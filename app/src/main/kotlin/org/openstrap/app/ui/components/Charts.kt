@@ -1,6 +1,13 @@
 package org.openstrap.app.ui.components
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.input.pointer.pointerInput
+import kotlin.math.abs
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
@@ -51,10 +58,14 @@ private fun DrawScope.label(m: TextMeasurer, text: String, style: TextStyle, x: 
     drawText(layout, topLeft = Offset((x + dx).coerceIn(0f, size.width - layout.size.width), y))
 }
 
+/** A coloured stretch of time drawn as a strip under a [LineChart] (e.g. what Charge was doing). */
+data class ChartSegment(val from: Long, val to: Long, val color: Color)
+
 /**
- * Time-series line with a gradient fill, light grid with y labels on the right, time labels underneath,
- * an optional dotted average line, a marker at the minimum, and an optional shaded band (e.g. sleep).
- * Gaps longer than [gapSeconds] break the line so off-wrist periods aren't bridged.
+ * Time-series chart in the Oura/WHOOP style: a smooth (monotone, never overshooting) line over a soft
+ * gradient, faint dashed grid with values on the right, a haloed dot at the latest reading and a
+ * labelled average. Press and hold, then drag, to read any point; a plain tap still reaches the card. Gaps longer than [gapSeconds] break the line so
+ * off-wrist periods aren't bridged. [segments] adds a Garmin-style state strip under the plot.
  */
 @Composable
 fun LineChart(
@@ -72,19 +83,39 @@ fun LineChart(
     reveal: Float = 1f,
     /** A fixed value axis (e.g. 0..100 for scores); null fits the data. */
     yRange: ClosedFloatingPointRange<Float>? = null,
+    segments: List<ChartSegment> = emptyList(),
+    /** Formats a value for the average label and the touch readout. */
+    format: (Float) -> String = { Math.round(it).toString() },
+    unit: String = "",
 ) {
     val measurer = rememberTextMeasurer()
     val style = axisStyle()
-    val grid = MaterialTheme.colorScheme.outlineVariant
+    val grid = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)
     val surface = MaterialTheme.colorScheme.surfaceContainer
-    val bandFill = if (bandColor == Color.Unspecified) MaterialTheme.colorScheme.primary.copy(alpha = 0.08f) else bandColor
-    Canvas(modifier.fillMaxWidth().height(height)) {
+    val onSurface = MaterialTheme.colorScheme.onSurface
+    val bubble = MaterialTheme.colorScheme.surfaceContainerHighest
+    val readoutStyle = TextStyle(color = onSurface, fontSize = 12.sp, fontFamily = org.openstrap.app.ui.theme.FunnelDisplay)
+    val bandFill = if (bandColor == Color.Unspecified) MaterialTheme.colorScheme.primary.copy(alpha = 0.07f) else bandColor
+    var touchX by remember { mutableStateOf<Float?>(null) }
+    val stripH = if (segments.isEmpty()) 0.dp else 8.dp
+
+    Canvas(
+        modifier.fillMaxWidth().height(height + stripH)
+            .pointerInput(points) {
+                detectDragGesturesAfterLongPress(
+                    onDragStart = { touchX = it.x },
+                    onDrag = { change, _ -> touchX = change.position.x },
+                    onDragEnd = { touchX = null },
+                    onDragCancel = { touchX = null },
+                )
+            },
+    ) {
         if (xRange.last <= xRange.first) return@Canvas
         val axisW = 28.dp.toPx()
         val axisH = 18.dp.toPx()
+        val strip = stripH.toPx()
         val w = size.width - axisW
-        val h = size.height - axisH
-
+        val h = size.height - axisH - strip
         val minV = yRange?.start ?: points.minOfOrNull { it.y } ?: 0f
         val maxV = yRange?.endInclusive ?: points.maxOfOrNull { it.y } ?: 1f
         val step = niceStep((maxV - minV).coerceAtLeast(4f) / (if (yRange != null) 4f else 3f))
@@ -96,13 +127,14 @@ fun LineChart(
         band?.let {
             val x0 = xOf(it.first).coerceIn(0f, w)
             val x1 = xOf(it.last).coerceIn(0f, w)
-            if (x1 > x0) drawRect(bandFill, Offset(x0, 0f), Size(x1 - x0, h))
+            if (x1 > x0) drawRoundRect(bandFill, Offset(x0, 0f), Size(x1 - x0, h), CornerRadius(6.dp.toPx()))
         }
 
+        val dash = PathEffect.dashPathEffect(floatArrayOf(2.dp.toPx(), 5.dp.toPx()))
         var v = bottom
         while (v <= top + 0.001f) {
             val y = yOf(v)
-            drawLine(grid, Offset(0f, y), Offset(w, y), 1.dp.toPx())
+            drawLine(grid, Offset(0f, y), Offset(w, y), 1.dp.toPx(), pathEffect = dash)
             label(measurer, v.toInt().toString(), style, size.width, y - 7.sp.toPx(), alignEnd = true)
             v += step
         }
@@ -110,52 +142,127 @@ fun LineChart(
         val span = (xRange.last - xRange.first + 1)
         for (i in 0..4) {
             val t = (xRange.first + span * i / 4).coerceAtMost(xRange.last)
-            label(measurer, hourLabel(t), style, xOf(t), h + 4.dp.toPx(), center = i in 1..3, alignEnd = i == 4)
-        }
-        if (points.isEmpty()) return@Canvas
-        clipRect(right = w * reveal.coerceIn(0f, 1f)) {
-        val segments = mutableListOf(mutableListOf(points.first()))
-        for (i in 1 until points.size) {
-            if (points[i].x - points[i - 1].x > gapSeconds) segments += mutableListOf<ChartPoint>()
-            segments.last() += points[i]
-        }
-        for (segment in segments) {
-            if (segment.size < 2) {
-                // A lone reading (e.g. a spot SpO2) gets a ringed dot so it's visible on its own.
-                val o = Offset(xOf(segment[0].x), yOf(segment[0].y))
-                drawCircle(color, 5.dp.toPx(), o)
-                drawCircle(surface, 2.dp.toPx(), o)
-                continue
-            }
-            val line = Path()
-            segment.forEachIndexed { i, p ->
-                if (i == 0) line.moveTo(xOf(p.x), yOf(p.y)) else line.lineTo(xOf(p.x), yOf(p.y))
-            }
-            val fill = Path().apply {
-                addPath(line)
-                lineTo(xOf(segment.last().x), h)
-                lineTo(xOf(segment.first().x), h)
-                close()
-            }
-            drawPath(fill, Brush.verticalGradient(listOf(color.copy(alpha = 0.28f), Color.Transparent), endY = h))
-            drawPath(line, color, style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
+            label(measurer, hourLabel(t), style, xOf(t), h + strip + 4.dp.toPx(), center = i in 1..3, alignEnd = i == 4)
         }
 
-        if (showAverage) {
-            val avgY = yOf(points.map { it.y }.average().toFloat())
-            drawLine(
-                color.copy(alpha = 0.7f), Offset(0f, avgY), Offset(w, avgY), 1.dp.toPx(),
-                pathEffect = PathEffect.dashPathEffect(floatArrayOf(3.dp.toPx(), 4.dp.toPx())),
-            )
+        // State strip: rounded runs of colour under the plot.
+        if (segments.isNotEmpty()) {
+            val y0 = h + 3.dp.toPx()
+            val sh = strip - 3.dp.toPx()
+            drawRoundRect(grid.copy(alpha = 0.25f), Offset(0f, y0), Size(w, sh), CornerRadius(sh / 2))
+            for (sgm in segments) {
+                val x0 = xOf(sgm.from).coerceIn(0f, w)
+                val x1 = xOf(sgm.to).coerceIn(0f, w)
+                if (x1 - x0 >= 1f) drawRoundRect(sgm.color, Offset(x0, y0), Size(x1 - x0, sh), CornerRadius(sh / 2))
+            }
         }
-        if (markMin) {
-            val p = points.minBy { it.y }
-            val o = Offset(xOf(p.x), yOf(p.y))
-            drawCircle(color, 6.dp.toPx(), o)
-            drawCircle(surface, 3.dp.toPx(), o)
+        if (points.isEmpty()) return@Canvas
+
+        val runs = mutableListOf(mutableListOf(points.first()))
+        for (i in 1 until points.size) {
+            if (points[i].x - points[i - 1].x > gapSeconds) runs += mutableListOf<ChartPoint>()
+            runs.last() += points[i]
         }
+        clipRect(right = w * reveal.coerceIn(0f, 1f)) {
+            for (run in runs) {
+                if (run.size < 2) {
+                    // A lone reading (e.g. a spot SpO2) gets a ringed dot so it's visible on its own.
+                    val o = Offset(xOf(run[0].x), yOf(run[0].y))
+                    drawCircle(color, 5.dp.toPx(), o)
+                    drawCircle(surface, 2.dp.toPx(), o)
+                    continue
+                }
+                val pts = run.map { Offset(xOf(it.x), yOf(it.y)) }
+                val line = smoothPath(pts)
+                val fill = Path().apply {
+                    addPath(line)
+                    lineTo(pts.last().x, h)
+                    lineTo(pts.first().x, h)
+                    close()
+                }
+                drawPath(fill, Brush.verticalGradient(listOf(color.copy(alpha = 0.30f), color.copy(alpha = 0.02f)), startY = 0f, endY = h))
+                drawPath(line, color, style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
+            }
+
+            if (showAverage) {
+                val avg = points.map { it.y }.average().toFloat()
+                val avgY = yOf(avg)
+                drawLine(onSurface.copy(alpha = 0.45f), Offset(0f, avgY), Offset(w, avgY), 1.dp.toPx(), pathEffect = dash)
+                // A small pill so the label stays readable where it crosses the line.
+                val text = measurer.measure("avg ${format(avg)}", style)
+                val pw = text.size.width + 10.dp.toPx()
+                val ph = text.size.height + 2.dp.toPx()
+                val py = (avgY - ph / 2).coerceIn(0f, h - ph)
+                drawRoundRect(bubble, Offset(2.dp.toPx(), py), Size(pw, ph), CornerRadius(ph / 2))
+                drawText(text, topLeft = Offset(2.dp.toPx() + 5.dp.toPx(), py + 1.dp.toPx()))
+            }
+            if (markMin) {
+                val p = points.minBy { it.y }
+                val o = Offset(xOf(p.x), yOf(p.y))
+                drawCircle(color, 6.dp.toPx(), o)
+                drawCircle(surface, 3.dp.toPx(), o)
+            }
+            // The latest reading: a solid dot with a soft halo, like Oura's "now".
+            val last = points.last()
+            val lo = Offset(xOf(last.x), yOf(last.y))
+            drawCircle(color.copy(alpha = 0.25f), 8.dp.toPx(), lo)
+            drawCircle(color, 4.dp.toPx(), lo)
+            drawCircle(surface, 1.5.dp.toPx(), lo)
+        }
+
+        // Touch readout: a guide line, a dot on the curve and a bubble with the value and time.
+        touchX?.let { tx ->
+            val x = tx.coerceIn(0f, w)
+            val t = xRange.first + ((x / w) * (xRange.last - xRange.first)).toLong()
+            val p = points.minBy { abs(it.x - t) }
+            if (abs(p.x - t) > gapSeconds) return@let
+            val px = xOf(p.x)
+            val py = yOf(p.y)
+            drawLine(onSurface.copy(alpha = 0.5f), Offset(px, 0f), Offset(px, h), 1.dp.toPx())
+            drawCircle(surface, 6.dp.toPx(), Offset(px, py))
+            drawCircle(color, 4.5.dp.toPx(), Offset(px, py))
+            val text = measurer.measure("${format(p.y)}$unit at ${hourLabel(p.x)}", readoutStyle)
+            val bw = text.size.width + 16.dp.toPx()
+            val bh = text.size.height + 8.dp.toPx()
+            val bx = (px - bw / 2).coerceIn(0f, size.width - bw)
+            val by = (py - bh - 12.dp.toPx()).let { if (it < 0f) py + 12.dp.toPx() else it }
+            drawRoundRect(bubble, Offset(bx, by), Size(bw, bh), CornerRadius(bh / 2))
+            drawText(text, topLeft = Offset(bx + 8.dp.toPx(), by + 4.dp.toPx()))
         }
     }
+}
+
+/**
+ * A smooth path through [pts] using monotone cubic interpolation (Fritsch–Carlson): curves like a spline
+ * but never overshoots the data, so a smoothed heart rate can't show a peak or dip that didn't happen.
+ */
+private fun smoothPath(pts: List<Offset>): Path {
+    val path = Path()
+    if (pts.isEmpty()) return path
+    path.moveTo(pts[0].x, pts[0].y)
+    if (pts.size == 2) { path.lineTo(pts[1].x, pts[1].y); return path }
+    val n = pts.size
+    val d = FloatArray(n - 1) { i -> (pts[i + 1].y - pts[i].y) / (pts[i + 1].x - pts[i].x).coerceAtLeast(0.001f) }
+    val m = FloatArray(n)
+    m[0] = d[0]
+    m[n - 1] = d[n - 2]
+    for (i in 1 until n - 1) m[i] = if (d[i - 1] * d[i] <= 0f) 0f else (d[i - 1] + d[i]) / 2f
+    for (i in 0 until n - 1) {
+        if (d[i] == 0f) { m[i] = 0f; m[i + 1] = 0f; continue }
+        val a = m[i] / d[i]
+        val b = m[i + 1] / d[i]
+        val s = a * a + b * b
+        if (s > 9f) {
+            val t = 3f / kotlin.math.sqrt(s)
+            m[i] = t * a * d[i]
+            m[i + 1] = t * b * d[i]
+        }
+    }
+    for (i in 0 until n - 1) {
+        val dx = (pts[i + 1].x - pts[i].x) / 3f
+        path.cubicTo(pts[i].x + dx, pts[i].y + m[i] * dx, pts[i + 1].x - dx, pts[i + 1].y - m[i + 1] * dx, pts[i + 1].x, pts[i + 1].y)
+    }
+    return path
 }
 
 private fun niceStep(raw: Float): Float {

@@ -36,6 +36,8 @@ import org.openstrap.app.data.Recovery
 import org.openstrap.app.data.RecoveryResult
 import org.openstrap.app.ui.components.BigValue
 import org.openstrap.app.ui.components.ChartPoint
+import org.openstrap.app.ui.components.ChartSegment
+import org.openstrap.app.ui.components.LegendDot
 import org.openstrap.app.ui.components.ContributorRow
 import org.openstrap.app.ui.components.EmptyHint
 import org.openstrap.app.ui.components.HeroPanel
@@ -50,6 +52,35 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
+
+/** What each charge state looks like on the strip under the chart; rest and no-data stay blank. */
+private val STATE_COLORS = mapOf(
+    Recovery.State.Sleep to MetricColors.sleepDeep,
+    Recovery.State.Relax to MetricColors.hrv,
+    Recovery.State.Activity to MetricColors.steps.copy(alpha = 0.6f),
+    Recovery.State.Exercise to MetricColors.steps,
+    Recovery.State.ExerciseRecovery to MetricColors.steps.copy(alpha = 0.35f),
+    Recovery.State.Stress to MetricColors.stress,
+)
+
+/**
+ * Strip segments from the charge samples: each 15-minute block takes its most common state (so a strap
+ * stress reading flickering around the threshold doesn't turn the strip into confetti), then equal
+ * neighbouring blocks join up.
+ */
+private fun chargeSegments(points: List<Recovery.ChargePoint>): List<ChartSegment> {
+    val block = 15 * 60L
+    val blocks = points.groupBy { it.t / block * block }.toSortedMap()
+        .mapValues { (_, v) -> v.groupingBy { it.state }.eachCount().maxBy { it.value }.key }
+    val out = mutableListOf<ChartSegment>()
+    for ((t, state) in blocks) {
+        val color = STATE_COLORS[state] ?: continue
+        val last = out.lastOrNull()
+        if (last != null && last.color == color && last.to == t) out[out.size - 1] = last.copy(to = t + block)
+        else out += ChartSegment(t, t + block, color)
+    }
+    return out
+}
 
 /** Readiness hero for Today and the detail screen. */
 @Composable
@@ -89,8 +120,14 @@ fun ChargeCard(r: RecoveryResult, dayRange: LongRange, sleepBand: LongRange?, on
         }
         LineChart(
             c.points.map { ChartPoint(it.t, it.value) }, MetricColors.charge, dayRange, height = 130.dp,
-            showAverage = false, band = sleepBand, yRange = 0f..100f,
+            showAverage = false, band = sleepBand, yRange = 0f..100f, segments = chargeSegments(c.points),
         )
+        Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            LegendDot("Sleep", STATE_COLORS.getValue(Recovery.State.Sleep))
+            LegendDot("Calm", STATE_COLORS.getValue(Recovery.State.Relax))
+            LegendDot("Active", STATE_COLORS.getValue(Recovery.State.Exercise))
+            LegendDot("Stress", STATE_COLORS.getValue(Recovery.State.Stress))
+        }
     }
 }
 

@@ -29,7 +29,6 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.MonitorHeart
 import androidx.compose.material.icons.filled.Psychology
-import androidx.compose.material.icons.filled.Spa
 import androidx.compose.material.icons.filled.Thermostat
 import androidx.compose.material.icons.filled.Watch
 import androidx.compose.material3.Icon
@@ -165,7 +164,6 @@ fun TodayScreen(
     item {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             val sleepValue = state.sleep?.score?.toString() ?: state.asleepSeconds?.let { "%d:%02d".format(it / 3600, (it % 3600) / 60) }
-            ScoreChip(rec?.readiness?.score?.toString(), "Readiness", Icons.Default.Spa, MetricColors.readiness, onClick = onOpenRecovery)
             ScoreChip(rec?.charge?.latest?.toInt()?.toString(), "Charge", Icons.Default.BatteryChargingFull, MetricColors.charge, onClick = onOpenRecovery)
             ScoreChip(sleepValue, "Sleep", Icons.Default.Bedtime, MetricColors.sleepDeep, onClick = onOpenSleep)
             ScoreChip(compactCount(state.steps), "Steps", Icons.AutoMirrored.Filled.DirectionsWalk, MetricColors.steps)

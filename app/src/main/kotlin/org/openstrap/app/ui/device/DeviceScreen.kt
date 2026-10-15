@@ -91,6 +91,26 @@ fun DeviceScreen(
     val scan by vm.scan.collectAsState()
     val log by vm.strap.log.collectAsState()
     var confirmForget by rememberSaveable { mutableStateOf(false) }
+    var confirmDisconnect by rememberSaveable { mutableStateOf(false) }
+
+    if (confirmDisconnect) {
+        AlertDialog(
+            onDismissRequest = { confirmDisconnect = false },
+            icon = { Icon(Icons.Default.LinkOff, null) },
+            title = { Text("Disconnect the strap?") },
+            text = {
+                Text(
+                    (if (sync is SyncState.Running) "The sync in progress will stop. " else "") +
+                        "The strap keeps recording on its own, but OpenStrap won't sync or show live heart rate " +
+                        "until you connect again.",
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { confirmDisconnect = false; vm.strap.disconnect() }) { Text("Disconnect") }
+            },
+            dismissButton = { TextButton(onClick = { confirmDisconnect = false }) { Text("Cancel") } },
+        )
+    }
 
     if (confirmForget) {
         AlertDialog(
@@ -132,7 +152,7 @@ fun DeviceScreen(
                                 onClick = vm.strap::syncNow, enabled = sync !is SyncState.Running,
                                 modifier = Modifier.weight(1f), contentPadding = PaddingValues(vertical = 14.dp),
                             ) { Text("Sync now") }
-                            OutlinedButton(onClick = vm.strap::disconnect, Modifier.weight(1f), contentPadding = PaddingValues(vertical = 14.dp)) {
+                            OutlinedButton(onClick = { confirmDisconnect = true }, Modifier.weight(1f), contentPadding = PaddingValues(vertical = 14.dp)) {
                                 Text("Disconnect")
                             }
                         }

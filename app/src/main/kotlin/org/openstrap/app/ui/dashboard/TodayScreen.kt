@@ -173,33 +173,18 @@ fun TodayScreen(
         }
     }
 
-    // Hero: readiness when there's a scored night, else last night's sleep, else today's movement.
+    // Hero: readiness is the day's headline. Before the first scored night it says when it'll arrive;
+    // steps live in the Activity card below.
     item {
-        val session = state.sleep
-        val score = session?.score
-        val asleep = state.asleepSeconds
         if (rec?.readiness?.score != null) {
             ReadinessHero(rec, onClick = onOpenRecovery)
-        } else if (session != null && score != null && asleep != null) {
-            HeroPanel(
-                label = "Sleep score", value = "$score", progress = score / 100f, accent = MetricColors.sleepDeep,
-                headline = Narrative.sleepHeadline(score), body = Narrative.sleepBody(session, asleep), onClick = onOpenSleep,
-            )
         } else {
             HeroPanel(
-                label = "Steps", value = "%,d".format(state.steps), progress = state.steps / STEP_GOAL.toFloat(), accent = MetricColors.steps,
-                headline = Narrative.stepsHeadline(state.steps, STEP_GOAL), body = Narrative.stepsBody(state.steps, STEP_GOAL, state.activeHours),
-            )
-        }
-    }
-
-    // Before the first scored night, say where readiness will come from rather than leaving a gap.
-    if (rec != null && rec.readiness.score == null) item {
-        Panel(onClick = onOpenRecovery) {
-            PanelHeader("Readiness", Icons.Default.Spa, MetricColors.readiness)
-            EmptyHint(
-                "Your Readiness score arrives each morning after a night wearing the strap. It compares the night " +
-                    "with your own normal, so it gets sharper over the first two weeks.",
+                label = "Readiness", value = "—", progress = null, accent = MetricColors.readiness,
+                headline = "Sleep with your strap tonight",
+                body = "Your first Readiness score arrives in the morning. It compares each night with your own " +
+                    "normal, so it gets sharper over the first two weeks.",
+                onClick = onOpenRecovery,
             )
         }
     }

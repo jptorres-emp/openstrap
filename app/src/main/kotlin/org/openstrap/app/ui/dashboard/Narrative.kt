@@ -39,17 +39,6 @@ object Narrative {
         session.wakeCount?.takeIf { it > 0 }?.let { append(" You woke $it ${if (it == 1) "time" else "times"}.") }
     }
 
-    fun stepsHeadline(steps: Int, goal: Int): String = when {
-        steps >= goal -> "Goal reached"
-        steps >= goal / 2 -> "Making progress"
-        steps > 0 -> "Getting started"
-        else -> "Time to move"
-    }
-
-    fun stepsBody(steps: Int, goal: Int, activeHours: Int): String =
-        if (steps >= goal) "You've passed your ${"%,d".format(goal)}-step goal" + (if (activeHours > 0) " across $activeHours active ${if (activeHours == 1) "hour" else "hours"}." else ".")
-        else "${"%,d".format(goal - steps)} steps to go to reach your daily goal of ${"%,d".format(goal)}."
-
     /** One sleep contributor: rating plus how full its bar is. */
     data class Contributor(val label: String, val rating: Rating, val fraction: Float, val detail: String)
 

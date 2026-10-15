@@ -187,6 +187,22 @@ class RecordParsersTest {
     }
 
     @Test
+    fun spo2VersionDetectedWithoutFeatureBit() {
+        // Helio Strap 3.20 sent 131 bytes: `02` then two 65-byte readings, starting 02 97 3c d1 6a 63 ...
+        val ts = 0x6AD13C97L
+        val hw = w().u8(2).u32(ts).u8(99).repeat(60, 0).u32(ts + 600).u8(98).repeat(60, 0).toByteArray()
+        assertEquals(131, hw.size)
+        val res = ok(HistoryParsers.spo2Single.parse(hw, ParseContext(headerTime = ts)))
+        assertEquals(listOf(99, 98), res.records.map { it.spo2 })
+        assertEquals(listOf(ts, ts + 600), res.records.map { it.timestamp })
+
+        // A legacy payload whose first time byte happens to be 2 is still read as legacy.
+        val legacyTs = (t0 and 0xFFFFFF00L) or 2L
+        val legacy = w().u32(legacyTs).u8(96).toByteArray()
+        assertEquals(96, ok(HistoryParsers.spo2Single.parse(legacy, ParseContext(headerTime = legacyTs))).records.single().spo2)
+    }
+
+    @Test
     fun spo2Sleep() {
         val legacy = w().u32(t0).u8(94).u8(10).toByteArray()
         assertEquals(10, ok(HistoryParsers.spo2Sleep.parse(legacy, ctx)).records.single().time)

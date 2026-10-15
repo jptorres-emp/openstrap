@@ -51,6 +51,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import org.openstrap.app.data.settings.ZeppAccount
 import org.openstrap.app.device.ConnectionState
@@ -203,7 +204,7 @@ private fun CheckResult(result: UpdateCheck, vm: FirmwareViewModel) {
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         OutlinedButton(onClick = vm::reset, Modifier.weight(1f)) { Text("Not now") }
         Button(onClick = { next?.let(vm::download) }, enabled = next != null, modifier = Modifier.weight(1f)) {
-            Text(if (next == null) "Unsupported" else "Download ${next.label.lowercase()}")
+            Text(if (next == null) "Unsupported" else "Download", maxLines = 1, textAlign = TextAlign.Center)
         }
     }
 }

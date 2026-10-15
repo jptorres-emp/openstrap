@@ -7,12 +7,13 @@ import org.openstrap.protocol.ByteReader
  *
  * @param headerTime epoch seconds of the START reply time (first record of the chunk).
  * @param activityRecordSize band feature parameter key 0; values <= 4 (or absent) mean 4.
- * @param spo2Versioned band feature-set 2 bit 25: SpO2 payloads start with a version byte.
+ * @param spo2Versioned band feature-set 2 bit 25: SpO2 payloads start with a version byte. Null when the
+ *   feature bit hasn't been read; the parser then looks at the payload itself.
  */
 data class ParseContext(
     val headerTime: Long,
     val activityRecordSize: Int = 4,
-    val spo2Versioned: Boolean = false,
+    val spo2Versioned: Boolean? = null,
 )
 
 sealed class ParseResult<out T : HistoryRecord> {
@@ -78,9 +79,22 @@ private fun <T : HistoryRecord> fixed(
 }
 
 private fun versionOf(payload: ByteArray, ctx: ParseContext): Pair<Int?, Int>? =
-    if (!ctx.spo2Versioned) null to 0
+    if (!isSpo2Versioned(payload, ctx)) null to 0
     else if (payload.isEmpty()) null
     else (payload[0].toInt() and 0xFF) to 1
+
+/**
+ * Without the feature bit, a payload is versioned when byte 0 is a known version and the first record's
+ * time sits right after it. On hardware (Helio Strap 3.20) type 37 arrives as `02` + 65-byte records.
+ */
+private fun isSpo2Versioned(payload: ByteArray, ctx: ParseContext): Boolean {
+    ctx.spo2Versioned?.let { return it }
+    if (payload.size < 5 || (payload[0].toInt() and 0xFF) !in 1..2) return false
+    fun near(at: Int) = kotlin.math.abs(ByteReader(payload, at).u32() - ctx.headerTime) <= NEAR_HEADER_SECONDS
+    return near(1) && !near(0)
+}
+
+private const val NEAR_HEADER_SECONDS = 2 * 86_400L
 
 private fun ByteReader.u8List(n: Int): List<Int> = List(n) { u8() }
 
@@ -217,7 +231,7 @@ object HistoryParsers {
     /** Type 43 (§3.5): 5-byte `ts, descend`. */
     val spo2OsaEventAlt = HistoryParser { payload, ctx ->
         // UNVERIFIED: 02 §3.5 - whether type 43 carries the version byte; assumed yes when versioned.
-        val off = if (ctx.spo2Versioned && payload.isNotEmpty()) 1 else 0
+        val off = if (isSpo2Versioned(payload, ctx)) 1 else 0
         fixed(payload, 5, strict = false, offset = off) { r, _ -> SpO2OsaEvent(r.u32(), r.u8(), null, null) }
     }
 

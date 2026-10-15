@@ -333,6 +333,8 @@ The whole payload is rejected if its length is not a multiple of 6 (`d/o40.java:
 
 If band feature bit 25 is set ("versioned"), **payload byte 0 is a version** `v` and the records follow it. Otherwise there is no version byte, and the legacy layout applies (`d/wg60.java:183-196`; feature check `d/og60.java:39`, `d/eh60.java:55`).
 
+**Verified on hardware (Helio Strap 3.20.0.1):** type 37 arrives versioned (`02` + 65-byte records). OpenStrap does not read the feature bit yet, so it detects the version byte: byte 0 is 1 or 2 and the u32 at offset 1 is within two days of the START time.
+
 | Type | Layout without version byte, or v = 1 | v = 2 | Evidence |
 |---|---|---|---|
 | 37 spot/auto | 5 B: `ts u32`, `b u8`. SpO2 = `b & 0x7F`. **bit 7 = isAuto** (automatic vs on-demand). | 65 B: `ts u32`, `b u8` (same split), `history[60]` u8 (60 preceding samples) | `d/wg60.java:101-136`; `d/tt00.java:41-52` (bit 7 → `isAuto`). The app keeps only values 80..100 and ts ≤ now (`d/tt00.java:150-162`). |

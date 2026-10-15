@@ -60,7 +60,6 @@ import org.openstrap.app.ui.components.formatDuration
 import org.openstrap.app.ui.theme.MetricColors
 import org.openstrap.app.ui.theme.MuseoModerno
 import java.time.LocalDate
-import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 
 val SLEEP_COLORS = mapOf(
@@ -92,39 +91,23 @@ fun ScreenList(
     )
 }
 
-/** Top bar: OpenStrap wordmark on the left, ‹ TODAY › centered, strap battery chip on the right. */
+/** Top bar: OpenStrap wordmark and strap battery chip, then ‹ TODAY › centered on its own row. */
 @Composable
 fun DateHeader(date: LocalDate, battery: Int?, onPrev: () -> Unit, onNext: () -> Unit, charging: Boolean = false) {
-    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(
-            buildAnnotatedString {
-                append("Open")
-                withStyle(SpanStyle(color = MaterialTheme.colorScheme.primary)) { append("Strap") }
-            },
-            fontFamily = MuseoModerno,
-            fontWeight = FontWeight.SemiBold,
-            fontSize = 19.sp,
-            color = MaterialTheme.colorScheme.onSurface,
-            maxLines = 1,
-            softWrap = false,
-        )
-        Row(Modifier.weight(1f), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onPrev, Modifier.size(40.dp)) { Icon(Icons.Default.ChevronLeft, "Previous day") }
-            SectionLabel(
-                when (date) {
-                    LocalDate.now() -> "Today"
-                    LocalDate.now().minusDays(1) -> "Yesterday"
-                    // Short enough to fit beside the wordmark; the month only when it isn't this one.
-                    else -> date.format(DateTimeFormatter.ofPattern(if (YearMonth.from(date) == YearMonth.now()) "EEE d" else "d MMM"))
+    Column(Modifier.fillMaxWidth()) {
+        Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                buildAnnotatedString {
+                    append("Open")
+                    withStyle(SpanStyle(color = MaterialTheme.colorScheme.primary)) { append("Strap") }
                 },
+                Modifier.weight(1f),
+                fontFamily = MuseoModerno,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 22.sp,
                 color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
             )
-            IconButton(onClick = onNext, Modifier.size(40.dp), enabled = date < LocalDate.now()) { Icon(Icons.Default.ChevronRight, "Next day") }
-        }
-        Row(
-            horizontalArrangement = Arrangement.End,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
             if (battery != null) {
                 Text(
                     if (charging) "⚡$battery%" else "$battery%",
@@ -137,6 +120,18 @@ fun DateHeader(date: LocalDate, battery: Int?, onPrev: () -> Unit, onNext: () ->
                     Box(Modifier.size(6.dp).background(MetricColors.battery(battery), CircleShape))
                 }
             }
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onPrev) { Icon(Icons.Default.ChevronLeft, "Previous day") }
+            SectionLabel(
+                when (date) {
+                    LocalDate.now() -> "Today"
+                    LocalDate.now().minusDays(1) -> "Yesterday"
+                    else -> date.format(DateTimeFormatter.ofPattern("EEE d MMM"))
+                },
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            IconButton(onClick = onNext, enabled = date < LocalDate.now()) { Icon(Icons.Default.ChevronRight, "Next day") }
         }
     }
 }

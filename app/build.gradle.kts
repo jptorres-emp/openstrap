@@ -64,6 +64,7 @@ dependencies {
     implementation(libs.datastore.preferences)
     implementation(libs.health.connect)
     implementation(libs.coroutines.android)
+    implementation(libs.core.ktx)
 
     testImplementation(libs.junit)
     testImplementation(libs.coroutines.test)

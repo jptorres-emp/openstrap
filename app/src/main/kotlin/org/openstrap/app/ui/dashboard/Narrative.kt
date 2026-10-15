@@ -78,4 +78,50 @@ object Narrative {
         val d = today - baseline
         return if (abs(d) < tolerance) 0 else if (d > 0) 1 else -1
     }
+
+    /** A 0-100 contributor score as a rating word. */
+    fun ratingFor(score: Int): Rating = when {
+        score >= 85 -> Rating.OPTIMAL
+        score >= 70 -> Rating.GOOD
+        score >= 55 -> Rating.FAIR
+        else -> Rating.LOW
+    }
+
+    fun readinessHeadline(score: Int, alert: Boolean): String = when {
+        alert -> "Signs of strain"
+        score >= 85 -> "Primed"
+        score >= 70 -> "Ready"
+        score >= 55 -> "Take it steady"
+        else -> "Prioritise recovery"
+    }
+
+    fun readinessBody(r: org.openstrap.app.data.Recovery.Readiness): String {
+        val score = r.score ?: return ""
+        val advice = when {
+            r.strainAlert -> "Several body signals moved away from your normal at once. Rest, drink fluids and keep it easy today."
+            score >= 85 -> "You're well recovered. A good day to push hard."
+            score >= 70 -> "Recovered enough for your usual training."
+            score >= 55 -> "Recovery isn't complete. Keep intensity moderate."
+            else -> "Your body is still catching up. Favour rest, light movement and an early night."
+        }
+        val ranked = r.contributors.filter { it.factor.weight >= 0.07f }.sortedBy { it.score }
+        val weakest = ranked.firstOrNull()?.takeIf { it.score < 70 }
+        // A quiet training day isn't something to praise, so load never counts as a strength.
+        val strongest = ranked.lastOrNull { it.factor.physiological || it.factor == org.openstrap.app.data.Recovery.Factor.Sleep }
+            ?.takeIf { it.score >= 85 && it != weakest }
+        return buildString {
+            append(advice)
+            if (weakest != null) append(" ${weakest.factor.label} is holding you back")
+            if (weakest != null && strongest != null) append("; ${strongest.factor.label.replaceFirstChar { it.lowercase() }} is a strength.")
+            else if (weakest != null) append(".")
+            else if (strongest != null) append(" ${strongest.factor.label} looks strong.")
+        }
+    }
+
+    fun chargeHeadline(charge: Int): String = when {
+        charge >= 75 -> "Fully charged"
+        charge >= 50 -> "Good energy"
+        charge >= 25 -> "Running low"
+        else -> "Depleted"
+    }
 }

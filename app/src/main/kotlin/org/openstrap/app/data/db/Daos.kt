@@ -135,4 +135,13 @@ interface HealthDao {
 
     @Query("SELECT * FROM resting_hr WHERE day BETWEEN :from AND :to ORDER BY day")
     suspend fun restingHrOnce(from: Long, to: Long): List<RestingHeartRate>
+
+    @Query("SELECT MAX(timestamp) FROM heart_rate")
+    fun latestHeartRateTime(): Flow<Long?>
+
+    @Query("SELECT MAX(timestamp) FROM stress")
+    fun latestStressTime(): Flow<Long?>
+
+    @Query("SELECT MAX(`end`) FROM sleep_session")
+    fun latestSleepEnd(): Flow<Long?>
 }

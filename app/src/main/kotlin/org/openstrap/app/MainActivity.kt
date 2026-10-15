@@ -48,6 +48,7 @@ import org.openstrap.app.ui.dashboard.FocusTarget
 import org.openstrap.app.ui.components.FloatingNavBar
 import org.openstrap.app.ui.components.NavItem
 import org.openstrap.app.ui.dashboard.TodayScreen
+import org.openstrap.app.ui.dashboard.RecoveryScreen
 import org.openstrap.app.ui.device.DeviceScreen
 import org.openstrap.app.ui.device.DeviceViewModel
 import org.openstrap.app.ui.theme.OpenStrapTheme
@@ -107,7 +108,7 @@ private val BLUETOOTH_PERMISSIONS = arrayOf(
 private fun AppRoot(container: AppContainer) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val dayVm: DayViewModel = viewModel(factory = viewModelFactory { initializer { DayViewModel(container.health, container.strap.todaySteps) } })
+    val dayVm: DayViewModel = viewModel(factory = viewModelFactory { initializer { DayViewModel(container.health, container.strap.todaySteps, container.settings.profile) } })
     val deviceVm: DeviceViewModel = viewModel(factory = viewModelFactory { initializer { DeviceViewModel(container) } })
 
     var tab by rememberSaveable { mutableIntStateOf(0) }
@@ -115,6 +116,10 @@ private fun AppRoot(container: AppContainer) {
     val liveEnabled by container.strap.liveHeartRateEnabled.collectAsStateWithLifecycle()
     val firmwareVm: FirmwareViewModel = viewModel(factory = viewModelFactory { initializer { FirmwareViewModel(container) } })
     var showFirmware by rememberSaveable { mutableStateOf(false) }
+    var showRecovery by rememberSaveable { mutableStateOf(false) }
+    var editProfile by rememberSaveable { mutableStateOf(false) }
+    val recovery by dayVm.recovery.collectAsStateWithLifecycle()
+    val profile by deviceVm.profile.collectAsStateWithLifecycle()
     val day by dayVm.state.collectAsStateWithLifecycle()
     val live by container.strap.liveHeartRate.collectAsStateWithLifecycle()
     val connection by container.strap.connection.collectAsStateWithLifecycle()
@@ -153,11 +158,19 @@ private fun AppRoot(container: AppContainer) {
 
     Scaffold(
         bottomBar = {
-            FloatingNavBar(Tab.entries.map { NavItem(it.label, it.icon) }, tab, { tab = it })
+            FloatingNavBar(Tab.entries.map { NavItem(it.label, it.icon) }, tab, { tab = it; showRecovery = false })
         },
         containerColor = MaterialTheme.colorScheme.background,
     ) { padding ->
-        when (Tab.entries[tab]) {
+        if (editProfile) {
+            org.openstrap.app.ui.device.ProfileDialog(profile, onSave = { deviceVm.saveProfile(it); editProfile = false }, onDismiss = { editProfile = false })
+        }
+        if (showRecovery && Tab.entries[tab] == Tab.Today) {
+            RecoveryScreen(
+                recovery, day.date, day.dayStart..day.dayEnd, day.sleep?.let { it.start..it.end }, padding,
+                onBack = { showRecovery = false }, onEditProfile = { editProfile = true },
+            )
+        } else when (Tab.entries[tab]) {
             Tab.Today -> TodayScreen(
                 day, live, battery, charging, dayVm::previousDay, dayVm::nextDay, padding,
                 onOpenSleep = { tab = Tab.Sleep.ordinal },
@@ -165,6 +178,8 @@ private fun AppRoot(container: AppContainer) {
                     focus = FocusRequest(target)
                     tab = (if (target == FocusTarget.Breathing) Tab.Sleep else Tab.Heart).ordinal
                 },
+                recovery = recovery,
+                onOpenRecovery = { showRecovery = true },
             )
             Tab.Heart -> HeartScreen(
                 day, live, liveEnabled,

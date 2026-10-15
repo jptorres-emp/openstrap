@@ -27,6 +27,8 @@ object MetricColors {
     val stress = Color(0xFFFF8A3D)
     val hrv = Color(0xFF2DD4BF)
     val temperature = Color(0xFFF472B6)
+    val readiness = Color(0xFF7CF2C9)
+    val charge = Color(0xFFFFD166)
     val good = Color(0xFF3DDC97)
     val warn = Color(0xFFFFB547)
     val bad = Color(0xFFFF5A5F)

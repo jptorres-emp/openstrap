@@ -33,6 +33,11 @@ class DeviceViewModel(private val container: AppContainer) : ViewModel() {
     val paired: StateFlow<PairedDevice?> =
         container.settings.pairedDevice.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
+    val profile: StateFlow<org.openstrap.app.data.settings.UserProfile> =
+        container.settings.profile.stateIn(viewModelScope, SharingStarted.Eagerly, org.openstrap.app.data.settings.UserProfile())
+
+    fun saveProfile(p: org.openstrap.app.data.settings.UserProfile) = viewModelScope.launch { container.settings.saveProfile(p) }
+
     private val _scan = MutableStateFlow(ScanUiState())
     val scan = _scan.asStateFlow()
 

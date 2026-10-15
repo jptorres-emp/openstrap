@@ -2,7 +2,15 @@ package org.openstrap.app.ui.dashboard
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import android.util.Log
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.mapLatest
+import kotlinx.coroutines.withContext
+import org.openstrap.app.data.RecoveryResult
+import org.openstrap.app.data.settings.UserProfile
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -70,7 +78,11 @@ data class DayUiState(
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class DayViewModel(private val repo: HealthRepository, private val strapSteps: Flow<Int?> = flowOf(null)) : ViewModel() {
+class DayViewModel(
+    private val repo: HealthRepository,
+    private val strapSteps: Flow<Int?> = flowOf(null),
+    profile: Flow<UserProfile> = flowOf(UserProfile()),
+) : ViewModel() {
     private val selected = MutableStateFlow(LocalDate.now())
 
     fun previousDay() { selected.value = selected.value.minusDays(1) }
@@ -78,6 +90,17 @@ class DayViewModel(private val repo: HealthRepository, private val strapSteps: F
 
     val state: StateFlow<DayUiState> = selected.flatMapLatest { date -> stateFor(date) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DayUiState())
+
+    /** Readiness and charge, recomputed (off the main thread) when the day, profile or synced data change. */
+    @OptIn(FlowPreview::class)
+    val recovery: StateFlow<RecoveryResult?> =
+        combine(selected, profile, repo.changes().debounce(800)) { d, p, _ -> d to p }
+            .mapLatest { (d, p) ->
+                withContext(Dispatchers.Default) {
+                    runCatching { repo.recovery(d, p) }.onFailure { Log.w("OpenStrap", "recovery failed", it) }.getOrNull()
+                }
+            }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     private fun stateFor(date: LocalDate): Flow<DayUiState> {
         val zone = ZoneId.systemDefault()

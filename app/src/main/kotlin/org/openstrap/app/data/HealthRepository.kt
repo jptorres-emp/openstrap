@@ -34,6 +34,15 @@ data class DayWindow(val from: Long, val to: Long) {
 }
 
 class HealthRepository(private val dao: HealthDao) {
+    private val recoveryEngine = RecoveryEngine(dao)
+
+    /** Readiness and charge for [date]; heavy, so call it off the main thread. */
+    suspend fun recovery(date: LocalDate, profile: org.openstrap.app.data.settings.UserProfile): RecoveryResult =
+        recoveryEngine.compute(date, profile)
+
+    /** Emits whenever new heart-rate, stress or sleep data lands, so derived scores can refresh. */
+    fun changes(): Flow<Unit> = kotlinx.coroutines.flow.combine(dao.latestHeartRateTime(), dao.latestStressTime(), dao.latestSleepEnd()) { _, _, _ -> }
+
     fun heartRate(w: DayWindow): Flow<List<HeartRateSample>> = dao.heartRate(w.from, w.to)
     fun activity(w: DayWindow): Flow<List<ActivityMinute>> = dao.activity(w.from, w.to)
     fun sleepSessions(w: DayWindow): Flow<List<SleepSession>> = dao.sleepSessions(w.from, w.to)

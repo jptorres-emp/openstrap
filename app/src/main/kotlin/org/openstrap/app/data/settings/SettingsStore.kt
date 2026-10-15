@@ -20,6 +20,31 @@ data class ZeppAccount(val appToken: String, val userId: String, val apiBase: St
     }
 }
 
+/** What the user told us about themselves; every field is optional. Used only by on-phone calculations. */
+data class UserProfile(
+    val birthYear: Int? = null,
+    val sex: Sex? = null,
+    val weightKg: Float? = null,
+    val heightCm: Int? = null,
+    /** Show pounds and feet/inches; null follows the phone's region. Values are always stored metric. */
+    val imperial: Boolean? = null,
+) {
+    enum class Sex { Female, Male }
+
+    val usesImperial: Boolean
+        get() = imperial ?: (java.util.Locale.getDefault().country in IMPERIAL_REGIONS)
+
+    companion object {
+        /** Regions that use pounds and feet day to day. */
+        val IMPERIAL_REGIONS = setOf("US", "LR", "MM")
+        const val KG_PER_LB = 0.45359237f
+        const val CM_PER_INCH = 2.54f
+    }
+
+    fun age(today: java.time.LocalDate = java.time.LocalDate.now()): Int? = birthYear?.let { today.year - it }
+    val isEmpty get() = birthYear == null && sex == null && weightKg == null && heightCm == null
+}
+
 class SettingsStore(private val context: Context) {
     private val address = stringPreferencesKey("device_address")
     private val authKey = stringPreferencesKey("device_auth_key")
@@ -73,8 +98,38 @@ class SettingsStore(private val context: Context) {
         context.dataStore.edit { it[liveHr] = enabled }
     }
 
+    private val birthYear = androidx.datastore.preferences.core.intPreferencesKey("profile_birth_year")
+    private val sex = stringPreferencesKey("profile_sex")
+    private val weight = androidx.datastore.preferences.core.floatPreferencesKey("profile_weight_kg")
+    private val height = androidx.datastore.preferences.core.intPreferencesKey("profile_height_cm")
+    private val imperial = androidx.datastore.preferences.core.booleanPreferencesKey("profile_imperial")
+
+    val profile: Flow<UserProfile> = context.dataStore.data.map { prefs ->
+        UserProfile(
+            prefs[birthYear],
+            prefs[sex]?.let { v -> UserProfile.Sex.entries.firstOrNull { it.name == v } },
+            prefs[weight],
+            prefs[height],
+            prefs[imperial],
+        )
+    }
+
+    suspend fun saveProfile(p: UserProfile) {
+        context.dataStore.edit {
+            if (p.birthYear != null) it[birthYear] = p.birthYear else it.remove(birthYear)
+            if (p.sex != null) it[sex] = p.sex.name else it.remove(sex)
+            if (p.weightKg != null) it[weight] = p.weightKg else it.remove(weight)
+            if (p.heightCm != null) it[height] = p.heightCm else it.remove(height)
+            if (p.imperial != null) it[imperial] = p.imperial else it.remove(imperial)
+        }
+    }
+
+    /** Forgets the strap and the Zepp sign-in; the user's profile stays. */
     suspend fun forgetDevice() {
-        context.dataStore.edit { it.clear() }
+        context.dataStore.edit { prefs ->
+            val keep = setOf(birthYear, sex, weight, height, imperial)
+            prefs.asMap().keys.filter { it !in keep }.forEach { prefs.remove(it) }
+        }
     }
 
     /** Last synced timestamp (epoch seconds) for a history data type. */

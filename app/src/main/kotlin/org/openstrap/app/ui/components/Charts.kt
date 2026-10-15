@@ -70,6 +70,8 @@ fun LineChart(
     bandColor: Color = Color.Unspecified,
     /** 0..1: how much of the line is drawn, left to right (for the focus animation). */
     reveal: Float = 1f,
+    /** A fixed value axis (e.g. 0..100 for scores); null fits the data. */
+    yRange: ClosedFloatingPointRange<Float>? = null,
 ) {
     val measurer = rememberTextMeasurer()
     val style = axisStyle()
@@ -83,9 +85,9 @@ fun LineChart(
         val w = size.width - axisW
         val h = size.height - axisH
 
-        val minV = points.minOfOrNull { it.y } ?: 0f
-        val maxV = points.maxOfOrNull { it.y } ?: 1f
-        val step = niceStep((maxV - minV).coerceAtLeast(4f) / 3f)
+        val minV = yRange?.start ?: points.minOfOrNull { it.y } ?: 0f
+        val maxV = yRange?.endInclusive ?: points.maxOfOrNull { it.y } ?: 1f
+        val step = niceStep((maxV - minV).coerceAtLeast(4f) / (if (yRange != null) 4f else 3f))
         val bottom = floor(minV / step) * step
         val top = (ceil(maxV / step) * step).coerceAtLeast(bottom + step)
         fun xOf(t: Long) = (t - xRange.first).toFloat() / (xRange.last - xRange.first) * w

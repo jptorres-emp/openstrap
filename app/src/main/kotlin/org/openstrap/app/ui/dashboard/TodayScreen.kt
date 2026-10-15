@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.Air
+import androidx.compose.material.icons.filled.BatteryChargingFull
 import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.ChevronLeft
@@ -28,6 +29,7 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.MonitorHeart
 import androidx.compose.material.icons.filled.Psychology
+import androidx.compose.material.icons.filled.Spa
 import androidx.compose.material.icons.filled.Thermostat
 import androidx.compose.material.icons.filled.Watch
 import androidx.compose.material3.Icon
@@ -44,6 +46,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import org.openstrap.app.data.RecoveryResult
 import org.openstrap.app.data.db.SleepStage
 import org.openstrap.app.ui.components.BarChart
 import org.openstrap.app.ui.components.BigValue
@@ -152,27 +155,32 @@ fun TodayScreen(
     onOpenSleep: () -> Unit = {},
     /** Jump to a metric's chart on the Heart or Sleep tab. */
     onFocus: (FocusTarget) -> Unit = {},
+    recovery: RecoveryResult? = null,
+    onOpenRecovery: () -> Unit = {},
 ) = ScreenList(contentPadding) {
+    val rec = recovery?.takeIf { it.date == state.date }
     item { DateHeader(state.date, battery, onPrev, onNext, charging) }
 
     // Oura's score row: the day at a glance, each chip opening its tab.
     item {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             val sleepValue = state.sleep?.score?.toString() ?: state.asleepSeconds?.let { "%d:%02d".format(it / 3600, (it % 3600) / 60) }
+            ScoreChip(rec?.readiness?.score?.toString(), "Readiness", Icons.Default.Spa, MetricColors.readiness, onClick = onOpenRecovery)
+            ScoreChip(rec?.charge?.latest?.toInt()?.toString(), "Charge", Icons.Default.BatteryChargingFull, MetricColors.charge, onClick = onOpenRecovery)
             ScoreChip(sleepValue, "Sleep", Icons.Default.Bedtime, MetricColors.sleepDeep, onClick = onOpenSleep)
             ScoreChip(compactCount(state.steps), "Steps", Icons.AutoMirrored.Filled.DirectionsWalk, MetricColors.steps)
-            ScoreChip(state.restingHeartRate?.toString(), if (state.restingEstimated) "Rest est." else "Resting", Icons.Default.Favorite, MetricColors.heart, onClick = { onFocus(FocusTarget.RestingHr) })
             ScoreChip(state.stress.avg()?.toString(), "Stress", Icons.Default.Psychology, MetricColors.stress, onClick = { onFocus(FocusTarget.Stress) })
-            ScoreChip(state.pai?.let { Math.round(it.total).toString() }, "PAI", Icons.Default.Bolt, MetricColors.hrv)
         }
     }
 
-    // Hero: last night's sleep when the strap scored it, otherwise today's movement.
+    // Hero: readiness when there's a scored night, else last night's sleep, else today's movement.
     item {
         val session = state.sleep
         val score = session?.score
         val asleep = state.asleepSeconds
-        if (session != null && score != null && asleep != null) {
+        if (rec?.readiness?.score != null) {
+            ReadinessHero(rec, onClick = onOpenRecovery)
+        } else if (session != null && score != null && asleep != null) {
             HeroPanel(
                 label = "Sleep score", value = "$score", progress = score / 100f, accent = MetricColors.sleepDeep,
                 headline = Narrative.sleepHeadline(score), body = Narrative.sleepBody(session, asleep), onClick = onOpenSleep,
@@ -183,6 +191,10 @@ fun TodayScreen(
                 headline = Narrative.stepsHeadline(state.steps, STEP_GOAL), body = Narrative.stepsBody(state.steps, STEP_GOAL, state.activeHours),
             )
         }
+    }
+
+    if (rec != null) item {
+        ChargeCard(rec, state.dayStart..state.dayEnd, state.sleep?.let { it.start..it.end }, onClick = onOpenRecovery)
     }
 
     item {
@@ -235,6 +247,10 @@ fun TodayScreen(
             PanelHeader("Activity", Icons.AutoMirrored.Filled.DirectionsWalk, MetricColors.steps, trailing = "Goal %,d".format(STEP_GOAL))
             Row(verticalAlignment = Alignment.Bottom) {
                 BigValue("%,d".format(state.steps), "steps", Modifier.weight(1f))
+                state.pai?.let {
+                    BigValue("${Math.round(it.total)}", "", caption = "PAI")
+                    Spacer(Modifier.width(18.dp))
+                }
                 BigValue("${state.activeHours}", "of $ACTIVE_HOURS_GOAL h", caption = "Active hours")
             }
             BarChart(state.hourlySteps, MetricColors.steps)

@@ -92,6 +92,12 @@ fun DeviceScreen(
     val log by vm.strap.log.collectAsState()
     var confirmForget by rememberSaveable { mutableStateOf(false) }
     var confirmDisconnect by rememberSaveable { mutableStateOf(false) }
+    var editProfile by rememberSaveable { mutableStateOf(false) }
+    val profile by vm.profile.collectAsState()
+
+    if (editProfile) {
+        ProfileDialog(profile, onSave = { vm.saveProfile(it); editProfile = false }, onDismiss = { editProfile = false })
+    }
 
     if (confirmDisconnect) {
         AlertDialog(
@@ -176,6 +182,14 @@ fun DeviceScreen(
                     SettingRow("Forget this strap", "Removes the address and auth key from this phone", onClick = { confirmForget = true }) {
                         Icon(Icons.Default.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
+                }
+            }
+        }
+
+        item {
+            Panel {
+                SettingRow("Your profile", profile.summary(), onClick = { editProfile = true }) {
+                    Icon(Icons.Default.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }

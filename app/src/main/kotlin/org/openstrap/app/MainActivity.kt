@@ -10,11 +10,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Bedtime
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Watch
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -52,6 +47,7 @@ import org.openstrap.app.ui.dashboard.RecoveryScreen
 import org.openstrap.app.ui.device.DeviceScreen
 import org.openstrap.app.ui.device.DeviceViewModel
 import org.openstrap.app.ui.theme.OpenStrapTheme
+import org.openstrap.app.ui.theme.PhosphorIcons
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -91,11 +87,11 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private enum class Tab(val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector) {
-    Today("Today", Icons.Default.Home),
-    Heart("Heart", Icons.Default.Favorite),
-    Sleep("Sleep", Icons.Default.Bedtime),
-    Device("Device", Icons.Default.Watch),
+private enum class Tab(val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector, val selectedIcon: androidx.compose.ui.graphics.vector.ImageVector) {
+    Today("Today", PhosphorIcons.House, PhosphorIcons.HouseFill),
+    Heart("Heart", PhosphorIcons.Heart, PhosphorIcons.HeartFill),
+    Sleep("Sleep", PhosphorIcons.Moon, PhosphorIcons.MoonFill),
+    Device("Device", PhosphorIcons.Watch, PhosphorIcons.WatchFill),
 }
 
 private val BLUETOOTH_PERMISSIONS = arrayOf(
@@ -158,7 +154,7 @@ private fun AppRoot(container: AppContainer) {
 
     Scaffold(
         bottomBar = {
-            FloatingNavBar(Tab.entries.map { NavItem(it.label, it.icon) }, tab, { tab = it; showRecovery = false })
+            FloatingNavBar(Tab.entries.map { NavItem(it.label, it.icon, it.selectedIcon) }, tab, { tab = it; showRecovery = false })
         },
         containerColor = MaterialTheme.colorScheme.background,
     ) { padding ->

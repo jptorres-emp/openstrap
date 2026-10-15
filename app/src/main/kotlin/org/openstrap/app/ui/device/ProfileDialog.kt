@@ -7,8 +7,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.filled.Female
-import androidx.compose.material.icons.filled.Male
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -23,8 +21,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -45,6 +41,7 @@ import org.openstrap.app.data.settings.UserProfile
 import org.openstrap.app.ui.components.SectionLabel
 import org.openstrap.app.ui.components.SegmentedTabs
 import java.time.LocalDate
+import org.openstrap.app.ui.theme.PhosphorIcons
 
 /** One line for the settings row: "34 years, male, 72 kg, 178 cm", or a prompt when empty. */
 fun UserProfile.summary(): String =
@@ -96,7 +93,7 @@ fun ProfileDialog(profile: UserProfile, onSave: (UserProfile) -> Unit, onDismiss
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        icon = { Icon(Icons.Default.Person, null) },
+        icon = { Icon(PhosphorIcons.User, null) },
         title = { Text("Your profile") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -108,8 +105,8 @@ fun ProfileDialog(profile: UserProfile, onSave: (UserProfile) -> Unit, onDismiss
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     NumberField(age, { age = it }, "Age", "years", age.isNotBlank() && ageValue == null, Modifier.weight(1f))
                     // Tapping the selected sex again clears it.
-                    SexToggle(Icons.Default.Female, "Female", FemaleColor, sex == 0) { sex = if (sex == 0) 2 else 0 }
-                    SexToggle(Icons.Default.Male, "Male", MaleColor, sex == 1) { sex = if (sex == 1) 2 else 1 }
+                    SexToggle(PhosphorIcons.GenderFemale, "Female", FemaleColor, sex == 0) { sex = if (sex == 0) 2 else 0 }
+                    SexToggle(PhosphorIcons.GenderMale, "Male", MaleColor, sex == 1) { sex = if (sex == 1) 2 else 1 }
                 }
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     SectionLabel("Units")

@@ -18,19 +18,6 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
-import androidx.compose.material.icons.filled.Air
-import androidx.compose.material.icons.filled.BatteryChargingFull
-import androidx.compose.material.icons.filled.Bedtime
-import androidx.compose.material.icons.filled.Bolt
-import androidx.compose.material.icons.filled.ChevronLeft
-import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.MonitorHeart
-import androidx.compose.material.icons.filled.Psychology
-import androidx.compose.material.icons.filled.Thermostat
-import androidx.compose.material.icons.filled.Watch
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -64,6 +51,7 @@ import org.openstrap.app.ui.theme.MetricColors
 import org.openstrap.app.ui.theme.MuseoModerno
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import org.openstrap.app.ui.theme.PhosphorIcons
 
 val SLEEP_COLORS = mapOf(
     SleepStage.AWAKE to MetricColors.sleepAwake,
@@ -122,13 +110,13 @@ fun DateHeader(date: LocalDate, battery: Int?, onPrev: () -> Unit, onNext: () ->
                 )
                 Spacer(Modifier.width(4.dp))
                 Box(contentAlignment = Alignment.TopEnd) {
-                    Icon(Icons.Default.Watch, "Strap connected", Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Icon(PhosphorIcons.Watch, "Strap connected", Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     Box(Modifier.size(6.dp).background(MetricColors.battery(battery), CircleShape))
                 }
             }
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onPrev) { Icon(Icons.Default.ChevronLeft, "Previous day") }
+            IconButton(onClick = onPrev) { Icon(PhosphorIcons.CaretLeft, "Previous day") }
             SectionLabel(
                 when (date) {
                     LocalDate.now() -> "Today"
@@ -137,7 +125,7 @@ fun DateHeader(date: LocalDate, battery: Int?, onPrev: () -> Unit, onNext: () ->
                 },
                 color = MaterialTheme.colorScheme.onSurface,
             )
-            IconButton(onClick = onNext, enabled = date < LocalDate.now()) { Icon(Icons.Default.ChevronRight, "Next day") }
+            IconButton(onClick = onNext, enabled = date < LocalDate.now()) { Icon(PhosphorIcons.CaretRight, "Next day") }
         }
     }
 }
@@ -164,10 +152,10 @@ fun TodayScreen(
     item {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             val sleepValue = state.sleep?.score?.toString() ?: state.asleepSeconds?.let { "%d:%02d".format(it / 3600, (it % 3600) / 60) }
-            ScoreChip(rec?.charge?.latest?.toInt()?.toString(), "Charge", Icons.Default.BatteryChargingFull, MetricColors.charge, onClick = onOpenRecovery)
-            ScoreChip(sleepValue, "Sleep", Icons.Default.Bedtime, MetricColors.sleepDeep, onClick = onOpenSleep)
-            ScoreChip(compactCount(state.steps), "Steps", Icons.AutoMirrored.Filled.DirectionsWalk, MetricColors.steps)
-            ScoreChip(state.stress.avg()?.toString(), "Stress", Icons.Default.Psychology, MetricColors.stress, onClick = { onFocus(FocusTarget.Stress) })
+            ScoreChip(rec?.charge?.latest?.toInt()?.toString(), "Charge", PhosphorIcons.BatteryCharging, MetricColors.charge, onClick = onOpenRecovery)
+            ScoreChip(sleepValue, "Sleep", PhosphorIcons.Moon, MetricColors.sleepDeep, onClick = onOpenSleep)
+            ScoreChip(compactCount(state.steps), "Steps", PhosphorIcons.Footprints, MetricColors.steps)
+            ScoreChip(state.stress.avg()?.toString(), "Stress", PhosphorIcons.Brain, MetricColors.stress, onClick = { onFocus(FocusTarget.Stress) })
         }
     }
 
@@ -193,7 +181,7 @@ fun TodayScreen(
 
     item {
         Panel(onClick = { onFocus(FocusTarget.HeartRate) }) {
-            PanelHeader("Heart rate", Icons.Default.Favorite, MetricColors.heart, trailing = if (liveHeartRate != null) "● Live" else null)
+            PanelHeader("Heart rate", PhosphorIcons.Heart, MetricColors.heart, trailing = if (liveHeartRate != null) "● Live" else null)
             val now = liveHeartRate ?: state.latestHeartRate
             if (now != null) BigValue("$now", "bpm", caption = if (liveHeartRate != null) "Right now" else "Latest")
             if (state.heartRate.isEmpty()) EmptyHint("No heart-rate data yet. Sync your strap.")
@@ -214,23 +202,23 @@ fun TodayScreen(
         val b = state.baselines
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             val rhr = state.restingHeartRate?.toFloat()
-            KeyStatRow("Resting HR", Icons.Default.Favorite, MetricColors.heart, rhr?.let { "%.0f".format(it) }, "bpm",
+            KeyStatRow("Resting HR", PhosphorIcons.Heart, MetricColors.heart, rhr?.let { "%.0f".format(it) }, "bpm",
                 b.restingHr?.let { "%.0f".format(it) }, Narrative.direction(rhr, b.restingHr, 1.5f), higherIsBetter = false, onClick = { onFocus(FocusTarget.RestingHr) })
             val hrv = state.hrv.avg()?.toFloat()
-            KeyStatRow("HRV", Icons.Default.MonitorHeart, MetricColors.hrv, hrv?.let { "%.0f".format(it) }, "ms",
+            KeyStatRow("HRV", PhosphorIcons.Heartbeat, MetricColors.hrv, hrv?.let { "%.0f".format(it) }, "ms",
                 b.hrv?.let { "%.0f".format(it) }, Narrative.direction(hrv, b.hrv, 3f), higherIsBetter = true, onClick = { onFocus(FocusTarget.Hrv) })
             val spo2 = state.spo2.avg()?.toFloat()
-            KeyStatRow("Blood oxygen", Icons.Default.Air, MetricColors.spo2, spo2?.let { "%.0f".format(it) }, "%",
+            KeyStatRow("Blood oxygen", PhosphorIcons.Drop, MetricColors.spo2, spo2?.let { "%.0f".format(it) }, "%",
                 b.spo2?.let { "%.0f".format(it) }, Narrative.direction(spo2, b.spo2, 1f), higherIsBetter = true, onClick = { onFocus(FocusTarget.Spo2) })
             val skin = state.skinTemperature.takeIf { it.isNotEmpty() }?.map { it.y }?.average()?.toFloat()
-            KeyStatRow("Skin temp", Icons.Default.Thermostat, MetricColors.temperature, skin?.let { "%.1f".format(it) }, "°C",
+            KeyStatRow("Skin temp", PhosphorIcons.ThermometerSimple, MetricColors.temperature, skin?.let { "%.1f".format(it) }, "°C",
                 b.skinTemperature?.let { "%.1f".format(it) }, Narrative.direction(skin, b.skinTemperature, 0.3f), higherIsBetter = null, onClick = { onFocus(FocusTarget.SkinTemperature) })
             val stress = state.stress.avg()?.toFloat()
-            KeyStatRow("Stress", Icons.Default.Psychology, MetricColors.stress, stress?.let { "%.0f".format(it) }, "",
+            KeyStatRow("Stress", PhosphorIcons.Brain, MetricColors.stress, stress?.let { "%.0f".format(it) }, "",
                 b.stress?.let { "%.0f".format(it) }, Narrative.direction(stress, b.stress, 4f), higherIsBetter = false, onClick = { onFocus(FocusTarget.Stress) })
             val breath = state.breathRate.avg()?.toFloat()
             if (breath != null || b.breathRate != null) {
-                KeyStatRow("Breathing", Icons.Default.Air, MetricColors.sleepLight, breath?.let { "%.0f".format(it) }, "/min",
+                KeyStatRow("Breathing", PhosphorIcons.Wind, MetricColors.sleepLight, breath?.let { "%.0f".format(it) }, "/min",
                     b.breathRate?.let { "%.0f".format(it) }, Narrative.direction(breath, b.breathRate, 1f), higherIsBetter = null, onClick = { onFocus(FocusTarget.Breathing) })
             }
         }
@@ -238,7 +226,7 @@ fun TodayScreen(
 
     item {
         Panel {
-            PanelHeader("Activity", Icons.AutoMirrored.Filled.DirectionsWalk, MetricColors.steps, trailing = "Goal %,d".format(STEP_GOAL))
+            PanelHeader("Activity", PhosphorIcons.Footprints, MetricColors.steps, trailing = "Goal %,d".format(STEP_GOAL))
             Row(verticalAlignment = Alignment.Bottom) {
                 BigValue("%,d".format(state.steps), "steps", Modifier.weight(1f))
                 state.pai?.let {
@@ -253,7 +241,7 @@ fun TodayScreen(
 
     if (state.sleep?.score == null) item {
         Panel(onClick = onOpenSleep) {
-            PanelHeader("Sleep", Icons.Default.Bedtime, MetricColors.sleepDeep)
+            PanelHeader("Sleep", PhosphorIcons.Moon, MetricColors.sleepDeep)
             val asleep = state.asleepSeconds
             if (asleep == null) EmptyHint("No sleep recorded for this night. Wear the strap to bed and it'll show up here.")
             else {

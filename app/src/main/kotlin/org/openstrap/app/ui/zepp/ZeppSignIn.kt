@@ -15,10 +15,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.ErrorOutline
-import androidx.compose.material.icons.filled.Watch
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -47,6 +43,7 @@ import kotlinx.coroutines.delay
 import org.openstrap.app.ui.components.Panel
 import org.openstrap.app.ui.components.PanelHeader
 import org.openstrap.app.ui.theme.MetricColors
+import org.openstrap.app.ui.theme.PhosphorIcons
 import org.openstrap.app.zepp.BoundDevice
 import org.openstrap.app.zepp.DeviceListing
 import org.openstrap.app.zepp.ZeppCloud
@@ -93,7 +90,7 @@ fun ZeppSignInDialog(
         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
             Column(Modifier.fillMaxSize()) {
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(4.dp)) {
-                    IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, "Close") }
+                    IconButton(onClick = onDismiss) { Icon(PhosphorIcons.X, "Close") }
                     Text("Sign in with Zepp", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
                     if (step is SignInStep.SignIn) TextButton(onClick = { clearZeppCookies(); attempt++ }) { Text("Reset") }
                 }
@@ -116,7 +113,7 @@ fun ZeppSignInDialog(
                     }
                     is SignInStep.Failed -> Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Icon(Icons.Default.ErrorOutline, null, tint = MetricColors.bad)
+                            Icon(PhosphorIcons.WarningCircle, null, tint = MetricColors.bad)
                             Text("Couldn't get your devices", style = MaterialTheme.typography.titleMedium)
                         }
                         Text(s.message)
@@ -140,7 +137,7 @@ private fun FoundStrap(listing: DeviceListing, confirmLabel: String, onConfirm: 
     var showKey by remember { mutableStateOf(false) }
     Column(Modifier.verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Panel {
-            PanelHeader(if (strap != null) "Found your Helio Strap" else "No Helio Strap on this account", Icons.Default.Watch, MaterialTheme.colorScheme.primary)
+            PanelHeader(if (strap != null) "Found your Helio Strap" else "No Helio Strap on this account", PhosphorIcons.Watch, MaterialTheme.colorScheme.primary)
             if (strap == null) {
                 Text(
                     "The account has ${listing.devices.size} other device(s) but no Amazfit Helio Strap. Bind the strap with the " +

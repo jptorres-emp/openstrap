@@ -21,17 +21,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.BluetoothSearching
-import androidx.compose.material.icons.filled.Bolt
-import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.FileDownload
-import androidx.compose.material.icons.filled.Key
-import androidx.compose.material.icons.filled.LinkOff
-import androidx.compose.material.icons.filled.SystemUpdate
-import androidx.compose.material.icons.filled.Terminal
-import androidx.compose.material.icons.filled.Watch
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -71,6 +60,7 @@ import org.openstrap.app.ui.components.SectionLabel
 import org.openstrap.app.ui.components.SettingRow
 import org.openstrap.app.ui.dashboard.ScreenList
 import org.openstrap.app.ui.theme.MetricColors
+import org.openstrap.app.ui.theme.PhosphorIcons
 import org.openstrap.app.ui.zepp.ZeppSignInDialog
 import java.time.Instant
 import java.time.ZoneId
@@ -102,7 +92,7 @@ fun DeviceScreen(
     if (confirmDisconnect) {
         AlertDialog(
             onDismissRequest = { confirmDisconnect = false },
-            icon = { Icon(Icons.Default.LinkOff, null) },
+            icon = { Icon(PhosphorIcons.LinkBreak, null) },
             title = { Text("Disconnect the strap?") },
             text = {
                 Text(
@@ -121,7 +111,7 @@ fun DeviceScreen(
     if (confirmForget) {
         AlertDialog(
             onDismissRequest = { confirmForget = false },
-            icon = { Icon(Icons.Default.LinkOff, null) },
+            icon = { Icon(PhosphorIcons.LinkBreak, null) },
             title = { Text("Forget this strap?") },
             text = {
                 Text(
@@ -176,11 +166,11 @@ fun DeviceScreen(
             item {
                 Panel {
                     SettingRow("Firmware update", "Check for and install strap firmware", onClick = onFirmware) {
-                        Icon(Icons.Default.SystemUpdate, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Icon(PhosphorIcons.ArrowCircleUp, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                     SettingRow("Forget this strap", "Removes the address and auth key from this phone", onClick = { confirmForget = true }) {
-                        Icon(Icons.Default.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Icon(PhosphorIcons.CaretRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
@@ -189,14 +179,14 @@ fun DeviceScreen(
         item {
             Panel {
                 SettingRow("Your profile", profile.summary(), onClick = { editProfile = true }) {
-                    Icon(Icons.Default.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Icon(PhosphorIcons.CaretRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
 
         item {
             Panel {
-                PanelHeader("Your data", Icons.Default.FileDownload, MetricColors.steps)
+                PanelHeader("Your data", PhosphorIcons.DownloadSimple, MetricColors.steps)
                 Text(
                     "Health data stays on this phone. Nothing leaves it unless you export it.",
                     style = MaterialTheme.typography.bodyMedium,
@@ -254,7 +244,7 @@ private fun StatusHero(name: String, address: String, connection: ConnectionStat
             ProgressRing((battery ?: 0) / 100f, ringColor, size = 168.dp, stroke = 10.dp)
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Icon(
-                    if (charging) Icons.Default.Bolt else Icons.Default.Watch, null, Modifier.size(28.dp),
+                    if (charging) PhosphorIcons.Lightning else PhosphorIcons.Watch, null, Modifier.size(28.dp),
                     tint = if (charging) ringColor else MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(battery?.let { "$it%" } ?: "—", style = MaterialTheme.typography.displaySmall)
@@ -298,7 +288,7 @@ private fun PairPanel(vm: DeviceViewModel, scan: ScanUiState, onRequestBluetooth
     }
 
     Panel {
-        PanelHeader("Pair your Helio Strap", Icons.AutoMirrored.Filled.BluetoothSearching, MaterialTheme.colorScheme.primary)
+        PanelHeader("Pair your Helio Strap", PhosphorIcons.Bluetooth, MaterialTheme.colorScheme.primary)
         Text(
             "Put the strap on its charger, then scan. You'll also need its 32-character auth key from the one-time Zepp bind.",
             style = MaterialTheme.typography.bodyMedium,
@@ -328,7 +318,7 @@ private fun PairPanel(vm: DeviceViewModel, scan: ScanUiState, onRequestBluetooth
                     .padding(14.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(Icons.Default.Watch, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                Icon(PhosphorIcons.Watch, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
                     Text(d.name, style = MaterialTheme.typography.titleSmall)
@@ -345,7 +335,7 @@ private fun PairPanel(vm: DeviceViewModel, scan: ScanUiState, onRequestBluetooth
         OutlinedTextField(
             value = key, onValueChange = { key = it },
             label = { Text("Auth key") }, singleLine = true,
-            leadingIcon = { Icon(Icons.Default.Key, null) },
+            leadingIcon = { Icon(PhosphorIcons.Key, null) },
             trailingIcon = { TextButton(onClick = { showKey = !showKey }) { Text(if (showKey) "Hide" else "Show") } },
             visualTransformation = if (showKey) VisualTransformation.None else PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
@@ -370,12 +360,12 @@ private fun DiagnosticsPanel(lines: List<String>) {
     Panel {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.weight(1f).clickable { expanded = !expanded }) {
-                PanelHeader("Diagnostics", Icons.Default.Terminal, trailing = if (expanded) "Hide" else "${lines.size} lines")
+                PanelHeader("Diagnostics", PhosphorIcons.TerminalWindow, trailing = if (expanded) "Hide" else "${lines.size} lines")
             }
             if (expanded) IconButton(onClick = {
                 context.getSystemService(ClipboardManager::class.java)
                     .setPrimaryClip(ClipData.newPlainText("OpenStrap log", lines.joinToString("\n")))
-            }) { Icon(Icons.Default.ContentCopy, "Copy log") }
+            }) { Icon(PhosphorIcons.Copy, "Copy log") }
         }
         if (expanded) {
             Box(

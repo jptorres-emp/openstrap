@@ -14,14 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.BatteryChargingFull
-import androidx.compose.material.icons.filled.FitnessCenter
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.ShowChart
-import androidx.compose.material.icons.filled.Spa
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -52,6 +44,7 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
+import org.openstrap.app.ui.theme.PhosphorIcons
 
 /** What each charge state looks like on the strip under the chart; rest and no-data stay blank. */
 private val STATE_COLORS = mapOf(
@@ -102,7 +95,7 @@ fun ReadinessHero(r: RecoveryResult, onClick: (() -> Unit)? = null) {
 fun ChargeCard(r: RecoveryResult, dayRange: LongRange, sleepBand: LongRange?, onClick: (() -> Unit)? = null) {
     val c = r.charge
     Panel(onClick = onClick) {
-        PanelHeader("Charge", Icons.Default.BatteryChargingFull, MetricColors.charge, trailing = c.atWake?.let { "Woke at ${it.toInt()}" })
+        PanelHeader("Charge", PhosphorIcons.BatteryCharging, MetricColors.charge, trailing = c.atWake?.let { "Woke at ${it.toInt()}" })
         val now = c.latest
         if (!c.anchored) {
             EmptyHint("Charge starts after your first night wearing the strap. Sleep is what fills it, so it needs one to measure from.")
@@ -137,7 +130,7 @@ fun RecoveryScreen(r: RecoveryResult?, date: LocalDate, dayRange: LongRange, sle
     ScreenList(contentPadding) {
         item {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
+                IconButton(onClick = onBack) { Icon(PhosphorIcons.ArrowLeft, "Back") }
                 Text("Recovery", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.weight(1f))
                 SectionLabel(
                     when (date) {
@@ -157,14 +150,14 @@ fun RecoveryScreen(r: RecoveryResult?, date: LocalDate, dayRange: LongRange, sle
         if (ready.score != null) item { ReadinessHero(r) }
         else item {
             Panel {
-                PanelHeader("Readiness", Icons.Default.Spa, MetricColors.readiness)
+                PanelHeader("Readiness", PhosphorIcons.Plant, MetricColors.readiness)
                 EmptyHint("Readiness is scored each morning from the night's sleep. Wear the strap to bed.")
             }
         }
 
         if (ready.strainAlert) item {
             Panel(highlight = MetricColors.warn) {
-                PanelHeader("Your body is under strain", Icons.Default.Warning, MetricColors.warn)
+                PanelHeader("Your body is under strain", PhosphorIcons.Warning, MetricColors.warn)
                 Text(
                     ready.alertSignals.joinToString(", ").replaceFirstChar { it.uppercase() } + ". " +
                         "Changes like these together often come with illness, heavy training, alcohol or a late night. " +
@@ -176,7 +169,7 @@ fun RecoveryScreen(r: RecoveryResult?, date: LocalDate, dayRange: LongRange, sle
 
         if (ready.contributors.isNotEmpty()) item {
             Panel {
-                PanelHeader("Contributors", Icons.Default.Spa, MetricColors.readiness, trailing = if (ready.calibrating) "Learning ${ready.baselineNights}/${Recovery.CALIBRATED_NIGHTS} nights" else null)
+                PanelHeader("Contributors", PhosphorIcons.Plant, MetricColors.readiness, trailing = if (ready.calibrating) "Learning ${ready.baselineNights}/${Recovery.CALIBRATED_NIGHTS} nights" else null)
                 Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     for (c in ready.contributors.sortedByDescending { it.factor.weight }) {
                         val rating = Narrative.ratingFor(c.score)
@@ -200,7 +193,7 @@ fun RecoveryScreen(r: RecoveryResult?, date: LocalDate, dayRange: LongRange, sle
 
         if (r.readinessTrend.any { it.second != null }) item {
             Panel {
-                PanelHeader("Readiness", Icons.Default.ShowChart, MetricColors.readiness, trailing = "Last 7 days")
+                PanelHeader("Readiness", PhosphorIcons.ChartLine, MetricColors.readiness, trailing = "Last 7 days")
                 TrendChart(
                     r.readinessTrend.map { (d, v) -> TrendPoint(d.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault()).take(2), v?.toFloat()) },
                     MetricColors.readiness,
@@ -219,7 +212,7 @@ fun RecoveryScreen(r: RecoveryResult?, date: LocalDate, dayRange: LongRange, sle
 private fun ChargeBreakdown(c: Recovery.ChargeDay) {
     if (c.latest == null) return
     Panel {
-        PanelHeader("Where your charge went", Icons.Default.BatteryChargingFull, MetricColors.charge)
+        PanelHeader("Where your charge went", PhosphorIcons.BatteryCharging, MetricColors.charge)
         val total = maxOf(c.recharged, c.drainedExercise + c.drainedStress + c.drainedLiving, 1f)
         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
             FlowRow("Recharged by sleep and calm rest", "+${c.recharged.toInt()}", c.recharged / total, MetricColors.good)
@@ -254,7 +247,7 @@ private fun FlowRow(label: String, value: String, fraction: Float, color: Color)
 @Composable
 private fun LoadPanel(r: RecoveryResult, onEditProfile: () -> Unit) {
     Panel {
-        PanelHeader("Training load", Icons.Default.FitnessCenter, MetricColors.steps, trailing = "TRIMP")
+        PanelHeader("Training load", PhosphorIcons.Barbell, MetricColors.steps, trailing = "TRIMP")
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             BigValue("${r.load.toInt()}", "", caption = "Today")
             BigValue(r.chronicLoad?.toInt()?.toString() ?: "—", "", caption = "Usual day")
@@ -280,7 +273,7 @@ private fun LoadPanel(r: RecoveryResult, onEditProfile: () -> Unit) {
 @Composable
 private fun HowItWorks() {
     Panel {
-        PanelHeader("How it's calculated", Icons.Default.Info)
+        PanelHeader("How it's calculated", PhosphorIcons.Info)
         Text(
             "Readiness compares last night with your own baseline: HRV on a log scale against your normal range (Plews), " +
                 "resting heart rate, skin temperature and breathing, how much sleep you got and owe, when your heart rate " +

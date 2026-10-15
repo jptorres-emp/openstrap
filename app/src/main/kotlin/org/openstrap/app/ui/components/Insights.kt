@@ -18,10 +18,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.ArrowDropUp
-import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -45,6 +41,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlin.math.cos
 import kotlin.math.sin
+import org.openstrap.app.ui.theme.PhosphorIcons
 
 /**
  * Oura-style hero: a wide, shallow arc over the score with a glowing knob where the score lands, then
@@ -223,7 +220,7 @@ fun KeyStatRow(
                 if (value != null && direction != null && direction != 0) {
                     val good = higherIsBetter?.let { (direction > 0) == it }
                     val tint = when (good) { true -> TrendGood; false -> TrendBad; null -> MaterialTheme.colorScheme.onSurfaceVariant }
-                    Icon(if (direction > 0) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown, null, tint = tint, modifier = Modifier.size(20.dp))
+                    Icon(if (direction > 0) PhosphorIcons.CaretUpFill else PhosphorIcons.CaretDownFill, null, tint = tint, modifier = Modifier.size(20.dp))
                 }
             }
             if (baseline != null) {
@@ -232,7 +229,7 @@ fun KeyStatRow(
         }
         if (onClick != null) {
             Spacer(Modifier.width(4.dp))
-            Icon(Icons.Default.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
+            Icon(PhosphorIcons.CaretRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
         }
     }
 }
@@ -259,7 +256,7 @@ fun ContributorRow(label: String, rating: String, fraction: Float, color: Color,
 }
 
 /** One destination in [FloatingNavBar]. */
-data class NavItem(val label: String, val icon: ImageVector)
+data class NavItem(val label: String, val icon: ImageVector, val selectedIcon: ImageVector = icon)
 
 /** Oura's floating pill tab bar: sits above the content with a hairline border. */
 @Composable
@@ -282,7 +279,7 @@ fun FloatingNavBar(items: List<NavItem>, selected: Int, onSelect: (Int) -> Unit,
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         val tint = if (on) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
-                        Icon(item.icon, item.label, tint = tint, modifier = Modifier.size(22.dp))
+                        Icon(if (on) item.selectedIcon else item.icon, item.label, tint = tint, modifier = Modifier.size(22.dp))
                         Text(item.label, style = MaterialTheme.typography.labelSmall, color = tint)
                     }
                 }

@@ -14,15 +14,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.CloudDownload
-import androidx.compose.material.icons.filled.ErrorOutline
-import androidx.compose.material.icons.filled.FolderOpen
-import androidx.compose.material.icons.filled.Key
-import androidx.compose.material.icons.filled.SystemUpdate
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -61,6 +52,7 @@ import org.openstrap.app.ui.components.PanelHeader
 import org.openstrap.app.ui.components.SettingRow
 import org.openstrap.app.ui.dashboard.ScreenList
 import org.openstrap.app.ui.theme.MetricColors
+import org.openstrap.app.ui.theme.PhosphorIcons
 import org.openstrap.app.ui.zepp.ZeppSignInDialog
 import org.openstrap.app.zepp.BoundDevice
 import org.openstrap.app.zepp.DeviceListing
@@ -84,14 +76,14 @@ fun FirmwareScreen(vm: FirmwareViewModel, contentPadding: PaddingValues, onBack:
     ScreenList(contentPadding) {
         item {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
-                IconButton(onClick = { vm.reset(); onBack() }, enabled = !installing) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
+                IconButton(onClick = { vm.reset(); onBack() }, enabled = !installing) { Icon(PhosphorIcons.ArrowLeft, "Back") }
                 Text("Firmware", style = MaterialTheme.typography.headlineMedium)
             }
         }
 
         item {
             Panel {
-                PanelHeader("This strap", Icons.Default.SystemUpdate, MetricColors.spo2)
+                PanelHeader("This strap", PhosphorIcons.ArrowCircleUp, MetricColors.spo2)
                 val c = connection as? ConnectionState.Connected
                 InfoLine("Firmware", info?.firmware ?: c?.firmware ?: "Unknown")
                 info?.hardware?.let { InfoLine("Hardware", it) }
@@ -107,7 +99,7 @@ fun FirmwareScreen(vm: FirmwareViewModel, contentPadding: PaddingValues, onBack:
         item {
             Panel {
                 SettingRow("Install from a file", "For a firmware image you already have", onClick = if (installing) null else ({ pickFile.launch(arrayOf("*/*")) })) {
-                    Icon(Icons.Default.FolderOpen, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Icon(PhosphorIcons.FolderOpen, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
@@ -132,7 +124,7 @@ private fun StepPanel(step: FirmwareStep, vm: FirmwareViewModel, onInstall: (Rea
     Panel {
         when (step) {
             FirmwareStep.Idle -> {
-                PanelHeader("Updates", Icons.Default.CloudDownload, MetricColors.steps)
+                PanelHeader("Updates", PhosphorIcons.CloudArrowDown, MetricColors.steps)
                 Text("Ask Zepp's update server whether there's newer firmware for this strap.", style = MaterialTheme.typography.bodyMedium)
                 Button(onClick = vm::check, modifier = Modifier.fillMaxWidth()) { Text("Check for update") }
             }
@@ -141,7 +133,7 @@ private fun StepPanel(step: FirmwareStep, vm: FirmwareViewModel, onInstall: (Rea
             is FirmwareStep.Downloading -> Busy("Downloading ${step.part.label} ${step.part.version}", step.fraction)
             is FirmwareStep.Ready -> {
                 val image = step.image
-                PanelHeader("Ready to install", Icons.Default.SystemUpdate, MetricColors.steps)
+                PanelHeader("Ready to install", PhosphorIcons.ArrowCircleUp, MetricColors.steps)
                 InfoLine("Image", image.title)
                 InfoLine("Size", "%,d bytes".format(image.bytes.size))
                 image.trailer?.let { InfoLine("Signed for", "product ${it.pnpId} v${it.pnpVersion}") }
@@ -161,7 +153,7 @@ private fun StepPanel(step: FirmwareStep, vm: FirmwareViewModel, onInstall: (Rea
             }
             FirmwareStep.Installed -> {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Icon(Icons.Default.CheckCircle, null, tint = MetricColors.good)
+                    Icon(PhosphorIcons.CheckCircle, null, tint = MetricColors.good)
                     Text("Installed", style = MaterialTheme.typography.titleMedium)
                 }
                 Text(
@@ -172,7 +164,7 @@ private fun StepPanel(step: FirmwareStep, vm: FirmwareViewModel, onInstall: (Rea
             }
             is FirmwareStep.Failed -> {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Icon(Icons.Default.ErrorOutline, null, tint = MetricColors.bad)
+                    Icon(PhosphorIcons.WarningCircle, null, tint = MetricColors.bad)
                     Text("Something went wrong", style = MaterialTheme.typography.titleMedium)
                 }
                 Text(step.message, style = MaterialTheme.typography.bodyMedium)
@@ -186,7 +178,7 @@ private fun StepPanel(step: FirmwareStep, vm: FirmwareViewModel, onInstall: (Rea
 private fun CheckResult(result: UpdateCheck, vm: FirmwareViewModel) {
     if (result.upToDate) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Icon(Icons.Default.CheckCircle, null, tint = MetricColors.good)
+            Icon(PhosphorIcons.CheckCircle, null, tint = MetricColors.good)
             Text("Up to date", style = MaterialTheme.typography.titleMedium)
         }
         Text("The update server has nothing newer for this strap.", style = MaterialTheme.typography.bodyMedium)
@@ -194,7 +186,7 @@ private fun CheckResult(result: UpdateCheck, vm: FirmwareViewModel) {
         return
     }
     val next = result.installOrder.firstOrNull()
-    PanelHeader(if (result.forced) "Required update" else "Update available", Icons.Default.CloudDownload, MetricColors.steps)
+    PanelHeader(if (result.forced) "Required update" else "Update available", PhosphorIcons.CloudArrowDown, MetricColors.steps)
     result.parts.forEach { InfoLine(it.label, "${it.version} · ${"%,d".format(it.length / 1024)} KB") }
     result.changeLog?.let {
         Text(it.substringBefore("###summary###").trim(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -233,7 +225,7 @@ private fun AccountPanel(
         )
     }
     Panel {
-        PanelHeader("Zepp account", Icons.Default.Key, MetricColors.warn, trailing = if (account != null) "Saved" else null)
+        PanelHeader("Zepp account", PhosphorIcons.Key, MetricColors.warn, trailing = if (account != null) "Saved" else null)
         if (!editing) {
             Text(
                 if (account == null) "Zepp only answers update checks for signed-in users. Sign in, or paste your own app token and user ID; they're stored on this phone only."
@@ -293,7 +285,7 @@ private fun ConfirmInstall(image: ReadyImage, blockers: List<String>, onDismiss:
     var accepted by remember { mutableStateOf(image.warnings.isEmpty()) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        icon = { Icon(if (image.warnings.isEmpty()) Icons.Default.SystemUpdate else Icons.Default.Warning, null) },
+        icon = { Icon(if (image.warnings.isEmpty()) PhosphorIcons.ArrowCircleUp else PhosphorIcons.Warning, null) },
         title = { Text("Install ${image.title}?") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -339,7 +331,7 @@ private fun InfoLine(label: String, value: String) {
 @Composable
 private fun Warning(text: String) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Icon(Icons.Default.Warning, null, tint = MetricColors.warn, modifier = Modifier.size(18.dp))
+        Icon(PhosphorIcons.Warning, null, tint = MetricColors.warn, modifier = Modifier.size(18.dp))
         Text(text, style = MaterialTheme.typography.bodySmall)
     }
 }

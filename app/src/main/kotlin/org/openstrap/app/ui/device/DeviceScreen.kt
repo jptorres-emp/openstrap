@@ -1,25 +1,40 @@
 package org.openstrap.app.ui.device
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Bluetooth
-import androidx.compose.material.icons.filled.BluetoothSearching
+import androidx.compose.material.icons.automirrored.filled.BluetoothSearching
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.FileDownload
-import androidx.compose.material.icons.filled.HealthAndSafety
 import androidx.compose.material.icons.filled.Key
-import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.filled.SystemUpdate
+import androidx.compose.material.icons.filled.Terminal
+import androidx.compose.material.icons.filled.Watch
 import androidx.compose.material3.Button
-import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -34,14 +49,24 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import org.openstrap.app.device.ConnectionState
 import org.openstrap.app.device.SyncState
 import org.openstrap.app.ui.components.EmptyHint
-import org.openstrap.app.ui.components.MetricCard
+import org.openstrap.app.ui.components.Panel
+import org.openstrap.app.ui.components.PanelHeader
+import org.openstrap.app.ui.components.ProgressRing
+import org.openstrap.app.ui.components.SectionLabel
+import org.openstrap.app.ui.components.SettingRow
+import org.openstrap.app.ui.dashboard.ScreenList
 import org.openstrap.app.ui.theme.MetricColors
 import java.time.Instant
 import java.time.ZoneId
@@ -54,137 +79,236 @@ fun DeviceScreen(
     onRequestBluetooth: (then: () -> Unit) -> Unit,
     onExportCsv: () -> Unit,
     onExportHealthConnect: () -> Unit,
+    onFirmware: () -> Unit,
 ) {
     val paired by vm.paired.collectAsState()
     val connection by vm.strap.connection.collectAsState()
     val sync by vm.strap.sync.collectAsState()
     val scan by vm.scan.collectAsState()
+    val log by vm.strap.log.collectAsState()
 
-    LazyColumn(
-        Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(
-            start = 16.dp, end = 16.dp,
-            top = contentPadding.calculateTopPadding() + 8.dp,
-            bottom = contentPadding.calculateBottomPadding() + 16.dp,
-        ),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        item { Text("Device", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(vertical = 8.dp)) }
+    ScreenList(contentPadding) {
+        item {
+            Text("Device", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.padding(top = 12.dp, bottom = 4.dp))
+        }
 
         val device = paired
         if (device == null) {
-            item { PairCard(vm, scan, onRequestBluetooth) }
+            item { PairPanel(vm, scan, onRequestBluetooth) }
         } else {
+            item { StatusHero(device.name, device.address, connection, sync) }
             item {
-                MetricCard(device.name, Icons.Default.Bluetooth, MaterialTheme.colorScheme.primary) {
-                    Text(device.address, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(connectionLabel(connection), style = MaterialTheme.typography.titleMedium)
-                    when (val s = sync) {
-                        is SyncState.Running -> {
-                            LinearProgressIndicator(Modifier.fillMaxWidth())
-                            Text(s.step, style = MaterialTheme.typography.bodySmall)
-                        }
-                        is SyncState.Done -> Text("Last sync ${clock(s.atEpochSeconds)}", style = MaterialTheme.typography.bodySmall)
-                        is SyncState.Failed -> Text("Sync failed: ${s.reason}", color = MaterialTheme.colorScheme.error)
-                        SyncState.Idle -> {}
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        when (connection) {
-                            is ConnectionState.Connected -> {
-                                Button(onClick = vm.strap::syncNow, enabled = sync !is SyncState.Running) {
-                                    Text("Sync now")
-                                }
-                                OutlinedButton(onClick = vm.strap::disconnect) { Text("Disconnect") }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    when (connection) {
+                        is ConnectionState.Connected -> {
+                            Button(
+                                onClick = vm.strap::syncNow, enabled = sync !is SyncState.Running,
+                                modifier = Modifier.weight(1f), contentPadding = PaddingValues(vertical = 14.dp),
+                            ) { Text("Sync now") }
+                            OutlinedButton(onClick = vm.strap::disconnect, Modifier.weight(1f), contentPadding = PaddingValues(vertical = 14.dp)) {
+                                Text("Disconnect")
                             }
-                            ConnectionState.Connecting, ConnectionState.Authenticating ->
-                                OutlinedButton(onClick = vm.strap::disconnect) { Text("Cancel") }
-                            else -> Button(onClick = { onRequestBluetooth { vm.strap.connect() } }) { Text("Connect") }
                         }
+                        ConnectionState.Connecting, ConnectionState.Authenticating ->
+                            OutlinedButton(onClick = vm.strap::disconnect, Modifier.fillMaxWidth(), contentPadding = PaddingValues(vertical = 14.dp)) {
+                                Text("Cancel")
+                            }
+                        else -> Button(
+                            onClick = { onRequestBluetooth { vm.strap.connect() } },
+                            modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(vertical = 14.dp),
+                        ) { Text("Connect") }
                     }
-                    HorizontalDivider()
-                    TextButton(onClick = { vm.forget() }) { Text("Forget this strap") }
+                }
+            }
+            item {
+                Panel {
+                    SettingRow("Firmware update", "Check for and install strap firmware", onClick = onFirmware) {
+                        Icon(Icons.Default.SystemUpdate, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    SettingRow("Forget this strap", "Removes the address and auth key from this phone", onClick = vm::forget) {
+                        Icon(Icons.Default.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 }
             }
         }
 
         item {
-            MetricCard("Your data", Icons.Default.FileDownload, MetricColors.steps) {
+            Panel {
+                PanelHeader("Your data", Icons.Default.FileDownload, MetricColors.steps)
                 Text(
-                    "Everything stays on this phone. Nothing is sent anywhere unless you export it.",
+                    "Health data stays on this phone. Nothing leaves it unless you export it.",
                     style = MaterialTheme.typography.bodyMedium,
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilledTonalButton(onClick = onExportCsv) { Text("Export CSV") }
-                    FilledTonalButton(onClick = onExportHealthConnect) { Text("Health Connect") }
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedButton(onClick = onExportCsv, Modifier.weight(1f)) { Text("Export CSV") }
+                    OutlinedButton(onClick = onExportHealthConnect, Modifier.weight(1f)) { Text("Health Connect") }
                 }
             }
+        }
+
+        item { DiagnosticsPanel(log) }
+    }
+}
+
+/** WHOOP/Ultrahuman-style status block: connection label, last sync, battery ring. */
+@Composable
+private fun StatusHero(name: String, address: String, connection: ConnectionState, sync: SyncState) {
+    Panel {
+        Row(Modifier.fillMaxWidth()) {
+            Column(Modifier.weight(1f)) {
+                val (label, color) = when (connection) {
+                    is ConnectionState.Connected -> "Connected to" to MetricColors.good
+                    ConnectionState.Connecting -> "Connecting to" to MaterialTheme.colorScheme.onSurfaceVariant
+                    ConnectionState.Authenticating -> "Authenticating" to MaterialTheme.colorScheme.onSurfaceVariant
+                    is ConnectionState.Failed -> "Connection failed" to MaterialTheme.colorScheme.error
+                    else -> "Not connected" to MaterialTheme.colorScheme.onSurfaceVariant
+                }
+                SectionLabel(label, color = color)
+                Text(name, style = MaterialTheme.typography.titleLarge)
+                Text(address, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Column(horizontalAlignment = Alignment.End) {
+                SectionLabel("Last sync")
+                Text(
+                    when (sync) {
+                        is SyncState.Done -> clock(sync.atEpochSeconds)
+                        is SyncState.Running -> "Syncing…"
+                        else -> "—"
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+        }
+
+        val battery = (connection as? ConnectionState.Connected)?.batteryPercent
+        Box(Modifier.fillMaxWidth().padding(vertical = 8.dp), contentAlignment = Alignment.Center) {
+            ProgressRing(
+                (battery ?: 0) / 100f,
+                if ((battery ?: 100) <= 15) MetricColors.heart else MetricColors.good,
+                size = 168.dp, stroke = 10.dp,
+            )
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(Icons.Default.Watch, null, Modifier.size(28.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(battery?.let { "$it%" } ?: "—", style = MaterialTheme.typography.displaySmall)
+                SectionLabel("Battery")
+            }
+        }
+
+        if (sync is SyncState.Running) {
+            LinearProgressIndicator(Modifier.fillMaxWidth().clip(CircleShape))
+            Text(sync.step, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        (connection as? ConnectionState.Connected)?.firmware?.let {
+            Text("Firmware $it", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        when {
+            connection is ConnectionState.Failed -> Text(connection.reason, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
+            sync is SyncState.Failed -> Text("Sync failed: ${sync.reason}", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
         }
     }
 }
 
 @Composable
-private fun PairCard(vm: DeviceViewModel, scan: ScanUiState, onRequestBluetooth: (then: () -> Unit) -> Unit) {
+private fun PairPanel(vm: DeviceViewModel, scan: ScanUiState, onRequestBluetooth: (then: () -> Unit) -> Unit) {
     var address by rememberSaveable { mutableStateOf("") }
     var name by rememberSaveable { mutableStateOf("Amazfit Helio Strap") }
     var key by rememberSaveable { mutableStateOf("") }
     var showKey by rememberSaveable { mutableStateOf(false) }
 
-    MetricCard("Pair your Helio Strap", Icons.Default.BluetoothSearching, MaterialTheme.colorScheme.primary) {
+    Panel {
+        PanelHeader("Pair your Helio Strap", Icons.AutoMirrored.Filled.BluetoothSearching, MaterialTheme.colorScheme.primary)
         Text(
-            "Put the strap on its charger, then scan. You also need the strap's auth key " +
-                "(from the one-time Zepp bind — see the README).",
+            "Put the strap on its charger, then scan. You'll also need its 32-character auth key from the one-time Zepp bind.",
             style = MaterialTheme.typography.bodyMedium,
         )
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (scan.scanning) {
-                OutlinedButton(onClick = vm::stopScan) { Text("Stop scanning") }
-            } else {
-                Button(onClick = { onRequestBluetooth { vm.startScan() } }) { Text("Scan") }
-            }
+        if (scan.scanning) {
+            OutlinedButton(onClick = vm::stopScan, Modifier.fillMaxWidth()) { Text("Stop scanning") }
+            LinearProgressIndicator(Modifier.fillMaxWidth().clip(CircleShape))
+        } else {
+            Button(onClick = { onRequestBluetooth { vm.startScan() } }, Modifier.fillMaxWidth()) { Text("Scan for straps") }
         }
-        if (scan.scanning) LinearProgressIndicator(Modifier.fillMaxWidth())
         scan.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         if (scan.scanning && scan.found.isEmpty()) EmptyHint("Looking for straps nearby…")
         scan.found.forEach { d ->
-            Column(
-                Modifier.fillMaxWidth().clickable { address = d.address; name = d.name }.padding(vertical = 6.dp),
+            val selected = d.address == address
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(if (selected) MaterialTheme.colorScheme.surfaceContainerHighest else MaterialTheme.colorScheme.surfaceContainerHigh)
+                    .clickable { address = d.address; name = d.name }
+                    .padding(14.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(d.name, style = MaterialTheme.typography.titleSmall)
-                Text("${d.address} · ${d.rssi} dBm", style = MaterialTheme.typography.bodySmall)
+                Icon(Icons.Default.Watch, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(d.name, style = MaterialTheme.typography.titleSmall)
+                    Text(d.address, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Text("${d.rssi} dBm", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
         OutlinedTextField(
             value = address, onValueChange = { address = it.uppercase() },
             label = { Text("Bluetooth address") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(14.dp),
         )
         OutlinedTextField(
             value = key, onValueChange = { key = it },
-            label = { Text("Auth key (32 hex characters)") }, singleLine = true,
-            leadingIcon = { androidx.compose.material3.Icon(Icons.Default.Key, null) },
+            label = { Text("Auth key") }, singleLine = true,
+            leadingIcon = { Icon(Icons.Default.Key, null) },
             trailingIcon = { TextButton(onClick = { showKey = !showKey }) { Text(if (showKey) "Hide" else "Show") } },
             visualTransformation = if (showKey) VisualTransformation.None else PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
             modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(14.dp),
         )
         Button(
             onClick = { onRequestBluetooth { vm.pair(address, name, key) } },
             enabled = address.isNotBlank() && key.isNotBlank(),
             modifier = Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(vertical = 14.dp),
+            colors = ButtonDefaults.buttonColors(),
         ) { Text("Pair") }
     }
 }
 
-private fun connectionLabel(c: ConnectionState) = when (c) {
-    ConnectionState.NotPaired -> "Not paired"
-    ConnectionState.Disconnected -> "Disconnected"
-    ConnectionState.Connecting -> "Connecting…"
-    ConnectionState.Authenticating -> "Authenticating…"
-    is ConnectionState.Connected -> buildString {
-        append("Connected")
-        c.batteryPercent?.let { append(" · $it% battery") }
-        c.firmware?.let { append(" · fw $it") }
+/** Protocol log, so behaviour on real hardware can be shared when reporting issues. */
+@Composable
+private fun DiagnosticsPanel(lines: List<String>) {
+    var expanded by rememberSaveable { mutableStateOf(false) }
+    val context = LocalContext.current
+    Panel {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.weight(1f).clickable { expanded = !expanded }) {
+                PanelHeader("Diagnostics", Icons.Default.Terminal, trailing = if (expanded) "Hide" else "${lines.size} lines")
+            }
+            if (expanded) IconButton(onClick = {
+                context.getSystemService(ClipboardManager::class.java)
+                    .setPrimaryClip(ClipData.newPlainText("OpenStrap log", lines.joinToString("\n")))
+            }) { Icon(Icons.Default.ContentCopy, "Copy log") }
+        }
+        if (expanded) {
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 320.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.surfaceContainerLowest)
+                    .verticalScroll(rememberScrollState())
+                    .horizontalScroll(rememberScrollState())
+                    .padding(12.dp),
+            ) {
+                Text(
+                    if (lines.isEmpty()) "No events yet." else lines.joinToString("\n"),
+                    fontFamily = FontFamily.Monospace, fontSize = 11.sp, lineHeight = 15.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Start,
+                )
+            }
+        }
     }
-    is ConnectionState.Failed -> "Failed: ${c.reason}"
 }
 
 private fun clock(epochSeconds: Long): String =

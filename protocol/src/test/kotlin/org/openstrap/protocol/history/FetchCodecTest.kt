@@ -190,3 +190,15 @@ class FetchCodecTest {
         assertFalse(HistoryTypeSpecs.shouldContinue(HistoryTypeSpecs.forCode(6)!!, 100, 200))
     }
 }
+
+class ActivityLayoutTest {
+    @org.junit.Test
+    fun detectsRecordSize() {
+        // 4-byte records: mode 1, intensity 40, steps 30, hr 80.
+        val four = ByteArray(64) { i -> when (i % 4) { 0 -> 1; 1 -> 40; 2 -> 30; else -> 80 }.toByte() }
+        org.junit.Assert.assertEquals(4, ActivityLayout.detect(four))
+        // 8-byte records whose bytes 4..7 (retain, posture, deep, rem) would be invalid modes.
+        val eight = ByteArray(64) { i -> when (i % 8) { 0 -> 5; 1 -> 3; 2 -> 0; 3 -> 55; 4 -> 200; 5 -> 180; 6 -> 90; else -> 140 }.toByte() }
+        org.junit.Assert.assertEquals(8, ActivityLayout.detect(eight))
+    }
+}

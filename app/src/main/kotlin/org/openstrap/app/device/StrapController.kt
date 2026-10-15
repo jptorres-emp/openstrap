@@ -26,6 +26,9 @@ interface StrapController {
     /** Latest live heart-rate reading in bpm, or null when live HR is off. */
     val liveHeartRate: StateFlow<Int?>
 
+    /** Recent protocol log lines, shown on the Device screen for troubleshooting. */
+    val log: StateFlow<List<String>>
+
     fun connect()
     fun disconnect()
     fun syncNow()

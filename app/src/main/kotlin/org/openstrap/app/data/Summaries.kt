@@ -18,6 +18,9 @@ object Summaries {
         return buckets.toList()
     }
 
+    /** Hours of the day with at least [threshold] steps — a simple "stay active" measure. */
+    fun activeHours(hourly: List<Float>, threshold: Int = 250): Int = hourly.count { it >= threshold }
+
     /** Merges heart rate from dedicated HR samples and per-minute activity, preferring HR samples. */
     fun heartRateSeries(hr: List<HeartRateSample>, minutes: List<ActivityMinute>): List<Pair<Long, Int>> {
         val byTime = sortedMapOf<Long, Int>()

@@ -9,7 +9,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
+import org.openstrap.app.R
 import androidx.compose.ui.unit.sp
 
 /** Metric accent colors, shared by cards and charts. Tuned to read well on near-black. */
@@ -58,19 +61,51 @@ private val Light = lightColorScheme(
     outlineVariant = Color(0xFFEDEEF2),
 )
 
+private fun variable(res: Int, weight: Int) = Font(
+    res,
+    weight = FontWeight(weight),
+    variationSettings = FontVariation.Settings(FontVariation.weight(weight)),
+)
+
+/** Funnel Display for numbers and headings, Funnel Sans for text. Both SIL OFL 1.1 (see licenses/). */
+val FunnelDisplay = FontFamily(
+    variable(R.font.funnel_display, 400),
+    variable(R.font.funnel_display, 500),
+    variable(R.font.funnel_display, 600),
+    variable(R.font.funnel_display, 700),
+)
+val FunnelSans = FontFamily(
+    variable(R.font.funnel_sans, 400),
+    variable(R.font.funnel_sans, 500),
+    variable(R.font.funnel_sans, 600),
+    variable(R.font.funnel_sans, 700),
+)
+
 private val Base = Typography()
 
 /** Big numerals use tabular figures so values don't jitter as they update (e.g. live HR). */
-private val Numerals = TextStyle(fontFeatureSettings = "tnum", fontFamily = FontFamily.SansSerif)
+private fun display(style: TextStyle, weight: FontWeight, size: Int, tracking: Float) =
+    style.copy(fontFamily = FunnelDisplay, fontWeight = weight, fontSize = size.sp, letterSpacing = tracking.sp, fontFeatureSettings = "tnum")
 
-private val AppTypography = Base.copy(
-    displayLarge = Base.displayLarge.merge(Numerals).copy(fontWeight = FontWeight.SemiBold, fontSize = 64.sp, letterSpacing = (-1.5).sp),
-    displayMedium = Base.displayMedium.merge(Numerals).copy(fontWeight = FontWeight.SemiBold, fontSize = 44.sp, letterSpacing = (-1).sp),
-    displaySmall = Base.displaySmall.merge(Numerals).copy(fontWeight = FontWeight.SemiBold, fontSize = 32.sp, letterSpacing = (-0.5).sp),
-    headlineSmall = Base.headlineSmall.merge(Numerals).copy(fontWeight = FontWeight.SemiBold),
-    titleLarge = Base.titleLarge.copy(fontWeight = FontWeight.SemiBold),
+private fun text(style: TextStyle) = style.copy(fontFamily = FunnelSans)
+
+private val AppTypography = Typography(
+    displayLarge = display(Base.displayLarge, FontWeight.SemiBold, 64, -1.5f),
+    displayMedium = display(Base.displayMedium, FontWeight.SemiBold, 48, -1f),
+    displaySmall = display(Base.displaySmall, FontWeight.SemiBold, 34, -0.5f),
+    headlineLarge = display(Base.headlineLarge, FontWeight.SemiBold, 30, -0.4f),
+    headlineMedium = display(Base.headlineMedium, FontWeight.SemiBold, 26, -0.3f),
+    headlineSmall = display(Base.headlineSmall, FontWeight.SemiBold, 22, -0.2f),
+    titleLarge = display(Base.titleLarge, FontWeight.SemiBold, 20, 0f),
+    titleMedium = text(Base.titleMedium).copy(fontWeight = FontWeight.SemiBold, fontFeatureSettings = "tnum"),
+    titleSmall = text(Base.titleSmall).copy(fontWeight = FontWeight.SemiBold),
+    bodyLarge = text(Base.bodyLarge),
+    bodyMedium = text(Base.bodyMedium),
+    bodySmall = text(Base.bodySmall),
+    labelLarge = text(Base.labelLarge).copy(fontWeight = FontWeight.SemiBold),
     // Uppercase tracked labels ("TIME ASLEEP") are styled with labelMedium.
-    labelMedium = Base.labelMedium.copy(fontWeight = FontWeight.SemiBold, letterSpacing = 1.4.sp, fontSize = 11.sp),
+    labelMedium = text(Base.labelMedium).copy(fontWeight = FontWeight.SemiBold, letterSpacing = 1.4.sp, fontSize = 11.sp),
+    labelSmall = text(Base.labelSmall),
 )
 
 @Composable

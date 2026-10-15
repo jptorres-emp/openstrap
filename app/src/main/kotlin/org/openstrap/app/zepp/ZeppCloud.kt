@@ -57,8 +57,14 @@ object ZeppCloud {
     private const val APP_VERSION_NAME = "10.9.0-play"
     private const val APP_VERSION_CODE = "151983"
 
-    /** Where watchface.zepp.com signs in. Its cookies hold the token we need. */
-    const val SIGN_IN_URL = "https://watchface.zepp.com/create"
+    /**
+     * Zepp's universal login, set up as watchface.zepp.com's sign-in: after the password it returns to that
+     * site, whose cookies hold the token we need. The page follows the phone's language.
+     */
+    const val SIGN_IN_URL = "https://user.zepp.com/universalLogin/index.html#/login" +
+        "?project_name=watchface" +
+        "&project_redirect_uri=https%3A%2F%2Fwatchface.zepp.com%2Fcreate" +
+        "&platform_app=com.huami.webapp"
     val COOKIE_URLS = listOf("https://watchface.zepp.com", "https://zepp.com", "https://user.zepp.com", "https://user.huami.com")
 
     /** Accounts live in one region; the global host usually answers for all, the others are tried if it doesn't. */

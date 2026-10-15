@@ -661,3 +661,15 @@ Before running a type, gate it on the `dataTypeMap` from QUERY_VERSION. Run type
   - Temperature types 46–48
   - `dataTypeMap` layout
   - Detail timestamp units
+
+---
+
+## Verified on hardware (Helio Strap, firmware 3.20.0.1, 2026-10-16)
+
+* Control runs over channel endpoint `0x004B`. Data arrives on HUAMI(0005).
+* **QUERY_VERSION reply layout:** `10 00 01 | version u8 | flag u8 | count u16 | count × {type u8, flag u8}`. The strap offers 35 types: 1, 2, 5, 6, 7, 8, 11, 13, 17, 18, 19, 30, 37, 38, 39, 44, 46, 48, 56, 57, 58, 59, 61, 63, 64, 66, 70, 72, 73, 74, 76, 78, 85, 87, 88.
+* **START `size` counts records, not bytes** for fixed-size minute types. For activity, size 2 means 16 bytes. Activity records are **8 bytes**. For sleep result, stress, today-ext and PAI the size equalled the byte count.
+* **TRANSFER end `10 02 01 <u32>`:** the u32 is the CRC-32 (zlib) of the concatenated payload without index bytes. Confirmed on every type.
+* **ACK must carry a parameter.** A bare `03` is ignored, and the strap later ends the transfer with `10 02 32` (timeout). `03 01` gets `10 03 01`.
+* **Every START must be closed with an ACK, including size-0 replies.** Otherwise the strap keeps that type open and answers every other START with status 5 (INVALID_STATE).
+* Stress values `ff` while on the charger, i.e. no reading.

@@ -155,7 +155,21 @@ object LiveHeartRate {
 }
 
 /** Today's running totals since local midnight. [distanceMeters]/[calories] are null when not reported. */
-data class StepTotals(val steps: Int, val distanceMeters: Int?, val calories: Int?)
+data class StepTotals(val steps: Int, val distanceMeters: Int?, val calories: Int?) {
+    /**
+     * False when the step count can't match the strap's own distance. After a firmware update (seen on
+     * 3.20 -> 3.25) the strap reported 8969 steps with 42 m: the step counter came back wrong while
+     * distance and calories stayed right. Strides under [MIN_STRIDE_METERS] are not plausible.
+     */
+    val isPlausible: Boolean
+        get() = distanceMeters == null || steps <= SLACK_STEPS || distanceMeters >= steps * MIN_STRIDE_METERS
+
+    companion object {
+        const val MIN_STRIDE_METERS = 0.25
+        /** Below this many steps rounding in the strap's distance can't be judged. */
+        const val SLACK_STEPS = 200
+    }
+}
 
 /**
  * Endpoint 0x0016 "RealtimeActivity": query `03` -> `04 status record`; notify on `05 01` -> `06 status`,

@@ -229,8 +229,9 @@ class StrapManager(
                 val totals = RealtimeSteps.parseMessage(p)
                 if (totals == null) log("steps < ${p.toHex()}")
                 totals?.let {
-                    if (it.steps != todaySteps.value) log("steps today=${it.steps} dist=${it.distanceMeters} kcal=${it.calories}")
-                    todaySteps.value = it.steps
+                    val steps = it.steps.takeIf { _ -> it.isPlausible }
+                    if (steps != todaySteps.value) log("steps today=${it.steps} dist=${it.distanceMeters} kcal=${it.calories}" + if (steps == null) " (ignored: steps don't match distance)" else "")
+                    todaySteps.value = steps
                 }
             }
         }

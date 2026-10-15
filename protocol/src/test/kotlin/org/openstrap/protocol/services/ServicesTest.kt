@@ -56,6 +56,17 @@ class ServicesTest {
 
 class RealtimeStepsTest {
     @org.junit.Test
+    fun stepCountThatContradictsDistanceIsImplausible() {
+        // Real reply after the 3.25.0.3 update: 8969 steps but 42 m and 5 kcal.
+        val after = RealtimeSteps.parseMessage("04010c092300002a00000005000000".hexToBytes())!!
+        org.junit.Assert.assertEquals(8969, after.steps)
+        org.junit.Assert.assertFalse(after.isPlausible)
+        org.junit.Assert.assertTrue(StepTotals(57, 42, 5).isPlausible)
+        org.junit.Assert.assertTrue(StepTotals(8969, 6200, 300).isPlausible)
+        org.junit.Assert.assertTrue(StepTotals(8969, null, null).isPlausible)
+    }
+
+    @org.junit.Test
     fun parsesQueryReplyAndPush() {
         // flags 0x0C: steps 1234, distance 900 m, 45 kcal.
         val reply = "04 01 0c d2040000 84030000 2d000000".replace(" ", "").hexToBytes()

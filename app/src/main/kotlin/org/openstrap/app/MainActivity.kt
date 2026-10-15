@@ -61,6 +61,22 @@ class MainActivity : ComponentActivity() {
         // Reconnect to a paired strap whenever the app comes to the front (sync follows on connect).
         val granted = checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) == android.content.pm.PackageManager.PERMISSION_GRANTED
         if (granted) (application as OpenStrapApp).container.strap.autoConnect()
+        handleDebugIntent()
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleDebugIntent()
+    }
+
+    /** Debug: `am start -n org.openstrap.app/.MainActivity --ei dump_raw_days 7` dumps raw history to files/raw. */
+    private fun handleDebugIntent() {
+        val days = intent.getIntExtra("dump_raw_days", 0)
+        if (!BuildConfig.DEBUG || days <= 0) return
+        intent.removeExtra("dump_raw_days")
+        android.util.Log.i("OpenStrap", "dump: requested $days days")
+        ((application as OpenStrapApp).container.strap as? org.openstrap.app.device.StrapManager)?.dumpRaw(days)
     }
 }
 

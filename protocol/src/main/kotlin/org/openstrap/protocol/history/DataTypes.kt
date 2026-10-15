@@ -37,8 +37,8 @@ enum class HistoryDataType(val code: Int, val strap: StrapRelevance) {
     SPO2_OSA_EVENT_ALT(43, StrapRelevance.IF_ADVERTISED),
     DEVICE_STATISTIC(44, StrapRelevance.NOT_APPLICABLE),
 
-    // UNVERIFIED: 02 §2/§3.10 - sync-time keys exist but no GDSP job/parser was found.
-    BODY_TEMPERATURE_ALL_DAY(46, StrapRelevance.IF_ADVERTISED),
+    // 46 verified on hardware (skin temperature per minute). 47/48: sync-time keys only, no job found.
+    BODY_TEMPERATURE_ALL_DAY(46, StrapRelevance.EXPECTED),
     BODY_TEMPERATURE_SINGLE(47, StrapRelevance.IF_ADVERTISED),
     BODY_TEMPERATURE_80S(48, StrapRelevance.IF_ADVERTISED),
 

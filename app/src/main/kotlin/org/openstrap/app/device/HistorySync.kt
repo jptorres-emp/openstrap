@@ -10,11 +10,14 @@ import kotlinx.coroutines.withTimeoutOrNull
 import org.openstrap.app.ble.GattClient
 import org.openstrap.app.ble.StrapUuids
 import org.openstrap.app.data.db.ActivityMinute
+import org.openstrap.app.data.db.BreathRate
 import org.openstrap.app.data.db.HealthDao
 import org.openstrap.app.data.db.HeartRateSample
 import org.openstrap.app.data.db.HrvSample
+import org.openstrap.app.data.db.PaiSample
 import org.openstrap.app.data.db.RestingHeartRate
 import org.openstrap.app.data.db.SleepSession
+import org.openstrap.app.data.db.SkinTemperature
 import org.openstrap.app.data.db.SleepStage
 import org.openstrap.app.data.db.Spo2Sample
 import org.openstrap.app.data.settings.SettingsStore
@@ -28,12 +31,17 @@ import org.openstrap.protocol.history.HistoryRecord
 import org.openstrap.protocol.history.HistoryTypeSpec
 import org.openstrap.protocol.history.HistoryTypeSpecs
 import org.openstrap.protocol.history.HrvRmssd
+import org.openstrap.protocol.history.PaiRecord
 import org.openstrap.protocol.history.ParseContext
 import org.openstrap.protocol.history.ParseResult
 import org.openstrap.protocol.history.RestHrRealtime
 import org.openstrap.protocol.history.SecondHeartRate
+import org.openstrap.protocol.history.SkinTemperatureSample
+import org.openstrap.protocol.history.SleepBreathRate
 import org.openstrap.protocol.history.SleepResult
+import org.openstrap.protocol.history.SleepStageCodes
 import org.openstrap.protocol.history.SleepStageType
+import org.openstrap.protocol.history.HeartRateSentinel
 import org.openstrap.protocol.history.SpO2Reading
 import org.openstrap.protocol.history.SpotHeartRate
 import org.openstrap.protocol.services.Endpoints
@@ -97,6 +105,52 @@ class HistorySync(
         }
     }
 
+    /**
+     * Debug aid: fetches every type the strap offers since [fromEpoch] and writes each chunk's payload to
+     * [dir] as `<code>_<headerTime>.bin`, without storing records or moving sync cursors.
+     */
+    suspend fun dumpRaw(fromEpoch: Long, dir: java.io.File) = coroutineScope {
+        dir.deleteRecursively(); dir.mkdirs()
+        val listeners = launch {
+            launch { gatt.notifications.filter { it.characteristic == HISTORY_DATA }.collect { data.send(it.value) } }
+            if (useChannel) launch { session.messagesFor(Endpoints.HISTORY).collect { control.send(FetchCodec.parse(it)) } }
+            else launch { gatt.notifications.filter { it.characteristic == HISTORY_CONTROL }.collect { control.send(FetchCodec.parse(it.value)) } }
+        }
+        try {
+            gatt.enableNotifications(StrapUuids.MAIN_SERVICE, HISTORY_DATA)
+            if (!useChannel) gatt.enableNotifications(StrapUuids.MAIN_SERVICE, HISTORY_CONTROL)
+            val version = command(FetchCodec.queryVersion()) as? GdspMessage.VersionReply
+            val codes = version?.supportedTypes()?.sorted().orEmpty()
+            log("dump: types $codes")
+            for (code in codes) {
+                state.value = SyncState.Running("Dumping type $code")
+                runCatching {
+                    var cursor = fromEpoch
+                    repeat(DUMP_CHUNKS) {
+                        val start = command(FetchCodec.startFetch(code, org.openstrap.protocol.history.GdspTime.of(cursor, zone)))
+                        if (start !is GdspMessage.StartReply || !start.isSuccess) { log("dump $code: start ${start.status}"); return@runCatching }
+                        if (start.size == 0L) { finish(ok = true); log("dump $code: empty"); return@runCatching }
+                        val header = start.firstRecordEpoch ?: cursor
+                        val (wire, _) = transfer() ?: run { finish(ok = false); return@runCatching }
+                        finish(ok = true)
+                        val payload = if (wire.size.toLong() != start.size && isZlib(wire)) inflate(wire) else wire
+                        java.io.File(dir, "${code}_$header.bin").writeBytes(payload)
+                        log("dump $code: ${payload.size} bytes, size field ${start.size}, from ${Instant.ofEpochSecond(header)}")
+                        val spec = HistoryTypeSpecs.forCode(code)
+                        val parsed = spec?.parser?.parse(payload, ParseContext(header, activityRecordSize = recordSize(code, payload, start.size)))
+                        val next = (parsed as? ParseResult.Success)?.nextCursor
+                        if (next == null || next <= cursor || spec?.loops == false) return@runCatching
+                        cursor = next
+                    }
+                }.onFailure { log("dump $code: $it") }
+            }
+            state.value = SyncState.Done(System.currentTimeMillis() / 1000)
+            log("dump: done")
+        } finally {
+            listeners.cancel()
+        }
+    }
+
     private suspend fun send(bytes: ByteArray) {
         if (useChannel) session.send(Endpoints.HISTORY, bytes)
         else gatt.write(StrapUuids.MAIN_SERVICE, HISTORY_CONTROL, bytes, withResponse = true)
@@ -125,6 +179,9 @@ class HistorySync(
         val padding = dao.deletePaddingActivity()
         val outside = dao.deleteActivityOutside(MIN_VALID_EPOCH, now + FUTURE_SLACK)
         if (padding + outside > 0) log("history: removed $padding padding and $outside misdated activity rows")
+        // Earlier builds stored the whole mode byte; the mode is its low nibble.
+        val modes = dao.fixActivityModeNibble()
+        if (modes > 0) log("history: fixed the mode of $modes activity rows")
         for (type in HistoryDataType.entries) {
             val key = "gdsp_${type.code}"
             val cursor = settings.lastSync(key) ?: continue
@@ -185,12 +242,7 @@ class HistorySync(
             }
             log("history ${spec.type}: ${payload.size} bytes (${start.size}×$unit) from ${Instant.ofEpochSecond(headerTime)}: ${payload.copyOf(minOf(32, payload.size)).toHex()}")
 
-            val recordSize = when {
-                spec.type != HistoryDataType.ACTIVITY -> 4
-                unit == 4 || unit == 8 -> unit
-                else -> ActivityLayout.detect(payload)
-            }
-            when (val result = spec.parser!!.parse(payload, ParseContext(headerTime, activityRecordSize = recordSize))) {
+            when (val result = spec.parser!!.parse(payload, ParseContext(headerTime, activityRecordSize = recordSize(spec.code, payload, start.size)))) {
                 is ParseResult.Failure -> {
                     log("history ${spec.type}: parse failed: ${result.reason}")
                     finish(ok = false)
@@ -275,6 +327,10 @@ class HistorySync(
         val stress = mutableListOf<DbStress>()
         val hrv = mutableListOf<HrvSample>()
         val resting = mutableListOf<RestingHeartRate>()
+        val restingFromPai = mutableListOf<RestingHeartRate>()
+        val skin = mutableListOf<SkinTemperature>()
+        val breath = mutableListOf<BreathRate>()
+        val pai = mutableListOf<PaiSample>()
         for (r in records) when (r) {
             is ActivitySample -> activity += ActivityMinute(r.timestamp, r.steps, r.intensity, r.mode, r.heartRate)
             // Per-second HR is averaged per minute to keep the database small.
@@ -286,6 +342,13 @@ class HistorySync(
             is StrapRestingHr -> if (r.heartRate in 30..120) resting += RestingHeartRate(dayStart(r.timestamp), r.heartRate)
             is RestHrRealtime -> if (r.realtimeRestHr in 30..120) resting += RestingHeartRate(dayStart(r.timestamp), r.realtimeRestHr)
             is SleepResult -> storeSleep(r)
+            is SkinTemperatureSample -> r.skinCelsius?.let { skin += SkinTemperature(r.timestamp, it) }
+            is SleepBreathRate -> if (r.breathRate in 4..40) breath += BreathRate(r.timestamp, r.breathRate)
+            is PaiRecord -> {
+                pai += PaiSample(r.timestamp, r.dailyPai, r.totalPai, r.restHr, r.maxHr)
+                // The strap's resting-HR profile; used only for days without a real resting value.
+                if (r.restHr in 30..120) restingFromPai += RestingHeartRate(dayStart(r.timestamp), r.restHr)
+            }
             else -> Unit
         }
         perSecond.forEach { (minute, values) -> hr += HeartRateSample(minute, values.average().toInt()) }
@@ -295,31 +358,68 @@ class HistorySync(
         if (stress.isNotEmpty()) dao.insertStress(stress)
         if (hrv.isNotEmpty()) dao.insertHrv(hrv)
         if (resting.isNotEmpty()) dao.insertRestingHr(resting)
+        if (restingFromPai.isNotEmpty()) dao.insertRestingHrIfMissing(restingFromPai)
+        if (skin.isNotEmpty()) dao.insertSkinTemperature(skin)
+        if (breath.isNotEmpty()) dao.insertBreathRate(breath)
+        if (pai.isNotEmpty()) dao.insertPai(pai)
     }
 
+    /**
+     * Stores a day's sleep result (02 §3.3): the main sleep with the strap's own score and totals, and each
+     * nap. The strap re-sends a day as it updates it, so the day's earlier version is replaced.
+     */
     private suspend fun storeSleep(r: SleepResult) {
-        if (!r.hasMainSleep) return
-        val start = r.resolveTime(r.mainSleepStart)
-        val end = r.resolveTime(r.mainSleepEnd)
-        if (end <= start || end - start > 20 * 3600) {
-            log("history: implausible sleep window $start..$end, skipped")
-            return
+        val day = r.day(zone)
+        val main = r.mainStages.filter { it.rawType in SleepStageCodes.VALID }
+        if (main.isNotEmpty()) {
+            val start = r.resolveTime(main.first().start, zone)
+            val end = r.resolveTime(r.mainSleepEndFixed.takeIf { it > main.first().start } ?: main.last().stop, zone)
+            if (end <= start || end - start > 20 * 3600) {
+                log("history: implausible sleep window $start..$end, skipped")
+            } else {
+                dao.deleteSleepStagesForDay(day, nap = false)
+                dao.deleteSleepSessionsForDay(day, nap = false)
+                dao.insertSleepSessions(listOf(SleepSession(
+                    start, end, day, nap = false,
+                    score = r.sleepScore.takeIf { it in 1..100 },
+                    averageHeartRate = HeartRateSentinel.valid(r.averageHeartRate),
+                    deepMinutes = r.deepSleepLength, lightMinutes = r.lightSleepLength,
+                    remMinutes = r.remSleepLength.takeIf { r.isRemSupported }, awakeMinutes = r.wakeLength,
+                    wakeCount = r.wakeCount,
+                )))
+                dao.insertSleepStages(main.map { stage(it, start, r) })
+            }
         }
-        dao.insertSleepSessions(listOf(SleepSession(start, end)))
-        dao.insertSleepStages(r.mainStages.map {
-            SleepStage(
-                start = r.resolveTime(it.start),
-                end = r.resolveTime(it.stop),
-                sessionStart = start,
-                stage = when (it.type) {
-                    SleepStageType.AWAKE -> SleepStage.AWAKE
-                    SleepStageType.LIGHT -> SleepStage.LIGHT
-                    SleepStageType.DEEP -> SleepStage.DEEP
-                    SleepStageType.REM -> SleepStage.REM
-                    SleepStageType.UNKNOWN -> SleepStage.LIGHT
-                },
-            )
-        })
+        if (r.shortStages.isNotEmpty()) {
+            dao.deleteSleepStagesForDay(day, nap = true)
+            dao.deleteSleepSessionsForDay(day, nap = true)
+            for (nap in r.shortStages) {
+                val start = r.resolveTime(nap.start, zone)
+                val end = r.resolveTime(nap.stop, zone)
+                if (end <= start) continue
+                dao.insertSleepSessions(listOf(SleepSession(start, end, day, nap = true)))
+                dao.insertSleepStages(listOf(stage(nap, start, r)))
+            }
+        }
+    }
+
+    private fun stage(s: org.openstrap.protocol.history.SleepStage, sessionStart: Long, r: SleepResult) = SleepStage(
+        start = r.resolveTime(s.start, zone),
+        end = r.resolveTime(s.stop, zone),
+        sessionStart = sessionStart,
+        stage = when (s.type) {
+            SleepStageType.AWAKE -> SleepStage.AWAKE
+            SleepStageType.DEEP -> SleepStage.DEEP
+            SleepStageType.REM -> SleepStage.REM
+            SleepStageType.LIGHT, SleepStageType.UNKNOWN -> SleepStage.LIGHT
+        },
+    )
+
+    /** Activity record size: the START size field counts records, so bytes ÷ records gives it. */
+    private fun recordSize(code: Int, payload: ByteArray, sizeField: Long): Int {
+        if (code != HistoryDataType.ACTIVITY.code) return 4
+        val unit = if (sizeField > 0 && payload.size % sizeField == 0L) (payload.size / sizeField).toInt() else 0
+        return if (unit == 4 || unit == 8) unit else ActivityLayout.detect(payload)
     }
 
     private fun dayStart(epoch: Long) = Instant.ofEpochSecond(epoch).atZone(zone).toLocalDate().atStartOfDay(zone).toEpochSecond()
@@ -335,6 +435,7 @@ class HistorySync(
         private const val FUTURE_SLACK = 120L
         private const val NO_DATA_TIMEOUT_MS = 20_000L
         private const val MAX_CHUNKS_PER_TYPE = 50
+        private const val DUMP_CHUNKS = 5
     }
 }
 

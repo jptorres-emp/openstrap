@@ -19,11 +19,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.Air
 import androidx.compose.material.icons.filled.Bedtime
+import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.MonitorHeart
 import androidx.compose.material.icons.filled.Psychology
+import androidx.compose.material.icons.filled.Thermostat
 import androidx.compose.material.icons.filled.Watch
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -142,10 +144,19 @@ fun TodayScreen(
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             val mod = Modifier.weight(1f)
             VitalPill((liveHeartRate ?: state.latestHeartRate)?.toString(), "bpm", Icons.Default.Favorite, MetricColors.heart, mod)
-            VitalPill(state.restingHeartRate?.toString(), "rest", Icons.Default.MonitorHeart, MetricColors.heart, mod)
+            VitalPill(state.restingHeartRate?.toString(), if (state.restingEstimated) "rest est." else "rest", Icons.Default.MonitorHeart, MetricColors.heart, mod)
             VitalPill(state.hrv.avg()?.toString(), "ms", Icons.Default.MonitorHeart, MetricColors.hrv, mod)
             VitalPill(state.spo2.avg()?.let { "$it" }, "% SpO₂", Icons.Default.Air, MetricColors.spo2, mod)
             VitalPill(state.stress.avg()?.toString(), "stress", Icons.Default.Psychology, MetricColors.stress, mod)
+        }
+    }
+
+    item {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            val mod = Modifier.weight(1f)
+            VitalPill(state.skinTemperature.lastOrNull()?.let { "%.1f".format(it.y) }, "°C skin", Icons.Default.Thermostat, MetricColors.temperature, mod)
+            VitalPill(state.pai?.let { Math.round(it.total).toString() }, "PAI", Icons.Default.Bolt, MetricColors.steps, mod)
+            VitalPill(state.breathRate.avg()?.toString(), "br/min", Icons.Default.Air, MetricColors.hrv, mod)
         }
     }
 
@@ -162,7 +173,7 @@ fun TodayScreen(
 
     item {
         Panel {
-            PanelHeader("Sleep", Icons.Default.Bedtime, MetricColors.sleepDeep)
+            PanelHeader("Sleep", Icons.Default.Bedtime, MetricColors.sleepDeep, trailing = state.sleep?.score?.let { "Score $it" })
             val asleep = state.asleepSeconds
             if (asleep == null) EmptyHint("No sleep recorded for this night.")
             else {

@@ -2,10 +2,13 @@ package org.openstrap.app.data
 
 import kotlinx.coroutines.flow.Flow
 import org.openstrap.app.data.db.ActivityMinute
+import org.openstrap.app.data.db.BreathRate
 import org.openstrap.app.data.db.HealthDao
 import org.openstrap.app.data.db.HeartRateSample
 import org.openstrap.app.data.db.HrvSample
+import org.openstrap.app.data.db.PaiSample
 import org.openstrap.app.data.db.RestingHeartRate
+import org.openstrap.app.data.db.SkinTemperature
 import org.openstrap.app.data.db.SleepSession
 import org.openstrap.app.data.db.SleepStage
 import org.openstrap.app.data.db.Spo2Sample
@@ -39,4 +42,7 @@ class HealthRepository(private val dao: HealthDao) {
     fun stress(w: DayWindow): Flow<List<StressSample>> = dao.stress(w.from, w.to)
     fun hrv(w: DayWindow): Flow<List<HrvSample>> = dao.hrv(w.from, w.to)
     fun restingHr(from: Long, to: Long): Flow<List<RestingHeartRate>> = dao.restingHr(from, to)
+    fun skinTemperature(w: DayWindow): Flow<List<SkinTemperature>> = dao.skinTemperature(w.from, w.to)
+    fun breathRate(w: DayWindow): Flow<List<BreathRate>> = dao.breathRate(w.from, w.to)
+    fun latestPai(before: Long): Flow<PaiSample?> = dao.latestPai(before)
 }

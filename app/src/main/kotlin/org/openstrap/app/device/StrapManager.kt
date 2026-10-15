@@ -299,6 +299,13 @@ class StrapManager(
         scope.launch { HistorySync(s, client, dao, settings, sync, ::log).run() }
     }
 
+    /** Debug aid, see [HistorySync.dumpRaw]. */
+    fun dumpRaw(days: Int) {
+        val s = activeSession ?: return log("dump: not connected")
+        val client = gatt ?: return
+        scope.launch { HistorySync(s, client, dao, settings, sync, ::log).dumpRaw(System.currentTimeMillis() / 1000 - days * 86_400L, java.io.File(context.filesDir, "raw")) }
+    }
+
     override fun setLiveHeartRate(enabled: Boolean) {
         liveHeartRateEnabled.value = enabled
         scope.launch { settings.setLiveHeartRate(enabled) }

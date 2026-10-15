@@ -192,13 +192,20 @@ class FetchCodecTest {
 class ActivityLayoutTest {
     @org.junit.Test
     fun detectsRecordSize() {
-        // 4-byte records: mode 1, intensity 40, steps 30, hr 80.
-        val four = ByteArray(64) { i -> when (i % 4) { 0 -> 1; 1 -> 40; 2 -> 30; else -> 80 }.toByte() }
-        org.junit.Assert.assertEquals(4, ActivityLayout.detect(four))
+        // Not a whole number of 8-byte records: must be 4-byte.
+        org.junit.Assert.assertEquals(4, ActivityLayout.detect(ByteArray(12) { 1 }))
+        // Byte 4 (0x3A, low nibble 10) is no mode, so these only read as 8-byte records.
+        val four = ByteArray(64) { i -> when (i % 8) { 0 -> 1; 4 -> 0x3A; else -> 40 }.toByte() }
+        org.junit.Assert.assertEquals(8, ActivityLayout.detect(four))
         // 8-byte records whose bytes 4..7 (retain, posture, deep, rem) would be invalid modes.
         val eight = ByteArray(64) { i -> when (i % 8) { 0 -> 5; 1 -> 3; 2 -> 0; 3 -> 55; 4 -> 200; 5 -> 180; 6 -> 90; else -> 140 }.toByte() }
         org.junit.Assert.assertEquals(8, ActivityLayout.detect(eight))
+        // Real Helio Strap minutes: mode byte 0x70/0x76 (state in the high nibble), byte 4 = 5, then 0xFF padding.
+        val strap = w8("7603 00ff 0500 0000 7047 0051 0500 0000 7038 0857 0500 0000 ffff ffff ffff ffff")
+        org.junit.Assert.assertEquals(8, ActivityLayout.detect(strap))
     }
+
+    private fun w8(hex: String) = hex.replace(" ", "").chunked(2).map { it.toInt(16).toByte() }.toByteArray()
 }
 
 class VersionReplyTest {

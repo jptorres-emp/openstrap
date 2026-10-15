@@ -5,14 +5,16 @@ sealed interface HistoryRecord {
     val timestamp: Long
 }
 
-/** Heart-rate byte validation. Spec 02 §3.1: 254 is the "no HR" default; treat >= 254 as missing. */
+/**
+ * Heart-rate byte validation. 254 is Zepp's "no HR" default and 255 is what not-worn minutes carry; Zepp
+ * accepts 30..220 as a real reading (HeartRateInfo.isHRValueValid).
+ */
 object HeartRateSentinel {
-    // UNVERIFIED: 02 §3.1 - whether 255 is also invalid; we treat >= 254 as missing. We also treat
-    // 0 as missing since 0 bpm is not a physiological reading.
-    fun valid(raw: Int): Int? = if (raw == 0 || raw >= 254) null else raw
+    val VALID = 30..220
+    fun valid(raw: Int): Int? = raw.takeIf { it in VALID }
 }
 
-/** Activity `mode` constants (spec 02 §3.1). */
+/** Activity `mode` constants (spec 02 §3.1): the low nibble of the record's first byte. */
 object ActivityMode {
     const val SILENT = 0
     const val WALKING = 1
@@ -27,16 +29,23 @@ object ActivityMode {
     const val BLANK = 126
 }
 
-/** Type 1, one per minute. [sleepExtra] holds bytes 4..7 when the record size is >= 8. */
+/**
+ * Type 1, one per minute. [sleepExtra] holds bytes 4..7 when the record size is >= 8.
+ *
+ * The first byte packs two values (verified against the strap's own log): the low nibble is the
+ * [ActivityMode] (3 = not worn, 6 = charging), the high nibble a firmware state (0x7_, 0x5_, ...).
+ */
 data class ActivitySample(
     override val timestamp: Long,
-    val mode: Int,
+    val rawMode: Int,
     val intensity: Int,
     val steps: Int,
     val rawHeartRate: Int,
     val sleepExtra: ActivitySleepExtra?,
 ) : HistoryRecord {
     val heartRate: Int? get() = HeartRateSentinel.valid(rawHeartRate)
+    val mode: Int get() = if (rawMode == ActivityMode.BLANK) rawMode else rawMode and 0x0F
+    val isWorn: Boolean get() = mode != ActivityMode.NOT_WORN && mode != ActivityMode.CHARGING
 }
 
 // UNVERIFIED: 02 §3.1 - bit-level meaning of bytes 4..7 is unknown; exposed raw.
@@ -70,22 +79,24 @@ data class SpotHeartRate(override val timestamp: Long, val tzQuarters: Int, val 
 
 enum class SleepStageType { AWAKE, LIGHT, DEEP, REM, UNKNOWN }
 
-/**
- * One stage of an on-device sleep result. [start]/[stop] are raw i16 values whose unit/origin is
- * UNVERIFIED (02 §3.3); see [SleepResult.resolveTime].
- */
+/** One stage of an on-device sleep result. [start]/[stop] are raw minutes; see [SleepResult.resolveTime]. */
 data class SleepStage(val start: Int, val stop: Int, val rawType: Int) {
     val type: SleepStageType get() = SleepStageCodes.map(rawType)
 }
 
+/** Zepp's SleepMode codes (02 §3.3). Slots with any other code are unused. */
 object SleepStageCodes {
-    // UNVERIFIED: 02 §3.3 - numeric stage codes were not found in the decompiled app. Pure best
-    // guess; calibrate against the official app's sleep chart on real hardware.
+    const val LIGHT = 4
+    const val DEEP = 5
+    const val AWAKE = 7
+    const val REM = 8
+    val VALID = setOf(LIGHT, DEEP, AWAKE, REM)
+
     fun map(code: Int): SleepStageType = when (code) {
-        0 -> SleepStageType.AWAKE
-        1 -> SleepStageType.LIGHT
-        2 -> SleepStageType.DEEP
-        3 -> SleepStageType.REM
+        LIGHT -> SleepStageType.LIGHT
+        DEEP -> SleepStageType.DEEP
+        AWAKE -> SleepStageType.AWAKE
+        REM -> SleepStageType.REM
         else -> SleepStageType.UNKNOWN
     }
 }
@@ -109,17 +120,25 @@ data class SleepResult(
     val sleepScore: Int,
     val shortSleeps: List<ShortSleep>,
     val mainStages: List<SleepStage>,
+    /** Nap stages: every nap slot holding a valid stage code (Zepp ignores the nap stage count). */
     val shortStages: List<SleepStage>,
     val remSleepLength: Int,
     val lightSleepLength: Int,
     val deepSleepLength: Int,
     val wakeLength: Int,
 ) : HistoryRecord {
-    /**
-     * Convert a raw i16 time field to epoch seconds.
-     * UNVERIFIED: 02 §3.3 - assumes minutes relative to [belongTime]. Adjust after hardware tests.
-     */
-    fun resolveTime(raw: Int): Long = belongTime + raw * 60L
+    /** Local midnight of the day this result belongs to: the date of [belongTime] + 2 h (02 §3.3). */
+    fun day(zone: java.time.ZoneId): Long =
+        java.time.Instant.ofEpochSecond(belongTime + 2 * 3600).atZone(zone).toLocalDate().atStartOfDay(zone).toEpochSecond()
+
+    /** Raw i16 times are minutes from local midnight of the day before [day], so 1440 = midnight of [day]. */
+    fun resolveTime(raw: Int, zone: java.time.ZoneId): Long = day(zone) + (raw - 1440) * 60L
+
+    /** Version 0 firmware reports the main sleep end one minute early. */
+    val mainSleepEndFixed: Int get() = if (version == 0) mainSleepEnd + 1 else mainSleepEnd
+
+    val totalSleepMinutes: Int get() = remSleepLength + lightSleepLength + deepSleepLength
+    val wakeCount: Int get() = mainStages.count { it.rawType == SleepStageCodes.AWAKE }
 }
 
 /** Type 37: spot/auto SpO2. [history] holds the 60 preceding samples (v2 only). */
@@ -176,6 +195,12 @@ data class OsaDesaturation(val odTime: Long, val odValue: Int, val odDuration: I
 data class StressSample(override val timestamp: Long, val stress: Int, val allDay: Boolean) : HistoryRecord {
     // UNVERIFIED: 02 §3.6 - sentinel not confirmed; 0 and >= 254 are probably gaps.
     val isLikelyGap: Boolean get() = stress == 0 || stress >= 254
+}
+
+/** Type 46: per-minute temperatures in 0.01 °C; null when the sensor had no reading. */
+data class SkinTemperatureSample(override val timestamp: Long, val skinCentiCelsius: Int?, val ambientCentiCelsius: Int?) : HistoryRecord {
+    /** Plausible skin readings only; the sensor reads room temperature while off the wrist. */
+    val skinCelsius: Float? get() = skinCentiCelsius?.let { it / 100f }?.takeIf { it in 20f..42f }
 }
 
 /** Type 73. RMSSD unit probably ms (UNVERIFIED). */

@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.stateIn
 import org.openstrap.app.data.DayWindow
 import org.openstrap.app.data.HealthRepository
 import org.openstrap.app.data.Summaries
+import org.openstrap.app.data.db.PaiSample
 import org.openstrap.app.data.db.SleepSession
 import org.openstrap.app.data.db.SleepStage
 import org.openstrap.app.ui.components.ChartPoint
@@ -36,14 +37,21 @@ data class DayUiState(
     val heartRate: List<ChartPoint> = emptyList(),
     val latestHeartRate: Int? = null,
     val restingHeartRate: Int? = null,
+    /** True when [restingHeartRate] is our own estimate rather than the strap's value. */
+    val restingEstimated: Boolean = false,
     val restingTrend: List<TrendPoint> = emptyList(),
     val hrvTrend: List<TrendPoint> = emptyList(),
+    /** The main sleep, carrying the strap's own score and stage totals when it reported them. */
     val sleep: SleepSession? = null,
+    val naps: List<SleepSession> = emptyList(),
     val sleepStages: List<StageSpan> = emptyList(),
     val sleepBreakdown: Summaries.SleepBreakdown? = null,
     val spo2: List<ChartPoint> = emptyList(),
     val stress: List<ChartPoint> = emptyList(),
     val hrv: List<ChartPoint> = emptyList(),
+    val skinTemperature: List<ChartPoint> = emptyList(),
+    val breathRate: List<ChartPoint> = emptyList(),
+    val pai: PaiSample? = null,
     val dayStart: Long = 0,
     val dayEnd: Long = 0,
 ) {
@@ -69,9 +77,14 @@ class DayViewModel(private val repo: HealthRepository, private val strapSteps: F
         val activityAndHr = combine(repo.activity(day), repo.heartRate(day)) { act, hr -> act to hr }
         val vitals = combine(repo.spo2(day), repo.stress(day), repo.hrv(day)) { spo2, stress, hrv -> Triple(spo2, stress, hrv) }
         val sleep = repo.sleepSessions(night).flatMapLatest { sessions ->
-            // Main sleep = the longest session that ended in this window.
-            val main = sessions.maxByOrNull { it.end - it.start }
-            if (main == null) flowOf(null to emptyList()) else combine(flowOf(main), repo.sleepStages(main.start)) { s, st -> s to st }
+            // Main sleep = the longest non-nap session that ended in this window.
+            val main = sessions.filter { !it.nap }.maxByOrNull { it.end - it.start }
+            val naps = sessions.filter { it.nap }
+            if (main == null) flowOf(Triple(null, emptyList(), naps))
+            else combine(flowOf(main), repo.sleepStages(main.start)) { s, st -> Triple(s, st, naps) }
+        }
+        val extras = combine(repo.skinTemperature(day), repo.breathRate(night), repo.latestPai(day.to)) { skin, breath, pai ->
+            Triple(skin, breath, pai?.takeIf { it.timestamp >= day.from })
         }
         val weekly = combine(repo.restingHr(week.from, week.to), repo.heartRate(week), repo.activity(week), repo.hrv(week)) { resting, hr, act, hrv ->
             val days = (6 downTo 0).map { date.minusDays(it.toLong()) }
@@ -79,10 +92,10 @@ class DayViewModel(private val repo: HealthRepository, private val strapSteps: F
             val restingTrend = days.map { d ->
                 val w = DayWindow.of(d, zone)
                 val stored = resting.firstOrNull { it.day in w.from..w.to }?.bpm
-                val estimated = stored ?: Summaries.estimateRestingHr(
-                    Summaries.heartRateSeries(hr.filter { it.timestamp in w.from..w.to }, act.filter { it.timestamp in w.from..w.to }),
-                )
-                TrendPoint(label(d), estimated?.toFloat())
+                // Our own estimate (lowest 30-min average) only means something with most of a day's data.
+                val series = Summaries.heartRateSeries(hr.filter { it.timestamp in w.from..w.to }, act.filter { it.timestamp in w.from..w.to })
+                val estimated = if (series.size >= MIN_MINUTES_FOR_ESTIMATE) Summaries.estimateRestingHr(series) else null
+                TrendPoint(label(d), (stored ?: estimated)?.toFloat()) to (stored == null && estimated != null)
             }
             val hrvTrend = days.map { d ->
                 val w = DayWindow.of(d, zone)
@@ -91,12 +104,16 @@ class DayViewModel(private val repo: HealthRepository, private val strapSteps: F
             }
             restingTrend to hrvTrend
         }
+        val sleepAndExtras = combine(sleep, extras) { s, e -> s to e }
 
         // The strap's own running total covers steps whose minute records were already taken by another app.
         val liveSteps = if (date == LocalDate.now()) strapSteps else flowOf(null)
         val actAndLive = combine(activityAndHr, liveSteps) { a, live -> a to live }
 
-        return combine(actAndLive, vitals, sleep, weekly) { (ah, live), (spo2, stress, hrv), (session, stages), (restingTrend, hrvTrend) ->
+        return combine(actAndLive, vitals, sleepAndExtras, weekly) { (ah, live), (spo2, stress, hrv), (sleepParts, extraParts), (restingWithFlag, hrvTrend) ->
+            val (session, stages, naps) = sleepParts
+            val (skin, breath, pai) = extraParts
+            val restingTrend = restingWithFlag.map { it.first }
             val (act, hr) = ah
             val series = Summaries.heartRateSeries(hr, act)
             val hourly = Summaries.hourlySteps(act, day.from)
@@ -108,14 +125,19 @@ class DayViewModel(private val repo: HealthRepository, private val strapSteps: F
                 heartRate = Summaries.bucketAverage(series).map { ChartPoint(it.first, it.second.toFloat()) },
                 latestHeartRate = series.lastOrNull()?.second,
                 restingHeartRate = restingTrend.last().value?.toInt(),
+                restingEstimated = restingWithFlag.last().second,
                 restingTrend = restingTrend,
                 hrvTrend = hrvTrend,
                 sleep = session,
+                naps = naps,
                 sleepStages = stages.map { StageSpan(it.start, it.end, it.stage) },
                 sleepBreakdown = if (stages.isEmpty()) null else Summaries.sleepBreakdown(stages),
                 spo2 = spo2.map { ChartPoint(it.timestamp, it.percent.toFloat()) },
                 stress = stress.map { ChartPoint(it.timestamp, it.value.toFloat()) },
                 hrv = hrv.map { ChartPoint(it.timestamp, it.milliseconds.toFloat()) },
+                skinTemperature = skin.map { ChartPoint(it.timestamp, it.celsius) },
+                breathRate = breath.map { ChartPoint(it.timestamp, it.perMinute.toFloat()) },
+                pai = pai,
                 dayStart = day.from,
                 dayEnd = day.to,
             )
@@ -123,6 +145,9 @@ class DayViewModel(private val repo: HealthRepository, private val strapSteps: F
     }
 
     companion object {
+        /** Minutes of heart-rate data a day needs before we estimate its resting HR ourselves. */
+        private const val MIN_MINUTES_FOR_ESTIMATE = 6 * 60
+
         val SLEEP_STAGE_ROWS = mapOf(
             SleepStage.AWAKE to 0,
             SleepStage.REM to 1,

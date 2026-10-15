@@ -25,8 +25,11 @@ class CsvExporter(private val dao: HealthDao) {
             entry("activity_minute.csv", "time,epoch,steps,intensity,kind,heart_rate",
                 dao.activityOnce(from, to).map { listOf(iso(it.timestamp), it.timestamp, it.steps, it.intensity, it.kind, it.heartRate) })
             val sessions = dao.sleepSessionsOnce(from, to)
-            entry("sleep_session.csv", "start,end,start_epoch,end_epoch",
-                sessions.map { listOf(iso(it.start), iso(it.end), it.start, it.end) })
+            entry("sleep_session.csv", "start,end,start_epoch,end_epoch,nap,score,avg_hr,deep_min,light_min,rem_min,awake_min,wake_count",
+                sessions.map {
+                    listOf(iso(it.start), iso(it.end), it.start, it.end, it.nap, it.score, it.averageHeartRate,
+                        it.deepMinutes, it.lightMinutes, it.remMinutes, it.awakeMinutes, it.wakeCount)
+                })
             entry("sleep_stage.csv", "session_start_epoch,start,end,stage",
                 sessions.flatMap { s -> dao.sleepStagesOnce(s.start) }
                     .map { listOf(it.sessionStart, iso(it.start), iso(it.end), stageName(it.stage)) })
@@ -38,6 +41,12 @@ class CsvExporter(private val dao: HealthDao) {
                 dao.hrvOnce(from, to).map { listOf(iso(it.timestamp), it.timestamp, it.milliseconds) })
             entry("resting_hr.csv", "day,epoch,bpm",
                 dao.restingHrOnce(from, to).map { listOf(iso(it.day), it.day, it.bpm) })
+            entry("skin_temperature.csv", "time,epoch,celsius",
+                dao.skinTemperatureOnce(from, to).map { listOf(iso(it.timestamp), it.timestamp, it.celsius) })
+            entry("breath_rate.csv", "time,epoch,breaths_per_minute",
+                dao.breathRateOnce(from, to).map { listOf(iso(it.timestamp), it.timestamp, it.perMinute) })
+            entry("pai.csv", "time,epoch,daily,total,resting_hr,max_hr",
+                dao.paiOnce(from, to).map { listOf(iso(it.timestamp), it.timestamp, it.daily, it.total, it.restingHeartRate, it.maxHeartRate) })
         }
     }
 

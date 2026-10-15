@@ -11,6 +11,7 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.MonitorHeart
 import androidx.compose.material.icons.filled.Psychology
+import androidx.compose.material.icons.filled.Thermostat
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -103,6 +104,7 @@ fun HeartScreen(
     item { TrendPanel("Heart-rate variability", Icons.Default.Insights, MetricColors.hrv, state.hrvTrend, "ms") }
     item { SeriesPanel("Blood oxygen", Icons.Default.Air, MetricColors.spo2, state.spo2, "%", state) }
     item { SeriesPanel("Stress", Icons.Default.Psychology, MetricColors.stress, state.stress, "", state) }
+    item { SeriesPanel("Skin temperature", Icons.Default.Thermostat, MetricColors.temperature, state.skinTemperature, "°C", state, decimals = 1) }
 }
 
 /** 7-day trend card; today's value is the headline. */
@@ -124,12 +126,21 @@ private fun TrendPanel(title: String, icon: ImageVector, color: Color, points: L
 }
 
 @Composable
-private fun SeriesPanel(title: String, icon: ImageVector, color: Color, points: List<ChartPoint>, unit: String, state: DayUiState) {
+private fun SeriesPanel(
+    title: String,
+    icon: ImageVector,
+    color: Color,
+    points: List<ChartPoint>,
+    unit: String,
+    state: DayUiState,
+    decimals: Int = 0,
+) {
     Panel {
         PanelHeader(title, icon, color)
         if (points.isEmpty()) EmptyHint("No data for this day.")
         else {
-            BigValue(points.avg().toString(), unit, caption = "Average")
+            val average = if (decimals == 0) points.avg().toString() else "%.${decimals}f".format(points.map { it.y }.average())
+            BigValue(average, unit, caption = "Average")
             LineChart(points, color, state.dayStart..state.dayEnd, height = 130.dp, gapSeconds = 3 * 3600)
         }
     }
@@ -147,6 +158,9 @@ fun SleepScreen(state: DayUiState, battery: Int?, charging: Boolean, onPrev: () 
     item {
         Panel {
             PanelHeader("Time asleep", Icons.Default.Bedtime, MetricColors.sleepDeep, trailing = "${clock(session.start)} – ${clock(session.end)}")
+            session.score?.let { score ->
+                Text("Sleep score $score" + (session.wakeCount?.let { " · woke $it×" } ?: ""), style = MaterialTheme.typography.titleMedium)
+            }
             BigValue(formatDuration(state.asleepSeconds ?: 0), "", large = true)
             Text(
                 "Total duration ${formatDuration(session.end - session.start)} · goal ${formatDuration(SLEEP_GOAL_SECONDS)}",
@@ -175,6 +189,23 @@ fun SleepScreen(state: DayUiState, battery: Int?, charging: Boolean, onPrev: () 
             ).forEach { (stage, label) ->
                 val secs = b.byStage[stage] ?: 0L
                 StageRow(label, secs, secs.toFloat() / total, SLEEP_COLORS.getValue(stage))
+            }
+        }
+    }
+
+    if (state.breathRate.isNotEmpty()) item {
+        Panel {
+            PanelHeader("Breathing rate", Icons.Default.Air, MetricColors.hrv)
+            BigValue(state.breathRate.avg().toString(), "br/min", caption = "Average during sleep")
+            LineChart(state.breathRate, MetricColors.hrv, session.start..session.end, height = 110.dp)
+        }
+    }
+
+    if (state.naps.isNotEmpty()) item {
+        Panel {
+            PanelHeader("Naps", Icons.Default.Bedtime, MetricColors.sleepLight)
+            state.naps.forEach { nap ->
+                Text("${clock(nap.start)} – ${clock(nap.end)} · ${formatDuration(nap.end - nap.start)}", style = MaterialTheme.typography.bodyMedium)
             }
         }
     }

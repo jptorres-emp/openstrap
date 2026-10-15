@@ -25,6 +25,16 @@ class RecordParsersTest {
     // ---- activity ----
 
     @Test
+    fun activityModeIsLowNibble() {
+        val p = w().u8(0x73).u8(0).u8(0).u8(255).u8(5).u8(0).u8(0).u8(0)
+            .u8(0x70).u8(56).u8(8).u8(87).u8(5).u8(0).u8(0).u8(0).toByteArray()
+        val (notWorn, worn) = ok(HistoryParsers.activity.parse(p, ctx.copy(activityRecordSize = 8))).records
+        assertEquals(ActivityMode.NOT_WORN, notWorn.mode); assertFalse(notWorn.isWorn); assertNull(notWorn.heartRate)
+        assertEquals(ActivityMode.SILENT, worn.mode); assertEquals(0x70, worn.rawMode); assertTrue(worn.isWorn)
+        assertEquals(8, worn.steps); assertEquals(87, worn.heartRate)
+    }
+
+    @Test
     fun activity4Byte() {
         val p = w().u8(1).u8(40).u8(12).u8(72) .u8(3).u8(0).u8(0).u8(254) .u8(0).u8(1).u8(0).u8(255) .u8(9).toByteArray()
         val res = ok(HistoryParsers.activity.parse(p, ctx))
@@ -115,7 +125,12 @@ class RecordParsersTest {
 
     // ---- sleep result ----
 
-    private fun sleepRecord(ts: Long, mainStages: List<Triple<Int, Int, Int>>, shortCount: Int = 1): ByteArray {
+    private fun sleepRecord(
+        ts: Long,
+        mainStages: List<Triple<Int, Int, Int>>,
+        shortCount: Int = 1,
+        naps: List<Triple<Int, Int, Int>> = emptyList(),
+    ): ByteArray {
         val b = w().u32(ts).u32(ts - 3600).u8(2).u8(1)
             .u16(-60).u16(420).u16(-70).u16(430)
             .u8(1).u8(1).u8(1).u8(58).u8(84).u8(shortCount)
@@ -125,14 +140,17 @@ class RecordParsersTest {
             val s = mainStages.getOrNull(i)
             if (s == null) b.u16(0).u16(0).u8(0) else b.u16(s.first).u16(s.second).u8(s.third)
         }
-        repeat(50) { b.u16(0).u16(0).u8(0) }
+        repeat(50) { i ->
+            val s = naps.getOrNull(i)
+            if (s == null) b.u16(0).u16(0).u8(0) else b.u16(s.first).u16(s.second).u8(s.third)
+        }
         b.u16(90).u16(200).u16(80).u16(30)
         return b.toByteArray().also { assertEquals(HistoryParsers.SLEEP_RESULT_SIZE, it.size) }
     }
 
     @Test
     fun sleepResult() {
-        val stages = listOf(Triple(-60, 0, 0), Triple(0, 120, 1), Triple(120, 200, 2), Triple(200, 300, 3), Triple(300, 420, 9))
+        val stages = listOf(Triple(-60, 0, 7), Triple(0, 120, 4), Triple(120, 200, 5), Triple(200, 300, 8), Triple(300, 420, 9))
         val p = sleepRecord(t0, stages) + sleepRecord(t0 + 86400, emptyList(), shortCount = 0)
         val res = ok(HistoryParsers.sleepResult.parse(p, ctx))
         assertEquals(2, res.records.size)
@@ -152,13 +170,32 @@ class RecordParsersTest {
         assertTrue(s.shortStages.isEmpty())
         assertEquals(90, s.remSleepLength); assertEquals(200, s.lightSleepLength)
         assertEquals(80, s.deepSleepLength); assertEquals(30, s.wakeLength)
-        assertEquals(s.belongTime + 120 * 60, s.resolveTime(120))
+        assertEquals(1, s.wakeCount)
         assertTrue(res.records[1].mainStages.isEmpty())
         assertEquals(t0 + 86401, res.nextCursor)
 
         // Truncated: partial record is dropped, not crashed on.
         val trunc = ok(HistoryParsers.sleepResult.parse(p.copyOf(594 + 100), ctx))
         assertEquals(1, trunc.records.size); assertEquals(100, trunc.droppedBytes)
+    }
+
+    @Test
+    fun sleepTimesAreMinutesFromTheDayBefore() {
+        // A night from 23:30 to 07:00, belonging to 2026-10-16 (belongTime is that day's local midnight).
+        val zone = java.time.ZoneId.of("Asia/Dubai")
+        val midnight = java.time.LocalDate.of(2026, 10, 16).atStartOfDay(zone).toEpochSecond()
+        val raw = sleepRecord(midnight, listOf(Triple(1410, 1500, 4), Triple(1500, 1860, 5)), naps = listOf(Triple(2280, 2310, 4)))
+            .also { it[4] = 0; it[5] = 0; it[6] = 0; it[7] = 0 }
+        val b = java.nio.ByteBuffer.wrap(raw).order(java.nio.ByteOrder.LITTLE_ENDIAN)
+        b.putInt(4, midnight.toInt())
+        val s = ok(HistoryParsers.sleepResult.parse(raw, ctx)).records.single()
+        assertEquals(midnight, s.day(zone))
+        assertEquals(midnight - 30 * 60, s.resolveTime(1410, zone))
+        assertEquals(midnight + 7 * 3600, s.resolveTime(1860, zone))
+        assertEquals(listOf(SleepStageType.LIGHT, SleepStageType.DEEP), s.mainStages.map { it.type })
+        // Naps are every valid nap slot, whatever the nap stage count says (it's 0 here).
+        assertEquals(listOf(SleepStage(2280, 2310, 4)), s.shortStages)
+        assertEquals(midnight + 14 * 3600, s.resolveTime(s.shortStages[0].start, zone))
     }
 
     // ---- SpO2 ----

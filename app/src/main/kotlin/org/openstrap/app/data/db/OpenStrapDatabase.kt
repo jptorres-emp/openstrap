@@ -1,6 +1,7 @@
 package org.openstrap.app.data.db
 
 import android.content.Context
+import androidx.room.AutoMigration
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
@@ -15,8 +16,12 @@ import androidx.room.RoomDatabase
         StressSample::class,
         HrvSample::class,
         RestingHeartRate::class,
+        SkinTemperature::class,
+        BreathRate::class,
+        PaiSample::class,
     ],
-    version = 1,
+    version = 2,
+    autoMigrations = [AutoMigration(from = 1, to = 2)],
 )
 abstract class OpenStrapDatabase : RoomDatabase() {
     abstract fun healthDao(): HealthDao

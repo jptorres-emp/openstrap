@@ -222,6 +222,12 @@ General rules:
 
 ### 3.1 ACTIVITY (type 1)
 
+**Verified on hardware (Helio Strap 3.20.0.1):**
+- Records are 8 bytes. The START size field counts records, not bytes.
+- **The first byte packs two values.** Low nibble = `mode`, high nibble = a firmware state that matches the `me:` field of the strap's `ALG_SED` log line. 0x73 = not worn and 0x76 = not worn while charging (both carry HR 0xFF); 0x70, 0x50, 0x60 and 0x40 are worn minutes.
+- A chunk can end in all-0xFF records for minutes not yet written. Parsing stops at the first one, and the next START resumes at the strap's next written minute.
+- Byte 4 (`retain`) was 5, 7 or 13 and bytes 5–7 were 0 while awake.
+
 Payload = N back-to-back records, one per minute. Record *i* has time `header_time + i min`.
 
 Record size `R` = band feature parameter key 0 (`vvg.e[0]`, from the feature blob, `d/qjk.java:44-52`; `d/vvg.java:14-20`). If the key is absent or ≤ 4, `R = 4`. One legacy product uses 3 (`d/ihz.java:43-69`).
@@ -265,6 +271,8 @@ Evidence: `d/o40.java:28-51`; field names from `d/l40.java:20-40` (the toString 
 
 ### 3.2 Per-second heart rate
 
+**Verified on hardware:** type 87 arrives zlib-compressed in 306-byte blocks (`ts u32, count u16, 300 slots`) holding about 89 real samples each. A short block sometimes repeats the next block's first second; keep the later value. Type 85 (no Zepp job) carries the same samples as 5-byte `ts u32, hr u8` records and isn't fetched.
+
 **SEC_HR (76)**: 5-byte records `ts u32, hr u8` (`d/z4j.java:449-466`).
 
 **SEC_HR_V2 (87)**: a sequence of blocks:
@@ -278,6 +286,16 @@ Evidence: `d/o40.java:28-51`; field names from `d/l40.java:20-40` (the toString 
 A block with `count = 0` is skipped (`d/vo30.java:139-230`). The app writes the payload to a temp file first because it can be large.
 
 ### 3.3 SLEEP_RESULT (type 72), on-device sleep staging
+
+**Resolved from the decompiled app** (`SleepMode`, `ydn.java:365-450`, `wg50.java:125-131`, `mt50.java`):
+- **Stage codes:** 4 = LIGHT, 5 = DEEP, 7 = AWAKE, 8 = REM. Any other code is an unused slot.
+- **Time base:** all i16 times are minutes from local midnight of the day *before* the record's day, so `epoch = midnight(day) + (raw − 1440)·60`.
+- **Record day:** `day = date(belongTime + 2 h)` in the phone's zone.
+- **Version 0:** `mainSleepEnd` is one minute early; add 1.
+- **Main sleep vs naps:** main stages are the first `mainStageCount` slots. Naps are *every* nap slot with a valid code; the nap stage count is ignored.
+- **Re-sends:** the strap re-sends a day as it updates it, so the last record for a day wins.
+
+On hardware the strap writes an empty record at local midnight (`hasMainSleep = 0`, `mainSleepEnd = 0xFFFF`).
 
 The strap computes sleep sessions itself when feature bit 65 is set (it is in the strap's static config list, `d/vl80.java:37`). Each record is 594 bytes, little-endian:
 
@@ -403,6 +421,8 @@ Units: RMSSD/SDNN are probably milliseconds (**UNVERIFIED**). `level` semantics 
 `+0` is offset 69 when v < 2 and offset 97 when v ≥ 2. f32 = IEEE-754 LE. Evidence: `d/azk.java:7-70`; names from the `d/hsk.java` toString order. The app also logs and ignores a "realtime" record dated today (`d/l5j.java:44-56`).
 
 ### 3.10 Legacy temperature (type 4)
+
+**Type 46 BODY_TEMPERATURE_ALL_DAY (verified on hardware):** one 8-byte record per minute from the START time: `env s16, touch s16, reserved[4]` (reserved is always `5A5A5A5A`). Values are in 0.01 °C, and 0x7FFF means no reading. `touch` is skin temperature and matches the strap's `HEA_TEMP min thermo` log lines. `env` was always 0x7FFF.
 
 Byte 0 is skipped (presumably a version byte). It is followed by 5-byte records `temp u8`, `ts u32` (`d/z4j.java:174-200`). The temperature unit and offset are **UNVERIFIED**. The strap's wrist-temperature types 46/47/48 have sync-time keys but **no parser was found**: **UNVERIFIED** whether the strap uses GDSP for temperature at all.
 

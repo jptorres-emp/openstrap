@@ -27,13 +27,15 @@ object HistoryTypeSpecs {
         HistoryTypeSpec(HistoryDataType.SPO2_SINGLE, 5, HistoryParsers.spo2Single),
         HistoryTypeSpec(HistoryDataType.SPO2_OSA, 5, HistoryParsers.spo2Sleep),
         HistoryTypeSpec(HistoryDataType.STRESS_ALL_DAY, 6, HistoryParsers.stressAllDay),
-        HistoryTypeSpec(HistoryDataType.STRESS_SINGLE, 6, HistoryParsers.stressSingle),
+        // Zepp fetches single stress once per sync (02 §1.6).
+        HistoryTypeSpec(HistoryDataType.STRESS_SINGLE, 6, HistoryParsers.stressSingle, loops = false),
         HistoryTypeSpec(HistoryDataType.SLEEP_BREATH_RATE, 7, HistoryParsers.sleepBreathRate),
         HistoryTypeSpec(HistoryDataType.SEC_HR_V2, 8, HistoryParsers.secondHrV2),
         HistoryTypeSpec(HistoryDataType.SEC_HR, 8, HistoryParsers.secondHr),
         HistoryTypeSpec(HistoryDataType.TODAY_ACTIVITY_EXTENDED, 9, HistoryParsers.todayActivityExtended),
         HistoryTypeSpec(HistoryDataType.HRV_SDNN, 10, HistoryParsers.hrvSdnn),
         HistoryTypeSpec(HistoryDataType.PAI, 11, HistoryParsers.pai),
+        HistoryTypeSpec(HistoryDataType.BODY_TEMPERATURE_ALL_DAY, 11, HistoryParsers.skinTemperature),
         // TODO: workout summary (protobuf, 02 §3.12) and detail (TLV, 02 §3.13) are not decoded
         // yet. Summary 5 and detail 6 must be fetched back to back with the same cursor.
         HistoryTypeSpec(HistoryDataType.SPORT_SUMMARY, 12, null),

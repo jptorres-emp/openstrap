@@ -153,7 +153,9 @@ object HistoryParsers {
                 while (n > 0 && hrs[n - 1] == 0xFF.toByte()) n--
                 for (k in 0 until n) out += SecondHeartRate(start + k, hrs[k].toInt() and 0xFF)
             }
-            ParseResult.Success(out, lastPlusOne(out), r.remaining)
+            // On hardware a short block sometimes repeats the next block's first second; keep the later value.
+            val unique = out.associateBy { it.timestamp }.values.sortedBy { it.timestamp }
+            ParseResult.Success(unique, lastPlusOne(unique), r.remaining)
         }
     }
 
@@ -176,9 +178,9 @@ object HistoryParsers {
             val shortCount = r.s8().coerceIn(0, 10)
             val shorts = List(10) { ShortSleep(r.s16(), r.s16(), r.s16()) }.take(shortCount)
             val mainCount = r.s8().coerceIn(0, 50)
-            val shortStageCount = r.s8().coerceIn(0, 50)
+            r.s8() // nap stage count; Zepp ignores it and takes every nap slot with a valid code
             val mainStages = List(50) { SleepStage(r.s16(), r.s16(), r.u8()) }.take(mainCount)
-            val shortStages = List(50) { SleepStage(r.s16(), r.s16(), r.u8()) }.take(shortStageCount)
+            val shortStages = List(50) { SleepStage(r.s16(), r.s16(), r.u8()) }.filter { it.rawType in SleepStageCodes.VALID }
             SleepResult(
                 ts, belong, version, hasMain, mainStart, mainEnd, onBed, offBed, remSup, shortSup, hasShort,
                 aveHr, score, shorts, mainStages, shortStages, r.s16(), r.s16(), r.s16(), r.s16(),
@@ -235,6 +237,8 @@ object HistoryParsers {
         fixed(payload, 5, strict = false, offset = off) { r, _ -> SpO2OsaEvent(r.u32(), r.u8(), null, null) }
     }
 
+    private const val TEMP_INVALID = 0x7FFF
+
     const val OSA_RESULT_SIZE = 16 + 240 * 12
 
     /** Type 74 (§3.5): ODI result, 2896 B per record. */
@@ -256,6 +260,17 @@ object HistoryParsers {
     val stressAllDay = HistoryParser { payload, ctx ->
         fixed(payload, 1, strict = false, next = { if (it.isEmpty()) null else ctx.headerTime + it.size * 60L + 1 }) { r, i ->
             StressSample(ctx.headerTime + i * 60L, r.u8(), allDay = true)
+        }
+    }
+
+    /**
+     * Type 46 (§3.10): one 8-byte record per minute from the header time: `env s16, touch s16, reserved[4]`,
+     * in 0.01 °C; 0x7FFF = no reading. Verified on hardware against the strap's `HEA_TEMP` log lines.
+     */
+    val skinTemperature = HistoryParser { payload, ctx ->
+        fixed(payload, 8, strict = false, next = { if (it.isEmpty()) null else ctx.headerTime + it.size * 60L + 1 }) { r, i ->
+            val env = r.s16(); val touch = r.s16(); r.bytes(4)
+            SkinTemperatureSample(ctx.headerTime + i * 60L, touch.takeIf { it != TEMP_INVALID }, env.takeIf { it != TEMP_INVALID })
         }
     }
 

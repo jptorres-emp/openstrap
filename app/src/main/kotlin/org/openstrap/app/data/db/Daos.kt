@@ -32,6 +32,47 @@ interface HealthDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertRestingHr(samples: List<RestingHeartRate>)
 
+    /** For estimates (from PAI) that must not overwrite the strap's own daily resting HR. */
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertRestingHrIfMissing(samples: List<RestingHeartRate>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertSkinTemperature(samples: List<SkinTemperature>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertBreathRate(samples: List<BreathRate>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertPai(samples: List<PaiSample>)
+
+    @Query("UPDATE activity_minute SET kind = kind & 15 WHERE kind > 15 AND kind != 126")
+    suspend fun fixActivityModeNibble(): Int
+
+    /** The strap re-sends a day's sleep as it updates it; drop the old version first. */
+    @Query("DELETE FROM sleep_stage WHERE sessionStart IN (SELECT start FROM sleep_session WHERE day = :day AND nap = :nap)")
+    suspend fun deleteSleepStagesForDay(day: Long, nap: Boolean)
+
+    @Query("DELETE FROM sleep_session WHERE day = :day AND nap = :nap")
+    suspend fun deleteSleepSessionsForDay(day: Long, nap: Boolean)
+
+    @Query("SELECT * FROM skin_temperature WHERE timestamp BETWEEN :from AND :to ORDER BY timestamp")
+    fun skinTemperature(from: Long, to: Long): Flow<List<SkinTemperature>>
+
+    @Query("SELECT * FROM skin_temperature WHERE timestamp BETWEEN :from AND :to ORDER BY timestamp")
+    suspend fun skinTemperatureOnce(from: Long, to: Long): List<SkinTemperature>
+
+    @Query("SELECT * FROM breath_rate WHERE timestamp BETWEEN :from AND :to ORDER BY timestamp")
+    fun breathRate(from: Long, to: Long): Flow<List<BreathRate>>
+
+    @Query("SELECT * FROM breath_rate WHERE timestamp BETWEEN :from AND :to ORDER BY timestamp")
+    suspend fun breathRateOnce(from: Long, to: Long): List<BreathRate>
+
+    @Query("SELECT * FROM pai WHERE timestamp <= :before ORDER BY timestamp DESC LIMIT 1")
+    fun latestPai(before: Long): Flow<PaiSample?>
+
+    @Query("SELECT * FROM pai WHERE timestamp BETWEEN :from AND :to ORDER BY timestamp")
+    suspend fun paiOnce(from: Long, to: Long): List<PaiSample>
+
     @Query("SELECT * FROM heart_rate WHERE timestamp BETWEEN :from AND :to ORDER BY timestamp")
     fun heartRate(from: Long, to: Long): Flow<List<HeartRateSample>>
 

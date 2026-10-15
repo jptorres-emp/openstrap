@@ -27,9 +27,11 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.Key
+import androidx.compose.material.icons.filled.LinkOff
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material.icons.filled.Watch
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -86,6 +88,29 @@ fun DeviceScreen(
     val sync by vm.strap.sync.collectAsState()
     val scan by vm.scan.collectAsState()
     val log by vm.strap.log.collectAsState()
+    var confirmForget by rememberSaveable { mutableStateOf(false) }
+
+    if (confirmForget) {
+        AlertDialog(
+            onDismissRequest = { confirmForget = false },
+            icon = { Icon(Icons.Default.LinkOff, null) },
+            title = { Text("Forget this strap?") },
+            text = {
+                Text(
+                    "OpenStrap will disconnect and delete the strap's address and auth key from this phone. " +
+                        "Your synced health data stays. To pair again you'll need the auth key.\n\n" +
+                        "This doesn't unbind the strap from your Zepp account.",
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = { confirmForget = false; vm.forget() },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                ) { Text("Forget") }
+            },
+            dismissButton = { TextButton(onClick = { confirmForget = false }) { Text("Cancel") } },
+        )
+    }
 
     ScreenList(contentPadding) {
         item {
@@ -126,7 +151,7 @@ fun DeviceScreen(
                         Icon(Icons.Default.SystemUpdate, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                    SettingRow("Forget this strap", "Removes the address and auth key from this phone", onClick = vm::forget) {
+                    SettingRow("Forget this strap", "Removes the address and auth key from this phone", onClick = { confirmForget = true }) {
                         Icon(Icons.Default.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }

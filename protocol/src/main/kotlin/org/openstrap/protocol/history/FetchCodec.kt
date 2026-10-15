@@ -77,13 +77,17 @@ sealed class GdspMessage {
     class VersionReply(override val statusCode: Int, val version: Int?, val rawData: ByteArray) : Response() {
         override val opcode get() = FetchCodec.OP_QUERY_VERSION
 
-        // UNVERIFIED: 02 §1.4 - the channel dataTypeMap layout did not decompile. Best guess:
-        // data = version u8, supportDataUpload bool, supportQueryDataStatus bool, then one type
-        // code per byte. Log rawData and adjust after capturing a real reply.
-        fun guessSupportsDataUpload(): Boolean? = rawData.getOrNull(1)?.let { it.toInt() != 0 }
-        fun guessSupportsQueryDataStatus(): Boolean? = rawData.getOrNull(2)?.let { it.toInt() != 0 }
-        fun guessSupportedTypes(): Set<Int> =
-            if (rawData.size <= 3) emptySet() else rawData.drop(3).map { it.toInt() and 0xFF }.toSet()
+        /**
+         * Data types the device can serve. Verified on a Helio Strap (fw 3.20.0.1):
+         * `version u8, flag u8, count u16, count × {type u8, flag u8}`. Returns null if the layout differs.
+         */
+        fun supportedTypes(): Set<Int>? {
+            if (rawData.size < 4) return null
+            val r = ByteReader(rawData, 2)
+            val count = r.u16()
+            if (r.remaining != count * 2) return null
+            return (0 until count).map { r.u8().also { r.u8() } }.toSet()
+        }
     }
 
     /** START reply. [size] == 0 means nothing newer; [firstRecordTime] is the first record's time. */

@@ -104,11 +104,9 @@ class FetchCodecTest {
         val ack = FetchCodec.parse("100301".hexToBytes()) as GdspMessage.AckReply
         assertTrue(ack.isSuccess)
 
-        val ver = FetchCodec.parse("100001 03 01 00 01 48 49".hexToBytes()) as GdspMessage.VersionReply
+        val ver = FetchCodec.parse("100001 03 00 0200 0101 4801".hexToBytes()) as GdspMessage.VersionReply
         assertEquals(3, ver.version)
-        assertEquals(true, ver.guessSupportsDataUpload())
-        assertEquals(false, ver.guessSupportsQueryDataStatus())
-        assertEquals(setOf(1, 72, 73), ver.guessSupportedTypes())
+        assertEquals(setOf(1, 0x48), ver.supportedTypes())
 
         val other = FetchCodec.parse("10050e".hexToBytes()) as GdspMessage.OtherReply
         assertEquals(GdspStatus.DATA_SIZE_MISMATCH, other.status)
@@ -200,5 +198,15 @@ class ActivityLayoutTest {
         // 8-byte records whose bytes 4..7 (retain, posture, deep, rem) would be invalid modes.
         val eight = ByteArray(64) { i -> when (i % 8) { 0 -> 5; 1 -> 3; 2 -> 0; 3 -> 55; 4 -> 200; 5 -> 180; 6 -> 90; else -> 140 }.toByte() }
         org.junit.Assert.assertEquals(8, ActivityLayout.detect(eight))
+    }
+}
+
+class VersionReplyTest {
+    @org.junit.Test
+    fun parsesSupportedTypesCapturedFromStrap() {
+        // Real reply payload from a Helio Strap (fw 3.20.0.1), truncated to three types.
+        val reply = "10 00 01 03 00 0300 0701 0101 4801".hexToBytes()
+        val v = FetchCodec.parse(reply) as GdspMessage.VersionReply
+        org.junit.Assert.assertEquals(setOf(7, 1, 0x48), v.supportedTypes())
     }
 }

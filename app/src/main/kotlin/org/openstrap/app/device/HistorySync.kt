@@ -21,7 +21,6 @@ import org.openstrap.app.data.settings.SettingsStore
 import org.openstrap.protocol.ChannelSession
 import org.openstrap.protocol.history.ActivityLayout
 import org.openstrap.protocol.history.ActivitySample
-import org.openstrap.protocol.history.FetchAssembler
 import org.openstrap.protocol.history.FetchCodec
 import org.openstrap.protocol.history.GdspMessage
 import org.openstrap.protocol.history.HistoryDataType
@@ -68,7 +67,7 @@ class HistorySync(
         val listeners = launch {
             launch { gatt.notifications.filter { it.characteristic == HISTORY_DATA }.collect { data.send(it.value) } }
             if (useChannel) {
-                launch { session.messagesFor(Endpoints.HISTORY).collect { control.send(FetchCodec.parse(it)) } }
+                launch { session.messagesFor(Endpoints.HISTORY).collect { log("gdsp < ${it.toHex()}"); control.send(FetchCodec.parse(it)) } }
             } else {
                 launch { gatt.notifications.filter { it.characteristic == HISTORY_CONTROL }.collect { control.send(FetchCodec.parse(it.value)) } }
             }
@@ -78,10 +77,11 @@ class HistorySync(
             if (!useChannel) gatt.enableNotifications(StrapUuids.MAIN_SERVICE, HISTORY_CONTROL)
             log("history: control via ${if (useChannel) "channel 0x004B" else "HUAMI(0004)"}")
 
-            val version = runCatching { command(FetchCodec.queryVersion()) }.getOrNull()
-            if (version is GdspMessage.VersionReply) log("history version: ${version.version} raw=${version.rawData.toHex()}")
+            val version = runCatching { command(FetchCodec.queryVersion()) }.getOrNull() as? GdspMessage.VersionReply
+            val advertised = version?.supportedTypes()
+            log("history version ${version?.version}, strap offers types ${advertised?.sorted()}")
 
-            val plan = HistoryTypeSpecs.plan(null).filter { it.parser != null }
+            val plan = HistoryTypeSpecs.plan(advertised).filter { it.parser != null }
             plan.forEachIndexed { i, spec ->
                 state.value = SyncState.Running("Syncing ${label(spec.type)} (${i + 1}/${plan.size})")
                 runCatching { syncType(spec) }.onFailure { log("history ${spec.type}: $it") }
@@ -126,21 +126,36 @@ class HistorySync(
             }
             if (start.size == 0L) return
             val headerTime = start.firstRecordEpoch ?: cursor
-            log("history ${spec.type}: ${start.size} bytes from ${Instant.ofEpochSecond(headerTime)}")
 
-            val payload = transfer(start.size) ?: return
-            log("history ${spec.type}: head ${payload.copyOf(minOf(32, payload.size)).toHex()}")
+            // Always close the fetch with an ACK, even when we reject the data; otherwise the strap stays
+            // mid-transfer and refuses every following START with INVALID_STATE (seen on hardware).
+            val payload = try {
+                transfer()
+            } finally {
+                runCatching { command(FetchCodec.ack()) }.onFailure { log("history: ack failed: $it") }
+            } ?: return
 
-            val recordSize = if (spec.type == HistoryDataType.ACTIVITY) ActivityLayout.detect(payload) else 4
+            // The size field counts bytes on some types and records on others (activity: 1 = one 8-byte minute).
+            val unit = when {
+                payload.size.toLong() == start.size -> 1
+                payload.size % start.size == 0L -> (payload.size / start.size).toInt()
+                else -> { log("history ${spec.type}: got ${payload.size} bytes for size ${start.size}, skipping"); return }
+            }
+            log("history ${spec.type}: ${payload.size} bytes (size ${start.size}×$unit) from ${Instant.ofEpochSecond(headerTime)}: ${payload.copyOf(minOf(32, payload.size)).toHex()}")
+
+            val recordSize = when {
+                spec.type != HistoryDataType.ACTIVITY -> 4
+                unit == 4 || unit == 8 -> unit
+                else -> ActivityLayout.detect(payload)
+            }
             val result = spec.parser!!.parse(payload, ParseContext(headerTime, activityRecordSize = recordSize))
-            // Acknowledge regardless: we track our own cursor, so a rejected chunk is simply re-requested later.
-            runCatching { command(FetchCodec.ack()) }
             when (result) {
                 is ParseResult.Failure -> {
                     log("history ${spec.type}: parse failed: ${result.reason}")
                     return
                 }
                 is ParseResult.Success -> {
+                    log("history ${spec.type}: ${result.records.size} records")
                     store(result.records)
                     val next = result.nextCursor
                     if (next != null && next > cursor) settings.setLastSync(key, next)
@@ -151,10 +166,11 @@ class HistorySync(
         }
     }
 
-    /** TRANSFER, collect indexed packets from 0005 until `10 02`, then verify size. */
-    private suspend fun transfer(size: Long): ByteArray? {
+    /** TRANSFER, then collect indexed packets from 0005 until `10 02`. Returns the payload without index bytes. */
+    private suspend fun transfer(): ByteArray? {
         while (data.tryReceive().isSuccess) Unit // drop stale packets
-        val assembler = FetchAssembler(size)
+        val out = java.io.ByteArrayOutputStream()
+        var lastIndex = -1
         send(FetchCodec.transfer())
         var complete: GdspMessage.TransferComplete? = null
         while (complete == null) {
@@ -165,23 +181,26 @@ class HistorySync(
                 }
             } ?: run { log("history: no data for 20 s"); return null }
             when (got) {
-                is ByteArray -> assembler.accept(got)
+                is ByteArray -> if (got.isNotEmpty()) {
+                    val index = got[0].toInt() and 0xFF
+                    if (lastIndex >= 0 && index != (lastIndex + 1) and 0xFF) log("history: packet gap $lastIndex -> $index")
+                    lastIndex = index
+                    out.write(got, 1, got.size - 1)
+                }
                 is GdspMessage.TransferComplete -> complete = got
                 is GdspMessage.DataAvailable -> Unit
                 else -> log("history: unexpected during transfer: $got")
             }
         }
+        // Packets can trail the end marker slightly; drain briefly.
+        withTimeoutOrNull(300) {
+            while (true) data.receive().let { if (it.isNotEmpty()) out.write(it, 1, it.size - 1) }
+        }
         if (!complete!!.isSuccess) {
             log("history: transfer ended with ${complete!!.status}")
             return null
         }
-        // Packets can trail the end marker slightly; drain briefly.
-        withTimeoutOrNull(300) { while (true) assembler.accept(data.receive()) }
-        assembler.crcMatches(complete!!.crc32)?.let { if (!it) log("history: CRC differs (unverified carrier, keeping data)") }
-        return when (val r = assembler.finish()) {
-            is FetchAssembler.Result.Complete -> r.payload
-            is FetchAssembler.Result.Failed -> { log("history: incomplete transfer ${r.error}"); null }
-        }
+        return out.toByteArray()
     }
 
     private suspend fun store(records: List<HistoryRecord>) {

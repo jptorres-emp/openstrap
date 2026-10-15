@@ -73,6 +73,10 @@ fun ChargeCard(r: RecoveryResult, dayRange: LongRange, sleepBand: LongRange?, on
     Panel(onClick = onClick) {
         PanelHeader("Charge", Icons.Default.BatteryChargingFull, MetricColors.charge, trailing = c.atWake?.let { "Woke at ${it.toInt()}" })
         val now = c.latest
+        if (!c.anchored) {
+            EmptyHint("Charge starts after your first night wearing the strap. Sleep is what fills it, so it needs one to measure from.")
+            return@Panel
+        }
         if (now == null) {
             EmptyHint("Charge appears once the strap has a few hours of heart rate.")
             return@Panel

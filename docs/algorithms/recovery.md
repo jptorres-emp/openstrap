@@ -84,7 +84,7 @@ Most contributors are z-scores (deviation from baseline in SDs, positive = bette
 
 ## Charge (0–100, minute by minute)
 
-A body battery, simulated per minute. The simulation starts 48 h before the day shown, so the arbitrary starting value (50) washes out through two nights of sleep.
+A body battery, simulated per minute. The simulation starts 48 h before the day shown, so the arbitrary starting value (50) washes out through two nights of sleep. Until the simulation has seen at least one sleep (`anchored`), no value is shown: charge is measured from how full a night left you, so without one the number would only echo the starting guess.
 
 ### Minute states
 
@@ -98,7 +98,8 @@ Each minute gets a state, following Firstbeat's stress/recovery method (*Stress 
 | Activity | HRR ≥ 0.20 or ≥ 60 steps/min | −`BASE_DRAIN` − 0.32·TRIMP(HRR) |
 | Stress | strap stress ≥ 40 | −`BASE_DRAIN` − 0.0035·(stress − 40) |
 | Relax | stress < 25 and still | −`BASE_DRAIN` + ¼ of light-sleep recharge |
-| Rest / no data | otherwise | −`BASE_DRAIN` (0.04, about 2.4/h) |
+| Rest | otherwise | −`BASE_DRAIN` (0.04, about 2.4/h) |
+| No data | strap off the wrist | no change: we can't tell rest from effort, so the value holds |
 
 ### Calibration targets (checked by unit tests)
 
@@ -118,6 +119,7 @@ Each minute gets a state, following Firstbeat's stress/recovery method (*Stress 
 * Formula (Banister 1991): TRIMP per minute = x·0.64·e^(1.92x) for men and x·0.86·e^(1.67x) for women, where x is HRR. Unknown sex uses the men's curve.
 * Only awake minutes with x ≥ 0.2 count.
 * Days with fewer than 8 h of heart-rate data are left out of the load history.
+* Live heart rate is stored several times a minute; the engine averages it to one value per minute first.
 
 ## Inputs from the profile (Device → Your profile)
 

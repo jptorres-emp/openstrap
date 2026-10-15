@@ -354,6 +354,11 @@ object Recovery {
         val drainedLiving: Float,
         val highest: Float?,
         val lowest: Float?,
+        /**
+         * True once the simulation has seen a sleep: charge is relative to how full a night left you, so
+         * without one the number would only reflect the arbitrary starting guess.
+         */
+        val anchored: Boolean,
     )
 
     /** Sleep recharge rate per minute, as a fraction of the remaining headroom (≈30 → 92 over 7.5 h). */
@@ -388,6 +393,8 @@ object Recovery {
         start: Float = 50f,
         sampleSeconds: Long = 300,
         mainSleepEnd: Long? = null,
+        /** Report nothing until a sleep has been seen (see [ChargeDay.anchored]); tests switch this off. */
+        requireAnchor: Boolean = true,
     ): ChargeDay {
         var c = start
         var epoc = 0f
@@ -401,6 +408,7 @@ object Recovery {
         var latest: Float? = null
         val hrvFactor = params.hrvScore?.let { (0.75f + 0.25f * it / 80f).coerceIn(0.6f, 1.1f) } ?: 1f
         val nightRest = params.nightRestingHr ?: params.restingHr
+        var anchored = false
 
         for (m in minutes) {
             val hr = m.hr
@@ -409,13 +417,15 @@ object Recovery {
             var delta: Float
             when {
                 m.sleepStage != null -> {
+                    anchored = true
                     state = State.Sleep
                     val relax = hr?.let { (1.2f - 0.04f * (it - nightRest)).coerceIn(0.5f, 1.2f) } ?: 1f
                     delta = SLEEP_K * (STAGE_WEIGHT[m.sleepStage] ?: 0.8f) * relax * hrvFactor * (100 - c)
                 }
+                // Off the wrist we can't tell rest from effort, so the value holds until data returns.
                 hr == null || x == null -> {
                     state = State.NoData
-                    delta = -BASE_DRAIN
+                    delta = 0f
                 }
                 x >= EXERCISE_HRR -> {
                     state = State.Exercise
@@ -466,7 +476,8 @@ object Recovery {
             if (mainSleepEnd != null && atWake == null && m.t >= mainSleepEnd) atWake = c
         }
         val values = points.map { it.value }
-        return ChargeDay(points, latest, atWake, recharged, exercise, stress, living, values.maxOrNull(), values.minOrNull())
+        if (!anchored && requireAnchor) return ChargeDay(emptyList(), null, null, 0f, 0f, 0f, 0f, null, null, anchored = false)
+        return ChargeDay(points, latest, atWake, recharged, exercise, stress, living, values.maxOrNull(), values.minOrNull(), anchored)
     }
 
     private const val EPOC_THRESHOLD = 5f

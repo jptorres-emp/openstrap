@@ -31,7 +31,8 @@ class RecoveryEngine(private val dao: HealthDao) {
         val from = DayWindow.of(date.minusDays(Recovery.BASELINE_NIGHTS.toLong() + 1), zone).from
         val to = day.to
 
-        val hr = Summaries.heartRateSeries(dao.heartRateOnce(from, to), dao.activityOnce(from, to))
+        // Live heart rate is stored several times a minute; the model works in minutes.
+        val hr = Summaries.bucketAverage(Summaries.heartRateSeries(dao.heartRateOnce(from, to), dao.activityOnce(from, to)), 60)
         val sessions = dao.sleepSessionsOnce(from, to)
         val hrv = dao.hrvOnce(from, to)
         val skin = dao.skinTemperatureOnce(from, to)

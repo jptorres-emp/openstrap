@@ -148,7 +148,7 @@ class RecoveryTest {
     @Test
     fun quietWakingDrainsSlowly() {
         val day = run(600) { Minute(it * 60L, 64, 0, 30, null) }
-        val r = Recovery.charge(day, params, 0L..600 * 60L, start = 80f)
+        val r = Recovery.charge(day, params, 0L..600 * 60L, start = 80f, requireAnchor = false)
         assertEquals(80f - 600 * Recovery.BASE_DRAIN, r.latest!!, 0.5f)
         assertEquals(0f, r.drainedExercise, 0.01f)
     }
@@ -156,7 +156,7 @@ class RecoveryTest {
     @Test
     fun anHourOfModerateExerciseDrainsAboutAQuarter() {
         val hr = (58 + 0.6f * (188 - 58)).toInt() // 60% of reserve
-        val r = Recovery.charge(run(60) { Minute(it * 60L, hr, 150, 70, null) }, params, 0L..3600L, start = 80f)
+        val r = Recovery.charge(run(60) { Minute(it * 60L, hr, 150, 70, null) }, params, 0L..3600L, start = 80f, requireAnchor = false)
         val drop = 80f - r.latest!!
         assertTrue("drop $drop", drop in 20f..32f)
         assertTrue(r.drainedExercise > r.drainedLiving)
@@ -168,22 +168,22 @@ class RecoveryTest {
         val workout = run(40) { Minute(it * 60L, 150, 160, 80, null) }
         // Cool-down: HR easing down, strap stress still high from the workout.
         val after = run(20) { Minute((40 + it) * 60L, 95 - it, 0, 75, null) }
-        val r = Recovery.charge(workout + after, params, 0L..3600L, start = 90f)
+        val r = Recovery.charge(workout + after, params, 0L..3600L, start = 90f, requireAnchor = false)
         assertTrue(r.points.filter { it.t >= 40 * 60L }.none { it.state == State.Stress })
         assertEquals(0f, r.drainedStress, 0.01f)
     }
 
     @Test
     fun sustainedStressDrainsFasterThanCalm() {
-        val calm = Recovery.charge(run(240) { Minute(it * 60L, 66, 0, 20, null) }, params, 0L..14_400L, start = 70f).latest!!
-        val tense = Recovery.charge(run(240) { Minute(it * 60L, 74, 0, 80, null) }, params, 0L..14_400L, start = 70f)
+        val calm = Recovery.charge(run(240) { Minute(it * 60L, 66, 0, 20, null) }, params, 0L..14_400L, start = 70f, requireAnchor = false).latest!!
+        val tense = Recovery.charge(run(240) { Minute(it * 60L, 74, 0, 80, null) }, params, 0L..14_400L, start = 70f, requireAnchor = false)
         assertTrue(calm > tense.latest!! + 5)
         assertTrue(tense.drainedStress > 0)
     }
 
     @Test
     fun chargeStaysInRange() {
-        val r = Recovery.charge(run(2000) { Minute(it * 60L, 175, 170, 90, null) }, params, 0L..120_000L, start = 50f)
+        val r = Recovery.charge(run(2000) { Minute(it * 60L, 175, 170, 90, null) }, params, 0L..120_000L, start = 50f, requireAnchor = false)
         assertTrue(r.points.all { it.value in 0f..100f })
         assertEquals(0f, r.lowest!!, 0.01f)
     }
@@ -231,5 +231,24 @@ class RecoveryTest {
         assertEquals(0.4f * 0.86f * kotlin.math.exp(1.67f * 0.4f), Recovery.trimpMinute(0.4f, female = true), 1e-4f)
         assertTrue(Recovery.trimpMinute(0.4f, female = true) > Recovery.trimpMinute(0.4f))
         assertTrue(Recovery.trimpMinute(0.95f, female = true) > Recovery.trimpMinute(0.95f))
+    }
+
+    @Test
+    fun noSleepMeansNoCharge() {
+        // A new user's first evening: plenty of heart rate, no night yet. A number here would be a guess.
+        val r = Recovery.charge(run(300) { Minute(it * 60L, 70, 0, 40, null) }, params, 0L..18_000L)
+        assertFalse(r.anchored)
+        assertNull(r.latest)
+        assertTrue(r.points.isEmpty())
+    }
+
+    @Test
+    fun chargeHoldsWhileTheStrapIsOff() {
+        val night = run(60) { Minute(it * 60L, 52, 0, null, SleepStage.DEEP) }
+        val off = run(240) { Minute((60 + it) * 60L, null, 0, null, null) }
+        val r = Recovery.charge(night + off, params, 0L..18_000L, start = 60f, sampleSeconds = 60)
+        val atWake = r.points.last { it.t < 60 * 60L }.value
+        assertTrue(r.anchored)
+        assertEquals(atWake, r.points.last().value, 0.5f)
     }
 }

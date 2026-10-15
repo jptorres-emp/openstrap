@@ -1,4 +1,9 @@
-# OpenStrap
+<h1>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/logo-dark.png">
+    <img src="docs/assets/logo-light.png" alt="OpenStrap" height="56">
+  </picture>
+</h1>
 
 A private, open-source companion app for the **Amazfit Helio Strap**, built as a replacement for Zepp.
 

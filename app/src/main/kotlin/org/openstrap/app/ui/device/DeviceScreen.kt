@@ -23,6 +23,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.BluetoothSearching
+import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.FileDownload
@@ -210,17 +211,19 @@ private fun StatusHero(name: String, address: String, connection: ConnectionStat
             }
         }
 
-        val battery = (connection as? ConnectionState.Connected)?.batteryPercent
+        val connected = connection as? ConnectionState.Connected
+        val battery = connected?.batteryPercent
+        val charging = connected?.charging == true
+        val ringColor = MetricColors.battery(battery)
         Box(Modifier.fillMaxWidth().padding(vertical = 8.dp), contentAlignment = Alignment.Center) {
-            ProgressRing(
-                (battery ?: 0) / 100f,
-                if ((battery ?: 100) <= 15) MetricColors.heart else MetricColors.good,
-                size = 168.dp, stroke = 10.dp,
-            )
+            ProgressRing((battery ?: 0) / 100f, ringColor, size = 168.dp, stroke = 10.dp)
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Icon(Icons.Default.Watch, null, Modifier.size(28.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                Icon(
+                    if (charging) Icons.Default.Bolt else Icons.Default.Watch, null, Modifier.size(28.dp),
+                    tint = if (charging) ringColor else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
                 Text(battery?.let { "$it%" } ?: "—", style = MaterialTheme.typography.displaySmall)
-                SectionLabel("Battery")
+                SectionLabel(if (charging) "Charging" else "Battery", color = if (charging) ringColor else MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
 

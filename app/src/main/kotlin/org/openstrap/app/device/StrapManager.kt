@@ -53,6 +53,7 @@ class StrapManager(
     private var session: ChannelSession? = null
     private var link: GattStrapLink? = null
     private var battery: Int? = null
+    private var charging = false
     private var firmware: String? = null
 
     /** The connected session, for features such as history sync and firmware update. */
@@ -90,7 +91,7 @@ class StrapManager(
                 s.handshake(device.authKeyHex.hexToBytes())
 
                 afterAuth(client, l, s)
-                connection.value = ConnectionState.Connected(battery, firmware)
+                connection.value = ConnectionState.Connected(battery, firmware, charging)
                 watchBattery(s)
             } catch (e: AuthException) {
                 log("auth failed: ${e.message}")
@@ -121,14 +122,17 @@ class StrapManager(
         }.getOrNull()
         log("firmware=$firmware")
 
-        battery = runCatching {
+        runCatching {
             if (s.services.has(Endpoints.BATTERY)) {
-                BatteryInfo.parseChannel(s.request(Endpoints.BATTERY, BatteryInfo.GET) { it.u8(0) == 0x04 })?.level
+                BatteryInfo.parseChannel(s.request(Endpoints.BATTERY, BatteryInfo.GET) { it.u8(0) == 0x04 })
             } else {
-                BatteryInfo.parse(client.read(StrapUuids.MAIN_SERVICE, StrapUuids.BATTERY)).level
+                BatteryInfo.parse(client.read(StrapUuids.MAIN_SERVICE, StrapUuids.BATTERY))
             }
-        }.onFailure { log("battery read failed: $it") }.getOrNull()
-        log("battery=$battery")
+        }.onFailure { log("battery read failed: $it") }.getOrNull()?.let {
+            battery = it.level
+            charging = it.charging == true
+        }
+        log("battery=$battery charging=$charging")
 
         runCatching {
             val now = ZonedDateTime.now()
@@ -146,7 +150,11 @@ class StrapManager(
         s.messagesFor(Endpoints.BATTERY).collect { payload ->
             BatteryInfo.parseChannel(payload)?.let { info ->
                 battery = info.level
-                (connection.value as? ConnectionState.Connected)?.let { connection.value = it.copy(batteryPercent = info.level) }
+                charging = info.charging == true
+                log("battery update ${info.level}% charging=$charging")
+                (connection.value as? ConnectionState.Connected)?.let {
+                    connection.value = it.copy(batteryPercent = info.level, charging = charging)
+                }
             }
         }
     }

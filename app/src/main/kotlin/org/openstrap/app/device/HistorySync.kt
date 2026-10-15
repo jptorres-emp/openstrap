@@ -124,39 +124,53 @@ class HistorySync(
                 log("history ${spec.type}: start refused (${start.status})")
                 return
             }
-            if (start.size == 0L) return
+            // Every START must be closed with an ACK, even an empty one; otherwise the strap keeps the type
+            // open and refuses other types with INVALID_STATE (seen on hardware).
+            if (start.size == 0L) {
+                finish(ok = true)
+                return
+            }
             val headerTime = start.firstRecordEpoch ?: cursor
+            val transferred = transfer()
+            if (transferred == null) {
+                finish(ok = false)
+                return
+            }
+            val (payload, deviceCrc) = transferred
+            if (deviceCrc != null && deviceCrc != org.openstrap.protocol.crypto.crc32(payload)) {
+                log("history ${spec.type}: CRC mismatch, discarding")
+                finish(ok = false)
+                return
+            }
 
-            // Always close the fetch with an ACK, even when we reject the data; otherwise the strap stays
-            // mid-transfer and refuses every following START with INVALID_STATE (seen on hardware).
-            val payload = try {
-                transfer()
-            } finally {
-                runCatching { command(FetchCodec.ack()) }.onFailure { log("history: ack failed: $it") }
-            } ?: return
-
-            // The size field counts bytes on some types and records on others (activity: 1 = one 8-byte minute).
+            // The size field counts records, not bytes (activity: size 4 = four 8-byte minutes).
             val unit = when {
                 payload.size.toLong() == start.size -> 1
                 payload.size % start.size == 0L -> (payload.size / start.size).toInt()
-                else -> { log("history ${spec.type}: got ${payload.size} bytes for size ${start.size}, skipping"); return }
+                else -> {
+                    log("history ${spec.type}: got ${payload.size} bytes for size ${start.size}, discarding")
+                    finish(ok = false)
+                    return
+                }
             }
-            log("history ${spec.type}: ${payload.size} bytes (size ${start.size}×$unit) from ${Instant.ofEpochSecond(headerTime)}: ${payload.copyOf(minOf(32, payload.size)).toHex()}")
+            log("history ${spec.type}: ${payload.size} bytes (${start.size}×$unit) from ${Instant.ofEpochSecond(headerTime)}: ${payload.copyOf(minOf(32, payload.size)).toHex()}")
 
             val recordSize = when {
                 spec.type != HistoryDataType.ACTIVITY -> 4
                 unit == 4 || unit == 8 -> unit
                 else -> ActivityLayout.detect(payload)
             }
-            val result = spec.parser!!.parse(payload, ParseContext(headerTime, activityRecordSize = recordSize))
-            when (result) {
+            when (val result = spec.parser!!.parse(payload, ParseContext(headerTime, activityRecordSize = recordSize))) {
                 is ParseResult.Failure -> {
                     log("history ${spec.type}: parse failed: ${result.reason}")
+                    finish(ok = false)
                     return
                 }
                 is ParseResult.Success -> {
                     log("history ${spec.type}: ${result.records.size} records")
                     store(result.records)
+                    // Only acknowledge once the data is safely in the database.
+                    finish(ok = true)
                     val next = result.nextCursor
                     if (next != null && next > cursor) settings.setLastSync(key, next)
                     if (!HistoryTypeSpecs.shouldContinue(spec, cursor, next)) return
@@ -166,8 +180,24 @@ class HistorySync(
         }
     }
 
+    /**
+     * Closes the current fetch. `03 01` after data we stored; `03 00` when we could not use it.
+     * The bare `03` was ignored by the strap (it then timed out with status 0x32).
+     */
+    private suspend fun finish(ok: Boolean) {
+        send(FetchCodec.ack(if (ok) 1 else 0))
+        val reply = withTimeoutOrNull(5_000) {
+            while (true) {
+                val m = control.receive()
+                if (m is GdspMessage.Response && (m.opcode == 0x03 || m.opcode == 0x02)) return@withTimeoutOrNull m
+            }
+            @Suppress("UNREACHABLE_CODE") null
+        }
+        log("history: ack ${if (ok) 1 else 0} -> ${reply?.let { "%02x %s".format(it.opcode, it.status) } ?: "no reply"}")
+    }
+
     /** TRANSFER, then collect indexed packets from 0005 until `10 02`. Returns the payload without index bytes. */
-    private suspend fun transfer(): ByteArray? {
+    private suspend fun transfer(): Pair<ByteArray, Long?>? {
         while (data.tryReceive().isSuccess) Unit // drop stale packets
         val out = java.io.ByteArrayOutputStream()
         var lastIndex = -1
@@ -200,7 +230,7 @@ class HistorySync(
             log("history: transfer ended with ${complete!!.status}")
             return null
         }
-        return out.toByteArray()
+        return out.toByteArray() to complete!!.crc32
     }
 
     private suspend fun store(records: List<HistoryRecord>) {

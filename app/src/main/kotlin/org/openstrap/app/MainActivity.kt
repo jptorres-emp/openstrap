@@ -82,6 +82,7 @@ private fun AppRoot(container: AppContainer) {
     val connection by container.strap.connection.collectAsStateWithLifecycle()
     val message by deviceVm.message.collectAsStateWithLifecycle()
     val battery = (connection as? ConnectionState.Connected)?.batteryPercent
+    val charging = (connection as? ConnectionState.Connected)?.charging == true
 
     LaunchedEffect(message) {
         message?.let { Toast.makeText(context, it, Toast.LENGTH_LONG).show(); deviceVm.clearMessage() }
@@ -133,15 +134,16 @@ private fun AppRoot(container: AppContainer) {
         },
     ) { padding ->
         when (Tab.entries[tab]) {
-            Tab.Today -> TodayScreen(day, live, battery, dayVm::previousDay, dayVm::nextDay, padding)
+            Tab.Today -> TodayScreen(day, live, battery, charging, dayVm::previousDay, dayVm::nextDay, padding)
             Tab.Heart -> HeartScreen(
                 day, live, liveEnabled,
                 canUseLive = connection is ConnectionState.Connected,
                 battery = battery,
+                charging = charging,
                 onLiveToggle = { liveEnabled = it; container.strap.setLiveHeartRate(it) },
                 onPrev = dayVm::previousDay, onNext = dayVm::nextDay, contentPadding = padding,
             )
-            Tab.Sleep -> SleepScreen(day, battery, dayVm::previousDay, dayVm::nextDay, padding)
+            Tab.Sleep -> SleepScreen(day, battery, charging, dayVm::previousDay, dayVm::nextDay, padding)
             Tab.Device -> DeviceScreen(
                 deviceVm, padding, requestBluetooth,
                 onExportCsv = { csvLauncher.launch("openstrap-export.zip") },

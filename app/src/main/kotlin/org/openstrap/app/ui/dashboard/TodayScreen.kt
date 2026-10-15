@@ -75,7 +75,7 @@ fun ScreenList(contentPadding: PaddingValues, content: LazyListScope.() -> Unit)
 
 /** WHOOP-style top bar: ‹ TODAY › centered, strap battery chip on the right. */
 @Composable
-fun DateHeader(date: LocalDate, battery: Int?, onPrev: () -> Unit, onNext: () -> Unit) {
+fun DateHeader(date: LocalDate, battery: Int?, onPrev: () -> Unit, onNext: () -> Unit, charging: Boolean = false) {
     Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         Spacer(Modifier.width(56.dp))
         Row(Modifier.weight(1f), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
@@ -96,11 +96,15 @@ fun DateHeader(date: LocalDate, battery: Int?, onPrev: () -> Unit, onNext: () ->
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (battery != null) {
-                Text("$battery%", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    if (charging) "⚡$battery%" else "$battery%",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (battery <= 15 || charging) MetricColors.battery(battery) else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
                 Spacer(Modifier.width(4.dp))
                 Box(contentAlignment = Alignment.TopEnd) {
                     Icon(Icons.Default.Watch, "Strap connected", Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Box(Modifier.size(6.dp).background(MetricColors.good, CircleShape))
+                    Box(Modifier.size(6.dp).background(MetricColors.battery(battery), CircleShape))
                 }
             }
         }
@@ -112,11 +116,12 @@ fun TodayScreen(
     state: DayUiState,
     liveHeartRate: Int?,
     battery: Int?,
+    charging: Boolean = false,
     onPrev: () -> Unit,
     onNext: () -> Unit,
     contentPadding: PaddingValues,
 ) = ScreenList(contentPadding) {
-    item { DateHeader(state.date, battery, onPrev, onNext) }
+    item { DateHeader(state.date, battery, onPrev, onNext, charging) }
 
     item {
         Panel {

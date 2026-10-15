@@ -51,12 +51,13 @@ fun HeartScreen(
     liveEnabled: Boolean,
     canUseLive: Boolean,
     battery: Int?,
+    charging: Boolean = false,
     onLiveToggle: (Boolean) -> Unit,
     onPrev: () -> Unit,
     onNext: () -> Unit,
     contentPadding: PaddingValues,
 ) = ScreenList(contentPadding) {
-    item { DateHeader(state.date, battery, onPrev, onNext) }
+    item { DateHeader(state.date, battery, onPrev, onNext, charging) }
 
     item {
         Panel {
@@ -135,8 +136,8 @@ private fun SeriesPanel(title: String, icon: ImageVector, color: Color, points: 
 }
 
 @Composable
-fun SleepScreen(state: DayUiState, battery: Int?, onPrev: () -> Unit, onNext: () -> Unit, contentPadding: PaddingValues) = ScreenList(contentPadding) {
-    item { DateHeader(state.date, battery, onPrev, onNext) }
+fun SleepScreen(state: DayUiState, battery: Int?, charging: Boolean, onPrev: () -> Unit, onNext: () -> Unit, contentPadding: PaddingValues) = ScreenList(contentPadding) {
+    item { DateHeader(state.date, battery, onPrev, onNext, charging) }
     val session = state.sleep
     if (session == null) {
         item { Panel { PanelHeader("Sleep", Icons.Default.Bedtime, MetricColors.sleepDeep); EmptyHint("No sleep recorded for this night.") } }

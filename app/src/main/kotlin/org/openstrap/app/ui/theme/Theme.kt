@@ -27,6 +27,16 @@ object MetricColors {
     val stress = Color(0xFFFF8A3D)
     val hrv = Color(0xFF2DD4BF)
     val good = Color(0xFF3DDC97)
+    val warn = Color(0xFFFFB547)
+    val bad = Color(0xFFFF5A5F)
+
+    /** Battery colour: red at 15% or below, amber up to 40%, green above. */
+    fun battery(level: Int?): Color = when {
+        level == null -> good
+        level <= 15 -> bad
+        level <= 40 -> warn
+        else -> good
+    }
 }
 
 private val Dark = darkColorScheme(

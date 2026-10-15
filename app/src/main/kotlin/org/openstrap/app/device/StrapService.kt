@@ -31,7 +31,7 @@ class StrapService : LifecycleService() {
             combine(strap.connection, strap.liveHeartRate) { c, hr -> c to hr }.collect { (c, hr) ->
                 val text = when (c) {
                     is ConnectionState.Connected -> buildString {
-                        append("Connected")
+                        append(if (c.charging) "Charging" else "Connected")
                         c.batteryPercent?.let { append(" · $it%") }
                         hr?.let { append(" · $it bpm") }
                     }

@@ -7,7 +7,7 @@ sealed interface ConnectionState {
     data object Disconnected : ConnectionState
     data object Connecting : ConnectionState
     data object Authenticating : ConnectionState
-    data class Connected(val batteryPercent: Int?, val firmware: String?) : ConnectionState
+    data class Connected(val batteryPercent: Int?, val firmware: String?, val charging: Boolean = false) : ConnectionState
     data class Failed(val reason: String) : ConnectionState
 }
 

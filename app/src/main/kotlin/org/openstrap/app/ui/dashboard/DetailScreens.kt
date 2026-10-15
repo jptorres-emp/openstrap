@@ -1,6 +1,14 @@
 package org.openstrap.app.ui.dashboard
 
 import androidx.compose.foundation.layout.Arrangement
+import org.openstrap.app.ui.components.ContributorRow
+import org.openstrap.app.ui.components.HeroPanel
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -156,40 +164,72 @@ fun SleepScreen(state: DayUiState, battery: Int?, charging: Boolean, onPrev: () 
     }
 
     item {
-        Panel {
-            PanelHeader("Time asleep", Icons.Default.Bedtime, MetricColors.sleepDeep, trailing = "${clock(session.start)} – ${clock(session.end)}")
-            session.score?.let { score ->
-                Text("Sleep score $score" + (session.wakeCount?.let { " · woke $it×" } ?: ""), style = MaterialTheme.typography.titleMedium)
-            }
-            BigValue(formatDuration(state.asleepSeconds ?: 0), "", large = true)
-            Text(
-                "Total duration ${formatDuration(session.end - session.start)} · goal ${formatDuration(SLEEP_GOAL_SECONDS)}",
-                style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+        val score = session.score
+        val asleep = state.asleepSeconds ?: (session.end - session.start)
+        if (score != null) {
+            HeroPanel(
+                label = "Sleep score", value = "$score", progress = score / 100f, accent = MetricColors.sleepDeep,
+                headline = Narrative.sleepHeadline(score), body = Narrative.sleepBody(session, asleep),
             )
-            if (state.sleepStages.isNotEmpty()) {
-                Hypnogram(state.sleepStages, SLEEP_COLORS, DayViewModel.SLEEP_STAGE_ROWS, height = 180.dp)
-                Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                    LegendDot("Awake", MetricColors.sleepAwake)
-                    LegendDot("REM", MetricColors.sleepRem)
-                    LegendDot("Light", MetricColors.sleepLight)
-                    LegendDot("Deep", MetricColors.sleepDeep)
+        } else {
+            HeroPanel(
+                label = "Time asleep", value = "%d:%02d".format(asleep / 3600, (asleep % 3600) / 60), progress = asleep / SLEEP_GOAL_SECONDS.toFloat(),
+                accent = MetricColors.sleepDeep, headline = "${formatDuration(asleep)} asleep", body = "Your goal is ${formatDuration(SLEEP_GOAL_SECONDS)}.",
+            )
+        }
+    }
+
+    // Bevel: time in bed and time asleep side by side.
+    item {
+        Panel {
+            Row {
+                Column(Modifier.weight(1f)) {
+                    BigValue(formatDuration(session.end - session.start), "", caption = "Time in bed")
+                    Text("${clock(session.start)} – ${clock(session.end)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Box(Modifier.width(1.dp).height(64.dp).background(MaterialTheme.colorScheme.outlineVariant))
+                Column(Modifier.weight(1f).padding(start = 16.dp)) {
+                    BigValue(formatDuration(state.asleepSeconds ?: 0), "", caption = "Time asleep")
+                    session.averageHeartRate?.let {
+                        Text("Avg heart rate $it bpm", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 }
             }
         }
     }
 
-    val b = state.sleepBreakdown
-    if (b != null) item {
+    if (state.sleepStages.isNotEmpty()) item {
         Panel {
-            PanelHeader("Stages", Icons.Default.Insights, MetricColors.sleepRem)
-            val total = (b.asleepSeconds + b.awakeSeconds).coerceAtLeast(1)
-            listOf(
-                SleepStage.AWAKE to "Awake", SleepStage.REM to "REM",
-                SleepStage.LIGHT to "Light", SleepStage.DEEP to "Deep",
-            ).forEach { (stage, label) ->
-                val secs = b.byStage[stage] ?: 0L
-                StageRow(label, secs, secs.toFloat() / total, SLEEP_COLORS.getValue(stage))
+            PanelHeader("Sleep stages", Icons.Default.Bedtime, MetricColors.sleepDeep, trailing = session.wakeCount?.let { "Woke $it×" })
+            Hypnogram(state.sleepStages, SLEEP_COLORS, DayViewModel.SLEEP_STAGE_ROWS, height = 180.dp)
+            Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                LegendDot("Awake", MetricColors.sleepAwake)
+                LegendDot("REM", MetricColors.sleepRem)
+                LegendDot("Light", MetricColors.sleepLight)
+                LegendDot("Deep", MetricColors.sleepDeep)
             }
+            state.sleepBreakdown?.let { b ->
+                val total = (b.asleepSeconds + b.awakeSeconds).coerceAtLeast(1)
+                listOf(
+                    SleepStage.AWAKE to "Awake", SleepStage.REM to "REM",
+                    SleepStage.LIGHT to "Light", SleepStage.DEEP to "Deep",
+                ).forEach { (stage, label) ->
+                    val secs = b.byStage[stage] ?: 0L
+                    StageRow(label, secs, secs.toFloat() / total, SLEEP_COLORS.getValue(stage))
+                }
+            }
+        }
+    }
+
+    val contributors = Narrative.sleepContributors(session, state.asleepSeconds ?: 0)
+    if (session.score != null && contributors.isNotEmpty()) item {
+        Panel {
+            PanelHeader("Contributors", Icons.Default.Insights, MetricColors.sleepRem)
+            contributors.forEach { ContributorRow(it.label, it.rating.label, it.fraction, it.rating.color, it.detail) }
+            Text(
+                "Ratings use general sleep guidance (7+ hours, about a fifth each of deep and REM sleep). They're a guide, not a medical assessment.",
+                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 
@@ -197,7 +237,7 @@ fun SleepScreen(state: DayUiState, battery: Int?, charging: Boolean, onPrev: () 
         Panel {
             PanelHeader("Breathing rate", Icons.Default.Air, MetricColors.hrv)
             BigValue(state.breathRate.avg().toString(), "br/min", caption = "Average during sleep")
-            LineChart(state.breathRate, MetricColors.hrv, session.start..session.end, height = 110.dp)
+            LineChart(state.breathRate, MetricColors.hrv, session.start..session.end, height = 110.dp, gapSeconds = 2 * 3600)
         }
     }
 

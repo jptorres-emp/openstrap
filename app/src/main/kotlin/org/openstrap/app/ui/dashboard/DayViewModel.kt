@@ -29,6 +29,16 @@ const val STEP_GOAL = 8000
 const val SLEEP_GOAL_SECONDS = 8 * 3600L
 const val ACTIVE_HOURS_GOAL = 10
 
+/** Averages over the 7 days before the selected day; null where there's no data. */
+data class Baselines(
+    val restingHr: Float? = null,
+    val hrv: Float? = null,
+    val spo2: Float? = null,
+    val stress: Float? = null,
+    val skinTemperature: Float? = null,
+    val breathRate: Float? = null,
+)
+
 data class DayUiState(
     val date: LocalDate = LocalDate.now(),
     val steps: Int = 0,
@@ -52,6 +62,7 @@ data class DayUiState(
     val skinTemperature: List<ChartPoint> = emptyList(),
     val breathRate: List<ChartPoint> = emptyList(),
     val pai: PaiSample? = null,
+    val baselines: Baselines = Baselines(),
     val dayStart: Long = 0,
     val dayEnd: Long = 0,
 ) {
@@ -104,13 +115,28 @@ class DayViewModel(private val repo: HealthRepository, private val strapSteps: F
             }
             restingTrend to hrvTrend
         }
-        val sleepAndExtras = combine(sleep, extras) { s, e -> s to e }
+        val previous = DayWindow(DayWindow.of(date.minusDays(7)).from, DayWindow.of(date.minusDays(1)).to)
+        val baselines = combine(
+            combine(repo.restingHr(previous.from, previous.to), repo.hrv(previous), repo.spo2(previous)) { r, h, s -> Triple(r, h, s) },
+            combine(repo.stress(previous), repo.skinTemperature(previous), repo.breathRate(previous)) { st, sk, br -> Triple(st, sk, br) },
+        ) { (resting, hrv, spo2), (stress, skin, breath) ->
+            fun List<Number>.mean() = if (isEmpty()) null else map { it.toFloat() }.average().toFloat()
+            Baselines(
+                restingHr = resting.map { it.bpm }.mean(),
+                hrv = hrv.map { it.milliseconds }.mean(),
+                spo2 = spo2.map { it.percent }.mean(),
+                stress = stress.map { it.value }.mean(),
+                skinTemperature = skin.map { it.celsius }.mean(),
+                breathRate = breath.map { it.perMinute }.mean(),
+            )
+        }
+        val sleepAndExtras = combine(sleep, extras, baselines) { s, e, b -> Triple(s, e, b) }
 
         // The strap's own running total covers steps whose minute records were already taken by another app.
         val liveSteps = if (date == LocalDate.now()) strapSteps else flowOf(null)
         val actAndLive = combine(activityAndHr, liveSteps) { a, live -> a to live }
 
-        return combine(actAndLive, vitals, sleepAndExtras, weekly) { (ah, live), (spo2, stress, hrv), (sleepParts, extraParts), (restingWithFlag, hrvTrend) ->
+        return combine(actAndLive, vitals, sleepAndExtras, weekly) { (ah, live), (spo2, stress, hrv), (sleepParts, extraParts, base), (restingWithFlag, hrvTrend) ->
             val (session, stages, naps) = sleepParts
             val (skin, breath, pai) = extraParts
             val restingTrend = restingWithFlag.map { it.first }
@@ -138,6 +164,7 @@ class DayViewModel(private val repo: HealthRepository, private val strapSteps: F
                 skinTemperature = skin.map { ChartPoint(it.timestamp, it.celsius) },
                 breathRate = breath.map { ChartPoint(it.timestamp, it.perMinute.toFloat()) },
                 pai = pai,
+                baselines = base,
                 dayStart = day.from,
                 dayEnd = day.to,
             )

@@ -107,7 +107,7 @@ fun LineChart(
             val t = (xRange.first + span * i / 4).coerceAtMost(xRange.last)
             label(measurer, hourLabel(t), style, xOf(t), h + 4.dp.toPx(), center = i in 1..3, alignEnd = i == 4)
         }
-        if (points.size < 2) return@Canvas
+        if (points.isEmpty()) return@Canvas
 
         val segments = mutableListOf(mutableListOf(points.first()))
         for (i in 1 until points.size) {
@@ -116,7 +116,10 @@ fun LineChart(
         }
         for (segment in segments) {
             if (segment.size < 2) {
-                drawCircle(color, 2.dp.toPx(), Offset(xOf(segment[0].x), yOf(segment[0].y)))
+                // A lone reading (e.g. a spot SpO2) gets a ringed dot so it's visible on its own.
+                val o = Offset(xOf(segment[0].x), yOf(segment[0].y))
+                drawCircle(color, 5.dp.toPx(), o)
+                drawCircle(surface, 2.dp.toPx(), o)
                 continue
             }
             val line = Path()

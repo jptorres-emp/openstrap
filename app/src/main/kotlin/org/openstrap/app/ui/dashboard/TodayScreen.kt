@@ -3,6 +3,7 @@ package org.openstrap.app.ui.dashboard
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -45,8 +46,9 @@ import org.openstrap.app.ui.components.LineChart
 import org.openstrap.app.ui.components.Panel
 import org.openstrap.app.ui.components.PanelHeader
 import org.openstrap.app.ui.components.SectionLabel
-import org.openstrap.app.ui.components.StatRing
-import org.openstrap.app.ui.components.VitalPill
+import org.openstrap.app.ui.components.HeroPanel
+import org.openstrap.app.ui.components.KeyStatRow
+import org.openstrap.app.ui.components.ScoreChip
 import org.openstrap.app.ui.components.formatDuration
 import org.openstrap.app.ui.theme.MetricColors
 import java.time.LocalDate
@@ -122,74 +124,108 @@ fun TodayScreen(
     onPrev: () -> Unit,
     onNext: () -> Unit,
     contentPadding: PaddingValues,
+    onOpenHeart: () -> Unit = {},
+    onOpenSleep: () -> Unit = {},
 ) = ScreenList(contentPadding) {
     item { DateHeader(state.date, battery, onPrev, onNext, charging) }
 
+    // Oura's score row: the day at a glance, each chip opening its tab.
     item {
-        Panel {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                StatRing("Steps", compactCount(state.steps), state.steps / STEP_GOAL.toFloat(), MetricColors.steps)
-                StatRing(
-                    "Sleep",
-                    state.asleepSeconds?.let { "%dh%02d".format(it / 3600, (it % 3600) / 60) } ?: "—",
-                    (state.asleepSeconds ?: 0L) / SLEEP_GOAL_SECONDS.toFloat(),
-                    MetricColors.sleepDeep,
-                )
-                StatRing("Active hrs", "${state.activeHours}", state.activeHours / ACTIVE_HOURS_GOAL.toFloat(), MetricColors.stress)
-            }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            val sleepValue = state.sleep?.score?.toString() ?: state.asleepSeconds?.let { "%d:%02d".format(it / 3600, (it % 3600) / 60) }
+            ScoreChip(sleepValue, "Sleep", Icons.Default.Bedtime, MetricColors.sleepDeep, onClick = onOpenSleep)
+            ScoreChip(compactCount(state.steps), "Steps", Icons.AutoMirrored.Filled.DirectionsWalk, MetricColors.steps)
+            ScoreChip(state.restingHeartRate?.toString(), if (state.restingEstimated) "Rest est." else "Resting", Icons.Default.Favorite, MetricColors.heart, onClick = onOpenHeart)
+            ScoreChip(state.stress.avg()?.toString(), "Stress", Icons.Default.Psychology, MetricColors.stress, onClick = onOpenHeart)
+            ScoreChip(state.pai?.let { Math.round(it.total).toString() }, "PAI", Icons.Default.Bolt, MetricColors.hrv)
+        }
+    }
+
+    // Hero: last night's sleep when the strap scored it, otherwise today's movement.
+    item {
+        val session = state.sleep
+        val score = session?.score
+        val asleep = state.asleepSeconds
+        if (session != null && score != null && asleep != null) {
+            HeroPanel(
+                label = "Sleep score", value = "$score", progress = score / 100f, accent = MetricColors.sleepDeep,
+                headline = Narrative.sleepHeadline(score), body = Narrative.sleepBody(session, asleep), onClick = onOpenSleep,
+            )
+        } else {
+            HeroPanel(
+                label = "Steps", value = "%,d".format(state.steps), progress = state.steps / STEP_GOAL.toFloat(), accent = MetricColors.steps,
+                headline = Narrative.stepsHeadline(state.steps, STEP_GOAL), body = Narrative.stepsBody(state.steps, STEP_GOAL, state.activeHours),
+            )
         }
     }
 
     item {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            val mod = Modifier.weight(1f)
-            VitalPill((liveHeartRate ?: state.latestHeartRate)?.toString(), "bpm", Icons.Default.Favorite, MetricColors.heart, mod)
-            VitalPill(state.restingHeartRate?.toString(), if (state.restingEstimated) "rest est." else "rest", Icons.Default.MonitorHeart, MetricColors.heart, mod)
-            VitalPill(state.hrv.avg()?.toString(), "ms", Icons.Default.MonitorHeart, MetricColors.hrv, mod)
-            VitalPill(state.spo2.avg()?.let { "$it" }, "% SpO₂", Icons.Default.Air, MetricColors.spo2, mod)
-            VitalPill(state.stress.avg()?.toString(), "stress", Icons.Default.Psychology, MetricColors.stress, mod)
-        }
-    }
-
-    item {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            val mod = Modifier.weight(1f)
-            VitalPill(state.skinTemperature.lastOrNull()?.let { "%.1f".format(it.y) }, "°C skin", Icons.Default.Thermostat, MetricColors.temperature, mod)
-            VitalPill(state.pai?.let { Math.round(it.total).toString() }, "PAI", Icons.Default.Bolt, MetricColors.steps, mod)
-            VitalPill(state.breathRate.avg()?.toString(), "br/min", Icons.Default.Air, MetricColors.hrv, mod)
-        }
-    }
-
-    item {
-        Panel {
+        Panel(onClick = onOpenHeart) {
             PanelHeader("Heart rate", Icons.Default.Favorite, MetricColors.heart, trailing = if (liveHeartRate != null) "● Live" else null)
+            val now = liveHeartRate ?: state.latestHeartRate
+            if (now != null) BigValue("$now", "bpm", caption = if (liveHeartRate != null) "Right now" else "Latest")
             if (state.heartRate.isEmpty()) EmptyHint("No heart-rate data yet. Sync your strap.")
             else LineChart(
-                state.heartRate, MetricColors.heart, state.dayStart..state.dayEnd, height = 150.dp,
+                state.heartRate, MetricColors.heart, state.dayStart..state.dayEnd, height = 140.dp,
                 band = state.sleep?.let { it.start..it.end },
             )
         }
     }
 
     item {
-        Panel {
-            PanelHeader("Sleep", Icons.Default.Bedtime, MetricColors.sleepDeep, trailing = state.sleep?.score?.let { "Score $it" })
-            val asleep = state.asleepSeconds
-            if (asleep == null) EmptyHint("No sleep recorded for this night.")
-            else {
-                BigValue(formatDuration(asleep), "", caption = "Time asleep")
-                if (state.sleepStages.isNotEmpty()) {
-                    Hypnogram(state.sleepStages, SLEEP_COLORS, DayViewModel.SLEEP_STAGE_ROWS, height = 110.dp)
-                }
+        Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            SectionLabel("Key statistics", Modifier.weight(1f), color = MaterialTheme.colorScheme.onSurface)
+            Text("vs. previous 7 days", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+    item {
+        val b = state.baselines
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            val rhr = state.restingHeartRate?.toFloat()
+            KeyStatRow("Resting HR", Icons.Default.Favorite, MetricColors.heart, rhr?.let { "%.0f".format(it) }, "bpm",
+                b.restingHr?.let { "%.0f".format(it) }, Narrative.direction(rhr, b.restingHr, 1.5f), higherIsBetter = false, onClick = onOpenHeart)
+            val hrv = state.hrv.avg()?.toFloat()
+            KeyStatRow("HRV", Icons.Default.MonitorHeart, MetricColors.hrv, hrv?.let { "%.0f".format(it) }, "ms",
+                b.hrv?.let { "%.0f".format(it) }, Narrative.direction(hrv, b.hrv, 3f), higherIsBetter = true, onClick = onOpenHeart)
+            val spo2 = state.spo2.avg()?.toFloat()
+            KeyStatRow("Blood oxygen", Icons.Default.Air, MetricColors.spo2, spo2?.let { "%.0f".format(it) }, "%",
+                b.spo2?.let { "%.0f".format(it) }, Narrative.direction(spo2, b.spo2, 1f), higherIsBetter = true, onClick = onOpenHeart)
+            val skin = state.skinTemperature.takeIf { it.isNotEmpty() }?.map { it.y }?.average()?.toFloat()
+            KeyStatRow("Skin temp", Icons.Default.Thermostat, MetricColors.temperature, skin?.let { "%.1f".format(it) }, "°C",
+                b.skinTemperature?.let { "%.1f".format(it) }, Narrative.direction(skin, b.skinTemperature, 0.3f), higherIsBetter = null, onClick = onOpenHeart)
+            val stress = state.stress.avg()?.toFloat()
+            KeyStatRow("Stress", Icons.Default.Psychology, MetricColors.stress, stress?.let { "%.0f".format(it) }, "",
+                b.stress?.let { "%.0f".format(it) }, Narrative.direction(stress, b.stress, 4f), higherIsBetter = false, onClick = onOpenHeart)
+            val breath = state.breathRate.avg()?.toFloat()
+            if (breath != null || b.breathRate != null) {
+                KeyStatRow("Breathing", Icons.Default.Air, MetricColors.sleepLight, breath?.let { "%.0f".format(it) }, "/min",
+                    b.breathRate?.let { "%.0f".format(it) }, Narrative.direction(breath, b.breathRate, 1f), higherIsBetter = null, onClick = onOpenSleep)
             }
         }
     }
 
     item {
         Panel {
-            PanelHeader("Steps", Icons.AutoMirrored.Filled.DirectionsWalk, MetricColors.steps, trailing = "Goal %,d".format(STEP_GOAL))
-            BigValue("%,d".format(state.steps), "steps")
+            PanelHeader("Activity", Icons.AutoMirrored.Filled.DirectionsWalk, MetricColors.steps, trailing = "Goal %,d".format(STEP_GOAL))
+            Row(verticalAlignment = Alignment.Bottom) {
+                BigValue("%,d".format(state.steps), "steps", Modifier.weight(1f))
+                BigValue("${state.activeHours}", "of $ACTIVE_HOURS_GOAL h", caption = "Active hours")
+            }
             BarChart(state.hourlySteps, MetricColors.steps)
+        }
+    }
+
+    if (state.sleep?.score == null) item {
+        Panel(onClick = onOpenSleep) {
+            PanelHeader("Sleep", Icons.Default.Bedtime, MetricColors.sleepDeep)
+            val asleep = state.asleepSeconds
+            if (asleep == null) EmptyHint("No sleep recorded for this night. Wear the strap to bed and it'll show up here.")
+            else {
+                BigValue(formatDuration(asleep), "", caption = "Time asleep")
+                if (state.sleepStages.isNotEmpty()) {
+                    Hypnogram(state.sleepStages, SLEEP_COLORS, DayViewModel.SLEEP_STAGE_ROWS, height = 110.dp)
+                }
+            }
         }
     }
 }

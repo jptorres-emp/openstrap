@@ -43,6 +43,8 @@ import org.openstrap.app.device.ConnectionState
 import org.openstrap.app.ui.dashboard.DayViewModel
 import org.openstrap.app.ui.dashboard.HeartScreen
 import org.openstrap.app.ui.dashboard.SleepScreen
+import org.openstrap.app.ui.components.FloatingNavBar
+import org.openstrap.app.ui.components.NavItem
 import org.openstrap.app.ui.dashboard.TodayScreen
 import org.openstrap.app.ui.device.DeviceScreen
 import org.openstrap.app.ui.device.DeviceViewModel
@@ -72,6 +74,12 @@ class MainActivity : ComponentActivity() {
 
     /** Debug: `am start -n org.openstrap.app/.MainActivity --ei dump_raw_days 7` dumps raw history to files/raw. */
     private fun handleDebugIntent() {
+        // Debug: `--ez demo_data true` fills an empty database with sample data (for the emulator).
+        if (BuildConfig.DEBUG && intent.getBooleanExtra("demo_data", false)) {
+            intent.removeExtra("demo_data")
+            val dao = (application as OpenStrapApp).container.database.healthDao()
+            kotlinx.coroutines.MainScope().launch { DemoData.fill(dao) }
+        }
         val days = intent.getIntExtra("dump_raw_days", 0)
         if (!BuildConfig.DEBUG || days <= 0) return
         intent.removeExtra("dump_raw_days")
@@ -142,26 +150,15 @@ private fun AppRoot(container: AppContainer) {
 
     Scaffold(
         bottomBar = {
-            NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainerLow, tonalElevation = 0.dp) {
-                Tab.entries.forEachIndexed { i, t ->
-                    NavigationBarItem(
-                        selected = tab == i, onClick = { tab = i },
-                        icon = { Icon(t.icon, contentDescription = null) },
-                        label = { Text(t.label, style = MaterialTheme.typography.labelSmall) },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = MaterialTheme.colorScheme.onSurface,
-                            selectedTextColor = MaterialTheme.colorScheme.onSurface,
-                            indicatorColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        ),
-                    )
-                }
-            }
+            FloatingNavBar(Tab.entries.map { NavItem(it.label, it.icon) }, tab, { tab = it })
         },
+        containerColor = MaterialTheme.colorScheme.background,
     ) { padding ->
         when (Tab.entries[tab]) {
-            Tab.Today -> TodayScreen(day, live, battery, charging, dayVm::previousDay, dayVm::nextDay, padding)
+            Tab.Today -> TodayScreen(
+                day, live, battery, charging, dayVm::previousDay, dayVm::nextDay, padding,
+                onOpenHeart = { tab = Tab.Heart.ordinal }, onOpenSleep = { tab = Tab.Sleep.ordinal },
+            )
             Tab.Heart -> HeartScreen(
                 day, live, liveEnabled,
                 canUseLive = connection is ConnectionState.Connected,

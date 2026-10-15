@@ -193,6 +193,17 @@ fun TodayScreen(
         }
     }
 
+    // Before the first scored night, say where readiness will come from rather than leaving a gap.
+    if (rec != null && rec.readiness.score == null) item {
+        Panel(onClick = onOpenRecovery) {
+            PanelHeader("Readiness", Icons.Default.Spa, MetricColors.readiness)
+            EmptyHint(
+                "Your Readiness score arrives each morning after a night wearing the strap. It compares the night " +
+                    "with your own normal, so it gets sharper over the first two weeks.",
+            )
+        }
+    }
+
     if (rec != null) item {
         ChargeCard(rec, state.dayStart..state.dayEnd, state.sleep?.let { it.start..it.end }, onClick = onOpenRecovery)
     }

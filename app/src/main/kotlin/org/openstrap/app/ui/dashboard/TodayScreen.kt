@@ -37,6 +37,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -91,6 +92,9 @@ fun ScreenList(
     )
 }
 
+/** The red full stop after the OpenStrap wordmark. */
+private val WordmarkDot = Color(0xFFFF4D5E)
+
 /** Top bar: OpenStrap wordmark and strap battery chip, then ‹ TODAY › centered on its own row. */
 @Composable
 fun DateHeader(date: LocalDate, battery: Int?, onPrev: () -> Unit, onNext: () -> Unit, charging: Boolean = false) {
@@ -98,8 +102,8 @@ fun DateHeader(date: LocalDate, battery: Int?, onPrev: () -> Unit, onNext: () ->
         Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(
                 buildAnnotatedString {
-                    append("Open")
-                    withStyle(SpanStyle(color = MaterialTheme.colorScheme.primary)) { append("Strap") }
+                    append("OpenStrap")
+                    withStyle(SpanStyle(color = WordmarkDot)) { append(".") }
                 },
                 Modifier.weight(1f),
                 fontFamily = MuseoModerno,

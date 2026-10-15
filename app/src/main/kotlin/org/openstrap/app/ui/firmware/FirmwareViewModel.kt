@@ -18,6 +18,8 @@ import org.openstrap.app.firmware.FirmwareCloud
 import org.openstrap.app.firmware.FirmwarePart
 import org.openstrap.app.firmware.StrapIdentity
 import org.openstrap.app.firmware.UpdateCheck
+import org.openstrap.app.zepp.BoundDevice
+import org.openstrap.app.zepp.DeviceListing
 import org.openstrap.protocol.firmware.DfuProgress
 import org.openstrap.protocol.firmware.FirmwareType
 import org.openstrap.protocol.firmware.HmfwTrailer
@@ -58,6 +60,12 @@ class FirmwareViewModel(private val container: AppContainer) : ViewModel() {
     fun saveAccount(token: String, userId: String, apiBase: String, china: Boolean) = viewModelScope.launch {
         container.settings.saveZeppAccount(
             ZeppAccount(token.trim(), userId.trim(), apiBase.trim().ifEmpty { ZeppAccount.DEFAULT_API_BASE }, china),
+        )
+    }
+
+    fun saveSignIn(listing: DeviceListing, strap: BoundDevice?) = viewModelScope.launch {
+        container.settings.saveZeppAccount(
+            ZeppAccount(listing.session.appToken, listing.session.userId, listing.apiBase, strap?.china ?: account.value?.china ?: false),
         )
     }
 

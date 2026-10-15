@@ -61,4 +61,9 @@ OpenStrap is not affiliated with Zepp Health or Amazfit.
 
 ## Network use
 
-OpenStrap only goes online when you tap **Check for update** or **Download** on the Firmware screen. A check sends your Zepp app token, your user ID, and the strap's firmware version, hardware version and serial number to the update server you set. Health data is never uploaded.
+OpenStrap goes online only for your Zepp account and for firmware, and only when you ask it to. Health data is never uploaded.
+
+- **Sign in with Zepp** (on the pairing panel or the Firmware screen's Zepp account panel) opens Zepp's own sign-in page from watchface.zepp.com in an in-app browser. You type your email and password into Zepp's page; OpenStrap never sees or stores the password. After you sign in, OpenStrap reads the app token and user ID from that page's cookies and sends one request to Zepp's device list (`GET users/{userId}/devices` on `api-mifit*.zepp.com`, trying the regional hosts if the global one has nothing). From the reply it takes the Helio Strap's Bluetooth address and auth key and shows them for you to confirm. The token and user ID are saved on this phone for firmware checks. The browser's Zepp cookies are then cleared.
+- **Check for update** sends your Zepp app token, your user ID, and the strap's firmware version, hardware version and serial number to the update server you set. **Download** fetches the image from the URL that server returns.
+
+You can skip the sign-in and paste the auth key and token by hand instead.

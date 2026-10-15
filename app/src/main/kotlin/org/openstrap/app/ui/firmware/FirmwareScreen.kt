@@ -61,6 +61,9 @@ import org.openstrap.app.ui.components.PanelHeader
 import org.openstrap.app.ui.components.SettingRow
 import org.openstrap.app.ui.dashboard.ScreenList
 import org.openstrap.app.ui.theme.MetricColors
+import org.openstrap.app.ui.zepp.ZeppSignInDialog
+import org.openstrap.app.zepp.BoundDevice
+import org.openstrap.app.zepp.DeviceListing
 
 @Composable
 fun FirmwareScreen(vm: FirmwareViewModel, contentPadding: PaddingValues, onBack: () -> Unit) {
@@ -99,7 +102,7 @@ fun FirmwareScreen(vm: FirmwareViewModel, contentPadding: PaddingValues, onBack:
 
         item { StepPanel(step, vm, onInstall = { confirm = it }) }
 
-        item { AccountPanel(account, enabled = !installing, onSave = vm::saveAccount, onClear = vm::clearAccount) }
+        item { AccountPanel(account, enabled = !installing, onSave = vm::saveAccount, onClear = vm::clearAccount, onSignIn = vm::saveSignIn) }
 
         item {
             Panel {
@@ -111,7 +114,9 @@ fun FirmwareScreen(vm: FirmwareViewModel, contentPadding: PaddingValues, onBack:
 
         item {
             Text(
-                "Checking for updates sends your Zepp app token, user ID and the strap's firmware, hardware version and " +
+                "Signing in with Zepp happens on Zepp's own page; OpenStrap reads only the resulting app token and user ID " +
+                    "and asks Zepp once for your device list. " +
+                    "Checking for updates sends your Zepp app token, user ID and the strap's firmware, hardware version and " +
                     "serial number to the update server you set. Nothing else leaves the phone. Downloads are checked against " +
                     "the server's MD5, and the strap checks the image's signature before installing it.",
                 style = MaterialTheme.typography.bodySmall,
@@ -215,19 +220,32 @@ private fun AccountPanel(
     enabled: Boolean,
     onSave: (String, String, String, Boolean) -> Unit,
     onClear: () -> Unit,
+    onSignIn: (DeviceListing, BoundDevice?) -> Unit,
 ) {
     var editing by rememberSaveable { mutableStateOf(false) }
+    var signIn by rememberSaveable { mutableStateOf(false) }
+    if (signIn) {
+        ZeppSignInDialog(
+            preferredApiBase = account?.apiBase,
+            confirmLabel = "Save sign-in",
+            onDismiss = { signIn = false },
+            onConfirm = { listing, strap -> signIn = false; onSignIn(listing, strap) },
+        )
+    }
     Panel {
         PanelHeader("Zepp account", Icons.Default.Key, MetricColors.warn, trailing = if (account != null) "Saved" else null)
         if (!editing) {
             Text(
-                if (account == null) "Zepp only answers update checks for signed-in users. Paste your own app token and user ID; they're stored on this phone only."
+                if (account == null) "Zepp only answers update checks for signed-in users. Sign in, or paste your own app token and user ID; they're stored on this phone only."
                 else "Update checks use your saved token${if (account.userId.isNotEmpty()) " for user ${account.userId}" else ""} on ${account.apiBase}.",
                 style = MaterialTheme.typography.bodyMedium,
             )
+            Button(onClick = { signIn = true }, enabled = enabled, modifier = Modifier.fillMaxWidth()) {
+                Text(if (account == null) "Sign in with Zepp" else "Sign in again")
+            }
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedButton(onClick = { editing = true }, enabled = enabled, modifier = Modifier.weight(1f)) {
-                    Text(if (account == null) "Add token" else "Change")
+                    Text(if (account == null) "Paste token" else "Edit")
                 }
                 if (account != null) {
                     TextButton(

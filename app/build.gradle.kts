@@ -68,5 +68,7 @@ dependencies {
     implementation(libs.core.ktx)
 
     testImplementation(libs.junit)
+    // Android's org.json is a stub in plain JVM unit tests.
+    testImplementation(libs.org.json)
     testImplementation(libs.coroutines.test)
 }

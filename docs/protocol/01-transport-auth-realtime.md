@@ -615,3 +615,17 @@ Example: `13` → `10 13 01 <mtu u16>` (§1.3).
 12. User profile: use `0008` (`4F …`) if present, else `0x0017` `01 mask …`.
 13. Live HR: use path A (`0x001D` + `0x0048`, 10 s keep-alive) if `0x0048` is listed, else path B (`2A39` `15 01 01` / `16` every 10 s). Read the bpm from `2A37`.
 14. Log every UNVERIFIED point on a real device: ECDH byte order, auth reply prefix, device ACK layout, `0x001D` bytes, the strap's endpoint list.
+
+---
+
+## Verified on hardware (Helio Strap, firmware 3.20.0.1, 2026-10-16)
+
+The first real connection, from OpenStrap on an Android 16 phone, confirmed the following:
+
+* Channel version reply: v2 with `encryptEnable = true`.
+* The services list arrives before auth. The strap lists `0000, 0081*, 0015, 0047, 0029, 0017*, 0028, 0043, 000a*, 0030*, 000d, 0048, 0016, 0022, 0049, 0032, 0036*, 001d, 0031, 0018*, 0082, 0025, 004b, 000c*, 004d*, 0019*, 000f, 001a*` (`*` = requires encryption).
+* **ECDH on B-163, with 24-byte little-endian coordinates, works.** The §3.4 handshake succeeds with the Zepp-issued auth key.
+* MTU query on `0x0015` → payload MTU 20.
+* DIS `2A28` firmware string = `3.20.0.1`.
+* Battery on `0x0029` works.
+* Time set on `0x0047` → reply `06 01`.

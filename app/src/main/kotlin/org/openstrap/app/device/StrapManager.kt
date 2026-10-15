@@ -26,6 +26,7 @@ import org.openstrap.protocol.hexToBytes
 import org.openstrap.protocol.services.BatteryInfo
 import org.openstrap.protocol.services.Endpoints
 import org.openstrap.protocol.services.LiveHeartRate
+import org.openstrap.protocol.services.RealtimeSteps
 import org.openstrap.protocol.services.TimeSync
 import org.openstrap.protocol.toHex
 import org.openstrap.protocol.u8
@@ -45,9 +46,15 @@ class StrapManager(
     override val connection = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
     override val sync = MutableStateFlow<SyncState>(SyncState.Idle)
     override val liveHeartRate = MutableStateFlow<Int?>(null)
+    override val todaySteps = MutableStateFlow<Int?>(null)
     override val log = MutableStateFlow<List<String>>(emptyList())
 
     private var connectJob: Job? = null
+    private var reconnectJob: Job? = null
+    /** True while the user wants the strap connected; cleared by [disconnect]. */
+    private var wantConnected = false
+    private var retries = 0
+    private var lastAutoSync = 0L
     private var liveJob: Job? = null
     private var gatt: GattClient? = null
     private var session: ChannelSession? = null
@@ -65,7 +72,35 @@ class StrapManager(
         log.update { (it + line).takeLast(400) }
     }
 
+    /** Connect if a strap is paired and nothing is connected or in progress. Safe to call often. */
+    override fun autoConnect() {
+        when (connection.value) {
+            is ConnectionState.Connected, ConnectionState.Connecting, ConnectionState.Authenticating -> return
+            else -> Unit
+        }
+        if (reconnectJob?.isActive == true) return
+        connect()
+    }
+
     override fun connect() {
+        wantConnected = true
+        reconnectJob?.cancel()
+        startConnect()
+    }
+
+    private fun scheduleReconnect() {
+        if (!wantConnected) return
+        val wait = RETRY_SECONDS[minOf(retries, RETRY_SECONDS.lastIndex)]
+        retries++
+        log("reconnecting in ${wait}s")
+        reconnectJob?.cancel()
+        reconnectJob = scope.launch {
+            delay(wait * 1000L)
+            startConnect()
+        }
+    }
+
+    private fun startConnect() {
         connectJob?.cancel()
         connectJob = scope.launch {
             val device = settings.pairedDevice.first()
@@ -73,7 +108,7 @@ class StrapManager(
                 connection.value = ConnectionState.NotPaired
                 return@launch
             }
-            StrapService.start(context)
+            runCatching { StrapService.start(context) }.onFailure { log("service start failed: $it") }
             connection.value = ConnectionState.Connecting
             val client = GattClient(context, device.address).also { gatt = it }
             try {
@@ -93,6 +128,9 @@ class StrapManager(
                 afterAuth(client, l, s)
                 connection.value = ConnectionState.Connected(battery, firmware, charging)
                 watchBattery(s)
+                watchSteps(s)
+                retries = 0
+                autoSync(s)
             } catch (e: AuthException) {
                 log("auth failed: ${e.message}")
                 connection.value = ConnectionState.Failed(e.message ?: "Authentication failed")
@@ -102,6 +140,7 @@ class StrapManager(
                 log("connect failed: $e")
                 connection.value = ConnectionState.Failed(e.message ?: "Connection failed")
                 close()
+                scheduleReconnect()
             }
         }
     }
@@ -159,6 +198,39 @@ class StrapManager(
         }
     }
 
+    private fun watchSteps(s: ChannelSession) = scope.launch {
+        if (!s.services.has(Endpoints.REALTIME_ACTIVITY)) return@launch
+        launch {
+            s.messagesFor(Endpoints.REALTIME_ACTIVITY).collect { p ->
+                val totals = RealtimeSteps.parseMessage(p)
+                if (totals == null) log("steps < ${p.toHex()}")
+                totals?.let {
+                    if (it.steps != todaySteps.value) log("steps today=${it.steps} dist=${it.distanceMeters} kcal=${it.calories}")
+                    todaySteps.value = it.steps
+                }
+            }
+        }
+        runCatching { s.send(Endpoints.REALTIME_ACTIVITY, RealtimeSteps.NOTIFY_ON) }.onFailure { log("steps notify failed: $it") }
+        // Pushes may only come while walking; poll as a fallback.
+        while (isActive && session === s) {
+            runCatching { s.send(Endpoints.REALTIME_ACTIVITY, RealtimeSteps.QUERY) }.onFailure { log("steps query failed: $it") }
+            delay(60_000)
+        }
+    }
+
+    /** Sync right after connecting (unless one ran recently), then every [AUTO_SYNC_SECONDS] while connected. */
+    private fun autoSync(s: ChannelSession) = scope.launch {
+        while (isActive && session === s) {
+            val now = System.currentTimeMillis() / 1000
+            if (now - lastAutoSync >= MIN_SYNC_GAP_SECONDS && sync.value !is SyncState.Running) {
+                lastAutoSync = now
+                log("auto sync")
+                syncNow()
+            }
+            delay(AUTO_SYNC_SECONDS * 1000L)
+        }
+    }
+
     private fun watchDisconnect(client: GattClient) = scope.launch {
         client.connected.filter { !it }.first()
         if (gatt === client) {
@@ -167,11 +239,21 @@ class StrapManager(
             liveHeartRate.value = null
             session?.stop()
             session = null
-            if (connection.value is ConnectionState.Connected) connection.value = ConnectionState.Disconnected
+            if (connection.value is ConnectionState.Connected) {
+                if (wantConnected) {
+                    // Keep the foreground service up while we try to get the strap back.
+                    connection.value = ConnectionState.Connecting
+                    scheduleReconnect()
+                } else {
+                    connection.value = ConnectionState.Disconnected
+                }
+            }
         }
     }
 
     override fun disconnect() {
+        wantConnected = false
+        reconnectJob?.cancel()
         connectJob?.cancel()
         liveJob?.cancel()
         close()
@@ -206,10 +288,21 @@ class StrapManager(
         liveJob = scope.launch {
             try {
                 // Collect from both the channel push and the standard 2A37 characteristic; de-duplicate by second.
-                launch { s.messagesFor(Endpoints.HEART_RATE).collect { p -> LiveHeartRate.parsePush(p)?.let { onLiveHr(it) } } }
+                var pushes = 0
+                launch {
+                    s.messagesFor(Endpoints.HEART_RATE).collect { p ->
+                        if (pushes++ % 15 == 0) log("live hr 0048 < ${p.toHex()}")
+                        LiveHeartRate.parsePush(p)?.let { onLiveHr(it) }
+                    }
+                }
+                launch { s.messagesFor(Endpoints.OPEN_APP).collect { p -> log("live hr 001d < ${p.toHex()}") } }
+                var measurements = 0
                 launch {
                     client.notifications.filter { it.characteristic == StrapUuids.HR_MEASUREMENT }
-                        .collect { n -> LiveHeartRate.parseMeasurement(n.value)?.let { onLiveHr(it) } }
+                        .collect { n ->
+                            if (measurements++ % 15 == 0) log("live hr 2a37 < ${n.value.toHex()}")
+                            LiveHeartRate.parseMeasurement(n.value)?.let { onLiveHr(it) }
+                        }
                 }
                 runCatching { client.enableNotifications(StrapUuids.HEART_RATE_SERVICE, StrapUuids.HR_MEASUREMENT) }
                     .onFailure { log("2A37 subscribe failed: $it") }
@@ -254,5 +347,11 @@ class StrapManager(
             lastLiveSecond = now
             dao.insertHeartRate(listOf(HeartRateSample(now, bpm, HeartRateSample.SOURCE_LIVE)))
         }
+    }
+
+    private companion object {
+        val RETRY_SECONDS = longArrayOf(5, 15, 30, 60, 120, 300)
+        const val MIN_SYNC_GAP_SECONDS = 15 * 60L
+        const val AUTO_SYNC_SECONDS = 60 * 60L
     }
 }

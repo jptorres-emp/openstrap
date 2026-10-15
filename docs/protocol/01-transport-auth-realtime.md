@@ -629,3 +629,18 @@ The first real connection, from OpenStrap on an Android 16 phone, confirmed the 
 * DIS `2A28` firmware string = `3.20.0.1`.
 * Battery on `0x0029` works.
 * Time set on `0x0047` → reply `06 01`.
+
+### Verified on hardware: real-time HR and steps (2026-10-16)
+
+- **Real-time HR (§5.6, path A):**
+  - Open `04 02` on `0x001D` replies `05 03`, not `05 00`. Each `04 03` keep-alive replies `05 02`. Neither is an error.
+  - Subscribe `03 01` on `0x0048` replies `04 01`.
+  - Pushes `05 hr u16` arrive on `0x0048`, and standard `2A37` notifications arrive in parallel.
+- **Real-time steps (endpoint `0x0016`, RealtimeActivity, `d/fz00.java`, `d/hz00.java`):**
+  - Query `03` replies `04 01 record`. Notify on `05 01` replies `06 01 01`; off is `05 00`.
+  - Record, little-endian: `flags u8, steps u32`, then:
+    - `[bit0: running u32]`
+    - `[bit1: walking u32]`
+    - `[bit2&3: distance m u32, calories kcal u32]`
+    - `[bit4: gait info]`
+  - Totals count from local midnight. The strap pushes an update roughly every second while you walk.

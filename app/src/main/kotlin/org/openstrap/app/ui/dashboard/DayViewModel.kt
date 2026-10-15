@@ -51,7 +51,7 @@ data class DayUiState(
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class DayViewModel(private val repo: HealthRepository) : ViewModel() {
+class DayViewModel(private val repo: HealthRepository, private val strapSteps: Flow<Int?> = flowOf(null)) : ViewModel() {
     private val selected = MutableStateFlow(LocalDate.now())
 
     fun previousDay() { selected.value = selected.value.minusDays(1) }
@@ -92,12 +92,17 @@ class DayViewModel(private val repo: HealthRepository) : ViewModel() {
             restingTrend to hrvTrend
         }
 
-        return combine(activityAndHr, vitals, sleep, weekly) { (act, hr), (spo2, stress, hrv), (session, stages), (restingTrend, hrvTrend) ->
+        // The strap's own running total covers steps whose minute records were already taken by another app.
+        val liveSteps = if (date == LocalDate.now()) strapSteps else flowOf(null)
+        val actAndLive = combine(activityAndHr, liveSteps) { a, live -> a to live }
+
+        return combine(actAndLive, vitals, sleep, weekly) { (ah, live), (spo2, stress, hrv), (session, stages), (restingTrend, hrvTrend) ->
+            val (act, hr) = ah
             val series = Summaries.heartRateSeries(hr, act)
             val hourly = Summaries.hourlySteps(act, day.from)
             DayUiState(
                 date = date,
-                steps = Summaries.totalSteps(act),
+                steps = maxOf(Summaries.totalSteps(act), live ?: 0),
                 hourlySteps = hourly,
                 activeHours = Summaries.activeHours(hourly),
                 heartRate = Summaries.bucketAverage(series).map { ChartPoint(it.first, it.second.toFloat()) },

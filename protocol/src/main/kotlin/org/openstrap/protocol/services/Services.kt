@@ -12,6 +12,7 @@ object Endpoints {
     const val CONNECT = 0x0015
     const val USER_INFO = 0x0017
     const val OPEN_APP = 0x001D
+    const val REALTIME_ACTIVITY = 0x0016
     const val BATTERY = 0x0029
     const val DEVICE_INFO = 0x0043
     const val TIME = 0x0047
@@ -150,5 +151,42 @@ object LiveHeartRate {
         val wide = value.u8(0) and 0x01 != 0
         val bpm = if (wide && value.size >= 3) value.u8(1) or (value.u8(2) shl 8) else value.u8(1)
         return bpm.takeIf { it in 1..250 }
+    }
+}
+
+/** Today's running totals since local midnight. [distanceMeters]/[calories] are null when not reported. */
+data class StepTotals(val steps: Int, val distanceMeters: Int?, val calories: Int?)
+
+/**
+ * Endpoint 0x0016 "RealtimeActivity": query `03` -> `04 status record`; notify on `05 01` -> `06 status`,
+ * off `05 00`. Record: `flags u8, steps u32, [bit0: running u32], [bit1: walking u32],
+ * [bit2+bit3: distance u32, calories u32], [bit4: gait…]`, little-endian.
+ */
+object RealtimeSteps {
+    val QUERY: ByteArray = bytesOf(0x03)
+    val NOTIFY_ON: ByteArray = bytesOf(0x05, 0x01)
+    val NOTIFY_OFF: ByteArray = bytesOf(0x05, 0x00)
+
+    fun parseRecord(b: ByteArray, offset: Int = 0): StepTotals? {
+        if (b.size - offset < 5) return null
+        val r = ByteReader(b, offset)
+        val flags = r.u8()
+        val steps = r.u32().toInt()
+        if (flags and 0x01 != 0) { if (r.remaining < 4) return StepTotals(steps, null, null); r.u32() }
+        if (flags and 0x02 != 0) { if (r.remaining < 4) return StepTotals(steps, null, null); r.u32() }
+        if (flags and 0x0C == 0x0C && r.remaining >= 8) {
+            return StepTotals(steps, r.u32().toInt(), r.u32().toInt())
+        }
+        return StepTotals(steps, null, null)
+    }
+
+    /** Query reply (`04 01 record`) or an unsolicited push (`op record`); null for command acks. */
+    fun parseMessage(payload: ByteArray): StepTotals? {
+        if (payload.isEmpty()) return null
+        return when (payload.u8(0)) {
+            0x04 -> if (payload.size > 2 && payload.u8(1) == 0x01) parseRecord(payload, 2) else null
+            0x02, 0x06 -> null
+            else -> parseRecord(payload, 1)
+        }
     }
 }

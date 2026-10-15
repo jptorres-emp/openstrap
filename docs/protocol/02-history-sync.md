@@ -673,3 +673,8 @@ Before running a type, gate it on the `dataTypeMap` from QUERY_VERSION. Run type
 * **ACK must carry a parameter.** A bare `03` is ignored, and the strap later ends the transfer with `10 02 32` (timeout). `03 01` gets `10 03 01`.
 * **Every START must be closed with an ACK, including size-0 replies.** Otherwise the strap keeps that type open and answers every other START with status 5 (INVALID_STATE).
 * Stress values `ff` while on the charger, i.e. no reading.
+
+### Verified on hardware (2026-10-16, worn strap)
+
+- **ACTIVITY padding:** the transfer can end with all-`0xFF` 8-byte records for minutes not yet written. Drop them. Reading them as data gives 255 steps each and moves the cursor past real minutes.
+- **SEC_HR_V2 is zlib-compressed:** the payload starts `78 01`, and the CRC covers the compressed bytes. The START size is the **inflated** byte count. After inflating, the §3.2 block layout matches: blocks of `count = 300` samples, with unwritten seconds as `0xFF`.

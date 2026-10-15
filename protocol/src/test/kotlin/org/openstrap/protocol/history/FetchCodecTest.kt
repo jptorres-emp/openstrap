@@ -210,3 +210,14 @@ class VersionReplyTest {
         org.junit.Assert.assertEquals(setOf(7, 1, 0x48), v.supportedTypes())
     }
 }
+
+class ActivityPaddingTest {
+    @org.junit.Test
+    fun dropsTrailingFfRecords() {
+        val payload = "702300500d00000070430a5005000000ffffffffffffffffffffffffffffffff".hexToBytes()
+        val r = HistoryParsers.activity.parse(payload, ParseContext(1000, activityRecordSize = 8)) as ParseResult.Success
+        org.junit.Assert.assertEquals(2, r.records.size)
+        org.junit.Assert.assertEquals(listOf(0, 10), r.records.map { (it as ActivitySample).steps })
+        org.junit.Assert.assertEquals(1000 + 120L, r.nextCursor)
+    }
+}

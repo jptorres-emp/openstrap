@@ -60,6 +60,13 @@ interface HealthDao {
     @Query("SELECT * FROM heart_rate WHERE timestamp BETWEEN :from AND :to ORDER BY timestamp")
     suspend fun heartRateOnce(from: Long, to: Long): List<HeartRateSample>
 
+    /** Rows written from 0xFF padding records by builds before the parser skipped them. */
+    @Query("SELECT MIN(timestamp) FROM activity_minute WHERE steps = 255 AND intensity = 255 AND kind = 255")
+    suspend fun firstPaddingActivity(): Long?
+
+    @Query("DELETE FROM activity_minute WHERE steps = 255 AND intensity = 255 AND kind = 255")
+    suspend fun deletePaddingActivity(): Int
+
     @Query("SELECT * FROM activity_minute WHERE timestamp BETWEEN :from AND :to ORDER BY timestamp")
     suspend fun activityOnce(from: Long, to: Long): List<ActivityMinute>
 

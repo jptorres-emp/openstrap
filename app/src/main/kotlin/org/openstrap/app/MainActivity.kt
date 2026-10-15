@@ -53,6 +53,13 @@ class MainActivity : ComponentActivity() {
         val container = (application as OpenStrapApp).container
         setContent { OpenStrapTheme { AppRoot(container) } }
     }
+
+    override fun onResume() {
+        super.onResume()
+        // Reconnect to a paired strap whenever the app comes to the front (sync follows on connect).
+        val granted = checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        if (granted) (application as OpenStrapApp).container.strap.autoConnect()
+    }
 }
 
 private enum class Tab(val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector) {
@@ -72,7 +79,7 @@ private val BLUETOOTH_PERMISSIONS = arrayOf(
 private fun AppRoot(container: AppContainer) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val dayVm: DayViewModel = viewModel(factory = viewModelFactory { initializer { DayViewModel(container.health) } })
+    val dayVm: DayViewModel = viewModel(factory = viewModelFactory { initializer { DayViewModel(container.health, container.strap.todaySteps) } })
     val deviceVm: DeviceViewModel = viewModel(factory = viewModelFactory { initializer { DeviceViewModel(container) } })
 
     var tab by rememberSaveable { mutableIntStateOf(0) }

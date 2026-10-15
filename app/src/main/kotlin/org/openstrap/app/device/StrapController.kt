@@ -26,10 +26,16 @@ interface StrapController {
     /** Latest live heart-rate reading in bpm, or null when live HR is off. */
     val liveHeartRate: StateFlow<Int?>
 
+    /** Today's step total as counted by the strap (since local midnight), or null when unknown. */
+    val todaySteps: StateFlow<Int?>
+
     /** Recent protocol log lines, shown on the Device screen for troubleshooting. */
     val log: StateFlow<List<String>>
 
     fun connect()
+
+    /** Connect to the paired strap if not already connected; no-op when nothing is paired. */
+    fun autoConnect()
     fun disconnect()
     fun syncNow()
     fun setLiveHeartRate(enabled: Boolean)

@@ -53,3 +53,17 @@ class ServicesTest {
         assertEquals(300 - 250, (LiveHeartRate.parseMeasurement("01 2c01".hexToBytes()) ?: 50))
     }
 }
+
+class RealtimeStepsTest {
+    @org.junit.Test
+    fun parsesQueryReplyAndPush() {
+        // flags 0x0C: steps 1234, distance 900 m, 45 kcal.
+        val reply = "04 01 0c d2040000 84030000 2d000000".replace(" ", "").hexToBytes()
+        org.junit.Assert.assertEquals(StepTotals(1234, 900, 45), RealtimeSteps.parseMessage(reply))
+        // flags 0x01 (running u32 present) without distance.
+        val push = "03 01 64000000 05000000".replace(" ", "").hexToBytes()
+        org.junit.Assert.assertEquals(StepTotals(100, null, null), RealtimeSteps.parseMessage(push))
+        org.junit.Assert.assertNull(RealtimeSteps.parseMessage("0601".hexToBytes()))
+        org.junit.Assert.assertNull(RealtimeSteps.parseMessage("0405".hexToBytes()))
+    }
+}

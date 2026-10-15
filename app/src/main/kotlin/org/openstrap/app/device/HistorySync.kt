@@ -64,6 +64,11 @@ class HistorySync(
 
     suspend fun run() = coroutineScope {
         state.value = SyncState.Running("Preparing…")
+        // Earlier builds stored the strap's 0xFF padding minutes as 255 steps; drop them and re-fetch from there.
+        dao.firstPaddingActivity()?.let { first ->
+            log("history: removed ${dao.deletePaddingActivity()} padding activity rows")
+            settings.setLastSync("gdsp_${HistoryDataType.ACTIVITY.code}", first)
+        }
         val listeners = launch {
             launch { gatt.notifications.filter { it.characteristic == HISTORY_DATA }.collect { data.send(it.value) } }
             if (useChannel) {
@@ -136,12 +141,17 @@ class HistorySync(
                 finish(ok = false)
                 return
             }
-            val (payload, deviceCrc) = transferred
-            if (deviceCrc != null && deviceCrc != org.openstrap.protocol.crypto.crc32(payload)) {
+            val (wire, deviceCrc) = transferred
+            if (deviceCrc != null && deviceCrc != org.openstrap.protocol.crypto.crc32(wire)) {
                 log("history ${spec.type}: CRC mismatch, discarding")
                 finish(ok = false)
                 return
             }
+            // Some types (SEC_HR_V2) arrive zlib-compressed; the size field is then the inflated byte count.
+            val payload = if (wire.size.toLong() != start.size && isZlib(wire)) {
+                runCatching { inflate(wire) }.onFailure { log("history ${spec.type}: inflate failed: $it") }.getOrNull()
+                    ?: run { finish(ok = false); return }
+            } else wire
 
             // The size field counts records, not bytes (activity: size 4 = four 8-byte minutes).
             val unit = when {
@@ -298,5 +308,25 @@ class HistorySync(
         private const val DEFAULT_LOOKBACK = 2L * 24 * 3600
         private const val NO_DATA_TIMEOUT_MS = 20_000L
         private const val MAX_CHUNKS_PER_TYPE = 50
+    }
+}
+
+private fun isZlib(b: ByteArray): Boolean =
+    b.size >= 2 && (b[0].toInt() and 0x0F) == 8 && ((b[0].toInt() and 0xFF) * 256 + (b[1].toInt() and 0xFF)) % 31 == 0
+
+private fun inflate(b: ByteArray): ByteArray {
+    val inflater = java.util.zip.Inflater()
+    try {
+        inflater.setInput(b)
+        val out = java.io.ByteArrayOutputStream(b.size * 8)
+        val buf = ByteArray(4096)
+        while (!inflater.finished()) {
+            val n = inflater.inflate(buf)
+            if (n == 0 && (inflater.needsInput() || inflater.needsDictionary())) error("truncated zlib stream")
+            out.write(buf, 0, n)
+        }
+        return out.toByteArray()
+    } finally {
+        inflater.end()
     }
 }

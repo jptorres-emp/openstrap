@@ -64,11 +64,7 @@ class HistorySync(
 
     suspend fun run() = coroutineScope {
         state.value = SyncState.Running("Preparing…")
-        // Earlier builds stored the strap's 0xFF padding minutes as 255 steps; drop them and re-fetch from there.
-        dao.firstPaddingActivity()?.let { first ->
-            log("history: removed ${dao.deletePaddingActivity()} padding activity rows")
-            settings.setLastSync("gdsp_${HistoryDataType.ACTIVITY.code}", first)
-        }
+        repairEarlierSyncs()
         val listeners = launch {
             launch { gatt.notifications.filter { it.characteristic == HISTORY_DATA }.collect { data.send(it.value) } }
             if (useChannel) {
@@ -117,6 +113,30 @@ class HistorySync(
                 if (m is GdspMessage.DataAvailable) log("history: device has new data of type ${m.typeCode}")
             }
             @Suppress("UNREACHABLE_CODE") error("unreachable")
+        }
+    }
+
+    /**
+     * Undo damage from earlier builds: 0xFF padding stored as 255-step minutes, stale buffer slots stored
+     * with dates weeks in the future, and sync cursors that those pushed past the present.
+     */
+    private suspend fun repairEarlierSyncs() {
+        val now = System.currentTimeMillis() / 1000
+        val padding = dao.deletePaddingActivity()
+        val outside = dao.deleteActivityOutside(MIN_VALID_EPOCH, now + FUTURE_SLACK)
+        if (padding + outside > 0) log("history: removed $padding padding and $outside misdated activity rows")
+        for (type in HistoryDataType.entries) {
+            val key = "gdsp_${type.code}"
+            val cursor = settings.lastSync(key) ?: continue
+            val activityRepaired = type == HistoryDataType.ACTIVITY && padding + outside > 0
+            if (cursor <= now + FUTURE_SLACK && !activityRepaired) continue
+            val reset = if (type == HistoryDataType.ACTIVITY) {
+                dao.latestActivity(now)?.plus(60) ?: (now - DEFAULT_LOOKBACK)
+            } else {
+                now - DEFAULT_LOOKBACK
+            }
+            log("history: cursor for $type was ${Instant.ofEpochSecond(cursor)}, reset to ${Instant.ofEpochSecond(reset)}")
+            settings.setLastSync(key, reset)
         }
     }
 
@@ -177,11 +197,15 @@ class HistorySync(
                     return
                 }
                 is ParseResult.Success -> {
-                    log("history ${spec.type}: ${result.records.size} records")
-                    store(result.records)
+                    // Drop records with impossible times (stale buffer slots, data from before the clock was set).
+                    val now = System.currentTimeMillis() / 1000
+                    val kept = result.records.filter { it.timestamp in MIN_VALID_EPOCH..now + FUTURE_SLACK }
+                    val dropped = result.records.size - kept.size
+                    log("history ${spec.type}: ${kept.size} records" + if (dropped > 0) " ($dropped with impossible times dropped)" else "")
+                    store(kept)
                     // Only acknowledge once the data is safely in the database.
                     finish(ok = true)
-                    val next = result.nextCursor
+                    val next = if (kept.isEmpty()) null else result.nextCursor?.coerceAtMost(kept.maxOf { it.timestamp } + 60)?.coerceAtMost(now)
                     if (next != null && next > cursor) settings.setLastSync(key, next)
                     if (!HistoryTypeSpecs.shouldContinue(spec, cursor, next)) return
                     cursor = next!!
@@ -306,6 +330,9 @@ class HistorySync(
         private val HISTORY_CONTROL = java.util.UUID.fromString("00000004-0000-3512-2118-0009af100700")
         private val HISTORY_DATA = java.util.UUID.fromString("00000005-0000-3512-2118-0009af100700")
         private const val DEFAULT_LOOKBACK = 2L * 24 * 3600
+        /** 2024-01-01: anything older comes from a strap whose clock was never set. */
+        private const val MIN_VALID_EPOCH = 1_704_067_200L
+        private const val FUTURE_SLACK = 120L
         private const val NO_DATA_TIMEOUT_MS = 20_000L
         private const val MAX_CHUNKS_PER_TYPE = 50
     }

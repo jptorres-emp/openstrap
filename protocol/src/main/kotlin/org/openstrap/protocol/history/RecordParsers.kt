@@ -91,11 +91,12 @@ object HistoryParsers {
     /** Type 1 (§3.1): per-minute activity; 4-byte or >= 8-byte records. */
     val activity = HistoryParser { raw, ctx ->
         val size = if (ctx.activityRecordSize <= 4) 4 else ctx.activityRecordSize
-        // The strap pads the transfer with all-0xFF records for minutes it hasn't written yet (seen on
-        // hardware). Read as data they'd be 255 steps each, and they'd push the cursor into the future.
+        // Real minutes end at the first all-0xFF record (a slot the strap hasn't written). On hardware the
+        // strap sometimes sends its whole buffer: a few real minutes, hours of 0xFF, then weeks of stale
+        // slots. Read as data the 0xFF records are 255 steps each and push the cursor into the future.
         val whole = raw.size - raw.size % size
-        var end = whole
-        while (end >= size && (end - size until end).all { raw[it] == 0xFF.toByte() }) end -= size
+        var end = 0
+        while (end < whole && !(end until end + size).all { raw[it] == 0xFF.toByte() }) end += size
         // Keep any trailing partial record so it's still reported as dropped bytes.
         val payload = if (end == whole) raw else raw.copyOf(end) + raw.copyOfRange(whole, raw.size)
         fixed(payload, size, strict = false, next = { recs ->

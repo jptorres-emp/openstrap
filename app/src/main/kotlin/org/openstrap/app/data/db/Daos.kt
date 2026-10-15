@@ -67,6 +67,13 @@ interface HealthDao {
     @Query("DELETE FROM activity_minute WHERE steps = 255 AND intensity = 255 AND kind = 255")
     suspend fun deletePaddingActivity(): Int
 
+    /** Rows dated outside [from, to]: stale buffer slots a strap sent with impossible times. */
+    @Query("DELETE FROM activity_minute WHERE timestamp < :from OR timestamp > :to")
+    suspend fun deleteActivityOutside(from: Long, to: Long): Int
+
+    @Query("SELECT MAX(timestamp) FROM activity_minute WHERE timestamp <= :before")
+    suspend fun latestActivity(before: Long): Long?
+
     @Query("SELECT * FROM activity_minute WHERE timestamp BETWEEN :from AND :to ORDER BY timestamp")
     suspend fun activityOnce(from: Long, to: Long): List<ActivityMinute>
 

@@ -11,6 +11,7 @@ import androidx.compose.material.icons.filled.Female
 import androidx.compose.material.icons.filled.Male
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -107,8 +108,8 @@ fun ProfileDialog(profile: UserProfile, onSave: (UserProfile) -> Unit, onDismiss
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     NumberField(age, { age = it }, "Age", "years", age.isNotBlank() && ageValue == null, Modifier.weight(1f))
                     // Tapping the selected sex again clears it.
-                    SexToggle(Icons.Default.Female, "Female", sex == 0) { sex = if (sex == 0) 2 else 0 }
-                    SexToggle(Icons.Default.Male, "Male", sex == 1) { sex = if (sex == 1) 2 else 1 }
+                    SexToggle(Icons.Default.Female, "Female", FemaleColor, sex == 0) { sex = if (sex == 0) 2 else 0 }
+                    SexToggle(Icons.Default.Male, "Male", MaleColor, sex == 1) { sex = if (sex == 1) 2 else 1 }
                 }
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     SectionLabel("Units")
@@ -174,18 +175,20 @@ private fun NumberField(
 /** 72.0 -> "72", 158.7 -> "158.7". */
 private fun formatNumber(v: Float): String = "%.1f".format(java.util.Locale.ROOT, v).removeSuffix(".0")
 
-/** A round icon button for one sex; filled when selected. */
+private val FemaleColor = Color(0xFFF472B6)
+private val MaleColor = Color(0xFF60A5FA)
+
+/** A round icon button for one sex, in its own colour: muted until selected, then filled. */
 @Composable
-private fun SexToggle(icon: ImageVector, label: String, selected: Boolean, onClick: () -> Unit) {
-    val accent = MaterialTheme.colorScheme.primary
+private fun SexToggle(icon: ImageVector, label: String, accent: Color, selected: Boolean, onClick: () -> Unit) {
     Box(
         Modifier.padding(top = 8.dp).size(52.dp).clip(CircleShape)
-            .background(if (selected) accent.copy(alpha = 0.18f) else MaterialTheme.colorScheme.surfaceContainerHigh)
+            .background(if (selected) accent.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceContainerHigh)
             .border(if (selected) 1.5.dp else 1.dp, if (selected) accent else MaterialTheme.colorScheme.outline, CircleShape)
             .clickable(onClickLabel = label, role = Role.RadioButton, onClick = onClick)
             .semantics { this.selected = selected; contentDescription = label },
         contentAlignment = Alignment.Center,
     ) {
-        Icon(icon, null, tint = if (selected) accent else MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(26.dp))
+        Icon(icon, null, tint = if (selected) accent else accent.copy(alpha = 0.55f), modifier = Modifier.size(26.dp))
     }
 }

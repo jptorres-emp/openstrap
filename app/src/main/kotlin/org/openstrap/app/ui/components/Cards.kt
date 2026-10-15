@@ -216,5 +216,9 @@ fun EmptyHint(text: String) {
 fun formatDuration(seconds: Long): String {
     val h = seconds / 3600
     val m = (seconds % 3600) / 60
-    return if (h > 0) "${h}h ${m}m" else "${m}m"
+    return when {
+        h > 0 && m == 0L -> "${h}h"
+        h > 0 -> "${h}h ${m}m"
+        else -> "${m}m"
+    }
 }

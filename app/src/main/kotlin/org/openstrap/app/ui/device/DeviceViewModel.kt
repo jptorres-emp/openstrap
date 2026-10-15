@@ -71,6 +71,11 @@ class DeviceViewModel(private val container: AppContainer) : ViewModel() {
         }
     }
 
+    fun loadSampleData() = viewModelScope.launch {
+        org.openstrap.app.data.SampleData.load(container.database.healthDao())
+        _message.value = "Loaded a week of sample data."
+    }
+
     fun forget() = viewModelScope.launch {
         container.strap.disconnect()
         container.settings.forgetDevice()

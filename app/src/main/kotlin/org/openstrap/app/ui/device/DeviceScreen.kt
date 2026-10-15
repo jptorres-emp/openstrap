@@ -148,6 +148,10 @@ fun DeviceScreen(
         }
 
         item { DiagnosticsPanel(log) }
+
+        if (org.openstrap.app.data.SampleData.AVAILABLE) item {
+            TextButton(onClick = vm::loadSampleData, modifier = Modifier.fillMaxWidth()) { Text("Load sample data (debug build)") }
+        }
     }
 }
 

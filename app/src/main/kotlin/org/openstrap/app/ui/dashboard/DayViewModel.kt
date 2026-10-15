@@ -100,7 +100,7 @@ class DayViewModel(private val repo: HealthRepository) : ViewModel() {
                 steps = Summaries.totalSteps(act),
                 hourlySteps = hourly,
                 activeHours = Summaries.activeHours(hourly),
-                heartRate = series.map { ChartPoint(it.first, it.second.toFloat()) },
+                heartRate = Summaries.bucketAverage(series).map { ChartPoint(it.first, it.second.toFloat()) },
                 latestHeartRate = series.lastOrNull()?.second,
                 restingHeartRate = restingTrend.last().value?.toInt(),
                 restingTrend = restingTrend,

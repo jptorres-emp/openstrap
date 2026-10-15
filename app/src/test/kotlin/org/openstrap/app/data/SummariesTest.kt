@@ -52,3 +52,11 @@ class SummariesTest {
         assertEquals(300L, b.byStage[SleepStage.DEEP])
     }
 }
+
+class BucketTest {
+    @Test
+    fun averagesIntoFiveMinuteBuckets() {
+        val s = listOf(0L to 60, 60L to 70, 299L to 80, 300L to 90)
+        assertEquals(listOf(0L to 70, 300L to 90), Summaries.bucketAverage(s))
+    }
+}

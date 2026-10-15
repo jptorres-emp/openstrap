@@ -101,8 +101,10 @@ fun LineChart(
             label(measurer, v.toInt().toString(), style, size.width, y - 7.sp.toPx(), alignEnd = true)
             v += step
         }
+        // Inclusive ranges like 00:00..23:59:59 label as 00:00, 06:00, … rather than 05:59.
+        val span = (xRange.last - xRange.first + 1)
         for (i in 0..4) {
-            val t = xRange.first + (xRange.last - xRange.first) * i / 4
+            val t = (xRange.first + span * i / 4).coerceAtMost(xRange.last)
             label(measurer, hourLabel(t), style, xOf(t), h + 4.dp.toPx(), center = i in 1..3, alignEnd = i == 4)
         }
         if (points.size < 2) return@Canvas

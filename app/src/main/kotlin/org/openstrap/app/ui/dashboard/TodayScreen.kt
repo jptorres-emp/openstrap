@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
@@ -59,11 +60,12 @@ val SLEEP_COLORS = mapOf(
 /** Shared scrolling list with consistent gutters for all dashboard tabs. */
 @Composable
 fun ScreenList(contentPadding: PaddingValues, content: LazyListScope.() -> Unit) {
+    // The status bar gets an opaque strip so cards don't scroll underneath the clock.
     LazyColumn(
-        Modifier.fillMaxSize(),
+        Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).statusBarsPadding(),
         contentPadding = PaddingValues(
             start = 16.dp, end = 16.dp,
-            top = contentPadding.calculateTopPadding() + 4.dp,
+            top = 4.dp,
             bottom = contentPadding.calculateBottomPadding() + 24.dp,
         ),
         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -119,7 +121,7 @@ fun TodayScreen(
     item {
         Panel {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                StatRing("Steps", "%.1fk".format(state.steps / 1000f).replace(".0k", "k"), state.steps / STEP_GOAL.toFloat(), MetricColors.steps)
+                StatRing("Steps", compactCount(state.steps), state.steps / STEP_GOAL.toFloat(), MetricColors.steps)
                 StatRing(
                     "Sleep",
                     state.asleepSeconds?.let { "%dh%02d".format(it / 3600, (it % 3600) / 60) } ?: "—",
@@ -177,3 +179,10 @@ fun TodayScreen(
 }
 
 fun List<ChartPoint>.avg(): Int? = if (isEmpty()) null else Math.round(map { it.y }.average()).toInt()
+
+/** 950 -> "950", 8_420 -> "8.4k", 12_000 -> "12k". */
+fun compactCount(n: Int): String = when {
+    n < 1000 -> n.toString()
+    n < 10_000 -> "%.1fk".format(n / 1000f).replace(".0k", "k")
+    else -> "${n / 1000}k"
+}

@@ -29,6 +29,12 @@ object Summaries {
         return byTime.map { it.key to it.value }
     }
 
+    /** Averages a series into fixed buckets (e.g. 5 minutes) for a calmer chart line. */
+    fun bucketAverage(series: List<Pair<Long, Int>>, bucketSeconds: Long = 300): List<Pair<Long, Int>> =
+        series.groupBy { it.first / bucketSeconds * bucketSeconds }
+            .map { (t, v) -> t to Math.round(v.map { it.second }.average()).toInt() }
+            .sortedBy { it.first }
+
     /**
      * Lowest 30-minute average heart rate — a reasonable stand-in for resting HR when the strap's own
      * value isn't available.

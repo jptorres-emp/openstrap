@@ -22,6 +22,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -38,13 +39,18 @@ val PanelShape = RoundedCornerShape(22.dp)
 fun Panel(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
+    /** When set, the border fades to this colour (used to point at a card after jumping to it). */
+    highlight: Color? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    val border by androidx.compose.animation.animateColorAsState(
+        highlight ?: MaterialTheme.colorScheme.outlineVariant, androidx.compose.animation.core.tween(450), label = "panel border",
+    )
     Surface(
         modifier = modifier.fillMaxWidth().let { if (onClick != null) it.clip(PanelShape).clickable(onClick = onClick) else it },
         shape = PanelShape,
         color = MaterialTheme.colorScheme.surfaceContainer,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        border = BorderStroke(if (highlight != null) 1.5.dp else 1.dp, border),
     ) {
         Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp), content = content)
     }

@@ -43,6 +43,8 @@ import org.openstrap.app.device.ConnectionState
 import org.openstrap.app.ui.dashboard.DayViewModel
 import org.openstrap.app.ui.dashboard.HeartScreen
 import org.openstrap.app.ui.dashboard.SleepScreen
+import org.openstrap.app.ui.dashboard.FocusRequest
+import org.openstrap.app.ui.dashboard.FocusTarget
 import org.openstrap.app.ui.components.FloatingNavBar
 import org.openstrap.app.ui.components.NavItem
 import org.openstrap.app.ui.dashboard.TodayScreen
@@ -109,6 +111,7 @@ private fun AppRoot(container: AppContainer) {
     val deviceVm: DeviceViewModel = viewModel(factory = viewModelFactory { initializer { DeviceViewModel(container) } })
 
     var tab by rememberSaveable { mutableIntStateOf(0) }
+    var focus by remember { mutableStateOf<FocusRequest?>(null) }
     val liveEnabled by container.strap.liveHeartRateEnabled.collectAsStateWithLifecycle()
     val firmwareVm: FirmwareViewModel = viewModel(factory = viewModelFactory { initializer { FirmwareViewModel(container) } })
     var showFirmware by rememberSaveable { mutableStateOf(false) }
@@ -157,7 +160,11 @@ private fun AppRoot(container: AppContainer) {
         when (Tab.entries[tab]) {
             Tab.Today -> TodayScreen(
                 day, live, battery, charging, dayVm::previousDay, dayVm::nextDay, padding,
-                onOpenHeart = { tab = Tab.Heart.ordinal }, onOpenSleep = { tab = Tab.Sleep.ordinal },
+                onOpenSleep = { tab = Tab.Sleep.ordinal },
+                onFocus = { target ->
+                    focus = FocusRequest(target)
+                    tab = (if (target == FocusTarget.Breathing) Tab.Sleep else Tab.Heart).ordinal
+                },
             )
             Tab.Heart -> HeartScreen(
                 day, live, liveEnabled,
@@ -166,8 +173,9 @@ private fun AppRoot(container: AppContainer) {
                 charging = charging,
                 onLiveToggle = { container.strap.setLiveHeartRate(it) },
                 onPrev = dayVm::previousDay, onNext = dayVm::nextDay, contentPadding = padding,
+                focus = focus, onFocusDone = { focus = null },
             )
-            Tab.Sleep -> SleepScreen(day, battery, charging, dayVm::previousDay, dayVm::nextDay, padding)
+            Tab.Sleep -> SleepScreen(day, battery, charging, dayVm::previousDay, dayVm::nextDay, padding, focus, onFocusDone = { focus = null })
             Tab.Device -> if (showFirmware) {
                 FirmwareScreen(firmwareVm, padding, onBack = { showFirmware = false })
             } else {

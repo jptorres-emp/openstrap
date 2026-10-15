@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
@@ -67,6 +68,8 @@ fun LineChart(
     markMin: Boolean = false,
     band: LongRange? = null,
     bandColor: Color = Color.Unspecified,
+    /** 0..1: how much of the line is drawn, left to right (for the focus animation). */
+    reveal: Float = 1f,
 ) {
     val measurer = rememberTextMeasurer()
     val style = axisStyle()
@@ -108,7 +111,7 @@ fun LineChart(
             label(measurer, hourLabel(t), style, xOf(t), h + 4.dp.toPx(), center = i in 1..3, alignEnd = i == 4)
         }
         if (points.isEmpty()) return@Canvas
-
+        clipRect(right = w * reveal.coerceIn(0f, 1f)) {
         val segments = mutableListOf(mutableListOf(points.first()))
         for (i in 1 until points.size) {
             if (points[i].x - points[i - 1].x > gapSeconds) segments += mutableListOf<ChartPoint>()
@@ -149,6 +152,7 @@ fun LineChart(
             drawCircle(color, 6.dp.toPx(), o)
             drawCircle(surface, 3.dp.toPx(), o)
         }
+        }
     }
 }
 
@@ -162,7 +166,7 @@ data class TrendPoint(val label: String, val value: Float?)
 
 /** WHOOP-style 7-day trend: dots joined by a line, value printed above each point, last point highlighted. */
 @Composable
-fun TrendChart(points: List<TrendPoint>, color: Color, modifier: Modifier = Modifier, height: Dp = 150.dp) {
+fun TrendChart(points: List<TrendPoint>, color: Color, modifier: Modifier = Modifier, height: Dp = 150.dp, reveal: Float = 1f) {
     val measurer = rememberTextMeasurer()
     val axis = axisStyle()
     val valueStyle = TextStyle(color = MaterialTheme.colorScheme.onSurface, fontSize = 12.sp, fontFamily = org.openstrap.app.ui.theme.FunnelDisplay)
@@ -180,11 +184,12 @@ fun TrendChart(points: List<TrendPoint>, color: Color, modifier: Modifier = Modi
         fun yOf(v: Float) = topPad + (h - topPad) * (1 - (v - lo) / (hi - lo).coerceAtLeast(1f))
 
         drawRoundRect(highlight, Offset(slot * (points.size - 1), 0f), Size(slot, size.height), CornerRadius(10.dp.toPx()))
+        points.forEachIndexed { i, p -> label(measurer, p.label, axis, slot * i + slot / 2, h + 4.dp.toPx(), center = true) }
 
+        clipRect(right = size.width * reveal.coerceIn(0f, 1f)) {
         var prev: Offset? = null
         points.forEachIndexed { i, p ->
             val cx = slot * i + slot / 2
-            label(measurer, p.label, axis, cx, h + 4.dp.toPx(), center = true)
             val v = p.value ?: run { prev = null; return@forEachIndexed }
             val o = Offset(cx, yOf(v))
             prev?.let { drawLine(color, it, o, 2.dp.toPx(), cap = StrokeCap.Round) }
@@ -196,6 +201,7 @@ fun TrendChart(points: List<TrendPoint>, color: Color, modifier: Modifier = Modi
             drawCircle(color, 5.dp.toPx(), o)
             drawCircle(surface, 2.5.dp.toPx(), o)
             label(measurer, v.toInt().toString(), valueStyle, o.x, o.y - 20.dp.toPx(), center = true)
+        }
         }
     }
 }

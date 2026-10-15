@@ -2,7 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- INTERNET is used only when you check for or download strap firmware. Health data is never uploaded. -->
+    <!-- INTERNET is used only for Zepp sign-in (device list) and strap firmware checks and downloads. Health data is never uploaded. -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 

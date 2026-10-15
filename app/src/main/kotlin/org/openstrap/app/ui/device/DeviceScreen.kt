@@ -71,6 +71,7 @@ import org.openstrap.app.ui.components.SectionLabel
 import org.openstrap.app.ui.components.SettingRow
 import org.openstrap.app.ui.dashboard.ScreenList
 import org.openstrap.app.ui.theme.MetricColors
+import org.openstrap.app.ui.zepp.ZeppSignInDialog
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -247,12 +248,32 @@ private fun PairPanel(vm: DeviceViewModel, scan: ScanUiState, onRequestBluetooth
     var name by rememberSaveable { mutableStateOf("Amazfit Helio Strap") }
     var key by rememberSaveable { mutableStateOf("") }
     var showKey by rememberSaveable { mutableStateOf(false) }
+    var signIn by rememberSaveable { mutableStateOf(false) }
+
+    if (signIn) {
+        ZeppSignInDialog(
+            preferredApiBase = null,
+            confirmLabel = "Use this strap",
+            onDismiss = { signIn = false },
+            onConfirm = { listing, strap ->
+                signIn = false
+                vm.saveZeppSignIn(listing, strap)
+                strap?.let { address = it.macAddress; it.authKey?.let { k -> key = k } }
+            },
+        )
+    }
 
     Panel {
         PanelHeader("Pair your Helio Strap", Icons.AutoMirrored.Filled.BluetoothSearching, MaterialTheme.colorScheme.primary)
         Text(
             "Put the strap on its charger, then scan. You'll also need its 32-character auth key from the one-time Zepp bind.",
             style = MaterialTheme.typography.bodyMedium,
+        )
+        OutlinedButton(onClick = { signIn = true }, Modifier.fillMaxWidth()) { Text("Sign in with Zepp to fetch the key") }
+        Text(
+            "Or scan and paste the key yourself below. Signing in only contacts Zepp to read your device list.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         if (scan.scanning) {
             OutlinedButton(onClick = vm::stopScan, Modifier.fillMaxWidth()) { Text("Stop scanning") }

@@ -1,0 +1,125 @@
+package org.openstrap.protocol
+
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Test
+import org.openstrap.protocol.auth.AuthException
+import org.openstrap.protocol.crypto.Aes
+import org.openstrap.protocol.crypto.B163
+import org.openstrap.protocol.crypto.ChannelCipher
+import org.openstrap.protocol.services.BatteryInfo
+import org.openstrap.protocol.services.Endpoints
+import org.openstrap.protocol.transport.Reassembler
+import org.openstrap.protocol.transport.buildChunks
+
+/**
+ * A simulated strap speaking the device side of docs/protocol/01: version query, services list,
+ * ECDH auth and an encrypted battery endpoint.
+ */
+private class SimulatedStrap(private val authKey: ByteArray) : StrapLink {
+    override val payloadMtu = 20
+    override val controlNotifications = MutableSharedFlow<ByteArray>(extraBufferCapacity = 64)
+    override val dataNotifications = MutableSharedFlow<ByteArray>(extraBufferCapacity = 64)
+
+    private val keys = B163.generateKeyPair()
+    private val challenge = ByteArray(16) { (it * 5 + 1).toByte() }
+    private var pendingCipher: ChannelCipher? = null
+    private var cipher: ChannelCipher? = null
+    private var deviceSession = 0
+    val phoneAcks = mutableListOf<ByteArray>()
+
+    private val reassembler = Reassembler({ true }, { sid, data, len ->
+        // The device decrypts with its own rx counter, which starts at the phone's tx counter.
+        cipher!!.decrypt(sid, data, len)
+    }) { msg -> respond(msg.endpoint, msg.payload) }
+
+    override suspend fun writeControl(data: ByteArray) {
+        if (data.contentEquals(byteArrayOf(1))) {
+            controlNotifications.emit(byteArrayOf(2, 2, 1))
+            return
+        }
+        reassembler.accept(data)?.let { controlNotifications.emit(it) }
+        flushOutbox()
+    }
+
+    override suspend fun writeData(data: ByteArray) {
+        phoneAcks += data
+    }
+
+    private val outbox = mutableListOf<Pair<Int, ByteArray>>()
+    private fun respond(endpoint: Int, payload: ByteArray) {
+        when (endpoint) {
+            Endpoints.SERVICES -> outbox += endpoint to "04 0300 0000 00 8200 00 2900 01".hexToBytes()
+            Endpoints.AUTH -> when (payload[0].toInt()) {
+                4 -> {
+                    val shared = B163.sharedSecret(keys.privateKey, payload.copyOfRange(4, 52))
+                    pendingCipher = ChannelCipher(shared, authKey)
+                    outbox += endpoint to byteArrayOf(0x10, 4, 1) + challenge + keys.publicKey
+                }
+                5 -> {
+                    val c = pendingCipher!!
+                    val ok = payload.copyOfRange(1, 17).contentEquals(Aes.encrypt(authKey, challenge)) &&
+                        payload.copyOfRange(17, 33).contentEquals(Aes.encrypt(c.sessionKey, challenge))
+                    outbox += endpoint to byteArrayOf(0x10, 5, if (ok) 1 else 0x26)
+                    if (ok) cipher = mirrored(c)
+                }
+            }
+            Endpoints.BATTERY -> outbox += endpoint to "04 01 4d 00".hexToBytes()
+        }
+    }
+
+    /** Device-side cipher: its tx counter is the phone's rx counter and vice versa. */
+    private fun mirrored(phoneView: ChannelCipher): ChannelCipher {
+        val s = ByteArray(24)
+        val tx = phoneView.rxCounter
+        val rx = phoneView.txCounter
+        for (i in 0..3) {
+            s[i] = (tx ushr (8 * i)).toByte()
+            s[4 + i] = (rx ushr (8 * i)).toByte()
+        }
+        // Bytes 8..23 must reproduce the same session key: S[8+i] xor K[i] == sessionKey[i].
+        for (i in 0..15) s[8 + i] = (phoneView.sessionKey[i].toInt() xor authKey[i].toInt()).toByte()
+        return ChannelCipher(s, authKey)
+    }
+
+    private suspend fun flushOutbox() {
+        while (outbox.isNotEmpty()) {
+            val (endpoint, payload) = outbox.removeAt(0)
+            val sid = deviceSession++ and 0xFF
+            val c = cipher
+            val encrypt = c != null && endpoint == Endpoints.BATTERY
+            val body = if (encrypt) c!!.encrypt(sid, payload) else payload
+            buildChunks(endpoint, sid, body, payload.size, encrypt, payloadMtu).forEach { dataNotifications.emit(it) }
+        }
+    }
+}
+
+class ChannelSessionTest {
+    private val key = "3c4a6f0e9b1d22e7a8c5f01b6d9e4a77".hexToBytes()
+
+    @Test
+    fun fullHandshakeThenEncryptedRequest() = runTest {
+        val strap = SimulatedStrap(key)
+        val session = ChannelSession(strap)
+        session.start(backgroundScope)
+        session.handshake(key)
+        assertTrue(session.isAuthenticated)
+        assertTrue(session.services.requiresEncryption(Endpoints.BATTERY))
+
+        val reply = session.request(Endpoints.BATTERY, BatteryInfo.GET) { it[0].toInt() == 4 }
+        assertEquals(77, BatteryInfo.parseChannel(reply)!!.level)
+        // The phone acknowledged the device's multi-chunk replies.
+        assertTrue(strap.phoneAcks.isNotEmpty())
+    }
+
+    @Test
+    fun wrongKeyFailsWithStatus() = runTest {
+        val strap = SimulatedStrap(key)
+        val session = ChannelSession(strap)
+        session.start(backgroundScope)
+        val e = runCatching { session.handshake("00000000000000000000000000000000".hexToBytes()) }.exceptionOrNull()
+        assertTrue("got $e", e is AuthException && e.status == 0x26)
+    }
+}

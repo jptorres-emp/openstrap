@@ -87,6 +87,11 @@ class DayViewModel(
 
     fun previousDay() { selected.value = selected.value.minusDays(1) }
     fun nextDay() { if (selected.value < LocalDate.now()) selected.value = selected.value.plusDays(1) }
+    fun select(date: LocalDate) { selected.value = minOf(date, LocalDate.now()) }
+
+    /** Days the calendar lets you pick. */
+    val daysWithData: StateFlow<Set<LocalDate>> = repo.daysWithData()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptySet())
 
     val state: StateFlow<DayUiState> = selected.flatMapLatest { date -> stateFor(date) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DayUiState())

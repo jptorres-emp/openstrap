@@ -136,6 +136,17 @@ interface HealthDao {
     @Query("SELECT * FROM resting_hr WHERE day BETWEEN :from AND :to ORDER BY day")
     suspend fun restingHrOnce(from: Long, to: Long): List<RestingHeartRate>
 
+    /**
+     * Hours (epoch seconds / 3600) that hold something worth showing: heart rate, steps or the end of a
+     * sleep. Hours rather than days so the caller can map them to local days in its own time zone.
+     */
+    @Query(
+        "SELECT DISTINCT timestamp / 3600 FROM heart_rate " +
+            "UNION SELECT DISTINCT timestamp / 3600 FROM activity_minute WHERE steps > 0 AND steps != 255 " +
+            "UNION SELECT DISTINCT `end` / 3600 FROM sleep_session",
+    )
+    fun hoursWithData(): Flow<List<Long>>
+
     @Query("SELECT MAX(timestamp) FROM heart_rate")
     fun latestHeartRateTime(): Flow<Long?>
 

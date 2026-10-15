@@ -61,6 +61,7 @@ fun HeartScreen(
     onPrev: () -> Unit,
     onNext: () -> Unit,
     contentPadding: PaddingValues,
+    picker: DayPicker = DayPicker(),
     focus: FocusRequest? = null,
     onFocusDone: () -> Unit = {},
 ) {
@@ -68,7 +69,7 @@ fun HeartScreen(
     val index = remember { SectionIndex() }
     val f = rememberFocus(focus, list, index, onFocusDone)
     ScreenList(contentPadding, list, index) {
-    section(index) { DateHeader(state.date, battery, onPrev, onNext, charging) }
+    section(index) { DateHeader(state.date, battery, onPrev, onNext, charging, picker) }
 
     section(index) {
         Panel {
@@ -171,11 +172,12 @@ fun SleepScreen(
     contentPadding: PaddingValues,
     focus: FocusRequest? = null,
     onFocusDone: () -> Unit = {},
+    picker: DayPicker = DayPicker(),
 ) {
     val list = rememberLazyListState()
     val index = remember { SectionIndex() }
     val f = rememberFocus(focus, list, index, onFocusDone)
-    SleepList(state, battery, charging, onPrev, onNext, contentPadding, list, index, f)
+    SleepList(state, battery, charging, onPrev, onNext, contentPadding, list, index, f, picker)
 }
 
 @Composable
@@ -189,8 +191,9 @@ private fun SleepList(
     list: LazyListState,
     index: SectionIndex,
     f: FocusState,
+    picker: DayPicker,
 ) = ScreenList(contentPadding, list, index) {
-    section(index) { DateHeader(state.date, battery, onPrev, onNext, charging) }
+    section(index) { DateHeader(state.date, battery, onPrev, onNext, charging, picker) }
     val session = state.sleep
     if (session == null) {
         section(index) { Panel { PanelHeader("Sleep", PhosphorIcons.Moon, MetricColors.sleepDeep); EmptyHint("No sleep recorded for this night.") } }

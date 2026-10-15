@@ -67,7 +67,7 @@ fun SectionLabel(text: String, modifier: Modifier = Modifier, color: Color = Mat
 fun PanelHeader(title: String, icon: ImageVector? = null, accent: Color = MaterialTheme.colorScheme.onSurfaceVariant, trailing: String? = null) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         if (icon != null) {
-            Icon(icon, null, tint = accent, modifier = Modifier.size(16.dp))
+            Icon(icon, null, tint = accent, modifier = Modifier.size(19.dp))
             Spacer(Modifier.width(8.dp))
         }
         SectionLabel(title, Modifier.weight(1f))
@@ -128,7 +128,7 @@ fun VitalPill(value: String?, unit: String, icon: ImageVector, accent: Color, mo
         Box(Modifier.size(6.dp).background(if (value != null) accent else accent.copy(alpha = 0.25f), CircleShape))
         Text(value ?: "—", style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
         Text(unit, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Icon(icon, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
+        Icon(icon, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(19.dp))
     }
 }
 

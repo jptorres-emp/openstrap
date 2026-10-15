@@ -75,6 +75,21 @@ private fun chargeSegments(points: List<Recovery.ChargePoint>): List<ChartSegmen
     return out
 }
 
+/** Charge as the Today hero once the morning is over: the battery now and where it went. */
+@Composable
+fun ChargeHero(r: RecoveryResult, onClick: (() -> Unit)? = null) {
+    val now = r.charge.latest ?: return
+    HeroPanel(
+        label = "Charge",
+        value = "${now.toInt()}",
+        progress = now / 100f,
+        accent = MetricColors.charge,
+        headline = Narrative.chargeHeadline(now.toInt()),
+        body = Narrative.chargeBody(r.charge),
+        onClick = onClick,
+    )
+}
+
 /** Readiness hero for Today and the detail screen. */
 @Composable
 fun ReadinessHero(r: RecoveryResult, onClick: (() -> Unit)? = null) {
@@ -92,7 +107,14 @@ fun ReadinessHero(r: RecoveryResult, onClick: (() -> Unit)? = null) {
 
 /** Today's battery: the value now, the day's curve and what filled and drained it. */
 @Composable
-fun ChargeCard(r: RecoveryResult, dayRange: LongRange, sleepBand: LongRange?, onClick: (() -> Unit)? = null) {
+fun ChargeCard(
+    r: RecoveryResult,
+    dayRange: LongRange,
+    sleepBand: LongRange?,
+    onClick: (() -> Unit)? = null,
+    /** False when a Charge hero above already shows the number; the card then shows just the day's curve. */
+    showValues: Boolean = true,
+) {
     val c = r.charge
     Panel(onClick = onClick) {
         PanelHeader("Charge", PhosphorIcons.BatteryCharging, MetricColors.charge, trailing = c.atWake?.let { "Woke at ${it.toInt()}" })
@@ -105,7 +127,7 @@ fun ChargeCard(r: RecoveryResult, dayRange: LongRange, sleepBand: LongRange?, on
             EmptyHint("Charge appears once the strap has a few hours of heart rate.")
             return@Panel
         }
-        Row(verticalAlignment = Alignment.Bottom) {
+        if (showValues) Row(verticalAlignment = Alignment.Bottom) {
             BigValue("${now.toInt()}", "/ 100", Modifier.weight(1f), caption = Narrative.chargeHeadline(now.toInt()))
             BigValue("+${c.recharged.toInt()}", "", caption = "Recharged")
             Spacer(Modifier.width(18.dp))

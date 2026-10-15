@@ -146,23 +146,30 @@ fun TodayScreen(
     onOpenRecovery: () -> Unit = {},
 ) = ScreenList(contentPadding) {
     val rec = recovery?.takeIf { it.date == state.date }
+    val chargeLeads = chargeLeads(state, rec)
     item { DateHeader(state.date, battery, onPrev, onNext, charging) }
 
     // Oura's score row: the day at a glance, each chip opening its tab.
     item {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        // Equal cells, so the gaps stay even however many chips there are.
+        Row(Modifier.fillMaxWidth()) {
+            val cell = Modifier.weight(1f)
             val sleepValue = state.sleep?.score?.toString() ?: state.asleepSeconds?.let { "%d:%02d".format(it / 3600, (it % 3600) / 60) }
-            ScoreChip(rec?.charge?.latest?.toInt()?.toString(), "Charge", PhosphorIcons.BatteryCharging, MetricColors.charge, onClick = onOpenRecovery)
-            ScoreChip(sleepValue, "Sleep", PhosphorIcons.Moon, MetricColors.sleepDeep, onClick = onOpenSleep)
-            ScoreChip(compactCount(state.steps), "Steps", PhosphorIcons.Footprints, MetricColors.steps)
-            ScoreChip(state.stress.avg()?.toString(), "Stress", PhosphorIcons.Brain, MetricColors.stress, onClick = { onFocus(FocusTarget.Stress) })
+            // Whichever score isn't the hero sits first in the row.
+            if (chargeLeads) ScoreChip(rec?.readiness?.score?.toString(), "Readiness", PhosphorIcons.Plant, MetricColors.readiness, cell, onClick = onOpenRecovery)
+            else ScoreChip(rec?.charge?.latest?.toInt()?.toString(), "Charge", PhosphorIcons.BatteryCharging, MetricColors.charge, cell, onClick = onOpenRecovery)
+            ScoreChip(sleepValue, "Sleep", PhosphorIcons.Moon, MetricColors.sleepDeep, cell, onClick = onOpenSleep)
+            ScoreChip(compactCount(state.steps), "Steps", PhosphorIcons.Footprints, MetricColors.steps, cell)
+            ScoreChip(state.stress.avg()?.toString(), "Stress", PhosphorIcons.Brain, MetricColors.stress, cell, onClick = { onFocus(FocusTarget.Stress) })
         }
     }
 
-    // Hero: readiness is the day's headline. Before the first scored night it says when it'll arrive;
-    // steps live in the Activity card below.
+    // Hero: Readiness in the morning (the day's verdict), Charge once you've been up a few hours (the
+    // live battery). Before the first scored night it says when readiness will arrive.
     item {
-        if (rec?.readiness?.score != null) {
+        if (chargeLeads && rec != null) {
+            ChargeHero(rec, onClick = onOpenRecovery)
+        } else if (rec?.readiness?.score != null) {
             ReadinessHero(rec, onClick = onOpenRecovery)
         } else {
             HeroPanel(
@@ -176,7 +183,7 @@ fun TodayScreen(
     }
 
     if (rec != null) item {
-        ChargeCard(rec, state.dayStart..state.dayEnd, state.sleep?.let { it.start..it.end }, onClick = onOpenRecovery)
+        ChargeCard(rec, state.dayStart..state.dayEnd, state.sleep?.let { it.start..it.end }, onClick = onOpenRecovery, showValues = !chargeLeads)
     }
 
     item {
@@ -252,6 +259,22 @@ fun TodayScreen(
             }
         }
     }
+}
+
+/** How long after waking Readiness stays the headline before Charge takes over. */
+private const val READINESS_HOURS_AFTER_WAKING = 3
+
+/**
+ * Whether Charge is the Today hero: only for today, once Charge has a value, and once you've been awake
+ * [READINESS_HOURS_AFTER_WAKING] hours (or from noon when no sleep was recorded). Past days lead with
+ * their Readiness, the day's verdict.
+ */
+private fun chargeLeads(state: DayUiState, rec: RecoveryResult?): Boolean {
+    if (state.date != LocalDate.now() || rec?.charge?.latest == null) return false
+    val now = java.time.Instant.now().epochSecond
+    val wake = state.sleep?.end
+    return if (wake != null) now - wake >= READINESS_HOURS_AFTER_WAKING * 3600L
+    else java.time.LocalTime.now().hour >= 12
 }
 
 fun List<ChartPoint>.avg(): Int? = if (isEmpty()) null else Math.round(map { it.y }.average()).toInt()

@@ -166,11 +166,11 @@ fun ScoreChip(value: String?, label: String, icon: ImageVector, accent: Color, m
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Box(
-            Modifier.size(60.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHigh),
+            Modifier.size(64.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHigh),
             contentAlignment = Alignment.Center,
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Icon(icon, null, tint = if (value != null) accent else MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(14.dp))
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                Icon(icon, null, tint = if (value != null) accent else MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
                 Text(
                     value ?: "—", style = MaterialTheme.typography.titleMedium,
                     color = if (value != null) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
@@ -206,8 +206,8 @@ fun KeyStatRow(
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(Modifier.size(34.dp).clip(CircleShape).background(accent.copy(alpha = 0.14f)), contentAlignment = Alignment.Center) {
-            Icon(icon, null, tint = accent, modifier = Modifier.size(18.dp))
+        Box(Modifier.size(38.dp).clip(CircleShape).background(accent.copy(alpha = 0.14f)), contentAlignment = Alignment.Center) {
+            Icon(icon, null, tint = accent, modifier = Modifier.size(21.dp))
         }
         Spacer(Modifier.width(14.dp))
         Text(label.uppercase(), style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
@@ -279,7 +279,7 @@ fun FloatingNavBar(items: List<NavItem>, selected: Int, onSelect: (Int) -> Unit,
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         val tint = if (on) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
-                        Icon(if (on) item.selectedIcon else item.icon, item.label, tint = tint, modifier = Modifier.size(22.dp))
+                        Icon(if (on) item.selectedIcon else item.icon, item.label, tint = tint, modifier = Modifier.size(24.dp))
                         Text(item.label, style = MaterialTheme.typography.labelSmall, color = tint)
                     }
                 }

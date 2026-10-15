@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -39,6 +40,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -105,16 +107,14 @@ fun FirmwareScreen(vm: FirmwareViewModel, contentPadding: PaddingValues, onBack:
         }
 
         item {
-            Text(
-                "Signing in with Zepp happens on Zepp's own page; OpenStrap reads only the resulting app token and user ID " +
-                    "and asks Zepp once for your device list. " +
-                    "Checking for updates sends your Zepp app token, user ID and the strap's firmware, hardware version and " +
-                    "serial number to the update server you set. Nothing else leaves the phone. Downloads are checked against " +
-                    "the server's MD5, and the strap checks the image's signature before installing it.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 4.dp),
-            )
+            Panel {
+                PanelHeader("Privacy and safety", PhosphorIcons.ShieldCheck, MetricColors.good)
+                Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Point(PhosphorIcons.Key, "Sign-in", "Happens on Zepp's own page. OpenStrap keeps only the app token and user ID, and fetches your device list once.")
+                    Point(PhosphorIcons.CloudArrowDown, "Update check", "Sends the update server your token, user ID and the strap's firmware, hardware and serial number. Nothing else.")
+                    Point(PhosphorIcons.CheckCircle, "Safe install", "Downloads are checked against the server's checksum, and the strap verifies the signature before installing.")
+                }
+            }
         }
     }
 }
@@ -318,6 +318,19 @@ private fun Busy(label: String, fraction: Float?) {
         fraction?.let { Text("${(it * 100).toInt()}%", style = MaterialTheme.typography.titleMedium) }
     }
     if (fraction != null) LinearProgressIndicator(progress = { fraction }, modifier = Modifier.fillMaxWidth())
+}
+
+/** One line of the privacy card: icon, short title, one sentence. */
+@Composable
+private fun Point(icon: ImageVector, title: String, body: String) {
+    Row(verticalAlignment = Alignment.Top) {
+        Icon(icon, null, Modifier.padding(top = 2.dp).size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(Modifier.width(12.dp))
+        Column {
+            Text(title, style = MaterialTheme.typography.titleSmall)
+            Text(body, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
 }
 
 @Composable

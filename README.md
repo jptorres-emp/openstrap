@@ -22,7 +22,7 @@ A private, open-source companion app for the **Amazfit Helio Strap**, built as a
 | History sync: activity, sleep stages, HR, HRV, resting HR, SpO₂, stress | Implemented |
 | Dashboard: Today / Heart / Sleep | Implemented |
 | Export: CSV zip, Android Health Connect | Implemented |
-| Firmware update | In progress |
+| Firmware update (online check with your own Zepp token, or from a file) | Implemented, not yet tried on hardware |
 | Workouts (protobuf summaries, GPS) | Not yet |
 | Open energy score ("Reserve") | Planned |
 
@@ -58,3 +58,7 @@ Requires JDK 21 and the Android SDK (compileSdk 37).
 Dual-licensed under [MIT](LICENSE-MIT) or [Apache-2.0](LICENSE-APACHE), at your option. The fonts are licensed under the SIL OFL 1.1 ([licenses/OFL-Funnel.txt](licenses/OFL-Funnel.txt)).
 
 OpenStrap is not affiliated with Zepp Health or Amazfit.
+
+## Network use
+
+OpenStrap only goes online when you tap **Check for update** or **Download** on the Firmware screen. A check sends your Zepp app token, your user ID, and the strap's firmware version, hardware version and serial number to the update server you set. Health data is never uploaded.

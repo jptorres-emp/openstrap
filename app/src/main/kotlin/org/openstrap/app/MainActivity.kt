@@ -1,6 +1,8 @@
 package org.openstrap.app
 
 import android.Manifest
+import org.openstrap.app.ui.firmware.FirmwareScreen
+import org.openstrap.app.ui.firmware.FirmwareViewModel
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -83,7 +85,9 @@ private fun AppRoot(container: AppContainer) {
     val deviceVm: DeviceViewModel = viewModel(factory = viewModelFactory { initializer { DeviceViewModel(container) } })
 
     var tab by rememberSaveable { mutableIntStateOf(0) }
-    var liveEnabled by rememberSaveable { mutableStateOf(false) }
+    val liveEnabled by container.strap.liveHeartRateEnabled.collectAsStateWithLifecycle()
+    val firmwareVm: FirmwareViewModel = viewModel(factory = viewModelFactory { initializer { FirmwareViewModel(container) } })
+    var showFirmware by rememberSaveable { mutableStateOf(false) }
     val day by dayVm.state.collectAsStateWithLifecycle()
     val live by container.strap.liveHeartRate.collectAsStateWithLifecycle()
     val connection by container.strap.connection.collectAsStateWithLifecycle()
@@ -147,16 +151,20 @@ private fun AppRoot(container: AppContainer) {
                 canUseLive = connection is ConnectionState.Connected,
                 battery = battery,
                 charging = charging,
-                onLiveToggle = { liveEnabled = it; container.strap.setLiveHeartRate(it) },
+                onLiveToggle = { container.strap.setLiveHeartRate(it) },
                 onPrev = dayVm::previousDay, onNext = dayVm::nextDay, contentPadding = padding,
             )
             Tab.Sleep -> SleepScreen(day, battery, charging, dayVm::previousDay, dayVm::nextDay, padding)
-            Tab.Device -> DeviceScreen(
-                deviceVm, padding, requestBluetooth,
-                onExportCsv = { csvLauncher.launch("openstrap-export.zip") },
-                onExportHealthConnect = exportHealthConnect,
-                onFirmware = { Toast.makeText(context, "Firmware update is coming next.", Toast.LENGTH_SHORT).show() },
-            )
+            Tab.Device -> if (showFirmware) {
+                FirmwareScreen(firmwareVm, padding, onBack = { showFirmware = false })
+            } else {
+                DeviceScreen(
+                    deviceVm, padding, requestBluetooth,
+                    onExportCsv = { csvLauncher.launch("openstrap-export.zip") },
+                    onExportHealthConnect = exportHealthConnect,
+                    onFirmware = { showFirmware = true },
+                )
+            }
         }
     }
 }

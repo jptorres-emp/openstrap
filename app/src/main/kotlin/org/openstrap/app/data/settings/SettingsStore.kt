@@ -13,6 +13,13 @@ private val Context.dataStore by preferencesDataStore(name = "settings")
 
 data class PairedDevice(val address: String, val authKeyHex: String, val name: String)
 
+/** The user's own Zepp credentials, used only for firmware update checks. Stored on this phone only. */
+data class ZeppAccount(val appToken: String, val userId: String, val apiBase: String, val china: Boolean) {
+    companion object {
+        const val DEFAULT_API_BASE = "https://api-mifit.zepp.com/"
+    }
+}
+
 class SettingsStore(private val context: Context) {
     private val address = stringPreferencesKey("device_address")
     private val authKey = stringPreferencesKey("device_auth_key")
@@ -30,6 +37,40 @@ class SettingsStore(private val context: Context) {
             it[authKey] = device.authKeyHex
             it[name] = device.name
         }
+    }
+
+    private val zeppToken = stringPreferencesKey("zepp_app_token")
+    private val zeppUser = stringPreferencesKey("zepp_user_id")
+    private val zeppApi = stringPreferencesKey("zepp_api_base")
+    private val zeppChina = androidx.datastore.preferences.core.booleanPreferencesKey("zepp_china")
+
+    val zeppAccount: Flow<ZeppAccount?> = context.dataStore.data.map { prefs ->
+        val t = prefs[zeppToken] ?: return@map null
+        ZeppAccount(t, prefs[zeppUser].orEmpty(), prefs[zeppApi] ?: ZeppAccount.DEFAULT_API_BASE, prefs[zeppChina] == true)
+    }
+
+    suspend fun saveZeppAccount(account: ZeppAccount) {
+        context.dataStore.edit {
+            it[zeppToken] = account.appToken
+            it[zeppUser] = account.userId
+            it[zeppApi] = account.apiBase
+            it[zeppChina] = account.china
+        }
+    }
+
+    suspend fun clearZeppAccount() {
+        context.dataStore.edit {
+            it.remove(zeppToken); it.remove(zeppUser); it.remove(zeppApi); it.remove(zeppChina)
+        }
+    }
+
+    private val liveHr = androidx.datastore.preferences.core.booleanPreferencesKey("live_hr")
+
+    /** Whether live heart rate starts automatically on connect. On by default. */
+    val liveHeartRate: Flow<Boolean> = context.dataStore.data.map { it[liveHr] ?: true }
+
+    suspend fun setLiveHeartRate(enabled: Boolean) {
+        context.dataStore.edit { it[liveHr] = enabled }
     }
 
     suspend fun forgetDevice() {

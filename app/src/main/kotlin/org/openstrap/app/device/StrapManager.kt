@@ -27,6 +27,13 @@ import org.openstrap.protocol.services.BatteryInfo
 import org.openstrap.protocol.services.Endpoints
 import org.openstrap.protocol.services.LiveHeartRate
 import org.openstrap.protocol.services.RealtimeSteps
+import org.openstrap.protocol.crypto.crc32
+import org.openstrap.protocol.firmware.DfuCommands
+import org.openstrap.protocol.firmware.DfuException
+import org.openstrap.protocol.firmware.DfuProgress
+import org.openstrap.protocol.firmware.DfuSession
+import org.openstrap.app.ble.GattDfuLink
+import android.os.PowerManager
 import org.openstrap.protocol.services.TimeSync
 import org.openstrap.protocol.toHex
 import org.openstrap.protocol.u8
@@ -47,6 +54,11 @@ class StrapManager(
     override val sync = MutableStateFlow<SyncState>(SyncState.Idle)
     override val liveHeartRate = MutableStateFlow<Int?>(null)
     override val todaySteps = MutableStateFlow<Int?>(null)
+    override val liveHeartRateEnabled = MutableStateFlow(true)
+    override val info = MutableStateFlow<StrapInfo?>(null)
+    override val firmwareUpdating = MutableStateFlow(false)
+    /** Set before a firmware install: the strap's services can change, so re-discover on the next connect. */
+    @Volatile private var refreshGattOnConnect = false
     override val log = MutableStateFlow<List<String>>(emptyList())
 
     private var connectJob: Job? = null
@@ -113,7 +125,8 @@ class StrapManager(
             val client = GattClient(context, device.address).also { gatt = it }
             try {
                 log("connecting to ${device.address}")
-                client.connect()
+                client.connect(refreshCache = refreshGattOnConnect)
+                refreshGattOnConnect = false
                 log("connected, services discovered, mtu=${client.mtu}")
                 watchDisconnect(client)
 
@@ -131,6 +144,8 @@ class StrapManager(
                 watchSteps(s)
                 retries = 0
                 autoSync(s)
+                liveHeartRateEnabled.value = settings.liveHeartRate.first()
+                if (liveHeartRateEnabled.value) startLive()
             } catch (e: AuthException) {
                 log("auth failed: ${e.message}")
                 connection.value = ConnectionState.Failed(e.message ?: "Authentication failed")
@@ -160,6 +175,15 @@ class StrapManager(
             client.read(StrapUuids.DEVICE_INFO_SERVICE, StrapUuids.SOFTWARE_REVISION).toString(Charsets.UTF_8).trimEnd('\u0000')
         }.getOrNull()
         log("firmware=$firmware")
+        val hardware = runCatching {
+            client.read(StrapUuids.DEVICE_INFO_SERVICE, StrapUuids.HARDWARE_REVISION).toString(Charsets.UTF_8).trimEnd('\u0000')
+        }.getOrNull()
+        val serial = runCatching {
+            client.read(StrapUuids.DEVICE_INFO_SERVICE, StrapUuids.SERIAL_NUMBER).toString(Charsets.UTF_8).trimEnd('\u0000')
+        }.getOrNull()
+        val dfu = GattDfuLink(client).available
+        info.value = StrapInfo(firmware, hardware, serial, dfu)
+        log("hardware=$hardware dfu=$dfu")
 
         runCatching {
             if (s.services.has(Endpoints.BATTERY)) {
@@ -213,7 +237,7 @@ class StrapManager(
         runCatching { s.send(Endpoints.REALTIME_ACTIVITY, RealtimeSteps.NOTIFY_ON) }.onFailure { log("steps notify failed: $it") }
         // Pushes may only come while walking; poll as a fallback.
         while (isActive && session === s) {
-            runCatching { s.send(Endpoints.REALTIME_ACTIVITY, RealtimeSteps.QUERY) }.onFailure { log("steps query failed: $it") }
+            if (!firmwareUpdating.value) runCatching { s.send(Endpoints.REALTIME_ACTIVITY, RealtimeSteps.QUERY) }.onFailure { log("steps query failed: $it") }
             delay(60_000)
         }
     }
@@ -222,7 +246,7 @@ class StrapManager(
     private fun autoSync(s: ChannelSession) = scope.launch {
         while (isActive && session === s) {
             val now = System.currentTimeMillis() / 1000
-            if (now - lastAutoSync >= MIN_SYNC_GAP_SECONDS && sync.value !is SyncState.Running) {
+            if (now - lastAutoSync >= MIN_SYNC_GAP_SECONDS && sync.value !is SyncState.Running && !firmwareUpdating.value) {
                 lastAutoSync = now
                 log("auto sync")
                 syncNow()
@@ -269,20 +293,30 @@ class StrapManager(
     }
 
     override fun syncNow() {
+        if (firmwareUpdating.value) return
         val s = activeSession ?: return
         val client = gatt ?: return
         scope.launch { HistorySync(s, client, dao, settings, sync, ::log).run() }
     }
 
     override fun setLiveHeartRate(enabled: Boolean) {
+        liveHeartRateEnabled.value = enabled
+        scope.launch { settings.setLiveHeartRate(enabled) }
+        if (enabled) startLive() else pauseLive()
+    }
+
+    /** Stops streaming without changing the user's preference (e.g. during a firmware update). */
+    private fun pauseLive() {
         liveJob?.cancel()
         liveHeartRate.value = null
-        if (!enabled) {
-            val s = session
-            val client = gatt
-            scope.launch { stopLive(s, client) }
-            return
-        }
+        val s = session
+        val client = gatt
+        scope.launch { stopLive(s, client) }
+    }
+
+    private fun startLive() {
+        liveJob?.cancel()
+        liveHeartRate.value = null
         val s = activeSession ?: return
         val client = gatt ?: return
         liveJob = scope.launch {
@@ -337,6 +371,33 @@ class StrapManager(
                 client?.write(StrapUuids.HEART_RATE_SERVICE, StrapUuids.HR_CONTROL, LiveHeartRate.LEGACY_STOP, withResponse = true)
             }
         }.onFailure { log("live hr stop failed: $it") }
+    }
+
+    override suspend fun installFirmware(file: ByteArray, type: Int, onProgress: (DfuProgress) -> Unit) {
+        val client = gatt
+        if (client == null || connection.value !is ConnectionState.Connected) throw DfuException(-1, "The strap isn't connected")
+        if (sync.value is SyncState.Running) throw DfuException(-1, "Wait for the sync to finish first")
+        if (!firmwareUpdating.compareAndSet(false, true)) throw DfuException(-1, "An update is already running")
+        val wake = context.getSystemService(PowerManager::class.java)
+            .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "OpenStrap:firmware").apply { acquire(30 * 60_000L) }
+        try {
+            if (liveJob?.isActive == true) pauseLive()
+            val link = GattDfuLink(client)
+            if (!link.available) throw DfuException(-1, "This strap doesn't offer the firmware update service")
+            // Bigger ATT packets make the transfer several times faster; fall back to 20-byte writes if refused.
+            runCatching { client.requestMtu(247) }.onFailure { log("dfu: mtu request failed: $it") }
+            log("dfu: ${file.size} bytes, type ${"%02x".format(type)}, crc ${"%08x".format(crc32(file))}, att mtu ${client.mtu}")
+            link.enable()
+            refreshGattOnConnect = true
+            DfuSession(link, ::log).flash(file, type, DfuCommands.MODE_NORMAL, onProgress)
+            log("dfu: installed, strap is restarting")
+        } catch (e: Exception) {
+            log("dfu failed: ${e.message}")
+            throw e
+        } finally {
+            firmwareUpdating.value = false
+            if (wake.isHeld) wake.release()
+        }
     }
 
     private var lastLiveSecond = 0L

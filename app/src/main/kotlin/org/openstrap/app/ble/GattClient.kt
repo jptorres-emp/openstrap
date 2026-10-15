@@ -109,13 +109,19 @@ class GattClient(private val context: Context, private val address: String) {
         }
     }
 
-    suspend fun connect() {
+    /** [refreshCache] drops Android's cached service table first; needed after a firmware update. */
+    suspend fun connect(refreshCache: Boolean = false) {
         val device: BluetoothDevice = context.getSystemService(BluetoothManager::class.java).adapter.getRemoteDevice(address)
         op<Unit>(timeoutMs = 30_000) {
             gatt = device.connectGatt(context, false, callback, BluetoothDevice.TRANSPORT_LE)
             gatt != null
         }
         gatt!!.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_HIGH)
+        if (refreshCache) {
+            // Hidden API, but the only way to force re-discovery; harmless if it fails.
+            runCatching { BluetoothGatt::class.java.getMethod("refresh").invoke(gatt) }
+            kotlinx.coroutines.delay(500)
+        }
         op<Unit> { gatt!!.discoverServices() }
     }
 

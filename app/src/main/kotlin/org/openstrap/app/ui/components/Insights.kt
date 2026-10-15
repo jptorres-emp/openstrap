@@ -70,7 +70,14 @@ fun HeroPanel(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             HorizonGauge(progress, accent, Modifier.fillMaxWidth().height(78.dp))
-            SectionLabel(label)
+            // "READINESS ›": the chevron says the card opens the details.
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                SectionLabel(label)
+                if (onClick != null) {
+                    Spacer(Modifier.width(2.dp))
+                    Icon(PhosphorIcons.CaretRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(15.dp))
+                }
+            }
             Row(verticalAlignment = Alignment.Bottom) {
                 Text(value, style = MaterialTheme.typography.displayLarge)
                 if (unit.isNotEmpty()) {

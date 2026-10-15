@@ -31,6 +31,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import org.openstrap.app.ui.theme.PhosphorIcons
 
 val PanelShape = RoundedCornerShape(22.dp)
 
@@ -64,7 +65,14 @@ fun SectionLabel(text: String, modifier: Modifier = Modifier, color: Color = Mat
 
 /** Label row with an optional leading accent icon and trailing text (e.g. "Last 7 days"). */
 @Composable
-fun PanelHeader(title: String, icon: ImageVector? = null, accent: Color = MaterialTheme.colorScheme.onSurfaceVariant, trailing: String? = null) {
+fun PanelHeader(
+    title: String,
+    icon: ImageVector? = null,
+    accent: Color = MaterialTheme.colorScheme.onSurfaceVariant,
+    trailing: String? = null,
+    /** Shows a "›" at the end: the card opens something when tapped. */
+    chevron: Boolean = false,
+) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         if (icon != null) {
             Icon(icon, null, tint = accent, modifier = Modifier.size(19.dp))
@@ -72,6 +80,10 @@ fun PanelHeader(title: String, icon: ImageVector? = null, accent: Color = Materi
         }
         SectionLabel(title, Modifier.weight(1f))
         if (trailing != null) Text(trailing, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (chevron) {
+            Spacer(Modifier.width(4.dp))
+            Icon(PhosphorIcons.CaretRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
+        }
     }
 }
 

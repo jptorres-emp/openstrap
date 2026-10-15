@@ -188,7 +188,7 @@ fun TodayScreen(
 
     item {
         Panel(onClick = { onFocus(FocusTarget.HeartRate) }) {
-            PanelHeader("Heart rate", PhosphorIcons.Heart, MetricColors.heart, trailing = if (liveHeartRate != null) "● Live" else null)
+            PanelHeader("Heart rate", PhosphorIcons.Heart, MetricColors.heart, trailing = if (liveHeartRate != null) "● Live" else null, chevron = true)
             val now = liveHeartRate ?: state.latestHeartRate
             if (now != null) BigValue("$now", "bpm", caption = if (liveHeartRate != null) "Right now" else "Latest")
             if (state.heartRate.isEmpty()) EmptyHint("No heart-rate data yet. Sync your strap.")
@@ -248,7 +248,7 @@ fun TodayScreen(
 
     if (state.sleep?.score == null) item {
         Panel(onClick = onOpenSleep) {
-            PanelHeader("Sleep", PhosphorIcons.Moon, MetricColors.sleepDeep)
+            PanelHeader("Sleep", PhosphorIcons.Moon, MetricColors.sleepDeep, chevron = true)
             val asleep = state.asleepSeconds
             if (asleep == null) EmptyHint("No sleep recorded for this night. Wear the strap to bed and it'll show up here.")
             else {

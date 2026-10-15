@@ -118,7 +118,7 @@ fun ChargeCard(
 ) {
     val c = r.charge
     Panel(onClick = onClick) {
-        PanelHeader("Charge", PhosphorIcons.BatteryCharging, MetricColors.charge, trailing = c.atWake?.let { "Woke at ${it.toInt()}" })
+        PanelHeader("Charge", PhosphorIcons.BatteryCharging, MetricColors.charge, trailing = c.atWake?.let { "Woke at ${it.toInt()}" }, chevron = onClick != null)
         val now = c.latest
         if (!c.anchored) {
             EmptyHint("Charge starts after your first night wearing the strap. Sleep is what fills it, so it needs one to measure from.")

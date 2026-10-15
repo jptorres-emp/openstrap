@@ -18,6 +18,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.ui.text.withStyle
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -295,17 +296,56 @@ private fun LoadPanel(r: RecoveryResult, onEditProfile: () -> Unit) {
 @Composable
 private fun HowItWorks() {
     Panel {
-        PanelHeader("How it's calculated", PhosphorIcons.Info)
+        PanelHeader("How it works", PhosphorIcons.Info)
+        ExplainerSection(
+            "Readiness: how recovered you are",
+            "Each morning we compare your night with what's normal for you, not with other people:",
+            listOf(
+                "Heart rate variability. Higher than your usual means your body has bounced back.",
+                "Resting heart rate. Lower than your usual is good. A jump can mean strain or a cold coming on.",
+                "Sleep. How long you slept last night, and whether you've been short on sleep this week.",
+                "Temperature and breathing. A clear change from your normal is an early warning sign.",
+                "Training. Whether yesterday was much harder than you're used to.",
+            ),
+            "If one of these is far off, your score stays low even when the rest look fine.",
+        )
+        ExplainerSection(
+            "Charge: your energy right now",
+            "Think of it as a battery that runs all day:",
+            listOf(
+                "Sleep fills it. Deep sleep most of all, and a calm, steady night fills it faster.",
+                "Being awake. Slowly uses it up, a little every hour.",
+                "Exercise and stress. Use it faster, while quiet, relaxed moments slow the drain.",
+            ),
+        )
         Text(
-            "Readiness compares last night with your own baseline: HRV on a log scale against your normal range (Plews), " +
-                "resting heart rate, skin temperature and breathing, how much sleep you got and owe, when your heart rate " +
-                "bottomed out, and your training load against your usual (Banister TRIMP, acute:chronic EWMA). " +
-                "One signal far outside your normal caps the score.\n\n" +
-                "Charge refills during sleep (deep sleep most, faster when your heart rate is low and HRV good) and " +
-                "drains while you're awake: a little every hour, more with exercise and with stress that isn't from " +
-                "movement, following Firstbeat's stress, recovery and activity split.\n\n" +
-                "Everything is calculated on this phone. These are wellness estimates, not medical advice.",
+            "Everything is worked out on this phone from your strap's data. It's a guide to help you plan your day, " +
+                "not medical advice.",
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+    }
+}
+
+/** A short titled block for [HowItWorks]: a heading, a lead-in line, bullets and an optional closing line. */
+@Composable
+private fun ExplainerSection(title: String, intro: String, bullets: List<String>, outro: String? = null) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(title, style = MaterialTheme.typography.titleSmall)
+        Text(intro, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        for (b in bullets) {
+            Row {
+                Box(Modifier.padding(top = 8.dp, end = 10.dp).size(5.dp).background(MaterialTheme.colorScheme.onSurfaceVariant, CircleShape))
+                // "Lead. Rest of the sentence": the lead is bold so the list scans quickly.
+                val cut = b.indexOf(". ")
+                val text = if (cut < 0) androidx.compose.ui.text.AnnotatedString(b) else androidx.compose.ui.text.buildAnnotatedString {
+                    withStyle(androidx.compose.ui.text.SpanStyle(color = MaterialTheme.colorScheme.onSurface, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)) {
+                        append(b.substring(0, cut + 1))
+                    }
+                    append(b.substring(cut + 1))
+                }
+                Text(text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        if (outro != null) Text(outro, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }

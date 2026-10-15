@@ -45,15 +45,15 @@ import org.openstrap.app.ui.components.SectionLabel
 import org.openstrap.app.ui.components.SegmentedTabs
 import java.time.LocalDate
 
-/** One line for the settings row: "34 · Male · 72 kg · 178 cm", or a prompt when empty. */
+/** One line for the settings row: "34 years, male, 72 kg, 178 cm", or a prompt when empty. */
 fun UserProfile.summary(): String =
     if (isEmpty) "Add age and sex for accurate effort and recovery"
     else listOfNotNull(
         age()?.let { "$it years" },
-        sex?.name,
+        sex?.name?.lowercase(),
         weightKg?.let { Units.formatWeight(it, usesImperial) },
         heightCm?.let { Units.formatHeight(it, usesImperial) },
-    ).joinToString(" · ")
+    ).joinToString(", ")
 
 /**
  * Age, sex, weight and height. Age sets the maximum heart rate (and so every effort calculation);
@@ -112,7 +112,7 @@ fun ProfileDialog(profile: UserProfile, onSave: (UserProfile) -> Unit, onDismiss
                 }
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     SectionLabel("Units")
-                    SegmentedTabs(listOf("kg · cm", "lb · ft"), if (imperial) 1 else 0, { switchUnits(it == 1) })
+                    SegmentedTabs(listOf("Metric", "Imperial"), if (imperial) 1 else 0, { switchUnits(it == 1) })
                 }
                 NumberField(
                     weight, { weight = it }, "Weight", if (imperial) "lb" else "kg",
@@ -120,7 +120,7 @@ fun ProfileDialog(profile: UserProfile, onSave: (UserProfile) -> Unit, onDismiss
                 )
                 if (imperial) {
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        NumberField(feet, { feet = it.take(1) }, "Height · feet", "ft", !heightBlank && heightValue == null, Modifier.weight(1f))
+                        NumberField(feet, { feet = it.take(1) }, "Feet", "ft", !heightBlank && heightValue == null, Modifier.weight(1f))
                         NumberField(inches, { inches = it.take(2) }, "Inches", "in", !heightBlank && heightValue == null, Modifier.weight(1f))
                     }
                 } else {

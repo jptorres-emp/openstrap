@@ -292,6 +292,8 @@ A block with `count = 0` is skipped (`d/vo30.java:139-230`). The app writes the 
 - **Time base:** all i16 times are minutes from local midnight of the day *before* the record's day, so `epoch = midnight(day) + (raw − 1440)·60`.
 - **Record day:** `day = date(belongTime + 2 h)` in the phone's zone.
 - **Version 0:** `mainSleepEnd` is one minute early; add 1.
+- **Stage stop is inclusive** (seen on hardware, 2026-10-16): `stop` is the last minute a stage covers and the next stage starts at `stop + 1`, so a stage ends at `stop + 1`. One-minute stages have `start == stop`.
+- **Naps can be withdrawn:** the strap may report a stretch of broken night sleep as a nap, then re-send the day with it folded into the main sleep and no naps (`hasShortSleep = 0`). Replace a day's naps on every re-send, and ignore naps that overlap the main sleep.
 - **Main sleep vs naps:** main stages are the first `mainStageCount` slots. Naps are *every* nap slot with a valid code; the nap stage count is ignored.
 - **Re-sends:** the strap re-sends a day as it updates it, so the last record for a day wins.
 

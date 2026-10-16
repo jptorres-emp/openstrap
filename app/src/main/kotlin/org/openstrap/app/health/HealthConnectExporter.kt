@@ -12,6 +12,7 @@ import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.metadata.Device
 import androidx.health.connect.client.records.metadata.Metadata
+import androidx.health.connect.client.time.TimeRangeFilter
 import androidx.health.connect.client.units.Percentage
 import org.openstrap.app.data.db.HealthDao
 import org.openstrap.app.data.db.SleepStage
@@ -58,9 +59,10 @@ class HealthConnectExporter(private val context: Context, private val dao: Healt
             .mapNotNull { m -> m.heartRate?.takeIf { it in 30..230 }?.let { org.openstrap.app.data.db.HeartRateSample(m.timestamp, it) } }
         hr.distinctBy { it.timestamp }.sortedBy { it.timestamp }.groupBy { it.timestamp / 3600 }.forEach { (hour, samples) ->
             val start = hour * 3600
+            val end = samples.last().timestamp + 1 // not the end of the hour, which can be in the future
             records += HeartRateRecord(
                 startTime = Instant.ofEpochSecond(start), startZoneOffset = offset(start),
-                endTime = Instant.ofEpochSecond(start + 3600), endZoneOffset = offset(start),
+                endTime = Instant.ofEpochSecond(end), endZoneOffset = offset(end),
                 samples = samples.map { HeartRateRecord.Sample(Instant.ofEpochSecond(it.timestamp), it.bpm.toLong()) },
                 metadata = meta("hr:$start"),
             )
@@ -77,9 +79,14 @@ class HealthConnectExporter(private val context: Context, private val dao: Healt
         }
 
         for (s in dao.sleepSessionsOnce(from, to)) {
-            val stages = dao.sleepStagesOnce(s.start).map {
+            // Rows synced before stage ends were made exclusive can be zero length; Health Connect rejects those,
+            // and stages must stay inside the session.
+            val stages = dao.sleepStagesOnce(s.start).mapNotNull {
+                val start = it.start.coerceAtLeast(s.start)
+                val end = maxOf(it.end, it.start + 60).coerceAtMost(s.end)
+                if (end <= start) return@mapNotNull null
                 SleepSessionRecord.Stage(
-                    Instant.ofEpochSecond(it.start), Instant.ofEpochSecond(it.end),
+                    Instant.ofEpochSecond(start), Instant.ofEpochSecond(end),
                     when (it.stage) {
                         SleepStage.AWAKE -> SleepSessionRecord.STAGE_TYPE_AWAKE
                         SleepStage.LIGHT -> SleepSessionRecord.STAGE_TYPE_LIGHT
@@ -123,6 +130,9 @@ class HealthConnectExporter(private val context: Context, private val dao: Healt
             )
         }
 
+        // Sleep that OpenStrap exported earlier may since have changed shape (a nap folded into the night),
+        // so its old records in this range are replaced rather than updated. This only touches OpenStrap's records.
+        client.deleteRecords(SleepSessionRecord::class, TimeRangeFilter.between(Instant.ofEpochSecond(from - 86_400), Instant.ofEpochSecond(to)))
         // Health Connect caps the batch size per call.
         records.chunked(500).forEach { client.insertRecords(it) }
         return records.size

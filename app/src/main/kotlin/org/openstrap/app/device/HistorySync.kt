@@ -182,6 +182,11 @@ class HistorySync(
         // Earlier builds stored the whole mode byte; the mode is its low nibble.
         val modes = dao.fixActivityModeNibble()
         if (modes > 0) log("history: fixed the mode of $modes activity rows")
+        val gaps = dao.closeSleepStageGaps()
+        if (gaps > 0) log("history: closed $gaps one-minute gaps after sleep stages")
+        dao.deleteNapStagesInsideMainSleep()
+        val naps = dao.deleteNapsInsideMainSleep()
+        if (naps > 0) log("history: removed $naps naps inside a main sleep")
         for (type in HistoryDataType.entries) {
             val key = "gdsp_${type.code}"
             val cursor = settings.lastSync(key) ?: continue
@@ -373,13 +378,15 @@ class HistorySync(
      */
     private suspend fun storeSleep(r: SleepResult) {
         val day = r.day(zone)
+        var mainWindow: Pair<Long, Long>? = null
         val main = r.mainStages.filter { it.rawType in SleepStageCodes.VALID }
         if (main.isNotEmpty()) {
             val start = r.resolveTime(main.first().start, zone)
-            val end = r.resolveTime(r.mainSleepEndFixed.takeIf { it > main.first().start } ?: main.last().stop, zone)
+            val end = r.resolveTime(r.mainSleepEndFixed.takeIf { it > main.first().start } ?: main.last().stop + 1, zone)
             if (end <= start || end - start > 20 * 3600) {
                 log("history: implausible sleep window $start..$end, skipped")
             } else {
+                mainWindow = start to end
                 dao.deleteSleepStagesForDay(day, nap = false)
                 dao.deleteSleepSessionsForDay(day, nap = false)
                 dao.insertSleepSessions(listOf(SleepSession(
@@ -393,22 +400,37 @@ class HistorySync(
                 dao.insertSleepStages(main.map { stage(it, start, r) })
             }
         }
-        if (r.shortStages.isNotEmpty()) {
-            dao.deleteSleepStagesForDay(day, nap = true)
-            dao.deleteSleepSessionsForDay(day, nap = true)
-            for (nap in r.shortStages) {
-                val start = r.resolveTime(nap.start, zone)
-                val end = r.resolveTime(nap.stop, zone)
-                if (end <= start) continue
-                dao.insertSleepSessions(listOf(SleepSession(start, end, day, nap = true)))
-                dao.insertSleepStages(listOf(stage(nap, start, r)))
-            }
+        // The newest copy of a day replaces its naps, including when it has none: the strap can report a stretch
+        // of broken night sleep as a nap and later fold it into the main sleep. The empty record the strap writes
+        // at midnight doesn't claim nap support, so it leaves them alone.
+        if (!r.isShortSleepSupported) return
+        dao.deleteSleepStagesForDay(day, nap = true)
+        dao.deleteSleepSessionsForDay(day, nap = true)
+        val stages = r.shortStages.map { stage(it, 0, r) }.filter { it.end > it.start }.sortedBy { it.start }
+        for ((start, end) in napWindows(r, stages)) {
+            if (mainWindow != null && start < mainWindow.second && end > mainWindow.first) continue
+            dao.insertSleepSessions(listOf(SleepSession(start, end, day, nap = true)))
+            dao.insertSleepStages(stages.filter { it.start >= start && it.end <= end }.map { it.copy(sessionStart = start) })
         }
     }
 
+    /** One window per nap: the strap's nap list when it gives one, otherwise runs of back-to-back nap stages. */
+    private fun napWindows(r: SleepResult, stages: List<SleepStage>): List<Pair<Long, Long>> {
+        val listed = r.shortSleeps.map { r.resolveTime(it.start, zone) to r.resolveTime(it.stop + 1, zone) }.filter { it.second > it.first }
+        if (listed.isNotEmpty()) return listed
+        val runs = mutableListOf<Pair<Long, Long>>()
+        for (s in stages) {
+            val last = runs.lastOrNull()
+            if (last != null && s.start <= last.second) runs[runs.size - 1] = last.first to maxOf(last.second, s.end)
+            else runs += s.start to s.end
+        }
+        return runs
+    }
+
+    /** A stage's stop is the last minute it covers (the next stage starts at stop + 1), so the end is a minute later. */
     private fun stage(s: org.openstrap.protocol.history.SleepStage, sessionStart: Long, r: SleepResult) = SleepStage(
         start = r.resolveTime(s.start, zone),
-        end = r.resolveTime(s.stop, zone),
+        end = r.resolveTime(s.stop + 1, zone),
         sessionStart = sessionStart,
         stage = when (s.type) {
             SleepStageType.AWAKE -> SleepStage.AWAKE

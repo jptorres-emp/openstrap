@@ -55,6 +55,28 @@ interface HealthDao {
     @Query("DELETE FROM sleep_session WHERE day = :day AND nap = :nap")
     suspend fun deleteSleepSessionsForDay(day: Long, nap: Boolean)
 
+    /**
+     * Naps that overlap a main sleep. The strap can briefly report a stretch of broken night sleep as a nap,
+     * then fold it into the main sleep; earlier builds kept that nap.
+     */
+    /**
+     * Earlier builds ended each stage at its last minute instead of a minute later, leaving a minute's gap before the
+     * next stage. Close those gaps; stages that already end where the next starts, or at the session end, are left.
+     */
+    @Query(
+        "UPDATE sleep_stage SET `end` = `end` + 60 " +
+            "WHERE NOT EXISTS (SELECT 1 FROM sleep_stage n WHERE n.sessionStart = sleep_stage.sessionStart AND n.start = sleep_stage.`end` AND n.start > sleep_stage.start) " +
+            "AND (EXISTS (SELECT 1 FROM sleep_stage n WHERE n.sessionStart = sleep_stage.sessionStart AND n.start = sleep_stage.`end` + 60) " +
+            "OR `end` + 60 = (SELECT s.`end` FROM sleep_session s WHERE s.start = sleep_stage.sessionStart))",
+    )
+    suspend fun closeSleepStageGaps(): Int
+
+    @Query("DELETE FROM sleep_stage WHERE sessionStart IN (SELECT n.start FROM sleep_session n JOIN sleep_session m ON m.nap = 0 AND n.nap = 1 AND n.start < m.`end` AND n.`end` > m.start)")
+    suspend fun deleteNapStagesInsideMainSleep(): Int
+
+    @Query("DELETE FROM sleep_session WHERE nap = 1 AND EXISTS (SELECT 1 FROM sleep_session m WHERE m.nap = 0 AND sleep_session.start < m.`end` AND sleep_session.`end` > m.start)")
+    suspend fun deleteNapsInsideMainSleep(): Int
+
     @Query("SELECT * FROM skin_temperature WHERE timestamp BETWEEN :from AND :to ORDER BY timestamp")
     fun skinTemperature(from: Long, to: Long): Flow<List<SkinTemperature>>
 

@@ -335,16 +335,18 @@ class StrapManager(
                 var pushes = 0
                 launch {
                     s.messagesFor(Endpoints.HEART_RATE).collect { p ->
-                        if (pushes++ % 15 == 0) log("live hr 0048 < ${p.toHex()}")
+                        if (pushes++ == 0) log("live hr 0048 < ${p.toHex()}")
                         LiveHeartRate.parsePush(p)?.let { onLiveHr(it) }
                     }
                 }
-                launch { s.messagesFor(Endpoints.OPEN_APP).collect { p -> log("live hr 001d < ${p.toHex()}") } }
+                // Each keep-alive is answered with `05 02`; only log the first reply and anything else.
+                var opens = 0
+                launch { s.messagesFor(Endpoints.OPEN_APP).collect { p -> if (opens++ == 0 || !p.contentEquals(KEEP_ALIVE_REPLY)) log("live hr 001d < ${p.toHex()}") } }
                 var measurements = 0
                 launch {
                     client.notifications.filter { it.characteristic == StrapUuids.HR_MEASUREMENT }
                         .collect { n ->
-                            if (measurements++ % 15 == 0) log("live hr 2a37 < ${n.value.toHex()}")
+                            if (measurements++ == 0) log("live hr 2a37 < ${n.value.toHex()}")
                             LiveHeartRate.parseMeasurement(n.value)?.let { onLiveHr(it) }
                         }
                 }
@@ -424,5 +426,6 @@ class StrapManager(
         val RETRY_SECONDS = longArrayOf(5, 15, 30, 60, 120, 300)
         const val MIN_SYNC_GAP_SECONDS = 15 * 60L
         const val AUTO_SYNC_SECONDS = 60 * 60L
+        val KEEP_ALIVE_REPLY = byteArrayOf(0x05, 0x02)
     }
 }

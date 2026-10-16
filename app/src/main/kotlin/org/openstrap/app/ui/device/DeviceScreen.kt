@@ -1,6 +1,7 @@
 package org.openstrap.app.ui.device
 
 import android.content.ClipData
+import androidx.activity.compose.BackHandler
 import android.content.ClipboardManager
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -71,24 +72,17 @@ fun DeviceScreen(
     vm: DeviceViewModel,
     contentPadding: PaddingValues,
     onRequestBluetooth: (then: () -> Unit) -> Unit,
-    onExportCsv: () -> Unit,
-    onExportHealthConnect: () -> Unit,
     onFirmware: () -> Unit,
     onAlarms: () -> Unit = {},
+    onBack: () -> Unit,
 ) {
+    BackHandler(onBack = onBack)
     val paired by vm.paired.collectAsState()
     val connection by vm.strap.connection.collectAsState()
     val sync by vm.strap.sync.collectAsState()
     val scan by vm.scan.collectAsState()
-    val log by vm.strap.log.collectAsState()
     var confirmForget by rememberSaveable { mutableStateOf(false) }
     var confirmDisconnect by rememberSaveable { mutableStateOf(false) }
-    var editProfile by rememberSaveable { mutableStateOf(false) }
-    val profile by vm.profile.collectAsState()
-
-    if (editProfile) {
-        ProfileDialog(profile, onSave = { vm.saveProfile(it); editProfile = false }, onDismiss = { editProfile = false })
-    }
 
     if (confirmDisconnect) {
         AlertDialog(
@@ -133,7 +127,10 @@ fun DeviceScreen(
 
     ScreenList(contentPadding) {
         item {
-            Text("Device", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.padding(top = 12.dp, bottom = 4.dp))
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onBack) { Icon(PhosphorIcons.ArrowLeft, "Back") }
+                Text("Your strap", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.weight(1f))
+            }
         }
 
         val device = paired
@@ -179,34 +176,6 @@ fun DeviceScreen(
                     }
                 }
             }
-        }
-
-        item {
-            Panel {
-                SettingRow("Your profile", profile.summary(), onClick = { editProfile = true }) {
-                    Icon(PhosphorIcons.CaretRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-        }
-
-        item {
-            Panel {
-                PanelHeader("Your data", PhosphorIcons.DownloadSimple, MetricColors.steps)
-                Text(
-                    "Health data stays on this phone. Nothing leaves it unless you export it.",
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    OutlinedButton(onClick = onExportCsv, Modifier.weight(1f)) { Text("Export CSV") }
-                    OutlinedButton(onClick = onExportHealthConnect, Modifier.weight(1f)) { Text("Health Connect") }
-                }
-            }
-        }
-
-        item { DiagnosticsPanel(log) }
-
-        if (org.openstrap.app.data.SampleData.AVAILABLE) item {
-            TextButton(onClick = vm::loadSampleData, modifier = Modifier.fillMaxWidth()) { Text("Load sample data (debug build)") }
         }
     }
 }
@@ -359,7 +328,7 @@ private fun PairPanel(vm: DeviceViewModel, scan: ScanUiState, onRequestBluetooth
 
 /** Protocol log, so behaviour on real hardware can be shared when reporting issues. */
 @Composable
-private fun DiagnosticsPanel(lines: List<String>) {
+internal fun DiagnosticsPanel(lines: List<String>) {
     var expanded by rememberSaveable { mutableStateOf(false) }
     val context = LocalContext.current
     Panel {
@@ -393,5 +362,5 @@ private fun DiagnosticsPanel(lines: List<String>) {
     }
 }
 
-private fun clock(epochSeconds: Long): String =
+internal fun clock(epochSeconds: Long): String =
     Instant.ofEpochSecond(epochSeconds).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("d MMM HH:mm"))

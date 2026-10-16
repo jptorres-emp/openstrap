@@ -1,5 +1,6 @@
 package org.openstrap.app.ui.components
 
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -23,6 +24,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.text.drawText
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.LaunchedEffect
@@ -166,18 +168,26 @@ fun HorizonGauge(progress: Float?, color: Color, modifier: Modifier = Modifier) 
  * ring; the icon carries the metric's colour.
  */
 @Composable
-fun ScoreChip(value: String?, label: String, icon: ImageVector, accent: Color, modifier: Modifier = Modifier, onClick: (() -> Unit)? = null) {
+fun ScoreChip(
+    value: String?,
+    label: String,
+    icon: ImageVector,
+    accent: Color,
+    modifier: Modifier = Modifier,
+    /** How full the ring is, 0..1 (WHOOP/Bevel-style); null leaves just the faint track. */
+    progress: Float? = null,
+    onClick: (() -> Unit)? = null,
+) {
     Column(
         modifier.clip(RoundedCornerShape(16.dp)).let { if (onClick != null) it.clickable(onClick = onClick) else it }.padding(4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Box(
-            Modifier.size(64.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHigh),
-            contentAlignment = Alignment.Center,
-        ) {
+        Box(Modifier.size(64.dp), contentAlignment = Alignment.Center) {
+            val shown by animateFloatAsState(progress ?: 0f, label = "$label ring")
+            ProgressRing(shown, if (value != null) accent else MaterialTheme.colorScheme.onSurfaceVariant, size = 64.dp, stroke = 5.dp)
             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                Icon(icon, null, tint = if (value != null) accent else MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
+                Icon(icon, null, tint = if (value != null) accent else MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
                 Text(
                     value ?: "—", style = MaterialTheme.typography.titleMedium,
                     color = if (value != null) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,

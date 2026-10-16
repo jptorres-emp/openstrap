@@ -101,6 +101,9 @@ fun ScreenList(
     )
 }
 
+/** Opens "Your strap" from the header chip on every dashboard tab; provided by the app root. */
+val LocalOpenStrap = androidx.compose.runtime.staticCompositionLocalOf<(() -> Unit)?> { null }
+
 /** The red full stop after the OpenStrap wordmark. */
 private val WordmarkDot = Color(0xFFFF4D5E)
 
@@ -157,16 +160,28 @@ fun DateHeader(
                 SyncingBadge(sync)
                 Spacer(Modifier.width(10.dp))
             }
-            if (battery != null) {
-                Text(
-                    if (charging) "⚡$battery%" else "$battery%",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (battery <= 15 || charging) MetricColors.battery(battery) else MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Spacer(Modifier.width(4.dp))
+            // WHOOP's strap chip: always there, and it opens "Your strap".
+            val openStrap = LocalOpenStrap.current
+            Row(
+                Modifier.clip(RoundedCornerShape(50))
+                    .let { if (openStrap != null) it.clickable(onClickLabel = "Open your strap", onClick = openStrap) else it }
+                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (battery != null) {
+                    Text(
+                        if (charging) "⚡$battery%" else "$battery%",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (battery <= 15 || charging) MetricColors.battery(battery) else MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(Modifier.width(4.dp))
+                }
                 Box(contentAlignment = Alignment.TopEnd) {
-                    Icon(PhosphorIcons.Watch, "Strap connected", Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Box(Modifier.size(6.dp).background(MetricColors.battery(battery), CircleShape))
+                    Icon(
+                        PhosphorIcons.Watch, if (battery != null) "Strap connected" else "Strap not connected", Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    if (battery != null) Box(Modifier.size(6.dp).background(MetricColors.battery(battery), CircleShape))
                 }
             }
         }
@@ -223,11 +238,13 @@ fun TodayScreen(
             val cell = Modifier.weight(1f)
             val sleepValue = state.sleep?.score?.toString() ?: state.asleepSeconds?.let { "%d:%02d".format(it / 3600, (it % 3600) / 60) }
             // Whichever score isn't the hero sits first in the row.
-            if (chargeLeads) ScoreChip(rec?.readiness?.score?.toString(), "Readiness", PhosphorIcons.Plant, MetricColors.readiness, cell, onClick = onOpenRecovery)
-            else ScoreChip(rec?.charge?.latest?.toInt()?.toString(), "Charge", PhosphorIcons.BatteryCharging, MetricColors.charge, cell, onClick = onOpenRecovery)
-            ScoreChip(sleepValue, "Sleep", PhosphorIcons.Moon, MetricColors.sleepDeep, cell, onClick = onOpenSleep)
-            ScoreChip(compactCount(state.steps), "Steps", PhosphorIcons.Footprints, MetricColors.steps, cell)
-            ScoreChip(state.stress.avg()?.toString(), "Stress", PhosphorIcons.Brain, MetricColors.stress, cell, onClick = { onFocus(FocusTarget.Stress) })
+            if (chargeLeads) ScoreChip(rec?.readiness?.score?.toString(), "Readiness", PhosphorIcons.Plant, MetricColors.readiness, cell, rec?.readiness?.score?.let { it / 100f }, onClick = onOpenRecovery)
+            else ScoreChip(rec?.charge?.latest?.toInt()?.toString(), "Charge", PhosphorIcons.BatteryCharging, MetricColors.charge, cell, rec?.charge?.latest?.let { it.toFloat() / 100f }, onClick = onOpenRecovery)
+            // The sleep ring is the score, or time asleep against eight hours when there's no score.
+            val sleepProgress = state.sleep?.score?.let { it / 100f } ?: state.asleepSeconds?.let { it / (8 * 3600f) }
+            ScoreChip(sleepValue, "Sleep", PhosphorIcons.Moon, MetricColors.sleepDeep, cell, sleepProgress, onClick = onOpenSleep)
+            ScoreChip(compactCount(state.steps), "Steps", PhosphorIcons.Footprints, MetricColors.steps, cell, state.steps.toFloat() / STEP_GOAL)
+            ScoreChip(state.stress.avg()?.toString(), "Stress", PhosphorIcons.Brain, MetricColors.stress, cell, state.stress.avg()?.let { it / 100f }, onClick = { onFocus(FocusTarget.Stress) })
         }
     }
 

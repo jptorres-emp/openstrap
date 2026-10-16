@@ -18,15 +18,15 @@ import androidx.compose.ui.unit.sp
 /** Metric accent colors, shared by cards and charts. Tuned to read well on near-black. */
 object MetricColors {
     val heart = Color(0xFFFF5A5F)
-    val steps = Color(0xFF3DDC97)
+    val steps = Color(0xFFC3F53C)
     val sleepDeep = Color(0xFF4C6FFF)
     val sleepLight = Color(0xFF8FA8FF)
     val sleepRem = Color(0xFFB37CFF)
     val sleepAwake = Color(0xFFFFB547)
     val spo2 = Color(0xFF38BDF8)
-    val stress = Color(0xFFFF8A3D)
+    val stress = Color(0xFFF062C0)
     val hrv = Color(0xFF2DD4BF)
-    val temperature = Color(0xFFF472B6)
+    val temperature = Color(0xFFFF8A3D)
     val readiness = Color(0xFF7CF2C9)
     val charge = Color(0xFFFFD166)
     val good = Color(0xFF3DDC97)
@@ -46,18 +46,19 @@ private val Dark = darkColorScheme(
     primary = Color(0xFF8FA8FF),
     onPrimary = Color(0xFF0A0F24),
     secondary = Color(0xFF2DD4BF),
-    background = Color(0xFF07080B),
-    onBackground = Color(0xFFF2F3F5),
-    surface = Color(0xFF07080B),
-    onSurface = Color(0xFFF2F3F5),
-    surfaceContainerLowest = Color(0xFF07080B),
-    surfaceContainerLow = Color(0xFF0F1116),
-    surfaceContainer = Color(0xFF14171D),
-    surfaceContainerHigh = Color(0xFF1B1F27),
-    surfaceContainerHighest = Color(0xFF232833),
-    onSurfaceVariant = Color(0xFF9097A3),
-    outline = Color(0xFF2A2F3A),
-    outlineVariant = Color(0xFF1F232B),
+    // OLED black page with neutral grey cards, so the metric accents carry all the colour.
+    background = Color(0xFF000000),
+    onBackground = Color(0xFFFFFFFF),
+    surface = Color(0xFF000000),
+    onSurface = Color(0xFFFFFFFF),
+    surfaceContainerLowest = Color(0xFF000000),
+    surfaceContainerLow = Color(0xFF0A0A0A),
+    surfaceContainer = Color(0xFF141414),
+    surfaceContainerHigh = Color(0xFF1C1C1E),
+    surfaceContainerHighest = Color(0xFF2C2C2E),
+    onSurfaceVariant = Color(0xFF8E8E93),
+    outline = Color(0xFF2C2C2E),
+    outlineVariant = Color(0xFF232323),
     error = Color(0xFFFF6B6B),
 )
 

@@ -16,6 +16,8 @@ Two ideas from Zepp carry over: splitting charge into physical and mental drains
 
 Each contributor compares the night that ended this morning with the user's own history. History covers up to `BASELINE_NIGHTS` = 60 prior nights. A baseline needs `MIN_BASELINE_NIGHTS` = 4 nights, and the score is labelled "learning" until `CALIBRATED_NIGHTS` = 14 nights.
 
+The strap's own Readiness is logged daily to calibrate this score against; see [readiness-calibration.md](readiness-calibration.md).
+
 ### How contributors are scored
 
 Most contributors are z-scores (deviation from baseline in SDs, positive = better). `scoreFromZ` maps them with a logistic curve:

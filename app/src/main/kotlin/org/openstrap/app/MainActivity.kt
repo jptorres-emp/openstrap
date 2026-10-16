@@ -102,8 +102,11 @@ class MainActivity : ComponentActivity() {
         val days = intent.getIntExtra("dump_raw_days", 0)
         if (!BuildConfig.DEBUG || days <= 0) return
         intent.removeExtra("dump_raw_days")
-        android.util.Log.i("OpenStrap", "dump: requested $days days")
-        ((application as OpenStrapApp).container.strap as? org.openstrap.app.device.StrapManager)?.dumpRaw(days)
+        // Debug: `--es dump_types 5,6,70` limits the dump to these GDSP codes (even ones the strap doesn't advertise).
+        val types = intent.getStringExtra("dump_types")?.split(',')?.mapNotNull { it.trim().toIntOrNull() }?.toSet()
+        intent.removeExtra("dump_types")
+        android.util.Log.i("OpenStrap", "dump: requested $days days, types ${types ?: "all"}")
+        ((application as OpenStrapApp).container.strap as? org.openstrap.app.device.StrapManager)?.dumpRaw(days, types)
     }
 }
 

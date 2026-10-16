@@ -302,10 +302,10 @@ class StrapManager(
     }
 
     /** Debug aid, see [HistorySync.dumpRaw]. */
-    fun dumpRaw(days: Int) {
+    fun dumpRaw(days: Int, types: Set<Int>? = null) {
         val s = activeSession ?: return log("dump: not connected")
         val client = gatt ?: return
-        scope.launch { HistorySync(s, client, dao, settings, sync, ::log).dumpRaw(System.currentTimeMillis() / 1000 - days * 86_400L, java.io.File(context.filesDir, "raw")) }
+        scope.launch { HistorySync(s, client, dao, settings, sync, ::log).dumpRaw(System.currentTimeMillis() / 1000 - days * 86_400L, java.io.File(context.filesDir, "raw"), types) }
     }
 
     /** Debug aid: sends [payload] to [endpoint] and logs every reply on it for 5 s. */
@@ -313,10 +313,13 @@ class StrapManager(
         val s = activeSession ?: return log("probe: not connected")
         scope.launch {
             val listener = launch { s.messagesFor(endpoint).collect { log("probe %04x < %s".format(endpoint, it.toHex())) } }
+            // Device-side chunk ACKs on 0016 carry transport errors (e.g. status 5 = unknown endpoint).
+            val acks = link?.let { l -> launch { l.controlNotifications.collect { log("probe %04x ack < %s".format(endpoint, it.toHex())) } } }
             log("probe %04x > %s".format(endpoint, payload.toHex()))
             runCatching { s.send(endpoint, payload) }.onFailure { log("probe failed: $it") }
             delay(5_000)
             listener.cancel()
+            acks?.cancel()
         }
     }
 

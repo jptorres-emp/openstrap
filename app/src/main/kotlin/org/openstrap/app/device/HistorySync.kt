@@ -109,19 +109,20 @@ class HistorySync(
      * Debug aid: fetches every type the strap offers since [fromEpoch] and writes each chunk's payload to
      * [dir] as `<code>_<headerTime>.bin`, without storing records or moving sync cursors.
      */
-    suspend fun dumpRaw(fromEpoch: Long, dir: java.io.File) = coroutineScope {
-        dir.deleteRecursively(); dir.mkdirs()
+    suspend fun dumpRaw(fromEpoch: Long, dir: java.io.File, only: Set<Int>? = null) = coroutineScope {
+        if (only == null) dir.deleteRecursively()
+        dir.mkdirs()
         val listeners = launch {
             launch { gatt.notifications.filter { it.characteristic == HISTORY_DATA }.collect { data.send(it.value) } }
-            if (useChannel) launch { session.messagesFor(Endpoints.HISTORY).collect { control.send(FetchCodec.parse(it)) } }
+            if (useChannel) launch { session.messagesFor(Endpoints.HISTORY).collect { log("dump gdsp < ${it.toHex()}"); control.send(FetchCodec.parse(it)) } }
             else launch { gatt.notifications.filter { it.characteristic == HISTORY_CONTROL }.collect { control.send(FetchCodec.parse(it.value)) } }
         }
         try {
             gatt.enableNotifications(StrapUuids.MAIN_SERVICE, HISTORY_DATA)
             if (!useChannel) gatt.enableNotifications(StrapUuids.MAIN_SERVICE, HISTORY_CONTROL)
             val version = command(FetchCodec.queryVersion()) as? GdspMessage.VersionReply
-            val codes = version?.supportedTypes()?.sorted().orEmpty()
-            log("dump: types $codes")
+            val codes = only?.sorted() ?: version?.supportedTypes()?.sorted().orEmpty()
+            log("dump: types $codes (strap offers ${version?.supportedTypes()?.sorted()})")
             for (code in codes) {
                 state.value = SyncState.Running("Dumping type $code")
                 runCatching {

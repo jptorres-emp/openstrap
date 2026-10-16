@@ -108,17 +108,24 @@ object HistoryParsers {
         // Real minutes end at the first all-0xFF record (a slot the strap hasn't written). On hardware the
         // strap sometimes sends its whole buffer: a few real minutes, hours of 0xFF, then weeks of stale
         // slots. Read as data the 0xFF records are 255 steps each and push the cursor into the future.
+        // A chunk can also *start* with 0xFF slots (minutes the strap has no record for). Those are skipped
+        // and the cursor still moves past them; otherwise every sync re-fetches the same chunk forever.
         val whole = raw.size - raw.size % size
-        var end = 0
-        while (end < whole && !(end until end + size).all { raw[it] == 0xFF.toByte() }) end += size
+        fun isPadding(at: Int) = (at until at + size).all { raw[it] == 0xFF.toByte() }
+        var begin = 0
+        while (begin < whole && isPadding(begin)) begin += size
+        var end = begin
+        while (end < whole && !isPadding(end)) end += size
+        val skipped = begin / size
+        val first = ctx.headerTime + skipped * 60L
         // Keep any trailing partial record so it's still reported as dropped bytes.
-        val payload = if (end == whole) raw else raw.copyOf(end) + raw.copyOfRange(whole, raw.size)
+        val payload = if (begin == 0 && end == whole) raw else raw.copyOfRange(begin, end) + raw.copyOfRange(whole, raw.size)
         fixed(payload, size, strict = false, next = { recs ->
-            if (recs.isEmpty()) null else ctx.headerTime + recs.size * 60L
+            if (recs.isEmpty() && skipped == 0) null else first + recs.size * 60L
         }) { r, i ->
             val mode = r.u8(); val intensity = r.u8(); val steps = r.u8(); val hr = r.u8()
             val extra = if (size >= 8) ActivitySleepExtra(r.u8(), r.u8(), r.u8(), r.u8()) else null
-            ActivitySample(ctx.headerTime + i * 60L, mode, intensity, steps, hr, extra)
+            ActivitySample(first + i * 60L, mode, intensity, steps, hr, extra)
         }
     }
 

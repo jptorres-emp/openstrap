@@ -257,7 +257,10 @@ class HistorySync(
                     store(kept)
                     // Only acknowledge once the data is safely in the database.
                     finish(ok = true)
-                    val next = if (kept.isEmpty()) null else result.nextCursor?.coerceAtMost(kept.maxOf { it.timestamp } + 60)?.coerceAtMost(now)
+                    // A chunk of only gap slots still moves the cursor past them (activity), or the type stalls.
+                    val next = result.nextCursor
+                        ?.let { if (kept.isEmpty()) it.takeIf { result.records.isEmpty() } else it.coerceAtMost(kept.maxOf { r -> r.timestamp } + 60) }
+                        ?.coerceAtMost(now)
                     if (next != null && next > cursor) settings.setLastSync(key, next)
                     if (!HistoryTypeSpecs.shouldContinue(spec, cursor, next)) return
                     cursor = next!!

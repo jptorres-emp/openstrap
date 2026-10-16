@@ -236,4 +236,20 @@ class ActivityPaddingTest {
         org.junit.Assert.assertEquals(listOf(0, 26), r.records.map { (it as ActivitySample).steps })
         org.junit.Assert.assertEquals(1000 + 120L, r.nextCursor)
     }
+
+    @org.junit.Test
+    fun skipsLeadingFfRecordsAndAdvancesCursor() {
+        // Captured on hardware: the chunk opens with a 0xFF slot. Stopping there stalled activity sync for good.
+        val payload = ("ff".repeat(8) + "5016004705000000" + "ff".repeat(8) + "500e004605000000").hexToBytes()
+        val r = HistoryParsers.activity.parse(payload, ParseContext(1000, activityRecordSize = 8)) as ParseResult.Success
+        org.junit.Assert.assertEquals(listOf(1060L), r.records.map { it.timestamp })
+        org.junit.Assert.assertEquals(1000 + 120L, r.nextCursor)
+    }
+
+    @org.junit.Test
+    fun allFfChunkStillAdvancesCursor() {
+        val r = HistoryParsers.activity.parse("ff".repeat(24).hexToBytes(), ParseContext(1000, activityRecordSize = 8)) as ParseResult.Success
+        org.junit.Assert.assertTrue(r.records.isEmpty())
+        org.junit.Assert.assertEquals(1000 + 180L, r.nextCursor)
+    }
 }

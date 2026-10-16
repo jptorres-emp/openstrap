@@ -206,8 +206,10 @@ data class SkinTemperatureSample(override val timestamp: Long, val skinCentiCels
 /** Type 73. RMSSD unit probably ms (UNVERIFIED). */
 data class HrvRmssd(override val timestamp: Long, val tzQuarters: Int, val rmssd: Int) : HistoryRecord
 
-/** Type 78. SDNN unit probably ms (UNVERIFIED). */
-data class HrvSdnn(override val timestamp: Long, val tzQuarters: Int, val sdnn: Long) : HistoryRecord
+/** Type 78: nightly SDNN in 0.01 ms (Zepp divides by 100 for Health Connect). */
+data class HrvSdnn(override val timestamp: Long, val tzQuarters: Int, val sdnnCentiMs: Long) : HistoryRecord {
+    val sdnnMs: Double get() = sdnnCentiMs / 100.0
+}
 
 /** Type 86: real-time resting HR + baseline. `level` semantics UNVERIFIED. */
 data class RestHrRealtime(

@@ -381,7 +381,7 @@ Invalid-value sentinel: **UNVERIFIED**. The app stores the raw byte. Treat 0 and
 | Type | Record | Size | Evidence |
 |---|---|---|---|
 | 73 HRV | `ts u32`, `tz i8`, `rmssd u8` | 6 | `d/z4j.java:259-290`; names `d/v2l.java` (toString: timestamp, timezone, rmssd) |
-| 78 HRV_SDNN | `tz i8`, `ts u32`, `sdnn u32` (note: tz comes first) | 9 | `d/z4j.java:291-318`; `d/pum.java:9-13,31` |
+| 78 HRV_SDNN | `ts u32`, `tz i8`, `sdnn u32` in 0.01 ms (verified on hardware; jadx shows tz first because R8 reordered the constructor) | 9 | `d/z4j.java:291-318`; `d/pum.java:9-13,31`; `d/n2i.java:167` (÷100) |
 | 86 REST_HR | `ts u32`, `tz i8`, `realtimeRestHr u8`, `restHrBaseline u8`, `level u8` | 8 | `d/z4j.java:425-448`; `d/r520.java:11-37` |
 | 58 RESTING_HEART_RATE | `ts u32`, `tz i8`, `hr u8` | 6 | `d/o40.java:220-247`; `d/f520.java` |
 | 61 DAILY_MAX_HR | `ts u32`, `tz i8`, `maxHr u8` | 6 | `d/o40.java:145-173`; `d/u4t.java` ("MaxHeartRate") |

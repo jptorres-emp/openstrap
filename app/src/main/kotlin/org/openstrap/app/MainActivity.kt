@@ -114,6 +114,7 @@ private enum class Tab(val label: String, val icon: androidx.compose.ui.graphics
     Today("Today", PhosphorIcons.House, PhosphorIcons.HouseFill),
     Heart("Heart", PhosphorIcons.Heart, PhosphorIcons.HeartFill),
     Sleep("Sleep", PhosphorIcons.Moon, PhosphorIcons.MoonFill),
+    Workouts("Workouts", PhosphorIcons.Barbell, PhosphorIcons.Barbell),
     Device("Device", PhosphorIcons.Watch, PhosphorIcons.WatchFill),
 }
 
@@ -136,6 +137,13 @@ private fun AppRoot(container: AppContainer) {
     val firmwareVm: FirmwareViewModel = viewModel(factory = viewModelFactory { initializer { FirmwareViewModel(container) } })
     var showFirmware by rememberSaveable { mutableStateOf(false) }
     var showRecovery by rememberSaveable { mutableStateOf(false) }
+    val workoutsVm: org.openstrap.app.ui.workout.WorkoutsViewModel = viewModel(factory = viewModelFactory {
+        initializer { org.openstrap.app.ui.workout.WorkoutsViewModel(container.database.healthDao(), container.settings.profile) }
+    })
+    val workouts by workoutsVm.workouts.collectAsStateWithLifecycle()
+    val openWorkout by workoutsVm.open.collectAsStateWithLifecycle()
+    var workoutStart by rememberSaveable { mutableStateOf<Long?>(null) }
+    LaunchedEffect(workoutStart) { workoutsVm.open(workoutStart) }
     var editProfile by rememberSaveable { mutableStateOf(false) }
     val recovery by dayVm.recovery.collectAsStateWithLifecycle()
     val profile by deviceVm.profile.collectAsStateWithLifecycle()
@@ -180,7 +188,7 @@ private fun AppRoot(container: AppContainer) {
 
     Scaffold(
         bottomBar = {
-            FloatingNavBar(Tab.entries.map { NavItem(it.label, it.icon, it.selectedIcon) }, tab, { tab = it; showRecovery = false })
+            FloatingNavBar(Tab.entries.map { NavItem(it.label, it.icon, it.selectedIcon) }, tab, { tab = it; showRecovery = false; workoutStart = null })
         },
         containerColor = MaterialTheme.colorScheme.background,
     ) { padding ->
@@ -204,6 +212,8 @@ private fun AppRoot(container: AppContainer) {
                 recovery = recovery,
                 onOpenRecovery = { showRecovery = true },
                 sync = sync as? SyncState.Running,
+                workouts = workouts,
+                onOpenWorkout = { tab = Tab.Workouts.ordinal; workoutStart = it },
             )
             Tab.Heart -> HeartScreen(
                 day, live, liveEnabled,
@@ -215,6 +225,11 @@ private fun AppRoot(container: AppContainer) {
                 focus = focus, onFocusDone = { focus = null },
             )
             Tab.Sleep -> SleepScreen(day, battery, charging, dayVm::previousDay, dayVm::nextDay, padding, focus, onFocusDone = { focus = null }, picker = picker)
+            Tab.Workouts -> if (workoutStart != null) {
+                org.openstrap.app.ui.workout.WorkoutScreen(openWorkout?.takeIf { it.workout.start == workoutStart }, padding, onBack = { workoutStart = null })
+            } else {
+                org.openstrap.app.ui.workout.WorkoutsScreen(workouts, padding, onOpen = { workoutStart = it })
+            }
             Tab.Device -> if (showFirmware) {
                 FirmwareScreen(firmwareVm, padding, onBack = { showFirmware = false })
             } else {

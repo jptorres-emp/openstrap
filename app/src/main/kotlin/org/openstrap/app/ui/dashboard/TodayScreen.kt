@@ -209,6 +209,8 @@ fun TodayScreen(
     recovery: RecoveryResult? = null,
     onOpenRecovery: () -> Unit = {},
     sync: SyncState.Running? = null,
+    workouts: List<org.openstrap.app.data.WorkoutAnalysis> = emptyList(),
+    onOpenWorkout: (Long) -> Unit = {},
 ) = ScreenList(contentPadding) {
     val rec = recovery?.takeIf { it.date == state.date }
     val chargeLeads = chargeLeads(state, rec)
@@ -310,6 +312,9 @@ fun TodayScreen(
             BarChart(state.hourlySteps, MetricColors.steps) { hour, steps -> "%02d:00–%02d:00 · %,d steps".format(hour, (hour + 1) % 24, Math.round(steps)) }
         }
     }
+
+    val dayWorkouts = workouts.filter { it.workout.start in state.dayStart..state.dayEnd }.sortedBy { it.workout.start }
+    if (dayWorkouts.isNotEmpty()) item { org.openstrap.app.ui.workout.WorkoutsPanel(dayWorkouts, onOpenWorkout) }
 
     if (state.sleep?.score == null) item {
         Panel(onClick = onOpenSleep) {

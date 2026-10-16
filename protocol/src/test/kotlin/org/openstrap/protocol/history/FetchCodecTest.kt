@@ -177,7 +177,7 @@ class FetchCodecTest {
         val all = HistoryTypeSpecs.all
         assertEquals(HistoryDataType.ACTIVITY, all.first().type)
         assertEquals(all.sortedBy { it.syncOrder }, all)
-        assertNull(HistoryTypeSpecs.forCode(5)!!.parser)
+        assertEquals(WorkoutParsers.summary, HistoryTypeSpecs.forCode(5)!!.parser)
         assertEquals(listOf(72, 1).toSet(), HistoryTypeSpecs.plan(setOf(1, 72, 3)).map { it.code }.toSet())
         assertTrue(HistoryTypeSpecs.plan(null).all { it.type.strap == StrapRelevance.EXPECTED })
 
@@ -185,7 +185,7 @@ class FetchCodecTest {
         assertTrue(HistoryTypeSpecs.shouldContinue(act, 100, 101))
         assertFalse(HistoryTypeSpecs.shouldContinue(act, 100, 100))
         assertFalse(HistoryTypeSpecs.shouldContinue(act, 100, null))
-        assertFalse(HistoryTypeSpecs.shouldContinue(HistoryTypeSpecs.forCode(6)!!, 100, 200))
+        assertFalse(HistoryTypeSpecs.shouldContinue(HistoryTypeSpecs.forCode(18)!!, 100, 200))
     }
 }
 

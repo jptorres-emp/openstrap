@@ -108,3 +108,53 @@ data class PaiSample(
     val restingHeartRate: Int,
     val maxHeartRate: Int,
 )
+
+/** Nightly HRV as SDNN (type 78). */
+@Entity(tableName = "hrv_sdnn")
+data class HrvSdnnSample(
+    @PrimaryKey val timestamp: Long,
+    val milliseconds: Float,
+)
+
+/**
+ * A workout recorded on the strap (type 5). [start] is the strap's trackId. [end] is the start plus the
+ * exercise time; the real end (pauses included) comes from the sport effect or the HR stream when present.
+ */
+@Entity(tableName = "workout")
+data class Workout(
+    @PrimaryKey val start: Long,
+    val end: Long,
+    val sportType: Int,
+    val exerciseSeconds: Int?,
+    val calories: Int?,
+    val averageHeartRate: Int?,
+    val maxHeartRate: Int?,
+    val minHeartRate: Int?,
+    val aerobicTrainingEffect: Float?,
+    val anaerobicTrainingEffect: Float?,
+    val trainingLoad: Int?,
+    val vo2max: Int?,
+    val steps: Int?,
+)
+
+/** Per-second HR during a workout and the strap's 3-minute recovery recording after it (type 6). */
+@Entity(tableName = "workout_hr", primaryKeys = ["workoutStart", "timestamp"])
+data class WorkoutHeartRate(
+    val workoutStart: Long,
+    val timestamp: Long,
+    val bpm: Int,
+)
+
+/** The strap's post-workout result (type 59), keyed by the workout's end. */
+@Entity(tableName = "sport_effect")
+data class SportEffectRow(
+    @PrimaryKey val end: Long,
+    val recoveryMinutes: Int?,
+    val vo2max: Float?,
+    val epoc: Float?,
+    val weeklyLoad: Float?,
+    val monthlyLoad: Float?,
+    val optimalLoadMin: Int?,
+    val optimalLoadMax: Int?,
+    val maximalHeartRate: Int?,
+)

@@ -285,7 +285,8 @@ fun FloatingNavBar(items: List<NavItem>, selected: Int, onSelect: (Int) -> Unit,
                         Modifier.clip(CircleShape)
                             .background(if (on) MaterialTheme.colorScheme.surfaceContainerHighest else Color.Transparent)
                             .clickable { onSelect(i) }
-                            .padding(horizontal = 18.dp, vertical = 8.dp),
+                            // Five tabs need tighter cells to fit a narrow phone.
+                            .padding(horizontal = if (items.size > 4) 11.dp else 18.dp, vertical = 8.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         val tint = if (on) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant

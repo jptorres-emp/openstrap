@@ -14,6 +14,10 @@ import org.openstrap.app.data.db.BreathRate
 import org.openstrap.app.data.db.HealthDao
 import org.openstrap.app.data.db.HeartRateSample
 import org.openstrap.app.data.db.HrvSample
+import org.openstrap.app.data.db.HrvSdnnSample
+import org.openstrap.app.data.db.SportEffectRow
+import org.openstrap.app.data.db.Workout
+import org.openstrap.app.data.db.WorkoutHeartRate
 import org.openstrap.app.data.db.PaiSample
 import org.openstrap.app.data.db.RestingHeartRate
 import org.openstrap.app.data.db.SleepSession
@@ -31,6 +35,10 @@ import org.openstrap.protocol.history.HistoryRecord
 import org.openstrap.protocol.history.HistoryTypeSpec
 import org.openstrap.protocol.history.HistoryTypeSpecs
 import org.openstrap.protocol.history.HrvRmssd
+import org.openstrap.protocol.history.HrvSdnn
+import org.openstrap.protocol.history.SportEffect
+import org.openstrap.protocol.history.WorkoutDetail
+import org.openstrap.protocol.history.WorkoutSummary
 import org.openstrap.protocol.history.PaiRecord
 import org.openstrap.protocol.history.ParseContext
 import org.openstrap.protocol.history.ParseResult
@@ -188,6 +196,11 @@ class HistorySync(
         dao.deleteNapStagesInsideMainSleep()
         val naps = dao.deleteNapsInsideMainSleep()
         if (naps > 0) log("history: removed $naps naps inside a main sleep")
+        // Builds before workouts were decoded moved the workout cursors past workouts they threw away.
+        if (dao.workoutCount() == 0) for (type in WORKOUT_TYPES) {
+            val key = "gdsp_${type.code}"
+            if ((settings.lastSync(key) ?: continue) > now - WORKOUT_LOOKBACK) settings.setLastSync(key, now - WORKOUT_LOOKBACK)
+        }
         for (type in HistoryDataType.entries) {
             val key = "gdsp_${type.code}"
             val cursor = settings.lastSync(key) ?: continue
@@ -205,7 +218,8 @@ class HistorySync(
 
     private suspend fun syncType(spec: HistoryTypeSpec) {
         val key = "gdsp_${spec.code}"
-        var cursor = settings.lastSync(key) ?: (System.currentTimeMillis() / 1000 - DEFAULT_LOOKBACK)
+        val lookback = if (spec.type in WORKOUT_TYPES) WORKOUT_LOOKBACK else DEFAULT_LOOKBACK
+        var cursor = settings.lastSync(key) ?: (System.currentTimeMillis() / 1000 - lookback)
         repeat(MAX_CHUNKS_PER_TYPE) {
             val start = command(FetchCodec.startFetch(spec.type, cursor, zone))
             if (start !is GdspMessage.StartReply || !start.isSuccess) {
@@ -340,6 +354,9 @@ class HistorySync(
         val skin = mutableListOf<SkinTemperature>()
         val breath = mutableListOf<BreathRate>()
         val pai = mutableListOf<PaiSample>()
+        val sdnn = mutableListOf<HrvSdnnSample>()
+        val workouts = mutableListOf<Workout>()
+        val effects = mutableListOf<SportEffectRow>()
         for (r in records) when (r) {
             is ActivitySample -> activity += ActivityMinute(r.timestamp, r.steps, r.intensity, r.mode, r.heartRate)
             // Per-second HR is averaged per minute to keep the database small.
@@ -348,6 +365,23 @@ class HistorySync(
             is SpO2Reading -> if (r.isPlausible) spo2 += Spo2Sample(r.timestamp, r.spo2)
             is StrapStress -> if (!r.isLikelyGap) stress += DbStress(r.timestamp, r.stress)
             is HrvRmssd -> if (r.rmssd > 0) hrv += HrvSample(r.timestamp, r.rmssd)
+            is HrvSdnn -> if (r.sdnnMs in 1.0..400.0) sdnn += HrvSdnnSample(r.timestamp, r.sdnnMs.toFloat())
+            is WorkoutSummary -> workouts += Workout(
+                r.trackId, r.trackId + (r.exerciseTime ?: r.totalTime ?: 0), r.sportType, r.exerciseTime ?: r.totalTime,
+                r.calories, r.averageHeartRate, r.maxHeartRate, r.minHeartRate, r.aerobicTrainingEffect,
+                r.anaerobicTrainingEffect, r.trainingLoad, r.vo2max, r.steps,
+            )
+            is WorkoutDetail -> {
+                // One sample per second; the strap re-sends a workout whole, so replace it.
+                val samples = r.heartRate.associate { (ms, bpm) -> ms / 1000 to bpm }
+                    .map { (t, bpm) -> WorkoutHeartRate(r.timestamp, t, bpm) }
+                dao.deleteWorkoutHeartRate(r.timestamp)
+                if (samples.isNotEmpty()) dao.insertWorkoutHeartRate(samples)
+            }
+            is SportEffect -> effects += SportEffectRow(
+                r.timestamp, r.recoveryTimeMinutes, r.vo2max, r.epoc, r.trainingLoadWeekly, r.trainingLoadMonthly,
+                r.optimalLoadMin, r.optimalLoadMax, r.maximalHeartRate,
+            )
             is StrapRestingHr -> if (r.heartRate in 30..120) resting += RestingHeartRate(dayStart(r.timestamp), r.heartRate)
             is RestHrRealtime -> if (r.realtimeRestHr in 30..120) resting += RestingHeartRate(dayStart(r.timestamp), r.realtimeRestHr)
             is SleepResult -> storeSleep(r)
@@ -371,6 +405,9 @@ class HistorySync(
         if (skin.isNotEmpty()) dao.insertSkinTemperature(skin)
         if (breath.isNotEmpty()) dao.insertBreathRate(breath)
         if (pai.isNotEmpty()) dao.insertPai(pai)
+        if (sdnn.isNotEmpty()) dao.insertHrvSdnn(sdnn)
+        if (workouts.isNotEmpty()) dao.insertWorkouts(workouts)
+        if (effects.isNotEmpty()) dao.insertSportEffects(effects)
     }
 
     /**
@@ -456,6 +493,9 @@ class HistorySync(
         private val HISTORY_CONTROL = java.util.UUID.fromString("00000004-0000-3512-2118-0009af100700")
         private val HISTORY_DATA = java.util.UUID.fromString("00000005-0000-3512-2118-0009af100700")
         private const val DEFAULT_LOOKBACK = 2L * 24 * 3600
+        /** Workouts are few and worth having: on first sync, take whatever the strap still holds. */
+        private const val WORKOUT_LOOKBACK = 30L * 24 * 3600
+        private val WORKOUT_TYPES = setOf(HistoryDataType.SPORT_SUMMARY, HistoryDataType.SPORT_DETAIL, HistoryDataType.SPORT_EFFECT)
         /** 2024-01-01: anything older comes from a strap whose clock was never set. */
         private const val MIN_VALID_EPOCH = 1_704_067_200L
         private const val FUTURE_SLACK = 120L

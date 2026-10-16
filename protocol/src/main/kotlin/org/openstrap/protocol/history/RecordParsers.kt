@@ -286,12 +286,9 @@ object HistoryParsers {
         fixed(payload, 6, strict = false) { r, _ -> HrvRmssd(r.u32(), r.s8(), r.u8()) }
     }
 
-    /** Type 78 (§3.7): `tz i8, ts u32, sdnn u32` (tz first). */
+    /** Type 78 (§3.7): `ts u32, tz i8, sdnn u32` in 0.01 ms (verified on hardware). */
     val hrvSdnn = HistoryParser { payload, _ ->
-        fixed(payload, 9, strict = false) { r, _ ->
-            val tz = r.s8()
-            HrvSdnn(r.u32(), tz, r.u32())
-        }
+        fixed(payload, 9, strict = false) { r, _ -> HrvSdnn(r.u32(), r.s8(), r.u32()) }
     }
 
     /** Type 86 (§3.7): `ts, tz, realtimeRestHr, restHrBaseline, level`. */

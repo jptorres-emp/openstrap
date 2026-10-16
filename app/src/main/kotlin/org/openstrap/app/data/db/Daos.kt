@@ -45,6 +45,43 @@ interface HealthDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertPai(samples: List<PaiSample>)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertHrvSdnn(samples: List<HrvSdnnSample>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertWorkouts(workouts: List<Workout>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertWorkoutHeartRate(samples: List<WorkoutHeartRate>)
+
+    @Query("DELETE FROM workout_hr WHERE workoutStart = :start")
+    suspend fun deleteWorkoutHeartRate(start: Long)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertSportEffects(rows: List<SportEffectRow>)
+
+    @Query("SELECT COUNT(*) FROM workout")
+    suspend fun workoutCount(): Int
+
+    @Query("SELECT * FROM workout ORDER BY start DESC")
+    fun workouts(): Flow<List<Workout>>
+
+    @Query("SELECT * FROM workout WHERE start = :start")
+    fun workout(start: Long): Flow<Workout?>
+
+    @Query("SELECT * FROM workout_hr WHERE workoutStart = :start ORDER BY timestamp")
+    fun workoutHeartRate(start: Long): Flow<List<WorkoutHeartRate>>
+
+    /** Last HR sample per workout: the strap records three minutes past the end, so this places the end. */
+    @Query("SELECT workoutStart, MAX(timestamp) AS timestamp, 0 AS bpm FROM workout_hr GROUP BY workoutStart")
+    fun lastWorkoutHeartRates(): Flow<List<WorkoutHeartRate>>
+
+    @Query("SELECT * FROM sport_effect ORDER BY `end`")
+    fun sportEffects(): Flow<List<SportEffectRow>>
+
+    @Query("SELECT * FROM hrv_sdnn WHERE timestamp BETWEEN :from AND :to ORDER BY timestamp")
+    fun hrvSdnn(from: Long, to: Long): Flow<List<HrvSdnnSample>>
+
     @Query("UPDATE activity_minute SET kind = kind & 15 WHERE kind > 15 AND kind != 126")
     suspend fun fixActivityModeNibble(): Int
 

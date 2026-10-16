@@ -1,6 +1,7 @@
 package org.openstrap.protocol.history
 
 import org.openstrap.protocol.ByteWriter
+import org.openstrap.protocol.hexToBytes
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -288,8 +289,10 @@ class RecordParsersTest {
         val rmssd = ok(HistoryParsers.hrvRmssd.parse(w().u32(t0).u8(4).u8(48).toByteArray(), ctx)).records.single()
         assertEquals(HrvRmssd(t0, 4, 48), rmssd)
 
-        val sdnn = ok(HistoryParsers.hrvSdnn.parse(w().u8(-4).u32(t0).u32(65).toByteArray(), ctx)).records.single()
-        assertEquals(HrvSdnn(t0, -4, 65), sdnn)
+        // Captured from the strap: ts 1792106880, tz +4 h, 60.56 ms.
+        val sdnn = ok(HistoryParsers.hrvSdnn.parse("8061d16a10a8170000".hexToBytes(), ctx)).records.single()
+        assertEquals(HrvSdnn(1_792_106_880, 16, 6056), sdnn)
+        assertEquals(60.56, sdnn.sdnnMs, 1e-9)
 
         val rest = ok(HistoryParsers.restHrRealtime.parse(w().u32(t0).u8(8).u8(55).u8(57).u8(2).toByteArray(), ctx))
         assertEquals(RestHrRealtime(t0, 8, 55, 57, 2), rest.records.single())

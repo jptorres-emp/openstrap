@@ -36,10 +36,11 @@ object HistoryTypeSpecs {
         HistoryTypeSpec(HistoryDataType.HRV_SDNN, 10, HistoryParsers.hrvSdnn),
         HistoryTypeSpec(HistoryDataType.PAI, 11, HistoryParsers.pai),
         HistoryTypeSpec(HistoryDataType.BODY_TEMPERATURE_ALL_DAY, 11, HistoryParsers.skinTemperature),
-        // TODO: workout summary (protobuf, 02 §3.12) and detail (TLV, 02 §3.13) are not decoded
-        // yet. Summary 5 and detail 6 must be fetched back to back with the same cursor.
-        HistoryTypeSpec(HistoryDataType.SPORT_SUMMARY, 12, null),
-        HistoryTypeSpec(HistoryDataType.SPORT_DETAIL, 12, null, loops = false),
+        // One workout per START. Zepp fetches the detail right after its summary with the same cursor; each
+        // keeping its own cursor (trackId + 1) walks the same workouts in the same order.
+        HistoryTypeSpec(HistoryDataType.SPORT_SUMMARY, 12, WorkoutParsers.summary),
+        HistoryTypeSpec(HistoryDataType.SPORT_DETAIL, 12, WorkoutParsers.detail),
+        HistoryTypeSpec(HistoryDataType.SPORT_EFFECT, 12, WorkoutParsers.sportEffect),
         HistoryTypeSpec(HistoryDataType.RECOVERY_HEART_RATE, 13, HistoryParsers.recoveryHr),
         HistoryTypeSpec(HistoryDataType.DAILY_MAX_EXERCISE_HR, 14, HistoryParsers.dailyMaxHr),
         HistoryTypeSpec(HistoryDataType.SPO2_OSA_EVENT, 15, HistoryParsers.spo2OsaEvent),

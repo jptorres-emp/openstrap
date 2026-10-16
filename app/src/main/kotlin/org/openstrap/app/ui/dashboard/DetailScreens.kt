@@ -101,7 +101,7 @@ fun HeartScreen(
                 }
                 LineChart(
                     state.heartRate, MetricColors.heart, state.dayStart..state.dayEnd, height = 190.dp,
-                    markMin = true, band = state.sleep?.let { it.start..it.end }, reveal = f.reveal(FocusTarget.HeartRate),
+                    markMin = true, band = state.sleep?.let { it.start..it.end }, reveal = f.reveal(FocusTarget.HeartRate), unit = "bpm",
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     LegendDot("Your average", MetricColors.heart.copy(alpha = 0.7f))
@@ -134,7 +134,7 @@ private fun TrendPanel(title: String, icon: ImageVector, color: Color, points: L
                 BigValue(today?.toInt()?.toString() ?: "—", unit, caption = "Today")
                 BigValue(Math.round(known.average()).toString(), unit, caption = "7-day avg")
             }
-            TrendChart(points, color, reveal = focus.reveal(target))
+            TrendChart(points, color, reveal = focus.reveal(target), unit = unit)
         }
     }
 }
@@ -157,7 +157,10 @@ private fun SeriesPanel(
         else {
             val average = if (decimals == 0) points.avg().toString() else "%.${decimals}f".format(points.map { it.y }.average())
             BigValue(average, unit, caption = "Average")
-            LineChart(points, color, state.dayStart..state.dayEnd, height = 130.dp, gapSeconds = 3 * 3600, reveal = focus.reveal(target))
+            LineChart(
+                points, color, state.dayStart..state.dayEnd, height = 130.dp, gapSeconds = 3 * 3600, reveal = focus.reveal(target),
+                format = { if (decimals == 0) Math.round(it).toString() else "%.${decimals}f".format(it) }, unit = unit,
+            )
         }
     }
 }
@@ -238,7 +241,7 @@ private fun SleepList(
     if (state.sleepStages.isNotEmpty()) section(index) {
         Panel {
             PanelHeader("Sleep stages", PhosphorIcons.Moon, MetricColors.sleepDeep, trailing = session.wakeCount?.let { "Woke $it×" })
-            Hypnogram(state.sleepStages, SLEEP_COLORS, DayViewModel.SLEEP_STAGE_ROWS, height = 180.dp)
+            Hypnogram(state.sleepStages, SLEEP_COLORS, DayViewModel.SLEEP_STAGE_ROWS, height = 180.dp, stageNames = SLEEP_NAMES)
             Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                 LegendDot("Awake", MetricColors.sleepAwake)
                 LegendDot("REM", MetricColors.sleepRem)
@@ -247,10 +250,7 @@ private fun SleepList(
             }
             state.sleepBreakdown?.let { b ->
                 val total = (b.asleepSeconds + b.awakeSeconds).coerceAtLeast(1)
-                listOf(
-                    SleepStage.AWAKE to "Awake", SleepStage.REM to "REM",
-                    SleepStage.LIGHT to "Light", SleepStage.DEEP to "Deep",
-                ).forEach { (stage, label) ->
+                SLEEP_NAMES.forEach { (stage, label) ->
                     val secs = b.byStage[stage] ?: 0L
                     StageRow(label, secs, secs.toFloat() / total, SLEEP_COLORS.getValue(stage))
                 }
@@ -274,7 +274,7 @@ private fun SleepList(
         Panel(highlight = MetricColors.hrv.takeIf { f.isHighlighted(FocusTarget.Breathing) }) {
             PanelHeader("Breathing rate", PhosphorIcons.Wind, MetricColors.hrv)
             BigValue(state.breathRate.avg().toString(), "br/min", caption = "Average during sleep")
-            LineChart(state.breathRate, MetricColors.hrv, session.start..session.end, height = 110.dp, gapSeconds = 2 * 3600, reveal = f.reveal(FocusTarget.Breathing))
+            LineChart(state.breathRate, MetricColors.hrv, session.start..session.end, height = 110.dp, gapSeconds = 2 * 3600, reveal = f.reveal(FocusTarget.Breathing), unit = "br/min")
         }
     }
 
@@ -297,7 +297,7 @@ private fun SleepList(
             if (pts.isEmpty()) EmptyHint("No heart-rate data in this window.")
             else {
                 BigValue(pts.minOf { it.y }.toInt().toString(), "bpm", caption = "Lowest")
-                LineChart(pts, MetricColors.heart, window, height = 150.dp, markMin = true)
+                LineChart(pts, MetricColors.heart, window, height = 150.dp, markMin = true, unit = "bpm")
             }
         }
     }

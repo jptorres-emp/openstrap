@@ -136,7 +136,7 @@ fun ChargeCard(
         }
         LineChart(
             c.points.map { ChartPoint(it.t, it.value) }, MetricColors.charge, dayRange, height = 130.dp,
-            showAverage = false, band = sleepBand, yRange = 0f..100f, segments = chargeSegments(c.points),
+            showAverage = false, band = sleepBand, yRange = 0f..100f, segments = chargeSegments(c.points), unit = "/ 100",
         )
         Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             LegendDot("Sleep", STATE_COLORS.getValue(Recovery.State.Sleep))

@@ -67,6 +67,13 @@ val SLEEP_COLORS = mapOf(
     SleepStage.DEEP to MetricColors.sleepDeep,
 )
 
+val SLEEP_NAMES = mapOf(
+    SleepStage.AWAKE to "Awake",
+    SleepStage.REM to "REM",
+    SleepStage.LIGHT to "Light",
+    SleepStage.DEEP to "Deep",
+)
+
 /** Shared scrolling list with consistent gutters for all dashboard tabs. */
 @Composable
 fun ScreenList(
@@ -222,7 +229,7 @@ fun TodayScreen(
             if (state.heartRate.isEmpty()) EmptyHint("No heart-rate data yet. Sync your strap.")
             else LineChart(
                 state.heartRate, MetricColors.heart, state.dayStart..state.dayEnd, height = 140.dp,
-                band = state.sleep?.let { it.start..it.end },
+                band = state.sleep?.let { it.start..it.end }, unit = "bpm",
             )
         }
     }
@@ -270,7 +277,7 @@ fun TodayScreen(
                 }
                 BigValue("${state.activeHours}", "of $ACTIVE_HOURS_GOAL h", caption = "Active hours")
             }
-            BarChart(state.hourlySteps, MetricColors.steps)
+            BarChart(state.hourlySteps, MetricColors.steps) { hour, steps -> "%02d:00–%02d:00 · %,d steps".format(hour, (hour + 1) % 24, Math.round(steps)) }
         }
     }
 
@@ -282,7 +289,7 @@ fun TodayScreen(
             else {
                 BigValue(formatDuration(asleep), "", caption = "Time asleep")
                 if (state.sleepStages.isNotEmpty()) {
-                    Hypnogram(state.sleepStages, SLEEP_COLORS, DayViewModel.SLEEP_STAGE_ROWS, height = 110.dp)
+                    Hypnogram(state.sleepStages, SLEEP_COLORS, DayViewModel.SLEEP_STAGE_ROWS, height = 110.dp, stageNames = SLEEP_NAMES)
                 }
             }
         }

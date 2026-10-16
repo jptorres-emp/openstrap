@@ -2,6 +2,7 @@ package org.openstrap.app.ui.components
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -58,13 +59,55 @@ private fun DrawScope.label(m: TextMeasurer, text: String, style: TextStyle, x: 
     drawText(layout, topLeft = Offset((x + dx).coerceIn(0f, size.width - layout.size.width), y))
 }
 
+/**
+ * Scrubbing for every chart: drag sideways to read values straight away, or press and hold first (the
+ * older gesture). Vertical drags still scroll the list and a plain tap still reaches the card.
+ */
+private fun Modifier.scrub(key: Any?, onScrub: (Float?) -> Unit): Modifier = this
+    .pointerInput(key) {
+        detectHorizontalDragGestures(
+            onDragStart = { onScrub(it.x) },
+            onDragEnd = { onScrub(null) },
+            onDragCancel = { onScrub(null) },
+        ) { change, _ -> change.consume(); onScrub(change.position.x) }
+    }
+    .pointerInput(key) {
+        detectDragGesturesAfterLongPress(
+            onDragStart = { onScrub(it.x) },
+            onDrag = { change, _ -> change.consume(); onScrub(change.position.x) },
+            onDragEnd = { onScrub(null) },
+            onDragCancel = { onScrub(null) },
+        )
+    }
+
+/** "62 bpm", "97%", "36.4°C", or the bare value when there's no unit. */
+fun withUnit(value: String, unit: String) = when {
+    unit.isEmpty() -> value
+    unit.startsWith("%") || unit.startsWith("°") -> value + unit
+    else -> "$value $unit"
+}
+
+/** The touch readout: a pill with [text] centred over [x], above [anchorY] when there's room, else below. */
+private fun DrawScope.readout(m: TextMeasurer, text: String, style: TextStyle, bubble: Color, x: Float, anchorY: Float) {
+    val layout = m.measure(text, style)
+    val bw = layout.size.width + 16.dp.toPx()
+    val bh = layout.size.height + 8.dp.toPx()
+    val bx = (x - bw / 2).coerceIn(0f, (size.width - bw).coerceAtLeast(0f))
+    val by = (anchorY - bh - 12.dp.toPx()).let { if (it < 0f) anchorY + 12.dp.toPx() else it }
+    drawRoundRect(bubble, Offset(bx, by), Size(bw, bh), CornerRadius(bh / 2))
+    drawText(layout, topLeft = Offset(bx + 8.dp.toPx(), by + 4.dp.toPx()))
+}
+
+@Composable
+private fun readoutStyle() = TextStyle(color = MaterialTheme.colorScheme.onSurface, fontSize = 12.sp, fontFamily = org.openstrap.app.ui.theme.FunnelDisplay)
+
 /** A coloured stretch of time drawn as a strip under a [LineChart] (e.g. what Charge was doing). */
 data class ChartSegment(val from: Long, val to: Long, val color: Color)
 
 /**
  * Time-series chart in the Oura/WHOOP style: a smooth (monotone, never overshooting) line over a soft
  * gradient, faint dashed grid with values on the right, a haloed dot at the latest reading and a
- * labelled average. Press and hold, then drag, to read any point; a plain tap still reaches the card. Gaps longer than [gapSeconds] break the line so
+ * labelled average. Drag across it to read any point (see [scrub]). Gaps longer than [gapSeconds] break the line so
  * off-wrist periods aren't bridged. [segments] adds a Garmin-style state strip under the plot.
  */
 @Composable
@@ -86,6 +129,7 @@ fun LineChart(
     segments: List<ChartSegment> = emptyList(),
     /** Formats a value for the average label and the touch readout. */
     format: (Float) -> String = { Math.round(it).toString() },
+    /** Shown after the value in the touch readout, e.g. "bpm" or "%". */
     unit: String = "",
 ) {
     val measurer = rememberTextMeasurer()
@@ -94,21 +138,14 @@ fun LineChart(
     val surface = MaterialTheme.colorScheme.surfaceContainer
     val onSurface = MaterialTheme.colorScheme.onSurface
     val bubble = MaterialTheme.colorScheme.surfaceContainerHighest
-    val readoutStyle = TextStyle(color = onSurface, fontSize = 12.sp, fontFamily = org.openstrap.app.ui.theme.FunnelDisplay)
+    val readoutStyle = readoutStyle()
     val bandFill = if (bandColor == Color.Unspecified) MaterialTheme.colorScheme.primary.copy(alpha = 0.07f) else bandColor
     var touchX by remember { mutableStateOf<Float?>(null) }
     val stripH = if (segments.isEmpty()) 0.dp else 8.dp
 
     Canvas(
         modifier.fillMaxWidth().height(height + stripH)
-            .pointerInput(points) {
-                detectDragGesturesAfterLongPress(
-                    onDragStart = { touchX = it.x },
-                    onDrag = { change, _ -> touchX = change.position.x },
-                    onDragEnd = { touchX = null },
-                    onDragCancel = { touchX = null },
-                )
-            },
+            .scrub(points) { touchX = it },
     ) {
         if (xRange.last <= xRange.first) return@Canvas
         val axisW = 28.dp.toPx()
@@ -221,13 +258,7 @@ fun LineChart(
             drawLine(onSurface.copy(alpha = 0.5f), Offset(px, 0f), Offset(px, h), 1.dp.toPx())
             drawCircle(surface, 6.dp.toPx(), Offset(px, py))
             drawCircle(color, 4.5.dp.toPx(), Offset(px, py))
-            val text = measurer.measure("${format(p.y)}$unit at ${hourLabel(p.x)}", readoutStyle)
-            val bw = text.size.width + 16.dp.toPx()
-            val bh = text.size.height + 8.dp.toPx()
-            val bx = (px - bw / 2).coerceIn(0f, size.width - bw)
-            val by = (py - bh - 12.dp.toPx()).let { if (it < 0f) py + 12.dp.toPx() else it }
-            drawRoundRect(bubble, Offset(bx, by), Size(bw, bh), CornerRadius(bh / 2))
-            drawText(text, topLeft = Offset(bx + 8.dp.toPx(), by + 4.dp.toPx()))
+            readout(measurer, "${withUnit(format(p.y), unit)} at ${hourLabel(p.x)}", readoutStyle, bubble, px, py)
         }
     }
 }
@@ -273,15 +304,29 @@ private fun niceStep(raw: Float): Float {
 /** A day on a weekly trend chart. */
 data class TrendPoint(val label: String, val value: Float?)
 
-/** WHOOP-style 7-day trend: dots joined by a line, value printed above each point, last point highlighted. */
+/**
+ * WHOOP-style 7-day trend: dots joined by a line, value printed above each point, last point highlighted.
+ * Dragging across it picks a day and shows its value with [unit] (and its full name from [dayName]).
+ */
 @Composable
-fun TrendChart(points: List<TrendPoint>, color: Color, modifier: Modifier = Modifier, height: Dp = 150.dp, reveal: Float = 1f) {
+fun TrendChart(
+    points: List<TrendPoint>,
+    color: Color,
+    modifier: Modifier = Modifier,
+    height: Dp = 150.dp,
+    reveal: Float = 1f,
+    unit: String = "",
+    dayName: (Int) -> String = { points[it].label },
+) {
     val measurer = rememberTextMeasurer()
     val axis = axisStyle()
     val valueStyle = TextStyle(color = MaterialTheme.colorScheme.onSurface, fontSize = 12.sp, fontFamily = org.openstrap.app.ui.theme.FunnelDisplay)
     val surface = MaterialTheme.colorScheme.surfaceContainer
     val highlight = MaterialTheme.colorScheme.surfaceContainerHighest
-    Canvas(modifier.fillMaxWidth().height(height)) {
+    val onSurface = MaterialTheme.colorScheme.onSurface
+    val readoutStyle = readoutStyle()
+    var touchX by remember { mutableStateOf<Float?>(null) }
+    Canvas(modifier.fillMaxWidth().height(height).scrub(points) { touchX = it }) {
         if (points.isEmpty()) return@Canvas
         val axisH = 18.dp.toPx()
         val topPad = 20.dp.toPx()
@@ -312,26 +357,50 @@ fun TrendChart(points: List<TrendPoint>, color: Color, modifier: Modifier = Modi
             label(measurer, v.toInt().toString(), valueStyle, o.x, o.y - 20.dp.toPx(), center = true)
         }
         }
+        touchX?.let { tx ->
+            val i = (tx / slot).toInt().coerceIn(0, points.size - 1)
+            val cx = slot * i + slot / 2
+            drawRoundRect(onSurface.copy(alpha = 0.06f), Offset(slot * i, 0f), Size(slot, size.height), CornerRadius(10.dp.toPx()))
+            val v = points[i].value
+            val text = if (v == null) "${dayName(i)}: no data" else "${dayName(i)}: ${withUnit(Math.round(v).toString(), unit)}"
+            readout(measurer, text, readoutStyle, highlight, cx, v?.let { yOf(it) - 14.dp.toPx() } ?: (h / 2))
+        }
     }
 }
 
-/** Evenly spaced rounded bars, e.g. steps per hour. */
+/**
+ * Evenly spaced rounded bars, e.g. steps per hour. Dragging across it picks a bar, dims the others and shows
+ * [describe] for it over the bars.
+ */
 @Composable
-fun BarChart(values: List<Float>, color: Color, modifier: Modifier = Modifier, height: Dp = 64.dp) {
-    Canvas(modifier.fillMaxWidth().height(height)) {
+fun BarChart(
+    values: List<Float>,
+    color: Color,
+    modifier: Modifier = Modifier,
+    height: Dp = 64.dp,
+    describe: (index: Int, value: Float) -> String = { _, v -> Math.round(v).toString() },
+) {
+    val measurer = rememberTextMeasurer()
+    val readoutStyle = readoutStyle()
+    val bubble = MaterialTheme.colorScheme.surfaceContainerHighest
+    var touchX by remember { mutableStateOf<Float?>(null) }
+    Canvas(modifier.fillMaxWidth().height(height).scrub(values) { touchX = it }) {
         if (values.isEmpty()) return@Canvas
         val max = values.max().coerceAtLeast(1f)
         val slot = size.width / values.size
         val barWidth = slot * 0.55f
+        val picked = touchX?.let { (it / slot).toInt().coerceIn(0, values.size - 1) }
         values.forEachIndexed { i, v ->
             val h = ((v / max) * size.height).coerceAtLeast(3.dp.toPx())
+            val base = if (v > 0f) color else color.copy(alpha = 0.12f)
             drawRoundRect(
-                color = if (v > 0f) color else color.copy(alpha = 0.12f),
+                color = if (picked == null || picked == i) base else base.copy(alpha = base.alpha * 0.4f),
                 topLeft = Offset(i * slot + (slot - barWidth) / 2, size.height - h),
                 size = Size(barWidth, h),
                 cornerRadius = CornerRadius(barWidth / 2),
             )
         }
+        picked?.let { i -> readout(measurer, describe(i, values[i]), readoutStyle, bubble, i * slot + slot / 2, 0f) }
     }
 }
 
@@ -341,6 +410,7 @@ data class StageSpan(val start: Long, val end: Long, val stage: Int)
 /**
  * Stepped hypnogram (Oura/Bevel style): one row per stage, rounded blocks joined by thin vertical
  * connectors in a gradient between the two stage colours, with start/end times underneath.
+ * Dragging across it shows the stage under the finger (named by [stageNames]) and when it ran.
  */
 @Composable
 fun Hypnogram(
@@ -349,11 +419,16 @@ fun Hypnogram(
     rowForStage: Map<Int, Int>,
     modifier: Modifier = Modifier,
     height: Dp = 170.dp,
+    stageNames: Map<Int, String> = emptyMap(),
 ) {
     val measurer = rememberTextMeasurer()
     val style = axisStyle()
     val grid = MaterialTheme.colorScheme.outlineVariant
-    Canvas(modifier.fillMaxWidth().height(height)) {
+    val onSurface = MaterialTheme.colorScheme.onSurface
+    val bubble = MaterialTheme.colorScheme.surfaceContainerHighest
+    val readoutStyle = readoutStyle()
+    var touchX by remember { mutableStateOf<Float?>(null) }
+    Canvas(modifier.fillMaxWidth().height(height).scrub(spans) { touchX = it }) {
         if (spans.isEmpty()) return@Canvas
         val sorted = spans.sortedBy { it.start }
         val start = sorted.first().start
@@ -397,6 +472,17 @@ fun Hypnogram(
         }
         label(measurer, hourLabel(start), style, 0f, h + 4.dp.toPx())
         label(measurer, hourLabel(end), style, size.width, h + 4.dp.toPx(), alignEnd = true)
+
+        touchX?.let { tx ->
+            val x = tx.coerceIn(0f, size.width)
+            val t = start + ((x / size.width) * (end - start)).toLong()
+            // The block under the finger, or the nearest one when the finger is in a gap.
+            val s = sorted.firstOrNull { t in it.start until it.end } ?: sorted.minBy { minOf(abs(it.start - t), abs(it.end - t)) }
+            drawLine(onSurface.copy(alpha = 0.5f), Offset(x, 0f), Offset(x, h), 1.dp.toPx())
+            val name = stageNames[s.stage] ?: "Stage ${s.stage}"
+            val mins = ((s.end - s.start) / 60).coerceAtLeast(1)
+            readout(measurer, "$name · ${hourLabel(s.start)}–${hourLabel(s.end)} · $mins min", readoutStyle, bubble, x, centerY(s.stage) - blockH / 2)
+        }
     }
 }
 

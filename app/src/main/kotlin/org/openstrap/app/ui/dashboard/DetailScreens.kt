@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -22,6 +23,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -29,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import org.openstrap.app.data.db.SleepSession
 import org.openstrap.app.data.db.SleepStage
 import org.openstrap.app.ui.components.BigValue
 import org.openstrap.app.ui.components.ChartPoint
@@ -200,6 +203,7 @@ private fun SleepList(
     val session = state.sleep
     if (session == null) {
         section(index) { Panel { PanelHeader("Sleep", PhosphorIcons.Moon, MetricColors.sleepDeep); EmptyHint("No sleep recorded for this night.") } }
+        if (state.naps.isNotEmpty()) section(index) { NapDetailsPanel(state) }
         return@ScreenList
     }
 
@@ -278,14 +282,7 @@ private fun SleepList(
         }
     }
 
-    if (state.naps.isNotEmpty()) section(index) {
-        Panel {
-            PanelHeader("Naps", PhosphorIcons.Moon, MetricColors.sleepLight)
-            state.naps.forEach { nap ->
-                Text("${clock(nap.start)} – ${clock(nap.end)} · ${formatDuration(nap.end - nap.start)}", style = MaterialTheme.typography.bodyMedium)
-            }
-        }
-    }
+    if (state.naps.isNotEmpty()) section(index) { NapDetailsPanel(state) }
 
     section(index) {
         var range by rememberSaveable { mutableIntStateOf(0) }
@@ -305,3 +302,58 @@ private fun SleepList(
 
 private fun clock(epochSeconds: Long): String =
     Instant.ofEpochSecond(epochSeconds).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("HH:mm"))
+
+/** The day's naps, one line each. */
+@Composable
+fun NapsPanel(naps: List<SleepSession>, onClick: (() -> Unit)? = null) {
+    Panel(onClick = onClick) {
+        PanelHeader("Naps", PhosphorIcons.Moon, MetricColors.sleepLight, chevron = onClick != null)
+        naps.forEach { nap ->
+            Text("${clock(nap.start)} – ${clock(nap.end)} · ${formatDuration(nap.end - nap.start)}", style = MaterialTheme.typography.bodyMedium)
+        }
+    }
+}
+
+/** The day's naps on the Sleep tab; tap one to see its stages and heart rate. A lone nap starts open. */
+@Composable
+fun NapDetailsPanel(state: DayUiState) {
+    var open by rememberSaveable(state.date) { mutableLongStateOf(state.naps.singleOrNull()?.start ?: -1L) }
+    Panel {
+        PanelHeader("Naps", PhosphorIcons.Moon, MetricColors.sleepLight)
+        state.naps.forEach { nap ->
+            val expanded = open == nap.start
+            Row(
+                Modifier.fillMaxWidth().clickable { open = if (expanded) -1L else nap.start }.padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text("${clock(nap.start)} – ${clock(nap.end)} · ${formatDuration(nap.end - nap.start)}", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                Text(if (expanded) "Hide" else "Details", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+            }
+            if (expanded) NapDetail(nap, state)
+        }
+    }
+}
+
+@Composable
+private fun NapDetail(nap: SleepSession, state: DayUiState) {
+    val stages = state.napStages[nap.start].orEmpty()
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        if (stages.isEmpty()) EmptyHint("The strap didn't record stages for this nap.")
+        else {
+            Hypnogram(stages, SLEEP_COLORS, DayViewModel.SLEEP_STAGE_ROWS, height = 120.dp, stageNames = SLEEP_NAMES)
+            state.napBreakdowns[nap.start]?.let { b ->
+                val total = (b.asleepSeconds + b.awakeSeconds).coerceAtLeast(1)
+                SLEEP_NAMES.forEach { (stage, label) ->
+                    val secs = b.byStage[stage] ?: 0L
+                    StageRow(label, secs, secs.toFloat() / total, SLEEP_COLORS.getValue(stage))
+                }
+            }
+        }
+        // The strap reports no average for naps, so it comes from the day's heart rate.
+        val hr = state.heartRate.filter { it.x in nap.start..nap.end }
+        if (hr.isNotEmpty()) {
+            Text("Heart rate", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            LineChart(hr, MetricColors.heart, nap.start..nap.end, height = 110.dp, markMin = true, unit = "bpm")
+        }
+    }
+}

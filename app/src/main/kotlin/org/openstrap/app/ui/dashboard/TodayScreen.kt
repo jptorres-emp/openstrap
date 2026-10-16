@@ -324,6 +324,8 @@ fun TodayScreen(
             }
         }
     }
+
+    if (state.naps.isNotEmpty()) item { NapsPanel(state.naps, onClick = onOpenSleep) }
 }
 
 /** How long after waking Readiness stays the headline before Charge takes over. */

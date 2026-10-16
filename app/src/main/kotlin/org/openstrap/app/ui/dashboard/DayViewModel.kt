@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import org.openstrap.app.data.DayWindow
 import org.openstrap.app.data.HealthRepository
+import org.openstrap.app.data.LiveSteps
 import org.openstrap.app.data.Summaries
 import org.openstrap.app.data.db.PaiSample
 import org.openstrap.app.data.db.SleepSession
@@ -28,6 +29,7 @@ import org.openstrap.app.data.db.SleepStage
 import org.openstrap.app.ui.components.ChartPoint
 import org.openstrap.app.ui.components.StageSpan
 import org.openstrap.app.ui.components.TrendPoint
+import org.openstrap.protocol.services.StepTotals
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.TextStyle
@@ -80,7 +82,7 @@ data class DayUiState(
 @OptIn(ExperimentalCoroutinesApi::class)
 class DayViewModel(
     private val repo: HealthRepository,
-    private val strapSteps: Flow<Int?> = flowOf(null),
+    private val strapSteps: Flow<StepTotals?> = flowOf(null),
     profile: Flow<UserProfile> = flowOf(UserProfile()),
 ) : ViewModel() {
     private val selected = MutableStateFlow(LocalDate.now())
@@ -162,6 +164,7 @@ class DayViewModel(
 
         // The strap's own running total covers steps whose minute records were already taken by another app.
         val liveSteps = if (date == LocalDate.now()) strapSteps else flowOf(null)
+        val liveCounter = LiveSteps()
         val actAndLive = combine(activityAndHr, liveSteps) { a, live -> a to live }
 
         return combine(actAndLive, vitals, sleepAndExtras, weekly) { (ah, live), (spo2, stress, hrv), (sleepParts, extraParts, base), (restingWithFlag, hrvTrend) ->
@@ -173,7 +176,7 @@ class DayViewModel(
             val hourly = Summaries.hourlySteps(act, day.from)
             DayUiState(
                 date = date,
-                steps = maxOf(Summaries.totalSteps(act), live ?: 0),
+                steps = liveCounter.today(Summaries.totalSteps(act), live),
                 hourlySteps = hourly,
                 activeHours = Summaries.activeHours(hourly),
                 heartRate = Summaries.bucketAverage(series).map { ChartPoint(it.first, it.second.toFloat()) },

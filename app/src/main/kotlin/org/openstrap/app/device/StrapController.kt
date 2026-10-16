@@ -1,6 +1,7 @@
 package org.openstrap.app.device
 
 import kotlinx.coroutines.flow.StateFlow
+import org.openstrap.protocol.services.StepTotals
 
 sealed interface ConnectionState {
     data object NotPaired : ConnectionState
@@ -32,8 +33,11 @@ interface StrapController {
     /** The user's live-HR switch; when on, streaming starts on every connect. */
     val liveHeartRateEnabled: StateFlow<Boolean>
 
-    /** Today's step total as counted by the strap (since local midnight), or null when unknown. */
-    val todaySteps: StateFlow<Int?>
+    /**
+     * The strap's live step counter for today, or null when unknown. Taken as sent: on firmware 3.25 the
+     * total carries a large constant offset, so check [StepTotals.isPlausible] before showing it directly.
+     */
+    val todaySteps: StateFlow<StepTotals?>
 
     /** Versions and capabilities of the connected strap, or null before the first connect. */
     val info: StateFlow<StrapInfo?>

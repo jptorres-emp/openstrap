@@ -27,6 +27,7 @@ import org.openstrap.protocol.services.BatteryInfo
 import org.openstrap.protocol.services.Endpoints
 import org.openstrap.protocol.services.LiveHeartRate
 import org.openstrap.protocol.services.RealtimeSteps
+import org.openstrap.protocol.services.StepTotals
 import org.openstrap.protocol.crypto.crc32
 import org.openstrap.protocol.firmware.DfuCommands
 import org.openstrap.protocol.firmware.DfuException
@@ -53,7 +54,7 @@ class StrapManager(
     override val connection = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
     override val sync = MutableStateFlow<SyncState>(SyncState.Idle)
     override val liveHeartRate = MutableStateFlow<Int?>(null)
-    override val todaySteps = MutableStateFlow<Int?>(null)
+    override val todaySteps = MutableStateFlow<StepTotals?>(null)
     override val liveHeartRateEnabled = MutableStateFlow(true)
     override val info = MutableStateFlow<StrapInfo?>(null)
     override val firmwareUpdating = MutableStateFlow(false)
@@ -229,9 +230,10 @@ class StrapManager(
                 val totals = RealtimeSteps.parseMessage(p)
                 if (totals == null) log("steps < ${p.toHex()}")
                 totals?.let {
-                    val steps = it.steps.takeIf { _ -> it.isPlausible }
-                    if (steps != todaySteps.value) log("steps today=${it.steps} dist=${it.distanceMeters} kcal=${it.calories}" + if (steps == null) " (ignored: steps don't match distance)" else "")
-                    todaySteps.value = steps
+                    if (todaySteps.value?.isPlausible != it.isPlausible) {
+                        log("steps today=${it.steps} dist=${it.distanceMeters} kcal=${it.calories}" + if (!it.isPlausible) " (total doesn't match distance: counting from synced history)" else "")
+                    }
+                    todaySteps.value = it
                 }
             }
         }

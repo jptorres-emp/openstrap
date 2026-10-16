@@ -51,6 +51,12 @@ import org.openstrap.app.ui.device.DeviceViewModel
 import org.openstrap.app.ui.device.YouScreen
 import org.openstrap.app.ui.dashboard.LocalOpenStrap
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.animation.core.tween
+import org.openstrap.app.ui.components.Motion
+import org.openstrap.app.ui.components.PushContent
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import org.openstrap.app.ui.theme.OpenStrapTheme
 import org.openstrap.app.ui.theme.PhosphorIcons
 
@@ -120,6 +126,9 @@ private enum class Tab(val label: String, val icon: androidx.compose.ui.graphics
     Workouts("Workouts", PhosphorIcons.Barbell, PhosphorIcons.Barbell),
     You("You", PhosphorIcons.User, PhosphorIcons.User),
 }
+
+/** The screens stacked under the You tab, shallowest first. */
+private enum class YouPage { Hub, Strap, Alarms, Firmware }
 
 private val BLUETOOTH_PERMISSIONS = arrayOf(
     Manifest.permission.BLUETOOTH_SCAN,
@@ -192,6 +201,20 @@ private fun AppRoot(container: AppContainer) {
         }
     }
 
+    // Swiping left and right moves between tabs. The bar and the swipe drive the same page: a tap
+    // animates the pager there, and a finished swipe updates the tab.
+    val pager = rememberPagerState(initialPage = tab) { Tab.entries.size }
+    LaunchedEffect(tab) {
+        if (pager.currentPage != tab) pager.animateScrollToPage(tab, animationSpec = tween(Motion.SWIFT, easing = Motion.easing))
+    }
+    LaunchedEffect(pager) { snapshotFlow { pager.settledPage }.collect { tab = it } }
+    // A detail screen open on this tab keeps the swipe for itself (and for its back gesture).
+    val subScreenOpen = when (Tab.entries[tab]) {
+        Tab.Today -> showRecovery
+        Tab.Workouts -> workoutStart != null
+        Tab.You -> showStrap || showAlarms || showFirmware
+        else -> false
+    }
     val openStrap: () -> Unit = { tab = Tab.You.ordinal; showStrap = true }
     CompositionLocalProvider(LocalOpenStrap provides openStrap) {
         Scaffold(
@@ -203,67 +226,79 @@ private fun AppRoot(container: AppContainer) {
             if (editProfile) {
                 org.openstrap.app.ui.device.ProfileDialog(profile, onSave = { deviceVm.saveProfile(it); editProfile = false }, onDismiss = { editProfile = false })
             }
-            if (showRecovery && Tab.entries[tab] == Tab.Today) {
-                RecoveryScreen(
-                    recovery, day.date, day.dayStart..day.dayEnd, day.sleep?.let { it.start..it.end }, padding,
-                    onBack = { showRecovery = false }, onEditProfile = { editProfile = true },
-                    strapReadiness = strapReadiness,
-                )
-            } else when (Tab.entries[tab]) {
-                Tab.Today -> TodayScreen(
-                    day, live, battery, charging, dayVm::previousDay, dayVm::nextDay, padding,
-                    picker = picker,
-                    onOpenSleep = { tab = Tab.Sleep.ordinal },
-                    onFocus = { target ->
-                        focus = FocusRequest(target)
-                        tab = (if (target == FocusTarget.Breathing) Tab.Sleep else Tab.Heart).ordinal
-                    },
-                    recovery = recovery,
-                    onOpenRecovery = { showRecovery = true },
-                    sync = sync as? SyncState.Running,
-                    workouts = workouts,
-                    onOpenWorkout = { tab = Tab.Workouts.ordinal; workoutStart = it },
-                )
-                Tab.Heart -> HeartScreen(
-                    day, live, liveEnabled,
-                    canUseLive = connection is ConnectionState.Connected,
-                    battery = battery,
-                    charging = charging,
-                    onLiveToggle = { container.strap.setLiveHeartRate(it) },
-                    onPrev = dayVm::previousDay, onNext = dayVm::nextDay, contentPadding = padding, picker = picker,
-                    focus = focus, onFocusDone = { focus = null },
-                )
-                Tab.Sleep -> SleepScreen(day, battery, charging, dayVm::previousDay, dayVm::nextDay, padding, focus, onFocusDone = { focus = null }, picker = picker)
-                Tab.Workouts -> if (workoutStart != null) {
-                    org.openstrap.app.ui.workout.WorkoutScreen(openWorkout?.takeIf { it.workout.start == workoutStart }, padding, onBack = { workoutStart = null })
-                } else {
-                    org.openstrap.app.ui.workout.WorkoutsScreen(workouts, padding, onOpen = { workoutStart = it })
-                }
-                Tab.You -> if (showFirmware) {
-                    FirmwareScreen(firmwareVm, padding, onBack = { showFirmware = false })
-                } else if (showAlarms) {
-                    // Created here so it reads from the strap each time the screen opens.
-                    val alarmsVm: org.openstrap.app.ui.alarms.AlarmsViewModel = viewModel(
-                        key = "alarms", factory = viewModelFactory { initializer { org.openstrap.app.ui.alarms.AlarmsViewModel(container.strap) } },
+            HorizontalPager(pager, userScrollEnabled = !subScreenOpen, key = { it }) { page ->
+                when (Tab.entries[page]) {
+                    Tab.Today -> PushContent(showRecovery, depth = { if (it) 1 else 0 }) { open ->
+                    if (open) RecoveryScreen(
+                        recovery, day.date, day.dayStart..day.dayEnd, day.sleep?.let { it.start..it.end }, padding,
+                        onBack = { showRecovery = false }, onEditProfile = { editProfile = true },
+                        strapReadiness = strapReadiness,
+                    ) else TodayScreen(
+                        day, live, battery, charging, dayVm::previousDay, dayVm::nextDay, padding,
+                        picker = picker,
+                        onOpenSleep = { tab = Tab.Sleep.ordinal },
+                        onFocus = { target ->
+                            focus = FocusRequest(target)
+                            tab = (if (target == FocusTarget.Breathing) Tab.Sleep else Tab.Heart).ordinal
+                        },
+                        recovery = recovery,
+                        onOpenRecovery = { showRecovery = true },
+                        sync = sync as? SyncState.Running,
+                        workouts = workouts,
+                        onOpenWorkout = { tab = Tab.Workouts.ordinal; workoutStart = it },
                     )
-                    LaunchedEffect(Unit) { alarmsVm.refresh() }
-                    val alarmsState by alarmsVm.state.collectAsStateWithLifecycle()
-                    org.openstrap.app.ui.alarms.AlarmsScreen(alarmsVm, alarmsState, padding, onBack = { showAlarms = false })
-                } else if (showStrap) {
-                    DeviceScreen(
-                        deviceVm, padding, requestBluetooth,
-                        onFirmware = { showFirmware = true },
-                        onAlarms = { showAlarms = true },
-                        onBack = { showStrap = false },
+                    }
+                    Tab.Heart -> HeartScreen(
+                        day, live, liveEnabled,
+                        canUseLive = connection is ConnectionState.Connected,
+                        battery = battery,
+                        charging = charging,
+                        onLiveToggle = { container.strap.setLiveHeartRate(it) },
+                        onPrev = dayVm::previousDay, onNext = dayVm::nextDay, contentPadding = padding, picker = picker,
+                        focus = focus, onFocusDone = { focus = null },
                     )
-                } else {
-                    YouScreen(
-                        deviceVm, padding,
-                        onEditProfile = { editProfile = true },
-                        onOpenStrap = { showStrap = true },
-                        onExportCsv = { csvLauncher.launch("openstrap-export.zip") },
-                        onExportHealthConnect = exportHealthConnect,
-                    )
+                    Tab.Sleep -> SleepScreen(day, battery, charging, dayVm::previousDay, dayVm::nextDay, padding, focus, onFocusDone = { focus = null }, picker = picker)
+                    Tab.Workouts -> PushContent(workoutStart, depth = { if (it == null) 0 else 1 }) { start ->
+                        if (start != null) {
+                            org.openstrap.app.ui.workout.WorkoutScreen(openWorkout?.takeIf { it.workout.start == start }, padding, onBack = { workoutStart = null })
+                        } else {
+                            org.openstrap.app.ui.workout.WorkoutsScreen(workouts, padding, onOpen = { workoutStart = it })
+                        }
+                    }
+                    Tab.You -> PushContent(
+                        when { showFirmware -> YouPage.Firmware; showAlarms -> YouPage.Alarms; showStrap -> YouPage.Strap; else -> YouPage.Hub },
+                        depth = { it.ordinal.coerceAtMost(2) },
+                    ) { youPage -> when (youPage) {
+                    YouPage.Firmware -> {
+                        FirmwareScreen(firmwareVm, padding, onBack = { showFirmware = false })
+                    }
+                    YouPage.Alarms -> {
+                        // Created here so it reads from the strap each time the screen opens.
+                        val alarmsVm: org.openstrap.app.ui.alarms.AlarmsViewModel = viewModel(
+                            key = "alarms", factory = viewModelFactory { initializer { org.openstrap.app.ui.alarms.AlarmsViewModel(container.strap) } },
+                        )
+                        LaunchedEffect(Unit) { alarmsVm.refresh() }
+                        val alarmsState by alarmsVm.state.collectAsStateWithLifecycle()
+                        org.openstrap.app.ui.alarms.AlarmsScreen(alarmsVm, alarmsState, padding, onBack = { showAlarms = false })
+                    }
+                    YouPage.Strap -> {
+                        DeviceScreen(
+                            deviceVm, padding, requestBluetooth,
+                            onFirmware = { showFirmware = true },
+                            onAlarms = { showAlarms = true },
+                            onBack = { showStrap = false },
+                        )
+                    }
+                    YouPage.Hub -> {
+                        YouScreen(
+                            deviceVm, padding,
+                            onEditProfile = { editProfile = true },
+                            onOpenStrap = { showStrap = true },
+                            onExportCsv = { csvLauncher.launch("openstrap-export.zip") },
+                            onExportHealthConnect = exportHealthConnect,
+                        )
+                    }
+                    } }
                 }
             }
         }

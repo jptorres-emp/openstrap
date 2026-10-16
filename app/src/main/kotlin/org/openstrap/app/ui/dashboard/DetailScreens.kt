@@ -124,7 +124,10 @@ fun HeartScreen(
     }
 }
 
-/** 7-day trend card; today's value is the headline. */
+/** Days with data needed before the 7-day average means anything. */
+private const val TREND_MIN_DAYS = 3
+
+/** 7-day trend card; today's value is the headline, next to the week's average once there's enough data. */
 @Composable
 private fun TrendPanel(title: String, icon: ImageVector, color: Color, points: List<TrendPoint>, unit: String, focus: FocusState, target: FocusTarget) {
     Panel(highlight = color.takeIf { focus.isHighlighted(target) }) {
@@ -133,11 +136,19 @@ private fun TrendPanel(title: String, icon: ImageVector, color: Color, points: L
         val known = points.mapNotNull { it.value }
         if (known.isEmpty()) EmptyHint("Not enough data yet.")
         else {
+            val average = known.takeIf { it.size >= TREND_MIN_DAYS }?.average()?.toFloat()
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                BigValue(today?.toInt()?.toString() ?: "—", unit, caption = "Today")
-                BigValue(Math.round(known.average()).toString(), unit, caption = "7-day avg")
+                BigValue(today?.let { Math.round(it).toString() } ?: "—", unit, caption = "Today")
+                BigValue(average?.let { Math.round(it).toString() } ?: "—", unit, caption = "7-day avg")
             }
-            TrendChart(points, color, reveal = focus.reveal(target), unit = unit)
+            TrendChart(points, color, reveal = focus.reveal(target), unit = unit, average = average)
+            if (average == null) {
+                Text(
+                    "Your 7-day average shows after $TREND_MIN_DAYS days of data (${known.size} so far).",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }

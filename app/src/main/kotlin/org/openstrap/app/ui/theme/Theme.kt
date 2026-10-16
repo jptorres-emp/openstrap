@@ -33,6 +33,18 @@ object MetricColors {
     val warn = Color(0xFFFFB547)
     val bad = Color(0xFFFF5A5F)
 
+    /** Charge from empty to full: red, orange, gold, then green. */
+    val chargeScale = listOf(0f to Color(0xFFFF5A5F), 0.3f to Color(0xFFFF9F43), 0.55f to Color(0xFFFFD166), 0.8f to Color(0xFF3DDC97))
+
+    /** The colour for a Charge level (0–100) on [chargeScale]; plain gold when unknown. */
+    fun chargeAt(level: Float?): Color {
+        val f = (level ?: return charge) / 100f
+        val i = chargeScale.indexOfLast { it.first <= f }.coerceAtLeast(0)
+        val (a, ca) = chargeScale[i]
+        val (b, cb) = chargeScale.getOrNull(i + 1) ?: return ca
+        return androidx.compose.ui.graphics.lerp(ca, cb, ((f - a) / (b - a)).coerceIn(0f, 1f))
+    }
+
     /** Battery colour: red at 15% or below, amber up to 40%, green above. */
     fun battery(level: Int?): Color = when {
         level == null -> good

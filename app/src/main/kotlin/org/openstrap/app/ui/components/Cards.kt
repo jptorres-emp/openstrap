@@ -48,7 +48,7 @@ fun Panel(
         highlight ?: MaterialTheme.colorScheme.outlineVariant, androidx.compose.animation.core.tween(450), label = "panel border",
     )
     Surface(
-        modifier = modifier.fillMaxWidth().let { if (onClick != null) it.clip(PanelShape).clickable(onClick = onClick) else it },
+        modifier = modifier.fillMaxWidth().let { if (onClick != null) it.pressClickable(onClick, PanelShape) else it },
         shape = PanelShape,
         color = MaterialTheme.colorScheme.surfaceContainer,
         border = BorderStroke(if (highlight != null) 1.5.dp else 1.dp, border),

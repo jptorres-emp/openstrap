@@ -84,10 +84,11 @@ fun ChargeHero(r: RecoveryResult, onClick: (() -> Unit)? = null) {
         label = "Charge",
         value = "${now.toInt()}",
         progress = now / 100f,
-        accent = MetricColors.charge,
+        accent = MetricColors.chargeAt(now),
         headline = Narrative.chargeHeadline(now.toInt()),
         body = Narrative.chargeBody(r.charge),
         onClick = onClick,
+        gaugeGradient = MetricColors.chargeScale.map { it.second },
     )
 }
 
@@ -118,7 +119,7 @@ fun ChargeCard(
 ) {
     val c = r.charge
     Panel(onClick = onClick) {
-        PanelHeader("Charge", PhosphorIcons.BatteryCharging, MetricColors.charge, trailing = c.atWake?.let { "Woke at ${it.toInt()}" }, chevron = onClick != null)
+        PanelHeader("Charge", PhosphorIcons.Lightning, MetricColors.chargeAt(c.latest), trailing = c.atWake?.let { "Woke at ${it.toInt()}" }, chevron = onClick != null)
         val now = c.latest
         if (!c.anchored) {
             EmptyHint("Charge starts after your first night wearing the strap. Sleep is what fills it, so it needs one to measure from.")
@@ -135,8 +136,9 @@ fun ChargeCard(
             BigValue("−${(c.drainedExercise + c.drainedStress + c.drainedLiving).toInt()}", "", caption = "Drained")
         }
         LineChart(
-            c.points.map { ChartPoint(it.t, it.value) }, MetricColors.charge, dayRange, height = 130.dp,
+            c.points.map { ChartPoint(it.t, it.value) }, MetricColors.chargeAt(now), dayRange, height = 130.dp,
             showAverage = false, band = sleepBand, yRange = 0f..100f, segments = chargeSegments(c.points), unit = "/ 100",
+            valueGradient = MetricColors.chargeScale.map { (f, col) -> f * 100f to col },
         )
         Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             LegendDot("Sleep", STATE_COLORS.getValue(Recovery.State.Sleep))
@@ -241,7 +243,7 @@ fun RecoveryScreen(
 private fun ChargeBreakdown(c: Recovery.ChargeDay, threshold: Recovery.StressThreshold) {
     if (c.latest == null) return
     Panel {
-        PanelHeader("Where your charge went", PhosphorIcons.BatteryCharging, MetricColors.charge)
+        PanelHeader("Where your charge went", PhosphorIcons.Lightning, MetricColors.chargeAt(c.latest))
         val total = maxOf(c.recharged, c.drainedExercise + c.drainedStress + c.drainedLiving, 1f)
         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
             FlowRow("Recharged by sleep and calm rest", "+${c.recharged.toInt()}", c.recharged / total, MetricColors.good)

@@ -239,7 +239,7 @@ fun TodayScreen(
             val sleepValue = state.sleep?.score?.toString() ?: state.asleepSeconds?.let { "%d:%02d".format(it / 3600, (it % 3600) / 60) }
             // Whichever score isn't the hero sits first in the row.
             if (chargeLeads) ScoreChip(rec?.readiness?.score?.toString(), "Readiness", PhosphorIcons.Plant, MetricColors.readiness, cell, rec?.readiness?.score?.let { it / 100f }, onClick = onOpenRecovery)
-            else ScoreChip(rec?.charge?.latest?.toInt()?.toString(), "Charge", PhosphorIcons.BatteryCharging, MetricColors.charge, cell, rec?.charge?.latest?.let { it.toFloat() / 100f }, onClick = onOpenRecovery)
+            else ScoreChip(rec?.charge?.latest?.toInt()?.toString(), "Charge", PhosphorIcons.Lightning, MetricColors.chargeAt(rec?.charge?.latest), cell, rec?.charge?.latest?.let { it.toFloat() / 100f }, onClick = onOpenRecovery)
             // The sleep ring is the score, or time asleep against eight hours when there's no score.
             val sleepProgress = state.sleep?.score?.let { it / 100f } ?: state.asleepSeconds?.let { it / (8 * 3600f) }
             ScoreChip(sleepValue, "Sleep", PhosphorIcons.Moon, MetricColors.sleepDeep, cell, sleepProgress, onClick = onOpenSleep)

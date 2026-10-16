@@ -1,6 +1,13 @@
 package org.openstrap.app.ui.components
 
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.offset
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -12,6 +19,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -60,9 +68,11 @@ fun HeroPanel(
     modifier: Modifier = Modifier,
     unit: String = "",
     onClick: (() -> Unit)? = null,
+    /** Colours the gauge fill runs through from 0 to 100 (Charge); null fills it in [accent]. */
+    gaugeGradient: List<Color>? = null,
 ) {
     Surface(
-        modifier = modifier.fillMaxWidth().clip(PanelShape).let { if (onClick != null) it.clickable(onClick = onClick) else it },
+        modifier = modifier.fillMaxWidth().let { if (onClick != null) it.pressClickable(onClick, PanelShape) else it },
         shape = PanelShape,
         color = MaterialTheme.colorScheme.surfaceContainer,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
@@ -71,7 +81,7 @@ fun HeroPanel(
             Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 18.dp, bottom = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            HorizonGauge(progress, accent, Modifier.fillMaxWidth().height(78.dp))
+            HorizonGauge(progress, accent, Modifier.fillMaxWidth().height(78.dp), gaugeGradient)
             // "READINESS ›": the chevron says the card opens the details.
             Row(verticalAlignment = Alignment.CenterVertically) {
                 SectionLabel(label)
@@ -107,7 +117,7 @@ fun HeroPanel(
  * in when the card appears; [progress] null draws only the track.
  */
 @Composable
-fun HorizonGauge(progress: Float?, color: Color, modifier: Modifier = Modifier) {
+fun HorizonGauge(progress: Float?, color: Color, modifier: Modifier = Modifier, gradient: List<Color>? = null) {
     val track = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
     val tick = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f)
     val knobCore = MaterialTheme.colorScheme.onSurface
@@ -115,7 +125,7 @@ fun HorizonGauge(progress: Float?, color: Color, modifier: Modifier = Modifier) 
     val endStyle = MaterialTheme.typography.labelSmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
     val target = progress?.coerceIn(0f, 1f) ?: 0f
     val anim = remember { androidx.compose.animation.core.Animatable(0f) }
-    LaunchedEffect(target) { anim.animateTo(target, androidx.compose.animation.core.tween(900, easing = androidx.compose.animation.core.FastOutSlowInEasing)) }
+    LaunchedEffect(target) { anim.animateTo(target, androidx.compose.animation.core.tween(600, easing = androidx.compose.animation.core.FastOutSlowInEasing)) }
 
     Canvas(modifier) {
         val sw = 4.dp.toPx()
@@ -142,8 +152,11 @@ fun HorizonGauge(progress: Float?, color: Color, modifier: Modifier = Modifier) 
             if (p > 0.001f) {
                 // Glow first, then the line on top.
                 drawArc(color.copy(alpha = 0.18f), start, sweep * p, false, arcTopLeft, arcSize, style = Stroke(sw * 3.5f, cap = StrokeCap.Round))
+                // A gradient runs across the whole arc, so the fill shows how far along the scale it got.
+                val fill = if (gradient != null) Brush.horizontalGradient(gradient, startX = c.x - chord / 2, endX = c.x + chord / 2)
+                else Brush.horizontalGradient(listOf(color.copy(alpha = 0.45f), color), startX = c.x - chord / 2, endX = at(p, r).x.coerceAtLeast(c.x - chord / 2 + 1f))
                 drawArc(
-                    Brush.horizontalGradient(listOf(color.copy(alpha = 0.45f), color), startX = c.x - chord / 2, endX = at(p, r).x.coerceAtLeast(c.x - chord / 2 + 1f)),
+                    fill,
                     start, sweep * p, false, arcTopLeft, arcSize, style = Stroke(sw, cap = StrokeCap.Round),
                 )
             }
@@ -179,7 +192,7 @@ fun ScoreChip(
     onClick: (() -> Unit)? = null,
 ) {
     Column(
-        modifier.clip(RoundedCornerShape(16.dp)).let { if (onClick != null) it.clickable(onClick = onClick) else it }.padding(4.dp),
+        modifier.let { if (onClick != null) it.pressClickable(onClick, RoundedCornerShape(16.dp), scale = 0.93f) else it }.padding(4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
@@ -287,21 +300,47 @@ fun FloatingNavBar(items: List<NavItem>, selected: Int, onSelect: (Int) -> Unit,
             color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.96f),
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
             shadowElevation = 12.dp,
+            modifier = Modifier.widthIn(max = 440.dp).fillMaxWidth(),
         ) {
-            Row(Modifier.padding(6.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                items.forEachIndexed { i, item ->
-                    val on = i == selected
-                    Column(
-                        Modifier.clip(CircleShape)
-                            .background(if (on) MaterialTheme.colorScheme.surfaceContainerHighest else Color.Transparent)
-                            .clickable { onSelect(i) }
-                            // Five tabs need tighter cells to fit a narrow phone.
-                            .padding(horizontal = if (items.size > 4) 11.dp else 18.dp, vertical = 8.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        val tint = if (on) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
-                        Icon(if (on) item.selectedIcon else item.icon, item.label, tint = tint, modifier = Modifier.size(24.dp))
-                        Text(item.label, style = MaterialTheme.typography.labelSmall, color = tint)
+            // Measured width, so the pill knows how wide a cell is (BoxWithConstraints can't size to its row).
+            var barWidth by remember { mutableIntStateOf(0) }
+            val density = androidx.compose.ui.platform.LocalDensity.current
+            Box(
+                Modifier.padding(6.dp).height(androidx.compose.foundation.layout.IntrinsicSize.Min)
+                    .onSizeChanged { barWidth = it.width },
+            ) {
+                // One pill that slides to the selected tab, rather than each cell lighting up on its own.
+                val gap = 2.dp
+                val cell = (with(density) { barWidth.toDp() } - gap * (items.size - 1)) / items.size
+                val x by androidx.compose.animation.core.animateDpAsState(
+                    (cell + gap) * selected, tween(Motion.SWIFT, easing = Motion.easing), label = "nav pill",
+                )
+                Box(
+                    Modifier.offset(x = x).width(cell).fillMaxHeight().clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surfaceContainerHighest),
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
+                    items.forEachIndexed { i, item ->
+                        val on = i == selected
+                        Column(
+                            Modifier.clip(CircleShape)
+                                .clickable { onSelect(i) }
+                                // Every cell gets an equal share of the bar, so labels like "Workouts" have room.
+                                .weight(1f)
+                                .padding(vertical = 8.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            val tint by androidx.compose.animation.animateColorAsState(
+                                if (on) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+                                tween(Motion.QUICK), label = "nav tint",
+                            )
+                            val iconScale by animateFloatAsState(if (on) 1.08f else 1f, tween(Motion.SWIFT, easing = Motion.easing), label = "nav icon")
+                            Icon(
+                                if (on) item.selectedIcon else item.icon, item.label, tint = tint,
+                                modifier = Modifier.size(24.dp).graphicsLayer { scaleX = iconScale; scaleY = iconScale },
+                            )
+                            Text(item.label, style = MaterialTheme.typography.labelSmall, color = tint, maxLines = 1)
+                        }
                     }
                 }
             }

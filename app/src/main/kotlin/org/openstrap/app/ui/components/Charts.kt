@@ -29,6 +29,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Dp
@@ -131,6 +132,8 @@ fun LineChart(
     format: (Float) -> String = { Math.round(it).toString() },
     /** Shown after the value in the touch readout, e.g. "bpm" or "%". */
     unit: String = "",
+    /** Colours the line and fill by value instead of [color]: (value, colour) stops, lowest first. */
+    valueGradient: List<Pair<Float, Color>>? = null,
 ) {
     val measurer = rememberTextMeasurer()
     val style = axisStyle()
@@ -217,8 +220,19 @@ fun LineChart(
                     lineTo(pts.first().x, h)
                     close()
                 }
-                drawPath(fill, Brush.verticalGradient(listOf(color.copy(alpha = 0.30f), color.copy(alpha = 0.02f)), startY = 0f, endY = h))
-                drawPath(line, color, style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
+                if (valueGradient != null) {
+                    // Stops placed at their values' heights, so the line changes colour as it rises and falls.
+                    val y0 = yOf(valueGradient.first().first)
+                    val y1 = yOf(valueGradient.last().first)
+                    val stops = valueGradient.map { (v, c) -> ((yOf(v) - y1) / (y0 - y1)).coerceIn(0f, 1f) to c }.reversed().toTypedArray()
+                    val lineBrush = Brush.verticalGradient(*stops, startY = y1, endY = y0)
+                    val fillBrush = Brush.verticalGradient(*stops.map { (f, c) -> f to c.copy(alpha = 0.16f) }.toTypedArray(), startY = y1, endY = y0)
+                    drawPath(fill, fillBrush)
+                    drawPath(line, lineBrush, style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
+                } else {
+                    drawPath(fill, Brush.verticalGradient(listOf(color.copy(alpha = 0.30f), color.copy(alpha = 0.02f)), startY = 0f, endY = h))
+                    drawPath(line, color, style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
+                }
             }
 
             if (showAverage) {
@@ -305,7 +319,10 @@ private fun niceStep(raw: Float): Float {
 data class TrendPoint(val label: String, val value: Float?)
 
 /**
- * WHOOP-style 7-day trend: dots joined by a line, value printed above each point, last point highlighted.
+ * 7-day trend: dots joined by a line, value printed above each point. Today (the last point) is marked by a
+ * solid dot and a bold day label rather than a column, as in Apple Fitness and Garmin.
+ * Days without data get a faint placeholder dot, and [average], when given, is a dashed
+ * line across (unlabelled: the card prints the number above).
  * Dragging across it picks a day and shows its value with [unit] (and its full name from [dayName]).
  */
 @Composable
@@ -316,10 +333,12 @@ fun TrendChart(
     height: Dp = 150.dp,
     reveal: Float = 1f,
     unit: String = "",
+    average: Float? = null,
     dayName: (Int) -> String = { points[it].label },
 ) {
     val measurer = rememberTextMeasurer()
     val axis = axisStyle()
+    val muted = MaterialTheme.colorScheme.onSurfaceVariant
     val valueStyle = TextStyle(color = MaterialTheme.colorScheme.onSurface, fontSize = 12.sp, fontFamily = org.openstrap.app.ui.theme.FunnelDisplay)
     val surface = MaterialTheme.colorScheme.surfaceContainer
     val highlight = MaterialTheme.colorScheme.surfaceContainerHighest
@@ -332,13 +351,28 @@ fun TrendChart(
         val topPad = 20.dp.toPx()
         val h = size.height - axisH
         val slot = size.width / points.size
-        val values = points.mapNotNull { it.value }
+        val values = points.mapNotNull { it.value } + listOfNotNull(average)
         val lo = (values.minOrNull() ?: 0f) - 2f
         val hi = (values.maxOrNull() ?: 1f) + 2f
         fun yOf(v: Float) = topPad + (h - topPad) * (1 - (v - lo) / (hi - lo).coerceAtLeast(1f))
 
-        drawRoundRect(highlight, Offset(slot * (points.size - 1), 0f), Size(slot, size.height), CornerRadius(10.dp.toPx()))
-        points.forEachIndexed { i, p -> label(measurer, p.label, axis, slot * i + slot / 2, h + 4.dp.toPx(), center = true) }
+        val todayAxis = axis.copy(color = onSurface, fontWeight = FontWeight.SemiBold)
+        points.forEachIndexed { i, p ->
+            label(measurer, p.label, if (i == points.lastIndex) todayAxis else axis, slot * i + slot / 2, h + 4.dp.toPx(), center = true)
+        }
+
+        // Missing days sit as faint dots mid-height, so a sparse week reads as "no data", not as a broken chart.
+        val midY = topPad + (h - topPad) / 2
+        points.forEachIndexed { i, p ->
+            if (p.value == null) drawCircle(muted.copy(alpha = 0.35f), 2.5.dp.toPx(), Offset(slot * i + slot / 2, midY))
+        }
+        average?.let { avg ->
+            val y = yOf(avg)
+            drawLine(
+                onSurface.copy(alpha = 0.45f), Offset(0f, y), Offset(size.width, y), 1.dp.toPx(),
+                pathEffect = PathEffect.dashPathEffect(floatArrayOf(2.dp.toPx(), 5.dp.toPx())),
+            )
+        }
 
         clipRect(right = size.width * reveal.coerceIn(0f, 1f)) {
         var prev: Offset? = null
@@ -352,15 +386,20 @@ fun TrendChart(
         points.forEachIndexed { i, p ->
             val v = p.value ?: return@forEachIndexed
             val o = Offset(slot * i + slot / 2, yOf(v))
-            drawCircle(color, 5.dp.toPx(), o)
-            drawCircle(surface, 2.5.dp.toPx(), o)
-            label(measurer, v.toInt().toString(), valueStyle, o.x, o.y - 20.dp.toPx(), center = true)
+            if (i == points.lastIndex) {
+                drawCircle(color.copy(alpha = 0.22f), 10.dp.toPx(), o)
+                drawCircle(color, 5.5.dp.toPx(), o)
+            } else {
+                drawCircle(color, 5.dp.toPx(), o)
+                drawCircle(surface, 2.5.dp.toPx(), o)
+            }
+            label(measurer, Math.round(v).toString(), valueStyle, o.x, o.y - 20.dp.toPx(), center = true)
         }
         }
         touchX?.let { tx ->
             val i = (tx / slot).toInt().coerceIn(0, points.size - 1)
             val cx = slot * i + slot / 2
-            drawRoundRect(onSurface.copy(alpha = 0.06f), Offset(slot * i, 0f), Size(slot, size.height), CornerRadius(10.dp.toPx()))
+            drawRoundRect(onSurface.copy(alpha = 0.06f), Offset(slot * i, 0f), Size(slot, h), CornerRadius(10.dp.toPx()))
             val v = points[i].value
             val text = if (v == null) "${dayName(i)}: no data" else "${dayName(i)}: ${withUnit(Math.round(v).toString(), unit)}"
             readout(measurer, text, readoutStyle, highlight, cx, v?.let { yOf(it) - 14.dp.toPx() } ?: (h / 2))

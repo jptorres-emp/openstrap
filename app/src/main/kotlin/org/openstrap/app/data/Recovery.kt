@@ -367,9 +367,13 @@ object Recovery {
     const val BASE_DRAIN = 0.04f
     /** Charge drained per TRIMP unit of exercise (≈25 for an hour at 60% of reserve). */
     const val EXERCISE_DRAIN_PER_TRIMP = 0.32f
-    /** Extra drain per stress point above [STRESS_FROM], per minute. */
-    const val STRESS_DRAIN = 0.0035f
-    const val STRESS_FROM = 40
+    /** Extra drain per stress point above [STRESS_FROM], per minute (80, Zepp's "high", drains 0.14/min). */
+    const val STRESS_DRAIN = 0.007f
+    /**
+     * Zepp's bands for the strap's score: relaxed 1–39, normal 40–59, medium 60–79, high 80–100. Only medium
+     * and up count as stress; from 40, most of a seated day (Zepp's "normal") drained as stress.
+     */
+    const val STRESS_FROM = 60
     const val RELAX_BELOW = 25
     /** Firstbeat's intensity bands, as heart-rate reserve (≈ %VO2 reserve, Swain & Leutholtz 1997). */
     const val ACTIVITY_HRR = 0.20f

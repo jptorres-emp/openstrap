@@ -96,7 +96,7 @@ Each minute gets a state, following Firstbeat's stress/recovery method (*Stress 
 | Exercise | HRR ≥ 0.30 | −`BASE_DRAIN` − 0.32·TRIMP(HRR). Also builds an EPOC-like debt. |
 | Exercise recovery | debt > 5 and HR not rising | −`BASE_DRAIN` only, even if the strap reports high stress |
 | Activity | HRR ≥ 0.20 or ≥ 60 steps/min | −`BASE_DRAIN` − 0.32·TRIMP(HRR) |
-| Stress | strap stress ≥ 40 | −`BASE_DRAIN` − 0.0035·(stress − 40) |
+| Stress | strap stress ≥ 60 (Zepp's "medium" and "high" bands) | −`BASE_DRAIN` − 0.007·(stress − 60) |
 | Relax | stress < 25 and still | −`BASE_DRAIN` + ¼ of light-sleep recharge |
 | Rest | otherwise | −`BASE_DRAIN` (0.04, about 2.4/h) |
 | No data | strap off the wrist | no change: we can't tell rest from effort, so the value holds |
@@ -108,6 +108,7 @@ Each minute gets a state, following Firstbeat's stress/recovery method (*Stress 
 * A quiet waking day drains about 2.4 per hour.
 * An hour at 60% of reserve drains 20–32.
 * A post-workout cool-down never counts as stress.
+* A seated day in Zepp's "normal" stress band (40–59) drains like rest, not stress. Zepp labels the strap's score relaxed 1–39, normal 40–59, medium 60–79 and high 80–100; counting from 40 had most waking minutes drain as stress.
 
 ### What the screen shows
 

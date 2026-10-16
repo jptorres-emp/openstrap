@@ -182,6 +182,14 @@ class RecoveryTest {
     }
 
     @Test
+    fun zeppNormalStressIsNotStress() {
+        // Readings of 40-59 are Zepp's "normal" band: a seated day there drains like rest.
+        val r = Recovery.charge(run(240) { Minute(it * 60L, 70, 0, 55, null) }, params, 0L..14_400L, start = 70f, requireAnchor = false)
+        assertTrue(r.points.none { it.state == State.Stress })
+        assertEquals(0f, r.drainedStress, 0.01f)
+    }
+
+    @Test
     fun chargeStaysInRange() {
         val r = Recovery.charge(run(2000) { Minute(it * 60L, 175, 170, 90, null) }, params, 0L..120_000L, start = 50f, requireAnchor = false)
         assertTrue(r.points.all { it.value in 0f..100f })

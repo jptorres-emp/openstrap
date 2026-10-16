@@ -92,7 +92,7 @@ class HistorySync(
 
             val plan = HistoryTypeSpecs.plan(advertised).filter { it.parser != null }
             plan.forEachIndexed { i, spec ->
-                state.value = SyncState.Running("Syncing ${label(spec.type)} (${i + 1}/${plan.size})")
+                state.value = SyncState.Running("Syncing ${label(spec.type)} (${i + 1}/${plan.size})", i.toFloat() / plan.size)
                 runCatching { syncType(spec) }.onFailure { log("history ${spec.type}: $it") }
             }
             state.value = SyncState.Done(System.currentTimeMillis() / 1000)

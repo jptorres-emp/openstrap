@@ -1,5 +1,6 @@
 package org.openstrap.app
 
+import org.openstrap.app.device.SyncState
 import android.Manifest
 import org.openstrap.app.ui.firmware.FirmwareScreen
 import org.openstrap.app.ui.firmware.FirmwareViewModel
@@ -140,6 +141,7 @@ private fun AppRoot(container: AppContainer) {
     val picker = DayPicker(daysWithData, dayVm::select)
     val live by container.strap.liveHeartRate.collectAsStateWithLifecycle()
     val connection by container.strap.connection.collectAsStateWithLifecycle()
+    val sync by container.strap.sync.collectAsStateWithLifecycle()
     val message by deviceVm.message.collectAsStateWithLifecycle()
     val battery = (connection as? ConnectionState.Connected)?.batteryPercent
     val charging = (connection as? ConnectionState.Connected)?.charging == true
@@ -198,6 +200,7 @@ private fun AppRoot(container: AppContainer) {
                 },
                 recovery = recovery,
                 onOpenRecovery = { showRecovery = true },
+                sync = sync as? SyncState.Running,
             )
             Tab.Heart -> HeartScreen(
                 day, live, liveEnabled,

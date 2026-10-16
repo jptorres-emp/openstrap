@@ -158,3 +158,22 @@ data class SportEffectRow(
     val optimalLoadMax: Int?,
     val maximalHeartRate: Int?,
 )
+
+/**
+ * The strap's own readiness for a day (module 0x0049), kept next to OpenStrap's so the two can be compared
+ * and ours fitted later. The strap keeps only its latest score, so each sync saves it.
+ */
+@Entity(tableName = "strap_readiness")
+data class StrapReadinessRow(
+    /** Local midnight of the scored day. */
+    @PrimaryKey val day: Long,
+    val updatedAt: Long,
+    val score: Int?,
+    val hrvScore: Int?,
+    val restingHrScore: Int?,
+    val skinTemperatureScore: Int?,
+    val breathingScore: Int?,
+    val sleepHrv: Int?,
+    val sleepRestingHr: Int?,
+    val algorithmVersion: String,
+)

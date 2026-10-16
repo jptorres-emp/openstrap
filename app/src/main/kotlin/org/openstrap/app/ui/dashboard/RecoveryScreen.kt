@@ -148,7 +148,11 @@ fun ChargeCard(
 }
 
 @Composable
-fun RecoveryScreen(r: RecoveryResult?, date: LocalDate, dayRange: LongRange, sleepBand: LongRange?, contentPadding: PaddingValues, onBack: () -> Unit, onEditProfile: () -> Unit) {
+fun RecoveryScreen(
+    r: RecoveryResult?, date: LocalDate, dayRange: LongRange, sleepBand: LongRange?, contentPadding: PaddingValues,
+    onBack: () -> Unit, onEditProfile: () -> Unit,
+    strapReadiness: org.openstrap.app.data.db.StrapReadinessRow? = null,
+) {
     BackHandler(onBack = onBack)
     ScreenList(contentPadding) {
         item {
@@ -189,6 +193,8 @@ fun RecoveryScreen(r: RecoveryResult?, date: LocalDate, dayRange: LongRange, sle
                 )
             }
         }
+
+        if (strapReadiness?.score != null) item { StrapReadinessPanel(strapReadiness, ready.score) }
 
         if (ready.contributors.isNotEmpty()) item {
             Panel {
@@ -351,5 +357,33 @@ private fun ExplainerSection(title: String, intro: String, bullets: List<String>
             }
         }
         if (outro != null) Text(outro, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+/**
+ * The strap's own readiness next to ours. Logged every sync so OpenStrap's score can later be fitted against it;
+ * until then it's shown for comparison only.
+ */
+@Composable
+private fun StrapReadinessPanel(s: org.openstrap.app.data.db.StrapReadinessRow, ours: Int?) {
+    Panel {
+        PanelHeader("Strap's own readiness", PhosphorIcons.Watch, MetricColors.readiness, trailing = ours?.let { "Ours: $it" })
+        BigValue("${s.score}", "", caption = "Calculated on the strap")
+        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            listOfNotNull(
+                s.hrvScore?.let { Triple("HRV", it, s.sleepHrv?.let { v -> "$v ms overnight" }) },
+                s.restingHrScore?.let { Triple("Resting heart rate", it, s.sleepRestingHr?.let { v -> "$v bpm" }) },
+                s.skinTemperatureScore?.let { Triple("Skin temperature", it, null) },
+                s.breathingScore?.let { Triple("Breathing", it, null) },
+            ).forEach { (label, score, detail) ->
+                val rating = Narrative.ratingFor(score)
+                ContributorRow(label, rating.label, score / 100f, rating.color, detail)
+            }
+        }
+        Text(
+            "The strap's score doesn't count sleep length, so after a short night it reads higher than ours. " +
+                "OpenStrap keeps both each day to tune its own score once there are a couple of weeks to compare.",
+            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }

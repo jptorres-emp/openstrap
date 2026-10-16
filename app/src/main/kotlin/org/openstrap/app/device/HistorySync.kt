@@ -16,6 +16,7 @@ import org.openstrap.app.data.db.HeartRateSample
 import org.openstrap.app.data.db.HrvSample
 import org.openstrap.app.data.db.HrvSdnnSample
 import org.openstrap.app.data.db.SportEffectRow
+import org.openstrap.app.data.db.StrapReadinessRow
 import org.openstrap.app.data.db.Workout
 import org.openstrap.app.data.db.WorkoutHeartRate
 import org.openstrap.app.data.db.PaiSample
@@ -53,6 +54,8 @@ import org.openstrap.protocol.history.HeartRateSentinel
 import org.openstrap.protocol.history.SpO2Reading
 import org.openstrap.protocol.history.SpotHeartRate
 import org.openstrap.protocol.services.Endpoints
+import org.openstrap.protocol.services.ReadinessCodec
+import org.openstrap.protocol.u8
 import org.openstrap.protocol.toHex
 import java.time.Instant
 import java.time.ZoneId
@@ -103,6 +106,7 @@ class HistorySync(
                 state.value = SyncState.Running("Syncing ${label(spec.type)} (${i + 1}/${plan.size})", i.toFloat() / plan.size)
                 runCatching { syncType(spec) }.onFailure { log("history ${spec.type}: $it") }
             }
+            if (session.services.has(Endpoints.READINESS)) runCatching { syncReadiness() }.onFailure { log("readiness: $it") }
             state.value = SyncState.Done(System.currentTimeMillis() / 1000)
         } catch (e: Exception) {
             if (e is kotlinx.coroutines.CancellationException) throw e
@@ -287,6 +291,18 @@ class HistorySync(
                 }
             }
         }
+    }
+
+    /** Saves the strap's latest readiness score; it keeps no history, so this runs every sync. */
+    private suspend fun syncReadiness() {
+        val since = System.currentTimeMillis() / 1000 - DEFAULT_LOOKBACK
+        val reply = session.request(Endpoints.READINESS, ReadinessCodec.scoreRequest(since), 8_000) { it.isNotEmpty() && it.u8(0) == ReadinessCodec.SCORE + 1 }
+        val scores = ReadinessCodec.parseScores(reply).orEmpty()
+        log("readiness: ${scores.joinToString { "${Instant.ofEpochSecond(it.day)} ${it.score}" }.ifEmpty { "none" }}")
+        val rows = scores.filter { it.score != null }.map {
+            StrapReadinessRow(it.day, it.updatedAt, it.score, it.hrvScore, it.restingHrScore, it.skinTemperatureScore, it.breathingScore, it.sleepHrv, it.sleepRestingHr, it.algorithmVersion)
+        }
+        if (rows.isNotEmpty()) dao.insertStrapReadiness(rows)
     }
 
     /**

@@ -21,6 +21,7 @@ object Endpoints {
     const val FIRMWARE = 0x000C
     const val SETTINGS = 0x000A
     const val ALARMS = 0x000F
+    const val READINESS = 0x0049
     const val AUTH = 0x0082
 }
 

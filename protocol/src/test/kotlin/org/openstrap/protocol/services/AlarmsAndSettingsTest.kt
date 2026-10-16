@@ -70,3 +70,24 @@ class AlarmsAndSettingsTest {
         assertEquals(3, SettingsCodec.replyCode("0403".hexToBytes()))
     }
 }
+
+class ReadinessCodecTest {
+    @Test
+    fun scoreFromStrap() {
+        val reply = "090001c030d16aa893d16a10043e420104035bffff59645664ffffffffff7fff000080bf0000001fffffffffffffff".hexToBytes()
+        val r = ReadinessCodec.parseScores(reply)!!.single()
+        assertEquals(1_792_094_400L, r.day)
+        assertEquals(91, r.score)
+        assertEquals(89, r.hrvScore); assertEquals(86, r.restingHrScore); assertEquals(100, r.skinTemperatureScore); assertEquals(100, r.breathingScore)
+        assertNull(r.physicalScore); assertNull(r.mentalScore)
+        assertEquals(62, r.sleepHrv); assertEquals(66, r.sleepRestingHr)
+        assertEquals("4.3", r.algorithmVersion)
+    }
+
+    @Test
+    fun noData() {
+        assertEquals(emptyList<StrapReadiness>(), ReadinessCodec.parseScores("0902".hexToBytes() + byteArrayOf(0)))
+        assertNull(ReadinessCodec.parseScores("0d0000".hexToBytes()))
+        assertArrayEquals("0846d9aa6a".hexToBytes(), ReadinessCodec.scoreRequest(0x6aaad946))
+    }
+}

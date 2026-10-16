@@ -149,6 +149,7 @@ private fun AppRoot(container: AppContainer) {
     val recovery by dayVm.recovery.collectAsStateWithLifecycle()
     val profile by deviceVm.profile.collectAsStateWithLifecycle()
     val day by dayVm.state.collectAsStateWithLifecycle()
+    val strapReadiness by remember(day.dayStart) { container.database.healthDao().strapReadiness(day.dayStart) }.collectAsStateWithLifecycle(null)
     val daysWithData by dayVm.daysWithData.collectAsStateWithLifecycle()
     val picker = DayPicker(daysWithData, dayVm::select)
     val live by container.strap.liveHeartRate.collectAsStateWithLifecycle()
@@ -200,6 +201,7 @@ private fun AppRoot(container: AppContainer) {
             RecoveryScreen(
                 recovery, day.date, day.dayStart..day.dayEnd, day.sleep?.let { it.start..it.end }, padding,
                 onBack = { showRecovery = false }, onEditProfile = { editProfile = true },
+                strapReadiness = strapReadiness,
             )
         } else when (Tab.entries[tab]) {
             Tab.Today -> TodayScreen(

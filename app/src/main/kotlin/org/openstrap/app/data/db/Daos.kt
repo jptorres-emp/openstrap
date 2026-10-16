@@ -60,6 +60,12 @@ interface HealthDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertSportEffects(rows: List<SportEffectRow>)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertStrapReadiness(rows: List<StrapReadinessRow>)
+
+    @Query("SELECT * FROM strap_readiness WHERE day = :day")
+    fun strapReadiness(day: Long): Flow<StrapReadinessRow?>
+
     @Query("SELECT COUNT(*) FROM workout")
     suspend fun workoutCount(): Int
 

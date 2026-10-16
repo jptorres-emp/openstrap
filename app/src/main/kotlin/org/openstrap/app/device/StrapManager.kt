@@ -23,7 +23,13 @@ import org.openstrap.protocol.ChannelSession
 import org.openstrap.protocol.auth.AuthException
 import org.openstrap.protocol.hexToBytes
 import org.openstrap.protocol.services.BatteryInfo
+import org.openstrap.protocol.services.Alarm
+import org.openstrap.protocol.services.AlarmCapabilities
+import org.openstrap.protocol.services.AlarmCodec
 import org.openstrap.protocol.services.Endpoints
+import org.openstrap.protocol.services.Setting
+import org.openstrap.protocol.services.SettingsCodec
+import org.openstrap.protocol.services.SettingsGroup
 import org.openstrap.protocol.services.LiveHeartRate
 import org.openstrap.protocol.services.RealtimeSteps
 import org.openstrap.protocol.services.StepTotals
@@ -410,6 +416,52 @@ class StrapManager(
                 client?.write(StrapUuids.HEART_RATE_SERVICE, StrapUuids.HR_CONTROL, LiveHeartRate.LEGACY_STOP, withResponse = true)
             }
         }.onFailure { log("live hr stop failed: $it") }
+    }
+
+    /** Sends a settings-style command and returns the reply whose first byte is the command + 1. */
+    private suspend fun command(endpoint: Int, request: ByteArray): ByteArray {
+        val s = activeSession ?: throw StrapCommandException("The strap isn't connected")
+        if (firmwareUpdating.value) throw StrapCommandException("Wait for the firmware update to finish")
+        val reply = runCatching {
+            s.request(endpoint, request, 8_000) { it.isNotEmpty() && it.u8(0) == request.u8(0) + 1 }
+        }.getOrElse { throw StrapCommandException("The strap didn't answer") }
+        log("cmd %04x > %s < %s".format(endpoint, request.toHex(), reply.toHex()))
+        return reply
+    }
+
+    private var alarmCaps: AlarmCapabilities? = null
+
+    private suspend fun alarmCaps(): AlarmCapabilities = alarmCaps ?: (
+        AlarmCodec.parseVersion(command(Endpoints.ALARMS, AlarmCodec.versionRequest))
+            ?: throw StrapCommandException("The strap sent an unexpected alarm reply")
+        ).also { alarmCaps = it }
+
+    override suspend fun readAlarms(): Pair<AlarmCapabilities, List<Alarm>> {
+        val caps = alarmCaps()
+        val list = AlarmCodec.parseList(command(Endpoints.ALARMS, AlarmCodec.listRequest), caps.titles)
+            ?: throw StrapCommandException("The strap sent an unexpected alarm list")
+        return caps to list
+    }
+
+    override suspend fun saveAlarm(alarm: Alarm, isNew: Boolean) {
+        val caps = alarmCaps()
+        val request = if (isNew) AlarmCodec.add(alarm, caps.titles) else AlarmCodec.modify(alarm, caps.titles)
+        if (!AlarmCodec.isSuccess(request, command(Endpoints.ALARMS, request))) throw StrapCommandException("The strap didn't save the alarm")
+    }
+
+    override suspend fun deleteAlarm(index: Int) {
+        val request = AlarmCodec.delete(index)
+        if (!AlarmCodec.isSuccess(request, command(Endpoints.ALARMS, request))) throw StrapCommandException("The strap didn't delete the alarm")
+    }
+
+    override suspend fun readHealthSettings(): SettingsGroup {
+        val reply = command(Endpoints.SETTINGS, SettingsCodec.query(SettingsCodec.GROUP_HEALTH))
+        return SettingsCodec.parse(reply) ?: throw StrapCommandException("The strap couldn't read its settings (code ${SettingsCodec.replyCode(reply)})")
+    }
+
+    override suspend fun writeHealthSettings(version: Int, settings: List<Setting>) {
+        val reply = command(Endpoints.SETTINGS, SettingsCodec.write(SettingsCodec.GROUP_HEALTH, version, settings))
+        if (!SettingsCodec.isWriteSuccess(reply)) throw StrapCommandException("The strap didn't accept the setting (code ${reply.getOrNull(1)})")
     }
 
     override suspend fun installFirmware(file: ByteArray, type: Int, onProgress: (DfuProgress) -> Unit) {

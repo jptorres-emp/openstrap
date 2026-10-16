@@ -74,6 +74,7 @@ fun DeviceScreen(
     onExportCsv: () -> Unit,
     onExportHealthConnect: () -> Unit,
     onFirmware: () -> Unit,
+    onAlarms: () -> Unit = {},
 ) {
     val paired by vm.paired.collectAsState()
     val connection by vm.strap.connection.collectAsState()
@@ -165,6 +166,10 @@ fun DeviceScreen(
             }
             item {
                 Panel {
+                    SettingRow("Alarms & alerts", "Wake-up alarms and heart-rate alerts on the strap", onClick = onAlarms) {
+                        Icon(PhosphorIcons.CaretRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                     SettingRow("Firmware update", "Check for and install strap firmware", onClick = onFirmware) {
                         Icon(PhosphorIcons.ArrowCircleUp, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }

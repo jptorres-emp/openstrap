@@ -1,6 +1,10 @@
 package org.openstrap.app.device
 
 import kotlinx.coroutines.flow.StateFlow
+import org.openstrap.protocol.services.Alarm
+import org.openstrap.protocol.services.AlarmCapabilities
+import org.openstrap.protocol.services.Setting
+import org.openstrap.protocol.services.SettingsGroup
 import org.openstrap.protocol.services.StepTotals
 
 sealed interface ConnectionState {
@@ -65,4 +69,20 @@ interface StrapController {
      * app reconnects on its own. Throws [org.openstrap.protocol.firmware.DfuException] on any refusal.
      */
     suspend fun installFirmware(file: ByteArray, type: Int, onProgress: (org.openstrap.protocol.firmware.DfuProgress) -> Unit)
+
+    /** The strap's alarms and its alarm limits. Throws [StrapCommandException] when not connected or refused. */
+    suspend fun readAlarms(): Pair<AlarmCapabilities, List<Alarm>>
+
+    /** Adds [alarm] when its slot is free on the strap, otherwise replaces that slot. */
+    suspend fun saveAlarm(alarm: Alarm, isNew: Boolean)
+    suspend fun deleteAlarm(index: Int)
+
+    /** The health settings group (HR measuring, HR and SpO2 alerts, …) with the choices the strap allows. */
+    suspend fun readHealthSettings(): SettingsGroup
+
+    /** Writes [settings] into the health group; [version] comes from the last [readHealthSettings]. */
+    suspend fun writeHealthSettings(version: Int, settings: List<Setting>)
 }
+
+/** The strap couldn't be asked, or said no. [message] is fit to show. */
+class StrapCommandException(message: String) : Exception(message)

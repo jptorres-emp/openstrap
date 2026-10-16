@@ -136,6 +136,7 @@ private fun AppRoot(container: AppContainer) {
     val liveEnabled by container.strap.liveHeartRateEnabled.collectAsStateWithLifecycle()
     val firmwareVm: FirmwareViewModel = viewModel(factory = viewModelFactory { initializer { FirmwareViewModel(container) } })
     var showFirmware by rememberSaveable { mutableStateOf(false) }
+    var showAlarms by rememberSaveable { mutableStateOf(false) }
     var showRecovery by rememberSaveable { mutableStateOf(false) }
     val workoutsVm: org.openstrap.app.ui.workout.WorkoutsViewModel = viewModel(factory = viewModelFactory {
         initializer { org.openstrap.app.ui.workout.WorkoutsViewModel(container.database.healthDao(), container.settings.profile) }
@@ -188,7 +189,7 @@ private fun AppRoot(container: AppContainer) {
 
     Scaffold(
         bottomBar = {
-            FloatingNavBar(Tab.entries.map { NavItem(it.label, it.icon, it.selectedIcon) }, tab, { tab = it; showRecovery = false; workoutStart = null })
+            FloatingNavBar(Tab.entries.map { NavItem(it.label, it.icon, it.selectedIcon) }, tab, { tab = it; showRecovery = false; workoutStart = null; showAlarms = false })
         },
         containerColor = MaterialTheme.colorScheme.background,
     ) { padding ->
@@ -232,12 +233,21 @@ private fun AppRoot(container: AppContainer) {
             }
             Tab.Device -> if (showFirmware) {
                 FirmwareScreen(firmwareVm, padding, onBack = { showFirmware = false })
+            } else if (showAlarms) {
+                // Created here so it reads from the strap each time the screen opens.
+                val alarmsVm: org.openstrap.app.ui.alarms.AlarmsViewModel = viewModel(
+                    key = "alarms", factory = viewModelFactory { initializer { org.openstrap.app.ui.alarms.AlarmsViewModel(container.strap) } },
+                )
+                LaunchedEffect(Unit) { alarmsVm.refresh() }
+                val alarmsState by alarmsVm.state.collectAsStateWithLifecycle()
+                org.openstrap.app.ui.alarms.AlarmsScreen(alarmsVm, alarmsState, padding, onBack = { showAlarms = false })
             } else {
                 DeviceScreen(
                     deviceVm, padding, requestBluetooth,
                     onExportCsv = { csvLauncher.launch("openstrap-export.zip") },
                     onExportHealthConnect = exportHealthConnect,
                     onFirmware = { showFirmware = true },
+                    onAlarms = { showAlarms = true },
                 )
             }
         }

@@ -308,6 +308,18 @@ class StrapManager(
         scope.launch { HistorySync(s, client, dao, settings, sync, ::log).dumpRaw(System.currentTimeMillis() / 1000 - days * 86_400L, java.io.File(context.filesDir, "raw")) }
     }
 
+    /** Debug aid: sends [payload] to [endpoint] and logs every reply on it for 5 s. */
+    fun probe(endpoint: Int, payload: ByteArray) {
+        val s = activeSession ?: return log("probe: not connected")
+        scope.launch {
+            val listener = launch { s.messagesFor(endpoint).collect { log("probe %04x < %s".format(endpoint, it.toHex())) } }
+            log("probe %04x > %s".format(endpoint, payload.toHex()))
+            runCatching { s.send(endpoint, payload) }.onFailure { log("probe failed: $it") }
+            delay(5_000)
+            listener.cancel()
+        }
+    }
+
     override fun setLiveHeartRate(enabled: Boolean) {
         liveHeartRateEnabled.value = enabled
         scope.launch { settings.setLiveHeartRate(enabled) }

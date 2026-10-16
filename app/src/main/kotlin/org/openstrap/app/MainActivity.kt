@@ -90,6 +90,14 @@ class MainActivity : ComponentActivity() {
             val dao = (application as OpenStrapApp).container.database.healthDao()
             kotlinx.coroutines.MainScope().launch { DemoData.fill(dao) }
         }
+        // Debug: `--ei probe_endpoint 73 --es probe_hex 00` sends raw bytes to a channel endpoint and logs replies.
+        val probeEndpoint = intent.getIntExtra("probe_endpoint", -1)
+        if (BuildConfig.DEBUG && probeEndpoint >= 0) {
+            val hex = intent.getStringExtra("probe_hex").orEmpty()
+            intent.removeExtra("probe_endpoint")
+            val bytes = hex.chunked(2).map { it.toInt(16).toByte() }.toByteArray()
+            ((application as OpenStrapApp).container.strap as? org.openstrap.app.device.StrapManager)?.probe(probeEndpoint, bytes)
+        }
         val days = intent.getIntExtra("dump_raw_days", 0)
         if (!BuildConfig.DEBUG || days <= 0) return
         intent.removeExtra("dump_raw_days")

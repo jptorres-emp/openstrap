@@ -248,13 +248,16 @@ private val TrendBad = Color(0xFFFFB547)
 @Composable
 fun ContributorRow(label: String, rating: String, fraction: Float, color: Color, detail: String? = null) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+        // The detail gets its own line: inline, a long one squeezed the label into a word per line.
+        Column {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                Spacer(Modifier.width(10.dp))
+                Text(rating, style = MaterialTheme.typography.titleSmall, color = color)
+            }
             if (detail != null) {
                 Text(detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Spacer(Modifier.width(10.dp))
             }
-            Text(rating, style = MaterialTheme.typography.titleSmall, color = color)
         }
         Box(Modifier.fillMaxWidth().height(5.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHighest)) {
             Box(Modifier.fillMaxWidth(fraction.coerceIn(0.02f, 1f)).height(5.dp).clip(CircleShape).background(color))

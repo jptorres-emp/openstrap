@@ -18,7 +18,6 @@ import org.openstrap.app.ble.GattClient
 import org.openstrap.app.ble.GattStrapLink
 import org.openstrap.app.ble.StrapUuids
 import org.openstrap.app.data.db.HealthDao
-import org.openstrap.app.data.db.HeartRateSample
 import org.openstrap.app.data.settings.SettingsStore
 import org.openstrap.protocol.ChannelSession
 import org.openstrap.protocol.auth.AuthException
@@ -146,7 +145,7 @@ class StrapManager(
                 retries = 0
                 autoSync(s)
                 liveHeartRateEnabled.value = settings.liveHeartRate.first()
-                if (liveHeartRateEnabled.value) startLive()
+                if (liveHeartRateEnabled.value && appVisible) startLive()
             } catch (e: AuthException) {
                 log("auth failed: ${e.message}")
                 connection.value = ConnectionState.Failed(e.message ?: "Authentication failed")
@@ -312,7 +311,20 @@ class StrapManager(
     override fun setLiveHeartRate(enabled: Boolean) {
         liveHeartRateEnabled.value = enabled
         scope.launch { settings.setLiveHeartRate(enabled) }
-        if (enabled) startLive() else pauseLive()
+        if (enabled && appVisible) startLive() else pauseLive()
+    }
+
+    /** Live HR streams only while the app is on screen; in the background nothing would show it. */
+    @Volatile private var appVisible = false
+
+    override fun setAppVisible(visible: Boolean) {
+        if (visible == appVisible) return
+        appVisible = visible
+        if (!visible) {
+            if (liveJob?.isActive == true) pauseLive()
+        } else if (liveHeartRateEnabled.value && !firmwareUpdating.value && connection.value is ConnectionState.Connected) {
+            startLive()
+        }
     }
 
     /** Stops streaming without changing the user's preference (e.g. during a firmware update). */
@@ -412,14 +424,9 @@ class StrapManager(
         }
     }
 
-    private var lastLiveSecond = 0L
-    private suspend fun onLiveHr(bpm: Int) {
+    /** Display only, like Zepp: the strap records per-second HR itself and history sync stores it. */
+    private fun onLiveHr(bpm: Int) {
         liveHeartRate.value = bpm
-        val now = System.currentTimeMillis() / 1000
-        if (now != lastLiveSecond) {
-            lastLiveSecond = now
-            dao.insertHeartRate(listOf(HeartRateSample(now, bpm, HeartRateSample.SOURCE_LIVE)))
-        }
     }
 
     private companion object {

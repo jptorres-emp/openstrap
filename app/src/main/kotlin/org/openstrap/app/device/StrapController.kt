@@ -30,7 +30,7 @@ interface StrapController {
     /** Latest live heart-rate reading in bpm, or null when live HR is off. */
     val liveHeartRate: StateFlow<Int?>
 
-    /** The user's live-HR switch; when on, streaming starts on every connect. */
+    /** The user's live-HR switch; when on, streaming runs while connected and the app is on screen. */
     val liveHeartRateEnabled: StateFlow<Boolean>
 
     /**
@@ -55,6 +55,9 @@ interface StrapController {
     fun disconnect()
     fun syncNow()
     fun setLiveHeartRate(enabled: Boolean)
+
+    /** Called as the app's screen comes to the front or leaves it; live HR only runs while it's visible. */
+    fun setAppVisible(visible: Boolean)
 
     /**
      * Sends [file] to the strap and applies it (docs/protocol/03 §3.4). The strap reboots afterwards and the

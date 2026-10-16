@@ -58,6 +58,16 @@ class MainActivity : ComponentActivity() {
         setContent { OpenStrapTheme { AppRoot(container) } }
     }
 
+    override fun onStart() {
+        super.onStart()
+        (application as OpenStrapApp).container.strap.setAppVisible(true)
+    }
+
+    override fun onStop() {
+        (application as OpenStrapApp).container.strap.setAppVisible(false)
+        super.onStop()
+    }
+
     override fun onResume() {
         super.onResume()
         // Reconnect to a paired strap whenever the app comes to the front (sync follows on connect).

@@ -181,6 +181,40 @@ class RecoveryTest {
         assertTrue(tense.drainedStress > 0)
     }
 
+    private val dayOf = { t: Long -> t / 86_400 }
+
+    @Test
+    fun stressThresholdIsTenAboveCalmLevel() {
+        // Four days of calm readings around 54 (seen on hardware while seated): stress counts from 64.
+        val calm = (0 until 4).flatMap { d -> (0 until 30).map { i -> d * 86_400L + i * 300 to (50 + i % 9) } }
+        val t = Recovery.stressThreshold(calm, dayOf)
+        assertEquals(54, t.calmLevel)
+        assertEquals(64, t.value)
+        assertEquals(4, t.days)
+    }
+
+    @Test
+    fun stressThresholdStaysInZeppsBandsAndNeedsThreeDays() {
+        val low = (0 until 3).flatMap { d -> (0 until 30).map { i -> d * 86_400L + i * 300 to 20 } }
+        assertEquals(Recovery.STRESS_FROM_MIN, Recovery.stressThreshold(low, dayOf).value)
+        val high = low.map { it.first to 75 }
+        assertEquals(Recovery.STRESS_FROM_MAX, Recovery.stressThreshold(high, dayOf).value)
+        val twoDays = low.filter { it.first < 2 * 86_400L }.map { it.first to 54 }
+        val learning = Recovery.stressThreshold(twoDays, dayOf)
+        assertEquals(Recovery.STRESS_FROM, learning.value)
+        assertNull(learning.calmLevel)
+        assertEquals(2, learning.days)
+    }
+
+    @Test
+    fun chargeUsesThePersonalThreshold() {
+        val day62 = run(240) { Minute(it * 60L, 70, 0, 62, null) }
+        val fixed = Recovery.charge(day62, params, 0L..14_400L, start = 70f, requireAnchor = false)
+        val personal = Recovery.charge(day62, params.copy(stressFrom = 64), 0L..14_400L, start = 70f, requireAnchor = false)
+        assertTrue(fixed.points.any { it.state == State.Stress })
+        assertTrue(personal.points.none { it.state == State.Stress })
+    }
+
     @Test
     fun zeppNormalStressIsNotStress() {
         // Readings of 40-59 are Zepp's "normal" band: a seated day there drains like rest.

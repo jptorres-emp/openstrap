@@ -21,6 +21,7 @@ data class RecoveryResult(
     val maxHr: Float,
     /** True when max HR came from the user's age rather than a fallback. */
     val maxHrFromAge: Boolean,
+    val stressThreshold: Recovery.StressThreshold,
 )
 
 /** Loads what [Recovery] needs from the database and runs it. All work happens off the main thread by the caller. */
@@ -81,13 +82,25 @@ class RecoveryEngine(private val dao: HealthDao) {
             .flatMap { s -> dao.sleepStagesOnce(s.start).map { Triple(it.start, it.end, it.stage) } }
         val stress = dao.stressOnce(simFrom, simTo).map { it.timestamp to it.value }
         val steps = dao.activityOnce(simFrom, simTo).associate { it.timestamp / 60 * 60 to it.steps }
+
+        // Personal stress threshold from calm readings: awake, still and at resting heart rate.
+        val calmFrom = DayWindow.of(date.minusDays(Recovery.STRESS_BASELINE_DAYS.toLong() - 1), zone).from
+        val calmSteps = dao.activityOnce(calmFrom, to).associate { it.timestamp / 60 * 60 to it.steps }
+        val minuteHr = hr.toMap()
+        val calm = dao.stressOnce(calmFrom, to).map { it.timestamp to it.value }.filter { (t, _) ->
+            val minute = t / 60 * 60
+            val bpm = minuteHr[minute]
+            !asleep(t) && (calmSteps[minute] ?: 0) < CALM_STEPS && bpm != null &&
+                Recovery.hrr(bpm, restingHr, maxHr) < Recovery.ACTIVITY_HRR
+        }
+        val stressThreshold = Recovery.stressThreshold(calm) { Instant.ofEpochSecond(it).atZone(zone).toLocalDate().toEpochDay() }
         val minutes = Recovery.minutes(simFrom, simTo, hr.filter { it.first in simFrom until simTo }, steps, stress, stages)
         val hrvScore = readiness.contributors.firstOrNull { it.factor == Recovery.Factor.HrvBalance }?.score
-        val params = Recovery.ChargeParams(restingHr, maxHr, tonight?.restingHr, hrvScore, female)
+        val params = Recovery.ChargeParams(restingHr, maxHr, tonight?.restingHr, hrvScore, female, stressThreshold.value)
         val charge = Recovery.charge(minutes, params, day.from..day.to, start = 50f, mainSleepEnd = tonight?.end)
 
         val chronic = if (loads.size >= 7) Recovery.ewmaLoads(loads).second else null
-        return RecoveryResult(date, readiness, charge, trend, todayLoad, chronic, restingHr, maxHr, age != null)
+        return RecoveryResult(date, readiness, charge, trend, todayLoad, chronic, restingHr, maxHr, age != null, stressThreshold)
     }
 
     private fun night(
@@ -127,6 +140,8 @@ class RecoveryEngine(private val dao: HealthDao) {
     companion object {
         /** A day needs this many minutes of heart rate before its training load counts. */
         const val MIN_WORN_MINUTES = 8 * 60
+        /** A minute with fewer steps than this counts as still for the calm stress level. */
+        const val CALM_STEPS = 10
     }
 }
 

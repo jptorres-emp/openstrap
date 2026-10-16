@@ -72,6 +72,35 @@ object Recovery {
         return Baseline(mean.toFloat(), sd.toFloat(), values.size)
     }
 
+    /**
+     * Where Charge starts counting the strap's stress score as stress. [calmLevel] is null (and [value] is
+     * [STRESS_FROM]) until [days] reaches [MIN_STRESS_DAYS].
+     */
+    data class StressThreshold(val value: Int, val calmLevel: Int?, val days: Int)
+
+    /**
+     * A personal stress threshold. [calm] are the strap's stress readings taken awake, still and at resting heart
+     * rate over the last [STRESS_BASELINE_DAYS] days, as (epoch seconds, value); [dayOf] maps a time to its day.
+     * The calm level is their median, and stress counts from [STRESS_MARGIN] above it, kept within
+     * [STRESS_FROM_MIN]..[STRESS_FROM_MAX]. A calm level of 50 gives 60, where Zepp's "medium" band starts.
+     * Zepp computes its own threshold on the phone and stores it on the strap; this is our equivalent.
+     */
+    fun stressThreshold(calm: List<Pair<Long, Int>>, dayOf: (Long) -> Long): StressThreshold {
+        val days = calm.map { dayOf(it.first) }.distinct().size
+        if (days < MIN_STRESS_DAYS || calm.size < MIN_STRESS_READINGS) return StressThreshold(STRESS_FROM, null, days)
+        val sorted = calm.map { it.second }.sorted()
+        val median = (sorted[(sorted.size - 1) / 2] + sorted[sorted.size / 2]) / 2f
+        val value = Math.round(median + STRESS_MARGIN).coerceIn(STRESS_FROM_MIN, STRESS_FROM_MAX)
+        return StressThreshold(value, Math.round(median), days)
+    }
+
+    const val STRESS_BASELINE_DAYS = 14
+    const val MIN_STRESS_DAYS = 3
+    const val MIN_STRESS_READINGS = 60
+    const val STRESS_MARGIN = 10
+    const val STRESS_FROM_MIN = 50
+    const val STRESS_FROM_MAX = 70
+
     /** Nights needed before a baseline is used at all, and before it's considered settled. */
     const val MIN_BASELINE_NIGHTS = 4
     const val CALIBRATED_NIGHTS = 14
@@ -337,6 +366,8 @@ object Recovery {
         /** Tonight's HRV contributor (0-100); scales how well sleep recharges. */
         val hrvScore: Int? = null,
         val female: Boolean = false,
+        /** Stress score from which a still minute counts as stress (see [stressThreshold]). */
+        val stressFrom: Int = STRESS_FROM,
     )
 
     data class ChargePoint(val t: Long, val value: Float, val state: State)
@@ -367,11 +398,12 @@ object Recovery {
     const val BASE_DRAIN = 0.04f
     /** Charge drained per TRIMP unit of exercise (≈25 for an hour at 60% of reserve). */
     const val EXERCISE_DRAIN_PER_TRIMP = 0.32f
-    /** Extra drain per stress point above [STRESS_FROM], per minute (80, Zepp's "high", drains 0.14/min). */
+    /** Extra drain per stress point above the threshold, per minute (80 over 60 drains 0.14/min). */
     const val STRESS_DRAIN = 0.007f
     /**
      * Zepp's bands for the strap's score: relaxed 1–39, normal 40–59, medium 60–79, high 80–100. Only medium
-     * and up count as stress; from 40, most of a seated day (Zepp's "normal") drained as stress.
+     * and up count as stress; from 40, most of a seated day (Zepp's "normal") drained as stress. The default
+     * until [stressThreshold] has enough of the user's own readings.
      */
     const val STRESS_FROM = 60
     const val RELAX_BELOW = 25
@@ -446,9 +478,9 @@ object Recovery {
                     state = State.Activity
                     delta = -BASE_DRAIN - EXERCISE_DRAIN_PER_TRIMP * trimpMinute(x, params.female)
                 }
-                m.stress != null && m.stress >= STRESS_FROM -> {
+                m.stress != null && m.stress >= params.stressFrom -> {
                     state = State.Stress
-                    delta = -BASE_DRAIN - STRESS_DRAIN * (m.stress - STRESS_FROM)
+                    delta = -BASE_DRAIN - STRESS_DRAIN * (m.stress - params.stressFrom)
                 }
                 m.stress != null && m.stress < RELAX_BELOW && m.steps < 10 -> {
                     state = State.Relax

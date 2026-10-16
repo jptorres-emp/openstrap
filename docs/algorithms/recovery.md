@@ -96,10 +96,22 @@ Each minute gets a state, following Firstbeat's stress/recovery method (*Stress 
 | Exercise | HRR ≥ 0.30 | −`BASE_DRAIN` − 0.32·TRIMP(HRR). Also builds an EPOC-like debt. |
 | Exercise recovery | debt > 5 and HR not rising | −`BASE_DRAIN` only, even if the strap reports high stress |
 | Activity | HRR ≥ 0.20 or ≥ 60 steps/min | −`BASE_DRAIN` − 0.32·TRIMP(HRR) |
-| Stress | strap stress ≥ 60 (Zepp's "medium" and "high" bands) | −`BASE_DRAIN` − 0.007·(stress − 60) |
+| Stress | strap stress ≥ your threshold *T* (below) | −`BASE_DRAIN` − 0.007·(stress − *T*) |
 | Relax | stress < 25 and still | −`BASE_DRAIN` + ¼ of light-sleep recharge |
 | Rest | otherwise | −`BASE_DRAIN` (0.04, about 2.4/h) |
 | No data | strap off the wrist | no change: we can't tell rest from effort, so the value holds |
+
+### Personal stress threshold
+
+The strap's stress score is the same one Zepp shows. Zepp labels it relaxed 1–39, normal 40–59, medium 60–79 and high 80–100. Where stress starts differs between people, so *T* comes from the user's own readings (`stressThreshold`).
+
+* Input: the strap's stress readings from the last `STRESS_BASELINE_DAYS` = 14 days that were calm. Calm means awake, fewer than 10 steps that minute, and heart rate below 20% of reserve.
+* Calm level: the median of those readings.
+* *T* = calm level + `STRESS_MARGIN` (10), kept within 50–70. A calm level of 50 gives 60, where Zepp's "medium" band starts.
+* *T* is 60 until there are `MIN_STRESS_DAYS` = 3 days and at least 60 calm readings.
+* The Recovery screen states *T* and the calm level it came from.
+
+Zepp does the same job differently. It computes a stress threshold on the phone or in its cloud and writes it to the strap (Readiness module 0x49, opcode `0E`; `j560.java`). The strap only stores what Zepp gives it. A strap used only with OpenStrap returns no records (`0C` → `0d 00 00`, verified on hardware), so there is nothing to read back.
 
 ### Calibration targets (checked by unit tests)
 

@@ -114,6 +114,17 @@ object Narrative {
         else -> "Depleted"
     }
 
+    /** Where stress starts counting, and why: the user's calm level, or how long until there is one. */
+    fun stressThreshold(t: org.openstrap.app.data.Recovery.StressThreshold): String {
+        val calm = t.calmLevel
+        val left = org.openstrap.app.data.Recovery.MIN_STRESS_DAYS - t.days
+        return when {
+            calm != null -> "Stress counts from ${t.value}: ${org.openstrap.app.data.Recovery.STRESS_MARGIN} above your calm level of $calm over the last ${t.days} days."
+            left > 0 -> "Stress counts from ${t.value} for now. After ${if (left == 1) "1 more day" else "$left more days"} of wear it adjusts to your own calm level."
+            else -> "Stress counts from ${t.value} for now, until there are enough calm readings to find your own level."
+        }
+    }
+
     /** One sentence on where the day's charge went, naming the biggest drain. */
     fun chargeBody(c: org.openstrap.app.data.Recovery.ChargeDay): String {
         val now = c.latest?.toInt() ?: return ""

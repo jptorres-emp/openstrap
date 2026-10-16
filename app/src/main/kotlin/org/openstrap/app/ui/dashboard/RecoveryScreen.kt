@@ -225,14 +225,14 @@ fun RecoveryScreen(r: RecoveryResult?, date: LocalDate, dayRange: LongRange, sle
         }
 
         item { ChargeCard(r, dayRange, sleepBand) }
-        item { ChargeBreakdown(r.charge) }
+        item { ChargeBreakdown(r.charge, r.stressThreshold) }
         item { LoadPanel(r, onEditProfile) }
         item { HowItWorks() }
     }
 }
 
 @Composable
-private fun ChargeBreakdown(c: Recovery.ChargeDay) {
+private fun ChargeBreakdown(c: Recovery.ChargeDay, threshold: Recovery.StressThreshold) {
     if (c.latest == null) return
     Panel {
         PanelHeader("Where your charge went", PhosphorIcons.BatteryCharging, MetricColors.charge)
@@ -249,6 +249,10 @@ private fun ChargeBreakdown(c: Recovery.ChargeDay) {
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+        Text(
+            Narrative.stressThreshold(threshold),
+            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 

@@ -141,11 +141,12 @@ internal fun SleepWeekPanel(state: DayUiState) {
 
         val asleep = slept.mapNotNull { it.asleepSeconds }
         val scores = slept.mapNotNull { it.session?.score }
-        val goalNights = asleep.count { it >= SLEEP_GOAL_SECONDS }
+        val goal = LocalGoals.current.sleepSeconds
+        val goalNights = asleep.count { it >= goal }
         Row(Modifier.fillMaxWidth()) {
             WeekFact("Average asleep", formatDuration(asleep.average().toLong()), Modifier.weight(1f))
             WeekFact("Average score", scores.takeIf { it.isNotEmpty() }?.average()?.roundToInt()?.toString() ?: "—", Modifier.weight(1f))
-            WeekFact("Reached ${SLEEP_GOAL_SECONDS / 3600} h", "$goalNights of ${slept.size}", Modifier.weight(1f))
+            WeekFact("Reached ${formatDuration(goal)}", "$goalNights of ${slept.size}", Modifier.weight(1f))
         }
 
         if (regularity == null) {
@@ -199,6 +200,7 @@ private fun SleepWindows(week: List<SleepNight>, regularity: SleepHistory.Regula
     val today = axis.copy(color = onSurface)
     val value = TextStyle(color = onSurface, fontSize = 11.sp, fontFamily = org.openstrap.app.ui.theme.FunnelDisplay)
     val bar = MetricColors.sleepDeep
+    val goal = LocalGoals.current.sleepSeconds
 
     // Minutes since the noon before each night, so a night never wraps.
     fun sinceNoon(epoch: Long, wake: Boolean): Int {
@@ -250,7 +252,7 @@ private fun SleepWindows(week: List<SleepNight>, regularity: SleepHistory.Regula
             }
             val y0 = yOf(span.first)
             val y1 = yOf(span.second)
-            val met = (n.asleepSeconds ?: 0) >= SLEEP_GOAL_SECONDS
+            val met = (n.asleepSeconds ?: 0) >= goal
             drawRoundRect(
                 if (i == week.lastIndex) bar else bar.copy(alpha = 0.7f),
                 Offset(cx - width / 2, y0), Size(width, (y1 - y0).coerceAtLeast(width)), CornerRadius(width / 2),

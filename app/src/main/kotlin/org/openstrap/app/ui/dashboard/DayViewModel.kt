@@ -39,11 +39,8 @@ import java.time.ZoneId
 import java.time.format.TextStyle
 import java.util.Locale
 
-const val STEP_GOAL = 8000
-const val SLEEP_GOAL_SECONDS = 8 * 3600L
 /** Nights of sleep loaded for the week view and the in-sleep vitals' usual values. */
 const val SLEEP_NIGHTS = 14
-const val ACTIVE_HOURS_GOAL = 10
 
 /** Averages over the 7 days before the selected day; null where there's no data. */
 data class Baselines(

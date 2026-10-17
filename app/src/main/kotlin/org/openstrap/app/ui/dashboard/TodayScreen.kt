@@ -239,15 +239,16 @@ fun TodayScreen(
     item {
         // Equal cells, so the gaps stay even however many chips there are.
         Row(Modifier.fillMaxWidth()) {
+            val goals = LocalGoals.current
             val cell = Modifier.weight(1f)
             val sleepValue = state.sleep?.score?.toString() ?: state.asleepSeconds?.let { "%d:%02d".format(it / 3600, (it % 3600) / 60) }
             // Whichever score isn't the hero sits first in the row.
             if (chargeLeads) ScoreChip(rec?.readiness?.score?.toString(), "Recovery", PhosphorIcons.Plant, MetricColors.readiness, cell, rec?.readiness?.score?.let { it / 100f }, onClick = onOpenRecovery)
             else ScoreChip(rec?.charge?.latest?.toInt()?.toString(), "Charge", PhosphorIcons.Lightning, MetricColors.chargeAt(rec?.charge?.latest), cell, rec?.charge?.latest?.let { it.toFloat() / 100f }, onClick = onOpenRecovery)
-            // The sleep ring is the score, or time asleep against eight hours when there's no score.
-            val sleepProgress = state.sleep?.score?.let { it / 100f } ?: state.asleepSeconds?.let { it / (8 * 3600f) }
+            // The sleep ring is the score, or time asleep against your goal when there's no score.
+            val sleepProgress = state.sleep?.score?.let { it / 100f } ?: state.asleepSeconds?.let { it / goals.sleepSeconds.toFloat() }
             ScoreChip(sleepValue, "Sleep", PhosphorIcons.Moon, MetricColors.sleepDeep, cell, sleepProgress, onClick = onOpenSleep)
-            ScoreChip(compactCount(state.steps), "Steps", PhosphorIcons.Footprints, MetricColors.steps, cell, state.steps.toFloat() / STEP_GOAL)
+            ScoreChip(compactCount(state.steps), "Steps", PhosphorIcons.Footprints, MetricColors.steps, cell, state.steps.toFloat() / goals.steps)
             ScoreChip(state.stress.avg()?.toString(), "Stress", PhosphorIcons.Brain, MetricColors.stress, cell, state.stress.avg()?.let { it / 100f }, onClick = { onOpenMetric(Metric.Stress) })
         }
     }
@@ -320,15 +321,16 @@ fun TodayScreen(
     }
 
     item {
+        val goals = LocalGoals.current
         Panel {
-            PanelHeader("Activity", PhosphorIcons.Footprints, MetricColors.steps, trailing = "Goal %,d".format(STEP_GOAL))
+            PanelHeader("Activity", PhosphorIcons.Footprints, MetricColors.steps, trailing = "Goal %,d".format(goals.steps))
             Row(verticalAlignment = Alignment.Bottom) {
                 BigValue("%,d".format(state.steps), "steps", Modifier.weight(1f))
                 state.pai?.let {
                     BigValue("${Math.round(it.total)}", "", caption = "PAI")
                     Spacer(Modifier.width(18.dp))
                 }
-                BigValue("${state.activeHours}", "of $ACTIVE_HOURS_GOAL h", caption = "Active hours")
+                BigValue("${state.activeHours}", "of ${goals.activeHours} h", caption = "Active hours")
             }
             BarChart(state.hourlySteps, MetricColors.steps) { hour, steps -> "%02d:00–%02d:00 · %,d steps".format(hour, (hour + 1) % 24, Math.round(steps)) }
         }

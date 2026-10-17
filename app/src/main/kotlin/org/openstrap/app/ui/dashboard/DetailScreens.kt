@@ -138,6 +138,7 @@ private fun SleepList(
     }
 
     item {
+        val goals = LocalGoals.current
         val score = session.score
         val asleep = state.asleepSeconds ?: (session.end - session.start)
         if (score != null) {
@@ -147,8 +148,8 @@ private fun SleepList(
             )
         } else {
             HeroPanel(
-                label = "Time asleep", value = "%d:%02d".format(asleep / 3600, (asleep % 3600) / 60), progress = asleep / SLEEP_GOAL_SECONDS.toFloat(),
-                accent = MetricColors.sleepDeep, headline = "${formatDuration(asleep)} asleep", body = "Your goal is ${formatDuration(SLEEP_GOAL_SECONDS)}.",
+                label = "Time asleep", value = "%d:%02d".format(asleep / 3600, (asleep % 3600) / 60), progress = asleep / goals.sleepSeconds.toFloat(),
+                accent = MetricColors.sleepDeep, headline = "${formatDuration(asleep)} asleep", body = "Your goal is ${formatDuration(goals.sleepSeconds)}.",
             )
         }
     }

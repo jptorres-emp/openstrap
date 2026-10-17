@@ -30,12 +30,11 @@ import org.openstrap.app.data.db.SportEffectRow
 import org.openstrap.app.device.SyncState
 import org.openstrap.app.ui.components.formatDuration
 import org.openstrap.app.ui.components.pressClickable
-import org.openstrap.app.ui.dashboard.ACTIVE_HOURS_GOAL
 import org.openstrap.app.ui.dashboard.DateHeader
 import org.openstrap.app.ui.dashboard.DayPicker
 import org.openstrap.app.ui.dashboard.DayUiState
 import org.openstrap.app.ui.dashboard.Metric
-import org.openstrap.app.ui.dashboard.STEP_GOAL
+import org.openstrap.app.ui.dashboard.LocalGoals
 import org.openstrap.app.ui.dashboard.ScreenList
 import org.openstrap.app.ui.theme.MetricColors
 import org.openstrap.app.ui.theme.PhosphorIcons
@@ -99,12 +98,13 @@ private val HOURS = listOf("00", "06", "12", "18", "24")
 /** Steps glow and pick up pace with the day's progress; distance, calories and active hours sit under the chart. */
 @Composable
 private fun StepsCard(state: DayUiState, onClick: () -> Unit) {
-    val progress = state.steps.toFloat() / STEP_GOAL
+    val goals = LocalGoals.current
+    val progress = state.steps.toFloat() / goals.steps
     val style = GlowStyle.chart(MetricColors.steps).copy(motion = GlowMotion.Stride(energy = progress.coerceIn(0f, 1f)))
     GlowCard(style, Modifier.fillMaxWidth(), onClick = onClick) {
         Column {
             GlowHeader("Steps", chevron = true)
-            val goal = if (state.steps >= STEP_GOAL) "Goal reached" else "%d%% of %,d".format(state.steps * 100 / STEP_GOAL, STEP_GOAL)
+            val goal = if (state.steps >= goals.steps) "Goal reached" else "%d%% of %,d".format(state.steps * 100 / goals.steps, goals.steps)
             GlowHeroNumber("${state.steps}", "steps", listOf(goal))
             GlowChartGap()
             GlowDotBars(state.hourlySteps, height = GlowLayout.ChartHeight, labels = HOURS, accent = MetricColors.steps) { h, v ->
@@ -112,7 +112,7 @@ private fun StepsCard(state: DayUiState, onClick: () -> Unit) {
             }
             Spacer(Modifier.height(18.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Fact("Active hours", "${state.activeHours} of $ACTIVE_HOURS_GOAL")
+                Fact("Active hours", "${state.activeHours} of ${goals.activeHours}")
                 Fact("Distance", state.distanceMeters?.let { "%.1f km".format(it / 1000f) } ?: "—")
                 Fact("Active kcal", state.activeCalories?.toString() ?: "—")
             }

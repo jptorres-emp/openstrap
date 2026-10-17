@@ -44,6 +44,8 @@ fun YouScreen(
     vm: DeviceViewModel,
     contentPadding: PaddingValues,
     onEditProfile: () -> Unit,
+    goals: org.openstrap.app.data.settings.Goals,
+    onEditGoals: () -> Unit,
     onOpenStrap: () -> Unit,
     onExportCsv: () -> Unit,
     onExportHealthConnect: () -> Unit,
@@ -75,6 +77,23 @@ fun YouScreen(
                     Column(Modifier.weight(1f)) {
                         Text("Your profile", style = MaterialTheme.typography.titleMedium)
                         Text(profile.summary(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Icon(PhosphorIcons.CaretRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+
+        item {
+            Panel(onClick = onEditGoals) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        Modifier.size(52.dp).background(MaterialTheme.colorScheme.surfaceContainerHighest, CircleShape),
+                        contentAlignment = Alignment.Center,
+                    ) { Icon(PhosphorIcons.ChartLineUp, null, Modifier.size(26.dp), tint = MetricColors.steps) }
+                    Spacer(Modifier.width(14.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("Your goals", style = MaterialTheme.typography.titleMedium)
+                        Text(goals.summary(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Icon(PhosphorIcons.CaretRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }

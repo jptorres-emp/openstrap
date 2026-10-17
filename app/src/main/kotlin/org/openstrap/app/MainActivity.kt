@@ -166,6 +166,12 @@ private fun AppRoot(container: AppContainer) {
     var sleepStack by rememberSaveable(stateSaver = Detail.StackSaver) { mutableStateOf(emptyList<Detail>()) }
     val history: org.openstrap.app.ui.dashboard.DailyHistory = { m, from, to -> container.health.daily(m, from, to) }
     var editProfile by rememberSaveable { mutableStateOf(false) }
+    var editGoals by rememberSaveable { mutableStateOf(false) }
+    val goals by container.settings.goals.collectAsStateWithLifecycle(org.openstrap.app.data.settings.Goals())
+    val todayTileNames by container.settings.todayTileNames.collectAsStateWithLifecycle(null)
+    // Unknown names (a metric since renamed) drop out; nothing chosen yet means all of them.
+    val todayTiles = todayTileNames?.mapNotNull { n -> org.openstrap.app.ui.dashboard.Metric.entries.firstOrNull { it.name == n } }
+        ?.takeIf { it.isNotEmpty() } ?: org.openstrap.app.ui.glow.TODAY_TILES
     val recovery by dayVm.recovery.collectAsStateWithLifecycle()
     val profile by deviceVm.profile.collectAsStateWithLifecycle()
     val day by dayVm.state.collectAsStateWithLifecycle()
@@ -228,7 +234,7 @@ private fun AppRoot(container: AppContainer) {
     val openStrap: () -> Unit = { tab = Tab.You.ordinal; showStrap = true }
     // The pages are what the glass nav bar blurs as they scroll under it.
     val navGlass = dev.chrisbanes.haze.rememberHazeState()
-    CompositionLocalProvider(LocalOpenStrap provides openStrap) {
+    CompositionLocalProvider(LocalOpenStrap provides openStrap, org.openstrap.app.ui.dashboard.LocalGoals provides goals) {
         Scaffold(
             bottomBar = {
                 FloatingNavBar(Tab.entries.map { NavItem(it.label, it.icon, it.selectedIcon) }, tab, { tab = it; todayStack = emptyList(); activityStack = emptyList(); recoveryStack = emptyList(); sleepStack = emptyList(); showAlarms = false; showStrap = false; showDesignLab = false }, glass = if (BuildConfig.DEBUG && glowToday) navGlass else null)
@@ -237,6 +243,9 @@ private fun AppRoot(container: AppContainer) {
         ) { padding ->
             if (editProfile) {
                 org.openstrap.app.ui.device.ProfileDialog(profile, onSave = { deviceVm.saveProfile(it); editProfile = false }, onDismiss = { editProfile = false })
+            }
+            if (editGoals) {
+                org.openstrap.app.ui.device.GoalsDialog(goals, onSave = { g -> scope.launch { container.settings.saveGoals(g) }; editGoals = false }, onDismiss = { editGoals = false })
             }
             HorizontalPager(pager, androidx.compose.ui.Modifier.hazeSource(navGlass), userScrollEnabled = !subScreenOpen, key = { it }) { page ->
                 val pullToSync: @androidx.compose.runtime.Composable (@androidx.compose.runtime.Composable () -> Unit) -> Unit = { screen ->
@@ -265,6 +274,12 @@ private fun AppRoot(container: AppContainer) {
                                     sync = sync as? SyncState.Running,
                                     workouts = workouts,
                                     onOpenWorkout = { todayStack = listOf(Detail.Workout(it)) },
+                                    liveEnabled = liveEnabled.takeIf { connection is ConnectionState.Connected },
+                                    onLiveToggle = { container.strap.setLiveHeartRate(it) },
+                                    onOpenActivity = { tab = Tab.Activity.ordinal },
+                                    history = history,
+                                    tiles = todayTiles,
+                                    onTilesChange = { m -> scope.launch { container.settings.saveTodayTiles(m.map { it.name }) } },
                                 ) else TodayScreen(
                                     day, live, battery, charging, dayVm::previousDay, dayVm::nextDay, padding,
                                     picker = picker,
@@ -374,6 +389,8 @@ private fun AppRoot(container: AppContainer) {
                         YouScreen(
                             deviceVm, padding,
                             onEditProfile = { editProfile = true },
+                            goals = goals,
+                            onEditGoals = { editGoals = true },
                             onOpenStrap = { showStrap = true },
                             onExportCsv = { csvLauncher.launch("openstrap-export.zip") },
                             onExportHealthConnect = exportHealthConnect,

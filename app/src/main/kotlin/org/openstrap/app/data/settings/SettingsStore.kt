@@ -133,10 +133,41 @@ class SettingsStore(private val context: Context) {
         }
     }
 
-    /** Forgets the strap and the Zepp sign-in; the user's profile stays. */
+    private val stepGoal = androidx.datastore.preferences.core.intPreferencesKey("goal_steps")
+    private val sleepGoal = androidx.datastore.preferences.core.intPreferencesKey("goal_sleep_minutes")
+    private val activeGoal = androidx.datastore.preferences.core.intPreferencesKey("goal_active_hours")
+
+    val goals: Flow<Goals> = context.dataStore.data.map { prefs ->
+        Goals(
+            prefs[stepGoal] ?: Goals.DEFAULT_STEPS,
+            prefs[sleepGoal] ?: Goals.DEFAULT_SLEEP_MINUTES,
+            prefs[activeGoal] ?: Goals.DEFAULT_ACTIVE_HOURS,
+        )
+    }
+
+    suspend fun saveGoals(g: Goals) {
+        context.dataStore.edit {
+            it[stepGoal] = g.steps
+            it[sleepGoal] = g.sleepMinutes
+            it[activeGoal] = g.activeHours
+        }
+    }
+
+    private val todayTiles = stringPreferencesKey("today_tiles")
+
+    /** The metrics Today's What changed shows, by name; null until the user picks (then it shows them all). */
+    val todayTileNames: Flow<List<String>?> = context.dataStore.data.map { prefs ->
+        prefs[todayTiles]?.split(',')?.filter { it.isNotEmpty() }
+    }
+
+    suspend fun saveTodayTiles(names: List<String>) {
+        context.dataStore.edit { it[todayTiles] = names.joinToString(",") }
+    }
+
+    /** Forgets the strap and the Zepp sign-in; the user's profile and goals stay. */
     suspend fun forgetDevice() {
         context.dataStore.edit { prefs ->
-            val keep = setOf(birthYear, sex, weight, height, imperial)
+            val keep = setOf(birthYear, sex, weight, height, imperial, stepGoal, sleepGoal, activeGoal, todayTiles)
             prefs.asMap().keys.filter { it !in keep }.forEach { prefs.remove(it) }
         }
     }

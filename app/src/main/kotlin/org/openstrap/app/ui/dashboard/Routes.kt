@@ -1,6 +1,8 @@
 package org.openstrap.app.ui.dashboard
 
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.saveable.Saver
+import org.openstrap.app.data.settings.Goals
 import org.openstrap.app.data.DailyMetric
 
 /** A metric with its own detail screen: its title, unit, decimals shown, and the per-day series behind it. */
@@ -17,6 +19,9 @@ enum class Metric(val title: String, val unit: String, val decimals: Int, val da
 
     fun format(v: Float): String = if (this == Steps) "%,d".format(Math.round(v)) else "%.${decimals}f".format(v)
 }
+
+/** Your daily goals, provided once at the top of the app so every screen measures against the same ones. */
+val LocalGoals = compositionLocalOf { Goals() }
 
 /** A screen pushed on top of a tab. Each tab keeps its own, so opening one never moves you to another tab. */
 sealed interface Detail {

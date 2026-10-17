@@ -147,7 +147,7 @@ fun ProfileDialog(profile: UserProfile, onSave: (UserProfile) -> Unit, onDismiss
 }
 
 @Composable
-private fun NumberField(
+internal fun NumberField(
     value: String,
     onChange: (String) -> Unit,
     label: String,

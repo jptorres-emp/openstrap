@@ -19,7 +19,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import org.openstrap.app.ui.components.pressClickable
+import org.openstrap.app.ui.dashboard.DailyHistory
+import kotlin.math.roundToInt
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -41,7 +48,7 @@ import org.openstrap.app.ui.dashboard.DayViewModel
 import org.openstrap.app.ui.dashboard.Metric
 import org.openstrap.app.ui.dashboard.Narrative
 import org.openstrap.app.ui.dashboard.SLEEP_NAMES
-import org.openstrap.app.ui.dashboard.STEP_GOAL
+import org.openstrap.app.ui.dashboard.LocalGoals
 import org.openstrap.app.ui.dashboard.ScreenList
 import org.openstrap.app.ui.dashboard.avg
 import org.openstrap.app.ui.dashboard.chargeLeads
@@ -70,13 +77,35 @@ fun GlowTodayScreen(
     sync: SyncState.Running? = null,
     workouts: List<org.openstrap.app.data.WorkoutAnalysis> = emptyList(),
     onOpenWorkout: (Long) -> Unit = {},
+    /** Whether live heart rate is on; null hides the switch. */
+    liveEnabled: Boolean? = null,
+    onLiveToggle: (Boolean) -> Unit = {},
+    onOpenActivity: () -> Unit = {},
+    /** Per-day history for the Monday recap; null leaves the recap out. */
+    history: DailyHistory? = null,
+    /** The statistics What changed shows, in order. */
+    tiles: List<Metric> = TODAY_TILES,
+    onTilesChange: (List<Metric>) -> Unit = {},
 ) {
     // The glow holds still while the list scrolls, so scrolling stays as smooth as on other screens.
     val list = rememberLazyListState()
+    var choosing by rememberSaveable { mutableStateOf(false) }
+    if (choosing) TilesDialog(tiles, onSave = { onTilesChange(it); choosing = false }, onDismiss = { choosing = false })
+    val extras = TodayExtras(liveEnabled, onLiveToggle, onOpenActivity, history, tiles) { choosing = true }
     CompositionLocalProvider(LocalGlowPaused provides { list.isScrollInProgress }) {
-        TodayList(state, liveHeartRate, battery, charging, onPrev, onNext, contentPadding, picker, onOpenSleep, onOpenMetric, recovery, onOpenRecovery, sync, workouts, onOpenWorkout, list)
+        TodayList(state, liveHeartRate, battery, charging, onPrev, onNext, contentPadding, picker, onOpenSleep, onOpenMetric, recovery, onOpenRecovery, sync, workouts, onOpenWorkout, list, extras)
     }
 }
+
+/** Today's newer controls, kept together so the list's signature stays readable. */
+private class TodayExtras(
+    val liveEnabled: Boolean?,
+    val onLiveToggle: (Boolean) -> Unit,
+    val onOpenActivity: () -> Unit,
+    val history: DailyHistory?,
+    val tiles: List<Metric>,
+    val onChooseTiles: () -> Unit,
+)
 
 @Composable
 private fun TodayList(
@@ -96,6 +125,7 @@ private fun TodayList(
     workouts: List<org.openstrap.app.data.WorkoutAnalysis>,
     onOpenWorkout: (Long) -> Unit,
     list: LazyListState,
+    extras: TodayExtras,
 ) = ScreenList(contentPadding, list, gutter = GlowLayout.Gutter) {
     val rec = recovery?.takeIf { it.date == state.date }
     item { DateHeader(state.date, battery, onPrev, onNext, charging, picker, sync) }
@@ -103,19 +133,25 @@ private fun TodayList(
     // Glow: the day's three scores at a glance, the leading one as the hero. The only place they appear.
     item { OverviewCard(state, rec, chargeLeads(state, rec), onOpenRecovery) }
 
+    // Quiet but first: anything the strap warned about this day.
+    if (state.alerts.isNotEmpty()) item { AlertsPanel(state.alerts, onOpenMetric) }
+
+    // Mondays: the week just gone against the one before.
+    if (extras.history != null && isRecapDay(state)) item { WeeklyRecapPanel(state, recovery, workouts, extras.history) }
+
     // Dark grey glow: last night, naps included. Right after waking it's what you want to know, so it leads.
     val hasSleep = state.asleepSeconds != null || state.naps.isNotEmpty()
     val morning = state.date == LocalDate.now() && LocalTime.now().hour < 12
     if (hasSleep && morning) item { SleepPanel(state, onOpenSleep) }
 
     // Quiet: what the readiness score means, then only the signals that moved away from your normal.
-    item { WhatChanged(state, rec?.readiness?.let { Narrative.readinessBody(it) }, onOpenMetric) }
+    item { WhatChanged(state, rec?.readiness?.let { Narrative.readinessBody(it) }, extras.tiles, onOpenMetric, extras.onChooseTiles) }
 
     // Glow: heart rate, beating at the latest reading.
-    item { HeartGlow(state, liveHeartRate) { onOpenMetric(Metric.HeartRate) } }
+    item { HeartGlow(state, liveHeartRate, extras.liveEnabled, extras.onLiveToggle) { onOpenMetric(Metric.HeartRate) } }
 
     // Glow: activity, moving with the day's steps.
-    item { ActivityGlow(state) }
+    item { ActivityGlow(state, extras.onOpenActivity) }
     val dayWorkouts = workouts.filter { it.workout.start in state.dayStart..state.dayEnd }.sortedBy { it.workout.start }
     if (dayWorkouts.isNotEmpty()) item { org.openstrap.app.ui.workout.WorkoutsPanel(dayWorkouts, onOpenWorkout) }
 
@@ -241,13 +277,26 @@ internal fun overviewColor(score: Int?, strain: Boolean) = when {
 }
 
 @Composable
-private fun HeartGlow(state: DayUiState, live: Int?, onClick: () -> Unit) {
+private fun HeartGlow(state: DayUiState, live: Int?, liveEnabled: Boolean?, onLiveToggle: (Boolean) -> Unit, onClick: () -> Unit) {
     val now = live ?: state.latestHeartRate
     val style = GlowStyle.chart(MetricColors.heart).copy(motion = GlowMotion.Heartbeat(now ?: 62))
     GlowCard(style, Modifier.fillMaxWidth(), onClick = onClick) {
         Column {
             // A live reading needs no label (the beating glow says it); an older one says so.
-            GlowHeader("Heart rate", trailing = if (live == null) "Latest" else null)
+            GlowHeader(
+                "Heart rate",
+                trailing = if (live == null) "Latest" else null,
+                // Live readings every few seconds while the app is open; off saves the strap's battery.
+                trailingContent = liveEnabled?.let { on ->
+                    {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("Live", color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodySmall)
+                            Spacer(Modifier.width(8.dp))
+                            GlowSwitch(on, onLiveToggle, accent = MetricColors.heart)
+                        }
+                    }
+                },
+            )
             if (now != null) GlowHeroNumber("$now", "bpm", listOfNotNull(state.restingHeartRate?.let { "Resting $it" }))
             GlowChartGap()
             if (state.heartRate.isEmpty()) {
@@ -274,7 +323,7 @@ private class Signal(
  * baseline, and an arrow on the ones that moved. A tile shows as soon as there is a value or a baseline.
  */
 @Composable
-private fun WhatChanged(state: DayUiState, advice: String?, onOpenMetric: (Metric) -> Unit) {
+private fun WhatChanged(state: DayUiState, advice: String?, tiles: List<Metric>, onOpenMetric: (Metric) -> Unit, onChooseTiles: () -> Unit) {
     val b = state.baselines
     val signals = listOfNotNull(
         Signal("Resting HR", MetricColors.heart, state.restingHeartRate?.toFloat(), b.restingHr, "bpm", 0, 1.5f, false, Metric.RestingHr),
@@ -286,7 +335,8 @@ private fun WhatChanged(state: DayUiState, advice: String?, onOpenMetric: (Metri
         ),
         Signal("Stress", MetricColors.stress, state.stress.avg()?.toFloat(), b.stress, "", 0, 4f, false, Metric.Stress),
         Signal("Breathing", MetricColors.sleepLight, state.breathRate.avg()?.toFloat(), b.breathRate, "/min", 0, 1f, null, Metric.Breathing),
-    ).filter { it.value != null || it.baseline != null }
+    ).filter { (it.value != null || it.baseline != null) && it.target in tiles }
+        .sortedBy { tiles.indexOf(it.target) }
     if (signals.isEmpty() && advice.isNullOrEmpty()) return
 
     DotPanel {
@@ -309,19 +359,27 @@ private fun WhatChanged(state: DayUiState, advice: String?, onOpenMetric: (Metri
         if (signals.isNotEmpty() && signals.all { it.baseline == null }) {
             Text("Your normal builds over the first week of wear.", color = Color.White.copy(alpha = 0.65f), style = MaterialTheme.typography.bodyMedium)
         }
+        Text(
+            "Choose what shows", color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.bodySmall,
+            modifier = Modifier.pressClickable(onChooseTiles),
+        )
     }
 }
 
 @Composable
-private fun ActivityGlow(state: DayUiState) {
-    val progress = state.steps.toFloat() / STEP_GOAL
+private fun ActivityGlow(state: DayUiState, onClick: () -> Unit) {
+    val goals = LocalGoals.current
+    val progress = state.steps.toFloat() / goals.steps
     val style = GlowStyle.chart(MetricColors.steps).copy(motion = GlowMotion.Stride(energy = progress.coerceIn(0f, 1f)))
-    GlowCard(style, Modifier.fillMaxWidth()) {
+    GlowCard(style, Modifier.fillMaxWidth(), onClick = onClick) {
         Column {
-            GlowHeader("Activity")
+            GlowHeader("Activity", chevron = true)
             // How far along the day's goal is; the hourly chart below shows when you moved.
-            val goal = if (state.steps >= STEP_GOAL) "Goal reached" else "%d%% of %,d".format(state.steps * 100 / STEP_GOAL, STEP_GOAL)
-            GlowHeroNumber("${state.steps}", "steps", listOf(goal))
+            val goal = if (state.steps >= goals.steps) "Goal reached" else "%d%% of %,d".format(state.steps * 100 / goals.steps, goals.steps)
+            GlowHeroNumber(
+                "${state.steps}", "steps",
+                listOfNotNull(goal, "Active ${state.activeHours} of ${goals.activeHours} h", state.pai?.let { "PAI ${it.total.roundToInt()}" }),
+            )
             GlowChartGap()
             GlowDotBars(state.hourlySteps, height = GlowLayout.ChartHeight, labels = HOURS, accent = MetricColors.steps) { h, v ->
                 "%02d:00–%02d:00 · %,d steps".format(h, (h + 1) % 24, Math.round(v))

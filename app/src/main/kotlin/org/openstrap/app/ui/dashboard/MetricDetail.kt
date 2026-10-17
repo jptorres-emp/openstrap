@@ -49,7 +49,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 /** How far back a metric detail looks: the selected day, or one value per day (per week, for a year). */
-private enum class Range(val label: String, val days: Int) { Day("Day", 1), Week("Week", 7), Month("Month", 30), Year("Year", 365) }
+internal enum class Range(val label: String, val days: Int) { Day("Day", 1), Week("Week", 7), Month("Month", 30), Year("Year", 365) }
 
 /** Loads one value per day of a metric between two dates; the app root passes the repository's. */
 typealias DailyHistory = (DailyMetric, LocalDate, LocalDate) -> Flow<List<DayStat>>
@@ -128,7 +128,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.dayContent(
     }
 }
 
-private fun colorOf(metric: Metric): Color = when (metric) {
+internal fun colorOf(metric: Metric): Color = when (metric) {
     Metric.HeartRate, Metric.RestingHr -> MetricColors.heart
     Metric.Hrv, Metric.Breathing -> MetricColors.hrv
     Metric.Spo2 -> MetricColors.spo2
@@ -138,7 +138,7 @@ private fun colorOf(metric: Metric): Color = when (metric) {
 }
 
 /** "Within your normal", "Higher than your normal" or "Lower than your normal", with the range itself. */
-private fun statusLine(metric: Metric, value: Float?, normal: History.Normal?): String? {
+internal fun statusLine(metric: Metric, value: Float?, normal: History.Normal?): String? {
     normal ?: return null
     val range = "${metric.format(normal.low)}–${metric.format(normal.high)}${metric.unit.let { if (it.isEmpty()) "" else " $it" }}"
     return when (History.status(value, normal)) {
@@ -262,7 +262,7 @@ private fun RelatedPanel(related: List<Metric>, onOpen: (Metric) -> Unit) {
     }
 }
 
-private val RELATED = mapOf(
+internal val RELATED = mapOf(
     Metric.HeartRate to listOf(Metric.RestingHr, Metric.Hrv, Metric.Stress),
     Metric.RestingHr to listOf(Metric.Hrv, Metric.HeartRate, Metric.SkinTemperature),
     Metric.Hrv to listOf(Metric.RestingHr, Metric.Stress, Metric.Breathing),
@@ -273,7 +273,7 @@ private val RELATED = mapOf(
     Metric.Steps to listOf(Metric.HeartRate),
 )
 
-private val ABOUT = mapOf(
+internal val ABOUT = mapOf(
     Metric.HeartRate to (
         "How fast your heart beats, measured all day by the strap." to
             "Movement, stress, caffeine, heat and illness raise it; rest and sleep bring it down."

@@ -254,14 +254,14 @@ private fun AppRoot(container: AppContainer) {
                 when (Tab.entries[page]) {
                     Tab.Today -> PushContent(todayStack, depth = { it.size }) { stack ->
                         when (val detail = stack.lastOrNull()) {
-                            is Detail.OfMetric -> MetricDetailScreen(
+                            is Detail.OfMetric -> MetricDetail(BuildConfig.DEBUG && glowToday, 
                                 detail.metric, day, history = history,
                                 liveHeartRate = live, liveEnabled = liveEnabled, canUseLive = connection is ConnectionState.Connected,
                                 onLiveToggle = { container.strap.setLiveHeartRate(it) },
                                 onOpenMetric = { todayStack = todayStack + Detail.OfMetric(it) },
                                 contentPadding = padding, onBack = { todayStack = todayStack.dropLast(1) },
                             )
-                            is Detail.Workout -> org.openstrap.app.ui.workout.WorkoutScreen(openWorkout?.takeIf { it.workout.start == detail.start }, padding, onBack = { todayStack = todayStack.dropLast(1) })
+                            is Detail.Workout -> WorkoutDetail(BuildConfig.DEBUG && glowToday, openWorkout?.takeIf { it.workout.start == detail.start }, padding, onBack = { todayStack = todayStack.dropLast(1) })
                             // Today never opens the full workout list; it would only land here from a stale saved stack.
                             null, Detail.AllWorkouts -> pullToSync {
                                 if (BuildConfig.DEBUG && glowToday) org.openstrap.app.ui.glow.GlowTodayScreen(
@@ -296,7 +296,7 @@ private fun AppRoot(container: AppContainer) {
                     }
                     Tab.Recovery -> PushContent(recoveryStack, depth = { it.size }) { stack ->
                         val detail = stack.lastOrNull()
-                        if (detail is Detail.OfMetric) MetricDetailScreen(
+                        if (detail is Detail.OfMetric) MetricDetail(BuildConfig.DEBUG && glowToday, 
                             detail.metric, day, history = history,
                             liveHeartRate = live, liveEnabled = liveEnabled, canUseLive = connection is ConnectionState.Connected,
                             onLiveToggle = { container.strap.setLiveHeartRate(it) },
@@ -316,7 +316,7 @@ private fun AppRoot(container: AppContainer) {
                     }
                     Tab.Sleep -> PushContent(sleepStack, depth = { it.size }) { stack ->
                         val detail = stack.lastOrNull()
-                        if (detail is Detail.OfMetric) MetricDetailScreen(
+                        if (detail is Detail.OfMetric) MetricDetail(BuildConfig.DEBUG && glowToday, 
                             detail.metric, day, history = history,
                             liveHeartRate = live, liveEnabled = liveEnabled, canUseLive = connection is ConnectionState.Connected,
                             onLiveToggle = { container.strap.setLiveHeartRate(it) },
@@ -336,8 +336,8 @@ private fun AppRoot(container: AppContainer) {
                         val detail = stack.lastOrNull()
                         when {
                             detail is Detail.Workout ->
-                                org.openstrap.app.ui.workout.WorkoutScreen(openWorkout?.takeIf { it.workout.start == detail.start }, padding, onBack = { activityStack = activityStack.dropLast(1) })
-                            detail is Detail.OfMetric -> MetricDetailScreen(
+                                WorkoutDetail(BuildConfig.DEBUG && glowToday, openWorkout?.takeIf { it.workout.start == detail.start }, padding, onBack = { activityStack = activityStack.dropLast(1) })
+                            detail is Detail.OfMetric -> MetricDetail(BuildConfig.DEBUG && glowToday, 
                                 detail.metric, day, history = history,
                                 liveHeartRate = live, liveEnabled = liveEnabled, canUseLive = connection is ConnectionState.Connected,
                                 onLiveToggle = { container.strap.setLiveHeartRate(it) },
@@ -346,8 +346,15 @@ private fun AppRoot(container: AppContainer) {
                             )
                             // The full list: its own page on glow, the tab itself on classic.
                             detail is Detail.AllWorkouts || !(BuildConfig.DEBUG && glowToday) -> {
-                                if (detail != null) androidx.activity.compose.BackHandler { activityStack = activityStack.dropLast(1) }
-                                org.openstrap.app.ui.workout.WorkoutsScreen(workouts, padding, onOpen = { activityStack = activityStack + Detail.Workout(it) })
+                                if (detail != null && BuildConfig.DEBUG && glowToday) {
+                                    org.openstrap.app.ui.glow.GlowWorkoutsScreen(
+                                        workouts, padding, onOpen = { activityStack = activityStack + Detail.Workout(it) },
+                                        onBack = { activityStack = activityStack.dropLast(1) },
+                                    )
+                                } else {
+                                    if (detail != null) androidx.activity.compose.BackHandler { activityStack = activityStack.dropLast(1) }
+                                    org.openstrap.app.ui.workout.WorkoutsScreen(workouts, padding, onOpen = { activityStack = activityStack + Detail.Workout(it) })
+                                }
                             }
                             else -> pullToSync {
                                 org.openstrap.app.ui.glow.GlowActivityScreen(
@@ -408,3 +415,26 @@ private fun AppRoot(container: AppContainer) {
         }
     }
 }
+
+/** A metric's detail in the glow language or the classic one. */
+@androidx.compose.runtime.Composable
+private fun MetricDetail(
+    glow: Boolean,
+    metric: org.openstrap.app.ui.dashboard.Metric,
+    state: org.openstrap.app.ui.dashboard.DayUiState,
+    history: org.openstrap.app.ui.dashboard.DailyHistory,
+    liveHeartRate: Int?,
+    liveEnabled: Boolean,
+    canUseLive: Boolean,
+    onLiveToggle: (Boolean) -> Unit,
+    onOpenMetric: (org.openstrap.app.ui.dashboard.Metric) -> Unit,
+    contentPadding: androidx.compose.foundation.layout.PaddingValues,
+    onBack: () -> Unit,
+) = if (glow) org.openstrap.app.ui.glow.GlowMetricDetailScreen(metric, state, history, liveHeartRate, liveEnabled, canUseLive, onLiveToggle, onOpenMetric, contentPadding, onBack)
+else MetricDetailScreen(metric, state, history, liveHeartRate, liveEnabled, canUseLive, onLiveToggle, onOpenMetric, contentPadding, onBack)
+
+/** A workout's detail in the glow language or the classic one. */
+@androidx.compose.runtime.Composable
+private fun WorkoutDetail(glow: Boolean, a: org.openstrap.app.data.WorkoutAnalysis?, contentPadding: androidx.compose.foundation.layout.PaddingValues, onBack: () -> Unit) =
+    if (glow) org.openstrap.app.ui.glow.GlowWorkoutScreen(a, contentPadding, onBack)
+    else org.openstrap.app.ui.workout.WorkoutScreen(a, contentPadding, onBack)

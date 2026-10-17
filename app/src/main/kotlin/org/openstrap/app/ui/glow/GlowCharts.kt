@@ -110,6 +110,10 @@ fun GlowLineChart(
     color: Color = Ink,
     /** A fixed value axis (e.g. 0..100 for scores); null fits the data. */
     yRange: ClosedFloatingPointRange<Float>? = null,
+    /** A usual range drawn as a faint band between two dotted lines (e.g. your normal). */
+    band: ClosedFloatingPointRange<Float>? = null,
+    /** How the average label prints a value. */
+    format: (Float) -> String = { it.roundToInt().toString() },
     /** Text for the touch readout at a reading; null turns scrubbing off. */
     describe: ((index: Int, value: Float) -> String)? = null,
 ) {
@@ -117,24 +121,33 @@ fun GlowLineChart(
     var touchX by remember { mutableStateOf<Float?>(null) }
     Canvas(modifier.fillMaxWidth().height(height).let { if (describe != null) it.scrub(values) { x -> touchX = x } else it }) {
         val known = values.filterNotNull()
-        if (known.size < 2) return@Canvas
+        if (known.isEmpty()) return@Canvas
         val axisH = if (labels.isEmpty()) 0f else 18.dp.toPx()
         val top = 10.dp.toPx()
         val h = size.height - axisH
-        val lo = yRange?.start ?: known.min()
-        val hi = (yRange?.endInclusive ?: known.max()).coerceAtLeast(lo + 1f)
+        val lo = yRange?.start ?: minOf(known.min(), band?.start ?: Float.MAX_VALUE)
+        val hi = (yRange?.endInclusive ?: maxOf(known.max(), band?.endInclusive ?: -Float.MAX_VALUE)).let { if (it - lo < 1e-3f) lo + 1f else it }
         // Inset by the end dot's halo, so a reading at the very edge isn't cut off.
         val inset = 7.dp.toPx()
-        fun xOf(i: Int) = inset + i / (values.size - 1f) * (size.width - inset * 2)
+        fun xOf(i: Int) = inset + i / (values.size - 1f).coerceAtLeast(1f) * (size.width - inset * 2)
         fun yOf(v: Float) = top + (h - top) * (1f - (v - lo) / (hi - lo))
 
         listOf(0f, 0.5f, 1f).forEach { dottedLine(top + (h - top) * it) }
+        band?.let { b ->
+            val y0 = yOf(b.endInclusive)
+            val y1 = yOf(b.start)
+            drawRect(color.copy(alpha = 0.10f), Offset(0f, y0), Size(size.width, y1 - y0))
+            dottedLine(y0, color.copy(alpha = 0.45f), gap = 4.dp)
+            dottedLine(y1, color.copy(alpha = 0.45f), gap = 4.dp)
+        }
 
         // Runs of consecutive readings; a gap starts a new run.
         val runs = mutableListOf<MutableList<Offset>>(mutableListOf())
         values.forEachIndexed { i, v ->
             if (v == null) { if (runs.last().isNotEmpty()) runs += mutableListOf<Offset>() } else runs.last() += Offset(xOf(i), yOf(v))
         }
+        // A lone reading between gaps is a dot, so a sparse week still shows its days.
+        runs.filter { it.size == 1 }.forEach { drawCircle(color, 2.6.dp.toPx(), it.first()) }
         runs.filter { it.size >= 2 }.forEach { pts ->
             val line = smoothPath(pts)
             val fill = Path().apply { addPath(line); lineTo(pts.last().x, h); lineTo(pts.first().x, h); close() }
@@ -148,7 +161,7 @@ fun GlowLineChart(
             val avg = known.average().toFloat()
             val y = yOf(avg)
             dottedLine(y, Ink.copy(alpha = 0.5f), gap = 4.dp)
-            text(m, "avg ${avg.roundToInt()}", axisText.copy(color = Ink.copy(alpha = 0.8f)), size.width, y - 16.dp.toPx(), align = 1f)
+            text(m, "avg ${format(avg)}", axisText.copy(color = Ink.copy(alpha = 0.8f)), size.width, y - 16.dp.toPx(), align = 1f)
         }
 
         val lastIndex = values.indexOfLast { it != null }

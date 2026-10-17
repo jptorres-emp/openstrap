@@ -258,7 +258,7 @@ private fun WorkoutsPanel(date: LocalDate, workouts: List<WorkoutAnalysis>, onOp
 }
 
 @Composable
-private fun WorkoutLine(a: WorkoutAnalysis, showDate: Boolean, onClick: () -> Unit) {
+internal fun WorkoutLine(a: WorkoutAnalysis, showDate: Boolean, onClick: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().pressClickable(onClick, RoundedCornerShape(12.dp), scale = 0.98f).padding(vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically,

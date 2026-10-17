@@ -107,7 +107,15 @@ class DayViewModel(
         combine(selected, profile, repo.changes().debounce(800)) { d, p, _ -> d to p }
             .mapLatest { (d, p) ->
                 withContext(Dispatchers.Default) {
-                    runCatching { repo.recovery(d, p) }.onFailure { Log.w("OpenStrap", "recovery failed", it) }.getOrNull()
+                    // mapLatest cancels this when newer data arrives; that's not a failure, so let it through.
+                    try {
+                        repo.recovery(d, p)
+                    } catch (e: kotlinx.coroutines.CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        Log.w("OpenStrap", "recovery failed", e)
+                        null
+                    }
                 }
             }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)

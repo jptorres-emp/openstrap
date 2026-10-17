@@ -137,7 +137,7 @@ private fun RecoveryPanel(a: WorkoutAnalysis) {
             Box(Modifier.weight(1f)) { Fact("After 1 min", "${signedDrop(drop)} bpm") }
             a.recovery120?.let { Box(Modifier.weight(1f)) { Fact("After 2 min", "${signedDrop(it)} bpm") } }
         }
-        if (rated) DotBar(drop / 40f, color)
+        if (rated) GlowBar(drop / 40f, color)
         Note(
             if (rated) {
                 "How fast your heart rate fell from ${a.endHeartRate} bpm once you stopped. A bigger drop usually means a " +
@@ -166,7 +166,7 @@ private fun ZonesPanel(a: WorkoutAnalysis) {
                     Note("$lo$hi")
                     Text(formatDuration(secs.toLong()), color = Color.White, style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(start = 12.dp).width(56.dp))
                 }
-                DotBar(secs.toFloat() / total, ZONE_COLORS[z])
+                GlowBar(secs.toFloat() / total, ZONE_COLORS[z])
             }
         }
     }

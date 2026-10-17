@@ -204,7 +204,7 @@ private fun StageRows(b: Summaries.SleepBreakdown) {
                     modifier = Modifier.padding(start = 10.dp).width(34.dp),
                 )
             }
-            DotBar(secs.toFloat() / total, color)
+            GlowBar(secs.toFloat() / total, color)
         }
     }
 }
@@ -220,7 +220,7 @@ private fun ContributorsPanel(contributors: List<Narrative.Contributor>) {
                     Text(c.rating.label, color = c.rating.color, style = MaterialTheme.typography.titleSmall)
                 }
                 Note(c.detail)
-                DotBar(c.fraction, c.rating.color)
+                GlowBar(c.fraction, c.rating.color)
             }
         }
         Note("Ratings use general sleep guidance (7+ hours, about a fifth each of deep and REM sleep). They're a guide, not a medical assessment.")
@@ -364,7 +364,7 @@ private fun WeekPanel(state: DayUiState) {
                     Note("Wake up ${minutesClock(r.wake)}")
                 }
             }
-            DotBar(r.score / 100f, bandColor(r.band))
+            GlowBar(r.score / 100f, bandColor(r.band))
             Note(w.regularityNote.orEmpty())
         }
     }

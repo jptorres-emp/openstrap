@@ -350,7 +350,7 @@ private fun NormalPanel(metric: Metric, normal: History.Normal?, days: Int) {
         DotHeader("Your normal", colorOf(metric), trailing = "Last ${History.NORMAL_DAYS} days")
         if (normal == null) {
             Note("Your normal shows after ${History.MIN_NORMAL_DAYS} days of data ($days so far). It's the range your daily values usually fall in.")
-            DotBar(days / History.MIN_NORMAL_DAYS.toFloat(), colorOf(metric))
+            GlowBar(days / History.MIN_NORMAL_DAYS.toFloat(), colorOf(metric))
             return@DotPanel
         }
         Row(Modifier.fillMaxWidth()) {

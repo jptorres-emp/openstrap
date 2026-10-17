@@ -218,20 +218,31 @@ private fun FlowRow(label: String, value: String, fraction: Float, color: Color)
             Text(label, color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
             Text(value, color = Color.White, style = MaterialTheme.typography.titleSmall)
         }
-        DotBar(fraction, color)
+        GlowBar(fraction, color)
     }
 }
 
-/** A row of dots, the first [fraction] of them lit in [color]: the quiet panels' progress bar. */
+/**
+ * The quiet panels' progress bar: a faint solid track, the first [fraction] of it a glowing line in [color], and a
+ * dot where it ends, like the knob on the sleep score's arc.
+ */
 @Composable
-internal fun DotBar(fraction: Float, color: Color, modifier: Modifier = Modifier) {
-    Canvas(modifier.fillMaxWidth().height(6.dp)) {
-        val step = 7.dp.toPx()
-        val n = (size.width / step).toInt().coerceAtLeast(1)
-        val lit = (fraction.coerceIn(0f, 1f) * n).toInt().coerceAtLeast(if (fraction > 0f) 1 else 0)
-        for (i in 0 until n) {
-            drawCircle(if (i < lit) color else Color.White.copy(alpha = 0.14f), 2.dp.toPx(), Offset(i * step + step / 2, size.height / 2))
-        }
+internal fun GlowBar(fraction: Float, color: Color, modifier: Modifier = Modifier) {
+    Canvas(modifier.fillMaxWidth().height(12.dp)) {
+        val y = size.height / 2
+        val r = 5.dp.toPx()
+        // Inset by the dot's halo, so a full or empty bar keeps its dot inside the panel.
+        val x0 = r
+        val x1 = size.width - r
+        drawLine(Color.White.copy(alpha = 0.10f), Offset(x0, y), Offset(x1, y), 2.dp.toPx(), StrokeCap.Round)
+        val f = fraction.coerceIn(0f, 1f)
+        if (f <= 0f) return@Canvas
+        val end = Offset(x0 + (x1 - x0) * f, y)
+        drawLine(color.copy(alpha = 0.22f), Offset(x0, y), end, 6.dp.toPx(), StrokeCap.Round)
+        drawLine(color, Offset(x0, y), end, 2.2.dp.toPx(), StrokeCap.Round)
+        drawCircle(color.copy(alpha = 0.30f), r, end)
+        drawCircle(color, 3.dp.toPx(), end)
+        drawCircle(Color.White, 1.2.dp.toPx(), end)
     }
 }
 
@@ -261,7 +272,7 @@ private fun ContributorsPanel(ready: Recovery.Readiness) {
                         Text(rating.label, color = rating.color, style = MaterialTheme.typography.titleSmall)
                     }
                     Note(c.detail)
-                    DotBar(c.score / 100f, rating.color)
+                    GlowBar(c.score / 100f, rating.color)
                 }
             }
         }

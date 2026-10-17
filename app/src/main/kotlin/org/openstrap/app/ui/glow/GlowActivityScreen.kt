@@ -140,7 +140,7 @@ private fun PaiPanel(state: DayUiState, week: Map<LocalDate, DailyPai>) {
             val today = state.pai?.daily ?: week[state.date]?.daily
             if (today != null) Fact("Today", "+${today.roundToInt()}")
         }
-        DotBar(total / PAI_TARGET, MetricColors.heart)
+        GlowBar(total / PAI_TARGET, MetricColors.heart)
         val days = (6 downTo 0).map { state.date.minusDays(it.toLong()) }
         GlowDotBars(
             days.map { week[it]?.daily ?: 0f }, height = 72.dp, rows = 6,
@@ -185,7 +185,7 @@ private fun LoadPanel(r: RecoveryResult?, effect: SportEffectRow?, onEditProfile
                 }
                 Text(word, color = color, style = MaterialTheme.typography.titleSmall)
             }
-            DotBar(weekly / (high * 1.25f), if (weekly in low.toFloat()..high.toFloat()) TrendGood else MetricColors.steps)
+            GlowBar(weekly / (high * 1.25f), if (weekly in low.toFloat()..high.toFloat()) TrendGood else MetricColors.steps)
             Note("Productive range $low–$high, from the strap (updated ${shortDate(effect.end)}). Its load is on a different scale from today's.")
         }
         if (r != null && !r.maxHrFromAge) {

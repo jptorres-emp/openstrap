@@ -2,6 +2,7 @@ package org.openstrap.app.ui.glow
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -103,7 +104,11 @@ internal val SleepGlow = GlowStyle.Midnight.copy(
 
 private fun clock(epoch: Long) = Instant.ofEpochSecond(epoch).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("HH:mm"))
 
-/** The night: score (or time asleep) with its sentence, time asleep and in bed, and the stages. */
+/**
+ * The night. The score sits centred inside its arc, the frame it had on the classic hero (time asleep against
+ * your goal when there's no score); then the headline, asleep / in bed / woke, and the stages.
+ * The one centred card: it's the tab's hero.
+ */
 @Composable
 private fun NightCard(state: DayUiState) {
     val session = state.sleep
@@ -111,12 +116,6 @@ private fun NightCard(state: DayUiState) {
     GlowCard(SleepGlow, Modifier.fillMaxWidth()) {
         Column {
             GlowHeader("Sleep", trailing = session?.let { "${clock(it.start)} – ${clock(it.end)}" })
-            if (session != null) {
-                // The score's arc, kept from the classic sleep hero; time asleep against your goal when there's no score.
-                val asleepNow = state.asleepSeconds ?: (session.end - session.start)
-                Spacer(Modifier.height(8.dp))
-                GlowHorizon(session.score?.let { it / 100f } ?: (asleepNow.toFloat() / goal), MetricColors.sleepRem)
-            }
             if (session == null) {
                 Spacer(Modifier.height(GlowLayout.TitleGap))
                 Text(
@@ -127,19 +126,32 @@ private fun NightCard(state: DayUiState) {
                 return@Column
             }
             val asleep = state.asleepSeconds ?: (session.end - session.start)
-            val facts = listOfNotNull(
-                "${formatDuration(asleep)} asleep",
-                "${formatDuration(session.end - session.start)} in bed",
-                session.wakeCount?.let { "Woke $it×" },
-            )
             val score = session.score
-            if (score != null) {
-                GlowHeroNumber("$score", "/ 100", facts)
-                Spacer(Modifier.height(12.dp))
-                Text(Narrative.sleepHeadline(score), color = Color.White, style = MaterialTheme.typography.titleMedium)
-                Text(Narrative.sleepBody(session, asleep), color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodyMedium)
-            } else {
-                GlowHeroNumber("%d:%02d".format(asleep / 3600, asleep % 3600 / 60), "asleep", listOf("Goal ${formatDuration(goal)}") + facts.drop(1))
+            Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                Box(Modifier.fillMaxWidth().padding(top = 6.dp), contentAlignment = Alignment.BottomCenter) {
+                    GlowHorizon(score?.let { it / 100f } ?: (asleep.toFloat() / goal), Color.White, height = 100.dp)
+                    DotMatrixText(
+                        score?.toString() ?: "%d:%02d".format(asleep / 3600, asleep % 3600 / 60),
+                        Modifier.padding(bottom = 6.dp), dot = 5.5.dp, gap = 2.dp,
+                    )
+                }
+                Text(
+                    if (score != null) "Sleep score" else "asleep · goal ${formatDuration(goal)}",
+                    color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.bodySmall,
+                )
+                Spacer(Modifier.height(14.dp))
+                Text(
+                    score?.let { Narrative.sleepHeadline(it) } ?: "${formatDuration(asleep)} asleep",
+                    color = Color.White, style = MaterialTheme.typography.titleMedium,
+                )
+                Text(
+                    listOfNotNull(
+                        if (score != null) "${formatDuration(asleep)} asleep" else null,
+                        "${formatDuration(session.end - session.start)} in bed",
+                        session.wakeCount?.let { "woke $it×" },
+                    ).joinToString(" · "),
+                    color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.bodySmall,
+                )
             }
             if (state.sleepStages.isNotEmpty()) {
                 GlowChartGap()

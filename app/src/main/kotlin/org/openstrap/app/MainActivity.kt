@@ -158,8 +158,9 @@ private fun AppRoot(container: AppContainer) {
     val workouts by workoutsVm.workouts.collectAsStateWithLifecycle()
     val openWorkout by workoutsVm.open.collectAsStateWithLifecycle()
     // What each tab has pushed on top of itself; opening a detail never moves you to another tab.
-    var todayDetail by rememberSaveable(stateSaver = Detail.Saver) { mutableStateOf<Detail?>(null) }
-    var activityDetail by rememberSaveable(stateSaver = Detail.Saver) { mutableStateOf<Detail?>(null) }
+    // Each tab's stack of details, deepest last; back pops one.
+    var todayStack by rememberSaveable(stateSaver = Detail.StackSaver) { mutableStateOf(emptyList<Detail>()) }
+    var activityStack by rememberSaveable(stateSaver = Detail.StackSaver) { mutableStateOf(emptyList<Detail>()) }
     var editProfile by rememberSaveable { mutableStateOf(false) }
     val recovery by dayVm.recovery.collectAsStateWithLifecycle()
     val profile by deviceVm.profile.collectAsStateWithLifecycle()
@@ -212,8 +213,8 @@ private fun AppRoot(container: AppContainer) {
     LaunchedEffect(pager) { snapshotFlow { pager.settledPage }.collect { tab = it } }
     // A detail screen open on this tab keeps the swipe for itself (and for its back gesture).
     val currentDetail = when (Tab.entries[tab]) {
-        Tab.Today -> todayDetail
-        Tab.Activity -> activityDetail
+        Tab.Today -> todayStack.lastOrNull()
+        Tab.Activity -> activityStack.lastOrNull()
         else -> null
     }
     LaunchedEffect(currentDetail) { workoutsVm.open((currentDetail as? Detail.Workout)?.start) }
@@ -224,7 +225,7 @@ private fun AppRoot(container: AppContainer) {
     CompositionLocalProvider(LocalOpenStrap provides openStrap) {
         Scaffold(
             bottomBar = {
-                FloatingNavBar(Tab.entries.map { NavItem(it.label, it.icon, it.selectedIcon) }, tab, { tab = it; todayDetail = null; activityDetail = null; showAlarms = false; showStrap = false; showDesignLab = false }, glass = if (BuildConfig.DEBUG && glowToday) navGlass else null)
+                FloatingNavBar(Tab.entries.map { NavItem(it.label, it.icon, it.selectedIcon) }, tab, { tab = it; todayStack = emptyList(); activityStack = emptyList(); showAlarms = false; showStrap = false; showDesignLab = false }, glass = if (BuildConfig.DEBUG && glowToday) navGlass else null)
             },
             containerColor = MaterialTheme.colorScheme.background,
         ) { padding ->
@@ -236,37 +237,37 @@ private fun AppRoot(container: AppContainer) {
                     org.openstrap.app.ui.components.PullToSync(sync, connection is ConnectionState.Connected, container.strap::syncNow) { screen() }
                 }
                 when (Tab.entries[page]) {
-                    Tab.Today -> PushContent(todayDetail, depth = { if (it == null) 0 else 1 }) { detail ->
-                        when (detail) {
+                    Tab.Today -> PushContent(todayStack, depth = { it.size }) { stack ->
+                        when (val detail = stack.lastOrNull()) {
                             is Detail.OfMetric -> MetricDetailScreen(
                                 detail.metric, day, history = { m, from, to -> container.health.daily(m, from, to) },
                                 liveHeartRate = live, liveEnabled = liveEnabled, canUseLive = connection is ConnectionState.Connected,
                                 onLiveToggle = { container.strap.setLiveHeartRate(it) },
-                                onOpenMetric = { todayDetail = Detail.OfMetric(it) },
-                                contentPadding = padding, onBack = { todayDetail = null },
+                                onOpenMetric = { todayStack = todayStack + Detail.OfMetric(it) },
+                                contentPadding = padding, onBack = { todayStack = todayStack.dropLast(1) },
                             )
-                            is Detail.Workout -> org.openstrap.app.ui.workout.WorkoutScreen(openWorkout?.takeIf { it.workout.start == detail.start }, padding, onBack = { todayDetail = null })
+                            is Detail.Workout -> org.openstrap.app.ui.workout.WorkoutScreen(openWorkout?.takeIf { it.workout.start == detail.start }, padding, onBack = { todayStack = todayStack.dropLast(1) })
                             null -> pullToSync {
                                 if (BuildConfig.DEBUG && glowToday) org.openstrap.app.ui.glow.GlowTodayScreen(
                                     day, live, battery, charging, dayVm::previousDay, dayVm::nextDay, padding,
                                     picker = picker,
                                     onOpenSleep = { tab = Tab.Sleep.ordinal },
-                                    onOpenMetric = { todayDetail = Detail.OfMetric(it) },
+                                    onOpenMetric = { todayStack = listOf(Detail.OfMetric(it)) },
                                     recovery = recovery,
                                     onOpenRecovery = { tab = Tab.Recovery.ordinal },
                                     sync = sync as? SyncState.Running,
                                     workouts = workouts,
-                                    onOpenWorkout = { todayDetail = Detail.Workout(it) },
+                                    onOpenWorkout = { todayStack = listOf(Detail.Workout(it)) },
                                 ) else TodayScreen(
                                     day, live, battery, charging, dayVm::previousDay, dayVm::nextDay, padding,
                                     picker = picker,
                                     onOpenSleep = { tab = Tab.Sleep.ordinal },
-                                    onOpenMetric = { todayDetail = Detail.OfMetric(it) },
+                                    onOpenMetric = { todayStack = listOf(Detail.OfMetric(it)) },
                                     recovery = recovery,
                                     onOpenRecovery = { tab = Tab.Recovery.ordinal },
                                     sync = sync as? SyncState.Running,
                                     workouts = workouts,
-                                    onOpenWorkout = { todayDetail = Detail.Workout(it) },
+                                    onOpenWorkout = { todayStack = listOf(Detail.Workout(it)) },
                                 )
                             }
                         }
@@ -279,11 +280,12 @@ private fun AppRoot(container: AppContainer) {
                         ) { DateHeader(day.date, battery, dayVm::previousDay, dayVm::nextDay, charging, picker, sync as? SyncState.Running) }
                     }
                     Tab.Sleep -> pullToSync { SleepScreen(day, battery, charging, dayVm::previousDay, dayVm::nextDay, padding, picker = picker) }
-                    Tab.Activity -> PushContent(activityDetail, depth = { if (it == null) 0 else 1 }) { detail ->
+                    Tab.Activity -> PushContent(activityStack, depth = { it.size }) { stack ->
+                        val detail = stack.lastOrNull()
                         if (detail is Detail.Workout) {
-                            org.openstrap.app.ui.workout.WorkoutScreen(openWorkout?.takeIf { it.workout.start == detail.start }, padding, onBack = { activityDetail = null })
+                            org.openstrap.app.ui.workout.WorkoutScreen(openWorkout?.takeIf { it.workout.start == detail.start }, padding, onBack = { activityStack = activityStack.dropLast(1) })
                         } else {
-                            org.openstrap.app.ui.workout.WorkoutsScreen(workouts, padding, onOpen = { activityDetail = Detail.Workout(it) })
+                            org.openstrap.app.ui.workout.WorkoutsScreen(workouts, padding, onOpen = { activityStack = listOf(Detail.Workout(it)) })
                         }
                     }
                     Tab.You -> PushContent(

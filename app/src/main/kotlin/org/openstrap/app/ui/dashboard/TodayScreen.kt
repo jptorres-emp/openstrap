@@ -42,6 +42,7 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.time.LocalDate
@@ -85,6 +86,8 @@ fun ScreenList(
     contentPadding: PaddingValues,
     state: LazyListState = rememberLazyListState(),
     index: SectionIndex? = null,
+    /** Space between the screen edge and the cards. */
+    gutter: Dp = 16.dp,
     content: LazyListScope.() -> Unit,
 ) {
     // The status bar gets an opaque strip so cards don't scroll underneath the clock.
@@ -92,7 +95,7 @@ fun ScreenList(
         Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).statusBarsPadding(),
         state = state,
         contentPadding = PaddingValues(
-            start = 16.dp, end = 16.dp,
+            start = gutter, end = gutter,
             top = 4.dp,
             bottom = contentPadding.calculateBottomPadding() + 24.dp,
         ),
@@ -358,7 +361,7 @@ private const val READINESS_HOURS_AFTER_WAKING = 3
  * [READINESS_HOURS_AFTER_WAKING] hours (or from noon when no sleep was recorded). Past days lead with
  * their Readiness, the day's verdict.
  */
-private fun chargeLeads(state: DayUiState, rec: RecoveryResult?): Boolean {
+internal fun chargeLeads(state: DayUiState, rec: RecoveryResult?): Boolean {
     if (state.date != LocalDate.now() || rec?.charge?.latest == null) return false
     val now = java.time.Instant.now().epochSecond
     val wake = state.sleep?.end

@@ -98,6 +98,15 @@ class SettingsStore(private val context: Context) {
         context.dataStore.edit { it[liveHr] = enabled }
     }
 
+    private val glowToday = androidx.datastore.preferences.core.booleanPreferencesKey("debug_glow_today")
+
+    /** Debug builds: show the experimental glow design on the Today tab. Off by default. */
+    val glowTodayEnabled: Flow<Boolean> = context.dataStore.data.map { it[glowToday] ?: false }
+
+    suspend fun setGlowToday(enabled: Boolean) {
+        context.dataStore.edit { it[glowToday] = enabled }
+    }
+
     private val birthYear = androidx.datastore.preferences.core.intPreferencesKey("profile_birth_year")
     private val sex = stringPreferencesKey("profile_sex")
     private val weight = androidx.datastore.preferences.core.floatPreferencesKey("profile_weight_kg")

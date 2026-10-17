@@ -95,6 +95,7 @@ private fun variable(res: Int, weight: Int) = Font(
 
 /** Funnel Display for numbers and headings, Funnel Sans for text. Both SIL OFL 1.1 (see licenses/). */
 val FunnelDisplay = FontFamily(
+    variable(R.font.funnel_display, 300),
     variable(R.font.funnel_display, 400),
     variable(R.font.funnel_display, 500),
     variable(R.font.funnel_display, 600),

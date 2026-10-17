@@ -63,6 +63,8 @@ data class DayUiState(
     val hrvTrend: List<TrendPoint> = emptyList(),
     /** The main sleep, carrying the strap's own score and stage totals when it reported them. */
     val sleep: SleepSession? = null,
+    /** The strap's score for the night before, to show which way sleep moved. */
+    val previousSleepScore: Int? = null,
     val naps: List<SleepSession> = emptyList(),
     /** Each nap's stages and totals, keyed by the nap's start. */
     val napStages: Map<Long, List<StageSpan>> = emptyMap(),
@@ -129,15 +131,17 @@ class DayViewModel(
         val activityAndHr = combine(repo.activity(day), repo.heartRate(day)) { act, hr -> act to hr }
         val vitals = combine(repo.spo2(day), repo.stress(day), repo.hrv(day)) { spo2, stress, hrv -> Triple(spo2, stress, hrv) }
         // Sessions ending from the start of the night into early tomorrow, so tonight's evening naps are included too.
-        val sleep = repo.sleepSessions(DayWindow(night.from, day.to + 12 * 3600)).flatMapLatest { sessions ->
+        val nightBefore = DayWindow.nightEndingOn(date.minusDays(1))
+        val sleep = repo.sleepSessions(DayWindow(nightBefore.from, day.to + 12 * 3600)).flatMapLatest { sessions ->
             // Main sleep = the longest non-nap session that ended in the night window.
             val main = sessions.filter { !it.nap && it.end in night.from..night.to }.maxByOrNull { it.end - it.start }
+            val before = sessions.filter { !it.nap && it.end in nightBefore.from..nightBefore.to }.maxByOrNull { it.end - it.start }
             // Naps belong to the calendar day they started on, not the night window (which ends at 18:00).
             val naps = sessions.filter { it.nap && it.start in day.from..day.to }
             val mainStages = if (main == null) flowOf(emptyList()) else repo.sleepStages(main.start)
             val napStages = if (naps.isEmpty()) flowOf(emptyMap())
             else combine(naps.map { repo.sleepStages(it.start) }) { all -> naps.zip(all) { n, st -> n.start to st.toList() }.toMap() }
-            combine(mainStages, napStages) { st, ns -> SleepParts(main, st, naps, ns) }
+            combine(mainStages, napStages) { st, ns -> SleepParts(main, st, naps, ns, before?.score) }
         }
         val extras = combine(repo.skinTemperature(day), repo.breathRate(night), repo.latestPai(day.to)) { skin, breath, pai ->
             Triple(skin, breath, pai?.takeIf { it.timestamp >= day.from })
@@ -201,6 +205,7 @@ class DayViewModel(
                 restingTrend = restingTrend,
                 hrvTrend = hrvTrend,
                 sleep = session,
+                previousSleepScore = sleepParts.previousScore,
                 naps = naps,
                 napStages = napStages.mapValues { (_, st) -> st.map { StageSpan(it.start, it.end, it.stage) } },
                 napBreakdowns = napStages.filterValues { it.isNotEmpty() }.mapValues { (_, st) -> Summaries.sleepBreakdown(st) },
@@ -237,4 +242,5 @@ private data class SleepParts(
     val mainStages: List<SleepStage>,
     val naps: List<SleepSession>,
     val napStages: Map<Long, List<SleepStage>>,
+    val previousScore: Int? = null,
 )

@@ -64,7 +64,7 @@ private fun DrawScope.label(m: TextMeasurer, text: String, style: TextStyle, x: 
  * Scrubbing for every chart: drag sideways to read values straight away, or press and hold first (the
  * older gesture). Vertical drags still scroll the list and a plain tap still reaches the card.
  */
-private fun Modifier.scrub(key: Any?, onScrub: (Float?) -> Unit): Modifier = this
+internal fun Modifier.scrub(key: Any?, onScrub: (Float?) -> Unit): Modifier = this
     .pointerInput(key) {
         detectHorizontalDragGestures(
             onDragStart = { onScrub(it.x) },
@@ -281,7 +281,7 @@ fun LineChart(
  * A smooth path through [pts] using monotone cubic interpolation (Fritsch–Carlson): curves like a spline
  * but never overshoots the data, so a smoothed heart rate can't show a peak or dip that didn't happen.
  */
-private fun smoothPath(pts: List<Offset>): Path {
+internal fun smoothPath(pts: List<Offset>): Path {
     val path = Path()
     if (pts.isEmpty()) return path
     path.moveTo(pts[0].x, pts[0].y)

@@ -128,7 +128,7 @@ private enum class Tab(val label: String, val icon: androidx.compose.ui.graphics
 }
 
 /** The screens stacked under the You tab, shallowest first. */
-private enum class YouPage { Hub, Strap, Alarms, Firmware }
+private enum class YouPage { Hub, Strap, Alarms, Firmware, DesignLab }
 
 private val BLUETOOTH_PERMISSIONS = arrayOf(
     Manifest.permission.BLUETOOTH_SCAN,
@@ -151,6 +151,8 @@ private fun AppRoot(container: AppContainer) {
     var showAlarms by rememberSaveable { mutableStateOf(false) }
     var showRecovery by rememberSaveable { mutableStateOf(false) }
     var showStrap by rememberSaveable { mutableStateOf(false) }
+    var showDesignLab by rememberSaveable { mutableStateOf(false) }
+    val glowToday by container.settings.glowTodayEnabled.collectAsStateWithLifecycle(false)
     val workoutsVm: org.openstrap.app.ui.workout.WorkoutsViewModel = viewModel(factory = viewModelFactory {
         initializer { org.openstrap.app.ui.workout.WorkoutsViewModel(container.database.healthDao(), container.settings.profile) }
     })
@@ -212,14 +214,14 @@ private fun AppRoot(container: AppContainer) {
     val subScreenOpen = when (Tab.entries[tab]) {
         Tab.Today -> showRecovery
         Tab.Workouts -> workoutStart != null
-        Tab.You -> showStrap || showAlarms || showFirmware
+        Tab.You -> showStrap || showAlarms || showFirmware || showDesignLab
         else -> false
     }
     val openStrap: () -> Unit = { tab = Tab.You.ordinal; showStrap = true }
     CompositionLocalProvider(LocalOpenStrap provides openStrap) {
         Scaffold(
             bottomBar = {
-                FloatingNavBar(Tab.entries.map { NavItem(it.label, it.icon, it.selectedIcon) }, tab, { tab = it; showRecovery = false; workoutStart = null; showAlarms = false; showStrap = false })
+                FloatingNavBar(Tab.entries.map { NavItem(it.label, it.icon, it.selectedIcon) }, tab, { tab = it; showRecovery = false; workoutStart = null; showAlarms = false; showStrap = false; showDesignLab = false })
             },
             containerColor = MaterialTheme.colorScheme.background,
         ) { padding ->
@@ -233,6 +235,19 @@ private fun AppRoot(container: AppContainer) {
                         recovery, day.date, day.dayStart..day.dayEnd, day.sleep?.let { it.start..it.end }, padding,
                         onBack = { showRecovery = false }, onEditProfile = { editProfile = true },
                         strapReadiness = strapReadiness,
+                    ) else if (BuildConfig.DEBUG && glowToday) org.openstrap.app.ui.glow.GlowTodayScreen(
+                        day, live, battery, charging, dayVm::previousDay, dayVm::nextDay, padding,
+                        picker = picker,
+                        onOpenSleep = { tab = Tab.Sleep.ordinal },
+                        onFocus = { target ->
+                            focus = FocusRequest(target)
+                            tab = (if (target == FocusTarget.Breathing) Tab.Sleep else Tab.Heart).ordinal
+                        },
+                        recovery = recovery,
+                        onOpenRecovery = { showRecovery = true },
+                        sync = sync as? SyncState.Running,
+                        workouts = workouts,
+                        onOpenWorkout = { tab = Tab.Workouts.ordinal; workoutStart = it },
                     ) else TodayScreen(
                         day, live, battery, charging, dayVm::previousDay, dayVm::nextDay, padding,
                         picker = picker,
@@ -266,9 +281,12 @@ private fun AppRoot(container: AppContainer) {
                         }
                     }
                     Tab.You -> PushContent(
-                        when { showFirmware -> YouPage.Firmware; showAlarms -> YouPage.Alarms; showStrap -> YouPage.Strap; else -> YouPage.Hub },
-                        depth = { it.ordinal.coerceAtMost(2) },
+                        when { showDesignLab -> YouPage.DesignLab; showFirmware -> YouPage.Firmware; showAlarms -> YouPage.Alarms; showStrap -> YouPage.Strap; else -> YouPage.Hub },
+                        depth = { if (it == YouPage.DesignLab) 1 else it.ordinal.coerceAtMost(2) },
                     ) { youPage -> when (youPage) {
+                    YouPage.DesignLab -> {
+                        org.openstrap.app.ui.glow.GlowLabScreen(padding, onBack = { showDesignLab = false })
+                    }
                     YouPage.Firmware -> {
                         FirmwareScreen(firmwareVm, padding, onBack = { showFirmware = false })
                     }
@@ -296,6 +314,9 @@ private fun AppRoot(container: AppContainer) {
                             onOpenStrap = { showStrap = true },
                             onExportCsv = { csvLauncher.launch("openstrap-export.zip") },
                             onExportHealthConnect = exportHealthConnect,
+                            onOpenDesignLab = if (BuildConfig.DEBUG) ({ showDesignLab = true }) else null,
+                            glowToday = if (BuildConfig.DEBUG) glowToday else null,
+                            onGlowToday = { on -> scope.launch { container.settings.setGlowToday(on) } },
                         )
                     }
                     } }

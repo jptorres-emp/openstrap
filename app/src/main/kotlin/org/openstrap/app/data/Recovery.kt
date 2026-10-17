@@ -42,6 +42,10 @@ object Recovery {
         val nadirTime: Long? = null,
         val skinTemperature: Float? = null,
         val breathRate: Float? = null,
+        /** Mean blood oxygen during the sleep, %. */
+        val spo2: Float? = null,
+        /** Oxygen-desaturation events per hour asleep, from the strap's nightly sleep-apnea summary. */
+        val odi: Float? = null,
     )
 
     /** One minute of the day as the charge model sees it. */
@@ -119,6 +123,8 @@ object Recovery {
         RecoveryIndex("Recovery index", 0.07f),
         Temperature("Body temperature", 0.10f, physiological = true),
         Breathing("Breathing rate", 0.03f, physiological = true),
+        BloodOxygen("Blood oxygen", 0.05f, physiological = true),
+        BreathingDisturbances("Breathing disturbances", 0.04f),
         PreviousDayLoad("Previous day's load", 0.07f),
         LoadBalance("Training load balance", 0.05f),
     }
@@ -243,6 +249,22 @@ object Recovery {
             }
         }
 
+        // Blood oxygen: only a fall below the usual nightly level counts; a higher reading is no better.
+        val spo2Base = baseline(past.mapNotNull { it.spo2 })
+        tonight.spo2?.let { o ->
+            if (spo2Base != null) {
+                val dev = o - spo2Base.mean
+                val score = (100 - SPO2_POINTS_PER_PERCENT * (-dev - SPO2_DEAD_BAND).coerceAtLeast(0f)).toInt().coerceIn(0, 100)
+                out += Contributor(Factor.BloodOxygen, score, "${"%.1f".format(o)} % · ${signed(dev, 1)} vs usual")
+                if (dev <= -SPO2_ALERT_DROP) alerts += "overnight blood oxygen down ${"%.1f".format(-dev)} %"
+            }
+        }
+
+        // Breathing disturbances: oxygen-desaturation events per hour, on the usual 5/15/30 clinical bands.
+        tonight.odi?.let { odi ->
+            out += Contributor(Factor.BreathingDisturbances, odiScore(odi), "${"%.1f".format(odi)} events/h · ${odiBand(odi)}")
+        }
+
         // Training load: yesterday against the chronic load, and the acute:chronic balance (EWMA).
         if (dailyLoad.size >= 7) {
             val (acute, chronic) = ewmaLoads(dailyLoad)
@@ -282,6 +304,28 @@ object Recovery {
     const val RED_FLAG_HEADROOM = 30
     const val ALERT_CAP = 55
     private const val MIN_CHRONIC_LOAD = 20f
+    /** Readiness points lost per % of nightly SpO2 below baseline, beyond a 1 % dead band (−2 % ≈ 75, −3 % ≈ 50). */
+    const val SPO2_POINTS_PER_PERCENT = 25
+    const val SPO2_DEAD_BAND = 1f
+    const val SPO2_ALERT_DROP = 2f
+
+    /**
+     * Score for an oxygen-desaturation index (events per hour), on the bands Zepp and sleep clinics use: under 5
+     * normal, 5-15 mild, 15-30 moderate, over 30 severe. Within each band the score falls linearly.
+     */
+    fun odiScore(odi: Float): Int = when {
+        odi < 5f -> 100
+        odi < 15f -> 100 - (odi - 5f) * 2.5f
+        odi < 30f -> 75 - (odi - 15f) * 2f
+        else -> 45 - (odi - 30f)
+    }.toInt().coerceIn(20, 100)
+
+    fun odiBand(odi: Float) = when {
+        odi < 5f -> "normal"
+        odi < 15f -> "mild"
+        odi < 30f -> "moderate"
+        else -> "high"
+    }
 
     /**
      * Our sleep score when the strap didn't give one: duration against need (50%), efficiency (25%)

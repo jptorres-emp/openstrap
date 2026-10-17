@@ -40,19 +40,28 @@ class RecoveryEngine(private val dao: HealthDao) {
         val breath = dao.breathRateOnce(from, to)
         val strapResting = dao.restingHrOnce(from, to)
         val pai = dao.paiOnce(from, to).lastOrNull()
+        val sleepSpo2 = dao.sleepSpo2Once(from, to)
+        // A night's summary uses the sleep result's day rule: the date of belongTime + 2 h.
+        val osaByMorning = dao.osaResultsOnce(from - 86_400, to).associateBy {
+            Instant.ofEpochSecond(it.belongTime + 2 * 3600).atZone(zone).toLocalDate().atStartOfDay(zone).toEpochSecond()
+        }
 
         // One main sleep per morning: the longest non-nap session ending that day.
         val mains = sessions.filter { !it.nap }
             .groupBy { morningOf(it, zone) }
             .mapValues { (_, v) -> v.maxBy { it.end - it.start } }
-        val nights = mains.map { (morning, s) -> night(morning, s, hr, hrv, skin, breath) }.sortedBy { it.day }
+        val nights = mains.map { (morning, s) -> night(morning, s, hr, hrv, skin, breath, sleepSpo2, osaByMorning[morning]) }.sortedBy { it.day }
 
         // Daytime resting HR: the strap's daily values when it has them, else the nightly lowest plus a little.
         val restingHr = strapResting.takeLast(14).map { it.bpm.toFloat() }.median()
             ?: nights.takeLast(14).mapNotNull { it.restingHr }.median()?.plus(3f)
             ?: 60f
         val age = profile.age()
-        val observedPeak = hr.map { it.second }.sortedDescending().getOrNull(1)
+        // The second-highest value, so one artefact can't set it: per-minute HR, and the strap's daily exercise maximum.
+        val observedPeak = listOfNotNull(
+            hr.map { it.second }.sortedDescending().getOrNull(1),
+            dao.dailyMaxHrOnce(from, to).map { it.bpm }.sortedDescending().getOrNull(1),
+        ).maxOrNull()
         val maxHr = Recovery.maxHeartRate(age, pai?.maxHeartRate, observedPeak)
         val female = profile.sex == UserProfile.Sex.Female
 
@@ -110,12 +119,15 @@ class RecoveryEngine(private val dao: HealthDao) {
         hrv: List<org.openstrap.app.data.db.HrvSample>,
         skin: List<org.openstrap.app.data.db.SkinTemperature>,
         breath: List<org.openstrap.app.data.db.BreathRate>,
+        spo2: List<org.openstrap.app.data.db.SleepSpo2Sample>,
+        osa: org.openstrap.app.data.db.OsaResultRow?,
     ): Recovery.Night {
         val inSleep = { t: Long -> t in s.start..s.end }
         val sleepHr = hr.filter { inSleep(it.first) }
         val asleep = listOfNotNull(s.deepMinutes, s.lightMinutes, s.remMinutes).takeIf { it.isNotEmpty() }?.sum()
             ?: (((s.end - s.start) / 60).toInt() - (s.awakeMinutes ?: 0))
         val skinValues = skin.filter { inSleep(it.timestamp) }.map { it.celsius }
+        val spo2Values = spo2.filter { inSleep(it.timestamp) }.map { it.percent.toFloat() }
         return Recovery.Night(
             day = morning,
             start = s.start,
@@ -131,6 +143,9 @@ class RecoveryEngine(private val dao: HealthDao) {
             // A handful of readings doesn't describe a night; the strap logs one a minute when worn.
             skinTemperature = skinValues.takeIf { it.size >= 30 }?.median(),
             breathRate = breath.filter { inSleep(it.timestamp) }.map { it.perMinute.toFloat() }.mean(),
+            spo2 = spo2Values.takeIf { it.size >= MIN_SPO2_READINGS }?.mean(),
+            // Events per hour need a real night to divide by.
+            odi = osa?.takeIf { asleep >= MIN_ODI_SLEEP_MINUTES }?.let { it.eventCount * 60f / asleep },
         )
     }
 
@@ -142,6 +157,9 @@ class RecoveryEngine(private val dao: HealthDao) {
         const val MIN_WORN_MINUTES = 8 * 60
         /** A minute with fewer steps than this counts as still for the calm stress level. */
         const val CALM_STEPS = 10
+        /** Sleep SpO2 readings needed before a night's mean counts. */
+        const val MIN_SPO2_READINGS = 5
+        const val MIN_ODI_SLEEP_MINUTES = 120
     }
 }
 

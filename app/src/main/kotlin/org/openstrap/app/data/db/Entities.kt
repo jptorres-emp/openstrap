@@ -177,3 +177,76 @@ data class StrapReadinessRow(
     val sleepRestingHr: Int?,
     val algorithmVersion: String,
 )
+
+/** Blood oxygen measured during sleep (type 38). Separate from daytime spot readings ([Spo2Sample]). */
+@Entity(tableName = "sleep_spo2")
+data class SleepSpo2Sample(
+    @PrimaryKey val timestamp: Long,
+    val percent: Int,
+)
+
+/**
+ * One oxygen-desaturation event during sleep (type 39): the size of the drop, and the 240 SpO2 and 240 heart-rate
+ * samples the strap recorded around it, one unsigned byte each. The samples are null for the short record form.
+ */
+@Entity(tableName = "osa_event")
+class OsaEventRow(
+    @PrimaryKey val timestamp: Long,
+    val drop: Int,
+    val spo2: ByteArray?,
+    val heartRate: ByteArray?,
+)
+
+/**
+ * The strap's nightly sleep-apnea summary (type 74), keyed by the night's belongTime (the same day rule as the
+ * sleep result). Units of [validTime], [odiRaw] and [odiScore] are unverified, so they're kept as sent; readiness
+ * uses only [eventCount].
+ */
+@Entity(tableName = "osa_result")
+data class OsaResultRow(
+    @PrimaryKey val belongTime: Long,
+    val validTime: Long,
+    val odiRaw: Long,
+    val odiScore: Int,
+    val dispCode: Int,
+    val eventCount: Int,
+    val version: Int,
+)
+
+/** The day's highest exercise heart rate (type 61). */
+@Entity(tableName = "daily_max_hr")
+data class DailyMaxHr(
+    /** Start of the local day, epoch seconds. */
+    @PrimaryKey val day: Long,
+    val bpm: Int,
+)
+
+/** Heart rate after a workout ended (type 70): about one bpm per second, one unsigned byte each. */
+@Entity(tableName = "recovery_hr")
+class RecoveryHeartRateRow(
+    @PrimaryKey val workoutStart: Long,
+    val samples: ByteArray,
+)
+
+/** Extra per-minute activity (type 88). The duration units are unverified, so they're kept as sent. */
+@Entity(tableName = "activity_extended")
+data class ActivityExtendedMinute(
+    @PrimaryKey val timestamp: Long,
+    val floors: Int,
+    val run: Int,
+    val fatBurn: Int,
+    val stand: Int,
+    val walk: Int,
+    val sit: Int,
+    val steps: Int,
+    val calories: Int,
+    val distanceCm: Int,
+)
+
+/** A record whose format isn't decoded yet (type 57), kept whole so it can be parsed later. */
+@Entity(tableName = "raw_record", primaryKeys = ["type", "timestamp"])
+class RawRecord(
+    val type: Int,
+    val timestamp: Long,
+    val payload: ByteArray,
+)

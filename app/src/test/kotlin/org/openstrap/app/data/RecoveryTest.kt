@@ -293,4 +293,51 @@ class RecoveryTest {
         assertTrue(r.anchored)
         assertEquals(atWake, r.points.last().value, 0.5f)
     }
+
+    @Test
+    fun overnightOxygenDropLowersReadinessAndAlerts() {
+        val past = history().map { it.copy(spo2 = 96f) }
+        val normal = Recovery.readiness(night(31).copy(spo2 = 95.8f), past)
+        assertEquals(100, normal.contributors.first { it.factor == Factor.BloodOxygen }.score)
+
+        val low = Recovery.readiness(night(31).copy(spo2 = 93f), past)
+        val c = low.contributors.first { it.factor == Factor.BloodOxygen }
+        assertEquals(50, c.score) // 3 % below usual: 2 % past the dead band, 25 points each
+        assertTrue(low.alertSignals.any { "blood oxygen" in it })
+        assertTrue(low.score!! < normal.score!!)
+    }
+
+    @Test
+    fun higherOxygenThanUsualIsNotABonus() {
+        val past = history().map { it.copy(spo2 = 95f) }
+        val r = Recovery.readiness(night(31).copy(spo2 = 98f), past)
+        assertEquals(100, r.contributors.first { it.factor == Factor.BloodOxygen }.score)
+        assertFalse(r.alertSignals.any { "blood oxygen" in it })
+    }
+
+    @Test
+    fun oxygenNeedsABaseline() {
+        val r = Recovery.readiness(night(31).copy(spo2 = 90f), history())
+        assertNull(r.contributors.firstOrNull { it.factor == Factor.BloodOxygen })
+    }
+
+    @Test
+    fun odiFollowsClinicalBands() {
+        assertEquals(100, Recovery.odiScore(0f))
+        assertEquals(100, Recovery.odiScore(4.9f))
+        assertEquals(75, Recovery.odiScore(15f))
+        assertEquals(45, Recovery.odiScore(30f))
+        assertEquals(20, Recovery.odiScore(80f))
+        assertEquals("mild", Recovery.odiBand(7f))
+        assertEquals("high", Recovery.odiBand(31f))
+    }
+
+    @Test
+    fun breathingDisturbancesNeedNoBaselineAndDontRedFlag() {
+        val r = Recovery.readiness(night(31).copy(odi = 40f), history())
+        val c = r.contributors.first { it.factor == Factor.BreathingDisturbances }
+        assertEquals(35, c.score)
+        // A chronic signal, not a sign of a bad day: it mustn't trigger the physiological cap.
+        assertFalse(r.capped)
+    }
 }

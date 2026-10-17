@@ -24,9 +24,19 @@ import androidx.room.RoomDatabase
         WorkoutHeartRate::class,
         SportEffectRow::class,
         StrapReadinessRow::class,
+        SleepSpo2Sample::class,
+        OsaEventRow::class,
+        OsaResultRow::class,
+        DailyMaxHr::class,
+        RecoveryHeartRateRow::class,
+        ActivityExtendedMinute::class,
+        RawRecord::class,
     ],
-    version = 4,
-    autoMigrations = [AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3), AutoMigration(from = 3, to = 4)],
+    version = 5,
+    autoMigrations = [
+        AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3), AutoMigration(from = 3, to = 4),
+        AutoMigration(from = 4, to = 5),
+    ],
 )
 abstract class OpenStrapDatabase : RoomDatabase() {
     abstract fun healthDao(): HealthDao

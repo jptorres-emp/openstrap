@@ -7,7 +7,14 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
 import org.openstrap.app.ble.GattClient
 import org.openstrap.app.ble.StrapUuids
+import org.openstrap.app.data.db.ActivityExtendedMinute
 import org.openstrap.app.data.db.ActivityMinute
+import org.openstrap.app.data.db.DailyMaxHr
+import org.openstrap.app.data.db.OsaEventRow
+import org.openstrap.app.data.db.OsaResultRow
+import org.openstrap.app.data.db.RawRecord
+import org.openstrap.app.data.db.RecoveryHeartRateRow
+import org.openstrap.app.data.db.SleepSpo2Sample
 import org.openstrap.app.data.db.BreathRate
 import org.openstrap.app.data.db.HealthDao
 import org.openstrap.app.data.db.HeartRateSample
@@ -27,6 +34,13 @@ import org.openstrap.app.data.settings.SettingsStore
 import org.openstrap.protocol.ChannelSession
 import org.openstrap.protocol.history.ActivityLayout
 import org.openstrap.protocol.history.ActivitySample
+import org.openstrap.protocol.history.DailyMaxHeartRate
+import org.openstrap.protocol.history.OsaResult
+import org.openstrap.protocol.history.RecoveryHeartRate
+import org.openstrap.protocol.history.SleepRespiratoryEvent
+import org.openstrap.protocol.history.SleepSpO2Sample
+import org.openstrap.protocol.history.SpO2OsaEvent
+import org.openstrap.protocol.history.TodayActivityExtended
 import org.openstrap.protocol.history.FastRechargeModeException
 import org.openstrap.protocol.history.FetchCodec
 import org.openstrap.protocol.history.GdspClient
@@ -348,6 +362,13 @@ class HistorySync(
         val sdnn = mutableListOf<HrvSdnnSample>()
         val workouts = mutableListOf<Workout>()
         val effects = mutableListOf<SportEffectRow>()
+        val sleepSpo2 = mutableListOf<SleepSpo2Sample>()
+        val osaEvents = mutableListOf<OsaEventRow>()
+        val osaResults = mutableListOf<OsaResultRow>()
+        val maxHr = mutableMapOf<Long, Int>()
+        val recoveryHr = mutableListOf<RecoveryHeartRateRow>()
+        val extended = mutableListOf<ActivityExtendedMinute>()
+        val raw = mutableListOf<RawRecord>()
         for (r in records) when (r) {
             is ActivitySample -> activity += ActivityMinute(r.timestamp, r.steps, r.intensity, r.mode, r.heartRate)
             // Per-second HR is averaged per minute to keep the database small.
@@ -384,6 +405,23 @@ class HistorySync(
                 // The strap's resting-HR profile; used only for days without a real resting value.
                 if (r.restHr in 30..120) restingIfMissing += RestingHeartRate(dayStart(r.timestamp), r.restHr)
             }
+            // Overnight SpO2 legitimately dips below the 80 % floor used for spot readings; below 70 is optical noise.
+            is SleepSpO2Sample -> if (r.spo2 in 70..100) sleepSpo2 += SleepSpo2Sample(r.timestamp, r.spo2)
+            is SpO2OsaEvent -> osaEvents += OsaEventRow(
+                r.timestamp, r.spo2Decrease, r.spo2?.map { it.toByte() }?.toByteArray(), r.heartRate?.map { it.toByte() }?.toByteArray(),
+            )
+            is OsaResult -> osaResults += OsaResultRow(r.timestamp, r.odiValidTime, r.odiRefined, r.odiScore, r.odiDispCode, r.odNumRefined, r.version)
+            // The strap updates the day's value as it rises; keep the highest seen.
+            is DailyMaxHeartRate -> HeartRateSentinel.valid(r.maxHeartRate)?.let { bpm ->
+                maxHr.merge(dayStart(r.timestamp), bpm, ::maxOf)
+            }
+            is RecoveryHeartRate -> if (r.samples.isNotEmpty()) recoveryHr += RecoveryHeartRateRow(r.trackId, r.samples.map { it.toByte() }.toByteArray())
+            // A record of 0xFF bytes is buffer padding, not a minute.
+            is TodayActivityExtended -> if (r.version != 0xFF) extended += ActivityExtendedMinute(
+                r.timestamp, r.floorCount, r.runDuration, r.fatBurnDuration, r.standDuration, r.walkDuration, r.sitDuration,
+                r.steps, r.calories, r.distanceCm,
+            )
+            is SleepRespiratoryEvent -> raw += RawRecord(HistoryDataType.SLEEP_RESPIRATORY_RATE_EVENT.code, r.timestamp, r.raw)
             else -> Unit
         }
         perSecond.forEach { (minute, values) -> hr += HeartRateSample(minute, values.average().toInt()) }
@@ -400,6 +438,13 @@ class HistorySync(
         if (sdnn.isNotEmpty()) dao.insertHrvSdnn(sdnn)
         if (workouts.isNotEmpty()) dao.insertWorkouts(workouts)
         if (effects.isNotEmpty()) dao.insertSportEffects(effects)
+        if (sleepSpo2.isNotEmpty()) dao.insertSleepSpo2(sleepSpo2)
+        if (osaEvents.isNotEmpty()) dao.insertOsaEvents(osaEvents)
+        if (osaResults.isNotEmpty()) dao.insertOsaResults(osaResults)
+        if (maxHr.isNotEmpty()) dao.insertDailyMaxHr(maxHr.map { (day, bpm) -> DailyMaxHr(day, bpm) })
+        if (recoveryHr.isNotEmpty()) dao.insertRecoveryHeartRate(recoveryHr)
+        if (extended.isNotEmpty()) dao.insertActivityExtended(extended)
+        if (raw.isNotEmpty()) dao.insertRawRecords(raw)
     }
 
     /**

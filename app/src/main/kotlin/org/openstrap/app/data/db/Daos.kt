@@ -63,6 +63,36 @@ interface HealthDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertStrapReadiness(rows: List<StrapReadinessRow>)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertSleepSpo2(samples: List<SleepSpo2Sample>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertOsaEvents(rows: List<OsaEventRow>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertOsaResults(rows: List<OsaResultRow>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertDailyMaxHr(rows: List<DailyMaxHr>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertRecoveryHeartRate(rows: List<RecoveryHeartRateRow>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertActivityExtended(minutes: List<ActivityExtendedMinute>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertRawRecords(rows: List<RawRecord>)
+
+    @Query("SELECT * FROM sleep_spo2 WHERE timestamp BETWEEN :from AND :to ORDER BY timestamp")
+    suspend fun sleepSpo2Once(from: Long, to: Long): List<SleepSpo2Sample>
+
+    @Query("SELECT * FROM osa_result WHERE belongTime BETWEEN :from AND :to ORDER BY belongTime")
+    suspend fun osaResultsOnce(from: Long, to: Long): List<OsaResultRow>
+
+    @Query("SELECT * FROM daily_max_hr WHERE day BETWEEN :from AND :to ORDER BY day")
+    suspend fun dailyMaxHrOnce(from: Long, to: Long): List<DailyMaxHr>
+
     @Query("SELECT * FROM strap_readiness WHERE day = :day")
     fun strapReadiness(day: Long): Flow<StrapReadinessRow?>
 

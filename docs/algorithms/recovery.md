@@ -70,6 +70,17 @@ Most contributors are z-scores (deviation from baseline in SDs, positive = bette
 * Score: −30 points per breath/min beyond ±1. Nightly breathing rate is very stable, so a change of 2 or more is notable.
 * Alert: ≥ +2 breaths/min.
 
+**Blood oxygen** (weight 0.05)
+* Input: mean sleep SpO2 (strap type 38) during the night, from at least 5 readings.
+* Score: −`SPO2_POINTS_PER_PERCENT` = 25 points per % below the baseline mean, beyond a 1 % dead band. A night above the usual level scores 100; higher oxygen isn't better. 2 % down ≈ 75, 3 % down ≈ 50.
+* Source: healthy adults hold a mean nightly SpO2 of about 96 %, steady night to night (Gries & Brooks 1996, Chest 110:1489). A sustained fall points to a respiratory infection, altitude or disturbed breathing.
+* Alert: ≥ `SPO2_ALERT_DROP` = 2 % below baseline.
+
+**Breathing disturbances** (weight 0.04, no baseline needed)
+* Input: the strap's nightly sleep-apnea summary (type 74). We use only its count of valid desaturation events, divided by hours asleep, because the units of its own ODI fields are unverified. Needs at least 2 h asleep.
+* Score (`odiScore`): 100 under 5 events/h, then falling linearly to 75 at 15, 45 at 30 and a floor of 20. These are Zepp's bands (`bn50.java`) and the usual clinical cut-offs for normal, mild, moderate and severe.
+* Not physiological for the red-flag cap: a high index is a lasting trait to raise with a doctor, not a sign of a bad day. It's a wellness estimate, not a diagnosis.
+
 **Previous day's load** (weight 0.07)
 * Input: yesterday's TRIMP divided by the chronic EWMA load. Above 1.5× the score falls by 25 points per unit, to a floor of 30.
 
@@ -77,6 +88,8 @@ Most contributors are z-scores (deviation from baseline in SDs, positive = bette
 * Input: acute:chronic ratio from EWMA, 7 vs 28 days, λ = 2/(N+1) (Williams et al. 2017, BJSM; Murray et al. 2017, BJSM 10.1136/bjsports-2016-097152).
 * Score: 100 inside 0.8–1.3 (Gabbett 2016), falling outside it.
 * Low weight on purpose: the "sweet spot" is disputed (Impellizzeri et al. 2020; Fanchini et al. 2018), so it only nudges the score.
+
+Weights add up to more than 1 once every contributor is present; they're always renormalised, so only their ratios matter.
 
 ### Combining contributors
 
@@ -138,7 +151,7 @@ Zepp does the same job differently. It computes a stress threshold on the phone 
 
 ## Inputs from the profile (Device → Your profile)
 
-* **Max HR:** Tanaka et al. 2001 (JACC): 208 − 0.7·age. Without an age, the strap's own max HR (from the Zepp profile) is used, else 190. Like Firstbeat, it's raised to the highest HR the user has actually reached, by at most +15 bpm.
+* **Max HR:** Tanaka et al. 2001 (JACC): 208 − 0.7·age. Without an age, the strap's own max HR (from the Zepp profile) is used, else 190. Like Firstbeat, it's raised to the highest HR the user has actually reached, by at most +15 bpm. "Reached" is the second-highest value over 60 days, so one artefact can't set it, taken from both the per-minute heart rate and the strap's daily maximum exercise HR (type 61). Max HR sets heart-rate reserve, so it changes both training load and Charge drain.
 * **Sex:** selects the TRIMP curve.
 * **Weight and height:** stored for future energy-expenditure work; not used yet.
 * **Resting HR (daytime):** median of the strap's daily resting HR over 14 days, else the median nightly lowest + 3 bpm.

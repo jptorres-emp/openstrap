@@ -226,6 +226,9 @@ class HistorySync(
         val key = "gdsp_${spec.code}"
         val lookback = if (spec.type in WORKOUT_TYPES) WORKOUT_LOOKBACK else DEFAULT_LOOKBACK
         var cursor = settings.lastSync(key) ?: (System.currentTimeMillis() / 1000 - lookback)
+        // The strap keeps updating a day's max exercise HR, so Zepp re-fetches it from the start of the day on every
+        // sync (y4t.java:62-69).
+        if (spec.type == HistoryDataType.DAILY_MAX_EXERCISE_HR) cursor = dayStart(cursor)
         repeat(MAX_CHUNKS_PER_TYPE) {
             val chunk = when (val f = client.fetch(spec.code, cursor, zone)) {
                 is GdspFetch.Chunk -> f

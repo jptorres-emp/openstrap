@@ -16,6 +16,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import org.openstrap.protocol.auth.Auth
 import org.openstrap.protocol.auth.AuthException
 import org.openstrap.protocol.auth.AuthHandshake
@@ -24,9 +25,11 @@ import org.openstrap.protocol.services.ChannelVersion
 import org.openstrap.protocol.services.ConnectCodec
 import org.openstrap.protocol.services.Endpoints
 import org.openstrap.protocol.services.ServiceList
+import org.openstrap.protocol.transport.AckStatus
 import org.openstrap.protocol.transport.ChannelMessage
 import org.openstrap.protocol.transport.Reassembler
 import org.openstrap.protocol.transport.buildChunks
+import org.openstrap.protocol.transport.parseDeviceAck
 
 /**
  * The radio side the session needs. The Android app implements this on top of BluetoothGatt;
@@ -153,18 +156,49 @@ class ChannelSession(
         return Auth.stripReply(command, reply)!!
     }
 
+    /** False once the strap failed to ACK an encrypted message in time; we then stop waiting for those ACKs. */
+    @Volatile private var awaitEncryptedAcks = true
+
     /**
      * Sends [payload] to [endpoint], encrypting when the strap requires it for that endpoint. [wantReply] false
-     * leaves ACK_REQ off the last chunk, for messages the strap doesn't acknowledge.
+     * leaves ACK_REQ off the last chunk, for messages the strap doesn't acknowledge. Encrypted messages always ask
+     * for the ACK, as Zepp does (`sk7.java:97`); one the strap reports as lost is sent again once.
      */
     suspend fun send(endpoint: Int, payload: ByteArray, wantReply: Boolean = true) = sendLock.withLock {
+        if (sendOnce(endpoint, payload, wantReply) == AckStatus.PACKET_LOST) {
+            log("strap lost a message on ${"%04x".format(endpoint)}, sending it again")
+            sendOnce(endpoint, payload, wantReply)
+        }
+    }
+
+    /** Returns the strap's ACK status for an encrypted message, or null when none was awaited or none came. */
+    private suspend fun sendOnce(endpoint: Int, payload: ByteArray, wantReply: Boolean): Int? {
         val sid = nextSessionId
         nextSessionId = (nextSessionId + 1) and 0xFF
         val c = cipher
         // Zepp encrypts only when the channel version said encryption is on and the endpoint asks for it.
         val encrypt = c != null && version?.encryptEnable == true && services.requiresEncryption(endpoint)
         val body = if (encrypt) c!!.encrypt(sid, payload) else payload
-        for (chunk in buildChunks(endpoint, sid, body, payload.size, encrypt, link.payloadMtu, wantReply)) link.writeControl(chunk)
+        val chunks = buildChunks(endpoint, sid, body, payload.size, encrypt, link.payloadMtu, wantReply || encrypt)
+        if (!encrypt || !awaitEncryptedAcks) {
+            for (chunk in chunks) link.writeControl(chunk)
+            return null
+        }
+        val lastIndex = (chunks.size - 1) and 0xFF
+        val acks = link.controlNotifications.mapNotNull { parseDeviceAck(it) }.filter { it.sessionId == sid && it.chunkIndex == lastIndex }
+        // Listen before writing so a fast ACK isn't missed; only the wait after the last write is timed.
+        val ack = coroutineScope {
+            val waiter = async(start = CoroutineStart.UNDISPATCHED) { acks.first() }
+            for (chunk in chunks) link.writeControl(chunk)
+            withTimeoutOrNull(ENCRYPTED_ACK_TIMEOUT_MS) { waiter.await() }.also { waiter.cancel() }
+        }
+        if (ack == null) {
+            awaitEncryptedAcks = false
+            log("no ACK for an encrypted message on ${"%04x".format(endpoint)}; not waiting for them any more")
+        } else if (ack.status != AckStatus.SUCCESS) {
+            log("strap ACKed ${"%04x".format(endpoint)} with status ${ack.status}")
+        }
+        return ack?.status
     }
 
     /** Sends and waits for the first reply on the same endpoint that satisfies [matches]. */
@@ -179,6 +213,10 @@ class ChannelSession(
     }
 
     /** Subscribes to [flow] before running [action], so a fast reply can't be missed. */
+    private companion object {
+        const val ENCRYPTED_ACK_TIMEOUT_MS = 2_000L
+    }
+
     private suspend fun <T> launchAndAwait(flow: Flow<T>, action: suspend () -> Unit): T =
         coroutineScope {
             val waiter = async(start = CoroutineStart.UNDISPATCHED) { flow.first() }

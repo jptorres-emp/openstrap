@@ -129,10 +129,12 @@ object TimeSync {
 
     /**
      * `07 u32 transition, i16 deltaSeconds`: the zone's next DST change after [now], answered `08 status`. Zepp sends
-     * the transition minus the delta when DST ends (`b930.java:632-641`), and zeros for a zone without DST.
+     * the transition minus the delta when DST ends (`b930.java:632-641`), and zeros unless the zone uses DST
+     * (`TimeZone.useDaylightTime()`, `b930.java:630`), so a plain change of standard offset is never sent.
      */
     fun nextDstRequest(now: ZonedDateTime): ByteArray {
         val t = now.zone.rules.nextTransition(now.toInstant())
+            ?.takeIf { java.util.TimeZone.getTimeZone(now.zone.id).useDaylightTime() }
         val delta = t?.let { it.offsetAfter.totalSeconds - it.offsetBefore.totalSeconds } ?: 0
         val at = t?.let { it.toEpochSecond() + if (delta < 0) delta else 0 } ?: 0L
         return ByteWriter().u8(NEXT_DST).u32(at).u16(delta and 0xFFFF).toByteArray()

@@ -48,6 +48,9 @@ class ServicesTest {
         assertArrayEquals(("07" + "%08x".format(Integer.reverseBytes(1806195600)) + "100e").hexToBytes(), TimeSync.nextDstRequest(w))
         // No DST.
         assertArrayEquals("07 00000000 0000".hexToBytes(), TimeSync.nextDstRequest(t.withZoneSameInstant(ZoneId.of("Asia/Dubai"))))
+        // Moscow no longer uses DST, so its 2011 change of standard offset is not sent as a DST hint.
+        val moscow = ZonedDateTime.of(2011, 1, 10, 12, 0, 0, 0, ZoneId.of("Europe/Moscow"))
+        assertArrayEquals("07 00000000 0000".hexToBytes(), TimeSync.nextDstRequest(moscow))
         assertEquals(2, TimeSync.parseVersion("0202".hexToBytes()))
     }
 

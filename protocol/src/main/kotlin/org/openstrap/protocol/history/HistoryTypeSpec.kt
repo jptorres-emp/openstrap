@@ -62,11 +62,12 @@ object HistoryTypeSpecs {
 
     /**
      * Specs to run, gated on the device's advertised type set (from QUERY_VERSION) when known. Types that are
-     * fetched together with another ([HistoryTypeSpec.followedBy]) don't run on their own.
+     * fetched together with another ([HistoryTypeSpec.followedBy]) don't run on their own, and types Zepp never
+     * fetches from the strap ([StrapRelevance.NOT_APPLICABLE]) don't run even when advertised.
      */
     fun plan(advertised: Set<Int>?): List<HistoryTypeSpec> =
         (if (advertised == null) all.filter { it.type.strap == StrapRelevance.EXPECTED } else all.filter { it.code in advertised })
-            .filter { it.type !in followers }
+            .filter { it.type !in followers && it.type.strap != StrapRelevance.NOT_APPLICABLE }
 
     /**
      * Loop rule (02 §1.6, §5.2): continue with [next] only if it is later than [current].

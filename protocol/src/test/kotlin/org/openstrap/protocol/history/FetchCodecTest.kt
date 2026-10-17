@@ -188,6 +188,10 @@ class FetchCodecTest {
         assertEquals(HistoryDataType.SPORT_DETAIL, HistoryTypeSpecs.forCode(5)!!.followedBy)
         assertEquals(setOf(5, 59), HistoryTypeSpecs.plan(setOf(5, 6, 59)).map { it.code }.toSet())
         assertTrue(HistoryTypeSpecs.plan(null).none { it.type == HistoryDataType.SPORT_DETAIL })
+        // Legacy temperature is never fetched from the strap; recovery HR only when advertised.
+        assertEquals(setOf(1), HistoryTypeSpecs.plan(setOf(1, 4)).map { it.code }.toSet())
+        assertTrue(HistoryTypeSpecs.plan(null).none { it.code == 70 })
+        assertTrue(HistoryTypeSpecs.plan(setOf(70)).any { it.code == 70 })
 
         val act = HistoryTypeSpecs.forCode(1)!!
         assertTrue(HistoryTypeSpecs.shouldContinue(act, 100, 101))

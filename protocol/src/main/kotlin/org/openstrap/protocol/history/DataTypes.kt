@@ -10,7 +10,7 @@ enum class StrapRelevance {
     /** Only fetched if the device lists the type in its GDSP `dataTypeMap`. */
     IF_ADVERTISED,
 
-    /** Not applicable (needs a screen, GPS, ECG, scale, ...). */
+    /** Not applicable (needs a screen, GPS, ECG, scale, ...). Never fetched, even if advertised. */
     NOT_APPLICABLE,
 }
 
@@ -19,7 +19,8 @@ enum class HistoryDataType(val code: Int, val strap: StrapRelevance) {
     ACTIVITY(1, StrapRelevance.EXPECTED),
     HEART_RATE_MANUAL(2, StrapRelevance.IF_ADVERTISED),
     ECG(3, StrapRelevance.NOT_APPLICABLE),
-    TEMPERATURE_LEGACY(4, StrapRelevance.IF_ADVERTISED),
+    // Zepp fetches 4 only for hasFeatureTemperature devices (g9h.java:607), and the strap isn't one (b6l.b).
+    TEMPERATURE_LEGACY(4, StrapRelevance.NOT_APPLICABLE),
     SPORT_SUMMARY(5, StrapRelevance.EXPECTED),
     SPORT_DETAIL(6, StrapRelevance.EXPECTED),
     LOG(7, StrapRelevance.NOT_APPLICABLE),
@@ -53,7 +54,9 @@ enum class HistoryDataType(val code: Int, val strap: StrapRelevance) {
     DAILY_MAX_EXERCISE_HR(61, StrapRelevance.IF_ADVERTISED),
     BLOOD_PRESSURE_62(62, StrapRelevance.NOT_APPLICABLE),
     SLEEP_PLAN(66, StrapRelevance.IF_ADVERTISED),
-    RECOVERY_HEART_RATE(70, StrapRelevance.EXPECTED),
+    // Zepp gates 70 on runtime feature bit 62 (HMDeviceConfig.java:862-871). We don't read that bitmap, so we
+    // fetch it only when the strap advertises it.
+    RECOVERY_HEART_RATE(70, StrapRelevance.IF_ADVERTISED),
     HLD(71, StrapRelevance.NOT_APPLICABLE),
     SLEEP_RESULT(72, StrapRelevance.EXPECTED),
     HRV_RMSSD(73, StrapRelevance.EXPECTED),

@@ -14,6 +14,7 @@ import org.openstrap.protocol.crypto.B163
 import org.openstrap.protocol.crypto.ChannelCipher
 import org.openstrap.protocol.services.BatteryInfo
 import org.openstrap.protocol.services.Endpoints
+import org.openstrap.protocol.transport.AckStatus
 import org.openstrap.protocol.transport.ChunkFlags
 import org.openstrap.protocol.transport.Reassembler
 import org.openstrap.protocol.transport.buildChunks
@@ -36,6 +37,9 @@ private class SimulatedStrap(private val authKey: ByteArray) : StrapLink {
     /** Every message the phone sent, with the flags byte of its last chunk. */
     val received = MutableSharedFlow<Triple<Int, ByteArray, Int>>(replay = 32)
     private var lastFlags = 0
+    /** Report the next encrypted message as lost (ACK status 3). */
+    var loseNextEncrypted = false
+    var encryptedAcks = 0
 
     private val reassembler = Reassembler({ true }, { sid, data, len ->
         // The device decrypts with its own rx counter, which starts at the phone's tx counter.
@@ -48,7 +52,16 @@ private class SimulatedStrap(private val authKey: ByteArray) : StrapLink {
             return
         }
         if (data.size > 1) lastFlags = data[1].toInt() and 0xFF
-        reassembler.accept(data)?.let { controlNotifications.emit(it) }
+        // The reassembler builds the phone's ACK form `04 00 sess st idx`; the strap's is `04 sess st idx appId`.
+        reassembler.accept(data)?.let { ack ->
+            var status = ack[3].toInt()
+            if (loseNextEncrypted && lastFlags and ChunkFlags.ENCRYPTED != 0 && lastFlags and ChunkFlags.LAST != 0) {
+                loseNextEncrypted = false
+                status = AckStatus.PACKET_LOST
+            }
+            encryptedAcks += if (lastFlags and ChunkFlags.ENCRYPTED != 0) 1 else 0
+            controlNotifications.emit(byteArrayOf(0x04, ack[2], status.toByte(), ack[4], 0))
+        }
         flushOutbox()
     }
 
@@ -126,6 +139,34 @@ class ChannelSessionTest {
         assertEquals(77, BatteryInfo.parseChannel(reply)!!.level)
         // The phone acknowledged the device's multi-chunk replies.
         assertTrue(strap.phoneAcks.isNotEmpty())
+    }
+
+    @Test
+    fun encryptedMessagesAskForAndGetAnAck() = runTest {
+        val strap = SimulatedStrap(key)
+        val logs = mutableListOf<String>()
+        val session = ChannelSession(strap, log = { logs += it })
+        session.start(backgroundScope)
+        session.handshake(key)
+
+        // Encrypted, and sent without asking for a reply: Zepp still sets ACK_REQ on it (sk7.java:97).
+        session.send(Endpoints.BATTERY, BatteryInfo.GET, wantReply = false)
+        val (_, _, flags) = withTimeout(5_000) { strap.received.first { it.first == Endpoints.BATTERY } }
+        assertTrue(flags and ChunkFlags.NEEDS_ACK != 0)
+        assertEquals(1, strap.encryptedAcks)
+        assertTrue("$logs", logs.none { it.startsWith("no ACK") })
+    }
+
+    @Test
+    fun encryptedMessageReportedLostIsSentAgain() = runTest {
+        val strap = SimulatedStrap(key)
+        val session = ChannelSession(strap)
+        session.start(backgroundScope)
+        session.handshake(key)
+
+        strap.loseNextEncrypted = true
+        session.send(Endpoints.BATTERY, BatteryInfo.GET)
+        assertEquals(2, strap.received.replayCache.count { it.first == Endpoints.BATTERY })
     }
 
     @Test

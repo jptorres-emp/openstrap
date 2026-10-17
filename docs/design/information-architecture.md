@@ -14,16 +14,16 @@ it; "Used" means a computation reads it but no screen shows it directly.
 |---|---|---|---|---|
 | `heart_rate` (history + live) | ts, bpm, source | Day HR series, resting-HR estimate, Readiness, Charge, TRIMP load | Today (HR card + latest), Heart (day chart, low/avg/high), Sleep (HR during sleep, whole day toggle) | — |
 | `activity_minute` (1) | ts, steps, intensity, kind, heartRate | Steps total + hourly, active hours, HR fallback, Charge states | Today (steps, hourly bars, active hours, Steps chip) | `intensity`, `kind` never shown; no steps history beyond today |
-| `activity_extended` (88) | floors, run, fatBurn, stand, walk, sit, steps, calories, distanceCm | — | — | **Stored, never read.** Units unverified |
+| `activity_extended` (88) | floors, run, fatBurn, stand, walk, sit, steps, calories, distanceCm | Day distance and calories (data step) | — | `distanceCm` confirmed as cm (≈ 75 cm a step on the strap). `sit/stand/walk/run` are one-hot flags per minute, not durations. Calories look like active kcal per minute; floors always 0 so far |
 | `sleep_session` (sleep) | start, end, day, nap, score, avgHR, deep/light/rem/awake min, wakeCount | Main sleep + naps, Readiness (sleep, sleep balance), Narrative | Today (Sleep chip, overview arc, sleep card, naps), Sleep (hero, in bed vs asleep, contributors, woke N×), Recovery (sleep band on Charge) | No sleep trend (only "vs night before"); no bedtime consistency |
 | `sleep_stage` | start, end, sessionStart, stage | Stage breakdown | Today (hypnogram), Sleep (hypnogram + stage rows), nap details | — |
 | `spo2` (daytime) | ts, percent | 7-day baseline | Today (What changed), Heart (day chart) | — |
 | `sleep_spo2` (38) | ts, percent | Readiness (Blood oxygen factor) | — | **Not shown.** Belongs on Sleep |
-| `osa_event` (39) | ts, drop, 240 SpO2 + 240 HR bytes | — | — | **Stored, never read** |
-| `osa_result` (74) | belongTime, validTime, odiRaw, odiScore, dispCode, eventCount | Readiness (Breathing disturbances: eventCount → ODI) | Only as a contributor row on Recovery | No sleep-side display; units unverified |
+| `osa_event` (39) | ts, drop, 240 SpO2 + 240 HR bytes | Day state (data step) | — | One event on the strap so far, with `drop` = 128, which looks like a flag or signed value, not a % drop |
+| `osa_result` (74) | belongTime, validTime, odiRaw, odiScore, dispCode, eventCount | Readiness (Breathing disturbances: eventCount → ODI), day state | Only as a contributor row on Recovery | No rows after two nights on the strap, so units are still unverified |
 | `stress` | ts, value | Baseline, Charge (stress drain + threshold) | Today (chip, What changed), Heart (day chart) | Not tied to Charge visually |
 | `hrv` | ts, ms | 7-day trend, baseline, Readiness (HRV balance) | Today (What changed), Heart (7-day trend) | — |
-| `hrv_sdnn` (78) | ts, ms | — | — | **Stored, never read.** Nightly HRV, belongs on Sleep/Recovery |
+| `hrv_sdnn` (78) | ts, ms | Day state (data step) | — | Not nightly: the strap sends one every 1–2 h through the day (5 on 17 Oct). Belongs in the HRV detail |
 | `resting_hr` (+ PAI estimate) | day, bpm | 7-day trend, baseline, Readiness, Charge params | Today (What changed, "Resting N" on HR card), Heart (7-day trend) | — |
 | `skin_temperature` (46) | ts, °C | Baseline, Readiness (Temperature) | Today (What changed), Heart (day chart) | Shown as absolute °C; deviation from normal is what matters |
 | `breath_rate` (56) | ts, /min | Baseline, Readiness (Breathing) | Today (What changed), Sleep (breathing rate chart) | — |
@@ -161,7 +161,7 @@ Mostly as Glow Today is now. Each thing appears once; everything links deeper.
 2. **Hero**: score + headline, or time asleep vs goal when there's no score. Asleep / in bed, bedtime – wake.
 3. **Stages**: hypnogram, stage bars with minutes and %, woke N×.
 4. **Contributors** (duration, deep, REM, efficiency, …).
-5. **Sleep vitals** grid: lowest HR + when (`nadirTime`), avg HR, **nightly HRV (`hrv_sdnn`, new)**, breathing
+5. **Sleep vitals** grid: lowest HR + when (`nadirTime`), avg HR, HRV during sleep (from `hrv`; `hrv_sdnn` is daytime), breathing
    rate, **sleep SpO2 (`sleep_spo2`, new)**, skin-temp deviation. Each → metric detail scoped to the night.
 6. **Breathing disturbances (new)**: events/hour (from `osa_result.eventCount`), with the event list from `osa_event`
    in its detail (drop size, the SpO2/HR trace around each). Label as "not a diagnosis"; units unverified, keep it
@@ -215,7 +215,7 @@ This needs repository queries over arbitrary ranges with per-day aggregates; tod
 |---|---|
 | Read `hrv_sdnn`, `sleep_spo2`, `osa_result`/`osa_event` into the Sleep state | Sleep vitals, breathing disturbances |
 | Read `pai.daily`, `daily_max_hr`, sport-effect trend | Activity |
-| Confirm `activity_extended` units on hardware | Distance, calories, floors |
+| Confirm `activity_extended` units on hardware | Distance confirmed; calories likely; floors unseen |
 | Store health alerts in a table | Today alert row, history |
 | Per-day aggregate queries for W/M/Y | Metric-detail template |
 | Goals in `SettingsStore` | Steps / sleep / active-hour goals |

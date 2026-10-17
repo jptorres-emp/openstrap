@@ -109,7 +109,7 @@ data class PaiSample(
     val maxHeartRate: Int,
 )
 
-/** Nightly HRV as SDNN (type 78). */
+/** HRV as SDNN (type 78). The strap sends one every hour or two through the day, not just at night. */
 @Entity(tableName = "hrv_sdnn")
 data class HrvSdnnSample(
     @PrimaryKey val timestamp: Long,
@@ -228,7 +228,11 @@ class RecoveryHeartRateRow(
     val samples: ByteArray,
 )
 
-/** Extra per-minute activity (type 88). The duration units are unverified, so they're kept as sent. */
+/**
+ * Extra per-minute activity (type 88). On a real strap [distanceCm] is centimetres (about 75 a step), and
+ * [sit], [stand], [walk] and [run] are 0/1 flags for the minute's posture rather than durations. [calories] looks like
+ * active kcal for the minute and [floors] has stayed 0; both are kept as sent until confirmed.
+ */
 @Entity(tableName = "activity_extended")
 data class ActivityExtendedMinute(
     @PrimaryKey val timestamp: Long,
@@ -250,3 +254,26 @@ class RawRecord(
     val timestamp: Long,
     val payload: ByteArray,
 )
+
+/** An alert the strap pushed (0x001D `0D`): high or low heart rate, high stress, low SpO2, or an irregular rhythm. */
+@Entity(tableName = "health_alert", primaryKeys = ["timestamp", "type"])
+data class HealthAlertRow(
+    val timestamp: Long,
+    /** The strap's alert code, `HealthAlert.Type.code`. */
+    val type: Int,
+    /** bpm, stress level or SpO2 %; 0 for an irregular rhythm. */
+    val value: Long,
+)
+
+/** One local day of a sampled metric: its average (or total, for steps), lowest, highest and sample count. */
+data class DailyAggregate(
+    /** The local date as SQLite prints it, `yyyy-MM-dd`. */
+    val day: String,
+    val value: Double,
+    val min: Double,
+    val max: Double,
+    val count: Int,
+)
+
+/** The day's last PAI reading: what the strap reported for that day and the 7-day total. */
+data class DailyPai(val day: String, val daily: Float, val total: Float, val latest: Long)

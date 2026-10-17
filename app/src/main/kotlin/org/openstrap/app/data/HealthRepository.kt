@@ -2,7 +2,16 @@ package org.openstrap.app.data
 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import org.openstrap.app.data.db.ActivityExtendedMinute
 import org.openstrap.app.data.db.ActivityMinute
+import org.openstrap.app.data.db.DailyAggregate
+import org.openstrap.app.data.db.DailyMaxHr
+import org.openstrap.app.data.db.DailyPai
+import org.openstrap.app.data.db.HealthAlertRow
+import org.openstrap.app.data.db.HrvSdnnSample
+import org.openstrap.app.data.db.OsaEventRow
+import org.openstrap.app.data.db.OsaResultRow
+import org.openstrap.app.data.db.SleepSpo2Sample
 import org.openstrap.app.data.db.BreathRate
 import org.openstrap.app.data.db.HealthDao
 import org.openstrap.app.data.db.HeartRateSample
@@ -61,4 +70,54 @@ class HealthRepository(private val dao: HealthDao) {
     fun skinTemperature(w: DayWindow): Flow<List<SkinTemperature>> = dao.skinTemperature(w.from, w.to)
     fun breathRate(w: DayWindow): Flow<List<BreathRate>> = dao.breathRate(w.from, w.to)
     fun latestPai(before: Long): Flow<PaiSample?> = dao.latestPai(before)
+
+    fun sleepSpo2(w: DayWindow): Flow<List<SleepSpo2Sample>> = dao.sleepSpo2(w.from, w.to)
+    fun hrvSdnn(w: DayWindow): Flow<List<HrvSdnnSample>> = dao.hrvSdnn(w.from, w.to)
+    fun osaEvents(w: DayWindow): Flow<List<OsaEventRow>> = dao.osaEvents(w.from, w.to)
+    fun activityExtended(w: DayWindow): Flow<List<ActivityExtendedMinute>> = dao.activityExtended(w.from, w.to)
+    fun healthAlerts(w: DayWindow): Flow<List<HealthAlertRow>> = dao.healthAlerts(w.from, w.to)
+    fun dailyMaxHr(w: DayWindow): Flow<DailyMaxHr?> = dao.dailyMaxHr(w.from, w.to).map { it.lastOrNull() }
+
+    /** The strap's sleep-apnea summary for the night ending on [date]: its belongTime + 2 h falls on that date. */
+    fun osaResult(date: LocalDate, zone: ZoneId = ZoneId.systemDefault()): Flow<OsaResultRow?> {
+        val d = DayWindow.of(date, zone)
+        return dao.osaResults(d.from - 2 * 3600, d.to - 2 * 3600).map { it.lastOrNull() }
+    }
+
+    /** One value per local day from [from] to [to], for week, month and year views. Days without data are absent. */
+    fun daily(metric: DailyMetric, from: LocalDate, to: LocalDate, zone: ZoneId = ZoneId.systemDefault()): Flow<List<DayStat>> {
+        val a = DayWindow.of(from, zone).from
+        val b = DayWindow.of(to, zone).to
+        val rows = when (metric) {
+            DailyMetric.HeartRate -> dao.dailyHeartRate(a, b)
+            DailyMetric.Steps -> dao.dailySteps(a, b)
+            DailyMetric.Hrv -> dao.dailyHrv(a, b)
+            DailyMetric.HrvSdnn -> dao.dailyHrvSdnn(a, b)
+            DailyMetric.Spo2 -> dao.dailySpo2(a, b)
+            DailyMetric.SleepSpo2 -> dao.dailySleepSpo2(a, b)
+            DailyMetric.Stress -> dao.dailyStress(a, b)
+            DailyMetric.SkinTemperature -> dao.dailySkinTemperature(a, b)
+            DailyMetric.Breathing -> dao.dailyBreathRate(a, b)
+        }
+        return rows.map { list -> list.mapNotNull(DayStat::of) }
+    }
+
+    /** Each day's PAI (earned that day, and the 7-day total), keyed by local date. */
+    fun dailyPai(from: LocalDate, to: LocalDate, zone: ZoneId = ZoneId.systemDefault()): Flow<Map<LocalDate, DailyPai>> =
+        dao.dailyPai(DayWindow.of(from, zone).from, DayWindow.of(to, zone).to).map { rows ->
+            rows.mapNotNull { r -> DayStat.parseDay(r.day)?.let { it to r } }.toMap()
+        }
+}
+
+/** Sampled metrics that have a per-day series. */
+enum class DailyMetric { HeartRate, Steps, Hrv, HrvSdnn, Spo2, SleepSpo2, Stress, SkinTemperature, Breathing }
+
+/** One local day of a metric: the average (the total, for steps), lowest and highest sample, and how many samples. */
+data class DayStat(val date: LocalDate, val value: Float, val min: Float, val max: Float, val count: Int) {
+    companion object {
+        fun parseDay(day: String): LocalDate? = runCatching { LocalDate.parse(day) }.getOrNull()
+
+        fun of(row: DailyAggregate): DayStat? =
+            parseDay(row.day)?.let { DayStat(it, row.value.toFloat(), row.min.toFloat(), row.max.toFloat(), row.count) }
+    }
 }

@@ -23,6 +23,9 @@ import org.openstrap.app.data.DayWindow
 import org.openstrap.app.data.HealthRepository
 import org.openstrap.app.data.LiveSteps
 import org.openstrap.app.data.Summaries
+import org.openstrap.app.data.db.HealthAlertRow
+import org.openstrap.app.data.db.OsaEventRow
+import org.openstrap.app.data.db.OsaResultRow
 import org.openstrap.app.data.db.PaiSample
 import org.openstrap.app.data.db.SleepSession
 import org.openstrap.app.data.db.SleepStage
@@ -78,6 +81,22 @@ data class DayUiState(
     val breathRate: List<ChartPoint> = emptyList(),
     val pai: PaiSample? = null,
     val baselines: Baselines = Baselines(),
+    /** Blood oxygen measured during the night's sleep (type 38), separate from daytime [spo2]. */
+    val sleepSpo2: List<ChartPoint> = emptyList(),
+    /** HRV as SDNN (type 78). On a real strap these come every hour or two through the day, not once a night. */
+    val hrvSdnn: List<ChartPoint> = emptyList(),
+    /** The strap's sleep-apnea summary for the night; units unverified, see [OsaResultRow]. */
+    val osaResult: OsaResultRow? = null,
+    /** Oxygen-drop events during the night. */
+    val osaEvents: List<OsaEventRow> = emptyList(),
+    /** The day's highest exercise heart rate as the strap reported it. */
+    val dailyMaxHeartRate: Int? = null,
+    /** Distance walked from the extended activity record (cm per minute, about 75 cm a step); null without data. */
+    val distanceMeters: Int? = null,
+    /** Calories from the extended activity record; looks like active kcal per minute, not yet verified. */
+    val activeCalories: Int? = null,
+    /** Alerts the strap pushed during the day. */
+    val alerts: List<HealthAlertRow> = emptyList(),
     val dayStart: Long = 0,
     val dayEnd: Long = 0,
 ) {
@@ -180,13 +199,31 @@ class DayViewModel(
             )
         }
         val sleepAndExtras = combine(sleep, extras, baselines) { s, e, b -> Triple(s, e, b) }
+        val more = combine(
+            combine(repo.sleepSpo2(night), repo.hrvSdnn(day), repo.osaEvents(night)) { a, b, c -> Triple(a, b, c) },
+            repo.osaResult(date),
+            repo.dailyMaxHr(day),
+            repo.activityExtended(day),
+            repo.healthAlerts(day),
+        ) { (sleepSpo2, sdnn, events), osa, maxHr, extended, alerts ->
+            MoreParts(
+                sleepSpo2 = sleepSpo2.map { ChartPoint(it.timestamp, it.percent.toFloat()) },
+                hrvSdnn = sdnn.map { ChartPoint(it.timestamp, it.milliseconds) },
+                osaResult = osa,
+                osaEvents = events,
+                dailyMaxHeartRate = maxHr?.bpm,
+                distanceMeters = extended.takeIf { it.isNotEmpty() }?.sumOf { it.distanceCm.toLong() }?.let { (it / 100).toInt() },
+                activeCalories = extended.takeIf { it.isNotEmpty() }?.sumOf { it.calories },
+                alerts = alerts,
+            )
+        }
 
         // The strap's own running total covers steps whose minute records were already taken by another app.
         val liveSteps = if (date == LocalDate.now()) strapSteps else flowOf(null)
         val liveCounter = LiveSteps()
         val actAndLive = combine(activityAndHr, liveSteps) { a, live -> a to live }
 
-        return combine(actAndLive, vitals, sleepAndExtras, weekly) { (ah, live), (spo2, stress, hrv), (sleepParts, extraParts, base), (restingWithFlag, hrvTrend) ->
+        return combine(actAndLive, vitals, sleepAndExtras, weekly, more) { (ah, live), (spo2, stress, hrv), (sleepParts, extraParts, base), (restingWithFlag, hrvTrend), m ->
             val (session, stages, naps, napStages) = sleepParts
             val (skin, breath, pai) = extraParts
             val restingTrend = restingWithFlag.map { it.first }
@@ -218,6 +255,14 @@ class DayViewModel(
                 breathRate = breath.map { ChartPoint(it.timestamp, it.perMinute.toFloat()) },
                 pai = pai,
                 baselines = base,
+                sleepSpo2 = m.sleepSpo2,
+                hrvSdnn = m.hrvSdnn,
+                osaResult = m.osaResult,
+                osaEvents = m.osaEvents,
+                dailyMaxHeartRate = m.dailyMaxHeartRate,
+                distanceMeters = m.distanceMeters,
+                activeCalories = m.activeCalories,
+                alerts = m.alerts,
                 dayStart = day.from,
                 dayEnd = day.to,
             )
@@ -243,4 +288,15 @@ private data class SleepParts(
     val naps: List<SleepSession>,
     val napStages: Map<Long, List<SleepStage>>,
     val previousScore: Int? = null,
+)
+
+private data class MoreParts(
+    val sleepSpo2: List<ChartPoint>,
+    val hrvSdnn: List<ChartPoint>,
+    val osaResult: OsaResultRow?,
+    val osaEvents: List<OsaEventRow>,
+    val dailyMaxHeartRate: Int?,
+    val distanceMeters: Int?,
+    val activeCalories: Int?,
+    val alerts: List<HealthAlertRow>,
 )

@@ -23,6 +23,7 @@ import org.openstrap.app.ble.GattClient
 import org.openstrap.app.ble.GattException
 import org.openstrap.app.ble.GattStrapLink
 import org.openstrap.app.ble.StrapUuids
+import org.openstrap.app.data.db.HealthAlertRow
 import org.openstrap.app.data.db.HealthDao
 import org.openstrap.app.data.settings.SettingsStore
 import org.openstrap.app.data.settings.UserProfile
@@ -307,7 +308,11 @@ class StrapManager(
             if (p.isEmpty() || p.u8(0) != HealthAlert.PUSH) return@collect
             val alert = HealthAlert.parse(p)
             log("health alert < ${p.toHex()}: $alert")
-            alert?.let { healthAlerts.show(it) }
+            alert ?: return@collect
+            healthAlerts.show(alert)
+            // Kept so Today can list the day's alerts; a failed write mustn't stop the watcher.
+            runCatching { dao.insertHealthAlerts(listOf(HealthAlertRow(alert.timestamp, alert.type.code, alert.value))) }
+                .onFailure { log("health alert not stored: $it") }
         }
     }
 

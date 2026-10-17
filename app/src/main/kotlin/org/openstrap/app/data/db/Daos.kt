@@ -242,6 +242,63 @@ interface HealthDao {
     )
     fun hoursWithData(): Flow<List<Long>>
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertHealthAlerts(rows: List<HealthAlertRow>)
+
+    @Query("SELECT * FROM health_alert WHERE timestamp BETWEEN :from AND :to ORDER BY timestamp")
+    fun healthAlerts(from: Long, to: Long): Flow<List<HealthAlertRow>>
+
+    // Reads for data the dashboard didn't show before.
+    @Query("SELECT * FROM sleep_spo2 WHERE timestamp BETWEEN :from AND :to ORDER BY timestamp")
+    fun sleepSpo2(from: Long, to: Long): Flow<List<SleepSpo2Sample>>
+
+    @Query("SELECT * FROM osa_result WHERE belongTime BETWEEN :from AND :to ORDER BY belongTime")
+    fun osaResults(from: Long, to: Long): Flow<List<OsaResultRow>>
+
+    @Query("SELECT * FROM osa_event WHERE timestamp BETWEEN :from AND :to ORDER BY timestamp")
+    fun osaEvents(from: Long, to: Long): Flow<List<OsaEventRow>>
+
+    @Query("SELECT * FROM daily_max_hr WHERE day BETWEEN :from AND :to ORDER BY day")
+    fun dailyMaxHr(from: Long, to: Long): Flow<List<DailyMaxHr>>
+
+    @Query("SELECT * FROM activity_extended WHERE timestamp BETWEEN :from AND :to ORDER BY timestamp")
+    fun activityExtended(from: Long, to: Long): Flow<List<ActivityExtendedMinute>>
+
+    /*
+     * One row per local day (SQLite's 'localtime' follows the phone's zone, DST included), for week, month and
+     * year views. Heart rate here is the heart_rate table only; the day chart also folds in per-minute activity HR.
+     */
+    @Query("SELECT date(timestamp, 'unixepoch', 'localtime') AS day, AVG(bpm) AS value, MIN(bpm) AS min, MAX(bpm) AS max, COUNT(*) AS count FROM heart_rate WHERE timestamp BETWEEN :from AND :to AND bpm BETWEEN 30 AND 230 GROUP BY day ORDER BY day")
+    fun dailyHeartRate(from: Long, to: Long): Flow<List<DailyAggregate>>
+
+    @Query("SELECT date(timestamp, 'unixepoch', 'localtime') AS day, SUM(steps) AS value, MIN(steps) AS min, MAX(steps) AS max, COUNT(*) AS count FROM activity_minute WHERE timestamp BETWEEN :from AND :to GROUP BY day ORDER BY day")
+    fun dailySteps(from: Long, to: Long): Flow<List<DailyAggregate>>
+
+    @Query("SELECT date(timestamp, 'unixepoch', 'localtime') AS day, AVG(milliseconds) AS value, MIN(milliseconds) AS min, MAX(milliseconds) AS max, COUNT(*) AS count FROM hrv WHERE timestamp BETWEEN :from AND :to GROUP BY day ORDER BY day")
+    fun dailyHrv(from: Long, to: Long): Flow<List<DailyAggregate>>
+
+    @Query("SELECT date(timestamp, 'unixepoch', 'localtime') AS day, AVG(milliseconds) AS value, MIN(milliseconds) AS min, MAX(milliseconds) AS max, COUNT(*) AS count FROM hrv_sdnn WHERE timestamp BETWEEN :from AND :to GROUP BY day ORDER BY day")
+    fun dailyHrvSdnn(from: Long, to: Long): Flow<List<DailyAggregate>>
+
+    @Query("SELECT date(timestamp, 'unixepoch', 'localtime') AS day, AVG(percent) AS value, MIN(percent) AS min, MAX(percent) AS max, COUNT(*) AS count FROM spo2 WHERE timestamp BETWEEN :from AND :to GROUP BY day ORDER BY day")
+    fun dailySpo2(from: Long, to: Long): Flow<List<DailyAggregate>>
+
+    @Query("SELECT date(timestamp, 'unixepoch', 'localtime') AS day, AVG(percent) AS value, MIN(percent) AS min, MAX(percent) AS max, COUNT(*) AS count FROM sleep_spo2 WHERE timestamp BETWEEN :from AND :to GROUP BY day ORDER BY day")
+    fun dailySleepSpo2(from: Long, to: Long): Flow<List<DailyAggregate>>
+
+    @Query("SELECT date(timestamp, 'unixepoch', 'localtime') AS day, AVG(value) AS value, MIN(value) AS min, MAX(value) AS max, COUNT(*) AS count FROM stress WHERE timestamp BETWEEN :from AND :to GROUP BY day ORDER BY day")
+    fun dailyStress(from: Long, to: Long): Flow<List<DailyAggregate>>
+
+    @Query("SELECT date(timestamp, 'unixepoch', 'localtime') AS day, AVG(celsius) AS value, MIN(celsius) AS min, MAX(celsius) AS max, COUNT(*) AS count FROM skin_temperature WHERE timestamp BETWEEN :from AND :to GROUP BY day ORDER BY day")
+    fun dailySkinTemperature(from: Long, to: Long): Flow<List<DailyAggregate>>
+
+    @Query("SELECT date(timestamp, 'unixepoch', 'localtime') AS day, AVG(perMinute) AS value, MIN(perMinute) AS min, MAX(perMinute) AS max, COUNT(*) AS count FROM breath_rate WHERE timestamp BETWEEN :from AND :to GROUP BY day ORDER BY day")
+    fun dailyBreathRate(from: Long, to: Long): Flow<List<DailyAggregate>>
+
+    /** Each day's last PAI row; SQLite takes the bare columns from the row that holds MAX(timestamp). */
+    @Query("SELECT date(timestamp, 'unixepoch', 'localtime') AS day, daily, total, MAX(timestamp) AS latest FROM pai WHERE timestamp BETWEEN :from AND :to GROUP BY day ORDER BY day")
+    fun dailyPai(from: Long, to: Long): Flow<List<DailyPai>>
+
     @Query("SELECT MAX(timestamp) FROM heart_rate")
     fun latestHeartRateTime(): Flow<Long?>
 

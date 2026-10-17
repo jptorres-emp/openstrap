@@ -270,8 +270,8 @@ private class Signal(
 }
 
 /**
- * Key statistics as a home screen should show them: only what moved away from your normal, with the
- * rest summed up in one line. A quiet day reads as "all normal" instead of six rows to scan.
+ * Key statistics against your normal, the same ones as the classic Today: each value with its 7-day
+ * baseline, and an arrow on the ones that moved. A tile shows as soon as there is a value or a baseline.
  */
 @Composable
 private fun WhatChanged(state: DayUiState, advice: String?, onFocus: (FocusTarget) -> Unit) {
@@ -286,29 +286,28 @@ private fun WhatChanged(state: DayUiState, advice: String?, onFocus: (FocusTarge
         ),
         Signal("Stress", MetricColors.stress, state.stress.avg()?.toFloat(), b.stress, "", 0, 4f, false, FocusTarget.Stress),
         Signal("Breathing", MetricColors.sleepLight, state.breathRate.avg()?.toFloat(), b.breathRate, "/min", 0, 1f, null, FocusTarget.Breathing),
-    ).filter { it.value != null }
-    if (signals.isEmpty()) return
-    val moved = signals.filter { (it.direction ?: 0) != 0 }
-    val steady = signals.filter { it.direction == 0 }
+    ).filter { it.value != null || it.baseline != null }
+    if (signals.isEmpty() && advice.isNullOrEmpty()) return
 
     DotPanel {
         DotHeader("What changed", Color.White.copy(alpha = 0.7f), trailing = "vs. your last 7 days")
         if (!advice.isNullOrEmpty()) Text(advice, color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodyMedium)
-        moved.forEachIndexed { i, sg ->
-            if (i > 0) DotDivider()
-            DotStatRow(sg.label, sg.accent, sg.fmt(sg.value), sg.unit, sg.fmt(sg.baseline), sg.direction, sg.higherIsBetter) { onFocus(sg.target) }
+        // Two columns, so six statistics take three rows instead of a screenful.
+        Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
+            signals.chunked(2).forEach { pair ->
+                Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+                    pair.forEach { sg ->
+                        DotStatTile(
+                            sg.label, sg.accent, sg.fmt(sg.value), sg.unit, sg.fmt(sg.baseline), sg.direction, sg.higherIsBetter,
+                            Modifier.weight(1f),
+                        ) { onFocus(sg.target) }
+                    }
+                    if (pair.size == 1) Spacer(Modifier.weight(1f))
+                }
+            }
         }
-        if (steady.isNotEmpty()) {
-            if (moved.isNotEmpty()) DotDivider()
-            val names = steady.joinToString(", ") { it.label }
-            Text(
-                if (moved.isEmpty()) "Everything is within your normal range: $names."
-                else "$names ${if (steady.size == 1) "is" else "are"} normal.",
-                color = Color.White.copy(alpha = 0.65f), style = MaterialTheme.typography.bodyMedium,
-            )
-        }
-        if (moved.isEmpty() && steady.isEmpty()) {
-            Text("Not enough days yet to know your normal.", color = Color.White.copy(alpha = 0.65f), style = MaterialTheme.typography.bodyMedium)
+        if (signals.isNotEmpty() && signals.all { it.baseline == null }) {
+            Text("Your normal builds over the first week of wear.", color = Color.White.copy(alpha = 0.65f), style = MaterialTheme.typography.bodyMedium)
         }
     }
 }

@@ -113,11 +113,11 @@ fun DotArrow(up: Boolean, color: Color, modifier: Modifier = Modifier) {
 }
 
 /**
- * A key-statistic row for a [DotPanel]: dot and label on the left; value, unit and a dot arrow on the
- * right, the 7-day baseline underneath.
+ * One key statistic as a grid tile: the label over the value, its trend arrow beside the value and
+ * its usual value underneath. Two of these side by side make a row of the What changed grid.
  */
 @Composable
-fun DotStatRow(
+fun DotStatTile(
     label: String,
     accent: Color,
     value: String?,
@@ -127,32 +127,32 @@ fun DotStatRow(
     direction: Int?,
     /** Whether going up is good; colours the arrow. */
     higherIsBetter: Boolean?,
+    modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
 ) {
-    Row(
-        Modifier.fillMaxWidth()
+    Column(
+        modifier
             .let { if (onClick != null) it.pressClickable(onClick, RoundedCornerShape(12.dp), scale = 0.98f) else it }
             .padding(vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(Modifier.size(6.dp).background(accent, CircleShape))
-        Spacer(Modifier.width(12.dp))
-        Text(label, color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-        Column(horizontalAlignment = Alignment.End) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (value != null && direction != null && direction != 0) {
-                    val good = higherIsBetter?.let { (direction > 0) == it }
-                    val tint = when (good) { true -> TrendGood; false -> TrendBad; null -> Color.White.copy(alpha = 0.6f) }
-                    DotArrow(direction > 0, tint)
-                    Spacer(Modifier.width(8.dp))
-                }
-                Text(value ?: "—", color = Color.White, style = MaterialTheme.typography.titleLarge)
-                if (value != null && unit.isNotEmpty()) {
-                    Text(unit, color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(start = 3.dp))
-                }
-            }
-            if (baseline != null) Text("usually $baseline", color = Color.White.copy(alpha = 0.5f), style = MaterialTheme.typography.bodySmall)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(6.dp).background(accent, CircleShape))
+            Spacer(Modifier.width(8.dp))
+            Text(label, color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.bodySmall, maxLines = 1)
         }
+        Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(value ?: "—", color = Color.White, style = MaterialTheme.typography.titleLarge)
+            if (value != null && unit.isNotEmpty()) {
+                Text(unit, color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(start = 3.dp))
+            }
+            if (value != null && direction != null && direction != 0) {
+                val good = higherIsBetter?.let { (direction > 0) == it }
+                val tint = when (good) { true -> TrendGood; false -> TrendBad; null -> Color.White.copy(alpha = 0.6f) }
+                Spacer(Modifier.width(8.dp))
+                DotArrow(direction > 0, tint)
+            }
+        }
+        if (baseline != null) Text("usually $baseline", color = Color.White.copy(alpha = 0.5f), style = MaterialTheme.typography.bodySmall)
     }
 }
 

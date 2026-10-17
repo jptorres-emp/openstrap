@@ -330,10 +330,11 @@ private fun ActivityGlow(state: DayUiState) {
     }
 }
 
-/** Sleep glows dark grey: quiet like the night, breathing slowly. */
-private val SleepGlow = GlowStyle.chart(Color(0xFF6E7280)).copy(
-    coreY = 0.6f, coreWidth = 0.92f, coreHeight = 0.72f, coreLightness = 0.05f, toneWidth = 14.dp,
-    glowStrength = 0.55f, bevel = 1f, motion = GlowMotion.Breath(5f),
+/** Sleep glows midnight blue, the same as the Design lab's sleep card, breathing slowly. */
+private val SleepGlow = GlowStyle.Midnight.copy(
+    color = MetricColors.sleepDeep,
+    coreX = 0.5f, coreY = 0.6f, coreWidth = 1.1f, coreHeight = 0.9f,
+    motion = GlowMotion.Breath(5f),
 )
 
 @Composable

@@ -52,85 +52,13 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import org.openstrap.app.ui.theme.PhosphorIcons
 
-@Composable
-fun HeartScreen(
-    state: DayUiState,
-    liveHeartRate: Int?,
-    liveEnabled: Boolean,
-    canUseLive: Boolean,
-    battery: Int?,
-    charging: Boolean = false,
-    onLiveToggle: (Boolean) -> Unit,
-    onPrev: () -> Unit,
-    onNext: () -> Unit,
-    contentPadding: PaddingValues,
-    picker: DayPicker = DayPicker(),
-    focus: FocusRequest? = null,
-    onFocusDone: () -> Unit = {},
-) {
-    val list = rememberLazyListState()
-    val index = remember { SectionIndex() }
-    val f = rememberFocus(focus, list, index, onFocusDone)
-    ScreenList(contentPadding, list, index) {
-    section(index) { DateHeader(state.date, battery, onPrev, onNext, charging, picker) }
-
-    section(index) {
-        Panel {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                BigValue(
-                    liveHeartRate?.toString() ?: "—", "bpm", Modifier.weight(1f),
-                    caption = if (liveEnabled) "Live heart rate" else "Live heart rate · off",
-                    captionColor = if (liveHeartRate != null) MetricColors.heart else MaterialTheme.colorScheme.onSurfaceVariant,
-                    large = true,
-                )
-                Switch(
-                    checked = liveEnabled, onCheckedChange = onLiveToggle, enabled = canUseLive,
-                    colors = SwitchDefaults.colors(checkedTrackColor = MetricColors.heart),
-                )
-            }
-            if (!canUseLive) EmptyHint("Connect your strap to stream live heart rate.")
-        }
-    }
-
-    section(index, FocusTarget.HeartRate) {
-        Panel(highlight = MetricColors.heart.takeIf { f.isHighlighted(FocusTarget.HeartRate) }) {
-            PanelHeader("Heart rate", PhosphorIcons.Heart, MetricColors.heart)
-            if (state.heartRate.isEmpty()) EmptyHint("No heart-rate data for this day.")
-            else {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    BigValue(state.heartRate.minOf { it.y }.toInt().toString(), "bpm", caption = "Lowest")
-                    BigValue(state.heartRate.avg().toString(), "bpm", caption = "Average")
-                    BigValue(state.heartRate.maxOf { it.y }.toInt().toString(), "bpm", caption = "Highest")
-                }
-                LineChart(
-                    state.heartRate, MetricColors.heart, state.dayStart..state.dayEnd, height = 190.dp,
-                    markMin = true, band = state.sleep?.let { it.start..it.end }, reveal = f.reveal(FocusTarget.HeartRate), unit = "bpm",
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    LegendDot("Your average", MetricColors.heart.copy(alpha = 0.7f))
-                    if (state.sleep != null) LegendDot("Asleep", MaterialTheme.colorScheme.primary.copy(alpha = 0.4f))
-                }
-            }
-        }
-    }
-
-    section(index, FocusTarget.RestingHr) { TrendPanel("Resting heart rate", PhosphorIcons.Heartbeat, MetricColors.heart, state.restingTrend, "bpm", f, FocusTarget.RestingHr) }
-    section(index, FocusTarget.Hrv) { TrendPanel("Heart-rate variability", PhosphorIcons.ChartLineUp, MetricColors.hrv, state.hrvTrend, "ms", f, FocusTarget.Hrv) }
-    section(index, FocusTarget.Spo2) { SeriesPanel("Blood oxygen", PhosphorIcons.Wind, MetricColors.spo2, state.spo2, "%", state, f, FocusTarget.Spo2) }
-    section(index, FocusTarget.Stress) { SeriesPanel("Stress", PhosphorIcons.Brain, MetricColors.stress, state.stress, "", state, f, FocusTarget.Stress) }
-    section(index, FocusTarget.SkinTemperature) {
-        SeriesPanel("Skin temperature", PhosphorIcons.ThermometerSimple, MetricColors.temperature, state.skinTemperature, "°C", state, f, FocusTarget.SkinTemperature, decimals = 1)
-    }
-    }
-}
-
 /** Days with data needed before the 7-day average means anything. */
 private const val TREND_MIN_DAYS = 3
 
 /** 7-day trend card; today's value is the headline, next to the week's average once there's enough data. */
 @Composable
-private fun TrendPanel(title: String, icon: ImageVector, color: Color, points: List<TrendPoint>, unit: String, focus: FocusState, target: FocusTarget) {
-    Panel(highlight = color.takeIf { focus.isHighlighted(target) }) {
+internal fun TrendPanel(title: String, icon: ImageVector, color: Color, points: List<TrendPoint>, unit: String) {
+    Panel {
         PanelHeader(title, icon, color, trailing = "Last 7 days")
         val today = points.lastOrNull()?.value
         val known = points.mapNotNull { it.value }
@@ -141,7 +69,7 @@ private fun TrendPanel(title: String, icon: ImageVector, color: Color, points: L
                 BigValue(today?.let { Math.round(it).toString() } ?: "—", unit, caption = "Today")
                 BigValue(average?.let { Math.round(it).toString() } ?: "—", unit, caption = "7-day avg")
             }
-            TrendChart(points, color, reveal = focus.reveal(target), unit = unit, average = average)
+            TrendChart(points, color, unit = unit, average = average)
             if (average == null) {
                 Text(
                     "Your 7-day average shows after $TREND_MIN_DAYS days of data (${known.size} so far).",
@@ -154,25 +82,23 @@ private fun TrendPanel(title: String, icon: ImageVector, color: Color, points: L
 }
 
 @Composable
-private fun SeriesPanel(
+internal fun SeriesPanel(
     title: String,
     icon: ImageVector,
     color: Color,
     points: List<ChartPoint>,
     unit: String,
     state: DayUiState,
-    focus: FocusState,
-    target: FocusTarget,
     decimals: Int = 0,
 ) {
-    Panel(highlight = color.takeIf { focus.isHighlighted(target) }) {
+    Panel {
         PanelHeader(title, icon, color)
         if (points.isEmpty()) EmptyHint("No data for this day.")
         else {
             val average = if (decimals == 0) points.avg().toString() else "%.${decimals}f".format(points.map { it.y }.average())
             BigValue(average, unit, caption = "Average")
             LineChart(
-                points, color, state.dayStart..state.dayEnd, height = 130.dp, gapSeconds = 3 * 3600, reveal = focus.reveal(target),
+                points, color, state.dayStart..state.dayEnd, height = 130.dp, gapSeconds = 3 * 3600,
                 format = { if (decimals == 0) Math.round(it).toString() else "%.${decimals}f".format(it) }, unit = unit,
             )
         }
@@ -187,15 +113,8 @@ fun SleepScreen(
     onPrev: () -> Unit,
     onNext: () -> Unit,
     contentPadding: PaddingValues,
-    focus: FocusRequest? = null,
-    onFocusDone: () -> Unit = {},
     picker: DayPicker = DayPicker(),
-) {
-    val list = rememberLazyListState()
-    val index = remember { SectionIndex() }
-    val f = rememberFocus(focus, list, index, onFocusDone)
-    SleepList(state, battery, charging, onPrev, onNext, contentPadding, list, index, f, picker)
-}
+) = SleepList(state, battery, charging, onPrev, onNext, contentPadding, picker)
 
 @Composable
 private fun SleepList(
@@ -205,20 +124,17 @@ private fun SleepList(
     onPrev: () -> Unit,
     onNext: () -> Unit,
     contentPadding: PaddingValues,
-    list: LazyListState,
-    index: SectionIndex,
-    f: FocusState,
     picker: DayPicker,
-) = ScreenList(contentPadding, list, index) {
-    section(index) { DateHeader(state.date, battery, onPrev, onNext, charging, picker) }
+) = ScreenList(contentPadding) {
+    item { DateHeader(state.date, battery, onPrev, onNext, charging, picker) }
     val session = state.sleep
     if (session == null) {
-        section(index) { Panel { PanelHeader("Sleep", PhosphorIcons.Moon, MetricColors.sleepDeep); EmptyHint("No sleep recorded for this night.") } }
-        if (state.naps.isNotEmpty()) section(index) { NapDetailsPanel(state) }
+        item { Panel { PanelHeader("Sleep", PhosphorIcons.Moon, MetricColors.sleepDeep); EmptyHint("No sleep recorded for this night.") } }
+        if (state.naps.isNotEmpty()) item { NapDetailsPanel(state) }
         return@ScreenList
     }
 
-    section(index) {
+    item {
         val score = session.score
         val asleep = state.asleepSeconds ?: (session.end - session.start)
         if (score != null) {
@@ -235,7 +151,7 @@ private fun SleepList(
     }
 
     // Bevel: time in bed and time asleep side by side.
-    section(index) {
+    item {
         Panel {
             Row {
                 Column(Modifier.weight(1f)) {
@@ -253,7 +169,7 @@ private fun SleepList(
         }
     }
 
-    if (state.sleepStages.isNotEmpty()) section(index) {
+    if (state.sleepStages.isNotEmpty()) item {
         Panel {
             PanelHeader("Sleep stages", PhosphorIcons.Moon, MetricColors.sleepDeep, trailing = session.wakeCount?.let { "Woke $it×" })
             Hypnogram(state.sleepStages, SLEEP_COLORS, DayViewModel.SLEEP_STAGE_ROWS, height = 180.dp, stageNames = SLEEP_NAMES)
@@ -274,7 +190,7 @@ private fun SleepList(
     }
 
     val contributors = Narrative.sleepContributors(session, state.asleepSeconds ?: 0)
-    if (session.score != null && contributors.isNotEmpty()) section(index) {
+    if (session.score != null && contributors.isNotEmpty()) item {
         Panel {
             PanelHeader("Contributors", PhosphorIcons.ChartLineUp, MetricColors.sleepRem)
             contributors.forEach { ContributorRow(it.label, it.rating.label, it.fraction, it.rating.color, it.detail) }
@@ -285,17 +201,13 @@ private fun SleepList(
         }
     }
 
-    if (state.breathRate.isNotEmpty()) section(index, FocusTarget.Breathing) {
-        Panel(highlight = MetricColors.hrv.takeIf { f.isHighlighted(FocusTarget.Breathing) }) {
-            PanelHeader("Breathing rate", PhosphorIcons.Wind, MetricColors.hrv)
-            BigValue(state.breathRate.avg().toString(), "br/min", caption = "Average during sleep")
-            LineChart(state.breathRate, MetricColors.hrv, session.start..session.end, height = 110.dp, gapSeconds = 2 * 3600, reveal = f.reveal(FocusTarget.Breathing), unit = "br/min")
-        }
+    if (state.breathRate.isNotEmpty()) item {
+        BreathingPanel(state.breathRate, session.start..session.end)
     }
 
-    if (state.naps.isNotEmpty()) section(index) { NapDetailsPanel(state) }
+    if (state.naps.isNotEmpty()) item { NapDetailsPanel(state) }
 
-    section(index) {
+    item {
         var range by rememberSaveable { mutableIntStateOf(0) }
         Panel {
             PanelHeader("Heart rate during sleep", PhosphorIcons.Heart, MetricColors.heart)

@@ -38,7 +38,7 @@ import org.openstrap.app.ui.dashboard.DateHeader
 import org.openstrap.app.ui.dashboard.DayPicker
 import org.openstrap.app.ui.dashboard.DayUiState
 import org.openstrap.app.ui.dashboard.DayViewModel
-import org.openstrap.app.ui.dashboard.FocusTarget
+import org.openstrap.app.ui.dashboard.Metric
 import org.openstrap.app.ui.dashboard.Narrative
 import org.openstrap.app.ui.dashboard.SLEEP_NAMES
 import org.openstrap.app.ui.dashboard.STEP_GOAL
@@ -64,7 +64,7 @@ fun GlowTodayScreen(
     contentPadding: PaddingValues,
     picker: DayPicker = DayPicker(),
     onOpenSleep: () -> Unit = {},
-    onFocus: (FocusTarget) -> Unit = {},
+    onOpenMetric: (Metric) -> Unit = {},
     recovery: RecoveryResult? = null,
     onOpenRecovery: () -> Unit = {},
     sync: SyncState.Running? = null,
@@ -74,7 +74,7 @@ fun GlowTodayScreen(
     // The glow holds still while the list scrolls, so scrolling stays as smooth as on other screens.
     val list = rememberLazyListState()
     CompositionLocalProvider(LocalGlowPaused provides { list.isScrollInProgress }) {
-        TodayList(state, liveHeartRate, battery, charging, onPrev, onNext, contentPadding, picker, onOpenSleep, onFocus, recovery, onOpenRecovery, sync, workouts, onOpenWorkout, list)
+        TodayList(state, liveHeartRate, battery, charging, onPrev, onNext, contentPadding, picker, onOpenSleep, onOpenMetric, recovery, onOpenRecovery, sync, workouts, onOpenWorkout, list)
     }
 }
 
@@ -89,7 +89,7 @@ private fun TodayList(
     contentPadding: PaddingValues,
     picker: DayPicker,
     onOpenSleep: () -> Unit,
-    onFocus: (FocusTarget) -> Unit,
+    onOpenMetric: (Metric) -> Unit,
     recovery: RecoveryResult?,
     onOpenRecovery: () -> Unit,
     sync: SyncState.Running?,
@@ -109,10 +109,10 @@ private fun TodayList(
     if (hasSleep && morning) item { SleepPanel(state, onOpenSleep) }
 
     // Quiet: what the readiness score means, then only the signals that moved away from your normal.
-    item { WhatChanged(state, rec?.readiness?.let { Narrative.readinessBody(it) }, onFocus) }
+    item { WhatChanged(state, rec?.readiness?.let { Narrative.readinessBody(it) }, onOpenMetric) }
 
     // Glow: heart rate, beating at the latest reading.
-    item { HeartGlow(state, liveHeartRate) { onFocus(FocusTarget.HeartRate) } }
+    item { HeartGlow(state, liveHeartRate) { onOpenMetric(Metric.HeartRate) } }
 
     // Glow: activity, moving with the day's steps.
     item { ActivityGlow(state) }
@@ -263,7 +263,7 @@ private fun HeartGlow(state: DayUiState, live: Int?, onClick: () -> Unit) {
 /** One key statistic against its 7-day baseline. */
 private class Signal(
     val label: String, val accent: Color, val value: Float?, val baseline: Float?, val unit: String,
-    val decimals: Int, val tolerance: Float, val higherIsBetter: Boolean?, val target: FocusTarget,
+    val decimals: Int, val tolerance: Float, val higherIsBetter: Boolean?, val target: Metric,
 ) {
     val direction get() = Narrative.direction(value, baseline, tolerance)
     fun fmt(v: Float?) = v?.let { "%.${decimals}f".format(it) }
@@ -274,18 +274,18 @@ private class Signal(
  * baseline, and an arrow on the ones that moved. A tile shows as soon as there is a value or a baseline.
  */
 @Composable
-private fun WhatChanged(state: DayUiState, advice: String?, onFocus: (FocusTarget) -> Unit) {
+private fun WhatChanged(state: DayUiState, advice: String?, onOpenMetric: (Metric) -> Unit) {
     val b = state.baselines
     val signals = listOfNotNull(
-        Signal("Resting HR", MetricColors.heart, state.restingHeartRate?.toFloat(), b.restingHr, "bpm", 0, 1.5f, false, FocusTarget.RestingHr),
-        Signal("HRV", MetricColors.hrv, state.hrv.avg()?.toFloat(), b.hrv, "ms", 0, 3f, true, FocusTarget.Hrv),
-        Signal("Blood oxygen", MetricColors.spo2, state.spo2.avg()?.toFloat(), b.spo2, "%", 0, 1f, true, FocusTarget.Spo2),
+        Signal("Resting HR", MetricColors.heart, state.restingHeartRate?.toFloat(), b.restingHr, "bpm", 0, 1.5f, false, Metric.RestingHr),
+        Signal("HRV", MetricColors.hrv, state.hrv.avg()?.toFloat(), b.hrv, "ms", 0, 3f, true, Metric.Hrv),
+        Signal("Blood oxygen", MetricColors.spo2, state.spo2.avg()?.toFloat(), b.spo2, "%", 0, 1f, true, Metric.Spo2),
         Signal(
             "Skin temp", MetricColors.temperature, state.skinTemperature.takeIf { it.isNotEmpty() }?.map { it.y }?.average()?.toFloat(),
-            b.skinTemperature, "°C", 1, 0.3f, null, FocusTarget.SkinTemperature,
+            b.skinTemperature, "°C", 1, 0.3f, null, Metric.SkinTemperature,
         ),
-        Signal("Stress", MetricColors.stress, state.stress.avg()?.toFloat(), b.stress, "", 0, 4f, false, FocusTarget.Stress),
-        Signal("Breathing", MetricColors.sleepLight, state.breathRate.avg()?.toFloat(), b.breathRate, "/min", 0, 1f, null, FocusTarget.Breathing),
+        Signal("Stress", MetricColors.stress, state.stress.avg()?.toFloat(), b.stress, "", 0, 4f, false, Metric.Stress),
+        Signal("Breathing", MetricColors.sleepLight, state.breathRate.avg()?.toFloat(), b.breathRate, "/min", 0, 1f, null, Metric.Breathing),
     ).filter { it.value != null || it.baseline != null }
     if (signals.isEmpty() && advice.isNullOrEmpty()) return
 
@@ -300,7 +300,7 @@ private fun WhatChanged(state: DayUiState, advice: String?, onFocus: (FocusTarge
                         DotStatTile(
                             sg.label, sg.accent, sg.fmt(sg.value), sg.unit, sg.fmt(sg.baseline), sg.direction, sg.higherIsBetter,
                             Modifier.weight(1f),
-                        ) { onFocus(sg.target) }
+                        ) { onOpenMetric(sg.target) }
                     }
                     if (pair.size == 1) Spacer(Modifier.weight(1f))
                 }

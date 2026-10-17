@@ -85,7 +85,6 @@ val SLEEP_NAMES = mapOf(
 fun ScreenList(
     contentPadding: PaddingValues,
     state: LazyListState = rememberLazyListState(),
-    index: SectionIndex? = null,
     /** Space between the screen edge and the cards. */
     gutter: Dp = 16.dp,
     content: LazyListScope.() -> Unit,
@@ -100,7 +99,7 @@ fun ScreenList(
             bottom = contentPadding.calculateBottomPadding() + 24.dp,
         ),
         verticalArrangement = Arrangement.spacedBy(12.dp),
-        content = { index?.reset(); content() },
+        content = content,
     )
 }
 
@@ -224,8 +223,8 @@ fun TodayScreen(
     contentPadding: PaddingValues,
     picker: DayPicker = DayPicker(),
     onOpenSleep: () -> Unit = {},
-    /** Jump to a metric's chart on the Heart or Sleep tab. */
-    onFocus: (FocusTarget) -> Unit = {},
+    /** Open a metric's detail on top of Today. */
+    onOpenMetric: (Metric) -> Unit = {},
     recovery: RecoveryResult? = null,
     onOpenRecovery: () -> Unit = {},
     sync: SyncState.Running? = null,
@@ -243,13 +242,13 @@ fun TodayScreen(
             val cell = Modifier.weight(1f)
             val sleepValue = state.sleep?.score?.toString() ?: state.asleepSeconds?.let { "%d:%02d".format(it / 3600, (it % 3600) / 60) }
             // Whichever score isn't the hero sits first in the row.
-            if (chargeLeads) ScoreChip(rec?.readiness?.score?.toString(), "Readiness", PhosphorIcons.Plant, MetricColors.readiness, cell, rec?.readiness?.score?.let { it / 100f }, onClick = onOpenRecovery)
+            if (chargeLeads) ScoreChip(rec?.readiness?.score?.toString(), "Recovery", PhosphorIcons.Plant, MetricColors.readiness, cell, rec?.readiness?.score?.let { it / 100f }, onClick = onOpenRecovery)
             else ScoreChip(rec?.charge?.latest?.toInt()?.toString(), "Charge", PhosphorIcons.Lightning, MetricColors.chargeAt(rec?.charge?.latest), cell, rec?.charge?.latest?.let { it.toFloat() / 100f }, onClick = onOpenRecovery)
             // The sleep ring is the score, or time asleep against eight hours when there's no score.
             val sleepProgress = state.sleep?.score?.let { it / 100f } ?: state.asleepSeconds?.let { it / (8 * 3600f) }
             ScoreChip(sleepValue, "Sleep", PhosphorIcons.Moon, MetricColors.sleepDeep, cell, sleepProgress, onClick = onOpenSleep)
             ScoreChip(compactCount(state.steps), "Steps", PhosphorIcons.Footprints, MetricColors.steps, cell, state.steps.toFloat() / STEP_GOAL)
-            ScoreChip(state.stress.avg()?.toString(), "Stress", PhosphorIcons.Brain, MetricColors.stress, cell, state.stress.avg()?.let { it / 100f }, onClick = { onFocus(FocusTarget.Stress) })
+            ScoreChip(state.stress.avg()?.toString(), "Stress", PhosphorIcons.Brain, MetricColors.stress, cell, state.stress.avg()?.let { it / 100f }, onClick = { onOpenMetric(Metric.Stress) })
         }
     }
 
@@ -262,9 +261,9 @@ fun TodayScreen(
             ReadinessHero(rec, onClick = onOpenRecovery)
         } else {
             HeroPanel(
-                label = "Readiness", value = "—", progress = null, accent = MetricColors.readiness,
+                label = "Recovery", value = "—", progress = null, accent = MetricColors.readiness,
                 headline = "Sleep with your strap tonight",
-                body = "Your first Readiness score arrives in the morning. It compares each night with your own " +
+                body = "Your first Recovery score arrives in the morning. It compares each night with your own " +
                     "normal, so it gets sharper over the first two weeks.",
                 onClick = onOpenRecovery,
             )
@@ -276,7 +275,7 @@ fun TodayScreen(
     }
 
     item {
-        Panel(onClick = { onFocus(FocusTarget.HeartRate) }) {
+        Panel(onClick = { onOpenMetric(Metric.HeartRate) }) {
             PanelHeader("Heart rate", PhosphorIcons.Heart, MetricColors.heart, trailing = if (liveHeartRate != null) "● Live" else null, chevron = true)
             val now = liveHeartRate ?: state.latestHeartRate
             if (now != null) BigValue("$now", "bpm", caption = if (liveHeartRate != null) "Right now" else "Latest")
@@ -299,23 +298,23 @@ fun TodayScreen(
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             val rhr = state.restingHeartRate?.toFloat()
             KeyStatRow("Resting HR", PhosphorIcons.Heart, MetricColors.heart, rhr?.let { "%.0f".format(it) }, "bpm",
-                b.restingHr?.let { "%.0f".format(it) }, Narrative.direction(rhr, b.restingHr, 1.5f), higherIsBetter = false, onClick = { onFocus(FocusTarget.RestingHr) })
+                b.restingHr?.let { "%.0f".format(it) }, Narrative.direction(rhr, b.restingHr, 1.5f), higherIsBetter = false, onClick = { onOpenMetric(Metric.RestingHr) })
             val hrv = state.hrv.avg()?.toFloat()
             KeyStatRow("HRV", PhosphorIcons.Heartbeat, MetricColors.hrv, hrv?.let { "%.0f".format(it) }, "ms",
-                b.hrv?.let { "%.0f".format(it) }, Narrative.direction(hrv, b.hrv, 3f), higherIsBetter = true, onClick = { onFocus(FocusTarget.Hrv) })
+                b.hrv?.let { "%.0f".format(it) }, Narrative.direction(hrv, b.hrv, 3f), higherIsBetter = true, onClick = { onOpenMetric(Metric.Hrv) })
             val spo2 = state.spo2.avg()?.toFloat()
             KeyStatRow("Blood oxygen", PhosphorIcons.Drop, MetricColors.spo2, spo2?.let { "%.0f".format(it) }, "%",
-                b.spo2?.let { "%.0f".format(it) }, Narrative.direction(spo2, b.spo2, 1f), higherIsBetter = true, onClick = { onFocus(FocusTarget.Spo2) })
+                b.spo2?.let { "%.0f".format(it) }, Narrative.direction(spo2, b.spo2, 1f), higherIsBetter = true, onClick = { onOpenMetric(Metric.Spo2) })
             val skin = state.skinTemperature.takeIf { it.isNotEmpty() }?.map { it.y }?.average()?.toFloat()
             KeyStatRow("Skin temp", PhosphorIcons.ThermometerSimple, MetricColors.temperature, skin?.let { "%.1f".format(it) }, "°C",
-                b.skinTemperature?.let { "%.1f".format(it) }, Narrative.direction(skin, b.skinTemperature, 0.3f), higherIsBetter = null, onClick = { onFocus(FocusTarget.SkinTemperature) })
+                b.skinTemperature?.let { "%.1f".format(it) }, Narrative.direction(skin, b.skinTemperature, 0.3f), higherIsBetter = null, onClick = { onOpenMetric(Metric.SkinTemperature) })
             val stress = state.stress.avg()?.toFloat()
             KeyStatRow("Stress", PhosphorIcons.Brain, MetricColors.stress, stress?.let { "%.0f".format(it) }, "",
-                b.stress?.let { "%.0f".format(it) }, Narrative.direction(stress, b.stress, 4f), higherIsBetter = false, onClick = { onFocus(FocusTarget.Stress) })
+                b.stress?.let { "%.0f".format(it) }, Narrative.direction(stress, b.stress, 4f), higherIsBetter = false, onClick = { onOpenMetric(Metric.Stress) })
             val breath = state.breathRate.avg()?.toFloat()
             if (breath != null || b.breathRate != null) {
                 KeyStatRow("Breathing", PhosphorIcons.Wind, MetricColors.sleepLight, breath?.let { "%.0f".format(it) }, "/min",
-                    b.breathRate?.let { "%.0f".format(it) }, Narrative.direction(breath, b.breathRate, 1f), higherIsBetter = null, onClick = { onFocus(FocusTarget.Breathing) })
+                    b.breathRate?.let { "%.0f".format(it) }, Narrative.direction(breath, b.breathRate, 1f), higherIsBetter = null, onClick = { onOpenMetric(Metric.Breathing) })
             }
         }
     }

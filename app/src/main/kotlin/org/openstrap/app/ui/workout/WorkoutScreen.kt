@@ -73,7 +73,7 @@ fun WorkoutsPanel(workouts: List<WorkoutAnalysis>, onOpen: (Long) -> Unit) {
 @Composable
 fun WorkoutsScreen(workouts: List<WorkoutAnalysis>, contentPadding: PaddingValues, onOpen: (Long) -> Unit) {
     ScreenList(contentPadding) {
-        item { Text("Workouts", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.padding(start = 4.dp, top = 8.dp)) }
+        item { Text("Activity", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.padding(start = 4.dp, top = 8.dp)) }
         if (workouts.isEmpty()) {
             item {
                 Panel {

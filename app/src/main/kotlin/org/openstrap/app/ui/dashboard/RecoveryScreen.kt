@@ -1,6 +1,5 @@
 package org.openstrap.app.ui.dashboard
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,7 +14,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.ui.text.withStyle
@@ -37,12 +35,10 @@ import org.openstrap.app.ui.components.HeroPanel
 import org.openstrap.app.ui.components.LineChart
 import org.openstrap.app.ui.components.Panel
 import org.openstrap.app.ui.components.PanelHeader
-import org.openstrap.app.ui.components.SectionLabel
 import org.openstrap.app.ui.components.TrendChart
 import org.openstrap.app.ui.components.TrendPoint
 import org.openstrap.app.ui.theme.MetricColors
 import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
 import org.openstrap.app.ui.theme.PhosphorIcons
@@ -97,7 +93,7 @@ fun ChargeHero(r: RecoveryResult, onClick: (() -> Unit)? = null) {
 fun ReadinessHero(r: RecoveryResult, onClick: (() -> Unit)? = null) {
     val score = r.readiness.score ?: return
     HeroPanel(
-        label = if (r.readiness.calibrating) "Readiness · learning" else "Readiness",
+        label = if (r.readiness.calibrating) "Recovery · learning" else "Recovery",
         value = "$score",
         progress = score / 100f,
         accent = if (r.readiness.strainAlert) MetricColors.warn else MetricColors.readiness,
@@ -149,28 +145,16 @@ fun ChargeCard(
     }
 }
 
+/** The Recovery tab: the day's score, Charge and what drove them. [header] is the tab's date header. */
 @Composable
 fun RecoveryScreen(
     r: RecoveryResult?, date: LocalDate, dayRange: LongRange, sleepBand: LongRange?, contentPadding: PaddingValues,
-    onBack: () -> Unit, onEditProfile: () -> Unit,
+    onEditProfile: () -> Unit,
     strapReadiness: org.openstrap.app.data.db.StrapReadinessRow? = null,
+    header: @Composable () -> Unit,
 ) {
-    BackHandler(onBack = onBack)
     ScreenList(contentPadding) {
-        item {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onBack) { Icon(PhosphorIcons.ArrowLeft, "Back") }
-                Text("Recovery", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.weight(1f))
-                SectionLabel(
-                    when (date) {
-                        LocalDate.now() -> "Today"
-                        LocalDate.now().minusDays(1) -> "Yesterday"
-                        else -> date.format(DateTimeFormatter.ofPattern("EEE d MMM"))
-                    },
-                )
-                Spacer(Modifier.width(8.dp))
-            }
-        }
+        item { header() }
         if (r == null || r.date != date) {
             item { Panel { EmptyHint("Calculating…") } }
             return@ScreenList
@@ -179,8 +163,8 @@ fun RecoveryScreen(
         if (ready.score != null) item { ReadinessHero(r) }
         else item {
             Panel {
-                PanelHeader("Readiness", PhosphorIcons.Plant, MetricColors.readiness)
-                EmptyHint("Readiness is scored each morning from the night's sleep. Wear the strap to bed.")
+                PanelHeader("Recovery", PhosphorIcons.Plant, MetricColors.readiness)
+                EmptyHint("Recovery is scored each morning from the night's sleep. Wear the strap to bed.")
             }
         }
 
@@ -215,7 +199,7 @@ fun RecoveryScreen(
                 }
                 if (ready.calibrating) {
                     Text(
-                        "Readiness compares each night with your own history. It gets sharper over the first two weeks.",
+                        "Recovery compares each night with your own history. It gets sharper over the first two weeks.",
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
@@ -224,7 +208,7 @@ fun RecoveryScreen(
 
         if (r.readinessTrend.any { it.second != null }) item {
             Panel {
-                PanelHeader("Readiness", PhosphorIcons.ChartLine, MetricColors.readiness, trailing = "Last 7 days")
+                PanelHeader("Recovery", PhosphorIcons.ChartLine, MetricColors.readiness, trailing = "Last 7 days")
                 TrendChart(
                     r.readinessTrend.map { (d, v) -> TrendPoint(d.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault()).take(2), v?.toFloat()) },
                     MetricColors.readiness,
@@ -310,7 +294,7 @@ private fun HowItWorks() {
     Panel {
         PanelHeader("How it works", PhosphorIcons.Info)
         ExplainerSection(
-            "Readiness: how recovered you are",
+            "Recovery: how ready your body is",
             "Each morning we compare your night with what's normal for you, not with other people:",
             listOf(
                 "Heart rate variability. Higher than your usual means your body has bounced back.",
@@ -369,7 +353,7 @@ private fun ExplainerSection(title: String, intro: String, bullets: List<String>
 @Composable
 private fun StrapReadinessPanel(s: org.openstrap.app.data.db.StrapReadinessRow, ours: Int?) {
     Panel {
-        PanelHeader("Strap's own readiness", PhosphorIcons.Watch, MetricColors.readiness, trailing = ours?.let { "Ours: $it" })
+        PanelHeader("Strap's own score", PhosphorIcons.Watch, MetricColors.readiness, trailing = ours?.let { "Ours: $it" })
         BigValue("${s.score}", "", caption = "Calculated on the strap")
         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
             listOfNotNull(

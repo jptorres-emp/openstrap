@@ -162,6 +162,7 @@ private fun AppRoot(container: AppContainer) {
     var todayStack by rememberSaveable(stateSaver = Detail.StackSaver) { mutableStateOf(emptyList<Detail>()) }
     var activityStack by rememberSaveable(stateSaver = Detail.StackSaver) { mutableStateOf(emptyList<Detail>()) }
     var recoveryStack by rememberSaveable(stateSaver = Detail.StackSaver) { mutableStateOf(emptyList<Detail>()) }
+    var sleepStack by rememberSaveable(stateSaver = Detail.StackSaver) { mutableStateOf(emptyList<Detail>()) }
     val history: org.openstrap.app.ui.dashboard.DailyHistory = { m, from, to -> container.health.daily(m, from, to) }
     var editProfile by rememberSaveable { mutableStateOf(false) }
     val recovery by dayVm.recovery.collectAsStateWithLifecycle()
@@ -218,6 +219,7 @@ private fun AppRoot(container: AppContainer) {
         Tab.Today -> todayStack.lastOrNull()
         Tab.Activity -> activityStack.lastOrNull()
         Tab.Recovery -> recoveryStack.lastOrNull()
+        Tab.Sleep -> sleepStack.lastOrNull()
         else -> null
     }
     LaunchedEffect(currentDetail) { workoutsVm.open((currentDetail as? Detail.Workout)?.start) }
@@ -228,7 +230,7 @@ private fun AppRoot(container: AppContainer) {
     CompositionLocalProvider(LocalOpenStrap provides openStrap) {
         Scaffold(
             bottomBar = {
-                FloatingNavBar(Tab.entries.map { NavItem(it.label, it.icon, it.selectedIcon) }, tab, { tab = it; todayStack = emptyList(); activityStack = emptyList(); recoveryStack = emptyList(); showAlarms = false; showStrap = false; showDesignLab = false }, glass = if (BuildConfig.DEBUG && glowToday) navGlass else null)
+                FloatingNavBar(Tab.entries.map { NavItem(it.label, it.icon, it.selectedIcon) }, tab, { tab = it; todayStack = emptyList(); activityStack = emptyList(); recoveryStack = emptyList(); sleepStack = emptyList(); showAlarms = false; showStrap = false; showDesignLab = false }, glass = if (BuildConfig.DEBUG && glowToday) navGlass else null)
             },
             containerColor = MaterialTheme.colorScheme.background,
         ) { padding ->
@@ -296,7 +298,21 @@ private fun AppRoot(container: AppContainer) {
                             ) { DateHeader(day.date, battery, dayVm::previousDay, dayVm::nextDay, charging, picker, sync as? SyncState.Running) }
                         }
                     }
-                    Tab.Sleep -> pullToSync { SleepScreen(day, battery, charging, dayVm::previousDay, dayVm::nextDay, padding, picker = picker) }
+                    Tab.Sleep -> PushContent(sleepStack, depth = { it.size }) { stack ->
+                        val detail = stack.lastOrNull()
+                        if (detail is Detail.OfMetric) MetricDetailScreen(
+                            detail.metric, day, history = history,
+                            liveHeartRate = live, liveEnabled = liveEnabled, canUseLive = connection is ConnectionState.Connected,
+                            onLiveToggle = { container.strap.setLiveHeartRate(it) },
+                            onOpenMetric = { sleepStack = sleepStack + Detail.OfMetric(it) },
+                            contentPadding = padding, onBack = { sleepStack = sleepStack.dropLast(1) },
+                        ) else pullToSync {
+                            SleepScreen(
+                                day, battery, charging, dayVm::previousDay, dayVm::nextDay, padding, picker = picker,
+                                onOpenMetric = { sleepStack = listOf(Detail.OfMetric(it)) },
+                            )
+                        }
+                    }
                     Tab.Activity -> PushContent(activityStack, depth = { it.size }) { stack ->
                         val detail = stack.lastOrNull()
                         if (detail is Detail.Workout) {

@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.stateIn
 import org.openstrap.app.data.DayWindow
 import org.openstrap.app.data.HealthRepository
 import org.openstrap.app.data.LiveSteps
+import org.openstrap.app.data.SleepHistory
 import org.openstrap.app.data.Summaries
 import org.openstrap.app.data.db.HealthAlertRow
 import org.openstrap.app.data.db.OsaEventRow
@@ -40,6 +41,8 @@ import java.util.Locale
 
 const val STEP_GOAL = 8000
 const val SLEEP_GOAL_SECONDS = 8 * 3600L
+/** Nights of sleep loaded for the week view and the in-sleep vitals' usual values. */
+const val SLEEP_NIGHTS = 14
 const val ACTIVE_HOURS_GOAL = 10
 
 /** Averages over the 7 days before the selected day; null where there's no data. */
@@ -97,6 +100,10 @@ data class DayUiState(
     val activeCalories: Int? = null,
     /** Alerts the strap pushed during the day. */
     val alerts: List<HealthAlertRow> = emptyList(),
+    /** The [SLEEP_NIGHTS] nights ending on this day, oldest first; nights without sleep have no session. */
+    val nights: List<SleepNight> = emptyList(),
+    /** Heart rate across the night window (5-minute averages), so sleep before midnight is included. */
+    val sleepHeartRate: List<ChartPoint> = emptyList(),
     val dayStart: Long = 0,
     val dayEnd: Long = 0,
 ) {
@@ -218,12 +225,39 @@ class DayViewModel(
             )
         }
 
+        val span = DayWindow(DayWindow.nightEndingOn(date.minusDays(SLEEP_NIGHTS - 1L), zone).from, night.to)
+        val nights = combine(
+            repo.sleepSessions(span),
+            combine(repo.hrv(span), repo.skinTemperature(span)) { h, s -> h to s },
+            combine(repo.sleepSpo2(span), repo.breathRate(span)) { o, b -> o to b },
+            repo.heartRate(night),
+        ) { sessions, (hrv, skin), (spo2, breath), hr ->
+            val main = SleepHistory.mainSleeps(sessions, zone)
+            val list = (SLEEP_NIGHTS - 1 downTo 0).map { ago ->
+                val d = date.minusDays(ago.toLong())
+                val s = main[d]
+                // Averages over the sleep itself, not the whole night window.
+                fun <T> during(samples: List<T>, time: (T) -> Long, value: (T) -> Float): Float? =
+                    s?.let { w -> samples.filter { time(it) in w.start..w.end }.map(value).takeIf { it.isNotEmpty() }?.average()?.toFloat() }
+                SleepNight(
+                    date = d,
+                    session = s,
+                    hrv = during(hrv, { it.timestamp }, { it.milliseconds.toFloat() }),
+                    skinTemperature = during(skin, { it.timestamp }, { it.celsius }),
+                    spo2 = during(spo2, { it.timestamp }, { it.percent.toFloat() }),
+                    breathing = during(breath, { it.timestamp }, { it.perMinute.toFloat() }),
+                )
+            }
+            list to Summaries.bucketAverage(Summaries.heartRateSeries(hr, emptyList())).map { ChartPoint(it.first, it.second.toFloat()) }
+        }
+        val moreAndNights = combine(more, nights) { m, (n, hr) -> m.copy(nights = n, sleepHeartRate = hr) }
+
         // The strap's own running total covers steps whose minute records were already taken by another app.
         val liveSteps = if (date == LocalDate.now()) strapSteps else flowOf(null)
         val liveCounter = LiveSteps()
         val actAndLive = combine(activityAndHr, liveSteps) { a, live -> a to live }
 
-        return combine(actAndLive, vitals, sleepAndExtras, weekly, more) { (ah, live), (spo2, stress, hrv), (sleepParts, extraParts, base), (restingWithFlag, hrvTrend), m ->
+        return combine(actAndLive, vitals, sleepAndExtras, weekly, moreAndNights) { (ah, live), (spo2, stress, hrv), (sleepParts, extraParts, base), (restingWithFlag, hrvTrend), m ->
             val (session, stages, naps, napStages) = sleepParts
             val (skin, breath, pai) = extraParts
             val restingTrend = restingWithFlag.map { it.first }
@@ -263,6 +297,8 @@ class DayViewModel(
                 distanceMeters = m.distanceMeters,
                 activeCalories = m.activeCalories,
                 alerts = m.alerts,
+                nights = m.nights,
+                sleepHeartRate = m.sleepHeartRate,
                 dayStart = day.from,
                 dayEnd = day.to,
             )
@@ -299,4 +335,18 @@ private data class MoreParts(
     val distanceMeters: Int?,
     val activeCalories: Int?,
     val alerts: List<HealthAlertRow>,
+    val nights: List<SleepNight> = emptyList(),
+    val sleepHeartRate: List<ChartPoint> = emptyList(),
 )
+
+/** One night's main sleep and the vitals averaged over it. */
+data class SleepNight(
+    val date: LocalDate,
+    val session: SleepSession?,
+    val hrv: Float? = null,
+    val skinTemperature: Float? = null,
+    val spo2: Float? = null,
+    val breathing: Float? = null,
+) {
+    val asleepSeconds: Long? get() = session?.let(SleepHistory::asleepSeconds)
+}

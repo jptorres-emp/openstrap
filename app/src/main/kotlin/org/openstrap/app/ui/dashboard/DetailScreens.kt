@@ -114,7 +114,8 @@ fun SleepScreen(
     onNext: () -> Unit,
     contentPadding: PaddingValues,
     picker: DayPicker = DayPicker(),
-) = SleepList(state, battery, charging, onPrev, onNext, contentPadding, picker)
+    onOpenMetric: ((Metric) -> Unit)? = null,
+) = SleepList(state, battery, charging, onPrev, onNext, contentPadding, picker, onOpenMetric)
 
 @Composable
 private fun SleepList(
@@ -125,12 +126,14 @@ private fun SleepList(
     onNext: () -> Unit,
     contentPadding: PaddingValues,
     picker: DayPicker,
+    onOpenMetric: ((Metric) -> Unit)?,
 ) = ScreenList(contentPadding) {
     item { DateHeader(state.date, battery, onPrev, onNext, charging, picker) }
     val session = state.sleep
     if (session == null) {
         item { Panel { PanelHeader("Sleep", PhosphorIcons.Moon, MetricColors.sleepDeep); EmptyHint("No sleep recorded for this night.") } }
         if (state.naps.isNotEmpty()) item { NapDetailsPanel(state) }
+        item { SleepWeekPanel(state) }
         return@ScreenList
     }
 
@@ -201,6 +204,8 @@ private fun SleepList(
         }
     }
 
+    item { SleepVitalsPanel(state, onOpenMetric) }
+
     if (state.breathRate.isNotEmpty()) item {
         BreathingPanel(state.breathRate, session.start..session.end)
     }
@@ -213,7 +218,8 @@ private fun SleepList(
             PanelHeader("Heart rate during sleep", PhosphorIcons.Heart, MetricColors.heart)
             SegmentedTabs(listOf("Sleep", "Whole day"), range, { range = it })
             val window = if (range == 0) session.start..session.end else state.dayStart..state.dayEnd
-            val pts = state.heartRate.filter { it.x in window }
+            // The night window reaches back before midnight; the day's series doesn't.
+            val pts = (if (range == 0) state.sleepHeartRate else state.heartRate).filter { it.x in window }
             if (pts.isEmpty()) EmptyHint("No heart-rate data in this window.")
             else {
                 BigValue(pts.minOf { it.y }.toInt().toString(), "bpm", caption = "Lowest")
@@ -221,6 +227,8 @@ private fun SleepList(
             }
         }
     }
+
+    item { SleepWeekPanel(state) }
 }
 
 private fun clock(epochSeconds: Long): String =

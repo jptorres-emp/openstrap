@@ -232,8 +232,11 @@ private fun AppRoot(container: AppContainer) {
                 org.openstrap.app.ui.device.ProfileDialog(profile, onSave = { deviceVm.saveProfile(it); editProfile = false }, onDismiss = { editProfile = false })
             }
             HorizontalPager(pager, androidx.compose.ui.Modifier.hazeSource(navGlass), userScrollEnabled = !subScreenOpen, key = { it }) { page ->
+                val pullToSync: @androidx.compose.runtime.Composable (@androidx.compose.runtime.Composable () -> Unit) -> Unit = { screen ->
+                    org.openstrap.app.ui.components.PullToSync(sync, connection is ConnectionState.Connected, container.strap::syncNow) { screen() }
+                }
                 when (Tab.entries[page]) {
-                    Tab.Today -> PushContent(showRecovery, depth = { if (it) 1 else 0 }) { open ->
+                    Tab.Today -> pullToSync { PushContent(showRecovery, depth = { if (it) 1 else 0 }) { open ->
                     if (open) RecoveryScreen(
                         recovery, day.date, day.dayStart..day.dayEnd, day.sleep?.let { it.start..it.end }, padding,
                         onBack = { showRecovery = false }, onEditProfile = { editProfile = true },
@@ -265,8 +268,8 @@ private fun AppRoot(container: AppContainer) {
                         workouts = workouts,
                         onOpenWorkout = { tab = Tab.Workouts.ordinal; workoutStart = it },
                     )
-                    }
-                    Tab.Heart -> HeartScreen(
+                    } }
+                    Tab.Heart -> pullToSync { HeartScreen(
                         day, live, liveEnabled,
                         canUseLive = connection is ConnectionState.Connected,
                         battery = battery,
@@ -274,8 +277,8 @@ private fun AppRoot(container: AppContainer) {
                         onLiveToggle = { container.strap.setLiveHeartRate(it) },
                         onPrev = dayVm::previousDay, onNext = dayVm::nextDay, contentPadding = padding, picker = picker,
                         focus = focus, onFocusDone = { focus = null },
-                    )
-                    Tab.Sleep -> SleepScreen(day, battery, charging, dayVm::previousDay, dayVm::nextDay, padding, focus, onFocusDone = { focus = null }, picker = picker)
+                    ) }
+                    Tab.Sleep -> pullToSync { SleepScreen(day, battery, charging, dayVm::previousDay, dayVm::nextDay, padding, focus, onFocusDone = { focus = null }, picker = picker) }
                     Tab.Workouts -> PushContent(workoutStart, depth = { if (it == null) 0 else 1 }) { start ->
                         if (start != null) {
                             org.openstrap.app.ui.workout.WorkoutScreen(openWorkout?.takeIf { it.workout.start == start }, padding, onBack = { workoutStart = null })

@@ -188,6 +188,8 @@ fun DateHeader(
                 }
             }
         }
+        // Pull to sync opens here, under the wordmark, and pushes the day and everything below it down.
+        org.openstrap.app.ui.components.PullSyncReveal()
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onPrev) { Icon(PhosphorIcons.CaretLeft, "Previous day") }
             Row(

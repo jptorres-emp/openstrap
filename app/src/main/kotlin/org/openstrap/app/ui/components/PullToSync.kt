@@ -1,0 +1,161 @@
+package org.openstrap.app.ui.components
+
+import android.widget.Toast
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay
+import org.openstrap.app.device.SyncState
+import org.openstrap.app.ui.theme.PhosphorIcons
+import kotlin.math.roundToInt
+
+/** How far the pull has gone (1 = far enough to sync) and whether a pulled sync is running. */
+class PullSyncState(val fraction: () -> Float, val syncing: () -> Boolean)
+
+/** Set by [PullToSync]; [PullSyncReveal] reads it to open a gap under the wordmark. */
+val LocalPullSync = staticCompositionLocalOf<PullSyncState?> { null }
+
+/**
+ * Pull down to sync with the strap. There's no floating spinner: [PullSyncReveal], placed in the screen's
+ * header, opens as you pull and pushes everything below it down. The pull ticks like a ratchet, clicks once
+ * it's far enough, and confirms on release.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PullToSync(
+    sync: SyncState,
+    connected: Boolean,
+    onSync: () -> Unit,
+    modifier: Modifier = Modifier,
+    content: @Composable BoxScope.() -> Unit,
+) {
+    val context = LocalContext.current
+    val haptics = LocalHapticFeedback.current
+    var pulled by remember { mutableStateOf(false) }
+    var started by remember { mutableStateOf(false) }
+    val running = sync is SyncState.Running
+    LaunchedEffect(pulled, running) {
+        if (!pulled) return@LaunchedEffect
+        when {
+            running -> started = true
+            // Done: a soft tick as the gap closes.
+            started -> { pulled = false; started = false; haptics.performHapticFeedback(HapticFeedbackType.SegmentTick) }
+            // The strap busy or dropping: a sync that doesn't start soon just lets go.
+            else -> { delay(START_GRACE_MS); pulled = false }
+        }
+    }
+    val state = rememberPullToRefreshState()
+    // Ratchet: a light tick each quarter of the way, a firm click on reaching the sync point.
+    LaunchedEffect(state) {
+        var last = 0
+        snapshotFlow { (state.distanceFraction * TICKS).toInt().coerceAtMost(TICKS) }.collect { notch ->
+            if (!pulled && notch > last) {
+                haptics.performHapticFeedback(if (notch == TICKS) HapticFeedbackType.ContextClick else HapticFeedbackType.SegmentFrequentTick)
+            }
+            last = notch
+        }
+    }
+    val reveal = remember(state) { PullSyncState(fraction = { state.distanceFraction }, syncing = { pulled }) }
+    PullToRefreshBox(
+        isRefreshing = pulled,
+        onRefresh = {
+            if (!connected) {
+                haptics.performHapticFeedback(HapticFeedbackType.Reject)
+                Toast.makeText(context, "The strap isn't connected", Toast.LENGTH_SHORT).show()
+            } else {
+                haptics.performHapticFeedback(HapticFeedbackType.Confirm)
+                pulled = true
+                onSync()
+            }
+        },
+        modifier = modifier.fillMaxSize(),
+        state = state,
+        indicator = {},
+    ) {
+        CompositionLocalProvider(LocalPullSync provides reveal) { Box(Modifier.fillMaxSize(), content = content) }
+    }
+}
+
+/** The gap a pull opens in the header: a strap icon that turns as you pull and spins while syncing. */
+@Composable
+fun PullSyncReveal() {
+    val pull = LocalPullSync.current ?: return
+    val ready by remember { derivedStateOf { pull.fraction() >= 1f } }
+    val syncing = pull.syncing()
+    val spin = rememberInfiniteTransition(label = "sync spin")
+    val turn by spin.animateFloat(0f, 360f, infiniteRepeatable(tween(1100, easing = LinearEasing), RepeatMode.Restart), label = "turn")
+    Box(
+        Modifier.fillMaxWidth().clipToBounds().layout { measurable, constraints ->
+            // Height follows the pull, read here so dragging only relayouts.
+            val p = measurable.measure(constraints.copy(minHeight = 0))
+            val h = (pull.fraction().coerceIn(0f, 1.6f) * REVEAL.toPx()).roundToInt()
+            layout(p.width, h) { p.place(0, (h - p.height) / 2) }
+        },
+        contentAlignment = Alignment.Center,
+    ) {
+        Row(
+            Modifier.height(REVEAL).graphicsLayer { alpha = pull.fraction().coerceIn(0f, 1f) },
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                PhosphorIcons.Watch, null,
+                Modifier.size(18.dp).graphicsLayer { rotationZ = if (syncing) turn else pull.fraction() * 180f },
+                tint = if (ready || syncing) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.width(8.dp))
+            val label = when {
+                syncing -> "Syncing strap…"
+                ready -> "Release to sync strap"
+                else -> "Pull to sync strap"
+            }
+            AnimatedContent(label, transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "pull label") {
+                Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+            }
+        }
+    }
+}
+
+private val REVEAL = 48.dp
+private const val TICKS = 4
+private const val START_GRACE_MS = 3_000L

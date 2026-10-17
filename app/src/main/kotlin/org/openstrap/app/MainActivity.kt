@@ -161,6 +161,8 @@ private fun AppRoot(container: AppContainer) {
     // Each tab's stack of details, deepest last; back pops one.
     var todayStack by rememberSaveable(stateSaver = Detail.StackSaver) { mutableStateOf(emptyList<Detail>()) }
     var activityStack by rememberSaveable(stateSaver = Detail.StackSaver) { mutableStateOf(emptyList<Detail>()) }
+    var recoveryStack by rememberSaveable(stateSaver = Detail.StackSaver) { mutableStateOf(emptyList<Detail>()) }
+    val history: org.openstrap.app.ui.dashboard.DailyHistory = { m, from, to -> container.health.daily(m, from, to) }
     var editProfile by rememberSaveable { mutableStateOf(false) }
     val recovery by dayVm.recovery.collectAsStateWithLifecycle()
     val profile by deviceVm.profile.collectAsStateWithLifecycle()
@@ -215,6 +217,7 @@ private fun AppRoot(container: AppContainer) {
     val currentDetail = when (Tab.entries[tab]) {
         Tab.Today -> todayStack.lastOrNull()
         Tab.Activity -> activityStack.lastOrNull()
+        Tab.Recovery -> recoveryStack.lastOrNull()
         else -> null
     }
     LaunchedEffect(currentDetail) { workoutsVm.open((currentDetail as? Detail.Workout)?.start) }
@@ -225,7 +228,7 @@ private fun AppRoot(container: AppContainer) {
     CompositionLocalProvider(LocalOpenStrap provides openStrap) {
         Scaffold(
             bottomBar = {
-                FloatingNavBar(Tab.entries.map { NavItem(it.label, it.icon, it.selectedIcon) }, tab, { tab = it; todayStack = emptyList(); activityStack = emptyList(); showAlarms = false; showStrap = false; showDesignLab = false }, glass = if (BuildConfig.DEBUG && glowToday) navGlass else null)
+                FloatingNavBar(Tab.entries.map { NavItem(it.label, it.icon, it.selectedIcon) }, tab, { tab = it; todayStack = emptyList(); activityStack = emptyList(); recoveryStack = emptyList(); showAlarms = false; showStrap = false; showDesignLab = false }, glass = if (BuildConfig.DEBUG && glowToday) navGlass else null)
             },
             containerColor = MaterialTheme.colorScheme.background,
         ) { padding ->
@@ -240,7 +243,7 @@ private fun AppRoot(container: AppContainer) {
                     Tab.Today -> PushContent(todayStack, depth = { it.size }) { stack ->
                         when (val detail = stack.lastOrNull()) {
                             is Detail.OfMetric -> MetricDetailScreen(
-                                detail.metric, day, history = { m, from, to -> container.health.daily(m, from, to) },
+                                detail.metric, day, history = history,
                                 liveHeartRate = live, liveEnabled = liveEnabled, canUseLive = connection is ConnectionState.Connected,
                                 onLiveToggle = { container.strap.setLiveHeartRate(it) },
                                 onOpenMetric = { todayStack = todayStack + Detail.OfMetric(it) },
@@ -272,12 +275,26 @@ private fun AppRoot(container: AppContainer) {
                             }
                         }
                     }
-                    Tab.Recovery -> pullToSync {
-                        RecoveryScreen(
-                            recovery, day.date, day.dayStart..day.dayEnd, day.sleep?.let { it.start..it.end }, padding,
-                            onEditProfile = { editProfile = true },
-                            strapReadiness = strapReadiness,
-                        ) { DateHeader(day.date, battery, dayVm::previousDay, dayVm::nextDay, charging, picker, sync as? SyncState.Running) }
+                    Tab.Recovery -> PushContent(recoveryStack, depth = { it.size }) { stack ->
+                        val detail = stack.lastOrNull()
+                        if (detail is Detail.OfMetric) MetricDetailScreen(
+                            detail.metric, day, history = history,
+                            liveHeartRate = live, liveEnabled = liveEnabled, canUseLive = connection is ConnectionState.Connected,
+                            onLiveToggle = { container.strap.setLiveHeartRate(it) },
+                            onOpenMetric = { recoveryStack = recoveryStack + Detail.OfMetric(it) },
+                            contentPadding = padding, onBack = { recoveryStack = recoveryStack.dropLast(1) },
+                        ) else pullToSync {
+                            if (BuildConfig.DEBUG && glowToday) org.openstrap.app.ui.glow.GlowRecoveryScreen(
+                                day, recovery, strapReadiness, history, battery, charging, dayVm::previousDay, dayVm::nextDay, picker,
+                                sync as? SyncState.Running, padding,
+                                onOpenMetric = { recoveryStack = listOf(Detail.OfMetric(it)) },
+                                onEditProfile = { editProfile = true },
+                            ) else RecoveryScreen(
+                                recovery, day.date, day.dayStart..day.dayEnd, day.sleep?.let { it.start..it.end }, padding,
+                                onEditProfile = { editProfile = true },
+                                strapReadiness = strapReadiness,
+                            ) { DateHeader(day.date, battery, dayVm::previousDay, dayVm::nextDay, charging, picker, sync as? SyncState.Running) }
+                        }
                     }
                     Tab.Sleep -> pullToSync { SleepScreen(day, battery, charging, dayVm::previousDay, dayVm::nextDay, padding, picker = picker) }
                     Tab.Activity -> PushContent(activityStack, depth = { it.size }) { stack ->

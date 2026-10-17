@@ -232,7 +232,7 @@ private fun FactScore(score: Score) {
  * good, amber when it's middling or there are signs of strain, coral when it's low. The rings sit on
  * the dark core, so they stay readable whatever the colour.
  */
-private fun overviewColor(score: Int?, strain: Boolean) = when {
+internal fun overviewColor(score: Int?, strain: Boolean) = when {
     score == null -> Color(0xFF6E7280)
     strain -> Color(0xFFF2A33A)
     score >= 70 -> MetricColors.hrv

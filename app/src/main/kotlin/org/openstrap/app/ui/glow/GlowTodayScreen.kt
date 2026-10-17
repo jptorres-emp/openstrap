@@ -343,18 +343,8 @@ private fun WhatChanged(state: DayUiState, advice: String?, tiles: List<Metric>,
         DotHeader("What changed", Color.White.copy(alpha = 0.7f), trailing = "vs. your last 7 days")
         if (!advice.isNullOrEmpty()) Text(advice, color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodyMedium)
         // Two columns, so six statistics take three rows instead of a screenful.
-        Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
-            signals.chunked(2).forEach { pair ->
-                Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-                    pair.forEach { sg ->
-                        DotStatTile(
-                            sg.label, sg.accent, sg.fmt(sg.value), sg.unit, sg.fmt(sg.baseline), sg.direction, sg.higherIsBetter,
-                            Modifier.weight(1f),
-                        ) { onOpenMetric(sg.target) }
-                    }
-                    if (pair.size == 1) Spacer(Modifier.weight(1f))
-                }
-            }
+        TileGrid(signals) { sg, m ->
+            DotStatTile(sg.label, sg.accent, sg.fmt(sg.value), sg.unit, sg.fmt(sg.baseline), sg.direction, sg.higherIsBetter, m) { onOpenMetric(sg.target) }
         }
         if (signals.isNotEmpty() && signals.all { it.baseline == null }) {
             Text("Your normal builds over the first week of wear.", color = Color.White.copy(alpha = 0.65f), style = MaterialTheme.typography.bodyMedium)

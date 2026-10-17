@@ -232,26 +232,18 @@ private fun ContributorsPanel(contributors: List<Narrative.Contributor>) {
 private fun VitalsPanel(vitals: List<SleepVital>, onOpen: (Metric) -> Unit) {
     DotPanel {
         DotHeader("Sleep vitals", MetricColors.heart, trailing = "During sleep")
-        Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
-            vitals.chunked(2).forEach { pair ->
-                Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-                    pair.forEach { v -> VitalTile(v, Modifier.weight(1f)) { onOpen(v.metric) } }
-                    if (pair.size == 1) Spacer(Modifier.weight(1f))
-                }
-            }
-        }
+        TileGrid(vitals) { v, m -> VitalTile(v, m) { onOpen(v.metric) } }
     }
 }
 
 @Composable
 private fun VitalTile(v: SleepVital, modifier: Modifier, onClick: () -> Unit) {
-    Column(modifier.pressClickable(onClick, RoundedCornerShape(12.dp), scale = 0.98f).padding(vertical = 4.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Canvas(Modifier.padding(end = 8.dp).width(6.dp).height(6.dp)) { drawCircle(v.accent) }
-            Text(v.label, color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.bodySmall, maxLines = 1)
+    GlowTile(v.label, v.accent, onClick, modifier) {
+        Text(v.value, color = Color.White, style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(top = 8.dp))
+        v.note?.let {
+            if (v.isOff) StatusPill(it.removeSuffix(" than usual"), TrendBad, Modifier.padding(top = 4.dp))
+            else Text(it, color = Color.White.copy(alpha = 0.55f), style = MaterialTheme.typography.bodySmall)
         }
-        Text(v.value, color = Color.White, style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(top = 6.dp))
-        v.note?.let { Text(it, color = if (v.isOff) TrendBad else Color.White.copy(alpha = 0.55f), style = MaterialTheme.typography.bodySmall) }
     }
 }
 

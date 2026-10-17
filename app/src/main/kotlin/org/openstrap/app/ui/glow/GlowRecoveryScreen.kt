@@ -330,14 +330,7 @@ private fun rememberSignals(state: DayUiState, history: DailyHistory): List<Body
 private fun SignalsPanel(signals: List<BodySignal>, onOpen: (Metric) -> Unit) {
     DotPanel {
         DotHeader("Body signals", Color.White.copy(alpha = 0.7f), trailing = "vs. your normal")
-        Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
-            signals.chunked(2).forEach { pair ->
-                Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-                    pair.forEach { SignalTile(it, Modifier.weight(1f)) { onOpen(it.metric) } }
-                    if (pair.size == 1) Spacer(Modifier.weight(1f))
-                }
-            }
-        }
+        TileGrid(signals) { s, m -> SignalTile(s, m) { onOpen(s.metric) } }
         if (signals.all { it.normal == null }) Note("Your normal builds over the first week of wear; until then each signal shows its week.")
     }
 }
@@ -357,19 +350,16 @@ private fun SignalTile(s: BodySignal, modifier: Modifier, onClick: () -> Unit) {
         0 -> "Normal"
         else -> null
     }
-    Column(modifier.pressClickable(onClick, androidx.compose.foundation.shape.RoundedCornerShape(12.dp), scale = 0.98f).padding(vertical = 4.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Canvas(Modifier.padding(end = 8.dp).width(6.dp).height(6.dp)) { drawCircle(s.accent) }
-            Text(s.label, color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.bodySmall, maxLines = 1)
-        }
-        Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.Bottom) {
+    GlowTile(s.label, s.accent, onClick, modifier) {
+        Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.Bottom) {
             Text(value ?: "—", color = Color.White, style = MaterialTheme.typography.titleLarge)
             if (value != null && m.unit.isNotEmpty()) {
                 Text(m.unit, color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(start = 3.dp, bottom = 3.dp))
             }
         }
-        if (word != null) Text(word, color = if (word == "Normal") TrendGood else TrendBad, style = MaterialTheme.typography.bodySmall)
-        Sparkline(s.week, s.accent, Modifier.padding(top = 8.dp).fillMaxWidth().height(22.dp))
+        if (word != null) StatusPill(word, if (word == "Normal") TrendGood else TrendBad, Modifier.padding(top = 4.dp))
+        Spacer(Modifier.weight(1f))
+        Sparkline(s.week, s.accent, Modifier.padding(top = 10.dp).fillMaxWidth().height(22.dp))
     }
 }
 

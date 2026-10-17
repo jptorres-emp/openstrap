@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -112,9 +113,60 @@ fun DotArrow(up: Boolean, color: Color, modifier: Modifier = Modifier) {
     }
 }
 
+private val TileShape = RoundedCornerShape(18.dp)
+
 /**
- * One key statistic as a grid tile: the label over the value, its trend arrow beside the value and
- * its usual value underneath. Two of these side by side make a row of the What changed grid.
+ * A tappable tile for a grid of statistics: a soft raised surface, the metric's dot and label, and a chevron
+ * that says it opens the metric's detail. [content] sits underneath.
+ */
+@Composable
+fun GlowTile(label: String, accent: Color, onClick: (() -> Unit)?, modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
+    Column(
+        modifier
+            .background(Color.White.copy(alpha = 0.05f), TileShape)
+            .let { if (onClick != null) it.pressClickable(onClick, TileShape, scale = 0.97f) else it }
+            .drawBehind {
+                drawRoundRect(
+                    Color.White.copy(alpha = 0.08f), cornerRadius = CornerRadius(18.dp.toPx()),
+                    style = Stroke(1.dp.toPx()),
+                )
+            }
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(6.dp).background(accent, CircleShape))
+            Spacer(Modifier.width(8.dp))
+            Text(label, color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.bodySmall, maxLines = 1, modifier = Modifier.weight(1f))
+            if (onClick != null) Icon(PhosphorIcons.CaretRight, null, tint = Color.White.copy(alpha = 0.55f), modifier = Modifier.size(14.dp))
+        }
+        content()
+    }
+}
+
+/** A small rounded tag for a status word ("Normal", "Higher"), tinted in [color]. */
+@Composable
+fun StatusPill(text: String, color: Color, modifier: Modifier = Modifier) {
+    Text(
+        text, color = color, style = MaterialTheme.typography.labelSmall,
+        modifier = modifier.background(color.copy(alpha = 0.14f), RoundedCornerShape(50)).padding(horizontal = 8.dp, vertical = 3.dp),
+    )
+}
+
+/** Two tiles a row, evenly spaced; an odd last tile keeps its half width. */
+@Composable
+fun <T> TileGrid(items: List<T>, tile: @Composable (T, Modifier) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        items.chunked(2).forEach { pair ->
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.height(androidx.compose.foundation.layout.IntrinsicSize.Max)) {
+                pair.forEach { tile(it, Modifier.weight(1f).fillMaxHeight()) }
+                if (pair.size == 1) Spacer(Modifier.weight(1f))
+            }
+        }
+    }
+}
+
+/**
+ * One key statistic as a grid tile: the value with its trend arrow, and its usual value underneath.
  */
 @Composable
 fun DotStatTile(
@@ -130,17 +182,8 @@ fun DotStatTile(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
 ) {
-    Column(
-        modifier
-            .let { if (onClick != null) it.pressClickable(onClick, RoundedCornerShape(12.dp), scale = 0.98f) else it }
-            .padding(vertical = 4.dp),
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(6.dp).background(accent, CircleShape))
-            Spacer(Modifier.width(8.dp))
-            Text(label, color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.bodySmall, maxLines = 1)
-        }
-        Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+    GlowTile(label, accent, onClick, modifier) {
+        Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(value ?: "—", color = Color.White, style = MaterialTheme.typography.titleLarge)
             if (value != null && unit.isNotEmpty()) {
                 Text(unit, color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(start = 3.dp))

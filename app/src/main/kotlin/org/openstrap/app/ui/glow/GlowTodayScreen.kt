@@ -388,13 +388,6 @@ private fun ActivityGlow(state: DayUiState, onClick: () -> Unit) {
     }
 }
 
-/** Sleep glows midnight blue, the same as the Design lab's sleep card, breathing slowly. */
-private val SleepGlow = GlowStyle.Midnight.copy(
-    color = MetricColors.sleepDeep,
-    coreX = 0.5f, coreY = 0.6f, coreWidth = 1.1f, coreHeight = 0.9f,
-    motion = GlowMotion.Breath(5f),
-)
-
 @Composable
 private fun SleepPanel(state: DayUiState, onClick: () -> Unit) {
     val session = state.sleep
@@ -407,22 +400,9 @@ private fun SleepPanel(state: DayUiState, onClick: () -> Unit) {
                 session?.score?.let { listOf("Score $it", Narrative.sleepHeadline(it)) } ?: emptyList(),
             )
         }
-        val spans = state.sleepStages
-        if (spans.isNotEmpty()) {
-            val start = spans.minOf { it.start }
-            val end = spans.maxOf { it.end }.coerceAtLeast(start + 1)
-            val rows = DayViewModel.SLEEP_STAGE_ROWS
-            val byRow = rows.entries.associate { it.value to (SLEEP_NAMES[it.key] ?: "") }
-            val names = (0 until rows.size).map { byRow[it] ?: "" }
-            val stages = remember(spans) {
-                spans.map { GlowStage((it.start - start).toFloat() / (end - start), (it.end - start).toFloat() / (end - start), rows[it.stage] ?: 0) }
-            }
-            fun at(f: Float) = clock(start + ((end - start) * f).toLong())
+        if (state.sleepStages.isNotEmpty()) {
             GlowChartGap()
-            GlowHypnogram(stages, names, height = GlowLayout.ChartHeight, labels = listOf(clock(start), clock(end))) { st ->
-                val mins = (((end - start) * (st.to - st.from)) / 60).toInt().coerceAtLeast(1)
-                "${names[st.row]} · ${at(st.from)}–${at(st.to)} · $mins min"
-            }
+            GlowSleepStages(state.sleepStages, GlowLayout.ChartHeight)
         }
         if (state.naps.isNotEmpty()) {
             Spacer(Modifier.height(14.dp))

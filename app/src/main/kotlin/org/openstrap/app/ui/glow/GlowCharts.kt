@@ -470,3 +470,54 @@ fun GlowHypnogram(
         }
     }
 }
+
+/* ------------------------------------------------------------------------------------------------ */
+
+/**
+ * The score as a wide, shallow arc across the card, like the classic sleep hero: a dotted track, ticks above it,
+ * a white fill with a soft halo up to the score, and a knob glowing in [color] where it lands. The fill sweeps in
+ * when the card appears.
+ */
+@Composable
+fun GlowHorizon(progress: Float?, color: Color, modifier: Modifier = Modifier, height: Dp = 72.dp) {
+    val m = rememberTextMeasurer()
+    val target = progress?.coerceIn(0f, 1f) ?: 0f
+    val anim = remember { androidx.compose.animation.core.Animatable(0f) }
+    androidx.compose.runtime.LaunchedEffect(target) {
+        anim.animateTo(target, androidx.compose.animation.core.tween(700, easing = androidx.compose.animation.core.FastOutSlowInEasing))
+    }
+    Canvas(modifier.fillMaxWidth().height(height)) {
+        val sweep = 84f
+        val start = 270f - sweep / 2
+        val chord = size.width - 28.dp.toPx()
+        val r = chord / 2f / sin(Math.toRadians(sweep / 2.0)).toFloat()
+        val sag = r * (1f - cos(Math.toRadians(sweep / 2.0)).toFloat())
+        val top = 14.dp.toPx()
+        val c = Offset(size.width / 2f, top + r)
+        val topLeft = Offset(c.x - r, c.y - r)
+        val box = Size(r * 2, r * 2)
+        fun at(f: Float, radius: Float = r): Offset {
+            val a = Math.toRadians((start + sweep * f).toDouble())
+            return Offset(c.x + radius * cos(a).toFloat(), c.y + radius * sin(a).toFloat())
+        }
+        drawArc(
+            Faint, start, sweep, false, topLeft, box,
+            style = Stroke(1.6.dp.toPx(), cap = StrokeCap.Round, pathEffect = PathEffect.dashPathEffect(floatArrayOf(0f, 6.dp.toPx()))),
+        )
+        for (i in 0..4) drawCircle(Muted, 1.5.dp.toPx(), at(i / 4f, r + 9.dp.toPx()))
+        if (progress != null) {
+            val p = anim.value
+            if (p > 0.001f) {
+                drawArc(Ink.copy(alpha = 0.10f), start, sweep * p, false, topLeft, box, style = Stroke(9.dp.toPx(), cap = StrokeCap.Round))
+                drawArc(Ink, start, sweep * p, false, topLeft, box, style = Stroke(2.4.dp.toPx(), cap = StrokeCap.Round))
+            }
+            val k = at(p)
+            drawCircle(color.copy(alpha = 0.30f), 11.dp.toPx(), k)
+            drawCircle(color, 6.5.dp.toPx(), k)
+            drawCircle(Ink, 2.6.dp.toPx(), k)
+        }
+        val labelY = top + sag + 8.dp.toPx()
+        text(m, "0", axisText, at(0f).x, labelY, align = 0.5f)
+        text(m, "100", axisText, at(1f).x, labelY, align = 0.5f)
+    }
+}

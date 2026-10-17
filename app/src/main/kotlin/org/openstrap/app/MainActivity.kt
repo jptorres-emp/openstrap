@@ -323,7 +323,10 @@ private fun AppRoot(container: AppContainer) {
                             onOpenMetric = { sleepStack = sleepStack + Detail.OfMetric(it) },
                             contentPadding = padding, onBack = { sleepStack = sleepStack.dropLast(1) },
                         ) else pullToSync {
-                            SleepScreen(
+                            if (BuildConfig.DEBUG && glowToday) org.openstrap.app.ui.glow.GlowSleepScreen(
+                                day, battery, charging, dayVm::previousDay, dayVm::nextDay, picker, sync as? SyncState.Running, padding,
+                                onOpenMetric = { sleepStack = listOf(Detail.OfMetric(it)) },
+                            ) else SleepScreen(
                                 day, battery, charging, dayVm::previousDay, dayVm::nextDay, padding, picker = picker,
                                 onOpenMetric = { sleepStack = listOf(Detail.OfMetric(it)) },
                             )

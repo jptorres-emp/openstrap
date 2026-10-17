@@ -38,7 +38,7 @@ import java.util.Locale
 import kotlin.math.roundToInt
 
 /** One cell of the sleep vitals grid. */
-private class SleepVital(
+internal class SleepVital(
     val metric: Metric,
     val label: String,
     val value: String,
@@ -51,9 +51,8 @@ private class SleepVital(
  * HRV, blood oxygen, breathing and skin temperature are compared with your previous nights once there are
  * a week of them.
  */
-@Composable
-internal fun SleepVitalsPanel(state: DayUiState, onOpenMetric: ((Metric) -> Unit)?) {
-    val session = state.sleep ?: return
+internal fun sleepVitals(state: DayUiState): List<SleepVital> {
+    val session = state.sleep ?: return emptyList()
     val tonight = state.nights.lastOrNull()?.takeIf { it.date == state.date }
     val previous = state.nights.dropLast(1)
     fun normal(pick: (SleepNight) -> Float?): History.Normal? =
@@ -71,7 +70,7 @@ internal fun SleepVitalsPanel(state: DayUiState, onOpenMetric: ((Metric) -> Unit
     val average = session.averageHeartRate ?: hr.takeIf { it.isNotEmpty() }?.map { it.y }?.average()?.roundToInt()
     val skinNormal = normal { it.skinTemperature }
 
-    val vitals = listOfNotNull(
+    return listOfNotNull(
         lowest?.let { SleepVital(Metric.HeartRate, "Lowest heart rate", "${it.y.roundToInt()} bpm", "at ${clockOf(it.x)}", MetricColors.heart) },
         average?.let { SleepVital(Metric.HeartRate, "Average heart rate", "$it bpm", "while asleep", MetricColors.heart) },
         tonight?.hrv?.let { v ->
@@ -92,8 +91,15 @@ internal fun SleepVitalsPanel(state: DayUiState, onOpenMetric: ((Metric) -> Unit
             )
         },
     )
-    if (vitals.isEmpty()) return
+}
 
+/** Whether a vital's note says it's outside your usual range, so it takes the accent colour. */
+internal val SleepVital.isOff get() = note?.endsWith("than usual") == true
+
+@Composable
+internal fun SleepVitalsPanel(state: DayUiState, onOpenMetric: ((Metric) -> Unit)?) {
+    val vitals = sleepVitals(state)
+    if (vitals.isEmpty()) return
     Panel {
         PanelHeader("Sleep vitals", PhosphorIcons.Heartbeat, MetricColors.heart, trailing = "During sleep")
         vitals.chunked(2).forEach { row ->
@@ -114,8 +120,7 @@ private fun VitalCell(v: SleepVital, modifier: Modifier, onOpenMetric: ((Metric)
         Text(v.label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Text(v.value, style = MaterialTheme.typography.titleLarge)
         // Only a reading outside your usual range takes the accent colour.
-        val off = v.note?.endsWith("than usual") == true
-        v.note?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = if (off) v.accent else MaterialTheme.colorScheme.onSurfaceVariant) }
+        v.note?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = if (v.isOff) v.accent else MaterialTheme.colorScheme.onSurfaceVariant) }
     }
 }
 
@@ -123,37 +128,60 @@ private fun VitalCell(v: SleepVital, modifier: Modifier, onOpenMetric: ((Metric)
  * The last seven nights: when each sleep started and ended on a shared clock, with time asleep over each bar,
  * then the week's averages and how regular the timing was (Zepp's bands, from five nights).
  */
+internal class SleepWeek(
+    val nights: List<SleepNight>,
+    val slept: Int,
+    val regularity: SleepHistory.Regularity?,
+    val averageAsleep: String,
+    val averageScore: String,
+    val goalNights: Int,
+) {
+    val learningNote get() =
+        "Sleep regularity shows once ${SleepHistory.MIN_REGULARITY_NIGHTS} of the last 7 nights have sleep ($slept so far)."
+    val regularityNote get() = regularity?.let {
+        "Regularity is how much your fall-asleep and wake-up times moved over the last ${it.nights} nights: " +
+            "100% means the same times every night, 50% about an hour either way."
+    }
+}
+
+/** The last seven nights' facts, or null when none of them has sleep. */
+internal fun sleepWeek(state: DayUiState, goalSeconds: Long, zone: ZoneId = ZoneId.systemDefault()): SleepWeek? {
+    val week = state.nights.takeLast(SleepHistory.REGULARITY_NIGHTS)
+    val slept = week.filter { it.session != null }
+    if (slept.isEmpty()) return null
+    val asleep = slept.mapNotNull { it.asleepSeconds }
+    val scores = slept.mapNotNull { it.session?.score }
+    return SleepWeek(
+        nights = week,
+        slept = slept.size,
+        regularity = SleepHistory.regularity(state.nights.mapNotNull { n -> n.session?.let { n.date to it } }.toMap(), state.date, zone),
+        averageAsleep = formatDuration(asleep.average().toLong()),
+        averageScore = scores.takeIf { it.isNotEmpty() }?.average()?.roundToInt()?.toString() ?: "—",
+        goalNights = asleep.count { it >= goalSeconds },
+    )
+}
+
 @Composable
 internal fun SleepWeekPanel(state: DayUiState) {
     val zone = ZoneId.systemDefault()
-    val week = state.nights.takeLast(SleepHistory.REGULARITY_NIGHTS)
-    val slept = week.filter { it.session != null }
+    val goal = LocalGoals.current.sleepSeconds
+    val w = sleepWeek(state, goal, zone)
     Panel {
         PanelHeader("This week", PhosphorIcons.CalendarBlank, MetricColors.sleepDeep, trailing = "Last 7 nights")
-        if (slept.isEmpty()) {
+        if (w == null) {
             EmptyHint("No sleep recorded in the last 7 nights.")
             return@Panel
         }
-        val regularity = SleepHistory.regularity(
-            state.nights.mapNotNull { n -> n.session?.let { n.date to it } }.toMap(), state.date, zone,
-        )
-        SleepWindows(week, regularity, zone)
-
-        val asleep = slept.mapNotNull { it.asleepSeconds }
-        val scores = slept.mapNotNull { it.session?.score }
-        val goal = LocalGoals.current.sleepSeconds
-        val goalNights = asleep.count { it >= goal }
+        val regularity = w.regularity
+        SleepWindows(w.nights, regularity, zone)
         Row(Modifier.fillMaxWidth()) {
-            WeekFact("Average asleep", formatDuration(asleep.average().toLong()), Modifier.weight(1f))
-            WeekFact("Average score", scores.takeIf { it.isNotEmpty() }?.average()?.roundToInt()?.toString() ?: "—", Modifier.weight(1f))
-            WeekFact("Reached ${formatDuration(goal)}", "$goalNights of ${slept.size}", Modifier.weight(1f))
+            WeekFact("Average asleep", w.averageAsleep, Modifier.weight(1f))
+            WeekFact("Average score", w.averageScore, Modifier.weight(1f))
+            WeekFact("Reached ${formatDuration(goal)}", "${w.goalNights} of ${w.slept}", Modifier.weight(1f))
         }
 
         if (regularity == null) {
-            Text(
-                "Sleep regularity shows once ${SleepHistory.MIN_REGULARITY_NIGHTS} of the last 7 nights have sleep (${slept.size} so far).",
-                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Text(w.learningNote, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         } else {
             Row(Modifier.fillMaxWidth()) {
                 Column(Modifier.weight(1f)) {
@@ -164,11 +192,7 @@ internal fun SleepWeekPanel(state: DayUiState) {
                 WeekFact("Avg. fall-asleep", minutesClock(regularity.bedtime), Modifier.weight(1f))
                 WeekFact("Avg. wake-up", minutesClock(regularity.wake), Modifier.weight(1f))
             }
-            Text(
-                "Regularity is how much your fall-asleep and wake-up times moved over the last ${regularity.nights} nights: " +
-                    "100% means the same times every night, 50% about an hour either way.",
-                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Text(w.regularityNote.orEmpty(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -181,7 +205,7 @@ private fun WeekFact(label: String, value: String, modifier: Modifier) {
     }
 }
 
-private fun bandColor(band: SleepHistory.Band) = when (band) {
+internal fun bandColor(band: SleepHistory.Band) = when (band) {
     SleepHistory.Band.VeryRegular, SleepHistory.Band.Regular -> MetricColors.sleepRem
     SleepHistory.Band.FairlyRegular -> MetricColors.sleepLight
     SleepHistory.Band.Irregular -> MetricColors.sleepAwake
@@ -192,7 +216,7 @@ private fun bandColor(band: SleepHistory.Band) = when (band) {
  * runs from falling asleep to waking, time asleep sits above it, and dashed lines mark the average times.
  */
 @Composable
-private fun SleepWindows(week: List<SleepNight>, regularity: SleepHistory.Regularity?, zone: ZoneId) {
+internal fun SleepWindows(week: List<SleepNight>, regularity: SleepHistory.Regularity?, zone: ZoneId) {
     val measurer = rememberTextMeasurer()
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
     val onSurface = MaterialTheme.colorScheme.onSurface
@@ -267,7 +291,7 @@ private fun SleepWindows(week: List<SleepNight>, regularity: SleepHistory.Regula
     }
 }
 
-private fun minutesClock(minutes: Int): String = SleepHistory.clockMinutes(minutes).let { "%02d:%02d".format(it / 60, it % 60) }
+internal fun minutesClock(minutes: Int): String = SleepHistory.clockMinutes(minutes).let { "%02d:%02d".format(it / 60, it % 60) }
 
 private fun clockOf(epochSeconds: Long): String =
     Instant.ofEpochSecond(epochSeconds).atZone(ZoneId.systemDefault()).let { "%02d:%02d".format(it.hour, it.minute) }

@@ -134,6 +134,10 @@ fun LineChart(
     unit: String = "",
     /** Colours the line and fill by value instead of [color]: (value, colour) stops, lowest first. */
     valueGradient: List<Pair<Float, Color>>? = null,
+    /** Labels the time axis and the touch readout; clock times by default. */
+    xLabel: (Long) -> String = ::hourLabel,
+    /** A horizontal band for the usual range of values (your normal), drawn behind the line. */
+    normal: ClosedFloatingPointRange<Float>? = null,
 ) {
     val measurer = rememberTextMeasurer()
     val style = axisStyle()
@@ -156,14 +160,19 @@ fun LineChart(
         val strip = stripH.toPx()
         val w = size.width - axisW
         val h = size.height - axisH - strip
-        val minV = yRange?.start ?: points.minOfOrNull { it.y } ?: 0f
-        val maxV = yRange?.endInclusive ?: points.maxOfOrNull { it.y } ?: 1f
+        val minV = yRange?.start ?: listOfNotNull(points.minOfOrNull { it.y }, normal?.start).minOrNull() ?: 0f
+        val maxV = yRange?.endInclusive ?: listOfNotNull(points.maxOfOrNull { it.y }, normal?.endInclusive).maxOrNull() ?: 1f
         val step = niceStep((maxV - minV).coerceAtLeast(4f) / (if (yRange != null) 4f else 3f))
         val bottom = floor(minV / step) * step
         val top = (ceil(maxV / step) * step).coerceAtLeast(bottom + step)
         fun xOf(t: Long) = (t - xRange.first).toFloat() / (xRange.last - xRange.first) * w
         fun yOf(v: Float) = h - (v - bottom) / (top - bottom) * h
 
+        normal?.let {
+            val y0 = yOf(it.endInclusive).coerceIn(0f, h)
+            val y1 = yOf(it.start).coerceIn(0f, h)
+            if (y1 > y0) drawRoundRect(color.copy(alpha = 0.10f), Offset(0f, y0), Size(w, y1 - y0), CornerRadius(4.dp.toPx()))
+        }
         band?.let {
             val x0 = xOf(it.first).coerceIn(0f, w)
             val x1 = xOf(it.last).coerceIn(0f, w)
@@ -182,7 +191,7 @@ fun LineChart(
         val span = (xRange.last - xRange.first + 1)
         for (i in 0..4) {
             val t = (xRange.first + span * i / 4).coerceAtMost(xRange.last)
-            label(measurer, hourLabel(t), style, xOf(t), h + strip + 4.dp.toPx(), center = i in 1..3, alignEnd = i == 4)
+            label(measurer, xLabel(t), style, xOf(t), h + strip + 4.dp.toPx(), center = i in 1..3, alignEnd = i == 4)
         }
 
         // State strip: rounded runs of colour under the plot.
@@ -272,7 +281,7 @@ fun LineChart(
             drawLine(onSurface.copy(alpha = 0.5f), Offset(px, 0f), Offset(px, h), 1.dp.toPx())
             drawCircle(surface, 6.dp.toPx(), Offset(px, py))
             drawCircle(color, 4.5.dp.toPx(), Offset(px, py))
-            readout(measurer, "${withUnit(format(p.y), unit)} at ${hourLabel(p.x)}", readoutStyle, bubble, px, py)
+            readout(measurer, "${withUnit(format(p.y), unit)} at ${xLabel(p.x)}", readoutStyle, bubble, px, py)
         }
     }
 }

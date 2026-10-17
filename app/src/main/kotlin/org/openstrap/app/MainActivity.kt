@@ -239,8 +239,11 @@ private fun AppRoot(container: AppContainer) {
                     Tab.Today -> PushContent(todayDetail, depth = { if (it == null) 0 else 1 }) { detail ->
                         when (detail) {
                             is Detail.OfMetric -> MetricDetailScreen(
-                                detail.metric, day, live, liveEnabled, canUseLive = connection is ConnectionState.Connected,
-                                onLiveToggle = { container.strap.setLiveHeartRate(it) }, contentPadding = padding, onBack = { todayDetail = null },
+                                detail.metric, day, history = { m, from, to -> container.health.daily(m, from, to) },
+                                liveHeartRate = live, liveEnabled = liveEnabled, canUseLive = connection is ConnectionState.Connected,
+                                onLiveToggle = { container.strap.setLiveHeartRate(it) },
+                                onOpenMetric = { todayDetail = Detail.OfMetric(it) },
+                                contentPadding = padding, onBack = { todayDetail = null },
                             )
                             is Detail.Workout -> org.openstrap.app.ui.workout.WorkoutScreen(openWorkout?.takeIf { it.workout.start == detail.start }, padding, onBack = { todayDetail = null })
                             null -> pullToSync {

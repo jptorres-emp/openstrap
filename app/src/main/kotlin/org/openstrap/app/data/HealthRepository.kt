@@ -88,7 +88,15 @@ class HealthRepository(private val dao: HealthDao) {
     fun daily(metric: DailyMetric, from: LocalDate, to: LocalDate, zone: ZoneId = ZoneId.systemDefault()): Flow<List<DayStat>> {
         val a = DayWindow.of(from, zone).from
         val b = DayWindow.of(to, zone).to
+        // The strap stores one resting HR per day already, keyed by local midnight.
+        if (metric == DailyMetric.RestingHr) return dao.restingHr(a, b).map { rows ->
+            rows.map { r ->
+                val bpm = r.bpm.toFloat()
+                DayStat(Instant.ofEpochSecond(r.day).atZone(zone).toLocalDate(), bpm, bpm, bpm, 1)
+            }
+        }
         val rows = when (metric) {
+            DailyMetric.RestingHr -> error("handled above")
             DailyMetric.HeartRate -> dao.dailyHeartRate(a, b)
             DailyMetric.Steps -> dao.dailySteps(a, b)
             DailyMetric.Hrv -> dao.dailyHrv(a, b)
@@ -110,7 +118,7 @@ class HealthRepository(private val dao: HealthDao) {
 }
 
 /** Sampled metrics that have a per-day series. */
-enum class DailyMetric { HeartRate, Steps, Hrv, HrvSdnn, Spo2, SleepSpo2, Stress, SkinTemperature, Breathing }
+enum class DailyMetric { HeartRate, RestingHr, Steps, Hrv, HrvSdnn, Spo2, SleepSpo2, Stress, SkinTemperature, Breathing }
 
 /** One local day of a metric: the average (the total, for steps), lowest and highest sample, and how many samples. */
 data class DayStat(val date: LocalDate, val value: Float, val min: Float, val max: Float, val count: Int) {

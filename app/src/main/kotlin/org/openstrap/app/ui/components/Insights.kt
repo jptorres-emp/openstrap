@@ -370,9 +370,6 @@ private val GlassBlur = HazeBlurStyle {
     // Without blur (before Android 12), a near-opaque tint instead.
     fallbackColorEffect(HazeColorEffect.tint(Color(0xFF0B0B0D).copy(alpha = 0.92f)))
 }
-private val GlassEdge = BorderStroke(
-    1.dp, Brush.verticalGradient(0f to Color.White.copy(alpha = 0.2f), 0.5f to Color.White.copy(alpha = 0.05f), 1f to Color.Black.copy(alpha = 0.4f)),
-)
 private val GlassChip = Color.White.copy(alpha = 0.1f)
 private val GlassChipEdge = BorderStroke(
     1.dp, Brush.verticalGradient(0f to Color.White.copy(alpha = 0.16f), 1f to Color.Transparent),

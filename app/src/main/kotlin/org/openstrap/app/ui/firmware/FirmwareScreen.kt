@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
@@ -283,7 +282,7 @@ private fun AccountPanel(
 @Composable
 private fun ConfirmInstall(image: ReadyImage, blockers: List<String>, onDismiss: () -> Unit, onInstall: () -> Unit) {
     var accepted by remember { mutableStateOf(image.warnings.isEmpty()) }
-    AlertDialog(
+    org.openstrap.app.ui.components.GlassAlertDialog(
         onDismissRequest = onDismiss,
         icon = { Icon(if (image.warnings.isEmpty()) PhosphorIcons.ArrowCircleUp else PhosphorIcons.Warning, null) },
         title = { Text("Install ${image.title}?") },

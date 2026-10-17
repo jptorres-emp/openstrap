@@ -3,7 +3,6 @@ package org.openstrap.app.ui.device
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -31,7 +30,7 @@ fun GoalsDialog(goals: Goals, onSave: (Goals) -> Unit, onDismiss: () -> Unit) {
         ?.takeIf { it in Goals.SLEEP_MINUTES }
     val activeValue = active.toIntOrNull()?.takeIf { it in Goals.ACTIVE_HOURS }
 
-    AlertDialog(
+    org.openstrap.app.ui.components.GlassAlertDialog(
         onDismissRequest = onDismiss,
         icon = { Icon(PhosphorIcons.ChartLineUp, null) },
         title = { Text("Your goals") },

@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -64,7 +63,7 @@ fun AlarmsScreen(vm: AlarmsViewModel, state: AlarmsUiState, contentPadding: Padd
     var editing by remember { mutableStateOf<Pair<Alarm, Boolean>?>(null) }
     var confirmDeleteAll by remember { mutableStateOf(false) }
     if (confirmDeleteAll) {
-        AlertDialog(
+        org.openstrap.app.ui.components.GlassAlertDialog(
             onDismissRequest = { confirmDeleteAll = false },
             title = { Text("Delete all alarms?") },
             text = { Text("This removes every alarm from the strap.") },
@@ -198,7 +197,7 @@ private fun ChoiceRow(title: String, choices: List<Int>, current: Int?, disabled
 private fun AlarmDialog(alarm: Alarm, isNew: Boolean, onSave: (Alarm) -> Unit, onDelete: () -> Unit, onDismiss: () -> Unit) {
     val time = rememberTimePickerState(alarm.hour, alarm.minute, is24Hour = true)
     var days by remember { mutableIntStateOf(alarm.days) }
-    AlertDialog(
+    org.openstrap.app.ui.components.GlassAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (isNew) "New alarm" else "Edit alarm") },
         text = {

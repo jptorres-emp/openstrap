@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -136,7 +135,7 @@ internal val TODAY_TILES = listOf(Metric.RestingHr, Metric.Hrv, Metric.Spo2, Met
 @Composable
 internal fun TilesDialog(chosen: List<Metric>, onSave: (List<Metric>) -> Unit, onDismiss: () -> Unit) {
     var on by rememberSaveable { mutableStateOf(chosen.map { it.name }.toSet()) }
-    AlertDialog(
+    org.openstrap.app.ui.components.GlassAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("What changed shows") },
         text = {

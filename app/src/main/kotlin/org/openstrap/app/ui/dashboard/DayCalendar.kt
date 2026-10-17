@@ -72,11 +72,17 @@ fun DayCalendarSheet(selected: LocalDate, available: Set<LocalDate>, onPick: (Lo
     val last = YearMonth.from(today)
     var month by remember { mutableStateOf(YearMonth.from(selected)) }
 
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+    // Glow: glass over the blurred page, in the app's overlay; classic: Material's sheet.
+    org.openstrap.app.ui.components.GlassSheet(
+        onDismiss,
+        fallback = { body ->
+            ModalBottomSheet(
+                onDismissRequest = onDismiss,
+                sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+                containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+            ) { body() }
+        },
     ) {
         Column(Modifier.padding(horizontal = 20.dp).navigationBarsPadding().padding(bottom = 12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {

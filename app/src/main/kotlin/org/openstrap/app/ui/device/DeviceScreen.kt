@@ -22,7 +22,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -85,7 +84,7 @@ fun DeviceScreen(
     var confirmDisconnect by rememberSaveable { mutableStateOf(false) }
 
     if (confirmDisconnect) {
-        AlertDialog(
+        org.openstrap.app.ui.components.GlassAlertDialog(
             onDismissRequest = { confirmDisconnect = false },
             icon = { Icon(PhosphorIcons.LinkBreak, null) },
             title = { Text("Disconnect the strap?") },
@@ -104,7 +103,7 @@ fun DeviceScreen(
     }
 
     if (confirmForget) {
-        AlertDialog(
+        org.openstrap.app.ui.components.GlassAlertDialog(
             onDismissRequest = { confirmForget = false },
             icon = { Icon(PhosphorIcons.LinkBreak, null) },
             title = { Text("Forget this strap?") },

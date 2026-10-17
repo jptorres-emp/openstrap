@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -91,7 +90,7 @@ fun ProfileDialog(profile: UserProfile, onSave: (UserProfile) -> Unit, onDismiss
         imperial = toImperial
     }
 
-    AlertDialog(
+    org.openstrap.app.ui.components.GlassAlertDialog(
         onDismissRequest = onDismiss,
         icon = { Icon(PhosphorIcons.User, null) },
         title = { Text("Your profile") },

@@ -51,6 +51,7 @@ import org.openstrap.app.ui.device.DeviceScreen
 import org.openstrap.app.ui.device.DeviceViewModel
 import org.openstrap.app.ui.device.YouScreen
 import org.openstrap.app.ui.dashboard.LocalOpenStrap
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.animation.core.tween
@@ -234,7 +235,16 @@ private fun AppRoot(container: AppContainer) {
     val openStrap: () -> Unit = { tab = Tab.You.ordinal; showStrap = true }
     // The pages are what the glass nav bar blurs as they scroll under it.
     val navGlass = dev.chrisbanes.haze.rememberHazeState()
-    CompositionLocalProvider(LocalOpenStrap provides openStrap, org.openstrap.app.ui.dashboard.LocalGoals provides goals) {
+    // Glow popups are drawn in the app's own window over a blur of the pages, like the nav bar.
+    val glassHost = remember { org.openstrap.app.ui.components.GlassHost() }
+    val glow = BuildConfig.DEBUG && glowToday
+    CompositionLocalProvider(
+        LocalOpenStrap provides openStrap,
+        org.openstrap.app.ui.dashboard.LocalGoals provides goals,
+        org.openstrap.app.ui.components.LocalGlowDesign provides glow,
+        org.openstrap.app.ui.components.LocalGlassHost provides glassHost.takeIf { glow },
+    ) {
+      androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.fillMaxSize()) {
         Scaffold(
             bottomBar = {
                 FloatingNavBar(Tab.entries.map { NavItem(it.label, it.icon, it.selectedIcon) }, tab, { tab = it; todayStack = emptyList(); activityStack = emptyList(); recoveryStack = emptyList(); sleepStack = emptyList(); showAlarms = false; showStrap = false; showDesignLab = false }, glass = if (BuildConfig.DEBUG && glowToday) navGlass else null)
@@ -368,7 +378,7 @@ private fun AppRoot(container: AppContainer) {
                             }
                         }
                     }
-                    Tab.You -> PushContent(
+                    Tab.You -> org.openstrap.app.ui.components.OledSurfaces(BuildConfig.DEBUG && glowToday) { PushContent(
                         when { showDesignLab -> YouPage.DesignLab; showFirmware -> YouPage.Firmware; showAlarms -> YouPage.Alarms; showStrap -> YouPage.Strap; else -> YouPage.Hub },
                         depth = { if (it == YouPage.DesignLab) 1 else it.ordinal.coerceAtMost(2) },
                     ) { youPage -> when (youPage) {
@@ -409,10 +419,12 @@ private fun AppRoot(container: AppContainer) {
                             onGlowToday = { on -> scope.launch { container.settings.setGlowToday(on) } },
                         )
                     }
-                    } }
+                    } } }
                 }
             }
         }
+        if (glow) org.openstrap.app.ui.components.GlassOverlay(glassHost, navGlass)
+      }
     }
 }
 

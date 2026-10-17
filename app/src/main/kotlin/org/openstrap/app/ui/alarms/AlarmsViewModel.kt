@@ -34,7 +34,11 @@ class AlarmsViewModel(private val strap: StrapController) : ViewModel() {
     private val _state = MutableStateFlow(AlarmsUiState())
     val state = _state.asStateFlow()
 
-    init { refresh() }
+    init {
+        refresh()
+        // A one-time alarm switches itself off after ringing; show what the strap now holds.
+        viewModelScope.launch { strap.alarmsChanged.collect { refresh() } }
+    }
 
     fun refresh() = run(loading = true) { }
 
@@ -43,6 +47,8 @@ class AlarmsViewModel(private val strap: StrapController) : ViewModel() {
     fun save(alarm: Alarm, isNew: Boolean) = run { strap.saveAlarm(alarm, isNew) }
 
     fun delete(alarm: Alarm) = run { strap.deleteAlarm(alarm.index) }
+
+    fun deleteAll() = run { strap.clearAlarms() }
 
     /** The lowest slot the strap isn't using, as Zepp picks it. */
     fun freeIndex(): Int? {

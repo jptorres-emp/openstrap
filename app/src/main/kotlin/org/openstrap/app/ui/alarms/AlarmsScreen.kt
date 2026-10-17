@@ -48,6 +48,7 @@ fun daysLabel(days: Int): String = when (days) {
     Alarm.EVERY_DAY -> "Every day"
     Alarm.WEEKDAYS -> "Weekdays"
     Alarm.WEEKEND -> "Weekends"
+    Alarm.WORKDAYS -> "Workdays"
     else -> DAY_NAMES.filterIndexed { i, _ -> days and (1 shl i) != 0 }.joinToString(", ")
 }
 
@@ -61,6 +62,16 @@ private fun intervalLabel(v: Int) = when (v) {
 fun AlarmsScreen(vm: AlarmsViewModel, state: AlarmsUiState, contentPadding: PaddingValues, onBack: () -> Unit) {
     BackHandler(onBack = onBack)
     var editing by remember { mutableStateOf<Pair<Alarm, Boolean>?>(null) }
+    var confirmDeleteAll by remember { mutableStateOf(false) }
+    if (confirmDeleteAll) {
+        AlertDialog(
+            onDismissRequest = { confirmDeleteAll = false },
+            title = { Text("Delete all alarms?") },
+            text = { Text("This removes every alarm from the strap.") },
+            confirmButton = { TextButton(onClick = { vm.deleteAll(); confirmDeleteAll = false }) { Text("Delete all", color = MetricColors.bad) } },
+            dismissButton = { TextButton(onClick = { confirmDeleteAll = false }) { Text("Cancel") } },
+        )
+    }
     editing?.let { (alarm, isNew) ->
         AlarmDialog(
             alarm, isNew,
@@ -90,13 +101,19 @@ fun AlarmsScreen(vm: AlarmsViewModel, state: AlarmsUiState, contentPadding: Padd
         }
         item { AlarmsPanel(state, onToggle = vm::setEnabled, onEdit = { editing = it to false }, onAdd = {
             vm.freeIndex()?.let { editing = Alarm(it, 7, 0, Alarm.WEEKDAYS, enabled = true) to true }
-        }) }
+        }, onDeleteAll = { confirmDeleteAll = true }) }
         state.health?.let { item { HeartAlertsPanel(state, vm) } }
     }
 }
 
 @Composable
-private fun AlarmsPanel(state: AlarmsUiState, onToggle: (Alarm, Boolean) -> Unit, onEdit: (Alarm) -> Unit, onAdd: () -> Unit) {
+private fun AlarmsPanel(
+    state: AlarmsUiState,
+    onToggle: (Alarm, Boolean) -> Unit,
+    onEdit: (Alarm) -> Unit,
+    onAdd: () -> Unit,
+    onDeleteAll: () -> Unit,
+) {
     Panel {
         PanelHeader("Alarms", PhosphorIcons.CalendarBlank, MetricColors.charge, trailing = state.caps?.let { "${state.alarms.size} of ${it.maxCount}" })
         if (state.alarms.isEmpty()) EmptyHint("No alarms on the strap.")
@@ -113,7 +130,10 @@ private fun AlarmsPanel(state: AlarmsUiState, onToggle: (Alarm, Boolean) -> Unit
                 Switch(a.enabled, { onToggle(a, it) }, enabled = !state.busy)
             }
         }
-        if (state.canAdd) TextButton(onClick = onAdd, enabled = !state.busy) { Text("Add alarm") }
+        Row {
+            if (state.canAdd) TextButton(onClick = onAdd, enabled = !state.busy) { Text("Add alarm") }
+            if (state.alarms.size > 1) TextButton(onClick = onDeleteAll, enabled = !state.busy) { Text("Delete all", color = MetricColors.bad) }
+        }
         // Zepp's tip for this strap (alarm_stuttgart_close_tips).
         Text(
             "The strap vibrates at the alarm time. To stop it, tap the front of the strap several times.",
@@ -187,7 +207,10 @@ private fun AlarmDialog(alarm: Alarm, isNew: Boolean, onSave: (Alarm) -> Unit, o
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally)) {
                     DAY_LETTERS.forEachIndexed { i, d ->
                         val bit = 1 shl i
-                        FilterChip(selected = days and bit != 0, onClick = { days = days xor bit }, label = { Text(d) })
+                        // Picking a day replaces the strap's own "workdays" calendar with a plain day set.
+                        FilterChip(selected = days != Alarm.WORKDAYS && days and bit != 0, onClick = {
+                            days = (if (days == Alarm.WORKDAYS) 0 else days) xor bit
+                        }, label = { Text(d) })
                     }
                 }
                 Text(daysLabel(days), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

@@ -7,6 +7,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -25,6 +27,7 @@ import org.openstrap.app.data.db.HealthDao
 import org.openstrap.app.data.settings.SettingsStore
 import org.openstrap.app.data.settings.UserProfile
 import org.openstrap.protocol.services.Gender
+import org.openstrap.protocol.services.HealthAlert
 import org.openstrap.protocol.services.UserProfile as StrapUserProfile
 import org.openstrap.protocol.ChannelSession
 import org.openstrap.protocol.auth.AuthException
@@ -65,6 +68,7 @@ class StrapManager(
     private val dao: HealthDao,
 ) : StrapController {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val healthAlerts = HealthAlertNotifier(context)
 
     override val connection = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
     override val sync = MutableStateFlow<SyncState>(SyncState.Idle)
@@ -73,6 +77,7 @@ class StrapManager(
     override val liveHeartRateEnabled = MutableStateFlow(true)
     override val info = MutableStateFlow<StrapInfo?>(null)
     override val firmwareUpdating = MutableStateFlow(false)
+    override val alarmsChanged = MutableSharedFlow<Unit>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
     /** Set before a firmware install: the strap's services can change, so re-discover on the next connect. */
     @Volatile private var refreshGattOnConnect = false
     override val log = MutableStateFlow<List<String>>(emptyList())
@@ -164,6 +169,8 @@ class StrapManager(
                 watchSteps(s)
                 watchDataAvailable(s)
                 watchProfile(s)
+                watchHealthAlerts(s)
+                watchAlarms(s)
                 retries = 0
                 autoSync(s)
                 liveHeartRateEnabled.value = settings.liveHeartRate.first()
@@ -229,8 +236,23 @@ class StrapManager(
         }
         log("battery=$battery charging=$charging")
 
+        timeProtocol = null
+        if (s.services.has(Endpoints.TIME)) {
+            timeProtocol = runCatching {
+                TimeSync.parseVersion(s.request(Endpoints.TIME, TimeSync.versionRequest, 5_000) { it.isNotEmpty() && it.u8(0) == TimeSync.VERSION + 1 })
+            }.onFailure { log("time version query failed: $it") }.getOrNull()
+            log("time protocol $timeProtocol")
+        }
+        syncTime(s, client)
+    }
+
+    /** The time module's version; the next-DST hint needs 2 or later (03 §3.8). */
+    @Volatile private var timeProtocol: Int? = null
+
+    /** Sets the strap's clock and time zone, and tells it when DST next changes, as Zepp does on connect and on every change. */
+    private suspend fun syncTime(s: ChannelSession, client: GattClient) {
+        val now = ZonedDateTime.now()
         runCatching {
-            val now = ZonedDateTime.now()
             if (s.services.has(Endpoints.TIME)) {
                 val r = s.request(Endpoints.TIME, TimeSync.setRequest(now)) { it.u8(0) == 0x06 }
                 log("time set: ${r.toHex()}")
@@ -239,6 +261,29 @@ class StrapManager(
                 log("time set via 2A2B")
             }
         }.onFailure { log("time sync failed: $it") }
+        if ((timeProtocol ?: 0) >= 2) runCatching {
+            val request = TimeSync.nextDstRequest(now)
+            val r = s.request(Endpoints.TIME, request) { it.isNotEmpty() && it.u8(0) == TimeSync.NEXT_DST + 1 }
+            log("next dst ${request.toHex()}: ${r.toHex()}")
+        }.onFailure { log("dst hint failed: $it") }
+    }
+
+    /** The phone's clock or time zone changed (travel, DST, a manual change): pass it on while connected. */
+    private val timeChanged = object : android.content.BroadcastReceiver() {
+        override fun onReceive(c: Context, intent: android.content.Intent) {
+            val s = activeSession ?: return
+            val client = gatt ?: return
+            log("phone time changed (${intent.action?.substringAfterLast('.')}), updating the strap")
+            scope.launch { syncTime(s, client) }
+        }
+    }
+
+    init {
+        val filter = android.content.IntentFilter().apply {
+            addAction(android.content.Intent.ACTION_TIMEZONE_CHANGED)
+            addAction(android.content.Intent.ACTION_TIME_CHANGED)
+        }
+        androidx.core.content.ContextCompat.registerReceiver(context, timeChanged, filter, androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED)
     }
 
     /**
@@ -256,6 +301,25 @@ class StrapManager(
         }
     }
 
+    /** The strap's own alerts (high/low HR, stress, low SpO2, irregular rhythm) arrive on 0x001D at any time. */
+    private fun CoroutineScope.watchHealthAlerts(s: ChannelSession) = launch {
+        s.messagesFor(Endpoints.OPEN_APP).collect { p ->
+            if (p.isEmpty() || p.u8(0) != HealthAlert.PUSH) return@collect
+            val alert = HealthAlert.parse(p)
+            log("health alert < ${p.toHex()}: $alert")
+            alert?.let { healthAlerts.show(it) }
+        }
+    }
+
+    /** Zepp re-reads the alarms on the strap's `0F` push (03 §3.14). */
+    private fun CoroutineScope.watchAlarms(s: ChannelSession) = launch {
+        s.messagesFor(Endpoints.ALARMS).collect { p ->
+            if (p.isEmpty() || p.u8(0) != AlarmCodec.CHANGED) return@collect
+            log("alarms changed on the strap: ${p.toHex()}")
+            alarmsChanged.tryEmit(Unit)
+        }
+    }
+
     private fun UserProfile.toStrapProfile() = StrapUserProfile(
         birthYear = birthYear,
         gender = when (sex) { UserProfile.Sex.Female -> Gender.FEMALE; UserProfile.Sex.Male -> Gender.MALE; null -> null },
@@ -263,7 +327,8 @@ class StrapManager(
         weightKg = weightKg,
     )
 
-    private fun watchBattery(s: ChannelSession) = scope.launch {
+    // The watch* listeners run in the connect job, so they end with the connection instead of piling up.
+    private fun CoroutineScope.watchBattery(s: ChannelSession) = launch {
         s.messagesFor(Endpoints.BATTERY).collect { payload ->
             BatteryInfo.parseChannel(payload)?.let { info ->
                 battery = info.level
@@ -276,7 +341,7 @@ class StrapManager(
         }
     }
 
-    private fun watchSteps(s: ChannelSession) = scope.launch {
+    private fun CoroutineScope.watchSteps(s: ChannelSession) = launch {
         if (!s.services.has(Endpoints.REALTIME_ACTIVITY)) return@launch
         launch {
             s.messagesFor(Endpoints.REALTIME_ACTIVITY).collect { p ->
@@ -302,7 +367,7 @@ class StrapManager(
      * The strap pushes `11 <type>` when it has new data; like Zepp, sync the related types at once
      * (a finished workout, recovery HR; 04 §1.7).
      */
-    private fun watchDataAvailable(s: ChannelSession) = scope.launch {
+    private fun CoroutineScope.watchDataAvailable(s: ChannelSession) = launch {
         if (!s.services.has(Endpoints.HISTORY)) return@launch
         s.messagesFor(Endpoints.HISTORY).collect { p ->
             val m = FetchCodec.parse(p) as? GdspMessage.DataAvailable ?: return@collect
@@ -331,11 +396,8 @@ class StrapManager(
         client.connected.filter { !it }.first()
         if (gatt === client) {
             log("link lost")
-            val wasConnected = connection.value is ConnectionState.Connected
-            if (!wasConnected) {
-                // A drop during setup: stop it here, so it can't go on to report Connected on a dead link.
-                connectJob?.cancel()
-            }
+            // Ends this connection's listeners, and a setup still in progress, so it can't go on to report Connected.
+            connectJob?.cancel()
             liveJob?.cancel()
             liveHeartRate.value = null
             session?.stop()
@@ -373,29 +435,36 @@ class StrapManager(
 
     override fun syncNow() = startSync(full = true)
 
-    /** One sync at a time; types pushed meanwhile are synced when it ends. */
+    /** One sync at a time; a full sync or types asked for meanwhile run when it ends. */
     private val syncLock = Mutex()
     private val pendingTypes = mutableSetOf<Int>()
+    private val pendingFull = java.util.concurrent.atomic.AtomicBoolean(false)
 
     private fun takePending(): Set<Int> = synchronized(pendingTypes) { pendingTypes.toSet().also { pendingTypes.clear() } }
+    private fun hasPending(): Boolean = pendingFull.get() || synchronized(pendingTypes) { pendingTypes.isNotEmpty() }
+
+    /** What to sync next: null for everything (a full sync covers anything pushed so far), or the pushed types. */
+    private fun takeNext(): Set<Int>? = if (pendingFull.getAndSet(false)) { takePending(); null } else takePending()
 
     private fun startSync(full: Boolean) {
         if (firmwareUpdating.value) return
         val s = activeSession ?: return
         val client = gatt ?: return
+        if (full) pendingFull.set(true)
         scope.launch {
+            // A sync is running: it picks up what was just queued when it finishes.
             if (!syncLock.tryLock()) return@launch
             try {
-                // A full sync covers anything pushed so far.
-                var only: Set<Int>? = if (full) { takePending(); null } else takePending().ifEmpty { return@launch }
-                while (true) {
+                while (activeSession === s && !firmwareUpdating.value) {
+                    val only = takeNext()
+                    if (only != null && only.isEmpty()) break
                     HistorySync(s, client, dao, settings, sync, ::log).run(only)
-                    if (activeSession !== s || firmwareUpdating.value) break
-                    only = takePending().ifEmpty { break }
                 }
             } finally {
                 syncLock.unlock()
             }
+            // Something queued between the last check and the unlock would otherwise wait for the next trigger.
+            if (hasPending()) startSync(full = false)
         }
     }
 
@@ -537,13 +606,18 @@ class StrapManager(
 
     override suspend fun saveAlarm(alarm: Alarm, isNew: Boolean) {
         val caps = alarmCaps()
-        val request = if (isNew) AlarmCodec.add(alarm, caps.titles) else AlarmCodec.modify(alarm, caps.titles)
+        val request = if (isNew) AlarmCodec.add(alarm, caps.titles, caps.workdaysSupported) else AlarmCodec.modify(alarm, caps.titles, caps.workdaysSupported)
         if (!AlarmCodec.isSuccess(request, command(Endpoints.ALARMS, request))) throw StrapCommandException("The strap didn't save the alarm")
     }
 
     override suspend fun deleteAlarm(index: Int) {
         val request = AlarmCodec.delete(index)
         if (!AlarmCodec.isSuccess(request, command(Endpoints.ALARMS, request))) throw StrapCommandException("The strap didn't delete the alarm")
+    }
+
+    override suspend fun clearAlarms() {
+        val request = AlarmCodec.clearAllRequest
+        if (!AlarmCodec.isSuccess(request, command(Endpoints.ALARMS, request))) throw StrapCommandException("The strap didn't delete the alarms")
     }
 
     /** Learned on connect; null until then or when the strap didn't answer (then replies are read as v1–3). */

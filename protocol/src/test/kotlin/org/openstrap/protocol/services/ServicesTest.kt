@@ -39,6 +39,19 @@ class ServicesTest {
     }
 
     @Test
+    fun encodesNextDstChange() {
+        // The codemap example: Berlin leaves DST on 2026-10-25 01:00 UTC; Zepp sends that minus an hour, delta -3600.
+        val t = ZonedDateTime.of(2026, 10, 17, 12, 0, 0, 0, ZoneId.of("Europe/Berlin"))
+        assertArrayEquals("07 8046dd6a f0f1".hexToBytes(), TimeSync.nextDstRequest(t))
+        // Entering DST: 2027-03-28 01:00 UTC, +3600, unadjusted.
+        val w = ZonedDateTime.of(2026, 12, 1, 12, 0, 0, 0, ZoneId.of("Europe/Berlin"))
+        assertArrayEquals(("07" + "%08x".format(Integer.reverseBytes(1806195600)) + "100e").hexToBytes(), TimeSync.nextDstRequest(w))
+        // No DST.
+        assertArrayEquals("07 00000000 0000".hexToBytes(), TimeSync.nextDstRequest(t.withZoneSameInstant(ZoneId.of("Asia/Dubai"))))
+        assertEquals(2, TimeSync.parseVersion("0202".hexToBytes()))
+    }
+
+    @Test
     fun encodesUserProfile() {
         val p = UserProfile(1990, 4, 2, Gender.MALE, 180, 75f)
         val legacy = p.legacyPayload()!!
@@ -56,6 +69,29 @@ class ServicesTest {
         // Unset fields are masked out: only height and weight here.
         assertArrayEquals("01 0c000000 a800 0c30".hexToBytes(), UserProfile(heightCm = 168, weightKg = 61.5f).channelPayload())
         assertNull(UserProfile().channelPayload())
+    }
+
+    @Test
+    fun appliesServiceChangePush() {
+        val list = ServiceList(mapOf(0x0029 to false))
+        val added = list.applyChange("05 01 1900 01".hexToBytes())!!
+        assertTrue(added.has(0x0019))
+        assertTrue(added.requiresEncryption(0x0019))
+        assertFalse(added.applyChange("05 02 1900 00".hexToBytes())!!.has(0x0019))
+        assertNull(list.applyChange("04 0100 2900 00".hexToBytes()))
+    }
+
+    @Test
+    fun parsesHealthAlert() {
+        // The codemap example: high-HR alert, 160 bpm (03 §3.10).
+        assertEquals(
+            HealthAlert(HealthAlert.Type.HIGH_HEART_RATE, 0x6A0E6B80, 160),
+            HealthAlert.parse("0D 01 806B0E6A A0000000".hexToBytes()),
+        )
+        assertEquals(HealthAlert.Type.LOW_SPO2, HealthAlert.parse("0D 04 806B0E6A 55000000".hexToBytes())!!.type)
+        assertNull(HealthAlert.parse("0D 09 806B0E6A A0000000".hexToBytes())) // unknown type
+        assertNull(HealthAlert.parse("05 02".hexToBytes()))
+        assertNull(HealthAlert.parse("0D 01 806B".hexToBytes()))
     }
 
     @Test

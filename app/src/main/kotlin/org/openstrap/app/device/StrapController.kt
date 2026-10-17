@@ -76,6 +76,10 @@ interface StrapController {
     /** Adds [alarm] when its slot is free on the strap, otherwise replaces that slot. */
     suspend fun saveAlarm(alarm: Alarm, isNew: Boolean)
     suspend fun deleteAlarm(index: Int)
+    suspend fun clearAlarms()
+
+    /** Emits when the strap reports that its alarms changed on their own (e.g. a one-time alarm switched itself off). */
+    val alarmsChanged: kotlinx.coroutines.flow.SharedFlow<Unit>
 
     /** The health settings group (HR measuring, HR and SpO2 alerts, …) with the choices the strap allows. */
     suspend fun readHealthSettings(): SettingsGroup

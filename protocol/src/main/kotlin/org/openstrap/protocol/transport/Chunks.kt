@@ -71,14 +71,17 @@ fun buildChunks(
 fun buildAck(sessionId: Int, status: Int, chunkIndex: Int): ByteArray =
     ByteWriter().u8(PacketType.ACK).u8(0).u8(sessionId).u8(status).u8(chunkIndex).toByteArray()
 
-/** A device ACK received on 0016. The v2 layout is unverified, so both 4- and 5-byte forms are accepted. */
+/** A device ACK received on 0016. */
 data class DeviceAck(val sessionId: Int, val status: Int, val chunkIndex: Int)
 
+/**
+ * `04 sess status idx appId` (02 §3). Unlike the phone's ACK there is no reserved byte after the type; Zepp drops
+ * ACKs whose appId isn't 0. The 4-byte form without appId is accepted too.
+ */
 fun parseDeviceAck(packet: ByteArray): DeviceAck? = when {
-    packet.isEmpty() || packet.u8(0) != PacketType.ACK -> null
-    packet.size >= 5 -> DeviceAck(packet.u8(2), packet.u8(3), packet.u8(4))
-    packet.size == 4 -> DeviceAck(packet.u8(1), packet.u8(2), packet.u8(3))
-    else -> null
+    packet.size < 4 || packet.u8(0) != PacketType.ACK -> null
+    packet.size >= 5 && packet.u8(4) != 0 -> null
+    else -> DeviceAck(packet.u8(1), packet.u8(2), packet.u8(3))
 }
 
 /** A fully reassembled incoming message. [payload] is decrypted when the transport had a cipher. */
@@ -93,6 +96,9 @@ class Reassembler(
     private val decrypt: (sessionId: Int, cipher: ByteArray, totalLength: Int) -> ByteArray,
     private val onMessage: (ChannelMessage) -> Unit,
 ) {
+    /** Told about each message dropped because it didn't decrypt. */
+    var onDecryptFailure: (Exception) -> Unit = {}
+
     private var sessionId = -1
     private var endpoint = 0
     private var totalLength = 0
@@ -100,7 +106,12 @@ class Reassembler(
     private var lastIndex = 0
     private val buffer = java.io.ByteArrayOutputStream()
 
-    /** Returns an ACK packet to send, or null. */
+    private fun reset() {
+        sessionId = -1
+        buffer.reset()
+    }
+
+    /** Returns an ACK packet to send, or null. Every error drops the message in progress, as Zepp does (02 §4). */
     fun accept(packet: ByteArray): ByteArray? {
         if (packet.size < NEXT_HEADER || packet.u8(0) != PacketType.DATA || packet.u8(2) != 0) return null
         val flags = packet.u8(1)
@@ -119,37 +130,43 @@ class Reassembler(
             lastIndex = index
             buffer.reset()
             if (!isKnownEndpoint(endpoint)) {
-                sessionId = -1
+                reset()
                 return buildAck(session, AckStatus.UNKNOWN_ENDPOINT, index)
             }
             body = packet.copyOfRange(FIRST_HEADER, packet.size)
         } else {
-            if (session != sessionId) return ack(AckStatus.SESSION_MISMATCH)
-            if (index != ((lastIndex + 1) and 0xFF)) return ack(AckStatus.PACKET_LOST)
+            // A continuation with no message in progress (its first chunk was lost or rejected): nothing to ACK.
+            if (sessionId == -1) return null
+            if (session != sessionId) { reset(); return ack(AckStatus.SESSION_MISMATCH) }
+            if (index != ((lastIndex + 1) and 0xFF)) { reset(); return ack(AckStatus.PACKET_LOST) }
             lastIndex = index
+            // Zepp ORs the flag over every chunk.
+            if (flags and ChunkFlags.ENCRYPTED != 0) encrypted = true
             body = packet.copyOfRange(NEXT_HEADER, packet.size)
         }
         buffer.write(body)
 
         val expected = if (encrypted) ((totalLength + 8 + 15) / 16 * 16) else totalLength
         if (buffer.size() > expected) {
-            sessionId = -1
+            reset()
             return ack(AckStatus.BAD_FORMAT)
         }
         if (flags and ChunkFlags.LAST != 0) {
             if (buffer.size() != expected) {
-                sessionId = -1
+                reset()
                 return ack(AckStatus.BAD_FORMAT)
             }
             val raw = buffer.toByteArray()
             val payload = try {
                 if (encrypted) decrypt(sessionId, raw, totalLength) else raw
             } catch (e: Exception) {
-                sessionId = -1
-                return ack(AckStatus.CANNOT_DECRYPT)
+                // Zepp ACKs these as received and drops them silently (02 §4.3); status 12 only makes the strap resend.
+                reset()
+                onDecryptFailure(e)
+                return ack(AckStatus.SUCCESS)
             }
             val message = ChannelMessage(endpoint, sessionId, payload, encrypted)
-            sessionId = -1
+            reset()
             val reply = ack(AckStatus.SUCCESS)
             onMessage(message)
             return reply

@@ -64,6 +64,7 @@ class ChannelSession(
     private var cipher: ChannelCipher? = null
     private var reader: Job? = null
     private var ponger: Job? = null
+    private var serviceWatcher: Job? = null
 
     var services: ServiceList = ServiceList(emptyMap())
         private set
@@ -85,7 +86,7 @@ class ChannelSession(
             (cipher ?: throw ProtocolException("Encrypted message before auth")).decrypt(sid, data, len)
         },
         onMessage = { _messages.tryEmit(it) },
-    )
+    ).apply { onDecryptFailure = { log("dropped a message that didn't decrypt: $it") } }
 
     /** Keep-alive pings answered so far (ConnectModule 0x0015, 02 §11). */
     @Volatile var pings = 0
@@ -99,10 +100,20 @@ class ChannelSession(
             }
         }
         // The strap pings with `03`; Zepp answers `04` at once, without asking for an ACK (jt7.java:428-445).
+        // Zepp looks at the first byte only.
         ponger = scope.launch {
-            messagesFor(Endpoints.CONNECT).filter { it.contentEquals(ConnectCodec.PING) }.collect {
+            messagesFor(Endpoints.CONNECT).filter { it.isNotEmpty() && it.u8(0) == ConnectCodec.PING.u8(0) }.collect {
                 if (pings++ == 0) log("strap ping, answering pong")
                 runCatching { send(Endpoints.CONNECT, ConnectCodec.PONG, wantReply = false) }.onFailure { e -> log("pong failed: $e") }
+            }
+        }
+        // The strap can add or remove an endpoint after the list was read (02 §6.3).
+        serviceWatcher = scope.launch {
+            messagesFor(Endpoints.SERVICES).collect { push ->
+                services.applyChange(push)?.let {
+                    log("services changed: ${push.toHex()}")
+                    services = it
+                }
             }
         }
     }
@@ -110,6 +121,7 @@ class ChannelSession(
     fun stop() {
         reader?.cancel()
         ponger?.cancel()
+        serviceWatcher?.cancel()
         cipher = null
     }
 
@@ -124,7 +136,8 @@ class ChannelSession(
         log("channel v${v.version}, encryptEnable=${v.encryptEnable}")
         if (v.version != 2 || v.encryptEnable == null) throw ProtocolException("Unsupported channel (v${v.version}, encryption ${v.encryptEnable})")
 
-        services = ServiceList.parse(request(Endpoints.SERVICES, ServiceList.REQUEST, timeoutMs = 5_000) { it.u8(0) == 0x04 })
+        // Zepp sends the services request without ACK_REQ (02 §6.1).
+        services = ServiceList.parse(request(Endpoints.SERVICES, ServiceList.REQUEST, timeoutMs = 5_000, wantReply = false) { it.u8(0) == 0x04 })
         log("services: " + services.endpoints.entries.joinToString { "%04x%s".format(it.key, if (it.value) "*" else "") })
         if (!services.has(Endpoints.AUTH)) throw ProtocolException("Strap does not offer the v2 auth endpoint")
 
@@ -148,7 +161,8 @@ class ChannelSession(
         val sid = nextSessionId
         nextSessionId = (nextSessionId + 1) and 0xFF
         val c = cipher
-        val encrypt = c != null && services.requiresEncryption(endpoint)
+        // Zepp encrypts only when the channel version said encryption is on and the endpoint asks for it.
+        val encrypt = c != null && version?.encryptEnable == true && services.requiresEncryption(endpoint)
         val body = if (encrypt) c!!.encrypt(sid, payload) else payload
         for (chunk in buildChunks(endpoint, sid, body, payload.size, encrypt, link.payloadMtu, wantReply)) link.writeControl(chunk)
     }
@@ -158,9 +172,10 @@ class ChannelSession(
         endpoint: Int,
         payload: ByteArray,
         timeoutMs: Long = 10_000,
+        wantReply: Boolean = true,
         matches: (ByteArray) -> Boolean = { true },
     ): ByteArray = withTimeout(timeoutMs) {
-        launchAndAwait(messagesFor(endpoint).filter(matches)) { send(endpoint, payload) }
+        launchAndAwait(messagesFor(endpoint).filter(matches)) { send(endpoint, payload, wantReply) }
     }
 
     /** Subscribes to [flow] before running [action], so a fast reply can't be missed. */

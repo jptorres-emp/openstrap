@@ -40,8 +40,23 @@ data class ServiceList(val endpoints: Map<Int, Boolean>) {
     fun has(endpoint: Int) = endpoint in endpoints
     fun requiresEncryption(endpoint: Int) = endpoints[endpoint] == true
 
+    /**
+     * Applies the strap's unsolicited `05 op endpoint u16 requireEncryption` push (02 §6.3): op 1 adds the
+     * endpoint, 2 removes it. Returns null for anything else.
+     */
+    fun applyChange(push: ByteArray): ServiceList? {
+        if (push.size < 4 || push.u8(0) != CHANGED) return null
+        val endpoint = push.u8(2) or (push.u8(3) shl 8)
+        return when (push.u8(1)) {
+            1 -> ServiceList(endpoints + (endpoint to (push.size > 4 && push.u8(4) != 0)))
+            2 -> ServiceList(endpoints - endpoint)
+            else -> null
+        }
+    }
+
     companion object {
         val REQUEST: ByteArray = bytesOf(0x03)
+        const val CHANGED = 0x05
 
         /** Parses the v2 reply `04 count(u16) {endpoint u16, requireEncryption bool}*`. */
         fun parse(reply: ByteArray): ServiceList {
@@ -104,6 +119,24 @@ object TimeSync {
 
     /** Channel endpoint 0x0047 set request; reply `06 01` on success. */
     fun setRequest(now: ZonedDateTime): ByteArray = bytesOf(0x05) + struct(now)
+
+    const val VERSION = 0x01
+    const val NEXT_DST = 0x07
+    val versionRequest: ByteArray = bytesOf(VERSION)
+
+    /** `02 version`; the DST hint needs version 2 or later (03 §3.8). */
+    fun parseVersion(reply: ByteArray): Int? = if (reply.size >= 2 && reply.u8(0) == VERSION + 1) reply.u8(1) else null
+
+    /**
+     * `07 u32 transition, i16 deltaSeconds`: the zone's next DST change after [now], answered `08 status`. Zepp sends
+     * the transition minus the delta when DST ends (`b930.java:632-641`), and zeros for a zone without DST.
+     */
+    fun nextDstRequest(now: ZonedDateTime): ByteArray {
+        val t = now.zone.rules.nextTransition(now.toInstant())
+        val delta = t?.let { it.offsetAfter.totalSeconds - it.offsetBefore.totalSeconds } ?: 0
+        val at = t?.let { it.toEpochSecond() + if (delta < 0) delta else 0 } ?: 0L
+        return ByteWriter().u8(NEXT_DST).u32(at).u16(delta and 0xFFFF).toByteArray()
+    }
 }
 
 enum class Gender(val code: Int) { MALE(0), FEMALE(1), UNSPECIFIED(2) }
@@ -154,7 +187,8 @@ data class UserProfile(
 
 /** Real-time heart rate (§5.6). */
 object LiveHeartRate {
-    // Endpoint 0x001D. UNVERIFIED encoding (§5.6): open 04 02, close 04 01, keep-alive 04 03; reply 05 00.
+    // Endpoint 0x001D (03 §3.10): open 04 02, close 04 01, keep-alive 04 03. On hardware open answers 05 03
+    // and keep-alive 05 02.
     val OPEN: ByteArray = bytesOf(0x04, 0x02)
     val CLOSE: ByteArray = bytesOf(0x04, 0x01)
     val KEEP_ALIVE: ByteArray = bytesOf(0x04, 0x03)
@@ -230,6 +264,23 @@ object RealtimeSteps {
             0x04 -> if (payload.size > 2 && payload.u8(1) == 0x01) parseRecord(payload, 2) else null
             0x02, 0x06 -> null
             else -> parseRecord(payload, 1)
+        }
+    }
+}
+
+/** A health alert the strap raised on its own (0x001D `0D`, 03 §3.10 table A). [value] is bpm, stress or SpO2 %. */
+data class HealthAlert(val type: Type, val timestamp: Long, val value: Long) {
+    enum class Type(val code: Int) { HIGH_HEART_RATE(1), LOW_HEART_RATE(2), HIGH_STRESS(3), LOW_SPO2(4), IRREGULAR_RHYTHM(5) }
+
+    companion object {
+        const val PUSH = 0x0D
+
+        /** `0D type u8, ts u32, value u32`. Null for other messages and for alert types Zepp ignores too. */
+        fun parse(payload: ByteArray): HealthAlert? {
+            if (payload.size < 10 || payload.u8(0) != PUSH) return null
+            val type = Type.entries.firstOrNull { it.code == payload.u8(1) } ?: return null
+            val r = ByteReader(payload, 2)
+            return HealthAlert(type, r.u32(), r.u32())
         }
     }
 }

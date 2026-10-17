@@ -86,12 +86,12 @@ class GdspClient(
      * on status 51 so the caller can stop the whole sync, as Zepp does.
      */
     suspend fun fetch(typeCode: Int, since: Long, zone: ZoneId): GdspFetch {
-        var start = startOrNull(typeCode, since, zone) ?: return failed("no reply to START")
+        var start = startOrNull(typeCode, since, zone) ?: return failed("no reply to START", GdspStatus.TIMEOUT)
         if (start.status == GdspStatus.INVALID_STATE) {
             // An earlier START is still open on the strap (04 §1.5). Close it and try once more.
             log("history: start $typeCode refused with INVALID_STATE, closing the open fetch and retrying")
-            finish(ok = false)
-            start = startOrNull(typeCode, since, zone) ?: return failed("no reply to START")
+            finish(GdspStatus.CANCELLED_BY_APP)
+            start = startOrNull(typeCode, since, zone) ?: return failed("no reply to START", GdspStatus.TIMEOUT)
         }
         if (start !is GdspMessage.StartReply || !start.isSuccess) {
             if (start.status == GdspStatus.FAST_RECHARGE_MODE) throw FastRechargeModeException()
@@ -100,15 +100,15 @@ class GdspClient(
         // Every START must be closed with an ACK, even an empty one; otherwise the strap keeps the type
         // open and refuses other types with INVALID_STATE (seen on hardware).
         if (start.size == 0L) {
-            finish(ok = true)
+            finish()
             return GdspFetch.Empty
         }
         val headerTime = start.firstRecordEpoch ?: since
-        val (wire, deviceCrc) = transfer() ?: return failed("transfer failed")
-        if (deviceCrc != null && deviceCrc != crc32(wire)) return failed("CRC mismatch")
+        val (wire, deviceCrc) = transfer() ?: return failed("transfer failed", GdspStatus.TIMEOUT)
+        if (deviceCrc != null && deviceCrc != crc32(wire)) return failed("CRC mismatch", GdspStatus.CRC_MISMATCH)
         // Some types (SEC_HR_V2) arrive zlib-compressed; the size field is then the inflated byte count.
         val payload = if (start.isCompressed ?: (wire.size.toLong() != start.size && isZlib(wire))) {
-            runCatching { inflate(wire) }.getOrElse { return failed("inflate failed: $it") }
+            runCatching { inflate(wire) }.getOrElse { return failed("inflate failed: $it", GdspStatus.DECOMPRESS_FAILED) }
         } else wire
         return GdspFetch.Chunk(payload, headerTime, start.size)
     }
@@ -121,8 +121,8 @@ class GdspClient(
             null
         }
 
-    private suspend fun failed(reason: String): GdspFetch {
-        finish(ok = false)
+    private suspend fun failed(reason: String, status: GdspStatus): GdspFetch {
+        finish(status)
         return GdspFetch.Failed(reason)
     }
 
@@ -135,24 +135,24 @@ class GdspClient(
         if (s !is GdspFetch.Chunk) return WorkoutFetch.None
         // Zepp requires bytes == size; accept a whole multiple too, as the other types do.
         if (s.unit == null) {
-            finish(ok = false)
+            finish(GdspStatus.DATA_SIZE_MISMATCH)
             return WorkoutFetch.Failed("summary: ${s.payload.size} bytes for size ${s.sizeField}")
         }
         val parsed = WorkoutParsers.summary.parse(s.payload, ParseContext(s.headerTime))
         if (parsed !is ParseResult.Success) {
-            finish(ok = false)
+            finish(GdspStatus.CONTENT_PARSE_ERROR)
             return WorkoutFetch.Failed("summary: ${(parsed as ParseResult.Failure).reason}")
         }
         // The summary has to be closed before the next START, or the strap answers INVALID_STATE.
-        finish(ok = true)
+        finish()
         val summary = parsed.records.singleOrNull() ?: return WorkoutFetch.None
         val next = parsed.nextCursor ?: (summary.trackId + 1)
 
         var retry = false
         val detail = when (val d = fetch(HistoryDataType.SPORT_DETAIL.code, since, zone)) {
             is GdspFetch.Chunk -> when (val r = WorkoutParsers.detail.parse(d.payload, ParseContext(summary.trackId))) {
-                is ParseResult.Success -> { finish(ok = true); r.records.singleOrNull() }
-                is ParseResult.Failure -> { finish(ok = false); log("history 6: ${r.reason}"); null }
+                is ParseResult.Success -> { finish(); r.records.singleOrNull() }
+                is ParseResult.Failure -> { finish(GdspStatus.CONTENT_PARSE_ERROR); log("history 6: ${r.reason}"); null }
             }
             is GdspFetch.Failed -> { log("history 6: ${d.reason}"); retry = true; null }
             is GdspFetch.Refused -> { log("history 6: start refused (${d.status})"); retry = true; null }
@@ -162,11 +162,11 @@ class GdspClient(
     }
 
     /**
-     * Closes the current fetch. `03 01` after data we can use; `03 00` when we could not.
-     * The bare `03` was ignored by the strap (it then timed out with status 0x32).
+     * Closes the current fetch with `03 <status>`: 1 after data we can use, otherwise the failure's own code, as
+     * Zepp does (04 §1.6 step 7). The bare `03` was ignored by the strap (it then timed out with status 0x32).
      */
-    suspend fun finish(ok: Boolean) {
-        send(FetchCodec.ack(if (ok) 1 else 0))
+    suspend fun finish(status: GdspStatus = GdspStatus.SUCCESS) {
+        send(FetchCodec.ack(status.code))
         val reply = withTimeoutOrNull(5_000) {
             while (true) {
                 val m = control.receive()
@@ -175,7 +175,7 @@ class GdspClient(
             }
             @Suppress("UNREACHABLE_CODE") null
         }
-        log("history: ack ${if (ok) 1 else 0} -> ${reply?.let { "%02x %s".format(it.opcode, it.status) } ?: "no reply"}")
+        log("history: ack ${status.code} -> ${reply?.let { "%02x %s".format(it.opcode, it.status) } ?: "no reply"}")
     }
 
     /** TRANSFER, then collect indexed packets until `10 02`. Returns the payload without index bytes and the CRC. */

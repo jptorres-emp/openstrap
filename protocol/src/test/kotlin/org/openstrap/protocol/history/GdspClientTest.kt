@@ -119,7 +119,7 @@ class GdspClientTest {
         val client = GdspClient(strap::send, strap.control, strap.data)
         // A timeout must not surface as a cancellation, which would abort the whole sync.
         assertTrue(client.fetch(HistoryDataType.ACTIVITY.code, trackId, zone) is GdspFetch.Failed)
-        assertEquals(listOf<Int?>(0), strap.acks)
+        assertEquals(listOf<Int?>(GdspStatus.TIMEOUT.code), strap.acks)
         // The next type still works.
         assertEquals(GdspFetch.Empty, client.fetch(HistoryDataType.ACTIVITY.code, trackId, zone))
     }
@@ -130,7 +130,7 @@ class GdspClientTest {
         val client = GdspClient(strap::send, strap.control, strap.data)
         assertEquals(GdspFetch.Empty, client.fetch(HistoryDataType.ACTIVITY.code, trackId, zone))
         assertEquals(2, strap.starts.size)
-        assertEquals(listOf<Int?>(0, 1), strap.acks)
+        assertEquals(listOf<Int?>(GdspStatus.CANCELLED_BY_APP.code, 1), strap.acks)
 
         strap.invalidStateStarts = 2
         val f = client.fetch(HistoryDataType.ACTIVITY.code, trackId, zone)

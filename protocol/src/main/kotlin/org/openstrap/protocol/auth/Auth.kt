@@ -31,15 +31,9 @@ object Auth {
 
     fun describe(status: Int): String = STATUS_NAMES[status] ?: "status 0x%02x".format(status)
 
-    /**
-     * Strips the auth reply prefix. The exact prefix is UNVERIFIED (§2.5): accept `10 <cmd>` or `<cmd+1>`.
-     * Returns `[status][data…]` or null if neither form matches.
-     */
-    fun stripReply(command: Int, reply: ByteArray): ByteArray? = when {
-        reply.size >= 3 && reply.u8(0) == 0x10 && reply.u8(1) == command -> reply.copyOfRange(2, reply.size)
-        reply.size >= 2 && reply.u8(0) == command + 1 -> reply.copyOfRange(1, reply.size)
-        else -> null
-    }
+    /** Strips the auth reply prefix `10 <cmd>` (always this form, 02 §7). Returns `[status][data…]`, or null. */
+    fun stripReply(command: Int, reply: ByteArray): ByteArray? =
+        if (reply.size >= 3 && reply.u8(0) == 0x10 && reply.u8(1) == command) reply.copyOfRange(2, reply.size) else null
 }
 
 class AuthException(val status: Int, message: String) : Exception(message)

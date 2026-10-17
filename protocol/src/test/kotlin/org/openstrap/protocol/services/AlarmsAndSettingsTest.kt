@@ -34,6 +34,19 @@ class AlarmsAndSettingsTest {
         assertFalse(AlarmCodec.isSuccess(req, "0402".hexToBytes()))
     }
 
+    @Test
+    fun alarmWorkdaysAndClearAll() {
+        // A strap whose alarm version reports workday support keeps 128 ("workdays").
+        assertTrue(AlarmCodec.parseVersion("02030a000100".hexToBytes())!!.workdaysSupported)
+        val listed = AlarmCodec.parseList("0a010404072d800000000100".hexToBytes(), titles = false)!!.single()
+        assertEquals(Alarm.WORKDAYS, listed.days)
+        assertArrayEquals("0701040407 2d80000000 0100".hexToBytes(), AlarmCodec.modify(listed, titles = false, workdays = true))
+        // Without support Zepp writes Mon-Fri instead.
+        assertArrayEquals("0701040407 2d1f000000 0100".hexToBytes(), AlarmCodec.modify(listed, titles = false, workdays = false))
+        assertArrayEquals("0b".hexToBytes(), AlarmCodec.clearAllRequest)
+        assertTrue(AlarmCodec.isSuccess(AlarmCodec.clearAllRequest, "0c01".hexToBytes()))
+    }
+
     private val health = ("04010803011d0110fe0600fe01050a1e0210000700646e78828c960310000400282d32040b00830b01110b01120b01130b01" +
         "140b01160b00181000060001050a0f1e310b0132105a040050555a410b014230080043301500440b0145300c0046300e00510b0152" +
         "0310270000d00700003075000053012c01c800b80b5403b036000058020000a08c00005501e0010000a00556010c00060010005701" +

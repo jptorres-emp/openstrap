@@ -32,6 +32,7 @@ import org.openstrap.protocol.history.FetchCodec
 import org.openstrap.protocol.history.GdspClient
 import org.openstrap.protocol.history.GdspFetch
 import org.openstrap.protocol.history.GdspMessage
+import org.openstrap.protocol.history.GdspStatus
 import org.openstrap.protocol.history.WorkoutFetch
 import org.openstrap.protocol.history.HistoryDataType
 import org.openstrap.protocol.history.HistoryRecord
@@ -159,7 +160,7 @@ class HistorySync(
                             is GdspFetch.Failed -> { log("dump $code: ${f.reason}"); return@runCatching }
                             GdspFetch.Empty -> { log("dump $code: empty"); return@runCatching }
                         }
-                        client.finish(ok = true)
+                        client.finish()
                         val header = chunk.headerTime
                         val payload = chunk.payload
                         java.io.File(dir, "${code}_$header.bin").writeBytes(payload)
@@ -237,7 +238,7 @@ class HistorySync(
             // The size field counts records, not bytes (activity: size 4 = four 8-byte minutes).
             val unit = chunk.unit ?: run {
                 log("history ${spec.type}: got ${payload.size} bytes for size ${chunk.sizeField}, discarding")
-                finish(ok = false)
+                finish(GdspStatus.DATA_SIZE_MISMATCH)
                 return
             }
             log("history ${spec.type}: ${payload.size} bytes (${chunk.sizeField}×$unit) from ${Instant.ofEpochSecond(headerTime)}: ${payload.copyOf(minOf(32, payload.size)).toHex()}")
@@ -245,23 +246,24 @@ class HistorySync(
             when (val result = spec.parser!!.parse(payload, ParseContext(headerTime, activityRecordSize = recordSize(spec.code, payload, chunk.sizeField)))) {
                 is ParseResult.Failure -> {
                     log("history ${spec.type}: parse failed: ${result.reason}")
-                    finish(ok = false)
+                    finish(GdspStatus.CONTENT_PARSE_ERROR)
                     return
                 }
                 is ParseResult.Success -> {
                     // Drop records with impossible times (stale buffer slots, data from before the clock was set).
                     val now = System.currentTimeMillis() / 1000
-                    val kept = result.records.filter { it.timestamp in MIN_VALID_EPOCH..now + FUTURE_SLACK }
-                    val dropped = result.records.size - kept.size
+                    val (records, parsedNext) = holdBackPartialMinute(result.records, result.nextCursor, cursor)
+                    val kept = records.filter { it.timestamp in MIN_VALID_EPOCH..now + FUTURE_SLACK }
+                    val dropped = records.size - kept.size
                     log("history ${spec.type}: ${kept.size} records" + if (dropped > 0) " ($dropped with impossible times dropped)" else "")
                     store(kept)
                     // Only acknowledge once the data is safely in the database.
-                    finish(ok = true)
+                    finish()
                     // A chunk with nothing usable (only gap slots, or only impossible times) still moves the cursor
                     // past it, or the strap serves the same chunk on every sync. The chunk holds the earliest
                     // records after the cursor, so skipping it loses nothing, and the cap at now keeps a strap
                     // clock that runs ahead from pushing the cursor into the future.
-                    val next = result.nextCursor
+                    val next = parsedNext
                         ?.let { if (kept.isEmpty()) it else it.coerceAtMost(kept.maxOf { r -> r.timestamp } + 60) }
                         ?.coerceAtMost(now)
                     if (next != null && next > cursor) settings.setLastSync(key, next)
@@ -270,6 +272,19 @@ class HistorySync(
                 }
             }
         }
+    }
+
+    /**
+     * Per-second HR is stored as one average per minute, keyed by the minute. A minute split across two chunks
+     * would be averaged twice, the second half replacing the first, so the chunk's last minute is left out and the
+     * cursor stops at its start: the next chunk brings the whole minute.
+     */
+    private fun holdBackPartialMinute(records: List<HistoryRecord>, next: Long?, cursor: Long): Pair<List<HistoryRecord>, Long?> {
+        if (records.isEmpty() || records.any { it !is SecondHeartRate }) return records to next
+        val lastMinute = records.maxOf { it.timestamp } / 60 * 60
+        // Never hold back so much that the cursor can't move.
+        if (lastMinute <= cursor) return records to next
+        return records.filter { it.timestamp < lastMinute } to lastMinute
     }
 
     /** Saves the strap's latest readiness score; it keeps no history, so this runs every sync. */
@@ -284,7 +299,7 @@ class HistorySync(
         if (rows.isNotEmpty()) dao.insertStrapReadiness(rows)
     }
 
-    private suspend fun finish(ok: Boolean) = client.finish(ok)
+    private suspend fun finish(status: GdspStatus = GdspStatus.SUCCESS) = client.finish(status)
 
     /**
      * Workouts, one per round: the summary, then its detail from the same cursor (04 §3.16). The cursor only
@@ -323,7 +338,7 @@ class HistorySync(
         val stress = mutableListOf<DbStress>()
         val hrv = mutableListOf<HrvSample>()
         val resting = mutableListOf<RestingHeartRate>()
-        val restingFromPai = mutableListOf<RestingHeartRate>()
+        val restingIfMissing = mutableListOf<RestingHeartRate>()
         val skin = mutableListOf<SkinTemperature>()
         val breath = mutableListOf<BreathRate>()
         val pai = mutableListOf<PaiSample>()
@@ -356,14 +371,15 @@ class HistorySync(
                 r.optimalLoadMin, r.optimalLoadMax, r.maximalHeartRate,
             )
             is StrapRestingHr -> if (r.heartRate in 30..120) resting += RestingHeartRate(dayStart(r.timestamp), r.heartRate)
-            is RestHrRealtime -> if (r.realtimeRestHr in 30..120) resting += RestingHeartRate(dayStart(r.timestamp), r.realtimeRestHr)
+            // A realtime value (86) must not replace the strap's daily resting HR (58) for the same day.
+            is RestHrRealtime -> if (r.realtimeRestHr in 30..120) restingIfMissing += RestingHeartRate(dayStart(r.timestamp), r.realtimeRestHr)
             is SleepResult -> storeSleep(r)
             is SkinTemperatureSample -> r.skinCelsius?.let { skin += SkinTemperature(r.timestamp, it) }
             is SleepBreathRate -> if (r.breathRate in 4..40) breath += BreathRate(r.timestamp, r.breathRate)
             is PaiRecord -> {
                 pai += PaiSample(r.timestamp, r.dailyPai, r.totalPai, r.restHr, r.maxHr)
                 // The strap's resting-HR profile; used only for days without a real resting value.
-                if (r.restHr in 30..120) restingFromPai += RestingHeartRate(dayStart(r.timestamp), r.restHr)
+                if (r.restHr in 30..120) restingIfMissing += RestingHeartRate(dayStart(r.timestamp), r.restHr)
             }
             else -> Unit
         }
@@ -374,7 +390,7 @@ class HistorySync(
         if (stress.isNotEmpty()) dao.insertStress(stress)
         if (hrv.isNotEmpty()) dao.insertHrv(hrv)
         if (resting.isNotEmpty()) dao.insertRestingHr(resting)
-        if (restingFromPai.isNotEmpty()) dao.insertRestingHrIfMissing(restingFromPai)
+        if (restingIfMissing.isNotEmpty()) dao.insertRestingHrIfMissing(restingIfMissing)
         if (skin.isNotEmpty()) dao.insertSkinTemperature(skin)
         if (breath.isNotEmpty()) dao.insertBreathRate(breath)
         if (pai.isNotEmpty()) dao.insertPai(pai)
@@ -390,7 +406,10 @@ class HistorySync(
     private suspend fun storeSleep(r: SleepResult) {
         val day = r.day(zone)
         var mainWindow: Pair<Long, Long>? = null
-        val main = r.mainStages.filter { it.rawType in SleepStageCodes.VALID }
+        // Every stage the count covers is real; Zepp shows one with an unknown code as light sleep (04 §3.5).
+        val main = r.mainStages.filter { it.stop >= it.start }
+        main.filter { it.rawType !in SleepStageCodes.VALID }.takeIf { it.isNotEmpty() }
+            ?.let { log("history: ${it.size} sleep stages with unknown codes ${it.map { s -> s.rawType }.toSet()}, counted as light") }
         if (main.isNotEmpty()) {
             val start = r.resolveTime(main.first().start, zone)
             val end = r.resolveTime(r.mainSleepEndFixed.takeIf { it > main.first().start } ?: main.last().stop + 1, zone)

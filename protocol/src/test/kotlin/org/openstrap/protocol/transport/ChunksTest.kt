@@ -3,6 +3,7 @@ package org.openstrap.protocol.transport
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.openstrap.protocol.crypto.ChannelCipher
 import org.openstrap.protocol.hexToBytes
@@ -54,6 +55,33 @@ class ChunksTest {
     }
 
     @Test
+    fun lostChunkDropsTheMessageAndLaterChunksAreIgnored() {
+        val received = mutableListOf<ChannelMessage>()
+        val r = Reassembler({ true }, { _, c, _ -> c }, { received += it })
+        val chunks = buildChunks(1, 9, ByteArray(40), 40, encrypted = false, payloadMtu = 20)
+        r.accept(chunks[0])
+        r.accept(chunks[2])
+        // The rest of the broken message gets no ACK and produces nothing.
+        assertNull(r.accept(chunks[3]))
+        assertTrue(received.isEmpty())
+        // The next message goes through.
+        buildChunks(1, 10, ByteArray(5), 5, encrypted = false, payloadMtu = 20).forEach { r.accept(it) }
+        assertEquals(1, received.size)
+    }
+
+    @Test
+    fun undecryptableMessageIsAckedAndDropped() {
+        val received = mutableListOf<ChannelMessage>()
+        var failures = 0
+        val r = Reassembler({ true }, { _, _, _ -> error("bad crc") }, { received += it }).apply { onDecryptFailure = { failures++ } }
+        val chunk = buildChunks(1, 3, ByteArray(16), 4, encrypted = true, payloadMtu = 40).single()
+        val ack = r.accept(chunk)!!
+        assertEquals(AckStatus.SUCCESS, ack[3].toInt())
+        assertTrue(received.isEmpty())
+        assertEquals(1, failures)
+    }
+
+    @Test
     fun rejectsUnknownEndpoint() {
         val r = Reassembler({ it == 1 }, { _, c, _ -> c }, {})
         val ack = r.accept(buildChunks(2, 1, byteArrayOf(1), 1, false, 20)[0])!!
@@ -83,8 +111,10 @@ class ChunksTest {
 
     @Test
     fun parsesBothAckForms() {
-        assertEquals(DeviceAck(5, 1, 2), parseDeviceAck("0400050102".hexToBytes()))
+        // `04 sess status idx appId` (02 §3).
+        assertEquals(DeviceAck(5, 1, 2), parseDeviceAck("0405010200".hexToBytes()))
         assertEquals(DeviceAck(5, 1, 2), parseDeviceAck("04050102".hexToBytes()))
+        assertNull(parseDeviceAck("0405010207".hexToBytes())) // another app's ACK
         assertNull(parseDeviceAck("03".hexToBytes()))
     }
 }

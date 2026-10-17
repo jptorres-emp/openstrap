@@ -57,6 +57,7 @@ class AuthHandshakeTest {
     @Test
     fun stripsBothReplyPrefixes() {
         assertArrayEquals(byteArrayOf(1, 9), Auth.stripReply(4, byteArrayOf(0x10, 4, 1, 9)))
-        assertArrayEquals(byteArrayOf(1, 9), Auth.stripReply(4, byteArrayOf(5, 1, 9)))
+        // The `<cmd+1>` form isn't an auth reply (02 §7); it must not satisfy a wait for one.
+        org.junit.Assert.assertNull(Auth.stripReply(4, byteArrayOf(5, 1, 9)))
     }
 }

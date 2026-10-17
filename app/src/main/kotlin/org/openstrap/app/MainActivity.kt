@@ -157,6 +157,7 @@ private fun AppRoot(container: AppContainer) {
     })
     val workouts by workoutsVm.workouts.collectAsStateWithLifecycle()
     val openWorkout by workoutsVm.open.collectAsStateWithLifecycle()
+    val sportEffects by workoutsVm.effects.collectAsStateWithLifecycle()
     // What each tab has pushed on top of itself; opening a detail never moves you to another tab.
     // Each tab's stack of details, deepest last; back pops one.
     var todayStack by rememberSaveable(stateSaver = Detail.StackSaver) { mutableStateOf(emptyList<Detail>()) }
@@ -252,7 +253,8 @@ private fun AppRoot(container: AppContainer) {
                                 contentPadding = padding, onBack = { todayStack = todayStack.dropLast(1) },
                             )
                             is Detail.Workout -> org.openstrap.app.ui.workout.WorkoutScreen(openWorkout?.takeIf { it.workout.start == detail.start }, padding, onBack = { todayStack = todayStack.dropLast(1) })
-                            null -> pullToSync {
+                            // Today never opens the full workout list; it would only land here from a stale saved stack.
+                            null, Detail.AllWorkouts -> pullToSync {
                                 if (BuildConfig.DEBUG && glowToday) org.openstrap.app.ui.glow.GlowTodayScreen(
                                     day, live, battery, charging, dayVm::previousDay, dayVm::nextDay, padding,
                                     picker = picker,
@@ -290,7 +292,6 @@ private fun AppRoot(container: AppContainer) {
                                 day, recovery, strapReadiness, history, battery, charging, dayVm::previousDay, dayVm::nextDay, picker,
                                 sync as? SyncState.Running, padding,
                                 onOpenMetric = { recoveryStack = listOf(Detail.OfMetric(it)) },
-                                onEditProfile = { editProfile = true },
                             ) else RecoveryScreen(
                                 recovery, day.date, day.dayStart..day.dayEnd, day.sleep?.let { it.start..it.end }, padding,
                                 onEditProfile = { editProfile = true },
@@ -315,10 +316,31 @@ private fun AppRoot(container: AppContainer) {
                     }
                     Tab.Activity -> PushContent(activityStack, depth = { it.size }) { stack ->
                         val detail = stack.lastOrNull()
-                        if (detail is Detail.Workout) {
-                            org.openstrap.app.ui.workout.WorkoutScreen(openWorkout?.takeIf { it.workout.start == detail.start }, padding, onBack = { activityStack = activityStack.dropLast(1) })
-                        } else {
-                            org.openstrap.app.ui.workout.WorkoutsScreen(workouts, padding, onOpen = { activityStack = listOf(Detail.Workout(it)) })
+                        when {
+                            detail is Detail.Workout ->
+                                org.openstrap.app.ui.workout.WorkoutScreen(openWorkout?.takeIf { it.workout.start == detail.start }, padding, onBack = { activityStack = activityStack.dropLast(1) })
+                            detail is Detail.OfMetric -> MetricDetailScreen(
+                                detail.metric, day, history = history,
+                                liveHeartRate = live, liveEnabled = liveEnabled, canUseLive = connection is ConnectionState.Connected,
+                                onLiveToggle = { container.strap.setLiveHeartRate(it) },
+                                onOpenMetric = { activityStack = activityStack + Detail.OfMetric(it) },
+                                contentPadding = padding, onBack = { activityStack = activityStack.dropLast(1) },
+                            )
+                            // The full list: its own page on glow, the tab itself on classic.
+                            detail is Detail.AllWorkouts || !(BuildConfig.DEBUG && glowToday) -> {
+                                if (detail != null) androidx.activity.compose.BackHandler { activityStack = activityStack.dropLast(1) }
+                                org.openstrap.app.ui.workout.WorkoutsScreen(workouts, padding, onOpen = { activityStack = activityStack + Detail.Workout(it) })
+                            }
+                            else -> pullToSync {
+                                org.openstrap.app.ui.glow.GlowActivityScreen(
+                                    day, recovery, workouts, sportEffects, { from, to -> container.health.dailyPai(from, to) },
+                                    battery, charging, dayVm::previousDay, dayVm::nextDay, picker, sync as? SyncState.Running, padding,
+                                    onOpenMetric = { activityStack = listOf(Detail.OfMetric(it)) },
+                                    onOpenWorkout = { activityStack = listOf(Detail.Workout(it)) },
+                                    onAllWorkouts = { activityStack = listOf(Detail.AllWorkouts) },
+                                    onEditProfile = { editProfile = true },
+                                )
+                            }
                         }
                     }
                     Tab.You -> PushContent(

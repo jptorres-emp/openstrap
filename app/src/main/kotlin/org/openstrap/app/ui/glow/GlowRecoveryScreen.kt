@@ -63,7 +63,6 @@ fun GlowRecoveryScreen(
     sync: SyncState.Running?,
     contentPadding: PaddingValues,
     onOpenMetric: (Metric) -> Unit,
-    onEditProfile: () -> Unit,
 ) {
     val list = rememberLazyListState()
     val signals = rememberSignals(state, history)
@@ -82,7 +81,6 @@ fun GlowRecoveryScreen(
             if (r.charge.latest != null) item { ChargeFlowPanel(r.charge, r.stressThreshold) }
             if (ready.contributors.isNotEmpty()) item { ContributorsPanel(ready) }
             item { SignalsPanel(signals, onOpenMetric) }
-            item { LoadPanel(r, onEditProfile) }
             item { HowItWorksPanel(strapReadiness, ready.score) }
         }
     }
@@ -226,7 +224,7 @@ private fun FlowRow(label: String, value: String, fraction: Float, color: Color)
 
 /** A row of dots, the first [fraction] of them lit in [color]: the quiet panels' progress bar. */
 @Composable
-private fun DotBar(fraction: Float, color: Color, modifier: Modifier = Modifier) {
+internal fun DotBar(fraction: Float, color: Color, modifier: Modifier = Modifier) {
     Canvas(modifier.fillMaxWidth().height(6.dp)) {
         val step = 7.dp.toPx()
         val n = (size.width / step).toInt().coerceAtLeast(1)
@@ -238,7 +236,7 @@ private fun DotBar(fraction: Float, color: Color, modifier: Modifier = Modifier)
 }
 
 @Composable
-private fun Note(text: String) = Text(text, color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.bodySmall)
+internal fun Note(text: String) = Text(text, color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.bodySmall)
 
 /** The score's contributors, grouped by what they're about. */
 @Composable
@@ -366,7 +364,7 @@ private fun SignalTile(s: BodySignal, modifier: Modifier, onClick: () -> Unit) {
 
 /** Seven days as dots joined by a faint line; missing days are gaps. */
 @Composable
-private fun Sparkline(values: List<Float?>, color: Color, modifier: Modifier) {
+internal fun Sparkline(values: List<Float?>, color: Color, modifier: Modifier) {
     Canvas(modifier) {
         val known = values.filterNotNull()
         if (known.isEmpty()) return@Canvas
@@ -388,32 +386,8 @@ private fun Sparkline(values: List<Float?>, color: Color, modifier: Modifier) {
 
 /* ------------------------------------------------------------------------------------------------ */
 
-/** Training load until the Activity tab takes it over. */
 @Composable
-private fun LoadPanel(r: RecoveryResult, onEditProfile: () -> Unit) {
-    DotPanel {
-        DotHeader("Training load", MetricColors.steps, trailing = "TRIMP")
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Fact("Today", "${r.load.toInt()}")
-            Fact("Usual day", r.chronicLoad?.toInt()?.toString() ?: "—")
-            Fact("Max HR", "${r.maxHr.toInt()} bpm")
-        }
-        Note(
-            "Load weights each minute by how hard your heart works between resting (${r.restingHr.toInt()} bpm) and maximum. " +
-                "An hour of moderate exercise is about 60–80.",
-        )
-        if (!r.maxHrFromAge) {
-            Text(
-                "Max HR is estimated. Add your age for accurate effort numbers.",
-                color = MetricColors.warn, style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.pressClickable(onEditProfile),
-            )
-        }
-    }
-}
-
-@Composable
-private fun Fact(label: String, value: String) {
+internal fun Fact(label: String, value: String) {
     Column {
         Text(label, color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.bodySmall)
         Text(value, color = Color.White, style = MaterialTheme.typography.titleLarge)

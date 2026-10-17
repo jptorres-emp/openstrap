@@ -22,6 +22,8 @@ enum class Metric(val title: String, val unit: String, val decimals: Int, val da
 sealed interface Detail {
     data class OfMetric(val metric: Metric) : Detail
     data class Workout(val start: Long) : Detail
+    /** Every workout, newest first. */
+    data object AllWorkouts : Detail
 
     companion object {
         /** Saves a tab's stack of details, deepest last, as one string ("m:Hrv|w:1792227300") so it survives process death. */
@@ -33,6 +35,7 @@ sealed interface Detail {
         private fun key(d: Detail): String = when (d) {
             is OfMetric -> "m:${d.metric.name}"
             is Workout -> "w:${d.start}"
+            AllWorkouts -> "a:"
         }
 
         private fun restore(s: String): Detail? {
@@ -40,6 +43,7 @@ sealed interface Detail {
             return when (s.substringBefore(':')) {
                 "m" -> Metric.entries.firstOrNull { it.name == value }?.let(::OfMetric)
                 "w" -> value.toLongOrNull()?.let(::Workout)
+                "a" -> AllWorkouts
                 else -> null
             }
         }

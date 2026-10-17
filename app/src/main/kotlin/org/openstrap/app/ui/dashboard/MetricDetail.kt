@@ -84,7 +84,10 @@ fun MetricDetailScreen(
         item { DetailHeader(metric.title, state.date, onBack) }
         item { SegmentedTabs(Range.entries.map { it.label }, rangeIndex, { rangeIndex = it }) }
         if (range == Range.Day) {
-            item { NormalPanel(metric, stats?.firstOrNull { it.date == end }, normal) }
+            // Steps take the day's own total, which includes the strap's live count for today.
+            val day = stats?.firstOrNull { it.date == end }
+                .let { if (metric == Metric.Steps) DayStat(end, state.steps.toFloat(), 0f, 0f, 1) else it }
+            item { NormalPanel(metric, day, normal) }
             dayContent(metric, state, liveHeartRate, liveEnabled, canUseLive, onLiveToggle)
         } else {
             item { HistoryPanel(metric, range, stats, normal, end) }

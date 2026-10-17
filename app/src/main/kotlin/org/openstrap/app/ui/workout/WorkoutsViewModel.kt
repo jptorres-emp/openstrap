@@ -30,6 +30,10 @@ class WorkoutsViewModel(private val dao: HealthDao, profile: Flow<UserProfile>) 
             ws.map { w -> Workouts.analyse(w, listOfNotNull(lastByWorkout[w.start]), effects, maxHr) }
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    /** The strap's sport-effect records, newest last: recovery time, VO2 max and weekly load after each workout. */
+    val effects: StateFlow<List<org.openstrap.app.data.db.SportEffectRow>> =
+        dao.sportEffects().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
     private val openStart = MutableStateFlow<Long?>(null)
 
     val open: StateFlow<WorkoutAnalysis?> = openStart.flatMapLatest { start ->

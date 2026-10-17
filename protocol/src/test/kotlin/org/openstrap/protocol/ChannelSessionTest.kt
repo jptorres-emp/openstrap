@@ -52,7 +52,7 @@ private class SimulatedStrap(private val authKey: ByteArray) : StrapLink {
             return
         }
         if (data.size > 1) lastFlags = data[1].toInt() and 0xFF
-        // The reassembler builds the phone's ACK form `04 00 sess st idx`; the strap's is `04 sess st idx appId`.
+        // The strap's ACK has the same `04 00 sess st idx` layout as the reassembler's.
         reassembler.accept(data)?.let { ack ->
             var status = ack[3].toInt()
             if (loseNextEncrypted && lastFlags and ChunkFlags.ENCRYPTED != 0 && lastFlags and ChunkFlags.LAST != 0) {
@@ -60,7 +60,7 @@ private class SimulatedStrap(private val authKey: ByteArray) : StrapLink {
                 status = AckStatus.PACKET_LOST
             }
             encryptedAcks += if (lastFlags and ChunkFlags.ENCRYPTED != 0) 1 else 0
-            controlNotifications.emit(byteArrayOf(0x04, ack[2], status.toByte(), ack[4], 0))
+            controlNotifications.emit(byteArrayOf(0x04, 0, ack[2], status.toByte(), ack[4]))
         }
         flushOutbox()
     }

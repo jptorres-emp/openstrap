@@ -75,13 +75,15 @@ fun buildAck(sessionId: Int, status: Int, chunkIndex: Int): ByteArray =
 data class DeviceAck(val sessionId: Int, val status: Int, val chunkIndex: Int)
 
 /**
- * `04 sess status idx appId` (02 §3). Unlike the phone's ACK there is no reserved byte after the type; Zepp drops
- * ACKs whose appId isn't 0. The 4-byte form without appId is accepted too.
+ * The strap sends `04 00 sess status idx`, the same layout as the phone's ACK (seen on fw 3.25.0.3). Doc 02 §3.2
+ * reads Zepp's parser `fhe.i` as `04 sess status idx appId`; the strap doesn't send that. The 4-byte v1 form
+ * `04 sess status idx` is accepted too. A 5-byte ACK whose second byte isn't 0 is ignored.
  */
 fun parseDeviceAck(packet: ByteArray): DeviceAck? = when {
     packet.size < 4 || packet.u8(0) != PacketType.ACK -> null
-    packet.size >= 5 && packet.u8(4) != 0 -> null
-    else -> DeviceAck(packet.u8(1), packet.u8(2), packet.u8(3))
+    packet.size == 4 -> DeviceAck(packet.u8(1), packet.u8(2), packet.u8(3))
+    packet.u8(1) != 0 -> null
+    else -> DeviceAck(packet.u8(2), packet.u8(3), packet.u8(4))
 }
 
 /** A fully reassembled incoming message. [payload] is decrypted when the transport had a cipher. */

@@ -184,8 +184,8 @@ class ChannelSession(
             for (chunk in chunks) link.writeControl(chunk)
             return null
         }
-        val lastIndex = (chunks.size - 1) and 0xFF
-        val acks = link.controlNotifications.mapNotNull { parseDeviceAck(it) }.filter { it.sessionId == sid && it.chunkIndex == lastIndex }
+        // Zepp matches the ACK on the session id only (02 §3.2).
+        val acks = link.controlNotifications.mapNotNull { parseDeviceAck(it) }.filter { it.sessionId == sid }
         // Listen before writing so a fast ACK isn't missed; only the wait after the last write is timed.
         val ack = coroutineScope {
             val waiter = async(start = CoroutineStart.UNDISPATCHED) { acks.first() }

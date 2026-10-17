@@ -111,10 +111,10 @@ class ChunksTest {
 
     @Test
     fun parsesBothAckForms() {
-        // `04 sess status idx appId` (02 §3).
-        assertEquals(DeviceAck(5, 1, 2), parseDeviceAck("0405010200".hexToBytes()))
+        // `04 00 sess status idx`, as the strap sends it (fw 3.25.0.3): session 1, status OK, last chunk 3.
+        assertEquals(DeviceAck(1, 1, 3), parseDeviceAck("0400010103".hexToBytes()))
         assertEquals(DeviceAck(5, 1, 2), parseDeviceAck("04050102".hexToBytes()))
-        assertNull(parseDeviceAck("0405010207".hexToBytes())) // another app's ACK
+        assertNull(parseDeviceAck("0405010200".hexToBytes())) // second byte isn't 0
         assertNull(parseDeviceAck("03".hexToBytes()))
     }
 }

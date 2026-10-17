@@ -42,6 +42,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
+import dev.chrisbanes.haze.HazeInput
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.blur.HazeBlurStyle
+import dev.chrisbanes.haze.blur.HazeColorEffect
+import dev.chrisbanes.haze.blur.hazeBlur
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -291,16 +296,22 @@ fun ContributorRow(label: String, rating: String, fraction: Float, color: Color,
 /** One destination in [FloatingNavBar]. */
 data class NavItem(val label: String, val icon: ImageVector, val selectedIcon: ImageVector = icon)
 
-/** Oura's floating pill tab bar: sits above the content with a hairline border. */
+/**
+ * Oura's floating pill tab bar: sits above the content with a hairline border. With [glass] it's black
+ * glass for the glow language: the content scrolling under it (marked with `hazeSource` on [glass])
+ * shows through blurred and darkened, and the edge catches light along the top.
+ */
 @Composable
-fun FloatingNavBar(items: List<NavItem>, selected: Int, onSelect: (Int) -> Unit, modifier: Modifier = Modifier) {
+fun FloatingNavBar(items: List<NavItem>, selected: Int, onSelect: (Int) -> Unit, modifier: Modifier = Modifier, glass: HazeState? = null) {
     Box(modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 20.dp, vertical = 10.dp), contentAlignment = Alignment.Center) {
         Surface(
             shape = CircleShape,
-            color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.96f),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-            shadowElevation = 12.dp,
-            modifier = Modifier.widthIn(max = 440.dp).fillMaxWidth(),
+            color = if (glass != null) Color.Transparent else MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.96f),
+            border = if (glass != null) GlassEdge else BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+            // A shadow would show through the glass as a dark smudge.
+            shadowElevation = if (glass != null) 0.dp else 12.dp,
+            modifier = Modifier.widthIn(max = 440.dp).fillMaxWidth()
+                .let { if (glass != null) it.clip(CircleShape).hazeBlur(HazeInput.Sources(glass), GlassBlur) else it },
         ) {
             // Measured width, so the pill knows how wide a cell is (BoxWithConstraints can't size to its row).
             var barWidth by remember { mutableIntStateOf(0) }
@@ -317,7 +328,7 @@ fun FloatingNavBar(items: List<NavItem>, selected: Int, onSelect: (Int) -> Unit,
                 )
                 Box(
                     Modifier.offset(x = x).width(cell).fillMaxHeight().clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surfaceContainerHighest),
+                        .let { if (glass != null) it.background(GlassChip).border(GlassChipEdge, CircleShape) else it.background(MaterialTheme.colorScheme.surfaceContainerHighest) },
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
                     items.forEachIndexed { i, item ->
@@ -331,7 +342,10 @@ fun FloatingNavBar(items: List<NavItem>, selected: Int, onSelect: (Int) -> Unit,
                             horizontalAlignment = Alignment.CenterHorizontally,
                         ) {
                             val tint by androidx.compose.animation.animateColorAsState(
-                                if (on) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+                                when {
+                                    glass != null -> if (on) Color.White else Color.White.copy(alpha = 0.55f)
+                                    else -> if (on) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
+                                },
                                 tween(Motion.QUICK), label = "nav tint",
                             )
                             val iconScale by animateFloatAsState(if (on) 1.08f else 1f, tween(Motion.SWIFT, easing = Motion.easing), label = "nav icon")
@@ -347,3 +361,19 @@ fun FloatingNavBar(items: List<NavItem>, selected: Int, onSelect: (Int) -> Unit,
         }
     }
 }
+
+/* Black glass: what passes under is blurred and darkened until only its colour shows; a light catching the top edge, shade along the bottom. */
+private val GlassBlur = HazeBlurStyle {
+    blurRadius(24.dp)
+    backgroundColor(Color.Black)
+    colorEffects(listOf(HazeColorEffect.tint(Color(0xFF0B0B0D).copy(alpha = 0.7f))))
+    // Without blur (before Android 12), a near-opaque tint instead.
+    fallbackColorEffect(HazeColorEffect.tint(Color(0xFF0B0B0D).copy(alpha = 0.92f)))
+}
+private val GlassEdge = BorderStroke(
+    1.dp, Brush.verticalGradient(0f to Color.White.copy(alpha = 0.2f), 0.5f to Color.White.copy(alpha = 0.05f), 1f to Color.Black.copy(alpha = 0.4f)),
+)
+private val GlassChip = Color.White.copy(alpha = 0.1f)
+private val GlassChipEdge = BorderStroke(
+    1.dp, Brush.verticalGradient(0f to Color.White.copy(alpha = 0.16f), 1f to Color.Transparent),
+)

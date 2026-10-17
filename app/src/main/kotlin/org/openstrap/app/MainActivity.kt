@@ -43,6 +43,7 @@ import org.openstrap.app.ui.dashboard.SleepScreen
 import org.openstrap.app.ui.dashboard.FocusRequest
 import org.openstrap.app.ui.dashboard.FocusTarget
 import org.openstrap.app.ui.components.FloatingNavBar
+import dev.chrisbanes.haze.hazeSource
 import org.openstrap.app.ui.components.NavItem
 import org.openstrap.app.ui.dashboard.TodayScreen
 import org.openstrap.app.ui.dashboard.RecoveryScreen
@@ -218,17 +219,19 @@ private fun AppRoot(container: AppContainer) {
         else -> false
     }
     val openStrap: () -> Unit = { tab = Tab.You.ordinal; showStrap = true }
+    // The pages are what the glass nav bar blurs as they scroll under it.
+    val navGlass = dev.chrisbanes.haze.rememberHazeState()
     CompositionLocalProvider(LocalOpenStrap provides openStrap) {
         Scaffold(
             bottomBar = {
-                FloatingNavBar(Tab.entries.map { NavItem(it.label, it.icon, it.selectedIcon) }, tab, { tab = it; showRecovery = false; workoutStart = null; showAlarms = false; showStrap = false; showDesignLab = false })
+                FloatingNavBar(Tab.entries.map { NavItem(it.label, it.icon, it.selectedIcon) }, tab, { tab = it; showRecovery = false; workoutStart = null; showAlarms = false; showStrap = false; showDesignLab = false }, glass = if (BuildConfig.DEBUG && glowToday) navGlass else null)
             },
             containerColor = MaterialTheme.colorScheme.background,
         ) { padding ->
             if (editProfile) {
                 org.openstrap.app.ui.device.ProfileDialog(profile, onSave = { deviceVm.saveProfile(it); editProfile = false }, onDismiss = { editProfile = false })
             }
-            HorizontalPager(pager, userScrollEnabled = !subScreenOpen, key = { it }) { page ->
+            HorizontalPager(pager, androidx.compose.ui.Modifier.hazeSource(navGlass), userScrollEnabled = !subScreenOpen, key = { it }) { page ->
                 when (Tab.entries[page]) {
                     Tab.Today -> PushContent(showRecovery, depth = { if (it) 1 else 0 }) { open ->
                     if (open) RecoveryScreen(

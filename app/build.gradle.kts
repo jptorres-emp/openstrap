@@ -65,6 +65,7 @@ dependencies {
     implementation(libs.health.connect)
     implementation(libs.coroutines.android)
     implementation(libs.core.ktx)
+    implementation(libs.haze.blur)
 
     testImplementation(libs.junit)
     // Android's org.json is a stub in plain JVM unit tests.

@@ -20,7 +20,7 @@ data class ZeppAccount(val appToken: String, val userId: String, val apiBase: St
     }
 }
 
-/** What the user told us about themselves; every field is optional. Used only by on-phone calculations. */
+/** What the user told us about themselves; every field is optional. Used by on-phone calculations and sent to the strap. */
 data class UserProfile(
     val birthYear: Int? = null,
     val sex: Sex? = null,

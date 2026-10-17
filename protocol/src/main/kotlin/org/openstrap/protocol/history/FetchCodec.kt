@@ -79,13 +79,15 @@ sealed class GdspMessage {
 
         /**
          * Data types the device can serve. Verified on a Helio Strap (fw 3.20.0.1):
-         * `version u8, flag u8, count u16, count × {type u8, flag u8}`. Returns null if the layout differs.
+         * `version u8, supportDataUpload u8, count u16, count × {type u8, hasData u8} [supportQueryDataStatus u8]`
+         * (04 §1.4). Returns null if the list doesn't fit.
          */
         fun supportedTypes(): Set<Int>? {
             if (rawData.size < 4) return null
             val r = ByteReader(rawData, 2)
             val count = r.u16()
-            if (r.remaining != count * 2) return null
+            // The trailing supportQueryDataStatus byte is optional.
+            if (r.remaining < count * 2) return null
             return (0 until count).map { r.u8().also { r.u8() } }.toSet()
         }
     }
@@ -100,12 +102,9 @@ sealed class GdspMessage {
         override val opcode get() = FetchCodec.OP_START
         val firstRecordEpoch: Long? get() = firstRecordTime?.toEpochSecond()
 
-        // UNVERIFIED: 02 §1.4 - app maps first expansion byte 0->2, 1->1, 2->4, other->3, absent->1.
-        // Meaning unknown ("more pending / done"?). Do not rely on it.
-        val completionHint: Int
-            get() = when (expansion.firstOrNull()?.toInt()?.and(0xFF)) {
-                null -> 1; 0 -> 2; 1 -> 1; 2 -> 4; else -> 3
-            }
+        /** Expansion byte 0 is the compression flag: 1 = zlib payload (04 §1.4). Null when the strap sent no expansion. */
+        val isCompressed: Boolean?
+            get() = expansion.firstOrNull()?.let { it.toInt() == 1 }
     }
 
     /** `10 02 <status> [extra]`: end of the data stream. */

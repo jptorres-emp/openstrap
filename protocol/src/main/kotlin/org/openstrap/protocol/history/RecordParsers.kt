@@ -150,11 +150,13 @@ object HistoryParsers {
         guarded {
             val r = ByteReader(payload)
             val out = ArrayList<SecondHeartRate>()
+            var blocksEnd: Long? = null
             while (r.remaining >= 6) {
                 val start = r.u32()
                 val count = r.u16()
                 if (count == 0) continue
                 if (r.remaining < count) return@guarded ParseResult.Failure("SEC_HR_V2 block truncated")
+                blocksEnd = maxOf(blocksEnd ?: 0L, start + count)
                 val hrs = r.bytes(count)
                 var n = count
                 while (n > 0 && hrs[n - 1] == 0xFF.toByte()) n--
@@ -162,7 +164,8 @@ object HistoryParsers {
             }
             // On hardware a short block sometimes repeats the next block's first second; keep the later value.
             val unique = out.associateBy { it.timestamp }.values.sortedBy { it.timestamp }
-            ParseResult.Success(unique, lastPlusOne(unique), r.remaining)
+            // A chunk of only 0xFF padding still moves the cursor past its blocks, or the type stalls.
+            ParseResult.Success(unique, lastPlusOne(unique) ?: blocksEnd, r.remaining)
         }
     }
 

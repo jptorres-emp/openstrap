@@ -118,6 +118,16 @@ class ReadinessCodecTest {
     }
 
     @Test
+    fun recordsAre44BytesApart() {
+        val record = "c030d16aa893d16a10043e420104035bffff59645664ffffffffff7fff000080bf0000001fffffffffffffff".hexToBytes()
+        assertEquals(44, record.size)
+        val second = record.copyOf().also { it[0] = 0x40; it[15] = 77 } // another day, score 77
+        val scores = ReadinessCodec.parseScores("090002".hexToBytes() + record + second)!!
+        assertEquals(listOf(91, 77), scores.map { it.score })
+        assertEquals(listOf(1_792_094_400L, 1_792_094_272L), scores.map { it.day })
+    }
+
+    @Test
     fun noData() {
         assertEquals(emptyList<StrapReadiness>(), ReadinessCodec.parseScores("0902".hexToBytes() + byteArrayOf(0)))
         assertNull(ReadinessCodec.parseScores("0d0000".hexToBytes()))

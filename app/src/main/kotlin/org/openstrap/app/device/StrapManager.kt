@@ -9,17 +9,23 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import org.openstrap.app.ble.GattClient
+import org.openstrap.app.ble.GattException
 import org.openstrap.app.ble.GattStrapLink
 import org.openstrap.app.ble.StrapUuids
 import org.openstrap.app.data.db.HealthDao
 import org.openstrap.app.data.settings.SettingsStore
+import org.openstrap.app.data.settings.UserProfile
+import org.openstrap.protocol.services.Gender
+import org.openstrap.protocol.services.UserProfile as StrapUserProfile
 import org.openstrap.protocol.ChannelSession
 import org.openstrap.protocol.auth.AuthException
 import org.openstrap.protocol.hexToBytes
@@ -132,6 +138,8 @@ class StrapManager(
             }
             runCatching { StrapService.start(context) }.onFailure { log("service start failed: $it") }
             connection.value = ConnectionState.Connecting
+            // A client left over from a lost link still holds one of Android's few GATT client slots.
+            gatt?.close()
             val client = GattClient(context, device.address).also { gatt = it }
             try {
                 log("connecting to ${device.address}")
@@ -149,10 +157,13 @@ class StrapManager(
                 s.handshake(device.authKeyHex.hexToBytes())
 
                 afterAuth(client, l, s)
+                // afterAuth swallows step failures, so a link that dropped during it would otherwise show as Connected.
+                if (!client.connected.value) throw GattException("Link lost during setup")
                 connection.value = ConnectionState.Connected(battery, firmware, charging)
                 watchBattery(s)
                 watchSteps(s)
                 watchDataAvailable(s)
+                watchProfile(s)
                 retries = 0
                 autoSync(s)
                 liveHeartRateEnabled.value = settings.liveHeartRate.first()
@@ -230,6 +241,28 @@ class StrapManager(
         }.onFailure { log("time sync failed: $it") }
     }
 
+    /**
+     * Sends the user's profile to the strap now and whenever it changes, as Zepp does (03 §3.5); the strap uses it
+     * for calories and heart-rate zones. Runs in the connect job, so it ends with this connection.
+     */
+    private fun CoroutineScope.watchProfile(s: ChannelSession) = launch {
+        if (!s.services.has(Endpoints.USER_INFO)) return@launch
+        settings.profile.map { it.toStrapProfile() }.distinctUntilChanged().collect { p ->
+            val payload = p.channelPayload() ?: return@collect
+            runCatching {
+                val r = s.request(Endpoints.USER_INFO, payload, 5_000) { it.isNotEmpty() && it.u8(0) == StrapUserProfile.SET + 1 }
+                log("profile sent: ${r.toHex()}")
+            }.onFailure { log("profile send failed: $it") }
+        }
+    }
+
+    private fun UserProfile.toStrapProfile() = StrapUserProfile(
+        birthYear = birthYear,
+        gender = when (sex) { UserProfile.Sex.Female -> Gender.FEMALE; UserProfile.Sex.Male -> Gender.MALE; null -> null },
+        heightCm = heightCm,
+        weightKg = weightKg,
+    )
+
     private fun watchBattery(s: ChannelSession) = scope.launch {
         s.messagesFor(Endpoints.BATTERY).collect { payload ->
             BatteryInfo.parseChannel(payload)?.let { info ->
@@ -298,18 +331,23 @@ class StrapManager(
         client.connected.filter { !it }.first()
         if (gatt === client) {
             log("link lost")
+            val wasConnected = connection.value is ConnectionState.Connected
+            if (!wasConnected) {
+                // A drop during setup: stop it here, so it can't go on to report Connected on a dead link.
+                connectJob?.cancel()
+            }
             liveJob?.cancel()
             liveHeartRate.value = null
             session?.stop()
             session = null
-            if (connection.value is ConnectionState.Connected) {
-                if (wantConnected) {
-                    // Keep the foreground service up while we try to get the strap back.
-                    connection.value = ConnectionState.Connecting
-                    scheduleReconnect()
-                } else {
-                    connection.value = ConnectionState.Disconnected
-                }
+            gatt = null
+            client.close()
+            if (wantConnected) {
+                // Keep the foreground service up while we try to get the strap back.
+                connection.value = ConnectionState.Connecting
+                scheduleReconnect()
+            } else {
+                connection.value = ConnectionState.Disconnected
             }
         }
     }
@@ -327,8 +365,10 @@ class StrapManager(
     private fun close() {
         session?.stop()
         session = null
-        gatt?.close()
+        // Clear the field first, so watchDisconnect sees the drop as ours and doesn't reconnect.
+        val g = gatt
         gatt = null
+        g?.close()
     }
 
     override fun syncNow() = startSync(full = true)

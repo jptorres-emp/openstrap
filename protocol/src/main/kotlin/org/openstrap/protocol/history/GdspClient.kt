@@ -2,7 +2,6 @@ package org.openstrap.protocol.history
 
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.selects.select
-import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
 import org.openstrap.protocol.crypto.crc32
 import org.openstrap.protocol.toHex
@@ -11,12 +10,18 @@ import java.time.ZoneId
 /** The strap refused a START with status 51: it is in fast-recharge mode and serves no data (04 §1.5, §3.16). */
 class FastRechargeModeException : Exception("The strap is in fast-charge mode")
 
+/**
+ * A GDSP command got no reply in time. A plain exception, not `withTimeout`'s cancellation, so one slow reply
+ * fails that type instead of cancelling the whole sync.
+ */
+class GdspTimeoutException(op: Int) : Exception("no reply to GDSP command %02x".format(op))
+
 /** What one START + TRANSFER produced. */
 sealed interface GdspFetch {
     /** Nothing newer than the cursor (already acknowledged). */
     data object Empty : GdspFetch
 
-    /** The strap refused the START (no ACK is owed). */
+    /** The strap refused the START. */
     data class Refused(val status: GdspStatus) : GdspFetch
 
     /** The transfer broke (already acknowledged with `03 00`). */
@@ -57,20 +62,20 @@ class GdspClient(
     private val log: (String) -> Unit = {},
     private val onDataAvailable: (GdspMessage.DataAvailable) -> Unit = { log("history: device has new data of type ${it.typeCode}") },
 ) {
-    /** Sends a command and waits for its `10 <op>` response. */
+    /** Sends a command and waits for its `10 <op>` response. Throws [GdspTimeoutException] if none comes. */
     suspend fun command(bytes: ByteArray, timeoutMs: Long = 10_000): GdspMessage.Response {
         val op = bytes[0].toInt() and 0xFF
         send(bytes)
-        return withTimeout(timeoutMs) {
+        return withTimeoutOrNull(timeoutMs) {
             while (true) {
                 when (val m = control.receive()) {
-                    is GdspMessage.Response -> if (m.opcode == op) return@withTimeout m
+                    is GdspMessage.Response -> if (m.opcode == op) return@withTimeoutOrNull m
                     is GdspMessage.DataAvailable -> onDataAvailable(m)
                     else -> Unit
                 }
             }
-            @Suppress("UNREACHABLE_CODE") error("unreachable")
-        }
+            @Suppress("UNREACHABLE_CODE") null
+        } ?: throw GdspTimeoutException(op)
     }
 
     suspend fun queryVersion(): GdspMessage.VersionReply? =
@@ -81,7 +86,13 @@ class GdspClient(
      * on status 51 so the caller can stop the whole sync, as Zepp does.
      */
     suspend fun fetch(typeCode: Int, since: Long, zone: ZoneId): GdspFetch {
-        val start = command(FetchCodec.startFetch(typeCode, GdspTime.of(since, zone)))
+        var start = startOrNull(typeCode, since, zone) ?: return failed("no reply to START")
+        if (start.status == GdspStatus.INVALID_STATE) {
+            // An earlier START is still open on the strap (04 §1.5). Close it and try once more.
+            log("history: start $typeCode refused with INVALID_STATE, closing the open fetch and retrying")
+            finish(ok = false)
+            start = startOrNull(typeCode, since, zone) ?: return failed("no reply to START")
+        }
         if (start !is GdspMessage.StartReply || !start.isSuccess) {
             if (start.status == GdspStatus.FAST_RECHARGE_MODE) throw FastRechargeModeException()
             return GdspFetch.Refused(start.status)
@@ -96,11 +107,19 @@ class GdspClient(
         val (wire, deviceCrc) = transfer() ?: return failed("transfer failed")
         if (deviceCrc != null && deviceCrc != crc32(wire)) return failed("CRC mismatch")
         // Some types (SEC_HR_V2) arrive zlib-compressed; the size field is then the inflated byte count.
-        val payload = if (wire.size.toLong() != start.size && isZlib(wire)) {
+        val payload = if (start.isCompressed ?: (wire.size.toLong() != start.size && isZlib(wire))) {
             runCatching { inflate(wire) }.getOrElse { return failed("inflate failed: $it") }
         } else wire
         return GdspFetch.Chunk(payload, headerTime, start.size)
     }
+
+    /** START, or null when the strap doesn't answer (the START may still be open, so the caller ACKs). */
+    private suspend fun startOrNull(typeCode: Int, since: Long, zone: ZoneId): GdspMessage.Response? =
+        try {
+            command(FetchCodec.startFetch(typeCode, GdspTime.of(since, zone)))
+        } catch (e: GdspTimeoutException) {
+            null
+        }
 
     private suspend fun failed(reason: String): GdspFetch {
         finish(ok = false)

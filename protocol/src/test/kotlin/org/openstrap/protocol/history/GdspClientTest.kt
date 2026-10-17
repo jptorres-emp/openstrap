@@ -22,6 +22,10 @@ private class SimulatedGdspStrap(private val workouts: Map<Long, Pair<ByteArray,
     val starts = mutableListOf<Pair<Int, Long>>()
     val acks = mutableListOf<Int?>()
     var fastRecharge = false
+    /** Number of STARTs to leave unanswered. */
+    var silentStarts = 0
+    /** Number of STARTs to refuse with INVALID_STATE, as when an earlier START is still open. */
+    var invalidStateStarts = 0
     /** Pushed `11 <type>` before the next START reply. */
     var pushBeforeStart: Int? = null
     private var pending: ByteArray? = null
@@ -34,6 +38,8 @@ private class SimulatedGdspStrap(private val workouts: Map<Long, Pair<ByteArray,
                 starts += type to since
                 pushBeforeStart?.let { pushBeforeStart = null; reply(byteArrayOf(0x11, it.toByte())) }
                 if (fastRecharge) return reply(byteArrayOf(0x10, 1, GdspStatus.FAST_RECHARGE_MODE.code.toByte()))
+                if (silentStarts > 0) { silentStarts--; return }
+                if (invalidStateStarts > 0) { invalidStateStarts--; return reply(byteArrayOf(0x10, 1, GdspStatus.INVALID_STATE.code.toByte())) }
                 val track = workouts.keys.sorted().firstOrNull { it >= since }
                 val payload = track?.let { workouts.getValue(it).let { (s, d) -> if (type == 5) s else if (type == 6) d else null } }
                 pending = payload
@@ -105,6 +111,30 @@ class GdspClientTest {
         val client = GdspClient(strap::send, strap.control, strap.data, onDataAvailable = { pushes += it })
         assertTrue(client.fetchWorkout(trackId, zone) is WorkoutFetch.Workout)
         assertEquals(listOf(5, 6, 79), pushes.single().typesToSync)
+    }
+
+    @Test
+    fun unansweredStartFailsTheTypeAndIsClosed() = runTest {
+        val strap = strap().apply { silentStarts = 1 }
+        val client = GdspClient(strap::send, strap.control, strap.data)
+        // A timeout must not surface as a cancellation, which would abort the whole sync.
+        assertTrue(client.fetch(HistoryDataType.ACTIVITY.code, trackId, zone) is GdspFetch.Failed)
+        assertEquals(listOf<Int?>(0), strap.acks)
+        // The next type still works.
+        assertEquals(GdspFetch.Empty, client.fetch(HistoryDataType.ACTIVITY.code, trackId, zone))
+    }
+
+    @Test
+    fun invalidStateClosesTheOpenFetchAndRetriesOnce() = runTest {
+        val strap = strap().apply { invalidStateStarts = 1 }
+        val client = GdspClient(strap::send, strap.control, strap.data)
+        assertEquals(GdspFetch.Empty, client.fetch(HistoryDataType.ACTIVITY.code, trackId, zone))
+        assertEquals(2, strap.starts.size)
+        assertEquals(listOf<Int?>(0, 1), strap.acks)
+
+        strap.invalidStateStarts = 2
+        val f = client.fetch(HistoryDataType.ACTIVITY.code, trackId, zone)
+        assertEquals(GdspStatus.INVALID_STATE, (f as GdspFetch.Refused).status)
     }
 
     @Test

@@ -54,7 +54,7 @@ object ReadinessCodec {
             val status = r.u8(); val hrv = r.u8(); val rhr = r.u8(); val insight = r.u8()
             val alg = r.u8(); val algSub = r.u8()
             val score = r.u8(); val phy = r.u8(); val ment = r.u8(); val hrvS = r.u8(); val skinS = r.u8(); val rhrS = r.u8(); val ahiS = r.u8()
-            r.bytes(SCORE_RECORD - 26) // afib score, baselines and insight codes: unused
+            r.bytes(SCORE_RECORD - 22) // afib score, baselines and insight codes: unused
             out += StrapReadiness(
                 day = ts, updatedAt = updated, tzQuarters = tz, status = status,
                 score = pct(score), hrvScore = pct(hrvS), restingHrScore = pct(rhrS), skinTemperatureScore = pct(skinS),

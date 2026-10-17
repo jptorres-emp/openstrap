@@ -3,6 +3,7 @@ package org.openstrap.protocol.services
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.openstrap.protocol.hexToBytes
@@ -39,11 +40,22 @@ class ServicesTest {
 
     @Test
     fun encodesUserProfile() {
-        val p = UserProfile(1990, 4, 2, Gender.MALE, 180, 75)
-        val legacy = p.legacyPayload()
+        val p = UserProfile(1990, 4, 2, Gender.MALE, 180, 75f)
+        val legacy = p.legacyPayload()!!
         assertEquals(16, legacy.size)
         assertEquals(0x4F, legacy[0].toInt())
         assertEquals(75 * 200, (legacy[10].toInt() and 0xFF) or ((legacy[11].toInt() and 0xFF) shl 8))
+        assertNull(UserProfile(birthYear = 1990).legacyPayload())
+    }
+
+    @Test
+    fun encodesChannelUserProfile() {
+        // The codemap example without the wear-location byte: female, 1990-05-17, 168 cm, 61.5 kg (03 §3.5).
+        val p = UserProfile(1990, 5, 17, Gender.FEMALE, 168, 61.5f)
+        assertArrayEquals("01 0f000000 c607 05 11 01 a800 0c30".hexToBytes(), p.channelPayload())
+        // Unset fields are masked out: only height and weight here.
+        assertArrayEquals("01 0c000000 a800 0c30".hexToBytes(), UserProfile(heightCm = 168, weightKg = 61.5f).channelPayload())
+        assertNull(UserProfile().channelPayload())
     }
 
     @Test

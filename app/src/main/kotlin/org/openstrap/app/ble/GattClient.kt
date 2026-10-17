@@ -37,6 +37,8 @@ class GattClient(private val context: Context, private val address: String) {
     private var gatt: BluetoothGatt? = null
     private val opLock = Mutex()
     private var pending: CompletableDeferred<Any?>? = null
+    /** Set while our own MTU request is the pending op; the stack or the strap can also start an exchange. */
+    @Volatile private var awaitingMtu = false
 
     private val _connected = MutableStateFlow(false)
     val connected: StateFlow<Boolean> = _connected
@@ -65,7 +67,9 @@ class GattClient(private val context: Context, private val address: String) {
 
         override fun onMtuChanged(g: BluetoothGatt, newMtu: Int, status: Int) {
             if (status == BluetoothGatt.GATT_SUCCESS) mtu = newMtu
-            complete(Unit) // a refused MTU request isn't fatal; we keep the default
+            // A refused MTU request isn't fatal; we keep the default. An exchange we didn't ask for must not
+            // complete whatever else is pending.
+            if (awaitingMtu) complete(Unit)
         }
 
         override fun onCharacteristicWrite(g: BluetoothGatt, c: BluetoothGattCharacteristic, status: Int) =
@@ -126,7 +130,14 @@ class GattClient(private val context: Context, private val address: String) {
     }
 
     suspend fun requestMtu(size: Int): Int {
-        op<Unit> { gatt!!.requestMtu(size) }
+        try {
+            op<Unit> {
+                awaitingMtu = true
+                gatt!!.requestMtu(size)
+            }
+        } finally {
+            awaitingMtu = false
+        }
         return mtu
     }
 

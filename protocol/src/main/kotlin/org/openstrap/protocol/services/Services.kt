@@ -108,32 +108,48 @@ object TimeSync {
 
 enum class Gender(val code: Int) { MALE(0), FEMALE(1), UNSPECIFIED(2) }
 
+/** What the strap is told about its wearer. Unset fields are left out of the channel request. */
 data class UserProfile(
-    val birthYear: Int,
-    val birthMonth: Int,
-    val birthDay: Int,
-    val gender: Gender,
-    val heightCm: Int,
-    val weightKg: Int,
+    val birthYear: Int? = null,
+    val birthMonth: Int = 1,
+    val birthDay: Int = 1,
+    val gender: Gender? = null,
+    val heightCm: Int? = null,
+    val weightKg: Float? = null,
     val userId: Long = 1,
 ) {
-    /** Legacy FEE0/0008 write (§5.5). */
-    fun legacyPayload(): ByteArray = ByteWriter()
-        .u8(0x4F).u8(0x00).u8(0x00)
-        .u16(birthYear).u8(birthMonth).u8(birthDay)
-        .u8(gender.code)
-        .u16(heightCm).u16(weightKg * 200)
-        .u32(userId)
-        .toByteArray()
+    private val weightUnits: Int? get() = weightKg?.let { (it * 200).toInt() }
 
-    /** Channel 0x0017 set request with birthday, gender, height and weight (mask bits 0-3). */
-    fun channelPayload(): ByteArray = ByteWriter()
-        .u8(0x01).u32(0x0F)
-        .u16(birthYear).u8(birthMonth).u8(birthDay)
-        .u8(gender.code)
-        .u16(heightCm)
-        .u16(weightKg * 200)
-        .toByteArray()
+    /** Legacy FEE0/0008 write (§5.5). Null unless every field is set, since the record has no mask. */
+    fun legacyPayload(): ByteArray? {
+        if (birthYear == null || heightCm == null || weightUnits == null) return null
+        return ByteWriter()
+            .u8(0x4F).u8(0x00).u8(0x00)
+            .u16(birthYear).u8(birthMonth).u8(birthDay)
+            .u8((gender ?: Gender.UNSPECIFIED).code)
+            .u16(heightCm).u16(weightUnits!!)
+            .u32(userId)
+            .toByteArray()
+    }
+
+    /**
+     * Channel 0x0017 set request `01 mask u32` + the set fields in bit order (03 §3.5): birthday (bit 0),
+     * gender (1), height cm (2), weight as kg × 200 (3). Null when nothing is set. Reply `02 status`, 1 = OK.
+     */
+    fun channelPayload(): ByteArray? {
+        var mask = 0
+        val fields = ByteWriter()
+        if (birthYear != null) { mask = mask or 0x01; fields.u16(birthYear).u8(birthMonth).u8(birthDay) }
+        if (gender != null) { mask = mask or 0x02; fields.u8(gender.code) }
+        if (heightCm != null) { mask = mask or 0x04; fields.u16(heightCm) }
+        weightUnits?.let { mask = mask or 0x08; fields.u16(it) }
+        if (mask == 0) return null
+        return ByteWriter().u8(SET).u32(mask.toLong()).toByteArray() + fields.toByteArray()
+    }
+
+    companion object {
+        const val SET = 0x01
+    }
 }
 
 /** Real-time heart rate (§5.6). */

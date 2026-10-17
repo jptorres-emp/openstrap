@@ -107,6 +107,14 @@ class RecordParsersTest {
     }
 
     @Test
+    fun secHrV2OnlyPaddingStillAdvances() {
+        val p = w().u32(t0).u16(3).u8(0xFF).u8(0xFF).u8(0xFF).toByteArray()
+        val res = ok(HistoryParsers.secondHrV2.parse(p, ctx))
+        assertTrue(res.records.isEmpty())
+        assertEquals(t0 + 3, res.nextCursor)
+    }
+
+    @Test
     fun secHrV2Truncated() {
         val p = w().u32(t0).u16(10).u8(60).toByteArray()
         assertFailure(HistoryParsers.secondHrV2.parse(p, ctx))

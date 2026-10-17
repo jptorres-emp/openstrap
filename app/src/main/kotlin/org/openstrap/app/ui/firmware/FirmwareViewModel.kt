@@ -143,7 +143,7 @@ class FirmwareViewModel(private val container: AppContainer) : ViewModel() {
         else {
             val battery = c.batteryPercent
             if (battery == null) add("Battery level unknown — reconnect the strap.")
-            else if (battery < MIN_BATTERY) add("Charge the strap to at least $MIN_BATTERY% (now $battery%).")
+            else if (battery <= MIN_BATTERY) add("Charge the strap above $MIN_BATTERY% (now $battery%).")
         }
         if (strap.info.value?.dfuAvailable == false) add("This strap doesn't offer the firmware update service.")
     }
@@ -170,6 +170,7 @@ class FirmwareViewModel(private val container: AppContainer) : ViewModel() {
     private fun fail(message: String) { _step.value = FirmwareStep.Failed(message) }
 
     companion object {
-        const val MIN_BATTERY = 20
+        /** Zepp's upgrade page refuses at this level or below (07 §1.1). */
+        const val MIN_BATTERY = 30
     }
 }

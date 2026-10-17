@@ -72,7 +72,7 @@ class FetchCodecTest {
         assertEquals(1234L, msg.size)
         assertEquals(ZonedDateTime.of(2026, 10, 16, 8, 0, 0, 0, ZoneId.of("Europe/Berlin")).toEpochSecond(), msg.firstRecordEpoch)
         assertEquals(1, msg.expansion.size)
-        assertEquals(1, msg.completionHint)
+        assertEquals(true, msg.isCompressed)
     }
 
     @Test
@@ -80,7 +80,7 @@ class FetchCodecTest {
         val empty = "1001 01 00000000 ea07 0a 10 08 00 00 08".hexToBytes()
         val e = FetchCodec.parse(empty) as GdspMessage.StartReply
         assertEquals(0L, e.size)
-        assertEquals(1, e.completionHint) // no expansion
+        assertNull(e.isCompressed) // no expansion
 
         val busy = FetchCodec.parse("100107".hexToBytes()) as GdspMessage.StartReply
         assertFalse(busy.isSuccess)
@@ -223,6 +223,19 @@ class VersionReplyTest {
         val reply = "10 00 01 03 00 0300 0701 0101 4801".hexToBytes()
         val v = FetchCodec.parse(reply) as GdspMessage.VersionReply
         org.junit.Assert.assertEquals(setOf(7, 1, 0x48), v.supportedTypes())
+    }
+
+    @org.junit.Test
+    fun acceptsTrailingQueryDataStatusByte() {
+        val reply = "10 00 01 03 00 0300 0701 0101 4801 01".hexToBytes()
+        val v = FetchCodec.parse(reply) as GdspMessage.VersionReply
+        org.junit.Assert.assertEquals(setOf(7, 1, 0x48), v.supportedTypes())
+    }
+
+    @org.junit.Test
+    fun rejectsTruncatedTypeList() {
+        val reply = "10 00 01 03 00 0300 0701 0101".hexToBytes()
+        org.junit.Assert.assertNull((FetchCodec.parse(reply) as GdspMessage.VersionReply).supportedTypes())
     }
 }
 

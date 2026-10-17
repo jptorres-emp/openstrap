@@ -1,0 +1,223 @@
+package org.openstrap.protocol.history
+
+import kotlinx.coroutines.channels.ReceiveChannel
+import kotlinx.coroutines.selects.select
+import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
+import org.openstrap.protocol.crypto.crc32
+import org.openstrap.protocol.toHex
+import java.time.ZoneId
+
+/** The strap refused a START with status 51: it is in fast-recharge mode and serves no data (04 §1.5, §3.16). */
+class FastRechargeModeException : Exception("The strap is in fast-charge mode")
+
+/** What one START + TRANSFER produced. */
+sealed interface GdspFetch {
+    /** Nothing newer than the cursor (already acknowledged). */
+    data object Empty : GdspFetch
+
+    /** The strap refused the START (no ACK is owed). */
+    data class Refused(val status: GdspStatus) : GdspFetch
+
+    /** The transfer broke (already acknowledged with `03 00`). */
+    data class Failed(val reason: String) : GdspFetch
+
+    /**
+     * One chunk, decompressed. The caller must close it with [GdspClient.finish]. [sizeField] is the START size,
+     * which counts records for fixed-size types and bytes otherwise.
+     */
+    class Chunk(val payload: ByteArray, val headerTime: Long, val sizeField: Long) : GdspFetch {
+        /** Bytes per unit of [sizeField]: 1 when it counts bytes, null when the payload doesn't fit it. */
+        val unit: Int?
+            get() = when {
+                payload.size.toLong() == sizeField -> 1
+                sizeField > 0 && payload.size % sizeField == 0L -> (payload.size / sizeField).toInt()
+                else -> null
+            }
+    }
+}
+
+/** One workout as Zepp's `xyk` fetches it: the summary, then its detail from the same cursor. */
+sealed interface WorkoutFetch {
+    data object None : WorkoutFetch
+    data class Failed(val reason: String) : WorkoutFetch
+    /** [retryDetail] is set when the detail transfer broke (worth fetching again), not when it was empty or unreadable. */
+    data class Workout(val summary: WorkoutSummary, val detail: WorkoutDetail?, val nextCursor: Long, val retryDetail: Boolean = false) : WorkoutFetch
+}
+
+/**
+ * The phone side of a GDSP fetch (04 §1). [send] writes a control command (channel 0x004B or HUAMI(0004));
+ * [control] carries decoded control messages and [data] the indexed packets from HUAMI(0005).
+ * Data-available pushes that arrive while waiting go to [onDataAvailable].
+ */
+class GdspClient(
+    private val send: suspend (ByteArray) -> Unit,
+    private val control: ReceiveChannel<GdspMessage>,
+    private val data: ReceiveChannel<ByteArray>,
+    private val log: (String) -> Unit = {},
+    private val onDataAvailable: (GdspMessage.DataAvailable) -> Unit = { log("history: device has new data of type ${it.typeCode}") },
+) {
+    /** Sends a command and waits for its `10 <op>` response. */
+    suspend fun command(bytes: ByteArray, timeoutMs: Long = 10_000): GdspMessage.Response {
+        val op = bytes[0].toInt() and 0xFF
+        send(bytes)
+        return withTimeout(timeoutMs) {
+            while (true) {
+                when (val m = control.receive()) {
+                    is GdspMessage.Response -> if (m.opcode == op) return@withTimeout m
+                    is GdspMessage.DataAvailable -> onDataAvailable(m)
+                    else -> Unit
+                }
+            }
+            @Suppress("UNREACHABLE_CODE") error("unreachable")
+        }
+    }
+
+    suspend fun queryVersion(): GdspMessage.VersionReply? =
+        runCatching { command(FetchCodec.queryVersion()) }.getOrNull() as? GdspMessage.VersionReply
+
+    /**
+     * START [typeCode] from [since], then TRANSFER, CRC check and inflate. Throws [FastRechargeModeException]
+     * on status 51 so the caller can stop the whole sync, as Zepp does.
+     */
+    suspend fun fetch(typeCode: Int, since: Long, zone: ZoneId): GdspFetch {
+        val start = command(FetchCodec.startFetch(typeCode, GdspTime.of(since, zone)))
+        if (start !is GdspMessage.StartReply || !start.isSuccess) {
+            if (start.status == GdspStatus.FAST_RECHARGE_MODE) throw FastRechargeModeException()
+            return GdspFetch.Refused(start.status)
+        }
+        // Every START must be closed with an ACK, even an empty one; otherwise the strap keeps the type
+        // open and refuses other types with INVALID_STATE (seen on hardware).
+        if (start.size == 0L) {
+            finish(ok = true)
+            return GdspFetch.Empty
+        }
+        val headerTime = start.firstRecordEpoch ?: since
+        val (wire, deviceCrc) = transfer() ?: return failed("transfer failed")
+        if (deviceCrc != null && deviceCrc != crc32(wire)) return failed("CRC mismatch")
+        // Some types (SEC_HR_V2) arrive zlib-compressed; the size field is then the inflated byte count.
+        val payload = if (wire.size.toLong() != start.size && isZlib(wire)) {
+            runCatching { inflate(wire) }.getOrElse { return failed("inflate failed: $it") }
+        } else wire
+        return GdspFetch.Chunk(payload, headerTime, start.size)
+    }
+
+    private suspend fun failed(reason: String): GdspFetch {
+        finish(ok = false)
+        return GdspFetch.Failed(reason)
+    }
+
+    /**
+     * One workout (04 §3.16, `xyk.java:60-150`): START(5, cursor) for the summary, then START(6, same cursor) for its detail. The next cursor is the summary's time + 1 s.
+     */
+    suspend fun fetchWorkout(since: Long, zone: ZoneId): WorkoutFetch {
+        val s = fetch(HistoryDataType.SPORT_SUMMARY.code, since, zone)
+        if (s is GdspFetch.Failed) return WorkoutFetch.Failed("summary: ${s.reason}")
+        if (s !is GdspFetch.Chunk) return WorkoutFetch.None
+        // Zepp requires bytes == size; accept a whole multiple too, as the other types do.
+        if (s.unit == null) {
+            finish(ok = false)
+            return WorkoutFetch.Failed("summary: ${s.payload.size} bytes for size ${s.sizeField}")
+        }
+        val parsed = WorkoutParsers.summary.parse(s.payload, ParseContext(s.headerTime))
+        if (parsed !is ParseResult.Success) {
+            finish(ok = false)
+            return WorkoutFetch.Failed("summary: ${(parsed as ParseResult.Failure).reason}")
+        }
+        // The summary has to be closed before the next START, or the strap answers INVALID_STATE.
+        finish(ok = true)
+        val summary = parsed.records.singleOrNull() ?: return WorkoutFetch.None
+        val next = parsed.nextCursor ?: (summary.trackId + 1)
+
+        var retry = false
+        val detail = when (val d = fetch(HistoryDataType.SPORT_DETAIL.code, since, zone)) {
+            is GdspFetch.Chunk -> when (val r = WorkoutParsers.detail.parse(d.payload, ParseContext(summary.trackId))) {
+                is ParseResult.Success -> { finish(ok = true); r.records.singleOrNull() }
+                is ParseResult.Failure -> { finish(ok = false); log("history 6: ${r.reason}"); null }
+            }
+            is GdspFetch.Failed -> { log("history 6: ${d.reason}"); retry = true; null }
+            is GdspFetch.Refused -> { log("history 6: start refused (${d.status})"); retry = true; null }
+            GdspFetch.Empty -> null
+        }
+        return WorkoutFetch.Workout(summary, detail, next, retry)
+    }
+
+    /**
+     * Closes the current fetch. `03 01` after data we can use; `03 00` when we could not.
+     * The bare `03` was ignored by the strap (it then timed out with status 0x32).
+     */
+    suspend fun finish(ok: Boolean) {
+        send(FetchCodec.ack(if (ok) 1 else 0))
+        val reply = withTimeoutOrNull(5_000) {
+            while (true) {
+                val m = control.receive()
+                if (m is GdspMessage.Response && (m.opcode == 0x03 || m.opcode == 0x02)) return@withTimeoutOrNull m
+                if (m is GdspMessage.DataAvailable) onDataAvailable(m)
+            }
+            @Suppress("UNREACHABLE_CODE") null
+        }
+        log("history: ack ${if (ok) 1 else 0} -> ${reply?.let { "%02x %s".format(it.opcode, it.status) } ?: "no reply"}")
+    }
+
+    /** TRANSFER, then collect indexed packets until `10 02`. Returns the payload without index bytes and the CRC. */
+    suspend fun transfer(): Pair<ByteArray, Long?>? {
+        while (data.tryReceive().isSuccess) Unit // drop stale packets
+        val out = java.io.ByteArrayOutputStream()
+        var lastIndex = -1
+        send(FetchCodec.transfer())
+        var complete: GdspMessage.TransferComplete? = null
+        while (complete == null) {
+            val got = withTimeoutOrNull(NO_DATA_TIMEOUT_MS) {
+                select<Any> {
+                    data.onReceive { it }
+                    control.onReceive { it }
+                }
+            } ?: run { log("history: no data for 20 s"); return null }
+            when (got) {
+                is ByteArray -> if (got.isNotEmpty()) {
+                    val index = got[0].toInt() and 0xFF
+                    if (lastIndex >= 0 && index != (lastIndex + 1) and 0xFF) log("history: packet gap $lastIndex -> $index")
+                    lastIndex = index
+                    out.write(got, 1, got.size - 1)
+                }
+                is GdspMessage.TransferComplete -> complete = got
+                is GdspMessage.DataAvailable -> onDataAvailable(got)
+                is GdspMessage.Malformed -> log("history: unexpected during transfer: ${got.reason} ${got.raw.toHex()}")
+                else -> log("history: unexpected during transfer: $got")
+            }
+        }
+        // Packets can trail the end marker slightly; drain briefly.
+        withTimeoutOrNull(300) {
+            while (true) data.receive().let { if (it.isNotEmpty()) out.write(it, 1, it.size - 1) }
+        }
+        if (!complete.isSuccess) {
+            log("history: transfer ended with ${complete.status}")
+            return null
+        }
+        return out.toByteArray() to complete.crc32
+    }
+
+    private companion object {
+        const val NO_DATA_TIMEOUT_MS = 20_000L
+    }
+}
+
+internal fun isZlib(b: ByteArray): Boolean =
+    b.size >= 2 && (b[0].toInt() and 0x0F) == 8 && ((b[0].toInt() and 0xFF) * 256 + (b[1].toInt() and 0xFF)) % 31 == 0
+
+internal fun inflate(b: ByteArray): ByteArray {
+    val inflater = java.util.zip.Inflater()
+    try {
+        inflater.setInput(b)
+        val out = java.io.ByteArrayOutputStream(b.size * 8)
+        val buf = ByteArray(4096)
+        while (!inflater.finished()) {
+            val n = inflater.inflate(buf)
+            if (n == 0 && (inflater.needsInput() || inflater.needsDictionary())) error("truncated zlib stream")
+            out.write(buf, 0, n)
+        }
+        return out.toByteArray()
+    } finally {
+        inflater.end()
+    }
+}

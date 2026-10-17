@@ -118,7 +118,11 @@ class FetchCodecTest {
         val n = FetchCodec.parse("1105".hexToBytes()) as GdspMessage.DataAvailable
         assertEquals(HistoryDataType.SPORT_SUMMARY, n.type)
         assertEquals(listOf(5, 6, 79), n.typesToSync)
+        assertEquals(listOf(5, 6, 79), (FetchCodec.parse("1106".hexToBytes()) as GdspMessage.DataAvailable).typesToSync)
         assertEquals(listOf(70), (FetchCodec.parse("1146".hexToBytes()) as GdspMessage.DataAvailable).typesToSync)
+        assertEquals(listOf(96), (FetchCodec.parse("1160".hexToBytes()) as GdspMessage.DataAvailable).typesToSync)
+        // Zepp ignores pushes for other types.
+        assertEquals(emptyList<Int>(), (FetchCodec.parse("1101".hexToBytes()) as GdspMessage.DataAvailable).typesToSync)
         assertTrue(FetchCodec.parse("11".hexToBytes()) is GdspMessage.Malformed)
     }
 
@@ -180,6 +184,10 @@ class FetchCodecTest {
         assertEquals(WorkoutParsers.summary, HistoryTypeSpecs.forCode(5)!!.parser)
         assertEquals(listOf(72, 1).toSet(), HistoryTypeSpecs.plan(setOf(1, 72, 3)).map { it.code }.toSet())
         assertTrue(HistoryTypeSpecs.plan(null).all { it.type.strap == StrapRelevance.EXPECTED })
+        // The workout detail is fetched with its summary, never on its own.
+        assertEquals(HistoryDataType.SPORT_DETAIL, HistoryTypeSpecs.forCode(5)!!.followedBy)
+        assertEquals(setOf(5, 59), HistoryTypeSpecs.plan(setOf(5, 6, 59)).map { it.code }.toSet())
+        assertTrue(HistoryTypeSpecs.plan(null).none { it.type == HistoryDataType.SPORT_DETAIL })
 
         val act = HistoryTypeSpecs.forCode(1)!!
         assertTrue(HistoryTypeSpecs.shouldContinue(act, 100, 101))

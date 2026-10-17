@@ -65,6 +65,39 @@ class AlarmsAndSettingsTest {
     }
 
     @Test
+    fun settingsVersion() {
+        assertArrayEquals("01".hexToBytes(), SettingsCodec.versionRequest)
+        assertEquals(SettingsProtocol(3, emptyList()), SettingsCodec.parseVersion("0203".hexToBytes()))
+        // v4+ appends one flag per group after the group ids.
+        assertEquals(SettingsProtocol(4, listOf(8, 10)), SettingsCodec.parseVersion("020402080a0100".hexToBytes()))
+        assertNull(SettingsCodec.parseVersion("0402".hexToBytes()))
+        assertEquals(listOf(0, 0, 0, 1, 2, 3, 3), listOf(null, 2, 3, 4, 5, 6, 9).map(SettingsCodec::flagBytes))
+    }
+
+    @Test
+    fun flagBytesFromProtocol4() {
+        // HR interval enum 10 with choices [0, 10] and flag 0; stress bool on with flag 1 (disabled).
+        val v4 = "04010803010201100a02000a00130b0101".hexToBytes()
+        val g = SettingsCodec.parse(v4, protocolVersion = 4)!!
+        assertEquals(10L, g[SettingsCodec.KEY_HR_INTERVAL]!!.number)
+        assertEquals(listOf(0, 10), g[SettingsCodec.KEY_HR_INTERVAL]!!.choices)
+        assertEquals(listOf(0), g[SettingsCodec.KEY_HR_INTERVAL]!!.flags)
+        assertEquals(true, g[SettingsCodec.KEY_STRESS]!!.bool)
+        assertEquals(listOf(1), g[SettingsCodec.KEY_STRESS]!!.flags)
+        // Read as v1-3, the flag byte is taken for the next key and the second entry is lost.
+        assertNull(SettingsCodec.parse(v4)?.get(SettingsCodec.KEY_STRESS))
+
+        // v6: three flag bytes per value, also without options.
+        val v6 = "040108030002010b01000001130b00010000".hexToBytes()
+        val g6 = SettingsCodec.parse(v6, protocolVersion = 6)!!
+        assertEquals(listOf(0, 0, 1), g6[1]!!.flags)
+        assertEquals(false, g6[SettingsCodec.KEY_STRESS]!!.bool)
+        assertEquals(listOf(1, 0, 0), g6[SettingsCodec.KEY_STRESS]!!.flags)
+        // Writes never carry flags.
+        assertArrayEquals("050803000113 0b01".replace(" ", "").hexToBytes(), SettingsCodec.write(8, 3, listOf(g6[SettingsCodec.KEY_STRESS]!!.copy(raw = byteArrayOf(1)))))
+    }
+
+    @Test
     fun failedQuery() {
         assertNull(SettingsCodec.parse("0403".hexToBytes()))
         assertEquals(3, SettingsCodec.replyCode("0403".hexToBytes()))

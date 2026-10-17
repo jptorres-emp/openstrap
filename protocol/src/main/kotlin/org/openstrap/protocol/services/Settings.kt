@@ -9,13 +9,24 @@ import org.openstrap.protocol.u8
  * (without the type byte) so any type can be written back unchanged; [number] is set for numeric types.
  * [choices] are the allowed values the strap offers for enum settings.
  */
-data class Setting(val key: Int, val type: Int, val raw: ByteArray, val number: Long?, val choices: List<Int>? = null) {
+data class Setting(
+    val key: Int,
+    val type: Int,
+    val raw: ByteArray,
+    val number: Long?,
+    val choices: List<Int>? = null,
+    /** Per-value flag bytes sent from settings protocol 4 on: `disable`, then (v5) `hidden`, then (v6) `lock`. */
+    val flags: List<Int> = emptyList(),
+) {
     val bool: Boolean? get() = if (type == SettingsCodec.TYPE_BOOL) number != 0L else null
 
     override fun equals(other: Any?) = other is Setting && key == other.key && type == other.type &&
-        raw.contentEquals(other.raw) && choices == other.choices
+        raw.contentEquals(other.raw) && choices == other.choices && flags == other.flags
     override fun hashCode() = key * 31 + raw.contentHashCode()
 }
+
+/** Reply to the version query (`02 version [n groups… [n flags]]`, yk40.java:489-528). */
+data class SettingsProtocol(val version: Int, val groups: List<Int>)
 
 /** A group as read: its version (needed for writes) and settings by key. */
 data class SettingsGroup(val group: Int, val version: Int, val settings: Map<Int, Setting>) {
@@ -28,6 +39,7 @@ data class SettingsGroup(val group: Int, val version: Int, val settings: Map<Int
  * value}` with keys ascending, answered `06 01` (zj40.k, yk40.java:776). Integers are little-endian.
  */
 object SettingsCodec {
+    const val VERSION = 0x01
     const val QUERY = 0x03
     const val WRITE = 0x05
 
@@ -54,8 +66,30 @@ object SettingsCodec {
     const val KEY_SMART_SPO2 = 0x31
     const val KEY_LOW_SPO2_ALERT = 0x32
 
+    /** General group; key 47 is fast-recharge mode, which blocks firmware updates and history sync (c6j.java:135). */
+    const val GROUP_GENERAL = 0x0A
+    const val KEY_FAST_RECHARGE = 0x2F
+
     /** HR interval value for continuous measuring; 0 is off, other values are minutes. */
     const val HR_CONTINUOUS = 0xFE
+
+    /** Settings protocol version and group list. Zepp sends `01 04 07`; `01` alone works (Gadgetbridge). */
+    val versionRequest: ByteArray = byteArrayOf(VERSION.toByte())
+
+    fun parseVersion(reply: ByteArray): SettingsProtocol? {
+        if (reply.size < 2 || reply.u8(0) != VERSION + 1) return null
+        val version = reply.u8(1)
+        if (reply.size == 2) return SettingsProtocol(version, emptyList())
+        val n = reply.u8(2)
+        if (reply.size < 3 + n) return null
+        return SettingsProtocol(version, List(n) { reply.u8(3 + it) })
+    }
+
+    /**
+     * Flag bytes after each value (and its options) in query replies: none up to protocol 3, then one per
+     * version up to three (eez v4, r9o v5, xux v6+; yk40.java:77-96).
+     */
+    fun flagBytes(protocolVersion: Int?): Int = ((protocolVersion ?: 1) - 3).coerceIn(0, 3)
 
     fun query(group: Int, keys: List<Int> = emptyList(), withOptions: Boolean = true): ByteArray =
         ByteWriter().u8(QUERY).u8(if (withOptions) 1 else 0).u8(group).u8(keys.size).apply { keys.forEach { u8(it) } }.toByteArray()
@@ -63,7 +97,9 @@ object SettingsCodec {
     /** Result code of a query reply: 1 is success (a630.y). */
     fun replyCode(reply: ByteArray): Int? = if (reply.size >= 2 && reply.u8(0) == QUERY + 1) reply.u8(1) else null
 
-    fun parse(reply: ByteArray): SettingsGroup? {
+    /** Parses a query reply; [protocolVersion] comes from [parseVersion] and decides the per-value flag bytes. */
+    fun parse(reply: ByteArray, protocolVersion: Int? = null): SettingsGroup? {
+        val trailer = flagBytes(protocolVersion)
         if (replyCode(reply) != 1 || reply.size < 6) return null
         val r = ByteReader(reply, 2)
         val group = r.u8(); val version = r.u8(); val options = r.u8() != 0; val n = r.u8()
@@ -96,7 +132,8 @@ object SettingsCodec {
                 TYPE_STRING_ENUM -> { r.bytes(1); repeat(r.u8()) { cString(r) } }
                 else -> Unit
             }
-            out[key] = Setting(key, type, raw, number, choices)
+            val flags = List(trailer) { r.u8() }
+            out[key] = Setting(key, type, raw, number, choices, flags)
         }
         return SettingsGroup(group, version, out)
     }

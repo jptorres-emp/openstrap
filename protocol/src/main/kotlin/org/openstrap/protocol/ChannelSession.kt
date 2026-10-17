@@ -21,6 +21,7 @@ import org.openstrap.protocol.auth.AuthException
 import org.openstrap.protocol.auth.AuthHandshake
 import org.openstrap.protocol.crypto.ChannelCipher
 import org.openstrap.protocol.services.ChannelVersion
+import org.openstrap.protocol.services.ConnectCodec
 import org.openstrap.protocol.services.Endpoints
 import org.openstrap.protocol.services.ServiceList
 import org.openstrap.protocol.transport.ChannelMessage
@@ -62,6 +63,7 @@ class ChannelSession(
     private var nextSessionId = 0
     private var cipher: ChannelCipher? = null
     private var reader: Job? = null
+    private var ponger: Job? = null
 
     var services: ServiceList = ServiceList(emptyMap())
         private set
@@ -85,6 +87,10 @@ class ChannelSession(
         onMessage = { _messages.tryEmit(it) },
     )
 
+    /** Keep-alive pings answered so far (ConnectModule 0x0015, 02 §11). */
+    @Volatile var pings = 0
+        private set
+
     fun start(scope: CoroutineScope) {
         reader = scope.launch {
             link.dataNotifications.collect { packet ->
@@ -92,10 +98,18 @@ class ChannelSession(
                 if (ack != null) link.writeData(ack)
             }
         }
+        // The strap pings with `03`; Zepp answers `04` at once, without asking for an ACK (jt7.java:428-445).
+        ponger = scope.launch {
+            messagesFor(Endpoints.CONNECT).filter { it.contentEquals(ConnectCodec.PING) }.collect {
+                if (pings++ == 0) log("strap ping, answering pong")
+                runCatching { send(Endpoints.CONNECT, ConnectCodec.PONG, wantReply = false) }.onFailure { e -> log("pong failed: $e") }
+            }
+        }
     }
 
     fun stop() {
         reader?.cancel()
+        ponger?.cancel()
         cipher = null
     }
 
@@ -126,14 +140,17 @@ class ChannelSession(
         return Auth.stripReply(command, reply)!!
     }
 
-    /** Sends [payload] to [endpoint], encrypting when the strap requires it for that endpoint. */
-    suspend fun send(endpoint: Int, payload: ByteArray) = sendLock.withLock {
+    /**
+     * Sends [payload] to [endpoint], encrypting when the strap requires it for that endpoint. [wantReply] false
+     * leaves ACK_REQ off the last chunk, for messages the strap doesn't acknowledge.
+     */
+    suspend fun send(endpoint: Int, payload: ByteArray, wantReply: Boolean = true) = sendLock.withLock {
         val sid = nextSessionId
         nextSessionId = (nextSessionId + 1) and 0xFF
         val c = cipher
         val encrypt = c != null && services.requiresEncryption(endpoint)
         val body = if (encrypt) c!!.encrypt(sid, payload) else payload
-        for (chunk in buildChunks(endpoint, sid, body, payload.size, encrypt, link.payloadMtu)) link.writeControl(chunk)
+        for (chunk in buildChunks(endpoint, sid, body, payload.size, encrypt, link.payloadMtu, wantReply)) link.writeControl(chunk)
     }
 
     /** Sends and waits for the first reply on the same endpoint that satisfies [matches]. */

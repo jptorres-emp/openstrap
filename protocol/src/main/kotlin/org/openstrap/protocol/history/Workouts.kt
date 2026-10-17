@@ -33,6 +33,7 @@ data class WorkoutSummary(
 data class WorkoutDetail(
     override val timestamp: Long,
     val heartRate: List<Pair<Long, Int>>,
+    /** (epoch ms, event code 1..17; names unknown, pause/resume likely). */
     val events: List<Pair<Long, Int>>,
 ) : HistoryRecord {
     companion object {
@@ -148,7 +149,7 @@ object WorkoutParsers {
 
     /**
      * Type 6 (§3.13): TLV nodes. A TimeStamp node (4 bytes, then `u64` epoch ms) sets the base; HeartRate
-     * nodes are `offset u16 (ms), bpm u8` from that base. Other nodes are skipped.
+     * nodes are `offset u16 (ms), bpm u8` from that base; Event nodes `offset u16, code u16`. Other nodes are skipped.
      */
     val detail = HistoryParser { payload, ctx ->
         try {
@@ -170,7 +171,8 @@ object WorkoutParsers {
                 when (tag) {
                     TAG_TIMESTAMP -> if (len >= 12) { v.bytes(4); base = v.u32() or (v.u32() shl 32) }
                     TAG_HEART_RATE -> if (len >= 3) base?.let { b -> val off = v.u16(); HeartRateSentinel.valid(v.u8())?.let { hr += (b + off) to it } }
-                    TAG_EVENT -> if (len >= 3) base?.let { b -> val off = v.u16(); events += (b + off) to v.u8() }
+                    // The event code is u16 (im70.java:200-214).
+                    TAG_EVENT -> if (len >= 4) base?.let { b -> val off = v.u16(); events += (b + off) to v.u16() }
                 }
             }
             if (hr.isEmpty() && events.isEmpty()) return@HistoryParser ParseResult.Success(emptyList(), ctx.headerTime + 1)

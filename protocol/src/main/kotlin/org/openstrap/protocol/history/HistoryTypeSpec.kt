@@ -6,12 +6,14 @@ package org.openstrap.protocol.history
  * @param syncOrder position in the recommended OpenStrap order (02 §5.1); lower runs first.
  * @param parser null when decoding is not implemented yet (raw payload only).
  * @param loops false for types the engine fetches only once per sync (02 §1.6).
+ * @param followedBy a type fetched right after each chunk of this one, from the same cursor, instead of on its own.
  */
 data class HistoryTypeSpec(
     val type: HistoryDataType,
     val syncOrder: Int,
     val parser: HistoryParser<HistoryRecord>?,
     val loops: Boolean = true,
+    val followedBy: HistoryDataType? = null,
 ) {
     val code: Int get() = type.code
 }
@@ -36,9 +38,8 @@ object HistoryTypeSpecs {
         HistoryTypeSpec(HistoryDataType.HRV_SDNN, 10, HistoryParsers.hrvSdnn),
         HistoryTypeSpec(HistoryDataType.PAI, 11, HistoryParsers.pai),
         HistoryTypeSpec(HistoryDataType.BODY_TEMPERATURE_ALL_DAY, 11, HistoryParsers.skinTemperature),
-        // One workout per START. Zepp fetches the detail right after its summary with the same cursor; each
-        // keeping its own cursor (trackId + 1) walks the same workouts in the same order.
-        HistoryTypeSpec(HistoryDataType.SPORT_SUMMARY, 12, WorkoutParsers.summary),
+        // One workout per START. The detail is fetched right after its summary with the same cursor (04 §3.16).
+        HistoryTypeSpec(HistoryDataType.SPORT_SUMMARY, 12, WorkoutParsers.summary, followedBy = HistoryDataType.SPORT_DETAIL),
         HistoryTypeSpec(HistoryDataType.SPORT_DETAIL, 12, WorkoutParsers.detail),
         HistoryTypeSpec(HistoryDataType.SPORT_EFFECT, 12, WorkoutParsers.sportEffect),
         HistoryTypeSpec(HistoryDataType.RECOVERY_HEART_RATE, 13, HistoryParsers.recoveryHr),
@@ -56,10 +57,15 @@ object HistoryTypeSpecs {
 
     fun forCode(code: Int): HistoryTypeSpec? = byCode[code]
 
-    /** Specs to run, gated on the device's advertised type set (from QUERY_VERSION) when known. */
+    private val followers = all.mapNotNull { it.followedBy }.toSet()
+
+    /**
+     * Specs to run, gated on the device's advertised type set (from QUERY_VERSION) when known. Types that are
+     * fetched together with another ([HistoryTypeSpec.followedBy]) don't run on their own.
+     */
     fun plan(advertised: Set<Int>?): List<HistoryTypeSpec> =
-        if (advertised == null) all.filter { it.type.strap == StrapRelevance.EXPECTED }
-        else all.filter { it.code in advertised }
+        (if (advertised == null) all.filter { it.type.strap == StrapRelevance.EXPECTED } else all.filter { it.code in advertised })
+            .filter { it.type !in followers }
 
     /**
      * Loop rule (02 §1.6, §5.2): continue with [next] only if it is later than [current].

@@ -129,11 +129,12 @@ sealed class GdspMessage {
     data class DataAvailable(val typeCode: Int) : GdspMessage() {
         val type: HistoryDataType? get() = HistoryDataType.fromCode(typeCode)
 
-        /** Types the app syncs in reaction (spec 02 §1.2). */
+        /** Types Zepp syncs in reaction (04 §1.7, ccf.java:668-695); it ignores every other type. */
         val typesToSync: List<Int>
             get() = when (typeCode) {
                 5, 6 -> listOf(5, 6, 79)
-                else -> listOf(typeCode)
+                70, 96 -> listOf(typeCode)
+                else -> emptyList()
             }
     }
 

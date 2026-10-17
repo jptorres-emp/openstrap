@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
 import org.openstrap.app.ble.GattClient
 import org.openstrap.app.ble.GattStrapLink
 import org.openstrap.app.ble.StrapUuids
@@ -30,10 +31,13 @@ import org.openstrap.protocol.services.Endpoints
 import org.openstrap.protocol.services.Setting
 import org.openstrap.protocol.services.SettingsCodec
 import org.openstrap.protocol.services.SettingsGroup
+import org.openstrap.protocol.services.SettingsProtocol
 import org.openstrap.protocol.services.LiveHeartRate
 import org.openstrap.protocol.services.RealtimeSteps
 import org.openstrap.protocol.services.StepTotals
 import org.openstrap.protocol.crypto.crc32
+import org.openstrap.protocol.history.FetchCodec
+import org.openstrap.protocol.history.GdspMessage
 import org.openstrap.protocol.firmware.DfuCommands
 import org.openstrap.protocol.firmware.DfuException
 import org.openstrap.protocol.firmware.DfuProgress
@@ -148,6 +152,7 @@ class StrapManager(
                 connection.value = ConnectionState.Connected(battery, firmware, charging)
                 watchBattery(s)
                 watchSteps(s)
+                watchDataAvailable(s)
                 retries = 0
                 autoSync(s)
                 liveHeartRateEnabled.value = settings.liveHeartRate.first()
@@ -175,6 +180,16 @@ class StrapManager(
                 if (n + 3 in 23..247) l.payloadMtu = n
                 log("strap payload mtu=$n")
             }.onFailure { log("mtu query failed: $it") }
+        }
+
+        // The settings protocol version decides how query replies are framed (03 §3.6), so learn it first.
+        settingsProtocol = null
+        if (s.services.has(Endpoints.SETTINGS)) {
+            runCatching {
+                val r = s.request(Endpoints.SETTINGS, SettingsCodec.versionRequest, 5_000) { it.isNotEmpty() && it.u8(0) == SettingsCodec.VERSION + 1 }
+                settingsProtocol = SettingsCodec.parseVersion(r)
+                log("settings protocol ${settingsProtocol?.version} groups ${settingsProtocol?.groups} (${r.toHex()})")
+            }.onFailure { log("settings version query failed: $it") }
         }
 
         firmware = runCatching {
@@ -250,6 +265,22 @@ class StrapManager(
         }
     }
 
+    /**
+     * The strap pushes `11 <type>` when it has new data; like Zepp, sync the related types at once
+     * (a finished workout, recovery HR; 04 §1.7).
+     */
+    private fun watchDataAvailable(s: ChannelSession) = scope.launch {
+        if (!s.services.has(Endpoints.HISTORY)) return@launch
+        s.messagesFor(Endpoints.HISTORY).collect { p ->
+            val m = FetchCodec.parse(p) as? GdspMessage.DataAvailable ?: return@collect
+            val types = m.typesToSync.toSet()
+            if (types.isEmpty()) return@collect
+            log("strap has new data of type ${m.typeCode}, syncing $types")
+            synchronized(pendingTypes) { pendingTypes += types }
+            startSync(full = false)
+        }
+    }
+
     /** Sync right after connecting (unless one ran recently), then every [AUTO_SYNC_SECONDS] while connected. */
     private fun autoSync(s: ChannelSession) = scope.launch {
         while (isActive && session === s) {
@@ -300,11 +331,32 @@ class StrapManager(
         gatt = null
     }
 
-    override fun syncNow() {
+    override fun syncNow() = startSync(full = true)
+
+    /** One sync at a time; types pushed meanwhile are synced when it ends. */
+    private val syncLock = Mutex()
+    private val pendingTypes = mutableSetOf<Int>()
+
+    private fun takePending(): Set<Int> = synchronized(pendingTypes) { pendingTypes.toSet().also { pendingTypes.clear() } }
+
+    private fun startSync(full: Boolean) {
         if (firmwareUpdating.value) return
         val s = activeSession ?: return
         val client = gatt ?: return
-        scope.launch { HistorySync(s, client, dao, settings, sync, ::log).run() }
+        scope.launch {
+            if (!syncLock.tryLock()) return@launch
+            try {
+                // A full sync covers anything pushed so far.
+                var only: Set<Int>? = if (full) { takePending(); null } else takePending().ifEmpty { return@launch }
+                while (true) {
+                    HistorySync(s, client, dao, settings, sync, ::log).run(only)
+                    if (activeSession !== s || firmwareUpdating.value) break
+                    only = takePending().ifEmpty { break }
+                }
+            } finally {
+                syncLock.unlock()
+            }
+        }
     }
 
     /** Debug aid, see [HistorySync.dumpRaw]. */
@@ -454,9 +506,17 @@ class StrapManager(
         if (!AlarmCodec.isSuccess(request, command(Endpoints.ALARMS, request))) throw StrapCommandException("The strap didn't delete the alarm")
     }
 
+    /** Learned on connect; null until then or when the strap didn't answer (then replies are read as v1–3). */
+    @Volatile private var settingsProtocol: SettingsProtocol? = null
+
+    private suspend fun settingsProtocol(): SettingsProtocol? = settingsProtocol
+        ?: runCatching { SettingsCodec.parseVersion(command(Endpoints.SETTINGS, SettingsCodec.versionRequest)) }.getOrNull()
+            ?.also { settingsProtocol = it }
+
     override suspend fun readHealthSettings(): SettingsGroup {
+        val protocol = settingsProtocol()
         val reply = command(Endpoints.SETTINGS, SettingsCodec.query(SettingsCodec.GROUP_HEALTH))
-        return SettingsCodec.parse(reply) ?: throw StrapCommandException("The strap couldn't read its settings (code ${SettingsCodec.replyCode(reply)})")
+        return SettingsCodec.parse(reply, protocol?.version) ?: throw StrapCommandException("The strap couldn't read its settings (code ${SettingsCodec.replyCode(reply)})")
     }
 
     override suspend fun writeHealthSettings(version: Int, settings: List<Setting>) {
@@ -464,10 +524,18 @@ class StrapManager(
         if (!SettingsCodec.isWriteSuccess(reply)) throw StrapCommandException("The strap didn't accept the setting (code ${reply.getOrNull(1)})")
     }
 
+    /** GENERAL key 47; null when the strap doesn't report it. Zepp refuses OTA while it is on (07 §1.6). */
+    private suspend fun fastRechargeOn(): Boolean? = runCatching {
+        val reply = command(Endpoints.SETTINGS, SettingsCodec.query(SettingsCodec.GROUP_GENERAL, listOf(SettingsCodec.KEY_FAST_RECHARGE), withOptions = false))
+        SettingsCodec.parse(reply, settingsProtocol()?.version)?.get(SettingsCodec.KEY_FAST_RECHARGE)?.bool
+    }.onFailure { log("fast-charge query failed: $it") }.getOrNull()
+
     override suspend fun installFirmware(file: ByteArray, type: Int, onProgress: (DfuProgress) -> Unit) {
         val client = gatt
         if (client == null || connection.value !is ConnectionState.Connected) throw DfuException(-1, "The strap isn't connected")
         if (sync.value is SyncState.Running) throw DfuException(-1, "Wait for the sync to finish first")
+        if (firmwareUpdating.value) throw DfuException(-1, "An update is already running")
+        if (session?.services?.has(Endpoints.SETTINGS) == true && fastRechargeOn() == true) throw DfuException(-1, "Turn off fast-charge mode on the strap first")
         if (!firmwareUpdating.compareAndSet(false, true)) throw DfuException(-1, "An update is already running")
         val wake = context.getSystemService(PowerManager::class.java)
             .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "OpenStrap:firmware").apply { acquire(30 * 60_000L) }

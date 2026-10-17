@@ -4,6 +4,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.openstrap.protocol.hexToBytes
 
 /** Payloads captured from a Helio Strap (fw 3.25.0.3) for one 2026-10-16 workout. */
 class WorkoutParsersTest {
@@ -42,8 +43,18 @@ class WorkoutParsersTest {
         // About 1 Hz throughout, including the three minutes after the workout ends.
         assertTrue(d.heartRate.zipWithNext().all { (a, b) -> b.first - a.first in 400L..4000L })
         assertEquals(1_792_142_763L, d.heartRate.last().first / 1000)
-        assertEquals(2, d.events.size)
+        assertEquals(listOf(1, 6), d.events.map { it.second })
         assertEquals(trackId + 1, r.nextCursor)
+    }
+
+    @Test
+    fun detailEventCodeIsU16() {
+        // TimeStamp node (4 unknown bytes, base u64 ms), then Event `offset u16 = 10, code u16 = 0x0102`.
+        val base = 1_792_141_453_000L
+        val ts = ByteArray(12).also { b -> for (i in 0..7) b[4 + i] = (base ushr (8 * i)).toByte() }
+        val payload = byteArrayOf(0x01, 12) + ts + "04040a000201".hexToBytes()
+        val d = (WorkoutParsers.detail.parse(payload, ParseContext(trackId)) as ParseResult.Success).records.single()
+        assertEquals(listOf((base + 10) to 0x0102), d.events)
     }
 
     @Test

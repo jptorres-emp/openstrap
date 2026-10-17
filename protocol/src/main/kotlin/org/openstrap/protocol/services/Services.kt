@@ -25,6 +25,16 @@ object Endpoints {
     const val AUTH = 0x0082
 }
 
+/**
+ * ConnectModule 0x0015 (02 §11): `01` → `02 n u16` (payload MTU, also pushed when it changes); the strap's
+ * `03` ping is answered with a `04` pong.
+ */
+object ConnectCodec {
+    val MTU_QUERY: ByteArray = bytesOf(0x01)
+    val PING: ByteArray = bytesOf(0x03)
+    val PONG: ByteArray = bytesOf(0x04)
+}
+
 /** Supported endpoints and whether each requires encryption (§4). */
 data class ServiceList(val endpoints: Map<Int, Boolean>) {
     fun has(endpoint: Int) = endpoint in endpoints

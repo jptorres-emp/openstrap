@@ -2,6 +2,9 @@ package org.openstrap.protocol
 
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeout
+import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -11,6 +14,7 @@ import org.openstrap.protocol.crypto.B163
 import org.openstrap.protocol.crypto.ChannelCipher
 import org.openstrap.protocol.services.BatteryInfo
 import org.openstrap.protocol.services.Endpoints
+import org.openstrap.protocol.transport.ChunkFlags
 import org.openstrap.protocol.transport.Reassembler
 import org.openstrap.protocol.transport.buildChunks
 
@@ -29,17 +33,21 @@ private class SimulatedStrap(private val authKey: ByteArray) : StrapLink {
     private var cipher: ChannelCipher? = null
     private var deviceSession = 0
     val phoneAcks = mutableListOf<ByteArray>()
+    /** Every message the phone sent, with the flags byte of its last chunk. */
+    val received = MutableSharedFlow<Triple<Int, ByteArray, Int>>(replay = 32)
+    private var lastFlags = 0
 
     private val reassembler = Reassembler({ true }, { sid, data, len ->
         // The device decrypts with its own rx counter, which starts at the phone's tx counter.
         cipher!!.decrypt(sid, data, len)
-    }) { msg -> respond(msg.endpoint, msg.payload) }
+    }) { msg -> received.tryEmit(Triple(msg.endpoint, msg.payload, lastFlags)); respond(msg.endpoint, msg.payload) }
 
     override suspend fun writeControl(data: ByteArray) {
         if (data.contentEquals(byteArrayOf(1))) {
             controlNotifications.emit(byteArrayOf(2, 2, 1))
             return
         }
+        if (data.size > 1) lastFlags = data[1].toInt() and 0xFF
         reassembler.accept(data)?.let { controlNotifications.emit(it) }
         flushOutbox()
     }
@@ -51,7 +59,7 @@ private class SimulatedStrap(private val authKey: ByteArray) : StrapLink {
     private val outbox = mutableListOf<Pair<Int, ByteArray>>()
     private fun respond(endpoint: Int, payload: ByteArray) {
         when (endpoint) {
-            Endpoints.SERVICES -> outbox += endpoint to "04 0300 0000 00 8200 00 2900 01".hexToBytes()
+            Endpoints.SERVICES -> outbox += endpoint to "04 0400 0000 00 8200 00 2900 01 1500 00".hexToBytes()
             Endpoints.AUTH -> when (payload[0].toInt()) {
                 4 -> {
                     val shared = B163.sharedSecret(keys.privateKey, payload.copyOfRange(4, 52))
@@ -84,6 +92,12 @@ private class SimulatedStrap(private val authKey: ByteArray) : StrapLink {
         return ChannelCipher(s, authKey)
     }
 
+    /** ConnectModule keep-alive ping (02 §11). */
+    suspend fun ping() {
+        outbox += Endpoints.CONNECT to byteArrayOf(0x03)
+        flushOutbox()
+    }
+
     private suspend fun flushOutbox() {
         while (outbox.isNotEmpty()) {
             val (endpoint, payload) = outbox.removeAt(0)
@@ -112,6 +126,21 @@ class ChannelSessionTest {
         assertEquals(77, BatteryInfo.parseChannel(reply)!!.level)
         // The phone acknowledged the device's multi-chunk replies.
         assertTrue(strap.phoneAcks.isNotEmpty())
+    }
+
+    @Test
+    fun answersPingWithPongWithoutAckRequest() = runTest {
+        val strap = SimulatedStrap(key)
+        val session = ChannelSession(strap)
+        session.start(backgroundScope)
+        session.handshake(key)
+
+        strap.ping()
+        val (_, payload, flags) = withTimeout(5_000) { strap.received.first { it.first == Endpoints.CONNECT } }
+        assertArrayEquals(byteArrayOf(0x04), payload)
+        // FIRST | LAST, and no ACK_REQ: the strap doesn't acknowledge pongs.
+        assertEquals(ChunkFlags.FIRST or ChunkFlags.LAST, flags)
+        assertEquals(1, session.pings)
     }
 
     @Test

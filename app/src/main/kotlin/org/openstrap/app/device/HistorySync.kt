@@ -5,8 +5,6 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeout
-import kotlinx.coroutines.withTimeoutOrNull
 import org.openstrap.app.ble.GattClient
 import org.openstrap.app.ble.StrapUuids
 import org.openstrap.app.data.db.ActivityMinute
@@ -29,8 +27,12 @@ import org.openstrap.app.data.settings.SettingsStore
 import org.openstrap.protocol.ChannelSession
 import org.openstrap.protocol.history.ActivityLayout
 import org.openstrap.protocol.history.ActivitySample
+import org.openstrap.protocol.history.FastRechargeModeException
 import org.openstrap.protocol.history.FetchCodec
+import org.openstrap.protocol.history.GdspClient
+import org.openstrap.protocol.history.GdspFetch
 import org.openstrap.protocol.history.GdspMessage
+import org.openstrap.protocol.history.WorkoutFetch
 import org.openstrap.protocol.history.HistoryDataType
 import org.openstrap.protocol.history.HistoryRecord
 import org.openstrap.protocol.history.HistoryTypeSpec
@@ -80,8 +82,10 @@ class HistorySync(
     private val useChannel = session.services.has(Endpoints.HISTORY)
     private val control = Channel<GdspMessage>(Channel.UNLIMITED)
     private val data = Channel<ByteArray>(Channel.UNLIMITED)
+    private val client = GdspClient(::send, control, data, log)
 
-    suspend fun run() = coroutineScope {
+    /** Syncs every type, or only the codes in [only] (an on-demand sync after a data-available push). */
+    suspend fun run(only: Set<Int>? = null) = coroutineScope {
         state.value = SyncState.Running("Preparing…")
         repairEarlierSyncs()
         val listeners = launch {
@@ -97,17 +101,26 @@ class HistorySync(
             if (!useChannel) gatt.enableNotifications(StrapUuids.MAIN_SERVICE, HISTORY_CONTROL)
             log("history: control via ${if (useChannel) "channel 0x004B" else "HUAMI(0004)"}")
 
-            val version = runCatching { command(FetchCodec.queryVersion()) }.getOrNull() as? GdspMessage.VersionReply
+            val version = client.queryVersion()
             val advertised = version?.supportedTypes()
-            log("history version ${version?.version}, strap offers types ${advertised?.sorted()}")
+            log("history version ${version?.version}, strap offers types ${advertised?.sorted()}" + (only?.let { ", syncing $it" } ?: ""))
 
-            val plan = HistoryTypeSpecs.plan(advertised).filter { it.parser != null }
+            val plan = HistoryTypeSpecs.plan(advertised).filter { it.parser != null && (only == null || it.code in only) }
             plan.forEachIndexed { i, spec ->
                 state.value = SyncState.Running("Syncing ${label(spec.type)} (${i + 1}/${plan.size})", i.toFloat() / plan.size)
-                runCatching { syncType(spec) }.onFailure { log("history ${spec.type}: $it") }
+                try {
+                    if (spec.followedBy == HistoryDataType.SPORT_DETAIL) syncWorkouts(spec) else syncType(spec)
+                } catch (e: Exception) {
+                    if (e is kotlinx.coroutines.CancellationException || e is FastRechargeModeException) throw e
+                    log("history ${spec.type}: $e")
+                }
             }
-            if (session.services.has(Endpoints.READINESS)) runCatching { syncReadiness() }.onFailure { log("readiness: $it") }
+            if (only == null && session.services.has(Endpoints.READINESS)) runCatching { syncReadiness() }.onFailure { log("readiness: $it") }
             state.value = SyncState.Done(System.currentTimeMillis() / 1000)
+        } catch (e: FastRechargeModeException) {
+            // Zepp ends the sync job at once in this mode (xyk.java:66-70); the data waits on the strap.
+            log("history: strap is in fast-charge mode, sync stopped")
+            state.value = SyncState.Failed("The strap is in fast-charge mode. Sync again once it's off.")
         } catch (e: Exception) {
             if (e is kotlinx.coroutines.CancellationException) throw e
             log("history failed: $e")
@@ -132,7 +145,7 @@ class HistorySync(
         try {
             gatt.enableNotifications(StrapUuids.MAIN_SERVICE, HISTORY_DATA)
             if (!useChannel) gatt.enableNotifications(StrapUuids.MAIN_SERVICE, HISTORY_CONTROL)
-            val version = command(FetchCodec.queryVersion()) as? GdspMessage.VersionReply
+            val version = client.queryVersion()
             val codes = only?.sorted() ?: version?.supportedTypes()?.sorted().orEmpty()
             log("dump: types $codes (strap offers ${version?.supportedTypes()?.sorted()})")
             for (code in codes) {
@@ -140,17 +153,19 @@ class HistorySync(
                 runCatching {
                     var cursor = fromEpoch
                     repeat(DUMP_CHUNKS) {
-                        val start = command(FetchCodec.startFetch(code, org.openstrap.protocol.history.GdspTime.of(cursor, zone)))
-                        if (start !is GdspMessage.StartReply || !start.isSuccess) { log("dump $code: start ${start.status}"); return@runCatching }
-                        if (start.size == 0L) { finish(ok = true); log("dump $code: empty"); return@runCatching }
-                        val header = start.firstRecordEpoch ?: cursor
-                        val (wire, _) = transfer() ?: run { finish(ok = false); return@runCatching }
-                        finish(ok = true)
-                        val payload = if (wire.size.toLong() != start.size && isZlib(wire)) inflate(wire) else wire
+                        val chunk = when (val f = client.fetch(code, cursor, zone)) {
+                            is GdspFetch.Chunk -> f
+                            is GdspFetch.Refused -> { log("dump $code: start ${f.status}"); return@runCatching }
+                            is GdspFetch.Failed -> { log("dump $code: ${f.reason}"); return@runCatching }
+                            GdspFetch.Empty -> { log("dump $code: empty"); return@runCatching }
+                        }
+                        client.finish(ok = true)
+                        val header = chunk.headerTime
+                        val payload = chunk.payload
                         java.io.File(dir, "${code}_$header.bin").writeBytes(payload)
-                        log("dump $code: ${payload.size} bytes, size field ${start.size}, from ${Instant.ofEpochSecond(header)}")
+                        log("dump $code: ${payload.size} bytes, size field ${chunk.sizeField}, from ${Instant.ofEpochSecond(header)}")
                         val spec = HistoryTypeSpecs.forCode(code)
-                        val parsed = spec?.parser?.parse(payload, ParseContext(header, activityRecordSize = recordSize(code, payload, start.size)))
+                        val parsed = spec?.parser?.parse(payload, ParseContext(header, activityRecordSize = recordSize(code, payload, chunk.sizeField)))
                         val next = (parsed as? ParseResult.Success)?.nextCursor
                         if (next == null || next <= cursor || spec?.loops == false) return@runCatching
                         cursor = next
@@ -167,20 +182,6 @@ class HistorySync(
     private suspend fun send(bytes: ByteArray) {
         if (useChannel) session.send(Endpoints.HISTORY, bytes)
         else gatt.write(StrapUuids.MAIN_SERVICE, HISTORY_CONTROL, bytes, withResponse = true)
-    }
-
-    /** Sends a command and waits for its `10 <op>` response. */
-    private suspend fun command(bytes: ByteArray, timeoutMs: Long = 10_000): GdspMessage.Response {
-        val op = bytes[0].toInt() and 0xFF
-        send(bytes)
-        return withTimeout(timeoutMs) {
-            while (true) {
-                val m = control.receive()
-                if (m is GdspMessage.Response && m.opcode == op) return@withTimeout m
-                if (m is GdspMessage.DataAvailable) log("history: device has new data of type ${m.typeCode}")
-            }
-            @Suppress("UNREACHABLE_CODE") error("unreachable")
-        }
     }
 
     /**
@@ -225,48 +226,23 @@ class HistorySync(
         val lookback = if (spec.type in WORKOUT_TYPES) WORKOUT_LOOKBACK else DEFAULT_LOOKBACK
         var cursor = settings.lastSync(key) ?: (System.currentTimeMillis() / 1000 - lookback)
         repeat(MAX_CHUNKS_PER_TYPE) {
-            val start = command(FetchCodec.startFetch(spec.type, cursor, zone))
-            if (start !is GdspMessage.StartReply || !start.isSuccess) {
-                log("history ${spec.type}: start refused (${start.status})")
-                return
+            val chunk = when (val f = client.fetch(spec.code, cursor, zone)) {
+                is GdspFetch.Chunk -> f
+                is GdspFetch.Refused -> { log("history ${spec.type}: start refused (${f.status})"); return }
+                is GdspFetch.Failed -> { log("history ${spec.type}: ${f.reason}"); return }
+                GdspFetch.Empty -> return
             }
-            // Every START must be closed with an ACK, even an empty one; otherwise the strap keeps the type
-            // open and refuses other types with INVALID_STATE (seen on hardware).
-            if (start.size == 0L) {
-                finish(ok = true)
-                return
-            }
-            val headerTime = start.firstRecordEpoch ?: cursor
-            val transferred = transfer()
-            if (transferred == null) {
-                finish(ok = false)
-                return
-            }
-            val (wire, deviceCrc) = transferred
-            if (deviceCrc != null && deviceCrc != org.openstrap.protocol.crypto.crc32(wire)) {
-                log("history ${spec.type}: CRC mismatch, discarding")
-                finish(ok = false)
-                return
-            }
-            // Some types (SEC_HR_V2) arrive zlib-compressed; the size field is then the inflated byte count.
-            val payload = if (wire.size.toLong() != start.size && isZlib(wire)) {
-                runCatching { inflate(wire) }.onFailure { log("history ${spec.type}: inflate failed: $it") }.getOrNull()
-                    ?: run { finish(ok = false); return }
-            } else wire
-
+            val headerTime = chunk.headerTime
+            val payload = chunk.payload
             // The size field counts records, not bytes (activity: size 4 = four 8-byte minutes).
-            val unit = when {
-                payload.size.toLong() == start.size -> 1
-                payload.size % start.size == 0L -> (payload.size / start.size).toInt()
-                else -> {
-                    log("history ${spec.type}: got ${payload.size} bytes for size ${start.size}, discarding")
-                    finish(ok = false)
-                    return
-                }
+            val unit = chunk.unit ?: run {
+                log("history ${spec.type}: got ${payload.size} bytes for size ${chunk.sizeField}, discarding")
+                finish(ok = false)
+                return
             }
-            log("history ${spec.type}: ${payload.size} bytes (${start.size}×$unit) from ${Instant.ofEpochSecond(headerTime)}: ${payload.copyOf(minOf(32, payload.size)).toHex()}")
+            log("history ${spec.type}: ${payload.size} bytes (${chunk.sizeField}×$unit) from ${Instant.ofEpochSecond(headerTime)}: ${payload.copyOf(minOf(32, payload.size)).toHex()}")
 
-            when (val result = spec.parser!!.parse(payload, ParseContext(headerTime, activityRecordSize = recordSize(spec.code, payload, start.size)))) {
+            when (val result = spec.parser!!.parse(payload, ParseContext(headerTime, activityRecordSize = recordSize(spec.code, payload, chunk.sizeField)))) {
                 is ParseResult.Failure -> {
                     log("history ${spec.type}: parse failed: ${result.reason}")
                     finish(ok = false)
@@ -305,57 +281,35 @@ class HistorySync(
         if (rows.isNotEmpty()) dao.insertStrapReadiness(rows)
     }
 
-    /**
-     * Closes the current fetch. `03 01` after data we stored; `03 00` when we could not use it.
-     * The bare `03` was ignored by the strap (it then timed out with status 0x32).
-     */
-    private suspend fun finish(ok: Boolean) {
-        send(FetchCodec.ack(if (ok) 1 else 0))
-        val reply = withTimeoutOrNull(5_000) {
-            while (true) {
-                val m = control.receive()
-                if (m is GdspMessage.Response && (m.opcode == 0x03 || m.opcode == 0x02)) return@withTimeoutOrNull m
-            }
-            @Suppress("UNREACHABLE_CODE") null
-        }
-        log("history: ack ${if (ok) 1 else 0} -> ${reply?.let { "%02x %s".format(it.opcode, it.status) } ?: "no reply"}")
-    }
+    private suspend fun finish(ok: Boolean) = client.finish(ok)
 
-    /** TRANSFER, then collect indexed packets from 0005 until `10 02`. Returns the payload without index bytes. */
-    private suspend fun transfer(): Pair<ByteArray, Long?>? {
-        while (data.tryReceive().isSuccess) Unit // drop stale packets
-        val out = java.io.ByteArrayOutputStream()
-        var lastIndex = -1
-        send(FetchCodec.transfer())
-        var complete: GdspMessage.TransferComplete? = null
-        while (complete == null) {
-            val got = withTimeoutOrNull(NO_DATA_TIMEOUT_MS) {
-                kotlinx.coroutines.selects.select<Any> {
-                    data.onReceive { it }
-                    control.onReceive { it }
+    /**
+     * Workouts, one per round: the summary, then its detail from the same cursor (04 §3.16). The cursor only
+     * moves once both are stored, so a workout whose detail transfer broke is fetched again next time.
+     */
+    private suspend fun syncWorkouts(spec: HistoryTypeSpec) {
+        val key = "gdsp_${spec.code}"
+        var cursor = settings.lastSync(key) ?: (System.currentTimeMillis() / 1000 - WORKOUT_LOOKBACK)
+        repeat(MAX_CHUNKS_PER_TYPE) {
+            when (val w = client.fetchWorkout(cursor, zone)) {
+                WorkoutFetch.None -> return
+                is WorkoutFetch.Failed -> { log("history workout: ${w.reason}"); return }
+                is WorkoutFetch.Workout -> {
+                    val now = System.currentTimeMillis() / 1000
+                    if (w.summary.timestamp in MIN_VALID_EPOCH..now + FUTURE_SLACK) {
+                        log("history workout ${Instant.ofEpochSecond(w.summary.trackId)}: type ${w.summary.sportType}, ${w.detail?.heartRate?.size ?: 0} HR samples")
+                        store(listOfNotNull(w.summary, w.detail))
+                    } else {
+                        log("history workout with impossible time ${w.summary.timestamp} dropped")
+                    }
+                    if (w.retryDetail) { log("history workout: detail failed, will retry next sync"); return }
+                    val next = w.nextCursor.coerceAtMost(now)
+                    if (next <= cursor) return
+                    settings.setLastSync(key, next)
+                    cursor = next
                 }
-            } ?: run { log("history: no data for 20 s"); return null }
-            when (got) {
-                is ByteArray -> if (got.isNotEmpty()) {
-                    val index = got[0].toInt() and 0xFF
-                    if (lastIndex >= 0 && index != (lastIndex + 1) and 0xFF) log("history: packet gap $lastIndex -> $index")
-                    lastIndex = index
-                    out.write(got, 1, got.size - 1)
-                }
-                is GdspMessage.TransferComplete -> complete = got
-                is GdspMessage.DataAvailable -> Unit
-                else -> log("history: unexpected during transfer: $got")
             }
         }
-        // Packets can trail the end marker slightly; drain briefly.
-        withTimeoutOrNull(300) {
-            while (true) data.receive().let { if (it.isNotEmpty()) out.write(it, 1, it.size - 1) }
-        }
-        if (!complete!!.isSuccess) {
-            log("history: transfer ended with ${complete!!.status}")
-            return null
-        }
-        return out.toByteArray() to complete!!.crc32
     }
 
     private suspend fun store(records: List<HistoryRecord>) {
@@ -515,28 +469,7 @@ class HistorySync(
         /** 2024-01-01: anything older comes from a strap whose clock was never set. */
         private const val MIN_VALID_EPOCH = 1_704_067_200L
         private const val FUTURE_SLACK = 120L
-        private const val NO_DATA_TIMEOUT_MS = 20_000L
         private const val MAX_CHUNKS_PER_TYPE = 50
         private const val DUMP_CHUNKS = 5
-    }
-}
-
-private fun isZlib(b: ByteArray): Boolean =
-    b.size >= 2 && (b[0].toInt() and 0x0F) == 8 && ((b[0].toInt() and 0xFF) * 256 + (b[1].toInt() and 0xFF)) % 31 == 0
-
-private fun inflate(b: ByteArray): ByteArray {
-    val inflater = java.util.zip.Inflater()
-    try {
-        inflater.setInput(b)
-        val out = java.io.ByteArrayOutputStream(b.size * 8)
-        val buf = ByteArray(4096)
-        while (!inflater.finished()) {
-            val n = inflater.inflate(buf)
-            if (n == 0 && (inflater.needsInput() || inflater.needsDictionary())) error("truncated zlib stream")
-            out.write(buf, 0, n)
-        }
-        return out.toByteArray()
-    } finally {
-        inflater.end()
     }
 }

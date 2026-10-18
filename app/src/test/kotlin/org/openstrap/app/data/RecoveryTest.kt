@@ -16,7 +16,7 @@ import kotlin.random.Random
 class RecoveryTest {
     private val day = 86_400L
 
-    private fun night(i: Int, hrv: Float? = 50f, rhr: Float? = 55f, temp: Float? = 33.5f, breath: Float? = 14f, asleep: Int = 450) =
+    private fun night(i: Int, hrv: Float? = 50f, rhr: Float? = 55f, temp: Float? = 33.5f, breath: Float? = 14f, asleep: Int = 480) =
         Night(
             day = i * day, start = i * day - 7 * 3600, end = i * day + 30 * 60, asleepMinutes = asleep, awakeMinutes = 20,
             deepMinutes = 80, remMinutes = 95, hrv = hrv, restingHr = rhr, rhrMeanSleep = rhr?.plus(4f), nadirTime = i * day - 4 * 3600,
@@ -172,8 +172,65 @@ class RecoveryTest {
         val debt = Recovery.readiness(night(14, asleep = 330), short).contributors.first { it.factor == Factor.SleepBalance }.score
         val none = Recovery.readiness(night(14, asleep = 480), rested).contributors.first { it.factor == Factor.SleepBalance }.score
         assertEquals(100, none)
-        assertTrue("debt $debt", debt in 30..45) // 2.5 h short a night
+        assertEquals(0, debt) // 2.5 h short for 14 nights is far more than 4 h of debt
     }
+
+    @Test
+    fun sleepNeedFollowsAgeAndOverride() {
+        assertEquals(480, Recovery.sleepNeed(30))
+        assertEquals(480, Recovery.sleepNeed(null))
+        assertEquals(450, Recovery.sleepNeed(65))
+        assertEquals(510, Recovery.sleepNeed(70, override = 510))
+        assertEquals(480, Recovery.sleepNeed(30, override = 600)) // out of 420-540: ignored
+    }
+
+    @Test
+    fun sleepScoreIsDurationAndContinuity() {
+        assertEquals(76.56f, Recovery.durationScore(420), 0.01f) // 7 of 8 h
+        assertEquals(56.25f, Recovery.durationScore(360), 0.01f)
+        assertEquals(100f, Recovery.durationScore(540), 0.01f)
+        assertEquals(100f, Recovery.continuityScore(30), 0.01f)
+        assertEquals(50f, Recovery.continuityScore(75), 0.01f)
+        assertEquals(0f, Recovery.continuityScore(120), 0.01f)
+        val n = night(1, asleep = 420).copy(wasoMinutes = 30, deepMinutes = 0, remMinutes = 0)
+        assertEquals(84, Recovery.sleepScore(n)) // 0.7·76.6 + 0.3·100; no stage target
+        assertEquals(77, Recovery.sleepScore(n.copy(wasoMinutes = null)))
+    }
+
+    @Test
+    fun wasoCountsWakeBetweenFirstAndLastSleep() {
+        val stages = listOf(
+            Triple(0L, 1200L, SleepStage.AWAKE), // before sleep onset: not WASO
+            Triple(1200L, 4800L, SleepStage.LIGHT),
+            Triple(4800L, 6600L, SleepStage.AWAKE), // 30 min
+            Triple(6600L, 9000L, SleepStage.DEEP),
+            Triple(9000L, 9600L, SleepStage.AWAKE), // after the final wake: not WASO
+        )
+        assertEquals(30, Recovery.wasoMinutes(stages))
+        assertNull(Recovery.wasoMinutes(listOf(Triple(0L, 600L, SleepStage.AWAKE))))
+    }
+
+    @Test
+    fun sleepDebtFollowsTheRecursion() {
+        val l = Recovery.SLEEP_DEBT_DECAY
+        assertEquals(0.906f, l, 0.001f)
+        fun nights(vararg asleep: Int) = asleep.mapIndexed { i, a -> night(i + 1, asleep = a) }
+        // Five ordinary nights, then two nights 2 h short: debt = 120·λ + 120.
+        assertEquals(120 * l + 120, Recovery.sleepDebtMinutes(nights(480, 480, 480, 480, 480, 360, 360), 7 * day)!!, 0.01f)
+        // A 10 h night repays half its 2 h surplus, capped at an hour.
+        assertEquals(max0(120 * l * l + 120 * l - 60), Recovery.sleepDebtMinutes(nights(480, 480, 480, 480, 360, 360, 600), 7 * day)!!, 0.01f)
+        // Naps count, missing nights are skipped, and fewer than 7 nights withholds it.
+        val napped = nights(480, 480, 480, 480, 480, 480, 360).mapIndexed { i, n -> if (i == 6) n.copy(napMinutes = 120) else n }
+        assertEquals(0f, Recovery.sleepDebtMinutes(napped, 7 * day)!!, 0.01f)
+        val gappy = nights(480, 480, 480, 480, 480, 480, 480, 360).filterIndexed { i, _ -> i != 3 }
+        assertEquals(120f, Recovery.sleepDebtMinutes(gappy, 8 * day)!!, 0.01f)
+        assertNull(Recovery.sleepDebtMinutes(nights(480, 480, 480, 480, 480, 360), 6 * day))
+        // Only the last 14 nights count.
+        val old = (1..20).map { night(it, asleep = if (it <= 6) 0 else 480) }
+        assertEquals(0f, Recovery.sleepDebtMinutes(old, 20 * day)!!, 0.01f)
+    }
+
+    private fun max0(v: Float) = if (v < 0) 0f else v
 
     @Test
     fun lateHeartRateNadirLowersRecoveryIndex() {

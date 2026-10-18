@@ -67,6 +67,7 @@ fun ProfileDialog(profile: UserProfile, onSave: (UserProfile) -> Unit, onDismiss
     val (ft0, in0) = profile.heightCm?.let { Units.cmToFeetInches(it) } ?: (null to null)
     var feet by rememberSaveable { mutableStateOf(ft0?.toString().orEmpty()) }
     var inches by rememberSaveable { mutableStateOf(in0?.toString().orEmpty()) }
+    var sleepNeed by rememberSaveable { mutableStateOf(profile.sleepNeedMinutes?.let { formatNumber(it / 60f) }.orEmpty()) }
 
     val ageValue = age.trim().toIntOrNull()?.takeIf { it in 10..100 }
     val weightNumber = weight.trim().replace(',', '.').toFloatOrNull()
@@ -77,7 +78,11 @@ fun ProfileDialog(profile: UserProfile, onSave: (UserProfile) -> Unit, onDismiss
         if (f != null && i != null) Units.feetInchesToCm(f, i).takeIf { it in 100..250 } else null
     } else heightCm.trim().toIntOrNull()?.takeIf { it in 100..250 }
     val heightBlank = if (imperial) feet.isBlank() && inches.isBlank() else heightCm.isBlank()
-    val valid = (age.isBlank() || ageValue != null) && (weight.isBlank() || weightValue != null) && (heightBlank || heightValue != null)
+    // Hours, so "7.5" is 450 min; only 7-9 h is accepted (Recovery.SLEEP_NEED_MIN..MAX).
+    val sleepNeedValue = sleepNeed.trim().replace(',', '.').toFloatOrNull()?.let { Math.round(it * 60) }
+        ?.takeIf { it in org.openstrap.app.data.Recovery.SLEEP_NEED_MIN..org.openstrap.app.data.Recovery.SLEEP_NEED_MAX }
+    val valid = (age.isBlank() || ageValue != null) && (weight.isBlank() || weightValue != null) && (heightBlank || heightValue != null) &&
+        (sleepNeed.isBlank() || sleepNeedValue != null)
 
     fun switchUnits(toImperial: Boolean) {
         if (toImperial == imperial) return
@@ -123,6 +128,7 @@ fun ProfileDialog(profile: UserProfile, onSave: (UserProfile) -> Unit, onDismiss
                 } else {
                     NumberField(heightCm, { heightCm = it }, "Height", "cm", !heightBlank && heightValue == null)
                 }
+                NumberField(sleepNeed, { sleepNeed = it }, "Sleep need (7–9, blank for your age's default)", "h", sleepNeed.isNotBlank() && sleepNeedValue == null, decimal = true)
             }
         },
         confirmButton = {
@@ -130,12 +136,14 @@ fun ProfileDialog(profile: UserProfile, onSave: (UserProfile) -> Unit, onDismiss
                 enabled = valid,
                 onClick = {
                     onSave(
-                        UserProfile(
+                        // A copy, so fields this dialog doesn't edit are kept.
+                        profile.copy(
                             birthYear = ageValue?.let { LocalDate.now().year - it },
                             sex = when (sex) { 0 -> UserProfile.Sex.Female; 1 -> UserProfile.Sex.Male; else -> null },
                             weightKg = weightValue,
                             heightCm = heightValue,
                             imperial = imperial,
+                            sleepNeedMinutes = sleepNeedValue,
                         ),
                     )
                 },

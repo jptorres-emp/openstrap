@@ -42,22 +42,23 @@ object Narrative {
     /** One sleep contributor: rating plus how full its bar is. */
     data class Contributor(val label: String, val rating: Rating, val fraction: Float, val detail: String)
 
-    fun sleepContributors(session: SleepSession, asleepSeconds: Long): List<Contributor> = buildList {
-        val asleepMin = asleepSeconds / 60f
-        add(Contributor("Total sleep", rate(asleepMin / 60f, 7f, 6f, 5f), asleepMin / (8 * 60f), formatDuration(asleepSeconds)))
-        if (asleepMin > 0) {
-            session.deepMinutes?.let { deep ->
-                val share = deep / asleepMin
-                add(Contributor("Deep sleep", rate(share, 0.16f, 0.12f, 0.08f), share / 0.25f, "${(share * 100).toInt()}%"))
-            }
-            session.remMinutes?.let { rem ->
-                val share = rem / asleepMin
-                add(Contributor("REM sleep", rate(share, 0.20f, 0.15f, 0.10f), share / 0.25f, "${(share * 100).toInt()}%"))
-            }
-            session.awakeMinutes?.let { awake ->
-                val efficiency = asleepMin / (asleepMin + awake)
-                add(Contributor("Efficiency", rate(efficiency, 0.90f, 0.85f, 0.75f), efficiency, "${(efficiency * 100).toInt()}%"))
-            }
+    /**
+     * What shaped the night: total sleep against need and continuity (wake after sleep onset). Deep and REM aren't
+     * rated: wearable staging is too unreliable to score (evidence-review.md, "Sleep"), so the stages panel shows them
+     * without a target.
+     */
+    fun sleepContributors(
+        session: SleepSession,
+        asleepSeconds: Long,
+        needMinutes: Int = org.openstrap.app.data.Recovery.SLEEP_NEED_MINUTES,
+        wasoMinutes: Int? = null,
+    ): List<Contributor> = buildList {
+        val asleepMin = (asleepSeconds / 60).toInt()
+        val duration = org.openstrap.app.data.Recovery.durationScore(asleepMin, needMinutes)
+        add(Contributor("Total sleep", ratingFor(Math.round(duration)), asleepMin / needMinutes.toFloat(), formatDuration(asleepSeconds) + " of ${formatDuration(needMinutes * 60L)}"))
+        if (wasoMinutes != null && asleepMin > 0) {
+            val c = org.openstrap.app.data.Recovery.continuityScore(wasoMinutes)
+            add(Contributor("Continuity", ratingFor(Math.round(c)), c / 100f, "${formatDuration(wasoMinutes * 60L)} awake after falling asleep"))
         }
     }
 

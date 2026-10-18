@@ -28,6 +28,8 @@ data class RecoveryResult(
     val breathingDisturbances: Recovery.BreathingDisturbances? = null,
     /** Acute:chronic load ratio for the Load screen (contested; not part of Readiness). */
     val acwr: Float? = null,
+    /** Sleep need in minutes (by age, or the user's own). */
+    val sleepNeed: Int = Recovery.SLEEP_NEED_MINUTES,
 )
 
 /** Loads what [Recovery] needs from the database and runs it. All work happens off the main thread by the caller. */
@@ -57,9 +59,17 @@ class RecoveryEngine(private val dao: HealthDao) {
             .groupBy { morningOf(it, zone) }
             .mapValues { (_, v) -> v.maxBy { it.end - it.start } }
         val strapNights = dao.strapReadinessOnce(from, to).associateBy { it.day }
+        // Naps count toward a day's total sleep for the debt; a nap belongs to the day it started.
+        val napsByDay = sessions.filter { it.nap }.groupBy { Instant.ofEpochSecond(it.start).atZone(zone).toLocalDate().atStartOfDay(zone).toEpochSecond() }
+            .mapValues { (_, v) -> v.sumOf { asleepMinutes(it) } }
         val nights = mains.map { (morning, s) ->
-            night(morning, s, hr, hrv, skin, breath, sleepSpo2, osaByMorning[morning])
-                .copy(strapHrv = strapNights[morning]?.sleepHrv?.toFloat(), strapRestingHr = strapNights[morning]?.sleepRestingHr?.toFloat())
+            val stages = dao.sleepStagesOnce(s.start).map { Triple(it.start, it.end, it.stage) }
+            night(morning, s, hr, hrv, skin, breath, sleepSpo2, osaByMorning[morning]).copy(
+                strapHrv = strapNights[morning]?.sleepHrv?.toFloat(),
+                strapRestingHr = strapNights[morning]?.sleepRestingHr?.toFloat(),
+                wasoMinutes = Recovery.wasoMinutes(stages),
+                napMinutes = napsByDay[morning] ?: 0,
+            )
         }.sortedBy { it.day }
 
         // Daytime resting HR: the strap's daily values when it has them, else the nightly lowest plus a little.
@@ -100,11 +110,12 @@ class RecoveryEngine(private val dao: HealthDao) {
 
         val midnight = day.from
         val tonight = nights.lastOrNull { it.day == midnight }
-        val readiness = Recovery.readiness(tonight, nights, loads, causes)
+        val sleepNeed = Recovery.sleepNeed(age, profile.sleepNeedMinutes)
+        val readiness = Recovery.readiness(tonight, nights, loads, causes, sleepNeed)
         val trend = (6 downTo 0).map { back ->
             val d = date.minusDays(back.toLong())
             val m = DayWindow.of(d, zone).from
-            d to (if (back == 0) readiness.score else Recovery.readiness(nights.lastOrNull { it.day == m }, nights).score)
+            d to (if (back == 0) readiness.score else Recovery.readiness(nights.lastOrNull { it.day == m }, nights, sleepNeed = sleepNeed).score)
         }
 
         // Charge: start two days early so the starting guess has washed out through two nights of sleep.
@@ -134,7 +145,7 @@ class RecoveryEngine(private val dao: HealthDao) {
         val chronic = if (loads.size >= 7) Recovery.ewmaLoads(loads).second else null
         return RecoveryResult(
             date, readiness, charge, trend, todayLoad, chronic, restingHr, maxHr, age != null, stressThreshold, tonight,
-            Recovery.breathingDisturbances(tonight, nights), Recovery.acwr(loads),
+            Recovery.breathingDisturbances(tonight, nights), Recovery.acwr(loads), sleepNeed,
         )
     }
 
@@ -152,8 +163,7 @@ class RecoveryEngine(private val dao: HealthDao) {
         val sleepHr = hr.filter { inSleep(it.first) && it.second in Recovery.HR_MIN_BPM..Recovery.HR_MAX_BPM }
         val sleepBpm = sleepHr.map { it.second.toFloat() }
         val rmssd = hrv.filter { inSleep(it.timestamp) && it.milliseconds in Recovery.HRV_MIN_MS..Recovery.HRV_MAX_MS }.map { it.milliseconds.toFloat() }
-        val asleep = listOfNotNull(s.deepMinutes, s.lightMinutes, s.remMinutes).takeIf { it.isNotEmpty() }?.sum()
-            ?: (((s.end - s.start) / 60).toInt() - (s.awakeMinutes ?: 0))
+        val asleep = asleepMinutes(s)
         val skinValues = skin.filter { inSleep(it.timestamp) }.map { it.celsius }
         val spo2Values = spo2.filter { inSleep(it.timestamp) }.map { it.percent.toFloat() }
         return Recovery.Night(
@@ -180,6 +190,9 @@ class RecoveryEngine(private val dao: HealthDao) {
             odi = osa?.takeIf { asleep >= MIN_ODI_SLEEP_MINUTES }?.let { it.eventCount * 60f / asleep },
         )
     }
+
+    private fun asleepMinutes(s: SleepSession): Int = listOfNotNull(s.deepMinutes, s.lightMinutes, s.remMinutes).takeIf { it.isNotEmpty() }?.sum()
+        ?: (((s.end - s.start) / 60).toInt() - (s.awakeMinutes ?: 0))
 
     private fun morningOf(s: SleepSession, zone: ZoneId): Long =
         if (s.day > 0) s.day else Instant.ofEpochSecond(s.end).atZone(zone).toLocalDate().atStartOfDay(zone).toEpochSecond()

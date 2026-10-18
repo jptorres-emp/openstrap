@@ -85,7 +85,10 @@ fun GlowSleepScreen(
             left { NightCard(state) }
             if (session != null) {
                 state.sleepBreakdown?.let { b -> left { StagesPanel(b) } }
-                val contributors = Narrative.sleepContributors(session, state.asleepSeconds ?: 0)
+                val waso = org.openstrap.app.data.Recovery.wasoMinutes(state.sleepStages.map { Triple(it.start, it.end, it.stage) })
+                val contributors = Narrative.sleepContributors(
+                    session, state.asleepSeconds ?: 0, rec?.sleepNeed ?: org.openstrap.app.data.Recovery.SLEEP_NEED_MINUTES, waso,
+                )
                 if (session.score != null && contributors.isNotEmpty()) right { ContributorsPanel(contributors) }
                 val vitals = sleepVitals(state)
                 if (vitals.isNotEmpty()) left { VitalsPanel(vitals, onOpenMetric) }

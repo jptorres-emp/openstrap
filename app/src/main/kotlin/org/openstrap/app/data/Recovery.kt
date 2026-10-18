@@ -50,6 +50,10 @@ object Recovery {
         val nadirTime: Long? = null,
         val skinTemperature: Float? = null,
         val breathRate: Float? = null,
+        /** Wake after sleep onset: awake minutes between the first and the last sleep stage; null without stages. */
+        val wasoMinutes: Int? = null,
+        /** Minutes asleep in naps on this day, counted toward total sleep for the debt. */
+        val napMinutes: Int = 0,
         /** Mean blood oxygen during the sleep, %. */
         val spo2: Float? = null,
         /** Oxygen-desaturation events per hour asleep, from the strap's nightly sleep-apnea summary. */
@@ -253,7 +257,19 @@ object Recovery {
     /** Own and strap values further apart than this raise a data-quality flag. */
     const val HRV_QA_FRACTION = 0.15f
     const val RHR_QA_BPM = 3f
+    /** Default sleep need: 480 min for ages 18-64, [SLEEP_NEED_65_MINUTES] from 65 (NSF 7-9 h and 7-8 h; AASM ≥ 7 h). */
     const val SLEEP_NEED_MINUTES = 8 * 60
+    const val SLEEP_NEED_65_MINUTES = 450
+    /** A user's own need can be set within this range (individual optimal sleep ran 7.3-9.3 h, Kitamura 2016). */
+    const val SLEEP_NEED_MIN = 420
+    const val SLEEP_NEED_MAX = 540
+
+    /** Sleep need in minutes: the user's [override] when it's in range, else by [age]. */
+    fun sleepNeed(age: Int?, override: Int? = null): Int = when {
+        override != null && override in SLEEP_NEED_MIN..SLEEP_NEED_MAX -> override
+        age != null && age >= 65 -> SLEEP_NEED_65_MINUTES
+        else -> SLEEP_NEED_MINUTES
+    }
 
     /**
      * Readiness for [tonight] against [history] (earlier nights, any order, tonight excluded) and
@@ -265,6 +281,7 @@ object Recovery {
         history: List<Night>,
         dailyLoad: List<Float> = emptyList(),
         causes: (Long) -> List<String> = { emptyList() },
+        sleepNeed: Int = SLEEP_NEED_MINUTES,
     ): Readiness {
         if (tonight == null) {
             val valid = history.filter { it.valid }.takeLast(BASELINE_NIGHTS)
@@ -326,22 +343,12 @@ object Recovery {
         }
 
         // Last night's sleep: the strap's own score when there is one, else ours.
-        out += Contributor(Factor.Sleep, tonight.strapScore ?: sleepScore(tonight), formatMinutes(tonight.asleepMinutes) + " asleep")
+        out += Contributor(Factor.Sleep, tonight.strapScore ?: sleepScore(tonight, sleepNeed), formatMinutes(tonight.asleepMinutes) + " asleep")
 
-        // Sleep balance: recent nights' shortfall against need, recent nights weighted more.
-        val recentNights = (past.takeLast(13) + tonight)
-        if (recentNights.size >= 3) {
-            var wSum = 0.0
-            var shortSum = 0.0
-            recentNights.reversed().forEachIndexed { i, n ->
-                val w = 0.5.pow(i / SLEEP_DEBT_HALF_LIFE_NIGHTS)
-                // A long night repays at most an hour of earlier debt.
-                shortSum += w * (SLEEP_NEED_MINUTES - n.asleepMinutes).coerceAtLeast(-60)
-                wSum += w
-            }
-            val avgShortHours = (shortSum / wSum / 60).toFloat()
-            val score = (100 - SLEEP_DEBT_POINTS_PER_HOUR * avgShortHours.coerceAtLeast(0f)).toInt().coerceIn(0, 100)
-            val detail = if (avgShortHours <= 0.05f) "No sleep debt" else "${formatMinutes((avgShortHours * 60).toInt())} short a night"
+        // Sleep balance: debt built over the last 14 nights, against need (naps count).
+        sleepDebtMinutes(earlier + tonight, tonight.day, sleepNeed)?.let { debt ->
+            val score = (100 - SLEEP_DEBT_POINTS_PER_HOUR * debt / 60f).toInt().coerceIn(0, 100)
+            val detail = if (debt < 3f) "No sleep debt" else "${formatMinutes(debt.toInt())} of sleep debt"
             out += Contributor(Factor.SleepBalance, score, detail)
         }
 
@@ -412,7 +419,33 @@ object Recovery {
         return extras(score.coerceIn(0, 100), capped, false)
     }
 
-    private const val SLEEP_DEBT_HALF_LIFE_NIGHTS = 4.0
+    /** Sleep debt halves over 7 nights: λ = 0.5^(1/7) ≈ 0.906, so a 14-night build-up still counts. */
+    const val SLEEP_DEBT_HALF_LIFE_NIGHTS = 7.0
+    val SLEEP_DEBT_DECAY = 0.5.pow(1 / SLEEP_DEBT_HALF_LIFE_NIGHTS).toFloat()
+    /** A long night repays half its surplus, at most an hour. */
+    const val SLEEP_DEBT_CREDIT_FRACTION = 0.5f
+    const val SLEEP_DEBT_MAX_CREDIT_MINUTES = 60f
+    const val SLEEP_DEBT_NIGHTS = 14
+    const val SLEEP_DEBT_MIN_NIGHTS = 7
+
+    /**
+     * Sleep debt in minutes at the morning [day], from the last [SLEEP_DEBT_NIGHTS] nights of [nights] (oldest to
+     * newest; missing nights skipped; naps count toward total sleep). Each night d = need − TST: a short night adds d
+     * on top of the decayed debt, a long one repays min(½·surplus, 60 min). Null with fewer than [SLEEP_DEBT_MIN_NIGHTS].
+     * Deficits build near-linearly over 14 days without people noticing (Van Dongen 2003); about 1 h of debt took 4
+     * nights to clear (Kitamura 2016).
+     */
+    fun sleepDebtMinutes(nights: List<Night>, day: Long, need: Int = SLEEP_NEED_MINUTES): Float? {
+        val window = nights.filter { it.day <= day && day - it.day < SLEEP_DEBT_NIGHTS * DAY - DST_SLACK }.sortedBy { it.day }
+        if (window.size < SLEEP_DEBT_MIN_NIGHTS) return null
+        var debt = 0f
+        for (n in window) {
+            val d = need - (n.asleepMinutes + n.napMinutes).toFloat()
+            debt = if (d >= 0) debt * SLEEP_DEBT_DECAY + d
+            else max(0f, debt * SLEEP_DEBT_DECAY - min(SLEEP_DEBT_CREDIT_FRACTION * -d, SLEEP_DEBT_MAX_CREDIT_MINUTES))
+        }
+        return debt
+    }
     private const val DAY = 86_400L
     /** Local midnights a DST change apart are an hour off a whole number of days. */
     private const val DST_SLACK = 2 * 3600L
@@ -450,16 +483,41 @@ object Recovery {
     }
 
     /**
-     * Our sleep score when the strap didn't give one: duration against need (50%), efficiency (25%)
-     * and the share of deep + REM (25%).
+     * Our sleep score when the strap didn't give one: 0.7·duration + 0.3·continuity. No stage target: four-stage
+     * agreement across six devices was kappa 0.21-0.53 (Schyvens et al. 2025), so stages are shown, not scored. And
+     * low wake specificity inflates wearable efficiency, so continuity uses wake after sleep onset, not time in bed.
+     * Without stages (no WASO), duration alone.
      */
-    fun sleepScore(n: Night): Int {
-        val duration = (n.asleepMinutes.toFloat() / SLEEP_NEED_MINUTES).coerceAtMost(1f)
-        val efficiency = n.awakeMinutes?.let { n.asleepMinutes.toFloat() / (n.asleepMinutes + it).coerceAtLeast(1) }
-        val restorative = if (n.deepMinutes != null && n.remMinutes != null && n.asleepMinutes > 0)
-            ((n.deepMinutes + n.remMinutes).toFloat() / n.asleepMinutes / 0.45f).coerceAtMost(1f) else null
-        val parts = listOfNotNull(0.5f to duration, efficiency?.let { 0.25f to ((it - 0.6f) / 0.35f).coerceIn(0f, 1f) }, restorative?.let { 0.25f to it })
-        return (parts.sumOf { (w, v) -> (w * v).toDouble() } / parts.sumOf { it.first.toDouble() } * 100).toInt().coerceIn(0, 100)
+    fun sleepScore(n: Night, need: Int = SLEEP_NEED_MINUTES): Int {
+        val duration = durationScore(n.asleepMinutes, need)
+        val continuity = n.wasoMinutes?.let { continuityScore(it) } ?: return Math.round(duration)
+        return Math.round(SLEEP_DURATION_WEIGHT * duration + SLEEP_CONTINUITY_WEIGHT * continuity).coerceIn(0, 100)
+    }
+
+    const val SLEEP_DURATION_WEIGHT = 0.7f
+    const val SLEEP_CONTINUITY_WEIGHT = 0.3f
+    /** WASO up to this is free; continuity then falls to 0 over the next [WASO_SPAN_MINUTES]. */
+    const val WASO_FREE_MINUTES = 30f
+    const val WASO_SPAN_MINUTES = 90f
+
+    /** 100·min(1, TST/need)²: 7 of 8 h ≈ 77, 6 h ≈ 56. */
+    fun durationScore(asleepMinutes: Int, need: Int = SLEEP_NEED_MINUTES): Float =
+        100f * (asleepMinutes.toFloat() / need).coerceIn(0f, 1f).pow(2)
+
+    /** clamp(100 − (WASO − 30)·(100/90), 0, 100). */
+    fun continuityScore(wasoMinutes: Int): Float = (100f - (wasoMinutes - WASO_FREE_MINUTES) * (100f / WASO_SPAN_MINUTES)).coerceIn(0f, 100f)
+
+    /**
+     * Wake after sleep onset from [stages] (start, end, stage): awake minutes between the first sleep stage's start
+     * and the last one's end. Null without any sleep stage.
+     */
+    fun wasoMinutes(stages: List<Triple<Long, Long, Int>>): Int? {
+        val sleep = stages.filter { it.third != SleepStage.AWAKE }
+        if (sleep.isEmpty()) return null
+        val onset = sleep.minOf { it.first }
+        val wake = sleep.maxOf { it.second }
+        val seconds = stages.filter { it.third == SleepStage.AWAKE }.sumOf { (max(it.first, onset) until min(it.second, wake)).let { r -> max(0L, r.last - r.first + 1) } }
+        return (seconds / 60).toInt()
     }
 
     // ------------------------------------------------------------------------------------------------

@@ -28,6 +28,8 @@ data class UserProfile(
     val heightCm: Int? = null,
     /** Show pounds and feet/inches; null follows the phone's region. Values are always stored metric. */
     val imperial: Boolean? = null,
+    /** The user's own sleep need, 420-540 min; null uses the default for their age. */
+    val sleepNeedMinutes: Int? = null,
 ) {
     enum class Sex { Female, Male }
 
@@ -103,6 +105,7 @@ class SettingsStore(private val context: Context) {
     private val weight = androidx.datastore.preferences.core.floatPreferencesKey("profile_weight_kg")
     private val height = androidx.datastore.preferences.core.intPreferencesKey("profile_height_cm")
     private val imperial = androidx.datastore.preferences.core.booleanPreferencesKey("profile_imperial")
+    private val sleepNeed = androidx.datastore.preferences.core.intPreferencesKey("profile_sleep_need_minutes")
 
     val profile: Flow<UserProfile> = context.dataStore.data.map { prefs ->
         UserProfile(
@@ -111,6 +114,7 @@ class SettingsStore(private val context: Context) {
             prefs[weight],
             prefs[height],
             prefs[imperial],
+            prefs[sleepNeed],
         )
     }
 
@@ -121,6 +125,7 @@ class SettingsStore(private val context: Context) {
             if (p.weightKg != null) it[weight] = p.weightKg else it.remove(weight)
             if (p.heightCm != null) it[height] = p.heightCm else it.remove(height)
             if (p.imperial != null) it[imperial] = p.imperial else it.remove(imperial)
+            if (p.sleepNeedMinutes != null) it[sleepNeed] = p.sleepNeedMinutes else it.remove(sleepNeed)
         }
     }
 
@@ -158,7 +163,7 @@ class SettingsStore(private val context: Context) {
     /** Forgets the strap and the Zepp sign-in; the user's profile and goals stay. */
     suspend fun forgetDevice() {
         context.dataStore.edit { prefs ->
-            val keep = setOf(birthYear, sex, weight, height, imperial, stepGoal, sleepGoal, activeGoal, todayTiles)
+            val keep = setOf(birthYear, sex, weight, height, imperial, sleepNeed, stepGoal, sleepGoal, activeGoal, todayTiles)
             prefs.asMap().keys.filter { it !in keep }.forEach { prefs.remove(it) }
         }
     }

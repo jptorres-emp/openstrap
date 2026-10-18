@@ -67,11 +67,17 @@ Most contributors are z-scores (deviation from the baseline centre in units of i
 
 **Last night's sleep** (weight 0.16)
 * The strap's own sleep score when present.
-* Otherwise our own score, `sleepScore`: duration vs 8 h (50%), efficiency (25%), and deep + REM share vs 45% (25%).
+* Otherwise our own score, `sleepScore` = `SLEEP_DURATION_WEIGHT` 0.7·duration + `SLEEP_CONTINUITY_WEIGHT` 0.3·continuity (duration alone without stages):
+  * `durationScore` = 100·min(1, TST/need)², so 7 of 8 h ≈ 77 and 6 h ≈ 56.
+  * `continuityScore` = clamp(100 − (WASO − 30 min)·(100/90), 0, 100), with WASO (`wasoMinutes`) the awake time between the first sleep stage and the final wake.
+* No stage target: four-stage agreement across six devices was kappa 0.21–0.53 and deep sleep was right only 47–70 % of the time (Schyvens et al. 2025). Low wake specificity also inflates wearable efficiency by 2–10 points, so time-in-bed efficiency is dropped for WASO. Stages are shown, not rated.
+* **Need** (`sleepNeed`): 480 min for ages 18–64, `SLEEP_NEED_65_MINUTES` = 450 from 65 (NSF 7–9 h and 7–8 h, above the AASM ≥ 7 h floor). The user can set their own, `SLEEP_NEED_MIN`–`SLEEP_NEED_MAX` = 420–540 min, in the profile (individual optimal sleep ran 7.3–9.3 h, Kitamura et al. 2016). The optional personal need learnt from unconstrained nights is not implemented yet.
 
 **Sleep balance** (weight 0.12)
-* Input: weighted mean nightly shortfall against 8 h over the last 14 nights. Weights halve every 4 nights, and a long night repays at most 1 h of debt.
-* Score: −`SLEEP_DEBT_POINTS_PER_HOUR` = 25 points per hour short, so 1 h short ≈ 75 and 2 h ≈ 50.
+* Input: sleep debt (`sleepDebtMinutes`) over the last `SLEEP_DEBT_NIGHTS` = 14 nights, oldest to newest; missing nights are skipped and naps count toward total sleep. λ = `SLEEP_DEBT_DECAY` = 0.5^(1/7) ≈ 0.906 (half-life 7 nights). With d = need − TST: d ≥ 0 gives debt = debt·λ + d; d < 0 gives debt = max(0, debt·λ − min(0.5·|d|, 60 min)).
+* Score: 100 − `SLEEP_DEBT_POINTS_PER_HOUR` = 25 points per hour of debt, so 1 h ≈ 75 and 2 h ≈ 50. Withheld with fewer than `SLEEP_DEBT_MIN_NIGHTS` = 7 of 14 nights.
+* The debt is cumulative, so it saturates fast: 30 min short every night for two weeks is about 4 h of debt, a score of 0. Worth checking at the review.
+* Why half-life 7: the old 4-night half-life discounted nights 8–14 to 25 % or less, undercounting the 14-day build-up. One 10 h recovery night is incomplete (Banks et al. 2010), and about 1 h of debt took 4 nights to clear (Kitamura 2016).
 * Source: Van Dongen et al. 2003 (Sleep 26:117): 6 h nights for 14 days caused deficits that built up night by night, equal to one or two nights of total deprivation, which subjects didn't notice.
 
 **Recovery index** (weight 0.03)

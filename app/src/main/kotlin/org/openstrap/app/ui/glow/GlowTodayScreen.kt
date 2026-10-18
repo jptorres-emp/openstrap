@@ -16,8 +16,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.ui.geometry.Offset
 import org.openstrap.app.ui.components.pressClickable
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -231,13 +229,9 @@ private fun OverviewCard(state: DayUiState, rec: RecoveryResult?, chargeLeads: B
                     )
                 }
             }
-            Row(
-                Modifier.fillMaxWidth().padding(top = 18.dp).height(androidx.compose.foundation.layout.IntrinsicSize.Min),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                ScoreHalf(second, onClick, Modifier.weight(1f))
-                DottedRule(Modifier.padding(vertical = 6.dp))
-                ScoreHalf(sleep, onOpenSleep, Modifier.weight(1f))
+            Row(Modifier.fillMaxWidth().padding(top = 18.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                ScoreRing(second, onClick, Modifier.weight(1f))
+                ScoreRing(sleep, onOpenSleep, Modifier.weight(1f))
             }
         }
     }
@@ -265,48 +259,32 @@ private fun Change(score: Score, withNote: Boolean) {
 }
 
 /**
- * One of the other two scores under the gauge, open on the card rather than boxed: its label in the score's
- * colour with a caret (so it reads as tappable), the value and change, then a bar filled to the score. The
- * whole half presses like the other glow controls.
+ * One of the other two scores under the gauge, tappable: a small ring filled to the score, like the gauge
+ * above, with the value inside and the label (in the score's colour) and change below. Label and change
+ * each get the half's whole width, so neither is cut at large font sizes.
  */
 @Composable
-private fun ScoreHalf(score: Score, onClick: () -> Unit, modifier: Modifier = Modifier) {
+private fun ScoreRing(score: Score, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Column(
         modifier
             .pressClickable(onClick, GlassRowShape)
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+            .padding(horizontal = 8.dp, vertical = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
+        GlowMiniRing((score.value ?: 0) / 100f, score.color) {
+            Text("${score.value ?: "-"}", color = Color.White, style = MaterialTheme.typography.titleLarge, maxLines = 1, softWrap = false)
+        }
+        Spacer(Modifier.height(6.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 score.label, color = score.color, style = MaterialTheme.typography.labelSmall,
                 maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false),
             )
-            Spacer(Modifier.width(2.dp))
-            Icon(PhosphorIcons.CaretRight, null, tint = score.color, modifier = Modifier.size(12.dp))
-        }
-        Spacer(Modifier.height(2.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("${score.value ?: "-"}", color = Color.White, style = MaterialTheme.typography.titleLarge, maxLines = 1, softWrap = false)
             if (score.change != null) {
-                Spacer(Modifier.width(8.dp))
+                Spacer(Modifier.width(6.dp))
                 Change(score, withNote = false)
             }
         }
-        Spacer(Modifier.height(4.dp))
-        GlowBar((score.value ?: 0) / 100f, score.color)
-    }
-}
-
-/** The dotted line between the two scores, in the dotted panels' dot rhythm. */
-@Composable
-private fun DottedRule(modifier: Modifier = Modifier) {
-    Canvas(modifier.fillMaxHeight().width(2.dp)) {
-        drawLine(
-            Color.White.copy(alpha = 0.3f), Offset(size.width / 2, 0f), Offset(size.width / 2, size.height),
-            strokeWidth = 1.6.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round,
-            pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(0f, 7.dp.toPx())),
-        )
     }
 }
 

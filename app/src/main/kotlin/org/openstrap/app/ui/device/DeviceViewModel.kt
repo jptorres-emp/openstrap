@@ -106,13 +106,13 @@ class DeviceViewModel(private val container: AppContainer) : ViewModel() {
         }.getOrElse { "Export failed: ${it.message}" }
     }
 
-    /** Restores a zip from [exportCsv]; rows already here are kept as they are, so it's safe to run twice. */
+    /** Restores a zip from [exportCsv]: the days it holds are replaced by its rows; the rest is left. Safe to run twice. */
     fun importCsv(uri: Uri) = viewModelScope.launch {
         _message.value = runCatching {
             val result = withContext(Dispatchers.IO) {
-                container.app.contentResolver.openInputStream(uri)!!.use { org.openstrap.app.export.CsvImporter(container.database.healthDao()).importZip(it) }
+                container.app.contentResolver.openInputStream(uri)!!.use { org.openstrap.app.export.CsvImporter(container.database).importZip(it) }
             }
-            "Imported %,d records from %d files.".format(result.total, result.rows.size) +
+            "Restored %,d days from the backup (%,d records).".format(result.days, result.total) +
                 (if (result.skipped > 0) " %,d unreadable rows skipped.".format(result.skipped) else "")
         }.getOrElse { "Import failed: ${it.message}" }
     }

@@ -47,6 +47,12 @@ class CsvRow(private val index: Map<String, Int>, private val cells: List<String
 }
 
 /**
+ * Where a table's rows sit in time: the database table, the column that holds each row's time, and the CSV column
+ * with that time in epoch seconds. A restore replaces the backup's days by deleting through these.
+ */
+class Key(val table: String, val column: String, val epoch: String)
+
+/**
  * One table in the CSV backup: its file, columns, how to read it from the database and write it back. Export and
  * import both go through these, so a column added here round-trips. Columns already in older exports keep their
  * names, so an old zip still imports; columns it lacks fall back to defaults.
@@ -54,6 +60,7 @@ class CsvRow(private val index: Map<String, Int>, private val cells: List<String
 class CsvTable<T>(
     val file: String,
     val header: String,
+    val key: Key,
     val read: suspend (HealthDao, Long, Long) -> List<T>,
     val row: (T) -> List<Any?>,
     val parse: (CsvRow) -> T,
@@ -76,14 +83,17 @@ private fun stageCode(name: String) = when (name) {
 
 val CSV_TABLES: List<CsvTable<*>> = listOf(
     CsvTable("heart_rate.csv", "time,epoch,bpm,source",
+        Key("heart_rate", "timestamp", "epoch"),
         { d, f, t -> d.heartRateOnce(f, t) }, { listOf(iso(it.timestamp), it.timestamp, it.bpm, it.source) },
         { HeartRateSample(it.long("epoch"), it.int("bpm"), it.intOrNull("source") ?: HeartRateSample.SOURCE_HISTORY) },
         { d, r -> d.insertHeartRate(r) }),
     CsvTable("activity_minute.csv", "time,epoch,steps,intensity,kind,heart_rate",
+        Key("activity_minute", "timestamp", "epoch"),
         { d, f, t -> d.activityOnce(f, t) }, { listOf(iso(it.timestamp), it.timestamp, it.steps, it.intensity, it.kind, it.heartRate) },
         { ActivityMinute(it.long("epoch"), it.int("steps"), it.int("intensity"), it.int("kind"), it.intOrNull("heart_rate")) },
         { d, r -> d.insertActivity(r) }),
     CsvTable("activity_extended.csv", "time,epoch,floors,run,fat_burn,stand,walk,sit,steps,calories,distance_cm",
+        Key("activity_extended", "timestamp", "epoch"),
         { d, f, t -> d.activityExtended(f, t).first() },
         { listOf(iso(it.timestamp), it.timestamp, it.floors, it.run, it.fatBurn, it.stand, it.walk, it.sit, it.steps, it.calories, it.distanceCm) },
         {
@@ -92,6 +102,7 @@ val CSV_TABLES: List<CsvTable<*>> = listOf(
         },
         { d, r -> d.insertActivityExtended(r) }),
     CsvTable("sleep_session.csv", "start,end,start_epoch,end_epoch,nap,score,avg_hr,deep_min,light_min,rem_min,awake_min,wake_count,day_epoch",
+        Key("sleep_session", "start", "start_epoch"),
         { d, f, t -> d.sleepSessionsOnce(f, t) },
         {
             listOf(iso(it.start), iso(it.end), it.start, it.end, it.nap, it.score, it.averageHeartRate,
@@ -107,40 +118,50 @@ val CSV_TABLES: List<CsvTable<*>> = listOf(
         },
         { d, r -> d.insertSleepSessions(r) }),
     CsvTable("sleep_stage.csv", "session_start_epoch,start,end,stage",
+        Key("sleep_stage", "sessionStart", "session_start_epoch"),
         { d, f, t -> d.sleepSessionsOnce(f, t).flatMap { s -> d.sleepStagesOnce(s.start) } },
         { listOf(it.sessionStart, iso(it.start), iso(it.end), CsvExporter.stageName(it.stage)) },
         { SleepStage(it.instant("start"), it.instant("end"), it.long("session_start_epoch"), stageCode(it.string("stage"))) },
         { d, r -> d.insertSleepStages(r) }),
     CsvTable("spo2.csv", "time,epoch,percent",
+        Key("spo2", "timestamp", "epoch"),
         { d, f, t -> d.spo2Once(f, t) }, { listOf(iso(it.timestamp), it.timestamp, it.percent) },
         { Spo2Sample(it.long("epoch"), it.int("percent")) }, { d, r -> d.insertSpo2(r) }),
     CsvTable("sleep_spo2.csv", "time,epoch,percent",
+        Key("sleep_spo2", "timestamp", "epoch"),
         { d, f, t -> d.sleepSpo2Once(f, t) }, { listOf(iso(it.timestamp), it.timestamp, it.percent) },
         { SleepSpo2Sample(it.long("epoch"), it.int("percent")) }, { d, r -> d.insertSleepSpo2(r) }),
     CsvTable("stress.csv", "time,epoch,value",
+        Key("stress", "timestamp", "epoch"),
         { d, f, t -> d.stressOnce(f, t) }, { listOf(iso(it.timestamp), it.timestamp, it.value) },
         { StressSample(it.long("epoch"), it.int("value")) }, { d, r -> d.insertStress(r) }),
     CsvTable("hrv.csv", "time,epoch,milliseconds",
+        Key("hrv", "timestamp", "epoch"),
         { d, f, t -> d.hrvOnce(f, t) }, { listOf(iso(it.timestamp), it.timestamp, it.milliseconds) },
         { HrvSample(it.long("epoch"), it.int("milliseconds")) }, { d, r -> d.insertHrv(r) }),
     CsvTable("hrv_sdnn.csv", "time,epoch,milliseconds",
+        Key("hrv_sdnn", "timestamp", "epoch"),
         { d, f, t -> d.hrvSdnn(f, t).first() }, { listOf(iso(it.timestamp), it.timestamp, it.milliseconds) },
         { HrvSdnnSample(it.long("epoch"), it.float("milliseconds")) }, { d, r -> d.insertHrvSdnn(r) }),
     CsvTable("resting_hr.csv", "day,epoch,bpm",
+        Key("resting_hr", "day", "epoch"),
         { d, f, t -> d.restingHrOnce(f, t) }, { listOf(iso(it.day), it.day, it.bpm) },
         { RestingHeartRate(it.long("epoch"), it.int("bpm")) }, { d, r -> d.insertRestingHr(r) }),
     CsvTable("skin_temperature.csv", "time,epoch,celsius",
+        Key("skin_temperature", "timestamp", "epoch"),
         { d, f, t -> d.skinTemperatureOnce(f, t) }, { listOf(iso(it.timestamp), it.timestamp, it.celsius) },
         { SkinTemperature(it.long("epoch"), it.float("celsius")) }, { d, r -> d.insertSkinTemperature(r) }),
     CsvTable("breath_rate.csv", "time,epoch,breaths_per_minute",
+        Key("breath_rate", "timestamp", "epoch"),
         { d, f, t -> d.breathRateOnce(f, t) }, { listOf(iso(it.timestamp), it.timestamp, it.perMinute) },
         { BreathRate(it.long("epoch"), it.int("breaths_per_minute")) }, { d, r -> d.insertBreathRate(r) }),
     CsvTable("pai.csv", "time,epoch,daily,total,resting_hr,max_hr",
+        Key("pai", "timestamp", "epoch"),
         { d, f, t -> d.paiOnce(f, t) }, { listOf(iso(it.timestamp), it.timestamp, it.daily, it.total, it.restingHeartRate, it.maxHeartRate) },
         { PaiSample(it.long("epoch"), it.float("daily"), it.float("total"), it.int("resting_hr"), it.int("max_hr")) },
         { d, r -> d.insertPai(r) }),
-    CsvTable("workout.csv",
-        "start,start_epoch,end_epoch,sport_type,exercise_seconds,calories,avg_hr,max_hr,min_hr,aerobic_te,anaerobic_te,training_load,vo2max,steps",
+    CsvTable("workout.csv", "start,start_epoch,end_epoch,sport_type,exercise_seconds,calories,avg_hr,max_hr,min_hr,aerobic_te,anaerobic_te,training_load,vo2max,steps",
+        Key("workout", "start", "start_epoch"),
         { d, f, t -> d.workouts().first().filter { it.start in f..t }.sortedBy { it.start } },
         {
             listOf(iso(it.start), it.start, it.end, it.sportType, it.exerciseSeconds, it.calories, it.averageHeartRate, it.maxHeartRate,
@@ -154,10 +175,11 @@ val CSV_TABLES: List<CsvTable<*>> = listOf(
         },
         { d, r -> d.insertWorkouts(r) }),
     CsvTable("workout_hr.csv", "workout_start_epoch,epoch,bpm",
+        Key("workout_hr", "workoutStart", "workout_start_epoch"),
         { d, f, t -> d.workoutHeartRateAll().filter { it.workoutStart in f..t } }, { listOf(it.workoutStart, it.timestamp, it.bpm) },
         { WorkoutHeartRate(it.long("workout_start_epoch"), it.long("epoch"), it.int("bpm")) }, { d, r -> d.insertWorkoutHeartRate(r) }),
-    CsvTable("sport_effect.csv",
-        "end_epoch,recovery_minutes,vo2max,epoc,weekly_load,monthly_load,optimal_load_min,optimal_load_max,max_hr",
+    CsvTable("sport_effect.csv", "end_epoch,recovery_minutes,vo2max,epoc,weekly_load,monthly_load,optimal_load_min,optimal_load_max,max_hr",
+        Key("sport_effect", "`end`", "end_epoch"),
         { d, f, t -> d.sportEffects().first().filter { it.end in f..t } },
         {
             listOf(it.end, it.recoveryMinutes, it.vo2max, it.epoc, it.weeklyLoad, it.monthlyLoad, it.optimalLoadMin,
@@ -170,14 +192,16 @@ val CSV_TABLES: List<CsvTable<*>> = listOf(
         },
         { d, r -> d.insertSportEffects(r) }),
     CsvTable("recovery_hr.csv", "workout_start_epoch,samples_hex",
+        Key("recovery_hr", "workoutStart", "workout_start_epoch"),
         { d, f, t -> d.recoveryHeartRateAll().filter { it.workoutStart in f..t } }, { listOf(it.workoutStart, hex(it.samples)) },
         { RecoveryHeartRateRow(it.long("workout_start_epoch"), it.bytes("samples_hex") ?: ByteArray(0)) },
         { d, r -> d.insertRecoveryHeartRate(r) }),
     CsvTable("daily_max_hr.csv", "day,epoch,bpm",
+        Key("daily_max_hr", "day", "epoch"),
         { d, f, t -> d.dailyMaxHr(f, t).first() }, { listOf(iso(it.day), it.day, it.bpm) },
         { DailyMaxHr(it.long("epoch"), it.int("bpm")) }, { d, r -> d.insertDailyMaxHr(r) }),
-    CsvTable("strap_readiness.csv",
-        "day_epoch,updated_epoch,score,hrv_score,resting_hr_score,skin_temperature_score,breathing_score,sleep_hrv,sleep_resting_hr,algorithm_version",
+    CsvTable("strap_readiness.csv", "day_epoch,updated_epoch,score,hrv_score,resting_hr_score,skin_temperature_score,breathing_score,sleep_hrv,sleep_resting_hr,algorithm_version",
+        Key("strap_readiness", "day", "day_epoch"),
         { d, f, t -> d.strapReadinessAll().filter { it.day in f..t } },
         {
             listOf(it.day, it.updatedAt, it.score, it.hrvScore, it.restingHrScore, it.skinTemperatureScore, it.breathingScore,
@@ -190,6 +214,7 @@ val CSV_TABLES: List<CsvTable<*>> = listOf(
         },
         { d, r -> d.insertStrapReadiness(r) }),
     CsvTable("osa_result.csv", "belong_epoch,valid_time,odi_raw,odi_score,disp_code,event_count,version",
+        Key("osa_result", "belongTime", "belong_epoch"),
         { d, f, t -> d.osaResultsOnce(f, t) },
         { listOf(it.belongTime, it.validTime, it.odiRaw, it.odiScore, it.dispCode, it.eventCount, it.version) },
         {
@@ -198,10 +223,12 @@ val CSV_TABLES: List<CsvTable<*>> = listOf(
         },
         { d, r -> d.insertOsaResults(r) }),
     CsvTable("osa_event.csv", "time,epoch,drop,spo2_hex,heart_rate_hex",
+        Key("osa_event", "timestamp", "epoch"),
         { d, f, t -> d.osaEvents(f, t).first() }, { listOf(iso(it.timestamp), it.timestamp, it.drop, hex(it.spo2), hex(it.heartRate)) },
         { OsaEventRow(it.long("epoch"), it.int("drop"), it.bytes("spo2_hex"), it.bytes("heart_rate_hex")) },
         { d, r -> d.insertOsaEvents(r) }),
     CsvTable("health_alert.csv", "time,epoch,type,value",
+        Key("health_alert", "timestamp", "epoch"),
         { d, f, t -> d.healthAlerts(f, t).first() }, { listOf(iso(it.timestamp), it.timestamp, it.type, it.value) },
         { HealthAlertRow(it.long("epoch"), it.int("type"), it.long("value")) }, { d, r -> d.insertHealthAlerts(r) }),
 )

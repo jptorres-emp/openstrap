@@ -52,7 +52,7 @@ Something not right? **You → Diagnostics → copy** captures a log to attach t
 
 ## Backup and restore
 
-**You → Export CSV** saves a zip with one CSV per table. **Import CSV** reads it back, on this phone or a new one. Every record is keyed by its time, so importing over existing data fills gaps without duplicating anything.
+**You → Export CSV** saves a zip with one CSV per table. **Import CSV** reads it back, on this phone or a new one. For each day the backup holds, its records replace what the phone has, so a restore also undoes data stored at the wrong time; days it doesn't hold, and anything newer than it, stay as they are. A restore is all or nothing: a zip that fails part way changes nothing.
 
 **Restore from Health Connect** brings back what OpenStrap wrote there, and nothing from other apps. Health Connect keeps that data after OpenStrap is uninstalled, so it works as a backup too. It fills gaps only and never replaces what the strap synced.
 

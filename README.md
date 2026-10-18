@@ -45,10 +45,16 @@ Tested daily with a real Helio Strap.
 | Recovery, Charge and sleep scores, PAI, training load | ✅ Works |
 | Dashboard: Today, Recovery, Sleep, Activity, You (foldables and tablets too) | ✅ Works |
 | Alarms, strap health alerts | ✅ Works |
-| Export: CSV zip, Android Health Connect | ✅ Works |
+| Export and import: CSV zip (every table), Android Health Connect | ✅ Works |
 | Firmware update (online check with your Zepp token, or from a file) | ✅ Works |
 
 Something not right? **You → Diagnostics → copy** captures a log to attach to an issue.
+
+## Backup and restore
+
+**You → Export CSV** saves a zip with one CSV per table. **Import CSV** reads it back, on this phone or a new one. Every record is keyed by its time, so importing over existing data fills gaps without duplicating anything.
+
+**Restore from Health Connect** brings back what OpenStrap wrote there, and nothing from other apps. Health Connect keeps that data after OpenStrap is uninstalled, so it works as a backup too. It fills gaps only and never replaces what the strap synced.
 
 ## Getting the auth key
 

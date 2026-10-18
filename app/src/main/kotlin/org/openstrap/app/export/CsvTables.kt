@@ -1,0 +1,207 @@
+package org.openstrap.app.export
+
+import kotlinx.coroutines.flow.first
+import org.openstrap.app.data.db.ActivityExtendedMinute
+import org.openstrap.app.data.db.ActivityMinute
+import org.openstrap.app.data.db.BreathRate
+import org.openstrap.app.data.db.DailyMaxHr
+import org.openstrap.app.data.db.HealthAlertRow
+import org.openstrap.app.data.db.HealthDao
+import org.openstrap.app.data.db.HeartRateSample
+import org.openstrap.app.data.db.HrvSample
+import org.openstrap.app.data.db.HrvSdnnSample
+import org.openstrap.app.data.db.OsaEventRow
+import org.openstrap.app.data.db.OsaResultRow
+import org.openstrap.app.data.db.PaiSample
+import org.openstrap.app.data.db.RecoveryHeartRateRow
+import org.openstrap.app.data.db.RestingHeartRate
+import org.openstrap.app.data.db.SkinTemperature
+import org.openstrap.app.data.db.SleepSession
+import org.openstrap.app.data.db.SleepSpo2Sample
+import org.openstrap.app.data.db.SleepStage
+import org.openstrap.app.data.db.SportEffectRow
+import org.openstrap.app.data.db.Spo2Sample
+import org.openstrap.app.data.db.StrapReadinessRow
+import org.openstrap.app.data.db.StressSample
+import org.openstrap.app.data.db.Workout
+import org.openstrap.app.data.db.WorkoutHeartRate
+import java.time.Instant
+import java.time.ZoneId
+
+/** One CSV row, read by column name so files from older exports (fewer columns, other order) still import. */
+class CsvRow(private val index: Map<String, Int>, private val cells: List<String>) {
+    private fun cell(name: String): String? = index[name]?.let(cells::getOrNull)?.takeIf { it.isNotEmpty() }
+
+    fun has(name: String) = cell(name) != null
+    fun long(name: String): Long = cell(name)!!.toLong()
+    fun longOrNull(name: String): Long? = cell(name)?.toLongOrNull()
+    fun int(name: String): Int = cell(name)!!.toInt()
+    fun intOrNull(name: String): Int? = cell(name)?.toIntOrNull()
+    fun float(name: String): Float = cell(name)!!.toFloat()
+    fun floatOrNull(name: String): Float? = cell(name)?.toFloatOrNull()
+    fun bool(name: String): Boolean = cell(name)!!.toBooleanStrict()
+    fun string(name: String): String = cell(name)!!
+    /** An ISO-8601 time column, as epoch seconds. */
+    fun instant(name: String): Long = Instant.parse(cell(name)!!).epochSecond
+    fun bytes(name: String): ByteArray? = cell(name)?.chunked(2)?.map { it.toInt(16).toByte() }?.toByteArray()
+}
+
+/**
+ * One table in the CSV backup: its file, columns, how to read it from the database and write it back. Export and
+ * import both go through these, so a column added here round-trips. Columns already in older exports keep their
+ * names, so an old zip still imports; columns it lacks fall back to defaults.
+ */
+class CsvTable<T>(
+    val file: String,
+    val header: String,
+    val read: suspend (HealthDao, Long, Long) -> List<T>,
+    val row: (T) -> List<Any?>,
+    val parse: (CsvRow) -> T,
+    val write: suspend (HealthDao, List<T>) -> Unit,
+)
+
+private fun iso(epochSeconds: Long) = CsvExporter.iso(epochSeconds)
+private fun hex(bytes: ByteArray?) = bytes?.joinToString("") { "%02x".format(it) }
+
+/** Local midnight of the day a sleep belongs to, for rows from exports that didn't carry it: the day you woke up. */
+private fun sleepDay(start: Long, end: Long, nap: Boolean): Long {
+    val zone = ZoneId.systemDefault()
+    return Instant.ofEpochSecond(if (nap) start else end).atZone(zone).toLocalDate().atStartOfDay(zone).toEpochSecond()
+}
+
+private fun stageCode(name: String) = when (name) {
+    "awake" -> SleepStage.AWAKE; "light" -> SleepStage.LIGHT; "deep" -> SleepStage.DEEP; "rem" -> SleepStage.REM
+    else -> name.toIntOrNull() ?: SleepStage.LIGHT
+}
+
+val CSV_TABLES: List<CsvTable<*>> = listOf(
+    CsvTable("heart_rate.csv", "time,epoch,bpm,source",
+        { d, f, t -> d.heartRateOnce(f, t) }, { listOf(iso(it.timestamp), it.timestamp, it.bpm, it.source) },
+        { HeartRateSample(it.long("epoch"), it.int("bpm"), it.intOrNull("source") ?: HeartRateSample.SOURCE_HISTORY) },
+        { d, r -> d.insertHeartRate(r) }),
+    CsvTable("activity_minute.csv", "time,epoch,steps,intensity,kind,heart_rate",
+        { d, f, t -> d.activityOnce(f, t) }, { listOf(iso(it.timestamp), it.timestamp, it.steps, it.intensity, it.kind, it.heartRate) },
+        { ActivityMinute(it.long("epoch"), it.int("steps"), it.int("intensity"), it.int("kind"), it.intOrNull("heart_rate")) },
+        { d, r -> d.insertActivity(r) }),
+    CsvTable("activity_extended.csv", "time,epoch,floors,run,fat_burn,stand,walk,sit,steps,calories,distance_cm",
+        { d, f, t -> d.activityExtended(f, t).first() },
+        { listOf(iso(it.timestamp), it.timestamp, it.floors, it.run, it.fatBurn, it.stand, it.walk, it.sit, it.steps, it.calories, it.distanceCm) },
+        {
+            ActivityExtendedMinute(it.long("epoch"), it.int("floors"), it.int("run"), it.int("fat_burn"), it.int("stand"),
+                it.int("walk"), it.int("sit"), it.int("steps"), it.int("calories"), it.int("distance_cm"))
+        },
+        { d, r -> d.insertActivityExtended(r) }),
+    CsvTable("sleep_session.csv", "start,end,start_epoch,end_epoch,nap,score,avg_hr,deep_min,light_min,rem_min,awake_min,wake_count,day_epoch",
+        { d, f, t -> d.sleepSessionsOnce(f, t) },
+        {
+            listOf(iso(it.start), iso(it.end), it.start, it.end, it.nap, it.score, it.averageHeartRate,
+                it.deepMinutes, it.lightMinutes, it.remMinutes, it.awakeMinutes, it.wakeCount, it.day)
+        },
+        {
+            val start = it.long("start_epoch"); val end = it.long("end_epoch"); val nap = it.bool("nap")
+            SleepSession(
+                start, end, it.longOrNull("day_epoch")?.takeIf { d -> d > 0 } ?: sleepDay(start, end, nap), nap,
+                it.intOrNull("score"), it.intOrNull("avg_hr"), it.intOrNull("deep_min"), it.intOrNull("light_min"),
+                it.intOrNull("rem_min"), it.intOrNull("awake_min"), it.intOrNull("wake_count"),
+            )
+        },
+        { d, r -> d.insertSleepSessions(r) }),
+    CsvTable("sleep_stage.csv", "session_start_epoch,start,end,stage",
+        { d, f, t -> d.sleepSessionsOnce(f, t).flatMap { s -> d.sleepStagesOnce(s.start) } },
+        { listOf(it.sessionStart, iso(it.start), iso(it.end), CsvExporter.stageName(it.stage)) },
+        { SleepStage(it.instant("start"), it.instant("end"), it.long("session_start_epoch"), stageCode(it.string("stage"))) },
+        { d, r -> d.insertSleepStages(r) }),
+    CsvTable("spo2.csv", "time,epoch,percent",
+        { d, f, t -> d.spo2Once(f, t) }, { listOf(iso(it.timestamp), it.timestamp, it.percent) },
+        { Spo2Sample(it.long("epoch"), it.int("percent")) }, { d, r -> d.insertSpo2(r) }),
+    CsvTable("sleep_spo2.csv", "time,epoch,percent",
+        { d, f, t -> d.sleepSpo2Once(f, t) }, { listOf(iso(it.timestamp), it.timestamp, it.percent) },
+        { SleepSpo2Sample(it.long("epoch"), it.int("percent")) }, { d, r -> d.insertSleepSpo2(r) }),
+    CsvTable("stress.csv", "time,epoch,value",
+        { d, f, t -> d.stressOnce(f, t) }, { listOf(iso(it.timestamp), it.timestamp, it.value) },
+        { StressSample(it.long("epoch"), it.int("value")) }, { d, r -> d.insertStress(r) }),
+    CsvTable("hrv.csv", "time,epoch,milliseconds",
+        { d, f, t -> d.hrvOnce(f, t) }, { listOf(iso(it.timestamp), it.timestamp, it.milliseconds) },
+        { HrvSample(it.long("epoch"), it.int("milliseconds")) }, { d, r -> d.insertHrv(r) }),
+    CsvTable("hrv_sdnn.csv", "time,epoch,milliseconds",
+        { d, f, t -> d.hrvSdnn(f, t).first() }, { listOf(iso(it.timestamp), it.timestamp, it.milliseconds) },
+        { HrvSdnnSample(it.long("epoch"), it.float("milliseconds")) }, { d, r -> d.insertHrvSdnn(r) }),
+    CsvTable("resting_hr.csv", "day,epoch,bpm",
+        { d, f, t -> d.restingHrOnce(f, t) }, { listOf(iso(it.day), it.day, it.bpm) },
+        { RestingHeartRate(it.long("epoch"), it.int("bpm")) }, { d, r -> d.insertRestingHr(r) }),
+    CsvTable("skin_temperature.csv", "time,epoch,celsius",
+        { d, f, t -> d.skinTemperatureOnce(f, t) }, { listOf(iso(it.timestamp), it.timestamp, it.celsius) },
+        { SkinTemperature(it.long("epoch"), it.float("celsius")) }, { d, r -> d.insertSkinTemperature(r) }),
+    CsvTable("breath_rate.csv", "time,epoch,breaths_per_minute",
+        { d, f, t -> d.breathRateOnce(f, t) }, { listOf(iso(it.timestamp), it.timestamp, it.perMinute) },
+        { BreathRate(it.long("epoch"), it.int("breaths_per_minute")) }, { d, r -> d.insertBreathRate(r) }),
+    CsvTable("pai.csv", "time,epoch,daily,total,resting_hr,max_hr",
+        { d, f, t -> d.paiOnce(f, t) }, { listOf(iso(it.timestamp), it.timestamp, it.daily, it.total, it.restingHeartRate, it.maxHeartRate) },
+        { PaiSample(it.long("epoch"), it.float("daily"), it.float("total"), it.int("resting_hr"), it.int("max_hr")) },
+        { d, r -> d.insertPai(r) }),
+    CsvTable("workout.csv",
+        "start,start_epoch,end_epoch,sport_type,exercise_seconds,calories,avg_hr,max_hr,min_hr,aerobic_te,anaerobic_te,training_load,vo2max,steps",
+        { d, f, t -> d.workouts().first().filter { it.start in f..t }.sortedBy { it.start } },
+        {
+            listOf(iso(it.start), it.start, it.end, it.sportType, it.exerciseSeconds, it.calories, it.averageHeartRate, it.maxHeartRate,
+                it.minHeartRate, it.aerobicTrainingEffect, it.anaerobicTrainingEffect, it.trainingLoad, it.vo2max, it.steps)
+        },
+        {
+            Workout(it.long("start_epoch"), it.long("end_epoch"), it.int("sport_type"), it.intOrNull("exercise_seconds"),
+                it.intOrNull("calories"), it.intOrNull("avg_hr"), it.intOrNull("max_hr"), it.intOrNull("min_hr"),
+                it.floatOrNull("aerobic_te"), it.floatOrNull("anaerobic_te"), it.intOrNull("training_load"),
+                it.intOrNull("vo2max"), it.intOrNull("steps"))
+        },
+        { d, r -> d.insertWorkouts(r) }),
+    CsvTable("workout_hr.csv", "workout_start_epoch,epoch,bpm",
+        { d, f, t -> d.workoutHeartRateAll().filter { it.workoutStart in f..t } }, { listOf(it.workoutStart, it.timestamp, it.bpm) },
+        { WorkoutHeartRate(it.long("workout_start_epoch"), it.long("epoch"), it.int("bpm")) }, { d, r -> d.insertWorkoutHeartRate(r) }),
+    CsvTable("sport_effect.csv",
+        "end_epoch,recovery_minutes,vo2max,epoc,weekly_load,monthly_load,optimal_load_min,optimal_load_max,max_hr",
+        { d, f, t -> d.sportEffects().first().filter { it.end in f..t } },
+        {
+            listOf(it.end, it.recoveryMinutes, it.vo2max, it.epoc, it.weeklyLoad, it.monthlyLoad, it.optimalLoadMin,
+                it.optimalLoadMax, it.maximalHeartRate)
+        },
+        {
+            SportEffectRow(it.long("end_epoch"), it.intOrNull("recovery_minutes"), it.floatOrNull("vo2max"), it.floatOrNull("epoc"),
+                it.floatOrNull("weekly_load"), it.floatOrNull("monthly_load"), it.intOrNull("optimal_load_min"),
+                it.intOrNull("optimal_load_max"), it.intOrNull("max_hr"))
+        },
+        { d, r -> d.insertSportEffects(r) }),
+    CsvTable("recovery_hr.csv", "workout_start_epoch,samples_hex",
+        { d, f, t -> d.recoveryHeartRateAll().filter { it.workoutStart in f..t } }, { listOf(it.workoutStart, hex(it.samples)) },
+        { RecoveryHeartRateRow(it.long("workout_start_epoch"), it.bytes("samples_hex") ?: ByteArray(0)) },
+        { d, r -> d.insertRecoveryHeartRate(r) }),
+    CsvTable("daily_max_hr.csv", "day,epoch,bpm",
+        { d, f, t -> d.dailyMaxHr(f, t).first() }, { listOf(iso(it.day), it.day, it.bpm) },
+        { DailyMaxHr(it.long("epoch"), it.int("bpm")) }, { d, r -> d.insertDailyMaxHr(r) }),
+    CsvTable("strap_readiness.csv",
+        "day_epoch,updated_epoch,score,hrv_score,resting_hr_score,skin_temperature_score,breathing_score,sleep_hrv,sleep_resting_hr,algorithm_version",
+        { d, f, t -> d.strapReadinessAll().filter { it.day in f..t } },
+        {
+            listOf(it.day, it.updatedAt, it.score, it.hrvScore, it.restingHrScore, it.skinTemperatureScore, it.breathingScore,
+                it.sleepHrv, it.sleepRestingHr, it.algorithmVersion)
+        },
+        {
+            StrapReadinessRow(it.long("day_epoch"), it.long("updated_epoch"), it.intOrNull("score"), it.intOrNull("hrv_score"),
+                it.intOrNull("resting_hr_score"), it.intOrNull("skin_temperature_score"), it.intOrNull("breathing_score"),
+                it.intOrNull("sleep_hrv"), it.intOrNull("sleep_resting_hr"), it.string("algorithm_version"))
+        },
+        { d, r -> d.insertStrapReadiness(r) }),
+    CsvTable("osa_result.csv", "belong_epoch,valid_time,odi_raw,odi_score,disp_code,event_count,version",
+        { d, f, t -> d.osaResultsOnce(f, t) },
+        { listOf(it.belongTime, it.validTime, it.odiRaw, it.odiScore, it.dispCode, it.eventCount, it.version) },
+        {
+            OsaResultRow(it.long("belong_epoch"), it.long("valid_time"), it.long("odi_raw"), it.int("odi_score"),
+                it.int("disp_code"), it.int("event_count"), it.int("version"))
+        },
+        { d, r -> d.insertOsaResults(r) }),
+    CsvTable("osa_event.csv", "time,epoch,drop,spo2_hex,heart_rate_hex",
+        { d, f, t -> d.osaEvents(f, t).first() }, { listOf(iso(it.timestamp), it.timestamp, it.drop, hex(it.spo2), hex(it.heartRate)) },
+        { OsaEventRow(it.long("epoch"), it.int("drop"), it.bytes("spo2_hex"), it.bytes("heart_rate_hex")) },
+        { d, r -> d.insertOsaEvents(r) }),
+    CsvTable("health_alert.csv", "time,epoch,type,value",
+        { d, f, t -> d.healthAlerts(f, t).first() }, { listOf(iso(it.timestamp), it.timestamp, it.type, it.value) },
+        { HealthAlertRow(it.long("epoch"), it.int("type"), it.long("value")) }, { d, r -> d.insertHealthAlerts(r) }),
+)

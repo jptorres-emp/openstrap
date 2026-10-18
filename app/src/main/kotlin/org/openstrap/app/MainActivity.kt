@@ -205,6 +205,21 @@ private fun AppRoot(container: AppContainer) {
         if (granted.containsAll(container.healthConnect.permissions)) deviceVm.exportHealthConnect()
         else Toast.makeText(context, "Health Connect permissions were not granted.", Toast.LENGTH_LONG).show()
     }
+    val csvImportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        uri?.let(deviceVm::importCsv)
+    }
+    val hcReadLauncher = rememberLauncherForActivityResult(PermissionController.createRequestPermissionResultContract()) { granted ->
+        if (granted.any { it in container.healthConnect.readPermissions }) deviceVm.importHealthConnect()
+        else Toast.makeText(context, "Health Connect permissions were not granted.", Toast.LENGTH_LONG).show()
+    }
+    val importHealthConnect: () -> Unit = {
+        if (!container.healthConnect.isAvailable()) {
+            Toast.makeText(context, "Health Connect isn't available on this phone.", Toast.LENGTH_LONG).show()
+        } else scope.launch {
+            if (container.healthConnect.hasReadPermissions()) deviceVm.importHealthConnect()
+            else hcReadLauncher.launch(container.healthConnect.readPermissions)
+        }
+    }
     val exportHealthConnect: () -> Unit = {
         if (!container.healthConnect.isAvailable()) {
             Toast.makeText(context, "Health Connect isn't available on this phone.", Toast.LENGTH_LONG).show()
@@ -322,6 +337,8 @@ private fun AppRoot(container: AppContainer) {
                         onOpenStrap = { showStrap = true },
                         onExportCsv = { csvLauncher.launch("openstrap-export.zip") },
                         onExportHealthConnect = exportHealthConnect,
+                        onImportCsv = { csvImportLauncher.launch(arrayOf("application/zip", "application/x-zip-compressed", "application/octet-stream")) },
+                        onImportHealthConnect = importHealthConnect,
                     )
                 }
             } }

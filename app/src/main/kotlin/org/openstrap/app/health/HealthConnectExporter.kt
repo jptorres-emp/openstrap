@@ -2,6 +2,17 @@ package org.openstrap.app.health
 
 import android.content.Context
 import androidx.health.connect.client.HealthConnectClient
+import androidx.health.connect.client.HealthConnectFeatures
+import androidx.health.connect.client.records.metadata.DataOrigin
+import androidx.health.connect.client.request.ReadRecordsRequest
+import org.openstrap.app.data.db.ActivityMinute
+import org.openstrap.app.data.db.HeartRateSample
+import org.openstrap.app.data.db.HrvSample
+import org.openstrap.app.data.db.RestingHeartRate
+import org.openstrap.app.data.db.SleepSession
+import org.openstrap.app.data.db.Spo2Sample
+import java.time.Duration
+import kotlin.reflect.KClass
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
@@ -21,8 +32,9 @@ import java.time.ZoneId
 import java.time.ZoneOffset
 
 /**
- * Pushes locally stored data into Android Health Connect. Each record carries a stable
- * clientRecordId, so re-exporting the same range updates rather than duplicates.
+ * Pushes locally stored data into Android Health Connect, and reads it back. Each exported record carries a stable
+ * clientRecordId, so re-exporting the same range updates rather than duplicates. [import] reads only what this app
+ * wrote (Health Connect keeps it after an uninstall), so it restores OpenStrap's own data and nothing else's.
  */
 class HealthConnectExporter(private val context: Context, private val dao: HealthDao) {
 
@@ -35,6 +47,20 @@ class HealthConnectExporter(private val context: Context, private val dao: Healt
         HealthPermission.getWritePermission(RestingHeartRateRecord::class),
     )
 
+    /** Reading back what was exported; history is the permission to read further back than 30 days. */
+    val readPermissions: Set<String>
+        get() = setOf(
+            HealthPermission.getReadPermission(HeartRateRecord::class),
+            HealthPermission.getReadPermission(StepsRecord::class),
+            HealthPermission.getReadPermission(SleepSessionRecord::class),
+            HealthPermission.getReadPermission(OxygenSaturationRecord::class),
+            HealthPermission.getReadPermission(HeartRateVariabilityRmssdRecord::class),
+            HealthPermission.getReadPermission(RestingHeartRateRecord::class),
+        ) + listOfNotNull(HealthPermission.PERMISSION_READ_HEALTH_DATA_HISTORY.takeIf { historyAvailable() })
+
+    private fun historyAvailable() = client.features.getFeatureStatus(HealthConnectFeatures.FEATURE_READ_HEALTH_DATA_HISTORY) ==
+        HealthConnectFeatures.FEATURE_STATUS_AVAILABLE
+
     fun isAvailable(): Boolean =
         HealthConnectClient.getSdkStatus(context) == HealthConnectClient.SDK_AVAILABLE
 
@@ -42,6 +68,10 @@ class HealthConnectExporter(private val context: Context, private val dao: Healt
 
     suspend fun hasPermissions(): Boolean =
         client.permissionController.getGrantedPermissions().containsAll(permissions)
+
+    /** The record reads the user has granted (any of them is enough to import that kind). */
+    suspend fun hasReadPermissions(): Boolean =
+        client.permissionController.getGrantedPermissions().any { it in readPermissions }
 
     private val device = Device(type = Device.TYPE_FITNESS_BAND, manufacturer = "Amazfit", model = "Helio Strap")
 
@@ -136,5 +166,80 @@ class HealthConnectExporter(private val context: Context, private val dao: Healt
         // Health Connect caps the batch size per call.
         records.chunked(500).forEach { client.insertRecords(it) }
         return records.size
+    }
+
+    /**
+     * Copies what OpenStrap wrote to Health Connect back into the database, filling gaps only: a day the strap has
+     * already synced keeps its own, richer rows. Returns the number of rows read. Without the history permission,
+     * Health Connect only returns the last 30 days.
+     */
+    suspend fun import(): Int {
+        val granted = client.permissionController.getGrantedPermissions()
+        val range = TimeRangeFilter.after(Instant.now().minus(Duration.ofDays(10 * 365)))
+        val ours = setOf(DataOrigin(context.packageName))
+        suspend fun <T : Record> read(type: KClass<T>): List<T> {
+            if (HealthPermission.getReadPermission(type) !in granted) return emptyList()
+            val out = mutableListOf<T>()
+            var page: String? = null
+            do {
+                val response = client.readRecords(ReadRecordsRequest(type, range, ours, pageSize = 1000, pageToken = page))
+                out += response.records
+                page = response.pageToken
+            } while (page != null)
+            return out
+        }
+        var n = 0
+
+        val hr = read(HeartRateRecord::class).flatMap { r -> r.samples.map { HeartRateSample(it.time.epochSecond, it.beatsPerMinute.toInt()) } }
+        dao.insertHeartRateIfMissing(hr); n += hr.size
+
+        // Steps were exported a minute at a time; a longer record (another export, an edit) is spread over its minutes.
+        val steps = read(StepsRecord::class).flatMap { r ->
+            val start = r.startTime.epochSecond / 60 * 60
+            val minutes = ((r.endTime.epochSecond - start + 59) / 60).coerceAtLeast(1)
+            (0 until minutes).map { i ->
+                val count = (r.count / minutes + if (i < r.count % minutes) 1 else 0).toInt()
+                ActivityMinute(start + i * 60, count, intensity = 0, kind = 0, heartRate = null)
+            }
+        }
+        dao.insertActivityIfMissing(steps); n += steps.size
+
+        for (r in read(SleepSessionRecord::class)) {
+            val start = r.startTime.epochSecond
+            val end = r.endTime.epochSecond
+            val nap = end - start < 3 * 3600
+            val zone = ZoneId.systemDefault()
+            val day = Instant.ofEpochSecond(if (nap) start else end).atZone(zone).toLocalDate().atStartOfDay(zone).toEpochSecond()
+            val stages = r.stages.map {
+                SleepStage(
+                    it.startTime.epochSecond, it.endTime.epochSecond, start,
+                    when (it.stage) {
+                        SleepSessionRecord.STAGE_TYPE_AWAKE, SleepSessionRecord.STAGE_TYPE_AWAKE_IN_BED, SleepSessionRecord.STAGE_TYPE_OUT_OF_BED -> SleepStage.AWAKE
+                        SleepSessionRecord.STAGE_TYPE_DEEP -> SleepStage.DEEP
+                        SleepSessionRecord.STAGE_TYPE_REM -> SleepStage.REM
+                        else -> SleepStage.LIGHT
+                    },
+                )
+            }
+            fun minutes(stage: Int) = (stages.filter { it.stage == stage }.sumOf { it.end - it.start } / 60).toInt().takeIf { stages.isNotEmpty() }
+            dao.insertSleepSessionsIfMissing(listOf(SleepSession(
+                start, end, day, nap,
+                deepMinutes = minutes(SleepStage.DEEP), lightMinutes = minutes(SleepStage.LIGHT),
+                remMinutes = minutes(SleepStage.REM), awakeMinutes = minutes(SleepStage.AWAKE),
+                wakeCount = stages.count { it.stage == SleepStage.AWAKE }.takeIf { stages.isNotEmpty() },
+            )))
+            dao.insertSleepStagesIfMissing(stages)
+            n += 1 + stages.size
+        }
+
+        val spo2 = read(OxygenSaturationRecord::class).map { Spo2Sample(it.time.epochSecond, it.percentage.value.toInt()) }
+        dao.insertSpo2IfMissing(spo2); n += spo2.size
+
+        val hrv = read(HeartRateVariabilityRmssdRecord::class).map { HrvSample(it.time.epochSecond, it.heartRateVariabilityMillis.toInt()) }
+        dao.insertHrvIfMissing(hrv); n += hrv.size
+
+        val rhr = read(RestingHeartRateRecord::class).map { RestingHeartRate(it.time.epochSecond, it.beatsPerMinute.toInt()) }
+        dao.insertRestingHrIfMissing(rhr); n += rhr.size
+        return n
     }
 }

@@ -48,7 +48,9 @@ fun YouScreen(
     onEditGoals: () -> Unit,
     onOpenStrap: () -> Unit,
     onExportCsv: () -> Unit,
+    onImportCsv: () -> Unit,
     onExportHealthConnect: () -> Unit,
+    onImportHealthConnect: () -> Unit,
 ) {
     val profile by vm.profile.collectAsState()
     val paired by vm.paired.collectAsState()
@@ -102,7 +104,11 @@ fun YouScreen(
                 )
                 LinkRow(PhosphorIcons.DownloadSimple, "Export CSV", "A zip of every synced record", onExportCsv)
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                LinkRow(PhosphorIcons.ArrowCircleUp, "Import CSV", "Restore a zip made by Export CSV", onImportCsv)
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 LinkRow(PhosphorIcons.Heartbeat, "Health Connect", "Copy your data to Android Health Connect", onExportHealthConnect)
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                LinkRow(PhosphorIcons.CloudArrowDown, "Restore from Health Connect", "Bring back what OpenStrap saved there", onImportHealthConnect)
             }
         }
 

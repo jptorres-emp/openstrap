@@ -7,48 +7,25 @@ import java.time.Instant
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
-/** Writes every table as a CSV file inside one zip. Timestamps are ISO-8601 UTC plus raw epoch seconds. */
+/**
+ * Writes every table as a CSV file inside one zip ([CSV_TABLES]). Timestamps are ISO-8601 UTC plus raw epoch seconds.
+ * [CsvImporter] reads the zip back.
+ */
 class CsvExporter(private val dao: HealthDao) {
 
     suspend fun exportZip(out: OutputStream, from: Long = 0, to: Long = Long.MAX_VALUE / 2) {
         ZipOutputStream(out).use { zip ->
             val w = zip.writer()
-            fun entry(name: String, header: String, rows: List<List<Any?>>) {
-                zip.putNextEntry(ZipEntry(name))
-                w.writeCsv(header, rows)
+            for (table in CSV_TABLES) {
+                zip.putNextEntry(ZipEntry(table.file))
+                w.writeCsv(table.header, table.rows(dao, from, to))
                 w.flush()
                 zip.closeEntry()
             }
-
-            entry("heart_rate.csv", "time,epoch,bpm,source",
-                dao.heartRateOnce(from, to).map { listOf(iso(it.timestamp), it.timestamp, it.bpm, it.source) })
-            entry("activity_minute.csv", "time,epoch,steps,intensity,kind,heart_rate",
-                dao.activityOnce(from, to).map { listOf(iso(it.timestamp), it.timestamp, it.steps, it.intensity, it.kind, it.heartRate) })
-            val sessions = dao.sleepSessionsOnce(from, to)
-            entry("sleep_session.csv", "start,end,start_epoch,end_epoch,nap,score,avg_hr,deep_min,light_min,rem_min,awake_min,wake_count",
-                sessions.map {
-                    listOf(iso(it.start), iso(it.end), it.start, it.end, it.nap, it.score, it.averageHeartRate,
-                        it.deepMinutes, it.lightMinutes, it.remMinutes, it.awakeMinutes, it.wakeCount)
-                })
-            entry("sleep_stage.csv", "session_start_epoch,start,end,stage",
-                sessions.flatMap { s -> dao.sleepStagesOnce(s.start) }
-                    .map { listOf(it.sessionStart, iso(it.start), iso(it.end), stageName(it.stage)) })
-            entry("spo2.csv", "time,epoch,percent",
-                dao.spo2Once(from, to).map { listOf(iso(it.timestamp), it.timestamp, it.percent) })
-            entry("stress.csv", "time,epoch,value",
-                dao.stressOnce(from, to).map { listOf(iso(it.timestamp), it.timestamp, it.value) })
-            entry("hrv.csv", "time,epoch,milliseconds",
-                dao.hrvOnce(from, to).map { listOf(iso(it.timestamp), it.timestamp, it.milliseconds) })
-            entry("resting_hr.csv", "day,epoch,bpm",
-                dao.restingHrOnce(from, to).map { listOf(iso(it.day), it.day, it.bpm) })
-            entry("skin_temperature.csv", "time,epoch,celsius",
-                dao.skinTemperatureOnce(from, to).map { listOf(iso(it.timestamp), it.timestamp, it.celsius) })
-            entry("breath_rate.csv", "time,epoch,breaths_per_minute",
-                dao.breathRateOnce(from, to).map { listOf(iso(it.timestamp), it.timestamp, it.perMinute) })
-            entry("pai.csv", "time,epoch,daily,total,resting_hr,max_hr",
-                dao.paiOnce(from, to).map { listOf(iso(it.timestamp), it.timestamp, it.daily, it.total, it.restingHeartRate, it.maxHeartRate) })
         }
     }
+
+    private suspend fun <T> CsvTable<T>.rows(dao: HealthDao, from: Long, to: Long) = read(dao, from, to).map(row)
 
     companion object {
         fun iso(epochSeconds: Long): String = Instant.ofEpochSecond(epochSeconds).toString()

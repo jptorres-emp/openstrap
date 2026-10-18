@@ -106,6 +106,25 @@ class DeviceViewModel(private val container: AppContainer) : ViewModel() {
         }.getOrElse { "Export failed: ${it.message}" }
     }
 
+    /** Restores a zip from [exportCsv]; rows already here are kept as they are, so it's safe to run twice. */
+    fun importCsv(uri: Uri) = viewModelScope.launch {
+        _message.value = runCatching {
+            val result = withContext(Dispatchers.IO) {
+                container.app.contentResolver.openInputStream(uri)!!.use { org.openstrap.app.export.CsvImporter(container.database.healthDao()).importZip(it) }
+            }
+            "Imported %,d records from %d files.".format(result.total, result.rows.size) +
+                (if (result.skipped > 0) " %,d unreadable rows skipped.".format(result.skipped) else "")
+        }.getOrElse { "Import failed: ${it.message}" }
+    }
+
+    /** Brings back what OpenStrap exported to Health Connect, filling gaps only. */
+    fun importHealthConnect() = viewModelScope.launch {
+        _message.value = runCatching {
+            val n = withContext(Dispatchers.IO) { container.healthConnect.import() }
+            if (n == 0) "Health Connect has no OpenStrap data to restore." else "Restored %,d records from Health Connect.".format(n)
+        }.getOrElse { "Health Connect import failed: ${it.message}" }
+    }
+
     fun exportHealthConnect() = viewModelScope.launch {
         _message.value = runCatching {
             val now = System.currentTimeMillis() / 1000

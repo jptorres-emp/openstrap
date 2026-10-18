@@ -115,6 +115,35 @@ interface HealthDao {
     @Query("SELECT * FROM sport_effect ORDER BY `end`")
     fun sportEffects(): Flow<List<SportEffectRow>>
 
+    // Restores from Health Connect: only fill gaps, never replace what the strap synced (which carries more).
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertHeartRateIfMissing(samples: List<HeartRateSample>)
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertActivityIfMissing(minutes: List<ActivityMinute>)
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertSleepSessionsIfMissing(sessions: List<SleepSession>)
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertSleepStagesIfMissing(stages: List<SleepStage>)
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertSpo2IfMissing(samples: List<Spo2Sample>)
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertHrvIfMissing(samples: List<HrvSample>)
+
+    // Whole tables, for the CSV backup.
+    @Query("SELECT * FROM workout_hr ORDER BY workoutStart, timestamp")
+    suspend fun workoutHeartRateAll(): List<WorkoutHeartRate>
+
+    @Query("SELECT * FROM strap_readiness ORDER BY day")
+    suspend fun strapReadinessAll(): List<StrapReadinessRow>
+
+    @Query("SELECT * FROM recovery_hr ORDER BY workoutStart")
+    suspend fun recoveryHeartRateAll(): List<RecoveryHeartRateRow>
+
     @Query("SELECT * FROM hrv_sdnn WHERE timestamp BETWEEN :from AND :to ORDER BY timestamp")
     fun hrvSdnn(from: Long, to: Long): Flow<List<HrvSdnnSample>>
 

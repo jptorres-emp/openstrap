@@ -258,7 +258,7 @@ private fun Change(score: Score, withNote: Boolean) {
 }
 
 /**
- * One of the other two scores under the gauge, tappable: its dot and label on top, its value and change centred below. Each line
+ * One of the other two scores under the gauge, tappable: its label on top and its value and change below, all centred. Each line
  * has the chip's whole width, so neither wraps or gets cut at large font sizes.
  */
 @Composable
@@ -267,21 +267,14 @@ private fun ScorePill(score: Score, onClick: () -> Unit, modifier: Modifier = Mo
         modifier
             .glass(GlassRowShape, onClick, scale = 0.97f)
             .padding(start = 12.dp, end = 12.dp, top = 9.dp, bottom = 10.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            // The same glowing dot the score has everywhere else, so the colour reads as its legend.
-            Canvas(Modifier.size(10.dp)) {
-                drawCircle(score.color.copy(alpha = 0.25f), size.minDimension / 2)
-                drawCircle(score.color, size.minDimension * 0.27f)
-            }
-            Spacer(Modifier.width(7.dp))
-            Text(
-                score.label, color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.labelSmall,
-                maxLines = 1, overflow = TextOverflow.Ellipsis,
-            )
-        }
+        Text(
+            score.label, color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.labelSmall,
+            maxLines = 1, overflow = TextOverflow.Ellipsis,
+        )
         Spacer(Modifier.height(2.dp))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Text("${score.value ?: "-"}", color = Color.White, style = MaterialTheme.typography.titleLarge, maxLines = 1, softWrap = false)
             if (score.change != null) {
                 Spacer(Modifier.width(8.dp))

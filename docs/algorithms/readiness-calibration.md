@@ -44,15 +44,15 @@ adb shell run-as org.openstrap.app cat databases/openstrap.db-wal > openstrap.db
 sqlite3 openstrap.db "SELECT date(day, 'unixepoch', 'localtime'), score, hrvScore, restingHrScore, skinTemperatureScore, breathingScore, sleepHrv, sleepRestingHr FROM strap_readiness ORDER BY day"
 ```
 
-## Check-in, tags and nightly inputs
+## Check-in and nightly inputs
 
 Agreement with the strap is agreement with another unvalidated score, so the review also needs a within-user test ([evidence-review.md](evidence-review.md), implementation step 1):
 
-* **Morning check-in** (Recovery screen): how you feel, 1 (poor) to 5 (great). Table `check_in`, one row per local day.
-* **Tags** (same panel): alcohol, travel, vaccination, hard session, feeling unwell (stored as `sick`). Table `day_tag`, one row per day and tag.
+* **Morning check-in** (Today screen, before noon): how you feel, 1 (poor) to 5 (great). Table `check_in`, one row per local day.
+* **Tags** were removed from the app: they changed no score. Old rows in table `day_tag` are still exported, imported and written to the backtest CSV.
 * **OpenStrap's own nightly inputs**, logged each time the day's score is computed. Table `night_metrics`: `hrvLn` (`hrv_n`, ln of the mean gated RMSSD, 5–200 ms), `rhrLowest30` (`rhr_n`), `rhrMeanSleep`, `rhrP10`, the sample counts, and the strap's `sleepHrv` / `sleepRestingHr` for the same night.
 
-All three are in the CSV backup (`check_in.csv`, `day_tag.csv`, `night_metrics.csv`).
+All of these are in the CSV backup (`check_in.csv`, `day_tag.csv`, `night_metrics.csv`).
 
 ## Backtest harness
 

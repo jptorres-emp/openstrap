@@ -1,0 +1,596 @@
+# How OpenStrap calculates everything (v1.2.0)
+
+Every number OpenStrap works out itself, explained in plain words. Written from the v1.2.0 code (tag `v1.2.0`, 2026-10-18).
+
+* For research sources and the reasoning behind each choice, see [recovery.md](recovery.md) and [evidence-review.md](evidence-review.md).
+* For the planned check against the strap's own Readiness, see [readiness-calibration.md](readiness-calibration.md).
+* Code lives in `app/src/main/kotlin/org/openstrap/app/data/`. Most of it is in `Recovery.kt`, and `RecoveryEngine.kt` feeds it from the database.
+
+OpenStrap is a wellness app. None of these numbers is a medical measurement.
+
+## Contents
+
+1. [What comes from the strap, and what we calculate](#1-what-comes-from-the-strap-and-what-we-calculate)
+2. [Shared building blocks](#2-shared-building-blocks)
+3. [The night: turning sleep into numbers](#3-the-night-turning-sleep-into-numbers)
+4. [Your heart-rate settings: resting and maximum](#4-your-heart-rate-settings-resting-and-maximum)
+5. [Readiness (0–100, each morning)](#5-readiness-0100-each-morning)
+6. [Body signals off baseline](#6-body-signals-off-baseline)
+7. [Charge (0–100, minute by minute)](#7-charge-0100-minute-by-minute)
+8. [Training load, Strain and fitness/fatigue](#8-training-load-strain-and-fitnessfatigue)
+9. [Sleep screen](#9-sleep-screen)
+10. [Activity: steps, distance, active minutes](#10-activity-steps-distance-active-minutes)
+11. [Energy expenditure (calories)](#11-energy-expenditure-calories)
+12. [Estimated fitness (VO2max) and fitness age](#12-estimated-fitness-vo2max-and-fitness-age)
+13. [Workouts](#13-workouts)
+14. [Trends and "your normal" ranges](#14-trends-and-your-normal-ranges)
+15. [Known gaps and inconsistencies in v1.2.0](#15-known-gaps-and-inconsistencies-in-v120)
+
+---
+
+## 1. What comes from the strap, and what we calculate
+
+**Taken from the strap as is:** heart rate, steps, sleep sessions and stages, RMSSD (HRV) samples, SpO₂, stress (0–100), skin temperature, breathing rate, the daily resting HR, PAI, the strap's sleep score, its sleep-apnea summary (desaturation event count), and workout records with their training effect.
+
+**Calculated by OpenStrap:** everything in sections 3–14: Readiness, body-signal alerts, Charge, training load, Strain, fitness/fatigue, sleep score (when the strap gave none), sleep debt, sleep regularity, sleep-health count, active minutes, distance, calories, VO2max, workout zones and recovery HR.
+
+**Logged but not used in any score:** the strap's own Readiness and its parts, and your morning check-in (1–5, asked on Today before noon). They're kept for the calibration review.
+
+---
+
+## 2. Shared building blocks
+
+These few tools are used all over the app.
+
+### Personal baseline ("your usual")
+
+Most scores compare today with your own history, not with population averages.
+
+* **Centre** = the median of your past values (the middle one when sorted).
+* **Spread** = 1.4826 × the median distance from that centre (the "MAD"). For normal data, this is about the same as one standard deviation.
+* The spread never goes below a **floor**, so a very steady history can't turn a tiny change into a huge one:
+
+| Signal | Floor |
+|---|---|
+| HRV (on the log scale) | 0.05 |
+| Resting heart rate | 2 bpm |
+| Breathing rate | 0.5 breaths/min |
+| Skin temperature | 0.15 °C |
+| Blood oxygen | 0.5 % |
+
+* A baseline needs at least 7 values, and it looks back over at most 60 nights.
+* **Why median and MAD, not mean and SD:** one bad week (illness, alcohol, a loose strap) would drag a mean with it and become "normal". The median barely moves.
+
+### z-score
+
+z = (today − centre) ÷ spread. It means "how many spreads away from usual". Where lower is better (resting HR), the sign is flipped so that a positive z always means better.
+
+### Dead zone
+
+Changes smaller than half a spread are treated as noise:
+
+z_eff = sign(z) × max(0, |z| − 0.5)
+
+So z = 0.4 counts as 0, and z = 1.2 counts as 0.7.
+
+### z → score (0–100)
+
+score = 100 ÷ (1 + e^−(1.19·z + ln 4))
+
+| z | Score | Meaning |
+|---|---|---|
+| +1 | 93 | better than usual |
+| 0 | 80 | a normal night |
+| −1 | 55 | worse than usual |
+| −2 | 27 | much worse |
+
+A normal night scores 80, not 100, which leaves room to show a better-than-usual one.
+
+### Percentile
+
+Values are sorted and the p-th percentile is read off by linear interpolation. The median is the 50th.
+
+### Heart-rate reserve (HRR)
+
+How hard your heart is working, from 0 (resting) to 1 (maximum):
+
+HRR = (HR − resting HR) ÷ (max HR − resting HR), kept between 0 and 1.2
+
+This is the intensity measure behind training load, Charge, active minutes and calories. Section 4 explains where resting and max HR come from.
+
+### TRIMP (training impulse) per minute
+
+Banister's formula. For one minute at reserve x:
+
+* men, or sex not set: x × 0.64 × e^(1.92·x)
+* women: x × 0.86 × e^(1.67·x)
+
+The curve rises steeply, so one minute at 80 % counts about 3× as much as one at 50 %. Example: an hour at 60 % HRR (men's curve) ≈ 73 TRIMP.
+
+### Exponentially weighted average (EWMA)
+
+A running average where recent days count more: each day, v = λ·today + (1 − λ)·v, with λ = 2 ÷ (N + 1) for an N-day average.
+
+### Days and nights
+
+* A day runs from local midnight to midnight.
+* A night belongs to the **morning it ended on**. The main sleep of a morning is the longest session that isn't a nap.
+* Naps count toward the day they started on.
+* The strap's sleep-apnea summary counts toward the day of its time + 2 hours.
+* Time windows allow two hours of slack so a daylight-saving change doesn't drop a day.
+
+---
+
+## 3. The night: turning sleep into numbers
+
+For each main sleep, OpenStrap works out the following (`RecoveryEngine.night`).
+
+**Artefact filters**
+* Heart-rate minutes outside 30–220 bpm are ignored.
+* RMSSD samples outside 5–200 ms are ignored.
+
+| Value | How it's calculated |
+|---|---|
+| **Time asleep** | Deep + light + REM minutes from the strap. Without stage totals: session length − awake minutes. |
+| **WASO** (wake after sleep onset) | Awake minutes between the start of the first sleep stage and the end of the last. Empty without stages. |
+| **HRV** | Mean of the night's RMSSD samples. For scoring it's put on the log scale: **ln(mean RMSSD)**. |
+| **Resting HR** | The lowest 30-minute average HR in the sleep. The window needs ≥ 20 minutes of data. |
+| **Sleep-mean HR** | Average of all HR minutes in the sleep (used by body-signal alerts). |
+| **10th-percentile HR** | Logged for the calibration review only. |
+| **Lowest-HR time** | The middle of the lowest 10-minute average (for the recovery index). |
+| **Skin temperature** | Mean of the night's readings, only with ≥ 30 of them. |
+| **Breathing rate** | Mean of the night's readings. |
+| **Blood oxygen** | Mean of the night's sleep SpO₂ readings, only with ≥ 5 of them. |
+| **Breathing disturbances** | Desaturation events × 60 ÷ minutes asleep (events per hour). Needs ≥ 2 h asleep. |
+
+### When a night is "valid"
+
+OpenStrap's own HRV and resting HR are only trusted, and only enter a baseline, when the night has all of:
+
+* a main sleep of at least 3 hours
+* at least 6 good RMSSD samples
+* at least 120 minutes of good heart rate
+
+On an invalid night, the strap's own nightly HRV and resting HR are **shown** instead, labelled as the strap's, but they're never scored.
+
+---
+
+## 4. Your heart-rate settings: resting and maximum
+
+### Daytime resting HR (for heart-rate reserve)
+
+Heart-rate reserve is defined against resting HR while **awake**. Using the much lower sleeping minimum would make every waking minute look harder than it was. In order of preference:
+
+1. The median of the strap's daily resting HR over the last 14 days.
+2. Otherwise, the median of the nightly resting HR over those 14 days, plus a typical day–night gap. The gap is the median of (daily − nightly) on recent days that have both, else 3 bpm.
+3. Otherwise, 60 bpm.
+
+### Maximum HR
+
+One rule for the whole app: Readiness, Charge, load, active minutes, calories, and workout zones when a workout has no max HR of its own (section 13).
+
+1. A **tested** max you entered in the profile (120–230 bpm) always wins.
+2. Otherwise, an estimate:
+   * from your age: **208 − 0.7 × age** (Tanaka)
+   * without an age: the strap's own value from the Zepp profile (140–225)
+   * otherwise 190
+3. The estimate is **raised, never lowered**, when you've really gone higher, by at most 15 bpm. "Really" means:
+   * Each day's peak is the highest heart-rate minute in 30–220 bpm that has a neighbouring minute within 10 bpm of it. A lone spike isn't a heartbeat.
+   * The strap's daily exercise maximum can raise a day's peak, but only when it's in 30–220 bpm and within 10 bpm of that day's filtered minute peak. On a day with no filtered minute peak it's ignored, because nothing backs it up.
+   * Two separate days must reach within 3 bpm of each other. The lower of those two is your observed peak, so one freak day can never set it.
+   * Days come from the last 90.
+
+---
+
+## 5. Readiness (0–100, each morning)
+
+"How far last night sat from your own normal." It's a comparison, not a prediction.
+
+### Step 1: protect the baselines
+
+The body-signal check (section 6) runs first. Any earlier night in **Watch** or **Alert** is left out of every Readiness baseline, so a sick week can't become your new normal.
+
+### Step 2: learning phases
+
+The phase is set by how many valid nights are in the HRV or resting-HR baseline, whichever has more.
+
+| Valid nights | What you see |
+|---|---|
+| 0–6 | HRV and resting HR withheld. The strap's own Readiness is shown as "Strap's estimate". |
+| 7–13 | Scored, labelled "learning" |
+| 14–27 | Scored |
+| 28+ | Labelled "calibrated" |
+
+### Step 3: score each contributor
+
+Each contributor scores 0–100. Weights are a design choice, and the evidence review explains them.
+
+| Contributor | Weight | How it's scored |
+|---|---|---|
+| **HRV balance** | 30 % | 0.4 × z(tonight) + 0.6 × z(7-night average), on the log scale, through the dead zone, then z → score. The 7-night average needs ≥ 3 valid nights in the past 7 days (tonight included); below 5 it's marked "thin". Without it, tonight alone. The detail shows the % difference from usual. |
+| **Resting heart rate** | 22 % | Tonight's lowest 30-minute average vs baseline, flipped so lower is better, through the dead zone, then z → score. |
+| **Last night's sleep** | 16 % | The strap's sleep score when it gave one, otherwise OpenStrap's (section 9). |
+| **Sleep balance** | 12 % | 100 − 25 points per hour of sleep debt (section 9), floored at 0. So 1 h of debt → 75 and 2 h → 50. |
+| **Body temperature** | 6 % | Distance from your usual nightly skin temperature, in **either** direction, through the dead zone, then z → score. |
+| **Breathing rate** | 4 % | Like temperature: a change either way counts. |
+| **Previous day's load** | 4 % | Yesterday's training load ÷ your usual (fitness, section 8, up to the day before). A ratio up to 1.5 → 100, then −25 points per extra 1.0, never below 30. Needs 7 days of load. |
+| **Blood oxygen** | 3 % | Only a **drop** counts: 100 − 25 points per % below your usual, after a 1 % free band. So −2 % → 75 and −3 % → 50. Higher than usual is no better. |
+| **Recovery index** | 3 % | When the night's lowest HR came. In the first half of the night → 100. Later, it loses 1.2 points per % of the night after halfway, never below 40. |
+
+Temperature, breathing and blood-oxygen baselines use all usable past nights, not only valid ones, and need 7 of them.
+
+### Step 4: combine
+
+* **No HRV and no resting HR contributor → no score.** Sleep alone isn't readiness. You see the sleep contributor and the strap's estimate instead ("withheld").
+* Otherwise: **Readiness = weighted average of the contributors present.** The weights are re-scaled over what's there, so a missing signal doesn't count as zero.
+* **Red-flag cap:** if any body signal (HRV, resting HR, temperature, breathing, blood oxygen) scored below 40, Readiness can be at most that score + 30. One very bad signal shouldn't be averaged away by a good night's sleep.
+* **Alert cap:** during a body-signal Alert, Readiness is at most 55.
+
+### Extras shown with Readiness
+
+* **HRV normal range:** the 7-night HRV is "below", "within" or "above" your usual ± 0.5 spread.
+* **Data-quality notes:** shown when OpenStrap's and the strap's values disagree by more than 15 % (HRV) or 3 bpm (resting HR).
+* **7-day trend:** Readiness recalculated for each of the last 7 mornings, each with the daily loads up to the day before it, so a past day shows what that morning showed. (Loads use today's resting and max HR, so a change to those since can still move a past value slightly.)
+
+### Breathing disturbances card (not part of Readiness)
+
+Tonight's events per hour, next to the median of your earlier nights (up to 60, shown once there are 7). It shows no severity words, because those belong to apnea diagnosis.
+
+---
+
+## 6. Body signals off baseline
+
+A night-by-night watch on resting HR, skin temperature and breathing rate, for "something's off, take it easy". Each night is **Normal**, **Watch** (shown in the app) or **Alert** (one push notification, Readiness capped at 55).
+
+### Baselines for this check
+
+* Earlier nights only, skipping the 2 most recent nights and any night that wasn't Normal.
+* The last 28 such nights. Resting HR and HRV use valid nights only.
+* No alerts at all until resting HR has 14 nights (a 28-night window covers a whole menstrual cycle).
+* Resting HR here is the **sleep-mean HR**, not the lowest 30 minutes. Our own value is used on a valid night, else the strap's.
+
+### Flags each night
+
+| Flag | Rule (difference from usual) | Counts as |
+|---|---|---|
+| Resting HR flag | up ≥ 4 bpm **and** ≥ 2 spreads | core vote (cardiac) |
+| Resting HR watch | up ≥ 3 bpm | watch only |
+| Temperature flag | up ≥ 0.5 °C **and** ≥ 2 spreads | core vote (thermal) |
+| Breathing flag | up ≥ 2 /min **and** ≥ 2 spreads | core vote (respiratory) |
+| HRV support | z ≤ −2 | supports resting HR, never a vote of its own |
+
+Only signals from **different families** count as separate votes. 0.5 °C is used because the normal luteal-phase rise (about 0.3 °C at the finger) would otherwise fire every cycle.
+
+### Deciding the state
+
+**Alert** when any of these holds:
+* a resting-HR flag on two nights in a row
+* core flags from 2 or more families on the same night
+* a core flag tonight, and core flags on at least 3 of the last 7 nights
+* breathing up ≥ 3 /min (and ≥ 2 spreads): an alert on its own
+
+Once on, an Alert stays until **2 nights in a row without a core flag**.
+
+**Watch** when there's any core flag, or a resting-HR watch together with HRV support.
+
+**Normal** otherwise.
+
+**Gaps:** one missing night is bridged; two or more missing nights reset the run.
+
+**Likely cause:** a hard training day the day before (more than 1.5× your 28-day average load) is named next to an alert, but never cancels it.
+
+---
+
+## 7. Charge (0–100, minute by minute)
+
+A body-battery: sleep fills it, and the day drains it.
+
+### How it runs
+
+* The simulation starts **48 hours before** the selected day at 50. Two nights of sleep wash the starting guess out.
+* Every minute gets one state, checked **in this order**:
+
+| State | When | Change per minute |
+|---|---|---|
+| **Sleep** | inside a sleep stage | + 0.006 × stage weight × relaxation × HRV factor × (100 − charge) |
+| **No data** | no heart rate (strap off) | 0, the value holds |
+| **Exercise** | HRR ≥ 30 % | − 0.04 − 0.32 × TRIMP of that minute |
+| **Exercise recovery** | after exercise, while HR isn't rising | − 0.04 |
+| **Activity** | HRR ≥ 20 %, or ≥ 60 steps that minute | − 0.04 − 0.32 × TRIMP of that minute |
+| **Stress** | stress ≥ your threshold for 3+ minutes in a row, awake | − 0.04 − 0.007 × (stress − threshold) |
+| **Relax** | stress < 25 and < 10 steps | − 0.04 + 0.25 × 0.006 × 0.8 × (100 − charge) |
+| **Rest** | anything else awake | − 0.04 (≈ 2.4 per hour) |
+
+Charge is always kept within 0–100.
+
+**Sleep details**
+* **Stage weight:** deep 1.0, light 0.8, REM 0.65, awake-inside-sleep 0.1.
+* **Relaxation:** 1.2 − 0.04 × (HR − that night's resting HR), kept between 0.5 and 1.2. A calmer heart recharges better.
+* **HRV factor:** 0.75 + 0.25 × (tonight's HRV contributor ÷ 80), kept between 0.6 and 1.1.
+* Recharge is a share of the room left, so it slows as you fill up. About 30 → 92 over 7.5 hours of normal sleep.
+
+**Exercise recovery details**
+* An "after-burn" tally adds up exercise TRIMP and halves about every 20 minutes once exercise stops (× 0.966 per minute).
+* While the tally is above 5 and HR isn't climbing (at most 2 bpm above the last reading), raised HR counts as recovery, not stress.
+
+**Stress readings:** a minute uses the latest stress reading from the past 10 minutes.
+
+### Your personal stress threshold
+
+The point where the strap's stress score starts to drain Charge.
+
+* Default: **60**, where Zepp's "medium" band begins.
+* Personal: built from **calm readings** over the last 14 days. A calm reading is awake, under 10 steps that minute, and HRR under 20 %.
+* Threshold = median calm reading + 10, kept within 50–70.
+* Needs readings on at least 3 days and at least 60 readings.
+
+### What the screen shows
+
+* Charge now (the last minute with data), Charge at wake, and the day's highest and lowest.
+* **Recharged:** the total gained during the day.
+* **Drained:** split into exercise, stress and everyday living. In exercise and stress minutes, the basic 0.04 part goes to "living" and the rest to exercise or stress.
+* Nothing is shown until the simulation has seen at least one sleep, because without one the number would only reflect the starting guess.
+
+---
+
+## 8. Training load, Strain and fitness/fatigue
+
+### Daily training load (TRIMP)
+
+* Add up TRIMP over the day's **awake** minutes at HRR ≥ 20 %. Below that it's everyday living.
+* A minute only counts when at least 3 of the last 5 minutes (itself included) are also ≥ 20 %, so single PPG spikes don't add load.
+* For history, days with under 8 hours of heart-rate data are skipped (strap mostly off). Up to 90 days are used.
+* Today's load is the running total so far.
+
+### Strain (0–21)
+
+Strain = 21 × (1 − e^(−TRIMP ÷ 180))
+
+A fixed curve, so a 12 today means the same as a 12 last year.
+
+| TRIMP | Strain |
+|---|---|
+| 50 | 5.1 |
+| 100 | 9.0 |
+| 180 | 13.3 |
+| 360 | 18.2 |
+
+**"vs your usual":** the share of your last 90 worn days with a load at or below today's (0–100). Needs 7 days.
+
+### Fitness, fatigue and form
+
+Classic 42-day / 7-day model, over worn days only (an unworn day holds rather than decays):
+
+* **Fitness (CTL)** moves toward each day's load by 1 − e^(−1/42) ≈ 2.4 % a day.
+* **Fatigue (ATL)** moves the same way by 1 − e^(−1/7) ≈ 13.3 % a day.
+* **Form** = fitness − fatigue, as they stood before the latest day.
+* Both start at the average of the first week, so a short history doesn't start from zero. Shown once there are 7 days of load.
+
+### Acute:chronic ratio (Load screen only, labelled contested)
+
+* Acute = 7-day EWMA of all days.
+* Chronic = 28-day EWMA of the days **before** the last 7, so this week isn't counted twice.
+* Ratio = acute ÷ chronic, with the chronic value floored at 20 to avoid dividing by almost nothing.
+* Needs 21 days. It's descriptive only and never enters Readiness.
+
+---
+
+## 9. Sleep screen
+
+### OpenStrap's sleep score
+
+Used only when the strap didn't give its own score:
+
+**Sleep score = 0.7 × duration + 0.3 × continuity**
+
+* **Duration** = 100 × (time asleep ÷ need)², capped at 100. 7 h of an 8 h need → 77, and 6 h → 56.
+* **Continuity** = 100 − (WASO − 30 min) × 100 ÷ 90, kept within 0–100. Up to 30 minutes awake is free, and 120 minutes scores 0.
+* Without stages (no WASO), duration alone.
+* Sleep stages are shown but **not scored**: consumer devices agree poorly with lab staging.
+
+### Sleep need
+
+* 8 h for ages 18–64, 7 h 30 m from 65.
+* You can set your own between 7 h and 9 h in the profile.
+
+### Sleep debt
+
+Built over the last 14 nights, oldest first. Naps count, and missing nights are skipped. For each night, shortfall d = need − total sleep:
+
+* **Short night (d ≥ 0):** debt = debt × 0.906 + d
+* **Long night (d < 0):** debt = max(0, debt × 0.906 − min(half the surplus, 60 min))
+
+0.906 means old debt halves over 7 nights. A long night only repays half its extra sleep, at most an hour, because one long lie-in doesn't fully undo a short week. Needs 7 of the 14 nights.
+
+### Sleep Regularity Index (SRI)
+
+* Each day is split into 1,440 one-minute slots from **noon to noon**, so a night isn't cut at midnight.
+* Each slot is marked asleep (deep, light, REM, naps included), awake (an awake stage, or the strap was worn), or missing.
+* Each slot is compared with the same slot the next day, over 8 days (7 pairs). Only pairs where both minutes are known count.
+* **SRI = −100 + 200 × (matching pairs ÷ valid pairs).** 100 means an identical schedule every day.
+* Withheld under 120 hours of valid pairs. Then the fallback is the spread (SD) of your sleep midpoints over the last 7 days, from at least 4 sleeps.
+* Bands: under 72 irregular, 72–78 fair, 79–86 regular, 87+ very regular.
+
+### Sleep-health count (0–3)
+
+One point each for:
+* **Duration:** 7–9 h asleep (7–8.5 h from 65).
+* **Continuity:** WASO ≤ 30 min, or ≥ 90 % of the sleep period actually asleep.
+* **Regularity:** SRI ≥ 72, or midpoint spread under 1 hour.
+
+The sleep midpoint is flagged when it falls outside 01:30–04:30, but it's never scored.
+
+### Bedtime/wake regularity score (Sleep screen panel)
+
+A simpler, Zepp-style score over the last 7 nights. It needs 5 of them.
+
+* Spread = average of the standard deviation of bedtime and the standard deviation of wake time, in minutes.
+* **Score = 100 × (1 − spread ÷ 120)**, kept within 0–100. 15 min spread ≈ 88, 30 min = 75, 1 h = 50.
+* Bands: 90+ very regular, 80–89 regular, 60–79 fairly regular, under 60 irregular.
+
+### Sleep vitals "usual / higher / lower"
+
+Last night's HRV, blood oxygen, breathing and skin temperature are compared with the previous 13 nights:
+* "Usual" = within the mean ± 1 standard deviation.
+* Needs 7 nights; before that it says "Learning n/7 nights".
+
+---
+
+## 10. Activity: steps, distance, active minutes
+
+### Steps today
+
+The synced minute-by-minute steps, plus the strap's live counter. A believable live total is used directly. On firmware 3.25 the live total carries a large fixed offset, so OpenStrap anchors it: it remembers the live reading each time the synced total changes, and adds only the steps counted since.
+
+* A warning shows when the strap's daily total and the sum of minutes differ by more than 5 %.
+* **Active hours:** hours of the day with at least 250 steps.
+
+### Default step goal
+
+8,000 a day, or 7,000 from age 60. That's where most of the measured health benefit is reached.
+
+### Distance
+
+Steps × step length, from your height:
+* under 120 steps/min: 0.414 × height
+* 130+ steps/min: 0.45 × height
+* in between, a straight line between the two
+
+It's an estimate, always shown with "≈". It needs a height.
+
+### Moderate-to-vigorous minutes (MVPA)
+
+Minutes are counted in two passes, and no minute counts twice.
+
+1. **By cadence:** awake minutes at ≥ 100 steps/min (at every age), in runs of at least 2 minutes in a row. At ≥ 130 steps/min a minute is vigorous.
+2. **By heart rate**, for effort without steps (cycling, rowing): awake runs of at least 10 minutes at HRR ≥ 40 %, with under 100 steps/min or inside a workout. At HRR ≥ 60 % a minute is vigorous. These are marked "HR-assisted".
+
+**Weekly target:** moderate + 2 × vigorous over the last 7 days, against 150 minutes (WHO).
+
+Minutes with more than 250 steps are treated as bad data.
+
+---
+
+## 11. Energy expenditure (calories)
+
+It needs weight, height and age, and is built minute by minute on top of your resting burn. No allowance for digesting food is added.
+
+### Resting burn (BMR, Mifflin–St Jeor)
+
+BMR (kcal/day) = 10 × weight kg + 6.25 × height cm − 5 × age + sex term
+
+The sex term is +5 for men and −161 for women. With sex not set, it's −78 (halfway).
+
+b = BMR ÷ 1,440 is the resting burn per minute.
+
+### Each minute with data
+
+Taken in this order:
+
+| Minute | kcal |
+|---|---|
+| Inside a recorded workout | the workout's own calories spread evenly over its minutes, never below b |
+| Asleep | 0.95 × b |
+| ≥ 60 steps | b + extra for the activity's MET (below) |
+| A few steps, or steps in a neighbouring minute | 1.3 × b |
+| Still | 1.15 × b |
+
+**Extra for an activity** = (MET − 1) × 3.5 × weight ÷ 200 kcal/min. Starting from BMR means rest isn't counted twice.
+
+**Walking MET by cadence:**
+* Up to 60 years: 60 steps/min → 2, 100 → 3, 130 → 6, with straight lines between, held at 6 above 130.
+* From 61: 100 → 3, 110 → 4, 120 → 5, 130 → 6.
+
+**Running:** 145+ steps/min in this and a neighbouring minute uses the ACSM running equation, MET = (3.5 + 0.2 × speed in m/min) ÷ 3.5. Speed is cadence × step length.
+
+**Heart-rate boost ("HR-assisted"):** for awake, non-workout minutes with under 20 steps, in runs of at least 10 minutes at HRR ≥ 40 %:
+* MET = 1 + HRR × (VO2max ÷ 3.5 − 1), capped at 6.
+* VO2max is your estimate (section 12), else 35.
+* This replaces the step-based value only when it's higher.
+
+### Day totals
+
+* Only minutes with data are added up. Under 20 hours of data, the day is marked **partial**.
+* **Activity level (PAL)** = total ÷ BMR on a full day. Outside 1.2–2.5 it's flagged as likely a wear or profile problem.
+
+---
+
+## 12. Estimated fitness (VO2max) and fitness age
+
+A non-exercise estimate (Jurca et al. 2005), recalculated weekly as of the latest Monday.
+
+### Formula
+
+METs = 2.77 × (1 if male, 0 if female) − 0.10 × age − 0.17 × BMI − 0.03 × resting HR + activity score + 18.07
+
+VO2max (ml/kg/min) = METs × 3.5
+
+| Activity answer (profile) | Score |
+|---|---|
+| Inactive, little beyond daily life | 0 |
+| Light activity ≥ 10 min, 5+ days a week | 0.32 |
+| Aerobic exercise 20–60 min a week | 1.06 |
+| Aerobic exercise 1–3 h a week | 1.76 |
+| Aerobic exercise over 3 h a week | 3.03 |
+
+**Inputs**
+* Resting HR is the median of your last 7 nightly resting HRs (valid nights). It needs at least 5 nights in the last 2 weeks.
+* BMI = weight ÷ height².
+
+**Shown as a range:** the value ± 1.45 METs (about ± 5 ml/kg/min), rounded to whole numbers, never a decimal.
+
+**Withheld when** any of these holds:
+* age is outside 20–79
+* sex isn't set
+* weight and height weren't entered in the last 90 days
+* the activity question wasn't answered in the last 6 months
+* you're taking beta-blockers or are pregnant (resting HR doesn't reflect fitness then)
+* there aren't enough resting-HR nights
+
+### Percentile band (FRIEND 2022)
+
+Your estimate is compared with the treadmill reference table for your age decade and sex (Kaminsky et al. 2022). Bands: below 30th, 30th–50th, 50th–70th, 70th–90th, top 10 %.
+
+### Fitness age
+
+* The age at which the median person of your sex has your VO2max.
+* Medians are placed at each decade's midpoint (25, 35 … 85) and joined with straight lines.
+* Shown as a range of ± 10 years, kept within 20–80, e.g. "typical of a woman aged about 35–55".
+
+---
+
+## 13. Workouts
+
+* **Workout end:** the strap's sport-effect end time. Without it, the last HR sample minus 3 minutes (the strap keeps recording 3 minutes for recovery HR, and never before the recorded end). Otherwise the recorded end.
+* **Heart-rate zones** are % of max HR:
+
+| Zone | % of max HR |
+|---|---|
+| 1 | 50–60 |
+| 2 | 60–70 |
+| 3 | 70–80 |
+| 4 | 80–90 |
+| 5 | 90+ |
+
+  * Time between samples counts toward the zone of the earlier sample, at most 5 s per gap.
+  * Max HR here is the strap's value from the workout. Without it, your usual max HR from section 4 (tested value, else Tanaka or the strap's value, raised by observed peaks).
+* **Recovery HR:** HR at the end minus HR 60 s and 120 s later. Each reading is a median over ± 2 s. It's only treated as meaningful when you finished at ≥ 65 % of max HR.
+* Training effect and the strap's recovery time come from the strap unchanged.
+
+---
+
+## 14. Trends and "your normal" ranges
+
+* **Daily values** for charts: the average of the day's samples (the total for steps), with the day's lowest and highest. Resting HR uses the strap's one value per day.
+* **Year view:** days are averaged into Monday-starting weeks.
+* **"Your normal"** on metric screens is the mean ± 1 standard deviation of the last 30 days. It needs 7 days with data. Today is "above", "within" or "below".
+* **Weekly resting-HR chart:** the strap's daily resting HR. Without it, OpenStrap estimates one as the day's lowest 30-minute average HR. That needs ≥ 6 hours of data, ≥ 5 samples in the window, and the window covering at least 80 % of 30 minutes. These days are marked as estimated.
+
+---
+
+## 15. Known gaps and inconsistencies in v1.2.0
+
+Found while writing this document. These are not bugs in the formulas above, but places where two parts of the app disagree or a setting isn't wired up. Worth a look before the 2026-10-30 review.
+
+1. **Two regularity measures.** The Sleep screen's bedtime/wake score (section 9) and the SRI behind the sleep-health count can disagree, since they measure different things.
+2. **Two resting-HR definitions on purpose.** Readiness uses the lowest 30-minute average; body-signal alerts use the sleep-mean HR. This is intended: the calibration review will pick one.

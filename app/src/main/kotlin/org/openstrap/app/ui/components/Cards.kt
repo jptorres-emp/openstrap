@@ -200,7 +200,13 @@ fun SegmentedTabs(options: List<String>, selected: Int, onSelect: (Int) -> Unit,
 
 /** Settings-style row with a title, optional subtitle and trailing content. */
 @Composable
-fun SettingRow(title: String, subtitle: String? = null, onClick: (() -> Unit)? = null, trailing: @Composable () -> Unit = {}) {
+fun SettingRow(
+    title: String,
+    subtitle: String? = null,
+    onClick: (() -> Unit)? = null,
+    titleStyle: androidx.compose.ui.text.TextStyle = MaterialTheme.typography.bodyLarge,
+    trailing: @Composable () -> Unit = {},
+) {
     Row(
         Modifier
             .fillMaxWidth()
@@ -209,7 +215,7 @@ fun SettingRow(title: String, subtitle: String? = null, onClick: (() -> Unit)? =
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge)
+            Text(title, style = titleStyle)
             if (subtitle != null) Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         trailing()

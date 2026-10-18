@@ -336,13 +336,22 @@ private fun PairPanel(vm: DeviceViewModel, scan: ScanUiState, onRequestBluetooth
 
 /** Protocol log, so behaviour on real hardware can be shared when reporting issues. */
 @Composable
-internal fun DiagnosticsPanel(lines: List<String>) {
+internal fun DiagnosticsPanel(lines: List<String>, asRow: Boolean = false) {
     var expanded by rememberSaveable { mutableStateOf(false) }
     val context = LocalContext.current
     Panel {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.weight(1f).clickable { expanded = !expanded }) {
-                PanelHeader("Diagnostics", PhosphorIcons.TerminalWindow, trailing = if (expanded) "Hide" else "${lines.size} lines")
+                // On You it reads like the rows around it: badge, title, what's inside.
+                if (asRow) Row(verticalAlignment = Alignment.CenterVertically) {
+                    YouIcon(PhosphorIcons.TerminalWindow)
+                    Spacer(Modifier.width(14.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("Diagnostics", style = MaterialTheme.typography.titleMedium)
+                        Text(if (expanded) "Tap to hide" else "${lines.size} lines", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+                else PanelHeader("Diagnostics", PhosphorIcons.TerminalWindow, trailing = if (expanded) "Hide" else "${lines.size} lines")
             }
             if (expanded) IconButton(onClick = {
                 context.getSystemService(ClipboardManager::class.java)

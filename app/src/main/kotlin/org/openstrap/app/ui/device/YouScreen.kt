@@ -69,10 +69,7 @@ fun YouScreen(
         item {
             Panel(onClick = onEditProfile) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        Modifier.size(52.dp).background(MaterialTheme.colorScheme.surfaceContainerHighest, CircleShape),
-                        contentAlignment = Alignment.Center,
-                    ) { Icon(PhosphorIcons.User, null, Modifier.size(26.dp), tint = MaterialTheme.colorScheme.primary) }
+                    YouIcon(PhosphorIcons.User)
                     Spacer(Modifier.width(14.dp))
                     Column(Modifier.weight(1f)) {
                         Text("Your profile", style = MaterialTheme.typography.titleMedium)
@@ -86,10 +83,7 @@ fun YouScreen(
         item {
             Panel(onClick = onEditGoals) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        Modifier.size(52.dp).background(MaterialTheme.colorScheme.surfaceContainerHighest, CircleShape),
-                        contentAlignment = Alignment.Center,
-                    ) { Icon(PhosphorIcons.ChartLineUp, null, Modifier.size(26.dp), tint = MetricColors.steps) }
+                    YouIcon(PhosphorIcons.ChartLineUp)
                     Spacer(Modifier.width(14.dp))
                     Column(Modifier.weight(1f)) {
                         Text("Your goals", style = MaterialTheme.typography.titleMedium)
@@ -118,12 +112,18 @@ fun YouScreen(
         }
 
         item { Group("Support") }
-        item { DiagnosticsPanel(log) }
+        item { DiagnosticsPanel(log, asRow = true) }
 
         if (glowToday != null) item {
             Panel {
-                SettingRow("Glow design on Today", "Experimental (debug build)", onClick = { onGlowToday(!glowToday) }) {
-                    androidx.compose.material3.Switch(glowToday, onGlowToday)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    YouIcon(PhosphorIcons.SlidersHorizontal)
+                    Spacer(Modifier.width(14.dp))
+                    Box(Modifier.weight(1f)) {
+                        SettingRow("Glow design on Today", "Experimental (debug build)", onClick = { onGlowToday(!glowToday) }, titleStyle = MaterialTheme.typography.titleMedium) {
+                            androidx.compose.material3.Switch(glowToday, onGlowToday)
+                        }
+                    }
                 }
             }
         }
@@ -156,10 +156,7 @@ private fun Group(title: String) = SectionLabel(title, Modifier.padding(start = 
 private fun StrapCard(name: String?, connection: ConnectionState, sync: SyncState, onClick: () -> Unit) {
     Panel(onClick = onClick) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                Modifier.size(52.dp).background(MaterialTheme.colorScheme.surfaceContainerHighest, CircleShape),
-                contentAlignment = Alignment.Center,
-            ) { Icon(PhosphorIcons.Watch, null, Modifier.size(26.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant) }
+            YouIcon(PhosphorIcons.Watch)
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 if (name == null) {
@@ -201,12 +198,21 @@ private fun StrapCard(name: String?, connection: ConnectionState, sync: SyncStat
 @Composable
 private fun LinkRow(icon: ImageVector, title: String, subtitle: String, onClick: () -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(icon, null, Modifier.size(22.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        YouIcon(icon)
         Spacer(Modifier.width(14.dp))
         Box(Modifier.weight(1f)) {
-            SettingRow(title, subtitle, onClick) {
+            SettingRow(title, subtitle, onClick, titleStyle = MaterialTheme.typography.titleMedium) {
                 Icon(PhosphorIcons.CaretRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
+}
+
+/** The round badge every row on You leads with: the same size, backdrop and white icon throughout. */
+@Composable
+internal fun YouIcon(icon: ImageVector) {
+    Box(
+        Modifier.size(52.dp).background(MaterialTheme.colorScheme.surfaceContainerHighest, CircleShape),
+        contentAlignment = Alignment.Center,
+    ) { Icon(icon, null, Modifier.size(26.dp), tint = MaterialTheme.colorScheme.primary) }
 }

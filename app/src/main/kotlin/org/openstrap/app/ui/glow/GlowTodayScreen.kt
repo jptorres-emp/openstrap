@@ -248,34 +248,36 @@ private fun Change(score: Score, withNote: Boolean) {
     }
 }
 
-/** One of the other two scores under the gauge: its dot, label, value and change, tappable. */
+/**
+ * One of the other two scores under the gauge, tappable: its dot and label on top, its value and change below. Each line
+ * has the chip's whole width, so neither wraps or gets cut at large font sizes.
+ */
 @Composable
 private fun ScorePill(score: Score, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    Row(
+    Column(
         modifier
             .glass(GlassRowShape, onClick, scale = 0.97f)
-            .padding(horizontal = 10.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
+            .padding(start = 12.dp, end = 12.dp, top = 9.dp, bottom = 10.dp),
     ) {
-        // The same glowing dot the score has everywhere else, so the colour reads as its legend.
-        Canvas(Modifier.size(12.dp)) {
-            drawCircle(score.color.copy(alpha = 0.25f), size.minDimension / 2)
-            drawCircle(score.color, size.minDimension * 0.27f)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            // The same glowing dot the score has everywhere else, so the colour reads as its legend.
+            Canvas(Modifier.size(10.dp)) {
+                drawCircle(score.color.copy(alpha = 0.25f), size.minDimension / 2)
+                drawCircle(score.color, size.minDimension * 0.27f)
+            }
+            Spacer(Modifier.width(7.dp))
+            Text(
+                score.label, color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.labelSmall,
+                maxLines = 1, overflow = TextOverflow.Ellipsis,
+            )
         }
-        Spacer(Modifier.width(6.dp))
-        // The label takes what's left and gives way first, so the value and change never wrap at large font sizes.
-        Text(
-            score.label, Modifier.weight(1f), color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodySmall,
-            maxLines = 1, overflow = TextOverflow.Ellipsis,
-        )
-        Spacer(Modifier.width(4.dp))
-        Text(
-            "${score.value ?: "-"}", color = Color.White, style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
-            maxLines = 1, softWrap = false,
-        )
-        if (score.change != null) {
-            Spacer(Modifier.width(6.dp))
-            Change(score, withNote = false)
+        Spacer(Modifier.height(2.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("${score.value ?: "-"}", color = Color.White, style = MaterialTheme.typography.titleLarge, maxLines = 1, softWrap = false)
+            if (score.change != null) {
+                Spacer(Modifier.width(8.dp))
+                Change(score, withNote = false)
+            }
         }
     }
 }

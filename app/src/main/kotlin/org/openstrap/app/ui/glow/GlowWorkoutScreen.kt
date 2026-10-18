@@ -132,7 +132,7 @@ private fun RecoveryPanel(a: WorkoutAnalysis) {
         else -> "Low" to TrendBad
     }
     DotPanel {
-        DotHeader("Recovery heart rate", MetricColors.hrv, trailing = label)
+        DotHeader("Recovery heart rate", trailing = label)
         Row(Modifier.fillMaxWidth()) {
             Box(Modifier.weight(1f)) { Fact("After 1 min", "${signedDrop(drop)} bpm") }
             a.recovery120?.let { Box(Modifier.weight(1f)) { Fact("After 2 min", "${signedDrop(it)} bpm") } }
@@ -154,7 +154,7 @@ private fun RecoveryPanel(a: WorkoutAnalysis) {
 private fun ZonesPanel(a: WorkoutAnalysis) {
     val total = a.zoneSeconds.sum().coerceAtLeast(1)
     DotPanel {
-        DotHeader("Heart-rate zones", MetricColors.heart, trailing = "Max ${a.maxHeartRate} bpm")
+        DotHeader("Heart-rate zones", trailing = "Max ${a.maxHeartRate} bpm")
         for (z in Workouts.ZONES - 1 downTo 0) {
             val lo = (50 + z * 10) * a.maxHeartRate / 100
             val hi = if (z == Workouts.ZONES - 1) "+" else "–${(60 + z * 10) * a.maxHeartRate / 100 - 1}"
@@ -177,7 +177,7 @@ private fun EffectPanel(a: WorkoutAnalysis) {
     val w = a.workout
     val e = a.effect
     DotPanel {
-        DotHeader("Training effect", MetricColors.steps, trailing = "From the strap")
+        DotHeader("Training effect", trailing = "From the strap")
         Row(Modifier.fillMaxWidth()) {
             Box(Modifier.weight(1f)) { Fact("Aerobic", w.aerobicTrainingEffect?.let { "%.1f".format(it) } ?: "—") }
             Box(Modifier.weight(1f)) { Fact("Anaerobic", w.anaerobicTrainingEffect?.let { "%.1f".format(it) } ?: "—") }
@@ -206,7 +206,7 @@ fun GlowWorkoutsScreen(workouts: List<WorkoutAnalysis>, contentPadding: PaddingV
         workouts.groupBy { Instant.ofEpochSecond(it.workout.start).atZone(zone).toLocalDate() }.forEach { (date, day) ->
             item {
                 DotPanel {
-                    DotHeader(dayName(date), MetricColors.steps, trailing = if (date.year != LocalDate.now().year) "${date.year}" else null)
+                    DotHeader(dayName(date), trailing = if (date.year != LocalDate.now().year) "${date.year}" else null)
                     day.forEachIndexed { i, a ->
                         if (i > 0) DotDivider()
                         WorkoutLine(a, showDate = false) { onOpen(a.workout.start) }

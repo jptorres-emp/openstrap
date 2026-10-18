@@ -27,7 +27,6 @@ import org.openstrap.app.ui.components.formatDuration
 import org.openstrap.app.ui.dashboard.DailyHistory
 import org.openstrap.app.ui.dashboard.DayUiState
 import org.openstrap.app.ui.dashboard.Metric
-import org.openstrap.app.ui.theme.MetricColors
 import java.time.DayOfWeek
 import java.time.Instant
 import java.time.ZoneId
@@ -51,7 +50,7 @@ private fun alertText(a: HealthAlertRow): String = when (a.type) {
 @Composable
 internal fun AlertsPanel(alerts: List<HealthAlertRow>, onOpenMetric: (Metric) -> Unit) {
     DotPanel {
-        DotHeader("Strap alerts", MetricColors.warn, trailing = if (alerts.size == 1) "1 today" else "${alerts.size} today")
+        DotHeader("Strap alerts", trailing = if (alerts.size == 1) "1 today" else "${alerts.size} today", warning = true)
         alerts.sortedByDescending { it.timestamp }.forEach { a ->
             val metric = when (a.type) { 3 -> Metric.Stress; 4 -> Metric.Spo2; else -> Metric.HeartRate }
             Row(Modifier.fillMaxWidth().clickable { onOpenMetric(metric) }, verticalAlignment = Alignment.CenterVertically) {
@@ -95,7 +94,7 @@ internal fun WeeklyRecapPanel(state: DayUiState, recovery: RecoveryResult?, work
 
     DotPanel {
         val range = DateTimeFormatter.ofPattern("d MMM")
-        DotHeader("Your week", Color.White.copy(alpha = 0.7f), trailing = "${start.format(range)} – ${end.format(range)}")
+        DotHeader("Your week", trailing = "${start.format(range)} – ${end.format(range)}")
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 Fact("Steps a day", stepsNow?.let { "%,d".format(it.roundToInt()) } ?: "—")

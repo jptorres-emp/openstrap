@@ -1,10 +1,14 @@
 package org.openstrap.app.ui.glow
 
+import org.openstrap.app.ui.theme.PhosphorIcons
+import androidx.compose.material3.Icon
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -24,13 +28,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import org.openstrap.app.ui.components.pressClickable
 import org.openstrap.app.ui.dashboard.DailyHistory
 import kotlin.math.roundToInt
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import java.time.Instant
 import java.time.LocalDate
@@ -38,7 +40,6 @@ import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import org.openstrap.app.data.RecoveryResult
-import org.openstrap.app.device.SyncState
 import org.openstrap.app.ui.components.ChartPoint
 import org.openstrap.app.ui.components.formatDuration
 import org.openstrap.app.ui.dashboard.DateHeader
@@ -74,7 +75,6 @@ fun GlowTodayScreen(
     onOpenMetric: (Metric) -> Unit = {},
     recovery: RecoveryResult? = null,
     onOpenRecovery: () -> Unit = {},
-    sync: SyncState.Running? = null,
     workouts: List<org.openstrap.app.data.WorkoutAnalysis> = emptyList(),
     onOpenWorkout: (Long) -> Unit = {},
     /** Whether live heart rate is on; null hides the switch. */
@@ -93,7 +93,7 @@ fun GlowTodayScreen(
     if (choosing) TilesDialog(tiles, onSave = { onTilesChange(it); choosing = false }, onDismiss = { choosing = false })
     val extras = TodayExtras(liveEnabled, onLiveToggle, onOpenActivity, history, tiles) { choosing = true }
     CompositionLocalProvider(LocalGlowPaused provides { list.isScrollInProgress }) {
-        TodayList(state, liveHeartRate, battery, charging, onPrev, onNext, contentPadding, picker, onOpenSleep, onOpenMetric, recovery, onOpenRecovery, sync, workouts, onOpenWorkout, list, extras)
+        TodayList(state, liveHeartRate, battery, charging, onPrev, onNext, contentPadding, picker, onOpenSleep, onOpenMetric, recovery, onOpenRecovery, workouts, onOpenWorkout, list, extras)
     }
 }
 
@@ -121,17 +121,16 @@ private fun TodayList(
     onOpenMetric: (Metric) -> Unit,
     recovery: RecoveryResult?,
     onOpenRecovery: () -> Unit,
-    sync: SyncState.Running?,
     workouts: List<org.openstrap.app.data.WorkoutAnalysis>,
     onOpenWorkout: (Long) -> Unit,
     list: LazyListState,
     extras: TodayExtras,
 ) = ScreenList(contentPadding, list, gutter = GlowLayout.Gutter) {
     val rec = recovery?.takeIf { it.date == state.date }
-    item { DateHeader(state.date, battery, onPrev, onNext, charging, picker, sync) }
+    item { DateHeader(state.date, battery, onPrev, onNext, charging, picker) }
 
     // Glow: the day's three scores at a glance, the leading one as the hero. The only place they appear.
-    item { OverviewCard(state, rec, chargeLeads(state, rec), onOpenRecovery) }
+    item { OverviewCard(state, rec, chargeLeads(state, rec), onOpenRecovery, onOpenSleep) }
 
     // Quiet but first: anything the strap warned about this day.
     if (state.alerts.isNotEmpty()) item { AlertsPanel(state.alerts, onOpenMetric) }
@@ -177,46 +176,55 @@ private fun bucket(points: List<ChartPoint>, range: LongRange, seconds: Long): L
 }
 
 /**
- * The top card, built like every glow card: the leading score as title and hero number with how it
- * moved, the other two as facts beside it, and the three scores as nested half arcs underneath (the
- * rings laid flat), outside in: leader, second score, sleep.
+ * The top card: the leading score as one big gauge with its number and a one-line verdict
+ * inside, and the other two scores as pills underneath that open their tabs.
  */
 @Composable
-private fun OverviewCard(state: DayUiState, rec: RecoveryResult?, chargeLeads: Boolean, onClick: () -> Unit) {
+private fun OverviewCard(state: DayUiState, rec: RecoveryResult?, chargeLeads: Boolean, onClick: () -> Unit, onOpenSleep: () -> Unit) {
     val c = rec?.charge
     val chargeNow = c?.latest?.toInt()
     val readinessNow = rec?.readiness?.score
     val readinessBefore = rec?.readinessTrend?.dropLast(1)?.lastOrNull()?.second
     val sleepNow = state.sleep?.score
-    val charge = Score("Charge", chargeNow, MetricColors.charge, chargeNow.minus(c?.atWake?.toInt()), "since waking")
-    val recovery = Score("Recovery", readinessNow, MetricColors.readiness, readinessNow.minus(readinessBefore), "vs yesterday")
-    val sleep = Score("Sleep", sleepNow, MetricColors.sleepLight, sleepNow.minus(state.previousSleepScore), "vs night before")
-    val (lead, second) = if (chargeLeads) charge to recovery else recovery to charge
     val strain = rec?.readiness?.strainAlert == true
+    // Teal, gold and the Sleep card's blue, all at the same saturation so no dot outshines the others.
+    val charge = Score("Charge", chargeNow, MetricColors.chargeDeep, chargeNow.minus(c?.atWake?.toInt()), "since waking")
+    val recovery = Score("Recovery", readinessNow, MetricColors.readinessDeep, readinessNow.minus(readinessBefore), "vs yesterday")
+    val sleep = Score("Sleep", sleepNow, SleepGlow.color, sleepNow.minus(state.previousSleepScore), "vs night before")
+    val (lead, second) = if (chargeLeads) charge to recovery else recovery to charge
+    val verdict = when {
+        strain -> "Signs of strain"
+        lead.value == null -> null
+        chargeLeads -> Narrative.chargeHeadline(lead.value)
+        else -> Narrative.readinessHeadline(lead.value, alert = false)
+    }
 
-    // The glow sits low and central, under the arcs.
+    // The glow sits low and central, under the gauge.
     val style = GlowStyle.Bloom.copy(
         color = overviewColor(lead.value, strain),
-        coreShape = CoreShape.Radial, coreX = 0.5f, coreY = 0.8f, coreWidth = 0.95f, coreHeight = 0.75f,
+        coreShape = CoreShape.Radial, coreX = 0.5f, coreY = 0.6f, coreWidth = 0.95f, coreHeight = 0.75f,
         coreBlur = 30.dp, toneWidth = 16.dp, toneShift = -10f, glowStrength = 0.6f, bevel = 0.6f,
         motion = GlowMotion.Breath(5f), depth = 6.dp,
     )
     GlowCard(style, Modifier.fillMaxWidth(), onClick = onClick) {
         Column {
-            GlowHeader(
-                lead.label,
-                trailing = if (strain) "Signs of strain" else null,
-                trailingContent = if (strain) null else ({ Change(lead, withNote = true) }),
-            )
-            GlowHeroNumber(lead.value?.toString() ?: "-", "/ 100") {
-                // A small table: dots, labels, values and changes each line up in their own column.
-                Column(Modifier.width(IntrinsicSize.Max), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    FactScore(second)
-                    FactScore(sleep)
+            GlowHeader(lead.label, trailingContent = { Change(lead, withNote = true) })
+            GlowArcGauge(
+                (lead.value ?: 0) / 100f, lead.color,
+                Modifier.padding(top = GlowLayout.TitleGap, start = 12.dp, end = 12.dp),
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    DotMatrixText(lead.value?.toString() ?: "-", dot = 5.5.dp, gap = 2.dp)
+                    if (verdict != null) Text(
+                        verdict, color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(top = 8.dp),
+                    )
                 }
             }
-            GlowChartGap()
-            GlowHalfArcs(listOf(lead, second, sleep).map { (it.value ?: 0) / 100f to it.color }, height = GlowLayout.ChartHeight)
+            Row(Modifier.fillMaxWidth().padding(top = 18.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                ScorePill(second, onClick, Modifier.weight(1f))
+                ScorePill(sleep, onOpenSleep, Modifier.weight(1f))
+            }
         }
     }
 }
@@ -226,40 +234,44 @@ private fun Int?.minus(other: Int?): Int? = if (this == null || other == null) n
 /** A score on the overview, with how far it moved and against what. */
 private class Score(val label: String, val value: Int?, val color: Color, val change: Int?, val against: String)
 
-/** How a score moved: a dot arrow (green up, amber down) and the amount; "steady" when it didn't. */
+/** How a score moved: a dot arrow (green up, amber down) and the amount; three level dots when it didn't. */
 @Composable
 private fun Change(score: Score, withNote: Boolean) {
     val d = score.change ?: return
     Row(verticalAlignment = Alignment.CenterVertically) {
-        if (d != 0) {
-            DotArrow(d > 0, if (d > 0) TrendGood else TrendBad)
+        if (d != 0) DotArrow(d > 0, if (d > 0) TrendGood else TrendBad)
+        else DotLevel(Color.White.copy(alpha = 0.6f))
+        // No change has no amount: the level dots say it, so it never wraps in the narrow column.
+        val text = listOfNotNull(if (d == 0) null else "${kotlin.math.abs(d)}", if (withNote) score.against else null).joinToString(" ")
+        if (text.isNotEmpty()) {
             Spacer(Modifier.width(6.dp))
+            Text(text, color = Color.White.copy(alpha = 0.9f), style = MaterialTheme.typography.bodySmall)
         }
-        val amount = if (d == 0) "Steady" else "${kotlin.math.abs(d)}"
-        Text(
-            if (withNote) "$amount ${score.against}" else amount,
-            color = Color.White.copy(alpha = 0.9f), style = MaterialTheme.typography.bodySmall,
-        )
     }
 }
 
-/** One of the other two scores, as a fact beside the hero: its arc's dot, label, value and change. */
+/** One of the other two scores under the gauge: its dot, label, value and change, tappable. */
 @Composable
-private fun FactScore(score: Score) {
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        // The same glowing dot as the end of this score's arc, so it reads as the legend.
-        Canvas(Modifier.size(13.dp)) {
+private fun ScorePill(score: Score, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Row(
+        modifier
+            .glass(GlassRowShape, onClick, scale = 0.97f)
+            .padding(horizontal = 10.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        // The same glowing dot the score has everywhere else, so the colour reads as its legend.
+        Canvas(Modifier.size(12.dp)) {
             drawCircle(score.color.copy(alpha = 0.25f), size.minDimension / 2)
             drawCircle(score.color, size.minDimension * 0.27f)
         }
-        Spacer(Modifier.width(8.dp))
-        Text(score.label, color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
-        Spacer(Modifier.width(10.dp))
-        Text(
-            "${score.value ?: "-"}", color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodySmall,
-            textAlign = TextAlign.End, modifier = Modifier.width(24.dp),
-        )
-        Box(Modifier.padding(start = 10.dp).width(36.dp)) { Change(score, withNote = false) }
+        Spacer(Modifier.width(6.dp))
+        Text(score.label, color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodySmall, maxLines = 1, softWrap = false)
+        Spacer(Modifier.weight(1f).widthIn(min = 4.dp))
+        Text("${score.value ?: "-"}", color = Color.White, style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold))
+        if (score.change != null) {
+            Spacer(Modifier.width(6.dp))
+            Change(score, withNote = false)
+        }
     }
 }
 
@@ -282,10 +294,11 @@ private fun HeartGlow(state: DayUiState, live: Int?, liveEnabled: Boolean?, onLi
     val style = GlowStyle.chart(MetricColors.heart).copy(motion = GlowMotion.Heartbeat(now ?: 62))
     GlowCard(style, Modifier.fillMaxWidth(), onClick = onClick) {
         Column {
-            // A live reading needs no label (the beating glow says it); an older one says so.
+            // A live reading needs no label (the beating glow says it). An older one says "Latest" only when
+            // there's no Live switch: an off switch already says it, and "Latest" beside "Live" reads oddly.
             GlowHeader(
                 "Heart rate",
-                trailing = if (live == null) "Latest" else null,
+                trailing = if (live == null && liveEnabled == null) "Latest" else null,
                 // Live readings every few seconds while the app is open; off saves the strap's battery.
                 trailingContent = liveEnabled?.let { on ->
                     {
@@ -340,7 +353,15 @@ private fun WhatChanged(state: DayUiState, advice: String?, tiles: List<Metric>,
     if (signals.isEmpty() && advice.isNullOrEmpty()) return
 
     DotPanel {
-        DotHeader("What changed", Color.White.copy(alpha = 0.7f), trailing = "vs. your last 7 days")
+        // No leading dot: on this panel it would be plain grey, a legend for nothing. Editing the tiles is a
+        // proper button where you'd look for it, so the 7-day note moves under the title.
+        Column {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text("What changed", color = Color.White, style = GlowType.title, modifier = Modifier.weight(1f))
+                EditPill(onChooseTiles)
+            }
+            Text("vs. your last 7 days", color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 2.dp))
+        }
         if (!advice.isNullOrEmpty()) Text(advice, color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodyMedium)
         // Two columns, so six statistics take three rows instead of a screenful.
         TileGrid(signals) { sg, m ->
@@ -349,10 +370,21 @@ private fun WhatChanged(state: DayUiState, advice: String?, tiles: List<Metric>,
         if (signals.isNotEmpty() && signals.all { it.baseline == null }) {
             Text("Your normal builds over the first week of wear.", color = Color.White.copy(alpha = 0.65f), style = MaterialTheme.typography.bodyMedium)
         }
-        Text(
-            "Choose what shows", color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.bodySmall,
-            modifier = Modifier.pressClickable(onChooseTiles),
-        )
+    }
+}
+
+/** A small glass pill with the sliders icon: opens the chooser for which statistics show. */
+@Composable
+private fun EditPill(onClick: () -> Unit) {
+    Row(
+        Modifier
+            .glass(CircleShape, onClick, scale = 0.97f)
+            .padding(horizontal = 12.dp, vertical = 7.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(PhosphorIcons.SlidersHorizontal, null, tint = Color.White, modifier = Modifier.size(14.dp))
+        Spacer(Modifier.width(6.dp))
+        Text("Edit", color = Color.White, style = MaterialTheme.typography.bodySmall)
     }
 }
 

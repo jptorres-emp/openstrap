@@ -347,7 +347,7 @@ private fun LowHighPanel(metric: Metric, range: Range, s: History.Summary) {
 @Composable
 private fun NormalPanel(metric: Metric, normal: History.Normal?, days: Int) {
     DotPanel {
-        DotHeader("Your normal", colorOf(metric), trailing = "Last ${History.NORMAL_DAYS} days")
+        DotHeader("Your normal", trailing = "Last ${History.NORMAL_DAYS} days")
         if (normal == null) {
             Note("Your normal shows after ${History.MIN_NORMAL_DAYS} days of data ($days so far). It's the range your daily values usually fall in.")
             GlowBar(days / History.MIN_NORMAL_DAYS.toFloat(), colorOf(metric))
@@ -365,7 +365,7 @@ private fun NormalPanel(metric: Metric, normal: History.Normal?, days: Int) {
 private fun AboutPanel(metric: Metric) {
     val (what, moves) = ABOUT.getValue(metric)
     DotPanel {
-        DotHeader("About ${metric.title.lowercase()}", Color.White.copy(alpha = 0.7f))
+        DotHeader("About ${metric.title.lowercase()}")
         Text(what, color = Color.White.copy(alpha = 0.9f), style = MaterialTheme.typography.bodyMedium)
         Note(moves)
     }
@@ -374,11 +374,10 @@ private fun AboutPanel(metric: Metric) {
 @Composable
 private fun RelatedPanel(related: List<Metric>, onOpen: (Metric) -> Unit) {
     DotPanel {
-        DotHeader("Related", Color.White.copy(alpha = 0.7f))
-        related.forEachIndexed { i, m ->
-            if (i > 0) DotDivider()
+        DotHeader("Related")
+        related.forEach { m ->
             Row(
-                Modifier.fillMaxWidth().pressClickable({ onOpen(m) }, RoundedCornerShape(12.dp), scale = 0.98f).padding(vertical = 2.dp),
+                Modifier.fillMaxWidth().glass(GlassRowShape, { onOpen(m) }).padding(horizontal = 14.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Canvas(Modifier.padding(end = 10.dp).size(7.dp)) { drawCircle(colorOf(m)) }

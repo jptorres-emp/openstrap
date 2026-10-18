@@ -32,6 +32,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -50,14 +51,14 @@ import org.openstrap.app.device.SyncState
 import org.openstrap.app.ui.theme.PhosphorIcons
 import kotlin.math.roundToInt
 
-/** How far the pull has gone (1 = far enough to sync) and whether a pulled sync is running. */
+/** How far the pull has gone (1 = far enough to sync) and whether a sync is running. */
 class PullSyncState(val fraction: () -> Float, val syncing: () -> Boolean)
 
 /** Set by [PullToSync]; [PullSyncReveal] reads it to open a gap under the wordmark. */
 val LocalPullSync = staticCompositionLocalOf<PullSyncState?> { null }
 
 /**
- * Pull down to sync with the strap. There's no floating spinner: [PullSyncReveal], placed in the screen's
+ * Pull down to sync with the strap, and the app's one sync indicator: any sync opens the same gap. There's no floating spinner: [PullSyncReveal], placed in the screen's
  * header, opens as you pull and pushes everything below it down. The pull ticks like a ratchet, clicks once
  * it's far enough, and confirms on release.
  */
@@ -75,6 +76,8 @@ fun PullToSync(
     var pulled by remember { mutableStateOf(false) }
     var started by remember { mutableStateOf(false) }
     val running = sync is SyncState.Running
+    // Read from the long-lived effect and lambdas below, which would otherwise keep the first value.
+    val runningNow by rememberUpdatedState(running)
     LaunchedEffect(pulled, running) {
         if (!pulled) return@LaunchedEffect
         when {
@@ -90,15 +93,17 @@ fun PullToSync(
     LaunchedEffect(state) {
         var last = 0
         snapshotFlow { (state.distanceFraction * TICKS).toInt().coerceAtMost(TICKS) }.collect { notch ->
-            if (!pulled && notch > last) {
+            // Only a finger pulling ticks; the gap opening for a sync on its own stays silent.
+            if (!pulled && !runningNow && notch > last) {
                 haptics.performHapticFeedback(if (notch == TICKS) HapticFeedbackType.ContextClick else HapticFeedbackType.SegmentFrequentTick)
             }
             last = notch
         }
     }
-    val reveal = remember(state) { PullSyncState(fraction = { state.distanceFraction }, syncing = { pulled }) }
+    val reveal = remember(state) { PullSyncState(fraction = { state.distanceFraction }, syncing = { pulled || runningNow }) }
     PullToRefreshBox(
-        isRefreshing = pulled,
+        // Every sync opens the gap, pulled or not (on connect, in the background), so it's the one sync indicator.
+        isRefreshing = pulled || running,
         onRefresh = {
             if (!connected) {
                 haptics.performHapticFeedback(HapticFeedbackType.Reject)

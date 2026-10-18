@@ -1,10 +1,8 @@
 package org.openstrap.app.ui.theme
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
@@ -29,6 +27,9 @@ object MetricColors {
     val temperature = Color(0xFFFF8A3D)
     val readiness = Color(0xFF7CF2C9)
     val charge = Color(0xFFFFD166)
+    /** Recovery and Charge as saturated as [sleepDeep], for marks that sit beside it (the Today top card). */
+    val readinessDeep = Color(0xFF00C99B)
+    val chargeDeep = Color(0xFFF5B400)
     val good = Color(0xFF3DDC97)
     val warn = Color(0xFFFFB547)
     val bad = Color(0xFFFF5A5F)
@@ -55,9 +56,23 @@ object MetricColors {
 }
 
 private val Dark = darkColorScheme(
-    primary = Color(0xFF8FA8FF),
-    onPrimary = Color(0xFF0A0F24),
-    secondary = Color(0xFF2DD4BF),
+    // No accent: controls (switches, checkboxes, buttons, progress) are white with black on top, like the
+    // marks on the glow cards, so colour in the app always means data. The containers Material would
+    // otherwise fill with its own purple-blue are neutral greys.
+    primary = Color(0xFFFFFFFF),
+    onPrimary = Color(0xFF000000),
+    primaryContainer = Color(0xFF2C2C2E),
+    onPrimaryContainer = Color(0xFFFFFFFF),
+    secondary = Color(0xFFFFFFFF),
+    onSecondary = Color(0xFF000000),
+    secondaryContainer = Color(0xFF2C2C2E),
+    onSecondaryContainer = Color(0xFFFFFFFF),
+    tertiary = Color(0xFFFFFFFF),
+    onTertiary = Color(0xFF000000),
+    tertiaryContainer = Color(0xFF2C2C2E),
+    onTertiaryContainer = Color(0xFFFFFFFF),
+    // Elevation would tint raised surfaces with the primary; white would lift them to grey.
+    surfaceTint = Color.Transparent,
     // OLED black page with neutral grey cards, so the metric accents carry all the colour.
     background = Color(0xFF000000),
     onBackground = Color(0xFFFFFFFF),
@@ -72,19 +87,6 @@ private val Dark = darkColorScheme(
     outline = Color(0xFF2C2C2E),
     outlineVariant = Color(0xFF232323),
     error = Color(0xFFFF6B6B),
-)
-
-private val Light = lightColorScheme(
-    primary = Color(0xFF3550D9),
-    secondary = Color(0xFF0F9F8F),
-    background = Color(0xFFF4F5F7),
-    surface = Color(0xFFF4F5F7),
-    surfaceContainerLow = Color(0xFFFFFFFF),
-    surfaceContainer = Color(0xFFFFFFFF),
-    surfaceContainerHigh = Color(0xFFEDEEF2),
-    onSurfaceVariant = Color(0xFF6B7280),
-    outline = Color(0xFFE2E4E9),
-    outlineVariant = Color(0xFFEDEEF2),
 )
 
 private fun variable(res: Int, weight: Int) = Font(
@@ -138,10 +140,11 @@ private val AppTypography = Typography(
     labelSmall = text(Base.labelSmall),
 )
 
+/** Always dark: the glow design is built for OLED black and doesn't follow the system light mode. */
 @Composable
 fun OpenStrapTheme(content: @Composable () -> Unit) {
     MaterialTheme(
-        colorScheme = if (isSystemInDarkTheme()) Dark else Light,
+        colorScheme = Dark,
         typography = AppTypography,
         content = content,
     )

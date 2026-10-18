@@ -3,6 +3,7 @@ package org.openstrap.app.ui.glow
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
@@ -323,6 +324,46 @@ fun GlowDotRing(
                     else -> drawCircle(Faint, 2.dp.toPx(), o)
                 }
             }
+        }
+        content()
+    }
+}
+
+/**
+ * A half-circle gauge from 9 o'clock over the top to 3: a smooth white line with a faint halo up to
+ * [progress], a dotted track for what's left, and a glowing dot in [color] at the leading edge. Fills
+ * the width it's given; [content] sits at the bottom middle, inside the arc.
+ */
+@Composable
+fun GlowArcGauge(
+    progress: Float,
+    color: Color,
+    modifier: Modifier = Modifier,
+    content: @Composable BoxScope.() -> Unit = {},
+) {
+    // A touch taller than half the width, so the top dot's halo isn't clipped.
+    Box(modifier.fillMaxWidth().aspectRatio(1.9f), contentAlignment = Alignment.BottomCenter) {
+        Canvas(Modifier.matchParentSize()) {
+            val r = size.width / 2 - 10.dp.toPx()
+            val c = Offset(size.width / 2, size.height - 3.dp.toPx())
+            val topLeft = Offset(c.x - r, c.y - r)
+            val box = Size(r * 2, r * 2)
+            val sweep = 180f * progress.coerceIn(0f, 1f)
+            drawArc(
+                Faint.copy(alpha = 0.22f), 180f + sweep, 180f - sweep, false, topLeft, box,
+                style = Stroke(2.dp.toPx(), cap = StrokeCap.Round, pathEffect = PathEffect.dashPathEffect(floatArrayOf(0f, 7.dp.toPx()))),
+            )
+            if (sweep <= 0f) return@Canvas
+            drawArc(Ink.copy(alpha = 0.1f), 180f, sweep, false, topLeft, box, style = Stroke(8.dp.toPx(), cap = StrokeCap.Round))
+            // Brighter towards the end, like the ring. Sweep gradients start at 3 o'clock; the arc at 9 (0.5).
+            drawArc(
+                Brush.sweepGradient(0.5f to Ink.copy(alpha = 0.55f), (180f + sweep) / 360f to Ink, center = c),
+                180f, sweep, false, topLeft, box, style = Stroke(3.dp.toPx(), cap = StrokeCap.Round),
+            )
+            val a = Math.toRadians((180f + sweep).toDouble())
+            val end = Offset(c.x + r * cos(a).toFloat(), c.y + r * sin(a).toFloat())
+            drawCircle(color.copy(alpha = 0.3f), 9.dp.toPx(), end)
+            drawCircle(color, 5.dp.toPx(), end)
         }
         content()
     }

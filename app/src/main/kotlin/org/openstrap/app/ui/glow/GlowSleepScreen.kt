@@ -1,5 +1,10 @@
 package org.openstrap.app.ui.glow
 
+import androidx.compose.foundation.layout.size
+import org.openstrap.app.ui.theme.PhosphorIcons
+import androidx.compose.material3.Icon
+import androidx.compose.ui.draw.rotate
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,7 +17,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -29,11 +33,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import org.openstrap.app.data.Summaries
 import org.openstrap.app.data.db.SleepSession
-import org.openstrap.app.device.SyncState
 import org.openstrap.app.ui.components.ChartPoint
 import org.openstrap.app.ui.components.StageSpan
 import org.openstrap.app.ui.components.formatDuration
-import org.openstrap.app.ui.components.pressClickable
 import org.openstrap.app.ui.dashboard.DateHeader
 import org.openstrap.app.ui.dashboard.DayPicker
 import org.openstrap.app.ui.dashboard.DayUiState
@@ -69,14 +71,13 @@ fun GlowSleepScreen(
     onPrev: () -> Unit,
     onNext: () -> Unit,
     picker: DayPicker,
-    sync: SyncState.Running?,
     contentPadding: PaddingValues,
     onOpenMetric: (Metric) -> Unit,
 ) {
     val list = rememberLazyListState()
     CompositionLocalProvider(LocalGlowPaused provides { list.isScrollInProgress }) {
         ScreenList(contentPadding, list, gutter = GlowLayout.Gutter) {
-            item { DateHeader(state.date, battery, onPrev, onNext, charging, picker, sync) }
+            item { DateHeader(state.date, battery, onPrev, onNext, charging, picker) }
             val session = state.sleep
             item { NightCard(state) }
             if (session != null) {
@@ -183,7 +184,7 @@ internal fun GlowSleepStages(spans: List<StageSpan>, height: Dp) {
 @Composable
 private fun StagesPanel(b: Summaries.SleepBreakdown) {
     DotPanel {
-        DotHeader("Stages", MetricColors.sleepDeep)
+        DotHeader("Stages")
         StageRows(b)
     }
 }
@@ -212,7 +213,7 @@ private fun StageRows(b: Summaries.SleepBreakdown) {
 @Composable
 private fun ContributorsPanel(contributors: List<Narrative.Contributor>) {
     DotPanel {
-        DotHeader("What shaped the score", MetricColors.sleepRem)
+        DotHeader("What shaped the score")
         contributors.forEach { c ->
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -231,7 +232,7 @@ private fun ContributorsPanel(contributors: List<Narrative.Contributor>) {
 @Composable
 private fun VitalsPanel(vitals: List<SleepVital>, onOpen: (Metric) -> Unit) {
     DotPanel {
-        DotHeader("Sleep vitals", MetricColors.heart, trailing = "During sleep")
+        DotHeader("Sleep vitals", trailing = "During sleep")
         TileGrid(vitals) { v, m -> VitalTile(v, m) { onOpen(v.metric) } }
     }
 }
@@ -257,7 +258,7 @@ private fun NightChartsPanel(state: DayUiState, session: SleepSession) {
     val labels = listOf(clock(session.start), clock(session.end))
     DotPanel {
         if (hr.isNotEmpty()) {
-            DotHeader("Heart rate", MetricColors.heart, trailing = "Lowest ${hr.minOf { it.y }.toInt()} · avg ${hr.map { it.y }.average().toInt()} bpm")
+            DotHeader("Heart rate", trailing = "Lowest ${hr.minOf { it.y }.toInt()} · avg ${hr.map { it.y }.average().toInt()} bpm")
             val values = remember(hr, window) { evenly(hr, window, 5 * 60L) }
             GlowLineChart(values, height = 110.dp, labels = labels, color = MetricColors.heart) { i, v ->
                 "${v.toInt()} bpm · ${clock(window.first + i * 5 * 60L)}"
@@ -265,7 +266,7 @@ private fun NightChartsPanel(state: DayUiState, session: SleepSession) {
         }
         if (hr.isNotEmpty() && breath.isNotEmpty()) DotDivider()
         if (breath.isNotEmpty()) {
-            DotHeader("Breathing", MetricColors.sleepLight, trailing = "avg %.1f br/min".format(breath.map { it.y }.average()))
+            DotHeader("Breathing", trailing = "avg %.1f br/min".format(breath.map { it.y }.average()))
             val values = remember(breath, window) { evenly(breath, window, 5 * 60L) }
             GlowLineChart(values, height = 90.dp, labels = labels, color = MetricColors.sleepLight) { i, v ->
                 "${v.toInt()} br/min · ${clock(window.first + i * 5 * 60L)}"
@@ -291,19 +292,20 @@ private fun evenly(points: List<ChartPoint>, range: LongRange, seconds: Long): L
 private fun NapsPanel(state: DayUiState) {
     var open by rememberSaveable(state.date) { mutableLongStateOf(state.naps.singleOrNull()?.start ?: -1L) }
     DotPanel {
-        DotHeader("Naps", MetricColors.sleepLight, trailing = formatDuration(state.naps.sumOf { it.end - it.start }))
+        DotHeader("Naps", trailing = formatDuration(state.naps.sumOf { it.end - it.start }))
         state.naps.forEachIndexed { i, nap ->
             if (i > 0) DotDivider()
             val expanded = open == nap.start
             Row(
-                Modifier.fillMaxWidth().pressClickable({ open = if (expanded) -1L else nap.start }, RoundedCornerShape(12.dp), scale = 0.98f),
+                Modifier.fillMaxWidth().glass(GlassRowShape, { open = if (expanded) -1L else nap.start }).padding(horizontal = 14.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     "${clock(nap.start)} – ${clock(nap.end)} · ${formatDuration(nap.end - nap.start)}",
                     color = Color.White, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f),
                 )
-                Note(if (expanded) "Hide" else "Details")
+                val turn by animateFloatAsState(if (expanded) 180f else 0f, label = "nap caret")
+                Icon(PhosphorIcons.CaretDown, if (expanded) "Hide" else "Details", tint = Color.White.copy(alpha = 0.8f), modifier = Modifier.size(16.dp).rotate(turn))
             }
             if (expanded) {
                 val stages = state.napStages[nap.start].orEmpty()
@@ -331,7 +333,7 @@ private fun WeekPanel(state: DayUiState) {
     val goal = LocalGoals.current.sleepSeconds
     val w = sleepWeek(state, goal, zone)
     DotPanel {
-        DotHeader("This week", MetricColors.sleepDeep, trailing = "Last 7 nights")
+        DotHeader("This week", trailing = "Last 7 nights")
         if (w == null) {
             Note("No sleep recorded in the last 7 nights.")
             return@DotPanel

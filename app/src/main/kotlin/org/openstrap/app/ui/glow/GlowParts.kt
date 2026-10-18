@@ -1,5 +1,7 @@
 package org.openstrap.app.ui.glow
 
+import androidx.compose.material3.ripple
+import androidx.compose.ui.draw.clip
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
@@ -165,8 +167,10 @@ fun GlowSwitch(checked: Boolean, onCheckedChange: (Boolean) -> Unit, modifier: M
     Box(
         modifier
             .size(60.dp, 34.dp)
-            .background(track, CircleShape)
-            .toggleable(checked, role = Role.Switch, onValueChange = onCheckedChange)
+            // Clipped so the press ripple stays inside the pill, and white like the rest of the glow marks.
+            .clip(CircleShape)
+            .background(track)
+            .toggleable(checked, interactionSource = null, indication = ripple(color = Color.White), role = Role.Switch, onValueChange = onCheckedChange)
             .padding(3.dp),
     ) {
         Box(

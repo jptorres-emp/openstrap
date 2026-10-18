@@ -1,6 +1,5 @@
 package org.openstrap.app
 
-import org.openstrap.app.device.SyncState
 import android.Manifest
 import org.openstrap.app.ui.firmware.FirmwareScreen
 import org.openstrap.app.ui.firmware.FirmwareViewModel
@@ -9,6 +8,7 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.Icon
@@ -65,7 +65,11 @@ import org.openstrap.app.ui.theme.PhosphorIcons
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        // Dark bars (light icons) whatever the system mode, to match the always-dark theme.
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
+        )
         val container = (application as OpenStrapApp).container
         setContent { OpenStrapTheme { AppRoot(container) } }
     }
@@ -232,6 +236,12 @@ private fun AppRoot(container: AppContainer) {
     }
     LaunchedEffect(currentDetail) { workoutsVm.open((currentDetail as? Detail.Workout)?.start) }
     val subScreenOpen = currentDetail != null || (Tab.entries[tab] == Tab.You && (showStrap || showAlarms || showFirmware || showDesignLab))
+    // Back closes what's open on a tab first (those screens handle it, registered later so they win);
+    // with nothing left it goes home to Today. Only Today's back leaves the app.
+    androidx.activity.compose.BackHandler(enabled = tab != Tab.Today.ordinal && !subScreenOpen) { tab = Tab.Today.ordinal }
+    // On Today looking at a past day, back first returns to today; the next back leaves.
+    val today = java.time.LocalDate.now()
+    androidx.activity.compose.BackHandler(enabled = tab == Tab.Today.ordinal && !subScreenOpen && day.date != today) { dayVm.select(today) }
     val openStrap: () -> Unit = { tab = Tab.You.ordinal; showStrap = true }
     // The pages are what the glass nav bar blurs as they scroll under it.
     val navGlass = dev.chrisbanes.haze.rememberHazeState()
@@ -247,7 +257,12 @@ private fun AppRoot(container: AppContainer) {
       androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.fillMaxSize()) {
         Scaffold(
             bottomBar = {
-                FloatingNavBar(Tab.entries.map { NavItem(it.label, it.icon, it.selectedIcon) }, tab, { tab = it; todayStack = emptyList(); activityStack = emptyList(); recoveryStack = emptyList(); sleepStack = emptyList(); showAlarms = false; showStrap = false; showDesignLab = false }, glass = if (BuildConfig.DEBUG && glowToday) navGlass else null)
+                FloatingNavBar(Tab.entries.map { NavItem(it.label, it.icon, it.selectedIcon) }, tab, {
+                    tab = it; todayStack = emptyList(); activityStack = emptyList(); recoveryStack = emptyList(); sleepStack = emptyList()
+                    showAlarms = false; showStrap = false; showDesignLab = false
+                    // An update being installed stays open, so coming back to You shows its progress.
+                    if (firmwareVm.step.value !is org.openstrap.app.ui.firmware.FirmwareStep.Installing) { firmwareVm.reset(); showFirmware = false }
+                }, glass = if (BuildConfig.DEBUG && glowToday) navGlass else null)
             },
             containerColor = MaterialTheme.colorScheme.background,
         ) { padding ->
@@ -281,7 +296,6 @@ private fun AppRoot(container: AppContainer) {
                                     onOpenMetric = { todayStack = listOf(Detail.OfMetric(it)) },
                                     recovery = recovery,
                                     onOpenRecovery = { tab = Tab.Recovery.ordinal },
-                                    sync = sync as? SyncState.Running,
                                     workouts = workouts,
                                     onOpenWorkout = { todayStack = listOf(Detail.Workout(it)) },
                                     liveEnabled = liveEnabled.takeIf { connection is ConnectionState.Connected },
@@ -297,7 +311,6 @@ private fun AppRoot(container: AppContainer) {
                                     onOpenMetric = { todayStack = listOf(Detail.OfMetric(it)) },
                                     recovery = recovery,
                                     onOpenRecovery = { tab = Tab.Recovery.ordinal },
-                                    sync = sync as? SyncState.Running,
                                     workouts = workouts,
                                     onOpenWorkout = { todayStack = listOf(Detail.Workout(it)) },
                                 )
@@ -314,14 +327,13 @@ private fun AppRoot(container: AppContainer) {
                             contentPadding = padding, onBack = { recoveryStack = recoveryStack.dropLast(1) },
                         ) else pullToSync {
                             if (BuildConfig.DEBUG && glowToday) org.openstrap.app.ui.glow.GlowRecoveryScreen(
-                                day, recovery, strapReadiness, history, battery, charging, dayVm::previousDay, dayVm::nextDay, picker,
-                                sync as? SyncState.Running, padding,
+                                day, recovery, strapReadiness, history, battery, charging, dayVm::previousDay, dayVm::nextDay, picker, padding,
                                 onOpenMetric = { recoveryStack = listOf(Detail.OfMetric(it)) },
                             ) else RecoveryScreen(
                                 recovery, day.date, day.dayStart..day.dayEnd, day.sleep?.let { it.start..it.end }, padding,
                                 onEditProfile = { editProfile = true },
                                 strapReadiness = strapReadiness,
-                            ) { DateHeader(day.date, battery, dayVm::previousDay, dayVm::nextDay, charging, picker, sync as? SyncState.Running) }
+                            ) { DateHeader(day.date, battery, dayVm::previousDay, dayVm::nextDay, charging, picker) }
                         }
                     }
                     Tab.Sleep -> PushContent(sleepStack, depth = { it.size }) { stack ->
@@ -334,7 +346,7 @@ private fun AppRoot(container: AppContainer) {
                             contentPadding = padding, onBack = { sleepStack = sleepStack.dropLast(1) },
                         ) else pullToSync {
                             if (BuildConfig.DEBUG && glowToday) org.openstrap.app.ui.glow.GlowSleepScreen(
-                                day, battery, charging, dayVm::previousDay, dayVm::nextDay, picker, sync as? SyncState.Running, padding,
+                                day, battery, charging, dayVm::previousDay, dayVm::nextDay, picker, padding,
                                 onOpenMetric = { sleepStack = listOf(Detail.OfMetric(it)) },
                             ) else SleepScreen(
                                 day, battery, charging, dayVm::previousDay, dayVm::nextDay, padding, picker = picker,
@@ -369,7 +381,7 @@ private fun AppRoot(container: AppContainer) {
                             else -> pullToSync {
                                 org.openstrap.app.ui.glow.GlowActivityScreen(
                                     day, recovery, workouts, sportEffects, { from, to -> container.health.dailyPai(from, to) },
-                                    battery, charging, dayVm::previousDay, dayVm::nextDay, picker, sync as? SyncState.Running, padding,
+                                    battery, charging, dayVm::previousDay, dayVm::nextDay, picker, padding,
                                     onOpenMetric = { activityStack = listOf(Detail.OfMetric(it)) },
                                     onOpenWorkout = { activityStack = listOf(Detail.Workout(it)) },
                                     onAllWorkouts = { activityStack = listOf(Detail.AllWorkouts) },

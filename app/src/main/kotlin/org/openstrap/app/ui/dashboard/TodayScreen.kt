@@ -1,10 +1,5 @@
 package org.openstrap.app.ui.dashboard
 
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
-import org.openstrap.app.device.SyncState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -113,24 +108,6 @@ private val WordmarkDot = Color(0xFFFF4D5E)
  * Top bar: OpenStrap wordmark and strap battery chip, then ‹ TODAY › centered on its own row. Tapping the
  * day opens a calendar of the days that have data.
  */
-/** A small ring that fills as each data type syncs, with a label. */
-@Composable
-private fun SyncingBadge(sync: SyncState.Running) {
-    val ring = Modifier.size(12.dp)
-    val color = MaterialTheme.colorScheme.primary
-    Row(Modifier.semantics(mergeDescendants = true) { contentDescription = sync.step }, verticalAlignment = Alignment.CenterVertically) {
-        val progress = sync.progress
-        if (progress != null) {
-            val shown by animateFloatAsState(progress, label = "sync progress")
-            CircularProgressIndicator(progress = { shown }, ring, color = color, strokeWidth = 1.5.dp, trackColor = color.copy(alpha = 0.2f))
-        } else {
-            CircularProgressIndicator(ring, color = color, strokeWidth = 1.5.dp)
-        }
-        Spacer(Modifier.width(6.dp))
-        Text("Syncing", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
-}
-
 @Composable
 fun DateHeader(
     date: LocalDate,
@@ -139,8 +116,6 @@ fun DateHeader(
     onNext: () -> Unit,
     charging: Boolean = false,
     picker: DayPicker = DayPicker(),
-    /** A sync in progress, shown beside the strap status. */
-    sync: SyncState.Running? = null,
 ) {
     var calendarOpen by rememberSaveable { mutableStateOf(false) }
     if (calendarOpen) DayCalendarSheet(date, picker.available, picker.onPick, onDismiss = { calendarOpen = false })
@@ -158,10 +133,6 @@ fun DateHeader(
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
             )
-            if (sync != null) {
-                SyncingBadge(sync)
-                Spacer(Modifier.width(10.dp))
-            }
             // WHOOP's strap chip: always there, and it opens "Your strap".
             val openStrap = LocalOpenStrap.current
             Row(
@@ -227,13 +198,12 @@ fun TodayScreen(
     onOpenMetric: (Metric) -> Unit = {},
     recovery: RecoveryResult? = null,
     onOpenRecovery: () -> Unit = {},
-    sync: SyncState.Running? = null,
     workouts: List<org.openstrap.app.data.WorkoutAnalysis> = emptyList(),
     onOpenWorkout: (Long) -> Unit = {},
 ) = ScreenList(contentPadding) {
     val rec = recovery?.takeIf { it.date == state.date }
     val chargeLeads = chargeLeads(state, rec)
-    item { DateHeader(state.date, battery, onPrev, onNext, charging, picker, sync) }
+    item { DateHeader(state.date, battery, onPrev, onNext, charging, picker) }
 
     // Oura's score row: the day at a glance, each chip opening its tab.
     item {

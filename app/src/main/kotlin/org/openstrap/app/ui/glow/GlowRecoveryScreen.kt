@@ -31,7 +31,6 @@ import org.openstrap.app.data.History
 import org.openstrap.app.data.Recovery
 import org.openstrap.app.data.RecoveryResult
 import org.openstrap.app.data.db.StrapReadinessRow
-import org.openstrap.app.device.SyncState
 import org.openstrap.app.ui.dashboard.DailyHistory
 import org.openstrap.app.ui.dashboard.DateHeader
 import org.openstrap.app.ui.dashboard.DayPicker
@@ -60,7 +59,6 @@ fun GlowRecoveryScreen(
     onPrev: () -> Unit,
     onNext: () -> Unit,
     picker: DayPicker,
-    sync: SyncState.Running?,
     contentPadding: PaddingValues,
     onOpenMetric: (Metric) -> Unit,
 ) {
@@ -68,7 +66,7 @@ fun GlowRecoveryScreen(
     val signals = rememberSignals(state, history)
     CompositionLocalProvider(LocalGlowPaused provides { list.isScrollInProgress }) {
         ScreenList(contentPadding, list, gutter = GlowLayout.Gutter) {
-            item { DateHeader(state.date, battery, onPrev, onNext, charging, picker, sync) }
+            item { DateHeader(state.date, battery, onPrev, onNext, charging, picker) }
             val r = recovery?.takeIf { it.date == state.date }
             if (r == null) {
                 item { DotPanel { Text("Calculating…", color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.bodyMedium) } }
@@ -137,7 +135,7 @@ private fun RecoveryCard(r: RecoveryResult) {
 @Composable
 private fun StrainPanel(ready: Recovery.Readiness) {
     DotPanel {
-        DotHeader("Your body is under strain", MetricColors.warn)
+        DotHeader("Your body is under strain", warning = true)
         Text(
             ready.alertSignals.joinToString(", ").replaceFirstChar { it.uppercase() } + ". " +
                 "Changes like these together often come with illness, heavy training, alcohol or a late night. " +
@@ -194,7 +192,7 @@ private fun clock(epoch: Long) = java.time.Instant.ofEpochSecond(epoch).atZone(j
 @Composable
 private fun ChargeFlowPanel(c: Recovery.ChargeDay, threshold: Recovery.StressThreshold) {
     DotPanel {
-        DotHeader("Where your charge went", MetricColors.chargeAt(c.latest))
+        DotHeader("Where your charge went")
         val total = maxOf(c.recharged, c.drainedExercise + c.drainedStress + c.drainedLiving, 1f)
         FlowRow("Sleep and calm rest", signed(c.recharged, +1), c.recharged / total, MetricColors.good)
         FlowRow("Movement and exercise", signed(c.drainedExercise, -1), c.drainedExercise / total, MetricColors.steps)
@@ -258,7 +256,7 @@ private fun ContributorsPanel(ready: Recovery.Readiness) {
         "Load" to setOf(Recovery.Factor.PreviousDayLoad, Recovery.Factor.LoadBalance),
     )
     DotPanel {
-        DotHeader("What drove it", MetricColors.readiness)
+        DotHeader("What drove it")
         groups.forEachIndexed { gi, (name, factors) ->
             val rows = ready.contributors.filter { it.factor in factors }.sortedByDescending { it.factor.weight }
             if (rows.isEmpty()) return@forEachIndexed
@@ -329,7 +327,7 @@ private fun rememberSignals(state: DayUiState, history: DailyHistory): List<Body
 @Composable
 private fun SignalsPanel(signals: List<BodySignal>, onOpen: (Metric) -> Unit) {
     DotPanel {
-        DotHeader("Body signals", Color.White.copy(alpha = 0.7f), trailing = "vs. your normal")
+        DotHeader("Body signals", trailing = "vs. your normal")
         TileGrid(signals) { s, m -> SignalTile(s, m) { onOpen(s.metric) } }
         if (signals.all { it.normal == null }) Note("Your normal builds over the first week of wear; until then each signal shows its week.")
     }
@@ -400,7 +398,7 @@ internal fun Fact(label: String, value: String) {
 private fun HowItWorksPanel(strap: StrapReadinessRow?, ours: Int?) {
     var open by rememberSaveable { mutableStateOf(false) }
     DotPanel(onClick = { open = !open }) {
-        DotHeader("How it works", Color.White.copy(alpha = 0.7f), trailing = if (open) "Hide" else "Show")
+        DotHeader("How it works", expanded = open)
         if (!open) return@DotPanel
         Text(
             "Each morning OpenStrap compares your night with what's normal for you, not with other people: HRV, resting heart " +

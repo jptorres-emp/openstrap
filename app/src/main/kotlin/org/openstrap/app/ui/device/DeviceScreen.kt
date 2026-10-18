@@ -1,5 +1,6 @@
 package org.openstrap.app.ui.device
 
+import androidx.compose.foundation.BorderStroke
 import android.content.ClipData
 import androidx.activity.compose.BackHandler
 import android.content.ClipboardManager
@@ -96,7 +97,10 @@ fun DeviceScreen(
                 )
             },
             confirmButton = {
-                TextButton(onClick = { confirmDisconnect = false; vm.strap.disconnect() }) { Text("Disconnect") }
+                TextButton(
+                    onClick = { confirmDisconnect = false; vm.strap.disconnect() },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                ) { Text("Disconnect") }
             },
             dismissButton = { TextButton(onClick = { confirmDisconnect = false }) { Text("Cancel") } },
         )
@@ -145,7 +149,12 @@ fun DeviceScreen(
                                 onClick = vm.strap::syncNow, enabled = sync !is SyncState.Running,
                                 modifier = Modifier.weight(1f), contentPadding = PaddingValues(vertical = 14.dp),
                             ) { Text("Sync now") }
-                            OutlinedButton(onClick = { confirmDisconnect = true }, Modifier.weight(1f), contentPadding = PaddingValues(vertical = 14.dp)) {
+                            // Red, like Forget: it cuts the strap off, so it shouldn't look like Sync now's twin.
+                            OutlinedButton(
+                                onClick = { confirmDisconnect = true }, Modifier.weight(1f), contentPadding = PaddingValues(vertical = 14.dp),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f)),
+                            ) {
                                 Text("Disconnect")
                             }
                         }

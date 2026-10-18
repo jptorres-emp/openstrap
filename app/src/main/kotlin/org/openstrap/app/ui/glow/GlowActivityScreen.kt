@@ -1,5 +1,12 @@
 package org.openstrap.app.ui.glow
 
+import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -9,7 +16,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -27,9 +33,7 @@ import org.openstrap.app.data.RecoveryResult
 import org.openstrap.app.data.WorkoutAnalysis
 import org.openstrap.app.data.db.DailyPai
 import org.openstrap.app.data.db.SportEffectRow
-import org.openstrap.app.device.SyncState
 import org.openstrap.app.ui.components.formatDuration
-import org.openstrap.app.ui.components.pressClickable
 import org.openstrap.app.ui.dashboard.DateHeader
 import org.openstrap.app.ui.dashboard.DayPicker
 import org.openstrap.app.ui.dashboard.DayUiState
@@ -71,7 +75,6 @@ fun GlowActivityScreen(
     onPrev: () -> Unit,
     onNext: () -> Unit,
     picker: DayPicker,
-    sync: SyncState.Running?,
     contentPadding: PaddingValues,
     onOpenMetric: (Metric) -> Unit,
     onOpenWorkout: (Long) -> Unit,
@@ -83,7 +86,7 @@ fun GlowActivityScreen(
     val r = recovery?.takeIf { it.date == state.date }
     CompositionLocalProvider(LocalGlowPaused provides { list.isScrollInProgress }) {
         ScreenList(contentPadding, list, gutter = GlowLayout.Gutter) {
-            item { DateHeader(state.date, battery, onPrev, onNext, charging, picker, sync) }
+            item { DateHeader(state.date, battery, onPrev, onNext, charging, picker) }
             item { StepsCard(state) { onOpenMetric(Metric.Steps) } }
             item { PaiPanel(state, week) }
             item { LoadPanel(r, effects.lastOrNull { it.weeklyLoad != null }, onEditProfile) }
@@ -121,14 +124,14 @@ private fun StepsCard(state: DayUiState, onClick: () -> Unit) {
 }
 
 /**
- * PAI: the strap's rolling 7-day score from heart-rate effort, aiming for 100. Shows the total, what each
- * day added, and how much is left to reach the target.
+ * PAI: the strap's rolling 7-day score from heart-rate effort, aiming for 100. Shows the total as one bar
+ * built from the days that make it up, what each day added, and what drops off next.
  */
 @Composable
 private fun PaiPanel(state: DayUiState, week: Map<LocalDate, DailyPai>) {
     val total = state.pai?.total ?: week[state.date]?.total
     DotPanel {
-        DotHeader("PAI", MetricColors.heart, trailing = "Last 7 days")
+        DotHeader("PAI", trailing = "Last 7 days")
         if (total == null) {
             Note("PAI shows after the strap's next sync. It counts minutes your heart rate is raised, harder minutes counting more.")
             return@DotPanel
@@ -140,17 +143,68 @@ private fun PaiPanel(state: DayUiState, week: Map<LocalDate, DailyPai>) {
             val today = state.pai?.daily ?: week[state.date]?.daily
             if (today != null) Fact("Today", "+${today.roundToInt()}")
         }
-        GlowBar(total / PAI_TARGET, MetricColors.heart)
         val days = (6 downTo 0).map { state.date.minusDays(it.toLong()) }
-        GlowDotBars(
-            days.map { week[it]?.daily ?: 0f }, height = 72.dp, rows = 6,
-            labels = days.map { it.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault()).take(2) },
-            accent = MetricColors.heart,
-        ) { i, v -> "${days[i].dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault())} · +${v.roundToInt()} PAI" }
+        val daily = days.map { week[it]?.daily ?: 0f }
+        val names = days.map { it.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault()).take(2) }
+        PaiStack(daily)
+        // Each day's points under the bar, oldest first; today in red like its segment.
+        Row(Modifier.fillMaxWidth()) {
+            daily.forEachIndexed { i, v ->
+                Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(names[i], color = Color.White.copy(alpha = 0.55f), style = MaterialTheme.typography.labelSmall)
+                    Text(
+                        paiPoints(v), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 2.dp),
+                        color = when { v <= 0f -> Color.White.copy(alpha = 0.35f); i == daily.lastIndex -> MetricColors.heart; else -> Color.White },
+                    )
+                }
+            }
+        }
+        // The oldest day leaves the rolling total tomorrow; only worth saying when looking at today.
+        val dropping = daily.first().takeIf { it > 0f && state.date == LocalDate.now() }
         Note(
-            if (total >= PAI_TARGET) "You're at or above $PAI_TARGET. Keeping it there week after week is what PAI is built around."
-            else "${PAI_TARGET - total.roundToInt()} to go. Brisk walking adds a little; anything that gets you out of breath adds more.",
+            listOfNotNull(
+                dropping?.let { "Tomorrow ${days.first().dayOfWeek.getDisplayName(TextStyle.FULL, Locale.getDefault())}'s ${paiPoints(it)} drops off." },
+                if (total >= PAI_TARGET) "You're at or above $PAI_TARGET. Keeping it there week after week is what PAI is built around."
+                else "${PAI_TARGET - total.roundToInt()} to go. Brisk walking adds a little; anything that gets you out of breath adds more.",
+            ).joinToString(" "),
         )
+    }
+}
+
+/** "+12", "+<1" for a sliver of a point, "–" for none. */
+private fun paiPoints(v: Float) = when {
+    v <= 0f -> "–"
+    v < 0.5f -> "+<1"
+    else -> "+${v.roundToInt()}"
+}
+
+/**
+ * The rolling total as one bar to [PAI_TARGET], built from the days that fill it: one segment per day,
+ * oldest first and faintest (it drops off next), today in heart red. Past the target it's simply full.
+ */
+@Composable
+private fun PaiStack(daily: List<Float>) {
+    Canvas(Modifier.fillMaxWidth().height(14.dp)) {
+        val corner = CornerRadius(size.height / 2)
+        drawRoundRect(Color.White.copy(alpha = 0.07f), cornerRadius = corner)
+        val track = Path().apply { addRoundRect(RoundRect(0f, 0f, size.width, size.height, corner)) }
+        clipPath(track) {
+            val gap = 1.5.dp.toPx()
+            // A day with any points shows at least as a sliver, so tiny days don't vanish.
+            val sliver = 3.dp.toPx()
+            var x = 0f
+            daily.forEachIndexed { i, v ->
+                if (v <= 0f || x >= size.width) return@forEachIndexed
+                val w = maxOf(size.width * v / PAI_TARGET, sliver)
+                val color = when (i) {
+                    daily.lastIndex -> MetricColors.heart
+                    0 -> Color.White.copy(alpha = 0.35f)
+                    else -> Color.White.copy(alpha = 0.55f + 0.45f * i / daily.lastIndex)
+                }
+                drawRect(color, Offset(x, 0f), Size(w, size.height))
+                x += w + gap
+            }
+        }
     }
 }
 
@@ -158,7 +212,7 @@ private fun PaiPanel(state: DayUiState, week: Map<LocalDate, DailyPai>) {
 @Composable
 private fun LoadPanel(r: RecoveryResult?, effect: SportEffectRow?, onEditProfile: () -> Unit) {
     DotPanel {
-        DotHeader("Training load", MetricColors.steps)
+        DotHeader("Training load")
         if (r != null) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Fact("Today", "${r.load.toInt()}")
@@ -189,11 +243,13 @@ private fun LoadPanel(r: RecoveryResult?, effect: SportEffectRow?, onEditProfile
             Note("Productive range $low–$high, from the strap (updated ${shortDate(effect.end)}). Its load is on a different scale from today's.")
         }
         if (r != null && !r.maxHrFromAge) {
-            Text(
-                "Max HR is estimated. Add your age for accurate effort numbers.",
-                color = MetricColors.warn, style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.pressClickable(onEditProfile),
-            )
+            Row(Modifier.fillMaxWidth().glass(GlassRowShape, onEditProfile).padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "Max HR is estimated. Add your age for accurate effort numbers.",
+                    color = MetricColors.warn, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f),
+                )
+                Icon(PhosphorIcons.CaretRight, null, tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.padding(start = 8.dp))
+            }
         }
     }
 }
@@ -206,7 +262,7 @@ private fun FitnessPanel(r: RecoveryResult?, workouts: List<WorkoutAnalysis>, ef
     val now = System.currentTimeMillis() / 1000
     val left = last?.let { it.end + it.recoveryMinutes!! * 60L - now }
     DotPanel {
-        DotHeader("Fitness", MetricColors.hrv)
+        DotHeader("Fitness")
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Fact("VO2 max", vo2.lastOrNull()?.toString() ?: "—")
             Fact("Recovery", when {
@@ -235,7 +291,7 @@ private fun WorkoutsPanel(date: LocalDate, workouts: List<WorkoutAnalysis>, onOp
     val today = workouts.filter { dayOf(it) == date }
     val recent = workouts.filter { dayOf(it) != date }.take(RECENT_WORKOUTS)
     DotPanel {
-        DotHeader("Workouts", MetricColors.steps, trailing = if (workouts.isEmpty()) null else "${workouts.size} recorded")
+        DotHeader("Workouts", trailing = if (workouts.isEmpty()) null else "${workouts.size} recorded")
         if (workouts.isEmpty()) {
             Note("Workouts you start on the strap show up here after a sync, with your heart rate every second and how fast it recovered.")
             return@DotPanel
@@ -248,8 +304,7 @@ private fun WorkoutsPanel(date: LocalDate, workouts: List<WorkoutAnalysis>, onOp
             recent.forEach { WorkoutLine(it, showDate = true) { onOpen(it.workout.start) } }
         }
         if (workouts.size > today.size + recent.size) {
-            DotDivider()
-            Row(Modifier.fillMaxWidth().pressClickable(onAll, RoundedCornerShape(12.dp), scale = 0.98f), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().glass(GlassRowShape, onAll).padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text("All workouts", color = Color.White, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
                 Icon(PhosphorIcons.CaretRight, null, tint = Color.White.copy(alpha = 0.7f))
             }
@@ -260,7 +315,7 @@ private fun WorkoutsPanel(date: LocalDate, workouts: List<WorkoutAnalysis>, onOp
 @Composable
 internal fun WorkoutLine(a: WorkoutAnalysis, showDate: Boolean, onClick: () -> Unit) {
     Row(
-        Modifier.fillMaxWidth().pressClickable(onClick, RoundedCornerShape(12.dp), scale = 0.98f).padding(vertical = 2.dp),
+        Modifier.fillMaxWidth().glass(GlassRowShape, onClick).padding(horizontal = 14.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {

@@ -173,7 +173,7 @@ private fun BoxScope.CoreLayer(b: GlowBitmaps, style: GlowStyle, motion: () -> D
                 scaleX = m.scale
                 scaleY = m.scale
                 transformOrigin = TransformOrigin(style.coreX, style.coreY)
-                alpha = style.coreOpacity.coerceIn(0f, 1f)
+                alpha = (style.coreOpacity * m.fade).coerceIn(0f, 1f)
                 // Fade by scaling each pixel's alpha instead of rendering the layer offscreen first.
                 compositingStrategy = CompositingStrategy.ModulateAlpha
             }
@@ -346,7 +346,8 @@ private fun blurFilter(sigma: Float): BlurMaskFilter? =
     if (sigma > 0.5f) BlurMaskFilter((sigma - 0.5f) / 0.57735f, BlurMaskFilter.Blur.NORMAL) else null
 
 /** Where the core is at a moment: an offset (fractions of the card), and size and blur multipliers. */
-private class Drift(val dx: Float, val dy: Float, val scale: Float)
+/** How the dark core sits: offset (fractions of the card), scale, and [fade] on top of the style's core opacity. */
+private class Drift(val dx: Float, val dy: Float, val scale: Float, val fade: Float = 1f)
 
 /**
  * The core's motion over time. Underneath every [GlowMotion] is a never-repeating wander: each axis is
@@ -366,10 +367,11 @@ private class CoreDrift(private val random: Random) {
             GlowMotion.Drift -> wander(t, amount = 1f)
             GlowMotion.Still -> Drift(0f, 0f, 1f)
             is GlowMotion.Heartbeat -> {
-                // Lub-dub: the core kicks bigger on each beat, then relaxes.
+                // An ECG beat: on each spike the dark core pulls in and thins, so the colour flares inward.
+                // The small dips either side of the spike push it out a touch, like the trace dipping below the line.
                 val base = wander(t, amount = 0.4f)
-                val p = beat(t * motion.bpm / 60f)
-                Drift(base.dx, base.dy, scale = 1f + 0.025f * p)
+                val e = ecg(t * motion.bpm / 60f)
+                Drift(base.dx, base.dy, scale = 1f - 0.04f * e, fade = 1f - 0.2f * e.coerceAtLeast(0f))
             }
             is GlowMotion.Breath -> {
                 // In: swell and rise like a chest. Out: slower, settling back.
@@ -399,11 +401,16 @@ private class CoreDrift(private val random: Random) {
     }
 }
 
-/** A heartbeat over one cycle (phase in beats): a sharp "lub" then a softer "dub", 0..1. */
-private fun beat(phase: Float): Float {
+/**
+ * One heartbeat as an ECG trace (phase in beats), about -0.25..1: a small P wave, the QRS complex (a dip,
+ * the sharp R spike, a deeper dip) and a broad, gentle T wave, then flat until the next beat.
+ */
+private fun ecg(phase: Float): Float {
     val f = phase - floor(phase)
     fun bump(at: Float, width: Float) = exp(-((f - at) / width).let { it * it })
-    return (bump(0.04f, 0.05f) + 0.55f * bump(0.3f, 0.06f)).coerceAtMost(1f)
+    return 0.12f * bump(0.10f, 0.035f) -
+        0.10f * bump(0.215f, 0.012f) + bump(0.24f, 0.018f) - 0.25f * bump(0.265f, 0.014f) +
+        0.30f * bump(0.52f, 0.07f)
 }
 
 /** One breath over a cycle (phase in breaths): eased inhale over 40%, longer eased exhale, 0..1. */

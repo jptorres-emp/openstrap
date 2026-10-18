@@ -172,16 +172,19 @@ private fun AppRoot(container: AppContainer) {
     var editGoals by rememberSaveable { mutableStateOf(false) }
     val goals by container.settings.goals.collectAsStateWithLifecycle(org.openstrap.app.data.settings.Goals())
     val todayTileNames by container.settings.todayTileNames.collectAsStateWithLifecycle(null)
-    // Unknown names (a metric since renamed) drop out; nothing chosen yet means all of them.
-    val todayTiles = todayTileNames?.mapNotNull { n -> org.openstrap.app.ui.dashboard.Metric.entries.firstOrNull { it.name == n } }
-        ?.takeIf { it.isNotEmpty() } ?: org.openstrap.app.ui.glow.TODAY_TILES
+    // Unknown names (a metric since renamed) drop out; nothing chosen yet means all of them. Remembered, like the
+    // picker below: a new object each time the root recomposes (on every tab change) would recompose every tab.
+    val todayTiles = remember(todayTileNames) {
+        todayTileNames?.mapNotNull { n -> org.openstrap.app.ui.dashboard.Metric.entries.firstOrNull { it.name == n } }
+            ?.takeIf { it.isNotEmpty() } ?: org.openstrap.app.ui.glow.TODAY_TILES
+    }
     val recovery by dayVm.recovery.collectAsStateWithLifecycle()
     val profile by deviceVm.profile.collectAsStateWithLifecycle()
     val day by dayVm.state.collectAsStateWithLifecycle()
     val strapReadiness by remember(day.dayStart) { container.database.healthDao().strapReadiness(day.dayStart) }.collectAsStateWithLifecycle(null)
     val checkIn by remember(day.date) { container.health.checkIn(day.date) }.collectAsStateWithLifecycle(null)
     val daysWithData by dayVm.daysWithData.collectAsStateWithLifecycle()
-    val picker = DayPicker(daysWithData, dayVm::select)
+    val picker = remember(daysWithData, dayVm) { DayPicker(daysWithData, dayVm::select) }
     val live by container.strap.liveHeartRate.collectAsStateWithLifecycle()
     val connection by container.strap.connection.collectAsStateWithLifecycle()
     val sync by container.strap.sync.collectAsStateWithLifecycle()
@@ -347,7 +350,15 @@ private fun AppRoot(container: AppContainer) {
                     )
                 }
             } }
-            HorizontalPager(pager, androidx.compose.ui.Modifier.padding(start = if (rail) org.openstrap.app.ui.components.NavRailWidth else 0.dp).hazeSource(navGlass), userScrollEnabled = !subScreenOpen, key = { it }) { page ->
+            // Every tab stays composed, so a swipe never builds a whole dashboard mid-gesture (with only the neighbours
+            // kept, crossing halfway built the next one); glows on tabs off screen, or while the pager moves, hold still.
+            HorizontalPager(
+                pager, androidx.compose.ui.Modifier.padding(start = if (rail) org.openstrap.app.ui.components.NavRailWidth else 0.dp).hazeSource(navGlass),
+                userScrollEnabled = !subScreenOpen, key = { it }, beyondViewportPageCount = Tab.entries.size - 1,
+            ) { page -> androidx.compose.runtime.CompositionLocalProvider(
+                // Remembered: a new lambda each time would be a new static local, recomposing the whole tab under it.
+                org.openstrap.app.ui.glow.LocalGlowPagePaused provides remember(pager, page) { { pager.isScrollInProgress || pager.settledPage != page } },
+            ) {
                 val pullToSync: @androidx.compose.runtime.Composable (@androidx.compose.runtime.Composable () -> Unit) -> Unit = { screen ->
                     org.openstrap.app.ui.components.PullToSync(sync, connection is ConnectionState.Connected, container.strap::syncNow) { screen() }
                 }
@@ -480,7 +491,7 @@ private fun AppRoot(container: AppContainer) {
                         detail = { page -> youPage(page) },
                     ) { youPage(YouPage.Hub) } }
                 }
-            }
+            } }
         }
         if (rail) org.openstrap.app.ui.components.FloatingNavRail(
             navItems, tab, selectTab, androidx.compose.ui.Modifier.align(androidx.compose.ui.Alignment.CenterStart),

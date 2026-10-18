@@ -3,8 +3,8 @@ package org.openstrap.app.ui.glow
 import org.openstrap.app.ui.theme.PhosphorIcons
 import androidx.compose.material3.Icon
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -243,7 +243,7 @@ private fun Change(score: Score, withNote: Boolean) {
         val text = listOfNotNull(if (d == 0) null else "${kotlin.math.abs(d)}", if (withNote) score.against else null).joinToString(" ")
         if (text.isNotEmpty()) {
             Spacer(Modifier.width(6.dp))
-            Text(text, color = Color.White.copy(alpha = 0.9f), style = MaterialTheme.typography.bodySmall)
+            Text(text, color = Color.White.copy(alpha = 0.9f), style = MaterialTheme.typography.bodySmall, maxLines = 1, softWrap = false)
         }
     }
 }
@@ -263,9 +263,16 @@ private fun ScorePill(score: Score, onClick: () -> Unit, modifier: Modifier = Mo
             drawCircle(score.color, size.minDimension * 0.27f)
         }
         Spacer(Modifier.width(6.dp))
-        Text(score.label, color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodySmall, maxLines = 1, softWrap = false)
-        Spacer(Modifier.weight(1f).widthIn(min = 4.dp))
-        Text("${score.value ?: "-"}", color = Color.White, style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold))
+        // The label takes what's left and gives way first, so the value and change never wrap at large font sizes.
+        Text(
+            score.label, Modifier.weight(1f), color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodySmall,
+            maxLines = 1, overflow = TextOverflow.Ellipsis,
+        )
+        Spacer(Modifier.width(4.dp))
+        Text(
+            "${score.value ?: "-"}", color = Color.White, style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
+            maxLines = 1, softWrap = false,
+        )
         if (score.change != null) {
             Spacer(Modifier.width(6.dp))
             Change(score, withNote = false)

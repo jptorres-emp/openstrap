@@ -52,6 +52,10 @@ Tested daily with a real Helio Strap.
 
 Something not right? **You → Diagnostics → copy** captures a log to attach to an issue.
 
+## Not a medical device
+
+OpenStrap is a general wellness app. Its scores, trends and alerts (Recovery, Charge, sleep, breathing disturbances, body-signal changes) are estimates for personal insight. They are not medical advice and are not meant to diagnose, treat or prevent any condition. The strap's sensors and OpenStrap's methods have not been clinically validated. If you feel unwell or are worried about a reading, talk to a health professional.
+
 ## Backup and restore
 
 **You → Export CSV** saves a zip with one CSV per table. **Import CSV** reads it back, on this phone or a new one. The strap keeps weeks of history and syncs it itself, so a restore only fills the days before it: for each kind of record, the days before the first one the phone has. Those days and everything after are left as the strap synced them, gaps included. Restore after the strap's first sync on a new phone, or the backup fills the strap's days too. A restore is all or nothing: a zip that fails part way changes nothing.

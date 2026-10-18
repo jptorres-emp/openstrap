@@ -260,7 +260,7 @@ object Recovery {
             }
         }
 
-        // Breathing disturbances: oxygen-desaturation events per hour, on the usual 5/15/30 clinical bands.
+        // Breathing disturbances: oxygen-desaturation events per hour, scored on the 5/15/30 bands Zepp uses.
         tonight.odi?.let { odi ->
             out += Contributor(Factor.BreathingDisturbances, odiScore(odi), "${"%.1f".format(odi)} events/h · ${odiBand(odi)}")
         }
@@ -310,8 +310,8 @@ object Recovery {
     const val SPO2_ALERT_DROP = 2f
 
     /**
-     * Score for an oxygen-desaturation index (events per hour), on the bands Zepp and sleep clinics use: under 5
-     * normal, 5-15 mild, 15-30 moderate, over 30 severe. Within each band the score falls linearly.
+     * Score for an oxygen-desaturation index (events per hour), on the bands Zepp uses (5, 15, 30 per hour).
+     * Within each band the score falls linearly.
      */
     fun odiScore(odi: Float): Int = when {
         odi < 5f -> 100
@@ -320,11 +320,12 @@ object Recovery {
         else -> 45 - (odi - 30f)
     }.toInt().coerceIn(20, 100)
 
+    /** Plain count wording, not clinical labels: this is a wellness estimate, not a sleep-apnea screen. */
     fun odiBand(odi: Float) = when {
-        odi < 5f -> "normal"
-        odi < 15f -> "mild"
-        odi < 30f -> "moderate"
-        else -> "high"
+        odi < 5f -> "few"
+        odi < 15f -> "some"
+        odi < 30f -> "frequent"
+        else -> "very frequent"
     }
 
     /**

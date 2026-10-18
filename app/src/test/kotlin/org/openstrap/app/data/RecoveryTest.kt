@@ -322,14 +322,14 @@ class RecoveryTest {
     }
 
     @Test
-    fun odiFollowsClinicalBands() {
+    fun odiFollowsZeppBands() {
         assertEquals(100, Recovery.odiScore(0f))
         assertEquals(100, Recovery.odiScore(4.9f))
         assertEquals(75, Recovery.odiScore(15f))
         assertEquals(45, Recovery.odiScore(30f))
         assertEquals(20, Recovery.odiScore(80f))
-        assertEquals("mild", Recovery.odiBand(7f))
-        assertEquals("high", Recovery.odiBand(31f))
+        assertEquals("some", Recovery.odiBand(7f))
+        assertEquals("very frequent", Recovery.odiBand(31f))
     }
 
     @Test

@@ -19,7 +19,7 @@ class RecoveryTest {
     private fun night(i: Int, hrv: Float? = 50f, rhr: Float? = 55f, temp: Float? = 33.5f, breath: Float? = 14f, asleep: Int = 450) =
         Night(
             day = i * day, start = i * day - 7 * 3600, end = i * day + 30 * 60, asleepMinutes = asleep, awakeMinutes = 20,
-            deepMinutes = 80, remMinutes = 95, hrv = hrv, restingHr = rhr, nadirTime = i * day - 4 * 3600,
+            deepMinutes = 80, remMinutes = 95, hrv = hrv, restingHr = rhr, rhrMeanSleep = rhr?.plus(4f), nadirTime = i * day - 4 * 3600,
             skinTemperature = temp, breathRate = breath, hrvSamples = 20, hrMinutes = 420,
         )
 
@@ -398,7 +398,9 @@ class RecoveryTest {
         val low = Recovery.readiness(night(31).copy(spo2 = 93f), past)
         val c = low.contributors.first { it.factor == Factor.BloodOxygen }
         assertEquals(50, c.score) // 3 % below usual: 2 % past the dead band, 25 points each
-        assertTrue(low.alertSignals.any { "blood oxygen" in it })
+        // SpO2 has no early-warning evidence: it lowers the score but never raises a body-signal alert.
+        assertTrue(low.alertSignals.isEmpty())
+        assertFalse(low.strainAlert)
         assertTrue(low.score!! < normal.score!!)
     }
 

@@ -193,7 +193,7 @@ object Recovery {
         val contributors: List<Contributor>,
         /** Valid nights in the HRV and resting HR baselines (the larger of the two); sets [phase]. */
         val baselineNights: Int,
-        /** Several body signals moved away from normal together; worth taking it easy. */
+        /** Body signals off baseline in the Alert state ([BodySignals]); worth taking it easy. */
         val strainAlert: Boolean,
         /** The signals that moved, in plain words, for the alert. */
         val alertSignals: List<String>,
@@ -213,6 +213,8 @@ object Recovery {
         val fallbackRestingHr: Float? = null,
         /** Data-quality notes: own and strap values disagree by more than [HRV_QA_FRACTION] or [RHR_QA_BPM]. */
         val qualityFlags: List<String> = emptyList(),
+        /** Tonight in the body-signal state machine: Normal, Watch (in-app) or Alert (push, capped). */
+        val bodySignals: BodySignals.Day? = null,
     ) {
         val calibrating get() = phase == Phase.Withheld || phase == Phase.Learning
         val hrvWeekThin get() = hrvWeekNights in HRV_WEEK_MIN_NIGHTS until HRV_WEEK_FULL_NIGHTS
@@ -255,19 +257,29 @@ object Recovery {
 
     /**
      * Readiness for [tonight] against [history] (earlier nights, any order, tonight excluded) and
-     * [dailyLoad] (TRIMP per day, oldest first, ending with yesterday).
+     * [dailyLoad] (TRIMP per day, oldest first, ending with yesterday). [causes] gives the likely causes noted for a
+     * morning, to annotate a body-signal alert.
      */
-    fun readiness(tonight: Night?, history: List<Night>, dailyLoad: List<Float> = emptyList()): Readiness {
+    fun readiness(
+        tonight: Night?,
+        history: List<Night>,
+        dailyLoad: List<Float> = emptyList(),
+        causes: (Long) -> List<String> = { emptyList() },
+    ): Readiness {
         if (tonight == null) {
             val valid = history.filter { it.valid }.takeLast(BASELINE_NIGHTS)
             return Readiness(null, emptyList(), max(valid.count { it.hrvLn != null }, valid.count { it.restingHr != null }), false, emptyList(), false)
         }
         val earlier = history.filter { it.day < tonight.day }.sortedBy { it.day }
+        // Body signals first: nights in Watch or Alert stay out of every baseline, so a bad stretch can't become normal.
+        val states = BodySignals.evaluate(earlier + tonight, causes)
+        val flagged = states.filter { it.state != BodySignals.State.Normal }.mapTo(HashSet()) { it.day }
+        val body = states.last()
+        val usable = earlier.filter { it.day !in flagged }
         // Baselines use the prior BASELINE_NIGHTS valid nights; invalid nights never enter them.
-        val validPast = earlier.filter { it.valid }.takeLast(BASELINE_NIGHTS)
-        val past = earlier.takeLast(BASELINE_NIGHTS)
+        val validPast = usable.filter { it.valid }.takeLast(BASELINE_NIGHTS)
+        val past = usable.takeLast(BASELINE_NIGHTS)
         val out = mutableListOf<Contributor>()
-        val alerts = mutableListOf<String>()
 
         val lnHistory = validPast.mapNotNull { it.hrvLn }
         val rhrHistory = validPast.mapNotNull { it.restingHr }
@@ -290,7 +302,6 @@ object Recovery {
             val z = if (hrv7 != null) HRV_NIGHT_WEIGHT * zNight + HRV_WEEK_WEIGHT * hrvBase.z(hrv7) else zNight
             val pct = ((exp(ln - hrvBase.centre.toDouble()) - 1) * 100).toInt()
             out += Contributor(Factor.HrvBalance, scoreFromZ(deadZone(z)), "${tonight.hrv!!.toInt()} ms · ${signed(pct)}% vs usual")
-            if (zNight <= -1.5f) alerts += "HRV well below your normal"
         }
 
         // Resting heart rate: the night's lowest 30-minute average against baseline; lower is better.
@@ -299,7 +310,6 @@ object Recovery {
         if (scored && rhrBase != null && rhr != null) {
             val delta = rhr - rhrBase.centre
             out += Contributor(Factor.RestingHr, scoreFromZ(deadZone(-rhrBase.z(rhr))), "${rhr.toInt()} bpm · ${signed(delta, 0)} vs usual")
-            if (delta >= max(5f, 2 * rhrBase.scale)) alerts += "resting heart rate up ${delta.toInt()} bpm"
         }
 
         // The strap's own values: a fallback for display when ours failed the validity rule, and a quality check.
@@ -349,7 +359,6 @@ object Recovery {
             if (tempBase != null) {
                 val dev = t - tempBase.centre
                 out += Contributor(Factor.Temperature, scoreFromZ(-abs(deadZone(tempBase.z(t)))), "${signed(dev, 1)} °C vs usual")
-                if (dev >= 0.5f) alerts += "skin temperature up ${"%.1f".format(dev)} °C"
             }
         }
 
@@ -359,7 +368,6 @@ object Recovery {
             if (breathBase != null) {
                 val dev = b - breathBase.centre
                 out += Contributor(Factor.Breathing, scoreFromZ(-abs(deadZone(breathBase.z(b)))), "${signed(dev, 1)} /min vs usual")
-                if (dev >= 2f) alerts += "breathing rate up ${"%.1f".format(dev)}/min"
             }
         }
 
@@ -370,7 +378,6 @@ object Recovery {
                 val dev = o - spo2Base.centre
                 val score = (100 - SPO2_POINTS_PER_PERCENT * (-dev - SPO2_DEAD_BAND).coerceAtLeast(0f)).toInt().coerceIn(0, 100)
                 out += Contributor(Factor.BloodOxygen, score, "${"%.1f".format(o)} % · ${signed(dev, 1)} vs usual")
-                if (dev <= -SPO2_ALERT_DROP) alerts += "overnight blood oxygen down ${"%.1f".format(-dev)} %"
             }
         }
 
@@ -383,14 +390,15 @@ object Recovery {
             out += Contributor(Factor.PreviousDayLoad, score, "Load ${yesterday.toInt()} · usual ${chronic.toInt()}")
         }
 
-        val extras = { score: Int?, capped: Boolean, alert: Boolean, withheld: Boolean ->
+        val alert = body.state == BodySignals.State.Alert
+        val extras = { score: Int?, capped: Boolean, withheld: Boolean ->
             Readiness(
-                score, out, nights, alert, alerts, capped, phase, withheld, hrvRange, week.size,
-                fallbackHrv, fallbackRhr, quality,
+                score, out, nights, alert, if (body.state == BodySignals.State.Normal) emptyList() else body.signals, capped, phase,
+                withheld, hrvRange, week.size, fallbackHrv, fallbackRhr, quality, body,
             )
         }
         // Withhold without an autonomic contributor: sleep alone isn't readiness.
-        if (out.none { it.factor == Factor.HrvBalance || it.factor == Factor.RestingHr }) return extras(null, false, alerts.size >= 2, true)
+        if (out.none { it.factor == Factor.HrvBalance || it.factor == Factor.RestingHr }) return extras(null, false, true)
         val totalWeight = out.sumOf { it.factor.weight.toDouble() }
         var score = (out.sumOf { it.factor.weight.toDouble() * it.score } / totalWeight).toInt()
         // One very poor body signal shouldn't be averaged away by good sleep and a quiet day.
@@ -400,9 +408,8 @@ object Recovery {
             score = worst + RED_FLAG_HEADROOM
             capped = true
         }
-        val alert = alerts.size >= 2
         if (alert && score > ALERT_CAP) { score = ALERT_CAP; capped = true }
-        return extras(score.coerceIn(0, 100), capped, alert, false)
+        return extras(score.coerceIn(0, 100), capped, false)
     }
 
     private const val SLEEP_DEBT_HALF_LIFE_NIGHTS = 4.0
@@ -418,7 +425,6 @@ object Recovery {
     /** Readiness points lost per % of nightly SpO2 below baseline, beyond a 1 % dead band (−2 % ≈ 75, −3 % ≈ 50). */
     const val SPO2_POINTS_PER_PERCENT = 25
     const val SPO2_DEAD_BAND = 1f
-    const val SPO2_ALERT_DROP = 2f
 
     /** The Breathing card: tonight's oxygen-desaturation events per hour against the user's own nights. */
     data class BreathingDisturbances(val perHour: Float, val usual: Float?, val nights: Int)
@@ -496,6 +502,10 @@ object Recovery {
 
     /** Below this reserve fraction, heart rate is everyday living rather than training. */
     const val LOAD_MIN_HRR = 0.2f
+
+    /** A day whose TRIMP is more than [HARD_DAY_RATIO]× the chronic load: annotated as a likely cause of an alert. */
+    fun hardDay(load: Float, chronic: Float): Boolean = load > HARD_DAY_RATIO * max(chronic, MIN_CHRONIC_LOAD)
+    const val HARD_DAY_RATIO = 1.5f
 
     /** Acute (7-day) and chronic (28-day) exponentially weighted load, λ = 2/(N+1) (Williams et al. 2017). */
     fun ewmaLoads(daily: List<Float>): Pair<Float, Float> {

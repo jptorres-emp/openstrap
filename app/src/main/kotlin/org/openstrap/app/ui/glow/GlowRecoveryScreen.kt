@@ -28,6 +28,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.unit.dp
+import org.openstrap.app.data.BodySignals
 import org.openstrap.app.data.BodySignalsCopy
 import org.openstrap.app.data.CheckIn
 import org.openstrap.app.data.DayTag
@@ -82,7 +83,8 @@ fun GlowRecoveryScreen(
             val ready = r.readiness
             // Wide: the scores and where the charge went on the left; why, and the body signals, on the right.
             left { RecoveryCard(r, strapReadiness) }
-            if (ready.strainAlert) right { StrainPanel(ready) }
+            val body = ready.bodySignals
+            if (body != null && body.state != BodySignals.State.Normal) right { BodySignalsPanel(body) }
             left { ChargeCard(r.charge, state.dayStart..state.dayEnd) }
             if (r.charge.latest != null) left { ChargeFlowPanel(r.charge, r.stressThreshold) }
             right { CheckInPanel(checkIn, tags, onCheckIn, onTag) }
@@ -164,15 +166,21 @@ private fun RecoveryCard(r: RecoveryResult, strap: StrapReadinessRow?) {
     }
 }
 
+/**
+ * Body signals off baseline: Watch is a quiet note, Alert a warning (and a push, sent once from the sync). Likely
+ * causes the user noted are listed, never used to hide it. Wording from [BodySignalsCopy].
+ */
 @Composable
-private fun StrainPanel(ready: Recovery.Readiness) {
+private fun BodySignalsPanel(body: BodySignals.Day) {
+    val alert = body.state == BodySignals.State.Alert
     DotPanel {
-        DotHeader(BodySignalsCopy.TITLE, warning = true)
+        DotHeader(BodySignalsCopy.TITLE, trailing = if (alert) null else "Watching", warning = alert)
         Text(
-            ready.alertSignals.joinToString(", ").replaceFirstChar { it.uppercase() } + ". " +
-                BodySignalsCopy.CAUSES + " " + BodySignalsCopy.ADVICE,
+            body.signals.joinToString(", ").replaceFirstChar { it.uppercase() } + ". " +
+                (if (alert) BodySignalsCopy.CAUSES + " " + BodySignalsCopy.ADVICE else "One signal is outside your usual range. OpenStrap is keeping an eye on it."),
             color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodyMedium,
         )
+        if (body.causes.isNotEmpty()) Note("You noted: ${body.causes.joinToString(", ")}.")
         Note(BodySignalsCopy.DISCLAIMER)
     }
 }

@@ -464,12 +464,28 @@ class StrapManager(
                     if (only != null && only.isEmpty()) break
                     HistorySync(s, client, dao, settings, sync, ::log).run(only)
                 }
+                runCatching { notifyBodySignals() }.onFailure { log("body signals: $it") }
             } finally {
                 syncLock.unlock()
             }
             // Something queued between the last check and the unlock would otherwise wait for the next trigger.
             if (hasPending()) startSync(full = false)
         }
+    }
+
+    /**
+     * After a sync, pushes the body-signal alert for this morning once, when the state machine is in Alert
+     * ([org.openstrap.app.data.BodySignals]). Watch stays in the app.
+     */
+    private suspend fun notifyBodySignals() {
+        val today = java.time.LocalDate.now()
+        val day = org.openstrap.app.data.DayWindow.of(today).from
+        if ((settings.lastSync(BODY_SIGNALS_PUSHED) ?: 0L) >= day) return
+        val r = org.openstrap.app.data.RecoveryEngine(dao).compute(today, settings.profile.first())
+        val body = r.readiness.bodySignals ?: return
+        if (body.day != day || body.state != org.openstrap.app.data.BodySignals.State.Alert) return
+        healthAlerts.showBodySignals(body.families, body.nightsOff)
+        settings.setLastSync(BODY_SIGNALS_PUSHED, day)
     }
 
     /** Debug aid, see [HistorySync.dumpRaw]. */
@@ -685,6 +701,8 @@ class StrapManager(
     private companion object {
         val RETRY_SECONDS = longArrayOf(5, 15, 30, 60, 120, 300)
         const val MIN_SYNC_GAP_SECONDS = 15 * 60L
+        /** Settings key: the local midnight of the last morning a body-signal alert was pushed. */
+        const val BODY_SIGNALS_PUSHED = "body_signals_push"
         const val AUTO_SYNC_SECONDS = 60 * 60L
         val KEEP_ALIVE_REPLY = byteArrayOf(0x05, 0x02)
     }

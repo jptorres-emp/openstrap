@@ -78,16 +78,29 @@ class RecoveryEngine(private val dao: HealthDao) {
         // Daily training load for the 28 days before the selected one, skipping days the strap was mostly off.
         val sleepRanges = sessions.map { it.start..it.end }
         val asleep = { t: Long -> sleepRanges.any { t in it } }
-        val loads = (28 downTo 1).mapNotNull { back ->
+        val loadDays = (28 downTo 1).mapNotNull { back ->
             val w = DayWindow.of(date.minusDays(back.toLong()), zone)
             val series = hr.filter { it.first in w.from..w.to }
-            if (series.size < MIN_WORN_MINUTES) null else Recovery.dailyLoad(series, restingHr, maxHr, female, asleep)
+            if (series.size < MIN_WORN_MINUTES) null else w.from to Recovery.dailyLoad(series, restingHr, maxHr, female, asleep)
+        }
+        val loads = loadDays.map { it.second }
+
+        // Likely causes for a body-signal alert: the user's tags that morning or the day before, and a hard previous day.
+        val tags = dao.dayTagsOnce(from, to).groupBy({ it.day }, { it.tag })
+        val hardDays = loadDays.indices.filter { k ->
+            k >= 7 && Recovery.hardDay(loadDays[k].second, Recovery.ewmaLoads(loads.take(k)).second)
+        }.map { loadDays[it].first }
+        val causes = { morning: Long ->
+            val before = morning - 86_400 + 3600
+            val noted = tags.filterKeys { it == morning || it in before - 7200..before + 7200 }.values.flatten()
+                .distinct().map { DayTag.of(it)?.label?.lowercase() ?: it }
+            noted + listOfNotNull("a hard training day".takeIf { hardDays.any { d -> d in before - 7200..before + 7200 } })
         }
         val todayLoad = Recovery.dailyLoad(hr.filter { it.first in day.from..day.to }, restingHr, maxHr, female, asleep)
 
         val midnight = day.from
         val tonight = nights.lastOrNull { it.day == midnight }
-        val readiness = Recovery.readiness(tonight, nights, loads)
+        val readiness = Recovery.readiness(tonight, nights, loads, causes)
         val trend = (6 downTo 0).map { back ->
             val d = date.minusDays(back.toLong())
             val m = DayWindow.of(d, zone).from

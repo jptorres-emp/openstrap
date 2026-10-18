@@ -57,13 +57,13 @@ Most contributors are z-scores (deviation from the baseline centre in units of i
 * Source: Plews' weekly-average work: a 7-day rolling mean of lnRMSSD is a steadier marker than a single morning (Plews et al., [AUT](https://openrepository.aut.ac.nz/items/d7b41d29-e92e-4acf-90ea-ed68d84d6c73)). Plews et al. 2012 (Eur J Appl Physiol, [PubMed](https://pubmed.ncbi.nlm.nih.gov/22367011/)) is only a case study of 2 athletes. In the HRV-guided training trials, Vesterinen et al. 2016 used **raw** RMSSD from a 4-minute supine morning chest-belt recording, with a band of mean ± 0.5 SD over 4 baseline weeks ([JYX](https://jyx.jyu.fi/handle/123456789/50625)); effects were small (ES 0.42).
 * Why log: RMSSD is right-skewed, and ln makes the SD meaningful.
 * Why nightly: whole-night averages are the most accurate wearable HRV (Oura vs ECG, JMIR 2022, PMC8808342).
-* Alert: z(tonight) ≤ −1.5.
+* Body signals: z(`hrv_n`) ≤ −2 supports a resting-HR rise (`HrvSupport`), never a vote of its own.
 
 **Resting heart rate** (weight 0.22)
 * Input: `rhr_n`, the night's lowest 30-minute average HR, the window needing ≥ `RHR_WINDOW_MIN_MINUTES` = 20 minutes of data (Garmin's definition). The sleep mean (`rhr_mean_sleep`) and 10th percentile (`rhr_p10`) are logged too, for the review to pick the least noisy one.
 * Score: z against baseline, inverted so lower is better, through the dead zone.
 * Source: Buchheit 2014 (Front Physiol 5:73): judge HR changes against measurement noise and the smallest worthwhile change, not absolute thresholds.
-* Alert: ≥ max(5 bpm, 2 SD) above baseline. Overnight resting HR is the best-tested early-warning signal: in Mishra et al. 2020 ([medRxiv](https://www.medrxiv.org/content/10.1101/2020.07.06.20147512v1)) it rose before symptoms in 32 COVID-19 cases, 63 % detectably in real time. That study says nothing about other conditions.
+* Body signals: the core cardiac signal, using the overnight **mean** sleep HR (see below). Overnight resting HR is the best-tested early-warning signal: in Mishra et al. 2020 ([medRxiv](https://www.medrxiv.org/content/10.1101/2020.07.06.20147512v1)) it rose before symptoms in 32 COVID-19 cases, 63 % detectably in real time. That study says nothing about other conditions.
 
 **Last night's sleep** (weight 0.16)
 * The strap's own sleep score when present.
@@ -83,18 +83,18 @@ Most contributors are z-scores (deviation from the baseline centre in units of i
 * Input: mean skin temperature during sleep (≥ 30 readings).
 * Score: `scoreFromZ`(−|z_eff|): a change in either direction beyond the dead zone counts.
 * Source: TemPredict (Oura); adding temperature raised a multimodal model's AUC from 0.770 to 0.819 (Mason et al. 2022, [PMC8891385](https://pmc.ncbi.nlm.nih.gov/articles/PMC8891385)). The luteal-phase rise is about +0.3 °C at the finger.
-* Alert: ≥ +0.5 °C.
+* Body signals: the thermal family (see below).
 
 **Breathing rate** (weight 0.04)
 * Input: mean breathing rate during sleep.
 * Score: `scoreFromZ`(−|z_eff|), either direction. Nightly breathing rate is very stable, so its floor is 0.5 /min.
-* Alert: ≥ +2 breaths/min.
+* Body signals: the respiratory family (see below).
 
 **Blood oxygen** (weight 0.03)
 * Input: mean sleep SpO2 (strap type 38) during the night, from at least 5 readings.
 * Score: −`SPO2_POINTS_PER_PERCENT` = 25 points per % below the baseline centre, beyond a 1 % dead band. A night above the usual level scores 100; higher oxygen isn't better. 2 % down ≈ 75, 3 % down ≈ 50.
 * Source: healthy adults hold a mean nightly SpO2 of about 96 %, steady night to night (Gries & Brooks 1996, Chest 110:1489). A sustained fall can come with altitude, disturbed breathing or a respiratory problem.
-* Alert: ≥ `SPO2_ALERT_DROP` = 2 % below baseline.
+* Never raises a body-signal alert: SpO2 has no early-warning evidence.
 
 **Breathing disturbances** (not part of Readiness: the Breathing card on the Sleep screen)
 * Input: the strap's nightly sleep-apnea summary (type 74). We use only its count of valid desaturation events, divided by hours asleep, because the units of its own ODI fields are unverified. Needs at least 2 h asleep.
@@ -122,8 +122,28 @@ The strap's method is unknown and may change with firmware, and a baseline that 
 
 * **Weighting:** weights are renormalised over the contributors that have data. Without HRV or resting HR there is no score (see "Withheld").
 * **Red-flag cap:** if any physiological contributor (HRV, resting HR, temperature, breathing) is below `RED_FLAG` = 40, readiness can't exceed that contributor + 30. One collapsed body signal shouldn't be averaged away by a good sleep score.
-* **Body signals off baseline:** two or more alert conditions at once, for example resting HR up with temperature up, set `strainAlert` and cap readiness at 55. Requiring several signals is plausible as a guard against one noisy signal, but no study has measured a rule-based conjunction, so the benefit is unquantified.
+* **Body signals off baseline:** in the Alert state (below) readiness is capped at `ALERT_CAP` = 55 and `strainAlert` is set. Nights in Watch or Alert stay out of every Readiness baseline.
 * **Wording** (FDA General Wellness guidance, revised 6 January 2026): the feature is called "Body signals off baseline" and never names illness, infection, fever or COVID. Copy lives in `BodySignalsCopy`; the push text is the evidence review's: "Several of your overnight signals (…) are outside your usual range for the second night. This can happen with heavy training, alcohol, travel, poor sleep, or when your body is fighting something off. Consider an easier day. If you feel unwell, checking in with a healthcare professional may be helpful. This is a wellness estimate, not a medical assessment." No screen shows a temperature threshold.
+
+## Body signals off baseline
+
+`BodySignals.kt`, a night-by-night state machine (evidence-review.md, "Body-signal alerts"). Resting HR is the best-validated early-warning signal (NightSignal, Alavi et al. 2022: +3 bpm a warning, ≥ +4 bpm on 2 consecutive nights an alert). Persistence is what controls false alarms (≥ 3 anomalous nights in 7 cut breathing rate's healthy-period hit rate from 13.4 % to 0.88 %, Natarajan et al. 2021). Only different signal families vote: cardiac, thermal and respiratory; HRV + resting HR is closer to one signal counted twice. That conjunction part is reasoning, not a measured result.
+
+**Baseline per signal:** the last `ALERT_BASELINE_NIGHTS` = 28 valid nights, excluding the `RECENT_EXCLUDED` = 2 most recent and any Watch or Alert nights; median + 1.4826·MAD with the Readiness floors. No alerts before `MIN_ALERT_NIGHTS` = 14 valid nights. Resting HR here is the overnight mean sleep HR (NightSignal's metric); Readiness keeps the lowest 30-minute window. On a night whose own values fail the validity rule, the strap's values stand in.
+
+| Flag | Condition | Role |
+|---|---|---|
+| `RhrFlag` | rhr − c ≥ max(`RHR_FLAG_BPM` = 4 bpm, 2·s) | core (cardiac) |
+| `RhrWatch` | rhr − c ≥ `RHR_WATCH_BPM` = 3 bpm | watch only |
+| `TempFlag` | temp − c ≥ `TEMP_FLAG_C` = 0.5 °C and ≥ 2·s (sleep mean, ≥ 30 readings) | core (thermal) |
+| `RrFlag` | rr − c ≥ `RR_FLAG_PER_MIN` = 2.0 /min and ≥ 2·s | core (respiratory) |
+| `HrvSupport` | z(`hrv_n`) ≤ −2.0 | support, never a core vote |
+
+* **Watch** (in the app, no push): any single core flag, or `RhrWatch` + `HrvSupport`.
+* **Alert** (one push per morning after a sync; Readiness capped at 55), any of: `RhrFlag` on 2 consecutive nights; ≥ 2 different core families on the same night; a core flag tonight and on ≥ 3 of the last 7 nights; rr − c ≥ `RR_ALERT_PER_MIN` = 3.0 /min on its own.
+* One missing night is bridged; two or more reset persistence. An alert clears after `CLEAR_NIGHTS` = 2 consecutive nights with no core flag.
+* Likely causes are annotated, never used to suppress: the user's tags that morning or the day before (alcohol, travel, vaccination, hard session, feeling unwell), or a previous day with TRIMP > `HARD_DAY_RATIO` = 1.5× the chronic load.
+* SpO2 and desaturations never vote; they stay in Readiness and the Breathing card. +0.5 °C is the lowest temperature line that won't fire every menstrual cycle (the luteal rise is about +0.3 °C), and it is never shown on screen.
 
 ## Charge (0–100, minute by minute)
 

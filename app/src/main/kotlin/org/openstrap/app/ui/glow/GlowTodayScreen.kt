@@ -150,9 +150,18 @@ private fun TodayList(
     // Glow: activity, moving with the day's steps.
     left { ActivityGlow(state, extras.onOpenActivity) }
     val dayWorkouts = workouts.filter { it.workout.start in state.dayStart..state.dayEnd }.sortedBy { it.workout.start }
-    if (dayWorkouts.isNotEmpty()) left { org.openstrap.app.ui.workout.WorkoutsPanel(dayWorkouts, onOpenWorkout) }
+    if (dayWorkouts.isNotEmpty()) left { TodayWorkouts(dayWorkouts, onOpenWorkout) }
 
     if (hasSleep && !morning) left { SleepPanel(state, onOpenSleep) }
+}
+
+/** The selected day's workouts, in the same glass rows as the Activity screen's list; hidden when there are none. */
+@Composable
+private fun TodayWorkouts(workouts: List<org.openstrap.app.data.WorkoutAnalysis>, onOpen: (Long) -> Unit) {
+    DotPanel {
+        DotHeader("Workouts")
+        workouts.forEach { WorkoutLine(it, showDate = false) { onOpen(it.workout.start) } }
+    }
 }
 
 /* ------------------------------------------------------------------------------------------------ */

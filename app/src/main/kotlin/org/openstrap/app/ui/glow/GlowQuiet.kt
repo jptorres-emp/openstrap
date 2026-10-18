@@ -183,7 +183,7 @@ fun GlowTile(label: String, accent: Color, onClick: (() -> Unit)?, modifier: Mod
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(6.dp).background(accent, CircleShape))
             Spacer(Modifier.width(8.dp))
-            Text(label, color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.bodySmall, maxLines = 1, modifier = Modifier.weight(1f))
+            Text(label, color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.bodySmall, maxLines = 2, modifier = Modifier.weight(1f))
             if (onClick != null) Icon(PhosphorIcons.CaretRight, null, tint = Color.White.copy(alpha = 0.55f), modifier = Modifier.size(14.dp))
         }
         content()

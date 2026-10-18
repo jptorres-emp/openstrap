@@ -65,6 +65,7 @@ dependencies {
     implementation(libs.health.connect)
     implementation(libs.coroutines.android)
     implementation(libs.core.ktx)
+    implementation(libs.window)
     implementation(libs.haze.blur)
 
     testImplementation(libs.junit)

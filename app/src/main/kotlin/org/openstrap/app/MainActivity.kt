@@ -52,11 +52,19 @@ import org.openstrap.app.ui.device.DeviceViewModel
 import org.openstrap.app.ui.device.YouScreen
 import org.openstrap.app.ui.dashboard.LocalOpenStrap
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.animation.core.tween
 import org.openstrap.app.ui.components.Motion
 import org.openstrap.app.ui.components.PushContent
+import org.openstrap.app.ui.components.ListDetail
+import org.openstrap.app.ui.components.SideBySideWidth
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import org.openstrap.app.ui.theme.OpenStrapTheme
@@ -248,21 +256,47 @@ private fun AppRoot(container: AppContainer) {
     // Glow popups are drawn in the app's own window over a blur of the pages, like the nav bar.
     val glassHost = remember { org.openstrap.app.ui.components.GlassHost() }
     val glow = BuildConfig.DEBUG && glowToday
+    // Half-open on a table, the fold level: heart rate fills the standing top half, the app carries on below the fold.
+    val activity = androidx.activity.compose.LocalActivity.current
+    val windowLayout by remember(activity) {
+        activity?.let { androidx.window.layout.WindowInfoTracker.getOrCreate(it).windowLayoutInfo(it) } ?: kotlinx.coroutines.flow.emptyFlow()
+    }.collectAsStateWithLifecycle(null)
+    val hinge = windowLayout?.displayFeatures?.filterIsInstance<androidx.window.layout.FoldingFeature>()?.firstOrNull {
+        it.state == androidx.window.layout.FoldingFeature.State.HALF_OPENED && it.orientation == androidx.window.layout.FoldingFeature.Orientation.HORIZONTAL
+    }?.takeIf { glow }
     CompositionLocalProvider(
         LocalOpenStrap provides openStrap,
         org.openstrap.app.ui.dashboard.LocalGoals provides goals,
         org.openstrap.app.ui.components.LocalGlowDesign provides glow,
         org.openstrap.app.ui.components.LocalGlassHost provides glassHost.takeIf { glow },
     ) {
-      androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.fillMaxSize()) {
+      androidx.compose.foundation.layout.Column(androidx.compose.ui.Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+      if (hinge != null) {
+          val density = androidx.compose.ui.platform.LocalDensity.current
+          org.openstrap.app.ui.glow.GlowTabletopHeart(
+              day, live, liveEnabled.takeIf { connection is ConnectionState.Connected }, { container.strap.setLiveHeartRate(it) },
+              androidx.compose.ui.Modifier.height(with(density) { hinge.bounds.top.toDp() }),
+          )
+          androidx.compose.foundation.layout.Spacer(androidx.compose.ui.Modifier.height(with(density) { hinge.bounds.height().toDp() }))
+      }
+      // Below the fold the status bar is far away, so the pages don't make room for it.
+      androidx.compose.foundation.layout.BoxWithConstraints(
+          androidx.compose.ui.Modifier.weight(1f).fillMaxWidth()
+              .let { if (hinge != null) it.consumeWindowInsets(androidx.compose.foundation.layout.WindowInsets.statusBars) else it },
+      ) {
+        // Wider than tall (a phone on its side, an unfolded foldable turned sideways): the tabs stand down the
+        // left edge, so the pages keep their height.
+        val rail = maxWidth > maxHeight && maxWidth >= 600.dp
+        val navItems = Tab.entries.map { NavItem(it.label, it.icon, it.selectedIcon) }
+        val selectTab: (Int) -> Unit = {
+            tab = it; todayStack = emptyList(); activityStack = emptyList(); recoveryStack = emptyList(); sleepStack = emptyList()
+            showAlarms = false; showStrap = false; showDesignLab = false
+            // An update being installed stays open, so coming back to You shows its progress.
+            if (firmwareVm.step.value !is org.openstrap.app.ui.firmware.FirmwareStep.Installing) { firmwareVm.reset(); showFirmware = false }
+        }
         Scaffold(
             bottomBar = {
-                FloatingNavBar(Tab.entries.map { NavItem(it.label, it.icon, it.selectedIcon) }, tab, {
-                    tab = it; todayStack = emptyList(); activityStack = emptyList(); recoveryStack = emptyList(); sleepStack = emptyList()
-                    showAlarms = false; showStrap = false; showDesignLab = false
-                    // An update being installed stays open, so coming back to You shows its progress.
-                    if (firmwareVm.step.value !is org.openstrap.app.ui.firmware.FirmwareStep.Installing) { firmwareVm.reset(); showFirmware = false }
-                }, glass = if (BuildConfig.DEBUG && glowToday) navGlass else null)
+                if (!rail) FloatingNavBar(navItems, tab, selectTab, glass = if (BuildConfig.DEBUG && glowToday) navGlass else null)
             },
             containerColor = MaterialTheme.colorScheme.background,
         ) { padding ->
@@ -272,23 +306,69 @@ private fun AppRoot(container: AppContainer) {
             if (editGoals) {
                 org.openstrap.app.ui.device.GoalsDialog(goals, onSave = { g -> scope.launch { container.settings.saveGoals(g) }; editGoals = false }, onDismiss = { editGoals = false })
             }
-            HorizontalPager(pager, androidx.compose.ui.Modifier.hazeSource(navGlass), userScrollEnabled = !subScreenOpen, key = { it }) { page ->
+            // The You list and the pages it opens; [ListDetail] puts them side by side when there's room.
+            val youPage: @Composable (YouPage) -> Unit = { youPage -> when (youPage) {
+                YouPage.DesignLab -> {
+                    org.openstrap.app.ui.glow.GlowLabScreen(padding, onBack = { showDesignLab = false })
+                }
+                YouPage.Firmware -> {
+                    FirmwareScreen(firmwareVm, padding, onBack = { showFirmware = false })
+                }
+                YouPage.Alarms -> {
+                    // Created here so it reads from the strap each time the screen opens.
+                    val alarmsVm: org.openstrap.app.ui.alarms.AlarmsViewModel = viewModel(
+                        key = "alarms", factory = viewModelFactory { initializer { org.openstrap.app.ui.alarms.AlarmsViewModel(container.strap) } },
+                    )
+                    LaunchedEffect(Unit) { alarmsVm.refresh() }
+                    val alarmsState by alarmsVm.state.collectAsStateWithLifecycle()
+                    org.openstrap.app.ui.alarms.AlarmsScreen(alarmsVm, alarmsState, padding, onBack = { showAlarms = false })
+                }
+                YouPage.Strap -> {
+                    DeviceScreen(
+                        deviceVm, padding, requestBluetooth,
+                        onFirmware = { showFirmware = true },
+                        onAlarms = { showAlarms = true },
+                        onBack = { showStrap = false },
+                    )
+                }
+                YouPage.Hub -> {
+                    YouScreen(
+                        deviceVm, padding,
+                        onEditProfile = { editProfile = true },
+                        goals = goals,
+                        onEditGoals = { editGoals = true },
+                        onOpenStrap = { showStrap = true },
+                        onExportCsv = { csvLauncher.launch("openstrap-export.zip") },
+                        onExportHealthConnect = exportHealthConnect,
+                        onOpenDesignLab = if (BuildConfig.DEBUG) ({ showDesignLab = true }) else null,
+                        glowToday = if (BuildConfig.DEBUG) glowToday else null,
+                        onGlowToday = { on -> scope.launch { container.settings.setGlowToday(on) } },
+                    )
+                }
+            } }
+            HorizontalPager(pager, androidx.compose.ui.Modifier.padding(start = if (rail) org.openstrap.app.ui.components.NavRailWidth else 0.dp).hazeSource(navGlass), userScrollEnabled = !subScreenOpen, key = { it }) { page ->
                 val pullToSync: @androidx.compose.runtime.Composable (@androidx.compose.runtime.Composable () -> Unit) -> Unit = { screen ->
                     org.openstrap.app.ui.components.PullToSync(sync, connection is ConnectionState.Connected, container.strap::syncNow) { screen() }
                 }
                 when (Tab.entries[page]) {
-                    Tab.Today -> PushContent(todayStack, depth = { it.size }) { stack ->
-                        when (val detail = stack.lastOrNull()) {
-                            is Detail.OfMetric -> MetricDetail(BuildConfig.DEBUG && glowToday, 
-                                detail.metric, day, history = history,
-                                liveHeartRate = live, liveEnabled = liveEnabled, canUseLive = connection is ConnectionState.Connected,
-                                onLiveToggle = { container.strap.setLiveHeartRate(it) },
-                                onOpenMetric = { todayStack = todayStack + Detail.OfMetric(it) },
-                                contentPadding = padding, onBack = { todayStack = todayStack.dropLast(1) },
-                            )
-                            is Detail.Workout -> WorkoutDetail(BuildConfig.DEBUG && glowToday, openWorkout?.takeIf { it.workout.start == detail.start }, padding, onBack = { todayStack = todayStack.dropLast(1) })
-                            // Today never opens the full workout list; it would only land here from a stale saved stack.
-                            null, Detail.AllWorkouts -> pullToSync {
+                    // Today never opens the full workout list; it would only be on the stack from a stale saved one.
+                    Tab.Today -> ListDetail(
+                        todayStack, isOpen = { s -> s.lastOrNull().let { it != null && it !is Detail.AllWorkouts } }, depth = { it.size }, side = glow, minWidth = SideBySideWidth,
+                        detail = { stack ->
+                            when (val detail = stack.lastOrNull()) {
+                                is Detail.OfMetric -> MetricDetail(BuildConfig.DEBUG && glowToday,
+                                    detail.metric, day, history = history,
+                                    liveHeartRate = live, liveEnabled = liveEnabled, canUseLive = connection is ConnectionState.Connected,
+                                    onLiveToggle = { container.strap.setLiveHeartRate(it) },
+                                    onOpenMetric = { todayStack = todayStack + Detail.OfMetric(it) },
+                                    contentPadding = padding, onBack = { todayStack = todayStack.dropLast(1) },
+                                )
+                                is Detail.Workout -> WorkoutDetail(BuildConfig.DEBUG && glowToday, openWorkout?.takeIf { it.workout.start == detail.start }, padding, onBack = { todayStack = todayStack.dropLast(1) })
+                                else -> Unit
+                            }
+                        },
+                    ) {
+                            pullToSync {
                                 if (BuildConfig.DEBUG && glowToday) org.openstrap.app.ui.glow.GlowTodayScreen(
                                     day, live, battery, charging, dayVm::previousDay, dayVm::nextDay, padding,
                                     picker = picker,
@@ -315,17 +395,21 @@ private fun AppRoot(container: AppContainer) {
                                     onOpenWorkout = { todayStack = listOf(Detail.Workout(it)) },
                                 )
                             }
-                        }
                     }
-                    Tab.Recovery -> PushContent(recoveryStack, depth = { it.size }) { stack ->
-                        val detail = stack.lastOrNull()
-                        if (detail is Detail.OfMetric) MetricDetail(BuildConfig.DEBUG && glowToday, 
-                            detail.metric, day, history = history,
-                            liveHeartRate = live, liveEnabled = liveEnabled, canUseLive = connection is ConnectionState.Connected,
-                            onLiveToggle = { container.strap.setLiveHeartRate(it) },
-                            onOpenMetric = { recoveryStack = recoveryStack + Detail.OfMetric(it) },
-                            contentPadding = padding, onBack = { recoveryStack = recoveryStack.dropLast(1) },
-                        ) else pullToSync {
+                    Tab.Recovery -> ListDetail(
+                        recoveryStack, isOpen = { it.lastOrNull() is Detail.OfMetric }, depth = { it.size }, side = glow, minWidth = SideBySideWidth,
+                        detail = { stack ->
+                            val detail = stack.last() as Detail.OfMetric
+                            MetricDetail(BuildConfig.DEBUG && glowToday,
+                                detail.metric, day, history = history,
+                                liveHeartRate = live, liveEnabled = liveEnabled, canUseLive = connection is ConnectionState.Connected,
+                                onLiveToggle = { container.strap.setLiveHeartRate(it) },
+                                onOpenMetric = { recoveryStack = recoveryStack + Detail.OfMetric(it) },
+                                contentPadding = padding, onBack = { recoveryStack = recoveryStack.dropLast(1) },
+                            )
+                        },
+                    ) {
+                        pullToSync {
                             if (BuildConfig.DEBUG && glowToday) org.openstrap.app.ui.glow.GlowRecoveryScreen(
                                 day, recovery, strapReadiness, history, battery, charging, dayVm::previousDay, dayVm::nextDay, picker, padding,
                                 onOpenMetric = { recoveryStack = listOf(Detail.OfMetric(it)) },
@@ -336,15 +420,20 @@ private fun AppRoot(container: AppContainer) {
                             ) { DateHeader(day.date, battery, dayVm::previousDay, dayVm::nextDay, charging, picker) }
                         }
                     }
-                    Tab.Sleep -> PushContent(sleepStack, depth = { it.size }) { stack ->
-                        val detail = stack.lastOrNull()
-                        if (detail is Detail.OfMetric) MetricDetail(BuildConfig.DEBUG && glowToday, 
-                            detail.metric, day, history = history,
-                            liveHeartRate = live, liveEnabled = liveEnabled, canUseLive = connection is ConnectionState.Connected,
-                            onLiveToggle = { container.strap.setLiveHeartRate(it) },
-                            onOpenMetric = { sleepStack = sleepStack + Detail.OfMetric(it) },
-                            contentPadding = padding, onBack = { sleepStack = sleepStack.dropLast(1) },
-                        ) else pullToSync {
+                    Tab.Sleep -> ListDetail(
+                        sleepStack, isOpen = { it.lastOrNull() is Detail.OfMetric }, depth = { it.size }, side = glow, minWidth = SideBySideWidth,
+                        detail = { stack ->
+                            val detail = stack.last() as Detail.OfMetric
+                            MetricDetail(BuildConfig.DEBUG && glowToday,
+                                detail.metric, day, history = history,
+                                liveHeartRate = live, liveEnabled = liveEnabled, canUseLive = connection is ConnectionState.Connected,
+                                onLiveToggle = { container.strap.setLiveHeartRate(it) },
+                                onOpenMetric = { sleepStack = sleepStack + Detail.OfMetric(it) },
+                                contentPadding = padding, onBack = { sleepStack = sleepStack.dropLast(1) },
+                            )
+                        },
+                    ) {
+                        pullToSync {
                             if (BuildConfig.DEBUG && glowToday) org.openstrap.app.ui.glow.GlowSleepScreen(
                                 day, battery, charging, dayVm::previousDay, dayVm::nextDay, picker, padding,
                                 onOpenMetric = { sleepStack = listOf(Detail.OfMetric(it)) },
@@ -354,7 +443,37 @@ private fun AppRoot(container: AppContainer) {
                             )
                         }
                     }
-                    Tab.Activity -> PushContent(activityStack, depth = { it.size }) { stack ->
+                    // Glow: the activity dashboard, with workouts and metrics opening over it (or beside it, when wide).
+                    Tab.Activity -> if (glow) ListDetail(
+                        activityStack, isOpen = { it.isNotEmpty() }, depth = { it.size }, minWidth = SideBySideWidth,
+                        detail = { stack ->
+                            when (val detail = stack.last()) {
+                                is Detail.Workout -> WorkoutDetail(true, openWorkout?.takeIf { it.workout.start == detail.start }, padding, onBack = { activityStack = activityStack.dropLast(1) })
+                                is Detail.OfMetric -> MetricDetail(true,
+                                    detail.metric, day, history = history,
+                                    liveHeartRate = live, liveEnabled = liveEnabled, canUseLive = connection is ConnectionState.Connected,
+                                    onLiveToggle = { container.strap.setLiveHeartRate(it) },
+                                    onOpenMetric = { activityStack = activityStack + Detail.OfMetric(it) },
+                                    contentPadding = padding, onBack = { activityStack = activityStack.dropLast(1) },
+                                )
+                                Detail.AllWorkouts -> org.openstrap.app.ui.glow.GlowWorkoutsScreen(
+                                    workouts, padding, onOpen = { activityStack = activityStack + Detail.Workout(it) },
+                                    onBack = { activityStack = activityStack.dropLast(1) },
+                                )
+                            }
+                        },
+                    ) {
+                        pullToSync {
+                            org.openstrap.app.ui.glow.GlowActivityScreen(
+                                day, recovery, workouts, sportEffects, { from, to -> container.health.dailyPai(from, to) },
+                                battery, charging, dayVm::previousDay, dayVm::nextDay, picker, padding,
+                                onOpenMetric = { activityStack = listOf(Detail.OfMetric(it)) },
+                                onOpenWorkout = { activityStack = listOf(Detail.Workout(it)) },
+                                onAllWorkouts = { activityStack = listOf(Detail.AllWorkouts) },
+                                onEditProfile = { editProfile = true },
+                            )
+                        }
+                    } else PushContent(activityStack, depth = { it.size }) { stack ->
                         val detail = stack.lastOrNull()
                         when {
                             detail is Detail.Workout ->
@@ -390,52 +509,23 @@ private fun AppRoot(container: AppContainer) {
                             }
                         }
                     }
-                    Tab.You -> org.openstrap.app.ui.components.OledSurfaces(BuildConfig.DEBUG && glowToday) { PushContent(
+                    // Glow on a wide screen: the You list stays on the left and its pages open on the right.
+                    Tab.You -> org.openstrap.app.ui.components.OledSurfaces(BuildConfig.DEBUG && glowToday) { ListDetail(
                         when { showDesignLab -> YouPage.DesignLab; showFirmware -> YouPage.Firmware; showAlarms -> YouPage.Alarms; showStrap -> YouPage.Strap; else -> YouPage.Hub },
+                        isOpen = { it != YouPage.Hub },
                         depth = { if (it == YouPage.DesignLab) 1 else it.ordinal.coerceAtMost(2) },
-                    ) { youPage -> when (youPage) {
-                    YouPage.DesignLab -> {
-                        org.openstrap.app.ui.glow.GlowLabScreen(padding, onBack = { showDesignLab = false })
-                    }
-                    YouPage.Firmware -> {
-                        FirmwareScreen(firmwareVm, padding, onBack = { showFirmware = false })
-                    }
-                    YouPage.Alarms -> {
-                        // Created here so it reads from the strap each time the screen opens.
-                        val alarmsVm: org.openstrap.app.ui.alarms.AlarmsViewModel = viewModel(
-                            key = "alarms", factory = viewModelFactory { initializer { org.openstrap.app.ui.alarms.AlarmsViewModel(container.strap) } },
-                        )
-                        LaunchedEffect(Unit) { alarmsVm.refresh() }
-                        val alarmsState by alarmsVm.state.collectAsStateWithLifecycle()
-                        org.openstrap.app.ui.alarms.AlarmsScreen(alarmsVm, alarmsState, padding, onBack = { showAlarms = false })
-                    }
-                    YouPage.Strap -> {
-                        DeviceScreen(
-                            deviceVm, padding, requestBluetooth,
-                            onFirmware = { showFirmware = true },
-                            onAlarms = { showAlarms = true },
-                            onBack = { showStrap = false },
-                        )
-                    }
-                    YouPage.Hub -> {
-                        YouScreen(
-                            deviceVm, padding,
-                            onEditProfile = { editProfile = true },
-                            goals = goals,
-                            onEditGoals = { editGoals = true },
-                            onOpenStrap = { showStrap = true },
-                            onExportCsv = { csvLauncher.launch("openstrap-export.zip") },
-                            onExportHealthConnect = exportHealthConnect,
-                            onOpenDesignLab = if (BuildConfig.DEBUG) ({ showDesignLab = true }) else null,
-                            glowToday = if (BuildConfig.DEBUG) glowToday else null,
-                            onGlowToday = { on -> scope.launch { container.settings.setGlowToday(on) } },
-                        )
-                    }
-                    } } }
+                        side = glow, closedMaxWidth = 600.dp,
+                        detail = { page -> youPage(page) },
+                    ) { youPage(YouPage.Hub) } }
                 }
             }
         }
+        if (rail) org.openstrap.app.ui.components.FloatingNavRail(
+            navItems, tab, selectTab, androidx.compose.ui.Modifier.align(androidx.compose.ui.Alignment.CenterStart),
+            glass = if (BuildConfig.DEBUG && glowToday) navGlass else null,
+        )
         if (glow) org.openstrap.app.ui.components.GlassOverlay(glassHost, navGlass)
+      }
       }
     }
 }

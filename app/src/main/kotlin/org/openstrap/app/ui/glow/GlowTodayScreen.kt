@@ -165,7 +165,7 @@ private val CLOCK = DateTimeFormatter.ofPattern("HH:mm")
 private fun clock(epoch: Long) = Instant.ofEpochSecond(epoch).atZone(ZoneId.systemDefault()).format(CLOCK)
 
 /** Averages timed points into evenly spaced buckets across [range]; empty buckets are null (gaps). */
-private fun bucket(points: List<ChartPoint>, range: LongRange, seconds: Long): List<Float?> {
+internal fun bucket(points: List<ChartPoint>, range: LongRange, seconds: Long): List<Float?> {
     val n = ((range.last - range.first + 1) / seconds).toInt().coerceAtLeast(2)
     val sums = FloatArray(n)
     val counts = IntArray(n)

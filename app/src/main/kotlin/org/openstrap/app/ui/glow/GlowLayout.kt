@@ -52,10 +52,13 @@ object GlowLayout {
     /** The arc gauge stops growing here, however wide its card. */
     val GaugeMaxWidth = 440.dp
     /**
-     * With two columns on an unfolded foldable each is a little narrower than a phone. A tighter gutter and
-     * card sides give the cards back a phone card's inner width, so tile labels and values fit as they do there.
+     * With two columns on an unfolded foldable each is a little narrower than a phone, and beside a detail pane a
+     * dashboard is a narrow phone's width. A tighter gutter and card sides give the cards back a phone card's inner
+     * width, so tile labels and values fit as they do there.
      */
     val WideGutter = 16.dp
+    /** Narrower than this (a small phone, a dashboard beside a detail) cards use the tight sides too. */
+    val NarrowWidth = 400.dp
     val WideCardPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 32.dp, bottom = 26.dp)
 }
 
@@ -83,9 +86,10 @@ class GlowBlocks internal constructor() {
 fun GlowScreenList(contentPadding: PaddingValues, state: LazyListState, content: GlowBlocks.() -> Unit) {
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val wide = maxWidth >= GlowLayout.TwoColumnWidth
-        val gutter = ((maxWidth - GlowLayout.MaxContentWidth) / 2).coerceAtLeast(if (wide) GlowLayout.WideGutter else GlowLayout.Gutter)
+        val tight = wide || maxWidth < GlowLayout.NarrowWidth
+        val gutter = ((maxWidth - GlowLayout.MaxContentWidth) / 2).coerceAtLeast(if (tight) GlowLayout.WideGutter else GlowLayout.Gutter)
         val blocks = GlowBlocks().apply(content).blocks
-        CompositionLocalProvider(LocalCardPadding provides if (wide) GlowLayout.WideCardPadding else GlowLayout.CardPadding) {
+        CompositionLocalProvider(LocalCardPadding provides if (tight) GlowLayout.WideCardPadding else GlowLayout.CardPadding) {
             ScreenList(contentPadding, state, gutter = gutter) {
                 if (!wide) blocks.forEach { (_, block) -> item { block() } }
                 else sections(blocks).forEach { section ->

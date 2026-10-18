@@ -20,6 +20,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.displayCutoutPadding
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -332,33 +335,81 @@ fun FloatingNavBar(items: List<NavItem>, selected: Int, onSelect: (Int) -> Unit,
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
                     items.forEachIndexed { i, item ->
-                        val on = i == selected
-                        Column(
-                            Modifier.clip(CircleShape)
-                                .clickable { onSelect(i) }
-                                // Every cell gets an equal share of the bar, so labels like "Workouts" have room.
-                                .weight(1f)
-                                .padding(vertical = 8.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                        ) {
-                            val tint by androidx.compose.animation.animateColorAsState(
-                                when {
-                                    glass != null -> if (on) Color.White else Color.White.copy(alpha = 0.55f)
-                                    else -> if (on) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
-                                },
-                                tween(Motion.QUICK), label = "nav tint",
-                            )
-                            val iconScale by animateFloatAsState(if (on) 1.08f else 1f, tween(Motion.SWIFT, easing = Motion.easing), label = "nav icon")
-                            Icon(
-                                if (on) item.selectedIcon else item.icon, item.label, tint = tint,
-                                modifier = Modifier.size(24.dp).graphicsLayer { scaleX = iconScale; scaleY = iconScale },
-                            )
-                            Text(item.label, style = MaterialTheme.typography.labelSmall, color = tint, maxLines = 1)
-                        }
+                        NavCell(item, i == selected, glass, Modifier.clip(CircleShape).clickable { onSelect(i) }
+                            // Every cell gets an equal share of the bar, so labels like "Workouts" have room.
+                            .weight(1f)
+                            .padding(vertical = 8.dp))
                     }
                 }
             }
         }
+    }
+}
+
+/**
+ * [FloatingNavBar] standing up along the left edge, for windows wider than tall (a phone on its side, an
+ * unfolded foldable turned sideways): the same glass pill and sliding highlight, giving the height back to the pages.
+ */
+@Composable
+fun FloatingNavRail(items: List<NavItem>, selected: Int, onSelect: (Int) -> Unit, modifier: Modifier = Modifier, glass: HazeState? = null) {
+    Box(
+        modifier.fillMaxHeight().systemBarsPadding().displayCutoutPadding().padding(horizontal = 10.dp, vertical = 20.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Surface(
+            shape = RoundedCornerShape(40.dp),
+            color = if (glass != null) Color.Transparent else MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.96f),
+            border = if (glass != null) GlassEdge else BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+            shadowElevation = if (glass != null) 0.dp else 12.dp,
+            modifier = Modifier.width(NavRailWidth - 20.dp).heightIn(max = 440.dp).fillMaxHeight()
+                .let { if (glass != null) it.clip(RoundedCornerShape(40.dp)).hazeBlur(HazeInput.Sources(glass), GlassBlur) else it },
+        ) {
+            var barHeight by remember { mutableIntStateOf(0) }
+            val density = androidx.compose.ui.platform.LocalDensity.current
+            Box(Modifier.padding(6.dp).onSizeChanged { barHeight = it.height }) {
+                val gap = 2.dp
+                val cell = (with(density) { barHeight.toDp() } - gap * (items.size - 1)) / items.size
+                val y by androidx.compose.animation.core.animateDpAsState(
+                    (cell + gap) * selected, tween(Motion.SWIFT, easing = Motion.easing), label = "nav pill",
+                )
+                Box(
+                    Modifier.offset(y = y).height(cell).fillMaxWidth().clip(RoundedCornerShape(24.dp))
+                        .let { if (glass != null) it.background(GlassChip).border(GlassChipEdge, RoundedCornerShape(24.dp)) else it.background(MaterialTheme.colorScheme.surfaceContainerHighest) },
+                )
+                Column(Modifier.fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(gap)) {
+                    items.forEachIndexed { i, item ->
+                        NavCell(
+                            item, i == selected, glass,
+                            Modifier.clip(RoundedCornerShape(24.dp)).clickable { onSelect(i) }.weight(1f).fillMaxWidth(),
+                            verticalArrangement = Arrangement.Center,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** How much of the window's width [FloatingNavRail] takes, its margins included. */
+val NavRailWidth = 92.dp
+
+/** One destination's icon and label, tinted for whether it's [on]. */
+@Composable
+private fun NavCell(item: NavItem, on: Boolean, glass: HazeState?, modifier: Modifier, verticalArrangement: Arrangement.Vertical = Arrangement.Top) {
+    Column(modifier, verticalArrangement = verticalArrangement, horizontalAlignment = Alignment.CenterHorizontally) {
+        val tint by androidx.compose.animation.animateColorAsState(
+            when {
+                glass != null -> if (on) Color.White else Color.White.copy(alpha = 0.55f)
+                else -> if (on) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
+            },
+            tween(Motion.QUICK), label = "nav tint",
+        )
+        val iconScale by animateFloatAsState(if (on) 1.08f else 1f, tween(Motion.SWIFT, easing = Motion.easing), label = "nav icon")
+        Icon(
+            if (on) item.selectedIcon else item.icon, item.label, tint = tint,
+            modifier = Modifier.size(24.dp).graphicsLayer { scaleX = iconScale; scaleY = iconScale },
+        )
+        Text(item.label, style = MaterialTheme.typography.labelSmall, color = tint, maxLines = 1)
     }
 }
 

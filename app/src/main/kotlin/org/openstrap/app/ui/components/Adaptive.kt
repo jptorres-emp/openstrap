@@ -23,7 +23,7 @@ val SideBySideWidth = 720.dp
 
 /**
  * A screen and what it opens. On a phone it's [PushContent]: the opened screen slides over [list]. From
- * [minWidth] (with [side]) the opened screen sits in a pane on the right and [list] stays on the left,
+ * [minWidth] the opened screen sits in a pane on the right and [list] stays on the left,
  * narrower, so you can tap through one thing after another; back closes the pane. [list] keeps its place in
  * the tree either way, so its scroll position survives the pane opening and closing.
  *
@@ -35,14 +35,13 @@ fun <S> ListDetail(
     target: S,
     isOpen: (S) -> Boolean,
     depth: (S) -> Int,
-    side: Boolean = true,
     minWidth: Dp = SidePaneWidth,
     closedMaxWidth: Dp = Dp.Unspecified,
     detail: @Composable (S) -> Unit,
     list: @Composable () -> Unit,
 ) {
     BoxWithConstraints(Modifier.fillMaxSize()) {
-        if (!side || maxWidth < minWidth) {
+        if (maxWidth < minWidth) {
             PushContent(target, depth) { if (isOpen(it)) detail(it) else list() }
             return@BoxWithConstraints
         }

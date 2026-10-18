@@ -24,15 +24,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -64,7 +60,6 @@ private val TodayDot = Color(0xFFFF4D5E)
  * Month calendar in a bottom sheet. Days with data are lit and tappable; the rest are dimmed and can't be
  * picked. Today is always pickable and carries the wordmark's red dot.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DayCalendarSheet(selected: LocalDate, available: Set<LocalDate>, onPick: (LocalDate) -> Unit, onDismiss: () -> Unit) {
     val today = LocalDate.now()
@@ -72,18 +67,8 @@ fun DayCalendarSheet(selected: LocalDate, available: Set<LocalDate>, onPick: (Lo
     val last = YearMonth.from(today)
     var month by remember { mutableStateOf(YearMonth.from(selected)) }
 
-    // Glow: glass over the blurred page, in the app's overlay; classic: Material's sheet.
-    org.openstrap.app.ui.components.GlassSheet(
-        onDismiss,
-        fallback = { body ->
-            ModalBottomSheet(
-                onDismissRequest = onDismiss,
-                sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-                containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-            ) { body() }
-        },
-    ) {
+    // Glass over the blurred page, in the app's overlay.
+    org.openstrap.app.ui.components.GlassSheet(onDismiss) {
         Column(Modifier.padding(horizontal = 20.dp).navigationBarsPadding().padding(bottom = 12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
@@ -205,4 +190,3 @@ private fun DayCell(date: LocalDate, selected: Boolean, today: Boolean, enabled:
         }
     }
 }
-

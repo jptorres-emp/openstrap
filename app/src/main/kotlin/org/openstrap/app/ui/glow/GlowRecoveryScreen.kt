@@ -38,7 +38,6 @@ import org.openstrap.app.ui.dashboard.DayUiState
 import org.openstrap.app.ui.dashboard.Metric
 import org.openstrap.app.ui.dashboard.Narrative
 import org.openstrap.app.ui.dashboard.avg
-import org.openstrap.app.ui.components.pressClickable
 import org.openstrap.app.ui.theme.MetricColors
 import java.time.format.TextStyle
 import java.util.Locale

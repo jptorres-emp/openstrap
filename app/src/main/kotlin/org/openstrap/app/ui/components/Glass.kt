@@ -1,8 +1,5 @@
 package org.openstrap.app.ui.components
 
-import android.os.Build
-import android.view.View
-import android.view.WindowManager
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,7 +20,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ProvideTextStyle
@@ -36,13 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogWindowProvider
-
-/** Whether the glow design is on; screens shared with the classic design check it to pick their look. */
-val LocalGlowDesign = staticCompositionLocalOf { false }
 
 /** The nav bar's glass: near-black, see-through, with a lit top edge. Popups use it over a blurred screen. */
 val GlassTint = Color(0xFF0B0B0D)
@@ -50,41 +40,7 @@ val GlassEdge = BorderStroke(
     1.dp, Brush.verticalGradient(0f to Color.White.copy(alpha = 0.2f), 0.5f to Color.White.copy(alpha = 0.05f), 1f to Color.Black.copy(alpha = 0.4f)),
 )
 
-/** How see-through a glass popup is: clearer when the screen behind is blurred, nearly solid when it can't be. */
-private fun glassAlpha(blurred: Boolean) = if (blurred) 0.62f else 0.94f
-
-/**
- * Blurs everything behind the popup this is placed in (Android 12+, when the phone allows cross-window blur),
- * and dims it a little. Returns whether the blur is on, so the popup can be more or less see-through.
- */
-@Composable
-fun blurBehindPopup(radius: Int = 60): Boolean {
-    val view = LocalView.current
-    val window = generateSequence(view as View?) { it.parent as? View }
-        .firstNotNullOfOrNull { it as? DialogWindowProvider }?.window
-        ?: (view.parent as? DialogWindowProvider)?.window
-    val blurred = window != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && window.windowManager.isCrossWindowBlurEnabled
-    DisposableEffect(window, blurred) {
-        if (window != null) {
-            if (blurred && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                window.addFlags(WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
-                window.attributes = window.attributes.also { it.blurBehindRadius = radius }
-            }
-            window.setDimAmount(if (blurred) 0.25f else 0.6f)
-        }
-        onDispose { }
-    }
-    return blurred
-}
-
-/** The glass colour for a popup's surface. */
-@Composable
-fun glassColor(blurred: Boolean) = GlassTint.copy(alpha = glassAlpha(blurred))
-
-/**
- * AlertDialog with the same slots. With the glow design it's a dark glass panel over the blurred screen, like the
- * nav bar; otherwise it's the standard Material dialog.
- */
+/** AlertDialog with the same slots, as a dark glass panel over the blurred screen, like the nav bar. */
 @Composable
 fun GlassAlertDialog(
     onDismissRequest: () -> Unit,
@@ -94,18 +50,8 @@ fun GlassAlertDialog(
     title: @Composable (() -> Unit)? = null,
     text: @Composable (() -> Unit)? = null,
 ) {
-    if (!LocalGlowDesign.current) {
-        AlertDialog(onDismissRequest = onDismissRequest, confirmButton = confirmButton, dismissButton = dismissButton, icon = icon, title = title, text = text)
-        return
-    }
-    val panel: @Composable (Color) -> Unit = { color ->
-        Surface(
-            shape = RoundedCornerShape(28.dp),
-            color = color,
-            border = GlassEdge,
-            contentColor = Color.White,
-            modifier = Modifier.widthIn(min = 280.dp, max = 560.dp),
-        ) {
+    GlassPortal(LocalGlassHost.current, sheet = false, onDismiss = onDismissRequest) {
+        GlassPanel(Modifier.widthIn(min = 280.dp, max = 560.dp)) {
             Column(Modifier.padding(24.dp)) {
                 if (icon != null) {
                     CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.secondary) {
@@ -133,18 +79,11 @@ fun GlassAlertDialog(
             }
         }
     }
-    val host = LocalGlassHost.current
-    if (host != null) GlassPortal(host, sheet = false, onDismiss = onDismissRequest) { panel(GlassTint.copy(alpha = 0.72f)) }
-    else Dialog(onDismissRequest = onDismissRequest) { panel(glassColor(blurBehindPopup())) }
 }
 
-/**
- * With the glow design, the screen's cards go OLED black with a faint hairline instead of grey fills, matching
- * the glow tabs; otherwise the theme is left as it is.
- */
+/** The screen's cards go OLED black with a faint hairline instead of grey fills, matching the glow tabs. */
 @Composable
-fun OledSurfaces(enabled: Boolean, content: @Composable () -> Unit) {
-    if (!enabled) { content(); return }
+fun OledSurfaces(content: @Composable () -> Unit) {
     val c = MaterialTheme.colorScheme
     MaterialTheme(
         colorScheme = c.copy(
@@ -181,8 +120,8 @@ internal class GlassLayer(
     val content: androidx.compose.runtime.State<@Composable () -> Unit>,
 )
 
-/** The overlay host, when the glow design is on; null otherwise. */
-val LocalGlassHost = staticCompositionLocalOf<GlassHost?> { null }
+/** The overlay host, provided at the app's root. */
+val LocalGlassHost = staticCompositionLocalOf<GlassHost> { error("No GlassHost provided") }
 
 /** Shows [content] in the overlay for as long as this is in the composition. */
 @Composable
@@ -242,12 +181,10 @@ fun GlassPanel(modifier: Modifier = Modifier, shape: androidx.compose.ui.graphic
     Surface(shape = shape, color = GlassTint.copy(alpha = 0.72f), border = GlassEdge, contentColor = Color.White, modifier = modifier, content = content)
 }
 
-/** A bottom sheet as glass in the overlay with the glow design, else Material's sheet (supplied by the caller). */
+/** A bottom sheet as glass in the overlay. */
 @Composable
-fun GlassSheet(onDismiss: () -> Unit, fallback: @Composable (@Composable () -> Unit) -> Unit, content: @Composable () -> Unit) {
-    val host = LocalGlassHost.current
-    if (host == null) { fallback(content); return }
-    GlassPortal(host, sheet = true, onDismiss = onDismiss) {
+fun GlassSheet(onDismiss: () -> Unit, content: @Composable () -> Unit) {
+    GlassPortal(LocalGlassHost.current, sheet = true, onDismiss = onDismiss) {
         GlassPanel(Modifier.fillMaxWidth(), RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)) {
             Column {
                 Box(Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 8.dp), contentAlignment = Alignment.Center) {

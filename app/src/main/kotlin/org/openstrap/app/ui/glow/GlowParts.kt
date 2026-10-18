@@ -101,25 +101,6 @@ private fun DrawScope.dotted(gap: Dp, width: Dp) = Stroke(
     pathEffect = PathEffect.dashPathEffect(floatArrayOf(0f, gap.toPx())),
 )
 
-/**
- * Overlapping dotted circles rising from the bottom edge with a few readings plotted on them
- * ("Last test"). [points] are (x, y) fractions of the area.
- */
-@Composable
-fun DottedOrbits(points: List<Offset>, modifier: Modifier = Modifier, color: Color = Color.White) {
-    Canvas(modifier) {
-        val stroke = dotted(5.dp, 1.4.dp)
-        val ring = color.copy(alpha = 0.35f)
-        val r = size.width / 3f
-        val cy = size.height + r * 0.15f
-        listOf(0.26f, 0.5f, 0.74f).forEach { fx -> drawCircle(ring, r, Offset(size.width * fx, cy), style = stroke) }
-        drawCircle(ring, r * 0.65f, Offset(size.width / 2, cy), style = stroke)
-        val baseline = size.height * 0.86f
-        drawLine(ring, Offset(0f, baseline), Offset(size.width, baseline), strokeWidth = stroke.width, cap = StrokeCap.Round, pathEffect = stroke.pathEffect)
-        points.forEach { drawCircle(color, 3.5.dp.toPx(), Offset(it.x * size.width, it.y * size.height)) }
-    }
-}
-
 /** A marker on an [ArcTimeline]: a position along the line (0..1) and its colour. */
 data class ArcMark(val at: Float, val color: Color)
 

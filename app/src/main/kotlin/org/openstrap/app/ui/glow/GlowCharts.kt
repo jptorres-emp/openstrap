@@ -27,7 +27,6 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
@@ -38,7 +37,6 @@ import androidx.compose.ui.unit.sp
 import org.openstrap.app.ui.components.scrub
 import org.openstrap.app.ui.components.smoothPath
 import org.openstrap.app.ui.theme.FunnelSans
-import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -298,40 +296,6 @@ fun GlowTrend(
 /* ------------------------------------------------------------------------------------------------ */
 
 /**
- * A progress ring made of [dots] dots: lit ones up to [progress], faint ones after, and a glowing dot
- * at the leading edge. [content] sits in the middle (e.g. a [DotMatrixText] score).
- */
-@Composable
-fun GlowDotRing(
-    progress: Float,
-    modifier: Modifier = Modifier,
-    size: Dp = 150.dp,
-    dots: Int = 48,
-    content: @Composable BoxScope.() -> Unit = {},
-) {
-    Box(modifier.size(size), contentAlignment = Alignment.Center) {
-        Canvas(Modifier.size(size)) {
-            val r = this.size.minDimension / 2 - 8.dp.toPx()
-            val c = center
-            val lit = (progress.coerceIn(0f, 1f) * dots).roundToInt()
-            for (i in 0 until dots) {
-                val a = -PI / 2 + 2 * PI * i / dots
-                val o = Offset(c.x + r * cos(a).toFloat(), c.y + r * sin(a).toFloat())
-                when {
-                    i == lit - 1 -> {
-                        drawCircle(Ink.copy(alpha = 0.2f), 9.dp.toPx(), o)
-                        drawCircle(Ink, 4.5.dp.toPx(), o)
-                    }
-                    i < lit -> drawCircle(Ink.copy(alpha = 0.55f + 0.45f * i / lit), 3.dp.toPx(), o)
-                    else -> drawCircle(Faint, 2.dp.toPx(), o)
-                }
-            }
-        }
-        content()
-    }
-}
-
-/**
  * A half-circle gauge from 9 o'clock over the top to 3: a smooth white line with a faint halo up to
  * [progress], a dotted track for what's left, and a glowing dot in [color] at the leading edge. Fills
  * the width it's given; [content] sits at the bottom middle, inside the arc.
@@ -372,93 +336,6 @@ fun GlowArcGauge(
             drawCircle(color, 5.dp.toPx(), end)
         }
         content()
-    }
-}
-
-/**
- * The smooth counterpart of [GlowDotRing]: a faint track, a white arc with a faint halo and a
- * dot at its end. Pair it with a dot-matrix number; pair [GlowDotRing] with plain text.
- */
-@Composable
-fun GlowRing(
-    progress: Float,
-    modifier: Modifier = Modifier,
-    size: Dp = 150.dp,
-    stroke: Dp = 7.dp,
-    color: Color = Ink,
-    content: @Composable BoxScope.() -> Unit = {},
-) {
-    Box(modifier.size(size), contentAlignment = Alignment.Center) {
-        Canvas(Modifier.size(size)) {
-            val s = stroke.toPx()
-            // Room for the end dot and halo, which scale with the stroke.
-            val inset = s / 2 + s * 1.2f
-            val arcSize = Size(this.size.width - inset * 2, this.size.height - inset * 2)
-            val topLeft = Offset(inset, inset)
-            val sweep = 360f * progress.coerceIn(0f, 1f)
-            drawArc(Faint, 0f, 360f, false, topLeft, arcSize, style = Stroke(s))
-            if (sweep <= 0f) return@Canvas
-            // Rotated so the arc and its fade both start at 12 o'clock (sweep gradients start at 3).
-            rotate(-90f) {
-                // A faint halo just wider than the arc.
-                drawArc(color.copy(alpha = 0.08f), 0f, sweep, false, topLeft, arcSize, style = Stroke(s * 1.7f, cap = StrokeCap.Round))
-                drawArc(
-                    Brush.sweepGradient(0f to color.copy(alpha = 0.55f), sweep / 360f to color, center = center),
-                    0f, sweep, false, topLeft, arcSize, style = Stroke(s, cap = StrokeCap.Round),
-                )
-            }
-            val a = Math.toRadians((sweep - 90f).toDouble())
-            val r = arcSize.width / 2
-            val end = Offset(center.x + r * cos(a).toFloat(), center.y + r * sin(a).toFloat())
-            drawCircle(color.copy(alpha = 0.18f), s * 1.05f, end)
-            drawCircle(color, s * 0.6f, end)
-        }
-        content()
-    }
-}
-
-/**
- * Nested half arcs, outermost first, drawn like the other glow charts: dotted tracks, a thin white
- * line with a faint halo up to each value, and a glowing dot at its end in the value's colour (the
- * only colour on the chart). The feet stand on a dotted baseline marked 0 and 100.
- */
-@Composable
-fun GlowHalfArcs(
-    arcs: List<Pair<Float, Color>>,
-    modifier: Modifier = Modifier,
-    height: Dp = 116.dp,
-    gap: Dp = 14.dp,
-) {
-    val m = rememberTextMeasurer()
-    Canvas(modifier.fillMaxWidth().height(height)) {
-        val axisH = 18.dp.toPx()
-        val baseY = size.height - axisH
-        val pad = 7.dp.toPx()
-        val outer = min(size.width / 2 - pad, baseY - pad)
-        val base = Offset(center.x, baseY)
-        dottedLine(baseY)
-        text(m, "0", axisText, base.x - outer, baseY + 4.dp.toPx(), align = 0.5f)
-        text(m, "100", axisText, base.x + outer, baseY + 4.dp.toPx(), align = 0.5f)
-        arcs.forEachIndexed { i, (progress, color) ->
-            val r = outer - i * gap.toPx()
-            if (r <= gap.toPx()) return@forEachIndexed
-            val topLeft = Offset(base.x - r, base.y - r)
-            val box = Size(r * 2, r * 2)
-            drawArc(
-                Faint, 180f, 180f, false, topLeft, box,
-                style = Stroke(1.6.dp.toPx(), cap = StrokeCap.Round, pathEffect = PathEffect.dashPathEffect(floatArrayOf(0f, 6.dp.toPx()))),
-            )
-            val sweep = 180f * progress.coerceIn(0f, 1f)
-            if (sweep <= 0f) return@forEachIndexed
-            // Outer arcs brightest, like the leading line on a chart.
-            val ink = Ink.copy(alpha = 1f - 0.2f * i)
-            drawArc(ink.copy(alpha = 0.08f), 180f, sweep, false, topLeft, box, style = Stroke(4.dp.toPx(), cap = StrokeCap.Round))
-            drawArc(ink, 180f, sweep, false, topLeft, box, style = Stroke(1.8.dp.toPx(), cap = StrokeCap.Round))
-            val a = Math.toRadians((180f + sweep).toDouble())
-            val end = Offset(base.x + r * cos(a).toFloat(), base.y + r * sin(a).toFloat())
-            drawCircle(color.copy(alpha = 0.25f), 6.5.dp.toPx(), end)
-            drawCircle(color, 3.5.dp.toPx(), end)
-        }
     }
 }
 
@@ -534,7 +411,7 @@ fun GlowHypnogram(
 /* ------------------------------------------------------------------------------------------------ */
 
 /**
- * The score as a wide, shallow arc across the card, like the classic sleep hero: a dotted track, ticks above it,
+ * The score as a wide, shallow arc across the card: a dotted track, ticks above it,
  * a white fill with a soft halo up to the score, and a knob glowing in [color] where it lands. The fill sweeps in
  * when the card appears.
  */

@@ -49,11 +49,6 @@ fun YouScreen(
     onOpenStrap: () -> Unit,
     onExportCsv: () -> Unit,
     onExportHealthConnect: () -> Unit,
-    /** Opens the glow design sandbox; debug builds only. */
-    onOpenDesignLab: (() -> Unit)? = null,
-    /** Whether Today uses the glow design; null hides the switch (release builds). */
-    glowToday: Boolean? = null,
-    onGlowToday: (Boolean) -> Unit = {},
 ) {
     val profile by vm.profile.collectAsState()
     val paired by vm.paired.collectAsState()
@@ -113,24 +108,6 @@ fun YouScreen(
 
         item { Group("Support") }
         item { DiagnosticsPanel(log, asRow = true) }
-
-        if (glowToday != null) item {
-            Panel {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    YouIcon(PhosphorIcons.SlidersHorizontal)
-                    Spacer(Modifier.width(14.dp))
-                    Box(Modifier.weight(1f)) {
-                        SettingRow("Glow design on Today", "Experimental (debug build)", onClick = { onGlowToday(!glowToday) }, titleStyle = MaterialTheme.typography.titleMedium) {
-                            androidx.compose.material3.Switch(glowToday, onGlowToday)
-                        }
-                    }
-                }
-            }
-        }
-
-        if (onOpenDesignLab != null) item {
-            TextButton(onClick = onOpenDesignLab, modifier = Modifier.fillMaxWidth()) { Text("Design lab (debug build)") }
-        }
 
         if (org.openstrap.app.data.SampleData.AVAILABLE) item {
             TextButton(onClick = vm::loadSampleData, modifier = Modifier.fillMaxWidth()) { Text("Load sample data (debug build)") }

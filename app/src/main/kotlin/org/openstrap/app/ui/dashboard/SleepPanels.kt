@@ -1,15 +1,9 @@
 package org.openstrap.app.ui.dashboard
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
@@ -25,12 +19,8 @@ import androidx.compose.ui.unit.sp
 import org.openstrap.app.data.DayStat
 import org.openstrap.app.data.History
 import org.openstrap.app.data.SleepHistory
-import org.openstrap.app.ui.components.EmptyHint
-import org.openstrap.app.ui.components.Panel
-import org.openstrap.app.ui.components.PanelHeader
 import org.openstrap.app.ui.components.formatDuration
 import org.openstrap.app.ui.theme.MetricColors
-import org.openstrap.app.ui.theme.PhosphorIcons
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.TextStyle as DayStyle
@@ -96,34 +86,6 @@ internal fun sleepVitals(state: DayUiState): List<SleepVital> {
 /** Whether a vital's note says it's outside your usual range, so it takes the accent colour. */
 internal val SleepVital.isOff get() = note?.endsWith("than usual") == true
 
-@Composable
-internal fun SleepVitalsPanel(state: DayUiState, onOpenMetric: ((Metric) -> Unit)?) {
-    val vitals = sleepVitals(state)
-    if (vitals.isEmpty()) return
-    Panel {
-        PanelHeader("Sleep vitals", PhosphorIcons.Heartbeat, MetricColors.heart, trailing = "During sleep")
-        vitals.chunked(2).forEach { row ->
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                row.forEach { v -> VitalCell(v, Modifier.weight(1f), onOpenMetric) }
-                if (row.size == 1) Spacer(Modifier.weight(1f))
-            }
-        }
-    }
-}
-
-@Composable
-private fun VitalCell(v: SleepVital, modifier: Modifier, onOpenMetric: ((Metric) -> Unit)?) {
-    Column(
-        modifier.let { m -> onOpenMetric?.let { open -> m.clickable { open(v.metric) } } ?: m },
-        verticalArrangement = Arrangement.spacedBy(2.dp),
-    ) {
-        Text(v.label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(v.value, style = MaterialTheme.typography.titleLarge)
-        // Only a reading outside your usual range takes the accent colour.
-        v.note?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = if (v.isOff) v.accent else MaterialTheme.colorScheme.onSurfaceVariant) }
-    }
-}
-
 /**
  * The last seven nights: when each sleep started and ended on a shared clock, with time asleep over each bar,
  * then the week's averages and how regular the timing was (Zepp's bands, from five nights).
@@ -159,50 +121,6 @@ internal fun sleepWeek(state: DayUiState, goalSeconds: Long, zone: ZoneId = Zone
         averageScore = scores.takeIf { it.isNotEmpty() }?.average()?.roundToInt()?.toString() ?: "—",
         goalNights = asleep.count { it >= goalSeconds },
     )
-}
-
-@Composable
-internal fun SleepWeekPanel(state: DayUiState) {
-    val zone = ZoneId.systemDefault()
-    val goal = LocalGoals.current.sleepSeconds
-    val w = sleepWeek(state, goal, zone)
-    Panel {
-        PanelHeader("This week", PhosphorIcons.CalendarBlank, MetricColors.sleepDeep, trailing = "Last 7 nights")
-        if (w == null) {
-            EmptyHint("No sleep recorded in the last 7 nights.")
-            return@Panel
-        }
-        val regularity = w.regularity
-        SleepWindows(w.nights, regularity, zone)
-        Row(Modifier.fillMaxWidth()) {
-            WeekFact("Average asleep", w.averageAsleep, Modifier.weight(1f))
-            WeekFact("Average score", w.averageScore, Modifier.weight(1f))
-            WeekFact("Reached ${formatDuration(goal)}", "${w.goalNights} of ${w.slept}", Modifier.weight(1f))
-        }
-
-        if (regularity == null) {
-            Text(w.learningNote, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        } else {
-            Row(Modifier.fillMaxWidth()) {
-                Column(Modifier.weight(1f)) {
-                    Text("Regularity", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text("${regularity.score}%", style = MaterialTheme.typography.titleLarge)
-                    Text(regularity.band.label, style = MaterialTheme.typography.bodySmall, color = bandColor(regularity.band))
-                }
-                WeekFact("Avg. fall-asleep", minutesClock(regularity.bedtime), Modifier.weight(1f))
-                WeekFact("Avg. wake-up", minutesClock(regularity.wake), Modifier.weight(1f))
-            }
-            Text(w.regularityNote.orEmpty(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-    }
-}
-
-@Composable
-private fun WeekFact(label: String, value: String, modifier: Modifier) {
-    Column(modifier) {
-        Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(value, style = MaterialTheme.typography.titleMedium)
-    }
 }
 
 internal fun bandColor(band: SleepHistory.Band) = when (band) {

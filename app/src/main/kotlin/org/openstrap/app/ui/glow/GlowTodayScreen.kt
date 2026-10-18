@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -45,10 +44,8 @@ import org.openstrap.app.ui.components.formatDuration
 import org.openstrap.app.ui.dashboard.DateHeader
 import org.openstrap.app.ui.dashboard.DayPicker
 import org.openstrap.app.ui.dashboard.DayUiState
-import org.openstrap.app.ui.dashboard.DayViewModel
 import org.openstrap.app.ui.dashboard.Metric
 import org.openstrap.app.ui.dashboard.Narrative
-import org.openstrap.app.ui.dashboard.SLEEP_NAMES
 import org.openstrap.app.ui.dashboard.LocalGoals
 import org.openstrap.app.ui.dashboard.avg
 import org.openstrap.app.ui.dashboard.chargeLeads
@@ -333,7 +330,7 @@ private class Signal(
 }
 
 /**
- * Key statistics against your normal, the same ones as the classic Today: each value with its 7-day
+ * Key statistics against your normal: each value with its 7-day
  * baseline, and an arrow on the ones that moved. A tile shows as soon as there is a value or a baseline.
  */
 @Composable

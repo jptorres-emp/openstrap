@@ -106,7 +106,7 @@ internal val SleepGlow = GlowStyle.Midnight.copy(
 private fun clock(epoch: Long) = Instant.ofEpochSecond(epoch).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("HH:mm"))
 
 /**
- * The night. The score sits centred inside its arc, the frame it had on the classic hero (time asleep against
+ * The night. The score sits centred inside its arc (time asleep against
  * your goal when there's no score); then the headline, asleep / in bed / woke, and the stages.
  * The one centred card: it's the tab's hero.
  */

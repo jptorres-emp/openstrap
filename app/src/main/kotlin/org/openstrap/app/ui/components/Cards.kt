@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -28,8 +27,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import org.openstrap.app.ui.theme.PhosphorIcons
 
@@ -110,58 +107,6 @@ fun BigValue(
                     modifier = Modifier.padding(bottom = if (large) 8.dp else 4.dp),
                 )
             }
-        }
-    }
-}
-
-/** One of the three hero rings on the Today screen. */
-@Composable
-fun StatRing(label: String, value: String, progress: Float, color: Color, modifier: Modifier = Modifier, ringSize: Dp = 92.dp) {
-    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Box(contentAlignment = Alignment.Center) {
-            ProgressRing(progress, color, size = ringSize, stroke = 9.dp)
-            Text(value, style = MaterialTheme.typography.titleLarge)
-        }
-        Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
-}
-
-/** Tall rounded vital tile (Bevel-style): value, unit, icon. */
-@Composable
-fun VitalPill(value: String?, unit: String, icon: ImageVector, accent: Color, modifier: Modifier = Modifier) {
-    Column(
-        modifier
-            .clip(RoundedCornerShape(18.dp))
-            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-            .padding(vertical = 14.dp, horizontal = 4.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        Box(Modifier.size(6.dp).background(if (value != null) accent else accent.copy(alpha = 0.25f), CircleShape))
-        Text(value ?: "—", style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
-        Text(unit, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Icon(icon, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(19.dp))
-    }
-}
-
-/** Oura-style stage row: colored bar proportional to share, duration and percentage. */
-@Composable
-fun StageRow(label: String, seconds: Long, fraction: Float, color: Color) {
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Row(verticalAlignment = Alignment.Bottom) {
-            Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-            Text(formatDuration(seconds), style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.width(10.dp))
-            Text(
-                "${Math.round(fraction * 100)}%",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.width(40.dp),
-                textAlign = TextAlign.End,
-            )
-        }
-        Box(Modifier.fillMaxWidth().height(6.dp).clip(CircleShape).background(color.copy(alpha = 0.15f))) {
-            Box(Modifier.fillMaxWidth(fraction.coerceIn(0f, 1f)).height(6.dp).clip(CircleShape).background(color))
         }
     }
 }

@@ -103,6 +103,15 @@ data class GlowStyle(
     }
 }
 
+/** A glow style tuned for charts: the dark core sits low and wide, behind the plot. */
+fun GlowStyle.Companion.chart(color: Color) = Bloom.copy(
+    color = color,
+    coreY = 0.64f, coreWidth = 0.88f, coreHeight = 0.66f,
+    coreBlur = 24.dp, toneWidth = 16.dp,
+    // Sleep's quiet recipe: a near-same-hue band, a softer rim and a lighter bevel.
+    toneShift = -10f, glowStrength = 0.6f, bevel = 0.6f,
+)
+
 /** The handful of colours a [GlowStyle] is drawn with, all derived from its main colour. */
 @Immutable
 internal class GlowPalette(style: GlowStyle) {

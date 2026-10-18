@@ -55,6 +55,8 @@ data class Baselines(
 data class DayUiState(
     val date: LocalDate = LocalDate.now(),
     val steps: Int = 0,
+    /** Steps summed from the per-minute records; [steps] can be higher today from the strap's own running total. */
+    val minuteSteps: Int = 0,
     val hourlySteps: List<Float> = List(24) { 0f },
     val activeHours: Int = 0,
     val heartRate: List<ChartPoint> = emptyList(),
@@ -264,6 +266,7 @@ class DayViewModel(
             DayUiState(
                 date = date,
                 steps = liveCounter.today(Summaries.totalSteps(act), live),
+                minuteSteps = Summaries.totalSteps(act),
                 hourlySteps = hourly,
                 activeHours = Summaries.activeHours(hourly),
                 heartRate = Summaries.bucketAverage(series).map { ChartPoint(it.first, it.second.toFloat()) },

@@ -41,6 +41,8 @@ data class RecoveryResult(
     val strainPercentile: Int? = null,
     /** True when max HR is the user's own tested value. */
     val maxHrTested: Boolean = false,
+    /** Steps, MVPA and distance for [date]. */
+    val activity: Activity.Day? = null,
 )
 
 /** Loads what [Recovery] needs from the database and runs it. All work happens off the main thread by the caller. */
@@ -161,6 +163,33 @@ class RecoveryEngine(private val dao: HealthDao) {
         val params = Recovery.ChargeParams(restingHr, maxHr, tonight?.restingHr, hrvScore, female, stressThreshold.value)
         val charge = Recovery.charge(minutes, params, day.from..day.to, start = 50f, mainSleepEnd = tonight?.end)
 
+        // Activity: MVPA from cadence, then heart rate, over the 7 days ending on the selected one.
+        val weekFrom = DayWindow.of(date.minusDays(6), zone).from
+        val workouts = dao.workoutsOnce(weekFrom, to)
+        val minuteSteps = dao.activityOnce(weekFrom, to).filter { it.steps in 0..250 }.associate { it.timestamp / 60 * 60 to it.steps }
+        val weekHr = hr.filter { it.first >= weekFrom }.toMap()
+        val activityDays = (6 downTo 0).map { back ->
+            val w = DayWindow.of(date.minusDays(back.toLong()), zone)
+            // Minutes with any data; no row is missing, never zero.
+            val times = (minuteSteps.keys.filter { it in w.from..w.to } + weekHr.keys.filter { it in w.from..w.to }).toSortedSet()
+            times.map { t ->
+                Activity.Minute(
+                    t, minuteSteps[t] ?: 0, weekHr[t]?.let { Recovery.hrr(it, restingHr, maxHr) }, asleep(t),
+                    workouts.any { t in it.start..it.end },
+                )
+            }
+        }
+        val moderateCadence = Activity.moderateCadence(age)
+        val weekMvpa = activityDays.map { Activity.mvpa(it, moderateCadence) }
+        val todayMinutes = activityDays.last()
+        val activity = Activity.Day(
+            steps = todayMinutes.sumOf { it.steps },
+            mvpa = weekMvpa.last(),
+            weekEquivalent = weekMvpa.sumOf { it.equivalent },
+            distanceMeters = Activity.distanceMeters(todayMinutes, profile.heightCm),
+            stepGoal = Activity.defaultStepGoal(age),
+        )
+
         val loadTrend = if (loads.size >= 7) Recovery.fitnessFatigue(loads).last() else null
         val chronic = loadTrend?.ctl
 
@@ -189,6 +218,7 @@ class RecoveryEngine(private val dao: HealthDao) {
             date, readiness, charge, trend, todayLoad, chronic, restingHr, maxHr, age != null, stressThreshold, tonight,
             Recovery.breathingDisturbances(tonight, nights), Recovery.acwr(loads), sleepNeed, regularity, sleepHealth,
             loadTrend, Recovery.strain(todayLoad), Recovery.loadPercentile(todayLoad, loads), profile.maxHeartRate != null && maxHr == profile.maxHeartRate.toFloat(),
+            activity,
         )
     }
 

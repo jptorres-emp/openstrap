@@ -102,6 +102,9 @@ interface HealthDao {
     @Query("SELECT * FROM workout ORDER BY start DESC")
     fun workouts(): Flow<List<Workout>>
 
+    @Query("SELECT * FROM workout WHERE `end` >= :from AND start <= :to ORDER BY start")
+    suspend fun workoutsOnce(from: Long, to: Long): List<Workout>
+
     @Query("SELECT * FROM workout WHERE start = :start")
     fun workout(start: Long): Flow<Workout?>
 

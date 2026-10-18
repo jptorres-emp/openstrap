@@ -222,6 +222,16 @@ Zepp does the same job differently. It computes a stress threshold on the phone 
 * Readiness keeps "previous day's load": 100 when yesterday's TRIMP ≤ 1.5 × CTL (up to the day before), −25 points per unit above, floor 30.
 * Live heart rate is stored several times a minute; the engine averages it to one value per minute first.
 
+## Activity (Activity screen)
+
+`Activity.kt`. The cadence thresholds are established; a chest- or arm-worn strap's step counting is not validated at all.
+
+* **MVPA** (`mvpa`): moderate at cadence ≥ `MODERATE_CADENCE` = 100 (105 from 61 is available, McAvoy 2023), vigorous at ≥ `VIGOROUS_CADENCE` = 130 (Tudor-Locke). A minute counts only inside a run of ≥ `CADENCE_RUN_MINUTES` = 2 consecutive qualifying minutes (design choice). Then heart rate, for effort without steps: awake, ≥ 10 consecutive minutes at ≥ 40 % of reserve (vigorous ≥ 60 %), with < 100 steps or inside a workout, labelled "HR-assisted". No minute counts twice.
+* MVPA-equivalent = moderate + 2·vigorous over the last 7 days, against 150 min a week (WHO 2020). Raw minutes are shown too.
+* **Steps:** the strap's daily counter, else the summed minutes; a divergence over 5 % is flagged.
+* **Step goal framing:** "most of the benefit is reached" by about 7,000 steps from 60, 8,000 below (Paluch et al. 2022: mortality plateaus at 6,000–8,000 and 8,000–10,000). The user's own goal is unchanged.
+* **Distance** ≈ steps·L, L = 0.414·H below 120 spm, linear to 0.45·H at 130 and above; shown with "≈". Workout or phone-GPS distance and a GPS-calibrated step length are not available yet.
+
 ## Inputs from the profile (Device → Your profile)
 
 * **Max HR:** a value the user entered from a test wins. Otherwise Tanaka et al. 2001 (JACC, 18,712 subjects): 208 − 0.7·age; without an age, the strap's own max HR (from the Zepp profile), else 190. Any equation's individual SD is about 7–11 bpm, so raising is sound and lowering is not: it's raised to the highest HR the user has actually reached, by at most `MAX_HR_RAISE` = +15 bpm. "Reached" (`observedPeak`) needs two separate days within `MAX_HR_AGREE_BPM` = 3 bpm of each other over the last 90 days, each day's value being its highest artefact-filtered minute (`filteredMax`: a neighbouring minute within 10 bpm) or the strap's daily maximum exercise HR (type 61). Max HR sets heart-rate reserve, so it changes both training load and Charge drain.

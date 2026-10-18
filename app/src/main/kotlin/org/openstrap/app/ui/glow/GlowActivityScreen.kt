@@ -87,7 +87,8 @@ fun GlowActivityScreen(
         GlowScreenList(contentPadding, list) {
             full { DateHeader(state.date, battery, onPrev, onNext, charging, picker) }
             // Wide: today's movement on the left; load, fitness and workouts on the right.
-            left { StepsCard(state) { onOpenMetric(Metric.Steps) } }
+            left { StepsCard(state, r?.activity) { onOpenMetric(Metric.Steps) } }
+            r?.activity?.let { a -> left { MvpaPanel(a) } }
             left { PaiPanel(state, week) }
             right { LoadPanel(r, effects.lastOrNull { it.weeklyLoad != null }, onEditProfile) }
             right { FitnessPanel(r, workouts, effects, state.dailyMaxHeartRate) }
@@ -100,7 +101,7 @@ private val HOURS = listOf("00", "06", "12", "18", "24")
 
 /** Steps glow and pick up pace with the day's progress; distance, calories and active hours sit under the chart. */
 @Composable
-private fun StepsCard(state: DayUiState, onClick: () -> Unit) {
+private fun StepsCard(state: DayUiState, activity: org.openstrap.app.data.Activity.Day?, onClick: () -> Unit) {
     val goals = LocalGoals.current
     val progress = state.steps.toFloat() / goals.steps
     val style = GlowStyle.chart(MetricColors.steps).copy(motion = GlowMotion.Stride(energy = progress.coerceIn(0f, 1f)))
@@ -116,10 +117,36 @@ private fun StepsCard(state: DayUiState, onClick: () -> Unit) {
             Spacer(Modifier.height(18.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Fact("Active hours", "${state.activeHours} of ${goals.activeHours}")
-                Fact("Distance", state.distanceMeters?.let { "%.1f km".format(it / 1000f) } ?: "—")
+                // Ours from step length and height when we can; the strap's own figure otherwise. Always approximate.
+                Fact("Distance", (activity?.distanceMeters ?: state.distanceMeters?.toFloat())?.let { "≈ %.1f km".format(it / 1000f) } ?: "—")
                 Fact("Active kcal", state.activeCalories?.toString() ?: "—")
             }
+            if (org.openstrap.app.data.Activity.stepsDiverge(state.steps, state.minuteSteps)) {
+                Spacer(Modifier.height(8.dp))
+                Note("The strap's step counter (${"%,d".format(state.steps)}) and its minute records (${"%,d".format(state.minuteSteps)}) differ by more than 5 %.")
+            }
+            activity?.let { Note("Most of the benefit is reached by about ${"%,d".format(it.stepGoal)} steps a day (Paluch et al. 2022).") }
         }
+    }
+}
+
+/** Moderate-to-vigorous minutes today and over the week, against the WHO's 150 a week (vigorous counts double). */
+@Composable
+private fun MvpaPanel(a: org.openstrap.app.data.Activity.Day) {
+    val target = org.openstrap.app.data.Activity.MVPA_WEEKLY_TARGET
+    DotPanel {
+        DotHeader("Active minutes", trailing = "Last 7 days")
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Fact("This week", "${a.weekEquivalent} / $target")
+            Fact("Moderate", "${a.mvpa.moderateMinutes}")
+            Fact("Vigorous", "${a.mvpa.vigorousMinutes}")
+        }
+        GlowBar(a.weekEquivalent / target.toFloat(), MetricColors.steps)
+        Note(
+            "Brisk walking (100+ steps a minute) is moderate, 130+ is vigorous and counts double. Effort without steps, " +
+                "like cycling, counts from heart rate after 10 minutes" +
+                if (a.mvpa.fromHeartRate > 0) " (${a.mvpa.fromHeartRate} min today, HR-assisted)." else ".",
+        )
     }
 }
 

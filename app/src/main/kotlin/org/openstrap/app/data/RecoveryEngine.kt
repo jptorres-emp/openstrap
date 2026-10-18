@@ -115,16 +115,13 @@ class RecoveryEngine(private val dao: HealthDao) {
         }
         val loads = loadDays.map { it.second }
 
-        // Likely causes for a body-signal alert: the user's tags that morning or the day before, and a hard previous day.
-        val tags = dao.dayTagsOnce(from, to).groupBy({ it.day }, { it.tag })
+        // A likely cause for a body-signal alert: a hard training day before the morning.
         val hardDays = loadDays.indices.filter { k ->
             k >= 7 && Recovery.hardDay(loadDays[k].second, Recovery.ewmaLoads(loads.take(k)).second)
         }.map { loadDays[it].first }
         val causes = { morning: Long ->
             val before = morning - 86_400 + 3600
-            val noted = tags.filterKeys { it == morning || it in before - 7200..before + 7200 }.values.flatten()
-                .distinct().map { DayTag.of(it)?.label?.lowercase() ?: it }
-            noted + listOfNotNull("a hard training day".takeIf { hardDays.any { d -> d in before - 7200..before + 7200 } })
+            listOfNotNull("a hard training day".takeIf { hardDays.any { d -> d in before - 7200..before + 7200 } })
         }
         val todayLoad = Recovery.dailyLoad(hr.filter { it.first in day.from..day.to }, restingHr, maxHr, female, asleep)
 

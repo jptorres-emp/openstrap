@@ -147,6 +147,8 @@ private fun AppRoot(container: AppContainer) {
     val deviceVm: DeviceViewModel = viewModel(factory = viewModelFactory { initializer { DeviceViewModel(container) } })
 
     var tab by rememberSaveable { mutableIntStateOf(0) }
+    // The Recovery tab section Today's top card asked for; cleared once the tab has scrolled to it.
+    var recoveryFocus by remember { mutableStateOf<org.openstrap.app.ui.glow.RecoverySection?>(null) }
     val liveEnabled by container.strap.liveHeartRateEnabled.collectAsStateWithLifecycle()
     val firmwareVm: FirmwareViewModel = viewModel(factory = viewModelFactory { initializer { FirmwareViewModel(container) } })
     var showFirmware by rememberSaveable { mutableStateOf(false) }
@@ -178,7 +180,6 @@ private fun AppRoot(container: AppContainer) {
     val day by dayVm.state.collectAsStateWithLifecycle()
     val strapReadiness by remember(day.dayStart) { container.database.healthDao().strapReadiness(day.dayStart) }.collectAsStateWithLifecycle(null)
     val checkIn by remember(day.date) { container.health.checkIn(day.date) }.collectAsStateWithLifecycle(null)
-    val dayTags by remember(day.date) { container.health.tags(day.date) }.collectAsStateWithLifecycle(emptySet())
     val daysWithData by dayVm.daysWithData.collectAsStateWithLifecycle()
     val picker = DayPicker(daysWithData, dayVm::select)
     val live by container.strap.liveHeartRate.collectAsStateWithLifecycle()
@@ -375,7 +376,10 @@ private fun AppRoot(container: AppContainer) {
                                     onOpenSleep = { tab = Tab.Sleep.ordinal },
                                     onOpenMetric = { todayStack = listOf(Detail.OfMetric(it)) },
                                     recovery = recovery,
-                                    onOpenRecovery = { tab = Tab.Recovery.ordinal },
+                                    strapReadiness = strapReadiness,
+                                    checkIn = checkIn?.feeling,
+                                    onCheckIn = { v -> scope.launch { container.health.saveCheckIn(day.date, v) } },
+                                    onOpenRecovery = { section -> recoveryStack = emptyList(); recoveryFocus = section; tab = Tab.Recovery.ordinal },
                                     workouts = workouts,
                                     onOpenWorkout = { todayStack = listOf(Detail.Workout(it)) },
                                     liveEnabled = liveEnabled.takeIf { connection is ConnectionState.Connected },
@@ -404,9 +408,7 @@ private fun AppRoot(container: AppContainer) {
                             org.openstrap.app.ui.glow.GlowRecoveryScreen(
                                 day, recovery, strapReadiness, history, battery, charging, dayVm::previousDay, dayVm::nextDay, picker, padding,
                                 onOpenMetric = { recoveryStack = listOf(Detail.OfMetric(it)) },
-                                checkIn = checkIn?.feeling, tags = dayTags,
-                                onCheckIn = { v -> scope.launch { container.health.saveCheckIn(day.date, v) } },
-                                onTag = { t, on -> scope.launch { container.health.setTag(day.date, t, on) } },
+                                focus = recoveryFocus, onFocused = { recoveryFocus = null },
                             )
                         }
                     }

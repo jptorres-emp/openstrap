@@ -39,7 +39,9 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import org.openstrap.app.data.Recovery
 import org.openstrap.app.data.RecoveryResult
+import org.openstrap.app.data.db.StrapReadinessRow
 import org.openstrap.app.ui.components.ChartPoint
 import org.openstrap.app.ui.components.formatDuration
 import org.openstrap.app.ui.dashboard.DateHeader
@@ -71,7 +73,8 @@ fun GlowTodayScreen(
     onOpenSleep: () -> Unit = {},
     onOpenMetric: (Metric) -> Unit = {},
     recovery: RecoveryResult? = null,
-    onOpenRecovery: () -> Unit = {},
+    /** Opens the Recovery tab at the Recovery or the Charge section. */
+    onOpenRecovery: (RecoverySection) -> Unit = {},
     workouts: List<org.openstrap.app.data.WorkoutAnalysis> = emptyList(),
     onOpenWorkout: (Long) -> Unit = {},
     /** Whether live heart rate is on; null hides the switch. */
@@ -83,12 +86,17 @@ fun GlowTodayScreen(
     /** The statistics What changed shows, in order. */
     tiles: List<Metric> = TODAY_TILES,
     onTilesChange: (List<Metric>) -> Unit = {},
+    /** The strap's own Readiness for the day, shown as "Strap's estimate" while OpenStrap's score is withheld. */
+    strapReadiness: StrapReadinessRow? = null,
+    /** The morning check-in (1-5), asked on Today before noon; see [CheckInPanel]. */
+    checkIn: Int? = null,
+    onCheckIn: (Int?) -> Unit = {},
 ) {
     // The glow holds still while the list scrolls, so scrolling stays as smooth as on other screens.
     val list = rememberLazyListState()
     var choosing by rememberSaveable { mutableStateOf(false) }
     if (choosing) TilesDialog(tiles, onSave = { onTilesChange(it); choosing = false }, onDismiss = { choosing = false })
-    val extras = TodayExtras(liveEnabled, onLiveToggle, onOpenActivity, history, tiles) { choosing = true }
+    val extras = TodayExtras(liveEnabled, onLiveToggle, onOpenActivity, history, tiles, strapReadiness, checkIn, onCheckIn) { choosing = true }
     CompositionLocalProvider(LocalGlowPaused provides { list.isScrollInProgress }) {
         TodayList(state, liveHeartRate, battery, charging, onPrev, onNext, contentPadding, picker, onOpenSleep, onOpenMetric, recovery, onOpenRecovery, workouts, onOpenWorkout, list, extras)
     }
@@ -101,6 +109,9 @@ private class TodayExtras(
     val onOpenActivity: () -> Unit,
     val history: DailyHistory?,
     val tiles: List<Metric>,
+    val strapReadiness: StrapReadinessRow?,
+    val checkIn: Int?,
+    val onCheckIn: (Int?) -> Unit,
     val onChooseTiles: () -> Unit,
 )
 
@@ -117,7 +128,7 @@ private fun TodayList(
     onOpenSleep: () -> Unit,
     onOpenMetric: (Metric) -> Unit,
     recovery: RecoveryResult?,
-    onOpenRecovery: () -> Unit,
+    onOpenRecovery: (RecoverySection) -> Unit,
     workouts: List<org.openstrap.app.data.WorkoutAnalysis>,
     onOpenWorkout: (Long) -> Unit,
     list: LazyListState,
@@ -129,7 +140,11 @@ private fun TodayList(
     // On a wide screen the scores, sleep and movement run down the left; what changed and your heart down the right.
 
     // Glow: the day's three scores at a glance, the leading one as the hero. The only place they appear.
-    left { OverviewCard(state, rec, chargeLeads(state, rec), onOpenRecovery, onOpenSleep) }
+    left { OverviewCard(state, rec, extras.strapReadiness?.takeIf { it.day == state.dayStart }, chargeLeads(state, rec), onOpenRecovery, onOpenSleep) }
+
+    // Mornings only (today, before noon): how you feel, under the score it's there to check.
+    val morning = state.date == LocalDate.now() && LocalTime.now().hour < 12
+    if (morning) left { CheckInPanel(extras.checkIn, extras.onCheckIn) }
 
     // Quiet but first: anything the strap warned about this day.
     if (state.alerts.isNotEmpty()) right { AlertsPanel(state.alerts, onOpenMetric) }
@@ -139,7 +154,6 @@ private fun TodayList(
 
     // Dark grey glow: last night, naps included. Right after waking it's what you want to know, so it leads.
     val hasSleep = state.asleepSeconds != null || state.naps.isNotEmpty()
-    val morning = state.date == LocalDate.now() && LocalTime.now().hour < 12
     if (hasSleep && morning) left { SleepPanel(state, onOpenSleep) }
 
     // Quiet: what the readiness score means, then only the signals that moved away from your normal.
@@ -188,7 +202,9 @@ internal fun bucket(points: List<ChartPoint>, range: LongRange, seconds: Long): 
  * inside, and the other two scores as pills underneath that open their tabs.
  */
 @Composable
-private fun OverviewCard(state: DayUiState, rec: RecoveryResult?, chargeLeads: Boolean, onClick: () -> Unit, onOpenSleep: () -> Unit) {
+private fun OverviewCard(
+    state: DayUiState, rec: RecoveryResult?, strap: StrapReadinessRow?, chargeLeads: Boolean, onOpen: (RecoverySection) -> Unit, onOpenSleep: () -> Unit,
+) {
     val c = rec?.charge
     val chargeNow = c?.latest?.toInt()
     val readinessNow = rec?.readiness?.score
@@ -197,24 +213,33 @@ private fun OverviewCard(state: DayUiState, rec: RecoveryResult?, chargeLeads: B
     val strain = rec?.readiness?.strainAlert == true
     // Teal, gold and the Sleep card's blue, all at the same saturation so no dot outshines the others.
     val charge = Score("Charge", chargeNow, MetricColors.chargeDeep, chargeNow.minus(c?.atWake?.toInt()), "since waking")
-    val recovery = Score("Recovery", readinessNow, MetricColors.readinessDeep, readinessNow.minus(readinessBefore), "vs yesterday")
+    // Without OpenStrap's own score, the strap's stands in as its estimate (as on the Recovery tab), with why ours is missing.
+    val estimate = rec?.readiness?.takeIf { readinessNow == null && it.showStrapEstimate }?.let { strap?.score }
+    val recovery = Score(
+        "Recovery", readinessNow ?: estimate, MetricColors.readinessDeep, readinessNow.minus(readinessBefore), "vs yesterday",
+        note = rec?.readiness?.let { readinessState(it, estimate != null, short = true) },
+        noteLong = rec?.readiness?.let { readinessState(it, estimate != null, short = false) },
+        estimate = estimate != null,
+    )
     val sleep = Score("Sleep", sleepNow, SleepGlow.color, sleepNow.minus(state.previousSleepScore), "vs night before")
     val (lead, second) = if (chargeLeads) charge to recovery else recovery to charge
+    // The card opens the leading score's section, the bar under it the other one's.
+    val (leadSection, secondSection) = if (chargeLeads) RecoverySection.Charge to RecoverySection.Recovery else RecoverySection.Recovery to RecoverySection.Charge
     val verdict = when {
         strain -> org.openstrap.app.data.BodySignalsCopy.SHORT
-        lead.value == null -> null
+        lead.value == null || lead.estimate -> null
         chargeLeads -> Narrative.chargeHeadline(lead.value)
         else -> Narrative.readinessHeadline(lead.value, alert = false)
     }
 
     // The glow sits low and central, under the gauge.
     val style = GlowStyle.Bloom.copy(
-        color = overviewColor(lead.value, strain),
+        color = overviewColor(lead.value.takeUnless { lead.estimate }, strain),
         coreShape = CoreShape.Radial, coreX = 0.5f, coreY = 0.6f, coreWidth = 0.95f, coreHeight = 0.75f,
         coreBlur = 30.dp, toneWidth = 16.dp, toneShift = -10f, glowStrength = 0.6f, bevel = 0.6f,
         motion = GlowMotion.Breath(5f), depth = 6.dp,
     )
-    GlowCard(style, Modifier.fillMaxWidth(), onClick = onClick) {
+    GlowCard(style, Modifier.fillMaxWidth(), onClick = { onOpen(leadSection) }) {
         Column {
             GlowHeader(lead.label, trailingContent = { Change(lead, withNote = true) })
             GlowArcGauge(
@@ -227,10 +252,16 @@ private fun OverviewCard(state: DayUiState, rec: RecoveryResult?, chargeLeads: B
                         verdict, color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier.padding(top = 8.dp),
                     )
+                    // Why there's no score yet, or that it's still learning: small, under the verdict.
+                    if (lead.noteLong != null) Text(
+                        lead.noteLong, color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.labelSmall,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(top = if (verdict != null) 4.dp else 8.dp),
+                    )
                 }
             }
             Row(Modifier.fillMaxWidth().padding(top = 18.dp), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-                ScoreBar(second, onClick, Modifier.weight(1f))
+                ScoreBar(second, { onOpen(secondSection) }, Modifier.weight(1f))
                 ScoreBar(sleep, onOpenSleep, Modifier.weight(1f))
             }
         }
@@ -239,8 +270,35 @@ private fun OverviewCard(state: DayUiState, rec: RecoveryResult?, chargeLeads: B
 
 private fun Int?.minus(other: Int?): Int? = if (this == null || other == null) null else this - other
 
-/** A score on the overview, with how far it moved and against what. */
-private class Score(val label: String, val value: Int?, val color: Color, val change: Int?, val against: String)
+/**
+ * A score on the overview, with how far it moved and against what. [note] (under a bar) and [noteLong] (under the
+ * gauge) are one-line states: still learning, why there's no score, or that [value] is the strap's [estimate].
+ */
+private class Score(
+    val label: String, val value: Int?, val color: Color, val change: Int?, val against: String,
+    val note: String? = null, val noteLong: String? = null, val estimate: Boolean = false,
+)
+
+/**
+ * The Readiness state in a few words, worded as on the Recovery tab; null once it's settled. "Learning" counts the
+ * nights toward a score while withheld, then toward a settled baseline while scored. [short] fits half the card
+ * at phone width on one line, so there the strap's estimate says only that; the gauge has room for why.
+ */
+private fun readinessState(r: Recovery.Readiness, estimate: Boolean, short: Boolean): String? {
+    val state = when {
+        r.score != null -> if (r.phase == Recovery.Phase.Learning) "Learning ${r.baselineNights}/${Recovery.SETTLED_NIGHTS} nights" else null
+        !r.withheld -> "No sleep yet"
+        r.phase == Recovery.Phase.Withheld -> "Learning ${r.baselineNights}/${Recovery.SCORED_NIGHTS} nights"
+        else -> "Needs HRV data"
+    }
+    return when {
+        !estimate -> state
+        short || state == null -> "Strap's estimate"
+        // Kept under ~30 characters so the gauge line never wraps at phone width.
+        r.phase == Recovery.Phase.Withheld -> "Strap's estimate, ${r.baselineNights}/${Recovery.SCORED_NIGHTS} nights"
+        else -> "Strap's estimate, no HRV yet"
+    }
+}
 
 /** How a score moved: a dot arrow (green up, amber down) and the amount; three level dots when it didn't. */
 @Composable
@@ -282,7 +340,12 @@ private fun ScoreBar(score: Score, onClick: () -> Unit, modifier: Modifier = Mod
             }
         }
         Spacer(Modifier.height(6.dp))
-        GlowBar((score.value ?: 0) / 100f, score.color)
+        // The strap's estimate draws fainter, so it doesn't read as OpenStrap's own score.
+        GlowBar((score.value ?: 0) / 100f, if (score.estimate) score.color.copy(alpha = 0.5f) else score.color)
+        if (score.note != null) Text(
+            score.note, color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.labelSmall,
+            maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp),
+        )
     }
 }
 

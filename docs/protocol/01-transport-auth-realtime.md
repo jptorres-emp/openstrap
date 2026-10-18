@@ -497,7 +497,7 @@ If the DIS read fails, the legacy fallback is `FEE0/FF01`: a 16- or 20-byte blob
 
 Transport:
 
-* **Channel endpoint `0x0047`** (if listed). Set: `05` + struct → reply `06 01` (1 = OK). Get: `03` → `04` + struct (`d/yf6.java:41-54`; `d/vf6.java`; `d/uf6.java`; `d/apd.java:448-472`).
+* **Channel endpoint `0x0047`** (if listed). Set: `05` + struct → reply `06 01` (1 = OK). Get: `03` → `04 01` + struct, where `01` is a status byte (`d/yf6.java:41-54`; `d/vf6.java`; `d/uf6.java`; `d/apd.java:448-472`). Verified on hardware (3.25.0.3, 2026-10-18): `04 01 ea07 0a 12 0d 0b 29 00 00 00 10` = 2026-10-18 13:11:41, Sunday, no DST, +04:00, matching the phone clock to the second.
 * **Legacy fallback:** write the 11-byte struct to `FEE0/2A2B` (`d/lo3.java:14-25`; `d/jv3.java:709-717`).
 
 ### 5.4 Not applicable here
@@ -644,3 +644,4 @@ The first real connection, from OpenStrap on an Android 16 phone, confirmed the 
     - `[bit2&3: distance m u32, calories kcal u32]`
     - `[bit4: gait info]`
   - Totals count from local midnight. The strap pushes an update roughly every second while you walk.
+  - Pushes use opcode **`07`** + the same record, e.g. `07 0c ed000000 b1000000 0e000000` = 237 steps, 177 m, 14 kcal (3.25.0.3, 2026-10-18).

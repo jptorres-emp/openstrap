@@ -143,7 +143,9 @@ dev   → CP : 10 03 01
 * **End**: a `10 02 xx` notification on the control path ends the stream. `xx = 01` means success (`d/i4c.java:949-952`; `d/ccf.java:692-694`). The app also gives up after **20 s without data** ("long time no data") (`d/bwh.java:1042-1078`; timeout constant `20000`).
 * **CRC**: the newer engine (`h5j`) keeps a `java.util.zip.CRC32` per fetch, and status 8 means "CRC mismatch". So a CRC-32 (zlib polynomial) is verified somewhere. **UNVERIFIED**: where the device's CRC value travels and what it covers. The routine did not decompile (`d/h5j.java:10-20,104-115`; `d/w5j` lambdas in `d/z5j.java:133-210`). The most likely carrier is extra bytes after the status in the `10 02 01` notification, covering the concatenated payload without index bytes. Implement it like this: if `10 02 01` carries ≥ 4 extra bytes, compare them (u32 LE) to CRC-32 of the payload. Log mismatches but do not discard until this has been confirmed on hardware.
 * **ACK (0x03)** tells the device the chunk was consumed. The app sends it after every completed transfer (`d/qaw.java:283-286`; `d/ktk.java:185-187`). In the readable fetcher, a size-0 header ends the fetch **without** TRANSFER or ACK (`d/e24.java:216-220`). Whether the newer engine ACKs after an empty header is **UNVERIFIED**, and it is harmless either way. The optional single parameter byte (`oyi.c(n)`, `d/ryi.java:145-149`) is used by the undecompiled engine. Its value and semantics are **UNVERIFIED**.
-* **"Do not delete" option**: nothing in the readable code shows an explicit "keep data on device" flag. The candidates are the START `flag` byte (§1.3; `true` for all health data, `false` for EDA-raw/log pulls) and the ACK parameter. **UNVERIFIED** which one, if either, controls deletion. The app never relies on deletion: it always moves its own cursor (§5) and asks for "records after T". So **a client that never ACKs, or always re-requests from its own cursor, still gets correct results**. Recommendation: send the START flag `0x01`, and send `03` with no parameter after each chunk, as the app does.
+* **"Do not delete" option**: nothing in the readable code shows an explicit "keep data on device" flag. The candidates are the START `flag` byte (§1.3; `true` for all health data, `false` for EDA-raw/log pulls) and the ACK parameter. **UNVERIFIED** which one, if either, controls deletion. The app never relies on deletion: it always moves its own cursor (§5) and asks for "records after T". So a client that always re-requests from its own cursor still gets correct results. Recommendation: send the START flag `0x01`, and send `03 01` after every START, including size-0 replies. A bare `03` is ignored and an un-ACKed START blocks the next one (see "Verified on hardware" below).
+
+  **Verified on hardware (3.25.0.3, 2026-10-18): `03 01` deletes nothing.** Records acknowledged with `03 01` in one sync were returned again 15 minutes later by a fetch from 60 days back: four HRV records and the newest sleep record, byte for byte. The ACK parameter doesn't control deletion, and no "keep" value (Gadgetbridge sends `03 09`) is needed.
 
 ### 1.6 The fetch loop per type
 
@@ -666,10 +668,10 @@ Before running a type, gate it on the `dataTypeMap` from QUERY_VERSION. Run type
 - [ ] Send `00` (QUERY_VERSION). Keep the `dataTypeMap`. Log the raw bytes, because the map layout is unverified.
 - [ ] Implement START `01 type Y(2) M D h m s tz [01]`, with tz in quarter-hours including DST. Always append the flag `01` on the channel path, and on GATT when the version is ≥ 2.
 - [ ] Parse `10 01 01 size(4) Y(2) M D h m s tz [exp]`. Treat status ≠ 1 as an error and map it with the `tyi` table.
-- [ ] If size == 0, finish this type. An optional `03` is harmless.
+- [ ] If size == 0, send `03 01` and finish this type. Skipping the ACK makes the next START fail with status 5.
 - [ ] Send `02`. Collect DATA notifications: strip index byte 0 and check continuity mod 256. Stop on `10 02 xx` or after 20 s of silence.
 - [ ] Verify `received == size`. If `10 02 01` carries 4 extra bytes, also check CRC-32 (log-only until confirmed).
-- [ ] Send `03`. Expect `10 03 01`.
+- [ ] Send `03 01`. Expect `10 03 01`.
 - [ ] Parse each type with §3. Compute the next cursor (§1.6). Loop until size 0. Retry a failed chunk up to 3 times.
 - [ ] Persist the cursor per (device, type) only after the parsed records are committed to storage.
 - [ ] Activity: get the record size from feature parameter key 0 (default 4, strap likely 8). Minute time = header time + i.
@@ -681,7 +683,6 @@ Before running a type, gate it on the `dataTypeMap` from QUERY_VERSION. Run type
   - Activity bytes 4..7
   - HR-invalid sentinel
   - CRC location
-  - ACK parameter and delete semantics
   - Temperature types 46–48
   - `dataTypeMap` layout
   - Detail timestamp units
@@ -692,7 +693,7 @@ Before running a type, gate it on the `dataTypeMap` from QUERY_VERSION. Run type
 
 * Control runs over channel endpoint `0x004B`. Data arrives on HUAMI(0005).
 * **QUERY_VERSION reply layout:** `10 00 01 | version u8 | flag u8 | count u16 | count × {type u8, flag u8}`. The strap offers 35 types: 1, 2, 5, 6, 7, 8, 11, 13, 17, 18, 19, 30, 37, 38, 39, 44, 46, 48, 56, 57, 58, 59, 61, 63, 64, 66, 70, 72, 73, 74, 76, 78, 85, 87, 88.
-* **START `size` counts records, not bytes** for fixed-size minute types. For activity, size 2 means 16 bytes. Activity records are **8 bytes**. For sleep result, stress, today-ext and PAI the size equalled the byte count.
+* **START `size` counts records, not bytes, for activity (type 1) only.** For activity, size 2 means 16 bytes. Activity records are **8 bytes**. Every other type counts bytes, including skin temperature (46), which is also 8 bytes per minute: size 240 = 30 minutes. Measured on 3.25.0.3 (2026-10-18) for 13 PAI, 19 stress, 37 SpO2, 38 sleep SpO2, 46 skin temperature, 56 respiratory rate, 58 resting HR, 59 sports effect, 61 max HR, 72 sleep result, 73 HRV, 78 HRV SDNN, 87 per-second HR (inflated length) and 88 today-ext.
 * **TRANSFER end `10 02 01 <u32>`:** the u32 is the CRC-32 (zlib) of the concatenated payload without index bytes. Confirmed on every type.
 * **ACK must carry a parameter.** A bare `03` is ignored, and the strap later ends the transfer with `10 02 32` (timeout). `03 01` gets `10 03 01`.
 * **Every START must be closed with an ACK, including size-0 replies.** Otherwise the strap keeps that type open and answers every other START with status 5 (INVALID_STATE).
@@ -702,3 +703,23 @@ Before running a type, gate it on the `dataTypeMap` from QUERY_VERSION. Run type
 
 - **ACTIVITY padding:** the transfer can end with all-`0xFF` 8-byte records for minutes not yet written. Drop them. Reading them as data gives 255 steps each and moves the cursor past real minutes.
 - **SEC_HR_V2 is zlib-compressed:** the payload starts `78 01`, and the CRC covers the compressed bytes. The START size is the **inflated** byte count. After inflating, the §3.2 block layout matches: blocks of `count = 300` samples, with unwritten seconds as `0xFF`.
+
+### Verified on hardware: retention (firmware 3.25.0.3, 2026-10-18)
+
+One fetch per type from 60 days back (since 2026-08-19 09:11 UTC). The oldest record each type returned:
+
+| Type | Oldest record (UTC) | Holds |
+|---|---|---|
+| 19 stress, 46 skin temperature, 88 today-ext | 08-19 09:11 | ≥ 60 days (the whole window asked for) |
+| 72 sleep result | night of 08-19 | ≥ 60 days |
+| 37 SpO2 | 10-15 20:50 | < 41 days |
+| 73 HRV | 10-15 22:59 | < 41 days |
+| 56 respiratory rate | 10-15 23:00 | < 41 days |
+| 78 HRV SDNN | 10-15 23:28 | < 41 days |
+| 38 sleep SpO2 | 10-15 23:30 | < 41 days |
+| 58 resting HR | 10-16 02:09 | < 41 days |
+| 1 activity | 10-16 14:05 | **about 43 hours** |
+
+* The strap wasn't worn from 09-08 to 10-15 20:24. The long types still returned their August data from before that gap; the "< 41 days" types returned none of it, so they hold less than the 41 days back to 09-07.
+* Activity is the shortest: it started at 10-16 14:05 although the strap was worn from 10-15 20:24. Sync per-minute activity at least daily, or minutes are lost.
+* Whether the "< 41 days" types are short by design, or were cleared around 10-15 (for example by a firmware update), needs a repeat of this fetch after a few weeks of continuous wear.

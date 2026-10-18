@@ -1,11 +1,13 @@
-<h1>
+<p>
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/assets/logo-dark.png">
-    <img src="docs/assets/logo-light.png" alt="OpenStrap" height="56">
+    <img src="docs/assets/logo-light.png" alt="OpenStrap logo" height="56">
   </picture>
-</h1>
+</p>
 
-A private, open-source companion app for the **Amazfit Helio Strap**, built as a replacement for Zepp.
+# OpenStrap: open-source Amazfit Helio Strap app for Android (Zepp alternative)
+
+OpenStrap is a private, open-source Android companion app for the **Amazfit Helio Strap**. It replaces the Zepp app: pair the strap, sync sleep, heart rate, HRV, SpO₂, stress and workouts, and see Recovery and Charge scores, all stored on your phone with no cloud account needed after pairing.
 
 - **Local-first.** Health data lives in a database on your phone. The app doesn't use Zepp's cloud, any analytics or any trackers.
 - **Modern.** It is built with Kotlin, Jetpack Compose and Material 3, and has an always-dark "Glow" design built for OLED screens.

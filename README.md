@@ -13,10 +13,14 @@ A private, open-source companion app for the **Amazfit Helio Strap**, built as a
 
 <table>
   <tr>
-    <td align="center"><img src="docs/screenshots/today.png" width="200" alt="Today"><br>Today</td>
-    <td align="center"><img src="docs/screenshots/recovery.png" width="200" alt="Recovery"><br>Recovery</td>
-    <td align="center"><img src="docs/screenshots/sleep.png" width="200" alt="Sleep"><br>Sleep</td>
-    <td align="center"><img src="docs/screenshots/activity.png" width="200" alt="Activity"><br>Activity</td>
+    <td align="center"><img src="docs/screenshots/today.png" width="250" alt="Today"><br>Today</td>
+    <td align="center"><img src="docs/screenshots/recovery.png" width="250" alt="Recovery"><br>Recovery</td>
+    <td align="center"><img src="docs/screenshots/sleep.png" width="250" alt="Sleep"><br>Sleep</td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/screenshots/activity.png" width="250" alt="Activity"><br>Activity</td>
+    <td align="center"><img src="docs/screenshots/heart-rate.png" width="250" alt="Heart rate"><br>Heart rate</td>
+    <td align="center"><img src="docs/screenshots/you.png" width="250" alt="You"><br>You</td>
   </tr>
 </table>
 

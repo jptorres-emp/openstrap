@@ -3,6 +3,7 @@ package org.openstrap.app.ui.device
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -67,6 +68,9 @@ fun ProfileDialog(profile: UserProfile, onSave: (UserProfile) -> Unit, onDismiss
     val (ft0, in0) = profile.heightCm?.let { Units.cmToFeetInches(it) } ?: (null to null)
     var feet by rememberSaveable { mutableStateOf(ft0?.toString().orEmpty()) }
     var inches by rememberSaveable { mutableStateOf(in0?.toString().orEmpty()) }
+    var activity by rememberSaveable { mutableIntStateOf(profile.activityLevel ?: -1) }
+    var betaBlocker by rememberSaveable { mutableStateOf(profile.betaBlocker) }
+    var pregnant by rememberSaveable { mutableStateOf(profile.pregnant) }
     var maxHr by rememberSaveable { mutableStateOf(profile.maxHeartRate?.toString().orEmpty()) }
     var sleepNeed by rememberSaveable { mutableStateOf(profile.sleepNeedMinutes?.let { formatNumber(it / 60f) }.orEmpty()) }
 
@@ -102,7 +106,10 @@ fun ProfileDialog(profile: UserProfile, onSave: (UserProfile) -> Unit, onDismiss
         icon = { Icon(PhosphorIcons.User, null) },
         title = { Text("Your profile") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()),
+            ) {
                 Text(
                     "Age sets your maximum heart rate, which every effort and recovery number depends on. " +
                         "All fields are optional and stay on this phone.",
@@ -130,6 +137,23 @@ fun ProfileDialog(profile: UserProfile, onSave: (UserProfile) -> Unit, onDismiss
                 } else {
                     NumberField(heightCm, { heightCm = it }, "Height", "cm", !heightBlank && heightValue == null)
                 }
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    SectionLabel("Usual activity (for the fitness estimate)")
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        (0..4).forEach { i ->
+                            androidx.compose.material3.FilterChip(
+                                selected = activity == i, onClick = { activity = if (activity == i) -1 else i },
+                                label = { Text("${i + 1}") }, modifier = Modifier.weight(1f),
+                            )
+                        }
+                    }
+                    Text(
+                        if (activity in 0..4) org.openstrap.app.data.Vo2max.ACTIVITY_LEVELS[activity] else "Pick the level that best matches a usual week.",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+                CheckRow("Taking beta-blockers", betaBlocker) { betaBlocker = it }
+                CheckRow("Pregnant", pregnant) { pregnant = it }
                 NumberField(maxHr, { maxHr = it }, "Max heart rate from a test (optional)", "bpm", maxHr.isNotBlank() && maxHrValue == null)
                 NumberField(sleepNeed, { sleepNeed = it }, "Sleep need (7–9, blank for your age's default)", "h", sleepNeed.isNotBlank() && sleepNeedValue == null, decimal = true)
             }
@@ -148,6 +172,12 @@ fun ProfileDialog(profile: UserProfile, onSave: (UserProfile) -> Unit, onDismiss
                             imperial = imperial,
                             sleepNeedMinutes = sleepNeedValue,
                             maxHeartRate = maxHrValue,
+                            activityLevel = activity.takeIf { it in 0..4 },
+                            // Saving confirms the answers, so the fitness estimate's freshness checks restart.
+                            activityAnsweredAt = if (activity in 0..4) System.currentTimeMillis() / 1000 else null,
+                            bodyMeasuredAt = if (weightValue != null && heightValue != null) System.currentTimeMillis() / 1000 else null,
+                            betaBlocker = betaBlocker,
+                            pregnant = pregnant,
                         ),
                     )
                 },
@@ -178,6 +208,14 @@ internal fun NumberField(
         shape = RoundedCornerShape(14.dp),
         modifier = modifier,
     )
+}
+
+@Composable
+private fun CheckRow(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().clickable { onChange(!checked) }) {
+        androidx.compose.material3.Checkbox(checked, onChange)
+        Text(label, style = MaterialTheme.typography.bodyMedium)
+    }
 }
 
 /** 72.0 -> "72", 158.7 -> "158.7". */

@@ -32,6 +32,14 @@ data class UserProfile(
     val sleepNeedMinutes: Int? = null,
     /** A maximum heart rate from a test; overrides the age estimate. */
     val maxHeartRate: Int? = null,
+    /** Usual physical activity, level 1-5 as index 0-4 (Jurca 2005's question), and when it was last answered. */
+    val activityLevel: Int? = null,
+    val activityAnsweredAt: Long? = null,
+    /** When weight and height were last confirmed (epoch seconds); the VO2max estimate wants them under 90 days old. */
+    val bodyMeasuredAt: Long? = null,
+    /** Resting heart rate doesn't reflect fitness on beta-blockers or in pregnancy, so VO2max is withheld. */
+    val betaBlocker: Boolean = false,
+    val pregnant: Boolean = false,
 ) {
     enum class Sex { Female, Male }
 
@@ -109,6 +117,11 @@ class SettingsStore(private val context: Context) {
     private val imperial = androidx.datastore.preferences.core.booleanPreferencesKey("profile_imperial")
     private val sleepNeed = androidx.datastore.preferences.core.intPreferencesKey("profile_sleep_need_minutes")
     private val maxHr = androidx.datastore.preferences.core.intPreferencesKey("profile_max_hr")
+    private val activityLevel = androidx.datastore.preferences.core.intPreferencesKey("profile_activity_level")
+    private val activityAt = longPreferencesKey("profile_activity_answered_at")
+    private val bodyAt = longPreferencesKey("profile_body_measured_at")
+    private val betaBlocker = androidx.datastore.preferences.core.booleanPreferencesKey("profile_beta_blocker")
+    private val pregnant = androidx.datastore.preferences.core.booleanPreferencesKey("profile_pregnant")
 
     val profile: Flow<UserProfile> = context.dataStore.data.map { prefs ->
         UserProfile(
@@ -119,6 +132,11 @@ class SettingsStore(private val context: Context) {
             prefs[imperial],
             prefs[sleepNeed],
             prefs[maxHr],
+            prefs[activityLevel],
+            prefs[activityAt],
+            prefs[bodyAt],
+            prefs[betaBlocker] == true,
+            prefs[pregnant] == true,
         )
     }
 
@@ -131,6 +149,11 @@ class SettingsStore(private val context: Context) {
             if (p.imperial != null) it[imperial] = p.imperial else it.remove(imperial)
             if (p.sleepNeedMinutes != null) it[sleepNeed] = p.sleepNeedMinutes else it.remove(sleepNeed)
             if (p.maxHeartRate != null) it[maxHr] = p.maxHeartRate else it.remove(maxHr)
+            if (p.activityLevel != null) it[activityLevel] = p.activityLevel else it.remove(activityLevel)
+            if (p.activityAnsweredAt != null) it[activityAt] = p.activityAnsweredAt else it.remove(activityAt)
+            if (p.bodyMeasuredAt != null) it[bodyAt] = p.bodyMeasuredAt else it.remove(bodyAt)
+            it[betaBlocker] = p.betaBlocker
+            it[pregnant] = p.pregnant
         }
     }
 
@@ -168,7 +191,7 @@ class SettingsStore(private val context: Context) {
     /** Forgets the strap and the Zepp sign-in; the user's profile and goals stay. */
     suspend fun forgetDevice() {
         context.dataStore.edit { prefs ->
-            val keep = setOf(birthYear, sex, weight, height, imperial, sleepNeed, maxHr, stepGoal, sleepGoal, activeGoal, todayTiles)
+            val keep = setOf(birthYear, sex, weight, height, imperial, sleepNeed, maxHr, activityLevel, activityAt, bodyAt, betaBlocker, pregnant, stepGoal, sleepGoal, activeGoal, todayTiles)
             prefs.asMap().keys.filter { it !in keep }.forEach { prefs.remove(it) }
         }
     }

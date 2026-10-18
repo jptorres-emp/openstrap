@@ -45,6 +45,9 @@ data class RecoveryResult(
     val activity: Activity.Day? = null,
     /** Energy expenditure for [date]; null without weight, height and age. */
     val energy: EnergyExpenditure.Day? = null,
+    /** Non-exercise VO2max (Jurca 2005), recomputed weekly; or why it's withheld. */
+    val vo2max: Vo2max.Estimate? = null,
+    val vo2maxWithheld: Vo2max.Withheld? = null,
 )
 
 /** Loads what [Recovery] needs from the database and runs it. All work happens off the main thread by the caller. */
@@ -192,6 +195,13 @@ class RecoveryEngine(private val dao: HealthDao) {
             stepGoal = Activity.defaultStepGoal(age),
         )
 
+        // VO2max: recomputed weekly, as of the latest Monday, from the nightly resting HR.
+        val monday = date.with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY))
+        val (vo2, vo2Withheld) = Vo2max.estimate(
+            profile, profile.age(monday), nights.mapNotNull { n -> n.validRestingHr?.let { n.day to it } }.toMap(),
+            DayWindow.of(monday, zone).from,
+        )
+
         // Energy: every minute of the day with data (a step record, heart rate, or sleep); no row is missing, never zero.
         val todaySleep = sessions.flatMap { s -> (maxOf(s.start, day.from) / 60 * 60 until minOf(s.end, day.to + 1) step 60).toList() }.toSet()
         val energyTimes = (minuteSteps.keys.filter { it in day.from..day.to } + weekHr.keys.filter { it in day.from..day.to } + todaySleep).toSortedSet()
@@ -203,7 +213,7 @@ class RecoveryEngine(private val dao: HealthDao) {
                     w?.calories?.let { kcal -> kcal / ((w.end - w.start) / 60f).coerceAtLeast(1f) },
                 )
             },
-            profile, age,
+            profile, age, vo2?.value?.toFloat(),
         )
 
         val loadTrend = if (loads.size >= 7) Recovery.fitnessFatigue(loads).last() else null
@@ -234,7 +244,7 @@ class RecoveryEngine(private val dao: HealthDao) {
             date, readiness, charge, trend, todayLoad, chronic, restingHr, maxHr, age != null, stressThreshold, tonight,
             Recovery.breathingDisturbances(tonight, nights), Recovery.acwr(loads), sleepNeed, regularity, sleepHealth,
             loadTrend, Recovery.strain(todayLoad), Recovery.loadPercentile(todayLoad, loads), profile.maxHeartRate != null && maxHr == profile.maxHeartRate.toFloat(),
-            activity, energy,
+            activity, energy, vo2, vo2Withheld,
         )
     }
 

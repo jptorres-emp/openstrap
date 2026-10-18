@@ -252,6 +252,17 @@ Zepp does the same job differently. It computes a stress threshold on the phone 
 * The daily total is "partial" below 20 h of data; PAL = TEE/BMR outside 1.2–2.5 is flagged. No thermic effect of food.
 * 0.95, 1.15 and 1.3 are conventions, not 2024 Compendium values (sleeping and sitting quietly are both 1.0 there).
 
+## Estimated fitness (VO2max, Activity screen)
+
+`Vo2max.kt`. Jurca et al. 2005 (Am J Prev Med 29(3):185–193), the NASA model, checked against the full text (Table 5 and the Figure 1 worksheet):
+
+* METs = 2.77·sex (female 0, male 1) − 0.10·age − 0.17·BMI − 0.03·RHR + SR-PA score + 18.07; × 3.5 for ml/kg/min. SEE 1.45 METs (NASA; 1.50 and 1.97 in the other cohorts), so the band is ±1 SEE ≈ ±5 ml/kg/min, rounded, never a decimal.
+* SR-PA is the worksheet's five-level question; the scores are the model's dummy weights 0 / 0.32 / 1.06 / 1.76 / 3.03, not 0–4.
+* RHR = median of the last 7 nightly resting HRs (needs ≥ 5 in 14 days). A sleeping RHR runs a few bpm below a seated one; at −0.03 METs/bpm that's small next to the SEE, so it's documented, not corrected.
+* Recomputed weekly (as of Monday). Withheld when: age outside 20–79 (the model was derived on 20–70), sex unset, weight or height missing or not confirmed in 90 days, the activity question not answered in 180 days, beta-blockers or pregnancy flagged, or < 5 nightly RHRs in 14 days.
+* The estimate feeds the energy model's HR branch.
+* **Not done:** the FRIEND 2022 percentile band and fitness age. The tables couldn't be transcribed from the primary paper (Kaminsky et al., Mayo Clin Proc 2022;97(2):285–293); the evidence review's link is the cardiovascular-disease FRIEND report instead. `Vo2max.Friend` holds the structure with empty tables, so nothing shows until they're entered. The phone-GPS phase 2 is later. Biological age is dropped.
+
 ## Inputs from the profile (Device → Your profile)
 
 * **Max HR:** a value the user entered from a test wins. Otherwise Tanaka et al. 2001 (JACC, 18,712 subjects): 208 − 0.7·age; without an age, the strap's own max HR (from the Zepp profile), else 190. Any equation's individual SD is about 7–11 bpm, so raising is sound and lowering is not: it's raised to the highest HR the user has actually reached, by at most `MAX_HR_RAISE` = +15 bpm. "Reached" (`observedPeak`) needs two separate days within `MAX_HR_AGREE_BPM` = 3 bpm of each other over the last 90 days, each day's value being its highest artefact-filtered minute (`filteredMax`: a neighbouring minute within 10 bpm) or the strap's daily maximum exercise HR (type 61). Max HR sets heart-rate reserve, so it changes both training load and Charge drain.
@@ -259,6 +270,7 @@ Zepp does the same job differently. It computes a stress threshold on the phone 
 * **Weight and height:** energy expenditure (BMR) and step length.
 * **Resting HR (daytime)** (`daytimeRestingHr`): median of the strap's daily resting HR over the last 14 days, else the median nightly lowest + an offset. The offset is the median of (daily − nightly lowest) over the latest 14 days that have both, else `RHR_OFFSET_BPM` = 3 bpm. Karvonen and Swain define resting HR as awake rest; a nightly minimum would inflate HRR for every waking minute.
 * **Sleep need:** optional, 7–9 h; blank uses the age default.
+* **Usual activity, beta-blockers, pregnancy:** for the VO2max estimate only. Saving the profile confirms weight, height and the activity answer, restarting their 90- and 180-day freshness checks.
 
 ## Limits
 

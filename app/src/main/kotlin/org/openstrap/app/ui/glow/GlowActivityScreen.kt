@@ -347,6 +347,18 @@ private fun FitnessPanel(r: RecoveryResult?, workouts: List<WorkoutAnalysis>, ef
             Fact("Max HR", r?.let { "${it.maxHr.toInt()}" } ?: "—")
         }
         if (vo2.size >= 2) Sparkline(vo2.takeLast(7).map { it.toFloat() }, MetricColors.hrv, Modifier.fillMaxWidth().height(24.dp))
+        if (r != null) {
+            DotDivider()
+            val est = r.vo2max
+            if (est != null) {
+                Fact("Estimated fitness (VO2 max)", "≈ ${est.low}–${est.high}")
+                Note(
+                    "From your age, sex, BMI, resting heart rate (${est.restingHr.toInt()} bpm, while asleep) and usual activity " +
+                        "(Jurca et al. 2005). Typical error is about ±5 ml/kg/min. Updated weekly." +
+                        (est.band?.let { " ${it.label} for your age and sex (FRIEND)." } ?: ""),
+                )
+            } else r.vo2maxWithheld?.let { Note("Estimated fitness: ${it.reason}") }
+        }
         Note(
             listOfNotNull(
                 if (vo2.isEmpty()) "VO2 max appears after a workout the strap can estimate it from." else null,

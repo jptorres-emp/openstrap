@@ -1,6 +1,15 @@
 package org.openstrap.app
 
+import org.openstrap.app.data.db.ActivityExtendedMinute
 import org.openstrap.app.data.db.ActivityMinute
+import org.openstrap.app.data.db.DailyMaxHr
+import org.openstrap.app.data.db.HrvSdnnSample
+import org.openstrap.app.data.db.OsaResultRow
+import org.openstrap.app.data.db.RecoveryHeartRateRow
+import org.openstrap.app.data.db.SleepSpo2Sample
+import org.openstrap.app.data.db.SportEffectRow
+import org.openstrap.app.data.db.Workout
+import org.openstrap.app.data.db.WorkoutHeartRate
 import org.openstrap.app.data.db.BreathRate
 import org.openstrap.app.data.db.HealthDao
 import org.openstrap.app.data.db.HeartRateSample
@@ -55,16 +64,66 @@ object DemoData {
 
             val endOfData = if (back == 0) System.currentTimeMillis() / 1000 else midnight + 24 * 3600
             val minutes = (midnight until endOfData step 60L).toList()
-            // Every other evening a 50-minute run at ~150 bpm; the night after it shows a little in HRV.
-            val workout = back % 2 == 1
-            val runStart = midnight + 18 * 3600
+            // Every other evening a 50-minute run at ~150 bpm (this morning too, so Today has one); the night
+            // after it shows a little in HRV.
+            val runStart = if (back == 0) midnight + 7 * 3600 + 30 * 60 else midnight + 18 * 3600
+            val runEnd = runStart + 50 * 60
+            val workout = (back % 2 == 1 || back == 0) && runEnd <= endOfData
             dao.insertHeartRate(minutes.map {
                 val hour = (it - midnight) / 3600.0
                 val asleep = it < sleepEnd
                 val base = if (asleep) 52.0 + 4 * sin((it - sleepStart) / 3600.0) else 66 + 10 * sin((hour - 9) / 24 * 2 * Math.PI)
-                val run = workout && it in runStart until runStart + 50 * 60
+                val run = workout && it in runStart until runEnd
                 HeartRateSample(it, (if (run) 148.0 + rnd.nextInt(-6, 7) else base + rnd.nextInt(-3, 4)).toInt().coerceAtLeast(45))
             })
+            // Steps: a commute, a lunch walk and pottering about while awake; the run is ~160 steps a minute.
+            val awake = minutes.filter { it >= sleepEnd }
+            val steps = awake.map {
+                val hour = (it - midnight) / 3600.0
+                val run = workout && it in runStart until runEnd
+                val walk = hour in 8.5..9.0 || hour in 12.5..13.0 || hour in 17.5..18.0
+                when {
+                    run -> 155 + rnd.nextInt(0, 12)
+                    walk -> 95 + rnd.nextInt(0, 20)
+                    hour < 22 && rnd.nextInt(0, 3) == 0 -> rnd.nextInt(10, 60)
+                    else -> 0
+                }
+            }
+            dao.insertActivity(awake.zip(steps) { t, n ->
+                ActivityMinute(t, n, intensity = (n / 2).coerceAtMost(100), kind = 0, heartRate = null)
+            })
+            // Distance (~75 cm a step) and active calories come from the extended per-minute record.
+            dao.insertActivityExtended(awake.zip(steps) { t, n ->
+                val running = n > 140
+                ActivityExtendedMinute(
+                    t, floors = 0, run = if (running) 1 else 0, fatBurn = 0, stand = if (n in 1..140) 1 else 0,
+                    walk = if (n in 60..140) 1 else 0, sit = if (n == 0) 1 else 0, steps = n,
+                    calories = when { running -> 12; n > 60 -> 4; n > 0 -> 1; else -> 0 }, distanceCm = n * (if (running) 110 else 75),
+                )
+            })
+            if (workout) {
+                val hr = (runStart until runEnd step 5L).mapIndexed { i, t ->
+                    val warm = (i / 60.0).coerceAtMost(1.0)
+                    WorkoutHeartRate(runStart, t, (100 + 50 * warm + 6 * sin(i / 40.0) + rnd.nextInt(-3, 4)).toInt())
+                }
+                dao.insertWorkouts(listOf(Workout(
+                    runStart, runEnd, sportType = 1, exerciseSeconds = 50 * 60, calories = 540 + rnd.nextInt(0, 60),
+                    averageHeartRate = hr.map { it.bpm }.average().toInt(), maxHeartRate = hr.maxOf { it.bpm }, minHeartRate = hr.minOf { it.bpm },
+                    aerobicTrainingEffect = 3.1f + rnd.nextFloat(), anaerobicTrainingEffect = 1.2f + rnd.nextFloat(),
+                    trainingLoad = 95 + rnd.nextInt(0, 40), vo2max = 48, steps = 7800 + rnd.nextInt(0, 400),
+                )))
+                dao.insertWorkoutHeartRate(hr)
+                dao.insertSportEffects(listOf(SportEffectRow(
+                    runEnd, recoveryMinutes = 20 * 60 + rnd.nextInt(0, 600), vo2max = 48f, epoc = 60f + rnd.nextInt(0, 30),
+                    weeklyLoad = 380f + (20 - back) * 6, monthlyLoad = 1400f, optimalLoadMin = 300, optimalLoadMax = 600, maximalHeartRate = 192,
+                )))
+                dao.insertRecoveryHeartRate(listOf(RecoveryHeartRateRow(runStart, ByteArray(180) { (150 - it / 3).toByte() })))
+                dao.insertDailyMaxHr(listOf(DailyMaxHr(midnight, hr.maxOf { it.bpm })))
+            }
+            // Through the night: blood oxygen every five minutes and HRV (SDNN) every couple of hours, day and night.
+            dao.insertSleepSpo2((sleepStart until sleepEnd step 300L).map { SleepSpo2Sample(it, 94 + rnd.nextInt(0, 5)) })
+            dao.insertHrvSdnn((sleepStart until endOfData step 7200L).map { HrvSdnnSample(it, 45f + rnd.nextInt(0, 25)) })
+            dao.insertOsaResults(listOf(OsaResultRow(midnight, 7 * 3600, 0, 95, 0, eventCount = rnd.nextInt(0, 3), version = 1)))
             // Stress: calm mornings and evenings, busier working hours.
             dao.insertStress(minutes.filter { it >= sleepEnd }.filterIndexed { i, _ -> i % 5 == 0 }.map {
                 val hour = ((it - midnight) / 3600).toInt()

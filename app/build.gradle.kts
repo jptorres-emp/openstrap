@@ -4,6 +4,15 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+fun env(name: String): String? = providers.environmentVariable(name).orNull?.takeIf { it.isNotBlank() }
+
+// The version comes from the release tag (CI passes -PappVersion=1.2.3); local builds default to the current one.
+val appVersionName = providers.gradleProperty("appVersion").orNull?.removePrefix("v") ?: "1.0.0"
+// 1.2.3 -> 10203, so every release installs over the one before it.
+val appVersionCode = appVersionName.substringBefore('-').split('.').map { it.toInt() }
+    .let { (major, minor, patch) -> major * 10_000 + minor * 100 + patch }
+val releaseKeystore = env("OPENSTRAP_KEYSTORE")
+
 android {
     namespace = "org.openstrap.app"
     compileSdk {
@@ -14,16 +23,26 @@ android {
         applicationId = "org.openstrap.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = appVersionCode
+        versionName = appVersionName
+    }
+
+    signingConfigs {
+        // The release key, when its env vars are set (CI sets them from secrets); see README "Releases".
+        if (releaseKeystore != null) create("release") {
+            storeFile = file(releaseKeystore)
+            storePassword = env("OPENSTRAP_KEYSTORE_PASSWORD")
+            keyAlias = env("OPENSTRAP_KEY_ALIAS")
+            keyPassword = env("OPENSTRAP_KEY_PASSWORD")
+        }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            // Signed with the debug key so a release build installs locally; use your own key to publish.
-            signingConfig = signingConfigs.getByName("debug")
+            // Without the release key, signed with the debug key so a release build still installs locally.
+            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
         }
     }
 

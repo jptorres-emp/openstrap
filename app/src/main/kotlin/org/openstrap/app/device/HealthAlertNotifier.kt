@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import androidx.core.app.NotificationCompat
 import org.openstrap.app.MainActivity
+import org.openstrap.app.data.BodySignalsCopy
 import org.openstrap.protocol.services.HealthAlert
 import java.time.Instant
 import java.time.ZoneId
@@ -50,8 +51,28 @@ class HealthAlertNotifier(private val context: Context) {
         manager.notify(NOTIFICATION_BASE + alert.type.code, notification)
     }
 
+    /**
+     * OpenStrap's own body-signal alert, in the wellness copy of [BodySignalsCopy]: it never names a condition or a
+     * threshold. One notification, replaced by the next.
+     */
+    fun showBodySignals(signals: List<String>, nights: Int) {
+        val text = BodySignalsCopy.pushText(signals, nights)
+        val open = PendingIntent.getActivity(context, 0, Intent(context, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE)
+        val notification = NotificationCompat.Builder(context, CHANNEL)
+            .setSmallIcon(android.R.drawable.stat_sys_warning)
+            .setContentTitle(BodySignalsCopy.TITLE)
+            .setContentText(text)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+            .setCategory(NotificationCompat.CATEGORY_REMINDER)
+            .setAutoCancel(true)
+            .setContentIntent(open)
+            .build()
+        manager.notify(BODY_SIGNALS_ID, notification)
+    }
+
     private companion object {
         const val CHANNEL = "health"
+        const val BODY_SIGNALS_ID = 99
         const val NOTIFICATION_BASE = 100
         const val MIN_EPOCH = 1_704_067_200L // 2024-01-01
         val TIME: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm").withZone(ZoneId.systemDefault())

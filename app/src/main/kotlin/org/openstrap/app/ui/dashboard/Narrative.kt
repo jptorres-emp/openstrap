@@ -77,7 +77,7 @@ object Narrative {
     }
 
     fun readinessHeadline(score: Int, alert: Boolean): String = when {
-        alert -> "Signs of strain"
+        alert -> org.openstrap.app.data.BodySignalsCopy.SHORT
         score >= 85 -> "Primed"
         score >= 70 -> "Ready"
         score >= 55 -> "Take it steady"
@@ -87,7 +87,7 @@ object Narrative {
     fun readinessBody(r: org.openstrap.app.data.Recovery.Readiness): String {
         val score = r.score ?: return ""
         val advice = when {
-            r.strainAlert -> "Several body signals moved away from your normal at once. Rest, drink fluids and keep it easy today."
+            r.strainAlert -> "Several overnight signals are outside your usual range. Consider an easier day."
             score >= 85 -> "You're well recovered. A good day to push hard."
             score >= 70 -> "Recovered enough for your usual training."
             score >= 55 -> "Recovery isn't complete. Keep intensity moderate."

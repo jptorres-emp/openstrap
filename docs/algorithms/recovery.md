@@ -36,7 +36,7 @@ Most contributors are z-scores (deviation from baseline in SDs, positive = bette
 **HRV balance** (weight 0.25)
 * Input: ln(mean nightly RMSSD).
 * Score: 0.6·z(tonight) + 0.4·z(7-night rolling mean), against the baseline mean and SD, with the SD floored at `HRV_LN_SD_FLOOR`.
-* Source: Plews et al. 2012 (Eur J Appl Physiol, DOI 10.1007/s00421-012-2354-4) used the 7-day rolling lnRMSSD against an individual normal range to spot overreaching. Vesterinen et al. 2016 (MSSE) guided training with it.
+* Source: Plews' weekly-average work: a 7-day rolling mean of lnRMSSD is a steadier marker than a single morning (Plews et al., [AUT](https://openrepository.aut.ac.nz/items/d7b41d29-e92e-4acf-90ea-ed68d84d6c73)). Plews et al. 2012 (Eur J Appl Physiol, [PubMed](https://pubmed.ncbi.nlm.nih.gov/22367011/)) is only a case study of 2 athletes. In the HRV-guided training trials, Vesterinen et al. 2016 used **raw** RMSSD from a 4-minute supine morning chest-belt recording, with a band of mean ± 0.5 SD over 4 baseline weeks ([JYX](https://jyx.jyu.fi/handle/123456789/50625)); effects were small (ES 0.42).
 * Why log: RMSSD is right-skewed, and ln makes the SD meaningful.
 * Why nightly: whole-night averages are the most accurate wearable HRV (Oura vs ECG, JMIR 2022, PMC8808342).
 * Alert: z(tonight) ≤ −1.5.
@@ -45,7 +45,7 @@ Most contributors are z-scores (deviation from baseline in SDs, positive = bette
 * Input: the night's lowest 30-minute average HR.
 * Score: z against baseline, inverted so lower is better, with the SD floored at 2 bpm.
 * Source: Buchheit 2014 (Front Physiol 5:73): judge HR changes against measurement noise and the smallest worthwhile change, not absolute thresholds.
-* Alert: ≥ max(5 bpm, 2 SD) above baseline. Elevated resting HR precedes symptoms in most infections (Mishra et al. 2020, Nat Biomed Eng, s41551-020-00640-6).
+* Alert: ≥ max(5 bpm, 2 SD) above baseline. Overnight resting HR is the best-tested early-warning signal: in Mishra et al. 2020 ([medRxiv](https://www.medrxiv.org/content/10.1101/2020.07.06.20147512v1)) it rose before symptoms in 32 COVID-19 cases, 63 % detectably in real time. That study says nothing about other conditions.
 
 **Last night's sleep** (weight 0.18)
 * The strap's own sleep score when present.
@@ -64,7 +64,7 @@ Most contributors are z-scores (deviation from baseline in SDs, positive = bette
 **Body temperature** (weight 0.10)
 * Input: mean skin temperature during sleep (≥ 30 readings) minus the baseline mean.
 * Score: −70 points per °C beyond a ±0.2 °C dead band, in either direction.
-* Source: TemPredict (Oura); temperature change is a key early-infection signal.
+* Source: TemPredict (Oura); adding temperature raised a multimodal model's AUC from 0.770 to 0.819 (Mason et al. 2022, [PMC8891385](https://pmc.ncbi.nlm.nih.gov/articles/PMC8891385)). The luteal-phase rise is about +0.3 °C at the finger.
 * Alert: ≥ +0.5 °C.
 
 **Breathing rate** (weight 0.03)
@@ -75,13 +75,13 @@ Most contributors are z-scores (deviation from baseline in SDs, positive = bette
 **Blood oxygen** (weight 0.05)
 * Input: mean sleep SpO2 (strap type 38) during the night, from at least 5 readings.
 * Score: −`SPO2_POINTS_PER_PERCENT` = 25 points per % below the baseline mean, beyond a 1 % dead band. A night above the usual level scores 100; higher oxygen isn't better. 2 % down ≈ 75, 3 % down ≈ 50.
-* Source: healthy adults hold a mean nightly SpO2 of about 96 %, steady night to night (Gries & Brooks 1996, Chest 110:1489). A sustained fall points to a respiratory infection, altitude or disturbed breathing.
+* Source: healthy adults hold a mean nightly SpO2 of about 96 %, steady night to night (Gries & Brooks 1996, Chest 110:1489). A sustained fall can come with altitude, disturbed breathing or a respiratory problem.
 * Alert: ≥ `SPO2_ALERT_DROP` = 2 % below baseline.
 
 **Breathing disturbances** (weight 0.04, no baseline needed)
 * Input: the strap's nightly sleep-apnea summary (type 74). We use only its count of valid desaturation events, divided by hours asleep, because the units of its own ODI fields are unverified. Needs at least 2 h asleep.
-* Score (`odiScore`): 100 under 5 events/h, then falling linearly to 75 at 15, 45 at 30 and a floor of 20. These are Zepp's bands (`bn50.java`) and the usual clinical cut-offs for normal, mild, moderate and severe.
-* Not physiological for the red-flag cap: a high index is a lasting trait to raise with a doctor, not a sign of a bad day. It's a wellness estimate, not a diagnosis.
+* Score (`odiScore`): 100 under 5 events/h, then falling linearly to 75 at 15, 45 at 30 and a floor of 20. The break points are Zepp's (`bn50.java`). They are apnea severity bands applied to the strap's desaturation counts, so they are never shown as labels: naming them (normal / mild / moderate / severe) would breach the 2026 wellness guidance. The detail shows events per hour against the user's own nights.
+* Not physiological for the red-flag cap: a high index is a lasting trait, not a sign of a bad day. It's a wellness estimate, not a diagnosis.
 
 **Previous day's load** (weight 0.07)
 * Input: yesterday's TRIMP divided by the chronic EWMA load. Above 1.5× the score falls by 25 points per unit, to a floor of 30.
@@ -97,7 +97,8 @@ Weights add up to more than 1 once every contributor is present; they're always 
 
 * **Weighting:** weights are renormalised over the contributors that have data, so readiness works from the first night using sleep alone.
 * **Red-flag cap:** if any physiological contributor (HRV, resting HR, temperature, breathing) is below `RED_FLAG` = 40, readiness can't exceed that contributor + 30. One collapsed body signal shouldn't be averaged away by a good sleep score.
-* **Strain alert:** two or more alert conditions at once, for example resting HR up with temperature up, set `strainAlert` and cap readiness at 55. Several signals moving together is what the wearable illness-detection studies rely on, and it cuts false alarms from any single noisy signal.
+* **Body signals off baseline:** two or more alert conditions at once, for example resting HR up with temperature up, set `strainAlert` and cap readiness at 55. Requiring several signals is plausible as a guard against one noisy signal, but no study has measured a rule-based conjunction, so the benefit is unquantified.
+* **Wording** (FDA General Wellness guidance, revised 6 January 2026): the feature is called "Body signals off baseline" and never names illness, infection, fever or COVID. Copy lives in `BodySignalsCopy`; the push text is the evidence review's: "Several of your overnight signals (…) are outside your usual range for the second night. This can happen with heavy training, alcohol, travel, poor sleep, or when your body is fighting something off. Consider an easier day. If you feel unwell, checking in with a healthcare professional may be helpful. This is a wellness estimate, not a medical assessment." No screen shows a temperature threshold.
 
 ## Charge (0–100, minute by minute)
 
@@ -153,13 +154,13 @@ Zepp does the same job differently. It computes a stress threshold on the phone 
 
 ## Inputs from the profile (Device → Your profile)
 
-* **Max HR:** Tanaka et al. 2001 (JACC): 208 − 0.7·age. Without an age, the strap's own max HR (from the Zepp profile) is used, else 190. Like Firstbeat, it's raised to the highest HR the user has actually reached, by at most +15 bpm. "Reached" is the second-highest value over 60 days, so one artefact can't set it, taken from both the per-minute heart rate and the strap's daily maximum exercise HR (type 61). Max HR sets heart-rate reserve, so it changes both training load and Charge drain.
+* **Max HR:** Tanaka et al. 2001 (JACC): 208 − 0.7·age. Without an age, the strap's own max HR (from the Zepp profile) is used, else 190. It's raised to the highest HR the user has actually reached, by at most +15 bpm. "Reached" is the second-highest value over 60 days, so one artefact can't set it, taken from both the per-minute heart rate and the strap's daily maximum exercise HR (type 61). Max HR sets heart-rate reserve, so it changes both training load and Charge drain.
 * **Sex:** selects the TRIMP curve.
 * **Weight and height:** stored for future energy-expenditure work; not used yet.
 * **Resting HR (daytime):** median of the strap's daily resting HR over 14 days, else the median nightly lowest + 3 bpm.
 
 ## Limits
 
-* These are wellness estimates, not medical advice. The alert wording says so.
+* These are wellness estimates, not medical advice. The alert wording says so ("This is a wellness estimate, not a medical assessment.").
 * HRV here is the strap's own RMSSD samples; we don't have beat-to-beat data. Readiness accuracy depends on the strap being worn every night.
 * Charge constants are calibrated to typical published body-battery behaviour and the targets above, not fitted to lab data.

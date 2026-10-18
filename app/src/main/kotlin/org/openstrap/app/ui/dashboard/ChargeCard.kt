@@ -111,9 +111,9 @@ private fun HowItWorks() {
             "Each morning we compare your night with what's normal for you, not with other people:",
             listOf(
                 "Heart rate variability. Higher than your usual means your body has bounced back.",
-                "Resting heart rate. Lower than your usual is good. A jump can mean strain or a cold coming on.",
+                "Resting heart rate. Lower than your usual is good. It can jump after hard training, alcohol or poor sleep.",
                 "Sleep. How long you slept last night, and whether you've been short on sleep this week.",
-                "Temperature and breathing. A clear change from your normal is an early warning sign.",
+                "Temperature and breathing. A clear change from your own normal is worth noticing.",
                 "Training. Whether yesterday was much harder than you're used to.",
             ),
             "If one of these is far off, your score stays low even when the rest look fine.",

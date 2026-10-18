@@ -50,7 +50,7 @@ class RecoveryTest {
 
     @Test
     fun concordantSignalsRaiseAnAlertAndCapTheScore() {
-        // Low HRV, resting HR up 9 bpm and a fever-like skin temperature together: classic early illness.
+        // Low HRV, resting HR up 9 bpm and skin temperature up together: several signals off baseline at once.
         val sick = night(31, hrv = 30f, rhr = 64f, temp = 34.4f)
         val r = Recovery.readiness(sick, history())
         assertTrue(r.strainAlert)
@@ -328,8 +328,28 @@ class RecoveryTest {
         assertEquals(75, Recovery.odiScore(15f))
         assertEquals(45, Recovery.odiScore(30f))
         assertEquals(20, Recovery.odiScore(80f))
-        assertEquals("some", Recovery.odiBand(7f))
-        assertEquals("very frequent", Recovery.odiBand(31f))
+    }
+
+    @Test
+    fun breathingDisturbancesShowNoSeverityWords() {
+        val past = history().map { it.copy(odi = 4f) }
+        val c = Recovery.readiness(night(31).copy(odi = 40f), past).contributors.first { it.factor == Factor.BreathingDisturbances }
+        assertEquals("40.0 events/h · usual 4.0", c.detail)
+        listOf("normal", "mild", "moderate", "severe", "few", "frequent").forEach { assertFalse(it, it in c.detail.lowercase()) }
+    }
+
+    @Test
+    fun bodySignalsPushFollowsTheWellnessCopy() {
+        assertEquals(
+            "Several of your overnight signals (resting heart rate, skin temperature) are outside your usual range for the second night. " +
+                "This can happen with heavy training, alcohol, travel, poor sleep, or when your body is fighting something off. " +
+                "Consider an easier day. If you feel unwell, checking in with a healthcare professional may be helpful. " +
+                "This is a wellness estimate, not a medical assessment.",
+            BodySignalsCopy.pushText(listOf("resting heart rate", "skin temperature"), nights = 2),
+        )
+        val banned = listOf("illness", "infection", "fever", "covid", "abnormal", "diagnos")
+        val texts = listOf(BodySignalsCopy.TITLE, BodySignalsCopy.SHORT, BodySignalsCopy.pushText(listOf("skin temperature"), 1))
+        texts.forEach { t -> banned.forEach { assertFalse("$it in $t", it in t.lowercase()) } }
     }
 
     @Test

@@ -38,19 +38,19 @@ internal val RELATED = mapOf(
 internal val ABOUT = mapOf(
     Metric.HeartRate to (
         "How fast your heart beats, measured all day by the strap." to
-            "Movement, stress, caffeine, heat and illness raise it; rest and sleep bring it down."
+            "Movement, stress, caffeine and heat raise it; rest and sleep bring it down."
         ),
     Metric.RestingHr to (
         "Your heart rate at its calmest, which the strap works out each day. Lower usually means a fitter, well-rested heart." to
-            "It rises after hard training, late meals, alcohol, poor sleep or when you're getting ill, and falls as fitness builds."
+            "It rises after hard training, late meals, alcohol, poor sleep or when your body is fighting something off, and falls as fitness builds."
         ),
     Metric.Hrv to (
         "Heart-rate variability: how much the time between beats varies. Higher than your usual means your body has recovered." to
-            "Good sleep and rest raise it. Stress, hard training, alcohol and illness lower it. Compare it with your own normal, not other people's."
+            "Good sleep and rest raise it. Stress, hard training and alcohol lower it. Compare it with your own normal, not other people's."
         ),
     Metric.Spo2 to (
         "Blood oxygen: how much of your blood's capacity is carrying oxygen. Most people sit at 95–100%." to
-            "Altitude, breathing pauses in sleep and illness can lower it. A loose strap can also give low readings."
+            "Altitude and breathing pauses in sleep can lower it. A loose strap can also give low readings."
         ),
     Metric.Stress to (
         "The strap's 0–100 stress level, worked out from your heart rate and its variability while you're still." to
@@ -58,11 +58,11 @@ internal val ABOUT = mapOf(
         ),
     Metric.SkinTemperature to (
         "The temperature of your skin under the strap. The level depends on fit and room; what matters is the change from your normal." to
-            "A rise of half a degree or more can come with illness, alcohol, a warm room or the menstrual cycle."
+            "It moves with alcohol, a warm room, hard training, the menstrual cycle, or when your body is fighting something off."
         ),
     Metric.Breathing to (
         "How many breaths you take a minute while asleep. It stays very steady for most people." to
-            "A rise above your normal can mean illness, a hard training day or a warm, stuffy room."
+            "It can rise above your normal after a hard training day, in a warm, stuffy room, or when your body is fighting something off."
         ),
     Metric.Steps to (
         "Steps counted by the strap through the day." to

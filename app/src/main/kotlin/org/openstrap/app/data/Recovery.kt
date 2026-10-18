@@ -268,9 +268,12 @@ object Recovery {
             }
         }
 
-        // Breathing disturbances: oxygen-desaturation events per hour, scored on the 5/15/30 bands Zepp uses.
+        // Breathing disturbances: oxygen-desaturation events per hour, shown against the user's own nights only. No
+        // normal / mild / moderate / severe words: those are apnea severity bands (evidence-review.md, "Wording").
         tonight.odi?.let { odi ->
-            out += Contributor(Factor.BreathingDisturbances, odiScore(odi), "${"%.1f".format(odi)} events/h · ${odiBand(odi)}")
+            val usual = past.mapNotNull { it.odi }.takeIf { it.size >= MIN_BASELINE_NIGHTS }?.let { percentile(it, 0.5f) }
+            val detail = "${"%.1f".format(odi)} events/h" + (usual?.let { " · usual ${"%.1f".format(it)}" } ?: "")
+            out += Contributor(Factor.BreathingDisturbances, odiScore(odi), detail)
         }
 
         // Training load: yesterday against the chronic load, and the acute:chronic balance (EWMA).
@@ -318,8 +321,8 @@ object Recovery {
     const val SPO2_ALERT_DROP = 2f
 
     /**
-     * Score for an oxygen-desaturation index (events per hour), on the bands Zepp uses (5, 15, 30 per hour).
-     * Within each band the score falls linearly.
+     * Score for an oxygen-desaturation index (events per hour): flat below 5, then falling linearly through 15 and 30
+     * (the break points Zepp uses). The break points are never shown as labels.
      */
     fun odiScore(odi: Float): Int = when {
         odi < 5f -> 100
@@ -327,14 +330,6 @@ object Recovery {
         odi < 30f -> 75 - (odi - 15f) * 2f
         else -> 45 - (odi - 30f)
     }.toInt().coerceIn(20, 100)
-
-    /** Plain count wording, not clinical labels: this is a wellness estimate, not a sleep-apnea screen. */
-    fun odiBand(odi: Float) = when {
-        odi < 5f -> "few"
-        odi < 15f -> "some"
-        odi < 30f -> "frequent"
-        else -> "very frequent"
-    }
 
     /**
      * Our sleep score when the strap didn't give one: duration against need (50%), efficiency (25%)
@@ -375,8 +370,8 @@ object Recovery {
 
     /**
      * Maximum heart rate: Tanaka's 208 − 0.7·age when the age is known, else the strap's own value (from
-     * the Zepp profile), else 190. Raised to [observedPeak] when the user has actually gone higher, as
-     * Firstbeat does, but by at most 15 bpm so one artefact can't move it far.
+     * the Zepp profile), else 190. Raised to [observedPeak] when the user has actually gone higher (an equation's
+     * individual SD is 7-11 bpm, so raising is sound), but by at most 15 bpm so one artefact can't move it far.
      */
     fun maxHeartRate(age: Int?, strapMax: Int? = null, observedPeak: Int? = null): Float {
         val estimate = when {

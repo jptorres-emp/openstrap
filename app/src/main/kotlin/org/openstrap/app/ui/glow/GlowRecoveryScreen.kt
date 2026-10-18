@@ -28,6 +28,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.unit.dp
+import org.openstrap.app.data.BodySignalsCopy
 import org.openstrap.app.data.CheckIn
 import org.openstrap.app.data.DayTag
 import org.openstrap.app.data.History
@@ -143,13 +144,13 @@ private fun RecoveryCard(r: RecoveryResult) {
 @Composable
 private fun StrainPanel(ready: Recovery.Readiness) {
     DotPanel {
-        DotHeader("Your body is under strain", warning = true)
+        DotHeader(BodySignalsCopy.TITLE, warning = true)
         Text(
             ready.alertSignals.joinToString(", ").replaceFirstChar { it.uppercase() } + ". " +
-                "Changes like these together often come with illness, heavy training, alcohol or a late night. " +
-                "OpenStrap isn't a medical device; see a doctor if you feel unwell.",
+                BodySignalsCopy.CAUSES + " " + BodySignalsCopy.ADVICE,
             color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodyMedium,
         )
+        Note(BodySignalsCopy.DISCLAIMER)
     }
 }
 
@@ -475,6 +476,6 @@ private fun HowItWorksPanel(strap: StrapReadinessRow?, ours: Int?) {
                     "OpenStrap keeps both each day to tune its own score once there are a couple of weeks to compare.",
             )
         }
-        Note("OpenStrap isn't a medical device.")
+        Note(BodySignalsCopy.DISCLAIMER)
     }
 }

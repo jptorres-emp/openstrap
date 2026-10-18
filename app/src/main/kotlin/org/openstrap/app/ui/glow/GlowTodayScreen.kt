@@ -191,7 +191,7 @@ private fun OverviewCard(state: DayUiState, rec: RecoveryResult?, chargeLeads: B
     val sleep = Score("Sleep", sleepNow, SleepGlow.color, sleepNow.minus(state.previousSleepScore), "vs night before")
     val (lead, second) = if (chargeLeads) charge to recovery else recovery to charge
     val verdict = when {
-        strain -> "Signs of strain"
+        strain -> org.openstrap.app.data.BodySignalsCopy.SHORT
         lead.value == null -> null
         chargeLeads -> Narrative.chargeHeadline(lead.value)
         else -> Narrative.readinessHeadline(lead.value, alert = false)

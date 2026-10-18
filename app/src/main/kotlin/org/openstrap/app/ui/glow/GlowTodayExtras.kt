@@ -58,7 +58,7 @@ internal fun AlertsPanel(alerts: List<HealthAlertRow>, onOpenMetric: (Metric) ->
                 Note(clockOf(a.timestamp))
             }
         }
-        Note("OpenStrap isn't a medical device. If you feel unwell, see a doctor.")
+        Note("If you feel unwell, checking in with a healthcare professional may be helpful. ${org.openstrap.app.data.BodySignalsCopy.DISCLAIMER}")
     }
 }
 

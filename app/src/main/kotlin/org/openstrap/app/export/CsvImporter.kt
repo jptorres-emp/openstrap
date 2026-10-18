@@ -8,24 +8,34 @@ import java.time.ZoneId
 import java.util.zip.ZipInputStream
 
 /**
- * Restores a zip made by [CsvExporter]. For each table, the days the backup holds are replaced by the backup's rows:
- * what the phone had in those days goes, so a restore also undoes rows that were stored at the wrong time. Days the
- * backup doesn't have, and anything after its last row, stay as they are. Runs as one transaction, so a zip that
- * fails part way changes nothing. Files this version doesn't know are skipped.
+ * Restores a zip made by [CsvExporter] into the days before the strap's history. The strap keeps weeks of it and syncs
+ * them itself, so for each table the backup only fills the local days before the first day the phone has a row on;
+ * that day and every day after it are the strap's, gaps included. A sleep or workout that overlaps one on the phone is
+ * skipped too, and stages and workout heart rate come back only with their sleep or workout. Restoring twice changes
+ * nothing. Runs as one transaction, so a zip that fails part way changes nothing. Files this version doesn't know are
+ * skipped.
  */
 class CsvImporter(private val db: OpenStrapDatabase, private val zone: ZoneId = ZoneId.systemDefault()) {
 
-    /** What one restore did: rows stored per file, local days replaced, and rows that couldn't be read. */
-    data class Result(val rows: Map<String, Int>, val days: Int, val skipped: Int) {
+    /** What one restore did: rows added per file, rows left out as the strap's days have them, and rows unreadable. */
+    data class Result(val rows: Map<String, Int>, val present: Int, val skipped: Int) {
         val total get() = rows.values.sum()
     }
+
+    private class Outcome(val stored: Int, val present: Int, val bad: Int)
 
     suspend fun importZip(input: InputStream): Result = db.withTransaction {
         val tables = CSV_TABLES.associateBy { it.file }
         val counts = linkedMapOf<String, Int>()
-        val days = mutableSetOf<Long>()
-        val cleared = mutableMapOf<String, List<Pair<Long, Long>>>()
+        // Starts of the sleeps and workouts this restore added: only their stages and heart rate come with them.
+        val added = mutableMapOf<String, Set<Long>>()
+        // Child tables wait until every parent is in, whatever order the zip lists them in.
+        val children = mutableListOf<Pair<CsvTable<*>, List<String>>>()
+        var present = 0
         var skipped = 0
+        fun count(table: CsvTable<*>, o: Outcome) {
+            counts[table.file] = o.stored; present += o.present; skipped += o.bad
+        }
         ZipInputStream(input).use { zip ->
             while (true) {
                 val entry = zip.nextEntry ?: break
@@ -33,77 +43,59 @@ class CsvImporter(private val db: OpenStrapDatabase, private val zone: ZoneId = 
                 // Only this entry's bytes, without closing the zip (a Reader's readLines would close it).
                 val lines = zip.readBytes().toString(Charsets.UTF_8).lines().filter { it.isNotBlank() }
                 if (lines.isEmpty()) continue
-                val (stored, bad, windows) = table.restore(lines)
-                counts[table.file] = stored
-                cleared[table.key.table] = windows
-                days += windows.map { localDay(it.first, zone) }
-                skipped += bad
+                if (table.key.parent != null) children += table to lines else count(table, table.backfill(lines, added))
             }
         }
-        // Rows that hung off a parent the restore replaced go with it. Done last, as the zip may list children first.
-        val sql = db.openHelper.writableDatabase
-        for ((parent, children) in CHILDREN) for ((from, to) in cleared[parent].orEmpty()) for (child in children) {
-            sql.execSQL(
-                "DELETE FROM ${child.table} WHERE ${child.column} >= ? AND ${child.column} < ? " +
-                    "AND ${child.column} NOT IN (SELECT ${child.parentColumn} FROM $parent)",
-                arrayOf(from, to),
-            )
-        }
+        for ((table, lines) in children) count(table, table.backfill(lines, added))
         // Throwing rolls back, so a zip that isn't ours leaves the database untouched.
         if (counts.isEmpty()) throw IllegalArgumentException("This isn't an OpenStrap export.")
-        Result(counts, days.size, skipped)
+        Result(counts, present, skipped)
     }
 
-    /** Replaces this table's rows in the days [lines] cover; returns rows stored, rows unreadable, and those days. */
-    private suspend fun <T> CsvTable<T>.restore(lines: List<String>): Triple<Int, Int, List<Pair<Long, Long>>> {
-        val index = CsvImporter.parseLine(lines.first()).withIndex().associate { (i, name) -> name to i }
+    /** Writes the rows of [lines] that fall before the phone's first day for this table. */
+    private suspend fun <T> CsvTable<T>.backfill(lines: List<String>, added: MutableMap<String, Set<Long>>): Outcome {
+        val index = parseLine(lines.first()).withIndex().associate { (i, name) -> name to i }
         var bad = 0
-        val rows = mutableListOf<T>()
-        val times = mutableListOf<Long>()
+        val rows = mutableListOf<Triple<Long, Long, T>>()
         for (line in lines.drop(1)) {
             runCatching {
                 val cells = CsvRow(index, parseLine(line))
-                val row = parse(cells)
-                times += cells.long(key.epoch)
-                rows += row
+                val time = cells.long(key.epoch)
+                rows += Triple(time, key.span?.let { cells.long(it.epoch) } ?: time, parse(cells))
             }.onFailure { bad++ }
         }
-        val windows = coveredWindows(times, zone)
-        val sql = db.openHelper.writableDatabase
-        for ((from, to) in windows) {
-            sql.execSQL("DELETE FROM ${key.table} WHERE ${key.column} >= ? AND ${key.column} < ?", arrayOf(from, to))
-        }
-        rows.chunked(2_000).forEach { write(db.healthDao(), it) }
-        return Triple(rows.size, bad, windows)
-    }
-
-    companion object {
-        private class Child(val table: String, val column: String, val parentColumn: String)
-
-        /** Tables keyed by a parent row's start, which mean nothing once that parent is gone. */
-        private val CHILDREN = mapOf(
-            "sleep_session" to listOf(Child("sleep_stage", "sessionStart", "start")),
-            "workout" to listOf(Child("workout_hr", "workoutStart", "start"), Child("recovery_hr", "workoutStart", "start")),
-        )
-
-        private fun localDay(epoch: Long, zone: ZoneId): Long =
-            Instant.ofEpochSecond(epoch).atZone(zone).toLocalDate().atStartOfDay(zone).toEpochSecond()
-
-        /**
-         * The stretches a backup speaks for, as [from, to) in epoch seconds: each local day it has a row on, starting
-         * no earlier than its first row and ending just after its last. Clipping both ends keeps what the phone has
-         * from before the backup started and from after it was made.
-         */
-        fun coveredWindows(times: List<Long>, zone: ZoneId): List<Pair<Long, Long>> {
-            if (times.isEmpty()) return emptyList()
-            val first = times.min()
-            val last = times.max()
-            return times.map { localDay(it, zone) }.distinct().sorted().map { day ->
-                val next = Instant.ofEpochSecond(day).atZone(zone).toLocalDate().plusDays(1).atStartOfDay(zone).toEpochSecond()
-                maxOf(day, first) to minOf(next, last + 1)
+        val fresh = if (rows.isEmpty()) rows else {
+            val from = rows.minOf { it.first }
+            val to = rows.maxOf { it.second }
+            val parent = key.parent
+            val span = key.span
+            when {
+                parent != null -> added[parent].orEmpty().let { starts -> rows.filter { it.first in starts } }
+                else -> {
+                    val first = query("SELECT MIN(${key.column}) FROM ${key.table}") { c -> if (c.isNull(0)) null else c.getLong(0) }.single()
+                    val cutoff = first?.let { dayStart(it) } ?: Long.MAX_VALUE
+                    val before = rows.filter { it.first < cutoff }
+                    if (span == null) before else {
+                        // A night that starts the evening before the strap's first day can still be one it has.
+                        val have = query("SELECT ${key.column}, ${span.column} FROM ${key.table} WHERE ${key.column} <= ? AND ${span.column} >= ?", to, from) {
+                            it.getLong(0) to it.getLong(1)
+                        }
+                        before.filter { (start, end) -> have.none { (s, e) -> s == start || (s < end && e > start) } }
+                    }
+                }
             }
         }
+        if (key.span != null) added[key.table] = fresh.mapTo(HashSet()) { it.first }
+        fresh.map { it.third }.chunked(2_000).forEach { write(db.healthDao(), it) }
+        return Outcome(fresh.size, rows.size - fresh.size, bad)
+    }
 
+    private fun dayStart(epoch: Long): Long = Instant.ofEpochSecond(epoch).atZone(zone).toLocalDate().atStartOfDay(zone).toEpochSecond()
+
+    private fun <R> query(sql: String, vararg args: Any, read: (android.database.Cursor) -> R): List<R> =
+        db.openHelper.writableDatabase.query(sql, args).use { c -> buildList { while (c.moveToNext()) add(read(c)) } }
+
+    companion object {
         /** One CSV line into cells: commas separate, double quotes wrap a cell and "" inside is a quote. */
         fun parseLine(line: String): List<String> {
             val cells = mutableListOf<String>()

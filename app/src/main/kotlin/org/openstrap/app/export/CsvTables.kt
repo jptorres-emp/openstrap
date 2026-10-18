@@ -48,9 +48,14 @@ class CsvRow(private val index: Map<String, Int>, private val cells: List<String
 
 /**
  * Where a table's rows sit in time: the database table, the column that holds each row's time, and the CSV column
- * with that time in epoch seconds. A restore replaces the backup's days by deleting through these.
+ * with that time in epoch seconds. A restore only writes rows from before the first day the phone has in the table. A
+ * [span] table (sleep, workouts) also skips rows that overlap one on the phone, as a night can cross into that day.
+ * A [parent] table's rows belong to a row of that table, keyed by its start, and come back only with it.
  */
-class Key(val table: String, val column: String, val epoch: String)
+class Key(val table: String, val column: String, val epoch: String, val span: Span? = null, val parent: String? = null)
+
+/** A span table's end: the database column and the CSV column, in epoch seconds. */
+class Span(val column: String, val epoch: String)
 
 /**
  * One table in the CSV backup: its file, columns, how to read it from the database and write it back. Export and
@@ -102,7 +107,7 @@ val CSV_TABLES: List<CsvTable<*>> = listOf(
         },
         { d, r -> d.insertActivityExtended(r) }),
     CsvTable("sleep_session.csv", "start,end,start_epoch,end_epoch,nap,score,avg_hr,deep_min,light_min,rem_min,awake_min,wake_count,day_epoch",
-        Key("sleep_session", "start", "start_epoch"),
+        Key("sleep_session", "start", "start_epoch", span = Span("`end`", "end_epoch")),
         { d, f, t -> d.sleepSessionsOnce(f, t) },
         {
             listOf(iso(it.start), iso(it.end), it.start, it.end, it.nap, it.score, it.averageHeartRate,
@@ -118,7 +123,7 @@ val CSV_TABLES: List<CsvTable<*>> = listOf(
         },
         { d, r -> d.insertSleepSessions(r) }),
     CsvTable("sleep_stage.csv", "session_start_epoch,start,end,stage",
-        Key("sleep_stage", "sessionStart", "session_start_epoch"),
+        Key("sleep_stage", "sessionStart", "session_start_epoch", parent = "sleep_session"),
         { d, f, t -> d.sleepSessionsOnce(f, t).flatMap { s -> d.sleepStagesOnce(s.start) } },
         { listOf(it.sessionStart, iso(it.start), iso(it.end), CsvExporter.stageName(it.stage)) },
         { SleepStage(it.instant("start"), it.instant("end"), it.long("session_start_epoch"), stageCode(it.string("stage"))) },
@@ -161,7 +166,7 @@ val CSV_TABLES: List<CsvTable<*>> = listOf(
         { PaiSample(it.long("epoch"), it.float("daily"), it.float("total"), it.int("resting_hr"), it.int("max_hr")) },
         { d, r -> d.insertPai(r) }),
     CsvTable("workout.csv", "start,start_epoch,end_epoch,sport_type,exercise_seconds,calories,avg_hr,max_hr,min_hr,aerobic_te,anaerobic_te,training_load,vo2max,steps",
-        Key("workout", "start", "start_epoch"),
+        Key("workout", "start", "start_epoch", span = Span("`end`", "end_epoch")),
         { d, f, t -> d.workouts().first().filter { it.start in f..t }.sortedBy { it.start } },
         {
             listOf(iso(it.start), it.start, it.end, it.sportType, it.exerciseSeconds, it.calories, it.averageHeartRate, it.maxHeartRate,
@@ -175,7 +180,7 @@ val CSV_TABLES: List<CsvTable<*>> = listOf(
         },
         { d, r -> d.insertWorkouts(r) }),
     CsvTable("workout_hr.csv", "workout_start_epoch,epoch,bpm",
-        Key("workout_hr", "workoutStart", "workout_start_epoch"),
+        Key("workout_hr", "workoutStart", "workout_start_epoch", parent = "workout"),
         { d, f, t -> d.workoutHeartRateAll().filter { it.workoutStart in f..t } }, { listOf(it.workoutStart, it.timestamp, it.bpm) },
         { WorkoutHeartRate(it.long("workout_start_epoch"), it.long("epoch"), it.int("bpm")) }, { d, r -> d.insertWorkoutHeartRate(r) }),
     CsvTable("sport_effect.csv", "end_epoch,recovery_minutes,vo2max,epoc,weekly_load,monthly_load,optimal_load_min,optimal_load_max,max_hr",
@@ -192,7 +197,7 @@ val CSV_TABLES: List<CsvTable<*>> = listOf(
         },
         { d, r -> d.insertSportEffects(r) }),
     CsvTable("recovery_hr.csv", "workout_start_epoch,samples_hex",
-        Key("recovery_hr", "workoutStart", "workout_start_epoch"),
+        Key("recovery_hr", "workoutStart", "workout_start_epoch", parent = "workout"),
         { d, f, t -> d.recoveryHeartRateAll().filter { it.workoutStart in f..t } }, { listOf(it.workoutStart, hex(it.samples)) },
         { RecoveryHeartRateRow(it.long("workout_start_epoch"), it.bytes("samples_hex") ?: ByteArray(0)) },
         { d, r -> d.insertRecoveryHeartRate(r) }),

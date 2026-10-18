@@ -1,0 +1,146 @@
+package org.openstrap.app.export
+
+import androidx.room.Room
+import androidx.test.core.app.ApplicationProvider
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.runTest
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.openstrap.app.data.db.HealthDao
+import org.openstrap.app.data.db.HeartRateSample
+import org.openstrap.app.data.db.OpenStrapDatabase
+import org.openstrap.app.data.db.SleepSession
+import org.openstrap.app.data.db.SleepStage
+import org.openstrap.app.data.db.Workout
+import org.openstrap.app.data.db.WorkoutHeartRate
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+import java.io.ByteArrayInputStream
+import java.time.ZoneId
+import java.io.ByteArrayOutputStream
+import java.util.zip.ZipEntry
+import java.util.zip.ZipInputStream
+import java.util.zip.ZipOutputStream
+
+/** Export and restore against a real database: the backup fills the days before the strap's history, and no others. */
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [35])
+class CsvRestoreTest {
+    private val day = 1792195200L // 2026-10-17T00:00Z
+    private val week = 7 * 86_400L
+
+    private lateinit var old: OpenStrapDatabase
+    private lateinit var phone: OpenStrapDatabase
+
+    private fun db() = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), OpenStrapDatabase::class.java)
+        .allowMainThreadQueries().build()
+
+    @Before fun open() { old = db(); phone = db() }
+    @After fun close() { old.close(); phone.close() }
+
+    private suspend fun backup(db: OpenStrapDatabase) = ByteArrayOutputStream().also { CsvExporter(db.healthDao()).exportZip(it) }.toByteArray()
+    private suspend fun restore(zip: ByteArray) = CsvImporter(phone, ZoneId.of("UTC")).importZip(ByteArrayInputStream(zip))
+
+    /** Every file of an export, by name, for comparing two databases in full. */
+    private suspend fun contents(db: OpenStrapDatabase): Map<String, String> {
+        val zip = ZipInputStream(ByteArrayInputStream(backup(db)))
+        return buildMap { while (true) { val e = zip.nextEntry ?: break; put(e.name, zip.readBytes().toString(Charsets.UTF_8)) } }
+    }
+
+    private suspend fun HealthDao.hr() = heartRateOnce(0, Long.MAX_VALUE / 2)
+    private suspend fun HealthDao.sleeps() = sleepSessionsOnce(0, Long.MAX_VALUE / 2)
+    private fun workout(start: Long, end: Long) = Workout(start, end, 1, (end - start).toInt(), null, null, null, null, null, null, null, null, null)
+
+    /** A month on the old phone: a heart rate every hour, a night's sleep with stages, and a workout every week. */
+    private suspend fun fillOldPhone() {
+        val d = old.healthDao()
+        d.insertHeartRate((0 until 30 * 24).map { HeartRateSample(day - 30 * 86_400L + it * 3600L, 60 + it % 20) })
+        for (n in 0 until 30) {
+            val start = day - (30 - n) * 86_400L - 2 * 3600
+            d.insertSleepSessions(listOf(SleepSession(start, start + 8 * 3600, start + 2 * 3600, score = 80)))
+            d.insertSleepStages(listOf(SleepStage(start, start + 4 * 3600, start, SleepStage.DEEP), SleepStage(start + 4 * 3600, start + 8 * 3600, start, SleepStage.LIGHT)))
+        }
+        for (w in 0 until 4) {
+            val start = day - (4 - w) * week + 17 * 3600
+            d.insertWorkouts(listOf(workout(start, start + 3600)))
+            d.insertWorkoutHeartRate(listOf(WorkoutHeartRate(start, start + 60, 120), WorkoutHeartRate(start, start + 120, 130)))
+        }
+    }
+
+    @Test fun `a backup restored onto an empty phone matches the phone it came from`() = runTest {
+        fillOldPhone()
+        val result = restore(backup(old))
+        assertEquals(contents(old), contents(phone))
+        assertEquals(0, result.present)
+        assertEquals(0, result.skipped)
+    }
+
+    @Test fun `restoring twice changes nothing`() = runTest {
+        fillOldPhone()
+        val zip = backup(old)
+        restore(zip)
+        val once = contents(phone)
+        val again = restore(zip)
+        assertEquals(once, contents(phone))
+        assertEquals(0, again.total)
+    }
+
+    @Test fun `the strap's days stay as it synced them, gaps included, and the backup fills the days before`() = runTest {
+        fillOldPhone()
+        // The strap's last week on the new phone: its first day starts at 10:00, and it has every other hour.
+        val strapFrom = day - week
+        val strap = old.healthDao().hr().filter { it.timestamp >= strapFrom + 10 * 3600 && (it.timestamp / 3600) % 2 == 0L }
+        phone.healthDao().insertHeartRate(strap.map { it.copy(bpm = 200) })
+        val result = restore(backup(old))
+
+        val hr = phone.healthDao().hr()
+        assertEquals(old.healthDao().hr().filter { it.timestamp < strapFrom }, hr.filter { it.timestamp < strapFrom })
+        assertEquals(strap.map { it.timestamp }, hr.filter { it.timestamp >= strapFrom }.map { it.timestamp })
+        assertTrue(hr.filter { it.timestamp >= strapFrom }.all { it.bpm == 200 })
+        assertEquals(7 * 24, result.present)
+    }
+
+    @Test fun `a night the strap re-synced with another start isn't doubled, and keeps its own stages`() = runTest {
+        fillOldPhone()
+        val night = old.healthDao().sleeps().last()
+        val resynced = night.copy(start = night.start + 60, score = 55)
+        phone.healthDao().insertSleepSessions(listOf(resynced))
+        phone.healthDao().insertSleepStages(listOf(SleepStage(resynced.start, resynced.end, resynced.start, SleepStage.REM)))
+        restore(backup(old))
+
+        val sleeps = phone.healthDao().sleeps()
+        assertEquals(30, sleeps.size)
+        assertTrue(sleeps.none { it.start == night.start })
+        assertEquals(55, sleeps.single { it.start == resynced.start }.score)
+        assertEquals(listOf(SleepStage.REM), phone.healthDao().sleepStagesOnce(resynced.start).map { it.stage })
+        // The nights before it came back with their stages.
+        assertEquals(2, phone.healthDao().sleepStagesOnce(sleeps.first().start).size)
+    }
+
+    @Test fun `a workout already on the phone keeps its heart rate, and the others come back with theirs`() = runTest {
+        fillOldPhone()
+        val last = old.healthDao().workouts().first().maxBy { it.start }
+        phone.healthDao().insertWorkouts(listOf(last))
+        phone.healthDao().insertWorkoutHeartRate(listOf(WorkoutHeartRate(last.start, last.start + 30, 99)))
+        restore(backup(old))
+
+        val hr = phone.healthDao().workoutHeartRateAll()
+        assertEquals(listOf(99), hr.filter { it.workoutStart == last.start }.map { it.bpm })
+        assertEquals(6, hr.count { it.workoutStart != last.start })
+        assertEquals(4, phone.healthDao().workouts().first().size)
+    }
+
+    @Test fun `a zip that isn't an export changes nothing`() = runTest {
+        phone.healthDao().insertHeartRate(listOf(HeartRateSample(day, 70)))
+        val zip = ByteArrayOutputStream().also { out ->
+            ZipOutputStream(out).use { it.putNextEntry(ZipEntry("notes.txt")); it.write("hello".toByteArray()); it.closeEntry() }
+        }.toByteArray()
+        try { restore(zip); fail("restored a zip that isn't an export") } catch (_: IllegalArgumentException) {}
+        assertEquals(listOf(HeartRateSample(day, 70)), phone.healthDao().hr())
+    }
+}

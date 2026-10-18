@@ -104,7 +104,7 @@ fun YouScreen(
                 )
                 LinkRow(PhosphorIcons.DownloadSimple, "Export CSV", "A zip of every synced record", onExportCsv)
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                LinkRow(PhosphorIcons.ArrowCircleUp, "Import CSV", "Restore a zip made by Export CSV; its days replace what's here", onImportCsv)
+                LinkRow(PhosphorIcons.ArrowCircleUp, "Import CSV", "Restore a zip made by Export CSV, for days before the strap's history", onImportCsv)
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 LinkRow(PhosphorIcons.Heartbeat, "Health Connect", "Copy your data to Android Health Connect", onExportHealthConnect)
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)

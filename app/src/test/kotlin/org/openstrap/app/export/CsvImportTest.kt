@@ -8,7 +8,6 @@ import org.openstrap.app.data.db.SleepSession
 import org.openstrap.app.data.db.SleepStage
 import org.openstrap.app.data.db.Workout
 import java.io.StringWriter
-import java.time.ZoneId
 import org.openstrap.app.export.CsvExporter.Companion.writeCsv
 
 class CsvImportTest {
@@ -62,33 +61,8 @@ class CsvImportTest {
     }
 
     @Test fun `every table's key column is in its header`() {
-        for (t in CSV_TABLES) assertTrue("${t.file} lacks ${t.key.epoch}", t.key.epoch in CsvImporter.parseLine(t.header))
-    }
-
-    private val utc = ZoneId.of("UTC")
-    private val day = 1792195200L // 2026-10-17T00:00Z
-
-    @Test fun `a backup covers each day it has rows on, from its first row to just after its last`() {
-        val times = listOf(day - 3600, day + 600, day + 86_400 + 7200)
-        assertEquals(
-            listOf(day - 3600 to day, day to day + 86_400, day + 86_400 to day + 86_400 + 7201),
-            CsvImporter.coveredWindows(times, utc),
-        )
-    }
-
-    @Test fun `a day the backup has nothing on is left alone`() {
-        val windows = CsvImporter.coveredWindows(listOf(day + 60, day + 2 * 86_400 + 60), utc)
-        assertEquals(2, windows.size)
-        assertTrue(windows.none { (from, to) -> day + 86_400 + 43_200 in from until to })
-    }
-
-    @Test fun `days follow the phone's zone`() {
-        // 23:30 UTC is already the next day in Berlin, so one row covers part of that Berlin day only.
-        val windows = CsvImporter.coveredWindows(listOf(day - 1800), ZoneId.of("Europe/Berlin"))
-        assertEquals(listOf(day - 1800 to day - 1799), windows)
-    }
-
-    @Test fun `an empty table covers nothing`() {
-        assertTrue(CsvImporter.coveredWindows(emptyList(), utc).isEmpty())
+        for (t in CSV_TABLES) for (column in listOfNotNull(t.key.epoch, t.key.span?.epoch)) {
+            assertTrue("${t.file} lacks $column", column in CsvImporter.parseLine(t.header))
+        }
     }
 }

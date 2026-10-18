@@ -7,7 +7,7 @@ plugins {
 fun env(name: String): String? = providers.environmentVariable(name).orNull?.takeIf { it.isNotBlank() }
 
 // The version comes from the release tag (CI passes -PappVersion=1.2.3); local builds default to the current one.
-val appVersionName = providers.gradleProperty("appVersion").orNull?.removePrefix("v") ?: "1.1.2"
+val appVersionName = providers.gradleProperty("appVersion").orNull?.removePrefix("v") ?: "1.1.3"
 // 1.2.3 -> 10203, so every release installs over the one before it.
 val appVersionCode = appVersionName.substringBefore('-').split('.').map { it.toInt() }
     .let { (major, minor, patch) -> major * 10_000 + minor * 100 + patch }
@@ -91,4 +91,7 @@ dependencies {
     // Android's org.json is a stub in plain JVM unit tests.
     testImplementation(libs.org.json)
     testImplementation(libs.coroutines.test)
+    // A real Room database in unit tests (CSV restore).
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
 }

@@ -269,8 +269,9 @@ private fun ScorePill(score: Score, onClick: () -> Unit, modifier: Modifier = Mo
             .padding(start = 12.dp, end = 12.dp, top = 9.dp, bottom = 10.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
+        // The label wears the score's colour, so it still reads as the legend without a dot.
         Text(
-            score.label, color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.labelSmall,
+            score.label, color = score.color, style = MaterialTheme.typography.labelSmall,
             maxLines = 1, overflow = TextOverflow.Ellipsis,
         )
         Spacer(Modifier.height(2.dp))

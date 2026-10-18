@@ -7,7 +7,7 @@ import kotlin.math.ln
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.pow
-import kotlin.math.sqrt
+import kotlin.math.sign
 
 /**
  * OpenStrap's own recovery model: a morning **Readiness** score and a minute-by-minute **Charge** (body
@@ -54,7 +54,21 @@ object Recovery {
         val spo2: Float? = null,
         /** Oxygen-desaturation events per hour asleep, from the strap's nightly sleep-apnea summary. */
         val odi: Float? = null,
-    )
+        /** The strap's own nightly HRV (ms) and resting HR (bpm) for this night, when it reported them. */
+        val strapHrv: Float? = null,
+        val strapRestingHr: Float? = null,
+    ) {
+        /**
+         * The validity rule for OpenStrap's own HRV and resting HR: a main sleep of at least 3 h, ≥ [MIN_HRV_SAMPLES]
+         * gated RMSSD samples and ≥ [MIN_HR_MINUTES] minutes of gated heart rate. Invalid nights never enter a baseline.
+         */
+        val valid: Boolean
+            get() = end - start >= MIN_VALID_SLEEP_MINUTES * 60L && hrvSamples >= MIN_HRV_SAMPLES && hrMinutes >= MIN_HR_MINUTES
+
+        /** `hrv_n` = ln(mean gated RMSSD) on a valid night, else null. */
+        val hrvLn: Float? get() = hrv?.takeIf { valid && it > 0 }?.let { ln(it) }
+        val validRestingHr: Float? get() = restingHr?.takeIf { valid }
+    }
 
     /** One minute of the day as the charge model sees it. */
     data class Minute(
@@ -71,18 +85,24 @@ object Recovery {
     // Baselines
     // ------------------------------------------------------------------------------------------------
 
-    /** Mean and standard deviation of a personal baseline, with the number of nights behind it. */
-    data class Baseline(val mean: Float, val sd: Float, val n: Int) {
-        fun z(x: Float, sdFloor: Float) = (x - mean) / max(sd, sdFloor)
+    /**
+     * A robust personal baseline: [centre] is the median and [scale] is 1.4826·MAD, floored, so one bad stretch
+     * (illness, alcohol, an artefact night) can't drag "normal" with it the way a mean and SD do.
+     */
+    data class Baseline(val centre: Float, val scale: Float, val n: Int) {
+        fun z(x: Float) = (x - centre) / scale
     }
 
-    /** Baseline from [values]; null with fewer than [minN] values. Uses the sample standard deviation. */
-    fun baseline(values: List<Float>, minN: Int = MIN_BASELINE_NIGHTS): Baseline? {
-        if (values.size < minN) return null
-        val mean = values.average()
-        val sd = if (values.size < 2) 0.0 else sqrt(values.sumOf { (it - mean).pow(2) } / (values.size - 1))
-        return Baseline(mean.toFloat(), sd.toFloat(), values.size)
+    /** Baseline from [values] with its scale floored at [floor]; null with fewer than [minN] values. */
+    fun baseline(values: List<Float>, floor: Float, minN: Int = SCORED_NIGHTS): Baseline? {
+        if (values.size < minN || values.isEmpty()) return null
+        val centre = percentile(values, 0.5f)!!
+        val mad = percentile(values.map { abs(it - centre) }, 0.5f)!!
+        return Baseline(centre, max(MAD_SCALE * mad, floor), values.size)
     }
+
+    /** 1.4826·MAD estimates the SD for normally distributed data. */
+    const val MAD_SCALE = 1.4826f
 
     /**
      * Where Charge starts counting the strap's stress score as stress. [calmLevel] is null (and [value] is
@@ -113,11 +133,32 @@ object Recovery {
     const val STRESS_FROM_MIN = 50
     const val STRESS_FROM_MAX = 70
 
-    /** Nights needed before a baseline is used at all, and before it's considered settled. */
-    const val MIN_BASELINE_NIGHTS = 4
-    const val CALIBRATED_NIGHTS = 14
-    /** Nights of history a baseline looks back over (Oura uses about two months for its long average). */
+    /**
+     * Phases by valid nights in the baseline (they replace MIN_BASELINE_NIGHTS = 4 and CALIBRATED_NIGHTS = 14):
+     * below [SCORED_NIGHTS] HRV and resting HR are withheld and the strap's estimate is shown instead; up to
+     * [SETTLED_NIGHTS] the score is labelled "learning"; from [CALIBRATED_NIGHTS] it's labelled "calibrated".
+     */
+    const val SCORED_NIGHTS = 7
+    const val SETTLED_NIGHTS = 14
+    const val CALIBRATED_NIGHTS = 28
+    /** Valid nights of history a baseline looks back over (published windows run 28-60). */
     const val BASELINE_NIGHTS = 60
+
+    enum class Phase { Withheld, Learning, Scored, Calibrated }
+
+    fun phase(validNights: Int): Phase = when {
+        validNights < SCORED_NIGHTS -> Phase.Withheld
+        validNights < SETTLED_NIGHTS -> Phase.Learning
+        validNights < CALIBRATED_NIGHTS -> Phase.Scored
+        else -> Phase.Calibrated
+    }
+
+    /** The validity rule's thresholds (see [Night.valid]). */
+    const val MIN_VALID_SLEEP_MINUTES = 3 * 60
+    const val MIN_HRV_SAMPLES = 6
+    const val MIN_HR_MINUTES = 120
+    /** The lowest 30-minute window needs this many minutes of heart rate in it. */
+    const val RHR_WINDOW_MIN_MINUTES = 20
 
     // ------------------------------------------------------------------------------------------------
     // Readiness
@@ -139,11 +180,14 @@ object Recovery {
 
     data class Contributor(val factor: Factor, val score: Int, val detail: String)
 
+    /** Where the 7-night HRV sits against the normal range, centre ± [HRV_RANGE_SCALE]·scale (the trials' band). */
+    enum class HrvRange { Below, Within, Above }
+
     data class Readiness(
-        /** 0-100, or null when there's no sleep to score. */
+        /** 0-100, or null when there's no sleep, or no HRV or resting HR to score ([withheld]). */
         val score: Int?,
         val contributors: List<Contributor>,
-        /** Nights in the HRV baseline; readiness is provisional below [CALIBRATED_NIGHTS]. */
+        /** Valid nights in the HRV and resting HR baselines (the larger of the two); sets [phase]. */
         val baselineNights: Int,
         /** Several body signals moved away from normal together; worth taking it easy. */
         val strainAlert: Boolean,
@@ -151,8 +195,25 @@ object Recovery {
         val alertSignals: List<String>,
         /** True when the weighted score was capped by one very low physiological contributor. */
         val capped: Boolean,
+        val phase: Phase = phase(baselineNights),
+        /**
+         * There was a night but neither an HRV nor a resting HR contributor, so no score: sleep alone isn't readiness
+         * (on 2026-10-16 it gave 52 against the strap's 91). The sleep contributor and the strap's estimate show instead.
+         */
+        val withheld: Boolean = false,
+        val hrvRange: HrvRange? = null,
+        /** Valid nights behind the 7-night HRV; "thin" below [HRV_WEEK_FULL_NIGHTS]. */
+        val hrvWeekNights: Int = 0,
+        /** The strap's values, shown (and used by alerts) because tonight's own ones failed the validity rule. */
+        val fallbackHrv: Float? = null,
+        val fallbackRestingHr: Float? = null,
+        /** Data-quality notes: own and strap values disagree by more than [HRV_QA_FRACTION] or [RHR_QA_BPM]. */
+        val qualityFlags: List<String> = emptyList(),
     ) {
-        val calibrating get() = baselineNights < CALIBRATED_NIGHTS
+        val calibrating get() = phase == Phase.Withheld || phase == Phase.Learning
+        val hrvWeekThin get() = hrvWeekNights in HRV_WEEK_MIN_NIGHTS until HRV_WEEK_FULL_NIGHTS
+        /** Show the strap's own score and parts as "Strap's estimate": before our baselines exist, or when withheld. */
+        val showStrapEstimate get() = phase == Phase.Withheld || withheld
     }
 
     /**
@@ -163,11 +224,29 @@ object Recovery {
     private const val Z_SLOPE = 1.19
     private val Z_OFFSET = ln(4.0)
 
-    /** Smallest worthwhile change, as a fraction of the baseline SD (Hopkins; Plews uses 0.5 for HRV). */
+    /** Smallest worthwhile change, as a fraction of the baseline scale (Buchheit; Plews uses 0.5 for HRV). */
     const val SWC_SD = 0.5f
-    /** Floors so a very steady baseline doesn't turn tiny changes into huge z-scores. */
+
+    /** The dead zone at the smallest worthwhile change: z_eff = sign(z)·max(0, |z| − [SWC_SD]). Smaller changes are noise. */
+    fun deadZone(z: Float): Float = sign(z) * max(0f, abs(z) - SWC_SD)
+
+    /** Floors so a very steady baseline doesn't turn tiny changes into huge z-scores (RHR's sits above device error). */
     const val HRV_LN_SD_FLOOR = 0.05f
     const val RHR_SD_FLOOR = 2f
+    const val BREATH_SD_FLOOR = 0.5f
+    const val TEMP_SD_FLOOR = 0.15f
+    const val SPO2_SD_FLOOR = 0.5f
+
+    /** Tonight's and the 7-night HRV in the score input; nightly wearable HRV error is larger than the SWC. */
+    const val HRV_NIGHT_WEIGHT = 0.4f
+    const val HRV_WEEK_WEIGHT = 0.6f
+    /** The 7-night mean needs this many valid nights, and is "thin" below the second. */
+    const val HRV_WEEK_MIN_NIGHTS = 3
+    const val HRV_WEEK_FULL_NIGHTS = 5
+    const val HRV_RANGE_SCALE = 0.5f
+    /** Own and strap values further apart than this raise a data-quality flag. */
+    const val HRV_QA_FRACTION = 0.15f
+    const val RHR_QA_BPM = 3f
     const val SLEEP_NEED_MINUTES = 8 * 60
 
     /**
@@ -175,47 +254,72 @@ object Recovery {
      * [dailyLoad] (TRIMP per day, oldest first, ending with yesterday).
      */
     fun readiness(tonight: Night?, history: List<Night>, dailyLoad: List<Float> = emptyList()): Readiness {
-        if (tonight == null) return Readiness(null, emptyList(), 0, false, emptyList(), false)
-        val past = history.filter { it.day < tonight.day }.sortedBy { it.day }.takeLast(BASELINE_NIGHTS)
+        if (tonight == null) {
+            val valid = history.filter { it.valid }.takeLast(BASELINE_NIGHTS)
+            return Readiness(null, emptyList(), max(valid.count { it.hrvLn != null }, valid.count { it.restingHr != null }), false, emptyList(), false)
+        }
+        val earlier = history.filter { it.day < tonight.day }.sortedBy { it.day }
+        // Baselines use the prior BASELINE_NIGHTS valid nights; invalid nights never enter them.
+        val validPast = earlier.filter { it.valid }.takeLast(BASELINE_NIGHTS)
+        val past = earlier.takeLast(BASELINE_NIGHTS)
         val out = mutableListOf<Contributor>()
         val alerts = mutableListOf<String>()
 
-        // HRV balance: tonight and the 7-night rolling mean of ln(RMSSD) against the long baseline (Plews).
-        val lnHistory = past.mapNotNull { it.hrv?.takeIf { v -> v > 0 }?.let { v -> ln(v) } }
-        val hrvBase = baseline(lnHistory)
-        tonight.hrv?.takeIf { it > 0 }?.let { hrv ->
-            val ln = ln(hrv)
-            if (hrvBase != null) {
-                val recent = (lnHistory.takeLast(6) + ln)
-                val zNight = hrvBase.z(ln, HRV_LN_SD_FLOOR)
-                val zWeek = hrvBase.z(recent.average().toFloat(), HRV_LN_SD_FLOOR)
-                val score = scoreFromZ(0.6f * zNight + 0.4f * zWeek)
-                val pct = ((exp(ln - hrvBase.mean.toDouble()) - 1) * 100).toInt()
-                out += Contributor(Factor.HrvBalance, score, "${hrv.toInt()} ms · ${signed(pct)}% vs usual")
-                if (zNight <= -1.5f) alerts += "HRV well below your normal"
-            }
+        val lnHistory = validPast.mapNotNull { it.hrvLn }
+        val rhrHistory = validPast.mapNotNull { it.restingHr }
+        val nights = max(lnHistory.size, rhrHistory.size)
+        val phase = phase(nights)
+        val scored = phase != Phase.Withheld
+
+        // HRV balance: 0.4·z(tonight) + 0.6·z(7-night mean of hrv_n) against the robust baseline, through the dead zone.
+        val hrvBase = baseline(lnHistory, HRV_LN_SD_FLOOR)
+        val week = (earlier + tonight).filter { tonight.day - it.day <= 6 * DAY + DST_SLACK }.mapNotNull { it.hrvLn }
+        val hrv7 = week.takeIf { it.size >= HRV_WEEK_MIN_NIGHTS }?.average()?.toFloat()
+        val hrvRange = if (hrvBase != null && hrv7 != null) when {
+            hrv7 < hrvBase.centre - HRV_RANGE_SCALE * hrvBase.scale -> HrvRange.Below
+            hrv7 > hrvBase.centre + HRV_RANGE_SCALE * hrvBase.scale -> HrvRange.Above
+            else -> HrvRange.Within
+        } else null
+        val ln = tonight.hrvLn
+        if (scored && hrvBase != null && ln != null) {
+            val zNight = hrvBase.z(ln)
+            val z = if (hrv7 != null) HRV_NIGHT_WEIGHT * zNight + HRV_WEEK_WEIGHT * hrvBase.z(hrv7) else zNight
+            val pct = ((exp(ln - hrvBase.centre.toDouble()) - 1) * 100).toInt()
+            out += Contributor(Factor.HrvBalance, scoreFromZ(deadZone(z)), "${tonight.hrv!!.toInt()} ms · ${signed(pct)}% vs usual")
+            if (zNight <= -1.5f) alerts += "HRV well below your normal"
         }
 
         // Resting heart rate: the night's lowest 30-minute average against baseline; lower is better.
-        val rhrBase = baseline(past.mapNotNull { it.restingHr })
-        tonight.restingHr?.let { rhr ->
-            if (rhrBase != null) {
-                val z = -rhrBase.z(rhr, RHR_SD_FLOOR)
-                val delta = rhr - rhrBase.mean
-                out += Contributor(Factor.RestingHr, scoreFromZ(z), "${rhr.toInt()} bpm · ${signed(delta, 0)} vs usual")
-                if (delta >= max(5f, 2 * max(rhrBase.sd, RHR_SD_FLOOR))) alerts += "resting heart rate up ${delta.toInt()} bpm"
+        val rhrBase = baseline(rhrHistory, RHR_SD_FLOOR)
+        val rhr = tonight.validRestingHr
+        if (scored && rhrBase != null && rhr != null) {
+            val delta = rhr - rhrBase.centre
+            out += Contributor(Factor.RestingHr, scoreFromZ(deadZone(-rhrBase.z(rhr))), "${rhr.toInt()} bpm · ${signed(delta, 0)} vs usual")
+            if (delta >= max(5f, 2 * rhrBase.scale)) alerts += "resting heart rate up ${delta.toInt()} bpm"
+        }
+
+        // The strap's own values: a fallback for display when ours failed the validity rule, and a quality check.
+        val fallbackHrv = tonight.strapHrv?.takeIf { tonight.hrvLn == null }
+        val fallbackRhr = tonight.strapRestingHr?.takeIf { tonight.validRestingHr == null }
+        val quality = buildList {
+            val own = tonight.hrv?.takeIf { tonight.valid }
+            val strap = tonight.strapHrv
+            if (own != null && strap != null && strap > 0 && abs(own - strap) / strap > HRV_QA_FRACTION) {
+                add("HRV: ours ${own.toInt()} ms, the strap's ${strap.toInt()} ms")
             }
+            val strapRhr = tonight.strapRestingHr
+            if (rhr != null && strapRhr != null && abs(rhr - strapRhr) > RHR_QA_BPM) add("Resting HR: ours ${rhr.toInt()} bpm, the strap's ${strapRhr.toInt()} bpm")
         }
 
         // Last night's sleep: the strap's own score when there is one, else ours.
         out += Contributor(Factor.Sleep, tonight.strapScore ?: sleepScore(tonight), formatMinutes(tonight.asleepMinutes) + " asleep")
 
         // Sleep balance: recent nights' shortfall against need, recent nights weighted more.
-        val nights = (past.takeLast(13) + tonight)
-        if (nights.size >= 3) {
+        val recentNights = (past.takeLast(13) + tonight)
+        if (recentNights.size >= 3) {
             var wSum = 0.0
             var shortSum = 0.0
-            nights.reversed().forEachIndexed { i, n ->
+            recentNights.reversed().forEachIndexed { i, n ->
                 val w = 0.5.pow(i / SLEEP_DEBT_HALF_LIFE_NIGHTS)
                 // A long night repays at most an hour of earlier debt.
                 shortSum += w * (SLEEP_NEED_MINUTES - n.asleepMinutes).coerceAtLeast(-60)
@@ -235,33 +339,31 @@ object Recovery {
             out += Contributor(Factor.RecoveryIndex, score, "Lowest HR ${formatMinutes(after)} before waking")
         }
 
-        // Body temperature: distance from the usual nightly skin temperature, either direction.
-        val tempBase = baseline(past.mapNotNull { it.skinTemperature })
+        // Body temperature: distance from the usual nightly skin temperature, either direction, through the dead zone.
+        val tempBase = baseline(past.mapNotNull { it.skinTemperature }, TEMP_SD_FLOOR)
         tonight.skinTemperature?.let { t ->
             if (tempBase != null) {
-                val dev = t - tempBase.mean
-                val score = (100 - 70 * (abs(dev) - 0.2f).coerceAtLeast(0f)).toInt().coerceIn(0, 100)
-                out += Contributor(Factor.Temperature, score, "${signed(dev, 1)} °C vs usual")
+                val dev = t - tempBase.centre
+                out += Contributor(Factor.Temperature, scoreFromZ(-abs(deadZone(tempBase.z(t)))), "${signed(dev, 1)} °C vs usual")
                 if (dev >= 0.5f) alerts += "skin temperature up ${"%.1f".format(dev)} °C"
             }
         }
 
-        // Breathing rate: very stable night to night, so a change of 1-2 breaths/min is notable.
-        val breathBase = baseline(past.mapNotNull { it.breathRate })
+        // Breathing rate: very stable night to night; a change either way beyond the dead zone counts.
+        val breathBase = baseline(past.mapNotNull { it.breathRate }, BREATH_SD_FLOOR)
         tonight.breathRate?.let { b ->
             if (breathBase != null) {
-                val dev = b - breathBase.mean
-                val score = (100 - 30 * (abs(dev) - 1f).coerceAtLeast(0f)).toInt().coerceIn(0, 100)
-                out += Contributor(Factor.Breathing, score, "${signed(dev, 1)} /min vs usual")
+                val dev = b - breathBase.centre
+                out += Contributor(Factor.Breathing, scoreFromZ(-abs(deadZone(breathBase.z(b)))), "${signed(dev, 1)} /min vs usual")
                 if (dev >= 2f) alerts += "breathing rate up ${"%.1f".format(dev)}/min"
             }
         }
 
         // Blood oxygen: only a fall below the usual nightly level counts; a higher reading is no better.
-        val spo2Base = baseline(past.mapNotNull { it.spo2 })
+        val spo2Base = baseline(past.mapNotNull { it.spo2 }, SPO2_SD_FLOOR)
         tonight.spo2?.let { o ->
             if (spo2Base != null) {
-                val dev = o - spo2Base.mean
+                val dev = o - spo2Base.centre
                 val score = (100 - SPO2_POINTS_PER_PERCENT * (-dev - SPO2_DEAD_BAND).coerceAtLeast(0f)).toInt().coerceIn(0, 100)
                 out += Contributor(Factor.BloodOxygen, score, "${"%.1f".format(o)} % · ${signed(dev, 1)} vs usual")
                 if (dev <= -SPO2_ALERT_DROP) alerts += "overnight blood oxygen down ${"%.1f".format(-dev)} %"
@@ -271,7 +373,7 @@ object Recovery {
         // Breathing disturbances: oxygen-desaturation events per hour, shown against the user's own nights only. No
         // normal / mild / moderate / severe words: those are apnea severity bands (evidence-review.md, "Wording").
         tonight.odi?.let { odi ->
-            val usual = past.mapNotNull { it.odi }.takeIf { it.size >= MIN_BASELINE_NIGHTS }?.let { percentile(it, 0.5f) }
+            val usual = past.mapNotNull { it.odi }.takeIf { it.size >= SCORED_NIGHTS }?.let { percentile(it, 0.5f) }
             val detail = "${"%.1f".format(odi)} events/h" + (usual?.let { " · usual ${"%.1f".format(it)}" } ?: "")
             out += Contributor(Factor.BreathingDisturbances, odiScore(odi), detail)
         }
@@ -294,6 +396,14 @@ object Recovery {
             }
         }
 
+        val extras = { score: Int?, capped: Boolean, alert: Boolean, withheld: Boolean ->
+            Readiness(
+                score, out, nights, alert, alerts, capped, phase, withheld, hrvRange, week.size,
+                fallbackHrv, fallbackRhr, quality,
+            )
+        }
+        // Withhold without an autonomic contributor: sleep alone isn't readiness.
+        if (out.none { it.factor == Factor.HrvBalance || it.factor == Factor.RestingHr }) return extras(null, false, alerts.size >= 2, true)
         val totalWeight = out.sumOf { it.factor.weight.toDouble() }
         var score = (out.sumOf { it.factor.weight.toDouble() * it.score } / totalWeight).toInt()
         // One very poor body signal shouldn't be averaged away by good sleep and a quiet day.
@@ -305,10 +415,13 @@ object Recovery {
         }
         val alert = alerts.size >= 2
         if (alert && score > ALERT_CAP) { score = ALERT_CAP; capped = true }
-        return Readiness(score.coerceIn(0, 100), out, hrvBase?.n ?: lnHistory.size, alert, alerts, capped)
+        return extras(score.coerceIn(0, 100), capped, alert, false)
     }
 
     private const val SLEEP_DEBT_HALF_LIFE_NIGHTS = 4.0
+    private const val DAY = 86_400L
+    /** Local midnights a DST change apart are an hour off a whole number of days. */
+    private const val DST_SLACK = 2 * 3600L
     /** Readiness points lost per hour of average nightly shortfall (1 h short ≈ 75, 2 h ≈ 50). */
     const val SLEEP_DEBT_POINTS_PER_HOUR = 25
     const val RED_FLAG = 40
@@ -617,8 +730,8 @@ object Recovery {
     }
 
     /** Lowest rolling-[windowMinutes] average in [series], with the time at its centre. */
-    fun lowestAverage(series: List<Pair<Long, Int>>, windowMinutes: Int): Pair<Long, Float>? {
-        if (series.size < windowMinutes / 2) return null
+    fun lowestAverage(series: List<Pair<Long, Int>>, windowMinutes: Int, minCount: Int = windowMinutes / 2): Pair<Long, Float>? {
+        if (series.size < minCount) return null
         var best: Pair<Long, Float>? = null
         var lo = 0
         var sum = 0L
@@ -626,7 +739,7 @@ object Recovery {
             sum += series[hi].second
             while (series[hi].first - series[lo].first >= windowMinutes * 60L) { sum -= series[lo].second; lo++ }
             val n = hi - lo + 1
-            if (n >= windowMinutes / 2) {
+            if (n >= minCount) {
                 val avg = sum.toFloat() / n
                 if (best == null || avg < best.second) best = ((series[lo].first + series[hi].first) / 2) to avg
             }

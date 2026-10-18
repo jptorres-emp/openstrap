@@ -81,7 +81,7 @@ fun GlowRecoveryScreen(
             }
             val ready = r.readiness
             // Wide: the scores and where the charge went on the left; why, and the body signals, on the right.
-            left { RecoveryCard(r) }
+            left { RecoveryCard(r, strapReadiness) }
             if (ready.strainAlert) right { StrainPanel(ready) }
             left { ChargeCard(r.charge, state.dayStart..state.dayEnd) }
             if (r.charge.latest != null) left { ChargeFlowPanel(r.charge, r.stressThreshold) }
@@ -99,7 +99,7 @@ private val HOURS = listOf("00", "06", "12", "18", "24")
 
 /** The score card: the number, its sentence, and the last seven days underneath. Coloured by how the day looks. */
 @Composable
-private fun RecoveryCard(r: RecoveryResult) {
+private fun RecoveryCard(r: RecoveryResult, strap: StrapReadinessRow?) {
     val ready = r.readiness
     val score = ready.score
     val before = r.readinessTrend.dropLast(1).lastOrNull()?.second
@@ -113,18 +113,41 @@ private fun RecoveryCard(r: RecoveryResult) {
         Column {
             GlowHeader(
                 "Recovery",
-                trailing = when {
-                    ready.calibrating -> "Learning ${ready.baselineNights}/${Recovery.CALIBRATED_NIGHTS} nights"
-                    score != null && before != null -> if (score == before) "Steady vs yesterday" else "${if (score > before) "+" else "−"}${kotlin.math.abs(score - before)} vs yesterday"
-                    else -> null
+                trailing = when (ready.phase) {
+                    Recovery.Phase.Withheld -> "Learning ${ready.baselineNights}/${Recovery.SCORED_NIGHTS} nights"
+                    Recovery.Phase.Learning -> "Learning ${ready.baselineNights}/${Recovery.SETTLED_NIGHTS} nights"
+                    Recovery.Phase.Calibrated -> if (score != null && before != null) "Calibrated · " + vsYesterday(score, before) else "Calibrated"
+                    else -> when {
+                        score != null && before != null -> vsYesterday(score, before)
+                        else -> null
+                    }
                 },
             )
             if (score == null) {
                 Spacer(Modifier.height(GlowLayout.TitleGap))
+                val sleep = ready.contributors.firstOrNull { it.factor == Recovery.Factor.Sleep }
                 Text(
-                    "Recovery is scored each morning from the night's sleep. Wear the strap to bed.",
+                    when {
+                        !ready.withheld -> "Recovery is scored each morning from the night's sleep. Wear the strap to bed."
+                        ready.phase == Recovery.Phase.Withheld ->
+                            "OpenStrap scores Recovery once it has ${Recovery.SCORED_NIGHTS} good nights of your own HRV and resting heart rate."
+                        else -> "Last night's HRV and resting heart rate didn't have enough clean readings, so there's no Recovery score today. Sleep alone isn't readiness."
+                    },
                     color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodyMedium,
                 )
+                if (sleep != null) Note("Sleep ${sleep.score} · ${sleep.detail}")
+                val strapScore = strap?.score
+                if (ready.showStrapEstimate && strapScore != null) {
+                    Spacer(Modifier.height(12.dp))
+                    Fact("Strap's estimate", "$strapScore")
+                    val parts = listOfNotNull(
+                        strap.hrvScore?.let { "HRV $it" }, strap.restingHrScore?.let { "resting HR $it" },
+                        strap.skinTemperatureScore?.let { "temperature $it" }, strap.breathingScore?.let { "breathing $it" },
+                    )
+                    if (parts.isNotEmpty()) Note(parts.joinToString(" · ") + ". Shown for reference; it never enters OpenStrap's score.")
+                }
+                ready.fallbackHrv?.let { Note("HRV ${it.toInt()} ms (strap fallback)") }
+                ready.fallbackRestingHr?.let { Note("Resting HR ${it.toInt()} bpm (strap fallback)") }
                 return@Column
             }
             GlowHeroNumber("$score", "/ 100", listOf(Narrative.readinessHeadline(score, ready.strainAlert)))
@@ -227,6 +250,9 @@ private fun ChargeCard(c: Recovery.ChargeDay, day: LongRange) {
     }
 }
 
+private fun vsYesterday(score: Int, before: Int) =
+    if (score == before) "Steady vs yesterday" else "${if (score > before) "+" else "−"}${kotlin.math.abs(score - before)} vs yesterday"
+
 /** Averages charge samples into evenly spaced buckets across [range]; empty buckets are gaps. */
 private fun bucket(points: List<Recovery.ChargePoint>, range: LongRange, seconds: Long): List<Float?> {
     val n = ((range.last - range.first + 1) / seconds).toInt().coerceAtLeast(2)
@@ -328,6 +354,13 @@ private fun ContributorsPanel(ready: Recovery.Readiness) {
             }
         }
         if (ready.capped) Note("Capped: one body signal is far from your normal, so good sleep can't fully make up for it.")
+        ready.hrvRange?.let { range ->
+            val word = when (range) { Recovery.HrvRange.Below -> "below"; Recovery.HrvRange.Within -> "within"; Recovery.HrvRange.Above -> "above" }
+            Note("7-night HRV is $word your normal range" + if (ready.hrvWeekThin) " (thin: ${ready.hrvWeekNights} of 7 nights)." else ".")
+        }
+        ready.fallbackHrv?.let { Note("HRV ${it.toInt()} ms (strap fallback): our own reading wasn't clean enough last night.") }
+        ready.fallbackRestingHr?.let { Note("Resting HR ${it.toInt()} bpm (strap fallback): our own reading wasn't clean enough last night.") }
+        ready.qualityFlags.forEach { Note("Check: $it") }
     }
 }
 

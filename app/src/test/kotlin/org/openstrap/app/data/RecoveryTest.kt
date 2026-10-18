@@ -20,7 +20,7 @@ class RecoveryTest {
         Night(
             day = i * day, start = i * day - 7 * 3600, end = i * day + 30 * 60, asleepMinutes = asleep, awakeMinutes = 20,
             deepMinutes = 80, remMinutes = 95, hrv = hrv, restingHr = rhr, nadirTime = i * day - 4 * 3600,
-            skinTemperature = temp, breathRate = breath,
+            skinTemperature = temp, breathRate = breath, hrvSamples = 20, hrMinutes = 420,
         )
 
     /** 30 ordinary nights with realistic night-to-night noise. */
@@ -44,6 +44,7 @@ class RecoveryTest {
         assertFalse(r.strainAlert)
         assertFalse(r.capped)
         assertFalse(r.calibrating)
+        assertEquals(Recovery.Phase.Calibrated, r.phase)
         val factors = r.contributors.map { it.factor }.toSet()
         assertTrue(factors.containsAll(listOf(Factor.HrvBalance, Factor.RestingHr, Factor.Sleep, Factor.SleepBalance, Factor.Temperature, Factor.RecoveryIndex)))
     }
@@ -69,11 +70,94 @@ class RecoveryTest {
     }
 
     @Test
-    fun calibratingWithoutBaselineStillScoresSleep() {
-        val r = Recovery.readiness(night(3), listOf(night(1), night(2)))
+    fun withoutHrvOrRestingHrReadinessIsWithheld() {
+        // Before 7 valid nights there's no HRV or resting HR contributor, so no score: sleep alone isn't readiness.
+        val r = Recovery.readiness(night(7), (1..6).map { night(it) })
         assertTrue(r.calibrating)
+        assertEquals(Recovery.Phase.Withheld, r.phase)
         assertTrue(r.contributors.none { it.factor == Factor.HrvBalance || it.factor == Factor.RestingHr })
-        assertNotNull(r.score)
+        assertTrue(r.contributors.any { it.factor == Factor.Sleep })
+        assertNull(r.score)
+        assertTrue(r.withheld)
+        assertTrue(r.showStrapEstimate)
+        // At 7 valid nights it's scored, labelled learning.
+        val learning = Recovery.readiness(night(8), (1..7).map { night(it) })
+        assertEquals(Recovery.Phase.Learning, learning.phase)
+        assertNotNull(learning.score)
+        assertFalse(learning.withheld)
+    }
+
+    @Test
+    fun phasesFollowValidNights() {
+        assertEquals(Recovery.Phase.Withheld, Recovery.phase(6))
+        assertEquals(Recovery.Phase.Learning, Recovery.phase(7))
+        assertEquals(Recovery.Phase.Learning, Recovery.phase(13))
+        assertEquals(Recovery.Phase.Scored, Recovery.phase(14))
+        assertEquals(Recovery.Phase.Scored, Recovery.phase(27))
+        assertEquals(Recovery.Phase.Calibrated, Recovery.phase(28))
+    }
+
+    @Test
+    fun deadZoneIgnoresChangesUnderHalfAnSd() {
+        assertEquals(0f, Recovery.deadZone(0.3f), 1e-6f)
+        assertEquals(0f, Recovery.deadZone(-0.5f), 1e-6f)
+        assertEquals(0.5f, Recovery.deadZone(1f), 1e-6f)
+        assertEquals(-0.7f, Recovery.deadZone(-1.2f), 1e-6f)
+        // A night a little off the usual scores as normal.
+        val past = (1..30).map { night(it, hrv = 50f + (it % 5 - 2) * 2f) }
+        val r = Recovery.readiness(night(31, hrv = 49f), past)
+        assertEquals(80, r.contributors.first { it.factor == Factor.HrvBalance }.score)
+    }
+
+    @Test
+    fun robustBaselineUsesMedianAndMadWithFloors() {
+        val b = Recovery.baseline(listOf(10f, 11f, 12f, 13f, 14f, 15f, 16f), floor = 0.1f)!!
+        assertEquals(13f, b.centre, 1e-5f)
+        assertEquals(1.4826f * 2f, b.scale, 1e-4f) // MAD of 3,2,1,0,1,2,3 is 2
+        // One wild night barely moves it.
+        val withOutlier = Recovery.baseline(listOf(10f, 11f, 12f, 13f, 14f, 15f, 90f), floor = 0.1f)!!
+        assertEquals(13f, withOutlier.centre, 1e-5f)
+        assertEquals(1.4826f * 2f, withOutlier.scale, 1e-4f)
+        // A perfectly steady baseline uses the floor.
+        assertEquals(Recovery.RHR_SD_FLOOR, Recovery.baseline(List(10) { 55f }, Recovery.RHR_SD_FLOOR)!!.scale, 1e-6f)
+        assertNull(Recovery.baseline(List(6) { 55f }, Recovery.RHR_SD_FLOOR))
+    }
+
+    @Test
+    fun hrvBlendsTonightAndTheWeek() {
+        // A steady baseline of 50 ms, then six low nights: tonight is back to usual but the 7-night mean still drags.
+        val base = (1..24).map { night(it, hrv = 50f * (1 + 0.04f * ((it % 5) - 2))) }
+        val low = (25..30).map { night(it, hrv = 38f) }
+        val r = Recovery.readiness(night(31, hrv = 50f), base + low)
+        val hrv = r.contributors.first { it.factor == Factor.HrvBalance }.score
+        assertTrue("hrv $hrv", hrv < 70)
+        assertEquals(Recovery.HrvRange.Below, r.hrvRange)
+        assertEquals(7, r.hrvWeekNights)
+        assertFalse(r.hrvWeekThin)
+    }
+
+    @Test
+    fun invalidNightsStayOutOfTheBaselineAndTheStrapFillsIn() {
+        // Too few RMSSD samples: our HRV and resting HR don't count tonight; the strap's values show as a fallback.
+        val thin = night(31, hrv = 20f).copy(hrvSamples = 3, strapHrv = 48f, strapRestingHr = 56f)
+        val r = Recovery.readiness(thin, history())
+        assertNull(r.contributors.firstOrNull { it.factor == Factor.HrvBalance })
+        assertEquals(48f, r.fallbackHrv)
+        assertEquals(56f, r.fallbackRestingHr)
+        assertTrue(r.withheld)
+        // Invalid nights in history are ignored, even with wild values.
+        val junk = (1..30).map { night(it, hrv = 500f, rhr = 99f).copy(hrMinutes = 30) }
+        val r2 = Recovery.readiness(night(31), junk)
+        assertEquals(Recovery.Phase.Withheld, r2.phase)
+        assertEquals(0, r2.baselineNights)
+    }
+
+    @Test
+    fun ownAndStrapDisagreeingRaisesAQualityFlag() {
+        val r = Recovery.readiness(night(31, hrv = 50f, rhr = 55f).copy(strapHrv = 62f, strapRestingHr = 59f), history())
+        assertEquals(2, r.qualityFlags.size)
+        val close = Recovery.readiness(night(31, hrv = 50f, rhr = 55f).copy(strapHrv = 54f, strapRestingHr = 57f), history())
+        assertTrue(close.qualityFlags.isEmpty())
     }
 
     @Test

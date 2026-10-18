@@ -16,13 +16,29 @@ Two ideas from Zepp carry over: splitting charge into physical and mental drains
 
 ## Readiness (0–100, each morning)
 
-Each contributor compares the night that ended this morning with the user's own history. History covers up to `BASELINE_NIGHTS` = 60 prior nights. A baseline needs `MIN_BASELINE_NIGHTS` = 4 nights, and the score is labelled "learning" until `CALIBRATED_NIGHTS` = 14 nights.
+Each contributor compares the night that ended this morning with the user's own history.
+
+### Valid nights and baselines
+
+* **Validity rule** (`Night.valid`): main sleep ≥ 3 h, ≥ `MIN_HRV_SAMPLES` = 6 RMSSD samples in 5–200 ms, and ≥ `MIN_HR_MINUTES` = 120 minutes of heart rate in 30–220 bpm. Only valid nights enter the HRV and resting-HR baselines.
+* **Baseline** (`baseline`): centre = median over the prior ≤ `BASELINE_NIGHTS` = 60 valid nights; scale = max(`MAD_SCALE`·MAD, floor), `MAD_SCALE` = 1.4826. A mean and SD let one bad stretch (illness, alcohol, artefacts) become "normal"; the median and MAD don't.
+* **Floors:** ln HRV `HRV_LN_SD_FLOOR` = 0.05, resting HR `RHR_SD_FLOOR` = 2 bpm (above device error of about 1–1.8 bpm), breathing `BREATH_SD_FLOOR` = 0.5 /min, skin temperature `TEMP_SD_FLOOR` = 0.15 °C, SpO2 `SPO2_SD_FLOOR` = 0.5 %.
+* **Phases** (`phase`, by valid nights; they replace the old 4 / 14 nights):
+
+| Valid nights | HRV and resting HR |
+|---|---|
+| < `SCORED_NIGHTS` = 7 | withheld; the strap's score and parts show as "Strap's estimate" |
+| 7–13 | scored, labelled "learning" |
+| 14–27 | scored |
+| ≥ `CALIBRATED_NIGHTS` = 28 | labelled "calibrated" |
+
+* **Withheld:** Readiness has no score unless an HRV or resting-HR contributor is present. On 2026-10-16 sleep alone gave 52 against the strap's 91; such a day shows the sleep contributor and the strap's estimate instead.
 
 The strap's own Readiness is logged daily to calibrate this score against; see [readiness-calibration.md](readiness-calibration.md).
 
 ### How contributors are scored
 
-Most contributors are z-scores (deviation from baseline in SDs, positive = better). `scoreFromZ` maps them with a logistic curve:
+Most contributors are z-scores (deviation from the baseline centre in units of its scale, positive = better). HRV, resting HR, breathing and temperature first go through a dead zone at the smallest worthwhile change, `deadZone`: z_eff = sign(z)·max(0, |z| − `SWC_SD`), `SWC_SD` = 0.5, because changes under half a scale unit are noise (Buchheit, Plews). `scoreFromZ` then maps them with a logistic curve, 100 / (1 + e^−(1.386 + 1.19·z)):
 
 | z | Score |
 |---|---|
@@ -34,16 +50,18 @@ Most contributors are z-scores (deviation from baseline in SDs, positive = bette
 ### Contributors
 
 **HRV balance** (weight 0.25)
-* Input: ln(mean nightly RMSSD).
-* Score: 0.6·z(tonight) + 0.4·z(7-night rolling mean), against the baseline mean and SD, with the SD floored at `HRV_LN_SD_FLOOR`.
+* Input: `hrv_n` = ln(mean of the night's gated RMSSD samples) on a valid night. This definition never changes inside a baseline.
+* `hrv_7` = mean of `hrv_n` over the last 7 nights, needing ≥ `HRV_WEEK_MIN_NIGHTS` = 3 valid nights; "thin" below `HRV_WEEK_FULL_NIGHTS` = 5.
+* Score: `HRV_NIGHT_WEIGHT` = 0.4·z(tonight) + `HRV_WEEK_WEIGHT` = 0.6·z(`hrv_7`), through the dead zone. Weighted towards the week because nightly wearable HRV error (6–16 % MAPE) is larger than the ~3 % smallest worthwhile change. Without `hrv_7`, tonight alone.
+* Normal-range state (`hrvRange`): `hrv_7` against centre ± `HRV_RANGE_SCALE` = 0.5·scale gives below / within / above, the band the HRV-guided training trials used.
 * Source: Plews' weekly-average work: a 7-day rolling mean of lnRMSSD is a steadier marker than a single morning (Plews et al., [AUT](https://openrepository.aut.ac.nz/items/d7b41d29-e92e-4acf-90ea-ed68d84d6c73)). Plews et al. 2012 (Eur J Appl Physiol, [PubMed](https://pubmed.ncbi.nlm.nih.gov/22367011/)) is only a case study of 2 athletes. In the HRV-guided training trials, Vesterinen et al. 2016 used **raw** RMSSD from a 4-minute supine morning chest-belt recording, with a band of mean ± 0.5 SD over 4 baseline weeks ([JYX](https://jyx.jyu.fi/handle/123456789/50625)); effects were small (ES 0.42).
 * Why log: RMSSD is right-skewed, and ln makes the SD meaningful.
 * Why nightly: whole-night averages are the most accurate wearable HRV (Oura vs ECG, JMIR 2022, PMC8808342).
 * Alert: z(tonight) ≤ −1.5.
 
 **Resting heart rate** (weight 0.15)
-* Input: the night's lowest 30-minute average HR.
-* Score: z against baseline, inverted so lower is better, with the SD floored at 2 bpm.
+* Input: `rhr_n`, the night's lowest 30-minute average HR, the window needing ≥ `RHR_WINDOW_MIN_MINUTES` = 20 minutes of data (Garmin's definition). The sleep mean (`rhr_mean_sleep`) and 10th percentile (`rhr_p10`) are logged too, for the review to pick the least noisy one.
+* Score: z against baseline, inverted so lower is better, through the dead zone.
 * Source: Buchheit 2014 (Front Physiol 5:73): judge HR changes against measurement noise and the smallest worthwhile change, not absolute thresholds.
 * Alert: ≥ max(5 bpm, 2 SD) above baseline. Overnight resting HR is the best-tested early-warning signal: in Mishra et al. 2020 ([medRxiv](https://www.medrxiv.org/content/10.1101/2020.07.06.20147512v1)) it rose before symptoms in 32 COVID-19 cases, 63 % detectably in real time. That study says nothing about other conditions.
 
@@ -62,19 +80,19 @@ Most contributors are z-scores (deviation from baseline in SDs, positive = bette
 * Source: Oura's recovery index (a late nadir suggests late meals, alcohol or late exercise).
 
 **Body temperature** (weight 0.10)
-* Input: mean skin temperature during sleep (≥ 30 readings) minus the baseline mean.
-* Score: −70 points per °C beyond a ±0.2 °C dead band, in either direction.
+* Input: mean skin temperature during sleep (≥ 30 readings).
+* Score: `scoreFromZ`(−|z_eff|): a change in either direction beyond the dead zone counts.
 * Source: TemPredict (Oura); adding temperature raised a multimodal model's AUC from 0.770 to 0.819 (Mason et al. 2022, [PMC8891385](https://pmc.ncbi.nlm.nih.gov/articles/PMC8891385)). The luteal-phase rise is about +0.3 °C at the finger.
 * Alert: ≥ +0.5 °C.
 
 **Breathing rate** (weight 0.03)
-* Input: deviation from the baseline mean.
-* Score: −30 points per breath/min beyond ±1. Nightly breathing rate is very stable, so a change of 2 or more is notable.
+* Input: mean breathing rate during sleep.
+* Score: `scoreFromZ`(−|z_eff|), either direction. Nightly breathing rate is very stable, so its floor is 0.5 /min.
 * Alert: ≥ +2 breaths/min.
 
 **Blood oxygen** (weight 0.05)
 * Input: mean sleep SpO2 (strap type 38) during the night, from at least 5 readings.
-* Score: −`SPO2_POINTS_PER_PERCENT` = 25 points per % below the baseline mean, beyond a 1 % dead band. A night above the usual level scores 100; higher oxygen isn't better. 2 % down ≈ 75, 3 % down ≈ 50.
+* Score: −`SPO2_POINTS_PER_PERCENT` = 25 points per % below the baseline centre, beyond a 1 % dead band. A night above the usual level scores 100; higher oxygen isn't better. 2 % down ≈ 75, 3 % down ≈ 50.
 * Source: healthy adults hold a mean nightly SpO2 of about 96 %, steady night to night (Gries & Brooks 1996, Chest 110:1489). A sustained fall can come with altitude, disturbed breathing or a respiratory problem.
 * Alert: ≥ `SPO2_ALERT_DROP` = 2 % below baseline.
 
@@ -93,9 +111,17 @@ Most contributors are z-scores (deviation from baseline in SDs, positive = bette
 
 Weights add up to more than 1 once every contributor is present; they're always renormalised, so only their ratios matter.
 
+### The strap's own nightly HRV and resting HR
+
+The strap's method is unknown and may change with firmware, and a baseline that mixes two definitions measures the switch, not the body. So:
+
+1. Before 7 valid own nights (and on a withheld day), the strap's Readiness and its parts show as "Strap's estimate". They never enter OpenStrap's score.
+2. On a night where our own value fails the validity rule, the strap's `sleepHrv` / `sleepRestingHr` show (and feed the alerts), flagged "strap fallback", and stay out of the baseline.
+3. A data-quality note appears when own and strap differ by more than `HRV_QA_FRACTION` = 15 % (HRV) or `RHR_QA_BPM` = 3 bpm (resting HR).
+
 ### Combining contributors
 
-* **Weighting:** weights are renormalised over the contributors that have data, so readiness works from the first night using sleep alone.
+* **Weighting:** weights are renormalised over the contributors that have data. Without HRV or resting HR there is no score (see "Withheld").
 * **Red-flag cap:** if any physiological contributor (HRV, resting HR, temperature, breathing) is below `RED_FLAG` = 40, readiness can't exceed that contributor + 30. One collapsed body signal shouldn't be averaged away by a good sleep score.
 * **Body signals off baseline:** two or more alert conditions at once, for example resting HR up with temperature up, set `strainAlert` and cap readiness at 55. Requiring several signals is plausible as a guard against one noisy signal, but no study has measured a rule-based conjunction, so the benefit is unquantified.
 * **Wording** (FDA General Wellness guidance, revised 6 January 2026): the feature is called "Body signals off baseline" and never names illness, infection, fever or COVID. Copy lives in `BodySignalsCopy`; the push text is the evidence review's: "Several of your overnight signals (…) are outside your usual range for the second night. This can happen with heavy training, alcohol, travel, poor sleep, or when your body is fighting something off. Consider an easier day. If you feel unwell, checking in with a healthcare professional may be helpful. This is a wellness estimate, not a medical assessment." No screen shows a temperature threshold.

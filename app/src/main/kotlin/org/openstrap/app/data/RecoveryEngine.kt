@@ -52,7 +52,11 @@ class RecoveryEngine(private val dao: HealthDao) {
         val mains = sessions.filter { !it.nap }
             .groupBy { morningOf(it, zone) }
             .mapValues { (_, v) -> v.maxBy { it.end - it.start } }
-        val nights = mains.map { (morning, s) -> night(morning, s, hr, hrv, skin, breath, sleepSpo2, osaByMorning[morning]) }.sortedBy { it.day }
+        val strapNights = dao.strapReadinessOnce(from, to).associateBy { it.day }
+        val nights = mains.map { (morning, s) ->
+            night(morning, s, hr, hrv, skin, breath, sleepSpo2, osaByMorning[morning])
+                .copy(strapHrv = strapNights[morning]?.sleepHrv?.toFloat(), strapRestingHr = strapNights[morning]?.sleepRestingHr?.toFloat())
+        }.sortedBy { it.day }
 
         // Daytime resting HR: the strap's daily values when it has them, else the nightly lowest plus a little.
         val restingHr = strapResting.takeLast(14).map { it.bpm.toFloat() }.median()
@@ -142,14 +146,14 @@ class RecoveryEngine(private val dao: HealthDao) {
             remMinutes = s.remMinutes,
             strapScore = s.score,
             hrv = rmssd.mean(),
-            restingHr = Recovery.lowestAverage(sleepHr, 30)?.second,
+            restingHr = Recovery.lowestAverage(sleepHr, 30, Recovery.RHR_WINDOW_MIN_MINUTES)?.second,
             rhrMeanSleep = sleepBpm.mean(),
             rhrP10 = Recovery.percentile(sleepBpm, 0.10f),
             hrvSamples = rmssd.size,
             hrMinutes = sleepHr.size,
             nadirTime = Recovery.lowestAverage(sleepHr, 10)?.first,
             // A handful of readings doesn't describe a night; the strap logs one a minute when worn.
-            skinTemperature = skinValues.takeIf { it.size >= 30 }?.median(),
+            skinTemperature = skinValues.takeIf { it.size >= 30 }?.mean(),
             breathRate = breath.filter { inSleep(it.timestamp) }.map { it.perMinute.toFloat() }.mean(),
             spo2 = spo2Values.takeIf { it.size >= MIN_SPO2_READINGS }?.mean(),
             // Events per hour need a real night to divide by.

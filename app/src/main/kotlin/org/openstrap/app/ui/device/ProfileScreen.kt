@@ -3,8 +3,17 @@ package org.openstrap.app.ui.device
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.verticalScroll
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.isImeVisible
+import androidx.compose.material3.IconButton
+import org.openstrap.app.ui.components.Panel
+import org.openstrap.app.ui.dashboard.ScreenList
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -55,10 +64,12 @@ fun UserProfile.summary(): String =
 
 /**
  * Age, sex, weight and height. Age sets the maximum heart rate (and so every effort calculation);
- * sex picks the training-load curve. Kept on this phone only.
+ * sex picks the training-load curve. Kept on this phone only. A full page over the You list (or beside it, when
+ * wide); back leaves without saving, asking first if anything was changed.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun ProfileDialog(profile: UserProfile, onSave: (UserProfile) -> Unit, onDismiss: () -> Unit) {
+fun ProfileScreen(profile: UserProfile, contentPadding: PaddingValues, onSave: (UserProfile) -> Unit, onBack: () -> Unit) {
     var age by rememberSaveable { mutableStateOf(profile.age()?.toString().orEmpty()) }
     var sex by rememberSaveable { mutableIntStateOf(when (profile.sex) { UserProfile.Sex.Female -> 0; UserProfile.Sex.Male -> 1; null -> 2 }) }
     var imperial by rememberSaveable { mutableStateOf(profile.usesImperial) }
@@ -101,90 +112,107 @@ fun ProfileDialog(profile: UserProfile, onSave: (UserProfile) -> Unit, onDismiss
         imperial = toImperial
     }
 
-    org.openstrap.app.ui.components.GlassAlertDialog(
-        onDismissRequest = onDismiss,
-        icon = { Icon(PhosphorIcons.User, null) },
-        title = { Text("Your profile") },
-        text = {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()),
-            ) {
-                Text(
-                    "Age sets your maximum heart rate, which every effort and recovery number depends on. " +
-                        "All fields are optional and stay on this phone.",
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    NumberField(age, { age = it }, "Age", "years", age.isNotBlank() && ageValue == null, Modifier.weight(1f))
-                    // Tapping the selected sex again clears it.
-                    SexToggle(PhosphorIcons.GenderFemale, "Female", FemaleColor, sex == 0) { sex = if (sex == 0) 2 else 0 }
-                    SexToggle(PhosphorIcons.GenderMale, "Male", MaleColor, sex == 1) { sex = if (sex == 1) 2 else 1 }
+    // What the fields held when the page opened, so back knows whether there is anything to lose.
+    val initial = rememberSaveable { listOf(age, sex, imperial, weight, heightCm, feet, inches, activity, betaBlocker, pregnant, maxHr, sleepNeed).joinToString("\u0000") }
+    val dirty = listOf(age, sex, imperial, weight, heightCm, feet, inches, activity, betaBlocker, pregnant, maxHr, sleepNeed).joinToString("\u0000") != initial
+    var confirmDiscard by rememberSaveable { mutableStateOf(false) }
+    val back: () -> Unit = { if (dirty) confirmDiscard = true else onBack() }
+    BackHandler(onBack = back)
+    if (confirmDiscard) {
+        org.openstrap.app.ui.components.GlassAlertDialog(
+            onDismissRequest = { confirmDiscard = false },
+            title = { Text("Discard changes?") },
+            text = { Text("Your profile changes haven't been saved.") },
+            confirmButton = { TextButton(onClick = { confirmDiscard = false; onBack() }) { Text("Discard") } },
+            dismissButton = { TextButton(onClick = { confirmDiscard = false }) { Text("Keep editing") } },
+        )
+    }
+    val save: () -> Unit = {
+        onSave(
+            // A copy, so fields this page doesn't edit are kept.
+            profile.copy(
+                birthYear = ageValue?.let { LocalDate.now().year - it },
+                sex = when (sex) { 0 -> UserProfile.Sex.Female; 1 -> UserProfile.Sex.Male; else -> null },
+                weightKg = weightValue,
+                heightCm = heightValue,
+                imperial = imperial,
+                sleepNeedMinutes = sleepNeedValue,
+                maxHeartRate = maxHrValue,
+                activityLevel = activity.takeIf { it in 0..4 },
+                // Saving confirms the answers, so the fitness estimate's freshness checks restart.
+                activityAnsweredAt = if (activity in 0..4) System.currentTimeMillis() / 1000 else null,
+                bodyMeasuredAt = if (weightValue != null && heightValue != null) System.currentTimeMillis() / 1000 else null,
+                betaBlocker = betaBlocker,
+                pregnant = pregnant,
+            ),
+        )
+    }
+
+    // The keyboard shrinks the page rather than covering it, so a focused field scrolls into view above it;
+    // while it's up the nav bar is hidden behind it and needs no room.
+    Box(Modifier.fillMaxSize().imePadding()) {
+        ScreenList(if (WindowInsets.isImeVisible) PaddingValues(0.dp) else contentPadding) {
+            item {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = back) { Icon(PhosphorIcons.ArrowLeft, "Back") }
+                    Text("Your profile", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.weight(1f))
+                    TextButton(onClick = save, enabled = valid) { Text("Save") }
                 }
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    SectionLabel("Units")
-                    SegmentedTabs(listOf("Metric", "Imperial"), if (imperial) 1 else 0, { switchUnits(it == 1) })
-                }
-                NumberField(
-                    weight, { weight = it }, "Weight", if (imperial) "lb" else "kg",
-                    weight.isNotBlank() && weightValue == null, decimal = true,
-                )
-                if (imperial) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        NumberField(feet, { feet = it.take(1) }, "Feet", "ft", !heightBlank && heightValue == null, Modifier.weight(1f))
-                        NumberField(inches, { inches = it.take(2) }, "Inches", "in", !heightBlank && heightValue == null, Modifier.weight(1f))
-                    }
-                } else {
-                    NumberField(heightCm, { heightCm = it }, "Height", "cm", !heightBlank && heightValue == null)
-                }
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    SectionLabel("Usual activity (for the fitness estimate)")
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        (0..4).forEach { i ->
-                            androidx.compose.material3.FilterChip(
-                                selected = activity == i, onClick = { activity = if (activity == i) -1 else i },
-                                label = { Text("${i + 1}") }, modifier = Modifier.weight(1f),
+            }
+            item {
+                Panel {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text(
+                            "Age sets your maximum heart rate, which every effort and recovery number depends on. " +
+                                "All fields are optional and stay on this phone.",
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            NumberField(age, { age = it }, "Age", "years", age.isNotBlank() && ageValue == null, Modifier.weight(1f))
+                            // Tapping the selected sex again clears it.
+                            SexToggle(PhosphorIcons.GenderFemale, "Female", FemaleColor, sex == 0) { sex = if (sex == 0) 2 else 0 }
+                            SexToggle(PhosphorIcons.GenderMale, "Male", MaleColor, sex == 1) { sex = if (sex == 1) 2 else 1 }
+                        }
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            SectionLabel("Units")
+                            SegmentedTabs(listOf("Metric", "Imperial"), if (imperial) 1 else 0, { switchUnits(it == 1) })
+                        }
+                        NumberField(
+                            weight, { weight = it }, "Weight", if (imperial) "lb" else "kg",
+                            weight.isNotBlank() && weightValue == null, decimal = true,
+                        )
+                        if (imperial) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                NumberField(feet, { feet = it.take(1) }, "Feet", "ft", !heightBlank && heightValue == null, Modifier.weight(1f))
+                                NumberField(inches, { inches = it.take(2) }, "Inches", "in", !heightBlank && heightValue == null, Modifier.weight(1f))
+                            }
+                        } else {
+                            NumberField(heightCm, { heightCm = it }, "Height", "cm", !heightBlank && heightValue == null)
+                        }
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            SectionLabel("Usual activity (for the fitness estimate)")
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                (0..4).forEach { i ->
+                                    androidx.compose.material3.FilterChip(
+                                        selected = activity == i, onClick = { activity = if (activity == i) -1 else i },
+                                        label = { Text("${i + 1}") }, modifier = Modifier.weight(1f),
+                                    )
+                                }
+                            }
+                            Text(
+                                if (activity in 0..4) org.openstrap.app.data.Vo2max.ACTIVITY_LEVELS[activity] else "Pick the level that best matches a usual week.",
+                                style = MaterialTheme.typography.bodySmall,
                             )
                         }
+                        CheckRow("Taking beta-blockers", betaBlocker) { betaBlocker = it }
+                        CheckRow("Pregnant", pregnant) { pregnant = it }
+                        NumberField(maxHr, { maxHr = it }, "Max heart rate from a test (optional)", "bpm", maxHr.isNotBlank() && maxHrValue == null)
+                        NumberField(sleepNeed, { sleepNeed = it }, "Sleep need (7–9, blank for your age's default)", "h", sleepNeed.isNotBlank() && sleepNeedValue == null, decimal = true)
                     }
-                    Text(
-                        if (activity in 0..4) org.openstrap.app.data.Vo2max.ACTIVITY_LEVELS[activity] else "Pick the level that best matches a usual week.",
-                        style = MaterialTheme.typography.bodySmall,
-                    )
                 }
-                CheckRow("Taking beta-blockers", betaBlocker) { betaBlocker = it }
-                CheckRow("Pregnant", pregnant) { pregnant = it }
-                NumberField(maxHr, { maxHr = it }, "Max heart rate from a test (optional)", "bpm", maxHr.isNotBlank() && maxHrValue == null)
-                NumberField(sleepNeed, { sleepNeed = it }, "Sleep need (7–9, blank for your age's default)", "h", sleepNeed.isNotBlank() && sleepNeedValue == null, decimal = true)
             }
-        },
-        confirmButton = {
-            TextButton(
-                enabled = valid,
-                onClick = {
-                    onSave(
-                        // A copy, so fields this dialog doesn't edit are kept.
-                        profile.copy(
-                            birthYear = ageValue?.let { LocalDate.now().year - it },
-                            sex = when (sex) { 0 -> UserProfile.Sex.Female; 1 -> UserProfile.Sex.Male; else -> null },
-                            weightKg = weightValue,
-                            heightCm = heightValue,
-                            imperial = imperial,
-                            sleepNeedMinutes = sleepNeedValue,
-                            maxHeartRate = maxHrValue,
-                            activityLevel = activity.takeIf { it in 0..4 },
-                            // Saving confirms the answers, so the fitness estimate's freshness checks restart.
-                            activityAnsweredAt = if (activity in 0..4) System.currentTimeMillis() / 1000 else null,
-                            bodyMeasuredAt = if (weightValue != null && heightValue != null) System.currentTimeMillis() / 1000 else null,
-                            betaBlocker = betaBlocker,
-                            pregnant = pregnant,
-                        ),
-                    )
-                },
-            ) { Text("Save") }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
-    )
+        }
+    }
 }
 
 @Composable

@@ -259,17 +259,22 @@ private fun Change(score: Score, withNote: Boolean) {
 }
 
 /**
- * One of the other two scores under the gauge, tappable: the label and the value with its change on one line, and
+ * One of the other two scores under the gauge, tappable: the label with a chevron and the value with its change on one line, and
  * below them a thin bar filled to the score in its colour. No box: the bar carries the colour and the fill.
  */
 @Composable
 private fun ScoreBar(score: Score, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Column(modifier.pressClickable(onClick, GlassRowShape, scale = 0.97f).padding(horizontal = 4.dp, vertical = 6.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                score.label, color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.labelSmall,
-                maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
-            )
+            // The chevron right after the label marks the half as something to open, as on the cards' headers.
+            Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    score.label, color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.labelSmall,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false),
+                )
+                Spacer(Modifier.width(2.dp))
+                Icon(PhosphorIcons.CaretRight, null, tint = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(12.dp))
+            }
             Text("${score.value ?: "-"}", color = Color.White, style = MaterialTheme.typography.titleLarge, maxLines = 1, softWrap = false)
             if (score.change != null) {
                 Spacer(Modifier.width(6.dp))

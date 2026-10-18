@@ -11,18 +11,16 @@ A private, open-source companion app for the **Amazfit Helio Strap**, built as a
 - **Modern.** It is built with Kotlin, Jetpack Compose and Material 3, and has an always-dark "Glow" design built for OLED screens.
 - **Clean-room.** The protocol is implemented from written specs in [`docs/protocol/`](docs/protocol). Those specs were derived only from static analysis of the official app. No Gadgetbridge (AGPL) code was used.
 
-<table>
-  <tr>
-    <td align="center" width="33%"><img src="docs/screenshots/today.png" width="100%" alt="Today"><br>Today</td>
-    <td align="center" width="33%"><img src="docs/screenshots/recovery.png" width="100%" alt="Recovery"><br>Recovery</td>
-    <td align="center" width="33%"><img src="docs/screenshots/sleep.png" width="100%" alt="Sleep"><br>Sleep</td>
-  </tr>
-  <tr>
-    <td align="center" width="33%"><img src="docs/screenshots/activity.png" width="100%" alt="Activity"><br>Activity</td>
-    <td align="center" width="33%"><img src="docs/screenshots/heart-rate.png" width="100%" alt="Heart rate"><br>Heart rate</td>
-    <td align="center" width="33%"><img src="docs/screenshots/you.png" width="100%" alt="You"><br>You</td>
-  </tr>
-</table>
+<p align="center">
+  <img src="docs/screenshots/today.png" width="30%" alt="Today">
+  <img src="docs/screenshots/recovery.png" width="30%" alt="Recovery">
+  <img src="docs/screenshots/sleep.png" width="30%" alt="Sleep">
+</p>
+<p align="center">
+  <img src="docs/screenshots/activity.png" width="30%" alt="Activity">
+  <img src="docs/screenshots/heart-rate.png" width="30%" alt="Heart rate">
+  <img src="docs/screenshots/you.png" width="30%" alt="You">
+</p>
 
 *Screenshots use the sample data that debug builds can generate.*
 

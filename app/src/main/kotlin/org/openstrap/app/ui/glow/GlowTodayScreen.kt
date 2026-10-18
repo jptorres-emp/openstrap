@@ -229,9 +229,9 @@ private fun OverviewCard(state: DayUiState, rec: RecoveryResult?, chargeLeads: B
                     )
                 }
             }
-            Row(Modifier.fillMaxWidth().padding(top = 18.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                ScoreRing(second, onClick, Modifier.weight(1f))
-                ScoreRing(sleep, onOpenSleep, Modifier.weight(1f))
+            Row(Modifier.fillMaxWidth().padding(top = 18.dp), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+                ScoreBar(second, onClick, Modifier.weight(1f))
+                ScoreBar(sleep, onOpenSleep, Modifier.weight(1f))
             }
         }
     }
@@ -259,32 +259,25 @@ private fun Change(score: Score, withNote: Boolean) {
 }
 
 /**
- * One of the other two scores under the gauge, tappable: a small ring filled to the score, like the gauge
- * above, with the value inside and the label (in the score's colour) and change below. Label and change
- * each get the half's whole width, so neither is cut at large font sizes.
+ * One of the other two scores under the gauge, tappable: the label and the value with its change on one line, and
+ * below them a thin bar filled to the score in its colour. No box: the bar carries the colour and the fill.
  */
 @Composable
-private fun ScoreRing(score: Score, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    Column(
-        modifier
-            .pressClickable(onClick, GlassRowShape)
-            .padding(horizontal = 8.dp, vertical = 6.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        GlowMiniRing((score.value ?: 0) / 100f, score.color) {
-            Text("${score.value ?: "-"}", color = Color.White, style = MaterialTheme.typography.titleLarge, maxLines = 1, softWrap = false)
-        }
-        Spacer(Modifier.height(6.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
+private fun ScoreBar(score: Score, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Column(modifier.pressClickable(onClick, GlassRowShape, scale = 0.97f).padding(horizontal = 4.dp, vertical = 6.dp)) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text(
-                score.label, color = score.color, style = MaterialTheme.typography.labelSmall,
-                maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false),
+                score.label, color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.labelSmall,
+                maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
             )
+            Text("${score.value ?: "-"}", color = Color.White, style = MaterialTheme.typography.titleLarge, maxLines = 1, softWrap = false)
             if (score.change != null) {
                 Spacer(Modifier.width(6.dp))
                 Change(score, withNote = false)
             }
         }
+        Spacer(Modifier.height(6.dp))
+        GlowBar((score.value ?: 0) / 100f, score.color)
     }
 }
 

@@ -27,7 +27,6 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
@@ -335,49 +334,6 @@ fun GlowArcGauge(
             val end = Offset(c.x + r * cos(a).toFloat(), c.y + r * sin(a).toFloat())
             drawCircle(color.copy(alpha = 0.3f), 9.dp.toPx(), end)
             drawCircle(color, 5.dp.toPx(), end)
-        }
-        content()
-    }
-}
-
-/**
- * A small full ring for a secondary score, drawn like [GlowArcGauge] so the two read as one family: a dotted
- * track, a white stroke that brightens towards its end, and the score's colour as the dot at the end.
- * [content] sits in the middle.
- */
-@Composable
-fun GlowMiniRing(
-    progress: Float,
-    color: Color,
-    modifier: Modifier = Modifier,
-    diameter: Dp = 68.dp,
-    content: @Composable BoxScope.() -> Unit = {},
-) {
-    Box(modifier.size(diameter), contentAlignment = Alignment.Center) {
-        Canvas(Modifier.matchParentSize()) {
-            // Inset by the end dot's halo so it's never clipped.
-            val r = size.minDimension / 2 - 6.dp.toPx()
-            val c = center
-            val topLeft = Offset(c.x - r, c.y - r)
-            val box = Size(r * 2, r * 2)
-            val sweep = 360f * progress.coerceIn(0f, 1f)
-            drawArc(
-                Faint.copy(alpha = 0.22f), -90f + sweep, 360f - sweep, false, topLeft, box,
-                style = Stroke(1.6.dp.toPx(), cap = StrokeCap.Round, pathEffect = PathEffect.dashPathEffect(floatArrayOf(0f, 5.dp.toPx()))),
-            )
-            if (sweep <= 0f) return@Canvas
-            drawArc(Ink.copy(alpha = 0.1f), -90f, sweep, false, topLeft, box, style = Stroke(6.dp.toPx(), cap = StrokeCap.Round))
-            // Sweep gradients start at 3 o'clock, so turn the canvas to start the ring and its gradient at 12.
-            rotate(-90f, c) {
-                drawArc(
-                    Brush.sweepGradient(0f to Ink.copy(alpha = 0.55f), (sweep / 360f) to Ink, center = c),
-                    0f, sweep, false, topLeft, box, style = Stroke(2.5.dp.toPx(), cap = StrokeCap.Round),
-                )
-            }
-            val a = Math.toRadians((-90f + sweep).toDouble())
-            val end = Offset(c.x + r * cos(a).toFloat(), c.y + r * sin(a).toFloat())
-            drawCircle(color.copy(alpha = 0.3f), 6.dp.toPx(), end)
-            drawCircle(color, 3.5.dp.toPx(), end)
         }
         content()
     }

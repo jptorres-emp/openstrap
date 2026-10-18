@@ -43,6 +43,8 @@ data class RecoveryResult(
     val maxHrTested: Boolean = false,
     /** Steps, MVPA and distance for [date]. */
     val activity: Activity.Day? = null,
+    /** Energy expenditure for [date]; null without weight, height and age. */
+    val energy: EnergyExpenditure.Day? = null,
 )
 
 /** Loads what [Recovery] needs from the database and runs it. All work happens off the main thread by the caller. */
@@ -190,6 +192,20 @@ class RecoveryEngine(private val dao: HealthDao) {
             stepGoal = Activity.defaultStepGoal(age),
         )
 
+        // Energy: every minute of the day with data (a step record, heart rate, or sleep); no row is missing, never zero.
+        val todaySleep = sessions.flatMap { s -> (maxOf(s.start, day.from) / 60 * 60 until minOf(s.end, day.to + 1) step 60).toList() }.toSet()
+        val energyTimes = (minuteSteps.keys.filter { it in day.from..day.to } + weekHr.keys.filter { it in day.from..day.to } + todaySleep).toSortedSet()
+        val energy = EnergyExpenditure.day(
+            energyTimes.map { t ->
+                val w = workouts.firstOrNull { t in it.start until it.end }
+                EnergyExpenditure.Minute(
+                    t, minuteSteps[t], weekHr[t]?.let { Recovery.hrr(it, restingHr, maxHr) }, t in todaySleep || asleep(t),
+                    w?.calories?.let { kcal -> kcal / ((w.end - w.start) / 60f).coerceAtLeast(1f) },
+                )
+            },
+            profile, age,
+        )
+
         val loadTrend = if (loads.size >= 7) Recovery.fitnessFatigue(loads).last() else null
         val chronic = loadTrend?.ctl
 
@@ -218,7 +234,7 @@ class RecoveryEngine(private val dao: HealthDao) {
             date, readiness, charge, trend, todayLoad, chronic, restingHr, maxHr, age != null, stressThreshold, tonight,
             Recovery.breathingDisturbances(tonight, nights), Recovery.acwr(loads), sleepNeed, regularity, sleepHealth,
             loadTrend, Recovery.strain(todayLoad), Recovery.loadPercentile(todayLoad, loads), profile.maxHeartRate != null && maxHr == profile.maxHeartRate.toFloat(),
-            activity,
+            activity, energy,
         )
     }
 

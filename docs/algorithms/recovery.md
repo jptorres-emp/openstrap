@@ -232,11 +232,31 @@ Zepp does the same job differently. It computes a stress threshold on the phone 
 * **Step goal framing:** "most of the benefit is reached" by about 7,000 steps from 60, 8,000 below (Paluch et al. 2022: mortality plateaus at 6,000–8,000 and 8,000–10,000). The user's own goal is unchanged.
 * **Distance** ≈ steps·L, L = 0.414·H below 120 spm, linear to 0.45·H at 130 and above; shown with "≈". Workout or phone-GPS distance and a GPS-calibrated step length are not available yet.
 
+## Energy expenditure (Activity screen)
+
+`EnergyExpenditure.kt`. Established for BMR (Mifflin-St Jeor came within 10 % of measured RMR in more people than other equations, Frankenfield et al. 2005), contested above it. Group-calibrated HR-only estimates were less precise than motion against doubly labelled water (Brage et al. 2015), so the model is motion first with a narrow HR branch.
+
+* BMR = 10·W + 6.25·H − 5·A + (male +5, female −161, unset −78) kcal/day; b = BMR/1440 per minute. net(MET) = (MET − 1)·3.5·W/200 kcal/min, so rest is never counted twice.
+* Per minute with data (a step record, heart rate or sleep; no row is missing, never zero):
+
+| Minute | kcal/min |
+|---|---|
+| In a device workout | the workout's kcal, pro-rated (at least b) |
+| Asleep | `SLEEP_FACTOR` 0.95·b |
+| ≥ 60 steps | b + net(cadence MET) |
+| Some steps, or a neighbouring minute stepped | `LIGHT_FACTOR` 1.3·b |
+| Awake, sedentary | `SEDENTARY_FACTOR` 1.15·b |
+
+* Cadence MET (`cadenceMet`, CADENCE-Adults, Tudor-Locke et al. 2019): up to 60 y, 60 → 2.0, 100 → 3, 130 → 6, linear between, held at 6 above. From 61: 100 → 3, 110 → 4, 120 → 5, then (our extrapolation) 6 at 130. Sustained ≥ 145 spm (this and a neighbouring minute) uses ACSM running, VO2 = 3.5 + 0.2·v with v from the step length.
+* HR branch, "HR-assisted": awake, outside a workout, < 20 steps, ≥ 10 consecutive minutes with x ≥ 0.40 → max(EE, b + net(min(6, 1 + x·(VO2max/3.5 − 1)))). VO2max is the user's estimate when there is one, else `DEFAULT_VO2MAX` = 35 ml/kg/min (an unverified placeholder).
+* The daily total is "partial" below 20 h of data; PAL = TEE/BMR outside 1.2–2.5 is flagged. No thermic effect of food.
+* 0.95, 1.15 and 1.3 are conventions, not 2024 Compendium values (sleeping and sitting quietly are both 1.0 there).
+
 ## Inputs from the profile (Device → Your profile)
 
 * **Max HR:** a value the user entered from a test wins. Otherwise Tanaka et al. 2001 (JACC, 18,712 subjects): 208 − 0.7·age; without an age, the strap's own max HR (from the Zepp profile), else 190. Any equation's individual SD is about 7–11 bpm, so raising is sound and lowering is not: it's raised to the highest HR the user has actually reached, by at most `MAX_HR_RAISE` = +15 bpm. "Reached" (`observedPeak`) needs two separate days within `MAX_HR_AGREE_BPM` = 3 bpm of each other over the last 90 days, each day's value being its highest artefact-filtered minute (`filteredMax`: a neighbouring minute within 10 bpm) or the strap's daily maximum exercise HR (type 61). Max HR sets heart-rate reserve, so it changes both training load and Charge drain.
 * **Sex:** selects the TRIMP curve.
-* **Weight and height:** stored for future energy-expenditure work; not used yet.
+* **Weight and height:** energy expenditure (BMR) and step length.
 * **Resting HR (daytime)** (`daytimeRestingHr`): median of the strap's daily resting HR over the last 14 days, else the median nightly lowest + an offset. The offset is the median of (daily − nightly lowest) over the latest 14 days that have both, else `RHR_OFFSET_BPM` = 3 bpm. Karvonen and Swain define resting HR as awake rest; a nightly minimum would inflate HRR for every waking minute.
 * **Sleep need:** optional, 7–9 h; blank uses the age default.
 

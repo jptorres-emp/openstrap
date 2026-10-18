@@ -89,6 +89,7 @@ fun GlowActivityScreen(
             // Wide: today's movement on the left; load, fitness and workouts on the right.
             left { StepsCard(state, r?.activity) { onOpenMetric(Metric.Steps) } }
             r?.activity?.let { a -> left { MvpaPanel(a) } }
+            left { EnergyPanel(r?.energy, onEditProfile) }
             left { PaiPanel(state, week) }
             right { LoadPanel(r, effects.lastOrNull { it.weeklyLoad != null }, onEditProfile) }
             right { FitnessPanel(r, workouts, effects, state.dailyMaxHeartRate) }
@@ -127,6 +128,35 @@ private fun StepsCard(state: DayUiState, activity: org.openstrap.app.data.Activi
             }
             activity?.let { Note("Most of the benefit is reached by about ${"%,d".format(it.stepGoal)} steps a day (Paluch et al. 2022).") }
         }
+    }
+}
+
+/** Energy expenditure: our per-minute estimate from BMR, steps and (narrowly) heart rate. */
+@Composable
+private fun EnergyPanel(e: org.openstrap.app.data.EnergyExpenditure.Day?, onEditProfile: () -> Unit) {
+    DotPanel {
+        DotHeader("Energy", trailing = e?.let { if (it.partial) "Partial day" else null })
+        if (e == null) {
+            Row(Modifier.fillMaxWidth().glass(GlassRowShape, onEditProfile).padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("Add age, weight and height to estimate the energy you use.", color = MetricColors.warn, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+                Icon(PhosphorIcons.CaretRight, null, tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.padding(start = 8.dp))
+            }
+            return@DotPanel
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Fact("Total", "≈ ${e.totalKcal.roundToInt()} kcal")
+            Fact("At rest", "${e.bmrKcal.roundToInt()} /day")
+            Fact("Activity level", e.pal?.let { "%.2f".format(it) } ?: "—")
+        }
+        Note(
+            listOfNotNull(
+                "From your resting metabolism (Mifflin-St Jeor), your steps each minute and, for effort without steps, your heart rate.",
+                if (e.partial) "Covers ${formatDuration(e.minutesWithData * 60L)} of wear, so it's a partial total." else null,
+                if (e.palImplausible) "That's an unusual total for a full day; check your profile and how the strap was worn." else null,
+                if (e.hrAssistedMinutes > 0) "${e.hrAssistedMinutes} min HR-assisted." else null,
+                "Food digestion isn't included.",
+            ).joinToString(" "),
+        )
     }
 }
 

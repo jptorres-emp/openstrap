@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import org.openstrap.app.MainActivity
 import org.openstrap.app.OpenStrapApp
+import org.openstrap.app.R
 
 /** Keeps the process alive while connected so syncing and live HR survive the app being backgrounded. */
 class StrapService : LifecycleService() {
@@ -66,7 +67,7 @@ class StrapService : LifecycleService() {
     private fun notification(text: String): Notification {
         val open = PendingIntent.getActivity(this, 0, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE)
         return NotificationCompat.Builder(this, CHANNEL)
-            .setSmallIcon(android.R.drawable.stat_sys_data_bluetooth)
+            .setSmallIcon(R.drawable.ic_stat_openstrap)
             .setContentTitle("Helio Strap")
             .setContentText(text)
             .setOngoing(true)

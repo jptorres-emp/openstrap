@@ -72,7 +72,7 @@ fun DotPanel(
                     ),
                 )
             }
-            .padding(GlowLayout.CardPadding),
+            .padding(LocalCardPadding.current),
         verticalArrangement = Arrangement.spacedBy(14.dp),
         content = content,
     )

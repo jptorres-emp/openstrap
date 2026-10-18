@@ -39,7 +39,6 @@ import org.openstrap.app.ui.dashboard.DayPicker
 import org.openstrap.app.ui.dashboard.DayUiState
 import org.openstrap.app.ui.dashboard.Metric
 import org.openstrap.app.ui.dashboard.LocalGoals
-import org.openstrap.app.ui.dashboard.ScreenList
 import org.openstrap.app.ui.theme.MetricColors
 import org.openstrap.app.ui.theme.PhosphorIcons
 import java.time.Instant
@@ -85,13 +84,14 @@ fun GlowActivityScreen(
     val week = remember(state.date) { paiHistory(state.date.minusDays(6), state.date) }.collectAsState(emptyMap()).value
     val r = recovery?.takeIf { it.date == state.date }
     CompositionLocalProvider(LocalGlowPaused provides { list.isScrollInProgress }) {
-        ScreenList(contentPadding, list, gutter = GlowLayout.Gutter) {
-            item { DateHeader(state.date, battery, onPrev, onNext, charging, picker) }
-            item { StepsCard(state) { onOpenMetric(Metric.Steps) } }
-            item { PaiPanel(state, week) }
-            item { LoadPanel(r, effects.lastOrNull { it.weeklyLoad != null }, onEditProfile) }
-            item { FitnessPanel(r, workouts, effects, state.dailyMaxHeartRate) }
-            item { WorkoutsPanel(state.date, workouts, onOpenWorkout, onAllWorkouts) }
+        GlowScreenList(contentPadding, list) {
+            full { DateHeader(state.date, battery, onPrev, onNext, charging, picker) }
+            // Wide: today's movement on the left; load, fitness and workouts on the right.
+            left { StepsCard(state) { onOpenMetric(Metric.Steps) } }
+            left { PaiPanel(state, week) }
+            right { LoadPanel(r, effects.lastOrNull { it.weeklyLoad != null }, onEditProfile) }
+            right { FitnessPanel(r, workouts, effects, state.dailyMaxHeartRate) }
+            right { WorkoutsPanel(state.date, workouts, onOpenWorkout, onAllWorkouts) }
         }
     }
 }

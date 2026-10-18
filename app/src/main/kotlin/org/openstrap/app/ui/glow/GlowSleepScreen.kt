@@ -45,7 +45,6 @@ import org.openstrap.app.ui.dashboard.Metric
 import org.openstrap.app.ui.dashboard.Narrative
 import org.openstrap.app.ui.dashboard.SLEEP_COLORS
 import org.openstrap.app.ui.dashboard.SLEEP_NAMES
-import org.openstrap.app.ui.dashboard.ScreenList
 import org.openstrap.app.ui.dashboard.SleepVital
 import org.openstrap.app.ui.dashboard.SleepWindows
 import org.openstrap.app.ui.dashboard.bandColor
@@ -76,20 +75,21 @@ fun GlowSleepScreen(
 ) {
     val list = rememberLazyListState()
     CompositionLocalProvider(LocalGlowPaused provides { list.isScrollInProgress }) {
-        ScreenList(contentPadding, list, gutter = GlowLayout.Gutter) {
-            item { DateHeader(state.date, battery, onPrev, onNext, charging, picker) }
+        GlowScreenList(contentPadding, list) {
+            full { DateHeader(state.date, battery, onPrev, onNext, charging, picker) }
             val session = state.sleep
-            item { NightCard(state) }
+            // Wide: the night, its stages and vitals on the left; what shaped the score and the night's charts on the right.
+            left { NightCard(state) }
             if (session != null) {
-                state.sleepBreakdown?.let { b -> item { StagesPanel(b) } }
+                state.sleepBreakdown?.let { b -> left { StagesPanel(b) } }
                 val contributors = Narrative.sleepContributors(session, state.asleepSeconds ?: 0)
-                if (session.score != null && contributors.isNotEmpty()) item { ContributorsPanel(contributors) }
+                if (session.score != null && contributors.isNotEmpty()) right { ContributorsPanel(contributors) }
                 val vitals = sleepVitals(state)
-                if (vitals.isNotEmpty()) item { VitalsPanel(vitals, onOpenMetric) }
-                item { NightChartsPanel(state, session) }
+                if (vitals.isNotEmpty()) left { VitalsPanel(vitals, onOpenMetric) }
+                right { NightChartsPanel(state, session) }
             }
-            if (state.naps.isNotEmpty()) item { NapsPanel(state) }
-            item { WeekPanel(state) }
+            if (state.naps.isNotEmpty()) right { NapsPanel(state) }
+            full { WeekPanel(state) }
         }
     }
 }

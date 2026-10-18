@@ -86,7 +86,7 @@ fun GlowCard(
     style: GlowStyle,
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
-    contentPadding: PaddingValues = GlowLayout.CardPadding,
+    contentPadding: PaddingValues = LocalCardPadding.current,
     content: @Composable BoxScope.() -> Unit,
 ) {
     val shape = remember(style.radius) { RoundedCornerShape(style.radius) }

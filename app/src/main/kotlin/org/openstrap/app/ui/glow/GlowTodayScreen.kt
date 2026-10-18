@@ -50,7 +50,6 @@ import org.openstrap.app.ui.dashboard.Metric
 import org.openstrap.app.ui.dashboard.Narrative
 import org.openstrap.app.ui.dashboard.SLEEP_NAMES
 import org.openstrap.app.ui.dashboard.LocalGoals
-import org.openstrap.app.ui.dashboard.ScreenList
 import org.openstrap.app.ui.dashboard.avg
 import org.openstrap.app.ui.dashboard.chargeLeads
 import org.openstrap.app.ui.theme.MetricColors
@@ -125,36 +124,38 @@ private fun TodayList(
     onOpenWorkout: (Long) -> Unit,
     list: LazyListState,
     extras: TodayExtras,
-) = ScreenList(contentPadding, list, gutter = GlowLayout.Gutter) {
+) = GlowScreenList(contentPadding, list) {
     val rec = recovery?.takeIf { it.date == state.date }
-    item { DateHeader(state.date, battery, onPrev, onNext, charging, picker) }
+    full { DateHeader(state.date, battery, onPrev, onNext, charging, picker) }
+
+    // On a wide screen the scores, sleep and movement run down the left; what changed and your heart down the right.
 
     // Glow: the day's three scores at a glance, the leading one as the hero. The only place they appear.
-    item { OverviewCard(state, rec, chargeLeads(state, rec), onOpenRecovery, onOpenSleep) }
+    left { OverviewCard(state, rec, chargeLeads(state, rec), onOpenRecovery, onOpenSleep) }
 
     // Quiet but first: anything the strap warned about this day.
-    if (state.alerts.isNotEmpty()) item { AlertsPanel(state.alerts, onOpenMetric) }
+    if (state.alerts.isNotEmpty()) right { AlertsPanel(state.alerts, onOpenMetric) }
 
     // Mondays: the week just gone against the one before.
-    if (extras.history != null && isRecapDay(state)) item { WeeklyRecapPanel(state, recovery, workouts, extras.history) }
+    if (extras.history != null && isRecapDay(state)) right { WeeklyRecapPanel(state, recovery, workouts, extras.history) }
 
     // Dark grey glow: last night, naps included. Right after waking it's what you want to know, so it leads.
     val hasSleep = state.asleepSeconds != null || state.naps.isNotEmpty()
     val morning = state.date == LocalDate.now() && LocalTime.now().hour < 12
-    if (hasSleep && morning) item { SleepPanel(state, onOpenSleep) }
+    if (hasSleep && morning) left { SleepPanel(state, onOpenSleep) }
 
     // Quiet: what the readiness score means, then only the signals that moved away from your normal.
-    item { WhatChanged(state, rec?.readiness?.let { Narrative.readinessBody(it) }, extras.tiles, onOpenMetric, extras.onChooseTiles) }
+    right { WhatChanged(state, rec?.readiness?.let { Narrative.readinessBody(it) }, extras.tiles, onOpenMetric, extras.onChooseTiles) }
 
     // Glow: heart rate, beating at the latest reading.
-    item { HeartGlow(state, liveHeartRate, extras.liveEnabled, extras.onLiveToggle) { onOpenMetric(Metric.HeartRate) } }
+    right { HeartGlow(state, liveHeartRate, extras.liveEnabled, extras.onLiveToggle) { onOpenMetric(Metric.HeartRate) } }
 
     // Glow: activity, moving with the day's steps.
-    item { ActivityGlow(state, extras.onOpenActivity) }
+    left { ActivityGlow(state, extras.onOpenActivity) }
     val dayWorkouts = workouts.filter { it.workout.start in state.dayStart..state.dayEnd }.sortedBy { it.workout.start }
-    if (dayWorkouts.isNotEmpty()) item { org.openstrap.app.ui.workout.WorkoutsPanel(dayWorkouts, onOpenWorkout) }
+    if (dayWorkouts.isNotEmpty()) left { org.openstrap.app.ui.workout.WorkoutsPanel(dayWorkouts, onOpenWorkout) }
 
-    if (hasSleep && !morning) item { SleepPanel(state, onOpenSleep) }
+    if (hasSleep && !morning) left { SleepPanel(state, onOpenSleep) }
 }
 
 /* ------------------------------------------------------------------------------------------------ */

@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -341,8 +343,12 @@ fun GlowArcGauge(
     modifier: Modifier = Modifier,
     content: @Composable BoxScope.() -> Unit = {},
 ) {
-    // A touch taller than half the width, so the top dot's halo isn't clipped.
-    Box(modifier.fillMaxWidth().aspectRatio(1.9f), contentAlignment = Alignment.BottomCenter) {
+    // A touch taller than half the width, so the top dot's halo isn't clipped. Centred and capped, so a
+    // wide card doesn't turn it into a dome taller than the screen.
+    Box(
+        modifier.fillMaxWidth().wrapContentWidth(Alignment.CenterHorizontally).widthIn(max = GlowLayout.GaugeMaxWidth).fillMaxWidth().aspectRatio(1.9f),
+        contentAlignment = Alignment.BottomCenter,
+    ) {
         Canvas(Modifier.matchParentSize()) {
             val r = size.width / 2 - 10.dp.toPx()
             val c = Offset(size.width / 2, size.height - 3.dp.toPx())

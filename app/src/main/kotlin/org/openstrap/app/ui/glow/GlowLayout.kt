@@ -1,6 +1,9 @@
 package org.openstrap.app.ui.glow
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -13,10 +16,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import org.openstrap.app.ui.dashboard.ScreenList
 import org.openstrap.app.ui.theme.PhosphorIcons
 
 /*
@@ -37,6 +43,76 @@ object GlowLayout {
     /** Dot-matrix hero numbers. */
     val HeroDot = 4.5.dp
     val HeroGap = 1.8.dp
+    /** From this width (an unfolded foldable, a tablet, a phone on its side) the dashboards use two columns. */
+    val TwoColumnWidth = 600.dp
+    /** The widest the cards get; past it the margins grow, so lines stay readable on a tablet. */
+    val MaxContentWidth = 1040.dp
+    /** Space between the two columns: the same as between cards in a column. */
+    val ColumnGap = 12.dp
+    /** The arc gauge stops growing here, however wide its card. */
+    val GaugeMaxWidth = 440.dp
+    /**
+     * With two columns on an unfolded foldable each is a little narrower than a phone. A tighter gutter and
+     * card sides give the cards back a phone card's inner width, so tile labels and values fit as they do there.
+     */
+    val WideGutter = 16.dp
+    val WideCardPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 32.dp, bottom = 26.dp)
+}
+
+/** The padding inside glow cards and dot panels; two-column dashboards narrow it. */
+val LocalCardPadding = staticCompositionLocalOf { GlowLayout.CardPadding }
+
+/** Where a dashboard block goes when there's room for two columns. On a phone every block stacks in the order given. */
+enum class Pane { Full, Left, Right }
+
+/** The blocks of a dashboard, in phone order, each with the column it takes on a wide screen. */
+class GlowBlocks internal constructor() {
+    internal val blocks = mutableListOf<Pair<Pane, @Composable () -> Unit>>()
+    fun full(content: @Composable () -> Unit) { blocks += Pane.Full to content }
+    fun left(content: @Composable () -> Unit) { blocks += Pane.Left to content }
+    fun right(content: @Composable () -> Unit) { blocks += Pane.Right to content }
+}
+
+/**
+ * A glow dashboard's list. Narrower than [GlowLayout.TwoColumnWidth] it's the phone list: every block in
+ * order, one under the other. Wider, each run of left and right blocks sits side by side in two columns,
+ * and full blocks span both. It stays one lazy list either way, so scrolling, pull to sync and the glow
+ * pausing while it scrolls behave the same.
+ */
+@Composable
+fun GlowScreenList(contentPadding: PaddingValues, state: LazyListState, content: GlowBlocks.() -> Unit) {
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        val wide = maxWidth >= GlowLayout.TwoColumnWidth
+        val gutter = ((maxWidth - GlowLayout.MaxContentWidth) / 2).coerceAtLeast(if (wide) GlowLayout.WideGutter else GlowLayout.Gutter)
+        val blocks = GlowBlocks().apply(content).blocks
+        CompositionLocalProvider(LocalCardPadding provides if (wide) GlowLayout.WideCardPadding else GlowLayout.CardPadding) {
+            ScreenList(contentPadding, state, gutter = gutter) {
+                if (!wide) blocks.forEach { (_, block) -> item { block() } }
+                else sections(blocks).forEach { section ->
+                    val left = section.filter { it.first == Pane.Left }.map { it.second }
+                    val right = section.filter { it.first == Pane.Right }.map { it.second }
+                    // A full block, or a run with nothing on one side, takes the whole width rather than leave a hole.
+                    if (left.isEmpty() || right.isEmpty()) section.forEach { (_, block) -> item { block() } }
+                    else item {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(GlowLayout.ColumnGap)) {
+                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(GlowLayout.ColumnGap)) { left.forEach { it() } }
+                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(GlowLayout.ColumnGap)) { right.forEach { it() } }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** Splits the blocks into runs: each full block on its own, and each unbroken stretch of left and right blocks together. */
+private fun sections(blocks: List<Pair<Pane, @Composable () -> Unit>>): List<List<Pair<Pane, @Composable () -> Unit>>> {
+    val out = mutableListOf<MutableList<Pair<Pane, @Composable () -> Unit>>>()
+    blocks.forEach { b ->
+        val last = out.lastOrNull()
+        if (b.first != Pane.Full && last != null && last.first().first != Pane.Full) last += b else out += mutableListOf(b)
+    }
+    return out
 }
 
 /**

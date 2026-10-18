@@ -37,7 +37,6 @@ import org.openstrap.app.ui.dashboard.DayPicker
 import org.openstrap.app.ui.dashboard.DayUiState
 import org.openstrap.app.ui.dashboard.Metric
 import org.openstrap.app.ui.dashboard.Narrative
-import org.openstrap.app.ui.dashboard.ScreenList
 import org.openstrap.app.ui.dashboard.avg
 import org.openstrap.app.ui.components.pressClickable
 import org.openstrap.app.ui.theme.MetricColors
@@ -65,21 +64,22 @@ fun GlowRecoveryScreen(
     val list = rememberLazyListState()
     val signals = rememberSignals(state, history)
     CompositionLocalProvider(LocalGlowPaused provides { list.isScrollInProgress }) {
-        ScreenList(contentPadding, list, gutter = GlowLayout.Gutter) {
-            item { DateHeader(state.date, battery, onPrev, onNext, charging, picker) }
+        GlowScreenList(contentPadding, list) {
+            full { DateHeader(state.date, battery, onPrev, onNext, charging, picker) }
             val r = recovery?.takeIf { it.date == state.date }
             if (r == null) {
-                item { DotPanel { Text("Calculating…", color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.bodyMedium) } }
-                return@ScreenList
+                full { DotPanel { Text("Calculating…", color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.bodyMedium) } }
+                return@GlowScreenList
             }
             val ready = r.readiness
-            item { RecoveryCard(r) }
-            if (ready.strainAlert) item { StrainPanel(ready) }
-            item { ChargeCard(r.charge, state.dayStart..state.dayEnd) }
-            if (r.charge.latest != null) item { ChargeFlowPanel(r.charge, r.stressThreshold) }
-            if (ready.contributors.isNotEmpty()) item { ContributorsPanel(ready) }
-            item { SignalsPanel(signals, onOpenMetric) }
-            item { HowItWorksPanel(strapReadiness, ready.score) }
+            // Wide: the scores and where the charge went on the left; why, and the body signals, on the right.
+            left { RecoveryCard(r) }
+            if (ready.strainAlert) right { StrainPanel(ready) }
+            left { ChargeCard(r.charge, state.dayStart..state.dayEnd) }
+            if (r.charge.latest != null) left { ChargeFlowPanel(r.charge, r.stressThreshold) }
+            if (ready.contributors.isNotEmpty()) right { ContributorsPanel(ready) }
+            right { SignalsPanel(signals, onOpenMetric) }
+            full { HowItWorksPanel(strapReadiness, ready.score) }
         }
     }
 }

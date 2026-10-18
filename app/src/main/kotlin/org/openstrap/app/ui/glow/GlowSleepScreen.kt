@@ -72,8 +72,11 @@ fun GlowSleepScreen(
     picker: DayPicker,
     contentPadding: PaddingValues,
     onOpenMetric: (Metric) -> Unit,
+    /** Readiness and the nightly model, for the Breathing card and the sleep-health panels. */
+    recovery: org.openstrap.app.data.RecoveryResult? = null,
 ) {
     val list = rememberLazyListState()
+    val rec = recovery?.takeIf { it.date == state.date }
     CompositionLocalProvider(LocalGlowPaused provides { list.isScrollInProgress }) {
         GlowScreenList(contentPadding, list) {
             full { DateHeader(state.date, battery, onPrev, onNext, charging, picker) }
@@ -88,6 +91,7 @@ fun GlowSleepScreen(
                 if (vitals.isNotEmpty()) left { VitalsPanel(vitals, onOpenMetric) }
                 right { NightChartsPanel(state, session) }
             }
+            rec?.breathingDisturbances?.let { b -> right { BreathingCard(b) } }
             if (state.naps.isNotEmpty()) right { NapsPanel(state) }
             full { WeekPanel(state) }
         }
@@ -361,5 +365,25 @@ private fun WeekPanel(state: DayUiState) {
             GlowBar(r.score / 100f, bandColor(r.band))
             Note(w.regularityNote.orEmpty())
         }
+    }
+}
+
+/**
+ * Breathing disturbances: the strap's count of oxygen-desaturation events per hour asleep, against your own nights.
+ * No normal / mild / moderate / severe words: those are apnea severity bands, and this is a wellness estimate.
+ */
+@Composable
+private fun BreathingCard(b: org.openstrap.app.data.Recovery.BreathingDisturbances) {
+    DotPanel {
+        DotHeader("Breathing", trailing = "vs. your nights")
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Fact("Disturbances", "%.1f /h".format(b.perHour))
+            Fact("Your usual", b.usual?.let { "%.1f /h".format(it) } ?: "—")
+        }
+        Note(
+            if (b.usual == null) "Your usual builds after ${org.openstrap.app.data.Recovery.SCORED_NIGHTS} nights with a breathing summary."
+            else "Dips in blood oxygen during sleep, counted by the strap. They are fairly steady for each person, so they're shown here rather than in Recovery. " +
+                org.openstrap.app.data.BodySignalsCopy.DISCLAIMER,
+        )
     }
 }

@@ -24,6 +24,10 @@ data class RecoveryResult(
     val stressThreshold: Recovery.StressThreshold,
     /** The main sleep that ended on [date], as the model saw it; null without one. */
     val tonight: Recovery.Night? = null,
+    /** For the Breathing card: tonight's desaturation events per hour against the user's own nights. */
+    val breathingDisturbances: Recovery.BreathingDisturbances? = null,
+    /** Acute:chronic load ratio for the Load screen (contested; not part of Readiness). */
+    val acwr: Float? = null,
 )
 
 /** Loads what [Recovery] needs from the database and runs it. All work happens off the main thread by the caller. */
@@ -115,7 +119,10 @@ class RecoveryEngine(private val dao: HealthDao) {
         val charge = Recovery.charge(minutes, params, day.from..day.to, start = 50f, mainSleepEnd = tonight?.end)
 
         val chronic = if (loads.size >= 7) Recovery.ewmaLoads(loads).second else null
-        return RecoveryResult(date, readiness, charge, trend, todayLoad, chronic, restingHr, maxHr, age != null, stressThreshold, tonight)
+        return RecoveryResult(
+            date, readiness, charge, trend, todayLoad, chronic, restingHr, maxHr, age != null, stressThreshold, tonight,
+            Recovery.breathingDisturbances(tonight, nights), Recovery.acwr(loads),
+        )
     }
 
     private fun night(

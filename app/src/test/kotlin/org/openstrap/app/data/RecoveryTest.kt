@@ -203,7 +203,18 @@ class RecoveryTest {
         val loads = List(27) { 40f } + 200f
         val r = Recovery.readiness(night(31), history(), loads)
         assertTrue(r.contributors.first { it.factor == Factor.PreviousDayLoad }.score < 100)
-        assertTrue(r.contributors.first { it.factor == Factor.LoadBalance }.score < 100)
+        // ACWR is descriptive now, on the Load screen, never a Readiness contributor.
+        assertTrue(Recovery.acwr(loads)!! > 1.3f)
+        assertNull(Recovery.acwr(loads.takeLast(13)))
+    }
+
+    @Test
+    fun weightsMatchTheEvidenceReview() {
+        val w = Factor.entries.associate { it to it.weight }
+        assertEquals(0.52f, w.getValue(Factor.HrvBalance) + w.getValue(Factor.RestingHr), 1e-5f)
+        assertEquals(0.28f, w.getValue(Factor.Sleep) + w.getValue(Factor.SleepBalance), 1e-5f)
+        assertEquals(0.13f, w.getValue(Factor.Temperature) + w.getValue(Factor.Breathing) + w.getValue(Factor.BloodOxygen), 1e-5f)
+        assertEquals(1f, w.values.sum(), 1e-5f)
     }
 
     // --- Charge ------------------------------------------------------------------------------------
@@ -406,20 +417,13 @@ class RecoveryTest {
     }
 
     @Test
-    fun odiFollowsZeppBands() {
-        assertEquals(100, Recovery.odiScore(0f))
-        assertEquals(100, Recovery.odiScore(4.9f))
-        assertEquals(75, Recovery.odiScore(15f))
-        assertEquals(45, Recovery.odiScore(30f))
-        assertEquals(20, Recovery.odiScore(80f))
-    }
-
-    @Test
-    fun breathingDisturbancesShowNoSeverityWords() {
+    fun breathingDisturbancesAreTheirOwnCardAgainstYourHistory() {
         val past = history().map { it.copy(odi = 4f) }
-        val c = Recovery.readiness(night(31).copy(odi = 40f), past).contributors.first { it.factor == Factor.BreathingDisturbances }
-        assertEquals("40.0 events/h · usual 4.0", c.detail)
-        listOf("normal", "mild", "moderate", "severe", "few", "frequent").forEach { assertFalse(it, it in c.detail.lowercase()) }
+        val b = Recovery.breathingDisturbances(night(31).copy(odi = 40f), past)!!
+        assertEquals(40f, b.perHour, 1e-5f)
+        assertEquals(4f, b.usual!!, 1e-5f)
+        assertNull(Recovery.breathingDisturbances(night(31).copy(odi = 40f), past.take(6))!!.usual)
+        assertNull(Recovery.breathingDisturbances(night(31), past))
     }
 
     @Test
@@ -437,11 +441,11 @@ class RecoveryTest {
     }
 
     @Test
-    fun breathingDisturbancesNeedNoBaselineAndDontRedFlag() {
-        val r = Recovery.readiness(night(31).copy(odi = 40f), history())
-        val c = r.contributors.first { it.factor == Factor.BreathingDisturbances }
-        assertEquals(35, c.score)
-        // A chronic signal, not a sign of a bad day: it mustn't trigger the physiological cap.
-        assertFalse(r.capped)
+    fun breathingDisturbancesDontMoveReadiness() {
+        // A stable trait, so inside Readiness it would only act as a fixed offset: it's left out.
+        val with = Recovery.readiness(night(31).copy(odi = 40f), history())
+        val without = Recovery.readiness(night(31), history())
+        assertEquals(without.score, with.score)
+        assertFalse(with.capped)
     }
 }

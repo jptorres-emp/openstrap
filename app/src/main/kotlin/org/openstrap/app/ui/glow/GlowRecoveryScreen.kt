@@ -331,8 +331,8 @@ internal fun Note(text: String) = Text(text, color = Color.White.copy(alpha = 0.
 private fun ContributorsPanel(ready: Recovery.Readiness) {
     val groups = listOf(
         "Body" to setOf(Recovery.Factor.HrvBalance, Recovery.Factor.RestingHr, Recovery.Factor.Temperature, Recovery.Factor.Breathing, Recovery.Factor.BloodOxygen),
-        "Sleep" to setOf(Recovery.Factor.Sleep, Recovery.Factor.SleepBalance, Recovery.Factor.RecoveryIndex, Recovery.Factor.BreathingDisturbances),
-        "Load" to setOf(Recovery.Factor.PreviousDayLoad, Recovery.Factor.LoadBalance),
+        "Sleep" to setOf(Recovery.Factor.Sleep, Recovery.Factor.SleepBalance, Recovery.Factor.RecoveryIndex),
+        "Load" to setOf(Recovery.Factor.PreviousDayLoad),
     )
     DotPanel {
         DotHeader("What drove it")

@@ -93,7 +93,7 @@ object Narrative {
             score >= 55 -> "Recovery isn't complete. Keep intensity moderate."
             else -> "Your body is still catching up. Favour rest, light movement and an early night."
         }
-        val ranked = r.contributors.filter { it.factor.weight >= 0.07f }.sortedBy { it.score }
+        val ranked = r.contributors.filter { it.factor.weight >= 0.06f }.sortedBy { it.score }
         val weakest = ranked.firstOrNull()?.takeIf { it.score < 70 }
         // A quiet training day isn't something to praise, so load never counts as a strength.
         val strongest = ranked.lastOrNull { it.factor.physiological || it.factor == org.openstrap.app.data.Recovery.Factor.Sleep }

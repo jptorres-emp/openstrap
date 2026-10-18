@@ -49,7 +49,7 @@ Most contributors are z-scores (deviation from the baseline centre in units of i
 
 ### Contributors
 
-**HRV balance** (weight 0.25)
+**HRV balance** (weight 0.30)
 * Input: `hrv_n` = ln(mean of the night's gated RMSSD samples) on a valid night. This definition never changes inside a baseline.
 * `hrv_7` = mean of `hrv_n` over the last 7 nights, needing ≥ `HRV_WEEK_MIN_NIGHTS` = 3 valid nights; "thin" below `HRV_WEEK_FULL_NIGHTS` = 5.
 * Score: `HRV_NIGHT_WEIGHT` = 0.4·z(tonight) + `HRV_WEEK_WEIGHT` = 0.6·z(`hrv_7`), through the dead zone. Weighted towards the week because nightly wearable HRV error (6–16 % MAPE) is larger than the ~3 % smallest worthwhile change. Without `hrv_7`, tonight alone.
@@ -59,57 +59,56 @@ Most contributors are z-scores (deviation from the baseline centre in units of i
 * Why nightly: whole-night averages are the most accurate wearable HRV (Oura vs ECG, JMIR 2022, PMC8808342).
 * Alert: z(tonight) ≤ −1.5.
 
-**Resting heart rate** (weight 0.15)
+**Resting heart rate** (weight 0.22)
 * Input: `rhr_n`, the night's lowest 30-minute average HR, the window needing ≥ `RHR_WINDOW_MIN_MINUTES` = 20 minutes of data (Garmin's definition). The sleep mean (`rhr_mean_sleep`) and 10th percentile (`rhr_p10`) are logged too, for the review to pick the least noisy one.
 * Score: z against baseline, inverted so lower is better, through the dead zone.
 * Source: Buchheit 2014 (Front Physiol 5:73): judge HR changes against measurement noise and the smallest worthwhile change, not absolute thresholds.
 * Alert: ≥ max(5 bpm, 2 SD) above baseline. Overnight resting HR is the best-tested early-warning signal: in Mishra et al. 2020 ([medRxiv](https://www.medrxiv.org/content/10.1101/2020.07.06.20147512v1)) it rose before symptoms in 32 COVID-19 cases, 63 % detectably in real time. That study says nothing about other conditions.
 
-**Last night's sleep** (weight 0.18)
+**Last night's sleep** (weight 0.16)
 * The strap's own sleep score when present.
 * Otherwise our own score, `sleepScore`: duration vs 8 h (50%), efficiency (25%), and deep + REM share vs 45% (25%).
 
-**Sleep balance** (weight 0.10)
+**Sleep balance** (weight 0.12)
 * Input: weighted mean nightly shortfall against 8 h over the last 14 nights. Weights halve every 4 nights, and a long night repays at most 1 h of debt.
 * Score: −`SLEEP_DEBT_POINTS_PER_HOUR` = 25 points per hour short, so 1 h short ≈ 75 and 2 h ≈ 50.
 * Source: Van Dongen et al. 2003 (Sleep 26:117): 6 h nights for 14 days caused deficits that built up night by night, equal to one or two nights of total deprivation, which subjects didn't notice.
 
-**Recovery index** (weight 0.07)
+**Recovery index** (weight 0.03)
 * Input: where the night's lowest 10-minute HR falls.
 * Score: 100 when it falls in the first half of the night, then sliding down to 40 at the very end.
 * Source: Oura's recovery index (a late nadir suggests late meals, alcohol or late exercise).
 
-**Body temperature** (weight 0.10)
+**Body temperature** (weight 0.06)
 * Input: mean skin temperature during sleep (≥ 30 readings).
 * Score: `scoreFromZ`(−|z_eff|): a change in either direction beyond the dead zone counts.
 * Source: TemPredict (Oura); adding temperature raised a multimodal model's AUC from 0.770 to 0.819 (Mason et al. 2022, [PMC8891385](https://pmc.ncbi.nlm.nih.gov/articles/PMC8891385)). The luteal-phase rise is about +0.3 °C at the finger.
 * Alert: ≥ +0.5 °C.
 
-**Breathing rate** (weight 0.03)
+**Breathing rate** (weight 0.04)
 * Input: mean breathing rate during sleep.
 * Score: `scoreFromZ`(−|z_eff|), either direction. Nightly breathing rate is very stable, so its floor is 0.5 /min.
 * Alert: ≥ +2 breaths/min.
 
-**Blood oxygen** (weight 0.05)
+**Blood oxygen** (weight 0.03)
 * Input: mean sleep SpO2 (strap type 38) during the night, from at least 5 readings.
 * Score: −`SPO2_POINTS_PER_PERCENT` = 25 points per % below the baseline centre, beyond a 1 % dead band. A night above the usual level scores 100; higher oxygen isn't better. 2 % down ≈ 75, 3 % down ≈ 50.
 * Source: healthy adults hold a mean nightly SpO2 of about 96 %, steady night to night (Gries & Brooks 1996, Chest 110:1489). A sustained fall can come with altitude, disturbed breathing or a respiratory problem.
 * Alert: ≥ `SPO2_ALERT_DROP` = 2 % below baseline.
 
-**Breathing disturbances** (weight 0.04, no baseline needed)
+**Breathing disturbances** (not part of Readiness: the Breathing card on the Sleep screen)
 * Input: the strap's nightly sleep-apnea summary (type 74). We use only its count of valid desaturation events, divided by hours asleep, because the units of its own ODI fields are unverified. Needs at least 2 h asleep.
-* Score (`odiScore`): 100 under 5 events/h, then falling linearly to 75 at 15, 45 at 30 and a floor of 20. The break points are Zepp's (`bn50.java`). They are apnea severity bands applied to the strap's desaturation counts, so they are never shown as labels: naming them (normal / mild / moderate / severe) would breach the 2026 wellness guidance. The detail shows events per hour against the user's own nights.
-* Not physiological for the red-flag cap: a high index is a lasting trait, not a sign of a bad day. It's a wellness estimate, not a diagnosis.
+* Shown (`breathingDisturbances`) as events per hour against the median of the user's own nights (from 7 nights). Moved out of Readiness because it is a stable trait, so inside the score it only acted as a fixed offset.
+* Zepp's 5 / 15 / 30 break points (`bn50.java`) are apnea severity bands applied to the strap's desaturation counts. They are never shown: naming them (normal / mild / moderate / severe) would breach the 2026 wellness guidance. It's a wellness estimate, not a diagnosis.
 
-**Previous day's load** (weight 0.07)
+**Previous day's load** (weight 0.04)
 * Input: yesterday's TRIMP divided by the chronic EWMA load. Above 1.5× the score falls by 25 points per unit, to a floor of 30.
 
-**Training load balance** (weight 0.05, needs ≥ 14 days of load)
-* Input: acute:chronic ratio from EWMA, 7 vs 28 days, λ = 2/(N+1) (Williams et al. 2017, BJSM; Murray et al. 2017, BJSM 10.1136/bjsports-2016-097152).
-* Score: 100 inside 0.8–1.3 (Gabbett 2016), falling outside it.
-* Low weight on purpose: the "sweet spot" is disputed (Impellizzeri et al. 2020; Fanchini et al. 2018), so it only nudges the score.
+**Training load balance** (not part of Readiness: the Load panel on the Activity screen, labelled "contested")
+* Input: acute:chronic ratio from EWMA, 7 vs 28 days (`acwr`), needing ≥ 14 days of load.
+* Out of Readiness because the evidence is against scoring with it: the coupling critique is accepted by its own proponents (BJSM 53/15/921), ACWR rescales acute load (Impellizzeri 2021), and the 2025 meta-analysis for 0.8–1.3 has a CI of 0.14–0.94 (Qin et al. 2025).
 
-Weights add up to more than 1 once every contributor is present; they're always renormalised, so only their ratios matter.
+Weights (a design choice, to be checked with the backtest) add up to 1: autonomic (HRV + resting HR) 52 %, sleep 28 %, other body signals 13 %, previous day's load 4 %, recovery index 3 %. They're renormalised over the contributors present, so only their ratios matter. Polar's only public hint is that heart rate has "the biggest influence"; bounding sleep's share keeps one short night from carrying the score.
 
 ### The strap's own nightly HRV and resting HR
 

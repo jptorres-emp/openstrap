@@ -164,18 +164,22 @@ object Recovery {
     // Readiness
     // ------------------------------------------------------------------------------------------------
 
+    /**
+     * Readiness contributors and their weights (a design choice, evidence-review.md): autonomic 52 %, sleep 28 %, other
+     * body signals 13 %, load 4 %, renormalised over the contributors present. Breathing disturbances (a stable trait,
+     * so only a fixed offset inside Readiness) moved to the Breathing card ([breathingDisturbances]); training load
+     * balance (ACWR) moved to the Load screen ([acwr]).
+     */
     enum class Factor(val label: String, val weight: Float, val physiological: Boolean = false) {
-        HrvBalance("HRV balance", 0.25f, physiological = true),
-        RestingHr("Resting heart rate", 0.15f, physiological = true),
-        Sleep("Last night's sleep", 0.18f),
-        SleepBalance("Sleep balance", 0.10f),
-        RecoveryIndex("Recovery index", 0.07f),
-        Temperature("Body temperature", 0.10f, physiological = true),
-        Breathing("Breathing rate", 0.03f, physiological = true),
-        BloodOxygen("Blood oxygen", 0.05f, physiological = true),
-        BreathingDisturbances("Breathing disturbances", 0.04f),
-        PreviousDayLoad("Previous day's load", 0.07f),
-        LoadBalance("Training load balance", 0.05f),
+        HrvBalance("HRV balance", 0.30f, physiological = true),
+        RestingHr("Resting heart rate", 0.22f, physiological = true),
+        Sleep("Last night's sleep", 0.16f),
+        SleepBalance("Sleep balance", 0.12f),
+        Temperature("Body temperature", 0.06f, physiological = true),
+        Breathing("Breathing rate", 0.04f, physiological = true),
+        PreviousDayLoad("Previous day's load", 0.04f),
+        BloodOxygen("Blood oxygen", 0.03f, physiological = true),
+        RecoveryIndex("Recovery index", 0.03f),
     }
 
     data class Contributor(val factor: Factor, val score: Int, val detail: String)
@@ -370,30 +374,13 @@ object Recovery {
             }
         }
 
-        // Breathing disturbances: oxygen-desaturation events per hour, shown against the user's own nights only. No
-        // normal / mild / moderate / severe words: those are apnea severity bands (evidence-review.md, "Wording").
-        tonight.odi?.let { odi ->
-            val usual = past.mapNotNull { it.odi }.takeIf { it.size >= SCORED_NIGHTS }?.let { percentile(it, 0.5f) }
-            val detail = "${"%.1f".format(odi)} events/h" + (usual?.let { " · usual ${"%.1f".format(it)}" } ?: "")
-            out += Contributor(Factor.BreathingDisturbances, odiScore(odi), detail)
-        }
-
-        // Training load: yesterday against the chronic load, and the acute:chronic balance (EWMA).
+        // Training load: yesterday against the chronic load.
         if (dailyLoad.size >= 7) {
-            val (acute, chronic) = ewmaLoads(dailyLoad)
+            val (_, chronic) = ewmaLoads(dailyLoad)
             val yesterday = dailyLoad.last()
             val ratio = yesterday / max(chronic, MIN_CHRONIC_LOAD)
             val score = if (ratio <= 1.5f) 100 else (100 - 25 * (ratio - 1.5f)).toInt().coerceIn(30, 100)
             out += Contributor(Factor.PreviousDayLoad, score, "Load ${yesterday.toInt()} · usual ${chronic.toInt()}")
-            if (dailyLoad.size >= 14) {
-                val acwr = acute / max(chronic, MIN_CHRONIC_LOAD)
-                val s = when {
-                    acwr > 1.3f -> (100 - 80 * (acwr - 1.3f)).toInt()
-                    acwr < 0.8f -> (100 - 40 * (0.8f - acwr)).toInt()
-                    else -> 100
-                }.coerceIn(20, 100)
-                out += Contributor(Factor.LoadBalance, s, "Acute:chronic ${"%.2f".format(acwr)}")
-            }
         }
 
         val extras = { score: Int?, capped: Boolean, alert: Boolean, withheld: Boolean ->
@@ -433,16 +420,28 @@ object Recovery {
     const val SPO2_DEAD_BAND = 1f
     const val SPO2_ALERT_DROP = 2f
 
+    /** The Breathing card: tonight's oxygen-desaturation events per hour against the user's own nights. */
+    data class BreathingDisturbances(val perHour: Float, val usual: Float?, val nights: Int)
+
     /**
-     * Score for an oxygen-desaturation index (events per hour): flat below 5, then falling linearly through 15 and 30
-     * (the break points Zepp uses). The break points are never shown as labels.
+     * Events per hour for [tonight], with the median of earlier nights once there are [SCORED_NIGHTS] of them. No
+     * normal / mild / moderate / severe words: those are apnea severity bands (evidence-review.md, "Wording").
      */
-    fun odiScore(odi: Float): Int = when {
-        odi < 5f -> 100
-        odi < 15f -> 100 - (odi - 5f) * 2.5f
-        odi < 30f -> 75 - (odi - 15f) * 2f
-        else -> 45 - (odi - 30f)
-    }.toInt().coerceIn(20, 100)
+    fun breathingDisturbances(tonight: Night?, history: List<Night>): BreathingDisturbances? {
+        val odi = tonight?.odi ?: return null
+        val past = history.filter { it.day < tonight.day }.sortedBy { it.day }.takeLast(BASELINE_NIGHTS).mapNotNull { it.odi }
+        return BreathingDisturbances(odi, past.takeIf { it.size >= SCORED_NIGHTS }?.let { percentile(it, 0.5f) }, past.size)
+    }
+
+    /**
+     * Acute:chronic workload ratio for the Load screen only, labelled contested: it is out of Readiness because the
+     * evidence is against scoring with it (evidence-review.md, "Load screen"). Null before 14 days of load.
+     */
+    fun acwr(daily: List<Float>): Float? {
+        if (daily.size < 14) return null
+        val (acute, chronic) = ewmaLoads(daily)
+        return acute / max(chronic, MIN_CHRONIC_LOAD)
+    }
 
     /**
      * Our sleep score when the strap didn't give one: duration against need (50%), efficiency (25%)

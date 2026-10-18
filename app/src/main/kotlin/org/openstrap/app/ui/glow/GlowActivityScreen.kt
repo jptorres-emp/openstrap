@@ -224,6 +224,15 @@ private fun LoadPanel(r: RecoveryResult?, effect: SportEffectRow?, onEditProfile
                     "(${r.maxHr.toInt()} bpm). An hour of moderate exercise is about 60–80.",
             )
         }
+        r?.acwr?.let { ratio ->
+            DotDivider()
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
+                Fact("Acute:chronic", "%.2f".format(ratio))
+                Spacer(Modifier.weight(1f))
+                StatusPill("Contested", Color.White.copy(alpha = 0.7f))
+            }
+            Note("Last 7 days against the last 4 weeks. Shown for interest only: the evidence for a \"safe\" ratio is disputed, so it never enters Recovery.")
+        }
         val weekly = effect?.weeklyLoad
         val low = effect?.optimalLoadMin
         val high = effect?.optimalLoadMax

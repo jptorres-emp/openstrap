@@ -425,6 +425,7 @@ private fun AppRoot(container: AppContainer) {
                             org.openstrap.app.ui.glow.GlowSleepScreen(
                                 day, battery, charging, dayVm::previousDay, dayVm::nextDay, picker, padding,
                                 onOpenMetric = { sleepStack = listOf(Detail.OfMetric(it)) },
+                                recovery = recovery,
                             )
                         }
                     }

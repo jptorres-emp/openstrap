@@ -7,11 +7,12 @@
 
 # OpenStrap: open-source Amazfit Helio Strap app for Android (Zepp alternative)
 
-OpenStrap is a private, open-source Android companion app for the **Amazfit Helio Strap**. It replaces the Zepp app: pair the strap, sync sleep, heart rate, HRV, SpO₂, stress and workouts, and see Recovery and Charge scores, all stored on your phone with no cloud account needed after pairing.
+OpenStrap replaces the Zepp app for the **Amazfit Helio Strap**. It pairs the strap, syncs sleep, heart rate, HRV, SpO₂, stress and workouts, and computes Recovery and Charge scores. Everything stays on your phone. After the first pairing you don't need a cloud account.
 
-- **Local-first.** Health data lives in a database on your phone. The app doesn't use Zepp's cloud, any analytics or any trackers.
-- **Modern.** It is built with Kotlin, Jetpack Compose and Material 3, and has an always-dark "Glow" design built for OLED screens.
-- **Clean-room.** The protocol is implemented from written specs in [`docs/protocol/`](docs/protocol). Those specs were derived only from static analysis of the official app. No Gadgetbridge (AGPL) code was used.
+- **Built against real hardware.** Every protocol step is checked on a real strap and the result written down: firmware 3.20.0.1 and 3.25.0.3, on an Android 16 phone. See the *Verified on hardware* sections in [`docs/protocol/`](docs/protocol).
+- **The scores are explained.** Every score is written out in plain words in [`calculations.md`](docs/algorithms/calculations.md). [`evidence-review.md`](docs/algorithms/evidence-review.md) says which parts rest on published research and which are design choices.
+- **Local-first.** No Zepp cloud for your health data, no analytics, no trackers. [Network use](#network-use) lists every request the app makes.
+- **Clean-room.** The protocol code is written from specs in [`docs/protocol/`](docs/protocol), which come only from static analysis of the official app. It uses no Gadgetbridge (AGPL) code.
 
 <p align="center">
   <img src="docs/screenshots/today.png" width="30%" alt="Today">
@@ -28,13 +29,13 @@ OpenStrap is a private, open-source Android companion app for the **Amazfit Heli
 
 ## Install
 
-Download `OpenStrap-vX.Y.Z.apk` from the [latest release](https://github.com/sayed0am/openstrap/releases/latest) and open it on your phone (Android 9 or newer). Android asks you to allow installs from your browser or file manager the first time. Each release lists the APK's SHA-256 in `SHA256SUMS.txt`.
+Download `OpenStrap-vX.Y.Z.apk` from the [latest release](https://github.com/sayed0am/openstrap/releases/latest) and open it on your phone (Android 9 or newer). Each release lists the APK's SHA-256 in `SHA256SUMS.txt`. Updates install over the previous version and keep your data.
 
-Updates install over the previous version and keep your data.
+You need the strap's auth key to pair. See [Getting the auth key](#getting-the-auth-key).
 
 ## Status
 
-Tested daily with a real Helio Strap.
+I use it daily with one Helio Strap on one Android 16 phone. Other phones and firmware versions are untested. Reports are welcome.
 
 | Feature | State |
 |---|---|
@@ -44,7 +45,7 @@ Tested daily with a real Helio Strap.
 | Live heart rate | ✅ Works |
 | History sync: activity, sleep stages, HR, HRV, resting HR, SpO₂, stress, skin temperature, breathing | ✅ Works |
 | Workouts with heart-rate zones, training effect and recovery | ✅ Works |
-| Recovery, Charge and sleep scores, PAI, training load | ✅ Works |
+| Recovery, Charge and sleep scores, PAI, training load | ✅ Works ([see limitations](#known-limitations)) |
 | Dashboard: Today, Recovery, Sleep, Activity, You (foldables and tablets too) | ✅ Works |
 | Alarms, strap health alerts | ✅ Works |
 | Export and import: CSV zip (every table), Android Health Connect | ✅ Works |
@@ -52,26 +53,44 @@ Tested daily with a real Helio Strap.
 
 Something not right? **You → Diagnostics → copy** captures a log to attach to an issue.
 
+## Known limitations
+
+- **The first pairing still needs Zepp.** The strap only accepts a first pairing that Zepp's server has signed. Every connection after that is local.
+- **The scores won't match Zepp's.** Zepp computes BioCharge and Readiness on the phone with closed native libraries. OpenStrap uses its own model, and the strap can't hand over BioCharge. Readiness needs about a week of nights before it shows a score, and four weeks to settle.
+- **The score weights are not yet backtested on real data.** Some constants are set to be reviewed after more nights of data ([readiness-calibration.md](docs/algorithms/readiness-calibration.md)).
+- **Android only.** There is no iOS version.
+
 ## Not a medical device
 
-OpenStrap is a general wellness app. Its scores, trends and alerts (Recovery, Charge, sleep, breathing disturbances, body-signal changes) are estimates for personal insight. They are not medical advice and are not meant to diagnose, treat or prevent any condition. The strap's sensors and OpenStrap's methods have not been clinically validated. If you feel unwell or are worried about a reading, talk to a health professional.
-
-## Backup and restore
-
-**You → Export CSV** saves a zip with one CSV per table. **Import CSV** reads it back, on this phone or a new one. The strap keeps weeks of history and syncs it itself, so a restore only fills the days before it: for each kind of record, the days before the first one the phone has. Those days and everything after are left as the strap synced them, gaps included. Restore after the strap's first sync on a new phone, or the backup fills the strap's days too. A restore is all or nothing: a zip that fails part way changes nothing.
-
-**Restore from Health Connect** brings back what OpenStrap wrote there, and nothing from other apps. Health Connect keeps that data after OpenStrap is uninstalled, so it works as a backup too. It fills gaps only and never replaces what the strap synced.
+OpenStrap is a general wellness app. Its scores, trends and alerts are estimates for personal insight, not medical advice. They are not meant to diagnose, treat or prevent any condition. Neither the strap's sensors nor OpenStrap's methods are clinically validated. If you feel unwell or are worried about a reading, talk to a health professional.
 
 ## Getting the auth key
 
-The strap only accepts a first pairing that Zepp's server has signed. After that, every connection is local. So the setup is:
-
 1. Pair the strap **once** with the Zepp app. A throwaway account with minimal profile data is enough.
-2. Read the strap's `auth_key` from your Zepp account's device list (the [Gadgetbridge server-pairing guide](https://gadgetbridge.org/basics/pairing/huami-xiaomi-server/) explains how). It is 32 hex characters.
-3. Uninstall Zepp. **Do not unbind the strap in Zepp**: that wipes the key on the strap.
-4. In OpenStrap: **You → your strap → Scan for straps** (strap on its charger) → paste the key, or tap **Sign in with Zepp to fetch the key** → **Pair**.
+2. Get the strap's `auth_key` (32 hex characters). You can tap **Sign in with Zepp to fetch the key** in OpenStrap, or read it by hand as the [Gadgetbridge server-pairing guide](https://gadgetbridge.org/basics/pairing/huami-xiaomi-server/) explains.
+3. Uninstall Zepp. **Do not unbind the strap in Zepp**, because that wipes the key on the strap.
+4. In OpenStrap: **You → your strap → Scan for straps** (strap on its charger) → paste or fetch the key → **Pair**.
 
 Treat the key like a password. Anyone who has it can connect to your strap.
+
+## Network use
+
+OpenStrap goes online only for your Zepp account and for firmware, and only when you ask it to. It never uploads health data.
+
+- **Sign in with Zepp** opens Zepp's own sign-in page (watchface.zepp.com) in an in-app browser. OpenStrap never sees your password. After sign-in it reads the app token and user ID from the page's cookies. It then makes one request to Zepp's device list (`GET users/{userId}/devices` on `api-mifit*.zepp.com`) and shows you the strap's Bluetooth address and auth key to confirm. It saves the token and user ID for firmware checks and clears the Zepp cookies.
+- **Check for update** sends your Zepp token, user ID, and the strap's firmware version, hardware version and serial number to the update server you set. **Download** fetches the image from the URL that server returns.
+
+You can skip the sign-in and paste the key and token by hand instead.
+
+## Backup and restore
+
+- **You → Export CSV** saves a zip with one CSV per table. **Import CSV** restores it on this phone or a new one. Data the strap synced always wins. The backup only fills in the days before the phone's earliest record. Import after the strap's first sync on a new phone. A failed import changes nothing.
+- **Restore from Health Connect** brings back what OpenStrap wrote there, even after OpenStrap was uninstalled. Like the CSV import, it only fills gaps.
+
+## How it was built
+
+<!-- Your call: keep, reword, or delete this section. -->
+I reverse-engineered the protocol from the Zepp 10.9.0 app by static analysis only, and wrote it up as specs first. The code was written with AI assistance. Every protocol behaviour was then checked on a real strap. Where the hardware disagreed with the spec, the spec was corrected and the result recorded. The `protocol/` module has a simulated strap that tests the whole handshake and sync end to end.
 
 ## Building
 
@@ -81,42 +100,24 @@ Requires JDK 21 and the Android SDK (compileSdk 37).
 ./gradlew :protocol:test :app:testDebugUnitTest :app:assembleDebug
 ```
 
-Debug builds can fill an empty database with three weeks of sample data, for the emulator:
+Debug builds can fill an empty database with three weeks of sample data:
 
 ```bash
 adb shell am start -n org.openstrap.app/.MainActivity --ez demo_data true
 ```
 
-## Releases
+### Layout
 
-GitHub Actions ([`.github/workflows/android.yml`](.github/workflows/android.yml)) runs the tests and builds a debug APK on every push and pull request. Pushing a tag `vX.Y.Z` builds the signed release APK and publishes it as a GitHub release:
+- **`protocol/`**: pure Kotlin/JVM, no Android dependencies. It holds the B-163 ECDH, channel framing, AES/CRC session cipher, auth handshake, service codecs, and the GDSP history fetch and parsers.
+- **`app/`**: the Android app. It holds the GATT client, `StrapManager`, `HistorySync`, Room storage, the Compose UI, and the exporters.
+- **`docs/protocol/`**: the clean-room specs. **`docs/algorithms/`**: how each score is computed.
 
-```bash
-git tag v1.0.1 && git push origin v1.0.1
-```
+### Releases
 
-The tag sets the version: `versionName` is `X.Y.Z` and `versionCode` is `X*10000 + Y*100 + Z`, so every release installs over the last one. Versions follow [semantic versioning](https://semver.org).
-
-Release signing reads `OPENSTRAP_KEYSTORE`, `OPENSTRAP_KEYSTORE_PASSWORD`, `OPENSTRAP_KEY_ALIAS` and `OPENSTRAP_KEY_PASSWORD` from the environment; CI gets them from repository secrets (the keystore as `OPENSTRAP_KEYSTORE_BASE64`). Without them, local release builds are signed with the debug key.
-
-## Layout
-
-- **`protocol/`**: a pure Kotlin/JVM module with no Android dependencies. It contains the B-163 ECDH, channel framing, AES/CRC session cipher, auth handshake, service codecs and the GDSP history fetch with its record parsers. A simulated strap tests it end to end.
-- **`app/`**: the Android app. It covers the coroutine GATT client, `StrapManager` (connection lifecycle), `HistorySync`, Room storage, the Compose UI, and the Health Connect and CSV exporters.
-- **`docs/protocol/`**: the clean-room specifications.
-- **`docs/algorithms/`**: how every score is computed; start with [`calculations.md`](docs/algorithms/calculations.md).
+CI ([`android.yml`](.github/workflows/android.yml)) tests and builds every push. Pushing a tag `vX.Y.Z` publishes a signed release, with `versionCode = X*10000 + Y*100 + Z`. The `OPENSTRAP_KEYSTORE*` and `OPENSTRAP_KEY_*` environment variables supply the signing key (repository secrets in CI). Without them, release builds use the debug key.
 
 ## License
 
-Dual-licensed under [MIT](LICENSE-MIT) or [Apache-2.0](LICENSE-APACHE), at your option. The fonts are licensed under the SIL OFL 1.1 ([licenses/OFL-Funnel.txt](licenses/OFL-Funnel.txt)).
+Dual-licensed under [MIT](LICENSE-MIT) or [Apache-2.0](LICENSE-APACHE), at your option. Fonts are under the SIL OFL 1.1 ([licenses/](licenses)).
 
 OpenStrap is not affiliated with Zepp Health or Amazfit.
-
-## Network use
-
-OpenStrap goes online only for your Zepp account and for firmware, and only when you ask it to. Health data is never uploaded.
-
-- **Sign in with Zepp** (on the pairing panel or the Firmware screen's Zepp account panel) opens Zepp's own sign-in page from watchface.zepp.com in an in-app browser. You type your email and password into Zepp's page; OpenStrap never sees or stores the password. After you sign in, OpenStrap reads the app token and user ID from that page's cookies and sends one request to Zepp's device list (`GET users/{userId}/devices` on `api-mifit*.zepp.com`, trying the regional hosts if the global one has nothing). From the reply it takes the Helio Strap's Bluetooth address and auth key and shows them for you to confirm. The token and user ID are saved on this phone for firmware checks. The browser's Zepp cookies are then cleared.
-- **Check for update** sends your Zepp app token, your user ID, and the strap's firmware version, hardware version and serial number to the update server you set. **Download** fetches the image from the URL that server returns.
-
-You can skip the sign-in and paste the auth key and token by hand instead.

@@ -11,9 +11,14 @@ A private, open-source companion app for the **Amazfit Helio Strap**, built as a
 - **Modern.** It is built with Kotlin, Jetpack Compose and Material 3, and has an always-dark "Glow" design built for OLED screens.
 - **Clean-room.** The protocol is implemented from written specs in [`docs/protocol/`](docs/protocol). Those specs were derived only from static analysis of the official app. No Gadgetbridge (AGPL) code was used.
 
-| Today | Recovery | Sleep | Activity |
-|---|---|---|---|
-| ![](docs/screenshots/today.png) | ![](docs/screenshots/recovery.png) | ![](docs/screenshots/sleep.png) | ![](docs/screenshots/activity.png) |
+<table>
+  <tr>
+    <td align="center"><img src="docs/screenshots/today.png" width="200" alt="Today"><br>Today</td>
+    <td align="center"><img src="docs/screenshots/recovery.png" width="200" alt="Recovery"><br>Recovery</td>
+    <td align="center"><img src="docs/screenshots/sleep.png" width="200" alt="Sleep"><br>Sleep</td>
+    <td align="center"><img src="docs/screenshots/activity.png" width="200" alt="Activity"><br>Activity</td>
+  </tr>
+</table>
 
 *Screenshots use the sample data that debug builds can generate.*
 

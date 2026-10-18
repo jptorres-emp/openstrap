@@ -2,7 +2,7 @@
 
 What the published evidence says about each part of OpenStrap's health model, and what we will change. The current model is in [recovery.md](recovery.md); constant names below match `Recovery.kt`.
 
-**Status: implementation steps 1–12 done on branch `evidence-review` (2026-10-18); [recovery.md](recovery.md) describes the model as built.** Not done: step 13 (personal weights, needs ≥ 6 weeks of check-ins), VO2max phase 2 (phone GPS), the FRIEND 2022 percentile band and fitness age (tables not yet transcribed from the primary paper; the FRIEND link below is the cardiovascular-disease report, not the healthy-adult standards), the optional personal sleep need, and BioCharge logging (not readable from the strap). The new weights have not been checked against a real-data backtest yet. Constants marked for review are settled at the strap calibration review on **2026-10-30** ([readiness-calibration.md](readiness-calibration.md)).
+**Status: implementation steps 1–12 done on branch `evidence-review` (2026-10-18), including the FRIEND 2022 band and fitness age (Kaminsky 2022 Table 3; bands at the reported 30th/50th/70th/90th percentiles); [recovery.md](recovery.md) describes the model as built.** Not done: step 13 (personal weights, needs ≥ 6 weeks of check-ins), VO2max phase 2 (phone GPS), the optional personal sleep need, and BioCharge logging (not readable from the strap). The new weights have not been checked against a real-data backtest yet. Constants marked for review are settled at the strap calibration review on **2026-10-30** ([readiness-calibration.md](readiness-calibration.md)).
 
 ## The short version
 
@@ -285,7 +285,7 @@ Jurca 2005 needs only sex, age, BMI, resting HR and one activity question. Its S
 
 * VO2max (METs) = 2.77·sex (m = 1, f = 0) − 0.10·age − 0.17·BMI − 0.03·RHR + SRPA (0–4) + 18.07; × 3.5 for ml/kg/min.
 * RHR = median of the last 7 nightly values (≥ 5 in 14 days). A sleeping RHR runs a few bpm below a seated one; at −0.03 METs/bpm that is small next to the SEE, so it's documented, not corrected.
-* Show ±1 SEE (≈ ±5 ml/kg/min) and a FRIEND 2022 percentile band, < 25 / 25–50 / 50–75 / 75–97.7 / ≥ 97.7 ([Kaminsky et al. 2022](https://pmc.ncbi.nlm.nih.gov/articles/PMC8751972)). Never a decimal. Recompute weekly.
+* Show ±1 SEE (≈ ±5 ml/kg/min) and a FRIEND 2022 percentile band, < 25 / 25–50 / 50–75 / 75–97.7 / ≥ 97.7 ([Kaminsky et al. 2022, Mayo Clin Proc 97(2):285–293](https://doi.org/10.1016/j.mayocp.2021.08.020), open access). Never a decimal. Recompute weekly. *As built:* the paper's Table 3 gives only the 10th–90th percentiles, so the bands use the nearest reported cuts, < 30 / 30–50 / 50–70 / 70–90 / ≥ 90 (treadmill, RER ≥ 1.0).
 * Withhold: < 5 nightly RHR in 14 days; height or weight missing or > 90 days old; activity question unanswered in 180 days; age outside 20–79; beta-blocker or pregnancy flag.
 * Before coding: verify the sex coding and SRPA weights against the Am J Prev Med 2005 full text (the weights may be non-integer: 0 / 0.32 / 1.06 / 1.76 / 3.03), and transcribe the FRIEND 2022 tables from the primary paper.
 * Phase 2, phone GPS: flat, steady 1-minute epochs (speed 1.0–4.5 m/s, accuracy ≤ 10 m, HR SD < 3 bpm over 3 min after ≥ 3 min warm-up). VO2 = 3.5 + 0.1·v (walk) or 0.2·v (run), v in m/min. Fit VO2 = a + b·HR (span ≥ 15 bpm, r² ≥ 0.7), extrapolate to HRmax, take the median of ≥ 3 sessions in 28 days. If it differs from Jurca by > 2 SEE, show both.

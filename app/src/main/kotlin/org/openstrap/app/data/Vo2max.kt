@@ -5,7 +5,8 @@ import org.openstrap.app.data.settings.UserProfile
 /**
  * A non-exercise VO2max estimate (docs/algorithms/evidence-review.md, "VO2max and fitness age"): Jurca et al. 2005
  * needs only sex, age, BMI, resting HR and one activity question. Its SEE is 1.45-1.97 METs, with no bias in an
- * independent older-adult sample (Mailey et al. 2010). Shown as a band, never a decimal. No biological age.
+ * independent older-adult sample (Mailey et al. 2010). Shown as a band, never a decimal, with a FRIEND 2022 percentile
+ * band and an optional fitness age. No biological age.
  */
 object Vo2max {
 
@@ -56,8 +57,11 @@ object Vo2max {
         val high: Int,
         /** The resting HR used: median of the last 7 nightly values. */
         val restingHr: Float,
-        /** FRIEND 2022 percentile band; null until the tables are transcribed (see [Friend]). */
+        /** FRIEND 2022 percentile band for the user's age and sex (see [Friend]). */
         val band: Friend.Band? = null,
+        /** Fitness age as a range (see [Friend.fitnessAge]); withheld with the estimate. */
+        val fitnessAge: IntRange? = null,
+        val sex: UserProfile.Sex? = null,
     )
 
     /** Why there is no estimate, in the order checked. */
@@ -94,46 +98,101 @@ object Vo2max {
         val mets = jurcaMets(sex == UserProfile.Sex.Male, age, bmi, rhr, level)
         val ml = mets * ML_PER_MET
         val see = SEE_METS * ML_PER_MET
-        return Estimate(Math.round(ml), Math.round(ml - see), Math.round(ml + see), rhr, Friend.band(ml, sex, age)) to null
+        return Estimate(
+            Math.round(ml), Math.round(ml - see), Math.round(ml + see), rhr,
+            band = Friend.band(ml, sex, age), fitnessAge = Friend.fitnessAge(ml, sex), sex = sex,
+        ) to null
     }
 
     /**
-     * FRIEND 2022 reference standards (Kaminsky et al., Mayo Clin Proc 2022;97(2):285-293, treadmill, apparently healthy
-     * adults) for the percentile band < 25 / 25-50 / 50-75 / 75-97.7 / ≥ 97.7 and for fitness age (the age at which the
-     * sex-specific 50th percentile equals the estimate).
+     * FRIEND 2022 reference standards: Kaminsky et al., "Updated Reference Standards for Cardiorespiratory Fitness
+     * Measured with Cardiopulmonary Exercise Testing", Mayo Clin Proc 2022;97(2):285-293, doi:10.1016/j.mayocp.2021.08.020.
+     * Apparently healthy US adults, treadmill CPX, RER ≥ 1.0. Jurca's equation was validated against treadmill VO2max, so
+     * the treadmill rows are the ones used.
      *
-     * TODO: transcribe the treadmill percentile tables from the primary paper. They could not be verified here: the
-     * evidence review's link (PMC8751972) is the FRIEND report by cardiovascular-disease category (Peterman et al., JAHA
-     * 2022), not the healthy-adult standards, and no value is entered from memory. Until then [band] and [fitnessAge]
-     * return null and nothing is shown.
+     * The paper reports only the 10th, 20th … 90th percentiles, so the bands use the nearest reported cuts,
+     * < 30 / 30-50 / 50-70 / 70-90 / ≥ 90, in place of the evidence review's 25 / 75 / 97.7, which would need
+     * interpolation or a distribution assumption.
      */
     object Friend {
-        enum class Band(val label: String) { Below25("Below the 25th percentile"), P25to50("25th–50th"), P50to75("50th–75th"), P75to97("75th–97.7th"), Top("Top 2.3 %") }
+        enum class Band(val label: String) {
+            Below30("Below the 30th percentile"),
+            P30to50("30th–50th percentile"),
+            P50to70("50th–70th percentile"),
+            P70to90("70th–90th percentile"),
+            Top10("Top 10 %"),
+        }
 
-        /** Age-decade rows (20-29 … 70-79): percentiles 25, 50, 75, 97.7 in ml/kg/min. Empty until transcribed. */
-        val MEN: Map<IntRange, FloatArray> = emptyMap()
-        val WOMEN: Map<IntRange, FloatArray> = emptyMap()
+        /** The percentiles in each row, ascending. */
+        val PERCENTILES = intArrayOf(10, 20, 30, 40, 50, 60, 70, 80, 90)
 
+        /*
+         * Kaminsky et al. 2022, Table 3 ("CRF Percentiles for the FRIEND Cohort by Age Group for Treadmill and Cycle
+         * Ergometer CPX ... Using an Inclusion Criterion of RER ≥ 1.0"), treadmill section, copied from the published
+         * table (Mayo Clin Proc full text, open access). ml/kg/min; each row is the 10th … 90th percentile.
+         */
+        val MEN: Map<IntRange, FloatArray> = linkedMapOf(
+            20..29 to floatArrayOf(28.6f, 35.2f, 40.0f, 43.6f, 46.5f, 49.0f, 51.9f, 54.5f, 58.6f),
+            30..39 to floatArrayOf(24.9f, 29.8f, 33.5f, 37.0f, 39.7f, 43.4f, 46.4f, 50.0f, 55.5f),
+            40..49 to floatArrayOf(22.1f, 26.7f, 29.7f, 32.4f, 35.3f, 37.9f, 40.9f, 45.2f, 50.8f),
+            50..59 to floatArrayOf(18.6f, 22.2f, 24.5f, 26.9f, 29.2f, 31.8f, 34.3f, 38.3f, 43.4f),
+            60..69 to floatArrayOf(15.8f, 18.5f, 20.7f, 22.8f, 24.6f, 26.5f, 28.7f, 32.0f, 37.1f),
+            70..79 to floatArrayOf(13.6f, 15.9f, 17.3f, 19.1f, 20.6f, 22.2f, 23.8f, 25.9f, 29.4f),
+            80..89 to floatArrayOf(12.9f, 14.8f, 16.1f, 16.6f, 17.6f, 18.4f, 20.0f, 21.4f, 22.8f),
+        )
+        val WOMEN: Map<IntRange, FloatArray> = linkedMapOf(
+            20..29 to floatArrayOf(22.5f, 27.2f, 30.8f, 34.0f, 36.6f, 39.0f, 41.8f, 44.8f, 49.0f),
+            30..39 to floatArrayOf(18.6f, 21.9f, 24.2f, 26.4f, 28.3f, 31.0f, 33.6f, 37.0f, 42.1f),
+            40..49 to floatArrayOf(17.2f, 19.7f, 21.8f, 23.9f, 25.7f, 27.7f, 30.0f, 33.0f, 37.8f),
+            50..59 to floatArrayOf(16.5f, 18.5f, 20.1f, 21.5f, 22.9f, 24.6f, 26.3f, 28.4f, 32.4f),
+            60..69 to floatArrayOf(13.4f, 15.4f, 17.0f, 18.3f, 19.6f, 20.9f, 22.4f, 24.3f, 27.3f),
+            70..79 to floatArrayOf(12.3f, 14.0f, 15.2f, 16.2f, 17.2f, 18.3f, 19.6f, 20.8f, 22.8f),
+            80..89 to floatArrayOf(11.4f, 12.6f, 13.7f, 14.7f, 15.4f, 16.0f, 17.3f, 18.4f, 20.8f),
+        )
+
+        private const val P30 = 2
+        private const val P50 = 4
+        private const val P70 = 6
+        private const val P90 = 8
+
+        private fun table(sex: UserProfile.Sex) = if (sex == UserProfile.Sex.Male) MEN else WOMEN
+
+        /** The band for [vo2] (ml/kg/min) against the row for the user's age decade; null outside 20-89. */
         fun band(vo2: Float, sex: UserProfile.Sex, age: Int): Band? {
-            val row = (if (sex == UserProfile.Sex.Male) MEN else WOMEN).entries.firstOrNull { age in it.key }?.value ?: return null
+            val row = table(sex).entries.firstOrNull { age in it.key }?.value ?: return null
             return when {
-                vo2 < row[0] -> Band.Below25
-                vo2 < row[1] -> Band.P25to50
-                vo2 < row[2] -> Band.P50to75
-                vo2 < row[3] -> Band.P75to97
-                else -> Band.Top
+                vo2 < row[P30] -> Band.Below30
+                vo2 < row[P50] -> Band.P30to50
+                vo2 < row[P70] -> Band.P50to70
+                vo2 < row[P90] -> Band.P70to90
+                else -> Band.Top10
             }
         }
 
-        /** Fitness age, clamped 20-80 and shown as a range of about ±10 years; null until the tables exist. */
-        fun fitnessAge(vo2: Float, sex: UserProfile.Sex): IntRange? {
-            val rows = (if (sex == UserProfile.Sex.Male) MEN else WOMEN).entries.sortedBy { it.key.first }
-            if (rows.isEmpty()) return null
-            // The decade whose median is closest to the estimate, by its midpoint age.
-            val mid = rows.minBy { kotlin.math.abs(it.value[1] - vo2) }.key.let { (it.first + it.last) / 2 }
-            return (mid - FITNESS_AGE_SPREAD).coerceAtLeast(20)..(mid + FITNESS_AGE_SPREAD).coerceAtMost(80)
+        /**
+         * Fitness age: the age at which the sex-specific 50th percentile equals [vo2]. The medians are placed at each
+         * decade's midpoint (25, 35 … 85) and joined linearly; they fall with every decade in Table 3. Shown as a range
+         * of ±[FITNESS_AGE_SPREAD] years, clamped to 20-80.
+         */
+        fun fitnessAge(vo2: Float, sex: UserProfile.Sex): IntRange {
+            val pts = table(sex).entries.map { (it.key.first + it.key.last + 1) / 2f to it.value[P50] }
+            val age = when {
+                vo2 >= pts.first().second -> pts.first().first
+                vo2 <= pts.last().second -> pts.last().first
+                else -> pts.zipWithNext().first { (a, b) -> vo2 <= a.second && vo2 >= b.second }.let { (a, b) ->
+                    a.first + (a.second - vo2) / (a.second - b.second) * (b.first - a.first)
+                }
+            }
+            val centre = Math.round(age).coerceIn(FITNESS_AGE_MIN, FITNESS_AGE_MAX)
+            return (centre - FITNESS_AGE_SPREAD).coerceAtLeast(FITNESS_AGE_MIN)..(centre + FITNESS_AGE_SPREAD).coerceAtMost(FITNESS_AGE_MAX)
         }
 
+        /** "typical of a woman aged about 35–55". */
+        fun fitnessAgeText(range: IntRange, sex: UserProfile.Sex): String =
+            "typical of a ${if (sex == UserProfile.Sex.Male) "man" else "woman"} aged about ${range.first}–${range.last}"
+
         const val FITNESS_AGE_SPREAD = 10
+        const val FITNESS_AGE_MIN = 20
+        const val FITNESS_AGE_MAX = 80
     }
 }

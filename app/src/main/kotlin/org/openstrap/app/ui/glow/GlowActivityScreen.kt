@@ -355,7 +355,8 @@ private fun FitnessPanel(r: RecoveryResult?, workouts: List<WorkoutAnalysis>, ef
                 Note(
                     "From your age, sex, BMI, resting heart rate (${est.restingHr.toInt()} bpm, while asleep) and usual activity " +
                         "(Jurca et al. 2005). Typical error is about ±5 ml/kg/min. Updated weekly." +
-                        (est.band?.let { " ${it.label} for your age and sex (FRIEND)." } ?: ""),
+                        (est.band?.let { " ${it.label} for your age and sex (FRIEND 2022, treadmill)." } ?: "") +
+                        (est.fitnessAge?.let { a -> est.sex?.let { " That's ${org.openstrap.app.data.Vo2max.Friend.fitnessAgeText(a, it)}." } } ?: ""),
                 )
             } else r.vo2maxWithheld?.let { Note("Estimated fitness: ${it.reason}") }
         }

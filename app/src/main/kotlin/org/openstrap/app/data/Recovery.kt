@@ -36,8 +36,16 @@ object Recovery {
         val strapScore: Int? = null,
         /** Mean RMSSD during the sleep, ms. */
         val hrv: Float? = null,
-        /** Lowest 30-minute average heart rate during the sleep, bpm. */
+        /** Lowest 30-minute average heart rate during the sleep, bpm (`rhr_n`). */
         val restingHr: Float? = null,
+        /** Mean of the per-minute heart rate during the sleep, bpm (`rhr_mean_sleep`). */
+        val rhrMeanSleep: Float? = null,
+        /** 10th percentile of the per-minute heart rate during the sleep, bpm (`rhr_p10`). */
+        val rhrP10: Float? = null,
+        /** RMSSD samples behind [hrv], after gating to [HRV_MIN_MS]..[HRV_MAX_MS]. */
+        val hrvSamples: Int = 0,
+        /** Minutes of heart rate in [HR_MIN_BPM]..[HR_MAX_BPM] during the sleep. */
+        val hrMinutes: Int = 0,
         /** When the lowest 10-minute heart rate happened (epoch seconds). */
         val nadirTime: Long? = null,
         val skinTemperature: Float? = null,
@@ -595,6 +603,22 @@ object Recovery {
             t += 60
         }
         return out
+    }
+
+    /** Gates for a nightly sample: RMSSD outside 5-200 ms or heart rate outside 30-220 bpm is treated as artefact. */
+    const val HRV_MIN_MS = 5
+    const val HRV_MAX_MS = 200
+    const val HR_MIN_BPM = 30
+    const val HR_MAX_BPM = 220
+
+    /** The [p]-th percentile (0-1) of [values] by linear interpolation; null when empty. */
+    fun percentile(values: List<Float>, p: Float): Float? {
+        if (values.isEmpty()) return null
+        val sorted = values.sorted()
+        val pos = p.coerceIn(0f, 1f) * (sorted.size - 1)
+        val lo = pos.toInt()
+        val hi = min(lo + 1, sorted.size - 1)
+        return sorted[lo] + (sorted[hi] - sorted[lo]) * (pos - lo)
     }
 
     /** Lowest rolling-[windowMinutes] average in [series], with the time at its centre. */

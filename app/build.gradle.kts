@@ -61,6 +61,14 @@ ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
 }
 
+// The backtest harness (BacktestReplay, docs/algorithms/readiness-calibration.md):
+// ./gradlew testDebugUnitTest --tests '*BacktestReplay*' -Pbacktest=/path/openstrap.db [-PbacktestProfile=1990,Male]
+tasks.withType<Test>().configureEach {
+    listOf("backtest", "backtestOut", "backtestProfile").forEach { name ->
+        providers.gradleProperty(name).orNull?.let { systemProperty("openstrap.$name", it) }
+    }
+}
+
 dependencies {
     implementation(project(":protocol"))
 

@@ -22,6 +22,8 @@ data class RecoveryResult(
     /** True when max HR came from the user's age rather than a fallback. */
     val maxHrFromAge: Boolean,
     val stressThreshold: Recovery.StressThreshold,
+    /** The main sleep that ended on [date], as the model saw it; null without one. */
+    val tonight: Recovery.Night? = null,
 )
 
 /** Loads what [Recovery] needs from the database and runs it. All work happens off the main thread by the caller. */
@@ -109,7 +111,7 @@ class RecoveryEngine(private val dao: HealthDao) {
         val charge = Recovery.charge(minutes, params, day.from..day.to, start = 50f, mainSleepEnd = tonight?.end)
 
         val chronic = if (loads.size >= 7) Recovery.ewmaLoads(loads).second else null
-        return RecoveryResult(date, readiness, charge, trend, todayLoad, chronic, restingHr, maxHr, age != null, stressThreshold)
+        return RecoveryResult(date, readiness, charge, trend, todayLoad, chronic, restingHr, maxHr, age != null, stressThreshold, tonight)
     }
 
     private fun night(
@@ -123,7 +125,9 @@ class RecoveryEngine(private val dao: HealthDao) {
         osa: org.openstrap.app.data.db.OsaResultRow?,
     ): Recovery.Night {
         val inSleep = { t: Long -> t in s.start..s.end }
-        val sleepHr = hr.filter { inSleep(it.first) }
+        val sleepHr = hr.filter { inSleep(it.first) && it.second in Recovery.HR_MIN_BPM..Recovery.HR_MAX_BPM }
+        val sleepBpm = sleepHr.map { it.second.toFloat() }
+        val rmssd = hrv.filter { inSleep(it.timestamp) && it.milliseconds in Recovery.HRV_MIN_MS..Recovery.HRV_MAX_MS }.map { it.milliseconds.toFloat() }
         val asleep = listOfNotNull(s.deepMinutes, s.lightMinutes, s.remMinutes).takeIf { it.isNotEmpty() }?.sum()
             ?: (((s.end - s.start) / 60).toInt() - (s.awakeMinutes ?: 0))
         val skinValues = skin.filter { inSleep(it.timestamp) }.map { it.celsius }
@@ -137,8 +141,12 @@ class RecoveryEngine(private val dao: HealthDao) {
             deepMinutes = s.deepMinutes,
             remMinutes = s.remMinutes,
             strapScore = s.score,
-            hrv = hrv.filter { inSleep(it.timestamp) && it.milliseconds in 5..250 }.map { it.milliseconds.toFloat() }.mean(),
+            hrv = rmssd.mean(),
             restingHr = Recovery.lowestAverage(sleepHr, 30)?.second,
+            rhrMeanSleep = sleepBpm.mean(),
+            rhrP10 = Recovery.percentile(sleepBpm, 0.10f),
+            hrvSamples = rmssd.size,
+            hrMinutes = sleepHr.size,
             nadirTime = Recovery.lowestAverage(sleepHr, 10)?.first,
             // A handful of readings doesn't describe a night; the strap logs one a minute when worn.
             skinTemperature = skinValues.takeIf { it.size >= 30 }?.median(),

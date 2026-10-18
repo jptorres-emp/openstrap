@@ -336,4 +336,38 @@ interface HealthDao {
 
     @Query("SELECT MAX(`end`) FROM sleep_session")
     fun latestSleepEnd(): Flow<Long?>
+
+    // Morning check-in, day tags and OpenStrap's own nightly inputs (evidence-review.md, implementation step 1).
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertCheckIns(rows: List<CheckInRow>)
+
+    @Query("DELETE FROM check_in WHERE day = :day")
+    suspend fun deleteCheckIn(day: Long)
+
+    @Query("SELECT * FROM check_in WHERE day = :day")
+    fun checkIn(day: Long): Flow<CheckInRow?>
+
+    @Query("SELECT * FROM check_in WHERE day BETWEEN :from AND :to ORDER BY day")
+    suspend fun checkInsOnce(from: Long, to: Long): List<CheckInRow>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertDayTags(rows: List<DayTagRow>)
+
+    @Query("DELETE FROM day_tag WHERE day = :day AND tag = :tag")
+    suspend fun deleteDayTag(day: Long, tag: String)
+
+    @Query("SELECT * FROM day_tag WHERE day = :day ORDER BY tag")
+    fun dayTags(day: Long): Flow<List<DayTagRow>>
+
+    @Query("SELECT * FROM day_tag WHERE day BETWEEN :from AND :to ORDER BY day, tag")
+    suspend fun dayTagsOnce(from: Long, to: Long): List<DayTagRow>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertNightMetrics(rows: List<NightMetricsRow>)
+
+    @Query("SELECT * FROM night_metrics WHERE day BETWEEN :from AND :to ORDER BY day")
+    suspend fun nightMetricsOnce(from: Long, to: Long): List<NightMetricsRow>
+
+    @Query("SELECT * FROM strap_readiness WHERE day BETWEEN :from AND :to ORDER BY day")
+    suspend fun strapReadinessOnce(from: Long, to: Long): List<StrapReadinessRow>
 }

@@ -176,6 +176,8 @@ private fun AppRoot(container: AppContainer) {
     val profile by deviceVm.profile.collectAsStateWithLifecycle()
     val day by dayVm.state.collectAsStateWithLifecycle()
     val strapReadiness by remember(day.dayStart) { container.database.healthDao().strapReadiness(day.dayStart) }.collectAsStateWithLifecycle(null)
+    val checkIn by remember(day.date) { container.health.checkIn(day.date) }.collectAsStateWithLifecycle(null)
+    val dayTags by remember(day.date) { container.health.tags(day.date) }.collectAsStateWithLifecycle(emptySet())
     val daysWithData by dayVm.daysWithData.collectAsStateWithLifecycle()
     val picker = DayPicker(daysWithData, dayVm::select)
     val live by container.strap.liveHeartRate.collectAsStateWithLifecycle()
@@ -400,6 +402,9 @@ private fun AppRoot(container: AppContainer) {
                             org.openstrap.app.ui.glow.GlowRecoveryScreen(
                                 day, recovery, strapReadiness, history, battery, charging, dayVm::previousDay, dayVm::nextDay, picker, padding,
                                 onOpenMetric = { recoveryStack = listOf(Detail.OfMetric(it)) },
+                                checkIn = checkIn?.feeling, tags = dayTags,
+                                onCheckIn = { v -> scope.launch { container.health.saveCheckIn(day.date, v) } },
+                                onTag = { t, on -> scope.launch { container.health.setTag(day.date, t, on) } },
                             )
                         }
                     }

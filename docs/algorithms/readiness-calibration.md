@@ -44,6 +44,29 @@ adb shell run-as org.openstrap.app cat databases/openstrap.db-wal > openstrap.db
 sqlite3 openstrap.db "SELECT date(day, 'unixepoch', 'localtime'), score, hrvScore, restingHrScore, skinTemperatureScore, breathingScore, sleepHrv, sleepRestingHr FROM strap_readiness ORDER BY day"
 ```
 
+## Check-in, tags and nightly inputs
+
+Agreement with the strap is agreement with another unvalidated score, so the review also needs a within-user test ([evidence-review.md](evidence-review.md), implementation step 1):
+
+* **Morning check-in** (Recovery screen): how you feel, 1 (poor) to 5 (great). Table `check_in`, one row per local day.
+* **Tags** (same panel): alcohol, travel, vaccination, hard session, feeling unwell (stored as `sick`). Table `day_tag`, one row per day and tag.
+* **OpenStrap's own nightly inputs**, logged each time the day's score is computed. Table `night_metrics`: `hrvLn` (`hrv_n`, ln of the mean gated RMSSD, 5–200 ms), `rhrLowest30` (`rhr_n`), `rhrMeanSleep`, `rhrP10`, the sample counts, and the strap's `sleepHrv` / `sleepRestingHr` for the same night.
+
+All three are in the CSV backup (`check_in.csv`, `day_tag.csv`, `night_metrics.csv`).
+
+## Backtest harness
+
+`Backtest` (`app/src/main/kotlin/org/openstrap/app/data/Backtest.kt`) replays `RecoveryEngine` one day at a time and writes one CSV line per day: our Readiness and every contributor, the nightly inputs, the strap's score and parts, the check-in and the tags. Each day only sees data up to its own end, as the phone would have.
+
+Run it on a pulled database (with its `-wal` beside it) or on a CSV backup zip:
+
+```bash
+./gradlew testDebugUnitTest --tests '*BacktestTest*replay*' \
+  -Pbacktest=/path/to/openstrap.db -PbacktestProfile=1990,Male -PbacktestOut=/tmp/backtest.csv
+```
+
+The database is copied first, so Room's migration never touches the original. Without `-PbacktestOut` the CSV goes to `app/build/backtest.csv`. The days use the machine's time zone, so run it in the zone the data was recorded in.
+
 ## When revisiting
 
 1. Check that there are at least 10–14 days of rows and that OpenStrap's baselines have finished learning.

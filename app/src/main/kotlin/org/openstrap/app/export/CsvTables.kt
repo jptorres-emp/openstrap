@@ -4,12 +4,15 @@ import kotlinx.coroutines.flow.first
 import org.openstrap.app.data.db.ActivityExtendedMinute
 import org.openstrap.app.data.db.ActivityMinute
 import org.openstrap.app.data.db.BreathRate
+import org.openstrap.app.data.db.CheckInRow
 import org.openstrap.app.data.db.DailyMaxHr
+import org.openstrap.app.data.db.DayTagRow
 import org.openstrap.app.data.db.HealthAlertRow
 import org.openstrap.app.data.db.HealthDao
 import org.openstrap.app.data.db.HeartRateSample
 import org.openstrap.app.data.db.HrvSample
 import org.openstrap.app.data.db.HrvSdnnSample
+import org.openstrap.app.data.db.NightMetricsRow
 import org.openstrap.app.data.db.OsaEventRow
 import org.openstrap.app.data.db.OsaResultRow
 import org.openstrap.app.data.db.PaiSample
@@ -236,4 +239,27 @@ val CSV_TABLES: List<CsvTable<*>> = listOf(
         Key("health_alert", "timestamp", "epoch"),
         { d, f, t -> d.healthAlerts(f, t).first() }, { listOf(iso(it.timestamp), it.timestamp, it.type, it.value) },
         { HealthAlertRow(it.long("epoch"), it.int("type"), it.long("value")) }, { d, r -> d.insertHealthAlerts(r) }),
+    // What the user entered: the morning check-in and day tags can't be synced again from the strap.
+    CsvTable("check_in.csv", "day,day_epoch,feeling,updated_epoch",
+        Key("check_in", "day", "day_epoch"),
+        { d, f, t -> d.checkInsOnce(f, t) }, { listOf(iso(it.day), it.day, it.feeling, it.updatedAt) },
+        { CheckInRow(it.long("day_epoch"), it.int("feeling"), it.longOrNull("updated_epoch") ?: it.long("day_epoch")) },
+        { d, r -> d.insertCheckIns(r) }),
+    CsvTable("day_tag.csv", "day,day_epoch,tag",
+        Key("day_tag", "day", "day_epoch"),
+        { d, f, t -> d.dayTagsOnce(f, t) }, { listOf(iso(it.day), it.day, it.tag) },
+        { DayTagRow(it.long("day_epoch"), it.string("tag")) }, { d, r -> d.insertDayTags(r) }),
+    CsvTable("night_metrics.csv", "day,day_epoch,updated_epoch,hrv_ln,hrv_samples,rhr_lowest30,rhr_mean_sleep,rhr_p10,hr_minutes,strap_hrv,strap_resting_hr",
+        Key("night_metrics", "day", "day_epoch"),
+        { d, f, t -> d.nightMetricsOnce(f, t) },
+        {
+            listOf(iso(it.day), it.day, it.updatedAt, it.hrvLn, it.hrvSamples, it.rhrLowest30, it.rhrMeanSleep, it.rhrP10, it.hrMinutes,
+                it.strapHrv, it.strapRestingHr)
+        },
+        {
+            NightMetricsRow(it.long("day_epoch"), it.long("updated_epoch"), it.floatOrNull("hrv_ln"), it.int("hrv_samples"),
+                it.floatOrNull("rhr_lowest30"), it.floatOrNull("rhr_mean_sleep"), it.floatOrNull("rhr_p10"), it.int("hr_minutes"),
+                it.intOrNull("strap_hrv"), it.intOrNull("strap_resting_hr"))
+        },
+        { d, r -> d.insertNightMetrics(r) }),
 )

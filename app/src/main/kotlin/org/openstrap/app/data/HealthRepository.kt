@@ -13,6 +13,8 @@ import org.openstrap.app.data.db.OsaEventRow
 import org.openstrap.app.data.db.OsaResultRow
 import org.openstrap.app.data.db.SleepSpo2Sample
 import org.openstrap.app.data.db.BreathRate
+import org.openstrap.app.data.db.CheckInRow
+import org.openstrap.app.data.db.DayTagRow
 import org.openstrap.app.data.db.HealthDao
 import org.openstrap.app.data.db.HeartRateSample
 import org.openstrap.app.data.db.HrvSample
@@ -47,9 +49,39 @@ data class DayWindow(val from: Long, val to: Long) {
 class HealthRepository(private val dao: HealthDao) {
     private val recoveryEngine = RecoveryEngine(dao)
 
-    /** Readiness and charge for [date]; heavy, so call it off the main thread. */
-    suspend fun recovery(date: LocalDate, profile: org.openstrap.app.data.settings.UserProfile): RecoveryResult =
-        recoveryEngine.compute(date, profile)
+    /**
+     * Readiness and charge for [date]; heavy, so call it off the main thread. Also logs the night's own inputs next to
+     * the strap's ([NightMetricsRow]) for the calibration review.
+     */
+    suspend fun recovery(date: LocalDate, profile: org.openstrap.app.data.settings.UserProfile): RecoveryResult {
+        val r = recoveryEngine.compute(date, profile)
+        r.tonight?.let { logNight(it) }
+        return r
+    }
+
+    private suspend fun logNight(n: Recovery.Night) {
+        val strap = dao.strapReadinessOnce(n.day, n.day).firstOrNull()
+        dao.insertNightMetrics(listOf(NightMetrics.row(n, strap, System.currentTimeMillis() / 1000)))
+    }
+
+    /** The morning check-in for [date], 1-5, or null before the user answered. */
+    fun checkIn(date: LocalDate, zone: ZoneId = ZoneId.systemDefault()): Flow<CheckInRow?> = dao.checkIn(DayWindow.of(date, zone).from)
+
+    /** Saves the check-in for [date]; null clears it. */
+    suspend fun saveCheckIn(date: LocalDate, feeling: Int?, zone: ZoneId = ZoneId.systemDefault()) {
+        val day = DayWindow.of(date, zone).from
+        if (feeling == null) dao.deleteCheckIn(day)
+        else dao.insertCheckIns(listOf(CheckInRow(day, feeling.coerceIn(CheckIn.MIN, CheckIn.MAX), System.currentTimeMillis() / 1000)))
+    }
+
+    /** Keys of the [DayTag]s set for [date]. */
+    fun tags(date: LocalDate, zone: ZoneId = ZoneId.systemDefault()): Flow<Set<String>> =
+        dao.dayTags(DayWindow.of(date, zone).from).map { rows -> rows.mapTo(LinkedHashSet()) { it.tag } }
+
+    suspend fun setTag(date: LocalDate, tag: DayTag, on: Boolean, zone: ZoneId = ZoneId.systemDefault()) {
+        val day = DayWindow.of(date, zone).from
+        if (on) dao.insertDayTags(listOf(DayTagRow(day, tag.key))) else dao.deleteDayTag(day, tag.key)
+    }
 
     /** Emits whenever new heart-rate, stress or sleep data lands, so derived scores can refresh. */
     fun changes(): Flow<Unit> = kotlinx.coroutines.flow.combine(dao.latestHeartRateTime(), dao.latestStressTime(), dao.latestSleepEnd()) { _, _, _ -> }

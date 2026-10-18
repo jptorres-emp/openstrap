@@ -277,3 +277,48 @@ data class DailyAggregate(
 
 /** The day's last PAI reading: what the strap reported for that day and the 7-day total. */
 data class DailyPai(val day: String, val daily: Float, val total: Float, val latest: Long)
+
+/**
+ * The morning check-in: how the user feels, 1 (poor) to 5 (great), for the local day [day]. The only within-user
+ * ground truth the Readiness score can be tested against (docs/algorithms/evidence-review.md, "Validity").
+ */
+@Entity(tableName = "check_in")
+data class CheckInRow(
+    /** Local midnight of the day, epoch seconds. */
+    @PrimaryKey val day: Long,
+    val feeling: Int,
+    val updatedAt: Long,
+)
+
+/** Something the user said happened on [day] that can move body signals: see `DayTag` for the keys. */
+@Entity(tableName = "day_tag", primaryKeys = ["day", "tag"])
+data class DayTagRow(
+    /** Local midnight of the day, epoch seconds. */
+    val day: Long,
+    val tag: String,
+)
+
+/**
+ * OpenStrap's own nightly inputs, logged next to the strap's for the same night, so the strap calibration review can
+ * compare definitions (evidence-review.md, "The strap's own nightly HRV and resting HR"). Recomputable from the synced
+ * data, but kept so a later change of definition doesn't rewrite what was seen at the time.
+ */
+@Entity(tableName = "night_metrics")
+data class NightMetricsRow(
+    /** Local midnight of the morning the sleep ended. */
+    @PrimaryKey val day: Long,
+    val updatedAt: Long,
+    /** `hrv_n`: ln(mean of the gated RMSSD samples during sleep). */
+    val hrvLn: Float?,
+    val hrvSamples: Int,
+    /** `rhr_n`: lowest 30-minute window mean during sleep. */
+    val rhrLowest30: Float?,
+    /** Mean of per-minute sleep heart rate. */
+    val rhrMeanSleep: Float?,
+    /** 10th percentile of per-minute sleep heart rate. */
+    val rhrP10: Float?,
+    val hrMinutes: Int,
+    /** The strap's own values for the same night (strap_readiness), when it reported them. */
+    val strapHrv: Int?,
+    val strapRestingHr: Int?,
+)

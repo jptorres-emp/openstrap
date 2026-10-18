@@ -1,6 +1,7 @@
 package org.openstrap.app.ui.glow
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -27,6 +28,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.unit.dp
+import org.openstrap.app.data.CheckIn
+import org.openstrap.app.data.DayTag
 import org.openstrap.app.data.History
 import org.openstrap.app.data.Recovery
 import org.openstrap.app.data.RecoveryResult
@@ -59,6 +62,11 @@ fun GlowRecoveryScreen(
     picker: DayPicker,
     contentPadding: PaddingValues,
     onOpenMetric: (Metric) -> Unit,
+    /** The morning check-in (1-5) and the day's tags, for the calibration review; see [CheckInPanel]. */
+    checkIn: Int? = null,
+    tags: Set<String> = emptySet(),
+    onCheckIn: (Int?) -> Unit = {},
+    onTag: (DayTag, Boolean) -> Unit = { _, _ -> },
 ) {
     val list = rememberLazyListState()
     val signals = rememberSignals(state, history)
@@ -76,6 +84,7 @@ fun GlowRecoveryScreen(
             if (ready.strainAlert) right { StrainPanel(ready) }
             left { ChargeCard(r.charge, state.dayStart..state.dayEnd) }
             if (r.charge.latest != null) left { ChargeFlowPanel(r.charge, r.stressThreshold) }
+            right { CheckInPanel(checkIn, tags, onCheckIn, onTag) }
             if (ready.contributors.isNotEmpty()) right { ContributorsPanel(ready) }
             right { SignalsPanel(signals, onOpenMetric) }
             full { HowItWorksPanel(strapReadiness, ready.score) }
@@ -141,6 +150,50 @@ private fun StrainPanel(ready: Recovery.Readiness) {
                 "OpenStrap isn't a medical device; see a doctor if you feel unwell.",
             color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodyMedium,
         )
+    }
+}
+
+/**
+ * The morning check-in: how you feel, 1 to 5, and what happened that can move body signals. It is the only
+ * within-user test of the score (evidence-review.md), so it asks once a day and never changes the score itself.
+ */
+@Composable
+private fun CheckInPanel(feeling: Int?, tags: Set<String>, onCheckIn: (Int?) -> Unit, onTag: (DayTag, Boolean) -> Unit) {
+    DotPanel {
+        DotHeader("Morning check-in", trailing = feeling?.let { CheckIn.label(it) })
+        Text("How do you feel this morning?", color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodyMedium)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+            (CheckIn.MIN..CheckIn.MAX).forEach { v ->
+                ChoicePill("$v", selected = feeling == v, Modifier.weight(1f)) { onCheckIn(if (feeling == v) null else v) }
+            }
+        }
+        Note("1 is ${CheckIn.label(CheckIn.MIN).lowercase()}, 5 is ${CheckIn.label(CheckIn.MAX).lowercase()}.")
+        DotDivider()
+        Text("Anything that could move your signals?", color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodyMedium)
+        DayTag.entries.chunked(3).forEach { row ->
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                row.forEach { t ->
+                    val on = t.key in tags
+                    ChoicePill(t.label, selected = on, Modifier.weight(1f)) { onTag(t, !on) }
+                }
+                repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
+            }
+        }
+    }
+}
+
+/** A glass pill that can be switched on, filled in white when it is. */
+@Composable
+private fun ChoicePill(text: String, selected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    val shape = androidx.compose.foundation.shape.RoundedCornerShape(50)
+    androidx.compose.foundation.layout.Box(
+        modifier
+            .let { if (selected) it.background(Color.White.copy(alpha = 0.85f), shape) else it }
+            .glass(shape, onClick)
+            .padding(vertical = 8.dp, horizontal = 6.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(text, color = if (selected) Color.Black else Color.White, style = MaterialTheme.typography.labelLarge, maxLines = 1)
     }
 }
 

@@ -97,7 +97,7 @@ fun ChargeCard(
             LegendDot("Sleep", STATE_COLORS.getValue(Recovery.State.Sleep))
             LegendDot("Calm", STATE_COLORS.getValue(Recovery.State.Relax))
             LegendDot("Active", STATE_COLORS.getValue(Recovery.State.Exercise))
-            LegendDot("Stress", STATE_COLORS.getValue(Recovery.State.Stress))
+            LegendDot("Physiological stress", STATE_COLORS.getValue(Recovery.State.Stress))
         }
     }
 }

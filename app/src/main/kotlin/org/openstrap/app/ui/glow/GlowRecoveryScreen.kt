@@ -283,7 +283,7 @@ private fun ChargeFlowPanel(c: Recovery.ChargeDay, threshold: Recovery.StressThr
         val total = maxOf(c.recharged, c.drainedExercise + c.drainedStress + c.drainedLiving, 1f)
         FlowRow("Sleep and calm rest", signed(c.recharged, +1), c.recharged / total, MetricColors.good)
         FlowRow("Movement and exercise", signed(c.drainedExercise, -1), c.drainedExercise / total, MetricColors.steps)
-        FlowRow("Stress", signed(c.drainedStress, -1), c.drainedStress / total, MetricColors.stress)
+        FlowRow("Physiological stress (estimate)", signed(c.drainedStress, -1), c.drainedStress / total, MetricColors.stress)
         FlowRow("Being awake", signed(c.drainedLiving, -1), c.drainedLiving / total, MetricColors.sleepLight)
         if (c.highest != null && c.lowest != null) Note("Highest ${c.highest.toInt()} · lowest ${c.lowest.toInt()} this day")
         Note(Narrative.stressThreshold(threshold))

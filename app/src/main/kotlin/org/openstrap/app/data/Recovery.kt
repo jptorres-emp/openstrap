@@ -742,6 +742,8 @@ object Recovery {
      * until [stressThreshold] has enough of the user's own readings.
      */
     const val STRESS_FROM = 60
+    /** Stress drains only after this many consecutive minutes at or above the threshold; a blip is rest. */
+    const val STRESS_GATE_MINUTES = 3
     const val RELAX_BELOW = 25
     /** Firstbeat's intensity bands, as heart-rate reserve (≈ %VO2 reserve, Swain & Leutholtz 1997). */
     const val ACTIVITY_HRR = 0.20f
@@ -781,8 +783,11 @@ object Recovery {
         val hrvFactor = params.hrvScore?.let { (0.75f + 0.25f * it / 80f).coerceIn(0.6f, 1.1f) } ?: 1f
         val nightRest = params.nightRestingHr ?: params.restingHr
         var anchored = false
+        var stressRun = 0
 
         for (m in minutes) {
+            // Consecutive awake minutes at or above the threshold: stress drains only from the third.
+            stressRun = if (m.sleepStage == null && m.stress != null && m.stress >= params.stressFrom) stressRun + 1 else 0
             val hr = m.hr
             val x = hr?.let { hrr(it, params.restingHr, params.maxHr) }
             val state: State
@@ -814,7 +819,7 @@ object Recovery {
                     state = State.Activity
                     delta = -BASE_DRAIN - EXERCISE_DRAIN_PER_TRIMP * trimpMinute(x, params.female)
                 }
-                m.stress != null && m.stress >= params.stressFrom -> {
+                m.stress != null && m.stress >= params.stressFrom && stressRun >= STRESS_GATE_MINUTES -> {
                     state = State.Stress
                     delta = -BASE_DRAIN - STRESS_DRAIN * (m.stress - params.stressFrom)
                 }

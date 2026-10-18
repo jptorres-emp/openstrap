@@ -333,6 +333,29 @@ class RecoveryTest {
         assertTrue(tense.drainedStress > 0)
     }
 
+    @Test
+    fun stressNeedsThreeMinutesInARow() {
+        // Alternating 80 and 40 never builds a run: no stress drain at all.
+        val blips = Recovery.charge(run(120) { Minute(it * 60L, 70, 0, if (it % 2 == 0) 80 else 40, null) }, params, 0L..7_200L, start = 70f, requireAnchor = false)
+        assertEquals(0f, blips.drainedStress, 1e-4f)
+        assertTrue(blips.points.none { it.state == State.Stress })
+        // A sustained stretch drains from its third minute.
+        val run3 = Recovery.charge(run(3) { Minute(it * 60L, 70, 0, 80, null) }, params, 0L..180L, start = 70f, sampleSeconds = 60, requireAnchor = false)
+        assertEquals(listOf(State.Rest, State.Rest, State.Stress), run3.points.map { it.state })
+    }
+
+    @Test
+    fun anHourOfStressDrainsAtMostAThirdOfAnHourOfExercise() {
+        // Calibration target: an hour at stress 80 with T = 60 stays at or below a third of an hour at 60 % of reserve.
+        val stress = Recovery.charge(run(60) { Minute(it * 60L, 70, 0, 80, null) }, params, 0L..3_600L, start = 80f, requireAnchor = false)
+        val hr = (58 + 0.6f * (188 - 58)).toInt()
+        val exercise = Recovery.charge(run(60) { Minute(it * 60L, hr, 150, 70, null) }, params, 0L..3_600L, start = 80f, requireAnchor = false)
+        val stressDrop = 80f - stress.latest!!
+        val exerciseDrop = 80f - exercise.latest!!
+        assertTrue("stress $stressDrop", stressDrop <= 32f / 3)
+        assertTrue("stress part ${stress.drainedStress} vs exercise $exerciseDrop", stress.drainedStress <= exerciseDrop / 3)
+    }
+
     private val dayOf = { t: Long -> t / 86_400 }
 
     @Test

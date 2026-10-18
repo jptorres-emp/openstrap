@@ -174,7 +174,7 @@ Each minute gets a state, following Firstbeat's stress/recovery method (*Stress 
 | Exercise | HRR ≥ 0.30 | −`BASE_DRAIN` − 0.32·TRIMP(HRR). Also builds an EPOC-like debt. |
 | Exercise recovery | debt > 5 and HR not rising | −`BASE_DRAIN` only, even if the strap reports high stress |
 | Activity | HRR ≥ 0.20 or ≥ 60 steps/min | −`BASE_DRAIN` − 0.32·TRIMP(HRR) |
-| Stress | strap stress ≥ your threshold *T* (below) | −`BASE_DRAIN` − 0.007·(stress − *T*) |
+| Stress | strap stress ≥ your threshold *T* (below) for ≥ `STRESS_GATE_MINUTES` = 3 consecutive minutes | −`BASE_DRAIN` − 0.007·(stress − *T*) |
 | Relax | stress < 25 and still | −`BASE_DRAIN` + ¼ of light-sleep recharge |
 | Rest | otherwise | −`BASE_DRAIN` (0.04, about 2.4/h) |
 | No data | strap off the wrist | no change: we can't tell rest from effort, so the value holds |
@@ -198,12 +198,15 @@ Zepp does the same job differently. It computes a stress threshold on the phone 
 * A quiet waking day drains about 2.4 per hour.
 * An hour at 60% of reserve drains 20–32.
 * A post-workout cool-down never counts as stress.
+* An hour at stress 80 with *T* = 60 (0.007·20·60 = 8.4, plus 2.4 base) stays at or below a third of an hour at 60 % of reserve: its total under 32 / 3, its stress part under a third of that exercise hour's drain.
+* Stress blips shorter than 3 minutes never drain as stress.
 * A seated day in Zepp's "normal" stress band (40–59) drains like rest, not stress. Zepp labels the strap's score relaxed 1–39, normal 40–59, medium 60–79 and high 80–100; counting from 40 had most waking minutes drain as stress.
 
 ### What the screen shows
 
 * The charge at waking and now.
-* What was recharged, and what was drained by movement, by stress, and by simply being awake. This is our version of Zepp's physical/mental split.
+* What was recharged, and what was drained by movement, by physiological stress, and by simply being awake. This is our version of Zepp's physical/mental split. The stress drain is labelled "physiological stress (estimate)", not mental: consumer stress scores separate rest from lab stress tasks but barely track self-reported daily stress (Rosenbach et al. 2025), and Firstbeat's support is manufacturer-curated.
+* Not logged: Zepp's BioCharge `totalCharge`. A strap used only with OpenStrap returns nothing from the Readiness module's record command, and no channel for BioCharge results is known, so there is nothing to fit `SLEEP_K`, `BASE_DRAIN` or the drains to yet. A full EPOC model and separate physical and mental pools are deferred until there is a calibration target.
 
 ## Training load (TRIMP)
 

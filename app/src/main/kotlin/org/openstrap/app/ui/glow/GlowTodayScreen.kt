@@ -258,7 +258,7 @@ private fun Change(score: Score, withNote: Boolean) {
 }
 
 /**
- * One of the other two scores under the gauge, tappable: its dot and label on top, its value and change below. Each line
+ * One of the other two scores under the gauge, tappable: its dot and label on top, its value and change centred below. Each line
  * has the chip's whole width, so neither wraps or gets cut at large font sizes.
  */
 @Composable
@@ -281,7 +281,7 @@ private fun ScorePill(score: Score, onClick: () -> Unit, modifier: Modifier = Mo
             )
         }
         Spacer(Modifier.height(2.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
             Text("${score.value ?: "-"}", color = Color.White, style = MaterialTheme.typography.titleLarge, maxLines = 1, softWrap = false)
             if (score.change != null) {
                 Spacer(Modifier.width(8.dp))

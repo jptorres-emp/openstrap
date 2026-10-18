@@ -131,6 +131,15 @@ The strap's method is unknown and may change with firmware, and a baseline that 
 * **Body signals off baseline:** in the Alert state (below) readiness is capped at `ALERT_CAP` = 55 and `strainAlert` is set. Nights in Watch or Alert stay out of every Readiness baseline.
 * **Wording** (FDA General Wellness guidance, revised 6 January 2026): the feature is called "Body signals off baseline" and never names illness, infection, fever or COVID. Copy lives in `BodySignalsCopy`; the push text is the evidence review's: "Several of your overnight signals (…) are outside your usual range for the second night. This can happen with heavy training, alcohol, travel, poor sleep, or when your body is fighting something off. Consider an easier day. If you feel unwell, checking in with a healthcare professional may be helpful. This is a wellness estimate, not a medical assessment." No screen shows a temperature threshold.
 
+## Sleep regularity and sleep health (Sleep screen, not Readiness)
+
+`SleepRegularity.kt`.
+
+* **Sleep Regularity Index:** 1440 one-minute epochs per local day, starting at `DAY_START_HOUR` = 12:00. Sleep = any deep, light or REM minute, naps included; awake = an awake stage or a minute with heart rate; strap off = missing. Over the last `SRI_DAYS` = 7 day-pairs, only pairs where both minutes are valid count (as GGIR does): SRI = −100 + 200·matches / validPairs. Withheld below `MIN_VALID_PAIRS` = 7200 (120 h), the validity rule in Windred et al. 2024 (60,977 UK Biobank participants, where SRI predicted all-cause mortality better than duration).
+* Bands (method-dependent, descriptive): < 72 irregular, 72–79 fair, 79–87 regular, ≥ 87 very regular.
+* Fallback when withheld but there are ≥ 4 main sleeps in 7 days: SD of the sleep midpoint, "good" under 60 min.
+* **Sleep-health count** (0–3, Brindle et al. 2019: OR 0.901 per point for cardiometabolic morbidity): duration 420–540 min (≥ 65: ≤ 510); continuity WASO ≤ 30 min or sleep-period efficiency ≥ 90 %; regularity SRI ≥ 72 (or the fallback). The midpoint is shown and flagged outside 01:30–04:30, never counted.
+
 ## Body signals off baseline
 
 `BodySignals.kt`, a night-by-night state machine (evidence-review.md, "Body-signal alerts"). Resting HR is the best-validated early-warning signal (NightSignal, Alavi et al. 2022: +3 bpm a warning, ≥ +4 bpm on 2 consecutive nights an alert). Persistence is what controls false alarms (≥ 3 anomalous nights in 7 cut breathing rate's healthy-period hit rate from 13.4 % to 0.88 %, Natarajan et al. 2021). Only different signal families vote: cardiac, thermal and respiratory; HRV + resting HR is closer to one signal counted twice. That conjunction part is reasoning, not a measured result.

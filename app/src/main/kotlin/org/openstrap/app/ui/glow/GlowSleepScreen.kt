@@ -94,6 +94,7 @@ fun GlowSleepScreen(
                 if (vitals.isNotEmpty()) left { VitalsPanel(vitals, onOpenMetric) }
                 right { NightChartsPanel(state, session) }
             }
+            if (rec?.regularity != null) right { SleepHealthPanel(rec.regularity, rec.sleepHealth) }
             rec?.breathingDisturbances?.let { b -> right { BreathingCard(b) } }
             if (state.naps.isNotEmpty()) right { NapsPanel(state) }
             full { WeekPanel(state) }
@@ -388,5 +389,46 @@ private fun BreathingCard(b: org.openstrap.app.data.Recovery.BreathingDisturbanc
             else "Dips in blood oxygen during sleep, counted by the strap. They are fairly steady for each person, so they're shown here rather than in Recovery. " +
                 org.openstrap.app.data.BodySignalsCopy.DISCLAIMER,
         )
+    }
+}
+
+/**
+ * Sleep health: how regular the last week was (the Sleep Regularity Index) and how many of three dimensions were good
+ * last night. Shown here, not in Recovery. Timing is informational only.
+ */
+@Composable
+private fun SleepHealthPanel(reg: org.openstrap.app.data.SleepRegularity.Result, health: org.openstrap.app.data.SleepRegularity.Health?) {
+    DotPanel {
+        DotHeader("Sleep health", trailing = health?.let { "${it.count} of 3 good" })
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Fact("Regularity", reg.sri?.let { "${it.toInt()}" } ?: reg.midpointSdMinutes?.let { "±${it.toInt()} min" } ?: "—")
+            Fact("Band", reg.band?.label ?: if (reg.midpointSdMinutes != null) (if (reg.good == true) "Steady" else "Variable") else "—")
+        }
+        Note(
+            when {
+                reg.sri != null -> "How alike your sleep and wake times were, minute by minute, across the last 7 days (${reg.validPairs / 60} h compared)."
+                reg.midpointSdMinutes != null -> "Not enough wear for the regularity index yet, so this is how much your sleep's midpoint moved this week."
+                else -> "Regularity needs about 5 days of wear around the clock, night and day."
+            },
+        )
+        if (health != null) {
+            DotDivider()
+            fun word(v: Boolean?) = when (v) { true -> "Good"; false -> "Not quite"; null -> "—" }
+            HealthRow("Duration", word(health.duration))
+            HealthRow("Continuity", word(health.continuity))
+            HealthRow("Regularity", word(health.regularity))
+            Note(
+                "Midpoint of your sleep ${org.openstrap.app.data.SleepRegularity.clock(health.midpointMinutes)}" +
+                    if (health.midpointOutside) ", outside 01:30–04:30. Shown for interest; it isn't counted." else ".",
+            )
+        }
+    }
+}
+
+@Composable
+private fun HealthRow(label: String, value: String) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+        Text(label, color = Color.White, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+        Text(value, color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.titleSmall)
     }
 }

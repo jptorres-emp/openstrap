@@ -30,6 +30,10 @@ data class RecoveryResult(
     val acwr: Float? = null,
     /** Sleep need in minutes (by age, or the user's own). */
     val sleepNeed: Int = Recovery.SLEEP_NEED_MINUTES,
+    /** Sleep Regularity Index over the last 7 day-pairs, or the midpoint fallback. */
+    val regularity: SleepRegularity.Result? = null,
+    /** The sleep-health count for the night that ended on [date]. */
+    val sleepHealth: SleepRegularity.Health? = null,
 )
 
 /** Loads what [Recovery] needs from the database and runs it. All work happens off the main thread by the caller. */
@@ -143,9 +147,31 @@ class RecoveryEngine(private val dao: HealthDao) {
         val charge = Recovery.charge(minutes, params, day.from..day.to, start = 50f, mainSleepEnd = tonight?.end)
 
         val chronic = if (loads.size >= 7) Recovery.ewmaLoads(loads).second else null
+
+        // Sleep regularity: 8 noon-to-noon grid days ending at noon today, so 7 day-pairs.
+        val gridStart = date.minusDays(SleepRegularity.SRI_DAYS.toLong() + 1).atTime(SleepRegularity.DAY_START_HOUR, 0).atZone(zone).toEpochSecond()
+        val gridEnd = date.atTime(SleepRegularity.DAY_START_HOUR, 0).atZone(zone).toEpochSecond()
+        val gridStages = sessions.filter { it.end > gridStart && it.start < gridEnd }
+            .flatMap { s -> dao.sleepStagesOnce(s.start).map { Triple(it.start, it.end, it.stage) } }
+        val wornMinutes = hr.mapTo(HashSet()) { it.first / 60 * 60 }
+        val grids = (0..SleepRegularity.SRI_DAYS).map { k ->
+            val noon = date.minusDays(SleepRegularity.SRI_DAYS.toLong() + 1 - k).atTime(SleepRegularity.DAY_START_HOUR, 0).atZone(zone).toEpochSecond()
+            SleepRegularity.grid(noon, gridStages.filter { it.second > noon && it.first < noon + 86_400 }) { it in wornMinutes }
+        }
+        // Midpoints as minutes after local noon, so a night never wraps round midnight.
+        fun minutesAfterNoon(t: Long) = Instant.ofEpochSecond(t).atZone(zone).toLocalTime().toSecondOfDay().let { ((it / 60 - 720) % 1440 + 1440) % 1440 }
+        val midpoints = mains.filterKeys { it > midnight - 7 * 86_400 + 3600 && it <= midnight }.values.map { minutesAfterNoon((it.start + it.end) / 2).toFloat() }
+        val regularity = SleepRegularity.result(grids, midpoints)
+        val sleepHealth = tonight?.let { n ->
+            val main = mains[midnight]
+            val stagesTonight = main?.let { dao.sleepStagesOnce(it.start).filter { st -> st.stage != org.openstrap.app.data.db.SleepStage.AWAKE } }.orEmpty()
+            val period = stagesTonight.takeIf { it.isNotEmpty() }?.let { ((it.maxOf { st -> st.end } - it.minOf { st -> st.start }) / 60).toInt() }
+            val mid = Instant.ofEpochSecond((n.start + n.end) / 2).atZone(zone).toLocalTime().toSecondOfDay() / 60
+            SleepRegularity.health(n.asleepMinutes, n.wasoMinutes, period, regularity, age, mid)
+        }
         return RecoveryResult(
             date, readiness, charge, trend, todayLoad, chronic, restingHr, maxHr, age != null, stressThreshold, tonight,
-            Recovery.breathingDisturbances(tonight, nights), Recovery.acwr(loads), sleepNeed,
+            Recovery.breathingDisturbances(tonight, nights), Recovery.acwr(loads), sleepNeed, regularity, sleepHealth,
         )
     }
 

@@ -615,6 +615,20 @@ object Recovery {
     const val ARTEFACT_JUMP_BPM = 10
 
     /**
+     * Each day's highest real heart rate, for [observedPeak]: the day's [filteredMax] from [minuteMax], raised by the
+     * strap's own daily maximum from [strapMax] only when that is in [HR_MIN_BPM]..[HR_MAX_BPM] and within
+     * [ARTEFACT_JUMP_BPM] of the filtered minute maximum. A strap value on a day without one has nothing to
+     * corroborate it and is dropped, so the strap's unfiltered figure can't carry a spike in.
+     */
+    fun <K> dailyMaxima(minuteMax: Map<K, Int?>, strapMax: List<Pair<K, Int>>): List<Int> {
+        val strap = strapMax.filter { it.second in HR_MIN_BPM..HR_MAX_BPM }.groupBy({ it.first }, { it.second })
+        return minuteMax.mapNotNull { (day, m) ->
+            m ?: return@mapNotNull null
+            maxOf(m, strap[day].orEmpty().filter { abs(it - m) <= ARTEFACT_JUMP_BPM }.maxOrNull() ?: m)
+        }
+    }
+
+    /**
      * Daytime resting HR for heart-rate reserve: Karvonen and Swain define resting HR as awake rest, so a nightly
      * minimum would inflate HRR for every waking minute. The median of the strap's daily resting HR over the last
      * [RHR_DAYS] days ([daily], day → bpm); else the median nightly lowest ([nightly]) of those days plus an offset:

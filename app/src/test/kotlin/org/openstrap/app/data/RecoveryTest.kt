@@ -443,6 +443,28 @@ class RecoveryTest {
     }
 
     @Test
+    fun strapDailyMaxNeedsTheMinutesToBackItUp() {
+        val minuteMax = mapOf(1 to 170, 2 to 168, 3 to null, 4 to 150)
+        val strap = listOf(1 to 176, 2 to 199, 3 to 205, 4 to 240, 5 to 190)
+        // Day 1 within 10 bpm is taken; day 2 a spike, day 3 no minutes, day 4 out of range, day 5 no minutes: dropped.
+        assertEquals(listOf(176, 168, 150), Recovery.dailyMaxima(minuteMax, strap))
+        // So two lone strap spikes no longer agree their way into the observed peak.
+        assertEquals(166, Recovery.observedPeak(Recovery.dailyMaxima(mapOf(1 to 166, 2 to 168), listOf(1 to 199, 2 to 199))))
+    }
+
+    @Test
+    fun pastTrendDayGetsItsOwnLoad() {
+        val loadDays = (1..30).map { it * day to if (it == 20) 200f else 40f }
+        // The morning of day 21 saw days 1-20, ending with the hard day.
+        val before = RecoveryEngine.loadsBefore(loadDays, 21 * day)
+        assertEquals(20, before.size)
+        assertEquals(200f, before.last(), 0f)
+        val past = Recovery.readiness(night(21), history().filter { it.day < 21 * day }, before)
+        assertTrue(past.contributors.first { it.factor == Factor.PreviousDayLoad }.score < 100)
+        assertEquals(loadDays.map { it.second }, RecoveryEngine.loadsBefore(loadDays, 31 * day))
+    }
+
+    @Test
     fun femaleTrimpCurveUsesItsOwnConstants() {
         // 0.86·e^(1.67x) sits above 0.64·e^(1.92x) everywhere below 118% of reserve.
         assertEquals(0.4f * 0.86f * kotlin.math.exp(1.67f * 0.4f), Recovery.trimpMinute(0.4f, female = true), 1e-4f)

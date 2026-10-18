@@ -2,7 +2,7 @@
 
 What the published evidence says about each part of OpenStrap's health model, and what we will change. The current model is in [recovery.md](recovery.md); constant names below match `Recovery.kt`.
 
-**Status: decided, not yet implemented.** Constants marked for review are settled at the strap calibration review on **2026-10-30** ([readiness-calibration.md](readiness-calibration.md)).
+**Status: implementation steps 1–12 done on branch `evidence-review` (2026-10-18); [recovery.md](recovery.md) describes the model as built.** Not done: step 13 (personal weights, needs ≥ 6 weeks of check-ins), VO2max phase 2 (phone GPS), the FRIEND 2022 percentile band and fitness age (tables not yet transcribed from the primary paper; the FRIEND link below is the cardiovascular-disease report, not the healthy-adult standards), the optional personal sleep need, and BioCharge logging (not readable from the strap). The new weights have not been checked against a real-data backtest yet. Constants marked for review are settled at the strap calibration review on **2026-10-30** ([readiness-calibration.md](readiness-calibration.md)).
 
 ## The short version
 

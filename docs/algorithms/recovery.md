@@ -2,6 +2,8 @@
 
 OpenStrap's own recovery model. Code: `app/src/main/kotlin/org/openstrap/app/data/Recovery.kt` (pure model) and `RecoveryEngine.kt` (database → model). Tests: `app/src/test/.../RecoveryTest.kt`. Constant names below match the code.
 
+Planned changes and their evidence: [evidence-review.md](evidence-review.md).
+
 ## Why our own
 
 Zepp's **BioCharge** is not reusable:

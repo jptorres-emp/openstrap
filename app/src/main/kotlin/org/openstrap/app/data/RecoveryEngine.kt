@@ -60,8 +60,7 @@ class RecoveryEngine(private val dao: HealthDao) {
 
         // Load history (CTL, Strain's "vs your usual", max HR) reaches further back than the nightly baselines.
         val loadFrom = DayWindow.of(date.minusDays(LOAD_DAYS.toLong()), zone).from
-        // Live heart rate is stored several times a minute; the model works in minutes.
-        val hrAll = Summaries.bucketAverage(Summaries.heartRateSeries(dao.heartRateOnce(loadFrom, to), dao.activityOnce(loadFrom, to)), 60)
+        val hrAll = minuteHeartRate(loadFrom, to)
         val hr = hrAll.filter { it.first >= from }
         val sessions = dao.sleepSessionsOnce(from, to)
         val hrv = dao.hrvOnce(from, to)
@@ -100,13 +99,8 @@ class RecoveryEngine(private val dao: HealthDao) {
             day.from,
         ) ?: 60f
         val age = profile.age()
-        // Each day's highest real heart rate (filtered per-minute HR, and the strap's daily exercise maximum); two
-        // separate days have to agree before it raises max HR, so one artefact can't.
         fun dayOf(t: Long) = Instant.ofEpochSecond(t).atZone(zone).toLocalDate()
-        val dayMax = hrAll.groupBy { dayOf(it.first) }.mapValues { (_, m) -> Recovery.filteredMax(m) }.toMutableMap()
-        dao.dailyMaxHrOnce(loadFrom, to).forEach { r -> val d = dayOf(r.day); dayMax[d] = maxOf(dayMax[d] ?: 0, r.bpm) }
-        val observedPeak = Recovery.observedPeak(dayMax.values.filterNotNull())
-        val maxHr = Recovery.maxHeartRate(age, pai?.maxHeartRate, observedPeak, profile.maxHeartRate)
+        val maxHr = maxHeartRate(profile, hrAll, pai?.maxHeartRate, loadFrom, to, zone)
         val female = profile.sex == UserProfile.Sex.Female
 
         // Daily training load for the 28 days before the selected one, skipping days the strap was mostly off.
@@ -121,16 +115,13 @@ class RecoveryEngine(private val dao: HealthDao) {
         }
         val loads = loadDays.map { it.second }
 
-        // Likely causes for a body-signal alert: the user's tags that morning or the day before, and a hard previous day.
-        val tags = dao.dayTagsOnce(from, to).groupBy({ it.day }, { it.tag })
+        // A likely cause for a body-signal alert: a hard training day before the morning.
         val hardDays = loadDays.indices.filter { k ->
             k >= 7 && Recovery.hardDay(loadDays[k].second, Recovery.ewmaLoads(loads.take(k)).second)
         }.map { loadDays[it].first }
         val causes = { morning: Long ->
             val before = morning - 86_400 + 3600
-            val noted = tags.filterKeys { it == morning || it in before - 7200..before + 7200 }.values.flatten()
-                .distinct().map { DayTag.of(it)?.label?.lowercase() ?: it }
-            noted + listOfNotNull("a hard training day".takeIf { hardDays.any { d -> d in before - 7200..before + 7200 } })
+            listOfNotNull("a hard training day".takeIf { hardDays.any { d -> d in before - 7200..before + 7200 } })
         }
         val todayLoad = Recovery.dailyLoad(hr.filter { it.first in day.from..day.to }, restingHr, maxHr, female, asleep)
 
@@ -141,7 +132,7 @@ class RecoveryEngine(private val dao: HealthDao) {
         val trend = (6 downTo 0).map { back ->
             val d = date.minusDays(back.toLong())
             val m = DayWindow.of(d, zone).from
-            d to (if (back == 0) readiness.score else Recovery.readiness(nights.lastOrNull { it.day == m }, nights, sleepNeed = sleepNeed).score)
+            d to (if (back == 0) readiness.score else Recovery.readiness(nights.lastOrNull { it.day == m }, nights, loadsBefore(loadDays, m), causes, sleepNeed).score)
         }
 
         // Charge: start two days early so the starting guess has washed out through two nights of sleep.
@@ -184,8 +175,7 @@ class RecoveryEngine(private val dao: HealthDao) {
                 )
             }
         }
-        val moderateCadence = Activity.moderateCadence(age)
-        val weekMvpa = activityDays.map { Activity.mvpa(it, moderateCadence) }
+        val weekMvpa = activityDays.map { Activity.mvpa(it) }
         val todayMinutes = activityDays.last()
         val activity = Activity.Day(
             steps = todayMinutes.sumOf { it.steps },
@@ -248,6 +238,36 @@ class RecoveryEngine(private val dao: HealthDao) {
         )
     }
 
+    /**
+     * Max HR as of [date] by the same rule [compute] uses, for screens that don't run the whole model (workout zones):
+     * the tested value, else Tanaka or the strap's PAI value, raised by observed peaks over [LOAD_DAYS].
+     */
+    suspend fun maxHeartRate(profile: UserProfile, date: LocalDate = LocalDate.now(), zone: ZoneId = ZoneId.systemDefault()): Float {
+        val to = DayWindow.of(date, zone).to
+        val loadFrom = DayWindow.of(date.minusDays(LOAD_DAYS.toLong()), zone).from
+        // Same PAI window as compute: the latest record within the nightly baseline span.
+        val paiFrom = DayWindow.of(date.minusDays(Recovery.BASELINE_NIGHTS.toLong() + 1), zone).from
+        val strapMax = dao.paiOnce(paiFrom, to).lastOrNull()?.maxHeartRate
+        // A tested value wins outright, so it doesn't need 90 days of heart rate read back.
+        val tested = profile.maxHeartRate
+        if (tested != null) Recovery.maxHeartRate(profile.age(), strapMax, tested = tested).let { if (it == tested.toFloat()) return it }
+        return maxHeartRate(profile, minuteHeartRate(loadFrom, to), strapMax, loadFrom, to, zone)
+    }
+
+    /** Live heart rate is stored several times a minute; the model works in minutes. */
+    private suspend fun minuteHeartRate(from: Long, to: Long): List<Pair<Long, Int>> =
+        Summaries.bucketAverage(Summaries.heartRateSeries(dao.heartRateOnce(from, to), dao.activityOnce(from, to)), 60)
+
+    private suspend fun maxHeartRate(profile: UserProfile, hrAll: List<Pair<Long, Int>>, strapMax: Int?, from: Long, to: Long, zone: ZoneId): Float {
+        // Each day's highest real heart rate (filtered per-minute HR, and the strap's daily exercise maximum when the
+        // minutes back it up); two separate days have to agree before it raises max HR, so one artefact can't.
+        fun dayOf(t: Long) = Instant.ofEpochSecond(t).atZone(zone).toLocalDate()
+        val minuteMax = hrAll.groupBy { dayOf(it.first) }.mapValues { (_, m) -> Recovery.filteredMax(m) }
+        val strapDaily = dao.dailyMaxHrOnce(from, to).map { dayOf(it.day) to it.bpm }
+        val observedPeak = Recovery.observedPeak(Recovery.dailyMaxima(minuteMax, strapDaily))
+        return Recovery.maxHeartRate(profile.age(), strapMax, observedPeak, profile.maxHeartRate)
+    }
+
     private fun night(
         morning: Long,
         s: SleepSession,
@@ -297,6 +317,12 @@ class RecoveryEngine(private val dao: HealthDao) {
         if (s.day > 0) s.day else Instant.ofEpochSecond(s.end).atZone(zone).toLocalDate().atStartOfDay(zone).toEpochSecond()
 
     companion object {
+        /**
+         * The daily loads a morning's readiness saw: those of [loadDays] (day start to load, oldest first) before
+         * [morning], so a past day in the trend gets the "Previous day's load" it had then.
+         */
+        fun loadsBefore(loadDays: List<Pair<Long, Float>>, morning: Long): List<Float> = loadDays.filter { it.first < morning }.map { it.second }
+
         /** Days of load history: CTL's 42-day constant and Strain's 90-day "vs your usual". */
         const val LOAD_DAYS = 90
         /** A day needs this many minutes of heart rate before its training load counts. */

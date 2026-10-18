@@ -14,7 +14,6 @@ import org.openstrap.app.data.db.OsaResultRow
 import org.openstrap.app.data.db.SleepSpo2Sample
 import org.openstrap.app.data.db.BreathRate
 import org.openstrap.app.data.db.CheckInRow
-import org.openstrap.app.data.db.DayTagRow
 import org.openstrap.app.data.db.HealthDao
 import org.openstrap.app.data.db.HeartRateSample
 import org.openstrap.app.data.db.HrvSample
@@ -74,14 +73,6 @@ class HealthRepository(private val dao: HealthDao) {
         else dao.insertCheckIns(listOf(CheckInRow(day, feeling.coerceIn(CheckIn.MIN, CheckIn.MAX), System.currentTimeMillis() / 1000)))
     }
 
-    /** Keys of the [DayTag]s set for [date]. */
-    fun tags(date: LocalDate, zone: ZoneId = ZoneId.systemDefault()): Flow<Set<String>> =
-        dao.dayTags(DayWindow.of(date, zone).from).map { rows -> rows.mapTo(LinkedHashSet()) { it.tag } }
-
-    suspend fun setTag(date: LocalDate, tag: DayTag, on: Boolean, zone: ZoneId = ZoneId.systemDefault()) {
-        val day = DayWindow.of(date, zone).from
-        if (on) dao.insertDayTags(listOf(DayTagRow(day, tag.key))) else dao.deleteDayTag(day, tag.key)
-    }
 
     /** Emits whenever new heart-rate, stress or sleep data lands, so derived scores can refresh. */
     fun changes(): Flow<Unit> = kotlinx.coroutines.flow.combine(dao.latestHeartRateTime(), dao.latestStressTime(), dao.latestSleepEnd()) { _, _, _ -> }

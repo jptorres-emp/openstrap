@@ -104,7 +104,7 @@ Release signing reads `OPENSTRAP_KEYSTORE`, `OPENSTRAP_KEYSTORE_PASSWORD`, `OPEN
 - **`protocol/`**: a pure Kotlin/JVM module with no Android dependencies. It contains the B-163 ECDH, channel framing, AES/CRC session cipher, auth handshake, service codecs and the GDSP history fetch with its record parsers. A simulated strap tests it end to end.
 - **`app/`**: the Android app. It covers the coroutine GATT client, `StrapManager` (connection lifecycle), `HistorySync`, Room storage, the Compose UI, and the Health Connect and CSV exporters.
 - **`docs/protocol/`**: the clean-room specifications.
-- **`docs/algorithms/`**: how the Recovery and Charge scores are computed.
+- **`docs/algorithms/`**: how every score is computed; start with [`calculations.md`](docs/algorithms/calculations.md).
 
 ## License
 

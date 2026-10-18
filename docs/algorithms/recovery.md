@@ -157,7 +157,7 @@ The strap's method is unknown and may change with firmware, and a baseline that 
 * **Watch** (in the app, no push): any single core flag, or `RhrWatch` + `HrvSupport`.
 * **Alert** (one push per morning after a sync; Readiness capped at 55), any of: `RhrFlag` on 2 consecutive nights; ≥ 2 different core families on the same night; a core flag tonight and on ≥ 3 of the last 7 nights; rr − c ≥ `RR_ALERT_PER_MIN` = 3.0 /min on its own.
 * One missing night is bridged; two or more reset persistence. An alert clears after `CLEAR_NIGHTS` = 2 consecutive nights with no core flag.
-* Likely causes are annotated, never used to suppress: the user's tags that morning or the day before (alcohol, travel, vaccination, hard session, feeling unwell), or a previous day with TRIMP > `HARD_DAY_RATIO` = 1.5× the chronic load.
+* A likely cause is annotated, never used to suppress: a previous day with TRIMP > `HARD_DAY_RATIO` = 1.5× the chronic load. (Day tags were removed from the app; old `day_tag` rows are still exported and imported.)
 * SpO2 and desaturations never vote; they stay in Readiness and the Breathing card. +0.5 °C is the lowest temperature line that won't fire every menstrual cycle (the luteal rise is about +0.3 °C), and it is never shown on screen.
 
 ## Charge (0–100, minute by minute)
@@ -226,7 +226,7 @@ Zepp does the same job differently. It computes a stress threshold on the phone 
 
 `Activity.kt`. The cadence thresholds are established; a chest- or arm-worn strap's step counting is not validated at all.
 
-* **MVPA** (`mvpa`): moderate at cadence ≥ `MODERATE_CADENCE` = 100 (105 from 61 is available, McAvoy 2023), vigorous at ≥ `VIGOROUS_CADENCE` = 130 (Tudor-Locke). A minute counts only inside a run of ≥ `CADENCE_RUN_MINUTES` = 2 consecutive qualifying minutes (design choice). Then heart rate, for effort without steps: awake, ≥ 10 consecutive minutes at ≥ 40 % of reserve (vigorous ≥ 60 %), with < 100 steps or inside a workout, labelled "HR-assisted". No minute counts twice.
+* **MVPA** (`mvpa`): moderate at cadence ≥ `MODERATE_CADENCE` = 100 at every age, vigorous at ≥ `VIGOROUS_CADENCE` = 130 (Tudor-Locke). A minute counts only inside a run of ≥ `CADENCE_RUN_MINUTES` = 2 consecutive qualifying minutes (design choice). Then heart rate, for effort without steps: awake, ≥ 10 consecutive minutes at ≥ 40 % of reserve (vigorous ≥ 60 %), with < 100 steps or inside a workout, labelled "HR-assisted". No minute counts twice.
 * MVPA-equivalent = moderate + 2·vigorous over the last 7 days, against 150 min a week (WHO 2020). Raw minutes are shown too.
 * **Steps:** the strap's daily counter, else the summed minutes; a divergence over 5 % is flagged.
 * **Step goal framing:** "most of the benefit is reached" by about 7,000 steps from 60, 8,000 below (Paluch et al. 2022: mortality plateaus at 6,000–8,000 and 8,000–10,000). The user's own goal is unchanged.
@@ -267,7 +267,7 @@ Zepp does the same job differently. It computes a stress threshold on the phone 
 
 ## Inputs from the profile (Device → Your profile)
 
-* **Max HR:** a value the user entered from a test wins. Otherwise Tanaka et al. 2001 (JACC, 18,712 subjects): 208 − 0.7·age; without an age, the strap's own max HR (from the Zepp profile), else 190. Any equation's individual SD is about 7–11 bpm, so raising is sound and lowering is not: it's raised to the highest HR the user has actually reached, by at most `MAX_HR_RAISE` = +15 bpm. "Reached" (`observedPeak`) needs two separate days within `MAX_HR_AGREE_BPM` = 3 bpm of each other over the last 90 days, each day's value being its highest artefact-filtered minute (`filteredMax`: a neighbouring minute within 10 bpm) or the strap's daily maximum exercise HR (type 61). Max HR sets heart-rate reserve, so it changes both training load and Charge drain.
+* **Max HR:** a value the user entered from a test wins. Otherwise Tanaka et al. 2001 (JACC, 18,712 subjects): 208 − 0.7·age; without an age, the strap's own max HR (from the Zepp profile), else 190. Any equation's individual SD is about 7–11 bpm, so raising is sound and lowering is not: it's raised to the highest HR the user has actually reached, by at most `MAX_HR_RAISE` = +15 bpm. "Reached" (`observedPeak`) needs two separate days within `MAX_HR_AGREE_BPM` = 3 bpm of each other over the last 90 days, each day's value being its highest artefact-filtered minute (`filteredMax`: a neighbouring minute within 10 bpm) raised by the strap's daily maximum exercise HR (type 61) only when that is in 30–220 bpm and within `ARTEFACT_JUMP_BPM` = 10 of the filtered minute (`dailyMaxima`; a strap value on a day without one is dropped). The same max HR sets workout zones when a workout has no sport-effect max HR. Max HR sets heart-rate reserve, so it changes both training load and Charge drain.
 * **Sex:** selects the TRIMP curve.
 * **Weight and height:** energy expenditure (BMR) and step length.
 * **Resting HR (daytime)** (`daytimeRestingHr`): median of the strap's daily resting HR over the last 14 days, else the median nightly lowest + an offset. The offset is the median of (daily − nightly lowest) over the latest 14 days that have both, else `RHR_OFFSET_BPM` = 3 bpm. Karvonen and Swain define resting HR as awake rest; a nightly minimum would inflate HRR for every waking minute.

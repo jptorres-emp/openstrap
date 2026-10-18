@@ -81,6 +81,13 @@ import org.openstrap.app.ui.components.pressClickable
  */
 val LocalGlowPaused = staticCompositionLocalOf<() -> Boolean> { { false } }
 
+/**
+ * Whether the page holding these cards is off screen or the tab pager is moving; provided by the pager, apart from
+ * [LocalGlowPaused] so a screen's own scroll state doesn't override it. Cores hold still then, so a swipe between
+ * tabs gets every frame to itself and the pages kept ready either side don't animate unseen.
+ */
+val LocalGlowPagePaused = staticCompositionLocalOf<() -> Boolean> { { false } }
+
 @Composable
 fun GlowCard(
     style: GlowStyle,
@@ -101,7 +108,9 @@ fun GlowCard(
     val animate = style.motion != GlowMotion.Still && remember(context) {
         Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) > 0f
     }
-    val paused = LocalGlowPaused.current
+    val listPaused = LocalGlowPaused.current
+    val pagePaused = LocalGlowPagePaused.current
+    val paused = { listPaused() || pagePaused() }
     if (animate) LaunchedEffect(Unit) {
         // Time only advances while the card isn't paused, so the core picks up where it stopped.
         var last = withFrameNanos { it }

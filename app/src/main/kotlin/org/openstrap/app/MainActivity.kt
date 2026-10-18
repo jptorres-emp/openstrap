@@ -131,7 +131,7 @@ private enum class Tab(val label: String, val icon: androidx.compose.ui.graphics
 }
 
 /** The screens stacked under the You tab, shallowest first. */
-private enum class YouPage { Hub, Strap, Alarms, Firmware }
+private enum class YouPage { Hub, Profile, Strap, Alarms, Firmware }
 
 private val BLUETOOTH_PERMISSIONS = arrayOf(
     Manifest.permission.BLUETOOTH_SCAN,
@@ -147,6 +147,8 @@ private fun AppRoot(container: AppContainer) {
     val deviceVm: DeviceViewModel = viewModel(factory = viewModelFactory { initializer { DeviceViewModel(container) } })
 
     var tab by rememberSaveable { mutableIntStateOf(0) }
+    // The Recovery tab section Today's top card asked for; cleared once the tab has scrolled to it.
+    var recoveryFocus by remember { mutableStateOf<org.openstrap.app.ui.glow.RecoverySection?>(null) }
     val liveEnabled by container.strap.liveHeartRateEnabled.collectAsStateWithLifecycle()
     val firmwareVm: FirmwareViewModel = viewModel(factory = viewModelFactory { initializer { FirmwareViewModel(container) } })
     var showFirmware by rememberSaveable { mutableStateOf(false) }
@@ -165,21 +167,24 @@ private fun AppRoot(container: AppContainer) {
     var recoveryStack by rememberSaveable(stateSaver = Detail.StackSaver) { mutableStateOf(emptyList<Detail>()) }
     var sleepStack by rememberSaveable(stateSaver = Detail.StackSaver) { mutableStateOf(emptyList<Detail>()) }
     val history: org.openstrap.app.ui.dashboard.DailyHistory = { m, from, to -> container.health.daily(m, from, to) }
-    var editProfile by rememberSaveable { mutableStateOf(false) }
+    // The tab whose profile page is open (You, or Activity's energy and load rows), or -1.
+    var profileTab by rememberSaveable { mutableIntStateOf(-1) }
     var editGoals by rememberSaveable { mutableStateOf(false) }
     val goals by container.settings.goals.collectAsStateWithLifecycle(org.openstrap.app.data.settings.Goals())
     val todayTileNames by container.settings.todayTileNames.collectAsStateWithLifecycle(null)
-    // Unknown names (a metric since renamed) drop out; nothing chosen yet means all of them.
-    val todayTiles = todayTileNames?.mapNotNull { n -> org.openstrap.app.ui.dashboard.Metric.entries.firstOrNull { it.name == n } }
-        ?.takeIf { it.isNotEmpty() } ?: org.openstrap.app.ui.glow.TODAY_TILES
+    // Unknown names (a metric since renamed) drop out; nothing chosen yet means all of them. Remembered, like the
+    // picker below: a new object each time the root recomposes (on every tab change) would recompose every tab.
+    val todayTiles = remember(todayTileNames) {
+        todayTileNames?.mapNotNull { n -> org.openstrap.app.ui.dashboard.Metric.entries.firstOrNull { it.name == n } }
+            ?.takeIf { it.isNotEmpty() } ?: org.openstrap.app.ui.glow.TODAY_TILES
+    }
     val recovery by dayVm.recovery.collectAsStateWithLifecycle()
     val profile by deviceVm.profile.collectAsStateWithLifecycle()
     val day by dayVm.state.collectAsStateWithLifecycle()
     val strapReadiness by remember(day.dayStart) { container.database.healthDao().strapReadiness(day.dayStart) }.collectAsStateWithLifecycle(null)
     val checkIn by remember(day.date) { container.health.checkIn(day.date) }.collectAsStateWithLifecycle(null)
-    val dayTags by remember(day.date) { container.health.tags(day.date) }.collectAsStateWithLifecycle(emptySet())
     val daysWithData by dayVm.daysWithData.collectAsStateWithLifecycle()
-    val picker = DayPicker(daysWithData, dayVm::select)
+    val picker = remember(daysWithData, dayVm) { DayPicker(daysWithData, dayVm::select) }
     val live by container.strap.liveHeartRate.collectAsStateWithLifecycle()
     val connection by container.strap.connection.collectAsStateWithLifecycle()
     val sync by container.strap.sync.collectAsStateWithLifecycle()
@@ -247,7 +252,7 @@ private fun AppRoot(container: AppContainer) {
         else -> null
     }
     LaunchedEffect(currentDetail) { workoutsVm.open((currentDetail as? Detail.Workout)?.start) }
-    val subScreenOpen = currentDetail != null || (Tab.entries[tab] == Tab.You && (showStrap || showAlarms || showFirmware))
+    val subScreenOpen = currentDetail != null || profileTab == tab || (Tab.entries[tab] == Tab.You && (showStrap || showAlarms || showFirmware))
     // Back closes what's open on a tab first (those screens handle it, registered later so they win);
     // with nothing left it goes home to Today. Only Today's back leaves the app.
     androidx.activity.compose.BackHandler(enabled = tab != Tab.Today.ordinal && !subScreenOpen) { tab = Tab.Today.ordinal }
@@ -292,7 +297,7 @@ private fun AppRoot(container: AppContainer) {
         val navItems = Tab.entries.map { NavItem(it.label, it.icon, it.selectedIcon) }
         val selectTab: (Int) -> Unit = {
             tab = it; todayStack = emptyList(); activityStack = emptyList(); recoveryStack = emptyList(); sleepStack = emptyList()
-            showAlarms = false; showStrap = false
+            showAlarms = false; showStrap = false; profileTab = -1
             // An update being installed stays open, so coming back to You shows its progress.
             if (firmwareVm.step.value !is org.openstrap.app.ui.firmware.FirmwareStep.Installing) { firmwareVm.reset(); showFirmware = false }
         }
@@ -302,14 +307,15 @@ private fun AppRoot(container: AppContainer) {
             },
             containerColor = MaterialTheme.colorScheme.background,
         ) { padding ->
-            if (editProfile) {
-                org.openstrap.app.ui.device.ProfileDialog(profile, onSave = { deviceVm.saveProfile(it); editProfile = false }, onDismiss = { editProfile = false })
+            val profilePage: @Composable () -> Unit = {
+                org.openstrap.app.ui.device.ProfileScreen(profile, padding, onSave = { deviceVm.saveProfile(it); profileTab = -1 }, onBack = { profileTab = -1 })
             }
             if (editGoals) {
                 org.openstrap.app.ui.device.GoalsDialog(goals, onSave = { g -> scope.launch { container.settings.saveGoals(g) }; editGoals = false }, onDismiss = { editGoals = false })
             }
             // The You list and the pages it opens; [ListDetail] puts them side by side when there's room.
             val youPage: @Composable (YouPage) -> Unit = { youPage -> when (youPage) {
+                YouPage.Profile -> profilePage()
                 YouPage.Firmware -> {
                     FirmwareScreen(firmwareVm, padding, onBack = { showFirmware = false })
                 }
@@ -333,7 +339,7 @@ private fun AppRoot(container: AppContainer) {
                 YouPage.Hub -> {
                     YouScreen(
                         deviceVm, padding,
-                        onEditProfile = { editProfile = true },
+                        onEditProfile = { profileTab = Tab.You.ordinal },
                         goals = goals,
                         onEditGoals = { editGoals = true },
                         onOpenStrap = { showStrap = true },
@@ -344,7 +350,15 @@ private fun AppRoot(container: AppContainer) {
                     )
                 }
             } }
-            HorizontalPager(pager, androidx.compose.ui.Modifier.padding(start = if (rail) org.openstrap.app.ui.components.NavRailWidth else 0.dp).hazeSource(navGlass), userScrollEnabled = !subScreenOpen, key = { it }) { page ->
+            // Every tab stays composed, so a swipe never builds a whole dashboard mid-gesture (with only the neighbours
+            // kept, crossing halfway built the next one); glows on tabs off screen, or while the pager moves, hold still.
+            HorizontalPager(
+                pager, androidx.compose.ui.Modifier.padding(start = if (rail) org.openstrap.app.ui.components.NavRailWidth else 0.dp).hazeSource(navGlass),
+                userScrollEnabled = !subScreenOpen, key = { it }, beyondViewportPageCount = Tab.entries.size - 1,
+            ) { page -> androidx.compose.runtime.CompositionLocalProvider(
+                // Remembered: a new lambda each time would be a new static local, recomposing the whole tab under it.
+                org.openstrap.app.ui.glow.LocalGlowPagePaused provides remember(pager, page) { { pager.isScrollInProgress || pager.settledPage != page } },
+            ) {
                 val pullToSync: @androidx.compose.runtime.Composable (@androidx.compose.runtime.Composable () -> Unit) -> Unit = { screen ->
                     org.openstrap.app.ui.components.PullToSync(sync, connection is ConnectionState.Connected, container.strap::syncNow) { screen() }
                 }
@@ -373,7 +387,10 @@ private fun AppRoot(container: AppContainer) {
                                     onOpenSleep = { tab = Tab.Sleep.ordinal },
                                     onOpenMetric = { todayStack = listOf(Detail.OfMetric(it)) },
                                     recovery = recovery,
-                                    onOpenRecovery = { tab = Tab.Recovery.ordinal },
+                                    strapReadiness = strapReadiness,
+                                    checkIn = checkIn?.feeling,
+                                    onCheckIn = { v -> scope.launch { container.health.saveCheckIn(day.date, v) } },
+                                    onOpenRecovery = { section -> recoveryStack = emptyList(); recoveryFocus = section; tab = Tab.Recovery.ordinal },
                                     workouts = workouts,
                                     onOpenWorkout = { todayStack = listOf(Detail.Workout(it)) },
                                     liveEnabled = liveEnabled.takeIf { connection is ConnectionState.Connected },
@@ -402,9 +419,7 @@ private fun AppRoot(container: AppContainer) {
                             org.openstrap.app.ui.glow.GlowRecoveryScreen(
                                 day, recovery, strapReadiness, history, battery, charging, dayVm::previousDay, dayVm::nextDay, picker, padding,
                                 onOpenMetric = { recoveryStack = listOf(Detail.OfMetric(it)) },
-                                checkIn = checkIn?.feeling, tags = dayTags,
-                                onCheckIn = { v -> scope.launch { container.health.saveCheckIn(day.date, v) } },
-                                onTag = { t, on -> scope.launch { container.health.setTag(day.date, t, on) } },
+                                focus = recoveryFocus, onFocused = { recoveryFocus = null },
                             )
                         }
                     }
@@ -430,10 +445,14 @@ private fun AppRoot(container: AppContainer) {
                         }
                     }
                     // The activity dashboard, with workouts and metrics opening over it (or beside it, when wide).
+                    // The profile page (from the energy and load rows) opens over everything else on the tab.
                     Tab.Activity -> ListDetail(
-                        activityStack, isOpen = { it.isNotEmpty() }, depth = { it.size }, minWidth = SideBySideWidth,
-                        detail = { stack ->
-                            when (val detail = stack.last()) {
+                        activityStack to (profileTab == Tab.Activity.ordinal),
+                        isOpen = { (stack, profileOpen) -> profileOpen || stack.isNotEmpty() },
+                        depth = { (stack, profileOpen) -> stack.size + if (profileOpen) 1 else 0 },
+                        minWidth = SideBySideWidth,
+                        detail = { (stack, profileOpen) ->
+                            if (profileOpen) profilePage() else when (val detail = stack.last()) {
                                 is Detail.Workout -> WorkoutDetail(openWorkout?.takeIf { it.workout.start == detail.start }, padding, onBack = { activityStack = activityStack.dropLast(1) })
                                 is Detail.OfMetric -> MetricDetail(
                                     detail.metric, day, history = history,
@@ -456,20 +475,23 @@ private fun AppRoot(container: AppContainer) {
                                 onOpenMetric = { activityStack = listOf(Detail.OfMetric(it)) },
                                 onOpenWorkout = { activityStack = listOf(Detail.Workout(it)) },
                                 onAllWorkouts = { activityStack = listOf(Detail.AllWorkouts) },
-                                onEditProfile = { editProfile = true },
+                                onEditProfile = { profileTab = Tab.Activity.ordinal },
                             )
                         }
                     }
                     // On a wide screen the You list stays on the left and its pages open on the right.
                     Tab.You -> org.openstrap.app.ui.components.OledSurfaces { ListDetail(
-                        when { showFirmware -> YouPage.Firmware; showAlarms -> YouPage.Alarms; showStrap -> YouPage.Strap; else -> YouPage.Hub },
+                        when {
+                            showFirmware -> YouPage.Firmware; showAlarms -> YouPage.Alarms; showStrap -> YouPage.Strap
+                            profileTab == Tab.You.ordinal -> YouPage.Profile; else -> YouPage.Hub
+                        },
                         isOpen = { it != YouPage.Hub },
-                        depth = { it.ordinal.coerceAtMost(2) },
+                        depth = { when (it) { YouPage.Hub -> 0; YouPage.Profile, YouPage.Strap -> 1; else -> 2 } },
                         closedMaxWidth = 600.dp,
                         detail = { page -> youPage(page) },
                     ) { youPage(YouPage.Hub) } }
                 }
-            }
+            } }
         }
         if (rail) org.openstrap.app.ui.components.FloatingNavRail(
             navItems, tab, selectTab, androidx.compose.ui.Modifier.align(androidx.compose.ui.Alignment.CenterStart),

@@ -24,14 +24,13 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.unit.dp
 import org.openstrap.app.data.BodySignals
 import org.openstrap.app.data.BodySignalsCopy
-import org.openstrap.app.data.CheckIn
-import org.openstrap.app.data.DayTag
 import org.openstrap.app.data.History
 import org.openstrap.app.data.Recovery
 import org.openstrap.app.data.RecoveryResult
@@ -51,6 +50,9 @@ import java.util.Locale
  * The Recovery tab in the glow language: "can I push today, and why". Two cards glow, the score and Charge;
  * everything that explains them sits in quiet dot panels underneath, and each body signal opens its detail.
  */
+/** The Recovery tab's two scores, as targets Today's top card can open. */
+enum class RecoverySection { Recovery, Charge }
+
 @Composable
 fun GlowRecoveryScreen(
     state: DayUiState,
@@ -64,16 +66,14 @@ fun GlowRecoveryScreen(
     picker: DayPicker,
     contentPadding: PaddingValues,
     onOpenMetric: (Metric) -> Unit,
-    /** The morning check-in (1-5) and the day's tags, for the calibration review; see [CheckInPanel]. */
-    checkIn: Int? = null,
-    tags: Set<String> = emptySet(),
-    onCheckIn: (Int?) -> Unit = {},
-    onTag: (DayTag, Boolean) -> Unit = { _, _ -> },
+    /** The section to scroll to, when opened from Today's top card; [onFocused] once it's there. */
+    focus: RecoverySection? = null,
+    onFocused: () -> Unit = {},
 ) {
     val list = rememberLazyListState()
     val signals = rememberSignals(state, history)
     CompositionLocalProvider(LocalGlowPaused provides { list.isScrollInProgress }) {
-        GlowScreenList(contentPadding, list) {
+        GlowScreenList(contentPadding, list, scrollTo = focus, onScrolled = onFocused) {
             full { DateHeader(state.date, battery, onPrev, onNext, charging, picker) }
             val r = recovery?.takeIf { it.date == state.date }
             if (r == null) {
@@ -81,15 +81,16 @@ fun GlowRecoveryScreen(
                 return@GlowScreenList
             }
             val ready = r.readiness
-            // Wide: the scores and where the charge went on the left; why, and the body signals, on the right.
-            left { RecoveryCard(r, strapReadiness) }
+            // A body-signal alert leads: it matters more than either score. Then each glow card with what explains it
+            // right under it, so the two glows never stack: on a wide screen Recovery and its contributors on the
+            // left, Charge and where it went on the right. The signal tiles and how it works span both.
             val body = ready.bodySignals
-            if (body != null && body.state != BodySignals.State.Normal) right { BodySignalsPanel(body) }
-            left { ChargeCard(r.charge, state.dayStart..state.dayEnd) }
-            if (r.charge.latest != null) left { ChargeFlowPanel(r.charge, r.stressThreshold) }
-            right { CheckInPanel(checkIn, tags, onCheckIn, onTag) }
-            if (ready.contributors.isNotEmpty()) right { ContributorsPanel(ready) }
-            right { SignalsPanel(signals, onOpenMetric) }
+            if (body != null && body.state != BodySignals.State.Normal) full { BodySignalsPanel(body) }
+            left(RecoverySection.Recovery) { RecoveryCard(r, strapReadiness) }
+            if (ready.contributors.isNotEmpty()) left { ContributorsPanel(ready) }
+            right(RecoverySection.Charge) { ChargeCard(r.charge, state.dayStart..state.dayEnd) }
+            if (r.charge.latest != null) right { ChargeFlowPanel(r.charge, r.stressThreshold) }
+            full { SignalsPanel(signals, onOpenMetric) }
             full { HowItWorksPanel(strapReadiness, ready.score) }
         }
     }
@@ -167,8 +168,8 @@ private fun RecoveryCard(r: RecoveryResult, strap: StrapReadinessRow?) {
 }
 
 /**
- * Body signals off baseline: Watch is a quiet note, Alert a warning (and a push, sent once from the sync). Likely
- * causes the user noted are listed, never used to hide it. Wording from [BodySignalsCopy].
+ * Body signals off baseline: Watch is a quiet note, Alert a warning (and a push, sent once from the sync). A likely
+ * cause (a hard training day before) is listed, never used to hide it. Wording from [BodySignalsCopy].
  */
 @Composable
 private fun BodySignalsPanel(body: BodySignals.Day) {
@@ -180,52 +181,8 @@ private fun BodySignalsPanel(body: BodySignals.Day) {
                 (if (alert) BodySignalsCopy.CAUSES + " " + BodySignalsCopy.ADVICE else "One signal is outside your usual range. OpenStrap is keeping an eye on it."),
             color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodyMedium,
         )
-        if (body.causes.isNotEmpty()) Note("You noted: ${body.causes.joinToString(", ")}.")
+        if (body.causes.isNotEmpty()) Note("Likely cause: ${body.causes.joinToString(", ")}.")
         Note(BodySignalsCopy.DISCLAIMER)
-    }
-}
-
-/**
- * The morning check-in: how you feel, 1 to 5, and what happened that can move body signals. It is the only
- * within-user test of the score (evidence-review.md), so it asks once a day and never changes the score itself.
- */
-@Composable
-private fun CheckInPanel(feeling: Int?, tags: Set<String>, onCheckIn: (Int?) -> Unit, onTag: (DayTag, Boolean) -> Unit) {
-    DotPanel {
-        DotHeader("Morning check-in", trailing = feeling?.let { CheckIn.label(it) })
-        Text("How do you feel this morning?", color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodyMedium)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-            (CheckIn.MIN..CheckIn.MAX).forEach { v ->
-                ChoicePill("$v", selected = feeling == v, Modifier.weight(1f)) { onCheckIn(if (feeling == v) null else v) }
-            }
-        }
-        Note("1 is ${CheckIn.label(CheckIn.MIN).lowercase()}, 5 is ${CheckIn.label(CheckIn.MAX).lowercase()}.")
-        DotDivider()
-        Text("Anything that could move your signals?", color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodyMedium)
-        DayTag.entries.chunked(3).forEach { row ->
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                row.forEach { t ->
-                    val on = t.key in tags
-                    ChoicePill(t.label, selected = on, Modifier.weight(1f)) { onTag(t, !on) }
-                }
-                repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
-            }
-        }
-    }
-}
-
-/** A glass pill that can be switched on, filled in white when it is. */
-@Composable
-private fun ChoicePill(text: String, selected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    val shape = androidx.compose.foundation.shape.RoundedCornerShape(50)
-    androidx.compose.foundation.layout.Box(
-        modifier
-            .let { if (selected) it.background(Color.White.copy(alpha = 0.85f), shape) else it }
-            .glass(shape, onClick)
-            .padding(vertical = 8.dp, horizontal = 6.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(text, color = if (selected) Color.Black else Color.White, style = MaterialTheme.typography.labelLarge, maxLines = 1)
     }
 }
 
@@ -337,17 +294,23 @@ internal fun Note(text: String) = Text(text, color = Color.White.copy(alpha = 0.
 /** The score's contributors, grouped by what they're about. */
 @Composable
 private fun ContributorsPanel(ready: Recovery.Readiness) {
+    // Folded to the heaviest few once a full set of contributors would push Charge a screen down.
+    val folds = ready.contributors.size > CONTRIBUTORS_FOLDED
+    var open by rememberSaveable { mutableStateOf(false) }
+    val shown = if (folds && !open) ready.contributors.sortedByDescending { it.factor.weight }.take(CONTRIBUTORS_FOLDED).toSet() else ready.contributors.toSet()
     val groups = listOf(
         "Body" to setOf(Recovery.Factor.HrvBalance, Recovery.Factor.RestingHr, Recovery.Factor.Temperature, Recovery.Factor.Breathing, Recovery.Factor.BloodOxygen),
         "Sleep" to setOf(Recovery.Factor.Sleep, Recovery.Factor.SleepBalance, Recovery.Factor.RecoveryIndex),
         "Load" to setOf(Recovery.Factor.PreviousDayLoad),
     )
-    DotPanel {
-        DotHeader("What drove it")
-        groups.forEachIndexed { gi, (name, factors) ->
-            val rows = ready.contributors.filter { it.factor in factors }.sortedByDescending { it.factor.weight }
-            if (rows.isEmpty()) return@forEachIndexed
-            if (gi > 0) DotDivider()
+    DotPanel(onClick = if (folds) ({ open = !open }) else null) {
+        DotHeader("What drove it", trailing = if (folds && !open) "Top $CONTRIBUTORS_FOLDED of ${ready.contributors.size}" else null, expanded = if (folds) open else null)
+        var first = true
+        groups.forEach { (name, factors) ->
+            val rows = ready.contributors.filter { it.factor in factors && it in shown }.sortedByDescending { it.factor.weight }
+            if (rows.isEmpty()) return@forEach
+            if (!first) DotDivider()
+            first = false
             Text(name.uppercase(), color = Color.White.copy(alpha = 0.55f), style = MaterialTheme.typography.labelSmall)
             rows.forEach { c ->
                 val rating = Narrative.ratingFor(c.score)
@@ -371,6 +334,9 @@ private fun ContributorsPanel(ready: Recovery.Readiness) {
         ready.qualityFlags.forEach { Note("Check: $it") }
     }
 }
+
+/** Contributors shown before "What drove it" is opened. */
+private const val CONTRIBUTORS_FOLDED = 3
 
 /* ------------------------------------------------------------------------------------------------ */
 
@@ -443,13 +409,21 @@ private fun SignalTile(s: BodySignal, modifier: Modifier, onClick: () -> Unit) {
         else -> null
     }
     GlowTile(s.label, s.accent, onClick, modifier) {
-        Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.Bottom) {
-            Text(value ?: "—", color = Color.White, style = MaterialTheme.typography.titleLarge)
+        // The unit sits on the number's baseline, and the value never wraps, so every tile's number reads on one line.
+        Row(Modifier.padding(top = 8.dp)) {
+            Text(value ?: "—", color = Color.White, style = MaterialTheme.typography.titleLarge, maxLines = 1, modifier = Modifier.alignByBaseline())
             if (value != null && m.unit.isNotEmpty()) {
-                Text(m.unit, color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(start = 3.dp, bottom = 3.dp))
+                Text(
+                    m.unit, color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.bodySmall, maxLines = 1,
+                    modifier = Modifier.padding(start = 3.dp).alignByBaseline(),
+                )
             }
         }
-        if (word != null) StatusPill(word, if (word == "Normal") TrendGood else TrendBad, Modifier.padding(top = 4.dp))
+        // The status slot is kept even with no word yet, so the pills of side-by-side tiles share a line.
+        StatusPill(
+            word ?: "Normal", if (word == null || word == "Normal") TrendGood else TrendBad,
+            Modifier.padding(top = 4.dp).alpha(if (word == null) 0f else 1f),
+        )
         Spacer(Modifier.weight(1f))
         Sparkline(s.week, s.accent, Modifier.padding(top = 10.dp).fillMaxWidth().height(22.dp))
     }

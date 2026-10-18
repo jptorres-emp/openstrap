@@ -60,7 +60,7 @@ class BacktestTest {
         val day10 = first.plusDays(10).atStartOfDay(zone).toEpochSecond()
         d.insertStrapReadiness(listOf(StrapReadinessRow(day10, day10, 88, 80, 75, 100, 100, 50, 54, "4.3")))
         d.insertCheckIns(listOf(CheckInRow(day10, 4, day10)))
-        d.insertDayTags(listOf(DayTagRow(day10, DayTag.Alcohol.key), DayTagRow(day10, DayTag.Travel.key)))
+        d.insertDayTags(listOf(DayTagRow(day10, "alcohol"), DayTagRow(day10, "travel")))
 
         val rows = Backtest(d, zone).run(first, first.plusDays(19), UserProfile(birthYear = 1990, sex = UserProfile.Sex.Male))
         assertEquals(20, rows.size)

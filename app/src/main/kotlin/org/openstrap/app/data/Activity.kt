@@ -12,9 +12,8 @@ object Activity {
     /** One minute as activity sees it. [hrr] is heart-rate reserve (null without HR); [asleep] and [inWorkout] flags. */
     data class Minute(val t: Long, val steps: Int, val hrr: Float?, val asleep: Boolean = false, val inWorkout: Boolean = false)
 
-    /** Moderate from 100 steps/min (optionally 105 from age 61, McAvoy 2023), vigorous from 130 (Tudor-Locke). */
+    /** Moderate from 100 steps/min at every age, vigorous from 130 (Tudor-Locke). */
     const val MODERATE_CADENCE = 100
-    const val MODERATE_CADENCE_61 = 105
     const val VIGOROUS_CADENCE = 130
     /** A cadence minute counts only inside a run of this many consecutive qualifying minutes (design choice). */
     const val CADENCE_RUN_MINUTES = 2
@@ -40,11 +39,11 @@ object Activity {
 
     /**
      * Moderate and vigorous minutes in [minutes] (ascending, one per minute; gaps break runs). Cadence first: a minute
-     * at ≥ [moderateCadence] steps counts inside a run of ≥ [CADENCE_RUN_MINUTES], vigorous at ≥ [VIGOROUS_CADENCE].
+     * at ≥ [MODERATE_CADENCE] steps counts inside a run of ≥ [CADENCE_RUN_MINUTES], vigorous at ≥ [VIGOROUS_CADENCE].
      * Then heart rate, for effort without steps (cycling, rowing): awake runs of ≥ [HR_RUN_MINUTES] minutes at
      * ≥ [HR_MODERATE_HRR] of reserve with < 100 steps or inside a workout. No minute is counted twice.
      */
-    fun mvpa(minutes: List<Minute>, moderateCadence: Int = MODERATE_CADENCE): Mvpa {
+    fun mvpa(minutes: List<Minute>): Mvpa {
         val n = minutes.size
         val counted = BooleanArray(n)
         var moderate = 0
@@ -60,7 +59,7 @@ object Activity {
                 i = j + 1
             }
         }
-        runs({ !minutes[it].asleep && minutes[it].steps >= moderateCadence }, CADENCE_RUN_MINUTES) { k ->
+        runs({ !minutes[it].asleep && minutes[it].steps >= MODERATE_CADENCE }, CADENCE_RUN_MINUTES) { k ->
             counted[k] = true
             if (minutes[k].steps >= VIGOROUS_CADENCE) vigorous++ else moderate++
         }
@@ -110,10 +109,6 @@ object Activity {
      * age 60 and 8,000-10,000 below (Paluch et al. 2022).
      */
     fun defaultStepGoal(age: Int?): Int = if (age != null && age >= 60) 7_000 else 8_000
-
-    /** Moderate cadence threshold for an age: 105 from 61 when [olderThreshold] is on, else 100. */
-    fun moderateCadence(age: Int?, olderThreshold: Boolean = false): Int =
-        if (olderThreshold && age != null && age >= 61) MODERATE_CADENCE_61 else MODERATE_CADENCE
 
     data class Day(
         val steps: Int,

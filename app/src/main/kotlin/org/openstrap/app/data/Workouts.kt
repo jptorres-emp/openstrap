@@ -40,7 +40,7 @@ object Workouts {
 
     /**
      * Ties a workout to its HR stream and sport effect. [maxHeartRate] comes from the strap's effect when it
-     * has one, then [fallbackMaxHr] (e.g. 220 − age).
+     * has one, then [fallbackMaxHr] (the app's usual max HR, [RecoveryEngine.maxHeartRate]).
      */
     fun analyse(w: Workout, hr: List<WorkoutHeartRate>, effects: List<SportEffectRow>, fallbackMaxHr: Int): WorkoutAnalysis {
         val effect = effects.filter { it.end > w.start && it.end <= w.start + EFFECT_WINDOW_S }.minByOrNull { it.end }

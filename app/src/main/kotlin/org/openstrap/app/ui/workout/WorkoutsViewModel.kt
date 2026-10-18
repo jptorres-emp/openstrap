@@ -2,26 +2,38 @@ package org.openstrap.app.ui.workout
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
+import org.openstrap.app.data.RecoveryEngine
 import org.openstrap.app.data.WorkoutAnalysis
 import org.openstrap.app.data.Workouts
 import org.openstrap.app.data.db.HealthDao
 import org.openstrap.app.data.settings.UserProfile
-import java.time.Year
+import kotlin.math.roundToInt
 
 /** Workouts list (newest first) and the one open in detail. */
 @OptIn(ExperimentalCoroutinesApi::class)
 class WorkoutsViewModel(private val dao: HealthDao, profile: Flow<UserProfile>) : ViewModel() {
-    private val fallbackMaxHr: Flow<Int> = profile.map { p -> p.birthYear?.let { 220 - (Year.now().value - it) } ?: DEFAULT_MAX_HR }
+    /**
+     * Zones fall back to the app's one max-HR rule (tested value, Tanaka, strap, raised by observed peaks) when a
+     * workout has no sport effect of its own. Shared, so the 90-day read behind it runs once per profile change.
+     */
+    private val fallbackMaxHr: Flow<Int> = profile
+        .mapLatest { p -> RecoveryEngine(dao).maxHeartRate(p).roundToInt() }
+        .flowOn(Dispatchers.Default)
+        .stateIn<Int?>(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+        .filterNotNull()
 
     /** List rows use the stored end; the detail screen works out the real one from the HR stream. */
     val workouts: StateFlow<List<WorkoutAnalysis>> =
@@ -44,8 +56,4 @@ class WorkoutsViewModel(private val dao: HealthDao, profile: Flow<UserProfile>) 
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     fun open(start: Long?) { openStart.value = start }
-
-    private companion object {
-        const val DEFAULT_MAX_HR = 190
-    }
 }

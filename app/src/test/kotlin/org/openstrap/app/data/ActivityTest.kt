@@ -42,10 +42,10 @@ class ActivityTest {
         assertEquals(0, Activity.mvpa(minutes(*IntArray(12), hrr = 0.5f).map { it.copy(asleep = true) }).moderateMinutes)
     }
 
-    @Test fun `older adults can use 105`() {
-        assertEquals(105, Activity.moderateCadence(65, olderThreshold = true))
-        assertEquals(100, Activity.moderateCadence(65))
-        assertEquals(0, Activity.mvpa(minutes(102, 102, 102), moderateCadence = 105).moderateMinutes)
+    @Test fun `moderate cadence is 100 at every age`() {
+        assertEquals(100, Activity.MODERATE_CADENCE)
+        assertEquals(3, Activity.mvpa(minutes(102, 102, 102)).moderateMinutes)
+        assertEquals(0, Activity.mvpa(minutes(99, 99, 99)).moderateMinutes)
     }
 
     @Test fun `step divergence over 5 percent is flagged`() {

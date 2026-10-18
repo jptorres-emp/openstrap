@@ -13,7 +13,8 @@ sealed interface ConnectionState {
     data object Connecting : ConnectionState
     data object Authenticating : ConnectionState
     data class Connected(val batteryPercent: Int?, val firmware: String?, val charging: Boolean = false) : ConnectionState
-    data class Failed(val reason: String) : ConnectionState
+    /** [keyRejected]: the strap refused the auth key, so retrying with the same key can't work. */
+    data class Failed(val reason: String, val keyRejected: Boolean = false) : ConnectionState
 }
 
 sealed interface SyncState {

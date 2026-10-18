@@ -66,10 +66,13 @@ OpenStrap is a general wellness app. Its scores, trends and alerts are estimates
 
 ## Getting the auth key
 
-1. Pair the strap **once** with the Zepp app. A throwaway account with minimal profile data is enough.
-2. Get the strap's `auth_key` (32 hex characters). You can tap **Sign in with Zepp to fetch the key** in OpenStrap, or read it by hand as the [Gadgetbridge server-pairing guide](https://gadgetbridge.org/basics/pairing/huami-xiaomi-server/) explains.
-3. Uninstall Zepp. **Do not unbind the strap in Zepp**, because that wipes the key on the strap.
-4. In OpenStrap: **You → your strap → Scan for straps** (strap on its charger) → paste or fetch the key → **Pair**.
+1. **Link the strap in the Zepp app**, once. OpenStrap signs in with **email and password** only, because Google, Apple, Facebook and Xiaomi sign-in can't run inside it. If you signed up with Google or Apple, add an email and password to the account in the Zepp app's account settings.
+2. **Get the strap ready.** Put it on its charger near the phone, and force-stop or uninstall Zepp. **Do not unlink the strap in Zepp**: that wipes the key on the strap.
+3. In OpenStrap, go to **You → your strap → Sign in with Zepp**. Sign in with the same email, check the strap it finds, and tap **Pair this strap**. OpenStrap pairs straight away.
+
+If you can't add an email, get the key on a computer with the [Gadgetbridge guide](https://gadgetbridge.org/basics/pairing/huami-xiaomi-server/#on-a-computer). Then tap **Enter it yourself**, scan, and paste it.
+
+If the strap rejects the key, OpenStrap says why (wrong key, strap unlinked, and so on) and offers **Start pairing again**.
 
 Treat the key like a password. Anyone who has it can connect to your strap.
 

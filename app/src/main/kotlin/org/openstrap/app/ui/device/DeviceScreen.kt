@@ -62,6 +62,8 @@ import org.openstrap.app.ui.components.SettingRow
 import org.openstrap.app.ui.dashboard.ScreenList
 import org.openstrap.app.ui.theme.MetricColors
 import org.openstrap.app.ui.theme.PhosphorIcons
+import org.openstrap.app.ui.zepp.ComputerGuideButton
+import org.openstrap.app.ui.zepp.OptionButton
 import org.openstrap.app.ui.zepp.ZeppSignInDialog
 import java.time.Instant
 import java.time.ZoneId
@@ -141,7 +143,9 @@ fun DeviceScreen(
             item { PairPanel(vm, scan, onRequestBluetooth) }
         } else {
             item { StatusHero(device.name, device.address, connection, sync) }
-            item {
+            val failed = connection as? ConnectionState.Failed
+            if (failed?.keyRejected == true) item { KeyRejectedPanel(failed.reason, onPairAgain = vm::forget) }
+            else item {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     when (connection) {
                         is ConnectionState.Connected -> {
@@ -242,7 +246,14 @@ private fun StatusHero(name: String, address: String, connection: ConnectionStat
             Text("Firmware $it", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         when {
-            connection is ConnectionState.Failed -> Text(connection.reason, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
+            connection is ConnectionState.Failed && !connection.keyRejected -> {
+                Text(connection.reason, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    "OpenStrap keeps retrying. Keep the strap on its charger near the phone, and make sure the Zepp app " +
+                        "isn't running: the strap talks to one app at a time.",
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
             sync is SyncState.Failed -> Text("Sync failed: ${sync.reason}", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
         }
     }
@@ -250,21 +261,18 @@ private fun StatusHero(name: String, address: String, connection: ConnectionStat
 
 @Composable
 private fun PairPanel(vm: DeviceViewModel, scan: ScanUiState, onRequestBluetooth: (then: () -> Unit) -> Unit) {
-    var address by rememberSaveable { mutableStateOf("") }
-    var name by rememberSaveable { mutableStateOf("Amazfit Helio Strap") }
-    var key by rememberSaveable { mutableStateOf("") }
-    var showKey by rememberSaveable { mutableStateOf(false) }
     var signIn by rememberSaveable { mutableStateOf(false) }
+    var manual by rememberSaveable { mutableStateOf(false) }
 
     if (signIn) {
         ZeppSignInDialog(
             preferredApiBase = null,
-            confirmLabel = "Use this strap",
+            confirmLabel = "Pair this strap",
+            requireKey = true,
             onDismiss = { signIn = false },
             onConfirm = { listing, strap ->
                 signIn = false
-                vm.saveZeppSignIn(listing, strap)
-                strap?.let { address = it.macAddress; it.authKey?.let { k -> key = k } }
+                onRequestBluetooth { vm.signInAndPair(listing, strap) }
             },
         )
     }
@@ -272,65 +280,159 @@ private fun PairPanel(vm: DeviceViewModel, scan: ScanUiState, onRequestBluetooth
     Panel {
         PanelHeader("Pair your Helio Strap", PhosphorIcons.Bluetooth, MaterialTheme.colorScheme.primary)
         Text(
-            "Put the strap on its charger, then scan. You'll also need its 32-character auth key from the one-time Zepp bind.",
+            "OpenStrap needs the strap's auth key, which Zepp creates when you link the strap. You only do this once.",
             style = MaterialTheme.typography.bodyMedium,
         )
-        OutlinedButton(onClick = { signIn = true }, Modifier.fillMaxWidth()) { Text("Sign in with Zepp to fetch the key") }
-        Text(
-            "Or scan and paste the key yourself below. Signing in only contacts Zepp to read your device list.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        if (scan.scanning) {
-            OutlinedButton(onClick = vm::stopScan, Modifier.fillMaxWidth()) { Text("Stop scanning") }
-            LinearProgressIndicator(Modifier.fillMaxWidth().clip(CircleShape))
-        } else {
-            Button(onClick = { onRequestBluetooth { vm.startScan() } }, Modifier.fillMaxWidth()) { Text("Scan for straps") }
+        PairStep(1, "Link the strap in the Zepp app") {
+            StepText("Install Zepp, sign in, and link your Helio Strap.")
+            StepText(
+                "OpenStrap signs in with email only. If you signed up with Google or Apple, add an email and password " +
+                    "to your account in the Zepp app's account settings.",
+                muted = true,
+            )
         }
-        scan.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-        if (scan.scanning && scan.found.isEmpty()) EmptyHint("Looking for straps nearby…")
-        scan.found.forEach { d ->
-            val selected = d.address == address
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(if (selected) MaterialTheme.colorScheme.surfaceContainerHighest else MaterialTheme.colorScheme.surfaceContainerHigh)
-                    .clickable { address = d.address; name = d.name }
-                    .padding(14.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(PhosphorIcons.Watch, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                Spacer(Modifier.width(12.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(d.name, style = MaterialTheme.typography.titleSmall)
-                    Text(d.address, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        PairStep(2, "Get the strap ready") {
+            StepText("Put the strap on its charger, close to this phone.")
+            StepText("Force-stop or uninstall Zepp so it lets go of the strap. Don't unlink the strap in Zepp: that wipes its key.", muted = true)
+        }
+        PairStep(3, "Sign in and pair") {
+            StepText("Sign in with the same Zepp email. OpenStrap finds your strap and its key, then pairs.")
+        }
+        // Full panel width, not indented under step 3, so they line up with the panel's edges.
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(
+                onClick = { signIn = true },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+                contentPadding = PaddingValues(vertical = 16.dp),
+            ) { Text("Sign in with Zepp") }
+            ComputerGuideButton()
+            OptionButton("Have the key already?", "Enter it yourself") { manual = true }
+        }
+    }
+
+    if (manual) ManualPairDialog(vm, scan, onRequestBluetooth, onDismiss = { vm.stopScan(); manual = false })
+}
+
+@Composable
+private fun PairStep(number: Int, title: String, content: @Composable () -> Unit) {
+    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Box(
+            Modifier.size(28.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text("$number", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onPrimaryContainer)
+        }
+        Column(Modifier.weight(1f).padding(top = 3.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(title, style = MaterialTheme.typography.titleSmall)
+            content()
+        }
+    }
+}
+
+@Composable
+private fun StepText(text: String, muted: Boolean = false) {
+    Text(
+        text,
+        style = if (muted) MaterialTheme.typography.bodySmall else MaterialTheme.typography.bodyMedium,
+        color = if (muted) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+    )
+}
+
+/** For keys read on a computer or from an earlier pairing: scan for the address, paste the key, pair. */
+@Composable
+private fun ManualPairDialog(
+    vm: DeviceViewModel,
+    scan: ScanUiState,
+    onRequestBluetooth: (then: () -> Unit) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var address by rememberSaveable { mutableStateOf("") }
+    var name by rememberSaveable { mutableStateOf(DeviceViewModel.DEFAULT_NAME) }
+    var key by rememberSaveable { mutableStateOf("") }
+    var showKey by rememberSaveable { mutableStateOf(false) }
+
+    org.openstrap.app.ui.components.GlassAlertDialog(
+        onDismissRequest = onDismiss,
+        icon = { Icon(PhosphorIcons.Key, null) },
+        title = { Text("Enter the key yourself") },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("Scan with the strap on its charger and tap it to fill in the address, then paste the 32-character auth key.")
+                if (scan.scanning) {
+                    OutlinedButton(onClick = vm::stopScan, Modifier.fillMaxWidth()) { Text("Stop scanning") }
+                    LinearProgressIndicator(Modifier.fillMaxWidth().clip(CircleShape))
+                } else {
+                    OutlinedButton(onClick = { onRequestBluetooth { vm.startScan() } }, Modifier.fillMaxWidth()) { Text("Scan for straps") }
                 }
-                Text("${d.rssi} dBm", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                scan.error?.let {
+                    Text("Scanning stopped: $it. Check that Bluetooth is on and try again.", color = MaterialTheme.colorScheme.error)
+                }
+                if (scan.scanning && scan.found.isEmpty()) {
+                    Text("Looking for straps nearby… Keep the strap on its charger.", style = MaterialTheme.typography.bodySmall)
+                }
+                scan.found.forEach { d ->
+                    val selected = d.address == address
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(if (selected) MaterialTheme.colorScheme.surfaceContainerHighest else MaterialTheme.colorScheme.surfaceContainerHigh)
+                            .clickable { address = d.address; name = d.name }
+                            .padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(PhosphorIcons.Watch, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Spacer(Modifier.width(12.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(d.name, style = MaterialTheme.typography.titleSmall)
+                            Text(d.address, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        if (selected) Icon(PhosphorIcons.CheckCircle, "Selected", tint = MaterialTheme.colorScheme.primary)
+                        else Text("${d.rssi} dBm", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+                OutlinedTextField(
+                    value = address, onValueChange = { address = it.uppercase() },
+                    label = { Text("Bluetooth address") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                )
+                OutlinedTextField(
+                    value = key, onValueChange = { key = it },
+                    label = { Text("Auth key") }, singleLine = true,
+                    trailingIcon = { TextButton(onClick = { showKey = !showKey }) { Text(if (showKey) "Hide" else "Show") } },
+                    visualTransformation = if (showKey) VisualTransformation.None else PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                )
             }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    // A bad key or address only shows a message; a valid one saves the strap and the screen moves to its status.
+                    if (DeviceViewModel.normalizeAuthKey(key) != null && DeviceViewModel.isAddress(address)) onDismiss()
+                    onRequestBluetooth { vm.pair(address, name, key) }
+                },
+                enabled = address.isNotBlank() && key.isNotBlank(),
+            ) { Text("Pair") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
+}
+
+/** Shown under the status when the strap turned the key down: retrying can't help, so offer to start pairing over. */
+@Composable
+private fun KeyRejectedPanel(reason: String, onPairAgain: () -> Unit) {
+    Panel {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Icon(PhosphorIcons.WarningCircle, null, tint = MetricColors.bad)
+            Text("Pairing didn't work", style = MaterialTheme.typography.titleMedium)
         }
-        OutlinedTextField(
-            value = address, onValueChange = { address = it.uppercase() },
-            label = { Text("Bluetooth address") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(14.dp),
-        )
-        OutlinedTextField(
-            value = key, onValueChange = { key = it },
-            label = { Text("Auth key") }, singleLine = true,
-            leadingIcon = { Icon(PhosphorIcons.Key, null) },
-            trailingIcon = { TextButton(onClick = { showKey = !showKey }) { Text(if (showKey) "Hide" else "Show") } },
-            visualTransformation = if (showKey) VisualTransformation.None else PasswordVisualTransformation(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(14.dp),
-        )
-        Button(
-            onClick = { onRequestBluetooth { vm.pair(address, name, key) } },
-            enabled = address.isNotBlank() && key.isNotBlank(),
-            modifier = Modifier.fillMaxWidth(),
-            contentPadding = PaddingValues(vertical = 14.dp),
-            colors = ButtonDefaults.buttonColors(),
-        ) { Text("Pair") }
+        Text(reason, style = MaterialTheme.typography.bodyMedium)
+        Button(onClick = onPairAgain, Modifier.fillMaxWidth()) { Text("Start pairing again") }
+        ComputerGuideButton()
     }
 }
 

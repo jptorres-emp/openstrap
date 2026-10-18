@@ -177,7 +177,7 @@ class StrapManager(
                 if (liveHeartRateEnabled.value && appVisible) startLive()
             } catch (e: AuthException) {
                 log("auth failed: ${e.message}")
-                connection.value = ConnectionState.Failed(e.message ?: "Authentication failed")
+                connection.value = PairingErrors.authFailure(e)
                 close()
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e

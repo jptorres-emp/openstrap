@@ -388,9 +388,9 @@ object Recovery {
             }
         }
 
-        // Training load: yesterday against the chronic load.
+        // Training load: yesterday against fitness (CTL, 42-day) up to the day before.
         if (dailyLoad.size >= 7) {
-            val (_, chronic) = ewmaLoads(dailyLoad)
+            val chronic = fitnessFatigue(dailyLoad.dropLast(1)).last().ctl
             val yesterday = dailyLoad.last()
             val ratio = yesterday / max(chronic, MIN_CHRONIC_LOAD)
             val score = if (ratio <= 1.5f) 100 else (100 - 25 * (ratio - 1.5f)).toInt().coerceIn(30, 100)
@@ -477,9 +477,23 @@ object Recovery {
      * evidence is against scoring with it (evidence-review.md, "Load screen"). Null before 14 days of load.
      */
     fun acwr(daily: List<Float>): Float? {
-        if (daily.size < 14) return null
-        val (acute, chronic) = ewmaLoads(daily)
+        // Uncoupled: the chronic EWMA stops where the acute week begins, so this week's load isn't in both.
+        if (daily.size < ACWR_ACUTE_DAYS + ACWR_MIN_CHRONIC_DAYS) return null
+        val acute = ewma(daily, ACWR_ACUTE_DAYS)
+        val chronic = ewma(daily.dropLast(ACWR_ACUTE_DAYS), ACWR_CHRONIC_DAYS)
         return acute / max(chronic, MIN_CHRONIC_LOAD)
+    }
+
+    const val ACWR_ACUTE_DAYS = 7
+    const val ACWR_CHRONIC_DAYS = 28
+    const val ACWR_MIN_CHRONIC_DAYS = 14
+
+    /** Exponentially weighted mean of [daily] with λ = 2/([days] + 1). */
+    fun ewma(daily: List<Float>, days: Int): Float {
+        val l = 2f / (days + 1)
+        var v = daily.first()
+        for (x in daily.drop(1)) v = l * x + (1 - l) * v
+        return v
     }
 
     /**
@@ -537,26 +551,85 @@ object Recovery {
         else -> hrr * 0.64f * exp(1.92f * hrr)
     }
 
-    /** Daily load: TRIMP over awake minutes with HR at or above [LOAD_MIN_HRR] of reserve. */
-    fun dailyLoad(hr: List<Pair<Long, Int>>, rest: Float, maxHr: Float, female: Boolean = false, asleep: (Long) -> Boolean = { false }): Float =
-        hr.filter { !asleep(it.first) }.sumOf { (_, bpm) ->
-            val x = hrr(bpm, rest, maxHr)
-            if (x >= LOAD_MIN_HRR) trimpMinute(x, female).toDouble() else 0.0
-        }.toFloat()
+    /**
+     * Daily load: TRIMP over awake minutes with HR at or above [LOAD_MIN_HRR] of reserve, counting a minute only when at
+     * least [LOAD_RUN_MINUTES] of the last [LOAD_RUN_WINDOW] minutes (itself included) are there too, so isolated PPG
+     * spikes don't count. No HR-load method is validated on free-living minutes; Banister is the least-bad choice.
+     */
+    fun dailyLoad(hr: List<Pair<Long, Int>>, rest: Float, maxHr: Float, female: Boolean = false, asleep: (Long) -> Boolean = { false }): Float {
+        val minutes = hr.filter { !asleep(it.first) }.sortedBy { it.first }.map { (t, bpm) -> t to hrr(bpm, rest, maxHr) }
+        val above = minutes.filter { it.second >= LOAD_MIN_HRR }
+        var lo = 0
+        var total = 0.0
+        for ((k, m) in above.withIndex()) {
+            while (above[lo].first <= m.first - LOAD_RUN_WINDOW * 60L) lo++
+            if (k - lo + 1 >= LOAD_RUN_MINUTES) total += trimpMinute(m.second, female)
+        }
+        return total.toFloat()
+    }
+
+    const val LOAD_RUN_MINUTES = 3
+    const val LOAD_RUN_WINDOW = 5
 
     /**
-     * Maximum heart rate: Tanaka's 208 − 0.7·age when the age is known, else the strap's own value (from
-     * the Zepp profile), else 190. Raised to [observedPeak] when the user has actually gone higher (an equation's
-     * individual SD is 7-11 bpm, so raising is sound), but by at most 15 bpm so one artefact can't move it far.
+     * Maximum heart rate: a [tested] value the user entered wins. Otherwise Tanaka's 208 − 0.7·age (18,712 subjects)
+     * when the age is known, else the strap's own value (from the Zepp profile), else 190. Raised to [observedPeak]
+     * when the user has actually gone higher (an equation's individual SD is 7-11 bpm, so raising is sound and
+     * lowering is not), by at most [MAX_HR_RAISE] bpm.
      */
-    fun maxHeartRate(age: Int?, strapMax: Int? = null, observedPeak: Int? = null): Float {
+    fun maxHeartRate(age: Int?, strapMax: Int? = null, observedPeak: Int? = null, tested: Int? = null): Float {
+        if (tested != null && tested in 120..230) return tested.toFloat()
         val estimate = when {
             age != null && age in 10..100 -> 208f - 0.7f * age
             strapMax != null && strapMax in 140..225 -> strapMax.toFloat()
             else -> 190f
         }
-        return if (observedPeak != null && observedPeak > estimate) min(observedPeak.toFloat(), estimate + 15) else estimate
+        return if (observedPeak != null && observedPeak > estimate) min(observedPeak.toFloat(), estimate + MAX_HR_RAISE) else estimate
     }
+
+    const val MAX_HR_RAISE = 15f
+    /** Two separate days must reach within this of each other before a peak counts. */
+    const val MAX_HR_AGREE_BPM = 3
+
+    /**
+     * The highest heart rate the user has really reached, from each day's artefact-filtered maximum [dailyMaxima]: the
+     * second of the first two days (from the top) within [MAX_HR_AGREE_BPM] of each other. One day alone, however
+     * high, never sets it. Null when no two days agree.
+     */
+    fun observedPeak(dailyMaxima: List<Int>): Int? {
+        val sorted = dailyMaxima.sortedDescending()
+        for (i in 0 until sorted.size - 1) if (sorted[i] - sorted[i + 1] <= MAX_HR_AGREE_BPM) return sorted[i + 1]
+        return null
+    }
+
+    /**
+     * A day's artefact-filtered maximum 1-minute HR: the highest minute in [HR_MIN_BPM]..[HR_MAX_BPM] with a
+     * neighbouring minute within [ARTEFACT_JUMP_BPM] of it (a lone spike isn't a heartbeat). [minutes] ascending.
+     */
+    fun filteredMax(minutes: List<Pair<Long, Int>>): Int? = minutes.indices.filter { i ->
+        val (t, bpm) = minutes[i]
+        bpm in HR_MIN_BPM..HR_MAX_BPM && listOfNotNull(minutes.getOrNull(i - 1), minutes.getOrNull(i + 1))
+            .any { (u, v) -> abs(u - t) <= 60 && abs(v - bpm) <= ARTEFACT_JUMP_BPM }
+    }.maxOfOrNull { minutes[it].second }
+
+    const val ARTEFACT_JUMP_BPM = 10
+
+    /**
+     * Daytime resting HR for heart-rate reserve: Karvonen and Swain define resting HR as awake rest, so a nightly
+     * minimum would inflate HRR for every waking minute. The median of the strap's daily resting HR over the last
+     * [RHR_DAYS] days ([daily], day → bpm); else the median nightly lowest ([nightly]) of those days plus an offset:
+     * the median of (daily − nightly lowest) over the latest [RHR_DAYS] days that have both, else [RHR_OFFSET_BPM].
+     */
+    fun daytimeRestingHr(daily: Map<Long, Float>, nightly: Map<Long, Float>, day: Long): Float? {
+        val recent = { m: Map<Long, Float> -> m.filterKeys { it <= day && day - it < RHR_DAYS * DAY - DST_SLACK }.values.toList() }
+        percentile(recent(daily), 0.5f)?.let { return it }
+        val lowest = percentile(recent(nightly), 0.5f) ?: return null
+        val pairs = daily.keys.filter { it in nightly }.sortedDescending().take(RHR_DAYS).map { daily.getValue(it) - nightly.getValue(it) }
+        return lowest + (percentile(pairs, 0.5f) ?: RHR_OFFSET_BPM)
+    }
+
+    const val RHR_DAYS = 14
+    const val RHR_OFFSET_BPM = 3f
 
     /** Below this reserve fraction, heart rate is everyday living rather than training. */
     const val LOAD_MIN_HRR = 0.2f
@@ -564,6 +637,41 @@ object Recovery {
     /** A day whose TRIMP is more than [HARD_DAY_RATIO]× the chronic load: annotated as a likely cause of an alert. */
     fun hardDay(load: Float, chronic: Float): Boolean = load > HARD_DAY_RATIO * max(chronic, MIN_CHRONIC_LOAD)
     const val HARD_DAY_RATIO = 1.5f
+
+    /** Fitness (CTL), fatigue (ATL) and form for one day of [fitnessFatigue]. */
+    data class LoadTrend(val ctl: Float, val atl: Float, val form: Float)
+
+    /** The standard 42/7-day convention; personal time constants are not fitted (poorly identifiable, Imbach 2025). */
+    const val CTL_DAYS = 42
+    const val ATL_DAYS = 7
+
+    /**
+     * CTL_t = CTL_{t−1} + (TRIMP_t − CTL_{t−1})·(1 − e^(−1/42)), ATL likewise with 7, Form_t = CTL_{t−1} − ATL_{t−1}, over
+     * [daily] (oldest first; only worn days, so an unworn day holds rather than decays). Seeded with the mean of the
+     * first week, so a short history doesn't start at zero.
+     */
+    fun fitnessFatigue(daily: List<Float>): List<LoadTrend> {
+        if (daily.isEmpty()) return listOf(LoadTrend(0f, 0f, 0f))
+        val kc = 1 - exp(-1f / CTL_DAYS)
+        val ka = 1 - exp(-1f / ATL_DAYS)
+        var ctl = daily.take(7).average().toFloat()
+        var atl = ctl
+        return daily.map { x ->
+            val form = ctl - atl
+            ctl += (x - ctl) * kc
+            atl += (x - atl) * ka
+            LoadTrend(ctl, atl, form)
+        }
+    }
+
+    /** Strain 0-21 from a day's TRIMP: 21·(1 − e^(−TRIMP/180)). A fixed curve, so today's 12 compares with last year's. */
+    fun strain(trimp: Float): Float = STRAIN_MAX * (1 - exp(-trimp.coerceAtLeast(0f) / STRAIN_SCALE))
+    const val STRAIN_MAX = 21f
+    const val STRAIN_SCALE = 180f
+
+    /** "vs your usual": the share (0-100) of the last 90 days' loads ([history]) at or below [today]; null under 7 days. */
+    fun loadPercentile(today: Float, history: List<Float>): Int? =
+        if (history.size < 7) null else Math.round(100f * history.count { it <= today } / history.size)
 
     /** Acute (7-day) and chronic (28-day) exponentially weighted load, λ = 2/(N+1) (Williams et al. 2017). */
     fun ewmaLoads(daily: List<Float>): Pair<Float, Float> {

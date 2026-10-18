@@ -215,13 +215,21 @@ private fun LoadPanel(r: RecoveryResult?, effect: SportEffectRow?, onEditProfile
         DotHeader("Training load")
         if (r != null) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Fact("Today", "${r.load.toInt()}")
-                Fact("Usual day", r.chronicLoad?.toInt()?.toString() ?: "—")
-                Spacer(Modifier)
+                Fact("Strain", "%.1f".format(r.strain))
+                Fact("Load today", "${r.load.toInt()}")
+                Fact("vs your usual", r.strainPercentile?.let { "${it}th pct" } ?: "—")
+            }
+            r.loadTrend?.let { t ->
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Fact("Fitness", "${t.ctl.toInt()}")
+                    Fact("Fatigue", "${t.atl.toInt()}")
+                    Fact("Form", "${if (t.form > 0.5f) "+" else ""}${t.form.toInt()}")
+                }
+                Note("Fitness and fatigue are 42- and 7-day averages of your daily load; form is fitness minus fatigue.")
             }
             Note(
                 "Each minute counts by how hard your heart works between resting (${r.restingHr.toInt()} bpm) and maximum " +
-                    "(${r.maxHr.toInt()} bpm). An hour of moderate exercise is about 60–80.",
+                    "(${r.maxHr.toInt()} bpm${if (r.maxHrTested) ", from your test" else ""}). Strain runs 0–21 on a fixed curve: an hour at 60 % of reserve is about 7.",
             )
         }
         r?.acwr?.let { ratio ->

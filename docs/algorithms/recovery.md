@@ -208,16 +208,24 @@ Zepp does the same job differently. It computes a stress threshold on the phone 
 ## Training load (TRIMP)
 
 * Formula (Banister 1991): TRIMP per minute = x·0.64·e^(1.92x) for men and x·0.86·e^(1.67x) for women, where x is HRR. Unknown sex uses the men's curve.
-* Only awake minutes with x ≥ 0.2 count.
-* Days with fewer than 8 h of heart-rate data are left out of the load history.
+* A minute counts only when awake, x ≥ `LOAD_MIN_HRR` = 0.2, and at least `LOAD_RUN_MINUTES` = 3 of the last `LOAD_RUN_WINDOW` = 5 minutes (itself included) have x ≥ 0.2, so isolated PPG spikes no longer count. No HR-load method is validated on free-living minutes, and even in sessions Banister's test–retest CV is 15.6 % (Wallace et al. 2014); it's the least-bad choice (Lucia needs lab thresholds, Edwards' zones start at 50 % HRmax, which walking crosses).
+* Days with fewer than 8 h of heart-rate data are left out of the load history (`LOAD_DAYS` = 90 days of it).
+
+### Load screen (Activity → Training load; descriptive)
+
+* **Fitness, fatigue, form** (`fitnessFatigue`), the standard 42/7 convention: CTL_t = CTL_{t−1} + (TRIMP_t − CTL_{t−1})·(1 − e^(−1/42)); ATL likewise with 7; Form_t = CTL_{t−1} − ATL_{t−1}. Over worn days only (an unworn day holds rather than decays), seeded with the first week's mean. Personal time constants are not fitted: they're poorly identifiable (Imbach et al. 2025).
+* **Strain** (`strain`) = 21·(1 − e^(−TRIMP/180)): about 7 for 1 h at 60 % HRR (men's curve), about 15 for 2 h at 75 %. A fixed curve keeps today's 12 comparable with last year's; WHOOP's 0–21 Strain has no published validation. Shown with "vs your usual" (`loadPercentile`), the share of the last 90 days' loads at or below today's.
+* **Acute:chronic** (`acwr`, labelled "contested"): EWMA acute 7 days over chronic 28 days, the chronic part ending where the acute week begins (uncoupled). Needs 21 days.
+* Readiness keeps "previous day's load": 100 when yesterday's TRIMP ≤ 1.5 × CTL (up to the day before), −25 points per unit above, floor 30.
 * Live heart rate is stored several times a minute; the engine averages it to one value per minute first.
 
 ## Inputs from the profile (Device → Your profile)
 
-* **Max HR:** Tanaka et al. 2001 (JACC): 208 − 0.7·age. Without an age, the strap's own max HR (from the Zepp profile) is used, else 190. It's raised to the highest HR the user has actually reached, by at most +15 bpm. "Reached" is the second-highest value over 60 days, so one artefact can't set it, taken from both the per-minute heart rate and the strap's daily maximum exercise HR (type 61). Max HR sets heart-rate reserve, so it changes both training load and Charge drain.
+* **Max HR:** a value the user entered from a test wins. Otherwise Tanaka et al. 2001 (JACC, 18,712 subjects): 208 − 0.7·age; without an age, the strap's own max HR (from the Zepp profile), else 190. Any equation's individual SD is about 7–11 bpm, so raising is sound and lowering is not: it's raised to the highest HR the user has actually reached, by at most `MAX_HR_RAISE` = +15 bpm. "Reached" (`observedPeak`) needs two separate days within `MAX_HR_AGREE_BPM` = 3 bpm of each other over the last 90 days, each day's value being its highest artefact-filtered minute (`filteredMax`: a neighbouring minute within 10 bpm) or the strap's daily maximum exercise HR (type 61). Max HR sets heart-rate reserve, so it changes both training load and Charge drain.
 * **Sex:** selects the TRIMP curve.
 * **Weight and height:** stored for future energy-expenditure work; not used yet.
-* **Resting HR (daytime):** median of the strap's daily resting HR over 14 days, else the median nightly lowest + 3 bpm.
+* **Resting HR (daytime)** (`daytimeRestingHr`): median of the strap's daily resting HR over the last 14 days, else the median nightly lowest + an offset. The offset is the median of (daily − nightly lowest) over the latest 14 days that have both, else `RHR_OFFSET_BPM` = 3 bpm. Karvonen and Swain define resting HR as awake rest; a nightly minimum would inflate HRR for every waking minute.
+* **Sleep need:** optional, 7–9 h; blank uses the age default.
 
 ## Limits
 

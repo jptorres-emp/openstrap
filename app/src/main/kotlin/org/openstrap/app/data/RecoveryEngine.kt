@@ -34,6 +34,13 @@ data class RecoveryResult(
     val regularity: SleepRegularity.Result? = null,
     /** The sleep-health count for the night that ended on [date]. */
     val sleepHealth: SleepRegularity.Health? = null,
+    /** Fitness (CTL), fatigue (ATL) and form at the start of [date], from worn days' loads. */
+    val loadTrend: Recovery.LoadTrend? = null,
+    /** Strain 0-21 from [load], and where [load] sits among the last 90 days (0-100). */
+    val strain: Float = 0f,
+    val strainPercentile: Int? = null,
+    /** True when max HR is the user's own tested value. */
+    val maxHrTested: Boolean = false,
 )
 
 /** Loads what [Recovery] needs from the database and runs it. All work happens off the main thread by the caller. */
@@ -44,8 +51,11 @@ class RecoveryEngine(private val dao: HealthDao) {
         val from = DayWindow.of(date.minusDays(Recovery.BASELINE_NIGHTS.toLong() + 1), zone).from
         val to = day.to
 
+        // Load history (CTL, Strain's "vs your usual", max HR) reaches further back than the nightly baselines.
+        val loadFrom = DayWindow.of(date.minusDays(LOAD_DAYS.toLong()), zone).from
         // Live heart rate is stored several times a minute; the model works in minutes.
-        val hr = Summaries.bucketAverage(Summaries.heartRateSeries(dao.heartRateOnce(from, to), dao.activityOnce(from, to)), 60)
+        val hrAll = Summaries.bucketAverage(Summaries.heartRateSeries(dao.heartRateOnce(loadFrom, to), dao.activityOnce(loadFrom, to)), 60)
+        val hr = hrAll.filter { it.first >= from }
         val sessions = dao.sleepSessionsOnce(from, to)
         val hrv = dao.hrvOnce(from, to)
         val skin = dao.skinTemperatureOnce(from, to)
@@ -76,25 +86,30 @@ class RecoveryEngine(private val dao: HealthDao) {
             )
         }.sortedBy { it.day }
 
-        // Daytime resting HR: the strap's daily values when it has them, else the nightly lowest plus a little.
-        val restingHr = strapResting.takeLast(14).map { it.bpm.toFloat() }.median()
-            ?: nights.takeLast(14).mapNotNull { it.restingHr }.median()?.plus(3f)
-            ?: 60f
+        // Daytime resting HR: the strap's daily values when it has them, else the nightly lowest plus an offset.
+        val restingHr = Recovery.daytimeRestingHr(
+            strapResting.associate { it.day to it.bpm.toFloat() },
+            nights.mapNotNull { n -> n.restingHr?.let { n.day to it } }.toMap(),
+            day.from,
+        ) ?: 60f
         val age = profile.age()
-        // The second-highest value, so one artefact can't set it: per-minute HR, and the strap's daily exercise maximum.
-        val observedPeak = listOfNotNull(
-            hr.map { it.second }.sortedDescending().getOrNull(1),
-            dao.dailyMaxHrOnce(from, to).map { it.bpm }.sortedDescending().getOrNull(1),
-        ).maxOrNull()
-        val maxHr = Recovery.maxHeartRate(age, pai?.maxHeartRate, observedPeak)
+        // Each day's highest real heart rate (filtered per-minute HR, and the strap's daily exercise maximum); two
+        // separate days have to agree before it raises max HR, so one artefact can't.
+        fun dayOf(t: Long) = Instant.ofEpochSecond(t).atZone(zone).toLocalDate()
+        val dayMax = hrAll.groupBy { dayOf(it.first) }.mapValues { (_, m) -> Recovery.filteredMax(m) }.toMutableMap()
+        dao.dailyMaxHrOnce(loadFrom, to).forEach { r -> val d = dayOf(r.day); dayMax[d] = maxOf(dayMax[d] ?: 0, r.bpm) }
+        val observedPeak = Recovery.observedPeak(dayMax.values.filterNotNull())
+        val maxHr = Recovery.maxHeartRate(age, pai?.maxHeartRate, observedPeak, profile.maxHeartRate)
         val female = profile.sex == UserProfile.Sex.Female
 
         // Daily training load for the 28 days before the selected one, skipping days the strap was mostly off.
         val sleepRanges = sessions.map { it.start..it.end }
         val asleep = { t: Long -> sleepRanges.any { t in it } }
-        val loadDays = (28 downTo 1).mapNotNull { back ->
-            val w = DayWindow.of(date.minusDays(back.toLong()), zone)
-            val series = hr.filter { it.first in w.from..w.to }
+        val hrByDay = hrAll.groupBy { dayOf(it.first) }
+        val loadDays = (LOAD_DAYS downTo 1).mapNotNull { back ->
+            val d = date.minusDays(back.toLong())
+            val w = DayWindow.of(d, zone)
+            val series = hrByDay[d].orEmpty()
             if (series.size < MIN_WORN_MINUTES) null else w.from to Recovery.dailyLoad(series, restingHr, maxHr, female, asleep)
         }
         val loads = loadDays.map { it.second }
@@ -146,7 +161,8 @@ class RecoveryEngine(private val dao: HealthDao) {
         val params = Recovery.ChargeParams(restingHr, maxHr, tonight?.restingHr, hrvScore, female, stressThreshold.value)
         val charge = Recovery.charge(minutes, params, day.from..day.to, start = 50f, mainSleepEnd = tonight?.end)
 
-        val chronic = if (loads.size >= 7) Recovery.ewmaLoads(loads).second else null
+        val loadTrend = if (loads.size >= 7) Recovery.fitnessFatigue(loads).last() else null
+        val chronic = loadTrend?.ctl
 
         // Sleep regularity: 8 noon-to-noon grid days ending at noon today, so 7 day-pairs.
         val gridStart = date.minusDays(SleepRegularity.SRI_DAYS.toLong() + 1).atTime(SleepRegularity.DAY_START_HOUR, 0).atZone(zone).toEpochSecond()
@@ -172,6 +188,7 @@ class RecoveryEngine(private val dao: HealthDao) {
         return RecoveryResult(
             date, readiness, charge, trend, todayLoad, chronic, restingHr, maxHr, age != null, stressThreshold, tonight,
             Recovery.breathingDisturbances(tonight, nights), Recovery.acwr(loads), sleepNeed, regularity, sleepHealth,
+            loadTrend, Recovery.strain(todayLoad), Recovery.loadPercentile(todayLoad, loads), profile.maxHeartRate != null && maxHr == profile.maxHeartRate.toFloat(),
         )
     }
 
@@ -224,6 +241,8 @@ class RecoveryEngine(private val dao: HealthDao) {
         if (s.day > 0) s.day else Instant.ofEpochSecond(s.end).atZone(zone).toLocalDate().atStartOfDay(zone).toEpochSecond()
 
     companion object {
+        /** Days of load history: CTL's 42-day constant and Strain's 90-day "vs your usual". */
+        const val LOAD_DAYS = 90
         /** A day needs this many minutes of heart rate before its training load counts. */
         const val MIN_WORN_MINUTES = 8 * 60
         /** A minute with fewer steps than this counts as still for the calm stress level. */

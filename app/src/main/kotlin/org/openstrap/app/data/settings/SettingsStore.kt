@@ -30,6 +30,8 @@ data class UserProfile(
     val imperial: Boolean? = null,
     /** The user's own sleep need, 420-540 min; null uses the default for their age. */
     val sleepNeedMinutes: Int? = null,
+    /** A maximum heart rate from a test; overrides the age estimate. */
+    val maxHeartRate: Int? = null,
 ) {
     enum class Sex { Female, Male }
 
@@ -106,6 +108,7 @@ class SettingsStore(private val context: Context) {
     private val height = androidx.datastore.preferences.core.intPreferencesKey("profile_height_cm")
     private val imperial = androidx.datastore.preferences.core.booleanPreferencesKey("profile_imperial")
     private val sleepNeed = androidx.datastore.preferences.core.intPreferencesKey("profile_sleep_need_minutes")
+    private val maxHr = androidx.datastore.preferences.core.intPreferencesKey("profile_max_hr")
 
     val profile: Flow<UserProfile> = context.dataStore.data.map { prefs ->
         UserProfile(
@@ -115,6 +118,7 @@ class SettingsStore(private val context: Context) {
             prefs[height],
             prefs[imperial],
             prefs[sleepNeed],
+            prefs[maxHr],
         )
     }
 
@@ -126,6 +130,7 @@ class SettingsStore(private val context: Context) {
             if (p.heightCm != null) it[height] = p.heightCm else it.remove(height)
             if (p.imperial != null) it[imperial] = p.imperial else it.remove(imperial)
             if (p.sleepNeedMinutes != null) it[sleepNeed] = p.sleepNeedMinutes else it.remove(sleepNeed)
+            if (p.maxHeartRate != null) it[maxHr] = p.maxHeartRate else it.remove(maxHr)
         }
     }
 
@@ -163,7 +168,7 @@ class SettingsStore(private val context: Context) {
     /** Forgets the strap and the Zepp sign-in; the user's profile and goals stay. */
     suspend fun forgetDevice() {
         context.dataStore.edit { prefs ->
-            val keep = setOf(birthYear, sex, weight, height, imperial, sleepNeed, stepGoal, sleepGoal, activeGoal, todayTiles)
+            val keep = setOf(birthYear, sex, weight, height, imperial, sleepNeed, maxHr, stepGoal, sleepGoal, activeGoal, todayTiles)
             prefs.asMap().keys.filter { it !in keep }.forEach { prefs.remove(it) }
         }
     }

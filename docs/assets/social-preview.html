@@ -1,0 +1,32 @@
+<!doctype html><html><head><meta charset="utf-8">
+<!-- Source of social-preview.png (1280x640). Re-render after updating docs/screenshots:
+     "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --hide-scrollbars --force-device-scale-factor=1 --window-size=1280,640 --screenshot=$PWD/docs/assets/social-preview.png file://$PWD/docs/assets/social-preview.html -->
+<style>
+@font-face{font-family:FD;src:url(../../app/src/main/res/font/funnel_display.ttf)}
+@font-face{font-family:FS;src:url(../../app/src/main/res/font/funnel_sans.ttf)}
+html,body{margin:0;width:1280px;height:640px;overflow:hidden;background:#050506}
+body{position:relative;font-family:FS;color:#fff;
+ background:radial-gradient(700px 520px at 0% 100%,rgba(150,40,30,.35),transparent 70%),
+            radial-gradient(600px 500px at 100% 0%,rgba(20,120,90,.30),transparent 70%),#050506}
+.logo{position:absolute;left:86px;top:96px;height:68px}
+h1{position:absolute;left:96px;top:208px;margin:0;font-family:FD;font-weight:400;font-size:52px;line-height:60px;white-space:nowrap;letter-spacing:-.5px;width:560px}
+.sub{position:absolute;left:96px;top:398px;font-size:24px;line-height:36px;color:rgba(255,255,255,.62)}
+.chips{position:absolute;left:96px;top:488px;display:flex;gap:12px}
+.chip{display:flex;align-items:center;gap:8px;height:38px;padding:0 14px;border-radius:19px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);font-size:19px}
+.dot{width:7px;height:7px;border-radius:50%}
+.phone{position:absolute;width:286px;height:620px;border-radius:44px;background:#1b1b1e;border:2px solid #3a3a3f;padding:9px;box-sizing:border-box;box-shadow:0 30px 80px rgba(0,0,0,.6)}
+.phone img{width:100%;border-radius:36px;display:block}
+.back{left:740px;top:150px;opacity:.92}
+.front{left:906px;top:96px}
+</style></head><body>
+<img class="logo" src="logo-dark.png">
+<h1>The open-source app<br>for the Amazfit<br>Helio Strap</h1>
+<div class="sub">A private Zepp alternative for Android.<br>Your health data stays on your phone.</div>
+<div class="chips">
+ <div class="chip"><span class="dot" style="background:#5eead4"></span>No cloud</div>
+ <div class="chip"><span class="dot" style="background:#93a5ff"></span>No trackers</div>
+ <div class="chip"><span class="dot" style="background:#fcd34d"></span>MIT / Apache-2.0</div>
+</div>
+<div class="phone back"><img src="../screenshots/heart-rate.png"></div>
+<div class="phone front"><img src="../screenshots/today.png"></div>
+</body></html>

@@ -65,11 +65,12 @@ class DeviceViewModel(private val container: AppContainer) : ViewModel() {
     fun pair(address: String, name: String, authKey: String) {
         val key = normalizeAuthKey(authKey)
         if (key == null) {
-            _message.value = "The auth key must be 32 hex characters (16 bytes)."
+            val n = authKey.trim().removePrefix("0x").removePrefix("0X").count { it.isLetterOrDigit() }
+            _message.value = "The auth key must be 32 characters of 0–9 and a–f. You entered $n."
             return
         }
         if (!MAC.matches(address.uppercase())) {
-            _message.value = "That doesn't look like a Bluetooth address."
+            _message.value = "The Bluetooth address should look like C8:0F:10:AB:CD:EF. Scan to fill it in."
             return
         }
         stopScan()
@@ -79,12 +80,14 @@ class DeviceViewModel(private val container: AppContainer) : ViewModel() {
         }
     }
 
-    /** Keeps the Zepp sign-in for firmware checks; the strap's address and key go into the pair form. */
-    fun saveZeppSignIn(listing: DeviceListing, strap: BoundDevice?) = viewModelScope.launch {
+    /** Keeps the Zepp sign-in for firmware checks and, when Zepp returned the strap's key, pairs with it straight away. */
+    fun signInAndPair(listing: DeviceListing, strap: BoundDevice?) = viewModelScope.launch {
         container.settings.saveZeppAccount(
             ZeppAccount(listing.session.appToken, listing.session.userId, listing.apiBase, strap?.china == true),
         )
-        _message.value = if (strap?.authKey != null) "Signed in. Check the address and key, then tap Pair." else "Zepp sign-in saved."
+        val key = strap?.authKey
+        if (strap != null && key != null) pair(strap.macAddress, DEFAULT_NAME, key)
+        else _message.value = "Zepp sign-in saved, but no auth key came with it. Get the key on a computer and enter it by hand."
     }
 
     fun loadSampleData() = viewModelScope.launch {
@@ -134,7 +137,10 @@ class DeviceViewModel(private val container: AppContainer) : ViewModel() {
     }
 
     companion object {
+        const val DEFAULT_NAME = "Amazfit Helio Strap"
         private val MAC = Regex("^([0-9A-F]{2}:){5}[0-9A-F]{2}$")
+
+        fun isAddress(input: String) = MAC.matches(input.trim().uppercase())
 
         /** Accepts "0x…", spaces or colons; returns 32 lowercase hex chars or null. */
         fun normalizeAuthKey(input: String): String? {

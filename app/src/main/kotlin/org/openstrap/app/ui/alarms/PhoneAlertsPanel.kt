@@ -9,11 +9,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -37,11 +34,11 @@ import org.openstrap.app.device.PhoneAlerts
 import org.openstrap.app.device.StrapNotificationListener
 import org.openstrap.app.ui.components.Panel
 import org.openstrap.app.ui.components.PanelHeader
+import org.openstrap.app.ui.components.SegmentedTabs
 import org.openstrap.app.ui.theme.MetricColors
 import org.openstrap.app.ui.theme.PhosphorIcons
 
 /** Switches for buzzing the strap on calls and notifications. These are phone settings, so they work offline too. */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun PhoneAlertsPanel(alerts: PhoneAlerts, settings: SettingsStore) {
     val context = LocalContext.current
@@ -51,7 +48,7 @@ fun PhoneAlertsPanel(alerts: PhoneAlerts, settings: SettingsStore) {
     val callPermission by alerts.callPermission.collectAsState()
     val notificationAccess by alerts.notificationAccess.collectAsState()
     val pattern by settings.notificationPattern.collectAsState(BuzzPattern.TWO_SHORT)
-    var testResult by remember { mutableStateOf<String?>(null) }
+    var previewError by remember { mutableStateOf<String?>(null) }
 
     // The user may grant access in system settings and come back.
     LifecycleResumeEffect(Unit) { alerts.refresh(); onPauseOrDispose { } }
@@ -81,7 +78,7 @@ fun PhoneAlertsPanel(alerts: PhoneAlerts, settings: SettingsStore) {
                 else -> askPhone.launch(Manifest.permission.READ_PHONE_STATE)
             }
         }
-        SwitchRow("Notifications", "One buzz for each notification that would make a sound on your phone.", notifications && notificationAccess) { on ->
+        SwitchRow("Notifications", "The strap buzzes for notifications that would make a sound.", notifications && notificationAccess) { on ->
             scope.launch { settings.setBuzzOnNotifications(on) }
             if (on && !notificationAccess) openNotificationAccess()
         }
@@ -92,32 +89,22 @@ fun PhoneAlertsPanel(alerts: PhoneAlerts, settings: SettingsStore) {
             )
             TextButton(onClick = openNotificationAccess) { Text("Open settings") }
         }
-        Text("Notification buzz", style = MaterialTheme.typography.bodyLarge)
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            BuzzPattern.entries.forEach { p ->
-                // Picking a pattern plays it, so it can be felt before the next notification.
-                FilterChip(selected = p == pattern, onClick = {
+        if (notifications && notificationAccess) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Buzz pattern", style = MaterialTheme.typography.bodyLarge)
+                // Picking a pattern plays it once, so it can be felt before the next notification.
+                SegmentedTabs(BuzzPattern.entries.map { it.label }, pattern.ordinal, { i ->
+                    val p = BuzzPattern.entries[i]
                     scope.launch {
                         settings.setNotificationPattern(p)
-                        testResult = runCatching { alerts.test(p) }.fold({ null }, { it.message ?: "Couldn't buzz the strap" })
+                        previewError = runCatching { alerts.preview(p) }.exceptionOrNull()?.let { it.message ?: "Couldn't buzz the strap" }
                     }
-                }, label = { Text(p.label) })
+                })
+                previewError?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MetricColors.warn) }
             }
         }
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = {
-                testResult = null
-                scope.launch { testResult = runCatching { alerts.test() }.fold({ "Buzz sent" }, { it.message ?: "Couldn't buzz the strap" }) }
-            }) { Text("Test buzz") }
-            TextButton(onClick = {
-                scope.launch { testResult = runCatching { alerts.stop() }.fold({ "Stopped" }, { it.message ?: "Couldn't reach the strap" }) }
-            }) { Text("Stop buzzing") }
-            testResult?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-        }
         Text(
-            "Silent apps and Do Not Disturb are followed, for calls too. With notification access, calls that Do Not Disturb " +
-                "lets through (starred contacts, repeat callers) still buzz. A call's buzzing stops when you answer or the call ends. " +
-                "OpenStrap never reads what a notification says, and nothing about it is stored or sent to the strap.",
+            "Silent apps and Do Not Disturb are followed. OpenStrap never reads what a notification says.",
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }

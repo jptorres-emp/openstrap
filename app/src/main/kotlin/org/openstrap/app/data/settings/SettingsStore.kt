@@ -59,10 +59,10 @@ data class UserProfile(
 
 /** Notification buzz patterns: alternating vibrate and pause milliseconds for the strap's motor. */
 enum class BuzzPattern(val label: String, val millis: List<Int>) {
-    ONE_SHORT("One short", listOf(200)),
-    TWO_SHORT("Two short", listOf(150, 150, 150)),
-    THREE_SHORT("Three short", listOf(120, 120, 120, 120, 120)),
-    ONE_LONG("One long", listOf(600)),
+    ONE_SHORT("Single", listOf(200)),
+    TWO_SHORT("Double", listOf(150, 150, 150)),
+    THREE_SHORT("Triple", listOf(120, 120, 120, 120, 120)),
+    ONE_LONG("Long", listOf(600)),
 }
 
 class SettingsStore(private val context: Context) {

@@ -81,11 +81,8 @@ class PhoneAlerts(
         return enabled.split(':').any { ComponentName.unflattenFromString(it) == me }
     }
 
-    /** Plays [p] now, for the screen's pattern picker. */
-    suspend fun test(p: BuzzPattern = pattern) = strap.buzz(p.millis)
-
-    /** Stops any buzzing, including one left running. */
-    suspend fun stop() = strap.stopBuzzing()
+    /** Plays [p] once, so the pattern picker can be felt. */
+    suspend fun preview(p: BuzzPattern) = strap.buzz(p.millis)
 
     // ---- Calls ----
 

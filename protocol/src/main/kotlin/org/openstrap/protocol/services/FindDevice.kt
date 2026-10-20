@@ -6,8 +6,8 @@ import org.openstrap.protocol.u8
 
 /**
  * FindDeviceModule 0x001A (Zepp `uhh`/`hhh`, 03 §3.16). The strap has no notification module, so OpenStrap uses
- * this to buzz it for phone calls and notifications: [BUZZ] then [STOP] for a notification, [START] … [STOP] while a call
- * rings. Tapping the strap did not stop a [BUZZ] on fw 3.25; [FOUND] is the strap's own "found" event (03 §3.16).
+ * this to buzz it while a call rings: [BUZZ] … [STOP]. Notifications use [MotorVibrate] patterns, or [BUZZ] then
+ * [STOP] on a strap without them. Tapping the strap did not stop a [BUZZ] on fw 3.25; [FOUND] is the strap's own "found" event (03 §3.16).
  */
 object FindDevice {
     /** Starts buzzing; answered `04 01` (the strap adds a third byte, `01`). It doesn't stop by itself: send [STOP]. */

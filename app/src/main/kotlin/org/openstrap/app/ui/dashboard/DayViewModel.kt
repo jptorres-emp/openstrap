@@ -147,6 +147,24 @@ class DayViewModel(
             }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
+    /** The weekly Healthspan estimate for the selected day, or why it's withheld; null while loading or on failure. */
+    @OptIn(FlowPreview::class)
+    val healthspan: StateFlow<Pair<org.openstrap.app.data.Healthspan.Result?, org.openstrap.app.data.Healthspan.Withheld?>?> =
+        combine(selected, profile, repo.changes().debounce(800)) { d, p, _ -> d to p }
+            .mapLatest { (d, p) ->
+                withContext(Dispatchers.Default) {
+                    try {
+                        repo.healthspan(d, p)
+                    } catch (e: kotlinx.coroutines.CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        Log.w("OpenStrap", "healthspan failed", e)
+                        null
+                    }
+                }
+            }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
     private fun stateFor(date: LocalDate): Flow<DayUiState> {
         val zone = ZoneId.systemDefault()
         val day = DayWindow.of(date)

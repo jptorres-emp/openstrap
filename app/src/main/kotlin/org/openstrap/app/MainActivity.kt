@@ -179,6 +179,7 @@ private fun AppRoot(container: AppContainer) {
             ?.takeIf { it.isNotEmpty() } ?: org.openstrap.app.ui.glow.TODAY_TILES
     }
     val recovery by dayVm.recovery.collectAsStateWithLifecycle()
+    val healthspan by dayVm.healthspan.collectAsStateWithLifecycle()
     val profile by deviceVm.profile.collectAsStateWithLifecycle()
     val day by dayVm.state.collectAsStateWithLifecycle()
     val strapReadiness by remember(day.dayStart) { container.database.healthDao().strapReadiness(day.dayStart) }.collectAsStateWithLifecycle(null)
@@ -376,7 +377,7 @@ private fun AppRoot(container: AppContainer) {
                                     contentPadding = padding, onBack = { todayStack = todayStack.dropLast(1) },
                                 )
                                 is Detail.Workout -> WorkoutDetail(openWorkout?.takeIf { it.workout.start == detail.start }, padding, onBack = { todayStack = todayStack.dropLast(1) })
-                                Detail.Healthspan -> org.openstrap.app.ui.glow.GlowHealthspanScreen(padding, onBack = { todayStack = todayStack.dropLast(1) })
+                                Detail.Healthspan -> org.openstrap.app.ui.glow.GlowHealthspanScreen(healthspan, padding, onBack = { todayStack = todayStack.dropLast(1) })
                                 else -> Unit
                             }
                         },
@@ -398,6 +399,7 @@ private fun AppRoot(container: AppContainer) {
                                     onLiveToggle = { container.strap.setLiveHeartRate(it) },
                                     onOpenActivity = { tab = Tab.Activity.ordinal },
                                     onOpenHealthspan = { todayStack = listOf(Detail.Healthspan) },
+                                    healthspan = healthspan,
                                     history = history,
                                     tiles = todayTiles,
                                     onTilesChange = { m -> scope.launch { container.settings.saveTodayTiles(m.map { it.name }) } },

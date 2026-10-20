@@ -21,6 +21,9 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import kotlin.math.abs
+import kotlin.math.roundToInt
+import org.openstrap.app.data.Healthspan
 import org.openstrap.app.ui.theme.MetricColors
 import org.openstrap.app.ui.theme.PhosphorIcons
 
@@ -30,30 +33,9 @@ private val Lavender = Color(0xFFB69CFF)
 /** The same recipe as the Heart rate and Activity cards, in lavender. */
 internal val HealthspanGlow = GlowStyle.chart(Lavender)
 
-/** The estimate until it's computed from the strap's data (docs/algorithms/healthspan.md); the card and its screen read the same one. */
-internal object HealthspanSample {
-    const val AGE = 35
-    const val LOW = 30
-    const val HIGH = 34
-    const val PACE = "Steady"
-    const val LEVER = "strength training"
-
-    /** One habit's effect: [years] under 0 takes years off, over 0 adds them. */
-    class Term(val name: String, val years: Float, val effect: String, val detail: String)
-
-    val terms = listOf(
-        Term("Strength training", -1.22f, "takes off about 1 year", "40 min a week · most people your age do none"),
-        Term("Fitness (VO2max)", -0.87f, "takes off about 1 year", "46 ml/kg/min · typical at 35: 40"),
-        Term("Steps", -0.52f, "takes off about ½ year", "10,000 a day · typical: 7,800"),
-        Term("Sleep regularity", -0.29f, "takes off a few months", "87 · typical: 81"),
-        Term("Resting heart rate", -0.21f, "takes off a few months", "55 bpm asleep · typical: about 59"),
-        Term("Time asleep", 0f, "no change", "7 h 30 m · counts only below 6 h 30 m"),
-    )
-}
-
-/** "3 years younger", "1 year older" or "Right on your age" for an estimate against [age]. */
-internal fun healthspanVerdict(age: Int, low: Int, high: Int): String {
-    val years = age - (low + high) / 2
+/** "3 years younger", "1 year older" or "Right on your age" for an [estimate] against [age], in whole years. */
+internal fun healthspanVerdict(age: Int, estimate: Float): String {
+    val years = age - estimate.roundToInt()
     return when {
         years > 0 -> "$years ${if (years == 1) "year" else "years"} younger"
         years < 0 -> "${-years} ${if (-years == 1) "year" else "years"} older"
@@ -61,51 +43,112 @@ internal fun healthspanVerdict(age: Int, low: Int, high: Int): String {
     }
 }
 
+/** "Steady" at 1x, "Slower" below, "Faster" above; "Learning" until there's enough history. */
+internal fun paceLabel(pace: Float?): String = when {
+    pace == null -> "Learning"
+    pace < 1f -> "Slower"
+    pace > 1f -> "Faster"
+    else -> "Steady"
+}
+
+/** "1x", "0.5x", "-1x". */
+internal fun paceText(pace: Float): String = if (pace % 1f == 0f) "${pace.toInt()}x" else "${pace}x"
+
+/** "takes off about 1 year", "adds about ½ year", "takes off a few months" or "no change". */
+internal fun effectText(years: Float): String {
+    val y = abs(years)
+    val verb = if (years < 0) "takes off" else "adds"
+    return when {
+        y < 0.05f -> "no change"
+        y < 0.375f -> "$verb a few months"
+        y < 0.75f -> "$verb about ½ year"
+        else -> y.roundToInt().let { "$verb about $it ${if (it == 1) "year" else "years"}" }
+    }
+}
+
+/** The line under a habit: your value, the typical one it's scored against, and a target where there is one. */
+internal fun termDetail(t: Healthspan.Term, age: Int): String {
+    val v = t.value
+    val ref = t.reference
+    if (v == null) return if (t.habit == Healthspan.Habit.Vo2max) "No VO2max from workouts yet · counted as typical" else "Not enough data yet · counted as typical"
+    return when (t.habit) {
+        Healthspan.Habit.Strength -> {
+            val m = v.roundToInt()
+            (if (m == 0) "None recorded" else "$m min a week") + " · most people your age do none" +
+                (if (m < Healthspan.STRENGTH_TARGET_MINUTES) " · aim for ${Healthspan.STRENGTH_TARGET_MINUTES}" else "")
+        }
+        Healthspan.Habit.Vo2max -> "${v.roundToInt()} ml/kg/min · typical at $age: ${ref?.roundToInt()}"
+        Healthspan.Habit.Steps -> "${"%,d".format(v.roundToInt())} a day · typical: ${"%,d".format(((ref ?: 0f) / 100).roundToInt() * 100)}" +
+            (if (v < 8000f) " · aim for 8,000–10,000" else "")
+        Healthspan.Habit.Regularity -> "${v.roundToInt()} · typical: ${ref?.roundToInt()}"
+        Healthspan.Habit.RestingHr -> "${v.roundToInt()} bpm asleep · typical: about ${ref?.roundToInt()}"
+        Healthspan.Habit.TimeAsleep -> v.roundToInt().let { m -> "${m / 60} h ${m % 60} m · counts only below 6 h 30 m" }
+    }
+}
+
+/** "Helping most: strength training", "Holding back most: steps", or a line for when every habit is typical. */
+internal fun leverText(r: Healthspan.Result): String {
+    val lever = r.lever ?: return "Every habit is close to typical"
+    return (if (lever.years < 0) "Helping most: " else "Holding back most: ") + lever.habit.label.replaceFirstChar { it.lowercase() }
+}
+
 /**
- * Healthspan: how old your habits look, as a range of ages (docs/algorithms/healthspan.md). [low]..[high] is the
- * weekly estimate, [age] the person's own age.
+ * Healthspan: how old your habits look, as a range of ages (docs/algorithms/healthspan.md), from [state] (the weekly
+ * estimate, or why it's withheld). Nothing shows until it has been worked out.
  */
 @Composable
-fun HealthspanCard(age: Int, low: Int, high: Int, pace: String, lever: String, onClick: (() -> Unit)? = null) {
-    val verdict = healthspanVerdict(age, low, high)
+fun HealthspanCard(state: Pair<Healthspan.Result?, Healthspan.Withheld?>?, onClick: (() -> Unit)? = null) {
+    val (r, withheld) = state ?: return
     GlowCard(HealthspanGlow, Modifier.fillMaxWidth(), onClick = onClick) {
         Column {
-            GlowHeader("Healthspan", trailing = "Weekly")
-            GlowHeroNumber("$low-$high", "", side = {
+            GlowHeader("Healthspan", trailing = if (r?.early == true) "Early" else "Weekly")
+            if (r == null) {
+                Text(
+                    withheld?.reason ?: "", color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(top = 10.dp),
+                )
+                CardLink("How it works")
+                return@Column
+            }
+            GlowHeroNumber("${r.low}-${r.high}", "", side = {
                 Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text("Pace", color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.labelSmall)
-                    Text(pace, color = Color.White, style = GlowType.number.copy(fontWeight = FontWeight.SemiBold))
+                    Text(paceLabel(r.pace), color = Color.White, style = GlowType.number.copy(fontWeight = FontWeight.SemiBold))
                 }
             })
             Text(
-                verdict, color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.bodySmall,
+                healthspanVerdict(r.age, r.estimate), color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.padding(top = 10.dp),
             )
             GlowChartGap()
-            AgeScale(age, low, high)
-            Row(Modifier.fillMaxWidth().padding(top = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    "Helping most: $lever", color = Color.White, style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.weight(1f),
-                )
-                Icon(PhosphorIcons.CaretRight, null, tint = Color.White, modifier = Modifier.size(16.dp))
-            }
+            AgeScale(r.age, r.low, r.high, r.estimate)
+            CardLink(leverText(r))
         }
+    }
+}
+
+/** The card's last row: a line of text and a chevron. */
+@Composable
+private fun CardLink(text: String) {
+    Row(Modifier.fillMaxWidth().padding(top = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(text, color = Color.White, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+        Icon(PhosphorIcons.CaretRight, null, tint = Color.White, modifier = Modifier.size(16.dp))
     }
 }
 
 /**
  * A line of ages, seven years either side of yours. The estimate is drawn like the Recovery arc: a dotted track and a
- * soft halo under a solid white line. A dot marks the middle of the range, and a hairline your age (always centred).
+ * soft halo under a solid white line. A dot marks the [estimate], and a hairline your age (always centred). An early
+ * estimate's range can run past the ends; it's drawn to them.
  */
 @Composable
-internal fun AgeScale(age: Int, low: Int, high: Int) {
+internal fun AgeScale(age: Int, low: Int, high: Int, estimate: Float) {
     val from = age - 7
     val to = age + 7
     Column {
         Canvas(Modifier.fillMaxWidth().height(28.dp)) {
             val pad = 8.dp.toPx()
-            fun x(a: Float) = pad + (a - from) / (to - from) * (size.width - 2 * pad)
+            fun x(a: Float) = pad + (a.coerceIn(from.toFloat(), to.toFloat()) - from) / (to - from) * (size.width - 2 * pad)
             val y = size.height / 2
             val start = Offset(x(low.toFloat()), y)
             val end = Offset(x(high.toFloat()), y)
@@ -116,9 +159,9 @@ internal fun AgeScale(age: Int, low: Int, high: Int) {
             drawLine(Color.White.copy(alpha = 0.1f), start, end, 8.dp.toPx(), StrokeCap.Round)
             drawLine(Color.White, start, end, 3.dp.toPx(), StrokeCap.Round)
             drawLine(Color.White.copy(alpha = 0.8f), Offset(x(age.toFloat()), y - 11.dp.toPx()), Offset(x(age.toFloat()), y + 11.dp.toPx()), 1.5.dp.toPx(), StrokeCap.Round)
-            val mid = Offset((start.x + end.x) / 2, y)
+            val mid = Offset(x(estimate), y)
             // Green when the estimate is at or under your age, amber when it's over.
-            val dot = if ((low + high) / 2f <= age) MetricColors.good else MetricColors.warn
+            val dot = if (estimate.roundToInt() <= age) MetricColors.good else MetricColors.warn
             drawCircle(dot.copy(alpha = 0.3f), 9.dp.toPx(), mid)
             drawCircle(dot, 5.dp.toPx(), mid)
         }

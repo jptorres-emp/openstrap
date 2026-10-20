@@ -22,51 +22,79 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.padding
+import org.openstrap.app.data.Healthspan
 import org.openstrap.app.ui.dashboard.ScreenList
+import kotlin.math.abs
 import org.openstrap.app.ui.theme.MetricColors
 
 /** The scale on the Healthspan screen's bars: a habit this many years either side of the middle fills its half. */
 private const val BAR_FULL_YEARS = 1.5f
 
-/**
- * The screen behind the Healthspan card: the estimate, the pace it's moving at, and what moves it. Numbers are the
- * [HealthspanSample] until the estimate is computed.
- */
+/** "Updated Sunday · next in 5 days", from the Sunday the estimate was made. */
+private fun updatedText(asOf: Long): String {
+    val made = java.time.Instant.ofEpochSecond(asOf).atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+    val next = 7 - java.time.temporal.ChronoUnit.DAYS.between(made, java.time.LocalDate.now()).toInt().coerceIn(0, 7)
+    return when (next) {
+        7 -> "Updated today · next Sunday"
+        1 -> "Updated Sunday · next tomorrow"
+        else -> "Updated Sunday · next in $next days"
+    }
+}
+
+/** The screen behind the Healthspan card: the estimate, the pace it's moving at, and what moves it; or why it's withheld. */
 @Composable
-fun GlowHealthspanScreen(contentPadding: PaddingValues, onBack: () -> Unit) {
+fun GlowHealthspanScreen(state: Pair<Healthspan.Result?, Healthspan.Withheld?>?, contentPadding: PaddingValues, onBack: () -> Unit) {
     BackHandler(onBack = onBack)
-    val s = HealthspanSample
+    val r = state?.first
     ScreenList(contentPadding, gutter = GlowLayout.Gutter) {
-        item { GlowDetailHeader("Healthspan", "Updated Sunday · next in 5 days", onBack) }
+        item { GlowDetailHeader("Healthspan", r?.let { updatedText(it.asOf) } ?: "Updated weekly, on Sunday", onBack) }
         item {
             GlowCard(HealthspanGlow.copy(motion = GlowMotion.Breath(5f)), Modifier.fillMaxWidth()) {
                 Column {
-                    GlowHeader("Your habits look like", trailing = "Weekly")
-                    GlowHeroNumber("${s.LOW}-${s.HIGH}", "years", listOf(healthspanVerdict(s.AGE, s.LOW, s.HIGH), "You're ${s.AGE}"))
+                    GlowHeader("Your habits look like", trailing = if (r?.early == true) "Early" else "Weekly")
+                    if (r == null) {
+                        Text(
+                            state?.second?.reason ?: "Working it out…", color = Color.White.copy(alpha = 0.85f),
+                            style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 10.dp),
+                        )
+                        return@Column
+                    }
+                    GlowHeroNumber("${r.low}-${r.high}", "years", listOf(healthspanVerdict(r.age, r.estimate), "You're ${r.age}"))
                     GlowChartGap()
-                    AgeScale(s.AGE, s.LOW, s.HIGH)
+                    AgeScale(r.age, r.low, r.high, r.estimate)
+                    if (r.early) Note("An early estimate from under 6 months of data, so the range is wider.")
                 }
             }
         }
-        item { PacePanel() }
-        item { TermsPanel() }
+        if (r != null) {
+            item { PacePanel(r.pace) }
+            item { TermsPanel(r) }
+        }
         item { HowItWorksPanel() }
     }
 }
 
 /** Where the last 30 days sit against the 6-month habits: 1x is in step with the calendar. */
 @Composable
-private fun PacePanel() {
+private fun PacePanel(pace: Float?) {
     DotPanel {
-        DotHeader("Pace of aging", trailing = "1x · ${HealthspanSample.PACE}")
-        PaceScale(marker = 0.5f)
-        Note("Your last 30 days match your 6-month habits, so the estimate is moving in step with the calendar.")
+        DotHeader("Pace of aging", trailing = pace?.let { "${paceText(it)} · ${paceLabel(it)}" } ?: paceLabel(null))
+        if (pace != null) PaceScale(marker = (pace + 1f) / 4f, color = if (pace <= 1f) MetricColors.good else MetricColors.warn)
+        Note(
+            when {
+                pace == null -> "Needs 30 days with enough data, and 3 months before them to tell a real change from day-to-day noise."
+                pace < 1f -> "Your last 30 days beat your 6-month habits: kept up, the estimate will come down."
+                pace > 1f -> "Your last 30 days fall behind your 6-month habits: kept up, the estimate will go up."
+                else -> "Your last 30 days match your 6-month habits, so the estimate is moving in step with the calendar."
+            },
+        )
     }
 }
 
 /** A track from -1x to 3x with a dot at the pace, in the quiet panels' bar style (see [GlowBar]). */
 @Composable
-private fun PaceScale(marker: Float) {
+private fun PaceScale(marker: Float, color: Color) {
     Column {
         Canvas(Modifier.fillMaxWidth().height(12.dp)) {
             val y = size.height / 2
@@ -74,7 +102,7 @@ private fun PaceScale(marker: Float) {
             val x0 = r
             val x1 = size.width - r
             drawLine(Color.White.copy(alpha = 0.10f), Offset(x0, y), Offset(x1, y), 2.dp.toPx(), StrokeCap.Round)
-            glowDot(Offset(x0 + (x1 - x0) * marker, y), MetricColors.good)
+            glowDot(Offset(x0 + (x1 - x0) * marker.coerceIn(0f, 1f), y), color)
         }
         Box(Modifier.fillMaxWidth()) {
             val label = Color.White.copy(alpha = 0.6f)
@@ -94,7 +122,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.glowDot(at: Offset,
 
 /** Each habit against the typical person your age: what it takes off or adds, and the numbers behind it. */
 @Composable
-private fun TermsPanel() {
+private fun TermsPanel(r: Healthspan.Result) {
     DotPanel {
         DotHeader("What moves it")
         Note("Each habit against the typical person your age, over 6 months")
@@ -105,14 +133,18 @@ private fun TermsPanel() {
             Text("0", color = Color.White, style = MaterialTheme.typography.labelSmall, modifier = Modifier.align(Alignment.Center))
             Text("older +1½ y", color = label, style = MaterialTheme.typography.labelSmall, modifier = Modifier.align(Alignment.CenterEnd))
         }
-        HealthspanSample.terms.forEach { t ->
+        r.terms.forEach { t ->
             DotDivider()
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text(t.name, color = Color.White, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-                Text(t.effect, color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.bodySmall)
+                Text(t.habit.label, color = Color.White, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                Text(effectText(t.years), color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.bodySmall)
             }
             EffectBar(t.years)
-            Note(t.detail)
+            Note(termDetail(t, r.age))
+        }
+        if (r.fitnessCapped) {
+            DotDivider()
+            Note("Fitness terms capped: resting heart rate, steps and VO2max together count for at most 3 years either way.")
         }
     }
 }
@@ -132,7 +164,7 @@ private fun EffectBar(years: Float) {
         val mid = size.width / 2
         drawLine(Color.White.copy(alpha = 0.10f), Offset(x0, y), Offset(x1, y), 2.dp.toPx(), StrokeCap.Round)
         drawLine(Color.White.copy(alpha = 0.35f), Offset(mid, y - 5.dp.toPx()), Offset(mid, y + 5.dp.toPx()), 1.5.dp.toPx(), StrokeCap.Round)
-        if (years == 0f) return@Canvas
+        if (abs(years) < 0.05f) return@Canvas
         val color = if (years < 0) MetricColors.good else MetricColors.warn
         val end = Offset(mid + (years / BAR_FULL_YEARS).coerceIn(-1f, 1f) * (mid - x0), y)
         drawLine(color.copy(alpha = 0.22f), Offset(mid, y), end, 6.dp.toPx(), StrokeCap.Round)

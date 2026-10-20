@@ -47,6 +47,7 @@ data class DayWindow(val from: Long, val to: Long) {
 
 class HealthRepository(private val dao: HealthDao) {
     private val recoveryEngine = RecoveryEngine(dao)
+    private val healthspanEngine = HealthspanEngine(dao)
 
     /**
      * Readiness and charge for [date]; heavy, so call it off the main thread. Also logs the night's own inputs next to
@@ -57,6 +58,10 @@ class HealthRepository(private val dao: HealthDao) {
         r.tonight?.let { logNight(it) }
         return r
     }
+
+    /** The weekly Healthspan estimate shown on [date] (made the Sunday on or before it), or why it's withheld; heavy. */
+    suspend fun healthspan(date: LocalDate, profile: org.openstrap.app.data.settings.UserProfile): Pair<Healthspan.Result?, Healthspan.Withheld?> =
+        healthspanEngine.compute(date, profile)
 
     private suspend fun logNight(n: Recovery.Night) {
         val strap = dao.strapReadinessOnce(n.day, n.day).firstOrNull()

@@ -310,13 +310,15 @@ class RecoveryEngine(private val dao: HealthDao) {
         )
     }
 
-    private fun asleepMinutes(s: SleepSession): Int = listOfNotNull(s.deepMinutes, s.lightMinutes, s.remMinutes).takeIf { it.isNotEmpty() }?.sum()
-        ?: (((s.end - s.start) / 60).toInt() - (s.awakeMinutes ?: 0))
-
-    private fun morningOf(s: SleepSession, zone: ZoneId): Long =
-        if (s.day > 0) s.day else Instant.ofEpochSecond(s.end).atZone(zone).toLocalDate().atStartOfDay(zone).toEpochSecond()
-
     companion object {
+        /** Asleep minutes: deep + light + REM, else time in bed less awake. */
+        fun asleepMinutes(s: SleepSession): Int = listOfNotNull(s.deepMinutes, s.lightMinutes, s.remMinutes).takeIf { it.isNotEmpty() }?.sum()
+            ?: (((s.end - s.start) / 60).toInt() - (s.awakeMinutes ?: 0))
+
+        /** Local midnight of the morning a sleep belongs to. */
+        fun morningOf(s: SleepSession, zone: ZoneId): Long =
+            if (s.day > 0) s.day else Instant.ofEpochSecond(s.end).atZone(zone).toLocalDate().atStartOfDay(zone).toEpochSecond()
+
         /**
          * The daily loads a morning's readiness saw: those of [loadDays] (day start to load, oldest first) before
          * [morning], so a past day in the trend gets the "Previous day's load" it had then.

@@ -296,9 +296,9 @@ Jurca 2005 needs only sex, age, BMI, resting HR and one activity question. Its S
 * The age at which the FRIEND 2022 sex-specific 50th percentile equals the estimate, shown as a range (about ±10 y), clamped to 20–80. Withheld with VO2max.
 * Wording: "typical of a [sex] aged about X–Y". No mortality language and no sleep term.
 
-### Healthspan age: proposed (Established to Contested by term; design choice for combining them)
+### Healthspan age: implemented (Established to Contested by term; design choice for combining them)
 
-Biological age was dropped here on 2026-10-18 for three reasons. [healthspan.md](healthspan.md) proposes a "your habits vs your age" estimate that answers each one. It's a proposal, not scheduled in the implementation steps below.
+Biological age was dropped here on 2026-10-18 for three reasons. [healthspan.md](healthspan.md) defines a "your habits vs your age" estimate that answers each one. It was implemented on 2026-10-20, outside the implementation steps below.
 
 It scores six terms against **population medians**, so a user at the median on every term reads their own age and better habits read younger: sleeping resting HR, steps, sleep regularity, short sleep, strength training and the strap's exercise VO2max. Each term's hazard ratio is turned into years with PhenoAge's Gompertz slope (0.09165). Resting HR, steps and VO2max share a ±5 y limit; the sum is shrunk by 0.6 and capped at ±5 y.
 

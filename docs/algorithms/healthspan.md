@@ -1,6 +1,6 @@
-# Healthspan age (proposal)
+# Healthspan age
 
-An estimate of how old your habits look, built only from data OpenStrap already has. **Status: proposal, not scheduled.** [evidence-review.md](evidence-review.md) dropped biological age on 2026-10-18 for three reasons; this document answers each one and lists what is still open. That section of evidence-review.md is now "Healthspan age: proposed".
+An estimate of how old your habits look, built only from data OpenStrap already has. **Status: implemented (2026-10-20)** in `data/Healthspan.kt` (the formula) and `data/HealthspanEngine.kt` (loading the data), with §7's examples as unit tests in `HealthspanTest`. [evidence-review.md](evidence-review.md) dropped biological age on 2026-10-18 for three reasons; this document answers each one and lists what is still open. That section of evidence-review.md is now "Healthspan age: implemented".
 
 OpenStrap is a wellness app. This is an estimate for personal insight, not a medical measurement.
 
@@ -44,7 +44,7 @@ S     = 0.6                                          shrinkage, because the term
 |---|---|---|---|
 | Age | `UserProfile.age()` (birth year only, so ±1 y) | 20–79 | — |
 | Sex | `UserProfile.sex` | required | — |
-| Resting HR | `night_metrics.rhrLowest30`: lowest 30-min mean during sleep (`Recovery.Night.restingHr`) | median of nightly values | NHANES seated pulse P50 by sex, joined linearly between age-band midpoints (Ostchega 2011), after adding 10 bpm to the sleeping value |
+| Resting HR | `night_metrics.rhrLowest30`: lowest 30-min mean during sleep (`Recovery.Night.restingHr`) | median of nightly values; a night counts with ≥ 3 h of main sleep and ≥ 120 min of heart rate, with no HRV requirement (decided 2026-10-20: Recovery's HRV rule is for scoring HRV, and Zhang 2016's cohorts measured pulse without one) | NHANES seated pulse P50 by sex, joined linearly between age-band midpoints (Ostchega 2011), after adding 10 bpm to the sleeping value |
 | Steps | the strap's daily counter, else the sum of `activity_minute.steps` (calculations.md §10) | mean of valid days | Paluch 2022 median of the cohort medians: 7,803 (< 60 y), 5,649 (≥ 60 y), blended from 55 to 65 |
 | Sleep regularity | `SleepRegularity.sri()` over 8 grid days (7 day-pairs) | mean of valid weekly SRIs | Windred 2024 UK Biobank median, 81.0 |
 | Sleep duration | main sleeps (`sleep_session.nap = false`), asleep = deep + light + REM (`RecoveryEngine.asleepMinutes`) | mean minutes per night | about 6.8 h (means: Windred 6.77 h, Yuan 6.8 h; no median reported); 6.5 h and over scores 0 |
@@ -176,7 +176,15 @@ c_strength = ln RR(minutesPerWeek) / G, joined linearly; 0 at 0 min and from 140
 * No opt-in is needed. An unrecorded gym session earns no credit, but it can't add years either.
 * Not in the fitness group: strength is a separate exposure in Momma, and none of the fitness terms measures it.
 * **Above 140 min/week** the curve rises above 1.00, and from about 160 min its CI no longer includes 1.00 (read from the figure). This isn't scored: the term stays at 0 rather than adding years on the strength of one figure (§9).
-* **Band:** the curve's own CI at your minutes, read from the figure (for example 0.82–0.88 at 30 min, 0.79–0.86 at 40, 0.85–0.93 at 100), clamped to the limits. The reference is the curve's own reference, so the CI applies directly.
+* **Band:** the curve's own CI at your minutes, clamped to the limits. The reference is the curve's own reference, so the CI applies directly. The dashed CI lines were digitized from the figure's pixels (±0.005; axis ticks used for calibration; the solid line reads 0.828 at 40 min and 1.004 at 140, matching the text):
+
+  ```
+  min/week   10     20     30     40     50     60     70     80     90     100    110    120    130    140
+  CI low    0.926  0.868  0.820  0.794  0.799  0.805  0.810  0.816  0.829  0.856  0.879  0.902  0.926  0.950
+  CI high   0.953  0.914  0.883  0.864  0.870  0.875  0.881  0.886  0.900  0.927  0.958  0.994  1.028  1.062
+  ```
+
+  The upper line passes 1.00 at about 118 min (capped at 1, so 0 y, before scoring); the lower line passes 1.00 at about 162 min.
 
 ### 3.6 VO2max (Established for the ratio, Contested for the input; optional; limits ±2; fitness group)
 
@@ -217,6 +225,7 @@ Pace     = 1                                       if |Δ| < max(2σ, 0.25 y)
 * 1x = in step with the calendar; below 1 = habits improving; above 1 = slipping.
 * **Why the noise gate:** 0.42 y of Δ moves Pace by a whole 1x. That's a few SRI points near the bottom quintile, or about 7 bpm of 30-day resting HR. Without the gate, Pace mostly tracks noise.
 * offset_180 includes the last 30 days, so Δ understates a real change by about a sixth.
+* **VO2max is held at its 90-day value in every window** (decided 2026-10-20). Most 30-day blocks have fewer than 3 workouts, so scoring it per block would drop it to the median and read as a change that didn't happen. Holding it fixed means it cancels out of Δ and σ: pace reflects resting HR, steps, sleep and strength. A real VO2max change still moves the estimate itself, through the weekly 90-day median. When the fitness limit binds, VO2max can still nudge pace slightly, because the limit absorbs part of a change in resting HR or steps.
 * The 5/12 divisor follows WHOOP's five-month projection (design choice), as do the 2σ threshold and the 0.25 y floor. σ comes from your own history, so users with steady habits see smaller real changes.
 * **Show** to the nearest 0.5x.
 * Needs ≥ 21 valid days and ≥ 2 valid weekly SRIs in the 30-day window, and ≥ 3 earlier blocks meeting the same rule for σ. Otherwise Pace is withheld.
@@ -281,8 +290,8 @@ Use all three as unit tests. Band ends are clamped to each term's limits.
 | *Fitness group* | *−2.67* | *−3.57 … −1.81* |
 | SRI | −0.49 | −0.57 … −0.25 |
 | Short sleep | 0 | 0 |
-| Strength | −2.03 | −2.03 … −1.65 |
-| **Σ** | **−5.19** | **−6.18 … −3.70** |
+| Strength | −2.03 | −2.03 … −1.60 |
+| **Σ** | **−5.19** | **−6.18 … −3.65** |
 
 `35 + 0.6 × (−5.19) = 31.9`; band 31.3–32.8, widened to ±2 → shown as **about 30–34**.
 
@@ -291,15 +300,17 @@ Use all three as unit tests. Band ends are clamped to each term's limits.
 | Term | cᵢ (y) | Band |
 |---|---|---|
 | Resting HR (90 seated vs 68.75) | +2.00 | +1.57 … +2.63 |
-| Steps (vs 7,803) | +1.50 (limit) | +1.50 … +1.50 |
+| Steps (vs 7,803) | +1.50 (limit) | +0.75 … +1.50 |
 | VO2max | +2.00 (limit) | +1.59 … +2.00 |
-| *Fitness group* | *+5.50 → +5.00* | *+4.66 … +5.00* |
+| *Fitness group* | *+5.50 → +5.00* | *+3.91 … +5.00* |
 | SRI | +0.71 | +0.35 … +1.06 |
 | Short sleep | 0 | 0 |
 | Strength | 0 | 0 |
-| **Σ** | **+5.71** | **+5.02 … +6.06** |
+| **Σ** | **+5.71** | **+4.26 … +6.06** |
 
-`35 + 0.6 × 5.71 = 38.4`; band 38.0–38.6, widened to ±2 → shown as **about 36–40**. Biggest levers (change in the shown estimate): 40 min/week of strength −1.2 y, 10,000 steps −1.1 y, median steps (7,803) −0.6 y, sleeping RHR 10 bpm lower only −0.3 y. Fitness gains count for less here because the limit absorbs the first 0.5 y of them.
+The steps band is ±50 % of the term *after* its limit (§3.2), so a capped term keeps a real range: +1.50 × 0.5 = +0.75 up to the limit. VO2max's band comes from Kodama's CI ends, each clamped to ±2.
+
+`35 + 0.6 × 5.71 = 38.4`; band 37.6–38.6, widened to ±2 → shown as **about 36–40**. Biggest levers (change in the shown estimate): 40 min/week of strength −1.2 y, 10,000 steps −1.1 y, median steps (7,803) −0.6 y, sleeping RHR 10 bpm lower only −0.3 y. Fitness gains count for less here because the limit absorbs the first 0.5 y of them.
 
 A user exactly at every median gets 35.0.
 

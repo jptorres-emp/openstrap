@@ -311,17 +311,34 @@ object Healthspan {
         val firstDay: Long? = null,
     )
 
-    /** Why there is no estimate, in the order checked. */
-    enum class Withheld(val reason: String) {
-        Age("Needs an age between 20 and 79."),
-        Sex("Needs your sex: the typical values differ for women and men."),
+    /**
+     * Why there is no estimate, in the order checked. [profile]: the user can fix it in their profile. [learning]: there
+     * isn't enough data yet, so the card starts at the user's own age.
+     */
+    enum class Withheld(val reason: String, val profile: Boolean = false, val learning: Boolean = false) {
+        NoAge("Add your birth year in your profile to start your estimate.", profile = true),
+        Age("Healthspan is for ages 20 to 79."),
+        Sex("Add your sex in your profile: the typical values differ for women and men.", profile = true),
         Medication("Not shown while taking beta-blockers or during pregnancy: resting heart rate doesn't reflect fitness then."),
-        Learning("Needs 30 days of wear before a first estimate."),
-        RestingHr("Needs more nights of resting heart rate: about half the nights."),
-        Steps("Needs more days worn for 10 hours or more: about half the days."),
-        Regularity("Needs more weeks of sleep regularity."),
-        Sleep("Needs more nights of sleep: about half the nights."),
+        Learning("Needs 30 days of wear before a first estimate.", learning = true),
+        RestingHr("Needs more nights of resting heart rate: about half the nights.", learning = true),
+        Steps("Needs more days worn for 10 hours or more: about half the days.", learning = true),
+        Regularity("Needs more weeks of sleep regularity.", learning = true),
+        Sleep("Needs more nights of sleep: about half the nights.", learning = true),
     }
+
+    /**
+     * What the card and screen show: the estimate, or why it's withheld together with what the starting state needs:
+     * the user's [age] (the estimate starts there), what's [missing] from the profile, and the Sunday a first estimate
+     * is due ([firstEstimate], local midnight) while it's learning.
+     */
+    data class Outcome(
+        val result: Result?,
+        val withheld: Withheld?,
+        val age: Int? = null,
+        val missing: List<String> = emptyList(),
+        val firstEstimate: Long? = null,
+    )
 
     /** One habit as the screen shows it: its shown years (after shrinkage) and the numbers behind it. */
     data class Term(val habit: Habit, val years: Float, val value: Float?, val reference: Float?)
@@ -372,7 +389,8 @@ object Healthspan {
      * the thresholds scaled to them.
      */
     fun estimate(profile: UserProfile, age: Int?, d: Daily): Pair<Result?, Withheld?> {
-        if (age == null || age !in MIN_AGE..MAX_AGE) return null to Withheld.Age
+        if (age == null) return null to Withheld.NoAge
+        if (age !in MIN_AGE..MAX_AGE) return null to Withheld.Age
         val sex = profile.sex ?: return null to Withheld.Sex
         if (profile.betaBlocker || profile.pregnant) return null to Withheld.Medication
         val windowFrom = d.asOf - WINDOW_DAYS * DAY

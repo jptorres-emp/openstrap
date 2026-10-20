@@ -82,8 +82,10 @@ fun GlowTodayScreen(
     onLiveToggle: (Boolean) -> Unit = {},
     onOpenActivity: () -> Unit = {},
     onOpenHealthspan: () -> Unit = {},
+    /** Opens the profile, for the Healthspan card's reminder to add a birth year or sex. */
+    onOpenProfile: () -> Unit = {},
     /** The weekly Healthspan estimate, or why it's withheld; null hides the card. */
-    healthspan: Pair<org.openstrap.app.data.Healthspan.Result?, org.openstrap.app.data.Healthspan.Withheld?>? = null,
+    healthspan: org.openstrap.app.data.Healthspan.Outcome? = null,
     /** Per-day history for the Monday recap; null leaves the recap out. */
     history: DailyHistory? = null,
     /** The statistics What changed shows, in order. */
@@ -99,7 +101,7 @@ fun GlowTodayScreen(
     val list = rememberLazyListState()
     var choosing by rememberSaveable { mutableStateOf(false) }
     if (choosing) TilesDialog(tiles, onSave = { onTilesChange(it); choosing = false }, onDismiss = { choosing = false })
-    val extras = TodayExtras(liveEnabled, onLiveToggle, onOpenActivity, onOpenHealthspan, healthspan, history, tiles, strapReadiness, checkIn, onCheckIn) { choosing = true }
+    val extras = TodayExtras(liveEnabled, onLiveToggle, onOpenActivity, onOpenHealthspan, onOpenProfile, healthspan, history, tiles, strapReadiness, checkIn, onCheckIn) { choosing = true }
     CompositionLocalProvider(LocalGlowPaused provides { list.isScrollInProgress }) {
         TodayList(state, liveHeartRate, battery, charging, onPrev, onNext, contentPadding, picker, onOpenSleep, onOpenMetric, recovery, onOpenRecovery, workouts, onOpenWorkout, list, extras)
     }
@@ -111,7 +113,8 @@ private class TodayExtras(
     val onLiveToggle: (Boolean) -> Unit,
     val onOpenActivity: () -> Unit,
     val onOpenHealthspan: () -> Unit,
-    val healthspan: Pair<org.openstrap.app.data.Healthspan.Result?, org.openstrap.app.data.Healthspan.Withheld?>?,
+    val onOpenProfile: () -> Unit,
+    val healthspan: org.openstrap.app.data.Healthspan.Outcome?,
     val history: DailyHistory?,
     val tiles: List<Metric>,
     val strapReadiness: StrapReadinessRow?,
@@ -165,7 +168,7 @@ private fun TodayList(
     right { WhatChanged(state, rec?.readiness?.let { Narrative.readinessBody(it) }, extras.tiles, onOpenMetric, extras.onChooseTiles) }
 
     // Glow: the weekly healthspan estimate (docs/algorithms/healthspan.md); absent until it's worked out.
-    if (extras.healthspan != null) right { HealthspanCard(extras.healthspan, extras.onOpenHealthspan) }
+    if (extras.healthspan != null) right { HealthspanCard(extras.healthspan, extras.onOpenHealthspan, extras.onOpenProfile) }
 
     // Glow: heart rate, beating at the latest reading.
     right { HeartGlow(state, liveHeartRate, extras.liveEnabled, extras.onLiveToggle) { onOpenMetric(Metric.HeartRate) } }

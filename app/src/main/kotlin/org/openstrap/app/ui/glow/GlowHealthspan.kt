@@ -92,40 +92,74 @@ internal fun leverText(r: Healthspan.Result): String {
     return (if (lever.years < 0) "Helping most: " else "Holding back most: ") + lever.habit.label.replaceFirstChar { it.lowercase() }
 }
 
+/** "Sunday 22 Nov" for local midnight [day] (epoch seconds), with no-break spaces so it never wraps inside the date. */
+internal fun sundayText(day: Long): String = java.time.Instant.ofEpochSecond(day).atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+    .format(java.time.format.DateTimeFormatter.ofPattern("EEEE d MMM")).replace(' ', '\u00A0')
+
+/** What to add to the profile: "Add your birth year and sex in your profile to start your Healthspan." */
+internal fun profileReminder(missing: List<String>): String =
+    "Add your ${missing.joinToString(" and ")} in your profile to start your Healthspan."
+
+/** The starting state's line under your age: when a first estimate is due, or what it's still waiting for. */
+internal fun learningText(o: Healthspan.Outcome): String = when {
+    // The date's line is kept whole, so "First estimate:" never ends up apart from its date.
+    o.firstEstimate != null -> "Starts at your age.\nFirst\u00A0estimate:\u00A0${sundayText(o.firstEstimate)}."
+    o.withheld == Healthspan.Withheld.Learning -> "Starts at your age. Wear the strap for 30 days for a first estimate."
+    else -> "Starts at your age. ${o.withheld?.reason.orEmpty()}"
+}
+
 /**
- * Healthspan: how old your habits look, as a range of ages (docs/algorithms/healthspan.md), from [state] (the weekly
- * estimate, or why it's withheld). Nothing shows until it has been worked out.
+ * Healthspan: how old your habits look, as a range of ages (docs/algorithms/healthspan.md), from [state]. Before there's
+ * an estimate it starts at your own age; with no birth year or sex it asks for them, and a tap opens the profile
+ * ([onOpenProfile]) instead of the Healthspan screen. Nothing shows until it has been worked out.
  */
 @Composable
-fun HealthspanCard(state: Pair<Healthspan.Result?, Healthspan.Withheld?>?, onClick: (() -> Unit)? = null) {
-    val (r, withheld) = state ?: return
-    GlowCard(HealthspanGlow, Modifier.fillMaxWidth(), onClick = onClick) {
+fun HealthspanCard(state: Healthspan.Outcome?, onClick: (() -> Unit)? = null, onOpenProfile: (() -> Unit)? = null) {
+    state ?: return
+    val r = state.result
+    val withheld = state.withheld
+    val needsProfile = r == null && state.missing.isNotEmpty() && withheld?.profile == true
+    GlowCard(HealthspanGlow, Modifier.fillMaxWidth(), onClick = if (needsProfile) onOpenProfile else onClick) {
         Column {
             GlowHeader("Healthspan", trailing = if (r?.early == true) "Early" else "Weekly")
-            if (r == null) {
-                Text(
-                    withheld?.reason ?: "", color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(top = 10.dp),
-                )
-                CardLink("How it works")
-                return@Column
-            }
-            GlowHeroNumber("${r.low}-${r.high}", "", side = {
-                Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text("Pace", color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.labelSmall)
-                    Text(paceLabel(r.pace), color = Color.White, style = GlowType.number.copy(fontWeight = FontWeight.SemiBold))
+            when {
+                r != null -> {
+                    GlowHeroNumber("${r.low}-${r.high}", "", side = {
+                        Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text("Pace", color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.labelSmall)
+                            Text(paceLabel(r.pace), color = Color.White, style = GlowType.number.copy(fontWeight = FontWeight.SemiBold))
+                        }
+                    })
+                    CardText(healthspanVerdict(r.age, r.estimate))
+                    GlowChartGap()
+                    AgeScale(r.age, r.low, r.high, r.estimate)
+                    CardLink(leverText(r))
                 }
-            })
-            Text(
-                healthspanVerdict(r.age, r.estimate), color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(top = 10.dp),
-            )
-            GlowChartGap()
-            AgeScale(r.age, r.low, r.high, r.estimate)
-            CardLink(leverText(r))
+                needsProfile -> {
+                    CardText(profileReminder(state.missing), bright = true)
+                    CardLink("Add to profile")
+                }
+                withheld?.learning == true && state.age != null -> {
+                    GlowHeroNumber("${state.age}", "your age")
+                    CardText(learningText(state))
+                    CardLink("How it works")
+                }
+                else -> {
+                    CardText(withheld?.reason.orEmpty(), bright = true)
+                    CardLink("How it works")
+                }
+            }
         }
     }
 }
+
+/** A line of the card's text under the number; [bright] when it's the card's only text. */
+@Composable
+private fun CardText(text: String, bright: Boolean = false) = Text(
+    text, color = Color.White.copy(alpha = if (bright) 0.85f else 0.75f),
+    style = if (bright) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.bodySmall,
+    modifier = Modifier.padding(top = 10.dp),
+)
 
 /** The card's last row: a line of text and a chevron. */
 @Composable

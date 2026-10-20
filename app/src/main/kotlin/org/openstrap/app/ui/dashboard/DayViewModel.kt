@@ -149,7 +149,7 @@ class DayViewModel(
 
     /** The weekly Healthspan estimate for the selected day, or why it's withheld; null while loading or on failure. */
     @OptIn(FlowPreview::class)
-    val healthspan: StateFlow<Pair<org.openstrap.app.data.Healthspan.Result?, org.openstrap.app.data.Healthspan.Withheld?>?> =
+    val healthspan: StateFlow<org.openstrap.app.data.Healthspan.Outcome?> =
         combine(selected, profile, repo.changes().debounce(800)) { d, p, _ -> d to p }
             .mapLatest { (d, p) ->
                 withContext(Dispatchers.Default) {

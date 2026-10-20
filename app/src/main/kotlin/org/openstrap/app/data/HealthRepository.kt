@@ -60,7 +60,7 @@ class HealthRepository(private val dao: HealthDao) {
     }
 
     /** The weekly Healthspan estimate shown on [date] (made the Sunday on or before it), or why it's withheld; heavy. */
-    suspend fun healthspan(date: LocalDate, profile: org.openstrap.app.data.settings.UserProfile): Pair<Healthspan.Result?, Healthspan.Withheld?> =
+    suspend fun healthspan(date: LocalDate, profile: org.openstrap.app.data.settings.UserProfile): Healthspan.Outcome =
         healthspanEngine.compute(date, profile)
 
     private suspend fun logNight(n: Recovery.Night) {

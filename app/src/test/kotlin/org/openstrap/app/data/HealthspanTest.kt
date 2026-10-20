@@ -136,6 +136,7 @@ class HealthspanTest {
     }
 
     @Test fun `withholding order`() {
+        assertEquals(Healthspan.Withheld.NoAge, Healthspan.estimate(UserProfile(sex = man), null, dailyA()).second)
         assertEquals(Healthspan.Withheld.Age, Healthspan.estimate(UserProfile(sex = man), 19, dailyA()).second)
         assertEquals(Healthspan.Withheld.Sex, Healthspan.estimate(UserProfile(), 35, dailyA()).second)
         assertEquals(Healthspan.Withheld.Medication, Healthspan.estimate(UserProfile(sex = man, betaBlocker = true), 35, dailyA()).second)

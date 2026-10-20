@@ -44,20 +44,28 @@ private fun updatedText(asOf: Long): String {
 
 /** The screen behind the Healthspan card: the estimate, the pace it's moving at, and what moves it; or why it's withheld. */
 @Composable
-fun GlowHealthspanScreen(state: Pair<Healthspan.Result?, Healthspan.Withheld?>?, contentPadding: PaddingValues, onBack: () -> Unit) {
+fun GlowHealthspanScreen(state: Healthspan.Outcome?, contentPadding: PaddingValues, onBack: () -> Unit) {
     BackHandler(onBack = onBack)
-    val r = state?.first
+    val r = state?.result
     ScreenList(contentPadding, gutter = GlowLayout.Gutter) {
         item { GlowDetailHeader("Healthspan", r?.let { updatedText(it.asOf) } ?: "Updated weekly, on Sunday", onBack) }
         item {
             GlowCard(HealthspanGlow.copy(motion = GlowMotion.Breath(5f)), Modifier.fillMaxWidth()) {
                 Column {
-                    GlowHeader("Your habits look like", trailing = if (r?.early == true) "Early" else "Weekly")
+                    GlowHeader(if (r == null && state?.withheld?.learning == true) "Starting point" else "Your habits look like", trailing = if (r?.early == true) "Early" else "Weekly")
                     if (r == null) {
+                        val learning = state?.withheld?.learning == true && state.age != null
+                        if (learning) GlowHeroNumber("${state?.age}", "your age")
                         Text(
-                            state?.second?.reason ?: "Working it out…", color = Color.White.copy(alpha = 0.85f),
-                            style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 10.dp),
+                            when {
+                                state == null -> "Working it out…"
+                                state.missing.isNotEmpty() && state.withheld?.profile == true -> profileReminder(state.missing)
+                                learning -> learningText(state)
+                                else -> state.withheld?.reason.orEmpty()
+                            },
+                            color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 10.dp),
                         )
+                        if (learning) Note("Everyone starts at their own age. From there, habits better than typical take years off and worse ones add them.")
                         return@Column
                     }
                     GlowHeroNumber("${r.low}-${r.high}", "years", listOf(healthspanVerdict(r.age, r.estimate), "You're ${r.age}"))

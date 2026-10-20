@@ -14,20 +14,32 @@ import java.time.temporal.TemporalAdjusters
  */
 class HealthspanEngine(private val dao: HealthDao) {
     private data class Key(val asOf: Long, val profile: UserProfile, val fingerprint: Long)
-    private var cached: Pair<Key, Pair<Healthspan.Result?, Healthspan.Withheld?>>? = null
+    private var cached: Pair<Key, Healthspan.Outcome>? = null
 
     /** The Sunday on or before [date]: the day the estimate it shows was made. */
     fun sundayOf(date: LocalDate): LocalDate = date.with(TemporalAdjusters.previousOrSame(DayOfWeek.SUNDAY))
 
-    suspend fun compute(date: LocalDate, profile: UserProfile, zone: ZoneId = ZoneId.systemDefault()): Pair<Healthspan.Result?, Healthspan.Withheld?> {
+    suspend fun compute(date: LocalDate, profile: UserProfile, zone: ZoneId = ZoneId.systemDefault()): Healthspan.Outcome {
         val sunday = sundayOf(date)
         val asOf = DayWindow.of(sunday, zone).from
         val from = DayWindow.of(sunday.minusDays(Healthspan.WINDOW_DAYS.toLong()), zone).from
         val key = Key(asOf, profile, dao.dataFingerprint(from, asOf - 1))
         cached?.let { (k, v) -> if (k == key) return v }
-        val result = Healthspan.estimate(profile, profile.age(sunday), daily(sunday, from, asOf, zone))
-        cached = key to result
-        return result
+        val age = profile.age(sunday)
+        val d = daily(sunday, from, asOf, zone)
+        val (result, withheld) = Healthspan.estimate(profile, age, d)
+        val missing = listOfNotNull("birth year".takeIf { profile.birthYear == null }, "sex".takeIf { profile.sex == null })
+        val outcome = Healthspan.Outcome(result, withheld, age, missing, d.firstDay?.let { firstEstimate(it, zone) }?.takeIf { withheld == Healthspan.Withheld.Learning })
+        cached = key to outcome
+        return outcome
+    }
+
+    /** Local midnight of the first Sunday with [Healthspan.EARLY_DAYS] of data after [firstDay], as [Healthspan.estimate] counts them. */
+    private fun firstEstimate(firstDay: Long, zone: ZoneId): Long {
+        val t = firstDay + (Healthspan.EARLY_DAYS * 86_400L - 43_200L)
+        var d = java.time.Instant.ofEpochSecond(t).atZone(zone).toLocalDate()
+        if (DayWindow.of(d, zone).from < t) d = d.plusDays(1)
+        return DayWindow.of(d.with(TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY)), zone).from
     }
 
     /** Every input over [from, asOf), keyed as [Healthspan.Daily] wants. */

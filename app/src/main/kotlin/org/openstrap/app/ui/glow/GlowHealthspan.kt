@@ -117,8 +117,10 @@ internal fun AgeScale(age: Int, low: Int, high: Int) {
             drawLine(Color.White, start, end, 3.dp.toPx(), StrokeCap.Round)
             drawLine(Color.White.copy(alpha = 0.8f), Offset(x(age.toFloat()), y - 11.dp.toPx()), Offset(x(age.toFloat()), y + 11.dp.toPx()), 1.5.dp.toPx(), StrokeCap.Round)
             val mid = Offset((start.x + end.x) / 2, y)
-            drawCircle(MetricColors.good.copy(alpha = 0.3f), 9.dp.toPx(), mid)
-            drawCircle(MetricColors.good, 5.dp.toPx(), mid)
+            // Green when the estimate is at or under your age, amber when it's over.
+            val dot = if ((low + high) / 2f <= age) MetricColors.good else MetricColors.warn
+            drawCircle(dot.copy(alpha = 0.3f), 9.dp.toPx(), mid)
+            drawCircle(dot, 5.dp.toPx(), mid)
         }
         Box(Modifier.fillMaxWidth()) {
             val label = Color.White.copy(alpha = 0.7f)

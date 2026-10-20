@@ -161,11 +161,11 @@ private fun TodayList(
     // Quiet: what the readiness score means, then only the signals that moved away from your normal.
     right { WhatChanged(state, rec?.readiness?.let { Narrative.readinessBody(it) }, extras.tiles, onOpenMetric, extras.onChooseTiles) }
 
-    // Glow: heart rate, beating at the latest reading.
-    right { HeartGlow(state, liveHeartRate, extras.liveEnabled, extras.onLiveToggle) { onOpenMetric(Metric.HeartRate) } }
-
     // Glow: healthspan estimate (sample numbers until the estimate is built, see docs/algorithms/healthspan.md).
     right { HealthspanCard(HealthspanSample.AGE, HealthspanSample.LOW, HealthspanSample.HIGH, HealthspanSample.PACE, HealthspanSample.LEVER, extras.onOpenHealthspan) }
+
+    // Glow: heart rate, beating at the latest reading.
+    right { HeartGlow(state, liveHeartRate, extras.liveEnabled, extras.onLiveToggle) { onOpenMetric(Metric.HeartRate) } }
 
     // Glow: activity, moving with the day's steps.
     left { ActivityGlow(state, extras.onOpenActivity) }

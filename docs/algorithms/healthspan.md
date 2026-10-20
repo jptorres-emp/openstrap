@@ -229,14 +229,14 @@ Pace     = 1                                       if |Δ| < max(2σ, 0.25 y)
 * **Per-term breakdown:** show each term as "adds about 1 year" or "takes off about 2 years", so the user sees what to change. Next to each, show the target (8,000–10,000 steps, 40 min/week of strength, at least 6.5 h measured sleep) as coaching, separate from the median the age is scored against. When the fitness limit binds, say so ("fitness terms capped").
 * **Wording:** no mortality language, as for fitness age. The name is still open: "healthspan estimate", "habits age".
 * **Recompute** weekly (Sunday), like WHOOP and like VO2max.
-* **Where it shows (decided 2026-10-20):**
-  * **Today tab: the top card becomes a swipeable stack** of Recovery (in front by default), Healthspan and Sleep, with page dots. The Healthspan card shows:
+* **Where it shows (decided 2026-10-20, revised the same day):**
+  * **Today tab: its own glow card in the list**, after Recovery and What changed and before Heart rate. An earlier version of this decision made the top card a swipeable stack of Recovery, Healthspan and Sleep. It was dropped: the Today tab already swipes between tabs, so a swipeable card inside it fights that gesture; a card behind a swipe is easy to miss; and a number that changes weekly doesn't need the hero slot Recovery has each morning. The card shows:
     * "Weekly" in the header;
-    * the range in the dot-matrix numerals ("30–34"), with pace ("Steady") beside it;
-    * "3 years younger" in green ("older" in amber);
-    * an age scale of your age ±7 (28–42 for a 35-year-old), the widest the range can reach: a white line over the range, a green dot at its middle and a tick at your age ("you're 35");
-    * one line naming the biggest lever ("Helping most: strength training").
-  * **Healthspan screen**, opened from the card: the range, "3 years younger" and the same age scale; pace of aging on a −1x to 3x scale with one line of explanation; "What moves it", one row per term against the typical person your age (a white bar left for younger and right for older, ending in a green or amber dot, with matching wording); and the not-a-medical-measurement line with a link to how it's worked out.
+    * the range in the dot-matrix numerals ("30-34"; the font has no en dash), with pace ("Steady") beside it;
+    * "3 years younger" ("older" when it applies) in plain text, with no colour: the dot on the scale carries the good-or-not signal;
+    * an age scale of your age ±7 (28–42 for a 35-year-old), the widest the range can reach: a dotted track, a solid white line over the range with a soft halo, a green dot at its middle (amber if the estimate is older than you) and a tick at your age ("you're 35");
+    * one row naming the biggest lever ("Helping most: strength training") with a chevron; the whole card opens the Healthspan screen.
+  * **Healthspan screen**, opened from the card: the range, "3 years younger" and the same age scale in a glow card; pace of aging on a −1x to 3x scale with one line of explanation; "What moves it", one row per term against the typical person your age, on one shared scale (−1½ y to +1½ y, a bar at either end meaning that or more): a green line left of the middle for years taken off, amber right for years added, ending in a dot, with matching wording; and a folded "How it works" with the not-a-medical-measurement line.
   * Not on the Activity tab, which keeps VO2max and fitness age.
 
 ## 6. Withholding rules

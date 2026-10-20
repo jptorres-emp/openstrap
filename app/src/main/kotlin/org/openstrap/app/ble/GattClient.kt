@@ -117,7 +117,19 @@ class GattClient(private val context: Context, private val address: String) {
     suspend fun connect(refreshCache: Boolean = false) {
         val device: BluetoothDevice = context.getSystemService(BluetoothManager::class.java).adapter.getRemoteDevice(address)
         op<Unit>(timeoutMs = 30_000) {
-            gatt = device.connectGatt(context, false, callback, BluetoothDevice.TRANSPORT_LE)
+            gatt = if (Build.VERSION.SDK_INT >= 37) {
+                // Android 17's settings form. Automatic MTU stays off, as the older call leaves it, and callbacks run
+                // on the binder thread like before.
+                val settings = android.bluetooth.BluetoothGattConnectionSettings.Builder()
+                    .setTransport(BluetoothDevice.TRANSPORT_LE)
+                    .setAutoConnectEnabled(false)
+                    .setAutomaticMtuEnabled(false)
+                    .build()
+                device.connectGatt(settings, { it.run() }, callback)
+            } else {
+                @Suppress("DEPRECATION")
+                device.connectGatt(context, false, callback, BluetoothDevice.TRANSPORT_LE)
+            }
             gatt != null
         }
         gatt!!.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_HIGH)

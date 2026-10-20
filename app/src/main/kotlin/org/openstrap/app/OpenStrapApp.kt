@@ -5,6 +5,7 @@ import org.openstrap.app.ble.BleScanner
 import org.openstrap.app.data.HealthRepository
 import org.openstrap.app.data.db.OpenStrapDatabase
 import org.openstrap.app.data.settings.SettingsStore
+import org.openstrap.app.device.PhoneAlerts
 import org.openstrap.app.device.StrapController
 import org.openstrap.app.device.StrapManager
 import org.openstrap.app.export.CsvExporter
@@ -19,6 +20,7 @@ class AppContainer(val app: Application) {
     val csv = CsvExporter(database.healthDao())
     val healthConnect = HealthConnectExporter(app, database.healthDao())
     val strap: StrapController = StrapManager(app, settings, database.healthDao())
+    val phoneAlerts = PhoneAlerts(app, settings, strap)
 }
 
 class OpenStrapApp : Application() {

@@ -37,6 +37,8 @@ import org.openstrap.protocol.services.Alarm
 import org.openstrap.protocol.services.AlarmCapabilities
 import org.openstrap.protocol.services.AlarmCodec
 import org.openstrap.protocol.services.Endpoints
+import org.openstrap.protocol.services.FindDevice
+import org.openstrap.protocol.services.MotorVibrate
 import org.openstrap.protocol.services.Setting
 import org.openstrap.protocol.services.SettingsCodec
 import org.openstrap.protocol.services.SettingsGroup
@@ -171,6 +173,7 @@ class StrapManager(
                 watchProfile(s)
                 watchHealthAlerts(s)
                 watchAlarms(s)
+                watchFindDevice(s)
                 retries = 0
                 autoSync(s)
                 liveHeartRateEnabled.value = settings.liveHeartRate.first()
@@ -321,6 +324,14 @@ class StrapManager(
             if (p.isEmpty() || p.u8(0) != AlarmCodec.CHANGED) return@collect
             log("alarms changed on the strap: ${p.toHex()}")
             alarmsChanged.tryEmit(Unit)
+        }
+    }
+
+    /** Logged only: the strap's `07` once buzzing has stopped. */
+    private fun CoroutineScope.watchFindDevice(s: ChannelSession) = launch {
+        if (!s.services.has(Endpoints.FIND_DEVICE)) return@launch
+        s.messagesFor(Endpoints.FIND_DEVICE).collect { p ->
+            if (p.isNotEmpty() && p.u8(0) == FindDevice.FOUND) log("buzzing stopped on the strap: ${p.toHex()}")
         }
     }
 
@@ -656,6 +667,35 @@ class StrapManager(
     override suspend fun writeHealthSettings(version: Int, settings: List<Setting>) {
         val reply = command(Endpoints.SETTINGS, SettingsCodec.write(SettingsCodec.GROUP_HEALTH, version, settings))
         if (!SettingsCodec.isWriteSuccess(reply)) throw StrapCommandException("The strap didn't accept the setting (code ${reply.getOrNull(1)})")
+    }
+
+    override suspend fun buzz(pattern: List<Int>) {
+        if (activeSession?.services?.has(Endpoints.MOTOR_VIBRATE) == true) {
+            if (!MotorVibrate.isOk(command(Endpoints.MOTOR_VIBRATE, MotorVibrate.play(pattern)))) throw StrapCommandException("The strap didn't buzz")
+            return
+        }
+        // No motor module: find-device's `03` keeps buzzing until stopped (fw 3.25, 2026-10-20), so time it by hand.
+        if (!FindDevice.isBuzzOk(command(Endpoints.FIND_DEVICE, FindDevice.BUZZ))) throw StrapCommandException("The strap didn't buzz")
+        delay(FindDevice.SHORT_BUZZ_MS)
+        stopBuzzing()
+    }
+
+    /**
+     * `03`, not the `05 01` Zepp uses for its continuous find: on fw 3.25 `03` was felt buzzing until `06`, while
+     * `05 01` was not felt during a test call (2026-10-20).
+     */
+    override suspend fun startBuzzing() {
+        if (!FindDevice.isBuzzOk(command(Endpoints.FIND_DEVICE, FindDevice.BUZZ))) throw StrapCommandException("The strap didn't buzz")
+    }
+
+    override suspend fun stopBuzzing() = sendFindDevice(FindDevice.STOP)
+
+    /** STOP gets no reply (03 §3.16), so it is only sent. */
+    private suspend fun sendFindDevice(request: ByteArray) {
+        val s = activeSession ?: throw StrapCommandException("The strap isn't connected")
+        if (firmwareUpdating.value) throw StrapCommandException("Wait for the firmware update to finish")
+        log("cmd %04x > %s".format(Endpoints.FIND_DEVICE, request.toHex()))
+        runCatching { s.send(Endpoints.FIND_DEVICE, request) }.getOrElse { throw StrapCommandException("The strap didn't answer") }
     }
 
     /** GENERAL key 47; null when the strap doesn't report it. Zepp refuses OTA while it is on (07 §1.6). */

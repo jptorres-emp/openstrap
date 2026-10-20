@@ -48,6 +48,7 @@ I use it daily with one Helio Strap on one Android 16 phone. Other phones and fi
 | Recovery, Charge and sleep scores, PAI, training load | ✅ Works ([see limitations](#known-limitations)) |
 | Dashboard: Today, Recovery, Sleep, Activity, You (foldables and tablets too) | ✅ Works |
 | Alarms, strap health alerts | ✅ Works |
+| Strap buzzes for phone calls and notifications, with a choice of pattern | ✅ Works |
 | Export and import: CSV zip (every table), Android Health Connect | ✅ Works |
 | Firmware update (online check with your Zepp token, or from a file) | ✅ Works |
 
@@ -84,6 +85,13 @@ OpenStrap goes online only for your Zepp account and for firmware, and only when
 - **Check for update** sends your Zepp token, user ID, and the strap's firmware version, hardware version and serial number to the update server you set. **Download** fetches the image from the URL that server returns.
 
 You can skip the sign-in and paste the key and token by hand instead.
+
+## Phone access
+
+Both are off until you switch them on in **You → Alarms & alerts → Phone alerts**.
+
+- **Incoming calls** needs the phone-state permission. OpenStrap uses it only to know when a call is ringing, answered or over. It never reads numbers, contacts or the call log.
+- **Notifications** needs notification access. OpenStrap looks only at whether a notification would make a sound (Do Not Disturb and silent apps are followed) and at its category. It never reads the title or text, stores nothing, and sends the strap only a buzz. It asks Android only for notifications that alert, plus conversations. You can narrow that further, or leave out apps, on the notification-access page.
 
 ## Backup and restore
 

@@ -122,8 +122,8 @@ object BodySignals {
             val prev = out.lastOrNull()
             val gap = prev?.let { nightsBetween(it.day, n.day) - 1 } ?: Int.MAX_VALUE
             val linked = prev != null && gap <= 1
-            val nightsOff = if (core.isEmpty()) 0 else if (linked && prev!!.flags.any { it.core }) prev.nightsOff + 1 else 1
-            val rhrTwice = Flag.RhrFlag in flags && linked && Flag.RhrFlag in prev!!.flags
+            val nightsOff = if (core.isEmpty()) 0 else if (linked && prev.flags.any { it.core }) prev.nightsOff + 1 else 1
+            val rhrTwice = Flag.RhrFlag in flags && linked && Flag.RhrFlag in prev.flags
             // Core flags over the last 7 nights, counting only nights after the latest reset.
             var since = i
             while (since > 0 && nightsBetween(sorted[since - 1].day, sorted[since].day) - 1 <= 1) since--
@@ -133,14 +133,14 @@ object BodySignals {
             val alertNow = rhrTwice || families.size >= 2 || (core.isNotEmpty() && recent >= PERSISTENCE_NIGHTS) || rrBig
             // An alert holds until CLEAR_NIGHTS consecutive nights without a core flag.
             var clearRun = 0
-            if (linked && prev!!.state == State.Alert && core.isEmpty()) {
+            if (linked && prev.state == State.Alert && core.isEmpty()) {
                 clearRun = 1
                 var k = i - 1
                 while (k > 0 && out[k].flags.none { it.core } && out[k].state == State.Alert && nightsBetween(sorted[k - 1].day, sorted[k].day) - 1 <= 1) { clearRun++; k-- }
             }
             val state = when {
                 alertNow -> State.Alert
-                linked && prev!!.state == State.Alert && clearRun < CLEAR_NIGHTS -> State.Alert
+                linked && prev.state == State.Alert && clearRun < CLEAR_NIGHTS -> State.Alert
                 core.isNotEmpty() || (Flag.RhrWatch in flags && Flag.HrvSupport in flags) -> State.Watch
                 else -> State.Normal
             }

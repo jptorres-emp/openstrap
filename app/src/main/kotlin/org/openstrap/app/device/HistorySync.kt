@@ -182,7 +182,7 @@ class HistorySync(
                         val spec = HistoryTypeSpecs.forCode(code)
                         val parsed = spec?.parser?.parse(payload, ParseContext(header, activityRecordSize = recordSize(code, payload, chunk.sizeField)))
                         val next = (parsed as? ParseResult.Success)?.nextCursor
-                        if (next == null || next <= cursor || spec?.loops == false) return@runCatching
+                        if (next == null || next <= cursor || spec.loops == false) return@runCatching
                         cursor = next
                     }
                 }.onFailure { log("dump $code: $it") }

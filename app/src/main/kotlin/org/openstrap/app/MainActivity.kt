@@ -179,6 +179,7 @@ private fun AppRoot(container: AppContainer) {
             ?.takeIf { it.isNotEmpty() } ?: org.openstrap.app.ui.glow.TODAY_TILES
     }
     val recovery by dayVm.recovery.collectAsStateWithLifecycle()
+    val healthspan by dayVm.healthspan.collectAsStateWithLifecycle()
     val profile by deviceVm.profile.collectAsStateWithLifecycle()
     val day by dayVm.state.collectAsStateWithLifecycle()
     val strapReadiness by remember(day.dayStart) { container.database.healthDao().strapReadiness(day.dayStart) }.collectAsStateWithLifecycle(null)
@@ -364,10 +365,13 @@ private fun AppRoot(container: AppContainer) {
                 }
                 when (Tab.entries[page]) {
                     // Today never opens the full workout list; it would only be on the stack from a stale saved one.
+                    // The profile (from the Healthspan card's reminder) opens over everything else on the tab.
                     Tab.Today -> ListDetail(
-                        todayStack, isOpen = { s -> s.lastOrNull().let { it != null && it !is Detail.AllWorkouts } }, depth = { it.size }, minWidth = SideBySideWidth,
-                        detail = { stack ->
-                            when (val detail = stack.lastOrNull()) {
+                        todayStack to (profileTab == Tab.Today.ordinal),
+                        isOpen = { (s, profileOpen) -> profileOpen || s.lastOrNull().let { it != null && it !is Detail.AllWorkouts } },
+                        depth = { (s, profileOpen) -> s.size + if (profileOpen) 1 else 0 }, minWidth = SideBySideWidth,
+                        detail = { (stack, profileOpen) ->
+                            if (profileOpen) profilePage() else when (val detail = stack.lastOrNull()) {
                                 is Detail.OfMetric -> MetricDetail(
                                     detail.metric, day, history = history,
                                     liveHeartRate = live, liveEnabled = liveEnabled, canUseLive = connection is ConnectionState.Connected,
@@ -376,6 +380,7 @@ private fun AppRoot(container: AppContainer) {
                                     contentPadding = padding, onBack = { todayStack = todayStack.dropLast(1) },
                                 )
                                 is Detail.Workout -> WorkoutDetail(openWorkout?.takeIf { it.workout.start == detail.start }, padding, onBack = { todayStack = todayStack.dropLast(1) })
+                                Detail.Healthspan -> org.openstrap.app.ui.glow.GlowHealthspanScreen(healthspan, padding, onBack = { todayStack = todayStack.dropLast(1) })
                                 else -> Unit
                             }
                         },
@@ -396,6 +401,9 @@ private fun AppRoot(container: AppContainer) {
                                     liveEnabled = liveEnabled.takeIf { connection is ConnectionState.Connected },
                                     onLiveToggle = { container.strap.setLiveHeartRate(it) },
                                     onOpenActivity = { tab = Tab.Activity.ordinal },
+                                    onOpenHealthspan = { todayStack = listOf(Detail.Healthspan) },
+                                    healthspan = healthspan,
+                                    onOpenProfile = { profileTab = Tab.Today.ordinal },
                                     history = history,
                                     tiles = todayTiles,
                                     onTilesChange = { m -> scope.launch { container.settings.saveTodayTiles(m.map { it.name }) } },
@@ -465,6 +473,8 @@ private fun AppRoot(container: AppContainer) {
                                     workouts, padding, onOpen = { activityStack = activityStack + Detail.Workout(it) },
                                     onBack = { activityStack = activityStack.dropLast(1) },
                                 )
+                                // Opened only from Today.
+                                Detail.Healthspan -> Unit
                             }
                         },
                     ) {

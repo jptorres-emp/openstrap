@@ -81,6 +81,7 @@ fun GlowTodayScreen(
     liveEnabled: Boolean? = null,
     onLiveToggle: (Boolean) -> Unit = {},
     onOpenActivity: () -> Unit = {},
+    onOpenHealthspan: () -> Unit = {},
     /** Per-day history for the Monday recap; null leaves the recap out. */
     history: DailyHistory? = null,
     /** The statistics What changed shows, in order. */
@@ -96,7 +97,7 @@ fun GlowTodayScreen(
     val list = rememberLazyListState()
     var choosing by rememberSaveable { mutableStateOf(false) }
     if (choosing) TilesDialog(tiles, onSave = { onTilesChange(it); choosing = false }, onDismiss = { choosing = false })
-    val extras = TodayExtras(liveEnabled, onLiveToggle, onOpenActivity, history, tiles, strapReadiness, checkIn, onCheckIn) { choosing = true }
+    val extras = TodayExtras(liveEnabled, onLiveToggle, onOpenActivity, onOpenHealthspan, history, tiles, strapReadiness, checkIn, onCheckIn) { choosing = true }
     CompositionLocalProvider(LocalGlowPaused provides { list.isScrollInProgress }) {
         TodayList(state, liveHeartRate, battery, charging, onPrev, onNext, contentPadding, picker, onOpenSleep, onOpenMetric, recovery, onOpenRecovery, workouts, onOpenWorkout, list, extras)
     }
@@ -107,6 +108,7 @@ private class TodayExtras(
     val liveEnabled: Boolean?,
     val onLiveToggle: (Boolean) -> Unit,
     val onOpenActivity: () -> Unit,
+    val onOpenHealthspan: () -> Unit,
     val history: DailyHistory?,
     val tiles: List<Metric>,
     val strapReadiness: StrapReadinessRow?,
@@ -161,6 +163,9 @@ private fun TodayList(
 
     // Glow: heart rate, beating at the latest reading.
     right { HeartGlow(state, liveHeartRate, extras.liveEnabled, extras.onLiveToggle) { onOpenMetric(Metric.HeartRate) } }
+
+    // Glow: healthspan estimate (sample numbers until the estimate is built, see docs/algorithms/healthspan.md).
+    right { HealthspanCard(HealthspanSample.AGE, HealthspanSample.LOW, HealthspanSample.HIGH, HealthspanSample.PACE, HealthspanSample.LEVER, extras.onOpenHealthspan) }
 
     // Glow: activity, moving with the day's steps.
     left { ActivityGlow(state, extras.onOpenActivity) }

@@ -29,6 +29,8 @@ sealed interface Detail {
     data class Workout(val start: Long) : Detail
     /** Every workout, newest first. */
     data object AllWorkouts : Detail
+    /** The Healthspan estimate and what moves it, opened from its card on Today. */
+    data object Healthspan : Detail
 
     companion object {
         /** Saves a tab's stack of details, deepest last, as one string ("m:Hrv|w:1792227300") so it survives process death. */
@@ -41,6 +43,7 @@ sealed interface Detail {
             is OfMetric -> "m:${d.metric.name}"
             is Workout -> "w:${d.start}"
             AllWorkouts -> "a:"
+            Healthspan -> "h:"
         }
 
         private fun restore(s: String): Detail? {
@@ -49,6 +52,7 @@ sealed interface Detail {
                 "m" -> Metric.entries.firstOrNull { it.name == value }?.let(::OfMetric)
                 "w" -> value.toLongOrNull()?.let(::Workout)
                 "a" -> AllWorkouts
+                "h" -> Healthspan
                 else -> null
             }
         }

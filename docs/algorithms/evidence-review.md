@@ -31,7 +31,7 @@ Grades: **Established** = consistent independent studies or consensus; **Probabl
 | Charge and stress | Firstbeat-style states | Keep; 3-minute stress gate, new label | Contested | S |
 | Energy expenditure | none | Mifflin BMR-anchored per-minute model | Established (BMR), Contested (rest) | L |
 | MVPA, steps, distance | none | Cadence 100/130, WHO ×2, step length from height | Established (thresholds), Contested (distance) | M |
-| VO2max, fitness age | none | Jurca 2005 as a band; fitness age optional; no biological age | Established (Jurca), design choice (fitness age) | M |
+| VO2max, fitness age | none | Jurca 2005 as a band; fitness age optional; healthspan age proposed ([healthspan.md](healthspan.md)), not scheduled | Established (Jurca), design choice (fitness age, combining healthspan terms) | M |
 
 ## Readiness
 
@@ -295,9 +295,25 @@ Jurca 2005 needs only sex, age, BMI, resting HR and one activity question. Its S
 * The age at which the FRIEND 2022 sex-specific 50th percentile equals the estimate, shown as a range (about ±10 y), clamped 20–80. Withheld with VO2max.
 * Wording: "typical of a [sex] aged about X–Y". No mortality language and no sleep term.
 
-### Biological age: dropped
+### Healthspan age: proposed (Established to Contested by term; design choice for combining them)
 
-Summing fitness and sleep hazard ratios that weren't adjusted for each other gives a falsely precise number. The sleep ratios come from self-reported sleep, and the long-sleep side probably reflects reverse causation ([Yin et al. 2017](https://pmc.ncbi.nlm.nih.gov/articles/PMC5634263)). Jurca's SEE alone adds ±2.3–2.7 "years" of noise.
+Biological age was dropped here on 2026-10-18 for three reasons. [healthspan.md](healthspan.md) proposes a "your habits vs your age" estimate that answers each one. It is a proposal: not scheduled in the implementation steps below.
+
+The proposal scores six terms against **population medians**, so a user at the median on every term reads their own age and better habits read younger: sleeping resting HR, steps, sleep regularity, short sleep, strength training and the strap's exercise VO2max. Each term's hazard ratio is turned into years with PhenoAge's Gompertz slope (0.09165); resting HR, steps and VO2max share a ±5 y limit; the sum is shrunk by 0.6 and capped at ±5 y.
+
+| Objection (2026-10-18) | Answer in healthspan.md | Resolved? |
+|---|---|---|
+| Summing hazard ratios that weren't adjusted for each other gives a falsely precise number | Sleep regularity uses ratios adjusted for sleep duration, which barely weaken it ([Windred et al. 2024](https://pmc.ncbi.nlm.nih.gov/articles/PMC10782501/)); an irregular-sleep pattern also holds after adjusting for activity volume (HR 1.44 → 1.42, [Zhang Y et al. 2024](https://doi.org/10.1186/s12966-024-01673-9)). Resting HR, steps and VO2max all track fitness and have no mutually adjusted source, so they share a ±5 y limit. That limit only catches outliers (about 1–5 % of users in simulation), so for most users their overlap is handled by the 0.6 shrinkage alone; healthspan.md §9 compares the result with validated wearable ageing clocks. Then shrinkage S = 0.6, the shown offset capped at ±5 y (a loose ceiling under [Li et al. 2018](https://pmc.ncbi.nlm.nih.gov/articles/PMC6207481/)'s 15 y five-factor contrast), a ±2 y minimum display range, whole years only | **Partly.** S and the fitness limit are design choices; there is no outcome data to fit them, and the overlap between the fitness terms is probably larger than S allows for |
+| The sleep ratios come from self-reported sleep, and the long-sleep side probably reflects reverse causation | Both sleep terms now come from UK Biobank wrist accelerometry: SRI quintiles adjusted for duration (Windred 2024) and duration bands ([Yuan et al. 2024](https://pmc.ncbi.nlm.nih.gov/articles/PMC11106264/)). Short sleep is penalty-only and there is no long-sleep term | **Mostly.** The references come from wrist accelerometers; the strap's values are scored as they are |
+| Jurca's SEE adds ±2.3–2.7 "years" of noise (an SEE of 1.45–1.97 METs actually works out to ±2.2–3.0 y) | Jurca is not used. Only the strap's exercise-based VO2max, at half weight, optional, limited to ±2 y and inside the fitness limit | **Mostly.** The strap estimate still carries about ±2.2 y of noise at half weight; no VO2max term for users without workouts |
+
+Still open (healthspan.md §9):
+
+* **Strap values are taken as-is.** No side-by-side validation against a wrist accelerometer is planned (decision). Strap sleep staging, asleep minutes and steps are scored against references from other devices; the ±2 y minimum range and whole-year display absorb the offset. In practice the shown range is the estimate ±2 y, a display convention rather than a derived confidence interval.
+* **Strap steps are unvalidated** (see "Steps and distance"), and the under-60 step curve is steep around its median, so step error moves the estimate more than any other input.
+* **Two curves are read off published figures** (±0.01–0.02): Paluch's age-specific step splines and Momma's strength dose–response.
+* **Sleeping vs seated resting HR:** +10 bpm (office vs night mean) is the low end for a lowest-30-minute value, so that term leans young.
+* **Wording** follows fitness age: no mortality language, name still open ("healthspan estimate", "habits age").
 
 ## Corrections to recovery.md
 

@@ -229,6 +229,10 @@ Pace     = 1                                       if |Δ| < max(2σ, 0.25 y)
 * **Per-term breakdown:** show each term as "adds about 1 year" or "takes off about 2 years", so the user sees what to change. Next to each, show the target (8,000–10,000 steps, 40 min/week of strength, at least 6.5 h measured sleep) as coaching, separate from the median the age is scored against. When the fitness limit binds, say so ("fitness terms capped").
 * **Wording:** no mortality language, as for fitness age. Final name is open: "healthspan estimate", "habits age".
 * **Recompute** weekly (Sunday), like WHOOP and like VO2max.
+* **Where it shows (decided 2026-10-20):**
+  * **Today tab, top card stack.** The top card becomes a swipeable stack: Recovery (front by default), Healthspan, Sleep, with page dots. The Healthspan card shows the range in the dot-matrix numerals ("about 30–34"), "You're 35", a 25–45 age scale with the range lit and a tick at the user's age, and two chips: pace ("Pace steady · 1x") and the top lever ("Top lever: strength").
+  * **Healthspan screen**, opened by tapping the card: the range and age scale, pace of aging on a −1x to 3x scale with one line of explanation, "What moves it" (one row per term against the typical person of the user's age, a bar left for younger and right for older, wording as above), and the not-a-medical-measurement line with a link to how it's worked out.
+  * Not shown on the Activity tab; the Activity tab keeps VO2max and fitness age.
 
 ## 6. Withholding rules
 

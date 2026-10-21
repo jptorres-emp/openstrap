@@ -524,6 +524,9 @@ private fun AppRoot(container: AppContainer) {
                                     offer = offer,
                                     onRecordOffer = { container.workout.recordOffer() },
                                     onDeclineOffer = { container.workout.declineOffer() },
+                                    running = workoutState as? org.openstrap.app.device.WorkoutState.Recording,
+                                    onOpenRunning = { container.workout.minimized.value = false },
+                                    onResumeRunning = container.workout::resume,
                                 )
                             }
                     }

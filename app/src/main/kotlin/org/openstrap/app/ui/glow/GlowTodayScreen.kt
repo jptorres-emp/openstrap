@@ -109,6 +109,10 @@ fun GlowTodayScreen(
     offer: org.openstrap.app.data.AutoStart.Offer? = null,
     onRecordOffer: () -> Unit = {},
     onDeclineOffer: () -> Unit = {},
+    /** A workout recording now: the Start workout pill becomes a way back to it ([WorkoutShortcut]). */
+    running: org.openstrap.app.device.WorkoutState.Recording? = null,
+    onOpenRunning: () -> Unit = {},
+    onResumeRunning: () -> Unit = {},
 ) {
     // The glow holds still while the list scrolls, so scrolling stays as smooth as on other screens.
     val list = rememberLazyListState()
@@ -117,6 +121,7 @@ fun GlowTodayScreen(
     val extras = TodayExtras(
         liveEnabled, onLiveToggle, onOpenActivity, onOpenHealthspan, onOpenProfile, healthspan, history, tiles, strapReadiness, checkIn, onCheckIn,
         suggestion, onSaveSuggestion, onDismissSuggestion, onStartWorkout, offer, onRecordOffer, onDeclineOffer,
+        running, onOpenRunning, onResumeRunning,
     ) { choosing = true }
     CompositionLocalProvider(LocalGlowPaused provides { list.isScrollInProgress }) {
         TodayList(state, liveHeartRate, battery, charging, onPrev, onNext, contentPadding, picker, onOpenSleep, onOpenMetric, recovery, onOpenRecovery, workouts, onOpenWorkout, list, extras)
@@ -143,6 +148,9 @@ private class TodayExtras(
     val offer: org.openstrap.app.data.AutoStart.Offer?,
     val onRecordOffer: () -> Unit,
     val onDeclineOffer: () -> Unit,
+    val running: org.openstrap.app.device.WorkoutState.Recording?,
+    val onOpenRunning: () -> Unit,
+    val onResumeRunning: () -> Unit,
     val onChooseTiles: () -> Unit,
 )
 
@@ -204,7 +212,7 @@ private fun TodayList(
     if (extras.suggestion != null && isToday) left { SuggestionPanel(extras.suggestion, extras.onSaveSuggestion, extras.onDismissSuggestion) }
     // Today's workouts with a way to start one; a past day lists only what was done.
     val start = extras.onStartWorkout.takeIf { isToday }
-    if (dayWorkouts.isNotEmpty() || start != null) left { TodayWorkouts(dayWorkouts, onOpenWorkout, start) }
+    if (dayWorkouts.isNotEmpty() || start != null) left { TodayWorkouts(dayWorkouts, onOpenWorkout, start, extras.running?.takeIf { isToday }, liveHeartRate, extras) }
 
     if (hasSleep && !morning) left { SleepPanel(state, onOpenSleep) }
 }
@@ -214,10 +222,15 @@ private fun TodayList(
  * a white pill like the ready screen's Start, so it reads as an action rather than another past workout.
  */
 @Composable
-private fun TodayWorkouts(workouts: List<org.openstrap.app.data.WorkoutAnalysis>, onOpen: (Long) -> Unit, onStart: (() -> Unit)?) {
+private fun TodayWorkouts(
+    workouts: List<org.openstrap.app.data.WorkoutAnalysis>, onOpen: (Long) -> Unit, onStart: (() -> Unit)?,
+    running: org.openstrap.app.device.WorkoutState.Recording?, liveHeartRate: Int?, extras: TodayExtras,
+) {
     DotPanel {
         DotHeader("Workouts")
-        if (onStart != null) Row(
+        // While one records there's no starting another: the pill leads back to it instead.
+        if (running != null) WorkoutShortcut(running, liveHeartRate, extras.onOpenRunning, extras.onResumeRunning)
+        else if (onStart != null) Row(
             Modifier.fillMaxWidth().height(52.dp).clip(RoundedCornerShape(50)).background(Color.White)
                 .pressClickable(onStart, RoundedCornerShape(50)),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center,

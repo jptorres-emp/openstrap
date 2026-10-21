@@ -133,7 +133,7 @@ private fun zoneRange(zone: Int, maxHr: Int) =
 
 /** Active time of the workout, ticking once a second while it records. */
 @Composable
-private fun activeSeconds(r: WorkoutState.Recording): Long = produceState(WorkoutRecorder.activeSeconds(r.workout, System.currentTimeMillis() / 1000), r.workout) {
+internal fun activeSeconds(r: WorkoutState.Recording): Long = produceState(WorkoutRecorder.activeSeconds(r.workout, System.currentTimeMillis() / 1000), r.workout) {
     while (true) {
         value = WorkoutRecorder.activeSeconds(r.workout, System.currentTimeMillis() / 1000)
         if (r.paused) break
@@ -1487,5 +1487,28 @@ fun WorkoutMorph(
         } else {
             capsule(Modifier.align(Alignment.BottomCenter).widthIn(max = 440.dp).padding(start = 16.dp, end = 16.dp, bottom = capsuleBottom))
         }
+    }
+}
+
+/**
+ * Where Today's Start workout pill stands while a workout records, in the same white pill: running, the sport and its
+ * clock with a live dot, opening the live screen; paused, "Resume" with a play icon, resuming at once.
+ */
+@Composable
+fun WorkoutShortcut(r: WorkoutState.Recording, liveHeartRate: Int?, onOpen: () -> Unit, onResume: () -> Unit) {
+    val shape = RoundedCornerShape(50)
+    val sport = Workouts.sportName(r.workout.sportType)
+    val clock = workoutClock(activeSeconds(r))
+    Row(
+        Modifier.fillMaxWidth().height(52.dp).clip(shape).background(Color.White).pressClickable(if (r.paused) onResume else onOpen, shape),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center,
+    ) {
+        if (r.paused) Icon(PhosphorIcons.PlayFill, null, tint = Color.Black, modifier = Modifier.size(16.dp))
+        else PulseDot(Color.Black, liveHeartRate, 10.dp)
+        Spacer(Modifier.width(10.dp))
+        Text(
+            if (r.paused) "Resume ${sport.lowercase()} · $clock" else "$sport · $clock",
+            color = Color.Black, style = MaterialTheme.typography.titleSmall.copy(fontFeatureSettings = "tnum"),
+        )
     }
 }

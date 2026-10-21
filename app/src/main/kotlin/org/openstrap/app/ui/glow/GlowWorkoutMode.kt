@@ -253,7 +253,8 @@ data class SportUse(val sportType: Int, val count: Int, val lastStart: Long?)
 
 /** The 3 most-used sports across both kinds of workout, else three sensible defaults. */
 fun topSports(workouts: List<WorkoutAnalysis>, n: Int = 3): List<SportUse> {
-    val used = workouts.groupBy { it.workout.sportType }
+    // The strap's own "Activity" records aren't a sport to offer.
+    val used = workouts.filter { it.workout.sportType != Workouts.GENERIC_ACTIVITY }.groupBy { it.workout.sportType }
         .map { (type, ws) -> SportUse(type, ws.size, ws.maxOf { it.workout.start }) }
         .sortedWith(compareByDescending<SportUse> { it.count }.thenByDescending { it.lastStart })
         .take(n)
@@ -287,7 +288,7 @@ internal fun StartWorkoutPanel(
             sports.drop(1).forEach { s -> SportChip(SportIcons.of(s.sportType), Workouts.sportName(s.sportType)) { onStart(s.sportType) } }
             SportChip(null, "All sports ›", onAllSports)
         }
-        autoStart?.let { SwitchRow("Auto-detect workouts", "When your heart rate stays up for 10 minutes, the strap buzzes and offers to record from where it began", it, onAutoStart) }
+        autoStart?.let { SwitchRow("Auto-detect workouts", "Asks to record when your heart rate stays up for 10 min", it, onAutoStart) }
     }
 }
 

@@ -104,6 +104,9 @@ object Workouts {
     /** Offered before any workout has been recorded: outdoor run, walk, strength training. */
     val DEFAULT_SPORTS = listOf(1, 3, 52)
 
+    /** "Activity": what the strap files movement it logged by itself under; a record, not a sport anyone starts. */
+    const val GENERIC_ACTIVITY = 223
+
     private val SPORT_NAMES = mapOf(
         1 to "Outdoor run", 2 to "Treadmill", 3 to "Walk", 4 to "Outdoor cycling", 5 to "Free training",
         6 to "Pool swim", 7 to "Open water swim", 8 to "Indoor cycling", 9 to "Elliptical", 10 to "Climbing",

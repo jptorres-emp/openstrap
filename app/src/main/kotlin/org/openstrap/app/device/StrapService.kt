@@ -45,6 +45,14 @@ class StrapService : LifecycleService() {
     private val confirmEnd = MutableStateFlow(0L)
     /** Today's scores for the everyday notification, refreshed after each sync. */
     private val figures = MutableStateFlow<Figures?>(null)
+    /**
+     * Set when the everyday notification is swiped away (Android 14+ allows it for a foreground service): it stays
+     * away, the strap still connected, until a workout or a new problem needs it. Holds the problem shown then, if any.
+     */
+    private val hidden = MutableStateFlow<Hidden?>(null)
+    /** What the everyday notification last said, for the problem it showed when swiped away. */
+    private var idleShown: IdleContent? = null
+    private var foreground = false
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
@@ -52,15 +60,20 @@ class StrapService : LifecycleService() {
         val strap = container.strap
         val workout = container.workout
         val first = shown ?: notification("Helio Strap", "Connecting…")
+        if (intent?.action == ACTION_HIDE) hidden.value = Hidden(idleShown?.problem)
         // A GPS workout adds the location type, allowed because its start comes from the visible ready screen. After a
         // restart in the background Android refuses it; the workout carries on without GPS.
         val gps = (workout.state.value as? WorkoutState.Recording)?.workout?.useGps == true && WorkoutLocation.granted(this)
         val base = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE else 0
         val withGps = if (gps && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) base or ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION else base
-        try {
-            ServiceCompat.startForeground(this, NOTIFICATION_ID, first, withGps)
-        } catch (e: SecurityException) {
-            ServiceCompat.startForeground(this, NOTIFICATION_ID, first, base)
+        // Posting it again would undo a swipe; once in the foreground, the service stays there without it.
+        if (!foreground || hidden.value == null || workout.state.value is WorkoutState.Recording) {
+            try {
+                ServiceCompat.startForeground(this, NOTIFICATION_ID, first, withGps)
+            } catch (e: SecurityException) {
+                ServiceCompat.startForeground(this, NOTIFICATION_ID, first, base)
+            }
+            foreground = true
         }
         when (intent?.action) {
             ACTION_PAUSE -> workout.pause()
@@ -106,7 +119,7 @@ class StrapService : LifecycleService() {
             // Connection, battery, charging and workout changes post at once; a bpm-only change waits for the refresh.
             var status: String? = null
             var lastPost = 0L
-            val more = combine(strap.sync, figures, container.settings.quietNotification, confirmEnd) { sync, f, quiet, end -> More(sync, f, quiet, end) }
+            val more = combine(strap.sync, figures, hidden, confirmEnd) { sync, f, h, end -> More(sync, f, h, end) }
             // Until the session has checked for a workout left recording (a restart after the process died), stay up.
             combine(strap.connection, strap.liveHeartRate, workout.state, workout.restored, more) { c, hr, w, restored, m ->
                 Status(c, hr, w, restored, m)
@@ -118,16 +131,23 @@ class StrapService : LifecycleService() {
                 val now = SystemClock.elapsedRealtime()
                 val n: Notification
                 if (w is WorkoutState.Recording) {
+                    if (m.hidden != null) hidden.value = null
                     val key = "${c::class.simpleName}${(c as? ConnectionState.Connected)?.batteryPercent}|${hr != null}|$w|$confirming"
                     if (key == status && now - lastPost < WORKOUT_REFRESH_MS) return@collect
                     status = key
                     n = workoutNotification(w, hr.takeIf { c is ConnectionState.Connected }, c is ConnectionState.Connected, confirming, workout)
                 } else {
                     val idle = idleContent(c, m.sync, m.figures)
-                    val key = "$idle|${m.quiet}"
+                    // Swiped away: back only for a problem it wasn't already showing.
+                    if (m.hidden != null) {
+                        if (idle.problem == null || idle.problem == m.hidden.problem) { status = null; return@collect }
+                        hidden.value = null
+                    }
+                    val key = "$idle"
                     if (key == status) return@collect
                     status = key
-                    n = idleNotification(idle, m.quiet)
+                    idleShown = idle
+                    n = idleNotification(idle)
                 }
                 lastPost = now
                 shown = n
@@ -139,10 +159,11 @@ class StrapService : LifecycleService() {
 
     override fun onCreate() {
         super.onCreate()
+        running = true
         val nm = getSystemService(NotificationManager::class.java)
         nm.createNotificationChannel(NotificationChannel(CHANNEL, "Strap connection", NotificationManager.IMPORTANCE_LOW))
-        // Quiet mode: no status-bar icon, folded away at the bottom of the shade.
-        nm.createNotificationChannel(NotificationChannel(QUIET_CHANNEL, "Strap connection (quiet)", NotificationManager.IMPORTANCE_MIN))
+        // Left by the old Quiet switch: Android raises a foreground service's MIN channel to LOW anyway.
+        nm.deleteNotificationChannel("strap_quiet")
         nm.createNotificationChannel(NotificationChannel(SAVED_CHANNEL, "Workout saved", NotificationManager.IMPORTANCE_LOW))
         nm.createNotificationChannel(NotificationChannel(WORKOUT_CHANNEL, "Workout", NotificationManager.IMPORTANCE_LOW))
         // Seen, not heard: the strap's buzz is the alert.
@@ -150,6 +171,11 @@ class StrapService : LifecycleService() {
             setSound(null, null)
             enableVibration(false)
         })
+    }
+
+    override fun onDestroy() {
+        running = false
+        super.onDestroy()
     }
 
     // Its own request code: a pending intent keeps the flags it was first made with, and an older one without
@@ -171,7 +197,7 @@ class StrapService : LifecycleService() {
     /** What the everyday notification says; equal content isn't posted again. */
     private data class IdleContent(
         val title: String, val text: String, val syncedAt: Long?, val progress: Float?, val syncing: Boolean,
-        val retry: Boolean, val connected: Boolean, val sport: Int,
+        val retry: Boolean, val connected: Boolean, val sport: Int, val problem: String?,
     )
 
     /**
@@ -196,17 +222,19 @@ class StrapService : LifecycleService() {
         return IdleContent(
             title, text, (sync as? SyncState.Done)?.atEpochSeconds ?: f?.syncedAt, (sync as? SyncState.Running)?.progress,
             sync is SyncState.Running, c is ConnectionState.Failed, connected != null, f?.sport ?: Workouts.DEFAULT_SPORTS.first(),
+            when { c is ConnectionState.Failed -> "failed"; low -> "low"; else -> null },
         )
     }
 
-    private fun idleNotification(i: IdleContent, quiet: Boolean): Notification {
-        val b = NotificationCompat.Builder(this, if (quiet) QUIET_CHANNEL else CHANNEL)
+    private fun idleNotification(i: IdleContent): Notification {
+        val b = NotificationCompat.Builder(this, CHANNEL)
             .setSmallIcon(R.drawable.ic_stat_openstrap)
             .setContentTitle(i.title)
             .setContentText(i.text)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setContentIntent(openApp())
+            .setDeleteIntent(service(ACTION_HIDE))
         // The header shows how long ago it synced, and keeps counting on its own.
         i.syncedAt?.let { b.setShowWhen(true).setWhen(it * 1000).setSubText("Synced") } ?: b.setShowWhen(false)
         if (i.syncing) b.setProgress(100, ((i.progress ?: 0f) * 100).roundToInt(), i.progress == null)
@@ -489,7 +517,8 @@ class StrapService : LifecycleService() {
         PendingIntent.getService(this, action.hashCode(), Intent(this, StrapService::class.java).setAction(action), PendingIntent.FLAG_IMMUTABLE)
 
     private data class Status(val connection: ConnectionState, val heartRate: Int?, val workout: WorkoutState, val restored: Boolean, val more: More)
-    private data class More(val sync: SyncState, val figures: Figures?, val quiet: Boolean, val confirmEnd: Long)
+    private data class More(val sync: SyncState, val figures: Figures?, val hidden: Hidden?, val confirmEnd: Long)
+    private data class Hidden(val problem: String?)
     private data class Figures(val recovery: Int?, val charge: Int?, val sport: Int, val syncedAt: Long?)
 
     companion object {
@@ -503,9 +532,9 @@ class StrapService : LifecycleService() {
         private const val ACTION_SYNC = "org.openstrap.app.strap.SYNC"
         private const val ACTION_RETRY = "org.openstrap.app.strap.RETRY"
         private const val ACTION_UNDO = "org.openstrap.app.workout.UNDO"
+        private const val ACTION_HIDE = "org.openstrap.app.strap.HIDE"
         private const val EXTRA_START = "start"
         private const val SUMMARY_ID = 4
-        private const val QUIET_CHANNEL = "strap_quiet"
         private const val SAVED_CHANNEL = "workout_saved"
         private const val REQUEST_START = 5
         private const val REQUEST_UNDO = 6
@@ -539,8 +568,13 @@ class StrapService : LifecycleService() {
         private fun zoneRange(zone: Int, maxHr: Int) =
             if (zone == 0) "under ${60 * maxHr / 100} bpm" else "${(50 + zone * 10) * maxHr / 100}–${if (zone == 4) maxHr else (60 + zone * 10) * maxHr / 100 - 1} bpm"
 
+        /** Whether the service is up; a start then needn't (and, once swiped away, mustn't) post its notification. */
+        @Volatile private var running = false
+
         fun start(context: Context) {
-            context.startForegroundService(Intent(context, StrapService::class.java))
+            val intent = Intent(context, StrapService::class.java)
+            if (running && runCatching { context.startService(intent) }.isSuccess) return
+            context.startForegroundService(intent)
         }
 
         private fun clock(seconds: Long) = if (seconds >= 3600) "%d:%02d:%02d".format(seconds / 3600, seconds / 60 % 60, seconds % 60)

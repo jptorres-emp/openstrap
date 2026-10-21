@@ -142,12 +142,12 @@ class MainActivity : ComponentActivity() {
             kotlinx.coroutines.MainScope().launch { (application as OpenStrapApp).container.settings.setStrapSessions(on) }
             Toast.makeText(this, "Strap sessions ${if (on) "on" else "off"}", Toast.LENGTH_SHORT).show()
         }
-        // Debug: `--es simulate_hr 140x120,80x600 --ei simulate_steps 0` plays heart rate as a connected strap (emulator).
+        // Debug: `--es simulate_hr 140x120,80x600 --ei simulate_steps 0 --ei simulate_battery 80` plays heart rate as a connected strap (emulator).
         val simulate = intent.getStringExtra("simulate_hr")
         if (BuildConfig.DEBUG && simulate != null) {
             intent.removeExtra("simulate_hr")
             val script = simulate.split(',').mapNotNull { p -> p.split('x').takeIf { it.size == 2 }?.let { (b, s) -> b.toIntOrNull()?.let { bpm -> s.toIntOrNull()?.let { bpm to it } } } }
-            ((application as OpenStrapApp).container.strap as? org.openstrap.app.device.StrapManager)?.simulate(script, intent.getIntExtra("simulate_steps", 0))
+            ((application as OpenStrapApp).container.strap as? org.openstrap.app.device.StrapManager)?.simulate(script, intent.getIntExtra("simulate_steps", 0), intent.getIntExtra("simulate_battery", 80))
         }
         val days = intent.getIntExtra("dump_raw_days", 0)
         if (!BuildConfig.DEBUG || days <= 0) return
@@ -238,7 +238,6 @@ private fun AppRoot(container: AppContainer) {
     val suggestion = suggestions.firstOrNull().takeIf { workoutState !is org.openstrap.app.device.WorkoutState.Recording }
     val offer by container.workout.offer.collectAsStateWithLifecycle()
     val autoStart by container.settings.autoStartWorkouts.collectAsStateWithLifecycle(true)
-    val quietNotification by container.settings.quietNotification.collectAsStateWithLifecycle(false)
     // A stretch being saved as a workout waits here while its sport is chosen.
     var savingSuggestion by remember { mutableStateOf<org.openstrap.app.data.WorkoutSuggestions.Suggestion?>(null) }
     // A launcher shortcut or the Quick Settings tile asked for the ready screen.
@@ -441,8 +440,6 @@ private fun AppRoot(container: AppContainer) {
                         onExportHealthConnect = exportHealthConnect,
                         onImportCsv = { csvImportLauncher.launch(arrayOf("application/zip", "application/x-zip-compressed", "application/octet-stream")) },
                         onImportHealthConnect = importHealthConnect,
-                        quietNotification = quietNotification,
-                        onQuietNotification = { on -> scope.launch { container.settings.setQuietNotification(on) } },
                     )
                 }
             } }

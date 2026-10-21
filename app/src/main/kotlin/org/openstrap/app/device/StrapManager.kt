@@ -589,13 +589,13 @@ class StrapManager(
      * Debug aid for the emulator, which has no strap: shows a connected strap and plays [script] as live heart rate,
      * one reading a second; each entry is (bpm, seconds). Steps rise by [stepsPerMinute] meanwhile.
      */
-    fun simulate(script: List<Pair<Int, Int>>, stepsPerMinute: Int) {
+    fun simulate(script: List<Pair<Int, Int>>, stepsPerMinute: Int, battery: Int = 80) {
         scope.launch {
             log("simulating a strap: $script, $stepsPerMinute steps/min")
             // No strap is paired on the emulator: a reconnect loop would knock the fake one offline.
             reconnectJob?.cancel()
             connectJob?.cancel()
-            connection.value = ConnectionState.Connected(80, "simulated")
+            connection.value = ConnectionState.Connected(battery, "simulated")
             // As a real connection does: the service carries the notifications.
             runCatching { StrapService.start(context) }.onFailure { log("service start failed: $it") }
             var steps = 1_000

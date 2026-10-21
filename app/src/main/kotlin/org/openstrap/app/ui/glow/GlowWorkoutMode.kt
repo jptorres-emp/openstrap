@@ -70,6 +70,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
@@ -172,7 +173,7 @@ internal fun WorkoutButton(
  * the height so the controls sit at the bottom.
  */
 @Composable
-private fun WorkoutPage(glow: Color, contentPadding: PaddingValues, content: @Composable ColumnScope.() -> Unit) {
+private fun WorkoutPage(glow: Color, contentPadding: PaddingValues, scroll: Boolean = true, content: @Composable ColumnScope.() -> Unit) {
     BoxWithConstraints(Modifier.fillMaxSize().background(Color.Black)) {
         val width = constraints.maxWidth.toFloat()
         Box(
@@ -180,10 +181,11 @@ private fun WorkoutPage(glow: Color, contentPadding: PaddingValues, content: @Co
                 Brush.radialGradient(listOf(glow.copy(alpha = 0.22f), Color.Transparent), center = Offset(width / 2f, 0f), radius = width * 0.9f),
             ),
         )
+        // The live screen fits the screen instead (scroll = false): its controls never move.
         Column(
-            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).statusBarsPadding()
+            Modifier.fillMaxSize().then(if (scroll) Modifier.verticalScroll(rememberScrollState()) else Modifier).statusBarsPadding()
                 .padding(contentPadding).padding(start = GlowLayout.Gutter, end = GlowLayout.Gutter, top = 8.dp, bottom = 16.dp)
-                .heightIn(min = maxHeight - 80.dp),
+                .then(if (scroll) Modifier.heightIn(min = maxHeight - 80.dp) else Modifier),
             verticalArrangement = Arrangement.spacedBy(14.dp),
             content = content,
         )
@@ -516,7 +518,7 @@ fun GlowWorkoutReadyScreen(
         }
         // GPS is offered for outdoor sports only, off by default; the route is discarded unless kept.
         if (outdoor) DotPanel {
-            SwitchRow("Use GPS", if (useGps) "Only during this workout, for distance, pace and the map" else "Off · distance from the strap's steps (≈)", useGps) { useGps = it }
+            SwitchRow("Use GPS", if (useGps) "Only during this workout, for distance, pace and the map. Map tiles come from OpenFreeMap, which sees roughly where the map is; its Route only button loads none." else "Off · distance from the strap's steps (≈)", useGps) { useGps = it }
             if (useGps) {
                 DotDivider()
                 SwitchRow(
@@ -666,6 +668,9 @@ fun GlowWorkoutLiveScreen(
 ) {
     BackHandler(onBack = onMinimize)
     val pager = androidx.compose.foundation.pager.rememberPagerState { 3 }
+    // The map and splits pages take the heart card's height, so swiping never moves what's below.
+    var cardHeight by remember { mutableStateOf(360.dp) }
+    val density = androidx.compose.ui.platform.LocalDensity.current
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     var routeOnly by rememberSaveable { mutableStateOf(false) }
     val connected = connection is ConnectionState.Connected
@@ -673,7 +678,7 @@ fun GlowWorkoutLiveScreen(
     val zone = WorkoutRecorder.liveZone(bpm, r.maxHeartRate)
     val color = workoutColor(r, liveHeartRate, connected)
     val active = activeSeconds(r)
-    WorkoutPage(color, contentPadding) {
+    WorkoutPage(color, contentPadding, scroll = false) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onMinimize) { Icon(PhosphorIcons.CaretDown, "Minimize", tint = Color.White) }
             Pill(Workouts.sportName(r.workout.sportType), color)
@@ -688,7 +693,7 @@ fun GlowWorkoutLiveScreen(
         val heartCard: @Composable () -> Unit = {
             GlowCard(
                 GlowStyle.chart(color).copy(motion = if (bpm != null) GlowMotion.Heartbeat(bpm) else GlowMotion.Still),
-                Modifier.fillMaxWidth(),
+                Modifier.fillMaxWidth().onSizeChanged { cardHeight = with(density) { it.height.toDp() } },
             ) {
                 Column {
                     GlowHeader("Heart rate", trailing = bpm?.let { "${it * 100 / r.maxHeartRate}% of max" })
@@ -733,10 +738,10 @@ fun GlowWorkoutLiveScreen(
             androidx.compose.foundation.pager.HorizontalPager(
                 pager, pageSpacing = 16.dp, verticalAlignment = Alignment.Top, beyondViewportPageCount = 2,
             ) { page ->
-                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                Column(Modifier.fillMaxWidth()) {
                     when (page) {
-                        1 -> LiveMapPage(route, history, r.maxHeartRate, routeOnly) { routeOnly = it }
-                        2 -> SplitsPage(route, history, r.workout.pauseRanges)
+                        1 -> LiveMapPage(route, history, r.maxHeartRate, routeOnly, Modifier.height(cardHeight)) { routeOnly = it }
+                        2 -> SplitsPage(route, history, r.workout.pauseRanges, Modifier.height(cardHeight))
                         else -> heartCard()
                     }
                 }
@@ -767,6 +772,15 @@ fun GlowWorkoutLiveScreen(
                 else -> LiveStat("Max", Modifier.weight(1f)) { LiveValue(stats?.max?.toString() ?: "—") }
             }
         }
+        // Once Lap has been pressed: the lap under way and its own clock, so a press shows on screen too.
+        r.workout.lapMarks.lastOrNull()?.let { mark ->
+            val lap = (active - WorkoutRecorder.activeSeconds(r.workout, mark)).coerceAtLeast(0)
+            Text(
+                "Lap ${r.workout.lapMarks.size + 1} · ${workoutClock(lap)}",
+                color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.titleSmall.copy(fontFeatureSettings = "tnum"),
+                modifier = Modifier.fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            )
+        }
         if (!connected && !r.paused) {
             Note("The strap isn't connected. Recording carries on, and the minutes missed are filled from its own history after it syncs.")
         }
@@ -774,7 +788,8 @@ fun GlowWorkoutLiveScreen(
         Spacer(Modifier.weight(1f))
         Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             // Lap (not for strength, which has sets), keeping Pause centred either way.
-            if (!r.strength && !r.paused) FlatButton(Raised, 64.dp, onClick = onLap) {
+            val haptics = LocalHapticFeedback.current
+            if (!r.strength && !r.paused) FlatButton(Raised, 64.dp, onClick = { haptics.performHapticFeedback(HapticFeedbackType.Confirm); onLap() }) {
                 Icon(SportIcons.Lap, "Lap", tint = Color.White, modifier = Modifier.size(22.dp))
             } else Spacer(Modifier.size(64.dp))
             Spacer(Modifier.weight(1f))
@@ -838,9 +853,10 @@ internal fun km(meters: Float): String = if (meters < 1000) "${meters.toInt()} m
 
 /** The live route in zone colours, the GPS accuracy, and "route only" (no tiles), with what loading tiles reveals. */
 @Composable
-private fun LiveMapPage(route: List<Route.Point>, history: List<Pair<Long, Int>>, maxHr: Int, routeOnly: Boolean, onRouteOnly: (Boolean) -> Unit) {
+private fun LiveMapPage(route: List<Route.Point>, history: List<Pair<Long, Int>>, maxHr: Int, routeOnly: Boolean, modifier: Modifier, onRouteOnly: (Boolean) -> Unit) {
     val stretches = remember(route.size, history.size) { Route.byZone(route, history, maxHr) }
-    Box(Modifier.fillMaxWidth().height(440.dp).clip(RoundedCornerShape(48.dp)).background(Raised)) {
+    // The whole page is the map; what its tiles reveal is said on the ready screen, by the GPS switch.
+    Box(modifier.fillMaxWidth().clip(RoundedCornerShape(48.dp)).background(Raised)) {
         // Where you are now, from the latest fix good enough to count, even while standing still.
         val here = route.lastOrNull { it.accuracy <= Route.MAX_ACCURACY_M }
         WorkoutMap(stretches, routeOnly, Modifier.fillMaxSize(), here)
@@ -850,19 +866,17 @@ private fun LiveMapPage(route: List<Route.Point>, history: List<Pair<Long, Int>>
             Pill(if (routeOnly) "Route only" else "Map", null, onClick = { onRouteOnly(!routeOnly) })
         }
     }
-    Note(
-        if (routeOnly) "Route only: no map tiles are loaded."
-        else "Map tiles come from OpenFreeMap, which sees roughly where the map is and your IP address. Route only loads none.",
-    )
 }
 
 /** Each kilometre's time, pace and average heart rate; the last one may be partial. */
 @Composable
-private fun SplitsPage(route: List<Route.Point>, history: List<Pair<Long, Int>>, pauses: List<LongRange>) {
+private fun SplitsPage(route: List<Route.Point>, history: List<Pair<Long, Int>>, pauses: List<LongRange>, modifier: Modifier) {
     val splits = remember(route.size) { Route.splits(route, pauses) }
-    DotPanel {
+    DotPanel(modifier) {
         DotHeader("Splits", trailing = "per km")
         if (splits.isEmpty()) Note("The first split shows once GPS has a fix and you've moved.")
+        // A long run's splits scroll inside the panel; the screen itself doesn't.
+        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         var startT = route.firstOrNull()?.t ?: 0L
         splits.forEach { sp ->
             val hr = history.filter { it.first in startT..sp.endT }.map { it.second }.takeIf { it.isNotEmpty() }?.average()?.toInt()
@@ -872,6 +886,7 @@ private fun SplitsPage(route: List<Route.Point>, history: List<Pair<Long, Int>>,
                 Text(Route.formatPace(sp.pace), color = Color.White, style = MaterialTheme.typography.titleSmall, modifier = Modifier.width(72.dp))
                 Text(hr?.let { "$it bpm" } ?: "—", color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.bodySmall, modifier = Modifier.width(64.dp))
             }
+        }
         }
     }
 }

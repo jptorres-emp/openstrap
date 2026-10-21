@@ -211,7 +211,7 @@ private fun Pill(label: String, dot: Color?, onClick: (() -> Unit)? = null, care
 
 /** The five zones side by side, the current one lit, with a white marker where [bpm] sits. */
 @Composable
-private fun ZoneBar(bpm: Int?, maxHr: Int, ring: Color, modifier: Modifier = Modifier, barHeight: Dp = 8.dp) {
+private fun ZoneBar(bpm: Int?, maxHr: Int, ring: Color, modifier: Modifier = Modifier, barHeight: Dp = 4.dp) {
     val zone = WorkoutRecorder.liveZone(bpm, maxHr)
     Canvas(modifier.fillMaxWidth().height(18.dp)) {
         val gap = 4.dp.toPx()

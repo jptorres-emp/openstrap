@@ -48,6 +48,8 @@ class StrapService : LifecycleService() {
             ACTION_PAUSE -> workout.pause()
             ACTION_RESUME -> workout.resume()
             ACTION_END -> workout.end()
+            ACTION_END_AT -> workout.endAtPrompt()
+            ACTION_KEEP -> workout.keepGoing()
         }
         val recording = workout.state.value is WorkoutState.Recording
         if (observing) return if (recording) START_STICKY else START_NOT_STICKY
@@ -71,7 +73,7 @@ class StrapService : LifecycleService() {
                     is ConnectionState.Failed -> "Connection failed"
                     else -> if (w is WorkoutState.Recording || !restored) "Strap not connected" else { stopSelf(); return@collect }
                 }
-                val key = state + (hr != null) + (w as? WorkoutState.Recording)?.workout
+                val key = state + (hr != null) + (w as? WorkoutState.Recording)
                 val now = SystemClock.elapsedRealtime()
                 val refresh = if (w is WorkoutState.Recording) WORKOUT_REFRESH_MS else HR_REFRESH_MS
                 if (key == status && now - lastPost < refresh) return@collect
@@ -115,6 +117,7 @@ class StrapService : LifecycleService() {
      * The five zones are the progress bar's segments, with the bar filled up to where the heart rate sits.
      */
     private fun workoutNotification(r: WorkoutState.Recording, bpm: Int?, connection: String): Notification {
+        r.endPrompt?.let { return stoppedNotification(r, it) }
         val w = r.workout
         val now = System.currentTimeMillis()
         val active = WorkoutRecorder.activeSeconds(w, now / 1000)
@@ -160,6 +163,28 @@ class StrapService : LifecycleService() {
             .build()
     }
 
+    /** "Looks like you've stopped": the same notification, asking whether to end where the wearer stopped. */
+    private fun stoppedNotification(r: WorkoutState.Recording, at: Long): Notification {
+        val time = java.time.Instant.ofEpochSecond(at).atZone(java.time.ZoneId.systemDefault()).format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))
+        val sport = Workouts.sportName(r.workout.sportType).lowercase()
+        val text = if (r.inCar) "You last moved at $time. End the $sport there, so the drive isn't counted?"
+        else "Your heart rate has been back near resting since $time. End the $sport at $time?"
+        return NotificationCompat.Builder(this, WORKOUT_CHANNEL)
+            .setSmallIcon(R.drawable.ic_stat_openstrap)
+            .setContentTitle(if (r.inCar) "Looks like you're in a car" else "Looks like you've stopped")
+            .setContentText(text)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+            .setOngoing(true)
+            .setCategory(NotificationCompat.CATEGORY_WORKOUT)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setRequestPromotedOngoing(true)
+            .setShortCriticalText("End?")
+            .setContentIntent(openApp())
+            .addAction(NotificationCompat.Action(0, "End at $time", service(ACTION_END_AT)))
+            .addAction(NotificationCompat.Action(0, "Keep going", service(ACTION_KEEP)))
+            .build()
+    }
+
     /** A white dot ringed in the notification's dark grey, drawn once. */
     private val tracker: androidx.core.graphics.drawable.IconCompat by lazy {
         val size = (24 * resources.displayMetrics.density).toInt()
@@ -187,6 +212,8 @@ class StrapService : LifecycleService() {
         private const val ACTION_PAUSE = "org.openstrap.app.workout.PAUSE"
         private const val ACTION_RESUME = "org.openstrap.app.workout.RESUME"
         private const val ACTION_END = "org.openstrap.app.workout.END"
+        private const val ACTION_END_AT = "org.openstrap.app.workout.END_AT"
+        private const val ACTION_KEEP = "org.openstrap.app.workout.KEEP"
         /** Each zone's length on the notification's progress bar. */
         private const val ZONE_SPAN = 20
         private const val REQUEST_OPEN = 2

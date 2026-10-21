@@ -96,12 +96,21 @@ fun GlowTodayScreen(
     /** The morning check-in (1-5), asked on Today before noon; see [CheckInPanel]. */
     checkIn: Int? = null,
     onCheckIn: (Int?) -> Unit = {},
+    /** A stretch nobody started, offered for saving; null hides the card. */
+    suggestion: org.openstrap.app.data.WorkoutSuggestions.Suggestion? = null,
+    onSaveSuggestion: () -> Unit = {},
+    onDismissSuggestion: () -> Unit = {},
+    /** Opens the ready screen with your usual sport; null hides the row. */
+    onStartWorkout: (() -> Unit)? = null,
 ) {
     // The glow holds still while the list scrolls, so scrolling stays as smooth as on other screens.
     val list = rememberLazyListState()
     var choosing by rememberSaveable { mutableStateOf(false) }
     if (choosing) TilesDialog(tiles, onSave = { onTilesChange(it); choosing = false }, onDismiss = { choosing = false })
-    val extras = TodayExtras(liveEnabled, onLiveToggle, onOpenActivity, onOpenHealthspan, onOpenProfile, healthspan, history, tiles, strapReadiness, checkIn, onCheckIn) { choosing = true }
+    val extras = TodayExtras(
+        liveEnabled, onLiveToggle, onOpenActivity, onOpenHealthspan, onOpenProfile, healthspan, history, tiles, strapReadiness, checkIn, onCheckIn,
+        suggestion, onSaveSuggestion, onDismissSuggestion, onStartWorkout,
+    ) { choosing = true }
     CompositionLocalProvider(LocalGlowPaused provides { list.isScrollInProgress }) {
         TodayList(state, liveHeartRate, battery, charging, onPrev, onNext, contentPadding, picker, onOpenSleep, onOpenMetric, recovery, onOpenRecovery, workouts, onOpenWorkout, list, extras)
     }
@@ -120,6 +129,10 @@ private class TodayExtras(
     val strapReadiness: StrapReadinessRow?,
     val checkIn: Int?,
     val onCheckIn: (Int?) -> Unit,
+    val suggestion: org.openstrap.app.data.WorkoutSuggestions.Suggestion?,
+    val onSaveSuggestion: () -> Unit,
+    val onDismissSuggestion: () -> Unit,
+    val onStartWorkout: (() -> Unit)?,
     val onChooseTiles: () -> Unit,
 )
 
@@ -176,17 +189,30 @@ private fun TodayList(
     // Glow: activity, moving with the day's steps.
     left { ActivityGlow(state, extras.onOpenActivity) }
     val dayWorkouts = workouts.filter { it.workout.start in state.dayStart..state.dayEnd }.sortedBy { it.workout.start }
-    if (dayWorkouts.isNotEmpty()) left { TodayWorkouts(dayWorkouts, onOpenWorkout) }
+    val isToday = state.date == LocalDate.now()
+    if (extras.suggestion != null && isToday) left { SuggestionPanel(extras.suggestion, extras.onSaveSuggestion, extras.onDismissSuggestion) }
+    // Today's workouts with a way to start one; a past day lists only what was done.
+    val start = extras.onStartWorkout.takeIf { isToday }
+    if (dayWorkouts.isNotEmpty() || start != null) left { TodayWorkouts(dayWorkouts, onOpenWorkout, start) }
 
     if (hasSleep && !morning) left { SleepPanel(state, onOpenSleep) }
 }
 
 /** The selected day's workouts, in the same glass rows as the Activity screen's list; hidden when there are none. */
 @Composable
-private fun TodayWorkouts(workouts: List<org.openstrap.app.data.WorkoutAnalysis>, onOpen: (Long) -> Unit) {
+private fun TodayWorkouts(workouts: List<org.openstrap.app.data.WorkoutAnalysis>, onOpen: (Long) -> Unit, onStart: (() -> Unit)?) {
     DotPanel {
         DotHeader("Workouts")
         workouts.forEach { WorkoutLine(it, showDate = false) { onOpen(it.workout.start) } }
+        if (onStart != null) Row(
+            Modifier.fillMaxWidth().glass(GlassRowShape, onStart).padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(org.openstrap.app.ui.theme.PhosphorIcons.PlayFill, null, tint = org.openstrap.app.ui.theme.MetricColors.heart, modifier = Modifier.size(16.dp))
+            Spacer(Modifier.width(12.dp))
+            Text("Start workout", color = Color.White, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+            Icon(org.openstrap.app.ui.theme.PhosphorIcons.CaretRight, null, tint = Color.White.copy(alpha = 0.7f))
+        }
     }
 }
 

@@ -167,8 +167,33 @@ interface HealthDao {
     @Query("DELETE FROM app_workout_hr WHERE workoutStart = :start")
     suspend fun deleteAppWorkoutHeartRate(start: Long)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertRoutePoints(points: List<AppWorkoutRoutePoint>)
+
+    @Query("SELECT * FROM app_workout_route WHERE workoutStart = :start ORDER BY timestamp")
+    fun route(start: Long): Flow<List<AppWorkoutRoutePoint>>
+
+    @Query("SELECT * FROM app_workout_route WHERE workoutStart = :start ORDER BY timestamp")
+    suspend fun routeOnce(start: Long): List<AppWorkoutRoutePoint>
+
+    @Query("SELECT * FROM app_workout_route ORDER BY workoutStart, timestamp")
+    suspend fun routeAll(): List<AppWorkoutRoutePoint>
+
+    @Query("DELETE FROM app_workout_route WHERE workoutStart = :start")
+    suspend fun deleteRoute(start: Long)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertDismissedWorkouts(rows: List<DismissedWorkout>)
+
+    @Query("SELECT * FROM app_workout_dismissed WHERE `end` >= :from ORDER BY start")
+    fun dismissedWorkouts(from: Long): Flow<List<DismissedWorkout>>
+
+    @Query("SELECT * FROM app_workout_dismissed ORDER BY start")
+    suspend fun dismissedWorkoutsAll(): List<DismissedWorkout>
+
     @androidx.room.Transaction
     suspend fun deleteAppWorkout(start: Long) {
+        deleteRoute(start)
         deleteAppWorkoutHeartRate(start)
         deleteAppWorkoutRow(start)
     }

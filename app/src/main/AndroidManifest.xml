@@ -73,6 +73,8 @@
             <intent-filter>
                 <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
             </intent-filter>
+            <!-- Long-press the icon: "Start run", "Start strength". -->
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
         </activity>
 
         <!-- Health Connect permission rationale (Android 14+). -->
@@ -91,6 +93,19 @@
             android:name=".device.StrapService"
             android:exported="false"
             android:foregroundServiceType="connectedDevice" />
+
+        <!-- Quick Settings: "Start workout" with the last sport; during a workout, its time. -->
+        <service
+            android:name=".device.WorkoutTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_stat_openstrap"
+            android:label="@string/tile_workout"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data android:name="android.service.quicksettings.ACTIVE_TILE" android:value="false" />
+        </service>
 
         <service
             android:name=".device.StrapPresenceService"

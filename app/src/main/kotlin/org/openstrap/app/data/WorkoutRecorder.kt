@@ -90,8 +90,8 @@ object WorkoutRecorder {
         return Stats(Math.round(sum.toDouble() / weight).toInt(), hr.maxOf { it.bpm }, hr.minOf { it.bpm })
     }
 
-    /** Seconds actually moving: start to end (or [now]) less every pause. */
-    fun activeSeconds(w: AppWorkout, now: Long): Long = ((w.end ?: now) - w.start - w.pausedSeconds(w.end ?: now)).coerceAtLeast(0)
+    /** Seconds actually moving: the shown start to the end (or [now]) less every pause. */
+    fun activeSeconds(w: AppWorkout, now: Long): Long = ((w.end ?: now) - w.from - w.pausedSeconds(w.end ?: now)).coerceAtLeast(0)
 
     /** The phone workout in the strap workout's shape, so lists and the detail screen show both alike. */
     fun toWorkout(w: AppWorkout, now: Long, stats: Stats? = null) = Workout(
@@ -110,10 +110,94 @@ object WorkoutRecorder {
         steps = null,
     )
 
-    /** A phone workout analysed like a strap one; [hr] empty gives a list row. */
-    fun analyse(w: AppWorkout, hr: List<AppWorkoutHeartRate>, maxHeartRate: Int, now: Long = System.currentTimeMillis() / 1000): WorkoutAnalysis =
-        Workouts.analyse(toWorkout(w, now, stats(hr)), expand(hr), emptyList(), maxHeartRate)
-            .copy(fromPhone = true, historyMinutes = hr.count { it.fromHistory }, historyRanges = historyRanges(hr))
+    /**
+     * A phone workout analysed like a strap one, over its shown range only (a trim or an early end leaves the rest
+     * recorded but out of the figures); [hr] empty gives a list row.
+     */
+    fun analyse(w: AppWorkout, hr: List<AppWorkoutHeartRate>, maxHeartRate: Int, now: Long = System.currentTimeMillis() / 1000): WorkoutAnalysis {
+        val end = w.end ?: now
+        val shown = shown(w, hr, end)
+        return Workouts.analyse(toWorkout(w, now, stats(shown)), expand(shown).filter { it.timestamp in w.from..end }, emptyList(), maxHeartRate)
+            .copy(
+                fromPhone = true, historyMinutes = shown.count { it.fromHistory }, historyRanges = historyRanges(shown),
+                shownStart = w.from, recordedEnd = w.recordedEnd,
+            )
+    }
+
+    /** The samples inside the shown range; a history row stands for its whole minute, so it counts when the minute overlaps. */
+    fun shown(w: AppWorkout, hr: List<AppWorkoutHeartRate>, end: Long = w.end ?: Long.MAX_VALUE): List<AppWorkoutHeartRate> =
+        hr.filter { it.timestamp in (if (it.fromHistory) w.from - 59 else w.from)..end }
+
+    /** [w] with its stored average and peak worked out again over its shown range, for the lists. */
+    fun withStats(w: AppWorkout, hr: List<AppWorkoutHeartRate>): AppWorkout =
+        stats(shown(w, hr)).let { w.copy(averageHeartRate = it?.average, maxHeartRate = it?.max) }
+
+    /* ------------------------------------------- Ending well ------------------------------------------- */
+
+    /** Heart rate counts as "near resting" up to this share of the reserve above resting. */
+    const val CALM_HRR = 0.25f
+    /** Steps between two of the strap's totals that count as moving. */
+    const val MOVING_STEPS = 20
+    /** How long calm and still before asking whether the workout is over (spec: about 8 minutes). */
+    const val STOPPED_S = 8 * 60L
+
+    /**
+     * When the wearer last moved, if they have been calm and still for [STOPPED_S] since: the end a "Looks like
+     * you've stopped" prompt proposes. Active is a heart rate above [CALM_HRR] of the reserve, or [MOVING_STEPS]
+     * between two step totals ([steps]: time, the strap's running total, ascending). Null while still active, when
+     * nothing active has happened since [since] (a calm session, or one already answered "Keep going"), or when
+     * heart rate covers less than half of the calm stretch, so a dropped strap never ends a workout.
+     */
+    fun stoppedSince(hr: List<Pair<Long, Int>>, steps: List<Pair<Long, Int>>, restingHr: Int, maxHr: Int, since: Long, now: Long): Long? {
+        val lastActive = lastActive(hr, steps, restingHr, maxHr) ?: return null
+        if (lastActive <= since || now - lastActive < STOPPED_S) return null
+        val covered = hr.count { it.first > lastActive }.toLong()
+        return if (covered * 2 >= now - lastActive) lastActive else null
+    }
+
+    /** The last moment of a heart rate above [CALM_HRR] of the reserve, or of [MOVING_STEPS] between two step totals. */
+    fun lastActive(hr: List<Pair<Long, Int>>, steps: List<Pair<Long, Int>>, restingHr: Int, maxHr: Int): Long? {
+        val calm = restingHr + CALM_HRR * (maxHr - restingHr)
+        val lastHr = hr.lastOrNull { it.second > calm }?.first
+        val lastSteps = steps.zipWithNext().lastOrNull { (a, b) -> b.second - a.second >= MOVING_STEPS }?.second?.first
+        return listOfNotNull(lastHr, lastSteps).maxOrNull()
+    }
+
+    /** What the summary compares a workout with: the averages of the [count] most recent similar ones. */
+    data class Usual(val count: Int, val activeSeconds: Long, val averageHeartRate: Int?, val maxHeartRate: Int?, val zoneShares: FloatArray)
+
+    /** How many similar workouts make "your usual", and how far a workout's length may differ to be similar. */
+    const val USUAL_COUNT = 5
+    private const val SIMILAR_LENGTH = 2.0
+
+    /**
+     * The workouts [a] is compared with: the same sport, ended before it, within [SIMILAR_LENGTH]× of its length
+     * either way, newest first, at most [USUAL_COUNT].
+     */
+    fun similar(a: WorkoutAnalysis, others: List<WorkoutAnalysis>): List<WorkoutAnalysis> {
+        val len = a.durationSeconds.coerceAtLeast(60).toDouble()
+        return others.filter {
+            it.workout.start != a.workout.start && it.workout.sportType == a.workout.sportType && it.workout.start < a.workout.start &&
+                it.durationSeconds.coerceAtLeast(60) in (len / SIMILAR_LENGTH).toLong()..(len * SIMILAR_LENGTH).toLong()
+        }.sortedByDescending { it.workout.start }.take(USUAL_COUNT)
+    }
+
+    /** "Your usual" from [similar] workouts analysed with their heart rate; null without any. */
+    fun usual(similar: List<WorkoutAnalysis>): Usual? {
+        if (similar.isEmpty()) return null
+        val shares = FloatArray(Workouts.ZONES)
+        similar.forEach { a ->
+            val z = liveZoneSeconds(a.heartRate.filter { it.timestamp in a.shownStart..a.end }.map { it.timestamp to it.bpm }, a.maxHeartRate)
+            val total = z.sum()
+            if (total > 0) for (i in z.indices) shares[i] += z[i].toFloat() / total / similar.size
+        }
+        fun avg(f: (WorkoutAnalysis) -> Int?) = similar.mapNotNull(f).takeIf { it.isNotEmpty() }?.average()?.let { Math.round(it).toInt() }
+        return Usual(
+            similar.size,
+            similar.map { (it.workout.exerciseSeconds ?: it.durationSeconds.toInt()).toLong() }.average().toLong(),
+            avg { it.workout.averageHeartRate }, avg { it.workout.maxHeartRate }, shares,
+        )
+    }
 
     /** Consecutive history minutes joined into runs, for marking them on a chart. */
     fun historyRanges(hr: List<AppWorkoutHeartRate>): List<LongRange> {

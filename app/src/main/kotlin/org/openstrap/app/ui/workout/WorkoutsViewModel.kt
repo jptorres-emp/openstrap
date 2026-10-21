@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
@@ -22,6 +23,19 @@ import org.openstrap.app.data.Workouts
 import org.openstrap.app.data.db.HealthDao
 import org.openstrap.app.data.settings.UserProfile
 import kotlin.math.roundToInt
+
+/**
+ * What a phone workout's summary shows: [analysis] over its shown range, [recorded] every sample from
+ * [recordedStart] to [recordedEnd] (for the trim chart), and [usual] to compare with.
+ */
+data class PhoneSummary(
+    val analysis: WorkoutAnalysis,
+    val recorded: List<org.openstrap.app.data.db.WorkoutHeartRate>,
+    val recordedStart: Long,
+    val recordedEnd: Long,
+    val usual: WorkoutRecorder.Usual?,
+    val endReason: Int?,
+)
 
 /** Workouts list (newest first) and the one open in detail. */
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -51,6 +65,40 @@ class WorkoutsViewModel(private val dao: HealthDao, profile: Flow<UserProfile>) 
     val effects: StateFlow<List<org.openstrap.app.data.db.SportEffectRow>> =
         dao.sportEffects().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    /** The max heart rate zones are shares of, once worked out. */
+    val maxHeartRate: StateFlow<Int?> = fallbackMaxHr.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    /** A day's heart rate a minute at a time, for adding a workout after the fact. */
+    suspend fun dayMinuteHeartRate(date: java.time.LocalDate): List<Pair<Long, Int>> = kotlinx.coroutines.withContext(Dispatchers.Default) {
+        val w = org.openstrap.app.data.DayWindow.of(date)
+        org.openstrap.app.data.Summaries.bucketAverage(org.openstrap.app.data.Summaries.heartRateSeries(dao.heartRateOnce(w.from, w.to), dao.activityOnce(w.from, w.to)), 60)
+    }
+
+    /** From the start of yesterday: the stretches the strap's history may hold that nobody started. */
+    private val suggestFrom = org.openstrap.app.data.DayWindow.of(java.time.LocalDate.now().minusDays(1)).from
+
+    /**
+     * Workouts nobody started, newest first ([org.openstrap.app.data.WorkoutSuggestions]), from the strap's heart rate
+     * since yesterday. Sleep, saved workouts and stretches answered "Not a workout" never count.
+     */
+    val suggestions: StateFlow<List<org.openstrap.app.data.WorkoutSuggestions.Suggestion>> = combine(
+        combine(dao.heartRate(suggestFrom, Long.MAX_VALUE), dao.activity(suggestFrom, Long.MAX_VALUE)) { hr, minutes ->
+            org.openstrap.app.data.Summaries.bucketAverage(org.openstrap.app.data.Summaries.heartRateSeries(hr, minutes), 60)
+        },
+        combine(dao.workouts(), dao.appWorkouts(), dao.dismissedWorkouts(suggestFrom), dao.sleepSessions(suggestFrom, Long.MAX_VALUE)) { strap, phone, dismissed, sleep ->
+            strap.map { it.start..it.end } + phone.map { it.start..(it.recordedEnd ?: it.end ?: it.start) } +
+                dismissed.map { it.start..it.end } + sleep.map { it.start..it.end }
+        },
+        fallbackMaxHr,
+    ) { series, busy, maxHr -> Triple(series, busy, maxHr) }
+        .mapLatest { (series, busy, maxHr) ->
+            val now = System.currentTimeMillis() / 1000
+            val resting = dao.restingHrOnce(now - 14 * 86_400L, now).lastOrNull()?.bpm ?: 60
+            org.openstrap.app.data.WorkoutSuggestions.find(series, resting, maxHr, busy)
+        }
+        .flowOn(Dispatchers.Default)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
     private val openStart = MutableStateFlow<Long?>(null)
 
     val open: StateFlow<WorkoutAnalysis?> = openStart.flatMapLatest { start ->
@@ -68,6 +116,24 @@ class WorkoutsViewModel(private val dao: HealthDao, profile: Flow<UserProfile>) 
         combine(dao.appWorkout(start), dao.appWorkoutHeartRate(start), fallbackMaxHr) { w, hr, maxHr ->
             w?.let { WorkoutRecorder.analyse(it, hr, maxHr) }
         }
+
+    /**
+     * A phone workout's summary: its analysis, everything recorded (for trimming), and "your usual" from the last
+     * similar workouts of the same sport, phone or strap ([WorkoutRecorder.similar]).
+     */
+    fun phoneSummary(start: Long): Flow<PhoneSummary?> =
+        combine(dao.appWorkout(start), dao.appWorkoutHeartRate(start), fallbackMaxHr, workouts) { w, hr, maxHr, all -> Quad(w, hr, maxHr, all) }
+            .mapLatest { (w, hr, maxHr, all) ->
+                w ?: return@mapLatest null
+                val a = WorkoutRecorder.analyse(w, hr, maxHr)
+                val similar = WorkoutRecorder.similar(a, all).map { s ->
+                    dao.appWorkoutOnce(s.workout.start)?.let { pw -> WorkoutRecorder.analyse(pw, dao.appWorkoutHeartRateOnce(pw.start), maxHr) }
+                        ?: Workouts.analyse(s.workout, dao.workoutHeartRate(s.workout.start).first(), dao.sportEffects().first(), maxHr)
+                }
+                PhoneSummary(a, WorkoutRecorder.expand(hr), w.start, w.recordedEnd ?: w.end ?: a.end, WorkoutRecorder.usual(similar), w.endReason)
+            }.flowOn(Dispatchers.Default)
+
+    private data class Quad<A, B, C, D>(val a: A, val b: B, val c: C, val d: D)
 
     fun open(start: Long?) { openStart.value = start }
 }

@@ -79,4 +79,80 @@ class WorkoutRecorderTest {
         assertTrue(!WorkoutRecorder.isValid(0))
         assertTrue(!WorkoutRecorder.isValid(255))
     }
+
+    // Resting 60, max 190: calm is up to 60 + 0.25 × 130 = 92.5 bpm.
+    private fun hrRun(from: Long, to: Long, bpm: Int) = (from until to).map { it to bpm }
+
+    @Test
+    fun stoppedAfterEightCalmMinutesEndsAtTheLastActiveMoment() {
+        val hr = hrRun(start, start + 600, 140) + hrRun(start + 600, start + 1200, 80)
+        val now = start + 600 + WorkoutRecorder.STOPPED_S
+        assertEquals(start + 599, WorkoutRecorder.stoppedSince(hr, emptyList(), 60, 190, since = start, now = now))
+        // A minute earlier it is still too soon.
+        assertNull(WorkoutRecorder.stoppedSince(hr, emptyList(), 60, 190, since = start, now = now - 60))
+    }
+
+    @Test
+    fun stepsKeepAWorkoutGoingAtACalmHeartRate() {
+        val hr = hrRun(start, start + 1200, 80)
+        // A first active spell at the start, then walking slowly: steps every minute.
+        val active = hrRun(start, start + 60, 120)
+        val steps = (0..20).map { start + it * 60L to 1000 + it * 50 }
+        assertNull(WorkoutRecorder.stoppedSince(active + hr, steps, 60, 190, since = start, now = start + 1200))
+    }
+
+    @Test
+    fun neverAsksWithoutAnActiveMomentOrAfterKeepGoing() {
+        val calm = hrRun(start, start + 1200, 70)
+        assertNull(WorkoutRecorder.stoppedSince(calm, emptyList(), 60, 190, since = start, now = start + 1200))
+        val hr = hrRun(start, start + 60, 130) + hrRun(start + 60, start + 1200, 70)
+        // "Keep going" at start + 700: nothing active since, so no second prompt.
+        assertNull(WorkoutRecorder.stoppedSince(hr, emptyList(), 60, 190, since = start + 700, now = start + 1200))
+    }
+
+    @Test
+    fun aDroppedStrapNeverEndsAWorkout() {
+        // Active, then the strap went quiet: no heart rate at all after.
+        val hr = hrRun(start, start + 60, 130)
+        assertNull(WorkoutRecorder.stoppedSince(hr, emptyList(), 60, 190, since = start, now = start + 60 + 600))
+    }
+
+    @Test
+    fun anEarlyEndLeavesTheRestRecordedButOutOfTheFigures() {
+        val hr = (0L until 600L).map { AppWorkoutHeartRate(start, start + it, if (it < 300) 150 else 80) }
+        val w = AppWorkout(start, start + 300, 1, recordedEnd = start + 600)
+        val a = WorkoutRecorder.analyse(w, hr, 190)
+        assertEquals(300, a.durationSeconds)
+        assertEquals(150, a.workout.averageHeartRate)
+        assertEquals(start + 600, a.recordedEnd)
+        // Trimming the start too.
+        val t = WorkoutRecorder.analyse(w.copy(shownStart = start + 100), hr, 190)
+        assertEquals(200, t.durationSeconds)
+        assertEquals(200L, t.workout.exerciseSeconds!!.toLong())
+        assertEquals(start + 100, t.shownStart)
+    }
+
+    @Test
+    fun usualAveragesTheLastFiveSimilarWorkouts() {
+        fun workout(at: Long, sport: Int, length: Long, bpm: Int) =
+            WorkoutRecorder.analyse(AppWorkout(at, at + length, sport), (0L until length).map { AppWorkoutHeartRate(at, at + it, bpm) }, 190)
+        val now = workout(start + 100_000, 1, 1800, 140)
+        val others = listOf(
+            workout(start, 1, 1800, 130),
+            workout(start + 10_000, 1, 1500, 150),
+            workout(start + 20_000, 3, 1800, 100), // another sport
+            workout(start + 30_000, 1, 300, 170), // far shorter
+            workout(start + 200_000, 1, 1800, 160), // after it
+        )
+        val similar = WorkoutRecorder.similar(now, others)
+        assertEquals(listOf(start + 10_000, start), similar.map { it.workout.start })
+        val u = WorkoutRecorder.usual(similar)!!
+        assertEquals(2, u.count)
+        assertEquals(140, u.averageHeartRate)
+        assertEquals(1650L, u.activeSeconds)
+        // 130/190 = 68 %: zone 2; 150/190 = 79 %: zone 3; half each.
+        assertEquals(0.5f, u.zoneShares[1], 0.01f)
+        assertEquals(0.5f, u.zoneShares[2], 0.01f)
+        assertNull(WorkoutRecorder.usual(emptyList()))
+    }
 }

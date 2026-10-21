@@ -25,8 +25,12 @@ data class WorkoutAnalysis(
     val historyMinutes: Int = 0,
     /** Those minutes as runs of epoch seconds, each from its first minute's start to its last minute's end − 1. */
     val historyRanges: List<LongRange> = emptyList(),
+    /** Where the workout is shown from: a phone workout's trimmed start, else its start. */
+    val shownStart: Long = workout.start,
+    /** A phone workout's end before the app or a trim moved it earlier; null when it ends where it was recorded. */
+    val recordedEnd: Long? = null,
 ) {
-    val durationSeconds: Long get() = end - workout.start
+    val durationSeconds: Long get() = end - shownStart
 
     /** Recovery HR only says something about fitness when you stopped from a real effort. */
     val recoveryIsMeaningful: Boolean get() = endHeartRate != null && endHeartRate * 100 >= maxHeartRate * MIN_EFFORT_PCT

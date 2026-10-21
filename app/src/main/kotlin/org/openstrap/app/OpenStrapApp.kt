@@ -25,7 +25,7 @@ class AppContainer(val app: Application) {
     val strap: StrapController = StrapManager(app, settings, database.healthDao())
     val companion = CompanionLink(app, settings)
     val phoneAlerts = PhoneAlerts(app, settings, strap)
-    val workout = org.openstrap.app.device.WorkoutSession(app, database.healthDao(), settings, strap)
+    val workout = org.openstrap.app.device.WorkoutSession(app, database.healthDao(), settings, strap, callRinging = { phoneAlerts.callRinging })
 }
 
 class OpenStrapApp : Application() {

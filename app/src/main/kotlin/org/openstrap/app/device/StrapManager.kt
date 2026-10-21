@@ -547,6 +547,27 @@ class StrapManager(
         }
     }
 
+    /**
+     * Debug aid for the emulator, which has no strap: shows a connected strap and plays [script] as live heart rate,
+     * one reading a second; each entry is (bpm, seconds). Steps rise by [stepsPerMinute] meanwhile.
+     */
+    fun simulate(script: List<Pair<Int, Int>>, stepsPerMinute: Int) {
+        scope.launch {
+            log("simulating a strap: $script, $stepsPerMinute steps/min")
+            connection.value = ConnectionState.Connected(80, "simulated")
+            var steps = 1_000
+            var second = 0
+            for ((bpm, seconds) in script) repeat(seconds) {
+                onLiveHr(bpm)
+                if (++second % 60 == 0) { steps += stepsPerMinute; todaySteps.value = StepTotals(steps, null, null) }
+                delay(1_000)
+            }
+            liveHeartRate.value = null
+            connection.value = ConnectionState.Disconnected
+            log("simulation over")
+        }
+    }
+
     override fun setLiveHeartRate(enabled: Boolean) {
         liveHeartRateEnabled.value = enabled
         scope.launch { settings.setLiveHeartRate(enabled) }

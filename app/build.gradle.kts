@@ -94,6 +94,8 @@ dependencies {
     implementation(libs.core.ktx)
     implementation(libs.window)
     implementation(libs.haze.blur)
+    // Workout maps: open source, no API key; tiles from OpenFreeMap (README, Network use).
+    implementation(libs.maplibre)
 
     testImplementation(libs.junit)
     // Android's org.json is a stub in plain JVM unit tests.

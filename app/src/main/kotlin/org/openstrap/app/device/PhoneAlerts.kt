@@ -116,6 +116,9 @@ class PhoneAlerts(
 
     @Volatile private var phoneRinging = false
 
+    /** True while a call rings (known only while buzzing for calls is on); other buzzes stay quiet then. */
+    val callRinging: Boolean get() = phoneRinging
+
     private fun onCallState(state: Int) {
         log("call state $state (calls ${if (callsOn) "on" else "off"})")
         phoneRinging = state == TelephonyManager.CALL_STATE_RINGING

@@ -81,6 +81,10 @@ fun GlowActivityScreen(
     onEditProfile: () -> Unit,
     onStartWorkout: (Int) -> Unit = {},
     onAllSports: () -> Unit = {},
+    suggestion: org.openstrap.app.data.WorkoutSuggestions.Suggestion? = null,
+    onSaveSuggestion: () -> Unit = {},
+    onDismissSuggestion: () -> Unit = {},
+    onAddWorkout: () -> Unit = {},
 ) {
     val list = rememberLazyListState()
     val sports = remember(workouts) { topSports(workouts) }
@@ -92,13 +96,14 @@ fun GlowActivityScreen(
             // Wide: today's movement on the left; load, fitness and workouts on the right.
             // The home for workouts: started from here on today; a past day only shows what was done.
             if (state.date == LocalDate.now()) left { StartWorkoutPanel(sports, onStartWorkout, onAllSports) }
+            if (suggestion != null && state.date == LocalDate.now()) left { SuggestionPanel(suggestion, onSaveSuggestion, onDismissSuggestion) }
             left { StepsCard(state, r?.activity) { onOpenMetric(Metric.Steps) } }
             r?.activity?.let { a -> left { MvpaPanel(a) } }
             left { EnergyPanel(r?.energy, onEditProfile) }
             left { PaiPanel(state, week) }
             right { LoadPanel(r, effects.lastOrNull { it.weeklyLoad != null }, onEditProfile) }
             right { FitnessPanel(r, workouts, effects, state.dailyMaxHeartRate) }
-            right { WorkoutsPanel(state.date, workouts, onOpenWorkout, onAllWorkouts) }
+            right { WorkoutsPanel(state.date, workouts, onOpenWorkout, onAllWorkouts, onAddWorkout) }
         }
     }
 }
@@ -377,23 +382,24 @@ private fun FitnessPanel(r: RecoveryResult?, workouts: List<WorkoutAnalysis>, ef
 
 /** The day's workouts, then the most recent others, then a way to the full list. */
 @Composable
-private fun WorkoutsPanel(date: LocalDate, workouts: List<WorkoutAnalysis>, onOpen: (Long) -> Unit, onAll: () -> Unit) {
+private fun WorkoutsPanel(date: LocalDate, workouts: List<WorkoutAnalysis>, onOpen: (Long) -> Unit, onAll: () -> Unit, onAdd: () -> Unit) {
     val zone = ZoneId.systemDefault()
     fun dayOf(a: WorkoutAnalysis) = Instant.ofEpochSecond(a.workout.start).atZone(zone).toLocalDate()
     val today = workouts.filter { dayOf(it) == date }
     val recent = workouts.filter { dayOf(it) != date }.take(RECENT_WORKOUTS)
     DotPanel {
         DotHeader("Workouts", trailing = if (workouts.isEmpty()) null else "${workouts.size} recorded")
-        if (workouts.isEmpty()) {
-            Note("Workouts you start above show up here, and the strap's own after a sync, with your heart rate every second.")
-            return@DotPanel
-        }
-        if (today.isEmpty()) Note("No workouts this day.")
+        if (workouts.isEmpty()) Note("Workouts you start above show up here, and the strap's own after a sync, with your heart rate every second.")
+        if (today.isEmpty() && workouts.isNotEmpty()) Note("No workouts this day.")
         today.forEach { WorkoutLine(it, showDate = false) { onOpen(it.workout.start) } }
         if (recent.isNotEmpty()) {
             DotDivider()
             Text("RECENT", color = Color.White.copy(alpha = 0.55f), style = MaterialTheme.typography.labelSmall)
             recent.forEach { WorkoutLine(it, showDate = true) { onOpen(it.workout.start) } }
+        }
+        Row(Modifier.fillMaxWidth().glass(GlassRowShape, onAdd).padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text("Add a workout you didn't record", color = Color.White, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+            Icon(PhosphorIcons.CaretRight, null, tint = Color.White.copy(alpha = 0.7f))
         }
         if (workouts.size > today.size + recent.size) {
             Row(Modifier.fillMaxWidth().glass(GlassRowShape, onAll).padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {

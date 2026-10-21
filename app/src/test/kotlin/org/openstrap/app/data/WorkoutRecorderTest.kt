@@ -155,4 +155,16 @@ class WorkoutRecorderTest {
         assertEquals(0.5f, u.zoneShares[2], 0.01f)
         assertNull(WorkoutRecorder.usual(emptyList()))
     }
+
+    @Test
+    fun lapsSplitAtTheirMarks() {
+        val hr = (0L until 300L).map { (start + it) to if (it < 100) 120 else 150 }
+        val laps = WorkoutRecorder.laps(start, start + 300, listOf(start + 100, start + 999), hr, emptyList(), emptyList())
+        // The mark past the end is ignored: two laps.
+        assertEquals(2, laps.size)
+        assertEquals(100L, laps[0].end - laps[0].start)
+        assertEquals(120, laps[0].averageHeartRate)
+        assertEquals(150, laps[1].averageHeartRate)
+        assertNull(laps[1].meters)
+    }
 }

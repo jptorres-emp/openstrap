@@ -132,6 +132,22 @@ object WorkoutRecorder {
     fun withStats(w: AppWorkout, hr: List<AppWorkoutHeartRate>): AppWorkout =
         stats(shown(w, hr)).let { w.copy(averageHeartRate = it?.average, maxHeartRate = it?.max) }
 
+    /** One lap: its number, when it began and ended, its average heart rate, and metres when there was GPS. */
+    data class Lap(val index: Int, val start: Long, val end: Long, val averageHeartRate: Int?, val meters: Double?)
+
+    /**
+     * The laps of a workout from [from] to [end] split at [marks]: the last one runs to the end. Heart rate is
+     * (time, bpm); [route] gives each lap's distance when the workout had GPS. Pauses count against no lap.
+     */
+    fun laps(from: Long, end: Long, marks: List<Long>, hr: List<Pair<Long, Int>>, route: List<Route.Point>, pauses: List<LongRange>): List<Lap> {
+        val bounds = listOf(from) + marks.filter { it in (from + 1) until end }.sorted() + end
+        return bounds.zipWithNext().mapIndexed { i, (a, b) ->
+            val bpm = hr.filter { it.first in a until b }.map { it.second }.takeIf { it.isNotEmpty() }?.average()?.let { Math.round(it).toInt() }
+            val meters = route.filter { it.t in a..b }.takeIf { it.size >= 2 }?.let { Route.distance(it, pauses) }
+            Lap(i, a, b, bpm, meters)
+        }
+    }
+
     /* ------------------------------------------- Ending well ------------------------------------------- */
 
     /** Heart rate counts as "near resting" up to this share of the reserve above resting. */

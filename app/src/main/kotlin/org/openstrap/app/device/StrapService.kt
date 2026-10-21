@@ -57,6 +57,7 @@ class StrapService : LifecycleService() {
             ACTION_END -> workout.end()
             ACTION_END_AT -> workout.endAtPrompt()
             ACTION_KEEP -> workout.keepGoing()
+            ACTION_LAP -> workout.lap()
             ACTION_START_SET -> workout.startSet()
             ACTION_SET_DONE -> workout.setDone()
             ACTION_EXTEND -> workout.extendRest()
@@ -167,6 +168,7 @@ class StrapService : LifecycleService() {
             .apply { if (r.paused) setShortCriticalText("Paused") }
             .setContentIntent(openApp())
             .addAction(toggle)
+            .apply { if (!r.paused) addAction(NotificationCompat.Action(0, "Lap", service(ACTION_LAP))) }
             .addAction(NotificationCompat.Action(0, "End", service(ACTION_END)))
             .setShowWhen(true)
             .setUsesChronometer(!r.paused)
@@ -263,6 +265,7 @@ class StrapService : LifecycleService() {
         private const val ACTION_END = "org.openstrap.app.workout.END"
         private const val ACTION_END_AT = "org.openstrap.app.workout.END_AT"
         private const val ACTION_KEEP = "org.openstrap.app.workout.KEEP"
+        private const val ACTION_LAP = "org.openstrap.app.workout.LAP"
         private const val ACTION_START_SET = "org.openstrap.app.workout.START_SET"
         private const val ACTION_SET_DONE = "org.openstrap.app.workout.SET_DONE"
         private const val ACTION_EXTEND = "org.openstrap.app.workout.EXTEND"

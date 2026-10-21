@@ -45,6 +45,8 @@ data class PhoneSummary(
     val sets: List<org.openstrap.app.data.db.AppWorkoutSet> = emptyList(),
     /** The strap's own record of the same workout, when it kept one (a strap session, or its auto-detection). */
     val strapWorkout: WorkoutAnalysis? = null,
+    /** Laps, when any were marked. */
+    val laps: List<WorkoutRecorder.Lap> = emptyList(),
 )
 
 /** Workouts list (newest first) and the one open in detail. */
@@ -151,6 +153,9 @@ class WorkoutsViewModel(private val dao: HealthDao, profile: Flow<UserProfile>) 
                 PhoneSummary(
                     a, WorkoutRecorder.expand(hr), w.start, w.recordedEnd ?: w.end ?: a.end, WorkoutRecorder.usual(similar), w.endReason,
                     route, hr.filter { !it.fromHistory }.map { it.timestamp to it.bpm }, w.distanceMeters, w.distanceFromSteps, sets, strap,
+                    w.lapMarks.takeIf { it.isNotEmpty() }?.let { marks ->
+                        WorkoutRecorder.laps(w.from, w.end ?: a.end, marks, hr.filter { !it.fromHistory }.map { it.timestamp to it.bpm }, route, w.pauseRanges)
+                    }.orEmpty(),
                 )
             }.flowOn(Dispatchers.Default)
 

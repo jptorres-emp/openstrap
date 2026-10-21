@@ -282,7 +282,8 @@ private fun SportTileName(icon: androidx.compose.ui.graphics.vector.ImageVector,
     Row(Modifier.padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
         Icon(icon, null, tint = Color.White, modifier = Modifier.size(20.dp))
         Spacer(Modifier.width(10.dp))
-        Text(name, color = Color.White, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        // Two lines, so "Strength training" isn't cut short; the grid evens the tiles' heights.
+        Text(name, color = Color.White, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -625,6 +626,7 @@ fun GlowWorkoutLiveScreen(
     onStartSet: () -> Unit = {},
     onSetDone: () -> Unit = {},
     onExtendRest: () -> Unit = {},
+    onLap: () -> Unit = {},
 ) {
     BackHandler(onBack = onMinimize)
     var page by rememberSaveable { mutableIntStateOf(0) }
@@ -719,8 +721,10 @@ fun GlowWorkoutLiveScreen(
         r.endPrompt?.let { at -> StoppedPrompt(r, at, onEndAtPrompt, onKeepGoing) }
         Spacer(Modifier.weight(1f))
         Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-            // Lap goes here in a later step; the space keeps Pause centred.
-            Spacer(Modifier.size(64.dp))
+            // Lap (not for strength, which has sets), keeping Pause centred either way.
+            if (!r.strength && !r.paused) GlowButton(Color(0xFF5A5A62), 64.dp, onClick = onLap) {
+                Icon(SportIcons.Lap, "Lap", tint = Color.White, modifier = Modifier.size(22.dp))
+            } else Spacer(Modifier.size(64.dp))
             Spacer(Modifier.weight(1f))
             GlowButton(color, 88.dp, onClick = if (r.paused) onResume else onPause) {
                 Icon(if (r.paused) PhosphorIcons.PlayFill else PhosphorIcons.PauseFill, if (r.paused) "Resume" else "Pause", tint = Color.White, modifier = Modifier.size(30.dp))
@@ -1067,6 +1071,17 @@ fun GlowPhoneWorkoutScreen(
                     }
                 }
                 Note("The strap recorded this workout too; training effect and recovery are its own figures.")
+            }
+        }
+        if (summary.laps.size > 1) DotPanel {
+            DotHeader("Laps", trailing = "${summary.laps.size}")
+            summary.laps.forEach { lap ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Lap ${lap.index + 1}", color = Color.White, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+                    Text(workoutClock(lap.end - lap.start), color = Color.White, style = MaterialTheme.typography.titleSmall, modifier = Modifier.width(64.dp))
+                    lap.meters?.let { Text(km(it.toFloat()) + if (it >= 1000) " km" else "", color = Color.White.copy(alpha = 0.8f), style = MaterialTheme.typography.bodySmall, modifier = Modifier.width(64.dp)) }
+                    Text(lap.averageHeartRate?.let { "$it bpm" } ?: "—", color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.bodySmall, modifier = Modifier.width(60.dp))
+                }
             }
         }
         if (summary.sets.isNotEmpty()) DotPanel {

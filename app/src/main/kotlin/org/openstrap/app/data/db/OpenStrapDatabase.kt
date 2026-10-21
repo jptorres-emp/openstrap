@@ -41,13 +41,13 @@ import androidx.room.RoomDatabase
         AppWorkoutRoutePoint::class,
         AppWorkoutSet::class,
     ],
-    version = 11,
+    version = 12,
     autoMigrations = [
         AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3), AutoMigration(from = 3, to = 4),
         AutoMigration(from = 4, to = 5), AutoMigration(from = 5, to = 6),
         AutoMigration(from = 6, to = 7), AutoMigration(from = 7, to = 8),
         AutoMigration(from = 8, to = 9), AutoMigration(from = 9, to = 10),
-        AutoMigration(from = 10, to = 11),
+        AutoMigration(from = 10, to = 11), AutoMigration(from = 11, to = 12),
     ],
 )
 abstract class OpenStrapDatabase : RoomDatabase() {

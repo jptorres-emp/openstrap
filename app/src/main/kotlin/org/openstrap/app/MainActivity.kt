@@ -685,6 +685,7 @@ private fun androidx.compose.foundation.layout.BoxScope.WorkoutLayer(
                 onEndAtPrompt = session::endAtPrompt, onKeepGoing = session::keepGoing,
                 route = route, history = history,
                 onStartSet = session::startSet, onSetDone = session::setDone, onExtendRest = session::extendRest,
+                onLap = session::lap,
             )
         }
         state is org.openstrap.app.device.WorkoutState.Recording -> {

@@ -184,7 +184,11 @@ data class AppWorkout(
     /** Strength: how rest ends ([org.openstrap.app.data.Strength.Rest.code]) and how many sets are planned. */
     val rest: String? = null,
     val setsTarget: Int? = null,
+    /** Lap marks, epoch seconds, comma separated; see [lapMarks]. */
+    @ColumnInfo(defaultValue = "") val laps: String = "",
 ) {
+    val lapMarks: List<Long> get() = laps.split(',').mapNotNull { it.toLongOrNull() }
+
     /** The start the workout is shown and measured from. */
     val from: Long get() = shownStart ?: start
 

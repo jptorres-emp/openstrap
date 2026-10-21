@@ -183,6 +183,13 @@ class WorkoutSession(
         }
     }
 
+    /** "Lap": marks the end of one lap and the start of the next; a buzz says it took. */
+    fun lap() = update { w ->
+        if (w.pausedAt != null) w else w.copy(laps = (w.lapMarks + now()).joinToString(",")).also {
+            if (!callRinging()) scope.launch { runCatching { strap.buzz(org.openstrap.app.data.Cue.BackInTarget.pattern) } }
+        }
+    }
+
     /** A pause doesn't count as time in zone. */
     fun resume() = update { w ->
         lastReading = null

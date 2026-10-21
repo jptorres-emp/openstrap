@@ -14,6 +14,8 @@ internal object SportIcons {
     val Run: ImageVector by lazy { stroke("Run", circle(14f, 4f, 2f), "m6 21 3-6 3 2v5", "m8 11 3-4 4 3 3 1", "M11 7 9 12l3 2") }
     val Walk: ImageVector by lazy { stroke("Walk", circle(13f, 4f, 2f), "M10 21l2-6-2-3 1-4 3 3h3", "m8 12-2 3") }
     val Strength: ImageVector by lazy { stroke("Strength", "M3 9v6M6 7v10M18 7v10M21 9v6M6 12h12") }
+    /** A flag, for marking a lap. */
+    val Lap: ImageVector by lazy { stroke("Lap", "M5 21V4", "M5 4h11l-2 4 2 4H5") }
 
     private val RUN = setOf(1, 2, 11)
     private val WALK = setOf(3, 15, 40, 215, 224, 225)

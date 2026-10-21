@@ -27,11 +27,11 @@ import org.openstrap.app.data.Healthspan
 import org.openstrap.app.ui.theme.MetricColors
 import org.openstrap.app.ui.theme.PhosphorIcons
 
-/** The Healthspan card's lavender, used for the glow. */
-private val Lavender = Color(0xFFB69CFF)
+/** The Healthspan card's orchid, used for the glow: warm enough to stay clear of Sleep's blue. */
+private val Orchid = Color(0xFFD86BEA)
 
-/** The same recipe as the Heart rate and Activity cards, in lavender. */
-internal val HealthspanGlow = GlowStyle.chart(Lavender)
+/** The same recipe as the Heart rate and Activity cards, in orchid. */
+internal val HealthspanGlow = GlowStyle.chart(Orchid)
 
 /** "3 years younger", "1 year older" or "Right on your age" for an [estimate] against [age], in whole years. */
 internal fun healthspanVerdict(age: Int, estimate: Float): String {

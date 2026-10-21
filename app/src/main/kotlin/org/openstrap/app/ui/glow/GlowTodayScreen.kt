@@ -301,7 +301,7 @@ private fun OverviewCard(
 
     // The glow sits low and central, under the gauge.
     val style = GlowStyle.Bloom.copy(
-        color = overviewColor(lead.value.takeUnless { lead.estimate }, strain),
+        color = overviewColor(lead.value, strain),
         coreShape = CoreShape.Radial, coreX = 0.5f, coreY = 0.6f, coreWidth = 0.95f, coreHeight = 0.75f,
         coreBlur = 30.dp, toneWidth = 16.dp, toneShift = -10f, glowStrength = 0.6f, bevel = 0.6f,
         motion = GlowMotion.Breath(5f), depth = 6.dp,
@@ -418,11 +418,13 @@ private fun ScoreBar(score: Score, onClick: () -> Unit, modifier: Modifier = Mod
 
 /**
  * The card's colour tells how the day looks before you read a number: teal when the leading score is
- * good, amber when it's middling or there are signs of strain, coral when it's low. The rings sit on
- * the dark core, so they stay readable whatever the colour.
+ * good, amber when it's middling or there are signs of strain, coral when it's low. The strap's
+ * estimate counts as a score here; its faded bar and label already say it's an estimate. With no
+ * score at all (still learning) it's a muted teal: Recovery waiting, not grey "no data". The rings
+ * sit on the dark core, so they stay readable whatever the colour.
  */
 internal fun overviewColor(score: Int?, strain: Boolean) = when {
-    score == null -> Color(0xFF6E7280)
+    score == null -> Color(0xFF4E8F86)
     strain -> Color(0xFFF2A33A)
     score >= 70 -> MetricColors.hrv
     score >= 50 -> Color(0xFFF2A33A)

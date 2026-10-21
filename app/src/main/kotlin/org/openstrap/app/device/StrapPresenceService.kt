@@ -19,7 +19,7 @@ class StrapPresenceService : CompanionDeviceService() {
     private fun appeared(what: String) {
         val strap = (application as OpenStrapApp).container.strap
         (strap as? StrapManager)?.log("companion: strap appeared ($what)")
-        if (checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) strap.autoConnect()
+        if (checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) strap.backgroundConnect()
     }
 
     // Which of these Android calls varies by version (Android 16 can call more than one for the same event);

@@ -36,7 +36,7 @@ class OpenStrapApp : Application() {
         container = AppContainer(this)
         container.companion.refresh()
         // Android restarts the process on its own (companion presence, a reboot): reconnect without the screen.
-        // A no-op when nothing is paired or a connection is already up; MainActivity.onResume calls it too.
-        if (checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) container.strap.autoConnect()
+        // A no-op when nothing is paired, a connection is already up, or the user tapped Disconnect.
+        if (checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) container.strap.backgroundConnect()
     }
 }

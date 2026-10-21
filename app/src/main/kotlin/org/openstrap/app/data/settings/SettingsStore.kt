@@ -213,6 +213,15 @@ class SettingsStore(private val context: Context) {
         context.dataStore.edit { it[companionNo] = declined }
     }
 
+    private val heldOff = androidx.datastore.preferences.core.booleanPreferencesKey("held_disconnected")
+
+    /** True after the user tapped Disconnect, until they connect again; background reconnects leave the strap alone. */
+    val heldDisconnected: Flow<Boolean> = context.dataStore.data.map { it[heldOff] == true }
+
+    suspend fun setHeldDisconnected(held: Boolean) {
+        context.dataStore.edit { it[heldOff] = held }
+    }
+
     /** Forgets the strap and the Zepp sign-in; the user's profile and goals stay. */
     suspend fun forgetDevice() {
         context.dataStore.edit { prefs ->

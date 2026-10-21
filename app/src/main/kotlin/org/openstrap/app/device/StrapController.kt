@@ -58,6 +58,12 @@ interface StrapController {
 
     /** Connect to the paired strap if not already connected; no-op when nothing is paired. */
     fun autoConnect()
+
+    /**
+     * [autoConnect] for reconnects nobody asked for on screen (companion presence, phone alerts, process start):
+     * a no-op while the user's Disconnect holds, which lasts until they connect again or open the app.
+     */
+    fun backgroundConnect()
     fun disconnect()
     fun syncNow()
     fun setLiveHeartRate(enabled: Boolean)

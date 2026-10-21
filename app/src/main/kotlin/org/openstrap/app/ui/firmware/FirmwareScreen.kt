@@ -25,7 +25,6 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -265,7 +264,7 @@ private fun AccountPanel(
                 Text("Chinese-market strap", style = MaterialTheme.typography.bodyLarge)
                 Text("Only if the strap was bought in mainland China", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            Switch(china, { china = it })
+            org.openstrap.app.ui.glow.GlowSwitch(china, { china = it })
         }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             OutlinedButton(onClick = { editing = false }, Modifier.weight(1f)) { Text("Cancel") }

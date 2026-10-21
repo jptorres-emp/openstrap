@@ -161,7 +161,7 @@ class MainActivity : ComponentActivity() {
 }
 
 private enum class Tab(val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector, val selectedIcon: androidx.compose.ui.graphics.vector.ImageVector) {
-    Today("Today", PhosphorIcons.House, PhosphorIcons.HouseFill),
+    Today("Today", PhosphorIcons.HouseSimple, PhosphorIcons.HouseSimpleFill),
     Recovery("Recovery", PhosphorIcons.Plant, PhosphorIcons.Plant),
     Sleep("Sleep", PhosphorIcons.Moon, PhosphorIcons.MoonFill),
     Activity("Activity", PhosphorIcons.SneakerMove, PhosphorIcons.SneakerMoveFill),

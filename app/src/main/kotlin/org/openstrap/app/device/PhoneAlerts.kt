@@ -23,10 +23,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.filterNotNull
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeoutOrNull
 import org.openstrap.app.data.settings.BuzzPattern
 import org.openstrap.app.data.settings.SettingsStore
 
@@ -119,25 +116,18 @@ class PhoneAlerts(
 
     @Volatile private var phoneRinging = false
 
-    /**
-     * Android's own Do Not Disturb verdict for the ringing call, taken from the call's notification. Null until that
-     * notification arrives (it needs notification access), and cleared when the call ends.
-     */
-    private val callVerdict = MutableStateFlow<Boolean?>(null)
-
     private fun onCallState(state: Int) {
         log("call state $state (calls ${if (callsOn) "on" else "off"})")
         phoneRinging = state == TelephonyManager.CALL_STATE_RINGING
-        if (phoneRinging && callsOn) startRinging() else { callVerdict.value = null; stopRinging() }
+        if (phoneRinging && callsOn) startRinging() else stopRinging()
     }
 
     private fun startRinging() {
         if (ringing?.isActive == true) return
         ringing = scope.launch {
-            // The call's notification can come a moment after the ringing state, so wait for it briefly.
-            val verdict = if (hasNotificationAccess()) withTimeoutOrNull(VERDICT_WAIT_MS) { callVerdict.filterNotNull().first() } else null
-            val allowed = verdict ?: dndAllowsAnyCaller()
-            log("call ringing: ${if (allowed) "buzz" else "held back by Do Not Disturb"} (${if (verdict != null) "call notification" else "DND setting"})")
+            val allowed = dndAllowsAnyCaller()
+            val filter = context.getSystemService(NotificationManager::class.java).currentInterruptionFilter
+            log("call ringing: ${if (allowed) "buzz" else "held back by Do Not Disturb"} (interruption filter $filter)")
             if (!allowed) return@launch
             runCatching { strap.startBuzzing() }.onFailure { return@launch }
             // A missed call can end without a state change reaching us; don't leave the strap buzzing.
@@ -154,8 +144,10 @@ class PhoneAlerts(
     }
 
     /**
-     * Without the call's notification, read Do Not Disturb itself. Callers it allows only as starred contacts or
-     * repeat callers can't be told apart without reading contacts, so those calls are held back.
+     * True unless Do Not Disturb would block a call from an unknown caller. Exceptions for starred contacts and repeat
+     * callers aren't followed: telling them apart needs the caller's number, which needs the call-log permission.
+     * The call notification's ranking doesn't help: on Samsung it said "blocked" for a repeat caller the phone let
+     * ring (2026-10-21).
      */
     private fun dndAllowsAnyCaller(): Boolean {
         val nm = context.getSystemService(NotificationManager::class.java)
@@ -176,12 +168,6 @@ class PhoneAlerts(
 
     /** Called by [StrapNotificationListener] for every posted notification. */
     fun onNotification(sbn: StatusBarNotification, ranking: NotificationListenerService.Ranking?, update: Boolean) {
-        // The ringing call's notification: keep Android's Do Not Disturb verdict for the call buzz, and don't also
-        // buzz it as a notification.
-        if (sbn.notification.category == Notification.CATEGORY_CALL && phoneRinging) {
-            if (ranking != null) callVerdict.value = ranking.matchesInterruptionFilter()
-            return
-        }
         // A pattern played on the motor cuts off the call's continuous buzz (seen 2026-10-20), so stay quiet while it rings.
         if (phoneRinging) return
         if (!notificationsOn || !shouldBuzz(sbn, ranking, update)) return
@@ -215,7 +201,6 @@ class PhoneAlerts(
 
     private companion object {
         const val MAX_RING_MS = 60_000L
-        const val VERDICT_WAIT_MS = 1_500L
         /** A burst of notifications (a group chat) buzzes once. */
         const val MIN_GAP_MS = 5_000L
     }

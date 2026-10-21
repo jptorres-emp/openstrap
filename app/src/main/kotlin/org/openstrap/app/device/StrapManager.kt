@@ -681,8 +681,8 @@ class StrapManager(
     }
 
     /**
-     * `03`, not the `05 01` Zepp uses for its continuous find: on fw 3.25 `03` was felt buzzing until `06`, while
-     * `05 01` was not felt during a test call (2026-10-20).
+     * `03`, not the `05 01` Zepp uses for its continuous find: on fw 3.25 `03` buzzes until `06`, while `05 01` doesn't
+     * vibrate at all (2026-10-21).
      */
     override suspend fun startBuzzing() {
         if (!FindDevice.isBuzzOk(command(Endpoints.FIND_DEVICE, FindDevice.BUZZ))) throw StrapCommandException("The strap didn't buzz")

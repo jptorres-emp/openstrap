@@ -593,7 +593,7 @@ The strap has no screen and no notification module: `0x001E` NotificationModule 
 | Bytes | Dir | Meaning |
 |---|---|---|
 | `03` | P→S | Start buzzing; reply `04 01 01` (1 = OK). **Buzzes until `06`.** It does not stop by itself, and tapping the strap did not stop it (hardware, below). |
-| `05 01` | P→S | Zepp's continuous find (`d/ghh.java:68-81`). Not answered. Not felt during a test call; OpenStrap doesn't use it. |
+| `05 01` | P→S | Zepp's continuous find (`d/ghh.java:68-81`), used by its Find strap button with `06` to stop (`d/bgu.java`, `d/mys.java` case 7). Not answered. **The strap doesn't vibrate**, although it ACKs it and sends `07` after `06` (hardware, below). OpenStrap doesn't use it. |
 | `06` | P→S | Stop. Not answered; the strap then sends `07`. |
 | `07` | S→P | Buzzing stopped. |
 
@@ -677,7 +677,7 @@ The first real connection, from OpenStrap on an Android 16 phone, confirmed the 
 ### Verified on hardware: buzzing (firmware 3.25.0.3, Android 16, 2026-10-20)
 
 - **`0x001A` `03`** → `04 01 01`. The strap buzzed until `06` was sent, and tapping the strap several times did not stop it. After `06` the strap sent `07`.
-- **`0x001A` `05 01`** gave no reply, and the wearer felt nothing during the first test call. A notification pattern was sent 28 ms after it in that call, so it is not certain that `05 01` alone does nothing.
+- **`0x001A` `05 01`** gave no reply, and the strap did not vibrate. It was retested alone on 2026-10-21: `05 01` (transport ACK OK), 10 s with nothing else sent, then `06`, answered by `07`. No vibration at any point.
 - **`0x0018` with `test` = 1** → `04 01`. Patterns were felt as sent (e.g. `03 00 01 01 02 9600 9600 9600 0000` = two short buzzes), and each stopped on its own.
 - **Latency:** within range, `03` was answered 0.3 s after the call started ringing, on a 30 ms connection interval, and `07` came 30 ms after `06`. Away from the phone, both took about 5 s, and the encrypted ACK for `03` never came. Asking Android for CONNECTION_PRIORITY_HIGH on ring didn't help: the new interval took effect only 3 s later.
 

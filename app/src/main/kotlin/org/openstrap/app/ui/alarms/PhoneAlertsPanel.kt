@@ -71,7 +71,7 @@ fun PhoneAlertsPanel(alerts: PhoneAlerts, settings: SettingsStore) {
 
     Panel {
         PanelHeader("Phone alerts", PhosphorIcons.BellRinging, MetricColors.charge)
-        SwitchRow("Incoming calls", "The strap buzzes while your phone rings.", calls && callPermission) { on ->
+        SwitchRow("Incoming calls", "The strap buzzes while your phone rings. With Do Not Disturb on, only if it allows calls from anyone.", calls && callPermission) { on ->
             when {
                 !on -> scope.launch { settings.setBuzzOnCalls(false) }
                 callPermission -> scope.launch { settings.setBuzzOnCalls(true) }

@@ -12,7 +12,7 @@ import org.openstrap.protocol.u8
 object FindDevice {
     /** Starts buzzing; answered `04 01` (the strap adds a third byte, `01`). It doesn't stop by itself: send [STOP]. */
     val BUZZ: ByteArray = bytesOf(0x03)
-    /** Zepp's continuous find. Not answered, and not felt on fw 3.25 during a test call; OpenStrap uses [BUZZ]. */
+    /** Zepp's continuous find. Not answered, and on fw 3.25 the strap doesn't vibrate for it (retested alone 2026-10-21); OpenStrap uses [BUZZ]. */
     val START: ByteArray = bytesOf(0x05, 0x01)
     val STOP: ByteArray = bytesOf(0x06)
     const val FOUND = 0x07

@@ -90,7 +90,7 @@ You can skip the sign-in and paste the key and token by hand instead.
 
 Both are off until you switch them on in **You → Alarms & alerts → Phone alerts**.
 
-- **Incoming calls** needs the phone-state permission. OpenStrap uses it only to know when a call is ringing, answered or over. It never reads numbers, contacts or the call log.
+- **Incoming calls** needs the phone-state permission. OpenStrap uses it only to know when a call is ringing, answered or over. It never reads numbers, contacts or the call log. During Do Not Disturb the strap buzzes only if Do Not Disturb lets calls from anyone through; calls let through only as starred contacts or repeat callers ring the phone but not the strap, because telling them apart would need the caller's number.
 - **Notifications** needs notification access. OpenStrap looks only at whether a notification would make a sound (Do Not Disturb and silent apps are followed) and at its category. It never reads the title or text, stores nothing, and sends the strap only a buzz. It asks Android only for notifications that alert, plus conversations. You can narrow that further, or leave out apps, on the notification-access page.
 
 ## Backup and restore

@@ -79,14 +79,19 @@ fun GlowActivityScreen(
     onOpenWorkout: (Long) -> Unit,
     onAllWorkouts: () -> Unit,
     onEditProfile: () -> Unit,
+    onStartWorkout: (Int) -> Unit = {},
+    onAllSports: () -> Unit = {},
 ) {
     val list = rememberLazyListState()
+    val sports = remember(workouts) { topSports(workouts) }
     val week = remember(state.date) { paiHistory(state.date.minusDays(6), state.date) }.collectAsState(emptyMap()).value
     val r = recovery?.takeIf { it.date == state.date }
     CompositionLocalProvider(LocalGlowPaused provides { list.isScrollInProgress }) {
         GlowScreenList(contentPadding, list) {
             full { DateHeader(state.date, battery, onPrev, onNext, charging, picker) }
             // Wide: today's movement on the left; load, fitness and workouts on the right.
+            // The home for workouts: started from here on today; a past day only shows what was done.
+            if (state.date == LocalDate.now()) left { StartWorkoutPanel(sports, onStartWorkout, onAllSports) }
             left { StepsCard(state, r?.activity) { onOpenMetric(Metric.Steps) } }
             r?.activity?.let { a -> left { MvpaPanel(a) } }
             left { EnergyPanel(r?.energy, onEditProfile) }
@@ -380,7 +385,7 @@ private fun WorkoutsPanel(date: LocalDate, workouts: List<WorkoutAnalysis>, onOp
     DotPanel {
         DotHeader("Workouts", trailing = if (workouts.isEmpty()) null else "${workouts.size} recorded")
         if (workouts.isEmpty()) {
-            Note("Workouts you start on the strap show up here after a sync, with your heart rate every second and how fast it recovered.")
+            Note("Workouts you start above show up here, and the strap's own after a sync, with your heart rate every second.")
             return@DotPanel
         }
         if (today.isEmpty()) Note("No workouts this day.")

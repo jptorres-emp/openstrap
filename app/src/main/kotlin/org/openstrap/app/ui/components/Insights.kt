@@ -56,7 +56,13 @@ data class NavItem(val label: String, val icon: ImageVector, val selectedIcon: I
  * [glass]) shows through blurred and darkened, and the edge catches light along the top.
  */
 @Composable
-fun FloatingNavBar(items: List<NavItem>, selected: Int, onSelect: (Int) -> Unit, modifier: Modifier = Modifier, glass: HazeState) {
+fun FloatingNavBar(
+    items: List<NavItem>, selected: Int, onSelect: (Int) -> Unit, modifier: Modifier = Modifier, glass: HazeState,
+    /** While a workout records the bar takes its colour: the highlight, and a dot on the [marked] tab. */
+    accent: Color? = null,
+    marked: Int = -1,
+) {
+    val tint = navAccent(accent)
     Box(modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 20.dp, vertical = 10.dp), contentAlignment = Alignment.Center) {
         Surface(
             shape = CircleShape,
@@ -81,11 +87,11 @@ fun FloatingNavBar(items: List<NavItem>, selected: Int, onSelect: (Int) -> Unit,
                 )
                 Box(
                     Modifier.offset(x = x).width(cell).fillMaxHeight().clip(CircleShape)
-                        .background(GlassChip).border(GlassChipEdge, CircleShape),
+                        .background(tint?.copy(alpha = 0.2f) ?: GlassChip).border(GlassChipEdge, CircleShape),
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
                     items.forEachIndexed { i, item ->
-                        NavCell(item, i == selected, Modifier.clip(CircleShape).clickable { onSelect(i) }
+                        NavCell(item, i == selected, dot = tint.takeIf { i == marked }, modifier = Modifier.clip(CircleShape).clickable { onSelect(i) }
                             // Every cell gets an equal share of the bar, so labels like "Workouts" have room.
                             .weight(1f)
                             .padding(vertical = 8.dp))
@@ -101,7 +107,12 @@ fun FloatingNavBar(items: List<NavItem>, selected: Int, onSelect: (Int) -> Unit,
  * unfolded foldable turned sideways): the same glass pill and sliding highlight, giving the height back to the pages.
  */
 @Composable
-fun FloatingNavRail(items: List<NavItem>, selected: Int, onSelect: (Int) -> Unit, modifier: Modifier = Modifier, glass: HazeState) {
+fun FloatingNavRail(
+    items: List<NavItem>, selected: Int, onSelect: (Int) -> Unit, modifier: Modifier = Modifier, glass: HazeState,
+    accent: Color? = null,
+    marked: Int = -1,
+) {
+    val tint = navAccent(accent)
     Box(
         modifier.fillMaxHeight().systemBarsPadding().displayCutoutPadding().padding(horizontal = 10.dp, vertical = 20.dp),
         contentAlignment = Alignment.Center,
@@ -123,13 +134,13 @@ fun FloatingNavRail(items: List<NavItem>, selected: Int, onSelect: (Int) -> Unit
                 )
                 Box(
                     Modifier.offset(y = y).height(cell).fillMaxWidth().clip(RoundedCornerShape(24.dp))
-                        .background(GlassChip).border(GlassChipEdge, RoundedCornerShape(24.dp)),
+                        .background(tint?.copy(alpha = 0.2f) ?: GlassChip).border(GlassChipEdge, RoundedCornerShape(24.dp)),
                 )
                 Column(Modifier.fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(gap)) {
                     items.forEachIndexed { i, item ->
                         NavCell(
-                            item, i == selected,
-                            Modifier.clip(RoundedCornerShape(24.dp)).clickable { onSelect(i) }.weight(1f).fillMaxWidth(),
+                            item, i == selected, dot = tint.takeIf { i == marked },
+                            modifier = Modifier.clip(RoundedCornerShape(24.dp)).clickable { onSelect(i) }.weight(1f).fillMaxWidth(),
                             verticalArrangement = Arrangement.Center,
                         )
                     }
@@ -139,22 +150,32 @@ fun FloatingNavRail(items: List<NavItem>, selected: Int, onSelect: (Int) -> Unit
     }
 }
 
+/** The workout colour, eased between zones; null when no workout records. */
+@Composable
+private fun navAccent(accent: Color?): Color? {
+    val eased by androidx.compose.animation.animateColorAsState(accent ?: Color.Transparent, tween(Motion.SWIFT), label = "nav accent")
+    return if (accent == null) null else eased
+}
+
 /** How much of the window's width [FloatingNavRail] takes, its margins included. */
 val NavRailWidth = 92.dp
 
 /** One destination's icon and label, tinted for whether it's [on]. */
 @Composable
-private fun NavCell(item: NavItem, on: Boolean, modifier: Modifier, verticalArrangement: Arrangement.Vertical = Arrangement.Top) {
+private fun NavCell(item: NavItem, on: Boolean, modifier: Modifier, verticalArrangement: Arrangement.Vertical = Arrangement.Top, dot: Color? = null) {
     Column(modifier, verticalArrangement = verticalArrangement, horizontalAlignment = Alignment.CenterHorizontally) {
         val tint by androidx.compose.animation.animateColorAsState(
             if (on) Color.White else Color.White.copy(alpha = 0.55f),
             tween(Motion.QUICK), label = "nav tint",
         )
         val iconScale by animateFloatAsState(if (on) 1.08f else 1f, tween(Motion.SWIFT, easing = Motion.easing), label = "nav icon")
-        Icon(
-            if (on) item.selectedIcon else item.icon, item.label, tint = tint,
-            modifier = Modifier.size(24.dp).graphicsLayer { scaleX = iconScale; scaleY = iconScale },
-        )
+        Box {
+            Icon(
+                if (on) item.selectedIcon else item.icon, item.label, tint = tint,
+                modifier = Modifier.size(24.dp).graphicsLayer { scaleX = iconScale; scaleY = iconScale },
+            )
+            if (dot != null) Box(Modifier.align(Alignment.TopEnd).offset(x = 4.dp, y = (-2).dp).size(7.dp).clip(CircleShape).background(dot))
+        }
         Text(item.label, style = MaterialTheme.typography.labelSmall, color = tint, maxLines = 1)
     }
 }

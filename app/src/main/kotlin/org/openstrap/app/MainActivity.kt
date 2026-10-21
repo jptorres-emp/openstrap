@@ -42,6 +42,9 @@ import org.openstrap.app.ui.device.DeviceViewModel
 import org.openstrap.app.ui.device.YouScreen
 import org.openstrap.app.ui.dashboard.LocalOpenStrap
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -89,12 +92,25 @@ class MainActivity : ComponentActivity() {
         // The association or battery setting may have changed in system settings meanwhile.
         (application as OpenStrapApp).container.companion.refresh()
         handleDebugIntent()
+        showWorkoutFromIntent()
     }
 
     override fun onNewIntent(intent: android.content.Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
         handleDebugIntent()
+        showWorkoutFromIntent()
+    }
+
+    /** The workout notification opens the live screen, even if it was tucked away. */
+    private fun showWorkoutFromIntent() {
+        if (!intent.getBooleanExtra(EXTRA_SHOW_WORKOUT, false)) return
+        intent.removeExtra(EXTRA_SHOW_WORKOUT)
+        (application as OpenStrapApp).container.workout.minimized.value = false
+    }
+
+    companion object {
+        const val EXTRA_SHOW_WORKOUT = "show_workout"
     }
 
     /** Debug: `am start -n org.openstrap.app/.MainActivity --ei dump_raw_days 7` dumps raw history to files/raw. */
@@ -192,6 +208,14 @@ private fun AppRoot(container: AppContainer) {
     val connection by container.strap.connection.collectAsStateWithLifecycle()
     val sync by container.strap.sync.collectAsStateWithLifecycle()
     val message by deviceVm.message.collectAsStateWithLifecycle()
+    val workoutState by container.workout.state.collectAsStateWithLifecycle()
+    val workoutMinimized by container.workout.minimized.collectAsStateWithLifecycle()
+    // The ready screen's sport while it is open, and whether it opened on the sport list ("All sports").
+    var readySport by rememberSaveable { mutableStateOf<Int?>(null) }
+    var readyPicking by rememberSaveable { mutableStateOf(false) }
+    // While a workout records, the app takes on its colour: the tab bar's highlight and dot, and the capsule.
+    val workoutAccent = (workoutState as? org.openstrap.app.device.WorkoutState.Recording)
+        ?.let { org.openstrap.app.ui.glow.workoutColor(it, live, connection is ConnectionState.Connected) }
     val battery = (connection as? ConnectionState.Connected)?.batteryPercent
     val charging = (connection as? ConnectionState.Connected)?.charging == true
 
@@ -306,7 +330,7 @@ private fun AppRoot(container: AppContainer) {
         }
         Scaffold(
             bottomBar = {
-                if (!rail) FloatingNavBar(navItems, tab, selectTab, glass = navGlass)
+                if (!rail) FloatingNavBar(navItems, tab, selectTab, glass = navGlass, accent = workoutAccent, marked = Tab.Activity.ordinal)
             },
             containerColor = MaterialTheme.colorScheme.background,
         ) { padding ->
@@ -383,7 +407,10 @@ private fun AppRoot(container: AppContainer) {
                                     onOpenMetric = { todayStack = todayStack + Detail.OfMetric(it) },
                                     contentPadding = padding, onBack = { todayStack = todayStack.dropLast(1) },
                                 )
-                                is Detail.Workout -> WorkoutDetail(openWorkout?.takeIf { it.workout.start == detail.start }, padding, onBack = { todayStack = todayStack.dropLast(1) })
+                                is Detail.Workout -> WorkoutDetail(
+                                    openWorkout?.takeIf { it.workout.start == detail.start }, padding, onBack = { todayStack = todayStack.dropLast(1) },
+                                    onDelete = { container.workout.discard(detail.start); todayStack = todayStack.dropLast(1) },
+                                )
                                 Detail.Healthspan -> org.openstrap.app.ui.glow.GlowHealthspanScreen(healthspan, padding, onBack = { todayStack = todayStack.dropLast(1) })
                                 else -> Unit
                             }
@@ -465,7 +492,10 @@ private fun AppRoot(container: AppContainer) {
                         minWidth = SideBySideWidth,
                         detail = { (stack, profileOpen) ->
                             if (profileOpen) profilePage() else when (val detail = stack.last()) {
-                                is Detail.Workout -> WorkoutDetail(openWorkout?.takeIf { it.workout.start == detail.start }, padding, onBack = { activityStack = activityStack.dropLast(1) })
+                                is Detail.Workout -> WorkoutDetail(
+                                    openWorkout?.takeIf { it.workout.start == detail.start }, padding, onBack = { activityStack = activityStack.dropLast(1) },
+                                    onDelete = { container.workout.discard(detail.start); activityStack = activityStack.dropLast(1) },
+                                )
                                 is Detail.OfMetric -> MetricDetail(
                                     detail.metric, day, history = history,
                                     liveHeartRate = live, liveEnabled = liveEnabled, canUseLive = connection is ConnectionState.Connected,
@@ -490,6 +520,8 @@ private fun AppRoot(container: AppContainer) {
                                 onOpenWorkout = { activityStack = listOf(Detail.Workout(it)) },
                                 onAllWorkouts = { activityStack = listOf(Detail.AllWorkouts) },
                                 onEditProfile = { profileTab = Tab.Activity.ordinal },
+                                onStartWorkout = { readySport = it; readyPicking = false },
+                                onAllSports = { readySport = readySport ?: org.openstrap.app.ui.glow.topSports(workouts).first().sportType; readyPicking = true },
                             )
                         }
                     }
@@ -509,11 +541,80 @@ private fun AppRoot(container: AppContainer) {
         }
         if (rail) org.openstrap.app.ui.components.FloatingNavRail(
             navItems, tab, selectTab, androidx.compose.ui.Modifier.align(androidx.compose.ui.Alignment.CenterStart),
-            glass = navGlass,
+            glass = navGlass, accent = workoutAccent, marked = Tab.Activity.ordinal,
+        )
+        WorkoutLayer(
+            container, workoutState, workoutMinimized, readySport, readyPicking, live, connection, workoutsVm, requestBluetooth,
+            onReadySport = { readySport = it },
+            onCloseReady = { readySport = null; readyPicking = false },
+            capsuleBottom = if (rail) 16.dp else 104.dp,
         )
         org.openstrap.app.ui.components.GlassOverlay(glassHost, navGlass)
       }
       }
+    }
+}
+
+/**
+ * The workout screens over the whole app: the ready screen, the live screen (or, tucked away, a capsule above the tab
+ * bar) and the summary once it ends.
+ */
+@Composable
+private fun androidx.compose.foundation.layout.BoxScope.WorkoutLayer(
+    container: AppContainer,
+    state: org.openstrap.app.device.WorkoutState,
+    minimized: Boolean,
+    readySport: Int?,
+    readyPicking: Boolean,
+    live: Int?,
+    connection: ConnectionState,
+    workoutsVm: org.openstrap.app.ui.workout.WorkoutsViewModel,
+    requestBluetooth: (() -> Unit) -> Unit,
+    onReadySport: (Int) -> Unit,
+    onCloseReady: () -> Unit,
+    capsuleBottom: androidx.compose.ui.unit.Dp,
+) {
+    val session = container.workout
+    val padding = androidx.compose.foundation.layout.WindowInsets.navigationBars.asPaddingValues()
+    val full = androidx.compose.ui.Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)
+    when {
+        state is org.openstrap.app.device.WorkoutState.Recording && !minimized -> androidx.compose.foundation.layout.Box(full) {
+            val recent by session.recent.collectAsStateWithLifecycle()
+            val stats by session.stats.collectAsStateWithLifecycle()
+            val zoneSeconds by session.zoneSeconds.collectAsStateWithLifecycle()
+            org.openstrap.app.ui.glow.GlowWorkoutLiveScreen(
+                state, live, recent, stats, zoneSeconds, connection, padding,
+                onPause = session::pause, onResume = session::resume, onEnd = session::end,
+                onMinimize = { session.minimized.value = true },
+            )
+        }
+        state is org.openstrap.app.device.WorkoutState.Recording -> {
+            val connected = connection is ConnectionState.Connected
+            org.openstrap.app.ui.glow.WorkoutCapsule(
+                state, live, connected, onClick = { session.minimized.value = false },
+                onPause = session::pause, onResume = session::resume,
+                modifier = androidx.compose.ui.Modifier.align(androidx.compose.ui.Alignment.BottomCenter)
+                    .widthIn(max = 440.dp).padding(start = 16.dp, end = 16.dp, bottom = capsuleBottom + padding.calculateBottomPadding()),
+            )
+        }
+        state is org.openstrap.app.device.WorkoutState.Ended -> androidx.compose.foundation.layout.Box(full) {
+            val summary by remember(state.start) { workoutsVm.phoneAnalysis(state.start) }.collectAsStateWithLifecycle(null)
+            org.openstrap.app.ui.glow.GlowPhoneWorkoutScreen(
+                summary, padding, onBack = session::dismissSummary, onDelete = { session.discard(state.start) }, justEnded = true,
+            )
+        }
+        readySport != null -> androidx.compose.foundation.layout.Box(full) {
+            org.openstrap.app.ui.glow.GlowWorkoutReadyScreen(
+                readySport, readyPicking, connection, live, padding,
+                onSport = onReadySport,
+                onStart = { sport ->
+                    val start = { session.start(sport); onCloseReady() }
+                    val granted = container.app.checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                    if (granted) start() else requestBluetooth(start)
+                },
+                onBack = onCloseReady,
+            )
+        }
     }
 }
 
@@ -534,5 +635,7 @@ private fun MetricDetail(
 
 /** A workout's detail. */
 @androidx.compose.runtime.Composable
-private fun WorkoutDetail(a: org.openstrap.app.data.WorkoutAnalysis?, contentPadding: androidx.compose.foundation.layout.PaddingValues, onBack: () -> Unit) =
-    org.openstrap.app.ui.glow.GlowWorkoutScreen(a, contentPadding, onBack)
+private fun WorkoutDetail(a: org.openstrap.app.data.WorkoutAnalysis?, contentPadding: androidx.compose.foundation.layout.PaddingValues, onBack: () -> Unit, onDelete: () -> Unit) =
+    // OpenStrap's own recordings get the workout-mode summary and can be deleted; the strap's come back with the next sync.
+    if (a?.fromPhone == true) org.openstrap.app.ui.glow.GlowPhoneWorkoutScreen(a, contentPadding, onBack, onDelete, justEnded = false)
+    else org.openstrap.app.ui.glow.GlowWorkoutScreen(a, contentPadding, onBack)

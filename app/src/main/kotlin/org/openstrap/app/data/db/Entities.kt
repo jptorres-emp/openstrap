@@ -145,6 +145,55 @@ data class WorkoutHeartRate(
     val bpm: Int,
 )
 
+/**
+ * A workout recorded on the phone from the strap's live heart rate, apart from the strap's own [Workout] so a later
+ * merge with strap-side sessions stays explicit. [end] is null while it is recording.
+ */
+@Entity(tableName = "app_workout")
+data class AppWorkout(
+    @PrimaryKey val start: Long,
+    val end: Long?,
+    val sportType: Int,
+    val source: Int = SOURCE_APP,
+    /** Finished pauses as "from-to" pairs of epoch seconds, comma separated; see [pauseRanges]. */
+    val pauses: String = "",
+    /** When the pause under way began; null while recording. */
+    val pausedAt: Long? = null,
+    val endReason: Int? = null,
+    /** Worked out when the workout ends, and again when gap filling adds minutes. */
+    val averageHeartRate: Int? = null,
+    val maxHeartRate: Int? = null,
+) {
+    val pauseRanges: List<LongRange>
+        get() = pauses.split(',').mapNotNull { p ->
+            val (a, b) = p.split('-').takeIf { it.size == 2 } ?: return@mapNotNull null
+            (a.toLongOrNull() ?: return@mapNotNull null)..(b.toLongOrNull() ?: return@mapNotNull null)
+        }
+
+    /** Seconds spent paused up to [now], the pause under way included. */
+    fun pausedSeconds(now: Long): Long = pauseRanges.sumOf { it.last - it.first } + (pausedAt?.let { (now - it).coerceAtLeast(0) } ?: 0)
+
+    fun withPause(from: Long, to: Long) = copy(pauses = (pauseRanges.map { "${it.first}-${it.last}" } + "$from-$to").joinToString(","), pausedAt = null)
+
+    companion object {
+        const val SOURCE_APP = 0
+        const val SOURCE_STRAP = 1
+        const val SOURCE_SUGGESTED = 2
+        const val END_USER = 0
+        const val END_AUTO = 1
+        const val END_CAR = 2
+    }
+}
+
+/** Live heart rate during an [AppWorkout], one per second; [fromHistory] rows fill minutes the phone missed, one per minute. */
+@Entity(tableName = "app_workout_hr", primaryKeys = ["workoutStart", "timestamp"])
+data class AppWorkoutHeartRate(
+    val workoutStart: Long,
+    val timestamp: Long,
+    val bpm: Int,
+    val fromHistory: Boolean = false,
+)
+
 /** The strap's post-workout result (type 59), keyed by the workout's end. */
 @Entity(tableName = "sport_effect")
 data class SportEffectRow(

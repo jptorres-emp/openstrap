@@ -75,6 +75,7 @@ class StrapManager(
     override val connection = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
     override val sync = MutableStateFlow<SyncState>(SyncState.Idle)
     override val liveHeartRate = MutableStateFlow<Int?>(null)
+    override val heartRateReadings = MutableSharedFlow<Int>(extraBufferCapacity = 64, onBufferOverflow = BufferOverflow.DROP_OLDEST)
     override val todaySteps = MutableStateFlow<StepTotals?>(null)
     override val liveHeartRateEnabled = MutableStateFlow(true)
     override val info = MutableStateFlow<StrapInfo?>(null)
@@ -200,7 +201,7 @@ class StrapManager(
                 retries = 0
                 autoSync(s)
                 liveHeartRateEnabled.value = settings.liveHeartRate.first()
-                if (liveHeartRateEnabled.value && appVisible) startLive()
+                if (liveWanted()) startLive()
             } catch (e: AuthException) {
                 log("auth failed: ${e.message}")
                 connection.value = PairingErrors.authFailure(e)
@@ -500,6 +501,7 @@ class StrapManager(
                     HistorySync(s, client, dao, settings, sync, ::log).run(only)
                 }
                 runCatching { notifyBodySignals() }.onFailure { log("body signals: $it") }
+                runCatching { WorkoutGapFill(dao).run()?.let { log(it) } }.onFailure { log("workout gap fill: $it") }
             } finally {
                 syncLock.unlock()
             }
@@ -548,20 +550,35 @@ class StrapManager(
     override fun setLiveHeartRate(enabled: Boolean) {
         liveHeartRateEnabled.value = enabled
         scope.launch { settings.setLiveHeartRate(enabled) }
-        if (enabled && appVisible) startLive() else pauseLive()
+        refreshLive()
     }
 
-    /** Live HR streams only while the app is on screen; in the background nothing would show it. */
+    /** Live HR streams only while the app is on screen, where it's shown, or while a workout records it. */
     @Volatile private var appVisible = false
+    @Volatile private var workoutActive = false
+
+    private fun liveWanted() = workoutActive || (liveHeartRateEnabled.value && appVisible)
+
+    /** Starts or stops streaming to match [liveWanted]; a stream already running is left alone. */
+    private fun refreshLive() {
+        if (!liveWanted()) {
+            if (liveJob?.isActive == true) pauseLive()
+        } else if (liveJob?.isActive != true && !firmwareUpdating.value && connection.value is ConnectionState.Connected) {
+            startLive()
+        }
+    }
 
     override fun setAppVisible(visible: Boolean) {
         if (visible == appVisible) return
         appVisible = visible
-        if (!visible) {
-            if (liveJob?.isActive == true) pauseLive()
-        } else if (liveHeartRateEnabled.value && !firmwareUpdating.value && connection.value is ConnectionState.Connected) {
-            startLive()
-        }
+        refreshLive()
+    }
+
+    override fun setWorkoutActive(active: Boolean) {
+        if (active == workoutActive) return
+        workoutActive = active
+        log(if (active) "workout started: live hr stays on in the background" else "workout ended")
+        refreshLive()
     }
 
     /** Stops streaming without changing the user's preference (e.g. during a firmware update). */
@@ -757,9 +774,10 @@ class StrapManager(
         }
     }
 
-    /** Display only, like Zepp: the strap records per-second HR itself and history sync stores it. */
+    /** Shown live, and recorded during a workout; the strap also records per-second HR itself and history sync stores it. */
     private fun onLiveHr(bpm: Int) {
         liveHeartRate.value = bpm
+        heartRateReadings.tryEmit(bpm)
     }
 
     private companion object {

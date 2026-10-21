@@ -200,7 +200,7 @@ fun GlowWorkoutsScreen(workouts: List<WorkoutAnalysis>, contentPadding: PaddingV
     ScreenList(contentPadding, gutter = GlowLayout.Gutter) {
         item { GlowDetailHeader("Workouts", "${workouts.size} recorded", onBack) }
         if (workouts.isEmpty()) {
-            item { DotPanel { Note("Workouts you start on the strap show up here after a sync.") } }
+            item { DotPanel { Note("Workouts you start in OpenStrap show up here, and the strap's own after a sync.") } }
             return@ScreenList
         }
         workouts.groupBy { Instant.ofEpochSecond(it.workout.start).atZone(zone).toLocalDate() }.forEach { (date, day) ->

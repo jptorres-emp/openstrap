@@ -36,6 +36,12 @@ interface StrapController {
     /** Latest live heart-rate reading in bpm, or null when live HR is off. */
     val liveHeartRate: StateFlow<Int?>
 
+    /**
+     * Every live heart-rate reading as it arrives (bpm), repeats included, for recording a workout. [liveHeartRate]
+     * drops a reading equal to the one before, and the strap sends each second on two paths, so de-duplicate by time.
+     */
+    val heartRateReadings: kotlinx.coroutines.flow.SharedFlow<Int>
+
     /** The user's live-HR switch; when on, streaming runs while connected and the app is on screen. */
     val liveHeartRateEnabled: StateFlow<Boolean>
 
@@ -70,6 +76,12 @@ interface StrapController {
 
     /** Called as the app's screen comes to the front or leaves it; live HR only runs while it's visible. */
     fun setAppVisible(visible: Boolean)
+
+    /**
+     * While a workout records, live HR streams whatever the switch and the screen say, and starts again after each
+     * reconnect.
+     */
+    fun setWorkoutActive(active: Boolean)
 
     /**
      * Sends [file] to the strap and applies it (docs/protocol/03 §3.4). The strap reboots afterwards and the

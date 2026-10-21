@@ -19,6 +19,12 @@ data class WorkoutAnalysis(
     /** Seconds in each of the five zones (50–60 … 90–100 % of [maxHeartRate]) during the workout. */
     val zoneSeconds: List<Int>,
     val maxHeartRate: Int,
+    /** Recorded by OpenStrap from live heart rate rather than by the strap ([WorkoutRecorder]). */
+    val fromPhone: Boolean = false,
+    /** Minutes the phone missed that the strap's history filled in. */
+    val historyMinutes: Int = 0,
+    /** Those minutes as runs of epoch seconds, each from its first minute's start to its last minute's end − 1. */
+    val historyRanges: List<LongRange> = emptyList(),
 ) {
     val durationSeconds: Long get() = end - workout.start
 
@@ -84,6 +90,12 @@ object Workouts {
 
     /** Zepp's sport type ids (Type.type in the summary) for the sports a strap is likely to record. */
     fun sportName(type: Int): String = SPORT_NAMES[type] ?: "Workout"
+
+    /** Every sport a workout can be started as, by name, one id per name (Zepp has two "Free training"). */
+    val sports: List<Pair<Int, String>> by lazy { SPORT_NAMES.entries.distinctBy { it.value }.map { it.key to it.value }.sortedBy { it.second } }
+
+    /** Offered before any workout has been recorded: outdoor run, walk, strength training. */
+    val DEFAULT_SPORTS = listOf(1, 3, 52)
 
     private val SPORT_NAMES = mapOf(
         1 to "Outdoor run", 2 to "Treadmill", 3 to "Walk", 4 to "Outdoor cycling", 5 to "Free training",

@@ -2,6 +2,8 @@ package org.openstrap.app.export
 
 import kotlinx.coroutines.flow.first
 import org.openstrap.app.data.db.ActivityExtendedMinute
+import org.openstrap.app.data.db.AppWorkout
+import org.openstrap.app.data.db.AppWorkoutHeartRate
 import org.openstrap.app.data.db.ActivityMinute
 import org.openstrap.app.data.db.BreathRate
 import org.openstrap.app.data.db.CheckInRow
@@ -186,6 +188,21 @@ val CSV_TABLES: List<CsvTable<*>> = listOf(
         Key("workout_hr", "workoutStart", "workout_start_epoch", parent = "workout"),
         { d, f, t -> d.workoutHeartRateAll().filter { it.workoutStart in f..t } }, { listOf(it.workoutStart, it.timestamp, it.bpm) },
         { WorkoutHeartRate(it.long("workout_start_epoch"), it.long("epoch"), it.int("bpm")) }, { d, r -> d.insertWorkoutHeartRate(r) }),
+    // Workouts recorded on the phone; one still recording is left out until it ends.
+    CsvTable("app_workout.csv", "start,start_epoch,end_epoch,sport_type,source,pauses,end_reason,avg_hr,max_hr",
+        Key("app_workout", "start", "start_epoch", span = Span("`end`", "end_epoch")),
+        { d, f, t -> d.appWorkoutsAll().filter { it.start in f..t } },
+        { listOf(iso(it.start), it.start, it.end, it.sportType, it.source, it.pauses, it.endReason, it.averageHeartRate, it.maxHeartRate) },
+        {
+            AppWorkout(it.long("start_epoch"), it.long("end_epoch"), it.int("sport_type"), it.intOrNull("source") ?: AppWorkout.SOURCE_APP,
+                if (it.has("pauses")) it.string("pauses") else "", null, it.intOrNull("end_reason"), it.intOrNull("avg_hr"), it.intOrNull("max_hr"))
+        },
+        { d, r -> d.insertAppWorkouts(r) }),
+    CsvTable("app_workout_hr.csv", "workout_start_epoch,epoch,bpm,from_history",
+        Key("app_workout_hr", "workoutStart", "workout_start_epoch", parent = "app_workout"),
+        { d, f, t -> d.appWorkoutHeartRateAll().filter { it.workoutStart in f..t } }, { listOf(it.workoutStart, it.timestamp, it.bpm, it.fromHistory) },
+        { AppWorkoutHeartRate(it.long("workout_start_epoch"), it.long("epoch"), it.int("bpm"), it.has("from_history") && it.bool("from_history")) },
+        { d, r -> d.insertAppWorkoutHeartRate(r) }),
     CsvTable("sport_effect.csv", "end_epoch,recovery_minutes,vo2max,epoc,weekly_load,monthly_load,optimal_load_min,optimal_load_max,max_hr",
         Key("sport_effect", "`end`", "end_epoch"),
         { d, f, t -> d.sportEffects().first().filter { it.end in f..t } },

@@ -101,6 +101,12 @@ object Workouts {
     /** Sports done outdoors, where the ready screen offers GPS. */
     val OUTDOOR = setOf(1, 3, 4, 11, 12, 15, 215, 224, 225)
 
+    /**
+     * Sports done on your feet, where steps times a stride make a distance (≈) without GPS: runs, walks, hikes. On a
+     * bike, in water or on a mat, steps say nothing about distance, so those show none.
+     */
+    val ON_FOOT = setOf(1, 2, 3, 11, 15, 40, 215, 224, 225)
+
     /** Offered before any workout has been recorded: outdoor run, walk, strength training. */
     val DEFAULT_SPORTS = listOf(1, 3, 52)
 

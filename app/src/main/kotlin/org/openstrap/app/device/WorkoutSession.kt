@@ -567,8 +567,12 @@ class WorkoutSession(
         if (Route.clean(_route.value).isNotEmpty()) Route.distance(_route.value, w.pauseRanges).toFloat() to false
         else stepsDistance(w)?.let { it to true }
 
-    /** The strap's steps since the start times a stride for their cadence and your height; null without either. */
+    /**
+     * The strap's steps since the start times a stride for their cadence and your height; null without either, and
+     * for sports not done on foot ([org.openstrap.app.data.Workouts.ON_FOOT]).
+     */
     private fun stepsDistance(w: AppWorkout): Float? {
+        if (w.sportType !in org.openstrap.app.data.Workouts.ON_FOOT) return null
         val first = firstSteps ?: return null
         val last = steps.lastOrNull()?.second ?: return null
         val height = heightCm ?: return null

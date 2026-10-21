@@ -1,5 +1,6 @@
 package org.openstrap.app.ui.glow
 
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.layout.offset
@@ -262,8 +263,8 @@ fun topSports(workouts: List<WorkoutAnalysis>, n: Int = 3): List<SportUse> {
 }
 
 /**
- * "Start a workout": your usual sport as one white pill (like Today's), the next two and every sport as chips under it,
- * and the auto-detect switch.
+ * "Start a workout": your three most-used sports, most used first, and every sport as a row of round buttons sharing
+ * the width, names under them; then the auto-detect switch. All alike: a white one would read as already chosen.
  */
 @Composable
 internal fun StartWorkoutPanel(
@@ -272,38 +273,29 @@ internal fun StartWorkoutPanel(
 ) {
     DotPanel {
         DotHeader("Start a workout")
-        sports.firstOrNull()?.let { usual ->
-            val shape = RoundedCornerShape(50)
-            Row(
-                Modifier.fillMaxWidth().height(54.dp).clip(shape).background(Color.White).pressClickable({ onStart(usual.sportType) }, shape),
-                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center,
-            ) {
-                Icon(PhosphorIcons.PlayFill, null, tint = Color.Black, modifier = Modifier.size(16.dp))
-                Spacer(Modifier.width(10.dp))
-                Text("Start ${Workouts.sportName(usual.sportType).lowercase()}", color = Color.Black, style = MaterialTheme.typography.titleSmall)
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+            sports.take(3).forEach { s ->
+                SportBubble(SportIcons.of(s.sportType), Workouts.sportName(s.sportType), Modifier.weight(1f)) { onStart(s.sportType) }
             }
-        }
-        // Scrolls sideways should a long sport name not fit.
-        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            sports.drop(1).forEach { s -> SportChip(SportIcons.of(s.sportType), Workouts.sportName(s.sportType)) { onStart(s.sportType) } }
-            SportChip(null, "All sports ›", onAllSports)
+            SportBubble(PhosphorIcons.DotsThree, "All sports", Modifier.weight(1f), onAllSports)
         }
         autoStart?.let { SwitchRow("Auto-detect workouts", "Asks to record when your heart rate stays up for 10 min", it, onAutoStart) }
     }
 }
 
 @Composable
-private fun SportChip(icon: androidx.compose.ui.graphics.vector.ImageVector?, name: String, onClick: () -> Unit) {
-    val shape = RoundedCornerShape(50)
-    Row(
-        Modifier.height(40.dp).clip(shape).background(Color.White.copy(alpha = 0.08f)).pressClickable(onClick, shape).padding(horizontal = 14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        icon?.let {
-            Icon(it, null, tint = Color.White, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(7.dp))
-        }
-        Text(name, color = Color.White, style = MaterialTheme.typography.bodyMedium, maxLines = 1)
+private fun SportBubble(icon: androidx.compose.ui.graphics.vector.ImageVector, name: String, modifier: Modifier, onClick: () -> Unit) {
+    Column(modifier.pressClickable(onClick, RoundedCornerShape(20.dp)).padding(vertical = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(
+            Modifier.size(64.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.08f)),
+            contentAlignment = Alignment.Center,
+        ) { Icon(icon, null, tint = Color.White, modifier = Modifier.size(26.dp)) }
+        Spacer(Modifier.height(8.dp))
+        // Two lines, so "Strength training" isn't cut short.
+        Text(
+            name, color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodySmall, maxLines = 2,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center, overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 
@@ -521,7 +513,7 @@ fun GlowWorkoutReadyScreen(
         }
         // GPS is offered for outdoor sports only, off by default; the route is discarded unless kept.
         if (outdoor) DotPanel {
-            SwitchRow("Use GPS", if (useGps) "Only during this workout, for distance, pace and the map. Map tiles come from OpenFreeMap, which sees roughly where the map is; its Route only button loads none." else "Off · distance from the strap's steps (≈)", useGps) { useGps = it }
+            SwitchRow("Use GPS", if (useGps) "Only during this workout, for distance, pace and the map. Map tiles come from OpenFreeMap, which sees roughly where the map is; its Route only button loads none." else if (sportType in Workouts.ON_FOOT) "Off · distance from the strap's steps (≈)" else "Off · no distance without it", useGps) { useGps = it }
             if (useGps) {
                 DotDivider()
                 SwitchRow(
@@ -1509,4 +1501,40 @@ fun WorkoutShortcut(r: WorkoutState.Recording, liveHeartRate: Int?, onOpen: () -
             color = Color.Black, style = MaterialTheme.typography.titleSmall.copy(fontFeatureSettings = "tnum"),
         )
     }
+}
+
+/**
+ * A screen over the app that grows as a circle from [origin] (where it was tapped open; the middle without one) and
+ * shrinks back into it when [value] goes null, kept on screen until it has. [cut] drops it at once instead, for when
+ * what replaces it (a workout starting) shouldn't watch it shrink.
+ */
+@Composable
+fun <T : Any> CircleReveal(value: T?, origin: () -> Offset?, cut: Boolean, content: @Composable (T) -> Unit) {
+    var last by remember { mutableStateOf(value) }
+    var center by remember { mutableStateOf<Offset?>(null) }
+    val progress = remember { androidx.compose.animation.core.Animatable(if (value != null) 1f else 0f) }
+    LaunchedEffect(value) { if (value != null) last = value }
+    LaunchedEffect(value != null, cut) {
+        when {
+            value != null -> {
+                if (progress.value == 0f) center = origin()
+                progress.animateTo(1f, androidx.compose.animation.core.tween(480, easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f)))
+            }
+            cut -> progress.snapTo(0f)
+            else -> progress.animateTo(0f, androidx.compose.animation.core.tween(380, easing = androidx.compose.animation.core.CubicBezierEasing(0.3f, 0f, 0.8f, 0.15f)))
+        }
+    }
+    val shown = value ?: last ?: return
+    if (progress.value == 0f && value == null) return
+    Box(
+        Modifier.fillMaxSize().graphicsLayer {
+            clip = true
+            shape = androidx.compose.foundation.shape.GenericShape { s, _ ->
+                val c = center ?: Offset(s.width / 2, s.height / 2)
+                // Far enough to reach the farthest corner.
+                val far = listOf(Offset.Zero, Offset(s.width, 0f), Offset(0f, s.height), Offset(s.width, s.height)).maxOf { (it - c).getDistance() }
+                addOval(androidx.compose.ui.geometry.Rect(c, far * progress.value))
+            }
+        },
+    ) { content(shown) }
 }

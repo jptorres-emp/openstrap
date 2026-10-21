@@ -665,7 +665,8 @@ fun GlowWorkoutLiveScreen(
     onLap: () -> Unit = {},
 ) {
     BackHandler(onBack = onMinimize)
-    var page by rememberSaveable { mutableIntStateOf(0) }
+    val pager = androidx.compose.foundation.pager.rememberPagerState { 3 }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
     var routeOnly by rememberSaveable { mutableStateOf(false) }
     val connected = connection is ConnectionState.Connected
     val bpm = liveHeartRate.takeIf { connected && !r.paused }
@@ -684,12 +685,7 @@ fun GlowWorkoutLiveScreen(
             Spacer(Modifier.width(8.dp))
             Canvas(Modifier.size(6.dp)) { drawCircle(if (connected) TrendGood else TrendBad) }
         }
-        // GPS workouts have three pages, as on the design: heart rate, the map, and the kilometre splits.
-        if (r.workout.useGps) GlowSegments(listOf("Heart", "Map", "Splits"), page) { page = it }
-        when (if (r.workout.useGps) page else 0) {
-            1 -> LiveMapPage(route, history, r.maxHeartRate, routeOnly) { routeOnly = it }
-            2 -> SplitsPage(route, history, r.workout.pauseRanges)
-            else -> {
+        val heartCard: @Composable () -> Unit = {
             GlowCard(
                 GlowStyle.chart(color).copy(motion = if (bpm != null) GlowMotion.Heartbeat(bpm) else GlowMotion.Still),
                 Modifier.fillMaxWidth(),
@@ -729,8 +725,23 @@ fun GlowWorkoutLiveScreen(
                     }
                 }
             }
-            }
         }
+        // GPS workouts have three pages, as on the design: heart rate, the map, and the kilometre splits. They swipe
+        // as well as tap; a drag that starts on the map pans the map.
+        if (r.workout.useGps) {
+            GlowSegments(listOf("Heart", "Map", "Splits"), pager.currentPage) { scope.launch { pager.animateScrollToPage(it) } }
+            androidx.compose.foundation.pager.HorizontalPager(
+                pager, pageSpacing = 16.dp, verticalAlignment = Alignment.Top, beyondViewportPageCount = 2,
+            ) { page ->
+                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    when (page) {
+                        1 -> LiveMapPage(route, history, r.maxHeartRate, routeOnly) { routeOnly = it }
+                        2 -> SplitsPage(route, history, r.workout.pauseRanges)
+                        else -> heartCard()
+                    }
+                }
+            }
+        } else heartCard()
         if (r.strength) SetsPanel(r, color, onStartSet, onSetDone, onExtendRest)
         // Centred between the card and the buttons: the moving time large in the middle, two smaller figures either
         // side (Oura's avg and max around the live number), labels under the numbers and thin rules between (WHOOP).
@@ -830,7 +841,9 @@ internal fun km(meters: Float): String = if (meters < 1000) "${meters.toInt()} m
 private fun LiveMapPage(route: List<Route.Point>, history: List<Pair<Long, Int>>, maxHr: Int, routeOnly: Boolean, onRouteOnly: (Boolean) -> Unit) {
     val stretches = remember(route.size, history.size) { Route.byZone(route, history, maxHr) }
     Box(Modifier.fillMaxWidth().height(440.dp).clip(RoundedCornerShape(48.dp)).background(Raised)) {
-        WorkoutMap(stretches, routeOnly, Modifier.fillMaxSize())
+        // Where you are now, from the latest fix good enough to count, even while standing still.
+        val here = route.lastOrNull { it.accuracy <= Route.MAX_ACCURACY_M }
+        WorkoutMap(stretches, routeOnly, Modifier.fillMaxSize(), here)
         Row(Modifier.align(Alignment.TopStart).padding(16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             val acc = route.lastOrNull()?.accuracy
             Pill(if (acc == null || acc > 1000) "Finding GPS…" else "GPS ±${acc.toInt()} m", if (acc != null && acc <= Route.MAX_ACCURACY_M) TrendGood else TrendBad)

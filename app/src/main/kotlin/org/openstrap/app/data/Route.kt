@@ -8,7 +8,8 @@ import kotlin.math.sqrt
 
 /**
  * A workout's GPS route, worked out in pure Kotlin like [Recovery]: distance, splits, and what an export may show.
- * The phone's fixes are filtered before they count: poor accuracy and impossible jumps are dropped.
+ * The phone's fixes are filtered before they count: nothing until GPS has settled, poor accuracy and impossible jumps
+ * are dropped, and movement within GPS's own error (a phone standing still wanders) doesn't add distance.
  */
 object Route {
     /** One GPS fix: epoch seconds, degrees, and the horizontal accuracy in metres. */
@@ -18,6 +19,15 @@ object Route {
     const val MAX_ACCURACY_M = 30f
     /** Faster than this between two fixes is a GPS jump, not a person (about 54 km/h, a fast descent on a bike). */
     const val MAX_SPEED_MS = 15.0
+    /** The route begins once this many fixes in a row agree: the first after a cold start can be far off. */
+    const val SETTLE_FIXES = 5
+    /** How accurate those settling fixes must be. */
+    const val SETTLED_ACCURACY_M = 20f
+    /** Least movement counted, however good the fixes claim to be. */
+    const val MIN_MOVE_M = 5.0
+    /** Plausible on foot between two fixes while settling (a sprint), so a runner's start still settles. */
+    private const val SETTLE_SPEED_MS = 8.0
+
     /** An export leaves out this much of the start and the end, so a shared run doesn't show where you live. */
     const val PRIVACY_M = 300.0
 
@@ -31,22 +41,52 @@ object Route {
         return 2 * EARTH_M * asin(sqrt(h.coerceIn(0.0, 1.0)))
     }
 
-    /** The fixes that count, in time order: accurate enough, and no faster than [MAX_SPEED_MS] from the last kept one. */
+    /**
+     * The fixes that count, in time order: from the first of [SETTLE_FIXES] in a row that are within
+     * [SETTLED_ACCURACY_M] and agree with each other, then accurate enough and no faster than [MAX_SPEED_MS] from the
+     * last kept one.
+     */
     fun clean(points: List<Point>): List<Point> {
+        val good = points.filter { it.accuracy <= MAX_ACCURACY_M }.sortedBy { it.t }.distinctBy { it.t }
+        var run = 0
+        val start = good.indices.firstOrNull { i ->
+            val p = good[i]
+            val agrees = p.accuracy <= SETTLED_ACCURACY_M &&
+                (run == 0 || meters(good[i - 1], p) <= noise(good[i - 1], p) + SETTLE_SPEED_MS * (p.t - good[i - 1].t))
+            run = if (agrees) run + 1 else if (p.accuracy <= SETTLED_ACCURACY_M) 1 else 0
+            run >= SETTLE_FIXES
+        }?.let { it - SETTLE_FIXES + 1 } ?: return emptyList()
         val out = mutableListOf<Point>()
-        points.sortedBy { it.t }.forEach { p ->
-            if (p.accuracy > MAX_ACCURACY_M) return@forEach
+        for (p in good.subList(start, good.size)) {
             val last = out.lastOrNull()
-            if (last != null && p.t > last.t && meters(last, p) / (p.t - last.t) > MAX_SPEED_MS) return@forEach
-            if (last != null && p.t <= last.t) return@forEach
+            if (last != null && meters(last, p) / (p.t - last.t) > MAX_SPEED_MS) continue
             out += p
         }
         return out
     }
 
-    /** Metres covered by [points] after [clean], leaving out [pauses] (a fix inside a pause starts a new stretch). */
+    /**
+     * [clean] less the wander of standing still: a fix is taken only once it's further from the last one taken than
+     * both fixes' error together. What distance, pace, splits and the map's line are measured along.
+     */
+    fun track(points: List<Point>): List<Point> {
+        val out = mutableListOf<Point>()
+        for (p in clean(points)) {
+            val last = out.lastOrNull()
+            if (last == null || meters(last, p) >= noise(last, p)) out += p
+        }
+        return out
+    }
+
+    /** How far two fixes can lie apart from GPS error alone. */
+    private fun noise(a: Point, b: Point): Double = maxOf(MIN_MOVE_M, (a.accuracy + b.accuracy).toDouble())
+
+    /** Metres covered by [points] along [track], leaving out stretches that overlap [pauses]. */
     fun distance(points: List<Point>, pauses: List<LongRange> = emptyList()): Double =
-        clean(points).zipWithNext().sumOf { (a, b) -> if (pauses.any { b.t in it || a.t in it }) 0.0 else meters(a, b) }
+        track(points).zipWithNext().sumOf { (a, b) -> if (paused(a, b, pauses)) 0.0 else meters(a, b) }
+
+    /** Whether the stretch from [a] to [b] overlaps a pause; one that only ends or begins at a pause's edge counts. */
+    private fun paused(a: Point, b: Point, pauses: List<LongRange>) = pauses.any { it.first < b.t && it.last > a.t }
 
     /** One kilometre (or the last part of one): when it ended, its time and metres. */
     data class Split(val index: Int, val endT: Long, val seconds: Long, val meters: Double) {
@@ -56,13 +96,13 @@ object Route {
 
     /** Per-kilometre splits along [points]; the last one may be partial. Paused time doesn't count. */
     fun splits(points: List<Point>, pauses: List<LongRange> = emptyList(), km: Double = 1000.0): List<Split> {
-        val clean = clean(points)
+        val clean = track(points)
         val out = mutableListOf<Split>()
         var startT = clean.firstOrNull()?.t ?: return out
         var meters = 0.0
         var seconds = 0L
         clean.zipWithNext().forEach { (a, b) ->
-            if (pauses.any { b.t in it || a.t in it }) return@forEach
+            if (paused(a, b, pauses)) return@forEach
             meters += meters(a, b)
             seconds += b.t - a.t
             if (meters >= km) {
@@ -78,7 +118,7 @@ object Route {
 
     /** Seconds per kilometre over the last [windowS] seconds of [points], or null with too little to say. */
     fun currentPace(points: List<Point>, windowS: Long = 30): Double? {
-        val clean = clean(points)
+        val clean = track(points)
         val last = clean.lastOrNull() ?: return null
         val recent = clean.filter { it.t >= last.t - windowS }
         val m = recent.zipWithNext().sumOf { (a, b) -> meters(a, b) }
@@ -125,7 +165,7 @@ object Route {
      * nearest heart rate within [MAX_HR_GAP_S] (time, bpm, ascending), else none (−1, drawn grey).
      */
     fun byZone(points: List<Point>, hr: List<Pair<Long, Int>>, maxHr: Int): List<Pair<List<Point>, Int>> {
-        val clean = clean(points)
+        val clean = track(points)
         if (clean.size < 2) return emptyList()
         val times = hr.map { it.first }
         fun zoneAt(t: Long): Int {

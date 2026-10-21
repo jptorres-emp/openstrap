@@ -21,7 +21,29 @@ class RouteTest {
         val points = run(100).toMutableList()
         points[50] = east(50, 5_000.0) // a jump
         points[60] = east(60, 180.0, accuracy = 80f)
-        assertEquals(300.0, Route.distance(points), 2.0)
+        // Measured along fixes about 10 m apart, so the last few metres may not be in yet.
+        assertEquals(300.0, Route.distance(points), 10.0)
+    }
+
+    @Test
+    fun theFirstFixesBeforeGpsSettlesDoNotCount() {
+        // A cold start: a fix 150 m off, a couple still poor, then good ones where you actually are.
+        val start = listOf(east(0, 150.0, 15f), east(1, 60.0, 25f), east(2, 20.0, 40f))
+        assertEquals(300.0, Route.distance(start + run(100, from = 3)), 10.0)
+    }
+
+    @Test
+    fun standingStillAddsNothing() {
+        // Ten minutes at home: fixes claiming ±5 m, each somewhere within 5 m of where you are.
+        val home = (0L..600L).map { t -> Route.Point(t, kotlin.math.sin(t * 0.7) * 5 / 111_195.0, kotlin.math.cos(t * 0.7) * 5 / 111_195.0, 5f) }
+        assertEquals(0.0, Route.distance(home), 0.0)
+        assertTrue(Route.track(home).size == 1)
+    }
+
+    @Test
+    fun noRouteUntilGpsSettles() {
+        assertTrue(Route.distance(run(3)).let { it == 0.0 })
+        assertTrue(Route.clean(run(100).map { it.copy(accuracy = 25f) }).isEmpty())
     }
 
     @Test
@@ -33,7 +55,7 @@ class RouteTest {
     fun splitsEveryKilometre() {
         val s = Route.splits(run(1000))
         assertEquals(3, s.size)
-        assertEquals(1000.0, s[0].meters, 3.0)
+        assertEquals(1000.0, s[0].meters, 12.0)
         // 3 m/s is 5′33″ a kilometre.
         assertEquals(333.0, s[0].pace, 2.0)
         assertTrue(s[2].meters < 1000)

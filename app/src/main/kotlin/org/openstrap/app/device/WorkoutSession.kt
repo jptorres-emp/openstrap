@@ -559,11 +559,13 @@ class WorkoutSession(
         update { it.copy(distanceMeters = meters, distanceFromSteps = fromSteps) }
     }
 
-    /** Metres so far and whether they came from steps: GPS when it has usable fixes, else the strap's steps. */
-    private fun distanceNow(w: AppWorkout): Pair<Float, Boolean>? {
-        val gps = Route.distance(_route.value, w.pauseRanges)
-        return if (gps > 0) gps.toFloat() to false else stepsDistance(w)?.let { it to true }
-    }
+    /**
+     * Metres so far and whether they came from steps: GPS once it has settled (even at 0 m, standing still), else the
+     * strap's steps.
+     */
+    private fun distanceNow(w: AppWorkout): Pair<Float, Boolean>? =
+        if (Route.clean(_route.value).isNotEmpty()) Route.distance(_route.value, w.pauseRanges).toFloat() to false
+        else stepsDistance(w)?.let { it to true }
 
     /** The strap's steps since the start times a stride for their cadence and your height; null without either. */
     private fun stepsDistance(w: AppWorkout): Float? {

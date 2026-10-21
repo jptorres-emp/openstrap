@@ -40,11 +40,12 @@ private const val BLANK_STYLE = """{"version":8,"sources":{},"layers":[{"id":"bg
 
 /**
  * A workout's route on a map, each stretch in its heart-rate zone's colour ([Route.byZone]), with a white dot where
- * you are (or ended). [routeOnly] loads no map tiles: the tile server never learns where the map is. The camera fits
- * the whole route as it grows.
+ * you are (or ended): [here] when given, so it shows before there's a line (standing still makes none), else the
+ * line's end. [routeOnly] loads no map tiles: the tile server never learns where the map is. The camera fits the
+ * whole route as it grows, or centres on the dot until then.
  */
 @Composable
-fun WorkoutMap(stretches: List<Pair<List<Route.Point>, Int>>, routeOnly: Boolean, modifier: Modifier = Modifier) {
+fun WorkoutMap(stretches: List<Pair<List<Route.Point>, Int>>, routeOnly: Boolean, modifier: Modifier = Modifier, here: Route.Point? = null) {
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     var map by remember { mutableStateOf<MapLibreMap?>(null) }
@@ -57,6 +58,8 @@ fun WorkoutMap(stretches: List<Pair<List<Route.Point>, Int>>, routeOnly: Boolean
                 m.uiSettings.isRotateGesturesEnabled = false
                 m.uiSettings.isTiltGesturesEnabled = false
                 m.uiSettings.isCompassEnabled = false
+                // MapLibre's licence doesn't ask for its logo; the ⓘ stays, for the OpenStreetMap credit the tiles need.
+                m.uiSettings.isLogoEnabled = false
                 map = m
             }
         }
@@ -103,10 +106,10 @@ fun WorkoutMap(stretches: List<Pair<List<Route.Point>, Int>>, routeOnly: Boolean
             style = s
         }
     }
-    LaunchedEffect(style, stretches) {
+    LaunchedEffect(style, stretches, here) {
         val s = style ?: return@LaunchedEffect
         s.getSourceAs<GeoJsonSource>(SOURCE)?.setGeoJson(geoJson(stretches))
-        val last = stretches.lastOrNull()?.first?.lastOrNull()
+        val last = here ?: stretches.lastOrNull()?.first?.lastOrNull()
         s.getSourceAs<GeoJsonSource>(HERE)?.setGeoJson(
             last?.let { """{"type":"Feature","geometry":{"type":"Point","coordinates":[${coord(it)}]},"properties":{}}""" }
                 ?: """{"type":"FeatureCollection","features":[]}""",
@@ -115,8 +118,8 @@ fun WorkoutMap(stretches: List<Pair<List<Route.Point>, Int>>, routeOnly: Boolean
         if (all.size >= 2) {
             val bounds = LatLngBounds.Builder().includes(all.map { LatLng(it.lat, it.lon) }).build()
             runCatching { map?.easeCamera(CameraUpdateFactory.newLatLngBounds(bounds, 80)) }
-        } else if (all.size == 1) {
-            map?.easeCamera(CameraUpdateFactory.newLatLngZoom(LatLng(all[0].lat, all[0].lon), 16.0))
+        } else if (last != null) {
+            map?.easeCamera(CameraUpdateFactory.newLatLngZoom(LatLng(last.lat, last.lon), 16.0))
         }
     }
     AndroidView({ view }, modifier)

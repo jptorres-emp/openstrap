@@ -58,7 +58,13 @@ private fun intervalLabel(v: Int) = when (v) {
 }
 
 @Composable
-fun AlarmsScreen(vm: AlarmsViewModel, state: AlarmsUiState, contentPadding: PaddingValues, onBack: () -> Unit) {
+fun AlarmsScreen(
+    vm: AlarmsViewModel,
+    state: AlarmsUiState,
+    contentPadding: PaddingValues,
+    onBack: () -> Unit,
+    phoneAlerts: @Composable () -> Unit = {},
+) {
     BackHandler(onBack = onBack)
     var editing by remember { mutableStateOf<Pair<Alarm, Boolean>?>(null) }
     var confirmDeleteAll by remember { mutableStateOf(false) }
@@ -94,6 +100,8 @@ fun AlarmsScreen(vm: AlarmsViewModel, state: AlarmsUiState, contentPadding: Padd
                 }
             }
         }
+        // Phone-side switches; they don't need the strap to answer.
+        item { phoneAlerts() }
         if (state.loading) {
             item { Panel { EmptyHint("Reading from the strap…") } }
             return@ScreenList

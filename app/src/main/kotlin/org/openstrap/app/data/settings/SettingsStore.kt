@@ -57,6 +57,14 @@ data class UserProfile(
     val isEmpty get() = birthYear == null && sex == null && weightKg == null && heightCm == null
 }
 
+/** Notification buzz patterns: alternating vibrate and pause milliseconds for the strap's motor. */
+enum class BuzzPattern(val label: String, val millis: List<Int>) {
+    ONE_SHORT("Single", listOf(200)),
+    TWO_SHORT("Double", listOf(150, 150, 150)),
+    THREE_SHORT("Triple", listOf(120, 120, 120, 120, 120)),
+    ONE_LONG("Long", listOf(600)),
+}
+
 class SettingsStore(private val context: Context) {
     private val address = stringPreferencesKey("device_address")
     private val authKey = stringPreferencesKey("device_auth_key")
@@ -191,9 +199,37 @@ class SettingsStore(private val context: Context) {
     /** Forgets the strap and the Zepp sign-in; the user's profile and goals stay. */
     suspend fun forgetDevice() {
         context.dataStore.edit { prefs ->
-            val keep = setOf(birthYear, sex, weight, height, imperial, sleepNeed, maxHr, activityLevel, activityAt, bodyAt, betaBlocker, pregnant, stepGoal, sleepGoal, activeGoal, todayTiles)
+            val keep = setOf(birthYear, sex, weight, height, imperial, sleepNeed, maxHr, activityLevel, activityAt, bodyAt, betaBlocker, pregnant, stepGoal, sleepGoal, activeGoal, todayTiles, buzzCalls, buzzNotifications, buzzPattern)
             prefs.asMap().keys.filter { it !in keep }.forEach { prefs.remove(it) }
         }
+    }
+
+    private val buzzCalls = androidx.datastore.preferences.core.booleanPreferencesKey("buzz_calls")
+    private val buzzNotifications = androidx.datastore.preferences.core.booleanPreferencesKey("buzz_notifications")
+
+    /** Buzz the strap while a phone call rings. Off by default; it needs the phone-state permission. */
+    val buzzOnCalls: Flow<Boolean> = context.dataStore.data.map { it[buzzCalls] == true }
+
+    /** Buzz the strap once for each app notification that would make a sound. Off by default; it needs notification access. */
+    val buzzOnNotifications: Flow<Boolean> = context.dataStore.data.map { it[buzzNotifications] == true }
+
+    private val buzzPattern = stringPreferencesKey("buzz_pattern")
+
+    /** How the strap buzzes for a notification; two short buzzes by default. */
+    val notificationPattern: Flow<BuzzPattern> = context.dataStore.data.map { prefs ->
+        BuzzPattern.entries.firstOrNull { it.name == prefs[buzzPattern] } ?: BuzzPattern.TWO_SHORT
+    }
+
+    suspend fun setNotificationPattern(pattern: BuzzPattern) {
+        context.dataStore.edit { it[buzzPattern] = pattern.name }
+    }
+
+    suspend fun setBuzzOnCalls(enabled: Boolean) {
+        context.dataStore.edit { it[buzzCalls] = enabled }
+    }
+
+    suspend fun setBuzzOnNotifications(enabled: Boolean) {
+        context.dataStore.edit { it[buzzNotifications] = enabled }
     }
 
     /** Last synced timestamp (epoch seconds) for a history data type. */

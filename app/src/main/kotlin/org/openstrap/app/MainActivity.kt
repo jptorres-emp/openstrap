@@ -327,7 +327,9 @@ private fun AppRoot(container: AppContainer) {
                     )
                     LaunchedEffect(Unit) { alarmsVm.refresh() }
                     val alarmsState by alarmsVm.state.collectAsStateWithLifecycle()
-                    org.openstrap.app.ui.alarms.AlarmsScreen(alarmsVm, alarmsState, padding, onBack = { showAlarms = false })
+                    org.openstrap.app.ui.alarms.AlarmsScreen(alarmsVm, alarmsState, padding, onBack = { showAlarms = false }) {
+                        org.openstrap.app.ui.alarms.PhoneAlertsPanel(container.phoneAlerts, container.settings)
+                    }
                 }
                 YouPage.Strap -> {
                     DeviceScreen(

@@ -584,6 +584,34 @@ If endpoint `0x0090` is listed, the app tunnels these commands through the chann
 
 Example: `13` → `10 13 01 <mtu u16>` (§1.3).
 
+### 5.8 Buzzing the strap: find device (`0x001A`) and motor patterns (`0x0018`)
+
+The strap has no screen and no notification module: `0x001E` NotificationModule is not in its services list, and Zepp leaves notifications off for it. OpenStrap buzzes it for phone calls and notifications with two endpoints the strap does list, both encrypted.
+
+**`0x001A` FindDeviceModule** (`d/uhh.java`, impl `d/hhh.java`, receive `d/ccf.java:591-630`):
+
+| Bytes | Dir | Meaning |
+|---|---|---|
+| `03` | P→S | Start buzzing; reply `04 01 01` (1 = OK). **Buzzes until `06`.** It does not stop by itself, and tapping the strap did not stop it (hardware, below). |
+| `05 01` | P→S | Zepp's continuous find (`d/ghh.java:68-81`), used by its Find strap button with `06` to stop (`d/bgu.java`, `d/mys.java` case 7). Not answered. **The strap doesn't vibrate**, although it ACKs it and sends `07` after `06` (hardware, below). OpenStrap doesn't use it. |
+| `06` | P→S | Stop. Not answered; the strap then sends `07`. |
+| `07` | S→P | Buzzing stopped. |
+
+**`0x0018` MotorVibrateModule** (`d/nau.java`, record `d/i0l.java`): `03 scene custom test nPairs {u16 LE}*`, reply `04 01`.
+
+* The pattern alternates vibrate and pause milliseconds, zero-padded to an even count; `nPairs` = count / 2.
+* `custom` = 1 uses the pattern; `test` = 1 plays it at once. It plays once and stops on its own.
+* `scene` is the ordinal of Zepp's `VibrateType` (`com/xiaomi/hm/health/ui/smartplay/customvibrate/model/VibrateType.java`): 0 APP_NOTIFY, 1 INCOMING_CALL, 2 SMS, 3 EMAIL, 4 SPORT_REACH_GOAL, 5 ALARM, 6 LONG_SIT, 7 DISCONNECT, 8 EVENT_REMIND, 9 FIND_BAND, 10 TODO, 11 COUNT_DOWN, 12 SCHEDULE.
+* Zepp's "test" sends the record with `test` = 1, then again with `test` = 0, which is the save (`d/ypk.java:396-407`). OpenStrap only sends the play, under scene 0, which the strap never uses on its own. So even if a play also saved, the alarm vibration is untouched.
+
+Example: two short buzzes, 150 ms on / 150 ms off / 150 ms on: `03 00 01 01 02 9600 9600 9600 0000`.
+
+How OpenStrap uses them:
+
+* **Notification:** a `0x0018` pattern. If the strap doesn't list `0x0018`, it falls back to `0x001A` `03`, then `06` after 1.5 s.
+* **Ringing call:** `0x001A` `03` when the phone starts ringing, `06` when it is answered or ends. It stops after 60 s at most.
+* **No notification patterns while a call rings:** a pattern played on the motor cut off the call's buzzing (hardware, below).
+
 ---
 
 ## 6. Keep-alive, disconnect, reconnect
@@ -645,3 +673,11 @@ The first real connection, from OpenStrap on an Android 16 phone, confirmed the 
     - `[bit4: gait info]`
   - Totals count from local midnight. The strap pushes an update roughly every second while you walk.
   - Pushes use opcode **`07`** + the same record, e.g. `07 0c ed000000 b1000000 0e000000` = 237 steps, 177 m, 14 kcal (3.25.0.3, 2026-10-18).
+
+### Verified on hardware: buzzing (firmware 3.25.0.3, Android 16, 2026-10-20)
+
+- **`0x001A` `03`** → `04 01 01`. The strap buzzed until `06` was sent, and tapping the strap several times did not stop it. After `06` the strap sent `07`.
+- **`0x001A` `05 01`** gave no reply, and the strap did not vibrate. It was retested alone on 2026-10-21: `05 01` (transport ACK OK), 10 s with nothing else sent, then `06`, answered by `07`. No vibration at any point.
+- **`0x0018` with `test` = 1** → `04 01`. Patterns were felt as sent (e.g. `03 00 01 01 02 9600 9600 9600 0000` = two short buzzes), and each stopped on its own.
+- **Latency:** within range, `03` was answered 0.3 s after the call started ringing, on a 30 ms connection interval, and `07` came 30 ms after `06`. Away from the phone, both took about 5 s, and the encrypted ACK for `03` never came. Asking Android for CONNECTION_PRIORITY_HIGH on ring didn't help: the new interval took effect only 3 s later.
+

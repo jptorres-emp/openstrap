@@ -239,9 +239,12 @@ private fun TodayWorkouts(
             Spacer(Modifier.width(10.dp))
             Text("Start workout", color = Color.Black, style = MaterialTheme.typography.titleSmall)
         }
-        workouts.forEach { WorkoutLine(it, showDate = false) { onOpen(it.workout.start) } }
+        // The day's last three; the rest are on Activity.
+        workouts.takeLast(TODAY_WORKOUTS).forEach { WorkoutLine(it, showDate = false) { onOpen(it.workout.start) } }
     }
 }
+
+private const val TODAY_WORKOUTS = 3
 
 /* ------------------------------------------------------------------------------------------------ */
 

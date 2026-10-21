@@ -397,8 +397,18 @@ class WorkoutSession(
                         else -> null
                     }
                 }?.let { dao.upsertSets(listOf(it)) }
-                dao.upsertAppWorkout(WorkoutRecorder.withStats(ended, dao.appWorkoutHeartRateOnce(w.start)))
                 stop()
+                // Under a minute is a mis-tap or a test, not a workout: nothing is kept, and the app says so.
+                if (WorkoutRecorder.activeSeconds(ended, end) < MIN_SAVED_S) {
+                    dao.deleteAppWorkout(w.start)
+                    _state.value = WorkoutState.Idle
+                    // A toast, so it shows whether it ended in the app or from the notification.
+                    context.mainExecutor.execute {
+                        android.widget.Toast.makeText(context, "Under a minute, so not saved", android.widget.Toast.LENGTH_SHORT).show()
+                    }
+                    return@withLock
+                }
+                dao.upsertAppWorkout(WorkoutRecorder.withStats(ended, dao.appWorkoutHeartRateOnce(w.start)))
                 _state.value = WorkoutState.Ended(w.start)
             }
             // The strap's history fills any minutes the phone missed; it batches, so ask now.
@@ -744,6 +754,8 @@ class WorkoutSession(
     internal companion object {
         const val FLUSH_MS = 10_000L
         const val RECENT_S = 600L
+        /** Workouts with less moving time than this aren't kept. */
+        const val MIN_SAVED_S = 60L
         /** Long enough to hold the 8 calm minutes and the active moment before them. */
         const val STOP_WINDOW_S = 20 * 60L
         /** Checked every third flush, 30 s. */

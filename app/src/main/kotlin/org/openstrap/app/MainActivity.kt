@@ -1,6 +1,5 @@
 package org.openstrap.app
 
-import androidx.compose.ui.input.pointer.pointerInput
 import android.Manifest
 import org.openstrap.app.ui.firmware.FirmwareScreen
 import org.openstrap.app.ui.firmware.FirmwareViewModel
@@ -370,8 +369,6 @@ private fun AppRoot(container: AppContainer) {
     val navGlass = dev.chrisbanes.haze.rememberHazeState()
     // Popups are drawn in the app's own window over a blur of the pages, like the nav bar.
     val glassHost = remember { org.openstrap.app.ui.components.GlassHost() }
-    // Where the last touch came down, so a screen opened by it can grow from there (the ready screen's reveal).
-    val lastTap = remember { androidx.compose.runtime.mutableStateOf<androidx.compose.ui.geometry.Offset?>(null) }
     // Half-open on a table, the fold level: heart rate fills the standing top half, the app carries on below the fold.
     val activity = androidx.activity.compose.LocalActivity.current
     val windowLayout by remember(activity) {
@@ -385,17 +382,7 @@ private fun AppRoot(container: AppContainer) {
         org.openstrap.app.ui.dashboard.LocalGoals provides goals,
         org.openstrap.app.ui.components.LocalGlassHost provides glassHost,
     ) {
-      androidx.compose.foundation.layout.Column(
-          androidx.compose.ui.Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).pointerInput(Unit) {
-              // Watched on the way down, never consumed: every tap still reaches what it hit.
-              awaitPointerEventScope {
-                  while (true) {
-                      val e = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
-                      e.changes.firstOrNull { it.pressed && !it.previousPressed }?.let { lastTap.value = it.position }
-                  }
-              }
-          },
-      ) {
+      androidx.compose.foundation.layout.Column(androidx.compose.ui.Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
       if (hinge != null) {
           val density = androidx.compose.ui.platform.LocalDensity.current
           org.openstrap.app.ui.glow.GlowTabletopHeart(
@@ -680,7 +667,6 @@ private fun AppRoot(container: AppContainer) {
             onReadySport = { readySport = it },
             onCloseReady = { readySport = null; readyPicking = false },
             capsuleBottom = if (rail) 16.dp else 104.dp,
-            tapOrigin = { lastTap.value },
         )
         org.openstrap.app.ui.components.GlassOverlay(glassHost, navGlass)
       }
@@ -708,7 +694,6 @@ private fun androidx.compose.foundation.layout.BoxScope.WorkoutLayer(
     onReadySport: (Int) -> Unit,
     onCloseReady: () -> Unit,
     capsuleBottom: androidx.compose.ui.unit.Dp,
-    tapOrigin: () -> androidx.compose.ui.geometry.Offset?,
 ) {
     val session = container.workout
     val padding = androidx.compose.foundation.layout.WindowInsets.navigationBars.asPaddingValues()
@@ -749,9 +734,9 @@ private fun androidx.compose.foundation.layout.BoxScope.WorkoutLayer(
             )
         }
     }
-    // The ready screen grows from what was tapped and shrinks back into it; a workout starting replaces it at once.
+    // The ready screen comes and goes like any other screen; a workout starting replaces it at once.
     val recording = state is org.openstrap.app.device.WorkoutState.Recording || state is org.openstrap.app.device.WorkoutState.Ended
-    org.openstrap.app.ui.glow.CircleReveal(readySport.takeIf { !recording }, tapOrigin, cut = recording) { sport ->
+    org.openstrap.app.ui.glow.PushOverlay(readySport.takeIf { !recording }, cut = recording) { sport ->
         androidx.compose.foundation.layout.Box(full) {
             org.openstrap.app.ui.glow.GlowWorkoutReadyScreen(
                 sport, readyPicking, connection, live, padding,

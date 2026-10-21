@@ -16,6 +16,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -730,23 +732,28 @@ fun GlowWorkoutLiveScreen(
             }
         }
         if (r.strength) SetsPanel(r, color, onStartSet, onSetDone, onExtendRest)
-        // Three equal columns, each centred, so the row sits centred under the card; labels share the top line.
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
-            LiveStat("Moving time", Modifier.weight(1f)) {
-                // Plain digits: the heart rate above is the one dot-matrix number on the screen.
-                Text(workoutClock(active), color = Color.White, style = GlowType.headline.copy(fontSize = 34.sp, lineHeight = 38.sp, fontFeatureSettings = "tnum"))
-            }
+        // Centred between the card and the buttons: the moving time large in the middle, two smaller figures either
+        // side (Oura's avg and max around the live number), labels under the numbers and thin rules between (WHOOP).
+        Spacer(Modifier.weight(1f))
+        Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), verticalAlignment = Alignment.Bottom) {
             val distance = r.workout.distanceMeters
-            if (distance != null) {
-                // With a distance, it and the pace (GPS) or the average heart rate (steps) take the other two columns.
-                // "1.25" alone could be anything: the label carries the unit from a kilometre on.
-                val unit = if (distance >= 1000) " km" else ""
-                LiveStat((if (r.workout.distanceFromSteps) "Distance ≈" else "Distance") + unit, Modifier.weight(1f)) { LiveValue(km(distance)) }
-                if (!r.workout.distanceFromSteps) LiveStat("Pace /km", Modifier.weight(1f)) { LiveValue(Route.formatPace(Route.currentPace(route))) }
-                else LiveStat("Avg", Modifier.weight(1f)) { LiveValue(stats?.average?.toString() ?: "—") }
-            } else {
-                LiveStat("Avg", Modifier.weight(1f)) { LiveValue(stats?.average?.toString() ?: "—") }
-                LiveStat("Max", Modifier.weight(1f)) { LiveValue(stats?.max?.toString() ?: "—") }
+            // With a distance it and the pace (GPS) take the sides; from steps, the distance and the average.
+            // "1.25" alone could be anything: the label carries the unit from a kilometre on.
+            val unit = if (distance != null && distance >= 1000) " km" else ""
+            when {
+                distance == null -> LiveStat("Avg", Modifier.weight(1f)) { LiveValue(stats?.average?.toString() ?: "—") }
+                else -> LiveStat((if (r.workout.distanceFromSteps) "Distance ≈" else "Distance") + unit, Modifier.weight(1f)) { LiveValue(km(distance)) }
+            }
+            StatRule()
+            LiveStat("Moving time", Modifier.weight(1.5f)) {
+                // Plain digits: the heart rate above is the one dot-matrix number on the screen.
+                Text(workoutClock(active), color = Color.White, style = GlowType.headline.copy(fontSize = 46.sp, lineHeight = 50.sp, fontFeatureSettings = "tnum"))
+            }
+            StatRule()
+            when {
+                distance != null && !r.workout.distanceFromSteps -> LiveStat("Pace /km", Modifier.weight(1f)) { LiveValue(Route.formatPace(Route.currentPace(route))) }
+                distance != null -> LiveStat("Avg", Modifier.weight(1f)) { LiveValue(stats?.average?.toString() ?: "—") }
+                else -> LiveStat("Max", Modifier.weight(1f)) { LiveValue(stats?.max?.toString() ?: "—") }
             }
         }
         if (!connected && !r.paused) {
@@ -770,6 +777,8 @@ fun GlowWorkoutLiveScreen(
             "Hold the square to end", color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.bodySmall,
             modifier = Modifier.fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.Center,
         )
+        // A little room under the controls, so they sit up off the screen's edge.
+        Spacer(Modifier.height(20.dp))
     }
 }
 
@@ -857,15 +866,19 @@ private fun SplitsPage(route: List<Route.Point>, history: List<Pair<Long, Int>>,
 @Composable
 private fun LiveStat(label: String, modifier: Modifier, value: @Composable () -> Unit) {
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(label, color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.bodySmall)
         value()
+        Text(label, color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.bodySmall)
     }
 }
+
+/** The thin rule between the live figures. */
+@Composable
+private fun StatRule() = Box(Modifier.padding(vertical = 6.dp).width(1.dp).fillMaxHeight().background(Color.White.copy(alpha = 0.12f)))
 
 /** Avg and Max in the same face and size as the moving time beside them. */
 @Composable
 private fun LiveValue(text: String) =
-    Text(text, color = Color.White, style = GlowType.headline.copy(fontSize = 34.sp, lineHeight = 38.sp, fontFeatureSettings = "tnum"))
+    Text(text, color = Color.White, style = GlowType.headline.copy(fontSize = 26.sp, lineHeight = 30.sp, fontFeatureSettings = "tnum"))
 
 private const val BUCKET_S = 5L
 private const val WINDOW_S = 600L

@@ -260,21 +260,9 @@ fun topSports(workouts: List<WorkoutAnalysis>, n: Int = 3): List<SportUse> {
     return used + Workouts.DEFAULT_SPORTS.filter { d -> used.none { it.sportType == d } }.take(n - used.size).map { SportUse(it, 0, null) }
 }
 
-/** "Last: Mon" within the week, "Last: today", else the date; "Not done yet" when never done. */
-private fun lastDone(epoch: Long?): String {
-    epoch ?: return "Not done yet"
-    val date = Instant.ofEpochSecond(epoch).atZone(ZoneId.systemDefault()).toLocalDate()
-    val days = java.time.temporal.ChronoUnit.DAYS.between(date, LocalDate.now())
-    return "Last: " + when {
-        days == 0L -> "today"
-        days < 7 -> date.format(DateTimeFormatter.ofPattern("EEE"))
-        else -> date.format(DateTimeFormatter.ofPattern("d MMM"))
-    }
-}
-
 /**
- * "Start a workout": the three most-used sports and every sport, as the app's own stat tiles two by two. Each tile
- * says when the sport was last done; the sport's icon and name sit underneath.
+ * "Start a workout": your usual sport as one white pill (like Today's), the next two and every sport as chips under it,
+ * and the auto-detect switch.
  */
 @Composable
 internal fun StartWorkoutPanel(
@@ -283,29 +271,38 @@ internal fun StartWorkoutPanel(
 ) {
     DotPanel {
         DotHeader("Start a workout")
-        val tiles: List<SportUse?> = sports + null
-        TileGrid(tiles) { s, modifier ->
-            if (s == null) {
-                GlowTile("${Workouts.sports.size} sports", Color.White.copy(alpha = 0.5f), onAllSports, modifier) {
-                    SportTileName(PhosphorIcons.SlidersHorizontal, "All sports")
-                }
-            } else {
-                GlowTile(lastDone(s.lastStart), MetricColors.heart, { onStart(s.sportType) }, modifier) {
-                    SportTileName(SportIcons.of(s.sportType), Workouts.sportName(s.sportType))
-                }
+        sports.firstOrNull()?.let { usual ->
+            val shape = RoundedCornerShape(50)
+            Row(
+                Modifier.fillMaxWidth().height(54.dp).clip(shape).background(Color.White).pressClickable({ onStart(usual.sportType) }, shape),
+                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center,
+            ) {
+                Icon(PhosphorIcons.PlayFill, null, tint = Color.Black, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(10.dp))
+                Text("Start ${Workouts.sportName(usual.sportType).lowercase()}", color = Color.Black, style = MaterialTheme.typography.titleSmall)
             }
         }
-        autoStart?.let { SwitchRow("Notice workouts", "When your heart rate stays up for 10 minutes, offer to record from where it began", it, onAutoStart) }
+        // Scrolls sideways should a long sport name not fit.
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            sports.drop(1).forEach { s -> SportChip(SportIcons.of(s.sportType), Workouts.sportName(s.sportType)) { onStart(s.sportType) } }
+            SportChip(null, "All sports ›", onAllSports)
+        }
+        autoStart?.let { SwitchRow("Auto-detect workouts", "When your heart rate stays up for 10 minutes, the strap buzzes and offers to record from where it began", it, onAutoStart) }
     }
 }
 
 @Composable
-private fun SportTileName(icon: androidx.compose.ui.graphics.vector.ImageVector, name: String) {
-    Row(Modifier.padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-        Icon(icon, null, tint = Color.White, modifier = Modifier.size(20.dp))
-        Spacer(Modifier.width(10.dp))
-        // Two lines, so "Strength training" isn't cut short; the grid evens the tiles' heights.
-        Text(name, color = Color.White, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+private fun SportChip(icon: androidx.compose.ui.graphics.vector.ImageVector?, name: String, onClick: () -> Unit) {
+    val shape = RoundedCornerShape(50)
+    Row(
+        Modifier.height(40.dp).clip(shape).background(Color.White.copy(alpha = 0.08f)).pressClickable(onClick, shape).padding(horizontal = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        icon?.let {
+            Icon(it, null, tint = Color.White, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(7.dp))
+        }
+        Text(name, color = Color.White, style = MaterialTheme.typography.bodyMedium, maxLines = 1)
     }
 }
 

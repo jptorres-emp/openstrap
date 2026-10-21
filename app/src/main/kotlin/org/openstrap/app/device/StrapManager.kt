@@ -108,12 +108,15 @@ class StrapManager(
     }
 
     /** Connect if a strap is paired and nothing is connected or in progress. Safe to call often. */
+    // Synchronized, and checking connectJob: callers race at process start (app start-up, the companion presence
+    // service, phone alerts), before the connect coroutine has moved the state off Disconnected.
+    @Synchronized
     override fun autoConnect() {
         when (connection.value) {
             is ConnectionState.Connected, ConnectionState.Connecting, ConnectionState.Authenticating -> return
             else -> Unit
         }
-        if (reconnectJob?.isActive == true) return
+        if (reconnectJob?.isActive == true || connectJob?.isActive == true) return
         connect()
     }
 

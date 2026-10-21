@@ -1,5 +1,8 @@
 package org.openstrap.app.ui.glow
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import org.openstrap.app.ui.theme.PhosphorIcons
 import androidx.compose.material3.Icon
 import androidx.compose.foundation.shape.CircleShape
@@ -206,21 +209,24 @@ private fun TodayList(
     if (hasSleep && !morning) left { SleepPanel(state, onOpenSleep) }
 }
 
-/** The selected day's workouts, in the same glass rows as the Activity screen's list; hidden when there are none. */
+/**
+ * The selected day's workouts, in the same glass rows as the Activity screen's list, under a way to start one today:
+ * a white pill like the ready screen's Start, so it reads as an action rather than another past workout.
+ */
 @Composable
 private fun TodayWorkouts(workouts: List<org.openstrap.app.data.WorkoutAnalysis>, onOpen: (Long) -> Unit, onStart: (() -> Unit)?) {
     DotPanel {
         DotHeader("Workouts")
-        workouts.forEach { WorkoutLine(it, showDate = false) { onOpen(it.workout.start) } }
         if (onStart != null) Row(
-            Modifier.fillMaxWidth().glass(GlassRowShape, onStart).padding(horizontal = 14.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
+            Modifier.fillMaxWidth().height(52.dp).clip(RoundedCornerShape(50)).background(Color.White)
+                .pressClickable(onStart, RoundedCornerShape(50)),
+            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center,
         ) {
-            Icon(org.openstrap.app.ui.theme.PhosphorIcons.PlayFill, null, tint = org.openstrap.app.ui.theme.MetricColors.heart, modifier = Modifier.size(16.dp))
-            Spacer(Modifier.width(12.dp))
-            Text("Start workout", color = Color.White, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-            Icon(org.openstrap.app.ui.theme.PhosphorIcons.CaretRight, null, tint = Color.White.copy(alpha = 0.7f))
+            Icon(org.openstrap.app.ui.theme.PhosphorIcons.PlayFill, null, tint = Color.Black, modifier = Modifier.size(16.dp))
+            Spacer(Modifier.width(10.dp))
+            Text("Start workout", color = Color.Black, style = MaterialTheme.typography.titleSmall)
         }
+        workouts.forEach { WorkoutLine(it, showDate = false) { onOpen(it.workout.start) } }
     }
 }
 

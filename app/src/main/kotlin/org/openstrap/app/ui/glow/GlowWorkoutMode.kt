@@ -1,5 +1,10 @@
 package org.openstrap.app.ui.glow
 
+import androidx.compose.foundation.layout.requiredSize
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
@@ -1432,5 +1437,55 @@ private fun ZoneLine(a: WorkoutAnalysis) {
         Note(clock(first))
         Spacer(Modifier.weight(1f))
         Note(clock(a.end))
+    }
+}
+
+/**
+ * The live screen tucking away into its capsule above the tab bar, and back: one frame that moves from the whole
+ * screen to the capsule's place as [minimized] changes, its corners rounding, the screen shrinking and fading inside
+ * it while the capsule fades in. At rest only [full] or [capsule] is there, so each keeps its own touch handling.
+ * [capsuleBottom] is the capsule's distance from the bottom edge.
+ */
+@Composable
+fun WorkoutMorph(
+    minimized: Boolean,
+    capsuleBottom: androidx.compose.ui.unit.Dp,
+    full: @Composable () -> Unit,
+    capsule: @Composable (Modifier) -> Unit,
+) {
+    val p by androidx.compose.animation.core.animateFloatAsState(
+        if (minimized) 1f else 0f,
+        androidx.compose.animation.core.tween(550, easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f)),
+        label = "workout morph",
+    )
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        val w = maxWidth
+        val h = maxHeight
+        val capW = minOf(w - 32.dp, 440.dp)
+        val capH = 64.dp
+        // One frame in one place for the whole move, so the live screen isn't rebuilt (map and all) as it starts.
+        if (p < 1f) {
+            val lerp = { a: androidx.compose.ui.unit.Dp, b: androidx.compose.ui.unit.Dp -> androidx.compose.ui.unit.lerp(a, b, p) }
+            val width = lerp(w, capW)
+            Box(
+                Modifier.offset(lerp(0.dp, (w - capW) / 2), lerp(0.dp, h - capsuleBottom - capH)).size(width, lerp(h, capH))
+                    .clip(RoundedCornerShape(lerp(0.dp, capH / 2))).background(androidx.compose.ui.graphics.lerp(Color.Black, Raised, p)),
+            ) {
+                // The screen at its own size, scaled to the frame's width from the top, gone by halfway.
+                Box(
+                    Modifier.requiredSize(w, h).align(Alignment.TopCenter).graphicsLayer {
+                        val s = width / w
+                        scaleX = s
+                        scaleY = s
+                        transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 0f)
+                        alpha = (1f - p * 2f).coerceIn(0f, 1f)
+                    },
+                ) { full() }
+                // The capsule's face, at its own height along the frame's bottom, comes up through the second half.
+                if (p > 0.4f) capsule(Modifier.align(Alignment.BottomCenter).graphicsLayer { alpha = ((p - 0.4f) / 0.6f).coerceIn(0f, 1f) })
+            }
+        } else {
+            capsule(Modifier.align(Alignment.BottomCenter).widthIn(max = 440.dp).padding(start = 16.dp, end = 16.dp, bottom = capsuleBottom))
+        }
     }
 }

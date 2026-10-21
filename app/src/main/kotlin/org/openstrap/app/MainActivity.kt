@@ -696,31 +696,32 @@ private fun androidx.compose.foundation.layout.BoxScope.WorkoutLayer(
     val padding = androidx.compose.foundation.layout.WindowInsets.navigationBars.asPaddingValues()
     val full = androidx.compose.ui.Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)
     when {
-        state is org.openstrap.app.device.WorkoutState.Recording && !minimized -> androidx.compose.foundation.layout.Box(full) {
-            val recent by session.recent.collectAsStateWithLifecycle()
-            val stats by session.stats.collectAsStateWithLifecycle()
-            val zoneSeconds by session.zoneSeconds.collectAsStateWithLifecycle()
-            val route by session.route.collectAsStateWithLifecycle()
-            val history by session.history.collectAsStateWithLifecycle()
-            org.openstrap.app.ui.glow.GlowWorkoutLiveScreen(
-                state, live, recent, stats, zoneSeconds, connection, padding,
-                onPause = session::pause, onResume = session::resume, onEnd = session::end,
-                onMinimize = { session.minimized.value = true },
-                onEndAtPrompt = session::endAtPrompt, onKeepGoing = session::keepGoing,
-                route = route, history = history,
-                onStartSet = session::startSet, onSetDone = session::setDone, onExtendRest = session::extendRest,
-                onLap = session::lap,
-            )
-        }
-        state is org.openstrap.app.device.WorkoutState.Recording -> {
-            val connected = connection is ConnectionState.Connected
-            org.openstrap.app.ui.glow.WorkoutCapsule(
-                state, live, connected, onClick = { session.minimized.value = false },
-                onPause = session::pause, onResume = session::resume,
-                modifier = androidx.compose.ui.Modifier.align(androidx.compose.ui.Alignment.BottomCenter)
-                    .widthIn(max = 440.dp).padding(start = 16.dp, end = 16.dp, bottom = capsuleBottom + padding.calculateBottomPadding()),
-            )
-        }
+        // Minimizing morphs the live screen into the capsule above the tab bar, and tapping the capsule back.
+        state is org.openstrap.app.device.WorkoutState.Recording -> org.openstrap.app.ui.glow.WorkoutMorph(
+            minimized, capsuleBottom + padding.calculateBottomPadding(),
+            full = {
+                val recent by session.recent.collectAsStateWithLifecycle()
+                val stats by session.stats.collectAsStateWithLifecycle()
+                val zoneSeconds by session.zoneSeconds.collectAsStateWithLifecycle()
+                val route by session.route.collectAsStateWithLifecycle()
+                val history by session.history.collectAsStateWithLifecycle()
+                org.openstrap.app.ui.glow.GlowWorkoutLiveScreen(
+                    state, live, recent, stats, zoneSeconds, connection, padding,
+                    onPause = session::pause, onResume = session::resume, onEnd = session::end,
+                    onMinimize = { session.minimized.value = true },
+                    onEndAtPrompt = session::endAtPrompt, onKeepGoing = session::keepGoing,
+                    route = route, history = history,
+                    onStartSet = session::startSet, onSetDone = session::setDone, onExtendRest = session::extendRest,
+                    onLap = session::lap,
+                )
+            },
+            capsule = { place ->
+                org.openstrap.app.ui.glow.WorkoutCapsule(
+                    state, live, connection is ConnectionState.Connected, onClick = { session.minimized.value = false },
+                    onPause = session::pause, onResume = session::resume, modifier = place,
+                )
+            },
+        )
         state is org.openstrap.app.device.WorkoutState.Ended -> androidx.compose.foundation.layout.Box(full) {
             val summary by remember(state.start) { workoutsVm.phoneSummary(state.start) }.collectAsStateWithLifecycle(null)
             org.openstrap.app.ui.glow.GlowPhoneWorkoutScreen(

@@ -188,6 +188,23 @@ class SettingsStore(private val context: Context) {
         context.dataStore.edit { it[todayTiles] = names.joinToString(",") }
     }
 
+    private val companionId = androidx.datastore.preferences.core.intPreferencesKey("companion_association_id")
+    private val companionNo = androidx.datastore.preferences.core.booleanPreferencesKey("companion_declined")
+
+    /** The strap's companion association id ([org.openstrap.app.device.CompanionLink.LEGACY_ID] before Android 13), or null. */
+    val companionAssociation: Flow<Int?> = context.dataStore.data.map { it[companionId] }
+
+    suspend fun setCompanionAssociation(id: Int) {
+        context.dataStore.edit { it[companionId] = id }
+    }
+
+    /** True once the user turned down Android's association prompt; the strap page then offers battery settings instead. */
+    val companionDeclined: Flow<Boolean> = context.dataStore.data.map { it[companionNo] == true }
+
+    suspend fun setCompanionDeclined(declined: Boolean) {
+        context.dataStore.edit { it[companionNo] = declined }
+    }
+
     /** Forgets the strap and the Zepp sign-in; the user's profile and goals stay. */
     suspend fun forgetDevice() {
         context.dataStore.edit { prefs ->

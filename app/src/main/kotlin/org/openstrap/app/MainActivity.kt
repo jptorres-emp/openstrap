@@ -86,6 +86,8 @@ class MainActivity : ComponentActivity() {
         // Reconnect to a paired strap whenever the app comes to the front (sync follows on connect).
         val granted = checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) == android.content.pm.PackageManager.PERMISSION_GRANTED
         if (granted) (application as OpenStrapApp).container.strap.autoConnect()
+        // The association or battery setting may have changed in system settings meanwhile.
+        (application as OpenStrapApp).container.companion.refresh()
         handleDebugIntent()
     }
 

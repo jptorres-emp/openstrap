@@ -85,6 +85,14 @@ OpenStrap goes online only for your Zepp account and for firmware, and only when
 
 You can skip the sign-in and paste the key and token by hand instead.
 
+## Permissions
+
+- **Nearby devices (Bluetooth)** to find and connect to the strap. On Android 11 and older, Android calls this Location; OpenStrap never reads your location.
+- **Notifications** for the "Helio Strap" connection notification and health alerts.
+- **Health Connect** read and write, only if you export to or restore from it.
+- **Internet** only for the Zepp sign-in and firmware (see [Network use](#network-use)).
+- **Keep strap connected in the background.** At the end of pairing, or from that row on the strap page, OpenStrap asks Android to link the strap to it as a companion device. Android shows its own prompt for that strap. It's a plain link, not Android's watch profile, so OpenStrap doesn't get access to calls, contacts or calendar. Once it's linked, Android leaves OpenStrap out of battery optimization and lets it reconnect from the background. On Android 12 and newer, Android also wakes OpenStrap when the strap comes into range, so it reconnects after the app is stopped or the phone restarts, without opening the app. Forget this strap removes the link. On phones without companion device support, or if you turn the prompt down, the row asks to turn off battery optimization for OpenStrap instead.
+
 ## Backup and restore
 
 - **You → Export CSV** saves a zip with one CSV per table. **Import CSV** restores it on this phone or a new one. Data the strap synced always wins. The backup only fills in the days before the phone's earliest record. Import after the strap's first sync on a new phone. A failed import changes nothing.

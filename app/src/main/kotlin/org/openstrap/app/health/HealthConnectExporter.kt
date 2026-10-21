@@ -45,6 +45,8 @@ class HealthConnectExporter(private val context: Context, private val dao: Healt
         HealthPermission.getWritePermission(OxygenSaturationRecord::class),
         HealthPermission.getWritePermission(HeartRateVariabilityRmssdRecord::class),
         HealthPermission.getWritePermission(RestingHeartRateRecord::class),
+        HealthPermission.getWritePermission(androidx.health.connect.client.records.ExerciseSessionRecord::class),
+        HealthPermission.getWritePermission(androidx.health.connect.client.records.DistanceRecord::class),
     )
 
     /** Reading back what was exported; history is the permission to read further back than 30 days. */
@@ -77,6 +79,27 @@ class HealthConnectExporter(private val context: Context, private val dao: Healt
 
     private fun meta(id: String) = Metadata.autoRecorded(device = device, clientRecordId = "openstrap:$id", clientRecordVersion = 1)
 
+    /** Zepp's sport ids to Health Connect's exercise types; anything else is "other workout". */
+    private fun exerciseType(sport: Int): Int = with(androidx.health.connect.client.records.ExerciseSessionRecord) {
+        when (sport) {
+            1, 11 -> EXERCISE_TYPE_RUNNING
+            2 -> EXERCISE_TYPE_RUNNING_TREADMILL
+            3, 40, 215 -> EXERCISE_TYPE_WALKING
+            15, 224, 225 -> EXERCISE_TYPE_HIKING
+            4 -> EXERCISE_TYPE_BIKING
+            8, 143 -> EXERCISE_TYPE_BIKING_STATIONARY
+            24, 50, 52, 222, 226 -> EXERCISE_TYPE_STRENGTH_TRAINING
+            49 -> EXERCISE_TYPE_HIGH_INTENSITY_INTERVAL_TRAINING
+            60 -> EXERCISE_TYPE_YOGA
+            61 -> EXERCISE_TYPE_PILATES
+            6 -> EXERCISE_TYPE_SWIMMING_POOL
+            7 -> EXERCISE_TYPE_SWIMMING_OPEN_WATER
+            9 -> EXERCISE_TYPE_ELLIPTICAL
+            23 -> EXERCISE_TYPE_ROWING_MACHINE
+            else -> EXERCISE_TYPE_OTHER_WORKOUT
+        }
+    }
+
     private fun offset(epochSeconds: Long): ZoneOffset =
         ZoneId.systemDefault().rules.getOffset(Instant.ofEpochSecond(epochSeconds))
 
@@ -105,6 +128,25 @@ class HealthConnectExporter(private val context: Context, private val dao: Healt
                 endTime = Instant.ofEpochSecond(m.timestamp + 60), endZoneOffset = offset(m.timestamp),
                 count = m.steps.toLong(),
                 metadata = meta("steps:${m.timestamp}"),
+            )
+        }
+
+        // Workouts recorded on the phone, as exercise sessions; GPS distance with them (a step estimate stays here).
+        for (w in dao.appWorkoutsOnce(from, to)) {
+            val end = w.end ?: continue
+            records += androidx.health.connect.client.records.ExerciseSessionRecord(
+                startTime = Instant.ofEpochSecond(w.from), startZoneOffset = offset(w.from),
+                endTime = Instant.ofEpochSecond(end), endZoneOffset = offset(end),
+                exerciseType = exerciseType(w.sportType),
+                title = org.openstrap.app.data.Workouts.sportName(w.sportType),
+                metadata = meta("workout:${w.start}"),
+            )
+            val meters = w.distanceMeters?.takeIf { !w.distanceFromSteps && it > 0 } ?: continue
+            records += androidx.health.connect.client.records.DistanceRecord(
+                startTime = Instant.ofEpochSecond(w.from), startZoneOffset = offset(w.from),
+                endTime = Instant.ofEpochSecond(end), endZoneOffset = offset(end),
+                distance = androidx.health.connect.client.units.Length.meters(meters.toDouble()),
+                metadata = meta("distance:${w.start}"),
             )
         }
 

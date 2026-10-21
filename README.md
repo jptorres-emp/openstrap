@@ -45,6 +45,7 @@ I use it daily with one Helio Strap on one Android 16 phone. Other phones and fi
 | Live heart rate | ✅ Works |
 | History sync: activity, sleep stages, HR, HRV, resting HR, SpO₂, stress, skin temperature, breathing | ✅ Works |
 | Workouts with heart-rate zones, training effect and recovery | ✅ Works |
+| Workouts started on the phone: live zones, strap coaching, GPS and maps, auto-end, missed-workout suggestions | 🧪 New, being tested |
 | Recovery, Charge and sleep scores, PAI, training load | ✅ Works ([see limitations](#known-limitations)) |
 | Dashboard: Today, Recovery, Sleep, Activity, You (foldables and tablets too) | ✅ Works |
 | Alarms, strap health alerts | ✅ Works |
@@ -79,16 +80,18 @@ Treat the key like a password. Anyone who has it can connect to your strap.
 
 ## Network use
 
-OpenStrap goes online only for your Zepp account and for firmware, and only when you ask it to. It never uploads health data.
+OpenStrap goes online only for your Zepp account, for firmware and for workout maps, and only when you ask it to. It never uploads health data.
 
 - **Sign in with Zepp** opens Zepp's own sign-in page (watchface.zepp.com) in an in-app browser. OpenStrap never sees your password. After sign-in it reads the app token and user ID from the page's cookies. It then makes one request to Zepp's device list (`GET users/{userId}/devices` on `api-mifit*.zepp.com`) and shows you the strap's Bluetooth address and auth key to confirm. It saves the token and user ID for firmware checks and clears the Zepp cookies.
 - **Check for update** sends your Zepp token, user ID, and the strap's firmware version, hardware version and serial number to the update server you set. **Download** fetches the image from the URL that server returns.
+- **Workout maps** load map tiles from [OpenFreeMap](https://openfreemap.org) (`tiles.openfreemap.org`), only when you open the map of a GPS workout. No account, API key or cookies. Like any tile server it sees roughly where the map is and your IP address; **Route only** on the map page loads no tiles at all. Your route itself never leaves the phone.
 
 You can skip the sign-in and paste the key and token by hand instead.
 
 ## Permissions
 
-- **Nearby devices (Bluetooth)** to find and connect to the strap. On Android 11 and older, Android calls this Location; OpenStrap never reads your location.
+- **Nearby devices (Bluetooth)** to find and connect to the strap. On Android 11 and older, Android calls this Location.
+- **Location** only if you turn on GPS for an outdoor workout, and only while that workout records. Never in the background otherwise. The route is used for distance, pace and the map, then discarded unless you choose **Keep route on this phone**. Without location, distance comes from the strap's steps (shown with ≈).
 - **Notifications** for the "Helio Strap" connection notification and health alerts.
 - **Health Connect** read and write, only if you export to or restore from it.
 - **Phone state and notification access** only if you turn on phone alerts (see [Phone access](#phone-access)).

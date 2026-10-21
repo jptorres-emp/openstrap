@@ -112,6 +112,18 @@ interface StrapController {
      */
     suspend fun buzz(pattern: List<Int>)
 
+    /**
+     * Sends a workout state to the strap's sport module (0x0019): START also learns the module and sends the config
+     * first. Throws [StrapCommandException] when not connected, refused, or the strap has no such module.
+     */
+    suspend fun sportSession(state: org.openstrap.protocol.services.SportSession.State, sportType: Int, startTime: Long, elapsedSeconds: Long)
+
+    /** The strap's sport-module keep-alive while a workout is paused, every 5 s. */
+    suspend fun sportSessionKeepAlive()
+
+    /** What the strap pushes on its own during a sport session ("heart rate back to normal", a stop). */
+    val sportSessionPushes: kotlinx.coroutines.flow.SharedFlow<org.openstrap.protocol.services.SportSession.Push>
+
     /** Keeps the strap buzzing (a ringing call) until [stopBuzzing] or the wearer taps the strap. */
     suspend fun startBuzzing()
     suspend fun stopBuzzing()

@@ -120,5 +120,34 @@ object Route {
         append("  </trkseg></trk>\n</gpx>\n")
     }
 
+    /**
+     * The route cut into stretches of one zone each, for drawing it in zone colours: each fix takes the zone of the
+     * nearest heart rate within [MAX_HR_GAP_S] (time, bpm, ascending), else none (−1, drawn grey).
+     */
+    fun byZone(points: List<Point>, hr: List<Pair<Long, Int>>, maxHr: Int): List<Pair<List<Point>, Int>> {
+        val clean = clean(points)
+        if (clean.size < 2) return emptyList()
+        val times = hr.map { it.first }
+        fun zoneAt(t: Long): Int {
+            var i = times.binarySearch(t).let { if (it < 0) -it - 1 else it }
+            val near = listOf(i - 1, i).filter { it in hr.indices }.minByOrNull { kotlin.math.abs(hr[it].first - t) } ?: return -1
+            if (kotlin.math.abs(hr[near].first - t) > MAX_HR_GAP_S) return -1
+            return WorkoutRecorder.liveZone(hr[near].second, maxHr) ?: -1
+        }
+        val out = mutableListOf<Pair<MutableList<Point>, Int>>()
+        clean.forEach { p ->
+            val z = zoneAt(p.t)
+            val last = out.lastOrNull()
+            if (last != null && last.second == z) last.first += p
+            else {
+                // Each stretch starts where the last ended, so the line has no gaps.
+                out += (mutableListOf<Point>().also { s -> last?.first?.lastOrNull()?.let(s::add); s += p }) to z
+            }
+        }
+        return out.filter { it.first.size >= 2 }
+    }
+
+    private const val MAX_HR_GAP_S = 30L
+
     private fun nearest(hr: Map<Long, Int>, t: Long): Int? = (0L..5L).firstNotNullOfOrNull { d -> hr[t - d] ?: hr[t + d] }
 }

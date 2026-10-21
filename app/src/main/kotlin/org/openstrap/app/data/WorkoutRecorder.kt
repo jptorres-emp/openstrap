@@ -177,7 +177,8 @@ object WorkoutRecorder {
     fun similar(a: WorkoutAnalysis, others: List<WorkoutAnalysis>): List<WorkoutAnalysis> {
         val len = a.durationSeconds.coerceAtLeast(60).toDouble()
         return others.filter {
-            it.workout.start != a.workout.start && it.workout.sportType == a.workout.sportType && it.workout.start < a.workout.start &&
+            // Starting well before it: the strap's own record of this same workout isn't "usual".
+            it.workout.start != a.workout.start && it.workout.sportType == a.workout.sportType && it.workout.start < a.shownStart - 120 &&
                 it.durationSeconds.coerceAtLeast(60) in (len / SIMILAR_LENGTH).toLong()..(len * SIMILAR_LENGTH).toLong()
         }.sortedByDescending { it.workout.start }.take(USUAL_COUNT)
     }

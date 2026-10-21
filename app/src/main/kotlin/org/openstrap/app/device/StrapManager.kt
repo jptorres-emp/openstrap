@@ -46,6 +46,7 @@ import org.openstrap.protocol.services.SettingsProtocol
 import org.openstrap.protocol.services.LiveHeartRate
 import org.openstrap.protocol.services.RealtimeSteps
 import org.openstrap.protocol.services.StepTotals
+import org.openstrap.protocol.services.SportSession
 import org.openstrap.protocol.crypto.crc32
 import org.openstrap.protocol.history.FetchCodec
 import org.openstrap.protocol.history.GdspMessage
@@ -76,6 +77,7 @@ class StrapManager(
     override val sync = MutableStateFlow<SyncState>(SyncState.Idle)
     override val liveHeartRate = MutableStateFlow<Int?>(null)
     override val heartRateReadings = MutableSharedFlow<Int>(extraBufferCapacity = 64, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+    override val sportSessionPushes = MutableSharedFlow<SportSession.Push>(extraBufferCapacity = 8, onBufferOverflow = BufferOverflow.DROP_OLDEST)
     override val todaySteps = MutableStateFlow<StepTotals?>(null)
     override val liveHeartRateEnabled = MutableStateFlow(true)
     override val info = MutableStateFlow<StrapInfo?>(null)
@@ -198,6 +200,7 @@ class StrapManager(
                 watchHealthAlerts(s)
                 watchAlarms(s)
                 watchFindDevice(s)
+                watchSportSession(s)
                 retries = 0
                 autoSync(s)
                 liveHeartRateEnabled.value = settings.liveHeartRate.first()
@@ -349,6 +352,41 @@ class StrapManager(
             log("alarms changed on the strap: ${p.toHex()}")
             alarmsChanged.tryEmit(Unit)
         }
+    }
+
+    /** The sport module's own pushes (its replies, `10 …`, go to their requests). */
+    private fun CoroutineScope.watchSportSession(s: ChannelSession) = launch {
+        sportCaps = null
+        if (!s.services.has(SportSession.ENDPOINT)) return@launch
+        s.messagesFor(SportSession.ENDPOINT).collect { p ->
+            if (p.isNotEmpty() && p.u8(0) == SportSession.REPLY) return@collect
+            log("sport < ${p.toHex()}")
+            SportSession.parsePush(p)?.let { sportSessionPushes.tryEmit(it) }
+        }
+    }
+
+    /** Learned with the first START on each connection. */
+    @Volatile private var sportCaps: SportSession.Capabilities? = null
+
+    override suspend fun sportSession(state: SportSession.State, sportType: Int, startTime: Long, elapsedSeconds: Long) {
+        val s = activeSession ?: throw StrapCommandException("The strap isn't connected")
+        if (!s.services.has(SportSession.ENDPOINT)) throw StrapCommandException("The strap has no sport module")
+        suspend fun send(request: ByteArray): ByteArray {
+            val reply = runCatching { s.request(SportSession.ENDPOINT, request, 8_000) { SportSession.isReplyTo(request, it) } }
+                .getOrElse { throw StrapCommandException("The strap didn't answer") }
+            log("sport > ${request.toHex()} < ${reply.toHex()}")
+            if (!SportSession.isOk(reply)) throw StrapCommandException("The strap refused the workout command")
+            return reply
+        }
+        val caps = sportCaps ?: (SportSession.parseVersion(send(SportSession.versionRequest)) ?: throw StrapCommandException("Unknown sport module version"))
+            .also { sportCaps = it }
+        if (state == SportSession.State.START) send(SportSession.config(sportType, caps))
+        send(SportSession.state(state, startTime, elapsedSeconds, caps))
+    }
+
+    override suspend fun sportSessionKeepAlive() {
+        val s = activeSession ?: return
+        runCatching { s.send(SportSession.ENDPOINT, SportSession.pauseKeepAlive) }
     }
 
     /** Logged only: the strap's `07` once buzzing has stopped. */

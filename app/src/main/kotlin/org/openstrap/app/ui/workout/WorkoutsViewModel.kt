@@ -35,6 +35,16 @@ data class PhoneSummary(
     val recordedEnd: Long,
     val usual: WorkoutRecorder.Usual?,
     val endReason: Int?,
+    /** The route, when it was kept; empty otherwise. */
+    val route: List<org.openstrap.app.data.Route.Point> = emptyList(),
+    /** Every live reading in the shown range, for colouring the route. */
+    val history: List<Pair<Long, Int>> = emptyList(),
+    val distanceMeters: Float? = null,
+    val distanceFromSteps: Boolean = false,
+    /** Strength: each set and the rest after it. */
+    val sets: List<org.openstrap.app.data.db.AppWorkoutSet> = emptyList(),
+    /** The strap's own record of the same workout, when it kept one (a strap session, or its auto-detection). */
+    val strapWorkout: WorkoutAnalysis? = null,
 )
 
 /** Workouts list (newest first) and the one open in detail. */
@@ -122,16 +132,43 @@ class WorkoutsViewModel(private val dao: HealthDao, profile: Flow<UserProfile>) 
      * similar workouts of the same sport, phone or strap ([WorkoutRecorder.similar]).
      */
     fun phoneSummary(start: Long): Flow<PhoneSummary?> =
-        combine(dao.appWorkout(start), dao.appWorkoutHeartRate(start), fallbackMaxHr, workouts) { w, hr, maxHr, all -> Quad(w, hr, maxHr, all) }
-            .mapLatest { (w, hr, maxHr, all) ->
+        combine(dao.appWorkout(start), dao.appWorkoutHeartRate(start), fallbackMaxHr, workouts, combine(dao.route(start), dao.sets(start)) { r, s -> r to s }) { w, hr, maxHr, all, extra ->
+            Quad(w, hr, maxHr, all) to extra
+        }
+            .mapLatest { (q, extra) ->
+                val (routeRows, sets) = extra
+                val (w, hr, maxHr, all) = q
                 w ?: return@mapLatest null
                 val a = WorkoutRecorder.analyse(w, hr, maxHr)
                 val similar = WorkoutRecorder.similar(a, all).map { s ->
                     dao.appWorkoutOnce(s.workout.start)?.let { pw -> WorkoutRecorder.analyse(pw, dao.appWorkoutHeartRateOnce(pw.start), maxHr) }
                         ?: Workouts.analyse(s.workout, dao.workoutHeartRate(s.workout.start).first(), dao.sportEffects().first(), maxHr)
                 }
-                PhoneSummary(a, WorkoutRecorder.expand(hr), w.start, w.recordedEnd ?: w.end ?: a.end, WorkoutRecorder.usual(similar), w.endReason)
+                // Merged by time: a strap workout that started within two minutes of this one's shown range.
+                val strap = all.firstOrNull { !it.fromPhone && it.workout.start in (w.from - 120)..((w.end ?: a.end) + 120) }
+                    ?.let { s -> Workouts.analyse(s.workout, dao.workoutHeartRate(s.workout.start).first(), dao.sportEffects().first(), maxHr) }
+                val route = routeRows.map { org.openstrap.app.data.Route.Point(it.timestamp, it.lat, it.lon, it.accuracy) }.filter { it.t in w.from..(w.end ?: Long.MAX_VALUE) }
+                PhoneSummary(
+                    a, WorkoutRecorder.expand(hr), w.start, w.recordedEnd ?: w.end ?: a.end, WorkoutRecorder.usual(similar), w.endReason,
+                    route, hr.filter { !it.fromHistory }.map { it.timestamp to it.bpm }, w.distanceMeters, w.distanceFromSteps, sets, strap,
+                )
             }.flowOn(Dispatchers.Default)
+
+    /**
+     * A GPX file of a kept route for sharing: its first and last [org.openstrap.app.data.Route.PRIVACY_M] metres left
+     * out, so it doesn't show where you live, with heart rate. Null without a route long enough to share.
+     */
+    suspend fun gpx(start: Long): Pair<String, String>? = kotlinx.coroutines.withContext(Dispatchers.Default) {
+        val w = dao.appWorkoutOnce(start) ?: return@withContext null
+        val points = org.openstrap.app.data.Route.privacyTrim(
+            dao.routeOnce(start).map { org.openstrap.app.data.Route.Point(it.timestamp, it.lat, it.lon, it.accuracy) }.filter { it.t in w.from..(w.end ?: Long.MAX_VALUE) },
+        )
+        if (points.isEmpty()) return@withContext null
+        val hr = dao.appWorkoutHeartRateOnce(start).filter { !it.fromHistory }.associate { it.timestamp to it.bpm }
+        val name = Workouts.sportName(w.sportType)
+        val date = java.time.Instant.ofEpochSecond(w.from).atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+        "openstrap-${name.lowercase().replace(' ', '-')}-$date.gpx" to org.openstrap.app.data.Route.gpx("$name $date", points, hr)
+    }
 
     private data class Quad<A, B, C, D>(val a: A, val b: B, val c: C, val d: D)
 

@@ -40,16 +40,26 @@ class StrapService : LifecycleService() {
         val container = (application as OpenStrapApp).container
         val strap = container.strap
         val workout = container.workout
-        ServiceCompat.startForeground(
-            this, NOTIFICATION_ID, shown ?: notification("Helio Strap", "Connecting…"),
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE else 0,
-        )
+        val first = shown ?: notification("Helio Strap", "Connecting…")
+        // A GPS workout adds the location type, allowed because its start comes from the visible ready screen. After a
+        // restart in the background Android refuses it; the workout carries on without GPS.
+        val gps = (workout.state.value as? WorkoutState.Recording)?.workout?.useGps == true && WorkoutLocation.granted(this)
+        val base = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE else 0
+        val withGps = if (gps && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) base or ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION else base
+        try {
+            ServiceCompat.startForeground(this, NOTIFICATION_ID, first, withGps)
+        } catch (e: SecurityException) {
+            ServiceCompat.startForeground(this, NOTIFICATION_ID, first, base)
+        }
         when (intent?.action) {
             ACTION_PAUSE -> workout.pause()
             ACTION_RESUME -> workout.resume()
             ACTION_END -> workout.end()
             ACTION_END_AT -> workout.endAtPrompt()
             ACTION_KEEP -> workout.keepGoing()
+            ACTION_START_SET -> workout.startSet()
+            ACTION_SET_DONE -> workout.setDone()
+            ACTION_EXTEND -> workout.extendRest()
         }
         val recording = workout.state.value is WorkoutState.Recording
         if (observing) return if (recording) START_STICKY else START_NOT_STICKY
@@ -118,6 +128,7 @@ class StrapService : LifecycleService() {
      */
     private fun workoutNotification(r: WorkoutState.Recording, bpm: Int?, connection: String): Notification {
         r.endPrompt?.let { return stoppedNotification(r, it) }
+        if (r.strength && !r.paused) return strengthNotification(r, bpm)
         val w = r.workout
         val now = System.currentTimeMillis()
         val active = WorkoutRecorder.activeSeconds(w, now / 1000)
@@ -161,6 +172,44 @@ class StrapService : LifecycleService() {
             .setUsesChronometer(!r.paused)
             .setWhen(if (r.paused) now else now - active * 1000)
             .build()
+    }
+
+    /** Strength on the lock screen: the set or the rest counting down, its progress, and the next step. */
+    private fun strengthNotification(r: WorkoutState.Recording, bpm: Int?): Notification {
+        val now = System.currentTimeMillis()
+        val done = r.sets.count { it.end != null }
+        val until = r.restUntil
+        val title = when {
+            r.inSet -> "Set ${r.sets.size}"
+            until != null -> "Resting after set $done"
+            done == 0 -> "${Workouts.sportName(r.workout.sportType)} · ready for set 1"
+            else -> "Rest over · set ${done + 1} next"
+        }
+        val b = NotificationCompat.Builder(this, WORKOUT_CHANNEL)
+            .setSmallIcon(R.drawable.ic_stat_openstrap)
+            .setContentTitle(title)
+            .setContentText(listOfNotNull(bpm?.let { "$it bpm" }, r.workout.setsTarget?.let { "$done of $it sets" }).joinToString(" · "))
+            .setOngoing(true)
+            .setOnlyAlertOnce(true)
+            .setCategory(NotificationCompat.CATEGORY_WORKOUT)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setRequestPromotedOngoing(true)
+            .setContentIntent(openApp())
+        if (until != null) {
+            val start = r.sets.lastOrNull()?.end ?: until
+            // The rest counts down on its own; the bar fills toward its end.
+            b.setUsesChronometer(true).setChronometerCountDown(true).setShowWhen(true).setWhen(until * 1000)
+                .setProgress((until - start).toInt().coerceAtLeast(1), (now / 1000 - start).toInt().coerceIn(0, (until - start).toInt()), false)
+            b.addAction(NotificationCompat.Action(0, "Start set ${r.sets.size + 1}", service(ACTION_START_SET)))
+            b.addAction(NotificationCompat.Action(0, "+30 s", service(ACTION_EXTEND)))
+        } else if (r.inSet) {
+            b.setUsesChronometer(true).setShowWhen(true).setWhen(r.sets.last().start * 1000)
+            b.addAction(NotificationCompat.Action(0, "Set done", service(ACTION_SET_DONE)))
+        } else {
+            b.addAction(NotificationCompat.Action(0, "Start set ${r.sets.size + 1}", service(ACTION_START_SET)))
+        }
+        b.addAction(NotificationCompat.Action(0, "End", service(ACTION_END)))
+        return b.build()
     }
 
     /** "Looks like you've stopped": the same notification, asking whether to end where the wearer stopped. */
@@ -214,6 +263,9 @@ class StrapService : LifecycleService() {
         private const val ACTION_END = "org.openstrap.app.workout.END"
         private const val ACTION_END_AT = "org.openstrap.app.workout.END_AT"
         private const val ACTION_KEEP = "org.openstrap.app.workout.KEEP"
+        private const val ACTION_START_SET = "org.openstrap.app.workout.START_SET"
+        private const val ACTION_SET_DONE = "org.openstrap.app.workout.SET_DONE"
+        private const val ACTION_EXTEND = "org.openstrap.app.workout.EXTEND"
         /** Each zone's length on the notification's progress bar. */
         private const val ZONE_SPAN = 20
         private const val REQUEST_OPEN = 2

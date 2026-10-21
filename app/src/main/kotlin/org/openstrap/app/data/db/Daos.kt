@@ -168,6 +168,21 @@ interface HealthDao {
     suspend fun deleteAppWorkoutHeartRate(start: Long)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertSets(sets: List<AppWorkoutSet>)
+
+    @Query("SELECT * FROM app_workout_set WHERE workoutStart = :start ORDER BY `index`")
+    fun sets(start: Long): Flow<List<AppWorkoutSet>>
+
+    @Query("SELECT * FROM app_workout_set WHERE workoutStart = :start ORDER BY `index`")
+    suspend fun setsOnce(start: Long): List<AppWorkoutSet>
+
+    @Query("SELECT * FROM app_workout_set ORDER BY workoutStart, `index`")
+    suspend fun setsAll(): List<AppWorkoutSet>
+
+    @Query("DELETE FROM app_workout_set WHERE workoutStart = :start")
+    suspend fun deleteSets(start: Long)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertRoutePoints(points: List<AppWorkoutRoutePoint>)
 
     @Query("SELECT * FROM app_workout_route WHERE workoutStart = :start ORDER BY timestamp")
@@ -193,6 +208,7 @@ interface HealthDao {
 
     @androidx.room.Transaction
     suspend fun deleteAppWorkout(start: Long) {
+        deleteSets(start)
         deleteRoute(start)
         deleteAppWorkoutHeartRate(start)
         deleteAppWorkoutRow(start)

@@ -98,6 +98,9 @@ object Workouts {
     /** Every sport a workout can be started as, by name, one id per name (Zepp has two "Free training"). */
     val sports: List<Pair<Int, String>> by lazy { SPORT_NAMES.entries.distinctBy { it.value }.map { it.key to it.value }.sortedBy { it.second } }
 
+    /** Sports done outdoors, where the ready screen offers GPS. */
+    val OUTDOOR = setOf(1, 3, 4, 11, 12, 15, 215, 224, 225)
+
     /** Offered before any workout has been recorded: outdoor run, walk, strength training. */
     val DEFAULT_SPORTS = listOf(1, 3, 52)
 

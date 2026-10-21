@@ -135,6 +135,13 @@ class MainActivity : ComponentActivity() {
             val bytes = hex.chunked(2).map { it.toInt(16).toByte() }.toByteArray()
             ((application as OpenStrapApp).container.strap as? org.openstrap.app.device.StrapManager)?.probe(probeEndpoint, bytes)
         }
+        // Debug: `--ez strap_sessions true` makes phone workouts also run a session on the strap (0x0019, unverified).
+        if (BuildConfig.DEBUG && intent.hasExtra("strap_sessions")) {
+            val on = intent.getBooleanExtra("strap_sessions", false)
+            intent.removeExtra("strap_sessions")
+            kotlinx.coroutines.MainScope().launch { (application as OpenStrapApp).container.settings.setStrapSessions(on) }
+            Toast.makeText(this, "Strap sessions ${if (on) "on" else "off"}", Toast.LENGTH_SHORT).show()
+        }
         // Debug: `--es simulate_hr 140x120,80x600 --ei simulate_steps 0` plays heart rate as a connected strap (emulator).
         val simulate = intent.getStringExtra("simulate_hr")
         if (BuildConfig.DEBUG && simulate != null) {
@@ -259,6 +266,33 @@ private fun AppRoot(container: AppContainer) {
         pending = null
     }
     val requestBluetooth: (() -> Unit) -> Unit = { then -> pending = then; btLauncher.launch(BLUETOOTH_PERMISSIONS) }
+    // Location for a GPS workout: asked only when GPS is turned on; the workout starts either way (steps without it).
+    var afterLocation by remember { mutableStateOf<(() -> Unit)?>(null) }
+    val locationLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
+        if (result.values.none { it }) Toast.makeText(context, "Without location, distance comes from the strap's steps.", Toast.LENGTH_LONG).show()
+        afterLocation?.invoke()
+        afterLocation = null
+    }
+    // GPX of a kept route: the system's save dialog picks where; the start and end are already left out.
+    var pendingGpx by remember { mutableStateOf<String?>(null) }
+    val gpxLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/gpx+xml")) { uri ->
+        val text = pendingGpx
+        pendingGpx = null
+        if (uri != null && text != null) scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            runCatching { context.contentResolver.openOutputStream(uri)?.use { it.write(text.toByteArray()) } }
+        }
+    }
+    val exportGpx: (Long) -> Unit = { start ->
+        scope.launch {
+            val file = workoutsVm.gpx(start)
+            if (file == null) Toast.makeText(context, "This route is too short to share once its start and end are hidden.", Toast.LENGTH_LONG).show()
+            else { pendingGpx = file.second; gpxLauncher.launch(file.first) }
+        }
+    }
+    val requestLocation: (() -> Unit) -> Unit = { then ->
+        afterLocation = then
+        locationLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
+    }
 
     val csvLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
         uri?.let(deviceVm::exportCsv)
@@ -438,7 +472,7 @@ private fun AppRoot(container: AppContainer) {
                                 is Detail.Workout -> WorkoutDetail(
                                     openWorkout?.takeIf { it.workout.start == detail.start }, padding, onBack = { todayStack = todayStack.dropLast(1) },
                                     onDelete = { container.workout.discard(detail.start); todayStack = todayStack.dropLast(1) },
-                                    workoutsVm = workoutsVm, session = container.workout,
+                                    workoutsVm = workoutsVm, session = container.workout, exportGpx = exportGpx,
                                 )
                                 Detail.Healthspan -> org.openstrap.app.ui.glow.GlowHealthspanScreen(healthspan, padding, onBack = { todayStack = todayStack.dropLast(1) })
                                 else -> Unit
@@ -528,7 +562,7 @@ private fun AppRoot(container: AppContainer) {
                                 is Detail.Workout -> WorkoutDetail(
                                     openWorkout?.takeIf { it.workout.start == detail.start }, padding, onBack = { activityStack = activityStack.dropLast(1) },
                                     onDelete = { container.workout.discard(detail.start); activityStack = activityStack.dropLast(1) },
-                                    workoutsVm = workoutsVm, session = container.workout,
+                                    workoutsVm = workoutsVm, session = container.workout, exportGpx = exportGpx,
                                 )
                                 is Detail.OfMetric -> MetricDetail(
                                     detail.metric, day, history = history,
@@ -602,7 +636,7 @@ private fun AppRoot(container: AppContainer) {
             }
         }
         WorkoutLayer(
-            container, workoutState, workoutMinimized, readySport, readyPicking, live, connection, workoutsVm, requestBluetooth,
+            container, workoutState, workoutMinimized, readySport, readyPicking, live, connection, workoutsVm, requestBluetooth, requestLocation, exportGpx,
             onReadySport = { readySport = it },
             onCloseReady = { readySport = null; readyPicking = false },
             capsuleBottom = if (rail) 16.dp else 104.dp,
@@ -628,6 +662,8 @@ private fun androidx.compose.foundation.layout.BoxScope.WorkoutLayer(
     connection: ConnectionState,
     workoutsVm: org.openstrap.app.ui.workout.WorkoutsViewModel,
     requestBluetooth: (() -> Unit) -> Unit,
+    requestLocation: (() -> Unit) -> Unit,
+    exportGpx: (Long) -> Unit,
     onReadySport: (Int) -> Unit,
     onCloseReady: () -> Unit,
     capsuleBottom: androidx.compose.ui.unit.Dp,
@@ -640,11 +676,15 @@ private fun androidx.compose.foundation.layout.BoxScope.WorkoutLayer(
             val recent by session.recent.collectAsStateWithLifecycle()
             val stats by session.stats.collectAsStateWithLifecycle()
             val zoneSeconds by session.zoneSeconds.collectAsStateWithLifecycle()
+            val route by session.route.collectAsStateWithLifecycle()
+            val history by session.history.collectAsStateWithLifecycle()
             org.openstrap.app.ui.glow.GlowWorkoutLiveScreen(
                 state, live, recent, stats, zoneSeconds, connection, padding,
                 onPause = session::pause, onResume = session::resume, onEnd = session::end,
                 onMinimize = { session.minimized.value = true },
                 onEndAtPrompt = session::endAtPrompt, onKeepGoing = session::keepGoing,
+                route = route, history = history,
+                onStartSet = session::startSet, onSetDone = session::setDone, onExtendRest = session::extendRest,
             )
         }
         state is org.openstrap.app.device.WorkoutState.Recording -> {
@@ -661,16 +701,18 @@ private fun androidx.compose.foundation.layout.BoxScope.WorkoutLayer(
             org.openstrap.app.ui.glow.GlowPhoneWorkoutScreen(
                 summary, padding, onBack = session::dismissSummary, onDelete = { session.discard(state.start) },
                 onTrim = { from, to -> session.trim(state.start, from, to) }, onUndoTrim = { session.undoTrim(state.start) }, justEnded = true,
+                onExportGpx = { exportGpx(state.start) },
             )
         }
         readySport != null -> androidx.compose.foundation.layout.Box(full) {
             org.openstrap.app.ui.glow.GlowWorkoutReadyScreen(
                 readySport, readyPicking, connection, live, padding,
                 onSport = onReadySport,
-                onStart = { sport, askToEnd, target ->
-                    val start = { session.start(sport, askToEnd, target); onCloseReady() }
+                onStart = { sport, askToEnd, target, useGps, keepRoute, rest, setsTarget ->
+                    val start = { session.start(sport, askToEnd, target, useGps, keepRoute, rest, setsTarget); onCloseReady() }
                     val granted = container.app.checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) == android.content.pm.PackageManager.PERMISSION_GRANTED
-                    if (granted) start() else requestBluetooth(start)
+                    val withBluetooth = { if (granted) start() else requestBluetooth(start) }
+                    if (useGps && !org.openstrap.app.device.WorkoutLocation.granted(container.app)) requestLocation(withBluetooth) else withBluetooth()
                 },
                 onBack = onCloseReady,
             )
@@ -702,6 +744,7 @@ private fun WorkoutDetail(
     onDelete: () -> Unit,
     workoutsVm: org.openstrap.app.ui.workout.WorkoutsViewModel,
     session: org.openstrap.app.device.WorkoutSession,
+    exportGpx: (Long) -> Unit,
 ) {
     // OpenStrap's own recordings get the workout-mode summary, trim and delete; the strap's come back with the next sync.
     if (a?.fromPhone == true) {
@@ -710,6 +753,7 @@ private fun WorkoutDetail(
         org.openstrap.app.ui.glow.GlowPhoneWorkoutScreen(
             summary, contentPadding, onBack, onDelete,
             onTrim = { from, to -> session.trim(start, from, to) }, onUndoTrim = { session.undoTrim(start) }, justEnded = false,
+            onExportGpx = { exportGpx(start) },
         )
     } else org.openstrap.app.ui.glow.GlowWorkoutScreen(a, contentPadding, onBack)
 }

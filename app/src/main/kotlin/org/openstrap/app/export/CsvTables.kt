@@ -5,6 +5,7 @@ import org.openstrap.app.data.db.ActivityExtendedMinute
 import org.openstrap.app.data.db.AppWorkout
 import org.openstrap.app.data.db.AppWorkoutHeartRate
 import org.openstrap.app.data.db.AppWorkoutRoutePoint
+import org.openstrap.app.data.db.AppWorkoutSet
 import org.openstrap.app.data.db.DismissedWorkout
 import org.openstrap.app.data.db.ActivityMinute
 import org.openstrap.app.data.db.BreathRate
@@ -193,12 +194,13 @@ val CSV_TABLES: List<CsvTable<*>> = listOf(
     // Workouts recorded on the phone; one still recording is left out until it ends.
     CsvTable("app_workout.csv",
         "start,start_epoch,end_epoch,sport_type,source,pauses,end_reason,avg_hr,max_hr,ask_to_end,recorded_end_epoch,shown_start_epoch,target," +
-            "use_gps,keep_route,distance_m,distance_from_steps",
+            "use_gps,keep_route,distance_m,distance_from_steps,rest,sets_target",
         Key("app_workout", "start", "start_epoch", span = Span("`end`", "end_epoch")),
         { d, f, t -> d.appWorkoutsAll().filter { it.start in f..t } },
         {
             listOf(iso(it.start), it.start, it.end, it.sportType, it.source, it.pauses, it.endReason, it.averageHeartRate, it.maxHeartRate,
-                it.askToEnd, it.recordedEnd, it.shownStart, it.target, it.useGps, it.keepRoute, it.distanceMeters, it.distanceFromSteps)
+                it.askToEnd, it.recordedEnd, it.shownStart, it.target, it.useGps, it.keepRoute, it.distanceMeters, it.distanceFromSteps,
+                it.rest, it.setsTarget)
         },
         {
             AppWorkout(it.long("start_epoch"), it.long("end_epoch"), it.int("sport_type"), it.intOrNull("source") ?: AppWorkout.SOURCE_APP,
@@ -206,7 +208,8 @@ val CSV_TABLES: List<CsvTable<*>> = listOf(
                 askToEnd = !it.has("ask_to_end") || it.bool("ask_to_end"), recordedEnd = it.longOrNull("recorded_end_epoch"),
                 shownStart = it.longOrNull("shown_start_epoch"), target = if (it.has("target")) it.string("target") else null,
                 useGps = it.has("use_gps") && it.bool("use_gps"), keepRoute = it.has("keep_route") && it.bool("keep_route"),
-                distanceMeters = it.floatOrNull("distance_m"), distanceFromSteps = it.has("distance_from_steps") && it.bool("distance_from_steps"))
+                distanceMeters = it.floatOrNull("distance_m"), distanceFromSteps = it.has("distance_from_steps") && it.bool("distance_from_steps"),
+                rest = if (it.has("rest")) it.string("rest") else null, setsTarget = it.intOrNull("sets_target"))
         },
         { d, r -> d.insertAppWorkouts(r) }),
     CsvTable("app_workout_hr.csv", "workout_start_epoch,epoch,bpm,from_history",
@@ -220,6 +223,11 @@ val CSV_TABLES: List<CsvTable<*>> = listOf(
         { d, f, t -> d.routeAll().filter { it.workoutStart in f..t } }, { listOf(it.workoutStart, it.timestamp, it.lat, it.lon, it.accuracy) },
         { AppWorkoutRoutePoint(it.long("workout_start_epoch"), it.long("epoch"), it.string("lat").toDouble(), it.string("lon").toDouble(), it.float("accuracy_m")) },
         { d, r -> d.insertRoutePoints(r) }),
+    CsvTable("app_workout_set.csv", "workout_start_epoch,set_index,start_epoch,end_epoch,rest_end_epoch",
+        Key("app_workout_set", "workoutStart", "workout_start_epoch", parent = "app_workout"),
+        { d, f, t -> d.setsAll().filter { it.workoutStart in f..t } }, { listOf(it.workoutStart, it.index, it.start, it.end, it.restEnd) },
+        { AppWorkoutSet(it.long("workout_start_epoch"), it.int("set_index"), it.long("start_epoch"), it.longOrNull("end_epoch"), it.longOrNull("rest_end_epoch")) },
+        { d, r -> d.upsertSets(r) }),
     CsvTable("app_workout_dismissed.csv", "start_epoch,end_epoch",
         Key("app_workout_dismissed", "start", "start_epoch"),
         { d, f, t -> d.dismissedWorkoutsAll().filter { it.start in f..t } }, { listOf(it.start, it.end) },

@@ -181,6 +181,9 @@ data class AppWorkout(
     /** Metres covered: from GPS, or estimated from the strap's steps ([distanceFromSteps]) without it. */
     val distanceMeters: Float? = null,
     @ColumnInfo(defaultValue = "0") val distanceFromSteps: Boolean = false,
+    /** Strength: how rest ends ([org.openstrap.app.data.Strength.Rest.code]) and how many sets are planned. */
+    val rest: String? = null,
+    val setsTarget: Int? = null,
 ) {
     /** The start the workout is shown and measured from. */
     val from: Long get() = shownStart ?: start
@@ -206,6 +209,16 @@ data class AppWorkout(
         const val END_CAR = 2
     }
 }
+
+/** One set of a strength workout: when it began and ended, and when the rest after it ended (null while resting). */
+@Entity(tableName = "app_workout_set", primaryKeys = ["workoutStart", "index"])
+data class AppWorkoutSet(
+    val workoutStart: Long,
+    val index: Int,
+    val start: Long,
+    val end: Long? = null,
+    val restEnd: Long? = null,
+)
 
 /** One GPS fix of a workout whose route the wearer chose to keep on the phone. */
 @Entity(tableName = "app_workout_route", primaryKeys = ["workoutStart", "timestamp"])

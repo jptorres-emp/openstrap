@@ -45,6 +45,8 @@ enum class Cue(val pattern: List<Int>) {
     Halfway(listOf(150, 150, 150)),
     /** Time target reached: long, short, long. */
     GoalReached(listOf(500, 200, 200, 200, 500)),
+    /** Strength: rest is over, start the next set. Two medium pulses. */
+    RestOver(listOf(400, 150, 400)),
 }
 
 /**

@@ -3,6 +3,11 @@ package org.openstrap.app.ui.device
 import androidx.compose.foundation.BorderStroke
 import android.content.ClipData
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.IntentSenderRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import android.content.ClipboardManager
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -85,6 +90,12 @@ fun DeviceScreen(
     val scan by vm.scan.collectAsState()
     var confirmForget by rememberSaveable { mutableStateOf(false) }
     var confirmDisconnect by rememberSaveable { mutableStateOf(false) }
+    val keepConnected = rememberKeepConnected(vm)
+    val offerBackground by vm.offerBackground.collectAsState()
+    LaunchedEffect(offerBackground, paired) {
+        val address = paired?.address
+        if (offerBackground && address != null) { vm.backgroundOffered(); keepConnected.associate(address) }
+    }
 
     if (confirmDisconnect) {
         org.openstrap.app.ui.components.GlassAlertDialog(
@@ -183,6 +194,7 @@ fun DeviceScreen(
                         Icon(PhosphorIcons.ArrowCircleUp, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    KeepConnectedRow(vm, keepConnected, device.address)
                     SettingRow("Forget this strap", "Removes the address and auth key from this phone", onClick = { confirmForget = true }) {
                         Icon(PhosphorIcons.CaretRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
@@ -190,6 +202,68 @@ fun DeviceScreen(
             }
         }
     }
+}
+
+/** Starts Android's companion association prompt from the strap page; the result goes back to [CompanionLink]. */
+private class KeepConnected(val associate: (address: String) -> Unit)
+
+@Composable
+private fun rememberKeepConnected(vm: DeviceViewModel): KeepConnected {
+    val context = LocalContext.current
+    val companion = vm.companion
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { result ->
+        if (!companion.onResult(result.resultCode)) vm.showMessage("Not linked. You can turn off battery optimization for OpenStrap instead.")
+    }
+    return remember(companion, launcher) {
+        KeepConnected { address ->
+            val activity = context.findActivity() ?: return@KeepConnected
+            companion.associate(
+                activity, address,
+                launch = { launcher.launch(IntentSenderRequest.Builder(it).build()) },
+                onError = vm::showMessage,
+            )
+        }
+    }
+}
+
+private tailrec fun android.content.Context.findActivity(): android.app.Activity? = when (this) {
+    is android.app.Activity -> this
+    is android.content.ContextWrapper -> baseContext.findActivity()
+    else -> null
+}
+
+/**
+ * "Keep strap connected in the background": a companion association where Android supports it, otherwise (or
+ * once the user turned that down) the battery-optimization prompt. Hidden once either is in place.
+ */
+@Composable
+private fun KeepConnectedRow(vm: DeviceViewModel, keepConnected: KeepConnected, address: String) {
+    val context = LocalContext.current
+    val associated by vm.companion.associated.collectAsState()
+    val ignoringBattery by vm.companion.ignoringBatteryOptimizations.collectAsState()
+    val declined by vm.companionDeclined.collectAsState()
+    when {
+        associated -> return
+        vm.companion.supported && !declined -> SettingRow(
+            "Keep strap connected in the background",
+            "Link the strap with Android so it can reconnect without opening OpenStrap",
+            onClick = { keepConnected.associate(address) },
+        ) { Icon(PhosphorIcons.CaretRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant) }
+        !ignoringBattery -> SettingRow(
+            "Keep strap connected in the background",
+            "Turn off battery optimization for OpenStrap so Android doesn't stop it",
+            onClick = {
+                runCatching {
+                    context.startActivity(
+                        android.content.Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
+                            .setData(android.net.Uri.parse("package:${context.packageName}")),
+                    )
+                }.onFailure { vm.showMessage("Couldn't open battery settings on this phone.") }
+            },
+        ) { Icon(PhosphorIcons.CaretRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant) }
+        else -> return
+    }
+    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 }
 
 /** WHOOP/Ultrahuman-style status block: connection label, last sync, battery ring. */

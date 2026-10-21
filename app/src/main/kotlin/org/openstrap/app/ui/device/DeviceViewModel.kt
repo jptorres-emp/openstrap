@@ -30,6 +30,7 @@ data class ScanUiState(
 
 class DeviceViewModel(private val container: AppContainer) : ViewModel() {
     val strap: StrapController get() = container.strap
+    val companion: org.openstrap.app.device.CompanionLink get() = container.companion
     val paired: StateFlow<PairedDevice?> =
         container.settings.pairedDevice.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
@@ -77,6 +78,8 @@ class DeviceViewModel(private val container: AppContainer) : ViewModel() {
         viewModelScope.launch {
             container.settings.savePairedDevice(PairedDevice(address.uppercase(), key, name))
             container.strap.connect()
+            container.companion.refresh().join()
+            if (container.companion.supported && !container.companion.associated.value) _offerBackground.value = true
         }
     }
 
@@ -95,8 +98,19 @@ class DeviceViewModel(private val container: AppContainer) : ViewModel() {
         _message.value = "Loaded a week of sample data."
     }
 
+    /** Set at the end of pairing: the strap page then asks Android to associate the strap, once. */
+    private val _offerBackground = MutableStateFlow(false)
+    val offerBackground = _offerBackground.asStateFlow()
+    fun backgroundOffered() { _offerBackground.value = false }
+
+    val companionDeclined: StateFlow<Boolean> =
+        container.settings.companionDeclined.stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+    fun showMessage(text: String) { _message.value = text }
+
     fun forget() = viewModelScope.launch {
         container.strap.disconnect()
+        paired.value?.let { container.companion.disassociate(it.address) }
         container.settings.forgetDevice()
     }
 

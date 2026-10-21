@@ -23,6 +23,15 @@
     <!-- Only to see when a call rings, so the strap can buzz. No numbers or call log are read. -->
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
 
+    <!-- Companion device association with the paired strap (no watch profile): lets OpenStrap run and reconnect
+         in the background and wakes it when the strap comes into range. -->
+    <uses-permission android:name="android.permission.REQUEST_COMPANION_RUN_IN_BACKGROUND" />
+    <uses-permission android:name="android.permission.REQUEST_COMPANION_USE_DATA_IN_BACKGROUND" />
+    <uses-permission android:name="android.permission.REQUEST_OBSERVE_COMPANION_DEVICE_PRESENCE" />
+    <uses-feature android:name="android.software.companion_device_setup" android:required="false" />
+    <!-- Fallback when there is no association: asks to leave OpenStrap out of battery optimization. -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+
     <uses-permission android:name="android.permission.health.WRITE_HEART_RATE" />
     <uses-permission android:name="android.permission.health.WRITE_STEPS" />
     <uses-permission android:name="android.permission.health.WRITE_SLEEP" />
@@ -79,6 +88,15 @@
             android:name=".device.StrapService"
             android:exported="false"
             android:foregroundServiceType="connectedDevice" />
+
+        <service
+            android:name=".device.StrapPresenceService"
+            android:exported="true"
+            android:permission="android.permission.BIND_COMPANION_DEVICE_SERVICE">
+            <intent-filter>
+                <action android:name="android.companion.CompanionDeviceService" />
+            </intent-filter>
+        </service>
 
         <!-- Notification access, granted by the user, so the strap can buzz for notifications. -->
         <service

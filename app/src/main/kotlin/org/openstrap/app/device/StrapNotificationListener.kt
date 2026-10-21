@@ -14,6 +14,7 @@ class StrapNotificationListener : NotificationListenerService() {
     override fun onListenerConnected() {
         synchronized(shown) { shown.clear(); runCatching { activeNotifications }.getOrNull()?.forEach { shown += it.key } }
         alerts.refresh()
+        alerts.reconnectStrap()
     }
 
     override fun onListenerDisconnected() = alerts.refresh()

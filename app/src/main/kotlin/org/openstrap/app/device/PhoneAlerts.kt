@@ -119,6 +119,7 @@ class PhoneAlerts(
     private fun onCallState(state: Int) {
         log("call state $state (calls ${if (callsOn) "on" else "off"})")
         phoneRinging = state == TelephonyManager.CALL_STATE_RINGING
+        if (phoneRinging) reconnectStrap()
         if (phoneRinging && callsOn) startRinging() else stopRinging()
     }
 
@@ -164,10 +165,24 @@ class PhoneAlerts(
 
     private fun log(message: String) = (strap as? StrapManager)?.log(message)
 
+    /**
+     * Reconnects a paired strap that isn't connected. Android can restart the process just to deliver a call or a
+     * notification (or to bind [StrapNotificationListener]); this alert is lost, but the next one reaches the strap.
+     * A no-op while connected or connecting, while the user's Disconnect holds, and when the strap turned the key
+     * down (retrying can't help).
+     */
+    fun reconnectStrap() {
+        val c = strap.connection.value
+        if (c is ConnectionState.Connected || (c as? ConnectionState.Failed)?.keyRejected == true) return
+        if (context.checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) return
+        strap.backgroundConnect()
+    }
+
     // ---- Notifications ----
 
     /** Called by [StrapNotificationListener] for every posted notification. */
     fun onNotification(sbn: StatusBarNotification, ranking: NotificationListenerService.Ranking?, update: Boolean) {
+        reconnectStrap()
         // A pattern played on the motor cuts off the call's continuous buzz (seen 2026-10-20), so stay quiet while it rings.
         if (phoneRinging) return
         if (!notificationsOn || !shouldBuzz(sbn, ranking, update)) return

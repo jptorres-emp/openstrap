@@ -108,16 +108,39 @@ class StrapManager(
     }
 
     /** Connect if a strap is paired and nothing is connected or in progress. Safe to call often. */
+    // Synchronized, and checking connectJob: callers race at process start (app start-up, the companion presence
+    // service, phone alerts), before the connect coroutine has moved the state off Disconnected.
+    @Synchronized
     override fun autoConnect() {
         when (connection.value) {
             is ConnectionState.Connected, ConnectionState.Connecting, ConnectionState.Authenticating -> return
             else -> Unit
         }
-        if (reconnectJob?.isActive == true) return
+        if (reconnectJob?.isActive == true || connectJob?.isActive == true) return
         connect()
     }
 
+    /** The user's Disconnect, kept across process restarts; null until read from settings. See [backgroundConnect]. */
+    @Volatile private var held: Boolean? = null
+    // One at a time, in order, so a quick Disconnect then Connect can't land the other way round.
+    private val heldWriter = CoroutineScope(SupervisorJob() + Dispatchers.IO.limitedParallelism(1))
+
+    private fun hold(value: Boolean) {
+        if (held == value) return
+        held = value
+        heldWriter.launch { settings.setHeldDisconnected(value) }
+    }
+
+    override fun backgroundConnect() {
+        scope.launch {
+            // Presence events repeat every few seconds while the strap advertises, so a skip isn't logged.
+            if (held ?: settings.heldDisconnected.first().also { held = it }) return@launch
+            autoConnect()
+        }
+    }
+
     override fun connect() {
+        hold(false)
         wantConnected = true
         reconnectJob?.cancel()
         startConnect()
@@ -430,6 +453,7 @@ class StrapManager(
     }
 
     override fun disconnect() {
+        hold(true)
         wantConnected = false
         reconnectJob?.cancel()
         connectJob?.cancel()

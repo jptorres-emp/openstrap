@@ -735,7 +735,7 @@ class WorkoutSession(
 
     private fun now() = System.currentTimeMillis() / 1000
 
-    private companion object {
+    internal companion object {
         const val FLUSH_MS = 10_000L
         const val RECENT_S = 600L
         /** Long enough to hold the 8 calm minutes and the active moment before them. */

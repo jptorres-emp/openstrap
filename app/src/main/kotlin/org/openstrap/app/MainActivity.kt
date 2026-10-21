@@ -142,6 +142,20 @@ class MainActivity : ComponentActivity() {
             kotlinx.coroutines.MainScope().launch { (application as OpenStrapApp).container.settings.setStrapSessions(on) }
             Toast.makeText(this, "Strap sessions ${if (on) "on" else "off"}", Toast.LENGTH_SHORT).show()
         }
+        // Debug: `--es buzz AboveTarget` plays a cue's pattern on the strap (a Cue name, Stop or Offer), to feel it.
+        val buzz = intent.getStringExtra("buzz")
+        if (BuildConfig.DEBUG && buzz != null) {
+            intent.removeExtra("buzz")
+            val pattern = when (buzz) {
+                "Stop" -> org.openstrap.app.device.WorkoutSession.STOP_BUZZ
+                "Offer" -> org.openstrap.app.device.WorkoutSession.OFFER_BUZZ
+                else -> runCatching { org.openstrap.app.data.Cue.valueOf(buzz).pattern }.getOrNull()
+            }
+            val strap = (application as OpenStrapApp).container.strap
+            if (pattern != null) kotlinx.coroutines.MainScope().launch {
+                runCatching { strap.buzz(pattern) }.onFailure { Toast.makeText(this@MainActivity, "Buzz failed: ${it.message}", Toast.LENGTH_SHORT).show() }
+            }
+        }
         // Debug: `--es simulate_hr 140x120,80x600 --ei simulate_steps 0 --ei simulate_battery 80` plays heart rate as a connected strap (emulator).
         val simulate = intent.getStringExtra("simulate_hr")
         if (BuildConfig.DEBUG && simulate != null) {

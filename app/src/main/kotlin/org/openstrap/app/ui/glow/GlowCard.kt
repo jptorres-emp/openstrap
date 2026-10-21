@@ -179,8 +179,9 @@ private fun BoxScope.CoreLayer(b: GlowBitmaps, style: GlowStyle, motion: () -> D
                 val m = motion()
                 translationX = m.dx * size.width
                 translationY = m.dy * size.height
-                scaleX = m.scale
-                scaleY = m.scale
+                // A squash widens the core a touch and flattens it as much: a squeeze, not a resize.
+                scaleX = m.scale * (1f + m.squash)
+                scaleY = m.scale * (1f - m.squash)
                 transformOrigin = TransformOrigin(style.coreX, style.coreY)
                 alpha = (style.coreOpacity * m.fade).coerceIn(0f, 1f)
                 // Fade by scaling each pixel's alpha instead of rendering the layer offscreen first.
@@ -356,7 +357,7 @@ private fun blurFilter(sigma: Float): BlurMaskFilter? =
 
 /** Where the core is at a moment: an offset (fractions of the card), and size and blur multipliers. */
 /** How the dark core sits: offset (fractions of the card), scale, and [fade] on top of the style's core opacity. */
-private class Drift(val dx: Float, val dy: Float, val scale: Float, val fade: Float = 1f)
+private class Drift(val dx: Float, val dy: Float, val scale: Float, val fade: Float = 1f, val squash: Float = 0f)
 
 /**
  * The core's motion over time. Underneath every [GlowMotion] is a never-repeating wander: each axis is
@@ -376,11 +377,19 @@ private class CoreDrift(private val random: Random) {
             GlowMotion.Drift -> wander(t, amount = 1f)
             GlowMotion.Still -> Drift(0f, 0f, 1f)
             is GlowMotion.Heartbeat -> {
-                // An ECG beat: on each spike the dark core pulls in and thins, so the colour flares inward.
-                // The small dips either side of the spike push it out a touch, like the trace dipping below the line.
+                // The dark core is the heart: it squeezes on each beat (lub, then a smaller dub) and relaxes,
+                // always as dark, so nothing flashes. Each beat also pushes it a little off centre, a new way each
+                // time, and squashes it, so the colour around it surges past a different side, like blood.
                 val base = wander(t, amount = 0.4f)
-                val e = ecg(t * motion.bpm / 60f)
-                Drift(base.dx, base.dy, scale = 1f - 0.04f * e, fade = 1f - 0.2f * e.coerceAtLeast(0f))
+                val beats = t * motion.bpm / 60f
+                val c = contraction(beats)
+                val angle = beatAngle(floor(beats).toInt())
+                Drift(
+                    dx = base.dx + 0.022f * c * cos(angle),
+                    dy = base.dy + 0.018f * c * sin(angle),
+                    scale = base.scale * (1f - 0.075f * c),
+                    squash = 0.025f * c * cos(2f * angle),
+                )
             }
             is GlowMotion.Breath -> {
                 // In: swell and rise like a chest. Out: slower, settling back.
@@ -411,15 +420,27 @@ private class CoreDrift(private val random: Random) {
 }
 
 /**
- * One heartbeat as an ECG trace (phase in beats), about -0.25..1: a small P wave, the QRS complex (a dip,
- * the sharp R spike, a deeper dip) and a broad, gentle T wave, then flat until the next beat.
+ * How hard the heart is squeezing over one beat (phase in beats), 0..1: a quick lub, a smaller dub just after,
+ * each tightening fast and letting go more slowly, then rest until the next beat.
  */
-private fun ecg(phase: Float): Float {
+private fun contraction(phase: Float): Float {
     val f = phase - floor(phase)
-    fun bump(at: Float, width: Float) = exp(-((f - at) / width).let { it * it })
-    return 0.12f * bump(0.10f, 0.035f) -
-        0.10f * bump(0.215f, 0.012f) + bump(0.24f, 0.018f) - 0.25f * bump(0.265f, 0.014f) +
-        0.30f * bump(0.52f, 0.07f)
+    // Fast in, slow out: a skewed bump that rises over [rise] and decays over [fall].
+    fun squeeze(at: Float, rise: Float, fall: Float): Float {
+        val d = f - at
+        val w = if (d < 0f) rise else fall
+        return exp(-(d / w).let { it * it })
+    }
+    return (squeeze(0.08f, 0.035f, 0.09f) + 0.55f * squeeze(0.30f, 0.03f, 0.08f)).coerceAtMost(1f)
+}
+
+/** Which way beat [n] pushes the core: a fixed scramble of the beat number, so each beat goes its own way. */
+private fun beatAngle(n: Int): Float {
+    var h = n * 0x9E3779B1.toInt()
+    h = h xor (h ushr 15)
+    h *= 0x85EBCA6B.toInt()
+    h = h xor (h ushr 13)
+    return (h ushr 8) / (1 shl 24).toFloat() * 2f * PI.toFloat()
 }
 
 /** One breath over a cycle (phase in breaths): eased inhale over 40%, longer eased exhale, 0..1. */

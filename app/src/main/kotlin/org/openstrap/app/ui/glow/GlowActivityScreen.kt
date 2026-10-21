@@ -1,5 +1,14 @@
 package org.openstrap.app.ui.glow
 
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.foundation.layout.Box
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.geometry.Size
@@ -52,8 +61,10 @@ import kotlin.math.roundToInt
 /** PAI's weekly target: 100 or more over the last seven days. */
 private const val PAI_TARGET = 100
 
-/** Recent workouts listed under the day's own, before "All workouts". */
-private const val RECENT_WORKOUTS = 3
+/** Recent workouts listed under the day's own (scrolling), before "All workouts". */
+private const val RECENT_WORKOUTS = 20
+/** How many workout rows the Workouts panel shows before it scrolls. */
+private const val VISIBLE_WORKOUTS = 4
 
 /** Each day's PAI between two dates, keyed by date. */
 typealias PaiHistory = (LocalDate, LocalDate) -> Flow<Map<LocalDate, DailyPai>>
@@ -79,21 +90,38 @@ fun GlowActivityScreen(
     onOpenWorkout: (Long) -> Unit,
     onAllWorkouts: () -> Unit,
     onEditProfile: () -> Unit,
+    onStartWorkout: (Int) -> Unit = {},
+    onAllSports: () -> Unit = {},
+    suggestion: org.openstrap.app.data.WorkoutSuggestions.Suggestion? = null,
+    onSaveSuggestion: () -> Unit = {},
+    onDismissSuggestion: () -> Unit = {},
+    onAddWorkout: () -> Unit = {},
+    /** An effort under way nobody started ([org.openstrap.app.data.AutoStart]); null hides the card. */
+    offer: org.openstrap.app.data.AutoStart.Offer? = null,
+    onRecordOffer: () -> Unit = {},
+    onDeclineOffer: () -> Unit = {},
+    autoStart: Boolean? = null,
+    onAutoStart: (Boolean) -> Unit = {},
 ) {
     val list = rememberLazyListState()
+    val sports = remember(workouts) { topSports(workouts) }
     val week = remember(state.date) { paiHistory(state.date.minusDays(6), state.date) }.collectAsState(emptyMap()).value
     val r = recovery?.takeIf { it.date == state.date }
     CompositionLocalProvider(LocalGlowPaused provides { list.isScrollInProgress }) {
         GlowScreenList(contentPadding, list) {
             full { DateHeader(state.date, battery, onPrev, onNext, charging, picker) }
             // Wide: today's movement on the left; load, fitness and workouts on the right.
+            // The home for workouts: started from here on today; a past day only shows what was done.
+            if (offer != null && state.date == LocalDate.now()) left { OfferPanel(offer, onRecordOffer, onDeclineOffer) }
+            if (state.date == LocalDate.now()) left { StartWorkoutPanel(sports, onStartWorkout, onAllSports, autoStart, onAutoStart) }
+            if (suggestion != null && state.date == LocalDate.now()) left { SuggestionPanel(suggestion, onSaveSuggestion, onDismissSuggestion) }
             left { StepsCard(state, r?.activity) { onOpenMetric(Metric.Steps) } }
             r?.activity?.let { a -> left { MvpaPanel(a) } }
             left { EnergyPanel(r?.energy, onEditProfile) }
             left { PaiPanel(state, week) }
             right { LoadPanel(r, effects.lastOrNull { it.weeklyLoad != null }, onEditProfile) }
             right { FitnessPanel(r, workouts, effects, state.dailyMaxHeartRate) }
-            right { WorkoutsPanel(state.date, workouts, onOpenWorkout, onAllWorkouts) }
+            right { WorkoutsPanel(state.date, workouts, onOpenWorkout, onAllWorkouts, onAddWorkout) }
         }
     }
 }
@@ -370,25 +398,42 @@ private fun FitnessPanel(r: RecoveryResult?, workouts: List<WorkoutAnalysis>, ef
     }
 }
 
-/** The day's workouts, then the most recent others, then a way to the full list. */
+/**
+ * The day's workouts, then the most recent others, in a window [VISIBLE_WORKOUTS] rows tall that scrolls inside the
+ * panel; then a way to add one and to the full list.
+ */
 @Composable
-private fun WorkoutsPanel(date: LocalDate, workouts: List<WorkoutAnalysis>, onOpen: (Long) -> Unit, onAll: () -> Unit) {
+private fun WorkoutsPanel(date: LocalDate, workouts: List<WorkoutAnalysis>, onOpen: (Long) -> Unit, onAll: () -> Unit, onAdd: () -> Unit) {
     val zone = ZoneId.systemDefault()
     fun dayOf(a: WorkoutAnalysis) = Instant.ofEpochSecond(a.workout.start).atZone(zone).toLocalDate()
     val today = workouts.filter { dayOf(it) == date }
     val recent = workouts.filter { dayOf(it) != date }.take(RECENT_WORKOUTS)
     DotPanel {
         DotHeader("Workouts", trailing = if (workouts.isEmpty()) null else "${workouts.size} recorded")
-        if (workouts.isEmpty()) {
-            Note("Workouts you start on the strap show up here after a sync, with your heart rate every second and how fast it recovered.")
-            return@DotPanel
+        if (workouts.isEmpty()) Note("Workouts you start above show up here, and the strap's own after a sync, with your heart rate every second.")
+        if (today.isEmpty() && workouts.isNotEmpty()) Note("No workouts this day.")
+        if (today.isNotEmpty() || recent.isNotEmpty()) {
+            // Sized from a row as laid out, so the window always shows whole rows whatever the font size.
+            val density = androidx.compose.ui.platform.LocalDensity.current
+            var rowHeight by remember { mutableStateOf(64.dp) }
+            val gap = 10.dp
+            val scroll = rememberScrollState()
+            Column(
+                Modifier.fillMaxWidth().heightIn(max = rowHeight * VISIBLE_WORKOUTS + gap * (VISIBLE_WORKOUTS - 1))
+                    .scrollBar(scroll).nestedScroll(KeepScroll).verticalScroll(scroll),
+                verticalArrangement = Arrangement.spacedBy(gap),
+            ) {
+                val measure = Modifier.onSizeChanged { rowHeight = with(density) { it.height.toDp() } }
+                today.forEachIndexed { i, a -> Box(if (i == 0) measure else Modifier) { WorkoutLine(a, showDate = false) { onOpen(a.workout.start) } } }
+                if (recent.isNotEmpty()) {
+                    Text("RECENT", color = Color.White.copy(alpha = 0.55f), style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(top = 4.dp))
+                    recent.forEachIndexed { i, a -> Box(if (i == 0 && today.isEmpty()) measure else Modifier) { WorkoutLine(a, showDate = true) { onOpen(a.workout.start) } } }
+                }
+            }
         }
-        if (today.isEmpty()) Note("No workouts this day.")
-        today.forEach { WorkoutLine(it, showDate = false) { onOpen(it.workout.start) } }
-        if (recent.isNotEmpty()) {
-            DotDivider()
-            Text("RECENT", color = Color.White.copy(alpha = 0.55f), style = MaterialTheme.typography.labelSmall)
-            recent.forEach { WorkoutLine(it, showDate = true) { onOpen(it.workout.start) } }
+        Row(Modifier.fillMaxWidth().glass(GlassRowShape, onAdd).padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text("Add a workout you didn't record", color = Color.White, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+            Icon(PhosphorIcons.CaretRight, null, tint = Color.White.copy(alpha = 0.7f))
         }
         if (workouts.size > today.size + recent.size) {
             Row(Modifier.fillMaxWidth().glass(GlassRowShape, onAll).padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -422,3 +467,32 @@ internal fun WorkoutLine(a: WorkoutAnalysis, showDate: Boolean, onClick: () -> U
 }
 
 private fun shortDate(epoch: Long) = Instant.ofEpochSecond(epoch).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("EEE d MMM"))
+
+/**
+ * A thin bar just outside a scrolling box's right edge, in the panel's margin, its length the share of the content in
+ * view and its place the scroll position, so a list that scrolls inside a panel says so. Nothing when everything fits.
+ */
+private fun Modifier.scrollBar(state: androidx.compose.foundation.ScrollState): Modifier = drawWithContent {
+    drawContent()
+    val content = size.height + state.maxValue
+    if (state.maxValue == 0) return@drawWithContent
+    val width = 3.dp.toPx()
+    val length = (size.height * size.height / content).coerceAtLeast(24.dp.toPx())
+    val top = (size.height - length) * state.value / state.maxValue
+    drawRoundRect(
+        Color.White.copy(alpha = 0.35f), topLeft = androidx.compose.ui.geometry.Offset(size.width + 8.dp.toPx(), top),
+        size = androidx.compose.ui.geometry.Size(width, length), cornerRadius = androidx.compose.ui.geometry.CornerRadius(width / 2),
+    )
+}
+
+/**
+ * Keeps a list's scroll to itself: what's left at either end (and a fling's leftover speed) is used up here rather than
+ * handed on, so the page doesn't move under a drag that started in the list.
+ */
+private object KeepScroll : androidx.compose.ui.input.nestedscroll.NestedScrollConnection {
+    override fun onPostScroll(consumed: androidx.compose.ui.geometry.Offset, available: androidx.compose.ui.geometry.Offset, source: androidx.compose.ui.input.nestedscroll.NestedScrollSource) =
+        available.copy(x = 0f)
+
+    override suspend fun onPostFling(consumed: androidx.compose.ui.unit.Velocity, available: androidx.compose.ui.unit.Velocity) =
+        available.copy(x = 0f)
+}

@@ -25,6 +25,9 @@ android {
         targetSdk = 36
         versionCode = appVersionCode
         versionName = appVersionName
+        // 64-bit ARM only: every phone from the last several years, and the emulator on Apple silicon. Each other CPU
+        // type would add its own ~13 MB copy of the map engine (libmaplibre.so).
+        ndk { abiFilters += "arm64-v8a" }
     }
 
     signingConfigs {
@@ -40,6 +43,7 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             // Without the release key, signed with the debug key so a release build still installs locally.
             signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
@@ -94,6 +98,8 @@ dependencies {
     implementation(libs.core.ktx)
     implementation(libs.window)
     implementation(libs.haze.blur)
+    // Workout maps: open source, no API key; tiles from OpenFreeMap (README, Network use).
+    implementation(libs.maplibre)
 
     testImplementation(libs.junit)
     // Android's org.json is a stub in plain JVM unit tests.

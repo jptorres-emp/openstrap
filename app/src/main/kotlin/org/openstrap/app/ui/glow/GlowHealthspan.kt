@@ -27,11 +27,11 @@ import org.openstrap.app.data.Healthspan
 import org.openstrap.app.ui.theme.MetricColors
 import org.openstrap.app.ui.theme.PhosphorIcons
 
-/** The Healthspan card's lavender, used for the glow. */
-private val Lavender = Color(0xFFB69CFF)
+/** The Healthspan card's orchid, used for the glow: warm enough to stay clear of Sleep's blue. */
+private val Orchid = Color(0xFFD86BEA)
 
-/** The same recipe as the Heart rate and Activity cards, in lavender. */
-internal val HealthspanGlow = GlowStyle.chart(Lavender)
+/** The same recipe as the Heart rate and Activity cards, in orchid. */
+internal val HealthspanGlow = GlowStyle.chart(Orchid)
 
 /** "3 years younger", "1 year older" or "Right on your age" for an [estimate] against [age], in whole years. */
 internal fun healthspanVerdict(age: Int, estimate: Float): String {
@@ -96,9 +96,9 @@ internal fun leverText(r: Healthspan.Result): String {
 internal fun sundayText(day: Long): String = java.time.Instant.ofEpochSecond(day).atZone(java.time.ZoneId.systemDefault()).toLocalDate()
     .format(java.time.format.DateTimeFormatter.ofPattern("EEEE d MMM")).replace(' ', '\u00A0')
 
-/** What to add to the profile: "Add your birth year and sex in your profile to start your Healthspan." */
+/** What to add to the profile: "Add your birth year and sex in your profile to see your Habit Age." */
 internal fun profileReminder(missing: List<String>): String =
-    "Add your ${missing.joinToString(" and ")} in your profile to start your Healthspan."
+    "Add your ${missing.joinToString(" and ")} in your profile to see your Habit Age."
 
 /** The starting state's line under your age: when a first estimate is due, or what it's still waiting for. */
 internal fun learningText(o: Healthspan.Outcome): String = when {
@@ -121,7 +121,7 @@ fun HealthspanCard(state: Healthspan.Outcome?, onClick: (() -> Unit)? = null, on
     val needsProfile = r == null && state.missing.isNotEmpty() && withheld?.profile == true
     GlowCard(HealthspanGlow, Modifier.fillMaxWidth(), onClick = if (needsProfile) onOpenProfile else onClick) {
         Column {
-            GlowHeader("Healthspan", trailing = if (r?.early == true) "Early" else "Weekly")
+            GlowHeader("Habit Age", trailing = if (r?.early == true) "Early" else "Weekly")
             when {
                 r != null -> {
                     GlowHeroNumber("${r.low}-${r.high}", "", side = {

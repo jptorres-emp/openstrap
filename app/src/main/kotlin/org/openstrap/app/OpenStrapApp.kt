@@ -25,6 +25,7 @@ class AppContainer(val app: Application) {
     val strap: StrapController = StrapManager(app, settings, database.healthDao())
     val companion = CompanionLink(app, settings)
     val phoneAlerts = PhoneAlerts(app, settings, strap)
+    val workout = org.openstrap.app.device.WorkoutSession(app, database.healthDao(), settings, strap, callRinging = { phoneAlerts.callRinging })
 }
 
 class OpenStrapApp : Application() {
@@ -35,6 +36,8 @@ class OpenStrapApp : Application() {
         super.onCreate()
         container = AppContainer(this)
         container.companion.refresh()
+        // A workout still recording when the process died carries on (the service restarts it too).
+        container.workout.restore()
         // Android restarts the process on its own (companion presence, a reboot): reconnect without the screen.
         // A no-op when nothing is paired, a connection is already up, or the user tapped Disconnect.
         if (checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) container.strap.backgroundConnect()

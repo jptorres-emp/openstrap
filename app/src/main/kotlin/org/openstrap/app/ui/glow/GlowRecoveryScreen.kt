@@ -107,7 +107,7 @@ private fun RecoveryCard(r: RecoveryResult, strap: StrapReadinessRow?) {
     val score = ready.score
     val before = r.readinessTrend.dropLast(1).lastOrNull()?.second
     val style = GlowStyle.Bloom.copy(
-        color = overviewColor(score, ready.strainAlert),
+        color = overviewColor(score ?: strap?.score?.takeIf { ready.showStrapEstimate }, ready.strainAlert),
         coreShape = CoreShape.Radial, coreX = 0.5f, coreY = 0.8f, coreWidth = 0.95f, coreHeight = 0.75f,
         coreBlur = 30.dp, toneWidth = 16.dp, toneShift = -10f, glowStrength = 0.6f, bevel = 0.6f,
         motion = GlowMotion.Breath(5f), depth = 6.dp,

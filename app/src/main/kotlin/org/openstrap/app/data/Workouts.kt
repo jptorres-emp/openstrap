@@ -19,8 +19,18 @@ data class WorkoutAnalysis(
     /** Seconds in each of the five zones (50–60 … 90–100 % of [maxHeartRate]) during the workout. */
     val zoneSeconds: List<Int>,
     val maxHeartRate: Int,
+    /** Recorded by OpenStrap from live heart rate rather than by the strap ([WorkoutRecorder]). */
+    val fromPhone: Boolean = false,
+    /** Minutes the phone missed that the strap's history filled in. */
+    val historyMinutes: Int = 0,
+    /** Those minutes as runs of epoch seconds, each from its first minute's start to its last minute's end − 1. */
+    val historyRanges: List<LongRange> = emptyList(),
+    /** Where the workout is shown from: a phone workout's trimmed start, else its start. */
+    val shownStart: Long = workout.start,
+    /** A phone workout's end before the app or a trim moved it earlier; null when it ends where it was recorded. */
+    val recordedEnd: Long? = null,
 ) {
-    val durationSeconds: Long get() = end - workout.start
+    val durationSeconds: Long get() = end - shownStart
 
     /** Recovery HR only says something about fitness when you stopped from a real effort. */
     val recoveryIsMeaningful: Boolean get() = endHeartRate != null && endHeartRate * 100 >= maxHeartRate * MIN_EFFORT_PCT
@@ -84,6 +94,43 @@ object Workouts {
 
     /** Zepp's sport type ids (Type.type in the summary) for the sports a strap is likely to record. */
     fun sportName(type: Int): String = SPORT_NAMES[type] ?: "Workout"
+
+    /** Every sport a workout can be started as, by name, one id per name (Zepp has two "Free training"). */
+    val sports: List<Pair<Int, String>> by lazy {
+        SPORT_NAMES.entries.filter { it.key !in HIDDEN }.distinctBy { it.value }.map { it.key to it.value }.sortedBy { it.second }
+    }
+
+    /**
+     * Sports kept for naming workouts already recorded (by the strap, Zepp or an import) but not offered for new ones:
+     * each is another one under a second name, or the strap's own generic "Activity".
+     */
+    val HIDDEN = setOf(143, 40, 224, 55, 10, 57, 58, 51, 109, 24, 226, 16, 223)
+
+    /** The picker's sections, each sport once, most-done kinds first. */
+    val SECTIONS: List<Pair<String, List<Int>>> = listOf(
+        "Running & walking" to listOf(1, 2, 11, 3, 15, 215, 225, 108),
+        "Gym" to listOf(52, 50, 49, 130, 222, 9, 21, 5),
+        "Cycling" to listOf(4, 8),
+        "Water" to listOf(6, 7, 23),
+        "Mind & body" to listOf(60, 61, 53, 76),
+        "Racket & ball" to listOf(17, 205, 204, 92, 89, 18, 85, 88, 83, 97),
+        "Outdoors" to listOf(12, 70),
+    )
+
+    /** Sports done outdoors, where the ready screen offers GPS. */
+    val OUTDOOR = setOf(1, 3, 4, 11, 12, 15, 215, 224, 225)
+
+    /**
+     * Sports done on your feet, where steps times a stride make a distance (≈) without GPS: runs, walks, hikes. On a
+     * bike, in water or on a mat, steps say nothing about distance, so those show none.
+     */
+    val ON_FOOT = setOf(1, 2, 3, 11, 15, 40, 215, 224, 225)
+
+    /** Offered before any workout has been recorded: outdoor run, walk, strength training. */
+    val DEFAULT_SPORTS = listOf(1, 3, 52)
+
+    /** "Activity": what the strap files movement it logged by itself under; a record, not a sport anyone starts. */
+    const val GENERIC_ACTIVITY = 223
 
     private val SPORT_NAMES = mapOf(
         1 to "Outdoor run", 2 to "Treadmill", 3 to "Walk", 4 to "Outdoor cycling", 5 to "Free training",

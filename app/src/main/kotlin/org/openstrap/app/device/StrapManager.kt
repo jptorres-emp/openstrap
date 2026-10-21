@@ -46,6 +46,7 @@ import org.openstrap.protocol.services.SettingsProtocol
 import org.openstrap.protocol.services.LiveHeartRate
 import org.openstrap.protocol.services.RealtimeSteps
 import org.openstrap.protocol.services.StepTotals
+import org.openstrap.protocol.services.SportSession
 import org.openstrap.protocol.crypto.crc32
 import org.openstrap.protocol.history.FetchCodec
 import org.openstrap.protocol.history.GdspMessage
@@ -75,6 +76,8 @@ class StrapManager(
     override val connection = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
     override val sync = MutableStateFlow<SyncState>(SyncState.Idle)
     override val liveHeartRate = MutableStateFlow<Int?>(null)
+    override val heartRateReadings = MutableSharedFlow<Int>(extraBufferCapacity = 64, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+    override val sportSessionPushes = MutableSharedFlow<SportSession.Push>(extraBufferCapacity = 8, onBufferOverflow = BufferOverflow.DROP_OLDEST)
     override val todaySteps = MutableStateFlow<StepTotals?>(null)
     override val liveHeartRateEnabled = MutableStateFlow(true)
     override val info = MutableStateFlow<StrapInfo?>(null)
@@ -197,10 +200,11 @@ class StrapManager(
                 watchHealthAlerts(s)
                 watchAlarms(s)
                 watchFindDevice(s)
+                watchSportSession(s)
                 retries = 0
                 autoSync(s)
                 liveHeartRateEnabled.value = settings.liveHeartRate.first()
-                if (liveHeartRateEnabled.value && appVisible) startLive()
+                if (liveWanted()) startLive()
             } catch (e: AuthException) {
                 log("auth failed: ${e.message}")
                 connection.value = PairingErrors.authFailure(e)
@@ -348,6 +352,41 @@ class StrapManager(
             log("alarms changed on the strap: ${p.toHex()}")
             alarmsChanged.tryEmit(Unit)
         }
+    }
+
+    /** The sport module's own pushes (its replies, `10 …`, go to their requests). */
+    private fun CoroutineScope.watchSportSession(s: ChannelSession) = launch {
+        sportCaps = null
+        if (!s.services.has(SportSession.ENDPOINT)) return@launch
+        s.messagesFor(SportSession.ENDPOINT).collect { p ->
+            if (p.isNotEmpty() && p.u8(0) == SportSession.REPLY) return@collect
+            log("sport < ${p.toHex()}")
+            SportSession.parsePush(p)?.let { sportSessionPushes.tryEmit(it) }
+        }
+    }
+
+    /** Learned with the first START on each connection. */
+    @Volatile private var sportCaps: SportSession.Capabilities? = null
+
+    override suspend fun sportSession(state: SportSession.State, sportType: Int, startTime: Long, elapsedSeconds: Long) {
+        val s = activeSession ?: throw StrapCommandException("The strap isn't connected")
+        if (!s.services.has(SportSession.ENDPOINT)) throw StrapCommandException("The strap has no sport module")
+        suspend fun send(request: ByteArray): ByteArray {
+            val reply = runCatching { s.request(SportSession.ENDPOINT, request, 8_000) { SportSession.isReplyTo(request, it) } }
+                .getOrElse { throw StrapCommandException("The strap didn't answer") }
+            log("sport > ${request.toHex()} < ${reply.toHex()}")
+            if (!SportSession.isOk(reply)) throw StrapCommandException("The strap refused the workout command")
+            return reply
+        }
+        val caps = sportCaps ?: (SportSession.parseVersion(send(SportSession.versionRequest)) ?: throw StrapCommandException("Unknown sport module version"))
+            .also { sportCaps = it }
+        if (state == SportSession.State.START) send(SportSession.config(sportType, caps))
+        send(SportSession.state(state, startTime, elapsedSeconds, caps))
+    }
+
+    override suspend fun sportSessionKeepAlive() {
+        val s = activeSession ?: return
+        runCatching { s.send(SportSession.ENDPOINT, SportSession.pauseKeepAlive) }
     }
 
     /** Logged only: the strap's `07` once buzzing has stopped. */
@@ -500,6 +539,7 @@ class StrapManager(
                     HistorySync(s, client, dao, settings, sync, ::log).run(only)
                 }
                 runCatching { notifyBodySignals() }.onFailure { log("body signals: $it") }
+                runCatching { WorkoutGapFill(dao).run()?.let { log(it) } }.onFailure { log("workout gap fill: $it") }
             } finally {
                 syncLock.unlock()
             }
@@ -545,23 +585,72 @@ class StrapManager(
         }
     }
 
+    /**
+     * Debug aid for the emulator, which has no strap: shows a connected strap and plays [script] as live heart rate,
+     * one reading a second; each entry is (bpm, seconds). Steps rise by [stepsPerMinute] meanwhile.
+     */
+    fun simulate(script: List<Pair<Int, Int>>, stepsPerMinute: Int, battery: Int = 80) {
+        scope.launch {
+            log("simulating a strap: $script, $stepsPerMinute steps/min")
+            // No strap is paired on the emulator: a reconnect loop would knock the fake one offline.
+            reconnectJob?.cancel()
+            connectJob?.cancel()
+            connection.value = ConnectionState.Connected(battery, "simulated")
+            // As a real connection does: the service carries the notifications.
+            runCatching { StrapService.start(context) }.onFailure { log("service start failed: $it") }
+            var steps = 1_000
+            var second = 0
+            for ((bpm, seconds) in script) repeat(seconds) {
+                onLiveHr(bpm)
+                if (++second % 60 == 0) { steps += stepsPerMinute; todaySteps.value = StepTotals(steps, null, null) }
+                delay(1_000)
+            }
+            liveHeartRate.value = null
+            connection.value = ConnectionState.Disconnected
+            log("simulation over")
+        }
+    }
+
     override fun setLiveHeartRate(enabled: Boolean) {
         liveHeartRateEnabled.value = enabled
         scope.launch { settings.setLiveHeartRate(enabled) }
-        if (enabled && appVisible) startLive() else pauseLive()
+        refreshLive()
     }
 
-    /** Live HR streams only while the app is on screen; in the background nothing would show it. */
+    /** Live HR streams only while the app is on screen, where it's shown, or while a workout records it. */
     @Volatile private var appVisible = false
+    @Volatile private var workoutActive = false
+
+    @Volatile private var effortWatch = false
+
+    private fun liveWanted() = workoutActive || effortWatch || (liveHeartRateEnabled.value && appVisible)
+
+    /** Starts or stops streaming to match [liveWanted]; a stream already running is left alone. */
+    private fun refreshLive() {
+        if (!liveWanted()) {
+            if (liveJob?.isActive == true) pauseLive()
+        } else if (liveJob?.isActive != true && !firmwareUpdating.value && connection.value is ConnectionState.Connected) {
+            startLive()
+        }
+    }
 
     override fun setAppVisible(visible: Boolean) {
         if (visible == appVisible) return
         appVisible = visible
-        if (!visible) {
-            if (liveJob?.isActive == true) pauseLive()
-        } else if (liveHeartRateEnabled.value && !firmwareUpdating.value && connection.value is ConnectionState.Connected) {
-            startLive()
-        }
+        refreshLive()
+    }
+
+    override fun setWorkoutActive(active: Boolean) {
+        if (active == workoutActive) return
+        workoutActive = active
+        log(if (active) "workout started: live hr stays on in the background" else "workout ended")
+        refreshLive()
+    }
+
+    override fun setEffortWatch(active: Boolean) {
+        if (active == effortWatch) return
+        effortWatch = active
+        refreshLive()
     }
 
     /** Stops streaming without changing the user's preference (e.g. during a firmware update). */
@@ -757,9 +846,10 @@ class StrapManager(
         }
     }
 
-    /** Display only, like Zepp: the strap records per-second HR itself and history sync stores it. */
+    /** Shown live, and recorded during a workout; the strap also records per-second HR itself and history sync stores it. */
     private fun onLiveHr(bpm: Int) {
         liveHeartRate.value = bpm
+        heartRateReadings.tryEmit(bpm)
     }
 
     private companion object {

@@ -118,6 +118,102 @@ interface HealthDao {
     @Query("SELECT * FROM sport_effect ORDER BY `end`")
     fun sportEffects(): Flow<List<SportEffectRow>>
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertAppWorkout(workout: AppWorkout)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAppWorkouts(workouts: List<AppWorkout>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAppWorkoutHeartRate(samples: List<AppWorkoutHeartRate>)
+
+    /** Gap filling: never over a live sample, and a second fill of the same minute changes nothing. */
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertAppWorkoutHeartRateIfMissing(samples: List<AppWorkoutHeartRate>)
+
+    /** Finished phone workouts, newest first. */
+    @Query("SELECT * FROM app_workout WHERE `end` IS NOT NULL ORDER BY start DESC")
+    fun appWorkouts(): Flow<List<AppWorkout>>
+
+    @Query("SELECT * FROM app_workout WHERE `end` IS NOT NULL ORDER BY start")
+    suspend fun appWorkoutsAll(): List<AppWorkout>
+
+    /** The workout still recording, if the app was stopped during one. */
+    @Query("SELECT * FROM app_workout WHERE `end` IS NULL ORDER BY start DESC LIMIT 1")
+    suspend fun activeAppWorkout(): AppWorkout?
+
+    /** Phone workouts that overlap [from, to], the one recording included. */
+    @Query("SELECT * FROM app_workout WHERE (`end` IS NULL OR `end` >= :from) AND start <= :to ORDER BY start")
+    suspend fun appWorkoutsOnce(from: Long, to: Long): List<AppWorkout>
+
+    @Query("SELECT * FROM app_workout WHERE start = :start")
+    fun appWorkout(start: Long): Flow<AppWorkout?>
+
+    @Query("SELECT * FROM app_workout WHERE start = :start")
+    suspend fun appWorkoutOnce(start: Long): AppWorkout?
+
+    @Query("SELECT * FROM app_workout_hr WHERE workoutStart = :start ORDER BY timestamp")
+    fun appWorkoutHeartRate(start: Long): Flow<List<AppWorkoutHeartRate>>
+
+    @Query("SELECT * FROM app_workout_hr WHERE workoutStart = :start ORDER BY timestamp")
+    suspend fun appWorkoutHeartRateOnce(start: Long): List<AppWorkoutHeartRate>
+
+    @Query("SELECT * FROM app_workout_hr ORDER BY workoutStart, timestamp")
+    suspend fun appWorkoutHeartRateAll(): List<AppWorkoutHeartRate>
+
+    @Query("DELETE FROM app_workout WHERE start = :start")
+    suspend fun deleteAppWorkoutRow(start: Long)
+
+    @Query("DELETE FROM app_workout_hr WHERE workoutStart = :start")
+    suspend fun deleteAppWorkoutHeartRate(start: Long)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertSets(sets: List<AppWorkoutSet>)
+
+    @Query("SELECT * FROM app_workout_set WHERE workoutStart = :start ORDER BY `index`")
+    fun sets(start: Long): Flow<List<AppWorkoutSet>>
+
+    @Query("SELECT * FROM app_workout_set WHERE workoutStart = :start ORDER BY `index`")
+    suspend fun setsOnce(start: Long): List<AppWorkoutSet>
+
+    @Query("SELECT * FROM app_workout_set ORDER BY workoutStart, `index`")
+    suspend fun setsAll(): List<AppWorkoutSet>
+
+    @Query("DELETE FROM app_workout_set WHERE workoutStart = :start")
+    suspend fun deleteSets(start: Long)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertRoutePoints(points: List<AppWorkoutRoutePoint>)
+
+    @Query("SELECT * FROM app_workout_route WHERE workoutStart = :start ORDER BY timestamp")
+    fun route(start: Long): Flow<List<AppWorkoutRoutePoint>>
+
+    @Query("SELECT * FROM app_workout_route WHERE workoutStart = :start ORDER BY timestamp")
+    suspend fun routeOnce(start: Long): List<AppWorkoutRoutePoint>
+
+    @Query("SELECT * FROM app_workout_route ORDER BY workoutStart, timestamp")
+    suspend fun routeAll(): List<AppWorkoutRoutePoint>
+
+    @Query("DELETE FROM app_workout_route WHERE workoutStart = :start")
+    suspend fun deleteRoute(start: Long)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertDismissedWorkouts(rows: List<DismissedWorkout>)
+
+    @Query("SELECT * FROM app_workout_dismissed WHERE `end` >= :from ORDER BY start")
+    fun dismissedWorkouts(from: Long): Flow<List<DismissedWorkout>>
+
+    @Query("SELECT * FROM app_workout_dismissed ORDER BY start")
+    suspend fun dismissedWorkoutsAll(): List<DismissedWorkout>
+
+    @androidx.room.Transaction
+    suspend fun deleteAppWorkout(start: Long) {
+        deleteSets(start)
+        deleteRoute(start)
+        deleteAppWorkoutHeartRate(start)
+        deleteAppWorkoutRow(start)
+    }
+
     @Query("SELECT * FROM sport_effect WHERE `end` BETWEEN :from AND :to ORDER BY `end`")
     suspend fun sportEffectsOnce(from: Long, to: Long): List<SportEffectRow>
 

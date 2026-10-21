@@ -1,5 +1,8 @@
 package org.openstrap.app.ui.glow
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import org.openstrap.app.ui.theme.PhosphorIcons
 import androidx.compose.material3.Icon
 import androidx.compose.foundation.shape.CircleShape
@@ -96,12 +99,30 @@ fun GlowTodayScreen(
     /** The morning check-in (1-5), asked on Today before noon; see [CheckInPanel]. */
     checkIn: Int? = null,
     onCheckIn: (Int?) -> Unit = {},
+    /** A stretch nobody started, offered for saving; null hides the card. */
+    suggestion: org.openstrap.app.data.WorkoutSuggestions.Suggestion? = null,
+    onSaveSuggestion: () -> Unit = {},
+    onDismissSuggestion: () -> Unit = {},
+    /** Opens the ready screen with your usual sport; null hides the row. */
+    onStartWorkout: (() -> Unit)? = null,
+    /** An effort under way nobody started ([org.openstrap.app.data.AutoStart]); null hides the card. */
+    offer: org.openstrap.app.data.AutoStart.Offer? = null,
+    onRecordOffer: () -> Unit = {},
+    onDeclineOffer: () -> Unit = {},
+    /** A workout recording now: the Start workout pill becomes a way back to it ([WorkoutShortcut]). */
+    running: org.openstrap.app.device.WorkoutState.Recording? = null,
+    onOpenRunning: () -> Unit = {},
+    onResumeRunning: () -> Unit = {},
 ) {
     // The glow holds still while the list scrolls, so scrolling stays as smooth as on other screens.
     val list = rememberLazyListState()
     var choosing by rememberSaveable { mutableStateOf(false) }
     if (choosing) TilesDialog(tiles, onSave = { onTilesChange(it); choosing = false }, onDismiss = { choosing = false })
-    val extras = TodayExtras(liveEnabled, onLiveToggle, onOpenActivity, onOpenHealthspan, onOpenProfile, healthspan, history, tiles, strapReadiness, checkIn, onCheckIn) { choosing = true }
+    val extras = TodayExtras(
+        liveEnabled, onLiveToggle, onOpenActivity, onOpenHealthspan, onOpenProfile, healthspan, history, tiles, strapReadiness, checkIn, onCheckIn,
+        suggestion, onSaveSuggestion, onDismissSuggestion, onStartWorkout, offer, onRecordOffer, onDeclineOffer,
+        running, onOpenRunning, onResumeRunning,
+    ) { choosing = true }
     CompositionLocalProvider(LocalGlowPaused provides { list.isScrollInProgress }) {
         TodayList(state, liveHeartRate, battery, charging, onPrev, onNext, contentPadding, picker, onOpenSleep, onOpenMetric, recovery, onOpenRecovery, workouts, onOpenWorkout, list, extras)
     }
@@ -120,6 +141,16 @@ private class TodayExtras(
     val strapReadiness: StrapReadinessRow?,
     val checkIn: Int?,
     val onCheckIn: (Int?) -> Unit,
+    val suggestion: org.openstrap.app.data.WorkoutSuggestions.Suggestion?,
+    val onSaveSuggestion: () -> Unit,
+    val onDismissSuggestion: () -> Unit,
+    val onStartWorkout: (() -> Unit)?,
+    val offer: org.openstrap.app.data.AutoStart.Offer?,
+    val onRecordOffer: () -> Unit,
+    val onDeclineOffer: () -> Unit,
+    val running: org.openstrap.app.device.WorkoutState.Recording?,
+    val onOpenRunning: () -> Unit,
+    val onResumeRunning: () -> Unit,
     val onChooseTiles: () -> Unit,
 )
 
@@ -176,19 +207,44 @@ private fun TodayList(
     // Glow: activity, moving with the day's steps.
     left { ActivityGlow(state, extras.onOpenActivity) }
     val dayWorkouts = workouts.filter { it.workout.start in state.dayStart..state.dayEnd }.sortedBy { it.workout.start }
-    if (dayWorkouts.isNotEmpty()) left { TodayWorkouts(dayWorkouts, onOpenWorkout) }
+    val isToday = state.date == LocalDate.now()
+    if (extras.offer != null && isToday) left { OfferPanel(extras.offer, extras.onRecordOffer, extras.onDeclineOffer) }
+    if (extras.suggestion != null && isToday) left { SuggestionPanel(extras.suggestion, extras.onSaveSuggestion, extras.onDismissSuggestion) }
+    // Today's workouts with a way to start one; a past day lists only what was done.
+    val start = extras.onStartWorkout.takeIf { isToday }
+    if (dayWorkouts.isNotEmpty() || start != null) left { TodayWorkouts(dayWorkouts, onOpenWorkout, start, extras.running?.takeIf { isToday }, liveHeartRate, extras) }
 
     if (hasSleep && !morning) left { SleepPanel(state, onOpenSleep) }
 }
 
-/** The selected day's workouts, in the same glass rows as the Activity screen's list; hidden when there are none. */
+/**
+ * The selected day's workouts, in the same glass rows as the Activity screen's list, under a way to start one today:
+ * a white pill like the ready screen's Start, so it reads as an action rather than another past workout.
+ */
 @Composable
-private fun TodayWorkouts(workouts: List<org.openstrap.app.data.WorkoutAnalysis>, onOpen: (Long) -> Unit) {
+private fun TodayWorkouts(
+    workouts: List<org.openstrap.app.data.WorkoutAnalysis>, onOpen: (Long) -> Unit, onStart: (() -> Unit)?,
+    running: org.openstrap.app.device.WorkoutState.Recording?, liveHeartRate: Int?, extras: TodayExtras,
+) {
     DotPanel {
         DotHeader("Workouts")
-        workouts.forEach { WorkoutLine(it, showDate = false) { onOpen(it.workout.start) } }
+        // While one records there's no starting another: the pill leads back to it instead.
+        if (running != null) WorkoutShortcut(running, liveHeartRate, extras.onOpenRunning, extras.onResumeRunning)
+        else if (onStart != null) Row(
+            Modifier.fillMaxWidth().height(52.dp).clip(RoundedCornerShape(50)).background(Color.White)
+                .pressClickable(onStart, RoundedCornerShape(50)),
+            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center,
+        ) {
+            Icon(org.openstrap.app.ui.theme.PhosphorIcons.PlayFill, null, tint = Color.Black, modifier = Modifier.size(16.dp))
+            Spacer(Modifier.width(10.dp))
+            Text("Start workout", color = Color.Black, style = MaterialTheme.typography.titleSmall)
+        }
+        // The day's last three; the rest are on Activity.
+        workouts.takeLast(TODAY_WORKOUTS).forEach { WorkoutLine(it, showDate = false) { onOpen(it.workout.start) } }
     }
 }
+
+private const val TODAY_WORKOUTS = 3
 
 /* ------------------------------------------------------------------------------------------------ */
 
@@ -245,7 +301,7 @@ private fun OverviewCard(
 
     // The glow sits low and central, under the gauge.
     val style = GlowStyle.Bloom.copy(
-        color = overviewColor(lead.value.takeUnless { lead.estimate }, strain),
+        color = overviewColor(lead.value, strain),
         coreShape = CoreShape.Radial, coreX = 0.5f, coreY = 0.6f, coreWidth = 0.95f, coreHeight = 0.75f,
         coreBlur = 30.dp, toneWidth = 16.dp, toneShift = -10f, glowStrength = 0.6f, bevel = 0.6f,
         motion = GlowMotion.Breath(5f), depth = 6.dp,
@@ -362,11 +418,13 @@ private fun ScoreBar(score: Score, onClick: () -> Unit, modifier: Modifier = Mod
 
 /**
  * The card's colour tells how the day looks before you read a number: teal when the leading score is
- * good, amber when it's middling or there are signs of strain, coral when it's low. The rings sit on
- * the dark core, so they stay readable whatever the colour.
+ * good, amber when it's middling or there are signs of strain, coral when it's low. The strap's
+ * estimate counts as a score here; its faded bar and label already say it's an estimate. With no
+ * score at all (still learning) it's a muted teal: Recovery waiting, not grey "no data". The rings
+ * sit on the dark core, so they stay readable whatever the colour.
  */
 internal fun overviewColor(score: Int?, strain: Boolean) = when {
-    score == null -> Color(0xFF6E7280)
+    score == null -> Color(0xFF4E8F86)
     strain -> Color(0xFFF2A33A)
     score >= 70 -> MetricColors.hrv
     score >= 50 -> Color(0xFFF2A33A)
@@ -390,7 +448,7 @@ private fun HeartGlow(state: DayUiState, live: Int?, liveEnabled: Boolean?, onLi
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text("Live", color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodySmall)
                             Spacer(Modifier.width(8.dp))
-                            GlowSwitch(on, onLiveToggle, accent = MetricColors.heart)
+                            GlowSwitch(on, onLiveToggle, accent = style.color)
                         }
                     }
                 },

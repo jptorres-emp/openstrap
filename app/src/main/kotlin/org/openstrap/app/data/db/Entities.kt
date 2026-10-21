@@ -145,6 +145,111 @@ data class WorkoutHeartRate(
     val bpm: Int,
 )
 
+/**
+ * A workout recorded on the phone from the strap's live heart rate, apart from the strap's own [Workout] so a later
+ * merge with strap-side sessions stays explicit. [end] is null while it is recording.
+ */
+@Entity(tableName = "app_workout")
+data class AppWorkout(
+    @PrimaryKey val start: Long,
+    val end: Long?,
+    val sportType: Int,
+    val source: Int = SOURCE_APP,
+    /** Finished pauses as "from-to" pairs of epoch seconds, comma separated; see [pauseRanges]. */
+    val pauses: String = "",
+    /** When the pause under way began; null while recording. */
+    val pausedAt: Long? = null,
+    val endReason: Int? = null,
+    /** Worked out when the workout ends, and again when gap filling adds minutes. */
+    val averageHeartRate: Int? = null,
+    val maxHeartRate: Int? = null,
+    /** "Ask to end when I stop", chosen on the ready screen. */
+    @ColumnInfo(defaultValue = "1") val askToEnd: Boolean = true,
+    /**
+     * Where the workout really ended before the app or a trim moved [end] earlier; null when it ends where it was
+     * recorded. Nothing recorded is deleted, so undo puts it back.
+     */
+    val recordedEnd: Long? = null,
+    /** The start as trimmed; null for [start]. [start] stays the key. */
+    val shownStart: Long? = null,
+    /** What it aims for ([org.openstrap.app.data.WorkoutTarget.code]); null for none. */
+    val target: String? = null,
+    /** GPS on for this workout (outdoor sports only, off by default). */
+    @ColumnInfo(defaultValue = "0") val useGps: Boolean = false,
+    /** The route is saved in [AppWorkoutRoutePoint]; otherwise it is used live, then discarded, and only totals stay. */
+    @ColumnInfo(defaultValue = "0") val keepRoute: Boolean = false,
+    /** Metres covered: from GPS, or estimated from the strap's steps ([distanceFromSteps]) without it. */
+    val distanceMeters: Float? = null,
+    @ColumnInfo(defaultValue = "0") val distanceFromSteps: Boolean = false,
+    /** Strength: how rest ends ([org.openstrap.app.data.Strength.Rest.code]) and how many sets are planned. */
+    val rest: String? = null,
+    val setsTarget: Int? = null,
+    /** Lap marks, epoch seconds, comma separated; see [lapMarks]. */
+    @ColumnInfo(defaultValue = "") val laps: String = "",
+) {
+    val lapMarks: List<Long> get() = laps.split(',').mapNotNull { it.toLongOrNull() }
+
+    /** The start the workout is shown and measured from. */
+    val from: Long get() = shownStart ?: start
+
+    val pauseRanges: List<LongRange>
+        get() = pauses.split(',').mapNotNull { p ->
+            val (a, b) = p.split('-').takeIf { it.size == 2 } ?: return@mapNotNull null
+            (a.toLongOrNull() ?: return@mapNotNull null)..(b.toLongOrNull() ?: return@mapNotNull null)
+        }
+
+    /** Seconds spent paused between [from] and [now], the pause under way included. */
+    fun pausedSeconds(now: Long): Long =
+        pauseRanges.sumOf { (minOf(it.last, now) - maxOf(it.first, from)).coerceAtLeast(0) } + (pausedAt?.let { (now - maxOf(it, from)).coerceAtLeast(0) } ?: 0)
+
+    fun withPause(from: Long, to: Long) = copy(pauses = (pauseRanges.map { "${it.first}-${it.last}" } + "$from-$to").joinToString(","), pausedAt = null)
+
+    companion object {
+        const val SOURCE_APP = 0
+        const val SOURCE_STRAP = 1
+        const val SOURCE_SUGGESTED = 2
+        const val END_USER = 0
+        const val END_AUTO = 1
+        const val END_CAR = 2
+    }
+}
+
+/** One set of a strength workout: when it began and ended, and when the rest after it ended (null while resting). */
+@Entity(tableName = "app_workout_set", primaryKeys = ["workoutStart", "index"])
+data class AppWorkoutSet(
+    val workoutStart: Long,
+    val index: Int,
+    val start: Long,
+    val end: Long? = null,
+    val restEnd: Long? = null,
+)
+
+/** One GPS fix of a workout whose route the wearer chose to keep on the phone. */
+@Entity(tableName = "app_workout_route", primaryKeys = ["workoutStart", "timestamp"])
+data class AppWorkoutRoutePoint(
+    val workoutStart: Long,
+    val timestamp: Long,
+    val lat: Double,
+    val lon: Double,
+    val accuracy: Float,
+)
+
+/** A stretch answered "Not a workout", so it isn't offered again ([org.openstrap.app.data.WorkoutSuggestions]). */
+@Entity(tableName = "app_workout_dismissed")
+data class DismissedWorkout(
+    @PrimaryKey val start: Long,
+    val end: Long,
+)
+
+/** Live heart rate during an [AppWorkout], one per second; [fromHistory] rows fill minutes the phone missed, one per minute. */
+@Entity(tableName = "app_workout_hr", primaryKeys = ["workoutStart", "timestamp"])
+data class AppWorkoutHeartRate(
+    val workoutStart: Long,
+    val timestamp: Long,
+    val bpm: Int,
+    val fromHistory: Boolean = false,
+)
+
 /** The strap's post-workout result (type 59), keyed by the workout's end. */
 @Entity(tableName = "sport_effect")
 data class SportEffectRow(

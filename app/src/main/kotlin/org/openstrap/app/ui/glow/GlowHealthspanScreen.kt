@@ -48,7 +48,7 @@ fun GlowHealthspanScreen(state: Healthspan.Outcome?, contentPadding: PaddingValu
     BackHandler(onBack = onBack)
     val r = state?.result
     ScreenList(contentPadding, gutter = GlowLayout.Gutter) {
-        item { GlowDetailHeader("Healthspan", r?.let { updatedText(it.asOf) } ?: "Updated weekly, on Sunday", onBack) }
+        item { GlowDetailHeader("Habit Age", r?.let { updatedText(it.asOf) } ?: "Updated weekly, on Sunday", onBack) }
         item {
             GlowCard(HealthspanGlow.copy(motion = GlowMotion.Breath(5f)), Modifier.fillMaxWidth()) {
                 Column {

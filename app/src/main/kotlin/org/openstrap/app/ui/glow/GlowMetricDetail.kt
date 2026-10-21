@@ -209,7 +209,7 @@ private fun DayCard(metric: Metric, state: DayUiState, normal: History.Normal?, 
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text("Live", color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodySmall)
                             Spacer(Modifier.width(8.dp))
-                            GlowSwitch(on, onLiveToggle, accent = color)
+                            GlowSwitch(on, onLiveToggle, accent = style.color)
                         }
                     }
                 },

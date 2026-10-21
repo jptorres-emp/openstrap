@@ -186,6 +186,8 @@ fun formatDuration(seconds: Long): String {
     val h = seconds / 3600
     val m = (seconds % 3600) / 60
     return when {
+        // A short workout reads "45s", not "0m".
+        seconds in 1 until 60 -> "${seconds}s"
         h > 0 && m == 0L -> "${h}h"
         h > 0 -> "${h}h ${m}m"
         else -> "${m}m"

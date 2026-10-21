@@ -16,10 +16,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -140,26 +140,34 @@ fun ArcTimeline(
 /* Switch                                                                                            */
 /* ------------------------------------------------------------------------------------------------ */
 
-/** The glassy pill switch from the "Training" card. */
+/**
+ * The pill switch, monochrome like the workout buttons: white with a black knob when on, dim grey when off.
+ * Inside a glow card, pass the card's colour as [accent]: on, it's a deeper shade of that colour with a white knob.
+ */
 @Composable
-fun GlowSwitch(checked: Boolean, onCheckedChange: (Boolean) -> Unit, modifier: Modifier = Modifier, accent: Color = Color(0xFF6D7CFF)) {
-    val track by animateColorAsState(if (checked) accent.copy(alpha = 0.55f) else Color.White.copy(alpha = 0.08f), label = "glow switch track")
+fun GlowSwitch(checked: Boolean, onCheckedChange: (Boolean) -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true, accent: Color? = null) {
+    val onTrack = accent?.let { lerp(it, Color.Black, 0.25f) } ?: Color.White
+    val track by animateColorAsState(if (checked) onTrack else Color.White.copy(alpha = 0.12f), label = "glow switch track")
+    val knobColor by animateColorAsState(
+        if (!checked) Color.White.copy(alpha = 0.6f) else if (accent != null) Color.White else Color.Black,
+        label = "glow switch knob colour",
+    )
     val knob by animateDpAsState(if (checked) 26.dp else 0.dp, spring(dampingRatio = 0.6f, stiffness = 500f), label = "glow switch knob")
     Box(
         modifier
             .size(60.dp, 34.dp)
-            // Clipped so the press ripple stays inside the pill, and white like the rest of the glow marks.
+            .alpha(if (enabled) 1f else 0.4f)
+            // Clipped so the press ripple stays inside the pill.
             .clip(CircleShape)
             .background(track)
-            .toggleable(checked, interactionSource = null, indication = ripple(color = Color.White), role = Role.Switch, onValueChange = onCheckedChange)
+            .toggleable(checked, enabled = enabled, interactionSource = null, indication = ripple(color = Color.Gray), role = Role.Switch, onValueChange = onCheckedChange)
             .padding(3.dp),
     ) {
         Box(
             Modifier
                 .offset(x = knob)
                 .size(28.dp)
-                .shadow(6.dp, CircleShape)
-                .background(Brush.radialGradient(listOf(Color.White, Color(0xFFDCDCEA))), CircleShape),
+                .background(knobColor, CircleShape),
         )
     }
 }

@@ -317,7 +317,7 @@ object Healthspan {
      */
     enum class Withheld(val reason: String, val profile: Boolean = false, val learning: Boolean = false) {
         NoAge("Add your birth year in your profile to start your estimate.", profile = true),
-        Age("Healthspan is for ages 20 to 79."),
+        Age("Habit Age is for ages 20 to 79."),
         Sex("Add your sex in your profile: the typical values differ for women and men.", profile = true),
         Medication("Not shown while taking beta-blockers or during pregnancy: resting heart rate doesn't reflect fitness then."),
         Learning("Needs 30 days of wear before a first estimate.", learning = true),

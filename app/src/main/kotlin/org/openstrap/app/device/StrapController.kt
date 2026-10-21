@@ -36,6 +36,12 @@ interface StrapController {
     /** Latest live heart-rate reading in bpm, or null when live HR is off. */
     val liveHeartRate: StateFlow<Int?>
 
+    /**
+     * Every live heart-rate reading as it arrives (bpm), repeats included, for recording a workout. [liveHeartRate]
+     * drops a reading equal to the one before, and the strap sends each second on two paths, so de-duplicate by time.
+     */
+    val heartRateReadings: kotlinx.coroutines.flow.SharedFlow<Int>
+
     /** The user's live-HR switch; when on, streaming runs while connected and the app is on screen. */
     val liveHeartRateEnabled: StateFlow<Boolean>
 
@@ -72,6 +78,15 @@ interface StrapController {
     fun setAppVisible(visible: Boolean)
 
     /**
+     * While a workout records, live HR streams whatever the switch and the screen say, and starts again after each
+     * reconnect.
+     */
+    fun setWorkoutActive(active: Boolean)
+
+    /** While idle: live HR streams for workout auto-start ([org.openstrap.app.data.AutoStart]) while this is on. */
+    fun setEffortWatch(active: Boolean)
+
+    /**
      * Sends [file] to the strap and applies it (docs/protocol/03 §3.4). The strap reboots afterwards and the
      * app reconnects on its own. Throws [org.openstrap.protocol.firmware.DfuException] on any refusal.
      */
@@ -99,6 +114,18 @@ interface StrapController {
      * Throws [StrapCommandException] when not connected or refused.
      */
     suspend fun buzz(pattern: List<Int>)
+
+    /**
+     * Sends a workout state to the strap's sport module (0x0019): START also learns the module and sends the config
+     * first. Throws [StrapCommandException] when not connected, refused, or the strap has no such module.
+     */
+    suspend fun sportSession(state: org.openstrap.protocol.services.SportSession.State, sportType: Int, startTime: Long, elapsedSeconds: Long)
+
+    /** The strap's sport-module keep-alive while a workout is paused, every 5 s. */
+    suspend fun sportSessionKeepAlive()
+
+    /** What the strap pushes on its own during a sport session ("heart rate back to normal", a stop). */
+    val sportSessionPushes: kotlinx.coroutines.flow.SharedFlow<org.openstrap.protocol.services.SportSession.Push>
 
     /** Keeps the strap buzzing (a ringing call) until [stopBuzzing] or the wearer taps the strap. */
     suspend fun startBuzzing()

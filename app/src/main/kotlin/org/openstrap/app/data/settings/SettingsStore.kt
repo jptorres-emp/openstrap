@@ -118,6 +118,27 @@ class SettingsStore(private val context: Context) {
         context.dataStore.edit { it[liveHr] = enabled }
     }
 
+    private val autoStartKey = androidx.datastore.preferences.core.booleanPreferencesKey("auto_start_workouts")
+
+    /** Notice a workout as it starts and offer to record it from where it began ([org.openstrap.app.data.AutoStart]). On by default. */
+    val autoStartWorkouts: Flow<Boolean> = context.dataStore.data.map { it[autoStartKey] ?: true }
+
+    suspend fun setAutoStartWorkouts(enabled: Boolean) {
+        context.dataStore.edit { it[autoStartKey] = enabled }
+    }
+
+    private val strapSessionsKey = androidx.datastore.preferences.core.booleanPreferencesKey("strap_sessions")
+
+    /**
+     * Experimental, off by default: a phone workout also starts a session on the strap (0x0019), so the strap keeps
+     * its own record. Not yet verified on hardware; a debug intent turns it on.
+     */
+    val strapSessions: Flow<Boolean> = context.dataStore.data.map { it[strapSessionsKey] ?: false }
+
+    suspend fun setStrapSessions(enabled: Boolean) {
+        context.dataStore.edit { it[strapSessionsKey] = enabled }
+    }
+
     private val birthYear = androidx.datastore.preferences.core.intPreferencesKey("profile_birth_year")
     private val sex = stringPreferencesKey("profile_sex")
     private val weight = androidx.datastore.preferences.core.floatPreferencesKey("profile_weight_kg")

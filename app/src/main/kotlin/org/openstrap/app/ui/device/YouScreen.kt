@@ -51,6 +51,8 @@ fun YouScreen(
     onImportCsv: () -> Unit,
     onExportHealthConnect: () -> Unit,
     onImportHealthConnect: () -> Unit,
+    quietNotification: Boolean = false,
+    onQuietNotification: (Boolean) -> Unit = {},
 ) {
     val profile by vm.profile.collectAsState()
     val paired by vm.paired.collectAsState()
@@ -93,6 +95,23 @@ fun YouScreen(
 
         item { Group("Device") }
         item { StrapCard(paired?.name, connection, sync, onOpenStrap) }
+        item {
+            Panel(onClick = { onQuietNotification(!quietNotification) }) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    YouIcon(PhosphorIcons.BellRinging)
+                    Spacer(Modifier.width(14.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("Quiet notification", style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            "Android needs a notification to keep the strap connected. Quiet hides its status-bar icon and folds it away.",
+                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    androidx.compose.material3.Switch(quietNotification, onQuietNotification)
+                }
+            }
+        }
 
         item { Group("Your data") }
         item {

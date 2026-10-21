@@ -259,7 +259,10 @@ private fun lastDone(epoch: Long?): String {
  * says when the sport was last done; the sport's icon and name sit underneath.
  */
 @Composable
-internal fun StartWorkoutPanel(sports: List<SportUse>, onStart: (Int) -> Unit, onAllSports: () -> Unit) {
+internal fun StartWorkoutPanel(
+    sports: List<SportUse>, onStart: (Int) -> Unit, onAllSports: () -> Unit,
+    autoStart: Boolean? = null, onAutoStart: (Boolean) -> Unit = {},
+) {
     DotPanel {
         DotHeader("Start a workout")
         val tiles: List<SportUse?> = sports + null
@@ -274,6 +277,7 @@ internal fun StartWorkoutPanel(sports: List<SportUse>, onStart: (Int) -> Unit, o
                 }
             }
         }
+        autoStart?.let { SwitchRow("Notice workouts", "When your heart rate stays up for 10 minutes, offer to record from where it began", it, onAutoStart) }
     }
 }
 
@@ -303,6 +307,25 @@ internal fun SuggestionPanel(s: org.openstrap.app.data.WorkoutSuggestions.Sugges
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Box(Modifier.weight(1f)) { WorkoutButton("Save as workout", Color.White, Color.Black, onSave, height = 48.dp) }
             Box(Modifier.weight(1f)) { WorkoutButton("Not a workout", Raised, Color.White, onDismiss, height = 48.dp) }
+        }
+    }
+}
+
+/** "Looks like a workout": an effort still under way that nobody started, offered for recording from its start. */
+@Composable
+internal fun OfferPanel(o: org.openstrap.app.data.AutoStart.Offer, onRecord: () -> Unit, onDecline: () -> Unit) {
+    DotPanel {
+        Row(verticalAlignment = Alignment.Top) {
+            Icon(SportIcons.of(o.sportType), null, tint = MetricColors.heart, modifier = Modifier.padding(top = 2.dp).size(20.dp))
+            Spacer(Modifier.width(10.dp))
+            Column {
+                Text("Looks like a workout", color = Color.White, style = MaterialTheme.typography.titleSmall)
+                Note("Your heart rate has been up since ${clock(o.start)}, ${o.averageHeartRate} bpm on average. Record a ${Workouts.sportName(o.sportType).lowercase()} from ${clock(o.start)}?")
+            }
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Box(Modifier.weight(1f)) { WorkoutButton("Record", MetricColors.heart, Color.Black, onRecord, height = 48.dp) }
+            Box(Modifier.weight(1f)) { WorkoutButton("Not now", Raised, Color.White, onDecline, height = 48.dp) }
         }
     }
 }

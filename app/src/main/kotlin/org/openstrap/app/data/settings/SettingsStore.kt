@@ -118,6 +118,24 @@ class SettingsStore(private val context: Context) {
         context.dataStore.edit { it[liveHr] = enabled }
     }
 
+    private val quietNotificationKey = androidx.datastore.preferences.core.booleanPreferencesKey("quiet_notification")
+
+    /** The everyday strap notification without a status-bar icon, folded away at the bottom of the shade. Off by default. */
+    val quietNotification: Flow<Boolean> = context.dataStore.data.map { it[quietNotificationKey] ?: false }
+
+    suspend fun setQuietNotification(enabled: Boolean) {
+        context.dataStore.edit { it[quietNotificationKey] = enabled }
+    }
+
+    private val autoStartKey = androidx.datastore.preferences.core.booleanPreferencesKey("auto_start_workouts")
+
+    /** Notice a workout as it starts and offer to record it from where it began ([org.openstrap.app.data.AutoStart]). On by default. */
+    val autoStartWorkouts: Flow<Boolean> = context.dataStore.data.map { it[autoStartKey] ?: true }
+
+    suspend fun setAutoStartWorkouts(enabled: Boolean) {
+        context.dataStore.edit { it[autoStartKey] = enabled }
+    }
+
     private val strapSessionsKey = androidx.datastore.preferences.core.booleanPreferencesKey("strap_sessions")
 
     /**

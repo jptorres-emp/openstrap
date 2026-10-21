@@ -592,7 +592,12 @@ class StrapManager(
     fun simulate(script: List<Pair<Int, Int>>, stepsPerMinute: Int) {
         scope.launch {
             log("simulating a strap: $script, $stepsPerMinute steps/min")
+            // No strap is paired on the emulator: a reconnect loop would knock the fake one offline.
+            reconnectJob?.cancel()
+            connectJob?.cancel()
             connection.value = ConnectionState.Connected(80, "simulated")
+            // As a real connection does: the service carries the notifications.
+            runCatching { StrapService.start(context) }.onFailure { log("service start failed: $it") }
             var steps = 1_000
             var second = 0
             for ((bpm, seconds) in script) repeat(seconds) {
@@ -616,7 +621,9 @@ class StrapManager(
     @Volatile private var appVisible = false
     @Volatile private var workoutActive = false
 
-    private fun liveWanted() = workoutActive || (liveHeartRateEnabled.value && appVisible)
+    @Volatile private var effortWatch = false
+
+    private fun liveWanted() = workoutActive || effortWatch || (liveHeartRateEnabled.value && appVisible)
 
     /** Starts or stops streaming to match [liveWanted]; a stream already running is left alone. */
     private fun refreshLive() {
@@ -637,6 +644,12 @@ class StrapManager(
         if (active == workoutActive) return
         workoutActive = active
         log(if (active) "workout started: live hr stays on in the background" else "workout ended")
+        refreshLive()
+    }
+
+    override fun setEffortWatch(active: Boolean) {
+        if (active == effortWatch) return
+        effortWatch = active
         refreshLive()
     }
 

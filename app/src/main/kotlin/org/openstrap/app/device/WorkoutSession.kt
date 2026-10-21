@@ -7,13 +7,18 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import org.openstrap.app.data.AutoStart
 import org.openstrap.app.data.RecoveryEngine
 import org.openstrap.app.data.WorkoutRecorder
 import org.openstrap.app.data.db.AppWorkout
@@ -106,7 +111,7 @@ class WorkoutSession(
     private var lastSecond = -1L
     private var wake: PowerManager.WakeLock? = null
 
-    /** Picks up a workout left recording when the process died. Called once at app start. */
+    /** Picks up a workout left recording when the process died, then starts watching for auto-start. Called once at app start. */
     fun restore() {
         scope.launch {
             try {
@@ -139,6 +144,8 @@ class WorkoutSession(
                 }
             } finally {
                 _restored.value = true
+                // After the restore, so a workout left recording isn't offered as a new one.
+                watchForEffort()
             }
         }
     }
@@ -147,12 +154,14 @@ class WorkoutSession(
         sportType: Int, askToEnd: Boolean = true, target: org.openstrap.app.data.WorkoutTarget? = null,
         useGps: Boolean = false, keepRoute: Boolean = false,
         rest: org.openstrap.app.data.Strength.Rest? = null, setsTarget: Int? = null,
+        /** Auto-start: the workout began here, earlier, and [seed] holds its live readings so far. */
+        from: Long? = null, seed: List<Pair<Long, Int>> = emptyList(), seedSteps: Int? = null,
     ) {
         scope.launch {
             lock.withLock {
                 if (_state.value is WorkoutState.Recording) return@withLock
                 val w = AppWorkout(
-                    start = now(), end = null, sportType = sportType, askToEnd = askToEnd, target = target?.code,
+                    start = from ?: now(), end = null, sportType = sportType, askToEnd = askToEnd, target = target?.code,
                     useGps = useGps, keepRoute = useGps && keepRoute,
                     rest = rest?.code, setsTarget = setsTarget,
                 )
@@ -172,8 +181,126 @@ class WorkoutSession(
                 askSince = w.start
                 minimized.value = false
                 begin(w, maxHeartRate())
+                firstSteps = seedSteps
+                for ((t, bpm) in seed) record(t, bpm)
             }
         }
+    }
+
+    /**
+     * "Looks like a workout" ([AutoStart]): an effort under way that nobody started, while the question is open.
+     * The strap buzzes once as it is asked; the notification and the Today and Activity tabs ask it.
+     */
+    private val _offer = MutableStateFlow<AutoStart.Offer?>(null)
+    val offer: StateFlow<AutoStart.Offer?> = _offer
+    /** Idle live readings and step totals of the last [WATCH_S], from probes and from streaming while effort lasts. */
+    private val idleReadings = mutableListOf<Pair<Long, Int>>()
+    private var idleSteps = listOf<Pair<Long, Int>>()
+    /** Effort before this isn't offered: the end of the last workout. */
+    private var offerNotBefore = 0L
+    /** "Not now": quiet until the effort under way has ended. */
+    private var declined = false
+
+    /** "Record": the workout starts where the effort began, with the readings since. */
+    fun recordOffer() {
+        val o = _offer.value ?: return
+        _offer.value = null
+        val seed = synchronized(idleReadings) { idleReadings.filter { it.first >= o.start } }
+        val steps = idleSteps.firstOrNull { it.first >= o.start }?.second
+        (strap as? StrapManager)?.log("auto-start: recording ${o.sportType} from ${o.start}, ${seed.size} readings")
+        start(o.sportType, from = o.start, seed = seed, seedSteps = steps)
+    }
+
+    fun declineOffer() {
+        if (_offer.value == null) return
+        _offer.value = null
+        declined = true
+    }
+
+    /** Watches for effort whenever auto-start is on, the strap is connected and nothing records. */
+    private fun watchForEffort() = scope.launch {
+        combine(settings.autoStartWorkouts, _state, strap.connection) { on, st, c ->
+            on && st !is WorkoutState.Recording && c is ConnectionState.Connected
+        }.distinctUntilChanged().collectLatest { watching ->
+            if (watching) watchEffort() else {
+                strap.setEffortWatch(false)
+                _offer.value = null
+            }
+        }
+    }
+
+    /**
+     * Probes live HR for [AutoStart.PROBE_S] every [AutoStart.PROBE_EVERY_S], and keeps it streaming while the heart
+     * rate is up or the feet are busy; asks once an effort has lasted long enough ([AutoStart.offer]).
+     */
+    private suspend fun watchEffort() = coroutineScope {
+        val maxHr = maxHeartRate()
+        val resting = runCatching { dao.restingHrOnce(now() - RESTING_LOOKBACK_S, now()).lastOrNull()?.bpm }.getOrNull() ?: DEFAULT_RESTING_HR
+        val threshold = AutoStart.threshold(resting, maxHr)
+        val log = { m: String -> (strap as? StrapManager)?.log(m); Unit }
+        launch {
+            var last = -1L
+            strap.heartRateReadings.collect { bpm ->
+                val t = now()
+                if (t == last || !WorkoutRecorder.isValid(bpm)) return@collect
+                last = t
+                synchronized(idleReadings) {
+                    idleReadings += t to bpm
+                    while (idleReadings.first().first < t - WATCH_S) idleReadings.removeAt(0)
+                }
+            }
+        }
+        launch {
+            strap.todaySteps.collect { s ->
+                s ?: return@collect
+                val t = now()
+                idleSteps = (idleSteps + (t to s.steps)).dropWhile { it.first < t - WATCH_S }
+            }
+        }
+        try {
+            var probeUntil = 0L
+            var nextProbe = now()
+            var streaming = false
+            while (isActive) {
+                val t = now()
+                val cadence = cadence(t)
+                val snapshot = synchronized(idleReadings) { idleReadings.toList() }
+                val hot = AutoStart.keepStreaming(snapshot.filter { it.first >= t - 60 }, threshold, cadence)
+                val stream = when {
+                    t < probeUntil || hot -> true
+                    t >= nextProbe -> { probeUntil = t + AutoStart.PROBE_S; true }
+                    else -> false
+                }
+                if (stream && !hot && t >= nextProbe) nextProbe = t + AutoStart.PROBE_EVERY_S
+                if (stream != streaming) log("auto-start: ${if (stream) "streaming" else "probe over"}${if (hot) " (effort)" else ""}")
+                streaming = stream
+                strap.setEffortWatch(stream)
+                val o = AutoStart.offer(snapshot, resting, maxHr, cadence, t, offerNotBefore)
+                if (o == null) {
+                    declined = false
+                    if (_offer.value != null) { _offer.value = null; log("auto-start: effort ended before an answer") }
+                } else if (_offer.value == null && !declined) {
+                    _offer.value = o
+                    log("auto-start: offering ${o.sportType} from ${o.start}, ${o.averageHeartRate} bpm")
+                    if (!callRinging()) launch { runCatching { strap.buzz(OFFER_BUZZ) } }
+                }
+                delay(WATCH_TICK_MS)
+            }
+        } finally {
+            strap.setEffortWatch(false)
+        }
+    }
+
+    /**
+     * Steps a minute over the last few minutes of [idleSteps], or null without two totals a minute apart (the strap
+     * reports about once a minute).
+     */
+    private fun cadence(t: Long): Int? {
+        val recent = idleSteps.filter { it.first >= t - 240 }
+        val first = recent.firstOrNull() ?: return null
+        val last = recent.last()
+        if (last.first - first.first < 60) return null
+        return ((last.second - first.second) * 60 / (last.first - first.first)).toInt().coerceAtLeast(0)
     }
 
     fun pause() = update { w ->
@@ -256,6 +383,8 @@ class WorkoutSession(
                 // Written here: an update() queued behind this lock would find the workout already ended.
                 val w = r.workout.let { w -> distanceNow(w)?.let { (m, steps) -> w.copy(distanceMeters = m, distanceFromSteps = steps) } ?: w }
                 val recorded = w.pausedAt ?: now()
+                // The heart rate stays up for a while after a workout; that's not a new one to offer.
+                offerNotBefore = now()
                 val end = at?.coerceIn(w.start, recorded) ?: recorded
                 val ended = w.copy(end = end, pausedAt = null, endReason = reason, recordedEnd = recorded.takeIf { it > end })
                 strapState(org.openstrap.protocol.services.SportSession.State.STOP, w)
@@ -571,10 +700,11 @@ class WorkoutSession(
     }
 
     /** One reading a second: the strap sends each on two paths. Nothing is kept while paused. */
-    private fun onReading(bpm: Int) {
+    private fun onReading(bpm: Int) = record(now(), bpm)
+
+    private fun record(t: Long, bpm: Int) {
         val r = _state.value as? WorkoutState.Recording ?: return
         if (r.paused || !WorkoutRecorder.isValid(bpm)) return
-        val t = now()
         synchronized(buffer) {
             if (t == lastSecond) return
             lastSecond = t
@@ -618,6 +748,11 @@ class WorkoutSession(
         val STOP_BUZZ = listOf(500, 250, 500)
         /** Only if the max-HR model can't run; 190 is Tanaka's estimate at 25. */
         const val DEFAULT_MAX_HR = 190
+        /** Long enough for an effort to be offered from its start. */
+        const val WATCH_S = 2 * 3600L
+        const val WATCH_TICK_MS = 5_000L
+        /** Three short pulses: unlike the stop question's two long ones. */
+        val OFFER_BUZZ = listOf(150, 150, 150, 150, 150)
         /** A safety net should end() never come; the strap's battery is long gone by then. */
         const val MAX_WAKE_MS = 12 * 3600_000L
     }

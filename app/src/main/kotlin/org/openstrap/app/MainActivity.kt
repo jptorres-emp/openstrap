@@ -236,6 +236,9 @@ private fun AppRoot(container: AppContainer) {
     val suggestions by workoutsVm.suggestions.collectAsStateWithLifecycle()
     // Hidden while a workout records: the strap's history may show the one under way.
     val suggestion = suggestions.firstOrNull().takeIf { workoutState !is org.openstrap.app.device.WorkoutState.Recording }
+    val offer by container.workout.offer.collectAsStateWithLifecycle()
+    val autoStart by container.settings.autoStartWorkouts.collectAsStateWithLifecycle(true)
+    val quietNotification by container.settings.quietNotification.collectAsStateWithLifecycle(false)
     // A stretch being saved as a workout waits here while its sport is chosen.
     var savingSuggestion by remember { mutableStateOf<org.openstrap.app.data.WorkoutSuggestions.Suggestion?>(null) }
     // A launcher shortcut or the Quick Settings tile asked for the ready screen.
@@ -438,6 +441,8 @@ private fun AppRoot(container: AppContainer) {
                         onExportHealthConnect = exportHealthConnect,
                         onImportCsv = { csvImportLauncher.launch(arrayOf("application/zip", "application/x-zip-compressed", "application/octet-stream")) },
                         onImportHealthConnect = importHealthConnect,
+                        quietNotification = quietNotification,
+                        onQuietNotification = { on -> scope.launch { container.settings.setQuietNotification(on) } },
                     )
                 }
             } }
@@ -505,6 +510,9 @@ private fun AppRoot(container: AppContainer) {
                                     onSaveSuggestion = { savingSuggestion = suggestion },
                                     onDismissSuggestion = { suggestion?.let { container.workout.dismissSuggestion(it.start, it.end) } },
                                     onStartWorkout = { readySport = org.openstrap.app.ui.glow.topSports(workouts).first().sportType; readyPicking = false },
+                                    offer = offer,
+                                    onRecordOffer = { container.workout.recordOffer() },
+                                    onDeclineOffer = { container.workout.declineOffer() },
                                 )
                             }
                     }
@@ -594,6 +602,11 @@ private fun AppRoot(container: AppContainer) {
                                 onDismissSuggestion = { suggestion?.let { container.workout.dismissSuggestion(it.start, it.end) } },
                                 onAllSports = { readySport = readySport ?: org.openstrap.app.ui.glow.topSports(workouts).first().sportType; readyPicking = true },
                                 onAddWorkout = { addingOn = day.date },
+                                offer = offer,
+                                onRecordOffer = { container.workout.recordOffer() },
+                                onDeclineOffer = { container.workout.declineOffer() },
+                                autoStart = autoStart,
+                                onAutoStart = { on -> scope.launch { container.settings.setAutoStartWorkouts(on) } },
                             )
                         }
                     }

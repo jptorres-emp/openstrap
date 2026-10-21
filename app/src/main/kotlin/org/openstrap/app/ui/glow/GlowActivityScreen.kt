@@ -85,6 +85,12 @@ fun GlowActivityScreen(
     onSaveSuggestion: () -> Unit = {},
     onDismissSuggestion: () -> Unit = {},
     onAddWorkout: () -> Unit = {},
+    /** An effort under way nobody started ([org.openstrap.app.data.AutoStart]); null hides the card. */
+    offer: org.openstrap.app.data.AutoStart.Offer? = null,
+    onRecordOffer: () -> Unit = {},
+    onDeclineOffer: () -> Unit = {},
+    autoStart: Boolean? = null,
+    onAutoStart: (Boolean) -> Unit = {},
 ) {
     val list = rememberLazyListState()
     val sports = remember(workouts) { topSports(workouts) }
@@ -95,7 +101,8 @@ fun GlowActivityScreen(
             full { DateHeader(state.date, battery, onPrev, onNext, charging, picker) }
             // Wide: today's movement on the left; load, fitness and workouts on the right.
             // The home for workouts: started from here on today; a past day only shows what was done.
-            if (state.date == LocalDate.now()) left { StartWorkoutPanel(sports, onStartWorkout, onAllSports) }
+            if (offer != null && state.date == LocalDate.now()) left { OfferPanel(offer, onRecordOffer, onDeclineOffer) }
+            if (state.date == LocalDate.now()) left { StartWorkoutPanel(sports, onStartWorkout, onAllSports, autoStart, onAutoStart) }
             if (suggestion != null && state.date == LocalDate.now()) left { SuggestionPanel(suggestion, onSaveSuggestion, onDismissSuggestion) }
             left { StepsCard(state, r?.activity) { onOpenMetric(Metric.Steps) } }
             r?.activity?.let { a -> left { MvpaPanel(a) } }

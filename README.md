@@ -45,7 +45,7 @@ I use it daily with one Helio Strap on one Android 16 phone. Other phones and fi
 | Live heart rate | ✅ Works |
 | History sync: activity, sleep stages, HR, HRV, resting HR, SpO₂, stress, skin temperature, breathing | ✅ Works |
 | Workouts with heart-rate zones, training effect and recovery | ✅ Works |
-| Workouts started on the phone: live zones, strap coaching, GPS and maps, auto-end, missed-workout suggestions | 🧪 New, being tested |
+| Workouts started on the phone: live zones, strap coaching, GPS and maps, auto-start, auto-end, missed-workout suggestions | 🧪 New, being tested |
 | Recovery, Charge and sleep scores, PAI, training load | ✅ Works ([see limitations](#known-limitations)) |
 | Dashboard: Today, Recovery, Sleep, Activity, You (foldables and tablets too) | ✅ Works |
 | Alarms, strap health alerts | ✅ Works |

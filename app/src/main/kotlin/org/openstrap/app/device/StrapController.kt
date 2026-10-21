@@ -83,6 +83,9 @@ interface StrapController {
      */
     fun setWorkoutActive(active: Boolean)
 
+    /** While idle: live HR streams for workout auto-start ([org.openstrap.app.data.AutoStart]) while this is on. */
+    fun setEffortWatch(active: Boolean)
+
     /**
      * Sends [file] to the strap and applies it (docs/protocol/03 §3.4). The strap reboots afterwards and the
      * app reconnects on its own. Throws [org.openstrap.protocol.firmware.DfuException] on any refusal.

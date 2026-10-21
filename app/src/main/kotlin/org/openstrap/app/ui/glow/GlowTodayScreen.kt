@@ -102,6 +102,10 @@ fun GlowTodayScreen(
     onDismissSuggestion: () -> Unit = {},
     /** Opens the ready screen with your usual sport; null hides the row. */
     onStartWorkout: (() -> Unit)? = null,
+    /** An effort under way nobody started ([org.openstrap.app.data.AutoStart]); null hides the card. */
+    offer: org.openstrap.app.data.AutoStart.Offer? = null,
+    onRecordOffer: () -> Unit = {},
+    onDeclineOffer: () -> Unit = {},
 ) {
     // The glow holds still while the list scrolls, so scrolling stays as smooth as on other screens.
     val list = rememberLazyListState()
@@ -109,7 +113,7 @@ fun GlowTodayScreen(
     if (choosing) TilesDialog(tiles, onSave = { onTilesChange(it); choosing = false }, onDismiss = { choosing = false })
     val extras = TodayExtras(
         liveEnabled, onLiveToggle, onOpenActivity, onOpenHealthspan, onOpenProfile, healthspan, history, tiles, strapReadiness, checkIn, onCheckIn,
-        suggestion, onSaveSuggestion, onDismissSuggestion, onStartWorkout,
+        suggestion, onSaveSuggestion, onDismissSuggestion, onStartWorkout, offer, onRecordOffer, onDeclineOffer,
     ) { choosing = true }
     CompositionLocalProvider(LocalGlowPaused provides { list.isScrollInProgress }) {
         TodayList(state, liveHeartRate, battery, charging, onPrev, onNext, contentPadding, picker, onOpenSleep, onOpenMetric, recovery, onOpenRecovery, workouts, onOpenWorkout, list, extras)
@@ -133,6 +137,9 @@ private class TodayExtras(
     val onSaveSuggestion: () -> Unit,
     val onDismissSuggestion: () -> Unit,
     val onStartWorkout: (() -> Unit)?,
+    val offer: org.openstrap.app.data.AutoStart.Offer?,
+    val onRecordOffer: () -> Unit,
+    val onDeclineOffer: () -> Unit,
     val onChooseTiles: () -> Unit,
 )
 
@@ -190,6 +197,7 @@ private fun TodayList(
     left { ActivityGlow(state, extras.onOpenActivity) }
     val dayWorkouts = workouts.filter { it.workout.start in state.dayStart..state.dayEnd }.sortedBy { it.workout.start }
     val isToday = state.date == LocalDate.now()
+    if (extras.offer != null && isToday) left { OfferPanel(extras.offer, extras.onRecordOffer, extras.onDeclineOffer) }
     if (extras.suggestion != null && isToday) left { SuggestionPanel(extras.suggestion, extras.onSaveSuggestion, extras.onDismissSuggestion) }
     // Today's workouts with a way to start one; a past day lists only what was done.
     val start = extras.onStartWorkout.takeIf { isToday }

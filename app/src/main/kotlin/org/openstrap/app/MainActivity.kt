@@ -164,7 +164,7 @@ private enum class Tab(val label: String, val icon: androidx.compose.ui.graphics
     Today("Today", PhosphorIcons.House, PhosphorIcons.HouseFill),
     Recovery("Recovery", PhosphorIcons.Plant, PhosphorIcons.Plant),
     Sleep("Sleep", PhosphorIcons.Moon, PhosphorIcons.MoonFill),
-    Activity("Activity", PhosphorIcons.Footprints, PhosphorIcons.Footprints),
+    Activity("Activity", PhosphorIcons.PersonSimpleRun, PhosphorIcons.PersonSimpleRunFill),
     You("You", PhosphorIcons.User, PhosphorIcons.User),
 }
 

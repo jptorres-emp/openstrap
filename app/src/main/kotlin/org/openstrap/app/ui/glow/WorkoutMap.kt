@@ -60,6 +60,10 @@ fun WorkoutMap(stretches: List<Pair<List<Route.Point>, Int>>, routeOnly: Boolean
                 m.uiSettings.isCompassEnabled = false
                 // MapLibre's licence doesn't ask for its logo; the ⓘ stays, for the OpenStreetMap credit the tiles need.
                 m.uiSettings.isLogoEnabled = false
+                // In the bottom-right corner, inset to clear the card's rounded edge.
+                val inset = (18 * context.resources.displayMetrics.density).toInt()
+                m.uiSettings.attributionGravity = android.view.Gravity.BOTTOM or android.view.Gravity.END
+                m.uiSettings.setAttributionMargins(0, 0, inset, inset)
                 map = m
             }
         }

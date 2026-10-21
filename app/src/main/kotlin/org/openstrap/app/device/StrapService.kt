@@ -299,9 +299,9 @@ class StrapService : LifecycleService() {
             .setContentTitle(if (!connected && !r.paused) "$sport · strap disconnected" else sport)
             .setContentText(text)
             .setStyle(bar)
-            // The card is OpenStrap's: near-black with a touch of the logo's red dot (grey when paused or disconnected);
-            // the zone stays on the bar and in the text.
-            .setColor(if (colorize) androidx.core.graphics.ColorUtils.blendARGB(CARD_DARK, if (color == PAUSED_GREY) PAUSED_GREY else BRAND_DOT, CARD_TINT) else BRAND_DOT)
+            // The card is OpenStrap's: the icon's black, a lighter grey when paused or disconnected; the zone stays on the
+            // bar and in the text.
+            .setColor(if (colorize) (if (color == PAUSED_GREY) CARD_PAUSED else CARD_DARK) else BRAND_DOT)
             .setColorized(colorize)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
@@ -509,9 +509,9 @@ class StrapService : LifecycleService() {
         private const val LOW_BATTERY = 15
         /** The live screen's paused grey, for a paused or disconnected workout. */
         private const val PAUSED_GREY = 0xFF5A5F6A.toInt()
-        /** The colorized workout card: this near-black with [CARD_TINT] of the logo's dot ([BRAND_DOT]). */
-        private const val CARD_DARK = 0xFF121216.toInt()
-        private const val CARD_TINT = 0.18f
+        /** The colorized workout card: the launcher icon's background black, and a lighter grey while paused. */
+        private const val CARD_DARK = 0xFF0B0D10.toInt()
+        private const val CARD_PAUSED = 0xFF24272D.toInt()
         /** The red dot in the "OS." logo, the app's heart colour. */
         private val BRAND_DOT = org.openstrap.app.ui.theme.MetricColors.heart.toArgb()
         private const val ACTION_RECORD = "org.openstrap.app.workout.RECORD"

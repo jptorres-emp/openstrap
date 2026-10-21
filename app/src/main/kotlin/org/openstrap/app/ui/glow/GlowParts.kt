@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -139,11 +140,18 @@ fun ArcTimeline(
 /* Switch                                                                                            */
 /* ------------------------------------------------------------------------------------------------ */
 
-/** The pill switch, monochrome like the workout buttons: white with a black knob when on, dim grey when off. */
+/**
+ * The pill switch, monochrome like the workout buttons: white with a black knob when on, dim grey when off.
+ * Inside a glow card, pass the card's colour as [accent]: on, it's a deeper shade of that colour with a white knob.
+ */
 @Composable
-fun GlowSwitch(checked: Boolean, onCheckedChange: (Boolean) -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true) {
-    val track by animateColorAsState(if (checked) Color.White else Color.White.copy(alpha = 0.12f), label = "glow switch track")
-    val knobColor by animateColorAsState(if (checked) Color.Black else Color.White.copy(alpha = 0.6f), label = "glow switch knob colour")
+fun GlowSwitch(checked: Boolean, onCheckedChange: (Boolean) -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true, accent: Color? = null) {
+    val onTrack = accent?.let { lerp(it, Color.Black, 0.25f) } ?: Color.White
+    val track by animateColorAsState(if (checked) onTrack else Color.White.copy(alpha = 0.12f), label = "glow switch track")
+    val knobColor by animateColorAsState(
+        if (!checked) Color.White.copy(alpha = 0.6f) else if (accent != null) Color.White else Color.Black,
+        label = "glow switch knob colour",
+    )
     val knob by animateDpAsState(if (checked) 26.dp else 0.dp, spring(dampingRatio = 0.6f, stiffness = 500f), label = "glow switch knob")
     Box(
         modifier

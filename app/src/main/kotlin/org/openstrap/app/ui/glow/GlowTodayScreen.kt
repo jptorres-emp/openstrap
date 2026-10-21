@@ -448,7 +448,7 @@ private fun HeartGlow(state: DayUiState, live: Int?, liveEnabled: Boolean?, onLi
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text("Live", color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodySmall)
                             Spacer(Modifier.width(8.dp))
-                            GlowSwitch(on, onLiveToggle)
+                            GlowSwitch(on, onLiveToggle, accent = style.color)
                         }
                     }
                 },

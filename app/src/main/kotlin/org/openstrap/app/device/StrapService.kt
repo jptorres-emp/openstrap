@@ -278,7 +278,7 @@ class StrapService : LifecycleService() {
         }
         val bar = NotificationCompat.ProgressStyle()
             .setStyledByProgress(false)
-            // `also`, not `apply`: ProgressStyle has an apply() of its own. The tracker, a white circle as on the live
+            // `also`, not `apply`: ProgressStyle has an apply() of its own. The tracker, the gauge marker in the zone colour as on the live
             // screen's zone bar, marks where the heart rate sits; a progress point would draw as a square on some phones.
             .also { style ->
                 if (target is org.openstrap.app.data.WorkoutTarget.Time) {
@@ -286,10 +286,12 @@ class StrapService : LifecycleService() {
                     style.setProgressSegments(listOf(NotificationCompat.ProgressStyle.Segment(target.seconds.toInt().coerceAtLeast(1)).setColor(color)))
                     style.setProgress(active.toInt().coerceAtMost(target.seconds.toInt()))
                 } else {
+                    // Bright up to the heart rate, faded after, like the app's zone bar and its gauges.
+                    style.setStyledByProgress(true)
                     style.setProgressSegments(ZONE_COLORS.map { NotificationCompat.ProgressStyle.Segment(ZONE_SPAN).setColor(it.toArgb()) })
                     if (bpm != null && !r.paused) {
                         style.setProgress((WorkoutRecorder.zonePosition(bpm, r.maxHeartRate) * ZONE_SPAN * ZONE_COLORS.size).toInt())
-                        style.setProgressTrackerIcon(tracker)
+                        WorkoutRecorder.liveZone(bpm, r.maxHeartRate)?.let { z -> style.setProgressTrackerIcon(tracker(z)) }
                     }
                 }
             }
@@ -466,17 +468,21 @@ class StrapService : LifecycleService() {
             .build()
     }
 
-    /** A white dot ringed in the notification's dark grey, drawn once. */
-    private val tracker: androidx.core.graphics.drawable.IconCompat by lazy {
-        val size = (24 * resources.displayMetrics.density).toInt()
+    /** The app's gauge marker in each zone's colour: a solid dot in a soft halo of itself, drawn once per zone. */
+    private val trackers = arrayOfNulls<androidx.core.graphics.drawable.IconCompat>(ZONE_COLORS.size)
+
+    private fun tracker(zone: Int): androidx.core.graphics.drawable.IconCompat = trackers[zone] ?: run {
+        val d = resources.displayMetrics.density
+        val size = (18 * d).toInt()
         val bitmap = android.graphics.Bitmap.createBitmap(size, size, android.graphics.Bitmap.Config.ARGB_8888)
         val canvas = android.graphics.Canvas(bitmap)
         val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
-        paint.color = 0xFF1C1C1E.toInt()
+        val color = ZONE_COLORS[zone].toArgb()
+        paint.color = androidx.core.graphics.ColorUtils.setAlphaComponent(color, 77)
         canvas.drawCircle(size / 2f, size / 2f, size / 2f, paint)
-        paint.color = android.graphics.Color.WHITE
-        canvas.drawCircle(size / 2f, size / 2f, size / 2f - 3 * resources.displayMetrics.density, paint)
-        androidx.core.graphics.drawable.IconCompat.createWithBitmap(bitmap)
+        paint.color = color
+        canvas.drawCircle(size / 2f, size / 2f, 5 * d, paint)
+        androidx.core.graphics.drawable.IconCompat.createWithBitmap(bitmap).also { trackers[zone] = it }
     }
 
     private fun service(action: String): PendingIntent =

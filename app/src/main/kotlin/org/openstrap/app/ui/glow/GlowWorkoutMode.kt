@@ -54,11 +54,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import kotlin.math.roundToInt
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
@@ -216,14 +218,21 @@ private fun ZoneBar(bpm: Int?, maxHr: Int, ring: Color, modifier: Modifier = Mod
         val h = barHeight.toPx()
         val w = (size.width - gap * (Workouts.ZONES - 1)) / Workouts.ZONES
         val top = (size.height - h) / 2
+        val halo = 9.dp.toPx()
+        val x = bpm?.let { (WorkoutRecorder.zonePosition(it, maxHr) * size.width).coerceIn(halo, size.width - halo) }
+        // Like the Recovery and Charge gauges: bright up to the marker, faint after it, so the marker stands clear.
         for (z in 0 until Workouts.ZONES) {
-            drawRoundRect(ZONE_COLORS[z].copy(alpha = if (z == zone) 1f else 0.3f), Offset(z * (w + gap), top), Size(w, h), CornerRadius(h / 2))
+            val left = z * (w + gap)
+            drawRoundRect(ZONE_COLORS[z].copy(alpha = 0.25f), Offset(left, top), Size(w, h), CornerRadius(h / 2))
+            if (x != null && x > left) clipRect(right = x) {
+                drawRoundRect(ZONE_COLORS[z], Offset(left, top), Size(w, h), CornerRadius(h / 2))
+            }
         }
-        if (bpm != null) {
-            val r = size.height / 2
-            val x = (WorkoutRecorder.zonePosition(bpm, maxHr) * size.width).coerceIn(r, size.width - r)
-            drawCircle(ring, radius = r + 3.dp.toPx(), center = Offset(x, size.height / 2))
-            drawCircle(Color.White, radius = r, center = Offset(x, size.height / 2))
+        if (bpm != null && x != null) {
+            // The gauges' marker: the colour in a soft halo of itself.
+            val dot = zone?.let { ZONE_COLORS[it] } ?: ring
+            drawCircle(dot.copy(alpha = 0.3f), radius = halo, center = Offset(x, size.height / 2))
+            drawCircle(dot, radius = 5.dp.toPx(), center = Offset(x, size.height / 2))
         }
     }
 }
@@ -388,6 +397,8 @@ fun GlowAddWorkoutScreen(
 
 /** Room either side of a range chart, so its handles sit whole inside it. */
 private val HandleInset = 14.dp
+/** The trim frame's sides, the handles; the strip is inset by as much so either side can reach its end. */
+private val TrimSide = 12.dp
 
 /** A day of minute heart rate in its zones' colours, with two handles marking a range; outside it dims. */
 @Composable
@@ -745,12 +756,12 @@ fun GlowWorkoutLiveScreen(
         Spacer(Modifier.weight(1f))
         Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             // Lap (not for strength, which has sets), keeping Pause centred either way.
-            if (!r.strength && !r.paused) GlowButton(Color(0xFF5A5A62), 64.dp, onClick = onLap) {
+            if (!r.strength && !r.paused) FlatButton(Raised, 64.dp, onClick = onLap) {
                 Icon(SportIcons.Lap, "Lap", tint = Color.White, modifier = Modifier.size(22.dp))
             } else Spacer(Modifier.size(64.dp))
             Spacer(Modifier.weight(1f))
-            GlowButton(color, 88.dp, onClick = if (r.paused) onResume else onPause) {
-                Icon(if (r.paused) PhosphorIcons.PlayFill else PhosphorIcons.PauseFill, if (r.paused) "Resume" else "Pause", tint = Color.White, modifier = Modifier.size(30.dp))
+            FlatButton(Color.White, 88.dp, onClick = if (r.paused) onResume else onPause) {
+                Icon(if (r.paused) PhosphorIcons.PlayFill else PhosphorIcons.PauseFill, if (r.paused) "Resume" else "Pause", tint = Color.Black, modifier = Modifier.size(30.dp))
             }
             Spacer(Modifier.weight(1f))
             HoldToEnd(onEnd)
@@ -877,16 +888,13 @@ private fun bucketRecent(recent: List<Pair<Long, Int>>, now: Long): List<Float?>
  * [onClick] null leaves the touch handling to [modifier] (the end square's hold).
  */
 @Composable
-private fun GlowButton(color: Color, size: Dp, modifier: Modifier = Modifier, onClick: (() -> Unit)? = null, content: @Composable () -> Unit) {
-    val style = remember(color, size) {
-        GlowStyle.chart(color).copy(
-            radius = size / 2, coreShape = CoreShape.Radial, coreX = 0.5f, coreY = 0.5f, coreWidth = 0.66f, coreHeight = 0.66f,
-            coreBlur = size / 7, toneWidth = size / 10, glowSize = size / 5, glowStrength = 0.9f, motion = GlowMotion.Still,
-        )
-    }
-    GlowCard(style, modifier.size(size), onClick = onClick, contentPadding = PaddingValues(0.dp)) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { content() }
-    }
+private fun FlatButton(container: Color, size: Dp, modifier: Modifier = Modifier, onClick: (() -> Unit)? = null, content: @Composable () -> Unit) {
+    // Flat, like the app's Start and Done: the live screen's card already carries the glow.
+    Box(
+        modifier.size(size).clip(CircleShape).background(container)
+            .then(if (onClick != null) Modifier.pressClickable(onClick, CircleShape) else Modifier),
+        contentAlignment = Alignment.Center,
+    ) { content() }
 }
 
 /** "Looks like you've stopped": end where the wearer stopped, or keep going. The strap has buzzed already. */
@@ -911,8 +919,8 @@ private fun HoldToEnd(onEnd: () -> Unit) {
     val progress = remember { Animatable(0f) }
     val haptics = LocalHapticFeedback.current
     Box(contentAlignment = Alignment.Center) {
-        GlowButton(
-            EndRed, 64.dp,
+        FlatButton(
+            Raised, 64.dp,
             Modifier.pointerInput(Unit) {
                 detectTapGestures(onPress = {
                     coroutineScope {
@@ -930,10 +938,10 @@ private fun HoldToEnd(onEnd: () -> Unit) {
                 })
             },
         ) {
-            Icon(PhosphorIcons.StopFill, "Hold to end the workout", tint = Color.White, modifier = Modifier.size(20.dp))
+            Icon(PhosphorIcons.StopFill, "Hold to end the workout", tint = EndRed, modifier = Modifier.size(20.dp))
         }
         Canvas(Modifier.size(64.dp).padding(2.dp)) {
-            if (progress.value > 0f) drawArc(Color.White, -90f, 360f * progress.value, false, style = Stroke(3.dp.toPx(), cap = StrokeCap.Round))
+            if (progress.value > 0f) drawArc(EndRed, -90f, 360f * progress.value, false, style = Stroke(3.dp.toPx(), cap = StrokeCap.Round))
         }
     }
 }
@@ -1270,14 +1278,16 @@ private fun TrimPanel(summary: PhoneSummary, onSave: (Long, Long) -> Unit, onCan
         List(n) { if (counts[it] == 0) null else sums[it] / counts[it] }
     }
     DotPanel {
-        DotHeader("Trim", trailing = "${clock(from)} – ${clock(to)}")
+        DotHeader("Trim", trailing = "${clock(from)} – ${clock(to)} · ${workoutClock(to - from)}")
         val known = points.filterNotNull()
-        val lo = (known.minOrNull() ?: 60f) - 5f
+        val lo = (known.minOrNull() ?: 60f) - 10f
         val hi = (known.maxOrNull() ?: 180f) + 5f
+        // A video trimmer: the workout as columns of dots in their zone colours, inside one rounded frame whose
+        // thicker sides are the handles (Snapchat's, Polarsteps'); what's left out fades back. Drag either side in.
         Canvas(
-            Modifier.fillMaxWidth().height(96.dp).pointerInput(summary) {
+            Modifier.fillMaxWidth().height(64.dp).pointerInput(summary) {
                 var dragging = 0
-                val inset = HandleInset.toPx()
+                val inset = TrimSide.toPx()
                 fun timeAt(x: Float) = (first + ((x - inset) / (size.width - 2 * inset) * (last - first)).toLong()).coerceIn(first, last)
                 detectHorizontalDragGestures(
                     onDragStart = { o ->
@@ -1290,24 +1300,43 @@ private fun TrimPanel(summary: PhoneSummary, onSave: (Long, Long) -> Unit, onCan
                 }
             },
         ) {
-            // Inset, so a handle at either end is whole and easy to grab.
-            val inset = HandleInset.toPx()
+            val inset = TrimSide.toPx()
             val w = size.width - 2 * inset
-            val dx = w / (points.size - 1).coerceAtLeast(1)
-            fun y(v: Float) = size.height - (v - lo) / (hi - lo) * size.height
+            val h = size.height
+            val edge = 3.dp.toPx()
             fun x(t: Long) = inset + (t - first).toFloat() / (last - first) * w
-            for (i in 0 until points.size - 1) {
-                val v0 = points[i] ?: continue
-                val v1 = points[i + 1] ?: continue
-                val t = first + i * step
-                val inside = t in from until to
-                val color = ZONE_COLORS[WorkoutRecorder.liveZone(v0.toInt(), a.maxHeartRate)!!].copy(alpha = if (inside) 1f else 0.25f)
-                drawLine(color, Offset(inset + i * dx, y(v0)), Offset(inset + (i + 1) * dx, y(v1)), strokeWidth = 2.5.dp.toPx(), cap = StrokeCap.Round)
+            drawRoundRect(Raised, Offset(inset, 0f), Size(w, h), CornerRadius(8.dp.toPx()))
+            // Dot columns, as tall as the heart rate in that stretch; unlit dots stay faintly visible, like DotMatrixText.
+            val pitch = 5.dp.toPx()
+            val dot = 1.7.dp.toPx()
+            val pad = edge + 5.dp.toPx()
+            val rows = ((h - 2 * pad) / pitch).toInt().coerceAtLeast(1)
+            val cols = (w / pitch).toInt().coerceAtLeast(1)
+            val fx = x(from)
+            val tx = x(to)
+            for (c in 0 until cols) {
+                val cx = inset + (c + 0.5f) * (w / cols)
+                val i = ((c + 0.5f) / cols * points.size).toInt().coerceIn(0, points.size - 1)
+                val v = points[i]
+                val lit = v?.let { (((it - lo) / (hi - lo)).coerceIn(0.1f, 1f) * rows).roundToInt() } ?: 0
+                val zone = v?.let { WorkoutRecorder.liveZone(it.toInt(), a.maxHeartRate) }
+                val inside = cx in fx..tx
+                for (r in 0 until rows) {
+                    val cy = h - pad - (r + 0.5f) * pitch
+                    val color = if (r < lit && zone != null) ZONE_COLORS[zone] else Color.White.copy(alpha = 0.08f)
+                    drawCircle(if (inside) color else color.copy(alpha = color.alpha * 0.3f), dot, Offset(cx, cy))
+                }
             }
-            listOf(from, to).forEach { t ->
-                val hx = x(t)
-                drawLine(Color.White, Offset(hx, 0f), Offset(hx, size.height), strokeWidth = 2.dp.toPx())
-                drawCircle(Color.White, radius = 7.dp.toPx(), center = Offset(hx, size.height / 2))
+            // The frame: one rounded outline, its sides thick enough to grab, each with a short grip.
+            val frame = androidx.compose.ui.graphics.Path().apply {
+                fillType = androidx.compose.ui.graphics.PathFillType.EvenOdd
+                addRoundRect(androidx.compose.ui.geometry.RoundRect(fx - inset, 0f, tx + inset, h, CornerRadius(10.dp.toPx())))
+                addRoundRect(androidx.compose.ui.geometry.RoundRect(fx, edge, tx, h - edge, CornerRadius(4.dp.toPx())))
+            }
+            drawPath(frame, Color.White)
+            val grip = 2.dp.toPx()
+            listOf(fx - inset / 2, tx + inset / 2).forEach { gx ->
+                drawRoundRect(Color.Black.copy(alpha = 0.55f), Offset(gx - grip / 2, h / 2 - 8.dp.toPx()), Size(grip, 16.dp.toPx()), CornerRadius(grip / 2))
             }
         }
         Row(Modifier.fillMaxWidth()) {

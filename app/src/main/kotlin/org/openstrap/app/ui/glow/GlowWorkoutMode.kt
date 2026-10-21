@@ -277,17 +277,20 @@ internal fun StartWorkoutPanel(
             sports.take(3).forEach { s ->
                 SportBubble(SportIcons.of(s.sportType), Workouts.sportName(s.sportType), Modifier.weight(1f)) { onStart(s.sportType) }
             }
-            SportBubble(PhosphorIcons.DotsThree, "All sports", Modifier.weight(1f), onAllSports)
+            SportBubble(PhosphorIcons.DotsThree, "All sports", Modifier.weight(1f), onClick = onAllSports)
         }
         autoStart?.let { SwitchRow("Auto-detect workouts", "Asks to record when your heart rate stays up for 10 min", it, onAutoStart) }
     }
 }
 
 @Composable
-private fun SportBubble(icon: androidx.compose.ui.graphics.vector.ImageVector, name: String, modifier: Modifier, onClick: () -> Unit) {
-    Column(modifier.pressClickable(onClick, RoundedCornerShape(20.dp)).padding(vertical = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+private fun SportBubble(icon: androidx.compose.ui.graphics.vector.ImageVector, name: String, modifier: Modifier, selected: Boolean = false, onClick: () -> Unit) {
+    // Tight corners and room underneath, so the press area never clips a label that fills the width.
+    Column(modifier.pressClickable(onClick, RoundedCornerShape(8.dp)).padding(vertical = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
-            Modifier.size(64.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.08f)),
+            Modifier.size(64.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.08f))
+                // The sport chosen now: a ring, not a fill, so it doesn't read as a button apart.
+                .then(if (selected) Modifier.border(BorderStroke(2.dp, Color.White), CircleShape) else Modifier),
             contentAlignment = Alignment.Center,
         ) { Icon(icon, null, tint = Color.White, modifier = Modifier.size(26.dp)) }
         Spacer(Modifier.height(8.dp))
@@ -601,7 +604,11 @@ private fun SwitchRow(title: String, subtitle: String, checked: Boolean, onChang
 private fun SportPicker(selected: Int, contentPadding: PaddingValues, onPick: (Int) -> Unit, onBack: () -> Unit) {
     BackHandler(onBack = onBack)
     var query by rememberSaveable { mutableStateOf("") }
-    val shown = remember(query) { Workouts.sports.filter { it.second.contains(query.trim(), ignoreCase = true) } }
+    // The sections, each with the sports matching the search; empty sections drop out.
+    val shown = remember(query) {
+        Workouts.SECTIONS.map { (title, types) -> title to types.filter { Workouts.sportName(it).contains(query.trim(), ignoreCase = true) } }
+            .filter { it.second.isNotEmpty() }
+    }
     ScreenList(contentPadding, gutter = GlowLayout.Gutter) {
         item { GlowDetailHeader("Choose a sport", null, onBack) }
         item {
@@ -616,16 +623,19 @@ private fun SportPicker(selected: Int, contentPadding: PaddingValues, onPick: (I
             )
         }
         if (shown.isEmpty()) item { DotPanel { Note("No sport matches \"$query\".") } }
-        shown.forEach { (type, name) ->
-            item(key = type) {
-                Row(
-                    Modifier.fillMaxWidth().glass(GlassRowShape, { onPick(type) }).padding(horizontal = 14.dp, vertical = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(SportIcons.of(type), null, tint = Color.White.copy(alpha = 0.8f), modifier = Modifier.size(20.dp))
-                    Spacer(Modifier.width(12.dp))
-                    Text(name, color = Color.White, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                    if (type == selected) Canvas(Modifier.size(8.dp)) { drawCircle(Color.White) }
+        // Each section a grid of the same round buttons as Start a workout, four to a row.
+        shown.forEach { (title, types) ->
+            item(key = title) {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(title, color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(start = 4.dp, top = 8.dp))
+                    types.chunked(4).forEach { row ->
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+                            row.forEach { type ->
+                                SportBubble(SportIcons.of(type), Workouts.sportName(type), Modifier.weight(1f), selected = type == selected) { onPick(type) }
+                            }
+                            repeat(4 - row.size) { Spacer(Modifier.weight(1f)) }
+                        }
+                    }
                 }
             }
         }

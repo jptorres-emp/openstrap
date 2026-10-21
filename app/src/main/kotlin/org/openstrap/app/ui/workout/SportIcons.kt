@@ -22,9 +22,38 @@ internal object SportIcons {
     private val STRENGTH = setOf(24, 50, 52, 222, 226)
 
     fun of(sportType: Int): ImageVector = when (sportType) {
+        11 -> PhosphorIcons.Mountains
         in RUN -> Run
+        15, 224 -> PhosphorIcons.PersonSimpleHike
+        215 -> PhosphorIcons.Dog
+        225 -> PhosphorIcons.Backpack
         in WALK -> Walk
+        108, 57, 58 -> PhosphorIcons.Stairs
+        9 -> PhosphorIcons.Steps
+        4 -> PhosphorIcons.PersonSimpleBike
+        8, 143 -> PhosphorIcons.Bicycle
+        6 -> PhosphorIcons.PersonSimpleSwim
+        7 -> PhosphorIcons.Waves
+        23 -> PhosphorIcons.Boat
+        49 -> PhosphorIcons.Timer
+        130, 51, 109 -> PhosphorIcons.Lightning
+        222 -> PhosphorIcons.FlagCheckered
+        50 -> PhosphorIcons.Barbell
         in STRENGTH -> Strength
+        60 -> PhosphorIcons.FlowerLotus
+        61 -> PhosphorIcons.PersonSimpleTaiChi
+        53, 55 -> PhosphorIcons.PersonArmsSpread
+        76 -> PhosphorIcons.MusicNotes
+        17, 205 -> PhosphorIcons.TennisBall
+        89, 204 -> PhosphorIcons.PingPong
+        92 -> PhosphorIcons.PersonSimpleThrow
+        18 -> PhosphorIcons.SoccerBall
+        85 -> PhosphorIcons.Basketball
+        88 -> PhosphorIcons.Volleyball
+        83 -> PhosphorIcons.Golf
+        97 -> PhosphorIcons.BoxingGlove
+        12 -> PhosphorIcons.PersonSimpleSki
+        70, 10 -> PhosphorIcons.Mountains
         else -> PhosphorIcons.Heartbeat
     }
 

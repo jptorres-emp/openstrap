@@ -96,7 +96,26 @@ object Workouts {
     fun sportName(type: Int): String = SPORT_NAMES[type] ?: "Workout"
 
     /** Every sport a workout can be started as, by name, one id per name (Zepp has two "Free training"). */
-    val sports: List<Pair<Int, String>> by lazy { SPORT_NAMES.entries.distinctBy { it.value }.map { it.key to it.value }.sortedBy { it.second } }
+    val sports: List<Pair<Int, String>> by lazy {
+        SPORT_NAMES.entries.filter { it.key !in HIDDEN }.distinctBy { it.value }.map { it.key to it.value }.sortedBy { it.second }
+    }
+
+    /**
+     * Sports kept for naming workouts already recorded (by the strap, Zepp or an import) but not offered for new ones:
+     * each is another one under a second name, or the strap's own generic "Activity".
+     */
+    val HIDDEN = setOf(143, 40, 224, 55, 10, 57, 58, 51, 109, 24, 226, 16, 223)
+
+    /** The picker's sections, each sport once, most-done kinds first. */
+    val SECTIONS: List<Pair<String, List<Int>>> = listOf(
+        "Running & walking" to listOf(1, 2, 11, 3, 15, 215, 225, 108),
+        "Gym" to listOf(52, 50, 49, 130, 222, 9, 21, 5),
+        "Cycling" to listOf(4, 8),
+        "Water" to listOf(6, 7, 23),
+        "Mind & body" to listOf(60, 61, 53, 76),
+        "Racket & ball" to listOf(17, 205, 204, 92, 89, 18, 85, 88, 83, 97),
+        "Outdoors" to listOf(12, 70),
+    )
 
     /** Sports done outdoors, where the ready screen offers GPS. */
     val OUTDOOR = setOf(1, 3, 4, 11, 12, 15, 215, 224, 225)

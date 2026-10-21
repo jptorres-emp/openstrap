@@ -643,7 +643,8 @@ private fun SportPicker(selected: Int, contentPadding: PaddingValues, onPick: (I
 /**
  * The workout as it records, in the current zone's colour. The card beats at the live heart rate with the last ten
  * minutes behind the number; the zone, its range and the time spent in it sit under a zone bar. Back tucks it away;
- * ending takes a one-second hold on the square so a pocket can't end it.
+ * ending takes a one-second hold on the square so a pocket can't end it. With [split] the heart card is on the other
+ * half of a folded phone ([GlowWorkoutGlance]), so this half keeps the figures and the controls.
  */
 @Composable
 fun GlowWorkoutLiveScreen(
@@ -666,6 +667,7 @@ fun GlowWorkoutLiveScreen(
     onSetDone: () -> Unit = {},
     onExtendRest: () -> Unit = {},
     onLap: () -> Unit = {},
+    split: Boolean = false,
 ) {
     BackHandler(onBack = onMinimize)
     val pager = androidx.compose.foundation.pager.rememberPagerState { 3 }
@@ -675,8 +677,6 @@ fun GlowWorkoutLiveScreen(
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     var routeOnly by rememberSaveable { mutableStateOf(false) }
     val connected = connection is ConnectionState.Connected
-    val bpm = liveHeartRate.takeIf { connected && !r.paused }
-    val zone = WorkoutRecorder.liveZone(bpm, r.maxHeartRate)
     val color = workoutColor(r, liveHeartRate, connected)
     val active = activeSeconds(r)
     WorkoutPage(color, contentPadding, scroll = false) {
@@ -692,49 +692,15 @@ fun GlowWorkoutLiveScreen(
             Canvas(Modifier.size(6.dp)) { drawCircle(if (connected) TrendGood else TrendBad) }
         }
         val heartCard: @Composable () -> Unit = {
-            GlowCard(
-                GlowStyle.chart(color).copy(motion = if (bpm != null) GlowMotion.Heartbeat(bpm) else GlowMotion.Still),
+            WorkoutHeartCard(
+                r, liveHeartRate, recent, zoneSeconds, connected, active,
                 Modifier.fillMaxWidth().onSizeChanged { cardHeight = with(density) { it.height.toDp() } },
-            ) {
-                Column {
-                    GlowHeader("Heart rate", trailing = bpm?.let { "${it * 100 / r.maxHeartRate}% of max" })
-                    Box(Modifier.fillMaxWidth().height(200.dp)) {
-                        val now = recent.lastOrNull()?.first ?: (System.currentTimeMillis() / 1000)
-                        val values = remember(recent) { bucketRecent(recent, now) }
-                        if (values.any { it != null }) {
-                            GlowLineChart(values, Modifier.align(Alignment.BottomCenter).alpha(0.45f), height = 120.dp, showAverage = false)
-                        }
-                        Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
-                            DotMatrixText(bpm?.toString() ?: "--", dot = 9.dp, gap = 3.dp)
-                            Spacer(Modifier.height(8.dp))
-                            Text(
-                                when { r.paused -> "paused"; bpm == null && !connected -> "waiting for the strap"; else -> "bpm · last 10 min behind" },
-                                color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.bodySmall,
-                            )
-                        }
-                    }
-                    Row(verticalAlignment = Alignment.Bottom) {
-                        Text(zone?.let { "Zone ${it + 1} · ${ZONE_NAMES[it]}" } ?: "No zone yet", color = Color.White, style = GlowType.title, modifier = Modifier.weight(1f))
-                        zone?.let { Text(zoneRange(it, r.maxHeartRate), color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodySmall) }
-                    }
-                    Spacer(Modifier.height(10.dp))
-                    ZoneBar(bpm, r.maxHeartRate, ring = Color.Black.copy(alpha = 0.6f))
-                    Spacer(Modifier.height(8.dp))
-                    Row {
-                        zone?.let { Note("${workoutClock(zoneSeconds[it].toLong())} in zone") }
-                        Spacer(Modifier.weight(1f))
-                        when (val t = WorkoutTarget.parse(r.workout.target)) {
-                            is WorkoutTarget.Zones -> Note("Target ${t.label.removePrefix("Zone ")} · strap buzzes if you drift")
-                            is WorkoutTarget.Time -> Note("${workoutClock(active)} of ${t.label}")
-                            null -> Unit
-                        }
-                    }
-                }
-            }
+            )
         }
         // GPS workouts have three pages, as on the design: heart rate, the map, and the kilometre splits. They swipe
-        // as well as tap; a drag that starts on the map pans the map.
-        if (r.workout.useGps) {
+        // as well as tap; a drag that starts on the map pans the map. Split across a fold, the card has the other half.
+        if (split) Unit
+        else if (r.workout.useGps) {
             GlowSegments(listOf("Heart", "Map", "Splits"), pager.currentPage) { scope.launch { pager.animateScrollToPage(it) } }
             androidx.compose.foundation.pager.HorizontalPager(
                 pager, pageSpacing = 16.dp, verticalAlignment = Alignment.Top, beyondViewportPageCount = 2,
@@ -787,7 +753,11 @@ fun GlowWorkoutLiveScreen(
         }
         r.endPrompt?.let { at -> StoppedPrompt(r, at, onEndAtPrompt, onKeepGoing) }
         Spacer(Modifier.weight(1f))
-        Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+        // At most a thumb's reach wide, so on a wide screen (an unfolded or half-folded phone) Lap and End stay by Pause.
+        Row(
+            Modifier.align(Alignment.CenterHorizontally).widthIn(max = 360.dp).fillMaxWidth().padding(horizontal = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             // Lap (not for strength, which has sets), keeping Pause centred either way.
             val haptics = LocalHapticFeedback.current
             if (!r.strength && !r.paused) FlatButton(Raised, 64.dp, onClick = { haptics.performHapticFeedback(HapticFeedbackType.Confirm); onLap() }) {
@@ -806,6 +776,81 @@ fun GlowWorkoutLiveScreen(
         )
         // A little room under the controls, so they sit up off the screen's edge.
         Spacer(Modifier.height(20.dp))
+    }
+}
+
+/**
+ * The live heart card: the beating number over the last ten minutes, then the zone, its range, the zone bar and the
+ * time in zone. With [fill] it takes all the height it's given and the number grows, for the standing half of a fold.
+ */
+@Composable
+private fun WorkoutHeartCard(
+    r: WorkoutState.Recording,
+    liveHeartRate: Int?,
+    recent: List<Pair<Long, Int>>,
+    zoneSeconds: IntArray,
+    connected: Boolean,
+    active: Long,
+    modifier: Modifier,
+    fill: Boolean = false,
+) {
+    val bpm = liveHeartRate.takeIf { connected && !r.paused }
+    val zone = WorkoutRecorder.liveZone(bpm, r.maxHeartRate)
+    val color = workoutColor(r, liveHeartRate, connected)
+    GlowCard(GlowStyle.chart(color).copy(motion = if (bpm != null) GlowMotion.Heartbeat(bpm) else GlowMotion.Still), modifier) {
+        Column(if (fill) Modifier.fillMaxSize() else Modifier) {
+            GlowHeader("Heart rate", trailing = bpm?.let { "${it * 100 / r.maxHeartRate}% of max" })
+            Box(Modifier.fillMaxWidth().then(if (fill) Modifier.weight(1f) else Modifier.height(200.dp))) {
+                val now = recent.lastOrNull()?.first ?: (System.currentTimeMillis() / 1000)
+                val values = remember(recent) { bucketRecent(recent, now) }
+                if (values.any { it != null }) {
+                    GlowLineChart(values, Modifier.align(Alignment.BottomCenter).alpha(0.45f), height = 120.dp, showAverage = false)
+                }
+                Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
+                    DotMatrixText(bpm?.toString() ?: "--", dot = if (fill) 12.dp else 9.dp, gap = if (fill) 4.dp else 3.dp)
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        when { r.paused -> "paused"; bpm == null && !connected -> "waiting for the strap"; else -> "bpm · last 10 min behind" },
+                        color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            }
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text(zone?.let { "Zone ${it + 1} · ${ZONE_NAMES[it]}" } ?: "No zone yet", color = Color.White, style = GlowType.title, modifier = Modifier.weight(1f))
+                zone?.let { Text(zoneRange(it, r.maxHeartRate), color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodySmall) }
+            }
+            Spacer(Modifier.height(10.dp))
+            ZoneBar(bpm, r.maxHeartRate, ring = Color.Black.copy(alpha = 0.6f))
+            Spacer(Modifier.height(8.dp))
+            Row {
+                zone?.let { Note("${workoutClock(zoneSeconds[it].toLong())} in zone") }
+                Spacer(Modifier.weight(1f))
+                when (val t = WorkoutTarget.parse(r.workout.target)) {
+                    is WorkoutTarget.Zones -> Note("Target ${t.label.removePrefix("Zone ")} · strap buzzes if you drift")
+                    is WorkoutTarget.Time -> Note("${workoutClock(active)} of ${t.label}")
+                    null -> Unit
+                }
+            }
+        }
+    }
+}
+
+/**
+ * The standing half of a foldable half-open during a workout (on a table, or stood up like a book): the live heart
+ * card as big as the half allows, readable from a step away. The controls stay on the other half, under your hand.
+ */
+@Composable
+fun GlowWorkoutGlance(
+    r: WorkoutState.Recording,
+    liveHeartRate: Int?,
+    recent: List<Pair<Long, Int>>,
+    zoneSeconds: IntArray,
+    connection: ConnectionState,
+    modifier: Modifier = Modifier,
+) {
+    val connected = connection is ConnectionState.Connected
+    Box(modifier.background(Color.Black).statusBarsPadding().padding(horizontal = GlowLayout.Gutter, vertical = 12.dp)) {
+        WorkoutHeartCard(r, liveHeartRate, recent, zoneSeconds, connected, activeSeconds(r), Modifier.fillMaxSize(), fill = true)
     }
 }
 

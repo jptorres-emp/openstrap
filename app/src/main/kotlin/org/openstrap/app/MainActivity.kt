@@ -49,6 +49,8 @@ import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.CompositionLocalProvider
@@ -370,13 +372,18 @@ private fun AppRoot(container: AppContainer) {
     // Popups are drawn in the app's own window over a blur of the pages, like the nav bar.
     val glassHost = remember { org.openstrap.app.ui.components.GlassHost() }
     // Half-open on a table, the fold level: heart rate fills the standing top half, the app carries on below the fold.
+    // During a workout the top half is the workout's heart card instead, and the controls stay below.
     val activity = androidx.activity.compose.LocalActivity.current
     val windowLayout by remember(activity) {
         activity?.let { androidx.window.layout.WindowInfoTracker.getOrCreate(it).windowLayoutInfo(it) } ?: kotlinx.coroutines.flow.emptyFlow()
     }.collectAsStateWithLifecycle(null)
-    val hinge = windowLayout?.displayFeatures?.filterIsInstance<androidx.window.layout.FoldingFeature>()?.firstOrNull {
-        it.state == androidx.window.layout.FoldingFeature.State.HALF_OPENED && it.orientation == androidx.window.layout.FoldingFeature.Orientation.HORIZONTAL
-    }
+    val halfOpen = windowLayout?.displayFeatures?.filterIsInstance<androidx.window.layout.FoldingFeature>()
+        ?.filter { it.state == androidx.window.layout.FoldingFeature.State.HALF_OPENED }.orEmpty()
+    val hinge = halfOpen.firstOrNull { it.orientation == androidx.window.layout.FoldingFeature.Orientation.HORIZONTAL }
+    // Stood up like a book, the fold upright: only the live workout splits, heart card left, controls right.
+    val bookHinge = halfOpen.firstOrNull { it.orientation == androidx.window.layout.FoldingFeature.Orientation.VERTICAL }
+    val workoutOpen = workoutState as? org.openstrap.app.device.WorkoutState.Recording
+    val workoutOnTop = workoutOpen?.takeIf { hinge != null && !workoutMinimized }
     CompositionLocalProvider(
         LocalOpenStrap provides openStrap,
         org.openstrap.app.ui.dashboard.LocalGoals provides goals,
@@ -385,9 +392,13 @@ private fun AppRoot(container: AppContainer) {
       androidx.compose.foundation.layout.Column(androidx.compose.ui.Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
       if (hinge != null) {
           val density = androidx.compose.ui.platform.LocalDensity.current
-          org.openstrap.app.ui.glow.GlowTabletopHeart(
-              day, live, liveEnabled.takeIf { connection is ConnectionState.Connected }, { container.strap.setLiveHeartRate(it) },
-              androidx.compose.ui.Modifier.height(with(density) { hinge.bounds.top.toDp() }),
+          val top = androidx.compose.ui.Modifier.height(with(density) { hinge.bounds.top.toDp() })
+          if (workoutOnTop != null) {
+              val recent by container.workout.recent.collectAsStateWithLifecycle()
+              val zoneSeconds by container.workout.zoneSeconds.collectAsStateWithLifecycle()
+              org.openstrap.app.ui.glow.GlowWorkoutGlance(workoutOnTop, live, recent, zoneSeconds, connection, top)
+          } else org.openstrap.app.ui.glow.GlowTabletopHeart(
+              day, live, liveEnabled.takeIf { connection is ConnectionState.Connected }, { container.strap.setLiveHeartRate(it) }, top,
           )
           androidx.compose.foundation.layout.Spacer(androidx.compose.ui.Modifier.height(with(density) { hinge.bounds.height().toDp() }))
       }
@@ -667,6 +678,7 @@ private fun AppRoot(container: AppContainer) {
             onReadySport = { readySport = it },
             onCloseReady = { readySport = null; readyPicking = false },
             capsuleBottom = if (rail) 16.dp else 104.dp,
+            tabletop = hinge != null, bookHinge = bookHinge,
         )
         org.openstrap.app.ui.components.GlassOverlay(glassHost, navGlass)
       }
@@ -694,6 +706,8 @@ private fun androidx.compose.foundation.layout.BoxScope.WorkoutLayer(
     onReadySport: (Int) -> Unit,
     onCloseReady: () -> Unit,
     capsuleBottom: androidx.compose.ui.unit.Dp,
+    tabletop: Boolean = false,
+    bookHinge: androidx.window.layout.FoldingFeature? = null,
 ) {
     val session = container.workout
     val padding = androidx.compose.foundation.layout.WindowInsets.navigationBars.asPaddingValues()
@@ -708,15 +722,33 @@ private fun androidx.compose.foundation.layout.BoxScope.WorkoutLayer(
                 val zoneSeconds by session.zoneSeconds.collectAsStateWithLifecycle()
                 val route by session.route.collectAsStateWithLifecycle()
                 val history by session.history.collectAsStateWithLifecycle()
-                org.openstrap.app.ui.glow.GlowWorkoutLiveScreen(
-                    state, live, recent, stats, zoneSeconds, connection, padding,
-                    onPause = session::pause, onResume = session::resume, onEnd = session::end,
-                    onMinimize = { session.minimized.value = true },
-                    onEndAtPrompt = session::endAtPrompt, onKeepGoing = session::keepGoing,
-                    route = route, history = history,
-                    onStartSet = session::startSet, onSetDone = session::setDone, onExtendRest = session::extendRest,
-                    onLap = session::lap,
-                )
+                // Folded, the heart card has the standing half: above the fold (drawn with the tabletop heart) or,
+                // stood up like a book, the left half here.
+                val liveScreen: @Composable (androidx.compose.ui.Modifier) -> Unit = { modifier ->
+                    androidx.compose.foundation.layout.Box(modifier) {
+                        org.openstrap.app.ui.glow.GlowWorkoutLiveScreen(
+                            state, live, recent, stats, zoneSeconds, connection, padding,
+                            onPause = session::pause, onResume = session::resume, onEnd = session::end,
+                            onMinimize = { session.minimized.value = true },
+                            onEndAtPrompt = session::endAtPrompt, onKeepGoing = session::keepGoing,
+                            route = route, history = history,
+                            onStartSet = session::startSet, onSetDone = session::setDone, onExtendRest = session::extendRest,
+                            onLap = session::lap,
+                            split = tabletop || bookHinge != null,
+                        )
+                    }
+                }
+                if (bookHinge != null) {
+                    val density = androidx.compose.ui.platform.LocalDensity.current
+                    androidx.compose.foundation.layout.Row(androidx.compose.ui.Modifier.fillMaxSize()) {
+                        org.openstrap.app.ui.glow.GlowWorkoutGlance(
+                            state, live, recent, zoneSeconds, connection,
+                            androidx.compose.ui.Modifier.width(with(density) { bookHinge.bounds.left.toDp() }).fillMaxHeight(),
+                        )
+                        androidx.compose.foundation.layout.Spacer(androidx.compose.ui.Modifier.width(with(density) { bookHinge.bounds.width().toDp() }))
+                        liveScreen(androidx.compose.ui.Modifier.weight(1f).fillMaxHeight())
+                    }
+                } else liveScreen(androidx.compose.ui.Modifier.fillMaxSize())
             },
             capsule = { place ->
                 org.openstrap.app.ui.glow.WorkoutCapsule(

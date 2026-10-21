@@ -8,6 +8,7 @@ import org.openstrap.app.data.HealthRepository
 import org.openstrap.app.data.db.OpenStrapDatabase
 import org.openstrap.app.data.settings.SettingsStore
 import org.openstrap.app.device.CompanionLink
+import org.openstrap.app.device.PhoneAlerts
 import org.openstrap.app.device.StrapController
 import org.openstrap.app.device.StrapManager
 import org.openstrap.app.export.CsvExporter
@@ -23,6 +24,7 @@ class AppContainer(val app: Application) {
     val healthConnect = HealthConnectExporter(app, database.healthDao())
     val strap: StrapController = StrapManager(app, settings, database.healthDao())
     val companion = CompanionLink(app, settings)
+    val phoneAlerts = PhoneAlerts(app, settings, strap)
 }
 
 class OpenStrapApp : Application() {

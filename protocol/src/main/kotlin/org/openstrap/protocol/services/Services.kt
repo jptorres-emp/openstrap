@@ -11,6 +11,8 @@ object Endpoints {
     const val SERVICES = 0x0000
     const val CONNECT = 0x0015
     const val USER_INFO = 0x0017
+    const val MOTOR_VIBRATE = 0x0018
+    const val FIND_DEVICE = 0x001A
     const val OPEN_APP = 0x001D
     const val REALTIME_ACTIVITY = 0x0016
     const val BATTERY = 0x0029

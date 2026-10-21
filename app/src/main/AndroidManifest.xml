@@ -20,6 +20,8 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Only to see when a call rings, so the strap can buzz. No numbers or call log are read. -->
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
 
     <!-- Companion device association with the paired strap (no watch profile): lets OpenStrap run and reconnect
          in the background and wakes it when the strap comes into range. -->
@@ -94,6 +96,25 @@
             <intent-filter>
                 <action android:name="android.companion.CompanionDeviceService" />
             </intent-filter>
+        </service>
+
+        <!-- Notification access, granted by the user, so the strap can buzz for notifications. -->
+        <service
+            android:name=".device.StrapNotificationListener"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+            <!-- Android 12+: only notifications that alert (sound or vibration) and conversations reach OpenStrap.
+                 Silent and ongoing ones are off, and the user can narrow it further, or leave out apps, in system settings. -->
+            <meta-data
+                android:name="android.service.notification.default_filter_types"
+                android:value="conversations|alerting" />
+            <meta-data
+                android:name="android.service.notification.disabled_filter_types"
+                android:value="ongoing|silent" />
         </service>
     </application>
 </manifest>

@@ -87,6 +87,16 @@ interface StrapController {
 
     /** Writes [settings] into the health group; [version] comes from the last [readHealthSettings]. */
     suspend fun writeHealthSettings(version: Int, settings: List<Setting>)
+
+    /**
+     * Plays [pattern] on the strap's motor: alternating vibrate and pause milliseconds (a phone notification).
+     * Throws [StrapCommandException] when not connected or refused.
+     */
+    suspend fun buzz(pattern: List<Int>)
+
+    /** Keeps the strap buzzing (a ringing call) until [stopBuzzing] or the wearer taps the strap. */
+    suspend fun startBuzzing()
+    suspend fun stopBuzzing()
 }
 
 /** The strap couldn't be asked, or said no. [message] is fit to show. */

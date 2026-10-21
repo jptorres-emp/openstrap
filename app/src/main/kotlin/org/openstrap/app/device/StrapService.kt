@@ -269,7 +269,7 @@ class StrapService : LifecycleService() {
         val text = when {
             r.paused -> listOfNotNull("Paused at ${clock(active)}", distance).joinToString(" · ")
             !connected -> "Still recording · reconnecting…"
-            else -> listOfNotNull(goal, zone?.let { "Zone ${it + 1} ${ZONE_NAMES[it]}" }, bpm?.let { "$it bpm" }, distance, pace).joinToString(" · ")
+            else -> listOfNotNull(goal, zone?.let { "Zone ${it + 1} ${ZONE_NAMES[it]}" }, bpm?.let { "$it bpm" } ?: "Waiting for heart rate", distance, pace).joinToString(" · ")
         }
         val color = when {
             r.paused || !connected -> PAUSED_GREY
@@ -299,7 +299,9 @@ class StrapService : LifecycleService() {
             .setContentTitle(if (!connected && !r.paused) "$sport · strap disconnected" else sport)
             .setContentText(text)
             .setStyle(bar)
-            .setColor(color)
+            // The card is OpenStrap's: near-black with a touch of the logo's red dot (grey when paused or disconnected);
+            // the zone stays on the bar and in the text.
+            .setColor(if (colorize) androidx.core.graphics.ColorUtils.blendARGB(CARD_DARK, if (color == PAUSED_GREY) PAUSED_GREY else BRAND_DOT, CARD_TINT) else BRAND_DOT)
             .setColorized(colorize)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
@@ -507,6 +509,11 @@ class StrapService : LifecycleService() {
         private const val LOW_BATTERY = 15
         /** The live screen's paused grey, for a paused or disconnected workout. */
         private const val PAUSED_GREY = 0xFF5A5F6A.toInt()
+        /** The colorized workout card: this near-black with [CARD_TINT] of the logo's dot ([BRAND_DOT]). */
+        private const val CARD_DARK = 0xFF121216.toInt()
+        private const val CARD_TINT = 0.18f
+        /** The red dot in the "OS." logo, the app's heart colour. */
+        private val BRAND_DOT = org.openstrap.app.ui.theme.MetricColors.heart.toArgb()
         private const val ACTION_RECORD = "org.openstrap.app.workout.RECORD"
         private const val ACTION_DECLINE = "org.openstrap.app.workout.DECLINE"
         private const val WORKOUT_REFRESH_MS = 10_000L

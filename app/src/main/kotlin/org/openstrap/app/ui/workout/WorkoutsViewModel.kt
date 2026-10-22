@@ -162,6 +162,9 @@ class WorkoutsViewModel(private val dao: HealthDao, profile: Flow<UserProfile>) 
     /**
      * A GPX file of a kept route for sharing: its first and last [org.openstrap.app.data.Route.PRIVACY_M] metres left
      * out, so it doesn't show where you live, with heart rate. Null without a route long enough to share.
+     *
+     * TODO: write the smoothed track (`Route.track`) instead of the raw fixes, so the file matches the map and the
+     * distance shown in the app. Deferred on purpose; the smoothing landed in 33b550f.
      */
     suspend fun gpx(start: Long): Pair<String, String>? = kotlinx.coroutines.withContext(Dispatchers.Default) {
         val w = dao.appWorkoutOnce(start) ?: return@withContext null

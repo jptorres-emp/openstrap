@@ -3,12 +3,18 @@ package org.openstrap.app.device
 import android.location.Location
 import android.location.LocationManager
 import androidx.test.core.app.ApplicationProvider
+import android.Manifest
+import android.app.Application
+import android.os.Looper
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.openstrap.app.data.Route
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import java.time.Duration
 
 @RunWith(RobolectricTestRunner::class)
 class WorkoutLocationTest {
@@ -46,5 +52,40 @@ class WorkoutLocationTest {
     @Config(sdk = [28])
     fun mockFixesAreDroppedBeforeApi31() {
         assertEquals(1, received(fix(mock = true), fix(mock = false)).size)
+    }
+
+    private fun started(fused: Boolean): WorkoutLocation {
+        val app = ApplicationProvider.getApplicationContext<Application>()
+        shadowOf(app).grantPermissions(Manifest.permission.ACCESS_FINE_LOCATION)
+        val lm = app.getSystemService(LocationManager::class.java)
+        shadowOf(lm).setProviderEnabled(LocationManager.GPS_PROVIDER, true)
+        shadowOf(lm).setProviderEnabled("fused", fused)
+        return WorkoutLocation(app) {}.also { it.start() }
+    }
+
+    @Test
+    @Config(sdk = [35])
+    fun startsOnFusedAndFallsBackToGpsWhenItStaysSilent() {
+        val gps = started(fused = true)
+        assertEquals("fused", gps.source)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(WorkoutLocation.FUSED_TIMEOUT_MS))
+        assertEquals(LocationManager.GPS_PROVIDER, gps.source)
+        gps.stop()
+        assertNull(gps.source)
+    }
+
+    @Test
+    @Config(sdk = [35])
+    fun staysOnFusedOnceItGivesAFix() {
+        val gps = started(fused = true)
+        gps.receive(fix(mock = false))
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(WorkoutLocation.FUSED_TIMEOUT_MS))
+        assertEquals("fused", gps.source)
+    }
+
+    @Test
+    @Config(sdk = [35])
+    fun usesGpsWhenThereIsNoFusedProvider() {
+        assertEquals(LocationManager.GPS_PROVIDER, started(fused = false).source)
     }
 }

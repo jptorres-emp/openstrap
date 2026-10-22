@@ -149,7 +149,7 @@ class WorkoutsViewModel(private val dao: HealthDao, profile: Flow<UserProfile>) 
                 // Merged by time: a strap workout that started within two minutes of this one's shown range.
                 val strap = all.firstOrNull { !it.fromPhone && it.workout.start in (w.from - 120)..((w.end ?: a.end) + 120) }
                     ?.let { s -> Workouts.analyse(s.workout, dao.workoutHeartRate(s.workout.start).first(), dao.sportEffects().first(), maxHr) }
-                val route = routeRows.map { org.openstrap.app.data.Route.Point(it.timestamp, it.lat, it.lon, it.accuracy) }.filter { it.t in w.from..(w.end ?: Long.MAX_VALUE) }
+                val route = routeRows.map { it.point }.filter { it.t in w.from..(w.end ?: Long.MAX_VALUE) }
                 PhoneSummary(
                     a, WorkoutRecorder.expand(hr), w.start, w.recordedEnd ?: w.end ?: a.end, WorkoutRecorder.usual(similar), w.endReason,
                     route, hr.filter { !it.fromHistory }.map { it.timestamp to it.bpm }, w.distanceMeters, w.distanceFromSteps, sets, strap,
@@ -166,7 +166,7 @@ class WorkoutsViewModel(private val dao: HealthDao, profile: Flow<UserProfile>) 
     suspend fun gpx(start: Long): Pair<String, String>? = kotlinx.coroutines.withContext(Dispatchers.Default) {
         val w = dao.appWorkoutOnce(start) ?: return@withContext null
         val points = org.openstrap.app.data.Route.privacyTrim(
-            dao.routeOnce(start).map { org.openstrap.app.data.Route.Point(it.timestamp, it.lat, it.lon, it.accuracy) }.filter { it.t in w.from..(w.end ?: Long.MAX_VALUE) },
+            dao.routeOnce(start).map { it.point }.filter { it.t in w.from..(w.end ?: Long.MAX_VALUE) },
         )
         if (points.isEmpty()) return@withContext null
         val hr = dao.appWorkoutHeartRateOnce(start).filter { !it.fromHistory }.associate { it.timestamp to it.bpm }

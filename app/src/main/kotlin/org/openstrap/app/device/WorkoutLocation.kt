@@ -52,7 +52,7 @@ class WorkoutLocation(private val context: Context, private val onFix: (Route.Po
             return
         }
         fixes++
-        onFix(Route.Point(l.time / 1000, l.latitude, l.longitude, if (l.hasAccuracy()) l.accuracy else Float.MAX_VALUE))
+        onFix(point(l))
     }
 
     /** False without permission or a GPS provider; the workout then measures distance from the strap's steps. */
@@ -122,6 +122,19 @@ class WorkoutLocation(private val context: Context, private val onFix: (Route.Po
         @Suppress("DEPRECATION")
         internal fun isMock(l: Location): Boolean =
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) l.isMock else l.isFromMockProvider
+
+        /**
+         * Everything the route can use from a fix: speed and bearing let `Route.smooth` follow turns (native 02 §3.7),
+         * altitude is kept for later. Each only when the fix has it; the accuracies need API 26, below the app's 28.
+         */
+        internal fun point(l: Location) = Route.Point(
+            l.time / 1000, l.latitude, l.longitude, if (l.hasAccuracy()) l.accuracy else Float.MAX_VALUE,
+            speed = l.speed.takeIf { l.hasSpeed() },
+            bearing = l.bearing.takeIf { l.hasBearing() },
+            altitude = l.altitude.takeIf { l.hasAltitude() },
+            speedAccuracy = l.speedAccuracyMetersPerSecond.takeIf { l.hasSpeedAccuracy() },
+            bearingAccuracy = l.bearingAccuracyDegrees.takeIf { l.hasBearingAccuracy() },
+        )
 
         /** Fine or approximate; approximate fixes are too coarse to count, so distance falls back to steps. */
         fun granted(context: Context) =

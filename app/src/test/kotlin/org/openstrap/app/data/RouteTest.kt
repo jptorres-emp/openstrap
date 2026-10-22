@@ -3,6 +3,9 @@ package org.openstrap.app.data
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.util.Random
+import kotlin.math.abs
+import kotlin.math.sqrt
 
 class RouteTest {
     // Along the equator a degree of longitude is 111.195 km, so 0.001° is about 111 m.
@@ -84,5 +87,159 @@ class RouteTest {
         assertTrue(g.contains("<name>Run &lt;1></name>"))
         assertTrue(g.contains("<gpxtpx:hr>120</gpxtpx:hr>"))
         assertEquals(3, Regex("<trkpt").findAll(g).count())
+    }
+
+    /**
+     * Fixes as a phone gives them. Accuracy is a 68 % radius, so each axis is off by about accuracy / 1.5 in all; most
+     * of that error drifts slowly (multipath, satellites moving: [drift] of it carried over each second), the rest is
+     * fresh each fix. Drifting error is what lets skipping fixes cut corners rather than zigzag.
+     */
+    private class Gps(seed: Long, val accuracy: Float = 5f, val drift: Double = 0.9) {
+        val rnd = Random(seed)
+        private val sigma = accuracy / 1.5
+        private var e = rnd.nextGaussian() * sigma * 0.8
+        private var n = rnd.nextGaussian() * sigma * 0.8
+
+        fun fix(t: Long, east: Double, north: Double): Route.Point {
+            val step = sigma * 0.8 * sqrt(1 - drift * drift)
+            e = drift * e + rnd.nextGaussian() * step
+            n = drift * n + rnd.nextGaussian() * step
+            val white = sigma * 0.6
+            return Route.Point(t, (north + n + rnd.nextGaussian() * white) / 111_195.0, (east + e + rnd.nextGaussian() * white) / 111_195.0, accuracy)
+        }
+    }
+
+    /** A walk at [speed] m/s, one fix a second: [legs] metres east, then north, then west, then south. */
+    private fun walk(legs: List<Double>, speed: Double, seed: Long, doppler: Boolean = false): Pair<List<Route.Point>, Double> {
+        val gps = Gps(seed)
+        val rnd = gps.rnd
+        val headings = listOf(1.0 to 0.0, 0.0 to 1.0, -1.0 to 0.0, 0.0 to -1.0)
+        val seconds = (legs.sum() / speed).toLong()
+        val points = (0..seconds).map { t ->
+            var left = t * speed
+            var e = 0.0
+            var n = 0.0
+            var heading = headings[0]
+            for ((i, leg) in legs.withIndex()) {
+                heading = headings[i % 4]
+                val d = minOf(left, leg)
+                e += heading.first * d
+                n += heading.second * d
+                left -= d
+                if (left <= 0) break
+            }
+            gps.fix(t, e, n).let { p ->
+                if (!doppler) p
+                else p.copy(
+                    speed = (speed + rnd.nextGaussian() * 0.3).toFloat(), speedAccuracy = 0.5f,
+                    bearing = Math.toDegrees(kotlin.math.atan2(heading.first, heading.second)).toFloat(), bearingAccuracy = 10f,
+                )
+            }
+        }
+        return points to seconds * speed
+    }
+
+    /** The rule [Route.track] had before smoothing: a fix counts once it's further than both fixes' error from the last. */
+    private fun skippingDistance(points: List<Route.Point>): Double {
+        val kept = mutableListOf<Route.Point>()
+        for (p in Route.clean(points)) {
+            val last = kept.lastOrNull()
+            if (last == null || Route.meters(last, p) >= maxOf(Route.MIN_MOVE_M, (last.accuracy + p.accuracy).toDouble())) kept += p
+        }
+        return kept.zipWithNext().sumOf { (a, b) -> Route.meters(a, b) }
+    }
+
+    /** Mean absolute error in metres over ten noisy walks, smoothed and by the old rule. */
+    private fun errors(legs: List<Double>, speed: Double, doppler: Boolean = false): Pair<Double, Double> {
+        val runs = (1L..10L).map { walk(legs, speed, it, doppler) }
+        fun error(measure: (List<Route.Point>) -> Double) = runs.map { (p, truth) -> abs(measure(p) - truth) }.average()
+        return error { Route.distance(it) } to error(::skippingDistance)
+    }
+
+    @Test
+    fun aNoisyStraightLineMeasuresTrue() {
+        val (smoothed, skipping) = errors(listOf(400.0), 1.4)
+        assertTrue("smoothed off by $smoothed m", smoothed < 10.0)
+        assertTrue("smoothed $smoothed m, skipping $skipping m", smoothed < skipping / 2)
+    }
+
+    @Test
+    fun cornersAreNotCut() {
+        // 100 m east then 100 m north at walking pace.
+        val (smoothed, skipping) = errors(listOf(100.0, 100.0), 1.4)
+        assertTrue("smoothed off by $smoothed m", smoothed < 8.0)
+        assertTrue("smoothed $smoothed m, skipping $skipping m", smoothed < skipping)
+    }
+
+    @Test
+    fun dopplerFollowsARunnersCorners() {
+        // A 400 m square at 3.5 m/s: positions alone round the corners off; speed and bearing hold them.
+        val (withDoppler, _) = errors(listOf(100.0, 100.0, 100.0, 100.0), 3.5, doppler = true)
+        val (without, _) = errors(listOf(100.0, 100.0, 100.0, 100.0), 3.5)
+        assertTrue("with Doppler off by $withDoppler m", withDoppler < 8.0)
+        assertTrue("with $withDoppler m, without $without m", withDoppler < without)
+    }
+
+    @Test
+    fun standingStillWithRandomJitterAddsNothing() {
+        // Fresh error each fix, the hardest case: a slow drift moves a bench less per second.
+        val gps = Gps(7, drift = 0.0)
+        val rnd = gps.rnd
+        val bench = (0L..600L).map { gps.fix(it, 0.0, 0.0) }
+        assertEquals(0.0, Route.distance(bench), 2.0)
+        // And with the Doppler nought a still phone reports, no bearing.
+        val withSpeed = bench.map { it.copy(speed = abs(rnd.nextGaussian() * 0.1).toFloat()) }
+        assertEquals(0.0, Route.distance(withSpeed), 2.0)
+    }
+
+    @Test
+    fun aStopAtTheLightsAddsLittle() {
+        // 100 m, two minutes standing, 100 m more. Drifting error looks like a slow shuffle, so some gets in, and more
+        // around the stop than with Doppler; skipping fixes zigzags along the drift for far more.
+        val runs = (11L..15L).map { seed ->
+            val gps = Gps(seed)
+            (0L..262L).map { t ->
+                val along = when {
+                    t <= 71 -> t * 1.4
+                    t <= 191 -> 100.0
+                    else -> 100.0 + (t - 191) * 1.4
+                }
+                gps.fix(t, minOf(along, 100.0), maxOf(0.0, along - 100.0))
+            }
+        }
+        val smoothed = runs.map { abs(Route.distance(it) - 199.0) }.average()
+        val skipping = runs.map { abs(skippingDistance(it) - 199.0) }.average()
+        assertTrue("smoothed off by $smoothed m", smoothed < 15.0)
+        assertTrue("smoothed $smoothed m, skipping $skipping m", smoothed < skipping / 3)
+    }
+
+    @Test
+    fun aJumpIsRejected() {
+        val (points, _) = walk(listOf(300.0), 1.4, seed = 3)
+        val clean = Route.distance(points)
+        val jumped = points.toMutableList().also { it[100] = it[100].copy(lat = it[100].lat + 200 / 111_195.0) }
+        assertEquals(clean, Route.distance(jumped), 1.0)
+    }
+
+    @Test
+    fun aPauseOrTunnelRestartsTheFilter() {
+        // Twenty seconds without fixes mid-run: the straight line across the gap still counts.
+        val points = run(100).filter { it.t !in 40L..59L }
+        assertEquals(300.0, Route.distance(points), 2.0)
+    }
+
+    @Test
+    fun theRecordedWalk() {
+        // native 01 §5.1: the stored route measured 176.0 m by skipping fixes; Zepp's live filter says 180.0 m. Its three
+        // legs measure about 57 + 44 + 88 m corner to corner, so a little under 189 m once the corners are rounded.
+        val lines = javaClass.getResource("/routes/walk-2026-10-22.csv")!!.readText().lines()
+        val points = lines.filter { it.isNotBlank() && it[0].isDigit() }.map { l ->
+            val (t, e, n, acc) = l.split(',')
+            Route.Point(t.toLong(), n.toDouble() / 111_195.0, e.toDouble() / 111_195.0, acc.toFloat())
+        }
+        assertEquals(134, points.size)
+        assertEquals(176.0, skippingDistance(points), 0.5)
+        val smoothed = Route.distance(points)
+        assertTrue("smoothed $smoothed m", smoothed in 178.0..188.0)
     }
 }

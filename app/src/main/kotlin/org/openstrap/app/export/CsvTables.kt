@@ -219,10 +219,15 @@ val CSV_TABLES: List<CsvTable<*>> = listOf(
         { AppWorkoutHeartRate(it.long("workout_start_epoch"), it.long("epoch"), it.int("bpm"), it.has("from_history") && it.bool("from_history")) },
         { d, r -> d.insertAppWorkoutHeartRate(r) }),
     // Only routes the wearer chose to keep are ever stored, so only those are exported.
-    CsvTable("app_workout_route.csv", "workout_start_epoch,epoch,lat,lon,accuracy_m",
+    CsvTable("app_workout_route.csv", "workout_start_epoch,epoch,lat,lon,accuracy_m,speed_ms,bearing_deg,altitude_m,speed_accuracy_ms,bearing_accuracy_deg",
         Key("app_workout_route", "workoutStart", "workout_start_epoch", parent = "app_workout"),
-        { d, f, t -> d.routeAll().filter { it.workoutStart in f..t } }, { listOf(it.workoutStart, it.timestamp, it.lat, it.lon, it.accuracy) },
-        { AppWorkoutRoutePoint(it.long("workout_start_epoch"), it.long("epoch"), it.string("lat").toDouble(), it.string("lon").toDouble(), it.float("accuracy_m")) },
+        { d, f, t -> d.routeAll().filter { it.workoutStart in f..t } },
+        { listOf(it.workoutStart, it.timestamp, it.lat, it.lon, it.accuracy, it.speed, it.bearing, it.altitude, it.speedAccuracy, it.bearingAccuracy) },
+        {
+            AppWorkoutRoutePoint(it.long("workout_start_epoch"), it.long("epoch"), it.string("lat").toDouble(), it.string("lon").toDouble(), it.float("accuracy_m"),
+                it.floatOrNull("speed_ms"), it.floatOrNull("bearing_deg"), if (it.has("altitude_m")) it.string("altitude_m").toDouble() else null,
+                it.floatOrNull("speed_accuracy_ms"), it.floatOrNull("bearing_accuracy_deg"))
+        },
         { d, r -> d.insertRoutePoints(r) }),
     CsvTable("app_workout_set.csv", "workout_start_epoch,set_index,start_epoch,end_epoch,rest_end_epoch",
         Key("app_workout_set", "workoutStart", "workout_start_epoch", parent = "app_workout"),

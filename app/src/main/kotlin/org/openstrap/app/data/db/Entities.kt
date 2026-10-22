@@ -224,7 +224,10 @@ data class AppWorkoutSet(
     val restEnd: Long? = null,
 )
 
-/** One GPS fix of a workout whose route the wearer chose to keep on the phone. */
+/**
+ * One GPS fix of a workout whose route the wearer chose to keep on the phone. Speed, bearing, altitude and their
+ * accuracies came in version 13 and are null on older rows ([org.openstrap.app.data.Route.Point]).
+ */
 @Entity(tableName = "app_workout_route", primaryKeys = ["workoutStart", "timestamp"])
 data class AppWorkoutRoutePoint(
     val workoutStart: Long,
@@ -232,7 +235,19 @@ data class AppWorkoutRoutePoint(
     val lat: Double,
     val lon: Double,
     val accuracy: Float,
-)
+    val speed: Float? = null,
+    val bearing: Float? = null,
+    val altitude: Double? = null,
+    val speedAccuracy: Float? = null,
+    val bearingAccuracy: Float? = null,
+) {
+    val point get() = org.openstrap.app.data.Route.Point(timestamp, lat, lon, accuracy, speed, bearing, altitude, speedAccuracy, bearingAccuracy)
+
+    companion object {
+        fun of(workoutStart: Long, p: org.openstrap.app.data.Route.Point) =
+            AppWorkoutRoutePoint(workoutStart, p.t, p.lat, p.lon, p.accuracy, p.speed, p.bearing, p.altitude, p.speedAccuracy, p.bearingAccuracy)
+    }
+}
 
 /** A stretch answered "Not a workout", so it isn't offered again ([org.openstrap.app.data.WorkoutSuggestions]). */
 @Entity(tableName = "app_workout_dismissed")

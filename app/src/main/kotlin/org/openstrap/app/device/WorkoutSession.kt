@@ -133,7 +133,7 @@ class WorkoutSession(
                     _history.value = live
                     window = live.filter { it.first >= now - STOP_WINDOW_S }
                     // A kept route comes back; one that wasn't kept was only ever in memory.
-                    _route.value = if (w.keepRoute) dao.routeOnce(w.start).map { Route.Point(it.timestamp, it.lat, it.lon, it.accuracy) } else emptyList()
+                    _route.value = if (w.keepRoute) dao.routeOnce(w.start).map { it.point } else emptyList()
                     savedPoints = _route.value.size
                     // A restart mustn't ask at once about a stop it can't see the start of.
                     askSince = now
@@ -561,7 +561,7 @@ class WorkoutSession(
         val points = _route.value
         if (w.keepRoute && points.size > savedPoints) {
             val fresh = points.subList(savedPoints, points.size)
-            runCatching { dao.insertRoutePoints(fresh.map { AppWorkoutRoutePoint(w.start, it.t, it.lat, it.lon, it.accuracy) }) }
+            runCatching { dao.insertRoutePoints(fresh.map { AppWorkoutRoutePoint.of(w.start, it) }) }
                 .onSuccess { savedPoints = points.size }
         }
         val (meters, fromSteps) = distanceNow(w) ?: return

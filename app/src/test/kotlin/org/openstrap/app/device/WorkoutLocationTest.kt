@@ -88,4 +88,19 @@ class WorkoutLocationTest {
     fun usesGpsWhenThereIsNoFusedProvider() {
         assertEquals(LocationManager.GPS_PROVIDER, started(fused = false).source)
     }
+
+    @Test
+    @Config(sdk = [35])
+    fun keepsSpeedBearingAndAltitude() {
+        val moving = fix(mock = false).apply {
+            speed = 1.4f
+            bearing = 90f
+            altitude = 31.5
+            speedAccuracyMetersPerSecond = 0.3f
+            bearingAccuracyDegrees = 8f
+        }
+        assertEquals(Route.Point(1_000, 51.5, -0.1, 5f, 1.4f, 90f, 31.5, 0.3f, 8f), received(moving).single())
+        // A fix without them leaves them null rather than nought.
+        assertNull(received(fix(mock = false)).single().speed)
+    }
 }

@@ -233,7 +233,7 @@ This needs repository queries over arbitrary ranges with per-day aggregates; tod
 ## 6. Zepp: what to take, what we already do better
 
 Mobbin has no Zepp screens, so this comes from the 10.9.0 decompile (`work/jadx`) and the teardown in
-`analysis/helio-codemap/06-health-features-and-algorithms.md`. Strings are quoted by resource name.
+`analysis/codemap/06-health-features-and-algorithms.md`. Strings are quoted by resource name.
 
 ### 6.1 How Zepp is organised
 
@@ -276,7 +276,7 @@ Tabs (`MainTabActivity.java:432-437`): **Home · Workout · Discover (or Badges)
 
 | | Zepp | OpenStrap |
 |---|---|---|
-| Privacy | All health data uploaded, no local-only mode; ~520 analytics events; Firebase forced on outside China; contact list upload (`analysis/tracking-and-network.md` §Executive summary) | Everything stays on the phone. No analytics, no trackers. Network only for sign-in and firmware, on request |
+| Privacy | All health data uploaded, no local-only mode; ~520 analytics events; Firebase forced on outside China; contact list upload (`analysis/privacy/tracking-and-network.md` §Executive summary) | Everything stays on the phone. No analytics, no trackers. Network only for sign-in and firmware, on request |
 | Readiness | For a strap, it's the strap's own score with three detail cards (HRV, RHR, temperature) | Our own score with 11 weighted contributors, each with a detail line, a strain alert, calibration progress, and the strap's score shown beside it for comparison |
 | Charge | HybridCharge runs in a closed native library (`libAlgoCharge.so`); the UI shows "Charged" and "Drained" totals | Open model. Timeline with a state per minute; drains split into exercise, stress and living |
 | What changed | Each metric only on its own card | One place comparing every vital with your 7-day normal |

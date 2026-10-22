@@ -21,6 +21,15 @@ data class StrapIdentity(
     val serial: String?,
     val deviceSource: Int = DEVICE_SOURCE_GLOBAL,
     val productId: Int = PRODUCT_ID,
+    /**
+     * Version/flag pairs from Settings group DEVICE_INFORMATION (codemap 07 §1.4). OpenStrap doesn't read that
+     * group yet, so these hold the values Zepp sends when the strap reports nothing.
+     */
+    val resources: StrapResources = StrapResources(),
+    /** From the cloud device list; Zepp sends `-1` when it has none (codemap 07 §1.4). */
+    val productionSource: Int = -1,
+    /** The strap has no GPS, so Zepp's value stays unset (docs/protocol/03 §1.1). */
+    val gpsVersion: String? = null,
 ) {
     companion object {
         const val DEVICE_SOURCE_GLOBAL = 10289411
@@ -28,6 +37,23 @@ data class StrapIdentity(
         const val PRODUCT_ID = 157
     }
 }
+
+/**
+ * Group 0x00 keys 2-6 as `hasNewVersion` sends them (codemap 07 §1.4). Defaults are Zepp's own: `-1`, except the
+ * font pair which starts at `0`. Base resource is always `-1`/`-1` in Zepp because of a field mix-up, even when
+ * the strap reports one.
+ */
+data class StrapResources(
+    val firmwareFlag: Int = -1,
+    val fontVersion: Int = 0,
+    val fontFlag: Int = 0,
+    val resourceVersion: Int = -1,
+    val resourceFlag: Int = -1,
+    val baseResourceVersion: Int = -1,
+    val baseResourceFlag: Int = -1,
+    val extResourceVersion: Int = -1,
+    val extResourceFlag: Int = -1,
+)
 
 /** One downloadable part of an update (docs/protocol/03 §1.2). */
 data class FirmwarePart(
@@ -75,29 +101,7 @@ class FirmwareCloud(private val cacheDir: File) {
             val base = apiBase.trim().let { if (it.endsWith("/")) it else "$it/" }
             require(base.startsWith("https://")) { "The server address must start with https://" }
             val locale = Locale.getDefault()
-            val params = linkedMapOf(
-                "v" to "2.0",
-                "appid" to APP_ID,
-                "lang" to "${locale.language}_${locale.country}",
-                "country" to locale.country,
-                "timezone" to TimeZone.getDefault().id,
-                "channel" to "play",
-                "device" to "android_${android.os.Build.VERSION.SDK_INT}",
-                "device_type" to "android_phone",
-                "cv" to "${APP_VERSION_CODE}_$APP_VERSION_NAME",
-                "userid" to userId,
-                "userId" to userId,
-                "appVersion" to "${APP_VERSION_NAME}_$APP_VERSION_CODE",
-                "deviceType" to "ALL",
-                "deviceSource" to strap.deviceSource.toString(),
-                "firmwareVersion" to strap.firmwareVersion.removePrefix("V").removePrefix("v"),
-                "support8Bytes" to "true",
-                "productId" to strap.productId.toString(),
-                "vendorId" to "-1",
-                "vendorSource" to "-1",
-            )
-            strap.hardwareVersion?.takeIf { it.isNotBlank() }?.let { params["hardwareVersion"] = it.removePrefix("V").removePrefix("v") }
-            strap.serial?.takeIf { it.isNotBlank() }?.let { params["sn"] = it }
+            val params = queryParams(strap, userId, locale, TimeZone.getDefault().id, android.os.Build.VERSION.SDK_INT)
             val query = params.entries.joinToString("&") { (k, v) -> "$k=${URLEncoder.encode(v, "UTF-8")}" }
 
             val conn = URL("${base}devices/ALL/hasNewVersion?$query").openConnection() as HttpURLConnection
@@ -177,6 +181,47 @@ class FirmwareCloud(private val cacheDir: File) {
         private const val APP_VERSION_CODE = "151983"
 
         private val PREFIXES = listOf("firmware", "resource", "baseResource", "extResource", "font", "gps")
+
+        /** The `hasNewVersion` query, in Zepp's order (docs/protocol/03 §1.1, codemap 08 §3). */
+        fun queryParams(strap: StrapIdentity, userId: String, locale: Locale, timezone: String, sdkInt: Int): LinkedHashMap<String, String> {
+            val r = strap.resources
+            val params = linkedMapOf(
+                "v" to "2.0",
+                "appid" to APP_ID,
+                "lang" to "${locale.language}_${locale.country}",
+                "country" to locale.country,
+                "timezone" to timezone,
+                "channel" to "play",
+                "device" to "android_$sdkInt",
+                "device_type" to "android_phone",
+                "cv" to "${APP_VERSION_CODE}_$APP_VERSION_NAME",
+                "userid" to userId,
+                "userId" to userId,
+                "appVersion" to "${APP_VERSION_NAME}_$APP_VERSION_CODE",
+                "deviceType" to "ALL",
+                "deviceSource" to strap.deviceSource.toString(),
+                "firmwareVersion" to strap.firmwareVersion.removePrefix("V").removePrefix("v"),
+                "support8Bytes" to "true",
+                "firmwareFlag" to r.firmwareFlag.toString(),
+                "fontVersion" to r.fontVersion.toString(),
+                "fontFlag" to r.fontFlag.toString(),
+                "resourceVersion" to r.resourceVersion.toString(),
+                "resourceFlag" to r.resourceFlag.toString(),
+                "baseResourceVersion" to r.baseResourceVersion.toString(),
+                "baseResourceFlag" to r.baseResourceFlag.toString(),
+                "extResourceVersion" to r.extResourceVersion.toString(),
+                "extResourceFlag" to r.extResourceFlag.toString(),
+                "vendorId" to "-1",
+                "vendorSource" to "-1",
+            )
+            // Zepp leaves an unknown GPS version unset, and its query builder drops unset values.
+            strap.gpsVersion?.let { params["gpsVersion"] = it }
+            strap.serial?.takeIf { it.isNotBlank() }?.let { params["sn"] = it }
+            strap.hardwareVersion?.takeIf { it.isNotBlank() }?.let { params["hardwareVersion"] = it.removePrefix("V").removePrefix("v") }
+            params["productionSource"] = strap.productionSource.toString()
+            params["productId"] = strap.productId.toString()
+            return params
+        }
 
         fun md5(bytes: ByteArray): String =
             MessageDigest.getInstance("MD5").digest(bytes).joinToString("") { "%02x".format(it) }

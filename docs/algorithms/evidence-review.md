@@ -291,6 +291,12 @@ Jurca 2005 needs only sex, age, BMI, resting HR and one activity question. Its S
 * Before coding: check the sex coding and SRPA weights against the Am J Prev Med 2005 full text (the weights may not be whole numbers: 0 / 0.32 / 1.06 / 1.76 / 3.03), and transcribe the FRIEND 2022 tables from the primary paper.
 * Phase 2, phone GPS: flat, steady 1-minute epochs (speed 1.0–4.5 m/s, accuracy ≤ 10 m, HR SD < 3 bpm over 3 min after ≥ 3 min warm-up). VO2 = 3.5 + 0.1·v (walk) or 0.2·v (run), v in m/min. Fit VO2 = a + b·HR (span ≥ 15 bpm, r² ≥ 0.7), extrapolate to HRmax, and take the median of ≥ 3 sessions in 28 days. If it differs from Jurca by > 2 SEE, show both.
 
+* *As built (phase 2, per workout):* outdoor runs only, ACSM running over %HRR per steady 2-minute window rather than a VO2–HR regression, gated as Zepp gates its own; shown with the workout, not merged with Jurca yet. See recovery.md "Workout effect".
+
+### Workout EPOC and training effect (design choice on a Probable base)
+
+Firstbeat's EPOC-from-%HRR structure is published in its white papers but its coefficients aren't; ours are fitted to round-number targets and mapped through Zepp's activity-class TE table, which the strap itself uses. Treat the figures as on the strap's scale, not as measured EPOC. Recovery time is a design choice, conservative by construction (it only lengthens with fatigue). Anaerobic TE is not attempted.
+
 ### Fitness age (design choice, optional)
 
 * The age at which the FRIEND 2022 sex-specific 50th percentile equals the estimate, shown as a range (about ±10 y), clamped to 20–80. Withheld with VO2max.

@@ -186,6 +186,15 @@ data class AppWorkout(
     val setsTarget: Int? = null,
     /** Lap marks, epoch seconds, comma separated; see [lapMarks]. */
     @ColumnInfo(defaultValue = "") val laps: String = "",
+    /**
+     * What the workout did ([org.openstrap.app.data.WorkoutEffect]): peak EPOC in ml/kg, aerobic training effect 0–5,
+     * recovery time and, for outdoor runs, VO2max in ml/kg/min. Worked out when it ends and again on a trim or a gap
+     * fill; null on workouts from before version 14 until they are opened.
+     */
+    val epoc: Float? = null,
+    val aerobicTrainingEffect: Float? = null,
+    val recoveryMinutes: Int? = null,
+    val vo2max: Float? = null,
 ) {
     val lapMarks: List<Long> get() = laps.split(',').mapNotNull { it.toLongOrNull() }
 

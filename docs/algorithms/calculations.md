@@ -32,7 +32,7 @@ OpenStrap is a wellness app. None of these numbers is a medical measurement.
 
 **Taken from the strap as is:** heart rate, steps, sleep sessions and stages, RMSSD (HRV) samples, SpO₂, stress (0–100), skin temperature, breathing rate, the daily resting HR, PAI, the strap's sleep score, its sleep-apnea summary (desaturation event count), and workout records with their training effect.
 
-**Calculated by OpenStrap:** everything in sections 3–14: Readiness, body-signal alerts, Charge, training load, Strain, fitness/fatigue, sleep score (when the strap gave none), sleep debt, sleep regularity, sleep-health count, active minutes, distance, calories, VO2max, workout zones and recovery HR.
+**Calculated by OpenStrap:** everything in sections 3–14: Readiness, body-signal alerts, Charge, training load, Strain, fitness/fatigue, sleep score (when the strap gave none), sleep debt, sleep regularity, sleep-health count, active minutes, distance, calories, VO2max, workout zones and recovery HR, and training effect, load, recovery time and run VO2max for workouts started in OpenStrap.
 
 **Logged but not used in any score:** the strap's own Readiness and its parts, and your morning check-in (1–5, asked on Today before noon). They're kept for the calibration review.
 
@@ -575,7 +575,54 @@ Your estimate is compared with the treadmill reference table for your age decade
   * Time between samples counts toward the zone of the earlier sample, at most 5 s per gap.
   * Max HR here is the strap's value from the workout. Without it, your usual max HR from section 4 (tested value, else Tanaka or the strap's value, raised by observed peaks).
 * **Recovery HR:** HR at the end minus HR 60 s and 120 s later. Each reading is a median over ± 2 s. It's only treated as meaningful when you finished at ≥ 65 % of max HR.
-* Training effect and the strap's recovery time come from the strap unchanged.
+* Training effect and the strap's recovery time come from the strap unchanged for the strap's own workouts. Workouts started in OpenStrap get OpenStrap's own, below.
+
+### Training effect, load, recovery and VO2max for phone workouts
+
+The strap works these out for the workouts it records. Zepp works them out for app workouts with neural networks whose weights are its own (analysis `native/04` §1), so OpenStrap uses open methods on the same scales. Code: `WorkoutEffect.kt`, fed by `WorkoutEffectEngine.kt`. Worked out when a workout ends, again after a trim or a gap fill, and for older workouts the first time their summary is opened.
+
+**Epochs.** Heart rate in 5-second epochs, each read as the median of its readings between 40 and 220 bpm, as Zepp does. An epoch with no reading keeps the last one twice, then counts as missing: a dropout neither adds load nor clears it.
+
+**EPOC (ml/kg), shown as Load.** Built up epoch by epoch from heart-rate reserve x (0 at resting, 1 at max; resting and max HR from section 4), the structure Firstbeat describes (EPOC as a running function of its last value, intensity and time, with %VO2max from %HRR):
+
+EPOC ← EPOC + [0.01 × (e^(7x) − 1) − 0.034 × (1 − x) × EPOC] × minutes
+
+* The first term rises steeply with intensity, as EPOC does (Børsheim & Bahr 2003). The second clears EPOC at Charge's rate at rest (×0.966 a minute, half-life about 20 minutes) and not at all at max.
+* The workout's EPOC is the peak. Load shows it as a whole number, as the strap shows Zepp's, so the two compare.
+* 0.01 and 7 are OpenStrap's own fit to these points: 30 easy minutes at 60 % HRR ≈ 16; an hour at 65 % ≈ 40; six 3-minute intervals at 92 % ≈ 110; an hour at 85 % ≈ 200.
+
+**Aerobic training effect (0–5).** EPOC against Zepp's breakpoints for your activity class (analysis `native/04` §4.4–4.5), joined by straight lines and rounded down to a tenth:
+
+| Class (last 28 days' workout EPOC) | TE 1 | TE 2 | TE 3 | TE 4 | TE 5 |
+|---|---|---|---|---|---|
+| 40 (≤ 450) | 6.5 | 12.8 | 40.9 | 96.4 | 156.7 |
+| 50 (≤ 570, or none) | 7.9 | 15.7 | 49.7 | 119.8 | 199.2 |
+| 60 (≤ 720) | 9.4 | 18.6 | 58.8 | 141.3 | 242.1 |
+| 70 (≤ 870) | 10.8 | 21.5 | 67.5 | 163.9 | 292.4 |
+| 75 (≤ 1020) | 11.5 | 23.0 | 71.9 | 177.1 | 316.2 |
+| 80 (≤ 1320) | 12.3 | 24.5 | 76.2 | 189.7 | 343.3 |
+| 85 (≤ 1570) | 13.0 | 25.8 | 80.9 | 201.8 | 384.5 |
+| 90 (≤ 1920) | 13.8 | 27.5 | 85.3 | 215.3 | 418.9 |
+| 95 (≤ 2450) | 14.6 | 28.9 | 89.6 | 230.6 | 429.5 |
+| 100 (above) | 15.4 | 30.6 | 94.2 | 245.3 | 445.9 |
+
+* The 28-day sum adds the phone's workout EPOC and the strap's workout load, counting a workout both recorded once.
+* No effect for a minute or less, or under 1 ml/kg, as Zepp.
+
+**Anaerobic training effect** is not worked out ("—"). Zepp's comes from another network; heart rate alone lags short efforts too much for an open model to hold up.
+
+**Recovery time.** From aerobic TE, joined by straight lines: TE 1 → 6 h, 2 → 16 h, 3 → 28 h, 4 → 48 h, 5 → 72 h.
+
+* Up to 25 % longer when fatigue runs ahead of fitness: × (1 + 0.25 × (ATL − CTL) ÷ CTL), kept between ×1 and ×1.25, with CTL at least 5. Fitness and fatigue are section 8's 42/7-day model run over daily workout EPOC.
+* Never less than what an earlier workout (phone or strap) still has to run, as Zepp's own rule. Never more than 72 h.
+* A design choice, not a fitted model: Zepp switches its own off for app workouts (`native/04` §6.2), so only its shape is kept.
+
+**VO2max (outdoor runs with GPS).** The ACSM running equation on the level, VO2 = 3.5 + 0.2 × speed (m/min), at reserve x gives VO2max = 3.5 + (VO2 − 3.5) ÷ x (%HRR ≈ %VO2R, Swain & Leutholtz 1997). Gated as Zepp gates its own (`native/04` §5.2):
+
+* Outdoor run only, with GPS (the route in memory at the end, or a kept one).
+* At least 120 qualifying epochs (about 10 minutes): ≥ 1.5 m/s and ≥ half of max HR.
+* 2-minute windows every 30 s, from 2 minutes in. A window counts when its four 30-second speeds (from the smoothed track) have an SD ≤ 0.3 m/s, heart rate over its second minute (once HR has caught up with the pace) has an SD ≤ 4 bpm, x is 0.5–0.95, and GPS height changes by no more than 2 % of the distance.
+* The result is the median of at least 5 such windows, which must be at least 30 % of the windows run at pace, with their middle half within 5 ml/kg/min, and between 20 and 90. Otherwise none.
 
 ---
 

@@ -1174,20 +1174,19 @@ fun GlowPhoneWorkoutScreen(
                 )
             }
         }
+        if (w.trainingLoad != null) DotPanel {
+            DotHeader("Training effect", trailing = "Worked out by OpenStrap")
+            EffectFacts(w, w.vo2max?.toFloat(), a.recoveryMinutes)
+            Note(
+                "From your heart rate, on the strap's 0–5 scale; load is EPOC, as the strap's. " +
+                    if (w.sportType == org.openstrap.app.data.WorkoutEffect.OUTDOOR_RUN) "VO₂ max needs 10 minutes of steady running with GPS."
+                    else "VO₂ max is worked out for outdoor runs only.",
+            )
+        }
         summary.strapWorkout?.let { s ->
             DotPanel {
                 DotHeader("From the strap", trailing = "Its own record")
-                Row(Modifier.fillMaxWidth()) {
-                    Box(Modifier.weight(1f)) { Fact("Aerobic", s.workout.aerobicTrainingEffect?.let { "%.1f".format(it) } ?: "—") }
-                    Box(Modifier.weight(1f)) { Fact("Anaerobic", s.workout.anaerobicTrainingEffect?.let { "%.1f".format(it) } ?: "—") }
-                    Box(Modifier.weight(1f)) { Fact("Load", s.workout.trainingLoad?.toString() ?: "—") }
-                }
-                Row(Modifier.fillMaxWidth()) {
-                    Box(Modifier.weight(1f)) { Fact("VO₂ max", (s.effect?.vo2max ?: s.workout.vo2max?.toFloat())?.let { "%.0f".format(it) } ?: "—") }
-                    Box(Modifier.weight(2f)) {
-                        Fact("Recovery time", s.effect?.recoveryMinutes?.takeIf { it > 0 }?.let { org.openstrap.app.ui.components.formatDuration(it * 60L) } ?: "—")
-                    }
-                }
+                EffectFacts(s.workout, s.effect?.vo2max ?: s.workout.vo2max?.toFloat(), s.recoveryMinutes)
                 Note("The strap recorded this workout too; training effect and recovery are its own figures.")
             }
         }

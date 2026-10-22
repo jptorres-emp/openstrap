@@ -560,7 +560,7 @@ class StrapManager(
                     HistorySync(s, client, dao, settings, sync, ::log).run(only)
                 }
                 runCatching { notifyBodySignals() }.onFailure { log("body signals: $it") }
-                runCatching { WorkoutGapFill(dao).run()?.let { log(it) } }.onFailure { log("workout gap fill: $it") }
+                runCatching { WorkoutGapFill(dao) { settings.profile.first() }.run()?.let { log(it) } }.onFailure { log("workout gap fill: $it") }
             } finally {
                 syncLock.unlock()
             }

@@ -51,7 +51,7 @@ data class PhoneSummary(
 
 /** Workouts list (newest first) and the one open in detail. */
 @OptIn(ExperimentalCoroutinesApi::class)
-class WorkoutsViewModel(private val dao: HealthDao, profile: Flow<UserProfile>) : ViewModel() {
+class WorkoutsViewModel(private val dao: HealthDao, private val profile: Flow<UserProfile>) : ViewModel() {
     /**
      * Zones fall back to the app's one max-HR rule (tested value, Tanaka, strap, raised by observed peaks) when a
      * workout has no sport effect of its own. Shared, so the 90-day read behind it runs once per profile change.
@@ -141,6 +141,10 @@ class WorkoutsViewModel(private val dao: HealthDao, profile: Flow<UserProfile>) 
                 val (routeRows, sets) = extra
                 val (w, hr, maxHr, all) = q
                 w ?: return@mapLatest null
+                // A workout from before its effect was worked out gets it now; saving it brings this summary round again.
+                if (w.end != null && w.epoc == null && hr.isNotEmpty()) {
+                    runCatching { org.openstrap.app.data.WorkoutEffectEngine(dao).backfill(w, profile.first()) }
+                }
                 val a = WorkoutRecorder.analyse(w, hr, maxHr)
                 val similar = WorkoutRecorder.similar(a, all).map { s ->
                     dao.appWorkoutOnce(s.workout.start)?.let { pw -> WorkoutRecorder.analyse(pw, dao.appWorkoutHeartRateOnce(pw.start), maxHr) }

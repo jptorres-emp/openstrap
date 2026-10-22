@@ -29,6 +29,8 @@ data class WorkoutAnalysis(
     val shownStart: Long = workout.start,
     /** A phone workout's end before the app or a trim moved it earlier; null when it ends where it was recorded. */
     val recordedEnd: Long? = null,
+    /** Recovery time in minutes: the strap's sport effect, or OpenStrap's own for a phone workout ([WorkoutEffect]). */
+    val recoveryMinutes: Int? = effect?.recoveryMinutes,
 ) {
     val durationSeconds: Long get() = end - shownStart
 

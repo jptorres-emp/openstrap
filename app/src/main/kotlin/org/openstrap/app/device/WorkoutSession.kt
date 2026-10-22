@@ -408,7 +408,8 @@ class WorkoutSession(
                     }
                     return@withLock
                 }
-                dao.upsertAppWorkout(WorkoutRecorder.withStats(ended, dao.appWorkoutHeartRateOnce(w.start)))
+                // The route is still in memory here, kept or not, so a run gets its VO2max either way.
+                dao.upsertAppWorkout(withEffect(ended, dao.appWorkoutHeartRateOnce(w.start), _route.value))
                 _state.value = WorkoutState.Ended(w.start)
             }
             // The strap's history fills any minutes the phone missed; it batches, so ask now.
@@ -436,7 +437,7 @@ class WorkoutSession(
                 if (to - from < 60 || dao.appWorkoutsOnce(from, to).isNotEmpty()) return@withLock
                 val w = AppWorkout(start = from, end = to, sportType = sportType, source = AppWorkout.SOURCE_SUGGESTED, endReason = AppWorkout.END_USER)
                 dao.upsertAppWorkout(w)
-                WorkoutGapFill(dao).fill(w)
+                WorkoutGapFill(dao) { settings.profile.first() }.fill(w)
             }
         }
     }
@@ -511,9 +512,18 @@ class WorkoutSession(
             lock.withLock {
                 val w = dao.appWorkoutOnce(start)?.takeIf { it.end != null } ?: return@withLock
                 val changed = change(w)
-                if (changed != w) dao.upsertAppWorkout(WorkoutRecorder.withStats(changed, dao.appWorkoutHeartRateOnce(start)))
+                if (changed != w) dao.upsertAppWorkout(withEffect(changed, dao.appWorkoutHeartRateOnce(start)))
             }
         }
+    }
+
+    /**
+     * [w] with its average and peak, then its effect ([org.openstrap.app.data.WorkoutEffectEngine]); [route] is the one in
+     * memory at the end. A failure there never costs the workout: it is saved with its stats alone.
+     */
+    private suspend fun withEffect(w: AppWorkout, hr: List<AppWorkoutHeartRate>, route: List<Route.Point>? = null): AppWorkout {
+        val stats = WorkoutRecorder.withStats(w, hr)
+        return runCatching { org.openstrap.app.data.WorkoutEffectEngine(dao).withEffect(stats, hr, settings.profile.first(), route) }.getOrDefault(stats)
     }
 
     fun dismissSummary() {

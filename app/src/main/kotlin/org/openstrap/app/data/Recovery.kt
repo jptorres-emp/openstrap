@@ -872,7 +872,8 @@ object Recovery {
     }
 
     private const val EPOC_THRESHOLD = 5f
-    private const val EPOC_DECAY = 0.966f
+    /** Charge's EPOC-like debt, and a workout's EPOC at rest ([WorkoutEffect]), are multiplied by this each minute (half-life ≈ 20 min). */
+    const val EPOC_DECAY = 0.966f
     private const val ACTIVE_STEPS = 60
 
     /**

@@ -7,8 +7,10 @@ import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
+import android.os.Build
 import android.os.Bundle
 import android.os.Looper
+import android.util.Log
 import org.openstrap.app.data.Route
 
 /**
@@ -18,8 +20,16 @@ import org.openstrap.app.data.Route
 class WorkoutLocation(private val context: Context, private val onFix: (Route.Point) -> Unit) {
     private val manager = context.getSystemService(LocationManager::class.java)
     private var listening = false
+    private var mockFixes = 0
 
-    private val listener = LocationListener { l: Location ->
+    private val listener = LocationListener(::receive)
+
+    /** Mock fixes are dropped, as Zepp does before its engine (native 01 §2.3); the rest go to [onFix]. */
+    internal fun receive(l: Location) {
+        if (isMock(l)) {
+            mockFixes++
+            return
+        }
         onFix(Route.Point(l.time / 1000, l.latitude, l.longitude, if (l.hasAccuracy()) l.accuracy else Float.MAX_VALUE))
     }
 
@@ -32,6 +42,7 @@ class WorkoutLocation(private val context: Context, private val onFix: (Route.Po
         runCatching { manager.requestLocationUpdates(LocationManager.GPS_PROVIDER, INTERVAL_MS, 0f, listener, Looper.getMainLooper()) }
             .onFailure { return false }
         listening = true
+        mockFixes = 0
         return true
     }
 
@@ -51,10 +62,17 @@ class WorkoutLocation(private val context: Context, private val onFix: (Route.Po
         if (!listening) return
         runCatching { manager?.removeUpdates(listener) }
         listening = false
+        if (mockFixes > 0) Log.i(TAG, "gps: dropped $mockFixes mock fixes")
     }
 
     companion object {
         private const val INTERVAL_MS = 1_000L
+        private const val TAG = "OpenStrap"
+
+        /** From a mock-location app rather than the GPS chip. `isMock` replaced `isFromMockProvider` in API 31. */
+        @Suppress("DEPRECATION")
+        internal fun isMock(l: Location): Boolean =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) l.isMock else l.isFromMockProvider
 
         /** Fine or approximate; approximate fixes are too coarse to count, so distance falls back to steps. */
         fun granted(context: Context) =

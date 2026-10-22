@@ -37,6 +37,7 @@ import org.openstrap.protocol.services.Alarm
 import org.openstrap.protocol.services.AlarmCapabilities
 import org.openstrap.protocol.services.AlarmCodec
 import org.openstrap.protocol.services.Endpoints
+import org.openstrap.protocol.services.DeviceFeatures
 import org.openstrap.protocol.services.FindDevice
 import org.openstrap.protocol.services.MotorVibrate
 import org.openstrap.protocol.services.Setting
@@ -201,6 +202,7 @@ class StrapManager(
                 watchAlarms(s)
                 watchFindDevice(s)
                 watchSportSession(s)
+                watchFeatures(s)
                 retries = 0
                 autoSync(s)
                 liveHeartRateEnabled.value = settings.liveHeartRate.first()
@@ -240,6 +242,15 @@ class StrapManager(
             }.onFailure { log("settings version query failed: $it") }
         }
 
+        // Runtime feature bitmap: history gates on it (01 §3). Nobody has seen the strap's reply yet, so log it raw.
+        if (s.services.has(DeviceFeatures.ENDPOINT)) {
+            runCatching {
+                val r = s.request(DeviceFeatures.ENDPOINT, DeviceFeatures.request, 5_000) { it.isNotEmpty() && it.u8(0) == DeviceFeatures.REPLY }
+                s.features = DeviceFeatures.parseMessage(r)
+                log("device features ${r.toHex()} -> ${s.features?.let { "mask %02x g2 %s alg %s".format(it.mask, it.group2?.toHex(), it.algorithm) } ?: "unparsed"}")
+            }.onFailure { log("device features query failed: $it") }
+        }
+
         firmware = runCatching {
             client.read(StrapUuids.DEVICE_INFO_SERVICE, StrapUuids.SOFTWARE_REVISION).toString(Charsets.UTF_8).trimEnd('\u0000')
         }.getOrNull()
@@ -274,6 +285,16 @@ class StrapManager(
             log("time protocol $timeProtocol")
         }
         syncTime(s, client)
+    }
+
+    /** The strap's `03` "features changed" push carries a new bitmap (03 §3.7). Ends with this connection. */
+    private fun CoroutineScope.watchFeatures(s: ChannelSession) = launch {
+        if (!s.services.has(DeviceFeatures.ENDPOINT)) return@launch
+        s.messagesFor(DeviceFeatures.ENDPOINT).collect { p ->
+            if (p.isEmpty() || p.u8(0) != DeviceFeatures.PUSH) return@collect
+            log("device features changed ${p.toHex()}")
+            DeviceFeatures.parseMessage(p)?.let { s.features = it }
+        }
     }
 
     /** The time module's version; the next-DST hint needs 2 or later (03 §3.8). */

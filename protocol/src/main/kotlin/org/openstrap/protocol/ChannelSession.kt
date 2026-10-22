@@ -73,6 +73,8 @@ class ChannelSession(
         private set
     var version: ChannelVersion? = null
         private set
+    /** Runtime feature bitmap from 0x0028, set after auth; null when not queried or the query failed (01 §3). */
+    @Volatile var features: org.openstrap.protocol.services.DeviceFeatures? = null
     val isAuthenticated get() = cipher != null
 
     private val _messages = MutableSharedFlow<ChannelMessage>(extraBufferCapacity = 256, onBufferOverflow = BufferOverflow.SUSPEND)

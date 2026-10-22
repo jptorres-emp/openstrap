@@ -120,7 +120,9 @@ class HistorySync(
             val advertised = version?.supportedTypes()
             log("history version ${version?.version}, strap offers types ${advertised?.sorted()}" + (only?.let { ", syncing $it" } ?: ""))
 
-            val plan = HistoryTypeSpecs.plan(advertised).filter { it.parser != null && (only == null || it.code in only) }
+            HistoryTypeSpecs.featureDisagreements(advertised, session.features).takeIf { it.isNotEmpty() }
+                ?.let { log("history: feature bits clear for advertised types $it; fetching them anyway") }
+            val plan = HistoryTypeSpecs.plan(advertised, session.features).filter { it.parser != null && (only == null || it.code in only) }
             plan.forEachIndexed { i, spec ->
                 state.value = SyncState.Running("Syncing ${label(spec.type)} (${i + 1}/${plan.size})", i.toFloat() / plan.size)
                 try {
@@ -518,12 +520,9 @@ class HistorySync(
         },
     )
 
-    /** Activity record size: the START size field counts records, so bytes ÷ records gives it. */
-    private fun recordSize(code: Int, payload: ByteArray, sizeField: Long): Int {
-        if (code != HistoryDataType.ACTIVITY.code) return 4
-        val unit = if (sizeField > 0 && payload.size % sizeField == 0L) (payload.size / sizeField).toInt() else 0
-        return if (unit == 4 || unit == 8) unit else ActivityLayout.detect(payload)
-    }
+    /** Activity record size: the START size field counts records; then the 0x0028 feature blob, then a guess. */
+    private fun recordSize(code: Int, payload: ByteArray, sizeField: Long): Int =
+        if (code != HistoryDataType.ACTIVITY.code) 4 else ActivityLayout.recordSize(payload, sizeField, session.features)
 
     private fun dayStart(epoch: Long) = Instant.ofEpochSecond(epoch).atZone(zone).toLocalDate().atStartOfDay(zone).toEpochSecond()
 

@@ -1,5 +1,7 @@
 package org.openstrap.protocol.history
 
+import org.openstrap.protocol.services.DeviceFeatures
+
 /**
  * How to fetch and decode one GDSP data type.
  *
@@ -64,10 +66,25 @@ object HistoryTypeSpecs {
      * Specs to run, gated on the device's advertised type set (from QUERY_VERSION) when known. Types that are
      * fetched together with another ([HistoryTypeSpec.followedBy]) don't run on their own, and types Zepp never
      * fetches from the strap ([StrapRelevance.NOT_APPLICABLE]) don't run even when advertised.
+     *
+     * With [features] (0x0028, codemap 01 §3), a type's [HistoryDataType.featureBit] stands in for a missing
+     * advertised list, the way Zepp's job gates use it (04 §2.2): set runs the type, clear skips it. An advertised
+     * list still wins over a clear bit, because the strap's reply has never been captured and a misread bitmap
+     * mustn't stop sleep or HRV sync; [featureDisagreements] lists those cases for the log.
      */
-    fun plan(advertised: Set<Int>?): List<HistoryTypeSpec> =
-        (if (advertised == null) all.filter { it.type.strap == StrapRelevance.EXPECTED } else all.filter { it.code in advertised })
-            .filter { it.type !in followers && it.type.strap != StrapRelevance.NOT_APPLICABLE }
+    fun plan(advertised: Set<Int>?, features: DeviceFeatures? = null): List<HistoryTypeSpec> =
+        all.filter { spec ->
+            val gate = spec.type.featureBit?.let { features?.group2(it) }
+            advertised?.contains(spec.code) ?: when (gate) {
+                null -> spec.type.strap == StrapRelevance.EXPECTED
+                else -> gate
+            }
+        }.filter { it.type !in followers && it.type.strap != StrapRelevance.NOT_APPLICABLE }
+
+    /** Advertised types whose runtime feature bit is clear: Zepp would skip them, we still fetch them. */
+    fun featureDisagreements(advertised: Set<Int>?, features: DeviceFeatures?): List<Int> =
+        all.filter { spec -> advertised?.contains(spec.code) == true && spec.type.featureBit?.let { features?.group2(it) } == false }
+            .map { it.code }
 
     /**
      * Loop rule (02 §1.6, §5.2): continue with [next] only if it is later than [current].

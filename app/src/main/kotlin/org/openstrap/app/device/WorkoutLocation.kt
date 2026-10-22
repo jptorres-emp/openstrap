@@ -7,6 +7,7 @@ import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
+import android.os.Bundle
 import android.os.Looper
 import org.openstrap.app.data.Route
 
@@ -27,10 +28,23 @@ class WorkoutLocation(private val context: Context, private val onFix: (Route.Po
     fun start(): Boolean {
         if (listening) return true
         if (!granted(context) || manager?.isProviderEnabled(LocationManager.GPS_PROVIDER) != true) return false
+        warmUp(manager)
         runCatching { manager.requestLocationUpdates(LocationManager.GPS_PROVIDER, INTERVAL_MS, 0f, listener, Looper.getMainLooper()) }
             .onFailure { return false }
         listening = true
         return true
+    }
+
+    /**
+     * Ask the GPS chip to fetch satellite orbit predictions (XTRA) and the network time now, as Zepp does at the start
+     * of a GPS workout, so the first good fix comes sooner. Both come from the chip vendor's servers set in the
+     * phone's GNSS config, not Google services. Best effort: a phone that ignores the commands just settles slower.
+     */
+    private fun warmUp(manager: LocationManager) {
+        if (context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) return
+        for (command in listOf("force_xtra_injection", "force_time_injection")) {
+            runCatching { manager.sendExtraCommand(LocationManager.GPS_PROVIDER, command, Bundle()) }
+        }
     }
 
     fun stop() {

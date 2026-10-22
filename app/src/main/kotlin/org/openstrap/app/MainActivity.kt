@@ -632,6 +632,7 @@ private fun AppRoot(container: AppContainer) {
                                 onDeclineOffer = { container.workout.declineOffer() },
                                 autoStart = autoStart,
                                 onAutoStart = { on -> scope.launch { container.settings.setAutoStartWorkouts(on) } },
+                                paiSex = profile.sex,
                             )
                         }
                     }

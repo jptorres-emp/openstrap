@@ -38,10 +38,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.flow.Flow
+import org.openstrap.app.data.Pai
 import org.openstrap.app.data.RecoveryResult
 import org.openstrap.app.data.WorkoutAnalysis
 import org.openstrap.app.data.db.DailyPai
 import org.openstrap.app.data.db.SportEffectRow
+import org.openstrap.app.data.settings.UserProfile
 import org.openstrap.app.ui.components.formatDuration
 import org.openstrap.app.ui.dashboard.DateHeader
 import org.openstrap.app.ui.dashboard.DayPicker
@@ -102,6 +104,8 @@ fun GlowActivityScreen(
     onDeclineOffer: () -> Unit = {},
     autoStart: Boolean? = null,
     onAutoStart: (Boolean) -> Unit = {},
+    /** Picks the strap's PAI curve for "drops off tomorrow"; null uses Zepp's default (female). */
+    paiSex: UserProfile.Sex? = null,
 ) {
     val list = rememberLazyListState()
     val sports = remember(workouts) { topSports(workouts) }
@@ -118,7 +122,7 @@ fun GlowActivityScreen(
             left { StepsCard(state, r?.activity) { onOpenMetric(Metric.Steps) } }
             r?.activity?.let { a -> left { MvpaPanel(a) } }
             left { EnergyPanel(r?.energy, onEditProfile) }
-            left { PaiPanel(state, week) }
+            left { PaiPanel(state, week, paiSex) }
             right { LoadPanel(r, effects.lastOrNull { it.weeklyLoad != null }, onEditProfile) }
             right { FitnessPanel(r, workouts, effects, state.dailyMaxHeartRate) }
             right { WorkoutsPanel(state.date, workouts, onOpenWorkout, onAllWorkouts, onAddWorkout) }
@@ -213,7 +217,7 @@ private fun MvpaPanel(a: org.openstrap.app.data.Activity.Day) {
  * built from the days that make it up, what each day added, and what drops off next.
  */
 @Composable
-private fun PaiPanel(state: DayUiState, week: Map<LocalDate, DailyPai>) {
+private fun PaiPanel(state: DayUiState, week: Map<LocalDate, DailyPai>, sex: UserProfile.Sex?) {
     val total = state.pai?.total ?: week[state.date]?.total
     DotPanel {
         DotHeader("PAI", trailing = "Last 7 days")
@@ -244,8 +248,11 @@ private fun PaiPanel(state: DayUiState, week: Map<LocalDate, DailyPai>) {
                 }
             }
         }
-        // The oldest day leaves the rolling total tomorrow; only worth saying when looking at today.
-        val dropping = daily.first().takeIf { it > 0f && state.date == LocalDate.now() }
+        // The oldest day leaves the rolling total tomorrow; only worth saying when looking at today. Its stored daily
+        // isn't what goes (native 08 §7), so re-sum the ring without it.
+        val dropping = if (state.date != LocalDate.now() || daily.first() <= 0f) null else
+            Pai.dropsOffTomorrow(days.map { d -> week[d]?.let { Pai.Day(it.daily, it.total) } }, sex)
+                .toFloat().takeIf { it > 0f }
         Note(
             listOfNotNull(
                 dropping?.let { "Tomorrow ${days.first().dayOfWeek.getDisplayName(TextStyle.FULL, Locale.getDefault())}'s ${paiPoints(it)} drops off." },

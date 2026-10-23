@@ -19,8 +19,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import java.time.LocalDate
-import org.openstrap.app.data.RecoveryResult
 import org.openstrap.app.data.db.SleepStage
 import org.openstrap.app.ui.components.ChartPoint
 import org.openstrap.app.ui.theme.MetricColors
@@ -67,19 +65,6 @@ fun ScreenList(
         verticalArrangement = Arrangement.spacedBy(12.dp),
         content = content,
     )
-}
-
-/**
- * Whether Charge is the Today hero: only for today, once Charge has a value, and once the waking up moment is over
- * ([org.openstrap.app.data.MomentResolver.wakingOver], or from noon when no sleep was recorded). Past days lead
- * with their Readiness, the day's verdict.
- */
-internal fun chargeLeads(state: DayUiState, rec: RecoveryResult?): Boolean {
-    if (state.date != LocalDate.now() || rec?.charge?.latest == null) return false
-    val now = java.time.Instant.now().epochSecond
-    val wake = state.sleep?.end
-    return if (wake != null) org.openstrap.app.data.MomentResolver.wakingOver(now, wake)
-    else java.time.LocalTime.now().hour >= 12
 }
 
 fun List<ChartPoint>.avg(): Int? = if (isEmpty()) null else Math.round(map { it.y }.average()).toInt()

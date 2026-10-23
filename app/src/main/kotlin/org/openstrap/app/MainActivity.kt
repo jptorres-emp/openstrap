@@ -29,6 +29,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import org.openstrap.app.device.ConnectionState
 import org.openstrap.app.ui.dashboard.DayPicker
@@ -300,13 +301,11 @@ private fun AppRoot(
     val history: org.openstrap.app.ui.dashboard.DailyHistory = { m, from, to -> container.health.daily(m, from, to) }
     var editGoals by rememberSaveable { mutableStateOf(false) }
     val goals by container.settings.goals.collectAsStateWithLifecycle(org.openstrap.app.data.settings.Goals())
-    val todayTileNames by container.settings.todayTileNames.collectAsStateWithLifecycle(null)
-    // Unknown names (a metric since renamed) drop out; nothing chosen yet means all of them. Remembered, like the
-    // picker below: a new object each time the root recomposes (on every tab change) would recompose every tab.
-    val todayTiles = remember(todayTileNames) {
-        todayTileNames?.mapNotNull { n -> org.openstrap.app.ui.dashboard.Metric.entries.firstOrNull { it.name == n } }
-            ?.takeIf { it.isNotEmpty() } ?: org.openstrap.app.ui.glow.TODAY_TILES
-    }
+    val todayHidden by container.settings.todayHiddenNames.collectAsStateWithLifecycle(null)
+    val todayPinned by container.settings.todayPinnedNames.collectAsStateWithLifecycle(null)
+    // Remembered, like the picker below: a new object each time the root recomposes (on every tab change) would
+    // recompose every tab.
+    val todayEdits = remember(todayHidden, todayPinned) { org.openstrap.app.ui.dashboard.TodayEdits.parse(todayHidden, todayPinned) }
     val recovery by dayVm.recovery.collectAsStateWithLifecycle()
     val healthspan by dayVm.healthspan.collectAsStateWithLifecycle()
     val profile by deviceVm.profile.collectAsStateWithLifecycle()
@@ -414,18 +413,34 @@ private fun AppRoot(
     // Your usual workout time comes from workouts you started, not walks the strap noticed by itself.
     val workoutStarts = remember(workouts) { workouts.filter { it.startedByYou }.map { it.workout.start } }
     val lastWorkout = remember(workouts) { workouts.maxByOrNull { it.end } }
-    val usualBedtime = recovery?.takeIf { it.date == clockDate }?.usualBedtime
-    val sleepEnd = day.sleep?.end?.takeIf { day.date == clockDate }
     val recording = workoutState is org.openstrap.app.device.WorkoutState.Recording
-    // Until today's recovery has loaded, the usual bedtime isn't known yet and the fallback would show Evening for a
-    // second before the real moment. No moment until then: Today's plain title, the day's mood.
-    val bedtimeLoaded = day.date != clockDate || recovery?.date == clockDate
-    val clockMoment = remember(clock.epochSecond / 60, day.date, recording, lastWorkout?.end, sleepEnd, usualBedtime, workoutStarts, bedtimeLoaded) {
-        if (!bedtimeLoaded) null
-        else org.openstrap.app.data.MomentResolver.resolve(clock, zone, day.date, recording, lastWorkout?.end, sleepEnd, usualBedtime, workoutStarts)
+    // The moment is the clock's, whichever day is shown: browsing yesterday at night is still night (the mood follows
+    // it), and only Today's layout goes back to waking for a past day. Today's wake and usual bedtime are kept from
+    // when today was last loaded, so a past day doesn't lose them. Until today's recovery has loaded once, the
+    // bedtime isn't known and the fallback would show Evening for a second before the real moment, so there's no
+    // moment until then: Today's plain title, the day's mood.
+    val todayLoaded = day.date == clockDate && recovery?.date == clockDate
+    val freshClockFacts = if (todayLoaded) day.sleep?.end to recovery?.usualBedtime else null
+    var keptClockFacts by remember(clockDate) { mutableStateOf<Pair<Long?, java.time.LocalTime?>?>(null) }
+    androidx.compose.runtime.SideEffect { if (freshClockFacts != null && freshClockFacts != keptClockFacts) keptClockFacts = freshClockFacts }
+    val clockFacts = freshClockFacts ?: keptClockFacts
+    val usualBedtime = clockFacts?.second
+    val clockMoment = remember(clock.epochSecond / 60, clockDate, recording, lastWorkout?.end, clockFacts, workoutStarts) {
+        clockFacts?.let { (sleepEnd, bedtime) ->
+            org.openstrap.app.data.MomentResolver.resolve(clock, zone, clockDate, recording, lastWorkout?.end, sleepEnd, bedtime, workoutStarts)
+        }
     }
     val forced by forcedMoment.collectAsStateWithLifecycle()
     val moment = forced ?: clockMoment
+    // What Today is laid out for: the moment today, the waking layout for a past day.
+    val todayMoment = org.openstrap.app.ui.dashboard.layoutMoment(moment, day.date == clockDate)
+    // When this run first saw the sync failing, for the stuck morning's "Last tried 07:42".
+    var syncFailedAt by remember { mutableStateOf<Long?>(null) }
+    LaunchedEffect(sync is org.openstrap.app.device.SyncState.Failed) {
+        syncFailedAt = if (sync is org.openstrap.app.device.SyncState.Failed) epochNow() else null
+    }
+    // Paired until the store says otherwise, so a paired strap never flashes the pairing hero on start.
+    val pairedKnown by remember { container.settings.pairedDevice.map { it != null } }.collectAsStateWithLifecycle(true)
     LaunchedEffect(forced, clockMoment) {
         forced?.let { android.util.Log.i("OpenStrap", "moment: forced $it, the clock says $clockMoment") }
     }
@@ -612,7 +627,7 @@ private fun AppRoot(
             // The header on every tab: the moment on Today (a past day's name for a past day), the tab's name elsewhere.
             val header: @Composable (Tab) -> Unit = { t ->
                 MomentHeader(
-                    if (t != Tab.Today) t.label else moment?.let { todayTitle(it, day.date, lastWorkout?.workout?.sportType) } ?: org.openstrap.app.ui.dashboard.dayTitle(day.date), day.date, chip, dayVm::previousDay, dayVm::nextDay, picker,
+                    if (t != Tab.Today) t.label else todayMoment?.let { todayTitle(it, day.date, lastWorkout?.workout?.sportType) } ?: org.openstrap.app.ui.dashboard.dayTitle(day.date), day.date, chip, dayVm::previousDay, dayVm::nextDay, picker,
                     onOpenYou = { openPage(Page.You) }, onOpenStrap = { openPage(Page.Strap) },
                     // All metrics is hidden for now (spec 3.1). Passing { allMetricsOpen = true } brings the button
                     // back; the sheet opens over whatever shows, and no tab hears of it (spec 3.2).
@@ -681,7 +696,7 @@ private fun AppRoot(
                     pullToSync {
                         when (t) {
                             Tab.Today -> org.openstrap.app.ui.glow.GlowTodayScreen(
-                                day, live, header = { header(Tab.Today) }, contentPadding = padding,
+                                day, live, header = { header(Tab.Today) }, contentPadding = padding, moment = todayMoment,
                                 // Cards about other tabs open those screens here, on Today; none switches tab.
                                 onOpenSleep = { todayStack = listOf(Detail.Sleep) },
                                 onOpenMetric = { todayStack = listOf(Detail.OfMetric(it)) },
@@ -692,25 +707,32 @@ private fun AppRoot(
                                 onOpenRecovery = { todayStack = listOf(Detail.Recovery) },
                                 workouts = workouts,
                                 onOpenWorkout = { todayStack = listOf(Detail.Workout(it)) },
-                                liveEnabled = liveEnabled.takeIf { connection is ConnectionState.Connected },
-                                onLiveToggle = { container.strap.setLiveHeartRate(it) },
                                 onOpenHealthspan = { todayStack = listOf(Detail.Healthspan) },
                                 healthspan = healthspan,
                                 onOpenProfile = { openPage(Page.Profile) },
                                 history = history,
-                                tiles = todayTiles,
-                                onTilesChange = { m -> scope.launch { container.settings.saveTodayTiles(m.map { it.name }) } },
+                                edits = todayEdits,
+                                onEditsChange = { e -> scope.launch { container.settings.saveTodayEdits(e.hidden.map { it.name }, e.pinned.map { it.name }) } },
                                 suggestion = suggestion,
                                 onSaveSuggestion = { savingSuggestion = suggestion },
                                 onDismissSuggestion = { suggestion?.let { container.workout.dismissSuggestion(it.start, it.end) } },
-                                onStartWorkout = { readySport = org.openstrap.app.ui.glow.topSports(workouts).first().sportType; readyPicking = false },
+                                // The same way in as Activity's start card: the ready screen for the sport, or its sport list.
+                                onStartSport = { readySport = it; readyPicking = false },
+                                onOtherSport = { readySport = readySport ?: org.openstrap.app.ui.glow.topSports(workouts).first().sportType; readyPicking = true },
                                 offer = offer,
                                 onRecordOffer = { container.workout.recordOffer() },
                                 onDeclineOffer = { container.workout.declineOffer() },
                                 running = workoutState as? org.openstrap.app.device.WorkoutState.Recording,
                                 onOpenRunning = { container.workout.minimized.value = false },
                                 onResumeRunning = container.workout::resume,
-                                heroLightAngle = moment?.let { org.openstrap.app.ui.dashboard.heroLightAngle(it) },
+                                heroLightAngle = todayMoment?.let { org.openstrap.app.ui.dashboard.heroLightAngle(it) },
+                                strap = org.openstrap.app.ui.glow.TodayStrap(
+                                    paired = pairedKnown, syncFailed = sync is org.openstrap.app.device.SyncState.Failed, failedAt = syncFailedAt,
+                                    canSync = connection is ConnectionState.Connected,
+                                ),
+                                onPair = { openPage(Page.Strap) },
+                                onSyncNow = container.strap::syncNow,
+                                usualBedtime = usualBedtime,
                             )
                             Tab.Recovery -> org.openstrap.app.ui.glow.GlowRecoveryScreen(
                                 day, recovery, strapReadiness, history, header = { header(Tab.Recovery) }, contentPadding = padding,

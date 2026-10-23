@@ -174,9 +174,9 @@ private fun NightCard(state: DayUiState) {
     }
 }
 
-/** Stages as the glow hypnogram, rows Awake to Deep, with start and end times underneath. Shared with Today. */
+/** Stages as the glow hypnogram, rows Awake to Deep, with start and end times underneath. Shared with Today, where [compact] leaves the names and times out. */
 @Composable
-internal fun GlowSleepStages(spans: List<StageSpan>, height: Dp) {
+internal fun GlowSleepStages(spans: List<StageSpan>, height: Dp, compact: Boolean = false) {
     val start = spans.minOf { it.start }
     val end = spans.maxOf { it.end }.coerceAtLeast(start + 1)
     val rows = DayViewModel.SLEEP_STAGE_ROWS
@@ -186,7 +186,8 @@ internal fun GlowSleepStages(spans: List<StageSpan>, height: Dp) {
         spans.map { GlowStage((it.start - start).toFloat() / (end - start), (it.end - start).toFloat() / (end - start), rows[it.stage] ?: 0) }
     }
     fun at(f: Float) = clock(start + ((end - start) * f).toLong())
-    GlowHypnogram(stages, names, height = height, labels = listOf(clock(start), clock(end))) { st ->
+    // Compact, as on Today's Last night card, the rows are too close for their names and the card's title has the times.
+    GlowHypnogram(stages, names, height = height, labels = if (compact) emptyList() else listOf(clock(start), clock(end)), showNames = !compact) { st ->
         val mins = (((end - start) * (st.to - st.from)) / 60).toInt().coerceAtLeast(1)
         "${names[st.row]} · ${at(st.from)}–${at(st.to)} · $mins min"
     }

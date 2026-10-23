@@ -355,6 +355,8 @@ fun GlowHypnogram(
     modifier: Modifier = Modifier,
     height: Dp = 130.dp,
     labels: List<String> = emptyList(),
+    /** The stage names down the left; too small a chart has no room for them, so it leaves them out. */
+    showNames: Boolean = true,
     /** Text for the touch readout on a stage; null turns scrubbing off. */
     describe: ((GlowStage) -> String)? = null,
 ) {
@@ -363,7 +365,7 @@ fun GlowHypnogram(
     Canvas(modifier.fillMaxWidth().height(height).let { if (describe != null) it.scrub(stages) { x -> touchX = x } else it }) {
         if (stages.isEmpty()) return@Canvas
         val axisH = if (labels.isEmpty()) 0f else 18.dp.toPx()
-        val nameW = 46.dp.toPx()
+        val nameW = if (showNames) 46.dp.toPx() else 0f
         val h = size.height - axisH
         val w = size.width - nameW
         val rowH = h / rowNames.size
@@ -373,7 +375,7 @@ fun GlowHypnogram(
 
         rowNames.forEachIndexed { row, name ->
             dottedLine(yOf(row), x0 = nameW)
-            text(m, name, axisText, 0f, yOf(row) - 7.dp.toPx())
+            if (showNames) text(m, name, axisText, 0f, yOf(row) - 7.dp.toPx())
         }
         val sorted = stages.sortedBy { it.from }
         for (i in 1 until sorted.size) {

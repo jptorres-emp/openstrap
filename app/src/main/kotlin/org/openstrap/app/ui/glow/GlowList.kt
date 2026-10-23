@@ -84,8 +84,10 @@ fun ListRow(
     offNormal: Boolean = false,
     onClick: (() -> Unit)? = null,
     divider: Boolean = true,
+    /** A null value draws the dim dash; false leaves the value column empty, for a row whose [status] is the answer. */
+    dash: Boolean = true,
 ) {
-    val waiting = value == null
+    val waiting = value == null && dash
     val accent = if (offNormal && !waiting) color else Color.White
     Row(
         modifier
@@ -111,7 +113,7 @@ fun ListRow(
         }
         Spacer(Modifier.width(12.dp))
         if (value != null) DotMatrixText(value, dot = ValueDot, gap = ValueGap, color = accent)
-        else WaitingDash()
+        else if (dash) WaitingDash()
     }
 }
 

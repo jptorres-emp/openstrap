@@ -1,14 +1,7 @@
 package org.openstrap.app.ui.glow
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.draw.clip
-import org.openstrap.app.ui.theme.PhosphorIcons
-import androidx.compose.material3.Icon
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.foundation.Canvas
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -17,12 +10,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import org.openstrap.app.ui.components.pressClickable
-import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -31,218 +19,531 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import org.openstrap.app.ui.dashboard.DailyHistory
-import kotlin.math.roundToInt
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import java.time.Instant
-import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
-import java.time.format.DateTimeFormatter
+import org.openstrap.app.data.Moment
 import org.openstrap.app.data.Recovery
 import org.openstrap.app.data.RecoveryResult
+import org.openstrap.app.data.WorkoutAnalysis
+import org.openstrap.app.data.Workouts
 import org.openstrap.app.data.db.StrapReadinessRow
 import org.openstrap.app.ui.components.ChartPoint
-import org.openstrap.app.ui.components.formatDuration
+import org.openstrap.app.ui.components.HapticEvent
+import org.openstrap.app.ui.components.rememberHaptics
+import org.openstrap.app.ui.dashboard.DailyHistory
 import org.openstrap.app.ui.dashboard.DayUiState
-import org.openstrap.app.ui.dashboard.Metric
-import org.openstrap.app.ui.dashboard.Narrative
 import org.openstrap.app.ui.dashboard.LocalGoals
+import org.openstrap.app.ui.dashboard.Metric
+import org.openstrap.app.ui.dashboard.TodayCard
+import org.openstrap.app.ui.dashboard.TodayCopy
+import org.openstrap.app.ui.dashboard.TodayEdits
+import org.openstrap.app.ui.dashboard.TodayFacts
+import org.openstrap.app.ui.dashboard.TodaySlot
+import org.openstrap.app.ui.dashboard.applyEdits
 import org.openstrap.app.ui.dashboard.avg
-import org.openstrap.app.ui.dashboard.chargeLeads
+import org.openstrap.app.ui.dashboard.sportNoun
+import org.openstrap.app.ui.dashboard.syncStuck
+import org.openstrap.app.ui.dashboard.todayCards
 import org.openstrap.app.ui.theme.MetricColors
 
-/**
- * Today in the glow language: the home screen answers "how am I, what changed, what should I do".
- * Each thing appears once. The verdict leads; in the morning last night comes next, later in the day
- * your heart and movement do. Key statistics list only what moved away from your normal. Only a few
- * cards glow; the rest is black with dots, so the glow keeps meaning "look here".
+/*
+ * Today (spec 4): one hero whose content follows the moment, then a stable set of cards for it ([todayCards]), with
+ * Edit Today's pins and hides on top ([applyEdits]). The hero glows; the rest is edge light and lists, so the glow
+ * keeps meaning "look here".
  */
+
+/** The strap's state where Today needs it: paired at all, and whether the last sync failed and when it was seen to. */
+class TodayStrap(
+    val paired: Boolean = true,
+    val syncFailed: Boolean = false,
+    /** When the failure was first seen this run (epoch seconds), for "Last tried 07:42". */
+    val failedAt: Long? = null,
+    val canSync: Boolean = true,
+)
+
 @Composable
 fun GlowTodayScreen(
     state: DayUiState,
     liveHeartRate: Int?,
     header: @Composable () -> Unit,
     contentPadding: PaddingValues,
+    /** The moment Today is laid out for ([org.openstrap.app.ui.dashboard.layoutMoment]); null while it loads. */
+    moment: Moment?,
     /** Opens the Sleep screen over Today. */
     onOpenSleep: () -> Unit = {},
     onOpenMetric: (Metric) -> Unit = {},
     recovery: RecoveryResult? = null,
     /** Opens the Recovery screen over Today. */
     onOpenRecovery: () -> Unit = {},
-    workouts: List<org.openstrap.app.data.WorkoutAnalysis> = emptyList(),
+    workouts: List<WorkoutAnalysis> = emptyList(),
     onOpenWorkout: (Long) -> Unit = {},
-    /** Whether live heart rate is on; null hides the switch. */
-    liveEnabled: Boolean? = null,
-    onLiveToggle: (Boolean) -> Unit = {},
     onOpenHealthspan: () -> Unit = {},
-    /** Opens the profile, for the Healthspan card's reminder to add a birth year or sex. */
+    /** Opens the profile, for the Habit Age card's reminder to add a birth year or sex. */
     onOpenProfile: () -> Unit = {},
-    /** The weekly Healthspan estimate, or why it's withheld; null hides the card. */
+    /** The weekly Habit Age estimate, or why it's withheld; null hides the card. */
     healthspan: org.openstrap.app.data.Healthspan.Outcome? = null,
-    /** Per-day history for the Monday recap; null leaves the recap out. */
+    /** Per-day history for Your week; null leaves its steps out. */
     history: DailyHistory? = null,
-    /** The statistics What changed shows, in order. */
-    tiles: List<Metric> = TODAY_TILES,
-    onTilesChange: (List<Metric>) -> Unit = {},
+    /** Edit Today's hidden and pinned cards. */
+    edits: TodayEdits = TodayEdits(),
+    onEditsChange: (TodayEdits) -> Unit = {},
     /** The strap's own Readiness for the day, shown as "Strap's estimate" while OpenStrap's score is withheld. */
     strapReadiness: StrapReadinessRow? = null,
-    /** The morning check-in (1-5), asked on Today before noon; see [CheckInPanel]. */
+    /** The morning check-in (1-5), asked on the waking moment. */
     checkIn: Int? = null,
     onCheckIn: (Int?) -> Unit = {},
-    /** A stretch nobody started, offered for saving; null hides the card. */
+    /** A stretch nobody started, offered for saving; null hides the strip. */
     suggestion: org.openstrap.app.data.WorkoutSuggestions.Suggestion? = null,
     onSaveSuggestion: () -> Unit = {},
     onDismissSuggestion: () -> Unit = {},
-    /** Opens the ready screen with your usual sport; null hides the row. */
-    onStartWorkout: (() -> Unit)? = null,
-    /** An effort under way nobody started ([org.openstrap.app.data.AutoStart]); null hides the card. */
+    /** Opens the ready screen for a sport, as Activity's start card does. */
+    onStartSport: (Int) -> Unit = {},
+    /** Opens the ready screen on its sport list. */
+    onOtherSport: () -> Unit = {},
+    /** An effort under way nobody started ([org.openstrap.app.data.AutoStart]); null hides the strip. */
     offer: org.openstrap.app.data.AutoStart.Offer? = null,
     onRecordOffer: () -> Unit = {},
     onDeclineOffer: () -> Unit = {},
-    /** A workout recording now: the Start workout pill becomes a way back to it ([WorkoutShortcut]). */
+    /** A workout recording now: the hero during a workout leads back to it ([WorkoutShortcut]). */
     running: org.openstrap.app.device.WorkoutState.Recording? = null,
     onOpenRunning: () -> Unit = {},
     onResumeRunning: () -> Unit = {},
     /** Where the hero's light comes from for the moment ([org.openstrap.app.ui.dashboard.heroLightAngle]); null keeps its own. */
     heroLightAngle: Float? = null,
+    strap: TodayStrap = TodayStrap(),
+    /** Opens the Strap page, to pair. */
+    onPair: () -> Unit = {},
+    onSyncNow: () -> Unit = {},
+    /** When you usually go to sleep, for "Bedtime in 1 h 10". */
+    usualBedtime: LocalTime? = null,
 ) {
-    // The glow holds still while the list scrolls, so scrolling stays as smooth as on other screens.
     val list = rememberLazyListState()
-    var choosing by rememberSaveable { mutableStateOf(false) }
-    if (choosing) TilesDialog(tiles, onSave = { onTilesChange(it); choosing = false }, onDismiss = { choosing = false })
-    val extras = TodayExtras(
-        liveEnabled, onLiveToggle, onOpenHealthspan, onOpenProfile, healthspan, history, tiles, strapReadiness, checkIn, onCheckIn,
-        suggestion, onSaveSuggestion, onDismissSuggestion, onStartWorkout, offer, onRecordOffer, onDeclineOffer,
-        running, onOpenRunning, onResumeRunning, heroLightAngle,
-    ) { choosing = true }
+    var editing by rememberSaveable { mutableStateOf(false) }
+    if (editing) EditTodayDialog(edits, onSave = { onEditsChange(it); editing = false }, onDismiss = { editing = false })
+
+    val zone = ZoneId.systemDefault()
+    val now = Instant.now()
+    val isToday = state.date == now.atZone(zone).toLocalDate()
+    val rec = recovery?.takeIf { it.date == state.date }
+    val lastWorkout = workouts.maxByOrNull { it.end }
+    val ctx = TodayContext(
+        state, rec, liveHeartRate, workouts, lastWorkout, isToday, now.epochSecond, zone, moment,
+        firstNights = rec != null && !rec.charge.anchored,
+        stuck = syncStuck(moment, isToday, state.asleepSeconds != null, strap.syncFailed),
+        strapScore = strapReadiness?.takeIf { it.day == state.dayStart }?.score,
+    )
+    val facts = TodayFacts(
+        isToday = isToday, offer = offer != null, suggestion = suggestion != null, alerts = state.alerts.isNotEmpty(),
+        workout = lastWorkout != null && isToday, healthspan = healthspan != null,
+    )
+    val slots = applyEdits(todayCards(moment, facts, morning = LocalTime.now().hour < 12), edits, moment)
+
+    // The glow holds still while the list scrolls, so scrolling stays as smooth as on other screens.
     CompositionLocalProvider(LocalGlowPaused provides { list.isScrollInProgress }) {
-        TodayList(state, liveHeartRate, header, contentPadding, onOpenSleep, onOpenMetric, recovery, onOpenRecovery, workouts, onOpenWorkout, list, extras)
+        GlowScreenList(contentPadding, list) {
+            full { header() }
+            var side = Pane.Left
+            slots.forEach { slot ->
+                // The hero, strips and lists span the width on a wide screen; the cards between take turns.
+                val pane = when (slot.size) {
+                    CardSize.Large, CardSize.Strip -> Pane.Full
+                    else -> side.also { side = if (it == Pane.Left) Pane.Right else Pane.Left }
+                }
+                // Before a strap is paired, everything under the pairing hero waits, dimmed.
+                val dim = if (!strap.paired && slot.card != TodayCard.Hero && slot.card != TodayCard.EditToday) Modifier.alpha(0.45f) else Modifier
+                val block: @Composable () -> Unit = {
+                    Column(dim) {
+                        when (slot.card) {
+                            TodayCard.Hero -> Hero(
+                                ctx, strap, heroLightAngle, usualBedtime,
+                                running, onOpenRunning, onResumeRunning, onStartSport, onOtherSport, onPair, onSyncNow,
+                                onOpenRecovery, onOpenWorkout,
+                            )
+                            TodayCard.EditToday -> EditTodayButton({ editing = true })
+                            else -> TodayRow(slot, ctx, healthspan, history, checkIn, onCheckIn, onOpenSleep, onOpenMetric, onOpenRecovery,
+                                onOpenWorkout, onOpenHealthspan, onOpenProfile, offer, onRecordOffer, onDeclineOffer, suggestion,
+                                onSaveSuggestion, onDismissSuggestion)
+                        }
+                    }
+                }
+                when (pane) {
+                    Pane.Full -> full(block)
+                    Pane.Left -> left(block)
+                    Pane.Right -> right(block)
+                }
+            }
+        }
     }
 }
 
-/** Today's newer controls, kept together so the list's signature stays readable. */
-private class TodayExtras(
-    val liveEnabled: Boolean?,
-    val onLiveToggle: (Boolean) -> Unit,
-    val onOpenHealthspan: () -> Unit,
-    val onOpenProfile: () -> Unit,
-    val healthspan: org.openstrap.app.data.Healthspan.Outcome?,
-    val history: DailyHistory?,
-    val tiles: List<Metric>,
-    val strapReadiness: StrapReadinessRow?,
-    val checkIn: Int?,
-    val onCheckIn: (Int?) -> Unit,
-    val suggestion: org.openstrap.app.data.WorkoutSuggestions.Suggestion?,
-    val onSaveSuggestion: () -> Unit,
-    val onDismissSuggestion: () -> Unit,
-    val onStartWorkout: (() -> Unit)?,
-    val offer: org.openstrap.app.data.AutoStart.Offer?,
-    val onRecordOffer: () -> Unit,
-    val onDeclineOffer: () -> Unit,
-    val running: org.openstrap.app.device.WorkoutState.Recording?,
-    val onOpenRunning: () -> Unit,
-    val onResumeRunning: () -> Unit,
-    val heroLightAngle: Float?,
-    val onChooseTiles: () -> Unit,
-)
+/** What Today's cards read, worked out once per screen. */
+private class TodayContext(
+    val state: DayUiState,
+    val rec: RecoveryResult?,
+    val live: Int?,
+    val workouts: List<WorkoutAnalysis>,
+    val lastWorkout: WorkoutAnalysis?,
+    val isToday: Boolean,
+    val now: Long,
+    val zone: ZoneId,
+    val moment: Moment?,
+    /** Before the strap has seen a night: cards keep their shape with a dash (spec 4.3). */
+    val firstNights: Boolean,
+    /** Last night is still on the strap (spec 4.3). */
+    val stuck: Boolean,
+    /** The strap's own Readiness for the day. */
+    val strapScore: Int?,
+) {
+    val score get() = rec?.readiness?.score
+    val alert get() = rec?.readiness?.strainAlert == true
+    val charge get() = rec?.charge?.latest?.toInt()
+
+    /** Why OpenStrap has no score: still learning comes first, since a learning night has no baseline to score against. */
+    val noScore: TodayCopy.NoScore?
+        get() {
+            val r = rec?.readiness ?: return null
+            return when {
+                r.score != null -> null
+                r.phase == Recovery.Phase.Withheld -> TodayCopy.NoScore.Learning(r.baselineNights, Recovery.SCORED_NIGHTS)
+                r.withheld -> TodayCopy.NoScore.NoHeartData
+                else -> null
+            }
+        }
+
+    /** The strap's estimate, shown as such while OpenStrap's own score is withheld (as on the Recovery tab). */
+    val estimate: Int? get() = rec?.readiness?.takeIf { score == null && it.showStrapEstimate }?.let { strapScore }
+
+    val recoveryShown get() = TodayCopy.recoveryShown(score, alert, noScore, estimate, waiting)
+
+    /** What a card with no value says while it waits. */
+    val waiting: String
+        get() = when {
+            firstNights -> "After your first night"
+            stuck -> "Waiting for last night"
+            else -> "No reading yet"
+        }
+
+    /** The day's workouts you'd call workouts, oldest first: the strap's own "Activity" records aren't. */
+    val dayWorkouts: List<WorkoutAnalysis>
+        get() = workouts.filter { it.workout.start in state.dayStart..state.dayEnd && it.workout.sportType != Workouts.GENERIC_ACTIVITY }
+            .sortedBy { it.workout.start }
+
+    val endOfDay get() = moment == Moment.Evening || moment == Moment.Night
+
+    val loadStatus get() = rec?.let { TodayCopy.loadStatus(it.load, it.chronicLoad, endOfDay) }
+
+    /** Time to recover from the latest workout that says how long it needs, or null when none does. */
+    val recover: Pair<String?, String>?
+        get() {
+            val w = workouts.filter { it.recoveryMinutes != null }.maxByOrNull { it.end } ?: return null
+            return TodayCopy.recoverText(TodayCopy.recoverLeft(w.end, w.recoveryMinutes ?: 0, now), now, zone)
+        }
+
+    /** Your usual sport: the one you start most, over the same 28 days as your usual workout time. */
+    val usualSport: Int
+        get() {
+            val from = now - org.openstrap.app.data.MomentResolver.USUAL_WORKOUT_DAYS * 86_400L
+            val yours = workouts.filter { it.startedByYou && it.workout.start >= from }.map { it.workout.sportType to it.workout.start }
+            return org.openstrap.app.ui.dashboard.usualSport(yours) ?: topSports(workouts).first().sportType
+        }
+}
+
+/* ----------------------------------------------- Hero ----------------------------------------------- */
 
 @Composable
-private fun TodayList(
-    state: DayUiState,
-    liveHeartRate: Int?,
-    header: @Composable () -> Unit,
-    contentPadding: PaddingValues,
-    onOpenSleep: () -> Unit,
-    onOpenMetric: (Metric) -> Unit,
-    recovery: RecoveryResult?,
-    onOpenRecovery: () -> Unit,
-    workouts: List<org.openstrap.app.data.WorkoutAnalysis>,
-    onOpenWorkout: (Long) -> Unit,
-    list: LazyListState,
-    extras: TodayExtras,
-) = GlowScreenList(contentPadding, list) {
-    val rec = recovery?.takeIf { it.date == state.date }
-    full { header() }
+private fun Hero(
+    ctx: TodayContext, strap: TodayStrap, lightAngle: Float?, bedtime: LocalTime?,
+    running: org.openstrap.app.device.WorkoutState.Recording?, onOpenRunning: () -> Unit, onResumeRunning: () -> Unit,
+    onStartSport: (Int) -> Unit, onOtherSport: () -> Unit, onPair: () -> Unit, onSyncNow: () -> Unit,
+    onOpenRecovery: () -> Unit, onOpenWorkout: (Long) -> Unit,
+) {
+    // Heroes with a chart or two rows of numbers fill the Large size; the others size to their content over a Wide's
+    // height, rather than leave the lower half empty.
+    val large = Modifier.fillMaxWidth().gridSize(CardSize.Large)
+    val m = Modifier.fillMaxWidth().gridSize(CardSize.Wide)
+    // The hero's content crossfades when the moment moves on (spec 3.5); the rows below change only with it.
+    val kind = when {
+        !strap.paired -> HeroKind.Pair
+        ctx.stuck -> HeroKind.Stuck
+        else -> when (ctx.moment) {
+            Moment.During -> if (running != null) HeroKind.During else HeroKind.Midday
+            Moment.After -> if (ctx.lastWorkout != null) HeroKind.After else HeroKind.Midday
+            Moment.WorkoutWindow -> HeroKind.Window
+            Moment.Midday -> HeroKind.Midday
+            Moment.Evening, Moment.Night -> HeroKind.Evening
+            Moment.Waking -> HeroKind.Waking
+            null -> if (LocalTime.now().hour < 12 || !ctx.isToday) HeroKind.Waking else HeroKind.Midday
+        }
+    }
+    Crossfade(kind, animationSpec = tween(300), label = "hero") { k ->
+        when (k) {
+            HeroKind.Pair -> PairHero(onPair, m)
+            HeroKind.Stuck -> StuckHero(strap, onSyncNow, m)
+            HeroKind.Waking -> WakingHero(ctx, lightAngle, onOpenRecovery, large)
+            HeroKind.Midday -> ChargeHero(ctx, onOpenRecovery, large)
+            HeroKind.Window -> WindowHero(ctx, lightAngle, onStartSport, onOtherSport, m)
+            HeroKind.After -> AfterHero(ctx, lightAngle, onOpenWorkout, large)
+            HeroKind.Evening -> EveningHero(ctx, lightAngle, bedtime, onOpenRecovery, m)
+            HeroKind.During -> DuringHero(ctx, running!!, onOpenRunning, onResumeRunning, m)
+        }
+    }
+}
 
-    // On a wide screen the scores, sleep and movement run down the left; what changed and your heart down the right.
+private enum class HeroKind { Pair, Stuck, Waking, Midday, Window, After, Evening, During }
 
-    // Glow: the day's three scores at a glance, the leading one as the hero. The only place they appear.
-    left { OverviewCard(state, rec, extras.strapReadiness?.takeIf { it.day == state.dayStart }, chargeLeads(state, rec), onOpenRecovery, onOpenSleep, extras.heroLightAngle) }
+/** The hero's recipe: the dark core opposite the light, which the moment places. */
+private fun heroStyle(color: Color, lightAngle: Float?, strength: Float = 0.6f) = GlowStyle.Bloom.copy(
+    lightAngle = lightAngle, color = color,
+    coreShape = CoreShape.Radial, coreX = 0.5f, coreY = 0.6f, coreWidth = 0.95f, coreHeight = 0.75f,
+    coreBlur = 30.dp, toneWidth = 16.dp, toneShift = -10f, glowStrength = strength, bevel = 0.6f,
+)
 
-    // Mornings only (today, before noon): how you feel, under the score it's there to check.
-    val morning = state.date == LocalDate.now() && LocalTime.now().hour < 12
-    if (morning) left { CheckInPanel(extras.checkIn, extras.onCheckIn) }
+/**
+ * Waking up: how you slept and what Recovery says, the score with its word, and Charge at waking as a fact. Without
+ * OpenStrap's own score the strap's stands in, labelled as its estimate.
+ */
+@Composable
+private fun WakingHero(ctx: TodayContext, lightAngle: Float?, onOpen: () -> Unit, modifier: Modifier) {
+    val score = ctx.score
+    val shown = ctx.recoveryShown
+    val before = ctx.rec?.readinessTrend?.dropLast(1)?.lastOrNull()?.second
+    GlowCard(heroStyle(overviewColor(shown.value, ctx.alert), lightAngle), modifier, onClick = onOpen) {
+        Column {
+            GlowHeader("Recovery", trailing = if (score != null && before != null) signed(score - before) + " vs yesterday" else null)
+            HeroSentence(TodayCopy.waking(ctx.state.asleepSeconds, score, ctx.alert, ctx.noScore, ctx.estimate, ctx.firstNights, ctx.isToday))
+            Spacer(Modifier.height(24.dp))
+            Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.Bottom) {
+                Column(Modifier.weight(1f)) { HeroFigure(shown.value?.toString(), shown.word ?: ctx.waiting, big = true) }
+                HeroFigure(ctx.rec?.charge?.atWake?.toInt()?.toString(), "Charge at waking", horizontal = androidx.compose.ui.Alignment.End)
+            }
+        }
+    }
+}
 
-    // Quiet but first: anything the strap warned about this day.
-    if (state.alerts.isNotEmpty()) right { AlertsPanel(state.alerts, onOpenMetric) }
+private fun signed(d: Int) = if (d > 0) "+$d" else if (d < 0) "−${-d}" else "Same"
 
-    // Mondays: the week just gone against the one before.
-    if (extras.history != null && isRecapDay(state)) right { WeeklyRecapPanel(state, recovery, workouts, extras.history) }
+/** Midday: Charge as a light level, what the day took and what's left, with recharged and drained. */
+@Composable
+private fun ChargeHero(ctx: TodayContext, onOpen: () -> Unit, modifier: Modifier) {
+    val c = ctx.rec?.charge
+    val now = ctx.charge
+    // Charge is lit to its level from below (spec 2.5), so the moment's angle gives way here.
+    GlowCard(GlowStyle.Ember.copy(lightLevel = (now ?: 0) / 100f), modifier, onClick = onOpen) {
+        Column {
+            GlowHeader("Charge", trailing = c?.atWake?.let { "${it.toInt()} at waking" })
+            HeroSentence(TodayCopy.charge(now, c?.atWake?.toInt(), c?.anchored == true, LocalTime.now().hour))
+            // TODO(step 6): the info sheet that explains an estimated start; the strap-off note says it for now.
+            if (c?.strapOffOvernight == true) Text(
+                "Strap off overnight, so today started from an estimate.",
+                color = Color.White.copy(alpha = 0.7f), style = GlowType.secondary, modifier = Modifier.padding(top = 8.dp),
+            )
+            Spacer(Modifier.height(24.dp))
+            Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.Bottom) {
+                Column(Modifier.weight(1f)) { HeroFigure(now?.toString(), if (now == null) ctx.waiting else "Now", big = true) }
+                if (c != null && c.anchored) Column(horizontalAlignment = androidx.compose.ui.Alignment.End, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    HeroFigure("+${c.recharged.toInt()}", "Recharged", horizontal = androidx.compose.ui.Alignment.End)
+                    val drained = (c.drainedExercise + c.drainedStress + c.drainedLiving).toInt()
+                    HeroFigure("−$drained", "Drained", horizontal = androidx.compose.ui.Alignment.End)
+                }
+            }
+        }
+    }
+}
 
-    // Dark grey glow: last night, naps included. Right after waking it's what you want to know, so it leads.
-    val hasSleep = state.asleepSeconds != null || state.naps.isNotEmpty()
-    if (hasSleep && morning) left { SleepPanel(state, onOpenSleep) }
-
-    // Quiet: what the readiness score means, then only the signals that moved away from your normal.
-    right { WhatChanged(state, rec?.readiness?.let { Narrative.readinessBody(it) }, extras.tiles, onOpenMetric, extras.onChooseTiles) }
-
-    // Glow: the weekly healthspan estimate (docs/algorithms/healthspan.md); absent until it's worked out.
-    if (extras.healthspan != null) right { HealthspanCard(extras.healthspan, extras.onOpenHealthspan, extras.onOpenProfile) }
-
-    // Glow: heart rate, beating at the latest reading.
-    right { HeartGlow(state, liveHeartRate, extras.liveEnabled, extras.onLiveToggle) { onOpenMetric(Metric.HeartRate) } }
-
-    // Glow: activity, moving with the day's steps. Opens the steps detail, never the Activity tab.
-    left { ActivityGlow(state) { onOpenMetric(Metric.Steps) } }
-    val dayWorkouts = workouts.filter { it.workout.start in state.dayStart..state.dayEnd }.sortedBy { it.workout.start }
-    val isToday = state.date == LocalDate.now()
-    if (extras.offer != null && isToday) left { OfferPanel(extras.offer, extras.onRecordOffer, extras.onDeclineOffer) }
-    if (extras.suggestion != null && isToday) left { SuggestionPanel(extras.suggestion, extras.onSaveSuggestion, extras.onDismissSuggestion) }
-    // Today's workouts with a way to start one; a past day lists only what was done.
-    val start = extras.onStartWorkout.takeIf { isToday }
-    if (dayWorkouts.isNotEmpty() || start != null) left { TodayWorkouts(dayWorkouts, onOpenWorkout, start, extras.running?.takeIf { isToday }, liveHeartRate, extras) }
-
-    if (hasSleep && !morning) left { SleepPanel(state, onOpenSleep) }
+/** Your usual workout time: whether you're ready for effort, and a way to start the sport you usually do now. */
+@Composable
+private fun WindowHero(ctx: TodayContext, lightAngle: Float?, onStart: (Int) -> Unit, onOther: () -> Unit, modifier: Modifier) {
+    val sport = ctx.usualSport
+    val noun = sportNoun(sport)
+    GlowCard(heroStyle(overviewColor(ctx.score, ctx.alert), lightAngle, strength = 0.85f), modifier) {
+        Column {
+            GlowHeader(TodayCopy.windowTitle(ctx.score), trailing = ctx.score?.let { "Recovery $it" })
+            HeroSentence(TodayCopy.window(noun, ctx.charge))
+            Spacer(Modifier.height(28.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                HeroButton("Start ${noun ?: Workouts.sportName(sport).lowercase()}", { onStart(sport) }, Modifier.weight(1f), icon = true)
+                HeroSecondaryButton("Other sport", onOther)
+            }
+        }
+    }
 }
 
 /**
- * The selected day's workouts, in the same glass rows as the Activity screen's list, under a way to start one today:
- * a white pill like the ready screen's Start, so it reads as an action rather than another past workout.
+ * After a workout: how long since, and the heart coming down, drawn from the readings since it ended. Calm light from
+ * below.
  */
 @Composable
-private fun TodayWorkouts(
-    workouts: List<org.openstrap.app.data.WorkoutAnalysis>, onOpen: (Long) -> Unit, onStart: (() -> Unit)?,
-    running: org.openstrap.app.device.WorkoutState.Recording?, liveHeartRate: Int?, extras: TodayExtras,
-) {
-    DotPanel {
-        DotHeader("Workouts")
-        // While one records there's no starting another: the pill leads back to it instead.
-        if (running != null) WorkoutShortcut(running, liveHeartRate, extras.onOpenRunning, extras.onResumeRunning)
-        else if (onStart != null) Row(
-            Modifier.fillMaxWidth().height(52.dp).clip(RoundedCornerShape(50)).background(Color.White)
-                .pressClickable(onStart, RoundedCornerShape(50)),
-            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center,
-        ) {
-            Icon(org.openstrap.app.ui.theme.PhosphorIcons.PlayFill, null, tint = Color.Black, modifier = Modifier.size(16.dp))
-            Spacer(Modifier.width(10.dp))
-            Text("Start workout", color = Color.Black, style = MaterialTheme.typography.titleSmall)
+private fun AfterHero(ctx: TodayContext, lightAngle: Float?, onOpenWorkout: (Long) -> Unit, modifier: Modifier) {
+    val w = ctx.lastWorkout ?: return
+    val since = ctx.state.heartRate.filter { it.x >= w.end }
+    val nowHr = ctx.live ?: since.lastOrNull()?.y?.toInt()
+    val noun = sportNoun(w.workout.sportType) ?: "workout"
+    GlowCard(heroStyle(MetricColors.heart, lightAngle, strength = 0.45f), modifier, onClick = { onOpenWorkout(w.workout.start) }) {
+        Column {
+            GlowHeader("Since your $noun", trailing = TodayCopy.duration(ctx.now - w.end))
+            HeroSentence(TodayCopy.after(nowHr, ctx.state.restingHeartRate))
+            // The drop since the end, from the readings the strap has sent. A live curve needs live readings kept
+            // through the calm down (step 7).
+            if (since.size >= 2) {
+                val values = remember(since, w.end) { bucket(since, w.end..ctx.now, 60) }
+                Spacer(Modifier.height(14.dp))
+                GlowLineChart(values, height = 64.dp, showAverage = false)
+            }
+            Spacer(Modifier.height(18.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                HeroFigure(w.endHeartRate?.toString(), "At the end")
+                HeroFigure(nowHr?.toString(), "Now")
+                HeroFigure(ctx.state.restingHeartRate?.toString(), "Resting", horizontal = androidx.compose.ui.Alignment.End)
+            }
         }
-        // The day's last three; the rest are on Activity.
-        workouts.takeLast(TODAY_WORKOUTS).forEach { WorkoutLine(it, showDate = false) { onOpen(it.workout.start) } }
     }
 }
 
-private const val TODAY_WORKOUTS = 3
+/** Evening and night: the day in a sentence, steps, Load and Charge left, and how long until your usual bedtime. */
+@Composable
+private fun EveningHero(ctx: TodayContext, lightAngle: Float?, bedtime: LocalTime?, onOpen: () -> Unit, modifier: Modifier) {
+    val goals = LocalGoals.current
+    val nouns = ctx.dayWorkouts.map { sportNoun(it.workout.sportType) }
+    GlowCard(heroStyle(MetricColors.sleepDeep, lightAngle), modifier, onClick = onOpen) {
+        Column {
+            GlowHeader("Today", trailing = TodayCopy.bedtimeIn(LocalTime.now(), bedtime))
+            HeroSentence(TodayCopy.evening(nouns, ctx.state.steps, goals.steps, ctx.loadStatus))
+            Spacer(Modifier.height(24.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                HeroFigure("%,d".format(ctx.state.steps), "Steps")
+                HeroFigure(ctx.rec?.load?.let { Math.round(it).toString() }, "Load")
+                HeroFigure(ctx.charge?.toString(), "Charge left", horizontal = androidx.compose.ui.Alignment.End)
+            }
+        }
+    }
+}
 
-/* ------------------------------------------------------------------------------------------------ */
+/** During a workout: the live heart rate, number first, and the way back to the live screen. */
+@Composable
+private fun DuringHero(
+    ctx: TodayContext, r: org.openstrap.app.device.WorkoutState.Recording, onOpen: () -> Unit, onResume: () -> Unit, modifier: Modifier,
+) {
+    val live = ctx.live
+    val style = GlowStyle.chart(MetricColors.heart).let { if (live != null) it.copy(motion = GlowMotion.Heartbeat(live)) else it }
+    GlowCard(style, modifier, onClick = onOpen) {
+        Column {
+            GlowHeader(Workouts.sportName(r.workout.sportType))
+            Spacer(Modifier.height(18.dp))
+            HeroFigure(live?.toString(), if (live != null) "bpm, live" else "Waiting for heart rate", big = true)
+            Spacer(Modifier.height(28.dp))
+            WorkoutShortcut(r, live, onOpen, onResume)
+        }
+    }
+}
 
-private val HOURS = listOf("00", "06", "12", "18", "24")
-private val CLOCK = DateTimeFormatter.ofPattern("HH:mm")
-private fun clock(epoch: Long) = Instant.ofEpochSecond(epoch).atZone(ZoneId.systemDefault()).format(CLOCK)
+/**
+ * No strap paired: the hero is where pairing starts. TODO(step 8): the pairing stage itself, the strap and the line
+ * to the phone with a sentence per step.
+ */
+@Composable
+private fun PairHero(onPair: () -> Unit, modifier: Modifier) {
+    GlowCard(heroStyle(Color(0xFF4E8F86), LightAngle.Below), modifier, onClick = onPair) {
+        Column {
+            GlowHeader("Pair your Helio Strap")
+            HeroSentence("Put the strap on its charger, close to this phone.")
+            Spacer(Modifier.height(28.dp))
+            HeroButton("Find my strap", onPair)
+        }
+    }
+}
+
+/** The morning sync is failing and last night hasn't come across yet (spec 4.3). */
+@Composable
+private fun StuckHero(strap: TodayStrap, onSyncNow: () -> Unit, modifier: Modifier) {
+    val haptics = rememberHaptics()
+    GlowCard(heroStyle(MetricColors.warn, LightAngle.Below, strength = 0.5f), modifier) {
+        Column {
+            GlowHeader("Last night", trailing = strap.failedAt?.let { "Last tried ${clockAt(it)}" })
+            HeroSentence("Last night is still on the strap.")
+            Text(
+                "Keep it near your phone and it comes across.",
+                color = Color.White.copy(alpha = 0.8f), style = GlowType.secondary, modifier = Modifier.padding(top = 8.dp),
+            )
+            Spacer(Modifier.height(28.dp))
+            HeroButton("Sync now", { if (strap.canSync) onSyncNow() else haptics.perform(HapticEvent.SyncFailed) })
+        }
+    }
+}
+
+/* ----------------------------------------------- Rows ----------------------------------------------- */
+
+@Composable
+private fun TodayRow(
+    slot: TodaySlot, ctx: TodayContext, healthspan: org.openstrap.app.data.Healthspan.Outcome?, history: DailyHistory?,
+    checkIn: Int?, onCheckIn: (Int?) -> Unit, onOpenSleep: () -> Unit, onOpenMetric: (Metric) -> Unit, onOpenRecovery: () -> Unit,
+    onOpenWorkout: (Long) -> Unit, onOpenHealthspan: () -> Unit, onOpenProfile: () -> Unit,
+    offer: org.openstrap.app.data.AutoStart.Offer?, onRecordOffer: () -> Unit, onDeclineOffer: () -> Unit,
+    suggestion: org.openstrap.app.data.WorkoutSuggestions.Suggestion?, onSaveSuggestion: () -> Unit, onDismissSuggestion: () -> Unit,
+) {
+    val s = ctx.state
+    val b = s.baselines
+    when (slot.card) {
+        TodayCard.Offer -> offer?.let { OfferPanel(it, onRecordOffer, onDeclineOffer) }
+        TodayCard.Suggestion -> suggestion?.let { SuggestionPanel(it, onSaveSuggestion, onDismissSuggestion) }
+        TodayCard.Alerts -> AlertsStrip(s.alerts, onOpenMetric)
+        TodayCard.CheckIn -> CheckInStrip(checkIn, onCheckIn)
+        TodayCard.BodyMorning -> BodyList(
+            "Your body this morning",
+            listOf(
+                BodyRow("Resting heart rate", MetricColors.heart, s.restingHeartRate?.toFloat(), b.restingHr, 1.5f, "", Metric.RestingHr),
+                BodyRow("HRV", MetricColors.hrv, s.hrv.avg()?.toFloat(), b.hrv, 3f, "", Metric.Hrv),
+                BodyRow("Blood oxygen", MetricColors.spo2, s.spo2.avg()?.toFloat(), b.spo2, 1f, "%", Metric.Spo2),
+                BodyRow("Breathing rate", MetricColors.sleepLight, s.breathRate.avg()?.toFloat(), b.breathRate, 1f, "", Metric.Breathing),
+            ),
+            ctx.waiting, onOpenMetric,
+        )
+        TodayCard.RightNow -> BodyList(
+            "Right now",
+            listOf(
+                BodyRow("Stress", MetricColors.stress, s.stress.lastOrNull()?.y, b.stress, 4f, "", Metric.Stress),
+                BodyRow("HRV", MetricColors.hrv, s.hrv.lastOrNull()?.y, b.hrv, 3f, "", Metric.Hrv),
+            ),
+            ctx.waiting, onOpenMetric,
+        )
+        TodayCard.LastNight ->
+            if (slot.size == CardSize.Strip) LastNightStrip(s, onOpenSleep) else LastNightCard(s, ctx.firstNights, onOpenSleep)
+        TodayCard.HeartRate -> HeartCard(s, ctx.live, { onOpenMetric(Metric.HeartRate) })
+        TodayCard.Activity -> ActivityCard(s, { onOpenMetric(Metric.Steps) })
+        TodayCard.Recovery -> RecoveryEarlierCard(ctx.recoveryShown, onOpenRecovery)
+        TodayCard.Charge -> {
+            val c = ctx.rec?.charge
+            val used = c?.atWake?.let { w -> c.latest?.let { (w - it).toInt() } }
+            val status = when {
+                ctx.charge == null -> ctx.waiting
+                ctx.endOfDay -> "Sleep fills it back"
+                used != null && used > 0 -> "Used $used since waking"
+                else -> "Steady since waking"
+            }
+            ChargeWideCard(ctx.charge, status, slot.secondGlow, onOpenRecovery)
+        }
+        TodayCard.LoadToday -> LoadList(
+            when (ctx.moment) {
+                Moment.WorkoutWindow -> "Before you start"
+                Moment.After -> "What the ${ctx.lastWorkout?.let { sportNoun(it.workout.sportType) } ?: "workout"} did"
+                else -> "Load today"
+            },
+            ctx.rec?.load, TodayCopy.loadLine(ctx.loadStatus), ctx.recover,
+        )
+        TodayCard.Workout -> ctx.lastWorkout?.let { w -> WorkoutCard(w, { onOpenWorkout(w.workout.start) }) }
+        TodayCard.Week -> WeekCard(s, ctx.workouts, history)
+        // TODO(step 5): Habit Age moves to the bottom of Recovery as an edge card; until then it stays here, drawn as
+        // a second glow so the hero still leads.
+        TodayCard.HabitAge -> HealthspanCard(healthspan, onOpenHealthspan, onOpenProfile, second = true)
+        TodayCard.Hero, TodayCard.EditToday -> Unit
+    }
+}
+
+/* ---------------------------------------------- Helpers --------------------------------------------- */
 
 /** Averages timed points into evenly spaced buckets across [range]; empty buckets are null (gaps). */
 internal fun bucket(points: List<ChartPoint>, range: LongRange, seconds: Long): List<Float?> {
@@ -257,163 +558,9 @@ internal fun bucket(points: List<ChartPoint>, range: LongRange, seconds: Long): 
 }
 
 /**
- * The top card: the leading score as one big gauge with its number and a one-line verdict
- * inside, and the other two scores as pills underneath. Each opens its screen over Today, never another tab.
- */
-@Composable
-private fun OverviewCard(
-    state: DayUiState, rec: RecoveryResult?, strap: StrapReadinessRow?, chargeLeads: Boolean, onOpen: () -> Unit, onOpenSleep: () -> Unit,
-    lightAngle: Float?,
-) {
-    val c = rec?.charge
-    val chargeNow = c?.latest?.toInt()
-    val readinessNow = rec?.readiness?.score
-    val readinessBefore = rec?.readinessTrend?.dropLast(1)?.lastOrNull()?.second
-    val sleepNow = state.sleep?.score
-    val strain = rec?.readiness?.strainAlert == true
-    // Teal, gold and the Sleep card's blue, all at the same saturation so no dot outshines the others.
-    val charge = Score("Charge", chargeNow, MetricColors.chargeDeep, chargeNow.minus(c?.atWake?.toInt()), "since waking")
-    // Without OpenStrap's own score, the strap's stands in as its estimate (as on the Recovery tab), with why ours is missing.
-    val estimate = rec?.readiness?.takeIf { readinessNow == null && it.showStrapEstimate }?.let { strap?.score }
-    val recovery = Score(
-        "Recovery", readinessNow ?: estimate, MetricColors.readinessDeep, readinessNow.minus(readinessBefore), "vs yesterday",
-        note = rec?.readiness?.let { readinessState(it, estimate != null, short = true) },
-        noteLong = rec?.readiness?.let { readinessState(it, estimate != null, short = false) },
-        estimate = estimate != null,
-    )
-    val sleep = Score("Sleep", sleepNow, SleepGlow.color, sleepNow.minus(state.previousSleepScore), "vs night before")
-    val (lead, second) = if (chargeLeads) charge to recovery else recovery to charge
-    val verdict = when {
-        strain -> org.openstrap.app.data.BodySignalsCopy.SHORT
-        lead.value == null || lead.estimate -> null
-        chargeLeads -> Narrative.chargeHeadline(lead.value)
-        else -> Narrative.readinessHeadline(lead.value, alert = false)
-    }
-
-    // The glow sits low and central, under the gauge, unless the moment says where the light comes from.
-    val style = GlowStyle.Bloom.copy(
-        lightAngle = lightAngle,
-        color = overviewColor(lead.value, strain),
-        coreShape = CoreShape.Radial, coreX = 0.5f, coreY = 0.6f, coreWidth = 0.95f, coreHeight = 0.75f,
-        coreBlur = 30.dp, toneWidth = 16.dp, toneShift = -10f, glowStrength = 0.6f, bevel = 0.6f,
-        depth = 6.dp,
-    )
-    GlowCard(style, Modifier.fillMaxWidth(), onClick = onOpen) {
-        Column {
-            GlowHeader(lead.label, trailingContent = { Change(lead, withNote = true) })
-            GlowArcGauge(
-                (lead.value ?: 0) / 100f, lead.color,
-                Modifier.padding(top = GlowLayout.TitleGap, start = 12.dp, end = 12.dp),
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    DotMatrixText(lead.value?.toString() ?: "-", dot = 5.5.dp, gap = 2.dp)
-                    if (verdict != null) Text(
-                        verdict, color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(top = 8.dp),
-                    )
-                    // Why there's no score yet, or that it's still learning: small, under the verdict.
-                    if (lead.noteLong != null) Text(
-                        lead.noteLong, color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.labelSmall,
-                        maxLines = 1, overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(top = if (verdict != null) 4.dp else 8.dp),
-                    )
-                }
-            }
-            Row(Modifier.fillMaxWidth().padding(top = 18.dp), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-                ScoreBar(second, onOpen, Modifier.weight(1f))
-                ScoreBar(sleep, onOpenSleep, Modifier.weight(1f))
-            }
-        }
-    }
-}
-
-private fun Int?.minus(other: Int?): Int? = if (this == null || other == null) null else this - other
-
-/**
- * A score on the overview, with how far it moved and against what. [note] (under a bar) and [noteLong] (under the
- * gauge) are one-line states: still learning, why there's no score, or that [value] is the strap's [estimate].
- */
-private class Score(
-    val label: String, val value: Int?, val color: Color, val change: Int?, val against: String,
-    val note: String? = null, val noteLong: String? = null, val estimate: Boolean = false,
-)
-
-/**
- * The Readiness state in a few words, worded as on the Recovery tab; null once it's settled. "Learning" counts the
- * nights toward a score while withheld, then toward a settled baseline while scored. [short] fits half the card
- * at phone width on one line, so there the strap's estimate says only that; the gauge has room for why.
- */
-private fun readinessState(r: Recovery.Readiness, estimate: Boolean, short: Boolean): String? {
-    val state = when {
-        r.score != null -> if (r.phase == Recovery.Phase.Learning) "Learning ${r.baselineNights}/${Recovery.SETTLED_NIGHTS} nights" else null
-        !r.withheld -> "No sleep yet"
-        r.phase == Recovery.Phase.Withheld -> "Learning ${r.baselineNights}/${Recovery.SCORED_NIGHTS} nights"
-        else -> "Needs HRV data"
-    }
-    return when {
-        !estimate -> state
-        short || state == null -> "Strap's estimate"
-        // Kept under ~30 characters so the gauge line never wraps at phone width.
-        r.phase == Recovery.Phase.Withheld -> "Strap's estimate, ${r.baselineNights}/${Recovery.SCORED_NIGHTS} nights"
-        else -> "Strap's estimate, no HRV yet"
-    }
-}
-
-/** How a score moved: a dot arrow (green up, amber down) and the amount; three level dots when it didn't. */
-@Composable
-private fun Change(score: Score, withNote: Boolean) {
-    val d = score.change ?: return
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        if (d != 0) DotArrow(d > 0, if (d > 0) TrendGood else TrendBad)
-        else DotLevel(Color.White.copy(alpha = 0.6f))
-        // No change has no amount: the level dots say it, so it never wraps in the narrow column.
-        val text = listOfNotNull(if (d == 0) null else "${kotlin.math.abs(d)}", if (withNote) score.against else null).joinToString(" ")
-        if (text.isNotEmpty()) {
-            Spacer(Modifier.width(6.dp))
-            Text(text, color = Color.White.copy(alpha = 0.9f), style = MaterialTheme.typography.bodySmall, maxLines = 1, softWrap = false)
-        }
-    }
-}
-
-/**
- * One of the other two scores under the gauge, tappable: the label with a chevron and the value with its change on one line, and
- * below them a thin bar filled to the score in its colour. No box: the bar carries the colour and the fill.
- */
-@Composable
-private fun ScoreBar(score: Score, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    Column(modifier.pressClickable(onClick, GlassRowShape, scale = 0.97f).padding(horizontal = 4.dp, vertical = 6.dp)) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            // The chevron right after the label marks the half as something to open, as on the cards' headers.
-            Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    score.label, color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.labelSmall,
-                    maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false),
-                )
-                Spacer(Modifier.width(2.dp))
-                Icon(PhosphorIcons.CaretRight, null, tint = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(12.dp))
-            }
-            Text("${score.value ?: "-"}", color = Color.White, style = MaterialTheme.typography.titleLarge, maxLines = 1, softWrap = false)
-            if (score.change != null) {
-                Spacer(Modifier.width(6.dp))
-                Change(score, withNote = false)
-            }
-        }
-        Spacer(Modifier.height(6.dp))
-        // The strap's estimate draws fainter, so it doesn't read as OpenStrap's own score.
-        GlowBar((score.value ?: 0) / 100f, if (score.estimate) score.color.copy(alpha = 0.5f) else score.color)
-        if (score.note != null) Text(
-            score.note, color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.labelSmall,
-            maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp),
-        )
-    }
-}
-
-/**
- * The card's colour tells how the day looks before you read a number: teal when the leading score is
- * good, amber when it's middling or there are signs of strain, coral when it's low. The strap's
- * estimate counts as a score here; its faded bar and label already say it's an estimate. With no
- * score at all (still learning) it's a muted teal: Recovery waiting, not grey "no data". The rings
- * sit on the dark core, so they stay readable whatever the colour.
+ * A Recovery card's colour tells how the day looks before you read a number: teal when the score is good, amber when
+ * it's middling or there are signs of strain, coral when it's low. With no score at all (still learning) it's a muted
+ * teal: Recovery waiting, not grey "no data".
  */
 internal fun overviewColor(score: Int?, strain: Boolean) = when {
     score == null -> Color(0xFF4E8F86)
@@ -421,156 +568,4 @@ internal fun overviewColor(score: Int?, strain: Boolean) = when {
     score >= 70 -> MetricColors.hrv
     score >= 50 -> Color(0xFFF2A33A)
     else -> Color(0xFFF0605A)
-}
-
-@Composable
-private fun HeartGlow(state: DayUiState, live: Int?, liveEnabled: Boolean?, onLiveToggle: (Boolean) -> Unit, onClick: () -> Unit) {
-    val now = live ?: state.latestHeartRate
-    val style = GlowStyle.chart(MetricColors.heart).copy(motion = GlowMotion.Heartbeat(now ?: 62))
-    GlowCard(style, Modifier.fillMaxWidth(), onClick = onClick) {
-        Column {
-            // A live reading needs no label (the beating glow says it). An older one says "Latest" only when
-            // there's no Live switch: an off switch already says it, and "Latest" beside "Live" reads oddly.
-            GlowHeader(
-                "Heart rate",
-                trailing = if (live == null && liveEnabled == null) "Latest" else null,
-                // Live readings every few seconds while the app is open; off saves the strap's battery.
-                trailingContent = liveEnabled?.let { on ->
-                    {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("Live", color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodySmall)
-                            Spacer(Modifier.width(8.dp))
-                            GlowSwitch(on, onLiveToggle, accent = style.color)
-                        }
-                    }
-                },
-            )
-            if (now != null) GlowHeroNumber("$now", "bpm", listOfNotNull(state.restingHeartRate?.let { "Resting $it" }))
-            GlowChartGap()
-            if (state.heartRate.isEmpty()) {
-                Text("No heart-rate data yet. Sync your strap.", color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.bodyMedium)
-            } else {
-                val values = remember(state.heartRate, state.dayStart) { bucket(state.heartRate, state.dayStart..state.dayEnd, 5 * 60) }
-                GlowLineChart(values, height = GlowLayout.ChartHeight, labels = HOURS) { i, v -> "${v.toInt()} bpm · ${clock(state.dayStart + i * 5 * 60L)}" }
-            }
-        }
-    }
-}
-
-/** One key statistic against its 7-day baseline. */
-private class Signal(
-    val label: String, val accent: Color, val value: Float?, val baseline: Float?, val unit: String,
-    val decimals: Int, val tolerance: Float, val higherIsBetter: Boolean?, val target: Metric,
-) {
-    val direction get() = Narrative.direction(value, baseline, tolerance)
-    fun fmt(v: Float?) = v?.let { "%.${decimals}f".format(it) }
-}
-
-/**
- * Key statistics against your normal: each value with its 7-day
- * baseline, and an arrow on the ones that moved. A tile shows as soon as there is a value or a baseline.
- */
-@Composable
-private fun WhatChanged(state: DayUiState, advice: String?, tiles: List<Metric>, onOpenMetric: (Metric) -> Unit, onChooseTiles: () -> Unit) {
-    val b = state.baselines
-    val signals = listOfNotNull(
-        Signal("Resting HR", MetricColors.heart, state.restingHeartRate?.toFloat(), b.restingHr, "bpm", 0, 1.5f, false, Metric.RestingHr),
-        Signal("HRV", MetricColors.hrv, state.hrv.avg()?.toFloat(), b.hrv, "ms", 0, 3f, true, Metric.Hrv),
-        Signal("Blood oxygen", MetricColors.spo2, state.spo2.avg()?.toFloat(), b.spo2, "%", 0, 1f, true, Metric.Spo2),
-        Signal(
-            "Skin temp", MetricColors.temperature, state.skinTemperature.takeIf { it.isNotEmpty() }?.map { it.y }?.average()?.toFloat(),
-            b.skinTemperature, "°C", 1, 0.3f, null, Metric.SkinTemperature,
-        ),
-        Signal("Stress", MetricColors.stress, state.stress.avg()?.toFloat(), b.stress, "", 0, 4f, false, Metric.Stress),
-        Signal("Breathing", MetricColors.sleepLight, state.breathRate.avg()?.toFloat(), b.breathRate, "/min", 0, 1f, null, Metric.Breathing),
-    ).filter { (it.value != null || it.baseline != null) && it.target in tiles }
-        .sortedBy { tiles.indexOf(it.target) }
-    if (signals.isEmpty() && advice.isNullOrEmpty()) return
-
-    DotPanel {
-        // No leading dot: on this panel it would be plain grey, a legend for nothing. Editing the tiles is a
-        // proper button where you'd look for it, so the 7-day note moves under the title.
-        Column {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text("What changed", color = Color.White, style = GlowType.title, modifier = Modifier.weight(1f))
-                EditPill(onChooseTiles)
-            }
-            Text("vs. your last 7 days", color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 2.dp))
-        }
-        if (!advice.isNullOrEmpty()) Text(advice, color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodyMedium)
-        // Two columns, so six statistics take three rows instead of a screenful.
-        TileGrid(signals) { sg, m ->
-            DotStatTile(sg.label, sg.accent, sg.fmt(sg.value), sg.unit, sg.fmt(sg.baseline), sg.direction, sg.higherIsBetter, m) { onOpenMetric(sg.target) }
-        }
-        if (signals.isNotEmpty() && signals.all { it.baseline == null }) {
-            Text("Your normal builds over the first week of wear.", color = Color.White.copy(alpha = 0.65f), style = MaterialTheme.typography.bodyMedium)
-        }
-    }
-}
-
-/** A small glass pill with the sliders icon: opens the chooser for which statistics show. */
-@Composable
-private fun EditPill(onClick: () -> Unit) {
-    Row(
-        Modifier
-            .glass(CircleShape, onClick, scale = 0.97f)
-            .padding(horizontal = 12.dp, vertical = 7.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(PhosphorIcons.SlidersHorizontal, null, tint = Color.White, modifier = Modifier.size(14.dp))
-        Spacer(Modifier.width(6.dp))
-        Text("Edit", color = Color.White, style = MaterialTheme.typography.bodySmall)
-    }
-}
-
-@Composable
-private fun ActivityGlow(state: DayUiState, onClick: () -> Unit) {
-    val goals = LocalGoals.current
-    val style = GlowStyle.chart(MetricColors.steps)
-    GlowCard(style, Modifier.fillMaxWidth(), onClick = onClick) {
-        Column {
-            GlowHeader("Activity", chevron = true)
-            // How far along the day's goal is; the hourly chart below shows when you moved.
-            val goal = if (state.steps >= goals.steps) "Goal reached" else "%d%% of %,d".format(state.steps * 100 / goals.steps, goals.steps)
-            GlowHeroNumber(
-                "${state.steps}", "steps",
-                listOfNotNull(goal, "Active ${state.activeHours} of ${goals.activeHours} h", state.pai?.let { "PAI ${it.total.roundToInt()}" }),
-            )
-            GlowChartGap()
-            GlowDotBars(state.hourlySteps, height = GlowLayout.ChartHeight, labels = HOURS, accent = MetricColors.steps) { h, v ->
-                "%02d:00–%02d:00 · %,d steps".format(h, (h + 1) % 24, Math.round(v))
-            }
-        }
-    }
-}
-
-@Composable
-private fun SleepPanel(state: DayUiState, onClick: () -> Unit) {
-    val session = state.sleep
-    GlowCard(SleepGlow, Modifier.fillMaxWidth(), onClick = onClick) {
-    Column {
-        GlowHeader("Sleep", trailing = session?.let { "${clock(it.start)} – ${clock(it.end)}" }, chevron = true)
-        state.asleepSeconds?.let { s ->
-            GlowHeroNumber(
-                "%d:%02d".format(s / 3600, (s % 3600) / 60), "asleep",
-                session?.let { n -> Narrative.sleepHeadline(n, s)?.let { listOf("Score ${n.score}", it) } } ?: emptyList(),
-            )
-        }
-        if (state.sleepStages.isNotEmpty()) {
-            GlowChartGap()
-            GlowSleepStages(state.sleepStages, GlowLayout.ChartHeight)
-        }
-        if (state.naps.isNotEmpty()) {
-            Spacer(Modifier.height(14.dp))
-            DotDivider()
-            Spacer(Modifier.height(14.dp))
-            val total = state.naps.sumOf { it.end - it.start }
-            Text(
-                "${if (state.naps.size == 1) "1 nap" else "${state.naps.size} naps"} · ${formatDuration(total)} · " +
-                    state.naps.joinToString(", ") { clock(it.start) },
-                color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.bodyMedium,
-            )
-        }
-    }
-    }
 }

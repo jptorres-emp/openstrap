@@ -15,7 +15,7 @@ enum class Moment { During, After, WorkoutWindow, Waking, Night, Evening, Midday
  * wins.
  */
 object MomentResolver {
-    /** How long after waking the morning lasts, and Readiness stays the Today hero (`chargeLeads`). */
+    /** How long after waking the morning lasts, with Recovery as the Today hero; Charge leads after it. */
     const val WAKING_HOURS = 3
     private const val WAKING_SECONDS = WAKING_HOURS * 3600L
 
@@ -42,7 +42,7 @@ object MomentResolver {
     const val USUAL_WORKOUT_DAYS = 28
     const val USUAL_WORKOUT_MIN = 3
 
-    /** True once [now] is [WAKING_HOURS] past [wake] (epoch seconds). Shared with `chargeLeads`. */
+    /** True once [now] is [WAKING_HOURS] past [wake] (epoch seconds). */
     fun wakingOver(now: Long, wake: Long): Boolean = now - wake >= WAKING_SECONDS
 
     /**

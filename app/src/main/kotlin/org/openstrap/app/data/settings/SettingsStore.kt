@@ -246,15 +246,20 @@ class SettingsStore(private val context: Context) {
         }
     }
 
-    private val todayTiles = stringPreferencesKey("today_tiles")
+    private val todayHidden = stringPreferencesKey("today_hidden")
+    private val todayPinned = stringPreferencesKey("today_pinned")
 
-    /** The metrics Today's What changed shows, by name; null until the user picks (then it shows them all). */
-    val todayTileNames: Flow<List<String>?> = context.dataStore.data.map { prefs ->
-        prefs[todayTiles]?.split(',')?.filter { it.isNotEmpty() }
-    }
+    /** Edit Today's choices: the cards hidden and the ones pinned under the hero, by name. Null until first edited. */
+    val todayHiddenNames: Flow<List<String>?> = context.dataStore.data.map { prefs -> prefs[todayHidden]?.split(',')?.filter { it.isNotEmpty() } }
+    val todayPinnedNames: Flow<List<String>?> = context.dataStore.data.map { prefs -> prefs[todayPinned]?.split(',')?.filter { it.isNotEmpty() } }
 
-    suspend fun saveTodayTiles(names: List<String>) {
-        context.dataStore.edit { it[todayTiles] = names.joinToString(",") }
+    suspend fun saveTodayEdits(hidden: List<String>, pinned: List<String>) {
+        context.dataStore.edit {
+            it[todayHidden] = hidden.joinToString(",")
+            it[todayPinned] = pinned.joinToString(",")
+            // What changed's tile choice, which Edit Today replaced.
+            it.remove(stringPreferencesKey("today_tiles"))
+        }
     }
 
     private val companionId = androidx.datastore.preferences.core.intPreferencesKey("companion_association_id")
@@ -286,7 +291,7 @@ class SettingsStore(private val context: Context) {
     /** Forgets the strap and the Zepp sign-in; the user's profile and goals stay. */
     suspend fun forgetDevice() {
         context.dataStore.edit { prefs ->
-            val keep = setOf(birthYear, sex, weight, height, imperial, sleepNeed, maxHr, activityLevel, activityAt, bodyAt, betaBlocker, pregnant, stepGoal, sleepGoal, activeGoal, todayTiles, buzzCalls, buzzNotifications, buzzPattern)
+            val keep = setOf(birthYear, sex, weight, height, imperial, sleepNeed, maxHr, activityLevel, activityAt, bodyAt, betaBlocker, pregnant, stepGoal, sleepGoal, activeGoal, todayHidden, todayPinned, buzzCalls, buzzNotifications, buzzPattern)
             prefs.asMap().keys.filter { it !in keep }.forEach { prefs.remove(it) }
         }
     }

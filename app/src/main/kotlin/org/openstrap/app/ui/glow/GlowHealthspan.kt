@@ -111,15 +111,16 @@ internal fun learningText(o: Healthspan.Outcome): String = when {
 /**
  * Healthspan: how old your habits look, as a range of ages (docs/algorithms/healthspan.md), from [state]. Before there's
  * an estimate it starts at your own age; with no birth year or sex it asks for them, and a tap opens the profile
- * ([onOpenProfile]) instead of the Healthspan screen. Nothing shows until it has been worked out.
+ * ([onOpenProfile]) instead of the Healthspan screen. Nothing shows until it has been worked out. [second] draws it as
+ * a screen's second glow card, under a hero.
  */
 @Composable
-fun HealthspanCard(state: Healthspan.Outcome?, onClick: (() -> Unit)? = null, onOpenProfile: (() -> Unit)? = null) {
+fun HealthspanCard(state: Healthspan.Outcome?, onClick: (() -> Unit)? = null, onOpenProfile: (() -> Unit)? = null, second: Boolean = false) {
     state ?: return
     val r = state.result
     val withheld = state.withheld
     val needsProfile = r == null && state.missing.isNotEmpty() && withheld?.profile == true
-    GlowCard(HealthspanGlow, Modifier.fillMaxWidth(), onClick = if (needsProfile) onOpenProfile else onClick) {
+    GlowCard(HealthspanGlow.copy(second = second), Modifier.fillMaxWidth(), onClick = if (needsProfile) onOpenProfile else onClick) {
         Column {
             GlowHeader("Habit Age", trailing = if (r?.early == true) "Early" else "Weekly")
             when {

@@ -133,33 +133,6 @@ fun DotDivider(modifier: Modifier = Modifier) {
     }
 }
 
-/** A small arrow made of five dots, pointing up ([up]) or down. */
-@Composable
-fun DotArrow(up: Boolean, color: Color, modifier: Modifier = Modifier) {
-    Canvas(modifier.size(11.dp, 9.dp)) {
-        val r = 1.3.dp.toPx()
-        val sx = size.width / 4
-        val sy = size.height / 2
-        // A chevron: tip in the middle, two dots each side stepping away from it.
-        val rows = if (up) listOf(0f, 1f, 2f) else listOf(2f, 1f, 0f)
-        listOf(-2 to rows[2], -1 to rows[1], 0 to rows[0], 1 to rows[1], 2 to rows[2]).forEach { (dx, row) ->
-            drawCircle(color, r, Offset(size.width / 2 + dx * sx * 0.95f, r + row * (sy - r)))
-        }
-    }
-}
-
-/** Three dots in a straight line, the [DotArrow] for "no change". Same footprint, so rows line up. */
-@Composable
-fun DotLevel(color: Color, modifier: Modifier = Modifier) {
-    Canvas(modifier.size(11.dp, 9.dp)) {
-        val r = 1.3.dp.toPx()
-        val sx = size.width / 4
-        listOf(-1, 0, 1).forEach { dx ->
-            drawCircle(color, r, Offset(size.width / 2 + dx * sx * 1.4f, size.height / 2))
-        }
-    }
-}
-
 private val TileShape = RoundedCornerShape(18.dp)
 
 /**
@@ -209,40 +182,6 @@ fun <T> TileGrid(items: List<T>, tile: @Composable (T, Modifier) -> Unit) {
                 if (pair.size == 1) Spacer(Modifier.weight(1f))
             }
         }
-    }
-}
-
-/**
- * One key statistic as a grid tile: the value with its trend arrow, and its usual value underneath.
- */
-@Composable
-fun DotStatTile(
-    label: String,
-    accent: Color,
-    value: String?,
-    unit: String,
-    baseline: String?,
-    /** +1 above baseline, -1 below, 0 or null when about the same or unknown. */
-    direction: Int?,
-    /** Whether going up is good; colours the arrow. */
-    higherIsBetter: Boolean?,
-    modifier: Modifier = Modifier,
-    onClick: (() -> Unit)? = null,
-) {
-    GlowTile(label, accent, onClick, modifier) {
-        Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(value ?: "—", color = Color.White, style = MaterialTheme.typography.titleLarge)
-            if (value != null && unit.isNotEmpty()) {
-                Text(unit, color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(start = 3.dp))
-            }
-            if (value != null && direction != null && direction != 0) {
-                val good = higherIsBetter?.let { (direction > 0) == it }
-                val tint = when (good) { true -> TrendGood; false -> TrendBad; null -> Color.White.copy(alpha = 0.6f) }
-                Spacer(Modifier.width(8.dp))
-                DotArrow(direction > 0, tint)
-            }
-        }
-        if (baseline != null) Text("usually $baseline", color = Color.White.copy(alpha = 0.5f), style = MaterialTheme.typography.bodySmall)
     }
 }
 

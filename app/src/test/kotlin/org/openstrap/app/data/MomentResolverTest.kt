@@ -111,7 +111,7 @@ class MomentResolverTest {
         assertEquals(Moment.Waking, moment(at(3, 0), sleepEnd = epoch(3, 0)))
     }
 
-    @Test fun `the waking rule is the one chargeLeads uses`() {
+    @Test fun `waking lasts three hours from the end of sleep`() {
         val wake = epoch(6, 30)
         assertEquals(false, MomentResolver.wakingOver(epoch(9, 29), wake))
         assertEquals(true, MomentResolver.wakingOver(epoch(9, 30), wake))

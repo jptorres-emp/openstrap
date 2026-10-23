@@ -43,6 +43,8 @@ data class WorkoutAnalysis(
     val sportName: String get() = Workouts.sportName(workout.sportType)
     /** The strap recognised this workout by itself rather than being started on it (codemap 05 §8). */
     val autoDetected: Boolean get() = !fromPhone && workout.subtype == Workouts.SUBTYPE_AUTO_DETECTED
+    /** You started it, on the phone or the strap: not one the strap noticed or filed as "Activity" by itself. */
+    val startedByYou: Boolean get() = !autoDetected && workout.sportType != Workouts.GENERIC_ACTIVITY
 }
 
 object Workouts {

@@ -411,13 +411,18 @@ private fun AppRoot(
             shownToday = clockDate
         }
     }
-    val workoutStarts = remember(workouts) { workouts.map { it.workout.start } }
+    // Your usual workout time comes from workouts you started, not walks the strap noticed by itself.
+    val workoutStarts = remember(workouts) { workouts.filter { it.startedByYou }.map { it.workout.start } }
     val lastWorkout = remember(workouts) { workouts.maxByOrNull { it.end } }
     val usualBedtime = recovery?.takeIf { it.date == clockDate }?.usualBedtime
     val sleepEnd = day.sleep?.end?.takeIf { day.date == clockDate }
     val recording = workoutState is org.openstrap.app.device.WorkoutState.Recording
-    val clockMoment = remember(clock.epochSecond / 60, day.date, recording, lastWorkout?.end, sleepEnd, usualBedtime, workoutStarts) {
-        org.openstrap.app.data.MomentResolver.resolve(clock, zone, day.date, recording, lastWorkout?.end, sleepEnd, usualBedtime, workoutStarts)
+    // Until today's recovery has loaded, the usual bedtime isn't known yet and the fallback would show Evening for a
+    // second before the real moment. No moment until then: Today's plain title, the day's mood.
+    val bedtimeLoaded = day.date != clockDate || recovery?.date == clockDate
+    val clockMoment = remember(clock.epochSecond / 60, day.date, recording, lastWorkout?.end, sleepEnd, usualBedtime, workoutStarts, bedtimeLoaded) {
+        if (!bedtimeLoaded) null
+        else org.openstrap.app.data.MomentResolver.resolve(clock, zone, day.date, recording, lastWorkout?.end, sleepEnd, usualBedtime, workoutStarts)
     }
     val forced by forcedMoment.collectAsStateWithLifecycle()
     val moment = forced ?: clockMoment
@@ -553,7 +558,7 @@ private fun AppRoot(
     CompositionLocalProvider(
         org.openstrap.app.ui.dashboard.LocalGoals provides goals,
         org.openstrap.app.ui.components.LocalGlassHost provides glassHost,
-        org.openstrap.app.ui.glow.LocalGlowMood provides org.openstrap.app.ui.dashboard.momentMood(moment),
+        org.openstrap.app.ui.glow.LocalGlowMood provides (moment?.let { org.openstrap.app.ui.dashboard.momentMood(it) } ?: org.openstrap.app.ui.glow.GlowMood.Day),
     ) {
       androidx.compose.foundation.layout.Column(androidx.compose.ui.Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
       if (hinge != null) {
@@ -607,7 +612,7 @@ private fun AppRoot(
             // The header on every tab: the moment on Today (a past day's name for a past day), the tab's name elsewhere.
             val header: @Composable (Tab) -> Unit = { t ->
                 MomentHeader(
-                    if (t == Tab.Today) todayTitle(moment, day.date, lastWorkout?.workout?.sportType) else t.label, day.date, chip, dayVm::previousDay, dayVm::nextDay, picker,
+                    if (t != Tab.Today) t.label else moment?.let { todayTitle(it, day.date, lastWorkout?.workout?.sportType) } ?: org.openstrap.app.ui.dashboard.dayTitle(day.date), day.date, chip, dayVm::previousDay, dayVm::nextDay, picker,
                     onOpenYou = { openPage(Page.You) }, onOpenStrap = { openPage(Page.Strap) },
                     // All metrics is hidden for now (spec 3.1). Passing { allMetricsOpen = true } brings the button
                     // back; the sheet opens over whatever shows, and no tab hears of it (spec 3.2).
@@ -705,7 +710,7 @@ private fun AppRoot(
                                 running = workoutState as? org.openstrap.app.device.WorkoutState.Recording,
                                 onOpenRunning = { container.workout.minimized.value = false },
                                 onResumeRunning = container.workout::resume,
-                                heroLightAngle = org.openstrap.app.ui.dashboard.heroLightAngle(moment),
+                                heroLightAngle = moment?.let { org.openstrap.app.ui.dashboard.heroLightAngle(it) },
                             )
                             Tab.Recovery -> org.openstrap.app.ui.glow.GlowRecoveryScreen(
                                 day, recovery, strapReadiness, history, header = { header(Tab.Recovery) }, contentPadding = padding,

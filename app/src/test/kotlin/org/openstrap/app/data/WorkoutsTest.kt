@@ -69,6 +69,16 @@ class WorkoutsTest {
     }
 
     @Test
+    fun startedByYouLeavesOutWhatTheStrapLoggedByItself() {
+        val run = workout().copy(sportType = 1)
+        val auto = run.copy(subtype = Workouts.SUBTYPE_AUTO_DETECTED)
+        val activity = run.copy(sportType = Workouts.GENERIC_ACTIVITY)
+        org.junit.Assert.assertTrue(Workouts.analyse(run, emptyList(), emptyList(), 190).startedByYou)
+        org.junit.Assert.assertFalse(Workouts.analyse(auto, emptyList(), emptyList(), 190).startedByYou)
+        org.junit.Assert.assertFalse(Workouts.analyse(activity, emptyList(), emptyList(), 190).startedByYou)
+    }
+
+    @org.junit.Test
     fun autoDetectedLabelOnlyOnStrapWorkouts() {
         val auto = workout().copy(subtype = Workouts.SUBTYPE_AUTO_DETECTED)
         org.junit.Assert.assertTrue(Workouts.analyse(auto, emptyList(), emptyList(), 190).autoDetected)

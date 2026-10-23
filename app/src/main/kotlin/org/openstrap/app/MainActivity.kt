@@ -530,12 +530,17 @@ private fun AppRoot(container: AppContainer, metricRequests: kotlinx.coroutines.
         val litTab = if (indexShowing) -1 else tab
         // Another tab keeps every stack. The tab showing scrolls to the top, then pops to its root (spec 3.3); from
         // All metrics, where it isn't lit, it pops at once. A tap that closes pages over the tab does only that.
+        // All metrics is the circle's, not the tab's: leaving it for another tab closes it, so it never waits on
+        // a tab and makes the next switch look like nothing happened.
         val selectTab: (Int) -> Unit = { t ->
             youOpen = false
             val closed = closePages()
             when {
                 firmwareInstalling() -> Unit
-                t != nav.current -> nav = nav.select(t)
+                t != nav.current -> {
+                    if (indexShowing) setStack(tab, stackOf(tab).dropLast(1))
+                    nav = nav.select(t)
+                }
                 closed -> Unit
                 else -> {
                     val (next, action) = nav.reselect(stackOf(t).size, index = indexShowing)

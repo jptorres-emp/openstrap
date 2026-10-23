@@ -96,6 +96,9 @@ class WorkoutSession(
     /** A sport a launcher shortcut or the Quick Settings tile asked the ready screen to open with; the screen clears it. */
     val readyRequest = MutableStateFlow<Int?>(null)
 
+    /** The start of a strap workout a notification asked to open on the Activity tab; the screen clears it. */
+    val openRequest = MutableStateFlow<Long?>(null)
+
     /** The live screen is tucked away to use the rest of the app; the notification brings it back. */
     val minimized = MutableStateFlow(false)
 

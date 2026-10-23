@@ -319,7 +319,7 @@ private fun WorkoutsList(
                     onClick = { onOpen(a.workout.start) }, divider = divider(), icon = SportIcons.of(a.workout.sportType),
                 )
                 // Zone bar (chart kit): how the workout's time was spent, thin under its row, lined up with its name.
-                ZoneBar(a.zoneSeconds, ZONE_COLORS, Modifier.padding(start = RowIcon + 10.dp, bottom = 10.dp), height = 4.dp)
+                ZoneBar(a.zoneSeconds, ZONE_COLORS, Modifier.padding(start = RowIcon + RowIconGap, bottom = 10.dp), height = 4.dp)
             }
         }
         LinkRow("Add a workout you didn't record", onAdd, divider = divider())

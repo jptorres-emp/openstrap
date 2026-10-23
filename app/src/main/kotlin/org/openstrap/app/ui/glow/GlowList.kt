@@ -80,7 +80,7 @@ fun ListPanel(
 private val ListPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 6.dp, bottom = 8.dp)
 
 /**
- * A row in a [ListPanel]: an 8 dp dot in the metric's [color] (or its [icon], as a workout's sport), the [name] with its [status] under it, and the
+ * A row in a [ListPanel]: an 8 dp dot in the metric's [color] (or a toned white [icon], as a workout's sport), the [name] with its [status] under it, and the
  * [value] in dot-matrix digits in its own column on the right. Value and status take the metric colour only when
  * [offNormal]. A null [value] is a waiting row: a dim dash, and [status] says what it waits for ("After your first
  * night"). [onClick] opens the metric's detail. [divider] draws the hairline above the row.
@@ -110,8 +110,9 @@ fun ListRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (icon != null) {
-            Icon(icon, null, tint = color, modifier = Modifier.size(RowIcon))
-            Spacer(Modifier.width(10.dp))
+            // Toned white, like the icons on the You and Strap pages: the icon says what it is, not a metric.
+            Icon(icon, null, tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(RowIcon))
+            Spacer(Modifier.width(RowIconGap))
         } else {
             Box(Modifier.size(8.dp).background(color, CircleShape))
             Spacer(Modifier.width(12.dp))
@@ -134,8 +135,9 @@ fun ListRow(
     }
 }
 
-/** A row's icon in place of its dot; the text then starts this plus 10 dp in. */
+/** A row's icon in place of its dot, and the gap after it, as on the You and Strap pages. */
 internal val RowIcon = 20.dp
+internal val RowIconGap = 14.dp
 
 /** The empty value: a short dim bar drawn by the UI, never a dash character. */
 @Composable

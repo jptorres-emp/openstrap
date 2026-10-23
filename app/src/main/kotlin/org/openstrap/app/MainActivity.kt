@@ -313,6 +313,9 @@ private fun AppRoot(
     val profile by deviceVm.profile.collectAsStateWithLifecycle()
     val paired by deviceVm.paired.collectAsStateWithLifecycle()
     val day by dayVm.state.collectAsStateWithLifecycle()
+    // Your usual steps by the hour, read once per day shown, off the main thread ([DayViewModel.usualSteps]).
+    val usualSteps by dayVm.usualSteps.collectAsStateWithLifecycle()
+    val paiHistory: org.openstrap.app.ui.glow.PaiHistory = remember(container) { { from, to -> container.health.dailyPai(from, to) } }
     val strapReadiness by remember(day.dayStart) { container.database.healthDao().strapReadiness(day.dayStart) }.collectAsStateWithLifecycle(null)
     val checkIn by remember(day.date) { container.health.checkIn(day.date) }.collectAsStateWithLifecycle(null)
     val daysWithData by dayVm.daysWithData.collectAsStateWithLifecycle()
@@ -653,6 +656,13 @@ private fun AppRoot(
                         detail.score, day, recovery, strapReadiness?.takeIf { it.day == day.dayStart }?.score, history,
                         onOpen = push, onSwitch = { setStack(t, stack.dropLast(1) + it) }, onSelectDay = dayVm::select,
                         contentPadding = padding, onBack = pop,
+                        workouts = workouts, paiHistory = paiHistory, onEditProfile = { openPage(Page.Profile) },
+                    )
+                    Detail.Week -> org.openstrap.app.ui.glow.WeekDetail(
+                        org.openstrap.app.ui.glow.ActivityDetailContext(
+                            day, recovery?.takeIf { it.date == day.date }, workouts, paiHistory, history, onOpen = push, onSwitch = {},
+                            onSelectDay = dayVm::select, onEditProfile = { openPage(Page.Profile) }, contentPadding = padding, onBack = pop,
+                        ),
                     )
                     is Detail.Workout -> WorkoutDetail(
                         openWorkout?.takeIf { it.workout.start == detail.start }, padding, onBack = pop,
@@ -710,6 +720,7 @@ private fun AppRoot(
                                 // Cards about other tabs open those screens here, on Today; none switches tab.
                                 onOpenSleep = { todayStack = listOf(Detail.Sleep) },
                                 onOpenMetric = { todayStack = listOf(Detail.OfMetric(it)) },
+                                onOpen = { todayStack = listOf(it) }, usualSteps = usualSteps,
                                 recovery = recovery,
                                 strapReadiness = strapReadiness,
                                 checkIn = checkIn?.feeling,
@@ -760,9 +771,10 @@ private fun AppRoot(
                                 recovery = recovery,
                             )
                             Tab.Activity -> org.openstrap.app.ui.glow.GlowActivityScreen(
-                                day, recovery, workouts, { from, to -> container.health.dailyPai(from, to) },
+                                day, recovery, workouts, paiHistory,
                                 header = { header(Tab.Activity) }, contentPadding = padding,
                                 onOpenMetric = { activityStack = listOf(Detail.OfMetric(it)) },
+                                onOpen = { activityStack = listOf(it) }, usualSteps = usualSteps,
                                 onOpenWorkout = { activityStack = listOf(Detail.Workout(it)) },
                                 onAllWorkouts = { activityStack = listOf(Detail.AllWorkouts) },
                                 onEditProfile = { openPage(Page.Profile) },

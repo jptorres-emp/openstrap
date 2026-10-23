@@ -28,7 +28,13 @@ class InfoCopyTest {
                 InfoCopy.HERE,
             ) +
             InfoCopy.regularityNotes(SleepRegularity.Result(82f, 9000, null)) + InfoCopy.regularityNotes(SleepRegularity.Result(null, 3360, 40f)) +
-            InfoCopy.sleepNotes(480)
+            InfoCopy.sleepNotes(480) +
+            InfoCopy.activeNotes(12, true) + InfoCopy.loadNotes(52f, 186f, true, 1.21f) +
+            InfoCopy.vo2Notes(
+                org.openstrap.app.data.Vo2max.Estimate(45, 40, 50, 52f, fitnessAge = 28..38, sex = org.openstrap.app.data.settings.UserProfile.Sex.Male),
+                org.openstrap.app.data.Vo2max.Withheld.Age,
+            ) +
+            InfoCopy.energyNotes(org.openstrap.app.data.EnergyExpenditure.Day(1940f, 1650f, 600, partial = true, pal = null, palImplausible = true, hrAssistedMinutes = 12))
 
     @Test fun `no info sheet uses an interpunct, semicolon or em dash`() {
         val strings = every.flatMap { listOf(it.name, it.meaning, it.how, it.moves, it.off) + it.scale } + dynamic
@@ -41,6 +47,23 @@ class InfoCopyTest {
             assertTrue(info.name, info.meaning.length <= 140)
             assertTrue(info.name, info.how.isNotBlank() && info.moves.isNotBlank() && info.off.isNotBlank())
         }
+    }
+
+    @Test fun `the Activity sheets carry the method moved off the old panels`() {
+        // Heart points name PAI once, here and nowhere on a card.
+        assertTrue(InfoCopy.of(Score.HeartPoints).how.contains("PAI"))
+        assertFalse(InfoCopy.of(Score.HeartPoints).meaning.contains("PAI"))
+        assertTrue(InfoCopy.of(Score.Energy).how.contains("Mifflin-St Jeor"))
+        assertTrue(InfoCopy.of(Score.Energy).off.contains("Food digestion"))
+        assertTrue(InfoCopy.of(Score.Vo2Max).how.contains("Jurca") && InfoCopy.of(Score.Vo2Max).how.contains("FRIEND"))
+        assertTrue(InfoCopy.of(Score.Load).how.contains("Building, Steady and Easing off"))
+        assertTrue(InfoCopy.of(Score.Load).off.contains("EPOC"))
+        assertTrue(InfoCopy.of(Score.Recover).how.contains("training effect"))
+        assertTrue(InfoCopy.of(Score.Distance).how.contains("height"))
+        assertTrue(InfoCopy.loadNotes(52f, 186f, false, 1.21f).any { "1.21" in it && "disputed" in it })
+        assertEquals(listOf("That's typical of a man aged about 28 to 38."), InfoCopy.vo2Notes(
+            org.openstrap.app.data.Vo2max.Estimate(45, 40, 50, 52f, fitnessAge = 28..38, sex = org.openstrap.app.data.settings.UserProfile.Sex.Male), null,
+        ).drop(1))
     }
 
     @Test fun `HRV is spelled out once, in its own sheet`() {

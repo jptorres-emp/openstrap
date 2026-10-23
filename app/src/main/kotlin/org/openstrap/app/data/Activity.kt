@@ -117,5 +117,7 @@ object Activity {
         val weekEquivalent: Int,
         val distanceMeters: Float?,
         val stepGoal: Int,
+        /** Each day's MVPA, worked out the same way, for the [RecoveryEngine.ACTIVITY_DAYS] ending on the day. */
+        val byDay: Map<java.time.LocalDate, Mvpa> = emptyMap(),
     )
 }

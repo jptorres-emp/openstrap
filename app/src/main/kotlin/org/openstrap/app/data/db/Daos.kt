@@ -570,6 +570,13 @@ interface HealthDao {
     @Query("SELECT date(timestamp, 'unixepoch', 'localtime') AS day, SUM(steps) AS value, MIN(steps) AS min, MAX(steps) AS max, COUNT(*) AS count FROM activity_minute WHERE timestamp BETWEEN :from AND :to AND steps BETWEEN 0 AND 250 GROUP BY day ORDER BY day")
     suspend fun dailyStepsOnce(from: Long, to: Long): List<DailyAggregate>
 
+    /**
+     * Steps per local hour of each local day, for your usual steps by this time of day ([org.openstrap.app.data.UsualSteps]).
+     * Minutes over 250 steps are left out as bad data, as in [dailyStepsOnce].
+     */
+    @Query("SELECT date(timestamp, 'unixepoch', 'localtime') AS day, CAST(strftime('%H', timestamp, 'unixepoch', 'localtime') AS INTEGER) AS hour, SUM(steps) AS steps FROM activity_minute WHERE timestamp BETWEEN :from AND :to AND steps BETWEEN 0 AND 250 GROUP BY day, hour ORDER BY day, hour")
+    suspend fun hourlyStepsOnce(from: Long, to: Long): List<HourSteps>
+
     /** Minutes (epoch seconds / 60) with a heart rate from either table: the strap was worn. */
     @Query("SELECT timestamp / 60 FROM heart_rate WHERE timestamp BETWEEN :from AND :to AND bpm BETWEEN 30 AND 230 UNION SELECT timestamp / 60 FROM activity_minute WHERE timestamp BETWEEN :from AND :to AND heartRate BETWEEN 30 AND 230")
     suspend fun wornMinutesOnce(from: Long, to: Long): List<Long>

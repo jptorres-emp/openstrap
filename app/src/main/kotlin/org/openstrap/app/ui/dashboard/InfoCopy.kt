@@ -1,5 +1,6 @@
 package org.openstrap.app.ui.dashboard
 
+import org.openstrap.app.data.Activity
 import org.openstrap.app.data.History
 import org.openstrap.app.data.Recovery
 import org.openstrap.app.data.SleepRegularity
@@ -227,6 +228,130 @@ object InfoCopy {
                 "one can make it harder to fall asleep.",
             off = "Lying still awake can look like a short nap, and a short nap may have no stages.",
         )
+        // The Activity tab's (spec 5.3). The method notes that sat on the old Activity panels (Paluch, Mifflin-St Jeor,
+        // Jurca, FRIEND, acute:chronic, the strap's weekly EPOC range, training effect) live here now.
+        Score.HeartPoints -> Info(
+            "Heart points",
+            "Points for the minutes your heart rate is raised, harder minutes earning more, over the last 7 days. Aim for ${ActivityCopy.HEART_POINTS_TARGET}.",
+            emptyList(),
+            how = "Heart points are the strap's PAI, Personal Activity Intelligence. The strap works them out itself from " +
+                "how far your heart rate rises above resting, against your age and sex, and OpenStrap shows them as they " +
+                "come. Each day's points count for 7 days, then drop off, so the total always covers the last week.",
+            moves = "Anything that gets you out of breath adds the most. Brisk walking adds a little. A few hard sessions " +
+                "a week keep the total at ${ActivityCopy.HEART_POINTS_TARGET} or more.",
+            off = "The total updates when the strap syncs, so it can lag behind today's effort. A loose strap in a workout " +
+                "misses raised heart rate.",
+        )
+        Score.ActiveMinutes -> Info(
+            "Active minutes",
+            "Minutes of brisk movement or harder over the last 7 days, against the ${Activity.MVPA_WEEKLY_TARGET} a week health guidelines aim for.",
+            emptyList(),
+            how = "A minute at ${Activity.MODERATE_CADENCE} steps or more counts as moderate, and ${Activity.VIGOROUS_CADENCE} " +
+                "or more as vigorous, inside a run of at least ${Activity.CADENCE_RUN_MINUTES} such minutes. Effort " +
+                "without steps, like cycling or rowing, counts from heart rate after ${Activity.HR_RUN_MINUTES} minutes in " +
+                "a row at ${(Activity.HR_MODERATE_HRR * 100).toInt()}% of your heart rate reserve or more, vigorous from " +
+                "${(Activity.HR_VIGOROUS_HRR * 100).toInt()}%. A vigorous minute counts double, as in the WHO's 2020 guidelines.",
+            moves = "Brisk walks of a few minutes or more, cycling, running and sport all count. Strolling and short bursts don't.",
+            off = "No study has checked a strap's step counts against walking pace, so brisk minutes near the line can be " +
+                "missed or counted. Pushing a trolley or holding a rail hides steps.",
+        )
+        Score.Load -> Info(
+            "Load",
+            "How hard your heart worked today, from workouts and moving about, against your usual day.",
+            ActivityCopy.LOAD_SCALE,
+            how = "Each minute counts by how hard your heart works between resting and maximum, Banister's training " +
+                "impulse (TRIMP). Every workout minute counts. Outside workouts only moving minutes do, at 35% of your " +
+                "heart rate reserve or more, or brisk walking from 20%. Your usual is your fitness, a 42-day average of " +
+                "your daily Load. Building, Steady and Easing off compare the last 7 days with it, Steady within a " +
+                "quarter either side. Strain puts the day on a fixed curve from 0 to 21, where an hour at 60% of your " +
+                "reserve is about 7.",
+            moves = "Workouts add the most, longer and harder ones more. A day of walking about adds a little. Rest days " +
+                "bring the week's balance down.",
+            off = "Days the strap was mostly off are left out of your usual. A low maximum heart rate makes every minute " +
+                "count for more. Workouts also carry the strap's EPOC, its measure of what one workout took, on a " +
+                "different scale from Load.",
+        )
+        Score.Vo2Max -> Info(
+            "VO2 max",
+            "The most oxygen your body can use in hard effort, a measure of fitness. Higher is fitter.",
+            emptyList(),
+            how = "After a workout the strap can read it from, the number is the strap's own estimate from your heart " +
+                "rate and pace. Otherwise OpenStrap estimates it from your age, sex, BMI, resting heart rate while asleep " +
+                "and how active you say you are (Jurca and others, 2005), updated weekly, and shows it as a range. Where " +
+                "you sit for your age and sex comes from treadmill tests of thousands of adults (FRIEND, 2022).",
+            moves = "Regular hard effort raises it over weeks. Weight, age and long breaks from training lower it.",
+            off = "The estimate from your profile is typically within about 5 either way. A resting heart rate thrown " +
+                "by a short night or illness moves it.",
+        )
+        Score.Recover -> Info(
+            "Time to recover",
+            "How long your body needs after your last workout before it's ready for another hard one.",
+            emptyList(),
+            how = "It's the strap's estimate, or OpenStrap's own for a workout recorded on the phone, from how hard the " +
+                "workout was: its EPOC, the extra oxygen your body uses afterwards to recover. The same EPOC gives each " +
+                "workout its training effect, from 0 to 5, for how much it builds your fitness.",
+            moves = "Longer and harder workouts need more time. Easy sessions need little.",
+            off = "It knows only the workout, not your sleep, stress or the rest of the day. Recovery here is time, not " +
+                "the morning's Recovery score.",
+        )
+        Score.Energy -> Info(
+            "Energy",
+            "The energy your body uses in a day, at rest and moving, in kcal. An estimate.",
+            emptyList(),
+            how = "Your body's use at rest comes from your weight, height, age and sex (Mifflin-St Jeor). On top of it " +
+                "come your steps each minute and, for effort without steps, your heart rate. A recorded workout uses " +
+                "its own kcal. Sleep counts at a little under resting.",
+            moves = "Moving more raises it, most of all workouts. A heavier body uses more at rest and in motion.",
+            off = "Food digestion isn't included. It only covers the minutes the strap was worn, so a day with it off " +
+                "for hours reads low. A profile out of date throws the resting part.",
+        )
+        Score.Distance -> Info(
+            "Distance",
+            "How far you walked and ran today, estimated from your steps.",
+            emptyList(),
+            how = "Each minute's steps times a step length from your height: ${(Activity.WALK_STEP_FRACTION * 100).roundToIntString()}% " +
+                "of it at a walk, rising to ${(Activity.RUN_STEP_FRACTION * 100).roundToIntString()}% at 130 steps a " +
+                "minute and faster. Without a height the strap's own figure stands in.",
+            moves = "More steps, and faster ones, which are longer.",
+            off = "Step length varies from person to person and with hills, so it can be off by a tenth or more. A " +
+                "workout with GPS has its own distance.",
+        )
+    }
+
+    private fun Float.roundToIntString(): String = if (this % 1f == 0f) toInt().toString() else "%.1f".format(this)
+
+    /** What's particular about today's active minutes: how many came from heart rate. */
+    fun activeNotes(fromHeartRate: Int, today: Boolean): List<String> = listOfNotNull(
+        "$fromHeartRate of ${if (today) "today's" else "that day's"} minutes came from heart rate.".takeIf { fromHeartRate > 0 },
+    )
+
+    /** What's particular about today's Load: the heart rates it's read between, and the contested ratio. */
+    fun loadNotes(restingHr: Float, maxHr: Float, maxTested: Boolean, acwr: Float?): List<String> = listOfNotNull(
+        "Today it's read between ${restingHr.toInt()} bpm resting and ${maxHr.toInt()} bpm maximum" +
+            if (maxTested) ", from your test." else ".",
+        acwr?.let {
+            "Your last 7 days against the last 4 weeks come to %.2f, the acute to chronic ratio. It's shown for ".format(it) +
+                "interest only, since the evidence for a safe ratio is disputed, and never enters Recovery."
+        },
+    )
+
+    /** What's particular about the VO2 max estimate: the resting heart rate used, fitness age, or why it's withheld. */
+    fun vo2Notes(estimate: org.openstrap.app.data.Vo2max.Estimate?, withheld: org.openstrap.app.data.Vo2max.Withheld?): List<String> = buildList {
+        estimate?.let { e ->
+            add("This week's estimate uses a resting heart rate of ${e.restingHr.toInt()} bpm, while asleep.")
+            e.fitnessAge?.let { a ->
+                e.sex?.let { add("That's typical of a ${if (it == org.openstrap.app.data.settings.UserProfile.Sex.Male) "man" else "woman"} aged about ${a.first} to ${a.last}.") }
+            }
+        }
+        withheld?.let { add("No estimate from your profile yet. ${it.reason}") }
+    }
+
+    /** What's particular about the day's energy: part of the day worn, an unusual total, minutes from heart rate. */
+    fun energyNotes(e: org.openstrap.app.data.EnergyExpenditure.Day?): List<String> = buildList {
+        e ?: return@buildList
+        if (e.partial) add("It covers ${TodayCopy.duration(e.minutesWithData * 60L)} of wear, so it's part of the day.")
+        if (e.palImplausible) add("That's an unusual total for a full day. Check your profile and how the strap was worn.")
+        if (e.hrAssistedMinutes > 0) add("${e.hrAssistedMinutes} minutes came from heart rate rather than steps.")
     }
 
     /** Spec 6.2's sheet for a night vital opened from the Sleep tab: the metric's, saying where the night's numbers come from. */
@@ -253,6 +378,19 @@ object InfoCopy {
         moves = "Alcohol, a blocked nose, sleeping on your back and altitude can raise it.",
         off = "The strap's units aren't confirmed on a real strap yet, so treat the number as an early estimate. A " +
             "loose strap can read as a dip. ${org.openstrap.app.data.BodySignalsCopy.DISCLAIMER} It isn't a test for sleep apnea.",
+    )
+
+    /** The week story's sheet: what each day's numbers are and how far back the comparisons reach. */
+    val WEEK = Info(
+        "Your week",
+        "Last Monday to Sunday, day by day: how much you moved, trained and slept.",
+        emptyList(),
+        how = "Steps are each day's total from the strap's minutes, and steps a day the average of the days with any. " +
+            "Active minutes are worked out as in their own sheet. A night belongs to the evening it started, so " +
+            "Sunday's is the night into Monday.",
+        moves = "Every walk, workout and early night shows here a week later.",
+        off = "Steps and workouts are compared with the week before. Active minutes and sleep only go back two weeks, " +
+            "so they're shown without a comparison. A day with the strap off reads low.",
     )
 
     /** Under the breathing disturbances sheet's title: the night against your usual, or how far the usual has got. */

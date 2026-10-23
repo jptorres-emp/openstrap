@@ -197,6 +197,27 @@ class FrameTest {
         assertEquals(Detail.OfMetric(Metric.Spo2), Detail.fromRoute("Spo2"))
     }
 
+    @Test fun `the Activity details and the week story survive process death`() {
+        val stack = ACTIVITY_GROUP + Detail.Week + Detail.OfScore(Score.Load)
+        val saved = with(Detail.StackSaver) { androidx.compose.runtime.saveable.SaverScope { true }.save(stack) }!!
+        assertEquals(stack, Detail.StackSaver.restore(saved))
+        assertTrue(saved.contains("k:") && saved.contains("c:HeartPoints"))
+    }
+
+    @Test fun `the Activity details switch among themselves in the tab's order, the week story alone`() {
+        assertEquals(
+            listOf(
+                Detail.OfMetric(Metric.Steps), Detail.OfScore(Score.ActiveMinutes), Detail.OfScore(Score.HeartPoints), Detail.OfScore(Score.Load),
+                Detail.OfMetric(Metric.HeartRate), Detail.OfScore(Score.Vo2Max), Detail.OfScore(Score.Recover), Detail.OfScore(Score.Energy),
+                Detail.OfScore(Score.Distance),
+            ),
+            ACTIVITY_GROUP,
+        )
+        ACTIVITY_GROUP.forEach { assertEquals(ACTIVITY_GROUP, siblingsOf(it)) }
+        assertEquals(listOf(Detail.Week), siblingsOf(Detail.Week))
+        assertFalse(DETAIL_GROUPS.any { Detail.Week in it })
+    }
+
     @Test fun `the sleep details switch among themselves, the night vitals only within the night`() {
         val sleep = listOf(Score.Sleep, Score.Regularity, Score.Naps).map(Detail::OfScore)
         sleep.forEach { assertEquals(sleep, siblingsOf(it)) }

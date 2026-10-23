@@ -41,6 +41,7 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import org.openstrap.app.ui.components.rememberScrubHaptics
 import org.openstrap.app.ui.components.scrub
 import org.openstrap.app.ui.components.smoothPath
 import org.openstrap.app.ui.theme.FunnelSans
@@ -136,13 +137,16 @@ fun GlowLineChart(
     var width by remember { mutableStateOf(0f) }
     val inset = with(androidx.compose.ui.platform.LocalDensity.current) { 7.dp.toPx() }
     val scrubbing = describe != null || onScrub != null
+    val tick = rememberScrubHaptics()
     Canvas(
         modifier.fillMaxWidth().height(height)
             .onSizeChanged { width = it.width.toFloat() }
             .let {
                 if (!scrubbing) it else it.scrub(values) { x ->
                     touchX = x
-                    onScrub?.invoke(x?.let { tx -> nearestReading(values, tx, width, inset) })
+                    val i = x?.let { tx -> nearestReading(values, tx, width, inset) }
+                    tick(i, values, band, true)
+                    onScrub?.invoke(i)
                 }
             },
     ) {
@@ -243,11 +247,15 @@ fun GlowDotBars(
     var touchX by remember { mutableStateOf<Float?>(null) }
     var width by remember { mutableStateOf(0f) }
     val scrubbing = describe != null || onScrub != null
+    val tick = rememberScrubHaptics()
     Canvas(
         modifier.fillMaxWidth().height(height).onSizeChanged { width = it.width.toFloat() }.let {
             if (!scrubbing) it else it.scrub(values) { x ->
                 touchX = x
-                onScrub?.invoke(x?.takeIf { values.isNotEmpty() && width > 0f }?.let { tx -> (tx / (width / values.size)).toInt().coerceIn(0, values.size - 1) })
+                val i = x?.takeIf { values.isNotEmpty() && width > 0f }?.let { tx -> (tx / (width / values.size)).toInt().coerceIn(0, values.size - 1) }
+                // Many hours sit at zero, so only the busiest is marked.
+                tick(i, values, null, false)
+                onScrub?.invoke(i)
             }
         },
     ) {
@@ -403,7 +411,24 @@ fun GlowHypnogram(
 ) {
     val m = rememberTextMeasurer()
     var touchX by remember { mutableStateOf<Float?>(null) }
-    Canvas(modifier.fillMaxWidth().height(height).let { if (describe != null) it.scrub(stages) { x -> touchX = x } else it }) {
+    var width by remember { mutableStateOf(0f) }
+    val nameWidth = with(androidx.compose.ui.platform.LocalDensity.current) { if (showNames) 46.dp.toPx() else 0f }
+    val haptics = org.openstrap.app.ui.components.rememberHaptics()
+    var lastStage by remember { mutableStateOf<Int?>(null) }
+    Canvas(
+        modifier.fillMaxWidth().height(height).onSizeChanged { width = it.width.toFloat() }.let {
+            if (describe != null) it.scrub(stages) { x ->
+                touchX = x
+                // A tick each time the finger crosses into another stage (spec 3.6).
+                val stage = x?.takeIf { width > nameWidth }?.let { tx ->
+                    val f = (tx - nameWidth) / (width - nameWidth)
+                    stages.indexOfFirst { f >= it.from && f <= it.to }.takeIf { it >= 0 }
+                }
+                if (stage != null && lastStage != null && stage != lastStage) haptics.perform(org.openstrap.app.ui.components.HapticEvent.ScrubStep)
+                lastStage = if (x == null) null else stage ?: lastStage
+            } else it
+        },
+    ) {
         if (stages.isEmpty()) return@Canvas
         val axisH = if (labels.isEmpty()) 0f else 18.dp.toPx()
         val nameW = if (showNames) 46.dp.toPx() else 0f
@@ -572,13 +597,16 @@ internal fun NormalTrend(
     var touchX by remember { mutableStateOf<Float?>(null) }
     var width by remember { mutableStateOf(0f) }
     val inset = with(androidx.compose.ui.platform.LocalDensity.current) { 16.dp.toPx() }
+    val tick = rememberScrubHaptics()
     Canvas(
         modifier.fillMaxWidth().height(height)
             .onSizeChanged { width = it.width.toFloat() }
             .let {
                 if (onScrub == null) it else it.scrub(values) { x ->
                     touchX = x
-                    onScrub(x?.let { tx -> nearestReading(values, tx, width, inset) })
+                    val i = x?.let { tx -> nearestReading(values, tx, width, inset) }
+                    tick(i, values, band, true)
+                    onScrub(i)
                 }
             },
     ) {

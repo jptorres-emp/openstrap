@@ -53,6 +53,11 @@ data class RecoveryResult(
     val everydayLoad: Float = 0f,
     /** When you usually go to sleep ([RecoveryEngine.usualBedtime]); null before any main sleep. */
     val usualBedtime: java.time.LocalTime? = null,
+    /**
+     * The daily Load of each worn day in the [RecoveryEngine.RECENT_LOAD_DAYS] before [date], oldest first: the same
+     * loads [chronicLoad] is worked out from. Days the strap was mostly off are absent.
+     */
+    val dailyLoads: List<Pair<LocalDate, Float>> = emptyList(),
 )
 
 /** Loads what [Recovery] needs from the database and runs it. All work happens off the main thread by the caller. */
@@ -186,12 +191,13 @@ class RecoveryEngine(private val dao: HealthDao) {
         )
         val charge = Recovery.charge(minutes, params, day.from..day.to, start = 50f, mainSleepEnd = tonight?.end)
 
-        // Activity: MVPA from cadence, then heart rate, over the 7 days ending on the selected one.
-        val weekFrom = DayWindow.of(date.minusDays(6), zone).from
+        // Activity: MVPA from cadence, then heart rate, over the 7 days ending on the selected one. Worked out for the
+        // 14 days ending on it, the same way each day, so the week story can tell last week's days.
+        val weekFrom = DayWindow.of(date.minusDays(ACTIVITY_DAYS - 1L), zone).from
         val workouts = dao.workoutsOnce(weekFrom, to)
         val minuteSteps = dao.activityOnce(weekFrom, to).filter { it.steps in 0..250 }.associate { it.timestamp / 60 * 60 to it.steps }
         val weekHr = hr.filter { it.first >= weekFrom }.toMap()
-        val activityDays = (6 downTo 0).map { back ->
+        val activityDays = (ACTIVITY_DAYS - 1 downTo 0).map { back ->
             val w = DayWindow.of(date.minusDays(back.toLong()), zone)
             // Minutes with any data; no row is missing, never zero.
             val times = (minuteSteps.keys.filter { it in w.from..w.to } + weekHr.keys.filter { it in w.from..w.to }).toSortedSet()
@@ -202,7 +208,8 @@ class RecoveryEngine(private val dao: HealthDao) {
                 )
             }
         }
-        val weekMvpa = activityDays.map { Activity.mvpa(it) }
+        val dayMvpa = activityDays.map { Activity.mvpa(it) }
+        val weekMvpa = dayMvpa.takeLast(7)
         val todayMinutes = activityDays.last()
         val activity = Activity.Day(
             steps = todayMinutes.sumOf { it.steps },
@@ -210,6 +217,7 @@ class RecoveryEngine(private val dao: HealthDao) {
             weekEquivalent = weekMvpa.sumOf { it.equivalent },
             distanceMeters = Activity.distanceMeters(todayMinutes, profile.heightCm),
             stepGoal = Activity.defaultStepGoal(age),
+            byDay = dayMvpa.mapIndexed { i, m -> date.minusDays(ACTIVITY_DAYS - 1L - i) to m }.toMap(),
         )
 
         // VO2max: recomputed weekly, as of the latest Monday, from the nightly resting HR.
@@ -263,6 +271,7 @@ class RecoveryEngine(private val dao: HealthDao) {
             loadTrend, Recovery.strain(todayLoad), Recovery.loadPercentile(todayLoad, loads), profile.maxHeartRate != null && maxHr == profile.maxHeartRate.toFloat(),
             activity, energy, vo2, vo2Withheld, todaySplit.workout, todaySplit.everyday,
             usualBedtime(mains.filterKeys { it <= midnight }.values, date, zone),
+            dailyLoads = loadDays.map { dayOf(it.first) to it.second }.filter { it.first >= date.minusDays(RECENT_LOAD_DAYS.toLong()) },
         )
     }
 
@@ -402,6 +411,12 @@ class RecoveryEngine(private val dao: HealthDao) {
 
         /** Days of load history: CTL's 42-day constant and Strain's 90-day "vs your usual". */
         const val LOAD_DAYS = 90
+
+        /** Days of MVPA worked out, ending on the day shown: the week and the one before, for the week story. */
+        const val ACTIVITY_DAYS = 14
+
+        /** Days of daily Load the result carries, before the day shown, for the Load detail's Week and Month. */
+        const val RECENT_LOAD_DAYS = 30
         /** A day needs this many minutes of heart rate before its training load counts. */
         const val MIN_WORN_MINUTES = 8 * 60
         /** Sleep SpO2 readings needed before a night's mean counts. */

@@ -150,6 +150,26 @@ class DayViewModel(
             }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
+    /**
+     * Your usual steps by the end of each hour ([org.openstrap.app.data.UsualSteps]), from the 28 days before the day
+     * shown; null until there are enough worn days. Past days don't change through the day, so it's read once per day
+     * shown, off the main thread, not on every sync.
+     */
+    val usualSteps: StateFlow<List<Float>?> = selected
+        .mapLatest { d ->
+            withContext(Dispatchers.IO) {
+                try {
+                    org.openstrap.app.data.UsualSteps.byHour(repo.hourlySteps(d.minusDays(org.openstrap.app.data.UsualSteps.DAYS.toLong()), d.minusDays(1)), d)
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.w("OpenStrap", "usual steps failed", e)
+                    null
+                }
+            }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
     /** The weekly Healthspan estimate for the selected day, or why it's withheld; null while loading or on failure. */
     @OptIn(FlowPreview::class)
     val healthspan: StateFlow<org.openstrap.app.data.Healthspan.Outcome?> =

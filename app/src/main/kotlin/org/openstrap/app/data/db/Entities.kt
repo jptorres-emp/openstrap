@@ -443,6 +443,9 @@ data class DailyAggregate(
     val count: Int,
 )
 
+/** One local hour's steps: the local date as SQLite prints it, the hour 0 to 23, and the steps in it. */
+data class HourSteps(val day: String, val hour: Int, val steps: Int)
+
 /** The day's last PAI reading: what the strap reported for that day and the 7-day total. */
 data class DailyPai(val day: String, val daily: Float, val total: Float, val latest: Long)
 

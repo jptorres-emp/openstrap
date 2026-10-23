@@ -23,10 +23,14 @@ enum class Metric(val title: String, val unit: String, val decimals: Int, val da
 /**
  * A detail in the metric template with no per-day series behind it, unlike a [Metric]'s: Recovery keeps only its last
  * 7 days, Charge only the day shown, the strap's Sleep score and the night's times only the 14 nights the day loads,
- * and the day's Naps are only that day's. Load and the rest join here later.
+ * and the day's Naps are only that day's. The Activity tab's: Heart points over the strap's 7 days, Active minutes over
+ * the 14 days the day works out, Load over the 30 days before it, and VO2 max, Time to recover, Energy and Distance as
+ * the day has them.
  */
 enum class Score(val title: String) {
     Recovery("Recovery"), Charge("Charge"), Sleep("Sleep score"), Regularity("Sleep regularity"), Naps("Naps"),
+    HeartPoints("Heart points"), ActiveMinutes("Active minutes"), Load("Load"), Vo2Max("VO2 max"),
+    Recover("Time to recover"), Energy("Energy"), Distance("Distance"),
 }
 
 /** Your daily goals, provided once at the top of the app so every screen measures against the same ones. */
@@ -53,6 +57,8 @@ sealed interface Detail {
     data object Recovery : Detail
     /** The Sleep tab's screen, opened from a card on another tab. */
     data object Sleep : Detail
+    /** The week story: last Monday to Sunday day by day, opened from Your week on Today. */
+    data object Week : Detail
 
     companion object {
         /** Saves a tab's stack of details, deepest last, as one string ("m:Hrv|n:Spo2|w:1792227300") so it survives process death. */
@@ -69,6 +75,7 @@ sealed interface Detail {
             Healthspan -> "h:"
             Recovery -> "r:"
             Sleep -> "s:"
+            Week -> "k:"
         }
 
         private fun restore(s: String): Detail? {
@@ -82,6 +89,7 @@ sealed interface Detail {
                 "h" -> Healthspan
                 "r" -> Recovery
                 "s" -> Sleep
+                "k" -> Week
                 else -> null
             }
         }

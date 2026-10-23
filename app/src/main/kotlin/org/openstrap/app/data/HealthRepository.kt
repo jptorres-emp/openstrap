@@ -162,6 +162,19 @@ class HealthRepository(private val dao: HealthDao) {
         return rows.map { list -> list.mapNotNull(DayStat::of) }
     }
 
+    /**
+     * Each local day's steps hour by hour, from [from] to [to], keyed by date; days without a step record are absent.
+     * Read once, off the main thread, for your usual steps by this time of day.
+     */
+    suspend fun hourlySteps(from: LocalDate, to: LocalDate, zone: ZoneId = ZoneId.systemDefault()): Map<LocalDate, List<Float>> =
+        dao.hourlyStepsOnce(DayWindow.of(from, zone).from, DayWindow.of(to, zone).to).groupBy { it.day }.mapNotNull { (day, hours) ->
+            DayStat.parseDay(day)?.let { d ->
+                val buckets = FloatArray(24)
+                hours.forEach { if (it.hour in 0..23) buckets[it.hour] += it.steps.toFloat() }
+                d to buckets.toList()
+            }
+        }.toMap()
+
     /** Each day's PAI (earned that day, and the 7-day total), keyed by local date. */
     fun dailyPai(from: LocalDate, to: LocalDate, zone: ZoneId = ZoneId.systemDefault()): Flow<Map<LocalDate, DailyPai>> =
         dao.dailyPai(DayWindow.of(from, zone).from, DayWindow.of(to, zone).to).map { rows ->

@@ -286,12 +286,12 @@ internal fun HeartCard(
 }
 
 /**
- * Steps toward the day's goal, with the day's steps so far as a line (ghost line, chart kit) on an axis up to the goal.
- * TODO(step 6): the ghost of your usual steps by this time of day, and "About usual" beside it, need hourly steps
- * from past days, which the app doesn't load yet; until then only today's line shows.
+ * Steps toward the day's goal, with the day's steps so far as a line (ghost line, chart kit) on an axis up to the goal,
+ * and your [usual] by the end of each hour as the faint dashed ghost behind it, with "about usual by now" beside the
+ * goal (spec 2.7, compare by pace). Without a usual yet only today's line shows.
  */
 @Composable
-internal fun ActivityCard(state: DayUiState, onClick: () -> Unit, modifier: Modifier = Modifier) {
+internal fun ActivityCard(state: DayUiState, onClick: () -> Unit, modifier: Modifier = Modifier, usual: List<Float>? = null) {
     val goal = org.openstrap.app.ui.dashboard.LocalGoals.current.steps
     val isToday = state.date == java.time.LocalDate.now()
     val hour = java.time.LocalTime.now().hour
@@ -299,15 +299,18 @@ internal fun ActivityCard(state: DayUiState, onClick: () -> Unit, modifier: Modi
         var sum = 0f
         state.hourlySteps.mapIndexed { i, v -> sum += v; if (isToday && i > hour) null else sum }
     }
+    val now = java.time.LocalTime.now()
+    val pace = org.openstrap.app.ui.dashboard.ActivityCopy.paceOf(state.steps, usual, isToday, now.hour, now.minute)
+    val ghost = usual?.takeIf { it.size == 24 }
     EdgeCard(MetricColors.steps, modifier.fillMaxWidth().gridSize(CardSize.Wide), kind = EdgeKind.Progress, onClick = onClick) {
         EdgeTitle("Activity", "Goal %,d".format(goal))
-        EdgeValue(
-            "%,d".format(state.steps), "steps",
-            if (state.steps >= goal) "Goal reached" else "${state.steps * 100 / goal.coerceAtLeast(1)}% of your goal",
-        )
+        EdgeValue("%,d".format(state.steps), "steps", org.openstrap.app.ui.dashboard.ActivityCopy.activityLine(state.steps, goal, pace, isToday))
         if (state.steps > 0 && line.size >= 2) {
             Spacer(Modifier.height(10.dp))
-            GhostLine(line, MetricColors.steps, maxOf(goal.toFloat(), state.steps.toFloat(), line.filterNotNull().maxOrNull() ?: 0f), height = 56.dp)
+            GhostLine(
+                line, MetricColors.steps, maxOf(goal.toFloat(), state.steps.toFloat(), line.filterNotNull().maxOrNull() ?: 0f, ghost?.maxOrNull() ?: 0f),
+                height = 56.dp, usual = ghost,
+            )
         }
     }
 }
@@ -328,8 +331,9 @@ internal fun RecoveryEarlierCard(shown: TodayCopy.RecoveryShown, onClick: () -> 
  * Charge as a wide card: the second glow before a workout, lit to its level, or a level card whose light fills
  * across to the value, only as high as its content. [status] says what's happening to it. [soFar] is the day's
  * Charge so far (evenly spaced, nulls still to come), drawn beside the number on the level card (ghost line, chart
- * kit). TODO(step 6): the ghost of your usual Charge by this time needs Charge by the hour from past days, which the
- * app doesn't keep; until then only today's line shows.
+ * kit). TODO(step 6): the ghost of your usual Charge by this time needs past days' Charge hour by hour. The engine
+ * simulates Charge only for the day shown (with a week's lead-in to settle it); past days would each need that whole
+ * simulation re-run, and nothing keeps its results, so only today's line shows.
  */
 @Composable
 internal fun ChargeWideCard(
@@ -378,6 +382,8 @@ internal fun WorkoutCard(w: org.openstrap.app.data.WorkoutAnalysis, onClick: () 
 @Composable
 internal fun WeekCard(
     state: DayUiState, workouts: List<org.openstrap.app.data.WorkoutAnalysis>, history: DailyHistory?, modifier: Modifier = Modifier,
+    /** Opens the week story. */
+    onClick: (() -> Unit)? = null,
 ) {
     val week = TodayCopy.lastWeek(state.date)
     val start = week.start
@@ -393,8 +399,7 @@ internal fun WeekCard(
     val zone = ZoneId.systemDefault()
     val done = workouts.count { Instant.ofEpochSecond(it.workout.start).atZone(zone).toLocalDate() in start..end }
     val range = DateTimeFormatter.ofPattern("d MMM")
-    // TODO(step 6): tapping opens the week story; there is none yet, so the card doesn't open anything.
-    EdgeCard(EdgeNeutral, modifier.fillMaxWidth().gridSize(CardSize.Wide), kind = EdgeKind.Value) {
+    EdgeCard(EdgeNeutral, modifier.fillMaxWidth().gridSize(CardSize.Wide), kind = EdgeKind.Value, onClick = onClick) {
         EdgeTitle("Your week", "${start.format(range)}–${end.format(range)}")
         Row(Modifier.fillMaxWidth().padding(top = 14.dp), horizontalArrangement = Arrangement.SpaceBetween) {
             HeroFigure(stepsNow?.let { "%,d".format(it.roundToInt()) }, "Steps a day")
@@ -461,13 +466,16 @@ internal fun BodyList(title: String, rows: List<BodyRow>, waiting: String, onOpe
     }
 }
 
-/** Load today and time to recover, before or after a workout. */
+/** Load today and time to recover, before or after a workout, each opening its detail. */
 @Composable
-internal fun LoadList(title: String, load: Float?, loadLine: String, recover: Pair<String?, String>?, modifier: Modifier = Modifier) {
+internal fun LoadList(
+    title: String, load: Float?, loadLine: String, recover: Pair<String?, String>?, modifier: Modifier = Modifier,
+    onLoad: (() -> Unit)? = null, onRecover: (() -> Unit)? = null,
+) {
     ListPanel(modifier, title = title) {
-        ListRow("Load today", MetricColors.load, load?.roundToInt()?.toString(), loadLine, divider = false)
+        ListRow("Load today", MetricColors.load, load?.roundToInt()?.toString(), loadLine, divider = false, onClick = onLoad)
         // Recovered is the whole answer: no number, no dash.
-        if (recover != null) ListRow("Time to recover", MetricColors.readinessDeep, recover.first, recover.second, dash = recover.first != null)
+        if (recover != null) ListRow("Time to recover", MetricColors.readinessDeep, recover.first, recover.second, dash = recover.first != null, onClick = onRecover)
     }
 }
 

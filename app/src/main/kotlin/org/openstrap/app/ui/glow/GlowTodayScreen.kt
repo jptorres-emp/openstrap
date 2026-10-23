@@ -133,6 +133,10 @@ fun GlowTodayScreen(
     onSyncNow: () -> Unit = {},
     /** When you usually go to sleep, for "Bedtime in 1 h 10". */
     usualBedtime: LocalTime? = null,
+    /** Opens a detail over Today: Load, time to recover, the week story. */
+    onOpen: (org.openstrap.app.ui.dashboard.Detail) -> Unit = {},
+    /** Your usual steps by the end of each hour, for the Activity card's ghost line; null until there's a usual. */
+    usualSteps: List<Float>? = null,
 ) {
     val list = rememberLazyListState()
     var editing by rememberSaveable { mutableStateOf(false) }
@@ -198,7 +202,8 @@ fun GlowTodayScreen(
                                         TodayCard.EditToday -> EditTodayButton({ editing = true })
                                         else -> TodayRow(slot, ctx, healthspan, history, checkIn, onCheckIn, onOpenSleep, onOpenMetric, onOpenRecovery,
                                             onOpenWorkout, onOpenHealthspan, onOpenProfile, offer, onRecordOffer, onDeclineOffer, suggestion,
-                                            onSaveSuggestion, onDismissSuggestion, if (slot.size == CardSize.Small) Modifier.fillMaxSize() else Modifier)
+                                            onSaveSuggestion, onDismissSuggestion, onOpen, usualSteps,
+                                            if (slot.size == CardSize.Small) Modifier.fillMaxSize() else Modifier)
                                     }
                                 }
                             }
@@ -534,11 +539,13 @@ private fun TodayRow(
     onOpenWorkout: (Long) -> Unit, onOpenHealthspan: () -> Unit, onOpenProfile: () -> Unit,
     offer: org.openstrap.app.data.AutoStart.Offer?, onRecordOffer: () -> Unit, onDeclineOffer: () -> Unit,
     suggestion: org.openstrap.app.data.WorkoutSuggestions.Suggestion?, onSaveSuggestion: () -> Unit, onDismissSuggestion: () -> Unit,
+    onOpen: (org.openstrap.app.ui.dashboard.Detail) -> Unit, usualSteps: List<Float>?,
     /** The size a Small takes in its row. */
     modifier: Modifier = Modifier,
 ) {
     val s = ctx.state
     val b = s.baselines
+    val openScore = { score: org.openstrap.app.ui.dashboard.Score -> onOpen(org.openstrap.app.ui.dashboard.Detail.OfScore(score)) }
     when (slot.card) {
         TodayCard.Offer -> offer?.let { OfferPanel(it, onRecordOffer, onDeclineOffer, edge = EdgeKind.Live) }
         TodayCard.Suggestion -> suggestion?.let { SuggestionPanel(it, onSaveSuggestion, onDismissSuggestion, edge = EdgeKind.Earlier) }
@@ -565,7 +572,7 @@ private fun TodayRow(
         TodayCard.LastNight ->
             if (slot.size == CardSize.Strip) LastNightStrip(s, onOpenSleep) else LastNightCard(s, ctx.firstNights, onOpenSleep)
         TodayCard.HeartRate -> HeartCard(s, ctx.live, { onOpenMetric(Metric.HeartRate) }, restingRange = ctx.restingRange)
-        TodayCard.Activity -> ActivityCard(s, { onOpenMetric(Metric.Steps) })
+        TodayCard.Activity -> ActivityCard(s, { onOpenMetric(Metric.Steps) }, usual = usualSteps)
         TodayCard.Recovery -> RecoveryEarlierCard(ctx.recoveryShown, onOpenRecovery)
         TodayCard.Charge -> {
             val c = ctx.rec?.charge
@@ -585,6 +592,7 @@ private fun TodayRow(
             MetricColors.load, "Load", ctx.rec?.load?.let { Math.round(it).toString() }, null,
             if (ctx.rec == null) ctx.waiting else TodayCopy.loadWord(ctx.loadStatus), modifier, kind = EdgeKind.Progress,
             edgeStatus = if (ctx.loadStatus == TodayCopy.LoadStatus.Above) EdgeStatus.Above else EdgeStatus.Usual,
+            onClick = { openScore(org.openstrap.app.ui.dashboard.Score.Load) },
         ) else LoadList(
             when (ctx.moment) {
                 Moment.WorkoutWindow -> "Before you start"
@@ -592,14 +600,18 @@ private fun TodayRow(
                 else -> "Load today"
             },
             ctx.rec?.load, TodayCopy.loadLine(ctx.loadStatus), ctx.recover,
+            onLoad = { openScore(org.openstrap.app.ui.dashboard.Score.Load) }, onRecover = { openScore(org.openstrap.app.ui.dashboard.Score.Recover) },
         )
         TodayCard.Recover -> {
             val left = ctx.workouts.filter { it.recoveryMinutes != null }.maxByOrNull { it.end }
                 ?.let { w -> TodayCopy.recoverShort(TodayCopy.recoverLeft(w.end, w.recoveryMinutes ?: 0, ctx.now), ctx.now, ctx.zone) }
-            SmallCard(MetricColors.readinessDeep, "To recover", left?.first, "h", left?.second ?: "No estimate from the strap", modifier)
+            SmallCard(
+                MetricColors.readinessDeep, "To recover", left?.first, "h", left?.second ?: "No estimate from the strap", modifier,
+                onClick = { openScore(org.openstrap.app.ui.dashboard.Score.Recover) },
+            )
         }
         TodayCard.Workout -> ctx.lastWorkout?.let { w -> WorkoutCard(w, { onOpenWorkout(w.workout.start) }) }
-        TodayCard.Week -> WeekCard(s, ctx.workouts, history)
+        TodayCard.Week -> WeekCard(s, ctx.workouts, history, onClick = { onOpen(org.openstrap.app.ui.dashboard.Detail.Week) })
         // Habit Age's home is the foot of Recovery; Today shows the same card when there's a new estimate, or pinned.
         TodayCard.HabitAge -> HabitAgeEdgeCard(healthspan, onOpenHealthspan, onOpenProfile)
         TodayCard.Hero, TodayCard.EditToday -> Unit

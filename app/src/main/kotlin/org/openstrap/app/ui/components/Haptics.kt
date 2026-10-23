@@ -77,3 +77,36 @@ fun rememberHaptics(): Haptics {
     val feedback = LocalHapticFeedback.current
     return remember(feedback) { Haptics(feedback) }
 }
+
+/**
+ * Which tick a scrub plays as the finger moves (spec 3.6): [HapticEvent.ScrubStep] when it lands on a new point, and
+ * [HapticEvent.ScrubMark] when that point crosses into or out of your normal ([next]'s band) or is the highest or
+ * lowest. Pure: the chart plays what it returns. One per chart, reset by a release (a null index).
+ */
+class ScrubTicks {
+    private var last: Int? = null
+
+    /**
+     * The tick for the finger on [index] of [values] (null on release, which plays nothing). [band] is your normal when
+     * the chart draws one. [lowMarks] false leaves the lowest point unmarked, for bars where many hours sit at zero.
+     */
+    fun next(index: Int?, values: List<Float?>, band: ClosedFloatingPointRange<Float>? = null, lowMarks: Boolean = true): HapticEvent? {
+        val prev = last
+        last = index
+        if (index == null || index == prev) return null
+        val v = values.getOrNull(index) ?: return HapticEvent.ScrubStep
+        val known = values.filterNotNull()
+        val extreme = known.size >= 2 && known.max() > known.min() && (v == known.max() || (lowMarks && v == known.min()))
+        val before = prev?.let { values.getOrNull(it) }
+        val crossed = band != null && before != null && (before in band) != (v in band)
+        return if (extreme || crossed) HapticEvent.ScrubMark else HapticEvent.ScrubStep
+    }
+}
+
+/** A [ScrubTicks] for this chart, playing through [rememberHaptics]: call it with each index the scrub lands on. */
+@Composable
+fun rememberScrubHaptics(): (Int?, List<Float?>, ClosedFloatingPointRange<Float>?, Boolean) -> Unit {
+    val haptics = rememberHaptics()
+    val ticks = remember { ScrubTicks() }
+    return remember(haptics, ticks) { { i, values, band, low -> ticks.next(i, values, band, low)?.let(haptics::perform) } }
+}

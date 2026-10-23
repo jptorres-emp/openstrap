@@ -32,13 +32,23 @@ internal fun colorOf(metric: Metric): Color = when (metric) {
 internal val NIGHT_VITALS: List<Metric> = listOf(Metric.HeartRate, Metric.Hrv, Metric.Breathing, Metric.Spo2, Metric.SkinTemperature)
 
 /**
+ * The Activity tab's details, in the tab's order: Steps, the Small pair, Load, Heart rate, then the Today list's VO2
+ * max, time to recover, energy and distance.
+ */
+internal val ACTIVITY_GROUP: List<Detail> = listOf(
+    Detail.OfMetric(Metric.Steps), Detail.OfScore(Score.ActiveMinutes), Detail.OfScore(Score.HeartPoints), Detail.OfScore(Score.Load),
+    Detail.OfMetric(Metric.HeartRate), Detail.OfScore(Score.Vo2Max), Detail.OfScore(Score.Recover), Detail.OfScore(Score.Energy),
+    Detail.OfScore(Score.Distance),
+)
+
+/**
  * The details a detail's switcher moves between (spec 6.1): its siblings in the same group. The body signals in
  * Recovery's list order, what the day does, the two scores of the Recovery tab, the Sleep tab's details, and the night
- * vitals, which switch only among themselves while scoped to the night. Every detail is in one group.
+ * vitals, which switch only among themselves while scoped to the night. Every detail is in one group but the week story.
  */
 internal val DETAIL_GROUPS: List<List<Detail>> = listOf(
     listOf(Metric.RestingHr, Metric.Hrv, Metric.SkinTemperature, Metric.Breathing, Metric.Spo2, Metric.Stress).map { Detail.OfMetric(it) },
-    listOf(Metric.Steps, Metric.HeartRate).map { Detail.OfMetric(it) },
+    ACTIVITY_GROUP,
     listOf(Score.Recovery, Score.Charge).map(Detail::OfScore),
     listOf(Score.Sleep, Score.Regularity, Score.Naps).map(Detail::OfScore),
     NIGHT_VITALS.map { Detail.OfMetric(it, night = true) },

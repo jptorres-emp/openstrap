@@ -4,6 +4,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,6 +23,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,6 +36,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -47,6 +52,9 @@ import org.openstrap.app.data.WorkoutAnalysis
 import org.openstrap.app.data.Workouts
 import org.openstrap.app.data.db.DailyPai
 import org.openstrap.app.ui.dashboard.ActivityCard
+import org.openstrap.app.ui.dashboard.ActivityCopy
+import org.openstrap.app.ui.dashboard.Detail
+import org.openstrap.app.ui.dashboard.Score
 import org.openstrap.app.ui.dashboard.ActivityFacts
 import org.openstrap.app.ui.dashboard.DayUiState
 import org.openstrap.app.ui.dashboard.LocalGoals
@@ -59,7 +67,7 @@ import org.openstrap.app.ui.workout.SportIcons
 import org.openstrap.app.ui.workout.ZONE_COLORS
 
 /** Heart points' weekly aim: 100 or more over the last seven days. */
-private const val HEART_POINTS_TARGET = 100
+private const val HEART_POINTS_TARGET = ActivityCopy.HEART_POINTS_TARGET
 
 /** Workouts the list shows, the day's first, before "All workouts". */
 private const val LISTED_WORKOUTS = 5
@@ -69,9 +77,9 @@ typealias PaiHistory = (LocalDate, LocalDate) -> Flow<Map<LocalDate, DailyPai>>
 
 /*
  * The Activity tab (spec 5.3): "how much did I move and train". A strip to start a sport today, steps glowing, Load
- * against your usual, this week's facts and the workouts ([activityCards]). The method behind each number (energy,
- * active minutes, VO2 max, Load's parts) belongs in their details and info sheets (step 6). Workouts under way and
- * the morning check-in live on Today.
+ * against your usual, this week's facts and the workouts ([activityCards]). Every card and row opens its detail; the
+ * method behind each number (energy, active minutes, VO2 max, Load's parts) is in their info sheets. Workouts under
+ * way and the morning check-in live on Today.
  */
 @Composable
 fun GlowActivityScreen(
@@ -95,7 +103,12 @@ fun GlowActivityScreen(
     liveHeartRate: Int? = null,
     /** Per-day history, for your resting range behind the heart rate line; null leaves the band out. */
     history: org.openstrap.app.ui.dashboard.DailyHistory? = null,
+    /** Opens a detail over the tab: the Activity details behind the Small pair, Load and the Today list. */
+    onOpen: (org.openstrap.app.ui.dashboard.Detail) -> Unit = {},
+    /** Your usual steps by the end of each hour ([org.openstrap.app.data.UsualSteps]); null until there's a usual. */
+    usualSteps: List<Float>? = null,
 ) {
+    val open = { s: Score -> onOpen(Detail.OfScore(s)) }
     val list = rememberLazyListState()
     val isToday = state.date == LocalDate.now()
     val sports = remember(workouts) { topSports(workouts) }
@@ -111,20 +124,22 @@ fun GlowActivityScreen(
             tabCards(slots) { card, m ->
                 when (card) {
                     ActivityCard.Start -> StartStrip(sports, onStartWorkout, onAllSports)
-                    ActivityCard.Steps -> StepsGlow(state) { onOpenMetric(Metric.Steps) }
+                    ActivityCard.Steps -> StepsGlow(state, usualSteps) { onOpenMetric(Metric.Steps) }
                     ActivityCard.ActiveMinutes -> r?.activity.let { a ->
                         SmallCard(
                             MetricColors.steps, "Active minutes", a?.weekEquivalent?.toString(), null,
                             a?.let { TabCopy.activeMinutes(it.weekEquivalent, Activity.MVPA_WEEKLY_TARGET) } ?: "No reading yet", m,
+                            onClick = { open(Score.ActiveMinutes) },
                         )
                     }
                     ActivityCard.HeartPoints -> SmallCard(
                         MetricColors.heart, "Heart points", heartPoints?.roundToInt()?.toString(), null,
                         heartPoints?.let { TabCopy.heartPoints(it.roundToInt(), HEART_POINTS_TARGET) } ?: "After the strap's next sync", m,
+                        onClick = { open(Score.HeartPoints) },
                     )
-                    ActivityCard.Load -> LoadCard(r)
+                    ActivityCard.Load -> LoadCard(r) { open(Score.Load) }
                     ActivityCard.HeartRate -> HeartCard(state, live, { onOpenMetric(Metric.HeartRate) }, restingRange = restingRange)
-                    ActivityCard.Facts -> FactsList(state, r, workouts, isToday, onEditProfile)
+                    ActivityCard.Facts -> FactsList(state, r, workouts, isToday, onEditProfile, open)
                     ActivityCard.Workouts -> WorkoutsList(
                         state.date, workouts, suggestion?.takeIf { isToday }, onOpenWorkout, onAllWorkouts, onAddWorkout,
                         onSaveSuggestion, onDismissSuggestion,
@@ -170,36 +185,52 @@ private fun SportPill(
 /* ----------------------------------------------- Steps ---------------------------------------------- */
 
 /**
- * Steps glow, lit to the share of the goal walked, with the day's steps hour by hour. Opens the Steps detail.
- * TODO(step 6): "About usual for midday" needs your usual steps by this hour, from past days' hourly steps, which
- * the app doesn't load yet; until then the line says how far toward the goal.
+ * Steps glow, lit to the share of the goal walked, with the day's steps hour by hour. Under the number, the steps
+ * against your [usual] by now ("About usual by now", compare by pace) once there is one, else how far toward the goal.
+ * Tapping an hour puts its steps in the number; tapping it again, or another card, puts the day back. Opens the Steps
+ * detail.
  */
 @Composable
-private fun StepsGlow(state: DayUiState, onClick: () -> Unit) {
+private fun StepsGlow(state: DayUiState, usual: List<Float>?, onClick: () -> Unit) {
     val goal = LocalGoals.current.steps
     val share = if (goal > 0) state.steps / goal.toFloat() else 0f
+    val isToday = state.date == LocalDate.now()
+    val now = java.time.LocalTime.now()
+    val pace = ActivityCopy.paceOf(state.steps, usual, isToday, now.hour, now.minute)
+    var hour by remember(state.date, state.hourlySteps) { mutableStateOf<Int?>(null) }
     GlowCard(GlowStyle.chart(MetricColors.steps).copy(lightLevel = share.coerceIn(0f, 1f)), Modifier.fillMaxWidth().gridSize(CardSize.Wide), onClick = onClick) {
         Column {
             GlowHeader("Steps", trailing = "Goal %,d".format(goal), chevron = true)
             Spacer(Modifier.height(GlowLayout.TitleGap))
-            HeroFigure("%,d".format(state.steps), if (state.steps >= goal) "Goal reached" else "${(share * 100).toInt()}% of your goal", big = true)
+            val picked = hour?.let { h -> state.hourlySteps.getOrNull(h) }
+            if (hour != null && picked != null) HeroFigure("%,d".format(Math.round(picked)), ActivityCopy.hourLabel(hour!!), big = true)
+            else HeroFigure("%,d".format(state.steps), pace?.let { ActivityCopy.pace(it, isToday) } ?: ActivityCopy.goalShare(state.steps, goal), big = true)
             Spacer(Modifier.height(18.dp))
-            HourPills(state.hourlySteps)
+            HourPills(state.hourlySteps, hour) { hour = it }
         }
     }
 }
 
 /**
  * Hourly pill bars (chart kit): the day's steps as 24 pills, one an hour, as high as the hour's share of the busiest.
- * The latest hour with steps is lit full white; hours with none, and those still to come, are faint stubs.
- * TODO(step 6): tapping an hour shows its count in the headline.
+ * The latest hour with steps is lit full white; hours with none, and those still to come, are faint stubs. Tapping an
+ * hour picks it ([onPick]) and lights it in place of the latest; tapping it again lets it go.
  */
 @Composable
-private fun HourPills(hourly: List<Float>) {
+private fun HourPills(hourly: List<Float>, picked: Int?, onPick: (Int?) -> Unit) {
     val top = hourly.maxOrNull()?.takeIf { it > 0f } ?: 1f
-    val last = hourly.indexOfLast { it > 0f }
+    val last = picked ?: hourly.indexOfLast { it > 0f }
     Column {
-        Canvas(Modifier.fillMaxWidth().height(56.dp)) {
+        Canvas(
+            Modifier.fillMaxWidth().height(56.dp).pointerInput(hourly, picked) {
+                detectTapGestures { o ->
+                    if (hourly.isEmpty()) return@detectTapGestures
+                    val h = (o.x / (size.width.toFloat() / hourly.size)).toInt().coerceIn(0, hourly.lastIndex)
+                    // A tap, not a scrub: no tick (spec 3.6).
+                    onPick(if (h == picked) null else h)
+                }
+            },
+        ) {
             val slot = size.width / hourly.size
             val w = slot * 0.56f
             hourly.forEachIndexed { i, v ->
@@ -228,17 +259,19 @@ private fun HourPills(hourly: List<Float>) {
 
 /**
  * Load today, its light filling across toward your usual for a day, and the week's balance in a word. Above your
- * usual it glows stronger. TODO(step 6): the ghost line of your usual Load by this time needs Load by the hour, which
- * the app doesn't keep; tapping opens the Load detail, where Strain, fitness and fatigue live.
+ * usual it glows stronger. Opens the Load detail, where Strain, fitness and fatigue live. TODO(step 6): the ghost line
+ * of your usual Load by this time needs past days' Load hour by hour. The engine keeps each past day's Load only as a
+ * total ([org.openstrap.app.data.Recovery.dailyLoad]); hours would mean re-running it 24 times for each of 30 days in
+ * every recompute, with nothing to cache them in.
  */
 @Composable
-private fun LoadCard(r: RecoveryResult?) {
+private fun LoadCard(r: RecoveryResult?, onClick: () -> Unit) {
     val usual = r?.chronicLoad?.takeIf { it > 0f }
     val status = r?.let { TodayCopy.loadStatus(it.load, it.chronicLoad, endOfDay = it.date != LocalDate.now()) }
     EdgeCard(
         MetricColors.load, Modifier.fillMaxWidth().gridSize(CardSize.Wide),
         status = if (status == TodayCopy.LoadStatus.Above) EdgeStatus.Above else EdgeStatus.Usual,
-        kind = EdgeKind.Level, progress = r?.let { l -> usual?.let { l.load / it } } ?: 0f,
+        kind = EdgeKind.Level, progress = r?.let { l -> usual?.let { l.load / it } } ?: 0f, onClick = onClick,
     ) {
         EdgeTitle("Load", TabCopy.loadBalance(r?.loadTrend))
         EdgeValue(r?.load?.roundToInt()?.toString(), "today", if (r == null) "No reading yet" else TabCopy.loadUsual(usual))
@@ -248,11 +281,13 @@ private fun LoadCard(r: RecoveryResult?) {
 /* ------------------------------------------------ Facts --------------------------------------------- */
 
 /**
- * The day's smaller facts: VO2 max, time to recover, energy and distance. Active minutes and Heart points are the
- * Small pair above. TODO(step 6): each opens its detail; none exists yet but Steps.
+ * The day's smaller facts: VO2 max, time to recover, energy and distance, each opening its detail. Active minutes and
+ * Heart points are the Small pair above.
  */
 @Composable
-private fun FactsList(state: DayUiState, r: RecoveryResult?, workouts: List<WorkoutAnalysis>, isToday: Boolean, onEditProfile: () -> Unit) {
+private fun FactsList(
+    state: DayUiState, r: RecoveryResult?, workouts: List<WorkoutAnalysis>, isToday: Boolean, onEditProfile: () -> Unit, open: (Score) -> Unit,
+) {
     val waiting = "No reading yet"
     ListPanel(title = "Today", note = if (isToday) "So far" else null) {
         val a = r?.activity
@@ -268,25 +303,29 @@ private fun FactsList(state: DayUiState, r: RecoveryResult?, workouts: List<Work
                 est != null -> est.band?.let { "${it.label} for your age" } ?: "Estimated from your profile"
                 else -> "After a workout the strap can read it from"
             },
-            divider = false,
+            divider = false, onClick = { open(Score.Vo2Max) },
         )
         val recover = workouts.filter { it.recoveryMinutes != null }.maxByOrNull { it.end }?.let { w ->
             val now = System.currentTimeMillis() / 1000
             TodayCopy.recoverText(TodayCopy.recoverLeft(w.end, w.recoveryMinutes ?: 0, now), now, ZoneId.systemDefault())
         }
         // Recovered is the whole answer: no number, no dash.
-        ListRow("Time to recover", MetricColors.readinessDeep, recover?.first, recover?.second ?: "No recent workout", dash = recover?.first != null)
+        ListRow(
+            "Time to recover", MetricColors.readinessDeep, recover?.first, recover?.second ?: "No recent workout", dash = recover?.first != null,
+            onClick = { open(Score.Recover) },
+        )
         val e = r?.energy
         ListRow(
             "Energy", MetricColors.chargeDeep, e?.totalKcal?.roundToInt()?.let { "%,d".format(it) },
             e?.let { TabCopy.energy(it.partial, isToday) } ?: "Add age, weight and height to see it",
-            onClick = if (e == null) onEditProfile else null, dash = e != null,
+            onClick = if (e == null && r != null) onEditProfile else { { open(Score.Energy) } }, dash = e != null,
         )
         // Ours from step length and height when we can; the strap's own figure otherwise. Always approximate.
         val distance = a?.distanceMeters ?: state.distanceMeters?.toFloat()
         ListRow(
             "Distance", MetricColors.steps, distance?.let { "%.1f".format(it / 1000f) },
-            if (distance == null) waiting else if (a?.distanceMeters != null) "km, estimated from your steps" else "km, from the strap",
+            if (distance == null) waiting else ActivityCopy.distanceSource(a?.distanceMeters != null),
+            onClick = { open(Score.Distance) },
         )
     }
 }

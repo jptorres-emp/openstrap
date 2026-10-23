@@ -255,6 +255,8 @@ private fun AppRoot(container: AppContainer, metricRequests: kotlinx.coroutines.
     // Pages over the tab showing (the Strap page and what it opens, Profile, Diagnostics), deepest last.
     var pages by rememberSaveable(stateSaver = PagesSaver) { mutableStateOf(emptyList<Page>()) }
     var youOpen by rememberSaveable { mutableStateOf(false) }
+    // The All metrics sheet, from the circle beside the tab bar: over the tab, like the You sheet, never a place.
+    var allMetricsOpen by rememberSaveable { mutableStateOf(false) }
     val workoutsVm: org.openstrap.app.ui.workout.WorkoutsViewModel = viewModel(factory = viewModelFactory {
         initializer { org.openstrap.app.ui.workout.WorkoutsViewModel(container.database.healthDao(), container.settings.profile) }
     })
@@ -343,6 +345,7 @@ private fun AppRoot(container: AppContainer, metricRequests: kotlinx.coroutines.
             Detail.fromRoute(r.route)?.let { detail ->
                 closePages()
                 youOpen = false
+                allMetricsOpen = false
                 r.day?.let(dayVm::select)
                 if (stackOf(tab).lastOrNull() != detail) setStack(tab, stackOf(tab) + detail)
             }
@@ -524,26 +527,17 @@ private fun AppRoot(container: AppContainer, metricRequests: kotlinx.coroutines.
         // left edge, so the pages keep their height.
         val rail = maxWidth > maxHeight && maxWidth >= 600.dp
         val navItems = Tab.entries.map { NavItem(it.label, it.icon, it.selectedIcon, it.tint) }
-        // While All metrics is the screen showing, the circle is the lit item and no tab is; a detail opened from it
-        // belongs to the tab again.
-        val indexShowing = currentDetail == Detail.AllMetrics && pages.isEmpty() && workoutOpen == null
-        val litTab = if (indexShowing) -1 else tab
-        // Another tab keeps every stack. The tab showing scrolls to the top, then pops to its root (spec 3.3); from
-        // All metrics, where it isn't lit, it pops at once. A tap that closes pages over the tab does only that.
-        // All metrics is the circle's, not the tab's: leaving it for another tab closes it, so it never waits on
-        // a tab and makes the next switch look like nothing happened.
+        // Another tab keeps every stack. The tab showing scrolls to the top, then pops to its root (spec 3.3). A tap
+        // that closes pages over the tab does only that.
         val selectTab: (Int) -> Unit = { t ->
             youOpen = false
             val closed = closePages()
             when {
                 firmwareInstalling() -> Unit
-                t != nav.current -> {
-                    if (indexShowing) setStack(tab, stackOf(tab).dropLast(1))
-                    nav = nav.select(t)
-                }
+                t != nav.current -> nav = nav.select(t)
                 closed -> Unit
                 else -> {
-                    val (next, action) = nav.reselect(stackOf(t).size, index = indexShowing)
+                    val (next, action) = nav.reselect(stackOf(t).size)
                     nav = next
                     when (action) {
                         Reselect.ScrollToTop -> scrollToTop[t] = scrollToTop[t] + 1
@@ -552,20 +546,18 @@ private fun AppRoot(container: AppContainer, metricRequests: kotlinx.coroutines.
                 }
             }
         }
-        val openAllMetrics: () -> Unit = {
-            closePages()
-            if (stackOf(tab).lastOrNull() != Detail.AllMetrics) setStack(tab, stackOf(tab) + Detail.AllMetrics)
-        }
+        // The circle only ever does an action (spec 3.2): it opens the sheet over whatever shows, and no tab hears of it.
+        val openAllMetrics: () -> Unit = { allMetricsOpen = true }
         val action: @Composable () -> Unit = {
             // The moments (step 3) pass the workout window's start here.
             TabAction(
-                workoutOpen, live, workoutAccent, workoutWindow = null, navGlass, indexShowing,
+                workoutOpen, live, workoutAccent, workoutWindow = null, navGlass,
                 onOpenWorkout = { container.workout.minimized.value = false }, onAllMetrics = openAllMetrics,
             )
         }
         Scaffold(
             bottomBar = {
-                if (!rail) FloatingNavBar(navItems, litTab, selectTab, glass = navGlass, action = action)
+                if (!rail) FloatingNavBar(navItems, tab, selectTab, glass = navGlass, action = action)
             },
             containerColor = MaterialTheme.colorScheme.background,
         ) { padding ->
@@ -616,26 +608,6 @@ private fun AppRoot(container: AppContainer, metricRequests: kotlinx.coroutines.
                             contentPadding = padding, onOpenMetric = { push(Detail.OfMetric(it)) }, recovery = recovery,
                         )
                     }
-                    // A map, not a card: rows whose home is a tab go there, at its root and top (Charge to its card);
-                    // the rest open their detail here. The day is shared, so the tab shows the same one.
-                    Detail.AllMetrics -> org.openstrap.app.ui.glow.AllMetricsScreen(
-                        org.openstrap.app.ui.glow.metricIndex(day, recovery, healthspan, workouts), day.date, padding,
-                        onOpen = { target ->
-                            when (target) {
-                                is org.openstrap.app.ui.glow.IndexTarget.Open -> push(target.detail)
-                                is org.openstrap.app.ui.glow.IndexTarget.Home -> {
-                                    val home = when (target.tab) {
-                                        org.openstrap.app.ui.glow.HomeTab.Recovery -> Tab.Recovery
-                                        org.openstrap.app.ui.glow.HomeTab.Sleep -> Tab.Sleep
-                                    }.ordinal
-                                    setStack(home, emptyList())
-                                    nav = nav.select(home)
-                                    if (target.charge) showCharge = true else scrollToTop[home] = scrollToTop[home] + 1
-                                }
-                            }
-                        },
-                        onBack = pop,
-                    )
                 }
             }
             // Every tab stays composed, so a swipe never builds a whole dashboard mid-gesture (with only the neighbours
@@ -737,7 +709,7 @@ private fun AppRoot(container: AppContainer, metricRequests: kotlinx.coroutines.
             }
         }
         if (rail) org.openstrap.app.ui.components.FloatingNavRail(
-            navItems, litTab, selectTab, androidx.compose.ui.Modifier.align(androidx.compose.ui.Alignment.CenterStart),
+            navItems, tab, selectTab, androidx.compose.ui.Modifier.align(androidx.compose.ui.Alignment.CenterStart),
             glass = navGlass, action = action,
         )
         if (youOpen) {
@@ -755,6 +727,29 @@ private fun AppRoot(container: AppContainer, metricRequests: kotlinx.coroutines.
                 onSampleData = if (org.openstrap.app.data.SampleData.AVAILABLE) ({ deviceVm.loadSampleData() }) else null,
             )
         }
+        // A map, not a card: rows whose home is a tab go there, at its root and top (Charge to its card); the rest open
+        // their detail on the tab showing. The day is shared, so the tab shows the same one. The sheet closes first.
+        if (allMetricsOpen) org.openstrap.app.ui.glow.AllMetricsSheet(
+            org.openstrap.app.ui.glow.metricIndex(day, recovery, healthspan, workouts), day.date,
+            onDismiss = { allMetricsOpen = false },
+            onOpen = { target ->
+                allMetricsOpen = false
+                closePages()
+                when (target) {
+                    is org.openstrap.app.ui.glow.IndexTarget.Open ->
+                        if (stackOf(tab).lastOrNull() != target.detail) setStack(tab, stackOf(tab) + target.detail)
+                    is org.openstrap.app.ui.glow.IndexTarget.Home -> {
+                        val home = when (target.tab) {
+                            org.openstrap.app.ui.glow.HomeTab.Recovery -> Tab.Recovery
+                            org.openstrap.app.ui.glow.HomeTab.Sleep -> Tab.Sleep
+                        }.ordinal
+                        setStack(home, emptyList())
+                        nav = nav.select(home)
+                        if (target.charge) showCharge = true else scrollToTop[home] = scrollToTop[home] + 1
+                    }
+                }
+            },
+        )
         addingOn?.let { date ->
             androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
                 val series by androidx.compose.runtime.produceState<List<Pair<Long, Int>>?>(null, date) { value = workoutsVm.dayMinuteHeartRate(date) }
@@ -790,7 +785,8 @@ private fun AppRoot(container: AppContainer, metricRequests: kotlinx.coroutines.
 
 /**
  * The circle beside the tab bar (spec 3.2): during a recording, the live heart rate in the zone [accent], opening the
- * live screen; in the workout window, Start workout; otherwise All metrics.
+ * live screen; in the workout window, Start workout; otherwise the All metrics sheet. Only ever an action, never a
+ * place: it is never lit like a tab.
  */
 @Composable
 private fun TabAction(
@@ -800,8 +796,6 @@ private fun TabAction(
     /** Starts a workout, while it's the usual time for one; set by the moments (step 3), null until then. */
     workoutWindow: (() -> Unit)?,
     glass: dev.chrisbanes.haze.HazeState,
-    /** All metrics is the screen showing: the circle is lit, white with a dark icon. */
-    indexShowing: Boolean,
     onOpenWorkout: () -> Unit,
     onAllMetrics: () -> Unit,
 ) {
@@ -817,11 +811,8 @@ private fun TabAction(
         workoutWindow != null -> org.openstrap.app.ui.components.NavActionCircle("Start workout", workoutWindow, glass, filled = true) {
             androidx.compose.material3.Icon(PhosphorIcons.PlayFill, null, androidx.compose.ui.Modifier.size(22.dp), tint = androidx.compose.ui.graphics.Color.Black)
         }
-        else -> org.openstrap.app.ui.components.NavActionCircle("All metrics", onAllMetrics, glass, filled = indexShowing) {
-            androidx.compose.material3.Icon(
-                PhosphorIcons.SquaresFour, null, androidx.compose.ui.Modifier.size(22.dp),
-                tint = if (indexShowing) androidx.compose.ui.graphics.Color.Black else white,
-            )
+        else -> org.openstrap.app.ui.components.NavActionCircle("All metrics", onAllMetrics, glass) {
+            androidx.compose.material3.Icon(PhosphorIcons.SquaresFour, null, androidx.compose.ui.Modifier.size(22.dp), tint = white)
         }
     }
 }

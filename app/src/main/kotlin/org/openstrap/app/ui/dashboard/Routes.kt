@@ -38,8 +38,6 @@ sealed interface Detail {
     data object Recovery : Detail
     /** The Sleep tab's screen, opened from a card on another tab. */
     data object Sleep : Detail
-    /** Every metric and screen there is, grouped, opened from the circle beside the tab bar. */
-    data object AllMetrics : Detail
 
     companion object {
         /** Saves a tab's stack of details, deepest last, as one string ("m:Hrv|w:1792227300") so it survives process death. */
@@ -55,7 +53,6 @@ sealed interface Detail {
             Healthspan -> "h:"
             Recovery -> "r:"
             Sleep -> "s:"
-            AllMetrics -> "x:"
         }
 
         private fun restore(s: String): Detail? {
@@ -67,7 +64,6 @@ sealed interface Detail {
                 "h" -> Healthspan
                 "r" -> Recovery
                 "s" -> Sleep
-                "x" -> AllMetrics
                 else -> null
             }
         }

@@ -130,14 +130,6 @@ class FrameTest {
         assertEquals(Reselect.ScrollToTop, once.reselect(depth = 0).second)
     }
 
-    @Test fun `tapping the tab under All metrics pops it at once`() {
-        val (next, action) = TabNav().reselect(depth = 1, index = true)
-        assertEquals(Reselect.PopToRoot, action)
-        assertFalse(next.reselected)
-        // Even right after a tap that scrolled: the tab isn't lit, so the tap goes back to it.
-        assertEquals(Reselect.PopToRoot, TabNav().reselect(depth = 1).first.reselect(depth = 1, index = true).second)
-    }
-
     @Test fun `only a swipe moves the tab when the pager settles`() {
         val nav = TabNav().select(sleep)
         // The pager settling on an old page, from an animation cut short or not started yet, leaves the tap's tab.
@@ -167,8 +159,13 @@ class FrameTest {
     }
 
     @Test fun `stacks with the new screens survive process death`() {
-        val stack = listOf(Detail.AllMetrics, Detail.Recovery, Detail.OfMetric(Metric.Spo2), Detail.Sleep, Detail.Workout(1792227300))
+        val stack = listOf(Detail.Recovery, Detail.OfMetric(Metric.Spo2), Detail.Sleep, Detail.Workout(1792227300))
         val saved = with(Detail.StackSaver) { androidx.compose.runtime.saveable.SaverScope { true }.save(stack) }!!
         assertEquals(stack, Detail.StackSaver.restore(saved))
+    }
+
+    @Test fun `a stack saved with All metrics on it comes back without it`() {
+        // All metrics is a sheet now, not a screen on a stack; a stack saved before keeps the rest.
+        assertEquals(listOf(Detail.OfMetric(Metric.Hrv)), Detail.StackSaver.restore("x:|m:Hrv"))
     }
 }

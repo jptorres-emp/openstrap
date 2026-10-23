@@ -1,9 +1,20 @@
 package org.openstrap.app.ui.glow
 
-import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import java.time.LocalDate
 import org.openstrap.app.data.Healthspan
 import org.openstrap.app.data.RecoveryResult
@@ -11,7 +22,6 @@ import org.openstrap.app.data.WorkoutAnalysis
 import org.openstrap.app.ui.dashboard.DayUiState
 import org.openstrap.app.ui.dashboard.Detail
 import org.openstrap.app.ui.dashboard.Metric
-import org.openstrap.app.ui.dashboard.ScreenList
 import org.openstrap.app.ui.dashboard.avg
 import org.openstrap.app.ui.theme.MetricColors
 
@@ -22,7 +32,7 @@ import org.openstrap.app.ui.theme.MetricColors
 
 /**
  * Where an index row goes. All metrics is a map, not a card: a row whose home is a tab goes to that tab ([Home]),
- * one with a detail of its own opens it on the stack the index is on ([Open]).
+ * one with a detail of its own opens it on the current tab's stack ([Open]).
  */
 sealed interface IndexTarget {
     data class Open(val detail: Detail) : IndexTarget
@@ -134,20 +144,29 @@ fun metricIndex(
     )
 }
 
-/** The index as a page: one grouped list per section, each row going to its tab or opening its detail. */
+/**
+ * The index as a sheet over the tab (spec 3.2), from the circle beside the tab bar: one grouped list per section.
+ * [onOpen] gets the tapped row's target; the caller closes the sheet and goes there.
+ */
 @Composable
-fun AllMetricsScreen(
+fun AllMetricsSheet(
     groups: List<IndexGroup>,
     date: LocalDate,
-    contentPadding: PaddingValues,
+    onDismiss: () -> Unit,
     onOpen: (IndexTarget) -> Unit,
-    onBack: () -> Unit,
 ) {
-    BackHandler(onBack = onBack)
-    ScreenList(contentPadding, gutter = GlowLayout.Gutter) {
-        item { PageHeader("All metrics", onBack, subtitle = dayName(date)) }
-        groups.forEach { group ->
-            item(group.title) {
+    val maxHeight = (LocalConfiguration.current.screenHeightDp * 0.9f).dp
+    org.openstrap.app.ui.components.GlassSheet(onDismiss) {
+        Column(
+            Modifier.heightIn(max = maxHeight).verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp).navigationBarsPadding().padding(bottom = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Column(Modifier.fillMaxWidth().padding(start = 4.dp, top = 4.dp, bottom = 4.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text("All metrics", color = Color.White, style = GlowType.label.copy(fontSize = 20.sp, lineHeight = 26.sp))
+                Text(dayName(date), color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary)
+            }
+            groups.forEach { group ->
                 ListPanel(title = group.title) {
                     group.rows.forEachIndexed { i, r ->
                         ListRow(r.name, r.color, r.value, r.status, onClick = { onOpen(r.target) }, divider = i > 0)

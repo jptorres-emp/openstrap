@@ -130,11 +130,10 @@ data class TabNav(val current: Int = HOME, val previous: Int? = null, val resele
 
     /**
      * A tap on the current tab, whose stack is [depth] screens deep: the first scrolls to the top, the next pops to
-     * the root. With nothing pushed there's nothing to pop, so it scrolls again. While All metrics shows ([index]) the
-     * circle is lit and the tab isn't, so the tap goes back to the tab: it pops to the root at once.
+     * the root. With nothing pushed there's nothing to pop, so it scrolls again.
      */
-    fun reselect(depth: Int, index: Boolean = false): Pair<TabNav, Reselect> =
-        if ((index || reselected) && depth > 0) copy(reselected = false) to Reselect.PopToRoot
+    fun reselect(depth: Int): Pair<TabNav, Reselect> =
+        if (reselected && depth > 0) copy(reselected = false) to Reselect.PopToRoot
         else copy(reselected = true) to Reselect.ScrollToTop
 
     /** Something else happened on the tab (a screen opened or closed): the next tap scrolls again first. */

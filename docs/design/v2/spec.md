@@ -207,7 +207,15 @@ Today). A detached circle to the right holds the moment's action:
 |---|---|
 | Workout window | Start workout (white fill) |
 | During a workout | Live heart rate in the zone colour, opens the live screen |
-| Otherwise | All metrics |
+| Otherwise | All metrics, opens the All metrics sheet |
+
+The circle only ever does an action. It never takes you to a place, so it is never lit like a tab and the tabs never
+know it was tapped.
+
+**All metrics sheet.** A modal sheet over the current tab, in the You sheet's style: every metric grouped by section,
+each row with its value for the day. Tapping a row closes the sheet, then opens that metric's detail on the current
+tab. Recovery and Sleep rows switch to their tab at its root, and Charge to the Recovery tab with its card in view.
+Back or a swipe down closes it. The tab bar under it does nothing while it's open.
 
 The live workout capsule above the bar stays as it is.
 
@@ -217,7 +225,7 @@ The live workout capsule above the bar stays as it is.
   jumps in `MainActivity` (inventory 1.5) are removed.
 - Tapping the current tab scrolls to top. Tapping it again pops to its root. Tapping another tab keeps every stack.
 - Back from a tab root goes to the previous tab, then Today, then leaves.
-- The Strap page and the You sheet open over the current tab and close back to it.
+- The Strap page, the You sheet and the All metrics sheet open over the current tab and close back to it.
 - Deep links keep working: `open_workout`, `show_workout`, `ready_sport`. Health alert and body-signal notifications
   gain a route to their metric detail (`open_metric`).
 

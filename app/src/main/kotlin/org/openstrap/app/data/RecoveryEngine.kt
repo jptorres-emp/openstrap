@@ -163,7 +163,11 @@ class RecoveryEngine(private val dao: HealthDao) {
         val stressThreshold = Recovery.stressThreshold(calm) { Instant.ofEpochSecond(it).atZone(zone).toLocalDate().toEpochDay() }
         val minutes = Recovery.minutes(simFrom, simTo, hr.filter { it.first in simFrom until simTo }, steps, stress, stages, workouts = workoutRanges)
         val hrvScore = readiness.contributors.firstOrNull { it.factor == Recovery.Factor.HrvBalance }?.score
-        val params = Recovery.ChargeParams(restingHr, maxHr, tonight?.restingHr, hrvScore, female, stressThreshold.value)
+        // Each main sleep's body-signal state, by the rule Readiness uses (it only looks backwards, so one pass over every
+        // night gives each its own state); an Alert scales Charge from that sleep's start.
+        val bodyByDay = BodySignals.evaluate(nights, causes).associate { it.day to it.state }
+        val bodySignals = nights.map { it.start to (bodyByDay[it.day] ?: BodySignals.State.Normal) }
+        val params = Recovery.ChargeParams(restingHr, maxHr, tonight?.restingHr, hrvScore, female, stressThreshold.value, bodySignals)
         val charge = Recovery.charge(minutes, params, day.from..day.to, start = 50f, mainSleepEnd = tonight?.end)
 
         // Activity: MVPA from cadence, then heart rate, over the 7 days ending on the selected one.

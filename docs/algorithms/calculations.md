@@ -294,15 +294,19 @@ A body-battery: sleep fills it, and the day drains it.
 |---|---|---|
 | **Sleep** | inside a sleep stage | + 0.006 × stage weight × relaxation × HRV factor × (100 − charge) |
 | **No data** | no heart rate (strap off) | 0, the value holds |
-| **Exercise** | HRR ≥ 30 % | − 0.04 − 0.32 × TRIMP of that minute |
+| **Exercise** | HRR ≥ 30 % and moving, or in a workout's stress exclusion | − 0.04 − 0.32 × TRIMP of that minute |
 | **Exercise recovery** | after exercise, while HR isn't rising | − 0.04 |
-| **Activity** | HRR ≥ 20 %, or ≥ 60 steps that minute | − 0.04 − 0.32 × TRIMP of that minute |
+| **Activity** | HRR ≥ 20 % and moving (or in a workout's stress exclusion), or ≥ 60 steps that minute | − 0.04 − 0.32 × TRIMP of that minute |
 | **Around a workout** | in the stress exclusion (below) | Activity inside the workout, Exercise recovery in the 20 minutes after; Rest in either when HRR < 10 % |
 | **Stress** | stress ≥ your threshold for 3+ minutes in a row, awake | − 0.04 − 0.007 × (stress − threshold) |
-| **Relax** | stress < 25 and < 10 steps | − 0.04 + 0.25 × 0.006 × 0.8 × (100 − charge) |
-| **Rest** | anything else awake | − 0.04 (≈ 2.4 per hour) |
+| **Relax** | stress < 25, < 10 steps and HRR < 20 % | + 0.25 × 0.006 × 0.8 × (100 − charge), no drain |
+| **Rest** | anything else awake | − 0.0005 × charge (0.04 at 80, 0.025 at 50) |
 
 Charge is always kept within 0–100.
+
+* **Moving** means the strap counted 1–250 steps that minute, as for daily load. Sitting with a raised heart rate (heat, coffee, a fever) isn't Activity or Exercise outside a workout: it's Stress if the stress score says so, otherwise Rest, and it can't Relax.
+* **Rest drain** is proportional to charge, so a desk day still runs Charge down but more slowly as it falls, as Zepp's mental pool does; Zepp's physical pool doesn't drain at rest at all.
+* **Body-signal Alert:** from the start of a night in Alert until the next sleep starts, every gain is × 0.5 and every drain × 1.5 (Zepp's health-alarm limits). Watch changes nothing.
 
 **Sleep details**
 * **Stage weight:** deep 1.0, light 0.8, REM 0.65, awake-inside-sleep 0.1.
@@ -335,7 +339,7 @@ The point where the strap's stress score starts to drain Charge.
 
 * Charge now (the last minute with data), Charge at wake, and the day's highest and lowest.
 * **Recharged:** the total gained during the day.
-* **Drained:** split into exercise, stress and everyday living. In exercise and stress minutes, the basic 0.04 part goes to "living" and the rest to exercise or stress.
+* **Drained:** split into exercise, stress and everyday living. In exercise and stress minutes, the basic 0.04 part (× 1.5 in Alert) goes to "living" and the rest to exercise or stress.
 * Nothing is shown until the simulation has seen at least one sleep, because without one the number would only reflect the starting guess.
 
 ---

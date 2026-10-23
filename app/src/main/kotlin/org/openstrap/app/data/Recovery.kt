@@ -912,6 +912,12 @@ object Recovery {
         val female: Boolean = false,
         /** Stress score from which a still minute counts as stress (see [stressThreshold]). */
         val stressFrom: Int = STRESS_FROM,
+        /**
+         * The body-signal state of each main sleep ([BodySignals]), as (sleep start, state), any order. A state applies
+         * from its sleep's start until the next sleep's start, as Zepp applies its morning alarm from the sleep-start
+         * minute (native 03 §8.2). Only [BodySignals.State.Alert] changes Charge ([ALERT_RECHARGE], [ALERT_DRAIN]).
+         */
+        val bodySignals: List<Pair<Long, BodySignals.State>> = emptyList(),
     )
 
     data class ChargePoint(val t: Long, val value: Float, val state: State)
@@ -938,8 +944,20 @@ object Recovery {
 
     /** Sleep recharge rate per minute, as a fraction of the remaining headroom (≈30 → 92 over 7.5 h). */
     const val SLEEP_K = 0.0060f
-    /** Resting drain while awake, per minute (≈2.4 per hour). */
+    /**
+     * Drain while awake and doing something, per minute (≈2.4 per hour): under every movement and stress minute, the
+     * stress exclusion around a workout, and exercise recovery. Still, calm minutes don't pay it ([REST_DRAIN],
+     * Relax).
+     */
     const val BASE_DRAIN = 0.04f
+    /**
+     * Drain of a still, awake Rest minute outside workouts, per minute and per point of charge: 0.04/min at 80 (the
+     * old [BASE_DRAIN]), 0.025 at 50, 0.01 at 20, so a desk day still runs Charge down but ever more slowly. Zepp has
+     * no awake drain on its physical pool; a seated day falls through its mental pool, whose drain also eases below 50
+     * (native 03 §4.4). Its 8 hours at a desk at stress 35 take the total from 85 to 64 (§11); this takes 85 to 67.
+     * Relax (low stress, still) has no drain at all, as Zepp's stress under 24 drains neither pool.
+     */
+    const val REST_DRAIN = 0.0005f
     /** Charge drained per TRIMP unit of exercise (≈25 for an hour at 60% of reserve). */
     const val EXERCISE_DRAIN_PER_TRIMP = 0.32f
     /** Extra drain per stress point above the threshold, per minute (80 over 60 drains 0.14/min). */
@@ -966,9 +984,25 @@ object Recovery {
      * shows in the state strip.
      */
     const val WORKOUT_REST_HRR = 0.10f
-    /** Firstbeat's intensity bands, as heart-rate reserve (≈ %VO2 reserve, Swain & Leutholtz 1997). */
+    /**
+     * Firstbeat's intensity bands, as heart-rate reserve (≈ %VO2 reserve, Swain & Leutholtz 1997). Outside the stress
+     * exclusion around a workout, a minute reaches Activity or Exercise by heart rate only while moving ([moving]):
+     * a raised heart rate sitting still (heat, caffeine, a fever, sitting stress) isn't effort, as in Zepp, whose
+     * physical pool drains only with movement (native 03 §4.3), and in [dailyLoad]. Such a minute can't Relax either:
+     * it is Stress if the stress score says so, else Rest.
+     */
     const val ACTIVITY_HRR = 0.20f
     const val EXERCISE_HRR = 0.30f
+
+    /**
+     * In [BodySignals.State.Alert], recharge (sleep and Relax) is multiplied by [ALERT_RECHARGE] and every drain by
+     * [ALERT_DRAIN]: the ends of Zepp's health-alarm multipliers (native 03 §4.2). Zepp ramps them with how far over
+     * its one-day threshold the night is; OpenStrap's Alert already needs persistence or two signal families, so it
+     * takes the full effect. Watch doesn't change Charge: it is one signal for one night, shown in the app only and
+     * leaving Readiness uncapped, and Zepp's multipliers just under its threshold are within 5 % of 1.
+     */
+    const val ALERT_RECHARGE = 0.5f
+    const val ALERT_DRAIN = 1.5f
 
     private val STAGE_WEIGHT = mapOf(
         SleepStage.DEEP to 1.0f,
@@ -1005,6 +1039,9 @@ object Recovery {
         val nightRest = params.nightRestingHr ?: params.restingHr
         var anchored = false
         var stressRun = 0
+        val signals = params.bodySignals.sortedBy { it.first }
+        var si = 0
+        var signal = BodySignals.State.Normal
 
         for (m in minutes) {
             // Consecutive awake minutes at or above the threshold: stress drains only from the third. A minute in the
@@ -1012,6 +1049,9 @@ object Recovery {
             stressRun = if (m.sleepStage == null && m.workout == null && m.stress != null && m.stress >= params.stressFrom) stressRun + 1 else 0
             val hr = m.hr
             val x = hr?.let { hrr(it, params.restingHr, params.maxHr) }
+            while (si < signals.size && signals[si].first <= m.t) signal = signals[si++].second
+            // Heart rate counts as effort outside workouts only while moving (see [ACTIVITY_HRR]).
+            val effort = m.workout != null || moving(m.steps)
             val state: State
             var delta: Float
             when {
@@ -1026,7 +1066,7 @@ object Recovery {
                     state = State.NoData
                     delta = 0f
                 }
-                x >= EXERCISE_HRR -> {
+                x >= EXERCISE_HRR && effort -> {
                     state = State.Exercise
                     val t = trimpMinute(x, params.female)
                     epoc += t
@@ -1037,7 +1077,7 @@ object Recovery {
                     state = State.ExerciseRecovery
                     delta = -BASE_DRAIN
                 }
-                x >= ACTIVITY_HRR || m.steps >= ACTIVE_STEPS -> {
+                (x >= ACTIVITY_HRR && effort) || m.steps >= ACTIVE_STEPS -> {
                     state = State.Activity
                     delta = -BASE_DRAIN - EXERCISE_DRAIN_PER_TRIMP * trimpMinute(x, params.female)
                 }
@@ -1059,16 +1099,19 @@ object Recovery {
                     state = State.Stress
                     delta = -BASE_DRAIN - STRESS_DRAIN * (m.stress - params.stressFrom)
                 }
-                m.stress != null && m.stress < RELAX_BELOW && m.steps < 10 -> {
+                m.stress != null && m.stress < RELAX_BELOW && m.steps < 10 && x < ACTIVITY_HRR -> {
                     state = State.Relax
-                    // Calm, still minutes recover at about a quarter of light sleep's rate.
-                    delta = -BASE_DRAIN + 0.25f * SLEEP_K * 0.8f * (100 - c)
+                    // Calm, still minutes recover at about a quarter of light sleep's rate, with no drain.
+                    delta = 0.25f * SLEEP_K * 0.8f * (100 - c)
                 }
                 else -> {
                     state = State.Rest
-                    delta = -BASE_DRAIN
+                    delta = -REST_DRAIN * c
                 }
             }
+            // The share of a drain that is the base drain, for the split below; scaling keeps it.
+            val baseShare = if (delta < 0) BASE_DRAIN / -delta else 0f
+            if (signal == BodySignals.State.Alert) delta *= if (delta > 0) ALERT_RECHARGE else ALERT_DRAIN
             // EPOC-like debt decays with a half-life of about 20 minutes once exercise stops.
             if (state != State.Exercise) epoc *= EPOC_DECAY
             if (hr != null) lastHr = hr
@@ -1079,9 +1122,9 @@ object Recovery {
             if (m.t in window) {
                 if (applied > 0) recharged += applied
                 else when (state) {
-                    State.Exercise, State.Activity -> { exercise += -applied * (1 - BASE_DRAIN / -delta); living += -applied * BASE_DRAIN / -delta }
+                    State.Exercise, State.Activity -> { exercise += -applied * (1 - baseShare); living += -applied * baseShare }
                     State.ExerciseRecovery, State.Rest, State.NoData, State.Relax, State.Sleep -> living += -applied
-                    State.Stress -> { stress += -applied * (1 - BASE_DRAIN / -delta); living += -applied * BASE_DRAIN / -delta }
+                    State.Stress -> { stress += -applied * (1 - baseShare); living += -applied * baseShare }
                 }
                 if (m.t % sampleSeconds == 0L || points.isEmpty()) points += ChargePoint(m.t, c, state)
                 if (state != State.NoData) latest = c

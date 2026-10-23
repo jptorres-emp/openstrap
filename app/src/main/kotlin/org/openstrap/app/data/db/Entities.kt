@@ -107,6 +107,11 @@ data class PaiSample(
     val total: Float,
     val restingHeartRate: Int,
     val maxHeartRate: Int,
+    /**
+     * The strap's projected total for the next day with no new activity (`nextActivityScores[1]`, record v2+), so
+     * `total − tomorrowTotal` is exactly what drops off (native 08 §3.7). Null for older records and older rows.
+     */
+    val tomorrowTotal: Float? = null,
 )
 
 /** HRV as SDNN (type 78). The strap sends one every hour or two through the day, not just at night. */

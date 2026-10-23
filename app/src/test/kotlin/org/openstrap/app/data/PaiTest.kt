@@ -1,6 +1,7 @@
 package org.openstrap.app.data
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 import org.openstrap.app.data.Pai.Day
 import org.openstrap.app.data.settings.UserProfile.Sex
@@ -70,5 +71,14 @@ class PaiTest {
             Day(17.3593f, 156.1794f), Day(15.7073f, 171.8867f), Day(14.2126f, 186.0992f),
         )
         assertEquals(41.1609, Pai.dropsOffTomorrow(week, Sex.Female), 0.01)
+    }
+
+    @Test fun `the strap's projection gives the drop directly`() {
+        // total − next[1] (native 08 §3.7): the capped-oldest-day week above, as the strap would project it.
+        assertEquals(55.5614, Pai.dropsOffTomorrow(198.6515f, 143.0901f)!!, 0.01)
+        // A projection above the total (it can't be) never shows as a negative drop.
+        assertEquals(0.0, Pai.dropsOffTomorrow(40f, 41f)!!, 0.0)
+        // No projection in the record: the caller falls back to re-summing the ring.
+        assertNull(Pai.dropsOffTomorrow(40f, null))
     }
 }

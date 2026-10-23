@@ -403,7 +403,7 @@ class HistorySync(
             is SkinTemperatureSample -> r.skinCelsius?.let { skin += SkinTemperature(r.timestamp, it) }
             is SleepBreathRate -> if (r.breathRate in 4..40) breath += BreathRate(r.timestamp, r.breathRate)
             is PaiRecord -> {
-                pai += PaiSample(r.timestamp, r.dailyPai, r.totalPai, r.restHr, r.maxHr)
+                pai += PaiSample(r.timestamp, r.dailyPai, r.totalPai, r.restHr, r.maxHr, r.nextActivityScores?.getOrNull(1))
                 // The strap's resting-HR profile; used only for days without a real resting value.
                 if (r.restHr in 30..120) restingIfMissing += RestingHeartRate(dayStart(r.timestamp), r.restHr)
             }

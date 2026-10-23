@@ -48,6 +48,13 @@ object Pai {
     fun slot(daily: Float, total: Float, sex: UserProfile.Sex?): Double =
         (score(total.toDouble(), sex) - score((total - daily).toDouble(), sex)).coerceAtLeast(0.0)
 
+    /**
+     * What leaves the total tomorrow, straight from the strap's projection: [tomorrowTotal] is `next[1]`, the total
+     * tomorrow with no new activity (native 08 §3.7). Null when the record didn't carry one.
+     */
+    fun dropsOffTomorrow(total: Float, tomorrowTotal: Float?): Double? =
+        tomorrowTotal?.let { (total - it).toDouble().coerceAtLeast(0.0) }
+
     /** A day's last PAI record. */
     data class Day(val daily: Float, val total: Float)
 

@@ -249,9 +249,11 @@ private fun PaiPanel(state: DayUiState, week: Map<LocalDate, DailyPai>, sex: Use
             }
         }
         // The oldest day leaves the rolling total tomorrow; only worth saying when looking at today. Its stored daily
-        // isn't what goes (native 08 §7), so re-sum the ring without it.
+        // isn't what goes (native 08 §7): take the strap's own projection when the latest record has one, else
+        // re-sum the ring without it.
         val dropping = if (state.date != LocalDate.now() || daily.first() <= 0f) null else
-            Pai.dropsOffTomorrow(days.map { d -> week[d]?.let { Pai.Day(it.daily, it.total) } }, sex)
+            (state.pai?.let { Pai.dropsOffTomorrow(it.total, it.tomorrowTotal) }
+                ?: Pai.dropsOffTomorrow(days.map { d -> week[d]?.let { Pai.Day(it.daily, it.total) } }, sex))
                 .toFloat().takeIf { it > 0f }
         Note(
             listOfNotNull(

@@ -23,7 +23,10 @@ enum class Metric(val title: String, val unit: String, val decimals: Int, val da
 /** Your daily goals, provided once at the top of the app so every screen measures against the same ones. */
 val LocalGoals = compositionLocalOf { Goals() }
 
-/** A screen pushed on top of a tab. Each tab keeps its own, so opening one never moves you to another tab. */
+/**
+ * A screen pushed on top of a tab. Each tab keeps its own, so opening one never moves you to another tab: a card on
+ * Today that's about Recovery opens the Recovery screen over Today rather than switching to its tab (spec 3.3).
+ */
 sealed interface Detail {
     data class OfMetric(val metric: Metric) : Detail
     data class Workout(val start: Long) : Detail
@@ -31,6 +34,12 @@ sealed interface Detail {
     data object AllWorkouts : Detail
     /** The Healthspan estimate and what moves it, opened from its card on Today. */
     data object Healthspan : Detail
+    /** The Recovery tab's screen (Recovery, Charge and the body signals), opened from a card on another tab. */
+    data object Recovery : Detail
+    /** The Sleep tab's screen, opened from a card on another tab. */
+    data object Sleep : Detail
+    /** Every metric and screen there is, grouped, opened from the circle beside the tab bar. */
+    data object AllMetrics : Detail
 
     companion object {
         /** Saves a tab's stack of details, deepest last, as one string ("m:Hrv|w:1792227300") so it survives process death. */
@@ -44,6 +53,9 @@ sealed interface Detail {
             is Workout -> "w:${d.start}"
             AllWorkouts -> "a:"
             Healthspan -> "h:"
+            Recovery -> "r:"
+            Sleep -> "s:"
+            AllMetrics -> "x:"
         }
 
         private fun restore(s: String): Detail? {
@@ -53,8 +65,21 @@ sealed interface Detail {
                 "w" -> value.toLongOrNull()?.let(::Workout)
                 "a" -> AllWorkouts
                 "h" -> Healthspan
+                "r" -> Recovery
+                "s" -> Sleep
+                "x" -> AllMetrics
                 else -> null
             }
+        }
+
+        /**
+         * The screen an `open_metric` link names: a [Metric] by name ("Hrv"), or "Recovery" or "Sleep" for those
+         * screens. Null for anything else.
+         */
+        fun fromRoute(route: String): Detail? = when (route) {
+            "Recovery" -> Recovery
+            "Sleep" -> Sleep
+            else -> Metric.entries.firstOrNull { it.name == route }?.let(::OfMetric)
         }
     }
 }

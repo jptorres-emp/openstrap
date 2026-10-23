@@ -47,8 +47,6 @@ import org.openstrap.app.data.RecoveryResult
 import org.openstrap.app.data.db.StrapReadinessRow
 import org.openstrap.app.ui.components.ChartPoint
 import org.openstrap.app.ui.components.formatDuration
-import org.openstrap.app.ui.dashboard.DateHeader
-import org.openstrap.app.ui.dashboard.DayPicker
 import org.openstrap.app.ui.dashboard.DayUiState
 import org.openstrap.app.ui.dashboard.Metric
 import org.openstrap.app.ui.dashboard.Narrative
@@ -67,23 +65,19 @@ import org.openstrap.app.ui.theme.MetricColors
 fun GlowTodayScreen(
     state: DayUiState,
     liveHeartRate: Int?,
-    battery: Int?,
-    charging: Boolean = false,
-    onPrev: () -> Unit,
-    onNext: () -> Unit,
+    header: @Composable () -> Unit,
     contentPadding: PaddingValues,
-    picker: DayPicker = DayPicker(),
+    /** Opens the Sleep screen over Today. */
     onOpenSleep: () -> Unit = {},
     onOpenMetric: (Metric) -> Unit = {},
     recovery: RecoveryResult? = null,
-    /** Opens the Recovery tab at the Recovery or the Charge section. */
-    onOpenRecovery: (RecoverySection) -> Unit = {},
+    /** Opens the Recovery screen over Today. */
+    onOpenRecovery: () -> Unit = {},
     workouts: List<org.openstrap.app.data.WorkoutAnalysis> = emptyList(),
     onOpenWorkout: (Long) -> Unit = {},
     /** Whether live heart rate is on; null hides the switch. */
     liveEnabled: Boolean? = null,
     onLiveToggle: (Boolean) -> Unit = {},
-    onOpenActivity: () -> Unit = {},
     onOpenHealthspan: () -> Unit = {},
     /** Opens the profile, for the Healthspan card's reminder to add a birth year or sex. */
     onOpenProfile: () -> Unit = {},
@@ -119,12 +113,12 @@ fun GlowTodayScreen(
     var choosing by rememberSaveable { mutableStateOf(false) }
     if (choosing) TilesDialog(tiles, onSave = { onTilesChange(it); choosing = false }, onDismiss = { choosing = false })
     val extras = TodayExtras(
-        liveEnabled, onLiveToggle, onOpenActivity, onOpenHealthspan, onOpenProfile, healthspan, history, tiles, strapReadiness, checkIn, onCheckIn,
+        liveEnabled, onLiveToggle, onOpenHealthspan, onOpenProfile, healthspan, history, tiles, strapReadiness, checkIn, onCheckIn,
         suggestion, onSaveSuggestion, onDismissSuggestion, onStartWorkout, offer, onRecordOffer, onDeclineOffer,
         running, onOpenRunning, onResumeRunning,
     ) { choosing = true }
     CompositionLocalProvider(LocalGlowPaused provides { list.isScrollInProgress }) {
-        TodayList(state, liveHeartRate, battery, charging, onPrev, onNext, contentPadding, picker, onOpenSleep, onOpenMetric, recovery, onOpenRecovery, workouts, onOpenWorkout, list, extras)
+        TodayList(state, liveHeartRate, header, contentPadding, onOpenSleep, onOpenMetric, recovery, onOpenRecovery, workouts, onOpenWorkout, list, extras)
     }
 }
 
@@ -132,7 +126,6 @@ fun GlowTodayScreen(
 private class TodayExtras(
     val liveEnabled: Boolean?,
     val onLiveToggle: (Boolean) -> Unit,
-    val onOpenActivity: () -> Unit,
     val onOpenHealthspan: () -> Unit,
     val onOpenProfile: () -> Unit,
     val healthspan: org.openstrap.app.data.Healthspan.Outcome?,
@@ -158,23 +151,19 @@ private class TodayExtras(
 private fun TodayList(
     state: DayUiState,
     liveHeartRate: Int?,
-    battery: Int?,
-    charging: Boolean,
-    onPrev: () -> Unit,
-    onNext: () -> Unit,
+    header: @Composable () -> Unit,
     contentPadding: PaddingValues,
-    picker: DayPicker,
     onOpenSleep: () -> Unit,
     onOpenMetric: (Metric) -> Unit,
     recovery: RecoveryResult?,
-    onOpenRecovery: (RecoverySection) -> Unit,
+    onOpenRecovery: () -> Unit,
     workouts: List<org.openstrap.app.data.WorkoutAnalysis>,
     onOpenWorkout: (Long) -> Unit,
     list: LazyListState,
     extras: TodayExtras,
 ) = GlowScreenList(contentPadding, list) {
     val rec = recovery?.takeIf { it.date == state.date }
-    full { DateHeader(state.date, battery, onPrev, onNext, charging, picker) }
+    full { header() }
 
     // On a wide screen the scores, sleep and movement run down the left; what changed and your heart down the right.
 
@@ -204,8 +193,8 @@ private fun TodayList(
     // Glow: heart rate, beating at the latest reading.
     right { HeartGlow(state, liveHeartRate, extras.liveEnabled, extras.onLiveToggle) { onOpenMetric(Metric.HeartRate) } }
 
-    // Glow: activity, moving with the day's steps.
-    left { ActivityGlow(state, extras.onOpenActivity) }
+    // Glow: activity, moving with the day's steps. Opens the steps detail, never the Activity tab.
+    left { ActivityGlow(state) { onOpenMetric(Metric.Steps) } }
     val dayWorkouts = workouts.filter { it.workout.start in state.dayStart..state.dayEnd }.sortedBy { it.workout.start }
     val isToday = state.date == LocalDate.now()
     if (extras.offer != null && isToday) left { OfferPanel(extras.offer, extras.onRecordOffer, extras.onDeclineOffer) }
@@ -266,11 +255,11 @@ internal fun bucket(points: List<ChartPoint>, range: LongRange, seconds: Long): 
 
 /**
  * The top card: the leading score as one big gauge with its number and a one-line verdict
- * inside, and the other two scores as pills underneath that open their tabs.
+ * inside, and the other two scores as pills underneath. Each opens its screen over Today, never another tab.
  */
 @Composable
 private fun OverviewCard(
-    state: DayUiState, rec: RecoveryResult?, strap: StrapReadinessRow?, chargeLeads: Boolean, onOpen: (RecoverySection) -> Unit, onOpenSleep: () -> Unit,
+    state: DayUiState, rec: RecoveryResult?, strap: StrapReadinessRow?, chargeLeads: Boolean, onOpen: () -> Unit, onOpenSleep: () -> Unit,
 ) {
     val c = rec?.charge
     val chargeNow = c?.latest?.toInt()
@@ -290,8 +279,6 @@ private fun OverviewCard(
     )
     val sleep = Score("Sleep", sleepNow, SleepGlow.color, sleepNow.minus(state.previousSleepScore), "vs night before")
     val (lead, second) = if (chargeLeads) charge to recovery else recovery to charge
-    // The card opens the leading score's section, the bar under it the other one's.
-    val (leadSection, secondSection) = if (chargeLeads) RecoverySection.Charge to RecoverySection.Recovery else RecoverySection.Recovery to RecoverySection.Charge
     val verdict = when {
         strain -> org.openstrap.app.data.BodySignalsCopy.SHORT
         lead.value == null || lead.estimate -> null
@@ -306,7 +293,7 @@ private fun OverviewCard(
         coreBlur = 30.dp, toneWidth = 16.dp, toneShift = -10f, glowStrength = 0.6f, bevel = 0.6f,
         depth = 6.dp,
     )
-    GlowCard(style, Modifier.fillMaxWidth(), onClick = { onOpen(leadSection) }) {
+    GlowCard(style, Modifier.fillMaxWidth(), onClick = onOpen) {
         Column {
             GlowHeader(lead.label, trailingContent = { Change(lead, withNote = true) })
             GlowArcGauge(
@@ -328,7 +315,7 @@ private fun OverviewCard(
                 }
             }
             Row(Modifier.fillMaxWidth().padding(top = 18.dp), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-                ScoreBar(second, { onOpen(secondSection) }, Modifier.weight(1f))
+                ScoreBar(second, onOpen, Modifier.weight(1f))
                 ScoreBar(sleep, onOpenSleep, Modifier.weight(1f))
             }
         }

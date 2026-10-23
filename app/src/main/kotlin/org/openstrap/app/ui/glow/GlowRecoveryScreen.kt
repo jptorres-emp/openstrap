@@ -36,8 +36,6 @@ import org.openstrap.app.data.Recovery
 import org.openstrap.app.data.RecoveryResult
 import org.openstrap.app.data.db.StrapReadinessRow
 import org.openstrap.app.ui.dashboard.DailyHistory
-import org.openstrap.app.ui.dashboard.DateHeader
-import org.openstrap.app.ui.dashboard.DayPicker
 import org.openstrap.app.ui.dashboard.DayUiState
 import org.openstrap.app.ui.dashboard.Metric
 import org.openstrap.app.ui.dashboard.Narrative
@@ -50,31 +48,22 @@ import java.util.Locale
  * The Recovery tab in the glow language: "can I push today, and why". Two cards glow, the score and Charge;
  * everything that explains them sits in quiet dot panels underneath, and each body signal opens its detail.
  */
-/** The Recovery tab's two scores, as targets Today's top card can open. */
-enum class RecoverySection { Recovery, Charge }
-
 @Composable
 fun GlowRecoveryScreen(
     state: DayUiState,
     recovery: RecoveryResult?,
     strapReadiness: StrapReadinessRow?,
     history: DailyHistory,
-    battery: Int?,
-    charging: Boolean,
-    onPrev: () -> Unit,
-    onNext: () -> Unit,
-    picker: DayPicker,
+    /** The tab's header, or a back header when the screen is opened from a card on another tab. */
+    header: @Composable () -> Unit,
     contentPadding: PaddingValues,
     onOpenMetric: (Metric) -> Unit,
-    /** The section to scroll to, when opened from Today's top card; [onFocused] once it's there. */
-    focus: RecoverySection? = null,
-    onFocused: () -> Unit = {},
 ) {
     val list = rememberLazyListState()
     val signals = rememberSignals(state, history)
     CompositionLocalProvider(LocalGlowPaused provides { list.isScrollInProgress }) {
-        GlowScreenList(contentPadding, list, scrollTo = focus, onScrolled = onFocused) {
-            full { DateHeader(state.date, battery, onPrev, onNext, charging, picker) }
+        GlowScreenList(contentPadding, list) {
+            full { header() }
             val r = recovery?.takeIf { it.date == state.date }
             if (r == null) {
                 full { DotPanel { Text("Calculating…", color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.bodyMedium) } }
@@ -86,9 +75,9 @@ fun GlowRecoveryScreen(
             // left, Charge and where it went on the right. The signal tiles and how it works span both.
             val body = ready.bodySignals
             if (body != null && body.state != BodySignals.State.Normal) full { BodySignalsPanel(body) }
-            left(RecoverySection.Recovery) { RecoveryCard(r, strapReadiness) }
+            left { RecoveryCard(r, strapReadiness) }
             if (ready.contributors.isNotEmpty()) left { ContributorsPanel(ready) }
-            right(RecoverySection.Charge) { ChargeCard(r.charge, state.dayStart..state.dayEnd) }
+            right { ChargeCard(r.charge, state.dayStart..state.dayEnd) }
             if (r.charge.latest != null) right { ChargeFlowPanel(r.charge, r.stressThreshold) }
             full { SignalsPanel(signals, onOpenMetric) }
             full { HowItWorksPanel(strapReadiness, ready.score) }

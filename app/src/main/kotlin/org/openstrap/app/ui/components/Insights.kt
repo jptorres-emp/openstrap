@@ -46,30 +46,34 @@ import dev.chrisbanes.haze.blur.HazeColorEffect
 import dev.chrisbanes.haze.blur.hazeBlur
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 
-/** One destination in [FloatingNavBar]. */
-data class NavItem(val label: String, val icon: ImageVector, val selectedIcon: ImageVector = icon)
+/** One destination in [FloatingNavBar]; [tint] colours its capsule while it's the tab showing (white on Today). */
+data class NavItem(val label: String, val icon: ImageVector, val selectedIcon: ImageVector = icon, val tint: Color = Color.White)
 
 /**
- * Oura's floating pill tab bar in black glass: the content scrolling under it (marked with `hazeSource` on
- * [glass]) shows through blurred and darkened, and the edge catches light along the top.
+ * The floating tab bar in black glass (spec 3.2): a pill of tabs, the content scrolling under it (marked with
+ * `hazeSource` on [glass]) showing through blurred and darkened, and a circle detached on its right holding the
+ * moment's [action]. The capsule behind the tab showing slides to it and takes that section's colour.
  */
 @Composable
 fun FloatingNavBar(
     items: List<NavItem>, selected: Int, onSelect: (Int) -> Unit, modifier: Modifier = Modifier, glass: HazeState,
-    /** While a workout records the bar takes its colour: the highlight, and a dot on the [marked] tab. */
-    accent: Color? = null,
-    marked: Int = -1,
+    action: @Composable () -> Unit = {},
 ) {
-    val tint = navAccent(accent)
-    Box(modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 20.dp, vertical = 10.dp), contentAlignment = Alignment.Center) {
+    Row(
+        modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally),
+    ) {
         Surface(
             shape = CircleShape,
             color = Color.Transparent,
             border = GlassEdge,
             // No shadow: it would show through the glass as a dark smudge.
-            modifier = Modifier.widthIn(max = 440.dp).fillMaxWidth()
+            modifier = Modifier.weight(1f, fill = false).widthIn(max = 440.dp).fillMaxWidth()
                 .clip(CircleShape).hazeBlur(HazeInput.Sources(glass), GlassBlur),
         ) {
             // Measured width, so the pill knows how wide a cell is (BoxWithConstraints can't size to its row).
@@ -79,7 +83,7 @@ fun FloatingNavBar(
                 Modifier.padding(6.dp).height(androidx.compose.foundation.layout.IntrinsicSize.Min)
                     .onSizeChanged { barWidth = it.width },
             ) {
-                // One pill that slides to the selected tab, rather than each cell lighting up on its own.
+                // One capsule that slides to the selected tab, rather than each cell lighting up on its own.
                 val gap = 2.dp
                 val cell = (with(density) { barWidth.toDp() } - gap * (items.size - 1)) / items.size
                 val x by androidx.compose.animation.core.animateDpAsState(
@@ -87,41 +91,41 @@ fun FloatingNavBar(
                 )
                 Box(
                     Modifier.offset(x = x).width(cell).fillMaxHeight().clip(CircleShape)
-                        .background(tint?.copy(alpha = 0.2f) ?: GlassChip).border(GlassChipEdge, CircleShape),
+                        .background(capsuleColor(items.getOrNull(selected)?.tint)).border(GlassChipEdge, CircleShape),
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
                     items.forEachIndexed { i, item ->
-                        NavCell(item, i == selected, dot = tint.takeIf { i == marked }, modifier = Modifier.clip(CircleShape).clickable { onSelect(i) }
-                            // Every cell gets an equal share of the bar, so labels like "Workouts" have room.
+                        NavCell(item, i == selected, modifier = Modifier.clip(CircleShape).clickable { onSelect(i) }
                             .weight(1f)
                             .padding(vertical = 8.dp))
                     }
                 }
             }
         }
+        action()
     }
 }
 
 /**
  * [FloatingNavBar] standing up along the left edge, for windows wider than tall (a phone on its side, an
- * unfolded foldable turned sideways): the same glass pill and sliding highlight, giving the height back to the pages.
+ * unfolded foldable turned sideways): the same glass pill and sliding capsule, the [action] circle under it, giving
+ * the height back to the pages.
  */
 @Composable
 fun FloatingNavRail(
     items: List<NavItem>, selected: Int, onSelect: (Int) -> Unit, modifier: Modifier = Modifier, glass: HazeState,
-    accent: Color? = null,
-    marked: Int = -1,
+    action: @Composable () -> Unit = {},
 ) {
-    val tint = navAccent(accent)
-    Box(
+    Column(
         modifier.fillMaxHeight().systemBarsPadding().displayCutoutPadding().padding(horizontal = 10.dp, vertical = 20.dp),
-        contentAlignment = Alignment.Center,
+        verticalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterVertically),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Surface(
             shape = RoundedCornerShape(40.dp),
             color = Color.Transparent,
             border = GlassEdge,
-            modifier = Modifier.width(NavRailWidth - 20.dp).heightIn(max = 440.dp).fillMaxHeight()
+            modifier = Modifier.width(NavRailWidth - 20.dp).heightIn(max = 380.dp).weight(1f, fill = false).fillMaxHeight()
                 .clip(RoundedCornerShape(40.dp)).hazeBlur(HazeInput.Sources(glass), GlassBlur),
         ) {
             var barHeight by remember { mutableIntStateOf(0) }
@@ -134,12 +138,12 @@ fun FloatingNavRail(
                 )
                 Box(
                     Modifier.offset(y = y).height(cell).fillMaxWidth().clip(RoundedCornerShape(24.dp))
-                        .background(tint?.copy(alpha = 0.2f) ?: GlassChip).border(GlassChipEdge, RoundedCornerShape(24.dp)),
+                        .background(capsuleColor(items.getOrNull(selected)?.tint)).border(GlassChipEdge, RoundedCornerShape(24.dp)),
                 )
                 Column(Modifier.fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(gap)) {
                     items.forEachIndexed { i, item ->
                         NavCell(
-                            item, i == selected, dot = tint.takeIf { i == marked },
+                            item, i == selected,
                             modifier = Modifier.clip(RoundedCornerShape(24.dp)).clickable { onSelect(i) }.weight(1f).fillMaxWidth(),
                             verticalArrangement = Arrangement.Center,
                         )
@@ -147,14 +151,33 @@ fun FloatingNavRail(
                 }
             }
         }
+        action()
     }
 }
 
-/** The workout colour, eased between zones; null when no workout records. */
+/** The capsule under the tab showing: its section colour, eased as it slides; plain glass white on Today. */
 @Composable
-private fun navAccent(accent: Color?): Color? {
-    val eased by androidx.compose.animation.animateColorAsState(accent ?: Color.Transparent, tween(Motion.SWIFT), label = "nav accent")
-    return if (accent == null) null else eased
+private fun capsuleColor(tint: Color?): Color {
+    val target = if (tint == null || tint == Color.White) GlassChip else tint.copy(alpha = 0.22f)
+    val eased by androidx.compose.animation.animateColorAsState(target, tween(Motion.SWIFT), label = "nav capsule")
+    return eased
+}
+
+/**
+ * The circle beside the tab bar (spec 3.2), in the same black glass. [filled] makes it white, for an action to take
+ * now (Start workout); [content] is its icon or the live heart rate.
+ */
+@Composable
+fun NavActionCircle(
+    label: String, onClick: () -> Unit, glass: HazeState, filled: Boolean = false, content: @Composable () -> Unit,
+) {
+    Box(
+        Modifier.size(58.dp).clip(CircleShape)
+            .let { if (filled) it.background(Color.White) else it.hazeBlur(HazeInput.Sources(glass), GlassBlur).border(GlassEdge, CircleShape) }
+            .clickable(onClickLabel = label, onClick = onClick)
+            .semantics { contentDescription = label },
+        contentAlignment = Alignment.Center,
+    ) { content() }
 }
 
 /** How much of the window's width [FloatingNavRail] takes, its margins included. */
@@ -162,20 +185,17 @@ val NavRailWidth = 92.dp
 
 /** One destination's icon and label, tinted for whether it's [on]. */
 @Composable
-private fun NavCell(item: NavItem, on: Boolean, modifier: Modifier, verticalArrangement: Arrangement.Vertical = Arrangement.Top, dot: Color? = null) {
+private fun NavCell(item: NavItem, on: Boolean, modifier: Modifier, verticalArrangement: Arrangement.Vertical = Arrangement.Top) {
     Column(modifier, verticalArrangement = verticalArrangement, horizontalAlignment = Alignment.CenterHorizontally) {
         val tint by androidx.compose.animation.animateColorAsState(
             if (on) Color.White else Color.White.copy(alpha = 0.55f),
             tween(Motion.QUICK), label = "nav tint",
         )
         val iconScale by animateFloatAsState(if (on) 1.08f else 1f, tween(Motion.SWIFT, easing = Motion.easing), label = "nav icon")
-        Box {
-            Icon(
-                if (on) item.selectedIcon else item.icon, item.label, tint = tint,
-                modifier = Modifier.size(24.dp).graphicsLayer { scaleX = iconScale; scaleY = iconScale },
-            )
-            if (dot != null) Box(Modifier.align(Alignment.TopEnd).offset(x = 4.dp, y = (-2).dp).size(7.dp).clip(CircleShape).background(dot))
-        }
+        Icon(
+            if (on) item.selectedIcon else item.icon, item.label, tint = tint,
+            modifier = Modifier.size(22.dp).graphicsLayer { scaleX = iconScale; scaleY = iconScale },
+        )
         Text(item.label, style = MaterialTheme.typography.labelSmall, color = tint, maxLines = 1)
     }
 }

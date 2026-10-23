@@ -15,15 +15,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -41,14 +37,22 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import org.openstrap.app.data.settings.ZeppAccount
 import org.openstrap.app.device.ConnectionState
 import org.openstrap.app.firmware.UpdateCheck
-import org.openstrap.app.ui.components.Panel
-import org.openstrap.app.ui.components.PanelHeader
-import org.openstrap.app.ui.components.SettingRow
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.sp
+import org.openstrap.app.ui.glow.DangerColor
+import org.openstrap.app.ui.glow.GlowLayout
+import org.openstrap.app.ui.glow.GlowType
+import org.openstrap.app.ui.glow.PageButton
+import org.openstrap.app.ui.glow.PageHeader
+import org.openstrap.app.ui.glow.PageNote
+import org.openstrap.app.ui.glow.PagePanel
+import org.openstrap.app.ui.glow.PageRow
+import org.openstrap.app.ui.glow.PageRows
+import org.openstrap.app.ui.glow.PageSwitchRow
 import org.openstrap.app.ui.dashboard.ScreenList
 import org.openstrap.app.ui.theme.MetricColors
 import org.openstrap.app.ui.theme.PhosphorIcons
@@ -56,8 +60,12 @@ import org.openstrap.app.ui.zepp.ZeppSignInDialog
 import org.openstrap.app.zepp.BoundDevice
 import org.openstrap.app.zepp.DeviceListing
 
+/**
+ * The strap's firmware: what it runs, checking for and installing an update, or installing from a file. Opened from
+ * the Strap page. The Zepp account the update check signs in with has its own page ([ZeppAccountScreen]).
+ */
 @Composable
-fun FirmwareScreen(vm: FirmwareViewModel, contentPadding: PaddingValues, onBack: () -> Unit) {
+fun FirmwareScreen(vm: FirmwareViewModel, contentPadding: PaddingValues, onBack: () -> Unit, onZeppAccount: () -> Unit) {
     val step by vm.step.collectAsState()
     val account by vm.account.collectAsState()
     val connection by vm.strap.connection.collectAsState()
@@ -72,17 +80,11 @@ fun FirmwareScreen(vm: FirmwareViewModel, contentPadding: PaddingValues, onBack:
     var confirm by remember { mutableStateOf<ReadyImage?>(null) }
     confirm?.let { image -> ConfirmInstall(image, vm.blockers(), onDismiss = { confirm = null }, onInstall = { confirm = null; vm.install(image) }) }
 
-    ScreenList(contentPadding) {
-        item {
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
-                IconButton(onClick = { vm.reset(); onBack() }, enabled = !installing) { Icon(PhosphorIcons.ArrowLeft, "Back") }
-                Text("Firmware", style = MaterialTheme.typography.headlineMedium)
-            }
-        }
+    ScreenList(contentPadding, gutter = GlowLayout.Gutter) {
+        item { PageHeader("Firmware", { vm.reset(); onBack() }, backEnabled = !installing) }
 
         item {
-            Panel {
-                PanelHeader("This strap", PhosphorIcons.ArrowCircleUp, MetricColors.spo2)
+            PagePanel(title = "This strap") {
                 val c = connection as? ConnectionState.Connected
                 InfoLine("Firmware", info?.firmware ?: c?.firmware ?: "Unknown")
                 info?.hardware?.let { InfoLine("Hardware", it) }
@@ -93,19 +95,16 @@ fun FirmwareScreen(vm: FirmwareViewModel, contentPadding: PaddingValues, onBack:
 
         item { StepPanel(step, vm, onInstall = { confirm = it }) }
 
-        item { AccountPanel(account, enabled = !installing, onSave = vm::saveAccount, onClear = vm::clearAccount, onSignIn = vm::saveSignIn) }
-
         item {
-            Panel {
-                SettingRow("Install from a file", "For a firmware image you already have", onClick = if (installing) null else ({ pickFile.launch(arrayOf("*/*")) })) {
-                    Icon(PhosphorIcons.FolderOpen, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
+            PageRows {
+                // Update checks need a signed-in Zepp account; its page is a row away, as on the Strap page.
+                PageRow("Zepp account", if (account != null) "Signed in" else "Not signed in", onClick = onZeppAccount, divider = false, enabled = !installing)
+                PageRow("Install from a file", "For an image you have", onClick = { pickFile.launch(arrayOf("*/*")) }, enabled = !installing)
             }
         }
 
         item {
-            Panel {
-                PanelHeader("Privacy and safety", PhosphorIcons.ShieldCheck, MetricColors.good)
+            PagePanel(title = "Privacy and safety") {
                 Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     Point(PhosphorIcons.Key, "Sign-in", "Happens on Zepp's own page. OpenStrap keeps only the app token and user ID, and fetches your device list once.")
                     Point(PhosphorIcons.CloudArrowDown, "Update check", "Sends the update server your token, user ID and the strap's firmware, hardware and serial number. Nothing else.")
@@ -118,54 +117,47 @@ fun FirmwareScreen(vm: FirmwareViewModel, contentPadding: PaddingValues, onBack:
 
 @Composable
 private fun StepPanel(step: FirmwareStep, vm: FirmwareViewModel, onInstall: (ReadyImage) -> Unit) {
-    Panel {
+    PagePanel {
         when (step) {
             FirmwareStep.Idle -> {
-                PanelHeader("Updates", PhosphorIcons.CloudArrowDown, MetricColors.steps)
-                Text("Ask Zepp's update server whether there's newer firmware for this strap.", style = MaterialTheme.typography.bodyMedium)
-                Button(onClick = vm::check, modifier = Modifier.fillMaxWidth()) { Text("Check for update") }
+                Title("Updates")
+                Body("Ask Zepp's update server whether there's newer firmware for this strap.")
+                PageButton("Check for update", vm::check, Modifier.fillMaxWidth(), primary = true)
             }
             FirmwareStep.Checking -> Busy("Checking for updates…", null)
             is FirmwareStep.Checked -> CheckResult(step.result, vm)
             is FirmwareStep.Downloading -> Busy("Downloading ${step.part.label} ${step.part.version}", step.fraction)
             is FirmwareStep.Ready -> {
                 val image = step.image
-                PanelHeader("Ready to install", PhosphorIcons.ArrowCircleUp, MetricColors.steps)
+                Title("Ready to install")
                 InfoLine("Image", image.title)
                 InfoLine("Size", "%,d bytes".format(image.bytes.size))
                 image.trailer?.let { InfoLine("Signed for", "product ${it.pnpId} v${it.pnpVersion}") }
                 image.warnings.forEach { Warning(it) }
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    OutlinedButton(onClick = vm::reset, Modifier.weight(1f)) { Text("Cancel") }
-                    Button(onClick = { onInstall(image) }, Modifier.weight(1f)) { Text("Install") }
+                    PageButton("Cancel", vm::reset, Modifier.weight(1f))
+                    PageButton("Install", { onInstall(image) }, Modifier.weight(1f), primary = true)
                 }
             }
             is FirmwareStep.Installing -> {
                 Busy(step.label, step.fraction)
-                Text(
-                    "Keep the strap close and this screen open. This can take several minutes.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                PageNote("Keep the strap close and this screen open. This can take several minutes.")
             }
             FirmwareStep.Installed -> {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Icon(PhosphorIcons.CheckCircle, null, tint = MetricColors.good)
-                    Text("Installed", style = MaterialTheme.typography.titleMedium)
+                    Title("Installed")
                 }
-                Text(
-                    "The strap is restarting. OpenStrap reconnects by itself; check again afterwards in case there are more parts to install.",
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                OutlinedButton(onClick = vm::reset, Modifier.fillMaxWidth()) { Text("Done") }
+                Body("The strap is restarting. OpenStrap reconnects by itself. Check again afterwards in case there are more parts to install.")
+                PageButton("Done", vm::reset, Modifier.fillMaxWidth())
             }
             is FirmwareStep.Failed -> {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Icon(PhosphorIcons.WarningCircle, null, tint = MetricColors.bad)
-                    Text("Something went wrong", style = MaterialTheme.typography.titleMedium)
+                    Title("Something went wrong")
                 }
-                Text(step.message, style = MaterialTheme.typography.bodyMedium)
-                OutlinedButton(onClick = vm::reset, Modifier.fillMaxWidth()) { Text("OK") }
+                Body(step.message)
+                PageButton("OK", vm::reset, Modifier.fillMaxWidth())
             }
         }
     }
@@ -176,30 +168,37 @@ private fun CheckResult(result: UpdateCheck, vm: FirmwareViewModel) {
     if (result.upToDate) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Icon(PhosphorIcons.CheckCircle, null, tint = MetricColors.good)
-            Text("Up to date", style = MaterialTheme.typography.titleMedium)
+            Title("Up to date")
         }
-        Text("The update server has nothing newer for this strap.", style = MaterialTheme.typography.bodyMedium)
-        OutlinedButton(onClick = vm::reset, Modifier.fillMaxWidth()) { Text("OK") }
+        Body("The update server has nothing newer for this strap.")
+        PageButton("OK", vm::reset, Modifier.fillMaxWidth())
         return
     }
     val next = result.installOrder.firstOrNull()
-    PanelHeader(if (result.forced) "Required update" else "Update available", PhosphorIcons.CloudArrowDown, MetricColors.steps)
-    result.parts.forEach { InfoLine(it.label, "${it.version} · ${"%,d".format(it.length / 1024)} KB") }
-    result.changeLog?.let {
-        Text(it.substringBefore("###summary###").trim(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
+    Title(if (result.forced) "Required update" else "Update available")
+    result.parts.forEach { InfoLine(it.label, "${it.version}, ${"%,d".format(it.length / 1024)} KB") }
+    result.changeLog?.let { PageNote(it.substringBefore("###summary###").trim()) }
     if (result.installOrder.size > 1) {
-        Text(
-            "Parts are installed one at a time. After the strap restarts, check again to install the next one.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        PageNote("Parts are installed one at a time. After the strap restarts, check again to install the next one.")
     }
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        OutlinedButton(onClick = vm::reset, Modifier.weight(1f)) { Text("Not now") }
-        Button(onClick = { next?.let(vm::download) }, enabled = next != null, modifier = Modifier.weight(1f)) {
-            Text(if (next == null) "Unsupported" else "Download", maxLines = 1, textAlign = TextAlign.Center)
-        }
+        PageButton("Not now", vm::reset, Modifier.weight(1f))
+        PageButton(if (next == null) "Unsupported" else "Download", { next?.let(vm::download) }, Modifier.weight(1f), enabled = next != null, primary = true)
+    }
+}
+
+/**
+ * The Zepp account the firmware check signs in with: sign in, paste a token, or remove it. Opened from the Strap page
+ * (and from Firmware). Kept on this phone only.
+ */
+@Composable
+fun ZeppAccountScreen(vm: FirmwareViewModel, contentPadding: PaddingValues, onBack: () -> Unit) {
+    BackHandler(onBack = onBack)
+    val account by vm.account.collectAsState()
+    val installing = vm.step.collectAsState().value is FirmwareStep.Installing
+    ScreenList(contentPadding, gutter = GlowLayout.Gutter) {
+        item { PageHeader("Zepp account", onBack) }
+        item { AccountPanel(account, enabled = !installing, onSave = vm::saveAccount, onClear = vm::clearAccount, onSignIn = vm::saveSignIn) }
     }
 }
 
@@ -221,29 +220,18 @@ private fun AccountPanel(
             onConfirm = { listing, strap -> signIn = false; onSignIn(listing, strap) },
         )
     }
-    Panel {
-        PanelHeader("Zepp account", PhosphorIcons.Key, MetricColors.warn, trailing = if (account != null) "Saved" else null)
+    PagePanel {
         if (!editing) {
-            Text(
-                if (account == null) "Zepp only answers update checks for signed-in users. Sign in, or paste your own app token and user ID; they're stored on this phone only."
+            Body(
+                if (account == null) "Zepp only answers update checks for signed-in users. Sign in, or paste your own app token and user ID. They're stored on this phone only."
                 else "Update checks use your saved token${if (account.userId.isNotEmpty()) " for user ${account.userId}" else ""} on ${account.apiBase}.",
-                style = MaterialTheme.typography.bodyMedium,
             )
-            Button(onClick = { signIn = true }, enabled = enabled, modifier = Modifier.fillMaxWidth()) {
-                Text(if (account == null) "Sign in with Zepp" else "Sign in again")
-            }
+            PageButton(if (account == null) "Sign in with Zepp" else "Sign in again", { signIn = true }, Modifier.fillMaxWidth(), enabled = enabled, primary = true)
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                OutlinedButton(onClick = { editing = true }, enabled = enabled, modifier = Modifier.weight(1f)) {
-                    Text(if (account == null) "Paste token" else "Edit")
-                }
-                if (account != null) {
-                    TextButton(
-                        onClick = onClear, enabled = enabled, modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                    ) { Text("Remove") }
-                }
+                PageButton(if (account == null) "Paste token" else "Edit", { editing = true }, Modifier.weight(1f), enabled = enabled)
+                if (account != null) PageButton("Remove", onClear, Modifier.weight(1f), enabled = enabled, color = DangerColor)
             }
-            return@Panel
+            return@PagePanel
         }
         var token by rememberSaveable { mutableStateOf("") }
         var user by rememberSaveable { mutableStateOf(account?.userId.orEmpty()) }
@@ -259,20 +247,13 @@ private fun AccountPanel(
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth(),
         )
         OutlinedTextField(api, { api = it }, label = { Text("Server") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text("Chinese-market strap", style = MaterialTheme.typography.bodyLarge)
-                Text("Only if the strap was bought in mainland China", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            org.openstrap.app.ui.glow.GlowSwitch(china, { china = it })
-        }
+        PageSwitchRow("Chinese-market strap", "Only if the strap was bought in mainland China", china, { china = it }, divider = false)
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            OutlinedButton(onClick = { editing = false }, Modifier.weight(1f)) { Text("Cancel") }
-            Button(
-                onClick = { onSave(token.ifBlank { account?.appToken.orEmpty() }, user, api, china); editing = false },
-                enabled = token.isNotBlank() || account != null,
-                modifier = Modifier.weight(1f),
-            ) { Text("Save") }
+            PageButton("Cancel", { editing = false }, Modifier.weight(1f))
+            PageButton(
+                "Save", { onSave(token.ifBlank { account?.appToken.orEmpty() }, user, api, china); editing = false }, Modifier.weight(1f),
+                enabled = token.isNotBlank() || account != null, primary = true,
+            )
         }
     }
 }
@@ -310,22 +291,28 @@ private fun ConfirmInstall(image: ReadyImage, blockers: List<String>, onDismiss:
 @Composable
 private fun Busy(label: String, fraction: Float?) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        if (fraction == null) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
-        Text(label, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-        fraction?.let { Text("${(it * 100).toInt()}%", style = MaterialTheme.typography.titleMedium) }
+        if (fraction == null) CircularProgressIndicator(Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
+        Text(label, style = GlowType.label, color = Color.White, modifier = Modifier.weight(1f))
+        fraction?.let { Text("${(it * 100).toInt()}%", style = GlowType.label, color = Color.White) }
     }
-    if (fraction != null) LinearProgressIndicator(progress = { fraction }, modifier = Modifier.fillMaxWidth())
+    if (fraction != null) LinearProgressIndicator(progress = { fraction }, modifier = Modifier.fillMaxWidth(), color = Color.White, trackColor = Color.White.copy(alpha = 0.1f))
 }
+
+@Composable
+private fun Title(text: String) = Text(text, style = GlowType.label, color = Color.White)
+
+@Composable
+private fun Body(text: String) = Text(text, style = GlowType.secondary.copy(fontSize = 14.sp, lineHeight = 19.sp), color = Color.White.copy(alpha = 0.85f))
 
 /** One line of the privacy card: icon, short title, one sentence. */
 @Composable
 private fun Point(icon: ImageVector, title: String, body: String) {
     Row(verticalAlignment = Alignment.Top) {
-        Icon(icon, null, Modifier.padding(top = 2.dp).size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        Icon(icon, null, Modifier.padding(top = 2.dp).size(18.dp), tint = Color.White.copy(alpha = 0.6f))
         Spacer(Modifier.width(12.dp))
         Column {
-            Text(title, style = MaterialTheme.typography.titleSmall)
-            Text(body, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(title, style = GlowType.label.copy(fontWeight = null), color = Color.White)
+            PageNote(body)
         }
     }
 }
@@ -333,8 +320,8 @@ private fun Point(icon: ImageVector, title: String, body: String) {
 @Composable
 private fun InfoLine(label: String, value: String) {
     Row(Modifier.fillMaxWidth()) {
-        Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
-        Text(value, style = MaterialTheme.typography.bodyMedium)
+        Text(label, style = GlowType.secondary.copy(fontSize = 14.sp), color = Color.White.copy(alpha = 0.6f), modifier = Modifier.weight(1f))
+        Text(value, style = GlowType.secondary.copy(fontSize = 14.sp), color = Color.White)
     }
 }
 

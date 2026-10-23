@@ -17,7 +17,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -69,18 +68,13 @@ val LocalCardPadding = staticCompositionLocalOf { GlowLayout.CardPadding }
 /** Where a dashboard block goes when there's room for two columns. On a phone every block stacks in the order given. */
 enum class Pane { Full, Left, Right }
 
-/**
- * The blocks of a dashboard, in phone order, each with the column it takes on a wide screen. A block given a [key]
- * can be scrolled to (see [GlowScreenList]'s `scrollTo`).
- */
+/** The blocks of a dashboard, in phone order, each with the column it takes on a wide screen. */
 class GlowBlocks internal constructor() {
     internal val blocks = mutableListOf<Pair<Pane, @Composable () -> Unit>>()
-    internal val keys = mutableMapOf<Any, Int>()
-    fun full(key: Any? = null, content: @Composable () -> Unit) = add(Pane.Full, key, content)
-    fun left(key: Any? = null, content: @Composable () -> Unit) = add(Pane.Left, key, content)
-    fun right(key: Any? = null, content: @Composable () -> Unit) = add(Pane.Right, key, content)
-    private fun add(pane: Pane, key: Any?, content: @Composable () -> Unit) {
-        if (key != null) keys[key] = blocks.size
+    fun full(content: @Composable () -> Unit) = add(Pane.Full, content)
+    fun left(content: @Composable () -> Unit) = add(Pane.Left, content)
+    fun right(content: @Composable () -> Unit) = add(Pane.Right, content)
+    private fun add(pane: Pane, content: @Composable () -> Unit) {
         blocks += pane to content
     }
 }
@@ -89,28 +83,19 @@ class GlowBlocks internal constructor() {
  * A glow dashboard's list. Narrower than [GlowLayout.TwoColumnWidth] it's the phone list: every block in
  * order, one under the other. Wider, each run of left and right blocks sits side by side in two columns,
  * and full blocks span both. It stays one lazy list either way, so scrolling, pull to sync and the glow
- * pausing while it scrolls behave the same. [scrollTo] scrolls to the block with that key once it's there, then
- * calls [onScrolled].
+ * pausing while it scrolls behave the same.
  */
 @Composable
 fun GlowScreenList(
     contentPadding: PaddingValues,
     state: LazyListState,
-    scrollTo: Any? = null,
-    onScrolled: () -> Unit = {},
     content: GlowBlocks.() -> Unit,
 ) {
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val wide = maxWidth >= GlowLayout.TwoColumnWidth
         val tight = wide || maxWidth < GlowLayout.NarrowWidth
         val gutter = ((maxWidth - GlowLayout.MaxContentWidth) / 2).coerceAtLeast(if (tight) GlowLayout.WideGutter else GlowLayout.Gutter)
-        val built = GlowBlocks().apply(content)
-        val blocks = built.blocks
-        // The lazy item a block lands in: its own on a phone; on a wide screen a two-column run is one item.
-        val target = scrollTo?.let { built.keys[it] }?.let { block -> if (wide) itemOf(blocks, block) else block }
-        LaunchedEffect(scrollTo, target) {
-            if (scrollTo != null && target != null) { state.animateScrollToItem(target); onScrolled() }
-        }
+        val blocks = GlowBlocks().apply(content).blocks
         CompositionLocalProvider(LocalCardPadding provides if (tight) GlowLayout.WideCardPadding else GlowLayout.CardPadding) {
             ScreenList(contentPadding, state, gutter = gutter) {
                 if (!wide) blocks.forEach { (_, block) -> item { block() } }
@@ -129,19 +114,6 @@ fun GlowScreenList(
             }
         }
     }
-}
-
-/** The lazy item that block [index] lands in on a wide screen, following [GlowScreenList]'s layout. */
-private fun itemOf(blocks: List<Pair<Pane, @Composable () -> Unit>>, index: Int): Int {
-    var item = 0
-    var seen = 0
-    for (section in sections(blocks)) {
-        val split = section.any { it.first == Pane.Left } && section.any { it.first == Pane.Right }
-        if (index < seen + section.size) return if (split) item else item + (index - seen)
-        item += if (split) 1 else section.size
-        seen += section.size
-    }
-    return item
 }
 
 /** Splits the blocks into runs: each full block on its own, and each unbroken stretch of left and right blocks together. */

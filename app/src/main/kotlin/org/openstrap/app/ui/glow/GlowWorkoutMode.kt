@@ -260,13 +260,11 @@ fun topSports(workouts: List<WorkoutAnalysis>, n: Int = 3): List<SportUse> {
 
 /**
  * "Start a workout": your three most-used sports, most used first, and every sport as a row of round buttons sharing
- * the width, names under them; then the auto-detect switch. All alike: a white one would read as already chosen.
+ * the width, names under them. All alike: a white one would read as already chosen. (The auto-detect switch lives on
+ * the Strap page.)
  */
 @Composable
-internal fun StartWorkoutPanel(
-    sports: List<SportUse>, onStart: (Int) -> Unit, onAllSports: () -> Unit,
-    autoStart: Boolean? = null, onAutoStart: (Boolean) -> Unit = {},
-) {
+internal fun StartWorkoutPanel(sports: List<SportUse>, onStart: (Int) -> Unit, onAllSports: () -> Unit) {
     DotPanel {
         DotHeader("Start a workout")
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
@@ -275,7 +273,6 @@ internal fun StartWorkoutPanel(
             }
             SportBubble(PhosphorIcons.DotsThree, "All sports", Modifier.weight(1f), onClick = onAllSports)
         }
-        autoStart?.let { SwitchRow("Auto-detect workouts", "Asks to record when your heart rate stays up for 10 min", it, onAutoStart) }
     }
 }
 

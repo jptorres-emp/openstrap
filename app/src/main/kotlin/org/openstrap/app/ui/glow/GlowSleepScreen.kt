@@ -40,8 +40,6 @@ import org.openstrap.app.data.db.SleepSession
 import org.openstrap.app.ui.components.ChartPoint
 import org.openstrap.app.ui.components.StageSpan
 import org.openstrap.app.ui.components.formatDuration
-import org.openstrap.app.ui.dashboard.DateHeader
-import org.openstrap.app.ui.dashboard.DayPicker
 import org.openstrap.app.ui.dashboard.DayUiState
 import org.openstrap.app.ui.dashboard.DayViewModel
 import org.openstrap.app.ui.dashboard.LocalGoals
@@ -70,11 +68,8 @@ import kotlin.math.roundToInt
 @Composable
 fun GlowSleepScreen(
     state: DayUiState,
-    battery: Int?,
-    charging: Boolean,
-    onPrev: () -> Unit,
-    onNext: () -> Unit,
-    picker: DayPicker,
+    /** The tab's header, or a back header when the screen is opened from a card on another tab. */
+    header: @Composable () -> Unit,
     contentPadding: PaddingValues,
     onOpenMetric: (Metric) -> Unit,
     /** Readiness and the nightly model, for the Breathing card and the sleep-health panels. */
@@ -84,7 +79,7 @@ fun GlowSleepScreen(
     val rec = recovery?.takeIf { it.date == state.date }
     CompositionLocalProvider(LocalGlowPaused provides { list.isScrollInProgress }) {
         GlowScreenList(contentPadding, list) {
-            full { DateHeader(state.date, battery, onPrev, onNext, charging, picker) }
+            full { header() }
             val session = state.sleep
             // Wide: the night, its stages and vitals on the left; what shaped the score and the night's charts on the right.
             left { NightCard(state) }

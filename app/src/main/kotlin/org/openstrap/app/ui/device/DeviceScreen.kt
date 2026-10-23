@@ -1,6 +1,5 @@
 package org.openstrap.app.ui.device
 
-import androidx.compose.foundation.BorderStroke
 import android.content.ClipData
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -30,9 +29,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -58,37 +55,89 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.openstrap.app.device.ConnectionState
 import org.openstrap.app.device.SyncState
-import org.openstrap.app.ui.components.EmptyHint
-import org.openstrap.app.ui.components.Panel
-import org.openstrap.app.ui.components.PanelHeader
-import org.openstrap.app.ui.components.ProgressRing
-import org.openstrap.app.ui.components.SectionLabel
-import org.openstrap.app.ui.components.SettingRow
+import androidx.compose.foundation.layout.height
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.graphics.Color
+import kotlinx.coroutines.launch
+import org.openstrap.app.data.settings.SettingsStore
+import org.openstrap.app.ui.alarms.AlarmsUiState
+import org.openstrap.app.ui.alarms.alarmsSummary
+import org.openstrap.app.ui.alarms.healthAlertsSummary
+import org.openstrap.app.ui.alarms.phoneAlertsSummary
+import org.openstrap.app.ui.dashboard.agoText
+import org.openstrap.app.ui.glow.CoreShape
+import org.openstrap.app.ui.glow.DangerColor
+import org.openstrap.app.ui.glow.DotMatrixText
+import org.openstrap.app.ui.glow.GlowCard
+import org.openstrap.app.ui.glow.GlowLayout
+import org.openstrap.app.ui.glow.GlowStyle
+import org.openstrap.app.ui.glow.GlowSwitch
+import org.openstrap.app.ui.glow.GlowType
+import org.openstrap.app.ui.glow.LightAngle
+import org.openstrap.app.ui.glow.PageButton
+import org.openstrap.app.ui.glow.PageHeader
+import org.openstrap.app.ui.glow.PagePanel
+import org.openstrap.app.ui.glow.PageRow
+import org.openstrap.app.ui.glow.PageRows
 import org.openstrap.app.ui.dashboard.ScreenList
 import org.openstrap.app.ui.theme.MetricColors
 import org.openstrap.app.ui.theme.PhosphorIcons
 import org.openstrap.app.ui.zepp.ComputerGuideButton
 import org.openstrap.app.ui.zepp.OptionButton
 import org.openstrap.app.ui.zepp.ZeppSignInDialog
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 
+/**
+ * The line under the strap's name on the Strap page: what it's doing and when it was last heard from ("Connected.
+ * Synced 2 min ago", "Last seen 18 min ago"). [lastSeen] and [now] are epoch seconds.
+ */
+internal fun strapStateLine(connection: ConnectionState, sync: SyncState, lastSeen: Long?, now: Long): String = when (connection) {
+    is ConnectionState.Connected -> when {
+        connection.charging -> "Charging. Wear data pauses until it's back on."
+        sync is SyncState.Running -> "Connected. Syncing"
+        sync is SyncState.Done -> "Connected. Synced ${agoText(now - sync.atEpochSeconds).lowercase()}"
+        sync is SyncState.Failed -> "Connected. Not synced"
+        else -> "Connected"
+    }
+    ConnectionState.Connecting, ConnectionState.Authenticating -> "Connecting"
+    is ConnectionState.Failed -> if (connection.keyRejected) "The strap turned the key down" else "Can't connect"
+    ConnectionState.NotPaired -> "Not paired"
+    ConnectionState.Disconnected -> lastSeen?.let { "Last seen ${agoText(now - it).lowercase()}" } ?: "Not connected"
+}
+
+/**
+ * The Strap page (spec 3.4), opened from the header chip on any tab: the strap with its state and battery, Sync now and
+ * Find strap, then its settings as rows with their values, each opening its page or switching in place, then
+ * Disconnect, Restart and Forget. With no strap paired, the pairing steps.
+ */
 @Composable
 fun DeviceScreen(
     vm: DeviceViewModel,
     contentPadding: PaddingValues,
     onRequestBluetooth: (then: () -> Unit) -> Unit,
+    settings: SettingsStore,
+    /** The strap's alarms and health settings as last read, for the rows' values. */
+    alarms: AlarmsUiState,
+    zeppSignedIn: Boolean,
+    /** When the strap was last connected (epoch seconds), null when not seen this run. */
+    lastSeen: Long?,
+    onAlarms: () -> Unit,
+    onPhoneAlerts: () -> Unit,
+    onHealthAlerts: () -> Unit,
     onFirmware: () -> Unit,
-    onAlarms: () -> Unit = {},
+    onZeppAccount: () -> Unit,
     onBack: () -> Unit,
 ) {
     BackHandler(onBack = onBack)
+    val scope = rememberCoroutineScope()
     val paired by vm.paired.collectAsState()
     val connection by vm.strap.connection.collectAsState()
     val sync by vm.strap.sync.collectAsState()
     val scan by vm.scan.collectAsState()
     val info by vm.strap.info.collectAsState()
+    val calls by settings.buzzOnCalls.collectAsState(false)
+    val notifications by settings.buzzOnNotifications.collectAsState(false)
+    val wearReminder by settings.wearReminder.collectAsState(true)
+    val autoStart by settings.autoStartWorkouts.collectAsState(true)
     var confirmForget by rememberSaveable { mutableStateOf(false) }
     var confirmDisconnect by rememberSaveable { mutableStateOf(false) }
     var confirmRestart by rememberSaveable { mutableStateOf(false) }
@@ -160,71 +209,61 @@ fun DeviceScreen(
         )
     }
 
-    ScreenList(contentPadding) {
-        item {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onBack) { Icon(PhosphorIcons.ArrowLeft, "Back") }
-                Text("Your strap", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.weight(1f))
-            }
-        }
+    ScreenList(contentPadding, gutter = GlowLayout.Gutter) {
+        item { PageHeader("Your strap", onBack) }
 
         val device = paired
         if (device == null) {
             item { PairPanel(vm, scan, onRequestBluetooth) }
-        } else {
-            item { StatusHero(device.name, device.address, connection, sync) }
-            val failed = connection as? ConnectionState.Failed
-            if (failed?.keyRejected == true) item { KeyRejectedPanel(failed.reason, onPairAgain = vm::forget) }
-            else item {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    when (connection) {
-                        is ConnectionState.Connected -> {
-                            Button(
-                                onClick = vm.strap::syncNow, enabled = sync !is SyncState.Running,
-                                modifier = Modifier.weight(1f), contentPadding = PaddingValues(vertical = 14.dp),
-                            ) { Text("Sync now") }
-                            // Red, like Forget: it cuts the strap off, so it shouldn't look like Sync now's twin.
-                            OutlinedButton(
-                                onClick = { confirmDisconnect = true }, Modifier.weight(1f), contentPadding = PaddingValues(vertical = 14.dp),
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f)),
-                            ) {
-                                Text("Disconnect")
-                            }
-                        }
-                        ConnectionState.Connecting, ConnectionState.Authenticating ->
-                            OutlinedButton(onClick = vm.strap::disconnect, Modifier.fillMaxWidth(), contentPadding = PaddingValues(vertical = 14.dp)) {
-                                Text("Cancel")
-                            }
-                        else -> Button(
-                            onClick = { onRequestBluetooth { vm.strap.connect() } },
-                            modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(vertical = 14.dp),
-                        ) { Text("Connect") }
+            return@ScreenList
+        }
+        item { StrapHero(device.name, connection, sync, lastSeen) }
+        val failed = connection as? ConnectionState.Failed
+        if (failed?.keyRejected == true) item { KeyRejectedPanel(failed.reason, onPairAgain = vm::forget) }
+        else item {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                when (connection) {
+                    is ConnectionState.Connected -> {
+                        PageButton("Sync now", vm.strap::syncNow, Modifier.weight(1f).height(56.dp), enabled = sync !is SyncState.Running)
+                        if (info?.findDevice == true) FindStrapButton(vm, Modifier.weight(1f).height(56.dp))
                     }
+                    ConnectionState.Connecting, ConnectionState.Authenticating ->
+                        PageButton("Cancel", vm.strap::disconnect, Modifier.fillMaxWidth().height(56.dp))
+                    else -> PageButton("Connect", { onRequestBluetooth { vm.strap.connect() } }, Modifier.fillMaxWidth().height(56.dp), primary = true)
                 }
             }
-            if (connection is ConnectionState.Connected && info?.findDevice == true) item { FindStrapButton(vm) }
-            item {
-                Panel {
-                    SettingRow("Alarms & alerts", "Wake-up alarms and heart-rate alerts on the strap", onClick = onAlarms) {
-                        Icon(PhosphorIcons.CaretRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                    SettingRow("Firmware update", "Check for and install strap firmware", onClick = onFirmware) {
-                        Icon(PhosphorIcons.ArrowCircleUp, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                    KeepConnectedRow(vm, keepConnected, device.address)
-                    if (connection is ConnectionState.Connected && info?.canRestart == true) {
-                        SettingRow("Restart strap", "Restarts the strap; OpenStrap reconnects by itself", onClick = { confirmRestart = true }) {
-                            Icon(PhosphorIcons.CaretRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                    }
-                    SettingRow("Forget this strap", "Removes the address and auth key from this phone", onClick = { confirmForget = true }) {
-                        Icon(PhosphorIcons.CaretRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
+        }
+        item {
+            val connected = connection is ConnectionState.Connected
+            // What the strap holds is read from it; until then, or without it, the row just opens its page.
+            val waiting = if (connected) "Reading" else "On the strap"
+            PageRows {
+                PageRow("Alarms", alarmsSummary(alarms) ?: waiting, onClick = onAlarms, divider = false)
+                PageRow("Phone alerts", phoneAlertsSummary(calls, notifications), onClick = onPhoneAlerts)
+                PageRow("Health alerts", healthAlertsSummary(alarms) ?: waiting, onClick = onHealthAlerts)
+                PageRow("Off-body reminder", onClick = { scope.launch { settings.setWearReminder(!wearReminder) } }) {
+                    GlowSwitch(wearReminder, { on -> scope.launch { settings.setWearReminder(on) } })
                 }
+                PageRow("Auto-detect workouts", onClick = { scope.launch { settings.setAutoStartWorkouts(!autoStart) } }) {
+                    GlowSwitch(autoStart, { on -> scope.launch { settings.setAutoStartWorkouts(on) } })
+                }
+                KeepConnectedRow(vm, keepConnected, device.address)
+                PageRow("Firmware", info?.firmware ?: (connection as? ConnectionState.Connected)?.firmware ?: "Check for updates", onClick = onFirmware)
+                PageRow("Zepp account", if (zeppSignedIn) "Signed in" else "Not signed in", onClick = onZeppAccount)
+            }
+        }
+        item {
+            PageRows {
+                var first = true
+                if (connection is ConnectionState.Connected) {
+                    PageRow("Disconnect", onClick = { confirmDisconnect = true }, divider = false)
+                    first = false
+                }
+                if (connection is ConnectionState.Connected && info?.canRestart == true) {
+                    PageRow("Restart strap", onClick = { confirmRestart = true }, divider = !first)
+                    first = false
+                }
+                PageRow("Forget this strap", onClick = { confirmForget = true }, divider = !first, titleColor = DangerColor)
             }
         }
     }
@@ -232,16 +271,12 @@ fun DeviceScreen(
 
 /** Find strap: buzzes the strap and becomes Stop while it runs; it stops by itself after 60 s, as Zepp's does. */
 @Composable
-private fun FindStrapButton(vm: DeviceViewModel) {
+private fun FindStrapButton(vm: DeviceViewModel, modifier: Modifier) {
     val finding by vm.strap.findingStrap.collectAsState()
-    OutlinedButton(
-        onClick = { if (finding) vm.stopFindingStrap() else vm.findStrap() },
-        modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(vertical = 14.dp),
-    ) {
-        Icon(if (finding) PhosphorIcons.StopFill else PhosphorIcons.BellRinging, null, Modifier.size(18.dp))
-        Spacer(Modifier.width(8.dp))
-        Text(if (finding) "Stop buzzing" else "Find strap")
-    }
+    PageButton(
+        if (finding) "Stop buzzing" else "Find strap", { if (finding) vm.stopFindingStrap() else vm.findStrap() }, modifier,
+        icon = if (finding) PhosphorIcons.StopFill else PhosphorIcons.BellRinging,
+    )
 }
 
 /** Starts Android's companion association prompt from the strap page; the result goes back to [CompanionLink]. */
@@ -273,8 +308,9 @@ private tailrec fun android.content.Context.findActivity(): android.app.Activity
 }
 
 /**
- * "Keep strap connected in the background": a companion association where Android supports it, otherwise (or
- * once the user turned that down) the battery-optimization prompt. Hidden once either is in place.
+ * "Stay connected in background": On once a companion association is in place, or battery optimization is off.
+ * Off, a tap asks for the association where Android supports it, otherwise (or once the user turned that down) the
+ * battery-optimization prompt.
  */
 @Composable
 private fun KeepConnectedRow(vm: DeviceViewModel, keepConnected: KeepConnected, address: String) {
@@ -282,93 +318,128 @@ private fun KeepConnectedRow(vm: DeviceViewModel, keepConnected: KeepConnected, 
     val associated by vm.companion.associated.collectAsState()
     val ignoringBattery by vm.companion.ignoringBatteryOptimizations.collectAsState()
     val declined by vm.companionDeclined.collectAsState()
+    val title = "Stay connected in background"
     when {
-        associated -> return
-        vm.companion.supported && !declined -> SettingRow(
-            "Keep strap connected in the background",
-            "Link the strap with Android so it can reconnect without opening OpenStrap",
-            onClick = { keepConnected.associate(address) },
-        ) { Icon(PhosphorIcons.CaretRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant) }
-        !ignoringBattery -> SettingRow(
-            "Keep strap connected in the background",
-            "Turn off battery optimization for OpenStrap so Android doesn't stop it",
-            onClick = {
-                runCatching {
-                    context.startActivity(
-                        android.content.Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
-                            .setData(android.net.Uri.parse("package:${context.packageName}")),
-                    )
-                }.onFailure { vm.showMessage("Couldn't open battery settings on this phone.") }
-            },
-        ) { Icon(PhosphorIcons.CaretRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant) }
-        else -> return
+        associated -> PageRow(title, "On")
+        vm.companion.supported && !declined -> PageRow(title, "Off", onClick = { keepConnected.associate(address) })
+        !ignoringBattery -> PageRow(title, "Off", onClick = {
+            runCatching {
+                context.startActivity(
+                    android.content.Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
+                        .setData(android.net.Uri.parse("package:${context.packageName}")),
+                )
+            }.onFailure { vm.showMessage("Couldn't open battery settings on this phone.") }
+        })
+        else -> PageRow(title, "On")
     }
-    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 }
 
-/** WHOOP/Ultrahuman-style status block: connection label, last sync, battery ring. */
+/** The strap in a glow card: its name, the state line, a drawing of it with its light, and the battery. */
 @Composable
-private fun StatusHero(name: String, address: String, connection: ConnectionState, sync: SyncState) {
-    Panel {
-        Row(Modifier.fillMaxWidth()) {
-            Column(Modifier.weight(1f)) {
-                val (label, color) = when (connection) {
-                    is ConnectionState.Connected -> "Connected to" to MetricColors.good
-                    ConnectionState.Connecting -> "Connecting to" to MaterialTheme.colorScheme.onSurfaceVariant
-                    ConnectionState.Authenticating -> "Authenticating" to MaterialTheme.colorScheme.onSurfaceVariant
-                    is ConnectionState.Failed -> "Connection failed" to MaterialTheme.colorScheme.error
-                    else -> "Not connected" to MaterialTheme.colorScheme.onSurfaceVariant
+private fun StrapHero(name: String, connection: ConnectionState, sync: SyncState, lastSeen: Long?) {
+    val connected = connection as? ConnectionState.Connected
+    val battery = connected?.batteryPercent
+    val led = when {
+        connected != null && sync is SyncState.Failed -> MetricColors.warn
+        connected != null -> StrapLight
+        connection is ConnectionState.Failed -> MetricColors.warn
+        else -> Color.White.copy(alpha = 0.25f)
+    }
+    // A clock that moves on, so "Synced 2 min ago" stays true while the page is open.
+    val now by androidx.compose.runtime.produceState(System.currentTimeMillis() / 1000) {
+        while (true) { kotlinx.coroutines.delay(30_000); value = System.currentTimeMillis() / 1000 }
+    }
+    GlowCard(StrapGlow, Modifier.fillMaxWidth()) {
+        Box(Modifier.fillMaxWidth()) {
+            Column(Modifier.fillMaxWidth().padding(end = 96.dp)) {
+                Text(name, color = Color.White, style = GlowType.label)
+                Text(
+                    strapStateLine(connection, sync, lastSeen, now), color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA),
+                    style = GlowType.secondary, modifier = Modifier.padding(top = 4.dp),
+                )
+            }
+            StrapDrawing(led, Modifier.align(Alignment.TopEnd).size(width = 84.dp, height = 105.dp))
+        }
+        Column(Modifier.fillMaxWidth().padding(top = 128.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (battery != null) Row(verticalAlignment = Alignment.Bottom) {
+                DotMatrixText("$battery", dot = GlowLayout.HeroDot, gap = GlowLayout.HeroGap)
+                Text("% battery", color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary, modifier = Modifier.padding(start = 8.dp))
+            }
+            if (sync is SyncState.Running) {
+                LinearProgressIndicator(Modifier.fillMaxWidth().clip(CircleShape), color = Color.White, trackColor = Color.White.copy(alpha = 0.1f))
+                Text(sync.step, style = GlowType.secondary, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA))
+            }
+            when {
+                connection is ConnectionState.Failed && !connection.keyRejected -> {
+                    Text(connection.reason, color = MetricColors.warn, style = GlowType.secondary)
+                    Text(
+                        "OpenStrap keeps retrying. Keep the strap on its charger near the phone, and make sure the Zepp app " +
+                            "isn't running. The strap talks to one app at a time.",
+                        style = GlowType.secondary, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA),
+                    )
                 }
-                SectionLabel(label, color = color)
-                Text(name, style = MaterialTheme.typography.titleLarge)
-                Text(address, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            Column(horizontalAlignment = Alignment.End) {
-                SectionLabel("Last sync")
-                Text(
-                    when (sync) {
-                        is SyncState.Done -> clock(sync.atEpochSeconds)
-                        is SyncState.Running -> "Syncing…"
-                        else -> "—"
-                    },
-                    style = MaterialTheme.typography.bodyMedium,
-                )
+                sync is SyncState.Failed -> Text("Sync failed. ${sync.reason}", color = MetricColors.warn, style = GlowType.secondary)
             }
         }
+    }
+}
 
-        val connected = connection as? ConnectionState.Connected
-        val battery = connected?.batteryPercent
-        val charging = connected?.charging == true
-        val ringColor = MetricColors.battery(battery)
-        Box(Modifier.fillMaxWidth().padding(vertical = 8.dp), contentAlignment = Alignment.Center) {
-            ProgressRing((battery ?: 0) / 100f, ringColor, size = 168.dp, stroke = 10.dp)
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Icon(
-                    if (charging) PhosphorIcons.Lightning else PhosphorIcons.Watch, null, Modifier.size(28.dp),
-                    tint = if (charging) ringColor else MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Text(battery?.let { "$it%" } ?: "—", style = MaterialTheme.typography.displaySmall)
-                SectionLabel(if (charging) "Charging" else "Battery", color = if (charging) ringColor else MaterialTheme.colorScheme.onSurfaceVariant)
-            }
+/** The strap seen from the front: the band, the pod, and its light in [led]. */
+@Composable
+private fun StrapDrawing(led: Color, modifier: Modifier) {
+    androidx.compose.foundation.Canvas(modifier) {
+        val sx = size.width / 120f
+        val sy = size.height / 150f
+        fun r(x: Float, y: Float, w: Float, h: Float, radius: Float, color: Color, stroke: Color?, strokeWidth: Float = 1f) {
+            val tl = androidx.compose.ui.geometry.Offset(x * sx, y * sy)
+            val sz = androidx.compose.ui.geometry.Size(w * sx, h * sy)
+            val cr = androidx.compose.ui.geometry.CornerRadius(radius * sx)
+            drawRoundRect(color, tl, sz, cr)
+            if (stroke != null) drawRoundRect(stroke, tl, sz, cr, style = androidx.compose.ui.graphics.drawscope.Stroke(strokeWidth * sx))
         }
+        r(30f, 0f, 60f, 150f, 26f, Color(0xFF0B0B0C), Color.White.copy(alpha = 0.13f))
+        r(22f, 44f, 76f, 62f, 20f, Color(0xFF18181B), led.copy(alpha = 0.4f), 1.5f)
+        val c = androidx.compose.ui.geometry.Offset(60f * sx, 75f * sy)
+        drawCircle(led.copy(alpha = 0.15f), 14f * sx, c)
+        drawCircle(led, 5f * sx, c)
+    }
+}
 
-        if (sync is SyncState.Running) {
-            LinearProgressIndicator(Modifier.fillMaxWidth().clip(CircleShape))
-            Text(sync.step, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        (connection as? ConnectionState.Connected)?.firmware?.let {
-            Text("Firmware $it", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        when {
-            connection is ConnectionState.Failed && !connection.keyRejected -> {
-                Text(connection.reason, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
-                Text(
-                    "OpenStrap keeps retrying. Keep the strap on its charger near the phone, and make sure the Zepp app " +
-                        "isn't running: the strap talks to one app at a time.",
-                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+private val StrapLight = Color(0xFF7DE0C0)
+
+/** The strap's card: a quiet grey-green lit from above, so it doesn't read as any metric. */
+private val StrapGlow = GlowStyle(
+    color = Color(0xFF6AAF98), coreShape = CoreShape.Radial, coreWidth = 1.2f, coreHeight = 1.1f, coreBlur = 30.dp,
+    coreLightness = 0.03f, toneWidth = 0.dp, glowStrength = 0.55f, lightAngle = LightAngle.Above,
+)
+
+/** The protocol log, for bug reports, opened from the You sheet; the whole log can be copied. */
+@Composable
+fun DiagnosticsScreen(lines: List<String>, contentPadding: PaddingValues, onBack: () -> Unit) {
+    BackHandler(onBack = onBack)
+    val context = LocalContext.current
+    ScreenList(contentPadding, gutter = GlowLayout.Gutter) {
+        item {
+            PageHeader("Diagnostics", onBack) {
+                PageButton("Copy", {
+                    context.getSystemService(ClipboardManager::class.java)
+                        .setPrimaryClip(ClipData.newPlainText("OpenStrap log", lines.joinToString("\n")))
+                }, Modifier.height(40.dp), icon = PhosphorIcons.Copy)
             }
-            sync is SyncState.Failed -> Text("Sync failed: ${sync.reason}", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
+        }
+        item {
+            PagePanel(title = "Strap log", note = "${lines.size} lines") {
+                Box(
+                    Modifier.fillMaxWidth().heightIn(max = 520.dp).clip(RoundedCornerShape(12.dp)).background(Color.Black)
+                        .verticalScroll(rememberScrollState()).horizontalScroll(rememberScrollState()).padding(12.dp),
+                ) {
+                    Text(
+                        if (lines.isEmpty()) "No events yet." else lines.joinToString("\n"),
+                        fontFamily = FontFamily.Monospace, fontSize = 11.sp, lineHeight = 15.sp,
+                        color = Color.White.copy(alpha = 0.7f), textAlign = TextAlign.Start,
+                    )
+                }
+            }
         }
     }
 }
@@ -391,12 +462,8 @@ private fun PairPanel(vm: DeviceViewModel, scan: ScanUiState, onRequestBluetooth
         )
     }
 
-    Panel {
-        PanelHeader("Pair your Helio Strap", PhosphorIcons.Bluetooth, MaterialTheme.colorScheme.primary)
-        Text(
-            "OpenStrap needs the strap's auth key, which Zepp creates when you link the strap. You only do this once.",
-            style = MaterialTheme.typography.bodyMedium,
-        )
+    PagePanel(title = "Pair your Helio Strap") {
+        StepText("OpenStrap needs the strap's auth key, which Zepp creates when you link the strap. You only do this once.")
         PairStep(1, "Link the strap in the Zepp app") {
             StepText("Install Zepp, sign in, and link your Helio Strap.")
             StepText(
@@ -414,12 +481,7 @@ private fun PairPanel(vm: DeviceViewModel, scan: ScanUiState, onRequestBluetooth
         }
         // Full panel width, not indented under step 3, so they line up with the panel's edges.
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(
-                onClick = { signIn = true },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(14.dp),
-                contentPadding = PaddingValues(vertical = 16.dp),
-            ) { Text("Sign in with Zepp") }
+            PageButton("Sign in with Zepp", { signIn = true }, Modifier.fillMaxWidth(), primary = true)
             ComputerGuideButton()
             OptionButton("Have the key already?", "Enter it yourself") { manual = true }
         }
@@ -432,13 +494,13 @@ private fun PairPanel(vm: DeviceViewModel, scan: ScanUiState, onRequestBluetooth
 private fun PairStep(number: Int, title: String, content: @Composable () -> Unit) {
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Box(
-            Modifier.size(28.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer),
+            Modifier.size(28.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.1f)),
             contentAlignment = Alignment.Center,
         ) {
-            Text("$number", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onPrimaryContainer)
+            Text("$number", style = GlowType.secondary, color = Color.White)
         }
         Column(Modifier.weight(1f).padding(top = 3.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(title, style = MaterialTheme.typography.titleSmall)
+            Text(title, style = GlowType.label, color = Color.White)
             content()
         }
     }
@@ -448,8 +510,8 @@ private fun PairStep(number: Int, title: String, content: @Composable () -> Unit
 private fun StepText(text: String, muted: Boolean = false) {
     Text(
         text,
-        style = if (muted) MaterialTheme.typography.bodySmall else MaterialTheme.typography.bodyMedium,
-        color = if (muted) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+        style = GlowType.secondary.copy(fontSize = if (muted) 12.5.sp else 14.sp, lineHeight = if (muted) 17.sp else 19.sp),
+        color = Color.White.copy(alpha = if (muted) 0.6f else 0.85f),
     )
 }
 
@@ -539,61 +601,9 @@ private fun ManualPairDialog(
 /** Shown under the status when the strap turned the key down: retrying can't help, so offer to start pairing over. */
 @Composable
 private fun KeyRejectedPanel(reason: String, onPairAgain: () -> Unit) {
-    Panel {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Icon(PhosphorIcons.WarningCircle, null, tint = MetricColors.bad)
-            Text("Pairing didn't work", style = MaterialTheme.typography.titleMedium)
-        }
-        Text(reason, style = MaterialTheme.typography.bodyMedium)
-        Button(onClick = onPairAgain, Modifier.fillMaxWidth()) { Text("Start pairing again") }
+    PagePanel(title = "Pairing didn't work") {
+        StepText(reason)
+        PageButton("Start pairing again", onPairAgain, Modifier.fillMaxWidth(), primary = true)
         ComputerGuideButton()
     }
 }
-
-/** Protocol log, so behaviour on real hardware can be shared when reporting issues. */
-@Composable
-internal fun DiagnosticsPanel(lines: List<String>, asRow: Boolean = false) {
-    var expanded by rememberSaveable { mutableStateOf(false) }
-    val context = LocalContext.current
-    Panel {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.weight(1f).clickable { expanded = !expanded }) {
-                // On You it reads like the rows around it: badge, title, what's inside.
-                if (asRow) Row(verticalAlignment = Alignment.CenterVertically) {
-                    YouIcon(PhosphorIcons.TerminalWindow)
-                    Spacer(Modifier.width(14.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text("Diagnostics", style = MaterialTheme.typography.titleMedium)
-                        Text(if (expanded) "Tap to hide" else "${lines.size} lines", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                }
-                else PanelHeader("Diagnostics", PhosphorIcons.TerminalWindow, trailing = if (expanded) "Hide" else "${lines.size} lines")
-            }
-            if (expanded) IconButton(onClick = {
-                context.getSystemService(ClipboardManager::class.java)
-                    .setPrimaryClip(ClipData.newPlainText("OpenStrap log", lines.joinToString("\n")))
-            }) { Icon(PhosphorIcons.Copy, "Copy log") }
-        }
-        if (expanded) {
-            Box(
-                Modifier
-                    .fillMaxWidth()
-                    .heightIn(max = 320.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(MaterialTheme.colorScheme.surfaceContainerLowest)
-                    .verticalScroll(rememberScrollState())
-                    .horizontalScroll(rememberScrollState())
-                    .padding(12.dp),
-            ) {
-                Text(
-                    if (lines.isEmpty()) "No events yet." else lines.joinToString("\n"),
-                    fontFamily = FontFamily.Monospace, fontSize = 11.sp, lineHeight = 15.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Start,
-                )
-            }
-        }
-    }
-}
-
-internal fun clock(epochSeconds: Long): String =
-    Instant.ofEpochSecond(epochSeconds).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("d MMM HH:mm"))

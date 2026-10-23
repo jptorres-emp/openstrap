@@ -45,8 +45,6 @@ import org.openstrap.app.data.db.DailyPai
 import org.openstrap.app.data.db.SportEffectRow
 import org.openstrap.app.data.settings.UserProfile
 import org.openstrap.app.ui.components.formatDuration
-import org.openstrap.app.ui.dashboard.DateHeader
-import org.openstrap.app.ui.dashboard.DayPicker
 import org.openstrap.app.ui.dashboard.DayUiState
 import org.openstrap.app.ui.dashboard.Metric
 import org.openstrap.app.ui.dashboard.LocalGoals
@@ -82,11 +80,7 @@ fun GlowActivityScreen(
     workouts: List<WorkoutAnalysis>,
     effects: List<SportEffectRow>,
     paiHistory: PaiHistory,
-    battery: Int?,
-    charging: Boolean,
-    onPrev: () -> Unit,
-    onNext: () -> Unit,
-    picker: DayPicker,
+    header: @Composable () -> Unit,
     contentPadding: PaddingValues,
     onOpenMetric: (Metric) -> Unit,
     onOpenWorkout: (Long) -> Unit,
@@ -102,8 +96,6 @@ fun GlowActivityScreen(
     offer: org.openstrap.app.data.AutoStart.Offer? = null,
     onRecordOffer: () -> Unit = {},
     onDeclineOffer: () -> Unit = {},
-    autoStart: Boolean? = null,
-    onAutoStart: (Boolean) -> Unit = {},
     /** Picks the strap's PAI curve for "drops off tomorrow"; null uses Zepp's default (female). */
     paiSex: UserProfile.Sex? = null,
 ) {
@@ -113,11 +105,11 @@ fun GlowActivityScreen(
     val r = recovery?.takeIf { it.date == state.date }
     CompositionLocalProvider(LocalGlowPaused provides { list.isScrollInProgress }) {
         GlowScreenList(contentPadding, list) {
-            full { DateHeader(state.date, battery, onPrev, onNext, charging, picker) }
+            full { header() }
             // Wide: today's movement on the left; load, fitness and workouts on the right.
             // The home for workouts: started from here on today; a past day only shows what was done.
             if (offer != null && state.date == LocalDate.now()) left { OfferPanel(offer, onRecordOffer, onDeclineOffer) }
-            if (state.date == LocalDate.now()) left { StartWorkoutPanel(sports, onStartWorkout, onAllSports, autoStart, onAutoStart) }
+            if (state.date == LocalDate.now()) left { StartWorkoutPanel(sports, onStartWorkout, onAllSports) }
             if (suggestion != null && state.date == LocalDate.now()) left { SuggestionPanel(suggestion, onSaveSuggestion, onDismissSuggestion) }
             left { StepsCard(state, r?.activity) { onOpenMetric(Metric.Steps) } }
             r?.activity?.let { a -> left { MvpaPanel(a) } }

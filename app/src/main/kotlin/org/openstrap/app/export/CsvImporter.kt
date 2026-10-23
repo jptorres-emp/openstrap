@@ -11,9 +11,11 @@ import java.util.zip.ZipInputStream
  * Restores a zip made by [CsvExporter] into the days before the strap's history. The strap keeps weeks of it and syncs
  * them itself, so for each table the backup only fills the local days before the first day the phone has a row on;
  * that day and every day after it are the strap's, gaps included. A sleep or workout that overlaps one on the phone is
- * skipped too, and stages and workout heart rate come back only with their sleep or workout. Restoring twice changes
- * nothing. Runs as one transaction, so a zip that fails part way changes nothing. Files this version doesn't know are
- * skipped.
+ * skipped too, and stages and workout heart rate come back only with their sleep or workout. A strap workout deleted in
+ * OpenStrap, on the phone or by the backup, stays deleted: its row and the sport effect deleted with it are left out, so
+ * its heart rate is too. Restoring twice changes nothing. Runs as one transaction, so a zip that fails part way changes
+ * nothing. Files this version doesn't know are skipped, and a backup from before deleted workouts were kept restores as
+ * it did.
  */
 class CsvImporter(private val db: OpenStrapDatabase, private val zone: ZoneId = ZoneId.systemDefault()) {
 
@@ -29,8 +31,10 @@ class CsvImporter(private val db: OpenStrapDatabase, private val zone: ZoneId = 
         val counts = linkedMapOf<String, Int>()
         // Starts of the sleeps and workouts this restore added: only their stages and heart rate come with them.
         val added = mutableMapOf<String, Set<Long>>()
-        // Child tables wait until every parent is in, whatever order the zip lists them in.
+        // Child tables wait until every parent is in, whatever order the zip lists them in, and the tables a deleted
+        // workout is left out of wait until every deleted workout is in.
         val children = mutableListOf<Pair<CsvTable<*>, List<String>>>()
+        val deletable = mutableListOf<Pair<CsvTable<*>, List<String>>>()
         var present = 0
         var skipped = 0
         fun count(table: CsvTable<*>, o: Outcome) {
@@ -43,17 +47,27 @@ class CsvImporter(private val db: OpenStrapDatabase, private val zone: ZoneId = 
                 // Only this entry's bytes, without closing the zip (a Reader's readLines would close it).
                 val lines = zip.readBytes().toString(Charsets.UTF_8).lines().filter { it.isNotBlank() }
                 if (lines.isEmpty()) continue
-                if (table.key.parent != null) children += table to lines else count(table, table.backfill(lines, added))
+                when {
+                    table.key.parent != null -> children += table to lines
+                    table.key.table in DELETABLE -> deletable += table to lines
+                    else -> count(table, table.backfill(lines, added))
+                }
             }
         }
+        val deleted = db.healthDao().deletedWorkoutsAll()
+        val gone = mapOf(
+            "workout" to deleted.mapTo(HashSet()) { it.start },
+            "sport_effect" to deleted.mapNotNullTo(HashSet()) { it.effectEnd },
+        )
+        for ((table, lines) in deletable) count(table, table.backfill(lines, added, gone[table.key.table].orEmpty()))
         for ((table, lines) in children) count(table, table.backfill(lines, added))
         // Throwing rolls back, so a zip that isn't ours leaves the database untouched.
         if (counts.isEmpty()) throw IllegalArgumentException("This isn't an OpenStrap export.")
         Result(counts, present, skipped)
     }
 
-    /** Writes the rows of [lines] that fall before the phone's first day for this table. */
-    private suspend fun <T> CsvTable<T>.backfill(lines: List<String>, added: MutableMap<String, Set<Long>>): Outcome {
+    /** Writes the rows of [lines] that fall before the phone's first day for this table, less those timed at [gone]. */
+    private suspend fun <T> CsvTable<T>.backfill(lines: List<String>, added: MutableMap<String, Set<Long>>, gone: Set<Long> = emptySet()): Outcome {
         val index = parseLine(lines.first()).withIndex().associate { (i, name) -> name to i }
         var bad = 0
         val rows = mutableListOf<Triple<Long, Long, T>>()
@@ -61,6 +75,7 @@ class CsvImporter(private val db: OpenStrapDatabase, private val zone: ZoneId = 
             runCatching {
                 val cells = CsvRow(index, parseLine(line))
                 val time = cells.long(key.epoch)
+                if (time in gone) return@runCatching
                 rows += Triple(time, key.span?.let { cells.long(it.epoch) } ?: time, parse(cells))
             }.onFailure { bad++ }
         }
@@ -74,7 +89,11 @@ class CsvImporter(private val db: OpenStrapDatabase, private val zone: ZoneId = 
                 else -> {
                     val first = query("SELECT MIN(${key.column}) FROM ${key.table}") { c -> if (c.isNull(0)) null else c.getLong(0) }.single()
                     val cutoff = first?.let { dayStart(it) } ?: Long.MAX_VALUE
-                    val before = rows.filter { it.first < cutoff }
+                    // A deletion is the user's, not the strap's history: every one comes back, less those already here.
+                    val before = if (key.table in WHOLE) {
+                        val have = query("SELECT ${key.column} FROM ${key.table}") { it.getLong(0) }.toHashSet()
+                        rows.filter { it.first !in have }
+                    } else rows.filter { it.first < cutoff }
                     if (span == null) before else {
                         // A night that starts the evening before the strap's first day can still be one it has.
                         val have = query("SELECT ${key.column}, ${span.column} FROM ${key.table} WHERE ${key.column} <= ? AND ${span.column} >= ?", to, from) {
@@ -96,6 +115,12 @@ class CsvImporter(private val db: OpenStrapDatabase, private val zone: ZoneId = 
         db.openHelper.writableDatabase.query(sql, args).use { c -> buildList { while (c.moveToNext()) add(read(c)) } }
 
     companion object {
+        /** Tables whose rows a deleted strap workout takes with it, by its start (workout) or its effect's end. */
+        private val DELETABLE = setOf("workout", "sport_effect")
+
+        /** Tables restored whole rather than only before the phone's first day: what the user did, which the strap can't re-send. */
+        private val WHOLE = setOf("workout_deleted")
+
         /** One CSV line into cells: commas separate, double quotes wrap a cell and "" inside is a quote. */
         fun parseLine(line: String): List<String> {
             val cells = mutableListOf<String>()

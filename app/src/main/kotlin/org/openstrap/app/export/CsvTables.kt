@@ -11,6 +11,7 @@ import org.openstrap.app.data.db.ActivityMinute
 import org.openstrap.app.data.db.BreathRate
 import org.openstrap.app.data.db.CheckInRow
 import org.openstrap.app.data.db.DailyMaxHr
+import org.openstrap.app.data.db.DeletedWorkout
 import org.openstrap.app.data.db.DayTagRow
 import org.openstrap.app.data.db.HealthAlertRow
 import org.openstrap.app.data.db.HealthDao
@@ -241,6 +242,13 @@ val CSV_TABLES: List<CsvTable<*>> = listOf(
         { d, f, t -> d.dismissedWorkoutsAll().filter { it.start in f..t } }, { listOf(it.start, it.end) },
         { DismissedWorkout(it.long("start_epoch"), it.long("end_epoch")) },
         { d, r -> d.insertDismissedWorkouts(r) }),
+    // Strap workouts deleted in OpenStrap. The strap still holds them and re-sends them, so a restore without these
+    // would bring them back. A restore also leaves out the workout rows and sport effects these name.
+    CsvTable("workout_deleted.csv", "start_epoch,effect_end_epoch,deleted_epoch",
+        Key("workout_deleted", "start", "start_epoch"),
+        { d, f, t -> d.deletedWorkoutsAll().filter { it.start in f..t } }, { listOf(it.start, it.effectEnd, it.deletedAt) },
+        { DeletedWorkout(it.long("start_epoch"), it.longOrNull("effect_end_epoch"), it.longOrNull("deleted_epoch") ?: it.long("start_epoch")) },
+        { d, r -> d.insertDeletedWorkouts(r) }),
     CsvTable("sport_effect.csv", "end_epoch,recovery_minutes,vo2max,epoc,weekly_load,monthly_load,optimal_load_min,optimal_load_max,max_hr",
         Key("sport_effect", "`end`", "end_epoch"),
         { d, f, t -> d.sportEffects().first().filter { it.end in f..t } },

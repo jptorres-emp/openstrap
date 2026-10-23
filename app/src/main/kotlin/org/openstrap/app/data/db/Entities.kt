@@ -427,6 +427,12 @@ data class WearEventRow(
 /** A phone workout's finished sets, counted for the workout lists ([HealthDao.setCounts]). */
 data class SetCount(val workoutStart: Long, val sets: Int)
 
+/**
+ * What a workout's HR stream looks like from outside: its last sample, how many there are and their bpm summed. The
+ * workout lists work zones out again only when it changes ([HealthDao.workoutHeartRateMarks]).
+ */
+data class HrStreamMark(val workoutStart: Long, val lastSample: Long, val samples: Int, val bpmSum: Long)
+
 /** One local day of a sampled metric: its average (or total, for steps), lowest, highest and sample count. */
 data class DailyAggregate(
     /** The local date as SQLite prints it, `yyyy-MM-dd`. */

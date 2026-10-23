@@ -166,6 +166,10 @@ interface HealthDao {
     @Query("SELECT workoutStart, MAX(timestamp) AS timestamp, 0 AS bpm FROM workout_hr GROUP BY workoutStart")
     fun lastWorkoutHeartRates(): Flow<List<WorkoutHeartRate>>
 
+    /** Each strap workout's HR stream in brief, so the lists redo a workout's zones only when its stream changes. */
+    @Query("SELECT workoutStart, MAX(timestamp) AS lastSample, COUNT(*) AS samples, SUM(bpm) AS bpmSum FROM workout_hr GROUP BY workoutStart")
+    fun workoutHeartRateMarks(): Flow<List<HrStreamMark>>
+
     @Query("SELECT * FROM sport_effect ORDER BY `end`")
     fun sportEffects(): Flow<List<SportEffectRow>>
 
@@ -216,6 +220,10 @@ interface HealthDao {
 
     @Query("SELECT * FROM app_workout_hr WHERE workoutStart = :start ORDER BY timestamp")
     suspend fun appWorkoutHeartRateOnce(start: Long): List<AppWorkoutHeartRate>
+
+    /** Each phone workout's HR stream in brief, as [workoutHeartRateMarks]; gap filling adds rows, so it changes then too. */
+    @Query("SELECT workoutStart, MAX(timestamp) AS lastSample, COUNT(*) AS samples, SUM(bpm) AS bpmSum FROM app_workout_hr GROUP BY workoutStart")
+    fun appWorkoutHeartRateMarks(): Flow<List<HrStreamMark>>
 
     @Query("SELECT * FROM app_workout_hr ORDER BY workoutStart, timestamp")
     suspend fun appWorkoutHeartRateAll(): List<AppWorkoutHeartRate>

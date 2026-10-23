@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Today, usual workout time</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Doto:wght@700&amp;family=Outfit:wght@300;400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#000}
+.ph{width:390px;background:#000;color:#fff;font-family:Outfit,system-ui,sans-serif;position:relative;overflow:hidden;box-sizing:border-box;padding:12px 16px 0}
+.feed{display:flex;flex-direction:column;gap:12px}
+.row{display:flex;gap:12px}
+.col{display:flex;flex-direction:column;gap:12px}
+.dots{font-family:Doto,monospace;font-weight:700;line-height:.85;letter-spacing:.01em}
+.g{position:relative;overflow:hidden;isolation:isolate;border-radius:36px;box-sizing:border-box;padding:18px 20px;display:flex;flex-direction:column;background:linear-gradient(var(--a,180deg),var(--l) 0%,var(--m) 42%,var(--m) 100%);box-shadow:inset var(--x,0px) var(--y,24px) 38px -14px var(--l),inset 0 0 22px 1px #ffffff10,inset 0 0 0 1px #ffffff16,inset 0 1px 0 #ffffff24}
+.g::after{content:"";position:absolute;inset:0;z-index:2;pointer-events:none;opacity:.5;background-image:radial-gradient(#ffffff0c 1px,transparent 1.2px);background-size:3px 3px}
+.g.hot{box-shadow:inset var(--x,0px) var(--y,24px) 44px -8px var(--l),inset 0 0 30px 4px var(--l),inset 0 0 0 1.5px #ffffff38,inset 0 1px 0 #ffffff30}
+.g.calm{box-shadow:inset var(--x,0px) var(--y,24px) 30px -18px var(--l),inset 0 0 0 1px #ffffff16}
+.g.dim{filter:brightness(.62) saturate(.85)}
+.g.night{filter:brightness(.45) saturate(.8)}
+.core{position:absolute;z-index:0;border-radius:50%;background:var(--c);filter:blur(26px);box-shadow:0 0 0 14px var(--t)}
+.in{position:relative;z-index:1;display:flex;flex-direction:column;height:100%}
+.S{width:173px;height:160px;padding:16px}
+.W{width:358px;height:160px}
+.L{width:358px;height:332px;padding:22px}
+.T{width:173px;height:332px;padding:16px}
+.St{width:358px;height:68px;border-radius:24px;padding:0 20px}
+.St .in{flex-direction:row;align-items:center;gap:10px}
+.rec{--l:hsl(166 70% 50%);--m:hsl(168 62% 14%);--c:hsl(168 80% 3%);--t:hsl(178 55% 11%)}
+.chg{--l:hsl(20 92% 56%);--m:hsl(14 78% 18%);--c:hsl(16 60% 2%);--t:hsl(8 70% 13%)}
+.slp{--l:hsl(229 88% 64%);--m:hsl(230 72% 20%);--c:hsl(232 80% 3%);--t:hsl(242 60% 13%)}
+.hrt{--l:hsl(358 92% 64%);--m:hsl(354 72% 20%);--c:hsl(356 70% 3%);--t:hsl(343 60% 14%)}
+.stp{--l:hsl(80 86% 55%);--m:hsl(84 64% 12%);--c:hsl(82 70% 2%);--t:hsl(96 50% 9%)}
+.hrv{--l:hsl(173 70% 50%);--m:hsl(176 64% 13%);--c:hsl(176 80% 3%);--t:hsl(188 55% 10%)}
+.lod{--l:hsl(262 80% 68%);--m:hsl(262 50% 20%);--c:hsl(262 70% 3%);--t:hsl(245 45% 13%)}
+.neu{--l:hsl(220 10% 55%);--m:hsl(222 10% 11%);--c:hsl(222 10% 2%);--t:hsl(222 8% 8%)}
+.lbl{font-size:15px;font-weight:500;color:#fffffff0}
+.sm{font-size:12.5px;color:#ffffffb8;line-height:1.35}
+.pill{align-self:flex-start;font-size:12px;padding:4px 10px;border-radius:999px;background:#ffffff1c;color:#fffffff0;white-space:nowrap}
+.word{font-weight:500;color:#fff;text-shadow:0 0 14px var(--l)}
+.sent{font-size:22px;line-height:1.22;font-weight:400;letter-spacing:-.01em;margin:0}
+.soft{color:#ffffff73}
+.sp{flex:1}
+.top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.hdr{display:flex;align-items:center;justify-content:space-between;height:60px;margin-bottom:8px}
+.av{width:38px;height:38px;border-radius:50%;background:#1c1c1e;display:flex;align-items:center;justify-content:center;border:0;color:#fff;padding:0}
+.day{display:flex;align-items:center;gap:16px}
+.peek{font-size:15px;color:#ffffff38}
+.mom{display:flex;flex-direction:column;align-items:center;gap:1px}
+.mom b{font-size:12.5px;font-weight:500;color:#ffffff8f}
+.mom span{font-size:17px;font-weight:500}
+.chip{display:flex;align-items:center;gap:7px;background:#16161a;border:1px solid #ffffff12;border-radius:999px;padding:8px 12px;font-size:13px;color:#fff;font-family:inherit}
+.dot{width:7px;height:7px;border-radius:50%;background:#3ddc97}
+.bar{position:absolute;left:16px;right:16px;bottom:22px;display:flex;gap:10px;align-items:center;z-index:5}
+.tabs{flex:1;display:flex;background:#121214f2;border:1px solid #ffffff14;border-radius:999px;padding:6px}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 0 6px;border-radius:999px;font-size:11px;color:#ffffff8c;border:0;background:none;font-family:inherit}
+.tab.on{background:var(--tint,#ffffff1f);color:#fff}
+.act{width:58px;height:58px;border-radius:50%;border:1px solid #ffffff1a;background:#121214;display:flex;align-items:center;justify-content:center;color:#fff;padding:0}
+.edit{align-self:center;background:none;border:0;color:#ffffff80;font-family:inherit;font-size:14px;padding:14px 20px}
+.go{background:#fff;color:#000;border:0;border-radius:999px;font-family:inherit;font-size:17px;font-weight:600;padding:16px 26px;display:flex;align-items:center;gap:10px}
+.ghost{background:#ffffff1a;color:#fff;border:0;border-radius:999px;font-family:inherit;font-size:15px;padding:16px 20px}
+.q{position:relative;isolation:isolate;border-radius:28px;box-sizing:border-box;padding:18px 20px;display:flex;flex-direction:column;background:#000}
+.q::before{content:"";position:absolute;inset:0;border-radius:inherit;border:2px dotted #ffffff4a;pointer-events:none}
+.q.off::before{border-color:var(--l)}
+.q.off .word{color:var(--l);text-shadow:none;background:none;padding-left:0}
+.q>.core{display:none}
+.q.S{padding:16px}
+.q.St{padding:0 20px;border-radius:24px}
+.q{background:#0a0a0b;box-shadow:inset 0 -2px 0 var(--l),inset 0 -30px 32px -28px var(--l),inset 0 0 0 1px #ffffff10}
+.q::before{display:none}
+.q.off{box-shadow:inset 0 -3px 0 var(--l),inset 0 -48px 44px -26px var(--l),inset 0 0 0 1.5px color-mix(in srgb,var(--l) 55%,transparent)}
+.q.neu{box-shadow:inset 0 0 0 1px #ffffff14}
+.qp{box-shadow:inset 0 -2px 0 #ffffff38,inset 0 -26px 30px -26px #ffffff40}
+.q.et{box-shadow:inset 0 2px 0 var(--l),inset 0 30px 32px -28px var(--l),inset 0 0 0 1px #ffffff10}
+.q.er{box-shadow:inset -2px 0 0 var(--l),inset -30px 0 32px -28px var(--l),inset 0 0 0 1px #ffffff10}
+.q.el{box-shadow:inset 2px 0 0 var(--l),inset 30px 0 32px -28px var(--l),inset 0 0 0 1px #ffffff10}
+.q.off.et{box-shadow:inset 0 3px 0 var(--l),inset 0 48px 44px -26px var(--l),inset 0 0 0 1.5px color-mix(in srgb,var(--l) 55%,transparent)}
+.q.prog{box-shadow:inset 0 0 0 1px #ffffff10}
+.q.prog::before{display:block;content:"";position:absolute;inset:auto auto 0 0;height:2px;width:var(--p);border:0;border-radius:2px;background:var(--l);box-shadow:0 -8px 24px 1px var(--l)}
+.q{border:1px solid #ffffff12;border-bottom:2px solid var(--l);box-shadow:inset 0 -30px 32px -28px var(--l)}
+.q.et{border-bottom:1px solid #ffffff12;border-top:2px solid var(--l);box-shadow:inset 0 30px 32px -28px var(--l)}
+.q.er{border-bottom:1px solid #ffffff12;border-right:2px solid var(--l);box-shadow:inset -30px 0 32px -28px var(--l)}
+.q.el{border-bottom:1px solid #ffffff12;border-left:2px solid var(--l);box-shadow:inset 30px 0 32px -28px var(--l)}
+.q.off{border-color:color-mix(in srgb,var(--l) 55%,transparent);border-bottom:3px solid var(--l);box-shadow:inset 0 -48px 44px -26px var(--l)}
+.q.off.et{border-bottom:1.5px solid color-mix(in srgb,var(--l) 55%,transparent);border-top:3px solid var(--l);box-shadow:inset 0 48px 44px -26px var(--l)}
+.q.neu{border:1px solid #ffffff14;box-shadow:none}
+.q.prog{border:1px solid #ffffff12;box-shadow:none}
+.q.prog::before{display:block;content:"";position:absolute;inset:-1px;width:auto;height:auto;border-radius:inherit;border:0;border-bottom:2px solid var(--l);background:none;box-shadow:inset 0 -26px 28px -24px var(--l);-webkit-mask-image:linear-gradient(90deg,#000 var(--p),transparent calc(var(--p) + 5%));mask-image:linear-gradient(90deg,#000 var(--p),transparent calc(var(--p) + 5%))}
+.q{border:1px solid #ffffff12;box-shadow:inset 0 -34px 34px -26px var(--l)}
+.q.et{border:1px solid #ffffff12;box-shadow:inset 0 34px 34px -26px var(--l)}
+.q.er{border:1px solid #ffffff12;box-shadow:inset -34px 0 34px -26px var(--l)}
+.q.el{border:1px solid #ffffff12;box-shadow:inset 34px 0 34px -26px var(--l)}
+.q.off{border:1px solid color-mix(in srgb,var(--l) 45%,transparent);box-shadow:inset 0 -52px 46px -24px var(--l)}
+.q.off.et{border:1px solid color-mix(in srgb,var(--l) 45%,transparent);box-shadow:inset 0 52px 46px -24px var(--l)}
+.q.neu{border:1px solid #ffffff14;box-shadow:none}
+.q.prog{border:1px solid #ffffff12;box-shadow:none}
+.q.prog::before{border-bottom:0;box-shadow:inset 0 -34px 34px -26px var(--l)}
+.list{background:#0f0f11;border-radius:28px;padding:6px 18px 8px;width:358px;box-sizing:border-box;border:1px solid #ffffff0f}
+.lh{display:flex;justify-content:space-between;align-items:center;padding:12px 0 8px}
+.lr{display:flex;align-items:center;gap:12px;padding:13px 0;border:0;border-top:1px solid #ffffff0d;background:none;width:100%;color:#fff;font-family:inherit;text-align:left}
+.lr i{width:8px;height:8px;border-radius:50%;flex:none}
+.lr .n{flex:1;font-size:15px}
+.lr .v{font-family:Doto,monospace;font-weight:700;font-size:22px;line-height:1}
+.lr .s{width:124px;text-align:right;font-size:12.5px;color:#ffffff99}
+.list.wait{opacity:.6}
+.q{box-shadow:inset 0 -30px 34px -28px color-mix(in srgb,var(--l) 50%,transparent)}
+.q.et{box-shadow:inset 0 30px 34px -28px color-mix(in srgb,var(--l) 50%,transparent)}
+.q.er{box-shadow:inset -30px 0 34px -28px color-mix(in srgb,var(--l) 50%,transparent)}
+.q.el{box-shadow:inset 30px 0 34px -28px color-mix(in srgb,var(--l) 50%,transparent)}
+.q.off{box-shadow:inset 0 -44px 42px -26px color-mix(in srgb,var(--l) 75%,transparent)}
+.q.off.et{box-shadow:inset 0 44px 42px -26px color-mix(in srgb,var(--l) 75%,transparent)}
+.q.neu{box-shadow:none}
+.q.prog{box-shadow:inset 0 -30px 34px -28px color-mix(in srgb,var(--l) 50%,transparent)}
+.q.prog::before{display:none}
+.pbar{height:4px;border-radius:2px;background:#ffffff14;margin-top:12px;overflow:hidden;flex:none}
+.pbar i{display:block;height:100%;width:var(--p);background:var(--l);border-radius:2px}
+.g.second{background:linear-gradient(var(--a,180deg),color-mix(in srgb,var(--l) 45%,var(--m)) 0%,var(--m) 38%,var(--m) 100%);box-shadow:inset var(--x,0px) var(--y,24px) 26px -18px color-mix(in srgb,var(--l) 60%,transparent),inset 0 0 0 1px #ffffff16}
+.lr .v{width:70px;text-align:right}
+.lr .s{width:118px}
+.circ{width:30px;height:30px;font-size:13px}
+.ci{white-space:nowrap;font-size:14.5px}
+.lr{display:grid;grid-template-columns:8px 1fr auto;grid-template-areas:"d n v" "d s v";column-gap:12px;row-gap:3px;align-items:center}
+.lr i{grid-area:d}
+.lr .n{grid-area:n}
+.lr .s{grid-area:s;width:auto;text-align:left}
+.lr .v{grid-area:v;width:auto;text-align:right;font-size:24px}
+</style>
+</helmet>
+<div class="ph" style="height:1224px">
+  <div class="hdr">
+    <button class="av" aria-label="You"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg></button>
+    <div class="day"><span class="peek">Wed</span><div class="mom"><b>Workout time</b><span>Thu 23 Oct</span></div><span class="peek" style="width:28px"></span></div>
+    <button class="chip" aria-label="Strap connected, battery 84 percent"><span class="dot"></span>84%</button>
+  </div>
+  <div class="feed">
+    <div class="g L hrt hot" style="--a:225deg;--x:-20px;--y:20px">
+      <div class="core" style="left:-12%;top:30%;width:92%;height:90%"></div>
+      <div class="in">
+        <div class="top"><span class="lbl">Ready for effort</span><span class="pill">Recovery 78</span></div>
+        <p class="sent" style="margin-top:18px"><span class="soft">You usually run</span> <span>around now.</span> <span class="soft">Charge is</span> <span>58, plenty for an hour.</span></p>
+        <div class="sp"></div>
+        <div style="display:flex;gap:10px">
+          <button class="go"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4l13 8-13 8z"/></svg>Start run</button>
+          <button class="ghost">Other sport</button>
+        </div>
+      </div>
+    </div>
+    <div class="g W chg second" style="--a:0deg;--y:-24px">
+        <div class="core" style="left:-30%;top:-34%;width:160%;height:72%;box-shadow:0 0 0 18px var(--t)"></div>
+        <div class="in">
+          <span class="lbl">Charge</span>
+          <div class="sp"></div>
+          <span class="dots" style="font-size:50px">58</span>
+          <span class="sm" style="margin-top:10px">Steady since lunch</span>
+        </div>
+      </div>
+    <div class="list"><div class="lh"><span class="lbl">Before you start</span><span class="sm"></span></div><button class="lr"><i style="background:#a78bfa"></i><span class="n">Load today</span><span class="v">12</span><span class="s">Easy so far</span></button><button class="lr"><i style="background:#7cf2c9"></i><span class="n">Time to recover</span><span class="v">0 h</span><span class="s">Recovered</span></button></div>
+    <div class="q W stp prog" style="--p:90%;--a:90deg;--x:22px;--y:0px">
+      <div class="core" style="left:36%;top:-20%;width:100%;height:140%"></div>
+      <div class="in">
+        <div class="top"><span class="lbl">Activity</span><span class="sm">Goal 8,000</span></div>
+        <div class="sp"></div>
+        <span class="dots" style="font-size:46px">7,180</span>
+        <span class="sm" style="margin-top:8px">About usual for this time</span>
+      <div class="pbar"><i></i></div></div>
+    </div>
+    <div class="q St slp et" style="--a:90deg;--x:18px;--y:0px">
+      <div class="in"><span class="lbl">Last night</span><span class="sm" style="flex:1">7 h 40, score 83</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></div>
+    </div>
+    <button class="edit">Edit Today</button>
+  </div>
+  <div class="bar">
+    <div class="tabs">
+      <button class="tab on"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11l8-7 8 7v9a1 1 0 0 1-1 1h-4v-6h-6v6H5a1 1 0 0 1-1-1z"/></svg>Today</button>
+      <button class="tab"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21v-9"/><path d="M12 12c0-4 3-7 8-7 0 4-3 7-8 7z"/><path d="M12 14c0-3-2-5-7-5 0 3 2 5 7 5z"/></svg>Recovery</button>
+      <button class="tab"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>Sleep</button>
+      <button class="tab"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12h4l3-7 4 14 3-7h4"/></svg>Activity</button>
+    </div>
+    <button class="act" aria-label="Start workout" style="background:#fff;color:#000"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4l13 8-13 8z"/></svg></button>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1224}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

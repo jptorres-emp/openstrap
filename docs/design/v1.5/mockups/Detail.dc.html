@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Metric detail, HRV</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Doto:wght@700&amp;family=Outfit:wght@300;400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#000}
+.ph{width:390px;background:#000;color:#fff;font-family:Outfit,system-ui,sans-serif;position:relative;overflow:hidden;box-sizing:border-box;padding:12px 16px 0}
+.dots{font-family:Doto,monospace;font-weight:700;line-height:.85;letter-spacing:.01em}
+.hero{position:relative;overflow:hidden;isolation:isolate;margin:0 -16px;padding:12px 16px 22px;background:linear-gradient(180deg,hsl(176 64% 13%) 0%,#000 100%);border-radius:0 0 36px 36px;box-shadow:inset 0 -1px 0 #ffffff12}
+.hero::before{content:"";position:absolute;left:-10%;right:-10%;top:-60px;height:120px;background:hsl(173 70% 50%);filter:blur(50px);opacity:.55;z-index:-1}
+.nav{display:flex;align-items:center;justify-content:space-between;height:52px}
+.ib{width:38px;height:38px;border-radius:50%;background:#ffffff1a;border:0;color:#fff;display:flex;align-items:center;justify-content:center;padding:0}
+.sw{display:flex;align-items:center;gap:6px;background:#ffffff1a;border:0;color:#fff;font-family:inherit;font-size:16px;font-weight:500;border-radius:999px;padding:9px 16px}
+.sm{font-size:13px;color:#ffffffb8;line-height:1.4}
+.word{font-weight:500;color:#fff;text-shadow:0 0 16px hsl(173 70% 50%)}
+.days{display:flex;justify-content:space-between;margin-top:20px}
+.d{display:flex;flex-direction:column;align-items:center;gap:6px;width:40px;border:0;background:none;color:#ffffff80;font-family:inherit;font-size:13px;padding:8px 0;border-radius:14px}
+.d i{width:5px;height:5px;border-radius:50%;background:hsl(173 70% 50%)}
+.d.on{background:#ffffff1a;color:#fff}
+.rng{display:flex;background:#121214;border:1px solid #ffffff12;border-radius:999px;padding:4px;margin:18px 0 10px}
+.rng button{flex:1;border:0;background:none;color:#ffffff8c;font-family:inherit;font-size:14px;padding:8px 0;border-radius:999px}
+.rng .on{background:#ffffff1f;color:#fff}
+.sent{font-size:19px;line-height:1.3;margin:14px 0 0}
+.soft{color:#ffffff73}
+.grp{background:#0d0d0f;border:1px solid #ffffff12;border-radius:24px;padding:2px 18px;margin-top:16px}
+.r{display:flex;align-items:center;gap:12px;padding:14px 0;border:0;border-bottom:1px solid #ffffff0d;background:none;width:100%;color:#fff;font-family:inherit;text-align:left;font-size:15px}
+.r:last-child{border-bottom:0}
+.r .v{margin-left:auto;font-size:13.5px;color:#ffffff99}
+.cap{font-size:13px;color:#ffffff80;margin:18px 4px 0}
+.bar{position:absolute;left:16px;right:16px;bottom:22px;display:flex;gap:10px;align-items:center;z-index:5}
+.tabs{flex:1;display:flex;background:#121214f2;border:1px solid #ffffff14;border-radius:999px;padding:6px}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 0 6px;border-radius:999px;font-size:11px;color:#ffffff8c;border:0;background:none;font-family:inherit}
+.tab.on{background:#ffffff1f;color:#fff}
+.act{width:58px;height:58px;border-radius:50%;border:1px solid #ffffff1a;background:#121214;display:flex;align-items:center;justify-content:center;color:#fff;padding:0}
+</style>
+</helmet>
+<div class="ph" style="height:1070px">
+  <div class="hero">
+    <div class="nav">
+      <button class="ib" aria-label="Back"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
+      <button class="sw">HRV<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+      <button class="ib" aria-label="About HRV"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><path d="M12 7.5v.5"/></svg></button>
+    </div>
+    <div style="display:flex;align-items:flex-end;gap:10px;margin-top:22px"><span class="dots" style="font-size:84px">41</span><span class="sm" style="margin-bottom:6px">ms last night</span></div>
+    <div style="margin-top:12px"><span class="word" style="font-size:20px">Below your normal</span></div>
+    <div class="days">
+      <button class="d">Fri<i></i></button><button class="d">Sat<i></i></button><button class="d">Sun<i></i></button><button class="d">Mon<i></i></button><button class="d">Tue<i></i></button><button class="d">Wed<i></i></button><button class="d on">Thu<i></i></button>
+    </div>
+  </div>
+  <div class="rng"><button>Day</button><button class="on">Week</button><button>Month</button><button>Year</button></div>
+  <svg width="358" height="230" viewBox="0 0 358 230" aria-hidden="true">
+    <rect x="0" y="50" width="358" height="70" rx="12" fill="hsl(173 70% 50%)" fill-opacity=".14"/>
+    <text x="352" y="44" text-anchor="end" fill="#ffffff80" font-family="Outfit" font-size="12">Your normal, 44 to 58</text>
+    <polyline points="20,78 70,70 120,92 170,104 220,138 270,150 320,146" fill="none" stroke="hsl(173 70% 60%)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+    <g fill="hsl(173 70% 30%)" stroke="hsl(173 70% 60%)" stroke-width="2"><circle cx="20" cy="78" r="5"/><circle cx="70" cy="70" r="5"/><circle cx="120" cy="92" r="5"/><circle cx="170" cy="104" r="5"/></g>
+    <g fill="hsl(173 80% 70%)"><circle cx="220" cy="138" r="7"/><circle cx="270" cy="150" r="7"/><circle cx="320" cy="146" r="7"/></g>
+    <g fill="hsl(173 80% 70%)" fill-opacity=".35"><circle cx="220" cy="138" r="14"/><circle cx="270" cy="150" r="14"/><circle cx="320" cy="146" r="14"/></g>
+    <g fill="#ffffff73" font-family="Outfit" font-size="12" text-anchor="middle"><text x="20" y="218">Fri</text><text x="70" y="218">Sat</text><text x="120" y="218">Sun</text><text x="170" y="218">Mon</text><text x="220" y="218">Tue</text><text x="270" y="218">Wed</text><text x="320" y="218">Thu</text></g>
+  </svg>
+  <p class="sent"><span>Below your normal for three nights.</span> <span class="soft">Short sleep and hard days often do this. It usually comes back with a few easy nights.</span></p>
+  <div class="cap">Related</div>
+  <div class="grp">
+    <button class="r">Resting heart rate<span class="v">52, usual</span></button>
+    <button class="r">Last night<span class="v">7 h 40</span></button>
+    <button class="r">Recovery<span class="v">78, ready</span></button>
+  </div>
+  <div class="bar">
+    <div class="tabs">
+      <button class="tab on"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11l8-7 8 7v9a1 1 0 0 1-1 1h-4v-6h-6v6H5a1 1 0 0 1-1-1z"/></svg>Today</button>
+      <button class="tab"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21v-9"/><path d="M12 12c0-4 3-7 8-7 0 4-3 7-8 7z"/><path d="M12 14c0-3-2-5-7-5 0 3 2 5 7 5z"/></svg>Recovery</button>
+      <button class="tab"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>Sleep</button>
+      <button class="tab"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12h4l3-7 4 14 3-7h4"/></svg>Activity</button>
+    </div>
+    <button class="act" aria-label="All metrics"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2"/></svg></button>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1070}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

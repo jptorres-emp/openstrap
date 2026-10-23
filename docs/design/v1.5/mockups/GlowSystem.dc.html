@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Glow and sizes</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Doto:wght@700&amp;family=Outfit:wght@300;400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#000}
+.bd{width:1400px;height:1460px;background:#000;color:#fff;font-family:Outfit,system-ui,sans-serif;box-sizing:border-box;padding:44px 56px;display:flex;flex-direction:column;gap:40px}
+h2{font-size:24px;font-weight:500;margin:0 0 6px}
+.cap{font-size:14px;color:#ffffff99;margin:0}
+.dots{font-family:Doto,monospace;font-weight:700;line-height:.85}
+.g{position:relative;overflow:hidden;isolation:isolate;border-radius:30px;box-sizing:border-box;padding:14px 16px;display:flex;flex-direction:column;background:linear-gradient(var(--a,180deg),var(--l) 0%,var(--m) 42%,var(--m) 100%);box-shadow:inset var(--x,0px) var(--y,22px) 34px -14px var(--l),inset 0 0 20px 1px #ffffff10,inset 0 0 0 1px #ffffff16,inset 0 1px 0 #ffffff24}
+.g.hot{box-shadow:inset var(--x,0px) var(--y,22px) 40px -8px var(--l),inset 0 0 28px 4px var(--l),inset 0 0 0 1.5px #ffffff38}
+.g.calm{box-shadow:inset var(--x,0px) var(--y,22px) 26px -18px var(--l),inset 0 0 0 1px #ffffff16}
+.g.night{filter:brightness(.45) saturate(.8)}
+.g.dim{filter:brightness(.65) saturate(.85)}
+.core{position:absolute;z-index:0;border-radius:50%;background:var(--c);filter:blur(22px);box-shadow:0 0 0 12px var(--t)}
+.in{position:relative;z-index:1;display:flex;flex-direction:column;height:100%}
+.chg{--l:hsl(20 92% 56%);--m:hsl(14 78% 18%);--c:hsl(16 60% 2%);--t:hsl(8 70% 13%)}
+.rec{--l:hsl(166 70% 50%);--m:hsl(168 62% 14%);--c:hsl(168 80% 3%);--t:hsl(178 55% 11%)}
+.hrv{--l:hsl(173 70% 50%);--m:hsl(176 64% 13%);--c:hsl(176 80% 3%);--t:hsl(188 55% 10%)}
+.hrt{--l:hsl(358 92% 64%);--m:hsl(354 72% 20%);--c:hsl(356 70% 3%);--t:hsl(343 60% 14%)}
+.eve{--l:hsl(250 70% 62%);--m:hsl(248 50% 12%);--c:hsl(250 60% 2%);--t:hsl(262 40% 9%)}
+.slp{--l:hsl(229 88% 64%);--m:hsl(230 72% 20%);--c:hsl(232 80% 3%);--t:hsl(242 60% 13%)}
+.stp{--l:hsl(80 86% 55%);--m:hsl(84 64% 12%);--c:hsl(82 70% 2%);--t:hsl(96 50% 9%)}
+.lod{--l:hsl(262 80% 68%);--m:hsl(262 50% 20%);--c:hsl(262 70% 3%);--t:hsl(245 45% 13%)}
+.lbl{font-size:13px;font-weight:500}
+.sm{font-size:12px;color:#ffffffb8}
+.sp{flex:1}
+.grp{display:flex;flex-direction:column;gap:12px}
+.tiles{display:flex;gap:12px;align-items:flex-end}
+.tl{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+.tl>span{font-size:12.5px;color:#ffffff99}
+.row{display:flex;gap:56px;align-items:flex-start}
+.e{width:140px;height:120px;border-radius:24px;background:#0a0a0b;border:1px solid #ffffff12;box-sizing:border-box;padding:12px 14px;display:flex;flex-direction:column}
+.e .lbl{font-size:12px}
+.rule{background:#0d0d0f;border:1px solid #ffffff12;border-radius:24px;padding:18px 22px;font-size:14px;line-height:1.55;color:#ffffffcc;width:360px;box-sizing:border-box}
+.rule b{color:#fff;font-weight:500}
+</style>
+</helmet>
+<div class="bd">
+  <div>
+    <h2>Light with meaning</h2>
+    <p class="cap">Nothing moves when idle. The light itself says what the card means.</p>
+  </div>
+  <div class="row">
+    <div class="grp">
+      <span class="lbl">Charge, light rises to the value</span>
+      <div class="tiles">
+        <div class="tl"><div class="g chg" style="width:104px;height:200px;--a:0deg;--y:-22px"><div class="core" style="left:-40%;top:-30%;width:180%;height:104%"></div><div class="in"><div class="sp"></div><span class="dots" style="font-size:34px">20</span></div></div><span>Low</span></div>
+        <div class="tl"><div class="g chg" style="width:104px;height:200px;--a:0deg;--y:-22px"><div class="core" style="left:-40%;top:-34%;width:180%;height:74%"></div><div class="in"><div class="sp"></div><span class="dots" style="font-size:34px">55</span></div></div><span>Half</span></div>
+        <div class="tl"><div class="g chg" style="width:104px;height:200px;--a:0deg;--y:-22px"><div class="core" style="left:-40%;top:-36%;width:180%;height:46%"></div><div class="in"><div class="sp"></div><span class="dots" style="font-size:34px">85</span></div></div><span>Full</span></div>
+      </div>
+    </div>
+    <div class="grp">
+      <span class="lbl">The hero, lit from where the sun is</span>
+      <div class="tiles">
+        <div class="tl"><div class="g rec" style="width:120px;height:120px;--a:45deg;--x:16px;--y:-16px"><div class="core" style="left:40%;top:-20%;width:90%;height:80%"></div></div><span>Waking up</span></div>
+        <div class="tl"><div class="g chg" style="width:120px;height:120px"><div class="core" style="left:-5%;top:45%;width:110%;height:80%"></div></div><span>Midday</span></div>
+        <div class="tl"><div class="g hrt hot" style="width:120px;height:120px;--a:225deg;--x:-16px;--y:16px"><div class="core" style="left:-20%;top:35%;width:90%;height:90%"></div></div><span>Workout time</span></div>
+        <div class="tl"><div class="g eve calm dim" style="width:120px;height:120px;--a:315deg;--x:-16px;--y:-16px"><div class="core" style="left:-30%;top:-30%;width:110%;height:100%"></div></div><span>Evening</span></div>
+        <div class="tl"><div class="g slp night" style="width:120px;height:120px;--a:0deg;--y:-14px"><div class="core" style="left:-30%;top:-40%;width:160%;height:120%"></div></div><span>Night</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="grp">
+      <span class="lbl">Status is strength, never a new colour</span>
+      <div class="tiles">
+        <div class="tl"><div class="g hrv" style="width:150px;height:140px"><div class="core" style="left:15%;top:38%;width:85%;height:70%"></div><div class="in"><span class="lbl">HRV</span><div class="sp"></div><span class="dots" style="font-size:34px">52</span></div></div><span>Usual</span></div>
+        <div class="tl"><div class="g hrv hot" style="width:150px;height:140px"><div class="core" style="left:15%;top:38%;width:85%;height:70%"></div><div class="in"><span class="lbl">HRV</span><div class="sp"></div><span class="dots" style="font-size:34px">41</span></div></div><span>Below your normal</span></div>
+      </div>
+    </div>
+    <div class="grp">
+      <span class="lbl">More effort, more light</span>
+      <div class="tiles">
+        <div class="tl"><div class="g lod calm" style="width:230px;height:120px;--a:0deg;--y:-12px"><div class="core" style="left:-15%;top:-40%;width:130%;height:130%"></div><div class="in"><span class="lbl">Walk</span><div class="sp"></div><span class="sm">Load 9</span></div></div><span>Easy</span></div>
+        <div class="tl"><div class="g lod" style="width:230px;height:120px;--a:0deg;--y:-34px;box-shadow:inset 0 -44px 56px -4px var(--l),inset 0 0 0 1px #ffffff1c"><div class="core" style="left:-15%;top:-70%;width:130%;height:110%"></div><div class="in"><span class="lbl">Intervals</span><div class="sp"></div><span class="sm">Load 72</span></div></div><span>Hard</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="grp">
+    <span class="lbl">Edge light, where the glow sits</span>
+    <div class="tiles">
+      <div class="tl"><div class="e" style="--l:#ff5a5f;box-shadow:inset 0 -30px 34px -28px color-mix(in srgb,var(--l) 50%,transparent)"><span class="lbl">Resting HR</span><div class="sp"></div><span class="dots" style="font-size:28px">52</span></div><span>Usual, soft bottom</span></div>
+      <div class="tl"><div class="e" style="--l:#ff8a3d;border-color:color-mix(in srgb,#ff8a3d 45%,transparent);box-shadow:inset 0 44px 42px -26px color-mix(in srgb,var(--l) 75%,transparent)"><span class="lbl">Skin temp</span><div class="sp"></div><span class="dots" style="font-size:28px;color:#ff8a3d">+0.6</span></div><span>Above normal, top</span></div>
+      <div class="tl"><div class="e" style="--l:#2dd4bf;border-color:color-mix(in srgb,#2dd4bf 45%,transparent);box-shadow:inset 0 -44px 42px -26px color-mix(in srgb,var(--l) 75%,transparent)"><span class="lbl">HRV</span><div class="sp"></div><span class="dots" style="font-size:28px;color:#2dd4bf">41</span></div><span>Below normal, strong bottom</span></div>
+      <div class="tl"><div class="e" style="--l:#c3f53c;box-shadow:inset 0 -30px 34px -28px color-mix(in srgb,var(--l) 50%,transparent)"><span class="lbl">Steps</span><div class="sp"></div><span class="dots" style="font-size:28px">6,420</span><div style="height:4px;border-radius:2px;background:#ffffff14;margin-top:10px"><div style="width:80%;height:100%;border-radius:2px;background:#c3f53c"></div></div></div><span>Progress, thin bar</span></div>
+      <div class="tl"><div class="e" style="--l:#ff5a5f;box-shadow:inset -30px 0 34px -28px color-mix(in srgb,var(--l) 50%,transparent)"><span class="lbl">Heart rate</span><div class="sp"></div><span class="dots" style="font-size:28px">71</span></div><span>Live now, right</span></div>
+      <div class="tl"><div class="e" style="--l:#7cf2c9;box-shadow:inset 30px 0 34px -28px color-mix(in srgb,var(--l) 50%,transparent)"><span class="lbl">Recovery</span><div class="sp"></div><span class="dots" style="font-size:28px">78</span></div><span>From earlier, left</span></div>
+      <div class="tl"><div class="e" style="--l:#4c6fff;box-shadow:inset 0 30px 34px -28px color-mix(in srgb,var(--l) 50%,transparent)"><span class="lbl">Last night</span><div class="sp"></div><span class="dots" style="font-size:28px">7:40</span></div><span>Sleep, top like a night sky</span></div>
+      <div class="tl"><div class="e" style="box-shadow:none;width:190px"><div style="display:flex;align-items:center;gap:8px;font-size:12.5px;padding:6px 0;border-bottom:1px solid #ffffff12"><i style="width:7px;height:7px;border-radius:50%;background:#38bdf8;display:block"></i><span style="flex:1">Blood oxygen</span><b style="font-family:Doto">97%</b></div><div style="display:flex;align-items:center;gap:8px;font-size:12.5px;padding:6px 0"><i style="width:7px;height:7px;border-radius:50%;background:#2dd4bf;display:block"></i><span style="flex:1;color:#5fe8d0">HRV</span><b style="font-family:Doto;color:#5fe8d0">41</b></div></div><span>List row, colour only when off</span></div>
+    </div>
+  </div>
+  <div style="display:flex;gap:56px;align-items:flex-start">
+    <div class="grp">
+      <span class="lbl">Five sizes on a two column grid, shown at half size</span>
+      <div style="display:flex;gap:10px;align-items:flex-start">
+        <div class="tl"><div class="g stp" style="width:87px;height:80px;border-radius:20px;--y:12px"><div class="core" style="left:20%;top:40%;width:80%;height:70%;filter:blur(12px);box-shadow:none"></div></div><span>Small 1x1</span></div>
+        <div class="tl"><div class="g slp" style="width:179px;height:80px;border-radius:20px;--a:90deg;--x:12px;--y:0px"><div class="core" style="left:40%;top:-20%;width:90%;height:140%;filter:blur(14px)"></div></div><span>Wide 2x1</span></div>
+        <div class="tl"><div class="g chg" style="width:87px;height:166px;border-radius:20px;--a:0deg;--y:-14px"><div class="core" style="left:-40%;top:-30%;width:180%;height:70%;filter:blur(14px)"></div></div><span>Tall 1x2</span></div>
+        <div class="tl"><div class="g rec" style="width:179px;height:166px;border-radius:22px;--a:45deg;--x:12px;--y:-12px"><div class="core" style="left:40%;top:-10%;width:80%;height:70%;filter:blur(16px)"></div></div><span>Large 2x2</span></div>
+        <div class="tl"><div class="g" style="width:179px;height:34px;border-radius:14px;--l:hsl(220 10% 55%);--m:hsl(222 10% 11%);--a:90deg;--x:10px;--y:0px"></div><span>Strip</span></div>
+      </div>
+    </div>
+    <div class="rule"><b>The family rule.</b> Locked on every card: corner radius, grain, hairline edge, the black the core fades to, and where the text sits. Free per card: colour for what it is, light side and height for what it means, strength for its status.<br><br><b>Dots are for numbers.</b> Only the dot-matrix digits are made of dots. Charts use lines, arcs, bars and bands.<br><br><b>Three tiers.</b> Glow card for the main card, edge light card for mid cards with a shape of their own, one grouped list for the small facts.<br><br><b>The glow budget.</b> The top card plus at most one more glows on a screen. Mid cards are edge light cards: near black, with a soft glow coming in from one edge in the metric colour. No bright line on the border, only a hairline. Off your normal, the glow grows and the hairline takes the metric colour.<br><br><b>Where the glow sits.</b> Bottom by default. Top when above your normal, bottom when below. Progress lights the bottom edge only as far as the value. Live cards light the right edge (now), cards about earlier light the left. Sleep lights the top, like a night sky.</div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1400,"height":1460}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

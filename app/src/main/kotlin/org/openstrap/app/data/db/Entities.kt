@@ -140,6 +140,8 @@ data class Workout(
     val trainingLoad: Int?,
     val vo2max: Int?,
     val steps: Int?,
+    /** The summary's Type.subtype: 1 auto-detected, 6 a phone workout mirrored on the strap, 0 normal (codemap 05 §8). Null before version 17. */
+    val subtype: Int? = null,
 )
 
 /** Per-second HR during a workout and the strap's 3-minute recovery recording after it (type 6). */

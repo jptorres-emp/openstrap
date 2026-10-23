@@ -465,7 +465,10 @@ internal fun WorkoutLine(a: WorkoutAnalysis, showDate: Boolean, onClick: () -> U
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
-            Text(a.sportName, color = Color.White, style = MaterialTheme.typography.titleSmall)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(a.sportName, color = Color.White, style = MaterialTheme.typography.titleSmall)
+                if (a.autoDetected) StatusPill(AUTO_DETECTED, Color.White.copy(alpha = 0.7f))
+            }
             val start = Instant.ofEpochSecond(a.workout.start).atZone(ZoneId.systemDefault())
             Note(
                 listOfNotNull(

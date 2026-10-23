@@ -36,6 +36,9 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 private fun clock(epoch: Long) = Instant.ofEpochSecond(epoch).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("HH:mm"))
+/** The label on a workout the strap recognised by itself (codemap 05 §8). */
+internal const val AUTO_DETECTED = "Auto-detected"
+
 private fun dateLine(epoch: Long) = Instant.ofEpochSecond(epoch).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("EEE d MMM · HH:mm"))
 
 /**
@@ -53,6 +56,7 @@ fun GlowWorkoutScreen(a: WorkoutAnalysis?, contentPadding: PaddingValues, onBack
                 item { DotPanel { Note("Loading…") } }
                 return@ScreenList
             }
+            if (a.autoDetected) item { StatusPill(AUTO_DETECTED, Color.White.copy(alpha = 0.7f)) }
             item { HeartCard(a) }
             item { SummaryPanel(a) }
             if (a.recovery60 != null) item { RecoveryPanel(a) }

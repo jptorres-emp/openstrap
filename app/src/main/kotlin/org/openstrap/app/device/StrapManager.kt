@@ -74,6 +74,7 @@ class StrapManager(
 ) : StrapController {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val healthAlerts = HealthAlertNotifier(context)
+    private val autoDetected = AutoDetectNotifier(context)
     private val wearNotifier = WearNotifier(context)
 
     override val connection = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
@@ -663,7 +664,7 @@ class StrapManager(
                 while (activeSession === s && !firmwareUpdating.value) {
                     val only = takeNext()
                     if (only != null && only.isEmpty()) break
-                    HistorySync(s, client, dao, settings, sync, ::log).run(only)
+                    HistorySync(s, client, dao, settings, sync, ::log, autoDetected::show).run(only)
                 }
                 runCatching { notifyBodySignals() }.onFailure { log("body signals: $it") }
                 runCatching { WorkoutGapFill(dao) { settings.profile.first() }.run()?.let { log(it) } }.onFailure { log("workout gap fill: $it") }

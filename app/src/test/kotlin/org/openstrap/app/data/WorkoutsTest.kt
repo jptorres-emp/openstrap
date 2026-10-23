@@ -51,4 +51,27 @@ class WorkoutsTest {
         assertEquals(4, Workouts.zoneOf(190, 190))
         assertEquals(4, Workouts.zoneOf(200, 190))
     }
+
+    /** Only a fresh, auto-detected strap workout gets the "detected" notification (codemap 05 §8). */
+    @Test
+    fun autoDetectNotification() {
+        val auto = workout().copy(subtype = Workouts.SUBTYPE_AUTO_DETECTED)
+        val justEnded = auto.end + 600
+        org.junit.Assert.assertTrue(Workouts.notifyAutoDetected(auto, storedBefore = false, now = justEnded))
+        // Already stored: the strap re-sent it, so no second notification.
+        org.junit.Assert.assertFalse(Workouts.notifyAutoDetected(auto, storedBefore = true, now = justEnded))
+        // Backlog from a first sync, more than a day old.
+        org.junit.Assert.assertFalse(Workouts.notifyAutoDetected(auto, storedBefore = false, now = auto.end + Workouts.AUTO_DETECT_NOTIFY_WINDOW_S + 1))
+        // Normal (0), mirrored phone workout (6) and rows from before the subtype was stored (null).
+        listOf(0, 6, null).forEach {
+            org.junit.Assert.assertFalse(Workouts.notifyAutoDetected(auto.copy(subtype = it), storedBefore = false, now = justEnded))
+        }
+    }
+
+    @Test
+    fun autoDetectedLabelOnlyOnStrapWorkouts() {
+        val auto = workout().copy(subtype = Workouts.SUBTYPE_AUTO_DETECTED)
+        org.junit.Assert.assertTrue(Workouts.analyse(auto, emptyList(), emptyList(), 190).autoDetected)
+        org.junit.Assert.assertFalse(Workouts.analyse(workout(), emptyList(), emptyList(), 190).autoDetected)
+    }
 }

@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Text
+import androidx.compose.foundation.clickable
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
@@ -367,27 +368,37 @@ private fun signed(d: Int) = if (d > 0) "+$d" else if (d < 0) "−${-d}" else "S
 private fun ChargeHero(ctx: TodayContext, onOpen: () -> Unit, modifier: Modifier) {
     val c = ctx.rec?.charge
     val now = ctx.charge
+    var info by rememberSaveable { mutableStateOf(false) }
     // Charge is lit to its level from below (spec 2.5), so the moment's angle gives way here.
     GlowCard(GlowStyle.Ember.copy(lightLevel = (now ?: 0) / 100f), modifier, onClick = onOpen) {
         Column {
             GlowHeader("Charge", trailing = c?.atWake?.let { "${it.toInt()} at waking" })
             HeroSentence(TodayCopy.charge(now, c?.atWake?.toInt(), c?.anchored == true, LocalTime.now().hour))
-            // TODO(step 6): the info sheet that explains an estimated start; the strap-off note says it for now.
+            // The caveat marker: tapping it opens Charge's info sheet, which explains the estimated start.
             if (c?.strapOffOvernight == true) Text(
                 "Strap off overnight, so today started from an estimate.",
-                color = Color.White.copy(alpha = 0.7f), style = GlowType.secondary, modifier = Modifier.padding(top = 8.dp),
+                color = Color.White.copy(alpha = 0.7f), style = GlowType.secondary,
+                modifier = Modifier.padding(top = 8.dp).clickable(onClickLabel = "About Charge") { info = true },
             )
             Spacer(Modifier.height(24.dp))
             Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.Bottom) {
                 Column(Modifier.weight(1f)) { HeroFigure(now?.toString(), if (now == null) ctx.waiting else "Now", big = true) }
                 if (c != null && c.anchored) Column(horizontalAlignment = androidx.compose.ui.Alignment.End, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     HeroFigure("+${c.recharged.toInt()}", "Recharged", horizontal = androidx.compose.ui.Alignment.End)
-                    val drained = (c.drainedExercise + c.drainedStress + c.drainedLiving).toInt()
-                    HeroFigure("−$drained", "Drained", horizontal = androidx.compose.ui.Alignment.End)
+                    // Under "Drained" the amount needs no minus (and the dots have no U+2212 to draw it with).
+                    HeroFigure(
+                        org.openstrap.app.ui.dashboard.TabCopy.drainedAmount(c.drainedExercise + c.drainedStress + c.drainedLiving), "Drained",
+                        horizontal = androidx.compose.ui.Alignment.End,
+                    )
                 }
             }
         }
     }
+    if (info) InfoSheet(
+        org.openstrap.app.ui.dashboard.InfoCopy.of(org.openstrap.app.ui.dashboard.Score.Charge), MetricColors.chargeDeep,
+        now?.let(org.openstrap.app.ui.dashboard.InfoCopy::chargeBar), now?.let { org.openstrap.app.ui.dashboard.InfoCopy.HERE },
+        onDismiss = { info = false }, notes = org.openstrap.app.ui.dashboard.InfoCopy.chargeNotes(c),
+    )
 }
 
 /** Your usual workout time: whether you're ready for effort, and a way to start the sport you usually do now. */

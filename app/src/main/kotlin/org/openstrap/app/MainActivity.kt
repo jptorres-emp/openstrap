@@ -641,11 +641,17 @@ private fun AppRoot(
                 val pop: () -> Unit = { setStack(t, stack.dropLast(1)) }
                 val push: (Detail) -> Unit = { setStack(t, stack + it) }
                 when (val detail = stack.last()) {
+                    // A switcher pick takes the detail's place; anything else it opens goes on top.
                     is Detail.OfMetric -> MetricDetail(
                         detail.metric, day, history = history,
                         liveHeartRate = live, liveEnabled = liveEnabled, canUseLive = connection is ConnectionState.Connected,
                         onLiveToggle = { container.strap.setLiveHeartRate(it) },
-                        onOpenMetric = { push(Detail.OfMetric(it)) },
+                        onOpen = push, onSwitch = { setStack(t, stack.dropLast(1) + it) }, onSelectDay = dayVm::select,
+                        contentPadding = padding, onBack = pop,
+                    )
+                    is Detail.OfScore -> org.openstrap.app.ui.glow.GlowScoreDetailScreen(
+                        detail.score, day, recovery, strapReadiness?.takeIf { it.day == day.dayStart }?.score, history,
+                        onOpen = push, onSwitch = { setStack(t, stack.dropLast(1) + it) }, onSelectDay = dayVm::select,
                         contentPadding = padding, onBack = pop,
                     )
                     is Detail.Workout -> WorkoutDetail(
@@ -664,6 +670,7 @@ private fun AppRoot(
                             day, recovery, history,
                             header = { org.openstrap.app.ui.glow.PageHeader("Recovery", pop, subtitle = org.openstrap.app.ui.glow.dayName(day.date)) },
                             contentPadding = padding, onOpenMetric = { push(Detail.OfMetric(it)) },
+                            onOpenScore = { push(Detail.OfScore(it)) }, strapScore = strapReadiness?.takeIf { it.day == day.dayStart }?.score,
                             healthspan = healthspan, onOpenHealthspan = { seeHabitAge(); push(Detail.Healthspan) }, onOpenProfile = { openPage(Page.Profile) },
                         )
                     }
@@ -741,6 +748,8 @@ private fun AppRoot(
                             Tab.Recovery -> org.openstrap.app.ui.glow.GlowRecoveryScreen(
                                 day, recovery, history, header = { header(Tab.Recovery) }, contentPadding = padding,
                                 onOpenMetric = { recoveryStack = listOf(Detail.OfMetric(it)) },
+                                onOpenScore = { recoveryStack = listOf(Detail.OfScore(it)) },
+                                strapScore = strapReadiness?.takeIf { it.day == day.dayStart }?.score,
                                 healthspan = healthspan, onOpenHealthspan = { seeHabitAge(); recoveryStack = listOf(Detail.Healthspan) },
                                 onOpenProfile = { openPage(Page.Profile) },
                                 showCharge = showCharge, onChargeShown = { showCharge = false },
@@ -1034,10 +1043,12 @@ private fun MetricDetail(
     liveEnabled: Boolean,
     canUseLive: Boolean,
     onLiveToggle: (Boolean) -> Unit,
-    onOpenMetric: (org.openstrap.app.ui.dashboard.Metric) -> Unit,
+    onOpen: (Detail) -> Unit,
+    onSwitch: (Detail) -> Unit,
+    onSelectDay: (java.time.LocalDate) -> Unit,
     contentPadding: androidx.compose.foundation.layout.PaddingValues,
     onBack: () -> Unit,
-) = org.openstrap.app.ui.glow.GlowMetricDetailScreen(metric, state, history, liveHeartRate, liveEnabled, canUseLive, onLiveToggle, onOpenMetric, contentPadding, onBack)
+) = org.openstrap.app.ui.glow.GlowMetricDetailScreen(metric, state, history, liveHeartRate, liveEnabled, canUseLive, onLiveToggle, onOpen, onSwitch, onSelectDay, contentPadding, onBack)
 
 /** A workout's detail. */
 @androidx.compose.runtime.Composable

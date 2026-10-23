@@ -1,8 +1,10 @@
 package org.openstrap.app.ui.glow
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -10,10 +12,14 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -24,26 +30,45 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import org.openstrap.app.data.DayStat
 import org.openstrap.app.data.History
 import org.openstrap.app.ui.components.ChartPoint
 import org.openstrap.app.ui.components.pressClickable
-import org.openstrap.app.ui.dashboard.ABOUT
 import org.openstrap.app.ui.dashboard.DailyHistory
 import org.openstrap.app.ui.dashboard.DayUiState
+import org.openstrap.app.ui.dashboard.Detail
+import org.openstrap.app.ui.dashboard.DetailCopy
+import org.openstrap.app.ui.dashboard.InfoCopy
 import org.openstrap.app.ui.dashboard.Metric
+import org.openstrap.app.ui.dashboard.NIGHTLY
 import org.openstrap.app.ui.dashboard.RELATED
 import org.openstrap.app.ui.dashboard.Range
 import org.openstrap.app.ui.dashboard.ScreenList
+import org.openstrap.app.ui.dashboard.avg
 import org.openstrap.app.ui.dashboard.colorOf
+import org.openstrap.app.ui.dashboard.siblingsOf
 import org.openstrap.app.ui.theme.AppIcons
 import java.time.DayOfWeek
 import java.time.Instant
@@ -95,14 +120,263 @@ internal fun GlowSegments(options: List<String>, selected: Int, onSelect: (Int) 
     }
 }
 
+/* ---------------------------------------------- Template --------------------------------------------- */
+
+/**
+ * What a detail's hero says: the [value] in dots, the [label] beside it ("ms, day average", or the time or date under
+ * the finger while scrubbing) and the status [word] under it in the metric's colour. Without a value the [word] is the
+ * state ("Learning", "No reading") and stands large in the value's place, the [label] under it says why, never a lone
+ * dash ([DetailHeadline.none]).
+ */
+internal data class DetailHeadline(val value: String?, val label: String, val word: String?) {
+    companion object {
+        /** No value: the state as a word, and what it waits for or why. */
+        fun none(state: String, why: String) = DetailHeadline(null, why, state)
+    }
+}
+
+/** A detail the switcher can move to: its [title], and whether it's the one showing. */
+internal class DetailSibling(val title: String, val current: Boolean, val open: () -> Unit)
+
+/** The siblings of [detail] for its switcher, each opening in its place through [onSwitch]. */
+internal fun siblings(detail: Detail, onSwitch: (Detail) -> Unit): List<DetailSibling> = siblingsOf(detail).map { d ->
+    val title = when (d) {
+        is Detail.OfMetric -> d.metric.title
+        is Detail.OfScore -> d.score.title
+        else -> ""
+    }
+    DetailSibling(title, d == detail) { if (d != detail) onSwitch(d) }
+}
+
+/** The big value in the detail's hero: larger dots than a card's, like the mockup's 84 px figure. */
+private val DetailDot = 6.dp
+private val DetailGap = 2.2.dp
+
+/**
+ * The metric detail template (spec 6.1), one for every number. The hero, tinted with [color] and fading to black,
+ * carries back, the switcher across [siblings] ([title] on it), the (i) that opens the info sheet ([onInfo]), the
+ * [headline] and the seven-day [strip] ([onDay] picks a day). Under it the [ranges] as pills when there's more than
+ * one, then [body]: the chart, the sentence and the rows. [heroValue] replaces the value row (Recovery's arc), and
+ * [heroSide] sits to its right (heart rate's Live switch).
+ */
+@Composable
+internal fun DetailTemplate(
+    title: String,
+    color: Color,
+    siblings: List<DetailSibling>,
+    onInfo: () -> Unit,
+    onBack: () -> Unit,
+    contentPadding: PaddingValues,
+    headline: DetailHeadline,
+    strip: List<DetailCopy.StripDay>,
+    onDay: (LocalDate) -> Unit,
+    ranges: List<Range>,
+    range: Range,
+    onRange: (Range) -> Unit,
+    heroValue: (@Composable () -> Unit)? = null,
+    heroSide: (@Composable () -> Unit)? = null,
+    body: LazyListScope.() -> Unit,
+) {
+    BackHandler(onBack = onBack)
+    val list = rememberLazyListState()
+    var switching by remember { mutableStateOf(false) }
+    val gutter = GlowLayout.WideGutter
+    CompositionLocalProvider(LocalGlowPaused provides { list.isScrollInProgress }) {
+        ScreenList(contentPadding, list, gutter = gutter) {
+            item {
+                DetailHero(color, gutter) {
+                    DetailNav(title, siblings.size > 1, onBack, onInfo, onSwitch = { switching = true })
+                    Row(Modifier.fillMaxWidth().padding(top = 22.dp), verticalAlignment = Alignment.Bottom) {
+                        Box(Modifier.weight(1f)) {
+                            when {
+                                heroValue != null -> heroValue()
+                                // No number: the state in words, large in the value's place, as a Small does.
+                                headline.value == null -> Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Text(headline.word ?: "No reading", color = Color.White, style = GlowType.label.copy(fontSize = 30.sp, lineHeight = 36.sp))
+                                    Text(headline.label, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary.copy(fontSize = 13.sp))
+                                }
+                                else -> Row(verticalAlignment = Alignment.Bottom) {
+                                    DotMatrixText(headline.value, dot = DetailDot, gap = DetailGap)
+                                    Text(
+                                        headline.label, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA),
+                                        style = GlowType.secondary.copy(fontSize = 13.sp), modifier = Modifier.padding(start = 10.dp, bottom = 2.dp),
+                                    )
+                                }
+                            }
+                        }
+                        heroSide?.invoke()
+                    }
+                    if (heroValue != null) Text(
+                        headline.label, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA),
+                        style = GlowType.secondary.copy(fontSize = 13.sp), modifier = Modifier.padding(top = 8.dp),
+                    )
+                    if (headline.word != null && headline.value != null) StatusWord(headline.word, color, Modifier.padding(top = 12.dp))
+                    if (strip.isNotEmpty()) WeekStrip(strip, color, onDay, Modifier.padding(top = 20.dp))
+                }
+            }
+            if (ranges.size > 1) item { RangePills(ranges, range, onRange) }
+            body()
+        }
+    }
+    if (switching) SwitcherSheet(siblings, color, onDismiss = { switching = false })
+}
+
+/** The hero's tint: the metric's colour at the top fading to black, rounded at the foot, as wide as the screen. */
+@Composable
+private fun DetailHero(color: Color, gutter: Dp, content: @Composable () -> Unit) {
+    val shape = RoundedCornerShape(bottomStart = 36.dp, bottomEnd = 36.dp)
+    Column(
+        Modifier
+            // Out to the screen's edges, past the list's gutter.
+            .layout { measurable, constraints ->
+                val extra = gutter.roundToPx() * 2
+                val w = constraints.maxWidth + extra
+                val placeable = measurable.measure(constraints.copy(minWidth = w, maxWidth = w))
+                layout(constraints.maxWidth, placeable.height) { placeable.place(-extra / 2, 0) }
+            }
+            .clip(shape)
+            .drawBehind {
+                drawRect(Brush.verticalGradient(listOf(lerp(Color.Black, color, 0.2f), Color.Black)))
+                drawRect(Brush.radialGradient(listOf(color.copy(alpha = 0.4f), Color.Transparent), Offset(size.width / 2, -size.height * 0.1f), size.width * 0.7f))
+                // The hairline along the foot; its top is above the clip, so only the foot and its corners show.
+                val r = 36.dp.toPx()
+                drawRoundRect(
+                    Color.White.copy(alpha = 0.07f), Offset(0.5f, -r), Size(size.width - 1f, size.height + r - 0.5f), CornerRadius(r),
+                    style = Stroke(1.dp.toPx()),
+                )
+            }
+            .padding(start = gutter, end = gutter, top = 4.dp, bottom = 22.dp),
+    ) { content() }
+}
+
+/** Back, the switcher in the middle (a plain title when there's nothing to switch to), and the (i). */
+@Composable
+private fun DetailNav(title: String, switchable: Boolean, onBack: () -> Unit, onInfo: () -> Unit, onSwitch: () -> Unit) {
+    Row(Modifier.fillMaxWidth().height(52.dp), verticalAlignment = Alignment.CenterVertically) {
+        RoundButton(AppIcons.ArrowLeft, "Back", onBack)
+        Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+            Row(
+                Modifier.clip(RoundedCornerShape(50)).background(Color.White.copy(alpha = 0.10f))
+                    .let { if (switchable) it.clickable(onClickLabel = "Switch metric", role = Role.Button, onClick = onSwitch) else it }
+                    .padding(horizontal = 16.dp, vertical = 9.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(title, color = Color.White, style = GlowType.label.copy(fontSize = 16.sp), maxLines = 1)
+                if (switchable) {
+                    Spacer(Modifier.width(6.dp))
+                    Icon(AppIcons.CaretDown, null, tint = Color.White, modifier = Modifier.size(14.dp))
+                }
+            }
+        }
+        RoundButton(AppIcons.Info, "About $title", onInfo)
+    }
+}
+
+/** A 38 dp round glass button with an icon, as on the detail mockup. */
+@Composable
+internal fun RoundButton(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, onClick: () -> Unit, size: Dp = 38.dp) {
+    Box(
+        Modifier.size(size).clip(CircleShape).background(Color.White.copy(alpha = 0.10f)).clickable(onClickLabel = label, role = Role.Button, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) { Icon(icon, label, Modifier.size(size * 0.47f), tint = Color.White) }
+}
+
+/** The status word under the value, in the metric's colour with a soft glow of it. */
+@Composable
+private fun StatusWord(word: String, color: Color, modifier: Modifier = Modifier) {
+    Text(
+        word, modifier = modifier, color = lerp(color, Color.White, 0.25f),
+        style = GlowType.label.copy(fontSize = 20.sp, lineHeight = 26.sp, shadow = Shadow(color.copy(alpha = 0.8f), blurRadius = 16f)),
+    )
+}
+
+/** The seven days: each day's short name, a dot under days with data, the day shown on a soft pill. */
+@Composable
+private fun WeekStrip(days: List<DetailCopy.StripDay>, color: Color, onDay: (LocalDate) -> Unit, modifier: Modifier = Modifier) {
+    Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        days.forEach { d ->
+            Column(
+                Modifier.width(40.dp).clip(RoundedCornerShape(14.dp))
+                    .background(if (d.selected) Color.White.copy(alpha = 0.10f) else Color.Transparent)
+                    .clickable(onClickLabel = "Show ${d.label}", role = Role.Button) { onDay(d.date) }
+                    .padding(vertical = 8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                Text(d.label, color = if (d.selected) Color.White else Color.White.copy(alpha = 0.5f), style = GlowType.secondary.copy(fontSize = 13.sp), maxLines = 1)
+                Box(Modifier.size(5.dp).background(if (d.hasData) color else Color.Transparent, CircleShape))
+            }
+        }
+    }
+}
+
+/** Day, Week, Month, Year: a dark track with the chosen one on a soft pill. */
+@Composable
+private fun RangePills(ranges: List<Range>, range: Range, onRange: (Range) -> Unit) {
+    val shape = RoundedCornerShape(50)
+    Row(
+        Modifier.fillMaxWidth().padding(top = 6.dp).clip(shape).background(Color(0xFF121214)).border(1.dp, Color.White.copy(alpha = 0.07f), shape).padding(4.dp),
+    ) {
+        ranges.forEach { r ->
+            val on = r == range
+            Box(
+                Modifier.weight(1f).clip(shape).background(if (on) Color.White.copy(alpha = 0.12f) else Color.Transparent)
+                    .clickable(role = Role.Tab) { onRange(r) }.padding(vertical = 8.dp),
+                contentAlignment = Alignment.Center,
+            ) { Text(r.label, color = if (on) Color.White else Color.White.copy(alpha = 0.55f), style = GlowType.label.copy(fontSize = 14.sp, fontWeight = null)) }
+        }
+    }
+}
+
+/** The switcher's choices, as a sheet over the detail: the group's details, the one showing ticked. */
+@Composable
+private fun SwitcherSheet(siblings: List<DetailSibling>, color: Color, onDismiss: () -> Unit) {
+    org.openstrap.app.ui.components.GlassSheet(onDismiss) {
+        Column(Modifier.padding(horizontal = 16.dp).navigationBarsPadding().padding(bottom = 16.dp)) {
+            ListPanel {
+                siblings.forEachIndexed { i, s ->
+                    ListRow(
+                        s.title, if (s.current) color else Color.White.copy(alpha = 0.3f), null, if (s.current) "Showing" else null,
+                        onClick = { onDismiss(); s.open() }, divider = i > 0, dash = false,
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** The one time-aware sentence under the chart. */
+@Composable
+internal fun DetailSentence(text: String) {
+    Text(text, color = Color.White, style = GlowType.label.copy(fontSize = 19.sp, lineHeight = 25.sp, fontWeight = FontWeight.Normal), modifier = Modifier.padding(top = 4.dp))
+}
+
+/** What a chart says while there's nothing to draw. */
+@Composable
+internal fun DetailEmpty(text: String) {
+    Text(text, color = Color.White.copy(alpha = 0.6f), style = GlowType.secondary.copy(fontSize = 14.sp), modifier = Modifier.padding(vertical = 24.dp))
+}
+
 /* ------------------------------------------- Metric detail ------------------------------------------ */
 
 private val HOURS = listOf("00", "06", "12", "18", "24")
 
+/** A day's value of [metric]: the live or latest heart rate, the strap's resting heart rate, the day's steps, else the average of its readings. */
+internal fun dayValue(metric: Metric, state: DayUiState, live: Int? = null): Float? = when (metric) {
+    Metric.HeartRate -> (live ?: state.latestHeartRate)?.toFloat()
+    Metric.RestingHr -> state.restingHeartRate?.toFloat()
+    Metric.Steps -> state.steps.toFloat().takeIf { it > 0f }
+    Metric.Hrv -> state.hrv.avg()?.toFloat()
+    Metric.Spo2 -> state.spo2.avg()?.toFloat()
+    Metric.Stress -> state.stress.avg()?.toFloat()
+    Metric.SkinTemperature -> state.skinTemperature.takeIf { it.isNotEmpty() }?.map { it.y }?.average()?.toFloat()
+    Metric.Breathing -> state.breathRate.takeIf { it.isNotEmpty() }?.map { it.y }?.average()?.toFloat()
+}
+
 /**
- * One metric in the glow language. A single card glows in the metric's colour: the number and chart for the
- * chosen range (the day, or a week, month or year of daily values against your normal). Your normal, the range's
- * lowest and highest, what the metric means and related metrics sit in dot panels underneath.
+ * A metric's detail (spec 6.1) in the [DetailTemplate]: the day's value and its readings, or a week, month or year of
+ * daily values (weekly for a year) against your normal, with related metrics under them. [onSwitch] puts a sibling in
+ * this one's place, [onOpen] pushes another detail, [onSelectDay] changes the day shown everywhere.
  */
 @Composable
 fun GlowMetricDetailScreen(
@@ -113,38 +387,99 @@ fun GlowMetricDetailScreen(
     liveEnabled: Boolean,
     canUseLive: Boolean,
     onLiveToggle: (Boolean) -> Unit,
-    onOpenMetric: (Metric) -> Unit,
+    onOpen: (Detail) -> Unit,
+    onSwitch: (Detail) -> Unit,
+    onSelectDay: (LocalDate) -> Unit,
     contentPadding: PaddingValues,
     onBack: () -> Unit,
 ) {
-    BackHandler(onBack = onBack)
     var rangeIndex by rememberSaveable(metric) { mutableIntStateOf(0) }
     val range = Range.entries[rangeIndex]
     val end = state.date
-    val from = end.minusDays(maxOf(range.days, History.NORMAL_DAYS) - 1L)
-    val stats by remember(metric, end, from) { history(metric.daily, from, end) }.collectAsState(null)
+    val today = LocalDate.now()
+    val strip0 = DetailCopy.strip(end, today, emptySet())
+    val to = maxOf(end, strip0.last().date)
+    val from = minOf(end.minusDays(maxOf(range.days, History.NORMAL_DAYS) - 1L), strip0.first().date)
+    val stats by remember(metric, from, to) { history(metric.daily, from, to) }.collectAsState(null)
     val normal = stats?.let { History.normal(it, end) }
-    val list = rememberLazyListState()
+    val normalDays = stats?.count { it.date in end.minusDays(History.NORMAL_DAYS - 1L)..end } ?: 0
+    val color = colorOf(metric)
+    val nightly = metric in NIGHTLY
+    val isToday = end == today
+    val live = if (metric == Metric.HeartRate && isToday && canUseLive && liveEnabled) liveHeartRate else null
+    var scrub by remember(metric, range, end) { mutableStateOf<DetailHeadline?>(null) }
+    var info by rememberSaveable(metric) { mutableStateOf(false) }
 
-    CompositionLocalProvider(LocalGlowPaused provides { list.isScrollInProgress }) {
-        ScreenList(contentPadding, list, gutter = GlowLayout.Gutter) {
-            item { GlowDetailHeader(metric.title, dayName(state.date), onBack) }
-            item { GlowSegments(Range.entries.map { it.label }, rangeIndex, { rangeIndex = it }) }
-            if (range == Range.Day) {
-                item {
-                    DayCard(metric, state, normal, if (metric == Metric.HeartRate && state.date == LocalDate.now() && canUseLive) liveEnabled else null, liveHeartRate, onLiveToggle)
-                }
-            } else {
-                item { HistoryCard(metric, range, stats, normal, end) }
-                val summary = stats?.let { History.summary(it, end.minusDays(range.days - 1L), end) }
-                if (summary != null) item { LowHighPanel(metric, range, summary) }
-            }
-            item { NormalPanel(metric, normal, stats?.count { it.date in end.minusDays(History.NORMAL_DAYS - 1L)..end } ?: 0) }
-            item { AboutPanel(metric) }
-            val related = RELATED[metric].orEmpty()
-            if (related.isNotEmpty()) item { RelatedPanel(related, onOpenMetric) }
-        }
+    // The range's number and the daily values its chart draws (weekly over a year).
+    val start = end.minusDays(range.days - 1L)
+    val summary = stats?.takeIf { range != Range.Day }?.let { History.summary(it, start, end) }
+    val value = if (range == Range.Day) dayValue(metric, state, live) else summary?.average
+    // Heart rate's normal is a daily average, not a reading, so the day's reading gets no word.
+    val status = if (range == Range.Year || (range == Range.Day && metric == Metric.HeartRate)) null else History.status(value, normal)
+    val headline = scrub ?: when {
+        value != null -> DetailHeadline(
+            metric.format(value).replace(",", ""), DetailCopy.valueLabel(metric, range, live = live != null, today = isToday), DetailCopy.statusWord(status),
+        )
+        range != Range.Day && stats == null -> DetailHeadline.none("Loading", DetailCopy.noValue(metric, range, isToday))
+        else -> DetailHeadline.none("No reading", DetailCopy.noValue(metric, range, isToday))
     }
+    val withData = stats.orEmpty().map { it.date }.toSet()
+
+    DetailTemplate(
+        metric.title, color, siblings(Detail.OfMetric(metric), onSwitch), onInfo = { info = true }, onBack = onBack,
+        contentPadding = contentPadding, headline = headline,
+        strip = DetailCopy.strip(end, today, withData), onDay = onSelectDay,
+        ranges = Range.entries, range = range, onRange = { rangeIndex = it.ordinal },
+        heroSide = if (metric == Metric.HeartRate && isToday && canUseLive && range == Range.Day) {
+            {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Live", color = Color.White.copy(alpha = 0.85f), style = GlowType.secondary)
+                    Spacer(Modifier.width(8.dp))
+                    GlowSwitch(liveEnabled, onLiveToggle, accent = color)
+                }
+            }
+        } else null,
+    ) {
+        if (range == Range.Day) {
+            item { DayChart(metric, state, color, value != null, normalOf = { m -> rememberNormal(m, end, history) }) { scrub = it } }
+            val sentence = when {
+                value == null -> null
+                metric == Metric.HeartRate -> state.heartRate.takeIf { it.isNotEmpty() }?.let { s ->
+                    DetailCopy.heartDay(s.minOf { it.y }.toInt(), s.maxOf { it.y }.toInt(), isToday)
+                }
+                else -> DetailCopy.day(status, org.openstrap.app.ui.dashboard.daySource(metric), isToday, normalDays)
+            }
+            if (sentence != null) item { DetailSentence(sentence) }
+        } else {
+            val inRange = stats
+            item {
+                when {
+                    inRange == null -> DetailEmpty("Loading")
+                    summary == null -> DetailEmpty("No ${inSentence(metric.title)} in this range yet.")
+                    else -> HistoryChart(metric, range, inRange, normal, start, end, color) { scrub = it }
+                }
+            }
+            val sentence = when {
+                inRange == null || summary == null -> null
+                range == Range.Year -> History.weekly(inRange.filter { it.date in start..end }).takeIf { it.isNotEmpty() }?.let { w ->
+                    DetailCopy.year(metric.format(w.minOf { it.value }), metric.format(w.maxOf { it.value }), metric.unit)
+                }
+                else -> {
+                    val days = generateSequence(start) { it.plusDays(1) }.takeWhile { !it.isAfter(end) }.toList()
+                    val byDate = inRange.associate { it.date to it.value }
+                    DetailCopy.span(range, DetailCopy.levels(days.map { byDate[it] }, normal), nightly, normal != null, normalDays)
+                }
+            }
+            if (sentence != null) item { DetailSentence(sentence) }
+        }
+        val related = RELATED[metric].orEmpty()
+        if (related.isNotEmpty()) item { RelatedList(related, state, history, onOpen) }
+    }
+
+    if (info) InfoSheet(
+        InfoCopy.of(metric), color, InfoCopy.normalBar(if (range == Range.Year) null else History.status(value, normal)),
+        InfoCopy.normalLine(normal, normalDays, metric::format, metric.unit, nightly), onDismiss = { info = false },
+    )
 }
 
 /** Averages timed points into evenly spaced buckets across [range]; empty buckets are gaps. */
@@ -159,25 +494,18 @@ private fun evenly(points: List<ChartPoint>, range: LongRange, seconds: Long): L
     return List(n) { if (counts[it] == 0) null else sums[it] / counts[it] }
 }
 
+/** A name inside a sentence: lower case, unless it's an acronym like HRV. */
+internal fun inSentence(name: String): String = if (name.all { it.isUpperCase() || it.isDigit() }) name else name.lowercase()
+
 private fun clock(epoch: Long) = Instant.ofEpochSecond(epoch).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("HH:mm"))
 
-/** "Usually 65" and where the value sits against your normal, as hero facts. */
-private fun normalFacts(metric: Metric, value: Float?, normal: History.Normal?): List<String> = listOfNotNull(
-    normal?.let { "Usually ${metric.format(it.mean)}" },
-    when (History.status(value, normal)) {
-        1 -> "Above your normal"
-        -1 -> "Below your normal"
-        0 -> "Within your normal"
-        else -> null
-    },
-)
-
-/** The selected day: today's number, how it compares, and the day's own chart. */
+/**
+ * The selected day's own chart: steps by the hour, the week of resting heart rates, or the day's readings as a line
+ * to scrub, which moves the headline ([onScrub], null on release). Heart rate's line has your resting range behind it.
+ */
 @Composable
-private fun DayCard(metric: Metric, state: DayUiState, normal: History.Normal?, liveEnabled: Boolean?, live: Int?, onLiveToggle: (Boolean) -> Unit) {
-    val color = colorOf(metric)
+private fun DayChart(metric: Metric, state: DayUiState, color: Color, hasValue: Boolean, normalOf: @Composable (Metric) -> History.Normal?, onScrub: (DetailHeadline?) -> Unit) {
     val day = state.dayStart..state.dayEnd
-    // The day's series (and its window) for metrics drawn as a line.
     val (series, window) = when (metric) {
         Metric.HeartRate -> state.heartRate to day
         Metric.Hrv -> state.hrv to day
@@ -187,124 +515,64 @@ private fun DayCard(metric: Metric, state: DayUiState, normal: History.Normal?, 
         Metric.Breathing -> state.breathRate to (state.sleep?.let { it.start..it.end } ?: day)
         else -> emptyList<ChartPoint>() to day
     }
-    val value: Float? = when (metric) {
-        Metric.HeartRate -> (live ?: state.latestHeartRate)?.toFloat()
-        Metric.RestingHr -> state.restingHeartRate?.toFloat()
-        Metric.Steps -> state.steps.toFloat()
-        else -> series.takeIf { it.isNotEmpty() }?.map { it.y }?.average()?.toFloat()
+    if (!hasValue) {
+        DetailEmpty(if (metric == Metric.Breathing) "Breathing rate is measured during sleep." else "No ${inSentence(metric.title)} for this day yet.")
+        return
     }
-    val style = GlowStyle.chart(color).copy(motion = if (metric == Metric.HeartRate) GlowMotion.Heartbeat(value?.toInt() ?: 62) else GlowMotion.Still)
-    GlowCard(style, Modifier.fillMaxWidth()) {
-        Column {
-            GlowHeader(
-                when (metric) {
-                    Metric.HeartRate -> if (live != null) "Now" else "Latest"
-                    Metric.RestingHr -> "Resting"
-                    Metric.Steps -> "Total"
-                    Metric.Breathing -> "Average during sleep"
-                    else -> "Day average"
-                },
-                trailingContent = liveEnabled?.let { on ->
-                    {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("Live", color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodySmall)
-                            Spacer(Modifier.width(8.dp))
-                            GlowSwitch(on, onLiveToggle, accent = style.color)
-                        }
-                    }
-                },
+    Column(Modifier.padding(top = 8.dp)) {
+        when (metric) {
+            // Holding an hour puts its steps in the headline.
+            Metric.Steps -> GlowDotBars(
+                state.hourlySteps, height = 200.dp, labels = HOURS, accent = color,
+                onScrub = { h -> onScrub(h?.let { DetailHeadline(Math.round(state.hourlySteps[it]).toString(), "steps, %02d:00 to %02d:00".format(it, (it + 1) % 24), null) }) },
             )
-            val facts = when (metric) {
-                // Heart rate's usual range is a daily average, not a reading; the day's spread says more here.
-                Metric.HeartRate -> series.takeIf { it.isNotEmpty() }?.let { s ->
-                    listOf("Low ${s.minOf { it.y }.toInt()} · high ${s.maxOf { it.y }.toInt()}", "Average ${s.map { it.y }.average().toInt()}")
-                }.orEmpty()
-                else -> normalFacts(metric, value, normal)
+            Metric.RestingHr -> if (state.restingTrend.any { it.value != null }) {
+                GlowTrend(state.restingTrend.map { GlowDay(it.label, it.value) }, height = 200.dp)
             }
-            if (value == null) {
-                Spacer(Modifier.height(GlowLayout.TitleGap))
-                Text(
-                    if (metric == Metric.Breathing) "Breathing rate is measured during sleep." else "No ${metric.title.lowercase()} for this day yet.",
-                    color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodyMedium,
+            else -> if (series.isNotEmpty()) {
+                // Readings come every minute for heart rate, sparser for the rest.
+                val bucket = if (metric == Metric.HeartRate) 5 * 60L else 15 * 60L
+                val values = remember(series, window) { evenly(series, window, bucket) }
+                val labels = if (window == day) HOURS else listOf(clock(window.first), clock(window.last))
+                val band = if (metric == Metric.HeartRate) normalOf(Metric.RestingHr)?.let { it.low..it.high } else null
+                GlowLineChart(
+                    values, height = 220.dp, labels = labels, color = color, showAverage = false, band = band, format = metric::format,
+                    onScrub = { i ->
+                        onScrub(i?.let { values[it] }?.let { v -> DetailHeadline(metric.format(v), "${metric.unit} at ${clock(window.first + i * bucket)}".trim(), null) })
+                    },
                 )
-                return@Column
-            }
-            GlowHeroNumber(metric.format(value).replace(",", ""), metric.unit.ifEmpty { "/ 100" }, facts)
-            when (metric) {
-                Metric.Steps -> {
-                    GlowChartGap()
-                    GlowDotBars(state.hourlySteps, height = GlowLayout.ChartHeight, labels = HOURS, accent = Color.White) { h, v ->
-                        "%02d:00–%02d:00 · %,d steps".format(h, (h + 1) % 24, Math.round(v))
-                    }
-                }
-                Metric.RestingHr -> if (state.restingTrend.any { it.value != null }) {
-                    GlowChartGap()
-                    GlowTrend(state.restingTrend.map { GlowDay(it.label, it.value) }, height = GlowLayout.ChartHeight)
-                }
-                else -> if (series.isNotEmpty()) {
-                    // Readings come every minute for heart rate, sparser for the rest.
-                    val bucket = if (metric == Metric.HeartRate) 5 * 60L else 15 * 60L
-                    val values = remember(series, window) { evenly(series, window, bucket) }
-                    val labels = if (window == day) HOURS else listOf(clock(window.first), clock(window.last))
-                    GlowChartGap()
-                    GlowLineChart(values, height = GlowLayout.ChartHeight, labels = labels, format = metric::format) { i, v ->
-                        "${metric.format(v)} ${metric.unit} · ${clock(window.first + i * bucket)}".replace("  ", " ")
-                    }
-                }
             }
         }
     }
 }
 
-/** A week, month or year of daily values (weekly for a year), your normal as a band. */
+/**
+ * A week, month or year of daily values (weekly over a year) as dots against your normal: the band behind, days
+ * outside it lit. Scrubbing puts the day under the finger in the headline.
+ */
 @Composable
-private fun HistoryCard(metric: Metric, range: Range, stats: List<DayStat>?, normal: History.Normal?, end: LocalDate) {
-    val color = colorOf(metric)
-    val start = end.minusDays(range.days - 1L)
-    GlowCard(GlowStyle.chart(color), Modifier.fillMaxWidth()) {
-        Column {
-            GlowHeader(
-                if (metric == Metric.Steps) "Steps a day" else "Daily average",
-                trailing = when (range) { Range.Week -> "Last 7 days"; Range.Month -> "Last 30 days"; else -> "Last 12 months" },
-            )
-            val summary = stats?.let { History.summary(it, start, end) }
-            if (summary == null) {
-                Spacer(Modifier.height(GlowLayout.TitleGap))
-                Text(
-                    if (stats == null) "Loading…" else "No ${metric.title.lowercase()} in this range yet.",
-                    color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodyMedium,
-                )
-                return@Column
-            }
-            val facts = buildList {
-                if (metric == Metric.Steps) add("%,d in total".format(Math.round(summary.total)))
-                add("${summary.days} days with data")
-                // Over a year, a month's average sitting inside last month's normal says nothing; status is for weeks and months.
-                if (range != Range.Year) normalFacts(metric, summary.average, normal).lastOrNull()?.let(::add)
-            }
-            GlowHeroNumber(metric.format(summary.average).replace(",", ""), metric.unit.ifEmpty { "/ 100" }, facts)
-
-            val (values, labels, dates) = series(range, stats, start, end)
-            GlowChartGap()
-            GlowLineChart(
-                values, height = GlowLayout.ChartHeight, labels = labels, showAverage = false,
-                band = normal?.let { it.low..it.high }, format = metric::format,
-            ) { i, v ->
+private fun HistoryChart(
+    metric: Metric, range: Range, stats: List<DayStat>, normal: History.Normal?, start: LocalDate, end: LocalDate, color: Color,
+    onScrub: (DetailHeadline?) -> Unit,
+) {
+    val (values, labels, dates) = remember(stats, range, start, end) { series(range, stats, start, end) }
+    val levels = remember(values, normal) { DetailCopy.levels(values, normal) }
+    val day = DateTimeFormatter.ofPattern("EEE d MMM")
+    NormalTrend(
+        values, levels, color, labels = labels,
+        band = normal?.let { it.low..it.high }, bandLabel = normal?.let { DetailCopy.bandLabel(it, metric::format) },
+        onScrub = { i ->
+            onScrub(i?.let { values[it] }?.let { v ->
                 val d = dates[i]
-                val label = if (range == Range.Year) "Week of ${d.format(DateTimeFormatter.ofPattern("d MMM"))}" else d.format(DateTimeFormatter.ofPattern("EEE d MMM"))
-                "${metric.format(v)} ${metric.unit} · $label".replace("  ", " ")
-            }
-            Spacer(Modifier.height(10.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(10.dp, 6.dp).background(Color.White.copy(alpha = 0.25f), RoundedCornerShape(2.dp)))
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    if (normal != null) "Your normal" else "Your normal shows after ${History.MIN_NORMAL_DAYS} days of data",
-                    color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.bodySmall,
-                )
-            }
-        }
-    }
+                val label = if (range == Range.Year) "week of ${d.format(DateTimeFormatter.ofPattern("d MMM"))}" else d.format(day)
+                DetailHeadline(metric.format(v).replace(",", ""), listOf(metric.unit, label).filter { it.isNotEmpty() }.joinToString(", "), DetailCopy.statusWord(History.status(v, normal)))
+            })
+        },
+    )
+    if (normal == null) Text(
+        DetailCopy.learningNormal(stats.count { it.date in end.minusDays(History.NORMAL_DAYS - 1L)..end }, metric in NIGHTLY),
+        color = Color.White.copy(alpha = 0.6f), style = GlowType.secondary,
+    )
 }
 
 /** Evenly spaced values for the chart: one a day, or one a week over a year; gaps are null. Also axis labels and each point's date. */
@@ -321,69 +589,26 @@ private fun series(range: Range, stats: List<DayStat>, start: LocalDate, end: Lo
         byDate = inRange.associate { it.date to it.value }
     }
     val labels = when (range) {
-        Range.Week -> dates.map { it.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault()).take(2) }
+        Range.Week -> dates.map { it.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault()) }
         Range.Month -> listOf(0f, 1 / 3f, 2 / 3f, 1f).map { dates[((dates.size - 1) * it).toInt()].format(DateTimeFormatter.ofPattern("d MMM")) }
         else -> listOf(0f, 1 / 3f, 2 / 3f, 1f).map { dates[((dates.size - 1) * it).toInt()].format(DateTimeFormatter.ofPattern("MMM")) }
     }
     return Triple(dates.map { byDate[it] }, labels, dates)
 }
 
+/** Related metrics as list rows, each with the day's value and its word against your normal, opening its detail. */
 @Composable
-private fun LowHighPanel(metric: Metric, range: Range, s: History.Summary) {
-    val day = DateTimeFormatter.ofPattern("EEE d MMM")
-    DotPanel {
-        Row(Modifier.fillMaxWidth()) {
-            listOf("Lowest" to s.lowest, "Highest" to s.highest).forEach { (label, stat) ->
-                Column(Modifier.weight(1f)) {
-                    Fact(if (range == Range.Year) "$label day" else label, "${metric.format(stat.value)} ${metric.unit}".trim())
-                    Note(stat.date.format(day))
-                }
-            }
-        }
-    }
-}
-
-/** Your normal: the usual range over the last 30 days, or how long until there is one. */
-@Composable
-private fun NormalPanel(metric: Metric, normal: History.Normal?, days: Int) {
-    DotPanel {
-        DotHeader("Your normal", trailing = "Last ${History.NORMAL_DAYS} days")
-        if (normal == null) {
-            Note("Your normal shows after ${History.MIN_NORMAL_DAYS} days of data ($days so far). It's the range your daily values usually fall in.")
-            GlowBar(days / History.MIN_NORMAL_DAYS.toFloat(), colorOf(metric))
-            return@DotPanel
-        }
-        Row(Modifier.fillMaxWidth()) {
-            Box(Modifier.weight(1f)) { Fact("Usual", "${metric.format(normal.mean)} ${metric.unit}".trim()) }
-            Box(Modifier.weight(1f)) { Fact("Range", "${metric.format(normal.low)}–${metric.format(normal.high)}") }
-        }
-        Note("From ${normal.days} days. Most of your days fall inside this range; outside it is worth a look, not a worry.")
-    }
-}
-
-@Composable
-private fun AboutPanel(metric: Metric) {
-    val (what, moves) = ABOUT.getValue(metric)
-    DotPanel {
-        DotHeader("About ${metric.title.lowercase()}")
-        Text(what, color = Color.White.copy(alpha = 0.9f), style = MaterialTheme.typography.bodyMedium)
-        Note(moves)
-    }
-}
-
-@Composable
-private fun RelatedPanel(related: List<Metric>, onOpen: (Metric) -> Unit) {
-    DotPanel {
-        DotHeader("Related")
-        related.forEach { m ->
-            Row(
-                Modifier.fillMaxWidth().glass(GlassRowShape, { onOpen(m) }).padding(horizontal = 14.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Canvas(Modifier.padding(end = 10.dp).size(7.dp)) { drawCircle(colorOf(m)) }
-                Text(m.title, color = Color.White, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-                Icon(AppIcons.CaretRight, null, tint = Color.White.copy(alpha = 0.7f))
-            }
+private fun RelatedList(related: List<Metric>, state: DayUiState, history: DailyHistory, onOpen: (Detail) -> Unit) {
+    ListPanel(Modifier.padding(top = 8.dp), title = "Related") {
+        related.forEachIndexed { i, m ->
+            val normal = rememberNormal(m, state.date, history)
+            val v = dayValue(m, state)
+            val status = if (m == Metric.HeartRate) null else History.status(v, normal)
+            ListRow(
+                m.title, colorOf(m), v?.let { m.format(it).replace(",", "") },
+                if (v == null) "Nothing for this day" else DetailCopy.statusWord(status) ?: m.unit.ifEmpty { null },
+                offNormal = status != null && status != 0, onClick = { onOpen(Detail.OfMetric(m)) }, divider = i > 0,
+            )
         }
     }
 }

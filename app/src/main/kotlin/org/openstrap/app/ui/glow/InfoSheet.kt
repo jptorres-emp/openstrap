@@ -1,0 +1,122 @@
+package org.openstrap.app.ui.glow
+
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import org.openstrap.app.ui.dashboard.Info
+import org.openstrap.app.ui.theme.AppIcons
+
+/*
+ * The info sheet (spec 6.2): what a number means, the scale it's read on with where you are, and how it's worked out,
+ * what moves it and why it might be off, folded until asked for. Opened from the (i) on a detail or a hero, over the
+ * screen it came from.
+ */
+
+/**
+ * [info] as a sheet over the screen, lit in [color]. [here] is the bar of [Info.scale] you're in (null leaves every bar
+ * dim), [hereLine] the line under the scale ("You are here. Your normal is 44 to 58 ms, from 30 days."), and [notes]
+ * what's particular about today, under Why it might be off.
+ */
+@Composable
+fun InfoSheet(info: Info, color: Color, here: Int?, hereLine: String?, onDismiss: () -> Unit, notes: List<String> = emptyList()) {
+    val maxHeight = (LocalConfiguration.current.screenHeightDp * 0.85f).dp
+    org.openstrap.app.ui.components.GlassSheet(onDismiss) {
+        Column(
+            Modifier.heightIn(max = maxHeight).verticalScroll(rememberScrollState())
+                .padding(horizontal = 22.dp).navigationBarsPadding().padding(bottom = 20.dp),
+        ) {
+            Text(info.name, color = Color.White.copy(alpha = 0.5f), style = GlowType.secondary.copy(fontSize = 13.sp))
+            Text(
+                info.meaning, color = Color.White, modifier = Modifier.padding(top = 6.dp),
+                style = GlowType.label.copy(fontSize = 22.sp, lineHeight = 28.sp, fontWeight = FontWeight.Medium),
+            )
+            Scale(info.scale, color, here, Modifier.padding(top = 22.dp))
+            if (hereLine != null) Text(hereLine, color = Color.White, style = GlowType.secondary, modifier = Modifier.padding(top = 10.dp))
+            Column(
+                Modifier.padding(top = 24.dp).fillMaxWidth().background(Color(0xFF141416), RoundedCornerShape(24.dp)).padding(horizontal = 18.dp),
+            ) {
+                Fold("How it's worked out", info.how, divider = false)
+                Fold("What moves it", info.moves)
+                Fold("Why it might be off", (listOf(info.off) + notes).joinToString("\n\n"))
+            }
+        }
+    }
+}
+
+/** The scale as coloured bars, low to high, each named under it; the bar you're in is lit and glows. */
+@Composable
+private fun Scale(labels: List<String>, color: Color, here: Int?, modifier: Modifier = Modifier) {
+    Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        labels.forEachIndexed { i, label ->
+            val on = i == here
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Box(
+                    Modifier.fillMaxWidth().height(10.dp)
+                        .let { if (on) it.shadow(10.dp, CircleShape, ambientColor = color, spotColor = color) else it }
+                        .background(if (on) color else color.copy(alpha = 0.18f + 0.12f * i / (labels.size - 1).coerceAtLeast(1)), CircleShape),
+                )
+                Text(
+                    label, color = if (on) Color.White else Color.White.copy(alpha = GlowType.SECONDARY_ALPHA),
+                    style = GlowType.secondary.copy(fontWeight = if (on) FontWeight.Medium else null),
+                )
+            }
+        }
+    }
+}
+
+/** A folded row: its [title] with a caret, opening onto [text]. */
+@Composable
+private fun Fold(title: String, text: String, divider: Boolean = true) {
+    var open by rememberSaveable(title) { mutableStateOf(false) }
+    val turn by animateFloatAsState(if (open) 180f else 0f, label = "fold caret")
+    Column(
+        Modifier.fillMaxWidth()
+            .let { if (divider) it.drawBehind { drawLine(RowHairline, Offset(0f, 0f), Offset(size.width, 0f), 1.dp.toPx()) } else it },
+    ) {
+        Row(
+            Modifier.fillMaxWidth().clickable(onClickLabel = if (open) "Fold" else "Open") { open = !open }.padding(vertical = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(title, color = Color.White, style = GlowType.label.copy(fontSize = 15.5.sp, fontWeight = null), modifier = Modifier.weight(1f))
+            Spacer(Modifier.size(12.dp))
+            Icon(AppIcons.CaretDown, null, tint = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(16.dp).rotate(turn))
+        }
+        AnimatedVisibility(open) {
+            Text(text, color = Color.White.copy(alpha = 0.8f), style = GlowType.secondary.copy(fontSize = 14.sp, lineHeight = 20.sp), modifier = Modifier.padding(bottom = 16.dp))
+        }
+    }
+}

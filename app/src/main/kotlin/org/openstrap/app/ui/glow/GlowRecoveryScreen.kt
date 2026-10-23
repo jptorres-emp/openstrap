@@ -15,7 +15,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -28,6 +30,8 @@ import org.openstrap.app.data.Recovery
 import org.openstrap.app.data.RecoveryResult
 import org.openstrap.app.ui.dashboard.DailyHistory
 import org.openstrap.app.ui.dashboard.DayUiState
+import org.openstrap.app.ui.dashboard.InfoCopy
+import org.openstrap.app.ui.dashboard.Score
 import org.openstrap.app.ui.dashboard.Metric
 import org.openstrap.app.ui.dashboard.RecoveryCard
 import org.openstrap.app.ui.dashboard.RecoveryFacts
@@ -41,7 +45,8 @@ import org.openstrap.app.ui.theme.MetricColors
  * The Recovery tab (spec 5.1): "can I push today, and why". The score glows with the last 7 days beside it, what
  * drove it as contributor bars, then Charge as a Tall battery with Recharged and Drained as Smalls, the body signals
  * and Habit Age ([recoveryCards]). How the score is
- * worked out, the strap's own score and why it might be off belong in the Recovery info sheet (step 6), not here.
+ * worked out, the strap's own score and why it might be off are in the Recovery info sheet, behind the hero's (i).
+ * The hero, the contributors and the Charge battery open their details on this tab's stack.
  */
 
 /** Charge as a whole number the way every screen shows it, cut rather than rounded, so they all agree. */
@@ -56,6 +61,10 @@ fun GlowRecoveryScreen(
     header: @Composable () -> Unit,
     contentPadding: PaddingValues,
     onOpenMetric: (Metric) -> Unit,
+    /** Opens Recovery's or Charge's detail. */
+    onOpenScore: (Score) -> Unit = {},
+    /** The strap's own Recovery for the day, for the info sheet. */
+    strapScore: Int? = null,
     /** The weekly Habit Age estimate, or why it's withheld; null leaves the card out. */
     healthspan: Healthspan.Outcome? = null,
     onOpenHealthspan: () -> Unit = {},
@@ -71,14 +80,15 @@ fun GlowRecoveryScreen(
     val learning = r?.readiness?.calibrating == true
     val waiting = if (r != null && !r.charge.anchored) "After your first night" else "No reading yet"
     val slots = recoveryCards(RecoveryFacts(habitAge = healthspan != null, learning = learning, hasRecovery = r != null))
+    var info by rememberSaveable { mutableStateOf(false) }
     CompositionLocalProvider(LocalGlowPaused provides { list.isScrollInProgress }) {
         GlowScreenList(contentPadding, list, focus = showCharge, onFocused = onChargeShown) {
             full { header() }
             tabCards(slots, focus = RecoveryCard.Charge) { card, m ->
                 when (card) {
-                    RecoveryCard.Hero -> RecoveryHero(r)
-                    RecoveryCard.Drivers -> DriversList(r?.readiness)
-                    RecoveryCard.Charge -> ChargeTall(r?.charge, state.dayStart..state.dayEnd, m)
+                    RecoveryCard.Hero -> RecoveryHero(r, onOpen = { onOpenScore(Score.Recovery) }, onInfo = { info = true })
+                    RecoveryCard.Drivers -> DriversList(r?.readiness, onAll = { onOpenScore(Score.Recovery) })
+                    RecoveryCard.Charge -> ChargeTall(r?.charge, state.dayStart..state.dayEnd, m, onOpen = { onOpenScore(Score.Charge) })
                     RecoveryCard.Recharged -> ChargeSmall(r?.charge, recharged = true, m)
                     RecoveryCard.Drained -> ChargeSmall(r?.charge, recharged = false, m)
                     RecoveryCard.BodySignals -> SignalsList(signals, waiting, onOpenMetric)
@@ -86,6 +96,13 @@ fun GlowRecoveryScreen(
                 }
             }
         }
+    }
+    if (info) {
+        val score = r?.readiness?.score
+        InfoSheet(
+            InfoCopy.of(Score.Recovery), overviewColor(score, r?.readiness?.strainAlert == true), score?.let(InfoCopy::recoveryBar),
+            score?.let { InfoCopy.HERE }, onDismiss = { info = false }, notes = InfoCopy.recoveryNotes(r?.readiness, strapScore),
+        )
     }
 }
 
@@ -103,15 +120,20 @@ private fun recoveryHeroStyle(color: Color) = GlowStyle.Bloom.copy(
  * in the title, and the calibration caveat under the sentence while it learns. As high as its content.
  */
 @Composable
-private fun RecoveryHero(r: RecoveryResult?) {
+private fun RecoveryHero(r: RecoveryResult?, onOpen: () -> Unit, onInfo: () -> Unit) {
     val ready = r?.readiness
     val score = ready?.score
     val yesterday = r?.readinessTrend?.dropLast(1)?.lastOrNull()?.second
     val alert = ready?.strainAlert == true
-    // TODO(step 6): tapping opens the Recovery detail, and an (i) opens the info sheet with the method and the strap's own score.
-    GlowCard(recoveryHeroStyle(overviewColor(score, alert)), Modifier.fillMaxWidth().gridSize(CardSize.Wide)) {
+    GlowCard(recoveryHeroStyle(overviewColor(score, alert)), Modifier.fillMaxWidth().gridSize(CardSize.Wide), onClick = onOpen) {
         Column {
-            GlowHeader("Recovery", trailing = score?.let { TabCopy.vsYesterday(it, yesterday) })
+            GlowHeader(
+                "Recovery", trailing = score?.let { TabCopy.vsYesterday(it, yesterday) },
+                trailingContent = {
+                    androidx.compose.foundation.layout.Spacer(Modifier.width(10.dp))
+                    RoundButton(org.openstrap.app.ui.theme.AppIcons.Info, "About Recovery", onInfo, size = 30.dp)
+                },
+            )
             HeroSentence(
                 when {
                     ready == null -> TabCopy.RECOVERY_WAITING
@@ -127,7 +149,8 @@ private fun RecoveryHero(r: RecoveryResult?) {
                 Spacer(Modifier.height(22.dp))
                 androidx.compose.foundation.layout.Row(verticalAlignment = androidx.compose.ui.Alignment.Bottom) {
                     HeroFigure(score.toString(), TodayCopy.recoveryWord(score, alert), big = true)
-                    // Trend dots (chart kit): the last 7 days beside the score, today the only full dot.
+                    // Trend dots (chart kit): the last 7 days beside the score, today the only full dot. TODO(step 6): your
+                    // normal as their band ([TrendDots] draws one) needs a normal of the score, and the app keeps 7 days of it.
                     val week = r.readinessTrend.map { it.second }
                     if (week.count { it != null } >= 2) {
                         Spacer(Modifier.width(16.dp))
@@ -144,16 +167,16 @@ private fun RecoveryHero(r: RecoveryResult?) {
 
 /** What drove the score: the three that weigh most, each with its bar and word. */
 @Composable
-private fun DriversList(ready: Recovery.Readiness?) {
+private fun DriversList(ready: Recovery.Readiness?, onAll: () -> Unit) {
     val all = ready?.contributors.orEmpty()
     val top = TabCopy.topDrivers(all)
-    // TODO(step 6): "All" opens the Recovery detail with every contributor; until then the note only counts them.
-    ListPanel(title = "What drove it", note = if (all.size > top.size) "Top ${top.size} of ${all.size}" else null) {
+    // "All" and each row open the Recovery detail, which has every contributor.
+    ListPanel(title = "What drove it", note = if (all.size > top.size) "All ${all.size}" else null, onNote = onAll.takeIf { all.isNotEmpty() }) {
         if (top.isEmpty()) ListRow("Waiting for a night", MetricColors.readinessDeep, null, "What drove Recovery shows here each morning", dash = false, divider = false)
         top.forEachIndexed { i, c ->
             ContributorRow(
                 TabCopy.factorName(c.factor), MetricColors.readinessDeep, TabCopy.contributorWord(c.score),
-                c.score / 100f, offNormal = TabCopy.contributorOff(c.score), divider = i > 0,
+                c.score / 100f, offNormal = TabCopy.contributorOff(c.score), divider = i > 0, onClick = onAll,
             )
         }
     }
@@ -166,15 +189,14 @@ private fun DriversList(ready: Recovery.Readiness?) {
  * and the number now with Charge at waking at the foot.
  */
 @Composable
-private fun ChargeTall(c: Recovery.ChargeDay?, day: LongRange, modifier: Modifier) {
+private fun ChargeTall(c: Recovery.ChargeDay?, day: LongRange, modifier: Modifier, onOpen: () -> Unit) {
     val now = c?.latest?.let(::chargeShown)
     val atWake = c?.atWake?.toInt()
     val step = 15 * 60L
     val values = remember(c?.points, day) { c?.points?.let { bucket(it, day, step) }.orEmpty() }
     var picked by remember(values) { androidx.compose.runtime.mutableStateOf<Int?>(null) }
     val scrubbed = picked?.let { i -> values.getOrNull(i)?.let { it.toInt() to clockAt(day.first + i * step) } }
-    // TODO(step 6): tapping opens the Charge detail.
-    GlowCard(GlowStyle.Ember.copy(lightLevel = (now ?: 0) / 100f, second = true), modifier) {
+    GlowCard(GlowStyle.Ember.copy(lightLevel = (now ?: 0) / 100f, second = true), modifier, onClick = onOpen) {
         Column(Modifier.fillMaxHeight()) {
             GlowHeader("Charge")
             if (c != null && now != null && c.points.size >= 2) {
@@ -204,7 +226,7 @@ private fun ChargeSmall(c: Recovery.ChargeDay?, recharged: Boolean, modifier: Mo
     val ready = c != null && c.anchored && c.latest != null
     val value = c?.takeIf { ready }?.let {
         if (recharged) TabCopy.chargeAmount(it.recharged, +1)
-        else TabCopy.chargeAmount(it.drainedExercise + it.drainedStress + it.drainedLiving, -1)
+        else TabCopy.drainedAmount(it.drainedExercise + it.drainedStress + it.drainedLiving)
     }
     val status = when {
         !ready -> "After your first night"

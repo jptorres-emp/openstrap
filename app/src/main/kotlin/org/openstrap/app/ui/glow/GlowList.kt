@@ -43,7 +43,7 @@ internal val ValueGap = 0.9.dp
 
 /**
  * A grouped list: a dark panel with a title row ([title] left, an optional [note] right) over its rows, usually
- * [ListRow]s. Without a title the rows start at the top. When the screen asks for an edge ([LocalEdgeOverride]), as
+ * [ListRow]s. Without a title the rows start at the top. With [onNote] the note is a way on ("All 9"), with a caret. When the screen asks for an edge ([LocalEdgeOverride]), as
  * Today does for a list right under another, the rows sit on an edge card in the neutral light instead.
  */
 @Composable
@@ -51,6 +51,7 @@ fun ListPanel(
     modifier: Modifier = Modifier,
     title: String? = null,
     note: String? = null,
+    onNote: (() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val inner: @Composable ColumnScope.() -> Unit = {
@@ -59,7 +60,14 @@ fun ListPanel(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(title.orEmpty(), color = Color.White, style = GlowType.label, modifier = Modifier.weight(1f))
-            if (note != null) Text(note, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary)
+            if (note != null && onNote != null) Row(
+                Modifier.clickable(onClick = onNote).padding(start = 12.dp, top = 4.dp, bottom = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(note, color = Color.White, style = GlowType.secondary)
+                Spacer(Modifier.width(4.dp))
+                Icon(org.openstrap.app.ui.theme.AppIcons.CaretRight, null, tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(12.dp))
+            } else if (note != null) Text(note, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary)
         }
         content()
     }

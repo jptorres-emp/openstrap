@@ -164,6 +164,25 @@ class FrameTest {
         assertEquals(stack, Detail.StackSaver.restore(saved))
     }
 
+    @Test fun `Recovery and Charge details survive process death`() {
+        // Every route there is, the score details among them, deepest last.
+        val stack = listOf(
+            Detail.OfScore(Score.Recovery), Detail.OfScore(Score.Charge), Detail.OfMetric(Metric.HeartRate), Detail.AllWorkouts,
+            Detail.Healthspan, Detail.Recovery, Detail.Sleep, Detail.Workout(1792227300),
+        ) + Metric.entries.map(Detail::OfMetric) + Score.entries.map(Detail::OfScore)
+        val saved = with(Detail.StackSaver) { androidx.compose.runtime.saveable.SaverScope { true }.save(stack) }!!
+        assertEquals(stack, Detail.StackSaver.restore(saved))
+        // A score this build doesn't know is dropped, the rest kept.
+        assertEquals(listOf(Detail.OfScore(Score.Charge)), Detail.StackSaver.restore("c:Sleepscore|c:Charge"))
+    }
+
+    @Test fun `every detail switches within one group of siblings`() {
+        val all = Metric.entries.map(Detail::OfMetric) + Score.entries.map(Detail::OfScore)
+        all.forEach { d -> assertEquals(d.toString(), 1, DETAIL_GROUPS.count { d in it }) }
+        assertEquals(listOf(Detail.OfScore(Score.Recovery), Detail.OfScore(Score.Charge)), siblingsOf(Detail.OfScore(Score.Charge)))
+        assertEquals(listOf(Detail.Healthspan), siblingsOf(Detail.Healthspan))
+    }
+
     @Test fun `a stack saved with All metrics on it comes back without it`() {
         // All metrics is a sheet now, not a screen on a stack; a stack saved before keeps the rest.
         assertEquals(listOf(Detail.OfMetric(Metric.Hrv)), Detail.StackSaver.restore("x:|m:Hrv"))

@@ -99,15 +99,21 @@ object TabCopy {
         return if (n == 0) "0" else "${if (sign > 0) "+" else "-"}$n"
     }
 
+    /**
+     * How much Charge was drained, as a plain amount: the "Drained" beside it already says which way, so no minus.
+     * The model only ever adds to a drain (each minute's fall), so it's never below zero; the floor is a guard.
+     */
+    fun drainedAmount(v: Float): String = v.toInt().coerceAtLeast(0).toString()
+
     /** One row of "Charge today": what moved it, and whether it filled or drained it. */
     data class ChargeRow(val name: String, val value: String, val status: String)
 
     /** Where today's Charge came from and went, in the order it happened: sleep first, then the day. */
     fun chargeRows(recharged: Float, movement: Float, stress: Float, awake: Float): List<ChargeRow> = listOf(
         ChargeRow("Sleep and calm rest", chargeAmount(recharged, +1), "Recharged"),
-        ChargeRow("Movement", chargeAmount(movement, -1), "Drained"),
-        ChargeRow("Stress", chargeAmount(stress, -1), "Drained"),
-        ChargeRow("Being awake", chargeAmount(awake, -1), "Drained"),
+        ChargeRow("Movement", drainedAmount(movement), "Drained"),
+        ChargeRow("Stress", drainedAmount(stress), "Drained"),
+        ChargeRow("Being awake", drainedAmount(awake), "Drained"),
     )
 
     /** The Charge card's line under the number. */

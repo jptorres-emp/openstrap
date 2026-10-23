@@ -26,6 +26,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import org.openstrap.app.ui.dashboard.CardLook
 import org.openstrap.app.ui.dashboard.Hue
 import org.openstrap.app.ui.dashboard.TabSlot
@@ -88,18 +89,26 @@ internal fun <T> GridRowBlock(row: GridRow<T>, draw: @Composable (T, Modifier) -
 
 /**
  * A contributor bar (chart kit): the [name], a bar filled to [fraction] (0..1) and the [word] on the right. Bar and
- * word take [color] only when [offNormal]; otherwise they stay white. [divider] draws the hairline above the row.
+ * word take [color] only when [offNormal]; otherwise they stay white. [detail] is a dim line under the name (the
+ * reading behind it), [onClick] opens what the row is part of, and [divider] draws the hairline above the row.
  */
 @Composable
-internal fun ContributorRow(name: String, color: Color, word: String, fraction: Float, offNormal: Boolean = false, divider: Boolean = true) {
+internal fun ContributorRow(
+    name: String, color: Color, word: String, fraction: Float, offNormal: Boolean = false, divider: Boolean = true,
+    detail: String? = null, onClick: (() -> Unit)? = null,
+) {
     val accent = if (offNormal) color else Color.White.copy(alpha = 0.7f)
     Row(
         Modifier.fillMaxWidth()
+            .let { if (onClick != null) it.clickable(onClick = onClick) else it }
             .let { if (divider) it.drawBehind { drawLine(RowHairline, Offset(0f, 0f), Offset(size.width, 0f), 1.dp.toPx()) } else it }
             .padding(vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(name, color = Color.White, style = GlowType.secondary, modifier = Modifier.weight(1.1f), maxLines = 2)
+        Column(Modifier.weight(1.1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(name, color = Color.White, style = GlowType.secondary, maxLines = 2)
+            if (detail != null) Text(detail, color = Color.White.copy(alpha = 0.5f), style = GlowType.secondary.copy(fontSize = 11.5.sp), maxLines = 2)
+        }
         Spacer(Modifier.width(10.dp))
         val shape = RoundedCornerShape(3.dp)
         Box(Modifier.weight(1f).height(6.dp).background(Color.White.copy(alpha = 0.07f), shape)) {

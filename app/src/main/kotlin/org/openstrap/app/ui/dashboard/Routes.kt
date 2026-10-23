@@ -9,7 +9,7 @@ import org.openstrap.app.data.DailyMetric
 enum class Metric(val title: String, val unit: String, val decimals: Int, val daily: DailyMetric) {
     HeartRate("Heart rate", "bpm", 0, DailyMetric.HeartRate),
     RestingHr("Resting heart rate", "bpm", 0, DailyMetric.RestingHr),
-    Hrv("Heart-rate variability", "ms", 0, DailyMetric.Hrv),
+    Hrv("HRV", "ms", 0, DailyMetric.Hrv),
     Spo2("Blood oxygen", "%", 0, DailyMetric.Spo2),
     Stress("Stress", "", 0, DailyMetric.Stress),
     SkinTemperature("Skin temperature", "°C", 1, DailyMetric.SkinTemperature),
@@ -20,6 +20,12 @@ enum class Metric(val title: String, val unit: String, val decimals: Int, val da
     fun format(v: Float): String = if (this == Steps) "%,d".format(Math.round(v)) else "%.${decimals}f".format(v)
 }
 
+/**
+ * A score OpenStrap works out itself, with a detail of its own like a [Metric]'s but no per-day series behind it:
+ * Recovery keeps only its last 7 days, Charge only the day shown. Sleep score, Load and the rest join here (step 6).
+ */
+enum class Score(val title: String) { Recovery("Recovery"), Charge("Charge") }
+
 /** Your daily goals, provided once at the top of the app so every screen measures against the same ones. */
 val LocalGoals = compositionLocalOf { Goals() }
 
@@ -29,6 +35,8 @@ val LocalGoals = compositionLocalOf { Goals() }
  */
 sealed interface Detail {
     data class OfMetric(val metric: Metric) : Detail
+    /** A [Score]'s detail, in the same template as a metric's. */
+    data class OfScore(val score: Score) : Detail
     data class Workout(val start: Long) : Detail
     /** Every workout, newest first. */
     data object AllWorkouts : Detail
@@ -48,6 +56,7 @@ sealed interface Detail {
 
         private fun key(d: Detail): String = when (d) {
             is OfMetric -> "m:${d.metric.name}"
+            is OfScore -> "c:${d.score.name}"
             is Workout -> "w:${d.start}"
             AllWorkouts -> "a:"
             Healthspan -> "h:"
@@ -59,6 +68,7 @@ sealed interface Detail {
             val value = s.substringAfter(':')
             return when (s.substringBefore(':')) {
                 "m" -> Metric.entries.firstOrNull { it.name == value }?.let(::OfMetric)
+                "c" -> Score.entries.firstOrNull { it.name == value }?.let(::OfScore)
                 "w" -> value.toLongOrNull()?.let(::Workout)
                 "a" -> AllWorkouts
                 "h" -> Healthspan

@@ -27,6 +27,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
@@ -235,10 +236,21 @@ fun GlowDotBars(
     accent: Color = Ink,
     /** Text for the touch readout on a column; null turns scrubbing off. */
     describe: ((index: Int, value: Float) -> String)? = null,
+    /** Scrubbing that moves the headline instead of a readout (spec 2.7): the column under the finger, or null on release. */
+    onScrub: ((Int?) -> Unit)? = null,
 ) {
     val m = rememberTextMeasurer()
     var touchX by remember { mutableStateOf<Float?>(null) }
-    Canvas(modifier.fillMaxWidth().height(height).let { if (describe != null) it.scrub(values) { x -> touchX = x } else it }) {
+    var width by remember { mutableStateOf(0f) }
+    val scrubbing = describe != null || onScrub != null
+    Canvas(
+        modifier.fillMaxWidth().height(height).onSizeChanged { width = it.width.toFloat() }.let {
+            if (!scrubbing) it else it.scrub(values) { x ->
+                touchX = x
+                onScrub?.invoke(x?.takeIf { values.isNotEmpty() && width > 0f }?.let { tx -> (tx / (width / values.size)).toInt().coerceIn(0, values.size - 1) })
+            }
+        },
+    ) {
         if (values.isEmpty()) return@Canvas
         val axisH = if (labels.isEmpty()) 0f else 18.dp.toPx()
         val h = size.height - axisH
@@ -246,7 +258,7 @@ fun GlowDotBars(
         val pitchY = h / rows
         val r = min(pitchX, pitchY) * 0.32f
         val max = values.max().coerceAtLeast(1f)
-        val picked = touchX?.takeIf { describe != null }?.let { (it / pitchX).toInt().coerceIn(0, values.size - 1) }
+        val picked = touchX?.takeIf { scrubbing }?.let { (it / pitchX).toInt().coerceIn(0, values.size - 1) }
         values.forEachIndexed { i, v ->
             val lit = if (v > 0f) (v / max * rows).roundToInt().coerceIn(1, rows) else 0
             // While scrubbing, the other columns dim so the picked one stands out.
@@ -508,26 +520,138 @@ fun GhostLine(today: List<Float?>, color: Color, max: Float, modifier: Modifier 
 
 /**
  * Trend dots (chart kit): a few days as dots joined by a faint line, the last (today) the only full dot, with a ring.
- * Days with no value are left out of the line. TODO(step 6): your normal as a dim band, and days outside it lit up,
- * once the app keeps a normal for the score.
+ * Days with no value are left out of the line. With a [band] (your normal) it's drawn dim behind the dots, and days
+ * outside it are lit up while those inside stay dim.
  */
 @Composable
-fun TrendDots(values: List<Int?>, modifier: Modifier = Modifier, height: Dp = 52.dp) {
+fun TrendDots(values: List<Int?>, modifier: Modifier = Modifier, height: Dp = 52.dp, band: ClosedFloatingPointRange<Float>? = null) {
     Canvas(modifier.fillMaxWidth().height(height)) {
         val known = values.filterNotNull()
         if (known.isEmpty()) return@Canvas
         val ring = 11.dp.toPx()
-        val lo = known.min() - 5f
-        val hi = (known.max() + 5f).coerceAtLeast(lo + 1f)
+        val lo = minOf(known.min().toFloat(), band?.start ?: Float.MAX_VALUE) - 5f
+        val hi = maxOf(known.max().toFloat(), band?.endInclusive ?: -Float.MAX_VALUE).plus(5f).coerceAtLeast(lo + 1f)
         fun xOf(i: Int) = ring + i / (values.size - 1f).coerceAtLeast(1f) * (size.width - ring * 2)
-        fun yOf(v: Int) = ring + (size.height - ring * 2) * (1f - (v - lo) / (hi - lo))
-        val pts = values.mapIndexedNotNull { i, v -> v?.let { i to Offset(xOf(i), yOf(it)) } }
+        fun yOf(v: Float) = ring + (size.height - ring * 2) * (1f - (v - lo) / (hi - lo))
+        band?.let { b ->
+            val y0 = yOf(b.endInclusive)
+            drawRoundRect(Ink.copy(alpha = 0.10f), Offset(0f, y0), Size(size.width, yOf(b.start) - y0), CornerRadius(6.dp.toPx()))
+        }
+        val pts = values.mapIndexedNotNull { i, v -> v?.let { i to Offset(xOf(i), yOf(it.toFloat())) } }
         pts.zipWithNext { (_, a), (_, b) -> drawLine(Ink.copy(alpha = 0.25f), a, b, 1.5.dp.toPx()) }
         pts.forEach { (i, p) ->
+            val outside = band != null && values[i]!!.toFloat() !in band
             if (i == values.lastIndex) {
                 drawCircle(Ink.copy(alpha = 0.5f), ring, p, style = Stroke(1.dp.toPx()))
                 drawCircle(Ink, 6.dp.toPx(), p)
-            } else drawCircle(Ink.copy(alpha = 0.45f), 4.dp.toPx(), p)
+            } else drawCircle(Ink.copy(alpha = if (outside) 0.95f else 0.45f), 4.dp.toPx(), p)
+        }
+    }
+}
+
+/**
+ * A detail's chart over days (chart kit, trend dots on a detail): each day's value as a dot on a line in [color], your
+ * normal as a dim band behind them with its [bandLabel], days inside it dim and days outside it lit with a halo
+ * ([levels]). A gap in the days is bridged by a dashed line. [labels] go under each dot when there's one a day,
+ * otherwise spread across. Holding scrubs: [onScrub] gets the point under the finger, or null on release, so the
+ * headline can follow it (spec 2.7).
+ */
+@Composable
+internal fun NormalTrend(
+    values: List<Float?>,
+    levels: List<org.openstrap.app.ui.dashboard.DetailCopy.Level?>,
+    color: Color,
+    modifier: Modifier = Modifier,
+    height: Dp = 230.dp,
+    labels: List<String> = emptyList(),
+    band: ClosedFloatingPointRange<Float>? = null,
+    bandLabel: String? = null,
+    onScrub: ((Int?) -> Unit)? = null,
+) {
+    val m = rememberTextMeasurer()
+    var touchX by remember { mutableStateOf<Float?>(null) }
+    var width by remember { mutableStateOf(0f) }
+    val inset = with(androidx.compose.ui.platform.LocalDensity.current) { 16.dp.toPx() }
+    Canvas(
+        modifier.fillMaxWidth().height(height)
+            .onSizeChanged { width = it.width.toFloat() }
+            .let {
+                if (onScrub == null) it else it.scrub(values) { x ->
+                    touchX = x
+                    onScrub(x?.let { tx -> nearestReading(values, tx, width, inset) })
+                }
+            },
+    ) {
+        val known = values.filterNotNull()
+        if (known.isEmpty()) return@Canvas
+        val axisH = if (labels.isEmpty()) 0f else 24.dp.toPx()
+        // Fewer, bigger dots for a week; a month or a year of them get smaller.
+        val scale = when {
+            values.size <= 7 -> 1f
+            values.size <= 31 -> 0.55f
+            else -> 0.4f
+        }
+        // The band's label has a row of its own above the plot, clear of the biggest halo, so it never sits on a point
+        // or the line wherever the data goes. A swatch of the band's colour ties it to the band.
+        val labelStyle = axisText.copy(fontSize = 12.sp)
+        val labelH = bandLabel?.takeIf { band != null }?.let { m.measure(it, labelStyle).size.height.toFloat() }
+        val top = (labelH?.plus(6.dp.toPx()) ?: 0f) + 14.dp.toPx() * scale + 4.dp.toPx()
+        val h = size.height - axisH - 16.dp.toPx()
+        val lo0 = minOf(known.min(), band?.start ?: Float.MAX_VALUE)
+        val hi0 = maxOf(known.max(), band?.endInclusive ?: -Float.MAX_VALUE)
+        val pad = ((hi0 - lo0) * 0.12f).coerceAtLeast(0.5f)
+        val lo = lo0 - pad
+        val hi = hi0 + pad
+        fun xOf(i: Int) = inset + i / (values.size - 1f).coerceAtLeast(1f) * (size.width - inset * 2)
+        fun yOf(v: Float) = top + (h - top) * (1f - (v - lo) / (hi - lo))
+        band?.let { b ->
+            val y0 = yOf(b.endInclusive)
+            drawRoundRect(color.copy(alpha = 0.14f), Offset(0f, y0), Size(size.width, yOf(b.start) - y0), CornerRadius(12.dp.toPx()))
+            if (bandLabel != null && labelH != null) {
+                val w = m.measure(bandLabel, labelStyle).size.width
+                val sw = 14.dp.toPx()
+                val x = size.width - w
+                drawRoundRect(color.copy(alpha = 0.35f), Offset(x - sw - 6.dp.toPx(), labelH / 2 - 4.dp.toPx()), Size(sw, 8.dp.toPx()), CornerRadius(3.dp.toPx()))
+                text(m, bandLabel, labelStyle, size.width, 0f, align = 1f)
+            }
+        }
+
+        val pts = values.mapIndexedNotNull { i, v -> v?.let { i to Offset(xOf(i), yOf(it)) } }
+        val stroke = 2.4.dp.toPx() * (0.6f + 0.4f * scale)
+        pts.zipWithNext { (i, a), (j, b) ->
+            // A missing day between two dots: the line goes on, dashed.
+            val gap = j - i > 1
+            drawLine(
+                color.copy(alpha = 0.85f), a, b, stroke, StrokeCap.Round,
+                pathEffect = if (gap) PathEffect.dashPathEffect(floatArrayOf(4.dp.toPx(), 5.dp.toPx())) else null,
+            )
+        }
+        val dim = lerp(color, Color.Black, 0.5f)
+        pts.forEach { (i, p) ->
+            when (levels.getOrNull(i)) {
+                org.openstrap.app.ui.dashboard.DetailCopy.Level.Above, org.openstrap.app.ui.dashboard.DetailCopy.Level.Below -> {
+                    val lit = lerp(color, Color.White, 0.3f)
+                    drawCircle(lit.copy(alpha = 0.35f), 14.dp.toPx() * scale, p)
+                    drawCircle(lit, 7.dp.toPx() * scale, p)
+                }
+                else -> {
+                    drawCircle(dim, 5.dp.toPx() * scale, p)
+                    drawCircle(color, 5.dp.toPx() * scale, p, style = Stroke(2.dp.toPx() * scale.coerceAtLeast(0.6f)))
+                }
+            }
+        }
+
+        if (labels.size == values.size) labels.forEachIndexed { i, l -> text(m, l, axisText.copy(fontSize = 12.sp), xOf(i), size.height - axisH + 6.dp.toPx(), align = 0.5f) }
+        else axis(m, labels, size.height - axisH + 6.dp.toPx())
+
+        val tx = touchX
+        if (onScrub != null && tx != null) {
+            nearestReading(values, tx, size.width, inset)?.let { i ->
+                val p = Offset(xOf(i), yOf(values[i]!!))
+                guide(p.x, h)
+                drawCircle(Color.Black.copy(alpha = 0.6f), 8.dp.toPx(), p)
+                drawCircle(Ink, 5.dp.toPx(), p)
+            }
         }
     }
 }

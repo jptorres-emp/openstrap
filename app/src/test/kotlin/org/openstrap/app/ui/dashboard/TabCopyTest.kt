@@ -58,7 +58,8 @@ class TabCopyTest {
 
     @Test fun `charge rows and line`() {
         assertEquals(
-            listOf("+32", "-12", "-5", "0"),
+            // A drain is an amount under "Drained", so it has no minus.
+            listOf("+32", "12", "5", "0"),
             TabCopy.chargeRows(32.7f, 12.2f, 5f, 0.4f).map { it.value },
         )
         assertEquals(listOf("Recharged", "Drained", "Drained", "Drained"), TabCopy.chargeRows(1f, 1f, 1f, 1f).map { it.status })

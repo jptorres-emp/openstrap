@@ -76,6 +76,7 @@ class StrapManager(
     private val healthAlerts = HealthAlertNotifier(context)
     private val autoDetected = AutoDetectNotifier(context)
     private val wearNotifier = WearNotifier(context)
+    private val wearEvents = WearEventLog(scope, dao::insertWearEvent) { log("wear event not stored: $it") }
 
     override val connection = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
     override val sync = MutableStateFlow<SyncState>(SyncState.Idle)
@@ -366,9 +367,8 @@ class StrapManager(
         }
         androidx.core.content.ContextCompat.registerReceiver(context, timeChanged, filter, androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED)
         // The app was stopped while it knew the wear state: close that interval now, as nothing is connected yet.
-        scope.launch {
-            runCatching { if (dao.lastWearEvent()?.worn != null) dao.insertWearEvent(WearEventRow(System.currentTimeMillis() / 1000, null)) }
-        }
+        val now = System.currentTimeMillis() / 1000
+        wearEvents.post { if (dao.lastWearEvent()?.worn != null) dao.insertWearEvent(WearEventRow(now, null)) }
     }
 
     /**
@@ -452,18 +452,19 @@ class StrapManager(
     /** The last wear state: true on body, false off, null unknown (not connected, or not reported). */
     @Volatile private var lastWorn: Boolean? = null
 
-    /** Records a change in [worn] for Charge and posts or clears the off-body notification. */
+    /**
+     * Records a change in [worn] for Charge and posts or clears the off-body notification. Queued inside the lock, so
+     * the stored order (and, within one second, the state kept) is the order the changes came in ([WearEventLog]).
+     */
     private fun onWear(worn: Boolean?) {
         synchronized(this) {
             if (worn == lastWorn) return
             lastWorn = worn
+            wearEvents.record(System.currentTimeMillis() / 1000, worn) {
+                wearNotifier.apply(WearReminder.decide(worn, settings.wearReminder.first(), wearNotifier.shown))
+            }
         }
         log("wear status: ${when (worn) { true -> "on body"; false -> "off body"; null -> "unknown" }}")
-        val at = System.currentTimeMillis() / 1000
-        scope.launch {
-            runCatching { dao.insertWearEvent(WearEventRow(at, worn)) }.onFailure { log("wear event not stored: $it") }
-            wearNotifier.apply(WearReminder.decide(worn, settings.wearReminder.first(), wearNotifier.shown))
-        }
     }
 
     /** Zepp re-reads the alarms on the strap's `0F` push (03 §3.14). */
@@ -922,9 +923,9 @@ class StrapManager(
     override suspend fun restartStrap() {
         val group = SettingsCodec.parse(settingsQuery(SettingsCodec.GROUP_GENERAL, listOf(SettingsCodec.KEY_RESTART), withOptions = false), settingsProtocol()?.version)
             ?: throw StrapCommandException("The strap couldn't read its settings")
-        if (group[SettingsCodec.KEY_RESTART] == null) throw StrapCommandException("This strap can't be restarted from the app")
+        val request = SettingsCodec.restartFor(group) ?: throw StrapCommandException("This strap can't be restarted from the app")
         log("restart: asking the strap to restart")
-        val reply = runCatching { command(Endpoints.SETTINGS, SettingsCodec.restart(group.version)) }
+        val reply = runCatching { command(Endpoints.SETTINGS, request) }
             .getOrElse { e -> if (activeSession == null) { log("restart: link dropped before the ack"); return } else throw e }
         if (!SettingsCodec.isWriteSuccess(reply)) throw StrapCommandException("The strap didn't accept the restart (code ${reply.getOrNull(1)})")
     }
@@ -948,7 +949,11 @@ class StrapManager(
         if (!FindDevice.isBuzzOk(command(Endpoints.FIND_DEVICE, FindDevice.BUZZ))) throw StrapCommandException("The strap didn't buzz")
     }
 
-    override suspend fun stopBuzzing() = sendFindDevice(FindDevice.STOP)
+    /** `06`. Any stop ends Find strap too (a ringing call ending, Stop in the app), so it can't wait out the timeout. */
+    override suspend fun stopBuzzing() {
+        endFind()
+        sendFindDevice(FindDevice.STOP)
+    }
 
     override val findingStrap = MutableStateFlow(false)
     private var findJob: Job? = null
@@ -962,15 +967,13 @@ class StrapManager(
         findJob = scope.launch {
             delay(FindDevice.FIND_TIMEOUT_MS)
             log("find strap: timed out")
-            findingStrap.value = false
+            // Cleared first, so stopBuzzing's endFind doesn't cancel this job before the STOP goes out.
+            findJob = null
             runCatching { stopBuzzing() }
         }
     }
 
-    override suspend fun stopFindingStrap() {
-        endFind()
-        stopBuzzing()
-    }
+    override suspend fun stopFindingStrap() = stopBuzzing()
 
     private fun endFind() {
         findJob?.cancel()

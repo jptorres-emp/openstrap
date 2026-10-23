@@ -611,7 +611,7 @@ How OpenStrap uses them:
 * **Notification:** a `0x0018` pattern. If the strap doesn't list `0x0018`, it falls back to `0x001A` `03`, then `06` after 1.5 s.
 * **Ringing call:** `0x001A` `03` when the phone starts ringing, `06` when it is answered or ends. It stops after 60 s at most.
 * **No notification patterns while a call rings:** a pattern played on the motor cut off the call's buzzing (hardware, below).
-* **Find strap** (strap page, shown when the strap lists `0x001A`): `03`, then `06` on Stop or after 60 s, the time Zepp's find dialog waits before it closes (`ktt.java:970`). The strap's `07` ends it too. A call ending meanwhile sends `06` as well, which stops it.
+* **Find strap** (strap page, shown when the strap lists `0x001A`): `03`, then `06` on Stop or after 60 s, the time Zepp's find dialog waits before it closes (`ktt.java:970`). The strap's `07` ends it too. Any `06` the app sends ends it as well, so a call ending meanwhile (which sends `06`) ends Find strap rather than leaving it until the timeout.
 
 ### 5.9 Settings the strap page uses: restart and the wear reminder (`0x000A`)
 

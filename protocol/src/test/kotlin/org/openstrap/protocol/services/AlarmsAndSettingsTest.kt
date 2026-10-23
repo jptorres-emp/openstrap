@@ -85,6 +85,9 @@ class AlarmsAndSettingsTest {
         val g = SettingsCodec.parse("04010a0200012d0b00".hexToBytes())!!
         assertEquals(2, g.version)
         assertEquals(false, g[SettingsCodec.KEY_RESTART]!!.bool)
+        assertArrayEquals(SettingsCodec.restart(2), SettingsCodec.restartFor(g))
+        // A strap that doesn't report key 45 is never asked.
+        assertNull(SettingsCodec.restartFor(SettingsCodec.parse("04010a0200012c0b01".hexToBytes())!!))
     }
 
     @Test

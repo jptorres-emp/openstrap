@@ -6,7 +6,12 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import androidx.core.app.NotificationCompat
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.launch
 import org.openstrap.app.MainActivity
+import org.openstrap.app.data.db.WearEventRow
 
 /**
  * Zepp's "Wear Reminders" for the strap (codemap 07 §4 N5): a notification while the strap reports it is off-body,
@@ -52,8 +57,8 @@ class WearNotifier(private val context: Context) {
         val open = PendingIntent.getActivity(context, 0, Intent(context, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE)
         val notification = NotificationCompat.Builder(context, CHANNEL)
             .setSmallIcon(android.R.drawable.stat_sys_warning)
-            .setContentTitle("Data paused — your Helio Strap is off-body")
-            .setContentText("Put it back on to resume monitoring.")
+            .setContentTitle(TITLE)
+            .setContentText(TEXT)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setOnlyAlertOnce(true)
             .setContentIntent(open)
@@ -62,9 +67,47 @@ class WearNotifier(private val context: Context) {
         shown = true
     }
 
-    private companion object {
-        const val CHANNEL = "wear"
+    companion object {
+        const val TITLE = "Strap is off your body"
+        const val TEXT = "Heart rate and sleep tracking are paused until you put it back on."
+        private const val CHANNEL = "wear"
         /** Zepp's id for this notification. */
-        const val NOTIFICATION_ID = 17
+        private const val NOTIFICATION_ID = 17
+    }
+}
+
+/**
+ * Stores wear changes ([WearEventRow]) one at a time, in the order they happened. wear_event is keyed by the second with
+ * REPLACE, so writes from separate coroutines could land out of order; here a later change in the same second always
+ * replaces an earlier one, and a change is never stamped before the one it follows (should the clock step back).
+ */
+internal class WearEventLog(
+    scope: CoroutineScope,
+    private val insert: suspend (WearEventRow) -> Unit,
+    private val onError: (Throwable) -> Unit = {},
+) {
+    private val queue = Channel<suspend () -> Unit>(Channel.UNLIMITED)
+    private var lastAt = Long.MIN_VALUE
+
+    init {
+        scope.launch {
+            for (work in queue) {
+                try { work() } catch (e: CancellationException) { throw e } catch (e: Exception) { onError(e) }
+            }
+        }
+    }
+
+    /** Queues [worn] at [atSeconds], then [then] (e.g. the notification), after every change recorded before it. */
+    fun record(atSeconds: Long, worn: Boolean?, then: suspend () -> Unit = {}) {
+        synchronized(this) {
+            val at = maxOf(atSeconds, lastAt)
+            lastAt = at
+            queue.trySend { insert(WearEventRow(at, worn)); then() }
+        }
+    }
+
+    /** Queues other wear-log work (e.g. closing the interval left open when the app stopped) in the same order. */
+    fun post(work: suspend () -> Unit) {
+        queue.trySend(work)
     }
 }

@@ -200,6 +200,12 @@ object SettingsCodec {
     fun restart(version: Int): ByteArray = write(GROUP_GENERAL, version, listOf(boolSetting(KEY_RESTART, true)))
 
     /**
+     * The [restart] write for a GENERAL read ([general]), or null when the strap doesn't report key 45: like Zepp, only
+     * a strap that lists it is asked (03 §5.2, 07 §0).
+     */
+    fun restartFor(general: SettingsGroup): ByteArray? = if (general[KEY_RESTART] == null) null else restart(general.version)
+
+    /**
      * A "version,flag" string read as Zepp does (codemap 07 §1.4): split on commas, both of the first two parts must
      * be integers, anything after them is ignored. Null when it isn't such a string.
      */

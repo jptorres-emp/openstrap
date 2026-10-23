@@ -193,8 +193,9 @@ Rules for every chart:
 - **Centre:** the moment on Today ("Waking up", "Midday", "Workout time", "After your run", "Evening", "Night") or the
   tab name on other tabs, over the day ("Thu 23 Oct"). Never wraps. Yesterday's short name peeks in dimmed on the
   left. Swipe the header to change day. Tapping the date opens the calendar sheet, which marks days with data.
-- **Right:** the All metrics button (a round grid icon, opens the All metrics sheet, on every tab), then the strap
-  chip. Battery and a dot when all is well. Words only when they matter: "Charging 64%", "Not
+- **Right:** the All metrics button (a round bar chart icon, opens the All metrics sheet, on every tab), then the
+  strap chip. **Hidden for now:** the button is off until All metrics earns its place. The sheet stays built.
+  The strap chip shows battery and a dot when all is well. Words only when they matter: "Charging 64%", "Not
   synced" (amber dot), "18 min ago" (amber, last seen), "Not paired". Tapping it opens the Strap page from any tab.
 
 Chevrons go. Changing the day still changes it on all four tabs (shared `DayViewModel`), as now.

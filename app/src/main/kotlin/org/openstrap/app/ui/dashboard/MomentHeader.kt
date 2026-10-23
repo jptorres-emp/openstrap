@@ -67,7 +67,8 @@ fun MomentHeader(
     picker: DayPicker,
     onOpenYou: () -> Unit,
     onOpenStrap: () -> Unit,
-    onOpenAllMetrics: () -> Unit,
+    /** Shows the All metrics button when set. */
+    onOpenAllMetrics: (() -> Unit)?,
 ) {
     var calendarOpen by rememberSaveable { mutableStateOf(false) }
     if (calendarOpen) DayCalendarSheet(date, picker.available, picker.onPick, onDismiss = { calendarOpen = false })
@@ -81,8 +82,10 @@ fun MomentHeader(
             centre = { DaySwitcher(title, date, hasNext, onPrev, onNext, { calendarOpen = true }, Modifier) },
             end = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    RoundButton(PhosphorIcons.ChartBar, "All metrics", "Open all metrics", onOpenAllMetrics)
-                    Spacer(Modifier.width(8.dp))
+                    if (onOpenAllMetrics != null) {
+                        RoundButton(PhosphorIcons.ChartBar, "All metrics", "Open all metrics", onOpenAllMetrics)
+                        Spacer(Modifier.width(8.dp))
+                    }
                     StrapChipButton(chip, onOpenStrap)
                 }
             },

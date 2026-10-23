@@ -556,8 +556,9 @@ private fun AppRoot(container: AppContainer, metricRequests: kotlinx.coroutines.
                 MomentHeader(
                     if (t == Tab.Today) dayTitle(day.date) else t.label, day.date, chip, dayVm::previousDay, dayVm::nextDay, picker,
                     onOpenYou = { youOpen = true }, onOpenStrap = { openPage(Page.Strap) },
-                    // The sheet opens over whatever shows, and no tab hears of it (spec 3.2).
-                    onOpenAllMetrics = { allMetricsOpen = true },
+                    // All metrics is hidden for now (spec 3.1). Passing { allMetricsOpen = true } brings the button
+                    // back; the sheet opens over whatever shows, and no tab hears of it (spec 3.2).
+                    onOpenAllMetrics = null,
                 )
             }
             // What a tab's stack shows on top: the same screens on every tab, each pushing onto the stack it's on.

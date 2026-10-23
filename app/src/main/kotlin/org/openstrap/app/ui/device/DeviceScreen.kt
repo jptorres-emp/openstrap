@@ -413,7 +413,7 @@ private val StrapGlow = GlowStyle(
     coreLightness = 0.03f, toneWidth = 0.dp, glowStrength = 0.55f, lightAngle = LightAngle.Above,
 )
 
-/** The protocol log, for bug reports, opened from the You sheet; the whole log can be copied. */
+/** The protocol log, for bug reports, opened from the You page; the whole log can be copied. */
 @Composable
 fun DiagnosticsScreen(lines: List<String>, contentPadding: PaddingValues, onBack: () -> Unit) {
     BackHandler(onBack = onBack)

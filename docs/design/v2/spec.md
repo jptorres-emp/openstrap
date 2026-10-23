@@ -189,7 +189,7 @@ Rules for every chart:
 
 `ScreenParts.DateHeader` is replaced by `MomentHeader`:
 
-- **Left:** avatar button, opens the You sheet.
+- **Left:** avatar button, opens the You page.
 - **Centre:** the moment on Today ("Waking up", "Midday", "Workout time", "After your run", "Evening", "Night") or the
   tab name on other tabs, over the day ("Thu 23 Oct"). Never wraps. Yesterday's short name peeks in dimmed on the
   left. Swipe the header to change day. Tapping the date opens the calendar sheet, which marks days with data.
@@ -211,7 +211,7 @@ the moment.
 - **During a workout** the live capsule above the bar shows the heart rate in the zone colour and opens the live
   screen.
 
-**All metrics sheet.** A modal sheet over the current tab, in the You sheet's style: every metric grouped by section,
+**All metrics sheet.** A modal sheet over the current tab, in the style of the sheets over the app: every metric grouped by section,
 each row with its value for the day. Tapping a row closes the sheet, then opens that metric's detail on the current
 tab. Recovery and Sleep rows switch to their tab at its root, and Charge to the Recovery tab with its card in view.
 Back or a swipe down closes it. The tab bar under it does nothing while it's open.
@@ -222,15 +222,17 @@ Back or a swipe down closes it. The tab bar under it does nothing while it's ope
   jumps in `MainActivity` (inventory 1.5) are removed.
 - Tapping the current tab scrolls to top. Tapping it again pops to its root. Tapping another tab keeps every stack.
 - Back from a tab root goes to the previous tab, then Today, then leaves.
-- The Strap page, the You sheet and the All metrics sheet open over the current tab and close back to it.
+- The You page, the Strap page and the All metrics sheet open over the current tab and close back to it. Pages
+  opened from them stack on top, so Back from Profile returns to You and Back from Alarms returns to the Strap page.
 - Deep links keep working: `open_workout`, `show_workout`, `ready_sport`. Health alert and body-signal notifications
   gain a route to their metric detail (`open_metric`).
 
-### 3.4 You sheet and Strap page
+### 3.4 You page and Strap page
 
-**You sheet** (modal, from the avatar): Profile, Goals (steps, active hours, sleep goal, and your sleep need shown
+**You page** (from the avatar, a page like the Strap page, with the same round back button): Profile, Goals (steps, active hours, sleep goal, and your sleep need shown
 with it), Your data (Save a copy, Restore from a copy, Health Connect), Diagnostics, About. Every row shows its current
-value as a second line.
+value as a second line. It was a sheet, but most rows open pages of their own, and a sheet that closes to open a
+page loses its way back.
 
 **Strap page**: hero glow card with the strap, state line with relative time and battery. Sync now and Find strap.
 Rows with values: Alarms, Phone alerts, Health alerts, Off-body reminder, Auto-detect workouts (moved from Activity),
@@ -458,7 +460,7 @@ Each step is one or a few commits on `design-v2`, with tests and before-and-afte
    `Still`, `GlowMood`, `EdgeCard`, `ListPanel` and `ListRow`, the grid row types, `MetricColors.load`, a haptics helper
    with the 3.6 table.
 2. **Frame:** `MomentHeader`, four-tab bar, the All metrics button in the header, the navigation rules (removing `FocusTarget` and
-   tab jumps), You sheet, Strap page and its moved settings.
+   tab jumps), You page, Strap page and its moved settings.
 3. **Moments:** `MomentResolver` with unit tests for every boundary and overlap, including usual workout time.
 4. **Today:** layouts per moment, states, Edit Today.
 5. **Tabs:** Recovery, Sleep, Activity.

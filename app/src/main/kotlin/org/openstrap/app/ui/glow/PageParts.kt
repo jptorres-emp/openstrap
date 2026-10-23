@@ -111,7 +111,7 @@ fun PageRows(modifier: Modifier = Modifier, content: @Composable ColumnScope.() 
 
 /**
  * A settings row: the [title], and its current [value] either on the right ([below] false, the Strap page) or as a
- * second line ([below] true, the You sheet). [trailing] replaces the value on the right (a switch). [divider] draws
+ * second line ([below] true, the You page). [trailing] replaces the value on the right (a switch). [divider] draws
  * the hairline above it.
  */
 @Composable

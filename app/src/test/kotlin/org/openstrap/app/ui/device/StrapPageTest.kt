@@ -6,7 +6,7 @@ import org.openstrap.app.data.settings.Goals
 import org.openstrap.app.device.ConnectionState
 import org.openstrap.app.device.SyncState
 
-/** The Strap page's state line and the You sheet's values. */
+/** The Strap page's state line and the You page's values. */
 class StrapPageTest {
     private val now = 1_800_000_000L
     private val connected = ConnectionState.Connected(86, "3.25")
@@ -23,7 +23,7 @@ class StrapPageTest {
         assertEquals("Connecting", strapStateLine(ConnectionState.Connecting, SyncState.Idle, null, now))
     }
 
-    @Test fun `You sheet values`() {
+    @Test fun `You page values`() {
         assertEquals("7 h 30", hoursMinutes(450))
         assertEquals("8 h", hoursMinutes(480))
         assertEquals("7 h 05", hoursMinutes(425))

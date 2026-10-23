@@ -217,10 +217,10 @@ private enum class Tab(
 }
 
 /**
- * The pages that open over whichever tab is showing and close back to it (spec 3.3): the Strap page and what it opens,
- * and the pages the You sheet opens. Shallowest first.
+ * The pages that open over whichever tab is showing and close back to it (spec 3.3): the You page and what it opens,
+ * and the Strap page and what it opens. Shallowest first.
  */
-private enum class Page { Strap, Alarms, PhoneAlerts, HealthAlerts, Firmware, ZeppAccount, Profile, Diagnostics }
+private enum class Page { You, Profile, Diagnostics, Strap, Alarms, PhoneAlerts, HealthAlerts, Firmware, ZeppAccount }
 
 /** Keeps the open pages across process death, as their names ("Strap,Alarms"). */
 private val PagesSaver: androidx.compose.runtime.saveable.Saver<List<Page>, String> = androidx.compose.runtime.saveable.Saver(
@@ -251,10 +251,9 @@ private fun AppRoot(container: AppContainer, metricRequests: kotlinx.coroutines.
     val tab = nav.current
     val liveEnabled by container.strap.liveHeartRateEnabled.collectAsStateWithLifecycle()
     val firmwareVm: FirmwareViewModel = viewModel(factory = viewModelFactory { initializer { FirmwareViewModel(container) } })
-    // Pages over the tab showing (the Strap page and what it opens, Profile, Diagnostics), deepest last.
+    // Pages over the tab showing (the You page and the Strap page, and what they open), deepest last.
     var pages by rememberSaveable(stateSaver = PagesSaver) { mutableStateOf(emptyList<Page>()) }
-    var youOpen by rememberSaveable { mutableStateOf(false) }
-    // The All metrics sheet, from the grid button in the header: over the tab, like the You sheet, never a place.
+    // The All metrics sheet, from the grid button in the header: over the tab, never a place.
     var allMetricsOpen by rememberSaveable { mutableStateOf(false) }
     val workoutsVm: org.openstrap.app.ui.workout.WorkoutsViewModel = viewModel(factory = viewModelFactory {
         initializer { org.openstrap.app.ui.workout.WorkoutsViewModel(container.database.healthDao(), container.settings.profile) }
@@ -343,7 +342,6 @@ private fun AppRoot(container: AppContainer, metricRequests: kotlinx.coroutines.
         metricRequest?.let { r ->
             Detail.fromRoute(r.route)?.let { detail ->
                 closePages()
-                youOpen = false
                 allMetricsOpen = false
                 r.day?.let(dayVm::select)
                 if (stackOf(tab).lastOrNull() != detail) setStack(tab, stackOf(tab) + detail)
@@ -526,7 +524,6 @@ private fun AppRoot(container: AppContainer, metricRequests: kotlinx.coroutines.
         // Another tab keeps every stack. The tab showing scrolls to the top, then pops to its root (spec 3.3). A tap
         // that closes pages over the tab does only that.
         val selectTab: (Int) -> Unit = { t ->
-            youOpen = false
             val closed = closePages()
             when {
                 firmwareInstalling() -> Unit
@@ -555,7 +552,7 @@ private fun AppRoot(container: AppContainer, metricRequests: kotlinx.coroutines.
             val header: @Composable (Tab) -> Unit = { t ->
                 MomentHeader(
                     if (t == Tab.Today) dayTitle(day.date) else t.label, day.date, chip, dayVm::previousDay, dayVm::nextDay, picker,
-                    onOpenYou = { youOpen = true }, onOpenStrap = { openPage(Page.Strap) },
+                    onOpenYou = { openPage(Page.You) }, onOpenStrap = { openPage(Page.Strap) },
                     // All metrics is hidden for now (spec 3.1). Passing { allMetricsOpen = true } brings the button
                     // back; the sheet opens over whatever shows, and no tab hears of it (spec 3.2).
                     onOpenAllMetrics = null,
@@ -685,7 +682,7 @@ private fun AppRoot(container: AppContainer, metricRequests: kotlinx.coroutines.
                     }
                 }
             } }
-            // The pages over the tab: the Strap page and what it opens, and the pages the You sheet opens.
+            // The pages over the tab: the You page and the Strap page, and what they open.
             if (pages.isNotEmpty()) androidx.compose.foundation.layout.Box(
                 androidx.compose.ui.Modifier.fillMaxSize().padding(start = if (rail) org.openstrap.app.ui.components.NavRailWidth else 0.dp)
                     .background(MaterialTheme.colorScheme.background).hazeSource(navGlass, zIndex = 1f),
@@ -694,6 +691,21 @@ private fun AppRoot(container: AppContainer, metricRequests: kotlinx.coroutines.
                     OverPages(
                         pages, container, deviceVm, firmwareVm, profile, padding, requestBluetooth, lastSeen,
                         open = openPage, close = closePage,
+                        youPage = {
+                            val log by container.strap.log.collectAsStateWithLifecycle()
+                            org.openstrap.app.ui.device.YouPage(
+                                profile, goals, org.openstrap.app.data.Recovery.sleepNeed(profile.age(), profile.sleepNeedMinutes), log.size, padding,
+                                onProfile = { openPage(Page.Profile) },
+                                onGoals = { editGoals = true },
+                                onSaveCopy = { csvLauncher.launch("openstrap-export.zip") },
+                                onRestoreCopy = { csvImportLauncher.launch(arrayOf("application/zip", "application/x-zip-compressed", "application/octet-stream")) },
+                                onHealthConnect = exportHealthConnect,
+                                onRestoreHealthConnect = importHealthConnect,
+                                onDiagnostics = { openPage(Page.Diagnostics) },
+                                onSampleData = if (org.openstrap.app.data.SampleData.AVAILABLE) ({ deviceVm.loadSampleData() }) else null,
+                                onBack = closePage,
+                            )
+                        },
                     )
                 }
             }
@@ -702,21 +714,6 @@ private fun AppRoot(container: AppContainer, metricRequests: kotlinx.coroutines.
             navItems, tab, selectTab, androidx.compose.ui.Modifier.align(androidx.compose.ui.Alignment.CenterStart),
             glass = navGlass,
         )
-        if (youOpen) {
-            val log by container.strap.log.collectAsStateWithLifecycle()
-            org.openstrap.app.ui.device.YouSheet(
-                profile, goals, org.openstrap.app.data.Recovery.sleepNeed(profile.age(), profile.sleepNeedMinutes), log.size,
-                onDismiss = { youOpen = false },
-                onProfile = { youOpen = false; openPage(Page.Profile) },
-                onGoals = { editGoals = true },
-                onSaveCopy = { csvLauncher.launch("openstrap-export.zip") },
-                onRestoreCopy = { csvImportLauncher.launch(arrayOf("application/zip", "application/x-zip-compressed", "application/octet-stream")) },
-                onHealthConnect = exportHealthConnect,
-                onRestoreHealthConnect = importHealthConnect,
-                onDiagnostics = { youOpen = false; openPage(Page.Diagnostics) },
-                onSampleData = if (org.openstrap.app.data.SampleData.AVAILABLE) ({ deviceVm.loadSampleData() }) else null,
-            )
-        }
         // A map, not a card: rows whose home is a tab go there, at its root and top (Charge to its card); the rest open
         // their detail on the tab showing. The day is shared, so the tab shows the same one. The sheet closes first.
         if (allMetricsOpen) org.openstrap.app.ui.glow.AllMetricsSheet(
@@ -786,6 +783,8 @@ private fun OverPages(
     lastSeen: Long?,
     open: (Page) -> Unit,
     close: () -> Unit,
+    /** The You page, built where its launchers and the Goals editor live. */
+    youPage: @Composable () -> Unit,
 ) {
     // Read from the strap when first needed (the Strap page's rows show what it holds), and again on each page that edits it.
     val needsAlarms = pages.any { it == Page.Strap || it == Page.Alarms || it == Page.HealthAlerts }
@@ -795,6 +794,7 @@ private fun OverPages(
     org.openstrap.app.ui.components.PushContent(pages, depth = { it.size }) { stack ->
         when (stack.lastOrNull()) {
             null -> Unit
+            Page.You -> youPage()
             Page.Strap -> {
                 val alarms = alarmsVm ?: return@PushContent
                 val alarmsState by alarms.state.collectAsStateWithLifecycle()

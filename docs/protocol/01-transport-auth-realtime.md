@@ -620,6 +620,11 @@ Settings writes are `05 group groupVersion 00 n {key type value}`, answered `06 
 | Group / key | Type | Use |
 |---|---|---|
 | GENERAL `0x0A` / 45 (`0x2D`) | bool | **Restart.** Writing true restarts the strap: `05 0A 02 00 01 2D 0B 01` with GENERAL at version 2. The ack may not arrive before the link drops; the usual reconnect brings the strap back. Zepp shows Restart only when the strap reports key 45, and so does OpenStrap (read on connect). |
+| GENERAL `0x0A` / 44 (`0x2C`) | bool | The strap's wear-reminder switch (`wearStatusAlertSwitch`). Zepp turns it on for the strap; OpenStrap does on connect while its Off-body reminder setting is on, writing only when the strap doesn't already report it on. |
+| DEVICE_INFORMATION `0x00` / 16 (`0x10`) | bool | `wearStatus`: false while the strap is off-body. Read with the rest of the group on connect, and pushed in a `04` when it changes (codemap 07 §4 N5). OpenStrap logs the first push raw (`wear status push …`). |
+
+None of the three has been checked on a strap yet: whether it reports keys 44 and 45, restarts on 45, and pushes key 16.
+
 ---
 
 ## 6. Keep-alive, disconnect, reconnect

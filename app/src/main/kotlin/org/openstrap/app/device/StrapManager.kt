@@ -24,6 +24,7 @@ import org.openstrap.app.ble.GattStrapLink
 import org.openstrap.app.ble.StrapUuids
 import org.openstrap.app.data.db.HealthAlertRow
 import org.openstrap.app.data.db.HealthDao
+import org.openstrap.app.data.db.WearEventRow
 import org.openstrap.app.data.settings.SettingsStore
 import org.openstrap.app.data.settings.UserProfile
 import org.openstrap.protocol.services.Gender
@@ -73,6 +74,7 @@ class StrapManager(
 ) : StrapController {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val healthAlerts = HealthAlertNotifier(context)
+    private val wearNotifier = WearNotifier(context)
 
     override val connection = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
     override val sync = MutableStateFlow<SyncState>(SyncState.Idle)
@@ -203,6 +205,7 @@ class StrapManager(
                 watchAlarms(s)
                 watchSettings(s)
                 watchFindDevice(s)
+                watchWear(s)
                 watchSportSession(s)
                 watchFeatures(s)
                 retries = 0
@@ -361,6 +364,10 @@ class StrapManager(
             addAction(android.content.Intent.ACTION_TIME_CHANGED)
         }
         androidx.core.content.ContextCompat.registerReceiver(context, timeChanged, filter, androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED)
+        // The app was stopped while it knew the wear state: close that interval now, as nothing is connected yet.
+        scope.launch {
+            runCatching { if (dao.lastWearEvent()?.worn != null) dao.insertWearEvent(WearEventRow(System.currentTimeMillis() / 1000, null)) }
+        }
     }
 
     /**
@@ -401,7 +408,60 @@ class StrapManager(
         s.messagesFor(Endpoints.SETTINGS).collect { p ->
             if (SettingsCodec.replyGroup(p) == null) return@collect
             val group = SettingsCodec.parse(p, settingsProtocol?.version)
-            if (group == null) log("settings 04 unparsed: ${p.toHex()}") else settingsChanged.tryEmit(group)
+            if (group == null) return@collect log("settings 04 unparsed: ${p.toHex()}")
+            // Nobody has captured the strap's wear push yet: log the first one raw, for checking against hardware.
+            if (!wearPushLogged && SettingsCodec.wearStatus(group) != null) {
+                wearPushLogged = true
+                log("wear status push ${p.toHex()}")
+            }
+            settingsChanged.tryEmit(group)
+        }
+    }
+
+    @Volatile private var wearPushLogged = false
+
+    /**
+     * Wear / off-body, as Zepp does for the strap (07 §4 N5): with the app's switch on, turns on the strap's wear
+     * reminder (GENERAL key 44), then follows DEVICE_INFORMATION key 16 as read on connect and as pushed. Ends with
+     * this connection.
+     */
+    private fun CoroutineScope.watchWear(s: ChannelSession) = launch {
+        if (!s.services.has(Endpoints.SETTINGS)) return@launch
+        launch {
+            settings.wearReminder.distinctUntilChanged().collect { on ->
+                if (on) enableWearAlert()
+                wearNotifier.apply(WearReminder.decide(lastWorn, on, wearNotifier.shown))
+            }
+        }
+        info.value?.deviceInformation?.let(SettingsCodec::wearStatus)?.let { onWear(it) }
+        settingsChanged.collect { g -> SettingsCodec.wearStatus(g)?.let { onWear(it) } }
+    }
+
+    /** GENERAL key 44 on, written only when the strap doesn't already report it on. */
+    private suspend fun enableWearAlert() = runCatching {
+        val key = SettingsCodec.KEY_WEAR_STATUS_ALERT
+        val reply = settingsQuery(SettingsCodec.GROUP_GENERAL, listOf(key), withOptions = false)
+        val group = SettingsCodec.parse(reply, settingsProtocol()?.version) ?: throw StrapCommandException("unparsed ${reply.toHex()}")
+        if (group[key]?.bool == true) return@runCatching
+        // Written even when the strap doesn't list the key, so the reply shows whether it takes it.
+        val ack = command(Endpoints.SETTINGS, SettingsCodec.write(SettingsCodec.GROUP_GENERAL, group.version, listOf(SettingsCodec.boolSetting(key, true))))
+        log("wear reminder on (was ${group[key]?.bool ?: "not reported"}): ${if (SettingsCodec.isWriteSuccess(ack)) "ok" else "refused"}")
+    }.onFailure { log("wear reminder switch failed: $it") }
+
+    /** The last wear state: true on body, false off, null unknown (not connected, or not reported). */
+    @Volatile private var lastWorn: Boolean? = null
+
+    /** Records a change in [worn] for Charge and posts or clears the off-body notification. */
+    private fun onWear(worn: Boolean?) {
+        synchronized(this) {
+            if (worn == lastWorn) return
+            lastWorn = worn
+        }
+        log("wear status: ${when (worn) { true -> "on body"; false -> "off body"; null -> "unknown" }}")
+        val at = System.currentTimeMillis() / 1000
+        scope.launch {
+            runCatching { dao.insertWearEvent(WearEventRow(at, worn)) }.onFailure { log("wear event not stored: $it") }
+            wearNotifier.apply(WearReminder.decide(worn, settings.wearReminder.first(), wearNotifier.shown))
         }
     }
 
@@ -539,6 +599,7 @@ class StrapManager(
             // Ends this connection's listeners, and a setup still in progress, so it can't go on to report Connected.
             connectJob?.cancel()
             endFind()
+            onWear(null)
             liveJob?.cancel()
             liveHeartRate.value = null
             session?.stop()
@@ -562,6 +623,7 @@ class StrapManager(
         connectJob?.cancel()
         liveJob?.cancel()
         endFind()
+        onWear(null)
         close()
         liveHeartRate.value = null
         connection.value = ConnectionState.Disconnected

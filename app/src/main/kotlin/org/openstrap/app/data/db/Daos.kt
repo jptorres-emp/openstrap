@@ -394,6 +394,19 @@ interface HealthDao {
     @Query("SELECT * FROM health_alert WHERE timestamp BETWEEN :from AND :to ORDER BY timestamp")
     fun healthAlerts(from: Long, to: Long): Flow<List<HealthAlertRow>>
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertWearEvent(row: WearEventRow)
+
+    /** Wear changes in [from, to), led by the one in force at [from] if there is one. */
+    @Query(
+        "SELECT * FROM wear_event WHERE timestamp < :to AND " +
+            "timestamp >= COALESCE((SELECT MAX(timestamp) FROM wear_event WHERE timestamp <= :from), :from) ORDER BY timestamp",
+    )
+    suspend fun wearEventsOnce(from: Long, to: Long): List<WearEventRow>
+
+    @Query("SELECT * FROM wear_event ORDER BY timestamp DESC LIMIT 1")
+    suspend fun lastWearEvent(): WearEventRow?
+
     // Reads for data the dashboard didn't show before.
     @Query("SELECT * FROM sleep_spo2 WHERE timestamp BETWEEN :from AND :to ORDER BY timestamp")
     fun sleepSpo2(from: Long, to: Long): Flow<List<SleepSpo2Sample>>

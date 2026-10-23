@@ -80,6 +80,14 @@ object SettingsCodec {
     const val KEY_RESOURCE_VERSION = 0x04
     const val KEY_FONT_VERSION = 0x05
     const val KEY_EXT_RESOURCE_VERSION = 0x06
+    /**
+     * DEVICE_INFORMATION key 16 `wearStatus`, a bool: false while the strap is off-body. Zepp listens for its `04`
+     * push and posts its "Wear Reminders" notification on false (07 §0 row 37, §4 N5). It only pushes while GENERAL
+     * [KEY_WEAR_STATUS_ALERT] is on (INFERRED from Zepp turning that on; not captured on a strap yet).
+     */
+    const val KEY_WEAR_STATUS = 0x10
+    /** GENERAL key 44 `wearStatusAlertSwitch`: the strap's own switch for the wear reminder (07 §4 N5). */
+    const val KEY_WEAR_STATUS_ALERT = 0x2C
 
     /** Health group and its keys (kel.java:62-110). */
     const val GROUP_HEALTH = 0x08
@@ -202,6 +210,10 @@ object SettingsCodec {
         val flag = parts[1].toIntOrNull() ?: return null
         return version to flag
     }
+
+    /** The wear state in a DEVICE_INFORMATION reply or push: true on body, false off-body; null when it doesn't carry key 16. */
+    fun wearStatus(group: SettingsGroup): Boolean? =
+        if (group.group == GROUP_DEVICE_INFORMATION) group[KEY_WEAR_STATUS]?.bool else null
 
     fun isWriteSuccess(reply: ByteArray): Boolean = reply.size == 2 && reply.u8(0) == WRITE + 1 && reply.u8(1) == 1
 

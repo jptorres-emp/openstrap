@@ -155,6 +155,18 @@ class SettingsStore(private val context: Context) {
         context.dataStore.edit { it[autoStartKey] = enabled }
     }
 
+    private val wearReminderKey = androidx.datastore.preferences.core.booleanPreferencesKey("wear_reminder")
+
+    /**
+     * Off-body reminder, as Zepp has for the strap (codemap 07 §4 N5): turns on the strap's wear reminder (GENERAL
+     * key 44) on connect and shows a notification while the strap reports it is off-body. On by default.
+     */
+    val wearReminder: Flow<Boolean> = context.dataStore.data.map { it[wearReminderKey] ?: true }
+
+    suspend fun setWearReminder(enabled: Boolean) {
+        context.dataStore.edit { it[wearReminderKey] = enabled }
+    }
+
     private val strapSessionsKey = androidx.datastore.preferences.core.booleanPreferencesKey("strap_sessions")
 
     /**

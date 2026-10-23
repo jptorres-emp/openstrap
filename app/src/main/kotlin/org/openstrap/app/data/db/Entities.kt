@@ -399,6 +399,17 @@ data class HealthAlertRow(
     val value: Long,
 )
 
+/**
+ * A change in whether the strap is worn, from its wear-status push (Settings DEVICE_INFORMATION key 16, codemap 07
+ * §4 N5) or the read on connect. The state holds until the next row. [worn] null marks the link going down: from then
+ * on the app doesn't know, so Charge falls back to its heart-rate gap rule.
+ */
+@Entity(tableName = "wear_event")
+data class WearEventRow(
+    @PrimaryKey val timestamp: Long,
+    val worn: Boolean?,
+)
+
 /** One local day of a sampled metric: its average (or total, for steps), lowest, highest and sample count. */
 data class DailyAggregate(
     /** The local date as SQLite prints it, `yyyy-MM-dd`. */

@@ -88,6 +88,20 @@ class AlarmsAndSettingsTest {
     }
 
     @Test
+    fun wearStatusPush() {
+        // A DEVICE_INFORMATION push carrying only key 16 (bool): off-body, then back on. Layout per 03 §3.6.1 table C;
+        // the strap's own push has not been captured yet.
+        val off = SettingsCodec.parse("040100010001100b00".hexToBytes())!!
+        assertEquals(false, SettingsCodec.wearStatus(off))
+        assertEquals(true, SettingsCodec.wearStatus(SettingsCodec.parse("040100010001100b01".hexToBytes())!!))
+        // Key 16 in another group isn't the wear state, and a push without it says nothing.
+        assertNull(SettingsCodec.wearStatus(SettingsCodec.parse("040108010001100b00".hexToBytes())!!))
+        assertNull(SettingsCodec.wearStatus(SettingsCodec.parse("04010001000102500000000a".hexToBytes())!!))
+        // Turning the strap's wear reminder on: GENERAL key 44, bool true.
+        assertArrayEquals("050a0200012c0b01".hexToBytes(), SettingsCodec.write(SettingsCodec.GROUP_GENERAL, 2, listOf(SettingsCodec.boolSetting(SettingsCodec.KEY_WEAR_STATUS_ALERT, true))))
+    }
+
+    @Test
     fun settingsVersion() {
         assertArrayEquals("01".hexToBytes(), SettingsCodec.versionRequest)
         assertEquals(SettingsProtocol(3, emptyList()), SettingsCodec.parseVersion("0203".hexToBytes()))

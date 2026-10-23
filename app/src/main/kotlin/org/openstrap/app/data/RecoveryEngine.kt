@@ -169,7 +169,9 @@ class RecoveryEngine(private val dao: HealthDao) {
         // Heart rate after the day (the lookahead) only says when the strap went back on.
         val hrAhead = if (simTo > day.to + 1) minuteHeartRate(day.to + 1, simTo) else emptyList()
         val simHr = hr.filter { it.first in simFrom until simTo } + hrAhead.filter { it.first > day.to }
-        val minutes = Recovery.minutes(simFrom, simTo, simHr, steps, stress, stages, workouts = workoutRanges, offWrist = offWrist)
+        // The strap's live wear pushes, where the app was connected to hear them; elsewhere the heart-rate gap rule stands.
+        val wear = dao.wearEventsOnce(simFrom, simTo).map { it.timestamp to it.worn }
+        val minutes = Recovery.minutes(simFrom, simTo, simHr, steps, stress, stages, workouts = workoutRanges, offWrist = offWrist, wear = wear)
         val hrvScore = readiness.contributors.firstOrNull { it.factor == Recovery.Factor.HrvBalance }?.score
         // Each main sleep's body-signal state, by the rule Readiness uses (it only looks backwards, so one pass over every
         // night gives each its own state); an Alert scales Charge from that sleep's start.

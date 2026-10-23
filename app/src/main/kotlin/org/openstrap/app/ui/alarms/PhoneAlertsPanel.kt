@@ -47,6 +47,7 @@ fun PhoneAlertsPanel(alerts: PhoneAlerts, settings: SettingsStore) {
     val callPermission by alerts.callPermission.collectAsState()
     val notificationAccess by alerts.notificationAccess.collectAsState()
     val pattern by settings.notificationPattern.collectAsState(BuzzPattern.TWO_SHORT)
+    val wearReminder by settings.wearReminder.collectAsState(true)
     var previewError by remember { mutableStateOf<String?>(null) }
 
     // The user may grant access in system settings and come back.
@@ -101,6 +102,9 @@ fun PhoneAlertsPanel(alerts: PhoneAlerts, settings: SettingsStore) {
                 })
                 previewError?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MetricColors.warn) }
             }
+        }
+        SwitchRow("Off-body reminder", "A notification while the strap says it's off your body, cleared when it's back on.", wearReminder) { on ->
+            scope.launch { settings.setWearReminder(on) }
         }
         Text(
             "Silent apps and Do Not Disturb are followed. OpenStrap never reads what a notification says.",

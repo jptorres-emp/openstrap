@@ -87,6 +87,11 @@ object Recovery {
         val workout: WorkoutPhase? = null,
         /** The strap marked this minute as not worn ([offWrist]); a minute with heart rate is worn whatever this says. */
         val offWrist: Boolean = false,
+        /**
+         * Whether the strap said it was worn at this minute, from its live wear pushes (true on body, false off-body);
+         * null where no recorded state covers the minute (e.g. while disconnected). See [notWorn].
+         */
+        val worn: Boolean? = null,
     )
 
     /**
@@ -1291,8 +1296,10 @@ object Recovery {
     }
 
     /**
-     * Which of [minutes] are not worn: no heart rate, not asleep, and either marked [Minute.offWrist] or inside a gap
-     * of at least [NO_WEAR_GAP_MINUTES] that heart rate or sleep later closes (an open gap at the end is unsynced data).
+     * Which of [minutes] are not worn: no heart rate, not asleep, and then by the strap's live wear state
+     * ([Minute.worn]) where one was recorded: off-body is not worn at once, on body is worn (a dropout). Where none
+     * was, as before: marked [Minute.offWrist], or inside a gap of at least [NO_WEAR_GAP_MINUTES] that heart rate or
+     * sleep later closes (an open gap at the end is unsynced data).
      */
     fun notWorn(minutes: List<Minute>): BooleanArray {
         val out = BooleanArray(minutes.size)
@@ -1302,7 +1309,7 @@ object Recovery {
             var j = i
             while (j < minutes.size && minutes[j].hr == null && minutes[j].sleepStage == null) j++
             val gap = j < minutes.size && j - i >= NO_WEAR_GAP_MINUTES
-            for (k in i until j) out[k] = gap || minutes[k].offWrist
+            for (k in i until j) out[k] = minutes[k].worn?.not() ?: (gap || minutes[k].offWrist)
             i = j
         }
         return out
@@ -1351,6 +1358,8 @@ object Recovery {
         workouts: List<LongRange> = emptyList(),
         /** Minute starts the strap marked off the wrist ([offWrist]). */
         offWrist: Set<Long> = emptySet(),
+        /** Recorded wear changes (time, worn or null for unknown), each holding until the next ([Minute.worn]). */
+        wear: List<Pair<Long, Boolean?>> = emptyList(),
     ): List<Minute> {
         val excluded = stressExcluded(workouts)
         val hrByMinute = hr.associate { (it.first / 60 * 60) to it.second }
@@ -1360,6 +1369,9 @@ object Recovery {
         var si = 0
         var lastStress: Pair<Long, Int>? = null
         var gi = 0
+        val wearSorted = wear.sortedBy { it.first }
+        var wi = 0
+        var worn: Boolean? = null
         val out = ArrayList<Minute>(((to - from) / 60).toInt().coerceAtLeast(0))
         var t = from / 60 * 60
         while (t < to) {
@@ -1372,7 +1384,9 @@ object Recovery {
                 inWorkout(t, excluded) -> WorkoutPhase.After
                 else -> null
             }
-            out += Minute(t, hrByMinute[t], steps[t] ?: 0, s, stage, phase, t in offWrist)
+            // The state at the minute's middle, so a change in its first half counts for it.
+            while (wi < wearSorted.size && wearSorted[wi].first <= t + 30) { worn = wearSorted[wi].second; wi++ }
+            out += Minute(t, hrByMinute[t], steps[t] ?: 0, s, stage, phase, t in offWrist, worn)
             t += 60
         }
         return out

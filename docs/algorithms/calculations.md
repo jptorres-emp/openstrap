@@ -293,7 +293,7 @@ A body-battery: sleep fills it, and the day drains it.
 | State | When | Change per minute |
 |---|---|---|
 | **Sleep** | inside a sleep stage | + 0.006 × stage weight × relaxation × HRV factor × (100 − charge) |
-| **Not worn** | no heart rate and marked off-wrist, or a gap of 10+ minutes | − 0.0482 (charge ≥ 50) or − 0.0349 (below), then no value (see below) |
+| **Not worn** | no heart rate and the strap said it was off your body; where it said nothing (e.g. while disconnected), marked off-wrist or a gap of 10+ minutes | − 0.0482 (charge ≥ 50) or − 0.0349 (below), then no value (see below) |
 | **No data** | a heart-rate gap under 10 minutes, or one not synced yet | 0, the value holds |
 | **Exercise** | HRR ≥ 30 % and moving, or 10+ minutes in a row at HRR ≥ 30 %, or in a workout's stress exclusion | − 0.04 − 0.32 × TRIMP of that minute |
 | **Exercise recovery** | after exercise, while HR isn't rising | − 0.04 |
@@ -307,7 +307,7 @@ Charge is always kept within 0–100.
 
 * **Moving** means the strap counted 1–250 steps that minute, as for daily load. Sitting with a raised heart rate (heat, coffee, a fever) isn't Activity or Exercise outside a workout, short of a sustained run (below): it's Stress if the stress score says so, otherwise Rest, and it can't Relax.
 * **Sustained effort:** 10 or more minutes in a row at HRR ≥ 30 % outside a workout count as Exercise even without steps (unrecorded cycling or rowing). Shorter spikes stay Stress or Rest.
-* **Not worn** follows Zepp: Charge drifts down at Zepp's default no-wear rate (about 2.9 an hour above 50). After 384 not-worn minutes (6.4 hours) since waking, or straight away when the strap is off over your usual sleep time, there is no value (a gap in the chart). After a night off, Charge restarts when the strap is back on from the median of your last 7 wake values (80 without any), and the day says "Strap off overnight, Charge estimated." After a long stretch off in the day, the gap lasts until the next sleep, which starts from 50.
+* **Not worn** uses the strap's own off-body reports where OpenStrap was connected to hear them, and the heart-rate gap guess elsewhere. Charge then follows Zepp: it drifts down at Zepp's default no-wear rate (about 2.9 an hour above 50). After 384 not-worn minutes (6.4 hours) since waking, or straight away when the strap is off over your usual sleep time, there is no value (a gap in the chart). After a night off, Charge restarts when the strap is back on from the median of your last 7 wake values (80 without any), and the day says "Strap off overnight, Charge estimated." After a long stretch off in the day, the gap lasts until the next sleep, which starts from 50.
 * **Rest drain** is proportional to charge, so a desk day still runs Charge down but more slowly as it falls, as Zepp's mental pool does; Zepp's physical pool doesn't drain at rest at all.
 * **Body-signal Alert:** from the start of a night in Alert until the next sleep starts, every gain is × 0.5 and every drain × 1.5 (Zepp's health-alarm limits). Watch changes nothing.
 

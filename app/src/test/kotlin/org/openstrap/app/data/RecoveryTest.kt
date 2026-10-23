@@ -457,6 +457,26 @@ class RecoveryTest {
     }
 
     @Test
+    fun aRecordedOffBodyIntervalIsNotWorn() {
+        // The strap pushed off-body at minute 10 and on body at minute 15, while connected: those five minutes without
+        // heart rate are not worn at once, though the gap rule alone would read them as a dropout.
+        val wear = listOf(10 * 60L to false, 15 * 60L to true)
+        val minutes = Recovery.minutes(0, 30 * 60L, (0 until 30).filter { it !in 10 until 15 }.map { it * 60L to 64 }, emptyMap(), emptyList(), emptyList(), wear = wear)
+        assertEquals((10 until 15).toList(), Recovery.notWorn(minutes).withIndex().filter { it.value }.map { it.index })
+        assertEquals(0, Recovery.notWorn(minutes.map { it.copy(worn = null) }).count { it })
+        // Recorded as on body, a long stretch without heart rate is a dropout rather than the strap being off.
+        val onBody = run(60) { Minute(it * 60L, if (it in 10 until 40) null else 64, 0, 40, null, worn = true) }
+        assertEquals(0, Recovery.notWorn(onBody).count { it })
+        // Unknown again (the link went down): the gap rule is back.
+        val minutesAfterLoss = Recovery.minutes(0, 60 * 60L, (0 until 60).filter { it !in 10 until 40 }.map { it * 60L to 64 }, emptyMap(), emptyList(), emptyList(), wear = listOf(0L to true, 5 * 60L to null))
+        assertEquals(30, Recovery.notWorn(minutesAfterLoss).count { it })
+        // And Charge drifts over the recorded off-body minutes instead of holding.
+        val r = Recovery.charge(minutes, params, 0L until 30 * 60L, start = 80f, sampleSeconds = 60, requireAnchor = false)
+        val held = Recovery.charge(minutes.map { it.copy(worn = null) }, params, 0L until 30 * 60L, start = 80f, sampleSeconds = 60, requireAnchor = false)
+        assertTrue(r.points.first { it.t == 15 * 60L }.value < held.points.first { it.t == 15 * 60L }.value)
+    }
+
+    @Test
     fun aLongDaytimeStretchOffIsAGapUntilTheNextSleep() {
         // Seven hours off in the day (no usual sleep there): drift for 384 minutes, then nothing until the next sleep.
         val minutes = run(60) { Minute(it * 60L, 64, 0, 40, null) } +

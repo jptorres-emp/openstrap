@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
@@ -146,7 +147,11 @@ fun PageRow(
         }
         if (!below && value != null && trailing == null) {
             Spacer(Modifier.width(12.dp))
-            Text(value, color = Color.White.copy(alpha = 0.6f), style = GlowType.secondary.copy(fontSize = 13.5.sp), textAlign = TextAlign.End)
+            // A long value wraps onto a second line before it ever makes the title wrap.
+            Text(
+                value, Modifier.widthIn(max = 160.dp), color = Color.White.copy(alpha = 0.6f),
+                style = GlowType.secondary.copy(fontSize = 13.5.sp), textAlign = TextAlign.End,
+            )
         }
         if (trailing != null) {
             Spacer(Modifier.width(12.dp))

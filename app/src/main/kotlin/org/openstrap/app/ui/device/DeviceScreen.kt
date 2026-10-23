@@ -224,7 +224,10 @@ fun DeviceScreen(
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 when (connection) {
                     is ConnectionState.Connected -> {
-                        PageButton("Sync now", vm.strap::syncNow, Modifier.weight(1f).height(56.dp), enabled = sync !is SyncState.Running)
+                        PageButton(
+                            "Sync now", vm.strap::syncNow, Modifier.weight(1f).height(56.dp), enabled = sync !is SyncState.Running,
+                            icon = PhosphorIcons.ArrowsClockwise,
+                        )
                         if (info?.findDevice == true) FindStrapButton(vm, Modifier.weight(1f).height(56.dp))
                     }
                     ConnectionState.Connecting, ConnectionState.Authenticating ->
@@ -238,32 +241,32 @@ fun DeviceScreen(
             // What the strap holds is read from it; until then, or without it, the row just opens its page.
             val waiting = if (connected) "Reading" else "On the strap"
             PageRows {
-                PageRow("Alarms", alarmsSummary(alarms) ?: waiting, onClick = onAlarms, divider = false)
-                PageRow("Phone alerts", phoneAlertsSummary(calls, notifications), onClick = onPhoneAlerts)
-                PageRow("Health alerts", healthAlertsSummary(alarms) ?: waiting, onClick = onHealthAlerts)
-                PageRow("Off-body reminder", onClick = { scope.launch { settings.setWearReminder(!wearReminder) } }) {
+                PageRow("Alarms", alarmsSummary(alarms) ?: waiting, onClick = onAlarms, divider = false, icon = PhosphorIcons.Alarm)
+                PageRow("Phone alerts", phoneAlertsSummary(calls, notifications), onClick = onPhoneAlerts, icon = PhosphorIcons.Vibrate)
+                PageRow("Health alerts", healthAlertsSummary(alarms) ?: waiting, onClick = onHealthAlerts, icon = PhosphorIcons.Heartbeat)
+                PageRow("Off-body reminder", onClick = { scope.launch { settings.setWearReminder(!wearReminder) } }, icon = PhosphorIcons.HandPalm) {
                     GlowSwitch(wearReminder, { on -> scope.launch { settings.setWearReminder(on) } })
                 }
-                PageRow("Auto-detect workouts", onClick = { scope.launch { settings.setAutoStartWorkouts(!autoStart) } }) {
+                PageRow("Auto-detect workouts", onClick = { scope.launch { settings.setAutoStartWorkouts(!autoStart) } }, icon = PhosphorIcons.PersonSimpleRun) {
                     GlowSwitch(autoStart, { on -> scope.launch { settings.setAutoStartWorkouts(on) } })
                 }
                 KeepConnectedRow(vm, keepConnected, device.address)
-                PageRow("Firmware", info?.firmware ?: (connection as? ConnectionState.Connected)?.firmware ?: "Check for updates", onClick = onFirmware)
-                PageRow("Zepp account", if (zeppSignedIn) "Signed in" else "Not signed in", onClick = onZeppAccount)
+                PageRow("Firmware", info?.firmware ?: (connection as? ConnectionState.Connected)?.firmware ?: "Check for updates", onClick = onFirmware, icon = PhosphorIcons.Cpu)
+                PageRow("Zepp account", if (zeppSignedIn) "Signed in" else "Not signed in", onClick = onZeppAccount, icon = PhosphorIcons.Key)
             }
         }
         item {
             PageRows {
                 var first = true
                 if (connection is ConnectionState.Connected) {
-                    PageRow("Disconnect", onClick = { confirmDisconnect = true }, divider = false)
+                    PageRow("Disconnect", onClick = { confirmDisconnect = true }, divider = false, icon = PhosphorIcons.LinkBreak)
                     first = false
                 }
                 if (connection is ConnectionState.Connected && info?.canRestart == true) {
-                    PageRow("Restart strap", onClick = { confirmRestart = true }, divider = !first)
+                    PageRow("Restart strap", onClick = { confirmRestart = true }, divider = !first, icon = PhosphorIcons.ArrowClockwise)
                     first = false
                 }
-                PageRow("Forget this strap", onClick = { confirmForget = true }, divider = !first, titleColor = DangerColor)
+                PageRow("Forget this strap", onClick = { confirmForget = true }, divider = !first, titleColor = DangerColor, icon = PhosphorIcons.Trash)
             }
         }
     }
@@ -319,10 +322,11 @@ private fun KeepConnectedRow(vm: DeviceViewModel, keepConnected: KeepConnected, 
     val ignoringBattery by vm.companion.ignoringBatteryOptimizations.collectAsState()
     val declined by vm.companionDeclined.collectAsState()
     val title = "Stay connected in background"
+    val icon = PhosphorIcons.Bluetooth
     when {
-        associated -> PageRow(title, "On")
-        vm.companion.supported && !declined -> PageRow(title, "Off", onClick = { keepConnected.associate(address) })
-        !ignoringBattery -> PageRow(title, "Off", onClick = {
+        associated -> PageRow(title, "On", icon = icon)
+        vm.companion.supported && !declined -> PageRow(title, "Off", onClick = { keepConnected.associate(address) }, icon = icon)
+        !ignoringBattery -> PageRow(title, "Off", icon = icon, onClick = {
             runCatching {
                 context.startActivity(
                     android.content.Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
@@ -330,7 +334,7 @@ private fun KeepConnectedRow(vm: DeviceViewModel, keepConnected: KeepConnected, 
                 )
             }.onFailure { vm.showMessage("Couldn't open battery settings on this phone.") }
         })
-        else -> PageRow(title, "On")
+        else -> PageRow(title, "On", icon = icon)
     }
 }
 

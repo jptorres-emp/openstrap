@@ -48,6 +48,9 @@ import java.util.Locale
  * The Recovery tab in the glow language: "can I push today, and why". Two cards glow, the score and Charge;
  * everything that explains them sits in quiet dot panels underneath, and each body signal opens its detail.
  */
+/** Charge as a whole number the way every screen shows it, cut rather than rounded, so they all agree. */
+fun chargeShown(value: Float): Int = value.toInt()
+
 @Composable
 fun GlowRecoveryScreen(
     state: DayUiState,
@@ -199,7 +202,7 @@ private fun ChargeCard(c: Recovery.ChargeDay, day: LongRange) {
                 return@Column
             }
             val drained = (c.drainedExercise + c.drainedStress + c.drainedLiving).toInt()
-            GlowHeroNumber("${now.toInt()}", "/ 100", listOf(Narrative.chargeHeadline(now.toInt()), "${signed(c.recharged, +1)} · ${signed(drained.toFloat(), -1)}"))
+            GlowHeroNumber("${chargeShown(now)}", "/ 100", listOf(Narrative.chargeHeadline(chargeShown(now)), "${signed(c.recharged, +1)} · ${signed(drained.toFloat(), -1)}"))
             if (c.strapOffOvernight) Note(org.openstrap.app.ui.dashboard.STRAP_OFF_OVERNIGHT)
             GlowChartGap()
             val values = remember(c.points, day) { bucket(c.points, day, 15 * 60L) }

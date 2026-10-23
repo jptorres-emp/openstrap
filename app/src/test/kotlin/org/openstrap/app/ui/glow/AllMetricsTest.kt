@@ -81,6 +81,12 @@ class AllMetricsTest {
         assertTrue(targets.values.none { it == IndexTarget.Open(Detail.Recovery) || it == IndexTarget.Open(Detail.Sleep) })
     }
 
+    @Test fun `Charge is cut to a whole number like the Charge card`() {
+        assertEquals(57, chargeShown(57.6f))
+        assertEquals(57, chargeShown(57.0f))
+        assertEquals(0, chargeShown(0.9f))
+    }
+
     @Test fun `Habit Age shows what its page shows`() {
         val learning = org.openstrap.app.data.Healthspan.Outcome(
             null, org.openstrap.app.data.Healthspan.Withheld.Learning, age = 30,

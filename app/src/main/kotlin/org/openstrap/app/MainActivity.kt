@@ -539,13 +539,20 @@ private fun AppRoot(container: AppContainer, metricRequests: kotlinx.coroutines.
             closePages()
             if (stackOf(tab).lastOrNull() != Detail.AllMetrics) setStack(tab, stackOf(tab) + Detail.AllMetrics)
         }
+        // While All metrics is the screen showing, the circle is the lit item and no tab is; a detail opened from it
+        // belongs to the tab again.
+        val indexShowing = currentDetail == Detail.AllMetrics && pages.isEmpty() && workoutOpen == null
+        val litTab = if (indexShowing) -1 else tab
         val action: @Composable () -> Unit = {
             // The moments (step 3) pass the workout window's start here.
-            TabAction(workoutOpen, live, workoutAccent, workoutWindow = null, navGlass, onOpenWorkout = { container.workout.minimized.value = false }, onAllMetrics = openAllMetrics)
+            TabAction(
+                workoutOpen, live, workoutAccent, workoutWindow = null, navGlass, indexShowing,
+                onOpenWorkout = { container.workout.minimized.value = false }, onAllMetrics = openAllMetrics,
+            )
         }
         Scaffold(
             bottomBar = {
-                if (!rail) FloatingNavBar(navItems, tab, selectTab, glass = navGlass, action = action)
+                if (!rail) FloatingNavBar(navItems, litTab, selectTab, glass = navGlass, action = action)
             },
             containerColor = MaterialTheme.colorScheme.background,
         ) { padding ->
@@ -717,7 +724,7 @@ private fun AppRoot(container: AppContainer, metricRequests: kotlinx.coroutines.
             }
         }
         if (rail) org.openstrap.app.ui.components.FloatingNavRail(
-            navItems, tab, selectTab, androidx.compose.ui.Modifier.align(androidx.compose.ui.Alignment.CenterStart),
+            navItems, litTab, selectTab, androidx.compose.ui.Modifier.align(androidx.compose.ui.Alignment.CenterStart),
             glass = navGlass, action = action,
         )
         if (youOpen) {
@@ -780,6 +787,8 @@ private fun TabAction(
     /** Starts a workout, while it's the usual time for one; set by the moments (step 3), null until then. */
     workoutWindow: (() -> Unit)?,
     glass: dev.chrisbanes.haze.HazeState,
+    /** All metrics is the screen showing: the circle is lit, white with a dark icon. */
+    indexShowing: Boolean,
     onOpenWorkout: () -> Unit,
     onAllMetrics: () -> Unit,
 ) {
@@ -795,8 +804,11 @@ private fun TabAction(
         workoutWindow != null -> org.openstrap.app.ui.components.NavActionCircle("Start workout", workoutWindow, glass, filled = true) {
             androidx.compose.material3.Icon(PhosphorIcons.PlayFill, null, androidx.compose.ui.Modifier.size(22.dp), tint = androidx.compose.ui.graphics.Color.Black)
         }
-        else -> org.openstrap.app.ui.components.NavActionCircle("All metrics", onAllMetrics, glass) {
-            androidx.compose.material3.Icon(PhosphorIcons.SquaresFour, null, androidx.compose.ui.Modifier.size(22.dp), tint = white)
+        else -> org.openstrap.app.ui.components.NavActionCircle("All metrics", onAllMetrics, glass, filled = indexShowing) {
+            androidx.compose.material3.Icon(
+                PhosphorIcons.SquaresFour, null, androidx.compose.ui.Modifier.size(22.dp),
+                tint = if (indexShowing) androidx.compose.ui.graphics.Color.Black else white,
+            )
         }
     }
 }

@@ -56,7 +56,8 @@ data class NavItem(val label: String, val icon: ImageVector, val selectedIcon: I
 /**
  * The floating tab bar in black glass (spec 3.2): a pill of tabs, the content scrolling under it (marked with
  * `hazeSource` on [glass]) showing through blurred and darkened, and a circle detached on its right holding the
- * moment's [action]. The capsule behind the tab showing slides to it and takes that section's colour.
+ * moment's [action]. The capsule behind the tab showing slides to it and takes that section's colour; with [selected]
+ * out of range (the circle's own screen is showing) no tab is lit.
  */
 @Composable
 fun FloatingNavBar(
@@ -87,10 +88,11 @@ fun FloatingNavBar(
                 val gap = 2.dp
                 val cell = (with(density) { barWidth.toDp() } - gap * (items.size - 1)) / items.size
                 val x by androidx.compose.animation.core.animateDpAsState(
-                    (cell + gap) * selected, tween(Motion.SWIFT, easing = Motion.easing), label = "nav pill",
+                    (cell + gap) * selected.coerceAtLeast(0), tween(Motion.SWIFT, easing = Motion.easing), label = "nav pill",
                 )
+                val lit by animateFloatAsState(if (selected in items.indices) 1f else 0f, tween(Motion.QUICK), label = "nav lit")
                 Box(
-                    Modifier.offset(x = x).width(cell).fillMaxHeight().clip(CircleShape)
+                    Modifier.offset(x = x).width(cell).fillMaxHeight().graphicsLayer { alpha = lit }.clip(CircleShape)
                         .background(capsuleColor(items.getOrNull(selected)?.tint)).border(GlassChipEdge, CircleShape),
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
@@ -134,10 +136,11 @@ fun FloatingNavRail(
                 val gap = 2.dp
                 val cell = (with(density) { barHeight.toDp() } - gap * (items.size - 1)) / items.size
                 val y by androidx.compose.animation.core.animateDpAsState(
-                    (cell + gap) * selected, tween(Motion.SWIFT, easing = Motion.easing), label = "nav pill",
+                    (cell + gap) * selected.coerceAtLeast(0), tween(Motion.SWIFT, easing = Motion.easing), label = "nav pill",
                 )
+                val lit by animateFloatAsState(if (selected in items.indices) 1f else 0f, tween(Motion.QUICK), label = "nav lit")
                 Box(
-                    Modifier.offset(y = y).height(cell).fillMaxWidth().clip(RoundedCornerShape(24.dp))
+                    Modifier.offset(y = y).height(cell).fillMaxWidth().graphicsLayer { alpha = lit }.clip(RoundedCornerShape(24.dp))
                         .background(capsuleColor(items.getOrNull(selected)?.tint)).border(GlassChipEdge, RoundedCornerShape(24.dp)),
                 )
                 Column(Modifier.fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(gap)) {
@@ -164,8 +167,9 @@ private fun capsuleColor(tint: Color?): Color {
 }
 
 /**
- * The circle beside the tab bar (spec 3.2), in the same black glass. [filled] makes it white, for an action to take
- * now (Start workout); [content] is its icon or the live heart rate.
+ * The circle beside the tab bar (spec 3.2), in the same black glass. [filled] makes it white: for an action to take
+ * now (Start workout), or while its own screen is the one showing, lit like the tab capsule; [content] is its icon or
+ * the live heart rate.
  */
 @Composable
 fun NavActionCircle(

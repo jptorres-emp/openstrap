@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import java.time.LocalDate
-import kotlin.math.roundToInt
 import org.openstrap.app.data.Healthspan
 import org.openstrap.app.data.RecoveryResult
 import org.openstrap.app.data.WorkoutAnalysis
@@ -98,7 +97,7 @@ fun metricIndex(
                     row("Recovery", MetricColors.readiness, rec?.readiness?.score?.toString(), status ?: "Score for the day", IndexTarget.Home(HomeTab.Recovery), waiting = status)
                 },
                 row(
-                    "Charge", MetricColors.chargeAt(rec?.charge?.latest), rec?.charge?.latest?.roundToInt()?.toString(),
+                    "Charge", MetricColors.chargeAt(rec?.charge?.latest), rec?.charge?.latest?.let(::chargeShown)?.toString(),
                     if (state.date == today) "Latest" else "End of day", IndexTarget.Home(HomeTab.Recovery, charge = true),
                 ),
                 row("Habit Age", MetricColors.habitAge, habitValue, habitStatus, IndexTarget.Open(Detail.Healthspan), waiting = habitStatus),

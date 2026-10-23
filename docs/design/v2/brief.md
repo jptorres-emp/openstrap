@@ -1,6 +1,6 @@
-# Design v1.5: brief
+# Design v2: brief
 
-Status: agreed 2026-10-23. Branch `design-v1.5`. Approved steps: pattern board, critique, mockups. The build follows [spec.md](spec.md). Follows [information-architecture.md](../information-architecture.md),
+Status: agreed 2026-10-23. Branch `design-v2`. Approved steps: pattern board, critique, mockups. The build follows [spec.md](spec.md). Follows [information-architecture.md](../information-architecture.md),
 which set the five tabs and the glow design language (v1).
 
 ## Goal
@@ -69,7 +69,7 @@ Haptics follow the same rule:
 - a firm pulse on start and end of a workout.
 - nothing for ordinary taps.
 
-No other accessibility work is in scope for v1.5.
+No other accessibility work is in scope for v2.
 
 ## States
 

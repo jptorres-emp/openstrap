@@ -1,10 +1,10 @@
-# Design v1.5: spec
+# Design v2: spec
 
 Step 5 of the [brief](brief.md). This is what step 6 builds. It turns the approved [pattern board](patterns.md),
 [critique](critique.md) and [mockups](mockups/) into rules and components that a Compose implementation can follow
 without guessing. Where this spec and an older doc disagree, this spec wins.
 
-Mockups: the canvas "OpenStrap v1.5 mockups" (claude.ai artifact, private) and its source in [mockups/](mockups/).
+Mockups: the canvas "OpenStrap v2 mockups" (claude.ai artifact, private) and its source in [mockups/](mockups/).
 Numbers in the mockups are made up but consistent across the day.
 
 Non-goals, unchanged from the brief: no new features, no changes to how any score is calculated, no strap protocol
@@ -447,7 +447,7 @@ The full list of 223 strings to rewrite is in [inventory 5](inventory.md#5-copy-
 
 ### 8.1 Order
 
-Each step is one or a few commits on `design-v1.5`, with tests and before-and-after screenshots over adb.
+Each step is one or a few commits on `design-v2`, with tests and before-and-after screenshots over adb.
 
 1. **Foundation:** `GlowStyle` additions (`lightAngle`, `lightLevel`, `second`), motion reduced to `Heartbeat` and
    `Still`, `GlowMood`, `EdgeCard`, `ListPanel` and `ListRow`, the grid row types, `MetricColors.load`, a haptics helper

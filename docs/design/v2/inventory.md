@@ -1,6 +1,6 @@
-# OpenStrap UI inventory (design v1.5, step 1)
+# OpenStrap UI inventory (design v2, step 1)
 
-Source: branch `design-v1.5`, read 2026-10-23. Paths are relative to `app/src/main/kotlin/org/openstrap/app/` unless they start with `docs/`. "MA" means `MainActivity.kt`. Line numbers are from the current tree.
+Source: branch `design-v2`, read 2026-10-23. Paths are relative to `app/src/main/kotlin/org/openstrap/app/` unless they start with `docs/`. "MA" means `MainActivity.kt`. Line numbers are from the current tree.
 
 Notes before reading:
 

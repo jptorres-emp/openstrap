@@ -1,4 +1,4 @@
-# Design v1.5: screen critique
+# Design v2: screen critique
 
 Step 3 of the [brief](brief.md). Each screen is checked against the [pattern board](patterns.md) (pattern IDs like
 A1, G2a) and the [inventory](inventory.md) (findability problems F1 to F20). For each screen: its purpose in one
@@ -162,7 +162,7 @@ Profile from three places (F15). Two sleep targets in two places (F6). "Export C
 - **Goals:** "8,000 steps, 7 h 30 sleep, 8 active hours". Sleep need moves here from Profile (decision below).
 - **Your data:** "Save a copy" (was Export CSV), "Restore from a copy", "Health Connect, last copy this morning".
 - **Help:** Diagnostics.
-- **About:** "OpenStrap 1.5. Everything stays on this phone."
+- **About:** "OpenStrap 2.0. Everything stays on this phone."
 
 ## 6. Strap page
 

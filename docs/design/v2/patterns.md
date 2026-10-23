@@ -1,4 +1,4 @@
-# Design v1.5: pattern board
+# Design v2: pattern board
 
 Step 2 of the [brief](brief.md). It pairs what the [inventory](inventory.md) found wrong with patterns from strong
 apps on Mobbin (68 searches, iOS and web, in and outside health). The full notes with every link are in

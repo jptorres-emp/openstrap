@@ -14,7 +14,7 @@ data class RecoveryResult(
     val charge: Recovery.ChargeDay,
     /** Readiness for the 7 days ending on the selected one (null where there was no sleep). */
     val readinessTrend: List<Pair<LocalDate, Int?>>,
-    /** Training load (TRIMP) so far on the selected day, and the usual (chronic) daily load. */
+    /** Training load (TRIMP) so far on the selected day, [workoutLoad] + [everydayLoad], and the usual (chronic) daily load. */
     val load: Float,
     val chronicLoad: Float?,
     val restingHr: Float,
@@ -48,6 +48,9 @@ data class RecoveryResult(
     /** Non-exercise VO2max (Jurca 2005), recomputed weekly; or why it's withheld. */
     val vo2max: Vo2max.Estimate? = null,
     val vo2maxWithheld: Vo2max.Withheld? = null,
+    /** [load] split: minutes inside recorded workouts, and moving minutes outside them ([Recovery.dailyLoad]). */
+    val workoutLoad: Float = 0f,
+    val everydayLoad: Float = 0f,
 )
 
 /** Loads what [Recovery] needs from the database and runs it. All work happens off the main thread by the caller. */
@@ -60,7 +63,8 @@ class RecoveryEngine(private val dao: HealthDao) {
 
         // Load history (CTL, Strain's "vs your usual", max HR) reaches further back than the nightly baselines.
         val loadFrom = DayWindow.of(date.minusDays(LOAD_DAYS.toLong()), zone).from
-        val hrAll = minuteHeartRate(loadFrom, to)
+        val activityAll = dao.activityOnce(loadFrom, to)
+        val hrAll = minuteHeartRate(loadFrom, to, activityAll)
         val hr = hrAll.filter { it.first >= from }
         val sessions = dao.sleepSessionsOnce(from, to)
         val hrv = dao.hrvOnce(from, to)
@@ -103,15 +107,21 @@ class RecoveryEngine(private val dao: HealthDao) {
         val maxHr = maxHeartRate(profile, hrAll, pai?.maxHeartRate, loadFrom, to, zone)
         val female = profile.sex == UserProfile.Sex.Female
 
-        // Daily training load for the 28 days before the selected one, skipping days the strap was mostly off.
+        // Daily training load for the days before the selected one, skipping days the strap was mostly off. Workouts
+        // (phone and strap) count every minute, on the workout's own heart rate; outside them only moving minutes do.
         val sleepRanges = sessions.map { it.start..it.end }
         val asleep = { t: Long -> sleepRanges.any { t in it } }
-        val hrByDay = hrAll.groupBy { dayOf(it.first) }
+        val workoutHr = workoutHeartRates(loadFrom, to, now)
+        val workoutRanges = workoutHr.map { it.first }
+        val loadHr = Recovery.withWorkoutHeartRate(hrAll, workoutHr)
+        val stepsByMinute = activityAll.associate { it.timestamp / 60 * 60 to it.steps }
+        val dailyLoad = { series: List<Pair<Long, Int>> -> Recovery.dailyLoad(series, restingHr, maxHr, female, workoutRanges, asleep) { stepsByMinute[it] } }
+        val hrByDay = loadHr.groupBy { dayOf(it.first) }
         val loadDays = (LOAD_DAYS downTo 1).mapNotNull { back ->
             val d = date.minusDays(back.toLong())
             val w = DayWindow.of(d, zone)
             val series = hrByDay[d].orEmpty()
-            if (series.size < MIN_WORN_MINUTES) null else w.from to Recovery.dailyLoad(series, restingHr, maxHr, female, asleep)
+            if (series.size < MIN_WORN_MINUTES) null else w.from to dailyLoad(series).total
         }
         val loads = loadDays.map { it.second }
 
@@ -123,7 +133,8 @@ class RecoveryEngine(private val dao: HealthDao) {
             val before = morning - 86_400 + 3600
             listOfNotNull("a hard training day".takeIf { hardDays.any { d -> d in before - 7200..before + 7200 } })
         }
-        val todayLoad = Recovery.dailyLoad(hr.filter { it.first in day.from..day.to }, restingHr, maxHr, female, asleep)
+        val todaySplit = dailyLoad(hrByDay[date].orEmpty())
+        val todayLoad = todaySplit.total
 
         val midnight = day.from
         val tonight = nights.lastOrNull { it.day == midnight }
@@ -234,7 +245,7 @@ class RecoveryEngine(private val dao: HealthDao) {
             date, readiness, charge, trend, todayLoad, chronic, restingHr, maxHr, age != null, stressThreshold, tonight,
             Recovery.breathingDisturbances(tonight, nights), Recovery.acwr(loads), sleepNeed, regularity, sleepHealth,
             loadTrend, Recovery.strain(todayLoad), Recovery.loadPercentile(todayLoad, loads), profile.maxHeartRate != null && maxHr == profile.maxHeartRate.toFloat(),
-            activity, energy, vo2, vo2Withheld,
+            activity, energy, vo2, vo2Withheld, todaySplit.workout, todaySplit.everyday,
         )
     }
 
@@ -255,8 +266,27 @@ class RecoveryEngine(private val dao: HealthDao) {
     }
 
     /** Live heart rate is stored several times a minute; the model works in minutes. */
-    private suspend fun minuteHeartRate(from: Long, to: Long): List<Pair<Long, Int>> =
-        Summaries.bucketAverage(Summaries.heartRateSeries(dao.heartRateOnce(from, to), dao.activityOnce(from, to)), 60)
+    private suspend fun minuteHeartRate(from: Long, to: Long, activity: List<org.openstrap.app.data.db.ActivityMinute>? = null): List<Pair<Long, Int>> =
+        Summaries.bucketAverage(Summaries.heartRateSeries(dao.heartRateOnce(from, to), activity ?: dao.activityOnce(from, to)), 60)
+
+    /**
+     * Every workout overlapping [from]..[to], phone and strap, as (its time, its own heart-rate samples). A phone
+     * workout runs from its shown start to its end (now while recording), less its pauses (the one under way
+     * included), one entry per active part; a strap one from its start to its end, so
+     * the strap's 3-minute recovery recording after it is left out by [Recovery.withWorkoutHeartRate].
+     */
+    private suspend fun workoutHeartRates(from: Long, to: Long, now: Long): List<Pair<LongRange, List<Pair<Long, Int>>>> {
+        val phone = dao.appWorkoutsOnce(from, to).flatMap { w ->
+            val end = w.end ?: now
+            val pauses = w.pauseRanges + listOfNotNull(w.pausedAt?.let { it..end })
+            val samples = dao.appWorkoutHeartRateOnce(w.start).map { it.timestamp to it.bpm }
+            Recovery.activeRanges(w.from, end, pauses).map { it to samples }
+        }
+        val strap = dao.workoutsOnce(from, to).map { w ->
+            (w.start until w.end) to dao.workoutHeartRateOnce(w.start).map { it.timestamp to it.bpm }
+        }
+        return (phone + strap).filter { !it.first.isEmpty() }
+    }
 
     private suspend fun maxHeartRate(profile: UserProfile, hrAll: List<Pair<Long, Int>>, strapMax: Int?, from: Long, to: Long, zone: ZoneId): Float {
         // Each day's highest real heart rate (filtered per-minute HR, and the strap's daily exercise maximum when the

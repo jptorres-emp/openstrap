@@ -587,22 +587,115 @@ object Recovery {
         else -> hrr * 0.64f * exp(1.92f * hrr)
     }
 
+    /** A day's load, TRIMP, split as Zepp's Exertion splits it: workout minutes and everyday minutes. */
+    data class DailyLoad(val workout: Float, val everyday: Float) {
+        val total: Float get() = workout + everyday
+    }
+
     /**
-     * Daily load: TRIMP over awake minutes with HR at or above [LOAD_MIN_HRR] of reserve, counting a minute only when at
-     * least [LOAD_RUN_MINUTES] of the last [LOAD_RUN_WINDOW] minutes (itself included) are there too, so isolated PPG
-     * spikes don't count. No HR-load method is validated on free-living minutes; Banister is the least-bad choice.
+     * Daily load: Banister TRIMP per minute, in two parts. No HR-load method is validated on free-living minutes;
+     * Banister is the least-bad choice, and the gate below is what keeps everyday heart rate out of it.
+     *
+     * - **Workout:** every minute that overlaps one of [workouts] (phone or strap, as time ranges), whatever its
+     *   intensity and even if marked asleep. Overlapping workouts share minutes, so each minute counts once.
+     * - **Everyday:** any other awake minute counts only when the strap counted steps that minute ([steps]) and
+     *   [everydayMinute] passes it: at or above [LOAD_MIN_HRR] of reserve, or at or above [LOAD_WALK_HRR] with at least
+     *   [LOAD_WALK_STEPS] steps. At least [LOAD_RUN_MINUTES] of the last [LOAD_RUN_WINDOW] minutes (itself included)
+     *   must pass too, so an isolated PPG spike during a few steps doesn't count. Raised HR while sitting (coffee,
+     *   stress, heat, a PPG artefact) is not training load.
+     *
+     * This follows Zepp's Exertion (analysis native 07 §3.3): a minute scores only inside a workout or with movement,
+     * at 35 % of reserve or more, and the day is split into workout and everyday activity. The walking exception is
+     * OpenStrap's own (see [LOAD_WALK_HRR]). [hr] is one value per
+     * minute (epoch seconds, the minute's start); the engine replaces workout minutes with the workout's own HR.
      */
-    fun dailyLoad(hr: List<Pair<Long, Int>>, rest: Float, maxHr: Float, female: Boolean = false, asleep: (Long) -> Boolean = { false }): Float {
-        val minutes = hr.filter { !asleep(it.first) }.sortedBy { it.first }.map { (t, bpm) -> t to hrr(bpm, rest, maxHr) }
-        val above = minutes.filter { it.second >= LOAD_MIN_HRR }
+    fun dailyLoad(
+        hr: List<Pair<Long, Int>>,
+        rest: Float,
+        maxHr: Float,
+        female: Boolean = false,
+        workouts: List<LongRange> = emptyList(),
+        asleep: (Long) -> Boolean = { false },
+        steps: (Long) -> Int?,
+    ): DailyLoad {
+        var workout = 0.0
+        val everyday = ArrayList<Pair<Long, Float>>()
+        for ((t, bpm) in hr.sortedBy { it.first }) {
+            val x = hrr(bpm, rest, maxHr)
+            when {
+                inWorkout(t, workouts) -> workout += trimpMinute(x, female)
+                !asleep(t) && everydayMinute(x, steps(t)) -> everyday += t to x
+            }
+        }
         var lo = 0
         var total = 0.0
-        for ((k, m) in above.withIndex()) {
-            while (above[lo].first <= m.first - LOAD_RUN_WINDOW * 60L) lo++
+        for ((k, m) in everyday.withIndex()) {
+            while (everyday[lo].first <= m.first - LOAD_RUN_WINDOW * 60L) lo++
             if (k - lo + 1 >= LOAD_RUN_MINUTES) total += trimpMinute(m.second, female)
         }
-        return total.toFloat()
+        return DailyLoad(workout.toFloat(), total.toFloat())
     }
+
+    /**
+     * [minutes] (one HR a minute) with each workout minute taken from the workout's own recording, as Zepp does: the
+     * mean of a workout's samples in that minute, only those inside its time range (so not the strap's recovery
+     * recording after it), the higher one where two workouts overlap. A workout minute with no sample of its own
+     * keeps the all-day value. [workouts] is (time range, samples as epoch second to bpm).
+     */
+    fun withWorkoutHeartRate(minutes: List<Pair<Long, Int>>, workouts: List<Pair<LongRange, List<Pair<Long, Int>>>>): List<Pair<Long, Int>> {
+        if (workouts.isEmpty()) return minutes
+        val own = HashMap<Long, Int>()
+        for ((range, samples) in workouts) {
+            samples.filter { it.first in range && it.second in HR_MIN_BPM..HR_MAX_BPM }
+                .groupBy { it.first / 60 * 60 }
+                .forEach { (m, v) -> val bpm = Math.round(v.map { it.second }.average()).toInt(); own[m] = max(own[m] ?: 0, bpm) }
+        }
+        if (own.isEmpty()) return minutes
+        return (minutes.toMap() + own).toList().sortedBy { it.first }
+    }
+
+    /**
+     * The active parts of a workout from [from] until [end] (exclusive), leaving out [pauses] (inclusive second ranges,
+     * as [org.openstrap.app.data.db.AppWorkout.pauseRanges] stores them), so paused time isn't workout load.
+     */
+    fun activeRanges(from: Long, end: Long, pauses: List<LongRange>): List<LongRange> {
+        var parts = listOf(from until end)
+        for (p in pauses) parts = parts.flatMap { r ->
+            if (p.last < r.first || p.first > r.last) listOf(r)
+            else listOf(r.first until p.first, p.last + 1..r.last).filter { !it.isEmpty() }
+        }
+        return parts
+    }
+
+    /** True when the minute starting at [t] overlaps any of [workouts] (inclusive second ranges). */
+    fun inWorkout(t: Long, workouts: List<LongRange>): Boolean = workouts.any { t <= it.last && t + 60 > it.first }
+
+    /**
+     * The movement signal for everyday load: the strap counted at least one step that minute (activity type 1,
+     * `steps` in 1..[MAX_MINUTE_STEPS]). Checked against a real database before choosing it: the record's activity
+     * `mode` (`kind`) was 0 ("silent") for every awake minute, never walking or running, so it says nothing; and its
+     * `intensity` byte was above Zepp's "> 5" in 79 % of minutes without a step (typing, gesturing at a desk), so
+     * Zepp's gate on it would let most of a seated day through, and any higher cut-off would be a guess. A step is
+     * unambiguous. The cost is non-stepping exercise (cycling, rowing, weights) outside a recorded workout, which then
+     * counts nothing; record a workout for those.
+     */
+    fun moving(steps: Int?): Boolean = steps != null && steps in 1..MAX_MINUTE_STEPS
+
+    /** Whether an awake minute outside workouts, at reserve fraction [x] with [steps], can add everyday load. */
+    fun everydayMinute(x: Float, steps: Int?): Boolean =
+        moving(steps) && (x >= LOAD_MIN_HRR || (x >= LOAD_WALK_HRR && steps!! >= LOAD_WALK_STEPS))
+
+    /**
+     * Sustained walking: a minute with at least [LOAD_WALK_STEPS] steps counts from this reserve fraction rather than
+     * [LOAD_MIN_HRR]. On real data, sustained walking at about 100 steps a minute sat at 24-34 % of reserve, so the
+     * 35 % line alone threw away whole walks; at 60+ steps a minute the movement is purposeful, not a few steps
+     * around a desk. Full TRIMP: the curve already gives these minutes little (about 0.26 a minute at 25 %).
+     */
+    const val LOAD_WALK_HRR = 0.20f
+    /** Steps in a minute that make it a walk: the bottom of the cadence MET scale OpenStrap already uses (60 → 2 MET). */
+    const val LOAD_WALK_STEPS = 60
+    /** Above this a minute's step count is a sentinel or an error (the strap's u8 tops out at 255). */
+    const val MAX_MINUTE_STEPS = 250
 
     const val LOAD_RUN_MINUTES = 3
     const val LOAD_RUN_WINDOW = 5
@@ -681,8 +774,11 @@ object Recovery {
     const val RHR_DAYS = 14
     const val RHR_OFFSET_BPM = 3f
 
-    /** Below this reserve fraction, heart rate is everyday living rather than training. */
-    const val LOAD_MIN_HRR = 0.2f
+    /**
+     * Outside a workout, a moving minute below this reserve fraction is everyday living rather than training. Zepp's
+     * Exertion uses 35 % (native 07 §3.1); OpenStrap used 20 % with no movement gate, which let a seated, raised HR in.
+     */
+    const val LOAD_MIN_HRR = 0.35f
 
     /** A day whose TRIMP is more than [HARD_DAY_RATIO]× the chronic load: annotated as a likely cause of an alert. */
     fun hardDay(load: Float, chronic: Float): Boolean = load > HARD_DAY_RATIO * max(chronic, MIN_CHRONIC_LOAD)

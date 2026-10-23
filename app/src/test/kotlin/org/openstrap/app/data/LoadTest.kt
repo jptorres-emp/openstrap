@@ -12,19 +12,109 @@ class LoadTest {
     private val max = 190f
     private fun bpmAt(x: Float) = Math.round(rest + x * (max - rest))
 
+    /** A slow shuffle: steps, but under the walking cadence, so only the 35 % line applies. */
+    private val walking = { _: Long -> 30 }
+    private val still = { _: Long -> 0 }
+
     @Test fun `isolated spikes don't count, sustained effort does`() {
         // A spike every 10 minutes over an hour: never 3 of 5.
         val spikes = (0 until 60).map { it * 60L to if (it % 10 == 0) bpmAt(0.7f) else 70 }
-        assertEquals(0f, Recovery.dailyLoad(spikes, rest, max), 1e-6f)
+        assertEquals(0f, Recovery.dailyLoad(spikes, rest, max, steps = walking).total, 1e-6f)
         // Ten minutes at 60 % of reserve: the first two minutes wait for the run, the other eight count.
         val bout = (0 until 10).map { it * 60L to bpmAt(0.6f) }
         val x = Recovery.hrr(bpmAt(0.6f), rest, max)
-        assertEquals(8 * Recovery.trimpMinute(x), Recovery.dailyLoad(bout, rest, max), 1e-3f)
+        assertEquals(8 * Recovery.trimpMinute(x), Recovery.dailyLoad(bout, rest, max, steps = walking).everyday, 1e-3f)
         // Two minutes on, one off, still counts: 3 of the last 5 minutes are above.
         val broken = listOf(0, 1, 3, 4).map { it * 60L to bpmAt(0.6f) }
-        assertEquals(2 * Recovery.trimpMinute(x), Recovery.dailyLoad(broken, rest, max), 1e-3f)
-        // Asleep minutes never count.
-        assertEquals(0f, Recovery.dailyLoad(bout, rest, max) { true }, 1e-6f)
+        assertEquals(2 * Recovery.trimpMinute(x), Recovery.dailyLoad(broken, rest, max, steps = walking).total, 1e-3f)
+        // Asleep minutes never count outside a workout.
+        assertEquals(0f, Recovery.dailyLoad(bout, rest, max, asleep = { true }, steps = walking).total, 1e-6f)
+    }
+
+    @Test fun `sitting with a raised heart rate and no steps is no everyday load`() {
+        val seated = (0 until 60).map { it * 60L to bpmAt(0.5f) }
+        assertEquals(0f, Recovery.dailyLoad(seated, rest, max, steps = still).total, 1e-6f)
+        // The strap's step count is the signal: none, or a sentinel, is not movement.
+        assertTrue(!Recovery.moving(0) && !Recovery.moving(null) && !Recovery.moving(255))
+        assertTrue(Recovery.moving(1) && Recovery.moving(120))
+    }
+
+    @Test fun `a brisk walk outside a workout counts only at 35 percent of reserve or more`() {
+        val walk = { x: Float -> (0 until 30).map { it * 60L to bpmAt(x) } }
+        assertEquals(0f, Recovery.dailyLoad(walk(0.30f), rest, max, steps = walking).total, 1e-6f)
+        val brisk = Recovery.dailyLoad(walk(0.40f), rest, max, steps = walking)
+        assertEquals(28 * Recovery.trimpMinute(Recovery.hrr(bpmAt(0.40f), rest, max)), brisk.everyday, 1e-3f)
+        assertEquals(0f, brisk.workout, 1e-6f)
+    }
+
+    @Test fun `a walk at 100 steps a minute counts from 20 percent of reserve`() {
+        val walk = { x: Float -> (0 until 30).map { it * 60L to bpmAt(x) } }
+        val perMinute = Recovery.trimpMinute(Recovery.hrr(bpmAt(0.25f), rest, max))
+        // 100 steps a minute at 25 %: counted at full TRIMP, less the run rule's first two minutes.
+        assertEquals(28 * perMinute, Recovery.dailyLoad(walk(0.25f), rest, max) { 100 }.everyday, 1e-3f)
+        // Sitting at 30 % with no steps: nothing.
+        assertEquals(0f, Recovery.dailyLoad(walk(0.30f), rest, max) { 0 }.total, 1e-6f)
+        // 30 steps a minute at 30 %: under the walking cadence and the 35 % line, so nothing.
+        assertEquals(0f, Recovery.dailyLoad(walk(0.30f), rest, max) { 30 }.total, 1e-6f)
+        // Below 20 % even a walk is everyday living.
+        assertEquals(0f, Recovery.dailyLoad(walk(0.15f), rest, max) { 100 }.total, 1e-6f)
+    }
+
+    @Test fun `an easy warm-up inside a workout counts every minute`() {
+        // 10 minutes at 25 % of reserve, no steps (on a bike), all inside a recorded workout.
+        val warmUp = (0 until 10).map { it * 60L to bpmAt(0.25f) }
+        val load = Recovery.dailyLoad(warmUp, rest, max, workouts = listOf(0L until 600L), steps = still)
+        assertEquals(10 * Recovery.trimpMinute(Recovery.hrr(bpmAt(0.25f), rest, max)), load.workout, 1e-3f)
+        assertEquals(0f, load.everyday, 1e-6f)
+        // The same minutes outside the workout: below the line and not moving, so nothing.
+        assertEquals(0f, Recovery.dailyLoad(warmUp, rest, max, steps = still).total, 1e-6f)
+    }
+
+    @Test fun `overlapping phone and strap workouts count each minute once`() {
+        val ride = (0 until 30).map { it * 60L to bpmAt(0.6f) }
+        val perMinute = Recovery.trimpMinute(Recovery.hrr(bpmAt(0.6f), rest, max))
+        val phone = 0L until 1800L
+        val strap = 300L until 1500L
+        assertEquals(30 * perMinute, Recovery.dailyLoad(ride, rest, max, workouts = listOf(phone, strap), steps = still).workout, 1e-3f)
+        // The workouts' own recordings replace the all-day minutes, once per minute, the higher where they disagree.
+        val phoneHr = (0 until 1800 step 5).map { it.toLong() to bpmAt(0.6f) }
+        val strapHr = (300 until 1500 step 1).map { it.toLong() to bpmAt(0.6f) + 2 } + (1500L until 1680L).map { it to 190 }
+        val merged = Recovery.withWorkoutHeartRate(ride, listOf(phone to phoneHr, strap to strapHr))
+        assertEquals(30, merged.size)
+        assertEquals(bpmAt(0.6f) + 2, merged.first { it.first == 600L }.second)
+        // The strap's recovery recording after its end is outside its range, so the phone's value stands.
+        assertEquals(bpmAt(0.6f), merged.first { it.first == 1560L }.second)
+    }
+
+    @Test fun `paused time inside a phone workout is not workout load`() {
+        // 30 minutes, paused from minute 10 to minute 20, sitting still at 30 % of reserve throughout.
+        val minutes = (0 until 30).map { it * 60L to bpmAt(0.3f) }
+        val active = Recovery.activeRanges(0L, 1800L, listOf(600L..1199L))
+        assertEquals(listOf(0L until 600L, 1200L until 1800L), active)
+        val load = Recovery.dailyLoad(minutes, rest, max, workouts = active, steps = still)
+        assertEquals(20 * Recovery.trimpMinute(Recovery.hrr(bpmAt(0.3f), rest, max)), load.workout, 1e-3f)
+        assertEquals(0f, load.everyday, 1e-6f)
+        // A pause running past the end, or several, leave only what's active; none leaves the whole workout.
+        assertEquals(listOf(0L until 600L), Recovery.activeRanges(0L, 1800L, listOf(600L..2000L)))
+        assertEquals(listOf(0L until 100L, 201L until 300L, 401L until 500L), Recovery.activeRanges(0L, 500L, listOf(100L..200L, 300L..400L)))
+        assertEquals(listOf(0L until 1800L), Recovery.activeRanges(0L, 1800L, emptyList()))
+    }
+
+    @Test fun `workout and everyday load sum to the total`() {
+        // A walk to the gym, a workout, a walk home, and an hour at a desk with a raised heart rate.
+        val minutes = (0 until 180).map { m ->
+            m * 60L to when (m) {
+                in 0 until 15, in 75 until 90 -> bpmAt(0.45f)
+                in 15 until 75 -> bpmAt(0.7f)
+                else -> bpmAt(0.4f)
+            }
+        }
+        val load = Recovery.dailyLoad(minutes, rest, max, workouts = listOf(900L until 4500L)) { t -> if (t < 5400) 30 else 0 }
+        assertTrue(load.workout > 0f && load.everyday > 0f)
+        assertEquals(load.workout + load.everyday, load.total, 1e-6f)
+        assertEquals(60 * Recovery.trimpMinute(Recovery.hrr(bpmAt(0.7f), rest, max)), load.workout, 1e-2f)
+        // 15 + 15 walking minutes, each walk losing its first two to the run rule; the desk hour adds nothing.
+        assertEquals(26 * Recovery.trimpMinute(Recovery.hrr(bpmAt(0.45f), rest, max)), load.everyday, 1e-2f)
     }
 
     @Test fun `max HR needs two days that agree`() {

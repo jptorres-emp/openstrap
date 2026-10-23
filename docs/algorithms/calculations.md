@@ -32,7 +32,7 @@ OpenStrap is a wellness app. None of these numbers is a medical measurement.
 
 **Taken from the strap as is:** heart rate, steps, sleep sessions and stages, RMSSD (HRV) samples, SpO₂, stress (0–100), skin temperature, breathing rate, the daily resting HR, PAI, the strap's sleep score, its sleep-apnea summary (desaturation event count), and workout records with their training effect.
 
-**Calculated by OpenStrap:** everything in sections 3–14: Readiness, body-signal alerts, Charge, training load, Strain, fitness/fatigue, sleep score (when the strap gave none), sleep debt, sleep regularity, sleep-health count, active minutes, distance, calories, VO2max, workout zones and recovery HR, and training effect, load, recovery time and run VO2max for workouts started in OpenStrap.
+**Calculated by OpenStrap:** everything in sections 3–14: Readiness, body-signal alerts, Charge, training load, Strain, fitness/fatigue, sleep score (when the strap gave none), sleep debt, sleep regularity, sleep-health count, active minutes, distance, calories, VO2max, workout zones and recovery HR, and training effect, EPOC, recovery time and run VO2max for workouts started in OpenStrap.
 
 **Logged but not used in any score:** the strap's own Readiness and its parts, and your morning check-in (1–5, asked on Today before noon). They're kept for the calibration review.
 
@@ -337,8 +337,12 @@ The point where the strap's stress score starts to drain Charge.
 
 ### Daily training load (TRIMP)
 
-* Add up TRIMP over the day's **awake** minutes at HRR ≥ 20 %. Below that it's everyday living.
-* A minute only counts when at least 3 of the last 5 minutes (itself included) are also ≥ 20 %, so single PPG spikes don't add load.
+Two parts, added up for the day's load and shown split on the Load screen ("62 today · 48 workouts · 14 everyday"), as Zepp's Exertion splits workout from everyday activity:
+
+* **Workouts:** every minute of a recorded workout (phone or strap) counts, whatever the intensity, except time a phone workout was paused, so an easy warm-up counts too. The minute's heart rate comes from the workout's own recording when it has one. A phone and a strap workout over the same time count each minute once.
+* **Everyday:** outside workouts, a minute counts only when you're **awake** and the strap counted **at least one step** that minute, at HRR ≥ **35 %**, or at HRR ≥ **20 %** when it has **60 or more steps** (a walk). A raised heart rate while sitting is not training load. The walking exception is there because sustained walking at about 100 steps a minute sits at HRR 24–34 %, under the 35 % line. A minute also needs at least 3 of the last 5 minutes (itself included) to pass the same test, so single PPG spikes don't add load.
+* Steps are the movement signal because the strap's other per-minute activity fields don't separate sitting from walking in real data. Cycling or weights outside a recorded workout therefore add nothing; record a workout for them.
+* Fitness, fatigue, the acute:chronic ratio and Readiness all use the total. A workout's EPOC (below, section 13) is a different measure and is never added in.
 * For history, days with under 8 hours of heart-rate data are skipped (strap mostly off). Up to 90 days are used.
 * Today's load is the running total so far.
 
@@ -591,18 +595,18 @@ Your estimate is compared with the treadmill reference table for your age decade
 * **Recovery HR:** HR at the end minus HR 60 s and 120 s later. Each reading is a median over ± 2 s. It's only treated as meaningful when you finished at ≥ 65 % of max HR.
 * Training effect and the strap's recovery time come from the strap unchanged for the strap's own workouts. Workouts started in OpenStrap get OpenStrap's own, below.
 
-### Training effect, load, recovery and VO2max for phone workouts
+### Training effect, EPOC, recovery and VO2max for phone workouts
 
 The strap works these out for the workouts it records. Zepp works them out for app workouts with neural networks whose weights are its own (analysis `native/04` §1), so OpenStrap uses open methods on the same scales. Code: `WorkoutEffect.kt`, fed by `WorkoutEffectEngine.kt`. Worked out when a workout ends, again after a trim or a gap fill, and for older workouts the first time their summary is opened.
 
 **Epochs.** Heart rate in 5-second epochs, each read as the median of its readings between 40 and 220 bpm, as Zepp does. An epoch with no reading keeps the last one twice, then counts as missing: a dropout neither adds load nor clears it.
 
-**EPOC (ml/kg), shown as Load.** Built up epoch by epoch from heart-rate reserve x (0 at resting, 1 at max; resting and max HR from section 4), the structure Firstbeat describes (EPOC as a running function of its last value, intensity and time, with %VO2max from %HRR):
+**EPOC (ml/kg), shown as EPOC.** Built up epoch by epoch from heart-rate reserve x (0 at resting, 1 at max; resting and max HR from section 4), the structure Firstbeat describes (EPOC as a running function of its last value, intensity and time, with %VO2max from %HRR):
 
 EPOC ← EPOC + [0.01 × (e^(7x) − 1) − 0.034 × (1 − x) × EPOC] × minutes
 
 * The first term rises steeply with intensity, as EPOC does (Børsheim & Bahr 2003). The second clears EPOC at Charge's rate at rest (×0.966 a minute, half-life about 20 minutes) and not at all at max.
-* The workout's EPOC is the peak. Load shows it as a whole number, as the strap shows Zepp's, so the two compare.
+* The workout's EPOC is the peak, shown as a whole number labelled "EPOC", as the strap's is, so the two compare. It is the workout's effect figure, not daily load: daily load is TRIMP only (section 8).
 * 0.01 and 7 are OpenStrap's own fit to these points: 30 easy minutes at 60 % HRR ≈ 16; an hour at 65 % ≈ 40; six 3-minute intervals at 92 % ≈ 110; an hour at 85 % ≈ 200.
 
 **Aerobic training effect (0–5).** EPOC against Zepp's breakpoints for your activity class (analysis `native/04` §4.4–4.5), joined by straight lines and rounded down to a tenth:

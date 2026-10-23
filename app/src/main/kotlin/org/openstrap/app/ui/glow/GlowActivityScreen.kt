@@ -308,11 +308,15 @@ private fun LoadPanel(r: RecoveryResult?, effect: SportEffectRow?, onEditProfile
     DotPanel {
         DotHeader("Training load")
         if (r != null) {
+            // Rounded parts, and the total as their sum, so the line always adds up.
+            val fromWorkouts = r.workoutLoad.roundToInt()
+            val everyday = r.everydayLoad.roundToInt()
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Fact("Strain", "%.1f".format(r.strain))
-                Fact("Load today", "${r.load.toInt()}")
+                Fact("Load today", "${fromWorkouts + everyday}")
                 Fact("vs your usual", r.strainPercentile?.let { "${it}th pct" } ?: "—")
             }
+            Note("${fromWorkouts + everyday} today · $fromWorkouts workouts · $everyday everyday")
             r.loadTrend?.let { t ->
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Fact("Fitness", "${t.ctl.toInt()}")
@@ -323,7 +327,8 @@ private fun LoadPanel(r: RecoveryResult?, effect: SportEffectRow?, onEditProfile
             }
             Note(
                 "Each minute counts by how hard your heart works between resting (${r.restingHr.toInt()} bpm) and maximum " +
-                    "(${r.maxHr.toInt()} bpm${if (r.maxHrTested) ", from your test" else ""}). Strain runs 0–21 on a fixed curve: an hour at 60 % of reserve is about 7.",
+                    "(${r.maxHr.toInt()} bpm${if (r.maxHrTested) ", from your test" else ""}). Every workout minute counts; outside workouts, " +
+                    "only minutes when you're moving at 35 % of reserve or more. Strain runs 0–21 on a fixed curve: an hour at 60 % of reserve is about 7.",
             )
         }
         r?.acwr?.let { ratio ->
@@ -341,7 +346,7 @@ private fun LoadPanel(r: RecoveryResult?, effect: SportEffectRow?, onEditProfile
         if (weekly != null && low != null && high != null) {
             DotDivider()
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
-                Fact("This week (strap)", "${weekly.roundToInt()}")
+                Fact("This week (strap EPOC)", "${weekly.roundToInt()}")
                 Spacer(Modifier.weight(1f))
                 val (word, color) = when {
                     weekly < low -> "Below productive" to TrendBad
@@ -351,7 +356,7 @@ private fun LoadPanel(r: RecoveryResult?, effect: SportEffectRow?, onEditProfile
                 Text(word, color = color, style = MaterialTheme.typography.titleSmall)
             }
             GlowBar(weekly / (high * 1.25f), if (weekly in low.toFloat()..high.toFloat()) TrendGood else MetricColors.steps)
-            Note("Productive range $low–$high, from the strap (updated ${shortDate(effect.end)}). Its load is on a different scale from today's.")
+            Note("Productive range $low–$high, from the strap (updated ${shortDate(effect.end)}). That is EPOC, on a different scale from today's load.")
         }
         if (r != null && !r.maxHrFromAge) {
             Row(Modifier.fillMaxWidth().glass(GlassRowShape, onEditProfile).padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {

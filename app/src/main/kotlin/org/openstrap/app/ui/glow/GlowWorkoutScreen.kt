@@ -179,12 +179,12 @@ private fun EffectPanel(a: WorkoutAnalysis) {
     DotPanel {
         DotHeader("Training effect", trailing = "From the strap")
         EffectFacts(w, e?.vo2max ?: w.vo2max?.toFloat(), a.recoveryMinutes)
-        Note("Training effect runs 0–5 for each system. VO₂ max shows up once the strap has enough data to estimate it.")
+        Note("Training effect runs 0–5 for each system; EPOC (ml/kg) is the strap's measure of what the workout took, not daily load. VO₂ max shows up once the strap has enough data to estimate it.")
     }
 }
 
 /**
- * Aerobic and anaerobic training effect, load, VO₂ max and recovery time, laid out the same wherever they come from:
+ * Aerobic and anaerobic training effect, EPOC, VO₂ max and recovery time, laid out the same wherever they come from:
  * the strap's sport effect, or OpenStrap's own for a phone workout ([org.openstrap.app.data.WorkoutEffect]).
  */
 @Composable
@@ -192,7 +192,7 @@ internal fun EffectFacts(w: org.openstrap.app.data.db.Workout, vo2: Float?, reco
     Row(Modifier.fillMaxWidth()) {
         Box(Modifier.weight(1f)) { Fact("Aerobic", w.aerobicTrainingEffect?.let { "%.1f".format(it) } ?: "—") }
         Box(Modifier.weight(1f)) { Fact("Anaerobic", w.anaerobicTrainingEffect?.let { "%.1f".format(it) } ?: "—") }
-        Box(Modifier.weight(1f)) { Fact("Load", w.trainingLoad?.toString() ?: "—") }
+        Box(Modifier.weight(1f)) { Fact("EPOC", w.trainingLoad?.toString() ?: "—") }
     }
     Row(Modifier.fillMaxWidth()) {
         Box(Modifier.weight(1f)) { Fact("VO₂ max", vo2?.let { "%.0f".format(it) } ?: "—") }

@@ -61,7 +61,7 @@ class Backtest(private val dao: HealthDao, private val zone: ZoneId = ZoneId.sys
                 listOf(
                     "hrv_n", "hrv_samples", "rhr_n", "rhr_mean_sleep", "rhr_p10", "hr_minutes", "asleep_min",
                     "strap_hrv_score", "strap_resting_hr_score", "strap_skin_temperature_score", "strap_breathing_score",
-                    "strap_sleep_hrv", "strap_sleep_resting_hr", "check_in", "tags", "load", "chronic_load", "charge_at_wake",
+                    "strap_sleep_hrv", "strap_sleep_resting_hr", "check_in", "tags", "load", "load_workout", "load_everyday", "chronic_load", "charge_at_wake",
                 )
             appendLine(header.joinToString(","))
             for (row in rows) {
@@ -75,7 +75,7 @@ class Backtest(private val dao: HealthDao, private val zone: ZoneId = ZoneId.sys
                         n?.rhrMeanSleep.f1(), n?.rhrP10.f1(), n?.hrMinutes, n?.asleepMinutes,
                         row.strapHrvScore, row.strapRestingHrScore, row.strapSkinTemperatureScore, row.strapBreathingScore,
                         row.strapSleepHrv, row.strapSleepRestingHr, row.checkIn, row.tags.joinToString(";"),
-                        row.result.load.f1(), row.result.chronicLoad.f1(), row.result.charge.atWake.f1(),
+                        row.result.load.f1(), row.result.workoutLoad.f1(), row.result.everydayLoad.f1(), row.result.chronicLoad.f1(), row.result.charge.atWake.f1(),
                     )
                 appendLine(cells.joinToString(",") { it?.toString() ?: "" })
             }

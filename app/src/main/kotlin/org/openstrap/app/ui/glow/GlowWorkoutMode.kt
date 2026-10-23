@@ -1178,7 +1178,7 @@ fun GlowPhoneWorkoutScreen(
             DotHeader("Training effect", trailing = "Worked out by OpenStrap")
             EffectFacts(w, w.vo2max?.toFloat(), a.recoveryMinutes)
             Note(
-                "From your heart rate, on the strap's 0–5 scale; load is EPOC, as the strap's. " +
+                "From your heart rate, on the strap's 0–5 scale; EPOC (ml/kg) as the strap reports it, not daily load. " +
                     if (w.sportType == org.openstrap.app.data.WorkoutEffect.OUTDOOR_RUN) "VO₂ max needs 10 minutes of steady running with GPS."
                     else "VO₂ max is worked out for outdoor runs only.",
             )

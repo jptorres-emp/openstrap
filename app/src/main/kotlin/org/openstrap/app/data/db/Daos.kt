@@ -111,6 +111,9 @@ interface HealthDao {
     @Query("SELECT * FROM workout_hr WHERE workoutStart = :start ORDER BY timestamp")
     fun workoutHeartRate(start: Long): Flow<List<WorkoutHeartRate>>
 
+    @Query("SELECT * FROM workout_hr WHERE workoutStart = :start ORDER BY timestamp")
+    suspend fun workoutHeartRateOnce(start: Long): List<WorkoutHeartRate>
+
     /** Last HR sample per workout: the strap records three minutes past the end, so this places the end. */
     @Query("SELECT workoutStart, MAX(timestamp) AS timestamp, 0 AS bpm FROM workout_hr GROUP BY workoutStart")
     fun lastWorkoutHeartRates(): Flow<List<WorkoutHeartRate>>

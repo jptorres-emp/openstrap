@@ -328,7 +328,7 @@ private fun LoadPanel(r: RecoveryResult?, effect: SportEffectRow?, onEditProfile
             Note(
                 "Each minute counts by how hard your heart works between resting (${r.restingHr.toInt()} bpm) and maximum " +
                     "(${r.maxHr.toInt()} bpm${if (r.maxHrTested) ", from your test" else ""}). Every workout minute counts; outside workouts, " +
-                    "only minutes when you're moving at 35 % of reserve or more. Strain runs 0–21 on a fixed curve: an hour at 60 % of reserve is about 7.",
+                    "only moving minutes at 35 % of reserve or more, or brisk walking (60+ steps a minute) from 20 %. Strain runs 0–21 on a fixed curve: an hour at 60 % of reserve is about 7.",
             )
         }
         r?.acwr?.let { ratio ->

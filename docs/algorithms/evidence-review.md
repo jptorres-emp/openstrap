@@ -95,7 +95,7 @@ New weights (design choice), renormalised over the contributors present:
 * Autonomic 52 %, sleep 28 %, other body signals 13 %. Polar's only hint is that HR has "the biggest influence".
 * **Withhold Readiness** unless an HRV or resting HR contributor is present. On 2026-10-16, sleep alone gave 52 against the strap's 91. Under this rule that day shows a Sleep score and the strap's placeholder instead.
 * Breathing disturbances move out: they're a stable trait, so inside Readiness they only add a fixed offset.
-* Keep the red-flag cap (`RED_FLAG` = 40, readiness ≤ contributor + 30) and the alert cap of 55. Neither has a source; both are reasonable guards.
+* Keep the red-flag cap (`RED_FLAG` = 40, readiness ≤ contributor + 30) and the alert cap of 54 (one below the Fair band). Neither has a source; both are reasonable guards.
 * Sleep was the main driver of a reconstructed Oura Readiness (R² 0.71 from Oura's own inputs; questionnaires R² 0.29, [De Bot et al. 2025](https://www.scitepress.org/PublishedPapers/2025/137331)). Limiting sleep's share stops one short night from carrying the score. The weights are the first thing to backtest.
 
 ### The strap's own nightly HRV and resting HR (Probable)

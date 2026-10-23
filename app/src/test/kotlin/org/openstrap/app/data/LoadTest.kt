@@ -178,4 +178,26 @@ class LoadTest {
         val r = Recovery.acwr(List(28) { 60f } + List(7) { 120f })!!
         assertTrue("acwr $r", r > 1.6f)
     }
+
+    @Test fun `the indexed workout lookup matches the plain scan`() {
+        // Overlapping, nested, touching and empty ranges, against minutes on and off the minute grid around them.
+        val ranges = listOf(600L until 1800L, 900L..1000L, 1799L..1799L, 5000L until 5000L, 7230L..7300L, 0L..30L)
+        val index = Recovery.MinuteRanges(ranges)
+        for (t in -120L..9000L step 15) assertEquals("t=$t", Recovery.inWorkout(t, ranges), index(t))
+        assertEquals(false, Recovery.MinuteRanges(emptyList())(0L))
+    }
+
+    @Test fun `reducing a workout to minutes first gives the same merged series`() {
+        val ride = (0 until 30).map { it * 60L to bpmAt(0.6f) }
+        val phone = 0L until 1800L
+        val strap = 330L until 1500L
+        val phoneHr = (0 until 1800 step 7).map { it.toLong() to bpmAt(0.6f) + it % 3 }
+        val strapHr = (300 until 1700).map { it.toLong() to bpmAt(0.6f) + 2 + it % 5 } + listOf(400L to 10, 401L to 250)
+        val workouts = listOf(phone to phoneHr, strap to strapHr)
+        assertEquals(
+            Recovery.withWorkoutHeartRate(ride, workouts),
+            Recovery.withWorkoutMinutes(ride, workouts.map { (r, hr) -> Recovery.workoutMinutes(r, hr) }),
+        )
+    }
 }
+

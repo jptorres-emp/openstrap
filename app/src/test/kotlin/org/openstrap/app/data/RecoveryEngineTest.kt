@@ -6,6 +6,7 @@ import org.junit.Test
 import org.openstrap.app.data.db.DailyMaxHr
 import org.openstrap.app.data.db.HealthDao
 import org.openstrap.app.data.db.HeartRateSample
+import org.openstrap.app.data.db.SleepSession
 import org.openstrap.app.data.settings.UserProfile
 import java.lang.reflect.Proxy
 import java.time.LocalDate
@@ -51,5 +52,30 @@ class RecoveryEngineTest {
         assertEquals(180f, maxHr(dao(minutes, days.map { DailyMaxHr(it, 205) })), 0.01f)
         // Within 10 bpm of the minutes it counts: 184 and 185 agree, raising max HR to 184.
         assertEquals(184f, maxHr(dao(minutes, listOf(DailyMaxHr(days[0], 184), DailyMaxHr(days[1], 185)))), 0.01f)
+    }
+
+    /** A main sleep from [from] to [to] (clock times) on each of the [nights] nights before [date]'s morning. */
+    private fun sleeps(nights: Int, from: java.time.LocalTime, to: java.time.LocalTime) = (1..nights).map { back ->
+        val d = date.minusDays(back.toLong() - 1)
+        val start = (if (from > to) d.minusDays(1) else d).atTime(from).toEpochSecond(zone)
+        SleepSession(start = start, end = d.atTime(to).toEpochSecond(zone))
+    }
+
+    @Test
+    fun usualSleepIsTheMedianNight() {
+        val nights = RecoveryEngine.usualSleep(sleeps(5, java.time.LocalTime.of(23, 0), java.time.LocalTime.of(7, 0)), date, zone)
+        assertEquals(Recovery.WAKE_HISTORY + 2, nights.size)
+        // The last one is the night into [date]'s morning.
+        val last = date.minusDays(1).atTime(23, 0).toEpochSecond(zone)..date.atTime(7, 0).toEpochSecond(zone)
+        assertEquals(last, nights.first())
+        // Without any sleep: midnight to 06:00.
+        assertEquals(date.atStartOfDay(zone).toEpochSecond()..date.atTime(6, 0).toEpochSecond(zone), RecoveryEngine.usualSleep(emptyList(), date, zone).first())
+    }
+
+    @Test
+    fun usualSleepAfterANightShiftCrossesNoon() {
+        // Asleep 08:00 to 16:00 after night shifts: the range runs through noon instead of coming out empty.
+        val days = RecoveryEngine.usualSleep(sleeps(5, java.time.LocalTime.of(8, 0), java.time.LocalTime.of(16, 0)), date, zone)
+        assertEquals(date.atTime(8, 0).toEpochSecond(zone)..date.atTime(16, 0).toEpochSecond(zone), days.first())
     }
 }

@@ -307,9 +307,9 @@ class RecoveryTest {
     }
 
     @Test
-    fun aCalmDeskHourDrainsLessThanBefore() {
-        // An hour at a desk at resting-ish HR, no steps, Zepp-"relaxed" stress 35: Rest. The old model took a flat
-        // BASE_DRAIN a minute (2.4 an hour) whatever the charge.
+    fun aCalmDeskHourDrainsLessThanTheActiveBaseDrain() {
+        // An hour at a desk at resting-ish HR, no steps, Zepp-"relaxed" stress 35: Rest, which drains well under the
+        // BASE_DRAIN (2.4 an hour) an active minute pays.
         val desk = Recovery.charge(run(60) { Minute(it * 60L, 64, 0, 35, null) }, params, 0L..3_600L, start = 60f, requireAnchor = false)
         val drop = 60f - desk.latest!!
         assertTrue("drop $drop", drop > 0f && drop < 60 * Recovery.BASE_DRAIN * 0.8f)
@@ -464,9 +464,6 @@ class RecoveryTest {
         val minutes = Recovery.minutes(0, 30 * 60L, (0 until 30).filter { it !in 10 until 15 }.map { it * 60L to 64 }, emptyMap(), emptyList(), emptyList(), wear = wear)
         assertEquals((10 until 15).toList(), Recovery.notWorn(minutes).withIndex().filter { it.value }.map { it.index })
         assertEquals(0, Recovery.notWorn(minutes.map { it.copy(worn = null) }).count { it })
-        // Recorded as on body, a long stretch without heart rate is a dropout rather than the strap being off.
-        val onBody = run(60) { Minute(it * 60L, if (it in 10 until 40) null else 64, 0, 40, null, worn = true) }
-        assertEquals(0, Recovery.notWorn(onBody).count { it })
         // Unknown again (the link went down): the gap rule is back.
         val minutesAfterLoss = Recovery.minutes(0, 60 * 60L, (0 until 60).filter { it !in 10 until 40 }.map { it * 60L to 64 }, emptyMap(), emptyList(), emptyList(), wear = listOf(0L to true, 5 * 60L to null))
         assertEquals(30, Recovery.notWorn(minutesAfterLoss).count { it })
@@ -474,6 +471,19 @@ class RecoveryTest {
         val r = Recovery.charge(minutes, params, 0L until 30 * 60L, start = 80f, sampleSeconds = 60, requireAnchor = false)
         val held = Recovery.charge(minutes.map { it.copy(worn = null) }, params, 0L until 30 * 60L, start = 80f, sampleSeconds = 60, requireAnchor = false)
         assertTrue(r.points.first { it.t == 15 * 60L }.value < held.points.first { it.t == 15 * 60L }.value)
+    }
+
+    @Test
+    fun aRecordedOnBodyStateDoesNotOverrideOffWristOrTheGapRule() {
+        // On body may be one stale read at connect, so the strap's off-wrist mark still counts...
+        val offWrist = run(30) { Minute(it * 60L, if (it in 10 until 15) null else 64, 0, 40, null, offWrist = it in 10 until 15, worn = true) }
+        assertEquals((10 until 15).toList(), Recovery.notWorn(offWrist).withIndex().filter { it.value }.map { it.index })
+        // ...and so does a closed gap of 10+ minutes without heart rate.
+        val gap = run(60) { Minute(it * 60L, if (it in 10 until 40) null else 64, 0, 40, null, worn = true) }
+        assertEquals(30, Recovery.notWorn(gap).count { it })
+        // A short dropout recorded on body still holds.
+        val dropout = run(30) { Minute(it * 60L, if (it in 10 until 15) null else 64, 0, 40, null, worn = true) }
+        assertEquals(0, Recovery.notWorn(dropout).count { it })
     }
 
     @Test
@@ -559,6 +569,15 @@ class RecoveryTest {
         // A sustained stretch drains from its third minute.
         val run3 = Recovery.charge(run(3) { Minute(it * 60L, 70, 0, 80, null) }, params, 0L..180L, start = 70f, sampleSeconds = 60, requireAnchor = false)
         assertEquals(listOf(State.Rest, State.Rest, State.Stress), run3.points.map { it.state })
+    }
+
+    @Test
+    fun stressEitherSideOfANotWornMinuteDoesNotAddUp() {
+        // Two stressed minutes, one off the wrist, two more: no run of three, so no Stress.
+        val minutes = run(5) { if (it == 2) Minute(it * 60L, null, 0, null, null, offWrist = true) else Minute(it * 60L, 70, 0, 80, null) }
+        val r = Recovery.charge(minutes, params, 0L..300L, start = 70f, sampleSeconds = 60, requireAnchor = false)
+        assertTrue(r.points.none { it.state == State.Stress })
+        assertEquals(0f, r.drainedStress, 1e-4f)
     }
 
     @Test

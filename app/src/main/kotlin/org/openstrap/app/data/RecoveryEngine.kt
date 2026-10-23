@@ -113,7 +113,7 @@ class RecoveryEngine(private val dao: HealthDao) {
         val asleep = { t: Long -> sleepRanges.any { t in it } }
         val workoutHr = workoutHeartRates(loadFrom, to, now)
         val workoutRanges = workoutHr.map { it.first }
-        val loadHr = Recovery.withWorkoutHeartRate(hrAll, workoutHr)
+        val loadHr = Recovery.withWorkoutMinutes(hrAll, workoutHr.map { it.second })
         val stepsByMinute = activityAll.associate { it.timestamp / 60 * 60 to it.steps }
         val dailyLoad = { series: List<Pair<Long, Int>> -> Recovery.dailyLoad(series, restingHr, maxHr, female, workoutRanges, asleep) { stepsByMinute[it] } }
         val hrByDay = loadHr.groupBy { dayOf(it.first) }
@@ -279,42 +279,29 @@ class RecoveryEngine(private val dao: HealthDao) {
         return maxHeartRate(profile, minuteHeartRate(loadFrom, to), strapMax, loadFrom, to, zone)
     }
 
-    /**
-     * The usual main sleep on each night of the Charge simulation (the [Recovery.WAKE_HISTORY] + 1 nights ending on
-     * [date]'s morning): the median start and end, as clock times, of the last [USUAL_SLEEP_NIGHTS] [mains];
-     * midnight to 06:00 without any.
-     */
-    private fun usualSleep(mains: Collection<SleepSession>, date: LocalDate, zone: ZoneId): List<LongRange> {
-        val recent = mains.sortedBy { it.end }.takeLast(USUAL_SLEEP_NIGHTS)
-        fun afterNoon(t: Long) = Instant.ofEpochSecond(t).atZone(zone).toLocalTime().toSecondOfDay().let { ((it - 43_200) % 86_400 + 86_400) % 86_400 }
-        val start = recent.map { afterNoon(it.start).toFloat() }.median()?.toLong() ?: 43_200L
-        val end = recent.map { afterNoon(it.end).toFloat() }.median()?.toLong() ?: (18 * 3600L)
-        if (end <= start) return emptyList()
-        return (0..Recovery.WAKE_HISTORY + 1).map { back ->
-            val noon = date.minusDays(back + 1L).atTime(12, 0).atZone(zone).toEpochSecond()
-            noon + start..noon + end
-        }
-    }
-
     /** Live heart rate is stored several times a minute; the model works in minutes. */
     private suspend fun minuteHeartRate(from: Long, to: Long, activity: List<org.openstrap.app.data.db.ActivityMinute>? = null): List<Pair<Long, Int>> =
         Summaries.bucketAverage(Summaries.heartRateSeries(dao.heartRateOnce(from, to), activity ?: dao.activityOnce(from, to)), 60)
 
     /**
-     * Every workout overlapping [from]..[to], phone and strap, as (its time, its own heart-rate samples). A phone
-     * workout runs from its shown start to its end (now while recording), less its pauses (the one under way
-     * included), one entry per active part; a strap one from its start to its end, so
-     * the strap's 3-minute recovery recording after it is left out by [Recovery.withWorkoutHeartRate].
+     * Every workout overlapping [from]..[to], phone and strap, as (its time, its own heart rate per minute,
+     * [Recovery.workoutMinutes]). A phone workout runs from its shown start to its end (now while recording), less its
+     * pauses (the one under way included), one entry per active part; a strap one from its start to its end, so the
+     * strap's 3-minute recovery recording after it is left out. Each workout's samples are reduced to minutes as soon
+     * as they're read, so 90 days of per-second recordings are never all held at once.
      */
-    private suspend fun workoutHeartRates(from: Long, to: Long, now: Long): List<Pair<LongRange, List<Pair<Long, Int>>>> {
+    private suspend fun workoutHeartRates(from: Long, to: Long, now: Long): List<Pair<LongRange, Map<Long, Int>>> {
         val phone = dao.appWorkoutsOnce(from, to).flatMap { w ->
+            val ranges = Recovery.activeRanges(w, now).filter { !it.isEmpty() }
+            if (ranges.isEmpty()) return@flatMap emptyList()
             val samples = dao.appWorkoutHeartRateOnce(w.start).map { it.timestamp to it.bpm }
-            Recovery.activeRanges(w, now).map { it to samples }
+            ranges.map { it to Recovery.workoutMinutes(it, samples) }
         }
-        val strap = dao.workoutsOnce(from, to).map { w ->
-            (w.start until w.end) to dao.workoutHeartRateOnce(w.start).map { it.timestamp to it.bpm }
+        val strap = dao.workoutsOnce(from, to).mapNotNull { w ->
+            val range = w.start until w.end
+            if (range.isEmpty()) null else range to Recovery.workoutMinutes(range, dao.workoutHeartRateOnce(w.start).map { it.timestamp to it.bpm })
         }
-        return (phone + strap).filter { !it.first.isEmpty() }
+        return phone + strap
     }
 
     private suspend fun maxHeartRate(profile: UserProfile, hrAll: List<Pair<Long, Int>>, strapMax: Int?, from: Long, to: Long, zone: ZoneId): Float {
@@ -370,6 +357,24 @@ class RecoveryEngine(private val dao: HealthDao) {
     }
 
     companion object {
+        /**
+         * The usual main sleep on each night of the Charge simulation (the [Recovery.WAKE_HISTORY] + 1 nights ending on
+         * [date]'s morning): the median start and end, as clock times, of the last [USUAL_SLEEP_NIGHTS] [mains];
+         * midnight to 06:00 without any. Clock times count from noon, and each end from its own start, so a day sleep
+         * after a night shift that runs past noon (08:00 to 16:00) is a range too rather than nothing.
+         */
+        internal fun usualSleep(mains: Collection<SleepSession>, date: LocalDate, zone: ZoneId): List<LongRange> {
+            val recent = mains.sortedBy { it.end }.takeLast(USUAL_SLEEP_NIGHTS)
+            fun afterNoon(t: Long) = Instant.ofEpochSecond(t).atZone(zone).toLocalTime().toSecondOfDay().let { ((it - 43_200) % 86_400 + 86_400) % 86_400 }
+            val start = recent.map { afterNoon(it.start).toFloat() }.median()?.toLong() ?: 43_200L
+            val end = recent.map { (afterNoon(it.start) + (it.end - it.start).coerceIn(0L, 86_399L)).toFloat() }.median()?.toLong() ?: (18 * 3600L)
+            if (end <= start) return emptyList()
+            return (0..Recovery.WAKE_HISTORY + 1).map { back ->
+                val noon = date.minusDays(back + 1L).atTime(12, 0).atZone(zone).toEpochSecond()
+                noon + start..noon + end
+            }
+        }
+
         /** Asleep minutes: deep + light + REM, else time in bed less awake. */
         fun asleepMinutes(s: SleepSession): Int = listOfNotNull(s.deepMinutes, s.lightMinutes, s.remMinutes).takeIf { it.isNotEmpty() }?.sum()
             ?: (((s.end - s.start) / 60).toInt() - (s.awakeMinutes ?: 0))

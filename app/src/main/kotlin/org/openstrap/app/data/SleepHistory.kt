@@ -8,7 +8,8 @@ import kotlin.math.roundToInt
 
 /**
  * Night-by-night sleep: which sleep belongs to which night, and the week's usual sleep times. How regular the week was
- * is the Sleep Regularity Index ([SleepRegularity]); the bedtime/wake-spread score this file used to compute is gone.
+ * is the Sleep Regularity Index ([SleepRegularity]), which compares the nights minute by minute rather than only their
+ * bedtimes and wake times.
  */
 object SleepHistory {
     /** Nights the Sleep screen's week looks back over. */

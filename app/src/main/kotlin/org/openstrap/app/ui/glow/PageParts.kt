@@ -112,7 +112,7 @@ fun PageRows(modifier: Modifier = Modifier, content: @Composable ColumnScope.() 
 /**
  * A settings row: the [title], and its current [value] either on the right ([below] false, the Strap page) or as a
  * second line ([below] true, the You page). [trailing] replaces the value on the right (a switch). [divider] draws
- * the hairline above it.
+ * the hairline above it. [icon] sits quietly on the left, centred on the row, with the title and value lined up after it.
  */
 @Composable
 fun PageRow(
@@ -123,6 +123,7 @@ fun PageRow(
     divider: Boolean = true,
     titleColor: Color = Color.White,
     enabled: Boolean = true,
+    icon: ImageVector? = null,
     trailing: (@Composable () -> Unit)? = null,
 ) {
     Row(
@@ -133,6 +134,12 @@ fun PageRow(
             .padding(vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        if (icon != null) {
+            Box(Modifier.width(20.dp), contentAlignment = Alignment.Center) {
+                Icon(icon, null, Modifier.size(20.dp), tint = Color.White.copy(alpha = 0.7f))
+            }
+            Spacer(Modifier.width(14.dp))
+        }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Text(title, color = titleColor, style = GlowType.label.copy(fontWeight = null))
             if (below && value != null) Text(value, color = Color.White.copy(alpha = 0.6f), style = GlowType.secondary)

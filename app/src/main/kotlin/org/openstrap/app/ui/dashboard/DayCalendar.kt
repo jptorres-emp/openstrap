@@ -41,7 +41,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import org.openstrap.app.ui.components.SectionLabel
-import org.openstrap.app.ui.theme.PhosphorIcons
+import org.openstrap.app.ui.theme.AppIcons
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.YearMonth
@@ -77,10 +77,10 @@ fun DayCalendarSheet(selected: LocalDate, available: Set<LocalDate>, onPick: (Lo
                     modifier = Modifier.weight(1f),
                 )
                 IconButton(onClick = { month = month.minusMonths(1) }, enabled = month > first) {
-                    Icon(PhosphorIcons.CaretLeft, "Previous month")
+                    Icon(AppIcons.CaretLeft, "Previous month")
                 }
                 IconButton(onClick = { month = month.plusMonths(1) }, enabled = month < last) {
-                    Icon(PhosphorIcons.CaretRight, "Next month")
+                    Icon(AppIcons.CaretRight, "Next month")
                 }
             }
             Spacer(Modifier.height(12.dp))

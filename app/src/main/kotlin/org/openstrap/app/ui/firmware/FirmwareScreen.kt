@@ -55,7 +55,7 @@ import org.openstrap.app.ui.glow.PageRows
 import org.openstrap.app.ui.glow.PageSwitchRow
 import org.openstrap.app.ui.dashboard.ScreenList
 import org.openstrap.app.ui.theme.MetricColors
-import org.openstrap.app.ui.theme.PhosphorIcons
+import org.openstrap.app.ui.theme.AppIcons
 import org.openstrap.app.ui.zepp.ZeppSignInDialog
 import org.openstrap.app.zepp.BoundDevice
 import org.openstrap.app.zepp.DeviceListing
@@ -106,9 +106,9 @@ fun FirmwareScreen(vm: FirmwareViewModel, contentPadding: PaddingValues, onBack:
         item {
             PagePanel(title = "Privacy and safety") {
                 Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                    Point(PhosphorIcons.Key, "Sign-in", "Happens on Zepp's own page. OpenStrap keeps only the app token and user ID, and fetches your device list once.")
-                    Point(PhosphorIcons.CloudArrowDown, "Update check", "Sends the update server your token, user ID and the strap's firmware, hardware and serial number. Nothing else.")
-                    Point(PhosphorIcons.CheckCircle, "Safe install", "Downloads are checked against the server's checksum, and the strap verifies the signature before installing.")
+                    Point(AppIcons.Key, "Sign-in", "Happens on Zepp's own page. OpenStrap keeps only the app token and user ID, and fetches your device list once.")
+                    Point(AppIcons.CloudArrowDown, "Update check", "Sends the update server your token, user ID and the strap's firmware, hardware and serial number. Nothing else.")
+                    Point(AppIcons.CheckCircle, "Safe install", "Downloads are checked against the server's checksum, and the strap verifies the signature before installing.")
                 }
             }
         }
@@ -145,7 +145,7 @@ private fun StepPanel(step: FirmwareStep, vm: FirmwareViewModel, onInstall: (Rea
             }
             FirmwareStep.Installed -> {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Icon(PhosphorIcons.CheckCircle, null, tint = MetricColors.good)
+                    Icon(AppIcons.CheckCircle, null, tint = MetricColors.good)
                     Title("Installed")
                 }
                 Body("The strap is restarting. OpenStrap reconnects by itself. Check again afterwards in case there are more parts to install.")
@@ -153,7 +153,7 @@ private fun StepPanel(step: FirmwareStep, vm: FirmwareViewModel, onInstall: (Rea
             }
             is FirmwareStep.Failed -> {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Icon(PhosphorIcons.WarningCircle, null, tint = MetricColors.bad)
+                    Icon(AppIcons.WarningCircle, null, tint = MetricColors.bad)
                     Title("Something went wrong")
                 }
                 Body(step.message)
@@ -167,7 +167,7 @@ private fun StepPanel(step: FirmwareStep, vm: FirmwareViewModel, onInstall: (Rea
 private fun CheckResult(result: UpdateCheck, vm: FirmwareViewModel) {
     if (result.upToDate) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Icon(PhosphorIcons.CheckCircle, null, tint = MetricColors.good)
+            Icon(AppIcons.CheckCircle, null, tint = MetricColors.good)
             Title("Up to date")
         }
         Body("The update server has nothing newer for this strap.")
@@ -263,7 +263,7 @@ private fun ConfirmInstall(image: ReadyImage, blockers: List<String>, onDismiss:
     var accepted by remember { mutableStateOf(image.warnings.isEmpty()) }
     org.openstrap.app.ui.components.GlassAlertDialog(
         onDismissRequest = onDismiss,
-        icon = { Icon(if (image.warnings.isEmpty()) PhosphorIcons.ArrowCircleUp else PhosphorIcons.Warning, null) },
+        icon = { Icon(if (image.warnings.isEmpty()) AppIcons.ArrowCircleUp else AppIcons.Warning, null) },
         title = { Text("Install ${image.title}?") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -328,7 +328,7 @@ private fun InfoLine(label: String, value: String) {
 @Composable
 private fun Warning(text: String) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Icon(PhosphorIcons.Warning, null, tint = MetricColors.warn, modifier = Modifier.size(18.dp))
+        Icon(AppIcons.Warning, null, tint = MetricColors.warn, modifier = Modifier.size(18.dp))
         Text(text, style = MaterialTheme.typography.bodySmall)
     }
 }

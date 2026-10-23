@@ -46,7 +46,7 @@ import androidx.compose.ui.unit.sp
 import java.time.LocalDate
 import org.openstrap.app.ui.glow.GlowType
 import org.openstrap.app.ui.theme.MetricColors
-import org.openstrap.app.ui.theme.PhosphorIcons
+import org.openstrap.app.ui.theme.AppIcons
 
 /** How far a swipe on the header has to travel to change the day. */
 private val SwipeDistance = 56.dp
@@ -78,12 +78,12 @@ fun MomentHeader(
         // With no day after this one, the room kept for its peek is empty and may tuck under the right side.
         CentredRow(
             overhang = if (hasNext) 0.dp else PeekWidth + 16.dp,
-            start = { RoundButton(PhosphorIcons.User, "You", "Open You", onOpenYou) },
+            start = { RoundButton(AppIcons.User, "You", "Open You", onOpenYou) },
             centre = { DaySwitcher(title, date, hasNext, onPrev, onNext, { calendarOpen = true }, Modifier) },
             end = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (onOpenAllMetrics != null) {
-                        RoundButton(PhosphorIcons.ChartBar, "All metrics", "Open all metrics", onOpenAllMetrics)
+                        RoundButton(AppIcons.ChartBar, "All metrics", "Open all metrics", onOpenAllMetrics)
                         Spacer(Modifier.width(8.dp))
                     }
                     StrapChipButton(chip, onOpenStrap)

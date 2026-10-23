@@ -81,7 +81,7 @@ import org.openstrap.app.ui.glow.PageRow
 import org.openstrap.app.ui.glow.PageRows
 import org.openstrap.app.ui.dashboard.ScreenList
 import org.openstrap.app.ui.theme.MetricColors
-import org.openstrap.app.ui.theme.PhosphorIcons
+import org.openstrap.app.ui.theme.AppIcons
 import org.openstrap.app.ui.zepp.ComputerGuideButton
 import org.openstrap.app.ui.zepp.OptionButton
 import org.openstrap.app.ui.zepp.ZeppSignInDialog
@@ -151,7 +151,7 @@ fun DeviceScreen(
     if (confirmDisconnect) {
         org.openstrap.app.ui.components.GlassAlertDialog(
             onDismissRequest = { confirmDisconnect = false },
-            icon = { Icon(PhosphorIcons.LinkBreak, null) },
+            icon = { Icon(AppIcons.LinkBreak, null) },
             title = { Text("Disconnect the strap?") },
             text = {
                 Text(
@@ -173,7 +173,7 @@ fun DeviceScreen(
     if (confirmRestart) {
         org.openstrap.app.ui.components.GlassAlertDialog(
             onDismissRequest = { confirmRestart = false },
-            icon = { Icon(PhosphorIcons.Info, null) },
+            icon = { Icon(AppIcons.Info, null) },
             title = { Text("Restart the strap?") },
             text = {
                 Text(
@@ -190,7 +190,7 @@ fun DeviceScreen(
     if (confirmForget) {
         org.openstrap.app.ui.components.GlassAlertDialog(
             onDismissRequest = { confirmForget = false },
-            icon = { Icon(PhosphorIcons.LinkBreak, null) },
+            icon = { Icon(AppIcons.LinkBreak, null) },
             title = { Text("Forget this strap?") },
             text = {
                 Text(
@@ -226,7 +226,7 @@ fun DeviceScreen(
                     is ConnectionState.Connected -> {
                         PageButton(
                             "Sync now", vm.strap::syncNow, Modifier.weight(1f).height(56.dp), enabled = sync !is SyncState.Running,
-                            icon = PhosphorIcons.ArrowsClockwise,
+                            icon = AppIcons.ArrowsClockwise,
                         )
                         if (info?.findDevice == true) FindStrapButton(vm, Modifier.weight(1f).height(56.dp))
                     }
@@ -241,32 +241,32 @@ fun DeviceScreen(
             // What the strap holds is read from it; until then, or without it, the row just opens its page.
             val waiting = if (connected) "Reading" else "On the strap"
             PageRows {
-                PageRow("Alarms", alarmsSummary(alarms) ?: waiting, onClick = onAlarms, divider = false, icon = PhosphorIcons.Alarm)
-                PageRow("Phone alerts", phoneAlertsSummary(calls, notifications), onClick = onPhoneAlerts, icon = PhosphorIcons.Vibrate)
-                PageRow("Health alerts", healthAlertsSummary(alarms) ?: waiting, onClick = onHealthAlerts, icon = PhosphorIcons.Heartbeat)
-                PageRow("Off-body reminder", onClick = { scope.launch { settings.setWearReminder(!wearReminder) } }, icon = PhosphorIcons.HandPalm) {
+                PageRow("Alarms", alarmsSummary(alarms) ?: waiting, onClick = onAlarms, divider = false, icon = AppIcons.Alarm)
+                PageRow("Phone alerts", phoneAlertsSummary(calls, notifications), onClick = onPhoneAlerts, icon = AppIcons.Vibrate)
+                PageRow("Health alerts", healthAlertsSummary(alarms) ?: waiting, onClick = onHealthAlerts, icon = AppIcons.Heartbeat)
+                PageRow("Off-body reminder", onClick = { scope.launch { settings.setWearReminder(!wearReminder) } }, icon = AppIcons.HandPalm) {
                     GlowSwitch(wearReminder, { on -> scope.launch { settings.setWearReminder(on) } })
                 }
-                PageRow("Auto-detect workouts", onClick = { scope.launch { settings.setAutoStartWorkouts(!autoStart) } }, icon = PhosphorIcons.PersonSimpleRun) {
+                PageRow("Auto-detect workouts", onClick = { scope.launch { settings.setAutoStartWorkouts(!autoStart) } }, icon = AppIcons.PersonSimpleRun) {
                     GlowSwitch(autoStart, { on -> scope.launch { settings.setAutoStartWorkouts(on) } })
                 }
                 KeepConnectedRow(vm, keepConnected, device.address)
-                PageRow("Firmware", info?.firmware ?: (connection as? ConnectionState.Connected)?.firmware ?: "Check for updates", onClick = onFirmware, icon = PhosphorIcons.Cpu)
-                PageRow("Zepp account", if (zeppSignedIn) "Signed in" else "Not signed in", onClick = onZeppAccount, icon = PhosphorIcons.Key)
+                PageRow("Firmware", info?.firmware ?: (connection as? ConnectionState.Connected)?.firmware ?: "Check for updates", onClick = onFirmware, icon = AppIcons.Cpu)
+                PageRow("Zepp account", if (zeppSignedIn) "Signed in" else "Not signed in", onClick = onZeppAccount, icon = AppIcons.Key)
             }
         }
         item {
             PageRows {
                 var first = true
                 if (connection is ConnectionState.Connected) {
-                    PageRow("Disconnect", onClick = { confirmDisconnect = true }, divider = false, icon = PhosphorIcons.LinkBreak)
+                    PageRow("Disconnect", onClick = { confirmDisconnect = true }, divider = false, icon = AppIcons.LinkBreak)
                     first = false
                 }
                 if (connection is ConnectionState.Connected && info?.canRestart == true) {
-                    PageRow("Restart strap", onClick = { confirmRestart = true }, divider = !first, icon = PhosphorIcons.ArrowClockwise)
+                    PageRow("Restart strap", onClick = { confirmRestart = true }, divider = !first, icon = AppIcons.ArrowClockwise)
                     first = false
                 }
-                PageRow("Forget this strap", onClick = { confirmForget = true }, divider = !first, titleColor = DangerColor, icon = PhosphorIcons.Trash)
+                PageRow("Forget this strap", onClick = { confirmForget = true }, divider = !first, titleColor = DangerColor, icon = AppIcons.Trash)
             }
         }
     }
@@ -278,7 +278,7 @@ private fun FindStrapButton(vm: DeviceViewModel, modifier: Modifier) {
     val finding by vm.strap.findingStrap.collectAsState()
     PageButton(
         if (finding) "Stop buzzing" else "Find strap", { if (finding) vm.stopFindingStrap() else vm.findStrap() }, modifier,
-        icon = if (finding) PhosphorIcons.StopFill else PhosphorIcons.BellRinging,
+        icon = if (finding) AppIcons.StopFill else AppIcons.BellRinging,
     )
 }
 
@@ -322,7 +322,7 @@ private fun KeepConnectedRow(vm: DeviceViewModel, keepConnected: KeepConnected, 
     val ignoringBattery by vm.companion.ignoringBatteryOptimizations.collectAsState()
     val declined by vm.companionDeclined.collectAsState()
     val title = "Stay connected in background"
-    val icon = PhosphorIcons.Bluetooth
+    val icon = AppIcons.Bluetooth
     when {
         associated -> PageRow(title, "On", icon = icon)
         vm.companion.supported && !declined -> PageRow(title, "Off", onClick = { keepConnected.associate(address) }, icon = icon)
@@ -428,7 +428,7 @@ fun DiagnosticsScreen(lines: List<String>, contentPadding: PaddingValues, onBack
                 PageButton("Copy", {
                     context.getSystemService(ClipboardManager::class.java)
                         .setPrimaryClip(ClipData.newPlainText("OpenStrap log", lines.joinToString("\n")))
-                }, Modifier.height(40.dp), icon = PhosphorIcons.Copy)
+                }, Modifier.height(40.dp), icon = AppIcons.Copy)
             }
         }
         item {
@@ -534,7 +534,7 @@ private fun ManualPairDialog(
 
     org.openstrap.app.ui.components.GlassAlertDialog(
         onDismissRequest = onDismiss,
-        icon = { Icon(PhosphorIcons.Key, null) },
+        icon = { Icon(AppIcons.Key, null) },
         title = { Text("Enter the key yourself") },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -562,13 +562,13 @@ private fun ManualPairDialog(
                             .padding(14.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Icon(PhosphorIcons.Watch, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Icon(AppIcons.Watch, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                         Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
                             Text(d.name, style = MaterialTheme.typography.titleSmall)
                             Text(d.address, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
-                        if (selected) Icon(PhosphorIcons.CheckCircle, "Selected", tint = MaterialTheme.colorScheme.primary)
+                        if (selected) Icon(AppIcons.CheckCircle, "Selected", tint = MaterialTheme.colorScheme.primary)
                         else Text("${d.rssi} dBm", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }

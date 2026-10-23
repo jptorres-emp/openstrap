@@ -53,7 +53,7 @@ import org.openstrap.app.ui.glow.PageNote
 import org.openstrap.app.ui.glow.PagePanel
 import org.openstrap.app.ui.glow.PageSwitchRow
 import java.time.LocalDate
-import org.openstrap.app.ui.theme.PhosphorIcons
+import org.openstrap.app.ui.theme.AppIcons
 
 /** One line for the settings row: "34 years, male, 72 kg, 178 cm", or a prompt when empty. */
 fun UserProfile.summary(): String =
@@ -170,8 +170,8 @@ fun ProfileScreen(profile: UserProfile, contentPadding: PaddingValues, onSave: (
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             NumberField(age, { age = it }, "Age", "years", age.isNotBlank() && ageValue == null, Modifier.weight(1f))
                             // Tapping the selected sex again clears it.
-                            SexToggle(PhosphorIcons.GenderFemale, "Female", FemaleColor, sex == 0) { sex = if (sex == 0) 2 else 0 }
-                            SexToggle(PhosphorIcons.GenderMale, "Male", MaleColor, sex == 1) { sex = if (sex == 1) 2 else 1 }
+                            SexToggle(AppIcons.GenderFemale, "Female", FemaleColor, sex == 0) { sex = if (sex == 0) 2 else 0 }
+                            SexToggle(AppIcons.GenderMale, "Male", MaleColor, sex == 1) { sex = if (sex == 1) 2 else 1 }
                         }
                         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             FieldLabel("Units")

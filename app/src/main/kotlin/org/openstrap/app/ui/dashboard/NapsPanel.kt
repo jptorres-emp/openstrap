@@ -11,7 +11,7 @@ import org.openstrap.app.ui.theme.MetricColors
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import org.openstrap.app.ui.theme.PhosphorIcons
+import org.openstrap.app.ui.theme.AppIcons
 
 private fun clock(epochSeconds: Long): String =
     Instant.ofEpochSecond(epochSeconds).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("HH:mm"))
@@ -20,7 +20,7 @@ private fun clock(epochSeconds: Long): String =
 @Composable
 fun NapsPanel(naps: List<SleepSession>, onClick: (() -> Unit)? = null) {
     Panel(onClick = onClick) {
-        PanelHeader("Naps", PhosphorIcons.Moon, MetricColors.sleepLight, chevron = onClick != null)
+        PanelHeader("Naps", AppIcons.Moon, MetricColors.sleepLight, chevron = onClick != null)
         naps.forEach { nap ->
             Text("${clock(nap.start)} – ${clock(nap.end)} · ${formatDuration(nap.end - nap.start)}", style = MaterialTheme.typography.bodyMedium)
         }

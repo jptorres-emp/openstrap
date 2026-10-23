@@ -49,7 +49,7 @@ import org.openstrap.app.ui.dashboard.DayUiState
 import org.openstrap.app.ui.dashboard.Metric
 import org.openstrap.app.ui.dashboard.LocalGoals
 import org.openstrap.app.ui.theme.MetricColors
-import org.openstrap.app.ui.theme.PhosphorIcons
+import org.openstrap.app.ui.theme.AppIcons
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -162,7 +162,7 @@ private fun EnergyPanel(e: org.openstrap.app.data.EnergyExpenditure.Day?, onEdit
         if (e == null) {
             Row(Modifier.fillMaxWidth().glass(GlassRowShape, onEditProfile).padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text("Add age, weight and height to estimate the energy you use.", color = MetricColors.warn, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
-                Icon(PhosphorIcons.CaretRight, null, tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.padding(start = 8.dp))
+                Icon(AppIcons.CaretRight, null, tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.padding(start = 8.dp))
             }
             return@DotPanel
         }
@@ -355,7 +355,7 @@ private fun LoadPanel(r: RecoveryResult?, effect: SportEffectRow?, onEditProfile
                     "Max HR is estimated. Add your age for accurate effort numbers.",
                     color = MetricColors.warn, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f),
                 )
-                Icon(PhosphorIcons.CaretRight, null, tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.padding(start = 8.dp))
+                Icon(AppIcons.CaretRight, null, tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.padding(start = 8.dp))
             }
         }
     }
@@ -438,12 +438,12 @@ private fun WorkoutsPanel(date: LocalDate, workouts: List<WorkoutAnalysis>, onOp
         }
         Row(Modifier.fillMaxWidth().glass(GlassRowShape, onAdd).padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             Text("Add a workout you didn't record", color = Color.White, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-            Icon(PhosphorIcons.CaretRight, null, tint = Color.White.copy(alpha = 0.7f))
+            Icon(AppIcons.CaretRight, null, tint = Color.White.copy(alpha = 0.7f))
         }
         if (workouts.size > today.size + recent.size) {
             Row(Modifier.fillMaxWidth().glass(GlassRowShape, onAll).padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text("All workouts", color = Color.White, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-                Icon(PhosphorIcons.CaretRight, null, tint = Color.White.copy(alpha = 0.7f))
+                Icon(AppIcons.CaretRight, null, tint = Color.White.copy(alpha = 0.7f))
             }
         }
     }
@@ -470,7 +470,7 @@ internal fun WorkoutLine(a: WorkoutAnalysis, showDate: Boolean, onClick: () -> U
                 ).joinToString(" · "),
             )
         }
-        Icon(PhosphorIcons.CaretRight, null, tint = Color.White.copy(alpha = 0.7f))
+        Icon(AppIcons.CaretRight, null, tint = Color.White.copy(alpha = 0.7f))
     }
 }
 

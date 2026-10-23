@@ -47,7 +47,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import org.openstrap.app.device.SyncState
-import org.openstrap.app.ui.theme.PhosphorIcons
+import org.openstrap.app.ui.theme.AppIcons
 import kotlin.math.roundToInt
 
 /** How far the pull has gone (1 = far enough to sync) and whether a sync is running. */
@@ -133,7 +133,7 @@ fun PullSyncReveal() {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
-                PhosphorIcons.Watch, null,
+                AppIcons.Watch, null,
                 Modifier.size(18.dp).graphicsLayer { rotationZ = if (syncing) turn else pull.fraction() * 180f },
                 tint = if (ready || syncing) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
             )

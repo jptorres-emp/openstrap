@@ -1,7 +1,7 @@
 package org.openstrap.app.ui.glow
 
 import androidx.compose.foundation.layout.size
-import org.openstrap.app.ui.theme.PhosphorIcons
+import org.openstrap.app.ui.theme.AppIcons
 import androidx.compose.material3.Icon
 import androidx.compose.ui.draw.rotate
 import androidx.compose.animation.core.animateFloatAsState
@@ -318,7 +318,7 @@ private fun NapsPanel(state: DayUiState) {
                     color = Color.White, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f),
                 )
                 val turn by animateFloatAsState(if (expanded) 180f else 0f, label = "nap caret")
-                Icon(PhosphorIcons.CaretDown, if (expanded) "Hide" else "Details", tint = Color.White.copy(alpha = 0.8f), modifier = Modifier.size(16.dp).rotate(turn))
+                Icon(AppIcons.CaretDown, if (expanded) "Hide" else "Details", tint = Color.White.copy(alpha = 0.8f), modifier = Modifier.size(16.dp).rotate(turn))
             }
             if (expanded) {
                 val stages = state.napStages[nap.start].orEmpty()

@@ -15,7 +15,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import org.openstrap.app.data.settings.Goals
-import org.openstrap.app.ui.theme.PhosphorIcons
+import org.openstrap.app.ui.theme.AppIcons
 
 /** Steps, sleep and active hours to aim for each day. Every goal ring and "goal reached" uses these. */
 @Composable
@@ -32,7 +32,7 @@ fun GoalsDialog(goals: Goals, onSave: (Goals) -> Unit, onDismiss: () -> Unit) {
 
     org.openstrap.app.ui.components.GlassAlertDialog(
         onDismissRequest = onDismiss,
-        icon = { Icon(PhosphorIcons.ChartLineUp, null) },
+        icon = { Icon(AppIcons.ChartLineUp, null) },
         title = { Text("Your goals") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {

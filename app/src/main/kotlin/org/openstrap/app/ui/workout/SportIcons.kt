@@ -7,7 +7,7 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.unit.dp
-import org.openstrap.app.ui.theme.PhosphorIcons
+import org.openstrap.app.ui.theme.AppIcons
 
 /** Line icons for the sports people start most, on a 24-unit grid with a 2-unit stroke; Icon() tints them. */
 internal object SportIcons {
@@ -22,39 +22,39 @@ internal object SportIcons {
     private val STRENGTH = setOf(24, 50, 52, 222, 226)
 
     fun of(sportType: Int): ImageVector = when (sportType) {
-        11 -> PhosphorIcons.Mountains
+        11 -> AppIcons.Mountains
         in RUN -> Run
-        15, 224 -> PhosphorIcons.PersonSimpleHike
-        215 -> PhosphorIcons.Dog
-        225 -> PhosphorIcons.Backpack
+        15, 224 -> AppIcons.PersonSimpleHike
+        215 -> AppIcons.Dog
+        225 -> AppIcons.Backpack
         in WALK -> Walk
-        108, 57, 58 -> PhosphorIcons.Stairs
-        9 -> PhosphorIcons.Steps
-        4 -> PhosphorIcons.PersonSimpleBike
-        8, 143 -> PhosphorIcons.Bicycle
-        6 -> PhosphorIcons.PersonSimpleSwim
-        7 -> PhosphorIcons.Waves
-        23 -> PhosphorIcons.Boat
-        49 -> PhosphorIcons.Timer
-        130, 51, 109 -> PhosphorIcons.Lightning
-        222 -> PhosphorIcons.FlagCheckered
-        50 -> PhosphorIcons.Barbell
+        108, 57, 58 -> AppIcons.Stairs
+        9 -> AppIcons.Steps
+        4 -> AppIcons.PersonSimpleBike
+        8, 143 -> AppIcons.Bicycle
+        6 -> AppIcons.PersonSimpleSwim
+        7 -> AppIcons.Waves
+        23 -> AppIcons.Boat
+        49 -> AppIcons.Timer
+        130, 51, 109 -> AppIcons.Lightning
+        222 -> AppIcons.FlagCheckered
+        50 -> AppIcons.Barbell
         in STRENGTH -> Strength
-        60 -> PhosphorIcons.FlowerLotus
-        61 -> PhosphorIcons.PersonSimpleTaiChi
-        53, 55 -> PhosphorIcons.PersonArmsSpread
-        76 -> PhosphorIcons.MusicNotes
-        17, 205 -> PhosphorIcons.TennisBall
-        89, 204 -> PhosphorIcons.PingPong
-        92 -> PhosphorIcons.PersonSimpleThrow
-        18 -> PhosphorIcons.SoccerBall
-        85 -> PhosphorIcons.Basketball
-        88 -> PhosphorIcons.Volleyball
-        83 -> PhosphorIcons.Golf
-        97 -> PhosphorIcons.BoxingGlove
-        12 -> PhosphorIcons.PersonSimpleSki
-        70, 10 -> PhosphorIcons.Mountains
-        else -> PhosphorIcons.Heartbeat
+        60 -> AppIcons.FlowerLotus
+        61 -> AppIcons.PersonSimpleTaiChi
+        53, 55 -> AppIcons.PersonArmsSpread
+        76 -> AppIcons.MusicNotes
+        17, 205 -> AppIcons.TennisBall
+        89, 204 -> AppIcons.PingPong
+        92 -> AppIcons.PersonSimpleThrow
+        18 -> AppIcons.SoccerBall
+        85 -> AppIcons.Basketball
+        88 -> AppIcons.Volleyball
+        83 -> AppIcons.Golf
+        97 -> AppIcons.BoxingGlove
+        12 -> AppIcons.PersonSimpleSki
+        70, 10 -> AppIcons.Mountains
+        else -> AppIcons.Heartbeat
     }
 
     private fun circle(cx: Float, cy: Float, r: Float) = "M${cx - r} ${cy}a$r $r 0 1 0 ${2 * r} 0a$r $r 0 1 0 ${-2 * r} 0"

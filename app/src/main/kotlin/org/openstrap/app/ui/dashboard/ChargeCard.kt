@@ -29,7 +29,7 @@ import org.openstrap.app.ui.components.LineChart
 import org.openstrap.app.ui.components.Panel
 import org.openstrap.app.ui.components.PanelHeader
 import org.openstrap.app.ui.theme.MetricColors
-import org.openstrap.app.ui.theme.PhosphorIcons
+import org.openstrap.app.ui.theme.AppIcons
 
 /** What each charge state looks like on the strip under the chart; rest and no-data stay blank. */
 private val STATE_COLORS = mapOf(
@@ -76,7 +76,7 @@ fun ChargeCard(
     val c = r.charge
     Panel(onClick = onClick) {
         PanelHeader(
-            "Charge", PhosphorIcons.Lightning, MetricColors.chargeAt(c.latest),
+            "Charge", AppIcons.Lightning, MetricColors.chargeAt(c.latest),
             trailing = c.atWake?.let { if (c.strapOffOvernight) "Started at ~${it.toInt()}" else "Woke at ${it.toInt()}" }, chevron = onClick != null,
         )
         val now = c.latest
@@ -115,7 +115,7 @@ fun ChargeCard(
 @Composable
 private fun HowItWorks() {
     Panel {
-        PanelHeader("How it works", PhosphorIcons.Info)
+        PanelHeader("How it works", AppIcons.Info)
         ExplainerSection(
             "Recovery: how ready your body is",
             "Each morning we compare your night with what's normal for you, not with other people:",

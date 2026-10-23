@@ -25,7 +25,7 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 import org.openstrap.app.data.Healthspan
 import org.openstrap.app.ui.theme.MetricColors
-import org.openstrap.app.ui.theme.PhosphorIcons
+import org.openstrap.app.ui.theme.AppIcons
 
 /** The Healthspan card's orchid, used for the glow: warm enough to stay clear of Sleep's blue. */
 private val Orchid = MetricColors.habitAge
@@ -167,7 +167,7 @@ private fun CardText(text: String, bright: Boolean = false) = Text(
 private fun CardLink(text: String) {
     Row(Modifier.fillMaxWidth().padding(top = 16.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(text, color = Color.White, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-        Icon(PhosphorIcons.CaretRight, null, tint = Color.White, modifier = Modifier.size(16.dp))
+        Icon(AppIcons.CaretRight, null, tint = Color.White, modifier = Modifier.size(16.dp))
     }
 }
 

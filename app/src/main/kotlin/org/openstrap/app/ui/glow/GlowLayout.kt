@@ -23,7 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import org.openstrap.app.ui.dashboard.ScreenList
-import org.openstrap.app.ui.theme.PhosphorIcons
+import org.openstrap.app.ui.theme.AppIcons
 
 /*
  * One set of spacing rules for every glow card and dot panel, so their contents line up down the
@@ -171,7 +171,7 @@ fun GlowHeader(
         trailingContent?.invoke()
         if (chevron) {
             Spacer(Modifier.width(4.dp))
-            Icon(PhosphorIcons.CaretRight, null, tint = Color.White.copy(alpha = 0.9f), modifier = Modifier.size(16.dp))
+            Icon(AppIcons.CaretRight, null, tint = Color.White.copy(alpha = 0.9f), modifier = Modifier.size(16.dp))
         }
     }
 }

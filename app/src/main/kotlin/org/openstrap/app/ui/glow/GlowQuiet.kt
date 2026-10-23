@@ -38,7 +38,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
 import org.openstrap.app.ui.components.pressClickable
-import org.openstrap.app.ui.theme.PhosphorIcons
+import org.openstrap.app.ui.theme.AppIcons
 
 /*
  * The quiet half of the glow language: plain black panels drawn with dots. Use these for lists and
@@ -88,21 +88,21 @@ fun DotPanel(
 fun DotHeader(title: String, trailing: String? = null, chevron: Boolean = false, warning: Boolean = false, expanded: Boolean? = null) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         if (warning) {
-            Icon(PhosphorIcons.Warning, null, tint = MetricColors.warn, modifier = Modifier.size(20.dp))
+            Icon(AppIcons.Warning, null, tint = MetricColors.warn, modifier = Modifier.size(20.dp))
             Spacer(Modifier.width(10.dp))
         }
         Text(title, color = Color.White, style = GlowType.title, modifier = Modifier.weight(1f))
         if (trailing != null) Text(trailing, color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.bodySmall)
         if (chevron) {
             Spacer(Modifier.width(4.dp))
-            Icon(PhosphorIcons.CaretRight, null, tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(16.dp))
+            Icon(AppIcons.CaretRight, null, tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(16.dp))
         }
         if (expanded != null) {
             // In a glass circle, like every other control inside a dotted panel.
             val turn by animateFloatAsState(if (expanded) 180f else 0f, label = "dot header caret")
             Spacer(Modifier.width(8.dp))
             Box(Modifier.size(32.dp).glass(CircleShape), contentAlignment = Alignment.Center) {
-                Icon(PhosphorIcons.CaretDown, if (expanded) "Hide" else "Show", tint = Color.White, modifier = Modifier.size(16.dp).rotate(turn))
+                Icon(AppIcons.CaretDown, if (expanded) "Hide" else "Show", tint = Color.White, modifier = Modifier.size(16.dp).rotate(turn))
             }
         }
     }
@@ -157,7 +157,7 @@ fun GlowTile(label: String, accent: Color, onClick: (() -> Unit)?, modifier: Mod
             Box(Modifier.size(6.dp).background(accent, CircleShape))
             Spacer(Modifier.width(8.dp))
             Text(label, color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.bodySmall, maxLines = 2, modifier = Modifier.weight(1f))
-            if (onClick != null) Icon(PhosphorIcons.CaretRight, null, tint = Color.White.copy(alpha = 0.55f), modifier = Modifier.size(14.dp))
+            if (onClick != null) Icon(AppIcons.CaretRight, null, tint = Color.White.copy(alpha = 0.55f), modifier = Modifier.size(14.dp))
         }
         content()
     }

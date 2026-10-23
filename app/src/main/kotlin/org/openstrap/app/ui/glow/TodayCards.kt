@@ -50,7 +50,7 @@ import org.openstrap.app.ui.dashboard.TodayCard
 import org.openstrap.app.ui.dashboard.TodayCopy
 import org.openstrap.app.ui.dashboard.TodayEdits
 import org.openstrap.app.ui.theme.MetricColors
-import org.openstrap.app.ui.theme.PhosphorIcons
+import org.openstrap.app.ui.theme.AppIcons
 
 /*
  * The pieces Today is built from (spec 4.2): the hero's parts, strips, edge cards and lists. Each card has one home
@@ -89,7 +89,7 @@ internal fun HeroButton(text: String, onClick: () -> Unit, modifier: Modifier = 
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center,
     ) {
         if (icon) {
-            Icon(PhosphorIcons.PlayFill, null, tint = Color.Black, modifier = Modifier.size(14.dp))
+            Icon(AppIcons.PlayFill, null, tint = Color.Black, modifier = Modifier.size(14.dp))
             Spacer(Modifier.width(8.dp))
         }
         Text(text, color = Color.Black, style = MaterialTheme.typography.titleSmall, maxLines = 1)
@@ -126,7 +126,7 @@ internal fun StripLine(title: String, detail: String?, chevron: Boolean = true) 
         if (detail != null) Text(detail, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary, maxLines = 1)
         if (chevron) {
             Spacer(Modifier.width(6.dp))
-            Icon(PhosphorIcons.CaretRight, null, tint = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(14.dp))
+            Icon(AppIcons.CaretRight, null, tint = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(14.dp))
         }
     }
 }
@@ -410,7 +410,7 @@ internal fun EditTodayButton(onClick: () -> Unit, modifier: Modifier = Modifier)
             Modifier.glass(CircleShape, onClick, scale = 0.97f).padding(horizontal = 16.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(PhosphorIcons.SlidersHorizontal, null, tint = Color.White, modifier = Modifier.size(14.dp))
+            Icon(AppIcons.SlidersHorizontal, null, tint = Color.White, modifier = Modifier.size(14.dp))
             Spacer(Modifier.width(8.dp))
             Text("Edit Today", color = Color.White, style = MaterialTheme.typography.bodyMedium)
         }

@@ -44,7 +44,7 @@ import org.openstrap.app.ui.dashboard.RELATED
 import org.openstrap.app.ui.dashboard.Range
 import org.openstrap.app.ui.dashboard.ScreenList
 import org.openstrap.app.ui.dashboard.colorOf
-import org.openstrap.app.ui.theme.PhosphorIcons
+import org.openstrap.app.ui.theme.AppIcons
 import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
@@ -60,7 +60,7 @@ import java.util.Locale
 @Composable
 internal fun GlowDetailHeader(title: String, subtitle: String?, onBack: () -> Unit) {
     Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-        IconButton(onClick = onBack) { Icon(PhosphorIcons.ArrowLeft, "Back", tint = Color.White) }
+        IconButton(onClick = onBack) { Icon(AppIcons.ArrowLeft, "Back", tint = Color.White) }
         Column(Modifier.weight(1f)) {
             Text(title, color = Color.White, style = GlowType.title.copy(fontSize = GlowType.title.fontSize * 1.25f))
             if (subtitle != null) Text(subtitle, color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.bodySmall)
@@ -382,7 +382,7 @@ private fun RelatedPanel(related: List<Metric>, onOpen: (Metric) -> Unit) {
             ) {
                 Canvas(Modifier.padding(end = 10.dp).size(7.dp)) { drawCircle(colorOf(m)) }
                 Text(m.title, color = Color.White, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-                Icon(PhosphorIcons.CaretRight, null, tint = Color.White.copy(alpha = 0.7f))
+                Icon(AppIcons.CaretRight, null, tint = Color.White.copy(alpha = 0.7f))
             }
         }
     }

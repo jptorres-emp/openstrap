@@ -19,7 +19,7 @@ import org.openstrap.app.ui.glow.GlowType
 import org.openstrap.app.ui.glow.PageHeader
 import org.openstrap.app.ui.glow.PageRow
 import org.openstrap.app.ui.glow.PageRows
-import org.openstrap.app.ui.theme.PhosphorIcons
+import org.openstrap.app.ui.theme.AppIcons
 
 /** "7 h 30", or "8 h" on the hour. */
 fun hoursMinutes(minutes: Int): String = if (minutes % 60 == 0) "${minutes / 60} h" else "${minutes / 60} h ${"%02d".format(minutes % 60)}"
@@ -59,24 +59,24 @@ fun YouPage(
         item { PageHeader("You", onBack) }
         item {
             PageRows {
-                PageRow("Profile", profile.summary(), onClick = onProfile, below = true, divider = false, icon = PhosphorIcons.User)
-                PageRow("Goals", goalsLine(goals), onClick = onGoals, below = true, icon = PhosphorIcons.Target)
-                PageRow("Sleep goal", sleepGoalLine(goals, sleepNeedMinutes), onClick = onGoals, below = true, icon = PhosphorIcons.Moon)
+                PageRow("Profile", profile.summary(), onClick = onProfile, below = true, divider = false, icon = AppIcons.User)
+                PageRow("Goals", goalsLine(goals), onClick = onGoals, below = true, icon = AppIcons.Target)
+                PageRow("Sleep goal", sleepGoalLine(goals, sleepNeedMinutes), onClick = onGoals, below = true, icon = AppIcons.Moon)
             }
         }
         item { Text("Your data", color = Color.White.copy(alpha = 0.6f), style = GlowType.secondary, modifier = Modifier.padding(start = 18.dp, top = 4.dp)) }
         item {
             PageRows {
-                PageRow("Save a copy", "A zip of every synced record, saved where you choose", onClick = onSaveCopy, below = true, divider = false, icon = PhosphorIcons.DownloadSimple)
-                PageRow("Restore from a copy", "For days before the strap's history", onClick = onRestoreCopy, below = true, icon = PhosphorIcons.UploadSimple)
-                PageRow("Health Connect", "Copy your data to Android Health Connect", onClick = onHealthConnect, below = true, icon = PhosphorIcons.Heartbeat)
-                PageRow("Restore from Health Connect", "Bring back what OpenStrap saved there", onClick = onRestoreHealthConnect, below = true, icon = PhosphorIcons.ArrowCounterClockwise)
+                PageRow("Save a copy", "A zip of every synced record, saved where you choose", onClick = onSaveCopy, below = true, divider = false, icon = AppIcons.DownloadSimple)
+                PageRow("Restore from a copy", "For days before the strap's history", onClick = onRestoreCopy, below = true, icon = AppIcons.UploadSimple)
+                PageRow("Health Connect", "Copy your data to Android Health Connect", onClick = onHealthConnect, below = true, icon = AppIcons.Heartbeat)
+                PageRow("Restore from Health Connect", "Bring back what OpenStrap saved there", onClick = onRestoreHealthConnect, below = true, icon = AppIcons.ArrowCounterClockwise)
             }
         }
         item {
             PageRows {
-                PageRow("Diagnostics", "$logLines lines, for bug reports", onClick = onDiagnostics, below = true, divider = false, icon = PhosphorIcons.Bug)
-                if (onSampleData != null) PageRow("Load sample data", "Debug builds only", onClick = onSampleData, below = true, icon = PhosphorIcons.Flask)
+                PageRow("Diagnostics", "$logLines lines, for bug reports", onClick = onDiagnostics, below = true, divider = false, icon = AppIcons.Bug)
+                if (onSampleData != null) PageRow("Load sample data", "Debug builds only", onClick = onSampleData, below = true, icon = AppIcons.Flask)
             }
         }
         item {

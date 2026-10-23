@@ -6,15 +6,15 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class PhosphorIconsTest {
+class AppIconsTest {
     /** Every icon getter on the object, found by reflection so a new icon is covered without listing it here. */
-    private val getters = PhosphorIcons::class.java.declaredMethods
+    private val getters = AppIcons::class.java.declaredMethods
         .filter { it.parameterCount == 0 && it.returnType == ImageVector::class.java && it.name.startsWith("get") }
 
     @Test fun `every icon builds on the 24 grid with drawable paths`() {
         assertTrue("found only ${getters.size} icons", getters.size > 90)
         for (g in getters) {
-            val icon = g.invoke(PhosphorIcons) as ImageVector
+            val icon = g.invoke(AppIcons) as ImageVector
             val name = g.name.removePrefix("get")
             assertEquals(name, 24f, icon.viewportWidth)
             assertEquals(name, 24f, icon.viewportHeight)
@@ -27,15 +27,15 @@ class PhosphorIconsTest {
     @Test fun `selected variants draw bolder than their outlines`() {
         fun width(icon: ImageVector) = (icon.root[0] as VectorPath).strokeLineWidth
         for ((plain, selected) in listOf(
-            PhosphorIcons.HouseSimple to PhosphorIcons.HouseSimpleFill,
-            PhosphorIcons.Plant to PhosphorIcons.PlantFill,
-            PhosphorIcons.Moon to PhosphorIcons.MoonFill,
-            PhosphorIcons.SneakerMove to PhosphorIcons.SneakerMoveFill,
+            AppIcons.HouseSimple to AppIcons.HouseSimpleFill,
+            AppIcons.Plant to AppIcons.PlantFill,
+            AppIcons.Moon to AppIcons.MoonFill,
+            AppIcons.SneakerMove to AppIcons.SneakerMoveFill,
         )) assertTrue(selected.name, width(selected) > width(plain))
     }
 
     @Test fun `play pause and stop are filled`() {
-        for (icon in listOf(PhosphorIcons.PlayFill, PhosphorIcons.PauseFill, PhosphorIcons.StopFill)) {
+        for (icon in listOf(AppIcons.PlayFill, AppIcons.PauseFill, AppIcons.StopFill)) {
             assertTrue(icon.name, (icon.root[0] as VectorPath).fill != null)
         }
     }

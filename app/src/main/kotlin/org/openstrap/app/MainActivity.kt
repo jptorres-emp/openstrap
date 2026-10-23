@@ -66,7 +66,7 @@ import org.openstrap.app.ui.components.SideBySideWidth
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import org.openstrap.app.ui.theme.OpenStrapTheme
-import org.openstrap.app.ui.theme.PhosphorIcons
+import org.openstrap.app.ui.theme.AppIcons
 
 class MainActivity : ComponentActivity() {
     /** The latest `open_metric` link, until the app root has opened it. */
@@ -228,10 +228,10 @@ private enum class Tab(
     /** The capsule's colour while this tab shows (spec 3.2). */
     val tint: androidx.compose.ui.graphics.Color,
 ) {
-    Today("Today", PhosphorIcons.HouseSimple, PhosphorIcons.HouseSimpleFill, androidx.compose.ui.graphics.Color.White),
-    Recovery("Recovery", PhosphorIcons.Plant, PhosphorIcons.PlantFill, org.openstrap.app.ui.theme.MetricColors.readiness),
-    Sleep("Sleep", PhosphorIcons.Moon, PhosphorIcons.MoonFill, org.openstrap.app.ui.theme.MetricColors.sleepDeep),
-    Activity("Activity", PhosphorIcons.SneakerMove, PhosphorIcons.SneakerMoveFill, org.openstrap.app.ui.theme.MetricColors.steps),
+    Today("Today", AppIcons.HouseSimple, AppIcons.HouseSimpleFill, androidx.compose.ui.graphics.Color.White),
+    Recovery("Recovery", AppIcons.Plant, AppIcons.PlantFill, org.openstrap.app.ui.theme.MetricColors.readiness),
+    Sleep("Sleep", AppIcons.Moon, AppIcons.MoonFill, org.openstrap.app.ui.theme.MetricColors.sleepDeep),
+    Activity("Activity", AppIcons.SneakerMove, AppIcons.SneakerMoveFill, org.openstrap.app.ui.theme.MetricColors.steps),
 }
 
 /**

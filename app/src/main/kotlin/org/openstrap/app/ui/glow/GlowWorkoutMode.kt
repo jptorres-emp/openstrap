@@ -98,7 +98,7 @@ import org.openstrap.app.ui.workout.PhoneSummary
 import org.openstrap.app.ui.components.pressClickable
 import org.openstrap.app.ui.dashboard.ScreenList
 import org.openstrap.app.ui.theme.MetricColors
-import org.openstrap.app.ui.theme.PhosphorIcons
+import org.openstrap.app.ui.theme.AppIcons
 import org.openstrap.app.ui.workout.SportIcons
 import org.openstrap.app.ui.workout.ZONE_COLORS
 import org.openstrap.app.ui.workout.ZONE_NAMES
@@ -210,7 +210,7 @@ private fun Pill(label: String, dot: Color?, onClick: (() -> Unit)? = null, care
         Text(label, color = Color.White, style = MaterialTheme.typography.titleSmall)
         if (caret) {
             Spacer(Modifier.width(8.dp))
-            Icon(PhosphorIcons.CaretDown, null, tint = Color.White, modifier = Modifier.size(14.dp))
+            Icon(AppIcons.CaretDown, null, tint = Color.White, modifier = Modifier.size(14.dp))
         }
     }
 }
@@ -271,7 +271,7 @@ internal fun StartWorkoutPanel(sports: List<SportUse>, onStart: (Int) -> Unit, o
             sports.take(3).forEach { s ->
                 SportBubble(SportIcons.of(s.sportType), Workouts.sportName(s.sportType), Modifier.weight(1f)) { onStart(s.sportType) }
             }
-            SportBubble(PhosphorIcons.DotsThree, "All sports", Modifier.weight(1f), onClick = onAllSports)
+            SportBubble(AppIcons.DotsThree, "All sports", Modifier.weight(1f), onClick = onAllSports)
         }
     }
 }
@@ -300,7 +300,7 @@ private fun SportBubble(icon: androidx.compose.ui.graphics.vector.ImageVector, n
 internal fun SuggestionPanel(s: org.openstrap.app.data.WorkoutSuggestions.Suggestion, onSave: () -> Unit, onDismiss: () -> Unit) {
     DotPanel {
         Row(verticalAlignment = Alignment.Top) {
-            Icon(PhosphorIcons.Heartbeat, null, tint = ZONE_COLORS[s.zone], modifier = Modifier.padding(top = 2.dp).size(20.dp))
+            Icon(AppIcons.Heartbeat, null, tint = ZONE_COLORS[s.zone], modifier = Modifier.padding(top = 2.dp).size(20.dp))
             Spacer(Modifier.width(10.dp))
             Column {
                 Text("Looks like you worked out", color = Color.White, style = MaterialTheme.typography.titleSmall)
@@ -361,7 +361,7 @@ fun GlowAddWorkoutScreen(
     BackHandler(onBack = onBack)
     WorkoutPage(Color.Transparent, contentPadding) {
         Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) { Icon(PhosphorIcons.ArrowLeft, "Back", tint = Color.White) }
+            IconButton(onClick = onBack) { Icon(AppIcons.ArrowLeft, "Back", tint = Color.White) }
             Column(Modifier.weight(1f)) {
                 Text("Add a workout", color = Color.White, style = GlowType.headline.copy(fontSize = GlowType.headline.fontSize * 1.1f))
                 Text(dayName(date), color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.bodySmall)
@@ -483,7 +483,7 @@ fun GlowWorkoutReadyScreen(
             Box(
                 Modifier.size(44.dp).clip(CircleShape).background(Raised).pressClickable(onBack, CircleShape),
                 contentAlignment = Alignment.Center,
-            ) { Icon(PhosphorIcons.X, "Close", tint = Color.White, modifier = Modifier.size(18.dp)) }
+            ) { Icon(AppIcons.X, "Close", tint = Color.White, modifier = Modifier.size(18.dp)) }
             Box(Modifier.align(Alignment.Center)) { Pill(Workouts.sportName(sportType), null, onClick = { picking = true }, caret = true) }
         }
         Column(Modifier.padding(top = 10.dp, start = 4.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -558,7 +558,7 @@ fun GlowWorkoutReadyScreen(
                 sportType, askToEnd, target, outdoor && useGps, outdoor && useGps && keepRoute,
                 Strength.Rest(restSeconds, restBelow).takeIf { strength }, setsTarget.takeIf { strength },
             )
-        }, icon = PhosphorIcons.PlayFill)
+        }, icon = AppIcons.PlayFill)
     }
 }
 
@@ -678,7 +678,7 @@ fun GlowWorkoutLiveScreen(
     val active = activeSeconds(r)
     WorkoutPage(color, contentPadding, scroll = false) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onMinimize) { Icon(PhosphorIcons.CaretDown, "Minimize", tint = Color.White) }
+            IconButton(onClick = onMinimize) { Icon(AppIcons.CaretDown, "Minimize", tint = Color.White) }
             Pill(Workouts.sportName(r.workout.sportType), color)
             Spacer(Modifier.weight(1f))
             Text(
@@ -762,7 +762,7 @@ fun GlowWorkoutLiveScreen(
             } else Spacer(Modifier.size(64.dp))
             Spacer(Modifier.weight(1f))
             FlatButton(Color.White, 88.dp, onClick = if (r.paused) onResume else onPause) {
-                Icon(if (r.paused) PhosphorIcons.PlayFill else PhosphorIcons.PauseFill, if (r.paused) "Resume" else "Pause", tint = Color.Black, modifier = Modifier.size(30.dp))
+                Icon(if (r.paused) AppIcons.PlayFill else AppIcons.PauseFill, if (r.paused) "Resume" else "Pause", tint = Color.Black, modifier = Modifier.size(30.dp))
             }
             Spacer(Modifier.weight(1f))
             HoldToEnd(onEnd)
@@ -1022,7 +1022,7 @@ private fun HoldToEnd(onEnd: () -> Unit) {
                 })
             },
         ) {
-            Icon(PhosphorIcons.StopFill, "Hold to end the workout", tint = EndRed, modifier = Modifier.size(20.dp))
+            Icon(AppIcons.StopFill, "Hold to end the workout", tint = EndRed, modifier = Modifier.size(20.dp))
         }
         Canvas(Modifier.size(64.dp).padding(2.dp)) {
             if (progress.value > 0f) drawArc(EndRed, -90f, 360f * progress.value, false, style = Stroke(3.dp.toPx(), cap = StrokeCap.Round))
@@ -1083,7 +1083,7 @@ fun WorkoutCapsule(
             Modifier.size(44.dp).clip(CircleShape).background(color).pressClickable(if (r.paused) onResume else onPause, CircleShape),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(if (r.paused) PhosphorIcons.PlayFill else PhosphorIcons.PauseFill, if (r.paused) "Resume" else "Pause", tint = Color.Black, modifier = Modifier.size(18.dp))
+            Icon(if (r.paused) AppIcons.PlayFill else AppIcons.PauseFill, if (r.paused) "Resume" else "Pause", tint = Color.Black, modifier = Modifier.size(18.dp))
         }
     }
 }
@@ -1129,7 +1129,7 @@ fun GlowPhoneWorkoutScreen(
     val a = summary?.analysis
     WorkoutPage(Color.Transparent, contentPadding) {
         Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            if (!justEnded) IconButton(onClick = onBack) { Icon(PhosphorIcons.ArrowLeft, "Back", tint = Color.White) }
+            if (!justEnded) IconButton(onClick = onBack) { Icon(AppIcons.ArrowLeft, "Back", tint = Color.White) }
             Text(
                 a?.let { if (justEnded) "${it.sportName} saved" else it.sportName } ?: "Workout",
                 color = Color.White, style = GlowType.headline.copy(fontSize = GlowType.headline.fontSize * 1.1f),
@@ -1291,7 +1291,7 @@ fun GlowPhoneWorkoutScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text("Trim start and end", color = Color.White, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-                Icon(PhosphorIcons.CaretRight, null, tint = Color.White.copy(alpha = 0.7f))
+                Icon(AppIcons.CaretRight, null, tint = Color.White.copy(alpha = 0.7f))
             }
         }
         Spacer(Modifier.weight(1f))
@@ -1520,7 +1520,7 @@ fun WorkoutShortcut(r: WorkoutState.Recording, liveHeartRate: Int?, onOpen: () -
         Modifier.fillMaxWidth().height(52.dp).clip(shape).background(Color.White).pressClickable(if (r.paused) onResume else onOpen, shape),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center,
     ) {
-        if (r.paused) Icon(PhosphorIcons.PlayFill, null, tint = Color.Black, modifier = Modifier.size(16.dp))
+        if (r.paused) Icon(AppIcons.PlayFill, null, tint = Color.Black, modifier = Modifier.size(16.dp))
         else PulseDot(Color.Black, liveHeartRate, 10.dp)
         Spacer(Modifier.width(10.dp))
         Text(

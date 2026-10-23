@@ -37,7 +37,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.openstrap.app.ui.components.pressClickable
-import org.openstrap.app.ui.theme.PhosphorIcons
+import org.openstrap.app.ui.theme.AppIcons
 
 /*
  * The settings pages (the Strap page and what it opens, Profile, You) in the glow language's quiet tier: black, with
@@ -71,7 +71,7 @@ fun PageHeader(
             Modifier.size(38.dp).clip(CircleShape).background(Color(0xFF1C1C1E)).alpha(if (backEnabled) 1f else 0.4f)
                 .clickable(enabled = backEnabled, onClickLabel = "Back", onClick = onBack),
             contentAlignment = Alignment.Center,
-        ) { Icon(PhosphorIcons.ArrowLeft, "Back", Modifier.size(18.dp), tint = Color.White) }
+        ) { Icon(AppIcons.ArrowLeft, "Back", Modifier.size(18.dp), tint = Color.White) }
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(title, color = Color.White, style = GlowType.label.copy(fontSize = 20.sp, lineHeight = 26.sp), maxLines = 1)

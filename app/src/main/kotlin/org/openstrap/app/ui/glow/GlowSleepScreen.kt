@@ -109,11 +109,10 @@ fun GlowSleepScreen(
 
 /* ------------------------------------------------------------------------------------------------ */
 
-/** Sleep glows midnight blue, breathing slowly. Shared with Today's sleep card. */
+/** Sleep glows midnight blue. Shared with Today's sleep card. */
 internal val SleepGlow = GlowStyle.Midnight.copy(
     color = MetricColors.sleepDeep,
     coreX = 0.5f, coreY = 0.6f, coreWidth = 1.1f, coreHeight = 0.9f,
-    motion = GlowMotion.Breath(5f),
 )
 
 private fun clock(epoch: Long) = Instant.ofEpochSecond(epoch).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("HH:mm"))

@@ -50,7 +50,7 @@ fun GlowHealthspanScreen(state: Healthspan.Outcome?, contentPadding: PaddingValu
     ScreenList(contentPadding, gutter = GlowLayout.Gutter) {
         item { GlowDetailHeader("Habit Age", r?.let { updatedText(it.asOf) } ?: "Updated weekly, on Sunday", onBack) }
         item {
-            GlowCard(HealthspanGlow.copy(motion = GlowMotion.Breath(5f)), Modifier.fillMaxWidth()) {
+            GlowCard(HealthspanGlow, Modifier.fillMaxWidth()) {
                 Column {
                     GlowHeader(if (r == null && state?.withheld?.learning == true) "Starting point" else "Your habits look like", trailing = if (r?.early == true) "Early" else "Weekly")
                     if (r == null) {

@@ -193,7 +193,7 @@ private fun DayCard(metric: Metric, state: DayUiState, normal: History.Normal?, 
         Metric.Steps -> state.steps.toFloat()
         else -> series.takeIf { it.isNotEmpty() }?.map { it.y }?.average()?.toFloat()
     }
-    val style = GlowStyle.chart(color).copy(motion = if (metric == Metric.HeartRate) GlowMotion.Heartbeat(value?.toInt() ?: 62) else GlowMotion.Breath(5f))
+    val style = GlowStyle.chart(color).copy(motion = if (metric == Metric.HeartRate) GlowMotion.Heartbeat(value?.toInt() ?: 62) else GlowMotion.Still)
     GlowCard(style, Modifier.fillMaxWidth()) {
         Column {
             GlowHeader(
@@ -261,7 +261,7 @@ private fun DayCard(metric: Metric, state: DayUiState, normal: History.Normal?, 
 private fun HistoryCard(metric: Metric, range: Range, stats: List<DayStat>?, normal: History.Normal?, end: LocalDate) {
     val color = colorOf(metric)
     val start = end.minusDays(range.days - 1L)
-    GlowCard(GlowStyle.chart(color).copy(motion = GlowMotion.Breath(6f)), Modifier.fillMaxWidth()) {
+    GlowCard(GlowStyle.chart(color), Modifier.fillMaxWidth()) {
         Column {
             GlowHeader(
                 if (metric == Metric.Steps) "Steps a day" else "Daily average",

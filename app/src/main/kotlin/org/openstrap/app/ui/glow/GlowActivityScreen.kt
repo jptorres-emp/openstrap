@@ -136,8 +136,7 @@ private val HOURS = listOf("00", "06", "12", "18", "24")
 @Composable
 private fun StepsCard(state: DayUiState, activity: org.openstrap.app.data.Activity.Day?, onClick: () -> Unit) {
     val goals = LocalGoals.current
-    val progress = state.steps.toFloat() / goals.steps
-    val style = GlowStyle.chart(MetricColors.steps).copy(motion = GlowMotion.Stride(energy = progress.coerceIn(0f, 1f)))
+    val style = GlowStyle.chart(MetricColors.steps)
     GlowCard(style, Modifier.fillMaxWidth(), onClick = onClick) {
         Column {
             GlowHeader("Steps", chevron = true)

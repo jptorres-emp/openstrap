@@ -30,6 +30,10 @@ object MetricColors {
     /** Recovery and Charge as saturated as [sleepDeep], for marks that sit beside it (the Today top card). */
     val readinessDeep = Color(0xFF00C99B)
     val chargeDeep = Color(0xFFF5B400)
+    /** Load: violet, apart from Sleep's blues and REM's purple. */
+    val load = Color(0xFFA78BFA)
+    /** Habit Age: orchid. */
+    val habitAge = Color(0xFFD86BEA)
     val good = Color(0xFF3DDC97)
     val warn = Color(0xFFFFB547)
     val bad = Color(0xFFFF5A5F)

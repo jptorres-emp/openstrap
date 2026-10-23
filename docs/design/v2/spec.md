@@ -86,8 +86,8 @@ Keep the existing recipe: rim light, dark core, tone band, grain, hairline. Chan
 
 - `GlowMotion` loses `Drift`, `Breath` and `Stride`. Only `Heartbeat` (live heart rate only) and `Still` remain.
   Everything that used another motion becomes `Still`.
-- New `GlowStyle.lightAngle` (degrees) replaces `LightFrom` for heroes. 270 is from below, 90 from above, 45 lower
-  left, 225 upper right. The core sits on the opposite side.
+- New `GlowStyle.lightAngle` (degrees, counterclockwise from the right edge) replaces `LightFrom` for heroes. 270 is from below, 90 from above, 225 lower
+  left, 45 upper right. Named constants in `LightAngle`. The core sits on the opposite side.
 - New `GlowStyle.lightLevel` (0..1, nullable): the height the light reaches, for Charge and other levels. Core Y and
   height follow it. Floor of 0.12 so an empty card still glows faintly. The edge between dark and light stays soft.
 - New `GlowStyle.second` flag for the second glow card on a screen: about 60% of the rim strength and a shorter
@@ -106,14 +106,14 @@ Where the glow sits carries meaning:
 | Case | Edge |
 |---|---|
 | Usual value | Bottom, soft |
-| Above your normal | Top, stronger, hairline tinted with the metric colour |
-| Below your normal | Bottom, stronger, hairline tinted |
+| Above your normal | Top, stronger |
+| Below your normal | Bottom, stronger |
 | Progress toward a goal or your usual | Bottom, soft, plus a 4 dp progress bar inside the card |
 | Live, now (heart rate today) | Right |
 | About earlier (Recovery after the morning, Habit Age) | Left |
 | Sleep (last night, regularity, breathing disturbances) | Top, like a night sky |
 
-Static. The edge only changes when the data changes.
+The hairline stays plain on every edge card. Off normal shows through the stronger glow and the coloured value and status, never a coloured border. Static. The edge only changes when the data changes.
 
 #### Grouped list
 
@@ -127,7 +127,7 @@ normal. Each row opens that metric's detail. Waiting rows show a dim dash and "A
 
 | Card | Rule |
 |---|---|
-| Today hero | `lightAngle` by moment: waking 45, midday 90, workout window 225 and stronger, after a workout 270 and calm, evening 315 and dim, night 270 and almost unlit |
+| Today hero | `lightAngle` by moment: waking 225 (lower left), midday 90, workout window 45 (upper right) and stronger, after a workout 270 and calm, evening 315 and dim, night 270 and almost unlit |
 | Charge | `lightLevel` = Charge / 100, light from below |
 | Recovery (tab hero, detail header) | The number sits in a dark pool: core behind the number, light all round |
 | Workout summary | Glow size by effort: an easy walk leaves most of the card dark, a hard run floods it |

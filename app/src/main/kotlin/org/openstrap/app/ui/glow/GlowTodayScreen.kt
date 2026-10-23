@@ -304,7 +304,7 @@ private fun OverviewCard(
         color = overviewColor(lead.value, strain),
         coreShape = CoreShape.Radial, coreX = 0.5f, coreY = 0.6f, coreWidth = 0.95f, coreHeight = 0.75f,
         coreBlur = 30.dp, toneWidth = 16.dp, toneShift = -10f, glowStrength = 0.6f, bevel = 0.6f,
-        motion = GlowMotion.Breath(5f), depth = 6.dp,
+        depth = 6.dp,
     )
     GlowCard(style, Modifier.fillMaxWidth(), onClick = { onOpen(leadSection) }) {
         Column {
@@ -534,8 +534,7 @@ private fun EditPill(onClick: () -> Unit) {
 @Composable
 private fun ActivityGlow(state: DayUiState, onClick: () -> Unit) {
     val goals = LocalGoals.current
-    val progress = state.steps.toFloat() / goals.steps
-    val style = GlowStyle.chart(MetricColors.steps).copy(motion = GlowMotion.Stride(energy = progress.coerceIn(0f, 1f)))
+    val style = GlowStyle.chart(MetricColors.steps)
     GlowCard(style, Modifier.fillMaxWidth(), onClick = onClick) {
         Column {
             GlowHeader("Activity", chevron = true)

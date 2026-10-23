@@ -67,8 +67,8 @@ import org.openstrap.app.ui.components.pressClickable
  * A card in the glow language (see [GlowStyle]). Layers, back to front: rim-coloured fill, rim light,
  * second-tone band, dark core, [content], film grain, hairline edge.
  *
- * The dark core moves with the style's [GlowMotion] (a drift, a heartbeat, a breath, a stride), each
- * card on its own random path. It holds still when the system's animations are off.
+ * The dark core holds still unless the style's [GlowMotion] is a [GlowMotion.Heartbeat] (live heart rate),
+ * and always when the system's animations are off. The screen's [LocalGlowMood] is applied on top of the style.
  *
  * Built to stay cheap while scrolling: everything blurred is rendered once per style and size, off the
  * main thread, into GPU bitmaps that are cached across cards (see [GlowCache]). The core moves on its
@@ -96,8 +96,10 @@ fun GlowCard(
     contentPadding: PaddingValues = LocalCardPadding.current,
     content: @Composable BoxScope.() -> Unit,
 ) {
-    val shape = remember(style.radius) { RoundedCornerShape(style.radius) }
-    val palette = remember(style) { GlowPalette(style) }
+    val lit = style.copy(mood = LocalGlowMood.current)
+    val shape = remember(lit.radius) { RoundedCornerShape(lit.radius) }
+    val palette = remember(lit) { GlowPalette(lit) }
+    val core = remember(lit) { lit.light().core }
     val slab = remember(palette) { lerp(palette.mid, Color.Black, 0.55f) }
     // Each card samples the grain tile from its own spot, so neighbouring cards never share a pattern.
     val grainSeed = remember { Random.nextInt(GRAIN_TILE * GRAIN_TILE) }
@@ -105,7 +107,8 @@ fun GlowCard(
     val seconds = remember { mutableFloatStateOf(0f) }
     val context = LocalContext.current
     val density = LocalDensity.current
-    val animate = style.motion != GlowMotion.Still && remember(context) {
+    // When the system's animator scale is 0 the heart doesn't beat: the core sits at its resting state.
+    val animate = lit.motion is GlowMotion.Heartbeat && remember(context) {
         Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) > 0f
     }
     val listPaused = LocalGlowPaused.current
@@ -128,7 +131,7 @@ fun GlowCard(
 
     var size by remember { mutableStateOf(IntSize.Zero) }
     // The motion doesn't change how the card looks at rest, so it isn't part of the cache key.
-    val key = GlowCache.Key(style.copy(motion = GlowMotion.Still), size, density.density)
+    val key = GlowCache.Key(lit, size, density.density)
     val bitmaps by produceState(GlowCache.peek(key), key) {
         // Always the layers for this key: when the card changes size, the old ones no longer fit.
         value = GlowCache.peek(key)
@@ -141,9 +144,9 @@ fun GlowCard(
             .let { if (onClick != null) it.pressClickable(onClick, shape) else it }
             // The slab's edge: a darker copy of the card showing underneath, for a 3D look.
             .let {
-                if (style.depth > 0.dp) it.drawBehind {
-                    val d = style.depth.toPx()
-                    drawRoundRect(slab, topLeft = Offset(0f, d), size = this.size, cornerRadius = CornerRadius(style.radius.toPx()))
+                if (lit.depth > 0.dp) it.drawBehind {
+                    val d = lit.depth.toPx()
+                    drawRoundRect(slab, topLeft = Offset(0f, d), size = this.size, cornerRadius = CornerRadius(lit.radius.toPx()))
                 } else it
             }
             .clip(shape)
@@ -160,17 +163,17 @@ fun GlowCard(
         )
         if (b != null) {
             // The core on its own layer: moved and scaled, never redrawn.
-            CoreLayer(b, style) { drift.at(seconds.floatValue, style.motion) }
+            CoreLayer(b, lit, core) { drift.at(seconds.floatValue, lit.motion) }
         }
         Box(Modifier.padding(contentPadding), content = content)
         // Grain and the hairline edge, on top of everything; static.
-        Spacer(Modifier.matchParentSize().drawWithCache { overlay(style, grainSeed) })
+        Spacer(Modifier.matchParentSize().drawWithCache { overlay(lit, grainSeed) })
     }
 }
 
 /** The pre-blurred core, moved by the motion through layer properties only. */
 @Composable
-private fun BoxScope.CoreLayer(b: GlowBitmaps, style: GlowStyle, motion: () -> Drift) {
+private fun BoxScope.CoreLayer(b: GlowBitmaps, style: GlowStyle, core: CoreBox, motion: () -> Drift) {
     Spacer(
         Modifier
             .matchParentSize()
@@ -182,7 +185,7 @@ private fun BoxScope.CoreLayer(b: GlowBitmaps, style: GlowStyle, motion: () -> D
                 // A squash widens the core a touch and flattens it as much: a squeeze, not a resize.
                 scaleX = m.scale * (1f + m.squash)
                 scaleY = m.scale * (1f - m.squash)
-                transformOrigin = TransformOrigin(style.coreX, style.coreY)
+                transformOrigin = TransformOrigin(core.x, core.y)
                 alpha = (style.coreOpacity * m.fade).coerceIn(0f, 1f)
                 // Fade by scaling each pixel's alpha instead of rendering the layer offscreen first.
                 compositingStrategy = CompositingStrategy.ModulateAlpha
@@ -201,8 +204,14 @@ private fun CacheDrawScope.overlay(style: GlowStyle, grainSeed: Int): DrawResult
     }
     val hairline = Stroke(1.dp.toPx())
     val outline = RoundedCornerShape(style.radius).createOutline(size, layoutDirection, this)
-    // A glossy edge: a lighter hairline along the top fading out down the sides.
-    val gloss = Brush.verticalGradient(0f to Color.White.copy(alpha = 0.35f), 0.25f to Color.White.copy(alpha = 0.08f), 1f to Color.White.copy(alpha = 0.04f))
+    // A glossy edge: a lighter hairline along the top fading out down the sides. On a level card it follows the
+    // light instead: glossy along the lit edge, plain hairline on the unlit side.
+    val light = style.light()
+    val gloss = if (light.level != null && !light.fromAbove) {
+        Brush.verticalGradient(0f to Color.White.copy(alpha = 0.04f), 0.75f to Color.White.copy(alpha = 0.08f), 1f to Color.White.copy(alpha = 0.35f))
+    } else {
+        Brush.verticalGradient(0f to Color.White.copy(alpha = 0.35f), 0.25f to Color.White.copy(alpha = 0.08f), 1f to Color.White.copy(alpha = 0.04f))
+    }
     return onDrawBehind {
         if (style.grain > 0f) drawIntoCanvas { it.nativeCanvas.drawPaint(grainPaint) }
         drawOutline(outline, Color.White.copy(alpha = 0.07f), style = hairline)
@@ -244,38 +253,70 @@ private object GlowCache {
 /** Renders the base and the core layer at half resolution (blur hides it), as GPU bitmaps. */
 private fun render(style: GlowStyle, w: Float, h: Float, density: Density): GlowBitmaps = with(density) {
     val p = GlowPalette(style)
+    val light = style.light()
     val r = style.radius.toPx()
     val area = Size(w, h)
 
     val base = halfResBitmap(w, h, 0f) { canvas ->
-        canvas.drawRect(0f, 0f, w, h, Paint().apply { shader = fillShader(style, p, h) })
-        if (style.glowStrength > 0f) {
-            val g = style.glowSize.toPx()
-            val k = style.glowStrength
-            // Rim light: CSS-style inset shadows (one leaning toward the lit edge, one all the way round).
-            if (style.lightFrom != LightFrom.All) {
-                val dy = if (style.lightFrom == LightFrom.Top) g * 0.6f else -g * 0.6f
-                insetShadow(area, r, dy, blur = g * 1.2f, spread = -g * 0.5f, p.light.copy(alpha = k)).let { (path, paint) -> canvas.drawPath(path, paint) }
+        canvas.drawRect(0f, 0f, w, h, Paint().apply { shader = fillShader(light, p, w, h) })
+        if (light.rim > 0f) {
+            // On a level card the rim lights only the lit part: clipped where the core is fully dark, so the unlit
+            // side keeps just its hairline.
+            light.level?.let { level ->
+                val dark = (levelEdge(level) - LEVEL_SOFTNESS) * h
+                if (light.fromAbove) canvas.clipRect(0f, 0f, w, h - dark) else canvas.clipRect(0f, dark, w, h)
             }
-            insetShadow(area, r, 0f, blur = g, spread = g * 0.1f, p.light.copy(alpha = 0.6f * k)).let { (path, paint) -> canvas.drawPath(path, paint) }
+            val g = style.glowSize.toPx()
+            val k = light.rim
+            // Rim light: CSS-style inset shadows (one leaning toward the lit edge, one all the way round).
+            if (light.angle != null) {
+                // The hole shifts away from the light, so the lit side shows the most.
+                val (vx, vy) = lightVector(light.angle)
+                insetShadow(area, r, -vx * g * 0.6f, -vy * g * 0.6f, blur = g * 1.2f, spread = -g * 0.5f, p.light.copy(alpha = k.coerceAtMost(1f))).let { (path, paint) -> canvas.drawPath(path, paint) }
+            }
+            insetShadow(area, r, 0f, 0f, blur = g, spread = g * 0.1f, p.light.copy(alpha = (0.6f * k).coerceAtMost(1f))).let { (path, paint) -> canvas.drawPath(path, paint) }
             // Bevel: a thick band of light all the way round, like the edge of a glossy slab.
             if (style.bevel > 0f) {
                 val b = minOf(w, h) * 0.075f * style.bevel
-                insetShadow(area, r, 0f, blur = b * 1.6f, spread = b * 0.45f, p.light.copy(alpha = 0.85f * k)).let { (path, paint) -> canvas.drawPath(path, paint) }
+                insetShadow(area, r, 0f, 0f, blur = b * 1.6f, spread = b * 0.45f, p.light.copy(alpha = (0.85f * k).coerceAtMost(1f))).let { (path, paint) -> canvas.drawPath(path, paint) }
             }
         }
     }
 
     // Dark core and the second-tone band around it, pre-blurred.
-    val cw = w * style.coreWidth
-    val ch = h * style.coreHeight
-    val core = RectF(w * style.coreX - cw / 2, h * style.coreY - ch / 2, 0f, 0f).apply { right = left + cw; bottom = top + ch }
+    val cw = w * light.core.width
+    val ch = h * light.core.height
+    val core = RectF(w * light.core.x - cw / 2, h * light.core.y - ch / 2, 0f, 0f).apply { right = left + cw; bottom = top + ch }
     val coreRadius = (r - 8.dp.toPx()).coerceAtLeast(0f)
-    val band = style.toneWidth.toPx()
+    val band = if (light.tone) style.toneWidth.toPx() else 0f
     val coreBlur = style.coreBlur.toPx()
     // Just enough room round the card for the core to drift and swell into view.
     val margin = maxOf(w, h) * 0.08f
     val coreLayer = halfResBitmap(w, h, margin) { canvas ->
+        light.level?.let { level ->
+            // A level card: the unlit part in the core colour, fading smoothly into the light around the level
+            // (a smoothstep over 2 x LEVEL_SOFTNESS of the card), like light rising in a glass. Only the core's alpha
+            // changes, so nothing is ever darker than the unlit part and there's no line.
+            val edge = levelEdge(level) * h
+            val soft = LEVEL_SOFTNESS * h
+            val (y0, y1) = if (light.fromAbove) h + margin to -margin else -margin to h + margin
+            val span = abs(y1 - y0)
+            fun at(fromUnlit: Float) = ((fromUnlit + margin) / span).coerceIn(0f, 1f)
+            val steps = 10
+            val colors = IntArray(steps + 3)
+            val stops = FloatArray(steps + 3)
+            colors[0] = p.core.toArgb(); stops[0] = 0f
+            for (i in 0..steps) {
+                val t = i / steps.toFloat()
+                val fade = t * t * (3f - 2f * t)
+                colors[i + 1] = p.core.copy(alpha = 1f - fade).toArgb()
+                stops[i + 1] = at(edge - soft + 2f * soft * t)
+            }
+            colors[steps + 2] = Color.Transparent.toArgb(); stops[steps + 2] = 1f
+            val paint = Paint().apply { shader = android.graphics.LinearGradient(0f, y0, 0f, y1, colors, stops, Shader.TileMode.CLAMP) }
+            canvas.drawRect(-margin, -margin, w + margin, h + margin, paint)
+            return@halfResBitmap
+        }
         val blur = blurFilter(coreBlur)
         val tonePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = p.tone.toArgb(); maskFilter = blur }
         val corePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = p.core.toArgb(); maskFilter = blur }
@@ -314,35 +355,38 @@ private fun halfResBitmap(w: Float, h: Float, margin: Float, draw: (android.grap
 }
 
 /**
- * The card's base fill: rim colour at the lit edge melting into the mid colour. The melt is eased
- * (fast near the edge, then slowly settling, with no corner where it ends), so the light reads as a
- * soft glow but has mostly faded by the title row.
+ * The card's base fill: rim colour at the lit edge melting into the mid colour, along the light's angle. The melt
+ * is eased (fast near the edge, then slowly settling, with no corner where it ends), so the light reads as a soft
+ * glow but has mostly faded by the title row.
  */
-private fun fillShader(style: GlowStyle, p: GlowPalette, h: Float): Shader {
-    if (style.lightFrom == LightFrom.All) {
-        return android.graphics.LinearGradient(0f, 0f, 0f, h, p.mid.toArgb(), p.mid.toArgb(), Shader.TileMode.CLAMP)
-    }
-    val reach = 0.4f
+private fun fillShader(light: GlowLight, p: GlowPalette, w: Float, h: Float): Shader {
+    val angle = light.angle ?: return android.graphics.LinearGradient(0f, 0f, 0f, h, p.mid.toArgb(), p.mid.toArgb(), Shader.TileMode.CLAMP)
+    val start = lerp(p.mid, p.light, light.fill.coerceIn(0f, 1f))
     val steps = 12
     // Ease-out: 1 - (1 - x)^3 runs from light to mid and arrives with zero slope, so there's no seam.
     val fade = List(steps + 1) { i -> i / steps.toFloat() }
-    val colors = fade.map { x -> lerp(p.light, p.mid, 1f - (1f - x).let { it * it * it }).toArgb() } + p.mid.toArgb()
-    val stops = fade.map { it * reach } + 1f
-    val (c, st) = if (style.lightFrom == LightFrom.Top) colors to stops else colors.reversed() to stops.map { 1f - it }.reversed()
-    return android.graphics.LinearGradient(0f, 0f, 0f, h, c.toIntArray(), st.toFloatArray(), Shader.TileMode.CLAMP)
+    val colors = fade.map { x -> lerp(start, p.mid, 1f - (1f - x).let { it * it * it }).toArgb() } + p.mid.toArgb()
+    val stops = fade.map { it * light.reach } + 1f
+    // Like a CSS linear-gradient: the line runs through the centre, just long enough to reach both far corners.
+    val (vx, vy) = lightVector(angle)
+    val half = (abs(w * vx) + abs(h * vy)) / 2f
+    return android.graphics.LinearGradient(
+        w / 2 + vx * half, h / 2 + vy * half, w / 2 - vx * half, h / 2 - vy * half,
+        colors.toIntArray(), stops.toFloatArray(), Shader.TileMode.CLAMP,
+    )
 }
 
 /**
- * The equivalent of CSS `box-shadow: inset 0 [dy] [blur] [spread] [color]`: everything outside the
- * card's shape (shifted by [dy], shrunk by [spread]), blurred and clipped to the card.
+ * The equivalent of CSS `box-shadow: inset [dx] [dy] [blur] [spread] [color]`: everything outside the
+ * card's shape (shifted by [dx], [dy], shrunk by [spread]), blurred and clipped to the card.
  */
-private fun insetShadow(size: Size, radius: Float, dy: Float, blur: Float, spread: Float, color: Color): Pair<Path, Paint> {
-    val pad = blur * 2 + abs(dy) + abs(spread) + 4f
+private fun insetShadow(size: Size, radius: Float, dx: Float, dy: Float, blur: Float, spread: Float, color: Color): Pair<Path, Paint> {
+    val pad = blur * 2 + abs(dx) + abs(dy) + abs(spread) + 4f
     val holeRadius = (radius - spread).coerceAtLeast(0f)
     val path = Path().apply {
         fillType = Path.FillType.EVEN_ODD
         addRect(-pad, -pad, size.width + pad, size.height + pad, Path.Direction.CW)
-        addRoundRect(spread, spread + dy, size.width - spread, size.height - spread + dy, holeRadius, holeRadius, Path.Direction.CW)
+        addRoundRect(spread + dx, spread + dy, size.width - spread + dx, size.height - spread + dy, holeRadius, holeRadius, Path.Direction.CW)
     }
     val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         this.color = color.toArgb()
@@ -355,13 +399,12 @@ private fun insetShadow(size: Size, radius: Float, dy: Float, blur: Float, sprea
 private fun blurFilter(sigma: Float): BlurMaskFilter? =
     if (sigma > 0.5f) BlurMaskFilter((sigma - 0.5f) / 0.57735f, BlurMaskFilter.Blur.NORMAL) else null
 
-/** Where the core is at a moment: an offset (fractions of the card), and size and blur multipliers. */
 /** How the dark core sits: offset (fractions of the card), scale, and [fade] on top of the style's core opacity. */
 private class Drift(val dx: Float, val dy: Float, val scale: Float, val fade: Float = 1f, val squash: Float = 0f)
 
 /**
- * The core's motion over time. Underneath every [GlowMotion] is a never-repeating wander: each axis is
- * two sine waves with unrelated periods (10–24 s), and every card gets its own periods and phases.
+ * The core's motion over time. Under the heartbeat is a small never-repeating wander: each axis is two
+ * sine waves with unrelated periods (10–24 s), and every card gets its own periods and phases.
  */
 private class CoreDrift(private val random: Random) {
     private fun wave() = Wave(period = 10f + random.nextFloat() * 14f, phase = random.nextFloat() * 2f * PI.toFloat())
@@ -374,7 +417,6 @@ private class CoreDrift(private val random: Random) {
     fun at(time: Float, motion: GlowMotion): Drift {
         val t = time + offset
         return when (motion) {
-            GlowMotion.Drift -> wander(t, amount = 1f)
             GlowMotion.Still -> Drift(0f, 0f, 1f)
             is GlowMotion.Heartbeat -> {
                 // The dark core is the heart: it squeezes on each beat (lub, then a smaller dub) and relaxes,
@@ -390,19 +432,6 @@ private class CoreDrift(private val random: Random) {
                     scale = base.scale * (1f - 0.075f * c),
                     squash = 0.025f * c * cos(2f * angle),
                 )
-            }
-            is GlowMotion.Breath -> {
-                // In: swell and rise like a chest. Out: slower, settling back.
-                val base = wander(t, amount = 0.5f)
-                val b = inhale(t * motion.perMinute / 60f)
-                Drift(base.dx, base.dy - 0.01f * b, scale = 1f + 0.045f * b)
-            }
-            is GlowMotion.Stride -> {
-                // The same wander twice as fast, plus a light footfall bounce at the cadence.
-                val e = motion.energy.coerceIn(0f, 1f)
-                val base = wander(t * 2f, amount = 0.4f + 0.4f * e)
-                val step = abs(sin(PI.toFloat() * t * motion.cadence / 60f))
-                Drift(base.dx, base.dy - 0.01f * e * step, scale = base.scale)
             }
         }
     }
@@ -441,13 +470,6 @@ private fun beatAngle(n: Int): Float {
     h *= 0x85EBCA6B.toInt()
     h = h xor (h ushr 13)
     return (h ushr 8) / (1 shl 24).toFloat() * 2f * PI.toFloat()
-}
-
-/** One breath over a cycle (phase in breaths): eased inhale over 40%, longer eased exhale, 0..1. */
-private fun inhale(phase: Float): Float {
-    val f = phase - floor(phase)
-    fun ease(x: Float) = (1f - cos(PI.toFloat() * x)) / 2f
-    return if (f < 0.4f) ease(f / 0.4f) else 1f - ease((f - 0.4f) / 0.6f)
 }
 
 private const val GRAIN_TILE = 512

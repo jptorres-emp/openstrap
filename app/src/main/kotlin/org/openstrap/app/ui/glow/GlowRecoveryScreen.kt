@@ -110,7 +110,7 @@ private fun RecoveryCard(r: RecoveryResult, strap: StrapReadinessRow?) {
         color = overviewColor(score ?: strap?.score?.takeIf { ready.showStrapEstimate }, ready.strainAlert),
         coreShape = CoreShape.Radial, coreX = 0.5f, coreY = 0.8f, coreWidth = 0.95f, coreHeight = 0.75f,
         coreBlur = 30.dp, toneWidth = 16.dp, toneShift = -10f, glowStrength = 0.6f, bevel = 0.6f,
-        motion = GlowMotion.Breath(5f), depth = 6.dp,
+        depth = 6.dp,
     )
     GlowCard(style, Modifier.fillMaxWidth()) {
         Column {
@@ -191,7 +191,7 @@ private fun BodySignalsPanel(body: BodySignals.Day) {
 @Composable
 private fun ChargeCard(c: Recovery.ChargeDay, day: LongRange) {
     val now = c.latest
-    val style = GlowStyle.Ember.copy(color = MetricColors.chargeAt(now), motion = GlowMotion.Breath(4f))
+    val style = GlowStyle.Ember.copy(color = MetricColors.chargeAt(now))
     GlowCard(style, Modifier.fillMaxWidth()) {
         Column {
             GlowHeader("Charge", trailing = c.atWake?.let { if (c.strapOffOvernight) "~${it.toInt()} at start" else "${it.toInt()} at waking" })

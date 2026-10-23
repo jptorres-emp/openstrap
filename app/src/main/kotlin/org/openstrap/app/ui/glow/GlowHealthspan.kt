@@ -28,7 +28,7 @@ import org.openstrap.app.ui.theme.MetricColors
 import org.openstrap.app.ui.theme.PhosphorIcons
 
 /** The Healthspan card's orchid, used for the glow: warm enough to stay clear of Sleep's blue. */
-private val Orchid = Color(0xFFD86BEA)
+private val Orchid = MetricColors.habitAge
 
 /** The same recipe as the Heart rate and Activity cards, in orchid. */
 internal val HealthspanGlow = GlowStyle.chart(Orchid)

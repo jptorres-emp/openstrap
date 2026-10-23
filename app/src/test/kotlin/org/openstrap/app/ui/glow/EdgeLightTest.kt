@@ -1,0 +1,62 @@
+package org.openstrap.app.ui.glow
+
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+/** Every row of the edge placement table (spec 2.4). */
+class EdgeLightTest {
+    @Test fun `usual value lights the bottom, soft`() {
+        assertEquals(EdgeLight(Edge.Bottom, strong = false, progressBar = false), edgeLight(EdgeStatus.Usual, EdgeKind.Value))
+    }
+
+    @Test fun `above your normal lights the top, stronger`() {
+        assertEquals(EdgeLight(Edge.Top, strong = true, progressBar = false), edgeLight(EdgeStatus.Above, EdgeKind.Value))
+    }
+
+    @Test fun `below your normal lights the bottom, stronger`() {
+        assertEquals(EdgeLight(Edge.Bottom, strong = true, progressBar = false), edgeLight(EdgeStatus.Below, EdgeKind.Value))
+    }
+
+    @Test fun `progress lights the bottom, soft, with a bar`() {
+        assertEquals(EdgeLight(Edge.Bottom, strong = false, progressBar = true), edgeLight(EdgeStatus.Usual, EdgeKind.Progress))
+    }
+
+    @Test fun `live lights the right`() {
+        assertEquals(Edge.Right, edgeLight(EdgeStatus.Usual, EdgeKind.Live).edge)
+        assertFalse(edgeLight(EdgeStatus.Usual, EdgeKind.Live).strong)
+    }
+
+    @Test fun `earlier lights the left`() {
+        assertEquals(Edge.Left, edgeLight(EdgeStatus.Usual, EdgeKind.Earlier).edge)
+    }
+
+    @Test fun `sleep lights the top like a night sky`() {
+        assertEquals(Edge.Top, edgeLight(EdgeStatus.Usual, EdgeKind.Sleep).edge)
+        assertFalse(edgeLight(EdgeStatus.Usual, EdgeKind.Sleep).strong)
+    }
+
+    @Test fun `a value is a plain value by default`() {
+        assertEquals(edgeLight(EdgeStatus.Above, EdgeKind.Value), edgeLight(EdgeStatus.Above))
+    }
+
+    @Test fun `kinds with their own edge keep it off your normal, and glow stronger`() {
+        for (status in listOf(EdgeStatus.Above, EdgeStatus.Below)) {
+            assertEquals(Edge.Right, edgeLight(status, EdgeKind.Live).edge)
+            assertEquals(Edge.Left, edgeLight(status, EdgeKind.Earlier).edge)
+            assertEquals(Edge.Top, edgeLight(status, EdgeKind.Sleep).edge)
+            assertEquals(Edge.Bottom, edgeLight(status, EdgeKind.Progress).edge)
+            for (kind in EdgeKind.entries) {
+                val light = edgeLight(status, kind)
+                assertTrue(light.strong)
+            }
+        }
+    }
+
+    @Test fun `only progress cards get a bar`() {
+        for (status in EdgeStatus.entries) for (kind in EdgeKind.entries) {
+            assertEquals(kind == EdgeKind.Progress, edgeLight(status, kind).progressBar)
+        }
+    }
+}

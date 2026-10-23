@@ -104,8 +104,16 @@ class MainActivity : ComponentActivity() {
         showWorkoutFromIntent()
     }
 
-    /** The workout notification opens the live screen, even if it was tucked away; a shortcut or the tile, the ready screen. */
+    /**
+     * The workout notification opens the live screen, even if it was tucked away; a shortcut or the tile, the ready
+     * screen; an auto-detected workout's notification, that workout.
+     */
     private fun showWorkoutFromIntent() {
+        val open = intent.getLongExtra(EXTRA_OPEN_WORKOUT, -1)
+        if (open >= 0) {
+            intent.removeExtra(EXTRA_OPEN_WORKOUT)
+            (application as OpenStrapApp).container.workout.openRequest.value = open
+        }
         val ready = intent.getStringExtra(EXTRA_READY_SPORT)?.toIntOrNull() ?: intent.getIntExtra(EXTRA_READY_SPORT, -1)
         if (ready >= 0) {
             intent.removeExtra(EXTRA_READY_SPORT)
@@ -119,6 +127,7 @@ class MainActivity : ComponentActivity() {
     companion object {
         const val EXTRA_SHOW_WORKOUT = "show_workout"
         const val EXTRA_READY_SPORT = "ready_sport"
+        const val EXTRA_OPEN_WORKOUT = "open_workout"
     }
 
     /** Debug: `am start -n org.openstrap.app/.MainActivity --ei dump_raw_days 7` dumps raw history to files/raw. */
@@ -262,6 +271,14 @@ private fun AppRoot(container: AppContainer) {
         readyRequest?.let { sport ->
             if (workoutState !is org.openstrap.app.device.WorkoutState.Recording) { readySport = sport; readyPicking = false }
             container.workout.readyRequest.value = null
+        }
+    }
+    val openRequest by container.workout.openRequest.collectAsStateWithLifecycle()
+    LaunchedEffect(openRequest) {
+        openRequest?.let { start ->
+            activityStack = listOf(Detail.Workout(start))
+            tab = Tab.Activity.ordinal
+            container.workout.openRequest.value = null
         }
     }
     // The day a workout is being added to after the fact.
@@ -632,6 +649,7 @@ private fun AppRoot(container: AppContainer) {
                                 onDeclineOffer = { container.workout.declineOffer() },
                                 autoStart = autoStart,
                                 onAutoStart = { on -> scope.launch { container.settings.setAutoStartWorkouts(on) } },
+                                paiSex = profile.sex,
                             )
                         }
                     }

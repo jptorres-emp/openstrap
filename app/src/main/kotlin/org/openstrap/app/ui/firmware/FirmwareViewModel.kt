@@ -15,11 +15,14 @@ import org.openstrap.app.AppContainer
 import org.openstrap.app.data.settings.ZeppAccount
 import org.openstrap.app.device.ConnectionState
 import org.openstrap.app.firmware.FirmwareCloud
+import org.openstrap.app.firmware.FirmwareCloudException
 import org.openstrap.app.firmware.FirmwarePart
 import org.openstrap.app.firmware.StrapIdentity
+import org.openstrap.app.firmware.StrapResources
 import org.openstrap.app.firmware.UpdateCheck
 import org.openstrap.app.zepp.BoundDevice
 import org.openstrap.app.zepp.DeviceListing
+import org.openstrap.app.zepp.ZeppCloud
 import org.openstrap.protocol.firmware.DfuProgress
 import org.openstrap.protocol.firmware.FirmwareType
 import org.openstrap.protocol.firmware.HmfwTrailer
@@ -65,7 +68,7 @@ class FirmwareViewModel(private val container: AppContainer) : ViewModel() {
 
     fun saveSignIn(listing: DeviceListing, strap: BoundDevice?) = viewModelScope.launch {
         container.settings.saveZeppAccount(
-            ZeppAccount(listing.session.appToken, listing.session.userId, listing.apiBase, strap?.china ?: account.value?.china ?: false),
+            listing.session.toAccount(listing.apiBase, strap?.china ?: account.value?.china ?: false, System.currentTimeMillis()),
         )
     }
 
@@ -87,10 +90,30 @@ class FirmwareViewModel(private val container: AppContainer) : ViewModel() {
                     hardwareVersion = info.hardware,
                     serial = info.serial,
                     deviceSource = if (acc.china) StrapIdentity.DEVICE_SOURCE_CHINA else StrapIdentity.DEVICE_SOURCE_GLOBAL,
+                    resources = StrapResources.from(info.deviceInformation),
                 )
-                FirmwareStep.Checked(cloud.check(acc.apiBase, acc.appToken, acc.userId, identity))
+                var current = renewed(acc, rejected = false)
+                val result = try {
+                    cloud.check(current.apiBase, current.appToken, current.userId, identity)
+                } catch (e: FirmwareCloudException) {
+                    if (!e.rejected || !ZeppCloud.needsAppTokenRefresh(current, System.currentTimeMillis(), rejected = true)) throw e
+                    current = renewed(current, rejected = true)
+                    cloud.check(current.apiBase, current.appToken, current.userId, identity)
+                }
+                FirmwareStep.Checked(result)
             }.getOrElse { FirmwareStep.Failed(it.message ?: "Update check failed") }
         }
+    }
+
+    /**
+     * [acc] with a fresh app token when Zepp would renew it (A3, codemap 08 §1.4), saved for next time. A renewal
+     * the server [rejected] the old token for must succeed; an early one that fails keeps the old token.
+     */
+    private suspend fun renewed(acc: ZeppAccount, rejected: Boolean): ZeppAccount {
+        if (!ZeppCloud.needsAppTokenRefresh(acc, System.currentTimeMillis(), rejected)) return acc
+        val fresh = if (rejected) ZeppCloud.refreshAppToken(acc) else runCatching { ZeppCloud.refreshAppToken(acc) }.getOrNull() ?: return acc
+        container.settings.saveZeppAccount(fresh)
+        return fresh
     }
 
     /** Downloads the first part in install order and stages it. Further parts follow after the strap restarts. */

@@ -24,6 +24,7 @@ import org.openstrap.app.ble.GattStrapLink
 import org.openstrap.app.ble.StrapUuids
 import org.openstrap.app.data.db.HealthAlertRow
 import org.openstrap.app.data.db.HealthDao
+import org.openstrap.app.data.db.WearEventRow
 import org.openstrap.app.data.settings.SettingsStore
 import org.openstrap.app.data.settings.UserProfile
 import org.openstrap.protocol.services.Gender
@@ -37,6 +38,7 @@ import org.openstrap.protocol.services.Alarm
 import org.openstrap.protocol.services.AlarmCapabilities
 import org.openstrap.protocol.services.AlarmCodec
 import org.openstrap.protocol.services.Endpoints
+import org.openstrap.protocol.services.DeviceFeatures
 import org.openstrap.protocol.services.FindDevice
 import org.openstrap.protocol.services.MotorVibrate
 import org.openstrap.protocol.services.Setting
@@ -72,6 +74,9 @@ class StrapManager(
 ) : StrapController {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val healthAlerts = HealthAlertNotifier(context)
+    private val autoDetected = AutoDetectNotifier(context)
+    private val wearNotifier = WearNotifier(context)
+    private val wearEvents = WearEventLog(scope, dao::insertWearEvent) { log("wear event not stored: $it") }
 
     override val connection = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
     override val sync = MutableStateFlow<SyncState>(SyncState.Idle)
@@ -83,6 +88,7 @@ class StrapManager(
     override val info = MutableStateFlow<StrapInfo?>(null)
     override val firmwareUpdating = MutableStateFlow(false)
     override val alarmsChanged = MutableSharedFlow<Unit>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+    override val settingsChanged = MutableSharedFlow<SettingsGroup>(extraBufferCapacity = 8, onBufferOverflow = BufferOverflow.DROP_OLDEST)
     /** Set before a firmware install: the strap's services can change, so re-discover on the next connect. */
     @Volatile private var refreshGattOnConnect = false
     override val log = MutableStateFlow<List<String>>(emptyList())
@@ -199,8 +205,11 @@ class StrapManager(
                 watchProfile(s)
                 watchHealthAlerts(s)
                 watchAlarms(s)
+                watchSettings(s)
                 watchFindDevice(s)
+                watchWear(s)
                 watchSportSession(s)
+                watchFeatures(s)
                 retries = 0
                 autoSync(s)
                 liveHeartRateEnabled.value = settings.liveHeartRate.first()
@@ -240,6 +249,28 @@ class StrapManager(
             }.onFailure { log("settings version query failed: $it") }
         }
 
+        // Resource versions for the firmware check, read once per connect as Zepp does with `03 00 00 00` (codemap 07
+        // §1.4). Nobody has seen the strap's values yet, so log them raw.
+        var deviceInformation: SettingsGroup? = null
+        if (s.services.has(Endpoints.SETTINGS)) {
+            runCatching {
+                val group = SettingsCodec.GROUP_DEVICE_INFORMATION
+                val r = s.request(Endpoints.SETTINGS, SettingsCodec.query(group, withOptions = false), 5_000) { SettingsCodec.isReplyTo(group, it) }
+                deviceInformation = SettingsCodec.parse(r, settingsProtocol?.version)
+                val keys = deviceInformation?.settings?.values?.joinToString(" ") { "${it.key}=${it.text ?: it.number ?: it.raw.toHex()}" }
+                log("device information ${r.toHex()} -> ${keys ?: "unparsed"}")
+            }.onFailure { log("device information query failed: $it") }
+        }
+
+        // Runtime feature bitmap: history gates on it (01 §3). Nobody has seen the strap's reply yet, so log it raw.
+        if (s.services.has(DeviceFeatures.ENDPOINT)) {
+            runCatching {
+                val r = s.request(DeviceFeatures.ENDPOINT, DeviceFeatures.request, 5_000) { it.isNotEmpty() && it.u8(0) == DeviceFeatures.REPLY }
+                s.features = DeviceFeatures.parseMessage(r)
+                log("device features ${r.toHex()} -> ${s.features?.let { "mask %02x g2 %s alg %s".format(it.mask, it.group2?.toHex(), it.algorithm) } ?: "unparsed"}")
+            }.onFailure { log("device features query failed: $it") }
+        }
+
         firmware = runCatching {
             client.read(StrapUuids.DEVICE_INFO_SERVICE, StrapUuids.SOFTWARE_REVISION).toString(Charsets.UTF_8).trimEnd('\u0000')
         }.getOrNull()
@@ -251,8 +282,19 @@ class StrapManager(
             client.read(StrapUuids.DEVICE_INFO_SERVICE, StrapUuids.SERIAL_NUMBER).toString(Charsets.UTF_8).trimEnd('\u0000')
         }.getOrNull()
         val dfu = GattDfuLink(client).available
-        info.value = StrapInfo(firmware, hardware, serial, dfu)
+        info.value = StrapInfo(firmware, hardware, serial, dfu, s.services.has(Endpoints.FIND_DEVICE), deviceInformation)
         log("hardware=$hardware dfu=$dfu")
+
+        // GENERAL key 45 restarts the strap; like Zepp, offer Restart only when the strap reports it (03 §5.2, 07 §0).
+        if (s.services.has(Endpoints.SETTINGS)) {
+            runCatching {
+                val group = SettingsCodec.GROUP_GENERAL
+                val r = s.request(Endpoints.SETTINGS, SettingsCodec.query(group, listOf(SettingsCodec.KEY_RESTART), withOptions = false), 5_000) { SettingsCodec.isReplyTo(group, it) }
+                val restart = SettingsCodec.parse(r, settingsProtocol?.version)?.get(SettingsCodec.KEY_RESTART)
+                log("general key 45 ${r.toHex()} -> ${restart?.let { "reported" } ?: "not reported"}")
+                info.value = info.value?.copy(canRestart = restart != null)
+            }.onFailure { log("restart key query failed: $it") }
+        }
 
         runCatching {
             if (s.services.has(Endpoints.BATTERY)) {
@@ -274,6 +316,16 @@ class StrapManager(
             log("time protocol $timeProtocol")
         }
         syncTime(s, client)
+    }
+
+    /** The strap's `03` "features changed" push carries a new bitmap (03 §3.7). Ends with this connection. */
+    private fun CoroutineScope.watchFeatures(s: ChannelSession) = launch {
+        if (!s.services.has(DeviceFeatures.ENDPOINT)) return@launch
+        s.messagesFor(DeviceFeatures.ENDPOINT).collect { p ->
+            if (p.isEmpty() || p.u8(0) != DeviceFeatures.PUSH) return@collect
+            log("device features changed ${p.toHex()}")
+            DeviceFeatures.parseMessage(p)?.let { s.features = it }
+        }
     }
 
     /** The time module's version; the next-DST hint needs 2 or later (03 §3.8). */
@@ -314,6 +366,9 @@ class StrapManager(
             addAction(android.content.Intent.ACTION_TIME_CHANGED)
         }
         androidx.core.content.ContextCompat.registerReceiver(context, timeChanged, filter, androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED)
+        // The app was stopped while it knew the wear state: close that interval now, as nothing is connected yet.
+        val now = System.currentTimeMillis() / 1000
+        wearEvents.post { if (dao.lastWearEvent()?.worn != null) dao.insertWearEvent(WearEventRow(now, null)) }
     }
 
     /**
@@ -343,6 +398,89 @@ class StrapManager(
             runCatching { dao.insertHealthAlerts(listOf(HealthAlertRow(alert.timestamp, alert.type.code, alert.value))) }
                 .onFailure { log("health alert not stored: $it") }
         }
+    }
+
+    /**
+     * The strap pushes `04` when a setting changes on its side, laid out like a query reply (03 §3.6.1, §3.6 note 4).
+     * Query replies come through here too, since they share the opcode; passing them on again is harmless.
+     */
+    private fun CoroutineScope.watchSettings(s: ChannelSession) = launch {
+        if (!s.services.has(Endpoints.SETTINGS)) return@launch
+        s.messagesFor(Endpoints.SETTINGS).collect { p ->
+            if (SettingsCodec.replyGroup(p) == null) return@collect
+            val group = SettingsCodec.parse(p, settingsProtocol?.version)
+            if (group == null) return@collect log("settings 04 unparsed: ${p.toHex()}")
+            // Nobody has captured the strap's wear push yet: log the first one raw, for checking against hardware.
+            // The wear poll's own replies come through here too, so they're left out.
+            if (!wearPushLogged && !wearPolling && SettingsCodec.wearStatus(group) != null) {
+                wearPushLogged = true
+                log("wear status push ${p.toHex()}")
+            }
+            settingsChanged.tryEmit(group)
+        }
+    }
+
+    @Volatile private var wearPushLogged = false
+    @Volatile private var wearPolling = false
+
+    /**
+     * Wear / off-body, as Zepp does for the strap (07 §4 N5): with the app's switch on, turns on the strap's wear
+     * reminder (GENERAL key 44), then follows DEVICE_INFORMATION key 16 as read on connect, as pushed, and as polled
+     * every minute. Ends with this connection.
+     */
+    private fun CoroutineScope.watchWear(s: ChannelSession) = launch {
+        if (!s.services.has(Endpoints.SETTINGS)) return@launch
+        launch {
+            settings.wearReminder.distinctUntilChanged().collect { on ->
+                if (on) enableWearAlert()
+                wearNotifier.apply(WearReminder.decide(lastWorn, on, wearNotifier.shown))
+            }
+        }
+        // Firmware 3.25.0.3 didn't push key 16 when taken off or put back on (2026-10-23), though a fresh read had it
+        // right; poll so a change shows within a minute. The reply also reaches settingsChanged, and onWear dedupes.
+        launch {
+            while (isActive && session === s) {
+                delay(WEAR_POLL_MS)
+                if (firmwareUpdating.value) continue
+                wearPolling = true
+                runCatching {
+                    val reply = settingsQuery(SettingsCodec.GROUP_DEVICE_INFORMATION, listOf(SettingsCodec.KEY_WEAR_STATUS), withOptions = false)
+                    SettingsCodec.parse(reply, settingsProtocol?.version)?.let(SettingsCodec::wearStatus)?.let { onWear(it) }
+                }.onFailure { log("wear status poll failed: $it") }
+                wearPolling = false
+            }
+        }
+        info.value?.deviceInformation?.let(SettingsCodec::wearStatus)?.let { onWear(it) }
+        settingsChanged.collect { g -> SettingsCodec.wearStatus(g)?.let { onWear(it) } }
+    }
+
+    /** GENERAL key 44 on, written only when the strap doesn't already report it on. */
+    private suspend fun enableWearAlert() = runCatching {
+        val key = SettingsCodec.KEY_WEAR_STATUS_ALERT
+        val reply = settingsQuery(SettingsCodec.GROUP_GENERAL, listOf(key), withOptions = false)
+        val group = SettingsCodec.parse(reply, settingsProtocol()?.version) ?: throw StrapCommandException("unparsed ${reply.toHex()}")
+        if (group[key]?.bool == true) return@runCatching
+        // Written even when the strap doesn't list the key, so the reply shows whether it takes it.
+        val ack = command(Endpoints.SETTINGS, SettingsCodec.write(SettingsCodec.GROUP_GENERAL, group.version, listOf(SettingsCodec.boolSetting(key, true))))
+        log("wear reminder on (was ${group[key]?.bool ?: "not reported"}): ${if (SettingsCodec.isWriteSuccess(ack)) "ok" else "refused"}")
+    }.onFailure { log("wear reminder switch failed: $it") }
+
+    /** The last wear state: true on body, false off, null unknown (not connected, or not reported). */
+    @Volatile private var lastWorn: Boolean? = null
+
+    /**
+     * Records a change in [worn] for Charge and posts or clears the off-body notification. Queued inside the lock, so
+     * the stored order (and, within one second, the state kept) is the order the changes came in ([WearEventLog]).
+     */
+    private fun onWear(worn: Boolean?) {
+        synchronized(this) {
+            if (worn == lastWorn) return
+            lastWorn = worn
+            wearEvents.record(System.currentTimeMillis() / 1000, worn) {
+                wearNotifier.apply(WearReminder.decide(worn, settings.wearReminder.first(), wearNotifier.shown))
+            }
+        }
+        log("wear status: ${when (worn) { true -> "on body"; false -> "off body"; null -> "unknown" }}")
     }
 
     /** Zepp re-reads the alarms on the strap's `0F` push (03 §3.14). */
@@ -389,11 +527,14 @@ class StrapManager(
         runCatching { s.send(SportSession.ENDPOINT, SportSession.pauseKeepAlive) }
     }
 
-    /** Logged only: the strap's `07` once buzzing has stopped. */
+    /** The strap's `07` once buzzing has stopped; it also ends Find strap. */
     private fun CoroutineScope.watchFindDevice(s: ChannelSession) = launch {
         if (!s.services.has(Endpoints.FIND_DEVICE)) return@launch
         s.messagesFor(Endpoints.FIND_DEVICE).collect { p ->
-            if (p.isNotEmpty() && p.u8(0) == FindDevice.FOUND) log("buzzing stopped on the strap: ${p.toHex()}")
+            if (p.isNotEmpty() && p.u8(0) == FindDevice.FOUND) {
+                log("buzzing stopped on the strap: ${p.toHex()}")
+                endFind()
+            }
         }
     }
 
@@ -475,6 +616,8 @@ class StrapManager(
             log("link lost")
             // Ends this connection's listeners, and a setup still in progress, so it can't go on to report Connected.
             connectJob?.cancel()
+            endFind()
+            onWear(null)
             liveJob?.cancel()
             liveHeartRate.value = null
             session?.stop()
@@ -497,6 +640,8 @@ class StrapManager(
         reconnectJob?.cancel()
         connectJob?.cancel()
         liveJob?.cancel()
+        endFind()
+        onWear(null)
         close()
         liveHeartRate.value = null
         connection.value = ConnectionState.Disconnected
@@ -536,10 +681,10 @@ class StrapManager(
                 while (activeSession === s && !firmwareUpdating.value) {
                     val only = takeNext()
                     if (only != null && only.isEmpty()) break
-                    HistorySync(s, client, dao, settings, sync, ::log).run(only)
+                    HistorySync(s, client, dao, settings, sync, ::log, autoDetected::show).run(only)
                 }
                 runCatching { notifyBodySignals() }.onFailure { log("body signals: $it") }
-                runCatching { WorkoutGapFill(dao).run()?.let { log(it) } }.onFailure { log("workout gap fill: $it") }
+                runCatching { WorkoutGapFill(dao) { settings.profile.first() }.run()?.let { log(it) } }.onFailure { log("workout gap fill: $it") }
             } finally {
                 syncLock.unlock()
             }
@@ -723,12 +868,16 @@ class StrapManager(
         }.onFailure { log("live hr stop failed: $it") }
     }
 
-    /** Sends a settings-style command and returns the reply whose first byte is the command + 1. */
-    private suspend fun command(endpoint: Int, request: ByteArray): ByteArray {
+    /** Sends a settings-style command and returns the reply whose first byte is the command + 1 (or that [matches]). */
+    private suspend fun command(
+        endpoint: Int,
+        request: ByteArray,
+        matches: (ByteArray) -> Boolean = { it.isNotEmpty() && it.u8(0) == request.u8(0) + 1 },
+    ): ByteArray {
         val s = activeSession ?: throw StrapCommandException("The strap isn't connected")
         if (firmwareUpdating.value) throw StrapCommandException("Wait for the firmware update to finish")
         val reply = runCatching {
-            s.request(endpoint, request, 8_000) { it.isNotEmpty() && it.u8(0) == request.u8(0) + 1 }
+            s.request(endpoint, request, 8_000, matches = matches)
         }.getOrElse { throw StrapCommandException("The strap didn't answer") }
         log("cmd %04x > %s < %s".format(endpoint, request.toHex(), reply.toHex()))
         return reply
@@ -771,15 +920,30 @@ class StrapManager(
         ?: runCatching { SettingsCodec.parseVersion(command(Endpoints.SETTINGS, SettingsCodec.versionRequest)) }.getOrNull()
             ?.also { settingsProtocol = it }
 
+    /** A settings query; a `04` push for another group arriving meanwhile isn't taken as its reply (03 §3.6.1). */
+    private suspend fun settingsQuery(group: Int, keys: List<Int> = emptyList(), withOptions: Boolean = true): ByteArray =
+        command(Endpoints.SETTINGS, SettingsCodec.query(group, keys, withOptions)) { SettingsCodec.isReplyTo(group, it) }
+
     override suspend fun readHealthSettings(): SettingsGroup {
         val protocol = settingsProtocol()
-        val reply = command(Endpoints.SETTINGS, SettingsCodec.query(SettingsCodec.GROUP_HEALTH))
+        val reply = settingsQuery(SettingsCodec.GROUP_HEALTH)
         return SettingsCodec.parse(reply, protocol?.version) ?: throw StrapCommandException("The strap couldn't read its settings (code ${SettingsCodec.replyCode(reply)})")
     }
 
     override suspend fun writeHealthSettings(version: Int, settings: List<Setting>) {
         val reply = command(Endpoints.SETTINGS, SettingsCodec.write(SettingsCodec.GROUP_HEALTH, version, settings))
         if (!SettingsCodec.isWriteSuccess(reply)) throw StrapCommandException("The strap didn't accept the setting (code ${reply.getOrNull(1)})")
+    }
+
+    /** Writes GENERAL key 45 = true with the group version just read (07 §0). The strap may drop the link before its ack. */
+    override suspend fun restartStrap() {
+        val group = SettingsCodec.parse(settingsQuery(SettingsCodec.GROUP_GENERAL, listOf(SettingsCodec.KEY_RESTART), withOptions = false), settingsProtocol()?.version)
+            ?: throw StrapCommandException("The strap couldn't read its settings")
+        val request = SettingsCodec.restartFor(group) ?: throw StrapCommandException("This strap can't be restarted from the app")
+        log("restart: asking the strap to restart")
+        val reply = runCatching { command(Endpoints.SETTINGS, request) }
+            .getOrElse { e -> if (activeSession == null) { log("restart: link dropped before the ack"); return } else throw e }
+        if (!SettingsCodec.isWriteSuccess(reply)) throw StrapCommandException("The strap didn't accept the restart (code ${reply.getOrNull(1)})")
     }
 
     override suspend fun buzz(pattern: List<Int>) {
@@ -801,7 +965,37 @@ class StrapManager(
         if (!FindDevice.isBuzzOk(command(Endpoints.FIND_DEVICE, FindDevice.BUZZ))) throw StrapCommandException("The strap didn't buzz")
     }
 
-    override suspend fun stopBuzzing() = sendFindDevice(FindDevice.STOP)
+    /** `06`. Any stop ends Find strap too (a ringing call ending, Stop in the app), so it can't wait out the timeout. */
+    override suspend fun stopBuzzing() {
+        endFind()
+        sendFindDevice(FindDevice.STOP)
+    }
+
+    override val findingStrap = MutableStateFlow(false)
+    private var findJob: Job? = null
+
+    /** The same `03` … `06` as a ringing call, with Zepp's 60 s limit (03 §3.16). */
+    override suspend fun findStrap() {
+        startBuzzing()
+        log("find strap: buzzing")
+        findingStrap.value = true
+        findJob?.cancel()
+        findJob = scope.launch {
+            delay(FindDevice.FIND_TIMEOUT_MS)
+            log("find strap: timed out")
+            // Cleared first, so stopBuzzing's endFind doesn't cancel this job before the STOP goes out.
+            findJob = null
+            runCatching { stopBuzzing() }
+        }
+    }
+
+    override suspend fun stopFindingStrap() = stopBuzzing()
+
+    private fun endFind() {
+        findJob?.cancel()
+        findJob = null
+        findingStrap.value = false
+    }
 
     /** STOP gets no reply (03 §3.16), so it is only sent. */
     private suspend fun sendFindDevice(request: ByteArray) {
@@ -813,7 +1007,7 @@ class StrapManager(
 
     /** GENERAL key 47; null when the strap doesn't report it. Zepp refuses OTA while it is on (07 §1.6). */
     private suspend fun fastRechargeOn(): Boolean? = runCatching {
-        val reply = command(Endpoints.SETTINGS, SettingsCodec.query(SettingsCodec.GROUP_GENERAL, listOf(SettingsCodec.KEY_FAST_RECHARGE), withOptions = false))
+        val reply = settingsQuery(SettingsCodec.GROUP_GENERAL, listOf(SettingsCodec.KEY_FAST_RECHARGE), withOptions = false)
         SettingsCodec.parse(reply, settingsProtocol()?.version)?.get(SettingsCodec.KEY_FAST_RECHARGE)?.bool
     }.onFailure { log("fast-charge query failed: $it") }.getOrNull()
 
@@ -855,6 +1049,7 @@ class StrapManager(
     private companion object {
         val RETRY_SECONDS = longArrayOf(5, 15, 30, 60, 120, 300)
         const val MIN_SYNC_GAP_SECONDS = 15 * 60L
+        const val WEAR_POLL_MS = 60_000L
         /** Settings key: the local midnight of the last morning a body-signal alert was pushed. */
         const val BODY_SIGNALS_PUSHED = "body_signals_push"
         const val AUTO_SYNC_SECONDS = 60 * 60L

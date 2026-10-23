@@ -25,11 +25,59 @@ object Narrative {
         else -> Rating.LOW
     }
 
-    fun sleepHeadline(score: Int): String = when {
-        score >= 85 -> "Restful night"
-        score >= 70 -> "Good sleep"
-        score >= 60 -> "Fair sleep"
-        else -> "Restless night"
+    /**
+     * A sleep score in Zepp's bands: 90+ Optimal, 80-89 Good, 60-79 Fair, below 60 Attention (codemap 06 §4.2). Stricter
+     * than [ratingFor] because that's the scale the strap's own score is built for.
+     */
+    fun sleepRating(score: Int): Rating = when {
+        score >= 90 -> Rating.OPTIMAL
+        score >= 80 -> Rating.GOOD
+        score >= 60 -> Rating.FAIR
+        else -> Rating.LOW
+    }
+
+    /** Under 6 h asleep: the bottom of Zepp's duration bands (codemap 06 §4.2), and 56 on [org.openstrap.app.data.Recovery.durationScore]. */
+    const val SHORT_NIGHT_MINUTES = 6 * 60
+
+    /** Awake after falling asleep from here on: where [org.openstrap.app.data.Recovery.continuityScore] starts taking points off. */
+    const val BROKEN_AWAKE_MINUTES = 30
+
+    /**
+     * This many wake-ups is broken sleep even when they were brief. Set high on purpose: everyone wakes a few times a
+     * night and wake detection is the weakest part of wearable staging (evidence-review.md, "Sleep"), so only about
+     * one every hour of a normal night counts. Short wake-ups that add up to 30 min are caught by [BROKEN_AWAKE_MINUTES].
+     */
+    const val BROKEN_WAKE_COUNT = 6
+
+    /**
+     * Deep + REM below this share of the time asleep is a light night. Adults usually spend 40-50 % there; a quarter
+     * leaves room for the strap misreading deep as light (evidence-review.md, "Sleep").
+     */
+    const val LIGHT_SLEEP_SHARE = 0.25f
+
+    /**
+     * What pulled the night down, in a few words. The strap's score mostly tracks duration, so a calm short night
+     * says "Short night" rather than "Restless". Short and broken outrank the score; light sleep is the weakest
+     * cause, since stages aren't rated (see [sleepContributors]), so it's named only when nothing else is and the
+     * score is below Good. Null without a score; callers fall back to time asleep.
+     */
+    fun sleepHeadline(session: SleepSession, asleepSeconds: Long): String? {
+        val score = session.score ?: return null
+        val asleepMin = asleepSeconds / 60
+        val short = asleepMin < SHORT_NIGHT_MINUTES
+        val broken = (session.awakeMinutes ?: 0) >= BROKEN_AWAKE_MINUTES || (session.wakeCount ?: 0) >= BROKEN_WAKE_COUNT
+        val deep = session.deepMinutes
+        val rem = session.remMinutes
+        val light = deep != null && rem != null && asleepMin > 0 && (deep + rem) < LIGHT_SLEEP_SHARE * asleepMin
+        return when {
+            short && broken -> "Short, broken night"
+            short -> "Short night"
+            broken -> "Broken sleep"
+            score >= 90 -> "Great night"
+            score >= 80 -> "Good night"
+            light -> "Light sleep"
+            else -> "Okay night"
+        }
     }
 
     fun sleepBody(session: SleepSession, asleepSeconds: Long): String = buildString {
@@ -43,7 +91,7 @@ object Narrative {
     data class Contributor(val label: String, val rating: Rating, val fraction: Float, val detail: String)
 
     /**
-     * What shaped the night: total sleep against need and continuity (wake after sleep onset). Deep and REM aren't
+     * What shaped the night: total sleep against need (and too much of it) and continuity (wake after sleep onset). Deep and REM aren't
      * rated: wearable staging is too unreliable to score (evidence-review.md, "Sleep"), so the stages panel shows them
      * without a target.
      */
@@ -55,12 +103,25 @@ object Narrative {
     ): List<Contributor> = buildList {
         val asleepMin = (asleepSeconds / 60).toInt()
         val duration = org.openstrap.app.data.Recovery.durationScore(asleepMin, needMinutes)
-        add(Contributor("Total sleep", ratingFor(Math.round(duration)), asleepMin / needMinutes.toFloat(), formatDuration(asleepSeconds) + " of ${formatDuration(needMinutes * 60L)}"))
+        add(Contributor("Total sleep", totalSleepRating(asleepMin, duration), asleepMin / needMinutes.toFloat(), formatDuration(asleepSeconds) + " of ${formatDuration(needMinutes * 60L)}"))
         if (wasoMinutes != null && asleepMin > 0) {
             val c = org.openstrap.app.data.Recovery.continuityScore(wasoMinutes)
             add(Contributor("Continuity", ratingFor(Math.round(c)), c / 100f, "${formatDuration(wasoMinutes * 60L)} awake after falling asleep"))
         }
     }
+
+    /**
+     * Total sleep against need, plus Zepp's oversleep bands: over 10 h is Attention, over 9 h 30 Fair (codemap 06
+     * §4.2). Need tops out at 9 h, so these only ever lower a night that met it.
+     */
+    private fun totalSleepRating(asleepMinutes: Int, durationScore: Float): Rating = when {
+        asleepMinutes > OVERSLEEP_ATTENTION_MINUTES -> Rating.LOW
+        asleepMinutes > OVERSLEEP_FAIR_MINUTES -> Rating.FAIR
+        else -> ratingFor(Math.round(durationScore))
+    }
+
+    const val OVERSLEEP_FAIR_MINUTES = 570
+    const val OVERSLEEP_ATTENTION_MINUTES = 600
 
     /** +1 / -1 when [today] differs from [baseline] by more than [tolerance], else 0; null if either is missing. */
     fun direction(today: Float?, baseline: Float?, tolerance: Float): Int? {
@@ -73,7 +134,18 @@ object Narrative {
     fun ratingFor(score: Int): Rating = when {
         score >= 85 -> Rating.OPTIMAL
         score >= 70 -> Rating.GOOD
-        score >= 55 -> Rating.FAIR
+        score >= org.openstrap.app.data.Recovery.FAIR_FROM -> Rating.FAIR
+        else -> Rating.LOW
+    }
+
+    /**
+     * The strap's own readiness score or one of its parts (HRV, resting HR, skin temperature, AHI) in Zepp's three
+     * bands: 85+ Optimal, 70-84 Good, below 70 Pay attention (codemap 06 §2.6). Only for the strap's values; OpenStrap's
+     * own score and contributors use [ratingFor].
+     */
+    fun zeppReadinessRating(score: Int): Rating = when {
+        score >= 85 -> Rating.OPTIMAL
+        score >= 70 -> Rating.GOOD
         else -> Rating.LOW
     }
 
@@ -81,7 +153,7 @@ object Narrative {
         alert -> org.openstrap.app.data.BodySignalsCopy.SHORT
         score >= 85 -> "Primed"
         score >= 70 -> "Ready"
-        score >= 55 -> "Take it steady"
+        score >= org.openstrap.app.data.Recovery.FAIR_FROM -> "Take it steady"
         else -> "Prioritise recovery"
     }
 
@@ -91,7 +163,7 @@ object Narrative {
             r.strainAlert -> "Several overnight signals are outside your usual range. Consider an easier day."
             score >= 85 -> "You're well recovered. A good day to push hard."
             score >= 70 -> "Recovered enough for your usual training."
-            score >= 55 -> "Recovery isn't complete. Keep intensity moderate."
+            score >= org.openstrap.app.data.Recovery.FAIR_FROM -> "Recovery isn't complete. Keep intensity moderate."
             else -> "Your body is still catching up. Favour rest, light movement and an early night."
         }
         val ranked = r.contributors.filter { it.factor.weight >= 0.06f }.sortedBy { it.score }
@@ -130,7 +202,10 @@ object Narrative {
     fun chargeBody(c: org.openstrap.app.data.Recovery.ChargeDay): String {
         val now = c.latest?.toInt() ?: return ""
         val used = (c.drainedExercise + c.drainedStress + c.drainedLiving).toInt()
-        val start = c.atWake?.let { "You woke at ${it.toInt()} and have used $used since" } ?: "You've used $used today"
+        val start = c.atWake?.let {
+            if (c.strapOffOvernight) "With the strap off overnight, today started from an estimated ${it.toInt()}; you've used $used since"
+            else "You woke at ${it.toInt()} and have used $used since"
+        } ?: "You've used $used today"
         val biggest = listOf("movement" to c.drainedExercise, "stress" to c.drainedStress).maxBy { it.second }
         val cause = if (biggest.second >= 8) ", most of it on ${biggest.first}." else "."
         val advice = when {

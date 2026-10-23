@@ -82,6 +82,15 @@ class BacktestTest {
         assertEquals("88", line[header.indexOf("strap_score")])
         assertEquals("4", line[header.indexOf("check_in")])
         assertEquals("alcohol;travel", line[header.indexOf("tags")])
+        // Both fusions side by side, then the strap's own score for the same day.
+        assertEquals(listOf("date", "readiness", "readiness_soft_min", "strap_score"), header.take(4))
+        val scored = rows.indexOfFirst { it.result.readiness.score != null }
+        assertTrue("no scored day", scored >= 0)
+        val r = rows[scored].result.readiness
+        val scoredLine = csv[scored + 1].split(',')
+        assertEquals(r.score.toString(), scoredLine[header.indexOf("readiness")])
+        assertNotNull(r.softMinScore)
+        assertEquals(r.softMinScore.toString(), scoredLine[header.indexOf("readiness_soft_min")])
     }
 
     /**

@@ -29,6 +29,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import org.openstrap.app.data.Summaries
@@ -56,6 +60,7 @@ import org.openstrap.app.ui.theme.MetricColors
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import kotlin.math.roundToInt
 
 /**
  * The Sleep tab in the glow language: "how did I sleep and is it trending right". The night glows, score and
@@ -97,7 +102,7 @@ fun GlowSleepScreen(
             if (rec?.regularity != null) right { SleepHealthPanel(rec.regularity, rec.sleepHealth) }
             rec?.breathingDisturbances?.let { b -> right { BreathingCard(b) } }
             if (state.naps.isNotEmpty()) right { NapsPanel(state) }
-            full { WeekPanel(state) }
+            full { WeekPanel(state, rec?.regularity) }
         }
     }
 }
@@ -144,13 +149,18 @@ private fun NightCard(state: DayUiState) {
                         Modifier.padding(bottom = 6.dp), dot = 5.5.dp, gap = 2.dp,
                     )
                 }
+                // The score's band in Zepp's terms (codemap 06 §4.2), in its colour, after the label.
+                val rating = score?.let { Narrative.sleepRating(it) }
                 Text(
-                    if (score != null) "Sleep score" else "asleep · goal ${formatDuration(goal)}",
+                    if (rating != null) buildAnnotatedString {
+                        append("Sleep score · ")
+                        withStyle(SpanStyle(color = rating.color)) { append(rating.label) }
+                    } else AnnotatedString("asleep · goal ${formatDuration(goal)}"),
                     color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.bodySmall,
                 )
                 Spacer(Modifier.height(14.dp))
                 Text(
-                    score?.let { Narrative.sleepHeadline(it) } ?: "${formatDuration(asleep)} asleep",
+                    Narrative.sleepHeadline(session, asleep) ?: "${formatDuration(asleep)} asleep",
                     color = Color.White, style = MaterialTheme.typography.titleMedium,
                 )
                 Text(
@@ -232,7 +242,7 @@ private fun ContributorsPanel(contributors: List<Narrative.Contributor>) {
                 GlowBar(c.fraction, c.rating.color)
             }
         }
-        Note("Ratings use general sleep guidance (7+ hours, about a fifth each of deep and REM sleep). They're a guide, not a medical assessment.")
+        Note("Ratings use general sleep guidance (7 to 9½ hours, under 30 minutes awake). They're a guide, not a medical assessment.")
     }
 }
 
@@ -334,41 +344,44 @@ private fun NapsPanel(state: DayUiState) {
     }
 }
 
-/** The last seven nights on a shared clock, the week's facts and how regular the timing was. */
+/**
+ * The last seven nights on a shared clock, the week's facts and how regular the week was: the Sleep Regularity Index
+ * ([regularity], from the selected day's recovery; null while it loads).
+ */
 @Composable
-private fun WeekPanel(state: DayUiState) {
+private fun WeekPanel(state: DayUiState, regularity: org.openstrap.app.data.SleepRegularity.Result?) {
     val zone = ZoneId.systemDefault()
     val goal = LocalGoals.current.sleepSeconds
-    val w = sleepWeek(state, goal, zone)
+    val w = sleepWeek(state, goal, regularity, zone)
     DotPanel {
         DotHeader("This week", trailing = "Last 7 nights")
         if (w == null) {
             Note("No sleep recorded in the last 7 nights.")
             return@DotPanel
         }
-        SleepWindows(w.nights, w.regularity, zone)
+        SleepWindows(w.nights, w.usual, zone)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Fact("Avg. asleep", w.averageAsleep)
             Fact("Avg. score", w.averageScore)
             Fact("Reached ${formatDuration(goal)}", "${w.goalNights} of ${w.slept}")
         }
-        val r = w.regularity
-        if (r == null) Note(w.learningNote)
-        else {
-            DotDivider()
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
-                Column(Modifier.weight(1f)) {
-                    Fact("Regularity", "${r.score}%")
-                    Text(r.band.label, color = bandColor(r.band), style = MaterialTheme.typography.bodySmall)
-                }
+        val sri = w.sri
+        val band = w.band
+        DotDivider()
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
+            Column(Modifier.weight(1f)) {
+                Fact("Regularity", sri?.let { "${it.roundToInt()}" } ?: "—")
+                if (band != null) Text(band.label, color = bandColor(band), style = MaterialTheme.typography.bodySmall)
+            }
+            w.usual?.let { u ->
                 Column(horizontalAlignment = Alignment.End) {
-                    Note("Fall asleep ${minutesClock(r.bedtime)}")
-                    Note("Wake up ${minutesClock(r.wake)}")
+                    Note("Fall asleep ${minutesClock(u.bedtime)}")
+                    Note("Wake up ${minutesClock(u.wake)}")
                 }
             }
-            GlowBar(r.score / 100f, bandColor(r.band))
-            Note(w.regularityNote.orEmpty())
         }
+        if (sri != null && band != null) GlowBar(sri.coerceIn(0f, 100f) / 100f, bandColor(band))
+        (w.regularityNote ?: w.learningNote)?.let { Note(it) }
     }
 }
 
@@ -401,7 +414,7 @@ private fun SleepHealthPanel(reg: org.openstrap.app.data.SleepRegularity.Result,
     DotPanel {
         DotHeader("Sleep health", trailing = health?.let { "${it.count} of 3 good" })
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Fact("Regularity", reg.sri?.let { "${it.toInt()}" } ?: reg.midpointSdMinutes?.let { "±${it.toInt()} min" } ?: "—")
+            Fact("Regularity", reg.sri?.let { "${it.roundToInt()}" } ?: reg.midpointSdMinutes?.let { "±${it.toInt()} min" } ?: "—")
             Fact("Band", reg.band?.label ?: if (reg.midpointSdMinutes != null) (if (reg.good == true) "Steady" else "Variable") else "—")
         }
         Note(

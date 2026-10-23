@@ -36,6 +36,9 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 private fun clock(epoch: Long) = Instant.ofEpochSecond(epoch).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("HH:mm"))
+/** The label on a workout the strap recognised by itself (codemap 05 §8). */
+internal const val AUTO_DETECTED = "Auto-detected"
+
 private fun dateLine(epoch: Long) = Instant.ofEpochSecond(epoch).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("EEE d MMM · HH:mm"))
 
 /**
@@ -53,6 +56,7 @@ fun GlowWorkoutScreen(a: WorkoutAnalysis?, contentPadding: PaddingValues, onBack
                 item { DotPanel { Note("Loading…") } }
                 return@ScreenList
             }
+            if (a.autoDetected) item { StatusPill(AUTO_DETECTED, Color.White.copy(alpha = 0.7f)) }
             item { HeartCard(a) }
             item { SummaryPanel(a) }
             if (a.recovery60 != null) item { RecoveryPanel(a) }
@@ -178,17 +182,25 @@ private fun EffectPanel(a: WorkoutAnalysis) {
     val e = a.effect
     DotPanel {
         DotHeader("Training effect", trailing = "From the strap")
-        Row(Modifier.fillMaxWidth()) {
-            Box(Modifier.weight(1f)) { Fact("Aerobic", w.aerobicTrainingEffect?.let { "%.1f".format(it) } ?: "—") }
-            Box(Modifier.weight(1f)) { Fact("Anaerobic", w.anaerobicTrainingEffect?.let { "%.1f".format(it) } ?: "—") }
-            Box(Modifier.weight(1f)) { Fact("Load", w.trainingLoad?.toString() ?: "—") }
-        }
-        val vo2 = e?.vo2max ?: w.vo2max?.toFloat()
-        Row(Modifier.fillMaxWidth()) {
-            Box(Modifier.weight(1f)) { Fact("VO₂ max", vo2?.let { "%.0f".format(it) } ?: "—") }
-            Box(Modifier.weight(2f)) { Fact("Recovery time", e?.recoveryMinutes?.takeIf { it > 0 }?.let { formatDuration(it * 60L) } ?: "—") }
-        }
-        Note("Training effect runs 0–5 for each system. VO₂ max shows up once the strap has enough data to estimate it.")
+        EffectFacts(w, e?.vo2max ?: w.vo2max?.toFloat(), a.recoveryMinutes)
+        Note("Training effect runs 0–5 for each system; EPOC (ml/kg) is the strap's measure of what the workout took, not daily load. VO₂ max shows up once the strap has enough data to estimate it.")
+    }
+}
+
+/**
+ * Aerobic and anaerobic training effect, EPOC, VO₂ max and recovery time, laid out the same wherever they come from:
+ * the strap's sport effect, or OpenStrap's own for a phone workout ([org.openstrap.app.data.WorkoutEffect]).
+ */
+@Composable
+internal fun EffectFacts(w: org.openstrap.app.data.db.Workout, vo2: Float?, recoveryMinutes: Int?) {
+    Row(Modifier.fillMaxWidth()) {
+        Box(Modifier.weight(1f)) { Fact("Aerobic", w.aerobicTrainingEffect?.let { "%.1f".format(it) } ?: "—") }
+        Box(Modifier.weight(1f)) { Fact("Anaerobic", w.anaerobicTrainingEffect?.let { "%.1f".format(it) } ?: "—") }
+        Box(Modifier.weight(1f)) { Fact("EPOC", w.trainingLoad?.toString() ?: "—") }
+    }
+    Row(Modifier.fillMaxWidth()) {
+        Box(Modifier.weight(1f)) { Fact("VO₂ max", vo2?.let { "%.0f".format(it) } ?: "—") }
+        Box(Modifier.weight(2f)) { Fact("Recovery time", recoveryMinutes?.takeIf { it > 0 }?.let { formatDuration(it * 60L) } ?: "—") }
     }
 }
 

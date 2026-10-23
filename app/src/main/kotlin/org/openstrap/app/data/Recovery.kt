@@ -83,7 +83,26 @@ object Recovery {
         val stress: Int?,
         /** A [SleepStage] while asleep (including AWAKE inside a sleep), null outside sleep. */
         val sleepStage: Int?,
+        /** Inside a stored workout's active time, or within [STRESS_AFTER_WORKOUT_SECONDS] after one; null otherwise. */
+        val workout: WorkoutPhase? = null,
+        /** The strap marked this minute as not worn ([offWrist]); a minute with heart rate is worn whatever this says. */
+        val offWrist: Boolean = false,
+        /**
+         * Whether the strap said it was worn at this minute, from its live wear pushes (true on body, false off-body);
+         * null where no recorded state covers the minute (e.g. while disconnected). See [notWorn].
+         */
+        val worn: Boolean? = null,
     )
+
+    /**
+     * Whether the activity record's mode byte ([org.openstrap.app.data.db.ActivityMinute.kind]) says the strap was off
+     * the wrist: low nibble 3 or 6, or 0x7E, the values Zepp's BioCharge reads as no wear (native 03 §2.2). On a real
+     * database 974 of 989 kind-3 minutes and all 46 kind-6 minutes had no heart rate.
+     */
+    fun offWrist(kind: Int): Boolean = kind == 0x7E || (kind and 0x0F).let { it == 3 || it == 6 }
+
+    /** Where a minute sits against the stored workouts, for the stress exclusion ([stressExcluded]). */
+    enum class WorkoutPhase { Active, After }
 
     // ------------------------------------------------------------------------------------------------
     // Baselines
@@ -129,6 +148,63 @@ object Recovery {
         val value = Math.round(median + STRESS_MARGIN).coerceIn(STRESS_FROM_MIN, STRESS_FROM_MAX)
         return StressThreshold(value, Math.round(median), days)
     }
+
+    /**
+     * The strap's stress readings that make up the calm level for [stressThreshold]: awake ([asleep] false), still
+     * (fewer than [CALM_STEPS] steps that minute), heart rate below [ACTIVITY_HRR] of reserve, and outside the stress
+     * exclusion around workouts ([excluded], from [stressExcluded]). [hr] and [steps] are keyed by minute start.
+     */
+    fun calmStress(
+        readings: List<Pair<Long, Int>>,
+        hr: Map<Long, Int>,
+        steps: Map<Long, Int>,
+        restingHr: Float,
+        maxHr: Float,
+        excluded: List<LongRange>,
+        asleep: (Long) -> Boolean,
+    ): List<Pair<Long, Int>> = readings.filter { (t, _) ->
+        val minute = t / 60 * 60
+        val bpm = hr[minute]
+        !asleep(t) && (steps[minute] ?: 0) < CALM_STEPS && bpm != null && hrr(bpm, restingHr, maxHr) < ACTIVITY_HRR &&
+            !inWorkout(minute, excluded)
+    }
+
+    /** A minute with fewer steps than this counts as still for the calm stress level. */
+    const val CALM_STEPS = 10
+
+    /**
+     * The stress exclusion: the strap's stress score comes from heart-rate variability, which exercise suppresses
+     * whatever the mind is doing, so a reading during a workout or while the heart is still settling after one says
+     * nothing about stress. The window is each of [workouts]' active parts (phone and strap, as
+     * [workoutRanges] gives them) plus [STRESS_AFTER_WORKOUT_SECONDS] after each part ends. A pause therefore stays
+     * excluded for its first 20 minutes too, being the same settling-down. Readings in it are kept and exported, but
+     * Charge, the calm level and the day's stress figures and charts leave them out (see [stressCounts]).
+     */
+    fun stressExcluded(workouts: List<LongRange>): List<LongRange> =
+        workouts.flatMap { listOf(it, it.last + 1..it.last + STRESS_AFTER_WORKOUT_SECONDS) }
+
+    /** Whether a stress reading at [t] counts as daily stress: not inside [excluded] (from [stressExcluded]). */
+    fun stressCounts(t: Long, excluded: List<LongRange>): Boolean = !inWorkout(t / 60 * 60, excluded)
+
+    /**
+     * How long after a workout stress readings stay excluded: 20 minutes, the ≈20-minute half-life of Charge's
+     * post-exercise debt ([EPOC_DECAY], 0.966 a minute). By then half the debt is gone and the heart rate is close
+     * to where it settles.
+     */
+    const val STRESS_AFTER_WORKOUT_SECONDS = 20 * 60L
+
+    /**
+     * A phone workout's active parts: [activeRanges] from its shown start to its end (now while recording), less its
+     * pauses, the one under way included.
+     */
+    fun activeRanges(w: org.openstrap.app.data.db.AppWorkout, now: Long): List<LongRange> {
+        val end = w.end ?: now
+        return activeRanges(w.from, end, w.pauseRanges + listOfNotNull(w.pausedAt?.let { it..end }))
+    }
+
+    /** Every stored workout's active time, phone ([activeRanges]) and strap (start until end), as [inWorkout] takes it. */
+    fun workoutRanges(phone: List<org.openstrap.app.data.db.AppWorkout>, strap: List<org.openstrap.app.data.db.Workout>, now: Long): List<LongRange> =
+        (phone.flatMap { activeRanges(it, now) } + strap.map { it.start until it.end }).filter { !it.isEmpty() }
 
     const val STRESS_BASELINE_DAYS = 14
     const val MIN_STRESS_DAYS = 3
@@ -219,6 +295,11 @@ object Recovery {
         val qualityFlags: List<String> = emptyList(),
         /** Tonight in the body-signal state machine: Normal, Watch (in-app) or Alert (push, capped). */
         val bodySignals: BodySignals.Day? = null,
+        /**
+         * The same contributors combined by [softMinimum] instead of the weighted mean and red-flag cap, with the Alert
+         * cap still applied. For the backtest comparison only ([SOFT_MIN_FUSION]); the app never shows it.
+         */
+        val softMinScore: Int? = null,
     ) {
         val calibrating get() = phase == Phase.Withheld || phase == Phase.Learning
         val hrvWeekThin get() = hrvWeekNights in HRV_WEEK_MIN_NIGHTS until HRV_WEEK_FULL_NIGHTS
@@ -398,14 +479,14 @@ object Recovery {
         }
 
         val alert = body.state == BodySignals.State.Alert
-        val extras = { score: Int?, capped: Boolean, withheld: Boolean ->
+        val extras = { score: Int?, capped: Boolean, withheld: Boolean, softMin: Int? ->
             Readiness(
                 score, out, nights, alert, if (body.state == BodySignals.State.Normal) emptyList() else body.signals, capped, phase,
-                withheld, hrvRange, week.size, fallbackHrv, fallbackRhr, quality, body,
+                withheld, hrvRange, week.size, fallbackHrv, fallbackRhr, quality, body, softMin,
             )
         }
         // Withhold without an autonomic contributor: sleep alone isn't readiness.
-        if (out.none { it.factor == Factor.HrvBalance || it.factor == Factor.RestingHr }) return extras(null, false, true)
+        if (out.none { it.factor == Factor.HrvBalance || it.factor == Factor.RestingHr }) return extras(null, false, true, null)
         val totalWeight = out.sumOf { it.factor.weight.toDouble() }
         var score = (out.sumOf { it.factor.weight.toDouble() * it.score } / totalWeight).toInt()
         // One very poor body signal shouldn't be averaged away by good sleep and a quiet day.
@@ -416,8 +497,36 @@ object Recovery {
             capped = true
         }
         if (alert && score > ALERT_CAP) { score = ALERT_CAP; capped = true }
-        return extras(score.coerceIn(0, 100), capped, false)
+        // The soft minimum replaces the weighted mean and the red-flag cap; the Alert cap stays.
+        var softMin = softMinimum(out.map { it.factor.weight to it.score }).toInt()
+        if (alert) softMin = min(softMin, ALERT_CAP)
+        val soft = softMin.coerceIn(0, 100)
+        return if (SOFT_MIN_FUSION) extras(soft, alert && soft == ALERT_CAP, false, soft) else extras(score.coerceIn(0, 100), capped, false, soft)
     }
+
+    /**
+     * Zepp's soft minimum (analysis native/06 §4.8) with our importance weights: each part counts
+     * w = baseWeight · e^(−(s/100)²), and the result is Σ w·s / Σ w. A low part weighs up to e ≈ 2.7× more than a
+     * perfect one, so one poor signal pulls the score down smoothly instead of through a hard cap. [parts] are
+     * (base weight, 0-100 score); 0 when empty.
+     */
+    fun softMinimum(parts: List<Pair<Float, Int>>): Double {
+        var num = 0.0
+        var den = 0.0
+        for ((base, s) in parts) {
+            val w = base * exp(-(s / 100.0).pow(2))
+            num += w * s
+            den += w
+        }
+        return if (den > 0) num / den else 0.0
+    }
+
+    /**
+     * Off: the app scores with the weighted mean and the red-flag cap, and [Readiness.softMinScore] is computed beside
+     * it for the backtest. On: the soft minimum becomes the score. Decided at the calibration review
+     * (readiness-calibration.md, "Soft-minimum fusion").
+     */
+    const val SOFT_MIN_FUSION = false
 
     /** Sleep debt halves over 7 nights: λ = 0.5^(1/7) ≈ 0.906, so a 14-night build-up still counts. */
     const val SLEEP_DEBT_HALF_LIFE_NIGHTS = 7.0
@@ -453,7 +562,10 @@ object Recovery {
     const val SLEEP_DEBT_POINTS_PER_HOUR = 25
     const val RED_FLAG = 40
     const val RED_FLAG_HEADROOM = 30
-    const val ALERT_CAP = 55
+    /** Where OpenStrap's "Take it steady" (Fair) band starts; [org.openstrap.app.ui.dashboard.Narrative.ratingFor] uses it. */
+    const val FAIR_FROM = 55
+    /** One below the Fair band, so an Alert day always rates in the lowest band ("Prioritise recovery"). */
+    const val ALERT_CAP = FAIR_FROM - 1
     private const val MIN_CHRONIC_LOAD = 20f
     /** Readiness points lost per % of nightly SpO2 below baseline, beyond a 1 % dead band (−2 % ≈ 75, −3 % ≈ 50). */
     const val SPO2_POINTS_PER_PERCENT = 25
@@ -551,22 +663,149 @@ object Recovery {
         else -> hrr * 0.64f * exp(1.92f * hrr)
     }
 
+    /** A day's load, TRIMP, split as Zepp's Exertion splits it: workout minutes and everyday minutes. */
+    data class DailyLoad(val workout: Float, val everyday: Float) {
+        val total: Float get() = workout + everyday
+    }
+
     /**
-     * Daily load: TRIMP over awake minutes with HR at or above [LOAD_MIN_HRR] of reserve, counting a minute only when at
-     * least [LOAD_RUN_MINUTES] of the last [LOAD_RUN_WINDOW] minutes (itself included) are there too, so isolated PPG
-     * spikes don't count. No HR-load method is validated on free-living minutes; Banister is the least-bad choice.
+     * Daily load: Banister TRIMP per minute, in two parts. No HR-load method is validated on free-living minutes;
+     * Banister is the least-bad choice, and the gate below is what keeps everyday heart rate out of it.
+     *
+     * - **Workout:** every minute that overlaps one of [workouts] (phone or strap, as time ranges), whatever its
+     *   intensity and even if marked asleep. Overlapping workouts share minutes, so each minute counts once.
+     * - **Everyday:** any other awake minute counts only when the strap counted steps that minute ([steps]) and
+     *   [everydayMinute] passes it: at or above [LOAD_MIN_HRR] of reserve, or at or above [LOAD_WALK_HRR] with at least
+     *   [LOAD_WALK_STEPS] steps. At least [LOAD_RUN_MINUTES] of the last [LOAD_RUN_WINDOW] minutes (itself included)
+     *   must pass too, so an isolated PPG spike during a few steps doesn't count. Raised HR while sitting (coffee,
+     *   stress, heat, a PPG artefact) is not training load.
+     *
+     * Workout minutes count at any intensity, unlike Zepp, which applies its 35 % line to every minute (native 07
+     * §3.3): a recorded workout's easy stretches (warm-up, recoveries between intervals, rests between sets) are part
+     * of the session, and dropping them would understate it, while the low TRIMP of an easy minute keeps them small.
+     * Everyday minutes follow Zepp's Exertion: movement and 35 % of reserve, with the day split into workout and
+     * everyday activity. The walking exception is OpenStrap's own (see [LOAD_WALK_HRR]). [hr] is one value per minute
+     * (epoch seconds, the minute's start); the engine replaces workout minutes with the workout's own HR.
      */
-    fun dailyLoad(hr: List<Pair<Long, Int>>, rest: Float, maxHr: Float, female: Boolean = false, asleep: (Long) -> Boolean = { false }): Float {
-        val minutes = hr.filter { !asleep(it.first) }.sortedBy { it.first }.map { (t, bpm) -> t to hrr(bpm, rest, maxHr) }
-        val above = minutes.filter { it.second >= LOAD_MIN_HRR }
+    fun dailyLoad(
+        hr: List<Pair<Long, Int>>,
+        rest: Float,
+        maxHr: Float,
+        female: Boolean = false,
+        workouts: List<LongRange> = emptyList(),
+        asleep: (Long) -> Boolean = { false },
+        steps: (Long) -> Int?,
+    ): DailyLoad {
+        var workout = 0.0
+        val everyday = ArrayList<Pair<Long, Float>>()
+        val inWorkout = MinuteRanges(workouts)
+        for ((t, bpm) in hr.sortedBy { it.first }) {
+            val x = hrr(bpm, rest, maxHr)
+            when {
+                inWorkout(t) -> workout += trimpMinute(x, female)
+                !asleep(t) && everydayMinute(x, steps(t)) -> everyday += t to x
+            }
+        }
         var lo = 0
         var total = 0.0
-        for ((k, m) in above.withIndex()) {
-            while (above[lo].first <= m.first - LOAD_RUN_WINDOW * 60L) lo++
+        for ((k, m) in everyday.withIndex()) {
+            while (everyday[lo].first <= m.first - LOAD_RUN_WINDOW * 60L) lo++
             if (k - lo + 1 >= LOAD_RUN_MINUTES) total += trimpMinute(m.second, female)
         }
-        return total.toFloat()
+        return DailyLoad(workout.toFloat(), total.toFloat())
     }
+
+    /**
+     * [minutes] (one HR a minute) with each workout minute taken from the workout's own recording, as Zepp does: the
+     * mean of a workout's samples in that minute, only those inside its time range (so not the strap's recovery
+     * recording after it), the higher one where two workouts overlap. A workout minute with no sample of its own
+     * keeps the all-day value. [workouts] is (time range, samples as epoch second to bpm).
+     */
+    fun withWorkoutHeartRate(minutes: List<Pair<Long, Int>>, workouts: List<Pair<LongRange, List<Pair<Long, Int>>>>): List<Pair<Long, Int>> =
+        withWorkoutMinutes(minutes, workouts.map { (range, samples) -> workoutMinutes(range, samples) })
+
+    /**
+     * One workout's own heart rate per minute (minute start to bpm), for [withWorkoutMinutes]: the rounded mean of its
+     * valid [samples] inside [range]. Reduced as each workout is read, so months of per-second samples aren't held.
+     */
+    fun workoutMinutes(range: LongRange, samples: List<Pair<Long, Int>>): Map<Long, Int> =
+        samples.filter { it.first in range && it.second in HR_MIN_BPM..HR_MAX_BPM }
+            .groupBy { it.first / 60 * 60 }
+            .mapValues { (_, v) -> Math.round(v.map { it.second }.average()).toInt() }
+
+    /** [withWorkoutHeartRate] on workouts already reduced by [workoutMinutes]. */
+    fun withWorkoutMinutes(minutes: List<Pair<Long, Int>>, workouts: List<Map<Long, Int>>): List<Pair<Long, Int>> {
+        if (workouts.isEmpty()) return minutes
+        val own = HashMap<Long, Int>()
+        for (w in workouts) for ((m, bpm) in w) own[m] = max(own[m] ?: 0, bpm)
+        if (own.isEmpty()) return minutes
+        return (minutes.toMap() + own).toList().sortedBy { it.first }
+    }
+
+    /**
+     * The active parts of a workout from [from] until [end] (exclusive), leaving out [pauses] (inclusive second ranges,
+     * as [org.openstrap.app.data.db.AppWorkout.pauseRanges] stores them), so paused time isn't workout load.
+     */
+    fun activeRanges(from: Long, end: Long, pauses: List<LongRange>): List<LongRange> {
+        var parts = listOf(from until end)
+        for (p in pauses) parts = parts.flatMap { r ->
+            if (p.last < r.first || p.first > r.last) listOf(r)
+            else listOf(r.first until p.first, p.last + 1..r.last).filter { !it.isEmpty() }
+        }
+        return parts
+    }
+
+    /** True when the minute starting at [t] overlaps any of [workouts] (inclusive second ranges). */
+    fun inWorkout(t: Long, workouts: List<LongRange>): Boolean = workouts.any { t <= it.last && t + 60 > it.first }
+
+    /**
+     * [inWorkout] for many minutes against the same [ranges]: sorted by start once, then a binary search per minute,
+     * so a 90-day load doesn't scan every workout for every minute. Same answer as [inWorkout].
+     */
+    class MinuteRanges(ranges: List<LongRange>) {
+        private val sorted = ranges.sortedBy { it.first }
+        private val firsts = LongArray(sorted.size) { sorted[it].first }
+        /** The latest end among the first k + 1 ranges by start. */
+        private val reach = LongArray(sorted.size).also { a ->
+            var m = Long.MIN_VALUE
+            for (k in sorted.indices) { m = max(m, sorted[k].last); a[k] = m }
+        }
+
+        operator fun invoke(t: Long): Boolean {
+            // Ranges starting before the minute ends are sorted[0 until lo]; one of them must end at or after t.
+            var lo = 0
+            var hi = sorted.size
+            while (lo < hi) { val mid = (lo + hi) ushr 1; if (firsts[mid] < t + 60) lo = mid + 1 else hi = mid }
+            return lo > 0 && reach[lo - 1] >= t
+        }
+    }
+
+    /**
+     * The movement signal for everyday load: the strap counted at least one step that minute (activity type 1,
+     * `steps` in 1..[MAX_MINUTE_STEPS]). Checked against a real database before choosing it: the record's activity
+     * `mode` (`kind`) was 0 ("silent") for every awake minute, never walking or running, so it says nothing; and its
+     * `intensity` byte was above Zepp's "> 5" in 79 % of minutes without a step (typing, gesturing at a desk), so
+     * Zepp's gate on it would let most of a seated day through, and any higher cut-off would be a guess. A step is
+     * unambiguous. The cost is non-stepping exercise (cycling, rowing, weights) outside a recorded workout, which then
+     * counts nothing; record a workout for those.
+     */
+    fun moving(steps: Int?): Boolean = steps != null && steps in 1..MAX_MINUTE_STEPS
+
+    /** Whether an awake minute outside workouts, at reserve fraction [x] with [steps], can add everyday load. */
+    fun everydayMinute(x: Float, steps: Int?): Boolean =
+        moving(steps) && (x >= LOAD_MIN_HRR || (x >= LOAD_WALK_HRR && steps!! >= LOAD_WALK_STEPS))
+
+    /**
+     * Sustained walking: a minute with at least [LOAD_WALK_STEPS] steps counts from this reserve fraction rather than
+     * [LOAD_MIN_HRR]. On real data, sustained walking at about 100 steps a minute sat at 24-34 % of reserve, so the
+     * 35 % line alone threw away whole walks; at 60+ steps a minute the movement is purposeful, not a few steps
+     * around a desk. Full TRIMP: the curve already gives these minutes little (about 0.26 a minute at 25 %).
+     */
+    const val LOAD_WALK_HRR = 0.20f
+    /** Steps in a minute that make it a walk: the bottom of the cadence MET scale OpenStrap already uses (60 → 2 MET). */
+    const val LOAD_WALK_STEPS = 60
+    /** Above this a minute's step count is a sentinel or an error (the strap's u8 tops out at 255). */
+    const val MAX_MINUTE_STEPS = 250
 
     const val LOAD_RUN_MINUTES = 3
     const val LOAD_RUN_WINDOW = 5
@@ -645,8 +884,12 @@ object Recovery {
     const val RHR_DAYS = 14
     const val RHR_OFFSET_BPM = 3f
 
-    /** Below this reserve fraction, heart rate is everyday living rather than training. */
-    const val LOAD_MIN_HRR = 0.2f
+    /**
+     * Outside a workout, a moving minute below this reserve fraction is everyday living rather than training (a walk
+     * aside, [LOAD_WALK_HRR]). Zepp's Exertion uses 35 % (native 07 §3.1); a lower line lets a raised heart rate
+     * during a few steps around a desk count as load.
+     */
+    const val LOAD_MIN_HRR = 0.35f
 
     /** A day whose TRIMP is more than [HARD_DAY_RATIO]× the chronic load: annotated as a likely cause of an alert. */
     fun hardDay(load: Float, chronic: Float): Boolean = load > HARD_DAY_RATIO * max(chronic, MIN_CHRONIC_LOAD)
@@ -718,6 +961,23 @@ object Recovery {
         val female: Boolean = false,
         /** Stress score from which a still minute counts as stress (see [stressThreshold]). */
         val stressFrom: Int = STRESS_FROM,
+        /**
+         * The body-signal state of each main sleep ([BodySignals]), as (sleep start, state), any order. A state applies
+         * from its sleep's start until the next sleep's start, as Zepp applies its morning alarm from the sleep-start
+         * minute (native 03 §8.2). Only [BodySignals.State.Alert] changes Charge ([ALERT_RECHARGE], [ALERT_DRAIN]).
+         */
+        val bodySignals: List<Pair<Long, BodySignals.State>> = emptyList(),
+        /**
+         * The end of each recorded main sleep in the simulation. Charge there is a wake value: the restart value after
+         * a long not-worn stretch is the median of the last [WAKE_HISTORY] of them ([NO_WEAR_LIMIT_MINUTES]), and the
+         * not-worn count restarts at each, as Zepp's wake-to-wake window does.
+         */
+        val mainSleepEnds: List<Long> = emptyList(),
+        /**
+         * The user's usual main sleep on each night of the simulation, as absolute time ranges. A not-worn stretch that
+         * covers at least [USUAL_SLEEP_COVER] of one is the strap off overnight ([ChargeDay.strapOffOvernight]).
+         */
+        val usualSleep: List<LongRange> = emptyList(),
     )
 
     data class ChargePoint(val t: Long, val value: Float, val state: State)
@@ -740,12 +1000,75 @@ object Recovery {
          * without one the number would only reflect the arbitrary starting guess.
          */
         val anchored: Boolean,
+        /**
+         * True when the strap was off over the usual sleep time before this day: that stretch has no Charge (a gap in
+         * [points]) and the day restarted from the median of recent wake values, so the numbers are an estimate.
+         * [atWake] is then that restart value.
+         */
+        val strapOffOvernight: Boolean = false,
     )
 
     /** Sleep recharge rate per minute, as a fraction of the remaining headroom (≈30 → 92 over 7.5 h). */
     const val SLEEP_K = 0.0060f
-    /** Resting drain while awake, per minute (≈2.4 per hour). */
+    /**
+     * Drain while awake and doing something, per minute (≈2.4 per hour): under every movement and stress minute, the
+     * stress exclusion around a workout, and exercise recovery. Still, calm minutes don't pay it ([REST_DRAIN],
+     * Relax).
+     */
     const val BASE_DRAIN = 0.04f
+    /**
+     * Drain of a still, awake Rest minute outside workouts, per minute and per point of charge: 0.04/min at 80 (as much
+     * as [BASE_DRAIN]), 0.025 at 50, 0.01 at 20, so a desk day still runs Charge down but ever more slowly. Zepp has
+     * no awake drain on its physical pool; a seated day falls through its mental pool, whose drain also eases below 50
+     * (native 03 §4.4). Its 8 hours at a desk at stress 35 take the total from 85 to 64 (§11); this takes 85 to 67.
+     * Relax (low stress, still) has no drain at all, as Zepp's stress under 24 drains neither pool.
+     */
+    const val REST_DRAIN = 0.0005f
+    /**
+     * Recharge of a Relax minute (awake, still, stress under [RELAX_BELOW]), per minute, as a fraction of the headroom:
+     * 85 → 86 over 8 hours, 60 → 62.8. Zepp's 8 hours at a desk at stress 20 from 85 end at 86 (native 03 §11): its
+     * mental pool gains a little and its physical pool, at rest between 80 and 100, barely moves (§4.3, §4.4). A
+     * calm day holds; sleep (SLEEP_K·weight, about 30 times this) is what fills Charge.
+     */
+    const val RELAX_K = 0.00015f
+    /**
+     * Not-worn drift per minute: the mean of Zepp's default no-wear slopes for its two pools (native 03 §4.7), physical
+     * −0.04596 with mental −0.0505 at or above 50 and −0.02386 below: about −2.9 an hour above 50, −2.1 below.
+     * Zepp learns per-user slopes from rest minutes; OpenStrap keeps the defaults.
+     *
+     * TODO: learn the user's own drift rate from their history, as Zepp does (native 03 §4.7): each day, measure the
+     * mean per-minute change of Charge over quiet, awake, worn minutes; once about 30 days and enough minutes have
+     * built up, replace these defaults with the minute-weighted mean of those days, keeping the defaults until then.
+     */
+    const val NO_WEAR_DRIFT_HIGH = -0.0482f
+    const val NO_WEAR_DRIFT_LOW = -0.0349f
+    /**
+     * Not-worn minutes since the last wake after which Charge is invalid (no points), as in Zepp's 384 minutes, 6.4 h
+     * (native 03 §3 step 12). A not-worn stretch over the usual sleep time is invalid from its start, however long.
+     */
+    const val NO_WEAR_LIMIT_MINUTES = 384
+    /**
+     * A stretch without heart rate (and outside sleep) counts as not worn once it runs this long: Zepp holds the last
+     * heart rate for 541 s (native 03 §4.3), so a shorter gap is a dropout and Charge holds. Minutes the strap marks
+     * off-wrist ([offWrist]) count at once. A gap still open at the end of the data (not synced yet) holds too.
+     */
+    const val NO_WEAR_GAP_MINUTES = 10
+    /** Share of a usual sleep range ([ChargeParams.usualSleep]) a not-worn stretch must cover to be "off overnight". */
+    const val USUAL_SLEEP_COVER = 0.5f
+    /** Wake values the restart median uses, and the value without any (Zepp's start rule, native 03 §12). */
+    const val WAKE_HISTORY = 7
+    const val DEFAULT_WAKE = 80f
+    /** Charge at the next recorded sleep after a long daytime not-worn stretch: the simulation's own neutral start. */
+    const val RESTART_BEFORE_SLEEP = 50f
+    /**
+     * A run of awake minutes outside workouts at or above [EXERCISE_HRR] without steps counts as Exercise for its
+     * whole length once it lasts this long: cycling, rowing or a stepper that wasn't recorded. 30 % of reserve is
+     * about 40 bpm over resting for a 130-bpm reserve; caffeine adds a few bpm and a stressful moment pushes heart
+     * rate up for a minute or two, so neither holds that for 10 minutes seated, while an unrecorded ride does.
+     * Shorter runs stay Stress or Rest.
+     */
+    const val SUSTAINED_EFFORT_MINUTES = 10
+
     /** Charge drained per TRIMP unit of exercise (≈25 for an hour at 60% of reserve). */
     const val EXERCISE_DRAIN_PER_TRIMP = 0.32f
     /** Extra drain per stress point above the threshold, per minute (80 over 60 drains 0.14/min). */
@@ -759,9 +1082,39 @@ object Recovery {
     /** Stress drains only after this many consecutive minutes at or above the threshold; a blip is rest. */
     const val STRESS_GATE_MINUTES = 3
     const val RELAX_BELOW = 25
-    /** Firstbeat's intensity bands, as heart-rate reserve (≈ %VO2 reserve, Swain & Leutholtz 1997). */
+    /**
+     * A minute in the stress exclusion around a workout ([stressExcluded]) that the intensity states above haven't
+     * claimed (heart rate under [ACTIVITY_HRR], few steps, no post-exercise debt: a strength workout between sets,
+     * yoga, the cool-down) never becomes Stress or Relax, since its stress reading reflects the exercise. It becomes:
+     * - **Activity** inside the workout's active time, draining by its TRIMP as any light activity does: it is part
+     *   of a recorded workout, and daily load counts every workout minute too ([dailyLoad]);
+     * - **ExerciseRecovery** in the 20 minutes after, the same base drain as the debt-driven recovery above;
+     * - **Rest** in either when heart rate is below this fraction of reserve (about 12 bpm over resting for a
+     *   120-bpm reserve), where it is back at sitting level and there is nothing to attribute to the workout.
+     * Activity at this intensity drains little more than Rest (TRIMP ≈ 0.08 a minute at 10 %), so the choice mostly
+     * shows in the state strip.
+     */
+    const val WORKOUT_REST_HRR = 0.10f
+    /**
+     * Firstbeat's intensity bands, as heart-rate reserve (≈ %VO2 reserve, Swain & Leutholtz 1997). Outside the stress
+     * exclusion around a workout, a minute reaches Activity or Exercise by heart rate only while moving ([moving]),
+     * or as part of a sustained run at [EXERCISE_HRR] ([SUSTAINED_EFFORT_MINUTES]):
+     * a raised heart rate sitting still (heat, caffeine, a fever, sitting stress) isn't effort, as in Zepp, whose
+     * physical pool drains only with movement (native 03 §4.3), and in [dailyLoad]. Such a minute can't Relax either:
+     * it is Stress if the stress score says so, else Rest.
+     */
     const val ACTIVITY_HRR = 0.20f
     const val EXERCISE_HRR = 0.30f
+
+    /**
+     * In [BodySignals.State.Alert], recharge (sleep and Relax) is multiplied by [ALERT_RECHARGE] and every drain by
+     * [ALERT_DRAIN]: the ends of Zepp's health-alarm multipliers (native 03 §4.2). Zepp ramps them with how far over
+     * its one-day threshold the night is; OpenStrap's Alert already needs persistence or two signal families, so it
+     * takes the full effect. Watch doesn't change Charge: it is one signal for one night, shown in the app only and
+     * leaving Readiness uncapped, and Zepp's multipliers just under its threshold are within 5 % of 1.
+     */
+    const val ALERT_RECHARGE = 0.5f
+    const val ALERT_DRAIN = 1.5f
 
     private val STAGE_WEIGHT = mapOf(
         SleepStage.DEEP to 1.0f,
@@ -773,6 +1126,13 @@ object Recovery {
     /**
      * Runs the charge model over [minutes] (one per minute, ascending; gaps are filled as no-data),
      * starting from [start], and reports the part inside [window].
+     *
+     * Not-worn time ([notWorn]) follows Zepp (native 03 §1, §4.7): Charge drifts down at [NO_WEAR_DRIFT_HIGH] /
+     * [NO_WEAR_DRIFT_LOW] until [NO_WEAR_LIMIT_MINUTES] not-worn minutes have built up since the last wake, then it is
+     * invalid (no points). A not-worn stretch over the usual sleep time is invalid from its start, so a night off the
+     * wrist is a gap, not a sleepless night, and Charge restarts when the strap is back on from the median of the last
+     * [WAKE_HISTORY] wake values ([DEFAULT_WAKE] without any), flagged [ChargeDay.strapOffOvernight]. Any other
+     * invalid stretch stays a gap until the next recorded sleep, which starts from [RESTART_BEFORE_SLEEP].
      */
     fun charge(
         minutes: List<Minute>,
@@ -798,12 +1158,93 @@ object Recovery {
         val nightRest = params.nightRestingHr ?: params.restingHr
         var anchored = false
         var stressRun = 0
+        val signals = params.bodySignals.sortedBy { it.first }
+        var si = 0
+        var signal = BodySignals.State.Normal
+        val off = notWorn(minutes)
+        val sustained = sustainedEffort(minutes, params)
+        // The not-worn stretch each minute belongs to, and whether it covers a usual sleep.
+        val stretchOf = IntArray(minutes.size) { -1 }
+        val overnight = ArrayList<Boolean>()
+        run {
+            var i = 0
+            while (i < minutes.size) {
+                if (!off[i]) { i++; continue }
+                var j = i
+                while (j < minutes.size && off[j]) j++
+                val from = minutes[i].t
+                val to = minutes[j - 1].t + 60
+                val closed = j < minutes.size
+                overnight += closed && params.usualSleep.any { u ->
+                    val len = u.last - u.first
+                    len > 0 && (minOf(to, u.last) - maxOf(from, u.first)) >= USUAL_SLEEP_COVER * len
+                }
+                for (k in i until j) stretchOf[k] = overnight.size - 1
+                i = j
+            }
+        }
+        val wakeTimes = params.mainSleepEnds.sorted()
+        var wi = 0
+        val wakes = ArrayList<Float>()
+        var wakesSeen = 0
+        var notWornCount = 0
+        var invalid = false
+        var invalidOvernight = false
+        var offOvernight = false
+        var estimatedWake: Float? = null
 
-        for (m in minutes) {
-            // Consecutive awake minutes at or above the threshold: stress drains only from the third.
-            stressRun = if (m.sleepStage == null && m.stress != null && m.stress >= params.stressFrom) stressRun + 1 else 0
+        for ((i, m) in minutes.withIndex()) {
+            // A wake: record it (all but the simulation's first, which still carries the starting guess) and start a new
+            // wake-to-wake count of not-worn minutes.
+            while (wi < wakeTimes.size && wakeTimes[wi] <= m.t) {
+                if (!invalid) { if (wakesSeen > 0) wakes += c; wakesSeen++ }
+                notWornCount = 0
+                wi++
+            }
+            if (off[i]) {
+                notWornCount++
+                if (!invalid && (overnight[stretchOf[i]] || notWornCount > NO_WEAR_LIMIT_MINUTES)) {
+                    invalid = true
+                    invalidOvernight = overnight[stretchOf[i]]
+                }
+                // Stress either side of a not-worn stretch doesn't add up to the gate.
+                stressRun = 0
+                if (!invalid) {
+                    // Zepp's no-wear drift; accounted as living, like the rest it stands in for.
+                    val before = c
+                    c = (c + if (c >= 50f) NO_WEAR_DRIFT_HIGH else NO_WEAR_DRIFT_LOW).coerceIn(0f, 100f)
+                    if (m.t in window) {
+                        living += before - c
+                        if (m.t % sampleSeconds == 0L || points.isEmpty()) points += ChargePoint(m.t, c, State.NoData)
+                    }
+                }
+                continue
+            }
+            if (invalid) {
+                when {
+                    m.sleepStage != null -> { invalid = false; c = RESTART_BEFORE_SLEEP }
+                    // Back on after a night off: restart from the usual wake. Before any sleep (the first days of
+                    // wearing) there is nothing to restart from, so Charge still waits for the first night.
+                    m.hr != null && invalidOvernight && anchored -> {
+                        invalid = false
+                        c = wakes.takeLast(WAKE_HISTORY).median() ?: DEFAULT_WAKE
+                        anchored = true
+                        if (m.t in window) { offOvernight = true; estimatedWake = c }
+                    }
+                    // Still invalid: a short dropout inside it, or worn again after a long daytime stretch.
+                    else -> { stressRun = 0; continue }
+                }
+                notWornCount = 0
+                epoc = 0f
+            }
+            // Consecutive awake minutes at or above the threshold: stress drains only from the third. A minute in the
+            // stress exclusion around a workout breaks the run, as its reading doesn't count.
+            stressRun = if (m.sleepStage == null && m.workout == null && m.stress != null && m.stress >= params.stressFrom) stressRun + 1 else 0
             val hr = m.hr
             val x = hr?.let { hrr(it, params.restingHr, params.maxHr) }
+            while (si < signals.size && signals[si].first <= m.t) signal = signals[si++].second
+            // Heart rate counts as effort outside workouts only while moving, or in a sustained run (see [ACTIVITY_HRR]).
+            val effort = m.workout != null || moving(m.steps) || sustained[i]
             val state: State
             var delta: Float
             when {
@@ -813,12 +1254,12 @@ object Recovery {
                     val relax = hr?.let { (1.2f - 0.04f * (it - nightRest)).coerceIn(0.5f, 1.2f) } ?: 1f
                     delta = SLEEP_K * (STAGE_WEIGHT[m.sleepStage] ?: 0.8f) * relax * hrvFactor * (100 - c)
                 }
-                // Off the wrist we can't tell rest from effort, so the value holds until data returns.
+                // A short heart-rate dropout (under [NO_WEAR_GAP_MINUTES], or not yet synced): the value holds.
                 hr == null || x == null -> {
                     state = State.NoData
                     delta = 0f
                 }
-                x >= EXERCISE_HRR -> {
+                x >= EXERCISE_HRR && effort -> {
                     state = State.Exercise
                     val t = trimpMinute(x, params.female)
                     epoc += t
@@ -829,24 +1270,41 @@ object Recovery {
                     state = State.ExerciseRecovery
                     delta = -BASE_DRAIN
                 }
-                x >= ACTIVITY_HRR || m.steps >= ACTIVE_STEPS -> {
+                (x >= ACTIVITY_HRR && effort) || m.steps >= ACTIVE_STEPS -> {
                     state = State.Activity
                     delta = -BASE_DRAIN - EXERCISE_DRAIN_PER_TRIMP * trimpMinute(x, params.female)
+                }
+                // Inside the stress exclusion ([stressExcluded]) the strap's stress score is ignored, so a minute that
+                // reaches here is never Stress or Relax. See [WORKOUT_REST_HRR] for the state it takes instead.
+                m.workout == WorkoutPhase.Active && x >= WORKOUT_REST_HRR -> {
+                    state = State.Activity
+                    delta = -BASE_DRAIN - EXERCISE_DRAIN_PER_TRIMP * trimpMinute(x, params.female)
+                }
+                m.workout == WorkoutPhase.After && x >= WORKOUT_REST_HRR -> {
+                    state = State.ExerciseRecovery
+                    delta = -BASE_DRAIN
+                }
+                m.workout != null -> {
+                    state = State.Rest
+                    delta = -BASE_DRAIN
                 }
                 m.stress != null && m.stress >= params.stressFrom && stressRun >= STRESS_GATE_MINUTES -> {
                     state = State.Stress
                     delta = -BASE_DRAIN - STRESS_DRAIN * (m.stress - params.stressFrom)
                 }
-                m.stress != null && m.stress < RELAX_BELOW && m.steps < 10 -> {
+                m.stress != null && m.stress < RELAX_BELOW && m.steps < CALM_STEPS && x < ACTIVITY_HRR -> {
                     state = State.Relax
-                    // Calm, still minutes recover at about a quarter of light sleep's rate.
-                    delta = -BASE_DRAIN + 0.25f * SLEEP_K * 0.8f * (100 - c)
+                    // Calm, still minutes hold, with a slight recovery and no drain ([RELAX_K]).
+                    delta = RELAX_K * (100 - c)
                 }
                 else -> {
                     state = State.Rest
-                    delta = -BASE_DRAIN
+                    delta = -REST_DRAIN * c
                 }
             }
+            // The share of a drain that is the base drain, for the split below; scaling keeps it.
+            val baseShare = if (delta < 0) BASE_DRAIN / -delta else 0f
+            if (signal == BodySignals.State.Alert) delta *= if (delta > 0) ALERT_RECHARGE else ALERT_DRAIN
             // EPOC-like debt decays with a half-life of about 20 minutes once exercise stops.
             if (state != State.Exercise) epoc *= EPOC_DECAY
             if (hr != null) lastHr = hr
@@ -857,9 +1315,9 @@ object Recovery {
             if (m.t in window) {
                 if (applied > 0) recharged += applied
                 else when (state) {
-                    State.Exercise, State.Activity -> { exercise += -applied * (1 - BASE_DRAIN / -delta); living += -applied * BASE_DRAIN / -delta }
+                    State.Exercise, State.Activity -> { exercise += -applied * (1 - baseShare); living += -applied * baseShare }
                     State.ExerciseRecovery, State.Rest, State.NoData, State.Relax, State.Sleep -> living += -applied
-                    State.Stress -> { stress += -applied * (1 - BASE_DRAIN / -delta); living += -applied * BASE_DRAIN / -delta }
+                    State.Stress -> { stress += -applied * (1 - baseShare); living += -applied * baseShare }
                 }
                 if (m.t % sampleSeconds == 0L || points.isEmpty()) points += ChargePoint(m.t, c, state)
                 if (state != State.NoData) latest = c
@@ -868,16 +1326,62 @@ object Recovery {
         }
         val values = points.map { it.value }
         if (!anchored && requireAnchor) return ChargeDay(emptyList(), null, null, 0f, 0f, 0f, 0f, null, null, anchored = false)
-        return ChargeDay(points, latest, atWake, recharged, exercise, stress, living, values.maxOrNull(), values.minOrNull(), anchored)
+        return ChargeDay(
+            points, latest, atWake ?: estimatedWake, recharged, exercise, stress, living, values.maxOrNull(), values.minOrNull(), anchored,
+            strapOffOvernight = offOvernight,
+        )
     }
 
+    /**
+     * Which of [minutes] are not worn: no heart rate, not asleep, and then either recorded off-body by the strap's live
+     * wear state ([Minute.worn] false), marked [Minute.offWrist], or inside a gap of at least [NO_WEAR_GAP_MINUTES]
+     * that heart rate or sleep later closes (an open gap at the end is unsynced data). A recorded on-body state doesn't
+     * override the other two: it may be one read at connect that the strap never updated, so only off-body is trusted.
+     */
+    fun notWorn(minutes: List<Minute>): BooleanArray {
+        val out = BooleanArray(minutes.size)
+        var i = 0
+        while (i < minutes.size) {
+            if (minutes[i].hr != null || minutes[i].sleepStage != null) { i++; continue }
+            var j = i
+            while (j < minutes.size && minutes[j].hr == null && minutes[j].sleepStage == null) j++
+            val gap = j < minutes.size && j - i >= NO_WEAR_GAP_MINUTES
+            for (k in i until j) out[k] = minutes[k].worn == false || gap || minutes[k].offWrist
+            i = j
+        }
+        return out
+    }
+
+    /**
+     * Minutes in a run of at least [SUSTAINED_EFFORT_MINUTES] consecutive awake minutes outside the stress exclusion at
+     * or above [EXERCISE_HRR]: effort even without steps.
+     */
+    fun sustainedEffort(minutes: List<Minute>, params: ChargeParams): BooleanArray {
+        val out = BooleanArray(minutes.size)
+        var i = 0
+        fun hard(m: Minute) = m.sleepStage == null && m.workout == null && m.hr != null &&
+            hrr(m.hr, params.restingHr, params.maxHr) >= EXERCISE_HRR
+        while (i < minutes.size) {
+            if (!hard(minutes[i])) { i++; continue }
+            var j = i
+            while (j < minutes.size && hard(minutes[j]) && minutes[j].t - minutes[j - (if (j > i) 1 else 0)].t <= 60) j++
+            if (j - i >= SUSTAINED_EFFORT_MINUTES) for (k in i until j) out[k] = true
+            i = j
+        }
+        return out
+    }
+
+    private fun List<Float>.median(): Float? = if (isEmpty()) null else sorted().let { (it[(it.size - 1) / 2] + it[it.size / 2]) / 2 }
+
     private const val EPOC_THRESHOLD = 5f
-    private const val EPOC_DECAY = 0.966f
+    /** Charge's EPOC-like debt, and a workout's EPOC at rest ([WorkoutEffect]), are multiplied by this each minute (half-life ≈ 20 min). */
+    const val EPOC_DECAY = 0.966f
     private const val ACTIVE_STEPS = 60
 
     /**
      * Builds one [Minute] per minute over [from, to): heart rate at that minute, the latest stress
-     * value within the last [stressHoldSeconds], and the sleep stage covering the minute.
+     * value within the last [stressHoldSeconds], the sleep stage covering the minute, and where it sits against
+     * [workouts].
      */
     fun minutes(
         from: Long,
@@ -887,13 +1391,26 @@ object Recovery {
         stress: List<Pair<Long, Int>>,
         stages: List<Triple<Long, Long, Int>>,
         stressHoldSeconds: Long = 10 * 60,
+        /** Stored workouts' active parts ([workoutRanges]); each minute gets its [WorkoutPhase] from these. */
+        workouts: List<LongRange> = emptyList(),
+        /** Minute starts the strap marked off the wrist ([offWrist]). */
+        offWrist: Set<Long> = emptySet(),
+        /** Recorded wear changes (time, worn or null for unknown), each holding until the next ([Minute.worn]). */
+        wear: List<Pair<Long, Boolean?>> = emptyList(),
     ): List<Minute> {
+        val excluded = stressExcluded(workouts)
+        val active = MinuteRanges(workouts)
+        val after = MinuteRanges(excluded)
         val hrByMinute = hr.associate { (it.first / 60 * 60) to it.second }
-        val stressSorted = stress.sortedBy { it.first }
+        // A reading taken in the exclusion must not be held into the minutes after it either.
+        val stressSorted = stress.filter { stressCounts(it.first, excluded) }.sortedBy { it.first }
         val stageSorted = stages.sortedBy { it.first }
         var si = 0
         var lastStress: Pair<Long, Int>? = null
         var gi = 0
+        val wearSorted = wear.sortedBy { it.first }
+        var wi = 0
+        var worn: Boolean? = null
         val out = ArrayList<Minute>(((to - from) / 60).toInt().coerceAtLeast(0))
         var t = from / 60 * 60
         while (t < to) {
@@ -901,7 +1418,14 @@ object Recovery {
             while (gi < stageSorted.size && stageSorted[gi].second <= t) gi++
             val stage = stageSorted.getOrNull(gi)?.takeIf { t >= it.first && t < it.second }?.third
             val s = lastStress?.takeIf { t - it.first <= stressHoldSeconds }?.second
-            out += Minute(t, hrByMinute[t], steps[t] ?: 0, s, stage)
+            val phase = when {
+                active(t) -> WorkoutPhase.Active
+                after(t) -> WorkoutPhase.After
+                else -> null
+            }
+            // The state at the minute's middle, so a change in its first half counts for it.
+            while (wi < wearSorted.size && wearSorted[wi].first <= t + 30) { worn = wearSorted[wi].second; wi++ }
+            out += Minute(t, hrByMinute[t], steps[t] ?: 0, s, stage, phase, t in offWrist, worn)
             t += 60
         }
         return out

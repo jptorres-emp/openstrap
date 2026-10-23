@@ -67,6 +67,22 @@ Run it on a pulled database (with its `-wal` beside it) or on a CSV backup zip:
 
 The database is copied first, so Room's migration never touches the original. Without `-PbacktestOut` the CSV goes to `app/build/backtest.csv`. The days use the machine's time zone, so run it in the zone the data was recorded in.
 
+## Soft-minimum fusion
+
+Zepp combines its parts with a soft minimum (analysis `native/06-readiness.md` §4.8): each part weighs e^(−(s/100)²), so a low part counts up to e ≈ 2.7× a perfect one. OpenStrap uses a weighted mean, and caps the score at worst + 30 when a physiological part is below 40.
+
+`Recovery.softMinimum` keeps OpenStrap's importance weights and adds Zepp's: w = weight · e^(−(s/100)²), score = Σ w·s / Σ w. It drops the red-flag cap; the Alert cap stays. The app still shows the weighted mean (`SOFT_MIN_FUSION` is off). The backtest writes both scores side by side for each day: `readiness` (shown), `readiness_soft_min`, then `strap_score`.
+
+At the review (about 2026-11-06, once there are 14+ scored nights), run the backtest and compare:
+
+* `readiness` against `readiness_soft_min`: how often they differ by more than 5, and on which days. Expect the soft minimum lower on days with one weak part and close to the mean on even days. Check that it still catches the red-flag days (`capped` true, no alert) without the hard cap.
+* Each against `strap_score`: mean difference and spread. The strap leaves sleep out, so also compare with the sleep columns (`c_sleep`, `c_sleep_balance`) set aside.
+* The check-in: which of the two tracks `check_in` better. Agreement with the strap alone isn't evidence either way.
+
+Switch `SOFT_MIN_FUSION` on only if the soft minimum is at least as good on both, and record the numbers here.
+
+**Also test whether the strap scores against population curves only** (`native/06` §9, idea 1). For each `strap_readiness` row, compute Zepp's population-curve HRV and RHR parts from the row's own `strap_sleep_hrv` / `strap_sleep_resting_hr` and the user's age (§4.3, §4.4), fuse them with the soft minimum (equal base weights) and compare with `strap_score`. If they keep matching after 7+ nights, the strap has no personal history and OpenStrap could reproduce its score exactly; if they drift apart, the strap keeps its own baselines and the z-curves in §4.3–4.5 are the model to fit.
+
 ## When revisiting
 
 1. Check that there are at least 10–14 days of rows and that OpenStrap's baselines have finished learning.

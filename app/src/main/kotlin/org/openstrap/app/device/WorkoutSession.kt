@@ -96,6 +96,9 @@ class WorkoutSession(
     /** A sport a launcher shortcut or the Quick Settings tile asked the ready screen to open with; the screen clears it. */
     val readyRequest = MutableStateFlow<Int?>(null)
 
+    /** The start of a strap workout a notification asked to open on the Activity tab; the screen clears it. */
+    val openRequest = MutableStateFlow<Long?>(null)
+
     /** The live screen is tucked away to use the rest of the app; the notification brings it back. */
     val minimized = MutableStateFlow(false)
 
@@ -133,7 +136,7 @@ class WorkoutSession(
                     _history.value = live
                     window = live.filter { it.first >= now - STOP_WINDOW_S }
                     // A kept route comes back; one that wasn't kept was only ever in memory.
-                    _route.value = if (w.keepRoute) dao.routeOnce(w.start).map { Route.Point(it.timestamp, it.lat, it.lon, it.accuracy) } else emptyList()
+                    _route.value = if (w.keepRoute) dao.routeOnce(w.start).map { it.point } else emptyList()
                     savedPoints = _route.value.size
                     // A restart mustn't ask at once about a stop it can't see the start of.
                     askSince = now
@@ -325,6 +328,13 @@ class WorkoutSession(
 
     /* --------------------------- The strap's own session (experimental, 0x0019) --------------------------- */
 
+    /*
+     * TODO (deferred): run phone-started workouts on the strap in full. Untried on hardware; still missing are
+     * 0x0019 `04` live SportInfo, `06` status query and `20` strap-initiated start, plus phone GPS fixes to the
+     * strap over 0x0031 (codemap 05 §5, 03 §3.20). First test whether the strap answers the version query and then
+     * syncs a subtype-6 summary with its own TE/load; if it does, merge that with the phone's recording by trackId.
+     */
+
     /** Read at each start: whether a phone workout also runs a session on the strap. */
     @Volatile private var strapSessions = false
     private var keepAlive: Job? = null
@@ -408,7 +418,8 @@ class WorkoutSession(
                     }
                     return@withLock
                 }
-                dao.upsertAppWorkout(WorkoutRecorder.withStats(ended, dao.appWorkoutHeartRateOnce(w.start)))
+                // The route is still in memory here, kept or not, so a run gets its VO2max either way.
+                dao.upsertAppWorkout(withEffect(ended, dao.appWorkoutHeartRateOnce(w.start), _route.value))
                 _state.value = WorkoutState.Ended(w.start)
             }
             // The strap's history fills any minutes the phone missed; it batches, so ask now.
@@ -436,7 +447,7 @@ class WorkoutSession(
                 if (to - from < 60 || dao.appWorkoutsOnce(from, to).isNotEmpty()) return@withLock
                 val w = AppWorkout(start = from, end = to, sportType = sportType, source = AppWorkout.SOURCE_SUGGESTED, endReason = AppWorkout.END_USER)
                 dao.upsertAppWorkout(w)
-                WorkoutGapFill(dao).fill(w)
+                WorkoutGapFill(dao) { settings.profile.first() }.fill(w)
             }
         }
     }
@@ -511,9 +522,18 @@ class WorkoutSession(
             lock.withLock {
                 val w = dao.appWorkoutOnce(start)?.takeIf { it.end != null } ?: return@withLock
                 val changed = change(w)
-                if (changed != w) dao.upsertAppWorkout(WorkoutRecorder.withStats(changed, dao.appWorkoutHeartRateOnce(start)))
+                if (changed != w) dao.upsertAppWorkout(withEffect(changed, dao.appWorkoutHeartRateOnce(start)))
             }
         }
+    }
+
+    /**
+     * [w] with its average and peak, then its effect ([org.openstrap.app.data.WorkoutEffectEngine]); [route] is the one in
+     * memory at the end. A failure there never costs the workout: it is saved with its stats alone.
+     */
+    private suspend fun withEffect(w: AppWorkout, hr: List<AppWorkoutHeartRate>, route: List<Route.Point>? = null): AppWorkout {
+        val stats = WorkoutRecorder.withStats(w, hr)
+        return runCatching { org.openstrap.app.data.WorkoutEffectEngine(dao).withEffect(stats, hr, settings.profile.first(), route) }.getOrDefault(stats)
     }
 
     fun dismissSummary() {
@@ -561,7 +581,7 @@ class WorkoutSession(
         val points = _route.value
         if (w.keepRoute && points.size > savedPoints) {
             val fresh = points.subList(savedPoints, points.size)
-            runCatching { dao.insertRoutePoints(fresh.map { AppWorkoutRoutePoint(w.start, it.t, it.lat, it.lon, it.accuracy) }) }
+            runCatching { dao.insertRoutePoints(fresh.map { AppWorkoutRoutePoint.of(w.start, it) }) }
                 .onSuccess { savedPoints = points.size }
         }
         val (meters, fromSteps) = distanceNow(w) ?: return

@@ -103,10 +103,12 @@ object WorkoutRecorder {
         averageHeartRate = stats?.average ?: w.averageHeartRate,
         maxHeartRate = stats?.max ?: w.maxHeartRate,
         minHeartRate = stats?.min,
-        aerobicTrainingEffect = null,
+        aerobicTrainingEffect = w.aerobicTrainingEffect,
+        // No open model holds up for it from heart rate alone ([WorkoutEffect]).
         anaerobicTrainingEffect = null,
-        trainingLoad = null,
-        vo2max = null,
+        // The strap's load is Zepp's int EPOC (native 04 §2.1); ours is on the same scale, so the two compare.
+        trainingLoad = w.epoc?.toInt(),
+        vo2max = w.vo2max?.let { Math.round(it) },
         steps = null,
     )
 
@@ -120,7 +122,7 @@ object WorkoutRecorder {
         return Workouts.analyse(toWorkout(w, now, stats(shown)), expand(shown).filter { it.timestamp in w.from..end }, emptyList(), maxHeartRate)
             .copy(
                 fromPhone = true, historyMinutes = shown.count { it.fromHistory }, historyRanges = historyRanges(shown),
-                shownStart = w.from, recordedEnd = w.recordedEnd,
+                shownStart = w.from, recordedEnd = w.recordedEnd, recoveryMinutes = w.recoveryMinutes,
             )
     }
 

@@ -95,7 +95,7 @@ New weights (design choice), renormalised over the contributors present:
 * Autonomic 52 %, sleep 28 %, other body signals 13 %. Polar's only hint is that HR has "the biggest influence".
 * **Withhold Readiness** unless an HRV or resting HR contributor is present. On 2026-10-16, sleep alone gave 52 against the strap's 91. Under this rule that day shows a Sleep score and the strap's placeholder instead.
 * Breathing disturbances move out: they're a stable trait, so inside Readiness they only add a fixed offset.
-* Keep the red-flag cap (`RED_FLAG` = 40, readiness ≤ contributor + 30) and the alert cap of 55. Neither has a source; both are reasonable guards.
+* Keep the red-flag cap (`RED_FLAG` = 40, readiness ≤ contributor + 30) and the alert cap of 54 (one below the Fair band). Neither has a source; both are reasonable guards.
 * Sleep was the main driver of a reconstructed Oura Readiness (R² 0.71 from Oura's own inputs; questionnaires R² 0.29, [De Bot et al. 2025](https://www.scitepress.org/PublishedPapers/2025/137331)). Limiting sleep's share stops one short night from carrying the score. The weights are the first thing to backtest.
 
 ### The strap's own nightly HRV and resting HR (Probable)
@@ -141,7 +141,8 @@ SRI predicted all-cause mortality better than duration in 60,977 UK Biobank part
 * Grid: 1440 one-minute epochs per local day, starting at 12:00. Sleep = any deep, light or REM minute, naps included; awake = wake; strap off = missing.
 * Over the last 7 day-pairs, count only pairs where both minutes are valid (as [GGIR](https://www.rdocumentation.org/packages/GGIR/versions/3.3-8/topics/CalcSleepRegularityIndex) does). SRI = −100 + 200·matches / validPairs.
 * Withhold below 7200 valid pairs (120 h).
-* Bands (depend on the method; descriptive only): < 72 irregular, 72–79 fair, 79–87 regular, ≥ 87 very regular.
+* Shown as the Sleep screen's "Regularity", on the standard −100…100 scale (100 identical days, 0 random), rounded.
+* Bands at Windred's UK Biobank quintile cuts (71.65 / 78.56 / 83.17 / 87.32), rounded: < 72 irregular (bottom fifth, the high-risk group), 72–79 fair, 79–87 regular, ≥ 87 very regular. Descriptive only: they depend on the sleep/wake method, and the strap's isn't GGIR's. Zepp's 60/80/90 bands are for a different (overlap) score and aren't used.
 * Fallback when withheld but there are ≥ 4 main sleeps in 7 days: the SD of sleep midpoint, "good" under 60 min.
 
 ### Sleep-health count (Probable)
@@ -180,7 +181,7 @@ RHR here is the overnight mean sleep HR (the NightSignal metric). Readiness keep
 SpO2 and desaturations are left out; they stay in Readiness and the Breathing card. `SPO2_ALERT_DROP` no longer raises an alert.
 
 * **Watch** (in the app, no push): any single core flag, or `RHR_WATCH` + `HRV_SUPPORT`.
-* **Alert** (push; Readiness capped at 55), any of:
+* **Alert** (push; Readiness capped at 54), any of:
   * `RHR_FLAG` on 2 nights in a row;
   * ≥ 2 different core flags on the same night;
   * any core flag on ≥ 3 of the last 7 nights;
@@ -290,6 +291,12 @@ Jurca 2005 needs only sex, age, BMI, resting HR and one activity question. Its S
 * Withhold with < 5 nightly RHR in 14 days; height or weight missing or > 90 days old; the activity question unanswered in 180 days; age outside 20–79; a beta-blocker or pregnancy flag.
 * Before coding: check the sex coding and SRPA weights against the Am J Prev Med 2005 full text (the weights may not be whole numbers: 0 / 0.32 / 1.06 / 1.76 / 3.03), and transcribe the FRIEND 2022 tables from the primary paper.
 * Phase 2, phone GPS: flat, steady 1-minute epochs (speed 1.0–4.5 m/s, accuracy ≤ 10 m, HR SD < 3 bpm over 3 min after ≥ 3 min warm-up). VO2 = 3.5 + 0.1·v (walk) or 0.2·v (run), v in m/min. Fit VO2 = a + b·HR (span ≥ 15 bpm, r² ≥ 0.7), extrapolate to HRmax, and take the median of ≥ 3 sessions in 28 days. If it differs from Jurca by > 2 SEE, show both.
+
+* *As built (phase 2, per workout):* outdoor runs only, ACSM running over %HRR per steady 2-minute window rather than a VO2–HR regression, gated as Zepp gates its own; shown with the workout, not merged with Jurca yet. See recovery.md "Workout effect".
+
+### Workout EPOC and training effect (design choice on a Probable base)
+
+Firstbeat's EPOC-from-%HRR structure is published in its white papers but its coefficients aren't; ours are fitted to round-number targets and mapped through Zepp's activity-class TE table, which the strap itself uses. Treat the figures as on the strap's scale, not as measured EPOC. Recovery time is a design choice, conservative by construction (it only lengthens with fatigue). Anaerobic TE is not attempted.
 
 ### Fitness age (design choice, optional)
 

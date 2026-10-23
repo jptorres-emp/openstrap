@@ -105,11 +105,18 @@ interface HealthDao {
     @Query("SELECT * FROM workout WHERE `end` >= :from AND start <= :to ORDER BY start")
     suspend fun workoutsOnce(from: Long, to: Long): List<Workout>
 
+    /** Strap workouts that overlap [from, to], as they change (for the stress exclusion). */
+    @Query("SELECT * FROM workout WHERE `end` >= :from AND start <= :to ORDER BY start")
+    fun workoutsIn(from: Long, to: Long): Flow<List<Workout>>
+
     @Query("SELECT * FROM workout WHERE start = :start")
     fun workout(start: Long): Flow<Workout?>
 
     @Query("SELECT * FROM workout_hr WHERE workoutStart = :start ORDER BY timestamp")
     fun workoutHeartRate(start: Long): Flow<List<WorkoutHeartRate>>
+
+    @Query("SELECT * FROM workout_hr WHERE workoutStart = :start ORDER BY timestamp")
+    suspend fun workoutHeartRateOnce(start: Long): List<WorkoutHeartRate>
 
     /** Last HR sample per workout: the strap records three minutes past the end, so this places the end. */
     @Query("SELECT workoutStart, MAX(timestamp) AS timestamp, 0 AS bpm FROM workout_hr GROUP BY workoutStart")
@@ -123,6 +130,10 @@ interface HealthDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAppWorkouts(workouts: List<AppWorkout>)
+
+    /** Only a workout's effect figures, so working them out for an old workout can't undo a trim made meanwhile. */
+    @Query("UPDATE app_workout SET epoc = :epoc, aerobicTrainingEffect = :aerobicTe, recoveryMinutes = :recoveryMinutes, vo2max = :vo2max WHERE start = :start")
+    suspend fun updateAppWorkoutEffect(start: Long, epoc: Float?, aerobicTe: Float?, recoveryMinutes: Int?, vo2max: Float?)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAppWorkoutHeartRate(samples: List<AppWorkoutHeartRate>)
@@ -145,6 +156,10 @@ interface HealthDao {
     /** Phone workouts that overlap [from, to], the one recording included. */
     @Query("SELECT * FROM app_workout WHERE (`end` IS NULL OR `end` >= :from) AND start <= :to ORDER BY start")
     suspend fun appWorkoutsOnce(from: Long, to: Long): List<AppWorkout>
+
+    /** Phone workouts that overlap [from, to], the one recording included, as they change (for the stress exclusion). */
+    @Query("SELECT * FROM app_workout WHERE (`end` IS NULL OR `end` >= :from) AND start <= :to ORDER BY start")
+    fun appWorkoutsIn(from: Long, to: Long): Flow<List<AppWorkout>>
 
     @Query("SELECT * FROM app_workout WHERE start = :start")
     fun appWorkout(start: Long): Flow<AppWorkout?>
@@ -379,6 +394,22 @@ interface HealthDao {
     @Query("SELECT * FROM health_alert WHERE timestamp BETWEEN :from AND :to ORDER BY timestamp")
     fun healthAlerts(from: Long, to: Long): Flow<List<HealthAlertRow>>
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertWearEvent(row: WearEventRow)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertWearEvents(rows: List<WearEventRow>)
+
+    /** Wear changes in [from, to), led by the one in force at [from] if there is one. */
+    @Query(
+        "SELECT * FROM wear_event WHERE timestamp < :to AND " +
+            "timestamp >= COALESCE((SELECT MAX(timestamp) FROM wear_event WHERE timestamp <= :from), :from) ORDER BY timestamp",
+    )
+    suspend fun wearEventsOnce(from: Long, to: Long): List<WearEventRow>
+
+    @Query("SELECT * FROM wear_event ORDER BY timestamp DESC LIMIT 1")
+    suspend fun lastWearEvent(): WearEventRow?
+
     // Reads for data the dashboard didn't show before.
     @Query("SELECT * FROM sleep_spo2 WHERE timestamp BETWEEN :from AND :to ORDER BY timestamp")
     fun sleepSpo2(from: Long, to: Long): Flow<List<SleepSpo2Sample>>
@@ -416,9 +447,6 @@ interface HealthDao {
 
     @Query("SELECT date(timestamp, 'unixepoch', 'localtime') AS day, AVG(percent) AS value, MIN(percent) AS min, MAX(percent) AS max, COUNT(*) AS count FROM sleep_spo2 WHERE timestamp BETWEEN :from AND :to GROUP BY day ORDER BY day")
     fun dailySleepSpo2(from: Long, to: Long): Flow<List<DailyAggregate>>
-
-    @Query("SELECT date(timestamp, 'unixepoch', 'localtime') AS day, AVG(value) AS value, MIN(value) AS min, MAX(value) AS max, COUNT(*) AS count FROM stress WHERE timestamp BETWEEN :from AND :to GROUP BY day ORDER BY day")
-    fun dailyStress(from: Long, to: Long): Flow<List<DailyAggregate>>
 
     @Query("SELECT date(timestamp, 'unixepoch', 'localtime') AS day, AVG(celsius) AS value, MIN(celsius) AS min, MAX(celsius) AS max, COUNT(*) AS count FROM skin_temperature WHERE timestamp BETWEEN :from AND :to GROUP BY day ORDER BY day")
     fun dailySkinTemperature(from: Long, to: Long): Flow<List<DailyAggregate>>

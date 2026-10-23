@@ -4,9 +4,11 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.openstrap.app.ble.GattClient
 import org.openstrap.app.ble.StrapUuids
+import org.openstrap.app.data.Workouts
 import org.openstrap.app.data.db.ActivityExtendedMinute
 import org.openstrap.app.data.db.ActivityMinute
 import org.openstrap.app.data.db.DailyMaxHr
@@ -92,6 +94,8 @@ class HistorySync(
     private val settings: SettingsStore,
     private val state: MutableStateFlow<SyncState>,
     private val log: (String) -> Unit,
+    /** Called for a newly synced workout the strap auto-detected, to notify about it (codemap 05 §8). */
+    private val onAutoDetected: (Workout) -> Unit = {},
 ) {
     private val zone = ZoneId.systemDefault()
     private val useChannel = session.services.has(Endpoints.HISTORY)
@@ -120,7 +124,9 @@ class HistorySync(
             val advertised = version?.supportedTypes()
             log("history version ${version?.version}, strap offers types ${advertised?.sorted()}" + (only?.let { ", syncing $it" } ?: ""))
 
-            val plan = HistoryTypeSpecs.plan(advertised).filter { it.parser != null && (only == null || it.code in only) }
+            HistoryTypeSpecs.featureDisagreements(advertised, session.features).takeIf { it.isNotEmpty() }
+                ?.let { log("history: feature bits clear for advertised types $it; fetching them anyway") }
+            val plan = HistoryTypeSpecs.plan(advertised, session.features).filter { it.parser != null && (only == null || it.code in only) }
             plan.forEachIndexed { i, spec ->
                 state.value = SyncState.Running("Syncing ${label(spec.type)} (${i + 1}/${plan.size})", i.toFloat() / plan.size)
                 try {
@@ -332,8 +338,11 @@ class HistorySync(
                 is WorkoutFetch.Workout -> {
                     val now = System.currentTimeMillis() / 1000
                     if (w.summary.timestamp in MIN_VALID_EPOCH..now + FUTURE_SLACK) {
-                        log("history workout ${Instant.ofEpochSecond(w.summary.trackId)}: type ${w.summary.sportType}, ${w.detail?.heartRate?.size ?: 0} HR samples")
+                        log("history workout ${Instant.ofEpochSecond(w.summary.trackId)}: type ${w.summary.sportType}, subtype ${w.summary.subtype}, ${w.detail?.heartRate?.size ?: 0} HR samples")
+                        val storedBefore = dao.workout(w.summary.trackId).first() != null
                         store(listOfNotNull(w.summary, w.detail))
+                        val row = workoutRow(w.summary)
+                        if (Workouts.notifyAutoDetected(row, storedBefore, now)) runCatching { onAutoDetected(row) }.onFailure { log("auto-detect notification: $it") }
                     } else {
                         log("history workout with impossible time ${w.summary.timestamp} dropped")
                     }
@@ -378,11 +387,7 @@ class HistorySync(
             is StrapStress -> if (!r.isLikelyGap) stress += DbStress(r.timestamp, r.stress)
             is HrvRmssd -> if (r.rmssd > 0) hrv += HrvSample(r.timestamp, r.rmssd)
             is HrvSdnn -> if (r.sdnnMs in 1.0..400.0) sdnn += HrvSdnnSample(r.timestamp, r.sdnnMs.toFloat())
-            is WorkoutSummary -> workouts += Workout(
-                r.trackId, r.trackId + (r.exerciseTime ?: r.totalTime ?: 0), r.sportType, r.exerciseTime ?: r.totalTime,
-                r.calories, r.averageHeartRate, r.maxHeartRate, r.minHeartRate, r.aerobicTrainingEffect,
-                r.anaerobicTrainingEffect, r.trainingLoad, r.vo2max, r.steps,
-            )
+            is WorkoutSummary -> workouts += workoutRow(r)
             is WorkoutDetail -> {
                 // One sample per second; the strap re-sends a workout whole, so replace it.
                 val samples = r.heartRate.associate { (ms, bpm) -> ms / 1000 to bpm }
@@ -401,7 +406,7 @@ class HistorySync(
             is SkinTemperatureSample -> r.skinCelsius?.let { skin += SkinTemperature(r.timestamp, it) }
             is SleepBreathRate -> if (r.breathRate in 4..40) breath += BreathRate(r.timestamp, r.breathRate)
             is PaiRecord -> {
-                pai += PaiSample(r.timestamp, r.dailyPai, r.totalPai, r.restHr, r.maxHr)
+                pai += PaiSample(r.timestamp, r.dailyPai, r.totalPai, r.restHr, r.maxHr, r.nextActivityScores?.getOrNull(1))
                 // The strap's resting-HR profile; used only for days without a real resting value.
                 if (r.restHr in 30..120) restingIfMissing += RestingHeartRate(dayStart(r.timestamp), r.restHr)
             }
@@ -518,12 +523,9 @@ class HistorySync(
         },
     )
 
-    /** Activity record size: the START size field counts records, so bytes ÷ records gives it. */
-    private fun recordSize(code: Int, payload: ByteArray, sizeField: Long): Int {
-        if (code != HistoryDataType.ACTIVITY.code) return 4
-        val unit = if (sizeField > 0 && payload.size % sizeField == 0L) (payload.size / sizeField).toInt() else 0
-        return if (unit == 4 || unit == 8) unit else ActivityLayout.detect(payload)
-    }
+    /** Activity record size: the START size field counts records; then the 0x0028 feature blob, then a guess. */
+    private fun recordSize(code: Int, payload: ByteArray, sizeField: Long): Int =
+        if (code != HistoryDataType.ACTIVITY.code) 4 else ActivityLayout.recordSize(payload, sizeField, session.features)
 
     private fun dayStart(epoch: Long) = Instant.ofEpochSecond(epoch).atZone(zone).toLocalDate().atStartOfDay(zone).toEpochSecond()
 
@@ -543,3 +545,10 @@ class HistorySync(
         private const val DUMP_CHUNKS = 5
     }
 }
+
+/** A strap workout summary (type 5) as stored. The subtype is kept so auto-detected workouts can be told apart (codemap 05 §8). */
+internal fun workoutRow(r: WorkoutSummary): Workout = Workout(
+    r.trackId, r.trackId + (r.exerciseTime ?: r.totalTime ?: 0), r.sportType, r.exerciseTime ?: r.totalTime,
+    r.calories, r.averageHeartRate, r.maxHeartRate, r.minHeartRate, r.aerobicTrainingEffect,
+    r.anaerobicTrainingEffect, r.trainingLoad, r.vo2max, r.steps, subtype = r.subtype,
+)

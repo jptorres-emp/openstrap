@@ -8,7 +8,7 @@ How Zepp tells the strap that a workout started on the phone, so the strap runs 
 adb shell am start -n org.openstrap.app/.MainActivity --ez strap_sessions true
 ```
 
-Source: the teardown's codemap, `analysis/helio-codemap/05-realtime-and-workouts.md` §5. Zepp classes: module `kb70`, state map `lb70`, SportInfo codec `vy60`, version model `q3d0`, caller `uv60` ("SportDeviceManager").
+Source: the teardown's codemap, `analysis/codemap/05-realtime-and-workouts.md` §5. Zepp classes: module `kb70`, state map `lb70`, SportInfo codec `vy60`, version model `q3d0`, caller `uv60` ("SportDeviceManager").
 
 ## 1. Framing
 

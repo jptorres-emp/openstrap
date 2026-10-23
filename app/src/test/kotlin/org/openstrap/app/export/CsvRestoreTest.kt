@@ -16,6 +16,7 @@ import org.openstrap.app.data.db.HeartRateSample
 import org.openstrap.app.data.db.OpenStrapDatabase
 import org.openstrap.app.data.db.SleepSession
 import org.openstrap.app.data.db.SleepStage
+import org.openstrap.app.data.db.WearEventRow
 import org.openstrap.app.data.db.Workout
 import org.openstrap.app.data.db.WorkoutHeartRate
 import org.robolectric.RobolectricTestRunner
@@ -70,6 +71,9 @@ class CsvRestoreTest {
             d.insertWorkouts(listOf(workout(start, start + 3600)))
             d.insertWorkoutHeartRate(listOf(WorkoutHeartRate(start, start + 60, 120), WorkoutHeartRate(start, start + 120, 130)))
         }
+        // The strap off for an hour, then the link dropping.
+        val off = day - 3 * 86_400L
+        d.insertWearEvents(listOf(WearEventRow(off, false), WearEventRow(off + 3600, true), WearEventRow(off + 7200, null)))
     }
 
     @Test fun `a backup restored onto an empty phone matches the phone it came from`() = runTest {

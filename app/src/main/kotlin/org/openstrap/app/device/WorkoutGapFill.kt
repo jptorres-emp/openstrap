@@ -1,15 +1,18 @@
 package org.openstrap.app.device
 
+import org.openstrap.app.data.WorkoutEffectEngine
 import org.openstrap.app.data.WorkoutRecorder
 import org.openstrap.app.data.db.HealthDao
 import org.openstrap.app.data.db.HeartRateSample
+import org.openstrap.app.data.settings.UserProfile
 
 /**
  * After a history sync, fills the minutes each recent phone workout missed (a disconnect, a killed app) from what the
  * strap recorded meanwhile ([WorkoutRecorder.missingMinutes], [WorkoutRecorder.fillFromHistory]), then refreshes the
- * workout's averages. Running it again changes nothing once a minute is filled.
+ * workout's averages and effect ([org.openstrap.app.data.WorkoutEffectEngine]). Running it again changes nothing once a
+ * minute is filled. [profile] gives the max HR the effect is worked out with.
  */
-class WorkoutGapFill(private val dao: HealthDao) {
+class WorkoutGapFill(private val dao: HealthDao, private val profile: suspend () -> UserProfile = { UserProfile() }) {
 
     /** A line for the log when anything was filled, else null. */
     suspend fun run(now: Long = System.currentTimeMillis() / 1000): String? {
@@ -35,7 +38,11 @@ class WorkoutGapFill(private val dao: HealthDao) {
         if (rows.isEmpty()) return 0
         dao.insertAppWorkoutHeartRateIfMissing(rows)
         // The recording workout gets its figures when it ends.
-        if (w.end != null) dao.upsertAppWorkout(WorkoutRecorder.withStats(w, dao.appWorkoutHeartRateOnce(w.start)))
+        if (w.end != null) {
+            val all = dao.appWorkoutHeartRateOnce(w.start)
+            val stats = WorkoutRecorder.withStats(w, all)
+            dao.upsertAppWorkout(runCatching { WorkoutEffectEngine(dao).withEffect(stats, all, profile()) }.getOrDefault(stats))
+        }
         return rows.size
     }
 

@@ -1,10 +1,22 @@
 package org.openstrap.protocol.history
 
+import org.openstrap.protocol.services.DeviceFeatures
+
 /**
- * The activity record size (4 or 8 bytes) comes from a feature blob we don't read (02 §3.1).
- * Pick the layout under which the `mode` bytes look like real activity modes.
+ * The activity record size (4 or 8 bytes) comes from alg entry 0 of the runtime feature blob (02 §3.1).
+ * Without it, pick the layout under which the `mode` bytes look like real activity modes.
  */
 object ActivityLayout {
+
+    /**
+     * Record size: the START size field when it divides the payload into 4- or 8-byte records (measured on the
+     * strap), else the feature blob's value, else [detect].
+     */
+    fun recordSize(payload: ByteArray, sizeField: Long, features: DeviceFeatures?): Int {
+        val unit = if (sizeField > 0 && payload.size % sizeField == 0L) (payload.size / sizeField).toInt() else 0
+        if (unit == 4 || unit == 8) return unit
+        return features?.activityRecordSize ?: detect(payload)
+    }
 
     fun detect(payload: ByteArray): Int {
         if (payload.size % 8 != 0) return 4

@@ -31,6 +31,7 @@ import org.openstrap.app.data.db.SportEffectRow
 import org.openstrap.app.data.db.Spo2Sample
 import org.openstrap.app.data.db.StrapReadinessRow
 import org.openstrap.app.data.db.StressSample
+import org.openstrap.app.data.db.WearEventRow
 import org.openstrap.app.data.db.Workout
 import org.openstrap.app.data.db.WorkoutHeartRate
 import java.time.Instant
@@ -168,23 +169,23 @@ val CSV_TABLES: List<CsvTable<*>> = listOf(
         Key("breath_rate", "timestamp", "epoch"),
         { d, f, t -> d.breathRateOnce(f, t) }, { listOf(iso(it.timestamp), it.timestamp, it.perMinute) },
         { BreathRate(it.long("epoch"), it.int("breaths_per_minute")) }, { d, r -> d.insertBreathRate(r) }),
-    CsvTable("pai.csv", "time,epoch,daily,total,resting_hr,max_hr",
+    CsvTable("pai.csv", "time,epoch,daily,total,resting_hr,max_hr,tomorrow_total",
         Key("pai", "timestamp", "epoch"),
-        { d, f, t -> d.paiOnce(f, t) }, { listOf(iso(it.timestamp), it.timestamp, it.daily, it.total, it.restingHeartRate, it.maxHeartRate) },
-        { PaiSample(it.long("epoch"), it.float("daily"), it.float("total"), it.int("resting_hr"), it.int("max_hr")) },
+        { d, f, t -> d.paiOnce(f, t) }, { listOf(iso(it.timestamp), it.timestamp, it.daily, it.total, it.restingHeartRate, it.maxHeartRate, it.tomorrowTotal) },
+        { PaiSample(it.long("epoch"), it.float("daily"), it.float("total"), it.int("resting_hr"), it.int("max_hr"), it.floatOrNull("tomorrow_total")) },
         { d, r -> d.insertPai(r) }),
-    CsvTable("workout.csv", "start,start_epoch,end_epoch,sport_type,exercise_seconds,calories,avg_hr,max_hr,min_hr,aerobic_te,anaerobic_te,training_load,vo2max,steps",
+    CsvTable("workout.csv", "start,start_epoch,end_epoch,sport_type,exercise_seconds,calories,avg_hr,max_hr,min_hr,aerobic_te,anaerobic_te,training_load,vo2max,steps,subtype",
         Key("workout", "start", "start_epoch", span = Span("`end`", "end_epoch")),
         { d, f, t -> d.workouts().first().filter { it.start in f..t }.sortedBy { it.start } },
         {
             listOf(iso(it.start), it.start, it.end, it.sportType, it.exerciseSeconds, it.calories, it.averageHeartRate, it.maxHeartRate,
-                it.minHeartRate, it.aerobicTrainingEffect, it.anaerobicTrainingEffect, it.trainingLoad, it.vo2max, it.steps)
+                it.minHeartRate, it.aerobicTrainingEffect, it.anaerobicTrainingEffect, it.trainingLoad, it.vo2max, it.steps, it.subtype)
         },
         {
             Workout(it.long("start_epoch"), it.long("end_epoch"), it.int("sport_type"), it.intOrNull("exercise_seconds"),
                 it.intOrNull("calories"), it.intOrNull("avg_hr"), it.intOrNull("max_hr"), it.intOrNull("min_hr"),
                 it.floatOrNull("aerobic_te"), it.floatOrNull("anaerobic_te"), it.intOrNull("training_load"),
-                it.intOrNull("vo2max"), it.intOrNull("steps"))
+                it.intOrNull("vo2max"), it.intOrNull("steps"), it.intOrNull("subtype"))
         },
         { d, r -> d.insertWorkouts(r) }),
     CsvTable("workout_hr.csv", "workout_start_epoch,epoch,bpm",
@@ -194,13 +195,13 @@ val CSV_TABLES: List<CsvTable<*>> = listOf(
     // Workouts recorded on the phone; one still recording is left out until it ends.
     CsvTable("app_workout.csv",
         "start,start_epoch,end_epoch,sport_type,source,pauses,end_reason,avg_hr,max_hr,ask_to_end,recorded_end_epoch,shown_start_epoch,target," +
-            "use_gps,keep_route,distance_m,distance_from_steps,rest,sets_target,laps",
+            "use_gps,keep_route,distance_m,distance_from_steps,rest,sets_target,laps,epoc,aerobic_te,recovery_minutes,vo2max",
         Key("app_workout", "start", "start_epoch", span = Span("`end`", "end_epoch")),
         { d, f, t -> d.appWorkoutsAll().filter { it.start in f..t } },
         {
             listOf(iso(it.start), it.start, it.end, it.sportType, it.source, it.pauses, it.endReason, it.averageHeartRate, it.maxHeartRate,
                 it.askToEnd, it.recordedEnd, it.shownStart, it.target, it.useGps, it.keepRoute, it.distanceMeters, it.distanceFromSteps,
-                it.rest, it.setsTarget, it.laps)
+                it.rest, it.setsTarget, it.laps, it.epoc, it.aerobicTrainingEffect, it.recoveryMinutes, it.vo2max)
         },
         {
             AppWorkout(it.long("start_epoch"), it.long("end_epoch"), it.int("sport_type"), it.intOrNull("source") ?: AppWorkout.SOURCE_APP,
@@ -210,7 +211,8 @@ val CSV_TABLES: List<CsvTable<*>> = listOf(
                 useGps = it.has("use_gps") && it.bool("use_gps"), keepRoute = it.has("keep_route") && it.bool("keep_route"),
                 distanceMeters = it.floatOrNull("distance_m"), distanceFromSteps = it.has("distance_from_steps") && it.bool("distance_from_steps"),
                 rest = if (it.has("rest")) it.string("rest") else null, setsTarget = it.intOrNull("sets_target"),
-                laps = if (it.has("laps")) it.string("laps") else "")
+                laps = if (it.has("laps")) it.string("laps") else "", epoc = it.floatOrNull("epoc"),
+                aerobicTrainingEffect = it.floatOrNull("aerobic_te"), recoveryMinutes = it.intOrNull("recovery_minutes"), vo2max = it.floatOrNull("vo2max"))
         },
         { d, r -> d.insertAppWorkouts(r) }),
     CsvTable("app_workout_hr.csv", "workout_start_epoch,epoch,bpm,from_history",
@@ -219,10 +221,15 @@ val CSV_TABLES: List<CsvTable<*>> = listOf(
         { AppWorkoutHeartRate(it.long("workout_start_epoch"), it.long("epoch"), it.int("bpm"), it.has("from_history") && it.bool("from_history")) },
         { d, r -> d.insertAppWorkoutHeartRate(r) }),
     // Only routes the wearer chose to keep are ever stored, so only those are exported.
-    CsvTable("app_workout_route.csv", "workout_start_epoch,epoch,lat,lon,accuracy_m",
+    CsvTable("app_workout_route.csv", "workout_start_epoch,epoch,lat,lon,accuracy_m,speed_ms,bearing_deg,altitude_m,speed_accuracy_ms,bearing_accuracy_deg",
         Key("app_workout_route", "workoutStart", "workout_start_epoch", parent = "app_workout"),
-        { d, f, t -> d.routeAll().filter { it.workoutStart in f..t } }, { listOf(it.workoutStart, it.timestamp, it.lat, it.lon, it.accuracy) },
-        { AppWorkoutRoutePoint(it.long("workout_start_epoch"), it.long("epoch"), it.string("lat").toDouble(), it.string("lon").toDouble(), it.float("accuracy_m")) },
+        { d, f, t -> d.routeAll().filter { it.workoutStart in f..t } },
+        { listOf(it.workoutStart, it.timestamp, it.lat, it.lon, it.accuracy, it.speed, it.bearing, it.altitude, it.speedAccuracy, it.bearingAccuracy) },
+        {
+            AppWorkoutRoutePoint(it.long("workout_start_epoch"), it.long("epoch"), it.string("lat").toDouble(), it.string("lon").toDouble(), it.float("accuracy_m"),
+                it.floatOrNull("speed_ms"), it.floatOrNull("bearing_deg"), if (it.has("altitude_m")) it.string("altitude_m").toDouble() else null,
+                it.floatOrNull("speed_accuracy_ms"), it.floatOrNull("bearing_accuracy_deg"))
+        },
         { d, r -> d.insertRoutePoints(r) }),
     CsvTable("app_workout_set.csv", "workout_start_epoch,set_index,start_epoch,end_epoch,rest_end_epoch",
         Key("app_workout_set", "workoutStart", "workout_start_epoch", parent = "app_workout"),
@@ -287,6 +294,11 @@ val CSV_TABLES: List<CsvTable<*>> = listOf(
         Key("health_alert", "timestamp", "epoch"),
         { d, f, t -> d.healthAlerts(f, t).first() }, { listOf(iso(it.timestamp), it.timestamp, it.type, it.value) },
         { HealthAlertRow(it.long("epoch"), it.int("type"), it.long("value")) }, { d, r -> d.insertHealthAlerts(r) }),
+    // The strap's on/off-body changes; worn is blank where the link went down and the state became unknown.
+    CsvTable("wear_event.csv", "time,epoch,worn",
+        Key("wear_event", "timestamp", "epoch"),
+        { d, f, t -> d.wearEventsOnce(f, t + 1).filter { it.timestamp in f..t } }, { listOf(iso(it.timestamp), it.timestamp, it.worn) },
+        { WearEventRow(it.long("epoch"), if (it.has("worn")) it.bool("worn") else null) }, { d, r -> d.insertWearEvents(r) }),
     // What the user entered: the morning check-in and day tags can't be synced again from the strap.
     CsvTable("check_in.csv", "day,day_epoch,feeling,updated_epoch",
         Key("check_in", "day", "day_epoch"),

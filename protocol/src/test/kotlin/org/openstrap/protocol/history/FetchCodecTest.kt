@@ -3,6 +3,7 @@ package org.openstrap.protocol.history
 import org.openstrap.protocol.ByteWriter
 import org.openstrap.protocol.hexToBytes
 import org.openstrap.protocol.toHex
+import org.openstrap.protocol.services.DeviceFeatures
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -276,5 +277,47 @@ class ActivityPaddingTest {
         val r = HistoryParsers.activity.parse("ff".repeat(24).hexToBytes(), ParseContext(1000, activityRecordSize = 8)) as ParseResult.Success
         org.junit.Assert.assertTrue(r.records.isEmpty())
         org.junit.Assert.assertEquals(1000 + 180L, r.nextCursor)
+    }
+}
+
+class FeatureGatedPlanTest {
+    private fun features(vararg g2Bits: Int, alg: Int? = null): DeviceFeatures {
+        val g2 = ByteArray(10)
+        for (b in g2Bits) g2[b / 8] = (g2[b / 8].toInt() or (1 shl (b % 8))).toByte()
+        return DeviceFeatures(0, if (alg != null) 0x0A else 0x02, null, g2, null, alg?.let { listOf(it) }, null)
+    }
+
+    private fun codes(advertised: Set<Int>?, f: DeviceFeatures?) = HistoryTypeSpecs.plan(advertised, f).map { it.code }.toSet()
+
+    @Test
+    fun gatesOnRuntimeBits() {
+        val advertised = setOf(1, 38, 70, 72, 73, 74)
+        // No bitmap: today's defaults.
+        assertEquals(advertised, codes(advertised, null))
+        // The advertised list wins over clear bits, which are only logged.
+        assertEquals(advertised, codes(advertised, features(21, 68)))
+        assertEquals(listOf(70, 72, 73), HistoryTypeSpecs.featureDisagreements(advertised, features(21, 68)).sorted())
+        assertTrue(HistoryTypeSpecs.featureDisagreements(advertised, features(21, 62, 65, 66, 68)).isEmpty())
+        // No advertised list: a set bit brings in an IF_ADVERTISED type, a clear bit drops an EXPECTED one.
+        assertTrue(70 in codes(null, features(62, 65)))
+        assertFalse(70 in codes(null, features(65)))
+        assertFalse(72 in codes(null, features(62)))
+        // Group 2 not reported: defaults again.
+        val noG2 = DeviceFeatures(0, 0x01, byteArrayOf(0x10), null, null, null, null)
+        assertEquals(advertised, codes(advertised, noG2))
+        // NOT_APPLICABLE stays off whatever the bit says (HLD, 63).
+        assertFalse(71 in codes(setOf(71), features(63)))
+    }
+
+    @Test
+    fun recordSizeFromFeatures() {
+        val payload = ByteArray(24) { 1 }
+        // The size field wins when it divides the payload cleanly.
+        assertEquals(8, ActivityLayout.recordSize(payload, 3, features(alg = 4)))
+        // Otherwise the feature blob's value, then the guess.
+        assertEquals(4, ActivityLayout.recordSize(payload, 0, features(alg = 4)))
+        assertEquals(8, ActivityLayout.recordSize(payload, 0, features(alg = 8)))
+        assertEquals(ActivityLayout.detect(payload), ActivityLayout.recordSize(payload, 0, features()))
+        assertEquals(ActivityLayout.detect(payload), ActivityLayout.recordSize(payload, 0, null))
     }
 }

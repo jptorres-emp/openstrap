@@ -32,7 +32,7 @@ OpenStrap is a wellness app. None of these numbers is a medical measurement.
 
 **Taken from the strap as is:** heart rate, steps, sleep sessions and stages, RMSSD (HRV) samples, SpO₂, stress (0–100), skin temperature, breathing rate, the daily resting HR, PAI, the strap's sleep score, its sleep-apnea summary (desaturation event count), and workout records with their training effect.
 
-**Calculated by OpenStrap:** everything in sections 3–14: Readiness, body-signal alerts, Charge, training load, Strain, fitness/fatigue, sleep score (when the strap gave none), sleep debt, sleep regularity, sleep-health count, active minutes, distance, calories, VO2max, workout zones and recovery HR.
+**Calculated by OpenStrap:** everything in sections 3–14: Readiness, body-signal alerts, Charge, training load, Strain, fitness/fatigue, sleep score (when the strap gave none), sleep debt, sleep regularity, sleep-health count, active minutes, distance, calories, VO2max, workout zones and recovery HR, and training effect, EPOC, recovery time and run VO2max for workouts started in OpenStrap.
 
 **Logged but not used in any score:** the strap's own Readiness and its parts, and your morning check-in (1–5, asked on Today before noon). They're kept for the calibration review.
 
@@ -224,7 +224,7 @@ Temperature, breathing and blood-oxygen baselines use all usable past nights, no
 * **No HRV and no resting HR contributor → no score.** Sleep alone isn't readiness. You see the sleep contributor and the strap's estimate instead ("withheld").
 * Otherwise: **Readiness = weighted average of the contributors present.** The weights are re-scaled over what's there, so a missing signal doesn't count as zero.
 * **Red-flag cap:** if any body signal (HRV, resting HR, temperature, breathing, blood oxygen) scored below 40, Readiness can be at most that score + 30. One very bad signal shouldn't be averaged away by a good night's sleep.
-* **Alert cap:** during a body-signal Alert, Readiness is at most 55.
+* **Alert cap:** during a body-signal Alert, Readiness is at most 54, so it always lands in the lowest band.
 
 ### Extras shown with Readiness
 
@@ -240,7 +240,7 @@ Tonight's events per hour, next to the median of your earlier nights (up to 60, 
 
 ## 6. Body signals off baseline
 
-A night-by-night watch on resting HR, skin temperature and breathing rate, for "something's off, take it easy". Each night is **Normal**, **Watch** (shown in the app) or **Alert** (one push notification, Readiness capped at 55).
+A night-by-night watch on resting HR, skin temperature and breathing rate, for "something's off, take it easy". Each night is **Normal**, **Watch** (shown in the app) or **Alert** (one push notification, Readiness capped at 54, the top of the lowest band).
 
 ### Baselines for this check
 
@@ -287,21 +287,29 @@ A body-battery: sleep fills it, and the day drains it.
 
 ### How it runs
 
-* The simulation starts **48 hours before** the selected day at 50. Two nights of sleep wash the starting guess out.
+* The simulation starts **8 days before** the selected day at 50. The first night washes the starting guess out, and the week gives the wake values for a restart after a night with the strap off. For a past day it runs up to 14 hours past the day's end, only to see when the strap went back on.
 * Every minute gets one state, checked **in this order**:
 
 | State | When | Change per minute |
 |---|---|---|
 | **Sleep** | inside a sleep stage | + 0.006 × stage weight × relaxation × HRV factor × (100 − charge) |
-| **No data** | no heart rate (strap off) | 0, the value holds |
-| **Exercise** | HRR ≥ 30 % | − 0.04 − 0.32 × TRIMP of that minute |
+| **Not worn** | no heart rate, and the strap said it was off your body, or marked off-wrist, or a gap of 10+ minutes | − 0.0482 (charge ≥ 50) or − 0.0349 (below), then no value (see below) |
+| **No data** | a heart-rate gap under 10 minutes, or one not synced yet | 0, the value holds |
+| **Exercise** | HRR ≥ 30 % and moving, or 10+ minutes in a row at HRR ≥ 30 %, or in a workout's stress exclusion | − 0.04 − 0.32 × TRIMP of that minute |
 | **Exercise recovery** | after exercise, while HR isn't rising | − 0.04 |
-| **Activity** | HRR ≥ 20 %, or ≥ 60 steps that minute | − 0.04 − 0.32 × TRIMP of that minute |
+| **Activity** | HRR ≥ 20 % and moving (or in a workout's stress exclusion), or ≥ 60 steps that minute | − 0.04 − 0.32 × TRIMP of that minute |
+| **Around a workout** | in the stress exclusion (below) | Activity inside the workout, Exercise recovery in the 20 minutes after; Rest in either when HRR < 10 % |
 | **Stress** | stress ≥ your threshold for 3+ minutes in a row, awake | − 0.04 − 0.007 × (stress − threshold) |
-| **Relax** | stress < 25 and < 10 steps | − 0.04 + 0.25 × 0.006 × 0.8 × (100 − charge) |
-| **Rest** | anything else awake | − 0.04 (≈ 2.4 per hour) |
+| **Relax** | stress < 25, < 10 steps and HRR < 20 % | + 0.00015 × (100 − charge), no drain (85 → 86 over 8 hours) |
+| **Rest** | anything else awake | − 0.0005 × charge (0.04 at 80, 0.025 at 50) |
 
 Charge is always kept within 0–100.
+
+* **Moving** means the strap counted 1–250 steps that minute, as for daily load. Sitting with a raised heart rate (heat, coffee, a fever) isn't Activity or Exercise outside a workout, short of a sustained run (below): it's Stress if the stress score says so, otherwise Rest, and it can't Relax.
+* **Sustained effort:** 10 or more minutes in a row at HRR ≥ 30 % outside a workout count as Exercise even without steps (unrecorded cycling or rowing). Shorter spikes stay Stress or Rest.
+* **Not worn** uses the strap's own off-body reports where OpenStrap was connected to hear them, plus the heart-rate gap guess everywhere (an "on body" report doesn't cancel it, as it may be stale). Charge then follows Zepp: it drifts down at Zepp's default no-wear rate (about 2.9 an hour above 50). After 384 not-worn minutes (6.4 hours) since waking, or straight away when the strap is off over your usual sleep time, there is no value (a gap in the chart). After a night off, Charge restarts when the strap is back on from the median of your last 7 wake values (80 without any), and the day says "Strap off overnight, Charge estimated." After a long stretch off in the day, the gap lasts until the next sleep, which starts from 50.
+* **Rest drain** is proportional to charge, so a desk day still runs Charge down but more slowly as it falls, as Zepp's mental pool does; Zepp's physical pool doesn't drain at rest at all.
+* **Body-signal Alert:** from the start of a night in Alert until the next sleep starts, every gain is × 0.5 and every drain × 1.5 (Zepp's health-alarm limits). Watch changes nothing.
 
 **Sleep details**
 * **Stage weight:** deep 1.0, light 0.8, REM 0.65, awake-inside-sleep 0.1.
@@ -315,12 +323,18 @@ Charge is always kept within 0–100.
 
 **Stress readings:** a minute uses the latest stress reading from the past 10 minutes.
 
+**Stress exclusion around workouts:** the strap's stress score comes from HRV, which exercise suppresses, so readings taken during a stored workout (phone or strap, active time only, pauses left out) or in the **20 minutes after** it ends are ignored. 20 minutes is the half-life of the after-burn tally above. A phone workout's pause counts as an end, so a pause is also covered for its first 20 minutes. In that window:
+* Charge never enters Stress or Relax, and a reading taken there isn't carried into the minutes after it.
+* The personal stress threshold doesn't use those readings.
+* The day's stress (the Today tile, the day chart, which shows a gap, and the daily average, lowest and highest behind the week, month and year views) leaves them out.
+* The readings are still stored and exported.
+
 ### Your personal stress threshold
 
 The point where the strap's stress score starts to drain Charge.
 
 * Default: **60**, where Zepp's "medium" band begins.
-* Personal: built from **calm readings** over the last 14 days. A calm reading is awake, under 10 steps that minute, and HRR under 20 %.
+* Personal: built from **calm readings** over the last 14 days. A calm reading is awake, under 10 steps that minute, HRR under 20 %, and outside the stress exclusion around workouts.
 * Threshold = median calm reading + 10, kept within 50–70.
 * Needs readings on at least 3 days and at least 60 readings.
 
@@ -328,7 +342,7 @@ The point where the strap's stress score starts to drain Charge.
 
 * Charge now (the last minute with data), Charge at wake, and the day's highest and lowest.
 * **Recharged:** the total gained during the day.
-* **Drained:** split into exercise, stress and everyday living. In exercise and stress minutes, the basic 0.04 part goes to "living" and the rest to exercise or stress.
+* **Drained:** split into exercise, stress and everyday living. In exercise and stress minutes, the basic 0.04 part (× 1.5 in Alert) goes to "living" and the rest to exercise or stress.
 * Nothing is shown until the simulation has seen at least one sleep, because without one the number would only reflect the starting guess.
 
 ---
@@ -337,8 +351,12 @@ The point where the strap's stress score starts to drain Charge.
 
 ### Daily training load (TRIMP)
 
-* Add up TRIMP over the day's **awake** minutes at HRR ≥ 20 %. Below that it's everyday living.
-* A minute only counts when at least 3 of the last 5 minutes (itself included) are also ≥ 20 %, so single PPG spikes don't add load.
+Two parts, added up for the day's load and shown split on the Load screen ("62 today · 48 workouts · 14 everyday"), as Zepp's Exertion splits workout from everyday activity:
+
+* **Workouts:** every minute of a recorded workout (phone or strap) counts, whatever the intensity, except time a phone workout was paused, so an easy warm-up counts too. The minute's heart rate comes from the workout's own recording when it has one. A phone and a strap workout over the same time count each minute once.
+* **Everyday:** outside workouts, a minute counts only when you're **awake** and the strap counted **at least one step** that minute, at HRR ≥ **35 %**, or at HRR ≥ **20 %** when it has **60 or more steps** (a walk). A raised heart rate while sitting is not training load. The walking exception is there because sustained walking at about 100 steps a minute sits at HRR 24–34 %, under the 35 % line. A minute also needs at least 3 of the last 5 minutes (itself included) to pass the same test, so single PPG spikes don't add load.
+* Steps are the movement signal because the strap's other per-minute activity fields don't separate sitting from walking in real data. Cycling or weights outside a recorded workout therefore add nothing; record a workout for them.
+* Fitness, fatigue, the acute:chronic ratio and Readiness all use the total. A workout's EPOC (below, section 13) is a different measure and is never added in.
 * For history, days with under 8 hours of heart-rate data are skipped (strap mostly off). Up to 90 days are used.
 * Today's load is the running total so far.
 
@@ -388,6 +406,20 @@ Used only when the strap didn't give its own score:
 * Without stages (no WASO), duration alone.
 * Sleep stages are shown but **not scored**: consumer devices agree poorly with lab staging.
 
+### Sleep score rating and headline
+
+The sleep score (the strap's, or OpenStrap's above) is rated in Zepp's bands: **90–100 Optimal, 80–89 Good, 60–79 Fair, 0–59 Pay attention**. The Sleep screen shows it next to the score, and the Recovery tab uses it for the Sleep contributor. Other contributors keep their own 85 / 70 / 55 bands.
+
+The headline names what pulled the night down, checked in this order:
+
+* **Short night:** under 6 h asleep (the bottom of Zepp's duration bands).
+* **Broken sleep:** 30 min or more awake after falling asleep (where continuity starts losing points), or 6 or more wake-ups (about one an hour, set high because wake detection is the least reliable part of staging).
+* Both → **Short, broken night**. Either one wins over the score: a short night at 70 is still "Short night".
+* Otherwise by score: 90+ **Great night**, 80+ **Good night**.
+* Below 80, **Light sleep** if deep + REM is under 25 % of time asleep (adults usually spend 40–50 % there), else **Okay night**. This is the weakest cause because stages aren't reliable.
+
+Total sleep in "What shaped the score" is rated against need, plus Zepp's oversleep bands: over 9 h 30 is Fair, over 10 h Pay attention.
+
 ### Sleep need
 
 * 8 h for ages 18–64, 7 h 30 m from 65.
@@ -404,12 +436,15 @@ Built over the last 14 nights, oldest first. Naps count, and missing nights are 
 
 ### Sleep Regularity Index (SRI)
 
+This is the **Regularity** number on the Sleep screen ("This week" and "Sleep health"), worked out for the selected day.
+
 * Each day is split into 1,440 one-minute slots from **noon to noon**, so a night isn't cut at midnight.
 * Each slot is marked asleep (deep, light, REM, naps included), awake (an awake stage, or the strap was worn), or missing.
-* Each slot is compared with the same slot the next day, over 8 days (7 pairs). Only pairs where both minutes are known count.
-* **SRI = −100 + 200 × (matching pairs ÷ valid pairs).** 100 means an identical schedule every day.
-* Withheld under 120 hours of valid pairs. Then the fallback is the spread (SD) of your sleep midpoints over the last 7 days, from at least 4 sleeps.
-* Bands: under 72 irregular, 72–78 fair, 79–86 regular, 87+ very regular.
+* Each slot is compared with the same slot the next day, over 8 days (7 pairs), ending at noon on the selected day. Only pairs where both minutes are known count.
+* **SRI = −100 + 200 × (matching pairs ÷ valid pairs).** This is the standard scale (Phillips et al. 2017, as GGIR and Windred et al. 2024 report it): 100 means an identical schedule every day, 0 is what random sleep gives; in UK Biobank the middle half scored 73.8–86.3. Shown rounded; the bar is clamped to 0–100.
+* Withheld under 120 hours of valid pairs (7200, Windred's validity rule). "This week" then says "Not enough nights yet" with the hours so far; the Sleep-health panel falls back to the spread (SD) of your sleep midpoints over the last 7 days, from at least 4 sleeps.
+* Bands: under 72 irregular, 72–78 fair, 79–86 regular, 87+ very regular. These are the UK Biobank SRI quintile cuts (71.65 / 78.56 / 83.17 / 87.32, median 81.0; [Windred et al. 2024](https://pmc.ncbi.nlm.nih.gov/articles/PMC10782501/)), rounded, with the middle two fifths merged. Irregular is the bottom fifth, where most of the mortality risk sat. They place you against that population; they aren't clinical thresholds, and the strap's sleep/wake minutes aren't GGIR's.
+* Zepp's 60/80/90 bands belong to its own night-overlap score (a different formula; see `analysis/native/05-sleep-regularity.md` in the parent project) and aren't used.
 
 ### Sleep-health count (0–3)
 
@@ -420,13 +455,9 @@ One point each for:
 
 The sleep midpoint is flagged when it falls outside 01:30–04:30, but it's never scored.
 
-### Bedtime/wake regularity score (Sleep screen panel)
+### Usual sleep times (Sleep screen, "This week")
 
-A simpler, Zepp-style score over the last 7 nights. It needs 5 of them.
-
-* Spread = average of the standard deviation of bedtime and the standard deviation of wake time, in minutes.
-* **Score = 100 × (1 − spread ÷ 120)**, kept within 0–100. 15 min spread ≈ 88, 30 min = 75, 1 h = 50.
-* Bands: 90+ very regular, 80–89 regular, 60–79 fairly regular, under 60 irregular.
+The average fall-asleep and wake-up time over the last 7 nights' main sleeps, from as many of them as have sleep. Bedtime is averaged from noon and wake time from midnight, so neither wraps in a normal night. They're drawn as dashed lines on the week chart. They are not scored: the bedtime/wake-spread score that used to sit here (100 × (1 − spread ÷ 120), Zepp's bands) was replaced by the SRI above.
 
 ### Sleep vitals "usual / higher / lower"
 
@@ -575,7 +606,54 @@ Your estimate is compared with the treadmill reference table for your age decade
   * Time between samples counts toward the zone of the earlier sample, at most 5 s per gap.
   * Max HR here is the strap's value from the workout. Without it, your usual max HR from section 4 (tested value, else Tanaka or the strap's value, raised by observed peaks).
 * **Recovery HR:** HR at the end minus HR 60 s and 120 s later. Each reading is a median over ± 2 s. It's only treated as meaningful when you finished at ≥ 65 % of max HR.
-* Training effect and the strap's recovery time come from the strap unchanged.
+* Training effect and the strap's recovery time come from the strap unchanged for the strap's own workouts. Workouts started in OpenStrap get OpenStrap's own, below.
+
+### Training effect, EPOC, recovery and VO2max for phone workouts
+
+The strap works these out for the workouts it records. Zepp works them out for app workouts with neural networks whose weights are its own (analysis `native/04` §1), so OpenStrap uses open methods on the same scales. Code: `WorkoutEffect.kt`, fed by `WorkoutEffectEngine.kt`. Worked out when a workout ends, again after a trim or a gap fill, and for older workouts the first time their summary is opened.
+
+**Epochs.** Heart rate in 5-second epochs, each read as the median of its readings between 40 and 220 bpm, as Zepp does. An epoch with no reading keeps the last one twice, then counts as missing: a dropout neither adds load nor clears it.
+
+**EPOC (ml/kg), shown as EPOC.** Built up epoch by epoch from heart-rate reserve x (0 at resting, 1 at max; resting and max HR from section 4), the structure Firstbeat describes (EPOC as a running function of its last value, intensity and time, with %VO2max from %HRR):
+
+EPOC ← EPOC + [0.01 × (e^(7x) − 1) − 0.034 × (1 − x) × EPOC] × minutes
+
+* The first term rises steeply with intensity, as EPOC does (Børsheim & Bahr 2003). The second clears EPOC at Charge's rate at rest (×0.966 a minute, half-life about 20 minutes) and not at all at max.
+* The workout's EPOC is the peak, shown as a whole number labelled "EPOC", as the strap's is, so the two compare. It is the workout's effect figure, not daily load: daily load is TRIMP only (section 8).
+* 0.01 and 7 are OpenStrap's own fit to these points: 30 easy minutes at 60 % HRR ≈ 16; an hour at 65 % ≈ 40; six 3-minute intervals at 92 % ≈ 110; an hour at 85 % ≈ 200.
+
+**Aerobic training effect (0–5).** EPOC against Zepp's breakpoints for your activity class (analysis `native/04` §4.4–4.5), joined by straight lines and rounded down to a tenth:
+
+| Class (last 28 days' workout EPOC) | TE 1 | TE 2 | TE 3 | TE 4 | TE 5 |
+|---|---|---|---|---|---|
+| 40 (≤ 450) | 6.5 | 12.8 | 40.9 | 96.4 | 156.7 |
+| 50 (≤ 570, or none) | 7.9 | 15.7 | 49.7 | 119.8 | 199.2 |
+| 60 (≤ 720) | 9.4 | 18.6 | 58.8 | 141.3 | 242.1 |
+| 70 (≤ 870) | 10.8 | 21.5 | 67.5 | 163.9 | 292.4 |
+| 75 (≤ 1020) | 11.5 | 23.0 | 71.9 | 177.1 | 316.2 |
+| 80 (≤ 1320) | 12.3 | 24.5 | 76.2 | 189.7 | 343.3 |
+| 85 (≤ 1570) | 13.0 | 25.8 | 80.9 | 201.8 | 384.5 |
+| 90 (≤ 1920) | 13.8 | 27.5 | 85.3 | 215.3 | 418.9 |
+| 95 (≤ 2450) | 14.6 | 28.9 | 89.6 | 230.6 | 429.5 |
+| 100 (above) | 15.4 | 30.6 | 94.2 | 245.3 | 445.9 |
+
+* The 28-day sum adds the phone's workout EPOC and the strap's workout load, counting a workout both recorded once.
+* No effect for a minute or less, or under 1 ml/kg, as Zepp.
+
+**Anaerobic training effect** is not worked out ("—"). Zepp's comes from another network; heart rate alone lags short efforts too much for an open model to hold up.
+
+**Recovery time.** From aerobic TE, joined by straight lines: TE 1 → 6 h, 2 → 16 h, 3 → 28 h, 4 → 48 h, 5 → 72 h.
+
+* Up to 25 % longer when fatigue runs ahead of fitness: × (1 + 0.25 × (ATL − CTL) ÷ CTL), kept between ×1 and ×1.25, with CTL at least 5. Fitness and fatigue are section 8's 42/7-day model run over daily workout EPOC.
+* Never less than what an earlier workout (phone or strap) still has to run, as Zepp's own rule. Never more than 72 h.
+* A design choice, not a fitted model: Zepp switches its own off for app workouts (`native/04` §6.2), so only its shape is kept.
+
+**VO2max (outdoor runs with GPS).** The ACSM running equation on the level, VO2 = 3.5 + 0.2 × speed (m/min), at reserve x gives VO2max = 3.5 + (VO2 − 3.5) ÷ x (%HRR ≈ %VO2R, Swain & Leutholtz 1997). Gated as Zepp gates its own (`native/04` §5.2):
+
+* Outdoor run only, with GPS (the route in memory at the end, or a kept one).
+* At least 120 qualifying epochs (about 10 minutes): ≥ 1.5 m/s and ≥ half of max HR.
+* 2-minute windows every 30 s, from 2 minutes in. A window counts when its four 30-second speeds (from the smoothed track) have an SD ≤ 0.3 m/s, heart rate over its second minute (once HR has caught up with the pace) has an SD ≤ 4 bpm, x is 0.5–0.95, and GPS height changes by no more than 2 % of the distance.
+* The result is the median of at least 5 such windows, which must be at least 30 % of the windows run at pace, with their middle half within 5 ml/kg/min, and between 20 and 90. Otherwise none.
 
 ---
 
@@ -592,5 +670,5 @@ Your estimate is compared with the treadmill reference table for your age decade
 
 Found while writing this document. These are not bugs in the formulas above, but places where two parts of the app disagree or a setting isn't wired up. Worth a look before the 2026-10-30 review.
 
-1. **Two regularity measures.** The Sleep screen's bedtime/wake score (section 9) and the SRI behind the sleep-health count can disagree, since they measure different things.
+1. **Two regularity measures (fixed).** The Sleep screen used to show a bedtime/wake-spread score while the sleep-health count used the SRI. Both now use the SRI (section 9).
 2. **Two resting-HR definitions on purpose.** Readiness uses the lowest 30-minute average; body-signal alerts use the sleep-mean HR. This is intended: the calibration review will pick one.

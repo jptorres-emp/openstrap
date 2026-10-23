@@ -29,6 +29,8 @@ data class WorkoutAnalysis(
     val shownStart: Long = workout.start,
     /** A phone workout's end before the app or a trim moved it earlier; null when it ends where it was recorded. */
     val recordedEnd: Long? = null,
+    /** Recovery time in minutes: the strap's sport effect, or OpenStrap's own for a phone workout ([WorkoutEffect]). */
+    val recoveryMinutes: Int? = effect?.recoveryMinutes,
 ) {
     val durationSeconds: Long get() = end - shownStart
 
@@ -39,6 +41,8 @@ data class WorkoutAnalysis(
         const val MIN_EFFORT_PCT = 65
     }
     val sportName: String get() = Workouts.sportName(workout.sportType)
+    /** The strap recognised this workout by itself rather than being started on it (codemap 05 §8). */
+    val autoDetected: Boolean get() = !fromPhone && workout.subtype == Workouts.SUBTYPE_AUTO_DETECTED
 }
 
 object Workouts {
@@ -47,6 +51,17 @@ object Workouts {
     /** A sport effect belongs to a workout when it ends within this long of the workout's start. */
     private const val EFFECT_WINDOW_S = 12 * 3600L
     const val ZONES = 5
+    /** Summary `Type.subtype` for a workout the strap recognised on its own; 6 is a phone workout it mirrored (codemap 05 §8). */
+    const val SUBTYPE_AUTO_DETECTED = 1
+    /** Older auto-detected workouts arrive on a first sync of the strap's backlog and get no notification. */
+    const val AUTO_DETECT_NOTIFY_WINDOW_S = 24 * 3600L
+
+    /**
+     * Whether a strap workout just stored gets Zepp's "detected" notification (codemap 05 §8): only one the strap
+     * auto-detected, not stored before (the strap re-sends a workout whose detail failed), and ended within a day.
+     */
+    fun notifyAutoDetected(w: Workout, storedBefore: Boolean, now: Long): Boolean =
+        w.subtype == SUBTYPE_AUTO_DETECTED && !storedBefore && now - w.end <= AUTO_DETECT_NOTIFY_WINDOW_S
 
     /**
      * Ties a workout to its HR stream and sport effect. [maxHeartRate] comes from the strap's effect when it

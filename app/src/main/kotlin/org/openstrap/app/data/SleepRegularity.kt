@@ -27,7 +27,14 @@ object SleepRegularity {
     const val WAKE: Byte = 0
     const val MISSING: Byte = -1
 
-    /** Descriptive bands; the cut-offs are method-dependent. */
+    /**
+     * Descriptive bands at the UK Biobank SRI quintile cuts (Windred et al. 2024, n = 60,977, wrist accelerometry
+     * scored with GGIR): 71.65 / 78.56 / 83.17 / 87.32, median 81.0, rounded to 72 / 79 / 87. Irregular is the bottom fifth, where most of the
+     * mortality risk sat (Q2 vs Q1 HR 0.80); Fair the second fifth; Regular the third and fourth fifths; Very
+     * regular the top fifth. They place you in that population, nothing more: the strap's sleep/wake minutes are
+     * not GGIR's, so treat a point or two either side of a cut as the same. Zepp's 60/80/90 bands belong to its own
+     * night-overlap score, a different scale, and are not used.
+     */
     enum class Band(val label: String) { Irregular("Irregular"), Fair("Fair"), Regular("Regular"), VeryRegular("Very regular") }
 
     fun band(sri: Float): Band = when {
@@ -38,7 +45,12 @@ object SleepRegularity {
     }
 
     data class Result(
-        /** −100 to 100; null when withheld (fewer than [MIN_VALID_PAIRS] valid pairs). */
+        /**
+         * The Sleep Regularity Index on its standard scale (Phillips et al. 2017; as GGIR and Windred et al. 2024
+         * report it): −100 to 100, where 100 is the same sleep/wake state at every minute 24 h apart and 0 is what
+         * random sleep gives. In UK Biobank the middle half sat between 73.8 and 86.3. Null when withheld (fewer than
+         * [MIN_VALID_PAIRS] valid pairs). This is the "Regularity" number the Sleep screen shows.
+         */
         val sri: Float?,
         val validPairs: Int,
         /** SD of the main-sleep midpoint, minutes, when the SRI is withheld and there are enough sleeps. */

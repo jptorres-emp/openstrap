@@ -1,6 +1,7 @@
 package org.openstrap.protocol.services
 
 import org.junit.Assert.assertArrayEquals
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -14,6 +15,15 @@ class FindDeviceTest {
         assertArrayEquals("03".hexToBytes(), FindDevice.BUZZ)
         assertArrayEquals("0501".hexToBytes(), FindDevice.START)
         assertArrayEquals("06".hexToBytes(), FindDevice.STOP)
+    }
+
+    @Test
+    fun findStrapFrames() {
+        // Find strap starts with the one-shot buzz and stops with STOP, as calls do; Zepp's 05 01 doesn't vibrate.
+        assertArrayEquals(byteArrayOf(0x03), FindDevice.BUZZ)
+        assertArrayEquals(byteArrayOf(0x06), FindDevice.STOP)
+        assertTrue(FindDevice.isBuzzOk("040101".hexToBytes()))
+        assertEquals(60_000L, FindDevice.FIND_TIMEOUT_MS)
     }
 
     @Test

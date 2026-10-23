@@ -25,8 +25,21 @@ sealed interface SyncState {
     data class Failed(val reason: String) : SyncState
 }
 
-/** Details read from the strap at connect time. */
-data class StrapInfo(val firmware: String?, val hardware: String?, val serial: String?, val dfuAvailable: Boolean)
+/**
+ * Details read from the strap at connect time. [deviceInformation] is Settings group 0x00, whose resource versions
+ * the firmware check sends (codemap 07 §1.4); null when the strap has no settings module or didn't answer.
+ */
+data class StrapInfo(
+    val firmware: String?,
+    val hardware: String?,
+    val serial: String?,
+    val dfuAvailable: Boolean,
+    /** The strap lists find device (0x001A), so Find strap can buzz it. */
+    val findDevice: Boolean = false,
+    val deviceInformation: SettingsGroup? = null,
+    /** The strap reports GENERAL key 45, so it can be restarted from the app; Zepp shows Restart only then (codemap 03 §5.2). */
+    val canRestart: Boolean = false,
+)
 
 /** What the UI can see and ask of the strap. Implemented on top of the BLE stack. */
 interface StrapController {
@@ -106,8 +119,20 @@ interface StrapController {
     /** The health settings group (HR measuring, HR and SpO2 alerts, …) with the choices the strap allows. */
     suspend fun readHealthSettings(): SettingsGroup
 
+    /**
+     * Settings the strap sent in a `04`: its push when something changed on the strap, or a query reply. Only the
+     * keys it carries are current; merge with [SettingsGroup.updatedWith].
+     */
+    val settingsChanged: kotlinx.coroutines.flow.SharedFlow<SettingsGroup>
+
     /** Writes [settings] into the health group; [version] comes from the last [readHealthSettings]. */
     suspend fun writeHealthSettings(version: Int, settings: List<Setting>)
+
+    /**
+     * Restarts the strap (GENERAL key 45). The link drops and the usual reconnect brings it back. Throws
+     * [StrapCommandException] when not connected or refused.
+     */
+    suspend fun restartStrap()
 
     /**
      * Plays [pattern] on the strap's motor: alternating vibrate and pause milliseconds (a phone notification).
@@ -130,6 +155,16 @@ interface StrapController {
     /** Keeps the strap buzzing (a ringing call) until [stopBuzzing] or the wearer taps the strap. */
     suspend fun startBuzzing()
     suspend fun stopBuzzing()
+
+    /** True while Find strap is buzzing the strap. */
+    val findingStrap: StateFlow<Boolean>
+
+    /**
+     * Find strap: buzzes until [stopFindingStrap], the strap reports it stopped, or Zepp's 60 s timeout
+     * ([org.openstrap.protocol.services.FindDevice.FIND_TIMEOUT_MS]). Throws [StrapCommandException] when not connected or refused.
+     */
+    suspend fun findStrap()
+    suspend fun stopFindingStrap()
 }
 
 /** The strap couldn't be asked, or said no. [message] is fit to show. */

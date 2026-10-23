@@ -4,6 +4,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.openstrap.app.data.db.PaiSample
 import org.openstrap.app.data.db.SleepSession
 import org.openstrap.app.data.db.SleepStage
 import org.openstrap.app.data.db.Workout
@@ -49,8 +50,20 @@ class CsvImportTest {
         assertEquals(SleepStage.DEEP, st.stage)
     }
 
+    @Test fun `PAI's tomorrow total round-trips, and is null from an older export`() {
+        val t = table("pai.csv")
+        for (p in listOf(PaiSample(1792300000, 12.5f, 87.25f, 58, 188, tomorrowTotal = 80.75f), PaiSample(1792300060, 3f, 90f, 57, 187))) {
+            @Suppress("UNCHECKED_CAST")
+            val row = (t as CsvTable<PaiSample>).row(p)
+            val out = StringWriter().also { it.writeCsv(t.header, listOf(row)) }.toString().lines()
+            assertEquals(p, parse<PaiSample>("pai.csv", out[0], out[1]))
+        }
+        val old: PaiSample = parse("pai.csv", "time,epoch,daily,total,resting_hr,max_hr", "2026-10-17T19:20:00Z,1792264800,1.5,40,60,185")
+        assertNull(old.tomorrowTotal)
+    }
+
     @Test fun `a workout round-trips through its row`() {
-        val w = Workout(1792300000, 1792303000, 1, 3000, 550, 140, 165, 98, 3.4f, 1.6f, 120, 48, null)
+        val w = Workout(1792300000, 1792303000, 1, 3000, 550, 140, 165, 98, 3.4f, 1.6f, 120, 48, null, subtype = 1)
         val t = table("workout.csv")
         @Suppress("UNCHECKED_CAST")
         val row = (t as CsvTable<Workout>).row(w)

@@ -50,6 +50,9 @@ I use it daily with one Helio Strap on one Android 16 phone. Other phones and fi
 | Dashboard: Today, Recovery, Sleep, Activity, You (foldables and tablets too) | ✅ Works |
 | Alarms, strap health alerts | ✅ Works |
 | Strap buzzes for phone calls and notifications, with a choice of pattern | ✅ Works |
+| Find strap: buzz it from the strap page | 🧪 New, being tested |
+| Restart the strap from the app | 🧪 New, being tested |
+| Off-body reminder: a notification while the strap is off, and Charge uses it for not-worn time | 🧪 New, being tested |
 | Export and import: CSV zip (every table), Android Health Connect | ✅ Works |
 | Firmware update (online check with your Zepp token, or from a file) | ✅ Works |
 
@@ -92,7 +95,7 @@ You can skip the sign-in and paste the key and token by hand instead.
 
 - **Nearby devices (Bluetooth)** to find and connect to the strap. On Android 11 and older, Android calls this Location.
 - **Location** only if you turn on GPS for an outdoor workout, and only while that workout records. Never in the background otherwise. The route is used for distance, pace and the map, then discarded unless you choose **Keep route on this phone**. Without location, distance comes from the strap's steps (shown with ≈).
-- **Notifications** for the "Helio Strap" connection notification and health alerts.
+- **Notifications** for the "Helio Strap" connection notification, health alerts and the off-body reminder.
 - **Health Connect** read and write, only if you export to or restore from it.
 - **Phone state and notification access** only if you turn on phone alerts (see [Phone access](#phone-access)).
 - **Internet** only for the Zepp sign-in and firmware (see [Network use](#network-use)).

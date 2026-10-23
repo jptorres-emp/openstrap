@@ -81,6 +81,10 @@ private val THIRD_PARTY_HOSTS = mapOf(
  * [onConfirm] gets the listing and the chosen strap (null when the user only keeps the sign-in). With
  * [requireKey], a strap without an auth key can't be confirmed with [confirmLabel], only kept as a sign-in.
  */
+// TODO (deferred): a cloud first bind, so a new or reset strap can be set up with only OpenStrap and a Zepp
+// account, without the Zepp app: AuthInfo 00, ECDH 02, binds.json digest, signature 03, then normal auth. Steps
+// and byte layouts are in zepp-alt analysis/codemap/08-cloud-and-account.md §2 (first-bind checklist). Untried;
+// whether the server signs for OpenStrap's appid is unknown.
 @Composable
 fun ZeppSignInDialog(
     preferredApiBase: String?,

@@ -107,6 +107,11 @@ data class PaiSample(
     val total: Float,
     val restingHeartRate: Int,
     val maxHeartRate: Int,
+    /**
+     * The strap's projected total for the next day with no new activity (`nextActivityScores[1]`, record v2+), so
+     * `total − tomorrowTotal` is exactly what drops off (native 08 §3.7). Null for older records and older rows.
+     */
+    val tomorrowTotal: Float? = null,
 )
 
 /** HRV as SDNN (type 78). The strap sends one every hour or two through the day, not just at night. */
@@ -135,6 +140,8 @@ data class Workout(
     val trainingLoad: Int?,
     val vo2max: Int?,
     val steps: Int?,
+    /** The summary's Type.subtype: 1 auto-detected, 6 a phone workout mirrored on the strap, 0 normal (codemap 05 §8). Null before version 17. */
+    val subtype: Int? = null,
 )
 
 /** Per-second HR during a workout and the strap's 3-minute recovery recording after it (type 6). */
@@ -186,6 +193,15 @@ data class AppWorkout(
     val setsTarget: Int? = null,
     /** Lap marks, epoch seconds, comma separated; see [lapMarks]. */
     @ColumnInfo(defaultValue = "") val laps: String = "",
+    /**
+     * What the workout did ([org.openstrap.app.data.WorkoutEffect]): peak EPOC in ml/kg, aerobic training effect 0–5,
+     * recovery time and, for outdoor runs, VO2max in ml/kg/min. Worked out when it ends and again on a trim or a gap
+     * fill; null on workouts from before version 14 until they are opened.
+     */
+    val epoc: Float? = null,
+    val aerobicTrainingEffect: Float? = null,
+    val recoveryMinutes: Int? = null,
+    val vo2max: Float? = null,
 ) {
     val lapMarks: List<Long> get() = laps.split(',').mapNotNull { it.toLongOrNull() }
 
@@ -224,7 +240,10 @@ data class AppWorkoutSet(
     val restEnd: Long? = null,
 )
 
-/** One GPS fix of a workout whose route the wearer chose to keep on the phone. */
+/**
+ * One GPS fix of a workout whose route the wearer chose to keep on the phone. Speed, bearing, altitude and their
+ * accuracies came in version 13 and are null on older rows ([org.openstrap.app.data.Route.Point]).
+ */
 @Entity(tableName = "app_workout_route", primaryKeys = ["workoutStart", "timestamp"])
 data class AppWorkoutRoutePoint(
     val workoutStart: Long,
@@ -232,7 +251,19 @@ data class AppWorkoutRoutePoint(
     val lat: Double,
     val lon: Double,
     val accuracy: Float,
-)
+    val speed: Float? = null,
+    val bearing: Float? = null,
+    val altitude: Double? = null,
+    val speedAccuracy: Float? = null,
+    val bearingAccuracy: Float? = null,
+) {
+    val point get() = org.openstrap.app.data.Route.Point(timestamp, lat, lon, accuracy, speed, bearing, altitude, speedAccuracy, bearingAccuracy)
+
+    companion object {
+        fun of(workoutStart: Long, p: org.openstrap.app.data.Route.Point) =
+            AppWorkoutRoutePoint(workoutStart, p.t, p.lat, p.lon, p.accuracy, p.speed, p.bearing, p.altitude, p.speedAccuracy, p.bearingAccuracy)
+    }
+}
 
 /** A stretch answered "Not a workout", so it isn't offered again ([org.openstrap.app.data.WorkoutSuggestions]). */
 @Entity(tableName = "app_workout_dismissed")
@@ -368,6 +399,17 @@ data class HealthAlertRow(
     val type: Int,
     /** bpm, stress level or SpO2 %; 0 for an irregular rhythm. */
     val value: Long,
+)
+
+/**
+ * A change in whether the strap is worn, from its wear-status push (Settings DEVICE_INFORMATION key 16, codemap 07
+ * §4 N5) or the read on connect. The state holds until the next row. [worn] null marks the link going down: from then
+ * on the app doesn't know, so Charge falls back to its heart-rate gap rule.
+ */
+@Entity(tableName = "wear_event")
+data class WearEventRow(
+    @PrimaryKey val timestamp: Long,
+    val worn: Boolean?,
 )
 
 /** One local day of a sampled metric: its average (or total, for steps), lowest, highest and sample count. */

@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.sp
 import org.openstrap.app.data.DayStat
 import org.openstrap.app.data.History
 import org.openstrap.app.data.SleepHistory
+import org.openstrap.app.data.SleepRegularity
 import org.openstrap.app.ui.components.formatDuration
 import org.openstrap.app.ui.theme.MetricColors
 import java.time.Instant
@@ -88,27 +89,36 @@ internal val SleepVital.isOff get() = note?.endsWith("than usual") == true
 
 /**
  * The last seven nights: when each sleep started and ended on a shared clock, with time asleep over each bar,
- * then the week's averages and how regular the timing was (Zepp's bands, from five nights).
+ * then the week's averages and how regular it was. Regularity is the Sleep Regularity Index from RecoveryResult
+ * (SleepRegularity.Result.sri), banded at the UK Biobank quintile cuts; null [regularity] means it is still loading.
  */
 internal class SleepWeek(
     val nights: List<SleepNight>,
     val slept: Int,
-    val regularity: SleepHistory.Regularity?,
+    val usual: SleepHistory.UsualTimes?,
+    val regularity: SleepRegularity.Result?,
     val averageAsleep: String,
     val averageScore: String,
     val goalNights: Int,
 ) {
-    val learningNote get() =
-        "Sleep regularity shows once ${SleepHistory.MIN_REGULARITY_NIGHTS} of the last 7 nights have sleep ($slept so far)."
-    val regularityNote get() = regularity?.let {
-        "Regularity is how much your fall-asleep and wake-up times moved over the last ${it.nights} nights: " +
-            "100% means the same times every night, 50% about an hour either way."
+    /** The SRI shown as "Regularity", or null when withheld or loading. */
+    val sri: Float? get() = regularity?.sri
+    val band: SleepRegularity.Band? get() = regularity?.band
+    val learningNote: String? get() = regularity?.takeIf { it.sri == null }?.let {
+        "Not enough nights yet. Regularity needs ${SleepRegularity.MIN_VALID_PAIRS / 60} h of wear compared day to day " +
+            "(${it.validPairs / 60} h so far), about 5 days worn around the clock."
+    }
+    val regularityNote: String? get() = regularity?.takeIf { it.sri != null }?.let {
+        "How alike your sleep and wake were, minute by minute, from one day to the next over the last 7 days " +
+            "(${it.validPairs / 60} h compared). 100 is the same every day; half of UK Biobank adults scored 74–86."
     }
 }
 
-/** The last seven nights' facts, or null when none of them has sleep. */
-internal fun sleepWeek(state: DayUiState, goalSeconds: Long, zone: ZoneId = ZoneId.systemDefault()): SleepWeek? {
-    val week = state.nights.takeLast(SleepHistory.REGULARITY_NIGHTS)
+/** The last seven nights' facts, or null when none of them has sleep. [regularity] comes from the selected day's recovery. */
+internal fun sleepWeek(
+    state: DayUiState, goalSeconds: Long, regularity: SleepRegularity.Result?, zone: ZoneId = ZoneId.systemDefault(),
+): SleepWeek? {
+    val week = state.nights.takeLast(SleepHistory.WEEK_NIGHTS)
     val slept = week.filter { it.session != null }
     if (slept.isEmpty()) return null
     val asleep = slept.mapNotNull { it.asleepSeconds }
@@ -116,17 +126,18 @@ internal fun sleepWeek(state: DayUiState, goalSeconds: Long, zone: ZoneId = Zone
     return SleepWeek(
         nights = week,
         slept = slept.size,
-        regularity = SleepHistory.regularity(state.nights.mapNotNull { n -> n.session?.let { n.date to it } }.toMap(), state.date, zone),
+        usual = SleepHistory.usualTimes(state.nights.mapNotNull { n -> n.session?.let { n.date to it } }.toMap(), state.date, zone),
+        regularity = regularity,
         averageAsleep = formatDuration(asleep.average().toLong()),
         averageScore = scores.takeIf { it.isNotEmpty() }?.average()?.roundToInt()?.toString() ?: "—",
         goalNights = asleep.count { it >= goalSeconds },
     )
 }
 
-internal fun bandColor(band: SleepHistory.Band) = when (band) {
-    SleepHistory.Band.VeryRegular, SleepHistory.Band.Regular -> MetricColors.sleepRem
-    SleepHistory.Band.FairlyRegular -> MetricColors.sleepLight
-    SleepHistory.Band.Irregular -> MetricColors.sleepAwake
+internal fun bandColor(band: SleepRegularity.Band) = when (band) {
+    SleepRegularity.Band.VeryRegular, SleepRegularity.Band.Regular -> MetricColors.sleepRem
+    SleepRegularity.Band.Fair -> MetricColors.sleepLight
+    SleepRegularity.Band.Irregular -> MetricColors.sleepAwake
 }
 
 /**
@@ -134,7 +145,7 @@ internal fun bandColor(band: SleepHistory.Band) = when (band) {
  * runs from falling asleep to waking, time asleep sits above it, and dashed lines mark the average times.
  */
 @Composable
-internal fun SleepWindows(week: List<SleepNight>, regularity: SleepHistory.Regularity?, zone: ZoneId) {
+internal fun SleepWindows(week: List<SleepNight>, usual: SleepHistory.UsualTimes?, zone: ZoneId) {
     val measurer = rememberTextMeasurer()
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
     val onSurface = MaterialTheme.colorScheme.onSurface
@@ -174,7 +185,7 @@ internal fun SleepWindows(week: List<SleepNight>, regularity: SleepHistory.Regul
             drawText(t, topLeft = Offset(0f, y - t.size.height / 2))
             m += 3 * 60
         }
-        regularity?.let { r ->
+        usual?.let { r ->
             val dash = PathEffect.dashPathEffect(floatArrayOf(3.dp.toPx(), 4.dp.toPx()))
             listOf(r.bedtime - 12 * 60, r.wake + 12 * 60).forEach { avg ->
                 val y = yOf(avg)

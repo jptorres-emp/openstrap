@@ -88,8 +88,10 @@ fun DeviceScreen(
     val connection by vm.strap.connection.collectAsState()
     val sync by vm.strap.sync.collectAsState()
     val scan by vm.scan.collectAsState()
+    val info by vm.strap.info.collectAsState()
     var confirmForget by rememberSaveable { mutableStateOf(false) }
     var confirmDisconnect by rememberSaveable { mutableStateOf(false) }
+    var confirmRestart by rememberSaveable { mutableStateOf(false) }
     val keepConnected = rememberKeepConnected(vm)
     val offerBackground by vm.offerBackground.collectAsState()
     LaunchedEffect(offerBackground, paired) {
@@ -116,6 +118,23 @@ fun DeviceScreen(
                 ) { Text("Disconnect") }
             },
             dismissButton = { TextButton(onClick = { confirmDisconnect = false }) { Text("Cancel") } },
+        )
+    }
+
+    if (confirmRestart) {
+        org.openstrap.app.ui.components.GlassAlertDialog(
+            onDismissRequest = { confirmRestart = false },
+            icon = { Icon(PhosphorIcons.Info, null) },
+            title = { Text("Restart the strap?") },
+            text = {
+                Text(
+                    (if (sync is SyncState.Running) "The sync in progress will stop. " else "") +
+                        "The strap restarts and disconnects. OpenStrap reconnects on its own once it's back, " +
+                        "which can take a minute.",
+                )
+            },
+            confirmButton = { TextButton(onClick = { confirmRestart = false; vm.restartStrap() }) { Text("Restart") } },
+            dismissButton = { TextButton(onClick = { confirmRestart = false }) { Text("Cancel") } },
         )
     }
 
@@ -184,6 +203,7 @@ fun DeviceScreen(
                     }
                 }
             }
+            if (connection is ConnectionState.Connected && info?.findDevice == true) item { FindStrapButton(vm) }
             item {
                 Panel {
                     SettingRow("Alarms & alerts", "Wake-up alarms and heart-rate alerts on the strap", onClick = onAlarms) {
@@ -195,12 +215,32 @@ fun DeviceScreen(
                     }
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                     KeepConnectedRow(vm, keepConnected, device.address)
+                    if (connection is ConnectionState.Connected && info?.canRestart == true) {
+                        SettingRow("Restart strap", "Restarts the strap; OpenStrap reconnects by itself", onClick = { confirmRestart = true }) {
+                            Icon(PhosphorIcons.CaretRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    }
                     SettingRow("Forget this strap", "Removes the address and auth key from this phone", onClick = { confirmForget = true }) {
                         Icon(PhosphorIcons.CaretRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
         }
+    }
+}
+
+/** Find strap: buzzes the strap and becomes Stop while it runs; it stops by itself after 60 s, as Zepp's does. */
+@Composable
+private fun FindStrapButton(vm: DeviceViewModel) {
+    val finding by vm.strap.findingStrap.collectAsState()
+    OutlinedButton(
+        onClick = { if (finding) vm.stopFindingStrap() else vm.findStrap() },
+        modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(vertical = 14.dp),
+    ) {
+        Icon(if (finding) PhosphorIcons.StopFill else PhosphorIcons.BellRinging, null, Modifier.size(18.dp))
+        Spacer(Modifier.width(8.dp))
+        Text(if (finding) "Stop buzzing" else "Find strap")
     }
 }
 

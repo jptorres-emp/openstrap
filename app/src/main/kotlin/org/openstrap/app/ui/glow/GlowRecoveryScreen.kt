@@ -142,10 +142,11 @@ private fun RecoveryCard(r: RecoveryResult, strap: StrapReadinessRow?) {
                 val strapScore = strap?.score
                 if (ready.showStrapEstimate && strapScore != null) {
                     Spacer(Modifier.height(12.dp))
-                    Fact("Strap's estimate", "$strapScore")
+                    // The strap's values are rated in Zepp's own three bands, not OpenStrap's four.
+                    Fact("Strap's estimate · ${Narrative.zeppReadinessRating(strapScore).label}", "$strapScore")
                     val parts = listOfNotNull(
-                        strap.hrvScore?.let { "HRV $it" }, strap.restingHrScore?.let { "resting HR $it" },
-                        strap.skinTemperatureScore?.let { "temperature $it" }, strap.breathingScore?.let { "breathing $it" },
+                        strap.hrvScore?.let { strapPart("HRV", it) }, strap.restingHrScore?.let { strapPart("resting HR", it) },
+                        strap.skinTemperatureScore?.let { strapPart("temperature", it) }, strap.breathingScore?.let { strapPart("breathing", it) },
                     )
                     if (parts.isNotEmpty()) Note(parts.joinToString(" · ") + ". Shown for reference; it never enters OpenStrap's score.")
                 }
@@ -193,7 +194,7 @@ private fun ChargeCard(c: Recovery.ChargeDay, day: LongRange) {
     val style = GlowStyle.Ember.copy(color = MetricColors.chargeAt(now), motion = GlowMotion.Breath(4f))
     GlowCard(style, Modifier.fillMaxWidth()) {
         Column {
-            GlowHeader("Charge", trailing = c.atWake?.let { "${it.toInt()} at waking" })
+            GlowHeader("Charge", trailing = c.atWake?.let { if (c.strapOffOvernight) "~${it.toInt()} at start" else "${it.toInt()} at waking" })
             val hint = when {
                 !c.anchored -> "Charge starts after your first night wearing the strap. Sleep is what fills it, so it needs one to measure from."
                 now == null -> "Charge appears once the strap has a few hours of heart rate."
@@ -206,6 +207,7 @@ private fun ChargeCard(c: Recovery.ChargeDay, day: LongRange) {
             }
             val drained = (c.drainedExercise + c.drainedStress + c.drainedLiving).toInt()
             GlowHeroNumber("${now.toInt()}", "/ 100", listOf(Narrative.chargeHeadline(now.toInt()), "${signed(c.recharged, +1)} · ${signed(drained.toFloat(), -1)}"))
+            if (c.strapOffOvernight) Note(org.openstrap.app.ui.dashboard.STRAP_OFF_OVERNIGHT)
             GlowChartGap()
             val values = remember(c.points, day) { bucket(c.points, day, 15 * 60L) }
             GlowLineChart(values, height = GlowLayout.ChartHeight, labels = HOURS, showAverage = false, yRange = 0f..100f) { i, v ->
@@ -313,7 +315,8 @@ private fun ContributorsPanel(ready: Recovery.Readiness) {
             first = false
             Text(name.uppercase(), color = Color.White.copy(alpha = 0.55f), style = MaterialTheme.typography.labelSmall)
             rows.forEach { c ->
-                val rating = Narrative.ratingFor(c.score)
+                // Sleep is a sleep score (the strap's when it gave one), so it's rated in Zepp's sleep bands.
+                val rating = if (c.factor == Recovery.Factor.Sleep) Narrative.sleepRating(c.score) else Narrative.ratingFor(c.score)
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(c.factor.label, color = Color.White, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
@@ -461,6 +464,9 @@ internal fun Fact(label: String, value: String) {
     }
 }
 
+/** One of the strap's readiness parts with its Zepp band: "HRV 89 (Optimal)". */
+private fun strapPart(name: String, score: Int) = "$name $score (${Narrative.zeppReadinessRating(score).label})"
+
 /** How the score works, folded away; the strap's own score sits inside as a comparison. */
 @Composable
 private fun HowItWorksPanel(strap: StrapReadinessRow?, ours: Int?) {
@@ -482,7 +488,7 @@ private fun HowItWorksPanel(strap: StrapReadinessRow?, ours: Int?) {
         if (strapScore != null) {
             DotDivider()
             Row(verticalAlignment = Alignment.Bottom) {
-                Fact("The strap's own score", "$strapScore")
+                Fact("The strap's own score · ${Narrative.zeppReadinessRating(strapScore).label}", "$strapScore")
                 Spacer(Modifier.weight(1f))
                 if (ours != null) Fact("Ours", "$ours")
             }

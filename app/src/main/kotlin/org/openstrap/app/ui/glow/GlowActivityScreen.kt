@@ -38,10 +38,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.flow.Flow
+import org.openstrap.app.data.Pai
 import org.openstrap.app.data.RecoveryResult
 import org.openstrap.app.data.WorkoutAnalysis
 import org.openstrap.app.data.db.DailyPai
 import org.openstrap.app.data.db.SportEffectRow
+import org.openstrap.app.data.settings.UserProfile
 import org.openstrap.app.ui.components.formatDuration
 import org.openstrap.app.ui.dashboard.DateHeader
 import org.openstrap.app.ui.dashboard.DayPicker
@@ -102,6 +104,8 @@ fun GlowActivityScreen(
     onDeclineOffer: () -> Unit = {},
     autoStart: Boolean? = null,
     onAutoStart: (Boolean) -> Unit = {},
+    /** Picks the strap's PAI curve for "drops off tomorrow"; null uses Zepp's default (female). */
+    paiSex: UserProfile.Sex? = null,
 ) {
     val list = rememberLazyListState()
     val sports = remember(workouts) { topSports(workouts) }
@@ -118,7 +122,7 @@ fun GlowActivityScreen(
             left { StepsCard(state, r?.activity) { onOpenMetric(Metric.Steps) } }
             r?.activity?.let { a -> left { MvpaPanel(a) } }
             left { EnergyPanel(r?.energy, onEditProfile) }
-            left { PaiPanel(state, week) }
+            left { PaiPanel(state, week, paiSex) }
             right { LoadPanel(r, effects.lastOrNull { it.weeklyLoad != null }, onEditProfile) }
             right { FitnessPanel(r, workouts, effects, state.dailyMaxHeartRate) }
             right { WorkoutsPanel(state.date, workouts, onOpenWorkout, onAllWorkouts, onAddWorkout) }
@@ -213,7 +217,7 @@ private fun MvpaPanel(a: org.openstrap.app.data.Activity.Day) {
  * built from the days that make it up, what each day added, and what drops off next.
  */
 @Composable
-private fun PaiPanel(state: DayUiState, week: Map<LocalDate, DailyPai>) {
+private fun PaiPanel(state: DayUiState, week: Map<LocalDate, DailyPai>, sex: UserProfile.Sex?) {
     val total = state.pai?.total ?: week[state.date]?.total
     DotPanel {
         DotHeader("PAI", trailing = "Last 7 days")
@@ -244,8 +248,13 @@ private fun PaiPanel(state: DayUiState, week: Map<LocalDate, DailyPai>) {
                 }
             }
         }
-        // The oldest day leaves the rolling total tomorrow; only worth saying when looking at today.
-        val dropping = daily.first().takeIf { it > 0f && state.date == LocalDate.now() }
+        // The oldest day leaves the rolling total tomorrow; only worth saying when looking at today. Its stored daily
+        // isn't what goes (native 08 §7): take the strap's own projection when the latest record has one, else
+        // re-sum the ring without it.
+        val dropping = if (state.date != LocalDate.now() || daily.first() <= 0f) null else
+            (state.pai?.let { Pai.dropsOffTomorrow(it.total, it.tomorrowTotal) }
+                ?: Pai.dropsOffTomorrow(days.map { d -> week[d]?.let { Pai.Day(it.daily, it.total) } }, sex))
+                .toFloat().takeIf { it > 0f }
         Note(
             listOfNotNull(
                 dropping?.let { "Tomorrow ${days.first().dayOfWeek.getDisplayName(TextStyle.FULL, Locale.getDefault())}'s ${paiPoints(it)} drops off." },
@@ -299,11 +308,15 @@ private fun LoadPanel(r: RecoveryResult?, effect: SportEffectRow?, onEditProfile
     DotPanel {
         DotHeader("Training load")
         if (r != null) {
+            // Rounded parts, and the total as their sum, so the line always adds up.
+            val fromWorkouts = r.workoutLoad.roundToInt()
+            val everyday = r.everydayLoad.roundToInt()
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Fact("Strain", "%.1f".format(r.strain))
-                Fact("Load today", "${r.load.toInt()}")
+                Fact("Load today", "${fromWorkouts + everyday}")
                 Fact("vs your usual", r.strainPercentile?.let { "${it}th pct" } ?: "—")
             }
+            Note("${fromWorkouts + everyday} today · $fromWorkouts workouts · $everyday everyday")
             r.loadTrend?.let { t ->
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Fact("Fitness", "${t.ctl.toInt()}")
@@ -314,7 +327,8 @@ private fun LoadPanel(r: RecoveryResult?, effect: SportEffectRow?, onEditProfile
             }
             Note(
                 "Each minute counts by how hard your heart works between resting (${r.restingHr.toInt()} bpm) and maximum " +
-                    "(${r.maxHr.toInt()} bpm${if (r.maxHrTested) ", from your test" else ""}). Strain runs 0–21 on a fixed curve: an hour at 60 % of reserve is about 7.",
+                    "(${r.maxHr.toInt()} bpm${if (r.maxHrTested) ", from your test" else ""}). Every workout minute counts; outside workouts, " +
+                    "only moving minutes at 35 % of reserve or more, or brisk walking (60+ steps a minute) from 20 %. Strain runs 0–21 on a fixed curve: an hour at 60 % of reserve is about 7.",
             )
         }
         r?.acwr?.let { ratio ->
@@ -332,7 +346,7 @@ private fun LoadPanel(r: RecoveryResult?, effect: SportEffectRow?, onEditProfile
         if (weekly != null && low != null && high != null) {
             DotDivider()
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
-                Fact("This week (strap)", "${weekly.roundToInt()}")
+                Fact("This week (strap EPOC)", "${weekly.roundToInt()}")
                 Spacer(Modifier.weight(1f))
                 val (word, color) = when {
                     weekly < low -> "Below productive" to TrendBad
@@ -342,7 +356,7 @@ private fun LoadPanel(r: RecoveryResult?, effect: SportEffectRow?, onEditProfile
                 Text(word, color = color, style = MaterialTheme.typography.titleSmall)
             }
             GlowBar(weekly / (high * 1.25f), if (weekly in low.toFloat()..high.toFloat()) TrendGood else MetricColors.steps)
-            Note("Productive range $low–$high, from the strap (updated ${shortDate(effect.end)}). Its load is on a different scale from today's.")
+            Note("Productive range $low–$high, from the strap (updated ${shortDate(effect.end)}). That is EPOC, on a different scale from today's load.")
         }
         if (r != null && !r.maxHrFromAge) {
             Row(Modifier.fillMaxWidth().glass(GlassRowShape, onEditProfile).padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -451,7 +465,10 @@ internal fun WorkoutLine(a: WorkoutAnalysis, showDate: Boolean, onClick: () -> U
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
-            Text(a.sportName, color = Color.White, style = MaterialTheme.typography.titleSmall)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(a.sportName, color = Color.White, style = MaterialTheme.typography.titleSmall)
+                if (a.autoDetected) StatusPill(AUTO_DETECTED, Color.White.copy(alpha = 0.7f))
+            }
             val start = Instant.ofEpochSecond(a.workout.start).atZone(ZoneId.systemDefault())
             Note(
                 listOfNotNull(

@@ -17,7 +17,6 @@ import kotlinx.coroutines.withContext
 import org.openstrap.app.AppContainer
 import org.openstrap.app.ble.FoundDevice
 import org.openstrap.app.data.settings.PairedDevice
-import org.openstrap.app.data.settings.ZeppAccount
 import org.openstrap.app.device.StrapController
 import org.openstrap.app.zepp.BoundDevice
 import org.openstrap.app.zepp.DeviceListing
@@ -85,9 +84,7 @@ class DeviceViewModel(private val container: AppContainer) : ViewModel() {
 
     /** Keeps the Zepp sign-in for firmware checks and, when Zepp returned the strap's key, pairs with it straight away. */
     fun signInAndPair(listing: DeviceListing, strap: BoundDevice?) = viewModelScope.launch {
-        container.settings.saveZeppAccount(
-            ZeppAccount(listing.session.appToken, listing.session.userId, listing.apiBase, strap?.china == true),
-        )
+        container.settings.saveZeppAccount(listing.session.toAccount(listing.apiBase, strap?.china == true, System.currentTimeMillis()))
         val key = strap?.authKey
         if (strap != null && key != null) pair(strap.macAddress, DEFAULT_NAME, key)
         else _message.value = "Zepp sign-in saved, but no auth key came with it. Get the key on a computer and enter it by hand."
@@ -107,6 +104,21 @@ class DeviceViewModel(private val container: AppContainer) : ViewModel() {
         container.settings.companionDeclined.stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     fun showMessage(text: String) { _message.value = text }
+
+    /** Find strap: buzzes it until stopped or Zepp's 60 s are up. */
+    fun findStrap() = viewModelScope.launch {
+        runCatching { container.strap.findStrap() }.onFailure { _message.value = it.message ?: "Couldn't buzz the strap" }
+    }
+
+    fun stopFindingStrap() = viewModelScope.launch {
+        runCatching { container.strap.stopFindingStrap() }.onFailure { _message.value = it.message ?: "Couldn't stop the strap buzzing" }
+    }
+
+    /** Restarts the strap; the link drops and the usual reconnect brings it back. */
+    fun restartStrap() = viewModelScope.launch {
+        _message.value = runCatching { container.strap.restartStrap(); "Restarting the strap. OpenStrap reconnects when it's back." }
+            .getOrElse { it.message ?: "Couldn't restart the strap" }
+    }
 
     fun forget() = viewModelScope.launch {
         container.strap.disconnect()

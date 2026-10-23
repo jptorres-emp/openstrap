@@ -83,7 +83,8 @@ object SettingsCodec {
     /**
      * DEVICE_INFORMATION key 16 `wearStatus`, a bool: false while the strap is off-body. Zepp listens for its `04`
      * push and posts its "Wear Reminders" notification on false (07 §0 row 37, §4 N5). It only pushes while GENERAL
-     * [KEY_WEAR_STATUS_ALERT] is on (INFERRED from Zepp turning that on; not captured on a strap yet).
+     * [KEY_WEAR_STATUS_ALERT] is on (INFERRED from Zepp turning that on). On firmware 3.25.0.3 with key 44 on, no push
+     * came in either direction within minutes (2026-10-23), while a fresh query read it right; OpenStrap polls it.
      */
     const val KEY_WEAR_STATUS = 0x10
     /** GENERAL key 44 `wearStatusAlertSwitch`: the strap's own switch for the wear reminder (07 §4 N5). */

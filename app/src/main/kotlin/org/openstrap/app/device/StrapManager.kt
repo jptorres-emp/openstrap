@@ -411,7 +411,8 @@ class StrapManager(
             val group = SettingsCodec.parse(p, settingsProtocol?.version)
             if (group == null) return@collect log("settings 04 unparsed: ${p.toHex()}")
             // Nobody has captured the strap's wear push yet: log the first one raw, for checking against hardware.
-            if (!wearPushLogged && SettingsCodec.wearStatus(group) != null) {
+            // The wear poll's own replies come through here too, so they're left out.
+            if (!wearPushLogged && !wearPolling && SettingsCodec.wearStatus(group) != null) {
                 wearPushLogged = true
                 log("wear status push ${p.toHex()}")
             }
@@ -420,11 +421,12 @@ class StrapManager(
     }
 
     @Volatile private var wearPushLogged = false
+    @Volatile private var wearPolling = false
 
     /**
      * Wear / off-body, as Zepp does for the strap (07 §4 N5): with the app's switch on, turns on the strap's wear
-     * reminder (GENERAL key 44), then follows DEVICE_INFORMATION key 16 as read on connect and as pushed. Ends with
-     * this connection.
+     * reminder (GENERAL key 44), then follows DEVICE_INFORMATION key 16 as read on connect, as pushed, and as polled
+     * every minute. Ends with this connection.
      */
     private fun CoroutineScope.watchWear(s: ChannelSession) = launch {
         if (!s.services.has(Endpoints.SETTINGS)) return@launch
@@ -432,6 +434,20 @@ class StrapManager(
             settings.wearReminder.distinctUntilChanged().collect { on ->
                 if (on) enableWearAlert()
                 wearNotifier.apply(WearReminder.decide(lastWorn, on, wearNotifier.shown))
+            }
+        }
+        // Firmware 3.25.0.3 didn't push key 16 when taken off or put back on (2026-10-23), though a fresh read had it
+        // right; poll so a change shows within a minute. The reply also reaches settingsChanged, and onWear dedupes.
+        launch {
+            while (isActive && session === s) {
+                delay(WEAR_POLL_MS)
+                if (firmwareUpdating.value) continue
+                wearPolling = true
+                runCatching {
+                    val reply = settingsQuery(SettingsCodec.GROUP_DEVICE_INFORMATION, listOf(SettingsCodec.KEY_WEAR_STATUS), withOptions = false)
+                    SettingsCodec.parse(reply, settingsProtocol?.version)?.let(SettingsCodec::wearStatus)?.let { onWear(it) }
+                }.onFailure { log("wear status poll failed: $it") }
+                wearPolling = false
             }
         }
         info.value?.deviceInformation?.let(SettingsCodec::wearStatus)?.let { onWear(it) }
@@ -1033,6 +1049,7 @@ class StrapManager(
     private companion object {
         val RETRY_SECONDS = longArrayOf(5, 15, 30, 60, 120, 300)
         const val MIN_SYNC_GAP_SECONDS = 15 * 60L
+        const val WEAR_POLL_MS = 60_000L
         /** Settings key: the local midnight of the last morning a body-signal alert was pushed. */
         const val BODY_SIGNALS_PUSHED = "body_signals_push"
         const val AUTO_SYNC_SECONDS = 60 * 60L

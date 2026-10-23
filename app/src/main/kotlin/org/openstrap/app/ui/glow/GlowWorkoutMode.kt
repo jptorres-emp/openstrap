@@ -258,24 +258,6 @@ fun topSports(workouts: List<WorkoutAnalysis>, n: Int = 3): List<SportUse> {
     return used + Workouts.DEFAULT_SPORTS.filter { d -> used.none { it.sportType == d } }.take(n - used.size).map { SportUse(it, 0, null) }
 }
 
-/**
- * "Start a workout": your three most-used sports, most used first, and every sport as a row of round buttons sharing
- * the width, names under them. All alike: a white one would read as already chosen. (The auto-detect switch lives on
- * the Strap page.)
- */
-@Composable
-internal fun StartWorkoutPanel(sports: List<SportUse>, onStart: (Int) -> Unit, onAllSports: () -> Unit) {
-    DotPanel {
-        DotHeader("Start a workout")
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
-            sports.take(3).forEach { s ->
-                SportBubble(SportIcons.of(s.sportType), Workouts.sportName(s.sportType), Modifier.weight(1f)) { onStart(s.sportType) }
-            }
-            SportBubble(AppIcons.DotsThree, "All sports", Modifier.weight(1f), onClick = onAllSports)
-        }
-    }
-}
-
 @Composable
 private fun SportBubble(icon: androidx.compose.ui.graphics.vector.ImageVector, name: String, modifier: Modifier, selected: Boolean = false, onClick: () -> Unit) {
     // Tight corners and room underneath, so the press area never clips a label that fills the width.

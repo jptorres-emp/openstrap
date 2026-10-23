@@ -282,7 +282,6 @@ private fun AppRoot(
     })
     val workouts by workoutsVm.workouts.collectAsStateWithLifecycle()
     val openWorkout by workoutsVm.open.collectAsStateWithLifecycle()
-    val sportEffects by workoutsVm.effects.collectAsStateWithLifecycle()
     // Each tab's stack of details, deepest last; back pops one. Opening a detail never moves you to another tab.
     var todayStack by rememberSaveable(stateSaver = Detail.StackSaver) { mutableStateOf(emptyList<Detail>()) }
     var activityStack by rememberSaveable(stateSaver = Detail.StackSaver) { mutableStateOf(emptyList<Detail>()) }
@@ -659,9 +658,10 @@ private fun AppRoot(
                     Detail.Recovery -> {
                         androidx.activity.compose.BackHandler(onBack = pop)
                         org.openstrap.app.ui.glow.GlowRecoveryScreen(
-                            day, recovery, strapReadiness, history,
+                            day, recovery, history,
                             header = { org.openstrap.app.ui.glow.PageHeader("Recovery", pop, subtitle = org.openstrap.app.ui.glow.dayName(day.date)) },
                             contentPadding = padding, onOpenMetric = { push(Detail.OfMetric(it)) },
+                            healthspan = healthspan, onOpenHealthspan = { push(Detail.Healthspan) }, onOpenProfile = { openPage(Page.Profile) },
                         )
                     }
                     Detail.Sleep -> {
@@ -735,8 +735,10 @@ private fun AppRoot(
                                 usualBedtime = usualBedtime,
                             )
                             Tab.Recovery -> org.openstrap.app.ui.glow.GlowRecoveryScreen(
-                                day, recovery, strapReadiness, history, header = { header(Tab.Recovery) }, contentPadding = padding,
+                                day, recovery, history, header = { header(Tab.Recovery) }, contentPadding = padding,
                                 onOpenMetric = { recoveryStack = listOf(Detail.OfMetric(it)) },
+                                healthspan = healthspan, onOpenHealthspan = { recoveryStack = listOf(Detail.Healthspan) },
+                                onOpenProfile = { openPage(Page.Profile) },
                                 showCharge = showCharge, onChargeShown = { showCharge = false },
                             )
                             Tab.Sleep -> org.openstrap.app.ui.glow.GlowSleepScreen(
@@ -745,7 +747,7 @@ private fun AppRoot(
                                 recovery = recovery,
                             )
                             Tab.Activity -> org.openstrap.app.ui.glow.GlowActivityScreen(
-                                day, recovery, workouts, sportEffects, { from, to -> container.health.dailyPai(from, to) },
+                                day, recovery, workouts, { from, to -> container.health.dailyPai(from, to) },
                                 header = { header(Tab.Activity) }, contentPadding = padding,
                                 onOpenMetric = { activityStack = listOf(Detail.OfMetric(it)) },
                                 onOpenWorkout = { activityStack = listOf(Detail.Workout(it)) },
@@ -757,10 +759,6 @@ private fun AppRoot(
                                 onDismissSuggestion = { suggestion?.let { container.workout.dismissSuggestion(it.start, it.end) } },
                                 onAllSports = { readySport = readySport ?: org.openstrap.app.ui.glow.topSports(workouts).first().sportType; readyPicking = true },
                                 onAddWorkout = { addingOn = day.date },
-                                offer = offer,
-                                onRecordOffer = { container.workout.recordOffer() },
-                                onDeclineOffer = { container.workout.declineOffer() },
-                                paiSex = profile.sex,
                             )
                         }
                     }

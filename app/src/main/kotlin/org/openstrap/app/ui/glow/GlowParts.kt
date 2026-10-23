@@ -50,6 +50,7 @@ private val GLYPHS: Map<Char, List<String>> = mapOf(
     ',' to listOf(".", ".", ".", ".", ".", "#", "#"),
     ':' to listOf(".", ".", "#", ".", ".", "#", "."),
     '-' to listOf("...", "...", "...", "###", "...", "...", "..."),
+    '+' to listOf("...", "...", ".#.", "###", ".#.", "...", "..."),
     'k' to listOf("#....", "#....", "#..#.", "#.#..", "##...", "#.#..", "#..#."),
     '%' to listOf("##...", "##..#", "...#.", "..#..", ".#...", "#..##", "...##"),
     ' ' to listOf("..", "..", "..", "..", "..", "..", ".."),
@@ -58,7 +59,7 @@ private const val ROWS = 7
 
 /**
  * A number drawn as round dots, like an LED matrix (the "3.3" on the reference cards). [dot] is the
- * dot diameter; the grid pitch is dot + [gap]. Digits, `.`, `,`, `:`, `-` and `%` are supported.
+ * dot diameter; the grid pitch is dot + [gap]. Digits, `.`, `,`, `:`, `-`, `+` and `%` are supported.
  */
 @Composable
 fun DotMatrixText(

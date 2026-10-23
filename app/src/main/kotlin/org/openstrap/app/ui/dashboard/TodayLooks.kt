@@ -6,25 +6,10 @@ import org.openstrap.app.ui.glow.Edge
 import org.openstrap.app.ui.glow.Pane
 
 /*
- * How each Today card looks, and the rule that no two cards next to each other look the same (spec 2.4). Plain
- * functions over the final list of cards, after Edit Today, so every moment and every pin and hide is tested
- * without a screen.
+ * How each Today card looks, and the rule that no two cards next to each other look the same (spec 2.4), with the
+ * looks themselves in CardLooks.kt. Plain functions over the final list of cards, after Edit Today, so every moment
+ * and every pin and hide is tested without a screen.
  */
-
-/** A card's tier (spec 2.4), with strips and plain pieces (Edit Today) told apart from edge cards. */
-enum class Tier { Glow, Edge, List, Strip, Plain }
-
-/** The colour a card is lit in: its metric's, or [Neutral], the cool grey of hsl 220 10% 55%. */
-enum class Hue { Recovery, Charge, Sleep, Heart, Steps, HabitAge, Neutral }
-
-/**
- * What a card looks like at a glance: its [tier], its [hue] and, for edge cards and strips, the [edge] its light
- * comes in from. Two cards look the same when tier and edge match ([sameDesign]): a colour alone doesn't tell two
- * cards apart, so two glows in a row, or two edge cards lit from one side, look the same whatever their colours.
- */
-data class CardLook(val tier: Tier, val hue: Hue, val edge: Edge? = null) {
-    fun sameDesign(other: CardLook?): Boolean = other != null && tier == other.tier && edge == other.edge
-}
 
 private fun glow(h: Hue) = CardLook(Tier.Glow, h)
 private fun edge(h: Hue, e: Edge) = CardLook(Tier.Edge, h, e)
@@ -69,39 +54,13 @@ fun TodaySlot.lookOr(moment: Moment?, live: Boolean = false): CardLook = look ?:
  * Where each slot goes on a wide screen: the hero and strips span both columns, the cards between take turns, as
  * [org.openstrap.app.ui.glow.GlowScreenList] lays them out.
  */
-fun todayPanes(slots: List<TodaySlot>): List<Pane> {
-    var side = Pane.Left
-    return slots.map { s ->
-        when (s.size) {
-            CardSize.Large, CardSize.Strip -> Pane.Full
-            else -> side.also { side = if (it == Pane.Left) Pane.Right else Pane.Left }
-        }
-    }
-}
+fun todayPanes(slots: List<TodaySlot>): List<Pane> = alternatingPanes(slots.map { it.size })
 
 /**
  * The pairs of slots (by index, earlier first) that sit next to each other: one after the other in reading order,
- * and on a [wide] screen also side by side and one over the other in a column.
+ * and on a [wide] screen also side by side and one over the other in a column ([neighbours]).
  */
-fun neighbours(slots: List<TodaySlot>, wide: Boolean): Set<Pair<Int, Int>> {
-    val out = (0 until slots.size - 1).mapTo(mutableSetOf()) { it to it + 1 }
-    if (!wide) return out
-    val panes = todayPanes(slots)
-    var i = 0
-    while (i < slots.size) {
-        if (panes[i] == Pane.Full) { i++; continue }
-        val run = generateSequence(i) { it + 1 }.takeWhile { it < slots.size && panes[it] != Pane.Full }.toList()
-        val left = run.filter { panes[it] == Pane.Left }
-        val right = run.filter { panes[it] == Pane.Right }
-        // A run with one side empty is drawn full width, in reading order.
-        if (left.isNotEmpty() && right.isNotEmpty()) {
-            left.zip(right).forEach { (a, b) -> out += minOf(a, b) to maxOf(a, b) }
-            listOf(left, right).forEach { col -> col.zipWithNext().forEach { out += it } }
-        }
-        i = run.last() + 1
-    }
-    return out
-}
+fun neighbours(slots: List<TodaySlot>, wide: Boolean): Set<Pair<Int, Int>> = neighbours(todayPanes(slots), wide)
 
 /** The pairs of neighbours that look the same, in reading order. */
 fun lookClashes(slots: List<TodaySlot>, wide: Boolean, moment: Moment? = null, live: Boolean = false): List<Pair<Int, Int>> =

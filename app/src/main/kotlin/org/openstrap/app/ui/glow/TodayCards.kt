@@ -33,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import java.time.Instant
 import java.time.ZoneId
@@ -72,9 +73,12 @@ internal fun HeroSentence(text: String, modifier: Modifier = Modifier) =
 
 /** A number on the hero: dot-matrix digits, or the dim dash while there's none, with a [label] under it. */
 @Composable
-internal fun HeroFigure(value: String?, label: String, big: Boolean = false, horizontal: Alignment.Horizontal = Alignment.Start) {
-    Column(horizontalAlignment = horizontal, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        if (value != null) DotMatrixText(value, dot = if (big) GlowLayout.HeroDot else 3.dp, gap = if (big) GlowLayout.HeroGap else 1.1.dp)
+internal fun HeroFigure(
+    value: String?, label: String, big: Boolean = false, horizontal: Alignment.Horizontal = Alignment.Start, dot: Dp = 3.dp,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier, horizontalAlignment = horizontal, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        if (value != null) DotMatrixText(value, dot = if (big) GlowLayout.HeroDot else dot, gap = if (big) GlowLayout.HeroGap else dot * 0.37f)
         else WaitingDash(Modifier.padding(vertical = 8.dp))
         Text(label, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary, maxLines = 1)
     }
@@ -204,8 +208,12 @@ internal fun EdgeTitle(title: String, note: String?) {
 
 /** An edge card's number and the line under it; a dim dash and [status] while there's no number. */
 @Composable
-internal fun EdgeValue(value: String?, unit: String?, status: String?, statusColor: Color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA)) {
-    Row(Modifier.padding(top = 14.dp), verticalAlignment = Alignment.Bottom) {
+internal fun EdgeValue(
+    value: String?, unit: String?, status: String?, statusColor: Color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA),
+    /** Whether a missing [value] shows the waiting dash; false where the [status] says all there is. */
+    waiting: Boolean = true,
+) {
+    if (value != null || waiting) Row(Modifier.padding(top = 14.dp), verticalAlignment = Alignment.Bottom) {
         if (value != null) DotMatrixText(value, dot = 3.4.dp, gap = 1.2.dp) else WaitingDash(Modifier.padding(vertical = 8.dp))
         if (unit != null && value != null) Text(unit, color = Color.White.copy(alpha = 0.7f), style = GlowType.secondary, modifier = Modifier.padding(start = 8.dp))
     }

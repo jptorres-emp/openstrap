@@ -1,22 +1,8 @@
 package org.openstrap.app.ui.glow
 
-import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.foundation.layout.Box
-import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.ui.graphics.drawscope.clipPath
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.geometry.RoundRect
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -24,61 +10,67 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.flow.Flow
-import org.openstrap.app.data.Pai
-import org.openstrap.app.data.RecoveryResult
-import org.openstrap.app.data.WorkoutAnalysis
-import org.openstrap.app.data.db.DailyPai
-import org.openstrap.app.data.db.SportEffectRow
-import org.openstrap.app.data.settings.UserProfile
-import org.openstrap.app.ui.components.formatDuration
-import org.openstrap.app.ui.dashboard.DayUiState
-import org.openstrap.app.ui.dashboard.Metric
-import org.openstrap.app.ui.dashboard.LocalGoals
-import org.openstrap.app.ui.theme.MetricColors
-import org.openstrap.app.ui.theme.AppIcons
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import java.time.format.TextStyle
-import java.util.Locale
 import kotlin.math.roundToInt
+import kotlinx.coroutines.flow.Flow
+import org.openstrap.app.data.Activity
+import org.openstrap.app.data.RecoveryResult
+import org.openstrap.app.data.WorkoutAnalysis
+import org.openstrap.app.data.Workouts
+import org.openstrap.app.data.db.DailyPai
+import org.openstrap.app.ui.dashboard.ActivityCard
+import org.openstrap.app.ui.dashboard.ActivityFacts
+import org.openstrap.app.ui.dashboard.DayUiState
+import org.openstrap.app.ui.dashboard.LocalGoals
+import org.openstrap.app.ui.dashboard.Metric
+import org.openstrap.app.ui.dashboard.TabCopy
+import org.openstrap.app.ui.dashboard.TodayCopy
+import org.openstrap.app.ui.dashboard.activityCards
+import org.openstrap.app.ui.theme.MetricColors
+import org.openstrap.app.ui.workout.SportIcons
+import org.openstrap.app.ui.workout.ZONE_COLORS
 
-/** PAI's weekly target: 100 or more over the last seven days. */
-private const val PAI_TARGET = 100
+/** Heart points' weekly aim: 100 or more over the last seven days. */
+private const val HEART_POINTS_TARGET = 100
 
-/** Recent workouts listed under the day's own (scrolling), before "All workouts". */
-private const val RECENT_WORKOUTS = 20
-/** How many workout rows the Workouts panel shows before it scrolls. */
-private const val VISIBLE_WORKOUTS = 4
+/** Workouts the list shows, the day's first, before "All workouts". */
+private const val LISTED_WORKOUTS = 5
 
-/** Each day's PAI between two dates, keyed by date. */
+/** Each day's Heart points (the strap's PAI) between two dates, keyed by date. */
 typealias PaiHistory = (LocalDate, LocalDate) -> Flow<Map<LocalDate, DailyPai>>
 
-/**
- * The Activity tab in the glow language: "how much did I move and train". Steps glow; PAI, training load,
- * fitness and workouts sit in quiet dot panels underneath.
+/*
+ * The Activity tab (spec 5.3): "how much did I move and train". A strip to start a sport today, steps glowing, Load
+ * against your usual, this week's facts and the workouts ([activityCards]). The method behind each number (energy,
+ * active minutes, VO2 max, Load's parts) belongs in their details and info sheets (step 6). Workouts under way and
+ * the morning check-in live on Today.
  */
 @Composable
 fun GlowActivityScreen(
     state: DayUiState,
     recovery: RecoveryResult?,
     workouts: List<WorkoutAnalysis>,
-    effects: List<SportEffectRow>,
     paiHistory: PaiHistory,
     header: @Composable () -> Unit,
     contentPadding: PaddingValues,
@@ -92,363 +84,250 @@ fun GlowActivityScreen(
     onSaveSuggestion: () -> Unit = {},
     onDismissSuggestion: () -> Unit = {},
     onAddWorkout: () -> Unit = {},
-    /** An effort under way nobody started ([org.openstrap.app.data.AutoStart]); null hides the card. */
-    offer: org.openstrap.app.data.AutoStart.Offer? = null,
-    onRecordOffer: () -> Unit = {},
-    onDeclineOffer: () -> Unit = {},
-    /** Picks the strap's PAI curve for "drops off tomorrow"; null uses Zepp's default (female). */
-    paiSex: UserProfile.Sex? = null,
 ) {
     val list = rememberLazyListState()
+    val isToday = state.date == LocalDate.now()
     val sports = remember(workouts) { topSports(workouts) }
-    val week = remember(state.date) { paiHistory(state.date.minusDays(6), state.date) }.collectAsState(emptyMap()).value
+    val stored = remember(state.date) { paiHistory(state.date, state.date) }.collectAsState(emptyMap()).value
+    val heartPoints = state.pai?.total ?: stored[state.date]?.total
     val r = recovery?.takeIf { it.date == state.date }
+    val slots = activityCards(ActivityFacts(isToday = isToday, suggestion = suggestion != null))
     CompositionLocalProvider(LocalGlowPaused provides { list.isScrollInProgress }) {
         GlowScreenList(contentPadding, list) {
             full { header() }
-            // Wide: today's movement on the left; load, fitness and workouts on the right.
-            // The home for workouts: started from here on today; a past day only shows what was done.
-            if (offer != null && state.date == LocalDate.now()) left { OfferPanel(offer, onRecordOffer, onDeclineOffer) }
-            if (state.date == LocalDate.now()) left { StartWorkoutPanel(sports, onStartWorkout, onAllSports) }
-            if (suggestion != null && state.date == LocalDate.now()) left { SuggestionPanel(suggestion, onSaveSuggestion, onDismissSuggestion) }
-            left { StepsCard(state, r?.activity) { onOpenMetric(Metric.Steps) } }
-            r?.activity?.let { a -> left { MvpaPanel(a) } }
-            left { EnergyPanel(r?.energy, onEditProfile) }
-            left { PaiPanel(state, week, paiSex) }
-            right { LoadPanel(r, effects.lastOrNull { it.weeklyLoad != null }, onEditProfile) }
-            right { FitnessPanel(r, workouts, effects, state.dailyMaxHeartRate) }
-            right { WorkoutsPanel(state.date, workouts, onOpenWorkout, onAllWorkouts, onAddWorkout) }
-        }
-    }
-}
-
-private val HOURS = listOf("00", "06", "12", "18", "24")
-
-/** Steps glow and pick up pace with the day's progress; distance, calories and active hours sit under the chart. */
-@Composable
-private fun StepsCard(state: DayUiState, activity: org.openstrap.app.data.Activity.Day?, onClick: () -> Unit) {
-    val goals = LocalGoals.current
-    val style = GlowStyle.chart(MetricColors.steps)
-    GlowCard(style, Modifier.fillMaxWidth(), onClick = onClick) {
-        Column {
-            GlowHeader("Steps", chevron = true)
-            val goal = if (state.steps >= goals.steps) "Goal reached" else "%d%% of %,d".format(state.steps * 100 / goals.steps, goals.steps)
-            GlowHeroNumber("${state.steps}", "steps", listOf(goal))
-            GlowChartGap()
-            GlowDotBars(state.hourlySteps, height = GlowLayout.ChartHeight, labels = HOURS, accent = MetricColors.steps) { h, v ->
-                "%02d:00–%02d:00 · %,d steps".format(h, (h + 1) % 24, Math.round(v))
-            }
-            Spacer(Modifier.height(18.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Fact("Active hours", "${state.activeHours} of ${goals.activeHours}")
-                // Ours from step length and height when we can; the strap's own figure otherwise. Always approximate.
-                Fact("Distance", (activity?.distanceMeters ?: state.distanceMeters?.toFloat())?.let { "≈ %.1f km".format(it / 1000f) } ?: "—")
-                Fact("Active kcal", state.activeCalories?.toString() ?: "—")
-            }
-            if (org.openstrap.app.data.Activity.stepsDiverge(state.steps, state.minuteSteps)) {
-                Spacer(Modifier.height(8.dp))
-                Note("The strap's step counter (${"%,d".format(state.steps)}) and its minute records (${"%,d".format(state.minuteSteps)}) differ by more than 5 %.")
-            }
-            activity?.let { Note("Most of the benefit is reached by about ${"%,d".format(it.stepGoal)} steps a day (Paluch et al. 2022).") }
-        }
-    }
-}
-
-/** Energy expenditure: our per-minute estimate from BMR, steps and (narrowly) heart rate. */
-@Composable
-private fun EnergyPanel(e: org.openstrap.app.data.EnergyExpenditure.Day?, onEditProfile: () -> Unit) {
-    DotPanel {
-        DotHeader("Energy", trailing = e?.let { if (it.partial) "Partial day" else null })
-        if (e == null) {
-            Row(Modifier.fillMaxWidth().glass(GlassRowShape, onEditProfile).padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("Add age, weight and height to estimate the energy you use.", color = MetricColors.warn, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
-                Icon(AppIcons.CaretRight, null, tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.padding(start = 8.dp))
-            }
-            return@DotPanel
-        }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Fact("Total", "≈ ${e.totalKcal.roundToInt()} kcal")
-            Fact("At rest", "${e.bmrKcal.roundToInt()} /day")
-            Fact("Activity level", e.pal?.let { "%.2f".format(it) } ?: "—")
-        }
-        Note(
-            listOfNotNull(
-                "From your resting metabolism (Mifflin-St Jeor), your steps each minute and, for effort without steps, your heart rate.",
-                if (e.partial) "Covers ${formatDuration(e.minutesWithData * 60L)} of wear, so it's a partial total." else null,
-                if (e.palImplausible) "That's an unusual total for a full day; check your profile and how the strap was worn." else null,
-                if (e.hrAssistedMinutes > 0) "${e.hrAssistedMinutes} min HR-assisted." else null,
-                "Food digestion isn't included.",
-            ).joinToString(" "),
-        )
-    }
-}
-
-/** Moderate-to-vigorous minutes today and over the week, against the WHO's 150 a week (vigorous counts double). */
-@Composable
-private fun MvpaPanel(a: org.openstrap.app.data.Activity.Day) {
-    val target = org.openstrap.app.data.Activity.MVPA_WEEKLY_TARGET
-    DotPanel {
-        DotHeader("Active minutes", trailing = "Last 7 days")
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Fact("This week", "${a.weekEquivalent} / $target")
-            Fact("Moderate", "${a.mvpa.moderateMinutes}")
-            Fact("Vigorous", "${a.mvpa.vigorousMinutes}")
-        }
-        GlowBar(a.weekEquivalent / target.toFloat(), MetricColors.steps)
-        Note(
-            "Brisk walking (100+ steps a minute) is moderate, 130+ is vigorous and counts double. Effort without steps, " +
-                "like cycling, counts from heart rate after 10 minutes" +
-                if (a.mvpa.fromHeartRate > 0) " (${a.mvpa.fromHeartRate} min today, HR-assisted)." else ".",
-        )
-    }
-}
-
-/**
- * PAI: the strap's rolling 7-day score from heart-rate effort, aiming for 100. Shows the total as one bar
- * built from the days that make it up, what each day added, and what drops off next.
- */
-@Composable
-private fun PaiPanel(state: DayUiState, week: Map<LocalDate, DailyPai>, sex: UserProfile.Sex?) {
-    val total = state.pai?.total ?: week[state.date]?.total
-    DotPanel {
-        DotHeader("PAI", trailing = "Last 7 days")
-        if (total == null) {
-            Note("PAI shows after the strap's next sync. It counts minutes your heart rate is raised, harder minutes counting more.")
-            return@DotPanel
-        }
-        Row(verticalAlignment = Alignment.Bottom) {
-            Text("${total.roundToInt()}", color = Color.White, style = MaterialTheme.typography.displaySmall)
-            Text(" / $PAI_TARGET", color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(bottom = 6.dp))
-            Spacer(Modifier.weight(1f))
-            val today = state.pai?.daily ?: week[state.date]?.daily
-            if (today != null) Fact("Today", "+${today.roundToInt()}")
-        }
-        val days = (6 downTo 0).map { state.date.minusDays(it.toLong()) }
-        val daily = days.map { week[it]?.daily ?: 0f }
-        val names = days.map { it.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault()).take(2) }
-        PaiStack(daily)
-        // Each day's points under the bar, oldest first; today in red like its segment.
-        Row(Modifier.fillMaxWidth()) {
-            daily.forEachIndexed { i, v ->
-                Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(names[i], color = Color.White.copy(alpha = 0.55f), style = MaterialTheme.typography.labelSmall)
-                    Text(
-                        paiPoints(v), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 2.dp),
-                        color = when { v <= 0f -> Color.White.copy(alpha = 0.35f); i == daily.lastIndex -> MetricColors.heart; else -> Color.White },
+            tabCards(slots) { card ->
+                when (card) {
+                    ActivityCard.Start -> StartStrip(sports, onStartWorkout, onAllSports)
+                    ActivityCard.Steps -> StepsGlow(state) { onOpenMetric(Metric.Steps) }
+                    ActivityCard.Load -> LoadCard(r)
+                    ActivityCard.Facts -> FactsList(state, r, workouts, heartPoints, isToday, onEditProfile)
+                    ActivityCard.Workouts -> WorkoutsList(
+                        state.date, workouts, suggestion?.takeIf { isToday }, onOpenWorkout, onAllWorkouts, onAddWorkout,
+                        onSaveSuggestion, onDismissSuggestion,
                     )
                 }
             }
         }
-        // The oldest day leaves the rolling total tomorrow; only worth saying when looking at today. Its stored daily
-        // isn't what goes (native 08 §7): take the strap's own projection when the latest record has one, else
-        // re-sum the ring without it.
-        val dropping = if (state.date != LocalDate.now() || daily.first() <= 0f) null else
-            (state.pai?.let { Pai.dropsOffTomorrow(it.total, it.tomorrowTotal) }
-                ?: Pai.dropsOffTomorrow(days.map { d -> week[d]?.let { Pai.Day(it.daily, it.total) } }, sex))
-                .toFloat().takeIf { it > 0f }
-        Note(
-            listOfNotNull(
-                dropping?.let { "Tomorrow ${days.first().dayOfWeek.getDisplayName(TextStyle.FULL, Locale.getDefault())}'s ${paiPoints(it)} drops off." },
-                if (total >= PAI_TARGET) "You're at or above $PAI_TARGET. Keeping it there week after week is what PAI is built around."
-                else "${PAI_TARGET - total.roundToInt()} to go. Brisk walking adds a little; anything that gets you out of breath adds more.",
-            ).joinToString(" "),
-        )
     }
 }
 
-/** "+12", "+<1" for a sliver of a point, "–" for none. */
-private fun paiPoints(v: Float) = when {
-    v <= 0f -> "–"
-    v < 0.5f -> "+<1"
-    else -> "+${v.roundToInt()}"
+/* ----------------------------------------------- Start ---------------------------------------------- */
+
+/** "Start": your three most used sports and every sport, as one strip of pills. Today only. */
+@Composable
+private fun StartStrip(sports: List<SportUse>, onStart: (Int) -> Unit, onAllSports: () -> Unit) {
+    TodayStrip(MetricColors.steps, EdgeKind.Value) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            sports.take(3).forEach { s ->
+                // Three named pills and All sports don't fit a phone, so the sports are icons, named for TalkBack.
+                SportPill(SportIcons.of(s.sportType), Workouts.sportName(s.sportType), Modifier.width(52.dp), iconOnly = true) { onStart(s.sportType) }
+            }
+            SportPill(null, "All sports", Modifier.weight(1f), onClick = onAllSports)
+        }
+    }
 }
+
+@Composable
+private fun SportPill(
+    icon: androidx.compose.ui.graphics.vector.ImageVector?, name: String, modifier: Modifier, iconOnly: Boolean = false, onClick: () -> Unit,
+) {
+    Row(
+        modifier.height(40.dp).glass(RoundedCornerShape(50), onClick).padding(horizontal = 10.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center,
+    ) {
+        if (icon != null) {
+            Icon(icon, if (iconOnly) "Start $name" else null, tint = Color.White, modifier = Modifier.size(if (iconOnly) 20.dp else 16.dp))
+            if (!iconOnly) Spacer(Modifier.width(6.dp))
+        }
+        if (!iconOnly) Text(name, color = Color.White, style = GlowType.secondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+/* ----------------------------------------------- Steps ---------------------------------------------- */
 
 /**
- * The rolling total as one bar to [PAI_TARGET], built from the days that fill it: one segment per day,
- * oldest first and faintest (it drops off next), today in heart red. Past the target it's simply full.
+ * Steps glow, lit to the share of the goal walked, with the day's steps hour by hour. Opens the Steps detail.
+ * TODO(step 6): "About usual for midday" needs your usual steps by this hour, from past days' hourly steps, which
+ * the app doesn't load yet; until then the line says how far toward the goal.
  */
 @Composable
-private fun PaiStack(daily: List<Float>) {
-    Canvas(Modifier.fillMaxWidth().height(14.dp)) {
-        val corner = CornerRadius(size.height / 2)
-        drawRoundRect(Color.White.copy(alpha = 0.07f), cornerRadius = corner)
-        val track = Path().apply { addRoundRect(RoundRect(0f, 0f, size.width, size.height, corner)) }
-        clipPath(track) {
-            val gap = 1.5.dp.toPx()
-            // A day with any points shows at least as a sliver, so tiny days don't vanish.
-            val sliver = 3.dp.toPx()
-            var x = 0f
-            daily.forEachIndexed { i, v ->
-                if (v <= 0f || x >= size.width) return@forEachIndexed
-                val w = maxOf(size.width * v / PAI_TARGET, sliver)
-                val color = when (i) {
-                    daily.lastIndex -> MetricColors.heart
-                    0 -> Color.White.copy(alpha = 0.35f)
-                    else -> Color.White.copy(alpha = 0.55f + 0.45f * i / daily.lastIndex)
-                }
-                drawRect(color, Offset(x, 0f), Size(w, size.height))
-                x += w + gap
-            }
+private fun StepsGlow(state: DayUiState, onClick: () -> Unit) {
+    val goal = LocalGoals.current.steps
+    val share = if (goal > 0) state.steps / goal.toFloat() else 0f
+    GlowCard(GlowStyle.chart(MetricColors.steps).copy(lightLevel = share.coerceIn(0f, 1f)), Modifier.fillMaxWidth().gridSize(CardSize.Wide), onClick = onClick) {
+        Column {
+            GlowHeader("Steps", trailing = "Goal %,d".format(goal), chevron = true)
+            Spacer(Modifier.height(GlowLayout.TitleGap))
+            HeroFigure("%,d".format(state.steps), if (state.steps >= goal) "Goal reached" else "${(share * 100).toInt()}% of your goal", big = true)
+            Spacer(Modifier.height(18.dp))
+            HourPills(state.hourlySteps)
         }
-    }
-}
-
-/** Today's load from heart rate (ours) next to the strap's weekly load and its productive range. */
-@Composable
-private fun LoadPanel(r: RecoveryResult?, effect: SportEffectRow?, onEditProfile: () -> Unit) {
-    DotPanel {
-        DotHeader("Training load")
-        if (r != null) {
-            // Rounded parts, and the total as their sum, so the line always adds up.
-            val fromWorkouts = r.workoutLoad.roundToInt()
-            val everyday = r.everydayLoad.roundToInt()
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Fact("Strain", "%.1f".format(r.strain))
-                Fact("Load today", "${fromWorkouts + everyday}")
-                Fact("vs your usual", r.strainPercentile?.let { "${it}th pct" } ?: "—")
-            }
-            Note("${fromWorkouts + everyday} today · $fromWorkouts workouts · $everyday everyday")
-            r.loadTrend?.let { t ->
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Fact("Fitness", "${t.ctl.toInt()}")
-                    Fact("Fatigue", "${t.atl.toInt()}")
-                    Fact("Form", "${if (t.form > 0.5f) "+" else ""}${t.form.toInt()}")
-                }
-                Note("Fitness and fatigue are 42- and 7-day averages of your daily load; form is fitness minus fatigue.")
-            }
-            Note(
-                "Each minute counts by how hard your heart works between resting (${r.restingHr.toInt()} bpm) and maximum " +
-                    "(${r.maxHr.toInt()} bpm${if (r.maxHrTested) ", from your test" else ""}). Every workout minute counts; outside workouts, " +
-                    "only moving minutes at 35 % of reserve or more, or brisk walking (60+ steps a minute) from 20 %. Strain runs 0–21 on a fixed curve: an hour at 60 % of reserve is about 7.",
-            )
-        }
-        r?.acwr?.let { ratio ->
-            DotDivider()
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
-                Fact("Acute:chronic", "%.2f".format(ratio))
-                Spacer(Modifier.weight(1f))
-                StatusPill("Contested", Color.White.copy(alpha = 0.7f))
-            }
-            Note("Last 7 days against the last 4 weeks. Shown for interest only: the evidence for a \"safe\" ratio is disputed, so it never enters Recovery.")
-        }
-        val weekly = effect?.weeklyLoad
-        val low = effect?.optimalLoadMin
-        val high = effect?.optimalLoadMax
-        if (weekly != null && low != null && high != null) {
-            DotDivider()
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
-                Fact("This week (strap EPOC)", "${weekly.roundToInt()}")
-                Spacer(Modifier.weight(1f))
-                val (word, color) = when {
-                    weekly < low -> "Below productive" to TrendBad
-                    weekly > high -> "Above productive" to TrendBad
-                    else -> "Productive" to TrendGood
-                }
-                Text(word, color = color, style = MaterialTheme.typography.titleSmall)
-            }
-            GlowBar(weekly / (high * 1.25f), if (weekly in low.toFloat()..high.toFloat()) TrendGood else MetricColors.steps)
-            Note("Productive range $low–$high, from the strap (updated ${shortDate(effect.end)}). That is EPOC, on a different scale from today's load.")
-        }
-        if (r != null && !r.maxHrFromAge) {
-            Row(Modifier.fillMaxWidth().glass(GlassRowShape, onEditProfile).padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    "Max HR is estimated. Add your age for accurate effort numbers.",
-                    color = MetricColors.warn, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f),
-                )
-                Icon(AppIcons.CaretRight, null, tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.padding(start = 8.dp))
-            }
-        }
-    }
-}
-
-/** VO2 max and its trend across workouts, recovery time left from the last one, and max heart rate. */
-@Composable
-private fun FitnessPanel(r: RecoveryResult?, workouts: List<WorkoutAnalysis>, effects: List<SportEffectRow>, highestToday: Int?) {
-    val vo2 = workouts.sortedBy { it.workout.start }.mapNotNull { a -> (a.workout.vo2max ?: a.effect?.vo2max?.roundToInt())?.takeIf { it > 0 } }
-    val last = effects.lastOrNull { it.recoveryMinutes != null }
-    val now = System.currentTimeMillis() / 1000
-    val left = last?.let { it.end + it.recoveryMinutes!! * 60L - now }
-    DotPanel {
-        DotHeader("Fitness")
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Fact("VO2 max", vo2.lastOrNull()?.toString() ?: "—")
-            Fact("Recovery", when {
-                left == null -> "—"
-                left <= 0 -> "Done"
-                else -> "${formatDuration(left)} left"
-            })
-            Fact("Max HR", r?.let { "${it.maxHr.toInt()}" } ?: "—")
-        }
-        if (vo2.size >= 2) Sparkline(vo2.takeLast(7).map { it.toFloat() }, MetricColors.hrv, Modifier.fillMaxWidth().height(24.dp))
-        if (r != null) {
-            DotDivider()
-            val est = r.vo2max
-            if (est != null) {
-                Fact("Estimated fitness (VO2 max)", "≈ ${est.low}–${est.high}")
-                Note(
-                    "From your age, sex, BMI, resting heart rate (${est.restingHr.toInt()} bpm, while asleep) and usual activity " +
-                        "(Jurca et al. 2005). Typical error is about ±5 ml/kg/min. Updated weekly." +
-                        (est.band?.let { " ${it.label} for your age and sex (FRIEND 2022, treadmill)." } ?: "") +
-                        (est.fitnessAge?.let { a -> est.sex?.let { " That's ${org.openstrap.app.data.Vo2max.Friend.fitnessAgeText(a, it)}." } } ?: ""),
-                )
-            } else r.vo2maxWithheld?.let { Note("Estimated fitness: ${it.reason}") }
-        }
-        Note(
-            listOfNotNull(
-                if (vo2.isEmpty()) "VO2 max appears after a workout the strap can estimate it from." else null,
-                last?.let { "Recovery time is the strap's estimate of how long your last effort needs." },
-                highestToday?.let { "Highest heart rate today $it bpm." },
-            ).joinToString(" ").ifEmpty { "Record a workout on the strap to see VO2 max and recovery time." },
-        )
     }
 }
 
 /**
- * The day's workouts, then the most recent others, in a window [VISIBLE_WORKOUTS] rows tall that scrolls inside the
- * panel; then a way to add one and to the full list.
+ * The day's steps as 24 pills, one an hour, as high as the hour's share of the busiest. The latest hour with steps
+ * is lit full white. TODO(step 6): tapping an hour shows its count in the headline.
  */
 @Composable
-private fun WorkoutsPanel(date: LocalDate, workouts: List<WorkoutAnalysis>, onOpen: (Long) -> Unit, onAll: () -> Unit, onAdd: () -> Unit) {
+private fun HourPills(hourly: List<Float>) {
+    val top = hourly.maxOrNull()?.takeIf { it > 0f } ?: 1f
+    val last = hourly.indexOfLast { it > 0f }
+    Column {
+        Canvas(Modifier.fillMaxWidth().height(56.dp)) {
+            val slot = size.width / hourly.size
+            val w = slot * 0.56f
+            hourly.forEachIndexed { i, v ->
+                val h = (size.height * v / top).coerceAtLeast(w)
+                val x = slot * i + (slot - w) / 2
+                drawRoundRect(
+                    if (i == last) Color.White else Color.White.copy(alpha = if (v > 0f) 0.45f else 0.12f),
+                    Offset(x, size.height - h), Size(w, h), CornerRadius(w / 2),
+                )
+            }
+        }
+        Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+            listOf("00", "06", "12", "18", "24").forEach {
+                Text(it, color = Color.White.copy(alpha = 0.55f), style = GlowType.secondary)
+            }
+        }
+    }
+}
+
+/* ------------------------------------------------ Load ---------------------------------------------- */
+
+/**
+ * Load today against your usual for a day, as progress with its bar, and the week's balance in a word. Above your
+ * usual it glows stronger. TODO(step 6): tapping opens the Load detail, where Strain, fitness and fatigue live.
+ */
+@Composable
+private fun LoadCard(r: RecoveryResult?) {
+    val usual = r?.chronicLoad?.takeIf { it > 0f }
+    val status = r?.let { TodayCopy.loadStatus(it.load, it.chronicLoad, endOfDay = it.date != LocalDate.now()) }
+    EdgeCard(
+        MetricColors.load, Modifier.fillMaxWidth().gridSize(CardSize.Wide),
+        status = if (status == TodayCopy.LoadStatus.Above) EdgeStatus.Above else EdgeStatus.Usual,
+        kind = EdgeKind.Progress, progress = r?.let { l -> usual?.let { l.load / it } },
+    ) {
+        EdgeTitle("Load", TabCopy.loadBalance(r?.loadTrend))
+        EdgeValue(r?.load?.roundToInt()?.toString(), "today", if (r == null) "No reading yet" else TabCopy.loadUsual(usual))
+    }
+}
+
+/* ------------------------------------------------ Facts --------------------------------------------- */
+
+/**
+ * The week's and the day's smaller facts: active minutes, Heart points, VO2 max, time to recover, energy and
+ * distance. TODO(step 6): each opens its detail; none exists yet but Steps.
+ */
+@Composable
+private fun FactsList(
+    state: DayUiState, r: RecoveryResult?, workouts: List<WorkoutAnalysis>, heartPoints: Float?, isToday: Boolean, onEditProfile: () -> Unit,
+) {
+    val waiting = "No reading yet"
+    ListPanel(title = "This week and today") {
+        val a = r?.activity
+        ListRow(
+            "Active minutes", MetricColors.steps, a?.weekEquivalent?.toString(),
+            a?.let { TabCopy.activeMinutes(it.weekEquivalent, Activity.MVPA_WEEKLY_TARGET) } ?: waiting, divider = false,
+        )
+        ListRow(
+            "Heart points", MetricColors.heart, heartPoints?.roundToInt()?.toString(),
+            heartPoints?.let { TabCopy.heartPoints(it.roundToInt(), HEART_POINTS_TARGET) } ?: "After the strap's next sync",
+        )
+        // The latest workout the strap read VO2 max from; the estimate from your profile otherwise.
+        val fromWorkouts = workouts.sortedByDescending { it.workout.start }
+            .firstNotNullOfOrNull { w -> (w.workout.vo2max ?: w.effect?.vo2max?.roundToInt())?.takeIf { it > 0 } }
+        val est = r?.vo2max
+        ListRow(
+            "VO2 max", MetricColors.hrv,
+            fromWorkouts?.toString() ?: est?.let { "${it.low}-${it.high}" },
+            when {
+                fromWorkouts != null -> "From your workouts"
+                est != null -> est.band?.let { "${it.label} for your age" } ?: "Estimated from your profile"
+                else -> "After a workout the strap can read it from"
+            },
+        )
+        val recover = workouts.filter { it.recoveryMinutes != null }.maxByOrNull { it.end }?.let { w ->
+            val now = System.currentTimeMillis() / 1000
+            TodayCopy.recoverText(TodayCopy.recoverLeft(w.end, w.recoveryMinutes ?: 0, now), now, ZoneId.systemDefault())
+        }
+        // Recovered is the whole answer: no number, no dash.
+        ListRow("Time to recover", MetricColors.readinessDeep, recover?.first, recover?.second ?: "No recent workout", dash = recover?.first != null)
+        val e = r?.energy
+        ListRow(
+            "Energy", MetricColors.chargeDeep, e?.totalKcal?.roundToInt()?.let { "%,d".format(it) },
+            e?.let { TabCopy.energy(it.partial, isToday) } ?: "Add age, weight and height to see it",
+            onClick = if (e == null) onEditProfile else null, dash = e != null,
+        )
+        // Ours from step length and height when we can; the strap's own figure otherwise. Always approximate.
+        val distance = a?.distanceMeters ?: state.distanceMeters?.toFloat()
+        ListRow(
+            "Distance", MetricColors.steps, distance?.let { "%.1f".format(it / 1000f) },
+            if (distance == null) waiting else if (a?.distanceMeters != null) "km, estimated from your steps" else "km, from the strap",
+        )
+    }
+}
+
+/* ---------------------------------------------- Workouts -------------------------------------------- */
+
+private val DAY = DateTimeFormatter.ofPattern("EEE d MMM")
+
+/**
+ * The day's workouts and the latest before it, a workout to save when the strap noticed one, then ways to add one
+ * and to see them all. No scrolling window inside: the list is short and "All workouts" is always there.
+ */
+@Composable
+private fun WorkoutsList(
+    date: LocalDate, workouts: List<WorkoutAnalysis>, suggestion: org.openstrap.app.data.WorkoutSuggestions.Suggestion?,
+    onOpen: (Long) -> Unit, onAll: () -> Unit, onAdd: () -> Unit, onSave: () -> Unit, onDismiss: () -> Unit,
+) {
     val zone = ZoneId.systemDefault()
     fun dayOf(a: WorkoutAnalysis) = Instant.ofEpochSecond(a.workout.start).atZone(zone).toLocalDate()
-    val today = workouts.filter { dayOf(it) == date }
-    val recent = workouts.filter { dayOf(it) != date }.take(RECENT_WORKOUTS)
-    DotPanel {
-        DotHeader("Workouts", trailing = if (workouts.isEmpty()) null else "${workouts.size} recorded")
-        if (workouts.isEmpty()) Note("Workouts you start above show up here, and the strap's own after a sync, with your heart rate every second.")
-        if (today.isEmpty() && workouts.isNotEmpty()) Note("No workouts this day.")
-        if (today.isNotEmpty() || recent.isNotEmpty()) {
-            // Sized from a row as laid out, so the window always shows whole rows whatever the font size.
-            val density = androidx.compose.ui.platform.LocalDensity.current
-            var rowHeight by remember { mutableStateOf(64.dp) }
-            val gap = 10.dp
-            val scroll = rememberScrollState()
-            Column(
-                Modifier.fillMaxWidth().heightIn(max = rowHeight * VISIBLE_WORKOUTS + gap * (VISIBLE_WORKOUTS - 1))
-                    .scrollBar(scroll).nestedScroll(KeepScroll).verticalScroll(scroll),
-                verticalArrangement = Arrangement.spacedBy(gap),
-            ) {
-                val measure = Modifier.onSizeChanged { rowHeight = with(density) { it.height.toDp() } }
-                today.forEachIndexed { i, a -> Box(if (i == 0) measure else Modifier) { WorkoutLine(a, showDate = false) { onOpen(a.workout.start) } } }
-                if (recent.isNotEmpty()) {
-                    Text("RECENT", color = Color.White.copy(alpha = 0.55f), style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(top = 4.dp))
-                    recent.forEachIndexed { i, a -> Box(if (i == 0 && today.isEmpty()) measure else Modifier) { WorkoutLine(a, showDate = true) { onOpen(a.workout.start) } } }
-                }
-            }
+    val today = workouts.filter { dayOf(it) == date }.sortedBy { it.workout.start }
+    val before = workouts.filter { dayOf(it) < date }.sortedByDescending { it.workout.start }
+    val shown = today + before.take((LISTED_WORKOUTS - today.size).coerceAtLeast(0))
+    ListPanel(title = "Workouts", note = if (today.isNotEmpty()) "${today.size} this day" else null) {
+        var first = true
+        fun divider() = !first.also { first = false }
+        suggestion?.let { SuggestionRow(it, onSave, onDismiss, divider()) }
+        if (shown.isEmpty()) ListRow("No workouts yet", MetricColors.heart, null, "Workouts you record show up here", dash = false, divider = divider())
+        shown.forEach { a ->
+            val start = Instant.ofEpochSecond(a.workout.start).atZone(zone)
+            val time = if (dayOf(a) == date) start.format(CLOCK) else "${start.format(DAY)}, ${start.format(CLOCK)}"
+            val status = listOfNotNull(
+                time, a.workout.averageHeartRate?.let { "average $it bpm" }, if (a.autoDetected) "found by the strap" else null,
+            ).joinToString(", ")
+            ListRow(
+                a.sportName, MetricColors.heart, workoutClock(a.durationSeconds), status,
+                onClick = { onOpen(a.workout.start) }, divider = divider(),
+            )
         }
-        Row(Modifier.fillMaxWidth().glass(GlassRowShape, onAdd).padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text("Add a workout you didn't record", color = Color.White, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-            Icon(AppIcons.CaretRight, null, tint = Color.White.copy(alpha = 0.7f))
-        }
-        if (workouts.size > today.size + recent.size) {
-            Row(Modifier.fillMaxWidth().glass(GlassRowShape, onAll).padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("All workouts", color = Color.White, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-                Icon(AppIcons.CaretRight, null, tint = Color.White.copy(alpha = 0.7f))
-            }
+        LinkRow("Add a workout you didn't record", onAdd, divider = divider())
+        LinkRow("All workouts", onAll)
+    }
+}
+
+private val CLOCK = DateTimeFormatter.ofPattern("HH:mm")
+
+/** A stretch nobody started, as a row with Save: when it was and how hard. */
+@Composable
+private fun SuggestionRow(s: org.openstrap.app.data.WorkoutSuggestions.Suggestion, onSave: () -> Unit, onDismiss: () -> Unit, divider: Boolean) {
+    Column {
+        ListRow(
+            "Looks like a workout", ZONE_COLORS[s.zone], null,
+            "${clockAt(s.start)}–${clockAt(s.end)}, mostly zone ${s.zone + 1}, ${s.averageHeartRate} bpm on average",
+            dash = false, divider = divider,
+        )
+        Row(Modifier.fillMaxWidth().padding(start = 20.dp, bottom = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            RowPill("Save", onSave, primary = true)
+            RowPill("Not a workout", onDismiss)
+            Box(Modifier.weight(1f))
         }
     }
 }
 
+/** A workout as a glass row: the sport, when, how long, heart rate and energy. Used by All workouts. */
 @Composable
 internal fun WorkoutLine(a: WorkoutAnalysis, showDate: Boolean, onClick: () -> Unit) {
     Row(
@@ -457,50 +336,19 @@ internal fun WorkoutLine(a: WorkoutAnalysis, showDate: Boolean, onClick: () -> U
     ) {
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(a.sportName, color = Color.White, style = MaterialTheme.typography.titleSmall)
+                Text(a.sportName, color = Color.White, style = androidx.compose.material3.MaterialTheme.typography.titleSmall)
                 if (a.autoDetected) StatusPill(AUTO_DETECTED, Color.White.copy(alpha = 0.7f))
             }
             val start = Instant.ofEpochSecond(a.workout.start).atZone(ZoneId.systemDefault())
             Note(
                 listOfNotNull(
-                    start.format(DateTimeFormatter.ofPattern(if (showDate) "EEE d MMM · HH:mm" else "HH:mm")),
-                    formatDuration(a.durationSeconds),
-                    a.workout.averageHeartRate?.let { "avg $it bpm" },
+                    start.format(DateTimeFormatter.ofPattern(if (showDate) "EEE d MMM, HH:mm" else "HH:mm")),
+                    org.openstrap.app.ui.components.formatDuration(a.durationSeconds),
+                    a.workout.averageHeartRate?.let { "average $it bpm" },
                     a.workout.calories?.let { "$it kcal" },
-                ).joinToString(" · "),
+                ).joinToString(", "),
             )
         }
-        Icon(AppIcons.CaretRight, null, tint = Color.White.copy(alpha = 0.7f))
+        Icon(org.openstrap.app.ui.theme.AppIcons.CaretRight, null, tint = Color.White.copy(alpha = 0.7f))
     }
-}
-
-private fun shortDate(epoch: Long) = Instant.ofEpochSecond(epoch).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("EEE d MMM"))
-
-/**
- * A thin bar just outside a scrolling box's right edge, in the panel's margin, its length the share of the content in
- * view and its place the scroll position, so a list that scrolls inside a panel says so. Nothing when everything fits.
- */
-private fun Modifier.scrollBar(state: androidx.compose.foundation.ScrollState): Modifier = drawWithContent {
-    drawContent()
-    val content = size.height + state.maxValue
-    if (state.maxValue == 0) return@drawWithContent
-    val width = 3.dp.toPx()
-    val length = (size.height * size.height / content).coerceAtLeast(24.dp.toPx())
-    val top = (size.height - length) * state.value / state.maxValue
-    drawRoundRect(
-        Color.White.copy(alpha = 0.35f), topLeft = androidx.compose.ui.geometry.Offset(size.width + 8.dp.toPx(), top),
-        size = androidx.compose.ui.geometry.Size(width, length), cornerRadius = androidx.compose.ui.geometry.CornerRadius(width / 2),
-    )
-}
-
-/**
- * Keeps a list's scroll to itself: what's left at either end (and a fling's leftover speed) is used up here rather than
- * handed on, so the page doesn't move under a drag that started in the list.
- */
-private object KeepScroll : androidx.compose.ui.input.nestedscroll.NestedScrollConnection {
-    override fun onPostScroll(consumed: androidx.compose.ui.geometry.Offset, available: androidx.compose.ui.geometry.Offset, source: androidx.compose.ui.input.nestedscroll.NestedScrollSource) =
-        available.copy(x = 0f)
-
-    override suspend fun onPostFling(consumed: androidx.compose.ui.unit.Velocity, available: androidx.compose.ui.unit.Velocity) =
-        available.copy(x = 0f)
 }

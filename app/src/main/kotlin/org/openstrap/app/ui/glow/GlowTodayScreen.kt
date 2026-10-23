@@ -559,8 +559,8 @@ private fun TodayRow(
         )
         TodayCard.Workout -> ctx.lastWorkout?.let { w -> WorkoutCard(w, { onOpenWorkout(w.workout.start) }) }
         TodayCard.Week -> WeekCard(s, ctx.workouts, history)
-        // TODO(step 5): Habit Age moves to the bottom of Recovery as an edge card; until then it stays here, drawn as
-        // a second glow so the hero still leads.
+        // Habit Age's home is now the foot of Recovery, as an edge card (step 5). Whether Today keeps it is still open,
+        // so it stays here for now, drawn as a second glow so the hero still leads.
         TodayCard.HabitAge -> HealthspanCard(healthspan, onOpenHealthspan, onOpenProfile, second = true)
         TodayCard.Hero, TodayCard.EditToday -> Unit
     }

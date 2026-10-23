@@ -1,0 +1,147 @@
+package org.openstrap.app.ui.dashboard
+
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Test
+import org.openstrap.app.data.Recovery
+import org.openstrap.app.data.Recovery.Contributor
+import org.openstrap.app.data.Recovery.Factor
+import org.openstrap.app.data.SleepRegularity
+
+/** The words on the Recovery, Sleep and Activity tabs (spec 5 and 7). */
+class TabCopyTest {
+    private fun c(f: Factor, score: Int) = Contributor(f, score, "")
+
+    @Test fun `recovery against yesterday`() {
+        assertEquals("+3 vs yesterday", TabCopy.vsYesterday(78, 75))
+        assertEquals("−4 vs yesterday", TabCopy.vsYesterday(71, 75))
+        assertEquals("Same as yesterday", TabCopy.vsYesterday(75, 75))
+        assertNull(TabCopy.vsYesterday(75, null))
+    }
+
+    @Test fun `the learning caveat counts toward the next step, then goes`() {
+        assertEquals("Learning, 4 of 7 nights", TabCopy.learning(Recovery.Phase.Withheld, 4))
+        assertEquals("Learning, 9 of 14 nights", TabCopy.learning(Recovery.Phase.Learning, 9))
+        assertNull(TabCopy.learning(Recovery.Phase.Scored, 20))
+        assertNull(TabCopy.learning(Recovery.Phase.Calibrated, 40))
+    }
+
+    @Test fun `the sentence names what held the score back`() {
+        val drivers = listOf(c(Factor.HrvBalance, 52), c(Factor.RestingHr, 81), c(Factor.Sleep, 74), c(Factor.BloodOxygen, 20))
+        // Blood oxygen weighs too little to lead the sentence, so HRV is named.
+        assertEquals(Factor.HrvBalance, TabCopy.heldBackBy(drivers))
+        assertEquals("Recovered enough for your usual training. Mostly held back by HRV.", TabCopy.recovery(72, false, drivers))
+        assertEquals(
+            "Not fully recovered. Keep the effort moderate. Mostly held back by resting heart rate.",
+            TabCopy.recovery(60, false, listOf(c(Factor.RestingHr, 40), c(Factor.Sleep, 80))),
+        )
+        // Nothing under the bar, well recovered, or an alert that already says why: the meaning alone.
+        assertEquals("Recovered enough for your usual training.", TabCopy.recovery(75, false, listOf(c(Factor.HrvBalance, 80))))
+        assertEquals("Well recovered. A good day for a hard session.", TabCopy.recovery(88, false, drivers))
+        assertEquals("Some overnight signals are off your normal. An easy day suits.", TabCopy.recovery(50, true, drivers))
+        assertNull(TabCopy.heldBackBy(emptyList()))
+    }
+
+    @Test fun `contributors read in words, three that weigh most`() {
+        assertEquals("Helping", TabCopy.contributorWord(90))
+        assertEquals("Usual", TabCopy.contributorWord(80))
+        assertEquals("Holding back a little", TabCopy.contributorWord(60))
+        assertEquals("Holding you back", TabCopy.contributorWord(30))
+        assertFalse(TabCopy.contributorOff(80))
+        assertTrue(TabCopy.contributorOff(60))
+        val all = listOf(c(Factor.BloodOxygen, 50), c(Factor.Sleep, 70), c(Factor.HrvBalance, 80), c(Factor.RestingHr, 90))
+        assertEquals(listOf(Factor.HrvBalance, Factor.RestingHr, Factor.Sleep), TabCopy.topDrivers(all).map { it.factor })
+        assertEquals("HRV", TabCopy.factorName(Factor.HrvBalance))
+    }
+
+    @Test fun `charge rows and line`() {
+        assertEquals(
+            listOf("+32", "-12", "-5", "0"),
+            TabCopy.chargeRows(32.7f, 12.2f, 5f, 0.4f).map { it.value },
+        )
+        assertEquals(listOf("Recharged", "Drained", "Drained", "Drained"), TabCopy.chargeRows(1f, 1f, 1f, 1f).map { it.status })
+        assertEquals("Used 20 since waking", TabCopy.chargeLine(64, 84, true))
+        assertEquals("Up 5 since waking", TabCopy.chargeLine(89, 84, true))
+        assertEquals("Level since waking", TabCopy.chargeLine(84, 84, true))
+        assertEquals("Charge starts after your first night. Sleep is what fills it.", TabCopy.chargeLine(null, null, false))
+    }
+
+    @Test fun `the night against the rest of the week`() {
+        val h = 3600L
+        val week = listOf(7 * h, 6 * h, 7 * h + 1800)
+        assertEquals("7 h 40, your longest this week.", TabCopy.night(7 * h + 2400, week))
+        assertEquals("5 h 50, your shortest this week.", TabCopy.night(5 * h + 3000, week))
+        assertEquals("7 h 10 asleep.", TabCopy.night(7 * h + 600, week))
+        // Too few other nights to call it the longest.
+        assertEquals("9 h asleep.", TabCopy.night(9 * h, listOf(7 * h, 6 * h)))
+        assertEquals("No night sleep recorded, only naps.", TabCopy.noNight(naps = true, isToday = true))
+        assertEquals("No sleep recorded last night. Was the strap on?", TabCopy.noNight(naps = false, isToday = true))
+    }
+
+    @Test fun `sleep words`() {
+        assertEquals("Great", TabCopy.sleepScoreWord(92))
+        assertEquals("Good", TabCopy.sleepScoreWord(83))
+        assertEquals("Fair", TabCopy.sleepScoreWord(65))
+        assertEquals("Poor", TabCopy.sleepScoreWord(40))
+        assertEquals("Woke 3 times", TabCopy.woke(3))
+        assertEquals("Woke once", TabCopy.woke(1))
+        assertEquals("Slept through", TabCopy.woke(0))
+        assertNull(TabCopy.woke(null))
+        assertEquals("Regular", TabCopy.regularity(SleepRegularity.Result(80f, 7000, null)))
+        assertEquals("Steady bedtimes this week", TabCopy.regularity(SleepRegularity.Result(null, 2000, 30f)))
+        assertEquals("Needs about 5 days of wear", TabCopy.regularity(SleepRegularity.Result(null, 100, null)))
+        assertEquals("Usually asleep by 23:10, up at 06:50.", TabCopy.usualTimes(23 * 60 + 10, 6 * 60 + 50))
+        assertEquals("Usually asleep by 00:30, up at 07:00.", TabCopy.usualTimes(24 * 60 + 30, 7 * 60))
+    }
+
+    @Test fun `breathing disturbances against your usual`() {
+        assertEquals("Your usual is 2.1 an hour", TabCopy.breathing(Recovery.BreathingDisturbances(3.4f, 2.1f, 20)))
+        assertEquals("Learning your usual, 3 of 7 nights", TabCopy.breathing(Recovery.BreathingDisturbances(3.4f, null, 3)))
+    }
+
+    @Test fun `load and its balance`() {
+        assertEquals("Your usual is 40", TabCopy.loadUsual(40.4f))
+        assertEquals("Learning your usual", TabCopy.loadUsual(null))
+        assertEquals("Learning your usual", TabCopy.loadUsual(0f))
+        assertEquals("Building", TabCopy.loadBalance(Recovery.LoadTrend(ctl = 40f, atl = 55f, form = -15f)))
+        assertEquals("Steady", TabCopy.loadBalance(Recovery.LoadTrend(ctl = 40f, atl = 45f, form = -5f)))
+        assertEquals("Easing off", TabCopy.loadBalance(Recovery.LoadTrend(ctl = 40f, atl = 25f, form = 15f)))
+        assertNull(TabCopy.loadBalance(Recovery.LoadTrend(0f, 0f, 0f)))
+        assertNull(TabCopy.loadBalance(null))
+    }
+
+    @Test fun `activity facts`() {
+        assertEquals("This week, goal 150", TabCopy.activeMinutes(90, 150))
+        assertEquals("This week, goal of 150 reached", TabCopy.activeMinutes(160, 150))
+        assertEquals("Last 7 days, aim for 100", TabCopy.heartPoints(64, 100))
+        assertEquals("Last 7 days, at 100 or more", TabCopy.heartPoints(100, 100))
+        assertEquals("Estimated kcal so far today", TabCopy.energy(partial = true, isToday = true))
+        assertEquals("Estimated kcal, part of the day worn", TabCopy.energy(partial = true, isToday = false))
+        assertEquals("Estimated kcal", TabCopy.energy(partial = false, isToday = false))
+    }
+
+    @Test fun `no interpunct, semicolon or em dash in any of it`() {
+        val all = buildList {
+            add(TabCopy.vsYesterday(78, 75)); add(TabCopy.vsYesterday(70, 75)); add(TabCopy.vsYesterday(75, 75))
+            Recovery.Phase.entries.forEach { add(TabCopy.learning(it, 3)) }
+            Factor.entries.forEach { f ->
+                add(TabCopy.factorName(f))
+                add(TabCopy.recovery(60, false, listOf(c(f, 30))))
+            }
+            listOf(30, 60, 80, 90).forEach { add(TabCopy.contributorWord(it)); add(TabCopy.sleepScoreWord(it)) }
+            TabCopy.chargeRows(3f, 2f, 1f, 0f).forEach { add(it.name); add(it.status) }
+            add(TabCopy.chargeLine(50, 60, true)); add(TabCopy.chargeLine(null, null, true)); add(TabCopy.chargeLine(null, null, false))
+            add(TabCopy.night(25_000, listOf(20_000, 21_000, 22_000))); add(TabCopy.noNight(true, false)); add(TabCopy.noNight(false, false))
+            listOf(null, 0, 1, 4).forEach { add(TabCopy.woke(it)) }
+            add(TabCopy.regularity(null)); add(TabCopy.regularity(SleepRegularity.Result(60f, 7000, null)))
+            add(TabCopy.regularity(SleepRegularity.Result(null, 2000, 90f)))
+            add(TabCopy.usualTimes(0, 0)); add(TabCopy.breathing(Recovery.BreathingDisturbances(1f, null, 0)))
+            add(TabCopy.loadUsual(null)); add(TabCopy.loadUsual(10f))
+            add(TabCopy.activeMinutes(1, 150)); add(TabCopy.heartPoints(1, 100)); add(TabCopy.energy(false, true))
+            add(TabCopy.RECOVERY_WAITING)
+        }.filterNotNull()
+        all.forEach { s -> listOf("·", ";", "—").forEach { bad -> assertFalse("'$s' contains $bad", bad in s) } }
+    }
+}

@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -150,6 +151,35 @@ fun HealthspanCard(state: Healthspan.Outcome?, onClick: (() -> Unit)? = null, on
                     CardLink("How it works")
                 }
             }
+        }
+    }
+}
+
+/**
+ * Habit Age at the foot of the Recovery tab (spec 5.1): the same estimate as [HealthspanCard], as an edge card lit
+ * from the left, since it's about the weeks behind you. Opens the Healthspan screen, or the profile when it needs a
+ * birth year or sex. Nothing shows until it has been worked out.
+ */
+@Composable
+fun HabitAgeEdgeCard(state: Healthspan.Outcome?, onClick: () -> Unit, onOpenProfile: () -> Unit, modifier: Modifier = Modifier) {
+    state ?: return
+    val r = state.result
+    val withheld = state.withheld
+    val needsProfile = r == null && state.missing.isNotEmpty() && withheld?.profile == true
+    EdgeCard(
+        Orchid, modifier.fillMaxWidth().gridSize(CardSize.Wide), kind = EdgeKind.Earlier,
+        onClick = if (needsProfile) onOpenProfile else onClick,
+    ) {
+        EdgeTitle("Habit Age", r?.let { "Updated ${sundayText(it.asOf)}" })
+        when {
+            r != null -> {
+                EdgeValue("${r.low}-${r.high}", "years", healthspanVerdict(r.age, r.estimate) + ". " + leverText(r) + ".")
+                Spacer(Modifier.height(12.dp))
+                AgeScale(r.age, r.low, r.high, r.estimate)
+            }
+            needsProfile -> EdgeValue(null, null, profileReminder(state.missing))
+            withheld?.learning == true && state.age != null -> EdgeValue("${state.age}", "your age", learningText(state).replace('\n', ' '))
+            else -> EdgeValue(null, null, withheld?.reason)
         }
     }
 }

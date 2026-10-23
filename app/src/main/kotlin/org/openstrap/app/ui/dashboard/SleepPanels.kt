@@ -28,64 +28,58 @@ import java.time.format.TextStyle as DayStyle
 import java.util.Locale
 import kotlin.math.roundToInt
 
-/** One cell of the sleep vitals grid. */
-internal class SleepVital(
+/**
+ * A row of the Sleep tab's night vitals: the [value] in dot-matrix digits (null while there's none), what it says
+ * against your previous nights ([status]) and which way it's off ([direction], null with no normal yet).
+ */
+internal class NightVital(
     val metric: Metric,
     val label: String,
-    val value: String,
-    val note: String?,
-    val accent: Color,
+    val color: Color,
+    val value: String?,
+    val status: String,
+    val direction: Int? = null,
 )
 
 /**
- * Lowest and average heart rate, HRV, blood oxygen, breathing and skin temperature during last night's sleep.
- * HRV, blood oxygen, breathing and skin temperature are compared with your previous nights once there are
- * a week of them.
+ * The six night vitals the Sleep tab lists (spec 5.2), always all six, in order: lowest heart rate, HRV, breathing
+ * rate, blood oxygen, skin temperature (as its change from your normal once there is one) and average heart rate.
+ * HRV, breathing, blood oxygen and skin temperature are read against your previous nights once there are a week of them.
  */
-internal fun sleepVitals(state: DayUiState): List<SleepVital> {
-    val session = state.sleep ?: return emptyList()
-    val tonight = state.nights.lastOrNull()?.takeIf { it.date == state.date }
+internal fun nightVitals(state: DayUiState): List<NightVital> {
+    val session = state.sleep
+    val tonight = state.nights.lastOrNull()?.takeIf { it.date == state.date && session != null }
     val previous = state.nights.dropLast(1)
     fun normal(pick: (SleepNight) -> Float?): History.Normal? =
         History.normal(previous.mapNotNull { n -> pick(n)?.let { DayStat(n.date, it, it, it, 1) } }, state.date.minusDays(1), SLEEP_NIGHTS - 1)
-    fun word(value: Float?, normal: History.Normal?, learned: Int): String? = when (History.status(value, normal)) {
-        null -> if (value == null) null else "Learning $learned/${History.MIN_NORMAL_DAYS} nights"
-        1 -> "Higher than usual"
-        -1 -> "Lower than usual"
-        else -> "Usual"
+    val missing = if (session == null) "No sleep recorded" else "No reading last night"
+    fun against(metric: Metric, label: String, color: Color, pick: (SleepNight) -> Float?, show: (Float, History.Normal?) -> String): NightVital {
+        val v = tonight?.let(pick) ?: return NightVital(metric, label, color, null, missing)
+        val n = normal(pick)
+        val direction = History.status(v, n)
+        val status = if (n == null) {
+            "Learning, ${previous.count { pick(it) != null }.coerceAtMost(History.MIN_NORMAL_DAYS)} of ${History.MIN_NORMAL_DAYS} nights"
+        } else TodayCopy.normalWord(direction)
+        return NightVital(metric, label, color, show(v, n), status, direction.takeIf { n != null })
     }
-    fun learned(pick: (SleepNight) -> Float?) = previous.count { pick(it) != null }.coerceAtMost(History.MIN_NORMAL_DAYS)
-
-    val hr = state.sleepHeartRate.filter { it.x in session.start..session.end }
+    val hr = session?.let { s -> state.sleepHeartRate.filter { it.x in s.start..s.end } }.orEmpty()
     val lowest = hr.minByOrNull { it.y }
-    val average = session.averageHeartRate ?: hr.takeIf { it.isNotEmpty() }?.map { it.y }?.average()?.roundToInt()
-    val skinNormal = normal { it.skinTemperature }
-
-    return listOfNotNull(
-        lowest?.let { SleepVital(Metric.HeartRate, "Lowest heart rate", "${it.y.roundToInt()} bpm", "at ${clockOf(it.x)}", MetricColors.heart) },
-        average?.let { SleepVital(Metric.HeartRate, "Average heart rate", "$it bpm", "while asleep", MetricColors.heart) },
-        tonight?.hrv?.let { v ->
-            SleepVital(Metric.Hrv, "HRV", "${v.roundToInt()} ms", word(v, normal { it.hrv }, learned { it.hrv }), MetricColors.hrv)
+    val average = session?.averageHeartRate ?: hr.takeIf { it.isNotEmpty() }?.map { it.y }?.average()?.roundToInt()
+    return listOf(
+        NightVital(
+            Metric.HeartRate, "Lowest heart rate", MetricColors.heart, lowest?.y?.roundToInt()?.toString(),
+            lowest?.let { "At ${clockOf(it.x)}" } ?: missing,
+        ),
+        against(Metric.Hrv, "HRV", MetricColors.hrv, { it.hrv }) { v, _ -> "${v.roundToInt()}" },
+        against(Metric.Breathing, "Breathing rate", MetricColors.sleepLight, { it.breathing }) { v, _ -> "%.1f".format(v) },
+        against(Metric.Spo2, "Blood oxygen", MetricColors.spo2, { it.spo2 }) { v, _ -> "${v.roundToInt()}%" },
+        // Skin temperature means little on its own; once there's a normal, show how far off it is.
+        against(Metric.SkinTemperature, "Skin temperature", MetricColors.temperature, { it.skinTemperature }) { v, n ->
+            n?.let { "%+.1f".format(v - it.mean) } ?: "%.1f".format(v)
         },
-        tonight?.spo2?.let { v ->
-            SleepVital(Metric.Spo2, "Blood oxygen", "${v.roundToInt()} %", word(v, normal { it.spo2 }, learned { it.spo2 }), MetricColors.spo2)
-        },
-        tonight?.breathing?.let { v ->
-            SleepVital(Metric.Breathing, "Breathing", "%.1f br/min".format(v), word(v, normal { it.breathing }, learned { it.breathing }), MetricColors.sleepLight)
-        },
-        tonight?.skinTemperature?.let { v ->
-            // Skin temperature means little on its own; once there's a normal, show how far off it is.
-            val value = skinNormal?.let { "%+.1f °C".format(v - it.mean).replace("-", "−") } ?: "%.1f °C".format(v)
-            SleepVital(
-                Metric.SkinTemperature, "Skin temperature", value,
-                word(v, skinNormal, learned { it.skinTemperature }), MetricColors.temperature,
-            )
-        },
+        NightVital(Metric.HeartRate, "Average heart rate", MetricColors.heart, average?.toString(), if (average != null) "While asleep" else missing),
     )
 }
-
-/** Whether a vital's note says it's outside your usual range, so it takes the accent colour. */
-internal val SleepVital.isOff get() = note?.endsWith("than usual") == true
 
 /**
  * The last seven nights: when each sleep started and ended on a shared clock, with time asleep over each bar,

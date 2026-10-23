@@ -313,7 +313,8 @@ private fun ContributorsPanel(ready: Recovery.Readiness) {
             first = false
             Text(name.uppercase(), color = Color.White.copy(alpha = 0.55f), style = MaterialTheme.typography.labelSmall)
             rows.forEach { c ->
-                val rating = Narrative.ratingFor(c.score)
+                // Sleep is a sleep score (the strap's when it gave one), so it's rated in Zepp's sleep bands.
+                val rating = if (c.factor == Recovery.Factor.Sleep) Narrative.sleepRating(c.score) else Narrative.ratingFor(c.score)
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(c.factor.label, color = Color.White, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))

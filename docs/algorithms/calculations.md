@@ -388,6 +388,20 @@ Used only when the strap didn't give its own score:
 * Without stages (no WASO), duration alone.
 * Sleep stages are shown but **not scored**: consumer devices agree poorly with lab staging.
 
+### Sleep score rating and headline
+
+The sleep score (the strap's, or OpenStrap's above) is rated in Zepp's bands: **90–100 Optimal, 80–89 Good, 60–79 Fair, 0–59 Pay attention**. The Sleep screen shows it next to the score, and the Recovery tab uses it for the Sleep contributor. Other contributors keep their own 85 / 70 / 55 bands.
+
+The headline names what pulled the night down, checked in this order:
+
+* **Short night:** under 6 h asleep (the bottom of Zepp's duration bands).
+* **Broken sleep:** 30 min or more awake after falling asleep (where continuity starts losing points), or 6 or more wake-ups (about one an hour, set high because wake detection is the least reliable part of staging).
+* Both → **Short, broken night**. Either one wins over the score: a short night at 70 is still "Short night".
+* Otherwise by score: 90+ **Great night**, 80+ **Good night**.
+* Below 80, **Light sleep** if deep + REM is under 25 % of time asleep (adults usually spend 40–50 % there), else **Okay night**. This is the weakest cause because stages aren't reliable.
+
+Total sleep in "What shaped the score" is rated against need, plus Zepp's oversleep bands: over 9 h 30 is Fair, over 10 h Pay attention.
+
 ### Sleep need
 
 * 8 h for ages 18–64, 7 h 30 m from 65.

@@ -562,7 +562,7 @@ private fun SleepPanel(state: DayUiState, onClick: () -> Unit) {
         state.asleepSeconds?.let { s ->
             GlowHeroNumber(
                 "%d:%02d".format(s / 3600, (s % 3600) / 60), "asleep",
-                session?.score?.let { listOf("Score $it", Narrative.sleepHeadline(it)) } ?: emptyList(),
+                session?.let { n -> Narrative.sleepHeadline(n, s)?.let { listOf("Score ${n.score}", it) } } ?: emptyList(),
             )
         }
         if (state.sleepStages.isNotEmpty()) {

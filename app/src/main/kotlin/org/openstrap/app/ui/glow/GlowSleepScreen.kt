@@ -29,6 +29,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import org.openstrap.app.data.Summaries
@@ -144,13 +148,18 @@ private fun NightCard(state: DayUiState) {
                         Modifier.padding(bottom = 6.dp), dot = 5.5.dp, gap = 2.dp,
                     )
                 }
+                // The score's band in Zepp's terms (codemap 06 §4.2), in its colour, after the label.
+                val rating = score?.let { Narrative.sleepRating(it) }
                 Text(
-                    if (score != null) "Sleep score" else "asleep · goal ${formatDuration(goal)}",
+                    if (rating != null) buildAnnotatedString {
+                        append("Sleep score · ")
+                        withStyle(SpanStyle(color = rating.color)) { append(rating.label) }
+                    } else AnnotatedString("asleep · goal ${formatDuration(goal)}"),
                     color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.bodySmall,
                 )
                 Spacer(Modifier.height(14.dp))
                 Text(
-                    score?.let { Narrative.sleepHeadline(it) } ?: "${formatDuration(asleep)} asleep",
+                    Narrative.sleepHeadline(session, asleep) ?: "${formatDuration(asleep)} asleep",
                     color = Color.White, style = MaterialTheme.typography.titleMedium,
                 )
                 Text(
@@ -232,7 +241,7 @@ private fun ContributorsPanel(contributors: List<Narrative.Contributor>) {
                 GlowBar(c.fraction, c.rating.color)
             }
         }
-        Note("Ratings use general sleep guidance (7+ hours, about a fifth each of deep and REM sleep). They're a guide, not a medical assessment.")
+        Note("Ratings use general sleep guidance (7 to 9½ hours, under 30 minutes awake). They're a guide, not a medical assessment.")
     }
 }
 

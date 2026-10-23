@@ -1,6 +1,7 @@
 package org.openstrap.app.data
 
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import org.openstrap.app.data.db.ActivityExtendedMinute
 import org.openstrap.app.data.db.ActivityMinute
@@ -92,7 +93,21 @@ class HealthRepository(private val dao: HealthDao) {
     fun sleepSessions(w: DayWindow): Flow<List<SleepSession>> = dao.sleepSessions(w.from, w.to)
     fun sleepStages(sessionStart: Long): Flow<List<SleepStage>> = dao.sleepStages(sessionStart)
     fun spo2(w: DayWindow): Flow<List<Spo2Sample>> = dao.spo2(w.from, w.to)
-    fun stress(w: DayWindow): Flow<List<StressSample>> = dao.stress(w.from, w.to)
+    /**
+     * The day's stress readings that count as daily stress: those outside the exclusion around workouts
+     * ([Recovery.stressExcluded]), so the chart shows a gap there and averages and highs leave them out. The raw
+     * readings stay in the database and the export.
+     */
+    fun stress(w: DayWindow): Flow<List<StressSample>> =
+        combine(dao.stress(w.from, w.to), stressExcluded(w.from, w.to)) { s, excluded -> s.filter { Recovery.stressCounts(it.timestamp, excluded) } }
+
+    /** The stress exclusion for workouts touching [from]..[to]; one that ended up to 20 minutes before [from] reaches in. */
+    private fun stressExcluded(from: Long, to: Long): Flow<List<LongRange>> {
+        val since = from - Recovery.STRESS_AFTER_WORKOUT_SECONDS
+        return combine(dao.appWorkoutsIn(since, to), dao.workoutsIn(since, to)) { phone, strap ->
+            Recovery.stressExcluded(Recovery.workoutRanges(phone, strap, System.currentTimeMillis() / 1000))
+        }
+    }
     fun hrv(w: DayWindow): Flow<List<HrvSample>> = dao.hrv(w.from, w.to)
     fun restingHr(from: Long, to: Long): Flow<List<RestingHeartRate>> = dao.restingHr(from, to)
     fun skinTemperature(w: DayWindow): Flow<List<SkinTemperature>> = dao.skinTemperature(w.from, w.to)
@@ -123,15 +138,21 @@ class HealthRepository(private val dao: HealthDao) {
                 DayStat(Instant.ofEpochSecond(r.day).atZone(zone).toLocalDate(), bpm, bpm, bpm, 1)
             }
         }
+        // Stress leaves out readings in and just after workouts, so it's aggregated here rather than in SQL.
+        if (metric == DailyMetric.Stress) return stress(DayWindow(a, b)).map { s ->
+            s.groupBy { Instant.ofEpochSecond(it.timestamp).atZone(zone).toLocalDate() }.toSortedMap().map { (d, v) ->
+                val values = v.map { it.value.toFloat() }
+                DayStat(d, values.average().toFloat(), values.min(), values.max(), values.size)
+            }
+        }
         val rows = when (metric) {
-            DailyMetric.RestingHr -> error("handled above")
+            DailyMetric.RestingHr, DailyMetric.Stress -> error("handled above")
             DailyMetric.HeartRate -> dao.dailyHeartRate(a, b)
             DailyMetric.Steps -> dao.dailySteps(a, b)
             DailyMetric.Hrv -> dao.dailyHrv(a, b)
             DailyMetric.HrvSdnn -> dao.dailyHrvSdnn(a, b)
             DailyMetric.Spo2 -> dao.dailySpo2(a, b)
             DailyMetric.SleepSpo2 -> dao.dailySleepSpo2(a, b)
-            DailyMetric.Stress -> dao.dailyStress(a, b)
             DailyMetric.SkinTemperature -> dao.dailySkinTemperature(a, b)
             DailyMetric.Breathing -> dao.dailyBreathRate(a, b)
         }

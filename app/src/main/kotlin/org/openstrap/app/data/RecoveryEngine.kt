@@ -154,18 +154,14 @@ class RecoveryEngine(private val dao: HealthDao) {
         val stress = dao.stressOnce(simFrom, simTo).map { it.timestamp to it.value }
         val steps = dao.activityOnce(simFrom, simTo).associate { it.timestamp / 60 * 60 to it.steps }
 
-        // Personal stress threshold from calm readings: awake, still and at resting heart rate.
+        // Personal stress threshold from calm readings: awake, still, at resting heart rate and away from workouts.
         val calmFrom = DayWindow.of(date.minusDays(Recovery.STRESS_BASELINE_DAYS.toLong() - 1), zone).from
+        // Minutes in or just after a workout are left out ([Recovery.stressExcluded]).
         val calmSteps = dao.activityOnce(calmFrom, to).associate { it.timestamp / 60 * 60 to it.steps }
-        val minuteHr = hr.toMap()
-        val calm = dao.stressOnce(calmFrom, to).map { it.timestamp to it.value }.filter { (t, _) ->
-            val minute = t / 60 * 60
-            val bpm = minuteHr[minute]
-            !asleep(t) && (calmSteps[minute] ?: 0) < CALM_STEPS && bpm != null &&
-                Recovery.hrr(bpm, restingHr, maxHr) < Recovery.ACTIVITY_HRR
-        }
+        val stressExcluded = Recovery.stressExcluded(workoutRanges)
+        val calm = Recovery.calmStress(dao.stressOnce(calmFrom, to).map { it.timestamp to it.value }, hr.toMap(), calmSteps, restingHr, maxHr, stressExcluded, asleep)
         val stressThreshold = Recovery.stressThreshold(calm) { Instant.ofEpochSecond(it).atZone(zone).toLocalDate().toEpochDay() }
-        val minutes = Recovery.minutes(simFrom, simTo, hr.filter { it.first in simFrom until simTo }, steps, stress, stages)
+        val minutes = Recovery.minutes(simFrom, simTo, hr.filter { it.first in simFrom until simTo }, steps, stress, stages, workouts = workoutRanges)
         val hrvScore = readiness.contributors.firstOrNull { it.factor == Recovery.Factor.HrvBalance }?.score
         val params = Recovery.ChargeParams(restingHr, maxHr, tonight?.restingHr, hrvScore, female, stressThreshold.value)
         val charge = Recovery.charge(minutes, params, day.from..day.to, start = 50f, mainSleepEnd = tonight?.end)
@@ -277,10 +273,8 @@ class RecoveryEngine(private val dao: HealthDao) {
      */
     private suspend fun workoutHeartRates(from: Long, to: Long, now: Long): List<Pair<LongRange, List<Pair<Long, Int>>>> {
         val phone = dao.appWorkoutsOnce(from, to).flatMap { w ->
-            val end = w.end ?: now
-            val pauses = w.pauseRanges + listOfNotNull(w.pausedAt?.let { it..end })
             val samples = dao.appWorkoutHeartRateOnce(w.start).map { it.timestamp to it.bpm }
-            Recovery.activeRanges(w.from, end, pauses).map { it to samples }
+            Recovery.activeRanges(w, now).map { it to samples }
         }
         val strap = dao.workoutsOnce(from, to).map { w ->
             (w.start until w.end) to dao.workoutHeartRateOnce(w.start).map { it.timestamp to it.bpm }
@@ -359,8 +353,6 @@ class RecoveryEngine(private val dao: HealthDao) {
         const val LOAD_DAYS = 90
         /** A day needs this many minutes of heart rate before its training load counts. */
         const val MIN_WORN_MINUTES = 8 * 60
-        /** A minute with fewer steps than this counts as still for the calm stress level. */
-        const val CALM_STEPS = 10
         /** Sleep SpO2 readings needed before a night's mean counts. */
         const val MIN_SPO2_READINGS = 5
         const val MIN_ODI_SLEEP_MINUTES = 120

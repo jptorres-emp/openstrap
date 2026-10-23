@@ -297,6 +297,7 @@ A body-battery: sleep fills it, and the day drains it.
 | **Exercise** | HRR ≥ 30 % | − 0.04 − 0.32 × TRIMP of that minute |
 | **Exercise recovery** | after exercise, while HR isn't rising | − 0.04 |
 | **Activity** | HRR ≥ 20 %, or ≥ 60 steps that minute | − 0.04 − 0.32 × TRIMP of that minute |
+| **Around a workout** | in the stress exclusion (below) | Activity inside the workout, Exercise recovery in the 20 minutes after; Rest in either when HRR < 10 % |
 | **Stress** | stress ≥ your threshold for 3+ minutes in a row, awake | − 0.04 − 0.007 × (stress − threshold) |
 | **Relax** | stress < 25 and < 10 steps | − 0.04 + 0.25 × 0.006 × 0.8 × (100 − charge) |
 | **Rest** | anything else awake | − 0.04 (≈ 2.4 per hour) |
@@ -315,12 +316,18 @@ Charge is always kept within 0–100.
 
 **Stress readings:** a minute uses the latest stress reading from the past 10 minutes.
 
+**Stress exclusion around workouts:** the strap's stress score comes from HRV, which exercise suppresses, so readings taken during a stored workout (phone or strap, active time only, pauses left out) or in the **20 minutes after** it ends are ignored. 20 minutes is the half-life of the after-burn tally above. A phone workout's pause counts as an end, so a pause is also covered for its first 20 minutes. In that window:
+* Charge never enters Stress or Relax, and a reading taken there isn't carried into the minutes after it.
+* The personal stress threshold doesn't use those readings.
+* The day's stress (the Today tile, the day chart, which shows a gap, and the daily average, lowest and highest behind the week, month and year views) leaves them out.
+* The readings are still stored and exported.
+
 ### Your personal stress threshold
 
 The point where the strap's stress score starts to drain Charge.
 
 * Default: **60**, where Zepp's "medium" band begins.
-* Personal: built from **calm readings** over the last 14 days. A calm reading is awake, under 10 steps that minute, and HRR under 20 %.
+* Personal: built from **calm readings** over the last 14 days. A calm reading is awake, under 10 steps that minute, HRR under 20 %, and outside the stress exclusion around workouts.
 * Threshold = median calm reading + 10, kept within 50–70.
 * Needs readings on at least 3 days and at least 60 readings.
 

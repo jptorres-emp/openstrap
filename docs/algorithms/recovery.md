@@ -175,16 +175,25 @@ Each minute gets a state, following Firstbeat's stress/recovery method (*Stress 
 | Exercise | HRR ≥ 0.30 | −`BASE_DRAIN` − 0.32·TRIMP(HRR). Also builds an EPOC-like debt. |
 | Exercise recovery | debt > 5 and HR not rising | −`BASE_DRAIN` only, even if the strap reports high stress |
 | Activity | HRR ≥ 0.20 or ≥ 60 steps/min | −`BASE_DRAIN` − 0.32·TRIMP(HRR) |
+| Around a workout | in the stress exclusion (below) and none of the above | Activity inside the workout's active time, Exercise recovery in the 20 min after; Rest in either when HRR < `WORKOUT_REST_HRR` = 0.10 |
 | Stress | strap stress ≥ your threshold *T* (below) for ≥ `STRESS_GATE_MINUTES` = 3 consecutive minutes | −`BASE_DRAIN` − 0.007·(stress − *T*) |
 | Relax | stress < 25 and still | −`BASE_DRAIN` + ¼ of light-sleep recharge |
 | Rest | otherwise | −`BASE_DRAIN` (0.04, about 2.4/h) |
 | No data | strap off the wrist | no change: we can't tell rest from effort, so the value holds |
 
+### Stress exclusion around workouts
+
+The strap's stress score is HRV-based, and exercise suppresses HRV whatever the mind is doing, so a reading during or just after a workout isn't stress. The strap logged none inside the workouts we have, but nothing guarantees that. `stressExcluded` covers every stored workout's active time (phone workouts less their pauses, via `activeRanges`; strap workouts start to end) plus `STRESS_AFTER_WORKOUT_SECONDS` = 20 min after each active part ends. 20 min is the ≈20-min half-life of the post-exercise debt (`EPOC_DECAY` = 0.966 a minute), so a pause is excluded for its first 20 min as well. Membership uses `inWorkout`, the same per-minute test daily load uses.
+
+* **Charge:** inside the window a minute never becomes Stress or Relax, and a reading taken there isn't held into later minutes. Low-intensity workout minutes (strength between sets, yoga) that the intensity states don't claim become Activity, since they are part of a recorded workout and daily load counts them too; in the 20 min after they become Exercise recovery, the same base drain as the debt-driven recovery. In either, a minute under 10 % of reserve is plain Rest: the heart is back at sitting level.
+* **Calm level:** readings in the window are left out (`calmStress`).
+* **Daily stress:** `HealthRepository.stress` and `daily(Stress)` drop them, so the Today tile, the day chart (a gap), the previous-day comparison and the daily average, lowest and highest behind the week/month/year views leave them out. The raw readings stay in the database and the export.
+
 ### Personal stress threshold
 
 The strap's stress score is the same one Zepp shows. Zepp labels it relaxed 1–39, normal 40–59, medium 60–79 and high 80–100. Where stress starts differs between people, so *T* comes from the user's own readings (`stressThreshold`).
 
-* Input: the strap's stress readings from the last `STRESS_BASELINE_DAYS` = 14 days that were calm. Calm means awake, fewer than 10 steps that minute, and heart rate below 20% of reserve.
+* Input: the strap's stress readings from the last `STRESS_BASELINE_DAYS` = 14 days that were calm. Calm means awake, fewer than 10 steps that minute, heart rate below 20% of reserve, and outside the stress exclusion around workouts.
 * Calm level: the median of those readings.
 * *T* = calm level + `STRESS_MARGIN` (10), kept within 50–70. A calm level of 50 gives 60, where Zepp's "medium" band starts.
 * *T* is 60 until there are `MIN_STRESS_DAYS` = 3 days and at least 60 calm readings.
@@ -199,6 +208,7 @@ Zepp does the same job differently. It computes a stress threshold on the phone 
 * A quiet waking day drains about 2.4 per hour.
 * An hour at 60% of reserve drains 20–32.
 * A post-workout cool-down never counts as stress.
+* Stress 80 through a slow strength workout drains nothing as stress; the same reading 30 min after it does.
 * An hour at stress 80 with *T* = 60 (0.007·20·60 = 8.4, plus 2.4 base) stays at or below a third of an hour at 60 % of reserve: its total under 32 / 3, its stress part under a third of that exercise hour's drain.
 * Stress blips shorter than 3 minutes never drain as stress.
 * A seated day in Zepp's "normal" stress band (40–59) drains like rest, not stress. Zepp labels the strap's score relaxed 1–39, normal 40–59, medium 60–79 and high 80–100; counting from 40 had most waking minutes drain as stress.

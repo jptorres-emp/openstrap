@@ -105,6 +105,10 @@ interface HealthDao {
     @Query("SELECT * FROM workout WHERE `end` >= :from AND start <= :to ORDER BY start")
     suspend fun workoutsOnce(from: Long, to: Long): List<Workout>
 
+    /** Strap workouts that overlap [from, to], as they change (for the stress exclusion). */
+    @Query("SELECT * FROM workout WHERE `end` >= :from AND start <= :to ORDER BY start")
+    fun workoutsIn(from: Long, to: Long): Flow<List<Workout>>
+
     @Query("SELECT * FROM workout WHERE start = :start")
     fun workout(start: Long): Flow<Workout?>
 
@@ -152,6 +156,10 @@ interface HealthDao {
     /** Phone workouts that overlap [from, to], the one recording included. */
     @Query("SELECT * FROM app_workout WHERE (`end` IS NULL OR `end` >= :from) AND start <= :to ORDER BY start")
     suspend fun appWorkoutsOnce(from: Long, to: Long): List<AppWorkout>
+
+    /** Phone workouts that overlap [from, to], the one recording included, as they change (for the stress exclusion). */
+    @Query("SELECT * FROM app_workout WHERE (`end` IS NULL OR `end` >= :from) AND start <= :to ORDER BY start")
+    fun appWorkoutsIn(from: Long, to: Long): Flow<List<AppWorkout>>
 
     @Query("SELECT * FROM app_workout WHERE start = :start")
     fun appWorkout(start: Long): Flow<AppWorkout?>
@@ -423,9 +431,6 @@ interface HealthDao {
 
     @Query("SELECT date(timestamp, 'unixepoch', 'localtime') AS day, AVG(percent) AS value, MIN(percent) AS min, MAX(percent) AS max, COUNT(*) AS count FROM sleep_spo2 WHERE timestamp BETWEEN :from AND :to GROUP BY day ORDER BY day")
     fun dailySleepSpo2(from: Long, to: Long): Flow<List<DailyAggregate>>
-
-    @Query("SELECT date(timestamp, 'unixepoch', 'localtime') AS day, AVG(value) AS value, MIN(value) AS min, MAX(value) AS max, COUNT(*) AS count FROM stress WHERE timestamp BETWEEN :from AND :to GROUP BY day ORDER BY day")
-    fun dailyStress(from: Long, to: Long): Flow<List<DailyAggregate>>
 
     @Query("SELECT date(timestamp, 'unixepoch', 'localtime') AS day, AVG(celsius) AS value, MIN(celsius) AS min, MAX(celsius) AS max, COUNT(*) AS count FROM skin_temperature WHERE timestamp BETWEEN :from AND :to GROUP BY day ORDER BY day")
     fun dailySkinTemperature(from: Long, to: Long): Flow<List<DailyAggregate>>

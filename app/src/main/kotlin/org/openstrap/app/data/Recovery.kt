@@ -83,7 +83,12 @@ object Recovery {
         val stress: Int?,
         /** A [SleepStage] while asleep (including AWAKE inside a sleep), null outside sleep. */
         val sleepStage: Int?,
+        /** Inside a stored workout's active time, or within [STRESS_AFTER_WORKOUT_SECONDS] after one; null otherwise. */
+        val workout: WorkoutPhase? = null,
     )
+
+    /** Where a minute sits against the stored workouts, for the stress exclusion ([stressExcluded]). */
+    enum class WorkoutPhase { Active, After }
 
     // ------------------------------------------------------------------------------------------------
     // Baselines
@@ -129,6 +134,63 @@ object Recovery {
         val value = Math.round(median + STRESS_MARGIN).coerceIn(STRESS_FROM_MIN, STRESS_FROM_MAX)
         return StressThreshold(value, Math.round(median), days)
     }
+
+    /**
+     * The strap's stress readings that make up the calm level for [stressThreshold]: awake ([asleep] false), still
+     * (fewer than [CALM_STEPS] steps that minute), heart rate below [ACTIVITY_HRR] of reserve, and outside the stress
+     * exclusion around workouts ([excluded], from [stressExcluded]). [hr] and [steps] are keyed by minute start.
+     */
+    fun calmStress(
+        readings: List<Pair<Long, Int>>,
+        hr: Map<Long, Int>,
+        steps: Map<Long, Int>,
+        restingHr: Float,
+        maxHr: Float,
+        excluded: List<LongRange>,
+        asleep: (Long) -> Boolean,
+    ): List<Pair<Long, Int>> = readings.filter { (t, _) ->
+        val minute = t / 60 * 60
+        val bpm = hr[minute]
+        !asleep(t) && (steps[minute] ?: 0) < CALM_STEPS && bpm != null && hrr(bpm, restingHr, maxHr) < ACTIVITY_HRR &&
+            !inWorkout(minute, excluded)
+    }
+
+    /** A minute with fewer steps than this counts as still for the calm stress level. */
+    const val CALM_STEPS = 10
+
+    /**
+     * The stress exclusion: the strap's stress score comes from heart-rate variability, which exercise suppresses
+     * whatever the mind is doing, so a reading during a workout or while the heart is still settling after one says
+     * nothing about stress. The window is each of [workouts]' active parts (phone and strap, as
+     * [workoutRanges] gives them) plus [STRESS_AFTER_WORKOUT_SECONDS] after each part ends. A pause therefore stays
+     * excluded for its first 20 minutes too, being the same settling-down. Readings in it are kept and exported, but
+     * Charge, the calm level and the day's stress figures and charts leave them out (see [stressCounts]).
+     */
+    fun stressExcluded(workouts: List<LongRange>): List<LongRange> =
+        workouts.flatMap { listOf(it, it.last + 1..it.last + STRESS_AFTER_WORKOUT_SECONDS) }
+
+    /** Whether a stress reading at [t] counts as daily stress: not inside [excluded] (from [stressExcluded]). */
+    fun stressCounts(t: Long, excluded: List<LongRange>): Boolean = !inWorkout(t / 60 * 60, excluded)
+
+    /**
+     * How long after a workout stress readings stay excluded: 20 minutes, the ≈20-minute half-life of Charge's
+     * post-exercise debt ([EPOC_DECAY], 0.966 a minute). By then half the debt is gone and the heart rate is close
+     * to where it settles.
+     */
+    const val STRESS_AFTER_WORKOUT_SECONDS = 20 * 60L
+
+    /**
+     * A phone workout's active parts: [activeRanges] from its shown start to its end (now while recording), less its
+     * pauses, the one under way included.
+     */
+    fun activeRanges(w: org.openstrap.app.data.db.AppWorkout, now: Long): List<LongRange> {
+        val end = w.end ?: now
+        return activeRanges(w.from, end, w.pauseRanges + listOfNotNull(w.pausedAt?.let { it..end }))
+    }
+
+    /** Every stored workout's active time, phone ([activeRanges]) and strap (start until end), as [inWorkout] takes it. */
+    fun workoutRanges(phone: List<org.openstrap.app.data.db.AppWorkout>, strap: List<org.openstrap.app.data.db.Workout>, now: Long): List<LongRange> =
+        (phone.flatMap { activeRanges(it, now) } + strap.map { it.start until it.end }).filter { !it.isEmpty() }
 
     const val STRESS_BASELINE_DAYS = 14
     const val MIN_STRESS_DAYS = 3
@@ -891,6 +953,19 @@ object Recovery {
     /** Stress drains only after this many consecutive minutes at or above the threshold; a blip is rest. */
     const val STRESS_GATE_MINUTES = 3
     const val RELAX_BELOW = 25
+    /**
+     * A minute in the stress exclusion around a workout ([stressExcluded]) that the intensity states above haven't
+     * claimed (heart rate under [ACTIVITY_HRR], few steps, no post-exercise debt: a strength workout between sets,
+     * yoga, the cool-down) never becomes Stress or Relax, since its stress reading reflects the exercise. It becomes:
+     * - **Activity** inside the workout's active time, draining by its TRIMP as any light activity does: it is part
+     *   of a recorded workout, and daily load counts every workout minute too ([dailyLoad]);
+     * - **ExerciseRecovery** in the 20 minutes after, the same base drain as the debt-driven recovery above;
+     * - **Rest** in either when heart rate is below this fraction of reserve (about 12 bpm over resting for a
+     *   120-bpm reserve), where it is back at sitting level and there is nothing to attribute to the workout.
+     * Activity at this intensity drains little more than Rest (TRIMP ≈ 0.08 a minute at 10 %), so the choice mostly
+     * shows in the state strip.
+     */
+    const val WORKOUT_REST_HRR = 0.10f
     /** Firstbeat's intensity bands, as heart-rate reserve (≈ %VO2 reserve, Swain & Leutholtz 1997). */
     const val ACTIVITY_HRR = 0.20f
     const val EXERCISE_HRR = 0.30f
@@ -932,8 +1007,9 @@ object Recovery {
         var stressRun = 0
 
         for (m in minutes) {
-            // Consecutive awake minutes at or above the threshold: stress drains only from the third.
-            stressRun = if (m.sleepStage == null && m.stress != null && m.stress >= params.stressFrom) stressRun + 1 else 0
+            // Consecutive awake minutes at or above the threshold: stress drains only from the third. A minute in the
+            // stress exclusion around a workout breaks the run, as its reading doesn't count.
+            stressRun = if (m.sleepStage == null && m.workout == null && m.stress != null && m.stress >= params.stressFrom) stressRun + 1 else 0
             val hr = m.hr
             val x = hr?.let { hrr(it, params.restingHr, params.maxHr) }
             val state: State
@@ -964,6 +1040,20 @@ object Recovery {
                 x >= ACTIVITY_HRR || m.steps >= ACTIVE_STEPS -> {
                     state = State.Activity
                     delta = -BASE_DRAIN - EXERCISE_DRAIN_PER_TRIMP * trimpMinute(x, params.female)
+                }
+                // Inside the stress exclusion ([stressExcluded]) the strap's stress score is ignored, so a minute that
+                // reaches here is never Stress or Relax. See [WORKOUT_REST_HRR] for the state it takes instead.
+                m.workout == WorkoutPhase.Active && x >= WORKOUT_REST_HRR -> {
+                    state = State.Activity
+                    delta = -BASE_DRAIN - EXERCISE_DRAIN_PER_TRIMP * trimpMinute(x, params.female)
+                }
+                m.workout == WorkoutPhase.After && x >= WORKOUT_REST_HRR -> {
+                    state = State.ExerciseRecovery
+                    delta = -BASE_DRAIN
+                }
+                m.workout != null -> {
+                    state = State.Rest
+                    delta = -BASE_DRAIN
                 }
                 m.stress != null && m.stress >= params.stressFrom && stressRun >= STRESS_GATE_MINUTES -> {
                     state = State.Stress
@@ -1010,7 +1100,8 @@ object Recovery {
 
     /**
      * Builds one [Minute] per minute over [from, to): heart rate at that minute, the latest stress
-     * value within the last [stressHoldSeconds], and the sleep stage covering the minute.
+     * value within the last [stressHoldSeconds], the sleep stage covering the minute, and where it sits against
+     * [workouts].
      */
     fun minutes(
         from: Long,
@@ -1020,9 +1111,13 @@ object Recovery {
         stress: List<Pair<Long, Int>>,
         stages: List<Triple<Long, Long, Int>>,
         stressHoldSeconds: Long = 10 * 60,
+        /** Stored workouts' active parts ([workoutRanges]); each minute gets its [WorkoutPhase] from these. */
+        workouts: List<LongRange> = emptyList(),
     ): List<Minute> {
+        val excluded = stressExcluded(workouts)
         val hrByMinute = hr.associate { (it.first / 60 * 60) to it.second }
-        val stressSorted = stress.sortedBy { it.first }
+        // A reading taken in the exclusion must not be held into the minutes after it either.
+        val stressSorted = stress.filter { stressCounts(it.first, excluded) }.sortedBy { it.first }
         val stageSorted = stages.sortedBy { it.first }
         var si = 0
         var lastStress: Pair<Long, Int>? = null
@@ -1034,7 +1129,12 @@ object Recovery {
             while (gi < stageSorted.size && stageSorted[gi].second <= t) gi++
             val stage = stageSorted.getOrNull(gi)?.takeIf { t >= it.first && t < it.second }?.third
             val s = lastStress?.takeIf { t - it.first <= stressHoldSeconds }?.second
-            out += Minute(t, hrByMinute[t], steps[t] ?: 0, s, stage)
+            val phase = when {
+                inWorkout(t, workouts) -> WorkoutPhase.Active
+                inWorkout(t, excluded) -> WorkoutPhase.After
+                else -> null
+            }
+            out += Minute(t, hrByMinute[t], steps[t] ?: 0, s, stage, phase)
             t += 60
         }
         return out

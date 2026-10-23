@@ -43,7 +43,6 @@ import org.openstrap.app.ui.dashboard.Reselect
 import org.openstrap.app.ui.dashboard.TabNav
 import org.openstrap.app.ui.dashboard.dayTitle
 import org.openstrap.app.ui.dashboard.strapChip
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.widthIn
@@ -255,7 +254,7 @@ private fun AppRoot(container: AppContainer, metricRequests: kotlinx.coroutines.
     // Pages over the tab showing (the Strap page and what it opens, Profile, Diagnostics), deepest last.
     var pages by rememberSaveable(stateSaver = PagesSaver) { mutableStateOf(emptyList<Page>()) }
     var youOpen by rememberSaveable { mutableStateOf(false) }
-    // The All metrics sheet, from the circle beside the tab bar: over the tab, like the You sheet, never a place.
+    // The All metrics sheet, from the grid button in the header: over the tab, like the You sheet, never a place.
     var allMetricsOpen by rememberSaveable { mutableStateOf(false) }
     val workoutsVm: org.openstrap.app.ui.workout.WorkoutsViewModel = viewModel(factory = viewModelFactory {
         initializer { org.openstrap.app.ui.workout.WorkoutsViewModel(container.database.healthDao(), container.settings.profile) }
@@ -354,9 +353,6 @@ private fun AppRoot(container: AppContainer, metricRequests: kotlinx.coroutines.
     }
     // The day a workout is being added to after the fact.
     var addingOn by rememberSaveable { mutableStateOf<java.time.LocalDate?>(null) }
-    // While a workout records, the circle beside the tab bar shows its heart rate in the zone colour.
-    val workoutAccent = (workoutState as? org.openstrap.app.device.WorkoutState.Recording)
-        ?.let { org.openstrap.app.ui.glow.workoutColor(it, live, connection is ConnectionState.Connected) }
 
     // When the strap was last heard from, for the header chip: kept fresh while connected, then left where it stopped.
     // Without that in this run, the last synced reading or the last sync stand in.
@@ -546,18 +542,9 @@ private fun AppRoot(container: AppContainer, metricRequests: kotlinx.coroutines.
                 }
             }
         }
-        // The circle only ever does an action (spec 3.2): it opens the sheet over whatever shows, and no tab hears of it.
-        val openAllMetrics: () -> Unit = { allMetricsOpen = true }
-        val action: @Composable () -> Unit = {
-            // The moments (step 3) pass the workout window's start here.
-            TabAction(
-                workoutOpen, live, workoutAccent, workoutWindow = null, navGlass,
-                onOpenWorkout = { container.workout.minimized.value = false }, onAllMetrics = openAllMetrics,
-            )
-        }
         Scaffold(
             bottomBar = {
-                if (!rail) FloatingNavBar(navItems, tab, selectTab, glass = navGlass, action = action)
+                if (!rail) FloatingNavBar(navItems, tab, selectTab, glass = navGlass)
             },
             containerColor = MaterialTheme.colorScheme.background,
         ) { padding ->
@@ -569,6 +556,8 @@ private fun AppRoot(container: AppContainer, metricRequests: kotlinx.coroutines.
                 MomentHeader(
                     if (t == Tab.Today) dayTitle(day.date) else t.label, day.date, chip, dayVm::previousDay, dayVm::nextDay, picker,
                     onOpenYou = { youOpen = true }, onOpenStrap = { openPage(Page.Strap) },
+                    // The sheet opens over whatever shows, and no tab hears of it (spec 3.2).
+                    onOpenAllMetrics = { allMetricsOpen = true },
                 )
             }
             // What a tab's stack shows on top: the same screens on every tab, each pushing onto the stack it's on.
@@ -710,7 +699,7 @@ private fun AppRoot(container: AppContainer, metricRequests: kotlinx.coroutines.
         }
         if (rail) org.openstrap.app.ui.components.FloatingNavRail(
             navItems, tab, selectTab, androidx.compose.ui.Modifier.align(androidx.compose.ui.Alignment.CenterStart),
-            glass = navGlass, action = action,
+            glass = navGlass,
         )
         if (youOpen) {
             val log by container.strap.log.collectAsStateWithLifecycle()
@@ -780,40 +769,6 @@ private fun AppRoot(container: AppContainer, metricRequests: kotlinx.coroutines.
         org.openstrap.app.ui.components.GlassOverlay(glassHost, navGlass)
       }
       }
-    }
-}
-
-/**
- * The circle beside the tab bar (spec 3.2): during a recording, the live heart rate in the zone [accent], opening the
- * live screen; in the workout window, Start workout; otherwise the All metrics sheet. Only ever an action, never a
- * place: it is never lit like a tab.
- */
-@Composable
-private fun TabAction(
-    recording: org.openstrap.app.device.WorkoutState.Recording?,
-    live: Int?,
-    accent: androidx.compose.ui.graphics.Color?,
-    /** Starts a workout, while it's the usual time for one; set by the moments (step 3), null until then. */
-    workoutWindow: (() -> Unit)?,
-    glass: dev.chrisbanes.haze.HazeState,
-    onOpenWorkout: () -> Unit,
-    onAllMetrics: () -> Unit,
-) {
-    val white = androidx.compose.ui.graphics.Color.White
-    when {
-        recording != null -> org.openstrap.app.ui.components.NavActionCircle(
-            live?.let { "Heart rate $it. Open the workout" } ?: "Open the workout", onOpenWorkout, glass,
-        ) {
-            val color = accent ?: white
-            if (live != null) org.openstrap.app.ui.glow.DotMatrixText("$live", dot = 2.6.dp, gap = 1.dp, color = color)
-            else androidx.compose.material3.Icon(PhosphorIcons.HeartFill, null, androidx.compose.ui.Modifier.size(22.dp), tint = color)
-        }
-        workoutWindow != null -> org.openstrap.app.ui.components.NavActionCircle("Start workout", workoutWindow, glass, filled = true) {
-            androidx.compose.material3.Icon(PhosphorIcons.PlayFill, null, androidx.compose.ui.Modifier.size(22.dp), tint = androidx.compose.ui.graphics.Color.Black)
-        }
-        else -> org.openstrap.app.ui.components.NavActionCircle("All metrics", onAllMetrics, glass) {
-            androidx.compose.material3.Icon(PhosphorIcons.SquaresFour, null, androidx.compose.ui.Modifier.size(22.dp), tint = white)
-        }
     }
 }
 

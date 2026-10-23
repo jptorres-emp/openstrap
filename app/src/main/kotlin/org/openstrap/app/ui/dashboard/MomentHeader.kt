@@ -52,8 +52,8 @@ private val SwipeDistance = 56.dp
 
 /**
  * The header on every tab (spec 3.1): the avatar on the left opens You, the [title] over the day in the middle, the
- * strap chip on the right opens the Strap page. Swipe it sideways to change the day (on every tab at once), or tap
- * the day for the calendar. The day before peeks in dimmed on the left, the day after on the right while there is
+ * All metrics button and the strap chip on the right open the sheet and the Strap page. Swipe it sideways to change
+ * the day (on every tab at once), or tap the day for the calendar. The day before peeks in dimmed on the left, the day after on the right while there is
  * one. Pull to sync opens its gap underneath.
  */
 @Composable
@@ -66,6 +66,7 @@ fun MomentHeader(
     picker: DayPicker,
     onOpenYou: () -> Unit,
     onOpenStrap: () -> Unit,
+    onOpenAllMetrics: () -> Unit,
 ) {
     var calendarOpen by rememberSaveable { mutableStateOf(false) }
     if (calendarOpen) DayCalendarSheet(date, picker.available, picker.onPick, onDismiss = { calendarOpen = false })
@@ -73,16 +74,24 @@ fun MomentHeader(
     val hasNext = date < today
     Column(Modifier.fillMaxWidth()) {
         Row(Modifier.fillMaxWidth().height(60.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                Modifier.size(38.dp).clip(CircleShape).background(Avatar).clickable(onClickLabel = "Open You", onClick = onOpenYou),
-                contentAlignment = Alignment.Center,
-            ) { Icon(PhosphorIcons.User, "You", Modifier.size(20.dp), tint = Color.White) }
+            RoundButton(PhosphorIcons.User, "You", "Open You", onOpenYou)
             DaySwitcher(title, date, hasNext, onPrev, onNext, { calendarOpen = true }, Modifier.weight(1f))
+            RoundButton(PhosphorIcons.SquaresFour, "All metrics", "Open all metrics", onOpenAllMetrics)
+            Spacer(Modifier.width(8.dp))
             StrapChipButton(chip, onOpenStrap)
         }
         // Pull to sync opens here and pushes everything below it down.
         org.openstrap.app.ui.components.PullSyncReveal()
     }
+}
+
+/** A round button at either end of the header: the avatar, and All metrics in its likeness. */
+@Composable
+private fun RoundButton(icon: androidx.compose.ui.graphics.vector.ImageVector, description: String, clickLabel: String, onClick: () -> Unit) {
+    Box(
+        Modifier.size(38.dp).clip(CircleShape).background(Avatar).clickable(onClickLabel = clickLabel, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) { Icon(icon, description, Modifier.size(20.dp), tint = Color.White) }
 }
 
 /** The title over the day, with its neighbours peeking in either side; it follows a sideways drag and springs back. */

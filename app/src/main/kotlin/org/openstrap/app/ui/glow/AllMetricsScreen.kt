@@ -145,7 +145,7 @@ fun metricIndex(
 }
 
 /**
- * The index as a sheet over the tab (spec 3.2), from the circle beside the tab bar: one grouped list per section.
+ * The index as a sheet over the tab (spec 3.2), from the grid button in the header: one grouped list per section.
  * [onOpen] gets the tapped row's target; the caller closes the sheet and goes there.
  */
 @Composable

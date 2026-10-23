@@ -193,31 +193,27 @@ Rules for every chart:
 - **Centre:** the moment on Today ("Waking up", "Midday", "Workout time", "After your run", "Evening", "Night") or the
   tab name on other tabs, over the day ("Thu 23 Oct"). Never wraps. Yesterday's short name peeks in dimmed on the
   left. Swipe the header to change day. Tapping the date opens the calendar sheet, which marks days with data.
-- **Right:** strap chip. Battery and a dot when all is well. Words only when they matter: "Charging 64%", "Not
+- **Right:** the All metrics button (a round grid icon, opens the All metrics sheet, on every tab), then the strap
+  chip. Battery and a dot when all is well. Words only when they matter: "Charging 64%", "Not
   synced" (amber dot), "18 min ago" (amber, last seen), "Not paired". Tapping it opens the Strap page from any tab.
 
 Chevrons go. Changing the day still changes it on all four tabs (shared `DayViewModel`), as now.
 
 ### 3.2 Tab bar
 
-Four tabs in a pill: Today, Recovery, Sleep, Activity. The active capsule is tinted with its section colour (white on
-Today). A detached circle to the right holds the moment's action:
+Four tabs in a pill, centred, and nothing else: Today, Recovery, Sleep, Activity. The active capsule is tinted with its
+section colour (white on Today). The bar only ever switches tabs. Nothing beside it does an action or changes with
+the moment.
 
-| Moment | Circle |
-|---|---|
-| Workout window | Start workout (white fill) |
-| During a workout | Live heart rate in the zone colour, opens the live screen |
-| Otherwise | All metrics, opens the All metrics sheet |
-
-The circle only ever does an action. It never takes you to a place, so it is never lit like a tab and the tabs never
-know it was tapped.
+- **All metrics** is the grid button in the header (3.1).
+- **Start workout** is the Start button in Today's workout-window hero (4).
+- **During a workout** the live capsule above the bar shows the heart rate in the zone colour and opens the live
+  screen.
 
 **All metrics sheet.** A modal sheet over the current tab, in the You sheet's style: every metric grouped by section,
 each row with its value for the day. Tapping a row closes the sheet, then opens that metric's detail on the current
 tab. Recovery and Sleep rows switch to their tab at its root, and Charge to the Recovery tab with its card in view.
 Back or a swipe down closes it. The tab bar under it does nothing while it's open.
-
-The live workout capsule above the bar stays as it is.
 
 ### 3.3 Navigation rules
 
@@ -460,7 +456,7 @@ Each step is one or a few commits on `design-v2`, with tests and before-and-afte
 1. **Foundation:** `GlowStyle` additions (`lightAngle`, `lightLevel`, `second`), motion reduced to `Heartbeat` and
    `Still`, `GlowMood`, `EdgeCard`, `ListPanel` and `ListRow`, the grid row types, `MetricColors.load`, a haptics helper
    with the 3.6 table.
-2. **Frame:** `MomentHeader`, four-tab bar with the action circle, the navigation rules (removing `FocusTarget` and
+2. **Frame:** `MomentHeader`, four-tab bar, the All metrics button in the header, the navigation rules (removing `FocusTarget` and
    tab jumps), You sheet, Strap page and its moved settings.
 3. **Moments:** `MomentResolver` with unit tests for every boundary and overlap, including usual workout time.
 4. **Today:** layouts per moment, states, Edit Today.

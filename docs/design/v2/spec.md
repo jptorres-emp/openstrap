@@ -118,6 +118,7 @@ Where the glow sits carries meaning:
 | Above your normal | Top, stronger |
 | Below your normal | Bottom, stronger |
 | Progress toward a goal or your usual | Bottom, soft, plus a 4 dp progress bar inside the card |
+| A level, like Charge as an edge card | The light fills from the left across to the value, no bar. Its own design under the 2.4 rule |
 | Live, now (heart rate today) | Right |
 | About earlier (Recovery after the morning, Habit Age) | Left |
 | Sleep (last night, regularity) | Top, like a night sky. Breathing disturbances is a value (bottom), so it never matches regularity above it (5.2) |

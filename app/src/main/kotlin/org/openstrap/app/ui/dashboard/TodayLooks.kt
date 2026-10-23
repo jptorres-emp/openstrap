@@ -40,7 +40,7 @@ fun defaultLook(slot: TodaySlot, moment: Moment?, live: Boolean = false): CardLo
     TodayCard.HeartRate -> edge(Hue.Heart, if (live) Edge.Right else Edge.Bottom)
     TodayCard.Activity -> edge(Hue.Steps, Edge.Bottom)
     TodayCard.Recovery -> edge(Hue.Recovery, Edge.Left)
-    TodayCard.Charge -> if (slot.secondGlow) glow(Hue.Charge) else edge(Hue.Charge, Edge.Bottom)
+    TodayCard.Charge -> if (slot.secondGlow) glow(Hue.Charge) else CardLook(Tier.Level, Hue.Charge, Edge.Left)
     TodayCard.Workout -> edge(Hue.Heart, Edge.Left)
     TodayCard.Week -> edge(Hue.Neutral, Edge.Bottom)
     TodayCard.HabitAge -> glow(Hue.HabitAge)
@@ -78,12 +78,13 @@ private fun flips(e: Edge): List<Edge> = listOf(opposite(e)) + Edge.entries.filt
 /**
  * The other looks [s] may take, in the order they're tried: the edge flipped, then another tier the spec gives the
  * card, then the neutral edge. Last night is a strip or a wide card. A list can sit on an edge card in the neutral
- * light. Charge as the second glow can step down to its edge card. Other glows and Edit Today have no other look,
- * and an alert from the strap keeps its colour.
+ * light. Charge as the second glow can step down to its level card. Other glows, a level and Edit Today have no
+ * other look, and an alert from the strap keeps its colour.
  */
 private fun options(s: TodaySlot): List<TodaySlot> {
     val l = s.look ?: return emptyList()
-    if (s.secondGlow) return (listOf(Edge.Bottom) + flips(Edge.Bottom)).map { s.copy(secondGlow = false, look = CardLook(Tier.Edge, l.hue, it)) }
+    if (s.secondGlow) return listOf(s.copy(secondGlow = false, look = CardLook(Tier.Level, l.hue, Edge.Left)))
+    if (l.tier == Tier.Level) return emptyList()
     if (l.tier == Tier.List) return (listOf(Edge.Bottom) + flips(Edge.Bottom)).map { s.copy(look = CardLook(Tier.Edge, Hue.Neutral, it)) }
     val e = l.edge ?: return emptyList()
     val sides = listOf(e) + flips(e)

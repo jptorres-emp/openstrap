@@ -305,8 +305,8 @@ internal fun RecoveryEarlierCard(shown: TodayCopy.RecoveryShown, onClick: () -> 
 }
 
 /**
- * Charge as a wide card: the second glow before and after a workout, lit to its level, or an edge card filling toward
- * full in the evening. [status] says what's happening to it.
+ * Charge as a wide card: the second glow before and after a workout, lit to its level, or a level card whose
+ * light fills across to the value, as in the evening. [status] says what's happening to it.
  */
 @Composable
 internal fun ChargeWideCard(now: Int?, status: String, secondGlow: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
@@ -318,7 +318,7 @@ internal fun ChargeWideCard(now: Int?, status: String, secondGlow: Boolean, onCl
                 EdgeValue(now?.toString(), null, status, Color.White.copy(alpha = 0.8f))
             }
         }
-    } else EdgeCard(MetricColors.chargeDeep, m, kind = EdgeKind.Progress, progress = now?.let { it / 100f }, onClick = onClick) {
+    } else EdgeCard(MetricColors.chargeDeep, m, kind = EdgeKind.Level, progress = (now ?: 0) / 100f, onClick = onClick) {
         EdgeTitle("Charge", null)
         EdgeValue(now?.toString(), null, status)
     }

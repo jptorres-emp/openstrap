@@ -55,6 +55,9 @@ enum class EdgeKind {
 
     /** Sleep: last night, regularity, breathing disturbances. Lit from the top, like a night sky. */
     Sleep,
+
+    /** A level, like Charge: the light fills from the left across to the value, in place of a progress bar. */
+    Level,
 }
 
 /** Where an edge card's light sits and how it's drawn. */
@@ -80,6 +83,7 @@ fun edgeLight(status: EdgeStatus, kind: EdgeKind = EdgeKind.Value): EdgeLight {
         EdgeKind.Live -> Edge.Right
         EdgeKind.Earlier -> Edge.Left
         EdgeKind.Sleep -> Edge.Top
+        EdgeKind.Level -> Edge.Left
     }
     return EdgeLight(edge, strong = off, progressBar = kind == EdgeKind.Progress)
 }
@@ -106,6 +110,7 @@ private val Hairline = Color.White.copy(alpha = 0.07f)
 /**
  * A card in the edge light tier, lit in [color] from the edge [edgeLight] picks for [status] and [kind], unless
  * [LocalEdgeOverride] says otherwise. For a [EdgeKind.Progress] card, [progress] (0..1) fills the bar under [content].
+ * For a [EdgeKind.Level] card it's how far across the light fills.
  * The screen's [LocalGlowMood] softens the light; the hairline always stays.
  */
 @Composable
@@ -120,7 +125,9 @@ fun EdgeCard(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val override = LocalEdgeOverride.current
-    val light = edgeLight(status, kind).let { l -> override.edge?.let { l.copy(edge = it) } ?: l }
+    // A level always fills from the left, so only its colour can be overridden.
+    val light = edgeLight(status, kind).let { l -> override.edge?.takeIf { kind != EdgeKind.Level }?.let { l.copy(edge = it) } ?: l }
+    val level = progress?.takeIf { kind == EdgeKind.Level }?.coerceIn(MinLevel, 1f)
     val tint = override.color ?: color
     val mood = LocalGlowMood.current
     Column(
@@ -137,7 +144,18 @@ fun EdgeCard(
                     Edge.Right -> Offset(size.width, 0f) to Offset(size.width - depth, 0f)
                 }
                 val stops = glow.stops(mood.edge).map { (at, alpha) -> at to tint.copy(alpha = alpha) }.toTypedArray()
-                val brush = Brush.linearGradient(*stops, start = from, end = to)
+                val brush = if (level == null) Brush.linearGradient(*stops, start = from, end = to) else {
+                    // The light fills across to the level, a little brighter at the left, and fades out just past it.
+                    val w = size.width
+                    val end = w * level
+                    val fade = LevelFade.toPx()
+                    val strength = mood.edge * (if (light.strong) 1.2f else 1f)
+                    Brush.horizontalGradient(
+                        0f to tint.copy(alpha = (0.42f * strength).coerceIn(0f, 1f)),
+                        (end / w).coerceIn(0f, 1f) to tint.copy(alpha = (0.26f * strength).coerceIn(0f, 1f)),
+                        ((end + fade) / w).coerceIn(0f, 1f) to tint.copy(alpha = 0f),
+                    )
+                }
                 val radius = CornerRadius(28.dp.toPx())
                 val stroke = 1.dp.toPx()
                 onDrawBehind {
@@ -161,6 +179,12 @@ fun EdgeCard(
         }
     }
 }
+
+/** A level card's lowest light, so an empty one still shows where it fills from. */
+private const val MinLevel = 0.04f
+
+/** How far past its level a level card's light fades out. */
+private val LevelFade = 28.dp
 
 /** The 4 dp bar inside a progress edge card. */
 @Composable

@@ -47,7 +47,7 @@ class TodayLooksTest {
     @Test fun `two glows never stack, so the second glow steps down to its edge card`() {
         val window = today(Moment.WorkoutWindow, TodayFacts())
         assertEquals(TodayCard.Charge, window[1].card)
-        assertEquals(CardLook(Tier.Edge, Hue.Charge, Edge.Bottom), window[1].look)
+        assertEquals(CardLook(Tier.Level, Hue.Charge, Edge.Left), window[1].look)
         assertEquals(false, window[1].secondGlow)
         // After a workout the workout card sits between, so Charge keeps its glow.
         val after = today(Moment.After, TodayFacts(workout = true))

@@ -10,8 +10,12 @@ import org.openstrap.app.ui.glow.Pane
  * Today resolves clashes as it goes ([varyLooks]); the tabs fix their looks up front ([recoveryCards] and the like).
  */
 
-/** A card's tier (spec 2.4), with strips and plain pieces (Edit Today) told apart from edge cards. */
-enum class Tier { Glow, Edge, List, Strip, Plain }
+/**
+ * A card's tier (spec 2.4), with strips and plain pieces (Edit Today) told apart from edge cards. [Level] is an edge
+ * card whose light fills from the left across to the value, like Charge: a fill, not an edge, so it reads as its own
+ * design.
+ */
+enum class Tier { Glow, Edge, Level, List, Strip, Plain }
 
 /** The colour a card is lit in: its metric's, or [Neutral], the cool grey of hsl 220 10% 55%. */
 enum class Hue { Recovery, Charge, Sleep, Heart, Steps, Load, HabitAge, Neutral }

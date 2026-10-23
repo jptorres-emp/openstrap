@@ -88,6 +88,7 @@ fun DeviceScreen(
     val connection by vm.strap.connection.collectAsState()
     val sync by vm.strap.sync.collectAsState()
     val scan by vm.scan.collectAsState()
+    val info by vm.strap.info.collectAsState()
     var confirmForget by rememberSaveable { mutableStateOf(false) }
     var confirmDisconnect by rememberSaveable { mutableStateOf(false) }
     val keepConnected = rememberKeepConnected(vm)
@@ -184,6 +185,7 @@ fun DeviceScreen(
                     }
                 }
             }
+            if (connection is ConnectionState.Connected && info?.findDevice == true) item { FindStrapButton(vm) }
             item {
                 Panel {
                     SettingRow("Alarms & alerts", "Wake-up alarms and heart-rate alerts on the strap", onClick = onAlarms) {
@@ -201,6 +203,20 @@ fun DeviceScreen(
                 }
             }
         }
+    }
+}
+
+/** Find strap: buzzes the strap and becomes Stop while it runs; it stops by itself after 60 s, as Zepp's does. */
+@Composable
+private fun FindStrapButton(vm: DeviceViewModel) {
+    val finding by vm.strap.findingStrap.collectAsState()
+    OutlinedButton(
+        onClick = { if (finding) vm.stopFindingStrap() else vm.findStrap() },
+        modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(vertical = 14.dp),
+    ) {
+        Icon(if (finding) PhosphorIcons.StopFill else PhosphorIcons.BellRinging, null, Modifier.size(18.dp))
+        Spacer(Modifier.width(8.dp))
+        Text(if (finding) "Stop buzzing" else "Find strap")
     }
 }
 

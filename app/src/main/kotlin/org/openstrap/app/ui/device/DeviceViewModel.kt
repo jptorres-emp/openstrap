@@ -105,6 +105,15 @@ class DeviceViewModel(private val container: AppContainer) : ViewModel() {
 
     fun showMessage(text: String) { _message.value = text }
 
+    /** Find strap: buzzes it until stopped or Zepp's 60 s are up. */
+    fun findStrap() = viewModelScope.launch {
+        runCatching { container.strap.findStrap() }.onFailure { _message.value = it.message ?: "Couldn't buzz the strap" }
+    }
+
+    fun stopFindingStrap() = viewModelScope.launch {
+        runCatching { container.strap.stopFindingStrap() }.onFailure { _message.value = it.message ?: "Couldn't stop the strap buzzing" }
+    }
+
     fun forget() = viewModelScope.launch {
         container.strap.disconnect()
         paired.value?.let { container.companion.disassociate(it.address) }

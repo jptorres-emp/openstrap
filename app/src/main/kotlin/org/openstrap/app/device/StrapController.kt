@@ -34,6 +34,8 @@ data class StrapInfo(
     val hardware: String?,
     val serial: String?,
     val dfuAvailable: Boolean,
+    /** The strap lists find device (0x001A), so Find strap can buzz it. */
+    val findDevice: Boolean = false,
     val deviceInformation: SettingsGroup? = null,
 )
 
@@ -145,6 +147,16 @@ interface StrapController {
     /** Keeps the strap buzzing (a ringing call) until [stopBuzzing] or the wearer taps the strap. */
     suspend fun startBuzzing()
     suspend fun stopBuzzing()
+
+    /** True while Find strap is buzzing the strap. */
+    val findingStrap: StateFlow<Boolean>
+
+    /**
+     * Find strap: buzzes until [stopFindingStrap], the strap reports it stopped, or Zepp's 60 s timeout
+     * ([org.openstrap.protocol.services.FindDevice.FIND_TIMEOUT_MS]). Throws [StrapCommandException] when not connected or refused.
+     */
+    suspend fun findStrap()
+    suspend fun stopFindingStrap()
 }
 
 /** The strap couldn't be asked, or said no. [message] is fit to show. */

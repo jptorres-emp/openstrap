@@ -277,7 +277,7 @@ class StrapManager(
             client.read(StrapUuids.DEVICE_INFO_SERVICE, StrapUuids.SERIAL_NUMBER).toString(Charsets.UTF_8).trimEnd('\u0000')
         }.getOrNull()
         val dfu = GattDfuLink(client).available
-        info.value = StrapInfo(firmware, hardware, serial, dfu, deviceInformation)
+        info.value = StrapInfo(firmware, hardware, serial, dfu, s.services.has(Endpoints.FIND_DEVICE), deviceInformation)
         log("hardware=$hardware dfu=$dfu")
 
         runCatching {
@@ -438,11 +438,14 @@ class StrapManager(
         runCatching { s.send(SportSession.ENDPOINT, SportSession.pauseKeepAlive) }
     }
 
-    /** Logged only: the strap's `07` once buzzing has stopped. */
+    /** The strap's `07` once buzzing has stopped; it also ends Find strap. */
     private fun CoroutineScope.watchFindDevice(s: ChannelSession) = launch {
         if (!s.services.has(Endpoints.FIND_DEVICE)) return@launch
         s.messagesFor(Endpoints.FIND_DEVICE).collect { p ->
-            if (p.isNotEmpty() && p.u8(0) == FindDevice.FOUND) log("buzzing stopped on the strap: ${p.toHex()}")
+            if (p.isNotEmpty() && p.u8(0) == FindDevice.FOUND) {
+                log("buzzing stopped on the strap: ${p.toHex()}")
+                endFind()
+            }
         }
     }
 
@@ -524,6 +527,7 @@ class StrapManager(
             log("link lost")
             // Ends this connection's listeners, and a setup still in progress, so it can't go on to report Connected.
             connectJob?.cancel()
+            endFind()
             liveJob?.cancel()
             liveHeartRate.value = null
             session?.stop()
@@ -546,6 +550,7 @@ class StrapManager(
         reconnectJob?.cancel()
         connectJob?.cancel()
         liveJob?.cancel()
+        endFind()
         close()
         liveHeartRate.value = null
         connection.value = ConnectionState.Disconnected
@@ -859,6 +864,34 @@ class StrapManager(
     }
 
     override suspend fun stopBuzzing() = sendFindDevice(FindDevice.STOP)
+
+    override val findingStrap = MutableStateFlow(false)
+    private var findJob: Job? = null
+
+    /** The same `03` … `06` as a ringing call, with Zepp's 60 s limit (03 §3.16). */
+    override suspend fun findStrap() {
+        startBuzzing()
+        log("find strap: buzzing")
+        findingStrap.value = true
+        findJob?.cancel()
+        findJob = scope.launch {
+            delay(FindDevice.FIND_TIMEOUT_MS)
+            log("find strap: timed out")
+            findingStrap.value = false
+            runCatching { stopBuzzing() }
+        }
+    }
+
+    override suspend fun stopFindingStrap() {
+        endFind()
+        stopBuzzing()
+    }
+
+    private fun endFind() {
+        findJob?.cancel()
+        findJob = null
+        findingStrap.value = false
+    }
 
     /** STOP gets no reply (03 §3.16), so it is only sent. */
     private suspend fun sendFindDevice(request: ByteArray) {

@@ -18,6 +18,11 @@ object FindDevice {
     const val FOUND = 0x07
     /** How long a notification buzz lasts before [STOP]. */
     const val SHORT_BUZZ_MS = 1_500L
+    /**
+     * Find strap: how long a [BUZZ] runs before the app sends [STOP] itself. Zepp's find dialog waits 60 s for the user
+     * to stop it, then closes (`ktt.java:970`).
+     */
+    const val FIND_TIMEOUT_MS = 60_000L
 
     fun isBuzzOk(reply: ByteArray): Boolean = reply.size >= 2 && reply.u8(0) == 0x04 && reply.u8(1) == 1
 }

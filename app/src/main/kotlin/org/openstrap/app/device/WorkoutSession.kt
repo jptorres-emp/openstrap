@@ -325,6 +325,13 @@ class WorkoutSession(
 
     /* --------------------------- The strap's own session (experimental, 0x0019) --------------------------- */
 
+    /*
+     * TODO (deferred): run phone-started workouts on the strap in full. Untried on hardware; still missing are
+     * 0x0019 `04` live SportInfo, `06` status query and `20` strap-initiated start, plus phone GPS fixes to the
+     * strap over 0x0031 (codemap 05 §5, 03 §3.20). First test whether the strap answers the version query and then
+     * syncs a subtype-6 summary with its own TE/load; if it does, merge that with the phone's recording by trackId.
+     */
+
     /** Read at each start: whether a phone workout also runs a session on the strap. */
     @Volatile private var strapSessions = false
     private var keepAlive: Job? = null

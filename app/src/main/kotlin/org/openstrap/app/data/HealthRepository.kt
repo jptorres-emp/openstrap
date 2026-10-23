@@ -2,6 +2,7 @@ package org.openstrap.app.data
 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import org.openstrap.app.data.db.ActivityExtendedMinute
 import org.openstrap.app.data.db.ActivityMinute
@@ -80,8 +81,10 @@ class HealthRepository(private val dao: HealthDao) {
     }
 
 
-    /** Emits whenever new heart-rate, stress or sleep data lands, so derived scores can refresh. */
-    fun changes(): Flow<Unit> = kotlinx.coroutines.flow.combine(dao.latestHeartRateTime(), dao.latestStressTime(), dao.latestSleepEnd()) { _, _, _ -> }
+    /** Emits whenever new heart-rate, stress or sleep data lands, or a strap workout comes or goes, so derived scores can refresh. */
+    fun changes(): Flow<Unit> = kotlinx.coroutines.flow.combine(
+        dao.latestHeartRateTime(), dao.latestStressTime(), dao.latestSleepEnd(), dao.workoutCountFlow().distinctUntilChanged(),
+    ) { _, _, _, _ -> }
 
     /** Local days that have any heart rate, steps or sleep, for the calendar. */
     fun daysWithData(zone: ZoneId = ZoneId.systemDefault()): Flow<Set<LocalDate>> = dao.hoursWithData().map { hours ->

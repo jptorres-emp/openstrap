@@ -51,7 +51,7 @@ object Workouts {
     /** The strap keeps recording HR this long after a workout, for recovery heart rate. */
     const val RECOVERY_TAIL_S = 180L
     /** A sport effect belongs to a workout when it ends within this long of the workout's start. */
-    private const val EFFECT_WINDOW_S = 12 * 3600L
+    const val EFFECT_WINDOW_S = 12 * 3600L
     const val ZONES = 5
     /** Summary `Type.subtype` for a workout the strap recognised on its own; 6 is a phone workout it mirrored (codemap 05 §8). */
     const val SUBTYPE_AUTO_DETECTED = 1
@@ -70,11 +70,9 @@ object Workouts {
      * has one, then [fallbackMaxHr] (the app's usual max HR, [RecoveryEngine.maxHeartRate]).
      */
     fun analyse(w: Workout, hr: List<WorkoutHeartRate>, effects: List<SportEffectRow>, fallbackMaxHr: Int): WorkoutAnalysis {
-        val effect = effects.filter { it.end > w.start && it.end <= w.start + EFFECT_WINDOW_S }.minByOrNull { it.end }
+        val effect = effectOf(w, effects)
         val lastSample = hr.maxOfOrNull { it.timestamp }
-        val end = effect?.end
-            ?: lastSample?.let { it - RECOVERY_TAIL_S }?.takeIf { it > w.start }?.let { maxOf(it, w.end) }
-            ?: w.end
+        val end = endOf(w, lastSample, effect)
         val maxHr = effect?.maximalHeartRate ?: fallbackMaxHr
         val during = hr.filter { it.timestamp in w.start..end }
         val zones = IntArray(ZONES)
@@ -91,6 +89,24 @@ object Workouts {
             zoneSeconds = zones.toList(),
             maxHeartRate = maxHr,
         )
+    }
+
+    /** The sport effect shown with [w]: the first that ends after its start, within [EFFECT_WINDOW_S]. */
+    fun effectOf(w: Workout, effects: List<SportEffectRow>): SportEffectRow? =
+        effects.filter { it.end > w.start && it.end <= w.start + EFFECT_WINDOW_S }.minByOrNull { it.end }
+
+    /** [w]'s real end: its sport effect's, else three minutes before its last HR sample ([lastSample]), else its stored end. */
+    fun endOf(w: Workout, lastSample: Long?, effect: SportEffectRow?): Long = effect?.end
+        ?: lastSample?.let { it - RECOVERY_TAIL_S }?.takeIf { it > w.start }?.let { maxOf(it, w.end) }
+        ?: w.end
+
+    /**
+     * The sport effect deleted along with [w]: the one shown with it, unless another workout starts ([otherStarts])
+     * before that effect ends. A strap workout with no effect of its own would otherwise take the next one's.
+     */
+    fun ownEffect(w: Workout, effects: List<SportEffectRow>, otherStarts: List<Long>): SportEffectRow? {
+        val e = effectOf(w, effects) ?: return null
+        return e.takeIf { otherStarts.none { s -> s > w.start && s < e.end } }
     }
 
     /** Zone 0..4 for 50–60, 60–70, 70–80, 80–90 and 90+ % of max; null below 50 %. */

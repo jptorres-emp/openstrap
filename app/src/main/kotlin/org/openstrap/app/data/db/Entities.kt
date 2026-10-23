@@ -265,6 +265,18 @@ data class AppWorkoutRoutePoint(
     }
 }
 
+/**
+ * A strap workout deleted in OpenStrap, so a later sync doesn't bring it back: the strap still holds it and re-sends
+ * it whenever its workout cursor goes back (a first sync, a cursor repair). [effectEnd] is the end of the sport effect
+ * deleted with it, if one was, which arrives on its own and is skipped the same way.
+ */
+@Entity(tableName = "workout_deleted")
+data class DeletedWorkout(
+    @PrimaryKey val start: Long,
+    val effectEnd: Long?,
+    val deletedAt: Long,
+)
+
 /** A stretch answered "Not a workout", so it isn't offered again ([org.openstrap.app.data.WorkoutSuggestions]). */
 @Entity(tableName = "app_workout_dismissed")
 data class DismissedWorkout(

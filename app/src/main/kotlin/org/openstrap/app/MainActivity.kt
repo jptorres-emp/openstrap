@@ -1050,7 +1050,8 @@ private fun WorkoutDetail(
     session: org.openstrap.app.device.WorkoutSession,
     exportGpx: (Long) -> Unit,
 ) {
-    // OpenStrap's own recordings get the workout-mode summary, trim and delete; the strap's come back with the next sync.
+    // OpenStrap's own recordings get the workout-mode summary, trim and delete; the strap's get delete too, remembered so
+    // the next sync doesn't bring them back.
     if (a?.fromPhone == true) {
         val start = a.workout.start
         val summary by remember(start) { workoutsVm.phoneSummary(start) }.collectAsStateWithLifecycle(null)
@@ -1059,5 +1060,8 @@ private fun WorkoutDetail(
             onTrim = { from, to -> session.trim(start, from, to) }, onUndoTrim = { session.undoTrim(start) }, justEnded = false,
             onExportGpx = { exportGpx(start) },
         )
-    } else org.openstrap.app.ui.glow.GlowWorkoutScreen(a, contentPadding, onBack)
+    } else org.openstrap.app.ui.glow.GlowWorkoutScreen(
+        a, contentPadding, onBack,
+        onDelete = a?.let { s -> { workoutsVm.deleteStrapWorkout(s.workout.start); onBack() } },
+    )
 }

@@ -57,6 +57,43 @@ interface HealthDao {
     @Query("DELETE FROM workout_hr WHERE workoutStart = :start")
     suspend fun deleteWorkoutHeartRate(start: Long)
 
+    @Query("DELETE FROM workout WHERE start = :start")
+    suspend fun deleteWorkoutRow(start: Long)
+
+    @Query("DELETE FROM recovery_hr WHERE workoutStart = :start")
+    suspend fun deleteRecoveryHeartRate(start: Long)
+
+    @Query("DELETE FROM sport_effect WHERE `end` = :end")
+    suspend fun deleteSportEffect(end: Long)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertDeletedWorkouts(rows: List<DeletedWorkout>)
+
+    /** Strap workouts deleted in OpenStrap, which a sync must not store again. */
+    @Query("SELECT * FROM workout_deleted ORDER BY start")
+    suspend fun deletedWorkoutsAll(): List<DeletedWorkout>
+
+    /**
+     * Deletes a strap workout: its row, its HR stream and recovery HR, and the sport effect that is only its own
+     * ([org.openstrap.app.data.Workouts.ownEffect]). It is remembered in [DeletedWorkout] so the strap's next re-send
+     * isn't stored, and its time as "Not a workout" so the same stretch isn't offered as a suggestion.
+     */
+    @androidx.room.Transaction
+    suspend fun deleteStrapWorkout(start: Long, now: Long) {
+        val w = workoutOnce(start) ?: return
+        val until = start + org.openstrap.app.data.Workouts.EFFECT_WINDOW_S
+        val effects = sportEffectsOnce(start, until)
+        val others = workoutsOnce(start, until).map { it.start }.filter { it != start } + appWorkoutsOnce(start, until).map { it.from }
+        val own = org.openstrap.app.data.Workouts.ownEffect(w, effects, others)
+        val end = org.openstrap.app.data.Workouts.endOf(w, workoutHeartRateOnce(start).maxOfOrNull { it.timestamp }, own)
+        deleteWorkoutHeartRate(start)
+        deleteRecoveryHeartRate(start)
+        own?.let { deleteSportEffect(it.end) }
+        deleteWorkoutRow(start)
+        insertDeletedWorkouts(listOf(DeletedWorkout(start, own?.end, now)))
+        insertDismissedWorkouts(listOf(DismissedWorkout(start, end)))
+    }
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertSportEffects(rows: List<SportEffectRow>)
 
@@ -99,6 +136,10 @@ interface HealthDao {
     @Query("SELECT COUNT(*) FROM workout")
     suspend fun workoutCount(): Int
 
+    /** How many strap workouts there are, as it changes: a delete changes it, so Load and charge are worked out again. */
+    @Query("SELECT COUNT(*) FROM workout")
+    fun workoutCountFlow(): Flow<Int>
+
     @Query("SELECT * FROM workout ORDER BY start DESC")
     fun workouts(): Flow<List<Workout>>
 
@@ -111,6 +152,9 @@ interface HealthDao {
 
     @Query("SELECT * FROM workout WHERE start = :start")
     fun workout(start: Long): Flow<Workout?>
+
+    @Query("SELECT * FROM workout WHERE start = :start")
+    suspend fun workoutOnce(start: Long): Workout?
 
     @Query("SELECT * FROM workout_hr WHERE workoutStart = :start ORDER BY timestamp")
     fun workoutHeartRate(start: Long): Flow<List<WorkoutHeartRate>>

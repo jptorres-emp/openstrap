@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import org.openstrap.app.data.RecoveryEngine
 import org.openstrap.app.data.WorkoutAnalysis
 import org.openstrap.app.data.WorkoutRecorder
@@ -185,4 +186,9 @@ class WorkoutsViewModel(private val dao: HealthDao, private val profile: Flow<Us
     private data class Quad<A, B, C, D>(val a: A, val b: B, val c: C, val d: D)
 
     fun open(start: Long?) { openStart.value = start }
+
+    /** Deletes a strap workout and keeps it from coming back with a later sync ([HealthDao.deleteStrapWorkout]). */
+    fun deleteStrapWorkout(start: Long) {
+        viewModelScope.launch { dao.deleteStrapWorkout(start, System.currentTimeMillis() / 1000) }
+    }
 }

@@ -13,18 +13,24 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import org.openstrap.app.data.WorkoutAnalysis
 import org.openstrap.app.data.Workouts
 import org.openstrap.app.ui.components.formatDuration
+import org.openstrap.app.ui.components.pressClickable
 import org.openstrap.app.ui.dashboard.ScreenList
 import org.openstrap.app.ui.theme.MetricColors
 import org.openstrap.app.ui.workout.ZONE_COLORS
@@ -43,11 +49,13 @@ private fun dateLine(epoch: Long) = Instant.ofEpochSecond(epoch).atZone(ZoneId.s
 
 /**
  * One workout in the glow language. Its heart rate glows: the average, duration and peak, and every second of it.
- * How fast you recovered, time in each zone and the strap's training effect sit in dot panels underneath.
+ * How fast you recovered, time in each zone and the strap's training effect sit in dot panels underneath, and last
+ * "Delete workout", with the same confirmation as a phone workout's.
  */
 @Composable
-fun GlowWorkoutScreen(a: WorkoutAnalysis?, contentPadding: PaddingValues, onBack: () -> Unit) {
+fun GlowWorkoutScreen(a: WorkoutAnalysis?, contentPadding: PaddingValues, onBack: () -> Unit, onDelete: (() -> Unit)? = null) {
     BackHandler(onBack = onBack)
+    var confirmDelete by remember { mutableStateOf(false) }
     val list = rememberLazyListState()
     CompositionLocalProvider(LocalGlowPaused provides { list.isScrollInProgress }) {
         ScreenList(contentPadding, list, gutter = GlowLayout.Gutter) {
@@ -62,7 +70,25 @@ fun GlowWorkoutScreen(a: WorkoutAnalysis?, contentPadding: PaddingValues, onBack
             if (a.recovery60 != null) item { RecoveryPanel(a) }
             if (a.zoneSeconds.sum() > 0) item { ZonesPanel(a) }
             item { EffectPanel(a) }
+            if (onDelete != null) item {
+                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Text(
+                        "Delete workout", color = TrendBad, style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.clip(RoundedCornerShape(50))
+                            .pressClickable({ confirmDelete = true }, RoundedCornerShape(50)).padding(horizontal = 16.dp, vertical = 10.dp),
+                    )
+                }
+            }
         }
+    }
+    if (confirmDelete && onDelete != null) {
+        org.openstrap.app.ui.components.GlassAlertDialog(
+            onDismissRequest = { confirmDelete = false },
+            title = { Text("Delete this workout?") },
+            text = { Text("Its heart rate and times are removed from OpenStrap, and the next sync won't bring it back. The strap's own history is kept.") },
+            confirmButton = { androidx.compose.material3.TextButton(onClick = { confirmDelete = false; onDelete() }) { Text("Delete") } },
+            dismissButton = { androidx.compose.material3.TextButton(onClick = { confirmDelete = false }) { Text("Cancel") } },
+        )
     }
 }
 

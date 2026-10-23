@@ -219,6 +219,11 @@ object Recovery {
         val qualityFlags: List<String> = emptyList(),
         /** Tonight in the body-signal state machine: Normal, Watch (in-app) or Alert (push, capped). */
         val bodySignals: BodySignals.Day? = null,
+        /**
+         * The same contributors combined by [softMinimum] instead of the weighted mean and red-flag cap, with the Alert
+         * cap still applied. For the backtest comparison only ([SOFT_MIN_FUSION]); the app never shows it.
+         */
+        val softMinScore: Int? = null,
     ) {
         val calibrating get() = phase == Phase.Withheld || phase == Phase.Learning
         val hrvWeekThin get() = hrvWeekNights in HRV_WEEK_MIN_NIGHTS until HRV_WEEK_FULL_NIGHTS
@@ -398,14 +403,14 @@ object Recovery {
         }
 
         val alert = body.state == BodySignals.State.Alert
-        val extras = { score: Int?, capped: Boolean, withheld: Boolean ->
+        val extras = { score: Int?, capped: Boolean, withheld: Boolean, softMin: Int? ->
             Readiness(
                 score, out, nights, alert, if (body.state == BodySignals.State.Normal) emptyList() else body.signals, capped, phase,
-                withheld, hrvRange, week.size, fallbackHrv, fallbackRhr, quality, body,
+                withheld, hrvRange, week.size, fallbackHrv, fallbackRhr, quality, body, softMin,
             )
         }
         // Withhold without an autonomic contributor: sleep alone isn't readiness.
-        if (out.none { it.factor == Factor.HrvBalance || it.factor == Factor.RestingHr }) return extras(null, false, true)
+        if (out.none { it.factor == Factor.HrvBalance || it.factor == Factor.RestingHr }) return extras(null, false, true, null)
         val totalWeight = out.sumOf { it.factor.weight.toDouble() }
         var score = (out.sumOf { it.factor.weight.toDouble() * it.score } / totalWeight).toInt()
         // One very poor body signal shouldn't be averaged away by good sleep and a quiet day.
@@ -416,8 +421,36 @@ object Recovery {
             capped = true
         }
         if (alert && score > ALERT_CAP) { score = ALERT_CAP; capped = true }
-        return extras(score.coerceIn(0, 100), capped, false)
+        // The soft minimum replaces the weighted mean and the red-flag cap; the Alert cap stays.
+        var softMin = softMinimum(out.map { it.factor.weight to it.score }).toInt()
+        if (alert) softMin = min(softMin, ALERT_CAP)
+        val soft = softMin.coerceIn(0, 100)
+        return if (SOFT_MIN_FUSION) extras(soft, alert && soft == ALERT_CAP, false, soft) else extras(score.coerceIn(0, 100), capped, false, soft)
     }
+
+    /**
+     * Zepp's soft minimum (analysis native/06 §4.8) with our importance weights: each part counts
+     * w = baseWeight · e^(−(s/100)²), and the result is Σ w·s / Σ w. A low part weighs up to e ≈ 2.7× more than a
+     * perfect one, so one poor signal pulls the score down smoothly instead of through a hard cap. [parts] are
+     * (base weight, 0-100 score); 0 when empty.
+     */
+    fun softMinimum(parts: List<Pair<Float, Int>>): Double {
+        var num = 0.0
+        var den = 0.0
+        for ((base, s) in parts) {
+            val w = base * exp(-(s / 100.0).pow(2))
+            num += w * s
+            den += w
+        }
+        return if (den > 0) num / den else 0.0
+    }
+
+    /**
+     * Off: the app scores with the weighted mean and the red-flag cap, and [Readiness.softMinScore] is computed beside
+     * it for the backtest. On: the soft minimum becomes the score. Decided at the calibration review
+     * (readiness-calibration.md, "Soft-minimum fusion").
+     */
+    const val SOFT_MIN_FUSION = false
 
     /** Sleep debt halves over 7 nights: λ = 0.5^(1/7) ≈ 0.906, so a 14-night build-up still counts. */
     const val SLEEP_DEBT_HALF_LIFE_NIGHTS = 7.0
@@ -453,7 +486,10 @@ object Recovery {
     const val SLEEP_DEBT_POINTS_PER_HOUR = 25
     const val RED_FLAG = 40
     const val RED_FLAG_HEADROOM = 30
-    const val ALERT_CAP = 55
+    /** Where OpenStrap's "Take it steady" (Fair) band starts; [org.openstrap.app.ui.dashboard.Narrative.ratingFor] uses it. */
+    const val FAIR_FROM = 55
+    /** One below the Fair band, so an Alert day always rates in the lowest band ("Prioritise recovery"). */
+    const val ALERT_CAP = FAIR_FROM - 1
     private const val MIN_CHRONIC_LOAD = 20f
     /** Readiness points lost per % of nightly SpO2 below baseline, beyond a 1 % dead band (−2 % ≈ 75, −3 % ≈ 50). */
     const val SPO2_POINTS_PER_PERCENT = 25

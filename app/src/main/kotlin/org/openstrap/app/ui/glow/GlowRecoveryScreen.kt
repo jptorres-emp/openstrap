@@ -142,10 +142,11 @@ private fun RecoveryCard(r: RecoveryResult, strap: StrapReadinessRow?) {
                 val strapScore = strap?.score
                 if (ready.showStrapEstimate && strapScore != null) {
                     Spacer(Modifier.height(12.dp))
-                    Fact("Strap's estimate", "$strapScore")
+                    // The strap's values are rated in Zepp's own three bands, not OpenStrap's four.
+                    Fact("Strap's estimate · ${Narrative.zeppReadinessRating(strapScore).label}", "$strapScore")
                     val parts = listOfNotNull(
-                        strap.hrvScore?.let { "HRV $it" }, strap.restingHrScore?.let { "resting HR $it" },
-                        strap.skinTemperatureScore?.let { "temperature $it" }, strap.breathingScore?.let { "breathing $it" },
+                        strap.hrvScore?.let { strapPart("HRV", it) }, strap.restingHrScore?.let { strapPart("resting HR", it) },
+                        strap.skinTemperatureScore?.let { strapPart("temperature", it) }, strap.breathingScore?.let { strapPart("breathing", it) },
                     )
                     if (parts.isNotEmpty()) Note(parts.joinToString(" · ") + ". Shown for reference; it never enters OpenStrap's score.")
                 }
@@ -462,6 +463,9 @@ internal fun Fact(label: String, value: String) {
     }
 }
 
+/** One of the strap's readiness parts with its Zepp band: "HRV 89 (Optimal)". */
+private fun strapPart(name: String, score: Int) = "$name $score (${Narrative.zeppReadinessRating(score).label})"
+
 /** How the score works, folded away; the strap's own score sits inside as a comparison. */
 @Composable
 private fun HowItWorksPanel(strap: StrapReadinessRow?, ours: Int?) {
@@ -483,7 +487,7 @@ private fun HowItWorksPanel(strap: StrapReadinessRow?, ours: Int?) {
         if (strapScore != null) {
             DotDivider()
             Row(verticalAlignment = Alignment.Bottom) {
-                Fact("The strap's own score", "$strapScore")
+                Fact("The strap's own score · ${Narrative.zeppReadinessRating(strapScore).label}", "$strapScore")
                 Spacer(Modifier.weight(1f))
                 if (ours != null) Fact("Ours", "$ours")
             }

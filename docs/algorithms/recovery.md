@@ -120,7 +120,7 @@ Weights (a design choice, to be checked with the backtest) add up to 1: autonomi
 
 The strap's method is unknown and may change with firmware, and a baseline that mixes two definitions measures the switch, not the body. So:
 
-1. Before 7 valid own nights (and on a withheld day), the strap's Readiness and its parts show as "Strap's estimate". They never enter OpenStrap's score.
+1. Before 7 valid own nights (and on a withheld day), the strap's Readiness and its parts show as "Strap's estimate". They never enter OpenStrap's score. The strap's score and parts are rated in Zepp's own three bands (85+ Optimal, 70–84 Good, below 70 Pay attention; `Narrative.zeppReadinessRating`), OpenStrap's score and contributors in its four (85 / 70 / 55).
 2. On a night where our own value fails the validity rule, the strap's `sleepHrv` / `sleepRestingHr` show (and feed the alerts), flagged "strap fallback", and stay out of the baseline.
 3. A data-quality note appears when own and strap differ by more than `HRV_QA_FRACTION` = 15 % (HRV) or `RHR_QA_BPM` = 3 bpm (resting HR).
 
@@ -128,7 +128,8 @@ The strap's method is unknown and may change with firmware, and a baseline that 
 
 * **Weighting:** weights are renormalised over the contributors that have data. Without HRV or resting HR there is no score (see "Withheld").
 * **Red-flag cap:** if any physiological contributor (HRV, resting HR, temperature, breathing) is below `RED_FLAG` = 40, readiness can't exceed that contributor + 30. One collapsed body signal shouldn't be averaged away by a good sleep score.
-* **Body signals off baseline:** in the Alert state (below) readiness is capped at `ALERT_CAP` = 55 and `strainAlert` is set. Nights in Watch or Alert stay out of every Readiness baseline.
+* **Soft minimum (comparison only):** `Recovery.softMinimum` combines the same contributors Zepp's way, w = weight · e^(−(s/100)²) and Σ w·s / Σ w, in place of the weighted mean and the red-flag cap (the Alert cap still applies). It is returned as `softMinScore` and written by the backtest; the app doesn't show it while `SOFT_MIN_FUSION` is off. See [readiness-calibration.md](readiness-calibration.md).
+* **Body signals off baseline:** in the Alert state (below) readiness is capped at `ALERT_CAP` = 54 and `strainAlert` is set. The cap is `FAIR_FROM` − 1, one below where the "Take it steady" (Fair) band starts at 55, so a capped Alert day always rates in the lowest band ("Prioritise recovery"). It was 55 until 2026-10-23, which put an Alert day in Fair. Nights in Watch or Alert stay out of every Readiness baseline.
 * **Wording** (FDA General Wellness guidance, revised 6 January 2026): the feature is called "Body signals off baseline" and never names illness, infection, fever or COVID. Copy lives in `BodySignalsCopy`; the push text is the evidence review's: "Several of your overnight signals (…) are outside your usual range for the second night. This can happen with heavy training, alcohol, travel, poor sleep, or when your body is fighting something off. Consider an easier day. If you feel unwell, checking in with a healthcare professional may be helpful. This is a wellness estimate, not a medical assessment." No screen shows a temperature threshold.
 
 ## Sleep regularity and sleep health (Sleep screen, not Readiness)
@@ -155,7 +156,7 @@ The strap's method is unknown and may change with firmware, and a baseline that 
 | `HrvSupport` | z(`hrv_n`) ≤ −2.0 | support, never a core vote |
 
 * **Watch** (in the app, no push): any single core flag, or `RhrWatch` + `HrvSupport`.
-* **Alert** (one push per morning after a sync; Readiness capped at 55), any of: `RhrFlag` on 2 consecutive nights; ≥ 2 different core families on the same night; a core flag tonight and on ≥ 3 of the last 7 nights; rr − c ≥ `RR_ALERT_PER_MIN` = 3.0 /min on its own.
+* **Alert** (one push per morning after a sync; Readiness capped at 54), any of: `RhrFlag` on 2 consecutive nights; ≥ 2 different core families on the same night; a core flag tonight and on ≥ 3 of the last 7 nights; rr − c ≥ `RR_ALERT_PER_MIN` = 3.0 /min on its own.
 * One missing night is bridged; two or more reset persistence. An alert clears after `CLEAR_NIGHTS` = 2 consecutive nights with no core flag.
 * A likely cause is annotated, never used to suppress: a previous day with TRIMP > `HARD_DAY_RATIO` = 1.5× the chronic load. (Day tags were removed from the app; old `day_tag` rows are still exported and imported.)
 * SpO2 and desaturations never vote; they stay in Readiness and the Breathing card. +0.5 °C is the lowest temperature line that won't fire every menstrual cycle (the luteal rise is about +0.3 °C), and it is never shown on screen.

@@ -240,7 +240,7 @@ Tonight's events per hour, next to the median of your earlier nights (up to 60, 
 
 ## 6. Body signals off baseline
 
-A night-by-night watch on resting HR, skin temperature and breathing rate, for "something's off, take it easy". Each night is **Normal**, **Watch** (shown in the app) or **Alert** (one push notification, Readiness capped at 55).
+A night-by-night watch on resting HR, skin temperature and breathing rate, for "something's off, take it easy". Each night is **Normal**, **Watch** (shown in the app) or **Alert** (one push notification, Readiness capped at 54, the top of the lowest band).
 
 ### Baselines for this check
 

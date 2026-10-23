@@ -180,7 +180,7 @@ RHR here is the overnight mean sleep HR (the NightSignal metric). Readiness keep
 SpO2 and desaturations are left out; they stay in Readiness and the Breathing card. `SPO2_ALERT_DROP` no longer raises an alert.
 
 * **Watch** (in the app, no push): any single core flag, or `RHR_WATCH` + `HRV_SUPPORT`.
-* **Alert** (push; Readiness capped at 55), any of:
+* **Alert** (push; Readiness capped at 54), any of:
   * `RHR_FLAG` on 2 nights in a row;
   * ≥ 2 different core flags on the same night;
   * any core flag on ≥ 3 of the last 7 nights;

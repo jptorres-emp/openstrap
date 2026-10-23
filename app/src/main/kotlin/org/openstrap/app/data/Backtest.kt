@@ -49,14 +49,18 @@ class Backtest(private val dao: HealthDao, private val zone: ZoneId = ZoneId.sys
     }
 
     companion object {
-        /** The rows as CSV: one line per day, a column per Readiness contributor. */
+        /**
+         * The rows as CSV: one line per day, a column per Readiness contributor. `readiness` is the score the app shows
+         * and `readiness_soft_min` the soft-minimum fusion beside it ([Recovery.softMinimum]), both next to the strap's
+         * `strap_score` for the same day.
+         */
         fun csv(rows: List<Row>): String = buildString {
             val factors = Recovery.Factor.entries
-            val header = listOf("date", "readiness", "baseline_nights", "calibrating", "alert", "capped") +
+            val header = listOf("date", "readiness", "readiness_soft_min", "strap_score", "baseline_nights", "calibrating", "alert", "capped") +
                 factors.map { "c_" + it.name.snakeCase() } +
                 listOf(
                     "hrv_n", "hrv_samples", "rhr_n", "rhr_mean_sleep", "rhr_p10", "hr_minutes", "asleep_min",
-                    "strap_score", "strap_hrv_score", "strap_resting_hr_score", "strap_skin_temperature_score", "strap_breathing_score",
+                    "strap_hrv_score", "strap_resting_hr_score", "strap_skin_temperature_score", "strap_breathing_score",
                     "strap_sleep_hrv", "strap_sleep_resting_hr", "check_in", "tags", "load", "chronic_load", "charge_at_wake",
                 )
             appendLine(header.joinToString(","))
@@ -64,12 +68,12 @@ class Backtest(private val dao: HealthDao, private val zone: ZoneId = ZoneId.sys
                 val r = row.result.readiness
                 val n = row.result.tonight
                 val byFactor = r.contributors.associate { it.factor to it.score }
-                val cells = listOf(row.date, r.score, r.baselineNights, r.calibrating, r.strainAlert, r.capped) +
+                val cells = listOf(row.date, r.score, r.softMinScore, row.strapScore, r.baselineNights, r.calibrating, r.strainAlert, r.capped) +
                     factors.map { byFactor[it] } +
                     listOf(
                         n?.let(NightMetrics::hrvLn)?.let { "%.4f".format(java.util.Locale.ROOT, it) }, n?.hrvSamples, n?.restingHr.f1(),
                         n?.rhrMeanSleep.f1(), n?.rhrP10.f1(), n?.hrMinutes, n?.asleepMinutes,
-                        row.strapScore, row.strapHrvScore, row.strapRestingHrScore, row.strapSkinTemperatureScore, row.strapBreathingScore,
+                        row.strapHrvScore, row.strapRestingHrScore, row.strapSkinTemperatureScore, row.strapBreathingScore,
                         row.strapSleepHrv, row.strapSleepRestingHr, row.checkIn, row.tags.joinToString(";"),
                         row.result.load.f1(), row.result.chronicLoad.f1(), row.result.charge.atWake.f1(),
                     )

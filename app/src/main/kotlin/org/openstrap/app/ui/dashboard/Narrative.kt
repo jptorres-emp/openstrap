@@ -134,7 +134,18 @@ object Narrative {
     fun ratingFor(score: Int): Rating = when {
         score >= 85 -> Rating.OPTIMAL
         score >= 70 -> Rating.GOOD
-        score >= 55 -> Rating.FAIR
+        score >= org.openstrap.app.data.Recovery.FAIR_FROM -> Rating.FAIR
+        else -> Rating.LOW
+    }
+
+    /**
+     * The strap's own readiness score or one of its parts (HRV, resting HR, skin temperature, AHI) in Zepp's three
+     * bands: 85+ Optimal, 70-84 Good, below 70 Pay attention (codemap 06 §2.6). Only for the strap's values; OpenStrap's
+     * own score and contributors use [ratingFor].
+     */
+    fun zeppReadinessRating(score: Int): Rating = when {
+        score >= 85 -> Rating.OPTIMAL
+        score >= 70 -> Rating.GOOD
         else -> Rating.LOW
     }
 
@@ -142,7 +153,7 @@ object Narrative {
         alert -> org.openstrap.app.data.BodySignalsCopy.SHORT
         score >= 85 -> "Primed"
         score >= 70 -> "Ready"
-        score >= 55 -> "Take it steady"
+        score >= org.openstrap.app.data.Recovery.FAIR_FROM -> "Take it steady"
         else -> "Prioritise recovery"
     }
 
@@ -152,7 +163,7 @@ object Narrative {
             r.strainAlert -> "Several overnight signals are outside your usual range. Consider an easier day."
             score >= 85 -> "You're well recovered. A good day to push hard."
             score >= 70 -> "Recovered enough for your usual training."
-            score >= 55 -> "Recovery isn't complete. Keep intensity moderate."
+            score >= org.openstrap.app.data.Recovery.FAIR_FROM -> "Recovery isn't complete. Keep intensity moderate."
             else -> "Your body is still catching up. Favour rest, light movement and an early night."
         }
         val ranked = r.contributors.filter { it.factor.weight >= 0.06f }.sortedBy { it.score }

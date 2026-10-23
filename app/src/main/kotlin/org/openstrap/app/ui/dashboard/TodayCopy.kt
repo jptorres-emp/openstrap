@@ -73,13 +73,14 @@ object TodayCopy {
      * The waking hero (spec 4.2, 4.3): how long you slept, then what Recovery says, or why there's no score yet and the
      * strap's own [estimate] when there is one. [firstNights] is before the strap has seen any sleep.
      */
-    fun waking(asleepSeconds: Long?, score: Int?, alert: Boolean, noScore: NoScore?, estimate: Int?, firstNights: Boolean, isToday: Boolean): String {
+    fun waking(asleepSeconds: Long?, score: Int?, alert: Boolean, noScore: NoScore?, firstNights: Boolean, isToday: Boolean): String {
         if (firstNights) return "Recovery starts after your first night with the strap."
         if (asleepSeconds == null) return if (isToday) "No sleep recorded last night. Was the strap on?" else "No sleep recorded that night."
         val slept = "Slept ${duration(asleepSeconds)}."
         return when {
             score != null -> "$slept ${recoveryMeaning(score, alert)}"
-            noScore != null -> "$slept ${noScoreLine(noScore)}" + (estimate?.let { " The strap's own estimate is $it." } ?: "")
+            // The strap's estimate stands under the sentence with its label, so the sentence doesn't repeat it.
+            noScore != null -> "$slept ${noScoreLine(noScore)}"
             else -> slept
         }
     }

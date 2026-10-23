@@ -315,7 +315,7 @@ private fun WakingHero(ctx: TodayContext, lightAngle: Float?, onOpen: () -> Unit
     GlowCard(heroStyle(overviewColor(shown.value, ctx.alert), lightAngle), modifier, onClick = onOpen) {
         Column {
             GlowHeader("Recovery", trailing = if (score != null && before != null) signed(score - before) + " vs yesterday" else null)
-            HeroSentence(TodayCopy.waking(ctx.state.asleepSeconds, score, ctx.alert, ctx.noScore, ctx.estimate, ctx.firstNights, ctx.isToday))
+            HeroSentence(TodayCopy.waking(ctx.state.asleepSeconds, score, ctx.alert, ctx.noScore, ctx.firstNights, ctx.isToday))
             Spacer(Modifier.height(24.dp))
             Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.Bottom) {
                 Column(Modifier.weight(1f)) { HeroFigure(shown.value?.toString(), shown.word ?: ctx.waiting, big = true) }
@@ -390,13 +390,16 @@ private fun AfterHero(ctx: TodayContext, lightAngle: Float?, onOpenWorkout: (Lon
             // The drop since the end, from the readings the strap has sent. A live curve needs live readings kept
             // through the calm down (step 7).
             if (since.size >= 2) {
-                val values = remember(since, w.end) { bucket(since, w.end..ctx.now, 60) }
+                // About 40 points over whatever time has passed: per-minute slots leave gaps that draw as lone dots.
+                val step = maxOf(60L, (ctx.now - w.end) / 40)
+                val values = remember(since, w.end, step) { bucket(since, w.end..ctx.now, step) }
                 Spacer(Modifier.height(14.dp))
                 GlowLineChart(values, height = 64.dp, showAverage = false)
             }
             Spacer(Modifier.height(18.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                HeroFigure(w.endHeartRate?.toString(), "At the end")
+                // No readings around the end give no end heart rate: leave the figure out rather than show a dash.
+                w.endHeartRate?.let { HeroFigure(it.toString(), "At the end") }
                 HeroFigure(nowHr?.toString(), "Now")
                 HeroFigure(ctx.state.restingHeartRate?.toString(), "Resting", horizontal = androidx.compose.ui.Alignment.End)
             }

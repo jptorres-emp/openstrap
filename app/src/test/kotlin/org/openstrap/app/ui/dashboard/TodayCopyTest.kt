@@ -28,27 +28,23 @@ class TodayCopyTest {
 
     @Test fun `waking says the night then what Recovery means`() {
         val slept = (7 * 60 + 40) * 60L
-        assertEquals("Slept 7 h 40. Recovered enough for your usual training.", TodayCopy.waking(slept, 78, false, null, null, false, true))
-        assertEquals("Slept 7 h 40. Well recovered. A good day for a hard session.", TodayCopy.waking(slept, 90, false, null, null, false, true))
-        assertEquals("Slept 7 h 40. Some overnight signals are off your normal. An easy day suits.", TodayCopy.waking(slept, 90, true, null, null, false, true))
+        assertEquals("Slept 7 h 40. Recovered enough for your usual training.", TodayCopy.waking(slept, 78, false, null, false, true))
+        assertEquals("Slept 7 h 40. Well recovered. A good day for a hard session.", TodayCopy.waking(slept, 90, false, null, false, true))
+        assertEquals("Slept 7 h 40. Some overnight signals are off your normal. An easy day suits.", TodayCopy.waking(slept, 90, true, null, false, true))
     }
 
     @Test fun `waking falls back honestly`() {
-        assertEquals("No sleep recorded last night. Was the strap on?", TodayCopy.waking(null, null, false, null, null, false, true))
-        assertEquals("No sleep recorded that night.", TodayCopy.waking(null, null, false, null, null, false, false))
-        assertEquals("Recovery starts after your first night with the strap.", TodayCopy.waking(null, null, false, learning, null, true, true))
+        assertEquals("No sleep recorded last night. Was the strap on?", TodayCopy.waking(null, null, false, null, false, true))
+        assertEquals("No sleep recorded that night.", TodayCopy.waking(null, null, false, null, false, false))
+        assertEquals("Recovery starts after your first night with the strap.", TodayCopy.waking(null, null, false, learning, true, true))
         val slept = (5 * 60 + 32) * 60L
-        assertEquals(
-            "Slept 5 h 32. OpenStrap is still learning your nights, 5 of 7. The strap's own estimate is 90.",
-            TodayCopy.waking(slept, null, false, learning, 90, false, true),
-        )
-        assertEquals("Slept 5 h 32. OpenStrap is still learning your nights, 5 of 7.", TodayCopy.waking(slept, null, false, learning, null, false, true))
+        assertEquals("Slept 5 h 32. OpenStrap is still learning your nights, 5 of 7.", TodayCopy.waking(slept, null, false, learning, false, true))
         assertEquals(
             "Slept 5 h 32. Not enough heart data last night for a Recovery score.",
-            TodayCopy.waking(slept, null, false, TodayCopy.NoScore.NoHeartData, null, false, true),
+            TodayCopy.waking(slept, null, false, TodayCopy.NoScore.NoHeartData, false, true),
         )
         // Still loading: only the night.
-        assertEquals("Slept 5 h 32.", TodayCopy.waking(slept, null, false, null, null, false, true))
+        assertEquals("Slept 5 h 32.", TodayCopy.waking(slept, null, false, null, false, true))
     }
 
     @Test fun `recovery shows the score, else the strap's estimate, else why not`() {
@@ -157,7 +153,7 @@ class TodayCopyTest {
 
     @Test fun `no sentence carries the forbidden marks`() {
         val all = listOf(
-            TodayCopy.waking(1000, 80, false, null, null, false, true), TodayCopy.waking(1000, null, false, learning, 90, false, true),
+            TodayCopy.waking(1000, 80, false, null, false, true), TodayCopy.waking(1000, null, false, learning, false, true),
             TodayCopy.WEEK_FIRST, TodayCopy.recoverText(5000, at(10), zone).second, TodayCopy.charge(50, 80, true, 10),
             TodayCopy.window("run", 50), TodayCopy.after(80, 50), TodayCopy.evening(listOf("run"), 9000, 8000, LoadStatus.Usual, Locale.UK),
         )

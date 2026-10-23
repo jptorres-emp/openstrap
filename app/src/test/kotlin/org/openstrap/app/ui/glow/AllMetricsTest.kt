@@ -13,13 +13,13 @@ class AllMetricsTest {
     private val empty = DayUiState()
 
     @Test fun `every metric detail appears exactly once`() {
-        val details = metricIndex(empty, null, null, emptyList()).flatMap { it.rows }.map { it.detail }
-        for (m in Metric.entries) assertEquals(m.name, 1, details.count { it == Detail.OfMetric(m) })
+        val details = metricIndex(empty, null, null, emptyList()).flatMap { it.rows }.map { it.target }
+        for (m in Metric.entries) assertEquals(m.name, 1, details.count { it == IndexTarget.Open(Detail.OfMetric(m)) })
     }
 
     @Test fun `the screens without a metric detail are there too`() {
-        val details = metricIndex(empty, null, null, emptyList()).flatMap { it.rows }.map { it.detail }.toSet()
-        assertTrue(details.containsAll(listOf(Detail.Recovery, Detail.Sleep, Detail.Healthspan, Detail.AllWorkouts)))
+        val details = metricIndex(empty, null, null, emptyList()).flatMap { it.rows }.map { it.target }.toSet()
+        assertTrue(details.containsAll(listOf(IndexTarget.Open(Detail.Healthspan), IndexTarget.Open(Detail.AllWorkouts))))
     }
 
     @Test fun `grouped by section`() {
@@ -30,7 +30,7 @@ class AllMetricsTest {
     }
 
     @Test fun `a day without a value says so instead of a number`() {
-        val hrv = metricIndex(empty, null, null, emptyList()).flatMap { it.rows }.first { it.detail == Detail.OfMetric(Metric.Hrv) }
+        val hrv = metricIndex(empty, null, null, emptyList()).flatMap { it.rows }.first { it.target == IndexTarget.Open(Detail.OfMetric(Metric.Hrv)) }
         assertEquals(null, hrv.value)
         assertEquals(NO_VALUE, hrv.status)
     }
@@ -41,11 +41,11 @@ class AllMetricsTest {
             spo2 = listOf(ChartPoint(0, 96f), ChartPoint(60, 98f)),
             skinTemperature = listOf(ChartPoint(0, 36.4f), ChartPoint(60, 36.6f)),
         )
-        val rows = metricIndex(day, null, null, emptyList()).flatMap { it.rows }.associateBy { it.detail }
-        assertEquals("13,860", rows.getValue(Detail.OfMetric(Metric.Steps)).value)
-        assertEquals("58", rows.getValue(Detail.OfMetric(Metric.HeartRate)).value)
-        assertEquals("97%", rows.getValue(Detail.OfMetric(Metric.Spo2)).value)
-        assertEquals("36.5", rows.getValue(Detail.OfMetric(Metric.SkinTemperature)).value)
+        val rows = metricIndex(day, null, null, emptyList()).flatMap { it.rows }.associateBy { it.target }
+        assertEquals("13,860", rows.getValue(IndexTarget.Open(Detail.OfMetric(Metric.Steps))).value)
+        assertEquals("58", rows.getValue(IndexTarget.Open(Detail.OfMetric(Metric.HeartRate))).value)
+        assertEquals("97%", rows.getValue(IndexTarget.Open(Detail.OfMetric(Metric.Spo2))).value)
+        assertEquals("36.5", rows.getValue(IndexTarget.Open(Detail.OfMetric(Metric.SkinTemperature))).value)
     }
 
     private fun readiness(score: Int?, nights: Int, withheld: Boolean = false) =
@@ -65,6 +65,31 @@ class AllMetricsTest {
         // Without a value the row says so; the status words are checked through a day that has none of either.
         assertEquals(NO_VALUE, status(today, "Charge").status)
         assertEquals("Last 7 days", status(today, "Workouts").status)
+    }
+
+    @Test fun `rows whose home is a tab go to it, the rest open their detail`() {
+        val targets = metricIndex(empty, null, null, emptyList()).flatMap { it.rows }.associate { it.name to it.target }
+        assertEquals(IndexTarget.Home(HomeTab.Recovery), targets["Recovery"])
+        assertEquals(IndexTarget.Home(HomeTab.Recovery, charge = true), targets["Charge"])
+        assertEquals(IndexTarget.Home(HomeTab.Sleep), targets["Sleep"])
+        assertEquals(IndexTarget.Open(Detail.Healthspan), targets["Habit Age"])
+        assertEquals(IndexTarget.Open(Detail.AllWorkouts), targets["Workouts"])
+        for (name in listOf("Heart rate", "Resting heart rate", "HRV", "Blood oxygen", "Skin temperature", "Breathing rate", "Stress", "Steps")) {
+            assertTrue(name, targets[name] is IndexTarget.Open)
+        }
+        // Nothing in the index opens a copy of another tab's screen.
+        assertTrue(targets.values.none { it == IndexTarget.Open(Detail.Recovery) || it == IndexTarget.Open(Detail.Sleep) })
+    }
+
+    @Test fun `Habit Age shows what its page shows`() {
+        val learning = org.openstrap.app.data.Healthspan.Outcome(
+            null, org.openstrap.app.data.Healthspan.Withheld.Learning, age = 30,
+        )
+        assertEquals("30" to "Starting point", habitAgeRow(learning))
+        assertEquals(null to "Not worked out yet", habitAgeRow(null))
+        val row = metricIndex(empty, null, learning, emptyList()).flatMap { it.rows }.first { it.name == "Habit Age" }
+        assertEquals("30", row.value)
+        assertEquals("Starting point", row.status)
     }
 
     @Test fun `no row text breaks the copy rules`() {

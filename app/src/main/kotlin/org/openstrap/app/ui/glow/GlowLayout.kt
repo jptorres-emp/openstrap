@@ -71,6 +71,12 @@ enum class Pane { Full, Left, Right }
 /** The blocks of a dashboard, in phone order, each with the column it takes on a wide screen. */
 class GlowBlocks internal constructor() {
     internal val blocks = mutableListOf<Pair<Pane, @Composable () -> Unit>>()
+
+    /** The block [GlowScreenList] scrolls to when asked ([focus]), or -1. */
+    internal var focusBlock = -1
+
+    /** Marks the next block as the one to scroll to. */
+    fun focusNext() { focusBlock = blocks.size }
     fun full(content: @Composable () -> Unit) = add(Pane.Full, content)
     fun left(content: @Composable () -> Unit) = add(Pane.Left, content)
     fun right(content: @Composable () -> Unit) = add(Pane.Right, content)
@@ -83,19 +89,28 @@ class GlowBlocks internal constructor() {
  * A glow dashboard's list. Narrower than [GlowLayout.TwoColumnWidth] it's the phone list: every block in
  * order, one under the other. Wider, each run of left and right blocks sits side by side in two columns,
  * and full blocks span both. It stays one lazy list either way, so scrolling, pull to sync and the glow
- * pausing while it scrolls behave the same.
+ * pausing while it scrolls behave the same. With [focus] set it scrolls to the block marked with
+ * [GlowBlocks.focusNext] once, then calls [onFocused].
  */
 @Composable
 fun GlowScreenList(
     contentPadding: PaddingValues,
     state: LazyListState,
+    focus: Boolean = false,
+    onFocused: () -> Unit = {},
     content: GlowBlocks.() -> Unit,
 ) {
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val wide = maxWidth >= GlowLayout.TwoColumnWidth
         val tight = wide || maxWidth < GlowLayout.NarrowWidth
         val gutter = ((maxWidth - GlowLayout.MaxContentWidth) / 2).coerceAtLeast(if (tight) GlowLayout.WideGutter else GlowLayout.Gutter)
-        val blocks = GlowBlocks().apply(content).blocks
+        val built = GlowBlocks().apply(content)
+        val blocks = built.blocks
+        // The lazy item the marked block lands in: its own on a phone; on a wide screen a two-column run is one item.
+        val target = built.focusBlock.takeIf { it >= 0 }?.let { if (wide) itemOf(blocks, it) else it }
+        androidx.compose.runtime.LaunchedEffect(focus, target) {
+            if (focus && target != null) { state.animateScrollToItem(target); onFocused() }
+        }
         CompositionLocalProvider(LocalCardPadding provides if (tight) GlowLayout.WideCardPadding else GlowLayout.CardPadding) {
             ScreenList(contentPadding, state, gutter = gutter) {
                 if (!wide) blocks.forEach { (_, block) -> item { block() } }
@@ -114,6 +129,19 @@ fun GlowScreenList(
             }
         }
     }
+}
+
+/** The lazy item that block [index] lands in on a wide screen, following [GlowScreenList]'s layout. */
+private fun itemOf(blocks: List<Pair<Pane, @Composable () -> Unit>>, index: Int): Int {
+    var item = 0
+    var seen = 0
+    for (section in sections(blocks)) {
+        val split = section.any { it.first == Pane.Left } && section.any { it.first == Pane.Right }
+        if (index < seen + section.size) return if (split) item else item + (index - seen)
+        item += if (split) 1 else section.size
+        seen += section.size
+    }
+    return item
 }
 
 /** Splits the blocks into runs: each full block on its own, and each unbroken stretch of left and right blocks together. */

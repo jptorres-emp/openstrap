@@ -21,8 +21,22 @@ import org.openstrap.app.ui.theme.MetricColors
  * nothing is only reachable from one card. Not a new feature: each row opens a screen that already exists.
  */
 
-/** One row of the index: the metric's [name] and [color], the day's [value] (null when there's none) and [detail] to open. */
-data class IndexRow(val name: String, val color: Color, val value: String?, val status: String, val detail: Detail)
+/**
+ * Where an index row goes. All metrics is a map, not a card: a row whose home is a tab goes to that tab ([Home]),
+ * one with a detail of its own opens it on the stack the index is on ([Open]).
+ */
+sealed interface IndexTarget {
+    data class Open(val detail: Detail) : IndexTarget
+
+    /** The tab, at its root and top; [charge] scrolls the Recovery tab to its Charge card. */
+    data class Home(val tab: HomeTab, val charge: Boolean = false) : IndexTarget
+}
+
+/** The tabs an index row can go to. */
+enum class HomeTab { Recovery, Sleep }
+
+/** One row of the index: the metric's [name] and [color], the day's [value] (null when there's none) and where it goes. */
+data class IndexRow(val name: String, val color: Color, val value: String?, val status: String, val target: IndexTarget)
 
 data class IndexGroup(val title: String, val rows: List<IndexRow>)
 
@@ -43,6 +57,20 @@ internal fun recoveryStatus(r: org.openstrap.app.data.Recovery.Readiness?): Stri
     else -> null
 }
 
+/**
+ * The Habit Age row's value and status, the same as its page shows: the range once there's an estimate, your age as
+ * the starting point while it learns, otherwise no value and why.
+ */
+internal fun habitAgeRow(outcome: Healthspan.Outcome?): Pair<String?, String> {
+    val r = outcome?.result
+    return when {
+        r != null -> "${r.low}-${r.high}" to "Updated weekly"
+        outcome?.withheld?.learning == true && outcome.age != null -> "${outcome.age}" to "Starting point"
+        outcome?.withheld?.profile == true -> null to "Needs your profile"
+        else -> null to "Not worked out yet"
+    }
+}
+
 /** The index for the day in [state]: every [Metric] once, plus Recovery, Charge, Habit Age, Sleep and the workouts. */
 fun metricIndex(
     state: DayUiState,
@@ -53,10 +81,11 @@ fun metricIndex(
 ): List<IndexGroup> {
     val rec = recovery?.takeIf { it.date == state.date }
     // A row without a value says why when it knows ([waiting]), otherwise that the day has none.
-    fun row(name: String, color: Color, value: String?, status: String, detail: Detail, waiting: String? = null) =
-        IndexRow(name, color, value, if (value == null) waiting ?: NO_VALUE else status, detail)
+    fun row(name: String, color: Color, value: String?, status: String, target: IndexTarget, waiting: String? = null) =
+        IndexRow(name, color, value, if (value == null) waiting ?: NO_VALUE else status, target)
     fun metric(m: Metric, name: String, color: Color, value: Float?, status: String, suffix: String = "") =
-        row(name, color, value?.let { m.format(it) + suffix }, status, Detail.OfMetric(m))
+        row(name, color, value?.let { m.format(it) + suffix }, status, IndexTarget.Open(Detail.OfMetric(m)))
+    val (habitValue, habitStatus) = habitAgeRow(healthspan)
     val weekFrom = state.date.minusDays(6)
     val week = workouts.count { a ->
         java.time.Instant.ofEpochSecond(a.workout.start).atZone(java.time.ZoneId.systemDefault()).toLocalDate() in weekFrom..state.date
@@ -66,18 +95,18 @@ fun metricIndex(
             "Recovery",
             listOf(
                 recoveryStatus(rec?.readiness).let { status ->
-                    row("Recovery", MetricColors.readiness, rec?.readiness?.score?.toString(), status ?: "Score for the day", Detail.Recovery, waiting = status)
+                    row("Recovery", MetricColors.readiness, rec?.readiness?.score?.toString(), status ?: "Score for the day", IndexTarget.Home(HomeTab.Recovery), waiting = status)
                 },
                 row(
                     "Charge", MetricColors.chargeAt(rec?.charge?.latest), rec?.charge?.latest?.roundToInt()?.toString(),
-                    if (state.date == today) "Latest" else "End of day", Detail.Recovery,
+                    if (state.date == today) "Latest" else "End of day", IndexTarget.Home(HomeTab.Recovery, charge = true),
                 ),
-                row("Habit Age", MetricColors.habitAge, healthspan?.result?.estimate?.roundToInt()?.toString(), "Updated weekly", Detail.Healthspan),
+                row("Habit Age", MetricColors.habitAge, habitValue, habitStatus, IndexTarget.Open(Detail.Healthspan), waiting = habitStatus),
             ),
         ),
         IndexGroup(
             "Sleep",
-            listOf(row("Sleep", MetricColors.sleepDeep, state.sleep?.score?.toString(), "Score for the night", Detail.Sleep)),
+            listOf(row("Sleep", MetricColors.sleepDeep, state.sleep?.score?.toString(), "Score for the night", IndexTarget.Home(HomeTab.Sleep))),
         ),
         IndexGroup(
             "Heart",
@@ -100,19 +129,19 @@ fun metricIndex(
             "Activity",
             listOf(
                 metric(Metric.Steps, "Steps", MetricColors.steps, state.steps.toFloat(), "For the day"),
-                row("Workouts", MetricColors.steps, week.toString(), "Last 7 days", Detail.AllWorkouts),
+                row("Workouts", MetricColors.steps, week.toString(), "Last 7 days", IndexTarget.Open(Detail.AllWorkouts)),
             ),
         ),
     )
 }
 
-/** The index as a page: one grouped list per section, each row opening its screen on the same tab. */
+/** The index as a page: one grouped list per section, each row going to its tab or opening its detail. */
 @Composable
 fun AllMetricsScreen(
     groups: List<IndexGroup>,
     date: LocalDate,
     contentPadding: PaddingValues,
-    onOpen: (Detail) -> Unit,
+    onOpen: (IndexTarget) -> Unit,
     onBack: () -> Unit,
 ) {
     BackHandler(onBack = onBack)
@@ -122,7 +151,7 @@ fun AllMetricsScreen(
             item(group.title) {
                 ListPanel(title = group.title) {
                     group.rows.forEachIndexed { i, r ->
-                        ListRow(r.name, r.color, r.value, r.status, onClick = { onOpen(r.detail) }, divider = i > 0)
+                        ListRow(r.name, r.color, r.value, r.status, onClick = { onOpen(r.target) }, divider = i > 0)
                     }
                 }
             }

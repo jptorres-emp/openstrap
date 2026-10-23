@@ -210,7 +210,7 @@ fun GlowWorkoutsScreen(workouts: List<WorkoutAnalysis>, contentPadding: PaddingV
     BackHandler(onBack = onBack)
     val zone = ZoneId.systemDefault()
     ScreenList(contentPadding, gutter = GlowLayout.Gutter) {
-        item { GlowDetailHeader("Workouts", "${workouts.size} recorded", onBack) }
+        item { PageHeader("Workouts", onBack, subtitle = "${workouts.size} recorded") }
         if (workouts.isEmpty()) {
             item { DotPanel { Note("Workouts you start in OpenStrap show up here, and the strap's own after a sync.") } }
             return@ScreenList

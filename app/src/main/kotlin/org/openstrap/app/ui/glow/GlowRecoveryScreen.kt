@@ -58,11 +58,14 @@ fun GlowRecoveryScreen(
     header: @Composable () -> Unit,
     contentPadding: PaddingValues,
     onOpenMetric: (Metric) -> Unit,
+    /** Scroll to the Charge card once (the All metrics Charge row); [onChargeShown] when it's there. */
+    showCharge: Boolean = false,
+    onChargeShown: () -> Unit = {},
 ) {
     val list = rememberLazyListState()
     val signals = rememberSignals(state, history)
     CompositionLocalProvider(LocalGlowPaused provides { list.isScrollInProgress }) {
-        GlowScreenList(contentPadding, list) {
+        GlowScreenList(contentPadding, list, focus = showCharge, onFocused = onChargeShown) {
             full { header() }
             val r = recovery?.takeIf { it.date == state.date }
             if (r == null) {
@@ -77,6 +80,7 @@ fun GlowRecoveryScreen(
             if (body != null && body.state != BodySignals.State.Normal) full { BodySignalsPanel(body) }
             left { RecoveryCard(r, strapReadiness) }
             if (ready.contributors.isNotEmpty()) left { ContributorsPanel(ready) }
+            focusNext()
             right { ChargeCard(r.charge, state.dayStart..state.dayEnd) }
             if (r.charge.latest != null) right { ChargeFlowPanel(r.charge, r.stressThreshold) }
             full { SignalsPanel(signals, onOpenMetric) }

@@ -272,6 +272,8 @@ private fun AppRoot(container: AppContainer, metricRequests: kotlinx.coroutines.
     fun setStack(t: Int, stack: List<Detail>) = when (Tab.entries[t]) {
         Tab.Today -> todayStack = stack; Tab.Recovery -> recoveryStack = stack; Tab.Sleep -> sleepStack = stack; Tab.Activity -> activityStack = stack
     }
+    // The All metrics Charge row asks the Recovery tab to scroll to its Charge card, once.
+    var showCharge by remember { mutableStateOf(false) }
     // Each tap on the tab showing bumps its count, and its lists scroll to the top.
     val scrollToTop = remember { androidx.compose.runtime.mutableStateListOf(*Array(Tab.entries.size) { 0 }) }
     val history: org.openstrap.app.ui.dashboard.DailyHistory = { m, from, to -> container.health.daily(m, from, to) }
@@ -594,8 +596,25 @@ private fun AppRoot(container: AppContainer, metricRequests: kotlinx.coroutines.
                             contentPadding = padding, onOpenMetric = { push(Detail.OfMetric(it)) }, recovery = recovery,
                         )
                     }
+                    // A map, not a card: rows whose home is a tab go there, at its root and top (Charge to its card);
+                    // the rest open their detail here. The day is shared, so the tab shows the same one.
                     Detail.AllMetrics -> org.openstrap.app.ui.glow.AllMetricsScreen(
-                        org.openstrap.app.ui.glow.metricIndex(day, recovery, healthspan, workouts), day.date, padding, onOpen = push, onBack = pop,
+                        org.openstrap.app.ui.glow.metricIndex(day, recovery, healthspan, workouts), day.date, padding,
+                        onOpen = { target ->
+                            when (target) {
+                                is org.openstrap.app.ui.glow.IndexTarget.Open -> push(target.detail)
+                                is org.openstrap.app.ui.glow.IndexTarget.Home -> {
+                                    val home = when (target.tab) {
+                                        org.openstrap.app.ui.glow.HomeTab.Recovery -> Tab.Recovery
+                                        org.openstrap.app.ui.glow.HomeTab.Sleep -> Tab.Sleep
+                                    }.ordinal
+                                    setStack(home, emptyList())
+                                    nav = nav.select(home)
+                                    if (target.charge) showCharge = true else scrollToTop[home] = scrollToTop[home] + 1
+                                }
+                            }
+                        },
+                        onBack = pop,
                     )
                 }
             }
@@ -655,6 +674,7 @@ private fun AppRoot(container: AppContainer, metricRequests: kotlinx.coroutines.
                             Tab.Recovery -> org.openstrap.app.ui.glow.GlowRecoveryScreen(
                                 day, recovery, strapReadiness, history, header = { header(Tab.Recovery) }, contentPadding = padding,
                                 onOpenMetric = { recoveryStack = listOf(Detail.OfMetric(it)) },
+                                showCharge = showCharge, onChargeShown = { showCharge = false },
                             )
                             Tab.Sleep -> org.openstrap.app.ui.glow.GlowSleepScreen(
                                 day, header = { header(Tab.Sleep) }, contentPadding = padding,

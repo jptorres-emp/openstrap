@@ -91,6 +91,7 @@ fun DeviceScreen(
     val info by vm.strap.info.collectAsState()
     var confirmForget by rememberSaveable { mutableStateOf(false) }
     var confirmDisconnect by rememberSaveable { mutableStateOf(false) }
+    var confirmRestart by rememberSaveable { mutableStateOf(false) }
     val keepConnected = rememberKeepConnected(vm)
     val offerBackground by vm.offerBackground.collectAsState()
     LaunchedEffect(offerBackground, paired) {
@@ -117,6 +118,23 @@ fun DeviceScreen(
                 ) { Text("Disconnect") }
             },
             dismissButton = { TextButton(onClick = { confirmDisconnect = false }) { Text("Cancel") } },
+        )
+    }
+
+    if (confirmRestart) {
+        org.openstrap.app.ui.components.GlassAlertDialog(
+            onDismissRequest = { confirmRestart = false },
+            icon = { Icon(PhosphorIcons.Info, null) },
+            title = { Text("Restart the strap?") },
+            text = {
+                Text(
+                    (if (sync is SyncState.Running) "The sync in progress will stop. " else "") +
+                        "The strap restarts and disconnects. OpenStrap reconnects on its own once it's back, " +
+                        "which can take a minute.",
+                )
+            },
+            confirmButton = { TextButton(onClick = { confirmRestart = false; vm.restartStrap() }) { Text("Restart") } },
+            dismissButton = { TextButton(onClick = { confirmRestart = false }) { Text("Cancel") } },
         )
     }
 
@@ -197,6 +215,12 @@ fun DeviceScreen(
                     }
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                     KeepConnectedRow(vm, keepConnected, device.address)
+                    if (connection is ConnectionState.Connected && info?.canRestart == true) {
+                        SettingRow("Restart strap", "Restarts the strap; OpenStrap reconnects by itself", onClick = { confirmRestart = true }) {
+                            Icon(PhosphorIcons.CaretRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    }
                     SettingRow("Forget this strap", "Removes the address and auth key from this phone", onClick = { confirmForget = true }) {
                         Icon(PhosphorIcons.CaretRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }

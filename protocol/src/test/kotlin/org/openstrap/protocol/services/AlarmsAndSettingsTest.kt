@@ -78,6 +78,16 @@ class AlarmsAndSettingsTest {
     }
 
     @Test
+    fun restartWrite() {
+        // Codemap 03 §5.5: GENERAL v2 as read, one entry, key 0x2D bool true.
+        assertArrayEquals("050a0200012d0b01".hexToBytes(), SettingsCodec.restart(2))
+        // A keyed GENERAL read tells whether the strap offers it, and the version the write echoes.
+        val g = SettingsCodec.parse("04010a0200012d0b00".hexToBytes())!!
+        assertEquals(2, g.version)
+        assertEquals(false, g[SettingsCodec.KEY_RESTART]!!.bool)
+    }
+
+    @Test
     fun settingsVersion() {
         assertArrayEquals("01".hexToBytes(), SettingsCodec.versionRequest)
         assertEquals(SettingsProtocol(3, emptyList()), SettingsCodec.parseVersion("0203".hexToBytes()))

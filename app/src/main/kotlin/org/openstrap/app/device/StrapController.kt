@@ -37,6 +37,8 @@ data class StrapInfo(
     /** The strap lists find device (0x001A), so Find strap can buzz it. */
     val findDevice: Boolean = false,
     val deviceInformation: SettingsGroup? = null,
+    /** The strap reports GENERAL key 45, so it can be restarted from the app; Zepp shows Restart only then (codemap 03 §5.2). */
+    val canRestart: Boolean = false,
 )
 
 /** What the UI can see and ask of the strap. Implemented on top of the BLE stack. */
@@ -125,6 +127,12 @@ interface StrapController {
 
     /** Writes [settings] into the health group; [version] comes from the last [readHealthSettings]. */
     suspend fun writeHealthSettings(version: Int, settings: List<Setting>)
+
+    /**
+     * Restarts the strap (GENERAL key 45). The link drops and the usual reconnect brings it back. Throws
+     * [StrapCommandException] when not connected or refused.
+     */
+    suspend fun restartStrap()
 
     /**
      * Plays [pattern] on the strap's motor: alternating vibrate and pause milliseconds (a phone notification).

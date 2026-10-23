@@ -94,6 +94,8 @@ object SettingsCodec {
     /** General group; key 47 is fast-recharge mode, which blocks firmware updates and history sync (c6j.java:135). */
     const val GROUP_GENERAL = 0x0A
     const val KEY_FAST_RECHARGE = 0x2F
+    /** GENERAL key 45 `resetSwitch`: writing true restarts the strap. Zepp offers Restart only when the strap reports it (07 §0, 03 §5.2). */
+    const val KEY_RESTART = 0x2D
 
     /** HR interval value for continuous measuring; 0 is off, other values are minutes. */
     const val HR_CONTINUOUS = 0xFE
@@ -185,6 +187,9 @@ object SettingsCodec {
 
     fun enumSetting(key: Int, value: Int) = Setting(key, TYPE_ENUM, byteArrayOf(value.toByte()), value.toLong())
     fun boolSetting(key: Int, on: Boolean) = Setting(key, TYPE_BOOL, byteArrayOf(if (on) 1 else 0), if (on) 1 else 0)
+
+    /** Restarts the strap: GENERAL key 45 = true; [version] is the GENERAL group version as read. Answered `06 01`, then the link drops. */
+    fun restart(version: Int): ByteArray = write(GROUP_GENERAL, version, listOf(boolSetting(KEY_RESTART, true)))
 
     /**
      * A "version,flag" string read as Zepp does (codemap 07 §1.4): split on commas, both of the first two parts must

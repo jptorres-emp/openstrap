@@ -280,6 +280,17 @@ class StrapManager(
         info.value = StrapInfo(firmware, hardware, serial, dfu, s.services.has(Endpoints.FIND_DEVICE), deviceInformation)
         log("hardware=$hardware dfu=$dfu")
 
+        // GENERAL key 45 restarts the strap; like Zepp, offer Restart only when the strap reports it (03 §5.2, 07 §0).
+        if (s.services.has(Endpoints.SETTINGS)) {
+            runCatching {
+                val group = SettingsCodec.GROUP_GENERAL
+                val r = s.request(Endpoints.SETTINGS, SettingsCodec.query(group, listOf(SettingsCodec.KEY_RESTART), withOptions = false), 5_000) { SettingsCodec.isReplyTo(group, it) }
+                val restart = SettingsCodec.parse(r, settingsProtocol?.version)?.get(SettingsCodec.KEY_RESTART)
+                log("general key 45 ${r.toHex()} -> ${restart?.let { "reported" } ?: "not reported"}")
+                info.value = info.value?.copy(canRestart = restart != null)
+            }.onFailure { log("restart key query failed: $it") }
+        }
+
         runCatching {
             if (s.services.has(Endpoints.BATTERY)) {
                 BatteryInfo.parseChannel(s.request(Endpoints.BATTERY, BatteryInfo.GET) { it.u8(0) == 0x04 })
@@ -842,6 +853,17 @@ class StrapManager(
     override suspend fun writeHealthSettings(version: Int, settings: List<Setting>) {
         val reply = command(Endpoints.SETTINGS, SettingsCodec.write(SettingsCodec.GROUP_HEALTH, version, settings))
         if (!SettingsCodec.isWriteSuccess(reply)) throw StrapCommandException("The strap didn't accept the setting (code ${reply.getOrNull(1)})")
+    }
+
+    /** Writes GENERAL key 45 = true with the group version just read (07 §0). The strap may drop the link before its ack. */
+    override suspend fun restartStrap() {
+        val group = SettingsCodec.parse(settingsQuery(SettingsCodec.GROUP_GENERAL, listOf(SettingsCodec.KEY_RESTART), withOptions = false), settingsProtocol()?.version)
+            ?: throw StrapCommandException("The strap couldn't read its settings")
+        if (group[SettingsCodec.KEY_RESTART] == null) throw StrapCommandException("This strap can't be restarted from the app")
+        log("restart: asking the strap to restart")
+        val reply = runCatching { command(Endpoints.SETTINGS, SettingsCodec.restart(group.version)) }
+            .getOrElse { e -> if (activeSession == null) { log("restart: link dropped before the ack"); return } else throw e }
+        if (!SettingsCodec.isWriteSuccess(reply)) throw StrapCommandException("The strap didn't accept the restart (code ${reply.getOrNull(1)})")
     }
 
     override suspend fun buzz(pattern: List<Int>) {

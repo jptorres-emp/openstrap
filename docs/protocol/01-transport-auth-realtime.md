@@ -613,6 +613,13 @@ How OpenStrap uses them:
 * **No notification patterns while a call rings:** a pattern played on the motor cut off the call's buzzing (hardware, below).
 * **Find strap** (strap page, shown when the strap lists `0x001A`): `03`, then `06` on Stop or after 60 s, the time Zepp's find dialog waits before it closes (`ktt.java:970`). The strap's `07` ends it too. A call ending meanwhile sends `06` as well, which stops it.
 
+### 5.9 Settings the strap page uses: restart and the wear reminder (`0x000A`)
+
+Settings writes are `05 group groupVersion 00 n {key type value}`, answered `06 01`, with the group version taken from a read just before (codemap 03 §3.6.1). OpenStrap uses three keys beyond the health group:
+
+| Group / key | Type | Use |
+|---|---|---|
+| GENERAL `0x0A` / 45 (`0x2D`) | bool | **Restart.** Writing true restarts the strap: `05 0A 02 00 01 2D 0B 01` with GENERAL at version 2. The ack may not arrive before the link drops; the usual reconnect brings the strap back. Zepp shows Restart only when the strap reports key 45, and so does OpenStrap (read on connect). |
 ---
 
 ## 6. Keep-alive, disconnect, reconnect

@@ -51,6 +51,7 @@ I use it daily with one Helio Strap on one Android 16 phone. Other phones and fi
 | Alarms, strap health alerts | ✅ Works |
 | Strap buzzes for phone calls and notifications, with a choice of pattern | ✅ Works |
 | Find strap: buzz it from the strap page | 🧪 New, being tested |
+| Restart the strap from the app | 🧪 New, being tested |
 | Export and import: CSV zip (every table), Android Health Connect | ✅ Works |
 | Firmware update (online check with your Zepp token, or from a file) | ✅ Works |
 

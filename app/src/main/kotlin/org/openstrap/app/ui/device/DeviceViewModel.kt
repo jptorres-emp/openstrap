@@ -114,6 +114,12 @@ class DeviceViewModel(private val container: AppContainer) : ViewModel() {
         runCatching { container.strap.stopFindingStrap() }.onFailure { _message.value = it.message ?: "Couldn't stop the strap buzzing" }
     }
 
+    /** Restarts the strap; the link drops and the usual reconnect brings it back. */
+    fun restartStrap() = viewModelScope.launch {
+        _message.value = runCatching { container.strap.restartStrap(); "Restarting the strap. OpenStrap reconnects when it's back." }
+            .getOrElse { it.message ?: "Couldn't restart the strap" }
+    }
+
     fun forget() = viewModelScope.launch {
         container.strap.disconnect()
         paired.value?.let { container.companion.disassociate(it.address) }

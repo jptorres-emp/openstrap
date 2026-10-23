@@ -64,8 +64,12 @@ fun InfoSheet(info: Info, color: Color, here: Int?, hereLine: String?, onDismiss
                 info.meaning, color = Color.White, modifier = Modifier.padding(top = 6.dp),
                 style = GlowType.label.copy(fontSize = 22.sp, lineHeight = 28.sp, fontWeight = FontWeight.Medium),
             )
-            Scale(info.scale, color, here, Modifier.padding(top = 22.dp))
-            if (hereLine != null) Text(hereLine, color = Color.White, style = GlowType.secondary, modifier = Modifier.padding(top = 10.dp))
+            // Some numbers have no scale to place them on (naps, breathing disturbances, whose only words are apnea bands).
+            if (info.scale.isNotEmpty()) Scale(info.scale, color, here, Modifier.padding(top = 22.dp))
+            if (hereLine != null) Text(
+                hereLine, color = Color.White, style = GlowType.secondary,
+                modifier = Modifier.padding(top = if (info.scale.isEmpty()) 16.dp else 10.dp),
+            )
             Column(
                 Modifier.padding(top = 24.dp).fillMaxWidth().background(Color(0xFF141416), RoundedCornerShape(24.dp)).padding(horizontal = 18.dp),
             ) {

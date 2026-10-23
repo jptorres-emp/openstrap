@@ -2,6 +2,7 @@ package org.openstrap.app.ui.dashboard
 
 import org.openstrap.app.data.History
 import org.openstrap.app.data.Recovery
+import org.openstrap.app.data.SleepRegularity
 
 /*
  * What every detail's info sheet says (spec 6.2): a bold one-line meaning, the scale its value is read on, and three
@@ -28,6 +29,23 @@ object InfoCopy {
 
     /** Charge's bands, low to high. */
     val CHARGE_SCALE = listOf("Running low", "Some left", "Good", "Full")
+
+    /** The Sleep score's bands, low to high, in the words beside it ([TabCopy.sleepScoreWord]). */
+    val SLEEP_SCALE = listOf("Poor", "Fair", "Good", "Great")
+
+    /** Sleep regularity's bands, low to high ([SleepRegularity.Band]). */
+    val REGULARITY_SCALE = SleepRegularity.Band.entries.map { it.label }
+
+    /** Which bar of [SLEEP_SCALE] a Sleep score is in. */
+    fun sleepBar(score: Int): Int = when {
+        score >= 90 -> 3
+        score >= 80 -> 2
+        score >= 60 -> 1
+        else -> 0
+    }
+
+    /** Which bar of [REGULARITY_SCALE] a band is. */
+    fun regularityBar(band: SleepRegularity.Band): Int = band.ordinal
 
     /** Which bar of [NORMAL_SCALE] a status against your normal is in; null without a normal. */
     fun normalBar(status: Int?): Int? = status?.let { it.coerceIn(-1, 1) + 1 }
@@ -169,7 +187,96 @@ object InfoCopy {
             off = "Charge starts after your first night. With the strap off overnight there's no sleep to fill it from, " +
                 "so the day starts from your usual Charge at waking, an estimate.",
         )
+        Score.Sleep -> Info(
+            "Sleep score",
+            "How well you slept, from 0 to 100, scored by the strap from the night.",
+            SLEEP_SCALE,
+            how = "The score is the strap's own, from the length and the stages of the night, and it mostly follows how " +
+                "long you slept. What shaped the score rates the night against general sleep guidance: time asleep " +
+                "against your sleep need, and staying asleep, with under 30 minutes awake after falling asleep counting " +
+                "as settled. Too much sleep counts against it too, past 9½ hours. Stages aren't rated, since a strap " +
+                "reads them less surely than sleep from waking. It's a guide, not a medical assessment.",
+            moves = "Regular bedtimes, a dark, cool room and less caffeine and alcohol late in the day help. Late nights, " +
+                "a restless night and waking early pull it down.",
+            off = "Lying still awake can count as asleep, and light and deep sleep are hard to tell apart through the " +
+                "skin. A night with the strap off or loose may be missed or cut short.",
+        )
+        Score.Regularity -> Info(
+            "Sleep regularity",
+            "How alike your sleep and wake times are from one day to the next. 100 is the same every day.",
+            REGULARITY_SCALE,
+            how = "OpenStrap works out the Sleep Regularity Index. It marks each minute of the day asleep or awake and " +
+                "counts how often a minute matches the same minute the day before, over the last 7 days. It needs " +
+                "${SleepRegularity.MIN_VALID_PAIRS / 60} h of wear compared day to day, about 5 days worn around the " +
+                "clock, and until then shows how much the middle of your sleep moved. The bands follow how UK Biobank " +
+                "adults scored, where half of them were between 74 and 86. Your usual times are the average " +
+                "of the last 7 nights.",
+            moves = "Going to bed and getting up at the same times, weekends too, raises it. Late nights, lie-ins and " +
+                "long naps lower it.",
+            off = "Minutes with the strap off aren't compared, so a week with little wear rests on fewer days. Lying " +
+                "awake in bed can count as asleep.",
+        )
+        Score.Naps -> Info(
+            "Naps",
+            "Sleep in the day, which the strap records apart from your night.",
+            emptyList(),
+            how = "The strap tells a nap from your night itself, and records its stages when it's long enough. A nap " +
+                "belongs to the day it started on. Its heart rate comes from the day's readings, since the strap " +
+                "sends no average for a nap.",
+            moves = "A short nap early in the afternoon refreshes without taking much from the night. A long or late " +
+                "one can make it harder to fall asleep.",
+            off = "Lying still awake can look like a short nap, and a short nap may have no stages.",
+        )
     }
+
+    /** Spec 6.2's sheet for a night vital opened from the Sleep tab: the metric's, saying where the night's numbers come from. */
+    fun ofNight(metric: Metric): Info = of(metric).let { it.copy(how = it.how + " " + nightHow(metric)) }
+
+    private fun nightHow(metric: Metric): String = when (metric) {
+        Metric.HeartRate -> "Opened from the night, it shows only your sleep: the line from falling asleep to waking, " +
+            "the lowest while asleep and the strap's average for the night. Month and Year are whole days."
+        Metric.Spo2 -> "Opened from the night, it shows the strap's readings in sleep, kept apart from the spot readings " +
+            "in the day, against your earlier nights."
+        Metric.Breathing -> "Opened from the night, it's that night's readings, against your earlier nights."
+        else -> "Opened from the night, it's the average of the readings taken while you slept, against your earlier " +
+            "nights. Month and Year are whole days, day and night."
+    }
+
+    /** The breathing disturbances sheet: an early estimate, with no scale, since its only words would be apnea bands. */
+    val BREATHING_DISTURBANCES = Info(
+        "Breathing disturbances",
+        "Dips in blood oxygen while you sleep, counted by the strap, as how many an hour. An early estimate.",
+        emptyList(),
+        how = "The strap counts each short drop in blood oxygen during sleep, and that's divided by the hours asleep. " +
+            "Your usual is the middle of your earlier nights, once there are ${Recovery.SCORED_NIGHTS} of them. They " +
+            "are fairly steady for each person, so they're shown with your sleep rather than in Recovery.",
+        moves = "Alcohol, a blocked nose, sleeping on your back and altitude can raise it.",
+        off = "The strap's units aren't confirmed on a real strap yet, so treat the number as an early estimate. A " +
+            "loose strap can read as a dip. ${org.openstrap.app.data.BodySignalsCopy.DISCLAIMER} It isn't a test for sleep apnea.",
+    )
+
+    /** Under the breathing disturbances sheet's title: the night against your usual, or how far the usual has got. */
+    fun breathingLine(b: Recovery.BreathingDisturbances, today: Boolean): String {
+        val night = "${if (today) "Last night" else "That night"} %.1f an hour.".format(b.perHour)
+        return when (val usual = b.usual) {
+            null -> "$night Learning your usual, ${b.nights.coerceAtMost(Recovery.SCORED_NIGHTS)} of ${Recovery.SCORED_NIGHTS} nights."
+            else -> "$night Your usual is %.1f.".format(usual)
+        }
+    }
+
+    /** What's particular about this week's regularity: how much wear it compares, or what it still needs. */
+    fun regularityNotes(reg: SleepRegularity.Result?): List<String> = buildList {
+        reg ?: return@buildList
+        val hours = reg.validPairs / 60
+        if (reg.sri != null) add("This week compares $hours h of wear.")
+        else {
+            add("Not enough wear for the full measure yet: $hours h of the ${SleepRegularity.MIN_VALID_PAIRS / 60} h it needs.")
+            reg.midpointSdMinutes?.let { add("Meanwhile the middle of your sleep moved about ${TodayCopy.duration(Math.round(it) * 60L)} this week.") }
+        }
+    }
+
+    /** What's particular about the night's Sleep score: the sleep need the guidance measures against. */
+    fun sleepNotes(needMinutes: Int): List<String> = listOf("Your sleep need here is ${TodayCopy.duration(needMinutes * 60L)}, from your age or your own setting.")
 
     /**
      * What's particular about today's Recovery, for its info sheet: the strap's own score beside ours, and anything that

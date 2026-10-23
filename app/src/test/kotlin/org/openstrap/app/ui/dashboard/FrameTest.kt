@@ -183,6 +183,36 @@ class FrameTest {
         assertEquals(listOf(Detail.Healthspan), siblingsOf(Detail.Healthspan))
     }
 
+    @Test fun `the sleep details and night-scoped vitals survive process death`() {
+        val stack = listOf(Detail.Sleep, Detail.OfScore(Score.Sleep), Detail.OfScore(Score.Regularity), Detail.OfScore(Score.Naps)) +
+            NIGHT_VITALS.map { Detail.OfMetric(it, night = true) } + Detail.OfMetric(Metric.Hrv)
+        val saved = with(Detail.StackSaver) { androidx.compose.runtime.saveable.SaverScope { true }.save(stack) }!!
+        assertEquals(stack, Detail.StackSaver.restore(saved))
+        // The night and the day are different details of one metric.
+        assertTrue(saved.contains("n:Hrv") && saved.contains("m:Hrv"))
+        assertEquals(listOf(Detail.OfMetric(Metric.Hrv, night = true), Detail.OfMetric(Metric.Hrv)), Detail.StackSaver.restore("n:Hrv|m:Hrv"))
+        // Only a night vital can be scoped to the night; a stray one is dropped, the rest kept.
+        assertEquals(listOf(Detail.OfScore(Score.Naps)), Detail.StackSaver.restore("n:Steps|c:Naps"))
+        // A link by name opens the day's detail, never the night's.
+        assertEquals(Detail.OfMetric(Metric.Spo2), Detail.fromRoute("Spo2"))
+    }
+
+    @Test fun `the sleep details switch among themselves, the night vitals only within the night`() {
+        val sleep = listOf(Score.Sleep, Score.Regularity, Score.Naps).map(Detail::OfScore)
+        sleep.forEach { assertEquals(sleep, siblingsOf(it)) }
+        val night = NIGHT_VITALS.map { Detail.OfMetric(it, night = true) }
+        assertEquals(listOf(Metric.HeartRate, Metric.Hrv, Metric.Breathing, Metric.Spo2, Metric.SkinTemperature), NIGHT_VITALS)
+        night.forEach { d ->
+            assertEquals(night, siblingsOf(d))
+            assertTrue(siblingsOf(d).all { it is Detail.OfMetric && it.night })
+        }
+        // The same metric by day stays with the day's group.
+        assertFalse(siblingsOf(Detail.OfMetric(Metric.Hrv)).any { it is Detail.OfMetric && it.night })
+        // Every row of the Sleep tab's night vitals opens a night detail in that group.
+        nightVitals(DayUiState()).forEach { v -> assertTrue(v.label, Detail.OfMetric(v.metric, night = true) in night) }
+        (night + sleep).forEach { d -> assertEquals(d.toString(), 1, DETAIL_GROUPS.count { d in it }) }
+    }
+
     @Test fun `a stack saved with All metrics on it comes back without it`() {
         // All metrics is a sheet now, not a screen on a stack; a stack saved before keeps the rest.
         assertEquals(listOf(Detail.OfMetric(Metric.Hrv)), Detail.StackSaver.restore("x:|m:Hrv"))

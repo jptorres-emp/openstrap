@@ -643,7 +643,7 @@ private fun AppRoot(
                 when (val detail = stack.last()) {
                     // A switcher pick takes the detail's place; anything else it opens goes on top.
                     is Detail.OfMetric -> MetricDetail(
-                        detail.metric, day, history = history,
+                        detail.metric, detail.night, day, history = history,
                         liveHeartRate = live, liveEnabled = liveEnabled, canUseLive = connection is ConnectionState.Connected,
                         onLiveToggle = { container.strap.setLiveHeartRate(it) },
                         onOpen = push, onSwitch = { setStack(t, stack.dropLast(1) + it) }, onSelectDay = dayVm::select,
@@ -678,7 +678,7 @@ private fun AppRoot(
                         androidx.activity.compose.BackHandler(onBack = pop)
                         org.openstrap.app.ui.glow.GlowSleepScreen(
                             day, header = { org.openstrap.app.ui.glow.PageHeader("Sleep", pop, subtitle = org.openstrap.app.ui.glow.dayName(day.date)) },
-                            contentPadding = padding, onOpenMetric = { push(Detail.OfMetric(it)) }, recovery = recovery,
+                            contentPadding = padding, onOpen = push, recovery = recovery,
                         )
                     }
                 }
@@ -756,7 +756,7 @@ private fun AppRoot(
                             )
                             Tab.Sleep -> org.openstrap.app.ui.glow.GlowSleepScreen(
                                 day, header = { header(Tab.Sleep) }, contentPadding = padding,
-                                onOpenMetric = { sleepStack = listOf(Detail.OfMetric(it)) },
+                                onOpen = { sleepStack = listOf(it) },
                                 recovery = recovery,
                             )
                             Tab.Activity -> org.openstrap.app.ui.glow.GlowActivityScreen(
@@ -1037,6 +1037,7 @@ private fun androidx.compose.foundation.layout.BoxScope.WorkoutLayer(
 @androidx.compose.runtime.Composable
 private fun MetricDetail(
     metric: org.openstrap.app.ui.dashboard.Metric,
+    night: Boolean,
     state: org.openstrap.app.ui.dashboard.DayUiState,
     history: org.openstrap.app.ui.dashboard.DailyHistory,
     liveHeartRate: Int?,
@@ -1048,7 +1049,7 @@ private fun MetricDetail(
     onSelectDay: (java.time.LocalDate) -> Unit,
     contentPadding: androidx.compose.foundation.layout.PaddingValues,
     onBack: () -> Unit,
-) = org.openstrap.app.ui.glow.GlowMetricDetailScreen(metric, state, history, liveHeartRate, liveEnabled, canUseLive, onLiveToggle, onOpen, onSwitch, onSelectDay, contentPadding, onBack)
+) = org.openstrap.app.ui.glow.GlowMetricDetailScreen(metric, night, state, history, liveHeartRate, liveEnabled, canUseLive, onLiveToggle, onOpen, onSwitch, onSelectDay, contentPadding, onBack)
 
 /** A workout's detail. */
 @androidx.compose.runtime.Composable

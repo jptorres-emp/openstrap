@@ -26,13 +26,22 @@ internal fun colorOf(metric: Metric): Color = when (metric) {
 }
 
 /**
+ * The metrics the Sleep tab's night vitals open scoped to the night, in the list's order. Lowest and average heart
+ * rate are both the night's heart rate, so it's here once.
+ */
+internal val NIGHT_VITALS: List<Metric> = listOf(Metric.HeartRate, Metric.Hrv, Metric.Breathing, Metric.Spo2, Metric.SkinTemperature)
+
+/**
  * The details a detail's switcher moves between (spec 6.1): its siblings in the same group. The body signals in
- * Recovery's list order, what the day does, and the two scores of the Recovery tab. Every detail is in one group.
+ * Recovery's list order, what the day does, the two scores of the Recovery tab, the Sleep tab's details, and the night
+ * vitals, which switch only among themselves while scoped to the night. Every detail is in one group.
  */
 internal val DETAIL_GROUPS: List<List<Detail>> = listOf(
-    listOf(Metric.RestingHr, Metric.Hrv, Metric.SkinTemperature, Metric.Breathing, Metric.Spo2, Metric.Stress).map(Detail::OfMetric),
-    listOf(Metric.Steps, Metric.HeartRate).map(Detail::OfMetric),
+    listOf(Metric.RestingHr, Metric.Hrv, Metric.SkinTemperature, Metric.Breathing, Metric.Spo2, Metric.Stress).map { Detail.OfMetric(it) },
+    listOf(Metric.Steps, Metric.HeartRate).map { Detail.OfMetric(it) },
     listOf(Score.Recovery, Score.Charge).map(Detail::OfScore),
+    listOf(Score.Sleep, Score.Regularity, Score.Naps).map(Detail::OfScore),
+    NIGHT_VITALS.map { Detail.OfMetric(it, night = true) },
 )
 
 /** [detail]'s group, itself included, in order; alone when it's in none. */

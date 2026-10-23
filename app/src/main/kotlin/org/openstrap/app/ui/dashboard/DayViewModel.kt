@@ -103,6 +103,9 @@ data class DayUiState(
     val nights: List<SleepNight> = emptyList(),
     /** Heart rate across the night window (5-minute averages), so sleep before midnight is included. */
     val sleepHeartRate: List<ChartPoint> = emptyList(),
+    /** HRV and skin temperature read during the night's main sleep, before midnight too, for the night-scoped details. */
+    val sleepHrv: List<ChartPoint> = emptyList(),
+    val sleepSkinTemperature: List<ChartPoint> = emptyList(),
     val dayStart: Long = 0,
     val dayEnd: Long = 0,
 ) {
@@ -265,9 +268,18 @@ class DayViewModel(
                     breathing = during(breath, { it.timestamp }, { it.perMinute.toFloat() }),
                 )
             }
-            list to Summaries.bucketAverage(Summaries.heartRateSeries(hr, emptyList())).map { ChartPoint(it.first, it.second.toFloat()) }
+            // The night's own readings, for the charts of the night-scoped details.
+            val tonight = main[date]
+            val sleepHrv = tonight?.let { w -> hrv.filter { it.timestamp in w.start..w.end }.map { ChartPoint(it.timestamp, it.milliseconds.toFloat()) } }.orEmpty()
+            val sleepSkin = tonight?.let { w -> skin.filter { it.timestamp in w.start..w.end }.map { ChartPoint(it.timestamp, it.celsius) } }.orEmpty()
+            NightParts(
+                list, Summaries.bucketAverage(Summaries.heartRateSeries(hr, emptyList())).map { ChartPoint(it.first, it.second.toFloat()) },
+                sleepHrv, sleepSkin,
+            )
         }
-        val moreAndNights = combine(more, nights) { m, (n, hr) -> m.copy(nights = n, sleepHeartRate = hr) }
+        val moreAndNights = combine(more, nights) { m, n ->
+            m.copy(nights = n.nights, sleepHeartRate = n.heartRate, sleepHrv = n.hrv, sleepSkinTemperature = n.skinTemperature)
+        }
 
         // The strap's own running total covers steps whose minute records were already taken by another app.
         val liveSteps = if (date == LocalDate.now()) strapSteps else flowOf(null)
@@ -317,6 +329,8 @@ class DayViewModel(
                 alerts = m.alerts,
                 nights = m.nights,
                 sleepHeartRate = m.sleepHeartRate,
+                sleepHrv = m.sleepHrv,
+                sleepSkinTemperature = m.sleepSkinTemperature,
                 dayStart = day.from,
                 dayEnd = day.to,
             )
@@ -355,6 +369,15 @@ private data class MoreParts(
     val alerts: List<HealthAlertRow>,
     val nights: List<SleepNight> = emptyList(),
     val sleepHeartRate: List<ChartPoint> = emptyList(),
+    val sleepHrv: List<ChartPoint> = emptyList(),
+    val sleepSkinTemperature: List<ChartPoint> = emptyList(),
+)
+
+private data class NightParts(
+    val nights: List<SleepNight>,
+    val heartRate: List<ChartPoint>,
+    val hrv: List<ChartPoint>,
+    val skinTemperature: List<ChartPoint>,
 )
 
 /** One night's main sleep and the vitals averaged over it. */

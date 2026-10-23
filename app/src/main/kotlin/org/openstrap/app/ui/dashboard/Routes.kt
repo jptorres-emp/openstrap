@@ -21,10 +21,13 @@ enum class Metric(val title: String, val unit: String, val decimals: Int, val da
 }
 
 /**
- * A score OpenStrap works out itself, with a detail of its own like a [Metric]'s but no per-day series behind it:
- * Recovery keeps only its last 7 days, Charge only the day shown. Sleep score, Load and the rest join here (step 6).
+ * A detail in the metric template with no per-day series behind it, unlike a [Metric]'s: Recovery keeps only its last
+ * 7 days, Charge only the day shown, the strap's Sleep score and the night's times only the 14 nights the day loads,
+ * and the day's Naps are only that day's. Load and the rest join here later.
  */
-enum class Score(val title: String) { Recovery("Recovery"), Charge("Charge") }
+enum class Score(val title: String) {
+    Recovery("Recovery"), Charge("Charge"), Sleep("Sleep score"), Regularity("Sleep regularity"), Naps("Naps"),
+}
 
 /** Your daily goals, provided once at the top of the app so every screen measures against the same ones. */
 val LocalGoals = compositionLocalOf { Goals() }
@@ -34,7 +37,11 @@ val LocalGoals = compositionLocalOf { Goals() }
  * Today that's about Recovery opens the Recovery screen over Today rather than switching to its tab (spec 3.3).
  */
 sealed interface Detail {
-    data class OfMetric(val metric: Metric) : Detail
+    /**
+     * A metric's detail. [night] scopes it to the night shown, as the Sleep tab's night vitals open it: the value,
+     * chart and sentence come from the sleep, not the whole day.
+     */
+    data class OfMetric(val metric: Metric, val night: Boolean = false) : Detail
     /** A [Score]'s detail, in the same template as a metric's. */
     data class OfScore(val score: Score) : Detail
     data class Workout(val start: Long) : Detail
@@ -48,14 +55,14 @@ sealed interface Detail {
     data object Sleep : Detail
 
     companion object {
-        /** Saves a tab's stack of details, deepest last, as one string ("m:Hrv|w:1792227300") so it survives process death. */
+        /** Saves a tab's stack of details, deepest last, as one string ("m:Hrv|n:Spo2|w:1792227300") so it survives process death. */
         val StackSaver: Saver<List<Detail>, String> = Saver(
             save = { stack -> stack.joinToString("|", transform = ::key) },
             restore = { s -> s.split('|').mapNotNull(::restore) },
         )
 
         private fun key(d: Detail): String = when (d) {
-            is OfMetric -> "m:${d.metric.name}"
+            is OfMetric -> "${if (d.night) "n" else "m"}:${d.metric.name}"
             is OfScore -> "c:${d.score.name}"
             is Workout -> "w:${d.start}"
             AllWorkouts -> "a:"
@@ -67,7 +74,8 @@ sealed interface Detail {
         private fun restore(s: String): Detail? {
             val value = s.substringAfter(':')
             return when (s.substringBefore(':')) {
-                "m" -> Metric.entries.firstOrNull { it.name == value }?.let(::OfMetric)
+                "m" -> Metric.entries.firstOrNull { it.name == value }?.let { OfMetric(it) }
+                "n" -> NIGHT_VITALS.firstOrNull { it.name == value }?.let { OfMetric(it, night = true) }
                 "c" -> Score.entries.firstOrNull { it.name == value }?.let(::OfScore)
                 "w" -> value.toLongOrNull()?.let(::Workout)
                 "a" -> AllWorkouts
@@ -85,7 +93,7 @@ sealed interface Detail {
         fun fromRoute(route: String): Detail? = when (route) {
             "Recovery" -> Recovery
             "Sleep" -> Sleep
-            else -> Metric.entries.firstOrNull { it.name == route }?.let(::OfMetric)
+            else -> Metric.entries.firstOrNull { it.name == route }?.let { OfMetric(it) }
         }
     }
 }

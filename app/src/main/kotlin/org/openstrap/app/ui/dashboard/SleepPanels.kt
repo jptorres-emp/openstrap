@@ -1,6 +1,8 @@
 package org.openstrap.app.ui.dashboard
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
@@ -48,33 +50,29 @@ internal class NightVital(
  */
 internal fun nightVitals(state: DayUiState): List<NightVital> {
     val session = state.sleep
-    val tonight = state.nights.lastOrNull()?.takeIf { it.date == state.date && session != null }
-    val previous = state.nights.dropLast(1)
-    fun normal(pick: (SleepNight) -> Float?): History.Normal? =
-        History.normal(previous.mapNotNull { n -> pick(n)?.let { DayStat(n.date, it, it, it, 1) } }, state.date.minusDays(1), SLEEP_NIGHTS - 1)
     val missing = if (session == null) "No sleep recorded" else "No reading last night"
-    fun against(metric: Metric, label: String, color: Color, pick: (SleepNight) -> Float?, show: (Float, History.Normal?) -> String): NightVital {
-        val v = tonight?.let(pick) ?: return NightVital(metric, label, color, null, missing)
-        val n = normal(pick)
+    // The same value and normal the night-scoped detail shows ([SleepCopy]).
+    fun against(metric: Metric, label: String, color: Color, show: (Float, History.Normal?) -> String): NightVital {
+        val v = SleepCopy.nightValue(state, metric) ?: return NightVital(metric, label, color, null, missing)
+        val n = SleepCopy.nightNormal(state, metric)
         val direction = History.status(v, n)
         val status = if (n == null) {
-            "Learning, ${previous.count { pick(it) != null }.coerceAtMost(History.MIN_NORMAL_DAYS)} of ${History.MIN_NORMAL_DAYS} nights"
+            "Learning, ${SleepCopy.nightNormalNights(state, metric).coerceAtMost(History.MIN_NORMAL_DAYS)} of ${History.MIN_NORMAL_DAYS} nights"
         } else TodayCopy.normalWord(direction)
         return NightVital(metric, label, color, show(v, n), status, direction.takeIf { n != null })
     }
-    val hr = session?.let { s -> state.sleepHeartRate.filter { it.x in s.start..s.end } }.orEmpty()
-    val lowest = hr.minByOrNull { it.y }
-    val average = session?.averageHeartRate ?: hr.takeIf { it.isNotEmpty() }?.map { it.y }?.average()?.roundToInt()
+    val lowest = SleepCopy.lowestHeart(state)
+    val average = SleepCopy.averageHeart(state)
     return listOf(
         NightVital(
             Metric.HeartRate, "Lowest heart rate", MetricColors.heart, lowest?.y?.roundToInt()?.toString(),
             lowest?.let { "At ${clockOf(it.x)}" } ?: missing,
         ),
-        against(Metric.Hrv, "HRV", MetricColors.hrv, { it.hrv }) { v, _ -> "${v.roundToInt()}" },
-        against(Metric.Breathing, "Breathing rate", MetricColors.sleepLight, { it.breathing }) { v, _ -> "%.1f".format(v) },
-        against(Metric.Spo2, "Blood oxygen", MetricColors.spo2, { it.spo2 }) { v, _ -> "${v.roundToInt()}%" },
+        against(Metric.Hrv, "HRV", MetricColors.hrv) { v, _ -> "${v.roundToInt()}" },
+        against(Metric.Breathing, "Breathing rate", MetricColors.sleepLight) { v, _ -> "%.1f".format(v) },
+        against(Metric.Spo2, "Blood oxygen", MetricColors.spo2) { v, _ -> "${v.roundToInt()}%" },
         // Skin temperature means little on its own; once there's a normal, show how far off it is.
-        against(Metric.SkinTemperature, "Skin temperature", MetricColors.temperature, { it.skinTemperature }) { v, n ->
+        against(Metric.SkinTemperature, "Skin temperature", MetricColors.temperature) { v, n ->
             n?.let { "%+.1f".format(v - it.mean) } ?: "%.1f".format(v)
         },
         NightVital(Metric.HeartRate, "Average heart rate", MetricColors.heart, average?.toString(), if (average != null) "While asleep" else missing),
@@ -92,20 +90,11 @@ internal class SleepWeek(
     val usual: SleepHistory.UsualTimes?,
     val regularity: SleepRegularity.Result?,
     val averageAsleep: String,
-    val averageScore: String,
     val goalNights: Int,
 ) {
-    /** The SRI shown as "Regularity", or null when withheld or loading. */
+    /** The SRI shown as "Regularity", or null when withheld or loading. Its method is in its info sheet ([InfoCopy.regularityNotes]). */
     val sri: Float? get() = regularity?.sri
     val band: SleepRegularity.Band? get() = regularity?.band
-    val learningNote: String? get() = regularity?.takeIf { it.sri == null }?.let {
-        "Not enough nights yet. Regularity needs ${SleepRegularity.MIN_VALID_PAIRS / 60} h of wear compared day to day " +
-            "(${it.validPairs / 60} h so far), about 5 days worn around the clock."
-    }
-    val regularityNote: String? get() = regularity?.takeIf { it.sri != null }?.let {
-        "How alike your sleep and wake were, minute by minute, from one day to the next over the last 7 days " +
-            "(${it.validPairs / 60} h compared). 100 is the same every day; half of UK Biobank adults scored 74–86."
-    }
 }
 
 /** The last seven nights' facts, or null when none of them has sleep. [regularity] comes from the selected day's recovery. */
@@ -116,14 +105,12 @@ internal fun sleepWeek(
     val slept = week.filter { it.session != null }
     if (slept.isEmpty()) return null
     val asleep = slept.mapNotNull { it.asleepSeconds }
-    val scores = slept.mapNotNull { it.session?.score }
     return SleepWeek(
         nights = week,
         slept = slept.size,
         usual = SleepHistory.usualTimes(state.nights.mapNotNull { n -> n.session?.let { n.date to it } }.toMap(), state.date, zone),
         regularity = regularity,
         averageAsleep = formatDuration(asleep.average().toLong()),
-        averageScore = scores.takeIf { it.isNotEmpty() }?.average()?.roundToInt()?.toString() ?: "—",
         goalNights = asleep.count { it >= goalSeconds },
     )
 }
@@ -136,11 +123,14 @@ internal fun bandColor(band: SleepRegularity.Band) = when (band) {
 
 /**
  * Bed and wake bars (chart kit): one bar per night on a clock running down the chart (evening at the top, morning at
- * the bottom), from falling asleep to waking, the last night in white. Your usual bedtime and wake time are dim bands
- * across, so nights that drift stand out.
+ * the bottom), from falling asleep to waking, the [selected] night (the last, without one) in white. Your usual
+ * bedtime and wake time are dim bands across, so nights that drift stand out. With [onNight], tapping a night picks it.
  */
 @Composable
-internal fun SleepWindows(week: List<SleepNight>, usual: SleepHistory.UsualTimes?, zone: ZoneId) {
+internal fun SleepWindows(
+    week: List<SleepNight>, usual: SleepHistory.UsualTimes?, zone: ZoneId,
+    selected: java.time.LocalDate? = null, onNight: ((java.time.LocalDate) -> Unit)? = null, height: androidx.compose.ui.unit.Dp = 110.dp,
+) {
     val measurer = rememberTextMeasurer()
     val axis = TextStyle(color = Color.White.copy(alpha = 0.5f), fontSize = 10.sp)
     val today = axis.copy(color = Color.White)
@@ -158,7 +148,13 @@ internal fun SleepWindows(week: List<SleepNight>, usual: SleepHistory.UsualTimes
     val top = (listOfNotNull(known.minOfOrNull { it.first }, usualBed).minOrNull() ?: (10 * 60)) - 30
     val bottom = (listOfNotNull(known.maxOfOrNull { it.second }, usualWake).maxOrNull() ?: (20 * 60)) + 30
 
-    Canvas(Modifier.fillMaxWidth().height(110.dp)) {
+    val tap = if (onNight == null || week.isEmpty()) Modifier else Modifier.pointerInput(week, onNight) {
+        detectTapGestures { o ->
+            val i = (o.x / (size.width.toFloat() / week.size)).toInt().coerceIn(0, week.lastIndex)
+            onNight(week[i].date)
+        }
+    }
+    Canvas(Modifier.fillMaxWidth().height(height).then(tap)) {
         val labelH = 16.dp.toPx()
         val chartBottom = size.height - labelH
         val slot = size.width / week.size.coerceAtLeast(1)
@@ -170,7 +166,7 @@ internal fun SleepWindows(week: List<SleepNight>, usual: SleepHistory.UsualTimes
         val width = 16.dp.toPx().coerceAtMost(slot * 0.5f)
         week.forEachIndexed { i, n ->
             val cx = slot * i + slot / 2
-            val last = i == week.lastIndex
+            val last = if (selected != null) n.date == selected else i == week.lastIndex
             val name = n.date.dayOfWeek.getDisplayName(DayStyle.SHORT, Locale.getDefault()).take(2)
             val label = measurer.measure(name, if (last) today else axis)
             drawText(label, topLeft = Offset(cx - label.size.width / 2, chartBottom + 3.dp.toPx()))

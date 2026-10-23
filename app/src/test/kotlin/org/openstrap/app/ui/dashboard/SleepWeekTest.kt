@@ -1,7 +1,6 @@
 package org.openstrap.app.ui.dashboard
 
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -35,8 +34,8 @@ class SleepWeekTest {
         assertEquals(result.sri, w.sri)
         assertEquals(100f, w.sri!!, 1e-4f)
         assertEquals(SleepRegularity.Band.VeryRegular, w.band)
-        assertNotNull(w.regularityNote)
-        assertNull(w.learningNote)
+        // The method is in the info sheet now, with how much wear the week compares.
+        assertTrue(InfoCopy.regularityNotes(result).single().startsWith("This week compares"))
         // Usual times still come from the nights.
         assertEquals("23:30", minutesClock(w.usual!!.bedtime))
         assertEquals("07:00", minutesClock(w.usual!!.wake))
@@ -46,15 +45,12 @@ class SleepWeekTest {
         val w = sleepWeek(state, 8 * 3600L, SleepRegularity.Result(null, 3360, 12f), zone)!!
         assertNull(w.sri)
         assertNull(w.band)
-        assertNull(w.regularityNote)
-        assertTrue(w.learningNote!!.startsWith("Not enough nights yet"))
-        assertTrue(w.learningNote!!.contains("56 h so far"))
+        assertTrue(InfoCopy.regularityNotes(w.regularity).first().contains("56 h of the 120 h it needs"))
     }
 
     @Test fun `while the SRI loads there is neither score nor note`() {
         val w = sleepWeek(state, 8 * 3600L, null, zone)!!
         assertNull(w.sri)
-        assertNull(w.learningNote)
-        assertNull(w.regularityNote)
+        assertEquals(emptyList<String>(), InfoCopy.regularityNotes(w.regularity))
     }
 }

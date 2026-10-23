@@ -68,6 +68,7 @@ import org.openstrap.app.ui.dashboard.Range
 import org.openstrap.app.ui.dashboard.ScreenList
 import org.openstrap.app.ui.dashboard.avg
 import org.openstrap.app.ui.dashboard.colorOf
+import org.openstrap.app.ui.dashboard.SleepCopy
 import org.openstrap.app.ui.dashboard.siblingsOf
 import org.openstrap.app.ui.theme.AppIcons
 import java.time.DayOfWeek
@@ -377,10 +378,16 @@ internal fun dayValue(metric: Metric, state: DayUiState, live: Int? = null): Flo
  * A metric's detail (spec 6.1) in the [DetailTemplate]: the day's value and its readings, or a week, month or year of
  * daily values (weekly for a year) against your normal, with related metrics under them. [onSwitch] puts a sibling in
  * this one's place, [onOpen] pushes another detail, [onSelectDay] changes the day shown everywhere.
+ *
+ * Scoped to the [night], as the Sleep tab's night vitals open it, Day and Week come from the sleep alone ([SleepCopy]):
+ * the night's average and readings while asleep, the last 7 nights, against your normal of the nights before, as the
+ * Sleep tab reads them. Month and Year come from the per-day series ([SleepCopy.nightDaily]), and their label says
+ * whether those are nights or whole days.
  */
 @Composable
 fun GlowMetricDetailScreen(
     metric: Metric,
+    night: Boolean,
     state: DayUiState,
     history: DailyHistory,
     liveHeartRate: Int?,
@@ -393,44 +400,60 @@ fun GlowMetricDetailScreen(
     contentPadding: PaddingValues,
     onBack: () -> Unit,
 ) {
-    var rangeIndex by rememberSaveable(metric) { mutableIntStateOf(0) }
+    var rangeIndex by rememberSaveable(metric, night) { mutableIntStateOf(0) }
     val range = Range.entries[rangeIndex]
     val end = state.date
     val today = LocalDate.now()
     val strip0 = DetailCopy.strip(end, today, emptySet())
     val to = maxOf(end, strip0.last().date)
     val from = minOf(end.minusDays(maxOf(range.days, History.NORMAL_DAYS) - 1L), strip0.first().date)
-    val stats by remember(metric, from, to) { history(metric.daily, from, to) }.collectAsState(null)
+    val daily = if (night) SleepCopy.nightDaily(metric) else metric.daily
+    val stats by remember(daily, from, to) { history(daily, from, to) }.collectAsState(null)
     val normal = stats?.let { History.normal(it, end) }
     val normalDays = stats?.count { it.date in end.minusDays(History.NORMAL_DAYS - 1L)..end } ?: 0
+    // The night's own: its normal from the nights before, and the last 7 nights. Day and Week read against these.
+    val nightNormal = if (night) SleepCopy.nightNormal(state, metric) else null
+    val nightDays = if (night) SleepCopy.nightNormalNights(state, metric) else 0
+    val nightWeek = if (night) SleepCopy.nightWeek(state, metric) else emptyList()
+    val fromNight = night && (range == Range.Day || range == Range.Week)
     val color = colorOf(metric)
-    val nightly = metric in NIGHTLY
+    val nightly = if (night) range == Range.Day || range == Range.Week || SleepCopy.dailyIsNightly(metric) else metric in NIGHTLY
     val isToday = end == today
-    val live = if (metric == Metric.HeartRate && isToday && canUseLive && liveEnabled) liveHeartRate else null
-    var scrub by remember(metric, range, end) { mutableStateOf<DetailHeadline?>(null) }
-    var info by rememberSaveable(metric) { mutableStateOf(false) }
+    val live = if (!night && metric == Metric.HeartRate && isToday && canUseLive && liveEnabled) liveHeartRate else null
+    var scrub by remember(metric, night, range, end) { mutableStateOf<DetailHeadline?>(null) }
+    var info by rememberSaveable(metric, night) { mutableStateOf(false) }
 
     // The range's number and the daily values its chart draws (weekly over a year).
     val start = end.minusDays(range.days - 1L)
     val summary = stats?.takeIf { range != Range.Day }?.let { History.summary(it, start, end) }
-    val value = if (range == Range.Day) dayValue(metric, state, live) else summary?.average
-    // Heart rate's normal is a daily average, not a reading, so the day's reading gets no word.
-    val status = if (range == Range.Year || (range == Range.Day && metric == Metric.HeartRate)) null else History.status(value, normal)
+    val value = when {
+        night && range == Range.Day -> SleepCopy.nightValue(state, metric)
+        night && range == Range.Week -> nightWeek.mapNotNull { it.second }.takeIf { it.isNotEmpty() }?.average()?.toFloat()
+        range == Range.Day -> dayValue(metric, state, live)
+        else -> summary?.average
+    }
+    // Heart rate's normal is a daily average, not a reading, so the day's reading gets no word; nor does a night's.
+    val status = when {
+        fromNight -> History.status(value, nightNormal)
+        range == Range.Year || (range == Range.Day && metric == Metric.HeartRate) -> null
+        else -> History.status(value, normal)
+    }
+    val label = if (night) SleepCopy.nightLabel(metric, range) else DetailCopy.valueLabel(metric, range, live = live != null, today = isToday)
     val headline = scrub ?: when {
-        value != null -> DetailHeadline(
-            metric.format(value).replace(",", ""), DetailCopy.valueLabel(metric, range, live = live != null, today = isToday), DetailCopy.statusWord(status),
-        )
+        value != null -> DetailHeadline(metric.format(value).replace(",", ""), label, DetailCopy.statusWord(status))
+        night && range == Range.Day -> SleepCopy.nightNoValue(state.sleep != null, isToday).let { (word, why) -> DetailHeadline.none(word, why) }
+        night && range == Range.Week -> DetailHeadline.none("No reading", "In the last 7 nights")
         range != Range.Day && stats == null -> DetailHeadline.none("Loading", DetailCopy.noValue(metric, range, isToday))
         else -> DetailHeadline.none("No reading", DetailCopy.noValue(metric, range, isToday))
     }
-    val withData = stats.orEmpty().map { it.date }.toSet()
+    val withData = stats.orEmpty().map { it.date }.toSet() + nightWeek.filter { it.second != null }.map { it.first }
 
     DetailTemplate(
-        metric.title, color, siblings(Detail.OfMetric(metric), onSwitch), onInfo = { info = true }, onBack = onBack,
+        metric.title, color, siblings(Detail.OfMetric(metric, night), onSwitch), onInfo = { info = true }, onBack = onBack,
         contentPadding = contentPadding, headline = headline,
         strip = DetailCopy.strip(end, today, withData), onDay = onSelectDay,
         ranges = Range.entries, range = range, onRange = { rangeIndex = it.ordinal },
-        heroSide = if (metric == Metric.HeartRate && isToday && canUseLive && range == Range.Day) {
+        heroSide = if (!night && metric == Metric.HeartRate && isToday && canUseLive && range == Range.Day) {
             {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("Live", color = Color.White.copy(alpha = 0.85f), style = GlowType.secondary)
@@ -440,7 +463,37 @@ fun GlowMetricDetailScreen(
             }
         } else null,
     ) {
-        if (range == Range.Day) {
+        if (night && range == Range.Day) {
+            item { NightChart(metric, state, color) { scrub = it } }
+            val sentence = when {
+                value == null -> null
+                metric == Metric.HeartRate -> SleepCopy.lowestHeart(state).let { low ->
+                    SleepCopy.nightHeart(low?.y?.toInt(), low?.x?.let(::clock), Math.round(value), isToday)
+                }
+                else -> DetailCopy.day(status, org.openstrap.app.ui.dashboard.DaySource.Night, isToday, nightDays)
+            }
+            if (sentence != null) item { DetailSentence(sentence) }
+        } else if (night && range == Range.Week) {
+            val values = nightWeek.map { it.second }
+            item {
+                if (values.all { it == null }) DetailEmpty("No ${inSentence(metric.title)} in the last 7 nights yet.")
+                else Column {
+                    NormalTrend(
+                        values, DetailCopy.levels(values, nightNormal), color, labels = nightWeek.map { shortDay(it.first) },
+                        band = nightNormal?.let { it.low..it.high }, bandLabel = nightNormal?.let { DetailCopy.bandLabel(it, metric::format) },
+                        onScrub = { i ->
+                            scrub = i?.let { nightWeek[it] }?.let { (d, v) ->
+                                v?.let { DetailHeadline(metric.format(it), "${metric.unit}, ${d.format(DateTimeFormatter.ofPattern("EEE d MMM"))}", DetailCopy.statusWord(History.status(it, nightNormal))) }
+                            }
+                        },
+                    )
+                    // Before there's a normal the sentence under the chart already says how far along it is.
+                }
+            }
+            val sentence = if (metric == Metric.HeartRate) SleepCopy.heartWeek(values.map { it?.let(Math::round) })
+            else DetailCopy.span(Range.Week, DetailCopy.levels(values, nightNormal), nightly = true, normalKnown = nightNormal != null, days = nightDays)
+            if (sentence != null) item { DetailSentence(sentence) }
+        } else if (range == Range.Day) {
             item { DayChart(metric, state, color, value != null, normalOf = { m -> rememberNormal(m, end, history) }) { scrub = it } }
             val sentence = when {
                 value == null -> null
@@ -456,7 +509,7 @@ fun GlowMetricDetailScreen(
                 when {
                     inRange == null -> DetailEmpty("Loading")
                     summary == null -> DetailEmpty("No ${inSentence(metric.title)} in this range yet.")
-                    else -> HistoryChart(metric, range, inRange, normal, start, end, color) { scrub = it }
+                    else -> HistoryChart(metric, range, inRange, normal, start, end, color, nightly) { scrub = it }
                 }
             }
             val sentence = when {
@@ -473,13 +526,53 @@ fun GlowMetricDetailScreen(
             if (sentence != null) item { DetailSentence(sentence) }
         }
         val related = RELATED[metric].orEmpty()
-        if (related.isNotEmpty()) item { RelatedList(related, state, history, onOpen) }
+        if (related.isNotEmpty() || night) item { RelatedList(related, state, history, onOpen, sleepRow = night) }
     }
 
-    if (info) InfoSheet(
-        InfoCopy.of(metric), color, InfoCopy.normalBar(if (range == Range.Year) null else History.status(value, normal)),
-        InfoCopy.normalLine(normal, normalDays, metric::format, metric.unit, nightly), onDismiss = { info = false },
-    )
+    if (info) {
+        // Scoped to the night, the sheet reads the night against your earlier nights, as Day and Week do.
+        val sheetStatus = when {
+            night -> History.status(SleepCopy.nightValue(state, metric), nightNormal)
+            range == Range.Year -> null
+            else -> History.status(value, normal)
+        }
+        InfoSheet(
+            if (night) InfoCopy.ofNight(metric) else InfoCopy.of(metric), color, InfoCopy.normalBar(sheetStatus),
+            // Heart rate's night has no normal of its own, so there's no line about one.
+            if (night && metric == Metric.HeartRate) null
+            else if (night) InfoCopy.normalLine(nightNormal, nightDays, metric::format, metric.unit, nightly = true)
+            else InfoCopy.normalLine(normal, normalDays, metric::format, metric.unit, nightly),
+            onDismiss = { info = false },
+        )
+    }
+}
+
+private fun shortDay(d: LocalDate) = d.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault())
+
+/**
+ * The night's readings of [metric] while asleep as a line to scrub, from falling asleep to waking ([SleepCopy.nightSeries]);
+ * scrubbing moves the headline.
+ */
+@Composable
+private fun NightChart(metric: Metric, state: DayUiState, color: Color, onScrub: (DetailHeadline?) -> Unit) {
+    val session = state.sleep
+    val series = SleepCopy.nightSeries(state, metric)
+    if (session == null || series.isEmpty()) {
+        DetailEmpty(if (session == null) SleepCopy.noNight(state.date == LocalDate.now()) else "No ${inSentence(metric.title)} readings while asleep.")
+        return
+    }
+    val window = session.start..session.end
+    // Heart rate and breathing come every few minutes in sleep, the rest more sparsely.
+    val bucket = if (metric == Metric.HeartRate || metric == Metric.Breathing) 5 * 60L else 15 * 60L
+    val values = remember(series, window) { evenly(series, window, bucket) }
+    Column(Modifier.padding(top = 8.dp)) {
+        GlowLineChart(
+            values, height = 220.dp, labels = listOf(clock(window.first), clock(window.last)), color = color, showAverage = false, format = metric::format,
+            onScrub = { i ->
+                onScrub(i?.let { values[it] }?.let { v -> DetailHeadline(metric.format(v), "${metric.unit} at ${clock(window.first + i * bucket)}".trim(), null) })
+            },
+        )
+    }
 }
 
 /** Averages timed points into evenly spaced buckets across [range]; empty buckets are gaps. */
@@ -553,7 +646,7 @@ private fun DayChart(metric: Metric, state: DayUiState, color: Color, hasValue: 
 @Composable
 private fun HistoryChart(
     metric: Metric, range: Range, stats: List<DayStat>, normal: History.Normal?, start: LocalDate, end: LocalDate, color: Color,
-    onScrub: (DetailHeadline?) -> Unit,
+    nightly: Boolean, onScrub: (DetailHeadline?) -> Unit,
 ) {
     val (values, labels, dates) = remember(stats, range, start, end) { series(range, stats, start, end) }
     val levels = remember(values, normal) { DetailCopy.levels(values, normal) }
@@ -570,7 +663,7 @@ private fun HistoryChart(
         },
     )
     if (normal == null) Text(
-        DetailCopy.learningNormal(stats.count { it.date in end.minusDays(History.NORMAL_DAYS - 1L)..end }, metric in NIGHTLY),
+        DetailCopy.learningNormal(stats.count { it.date in end.minusDays(History.NORMAL_DAYS - 1L)..end }, nightly),
         color = Color.White.copy(alpha = 0.6f), style = GlowType.secondary,
     )
 }
@@ -596,10 +689,21 @@ private fun series(range: Range, stats: List<DayStat>, start: LocalDate, end: Lo
     return Triple(dates.map { byDate[it] }, labels, dates)
 }
 
-/** Related metrics as list rows, each with the day's value and its word against your normal, opening its detail. */
+/**
+ * Related metrics as list rows, each with the day's value and its word against your normal, opening its detail. With
+ * [sleepRow], as a night-scoped detail has, the night's Sleep score leads.
+ */
 @Composable
-private fun RelatedList(related: List<Metric>, state: DayUiState, history: DailyHistory, onOpen: (Detail) -> Unit) {
+private fun RelatedList(related: List<Metric>, state: DayUiState, history: DailyHistory, onOpen: (Detail) -> Unit, sleepRow: Boolean = false) {
     ListPanel(Modifier.padding(top = 8.dp), title = "Related") {
+        if (sleepRow) {
+            val score = state.sleep?.score
+            ListRow(
+                org.openstrap.app.ui.dashboard.Score.Sleep.title, org.openstrap.app.ui.theme.MetricColors.sleepDeep, score?.toString(),
+                score?.let(org.openstrap.app.ui.dashboard.TabCopy::sleepScoreWord) ?: "Nothing for this night",
+                onClick = { onOpen(Detail.OfScore(org.openstrap.app.ui.dashboard.Score.Sleep)) }, divider = false,
+            )
+        }
         related.forEachIndexed { i, m ->
             val normal = rememberNormal(m, state.date, history)
             val v = dayValue(m, state)
@@ -607,7 +711,7 @@ private fun RelatedList(related: List<Metric>, state: DayUiState, history: Daily
             ListRow(
                 m.title, colorOf(m), v?.let { m.format(it).replace(",", "") },
                 if (v == null) "Nothing for this day" else DetailCopy.statusWord(status) ?: m.unit.ifEmpty { null },
-                offNormal = status != null && status != 0, onClick = { onOpen(Detail.OfMetric(m)) }, divider = i > 0,
+                offNormal = status != null && status != 0, onClick = { onOpen(Detail.OfMetric(m)) }, divider = i > 0 || sleepRow,
             )
         }
     }

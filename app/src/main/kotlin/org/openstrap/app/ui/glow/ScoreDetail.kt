@@ -43,7 +43,8 @@ import java.time.format.TextStyle
 import java.util.Locale
 
 /*
- * Recovery's and Charge's details (spec 6.1) in the same template as a metric's. Neither has a per-day series like a
+ * Recovery's and Charge's details (spec 6.1) in the same template as a metric's, and the way to the Sleep tab's
+ * ([SleepScoreDetail] and its siblings). Neither has a per-day series like a
  * metric: Recovery keeps its last 7 days, Charge only the day shown, so their ranges stop where their history does.
  */
 
@@ -68,12 +69,15 @@ fun GlowScoreDetailScreen(
     when (score) {
         Score.Recovery -> RecoveryDetail(state, r, strapScore, history, onOpen, onSwitch, onSelectDay, contentPadding, onBack)
         Score.Charge -> ChargeDetail(state, r, history, onOpen, onSwitch, onSelectDay, contentPadding, onBack)
+        Score.Sleep -> SleepScoreDetail(state, r, history, onOpen, onSwitch, onSelectDay, contentPadding, onBack)
+        Score.Regularity -> RegularityDetail(state, r, history, onOpen, onSwitch, onSelectDay, contentPadding, onBack)
+        Score.Naps -> NapsDetail(state, r, onOpen, onSwitch, onSelectDay, contentPadding, onBack)
     }
 }
 
 /** The days a metric has data for, from the day after [from] to [to]; none when [from] isn't before [to]. */
 @Composable
-private fun daysWithData(metric: DailyMetric, from: LocalDate, to: LocalDate, history: DailyHistory): Set<LocalDate> {
+internal fun daysWithData(metric: DailyMetric, from: LocalDate, to: LocalDate, history: DailyHistory): Set<LocalDate> {
     val stats by remember(metric, from, to) { if (from < to) history(metric, from.plusDays(1), to) else flowOf(emptyList()) }.collectAsState(emptyList())
     return stats.map { it.date }.toSet()
 }
@@ -320,7 +324,7 @@ private fun ScoreRelated(score: Score, state: DayUiState, r: RecoveryResult?, hi
         )
         ListRow(
             "Last night", MetricColors.sleepDeep, asleep?.let(::clockDuration), if (asleep == null) "No sleep recorded" else "Asleep",
-            onClick = { onOpen(Detail.Sleep) },
+            onClick = { onOpen(Detail.OfScore(Score.Sleep)) },
         )
         metrics.forEach { m ->
             val normal = rememberNormal(m, state.date, history)

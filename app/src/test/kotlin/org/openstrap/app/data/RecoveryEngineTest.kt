@@ -78,4 +78,11 @@ class RecoveryEngineTest {
         val days = RecoveryEngine.usualSleep(sleeps(5, java.time.LocalTime.of(8, 0), java.time.LocalTime.of(16, 0)), date, zone)
         assertEquals(date.atTime(8, 0).toEpochSecond(zone)..date.atTime(16, 0).toEpochSecond(zone), days.first())
     }
+
+    @Test
+    fun usualBedtimeIsTheUsualSleepsStart() {
+        assertEquals(java.time.LocalTime.of(23, 0), RecoveryEngine.usualBedtime(sleeps(5, java.time.LocalTime.of(23, 0), java.time.LocalTime.of(7, 0)), date, zone))
+        // No main sleep yet: unknown, not usualSleep's midnight stand-in.
+        assertEquals(null, RecoveryEngine.usualBedtime(emptyList(), date, zone))
+    }
 }

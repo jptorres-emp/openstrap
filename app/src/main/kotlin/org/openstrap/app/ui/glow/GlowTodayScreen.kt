@@ -107,6 +107,8 @@ fun GlowTodayScreen(
     running: org.openstrap.app.device.WorkoutState.Recording? = null,
     onOpenRunning: () -> Unit = {},
     onResumeRunning: () -> Unit = {},
+    /** Where the hero's light comes from for the moment ([org.openstrap.app.ui.dashboard.heroLightAngle]); null keeps its own. */
+    heroLightAngle: Float? = null,
 ) {
     // The glow holds still while the list scrolls, so scrolling stays as smooth as on other screens.
     val list = rememberLazyListState()
@@ -115,7 +117,7 @@ fun GlowTodayScreen(
     val extras = TodayExtras(
         liveEnabled, onLiveToggle, onOpenHealthspan, onOpenProfile, healthspan, history, tiles, strapReadiness, checkIn, onCheckIn,
         suggestion, onSaveSuggestion, onDismissSuggestion, onStartWorkout, offer, onRecordOffer, onDeclineOffer,
-        running, onOpenRunning, onResumeRunning,
+        running, onOpenRunning, onResumeRunning, heroLightAngle,
     ) { choosing = true }
     CompositionLocalProvider(LocalGlowPaused provides { list.isScrollInProgress }) {
         TodayList(state, liveHeartRate, header, contentPadding, onOpenSleep, onOpenMetric, recovery, onOpenRecovery, workouts, onOpenWorkout, list, extras)
@@ -144,6 +146,7 @@ private class TodayExtras(
     val running: org.openstrap.app.device.WorkoutState.Recording?,
     val onOpenRunning: () -> Unit,
     val onResumeRunning: () -> Unit,
+    val heroLightAngle: Float?,
     val onChooseTiles: () -> Unit,
 )
 
@@ -168,7 +171,7 @@ private fun TodayList(
     // On a wide screen the scores, sleep and movement run down the left; what changed and your heart down the right.
 
     // Glow: the day's three scores at a glance, the leading one as the hero. The only place they appear.
-    left { OverviewCard(state, rec, extras.strapReadiness?.takeIf { it.day == state.dayStart }, chargeLeads(state, rec), onOpenRecovery, onOpenSleep) }
+    left { OverviewCard(state, rec, extras.strapReadiness?.takeIf { it.day == state.dayStart }, chargeLeads(state, rec), onOpenRecovery, onOpenSleep, extras.heroLightAngle) }
 
     // Mornings only (today, before noon): how you feel, under the score it's there to check.
     val morning = state.date == LocalDate.now() && LocalTime.now().hour < 12
@@ -260,6 +263,7 @@ internal fun bucket(points: List<ChartPoint>, range: LongRange, seconds: Long): 
 @Composable
 private fun OverviewCard(
     state: DayUiState, rec: RecoveryResult?, strap: StrapReadinessRow?, chargeLeads: Boolean, onOpen: () -> Unit, onOpenSleep: () -> Unit,
+    lightAngle: Float?,
 ) {
     val c = rec?.charge
     val chargeNow = c?.latest?.toInt()
@@ -286,8 +290,9 @@ private fun OverviewCard(
         else -> Narrative.readinessHeadline(lead.value, alert = false)
     }
 
-    // The glow sits low and central, under the gauge.
+    // The glow sits low and central, under the gauge, unless the moment says where the light comes from.
     val style = GlowStyle.Bloom.copy(
+        lightAngle = lightAngle,
         color = overviewColor(lead.value, strain),
         coreShape = CoreShape.Radial, coreX = 0.5f, coreY = 0.6f, coreWidth = 0.95f, coreHeight = 0.75f,
         coreBlur = 30.dp, toneWidth = 16.dp, toneShift = -10f, glowStrength = 0.6f, bevel = 0.6f,

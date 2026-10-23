@@ -51,6 +51,8 @@ data class RecoveryResult(
     /** [load] split: minutes inside recorded workouts, and moving minutes outside them ([Recovery.dailyLoad]). */
     val workoutLoad: Float = 0f,
     val everydayLoad: Float = 0f,
+    /** When you usually go to sleep ([RecoveryEngine.usualBedtime]); null before any main sleep. */
+    val usualBedtime: java.time.LocalTime? = null,
 )
 
 /** Loads what [Recovery] needs from the database and runs it. All work happens off the main thread by the caller. */
@@ -260,6 +262,7 @@ class RecoveryEngine(private val dao: HealthDao) {
             Recovery.breathingDisturbances(tonight, nights), Recovery.acwr(loads), sleepNeed, regularity, sleepHealth,
             loadTrend, Recovery.strain(todayLoad), Recovery.loadPercentile(todayLoad, loads), profile.maxHeartRate != null && maxHr == profile.maxHeartRate.toFloat(),
             activity, energy, vo2, vo2Withheld, todaySplit.workout, todaySplit.everyday,
+            usualBedtime(mains.filterKeys { it <= midnight }.values, date, zone),
         )
     }
 
@@ -374,6 +377,14 @@ class RecoveryEngine(private val dao: HealthDao) {
                 noon + start..noon + end
             }
         }
+
+        /**
+         * The usual bedtime as a clock time: the start of [usualSleep]'s most recent range. Null without any [mains],
+         * where [usualSleep] would only give its midnight stand-in.
+         */
+        internal fun usualBedtime(mains: Collection<SleepSession>, date: LocalDate, zone: ZoneId): java.time.LocalTime? =
+            if (mains.isEmpty()) null
+            else usualSleep(mains, date, zone).firstOrNull()?.let { Instant.ofEpochSecond(it.first).atZone(zone).toLocalTime() }
 
         /** Asleep minutes: deep + light + REM, else time in bed less awake. */
         fun asleepMinutes(s: SleepSession): Int = listOfNotNull(s.deepMinutes, s.lightMinutes, s.remMinutes).takeIf { it.isNotEmpty() }?.sum()

@@ -25,6 +25,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.health.connect.client.PermissionController
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
@@ -41,7 +42,7 @@ import org.openstrap.app.ui.device.DeviceViewModel
 import org.openstrap.app.ui.dashboard.MomentHeader
 import org.openstrap.app.ui.dashboard.Reselect
 import org.openstrap.app.ui.dashboard.TabNav
-import org.openstrap.app.ui.dashboard.dayTitle
+import org.openstrap.app.ui.dashboard.todayTitle
 import org.openstrap.app.ui.dashboard.strapChip
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.asPaddingValues
@@ -70,6 +71,9 @@ class MainActivity : ComponentActivity() {
     /** The latest `open_metric` link, until the app root has opened it. */
     private val metricRequests = kotlinx.coroutines.flow.MutableStateFlow<MetricRequest?>(null)
 
+    /** Debug: the moment forced by the `moment` extra, null to follow the clock. */
+    private val forcedMoment = kotlinx.coroutines.flow.MutableStateFlow<org.openstrap.app.data.Moment?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // Dark bars (light icons) whatever the system mode, to match the always-dark theme.
@@ -78,7 +82,7 @@ class MainActivity : ComponentActivity() {
             navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
         )
         val container = (application as OpenStrapApp).container
-        setContent { OpenStrapTheme { AppRoot(container, metricRequests) } }
+        setContent { OpenStrapTheme { AppRoot(container, metricRequests, forcedMoment) } }
     }
 
     override fun onStart() {
@@ -146,6 +150,9 @@ class MainActivity : ComponentActivity() {
 
         /** The day for [EXTRA_OPEN_METRIC], as an ISO date ("2026-10-23"); without it the day showing stays. */
         const val EXTRA_METRIC_DAY = "metric_day"
+
+        /** Debug: a [org.openstrap.app.data.Moment] name to force on Today, or "auto" to follow the clock again. */
+        const val EXTRA_MOMENT = "moment"
     }
 
     /** Debug: `am start -n org.openstrap.app/.MainActivity --ei dump_raw_days 7` dumps raw history to files/raw. */
@@ -191,6 +198,16 @@ class MainActivity : ComponentActivity() {
             intent.removeExtra("simulate_hr")
             val script = simulate.split(',').mapNotNull { p -> p.split('x').takeIf { it.size == 2 }?.let { (b, s) -> b.toIntOrNull()?.let { bpm -> s.toIntOrNull()?.let { bpm to it } } } }
             ((application as OpenStrapApp).container.strap as? org.openstrap.app.device.StrapManager)?.simulate(script, intent.getIntExtra("simulate_steps", 0), intent.getIntExtra("simulate_battery", 80))
+        }
+        // Debug: `--es moment Evening` forces Today's moment (a Moment name), so each can be checked on a phone;
+        // `--es moment auto` goes back to the clock.
+        val moment = intent.getStringExtra(EXTRA_MOMENT)
+        if (BuildConfig.DEBUG && moment != null) {
+            intent.removeExtra(EXTRA_MOMENT)
+            if (moment.equals("auto", ignoreCase = true)) forcedMoment.value = null
+            else org.openstrap.app.data.Moment.entries.firstOrNull { it.name.equals(moment, ignoreCase = true) }
+                ?.let { forcedMoment.value = it }
+                ?: android.util.Log.w("OpenStrap", "moment: no moment called $moment")
         }
         val days = intent.getIntExtra("dump_raw_days", 0)
         if (!BuildConfig.DEBUG || days <= 0) return
@@ -240,7 +257,11 @@ private val BLUETOOTH_PERMISSIONS = arrayOf(
 private fun epochNow() = System.currentTimeMillis() / 1000
 
 @Composable
-private fun AppRoot(container: AppContainer, metricRequests: kotlinx.coroutines.flow.MutableStateFlow<MetricRequest?>) {
+private fun AppRoot(
+    container: AppContainer,
+    metricRequests: kotlinx.coroutines.flow.MutableStateFlow<MetricRequest?>,
+    forcedMoment: kotlinx.coroutines.flow.StateFlow<org.openstrap.app.data.Moment?>,
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val dayVm: DayViewModel = viewModel(factory = viewModelFactory { initializer { DayViewModel(container.health, container.strap.todaySteps, container.settings.profile) } })
@@ -370,6 +391,40 @@ private fun AppRoot(container: AppContainer, metricRequests: kotlinx.coroutines.
     val sinceStart = (android.os.SystemClock.uptimeMillis() - android.os.Process.getStartUptimeMillis()) / 1000
     val chip = strapChip(paired != null, connection, sync, lastSeen, now, sinceStart)
 
+    // The moment (spec 4.1), on a clock that ticks each minute only while the app is in view.
+    val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
+    val clock by androidx.compose.runtime.produceState(java.time.Instant.now(), lifecycle) {
+        lifecycle.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
+            while (true) {
+                value = java.time.Instant.now()
+                kotlinx.coroutines.delay(60_000 - System.currentTimeMillis() % 60_000)
+            }
+        }
+    }
+    val zone = java.time.ZoneId.systemDefault()
+    val clockDate = clock.atZone(zone).toLocalDate()
+    // Open across midnight on today, the day moves on with the clock, so night carries on past 00:00.
+    var shownToday by remember { mutableStateOf(clockDate) }
+    LaunchedEffect(clockDate) {
+        if (clockDate != shownToday) {
+            if (day.date == shownToday) dayVm.select(clockDate)
+            shownToday = clockDate
+        }
+    }
+    val workoutStarts = remember(workouts) { workouts.map { it.workout.start } }
+    val lastWorkout = remember(workouts) { workouts.maxByOrNull { it.end } }
+    val usualBedtime = recovery?.takeIf { it.date == clockDate }?.usualBedtime
+    val sleepEnd = day.sleep?.end?.takeIf { day.date == clockDate }
+    val recording = workoutState is org.openstrap.app.device.WorkoutState.Recording
+    val clockMoment = remember(clock.epochSecond / 60, day.date, recording, lastWorkout?.end, sleepEnd, usualBedtime, workoutStarts) {
+        org.openstrap.app.data.MomentResolver.resolve(clock, zone, day.date, recording, lastWorkout?.end, sleepEnd, usualBedtime, workoutStarts)
+    }
+    val forced by forcedMoment.collectAsStateWithLifecycle()
+    val moment = forced ?: clockMoment
+    LaunchedEffect(forced, clockMoment) {
+        forced?.let { android.util.Log.i("OpenStrap", "moment: forced $it, the clock says $clockMoment") }
+    }
+
     LaunchedEffect(message) {
         message?.let { Toast.makeText(context, it, Toast.LENGTH_LONG).show(); deviceVm.clearMessage() }
     }
@@ -498,6 +553,7 @@ private fun AppRoot(container: AppContainer, metricRequests: kotlinx.coroutines.
     CompositionLocalProvider(
         org.openstrap.app.ui.dashboard.LocalGoals provides goals,
         org.openstrap.app.ui.components.LocalGlassHost provides glassHost,
+        org.openstrap.app.ui.glow.LocalGlowMood provides org.openstrap.app.ui.dashboard.momentMood(moment),
     ) {
       androidx.compose.foundation.layout.Column(androidx.compose.ui.Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
       if (hinge != null) {
@@ -548,10 +604,10 @@ private fun AppRoot(container: AppContainer, metricRequests: kotlinx.coroutines.
             if (editGoals) {
                 org.openstrap.app.ui.device.GoalsDialog(goals, onSave = { g -> scope.launch { container.settings.saveGoals(g) }; editGoals = false }, onDismiss = { editGoals = false })
             }
-            // The header on every tab: Today's title for the day (step 3 makes it the moment), the tab's name elsewhere.
+            // The header on every tab: the moment on Today (a past day's name for a past day), the tab's name elsewhere.
             val header: @Composable (Tab) -> Unit = { t ->
                 MomentHeader(
-                    if (t == Tab.Today) dayTitle(day.date) else t.label, day.date, chip, dayVm::previousDay, dayVm::nextDay, picker,
+                    if (t == Tab.Today) todayTitle(moment, day.date, lastWorkout?.workout?.sportType) else t.label, day.date, chip, dayVm::previousDay, dayVm::nextDay, picker,
                     onOpenYou = { openPage(Page.You) }, onOpenStrap = { openPage(Page.Strap) },
                     // All metrics is hidden for now (spec 3.1). Passing { allMetricsOpen = true } brings the button
                     // back; the sheet opens over whatever shows, and no tab hears of it (spec 3.2).
@@ -649,6 +705,7 @@ private fun AppRoot(container: AppContainer, metricRequests: kotlinx.coroutines.
                                 running = workoutState as? org.openstrap.app.device.WorkoutState.Recording,
                                 onOpenRunning = { container.workout.minimized.value = false },
                                 onResumeRunning = container.workout::resume,
+                                heroLightAngle = org.openstrap.app.ui.dashboard.heroLightAngle(moment),
                             )
                             Tab.Recovery -> org.openstrap.app.ui.glow.GlowRecoveryScreen(
                                 day, recovery, strapReadiness, history, header = { header(Tab.Recovery) }, contentPadding = padding,

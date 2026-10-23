@@ -4,8 +4,11 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
+import org.openstrap.app.data.Moment
 import org.openstrap.app.device.ConnectionState
 import org.openstrap.app.device.SyncState
+import org.openstrap.app.ui.glow.GlowMood
+import org.openstrap.app.ui.glow.LightAngle
 
 /*
  * The frame around every tab (spec 3): what the header says about the day and the strap, and how the tabs answer
@@ -17,6 +20,53 @@ fun dayTitle(date: LocalDate, today: LocalDate = LocalDate.now(), locale: Locale
     today -> "Today"
     today.minusDays(1) -> "Yesterday"
     else -> date.dayOfWeek.getDisplayName(TextStyle.FULL, locale)
+}
+
+/**
+ * The header's title on Today (spec 3.1): the [moment] for today, [dayTitle] for a past day, which keeps its name.
+ * After a workout it names the sport when it can ([sportType], "After your ride").
+ */
+fun todayTitle(moment: Moment, date: LocalDate, sportType: Int? = null, today: LocalDate = LocalDate.now(), locale: Locale = Locale.getDefault()): String =
+    if (date < today) dayTitle(date, today, locale) else when (moment) {
+        Moment.During -> "Workout"
+        Moment.After -> "After your ${sportType?.let(::sportNoun) ?: "workout"}"
+        Moment.WorkoutWindow -> "Workout time"
+        Moment.Waking -> "Waking up"
+        Moment.Night -> "Night"
+        Moment.Evening -> "Evening"
+        Moment.Midday -> "Midday"
+    }
+
+/** A sport as a short noun ("run", "ride"), for "After your run"; null where none reads well, so it says "workout". */
+internal fun sportNoun(sportType: Int): String? = when (sportType) {
+    1, 2, 11 -> "run"
+    3, 40, 215 -> "walk"
+    4, 8, 143 -> "ride"
+    6, 7 -> "swim"
+    15, 224 -> "hike"
+    23 -> "row"
+    else -> null
+}
+
+/** The screen's light for a moment (spec 2.6): dimmed in the evening, almost unlit at night. */
+fun momentMood(moment: Moment): GlowMood = when (moment) {
+    Moment.Evening -> GlowMood.Dim
+    Moment.Night -> GlowMood.Night
+    else -> GlowMood.Day
+}
+
+/**
+ * Where the Today hero's light comes from for a moment (spec 2.5): low on the left on waking, up on the right before a
+ * workout, overhead at midday, low on the right in the evening, and below after a workout and at night. During a
+ * workout the hero keeps its own light (null).
+ */
+fun heroLightAngle(moment: Moment): Float? = when (moment) {
+    Moment.Waking -> LightAngle.LowerLeft
+    Moment.WorkoutWindow -> LightAngle.UpperRight
+    Moment.Midday -> LightAngle.Above
+    Moment.Evening -> LightAngle.LowerRight
+    Moment.After, Moment.Night -> LightAngle.Below
+    Moment.During -> null
 }
 
 /** The day under the header's title: "Thu 23 Oct". */

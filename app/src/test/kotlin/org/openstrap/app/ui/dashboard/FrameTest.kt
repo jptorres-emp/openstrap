@@ -168,4 +168,43 @@ class FrameTest {
         // All metrics is a sheet now, not a screen on a stack; a stack saved before keeps the rest.
         assertEquals(listOf(Detail.OfMetric(Metric.Hrv)), Detail.StackSaver.restore("x:|m:Hrv"))
     }
+
+    @Test fun `today's title is the moment, a past day keeps its name`() {
+        val titles = org.openstrap.app.data.Moment.entries.associateWith { todayTitle(it, today, today = today, locale = uk) }
+        assertEquals(
+            mapOf(
+                org.openstrap.app.data.Moment.During to "Workout", org.openstrap.app.data.Moment.After to "After your workout",
+                org.openstrap.app.data.Moment.WorkoutWindow to "Workout time", org.openstrap.app.data.Moment.Waking to "Waking up",
+                org.openstrap.app.data.Moment.Night to "Night", org.openstrap.app.data.Moment.Evening to "Evening",
+                org.openstrap.app.data.Moment.Midday to "Midday",
+            ),
+            titles,
+        )
+        assertEquals("After your run", todayTitle(org.openstrap.app.data.Moment.After, today, 1, today, uk))
+        assertEquals("After your ride", todayTitle(org.openstrap.app.data.Moment.After, today, 4, today, uk))
+        assertEquals("After your workout", todayTitle(org.openstrap.app.data.Moment.After, today, 52, today, uk))
+        assertEquals("Yesterday", todayTitle(org.openstrap.app.data.Moment.Waking, today.minusDays(1), today = today, locale = uk))
+        assertEquals("Wednesday", todayTitle(org.openstrap.app.data.Moment.Waking, today.minusDays(2), today = today, locale = uk))
+    }
+
+    @Test fun `evening dims, night is almost unlit, the rest is day`() {
+        for (m in org.openstrap.app.data.Moment.entries) {
+            val want = when (m) {
+                org.openstrap.app.data.Moment.Evening -> org.openstrap.app.ui.glow.GlowMood.Dim
+                org.openstrap.app.data.Moment.Night -> org.openstrap.app.ui.glow.GlowMood.Night
+                else -> org.openstrap.app.ui.glow.GlowMood.Day
+            }
+            assertEquals(m.name, want, momentMood(m))
+        }
+    }
+
+    @Test fun `the hero's light follows the moment`() {
+        assertEquals(225f, heroLightAngle(org.openstrap.app.data.Moment.Waking))
+        assertEquals(90f, heroLightAngle(org.openstrap.app.data.Moment.Midday))
+        assertEquals(45f, heroLightAngle(org.openstrap.app.data.Moment.WorkoutWindow))
+        assertEquals(270f, heroLightAngle(org.openstrap.app.data.Moment.After))
+        assertEquals(315f, heroLightAngle(org.openstrap.app.data.Moment.Evening))
+        assertEquals(270f, heroLightAngle(org.openstrap.app.data.Moment.Night))
+        assertNull(heroLightAngle(org.openstrap.app.data.Moment.During))
+    }
 }

@@ -69,19 +69,16 @@ fun ScreenList(
     )
 }
 
-/** How long after waking Readiness stays the headline before Charge takes over. */
-private const val READINESS_HOURS_AFTER_WAKING = 3
-
 /**
- * Whether Charge is the Today hero: only for today, once Charge has a value, and once you've been awake
- * [READINESS_HOURS_AFTER_WAKING] hours (or from noon when no sleep was recorded). Past days lead with
- * their Readiness, the day's verdict.
+ * Whether Charge is the Today hero: only for today, once Charge has a value, and once the waking up moment is over
+ * ([org.openstrap.app.data.MomentResolver.wakingOver], or from noon when no sleep was recorded). Past days lead
+ * with their Readiness, the day's verdict.
  */
 internal fun chargeLeads(state: DayUiState, rec: RecoveryResult?): Boolean {
     if (state.date != LocalDate.now() || rec?.charge?.latest == null) return false
     val now = java.time.Instant.now().epochSecond
     val wake = state.sleep?.end
-    return if (wake != null) now - wake >= READINESS_HOURS_AFTER_WAKING * 3600L
+    return if (wake != null) org.openstrap.app.data.MomentResolver.wakingOver(now, wake)
     else java.time.LocalTime.now().hour >= 12
 }
 

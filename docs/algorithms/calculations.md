@@ -287,24 +287,27 @@ A body-battery: sleep fills it, and the day drains it.
 
 ### How it runs
 
-* The simulation starts **48 hours before** the selected day at 50. Two nights of sleep wash the starting guess out.
+* The simulation starts **8 days before** the selected day at 50. The first night washes the starting guess out, and the week gives the wake values for a restart after a night with the strap off. For a past day it runs up to 14 hours past the day's end, only to see when the strap went back on.
 * Every minute gets one state, checked **in this order**:
 
 | State | When | Change per minute |
 |---|---|---|
 | **Sleep** | inside a sleep stage | + 0.006 × stage weight × relaxation × HRV factor × (100 − charge) |
-| **No data** | no heart rate (strap off) | 0, the value holds |
-| **Exercise** | HRR ≥ 30 % and moving, or in a workout's stress exclusion | − 0.04 − 0.32 × TRIMP of that minute |
+| **Not worn** | no heart rate and marked off-wrist, or a gap of 10+ minutes | − 0.0482 (charge ≥ 50) or − 0.0349 (below), then no value (see below) |
+| **No data** | a heart-rate gap under 10 minutes, or one not synced yet | 0, the value holds |
+| **Exercise** | HRR ≥ 30 % and moving, or 10+ minutes in a row at HRR ≥ 30 %, or in a workout's stress exclusion | − 0.04 − 0.32 × TRIMP of that minute |
 | **Exercise recovery** | after exercise, while HR isn't rising | − 0.04 |
 | **Activity** | HRR ≥ 20 % and moving (or in a workout's stress exclusion), or ≥ 60 steps that minute | − 0.04 − 0.32 × TRIMP of that minute |
 | **Around a workout** | in the stress exclusion (below) | Activity inside the workout, Exercise recovery in the 20 minutes after; Rest in either when HRR < 10 % |
 | **Stress** | stress ≥ your threshold for 3+ minutes in a row, awake | − 0.04 − 0.007 × (stress − threshold) |
-| **Relax** | stress < 25, < 10 steps and HRR < 20 % | + 0.25 × 0.006 × 0.8 × (100 − charge), no drain |
+| **Relax** | stress < 25, < 10 steps and HRR < 20 % | + 0.00015 × (100 − charge), no drain (85 → 86 over 8 hours) |
 | **Rest** | anything else awake | − 0.0005 × charge (0.04 at 80, 0.025 at 50) |
 
 Charge is always kept within 0–100.
 
-* **Moving** means the strap counted 1–250 steps that minute, as for daily load. Sitting with a raised heart rate (heat, coffee, a fever) isn't Activity or Exercise outside a workout: it's Stress if the stress score says so, otherwise Rest, and it can't Relax.
+* **Moving** means the strap counted 1–250 steps that minute, as for daily load. Sitting with a raised heart rate (heat, coffee, a fever) isn't Activity or Exercise outside a workout, short of a sustained run (below): it's Stress if the stress score says so, otherwise Rest, and it can't Relax.
+* **Sustained effort:** 10 or more minutes in a row at HRR ≥ 30 % outside a workout count as Exercise even without steps (unrecorded cycling or rowing). Shorter spikes stay Stress or Rest.
+* **Not worn** follows Zepp: Charge drifts down at Zepp's default no-wear rate (about 2.9 an hour above 50). After 384 not-worn minutes (6.4 hours) since waking, or straight away when the strap is off over your usual sleep time, there is no value (a gap in the chart). After a night off, Charge restarts when the strap is back on from the median of your last 7 wake values (80 without any), and the day says "Strap off overnight, Charge estimated." After a long stretch off in the day, the gap lasts until the next sleep, which starts from 50.
 * **Rest drain** is proportional to charge, so a desk day still runs Charge down but more slowly as it falls, as Zepp's mental pool does; Zepp's physical pool doesn't drain at rest at all.
 * **Body-signal Alert:** from the start of a night in Alert until the next sleep starts, every gain is × 0.5 and every drain × 1.5 (Zepp's health-alarm limits). Watch changes nothing.
 

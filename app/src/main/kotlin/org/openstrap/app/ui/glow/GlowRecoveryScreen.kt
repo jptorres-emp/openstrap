@@ -194,7 +194,7 @@ private fun ChargeCard(c: Recovery.ChargeDay, day: LongRange) {
     val style = GlowStyle.Ember.copy(color = MetricColors.chargeAt(now), motion = GlowMotion.Breath(4f))
     GlowCard(style, Modifier.fillMaxWidth()) {
         Column {
-            GlowHeader("Charge", trailing = c.atWake?.let { "${it.toInt()} at waking" })
+            GlowHeader("Charge", trailing = c.atWake?.let { if (c.strapOffOvernight) "~${it.toInt()} at start" else "${it.toInt()} at waking" })
             val hint = when {
                 !c.anchored -> "Charge starts after your first night wearing the strap. Sleep is what fills it, so it needs one to measure from."
                 now == null -> "Charge appears once the strap has a few hours of heart rate."
@@ -207,6 +207,7 @@ private fun ChargeCard(c: Recovery.ChargeDay, day: LongRange) {
             }
             val drained = (c.drainedExercise + c.drainedStress + c.drainedLiving).toInt()
             GlowHeroNumber("${now.toInt()}", "/ 100", listOf(Narrative.chargeHeadline(now.toInt()), "${signed(c.recharged, +1)} · ${signed(drained.toFloat(), -1)}"))
+            if (c.strapOffOvernight) Note(org.openstrap.app.ui.dashboard.STRAP_OFF_OVERNIGHT)
             GlowChartGap()
             val values = remember(c.points, day) { bucket(c.points, day, 15 * 60L) }
             GlowLineChart(values, height = GlowLayout.ChartHeight, labels = HOURS, showAverage = false, yRange = 0f..100f) { i, v ->

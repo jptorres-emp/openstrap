@@ -202,7 +202,10 @@ object Narrative {
     fun chargeBody(c: org.openstrap.app.data.Recovery.ChargeDay): String {
         val now = c.latest?.toInt() ?: return ""
         val used = (c.drainedExercise + c.drainedStress + c.drainedLiving).toInt()
-        val start = c.atWake?.let { "You woke at ${it.toInt()} and have used $used since" } ?: "You've used $used today"
+        val start = c.atWake?.let {
+            if (c.strapOffOvernight) "With the strap off overnight, today started from an estimated ${it.toInt()}; you've used $used since"
+            else "You woke at ${it.toInt()} and have used $used since"
+        } ?: "You've used $used today"
         val biggest = listOf("movement" to c.drainedExercise, "stress" to c.drainedStress).maxBy { it.second }
         val cause = if (biggest.second >= 8) ", most of it on ${biggest.first}." else "."
         val advice = when {

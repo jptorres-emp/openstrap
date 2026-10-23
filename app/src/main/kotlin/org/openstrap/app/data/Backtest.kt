@@ -54,7 +54,8 @@ class Backtest(private val dao: HealthDao, private val zone: ZoneId = ZoneId.sys
          * and `readiness_soft_min` the soft-minimum fusion beside it ([Recovery.softMinimum]), both next to the strap's
          * `strap_score` for the same day. The `charge_*` columns are that day's Charge: at wake, lowest, at the end of the
          * day (or the last worn minute), and how much was recharged and drained by each cause; `body_signals` is the
-         * night's body-signal state, which scales Charge in Alert.
+         * night's body-signal state, which scales Charge in Alert; `charge_off_overnight` marks a day restarted after a night
+         * with the strap off ([Recovery.ChargeDay.strapOffOvernight]).
          */
         fun csv(rows: List<Row>): String = buildString {
             val factors = Recovery.Factor.entries
@@ -65,7 +66,7 @@ class Backtest(private val dao: HealthDao, private val zone: ZoneId = ZoneId.sys
                     "strap_hrv_score", "strap_resting_hr_score", "strap_skin_temperature_score", "strap_breathing_score",
                     "strap_sleep_hrv", "strap_sleep_resting_hr", "check_in", "tags", "load", "load_workout", "load_everyday", "chronic_load", "charge_at_wake",
                     "charge_lowest", "charge_end", "charge_recharged", "charge_drained_exercise", "charge_drained_stress",
-                    "charge_drained_living", "body_signals",
+                    "charge_drained_living", "body_signals", "charge_off_overnight",
                 )
             appendLine(header.joinToString(","))
             for (row in rows) {
@@ -82,7 +83,7 @@ class Backtest(private val dao: HealthDao, private val zone: ZoneId = ZoneId.sys
                         row.strapSleepHrv, row.strapSleepRestingHr, row.checkIn, row.tags.joinToString(";"),
                         row.result.load.f1(), row.result.workoutLoad.f1(), row.result.everydayLoad.f1(), row.result.chronicLoad.f1(), row.result.charge.atWake.f1(),
                         c.lowest.f1(), c.latest.f1(), c.recharged.f1(), c.drainedExercise.f1(), c.drainedStress.f1(), c.drainedLiving.f1(),
-                        r.bodySignals?.state,
+                        r.bodySignals?.state, c.strapOffOvernight,
                     )
                 appendLine(cells.joinToString(",") { it?.toString() ?: "" })
             }

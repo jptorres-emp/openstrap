@@ -60,6 +60,9 @@ private fun chargeSegments(points: List<Recovery.ChargePoint>): List<ChartSegmen
     return out
 }
 
+/** The note on a day whose Charge restarted after a night with the strap off ([Recovery.ChargeDay.strapOffOvernight]). */
+internal const val STRAP_OFF_OVERNIGHT = "Strap off overnight, Charge estimated."
+
 /** Today's battery: the value now, the day's curve and what filled and drained it. */
 @Composable
 fun ChargeCard(
@@ -72,7 +75,10 @@ fun ChargeCard(
 ) {
     val c = r.charge
     Panel(onClick = onClick) {
-        PanelHeader("Charge", PhosphorIcons.Lightning, MetricColors.chargeAt(c.latest), trailing = c.atWake?.let { "Woke at ${it.toInt()}" }, chevron = onClick != null)
+        PanelHeader(
+            "Charge", PhosphorIcons.Lightning, MetricColors.chargeAt(c.latest),
+            trailing = c.atWake?.let { if (c.strapOffOvernight) "Started at ~${it.toInt()}" else "Woke at ${it.toInt()}" }, chevron = onClick != null,
+        )
         val now = c.latest
         if (!c.anchored) {
             EmptyHint("Charge starts after your first night wearing the strap. Sleep is what fills it, so it needs one to measure from.")
@@ -88,6 +94,10 @@ fun ChargeCard(
             Spacer(Modifier.width(18.dp))
             BigValue("−${(c.drainedExercise + c.drainedStress + c.drainedLiving).toInt()}", "", caption = "Drained")
         }
+        if (c.strapOffOvernight) Text(
+            STRAP_OFF_OVERNIGHT,
+            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
         LineChart(
             c.points.map { ChartPoint(it.t, it.value) }, MetricColors.chargeAt(now), dayRange, height = 130.dp,
             showAverage = false, band = sleepBand, yRange = 0f..100f, segments = chargeSegments(c.points), unit = "/ 100",

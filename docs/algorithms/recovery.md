@@ -163,7 +163,7 @@ The strap's method is unknown and may change with firmware, and a baseline that 
 
 ## Charge (0–100, minute by minute)
 
-A body battery, simulated per minute. The simulation starts 48 h before the day shown, so the arbitrary starting value (50) washes out through two nights of sleep. Until the simulation has seen at least one sleep (`anchored`), no value is shown: charge is measured from how full a night left you, so without one the number would only echo the starting guess.
+A body battery, simulated per minute. The simulation starts 8 days before the day shown (`WAKE_HISTORY` + 1), so the arbitrary starting value (50) washes out through the first night and the week's wake values are there for the not-worn restart below. For a past day it runs up to 14 h past the day's end (`LOOKAHEAD_SECONDS`, data permitting) only to see when the strap went back on. Until the simulation has seen at least one sleep (`anchored`), no value is shown: charge is measured from how full a night left you, so without one the number would only echo the starting guess.
 
 ### Minute states
 
@@ -172,23 +172,33 @@ Each minute gets a state, following Firstbeat's stress/recovery method (*Stress 
 | State | When | Effect per minute |
 |---|---|---|
 | Sleep | inside a sleep stage | `SLEEP_K`·w(stage)·relax·hrvFactor·(100 − C). Stage weights: deep 1.0, light 0.8, REM 0.65, awake-in-bed 0.1. relax = 1.2 − 0.04·(HR − night resting), limited to 0.5–1.2. hrvFactor comes from tonight's HRV contributor (0.6–1.1). |
-| Exercise | HRR ≥ 0.30 and moving (or in the stress exclusion) | −`BASE_DRAIN` − 0.32·TRIMP(HRR). Also builds an EPOC-like debt. |
+| Not worn | no heart rate, not asleep, and marked off-wrist or a gap ≥ `NO_WEAR_GAP_MINUTES` = 10 | Zepp's drift, or no value (below) |
+| Exercise | HRR ≥ 0.30 and moving, in a sustained run (below) or in the stress exclusion | −`BASE_DRAIN` − 0.32·TRIMP(HRR). Also builds an EPOC-like debt. |
 | Exercise recovery | debt > 5 and HR not rising | −`BASE_DRAIN` only, even if the strap reports high stress |
 | Activity | HRR ≥ 0.20 and moving (or in the stress exclusion), or ≥ 60 steps/min | −`BASE_DRAIN` − 0.32·TRIMP(HRR) |
 | Around a workout | in the stress exclusion (below) and none of the above | Activity inside the workout's active time, Exercise recovery in the 20 min after; Rest in either when HRR < `WORKOUT_REST_HRR` = 0.10 |
 | Stress | strap stress ≥ your threshold *T* (below) for ≥ `STRESS_GATE_MINUTES` = 3 consecutive minutes | −`BASE_DRAIN` − 0.007·(stress − *T*) |
-| Relax | stress < 25, still, HRR < 0.20 | + ¼ of light-sleep recharge, no drain |
+| Relax | stress < 25, still, HRR < 0.20 | + `RELAX_K`·(100 − C), `RELAX_K` = 0.00015, no drain |
 | Rest | otherwise | −`REST_DRAIN`·C (0.0005·C: 0.04 at 80, 0.025 at 50) |
-| No data | strap off the wrist | no change: we can't tell rest from effort, so the value holds |
+| No data | a heart-rate dropout under 10 min, or a gap still open at the end of the data (not synced yet) | no change, the value holds |
 
 `BASE_DRAIN` = 0.04 (about 2.4/h) is the floor under every minute that is doing something: movement, stress, exercise recovery, the stress exclusion. "Moving" is `moving`, the same signal daily load uses: the strap counted 1–250 steps that minute.
 
 **No drain at rest.** Zepp's physical pool drains only with movement and HRR over 10 %; at rest it recharges slowly. A seated day falls through its mental pool, which drains while stress is 24 or more, and ever more slowly once the pool is under half (native 03 §4.3–4.4). OpenStrap has one pool, so:
 
 * A calm, still minute (Relax) has no drain, only its slow recharge, as Zepp's stress under 24 drains neither pool.
+* Relax recharges at `RELAX_K` = 0.00015 of the headroom a minute: 85 → 86 over 8 calm hours, 60 → 62.8. Zepp's toy replay of 8 hours at a desk at stress 20 goes from 85 to 86 (native 03 §11): its physical pool barely moves between 80 and 100 at rest and its mental pool gains a little. The earlier ¼ of light sleep (0.0012) gave 85 → 91.6, so a calm day climbed; now it holds and sleep, about 30 times faster, is what fills Charge.
 * Any other still, awake minute outside workouts (Rest) drains in proportion to charge, `REST_DRAIN` = 0.0005 per point a minute. That equals the old flat 0.04 at 80 and halves by 40, so a desk day still runs Charge down, ever more slowly. Zepp's 8 hours at a desk at stress 35 take its total from 85 to 64 (native 03 §11); this takes 85 to 67, against 66 for the old flat drain, but from 50 it drains 11 rather than 19.
 
-**Raised heart rate while still.** Outside the stress exclusion, heart rate makes a minute Activity or Exercise only while moving. Sitting with a raised heart rate (heat, coffee, a fever, sitting stress) is Stress if the stress score says so, else Rest; it can't Relax, so the raised heart rate takes away any recharge. This is Zepp's movement gate (native 03 §4.3: "raised HR without movement only slows recharge") and matches daily load, which stopped counting sitting heart rate. Inside a workout and its 20 minutes after, heart rate counts as before, steps or not (cycling, weights). Outside one, non-stepping exercise drains nothing as effort; record a workout for it.
+**Raised heart rate while still.** Outside the stress exclusion, heart rate makes a minute Activity or Exercise only while moving. Sitting with a raised heart rate (heat, coffee, a fever, sitting stress) is Stress if the stress score says so, else Rest; it can't Relax, so the raised heart rate takes away any recharge. This is Zepp's movement gate (native 03 §4.3: "raised HR without movement only slows recharge") and matches daily load, which stopped counting sitting heart rate. Inside a workout and its 20 minutes after, heart rate counts as before, steps or not (cycling, weights). Outside one, a **sustained run** counts: `SUSTAINED_EFFORT_MINUTES` = 10 or more consecutive awake minutes at HRR ≥ 0.30 are effort for the whole run, steps or not (`sustainedEffort`), so unrecorded cycling or rowing drains as Exercise. 30 % of reserve is about 40 bpm over resting; caffeine adds a few bpm and a tense moment holds a raised heart rate for a minute or two, so neither lasts 10 minutes seated. Shorter runs stay Stress or Rest. Daily load doesn't count these runs yet (it still needs steps).
+
+**Not worn.** A minute with no heart rate outside sleep is not worn when the strap's activity record marks it off-wrist (`offWrist`: mode low nibble 3 or 6, or 0x7E, as Zepp reads it, native 03 §2.2) or it sits in a gap of at least 10 minutes that data later closes (Zepp holds the last heart rate for 541 s). A shorter gap, or one still open at the end of the data, holds the value as before. Following Zepp (native 03 §1, §3 step 12, §4.7):
+
+* **Short stretches drift.** Charge falls at the mean of Zepp's default no-wear slopes for its two pools: `NO_WEAR_DRIFT_HIGH` = −0.0482 a minute at or above 50 (about −2.9 an hour), `NO_WEAR_DRIFT_LOW` = −0.0349 below. Counted as living.
+* **Long stretches are a gap.** Once `NO_WEAR_LIMIT_MINUTES` = 384 not-worn minutes (6.4 h) have built up since the last wake, Charge is invalid: no points, so the chart shows a gap. A not-worn stretch that covers at least half (`USUAL_SLEEP_COVER`) of the usual sleep time is invalid from its start. The usual sleep time is the median clock start and end of the last 14 main sleeps (midnight to 06:00 without any).
+* **Restart.** After a night off the wrist, Charge restarts when the strap is back on from the median of the last `WAKE_HISTORY` = 7 wake values (Charge at the end of each recorded main sleep, not counting the simulation's first), else `DEFAULT_WAKE` = 80: Zepp's start-value rule. Wake values, not day averages, which would carry the evening lows. That day is flagged `strapOffOvernight`; its "at wake" is the restart value, and the Charge card and Recovery screen say "Strap off overnight, Charge estimated." Before the first recorded sleep there is nothing to restart from, so Charge waits for one as before. After a long daytime stretch Charge stays a gap until the next recorded sleep, which starts from 50.
+
+Future: learn the user's own no-wear drift from their quiet, awake, worn minutes over about 30 days, as Zepp does (native 03 §4.7), and keep the defaults until then.
 
 **Body-signal Alert.** On a night in Alert ([Body signals off baseline](#body-signals-off-baseline)), from that sleep's start until the next main sleep starts, recharge (Sleep, Relax) is × `ALERT_RECHARGE` = 0.5 and every drain × `ALERT_DRAIN` = 1.5. These are the ends of Zepp's health-alarm multipliers (native 03 §4.2, §8.2), which apply from the sleep-start minute too. Zepp ramps them with how far over its one-night threshold (z ≥ 1.66) the night is; OpenStrap's Alert already needs persistence or two signal families, so it takes the full effect. Watch doesn't touch Charge: it is one signal for one night, shown in the app only and leaving Readiness uncapped, and Zepp's multipliers just under its threshold are within 5 % of 1. The engine runs the body-signal rule over every night it loaded (it only looks backwards, so each night gets the state Readiness gave it) and passes each main sleep's start and state in `ChargeParams.bodySignals`.
 
@@ -218,7 +228,10 @@ Zepp does the same job differently. It computes a stress threshold on the phone 
 * A restless night (high HR, low HRV) recharges clearly less.
 * A quiet waking day drains 0.0005·C a minute: 80 → about 59 over 10 hours.
 * A calm desk hour drains less than the old flat 2.4; with stress under 25 it recharges.
-* Sitting at 30 % of reserve with no steps drains exactly as rest, never as exercise, and can't Relax; the same heart rate walking drains as exercise.
+* Sitting at 25 % of reserve with no steps drains exactly as rest, never as activity, and can't Relax; a raised heart rate walking drains as exercise.
+* 30 minutes at HRR 0.5 with no steps is Exercise throughout; 5 (or 9) such minutes aren't.
+* 8 calm, still hours from 85 end between 85 and 87.
+* A night with the strap off (11 h, over the usual sleep) is a gap, not a sleepless night: the next day restarts from the median wake value, is flagged, and stays above 45, where treating the night as awake leaves it 15+ lower. Two hours off the wrist drift by 120 × −0.0482; a 5-minute dropout holds; 7 hours off in the day are a gap after 384 minutes until the next sleep.
 * A recorded workout without steps drains exactly as before: `BASE_DRAIN` + 0.32·TRIMP a minute, then `BASE_DRAIN` in the 20 minutes after.
 * An Alert night recharges clearly less (30 → about 79 rather than 94 over 7.5 h of light sleep), the day after drains 1.3–1.5× as much, an Alert ends at the next sleep, and Watch changes nothing.
 * An hour at 60% of reserve drains 20–32.
@@ -230,7 +243,7 @@ Zepp does the same job differently. It computes a stress threshold on the phone 
 
 ### What the screen shows
 
-* The charge at waking and now.
+* The charge at waking and now. After a night with the strap off, a small note: "Strap off overnight, Charge estimated.", and the start value is labelled as such.
 * What was recharged, and what was drained by movement, by physiological stress, and by simply being awake. This is our version of Zepp's physical/mental split. The stress drain is labelled "physiological stress (estimate)", not mental: consumer stress scores separate rest from lab stress tasks but barely track self-reported daily stress (Rosenbach et al. 2025), and Firstbeat's support is manufacturer-curated.
 * Not logged: Zepp's BioCharge `totalCharge`. A strap used only with OpenStrap returns nothing from the Readiness module's record command, and no channel for BioCharge results is known, so there is nothing to fit `SLEEP_K`, `BASE_DRAIN`, `REST_DRAIN` or the drains to yet. A full EPOC model and separate physical and mental pools are deferred until there is a calibration target.
 

@@ -321,22 +321,24 @@ class RecoveryTest {
 
     /** 30 % of reserve for [params] (58-188): Exercise intensity by heart rate alone. */
     private val raisedHr = 98
+    /** 25 % of reserve: Activity intensity, below the sustained-effort line ([Recovery.SUSTAINED_EFFORT_MINUTES]). */
+    private val sittingHr = 90
 
     @Test
     fun sittingWithARaisedHeartRateDoesNotDrainAsActivity() {
-        // Heat or coffee: HR at 30 % of reserve, no steps, stress in the normal band. Rest, not Exercise or Activity.
-        val sitting = Recovery.charge(run(60) { Minute(it * 60L, raisedHr, 0, 45, null) }, params, 0L..3_600L, start = 70f, requireAnchor = false)
+        // Heat or coffee: HR at 25 % of reserve, no steps, stress in the normal band. Rest, not Exercise or Activity.
+        val sitting = Recovery.charge(run(60) { Minute(it * 60L, sittingHr, 0, 45, null) }, params, 0L..3_600L, start = 70f, requireAnchor = false)
         assertTrue(sitting.points.all { it.state == State.Rest })
         assertEquals(0f, sitting.drainedExercise, 1e-4f)
         val rest = Recovery.charge(run(60) { Minute(it * 60L, 64, 0, 45, null) }, params, 0L..3_600L, start = 70f, requireAnchor = false)
         assertEquals(rest.latest!!, sitting.latest!!, 0.01f)
         // With a low stress score it still can't Relax: the raised heart rate takes the recharge away.
-        val calmScore = Recovery.charge(run(60) { Minute(it * 60L, raisedHr, 0, 15, null) }, params, 0L..3_600L, start = 70f, requireAnchor = false)
+        val calmScore = Recovery.charge(run(60) { Minute(it * 60L, sittingHr, 0, 15, null) }, params, 0L..3_600L, start = 70f, requireAnchor = false)
         val relaxed = Recovery.charge(run(60) { Minute(it * 60L, 64, 0, 15, null) }, params, 0L..3_600L, start = 70f, requireAnchor = false)
         assertTrue(calmScore.points.none { it.state == State.Relax })
         assertTrue(calmScore.latest!! < relaxed.latest!!)
         // Sitting stress still drains as stress.
-        val tense = Recovery.charge(run(60) { Minute(it * 60L, raisedHr, 0, 80, null) }, params, 0L..3_600L, start = 70f, requireAnchor = false)
+        val tense = Recovery.charge(run(60) { Minute(it * 60L, sittingHr, 0, 80, null) }, params, 0L..3_600L, start = 70f, requireAnchor = false)
         assertTrue(tense.drainedStress > 0f)
         assertEquals(0f, tense.drainedExercise, 1e-4f)
     }
@@ -345,7 +347,7 @@ class RecoveryTest {
     fun aWalkStillDrains() {
         // The same heart rate while walking (100 steps a minute) is effort.
         val walk = Recovery.charge(run(60) { Minute(it * 60L, raisedHr, 100, 45, null) }, params, 0L..3_600L, start = 70f, requireAnchor = false)
-        val sitting = Recovery.charge(run(60) { Minute(it * 60L, raisedHr, 0, 45, null) }, params, 0L..3_600L, start = 70f, requireAnchor = false)
+        val sitting = Recovery.charge(run(60) { Minute(it * 60L, sittingHr, 0, 45, null) }, params, 0L..3_600L, start = 70f, requireAnchor = false)
         assertTrue(walk.points.all { it.state == State.Exercise || it.state == State.Activity })
         assertTrue(walk.drainedExercise > 3f)
         assertTrue(walk.latest!! < sitting.latest!! - 3f)
@@ -367,6 +369,104 @@ class RecoveryTest {
         val expected = 80f - 30 * (Recovery.BASE_DRAIN + Recovery.EXERCISE_DRAIN_PER_TRIMP * Recovery.trimpMinute(x)) - 20 * Recovery.BASE_DRAIN
         assertEquals(expected, r.latest!!, 0.01f)
         assertTrue(r.points.filter { it.t < 30 * 60L }.all { it.state == State.Exercise })
+    }
+
+    /** Half of reserve for [params]: hard enough that a sustained run without steps is unrecorded exercise. */
+    private val hardHr = 123
+
+    @Test
+    fun halfAnHourHardWithoutStepsIsExercise() {
+        // Cycling or rowing that wasn't recorded: 30 minutes at HRR 0.5, no steps, stress high from the effort.
+        val r = Recovery.charge(run(30) { Minute(it * 60L, hardHr, 0, 70, null) }, params, 0L..1_800L, start = 80f, sampleSeconds = 60, requireAnchor = false)
+        assertTrue(r.points.all { it.state == State.Exercise })
+        assertTrue("exercise ${r.drainedExercise}", r.drainedExercise > 5f)
+        assertEquals(0f, r.drainedStress, 1e-4f)
+    }
+
+    @Test
+    fun fiveHardMinutesWithoutStepsAreNotExercise() {
+        // A short spike sitting down (a tense call, a coffee): Rest or Stress, never Exercise or Activity.
+        val spike = run(5) { Minute(it * 60L, hardHr, 0, 70, null) } + run(30) { Minute((5 + it) * 60L, 64, 0, 40, null) }
+        val r = Recovery.charge(spike, params, 0L..2_100L, start = 80f, sampleSeconds = 60, requireAnchor = false)
+        assertTrue(r.points.none { it.state == State.Exercise || it.state == State.Activity })
+        assertEquals(0f, r.drainedExercise, 1e-4f)
+        // Nine minutes is still short of the run.
+        assertTrue(Recovery.sustainedEffort(run(9) { Minute(it * 60L, hardHr, 0, 70, null) }, params).none { it })
+        assertTrue(Recovery.sustainedEffort(run(10) { Minute(it * 60L, hardHr, 0, 70, null) }, params).all { it })
+    }
+
+    @Test
+    fun aCalmAwakeDayHolds() {
+        // Eight calm, still hours (stress 20, resting HR) from 85: Zepp's toy replay ends at 86 (native 03 §11).
+        val r = Recovery.charge(run(480) { Minute(it * 60L, 60, 0, 20, null) }, params, 0L..28_800L, start = 85f, requireAnchor = false)
+        assertTrue("calm ${r.latest}", r.latest!! in 85f..87f)
+        assertTrue(r.points.all { it.state == State.Relax })
+    }
+
+    /**
+     * Two nights of 7.5 h light sleep, then a day worn until 20:00 equivalent, the strap off for 11 hours over the
+     * third night (marked off-wrist), and a worn morning. Minute 2880 is the third day's midnight.
+     */
+    private fun strapOffNight(): Pair<List<Minute>, Recovery.ChargeParams> {
+        val sleep = { from: Int -> run(450) { Minute((from + it) * 60L, 54, 0, null, SleepStage.LIGHT) } }
+        val awake = { from: Int, n: Int -> run(n) { Minute((from + it) * 60L, 66, if (it % 30 == 0) 80 else 0, 45, null) } }
+        val off = run(660) { Minute((2640 + it) * 60L, null, 0, null, null, offWrist = true) }
+        val minutes = sleep(0) + awake(450, 990) + sleep(1440) + awake(1890, 750) + off + awake(3300, 900)
+        val p = params.copy(
+            mainSleepEnds = listOf(450 * 60L, 1890 * 60L),
+            usualSleep = listOf(0L..450 * 60L, 1440 * 60L..1890 * 60L, 2880 * 60L..3330 * 60L),
+        )
+        return minutes to p
+    }
+
+    @Test
+    fun aNightWithTheStrapOffIsNotASleeplessNight() {
+        val (minutes, p) = strapOffNight()
+        val window = 2880 * 60L until 4320 * 60L
+        val r = Recovery.charge(minutes, p, window, start = 50f)
+        assertTrue(r.strapOffOvernight)
+        // Restarted from the median wake value: the second night's (the first carries the starting guess).
+        val wake = Recovery.charge(minutes, p, 1890 * 60L..1890 * 60L, start = 50f).points.single().value
+        assertEquals(wake, r.atWake!!, 0.5f)
+        // No number while the strap was off, and a sensible day after it.
+        assertTrue(r.points.none { it.t < 3300 * 60L })
+        assertTrue("lowest ${r.lowest}", r.lowest!! > 45f)
+        // Treated as awake (the old rule) the same night would leave the day far lower.
+        val asAwake = minutes.map { if (it.offWrist) it.copy(hr = 66, offWrist = false) else it }
+        assertTrue(Recovery.charge(asAwake, p, window, start = 50f).lowest!! < r.lowest!! - 15f)
+        // The day before isn't flagged: its evening just stops when the strap comes off.
+        val before = Recovery.charge(minutes, p, 1440 * 60L until 2880 * 60L, start = 50f)
+        assertTrue(!before.strapOffOvernight)
+        assertTrue(before.points.none { it.t >= 2640 * 60L })
+    }
+
+    @Test
+    fun shortTimeOffTheWristDriftsDown() {
+        // Two hours off the wrist mid-morning, from about 80: Zepp's drift, about 2.9 an hour, not a hold.
+        val minutes = run(60) { Minute(it * 60L, 64, 0, 20, null) } +
+            run(120) { Minute((60 + it) * 60L, null, 0, null, null, offWrist = true) } +
+            run(60) { Minute((180 + it) * 60L, 64, 0, 20, null) }
+        val r = Recovery.charge(minutes, params, 0L until 240 * 60L, start = 80f, sampleSeconds = 60, requireAnchor = false)
+        val atOn = r.points.first { it.t == 180 * 60L }.value
+        val atOff = r.points.first { it.t == 59 * 60L }.value
+        assertEquals(120 * Recovery.NO_WEAR_DRIFT_HIGH, atOn - atOff, 0.3f)
+        assertTrue(!r.strapOffOvernight)
+        // A heart-rate dropout under ten minutes holds instead.
+        val dropout = run(30) { Minute(it * 60L, if (it in 10 until 15) null else 64, 0, 40, null) }
+        assertEquals(0, Recovery.notWorn(dropout).count { it })
+    }
+
+    @Test
+    fun aLongDaytimeStretchOffIsAGapUntilTheNextSleep() {
+        // Seven hours off in the day (no usual sleep there): drift for 384 minutes, then nothing until the next sleep.
+        val minutes = run(60) { Minute(it * 60L, 64, 0, 40, null) } +
+            run(420) { Minute((60 + it) * 60L, null, 0, null, null, offWrist = true) } +
+            run(120) { Minute((480 + it) * 60L, 64, 0, 40, null) } +
+            run(60) { Minute((600 + it) * 60L, 54, 0, null, SleepStage.LIGHT) }
+        val r = Recovery.charge(minutes, params.copy(usualSleep = listOf(1000 * 60L..1500 * 60L)), 0L until 660 * 60L, start = 80f, sampleSeconds = 60, requireAnchor = false)
+        assertTrue(r.points.none { it.t in (60 + Recovery.NO_WEAR_LIMIT_MINUTES) * 60L until 600 * 60L })
+        assertTrue(r.points.any { it.t == 600 * 60L && it.state == State.Sleep })
+        assertTrue(!r.strapOffOvernight)
     }
 
     private fun withSignal(signal: BodySignals.State) = params.copy(bodySignals = listOf(-60L to signal))

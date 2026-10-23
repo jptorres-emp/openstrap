@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -41,7 +42,8 @@ private val ValueGap = 0.9.dp
 
 /**
  * A grouped list: a dark panel with a title row ([title] left, an optional [note] right) over its rows, usually
- * [ListRow]s. Without a title the rows start at the top.
+ * [ListRow]s. Without a title the rows start at the top. When the screen asks for an edge ([LocalEdgeOverride]), as
+ * Today does for a list right under another, the rows sit on an edge card in the neutral light instead.
  */
 @Composable
 fun ListPanel(
@@ -50,13 +52,7 @@ fun ListPanel(
     note: String? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Column(
-        modifier
-            .fillMaxWidth()
-            .background(ListSurface, ListShape)
-            .border(1.dp, Color.White.copy(alpha = 0.06f), ListShape)
-            .padding(start = 18.dp, end = 18.dp, top = 6.dp, bottom = 8.dp),
-    ) {
+    val inner: @Composable ColumnScope.() -> Unit = {
         if (title != null || note != null) Row(
             Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -66,7 +62,21 @@ fun ListPanel(
         }
         content()
     }
+    if (LocalEdgeOverride.current.edge != null) {
+        EdgeCard(EdgeNeutral, modifier.fillMaxWidth(), contentPadding = ListPadding, content = inner)
+        return
+    }
+    Column(
+        modifier
+            .fillMaxWidth()
+            .background(ListSurface, ListShape)
+            .border(1.dp, Color.White.copy(alpha = 0.06f), ListShape)
+            .padding(ListPadding),
+        content = inner,
+    )
 }
+
+private val ListPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 6.dp, bottom = 8.dp)
 
 /**
  * A row in a [ListPanel]: an 8 dp dot in the metric's [color], the [name] with its [status] under it, and the

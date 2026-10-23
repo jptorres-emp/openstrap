@@ -332,7 +332,8 @@ internal fun WorkoutCard(w: org.openstrap.app.data.WorkoutAnalysis, onClick: () 
 
 /**
  * Your week (spec 4.2): last Monday to Sunday against the week before, every day of this week. Steps a day, time
- * asleep a night and the workouts done.
+ * asleep a night and the workouts done. A summary of three metrics borrows none of their colours: a neutral edge
+ * from the bottom, soft, like any value at its usual.
  */
 @Composable
 internal fun WeekCard(
@@ -353,7 +354,7 @@ internal fun WeekCard(
     val done = workouts.count { Instant.ofEpochSecond(it.workout.start).atZone(zone).toLocalDate() in start..end }
     val range = DateTimeFormatter.ofPattern("d MMM")
     // TODO(step 6): tapping opens the week story; there is none yet, so the card doesn't open anything.
-    EdgeCard(MetricColors.readiness, modifier.fillMaxWidth().gridSize(CardSize.Wide), kind = EdgeKind.Earlier) {
+    EdgeCard(EdgeNeutral, modifier.fillMaxWidth().gridSize(CardSize.Wide), kind = EdgeKind.Value) {
         EdgeTitle("Your week", "${start.format(range)}–${end.format(range)}")
         Row(Modifier.fillMaxWidth().padding(top = 14.dp), horizontalArrangement = Arrangement.SpaceBetween) {
             HeroFigure(stepsNow?.let { "%,d".format(it.roundToInt()) }, "Steps a day")

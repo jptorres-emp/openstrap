@@ -295,10 +295,24 @@ private fun SportBubble(icon: androidx.compose.ui.graphics.vector.ImageVector, n
     }
 }
 
-/** "Looks like you worked out": a stretch nobody started, offered for saving. */
+/**
+ * Where an offer or a suggestion sits: a dotted panel, or on Today a strip lit in heart red from [edge]'s side, so the
+ * two never look alike when both show.
+ */
 @Composable
-internal fun SuggestionPanel(s: org.openstrap.app.data.WorkoutSuggestions.Suggestion, onSave: () -> Unit, onDismiss: () -> Unit) {
-    DotPanel {
+private fun OfferBox(edge: EdgeKind?, content: @Composable ColumnScope.() -> Unit) {
+    if (edge == null) DotPanel(content = content)
+    else EdgeCard(MetricColors.heart, Modifier.fillMaxWidth(), kind = edge) {
+        Column(verticalArrangement = Arrangement.spacedBy(14.dp), content = content)
+    }
+}
+
+/** "Looks like you worked out": a stretch nobody started, offered for saving. [edge] draws it as a Today strip. */
+@Composable
+internal fun SuggestionPanel(
+    s: org.openstrap.app.data.WorkoutSuggestions.Suggestion, onSave: () -> Unit, onDismiss: () -> Unit, edge: EdgeKind? = null,
+) {
+    OfferBox(edge) {
         Row(verticalAlignment = Alignment.Top) {
             Icon(AppIcons.Heartbeat, null, tint = ZONE_COLORS[s.zone], modifier = Modifier.padding(top = 2.dp).size(20.dp))
             Spacer(Modifier.width(10.dp))
@@ -315,10 +329,13 @@ internal fun SuggestionPanel(s: org.openstrap.app.data.WorkoutSuggestions.Sugges
     }
 }
 
-/** "Looks like a workout": an effort still under way that nobody started, offered for recording from its start. */
+/**
+ * "Looks like a workout": an effort still under way that nobody started, offered for recording from its start.
+ * [edge] draws it as a Today strip.
+ */
 @Composable
-internal fun OfferPanel(o: org.openstrap.app.data.AutoStart.Offer, onRecord: () -> Unit, onDecline: () -> Unit) {
-    DotPanel {
+internal fun OfferPanel(o: org.openstrap.app.data.AutoStart.Offer, onRecord: () -> Unit, onDecline: () -> Unit, edge: EdgeKind? = null) {
+    OfferBox(edge) {
         Row(verticalAlignment = Alignment.Top) {
             Icon(SportIcons.of(o.sportType), null, tint = MetricColors.heart, modifier = Modifier.padding(top = 2.dp).size(20.dp))
             Spacer(Modifier.width(10.dp))

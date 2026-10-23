@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.CornerRadius
@@ -83,6 +84,18 @@ fun edgeLight(status: EdgeStatus, kind: EdgeKind = EdgeKind.Value): EdgeLight {
     return EdgeLight(edge, strong = off, progressBar = kind == EdgeKind.Progress)
 }
 
+/** The neutral edge light, hsl 220 10% 55%: a cool soft white for cards that speak for no one metric. */
+val EdgeNeutral = Color.hsl(220f, 0.10f, 0.55f)
+
+/**
+ * A screen's say over the next edge card's look, so two cards in a row never look the same (spec 2.4): the [edge] the
+ * light comes in from and the [color] it's lit in, each null to keep the card's own.
+ */
+@Immutable
+data class EdgeOverride(val edge: Edge? = null, val color: Color? = null)
+
+val LocalEdgeOverride = staticCompositionLocalOf { EdgeOverride() }
+
 /** Inside an edge card. */
 val EdgeCardPadding = PaddingValues(horizontal = 20.dp, vertical = 18.dp)
 
@@ -91,9 +104,9 @@ private val Surface = Color(0xFF0A0A0B)
 private val Hairline = Color.White.copy(alpha = 0.07f)
 
 /**
- * A card in the edge light tier, lit in [color] from the edge [edgeLight] picks for [status] and [kind]. For a
- * [EdgeKind.Progress] card, [progress] (0..1) fills the bar under [content]. The screen's [LocalGlowMood] softens
- * the light; the hairline always stays.
+ * A card in the edge light tier, lit in [color] from the edge [edgeLight] picks for [status] and [kind], unless
+ * [LocalEdgeOverride] says otherwise. For a [EdgeKind.Progress] card, [progress] (0..1) fills the bar under [content].
+ * The screen's [LocalGlowMood] softens the light; the hairline always stays.
  */
 @Composable
 fun EdgeCard(
@@ -106,7 +119,9 @@ fun EdgeCard(
     contentPadding: PaddingValues = EdgeCardPadding,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    val light = edgeLight(status, kind)
+    val override = LocalEdgeOverride.current
+    val light = edgeLight(status, kind).let { l -> override.edge?.let { l.copy(edge = it) } ?: l }
+    val tint = override.color ?: color
     val mood = LocalGlowMood.current
     Column(
         modifier
@@ -121,7 +136,7 @@ fun EdgeCard(
                     Edge.Left -> Offset(0f, 0f) to Offset(depth, 0f)
                     Edge.Right -> Offset(size.width, 0f) to Offset(size.width - depth, 0f)
                 }
-                val stops = glow.stops(mood.edge).map { (at, alpha) -> at to color.copy(alpha = alpha) }.toTypedArray()
+                val stops = glow.stops(mood.edge).map { (at, alpha) -> at to tint.copy(alpha = alpha) }.toTypedArray()
                 val brush = Brush.linearGradient(*stops, start = from, end = to)
                 val radius = CornerRadius(28.dp.toPx())
                 val stroke = 1.dp.toPx()
@@ -142,7 +157,7 @@ fun EdgeCard(
         content()
         if (light.progressBar && progress != null) {
             Spacer(Modifier.weight(1f, fill = false).padding(top = 12.dp))
-            ProgressBar(progress, color)
+            ProgressBar(progress, tint)
         }
     }
 }

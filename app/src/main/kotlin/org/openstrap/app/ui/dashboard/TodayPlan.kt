@@ -32,8 +32,13 @@ enum class TodayCard(val label: String, val editable: Boolean = true, val pinnab
     EditToday("", editable = false),
 }
 
-/** A card in Today's list: its [size] on the grid, and whether it's the screen's [secondGlow] (spec 2.4). */
-data class TodaySlot(val card: TodayCard, val size: CardSize, val secondGlow: Boolean = false)
+/**
+ * A card in Today's list: its [size] on the grid, whether it's the screen's [secondGlow] (spec 2.4), whether Edit
+ * Today [pinned] it, and the [look] [varyLooks] gave it (null until then).
+ */
+data class TodaySlot(
+    val card: TodayCard, val size: CardSize, val secondGlow: Boolean = false, val pinned: Boolean = false, val look: CardLook? = null,
+)
 
 /** What Today has to show beyond the moment's own cards; each false leaves its card out. */
 data class TodayFacts(
@@ -142,7 +147,7 @@ data class TodayEdits(val hidden: Set<TodayCard> = emptySet(), val pinned: List<
  */
 fun applyEdits(slots: List<TodaySlot>, edits: TodayEdits, moment: Moment?): List<TodaySlot> {
     val pins = edits.pinned.filter { it != heroSubject(moment) }
-    val pinned = pins.map { card -> slots.firstOrNull { it.card == card } ?: TodaySlot(card, pinnedSize(card)) }
+    val pinned = pins.map { card -> (slots.firstOrNull { it.card == card } ?: TodaySlot(card, pinnedSize(card))).copy(pinned = true) }
     val rest = slots.filter { it.card !in edits.hidden && it.card !in pins }
     val urgent = setOf(TodayCard.Hero, TodayCard.Offer, TodayCard.Suggestion, TodayCard.Alerts)
     val at = rest.indexOfFirst { it.card !in urgent }.let { if (it < 0) rest.size else it }

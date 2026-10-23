@@ -57,7 +57,7 @@ Two columns, 16 dp side gutter, 12 dp gap. Unit width = (screen width minus 32 m
 
 | Size | Shape | Use |
 |---|---|---|
-| Large | 2x2 | The hero of the moment |
+| Large | full width, as high as its content | The hero of the moment, with no empty band under it |
 | Wide | 2x1 | A number with a trend, a strip or a short chart |
 | Small | 1x1 | A number and a status word |
 | Tall | 1x2 | Charge as a battery, when it sits beside smalls |
@@ -79,6 +79,15 @@ Every card on every screen is exactly one of these.
 | **Grouped list** | `ListPanel` + `ListRow` (new) | Small facts: body signals, time to recover, energy, distance and the like | Usually 1, at most 2 |
 
 `DotPanel` is removed. Lists of rows (workouts, contributors, settings) use `ListPanel` with a plain hairline.
+
+Never two cards in a row with the same design. A card's design is its tier and the edge its light comes in from.
+Colour (the metric's, or the neutral light, hsl 220 10% 55%) doesn't count: two glows in a row, or two edge cards lit
+from the same side, look the same whatever their colours. Neighbours are cards one after the other in reading
+order, and on two columns also cards side by side or one over the other. When two neighbours would look the same,
+the later one flips its edge first. If that still clashes it takes another tier the spec gives it (Last night as a
+strip, a list on a neutral edge card, the second glow as its edge card) or the neutral light. Only then does a card move, and only one whose place is
+open: a pin, Your week or Habit Age, to the nearest place it fits. `varyLooks` applies this to Today after Edit
+Today's pins and hides.
 
 #### Glow card
 
@@ -311,7 +320,7 @@ Present in every moment when they apply:
 
 - Workout offer and suggestion (strip), from today only.
 - Health alerts from the strap (strip, "From your strap"), opening the metric.
-- "Your week" (wide edge card) Monday through Sunday, opening the week story.
+- "Your week" (wide edge card, neutral light from the bottom) Monday through Sunday, opening the week story.
 - "Edit Today" at the end: hide cards, pin up to two under the hero. Replaces the What changed tile chooser.
 
 ### 4.3 States

@@ -18,7 +18,7 @@ import androidx.compose.ui.unit.dp
 
 /** A card's size on the grid. Cards never resize by user choice. */
 enum class CardSize {
-    /** 2x2: the hero of the moment. */
+    /** 2x2: the hero of the moment. Today's heroes take its width but are only as high as their content. */
     Large,
 
     /** 2x1: a number with a trend, a strip or a short chart. */

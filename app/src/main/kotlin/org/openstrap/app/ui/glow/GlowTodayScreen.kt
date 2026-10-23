@@ -3,10 +3,12 @@ package org.openstrap.app.ui.glow
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -37,6 +39,11 @@ import org.openstrap.app.ui.components.HapticEvent
 import org.openstrap.app.ui.components.rememberHaptics
 import org.openstrap.app.ui.dashboard.DailyHistory
 import org.openstrap.app.ui.dashboard.DayUiState
+import org.openstrap.app.ui.dashboard.Hue
+import org.openstrap.app.ui.dashboard.defaultLook
+import org.openstrap.app.ui.dashboard.lookOr
+import org.openstrap.app.ui.dashboard.todayPanes
+import org.openstrap.app.ui.dashboard.varyLooks
 import org.openstrap.app.ui.dashboard.LocalGoals
 import org.openstrap.app.ui.dashboard.Metric
 import org.openstrap.app.ui.dashboard.TodayCard
@@ -141,40 +148,54 @@ fun GlowTodayScreen(
         isToday = isToday, offer = offer != null, suggestion = suggestion != null, alerts = state.alerts.isNotEmpty(),
         workout = lastWorkout != null && isToday, healthspan = healthspan != null,
     )
-    val slots = applyEdits(todayCards(moment, facts, morning = LocalTime.now().hour < 12), edits, moment)
+    val morning = LocalTime.now().hour < 12
+    val live = liveHeartRate != null
+    // The moment the cards are laid out for, with no moment yet resolved as todayCards does.
+    val looksFor = moment ?: if (morning) Moment.Waking else Moment.Midday
 
     // The glow holds still while the list scrolls, so scrolling stays as smooth as on other screens.
     CompositionLocalProvider(LocalGlowPaused provides { list.isScrollInProgress }) {
-        GlowScreenList(contentPadding, list) {
-            full { header() }
-            var side = Pane.Left
-            slots.forEach { slot ->
-                // The hero, strips and lists span the width on a wide screen; the cards between take turns.
-                val pane = when (slot.size) {
-                    CardSize.Large, CardSize.Strip -> Pane.Full
-                    else -> side.also { side = if (it == Pane.Left) Pane.Right else Pane.Left }
-                }
-                // Before a strap is paired, everything under the pairing hero waits, dimmed.
-                val dim = if (!strap.paired && slot.card != TodayCard.Hero && slot.card != TodayCard.EditToday) Modifier.alpha(0.45f) else Modifier
-                val block: @Composable () -> Unit = {
-                    Column(dim) {
-                        when (slot.card) {
-                            TodayCard.Hero -> Hero(
-                                ctx, strap, heroLightAngle, usualBedtime,
-                                running, onOpenRunning, onResumeRunning, onStartSport, onOtherSport, onPair, onSyncNow,
-                                onOpenRecovery, onOpenWorkout,
-                            )
-                            TodayCard.EditToday -> EditTodayButton({ editing = true })
-                            else -> TodayRow(slot, ctx, healthspan, history, checkIn, onCheckIn, onOpenSleep, onOpenMetric, onOpenRecovery,
-                                onOpenWorkout, onOpenHealthspan, onOpenProfile, offer, onRecordOffer, onDeclineOffer, suggestion,
-                                onSaveSuggestion, onDismissSuggestion)
+        BoxWithConstraints(Modifier.fillMaxSize()) {
+            // No two cards next to each other look the same (spec 2.4). On two columns, side by side counts too.
+            val wide = maxWidth >= GlowLayout.TwoColumnWidth
+            val slots = varyLooks(applyEdits(todayCards(moment, facts, morning), edits, moment), looksFor, live, wide)
+            val panes = todayPanes(slots)
+            GlowScreenList(contentPadding, list) {
+                full { header() }
+                slots.forEachIndexed { i, slot ->
+                    // The hero and strips span the width on a wide screen; the cards between take turns.
+                    val pane = panes[i]
+                    // Before a strap is paired, everything under the pairing hero waits, dimmed.
+                    val dim = if (!strap.paired && slot.card != TodayCard.Hero && slot.card != TodayCard.EditToday) Modifier.alpha(0.45f) else Modifier
+                    // Where the look differs from the card's own, its edge card is told the side and colour to use.
+                    val own = defaultLook(slot.copy(look = null), looksFor, live)
+                    val look = slot.lookOr(looksFor, live)
+                    val override = EdgeOverride(
+                        edge = look.edge.takeIf { it != own.edge },
+                        color = EdgeNeutral.takeIf { look.hue == Hue.Neutral && own.hue != Hue.Neutral },
+                    )
+                    val block: @Composable () -> Unit = {
+                        CompositionLocalProvider(LocalEdgeOverride provides override) {
+                            Column(dim) {
+                                when (slot.card) {
+                                    TodayCard.Hero -> Hero(
+                                        ctx, strap, heroLightAngle, usualBedtime,
+                                        running, onOpenRunning, onResumeRunning, onStartSport, onOtherSport, onPair, onSyncNow,
+                                        onOpenRecovery, onOpenWorkout,
+                                    )
+                                    TodayCard.EditToday -> EditTodayButton({ editing = true })
+                                    else -> TodayRow(slot, ctx, healthspan, history, checkIn, onCheckIn, onOpenSleep, onOpenMetric, onOpenRecovery,
+                                        onOpenWorkout, onOpenHealthspan, onOpenProfile, offer, onRecordOffer, onDeclineOffer, suggestion,
+                                        onSaveSuggestion, onDismissSuggestion)
+                                }
+                            }
                         }
                     }
-                }
-                when (pane) {
-                    Pane.Full -> full(block)
-                    Pane.Left -> left(block)
-                    Pane.Right -> right(block)
+                    when (pane) {
+                        Pane.Full -> full(block)
+                        Pane.Left -> left(block)
+                        Pane.Right -> right(block)
+                    }
                 }
             }
         }
@@ -262,9 +283,8 @@ private fun Hero(
     onStartSport: (Int) -> Unit, onOtherSport: () -> Unit, onPair: () -> Unit, onSyncNow: () -> Unit,
     onOpenRecovery: () -> Unit, onOpenWorkout: (Long) -> Unit,
 ) {
-    // Heroes with a chart or two rows of numbers fill the Large size; the others size to their content over a Wide's
-    // height, rather than leave the lower half empty.
-    val large = Modifier.fillMaxWidth().gridSize(CardSize.Large)
+    // Every hero is as high as its content with the card padding around it. The floor is only a Wide's height, under
+    // every hero's content, so none shows an empty band.
     val m = Modifier.fillMaxWidth().gridSize(CardSize.Wide)
     // The hero's content crossfades when the moment moves on (spec 3.5); the rows below change only with it.
     val kind = when {
@@ -284,10 +304,10 @@ private fun Hero(
         when (k) {
             HeroKind.Pair -> PairHero(onPair, m)
             HeroKind.Stuck -> StuckHero(strap, onSyncNow, m)
-            HeroKind.Waking -> WakingHero(ctx, lightAngle, onOpenRecovery, large)
-            HeroKind.Midday -> ChargeHero(ctx, onOpenRecovery, large)
+            HeroKind.Waking -> WakingHero(ctx, lightAngle, onOpenRecovery, m)
+            HeroKind.Midday -> ChargeHero(ctx, onOpenRecovery, m)
             HeroKind.Window -> WindowHero(ctx, lightAngle, onStartSport, onOtherSport, m)
-            HeroKind.After -> AfterHero(ctx, lightAngle, onOpenWorkout, large)
+            HeroKind.After -> AfterHero(ctx, lightAngle, onOpenWorkout, m)
             HeroKind.Evening -> EveningHero(ctx, lightAngle, bedtime, onOpenRecovery, m)
             HeroKind.During -> DuringHero(ctx, running!!, onOpenRunning, onResumeRunning, m)
         }
@@ -491,8 +511,8 @@ private fun TodayRow(
     val s = ctx.state
     val b = s.baselines
     when (slot.card) {
-        TodayCard.Offer -> offer?.let { OfferPanel(it, onRecordOffer, onDeclineOffer) }
-        TodayCard.Suggestion -> suggestion?.let { SuggestionPanel(it, onSaveSuggestion, onDismissSuggestion) }
+        TodayCard.Offer -> offer?.let { OfferPanel(it, onRecordOffer, onDeclineOffer, edge = EdgeKind.Live) }
+        TodayCard.Suggestion -> suggestion?.let { SuggestionPanel(it, onSaveSuggestion, onDismissSuggestion, edge = EdgeKind.Earlier) }
         TodayCard.Alerts -> AlertsStrip(s.alerts, onOpenMetric)
         TodayCard.CheckIn -> CheckInStrip(checkIn, onCheckIn)
         TodayCard.BodyMorning -> BodyList(

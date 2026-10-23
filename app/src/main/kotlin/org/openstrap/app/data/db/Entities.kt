@@ -424,6 +424,9 @@ data class WearEventRow(
     val worn: Boolean?,
 )
 
+/** A phone workout's finished sets, counted for the workout lists ([HealthDao.setCounts]). */
+data class SetCount(val workoutStart: Long, val sets: Int)
+
 /** One local day of a sampled metric: its average (or total, for steps), lowest, highest and sample count. */
 data class DailyAggregate(
     /** The local date as SQLite prints it, `yyyy-MM-dd`. */

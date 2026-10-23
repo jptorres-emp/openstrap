@@ -65,13 +65,16 @@ class WorkoutsViewModel(private val dao: HealthDao, private val profile: Flow<Us
 
     /**
      * The strap's workouts and the phone's, newest first. List rows use the stored end; the detail screen works out
-     * the real one from the HR stream.
+     * the real one from the HR stream. A phone strength workout carries its count of finished sets.
      */
     val workouts: StateFlow<List<WorkoutAnalysis>> =
-        combine(dao.workouts(), dao.sportEffects(), dao.lastWorkoutHeartRates(), dao.appWorkouts(), fallbackMaxHr) { ws, effects, last, phone, maxHr ->
+        combine(
+            dao.workouts(), dao.sportEffects(), dao.lastWorkoutHeartRates(),
+            combine(dao.appWorkouts(), dao.setCounts()) { phone, sets -> phone to sets.associate { it.workoutStart to it.sets } }, fallbackMaxHr,
+        ) { ws, effects, last, (phone, sets), maxHr ->
             val lastByWorkout = last.associateBy { it.workoutStart }
             val strap = ws.map { w -> Workouts.analyse(w, listOfNotNull(lastByWorkout[w.start]), effects, maxHr) }
-            (strap + phone.map { WorkoutRecorder.analyse(it, emptyList(), maxHr) }).sortedByDescending { it.workout.start }
+            (strap + phone.map { WorkoutRecorder.analyse(it, emptyList(), maxHr).copy(sets = sets[it.start]) }).sortedByDescending { it.workout.start }
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     /** The strap's sport-effect records, newest last: recovery time, VO2 max and weekly load after each workout. */

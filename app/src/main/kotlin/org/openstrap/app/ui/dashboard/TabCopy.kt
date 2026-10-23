@@ -2,6 +2,7 @@ package org.openstrap.app.ui.dashboard
 
 import org.openstrap.app.data.Recovery
 import org.openstrap.app.data.SleepRegularity
+import org.openstrap.app.data.Workouts
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -242,6 +243,71 @@ object TabCopy {
 
     /** Under the Recovery hero's trend dots. */
     const val LAST_7_DAYS = "Last 7 days"
+
+    /* ---------------------------------------------- Workouts --------------------------------------------- */
+
+    /** The quiet tag beside a workout the strap found by itself, or filed under its generic "Activity". */
+    const val FOUND_BY_STRAP = "Found by the strap"
+
+    /** Which fact leads a workout's line, by sport. */
+    enum class SportFact { Run, Walk, Strength, Other }
+
+    fun sportFact(sportType: Int): SportFact = when (sportType) {
+        in Workouts.RUNS -> SportFact.Run
+        in Workouts.WALKS -> SportFact.Walk
+        in org.openstrap.app.data.Strength.SPORTS -> SportFact.Strength
+        else -> SportFact.Other
+    }
+
+    /** Shorter than this and a pace says more about GPS noise than the run. */
+    private const val PACE_MIN_M = 500f
+
+    /**
+     * A workout's one fact, by [sport]: distance and pace for a run ("5.2 km, 5:24 a km"), distance for a walk, sets
+     * for strength ("14 sets"), average heart rate otherwise ("Average 128 bpm"). Each falls back to the next the
+     * workout has: a run without a GPS pace to its distance, a run or walk without one to heart rate, strength without
+     * sets to heart rate, anything else without heart rate to distance. Distance from steps is approximate ("≈ 3.4
+     * km") and gets no pace. Only phone workouts carry distance and sets; the strap's fall back to heart rate.
+     */
+    fun workoutFact(sport: SportFact, distanceMeters: Float?, fromSteps: Boolean, activeSeconds: Long?, sets: Int?, averageHeartRate: Int?): String? {
+        val distance = distanceMeters?.takeIf { it >= 10f }?.let { distanceText(it, fromSteps) }
+        val pace = distanceMeters?.takeIf { !fromSteps && it >= PACE_MIN_M }?.let { m ->
+            activeSeconds?.takeIf { it > 0 }?.let { paceText(it / (m / 1000f)) }
+        }
+        val heart = averageHeartRate?.takeIf { it > 0 }?.let { "Average $it bpm" }
+        val counted = sets?.takeIf { it > 0 }?.let { if (it == 1) "1 set" else "$it sets" }
+        return when (sport) {
+            SportFact.Run -> pace?.let { "$distance, $it" } ?: distance ?: heart
+            SportFact.Walk -> distance ?: heart
+            SportFact.Strength -> counted ?: heart
+            SportFact.Other -> heart ?: distance
+        }
+    }
+
+    /** "850 m" under a kilometre, "5.2 km" from one; "≈ " in front when estimated from steps. */
+    fun distanceText(meters: Float, fromSteps: Boolean): String =
+        (if (fromSteps) "≈ " else "") + if (meters < 1000f) "${meters.toInt()} m" else "%.1f km".format(meters / 1000f)
+
+    /** "5:24 a km"; null for a pace slower than an hour a kilometre, which is standing still. */
+    fun paceText(secondsPerKm: Float): String? {
+        if (secondsPerKm <= 0f || secondsPerKm > 3600f) return null
+        val s = Math.round(secondsPerKm)
+        return "%d:%02d a km".format(s / 60, s % 60)
+    }
+
+    /**
+     * A workout row's second line: its fact, then when it started ("3.4 km, 17:35"), or the time alone.
+     * TODO: a personal best ("Fastest 5 km since March") goes after the fact in the mock's warm colour (0xFFFFD08A)
+     * once the app detects them; it doesn't yet.
+     */
+    fun workoutLine(fact: String?, startClock: String): String = listOfNotNull(fact, startClock).joinToString(", ")
+
+    /** The header over a day's workouts: "Today", "Yesterday", then "Wed 21 Oct", with the year when it isn't this one. */
+    fun workoutDay(date: LocalDate, today: LocalDate, locale: Locale = Locale.getDefault()): String = when (date) {
+        today -> "Today"
+        today.minusDays(1) -> "Yesterday"
+        else -> date.format(DateTimeFormatter.ofPattern(if (date.year == today.year) "EEE d MMM" else "EEE d MMM yyyy", locale))
+    }
 
     /* --------------------------------------------- Habit Age --------------------------------------------- */
 

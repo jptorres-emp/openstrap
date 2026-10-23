@@ -230,11 +230,12 @@ internal fun EffectFacts(w: org.openstrap.app.data.db.Workout, vo2: Float?, reco
     }
 }
 
-/** Every workout, newest first, one dot panel per day. */
+/** Every workout, newest first, one dot panel per day, each a row as on the Activity tab's Workouts card ([WorkoutRow]). */
 @Composable
 fun GlowWorkoutsScreen(workouts: List<WorkoutAnalysis>, contentPadding: PaddingValues, onOpen: (Long) -> Unit, onBack: () -> Unit) {
     BackHandler(onBack = onBack)
     val zone = ZoneId.systemDefault()
+    val usual = remember(workouts) { Workouts.usualLoad(workouts.map { it.workout.trainingLoad }) }
     ScreenList(contentPadding, gutter = GlowLayout.Gutter) {
         item { PageHeader("Workouts", onBack, subtitle = "${workouts.size} recorded") }
         if (workouts.isEmpty()) {
@@ -247,7 +248,7 @@ fun GlowWorkoutsScreen(workouts: List<WorkoutAnalysis>, contentPadding: PaddingV
                     DotHeader(dayName(date), trailing = if (date.year != LocalDate.now().year) "${date.year}" else null)
                     day.forEachIndexed { i, a ->
                         if (i > 0) DotDivider()
-                        WorkoutLine(a, showDate = false) { onOpen(a.workout.start) }
+                        WorkoutRow(a, usual, divider = false) { onOpen(a.workout.start) }
                     }
                 }
             }

@@ -31,6 +31,11 @@ data class WorkoutAnalysis(
     val recordedEnd: Long? = null,
     /** Recovery time in minutes: the strap's sport effect, or OpenStrap's own for a phone workout ([WorkoutEffect]). */
     val recoveryMinutes: Int? = effect?.recoveryMinutes,
+    /** A phone workout's metres, from GPS or estimated from steps ([distanceFromSteps]); the strap stores none. */
+    val distanceMeters: Float? = null,
+    val distanceFromSteps: Boolean = false,
+    /** A phone strength workout's finished sets; null when none were counted, and always for the strap's. */
+    val sets: Int? = null,
 ) {
     val durationSeconds: Long get() = end - shownStart
 
@@ -158,6 +163,43 @@ object Workouts {
      * bike, in water or on a mat, steps say nothing about distance, so those show none.
      */
     val ON_FOOT = setOf(1, 2, 3, 11, 15, 40, 215, 224, 225)
+
+    /** Runs, where distance comes with a pace. */
+    val RUNS = setOf(1, 2, 11)
+
+    /** On foot but not running: walks and hikes, where distance alone says it. */
+    val WALKS = ON_FOOT - RUNS
+
+    /** A workout's effort glow never goes below this, so a light one, or one with no Load, still shows a trace. */
+    const val EFFORT_MIN = 0.12f
+    /** Workouts with a Load before your usual counts: fewer and the fixed [EFFORT_FULL_LOAD] scale is used. */
+    const val USUAL_LOAD_MIN = 3
+    /** How many recent workouts your usual is taken from. */
+    const val USUAL_LOAD_OF = 20
+    /** Without a usual, the Load (EPOC) that lights a workout fully: a hard session's. */
+    const val EFFORT_FULL_LOAD = 150f
+
+    /**
+     * Your usual workout Load: the median [Workout.trainingLoad] (EPOC, the strap's or OpenStrap's on the same scale)
+     * of the latest [USUAL_LOAD_OF] workouts with one, [loads] newest first. Null with fewer than [USUAL_LOAD_MIN].
+     * Not the day's Load: that is TRIMP over every minute, on another scale.
+     */
+    fun usualLoad(loads: List<Int?>): Float? {
+        val recent = loads.filterNotNull().filter { it > 0 }.take(USUAL_LOAD_OF).sorted()
+        if (recent.size < USUAL_LOAD_MIN) return null
+        val mid = recent.size / 2
+        return if (recent.size % 2 == 1) recent[mid].toFloat() else (recent[mid - 1] + recent[mid]) / 2f
+    }
+
+    /**
+     * How strongly a workout's effort light glows, 0..1, from its [load]: a usual workout at half, twice your
+     * [usual] or more at full. Without a usual, [EFFORT_FULL_LOAD] is full. No Load glows at [EFFORT_MIN].
+     */
+    fun effort(load: Int?, usual: Float?): Float {
+        if (load == null || load <= 0) return EFFORT_MIN
+        val full = usual?.takeIf { it > 0f }?.let { it * 2f } ?: EFFORT_FULL_LOAD
+        return (load / full).coerceIn(EFFORT_MIN, 1f)
+    }
 
     /** Offered before any workout has been recorded: outdoor run, walk, strength training. */
     val DEFAULT_SPORTS = listOf(1, 3, 52)

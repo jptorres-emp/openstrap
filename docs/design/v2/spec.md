@@ -426,9 +426,23 @@ each nap's heart rate (the naps in the Sleep detail, step 6).
 5. Edge: Heart rate, the day's line with your resting range as a dim band, hold to scrub (the number follows). Lit
    from the right while live, otherwise from below like any usual value.
 6. List "Today", "So far": VO2 max, time to recover, energy, distance.
-7. Edge, neutral light from the top: "Workouts", the day's and the latest before it (5 in all), each row with a thin
-   zone bar, a pending suggestion as a row with Save, "Add a workout you didn't record", "All workouts" always. A
-   list right after another list, so it sits on the edge card 2.4 allows.
+7. Edge, neutral light from the top: "Workouts", the day's and the latest before it (5 in all), under small dim day
+   headers ("Today", "Yesterday", "Wed 21 Oct") instead of a date on each row, a pending suggestion as a row with
+   Save, "Add a workout you didn't record", "All workouts" always. A list right after another list, so it sits on
+   the edge card 2.4 allows. Each row (version A of the workout mocks):
+   - **Effort light:** the sport's toned white icon on a small dark tile (38 dp, 12 dp corners) with a soft
+     heart-red glow behind it, as strong as the workout's Load (its EPOC, the strap's or OpenStrap's) against your
+     usual workout's: the median of the last 20 with one, a usual one at half, twice it at full. Under 3 workouts
+     with a Load, 150 is full. No Load keeps a faint minimum. Not the day's Load, which is TRIMP on another scale.
+   - **One fact per sport,** then the start time: distance and pace for runs ("5.2 km, 5:24 a km, 21:28"),
+     distance for walks, sets for strength ("14 sets, 07:10"), average heart rate otherwise ("Average 128 bpm,
+     09:04"). Each falls back to the next the workout has. Distance (GPS or "≈" from steps, no pace from steps)
+     and sets come from phone workouts only. The strap's workouts carry neither, so theirs say heart rate.
+   - **Found by the strap:** a quiet outlined tag beside the name of a workout the strap detected or filed as
+     "Activity".
+   - The duration in dots on the right and the thin zone bar under the row, lined up with the name.
+   - A personal best would be one warm line after the fact. The app doesn't detect them yet.
+   All workouts uses the same row inside its day panels.
 
 Wide: the strip and Steps span both columns. The Small pair and Load on the left, Heart rate, the list and Workouts on
 the right.

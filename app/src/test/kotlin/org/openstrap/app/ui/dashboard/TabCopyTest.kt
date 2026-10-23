@@ -172,4 +172,66 @@ class TabCopyTest {
         assertEquals("27 to 31", TabCopy.ageRange(27, 31))
         assertEquals("You, 34", TabCopy.yourAge(34))
     }
+
+    @Test fun `each sport leads with its own fact`() {
+        assertEquals(TabCopy.SportFact.Run, TabCopy.sportFact(1))
+        assertEquals(TabCopy.SportFact.Run, TabCopy.sportFact(2))
+        assertEquals(TabCopy.SportFact.Walk, TabCopy.sportFact(3))
+        assertEquals(TabCopy.SportFact.Walk, TabCopy.sportFact(15))
+        assertEquals(TabCopy.SportFact.Strength, TabCopy.sportFact(52))
+        assertEquals(TabCopy.SportFact.Other, TabCopy.sportFact(4))
+        assertEquals(TabCopy.SportFact.Other, TabCopy.sportFact(223))
+        // 5.2 km in 28:05 of running: 5:24 a km.
+        assertEquals("5.2 km, 5:24 a km", TabCopy.workoutFact(TabCopy.SportFact.Run, 5200f, false, 1685, null, 152))
+        assertEquals("3.4 km", TabCopy.workoutFact(TabCopy.SportFact.Walk, 3400f, false, 2530, null, 108))
+        assertEquals("14 sets", TabCopy.workoutFact(TabCopy.SportFact.Strength, null, false, 2100, 14, 121))
+        assertEquals("1 set", TabCopy.workoutFact(TabCopy.SportFact.Strength, null, false, 300, 1, 121))
+        assertEquals("Average 128 bpm", TabCopy.workoutFact(TabCopy.SportFact.Other, null, false, 782, null, 128))
+    }
+
+    @Test fun `a workout's fact falls back to the next one it has`() {
+        // Distance from steps is approximate and gets no pace.
+        assertEquals("≈ 5.2 km", TabCopy.workoutFact(TabCopy.SportFact.Run, 5200f, true, 1685, null, 152))
+        // Too short for a pace to mean much.
+        assertEquals("420 m", TabCopy.workoutFact(TabCopy.SportFact.Run, 420f, false, 150, null, 152))
+        // A strap run carries no distance: its heart rate.
+        assertEquals("Average 152 bpm", TabCopy.workoutFact(TabCopy.SportFact.Run, null, false, 1685, null, 152))
+        assertEquals("Average 108 bpm", TabCopy.workoutFact(TabCopy.SportFact.Walk, null, false, 2530, null, 108))
+        assertEquals("Average 121 bpm", TabCopy.workoutFact(TabCopy.SportFact.Strength, null, false, 2100, 0, 121))
+        // A ride with GPS but no heart rate says its distance.
+        assertEquals("21.3 km", TabCopy.workoutFact(TabCopy.SportFact.Other, 21300f, false, 3000, null, null))
+        assertNull(TabCopy.workoutFact(TabCopy.SportFact.Other, null, false, 600, null, null))
+        assertNull(TabCopy.workoutFact(TabCopy.SportFact.Walk, 5f, false, 600, null, 0))
+    }
+
+    @Test fun `distance and pace`() {
+        assertEquals("850 m", TabCopy.distanceText(850f, false))
+        assertEquals("≈ 1.0 km", TabCopy.distanceText(1000f, true))
+        assertEquals("4:05 a km", TabCopy.paceText(245f))
+        assertEquals("10:00 a km", TabCopy.paceText(600f))
+        assertNull(TabCopy.paceText(4000f))
+        assertNull(TabCopy.paceText(0f))
+    }
+
+    @Test fun `a workout row's line ends with when it started`() {
+        assertEquals("3.4 km, 17:35", TabCopy.workoutLine("3.4 km", "17:35"))
+        assertEquals("09:04", TabCopy.workoutLine(null, "09:04"))
+    }
+
+    @Test fun `workout days read as today, yesterday, then the date`() {
+        val today = java.time.LocalDate.of(2026, 10, 23)
+        val uk = java.util.Locale.UK
+        assertEquals("Today", TabCopy.workoutDay(today, today, uk))
+        assertEquals("Yesterday", TabCopy.workoutDay(today.minusDays(1), today, uk))
+        assertEquals("Wed 21 Oct", TabCopy.workoutDay(today.minusDays(2), today, uk))
+        assertEquals("Sat 27 Dec 2025", TabCopy.workoutDay(java.time.LocalDate.of(2025, 12, 27), today, uk))
+    }
+
+    @Test fun `workout copy never uses the banned punctuation`() {
+        val lines = listOf(
+            TabCopy.FOUND_BY_STRAP, TabCopy.workoutFact(TabCopy.SportFact.Run, 5200f, false, 1685, null, 152)!!,
+            TabCopy.workoutLine("14 sets", "07:10"), TabCopy.workoutDay(java.time.LocalDate.of(2026, 10, 21), java.time.LocalDate.of(2026, 10, 23)),
+        )
+        lines.forEach { l -> listOf("·", ";", "—").forEach { assertFalse("$l has $it", l.contains(it)) } }
+    }
 }

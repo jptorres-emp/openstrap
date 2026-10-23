@@ -86,8 +86,6 @@ internal fun <T> GridRowBlock(row: GridRow<T>, draw: @Composable (T, Modifier) -
     }
 }
 
-private val RowHairline = Color.White.copy(alpha = 0.05f)
-
 /**
  * A contributor bar (chart kit): the [name], a bar filled to [fraction] (0..1) and the [word] on the right. Bar and
  * word take [color] only when [offNormal]; otherwise they stay white. [divider] draws the hairline above the row.

@@ -1,6 +1,9 @@
 package org.openstrap.app.ui.glow
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,12 +25,16 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -286,11 +293,10 @@ private fun FactsList(state: DayUiState, r: RecoveryResult?, workouts: List<Work
 
 /* ---------------------------------------------- Workouts -------------------------------------------- */
 
-private val DAY = DateTimeFormatter.ofPattern("EEE d MMM")
-
 /**
  * The day's workouts and the latest before it, a workout to save when the strap noticed one, then ways to add one
- * and to see them all. No scrolling window inside: the list is short and "All workouts" is always there.
+ * and to see them all. No scrolling window inside: the list is short and "All workouts" is always there. The rows sit
+ * under day headers ("Today", "Yesterday", "Wed 21 Oct") rather than each saying its date.
  */
 @Composable
 private fun WorkoutsList(
@@ -302,29 +308,124 @@ private fun WorkoutsList(
     val today = workouts.filter { dayOf(it) == date }.sortedBy { it.workout.start }
     val before = workouts.filter { dayOf(it) < date }.sortedByDescending { it.workout.start }
     val shown = today + before.take((LISTED_WORKOUTS - today.size).coerceAtLeast(0))
+    // From every workout (newest first), so a row glows the same here and in All workouts.
+    val usual = remember(workouts) { Workouts.usualLoad(workouts.map { it.workout.trainingLoad }) }
     ListPanel(title = "Workouts", note = if (today.isNotEmpty()) "${today.size} this day" else null) {
         var first = true
         fun divider() = !first.also { first = false }
         suggestion?.let { SuggestionRow(it, onSave, onDismiss, divider()) }
         if (shown.isEmpty()) ListRow("No workouts yet", MetricColors.heart, null, "Workouts you record show up here", dash = false, divider = divider())
+        var day: LocalDate? = null
         shown.forEach { a ->
-            val start = Instant.ofEpochSecond(a.workout.start).atZone(zone)
-            val time = if (dayOf(a) == date) start.format(CLOCK) else "${start.format(DAY)}, ${start.format(CLOCK)}"
-            val status = listOfNotNull(
-                time, a.workout.averageHeartRate?.let { "average $it bpm" }, if (a.autoDetected) "found by the strap" else null,
-            ).joinToString(", ")
-            Column {
-                ListRow(
-                    a.sportName, MetricColors.heart, workoutClock(a.durationSeconds), status,
-                    onClick = { onOpen(a.workout.start) }, divider = divider(), icon = SportIcons.of(a.workout.sportType),
-                )
-                // Zone bar (chart kit): how the workout's time was spent, thin under its row, lined up with its name.
-                ZoneBar(a.zoneSeconds, ZONE_COLORS, Modifier.padding(start = RowIcon + RowIconGap, bottom = 10.dp), height = 4.dp)
+            if (dayOf(a) != day) {
+                day = dayOf(a)
+                WorkoutDayHeader(TabCopy.workoutDay(dayOf(a), LocalDate.now()))
+                // The first row under a header has no hairline: the header already parts it from the day before.
+                first = true
             }
+            WorkoutRow(a, usual, divider()) { onOpen(a.workout.start) }
         }
         LinkRow("Add a workout you didn't record", onAdd, divider = divider())
         LinkRow("All workouts", onAll)
     }
+}
+
+/** A day's header in a workout list: small dim text, no hairline. */
+@Composable
+internal fun WorkoutDayHeader(text: String) {
+    Text(
+        text, color = Color.White.copy(alpha = 0.5f), style = GlowType.secondary.copy(fontSize = 12.sp),
+        modifier = Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 2.dp),
+    )
+}
+
+/** The effort light's tile, as the mock draws it: 38 dp, 12 dp corners, a shade above the panel. */
+private val EffortTile = 38.dp
+private val EffortShape = RoundedCornerShape(12.dp)
+private val EffortSurface = Color(0xFF151517)
+private val EffortGap = 12.dp
+
+/**
+ * A workout as a list row: its sport's toned white icon on the effort light (a heart-red glow as strong as the
+ * workout's Load against your [usual], [Workouts.effort]), the sport with "Found by the strap" when the strap logged
+ * it by itself, the sport's one fact and the start time ([TabCopy.workoutFact]), and the duration in dots. A thin zone
+ * bar under it, lined up with the name. [divider] draws the hairline above.
+ */
+@Composable
+internal fun WorkoutRow(a: WorkoutAnalysis, usual: Float?, divider: Boolean, onClick: () -> Unit) {
+    val fact = TabCopy.workoutFact(
+        TabCopy.sportFact(a.workout.sportType), a.distanceMeters, a.distanceFromSteps,
+        a.workout.exerciseSeconds?.toLong(), a.sets, a.workout.averageHeartRate,
+    )
+    val start = Instant.ofEpochSecond(a.shownStart).atZone(ZoneId.systemDefault())
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .let { if (divider) it.drawBehind { drawLine(RowHairline, Offset(0f, 0f), Offset(size.width, 0f), 1.dp.toPx()) } else it },
+    ) {
+        Row(Modifier.fillMaxWidth().padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            EffortLight(SportIcons.of(a.workout.sportType), Workouts.effort(a.workout.trainingLoad, usual))
+            Spacer(Modifier.width(EffortGap))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        a.sportName, color = Color.White, style = GlowType.label.copy(fontWeight = null),
+                        maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false),
+                    )
+                    if (!a.startedByYou) {
+                        Spacer(Modifier.width(6.dp))
+                        FoundTag()
+                    }
+                }
+                Text(
+                    TabCopy.workoutLine(fact, start.format(CLOCK)), color = Color.White.copy(alpha = 0.6f), style = GlowType.secondary,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis,
+                )
+            }
+            Spacer(Modifier.width(12.dp))
+            DotMatrixText(workoutClock(a.durationSeconds), dot = ValueDot, gap = ValueGap, color = Color.White)
+        }
+        // Zone bar (chart kit): how the workout's time was spent, thin under its row, lined up with its name.
+        ZoneBar(a.zoneSeconds, ZONE_COLORS, Modifier.padding(start = EffortTile + EffortGap, bottom = 10.dp), height = 4.dp)
+    }
+}
+
+/**
+ * The effort light: the sport's icon on a small dark tile, a soft heart-red glow behind it, centred a little low as
+ * light from below would be. [effort] (0..1) sets the glow's strength.
+ */
+@Composable
+private fun EffortLight(icon: androidx.compose.ui.graphics.vector.ImageVector, effort: Float) {
+    Box(
+        Modifier
+            .size(EffortTile)
+            .clip(EffortShape)
+            .background(EffortSurface)
+            .drawBehind {
+                val centre = Offset(size.width / 2, size.height * 0.6f)
+                drawRect(
+                    Brush.radialGradient(
+                        0f to MetricColors.heart.copy(alpha = 0.7f * effort.coerceIn(0f, 1f)), 1f to Color.Transparent,
+                        center = centre, radius = size.minDimension * 0.56f,
+                    ),
+                )
+            }
+            .border(1.dp, Color.White.copy(alpha = 0.06f), EffortShape),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(icon, null, tint = Color.White.copy(alpha = 0.85f), modifier = Modifier.size(RowIcon))
+    }
+}
+
+/** "Found by the strap": a quiet outlined label beside the sport's name. */
+@Composable
+private fun FoundTag() {
+    Text(
+        TabCopy.FOUND_BY_STRAP, color = Color.White.copy(alpha = 0.7f), style = GlowType.secondary.copy(fontSize = 11.sp, lineHeight = 14.sp),
+        maxLines = 1,
+        modifier = Modifier.border(1.dp, Color.White.copy(alpha = 0.19f), RoundedCornerShape(6.dp)).padding(horizontal = 6.dp, vertical = 1.dp),
+    )
 }
 
 private val CLOCK = DateTimeFormatter.ofPattern("HH:mm")
@@ -343,31 +444,5 @@ private fun SuggestionRow(s: org.openstrap.app.data.WorkoutSuggestions.Suggestio
             RowPill("Not a workout", onDismiss)
             Box(Modifier.weight(1f))
         }
-    }
-}
-
-/** A workout as a glass row: the sport, when, how long, heart rate and energy. Used by All workouts. */
-@Composable
-internal fun WorkoutLine(a: WorkoutAnalysis, showDate: Boolean, onClick: () -> Unit) {
-    Row(
-        Modifier.fillMaxWidth().glass(GlassRowShape, onClick).padding(horizontal = 14.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(Modifier.weight(1f)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(a.sportName, color = Color.White, style = androidx.compose.material3.MaterialTheme.typography.titleSmall)
-                if (a.autoDetected) StatusPill(AUTO_DETECTED, Color.White.copy(alpha = 0.7f))
-            }
-            val start = Instant.ofEpochSecond(a.workout.start).atZone(ZoneId.systemDefault())
-            Note(
-                listOfNotNull(
-                    start.format(DateTimeFormatter.ofPattern(if (showDate) "EEE d MMM, HH:mm" else "HH:mm")),
-                    org.openstrap.app.ui.components.formatDuration(a.durationSeconds),
-                    a.workout.averageHeartRate?.let { "average $it bpm" },
-                    a.workout.calories?.let { "$it kcal" },
-                ).joinToString(", "),
-            )
-        }
-        Icon(org.openstrap.app.ui.theme.AppIcons.CaretRight, null, tint = Color.White.copy(alpha = 0.7f))
     }
 }

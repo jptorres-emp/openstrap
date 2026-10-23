@@ -35,11 +35,11 @@ import androidx.compose.ui.unit.dp
 
 private val ListShape = RoundedCornerShape(28.dp)
 private val ListSurface = Color(0xFF0F0F11)
-private val RowHairline = Color.White.copy(alpha = 0.05f)
+internal val RowHairline = Color.White.copy(alpha = 0.05f)
 
 /** Row values in dot-matrix digits. */
-private val ValueDot = 2.4.dp
-private val ValueGap = 0.9.dp
+internal val ValueDot = 2.4.dp
+internal val ValueGap = 0.9.dp
 
 /**
  * A grouped list: a dark panel with a title row ([title] left, an optional [note] right) over its rows, usually

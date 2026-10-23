@@ -238,6 +238,10 @@ interface HealthDao {
     @Query("SELECT * FROM app_workout_set ORDER BY workoutStart, `index`")
     suspend fun setsAll(): List<AppWorkoutSet>
 
+    /** Finished sets per phone workout, for the workout lists. */
+    @Query("SELECT workoutStart, COUNT(*) AS sets FROM app_workout_set WHERE `end` IS NOT NULL GROUP BY workoutStart")
+    fun setCounts(): Flow<List<SetCount>>
+
     @Query("DELETE FROM app_workout_set WHERE workoutStart = :start")
     suspend fun deleteSets(start: Long)
 

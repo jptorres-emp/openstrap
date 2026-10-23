@@ -167,4 +167,13 @@ class WorkoutRecorderTest {
         assertEquals(150, laps[1].averageHeartRate)
         assertNull(laps[1].meters)
     }
+
+    @Test
+    fun aListRowCarriesThePhoneWorkoutsDistance() {
+        val start = 1_000_000L
+        val a = WorkoutRecorder.analyse(AppWorkout(start, start + 1800, 3, distanceMeters = 3400f, distanceFromSteps = true), emptyList(), 190)
+        assertEquals(3400f, a.distanceMeters!!, 0.01f)
+        assertTrue(a.distanceFromSteps)
+        assertNull(a.sets)
+    }
 }

@@ -84,4 +84,28 @@ class WorkoutsTest {
         org.junit.Assert.assertTrue(Workouts.analyse(auto, emptyList(), emptyList(), 190).autoDetected)
         org.junit.Assert.assertFalse(Workouts.analyse(workout(), emptyList(), emptyList(), 190).autoDetected)
     }
+
+    @Test
+    fun usualLoadIsTheMedianOfRecentWorkoutsWithOne() {
+        assertNull(Workouts.usualLoad(listOf(80, null, 0, 120)))
+        assertEquals(80f, Workouts.usualLoad(listOf(80, null, 40, 0, 120))!!, 0.001f)
+        assertEquals(60f, Workouts.usualLoad(listOf(80, 40, 120, 20))!!, 0.001f)
+        // Only the latest 20 count: the old hard ones fall out.
+        assertEquals(30f, Workouts.usualLoad(List(20) { 30 } + List(10) { 300 })!!, 0.001f)
+    }
+
+    @Test
+    fun effortGlowsWithLoadAgainstYourUsual() {
+        // A usual workout glows at half, twice usual or more at full.
+        assertEquals(0.5f, Workouts.effort(60, 60f), 0.001f)
+        assertEquals(1f, Workouts.effort(120, 60f), 0.001f)
+        assertEquals(1f, Workouts.effort(400, 60f), 0.001f)
+        assertEquals(0.25f, Workouts.effort(30, 60f), 0.001f)
+        // Without a usual, the fixed scale.
+        assertEquals(0.5f, Workouts.effort(75, null), 0.001f)
+        // No Load, or a tiny one, keeps the faint minimum.
+        assertEquals(Workouts.EFFORT_MIN, Workouts.effort(null, 60f), 0.001f)
+        assertEquals(Workouts.EFFORT_MIN, Workouts.effort(0, null), 0.001f)
+        assertEquals(Workouts.EFFORT_MIN, Workouts.effort(2, 60f), 0.001f)
+    }
 }

@@ -397,6 +397,9 @@ interface HealthDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertWearEvent(row: WearEventRow)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertWearEvents(rows: List<WearEventRow>)
+
     /** Wear changes in [from, to), led by the one in force at [from] if there is one. */
     @Query(
         "SELECT * FROM wear_event WHERE timestamp < :to AND " +

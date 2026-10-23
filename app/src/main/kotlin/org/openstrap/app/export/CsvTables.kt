@@ -31,6 +31,7 @@ import org.openstrap.app.data.db.SportEffectRow
 import org.openstrap.app.data.db.Spo2Sample
 import org.openstrap.app.data.db.StrapReadinessRow
 import org.openstrap.app.data.db.StressSample
+import org.openstrap.app.data.db.WearEventRow
 import org.openstrap.app.data.db.Workout
 import org.openstrap.app.data.db.WorkoutHeartRate
 import java.time.Instant
@@ -173,18 +174,18 @@ val CSV_TABLES: List<CsvTable<*>> = listOf(
         { d, f, t -> d.paiOnce(f, t) }, { listOf(iso(it.timestamp), it.timestamp, it.daily, it.total, it.restingHeartRate, it.maxHeartRate, it.tomorrowTotal) },
         { PaiSample(it.long("epoch"), it.float("daily"), it.float("total"), it.int("resting_hr"), it.int("max_hr"), it.floatOrNull("tomorrow_total")) },
         { d, r -> d.insertPai(r) }),
-    CsvTable("workout.csv", "start,start_epoch,end_epoch,sport_type,exercise_seconds,calories,avg_hr,max_hr,min_hr,aerobic_te,anaerobic_te,training_load,vo2max,steps",
+    CsvTable("workout.csv", "start,start_epoch,end_epoch,sport_type,exercise_seconds,calories,avg_hr,max_hr,min_hr,aerobic_te,anaerobic_te,training_load,vo2max,steps,subtype",
         Key("workout", "start", "start_epoch", span = Span("`end`", "end_epoch")),
         { d, f, t -> d.workouts().first().filter { it.start in f..t }.sortedBy { it.start } },
         {
             listOf(iso(it.start), it.start, it.end, it.sportType, it.exerciseSeconds, it.calories, it.averageHeartRate, it.maxHeartRate,
-                it.minHeartRate, it.aerobicTrainingEffect, it.anaerobicTrainingEffect, it.trainingLoad, it.vo2max, it.steps)
+                it.minHeartRate, it.aerobicTrainingEffect, it.anaerobicTrainingEffect, it.trainingLoad, it.vo2max, it.steps, it.subtype)
         },
         {
             Workout(it.long("start_epoch"), it.long("end_epoch"), it.int("sport_type"), it.intOrNull("exercise_seconds"),
                 it.intOrNull("calories"), it.intOrNull("avg_hr"), it.intOrNull("max_hr"), it.intOrNull("min_hr"),
                 it.floatOrNull("aerobic_te"), it.floatOrNull("anaerobic_te"), it.intOrNull("training_load"),
-                it.intOrNull("vo2max"), it.intOrNull("steps"))
+                it.intOrNull("vo2max"), it.intOrNull("steps"), it.intOrNull("subtype"))
         },
         { d, r -> d.insertWorkouts(r) }),
     CsvTable("workout_hr.csv", "workout_start_epoch,epoch,bpm",
@@ -293,6 +294,11 @@ val CSV_TABLES: List<CsvTable<*>> = listOf(
         Key("health_alert", "timestamp", "epoch"),
         { d, f, t -> d.healthAlerts(f, t).first() }, { listOf(iso(it.timestamp), it.timestamp, it.type, it.value) },
         { HealthAlertRow(it.long("epoch"), it.int("type"), it.long("value")) }, { d, r -> d.insertHealthAlerts(r) }),
+    // The strap's on/off-body changes; worn is blank where the link went down and the state became unknown.
+    CsvTable("wear_event.csv", "time,epoch,worn",
+        Key("wear_event", "timestamp", "epoch"),
+        { d, f, t -> d.wearEventsOnce(f, t + 1).filter { it.timestamp in f..t } }, { listOf(iso(it.timestamp), it.timestamp, it.worn) },
+        { WearEventRow(it.long("epoch"), if (it.has("worn")) it.bool("worn") else null) }, { d, r -> d.insertWearEvents(r) }),
     // What the user entered: the morning check-in and day tags can't be synced again from the strap.
     CsvTable("check_in.csv", "day,day_epoch,feeling,updated_epoch",
         Key("check_in", "day", "day_epoch"),

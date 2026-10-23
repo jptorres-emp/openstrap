@@ -50,7 +50,7 @@ class CsvImportTest {
     }
 
     @Test fun `a workout round-trips through its row`() {
-        val w = Workout(1792300000, 1792303000, 1, 3000, 550, 140, 165, 98, 3.4f, 1.6f, 120, 48, null)
+        val w = Workout(1792300000, 1792303000, 1, 3000, 550, 140, 165, 98, 3.4f, 1.6f, 120, 48, null, subtype = 1)
         val t = table("workout.csv")
         @Suppress("UNCHECKED_CAST")
         val row = (t as CsvTable<Workout>).row(w)

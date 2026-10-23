@@ -115,6 +115,12 @@ data class TabNav(val current: Int = HOME, val previous: Int? = null, val resele
     /** Another tab: it becomes current, and back returns here. Every tab keeps its own stack. */
     fun select(tab: Int): TabNav = if (tab == current) this else TabNav(tab, current)
 
+    /**
+     * The pager came to rest on [page]. The tab is the one owner of what shows and the pager follows it, so only a
+     * finished [swiped] gesture moves the tab; the pager's own animation to a tapped tab never writes back.
+     */
+    fun settled(page: Int, swiped: Boolean): TabNav = if (swiped) select(page) else this
+
     /** Back from the current tab's root: the tab before it, then Today. Null on Today: back leaves the app. */
     fun back(): TabNav? = when {
         current == HOME -> null
@@ -124,10 +130,11 @@ data class TabNav(val current: Int = HOME, val previous: Int? = null, val resele
 
     /**
      * A tap on the current tab, whose stack is [depth] screens deep: the first scrolls to the top, the next pops to
-     * the root. With nothing pushed there's nothing to pop, so it scrolls again.
+     * the root. With nothing pushed there's nothing to pop, so it scrolls again. While All metrics shows ([index]) the
+     * circle is lit and the tab isn't, so the tap goes back to the tab: it pops to the root at once.
      */
-    fun reselect(depth: Int): Pair<TabNav, Reselect> =
-        if (reselected && depth > 0) copy(reselected = false) to Reselect.PopToRoot
+    fun reselect(depth: Int, index: Boolean = false): Pair<TabNav, Reselect> =
+        if ((index || reselected) && depth > 0) copy(reselected = false) to Reselect.PopToRoot
         else copy(reselected = true) to Reselect.ScrollToTop
 
     /** Something else happened on the tab (a screen opened or closed): the next tap scrolls again first. */

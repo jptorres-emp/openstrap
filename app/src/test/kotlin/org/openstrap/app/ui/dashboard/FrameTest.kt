@@ -130,6 +130,27 @@ class FrameTest {
         assertEquals(Reselect.ScrollToTop, once.reselect(depth = 0).second)
     }
 
+    @Test fun `tapping the tab under All metrics pops it at once`() {
+        val (next, action) = TabNav().reselect(depth = 1, index = true)
+        assertEquals(Reselect.PopToRoot, action)
+        assertFalse(next.reselected)
+        // Even right after a tap that scrolled: the tab isn't lit, so the tap goes back to it.
+        assertEquals(Reselect.PopToRoot, TabNav().reselect(depth = 1).first.reselect(depth = 1, index = true).second)
+    }
+
+    @Test fun `only a swipe moves the tab when the pager settles`() {
+        val nav = TabNav().select(sleep)
+        // The pager settling on an old page, from an animation cut short or not started yet, leaves the tap's tab.
+        assertEquals(nav, nav.settled(TabNav.HOME, swiped = false))
+        assertEquals(nav, nav.settled(recovery, swiped = false))
+        // A swipe that lands on another tab picks it, and back returns to where the swipe began.
+        val swiped = nav.settled(activity, swiped = true)
+        assertEquals(activity, swiped.current)
+        assertEquals(sleep, swiped.previous)
+        // A swipe that springs back changes nothing.
+        assertEquals(nav, nav.settled(sleep, swiped = true))
+    }
+
     @Test fun `opening a screen in between makes the next tap scroll first`() {
         val (once, _) = TabNav().reselect(depth = 1)
         assertTrue(once.reselected)

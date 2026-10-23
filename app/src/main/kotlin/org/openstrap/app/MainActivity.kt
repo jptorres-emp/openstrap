@@ -444,13 +444,21 @@ private fun AppRoot(container: AppContainer, metricRequests: kotlinx.coroutines.
         }
     }
 
-    // Swiping left and right moves between tabs. The bar and the swipe drive the same page: a tap
-    // animates the pager there, and a finished swipe updates the tab.
+    // Swiping left and right moves between tabs. [nav] owns the tab and the pager follows it: a tap animates the
+    // pager there, and only a swipe the user made, once it settles, is another way to pick the tab. The pager
+    // settling from its own animation (or one cut short by the next tap) never writes back.
     val pager = rememberPagerState(initialPage = tab) { Tab.entries.size }
+    val swiped = remember { java.util.concurrent.atomic.AtomicBoolean(false) }
     LaunchedEffect(tab) {
-        if (pager.currentPage != tab) pager.animateScrollToPage(tab, animationSpec = tween(Motion.SWIFT, easing = Motion.easing))
+        if (pager.currentPage != tab) {
+            swiped.set(false)
+            pager.animateScrollToPage(tab, animationSpec = tween(Motion.SWIFT, easing = Motion.easing))
+        }
     }
-    LaunchedEffect(pager) { snapshotFlow { pager.settledPage }.collect { nav = nav.select(it) } }
+    LaunchedEffect(pager) {
+        launch { pager.interactionSource.interactions.collect { if (it is androidx.compose.foundation.interaction.DragInteraction.Start) swiped.set(true) } }
+        snapshotFlow { pager.settledPage }.collect { nav = nav.settled(it, swiped.get()) }
+    }
     // A detail screen open on this tab keeps the swipe for itself (and for its back gesture).
     val currentDetail = stackOf(tab).lastOrNull()
     LaunchedEffect(currentDetail) {
@@ -516,8 +524,12 @@ private fun AppRoot(container: AppContainer, metricRequests: kotlinx.coroutines.
         // left edge, so the pages keep their height.
         val rail = maxWidth > maxHeight && maxWidth >= 600.dp
         val navItems = Tab.entries.map { NavItem(it.label, it.icon, it.selectedIcon, it.tint) }
-        // Another tab keeps every stack. The tab showing scrolls to the top, then pops to its root (spec 3.3). A tap
-        // that closes pages over the tab does only that.
+        // While All metrics is the screen showing, the circle is the lit item and no tab is; a detail opened from it
+        // belongs to the tab again.
+        val indexShowing = currentDetail == Detail.AllMetrics && pages.isEmpty() && workoutOpen == null
+        val litTab = if (indexShowing) -1 else tab
+        // Another tab keeps every stack. The tab showing scrolls to the top, then pops to its root (spec 3.3); from
+        // All metrics, where it isn't lit, it pops at once. A tap that closes pages over the tab does only that.
         val selectTab: (Int) -> Unit = { t ->
             youOpen = false
             val closed = closePages()
@@ -526,7 +538,7 @@ private fun AppRoot(container: AppContainer, metricRequests: kotlinx.coroutines.
                 t != nav.current -> nav = nav.select(t)
                 closed -> Unit
                 else -> {
-                    val (next, action) = nav.reselect(stackOf(t).size)
+                    val (next, action) = nav.reselect(stackOf(t).size, index = indexShowing)
                     nav = next
                     when (action) {
                         Reselect.ScrollToTop -> scrollToTop[t] = scrollToTop[t] + 1
@@ -539,10 +551,6 @@ private fun AppRoot(container: AppContainer, metricRequests: kotlinx.coroutines.
             closePages()
             if (stackOf(tab).lastOrNull() != Detail.AllMetrics) setStack(tab, stackOf(tab) + Detail.AllMetrics)
         }
-        // While All metrics is the screen showing, the circle is the lit item and no tab is; a detail opened from it
-        // belongs to the tab again.
-        val indexShowing = currentDetail == Detail.AllMetrics && pages.isEmpty() && workoutOpen == null
-        val litTab = if (indexShowing) -1 else tab
         val action: @Composable () -> Unit = {
             // The moments (step 3) pass the workout window's start here.
             TabAction(

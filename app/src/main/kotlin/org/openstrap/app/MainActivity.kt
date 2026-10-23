@@ -229,7 +229,7 @@ private enum class Tab(
     val tint: androidx.compose.ui.graphics.Color,
 ) {
     Today("Today", PhosphorIcons.HouseSimple, PhosphorIcons.HouseSimpleFill, androidx.compose.ui.graphics.Color.White),
-    Recovery("Recovery", PhosphorIcons.Plant, PhosphorIcons.Plant, org.openstrap.app.ui.theme.MetricColors.readiness),
+    Recovery("Recovery", PhosphorIcons.Plant, PhosphorIcons.PlantFill, org.openstrap.app.ui.theme.MetricColors.readiness),
     Sleep("Sleep", PhosphorIcons.Moon, PhosphorIcons.MoonFill, org.openstrap.app.ui.theme.MetricColors.sleepDeep),
     Activity("Activity", PhosphorIcons.SneakerMove, PhosphorIcons.SneakerMoveFill, org.openstrap.app.ui.theme.MetricColors.steps),
 }

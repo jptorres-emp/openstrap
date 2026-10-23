@@ -35,6 +35,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -53,8 +54,8 @@ private val SwipeDistance = 56.dp
 /**
  * The header on every tab (spec 3.1): the avatar on the left opens You, the [title] over the day in the middle, the
  * All metrics button and the strap chip on the right open the sheet and the Strap page. Swipe it sideways to change
- * the day (on every tab at once), or tap the day for the calendar. The day before peeks in dimmed on the left, the day after on the right while there is
- * one. Pull to sync opens its gap underneath.
+ * the day (on every tab at once), or tap the day for the calendar. The day before peeks in dimmed on the left, the day
+ * after on the right while there is one. Pull to sync opens its gap underneath.
  */
 @Composable
 fun MomentHeader(
@@ -73,15 +74,48 @@ fun MomentHeader(
     val today = LocalDate.now()
     val hasNext = date < today
     Column(Modifier.fillMaxWidth()) {
-        Row(Modifier.fillMaxWidth().height(60.dp), verticalAlignment = Alignment.CenterVertically) {
-            RoundButton(PhosphorIcons.User, "You", "Open You", onOpenYou)
-            DaySwitcher(title, date, hasNext, onPrev, onNext, { calendarOpen = true }, Modifier.weight(1f))
-            RoundButton(PhosphorIcons.SquaresFour, "All metrics", "Open all metrics", onOpenAllMetrics)
-            Spacer(Modifier.width(8.dp))
-            StrapChipButton(chip, onOpenStrap)
-        }
+        // With no day after this one, the room kept for its peek is empty and may tuck under the right side.
+        CentredRow(
+            overhang = if (hasNext) 0.dp else PeekWidth + 16.dp,
+            start = { RoundButton(PhosphorIcons.User, "You", "Open You", onOpenYou) },
+            centre = { DaySwitcher(title, date, hasNext, onPrev, onNext, { calendarOpen = true }, Modifier) },
+            end = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    RoundButton(PhosphorIcons.ChartBar, "All metrics", "Open all metrics", onOpenAllMetrics)
+                    Spacer(Modifier.width(8.dp))
+                    StrapChipButton(chip, onOpenStrap)
+                }
+            },
+        )
         // Pull to sync opens here and pushes everything below it down.
         org.openstrap.app.ui.components.PullSyncReveal()
+    }
+}
+
+/**
+ * [start] and [end] at the edges, [centre] in the middle of the screen rather than of the room between them, so the day
+ * sits under the status bar's centre whatever the sides hold. Only when the strap chip grows wide enough to reach it does
+ * the centre slide over, just far enough to clear it. The last [overhang] of the centre is empty and may pass under [end].
+ */
+@Composable
+private fun CentredRow(
+    overhang: androidx.compose.ui.unit.Dp, start: @Composable () -> Unit, centre: @Composable () -> Unit, end: @Composable () -> Unit,
+) {
+    Layout(listOf(start, centre, end), Modifier.fillMaxWidth().height(60.dp)) { (s, c, e), constraints ->
+        val loose = constraints.copy(minWidth = 0, minHeight = 0)
+        val sp = s.first().measure(loose)
+        val ep = e.first().measure(loose)
+        val over = overhang.roundToPx()
+        val room = (constraints.maxWidth - sp.width - ep.width + over).coerceAtLeast(0)
+        val cp = c.first().measure(loose.copy(maxWidth = room))
+        val w = constraints.maxWidth
+        val h = constraints.maxHeight
+        layout(w, h) {
+            sp.place(0, (h - sp.height) / 2)
+            ep.place(w - ep.width, (h - ep.height) / 2)
+            val x = ((w - cp.width) / 2).coerceIn(sp.width, (w - ep.width - cp.width + over).coerceAtLeast(sp.width))
+            cp.place(x, (h - cp.height) / 2)
+        }
     }
 }
 

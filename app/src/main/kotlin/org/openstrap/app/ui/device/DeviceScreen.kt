@@ -365,7 +365,7 @@ private fun StrapHero(name: String, connection: ConnectionState, sync: SyncState
     }
     GlowCard(StrapGlow, Modifier.fillMaxWidth()) {
         Box(Modifier.fillMaxWidth()) {
-            Column(Modifier.fillMaxWidth().padding(end = 96.dp)) {
+            Column(Modifier.fillMaxWidth().padding(end = 112.dp)) {
                 Text(name, color = Color.White, style = GlowType.label)
                 Text(
                     strapStateLine(connection, sync, lastSeen, now), color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA),
@@ -374,7 +374,7 @@ private fun StrapHero(name: String, connection: ConnectionState, sync: SyncState
             }
             StrapDrawing(
                 led, lit = connected != null || connection is ConnectionState.Failed, syncing = connected != null && sync is SyncState.Running,
-                Modifier.align(Alignment.TopEnd).size(width = 84.dp, height = 105.dp),
+                Modifier.align(Alignment.TopEnd).size(width = 100.dp, height = 125.dp),
             )
         }
         Column(Modifier.fillMaxWidth().padding(top = 128.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {

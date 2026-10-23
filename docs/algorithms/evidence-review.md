@@ -141,7 +141,8 @@ SRI predicted all-cause mortality better than duration in 60,977 UK Biobank part
 * Grid: 1440 one-minute epochs per local day, starting at 12:00. Sleep = any deep, light or REM minute, naps included; awake = wake; strap off = missing.
 * Over the last 7 day-pairs, count only pairs where both minutes are valid (as [GGIR](https://www.rdocumentation.org/packages/GGIR/versions/3.3-8/topics/CalcSleepRegularityIndex) does). SRI = −100 + 200·matches / validPairs.
 * Withhold below 7200 valid pairs (120 h).
-* Bands (depend on the method; descriptive only): < 72 irregular, 72–79 fair, 79–87 regular, ≥ 87 very regular.
+* Shown as the Sleep screen's "Regularity", on the standard −100…100 scale (100 identical days, 0 random), rounded.
+* Bands at Windred's UK Biobank quintile cuts (71.65 / 78.56 / 83.17 / 87.32), rounded: < 72 irregular (bottom fifth, the high-risk group), 72–79 fair, 79–87 regular, ≥ 87 very regular. Descriptive only: they depend on the sleep/wake method, and the strap's isn't GGIR's. Zepp's 60/80/90 bands are for a different (overlap) score and aren't used.
 * Fallback when withheld but there are ≥ 4 main sleeps in 7 days: the SD of sleep midpoint, "good" under 60 min.
 
 ### Sleep-health count (Probable)

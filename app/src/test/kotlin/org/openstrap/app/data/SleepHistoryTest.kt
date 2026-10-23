@@ -40,39 +40,24 @@ class SleepHistoryTest {
     }
 
     @Test
-    fun regularityNeedsFiveNights() {
-        val four = (0L..3L).associate { end.minusDays(it) to night(it, -30, 7 * 60) }
-        assertNull(SleepHistory.regularity(four, end, zone))
-        val five = (0L..4L).associate { end.minusDays(it) to night(it, -30, 7 * 60) }
-        assertEquals(5, SleepHistory.regularity(five, end, zone)!!.nights)
+    fun usualTimesNeedSomeSleep() {
+        assertNull(SleepHistory.usualTimes(emptyMap(), end, zone))
+        // Nights outside the 7-night window don't count.
+        assertNull(SleepHistory.usualTimes(mapOf(end.minusDays(7) to night(7, -30, 7 * 60)), end, zone))
+        val two = (0L..1L).associate { end.minusDays(it) to night(it, -30, 7 * 60) }
+        assertEquals(2, SleepHistory.usualTimes(two, end, zone)!!.nights)
     }
 
     @Test
-    fun identicalNightsScoreFullAcrossMidnight() {
+    fun usualTimesAverageAcrossMidnight() {
         // 23:30 to 07:00 every night: bedtime averages before midnight without wrapping.
-        val nights = (0L..6L).associate { end.minusDays(it) to night(it, -30, 7 * 60) }
-        val r = SleepHistory.regularity(nights, end, zone)!!
-        assertEquals(100, r.score)
-        assertEquals(23 * 60 + 30, SleepHistory.clockMinutes(r.bedtime))
-        assertEquals(7 * 60, r.wake)
-        assertEquals(SleepHistory.Band.VeryRegular, r.band)
-    }
-
-    @Test
-    fun bedtimesEitherSideOfMidnightAverageNearMidnight() {
-        val nights = (0L..5L).associate { end.minusDays(it) to night(it, if (it % 2 == 0L) -30 else 30, 7 * 60) }
-        val r = SleepHistory.regularity(nights, end, zone)!!
-        assertEquals(0, SleepHistory.clockMinutes(r.bedtime))
-        // Bedtime SD 30 min, wake SD 0: spread 15 min -> 88.
-        assertEquals(88, r.score)
-        assertEquals(SleepHistory.Band.Regular, r.band)
-    }
-
-    @Test
-    fun bandsFollowZepp() {
-        assertEquals(SleepHistory.Band.VeryRegular, SleepHistory.Band.of(90))
-        assertEquals(SleepHistory.Band.Regular, SleepHistory.Band.of(89))
-        assertEquals(SleepHistory.Band.FairlyRegular, SleepHistory.Band.of(60))
-        assertEquals(SleepHistory.Band.Irregular, SleepHistory.Band.of(59))
+        val same = (0L..6L).associate { end.minusDays(it) to night(it, -30, 7 * 60) }
+        val u = SleepHistory.usualTimes(same, end, zone)!!
+        assertEquals(23 * 60 + 30, SleepHistory.clockMinutes(u.bedtime))
+        assertEquals(7 * 60, u.wake)
+        assertEquals(7, u.nights)
+        // 23:30 and 00:30 alternating average to midnight.
+        val either = (0L..5L).associate { end.minusDays(it) to night(it, if (it % 2 == 0L) -30 else 30, 7 * 60) }
+        assertEquals(0, SleepHistory.clockMinutes(SleepHistory.usualTimes(either, end, zone)!!.bedtime))
     }
 }

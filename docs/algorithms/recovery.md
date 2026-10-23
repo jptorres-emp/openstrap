@@ -137,7 +137,7 @@ The strap's method is unknown and may change with firmware, and a baseline that 
 `SleepRegularity.kt`.
 
 * **Sleep Regularity Index:** 1440 one-minute epochs per local day, starting at `DAY_START_HOUR` = 12:00. Sleep = any deep, light or REM minute, naps included; awake = an awake stage or a minute with heart rate; strap off = missing. Over the last `SRI_DAYS` = 7 day-pairs, only pairs where both minutes are valid count (as GGIR does): SRI = −100 + 200·matches / validPairs. Withheld below `MIN_VALID_PAIRS` = 7200 (120 h), the validity rule in Windred et al. 2024 (60,977 UK Biobank participants, where SRI predicted all-cause mortality better than duration).
-* Bands (method-dependent, descriptive): < 72 irregular, 72–79 fair, 79–87 regular, ≥ 87 very regular.
+* Shown as "Regularity" on the Sleep screen ("This week" and "Sleep health"). Bands at the Windred UK Biobank quintile cuts, rounded (method-dependent, descriptive): < 72 irregular, 72–79 fair, 79–87 regular, ≥ 87 very regular.
 * Fallback when withheld but there are ≥ 4 main sleeps in 7 days: SD of the sleep midpoint, "good" under 60 min.
 * **Sleep-health count** (0–3, Brindle et al. 2019: OR 0.901 per point for cardiometabolic morbidity): duration 420–540 min (≥ 65: ≤ 510); continuity WASO ≤ 30 min or sleep-period efficiency ≥ 90 %; regularity SRI ≥ 72 (or the fallback). The midpoint is shown and flagged outside 01:30–04:30, never counted.
 

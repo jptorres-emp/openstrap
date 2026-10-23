@@ -429,12 +429,15 @@ Built over the last 14 nights, oldest first. Naps count, and missing nights are 
 
 ### Sleep Regularity Index (SRI)
 
+This is the **Regularity** number on the Sleep screen ("This week" and "Sleep health"), worked out for the selected day.
+
 * Each day is split into 1,440 one-minute slots from **noon to noon**, so a night isn't cut at midnight.
 * Each slot is marked asleep (deep, light, REM, naps included), awake (an awake stage, or the strap was worn), or missing.
-* Each slot is compared with the same slot the next day, over 8 days (7 pairs). Only pairs where both minutes are known count.
-* **SRI = −100 + 200 × (matching pairs ÷ valid pairs).** 100 means an identical schedule every day.
-* Withheld under 120 hours of valid pairs. Then the fallback is the spread (SD) of your sleep midpoints over the last 7 days, from at least 4 sleeps.
-* Bands: under 72 irregular, 72–78 fair, 79–86 regular, 87+ very regular.
+* Each slot is compared with the same slot the next day, over 8 days (7 pairs), ending at noon on the selected day. Only pairs where both minutes are known count.
+* **SRI = −100 + 200 × (matching pairs ÷ valid pairs).** This is the standard scale (Phillips et al. 2017, as GGIR and Windred et al. 2024 report it): 100 means an identical schedule every day, 0 is what random sleep gives; in UK Biobank the middle half scored 73.8–86.3. Shown rounded; the bar is clamped to 0–100.
+* Withheld under 120 hours of valid pairs (7200, Windred's validity rule). "This week" then says "Not enough nights yet" with the hours so far; the Sleep-health panel falls back to the spread (SD) of your sleep midpoints over the last 7 days, from at least 4 sleeps.
+* Bands: under 72 irregular, 72–78 fair, 79–86 regular, 87+ very regular. These are the UK Biobank SRI quintile cuts (71.65 / 78.56 / 83.17 / 87.32, median 81.0; [Windred et al. 2024](https://pmc.ncbi.nlm.nih.gov/articles/PMC10782501/)), rounded, with the middle two fifths merged. Irregular is the bottom fifth, where most of the mortality risk sat. They place you against that population; they aren't clinical thresholds, and the strap's sleep/wake minutes aren't GGIR's.
+* Zepp's 60/80/90 bands belong to its own night-overlap score (a different formula; see `analysis/native/05-sleep-regularity.md` in the parent project) and aren't used.
 
 ### Sleep-health count (0–3)
 
@@ -445,13 +448,9 @@ One point each for:
 
 The sleep midpoint is flagged when it falls outside 01:30–04:30, but it's never scored.
 
-### Bedtime/wake regularity score (Sleep screen panel)
+### Usual sleep times (Sleep screen, "This week")
 
-A simpler, Zepp-style score over the last 7 nights. It needs 5 of them.
-
-* Spread = average of the standard deviation of bedtime and the standard deviation of wake time, in minutes.
-* **Score = 100 × (1 − spread ÷ 120)**, kept within 0–100. 15 min spread ≈ 88, 30 min = 75, 1 h = 50.
-* Bands: 90+ very regular, 80–89 regular, 60–79 fairly regular, under 60 irregular.
+The average fall-asleep and wake-up time over the last 7 nights' main sleeps, from as many of them as have sleep. Bedtime is averaged from noon and wake time from midnight, so neither wraps in a normal night. They're drawn as dashed lines on the week chart. They are not scored: the bedtime/wake-spread score that used to sit here (100 × (1 − spread ÷ 120), Zepp's bands) was replaced by the SRI above.
 
 ### Sleep vitals "usual / higher / lower"
 
@@ -664,5 +663,5 @@ EPOC ← EPOC + [0.01 × (e^(7x) − 1) − 0.034 × (1 − x) × EPOC] × minut
 
 Found while writing this document. These are not bugs in the formulas above, but places where two parts of the app disagree or a setting isn't wired up. Worth a look before the 2026-10-30 review.
 
-1. **Two regularity measures.** The Sleep screen's bedtime/wake score (section 9) and the SRI behind the sleep-health count can disagree, since they measure different things.
+1. **Two regularity measures (fixed).** The Sleep screen used to show a bedtime/wake-spread score while the sleep-health count used the SRI. Both now use the SRI (section 9).
 2. **Two resting-HR definitions on purpose.** Readiness uses the lowest 30-minute average; body-signal alerts use the sleep-mean HR. This is intended: the calibration review will pick one.

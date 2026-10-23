@@ -287,7 +287,7 @@ Tabs (`MainTabActivity.java:432-437`): **Home · Workout · Discover (or Badges)
 
 ### 6.5 Changes to the tab proposal from this
 
-- **Sleep** gets *Regularity* in "This week" (Zepp bands, ≥ 5 nights) and the breathing-disturbance bands above.
+- **Sleep** gets *Regularity* in "This week" (since replaced by the Sleep Regularity Index with UK Biobank quintile bands; see algorithms/calculations.md) and the breathing-disturbance bands above.
 - **Recovery** signal tiles use Higher/Lower/Faster/Slower words, not just arrows.
 - **Activity** turns Training load into *today vs target*, where the target drops on a low-Charge or low-Recovery day,
   and PAI gets "earn N more today".

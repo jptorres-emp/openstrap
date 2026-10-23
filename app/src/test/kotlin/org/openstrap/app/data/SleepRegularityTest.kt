@@ -33,6 +33,15 @@ class SleepRegularityTest {
         assertEquals(Band.Regular, SleepRegularity.band(sri))
     }
 
+    @Test fun `a week shifted 2 h either way every other day scores much lower`() {
+        // 23:00-07:00 and 01:00-09:00 alternating: each pair disagrees at both ends, 240 of 1440 minutes.
+        val regular = SleepRegularity.sri((0..7).map { day(it, 660, 1140) }).first!!
+        val shifted = SleepRegularity.sri((0..7).map { if (it % 2 == 0) day(it, 660, 1140) else day(it, 780, 1260) }).first!!
+        assertEquals(-100f + 200f * (1440 - 240) / 1440, shifted, 1e-3f) // 66.7
+        assertTrue(regular - shifted > 30f)
+        assertEquals(Band.Irregular, SleepRegularity.band(shifted))
+    }
+
     @Test fun `only pairs with both minutes valid count, and under 120 h it is withheld`() {
         // Off the wrist outside sleep: only the 8 h of sleep per day are valid, 7 pairs × 480 = 3360 < 7200.
         val grids = (0..7).map { day(it, 660, 1140, worn = false) }

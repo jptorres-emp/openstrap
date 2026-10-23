@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -79,7 +80,7 @@ fun ListPanel(
 private val ListPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 6.dp, bottom = 8.dp)
 
 /**
- * A row in a [ListPanel]: an 8 dp dot in the metric's [color], the [name] with its [status] under it, and the
+ * A row in a [ListPanel]: an 8 dp dot in the metric's [color] (or its [icon], as a workout's sport), the [name] with its [status] under it, and the
  * [value] in dot-matrix digits in its own column on the right. Value and status take the metric colour only when
  * [offNormal]. A null [value] is a waiting row: a dim dash, and [status] says what it waits for ("After your first
  * night"). [onClick] opens the metric's detail. [divider] draws the hairline above the row.
@@ -96,6 +97,7 @@ fun ListRow(
     divider: Boolean = true,
     /** A null value draws the dim dash; false leaves the value column empty, for a row whose [status] is the answer. */
     dash: Boolean = true,
+    icon: androidx.compose.ui.graphics.vector.ImageVector? = null,
 ) {
     val waiting = value == null && dash
     val accent = if (offNormal && !waiting) color else Color.White
@@ -107,8 +109,13 @@ fun ListRow(
             .padding(vertical = 13.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(Modifier.size(8.dp).background(color, CircleShape))
-        Spacer(Modifier.width(12.dp))
+        if (icon != null) {
+            Icon(icon, null, tint = color, modifier = Modifier.size(RowIcon))
+            Spacer(Modifier.width(10.dp))
+        } else {
+            Box(Modifier.size(8.dp).background(color, CircleShape))
+            Spacer(Modifier.width(12.dp))
+        }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Text(name, color = Color.White, style = GlowType.label.copy(fontWeight = null))
             if (status != null) Text(
@@ -126,6 +133,9 @@ fun ListRow(
         else if (dash) WaitingDash()
     }
 }
+
+/** A row's icon in place of its dot; the text then starts this plus 10 dp in. */
+internal val RowIcon = 20.dp
 
 /** The empty value: a short dim bar drawn by the UI, never a dash character. */
 @Composable

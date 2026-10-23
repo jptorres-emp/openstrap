@@ -35,6 +35,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -247,48 +248,67 @@ internal fun LastNightCard(state: DayUiState, firstNights: Boolean, onClick: () 
 }
 
 /**
- * Heart rate today: the latest reading and the day so far. Lit from the right while the reading is live. The live
- * switch lives in the Heart rate detail, not here.
+ * Heart rate (line with scrub, chart kit): the latest reading and the day's line, with your resting range as a dim
+ * band behind it when there's one ([restingRange], your normal resting heart rate). Hold the line to scrub: the big
+ * number and the time under it follow the finger, and snap back on release. Lit from the right while the reading is
+ * live, otherwise as a value at its usual. The live switch lives in the Heart rate detail, not here. Shared by Today
+ * and the Activity tab.
  */
 @Composable
-internal fun HeartCard(state: DayUiState, live: Int?, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    val now = live ?: state.latestHeartRate
+internal fun HeartCard(
+    state: DayUiState, live: Int?, onClick: () -> Unit, modifier: Modifier = Modifier,
+    restingRange: org.openstrap.app.data.History.Normal? = null,
+) {
+    val step = 10 * 60L
+    val values = remember(state.heartRate, state.dayStart) { bucket(state.heartRate, state.dayStart..state.dayEnd, step) }
+    var picked by remember(values) { mutableStateOf<Int?>(null) }
+    val scrubbed = picked?.let { i -> values.getOrNull(i)?.let { it.roundToInt() to state.dayStart + i * step } }
+    val now = scrubbed?.first ?: live ?: state.latestHeartRate
     EdgeCard(
         MetricColors.heart, modifier.fillMaxWidth().gridSize(CardSize.Wide),
         kind = if (live != null) EdgeKind.Live else EdgeKind.Value, onClick = onClick,
     ) {
         EdgeTitle("Heart rate", state.restingHeartRate?.let { "Resting $it" })
-        val at = state.heartRate.lastOrNull()?.x
-        EdgeValue(
-            now?.toString(), "bpm",
-            when {
-                live != null -> "Live"
-                now != null && at != null -> "At ${clockAt(at)}"
-                else -> "Waiting for the strap"
-            },
-        )
+        val at = scrubbed?.second ?: state.heartRate.lastOrNull()?.x
+        EdgeValue(now?.toString(), "bpm", TodayCopy.heartAt(live != null && scrubbed == null, at?.let(::clockAt)))
         if (state.heartRate.size >= 2) {
-            val values = remember(state.heartRate, state.dayStart) { bucket(state.heartRate, state.dayStart..state.dayEnd, 10 * 60) }
             Spacer(Modifier.height(10.dp))
-            GlowLineChart(values, height = 40.dp, showAverage = false, color = MetricColors.heart)
+            GlowLineChart(
+                values, height = 72.dp, showAverage = false, color = MetricColors.heart, labels = listOf("00", "06", "12", "18", "24"),
+                band = restingRange?.let { it.low..it.high }, onScrub = { picked = it },
+            )
+            Text(
+                TodayCopy.heartLineNote(restingRange != null), color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA),
+                style = GlowType.secondary, modifier = Modifier.padding(top = 6.dp),
+            )
         }
     }
 }
 
-/** Steps toward the day's goal, with the bar inside the card. */
+/**
+ * Steps toward the day's goal, with the day's steps so far as a line (ghost line, chart kit) on an axis up to the goal.
+ * TODO(step 6): the ghost of your usual steps by this time of day, and "About usual" beside it, need hourly steps
+ * from past days, which the app doesn't load yet; until then only today's line shows.
+ */
 @Composable
 internal fun ActivityCard(state: DayUiState, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val goal = org.openstrap.app.ui.dashboard.LocalGoals.current.steps
-    // TODO(step 4): the ghost line of your usual steps by this time (spec 2.7) needs hourly steps from past days.
-    EdgeCard(
-        MetricColors.steps, modifier.fillMaxWidth().gridSize(CardSize.Wide), kind = EdgeKind.Progress,
-        progress = if (goal > 0) state.steps / goal.toFloat() else null, onClick = onClick,
-    ) {
+    val isToday = state.date == java.time.LocalDate.now()
+    val hour = java.time.LocalTime.now().hour
+    val line = remember(state.hourlySteps, isToday, hour) {
+        var sum = 0f
+        state.hourlySteps.mapIndexed { i, v -> sum += v; if (isToday && i > hour) null else sum }
+    }
+    EdgeCard(MetricColors.steps, modifier.fillMaxWidth().gridSize(CardSize.Wide), kind = EdgeKind.Progress, onClick = onClick) {
         EdgeTitle("Activity", "Goal %,d".format(goal))
         EdgeValue(
             "%,d".format(state.steps), "steps",
             if (state.steps >= goal) "Goal reached" else "${state.steps * 100 / goal.coerceAtLeast(1)}% of your goal",
         )
+        if (state.steps > 0 && line.size >= 2) {
+            Spacer(Modifier.height(10.dp))
+            GhostLine(line, MetricColors.steps, maxOf(goal.toFloat(), state.steps.toFloat(), line.filterNotNull().maxOrNull() ?: 0f), height = 56.dp)
+        }
     }
 }
 
@@ -305,12 +325,16 @@ internal fun RecoveryEarlierCard(shown: TodayCopy.RecoveryShown, onClick: () -> 
 }
 
 /**
- * Charge as a wide card: the second glow before and after a workout, lit to its level, or a level card whose
- * light fills across to the value, as in the evening, only as high as its content. [status] says what's happening
- * to it.
+ * Charge as a wide card: the second glow before a workout, lit to its level, or a level card whose light fills
+ * across to the value, only as high as its content. [status] says what's happening to it. [soFar] is the day's
+ * Charge so far (evenly spaced, nulls still to come), drawn beside the number on the level card (ghost line, chart
+ * kit). TODO(step 6): the ghost of your usual Charge by this time needs Charge by the hour from past days, which the
+ * app doesn't keep; until then only today's line shows.
  */
 @Composable
-internal fun ChargeWideCard(now: Int?, status: String, secondGlow: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+internal fun ChargeWideCard(
+    now: Int?, status: String, secondGlow: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier, soFar: List<Float?>? = null,
+) {
     val m = modifier.fillMaxWidth().gridSize(CardSize.Wide)
     if (secondGlow) {
         GlowCard(GlowStyle.Ember.copy(lightLevel = (now ?: 0) / 100f, second = true), m, onClick = onClick) {
@@ -321,7 +345,12 @@ internal fun ChargeWideCard(now: Int?, status: String, secondGlow: Boolean, onCl
         }
     } else EdgeCard(MetricColors.chargeDeep, modifier.fillMaxWidth(), kind = EdgeKind.Level, progress = (now ?: 0) / 100f, onClick = onClick) {
         EdgeTitle("Charge", null)
-        EdgeValue(now?.toString(), null, status)
+        if (soFar == null || soFar.count { it != null } < 2) EdgeValue(now?.toString(), null, status)
+        else Row(verticalAlignment = Alignment.Bottom) {
+            Column(Modifier.weight(1f)) { EdgeValue(now?.toString(), null, status) }
+            Spacer(Modifier.width(14.dp))
+            GhostLine(soFar, MetricColors.charge, 100f, Modifier.weight(1f), height = 52.dp)
+        }
     }
 }
 
@@ -336,6 +365,8 @@ internal fun WorkoutCard(w: org.openstrap.app.data.WorkoutAnalysis, onClick: () 
             listOfNotNull(w.workout.averageHeartRate?.let { "Average $it bpm" }, mostly?.let { "mostly zone ${it + 1}" })
                 .joinToString(", ").replaceFirstChar { it.uppercase() }.ifEmpty { null },
         )
+        // Zone bar (chart kit): how the time was spent.
+        ZoneBar(w.zoneSeconds, org.openstrap.app.ui.workout.ZONE_COLORS, Modifier.padding(top = 8.dp))
     }
 }
 
@@ -377,6 +408,36 @@ internal fun WeekCard(
         )
     }
 }
+
+/**
+ * A Small (spec 2.3): a number and a word only, in the edge light, filling the [modifier] its row gives it. The title
+ * at the top, the number and its word at the foot. [extra] goes between them, for the nap's stage strip. With no
+ * number the word alone stands in its place, larger, rather than a dash over it ("Recovered").
+ */
+@Composable
+internal fun SmallCard(
+    color: Color, title: String, value: String?, unit: String?, status: String?, modifier: Modifier = Modifier,
+    kind: EdgeKind = EdgeKind.Value, edgeStatus: EdgeStatus = EdgeStatus.Usual, statusColor: Color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA),
+    onClick: (() -> Unit)? = null, extra: (@Composable () -> Unit)? = null,
+) {
+    EdgeCard(color, modifier, status = edgeStatus, kind = kind, onClick = onClick, contentPadding = SmallPadding) {
+        Text(title, color = Color.White, style = GlowType.label, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        Spacer(Modifier.weight(1f))
+        if (value == null && status != null) {
+            extra?.invoke()
+            Text(status, color = Color.White, style = GlowType.label.copy(fontSize = 20.sp, lineHeight = 24.sp), maxLines = 2, overflow = TextOverflow.Ellipsis)
+            return@EdgeCard
+        }
+        Row(verticalAlignment = Alignment.Bottom) {
+            if (value != null) DotMatrixText(value, dot = 3.dp, gap = 1.1.dp) else WaitingDash(Modifier.padding(vertical = 8.dp))
+            if (unit != null && value != null) Text(unit, color = Color.White.copy(alpha = 0.7f), style = GlowType.secondary, modifier = Modifier.padding(start = 6.dp))
+        }
+        extra?.invoke()
+        if (status != null) Text(status, color = statusColor, style = GlowType.secondary, modifier = Modifier.padding(top = 6.dp), maxLines = 2, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+private val SmallPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp)
 
 /* ---------------------------------------------- Lists ----------------------------------------------- */
 

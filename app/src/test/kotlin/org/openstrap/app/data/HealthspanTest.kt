@@ -143,4 +143,16 @@ class HealthspanTest {
         val sparse = dailyA().let { it.copy(restingHr = it.restingHr.entries.take(60).associate { e -> e.toPair() }) }
         assertEquals(Healthspan.Withheld.RestingHr, Healthspan.estimate(UserProfile(sex = man), 35, sparse).second)
     }
+
+    @Test fun `last week's estimate is the stored Sunday before, over a clock change too`() {
+        val day = 86_400L
+        val sunday = 1_760_745_600L
+        // A week before, an hour off for the clock change: still last week.
+        val weeks = listOf(sunday - 14 * day to 31f, sunday - 7 * day + 3600 to 30.1f)
+        assertEquals(30.1f, Healthspan.lastWeek(weeks, sunday))
+        assertNull(Healthspan.lastWeek(listOf(sunday - 14 * day to 31f), sunday))
+        // This Sunday's own result doesn't count as last week.
+        assertNull(Healthspan.lastWeek(listOf(sunday to 29f), sunday))
+        assertNull(Healthspan.lastWeek(emptyList(), sunday))
+    }
 }

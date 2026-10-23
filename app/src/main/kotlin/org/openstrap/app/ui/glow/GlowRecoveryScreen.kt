@@ -4,7 +4,9 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.MaterialTheme
@@ -14,6 +16,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -35,8 +38,9 @@ import org.openstrap.app.ui.dashboard.recoveryCards
 import org.openstrap.app.ui.theme.MetricColors
 
 /*
- * The Recovery tab (spec 5.1): "can I push today, and why". The score glows, what drove it as a list under it, then
- * Charge as the second glow with where it went, the body signals and Habit Age ([recoveryCards]). How the score is
+ * The Recovery tab (spec 5.1): "can I push today, and why". The score glows with the last 7 days beside it, what
+ * drove it as contributor bars, then Charge as a Tall battery with Recharged and Drained as Smalls, the body signals
+ * and Habit Age ([recoveryCards]). How the score is
  * worked out, the strap's own score and why it might be off belong in the Recovery info sheet (step 6), not here.
  */
 
@@ -70,12 +74,13 @@ fun GlowRecoveryScreen(
     CompositionLocalProvider(LocalGlowPaused provides { list.isScrollInProgress }) {
         GlowScreenList(contentPadding, list, focus = showCharge, onFocused = onChargeShown) {
             full { header() }
-            tabCards(slots, focus = RecoveryCard.Charge) { card ->
+            tabCards(slots, focus = RecoveryCard.Charge) { card, m ->
                 when (card) {
                     RecoveryCard.Hero -> RecoveryHero(r)
                     RecoveryCard.Drivers -> DriversList(r?.readiness)
-                    RecoveryCard.Charge -> ChargeGlow(r?.charge, state.dayStart..state.dayEnd)
-                    RecoveryCard.ChargeToday -> ChargeTodayList(r?.charge)
+                    RecoveryCard.Charge -> ChargeTall(r?.charge, state.dayStart..state.dayEnd, m)
+                    RecoveryCard.Recharged -> ChargeSmall(r?.charge, recharged = true, m)
+                    RecoveryCard.Drained -> ChargeSmall(r?.charge, recharged = false, m)
                     RecoveryCard.BodySignals -> SignalsList(signals, waiting, onOpenMetric)
                     RecoveryCard.HabitAge -> HabitAgeEdgeCard(healthspan, onOpenHealthspan, onOpenProfile)
                 }
@@ -120,7 +125,18 @@ private fun RecoveryHero(r: RecoveryResult?) {
             if (score != null) {
                 ready.let { TabCopy.learning(it.phase, it.baselineNights) }?.let { CaveatLine(it, overviewColor(score, alert)) }
                 Spacer(Modifier.height(22.dp))
-                HeroFigure(score.toString(), TodayCopy.recoveryWord(score, alert), big = true)
+                androidx.compose.foundation.layout.Row(verticalAlignment = androidx.compose.ui.Alignment.Bottom) {
+                    HeroFigure(score.toString(), TodayCopy.recoveryWord(score, alert), big = true)
+                    // Trend dots (chart kit): the last 7 days beside the score, today the only full dot.
+                    val week = r.readinessTrend.map { it.second }
+                    if (week.count { it != null } >= 2) {
+                        Spacer(Modifier.width(16.dp))
+                        Column(Modifier.weight(1f)) {
+                            TrendDots(week)
+                            Text(TabCopy.LAST_7_DAYS, color = Color.White.copy(alpha = 0.6f), style = GlowType.secondary)
+                        }
+                    }
+                }
             }
         }
     }
@@ -135,8 +151,8 @@ private fun DriversList(ready: Recovery.Readiness?) {
     ListPanel(title = "What drove it", note = if (all.size > top.size) "Top ${top.size} of ${all.size}" else null) {
         if (top.isEmpty()) ListRow("Waiting for a night", MetricColors.readinessDeep, null, "What drove Recovery shows here each morning", dash = false, divider = false)
         top.forEachIndexed { i, c ->
-            BarRow(
-                TabCopy.factorName(c.factor), MetricColors.readinessDeep, c.score.toString(), TabCopy.contributorWord(c.score),
+            ContributorRow(
+                TabCopy.factorName(c.factor), MetricColors.readinessDeep, TabCopy.contributorWord(c.score),
                 c.score / 100f, offNormal = TabCopy.contributorOff(c.score), divider = i > 0,
             )
         }
@@ -145,28 +161,57 @@ private fun DriversList(ready: Recovery.Readiness?) {
 
 /* ---------------------------------------------- Charge ---------------------------------------------- */
 
-private val HOURS = listOf("00", "06", "12", "18", "24")
-
-/** Charge, the second glow: lit to its level from below, the number now, and the day's curve. */
+/**
+ * Charge as a Tall battery (spec 2.3): the light rises to its level from below, the day's Charge curve at the top,
+ * and the number now with Charge at waking at the foot.
+ */
 @Composable
-private fun ChargeGlow(c: Recovery.ChargeDay?, day: LongRange) {
+private fun ChargeTall(c: Recovery.ChargeDay?, day: LongRange, modifier: Modifier) {
     val now = c?.latest?.let(::chargeShown)
     val atWake = c?.atWake?.toInt()
+    val step = 15 * 60L
+    val values = remember(c?.points, day) { c?.points?.let { bucket(it, day, step) }.orEmpty() }
+    var picked by remember(values) { androidx.compose.runtime.mutableStateOf<Int?>(null) }
+    val scrubbed = picked?.let { i -> values.getOrNull(i)?.let { it.toInt() to clockAt(day.first + i * step) } }
     // TODO(step 6): tapping opens the Charge detail.
-    GlowCard(GlowStyle.Ember.copy(lightLevel = (now ?: 0) / 100f, second = true), Modifier.fillMaxWidth().gridSize(CardSize.Wide)) {
-        Column {
-            GlowHeader("Charge", trailing = atWake?.let { if (c.strapOffOvernight) "$it at start" else "$it at waking" })
-            EdgeValue(now?.toString(), null, TabCopy.chargeLine(now, atWake, c?.anchored == true), Color.White.copy(alpha = 0.8f))
-            if (c?.strapOffOvernight == true) Note(org.openstrap.app.ui.dashboard.STRAP_OFF_OVERNIGHT)
+    GlowCard(GlowStyle.Ember.copy(lightLevel = (now ?: 0) / 100f, second = true), modifier) {
+        Column(Modifier.fillMaxHeight()) {
+            GlowHeader("Charge")
             if (c != null && now != null && c.points.size >= 2) {
-                Spacer(Modifier.height(16.dp))
-                val values = remember(c.points, day) { bucket(c.points, day, 15 * 60L) }
-                GlowLineChart(values, height = 72.dp, labels = HOURS, showAverage = false, yRange = 0f..100f) { i, v ->
-                    "${v.toInt()} at ${clockAt(day.first + i * 15 * 60L)}"
-                }
+                Spacer(Modifier.height(10.dp))
+                // The Charge curve (chart kit): sleep fills it, the day drains it. Scrubbing moves the number.
+                GlowLineChart(values, height = 64.dp, showAverage = false, yRange = 0f..100f, onScrub = { picked = it })
             }
+            Spacer(Modifier.weight(1f))
+            HeroFigure(
+                scrubbed?.first?.toString() ?: now?.toString(),
+                when {
+                    scrubbed != null -> "At ${scrubbed.second}"
+                    c == null || !c.anchored -> "After your first night"
+                    atWake == null -> "Now"
+                    c.strapOffOvernight -> "$atWake at start"
+                    else -> "$atWake at waking"
+                },
+                big = true,
+            )
         }
     }
+}
+
+/** Recharged or Drained beside the Charge battery: a number and a word. */
+@Composable
+private fun ChargeSmall(c: Recovery.ChargeDay?, recharged: Boolean, modifier: Modifier) {
+    val ready = c != null && c.anchored && c.latest != null
+    val value = c?.takeIf { ready }?.let {
+        if (recharged) TabCopy.chargeAmount(it.recharged, +1)
+        else TabCopy.chargeAmount(it.drainedExercise + it.drainedStress + it.drainedLiving, -1)
+    }
+    val status = when {
+        !ready -> "After your first night"
+        recharged -> TabCopy.RECHARGED
+        else -> TabCopy.drainedMostly(c!!.drainedExercise, c.drainedStress, c.drainedLiving)
+    }
+    SmallCard(MetricColors.chargeDeep, if (recharged) "Recharged" else "Drained", value, null, status, modifier)
 }
 
 /** Averages charge samples into evenly spaced buckets across [range]; empty buckets are gaps. */
@@ -179,20 +224,6 @@ private fun bucket(points: List<Recovery.ChargePoint>, range: LongRange, seconds
         if (i in 0 until n) { sums[i] += it.value; counts[i]++ }
     }
     return List(n) { if (counts[it] == 0) null else sums[it] / counts[it] }
-}
-
-/** Where today's Charge came from and went: sleep filled it, the day drained it. */
-@Composable
-private fun ChargeTodayList(c: Recovery.ChargeDay?) {
-    ListPanel(title = "Charge today") {
-        val ready = c != null && c.anchored && c.latest != null
-        TabCopy.chargeRows(c?.recharged ?: 0f, c?.drainedExercise ?: 0f, c?.drainedStress ?: 0f, c?.drainedLiving ?: 0f).forEachIndexed { i, row ->
-            ListRow(
-                row.name, MetricColors.chargeDeep, row.value.takeIf { ready },
-                if (ready) row.status else "After your first night", divider = i > 0,
-            )
-        }
-    }
 }
 
 /* ------------------------------------------- Body signals ------------------------------------------- */

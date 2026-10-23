@@ -1,5 +1,6 @@
 package org.openstrap.app.data
 
+import org.openstrap.app.data.db.HabitAgeWeekRow
 import org.openstrap.app.data.db.HealthDao
 import org.openstrap.app.data.settings.UserProfile
 import java.time.DayOfWeek
@@ -29,7 +30,14 @@ class HealthspanEngine(private val dao: HealthDao) {
         val d = daily(sunday, from, asOf, zone)
         val (result, withheld) = Healthspan.estimate(profile, age, d)
         val missing = listOfNotNull("birth year".takeIf { profile.birthYear == null }, "sex".takeIf { profile.sex == null })
-        val outcome = Healthspan.Outcome(result, withheld, age, missing, d.firstDay?.let { firstEstimate(it, zone) }?.takeIf { withheld == Healthspan.Withheld.Learning })
+        // This week's result is kept as shown, so next week can compare with it. A past week is never written again:
+        // looking back at a day must not replace what that Sunday showed.
+        result?.takeIf { sunday == sundayOf(LocalDate.now(zone)) }?.let { dao.insertHabitAgeWeek(HabitAgeWeekRow(asOf, it.estimate, it.low, it.high, System.currentTimeMillis() / 1000)) }
+        val weeks = dao.habitAgeWeeksOnce(asOf - 8 * 86_400L, asOf - 1).map { it.asOf to it.estimate }
+        val outcome = Healthspan.Outcome(
+            result, withheld, age, missing, d.firstDay?.let { firstEstimate(it, zone) }?.takeIf { withheld == Healthspan.Withheld.Learning },
+            lastWeek = Healthspan.lastWeek(weeks, asOf),
+        )
         cached = key to outcome
         return outcome
     }

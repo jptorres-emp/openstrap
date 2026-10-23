@@ -144,4 +144,32 @@ class TabCopyTest {
         }.filterNotNull()
         all.forEach { s -> listOf("·", ";", "—").forEach { bad -> assertFalse("'$s' contains $bad", bad in s) } }
     }
+
+    @Test fun `the Charge Smalls`() {
+        assertEquals("Mostly being awake", TabCopy.drainedMostly(movement = 4f, stress = 10f, awake = 22f))
+        assertEquals("Mostly movement", TabCopy.drainedMostly(movement = 30f, stress = 10f, awake = 22f))
+        assertEquals("Nothing yet", TabCopy.drainedMostly(0f, 0f, 0f))
+        assertEquals("Sleep and calm rest", TabCopy.RECHARGED)
+    }
+
+    @Test fun `the sleep Smalls`() {
+        assertEquals("Usual 2.1, early estimate", TabCopy.breathingShort(Recovery.BreathingDisturbances(2.4f, 2.1f, 20)))
+        assertEquals("Learning, 3 of 7 nights", TabCopy.breathingShort(Recovery.BreathingDisturbances(2.4f, null, 3)))
+        assertEquals("Nap", TabCopy.napsTitle(1))
+        assertEquals("Naps", TabCopy.napsTitle(2))
+        assertEquals("At 14:10", TabCopy.naps(1, "14:10"))
+        assertEquals("2 naps, first at 14:10", TabCopy.naps(2, "14:10"))
+    }
+
+    @Test fun `habit age against last week, the range until there is one`() {
+        assertEquals(TabCopy.HabitAgeLine("1 year younger than last week", moved = true), TabCopy.habitAgeLine(29.2f, 30.1f, 27, 31))
+        assertEquals(TabCopy.HabitAgeLine("2 years older than last week", moved = true), TabCopy.habitAgeLine(31.4f, 29.4f, 29, 34))
+        assertEquals(TabCopy.HabitAgeLine("Same as last week", moved = false), TabCopy.habitAgeLine(29.2f, 28.9f, 27, 31))
+        assertEquals(TabCopy.HabitAgeLine("Likely 27 to 31", moved = false), TabCopy.habitAgeLine(29.2f, null, 27, 31))
+        val uk = java.util.Locale.UK
+        assertEquals("Updated Sun 18 Oct", TabCopy.habitAgeUpdated(java.time.LocalDate.of(2026, 10, 18), uk))
+        assertEquals("First estimate Sunday 22 Nov", TabCopy.firstEstimate(java.time.LocalDate.of(2026, 11, 22), uk))
+        assertEquals("27 to 31", TabCopy.ageRange(27, 31))
+        assertEquals("You, 34", TabCopy.yourAge(34))
+    }
 }

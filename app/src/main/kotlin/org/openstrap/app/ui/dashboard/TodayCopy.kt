@@ -262,4 +262,28 @@ object TodayCopy {
     fun lastNight(asleepSeconds: Long?, score: Int?): String? = asleepSeconds?.let {
         duration(it) + (score?.let { s -> ", score $s" } ?: "")
     }
+
+    /** A Small's word for Load against your usual: the [LoadStatus]'s, or that the usual is still being learned. */
+    fun loadWord(status: LoadStatus?): String = status?.text ?: "Learning your usual"
+
+    /**
+     * Time to recover as a Small says it: the hours as the value and when you're ready as the word. "14" and "Ready
+     * tomorrow", "2" and "Ready by 20:30". Recovered has no number, only the word.
+     */
+    fun recoverShort(left: Long, now: Long, zone: ZoneId): Pair<String?, String> {
+        val (value, status) = recoverText(left, now, zone)
+        if (value == null) return null to status
+        return value to status.substringAfter(", ").replaceFirstChar { it.uppercase() }
+    }
+
+    /** How to read the heart rate line, with [band] when your resting range is drawn behind it. */
+    fun heartLineNote(band: Boolean): String =
+        if (band) "Hold to scrub, the number follows. The band is your resting range." else "Hold to scrub, the number follows."
+
+    /** The heart rate card's line under its number: live, or when the reading shown was taken. */
+    fun heartAt(live: Boolean, at: String?): String = when {
+        live -> "Live now"
+        at != null -> "At $at"
+        else -> "Waiting for the strap"
+    }
 }

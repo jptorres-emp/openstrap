@@ -44,6 +44,8 @@ import org.openstrap.app.ui.dashboard.defaultLook
 import org.openstrap.app.ui.dashboard.lookOr
 import org.openstrap.app.ui.dashboard.todayPanes
 import org.openstrap.app.ui.dashboard.varyLooks
+import org.openstrap.app.ui.dashboard.habitAgeNew
+import org.openstrap.app.ui.dashboard.items
 import org.openstrap.app.ui.dashboard.LocalGoals
 import org.openstrap.app.ui.dashboard.Metric
 import org.openstrap.app.ui.dashboard.TodayCard
@@ -94,6 +96,8 @@ fun GlowTodayScreen(
     onOpenProfile: () -> Unit = {},
     /** The weekly Habit Age estimate, or why it's withheld; null hides the card. */
     healthspan: org.openstrap.app.data.Healthspan.Outcome? = null,
+    /** The Sunday of the last Habit Age estimate opened, so Today stops offering it ([habitAgeNew]). */
+    habitAgeSeenAsOf: Long? = null,
     /** Per-day history for Your week; null leaves its steps out. */
     history: DailyHistory? = null,
     /** Edit Today's hidden and pinned cards. */
@@ -140,14 +144,20 @@ fun GlowTodayScreen(
     val lastWorkout = workouts.maxByOrNull { it.end }
     val ctx = TodayContext(
         state, rec, liveHeartRate, workouts, lastWorkout, isToday, now.epochSecond, zone, moment,
+        restingRange = rememberNormal(Metric.RestingHr, state.date, history),
         firstNights = rec != null && !rec.charge.anchored,
         stuck = syncStuck(moment, isToday, state.asleepSeconds != null, strap.syncFailed),
         strapScore = strapReadiness?.takeIf { it.day == state.dayStart }?.score,
     )
     val facts = TodayFacts(
         isToday = isToday, offer = offer != null, suggestion = suggestion != null, alerts = state.alerts.isNotEmpty(),
-        workout = lastWorkout != null && isToday, healthspan = healthspan != null,
+        workout = lastWorkout != null && isToday,
+        healthspan = healthspan?.result?.let { r ->
+            habitAgeNew(Instant.ofEpochSecond(r.asOf).atZone(zone).toLocalDate(), habitAgeSeenAsOf == r.asOf, state.date, now.atZone(zone).toLocalDate())
+        } == true,
     )
+    // Before the first estimate Habit Age never shows on Today, pinned or not.
+    val unavailable = if (healthspan?.result == null) setOf(TodayCard.HabitAge) else emptySet()
     val morning = LocalTime.now().hour < 12
     val live = liveHeartRate != null
     // The moment the cards are laid out for, with no moment yet resolved as todayCards does.
@@ -158,40 +168,43 @@ fun GlowTodayScreen(
         BoxWithConstraints(Modifier.fillMaxSize()) {
             // No two cards next to each other look the same (spec 2.4). On two columns, side by side counts too.
             val wide = maxWidth >= GlowLayout.TwoColumnWidth
-            val slots = varyLooks(applyEdits(todayCards(moment, facts, morning), edits, moment), looksFor, live, wide)
+            val slots = varyLooks(applyEdits(todayCards(moment, facts, morning), edits, moment, unavailable), looksFor, live, wide)
             val panes = todayPanes(slots)
             GlowScreenList(contentPadding, list) {
                 full { header() }
-                slots.forEachIndexed { i, slot ->
-                    // The hero and strips span the width on a wide screen; the cards between take turns.
-                    val pane = panes[i]
-                    // Before a strap is paired, everything under the pairing hero waits, dimmed.
-                    val dim = if (!strap.paired && slot.card != TodayCard.Hero && slot.card != TodayCard.EditToday) Modifier.alpha(0.45f) else Modifier
-                    // Where the look differs from the card's own, its edge card is told the side and colour to use.
-                    val own = defaultLook(slot.copy(look = null), looksFor, live)
-                    val look = slot.lookOr(looksFor, live)
-                    val override = EdgeOverride(
-                        edge = look.edge.takeIf { it != own.edge },
-                        color = EdgeNeutral.takeIf { look.hue == Hue.Neutral && own.hue != Hue.Neutral },
-                    )
+                // One block per grid row: a Small pair stays side by side, and on a wide screen in one column.
+                packGrid(slots.indices.map { slots[it].size to it }).forEach { row ->
                     val block: @Composable () -> Unit = {
-                        CompositionLocalProvider(LocalEdgeOverride provides override) {
-                            Column(dim) {
-                                when (slot.card) {
-                                    TodayCard.Hero -> Hero(
-                                        ctx, strap, heroLightAngle, usualBedtime,
-                                        running, onOpenRunning, onResumeRunning, onStartSport, onOtherSport, onPair, onSyncNow,
-                                        onOpenRecovery, onOpenWorkout,
-                                    )
-                                    TodayCard.EditToday -> EditTodayButton({ editing = true })
-                                    else -> TodayRow(slot, ctx, healthspan, history, checkIn, onCheckIn, onOpenSleep, onOpenMetric, onOpenRecovery,
-                                        onOpenWorkout, onOpenHealthspan, onOpenProfile, offer, onRecordOffer, onDeclineOffer, suggestion,
-                                        onSaveSuggestion, onDismissSuggestion)
+                        GridRowBlock(row) { i, m ->
+                            val slot = slots[i]
+                            // Before a strap is paired, everything under the pairing hero waits, dimmed.
+                            val dim = if (!strap.paired && slot.card != TodayCard.Hero && slot.card != TodayCard.EditToday) Modifier.alpha(0.45f) else Modifier
+                            // Where the look differs from the card's own, its edge card is told the side and colour to use.
+                            val own = defaultLook(slot.copy(look = null), looksFor, live)
+                            val look = slot.lookOr(looksFor, live)
+                            val override = EdgeOverride(
+                                edge = look.edge.takeIf { it != own.edge },
+                                color = EdgeNeutral.takeIf { look.hue == Hue.Neutral && own.hue != Hue.Neutral },
+                            )
+                            CompositionLocalProvider(LocalEdgeOverride provides override) {
+                                Column(m.then(dim)) {
+                                    when (slot.card) {
+                                        TodayCard.Hero -> Hero(
+                                            ctx, strap, heroLightAngle, usualBedtime,
+                                            running, onOpenRunning, onResumeRunning, onStartSport, onOtherSport, onPair, onSyncNow,
+                                            onOpenRecovery, onOpenWorkout,
+                                        )
+                                        TodayCard.EditToday -> EditTodayButton({ editing = true })
+                                        else -> TodayRow(slot, ctx, healthspan, history, checkIn, onCheckIn, onOpenSleep, onOpenMetric, onOpenRecovery,
+                                            onOpenWorkout, onOpenHealthspan, onOpenProfile, offer, onRecordOffer, onDeclineOffer, suggestion,
+                                            onSaveSuggestion, onDismissSuggestion, if (slot.size == CardSize.Small) Modifier.fillMaxSize() else Modifier)
+                                    }
                                 }
                             }
                         }
                     }
-                    when (pane) {
+                    // The hero and strips span the width on a wide screen; the rows between take turns.
+                    when (panes[row.items().first()]) {
                         Pane.Full -> full(block)
                         Pane.Left -> left(block)
                         Pane.Right -> right(block)
@@ -213,6 +226,8 @@ private class TodayContext(
     val now: Long,
     val zone: ZoneId,
     val moment: Moment?,
+    /** Your normal resting heart rate, drawn as the resting range behind heart rate lines; null until known. */
+    val restingRange: org.openstrap.app.data.History.Normal?,
     /** Before the strap has seen a night: cards keep their shape with a dash (spec 4.3). */
     val firstNights: Boolean,
     /** Last night is still on the strap (spec 4.3). */
@@ -414,7 +429,8 @@ private fun AfterHero(ctx: TodayContext, lightAngle: Float?, onOpenWorkout: (Lon
                 val step = maxOf(60L, (ctx.now - w.end) / 40)
                 val values = remember(since, w.end, step) { bucket(since, w.end..ctx.now, step) }
                 Spacer(Modifier.height(14.dp))
-                GlowLineChart(values, height = 64.dp, showAverage = false)
+                // The line drops into your resting range, a dim band, once it's known.
+                GlowLineChart(values, height = 64.dp, showAverage = false, band = ctx.restingRange?.let { it.low..it.high })
             }
             Spacer(Modifier.height(18.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -507,6 +523,8 @@ private fun TodayRow(
     onOpenWorkout: (Long) -> Unit, onOpenHealthspan: () -> Unit, onOpenProfile: () -> Unit,
     offer: org.openstrap.app.data.AutoStart.Offer?, onRecordOffer: () -> Unit, onDeclineOffer: () -> Unit,
     suggestion: org.openstrap.app.data.WorkoutSuggestions.Suggestion?, onSaveSuggestion: () -> Unit, onDismissSuggestion: () -> Unit,
+    /** The size a Small takes in its row. */
+    modifier: Modifier = Modifier,
 ) {
     val s = ctx.state
     val b = s.baselines
@@ -535,7 +553,7 @@ private fun TodayRow(
         )
         TodayCard.LastNight ->
             if (slot.size == CardSize.Strip) LastNightStrip(s, onOpenSleep) else LastNightCard(s, ctx.firstNights, onOpenSleep)
-        TodayCard.HeartRate -> HeartCard(s, ctx.live, { onOpenMetric(Metric.HeartRate) })
+        TodayCard.HeartRate -> HeartCard(s, ctx.live, { onOpenMetric(Metric.HeartRate) }, restingRange = ctx.restingRange)
         TodayCard.Activity -> ActivityCard(s, { onOpenMetric(Metric.Steps) })
         TodayCard.Recovery -> RecoveryEarlierCard(ctx.recoveryShown, onOpenRecovery)
         TodayCard.Charge -> {
@@ -547,9 +565,16 @@ private fun TodayRow(
                 used != null && used > 0 -> "Used $used since waking"
                 else -> "Steady since waking"
             }
-            ChargeWideCard(ctx.charge, status, slot.secondGlow, onOpenRecovery)
+            // The day's Charge so far, beside the number, until the evening says sleep fills it back.
+            val soFar = c?.takeIf { !ctx.endOfDay && it.anchored && ctx.isToday }?.let { chargeSoFar(it.points, s.dayStart..s.dayEnd, ctx.now) }
+            ChargeWideCard(ctx.charge, status, slot.secondGlow, onOpenRecovery, soFar = soFar)
         }
-        TodayCard.LoadToday -> LoadList(
+        // After a workout, what it did as a Small pair: Load toward your usual (from below) and time to recover.
+        TodayCard.LoadToday -> if (slot.size == CardSize.Small) SmallCard(
+            MetricColors.load, "Load", ctx.rec?.load?.let { Math.round(it).toString() }, null,
+            if (ctx.rec == null) ctx.waiting else TodayCopy.loadWord(ctx.loadStatus), modifier, kind = EdgeKind.Progress,
+            edgeStatus = if (ctx.loadStatus == TodayCopy.LoadStatus.Above) EdgeStatus.Above else EdgeStatus.Usual,
+        ) else LoadList(
             when (ctx.moment) {
                 Moment.WorkoutWindow -> "Before you start"
                 Moment.After -> "What the ${ctx.lastWorkout?.let { sportNoun(it.workout.sportType) } ?: "workout"} did"
@@ -557,16 +582,30 @@ private fun TodayRow(
             },
             ctx.rec?.load, TodayCopy.loadLine(ctx.loadStatus), ctx.recover,
         )
+        TodayCard.Recover -> {
+            val left = ctx.workouts.filter { it.recoveryMinutes != null }.maxByOrNull { it.end }
+                ?.let { w -> TodayCopy.recoverShort(TodayCopy.recoverLeft(w.end, w.recoveryMinutes ?: 0, ctx.now), ctx.now, ctx.zone) }
+            SmallCard(MetricColors.readinessDeep, "To recover", left?.first, "h", left?.second ?: "No estimate from the strap", modifier)
+        }
         TodayCard.Workout -> ctx.lastWorkout?.let { w -> WorkoutCard(w, { onOpenWorkout(w.workout.start) }) }
         TodayCard.Week -> WeekCard(s, ctx.workouts, history)
-        // Habit Age's home is now the foot of Recovery, as an edge card (step 5). Whether Today keeps it is still open,
-        // so it stays here for now, drawn as a second glow so the hero still leads.
-        TodayCard.HabitAge -> HealthspanCard(healthspan, onOpenHealthspan, onOpenProfile, second = true)
+        // Habit Age's home is the foot of Recovery; Today shows the same card when there's a new estimate, or pinned.
+        TodayCard.HabitAge -> HabitAgeEdgeCard(healthspan, onOpenHealthspan, onOpenProfile)
         TodayCard.Hero, TodayCard.EditToday -> Unit
     }
 }
 
 /* ---------------------------------------------- Helpers --------------------------------------------- */
+
+/** The day's Charge in quarter hours across [day], up to [now]; the quarters still to come are null. */
+internal fun chargeSoFar(points: List<Recovery.ChargePoint>, day: LongRange, now: Long): List<Float?> {
+    val step = 15 * 60L
+    val n = ((day.last - day.first + 1) / step).toInt().coerceAtLeast(2)
+    val sums = FloatArray(n)
+    val counts = IntArray(n)
+    points.forEach { val i = ((it.t - day.first) / step).toInt(); if (i in 0 until n && it.t <= now) { sums[i] += it.value; counts[i]++ } }
+    return List(n) { if (counts[it] == 0) null else sums[it] / counts[it] }
+}
 
 /** Averages timed points into evenly spaced buckets across [range]; empty buckets are null (gaps). */
 internal fun bucket(points: List<ChartPoint>, range: LongRange, seconds: Long): List<Float?> {

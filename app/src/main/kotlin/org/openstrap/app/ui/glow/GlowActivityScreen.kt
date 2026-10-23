@@ -84,6 +84,10 @@ fun GlowActivityScreen(
     onSaveSuggestion: () -> Unit = {},
     onDismissSuggestion: () -> Unit = {},
     onAddWorkout: () -> Unit = {},
+    /** The live heart rate, when the live switch is on; lights Heart rate from the right. */
+    liveHeartRate: Int? = null,
+    /** Per-day history, for your resting range behind the heart rate line; null leaves the band out. */
+    history: org.openstrap.app.ui.dashboard.DailyHistory? = null,
 ) {
     val list = rememberLazyListState()
     val isToday = state.date == LocalDate.now()
@@ -91,16 +95,29 @@ fun GlowActivityScreen(
     val stored = remember(state.date) { paiHistory(state.date, state.date) }.collectAsState(emptyMap()).value
     val heartPoints = state.pai?.total ?: stored[state.date]?.total
     val r = recovery?.takeIf { it.date == state.date }
-    val slots = activityCards(ActivityFacts(isToday = isToday, suggestion = suggestion != null))
+    val live = liveHeartRate?.takeIf { isToday }
+    val slots = activityCards(ActivityFacts(isToday = isToday, suggestion = suggestion != null, live = live != null))
+    val restingRange = rememberNormal(Metric.RestingHr, state.date, history)
     CompositionLocalProvider(LocalGlowPaused provides { list.isScrollInProgress }) {
         GlowScreenList(contentPadding, list) {
             full { header() }
-            tabCards(slots) { card ->
+            tabCards(slots) { card, m ->
                 when (card) {
                     ActivityCard.Start -> StartStrip(sports, onStartWorkout, onAllSports)
                     ActivityCard.Steps -> StepsGlow(state) { onOpenMetric(Metric.Steps) }
+                    ActivityCard.ActiveMinutes -> r?.activity.let { a ->
+                        SmallCard(
+                            MetricColors.steps, "Active minutes", a?.weekEquivalent?.toString(), null,
+                            a?.let { TabCopy.activeMinutes(it.weekEquivalent, Activity.MVPA_WEEKLY_TARGET) } ?: "No reading yet", m,
+                        )
+                    }
+                    ActivityCard.HeartPoints -> SmallCard(
+                        MetricColors.heart, "Heart points", heartPoints?.roundToInt()?.toString(), null,
+                        heartPoints?.let { TabCopy.heartPoints(it.roundToInt(), HEART_POINTS_TARGET) } ?: "After the strap's next sync", m,
+                    )
                     ActivityCard.Load -> LoadCard(r)
-                    ActivityCard.Facts -> FactsList(state, r, workouts, heartPoints, isToday, onEditProfile)
+                    ActivityCard.HeartRate -> HeartCard(state, live, { onOpenMetric(Metric.HeartRate) }, restingRange = restingRange)
+                    ActivityCard.Facts -> FactsList(state, r, workouts, isToday, onEditProfile)
                     ActivityCard.Workouts -> WorkoutsList(
                         state.date, workouts, suggestion?.takeIf { isToday }, onOpenWorkout, onAllWorkouts, onAddWorkout,
                         onSaveSuggestion, onDismissSuggestion,
@@ -166,8 +183,9 @@ private fun StepsGlow(state: DayUiState, onClick: () -> Unit) {
 }
 
 /**
- * The day's steps as 24 pills, one an hour, as high as the hour's share of the busiest. The latest hour with steps
- * is lit full white. TODO(step 6): tapping an hour shows its count in the headline.
+ * Hourly pill bars (chart kit): the day's steps as 24 pills, one an hour, as high as the hour's share of the busiest.
+ * The latest hour with steps is lit full white; hours with none, and those still to come, are faint stubs.
+ * TODO(step 6): tapping an hour shows its count in the headline.
  */
 @Composable
 private fun HourPills(hourly: List<Float>) {
@@ -178,10 +196,15 @@ private fun HourPills(hourly: List<Float>) {
             val slot = size.width / hourly.size
             val w = slot * 0.56f
             hourly.forEachIndexed { i, v ->
-                val h = (size.height * v / top).coerceAtLeast(w)
                 val x = slot * i + (slot - w) / 2
+                if (v <= 0f) {
+                    val stub = 2.dp.toPx()
+                    drawRoundRect(Color.White.copy(alpha = 0.18f), Offset(x, size.height - stub), Size(w, stub), CornerRadius(stub / 2))
+                    return@forEachIndexed
+                }
+                val h = (size.height * v / top).coerceAtLeast(w)
                 drawRoundRect(
-                    if (i == last) Color.White else Color.White.copy(alpha = if (v > 0f) 0.45f else 0.12f),
+                    if (i == last) Color.White else Color.White.copy(alpha = 0.45f),
                     Offset(x, size.height - h), Size(w, h), CornerRadius(w / 2),
                 )
             }
@@ -197,8 +220,9 @@ private fun HourPills(hourly: List<Float>) {
 /* ------------------------------------------------ Load ---------------------------------------------- */
 
 /**
- * Load today against your usual for a day, as progress with its bar, and the week's balance in a word. Above your
- * usual it glows stronger. TODO(step 6): tapping opens the Load detail, where Strain, fitness and fatigue live.
+ * Load today, its light filling across toward your usual for a day, and the week's balance in a word. Above your
+ * usual it glows stronger. TODO(step 6): the ghost line of your usual Load by this time needs Load by the hour, which
+ * the app doesn't keep; tapping opens the Load detail, where Strain, fitness and fatigue live.
  */
 @Composable
 private fun LoadCard(r: RecoveryResult?) {
@@ -207,7 +231,7 @@ private fun LoadCard(r: RecoveryResult?) {
     EdgeCard(
         MetricColors.load, Modifier.fillMaxWidth().gridSize(CardSize.Wide),
         status = if (status == TodayCopy.LoadStatus.Above) EdgeStatus.Above else EdgeStatus.Usual,
-        kind = EdgeKind.Progress, progress = r?.let { l -> usual?.let { l.load / it } },
+        kind = EdgeKind.Level, progress = r?.let { l -> usual?.let { l.load / it } } ?: 0f,
     ) {
         EdgeTitle("Load", TabCopy.loadBalance(r?.loadTrend))
         EdgeValue(r?.load?.roundToInt()?.toString(), "today", if (r == null) "No reading yet" else TabCopy.loadUsual(usual))
@@ -217,24 +241,14 @@ private fun LoadCard(r: RecoveryResult?) {
 /* ------------------------------------------------ Facts --------------------------------------------- */
 
 /**
- * The week's and the day's smaller facts: active minutes, Heart points, VO2 max, time to recover, energy and
- * distance. TODO(step 6): each opens its detail; none exists yet but Steps.
+ * The day's smaller facts: VO2 max, time to recover, energy and distance. Active minutes and Heart points are the
+ * Small pair above. TODO(step 6): each opens its detail; none exists yet but Steps.
  */
 @Composable
-private fun FactsList(
-    state: DayUiState, r: RecoveryResult?, workouts: List<WorkoutAnalysis>, heartPoints: Float?, isToday: Boolean, onEditProfile: () -> Unit,
-) {
+private fun FactsList(state: DayUiState, r: RecoveryResult?, workouts: List<WorkoutAnalysis>, isToday: Boolean, onEditProfile: () -> Unit) {
     val waiting = "No reading yet"
-    ListPanel(title = "This week and today") {
+    ListPanel(title = "Today", note = if (isToday) "So far" else null) {
         val a = r?.activity
-        ListRow(
-            "Active minutes", MetricColors.steps, a?.weekEquivalent?.toString(),
-            a?.let { TabCopy.activeMinutes(it.weekEquivalent, Activity.MVPA_WEEKLY_TARGET) } ?: waiting, divider = false,
-        )
-        ListRow(
-            "Heart points", MetricColors.heart, heartPoints?.roundToInt()?.toString(),
-            heartPoints?.let { TabCopy.heartPoints(it.roundToInt(), HEART_POINTS_TARGET) } ?: "After the strap's next sync",
-        )
         // The latest workout the strap read VO2 max from; the estimate from your profile otherwise.
         val fromWorkouts = workouts.sortedByDescending { it.workout.start }
             .firstNotNullOfOrNull { w -> (w.workout.vo2max ?: w.effect?.vo2max?.roundToInt())?.takeIf { it > 0 } }
@@ -247,6 +261,7 @@ private fun FactsList(
                 est != null -> est.band?.let { "${it.label} for your age" } ?: "Estimated from your profile"
                 else -> "After a workout the strap can read it from"
             },
+            divider = false,
         )
         val recover = workouts.filter { it.recoveryMinutes != null }.maxByOrNull { it.end }?.let { w ->
             val now = System.currentTimeMillis() / 1000
@@ -298,10 +313,14 @@ private fun WorkoutsList(
             val status = listOfNotNull(
                 time, a.workout.averageHeartRate?.let { "average $it bpm" }, if (a.autoDetected) "found by the strap" else null,
             ).joinToString(", ")
-            ListRow(
-                a.sportName, MetricColors.heart, workoutClock(a.durationSeconds), status,
-                onClick = { onOpen(a.workout.start) }, divider = divider(),
-            )
+            Column {
+                ListRow(
+                    a.sportName, MetricColors.heart, workoutClock(a.durationSeconds), status,
+                    onClick = { onOpen(a.workout.start) }, divider = divider(), icon = SportIcons.of(a.workout.sportType),
+                )
+                // Zone bar (chart kit): how the workout's time was spent, thin under its row, lined up with its name.
+                ZoneBar(a.zoneSeconds, ZONE_COLORS, Modifier.padding(start = RowIcon + 10.dp, bottom = 10.dp), height = 4.dp)
+            }
         }
         LinkRow("Add a workout you didn't record", onAdd, divider = divider())
         LinkRow("All workouts", onAll)

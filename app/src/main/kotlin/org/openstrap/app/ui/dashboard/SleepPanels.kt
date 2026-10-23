@@ -135,19 +135,15 @@ internal fun bandColor(band: SleepRegularity.Band) = when (band) {
 }
 
 /**
- * One column per night on a clock running down the chart (evening at the top, morning at the bottom): the bar
- * runs from falling asleep to waking, time asleep sits above it, and dashed lines mark the average times.
+ * Bed and wake bars (chart kit): one bar per night on a clock running down the chart (evening at the top, morning at
+ * the bottom), from falling asleep to waking, the last night in white. Your usual bedtime and wake time are dim bands
+ * across, so nights that drift stand out.
  */
 @Composable
 internal fun SleepWindows(week: List<SleepNight>, usual: SleepHistory.UsualTimes?, zone: ZoneId) {
     val measurer = rememberTextMeasurer()
-    val muted = MaterialTheme.colorScheme.onSurfaceVariant
-    val onSurface = MaterialTheme.colorScheme.onSurface
-    val axis = TextStyle(color = muted, fontSize = 11.sp)
-    val today = axis.copy(color = onSurface)
-    val value = TextStyle(color = onSurface, fontSize = 11.sp, fontFamily = org.openstrap.app.ui.theme.FunnelDisplay)
-    val bar = MetricColors.sleepDeep
-    val goal = LocalGoals.current.sleepSeconds
+    val axis = TextStyle(color = Color.White.copy(alpha = 0.5f), fontSize = 10.sp)
+    val today = axis.copy(color = Color.White)
 
     // Minutes since the noon before each night, so a night never wraps.
     fun sinceNoon(epoch: Long, wake: Boolean): Int {
@@ -157,59 +153,38 @@ internal fun SleepWindows(week: List<SleepNight>, usual: SleepHistory.UsualTimes
     }
     val spans = week.map { n -> n.session?.let { sinceNoon(it.start, false) to sinceNoon(it.end, true).coerceAtLeast(sinceNoon(it.start, false) + 1) } }
     val known = spans.filterNotNull()
-    val top = ((known.minOfOrNull { it.first } ?: (10 * 60)) / 60 - 1).coerceAtLeast(0) * 60
-    val bottom = ((known.maxOfOrNull { it.second } ?: (20 * 60)) / 60 + 1).coerceAtMost(36) * 60
+    val usualBed = usual?.let { it.bedtime - 12 * 60 }
+    val usualWake = usual?.let { it.wake + 12 * 60 }
+    val top = (listOfNotNull(known.minOfOrNull { it.first }, usualBed).minOrNull() ?: (10 * 60)) - 30
+    val bottom = (listOfNotNull(known.maxOfOrNull { it.second }, usualWake).maxOrNull() ?: (20 * 60)) + 30
 
-    Canvas(Modifier.fillMaxWidth().height(200.dp)) {
-        val left = 40.dp.toPx()
-        val labelH = 18.dp.toPx()
-        val valueH = 18.dp.toPx()
-        val chartTop = valueH
+    Canvas(Modifier.fillMaxWidth().height(110.dp)) {
+        val labelH = 16.dp.toPx()
         val chartBottom = size.height - labelH
-        val slot = (size.width - left) / week.size
-        fun yOf(m: Int) = chartTop + (chartBottom - chartTop) * (m - top).toFloat() / (bottom - top).coerceAtLeast(1)
-        fun clockLabel(m: Int) = "%02d:00".format(Math.floorMod(m / 60 + 12, 24))
-
-        // Hour marks: top, bottom and every three hours between.
-        var m = top
-        while (m <= bottom) {
-            val y = yOf(m)
-            drawLine(muted.copy(alpha = 0.15f), Offset(left, y), Offset(size.width, y), 1.dp.toPx())
-            val t = measurer.measure(clockLabel(m), axis)
-            drawText(t, topLeft = Offset(0f, y - t.size.height / 2))
-            m += 3 * 60
+        val slot = size.width / week.size.coerceAtLeast(1)
+        fun yOf(m: Int) = chartBottom * (m - top).toFloat() / (bottom - top).coerceAtLeast(1)
+        val band = 14.dp.toPx()
+        listOfNotNull(usualBed, usualWake).forEach { m ->
+            drawRect(MetricColors.sleepDeep.copy(alpha = 0.16f), Offset(0f, yOf(m) - band / 2), Size(size.width, band))
         }
-        usual?.let { r ->
-            val dash = PathEffect.dashPathEffect(floatArrayOf(3.dp.toPx(), 4.dp.toPx()))
-            listOf(r.bedtime - 12 * 60, r.wake + 12 * 60).forEach { avg ->
-                val y = yOf(avg)
-                drawLine(onSurface.copy(alpha = 0.5f), Offset(left, y), Offset(size.width, y), 1.dp.toPx(), pathEffect = dash)
-            }
-        }
-        val width = slot * 0.42f
+        val width = 16.dp.toPx().coerceAtMost(slot * 0.5f)
         week.forEachIndexed { i, n ->
-            val cx = left + slot * i + slot / 2
+            val cx = slot * i + slot / 2
+            val last = i == week.lastIndex
             val name = n.date.dayOfWeek.getDisplayName(DayStyle.SHORT, Locale.getDefault()).take(2)
-            val label = measurer.measure(name, if (i == week.lastIndex) today else axis)
-            drawText(label, topLeft = Offset(cx - label.size.width / 2, chartBottom + 4.dp.toPx()))
+            val label = measurer.measure(name, if (last) today else axis)
+            drawText(label, topLeft = Offset(cx - label.size.width / 2, chartBottom + 3.dp.toPx()))
             val span = spans[i]
             if (span == null) {
-                drawCircle(muted.copy(alpha = 0.35f), 2.5.dp.toPx(), Offset(cx, (chartTop + chartBottom) / 2))
+                drawCircle(Color.White.copy(alpha = 0.25f), 2.5.dp.toPx(), Offset(cx, chartBottom / 2))
                 return@forEachIndexed
             }
             val y0 = yOf(span.first)
             val y1 = yOf(span.second)
-            val met = (n.asleepSeconds ?: 0) >= goal
             drawRoundRect(
-                if (i == week.lastIndex) bar else bar.copy(alpha = 0.7f),
+                if (last) Color.White else MetricColors.sleepLight,
                 Offset(cx - width / 2, y0), Size(width, (y1 - y0).coerceAtLeast(width)), CornerRadius(width / 2),
             )
-            val asleep = n.asleepSeconds ?: 0
-            val text = measurer.measure(
-                "%d:%02d".format(asleep / 3600, asleep % 3600 / 60),
-                if (met) value.copy(color = MetricColors.sleepRem) else value,
-            )
-            drawText(text, topLeft = Offset(cx - text.size.width / 2, y0 - text.size.height - 2.dp.toPx()))
         }
     }
 }

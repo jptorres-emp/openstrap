@@ -307,6 +307,9 @@ private fun AppRoot(
     val todayEdits = remember(todayHidden, todayPinned) { org.openstrap.app.ui.dashboard.TodayEdits.parse(todayHidden, todayPinned) }
     val recovery by dayVm.recovery.collectAsStateWithLifecycle()
     val healthspan by dayVm.healthspan.collectAsStateWithLifecycle()
+    val habitAgeSeen by container.settings.habitAgeSeenAsOf.collectAsStateWithLifecycle(null)
+    // Opening Habit Age marks the estimate seen, so Today stops offering it.
+    val seeHabitAge: () -> Unit = { healthspan?.result?.asOf?.let { a -> scope.launch { container.settings.setHabitAgeSeen(a) } } }
     val profile by deviceVm.profile.collectAsStateWithLifecycle()
     val paired by deviceVm.paired.collectAsStateWithLifecycle()
     val day by dayVm.state.collectAsStateWithLifecycle()
@@ -661,7 +664,7 @@ private fun AppRoot(
                             day, recovery, history,
                             header = { org.openstrap.app.ui.glow.PageHeader("Recovery", pop, subtitle = org.openstrap.app.ui.glow.dayName(day.date)) },
                             contentPadding = padding, onOpenMetric = { push(Detail.OfMetric(it)) },
-                            healthspan = healthspan, onOpenHealthspan = { push(Detail.Healthspan) }, onOpenProfile = { openPage(Page.Profile) },
+                            healthspan = healthspan, onOpenHealthspan = { seeHabitAge(); push(Detail.Healthspan) }, onOpenProfile = { openPage(Page.Profile) },
                         )
                     }
                     Detail.Sleep -> {
@@ -707,8 +710,9 @@ private fun AppRoot(
                                 onOpenRecovery = { todayStack = listOf(Detail.Recovery) },
                                 workouts = workouts,
                                 onOpenWorkout = { todayStack = listOf(Detail.Workout(it)) },
-                                onOpenHealthspan = { todayStack = listOf(Detail.Healthspan) },
+                                onOpenHealthspan = { seeHabitAge(); todayStack = listOf(Detail.Healthspan) },
                                 healthspan = healthspan,
+                                habitAgeSeenAsOf = habitAgeSeen,
                                 onOpenProfile = { openPage(Page.Profile) },
                                 history = history,
                                 edits = todayEdits,
@@ -737,7 +741,7 @@ private fun AppRoot(
                             Tab.Recovery -> org.openstrap.app.ui.glow.GlowRecoveryScreen(
                                 day, recovery, history, header = { header(Tab.Recovery) }, contentPadding = padding,
                                 onOpenMetric = { recoveryStack = listOf(Detail.OfMetric(it)) },
-                                healthspan = healthspan, onOpenHealthspan = { recoveryStack = listOf(Detail.Healthspan) },
+                                healthspan = healthspan, onOpenHealthspan = { seeHabitAge(); recoveryStack = listOf(Detail.Healthspan) },
                                 onOpenProfile = { openPage(Page.Profile) },
                                 showCharge = showCharge, onChargeShown = { showCharge = false },
                             )
@@ -759,6 +763,7 @@ private fun AppRoot(
                                 onDismissSuggestion = { suggestion?.let { container.workout.dismissSuggestion(it.start, it.end) } },
                                 onAllSports = { readySport = readySport ?: org.openstrap.app.ui.glow.topSports(workouts).first().sportType; readyPicking = true },
                                 onAddWorkout = { addingOn = day.date },
+                                liveHeartRate = live, history = history,
                             )
                         }
                     }

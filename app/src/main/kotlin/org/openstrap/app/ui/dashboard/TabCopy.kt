@@ -2,6 +2,9 @@ package org.openstrap.app.ui.dashboard
 
 import org.openstrap.app.data.Recovery
 import org.openstrap.app.data.SleepRegularity
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 /*
  * The words on the Recovery, Sleep and Activity tabs (spec 5 and 7). Like [TodayCopy], built only from numbers the
@@ -213,4 +216,62 @@ object TabCopy {
         partial -> "Estimated kcal, part of the day worn"
         else -> "Estimated kcal"
     }
+
+    /* ------------------------------------------- Small cards ------------------------------------------- */
+
+    /** Under Drained on the Recovery tab: what took the most, or that nothing has yet. */
+    fun drainedMostly(movement: Float, stress: Float, awake: Float): String {
+        val most = listOf("Mostly movement" to movement, "Mostly stress" to stress, "Mostly being awake" to awake).maxBy { it.second }
+        return if (most.second.toInt() <= 0) "Nothing yet" else most.first
+    }
+
+    /** Under Recharged on the Recovery tab. */
+    const val RECHARGED = "Sleep and calm rest"
+
+    /** Breathing disturbances as a Small: your usual, or how many nights it still needs, and that it's early. */
+    fun breathingShort(b: Recovery.BreathingDisturbances): String = when (val usual = b.usual) {
+        null -> "Learning, ${b.nights.coerceAtMost(Recovery.SCORED_NIGHTS)} of ${Recovery.SCORED_NIGHTS} nights"
+        else -> "Usual %.1f, early estimate".format(usual)
+    }
+
+    /** The naps Small's title: "Nap" for one, "Naps" for more. */
+    fun napsTitle(count: Int): String = if (count == 1) "Nap" else "Naps"
+
+    /** Under the naps Small: when the nap was, or how many and when the first. */
+    fun naps(count: Int, firstAt: String): String = if (count == 1) "At $firstAt" else "$count naps, first at $firstAt"
+
+    /** Under the Recovery hero's trend dots. */
+    const val LAST_7_DAYS = "Last 7 days"
+
+    /* --------------------------------------------- Habit Age --------------------------------------------- */
+
+    /** "Updated Sun 18 Oct", for the Sunday the estimate is for. */
+    fun habitAgeUpdated(sunday: LocalDate, locale: Locale = Locale.getDefault()): String =
+        "Updated " + sunday.format(DateTimeFormatter.ofPattern("EEE d MMM", locale))
+
+    /** "First estimate Sunday 22 Nov", before there's a number. */
+    fun firstEstimate(sunday: LocalDate, locale: Locale = Locale.getDefault()): String =
+        "First estimate " + sunday.format(DateTimeFormatter.ofPattern("EEEE d MMM", locale))
+
+    /** Habit Age's one status line, and whether the number moved, which alone takes the orchid. */
+    data class HabitAgeLine(val text: String, val moved: Boolean)
+
+    /**
+     * Habit Age against last week's estimate, in whole years: "1 year younger than last week", "Same as last week".
+     * Until there's a [lastWeek] it says the range instead: "Likely 27 to 31".
+     */
+    fun habitAgeLine(estimate: Float, lastWeek: Float?, low: Int, high: Int): HabitAgeLine {
+        lastWeek ?: return HabitAgeLine("Likely $low to $high", moved = false)
+        val d = Math.round(estimate) - Math.round(lastWeek)
+        fun years(n: Int) = if (n == 1) "1 year" else "$n years"
+        return when {
+            d < 0 -> HabitAgeLine("${years(-d)} younger than last week", moved = true)
+            d > 0 -> HabitAgeLine("${years(d)} older than last week", moved = true)
+            else -> HabitAgeLine("Same as last week", moved = false)
+        }
+    }
+
+    /** The age scale's labels: the range under its band and your age at its hairline. */
+    fun ageRange(low: Int, high: Int): String = "$low to $high"
+    fun yourAge(age: Int): String = "You, $age"
 }

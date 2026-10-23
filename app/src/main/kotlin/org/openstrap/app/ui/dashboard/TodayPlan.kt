@@ -1,6 +1,7 @@
 package org.openstrap.app.ui.dashboard
 
 import org.openstrap.app.data.Moment
+import java.time.LocalDate
 import org.openstrap.app.ui.glow.CardSize
 
 /*
@@ -26,6 +27,8 @@ enum class TodayCard(val label: String, val editable: Boolean = true, val pinnab
     Recovery("Recovery", pinnable = true),
     Charge("Charge", pinnable = true),
     LoadToday("Load and time to recover", pinnable = true),
+    /** Time to recover as a Small beside Load's after a workout: part of [LoadToday], hidden and pinned with it. */
+    Recover("", editable = false),
     Workout("The workout"),
     Week("Your week", pinnable = true),
     HabitAge("Habit Age", pinnable = true),
@@ -48,8 +51,25 @@ data class TodayFacts(
     val alerts: Boolean = false,
     /** A finished workout to show after it (the after-workout moment). */
     val workout: Boolean = false,
+    /**
+     * A new Habit Age estimate: from the day it updates until it has been seen or the next day ends. Edit Today can pin
+     * it to keep it every day, but never before there's a first estimate ([applyEdits]' unavailable).
+     */
     val healthspan: Boolean = false,
 )
+
+/** Cards that come and go with another: they are hidden with it, and a pin moves them with it. */
+private val PARTNER = mapOf(TodayCard.Recover to TodayCard.LoadToday)
+
+/** [this] card, or the card it belongs to. */
+private fun TodayCard.owner(): TodayCard = PARTNER[this] ?: this
+
+/**
+ * Whether Today offers Habit Age without a pin: a new estimate, for the Sunday [asOf], from that day until the end of
+ * the next, unless it has been [seen] (opened). Never before there's an estimate (null [asOf]), and only on [today].
+ */
+fun habitAgeNew(asOf: LocalDate?, seen: Boolean, date: LocalDate, today: LocalDate): Boolean =
+    asOf != null && !seen && date == today && today in asOf..asOf.plusDays(1)
 
 /** The moment Today is laid out for: a past day always shows how it began (spec 4.1). */
 fun layoutMoment(moment: Moment?, isToday: Boolean): Moment? = if (!isToday) Moment.Waking else moment
@@ -64,25 +84,30 @@ fun todayCards(moment: Moment?, facts: TodayFacts, morning: Boolean = true): Lis
     val wide = { c: TodayCard -> TodaySlot(c, CardSize.Wide) }
     val strip = { c: TodayCard -> TodaySlot(c, CardSize.Strip) }
     val list = { c: TodayCard -> TodaySlot(c, CardSize.List) }
+    val small = { c: TodayCard -> TodaySlot(c, CardSize.Small) }
     val own = when (m) {
         Moment.Waking -> listOfNotNull(
             strip(TodayCard.CheckIn).takeIf { facts.isToday },
             list(TodayCard.BodyMorning), wide(TodayCard.LastNight), wide(TodayCard.HeartRate), wide(TodayCard.Activity),
         )
-        // During a workout the hero is the workout, and the rest stays as the day was.
-        Moment.Midday, Moment.During -> listOf(
+        Moment.Midday -> listOf(
             strip(TodayCard.LastNight), wide(TodayCard.Activity), wide(TodayCard.HeartRate), list(TodayCard.RightNow),
             wide(TodayCard.Recovery),
         )
+        // During a workout the hero is the workout and its live heart rate, so the rest stays as midday without it.
+        Moment.During -> listOf(strip(TodayCard.LastNight), wide(TodayCard.Activity), list(TodayCard.RightNow), wide(TodayCard.Recovery))
         Moment.WorkoutWindow -> listOf(
             TodaySlot(TodayCard.Charge, CardSize.Wide, secondGlow = true), list(TodayCard.LoadToday), wide(TodayCard.Activity),
             strip(TodayCard.LastNight),
         )
+        // What the workout did as a Small pair; Charge fills across to its level, so the hero is the one glow.
         Moment.After -> listOfNotNull(
-            wide(TodayCard.Workout).takeIf { facts.workout }, TodaySlot(TodayCard.Charge, CardSize.Wide, secondGlow = true),
-            list(TodayCard.LoadToday), wide(TodayCard.Activity),
+            wide(TodayCard.Workout).takeIf { facts.workout }, small(TodayCard.LoadToday), small(TodayCard.Recover),
+            wide(TodayCard.Charge), wide(TodayCard.Activity),
         )
-        Moment.Evening, Moment.Night -> listOf(wide(TodayCard.Charge), wide(TodayCard.Activity), strip(TodayCard.LastNight))
+        Moment.Evening, Moment.Night -> listOf(
+            wide(TodayCard.Charge), wide(TodayCard.Activity), wide(TodayCard.HeartRate), strip(TodayCard.LastNight),
+        )
     }
     // Things that need an answer come straight under the hero; the week and Habit Age close the list.
     return listOfNotNull(
@@ -142,13 +167,16 @@ data class TodayEdits(val hidden: Set<TodayCard> = emptySet(), val pinned: List<
 
 /**
  * [slots] with the edits applied: hidden cards gone, pinned ones moved under the hero (after anything that needs an
- * answer), in pin order. A pinned card the moment doesn't have is added; one the hero already shows is left where
- * it is.
+ * answer), in pin order. A pinned card the moment doesn't have is added, unless it's [unavailable] (Habit Age before
+ * its first estimate); one the hero already shows is left where it is. A card's partner ([TodayCard.Recover] with
+ * Load) goes where it goes.
  */
-fun applyEdits(slots: List<TodaySlot>, edits: TodayEdits, moment: Moment?): List<TodaySlot> {
-    val pins = edits.pinned.filter { it != heroSubject(moment) }
-    val pinned = pins.map { card -> (slots.firstOrNull { it.card == card } ?: TodaySlot(card, pinnedSize(card))).copy(pinned = true) }
-    val rest = slots.filter { it.card !in edits.hidden && it.card !in pins }
+fun applyEdits(slots: List<TodaySlot>, edits: TodayEdits, moment: Moment?, unavailable: Set<TodayCard> = emptySet()): List<TodaySlot> {
+    val pins = edits.pinned.filter { it != heroSubject(moment) && it !in unavailable }
+    val pinned = pins.flatMap { card ->
+        slots.filter { it.card.owner() == card }.ifEmpty { listOf(TodaySlot(card, pinnedSize(card))) }.map { it.copy(pinned = true) }
+    }
+    val rest = slots.filter { it.card.owner() !in edits.hidden && it.card.owner() !in pins }
     val urgent = setOf(TodayCard.Hero, TodayCard.Offer, TodayCard.Suggestion, TodayCard.Alerts)
     val at = rest.indexOfFirst { it.card !in urgent }.let { if (it < 0) rest.size else it }
     return rest.take(at) + pinned + rest.drop(at)

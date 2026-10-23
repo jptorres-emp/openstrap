@@ -2,6 +2,7 @@ package org.openstrap.app.ui.dashboard
 
 import kotlin.random.Random
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -16,6 +17,7 @@ import org.openstrap.app.ui.dashboard.TodayCard.RightNow
 import org.openstrap.app.ui.dashboard.TodayCard.Week
 import org.openstrap.app.ui.glow.CardSize
 import org.openstrap.app.ui.glow.Edge
+import org.openstrap.app.ui.glow.Pane
 
 /** No two Today cards next to each other look the same (spec 2.4), whatever the moment, the pins and the hides. */
 class TodayLooksTest {
@@ -49,9 +51,59 @@ class TodayLooksTest {
         assertEquals(TodayCard.Charge, window[1].card)
         assertEquals(CardLook(Tier.Level, Hue.Charge, Edge.Left), window[1].look)
         assertEquals(false, window[1].secondGlow)
-        // After a workout the workout card sits between, so Charge keeps its glow.
+        // After a workout Charge is the level card from the start: the hero is the one glow.
         val after = today(Moment.After, TodayFacts(workout = true))
-        assertEquals(true, after.first { it.card == TodayCard.Charge }.secondGlow)
+        assertEquals(CardLook(Tier.Level, Hue.Charge, Edge.Left), after.first { it.card == TodayCard.Charge }.look)
+        assertEquals(1, after.count { it.look?.tier == Tier.Glow })
+    }
+
+    @Test fun `after a run Load and time to recover differ side by side, as mocked`() {
+        for (wide in listOf(false, true)) {
+            val after = today(Moment.After, TodayFacts(workout = true), wide = wide)
+            assertEquals(CardLook(Tier.Edge, Hue.Load, Edge.Bottom, Shape.Small), after.first { it.card == LoadToday }.look)
+            assertEquals(CardLook(Tier.Edge, Hue.Recovery, Edge.Top, Shape.Small), after.first { it.card == TodayCard.Recover }.look)
+            // Activity is lit from below, so Your week under it flips to the top.
+            assertEquals(Edge.Top, after.first { it.card == Week }.look?.edge)
+            assertVaried(after, wide, "after wide=$wide")
+        }
+    }
+
+    @Test fun `in the evening heart rate flips to the top under Activity`() {
+        val evening = today(Moment.Evening, TodayFacts())
+        assertEquals(listOf(Hero, TodayCard.Charge, Activity, TodayCard.HeartRate, LastNight, Week, EditToday), evening.map { it.card })
+        assertEquals(Edge.Bottom, evening.first { it.card == Activity }.look?.edge)
+        assertEquals(Edge.Top, evening.first { it.card == TodayCard.HeartRate }.look?.edge)
+        // Live, it's lit from the right and needs no flip.
+        assertEquals(Edge.Right, today(Moment.Evening, TodayFacts(), live = true).first { it.card == TodayCard.HeartRate }.look?.edge)
+    }
+
+    @Test fun `a Small is its own design, but two Smalls side by side are neighbours`() {
+        val wideBottom = CardLook(Tier.Edge, Hue.Steps, Edge.Bottom)
+        assertFalse(wideBottom.sameDesign(wideBottom.copy(shape = Shape.Small)))
+        assertFalse(wideBottom.copy(shape = Shape.Tall).sameDesign(wideBottom.copy(shape = Shape.Small)))
+        val pair = listOf(
+            TodaySlot(Hero, CardSize.Large), TodaySlot(LoadToday, CardSize.Small), TodaySlot(TodayCard.Recover, CardSize.Small),
+            TodaySlot(Activity, CardSize.Wide),
+        )
+        // The hero touches both Smalls under it, and so does the card under them.
+        assertTrue(setOf(0 to 1, 0 to 2, 1 to 2, 1 to 3, 2 to 3).all { it in neighbours(pair, wide = false) })
+    }
+
+    @Test fun `on two columns a full-width card touches the top card of each column under it`() {
+        // Hero, then two edge cards side by side: the right one isn't next to the hero in reading order, but it's
+        // right under it. Today counts it as tabClashes does, so the glow over a glow is caught.
+        val glow = CardLook(Tier.Glow, Hue.Charge)
+        val slots = listOf(
+            TodaySlot(Hero, CardSize.Large, look = glow), TodaySlot(Activity, CardSize.Wide, look = CardLook(Tier.Edge, Hue.Steps, Edge.Bottom)),
+            TodaySlot(TodayCard.Charge, CardSize.Wide, look = glow),
+        )
+        assertEquals(listOf(Pane.Full, Pane.Left, Pane.Right), todayPanes(slots))
+        assertTrue(lookClashes(slots, wide = false).isEmpty())
+        assertEquals(listOf(0 to 2), lookClashes(slots, wide = true))
+        // varyLooks resolves it: the second glow steps down to its level card.
+        val out = varyLooks(listOf(slots[0], slots[1], slots[2].copy(look = null, secondGlow = true)).map { it.copy(look = null) }, Moment.WorkoutWindow, wide = true)
+        assertVaried(out, true, "full over columns")
+        assertEquals(Tier.Level, out[2].look?.tier)
     }
 
     @Test fun `every moment's own cards are varied, on a phone and on two columns`() {
@@ -91,15 +143,23 @@ class TodayLooksTest {
     }
 
     @Test fun `a card moves only when no other look will do`() {
-        // Two glows have no other look, so the later one, whose place is open, moves down a card.
-        val habit = TodaySlot(TodayCard.HabitAge, CardSize.Wide)
+        // Two level cards have no other look, so the later one, whose place is open (a pin), moves down a card.
+        val charge = TodaySlot(TodayCard.Charge, CardSize.Wide, pinned = true)
         val slots = listOf(
-            TodaySlot(Hero, CardSize.Large), TodaySlot(Activity, CardSize.Wide), habit, habit, TodaySlot(Recovery, CardSize.Wide),
+            TodaySlot(Hero, CardSize.Large), TodaySlot(Activity, CardSize.Wide), charge, charge, TodaySlot(Recovery, CardSize.Wide),
             TodaySlot(EditToday, CardSize.Strip),
         )
         val out = varyLooks(slots, Moment.Midday)
-        assertEquals(listOf(Hero, Activity, TodayCard.HabitAge, Recovery, TodayCard.HabitAge, EditToday), out.map { it.card })
-        assertVaried(out, false, "two glows")
+        assertEquals(listOf(Hero, Activity, TodayCard.Charge, Recovery, TodayCard.Charge, EditToday), out.map { it.card })
+        assertVaried(out, false, "two levels")
+    }
+
+    @Test fun `a moving card never splits a Small pair`() {
+        for (m in Moment.entries) for (wide in listOf(false, true)) for (pins in listOf(listOf(Week), listOf(Week, TodayCard.HabitAge), listOf(LoadToday, Week))) {
+            val out = today(m, TodayFacts(workout = true, healthspan = true), TodayEdits(pinned = pins), wide = wide)
+            val i = out.indexOfFirst { it.card == LoadToday && it.size == CardSize.Small }
+            if (i >= 0) assertEquals("$m $pins", TodayCard.Recover, out[i + 1].card)
+        }
     }
 
     @Test fun `every pin and hide on every moment stays varied`() {

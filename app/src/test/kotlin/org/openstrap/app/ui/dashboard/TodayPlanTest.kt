@@ -17,6 +17,7 @@ import org.openstrap.app.ui.dashboard.TodayCard.Hero
 import org.openstrap.app.ui.dashboard.TodayCard.LastNight
 import org.openstrap.app.ui.dashboard.TodayCard.LoadToday
 import org.openstrap.app.ui.dashboard.TodayCard.Offer
+import org.openstrap.app.ui.dashboard.TodayCard.Recover
 import org.openstrap.app.ui.dashboard.TodayCard.Recovery
 import org.openstrap.app.ui.dashboard.TodayCard.RightNow
 import org.openstrap.app.ui.dashboard.TodayCard.Suggestion
@@ -32,10 +33,13 @@ class TodayPlanTest {
         assertEquals(listOf(Hero, CheckIn, BodyMorning, LastNight, HeartRate, Activity, Week, EditToday), cards(Moment.Waking))
         assertEquals(listOf(Hero, LastNight, Activity, HeartRate, RightNow, Recovery, Week, EditToday), cards(Moment.Midday))
         assertEquals(listOf(Hero, Charge, LoadToday, Activity, LastNight, Week, EditToday), cards(Moment.WorkoutWindow))
-        assertEquals(listOf(Hero, Workout, Charge, LoadToday, Activity, Week, EditToday), cards(Moment.After, TodayFacts(workout = true)))
-        assertEquals(listOf(Hero, Charge, Activity, LastNight, Week, EditToday), cards(Moment.Evening))
+        assertEquals(listOf(Hero, Workout, LoadToday, Recover, Charge, Activity, Week, EditToday), cards(Moment.After, TodayFacts(workout = true)))
+        assertEquals(listOf(Hero, Charge, Activity, HeartRate, LastNight, Week, EditToday), cards(Moment.Evening))
         assertEquals(cards(Moment.Evening), cards(Moment.Night))
-        assertEquals(cards(Moment.Midday), cards(Moment.During))
+        // During a workout the hero has the live heart rate, so the card leaves; the rest is midday's.
+        assertEquals(cards(Moment.Midday) - HeartRate, cards(Moment.During))
+        // Heart rate shows at waking, midday and the evening, never around a workout.
+        for (m in listOf(Moment.WorkoutWindow, Moment.During, Moment.After)) assertFalse("$m", HeartRate in cards(m, TodayFacts(workout = true)))
     }
 
     @Test fun `sizes and tiers follow the spec`() {
@@ -46,10 +50,15 @@ class TodayPlanTest {
         assertEquals(CardSize.Wide, waking[LastNight])
         // Past midday the night collapses to a strip.
         assertEquals(CardSize.Strip, todayCards(Moment.Midday, TodayFacts()).first { it.card == LastNight }.size)
-        // Charge is the second glow before and after a workout, an edge card in the evening.
+        // Charge is the second glow before a workout, a level card after it and in the evening.
         assertTrue(todayCards(Moment.WorkoutWindow, TodayFacts()).first { it.card == Charge }.secondGlow)
-        assertTrue(todayCards(Moment.After, TodayFacts()).first { it.card == Charge }.secondGlow)
+        assertFalse(todayCards(Moment.After, TodayFacts()).first { it.card == Charge }.secondGlow)
         assertFalse(todayCards(Moment.Evening, TodayFacts()).first { it.card == Charge }.secondGlow)
+        // After a workout Load and time to recover are a Small pair; before one, a list.
+        val after = todayCards(Moment.After, TodayFacts(workout = true)).associate { it.card to it.size }
+        assertEquals(CardSize.Small, after[LoadToday])
+        assertEquals(CardSize.Small, after[Recover])
+        assertEquals(CardSize.List, todayCards(Moment.WorkoutWindow, TodayFacts()).first { it.card == LoadToday }.size)
         // At most one second glow on any moment.
         Moment.entries.forEach { m -> assertTrue(todayCards(m, TodayFacts()).count { it.secondGlow } <= 1) }
     }
@@ -124,6 +133,36 @@ class TodayPlanTest {
         assertEquals(TodayEdits(), TodayEdits.parse(null, null))
         // A card both hidden and pinned (edited by hand) is pinned.
         assertEquals(TodayEdits(pinned = listOf(Week)), TodayEdits.parse(listOf("Week"), listOf("Week")))
+    }
+
+    @Test fun `time to recover goes with Load, hidden or pinned`() {
+        val after = todayCards(Moment.After, TodayFacts(workout = true))
+        val hidden = applyEdits(after, TodayEdits(hidden = setOf(LoadToday)), Moment.After).map { it.card }
+        assertFalse(LoadToday in hidden)
+        assertFalse(Recover in hidden)
+        val pinned = applyEdits(after, TodayEdits(pinned = listOf(LoadToday)), Moment.After)
+        assertEquals(listOf(Hero, LoadToday, Recover, Workout), pinned.map { it.card }.take(4))
+        assertTrue(pinned.take(3).drop(1).all { it.pinned && it.size == CardSize.Small })
+        // Recover is never offered on its own in Edit Today.
+        assertFalse(Recover.editable)
+        assertFalse(Recover.pinnable)
+    }
+
+    @Test fun `habit age is on Today only while its estimate is new, or pinned once there is one`() {
+        val sunday = java.time.LocalDate.of(2026, 10, 18)
+        assertTrue(habitAgeNew(sunday, seen = false, date = sunday, today = sunday))
+        assertTrue(habitAgeNew(sunday, seen = false, date = sunday.plusDays(1), today = sunday.plusDays(1)))
+        assertFalse(habitAgeNew(sunday, seen = false, date = sunday.plusDays(2), today = sunday.plusDays(2)))
+        assertFalse(habitAgeNew(sunday, seen = true, date = sunday, today = sunday))
+        assertFalse(habitAgeNew(null, seen = false, date = sunday, today = sunday))
+        // A past day never offers it.
+        assertFalse(habitAgeNew(sunday, seen = false, date = sunday.minusDays(1), today = sunday))
+        assertTrue(HabitAge in cards(Moment.Midday, TodayFacts(healthspan = true)))
+        assertFalse(HabitAge in cards(Moment.Midday, TodayFacts(healthspan = false)))
+        // Pinned, it shows every day, but never before the first estimate.
+        val slots = todayCards(Moment.Midday, TodayFacts())
+        assertEquals(HabitAge, applyEdits(slots, TodayEdits(pinned = listOf(HabitAge)), Moment.Midday)[1].card)
+        assertFalse(HabitAge in applyEdits(slots, TodayEdits(pinned = listOf(HabitAge)), Moment.Midday, unavailable = setOf(HabitAge)).map { it.card })
     }
 
     @Test fun `usual sport is the most frequent, ties to the latest`() {

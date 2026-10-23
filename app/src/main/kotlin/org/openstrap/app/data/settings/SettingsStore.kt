@@ -253,6 +253,15 @@ class SettingsStore(private val context: Context) {
     val todayHiddenNames: Flow<List<String>?> = context.dataStore.data.map { prefs -> prefs[todayHidden]?.split(',')?.filter { it.isNotEmpty() } }
     val todayPinnedNames: Flow<List<String>?> = context.dataStore.data.map { prefs -> prefs[todayPinned]?.split(',')?.filter { it.isNotEmpty() } }
 
+    private val habitAgeSeen = longPreferencesKey("habit_age_seen")
+
+    /** The Sunday (local midnight) of the last Habit Age estimate opened, so Today stops offering it; null before any. */
+    val habitAgeSeenAsOf: Flow<Long?> = context.dataStore.data.map { it[habitAgeSeen] }
+
+    suspend fun setHabitAgeSeen(asOf: Long) {
+        context.dataStore.edit { it[habitAgeSeen] = asOf }
+    }
+
     suspend fun saveTodayEdits(hidden: List<String>, pinned: List<String>) {
         context.dataStore.edit {
             it[todayHidden] = hidden.joinToString(",")

@@ -480,6 +480,13 @@ interface HealthDao {
     @Query("SELECT * FROM check_in WHERE day BETWEEN :from AND :to ORDER BY day")
     suspend fun checkInsOnce(from: Long, to: Long): List<CheckInRow>
 
+    // Each Sunday's Habit Age estimate, for the next week's comparison.
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertHabitAgeWeek(row: HabitAgeWeekRow)
+
+    @Query("SELECT * FROM habit_age_week WHERE asOf BETWEEN :from AND :to ORDER BY asOf")
+    suspend fun habitAgeWeeksOnce(from: Long, to: Long): List<HabitAgeWeekRow>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertDayTags(rows: List<DayTagRow>)
 

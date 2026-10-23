@@ -3,7 +3,10 @@ package org.openstrap.app.ui.glow
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
@@ -16,11 +19,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
@@ -37,6 +43,7 @@ import androidx.compose.ui.unit.sp
 import org.openstrap.app.ui.components.scrub
 import org.openstrap.app.ui.components.smoothPath
 import org.openstrap.app.ui.theme.FunnelSans
+import org.openstrap.app.ui.theme.MetricColors
 import kotlin.math.cos
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -115,12 +122,29 @@ fun GlowLineChart(
     band: ClosedFloatingPointRange<Float>? = null,
     /** How the average label prints a value. */
     format: (Float) -> String = { it.roundToInt().toString() },
+    /**
+     * Scrubbing that moves the card's headline instead of a readout (spec 2.7): the reading under the finger, or null
+     * on release. Used without [describe].
+     */
+    onScrub: ((Int?) -> Unit)? = null,
     /** Text for the touch readout at a reading; null turns scrubbing off. */
     describe: ((index: Int, value: Float) -> String)? = null,
 ) {
     val m = rememberTextMeasurer()
     var touchX by remember { mutableStateOf<Float?>(null) }
-    Canvas(modifier.fillMaxWidth().height(height).let { if (describe != null) it.scrub(values) { x -> touchX = x } else it }) {
+    var width by remember { mutableStateOf(0f) }
+    val inset = with(androidx.compose.ui.platform.LocalDensity.current) { 7.dp.toPx() }
+    val scrubbing = describe != null || onScrub != null
+    Canvas(
+        modifier.fillMaxWidth().height(height)
+            .onSizeChanged { width = it.width.toFloat() }
+            .let {
+                if (!scrubbing) it else it.scrub(values) { x ->
+                    touchX = x
+                    onScrub?.invoke(x?.let { tx -> nearestReading(values, tx, width, inset) })
+                }
+            },
+    ) {
         val known = values.filterNotNull()
         if (known.isEmpty()) return@Canvas
         val axisH = if (labels.isEmpty()) 0f else 18.dp.toPx()
@@ -129,7 +153,6 @@ fun GlowLineChart(
         val lo = yRange?.start ?: minOf(known.min(), band?.start ?: Float.MAX_VALUE)
         val hi = (yRange?.endInclusive ?: maxOf(known.max(), band?.endInclusive ?: -Float.MAX_VALUE)).let { if (it - lo < 1e-3f) lo + 1f else it }
         // Inset by the end dot's halo, so a reading at the very edge isn't cut off.
-        val inset = 7.dp.toPx()
         fun xOf(i: Int) = inset + i / (values.size - 1f).coerceAtLeast(1f) * (size.width - inset * 2)
         fun yOf(v: Float) = top + (h - top) * (1f - (v - lo) / (hi - lo))
 
@@ -174,19 +197,25 @@ fun GlowLineChart(
 
         // Scrubbing: the reading nearest the finger (gaps are skipped, not bridged).
         val tx = touchX
-        if (describe != null && tx != null) {
-            val near = ((tx - inset) / (size.width - inset * 2) * (values.size - 1)).roundToInt().coerceIn(0, values.size - 1)
-            val i = (0..values.size).asSequence().flatMap { d -> sequenceOf(near - d, near + d) }
-                .firstOrNull { it in values.indices && values[it] != null && kotlin.math.abs(it - near) <= values.size / 48 + 1 }
+        if (scrubbing && tx != null) {
+            val i = nearestReading(values, tx, size.width, inset)
             if (i != null) {
                 val p = Offset(xOf(i), yOf(values[i]!!))
                 guide(p.x, h)
                 drawCircle(Color.Black.copy(alpha = 0.6f), 6.dp.toPx(), p)
                 drawCircle(color, 4.dp.toPx(), p)
-                readout(m, describe(i, values[i]!!), p.x, p.y)
+                if (describe != null) readout(m, describe(i, values[i]!!), p.x, p.y)
             }
         }
     }
+}
+
+/** The reading nearest [x] on a line chart [width] wide, its ends [inset] in; gaps are skipped, not bridged. */
+internal fun nearestReading(values: List<Float?>, x: Float, width: Float, inset: Float): Int? {
+    if (values.isEmpty() || width <= inset * 2) return null
+    val near = ((x - inset) / (width - inset * 2) * (values.size - 1)).roundToInt().coerceIn(0, values.size - 1)
+    return (0..values.size).asSequence().flatMap { d -> sequenceOf(near - d, near + d) }
+        .firstOrNull { it in values.indices && values[it] != null && kotlin.math.abs(it - near) <= values.size / 48 + 1 }
 }
 
 /* ------------------------------------------------------------------------------------------------ */
@@ -413,50 +442,140 @@ fun GlowHypnogram(
 /* ------------------------------------------------------------------------------------------------ */
 
 /**
- * The score as a wide, shallow arc across the card: a dotted track, ticks above it,
- * a white fill with a soft halo up to the score, and a knob glowing in [color] where it lands. The fill sweeps in
- * when the card appears.
+ * The horizon arc (chart kit): the sleep score as a night sky rising from the horizon, a faint track over the top
+ * from one end of the horizon to the other and a solid line up to [progress] (0..1), with [value] in dot-matrix
+ * digits under the crown. Drawn where it lands, never swept in from zero.
  */
 @Composable
-fun GlowHorizon(progress: Float?, color: Color, modifier: Modifier = Modifier, height: Dp = 72.dp) {
-    val m = rememberTextMeasurer()
-    val target = progress?.coerceIn(0f, 1f) ?: 0f
-    val anim = remember { androidx.compose.animation.core.Animatable(0f) }
-    androidx.compose.runtime.LaunchedEffect(target) {
-        anim.animateTo(target, androidx.compose.animation.core.tween(700, easing = androidx.compose.animation.core.FastOutSlowInEasing))
-    }
-    Canvas(modifier.fillMaxWidth().height(height)) {
-        val sweep = 84f
-        val start = 270f - sweep / 2
-        val chord = size.width - 28.dp.toPx()
-        val r = chord / 2f / sin(Math.toRadians(sweep / 2.0)).toFloat()
-        val sag = r * (1f - cos(Math.toRadians(sweep / 2.0)).toFloat())
-        val top = 14.dp.toPx()
-        val c = Offset(size.width / 2f, top + r)
-        val topLeft = Offset(c.x - r, c.y - r)
-        val box = Size(r * 2, r * 2)
-        fun at(f: Float, radius: Float = r): Offset {
-            val a = Math.toRadians((start + sweep * f).toDouble())
-            return Offset(c.x + radius * cos(a).toFloat(), c.y + radius * sin(a).toFloat())
-        }
-        drawArc(
-            Faint, start, sweep, false, topLeft, box,
-            style = Stroke(1.6.dp.toPx(), cap = StrokeCap.Round, pathEffect = PathEffect.dashPathEffect(floatArrayOf(0f, 6.dp.toPx()))),
-        )
-        for (i in 0..4) drawCircle(Muted, 1.5.dp.toPx(), at(i / 4f, r + 9.dp.toPx()))
-        if (progress != null) {
-            val p = anim.value
-            if (p > 0.001f) {
-                drawArc(Ink.copy(alpha = 0.10f), start, sweep * p, false, topLeft, box, style = Stroke(9.dp.toPx(), cap = StrokeCap.Round))
-                drawArc(Ink, start, sweep * p, false, topLeft, box, style = Stroke(2.4.dp.toPx(), cap = StrokeCap.Round))
+fun GlowHorizon(progress: Float?, value: String?, modifier: Modifier = Modifier, width: Dp = 170.dp, height: Dp = 92.dp) {
+    Box(modifier.size(width, height), contentAlignment = Alignment.BottomCenter) {
+        Canvas(Modifier.matchParentSize()) {
+            val stroke = 8.dp.toPx()
+            val y0 = size.height - stroke / 2 - 2.dp.toPx()
+            val p0 = Offset(stroke / 2 + 4.dp.toPx(), y0)
+            val p2 = Offset(size.width - p0.x, y0)
+            // The control point above the card, so the crown sits near its top edge.
+            val c = Offset(size.width / 2, y0 - (y0 - stroke) * 2f)
+            fun at(t: Float) = Offset(
+                (1 - t) * (1 - t) * p0.x + 2 * (1 - t) * t * c.x + t * t * p2.x,
+                (1 - t) * (1 - t) * p0.y + 2 * (1 - t) * t * c.y + t * t * p2.y,
+            )
+            fun path(to: Float) = Path().apply {
+                moveTo(p0.x, p0.y)
+                val n = 48
+                for (k in 1..n) at(to * k / n).let { lineTo(it.x, it.y) }
             }
-            val k = at(p)
-            drawCircle(color.copy(alpha = 0.30f), 11.dp.toPx(), k)
-            drawCircle(color, 6.5.dp.toPx(), k)
-            drawCircle(Ink, 2.6.dp.toPx(), k)
+            drawPath(path(1f), Ink.copy(alpha = 0.12f), style = Stroke(stroke, cap = StrokeCap.Round))
+            val p = progress?.coerceIn(0f, 1f) ?: return@Canvas
+            if (p > 0f) drawPath(path(p), MetricColors.sleepLight.copy(alpha = 0.9f).compositeOver(Ink), style = Stroke(stroke, cap = StrokeCap.Round))
         }
-        val labelY = top + sag + 8.dp.toPx()
-        text(m, "0", axisText, at(0f).x, labelY, align = 0.5f)
-        text(m, "100", axisText, at(1f).x, labelY, align = 0.5f)
+        if (value != null) DotMatrixText(value, dot = 3.4.dp, gap = 1.2.dp, modifier = Modifier.padding(bottom = 6.dp))
     }
+}
+
+/* ------------------------------------------------------------------------------------------------ */
+
+/**
+ * The ghost line of your usual (chart kit): [today] so far as a solid line in [color] ending in a dot, and [usual]
+ * by this time of day as a faint dashed line behind it, when there is one. Both are evenly spaced over the same span
+ * (a day, say) on a value axis from 0 to [max]; nulls in [today] are the hours still to come.
+ */
+@Composable
+fun GhostLine(today: List<Float?>, color: Color, max: Float, modifier: Modifier = Modifier, usual: List<Float>? = null, height: Dp = 56.dp) {
+    Canvas(modifier.fillMaxWidth().height(height)) {
+        if (today.size < 2) return@Canvas
+        val r = 4.5.dp.toPx()
+        val top = r
+        val h = size.height - r
+        val hi = max.coerceAtLeast(1f)
+        fun xOf(i: Int, n: Int) = r + i / (n - 1f) * (size.width - r * 2)
+        fun yOf(v: Float) = top + (h - top) * (1f - (v / hi).coerceIn(0f, 1f))
+        usual?.takeIf { it.size >= 2 }?.let { u ->
+            val path = Path().apply { u.forEachIndexed { i, v -> if (i == 0) moveTo(xOf(i, u.size), yOf(v)) else lineTo(xOf(i, u.size), yOf(v)) } }
+            drawPath(path, Ink.copy(alpha = 0.35f), style = Stroke(2.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(3.dp.toPx(), 5.dp.toPx()))))
+        }
+        val pts = today.mapIndexedNotNull { i, v -> v?.let { Offset(xOf(i, today.size), yOf(it)) } }
+        if (pts.isEmpty()) return@Canvas
+        if (pts.size >= 2) drawPath(
+            Path().apply { pts.forEachIndexed { i, p -> if (i == 0) moveTo(p.x, p.y) else lineTo(p.x, p.y) } },
+            color, style = Stroke(2.6.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round),
+        )
+        drawCircle(color, r, pts.last())
+    }
+}
+
+/* ------------------------------------------------------------------------------------------------ */
+
+/**
+ * Trend dots (chart kit): a few days as dots joined by a faint line, the last (today) the only full dot, with a ring.
+ * Days with no value are left out of the line. TODO(step 6): your normal as a dim band, and days outside it lit up,
+ * once the app keeps a normal for the score.
+ */
+@Composable
+fun TrendDots(values: List<Int?>, modifier: Modifier = Modifier, height: Dp = 52.dp) {
+    Canvas(modifier.fillMaxWidth().height(height)) {
+        val known = values.filterNotNull()
+        if (known.isEmpty()) return@Canvas
+        val ring = 11.dp.toPx()
+        val lo = known.min() - 5f
+        val hi = (known.max() + 5f).coerceAtLeast(lo + 1f)
+        fun xOf(i: Int) = ring + i / (values.size - 1f).coerceAtLeast(1f) * (size.width - ring * 2)
+        fun yOf(v: Int) = ring + (size.height - ring * 2) * (1f - (v - lo) / (hi - lo))
+        val pts = values.mapIndexedNotNull { i, v -> v?.let { i to Offset(xOf(i), yOf(it)) } }
+        pts.zipWithNext { (_, a), (_, b) -> drawLine(Ink.copy(alpha = 0.25f), a, b, 1.5.dp.toPx()) }
+        pts.forEach { (i, p) ->
+            if (i == values.lastIndex) {
+                drawCircle(Ink.copy(alpha = 0.5f), ring, p, style = Stroke(1.dp.toPx()))
+                drawCircle(Ink, 6.dp.toPx(), p)
+            } else drawCircle(Ink.copy(alpha = 0.45f), 4.dp.toPx(), p)
+        }
+    }
+}
+
+/* ------------------------------------------------------------------------------------------------ */
+
+/**
+ * The zone bar (chart kit): how a workout's time was spent, a thin bar split by the seconds in each heart rate zone,
+ * easy to max, in the zone colours. Zones with no time are left out; nothing draws without any.
+ */
+@Composable
+fun ZoneBar(zoneSeconds: List<Int>, colors: List<Color>, modifier: Modifier = Modifier, height: Dp = 6.dp) {
+    if (zoneSeconds.sum() <= 0) return
+    androidx.compose.foundation.layout.Row(
+        modifier.fillMaxWidth().height(height).clip(androidx.compose.foundation.shape.RoundedCornerShape(height / 2)),
+        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(2.dp),
+    ) {
+        zoneSeconds.forEachIndexed { z, secs ->
+            if (secs > 0) Box(Modifier.weight(secs.toFloat()).fillMaxHeight().background(colors[z % colors.size]))
+        }
+    }
+}
+
+/* ------------------------------------------------------------------------------------------------ */
+
+/**
+ * A night or nap's stages laid flat (the nap hypnogram strip): one line from start to end, each stretch in its
+ * stage's colour.
+ */
+@Composable
+fun StageStrip(spans: List<org.openstrap.app.ui.components.StageSpan>, modifier: Modifier = Modifier, height: Dp = 6.dp) {
+    Canvas(modifier.fillMaxWidth().height(height)) {
+        if (spans.isEmpty()) return@Canvas
+        val start = spans.minOf { it.start }
+        val end = spans.maxOf { it.end }.coerceAtLeast(start + 1)
+        val w = size.height
+        spans.sortedBy { it.start }.forEach { s ->
+            val x0 = w / 2 + (size.width - w) * (s.start - start) / (end - start)
+            val x1 = w / 2 + (size.width - w) * (s.end - start) / (end - start)
+            drawLine(stageColor(s.stage), Offset(x0, size.height / 2), Offset(x1.coerceAtLeast(x0 + 0.5f), size.height / 2), w, StrokeCap.Round)
+        }
+    }
+}
+
+/** A sleep stage's colour, as on the strap's own charts. */
+internal fun stageColor(stage: Int): Color = when (stage) {
+    org.openstrap.app.data.db.SleepStage.DEEP -> MetricColors.sleepDeep
+    org.openstrap.app.data.db.SleepStage.REM -> MetricColors.sleepRem
+    org.openstrap.app.data.db.SleepStage.AWAKE -> MetricColors.sleepAwake
+    else -> MetricColors.sleepLight
 }

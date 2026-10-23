@@ -74,14 +74,16 @@ fun GlowSleepScreen(
     CompositionLocalProvider(LocalGlowPaused provides { list.isScrollInProgress }, LocalGlowMood provides GlowMood.Night) {
         GlowScreenList(contentPadding, list) {
             full { header() }
-            tabCards(slots) { card ->
+            // With naps and a breathing summary the two are a Small pair; alone, either is a Wide.
+            val pair = breathing != null && state.naps.isNotEmpty()
+            tabCards(slots) { card, m ->
                 when (card) {
                     SleepCard.Hero -> NightHero(state)
                     // TODO(step 6): each row opens its detail scoped to the night, with the night's chart there.
                     SleepCard.Vitals -> VitalsList(state, onOpenMetric)
                     SleepCard.Regularity -> RegularityCard(state, rec?.regularity)
-                    SleepCard.Breathing -> breathing?.let { BreathingCard(it) }
-                    SleepCard.Naps -> NapsCard(state)
+                    SleepCard.Breathing -> breathing?.let { if (pair) BreathingSmall(it, m) else BreathingCard(it) }
+                    SleepCard.Naps -> NapsCard(state, if (pair) m else Modifier.fillMaxWidth().height(GlowGrid.UnitHeight))
                 }
             }
         }
@@ -124,11 +126,17 @@ private fun NightHero(state: DayUiState) {
             HeroSentence(TabCopy.night(asleep, others))
             Spacer(Modifier.height(22.dp))
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
-                Column(Modifier.weight(1f)) {
-                    val score = session.score
-                    HeroFigure(score?.toString(), score?.let { "Sleep score, ${TabCopy.sleepScoreWord(it).lowercase()}" } ?: "No score from the strap", big = true)
+                val score = session.score
+                // The horizon arc (chart kit): the score rising from the night's horizon.
+                if (score != null) GlowHorizon(score / 100f, score.toString())
+                Spacer(Modifier.weight(1f))
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        score?.let { "Sleep score, ${TabCopy.sleepScoreWord(it).lowercase()}" } ?: "No score from the strap",
+                        color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary,
+                    )
+                    TabCopy.woke(session.wakeCount)?.let { Text(it, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary) }
                 }
-                TabCopy.woke(session.wakeCount)?.let { Text(it, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary) }
             }
             if (state.sleepStages.isNotEmpty()) {
                 Spacer(Modifier.height(18.dp))
@@ -211,50 +219,24 @@ private fun BreathingCard(b: org.openstrap.app.data.Recovery.BreathingDisturbanc
     }
 }
 
-/** The day's naps; tap one to see its stages and heart rate. A lone nap starts open. Earlier in the day, so lit from the left. */
+/** Breathing disturbances as a Small beside the naps: the count an hour and your usual. Lit from below, a value. */
 @Composable
-private fun NapsCard(state: DayUiState) {
-    var open by rememberSaveable(state.date) { mutableLongStateOf(state.naps.singleOrNull()?.start ?: -1L) }
-    EdgeCard(MetricColors.sleepRem, Modifier.fillMaxWidth(), kind = EdgeKind.Earlier) {
-        EdgeTitle("Naps", TodayCopy.duration(state.naps.sumOf { it.end - it.start }))
-        state.naps.forEach { nap ->
-            val expanded = open == nap.start
-            Row(
-                Modifier.fillMaxWidth().padding(top = 10.dp).clickable { open = if (expanded) -1L else nap.start }.padding(vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    "${clock(nap.start)}–${clock(nap.end)}, ${TodayCopy.duration(nap.end - nap.start)}",
-                    color = Color.White, style = GlowType.label.copy(fontWeight = null), modifier = Modifier.weight(1f),
-                )
-                val turn by animateFloatAsState(if (expanded) 180f else 0f, label = "nap caret")
-                Icon(AppIcons.CaretDown, if (expanded) "Hide" else "Details", tint = Color.White.copy(alpha = 0.8f), modifier = Modifier.size(16.dp).rotate(turn))
-            }
-            if (expanded) {
-                val stages = state.napStages[nap.start].orEmpty()
-                if (stages.isEmpty()) Note("The strap didn't record stages for this nap.")
-                else GlowSleepStages(stages, 80.dp)
-                // The strap reports no average for naps, so it comes from the day's heart rate.
-                val hr = state.heartRate.filter { it.x in nap.start..nap.end }
-                if (hr.isNotEmpty()) {
-                    val values = remember(hr) { evenly(hr, nap.start..nap.end, 5 * 60L) }
-                    Spacer(Modifier.height(8.dp))
-                    Note("Lowest heart rate ${hr.minOf { it.y }.toInt()} bpm")
-                    GlowLineChart(values, height = 64.dp, labels = listOf(clock(nap.start), clock(nap.end)), color = MetricColors.heart)
-                }
-            }
-        }
-    }
-}
+private fun BreathingSmall(b: org.openstrap.app.data.Recovery.BreathingDisturbances, modifier: Modifier) =
+    SmallCard(MetricColors.sleepLight, "Breathing disturbances", "%.1f".format(b.perHour), "/ h", TabCopy.breathingShort(b), modifier)
 
-/** Averages timed points into evenly spaced buckets across [range]; empty buckets are gaps. */
-private fun evenly(points: List<ChartPoint>, range: LongRange, seconds: Long): List<Float?> {
-    val n = ((range.last - range.first + 1) / seconds).toInt().coerceAtLeast(2)
-    val sums = FloatArray(n)
-    val counts = IntArray(n)
-    points.forEach {
-        val i = ((it.x - range.first) / seconds).toInt()
-        if (i in 0 until n) { sums[i] += it.y; counts[i]++ }
-    }
-    return List(n) { if (counts[it] == 0) null else sums[it] / counts[it] }
+/**
+ * The day's naps as a Small (a Wide when alone): the time napped, a strip of the latest nap's stages and when it was.
+ * Earlier in the day, so lit from the left. TODO(step 6): tapping opens the naps in the Sleep detail, with each nap's
+ * heart rate.
+ */
+@Composable
+private fun NapsCard(state: DayUiState, modifier: Modifier) {
+    val naps = state.naps.sortedBy { it.start }
+    if (naps.isEmpty()) return
+    val stages = state.napStages[naps.last().start].orEmpty()
+    SmallCard(
+        MetricColors.sleepRem, TabCopy.napsTitle(naps.size), clockDuration(naps.sumOf { it.end - it.start }), null,
+        TabCopy.naps(naps.size, clock(naps.first().start)), modifier, kind = EdgeKind.Earlier,
+        extra = if (stages.isEmpty()) null else ({ StageStrip(stages, Modifier.padding(top = 8.dp)) }),
+    )
 }

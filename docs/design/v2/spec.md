@@ -64,9 +64,15 @@ Two columns, 16 dp side gutter, 12 dp gap. Unit width = (screen width minus 32 m
 | Strip | full width, 68 dp | A state or an action (check-in, Start sports, last night collapsed) |
 
 Rows are one of: `Full(Large | Wide | Strip | List)`, `Pair(Small, Small)`, `TallPair(Tall, Small over Small)`. A lone
-Small becomes a Wide. Cards never resize by user choice.
+Small becomes a Wide. Cards never resize by user choice. A Small is a number and a word only, no chart (the nap's
+stage strip is the one exception). Smalls and Talls are a unit high (160 dp) and two units plus the gap.
 
-On wide screens (600 dp and up) the existing two-column split in `GlowLayout` stays. The row types fill each column.
+Where sizes are in use ([mock](../../../build/v2-shots/size-mocks/sizes.html)): Today after a workout (Load and Time
+to recover, a Small pair), Recovery (Charge as a Tall glow battery beside Recharged over Drained), Sleep (Breathing
+disturbances and Naps, a Small pair when both are there) and Activity (Active minutes and Heart points).
+
+On wide screens (600 dp and up) the existing two-column split in `GlowLayout` stays. Each grid row is one block, so a
+Pair or TallPair stays together in one column, and the row types fill each column.
 
 ### 2.4 The three card tiers
 
@@ -80,14 +86,18 @@ Every card on every screen is exactly one of these.
 
 `DotPanel` is removed. Lists of rows (workouts, contributors, settings) use `ListPanel` with a plain hairline.
 
-Never two cards in a row with the same design. A card's design is its tier and the edge its light comes in from.
+Never two cards in a row with the same design. A card's design is its tier, the edge its light comes in from, and
+its shape: a Small and a Tall each count as a design of their own (`CardLook.shape`), so a Small never matches a Wide.
 Colour (the metric's, or the neutral light, hsl 220 10% 55%) doesn't count: two glows in a row, or two edge cards lit
 from the same side, look the same whatever their colours. Neighbours are cards one after the other in reading
-order, and on two columns also cards side by side or one over the other. When two neighbours would look the same,
+order, the two Smalls of a Pair side by side, a Tall with each of its Smalls, every card of a row with the row over
+and under it, and on two columns also cards side by side or one over the other. On two columns a full-width card
+touches the top card of each column under it and the last of each column over it, on Today as on the tabs. Two
+Smalls side by side differ by their edge (one lit from below, one from above, or from the left). When two neighbours would look the same,
 the later one flips its edge first. If that still clashes it takes another tier the spec gives it (Last night as a
 strip, a list on a neutral edge card, the second glow as its edge card) or the neutral light. Only then does a card move, and only one whose place is
-open: a pin, Your week or Habit Age, to the nearest place it fits. `varyLooks` applies this to Today after Edit
-Today's pins and hides.
+open: a pin, Your week or Habit Age, to the nearest place it fits, never splitting a Small pair. `varyLooks` applies
+this to Today after Edit Today's pins and hides.
 
 #### Glow card
 
@@ -118,7 +128,7 @@ Where the glow sits carries meaning:
 | Above your normal | Top, stronger |
 | Below your normal | Bottom, stronger |
 | Progress toward a goal or your usual | Bottom, soft, plus a 4 dp progress bar inside the card |
-| A level, like Charge as an edge card | The light fills from the left across to the value, no bar. Its own design under the 2.4 rule |
+| A level, like Charge as an edge card, or Load toward your usual on Activity | The light fills from the left across to the value, no bar. Its own design under the 2.4 rule |
 | Live, now (heart rate today) | Right |
 | About earlier (Recovery after the morning, Habit Age) | Left |
 | Sleep (last night, regularity) | Top, like a night sky. Breathing disturbances is a value (bottom), so it never matches regularity above it (5.2) |
@@ -163,7 +173,7 @@ Every chart kind in the app, drawn in this style ([chart kit](mockups/ChartKit.d
 | Ghost line of your usual | Edge | Steps, Load and Charge so far today | Read only |
 | Charge curve | Glow | Charge card and detail | Hold to scrub |
 | Hourly pill bars | Glow | Steps card | Tap an hour |
-| Trend dots | Edge, detail | Recovery and Habit Age over days | Tap a day |
+| Trend dots | Edge, detail, Recovery hero | Recovery over the last 7 days beside the hero score, Habit Age over days | Tap a day |
 | Arc gauge | Glow | Recovery detail header | None |
 | Horizon arc | Glow | Sleep score | None |
 | Progress ring | List row | Goals | None |
@@ -172,7 +182,7 @@ Every chart kind in the app, drawn in this style ([chart kit](mockups/ChartKit.d
 | Stacked day bars | Detail | Heart points over 7 days | Tap a day |
 | Bed and wake bars | Edge | Sleep regularity | Tap a night |
 | Zone arc | Workout | Live workout Heart view only | None |
-| Zone bar | Workout | Workout summary and detail | Tap a zone |
+| Zone bar | Workout | Workout summary and detail, thin under each workout row and on Today's workout card | Tap a zone |
 | Age scale | Edge | Habit Age | None |
 | Contributor bars | List row | What drove Recovery, where Charge went | Tap a row |
 | Route by zone | Workout | GPS workouts | Pan |
@@ -313,15 +323,25 @@ Rows in order. Sizes per 2.3, tiers per 2.4.
 | Waking up | Recovery: "Slept 7 h 40. Recovered enough for your usual training." Score, status word, "Charge at waking 84" | Check-in strip. List "Your body this morning" (resting HR, HRV, blood oxygen, breathing rate). Edge: Last night (with stage strip), Heart rate, Activity |
 | Midday | Charge: sentence, value with `lightLevel`, recharged and drained | Strip: Last night collapsed. Edge: Activity (ghost line), Heart rate. List "Right now" (stress, HRV). Edge: Recovery (left edge) |
 | Workout window | "Ready for effort. You usually run around now." Start button, Other sport | Second glow: Charge (wide). List "Before you start" (Load today, time to recover). Edge: Activity. Strip: Last night |
-| After a workout | "Since your run, 40 min. Heart rate settling." Live drop curve, calm glow | Edge: the workout. Second glow: Charge. List "What the run did" (Load today, time to recover). Edge: Activity |
-| Evening | "A full day. A run, 13,860 steps and a Load above your usual." Steps, Load, Charge left. "Bedtime in 1 h 10". Dim mood | Edge: Charge (progress), Activity (progress). Strip: Last night |
+| After a workout | "Since your run, 40 min. Heart rate settling." Drop curve into your resting range (a dim band), calm glow | Edge: the workout (left, with its zone bar). Small pair: Load (toward your usual, from below) and To recover (flips to the top). Level: Charge, with its line so far. Edge: Activity |
+| Evening | "A full day. A run, 13,860 steps and a Load above your usual." Steps, Load, Charge left. "Bedtime in 1 h 10". Dim mood | Level: Charge. Edge: Activity (line so far), Heart rate (the day's line, flips to the top under Activity unless live). Strip: Last night |
 | Night | As evening, Night mood | As evening |
+| During a workout | The workout, live heart rate | As midday without Heart rate (the hero has it) |
+
+Heart rate shows at waking, midday, the evening and night, never in the workout window, during or after a workout.
+Its card is the line with scrub: the day's heart rate with your resting range (your normal resting heart rate, mean
+± one standard deviation over 30 days) as a dim band, the big number and its time following the finger. Activity's
+card draws today's steps so far as a line in place of the progress bar. The ghost of your usual by this time waits
+for hourly steps from past days (step 6). Charge's level card draws its line so far until the evening.
 
 Present in every moment when they apply:
 
 - Workout offer and suggestion (strip), from today only.
 - Health alerts from the strap (strip, "From your strap"), opening the metric.
 - "Your week" (wide edge card, neutral light from the bottom) Monday through Sunday, opening the week story.
+- Habit Age (edge, left, the same card as on Recovery) only when there's a new estimate: from the Sunday it updates
+  until it has been opened or the Monday ends. Pinned in Edit Today it shows every day. Never before the first
+  estimate, pinned or not.
 - "Edit Today" at the end: hide cards, pin up to two under the hero. Replaces the What changed tile chooser.
 
 ### 4.3 States
@@ -345,23 +365,25 @@ Present in every moment when they apply:
 ### 5.1 Recovery tab
 
 Each tab keeps one set of cards whatever the day, so its edges are fixed by meaning and chosen so no two neighbours
-ever look the same (2.4). `TabPlans.kt` holds the order, looks and wide-screen columns, and a test goes through every
-optional card on a phone and on two columns. On two columns a full-width card also counts as touching the top card of
-each column under it.
+ever look the same (2.4). `TabPlans.kt` holds the order, looks, sizes and wide-screen columns, and a test goes through
+every optional card on a phone and on two columns. On two columns a full-width card also counts as touching the top
+card of each column under it.
 
 1. Glow hero: sentence ("Recovered enough for your usual training. Mostly held back by HRV."), score in a dark pool,
-   status word, "+3 vs yesterday", (i). "Learning, 9 of 14 nights" marker while calibrating.
-2. List "What drove it": the three contributors that weigh most, with bars and status. "Top 3 of 9" in the title
-   until the Recovery detail exists to open (step 6).
-3. Second glow: Charge (wide, `lightLevel`), "84 at waking", the day's curve.
-4. List "Charge today": sleep and calm rest recharged, movement, stress and being awake drained.
-5. Edge, neutral light from below: "Body signals" rows (resting heart rate, HRV, skin temperature as deviation,
-   breathing rate, blood oxygen, stress). Three lists in a row would look the same, so this one sits on the edge card
-   2.4 allows for a list.
-6. Edge: Habit Age (left edge), "Updated Sunday 19 Oct". Habit Age's home. Today still shows it for now.
+   status word, "+3 vs yesterday", (i), and trend dots for the last 7 days beside the score, today the only full dot.
+   "Learning, 9 of 14 nights" marker while calibrating. The normal band behind the dots waits for a normal of the
+   score (step 6).
+2. List "What drove it": the three contributors that weigh most, as contributor bars (name, bar, word, colour when
+   off usual). "Top 3 of 9" in the title until the Recovery detail exists to open (step 6).
+3. TallPair: Charge as a Tall glow battery (`lightLevel`, the light rising to the value), the Charge curve (hold to
+   scrub, the number follows), the number and "84 at waking". Beside it, Recharged ("+44", "Sleep and calm rest",
+   lit from below) over Drained ("-36", "Mostly being awake", lit from above).
+4. List "Body signals": resting heart rate, HRV, skin temperature as deviation, breathing rate, blood oxygen, stress.
+   A plain list again: the Smalls sit between it and What drove it.
+5. Edge: Habit Age (left edge), always last. See 5.4.
 
-Wide: the hero spans both columns; What drove it, Charge and Charge today on the left; Body signals and Habit Age on
-the right, so nothing glows right under the hero.
+Wide: the hero spans both columns. What drove it and Habit Age on the left, the Charge battery and Body signals on the
+right, so no two lists sit side by side.
 
 The off-baseline panel, How it works and the strap's own score are gone from the screen. The strap's score and the
 method move to the Recovery info sheet. The body-signal Watch and Alert panel is gone too: an alert reads in the
@@ -372,38 +394,64 @@ hero's sentence, and an off-normal signal shows in its row's colour.
 Night mood always.
 
 1. Glow hero: "7 h 40, your longest this week." (longest or shortest of the week's nights once there are 3 others to
-   compare, else "7 h 40 asleep."). "Longest" rather than "best": more sleep isn't always better. Score with status
-   word, bedtime to wake, "Woke 3 times", hypnogram to scrub, stage totals.
+   compare, else "7 h 40 asleep."). "Longest" rather than "best": more sleep isn't always better. The score as a
+   horizon arc with the number under its crown, "Sleep score, good", bedtime to wake, "Woke 3 times", hypnogram to
+   scrub, stage totals.
 2. List "Night vitals": lowest heart rate, HRV, breathing rate, blood oxygen, skin temperature, average heart rate.
    Each opens its detail; scoped to the night in step 6.
-3. Edge: Sleep regularity (top edge), score, status word, usual bedtime and wake, the week's bed and wake bars.
-4. Edge: Breathing disturbances (bottom edge, a value against your usual), "Early estimate" marker until confirmed
-   on hardware. Lit from below rather than the top so it never matches regularity right above it.
-5. Edge: Naps (left edge, earlier in the day), only when there are naps.
+3. Edge: Sleep regularity (top edge), score, status word, usual bedtime and wake, the week's bed and wake bars against
+   dim bands at your usual times, last night in white.
+4. Small pair, when there are naps: Breathing disturbances (bottom edge, a value against your usual, "Usual 2.1,
+   early estimate") and Naps (left edge, earlier in the day: time napped, the latest nap's stage strip, "At 14:10").
+   With no naps Breathing disturbances is a Wide. With naps but no breathing summary, Naps is.
 
-Wide: the night spans both columns; vitals and naps on the left, regularity and breathing on the right.
+Wide: the night spans both columns, vitals and the Small pair (or lone naps) on the left, regularity and a lone
+breathing card on the right.
 
 Gone from the screen: the stages panel (totals sit in the hero), What shaped the score and the night's heart rate
-and breathing charts (Sleep detail, step 6), Sleep health and the week's averages (regularity's one home now).
+and breathing charts (Sleep detail, step 6), Sleep health and the week's averages (regularity's one home now), and
+each nap's heart rate (the naps in the Sleep detail, step 6).
 
 ### 5.3 Activity tab
 
 1. Strip: the three sports you do most and All sports, lit from below. Today only.
-2. Glow: Steps, lit to the share of the goal, value, "62% of your goal", hourly pill bars. Opens the Steps detail.
-   "About usual for midday" waits for usual steps by the hour from past days, which the app doesn't load yet.
-3. Edge: Load (progress toward your usual, bottom edge with its bar), "12 today", "Your usual is 40", balance word
-   ("Building", "Steady", "Easing off") from the last 7 days against the last 6 weeks, with Today's 25% band for
-   usual. Strain lives in its detail.
-4. List "This week and today": active minutes, Heart points, VO2 max, time to recover, energy, distance.
-5. Edge, neutral light from the top: "Workouts", the day's and the latest before it (5 in all), a pending suggestion
-   as a row with Save, "Add a workout you didn't record", "All workouts" always. A list right after another list,
-   so it sits on the edge card 2.4 allows, lit from the top so it never matches Load.
+2. Glow: Steps, lit to the share of the goal, value, "62% of your goal", hourly pill bars (hours with no steps and
+   those still to come are faint stubs). Opens the Steps detail. "About usual for midday" waits for usual steps by
+   the hour from past days, which the app doesn't load yet.
+3. Small pair: Active minutes ("This week, goal 150", from below) and Heart points ("Last 7 days, aim for 100", from
+   above).
+4. Level: Load, its light filling across toward your usual, "12 today", "Your usual is 40", balance word ("Building",
+   "Steady", "Easing off") from the last 7 days against the last 6 weeks, with Today's 25% band for usual. No bar.
+   The ghost line of your usual Load by now waits for Load by the hour (step 6). Strain lives in its detail.
+5. Edge: Heart rate, the day's line with your resting range as a dim band, hold to scrub (the number follows). Lit
+   from the right while live, otherwise from below like any usual value.
+6. List "Today", "So far": VO2 max, time to recover, energy, distance.
+7. Edge, neutral light from the top: "Workouts", the day's and the latest before it (5 in all), each row with a thin
+   zone bar, a pending suggestion as a row with Save, "Add a workout you didn't record", "All workouts" always. A
+   list right after another list, so it sits on the edge card 2.4 allows.
 
-Wide: the strip and Steps span both columns; Load on the left, the list and Workouts on the right.
+Wide: the strip and Steps span both columns. The Small pair and Load on the left, Heart rate, the list and Workouts on
+the right.
 
 Gone from the screen: the offer card (Today only), active hours, the step counter mismatch note and every method
 note (Paluch, Mifflin-St Jeor, Jurca, FRIEND, acute:chronic, the strap's weekly EPOC range), which belong in the info
 sheets.
+
+### 5.4 Habit Age
+
+One design wherever it shows: an edge card lit from the left (about the weeks behind you) with the title,
+"Updated Sun 18 Oct", the age in dots, one status line and the age scale (the range as an orchid band, a white dot
+at the estimate, a hairline at your age, "27 to 31" under the band and "You, 34" over the hairline). The glow card
+and How it works are gone.
+
+- **Status line:** "1 year younger than last week", "2 years older than last week" or "Same as last week", in whole
+  years against last week's estimate. Until two weeks exist it says the range, "Likely 27 to 31". Orchid only when
+  the number moved.
+- **Last week:** each Sunday's estimate is stored as shown (`habit_age_week`, database version 18) when it's worked
+  out, and the next week compares with the latest one from the 8 days before.
+- **Before the first estimate:** "First estimate Sunday 22 Nov" and no number. Never on Today.
+- **No birth year or sex:** says what's needed and opens the profile.
+- **Where:** always at the bottom of Recovery. On Today only while new (4.2), or pinned.
 
 ---
 

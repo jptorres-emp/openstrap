@@ -166,4 +166,32 @@ class TodayCopyTest {
         assertEquals("Usual", TodayCopy.normalWord(0))
         assertEquals("Learning your normal", TodayCopy.normalWord(null))
     }
+
+    @Test fun `the after workout Smalls say a number and a word`() {
+        assertEquals("Above your usual", TodayCopy.loadWord(LoadStatus.Above))
+        assertEquals("So far today", TodayCopy.loadWord(LoadStatus.SoFar))
+        assertEquals("Learning your usual", TodayCopy.loadWord(null))
+        val zone = ZoneId.of("Europe/London")
+        val now = ZonedDateTime.of(2026, 10, 23, 18, 0, 0, 0, zone).toEpochSecond()
+        assertEquals("14" to "Ready tomorrow", TodayCopy.recoverShort(14 * 3600L, now, zone))
+        assertEquals("2" to "Ready by 20:00", TodayCopy.recoverShort(2 * 3600L, now, zone))
+        assertEquals(null to "Recovered", TodayCopy.recoverShort(0, now, zone))
+    }
+
+    @Test fun `the heart rate card says how to read its line`() {
+        assertEquals("Hold to scrub, the number follows. The band is your resting range.", TodayCopy.heartLineNote(band = true))
+        assertEquals("Hold to scrub, the number follows.", TodayCopy.heartLineNote(band = false))
+        assertEquals("Live now", TodayCopy.heartAt(live = true, at = "20:52"))
+        assertEquals("At 20:52", TodayCopy.heartAt(live = false, at = "20:52"))
+        assertEquals("Waiting for the strap", TodayCopy.heartAt(live = false, at = null))
+    }
+
+    @Test fun `new lines keep to the copy rules`() {
+        val zone = ZoneId.of("Europe/London")
+        val lines = listOf(
+            TodayCopy.heartLineNote(true), TodayCopy.heartLineNote(false), TodayCopy.loadWord(null),
+            TodayCopy.recoverShort(3600L * 30, 0, zone).second, TodayCopy.heartAt(false, "07:00"),
+        )
+        lines.forEach { l -> listOf("·", ";", "—").forEach { assertFalse("$l has $it", l.contains(it)) } }
+    }
 }

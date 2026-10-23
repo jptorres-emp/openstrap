@@ -469,3 +469,17 @@ data class NightMetricsRow(
     val strapHrv: Int?,
     val strapRestingHr: Int?,
 )
+
+/**
+ * Each Sunday's Habit Age estimate as it was shown, so the next week can say "1 year younger than last week". Kept
+ * rather than worked out again, since a later sync can change the data behind a past estimate.
+ */
+@Entity(tableName = "habit_age_week")
+data class HabitAgeWeekRow(
+    /** Local midnight of the Sunday the estimate is for. */
+    @PrimaryKey val asOf: Long,
+    val estimate: Float,
+    val low: Int,
+    val high: Int,
+    val updatedAt: Long,
+)

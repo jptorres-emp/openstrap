@@ -84,6 +84,7 @@ class StrapManager(
     override val info = MutableStateFlow<StrapInfo?>(null)
     override val firmwareUpdating = MutableStateFlow(false)
     override val alarmsChanged = MutableSharedFlow<Unit>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+    override val settingsChanged = MutableSharedFlow<SettingsGroup>(extraBufferCapacity = 8, onBufferOverflow = BufferOverflow.DROP_OLDEST)
     /** Set before a firmware install: the strap's services can change, so re-discover on the next connect. */
     @Volatile private var refreshGattOnConnect = false
     override val log = MutableStateFlow<List<String>>(emptyList())
@@ -200,6 +201,7 @@ class StrapManager(
                 watchProfile(s)
                 watchHealthAlerts(s)
                 watchAlarms(s)
+                watchSettings(s)
                 watchFindDevice(s)
                 watchSportSession(s)
                 watchFeatures(s)
@@ -242,6 +244,19 @@ class StrapManager(
             }.onFailure { log("settings version query failed: $it") }
         }
 
+        // Resource versions for the firmware check, read once per connect as Zepp does with `03 00 00 00` (codemap 07
+        // §1.4). Nobody has seen the strap's values yet, so log them raw.
+        var deviceInformation: SettingsGroup? = null
+        if (s.services.has(Endpoints.SETTINGS)) {
+            runCatching {
+                val group = SettingsCodec.GROUP_DEVICE_INFORMATION
+                val r = s.request(Endpoints.SETTINGS, SettingsCodec.query(group, withOptions = false), 5_000) { SettingsCodec.isReplyTo(group, it) }
+                deviceInformation = SettingsCodec.parse(r, settingsProtocol?.version)
+                val keys = deviceInformation?.settings?.values?.joinToString(" ") { "${it.key}=${it.text ?: it.number ?: it.raw.toHex()}" }
+                log("device information ${r.toHex()} -> ${keys ?: "unparsed"}")
+            }.onFailure { log("device information query failed: $it") }
+        }
+
         // Runtime feature bitmap: history gates on it (01 §3). Nobody has seen the strap's reply yet, so log it raw.
         if (s.services.has(DeviceFeatures.ENDPOINT)) {
             runCatching {
@@ -262,7 +277,7 @@ class StrapManager(
             client.read(StrapUuids.DEVICE_INFO_SERVICE, StrapUuids.SERIAL_NUMBER).toString(Charsets.UTF_8).trimEnd('\u0000')
         }.getOrNull()
         val dfu = GattDfuLink(client).available
-        info.value = StrapInfo(firmware, hardware, serial, dfu)
+        info.value = StrapInfo(firmware, hardware, serial, dfu, deviceInformation)
         log("hardware=$hardware dfu=$dfu")
 
         runCatching {
@@ -363,6 +378,19 @@ class StrapManager(
             // Kept so Today can list the day's alerts; a failed write mustn't stop the watcher.
             runCatching { dao.insertHealthAlerts(listOf(HealthAlertRow(alert.timestamp, alert.type.code, alert.value))) }
                 .onFailure { log("health alert not stored: $it") }
+        }
+    }
+
+    /**
+     * The strap pushes `04` when a setting changes on its side, laid out like a query reply (03 §3.6.1, §3.6 note 4).
+     * Query replies come through here too, since they share the opcode; passing them on again is harmless.
+     */
+    private fun CoroutineScope.watchSettings(s: ChannelSession) = launch {
+        if (!s.services.has(Endpoints.SETTINGS)) return@launch
+        s.messagesFor(Endpoints.SETTINGS).collect { p ->
+            if (SettingsCodec.replyGroup(p) == null) return@collect
+            val group = SettingsCodec.parse(p, settingsProtocol?.version)
+            if (group == null) log("settings 04 unparsed: ${p.toHex()}") else settingsChanged.tryEmit(group)
         }
     }
 
@@ -744,12 +772,16 @@ class StrapManager(
         }.onFailure { log("live hr stop failed: $it") }
     }
 
-    /** Sends a settings-style command and returns the reply whose first byte is the command + 1. */
-    private suspend fun command(endpoint: Int, request: ByteArray): ByteArray {
+    /** Sends a settings-style command and returns the reply whose first byte is the command + 1 (or that [matches]). */
+    private suspend fun command(
+        endpoint: Int,
+        request: ByteArray,
+        matches: (ByteArray) -> Boolean = { it.isNotEmpty() && it.u8(0) == request.u8(0) + 1 },
+    ): ByteArray {
         val s = activeSession ?: throw StrapCommandException("The strap isn't connected")
         if (firmwareUpdating.value) throw StrapCommandException("Wait for the firmware update to finish")
         val reply = runCatching {
-            s.request(endpoint, request, 8_000) { it.isNotEmpty() && it.u8(0) == request.u8(0) + 1 }
+            s.request(endpoint, request, 8_000, matches = matches)
         }.getOrElse { throw StrapCommandException("The strap didn't answer") }
         log("cmd %04x > %s < %s".format(endpoint, request.toHex(), reply.toHex()))
         return reply
@@ -792,9 +824,13 @@ class StrapManager(
         ?: runCatching { SettingsCodec.parseVersion(command(Endpoints.SETTINGS, SettingsCodec.versionRequest)) }.getOrNull()
             ?.also { settingsProtocol = it }
 
+    /** A settings query; a `04` push for another group arriving meanwhile isn't taken as its reply (03 §3.6.1). */
+    private suspend fun settingsQuery(group: Int, keys: List<Int> = emptyList(), withOptions: Boolean = true): ByteArray =
+        command(Endpoints.SETTINGS, SettingsCodec.query(group, keys, withOptions)) { SettingsCodec.isReplyTo(group, it) }
+
     override suspend fun readHealthSettings(): SettingsGroup {
         val protocol = settingsProtocol()
-        val reply = command(Endpoints.SETTINGS, SettingsCodec.query(SettingsCodec.GROUP_HEALTH))
+        val reply = settingsQuery(SettingsCodec.GROUP_HEALTH)
         return SettingsCodec.parse(reply, protocol?.version) ?: throw StrapCommandException("The strap couldn't read its settings (code ${SettingsCodec.replyCode(reply)})")
     }
 
@@ -834,7 +870,7 @@ class StrapManager(
 
     /** GENERAL key 47; null when the strap doesn't report it. Zepp refuses OTA while it is on (07 §1.6). */
     private suspend fun fastRechargeOn(): Boolean? = runCatching {
-        val reply = command(Endpoints.SETTINGS, SettingsCodec.query(SettingsCodec.GROUP_GENERAL, listOf(SettingsCodec.KEY_FAST_RECHARGE), withOptions = false))
+        val reply = settingsQuery(SettingsCodec.GROUP_GENERAL, listOf(SettingsCodec.KEY_FAST_RECHARGE), withOptions = false)
         SettingsCodec.parse(reply, settingsProtocol()?.version)?.get(SettingsCodec.KEY_FAST_RECHARGE)?.bool
     }.onFailure { log("fast-charge query failed: $it") }.getOrNull()
 

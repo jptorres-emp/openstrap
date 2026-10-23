@@ -5,6 +5,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.openstrap.app.data.settings.ZeppAccount
 import java.net.URLEncoder
 
 class ZeppCloudTest {
@@ -97,8 +98,70 @@ class ZeppCloudTest {
     }
 
     @Test
+    fun sessionKeepsLoginToken() {
+        val info = """{"token_info":{"app_token":"tok-abc","user_id":"1234567","login_token":"login-xyz","app_ttl":7776000}}"""
+        val session = ZeppCloud.sessionFromCookies("hm-user-login-info=${URLEncoder.encode(info, "UTF-8")}")!!
+        assertEquals(ZeppSession("tok-abc", "1234567", "login-xyz", 7_776_000), session)
+        val account = session.toAccount("https://api-mifit.zepp.com/", china = false, nowMs = 1_000)
+        assertEquals("login-xyz", account.loginToken)
+        assertEquals(1_000L, account.appTokenAtMs)
+        assertEquals(7_776_000L, account.appTtlSeconds)
+    }
+
+    private val signedIn = ZeppAccount("app", "42", "https://api-mifit.zepp.com/", false, "login", appTokenAtMs = 0, appTtlSeconds = 100)
+
+    @Test
+    fun refreshesAfterHalfTheAppTokenLifetime() {
+        // Zepp's A3 rule: (now − lu_app_ttl)/1000 > app_ttl/2 (codemap 08 §1.4).
+        assertFalse(ZeppCloud.needsAppTokenRefresh(signedIn, nowMs = 50_000, rejected = false))
+        assertFalse(ZeppCloud.needsAppTokenRefresh(signedIn, nowMs = 50_999, rejected = false))
+        assertTrue(ZeppCloud.needsAppTokenRefresh(signedIn, nowMs = 51_000, rejected = false))
+    }
+
+    @Test
+    fun refreshesWhenRejectedButNeverWithoutLoginToken() {
+        assertTrue(ZeppCloud.needsAppTokenRefresh(signedIn, nowMs = 0, rejected = true))
+        // Lifetime unknown: only a rejection triggers it.
+        val noTtl = signedIn.copy(appTokenAtMs = null, appTtlSeconds = null)
+        assertFalse(ZeppCloud.needsAppTokenRefresh(noTtl, nowMs = Long.MAX_VALUE / 2, rejected = false))
+        assertTrue(ZeppCloud.needsAppTokenRefresh(noTtl, nowMs = 0, rejected = true))
+        // A typed-in token or a cookie without a login token can't be renewed: sign in again.
+        val typed = signedIn.copy(loginToken = null)
+        assertFalse(ZeppCloud.needsAppTokenRefresh(typed, nowMs = Long.MAX_VALUE / 2, rejected = false))
+        assertFalse(ZeppCloud.needsAppTokenRefresh(typed, nowMs = 0, rejected = true))
+        assertFalse(ZeppCloud.needsAppTokenRefresh(signedIn.copy(loginToken = " "), nowMs = 0, rejected = true))
+    }
+
+    @Test
+    fun appTokensRequestAndReply() {
+        assertEquals(
+            listOf("login_token", "os_version", "source", "dn"),
+            ZeppCloud.appTokensQuery("login").keys.toList(),
+        )
+        assertEquals("com.huami.midong:10.9.0-play:151983", ZeppCloud.appTokensQuery("login")["source"])
+        val r = ZeppCloud.parseAppTokens("""{"result":"ok","token_info":{"app_token":"new-app","user_id":"42","app_ttl":7776000}}""")
+        assertEquals(AppTokenRefresh("new-app", "42", 7_776_000), r)
+        val renewed = ZeppCloud.withRefresh(signedIn, r, nowMs = 9_000)
+        assertEquals(signedIn.copy(appToken = "new-app", appTokenAtMs = 9_000, appTtlSeconds = 7_776_000), renewed)
+        // Without a TTL in the reply the old one stays.
+        assertEquals(100L, ZeppCloud.withRefresh(signedIn, AppTokenRefresh("x", null, null), 0).appTtlSeconds)
+    }
+
+    @Test
+    fun appTokensFailures() {
+        val refused = runCatching { ZeppCloud.parseAppTokens("""{"result":"invalid_token"}""") }.exceptionOrNull() as ZeppCloudException
+        assertTrue(refused.rejected)
+        val empty = runCatching { ZeppCloud.parseAppTokens("""{"result":"ok","token_info":{}}""") }.exceptionOrNull() as ZeppCloudException
+        assertTrue(empty.rejected)
+        val garbage = runCatching { ZeppCloud.parseAppTokens("<html>") }.exceptionOrNull() as ZeppCloudException
+        assertFalse(garbage.rejected)
+    }
+
+    @Test
     fun toStringHidesSecrets() {
         assertFalse(ZeppSession("secret-token", "1").toString().contains("secret-token"))
+        assertFalse(ZeppSession("secret-token", "1", "secret-login").toString().contains("secret-login"))
+        assertFalse(signedIn.copy(appToken = "secret-app", loginToken = "secret-login").toString().contains("secret"))
         val strap = ZeppCloud.parseDeviceList(list)[2]
         assertFalse(strap.toString().contains(strap.authKey!!))
     }

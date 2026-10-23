@@ -4,6 +4,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import org.openstrap.protocol.firmware.FirmwareType
+import org.openstrap.protocol.services.SettingsCodec
+import org.openstrap.protocol.services.SettingsGroup
 import java.io.File
 import java.io.IOException
 import java.net.HttpURLConnection
@@ -22,8 +24,8 @@ data class StrapIdentity(
     val deviceSource: Int = DEVICE_SOURCE_GLOBAL,
     val productId: Int = PRODUCT_ID,
     /**
-     * Version/flag pairs from Settings group DEVICE_INFORMATION (codemap 07 §1.4). OpenStrap doesn't read that
-     * group yet, so these hold the values Zepp sends when the strap reports nothing.
+     * Version/flag pairs from Settings group DEVICE_INFORMATION (codemap 07 §1.4), via [StrapResources.from]; Zepp's
+     * "not reported" values when the group wasn't read.
      */
     val resources: StrapResources = StrapResources(),
     /** From the cloud device list; Zepp sends `-1` when it has none (codemap 07 §1.4). */
@@ -53,7 +55,32 @@ data class StrapResources(
     val baseResourceFlag: Int = -1,
     val extResourceVersion: Int = -1,
     val extResourceFlag: Int = -1,
-)
+) {
+    companion object {
+        /**
+         * Fills the pairs from the strap's DEVICE_INFORMATION group as Zepp does (codemap 07 §1.4): key 2 is the
+         * firmware flag, keys 4/5/6 the resource, font and extra-resource pairs. A key that's missing or doesn't parse
+         * keeps its default. Key 3, the base resource, is deliberately ignored: Zepp parses it into fields its query
+         * builder doesn't read, so it always sends `-1`/`-1`, and so does this.
+         */
+        fun from(info: SettingsGroup?): StrapResources {
+            val d = StrapResources()
+            if (info == null || info.group != SettingsCodec.GROUP_DEVICE_INFORMATION) return d
+            val resource = SettingsCodec.versionFlag(info[SettingsCodec.KEY_RESOURCE_VERSION])
+            val font = SettingsCodec.versionFlag(info[SettingsCodec.KEY_FONT_VERSION])
+            val ext = SettingsCodec.versionFlag(info[SettingsCodec.KEY_EXT_RESOURCE_VERSION])
+            return d.copy(
+                firmwareFlag = info[SettingsCodec.KEY_LANGUAGE_FAMILY]?.number?.toInt() ?: d.firmwareFlag,
+                resourceVersion = resource?.first ?: d.resourceVersion,
+                resourceFlag = resource?.second ?: d.resourceFlag,
+                fontVersion = font?.first ?: d.fontVersion,
+                fontFlag = font?.second ?: d.fontFlag,
+                extResourceVersion = ext?.first ?: d.extResourceVersion,
+                extResourceFlag = ext?.second ?: d.extResourceFlag,
+            )
+        }
+    }
+}
 
 /** One downloadable part of an update (docs/protocol/03 §1.2). */
 data class FirmwarePart(
@@ -88,7 +115,8 @@ data class UpdateCheck(
         get() = parts.filter { it.type != null }.sortedBy { FirmwareType.SINGLE_ORDER.indexOf(it.type) }
 }
 
-class FirmwareCloudException(message: String) : IOException(message)
+/** [rejected]: the server refused the app token, so a renewed one may get through. */
+class FirmwareCloudException(message: String, val rejected: Boolean = false) : IOException(message)
 
 /**
  * Talks to Zepp's firmware service with the user's own app token. Nothing is sent unless the user asks
@@ -124,7 +152,7 @@ class FirmwareCloud(private val cacheDir: File) {
                 val body = (if (code in 200..299) conn.inputStream else conn.errorStream)?.bufferedReader()?.use { it.readText() }.orEmpty()
                 when (code) {
                     in 200..299 -> parse(body)
-                    401, 403 -> throw FirmwareCloudException("The server rejected the app token (HTTP $code). It may have expired.")
+                    401, 403 -> throw FirmwareCloudException("The server rejected the app token (HTTP $code). It may have expired.", rejected = true)
                     else -> throw FirmwareCloudException("Update server returned HTTP $code${body.take(200).let { if (it.isBlank()) "" else ": $it" }}")
                 }
             } finally {

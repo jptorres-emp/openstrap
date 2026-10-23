@@ -3,6 +3,9 @@ package org.openstrap.app.firmware
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Test
+import org.openstrap.protocol.services.Setting
+import org.openstrap.protocol.services.SettingsCodec
+import org.openstrap.protocol.services.SettingsGroup
 import java.util.Locale
 
 class FirmwareCloudTest {
@@ -40,6 +43,39 @@ class FirmwareCloudTest {
         assertEquals("2", q["extResourceVersion"])
         assertEquals("3", q["extResourceFlag"])
         assertEquals("4", q["productionSource"])
+    }
+
+    private fun text(key: Int, value: String) =
+        Setting(key, SettingsCodec.TYPE_STRING, (value + "\u0000").toByteArray(), null)
+
+    @Test
+    fun resourcesFromDeviceInformation() {
+        val info = SettingsGroup(
+            SettingsCodec.GROUP_DEVICE_INFORMATION, 1,
+            listOf(
+                Setting(SettingsCodec.KEY_LANGUAGE_FAMILY, SettingsCodec.TYPE_I32_B, byteArrayOf(15, 0, 0, 0), 15),
+                text(SettingsCodec.KEY_BASE_RESOURCE_VERSION, "3,1"),
+                text(SettingsCodec.KEY_RESOURCE_VERSION, "12,65"),
+                text(SettingsCodec.KEY_EXT_RESOURCE_VERSION, "bad"),
+            ).associateBy { it.key },
+        )
+        val r = StrapResources.from(info)
+        assertEquals(15, r.firmwareFlag)
+        assertEquals(12, r.resourceVersion); assertEquals(65, r.resourceFlag)
+        // Zepp sends its base-resource fields unset even when the strap reports a pair (codemap 07 §1.4).
+        assertEquals(-1, r.baseResourceVersion); assertEquals(-1, r.baseResourceFlag)
+        // Missing font keeps Zepp's 0/0; an unparsable pair keeps -1/-1.
+        assertEquals(0, r.fontVersion); assertEquals(0, r.fontFlag)
+        assertEquals(-1, r.extResourceVersion); assertEquals(-1, r.extResourceFlag)
+        val q = query(strap.copy(resources = r))
+        assertEquals("15", q["firmwareFlag"]); assertEquals("12", q["resourceVersion"]); assertEquals("-1", q["baseResourceVersion"])
+    }
+
+    @Test
+    fun noDeviceInformationKeepsDefaults() {
+        assertEquals(StrapResources(), StrapResources.from(null))
+        // Another group isn't mistaken for it.
+        assertEquals(StrapResources(), StrapResources.from(SettingsGroup(SettingsCodec.GROUP_HEALTH, 3, emptyMap())))
     }
 
     @Test

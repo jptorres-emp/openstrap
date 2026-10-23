@@ -3,6 +3,7 @@ package org.openstrap.app.zepp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
+import org.openstrap.app.data.settings.ZeppAccount
 import org.openstrap.app.firmware.StrapIdentity
 import java.io.IOException
 import java.net.HttpURLConnection
@@ -13,9 +14,21 @@ import java.util.Locale
 import java.util.TimeZone
 import java.util.UUID
 
-/** The user's own Zepp sign-in, read from the watchface.zepp.com cookies after they signed in there. */
-data class ZeppSession(val appToken: String, val userId: String) {
-    override fun toString() = "ZeppSession(userId=$userId, appToken=…)"
+/**
+ * The user's own Zepp sign-in, read from the watchface.zepp.com cookies after they signed in there. [loginToken] and
+ * [appTtlSeconds] are kept when the cookie's `token_info` carries them, so the app token can be renewed (A3).
+ */
+data class ZeppSession(val appToken: String, val userId: String, val loginToken: String? = null, val appTtlSeconds: Long? = null) {
+    override fun toString() = "ZeppSession(userId=$userId, appToken=…, loginToken=${if (loginToken == null) "none" else "…"})"
+
+    /** The account to store, with the app token stamped as obtained [nowMs]. */
+    fun toAccount(apiBase: String, china: Boolean, nowMs: Long) =
+        ZeppAccount(appToken, userId, apiBase, china, loginToken, nowMs, appTtlSeconds)
+}
+
+/** What A3 `v1/client/app_tokens` returns (codemap 08 §1.4). */
+data class AppTokenRefresh(val appToken: String, val userId: String?, val appTtlSeconds: Long?) {
+    override fun toString() = "AppTokenRefresh(userId=$userId, appTtlSeconds=$appTtlSeconds, appToken=…)"
 }
 
 /** One device bound to the account, as the device list reports it. */
@@ -56,6 +69,7 @@ object ZeppCloud {
     private const val APP_ID = "428135909242707968"
     private const val APP_VERSION_NAME = "10.9.0-play"
     private const val APP_VERSION_CODE = "151983"
+    private const val APP_NAME = "com.huami.midong"
 
     /**
      * Zepp's universal login, set up as watchface.zepp.com's sign-in: after the password it returns to that
@@ -93,7 +107,9 @@ object ZeppCloud {
             val info = json.optJSONObject("token_info") ?: json
             val token = info.optString("app_token").ifBlank { info.optString("apptoken") }
             val user = info.optString("user_id").ifBlank { info.optString("userid") }
-            if (token.isNotBlank() && user.isNotBlank()) return ZeppSession(token, user)
+            val login = info.optString("login_token").ifBlank { null }
+            val ttl = info.optLong("app_ttl", 0).takeIf { it > 0 }
+            if (token.isNotBlank() && user.isNotBlank()) return ZeppSession(token, user, login, ttl)
         }
         val token = map["apptoken"]?.let(::urlDecode).orEmpty()
         val user = map["userid"]?.let(::urlDecode).orEmpty()
@@ -154,6 +170,73 @@ object ZeppCloud {
 
     private val MAC = Regex("^([0-9A-F]{2}:){5}[0-9A-F]{2}$")
 
+    /**
+     * Whether to get a new app token with the login token, by Zepp's A3 rule (codemap 08 §1.4): when the server
+     * [rejected] the current one, or once half its lifetime has passed. Never without a login token; without a known
+     * lifetime, only on rejection.
+     */
+    fun needsAppTokenRefresh(account: ZeppAccount, nowMs: Long, rejected: Boolean): Boolean {
+        if (account.loginToken.isNullOrBlank()) return false
+        if (rejected) return true
+        val at = account.appTokenAtMs ?: return false
+        val ttl = account.appTtlSeconds ?: return false
+        return (nowMs - at) / 1000 > ttl / 2
+    }
+
+    /** A3's query: the passport params, not the common ones (codemap 08 §1.2, §1.4). */
+    fun appTokensQuery(loginToken: String): LinkedHashMap<String, String> = linkedMapOf(
+        "login_token" to loginToken,
+        "os_version" to "vnull",
+        "source" to "$APP_NAME:$APP_VERSION_NAME:$APP_VERSION_CODE",
+        "dn" to "api-mifit.zepp.com,api-user.zepp.com",
+    )
+
+    /** Parses A3's reply (`t7s`): `result` must be ok and `token_info.app_token` set (codemap 08 §1.2). */
+    fun parseAppTokens(body: String): AppTokenRefresh {
+        val root = runCatching { JSONObject(body) }.getOrElse { throw ZeppCloudException("Unexpected reply when renewing the Zepp sign-in") }
+        val result = root.optString("result")
+        if (result.isNotEmpty() && result != "ok") throw ZeppCloudException("Zepp refused to renew the sign-in ($result). Sign in again.", rejected = true)
+        val info = root.optJSONObject("token_info") ?: JSONObject()
+        val token = info.optString("app_token").ifBlank { null }
+            ?: throw ZeppCloudException("Zepp didn't renew the sign-in. Sign in again.", rejected = true)
+        return AppTokenRefresh(
+            token,
+            info.optString("user_id").ifBlank { root.optString("user_id") }.ifBlank { null },
+            info.optLong("app_ttl", 0).takeIf { it > 0 },
+        )
+    }
+
+    /** [account] with a refreshed app token, stamped as obtained [nowMs]; the login token stays. */
+    fun withRefresh(account: ZeppAccount, r: AppTokenRefresh, nowMs: Long): ZeppAccount = account.copy(
+        appToken = r.appToken,
+        userId = r.userId ?: account.userId,
+        appTokenAtMs = nowMs,
+        appTtlSeconds = r.appTtlSeconds ?: account.appTtlSeconds,
+    )
+
+    /** Gets a new app token with [account]'s login token (A3, `GET v1/client/app_tokens`, codemap 08 §1.4). */
+    suspend fun refreshAppToken(account: ZeppAccount, nowMs: Long = System.currentTimeMillis()): ZeppAccount = withContext(Dispatchers.IO) {
+        val login = account.loginToken?.takeIf { it.isNotBlank() } ?: throw ZeppCloudException("No login token to renew the sign-in with. Sign in again.", rejected = true)
+        val base = account.apiBase.trim().let { if (it.endsWith("/")) it else "$it/" }
+        require(base.startsWith("https://")) { "The server address must start with https://" }
+        val query = appTokensQuery(login).entries.joinToString("&") { (k, v) -> "$k=${URLEncoder.encode(v, "UTF-8")}" }
+        val conn = URL("${base}v1/client/app_tokens?$query").openConnection() as HttpURLConnection
+        try {
+            conn.connectTimeout = 15_000
+            conn.readTimeout = 20_000
+            setCommonHeaders(conn, Locale.getDefault(), appToken = null)
+            val code = conn.responseCode
+            val body = (if (code in 200..299) conn.inputStream else conn.errorStream)?.bufferedReader()?.use { it.readText() }.orEmpty()
+            when (code) {
+                in 200..299 -> withRefresh(account, parseAppTokens(body), nowMs)
+                401, 403 -> throw ZeppCloudException("Zepp refused to renew the sign-in (HTTP $code). Sign in again.", rejected = true)
+                else -> throw ZeppCloudException("Renewing the Zepp sign-in returned HTTP $code")
+            }
+        } finally {
+            conn.disconnect()
+        }
+    }
+
     /** Tries [preferredBase] first, then the regional hosts, until one lists at least one device. */
     suspend fun listDevices(session: ZeppSession, preferredBase: String?): DeviceListing = withContext(Dispatchers.IO) {
         val bases = (listOfNotNull(preferredBase?.trim()?.takeIf { it.startsWith("https://") }?.let { if (it.endsWith("/")) it else "$it/" }) + API_HOSTS).distinct()
@@ -197,18 +280,7 @@ object ZeppCloud {
         try {
             conn.connectTimeout = 15_000
             conn.readTimeout = 20_000
-            conn.setRequestProperty("apptoken", session.appToken)
-            conn.setRequestProperty("appname", "com.huami.midong")
-            conn.setRequestProperty("appplatform", "android_phone")
-            conn.setRequestProperty("channel", "play")
-            conn.setRequestProperty("cv", "${APP_VERSION_CODE}_$APP_VERSION_NAME")
-            conn.setRequestProperty("v", "2.0")
-            conn.setRequestProperty("lang", "${locale.language}_${locale.country}")
-            conn.setRequestProperty("country", locale.country)
-            conn.setRequestProperty("timezone", TimeZone.getDefault().id)
-            conn.setRequestProperty("hm-privacy-diagnostics", "false")
-            conn.setRequestProperty("hm-privacy-ceip", "false")
-            conn.setRequestProperty("X-Request-Id", UUID.randomUUID().toString())
+            setCommonHeaders(conn, locale, session.appToken)
             val code = conn.responseCode
             val body = (if (code in 200..299) conn.inputStream else conn.errorStream)?.bufferedReader()?.use { it.readText() }.orEmpty()
             return when (code) {
@@ -219,5 +291,21 @@ object ZeppCloud {
         } finally {
             conn.disconnect()
         }
+    }
+
+    /** The headers every call here sends; [appToken] is left out for A3, which authenticates with the login token. */
+    private fun setCommonHeaders(conn: HttpURLConnection, locale: Locale, appToken: String?) {
+        appToken?.let { conn.setRequestProperty("apptoken", it) }
+        conn.setRequestProperty("appname", APP_NAME)
+        conn.setRequestProperty("appplatform", "android_phone")
+        conn.setRequestProperty("channel", "play")
+        conn.setRequestProperty("cv", "${APP_VERSION_CODE}_$APP_VERSION_NAME")
+        conn.setRequestProperty("v", "2.0")
+        conn.setRequestProperty("lang", "${locale.language}_${locale.country}")
+        conn.setRequestProperty("country", locale.country)
+        conn.setRequestProperty("timezone", TimeZone.getDefault().id)
+        conn.setRequestProperty("hm-privacy-diagnostics", "false")
+        conn.setRequestProperty("hm-privacy-ceip", "false")
+        conn.setRequestProperty("X-Request-Id", UUID.randomUUID().toString())
     }
 }

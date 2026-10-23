@@ -115,6 +115,55 @@ class AlarmsAndSettingsTest {
         assertNull(SettingsCodec.parse("0403".hexToBytes()))
         assertEquals(3, SettingsCodec.replyCode("0403".hexToBytes()))
     }
+
+    @Test
+    fun repliesMatchTheAskedGroup() {
+        assertEquals(8, SettingsCodec.replyGroup(health))
+        assertTrue(SettingsCodec.isReplyTo(SettingsCodec.GROUP_HEALTH, health))
+        // A GENERAL push (key 47 off) arriving during a HEALTH query isn't its reply.
+        val general = "04010a0200012f0b00".hexToBytes()
+        assertFalse(SettingsCodec.isReplyTo(SettingsCodec.GROUP_HEALTH, general))
+        assertTrue(SettingsCodec.isReplyTo(SettingsCodec.GROUP_GENERAL, general))
+        // A failure carries no group, so it answers whatever was asked.
+        assertTrue(SettingsCodec.isReplyTo(SettingsCodec.GROUP_HEALTH, "0403".hexToBytes()))
+        assertNull(SettingsCodec.replyGroup("0403".hexToBytes()))
+        // Other opcodes never match.
+        assertFalse(SettingsCodec.isReplyTo(SettingsCodec.GROUP_HEALTH, "0601".hexToBytes()))
+        assertNull(SettingsCodec.replyGroup("0601".hexToBytes()))
+    }
+
+    @Test
+    fun pushUpdatesOnlyItsKeys() {
+        val read = SettingsCodec.parse(health)!!
+        // The strap pushes high-HR alert 120 without options, in group version 4.
+        val push = SettingsCodec.parse("040108040001021078".hexToBytes())!!
+        val merged = read.updatedWith(push)!!
+        assertEquals(4, merged.version)
+        assertEquals(120L, merged[SettingsCodec.KEY_HIGH_HR_ALERT]!!.number)
+        assertEquals(29, merged.settings.size)
+        // Untouched keys keep their value and choices.
+        assertEquals(read[SettingsCodec.KEY_HR_INTERVAL], merged[SettingsCodec.KEY_HR_INTERVAL])
+        // A push for another group leaves this one alone.
+        assertNull(read.updatedWith(SettingsCodec.parse("04010a0200012f0b00".hexToBytes())!!))
+    }
+    @Test
+    fun deviceInformationVersions() {
+        assertArrayEquals("03000000".hexToBytes(), SettingsCodec.query(SettingsCodec.GROUP_DEVICE_INFORMATION, withOptions = false))
+        // Key 2 int 15; keys 3-6 "3,1", "12,65", "bad", "2,3,9" (schematic: the strap's real values are still unseen).
+        val reply = ("0401000100 05" + "02500f000000" + "0320332c3100" + "042031322c363500" + "052062616400" + "0620322c332c3900")
+            .replace(" ", "").hexToBytes()
+        assertTrue(SettingsCodec.isReplyTo(SettingsCodec.GROUP_DEVICE_INFORMATION, reply))
+        val g = SettingsCodec.parse(reply)!!
+        assertEquals(15L, g[SettingsCodec.KEY_LANGUAGE_FAMILY]!!.number)
+        assertEquals("12,65", g[SettingsCodec.KEY_RESOURCE_VERSION]!!.text)
+        assertEquals(3 to 1, SettingsCodec.versionFlag(g[SettingsCodec.KEY_BASE_RESOURCE_VERSION]))
+        assertEquals(12 to 65, SettingsCodec.versionFlag(g[SettingsCodec.KEY_RESOURCE_VERSION]))
+        assertNull(SettingsCodec.versionFlag(g[SettingsCodec.KEY_FONT_VERSION]))
+        // Like Zepp, only the first two parts count.
+        assertEquals(2 to 3, SettingsCodec.versionFlag(g[SettingsCodec.KEY_EXT_RESOURCE_VERSION]))
+        assertNull(SettingsCodec.versionFlag(null))
+        assertNull(g[SettingsCodec.KEY_LANGUAGE_FAMILY]!!.text)
+    }
 }
 
 class ReadinessCodecTest {

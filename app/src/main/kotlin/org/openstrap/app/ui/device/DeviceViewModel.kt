@@ -17,7 +17,6 @@ import kotlinx.coroutines.withContext
 import org.openstrap.app.AppContainer
 import org.openstrap.app.ble.FoundDevice
 import org.openstrap.app.data.settings.PairedDevice
-import org.openstrap.app.data.settings.ZeppAccount
 import org.openstrap.app.device.StrapController
 import org.openstrap.app.zepp.BoundDevice
 import org.openstrap.app.zepp.DeviceListing
@@ -85,9 +84,7 @@ class DeviceViewModel(private val container: AppContainer) : ViewModel() {
 
     /** Keeps the Zepp sign-in for firmware checks and, when Zepp returned the strap's key, pairs with it straight away. */
     fun signInAndPair(listing: DeviceListing, strap: BoundDevice?) = viewModelScope.launch {
-        container.settings.saveZeppAccount(
-            ZeppAccount(listing.session.appToken, listing.session.userId, listing.apiBase, strap?.china == true),
-        )
+        container.settings.saveZeppAccount(listing.session.toAccount(listing.apiBase, strap?.china == true, System.currentTimeMillis()))
         val key = strap?.authKey
         if (strap != null && key != null) pair(strap.macAddress, DEFAULT_NAME, key)
         else _message.value = "Zepp sign-in saved, but no auth key came with it. Get the key on a computer and enter it by hand."

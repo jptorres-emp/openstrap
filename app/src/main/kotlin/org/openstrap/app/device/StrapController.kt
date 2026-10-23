@@ -25,8 +25,17 @@ sealed interface SyncState {
     data class Failed(val reason: String) : SyncState
 }
 
-/** Details read from the strap at connect time. */
-data class StrapInfo(val firmware: String?, val hardware: String?, val serial: String?, val dfuAvailable: Boolean)
+/**
+ * Details read from the strap at connect time. [deviceInformation] is Settings group 0x00, whose resource versions
+ * the firmware check sends (codemap 07 §1.4); null when the strap has no settings module or didn't answer.
+ */
+data class StrapInfo(
+    val firmware: String?,
+    val hardware: String?,
+    val serial: String?,
+    val dfuAvailable: Boolean,
+    val deviceInformation: SettingsGroup? = null,
+)
 
 /** What the UI can see and ask of the strap. Implemented on top of the BLE stack. */
 interface StrapController {
@@ -105,6 +114,12 @@ interface StrapController {
 
     /** The health settings group (HR measuring, HR and SpO2 alerts, …) with the choices the strap allows. */
     suspend fun readHealthSettings(): SettingsGroup
+
+    /**
+     * Settings the strap sent in a `04`: its push when something changed on the strap, or a query reply. Only the
+     * keys it carries are current; merge with [SettingsGroup.updatedWith].
+     */
+    val settingsChanged: kotlinx.coroutines.flow.SharedFlow<SettingsGroup>
 
     /** Writes [settings] into the health group; [version] comes from the last [readHealthSettings]. */
     suspend fun writeHealthSettings(version: Int, settings: List<Setting>)

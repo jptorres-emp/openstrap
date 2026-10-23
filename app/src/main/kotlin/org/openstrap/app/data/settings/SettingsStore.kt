@@ -13,8 +13,25 @@ private val Context.dataStore by preferencesDataStore(name = "settings")
 
 data class PairedDevice(val address: String, val authKeyHex: String, val name: String)
 
-/** The user's own Zepp credentials, used only for firmware update checks. Stored on this phone only. */
-data class ZeppAccount(val appToken: String, val userId: String, val apiBase: String, val china: Boolean) {
+/**
+ * The user's own Zepp credentials, used only for firmware update checks. Stored on this phone only.
+ * [loginToken] is the long-lived token that buys a new app token (A3, codemap 08 §1.4); null when the sign-in didn't
+ * give one or the token was typed in. [appTokenAtMs] is when [appToken] was obtained (Zepp's `lu_app_ttl`) and
+ * [appTtlSeconds] its lifetime, when the server said.
+ */
+data class ZeppAccount(
+    val appToken: String,
+    val userId: String,
+    val apiBase: String,
+    val china: Boolean,
+    val loginToken: String? = null,
+    val appTokenAtMs: Long? = null,
+    val appTtlSeconds: Long? = null,
+) {
+    override fun toString() =
+        "ZeppAccount(userId=$userId, apiBase=$apiBase, china=$china, appToken=…, loginToken=${if (loginToken == null) "none" else "…"}, " +
+            "appTokenAtMs=$appTokenAtMs, appTtlSeconds=$appTtlSeconds)"
+
     companion object {
         const val DEFAULT_API_BASE = "https://api-mifit.zepp.com/"
     }
@@ -88,24 +105,35 @@ class SettingsStore(private val context: Context) {
     private val zeppUser = stringPreferencesKey("zepp_user_id")
     private val zeppApi = stringPreferencesKey("zepp_api_base")
     private val zeppChina = androidx.datastore.preferences.core.booleanPreferencesKey("zepp_china")
+    private val zeppLoginToken = stringPreferencesKey("zepp_login_token")
+    private val zeppAppTokenAt = androidx.datastore.preferences.core.longPreferencesKey("zepp_app_token_at")
+    private val zeppAppTtl = androidx.datastore.preferences.core.longPreferencesKey("zepp_app_ttl")
 
     val zeppAccount: Flow<ZeppAccount?> = context.dataStore.data.map { prefs ->
         val t = prefs[zeppToken] ?: return@map null
-        ZeppAccount(t, prefs[zeppUser].orEmpty(), prefs[zeppApi] ?: ZeppAccount.DEFAULT_API_BASE, prefs[zeppChina] == true)
+        ZeppAccount(
+            t, prefs[zeppUser].orEmpty(), prefs[zeppApi] ?: ZeppAccount.DEFAULT_API_BASE, prefs[zeppChina] == true,
+            prefs[zeppLoginToken], prefs[zeppAppTokenAt], prefs[zeppAppTtl],
+        )
     }
 
+    /** Replaces the whole sign-in, so a typed-in token drops the login token of an earlier sign-in. */
     suspend fun saveZeppAccount(account: ZeppAccount) {
         context.dataStore.edit {
             it[zeppToken] = account.appToken
             it[zeppUser] = account.userId
             it[zeppApi] = account.apiBase
             it[zeppChina] = account.china
+            account.loginToken?.let { v -> it[zeppLoginToken] = v } ?: it.remove(zeppLoginToken)
+            account.appTokenAtMs?.let { v -> it[zeppAppTokenAt] = v } ?: it.remove(zeppAppTokenAt)
+            account.appTtlSeconds?.let { v -> it[zeppAppTtl] = v } ?: it.remove(zeppAppTtl)
         }
     }
 
     suspend fun clearZeppAccount() {
         context.dataStore.edit {
             it.remove(zeppToken); it.remove(zeppUser); it.remove(zeppApi); it.remove(zeppChina)
+            it.remove(zeppLoginToken); it.remove(zeppAppTokenAt); it.remove(zeppAppTtl)
         }
     }
 

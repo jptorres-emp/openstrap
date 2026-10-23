@@ -38,6 +38,12 @@ class AlarmsViewModel(private val strap: StrapController) : ViewModel() {
         refresh()
         // A one-time alarm switches itself off after ringing; show what the strap now holds.
         viewModelScope.launch { strap.alarmsChanged.collect { refresh() } }
+        // A setting changed on the strap: apply it as a fresh read would (03 §3.6.1).
+        viewModelScope.launch {
+            strap.settingsChanged.collect { pushed ->
+                _state.update { s -> s.health?.updatedWith(pushed)?.let { s.copy(health = it) } ?: s }
+            }
+        }
     }
 
     fun refresh() = run(loading = true) { }

@@ -48,9 +48,9 @@ internal fun sportNoun(sportType: Int): String? = when (sportType) {
     else -> null
 }
 
-/** The screen's light for a moment (spec 2.6): dimmed in the evening, almost unlit at night. */
+/** Today's light for a moment (spec 2.1 Moods): softer in the evening, calmer and from below at night. */
 fun momentMood(moment: Moment): GlowMood = when (moment) {
-    Moment.Evening -> GlowMood.Dim
+    Moment.Evening -> GlowMood.Evening
     Moment.Night -> GlowMood.Night
     else -> GlowMood.Day
 }

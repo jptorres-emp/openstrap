@@ -36,14 +36,14 @@ class GlowLightTest {
         assertTrue(below.y < 0.5f)
     }
 
-    @Test fun `the lit part is about the level's height`() {
-        // Measured from the unlit side: 0.3 leaves about 70% dark.
-        assertEquals(0.88f, levelEdge(MIN_LIGHT_LEVEL), 0.02f)
-        assertEquals(0.7f, levelEdge(0.3f), 0.03f)
-        assertEquals(0.3f, levelEdge(0.7f), 0.04f)
-        // Full: lit all the way, the soft step past the edge.
-        assertEquals(-LEVEL_SOFTNESS, levelEdge(1f), 1e-6f)
-        assertTrue(levelEdge(0.3f) > levelEdge(0.7f))
+    @Test fun `the lit part is the level's height`() {
+        // Measured from the unlit side: 0.3 leaves 70% past the light, the soft step in it.
+        assertEquals(0.88f, levelEdge(MIN_LIGHT_LEVEL), 1e-6f)
+        assertEquals(0.7f, levelEdge(0.3f), 1e-6f)
+        assertEquals(0.3f, levelEdge(0.7f), 1e-6f)
+        // Full: lit all the way.
+        assertEquals(0f, levelEdge(1f), 1e-6f)
+        assertEquals(22f, LEVEL_STEP.value)
     }
 
     @Test fun `the level core covers the dark part`() {
@@ -62,6 +62,16 @@ class GlowLightTest {
         assertEquals(1f, style.light().fill, 1e-6f)
     }
 
+    @Test fun `L4 is the light colour at full, melting linearly into the body by 45 percent`() {
+        val hero = style.light()
+        assertEquals(1f, style.glowStrength, 1e-6f)
+        assertEquals(1f, hero.rim, 1e-6f)
+        assertEquals(FillStop(0f, 1f), hero.fillStops.first())
+        assertEquals(FillStop(0.45f, 0f), hero.fillStops.last())
+        // Never brighter further in.
+        hero.fillStops.zipWithNext().forEach { (a, b) -> assertTrue(b.at > a.at && b.light < a.light) }
+    }
+
     @Test fun `an angle moves the core`() {
         val lit = style.copy(lightAngle = LightAngle.UpperRight).light()
         assertEquals(LightAngle.UpperRight, lit.angle)
@@ -77,29 +87,38 @@ class GlowLightTest {
         assertNull(style.light().level)
     }
 
-    @Test fun `the second card is dimmer, with a weaker rim and a shorter fill`() {
-        val hero = style.light()
+    @Test fun `L3 starts at 70 percent and reaches the body by 28 percent`() {
         val second = style.copy(second = true).light()
-        assertTrue(second.rim < hero.rim)
-        assertTrue(second.fill < hero.fill)
-        assertTrue(second.reach < hero.reach)
-        assertTrue(second.brightness < hero.brightness)
-        assertEquals(1f, hero.brightness, 1e-6f)
+        assertEquals(0.7f, second.rim, 1e-6f)
+        assertEquals(0.7f, second.fill, 1e-6f)
+        assertEquals(0.28f, second.reach, 1e-6f)
+        // The body is the same as the hero's: only the light is weaker.
+        assertEquals(1f, second.brightness, 1e-6f)
+    }
+
+    @Test fun `a level is always at full, even as the second glow`() {
+        val level = style.copy(lightLevel = 0.6f, second = true).light()
+        assertEquals(1f, level.rim, 1e-6f)
+        assertEquals(1f, level.fill, 1e-6f)
+        // The light holds most of the way up to the value.
+        assertEquals(LEVEL_FILL_REACH * 0.6f, level.reach, 1e-6f)
     }
 
     @Test fun `moods dim the whole card`() {
         assertEquals(1f, style.copy(mood = GlowMood.Day).light().brightness, 1e-6f)
-        val dim = style.copy(mood = GlowMood.Dim).light()
-        assertEquals(0.6f, dim.brightness, 1e-6f)
-        assertFalse(dim.tone)
-        assertNull(dim.level)
+        val evening = style.copy(mood = GlowMood.Evening).light()
+        assertEquals(0.8f, evening.brightness, 1e-6f)
+        assertEquals(0.9f, GlowMood.Evening.edge, 1e-6f)
+        assertFalse(evening.tone)
+        assertNull(evening.level)
         val night = style.copy(lightAngle = LightAngle.UpperRight, mood = GlowMood.Night).light()
         assertEquals(LightAngle.Below, night.angle)
-        assertEquals(0.4f, night.brightness, 1e-6f)
-        // Lit along the bottom edge only.
-        val level = night.level!!
-        assertTrue(level < 0.25f)
+        assertEquals(0.65f, night.brightness, 1e-6f)
+        assertEquals(0.8f, GlowMood.Night.edge, 1e-6f)
+        // Lit from below, the core opposite, as an L4 from below.
+        assertNull(night.level)
         assertFalse(night.fromAbove)
+        assertTrue(night.core.y < 0.5f)
         // A level card keeps its level at night.
         assertEquals(0.7f, style.copy(lightLevel = 0.7f, mood = GlowMood.Night).light().level)
         assertNull(style.copy(lightFrom = LightFrom.All, mood = GlowMood.Night).light().angle)

@@ -232,7 +232,7 @@ private fun CacheDrawScope.overlay(style: GlowStyle, grainSeed: Int): DrawResult
     if (style.outline) return onDrawBehind { drawOutline(outline, style.color.copy(alpha = OUTLINE_ALPHA), style = Stroke(OUTLINE_WIDTH.toPx())) }
     return onDrawBehind {
         if (style.grain > 0f) drawIntoCanvas { it.nativeCanvas.drawPaint(grainPaint) }
-        drawOutline(outline, Color.White.copy(alpha = 0.07f), style = hairline)
+        drawOutline(outline, Color.White.copy(alpha = GlowLayout.HairlineAlpha), style = hairline)
         drawOutline(outline, gloss, style = hairline)
     }
 }
@@ -281,18 +281,20 @@ private fun render(style: GlowStyle, w: Float, h: Float, density: Density): Glow
             // On a level card the rim lights only the lit part: clipped where the core is fully dark, so the unlit
             // side keeps just its hairline.
             light.level?.let { level ->
-                val dark = (levelEdge(level) - LEVEL_SOFTNESS) * h
+                val dark = levelEdge(level) * h - LEVEL_STEP.toPx()
                 if (light.fromAbove) canvas.clipRect(0f, 0f, w, h - dark) else canvas.clipRect(0f, dark, w, h)
             }
             val g = style.glowSize.toPx()
             val k = light.rim
-            // Rim light: CSS-style inset shadows (one leaning toward the lit edge, one all the way round).
+            // Rim light: a CSS-style inset shadow leaning toward the lit edge, so the rim is full on one side (L4) and
+            // gone on the other. Light all the way round only when the style has no side.
             if (light.angle != null) {
                 // The hole shifts away from the light, so the lit side shows the most.
                 val (vx, vy) = lightVector(light.angle)
                 insetShadow(area, r, -vx * g * 0.6f, -vy * g * 0.6f, blur = g * 1.2f, spread = -g * 0.5f, p.light.copy(alpha = k.coerceAtMost(1f))).let { (path, paint) -> canvas.drawPath(path, paint) }
+            } else {
+                insetShadow(area, r, 0f, 0f, blur = g, spread = g * 0.1f, p.light.copy(alpha = (0.6f * k).coerceAtMost(1f))).let { (path, paint) -> canvas.drawPath(path, paint) }
             }
-            insetShadow(area, r, 0f, 0f, blur = g, spread = g * 0.1f, p.light.copy(alpha = (0.6f * k).coerceAtMost(1f))).let { (path, paint) -> canvas.drawPath(path, paint) }
             // Bevel: a thick band of light all the way round, like the edge of a glossy slab.
             if (style.bevel > 0f) {
                 val b = minOf(w, h) * 0.075f * style.bevel
@@ -312,11 +314,11 @@ private fun render(style: GlowStyle, w: Float, h: Float, density: Density): Glow
     val margin = maxOf(w, h) * 0.08f
     val coreLayer = halfResBitmap(w, h, margin) { canvas ->
         light.level?.let { level ->
-            // A level card: the unlit part in the core colour, fading smoothly into the light around the level
-            // (a smoothstep over 2 x LEVEL_SOFTNESS of the card), like light rising in a glass. Only the core's alpha
-            // changes, so nothing is ever darker than the unlit part and there's no line.
+            // A level card: lit at full up to the level, then the core colour fading in over LEVEL_STEP past it (a
+            // smoothstep), like light rising in a glass. Only the core's alpha changes, so nothing is ever darker than
+            // the unlit part and there's never a hard edge.
             val edge = levelEdge(level) * h
-            val soft = LEVEL_SOFTNESS * h
+            val step = LEVEL_STEP.toPx()
             val (y0, y1) = if (light.fromAbove) h + margin to -margin else -margin to h + margin
             val span = abs(y1 - y0)
             fun at(fromUnlit: Float) = ((fromUnlit + margin) / span).coerceIn(0f, 1f)
@@ -328,7 +330,7 @@ private fun render(style: GlowStyle, w: Float, h: Float, density: Density): Glow
                 val t = i / steps.toFloat()
                 val fade = t * t * (3f - 2f * t)
                 colors[i + 1] = p.core.copy(alpha = 1f - fade).toArgb()
-                stops[i + 1] = at(edge - soft + 2f * soft * t)
+                stops[i + 1] = at(edge - step + step * t)
             }
             colors[steps + 2] = Color.Transparent.toArgb(); stops[steps + 2] = 1f
             val paint = Paint().apply { shader = android.graphics.LinearGradient(0f, y0, 0f, y1, colors, stops, Shader.TileMode.CLAMP) }
@@ -373,18 +375,15 @@ private fun halfResBitmap(w: Float, h: Float, margin: Float, draw: (android.grap
 }
 
 /**
- * The card's base fill: rim colour at the lit edge melting into the mid colour, along the light's angle. The melt
- * is eased (fast near the edge, then slowly settling, with no corner where it ends), so the light reads as a soft
- * glow but has mostly faded by the title row.
+ * The card's base fill: the light colour at the lit edge melting into the mid (body) colour along the light's angle,
+ * linearly through the level's [GlowLight.fillStops] (spec 2.1): on L4 the light holds for the first part of the card
+ * and reaches the body by 45%, on L3 it starts at 70% and is gone by 28%.
  */
 private fun fillShader(light: GlowLight, p: GlowPalette, w: Float, h: Float): Shader {
     val angle = light.angle ?: return android.graphics.LinearGradient(0f, 0f, 0f, h, p.mid.toArgb(), p.mid.toArgb(), Shader.TileMode.CLAMP)
-    val start = lerp(p.mid, p.light, light.fill.coerceIn(0f, 1f))
-    val steps = 12
-    // Ease-out: 1 - (1 - x)^3 runs from light to mid and arrives with zero slope, so there's no seam.
-    val fade = List(steps + 1) { i -> i / steps.toFloat() }
-    val colors = fade.map { x -> lerp(start, p.mid, 1f - (1f - x).let { it * it * it }).toArgb() } + p.mid.toArgb()
-    val stops = fade.map { it * light.reach } + 1f
+    val points = light.fillStops.map { it.at.coerceIn(0f, 1f) to it.light.coerceIn(0f, 1f) }
+    val colors = points.map { (_, k) -> lerp(p.mid, p.light, k).toArgb() } + p.mid.toArgb()
+    val stops = points.map { it.first } + 1f
     // Like a CSS linear-gradient: the line runs through the centre, just long enough to reach both far corners.
     val (vx, vy) = lightVector(angle)
     val half = (abs(w * vx) + abs(h * vy)) / 2f

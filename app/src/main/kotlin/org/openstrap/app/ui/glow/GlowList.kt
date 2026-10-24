@@ -37,7 +37,7 @@ import org.openstrap.app.ui.components.cardOpening
  */
 
 private val ListSurface = Color(0xFF0F0F11)
-internal val RowHairline = Color.White.copy(alpha = 0.05f)
+internal val RowHairline = Color.White.copy(alpha = GlowLayout.DividerAlpha)
 
 /**
  * A grouped list: a dark panel with a title row ([title] left, an optional [note] right) over its rows, usually
@@ -89,7 +89,7 @@ fun ListPanel(
         modifier
             .fillMaxWidth()
             .background(ListSurface, GlowLayout.CardShape)
-            .border(1.dp, Color.White.copy(alpha = 0.06f), GlowLayout.CardShape)
+            .border(1.dp, RowHairline, GlowLayout.CardShape)
             .padding(GlowLayout.ListPadding),
         content = inner,
     )

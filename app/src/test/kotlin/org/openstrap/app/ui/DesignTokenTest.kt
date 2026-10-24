@@ -8,7 +8,9 @@ import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
 import org.openstrap.app.ui.glow.DotSize
+import androidx.compose.ui.graphics.luminance
 import org.openstrap.app.ui.glow.GlowLayout
+import org.openstrap.app.ui.glow.GlowPalette
 import org.openstrap.app.ui.glow.GlowStyle
 import org.openstrap.app.ui.theme.MetricColors
 import java.io.File
@@ -47,6 +49,24 @@ class DesignTokenTest {
         assertEquals(14.dp, GlowLayout.RowPadding)
         assertEquals(Color(0xFFF66C28), MetricColors.charge)
         assertEquals(Color(0xFF8B7BEA), MetricColors.evening)
+    }
+
+    @Test fun `glow bodies keep white text readable, and are no darker than they need be`() {
+        assertEquals(0.18f, GlowPalette.MID_MAX_LUMINANCE, 1e-6f)
+        assertTrue(GlowPalette.TONE_MAX_LUMINANCE < GlowPalette.MID_MAX_LUMINANCE)
+        // White on the body: at least 4.5:1 (spec 2.1), for every metric's ink.
+        val inks = listOf(
+            MetricColors.readiness, MetricColors.charge, MetricColors.sleepDeep, MetricColors.heart, MetricColors.steps,
+            MetricColors.hrv, MetricColors.spo2, MetricColors.stress, MetricColors.temperature, MetricColors.load,
+            MetricColors.habitAge, MetricColors.evening,
+        )
+        inks.forEach { ink ->
+            val body = GlowPalette(GlowStyle(ink)).mid.luminance()
+            assertTrue("$ink body luminance $body", body <= GlowPalette.MID_MAX_LUMINANCE + 1e-3f)
+            assertTrue("$ink white on body ${1.05f / (body + 0.05f)}", 1.05f / (body + 0.05f) >= 4.5f)
+        }
+        assertEquals(0.08f, GlowLayout.HairlineAlpha, 1e-6f)
+        assertEquals(0.06f, GlowLayout.DividerAlpha, 1e-6f)
     }
 
     @Test fun `no metric has a second colour`() {

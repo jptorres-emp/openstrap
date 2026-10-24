@@ -105,7 +105,7 @@ val LocalEdgeOverride = staticCompositionLocalOf { EdgeOverride() }
 
 private val EdgeShape = GlowLayout.CardShape
 private val Surface = Color(0xFF0A0A0B)
-private val Hairline = Color.White.copy(alpha = 0.07f)
+private val Hairline = Color.White.copy(alpha = GlowLayout.HairlineAlpha)
 
 /**
  * A card in the edge light tier, lit in [color] from the edge [edgeLight] picks for [status] and [kind], unless
@@ -148,15 +148,21 @@ fun EdgeCard(
                 }
                 val stops = glow.stops(mood.edge).map { (at, alpha) -> at to tint.copy(alpha = alpha) }.toTypedArray()
                 val brush = if (level == null) Brush.linearGradient(*stops, start = from, end = to) else {
-                    // The light fills across to the level, a little brighter at the left, and fades out just past it.
+                    // The light fills across to the level, 46% of the ink at the left and 30% at the value, then fades
+                    // out over LevelFade past it on a smoothstep, so it never stops in a line (spec 2.1, Levels).
                     val w = size.width
                     val end = w * level
                     val fade = LevelFade.toPx()
                     val strength = mood.edge * (if (light.strong) 1.2f else 1f)
+                    val atValue = 0.30f * strength
+                    val past = List(LEVEL_FADE_STEPS) { i ->
+                        val t = (i + 1) / LEVEL_FADE_STEPS.toFloat()
+                        ((end + fade * t) / w).coerceIn(0f, 1f) to tint.copy(alpha = (atValue * (1f - t * t * (3f - 2f * t))).coerceIn(0f, 1f))
+                    }
                     Brush.horizontalGradient(
-                        0f to tint.copy(alpha = (0.42f * strength).coerceIn(0f, 1f)),
-                        (end / w).coerceIn(0f, 1f) to tint.copy(alpha = (0.26f * strength).coerceIn(0f, 1f)),
-                        ((end + fade) / w).coerceIn(0f, 1f) to tint.copy(alpha = 0f),
+                        0f to tint.copy(alpha = (0.46f * strength).coerceIn(0f, 1f)),
+                        (end / w).coerceIn(0f, 1f) to tint.copy(alpha = atValue.coerceIn(0f, 1f)),
+                        *past.toTypedArray(),
                     )
                 }
                 val radius = CornerRadius(GlowLayout.CardCorner.toPx())
@@ -187,7 +193,8 @@ fun EdgeCard(
 private const val MinLevel = 0.04f
 
 /** How far past its level a level card's light fades out. */
-private val LevelFade = 28.dp
+internal val LevelFade = 40.dp
+private const val LEVEL_FADE_STEPS = 6
 
 /** The 4 dp bar inside a progress edge card. */
 @Composable
@@ -202,7 +209,7 @@ private fun ProgressBar(progress: Float, color: Color) {
  * An edge glow, after the CSS `box-shadow: inset` it was designed with: [alpha] of the colour, its hard edge [shift]
  * in from the card's edge, blurred with a standard deviation of [sigma].
  */
-private class EdgeGlow(val alpha: Float, val shift: Dp, val sigma: Dp) {
+internal class EdgeGlow(val alpha: Float, val shift: Dp, val sigma: Dp) {
     /** How far in the glow reaches before it's gone. */
     val depth: Dp get() = shift + sigma * 2.5f
 
@@ -210,21 +217,20 @@ private class EdgeGlow(val alpha: Float, val shift: Dp, val sigma: Dp) {
     fun stops(strength: Float): List<Pair<Float, Float>> = List(STEPS + 1) { i ->
         val at = i / STEPS.toFloat()
         val x = depth.value * at
-        // The Gaussian's cumulative curve, closely enough: a logistic with the matching slope.
-        val cover = 1f / (1f + exp(-1.702f * (shift.value - x) / sigma.value))
-        at to (alpha * strength * cover * (1f - at)).coerceIn(0f, 1f)
+        // The Gaussian's cumulative curve, closely enough: a logistic with the matching slope. Scaled so the lit edge
+        // is [alpha] of the colour exactly.
+        at to (alpha * strength * cover(x) / cover(0f) * (1f - at)).coerceIn(0f, 1f)
     }
+
+    private fun cover(x: Float) = 1f / (1f + exp(-1.702f * (shift.value - x) / sigma.value))
 
     private companion object {
         const val STEPS = 8
     }
 }
 
-/**
- * Usual: the soft glow. Brighter than the mockup's `inset 0 -30px 34px -28px` at 50%, which barely showed on a phone,
- * but still shallower and calmer than [StrongGlow].
- */
-private val SoftGlow = EdgeGlow(alpha = 0.62f, shift = 8.dp, sigma = 15.dp)
+/** L1, a usual value and every strip (spec 2.1): the ink at 70% at the edge, reaching 48 dp in. */
+internal val SoftGlow = EdgeGlow(alpha = 0.70f, shift = 10.5.dp, sigma = 15.dp)
 
-/** Off your normal: deeper and stronger (`inset 0 -44px 42px -26px`, 75% of the colour). */
-private val StrongGlow = EdgeGlow(alpha = 0.75f, shift = 18.dp, sigma = 21.dp)
+/** L2, off your normal: the ink at 90% at the edge, reaching 72 dp in. */
+internal val StrongGlow = EdgeGlow(alpha = 0.90f, shift = 19.5.dp, sigma = 21.dp)

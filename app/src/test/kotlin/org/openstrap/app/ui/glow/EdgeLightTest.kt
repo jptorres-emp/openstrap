@@ -54,6 +54,19 @@ class EdgeLightTest {
         }
     }
 
+    @Test fun `L1 is the ink at 70 percent over 48 dp, L2 at 90 percent over 72 dp`() {
+        for ((glow, alpha, depth) in listOf(Triple(SoftGlow, 0.7f, 48f), Triple(StrongGlow, 0.9f, 72f))) {
+            assertEquals(depth, glow.depth.value, 1e-3f)
+            val stops = glow.stops(1f)
+            assertEquals(alpha, stops.first().second, 1e-4f)
+            assertEquals(0f, stops.last().second, 1e-6f)
+            stops.zipWithNext().forEach { (a, b) -> assertTrue(b.second <= a.second) }
+        }
+        // A mood scales it.
+        assertEquals(0.7f * 0.8f, SoftGlow.stops(0.8f).first().second, 1e-3f)
+        assertEquals(40f, LevelFade.value)
+    }
+
     @Test fun `only progress cards get a bar`() {
         for (status in EdgeStatus.entries) for (kind in EdgeKind.entries) {
             assertEquals(kind == EdgeKind.Progress, edgeLight(status, kind).progressBar)

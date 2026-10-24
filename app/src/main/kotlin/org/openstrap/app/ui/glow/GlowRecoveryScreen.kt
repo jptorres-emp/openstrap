@@ -143,7 +143,7 @@ fun GlowRecoveryScreen(
 private fun recoveryHeroStyle(color: Color) = GlowStyle.Bloom.copy(
     color = color,
     coreShape = CoreShape.Radial, coreX = 0.3f, coreY = 0.72f, coreWidth = 0.75f, coreHeight = 0.6f,
-    coreBlur = 30.dp, toneWidth = 16.dp, toneShift = -10f, glowStrength = 0.6f, bevel = 0.9f,
+    coreBlur = 30.dp, toneWidth = 16.dp, toneShift = -10f, glowStrength = 1f, bevel = 0.9f,
 )
 
 /**

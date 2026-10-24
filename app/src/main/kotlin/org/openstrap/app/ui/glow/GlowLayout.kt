@@ -54,6 +54,11 @@ object GlowLayout {
     /** Inside a list: [CardInset] at the sides, and with the first and last row's [RowPadding] at the top and bottom. */
     val ListPadding = PaddingValues(horizontal = CardInset, vertical = CardInset - RowPadding)
 
+    /** The 1 dp hairline round a glow or edge card, and a chart's grid: white at 8% (spec 2.2, 2.7). */
+    const val HairlineAlpha = 0.08f
+    /** A list panel's border and the divider between its rows: white at 6%. */
+    const val DividerAlpha = 0.06f
+
     /** Title row to the hero number. */
     val TitleGap = 14.dp
     /** Hero number (or the last line of text) to the chart. */

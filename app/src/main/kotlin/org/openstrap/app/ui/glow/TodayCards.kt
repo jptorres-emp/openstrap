@@ -383,7 +383,7 @@ internal fun RecoveryFailed(failure: RecoveryFailure, onRetry: () -> Unit) {
 internal const val FAILED_ALPHA = 0.45f
 
 /**
- * Charge as a wide card: the second glow before a workout, lit to its level, or a level card whose light fills
+ * Charge as a wide card: the second glow before a workout (L3, not a level, spec 2.1), or a level card whose light fills
  * across to the value, only as high as its content. [status] says what's happening to it. [soFar] is the day's
  * Charge so far (evenly spaced, nulls still to come), drawn beside the number on the level card (ghost line, chart
  * kit). TODO(step 6): the ghost of your usual Charge by this time needs past days' Charge hour by hour. The engine
@@ -397,7 +397,7 @@ internal fun ChargeWideCard(
 ) {
     val m = modifier.fillMaxWidth().gridSize(CardSize.Wide)
     if (secondGlow) {
-        GlowCard(GlowStyle.Ember.copy(lightLevel = (now ?: 0) / 100f, second = true), m, onClick = onClick) {
+        GlowCard(GlowStyle.Ember.copy(second = true), m, onClick = onClick) {
             Column {
                 GlowHeader("Charge", marker = upTo, tag = tag)
                 EdgeValue(now?.toString(), null, status, Color.White.copy(alpha = 0.8f), dot = DotSize.Second)

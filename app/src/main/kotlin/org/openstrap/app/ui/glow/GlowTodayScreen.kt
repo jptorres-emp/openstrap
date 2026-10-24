@@ -403,11 +403,14 @@ private fun Hero(
 
 private enum class HeroKind { Pair, Stuck, Waking, NoSleep, Midday, Window, After, Evening, During }
 
-/** The hero's recipe: the dark core opposite the light, which the moment places. */
-private fun heroStyle(color: Color, lightAngle: Float?, strength: Float = 0.6f) = GlowStyle.Bloom.copy(
+/**
+ * The hero's recipe, L4 (spec 2.1): the rim at full from the one side the moment places, no bevel, and the dark core
+ * opposite the light.
+ */
+private fun heroStyle(color: Color, lightAngle: Float?) = GlowStyle.Bloom.copy(
     lightAngle = lightAngle, color = color,
     coreShape = CoreShape.Radial, coreX = 0.5f, coreY = 0.6f, coreWidth = 0.95f, coreHeight = 0.75f,
-    coreBlur = 30.dp, toneWidth = 16.dp, toneShift = -10f, glowStrength = strength, bevel = 0.6f,
+    coreBlur = 30.dp, toneWidth = 16.dp, toneShift = -10f, glowStrength = 1f, bevel = 0f,
 )
 
 /**
@@ -522,7 +525,7 @@ private fun ChargeHero(ctx: TodayContext, onOpen: () -> Unit, onRetry: () -> Uni
 private fun WindowHero(ctx: TodayContext, lightAngle: Float?, onStart: (Int) -> Unit, onOther: () -> Unit, modifier: Modifier) {
     val sport = ctx.usualSport
     val noun = sportNoun(sport)
-    GlowCard(heroStyle(overviewColor(ctx.score, ctx.alert), lightAngle, strength = 0.85f), modifier) {
+    GlowCard(heroStyle(overviewColor(ctx.score, ctx.alert), lightAngle), modifier) {
         Column {
             GlowHeader(TodayCopy.windowTitle(ctx.score), trailing = ctx.score?.let { "Recovery $it" })
             HeroSentence(TodayCopy.window(noun, ctx.charge))
@@ -545,7 +548,7 @@ private fun AfterHero(ctx: TodayContext, lightAngle: Float?, onOpenWorkout: (Lon
     val since = ctx.state.heartRate.filter { it.x >= w.end }
     val nowHr = ctx.live ?: since.lastOrNull()?.y?.toInt()
     val noun = sportNoun(w.workout.sportType) ?: "workout"
-    GlowCard(heroStyle(MetricColors.heart, lightAngle, strength = 0.45f), modifier, onClick = { onOpenWorkout(w.workout.start) }) {
+    GlowCard(heroStyle(MetricColors.heart, lightAngle), modifier, onClick = { onOpenWorkout(w.workout.start) }) {
         Column {
             GlowHeader("Since your $noun", trailing = TodayCopy.duration(ctx.now - w.end))
             HeroSentence(TodayCopy.after(nowHr, ctx.state.restingHeartRate))
@@ -639,7 +642,7 @@ private fun PairHero(step: PairStep, onPair: () -> Unit, modifier: Modifier) {
 private fun StuckHero(ctx: TodayContext, strap: TodayStrap, onSyncNow: () -> Unit, modifier: Modifier) {
     val haptics = rememberHaptics()
     val copy = stuckCopy(ctx.state.asleepSeconds != null, ctx.newest?.let { clockText(it, ctx.zone) })
-    GlowCard(heroStyle(MetricColors.warn, LightAngle.Below, strength = 0.5f), modifier) {
+    GlowCard(heroStyle(MetricColors.warn, LightAngle.Below), modifier) {
         Column {
             GlowHeader(copy.title, trailing = lastTried(strap.record, ctx.zone))
             HeroSentence(copy.sentence)

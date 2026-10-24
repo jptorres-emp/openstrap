@@ -697,7 +697,6 @@ private fun AppRoot(
     CompositionLocalProvider(
         org.openstrap.app.ui.dashboard.LocalGoals provides goals,
         org.openstrap.app.ui.components.LocalGlassHost provides glassHost,
-        org.openstrap.app.ui.glow.LocalGlowMood provides (moment?.let { org.openstrap.app.ui.dashboard.momentMood(it) } ?: org.openstrap.app.ui.glow.GlowMood.Day),
     ) {
       androidx.compose.foundation.layout.Column(androidx.compose.ui.Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
       if (hinge != null) {
@@ -836,7 +835,10 @@ private fun AppRoot(
                 ) {
                     pullToSync {
                         when (t) {
-                            Tab.Today -> org.openstrap.app.ui.glow.GlowTodayScreen(
+                            // The moment's mood lights Today only (spec 2.1 Moods); the Sleep tab sets its own.
+                            Tab.Today -> androidx.compose.runtime.CompositionLocalProvider(
+                                org.openstrap.app.ui.glow.LocalGlowMood provides (todayMoment?.let { org.openstrap.app.ui.dashboard.momentMood(it) } ?: org.openstrap.app.ui.glow.GlowMood.Day),
+                            ) { org.openstrap.app.ui.glow.GlowTodayScreen(
                                 day, live, header = { header(Tab.Today) }, contentPadding = padding, moment = todayMoment,
                                 // Cards about other tabs open those screens here, on Today; none switches tab.
                                 onOpenSleep = { todayStack = listOf(Detail.Sleep) },
@@ -880,7 +882,7 @@ private fun AppRoot(
                                 onSyncNow = container.strap::syncNow,
                                 usualBedtime = usualBedtime,
                                 wear = wear, firstScore = showFirstScore,
-                            )
+                            ) }
                             Tab.Recovery -> org.openstrap.app.ui.glow.GlowRecoveryScreen(
                                 day, recovery, history, header = { header(Tab.Recovery) }, contentPadding = padding,
                                 onOpenMetric = { recoveryStack = listOf(Detail.OfMetric(it)) },

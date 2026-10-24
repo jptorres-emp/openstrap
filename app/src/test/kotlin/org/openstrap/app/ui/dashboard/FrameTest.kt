@@ -271,7 +271,7 @@ class FrameTest {
     @Test fun `evening dims, night is almost unlit, the rest is day`() {
         for (m in org.openstrap.app.data.Moment.entries) {
             val want = when (m) {
-                org.openstrap.app.data.Moment.Evening -> org.openstrap.app.ui.glow.GlowMood.Dim
+                org.openstrap.app.data.Moment.Evening -> org.openstrap.app.ui.glow.GlowMood.Evening
                 org.openstrap.app.data.Moment.Night -> org.openstrap.app.ui.glow.GlowMood.Night
                 else -> org.openstrap.app.ui.glow.GlowMood.Day
             }

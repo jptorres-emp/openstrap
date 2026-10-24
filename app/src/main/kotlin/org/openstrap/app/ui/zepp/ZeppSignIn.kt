@@ -5,26 +5,24 @@ import android.webkit.CookieManager
 import android.webkit.WebStorage
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -35,6 +33,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
@@ -42,8 +42,18 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import kotlinx.coroutines.delay
-import org.openstrap.app.ui.components.Panel
-import org.openstrap.app.ui.components.PanelHeader
+import org.openstrap.app.ui.components.pressClickable
+import org.openstrap.app.ui.glow.ControlSurface
+import org.openstrap.app.ui.glow.GlowLayout
+import org.openstrap.app.ui.glow.GlowType
+import org.openstrap.app.ui.glow.PageButton
+import org.openstrap.app.ui.glow.PageNote
+import org.openstrap.app.ui.glow.PagePanel
+import org.openstrap.app.ui.glow.PageProgress
+import org.openstrap.app.ui.glow.PageTextButton
+import org.openstrap.app.ui.glow.ROW_CARET_ALPHA
+import org.openstrap.app.ui.glow.RowCaretGap
+import org.openstrap.app.ui.glow.TapCaret
 import org.openstrap.app.ui.theme.MetricColors
 import org.openstrap.app.ui.theme.AppIcons
 import org.openstrap.app.zepp.BoundDevice
@@ -110,63 +120,70 @@ fun ZeppSignInDialog(
     }
 
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-            Column(Modifier.fillMaxSize()) {
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(4.dp)) {
-                    IconButton(onClick = onDismiss) { Icon(AppIcons.X, "Close") }
-                    Text("Sign in with Zepp", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
-                    if (step is SignInStep.SignIn) TextButton(onClick = { clearZeppCookies(); attempt++ }) { Text("Reset") }
+        Column(Modifier.fillMaxSize().background(Color.Black)) {
+            // A page's top: the round button (a close, since this sits over the page it came from) and the title.
+            Row(Modifier.fillMaxWidth().height(60.dp).padding(horizontal = GlowLayout.Gutter), verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    Modifier.size(44.dp).clip(CircleShape).background(ControlSurface).clickable(onClickLabel = "Close", onClick = onDismiss),
+                    contentAlignment = Alignment.Center,
+                ) { Icon(AppIcons.X, "Close", Modifier.size(20.dp), tint = Color.White) }
+                Spacer(Modifier.width(12.dp))
+                Text("Sign in with Zepp", color = Color.White, style = GlowType.pageTitle, maxLines = 1, modifier = Modifier.weight(1f))
+                if (step is SignInStep.SignIn) PageTextButton("Reset", { clearZeppCookies(); attempt++ })
+            }
+            when (val s = step) {
+                SignInStep.SignIn -> {
+                    Column(Modifier.padding(horizontal = GlowLayout.Gutter, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            "Use the email and password of the Zepp account your strap is linked to. Google, Apple, " +
+                                "Facebook and Xiaomi sign-in don't work here.",
+                            color = Color.White, style = GlowType.body,
+                        )
+                        PageNote(
+                            "This is Zepp's own page, so OpenStrap never sees your password. It reads only the app token and " +
+                                "user ID, then asks Zepp once for your devices.",
+                        )
+                    }
+                    key(attempt) {
+                        ZeppWebView(Modifier.fillMaxWidth().weight(1f).padding(top = 8.dp)) { provider ->
+                            step = SignInStep.Failed(
+                                "$provider sign-in doesn't work inside OpenStrap, because $provider blocks sign-in in embedded pages.\n\n" +
+                                    "Open the Zepp app and add an email and password to your account in its account settings. " +
+                                    "Then sign in here with that email. Or get the auth key on a computer.",
+                                thirdParty = true,
+                            )
+                        }
+                    }
                 }
-                when (val s = step) {
-                    SignInStep.SignIn -> {
-                        Column(Modifier.padding(horizontal = 16.dp, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text(
-                                "Use the email and password of the Zepp account your strap is linked to. Google, Apple, " +
-                                    "Facebook and Xiaomi sign-in don't work here.",
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
-                            Text(
-                                "This is Zepp's own page, so OpenStrap never sees your password. It reads only the app token and " +
-                                    "user ID, then asks Zepp once for your devices.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        key(attempt) {
-                            ZeppWebView(Modifier.fillMaxWidth().weight(1f)) { provider ->
-                                step = SignInStep.Failed(
-                                    "$provider sign-in doesn't work inside OpenStrap, because $provider blocks sign-in in embedded pages.\n\n" +
-                                        "Open the Zepp app and add an email and password to your account in its account settings. " +
-                                        "Then sign in here with that email. Or get the auth key on a computer.",
-                                    thirdParty = true,
-                                )
-                            }
-                        }
+                SignInStep.Fetching -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                        PageProgress(modifier = Modifier.width(160.dp))
+                        Text("Signed in. Looking up your devices", color = Color.White, style = GlowType.body)
                     }
-                    SignInStep.Fetching -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            CircularProgressIndicator()
-                            Text("Signed in. Looking up your devices…")
-                        }
-                    }
-                    is SignInStep.Failed -> Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                }
+                is SignInStep.Failed -> Column(
+                    Modifier.verticalScroll(rememberScrollState()).padding(GlowLayout.Gutter),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    PagePanel {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Icon(AppIcons.WarningCircle, null, tint = MetricColors.warn)
-                            Text(if (s.thirdParty) "Use email sign-in" else "Couldn't get your devices", style = MaterialTheme.typography.titleMedium)
+                            Icon(AppIcons.WarningCircle, null, Modifier.size(20.dp), tint = MetricColors.warn)
+                            Text(if (s.thirdParty) "Use email sign-in" else "Couldn't get your devices", color = Color.White, style = GlowType.cardTitle, maxLines = 1)
                         }
-                        Text(s.message)
-                        Button(onClick = { clearZeppCookies(); step = SignInStep.SignIn; attempt++ }, Modifier.fillMaxWidth()) {
-                            Text(if (s.thirdParty) "Sign in with email" else "Sign in again")
-                        }
-                        ComputerGuideButton()
-                        OutlinedButton(onClick = onDismiss, Modifier.fillMaxWidth()) { Text("Close") }
+                        Text(s.message, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.body)
                     }
-                    is SignInStep.Found -> FoundStrap(
-                        s.listing, confirmLabel, requireKey,
-                        onConfirm = { strap -> clearZeppCookies(); onConfirm(s.listing, strap) },
-                        onOtherAccount = { clearZeppCookies(); step = SignInStep.SignIn; attempt++ },
+                    PageButton(
+                        if (s.thirdParty) "Sign in with email" else "Sign in again",
+                        { clearZeppCookies(); step = SignInStep.SignIn; attempt++ }, Modifier.fillMaxWidth(), primary = true,
                     )
+                    ComputerGuideButton()
+                    PageButton("Close", onDismiss, Modifier.fillMaxWidth())
                 }
+                is SignInStep.Found -> FoundStrap(
+                    s.listing, confirmLabel, requireKey,
+                    onConfirm = { strap -> clearZeppCookies(); onConfirm(s.listing, strap) },
+                    onOtherAccount = { clearZeppCookies(); step = SignInStep.SignIn; attempt++ },
+                )
             }
         }
     }
@@ -183,9 +200,8 @@ private fun FoundStrap(
     val strap = listing.helioStrap
     val canConfirm = strap != null && (strap.authKey != null || !requireKey)
     var showKey by remember { mutableStateOf(false) }
-    Column(Modifier.verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Panel {
-            PanelHeader(if (strap != null) "Found your Helio Strap" else "No Helio Strap on this account", AppIcons.Watch, MaterialTheme.colorScheme.primary)
+    Column(Modifier.verticalScroll(rememberScrollState()).padding(GlowLayout.Gutter), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        PagePanel(title = if (strap != null) "Found your Helio Strap" else "No Helio Strap on this account") {
             if (strap == null) {
                 Text(
                     if (listing.devices.isEmpty()) {
@@ -195,48 +211,41 @@ private fun FoundStrap(
                         "This account has ${listing.devices.size} device(s), but none is an Amazfit Helio Strap. Link the strap " +
                             "in the Zepp app, then sign in again."
                     },
-                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.body,
                 )
             } else {
                 Line("Bluetooth address", strap.macAddress)
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Auth key", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+                    Text("Auth key", color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.body, modifier = Modifier.weight(1f))
                     Text(
                         when {
                             strap.authKey == null -> "Not on the account"
                             showKey -> strap.authKey
                             else -> "•".repeat(8) + strap.authKey.takeLast(4)
                         },
-                        style = MaterialTheme.typography.bodyMedium, fontFamily = FontFamily.Monospace,
+                        color = Color.White, style = GlowType.body.copy(fontFamily = FontFamily.Monospace),
                     )
-                    if (strap.authKey != null) TextButton(onClick = { showKey = !showKey }) { Text(if (showKey) "Hide" else "Show") }
+                    if (strap.authKey != null) PageTextButton(if (showKey) "Hide" else "Show", { showKey = !showKey })
                 }
                 strap.serial?.let { Line("Serial", it) }
                 strap.firmwareVersion?.let { Line("Firmware", it) }
                 Line("Region", if (strap.china) "China" else "Global")
                 if (strap.authKey == null) {
-                    Text(
+                    PageNote(
                         "Zepp didn't return an auth key for this strap. Open the Zepp app and check the strap is still linked " +
                             "(unlink and link it again if needed), then sign in here again.",
-                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error,
+                        color = MetricColors.warn,
                     )
                 }
             }
             Line("Zepp user", listing.session.userId)
         }
         if (canConfirm && requireKey) {
-            Text(
-                "Keep the strap on its charger near the phone. Don't unlink it in the Zepp app: that wipes this key from the strap.",
-                style = MaterialTheme.typography.bodySmall,
-            )
+            PageNote("Keep the strap on its charger near the phone. Don't unlink it in the Zepp app: that wipes this key from the strap.")
         }
-        Text(
-            "The app token and user ID stay on this phone only, for firmware checks.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Button(onClick = { onConfirm(strap) }, Modifier.fillMaxWidth()) { Text(if (canConfirm) confirmLabel else "Keep sign-in only") }
-        OutlinedButton(onClick = onOtherAccount, Modifier.fillMaxWidth()) { Text("Use another account") }
+        PageNote("The app token and user ID stay on this phone only, for firmware checks.")
+        PageButton(if (canConfirm) confirmLabel else "Keep sign-in only", { onConfirm(strap) }, Modifier.fillMaxWidth(), primary = true)
+        PageButton("Use another account", onOtherAccount, Modifier.fillMaxWidth())
         if (!canConfirm && requireKey) ComputerGuideButton()
     }
 }
@@ -244,8 +253,8 @@ private fun FoundStrap(
 @Composable
 private fun Line(label: String, value: String) {
     Row(Modifier.fillMaxWidth()) {
-        Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
-        Text(value, style = MaterialTheme.typography.bodyMedium)
+        Text(label, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.body, modifier = Modifier.weight(1f))
+        Text(value, color = Color.White, style = GlowType.body)
     }
 }
 
@@ -256,20 +265,23 @@ fun ComputerGuideButton(modifier: Modifier = Modifier.fillMaxWidth()) {
     OptionButton("Can't sign in with email?", "Get the key on a computer", modifier) { uri.openUri(COMPUTER_KEY_GUIDE_URL) }
 }
 
-/** A secondary choice: an outlined, rounded row with a caption, a label and a chevron, so it reads as tappable. */
+/**
+ * A secondary choice: a tile on the Control surface (spec 2.4) with a [caption] in Secondary over the [label] in Body,
+ * and the tap caret at its end, so it reads as something that opens.
+ */
 @Composable
 fun OptionButton(caption: String, label: String, modifier: Modifier = Modifier.fillMaxWidth(), onClick: () -> Unit) {
-    OutlinedButton(
-        onClick = onClick,
-        modifier = modifier,
-        shape = org.openstrap.app.ui.glow.GlowLayout.TileShape,
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+    Row(
+        modifier.clip(GlowLayout.TileShape).background(ControlSurface).pressClickable(onClick, GlowLayout.TileShape)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
-            Text(caption, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurface)
+            Text(caption, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary)
+            Text(label, color = Color.White, style = GlowType.body)
         }
-        Icon(AppIcons.CaretRight, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(Modifier.width(RowCaretGap))
+        TapCaret(ROW_CARET_ALPHA)
     }
 }
 

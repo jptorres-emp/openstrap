@@ -1,7 +1,6 @@
 package org.openstrap.app.ui.glow
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,11 +16,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -55,9 +52,7 @@ import org.openstrap.app.ui.dashboard.TRY_AGAIN
 import org.openstrap.app.ui.dashboard.WAITING_LAST_NIGHT
 import org.openstrap.app.ui.dashboard.Metric
 import org.openstrap.app.ui.dashboard.Score
-import org.openstrap.app.ui.dashboard.TodayCard
 import org.openstrap.app.ui.dashboard.TodayCopy
-import org.openstrap.app.ui.dashboard.TodayEdits
 import org.openstrap.app.ui.theme.MetricColors
 import org.openstrap.app.ui.theme.AppIcons
 
@@ -597,41 +592,7 @@ internal fun EditTodayButton(onClick: () -> Unit, modifier: Modifier = Modifier)
         ) {
             Icon(AppIcons.SlidersHorizontal, null, tint = Color.White, modifier = Modifier.size(14.dp))
             Spacer(Modifier.width(8.dp))
-            Text("Edit Today", color = Color.White, style = MaterialTheme.typography.bodyMedium)
+            Text("Edit Today", color = Color.White, style = GlowType.body)
         }
     }
-}
-
-/** Which cards Today shows, and up to two pinned under the hero. Saved as a whole on Done. */
-@Composable
-internal fun EditTodayDialog(edits: TodayEdits, onSave: (TodayEdits) -> Unit, onDismiss: () -> Unit) {
-    var e by remember { mutableStateOf(edits) }
-    org.openstrap.app.ui.components.GlassAlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Edit Today") },
-        text = {
-            Column {
-                Text(
-                    "Pin up to two cards under the top card, or hide the ones you don't need.",
-                    color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.bodyMedium,
-                )
-                Spacer(Modifier.height(8.dp))
-                TodayCard.entries.filter { it.editable }.forEach { card ->
-                    val shown = card !in e.hidden
-                    Row(Modifier.fillMaxWidth().clickable { e = e.toggleHidden(card) }, verticalAlignment = Alignment.CenterVertically) {
-                        Checkbox(shown, { e = e.toggleHidden(card) })
-                        Text(card.label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                        if (card.pinnable) {
-                            val pinned = card in e.pinned
-                            TextButton(onClick = { e = e.togglePin(card) }, enabled = e.canPin(card)) {
-                                Text(if (pinned) "Pinned" else "Pin", color = if (pinned) Color.White else Color.White.copy(alpha = if (e.canPin(card)) 0.7f else 0.3f))
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        confirmButton = { TextButton(onClick = { onSave(e) }) { Text("Done") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
-    )
 }

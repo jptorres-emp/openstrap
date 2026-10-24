@@ -110,7 +110,7 @@ fun PhoneAlertsScreen(alerts: PhoneAlerts, settings: SettingsStore, contentPaddi
                 }
                 if (notifications && notificationAccess) {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Buzz pattern", style = GlowType.label.copy(fontWeight = null), color = Color.White)
+                        Text("Buzz pattern", style = GlowType.body, color = Color.White)
                         // Picking a pattern plays it once, so it can be felt before the next notification.
                         GlowSegments(BuzzPattern.entries.map { it.label }, pattern.ordinal, { i ->
                             val p = BuzzPattern.entries[i]

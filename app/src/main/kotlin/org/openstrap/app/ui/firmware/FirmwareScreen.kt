@@ -15,14 +15,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
@@ -42,11 +36,14 @@ import org.openstrap.app.data.settings.ZeppAccount
 import org.openstrap.app.device.ConnectionState
 import org.openstrap.app.firmware.UpdateCheck
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.style.TextOverflow
 import org.openstrap.app.ui.glow.DestructiveInk
 import org.openstrap.app.ui.glow.GlowLayout
 import org.openstrap.app.ui.glow.GlowType
 import org.openstrap.app.ui.glow.PageButton
+import org.openstrap.app.ui.glow.PageConfirm
+import org.openstrap.app.ui.glow.PageField
+import org.openstrap.app.ui.glow.PageProgress
 import org.openstrap.app.ui.glow.PageHeader
 import org.openstrap.app.ui.glow.PageNote
 import org.openstrap.app.ui.glow.PagePanel
@@ -237,16 +234,16 @@ private fun AccountPanel(
         var user by rememberSaveable { mutableStateOf(account?.userId.orEmpty()) }
         var api by rememberSaveable { mutableStateOf(account?.apiBase ?: ZeppAccount.DEFAULT_API_BASE) }
         var china by rememberSaveable { mutableStateOf(account?.china == true) }
-        OutlinedTextField(
-            token, { token = it }, label = { Text("App token") }, singleLine = true,
-            visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth(),
-            placeholder = { if (account != null) Text("Leave empty to keep the saved token") },
+        PageField(
+            token, { token = it }, "App token", Modifier.fillMaxWidth(),
+            placeholder = if (account != null) "Leave empty to keep the saved token" else null,
+            visualTransformation = PasswordVisualTransformation(),
         )
-        OutlinedTextField(
-            user, { user = it }, label = { Text("User ID") }, singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth(),
+        PageField(
+            user, { user = it }, "User ID", Modifier.fillMaxWidth(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         )
-        OutlinedTextField(api, { api = it }, label = { Text("Server") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        PageField(api, { api = it }, "Server", Modifier.fillMaxWidth())
         PageSwitchRow("Chinese-market strap", "Only if the strap was bought in mainland China", china, { china = it }, divider = false)
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             PageButton("Cancel", { editing = false }, Modifier.weight(1f))
@@ -261,57 +258,44 @@ private fun AccountPanel(
 @Composable
 private fun ConfirmInstall(image: ReadyImage, blockers: List<String>, onDismiss: () -> Unit, onInstall: () -> Unit) {
     var accepted by remember { mutableStateOf(image.warnings.isEmpty()) }
-    org.openstrap.app.ui.components.GlassAlertDialog(
-        onDismissRequest = onDismiss,
-        icon = { Icon(if (image.warnings.isEmpty()) AppIcons.ArrowCircleUp else AppIcons.Warning, null) },
-        title = { Text("Install ${image.title}?") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (blockers.isNotEmpty()) {
-                    blockers.forEach { Warning(it) }
-                } else {
-                    Text("The strap will receive the image, check it, install it and restart. Keep it near the phone and don't close OpenStrap until it's done.")
-                    image.warnings.forEach { Warning(it) }
-                    if (image.warnings.isNotEmpty()) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Checkbox(accepted, { accepted = it })
-                            Text("I understand and want to install it anyway", style = MaterialTheme.typography.bodyMedium)
-                        }
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onInstall, enabled = blockers.isEmpty() && accepted) { Text("Install") }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
-    )
+    PageConfirm(
+        "Install ${image.title}?",
+        if (blockers.isNotEmpty()) null
+        else "The strap will receive the image, check it, install it and restart. Keep it near the phone and don't close OpenStrap until it's done.",
+        confirm = "Install", onConfirm = onInstall, onDismiss = onDismiss, confirmEnabled = blockers.isEmpty() && accepted,
+    ) {
+        if (blockers.isNotEmpty()) {
+            blockers.forEach { Warning(it) }
+        } else {
+            image.warnings.forEach { Warning(it) }
+            if (image.warnings.isNotEmpty()) PageSwitchRow("I understand and want to install it anyway", null, accepted, { accepted = it }, divider = false)
+        }
+    }
 }
 
 @Composable
 private fun Busy(label: String, fraction: Float?) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        if (fraction == null) CircularProgressIndicator(Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
-        Text(label, style = GlowType.label, color = Color.White, modifier = Modifier.weight(1f))
-        fraction?.let { Text("${(it * 100).toInt()}%", style = GlowType.label, color = Color.White) }
+        Text(label, style = GlowType.body, color = Color.White, modifier = Modifier.weight(1f))
+        fraction?.let { Text("${(it * 100).toInt()}%", style = GlowType.body, color = Color.White) }
     }
-    if (fraction != null) LinearProgressIndicator(progress = { fraction }, modifier = Modifier.fillMaxWidth(), color = Color.White, trackColor = Color.White.copy(alpha = 0.1f))
+    PageProgress(fraction)
 }
 
 @Composable
-private fun Title(text: String) = Text(text, style = GlowType.label, color = Color.White)
+private fun Title(text: String) = Text(text, style = GlowType.cardTitle, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
 
 @Composable
-private fun Body(text: String) = Text(text, style = GlowType.secondary.copy(fontSize = 14.sp, lineHeight = 19.sp), color = Color.White.copy(alpha = 0.85f))
+private fun Body(text: String) = Text(text, style = GlowType.body, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA))
 
 /** One line of the privacy card: icon, short title, one sentence. */
 @Composable
 private fun Point(icon: ImageVector, title: String, body: String) {
     Row(verticalAlignment = Alignment.Top) {
-        Icon(icon, null, Modifier.padding(top = 2.dp).size(18.dp), tint = Color.White.copy(alpha = 0.6f))
+        Icon(icon, null, Modifier.padding(top = 2.dp).size(20.dp), tint = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA))
         Spacer(Modifier.width(12.dp))
         Column {
-            Text(title, style = GlowType.label.copy(fontWeight = null), color = Color.White)
+            Text(title, style = GlowType.body, color = Color.White)
             PageNote(body)
         }
     }
@@ -320,16 +304,16 @@ private fun Point(icon: ImageVector, title: String, body: String) {
 @Composable
 private fun InfoLine(label: String, value: String) {
     Row(Modifier.fillMaxWidth()) {
-        Text(label, style = GlowType.secondary.copy(fontSize = 14.sp), color = Color.White.copy(alpha = 0.6f), modifier = Modifier.weight(1f))
-        Text(value, style = GlowType.secondary.copy(fontSize = 14.sp), color = Color.White)
+        Text(label, style = GlowType.body, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), modifier = Modifier.weight(1f))
+        Text(value, style = GlowType.body, color = Color.White)
     }
 }
 
 @Composable
 private fun Warning(text: String) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Icon(AppIcons.Warning, null, tint = MetricColors.warn, modifier = Modifier.size(18.dp))
-        Text(text, style = MaterialTheme.typography.bodySmall)
+        Icon(AppIcons.Warning, null, tint = MetricColors.warn, modifier = Modifier.size(20.dp))
+        Text(text, style = GlowType.secondary, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA))
     }
 }
 

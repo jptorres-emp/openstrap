@@ -174,7 +174,7 @@ fun GlowTodayScreen(
 ) {
     val list = rememberLazyListState()
     var editing by rememberSaveable { mutableStateOf(false) }
-    if (editing) EditTodayDialog(edits, onSave = { onEditsChange(it); editing = false }, onDismiss = { editing = false })
+    if (editing) EditTodaySheet(edits, onSave = { onEditsChange(it); editing = false }, onDismiss = { editing = false })
     var partialInfo by rememberSaveable { mutableStateOf(false) }
 
     val zone = ZoneId.systemDefault()

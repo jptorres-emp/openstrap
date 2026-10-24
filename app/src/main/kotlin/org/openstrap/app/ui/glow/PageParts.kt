@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -35,7 +34,28 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextOverflow
+import org.openstrap.app.ui.components.GlassSheet
 import org.openstrap.app.ui.components.pressClickable
+import org.openstrap.app.ui.theme.MetricColors
 import org.openstrap.app.ui.theme.AppIcons
 
 /*
@@ -46,8 +66,8 @@ import org.openstrap.app.ui.theme.AppIcons
 
 private val PanelShape = GlowLayout.CardShape
 private val PanelSurface = Color(0xFF0F0F11)
-private val ButtonShape = RoundedCornerShape(20.dp)
-private val ButtonSurface = Color(0xFF121214)
+/** The Control surface (spec 2.2): buttons, chips, pills and text fields on a page. */
+internal val ControlSurface = Color(0xFF1F1F22)
 private val Hairline = Color.White.copy(alpha = 0.05f)
 
 /**
@@ -128,7 +148,7 @@ fun PagePanel(modifier: Modifier = Modifier, title: String? = null, note: String
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         if (title != null) Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(title, color = Color.White, style = GlowType.cardTitle, modifier = Modifier.weight(1f))
+            Text(title, color = Color.White, style = GlowType.cardTitle, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
             if (note != null) Text(note, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary)
         }
         content()
@@ -217,7 +237,10 @@ fun PageSwitchRow(title: String, subtitle: String?, checked: Boolean, onChange: 
     }
 }
 
-/** A plain button: dark with a hairline, or white when it's the page's main action ([primary]). */
+/**
+ * A page's button, fully round (spec 2.4): white with black text when it's the page's main action ([primary]),
+ * otherwise on the Control surface with white text. Body type, a 20 dp [icon] before the text when given.
+ */
 @Composable
 fun PageButton(
     text: String,
@@ -229,20 +252,182 @@ fun PageButton(
     icon: ImageVector? = null,
 ) {
     Row(
-        modifier.height(52.dp).clip(ButtonShape)
-            .background(if (primary) Color.White else ButtonSurface)
-            .let { if (primary) it else it.border(1.dp, Color.White.copy(alpha = 0.08f), ButtonShape) }
+        modifier.height(52.dp).clip(CircleShape)
+            .background(if (primary) Color.White else ControlSurface)
             .alpha(if (enabled) 1f else 0.4f)
-            .let { if (enabled) it.pressClickable(onClick, ButtonShape) else it }
-            .padding(horizontal = 16.dp),
+            .let { if (enabled) it.pressClickable(onClick, CircleShape) else it }
+            .semantics { role = Role.Button }
+            .padding(horizontal = 18.dp),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (icon != null) {
-            Icon(icon, null, Modifier.size(18.dp), tint = color)
+            Icon(icon, null, Modifier.size(20.dp), tint = color)
             Spacer(Modifier.width(8.dp))
         }
-        Text(text, color = color, style = GlowType.body, maxLines = 1)
+        Text(text, color = color, style = GlowType.body, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+/**
+ * A quiet action that is only its words, in Body at 72% (Delete under Save, Reset): no surface, so the page's buttons
+ * stay the loudest thing. At least 44 dp tall to tap.
+ */
+@Composable
+fun PageTextButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    color: Color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA),
+) {
+    Box(
+        modifier.heightIn(min = 44.dp).clip(CircleShape)
+            .alpha(if (enabled) 1f else 0.4f)
+            .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
+            .padding(horizontal = 16.dp),
+        contentAlignment = Alignment.Center,
+    ) { Text(text, color = color, style = GlowType.body, maxLines = 1) }
+}
+
+/**
+ * A text field in the tile style (spec 2.4): the Control surface with 16 dp corners, the [label] over it in
+ * Secondary, the text in Body, an optional [unit] after it. [error] draws an amber hairline round it.
+ */
+@Composable
+fun PageField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String?,
+    modifier: Modifier = Modifier,
+    unit: String? = null,
+    placeholder: String? = null,
+    error: Boolean = false,
+    enabled: Boolean = true,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    visualTransformation: VisualTransformation = VisualTransformation.None,
+    trailing: (@Composable () -> Unit)? = null,
+) {
+    Column(modifier.alpha(if (enabled) 1f else 0.45f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        if (label != null) Text(label, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary)
+        Row(
+            Modifier.fillMaxWidth().heightIn(min = 52.dp).clip(GlowLayout.TileShape).background(ControlSurface)
+                .let { if (error) it.border(1.dp, MetricColors.warn, GlowLayout.TileShape) else it }
+                .padding(start = 16.dp, end = if (trailing != null) 4.dp else 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(Modifier.weight(1f).padding(vertical = 14.dp)) {
+                if (value.isEmpty() && placeholder != null) {
+                    Text(placeholder, color = Color.White.copy(alpha = 0.3f), style = GlowType.body, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+                BasicTextField(
+                    value, onValueChange, Modifier.fillMaxWidth(), enabled = enabled,
+                    textStyle = GlowType.body.copy(color = Color.White), singleLine = true,
+                    keyboardOptions = keyboardOptions, visualTransformation = visualTransformation,
+                    cursorBrush = SolidColor(Color.White),
+                )
+            }
+            if (unit != null) {
+                Spacer(Modifier.width(8.dp))
+                Text(unit, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary, maxLines = 1)
+            }
+            if (trailing != null) {
+                Spacer(Modifier.width(4.dp))
+                trailing()
+            }
+        }
+    }
+}
+
+/**
+ * A thin progress bar: a 4 dp track at 10% white, filled white to [fraction]. With no [fraction] (how long isn't
+ * known), a third of the track slides across.
+ */
+@Composable
+fun PageProgress(fraction: Float? = null, modifier: Modifier = Modifier.fillMaxWidth()) {
+    val slide = if (fraction == null) {
+        rememberInfiniteTransition(label = "page progress")
+            .animateFloat(0f, 1f, infiniteRepeatable(tween(1200, easing = LinearEasing)), label = "page progress slide")
+    } else null
+    Canvas(modifier.height(4.dp).clip(CircleShape)) {
+        val r = CornerRadius(size.height / 2f)
+        drawRoundRect(Color.White.copy(alpha = 0.1f), cornerRadius = r)
+        if (fraction != null) {
+            drawRoundRect(Color.White, size = Size(size.width * fraction.coerceIn(0f, 1f), size.height), cornerRadius = r)
+        } else if (slide != null) {
+            val w = size.width / 3f
+            drawRoundRect(Color.White, topLeft = Offset(-w + (size.width + w) * slide.value, 0f), size = Size(w, size.height), cornerRadius = r)
+        }
+    }
+}
+
+/**
+ * A sheet over the page (spec 2.5, sheets): the glass sheet with its handle, the [title] as a card title, an
+ * optional [note] under it, then [content], 20 dp from the edges. It scrolls when taller than most of the screen.
+ */
+@Composable
+fun PageSheet(onDismiss: () -> Unit, title: String, note: String? = null, content: @Composable ColumnScope.() -> Unit) {
+    val maxHeight = (LocalConfiguration.current.screenHeightDp * 0.88f).dp
+    GlassSheet(onDismiss) {
+        Column(
+            Modifier.fillMaxWidth().heightIn(max = maxHeight).verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp).navigationBarsPadding().padding(top = 4.dp, bottom = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(title, color = Color.White, style = GlowType.cardTitle, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                if (note != null) Text(note, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary)
+            }
+            content()
+        }
+    }
+}
+
+/**
+ * A question before something that can't be taken back (Forget, Disconnect, Delete all): a [PageSheet] with the
+ * [text], any extra [content], then Cancel and the [confirm] button, the white one, side by side.
+ */
+@Composable
+fun PageConfirm(
+    title: String,
+    text: String?,
+    confirm: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+    dismiss: String = "Cancel",
+    confirmEnabled: Boolean = true,
+    content: (@Composable ColumnScope.() -> Unit)? = null,
+) {
+    PageSheet(onDismiss, title) {
+        if (text != null) Text(text, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.body)
+        content?.invoke(this)
+        Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            PageButton(dismiss, onDismiss, Modifier.weight(1f))
+            PageButton(confirm, onConfirm, Modifier.weight(1f), enabled = confirmEnabled, primary = true)
+        }
+    }
+}
+
+/**
+ * A chip (spec 2.4, fully round): a hairline and 72% text, or white with black text when [selected]. Secondary type,
+ * at least 36 dp tall.
+ */
+@Composable
+fun PageChip(text: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true, role: Role = Role.Checkbox) {
+    Box(
+        modifier.heightIn(min = 36.dp).clip(CircleShape)
+            .background(if (selected) Color.White else Color.Transparent)
+            .let { if (selected) it else it.border(1.dp, Color.White.copy(alpha = 0.16f), CircleShape) }
+            .alpha(if (enabled) 1f else 0.4f)
+            .clickable(enabled = enabled, role = role, onClick = onClick)
+            .semantics { this.selected = selected }
+            .padding(horizontal = 14.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text, color = if (selected) Color.Black else Color.White.copy(alpha = GlowType.SECONDARY_ALPHA),
+            style = GlowType.secondary, maxLines = 1,
+        )
     }
 }
 
@@ -252,22 +437,14 @@ fun PageNote(text: String, color: Color = Color.White.copy(alpha = 0.6f)) {
     Text(text, color = color, style = GlowType.secondary)
 }
 
-/** A short choice between a few values, as pills; the chosen one is soft white. */
+/** A short choice between a few values, as [PageChip]s; the chosen one is white. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun <T> ChoicePills(options: List<T>, selected: T?, label: (T) -> String, onPick: (T) -> Unit, enabled: Boolean = true, modifier: Modifier = Modifier) {
     FlowRow(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         options.forEach { v ->
             val on = v == selected
-            Box(
-                Modifier.clip(CircleShape)
-                    .background(if (on) Color.White.copy(alpha = 0.16f) else Color.White.copy(alpha = 0.05f))
-                    .border(1.dp, if (on) Color.White.copy(alpha = 0.35f) else Color.White.copy(alpha = 0.08f), CircleShape)
-                    .alpha(if (enabled) 1f else 0.4f)
-                    .clickable(enabled = enabled, role = Role.RadioButton) { if (!on) onPick(v) }
-                    .semantics { this.selected = on }
-                    .padding(horizontal = 14.dp, vertical = 8.dp),
-            ) { Text(label(v), color = Color.White, style = GlowType.secondary) }
+            PageChip(label(v), on, { if (!on) onPick(v) }, enabled = enabled, role = Role.RadioButton)
         }
     }
 }

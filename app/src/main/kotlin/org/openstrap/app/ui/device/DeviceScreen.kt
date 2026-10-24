@@ -9,14 +9,12 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import android.content.ClipboardManager
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -27,15 +25,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -47,12 +37,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import org.openstrap.app.device.ConnectionState
 import org.openstrap.app.device.SyncState
 import androidx.compose.foundation.layout.height
@@ -75,6 +66,12 @@ import org.openstrap.app.ui.glow.GlowSwitch
 import org.openstrap.app.ui.glow.GlowType
 import org.openstrap.app.ui.glow.LightAngle
 import org.openstrap.app.ui.glow.PageButton
+import org.openstrap.app.ui.glow.PageConfirm
+import org.openstrap.app.ui.glow.PageField
+import org.openstrap.app.ui.glow.PageNote
+import org.openstrap.app.ui.glow.PageProgress
+import org.openstrap.app.ui.glow.PageSheet
+import org.openstrap.app.ui.glow.PageTextButton
 import org.openstrap.app.ui.glow.PageHeader
 import org.openstrap.app.ui.glow.PagePanel
 import org.openstrap.app.ui.glow.PageRow
@@ -155,63 +152,30 @@ fun DeviceScreen(
     }
 
     if (confirmDisconnect) {
-        org.openstrap.app.ui.components.GlassAlertDialog(
-            onDismissRequest = { confirmDisconnect = false },
-            icon = { Icon(AppIcons.LinkBreak, null) },
-            title = { Text("Disconnect the strap?") },
-            text = {
-                Text(
-                    (if (sync is SyncState.Running) "The sync in progress will stop. " else "") +
-                        "The strap keeps recording on its own, but OpenStrap won't sync or show live heart rate " +
-                        "until you connect again.",
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = { confirmDisconnect = false; vm.strap.disconnect() },
-                    colors = ButtonDefaults.textButtonColors(contentColor = DestructiveInk),
-                ) { Text("Disconnect") }
-            },
-            dismissButton = { TextButton(onClick = { confirmDisconnect = false }) { Text("Cancel") } },
+        PageConfirm(
+            "Disconnect the strap?",
+            (if (sync is SyncState.Running) "The sync in progress will stop. " else "") +
+                "The strap keeps recording on its own, but OpenStrap won't sync or show live heart rate until you connect again.",
+            confirm = "Disconnect", onConfirm = { confirmDisconnect = false; vm.strap.disconnect() }, onDismiss = { confirmDisconnect = false },
         )
     }
 
     if (confirmRestart) {
-        org.openstrap.app.ui.components.GlassAlertDialog(
-            onDismissRequest = { confirmRestart = false },
-            icon = { Icon(AppIcons.Info, null) },
-            title = { Text("Restart the strap?") },
-            text = {
-                Text(
-                    (if (sync is SyncState.Running) "The sync in progress will stop. " else "") +
-                        "The strap restarts and disconnects. OpenStrap reconnects on its own once it's back, " +
-                        "which can take a minute.",
-                )
-            },
-            confirmButton = { TextButton(onClick = { confirmRestart = false; vm.restartStrap() }) { Text("Restart") } },
-            dismissButton = { TextButton(onClick = { confirmRestart = false }) { Text("Cancel") } },
+        PageConfirm(
+            "Restart the strap?",
+            (if (sync is SyncState.Running) "The sync in progress will stop. " else "") +
+                "The strap restarts and disconnects. OpenStrap reconnects on its own once it's back, which can take a minute.",
+            confirm = "Restart", onConfirm = { confirmRestart = false; vm.restartStrap() }, onDismiss = { confirmRestart = false },
         )
     }
 
     if (confirmForget) {
-        org.openstrap.app.ui.components.GlassAlertDialog(
-            onDismissRequest = { confirmForget = false },
-            icon = { Icon(AppIcons.LinkBreak, null) },
-            title = { Text("Forget this strap?") },
-            text = {
-                Text(
-                    "OpenStrap will disconnect and delete the strap's address and auth key from this phone. " +
-                        "Your synced health data stays. To pair again you'll need the auth key.\n\n" +
-                        "This doesn't unbind the strap from your Zepp account.",
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = { confirmForget = false; vm.forget() },
-                    colors = ButtonDefaults.textButtonColors(contentColor = DestructiveInk),
-                ) { Text("Forget") }
-            },
-            dismissButton = { TextButton(onClick = { confirmForget = false }) { Text("Cancel") } },
+        PageConfirm(
+            "Forget this strap?",
+            "OpenStrap will disconnect and delete the strap's address and auth key from this phone. " +
+                "Your synced health data stays. To pair again you'll need the auth key.\n\n" +
+                "This doesn't unbind the strap from your Zepp account.",
+            confirm = "Forget", onConfirm = { confirmForget = false; vm.forget() }, onDismiss = { confirmForget = false },
         )
     }
 
@@ -362,7 +326,7 @@ private fun StrapHero(name: String, connection: ConnectionState, sync: SyncState
     GlowCard(StrapGlow, Modifier.fillMaxWidth()) {
         Box(Modifier.fillMaxWidth()) {
             Column(Modifier.fillMaxWidth().padding(end = 112.dp)) {
-                Text(name, color = Color.White, style = GlowType.label)
+                Text(name, color = Color.White, style = GlowType.cardTitle, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(
                     strapStateLine(connection, sync, lastSeen, now), color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA),
                     style = GlowType.secondary, modifier = Modifier.padding(top = 4.dp),
@@ -374,12 +338,13 @@ private fun StrapHero(name: String, connection: ConnectionState, sync: SyncState
             )
         }
         Column(Modifier.fillMaxWidth().padding(top = 128.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            // The card's one dotted number (spec 2.3); the word after it sits on the digits' baseline in Body at 72%.
             if (battery != null) Row(verticalAlignment = Alignment.Bottom) {
                 DotMatrixText("$battery", dot = org.openstrap.app.ui.glow.DotSize.Hero)
-                Text("% battery", color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary, modifier = Modifier.padding(start = 8.dp))
+                Text("% battery", color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.body, modifier = Modifier.padding(start = 8.dp))
             }
             if (sync is SyncState.Running) {
-                LinearProgressIndicator(Modifier.fillMaxWidth().clip(CircleShape), color = Color.White, trackColor = Color.White.copy(alpha = 0.1f))
+                PageProgress()
                 Text(sync.step, style = GlowType.secondary, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA))
             }
             when {
@@ -404,10 +369,13 @@ private fun StrapHero(name: String, connection: ConnectionState, sync: SyncState
 }
 
 
-/** The strap's card: a quiet grey-green lit from above, so it doesn't read as any metric. */
-private val StrapGlow = GlowStyle(
+/**
+ * The strap's card: a quiet grey-green lit from above, so it doesn't read as any metric. The page's hero, so its light
+ * is L4 at full strength (spec 2.1).
+ */
+internal val StrapGlow = GlowStyle(
     color = Color(0xFF6AAF98), coreShape = CoreShape.Radial, coreWidth = 1.2f, coreHeight = 1.1f, coreBlur = 30.dp,
-    coreLightness = 0.03f, toneWidth = 0.dp, glowStrength = 0.55f, lightAngle = LightAngle.Above,
+    coreLightness = 0.03f, toneWidth = 0.dp, lightAngle = LightAngle.Above,
 )
 
 /** The protocol log, for bug reports, opened from the You page; the whole log can be copied. */
@@ -432,7 +400,7 @@ fun DiagnosticsScreen(lines: List<String>, contentPadding: PaddingValues, onBack
                 ) {
                     Text(
                         if (lines.isEmpty()) "No events yet." else lines.joinToString("\n"),
-                        fontFamily = FontFamily.Monospace, fontSize = 11.sp, lineHeight = 15.sp,
+                        style = GlowType.caption.copy(fontFamily = FontFamily.Monospace),
                         color = Color.White.copy(alpha = 0.7f), textAlign = TextAlign.Start,
                     )
                 }
@@ -484,7 +452,7 @@ private fun PairPanel(vm: DeviceViewModel, scan: ScanUiState, onRequestBluetooth
         }
     }
 
-    if (manual) ManualPairDialog(vm, scan, onRequestBluetooth, onDismiss = { vm.stopScan(); manual = false })
+    if (manual) ManualPairSheet(vm, scan, onRequestBluetooth, onDismiss = { vm.stopScan(); manual = false })
 }
 
 @Composable
@@ -497,7 +465,7 @@ private fun PairStep(number: Int, title: String, content: @Composable () -> Unit
             Text("$number", style = GlowType.secondary, color = Color.White)
         }
         Column(Modifier.weight(1f).padding(top = 3.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(title, style = GlowType.label, color = Color.White)
+            Text(title, style = GlowType.body, color = Color.White)
             content()
         }
     }
@@ -505,16 +473,12 @@ private fun PairStep(number: Int, title: String, content: @Composable () -> Unit
 
 @Composable
 private fun StepText(text: String, muted: Boolean = false) {
-    Text(
-        text,
-        style = GlowType.secondary.copy(fontSize = if (muted) 12.5.sp else 14.sp, lineHeight = if (muted) 17.sp else 19.sp),
-        color = Color.White.copy(alpha = if (muted) 0.6f else 0.85f),
-    )
+    Text(text, style = GlowType.secondary, color = Color.White.copy(alpha = if (muted) 0.6f else GlowType.SECONDARY_ALPHA))
 }
 
 /** For keys read on a computer or from an earlier pairing: scan for the address, paste the key, pair. */
 @Composable
-private fun ManualPairDialog(
+private fun ManualPairSheet(
     vm: DeviceViewModel,
     scan: ScanUiState,
     onRequestBluetooth: (then: () -> Unit) -> Unit,
@@ -525,74 +489,51 @@ private fun ManualPairDialog(
     var key by rememberSaveable { mutableStateOf("") }
     var showKey by rememberSaveable { mutableStateOf(false) }
 
-    org.openstrap.app.ui.components.GlassAlertDialog(
-        onDismissRequest = onDismiss,
-        icon = { Icon(AppIcons.Key, null) },
-        title = { Text("Enter the key yourself") },
-        text = {
-            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("Scan with the strap on its charger and tap it to fill in the address, then paste the 32-character auth key. The dBm beside each strap is its signal, and nearer zero is closer.")
-                if (scan.scanning) {
-                    OutlinedButton(onClick = vm::stopScan, Modifier.fillMaxWidth()) { Text("Stop scanning") }
-                    LinearProgressIndicator(Modifier.fillMaxWidth().clip(CircleShape))
-                } else {
-                    OutlinedButton(onClick = { onRequestBluetooth { vm.startScan() } }, Modifier.fillMaxWidth()) { Text("Scan for straps") }
-                }
-                scan.error?.let {
-                    Text("Scanning stopped: $it. Check that Bluetooth is on and try again.", color = MaterialTheme.colorScheme.error)
-                }
-                if (scan.scanning && scan.found.isEmpty()) {
-                    Text("Looking for straps nearby… Keep the strap on its charger.", style = MaterialTheme.typography.bodySmall)
-                }
-                scan.found.forEach { d ->
-                    val selected = d.address == address
-                    Row(
-                        Modifier
-                            .fillMaxWidth()
-                            .clip(GlowLayout.TileShape)
-                            .background(if (selected) MaterialTheme.colorScheme.surfaceContainerHighest else MaterialTheme.colorScheme.surfaceContainerHigh)
-                            .clickable { address = d.address; name = d.name }
-                            .padding(14.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Icon(AppIcons.Watch, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Spacer(Modifier.width(12.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text(d.name, style = MaterialTheme.typography.titleSmall)
-                            Text(d.address, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                        if (selected) Icon(AppIcons.CheckCircle, "Selected", tint = MaterialTheme.colorScheme.primary)
-                        else Text("${d.rssi} dBm", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                }
-                OutlinedTextField(
-                    value = address, onValueChange = { address = it.uppercase() },
-                    label = { Text("Bluetooth address") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
-                    shape = GlowLayout.TileShape,
-                )
-                OutlinedTextField(
-                    value = key, onValueChange = { key = it },
-                    label = { Text("Auth key") }, singleLine = true,
-                    trailingIcon = { TextButton(onClick = { showKey = !showKey }) { Text(if (showKey) "Hide" else "Show") } },
-                    visualTransformation = if (showKey) VisualTransformation.None else PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = GlowLayout.TileShape,
+    PageSheet(
+        onDismiss, "Enter the key yourself",
+        note = "Scan with the strap on its charger and tap it to fill in the address, then paste the 32-character auth key. " +
+            "The dBm beside each strap is its signal, and nearer zero is closer.",
+    ) {
+        if (scan.scanning) {
+            PageButton("Stop scanning", vm::stopScan, Modifier.fillMaxWidth())
+            PageProgress()
+        } else {
+            PageButton("Scan for straps", { onRequestBluetooth { vm.startScan() } }, Modifier.fillMaxWidth(), icon = AppIcons.Bluetooth)
+        }
+        scan.error?.let { PageNote("Scanning stopped: $it. Check that Bluetooth is on and try again.", color = MetricColors.warn) }
+        if (scan.scanning && scan.found.isEmpty()) PageNote("Looking for straps nearby. Keep the strap on its charger.")
+        if (scan.found.isNotEmpty()) PageRows {
+            scan.found.forEachIndexed { i, d ->
+                val selected = d.address == address
+                PageRow(
+                    d.name, if (selected) "Chosen" else "${d.rssi} dBm", onClick = { address = d.address; name = d.name },
+                    divider = i > 0, icon = AppIcons.Watch,
                 )
             }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
+        }
+        PageField(
+            address, { address = it.uppercase() }, "Bluetooth address", placeholder = "C8:0F:10:00:00:00",
+            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters),
+        )
+        PageField(
+            key, { key = it }, "Auth key",
+            visualTransformation = if (showKey) VisualTransformation.None else PasswordVisualTransformation(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+            trailing = { PageTextButton(if (showKey) "Hide" else "Show", { showKey = !showKey }) },
+        )
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            PageButton("Cancel", onDismiss, Modifier.weight(1f))
+            PageButton(
+                "Pair",
+                {
                     // A bad key or address only shows a message; a valid one saves the strap and the screen moves to its status.
                     if (DeviceViewModel.normalizeAuthKey(key) != null && DeviceViewModel.isAddress(address)) onDismiss()
                     onRequestBluetooth { vm.pair(address, name, key) }
                 },
-                enabled = address.isNotBlank() && key.isNotBlank(),
-            ) { Text("Pair") }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
-    )
+                Modifier.weight(1f), enabled = address.isNotBlank() && key.isNotBlank(), primary = true,
+            )
+        }
+    }
 }
 
 /** Shown under the status when the strap turned the key down: retrying can't help, so offer to start pairing over. */

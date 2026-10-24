@@ -208,12 +208,10 @@ class DesignTokenTest {
             // The floating tab bar and its selected capsule: a pill, redone with the tab bar (step 10).
             "components/Insights.kt" to 118, "components/Insights.kt" to 122, "components/Insights.kt" to 133,
             "components/Insights.kt" to 134, "components/Insights.kt" to 140,
-            // The page buttons: fully round in step 8 (spec 2.4, pills and buttons).
-            "glow/PageParts.kt" to 49,
         )
 
-        /** Pages whose panel titles move to the page parts in step 8, so the one-line rule waits for them. */
-        val titleNotMigrated = setOf("glow/PageParts.kt", "glow/GlowQuiet.kt")
+        /** Files whose card titles may still wrap, until their step makes them one line. Empty since step 8. */
+        val titleNotMigrated = emptySet<String>()
 
         /** Where type sizes are defined. */
         val typeHomes = setOf("glow/GlowType.kt", "theme/Theme.kt")
@@ -225,8 +223,6 @@ class DesignTokenTest {
         val typeNotMigrated = mapOf(
             "components/Charts.kt" to 2,
             "dashboard/SleepPanels.kt" to 1,
-            "device/DeviceScreen.kt" to 2,
-            "firmware/FirmwareScreen.kt" to 3,
             "glow/AllMetricsScreen.kt" to 1,
             "glow/GlowActivityScreen.kt" to 2,
             "glow/GlowCharts.kt" to 5,

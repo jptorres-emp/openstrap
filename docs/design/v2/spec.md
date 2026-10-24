@@ -1,12 +1,12 @@
 # Design v2: spec
 
-Step 5 of the [brief](brief.md). This is what step 6 builds. It turns the approved [pattern board](patterns.md),
-[critique](critique.md) and [mockups](mockups/) into rules and components that a Compose implementation can follow
-without guessing. Where this spec and an older doc disagree, this spec wins. Section 2 is the design system, shown
-with live examples on the [design system page](design-system.html).
+Step 5 of the [brief](brief.md). This is what step 6 builds: rules and components that a Compose implementation can
+follow without guessing. Where this spec and an older doc disagree, this spec wins. Section 2 is the design system,
+shown with live examples on the [design system page](design-system.html). The [audit](audit.md) checks the build
+against it.
 
-Mockups: the canvas "OpenStrap v2 mockups" (claude.ai artifact, private) and its source in [mockups/](mockups/).
-Numbers in the mockups are made up but consistent across the day.
+The pattern board, critique, inventory, research, step 10 review and the screen mockups that led here were removed on
+2026-10-24 once this spec and the design system page replaced them. They are in git history before that date.
 
 Non-goals, unchanged from the brief: no new features, no changes to how any score is calculated, no strap protocol
 changes, existing deep links keep working.
@@ -28,10 +28,10 @@ changes, existing deep links keep working.
 
 ## 2. Foundation: the design system
 
-Rewritten 2026-10-24 after a pass on the phone found the build, the mockups and this section disagreeing. The
+Rewritten 2026-10-24 after a pass on the phone found the build, the old mockups and this section disagreeing. The
 [design system page](design-system.html) ([published copy](https://claude.ai/artifact/Q4FAqeaosZHGKA3DvGzGV3)) shows
-every rule here with live examples. The page and this section say the same thing. Where an older mockup
-(`GlowSystem.dc.html`, `ChartKit.dc.html`) or the code disagrees with them, they win. 2.9 lists what changed.
+every rule here with live examples. The page and this section say the same thing. Where the code disagrees with them,
+they win. 2.9 lists what changed.
 
 ### 2.1 Light levels
 
@@ -336,7 +336,7 @@ dashed. `PathEffect.dashPathEffect` goes from the UI.
 | Pairing, strap to phone | A solid hairline | 1 dp |
 | Card and panel borders | Solid hairline, white at 8% (lists 6%) | 1 dp |
 
-Every chart kind in the app ([chart kit](mockups/ChartKit.dc.html), drawn with the rules above):
+Every chart kind in the app, drawn with the rules above:
 
 | Kind | Tier | Where | Touch |
 |---|---|---|---|
@@ -449,7 +449,7 @@ Back or a swipe down closes it. The tab bar under it does nothing while it's ope
 ### 3.3 Navigation rules
 
 - A card opens its own detail, grown out of the card (3.5). **No card ever switches tab.** `FocusTarget` and the tab
-  jumps in `MainActivity` (inventory 1.5) are removed.
+  jumps in `MainActivity` are removed.
 - Tapping the current tab scrolls to top. Tapping it again pops to its root. Tapping another tab keeps every stack.
 - Back from a tab root goes to the previous tab, then Today, then leaves.
 - The You page, the Strap page and the All metrics sheet open over the current tab and close back to it. Pages
@@ -825,8 +825,7 @@ From the brief, enforced in code review and by a test (8.2):
 | From your strap | Strap alerts, alert |
 | Save a copy, Restore from a copy | Export CSV, Import CSV |
 
-The full list of 223 strings to rewrite is in [inventory 5](inventory.md#5-copy-audit), with examples in
-[critique 9](critique.md#9-copy-worst-first).
+The copy pass of step 9 rewrote the 223 strings the inventory listed.
 
 ---
 

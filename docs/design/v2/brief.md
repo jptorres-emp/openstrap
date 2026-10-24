@@ -1,6 +1,6 @@
 # Design v2: brief
 
-Status: agreed 2026-10-23. Branch `design-v2`. Approved steps: pattern board, critique, mockups. The build follows [spec.md](spec.md). Follows [information-architecture.md](../information-architecture.md),
+Status: agreed 2026-10-23. Branch `design-v2`. Approved steps: pattern board, critique, mockups, then the design system (2026-10-24). The build follows [spec.md](spec.md), and the step documents it replaced are in git history. Follows [information-architecture.md](../information-architecture.md),
 which set the five tabs and the glow design language (v1).
 
 ## Goal

@@ -88,7 +88,7 @@ private fun Caption(text: String, modifier: Modifier = Modifier) =
 @Composable
 private fun ChartTitle(title: String, note: String?, modifier: Modifier = Modifier) {
     Row(modifier.fillMaxWidth().padding(top = 18.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(title, color = Color.White, style = GlowType.label, modifier = Modifier.weight(1f))
+        Text(title, color = Color.White, style = GlowType.cardTitle, maxLines = 1, modifier = Modifier.weight(1f))
         if (note != null) Text(note, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary)
     }
 }
@@ -155,7 +155,7 @@ internal fun SleepScoreDetail(
                     Column(Modifier.padding(top = 8.dp)) {
                         if (state.sleepStages.isNotEmpty()) GlowSleepStages(state.sleepStages, 150.dp)
                         state.sleepBreakdown?.let { StageBars(it, Modifier.padding(top = 18.dp)) }
-                        FigureRow(
+                        DetailFigures(
                             listOf(clock(session.start) to SleepCopy.FELL_ASLEEP, clock(session.end) to SleepCopy.WOKE, clockDuration(asleep) to SleepCopy.ASLEEP),
                             Modifier.padding(top = 20.dp),
                         )
@@ -331,7 +331,7 @@ internal fun RegularityDetail(
                     else SleepCopy.regularityNight(minutesOf(night.start, zone), minutesOf(night.end, zone), u?.bedtime, isToday),
                     Modifier.padding(top = 14.dp),
                 )
-                if (u != null) FigureRow(
+                if (u != null) DetailFigures(
                     listOf(
                         minutesClock(u.bedtime) to "Usually asleep by",
                         minutesClock(u.wake) to "Usually up at",
@@ -401,7 +401,7 @@ internal fun NapsDetail(
                                     org.openstrap.app.data.db.SleepStage.DEEP, org.openstrap.app.data.db.SleepStage.REM,
                                     org.openstrap.app.data.db.SleepStage.LIGHT, org.openstrap.app.data.db.SleepStage.AWAKE,
                                 ).mapNotNull { st -> b.byStage[st]?.takeIf { it > 0 }?.let { clockDuration(it) to SLEEP_NAMES[st].orEmpty() } }
-                                if (figures.isNotEmpty()) FigureRow(figures, Modifier.padding(top = 14.dp))
+                                if (figures.isNotEmpty()) DetailFigures(figures, Modifier.padding(top = 14.dp))
                             }
                         }
                         // The strap sends no average for a nap, so its heart rate is the day's readings in its window.

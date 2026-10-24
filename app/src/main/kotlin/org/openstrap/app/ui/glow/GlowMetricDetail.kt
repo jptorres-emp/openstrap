@@ -19,10 +19,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -48,10 +48,8 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import org.openstrap.app.data.DayStat
 import org.openstrap.app.data.History
 import org.openstrap.app.ui.components.ChartPoint
@@ -85,17 +83,9 @@ import java.util.Locale
 
 /* ------------------------------------------- Shared pieces ------------------------------------------ */
 
-/** Back arrow, the screen's page title, and the day or subtitle it shows. */
+/** The one page header ([PageHeader], spec 3.4): the round back button, the page title, and the day or note under it. */
 @Composable
-internal fun GlowDetailHeader(title: String, subtitle: String?, onBack: () -> Unit) {
-    Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-        IconButton(onClick = onBack) { Icon(AppIcons.ArrowLeft, "Back", tint = Color.White) }
-        Column(Modifier.weight(1f)) {
-            Text(title, color = Color.White, style = GlowType.pageTitle)
-            if (subtitle != null) Text(subtitle, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary)
-        }
-    }
-}
+internal fun GlowDetailHeader(title: String, subtitle: String?, onBack: () -> Unit) = PageHeader(title, onBack, subtitle = subtitle)
 
 internal fun dayName(date: LocalDate): String = when (date) {
     LocalDate.now() -> "Today"
@@ -194,14 +184,14 @@ internal fun DetailTemplate(
                                 heroValue != null -> heroValue()
                                 // No number: the state in words, large in the value's place, as a Small does.
                                 headline.value == null -> Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                    Text(headline.word ?: "No reading", color = Color.White, style = GlowType.label.copy(fontSize = 30.sp, lineHeight = 36.sp))
-                                    Text(headline.label, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary.copy(fontSize = 13.sp))
+                                    Text(headline.word ?: "No reading", color = Color.White, style = GlowType.pageTitle)
+                                    Text(headline.label, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary)
                                 }
                                 else -> Row(verticalAlignment = Alignment.Bottom) {
                                     DotMatrixText(headline.value, Modifier.detailNumber(headline.value), dot = DotSize.Detail)
                                     Text(
                                         headline.label, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA),
-                                        style = GlowType.secondary.copy(fontSize = 13.sp), modifier = Modifier.padding(start = 10.dp, bottom = 2.dp),
+                                        style = GlowType.secondary, modifier = Modifier.padding(start = 10.dp, bottom = 2.dp),
                                     )
                                 }
                             }
@@ -210,7 +200,7 @@ internal fun DetailTemplate(
                     }
                     if (heroValue != null) Text(
                         headline.label, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA),
-                        style = GlowType.secondary.copy(fontSize = 13.sp), modifier = Modifier.padding(top = 8.dp),
+                        style = GlowType.secondary, modifier = Modifier.padding(top = 8.dp),
                     )
                     if (headline.word != null && headline.value != null) StatusWord(headline.word, color, Modifier.padding(top = 12.dp))
                     if (strip.isNotEmpty()) WeekStrip(strip, color, onDay, Modifier.padding(top = 20.dp))
@@ -253,26 +243,38 @@ private fun DetailHero(color: Color, gutter: Dp, content: @Composable () -> Unit
     ) { content() }
 }
 
-/** Back, the switcher in the middle (a plain title when there's nothing to switch to), and the (i). */
+/**
+ * The detail's page header ([PageHeader], spec 3.4 and 6.1): back, the title, which opens the switcher when there's
+ * something to switch to, and the (i).
+ */
 @Composable
 private fun DetailNav(title: String, switchable: Boolean, onBack: () -> Unit, onInfo: () -> Unit, onSwitch: () -> Unit) {
-    Row(Modifier.fillMaxWidth().height(52.dp), verticalAlignment = Alignment.CenterVertically) {
-        RoundButton(AppIcons.ArrowLeft, "Back", onBack)
-        Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
-            Row(
-                Modifier.clip(RoundedCornerShape(50)).background(Color.White.copy(alpha = 0.10f))
-                    .let { if (switchable) it.clickable(onClickLabel = "Switch metric", role = Role.Button, onClick = onSwitch) else it }
-                    .padding(horizontal = 16.dp, vertical = 9.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(title, color = Color.White, style = GlowType.label.copy(fontSize = 16.sp), maxLines = 1)
-                if (switchable) {
-                    Spacer(Modifier.width(6.dp))
-                    Icon(AppIcons.CaretDown, null, tint = Color.White, modifier = Modifier.size(14.dp))
-                }
-            }
-        }
-        RoundButton(AppIcons.Info, "About $title", onInfo)
+    PageHeader(title, onBack, onTitle = if (switchable) onSwitch else null) { InfoButton("About $title", onInfo) }
+}
+
+/** The (i) of a card or a detail header (spec 2.5): 32 dp round at 10% white, a 16 dp icon at 72%. */
+@Composable
+internal fun InfoButton(label: String, onClick: () -> Unit) {
+    Box(
+        Modifier.size(32.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.10f)).clickable(onClickLabel = label, role = Role.Button, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) { Icon(AppIcons.Info, label, Modifier.size(16.dp), tint = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA)) }
+}
+
+/**
+ * Heart rate's Live control in its detail header: a chip on the Control surface (spec 2.2, 2.4), white with black
+ * text while live, so it reads as the design system's own control and not a coloured switch.
+ */
+@Composable
+internal fun LiveChip(on: Boolean, onChange: (Boolean) -> Unit) {
+    val shape = RoundedCornerShape(50)
+    Box(
+        Modifier.height(36.dp).clip(shape).background(if (on) Color.White else ControlSurface)
+            .toggleable(on, role = Role.Switch, onValueChange = onChange)
+            .padding(horizontal = 16.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text("Live", color = if (on) Color.Black else Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.body, maxLines = 1)
     }
 }
 
@@ -290,7 +292,7 @@ internal fun RoundButton(icon: androidx.compose.ui.graphics.vector.ImageVector, 
 private fun StatusWord(word: String, color: Color, modifier: Modifier = Modifier) {
     Text(
         word, modifier = modifier, color = lerp(color, Color.White, 0.25f),
-        style = GlowType.label.copy(fontSize = 20.sp, lineHeight = 26.sp, shadow = Shadow(color.copy(alpha = 0.8f), blurRadius = 16f)),
+        style = GlowType.cardTitle.copy(shadow = Shadow(color.copy(alpha = 0.8f), blurRadius = 16f)), maxLines = 1,
     )
 }
 
@@ -307,7 +309,7 @@ private fun WeekStrip(days: List<DetailCopy.StripDay>, color: Color, onDay: (Loc
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                Text(d.label, color = if (d.selected) Color.White else Color.White.copy(alpha = 0.5f), style = GlowType.secondary.copy(fontSize = 13.sp), maxLines = 1)
+                Text(d.label, color = if (d.selected) Color.White else Color.White.copy(alpha = 0.5f), style = GlowType.secondary, maxLines = 1)
                 Box(Modifier.size(5.dp).background(if (d.hasData) color else Color.Transparent, CircleShape))
             }
         }
@@ -327,7 +329,7 @@ private fun RangePills(ranges: List<Range>, range: Range, onRange: (Range) -> Un
                 Modifier.weight(1f).clip(shape).background(if (on) Color.White.copy(alpha = 0.12f) else Color.Transparent)
                     .clickable(role = Role.Tab) { onRange(r) }.padding(vertical = 8.dp),
                 contentAlignment = Alignment.Center,
-            ) { Text(r.label, color = if (on) Color.White else Color.White.copy(alpha = 0.55f), style = GlowType.label.copy(fontSize = 14.sp, fontWeight = null)) }
+            ) { Text(r.label, color = if (on) Color.White else Color.White.copy(alpha = 0.55f), style = GlowType.body) }
         }
     }
 }
@@ -352,13 +354,37 @@ private fun SwitcherSheet(siblings: List<DetailSibling>, color: Color, onDismiss
 /** The one time-aware sentence under the chart. */
 @Composable
 internal fun DetailSentence(text: String) {
-    Text(text, color = Color.White, style = GlowType.label.copy(fontSize = 19.sp, lineHeight = 25.sp, fontWeight = FontWeight.Normal), modifier = Modifier.padding(top = 4.dp))
+    Text(text, color = Color.White, style = GlowType.sentence, modifier = Modifier.padding(top = 4.dp))
+}
+
+/**
+ * A detail's second figures side by side, each in an equal share of the width: the value as text in Body, its name
+ * under it in Secondary. Text, not dots, since the header's number is the detail's one dotted number (spec 2.3). A
+ * figure without a value shows "No reading" in its place.
+ */
+@Composable
+internal fun DetailFigures(figures: List<Pair<String?, String>>, modifier: Modifier = Modifier) {
+    Row(modifier.fillMaxWidth()) {
+        figures.forEachIndexed { i, (value, label) ->
+            val end = i == figures.lastIndex && i > 0
+            Column(
+                Modifier.weight(1f), horizontalAlignment = if (end) Alignment.End else Alignment.Start,
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(
+                    value ?: "No reading", color = if (value != null) Color.White else Color.White.copy(alpha = 0.3f),
+                    style = GlowType.body.copy(fontFeatureSettings = "tnum"), maxLines = 1,
+                )
+                Text(label, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary, maxLines = 1)
+            }
+        }
+    }
 }
 
 /** What a chart says while there's nothing to draw. */
 @Composable
 internal fun DetailEmpty(text: String) {
-    Text(text, color = Color.White.copy(alpha = 0.6f), style = GlowType.secondary.copy(fontSize = 14.sp), modifier = Modifier.padding(vertical = 24.dp))
+    Text(text, color = Color.White.copy(alpha = 0.6f), style = GlowType.secondary, modifier = Modifier.padding(vertical = 24.dp))
 }
 
 /* ------------------------------------------- Metric detail ------------------------------------------ */
@@ -458,11 +484,7 @@ fun GlowMetricDetailScreen(
         ranges = Range.entries, range = range, onRange = { rangeIndex = it.ordinal },
         heroSide = if (!night && metric == Metric.HeartRate && isToday && canUseLive && range == Range.Day) {
             {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Live", color = Color.White.copy(alpha = 0.85f), style = GlowType.secondary)
-                    Spacer(Modifier.width(8.dp))
-                    GlowSwitch(liveEnabled, onLiveToggle, accent = color)
-                }
+                LiveChip(liveEnabled, onLiveToggle)
             }
         } else null,
     ) {

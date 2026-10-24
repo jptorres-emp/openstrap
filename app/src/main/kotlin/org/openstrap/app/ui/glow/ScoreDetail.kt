@@ -270,7 +270,7 @@ private fun ChargeDetail(
                     c.highest?.let(::chargeShown)?.toString() to "Highest",
                     c.lowest?.let(::chargeShown)?.toString() to "Lowest",
                 ).filter { it.first != null }
-                if (figures.isNotEmpty()) FigureRow(figures, Modifier.padding(top = 18.dp))
+                if (figures.isNotEmpty()) DetailFigures(figures, Modifier.padding(top = 18.dp))
             }
         }
         if (now != null) item {

@@ -343,7 +343,7 @@ private fun LoadDetail(ctx: ActivityDetailContext) {
         if (r != null && range == Range.Day) {
             item {
                 Column(Modifier.padding(top = 8.dp)) {
-                    FigureRow(
+                    DetailFigures(
                         listOf(
                             Math.round(r.workoutLoad).toString() to "From workouts",
                             Math.round(r.everydayLoad).toString() to "Moving about",
@@ -524,7 +524,7 @@ private fun EnergyDetail(ctx: ActivityDetailContext) {
                         e.pal?.let { "%.2f".format(it) } to "Activity level",
                         clockDuration(e.minutesWithData * 60L).takeIf { !e.partial } to "Hours worn",
                     ).filter { it.first != null }
-                    if (figures.isNotEmpty()) FigureRow(figures)
+                    if (figures.isNotEmpty()) DetailFigures(figures)
                     DetailSentence(ActivityCopy.energy(Math.round(e.bmrKcal)))
                     InfoCopy.energyNotes(e).firstOrNull()?.let { note ->
                         androidx.compose.foundation.layout.Box(Modifier.clickable { info = true }) { CaveatLine(note, color) }
@@ -652,7 +652,7 @@ internal fun WeekDetail(ctx: ActivityDetailContext) {
             )
         }
         item {
-            FigureRow(
+            DetailFigures(
                 listOf(
                     totals.activeMinutes?.toString() to "Active minutes",
                     totals.workouts.toString() to "Workouts",

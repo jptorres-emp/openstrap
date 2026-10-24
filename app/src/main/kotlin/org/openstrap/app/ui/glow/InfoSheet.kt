@@ -35,7 +35,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import org.openstrap.app.ui.dashboard.Info
 import org.openstrap.app.ui.theme.AppIcons
 
@@ -62,10 +61,10 @@ fun InfoSheet(
             Modifier.heightIn(max = maxHeight).verticalScroll(rememberScrollState())
                 .padding(horizontal = 22.dp).navigationBarsPadding().padding(bottom = 20.dp),
         ) {
-            Text(info.name, color = Color.White.copy(alpha = 0.5f), style = GlowType.secondary.copy(fontSize = 13.sp))
+            Text(info.name, color = Color.White.copy(alpha = 0.5f), style = GlowType.secondary)
             Text(
                 info.meaning, color = Color.White, modifier = Modifier.padding(top = 6.dp),
-                style = GlowType.label.copy(fontSize = 22.sp, lineHeight = 28.sp, fontWeight = FontWeight.Medium),
+                style = GlowType.sentence,
             )
             // Some numbers have no scale to place them on (naps, breathing disturbances, whose only words are apnea bands).
             if (info.scale.isNotEmpty()) Scale(info.scale, color, here, Modifier.padding(top = 22.dp))
@@ -121,12 +120,12 @@ private fun Fold(title: String, text: String, divider: Boolean = true) {
             Modifier.fillMaxWidth().clickable(onClickLabel = if (open) "Fold" else "Open") { open = !open }.padding(vertical = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(title, color = Color.White, style = GlowType.label.copy(fontSize = 15.5.sp, fontWeight = null), modifier = Modifier.weight(1f))
+            Text(title, color = Color.White, style = GlowType.body, modifier = Modifier.weight(1f))
             Spacer(Modifier.size(12.dp))
             Icon(AppIcons.CaretDown, null, tint = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(16.dp).rotate(turn))
         }
         AnimatedVisibility(open) {
-            Text(text, color = Color.White.copy(alpha = 0.8f), style = GlowType.secondary.copy(fontSize = 14.sp, lineHeight = 20.sp), modifier = Modifier.padding(bottom = 16.dp))
+            Text(text, color = Color.White.copy(alpha = 0.8f), style = GlowType.secondary, modifier = Modifier.padding(bottom = 16.dp))
         }
     }
 }

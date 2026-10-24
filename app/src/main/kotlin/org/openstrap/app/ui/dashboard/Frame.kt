@@ -215,3 +215,10 @@ data class TabNav(val current: Int = HOME, val previous: Int? = null, val resele
         )
     }
 }
+
+/**
+ * A row on the You or Strap page opening its [page] on a wide screen (spec 2.4 Unfolded): beside the list, in place of
+ * whatever was open there, so the stack is the list's root and that page. Deeper pages opened from the pane stack on
+ * it as on a phone.
+ */
+fun <P> openBeside(pages: List<P>, page: P): List<P> = pages.take(1) + page

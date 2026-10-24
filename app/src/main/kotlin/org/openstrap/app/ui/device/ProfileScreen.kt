@@ -4,12 +4,14 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.isImeVisible
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.ime
+import androidx.compose.ui.platform.LocalDensity
+import org.openstrap.app.ui.glow.LocalPageColumn
 import org.openstrap.app.ui.dashboard.ScreenList
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -47,7 +49,6 @@ import org.openstrap.app.ui.glow.ControlSurface
 import org.openstrap.app.ui.glow.PageButton
 import org.openstrap.app.ui.glow.PageConfirm
 import org.openstrap.app.ui.glow.PageField
-import androidx.compose.foundation.layout.widthIn
 import org.openstrap.app.ui.glow.PageHeader
 import org.openstrap.app.ui.glow.PageNote
 import org.openstrap.app.ui.glow.PagePanel
@@ -70,7 +71,6 @@ fun UserProfile.summary(): String =
  * sex picks the training-load curve. Kept on this phone only. A full page over the You list (or beside it, when
  * wide); back leaves without saving, asking first if anything was changed.
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ProfileScreen(profile: UserProfile, contentPadding: PaddingValues, onSave: (UserProfile) -> Unit, onBack: () -> Unit) {
     var age by rememberSaveable { mutableStateOf(profile.age()?.toString().orEmpty()) }
@@ -151,9 +151,13 @@ fun ProfileScreen(profile: UserProfile, contentPadding: PaddingValues, onSave: (
 
     // The keyboard shrinks the page rather than covering it, so a focused field scrolls into view above it;
     // while it's up the nav bar is hidden behind it and needs no room. Save is pinned at the bottom, over the
-    // keyboard when it's up, like Start and Done on the workout pages (spec 6.3).
-    Box(Modifier.fillMaxSize().imePadding()) {
-        val bottom = if (WindowInsets.isImeVisible) 0.dp else contentPadding.calculateBottomPadding()
+    // keyboard when it's up, like Start and Done on the workout pages (spec 6.3), and as wide as the fields: on a
+    // wide screen both keep to the page's centred column (spec 2.4 Unfolded). Whether the keyboard takes room is
+    // read from its inset, so a keyboard that floats (as it can on an unfolded screen) leaves Save above the tab bar.
+    BoxWithConstraints(Modifier.fillMaxSize().imePadding()) {
+        val keyboard = WindowInsets.ime.getBottom(LocalDensity.current) > 0
+        val bottom = if (keyboard) 0.dp else contentPadding.calculateBottomPadding()
+        val side = GlowLayout.pageSide(maxWidth, LocalPageColumn.current, GlowLayout.Gutter)
         ScreenList(PaddingValues(bottom = bottom + SaveHeight + 16.dp), gutter = GlowLayout.Gutter) {
             item { PageHeader("Your profile", back) }
             item {
@@ -201,8 +205,8 @@ fun ProfileScreen(profile: UserProfile, contentPadding: PaddingValues, onSave: (
         }
         PageButton(
             "Save", save,
-            Modifier.align(Alignment.BottomCenter).widthIn(max = 600.dp).fillMaxWidth()
-                .padding(start = GlowLayout.Gutter, end = GlowLayout.Gutter, bottom = bottom + 12.dp).height(SaveHeight),
+            Modifier.align(Alignment.BottomCenter).fillMaxWidth()
+                .padding(start = side, end = side, bottom = bottom + 12.dp).height(SaveHeight),
             enabled = valid, primary = true,
         )
     }

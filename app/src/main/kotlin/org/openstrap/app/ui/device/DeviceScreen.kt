@@ -129,6 +129,8 @@ fun DeviceScreen(
     onBack: () -> Unit,
     /** Debug: a previewed strap state, shown on the strap card only ([org.openstrap.app.ui.dashboard.StrapPreview]). */
     preview: StrapView? = null,
+    /** The row whose page is open beside the list on a wide screen, by its title ("Alarms"), or null. */
+    selected: String? = null,
 ) {
     BackHandler(onBack = onBack)
     val scope = rememberCoroutineScope()
@@ -211,9 +213,9 @@ fun DeviceScreen(
             // What the strap holds is read from it; until then, or without it, the row just opens its page.
             val waiting = if (connected) "Reading" else "On the strap"
             PageRows {
-                PageRow("Alarms", alarmsSummary(alarms) ?: waiting, onClick = onAlarms, divider = false, icon = AppIcons.Alarm)
-                PageRow("Phone alerts", phoneAlertsSummary(calls, notifications), onClick = onPhoneAlerts, icon = AppIcons.Vibrate)
-                PageRow("Health alerts", healthAlertsSummary(alarms) ?: waiting, onClick = onHealthAlerts, icon = AppIcons.Heartbeat)
+                PageRow("Alarms", alarmsSummary(alarms) ?: waiting, onClick = onAlarms, divider = false, icon = AppIcons.Alarm, selected = selected == "Alarms")
+                PageRow("Phone alerts", phoneAlertsSummary(calls, notifications), onClick = onPhoneAlerts, icon = AppIcons.Vibrate, selected = selected == "Phone alerts")
+                PageRow("Health alerts", healthAlertsSummary(alarms) ?: waiting, onClick = onHealthAlerts, icon = AppIcons.Heartbeat, selected = selected == "Health alerts")
                 PageRow("Off-body reminder", onClick = { scope.launch { settings.setWearReminder(!wearReminder) } }, icon = AppIcons.HandPalm) {
                     GlowSwitch(wearReminder, { on -> scope.launch { settings.setWearReminder(on) } })
                 }
@@ -221,8 +223,8 @@ fun DeviceScreen(
                     GlowSwitch(autoStart, { on -> scope.launch { settings.setAutoStartWorkouts(on) } })
                 }
                 KeepConnectedRow(vm, keepConnected, device.address)
-                PageRow("Firmware", info?.firmware ?: (connection as? ConnectionState.Connected)?.firmware ?: "Check for updates", onClick = onFirmware, icon = AppIcons.Cpu)
-                PageRow("Zepp account", if (zeppSignedIn) "Signed in" else "Not signed in", onClick = onZeppAccount, icon = AppIcons.Key)
+                PageRow("Firmware", info?.firmware ?: (connection as? ConnectionState.Connected)?.firmware ?: "Check for updates", onClick = onFirmware, icon = AppIcons.Cpu, selected = selected == "Firmware")
+                PageRow("Zepp account", if (zeppSignedIn) "Signed in" else "Not signed in", onClick = onZeppAccount, icon = AppIcons.Key, selected = selected == "Zepp account")
             }
         }
         item {

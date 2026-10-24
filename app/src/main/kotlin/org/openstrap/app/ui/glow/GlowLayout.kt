@@ -27,6 +27,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import org.openstrap.app.ui.dashboard.ScreenList
@@ -72,21 +73,72 @@ object GlowLayout {
     val ChartHeight = 116.dp
     /** From this width (an unfolded foldable, a tablet, a phone on its side) the dashboards use two columns. */
     val TwoColumnWidth = 600.dp
-    /** The widest the cards get; past it the margins grow, so lines stay readable on a tablet. */
-    val MaxContentWidth = 1040.dp
+    /** The widest a tab's two columns get together (spec 2.4 Unfolded); past it the content is centred. */
+    val MaxContentWidth = 960.dp
+    /** The side gutter on two columns (spec 2.4 Unfolded). */
+    val UnfoldedGutter = 24.dp
+    /**
+     * The widest a page over a tab gets (spec 2.4 Unfolded): You, the Strap page and what they open, Ready, the sport
+     * picker, Add a workout, a detail that isn't beside its tab. One centred column; a sheet is no wider either.
+     */
+    val PageMaxWidth = 600.dp
     /** Space between the two columns: the same as between cards in a column. */
     val ColumnGap = 12.dp
     /** The arc gauge stops growing here, however wide its card. */
     val GaugeMaxWidth = 440.dp
     /**
-     * With two columns on an unfolded foldable each is a little narrower than a phone, and beside a detail pane a
-     * dashboard is a narrow phone's width. A tighter gutter gives the cards back a phone card's inner width, so tile
-     * labels and values fit as they do there.
+     * Beside a detail pane a dashboard is a narrow phone's width. A tighter gutter gives the cards back a phone card's
+     * inner width, so tile labels and values fit as they do there. A detail takes it too.
      */
     val WideGutter = 16.dp
-    /** Narrower than this (a small phone, a dashboard beside a detail) the gutter is tight too. */
+    /** Narrower than this (a small phone, a dashboard beside a detail) the gutter is tight. */
     val NarrowWidth = 400.dp
+
+    /**
+     * A dashboard's side gutter at [width]: on two columns [UnfoldedGutter], growing past it so the content is at most
+     * [MaxContentWidth] and centred; on a phone [Gutter], or [WideGutter] when narrow.
+     */
+    fun dashboardGutter(width: Dp): Dp = when {
+        width >= TwoColumnWidth -> maxOf(UnfoldedGutter, (width - MaxContentWidth) / 2)
+        width < NarrowWidth -> WideGutter
+        else -> Gutter
+    }
+
+    /**
+     * The side padding that keeps a page's content in one centred column [column] wide at most (spec 2.4 Unfolded),
+     * [gutter] inside it: just [gutter] on a phone, more on a wider screen.
+     */
+    fun pageSide(width: Dp, column: Dp, gutter: Dp): Dp =
+        if (column == Dp.Unspecified) gutter else maxOf(gutter, (width - column) / 2 + gutter)
+
+    /**
+     * Which column each block of a two-column run goes in, by the blocks' measured heights (spec 2.4 Unfolded):
+     * [left] and [right] as given, except that when one column ends well below the other, its last block moves to
+     * the foot of the shorter one if that brings their ends closer. One move only, so the order stays close to the
+     * phone's; a block is a whole grid row, so a pair is never split. Returns the blocks' indices per column, left
+     * then right, counting [left]'s first and then [right]'s.
+     */
+    fun balanceColumns(left: List<Int>, right: List<Int>, gap: Int): Pair<List<Int>, List<Int>> {
+        val l = left.indices.toMutableList()
+        val r = right.indices.map { it + left.size }.toMutableList()
+        val heights = left + right
+        fun height(col: List<Int>) = col.sumOf { heights[it] } + gap * (col.size - 1).coerceAtLeast(0)
+        val diff = height(l) - height(r)
+        val (tall, short) = if (diff > 0) l to r else r to l
+        if (tall.size > 1) {
+            val moved = tall.last()
+            val after = (height(tall) - heights[moved] - gap) - (height(short) + heights[moved] + gap)
+            if (kotlin.math.abs(after) < kotlin.math.abs(diff)) { tall.removeAt(tall.lastIndex); short += moved }
+        }
+        return l to r
+    }
 }
+
+/**
+ * The widest a page's column gets ([GlowLayout.PageMaxWidth] over the app); [ScreenList] and the workout pages centre
+ * their content in it. A dashboard lays out its own width, so [GlowScreenList] clears it.
+ */
+val LocalPageColumn = compositionLocalOf { GlowLayout.PageMaxWidth }
 
 /** Where a dashboard block goes when there's room for two columns. On a phone every block stacks in the order given. */
 enum class Pane { Full, Left, Right }
@@ -125,8 +177,7 @@ fun GlowScreenList(
 ) {
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val wide = maxWidth >= GlowLayout.TwoColumnWidth
-        val tight = wide || maxWidth < GlowLayout.NarrowWidth
-        val gutter = ((maxWidth - GlowLayout.MaxContentWidth) / 2).coerceAtLeast(if (tight) GlowLayout.WideGutter else GlowLayout.Gutter)
+        val gutter = GlowLayout.dashboardGutter(maxWidth)
         val built = GlowBlocks().apply(content)
         val blocks = built.blocks
         // The lazy item the marked block lands in: its own on a phone; on a wide screen a two-column run is one item.
@@ -134,19 +185,38 @@ fun GlowScreenList(
         androidx.compose.runtime.LaunchedEffect(focus, target) {
             if (focus && target != null) { state.animateScrollToItem(target); onFocused() }
         }
-        ScreenList(contentPadding, state, gutter = gutter) {
+        androidx.compose.runtime.CompositionLocalProvider(LocalPageColumn provides Dp.Unspecified) { ScreenList(contentPadding, state, gutter = gutter) {
             if (!wide) blocks.forEach { (_, block) -> item { block() } }
             else sections(blocks).forEach { section ->
                 val left = section.filter { it.first == Pane.Left }.map { it.second }
                 val right = section.filter { it.first == Pane.Right }.map { it.second }
                 // A full block, or a run with nothing on one side, takes the whole width rather than leave a hole.
                 if (left.isEmpty() || right.isEmpty()) section.forEach { (_, block) -> item { block() } }
-                else item {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(GlowLayout.ColumnGap)) {
-                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(GlowLayout.ColumnGap)) { left.forEach { it() } }
-                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(GlowLayout.ColumnGap)) { right.forEach { it() } }
-                    }
-                }
+                else item { BalancedColumns(left, right) }
+            }
+        } }
+    }
+}
+
+/**
+ * Two columns of blocks, [GlowLayout.ColumnGap] apart and between blocks, balanced by height
+ * ([GlowLayout.balanceColumns]): the last block of a column that would end far below the other moves under the other.
+ */
+@Composable
+private fun BalancedColumns(left: List<@Composable () -> Unit>, right: List<@Composable () -> Unit>) {
+    // Each block in a box of its own, so a block that draws nothing (or several things) is still one child.
+    Layout(content = { (left + right).forEach { androidx.compose.foundation.layout.Box(propagateMinConstraints = true) { it() } } }, modifier = Modifier.fillMaxWidth()) { measurables, cs ->
+        val gap = GlowLayout.ColumnGap.roundToPx()
+        val column = ((cs.maxWidth - gap) / 2).coerceAtLeast(0)
+        val placeables = measurables.map { it.measure(Constraints.fixedWidth(column)) }
+        val (l, r) = GlowLayout.balanceColumns(
+            placeables.take(left.size).map { it.height }, placeables.drop(left.size).map { it.height }, gap,
+        )
+        fun height(col: List<Int>) = col.sumOf { placeables[it].height } + gap * (col.size - 1).coerceAtLeast(0)
+        layout(cs.maxWidth, maxOf(height(l), height(r))) {
+            listOf(l to 0, r to column + gap).forEach { (col, x) ->
+                var y = 0
+                col.forEach { placeables[it].place(x, y); y += placeables[it].height + gap }
             }
         }
     }

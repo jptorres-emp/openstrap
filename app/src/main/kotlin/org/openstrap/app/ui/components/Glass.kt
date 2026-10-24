@@ -198,7 +198,8 @@ fun GlassPanel(modifier: Modifier = Modifier, shape: androidx.compose.ui.graphic
 }
 
 /**
- * A bottom sheet as glass in the overlay. Pulled down by its handle, or past the top of its list, it follows the
+ * A bottom sheet as glass in the overlay, at most [org.openstrap.app.ui.glow.GlowLayout.PageMaxWidth] wide and centred.
+ * Pulled down by its handle, or past the top of its list, it follows the
  * finger; let go far enough down (or flung) and it closes, otherwise it springs back.
  */
 @Composable
@@ -238,8 +239,9 @@ fun GlassSheet(onDismiss: () -> Unit, content: @Composable () -> Unit) {
                 }
             }
         }
+        // At most a page's column wide, centred, on a wide screen (spec 2.4 Unfolded).
         GlassPanel(
-            Modifier.fillMaxWidth()
+            Modifier.widthIn(max = org.openstrap.app.ui.glow.GlowLayout.PageMaxWidth).fillMaxWidth()
                 .graphicsLayer { translationY = pull.floatValue }
                 .nestedScroll(pullOnTop)
                 .draggable(

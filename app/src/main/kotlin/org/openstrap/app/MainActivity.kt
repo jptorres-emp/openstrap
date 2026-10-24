@@ -325,7 +325,13 @@ private enum class Tab(
  * The pages that open over whichever tab is showing and close back to it (spec 3.3): the You page and what it opens,
  * and the Strap page and what it opens. Shallowest first.
  */
-private enum class Page { You, Profile, Diagnostics, Strap, Alarms, PhoneAlerts, HealthAlerts, Firmware, ZeppAccount }
+private enum class Page(
+    /** The row on the You or Strap page that opens this page, marked while it's open beside the list on a wide screen. */
+    val row: String? = null,
+) {
+    You, Profile("Profile"), Diagnostics("Diagnostics"), Strap, Alarms("Alarms"), PhoneAlerts("Phone alerts"),
+    HealthAlerts("Health alerts"), Firmware("Firmware"), ZeppAccount("Zepp account"),
+}
 
 /** Keeps the open pages across process death, as their names ("Strap,Alarms"). */
 private val PagesSaver: androidx.compose.runtime.saveable.Saver<List<Page>, String> = androidx.compose.runtime.saveable.Saver(
@@ -948,19 +954,24 @@ private fun AppRoot(
                     OverPages(
                         pages.ifEmpty { keptPages[0] }, container, deviceVm, firmwareVm, profile, padding, requestBluetooth, lastSeen, strapView.takeIf { preview != null },
                         open = openPage, close = closePage,
-                        youPage = {
+                        // A row on a wide screen's list: its page beside the list, in place of the one there, unless
+                        // an update is being installed there.
+                        openBeside = { p -> if (!firmwareInstalling()) pages = org.openstrap.app.ui.dashboard.openBeside(pages, p) },
+                        closeAll = { closePages() },
+                        youPage = { open, selected, onBack ->
                             val log by container.strap.log.collectAsStateWithLifecycle()
                             org.openstrap.app.ui.device.YouPage(
                                 profile, goals, org.openstrap.app.data.Recovery.sleepNeed(profile.age(), profile.sleepNeedMinutes), log.size, padding,
-                                onProfile = { openPage(Page.Profile) },
+                                onProfile = { open(Page.Profile) },
                                 onGoals = { editGoals = true },
                                 onSaveCopy = { csvLauncher.launch("openstrap-export.zip") },
                                 onRestoreCopy = { csvImportLauncher.launch(arrayOf("application/zip", "application/x-zip-compressed", "application/octet-stream")) },
                                 onHealthConnect = exportHealthConnect,
                                 onRestoreHealthConnect = importHealthConnect,
-                                onDiagnostics = { openPage(Page.Diagnostics) },
+                                onDiagnostics = { open(Page.Diagnostics) },
                                 onSampleData = if (org.openstrap.app.data.SampleData.AVAILABLE) ({ deviceVm.loadSampleData() }) else null,
-                                onBack = closePage,
+                                onBack = onBack,
+                                selected = selected?.row,
                             )
                         },
                     )
@@ -1032,7 +1043,13 @@ private fun AppRoot(
     }
 }
 
-/** The top page over the tab, sliding in and out like a stack; each closes back to the one under it. */
+/**
+ * The top page over the tab, sliding in and out like a stack; each closes back to the one under it. On a wide screen
+ * (spec 2.4 Unfolded) the You and Strap pages are a list with the page a row opens beside it, as a tab with its
+ * detail: the list on the left with that row marked, the page in a pane on the right ([openBeside] puts it there,
+ * in place of the one open). Back closes the pane, or goes back within it; the list's own back closes it all
+ * ([closeAll]). A page opened on its own (Profile from a card) is one centred column.
+ */
 @Composable
 private fun OverPages(
     pages: List<Page>,
@@ -1047,20 +1064,27 @@ private fun OverPages(
     preview: StrapView?,
     open: (Page) -> Unit,
     close: () -> Unit,
-    /** The You page, built where its launchers and the Goals editor live. */
-    youPage: @Composable () -> Unit,
+    openBeside: (Page) -> Unit,
+    closeAll: () -> Unit,
+    /** The You page, built where its launchers and the Goals editor live: how its rows open, the row marked, its back. */
+    youPage: @Composable (open: (Page) -> Unit, selected: Page?, onBack: () -> Unit) -> Unit,
 ) {
     // Read from the strap when first needed (the Strap page's rows show what it holds), and again on each page that edits it.
     val needsAlarms = pages.any { it == Page.Strap || it == Page.Alarms || it == Page.HealthAlerts }
     val alarmsVm: org.openstrap.app.ui.alarms.AlarmsViewModel? = if (needsAlarms) viewModel(
         key = "alarms", factory = viewModelFactory { initializer { org.openstrap.app.ui.alarms.AlarmsViewModel(container.strap) } },
     ) else null
-    org.openstrap.app.ui.components.PushContent(pages, depth = { it.size }) { stack ->
-        when (stack.lastOrNull()) {
+    // One page. [list] is set for the You or Strap page as the list beside a pane: its rows open there, the row whose
+    // page is open is marked, and its back closes everything.
+    val page: @Composable (Page?, List<Page>?) -> Unit = page@{ shown, list ->
+        val rowOpens: (Page) -> Unit = if (list != null) openBeside else open
+        val selected = list?.getOrNull(1)
+        val back = if (list != null) closeAll else close
+        when (shown) {
             null -> Unit
-            Page.You -> youPage()
+            Page.You -> youPage(rowOpens, selected, back)
             Page.Strap -> {
-                val alarms = alarmsVm ?: return@PushContent
+                val alarms = alarmsVm ?: return@page
                 val alarmsState by alarms.state.collectAsStateWithLifecycle()
                 val account by firmwareVm.account.collectAsStateWithLifecycle()
                 val connection by container.strap.connection.collectAsStateWithLifecycle()
@@ -1070,23 +1094,24 @@ private fun OverPages(
                 }
                 DeviceScreen(
                     deviceVm, padding, requestBluetooth, container.settings, alarmsState, account != null, lastSeen,
-                    onAlarms = { open(Page.Alarms) },
-                    onPhoneAlerts = { open(Page.PhoneAlerts) },
-                    onHealthAlerts = { open(Page.HealthAlerts) },
-                    onFirmware = { open(Page.Firmware) },
-                    onZeppAccount = { open(Page.ZeppAccount) },
-                    onBack = close,
+                    onAlarms = { rowOpens(Page.Alarms) },
+                    onPhoneAlerts = { rowOpens(Page.PhoneAlerts) },
+                    onHealthAlerts = { rowOpens(Page.HealthAlerts) },
+                    onFirmware = { rowOpens(Page.Firmware) },
+                    onZeppAccount = { rowOpens(Page.ZeppAccount) },
+                    onBack = back,
                     preview = preview,
+                    selected = selected?.row,
                 )
             }
             Page.Alarms -> {
-                val alarms = alarmsVm ?: return@PushContent
+                val alarms = alarmsVm ?: return@page
                 LaunchedEffect(Unit) { alarms.refresh() }
                 val alarmsState by alarms.state.collectAsStateWithLifecycle()
                 org.openstrap.app.ui.alarms.AlarmsScreen(alarms, alarmsState, padding, onBack = close)
             }
             Page.HealthAlerts -> {
-                val alarms = alarmsVm ?: return@PushContent
+                val alarms = alarmsVm ?: return@page
                 LaunchedEffect(Unit) { alarms.refresh() }
                 val alarmsState by alarms.state.collectAsStateWithLifecycle()
                 org.openstrap.app.ui.alarms.HealthAlertsScreen(alarms, alarmsState, padding, onBack = close)
@@ -1100,6 +1125,17 @@ private fun OverPages(
                 org.openstrap.app.ui.device.DiagnosticsScreen(log, padding, onBack = close)
             }
         }
+    }
+    androidx.compose.foundation.layout.BoxWithConstraints(androidx.compose.ui.Modifier.fillMaxSize()) {
+        val root = pages.firstOrNull()
+        if (maxWidth >= org.openstrap.app.ui.components.SidePaneWidth && (root == Page.You || root == Page.Strap)) {
+            ListDetail(
+                pages.drop(1), isOpen = { it.isNotEmpty() }, keys = { s -> s.map { it.name } },
+                minWidth = org.openstrap.app.ui.components.SidePaneWidth,
+                closedMaxWidth = org.openstrap.app.ui.glow.GlowLayout.PageMaxWidth,
+                detail = { stack -> page(stack.lastOrNull(), null) },
+            ) { page(root, pages) }
+        } else org.openstrap.app.ui.components.PushContent(pages, depth = { it.size }) { stack -> page(stack.lastOrNull(), null) }
     }
 }
 

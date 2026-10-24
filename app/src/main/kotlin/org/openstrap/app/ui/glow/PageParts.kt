@@ -70,6 +70,8 @@ private val PanelSurface = Color(0xFF0F0F11)
 /** The Control surface (spec 2.2): buttons, chips, pills and text fields on a page. */
 internal val ControlSurface = Color(0xFF1F1F22)
 private val Hairline = Color.White.copy(alpha = 0.05f)
+/** A [PageRow] whose page is open beside the list. */
+private val SelectedTint = Color.White.copy(alpha = 0.08f)
 
 /**
  * The one row or button that can't be undone (Forget, Delete all, Delete workout): plain white at 72%, no colour, since
@@ -157,7 +159,8 @@ fun PagePanel(modifier: Modifier = Modifier, title: String? = null, note: String
 @Composable
 fun PageRows(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
     Column(
-        modifier.fillMaxWidth().background(PanelSurface, PanelShape).border(1.dp, Color.White.copy(alpha = 0.06f), PanelShape)
+        // Clipped, so a selected row's tint keeps to the panel's corners.
+        modifier.fillMaxWidth().clip(PanelShape).background(PanelSurface, PanelShape).border(1.dp, Color.White.copy(alpha = 0.06f), PanelShape)
             .padding(GlowLayout.ListPadding),
         content = content,
     )
@@ -167,7 +170,8 @@ fun PageRows(modifier: Modifier = Modifier, content: @Composable ColumnScope.() 
  * A settings row: the [title], and its current [value] either on the right ([below] false, the Strap page) or as a
  * second line ([below] true, the You page). [trailing] replaces the value on the right (a switch). [divider] draws
  * the hairline above it. [icon] sits quietly on the left, centred on the row, with the title and value lined up after it.
- * A row that opens something ([onClick], no [trailing]) ends in the tap caret (spec 2.5).
+ * A row that opens something ([onClick], no [trailing]) ends in the tap caret (spec 2.5). [selected] marks the row
+ * whose page is open beside the list on a wide screen: tinted across the panel's width.
  */
 @Composable
 fun PageRow(
@@ -179,10 +183,17 @@ fun PageRow(
     titleColor: Color = Color.White,
     enabled: Boolean = true,
     icon: ImageVector? = null,
+    selected: Boolean = false,
     trailing: (@Composable () -> Unit)? = null,
 ) {
     Row(
         Modifier.fillMaxWidth()
+            .let {
+                if (!selected) it else it.semantics { this.selected = true }.drawBehind {
+                    val inset = GlowLayout.CardInset.toPx()
+                    drawRect(SelectedTint, Offset(-inset, 0f), Size(size.width + 2 * inset, size.height))
+                }
+            }
             .let { if (onClick != null) it.clickable(enabled = enabled, onClick = onClick) else it }
             .let { if (divider) it.drawBehind { drawLine(Hairline, Offset(0f, 0f), Offset(size.width, 0f), 1.dp.toPx()) } else it }
             .alpha(if (enabled) 1f else 0.45f)

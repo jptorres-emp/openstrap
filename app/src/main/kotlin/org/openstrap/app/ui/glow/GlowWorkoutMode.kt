@@ -234,10 +234,12 @@ internal fun WorkoutPage(
                 Brush.radialGradient(listOf(glow.copy(alpha = 0.22f), Color.Transparent), center = Offset(width / 2f, 0f), radius = width * 0.9f),
             ),
         )
+        // On a wide screen the page keeps to one centred column (spec 2.4 Unfolded); the glow stays the screen's.
+        val side = GlowLayout.pageSide(maxWidth, LocalPageColumn.current, GlowLayout.Gutter)
         // The live screen fits the screen instead (scroll = false): its controls never move.
         Column(
             Modifier.fillMaxSize().then(if (scroll) Modifier.verticalScroll(rememberScrollState()) else Modifier).statusBarsPadding()
-                .padding(contentPadding).padding(start = GlowLayout.Gutter, end = GlowLayout.Gutter, top = 8.dp, bottom = 16.dp + pinnedHeight)
+                .padding(contentPadding).padding(start = side, end = side, top = 8.dp, bottom = 16.dp + pinnedHeight)
                 .then(if (scroll) Modifier.heightIn(min = maxHeight - 80.dp - pinnedHeight) else Modifier),
             verticalArrangement = Arrangement.spacedBy(14.dp),
             content = content,
@@ -245,7 +247,7 @@ internal fun WorkoutPage(
         if (pinned != null) Column(
             Modifier.align(Alignment.BottomCenter).fillMaxWidth()
                 .background(Brush.verticalGradient(0f to Color.Transparent, 0.25f to Color.Black, 1f to Color.Black))
-                .padding(contentPadding).padding(start = GlowLayout.Gutter, end = GlowLayout.Gutter, top = 24.dp, bottom = 16.dp)
+                .padding(contentPadding).padding(start = side, end = side, top = 24.dp, bottom = 16.dp)
                 .onSizeChanged { pinnedHeight = with(density) { it.height.toDp() } - 16.dp },
             verticalArrangement = Arrangement.spacedBy(4.dp),
             content = pinned,

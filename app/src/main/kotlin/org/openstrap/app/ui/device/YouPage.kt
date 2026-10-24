@@ -53,13 +53,15 @@ fun YouPage(
     onDiagnostics: () -> Unit,
     onSampleData: (() -> Unit)?,
     onBack: () -> Unit,
+    /** The row whose page is open beside the list on a wide screen, by its title ("Profile"), or null. */
+    selected: String? = null,
 ) {
     BackHandler(onBack = onBack)
     ScreenList(contentPadding, gutter = GlowLayout.Gutter) {
         item { PageHeader("You", onBack) }
         item {
             PageRows {
-                PageRow("Profile", profile.summary(), onClick = onProfile, below = true, divider = false, icon = AppIcons.User)
+                PageRow("Profile", profile.summary(), onClick = onProfile, below = true, divider = false, icon = AppIcons.User, selected = selected == "Profile")
                 PageRow("Goals", goalsLine(goals), onClick = onGoals, below = true, icon = AppIcons.Target)
                 PageRow("Sleep goal", sleepGoalLine(goals, sleepNeedMinutes), onClick = onGoals, below = true, icon = AppIcons.Moon)
             }
@@ -75,7 +77,7 @@ fun YouPage(
         }
         item {
             PageRows {
-                PageRow("Diagnostics", "$logLines lines, for bug reports", onClick = onDiagnostics, below = true, divider = false, icon = AppIcons.Bug)
+                PageRow("Diagnostics", "$logLines lines, for bug reports", onClick = onDiagnostics, below = true, divider = false, icon = AppIcons.Bug, selected = selected == "Diagnostics")
                 if (onSampleData != null) PageRow("Load sample data", "Debug builds only", onClick = onSampleData, below = true, icon = AppIcons.Flask)
             }
         }

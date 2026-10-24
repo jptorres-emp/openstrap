@@ -197,8 +197,21 @@ stage strip is the one exception). Smalls and Wides are a unit high (160 dp), Ta
 
 **Unfolded** (600 dp and up, the Fold's inner screen): two columns with a 12 dp gap and a 24 dp gutter, content
 centred and at most 960 dp wide. Type and dot sizes stay the same, and cards only get wider, never taller. The hero and
-strips span both columns. Each grid row is one block, so a Pair or TallPair stays together in one column. Pages opened
-over a tab take one centred column of at most 600 dp.
+strips span both columns. Each grid row is one block, so a Pair or TallPair stays together in one column. The two
+columns are balanced by height: when one would end well below the other, its last block (Habit Age, Your week, as a
+rule the last optional card) moves to the foot of the shorter one. The tab bar stays centred over the content, with
+its fade (3.2).
+
+From 720 dp a detail opens in a right pane beside its tab, the tab narrowed to a phone's width on the left, and back
+closes the pane (list and detail). The You and Strap pages work the same way from 600 dp: a row (Profile, Diagnostics;
+Alarms, Phone alerts, Health alerts, Firmware, Zepp account) opens its page in a right pane beside the list instead of
+over it, with the row marked while its page is open. Another row replaces the pane, pages opened from the pane stack in
+it, and back closes the pane or goes back within it. Rows that open a sheet (Goals, Sleep goal) still open a sheet.
+Folded, each opens a page of its own as before.
+
+Any other page over a tab (Profile from a card, Ready, Choose a sport, Add a workout, the calm down page, All workouts,
+Habit Age or a detail when not in the right pane) takes one centred column of at most 600 dp, its pinned button as wide
+as its content. A sheet is at most 600 dp wide and centred.
 
 ### 2.5 The card tiers
 

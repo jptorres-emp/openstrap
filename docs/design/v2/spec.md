@@ -46,7 +46,7 @@ use their own metric colour, never red or amber.
 ### 2.2 Type
 
 - **Dot-matrix digits** (`DotMatrixText`, Doto) for the main number of a card, list values and live numbers.
-- **Outfit** for everything else. Sentence on a hero: 22 sp, line height 1.22. Card title 15 sp medium. Secondary
+- **Outfit** for everything else. Sentence on a hero: 20 sp like the card title over it, never bigger, line height 1.22. Card title 15 sp medium. Secondary
   12.5 sp at 72% white.
 - **Dots are for numbers.** Nothing else in the app is drawn from dots: no dotted borders, no dot-matrix bars. The
   fine grain inside glow cards stays.

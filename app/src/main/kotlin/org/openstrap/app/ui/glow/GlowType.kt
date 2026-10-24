@@ -15,8 +15,11 @@ object GlowType {
     /** Verdicts and hero headlines ("Good energy", "Ready"). */
     val headline = TextStyle(fontFamily = FunnelDisplay, fontWeight = FontWeight.Light, fontSize = 26.sp, letterSpacing = (-0.02).em, lineHeight = 30.sp)
 
-    /** The sentence that leads a hero ("Slept 7 h 40. Recovered enough for your usual training."): 22 sp, line height 1.22. */
-    val sentence = TextStyle(fontFamily = FunnelDisplay, fontWeight = FontWeight.Light, fontSize = 22.sp, letterSpacing = (-0.01).em, lineHeight = 26.8.sp)
+    /**
+     * The sentence that leads a hero ("Slept 7 h 40. Recovered enough for your usual training."): the card title's 20 sp,
+     * never bigger than the title over it, line height 1.22.
+     */
+    val sentence = TextStyle(fontFamily = FunnelDisplay, fontWeight = FontWeight.Light, fontSize = 20.sp, letterSpacing = (-0.01).em, lineHeight = 24.4.sp)
 
     /** Card titles ("Heart rate", "Activity"). */
     val title = TextStyle(fontFamily = FunnelDisplay, fontWeight = FontWeight.Light, fontSize = 20.sp, letterSpacing = (-0.02).em)

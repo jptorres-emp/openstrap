@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
@@ -35,7 +34,6 @@ import org.openstrap.app.data.RecoveryResult
 import org.openstrap.app.data.SleepHistory
 import org.openstrap.app.data.Summaries
 import org.openstrap.app.ui.components.ChartPoint
-import org.openstrap.app.ui.components.detailNumber
 import org.openstrap.app.ui.dashboard.DailyHistory
 import org.openstrap.app.ui.dashboard.DayUiState
 import org.openstrap.app.ui.dashboard.Detail
@@ -136,14 +134,9 @@ internal fun SleepScoreDetail(
         contentPadding = contentPadding, headline = headline,
         strip = DetailCopy.strip(state.date, today, sleepDays(state, history)), onDay = onSelectDay,
         ranges = ranges, range = range, onRange = { rangeIndex = ranges.indexOf(it) },
-        // The horizon arc (chart kit) holds the night's score, as on the Sleep tab, the number under its crown.
+        // The arc gauge (chart kit) holds the night's score in Sleep's ink, the same arch as Recovery's (spec 2.7).
         heroValue = if (range == Range.Day && score != null && scrub == null) {
-            {
-                Box(Modifier.size(240.dp, 118.dp)) {
-                    GlowHorizon(score / 100f, null, width = 240.dp, height = 118.dp)
-                    DotMatrixText(score.toString(), dot = DotSize.Detail, modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 12.dp).detailNumber(score.toString()))
-                }
-            }
+            { ScoreGauge(score, color) }
         } else null,
     ) {
         if (range == Range.Day) {

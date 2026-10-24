@@ -362,7 +362,7 @@ Every chart kind in the app, drawn with the rules above:
 | Charge curve | Glow | Charge card and detail | Hold to scrub |
 | Hourly pill bars | Glow | Steps card | Tap an hour |
 | Trend dots | Edge, detail, Recovery hero | Recovery over the last 7 days beside the hero score, Habit Age over days | Tap a day |
-| Arc gauge | Glow | Recovery detail header | None |
+| Arc gauge | Detail | Recovery and Sleep score detail headers: one shared 240 degree arch open at the foot, round caps, an 8 dp solid track of white at 8% and the value over it in the metric's ink, the score in dots centred inside | None |
 | Progress ring | List row | Goals | None |
 | Hypnogram | Glow | Last night, naps: solid rounded bands in the stage colours on four hairlines | Hold to scrub |
 | Stage bar | Glow, detail | One 8 dp bar split by stage with a legend, on the sleep hero and the Sleep detail | None |
@@ -658,7 +658,8 @@ Night mood always.
    the title row's note. The score in 4.5 dp dots with "Sleep score, good" and "Woke 3 times" beside it, the only
    dotted number on the card. The hypnogram to scrub (2.7), then the stage bar with its legend ("Deep 2 h 51",
    "REM 1 h 31", "Light 3 h 39", "Awake 18 min", each with an 8 dp colour mark, Secondary type). No arc, no dotted
-   stage totals. The Sleep score detail drops its arc and dotted times the same way.
+   stage totals. The Sleep score detail drops the horizon arc and its dotted times the same way, and holds its score
+   in the arc gauge Recovery's detail uses (2.7), in Sleep's ink.
 2. List "Night vitals": lowest heart rate, HRV, breathing rate, blood oxygen, skin temperature, average heart rate.
    Each opens its detail; scoped to the night in step 6.
 3. Edge: Sleep regularity (top edge), score, status word, usual bedtime and wake, the week's bed and wake bars against

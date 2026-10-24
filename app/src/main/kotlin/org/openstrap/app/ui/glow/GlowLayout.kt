@@ -84,8 +84,6 @@ object GlowLayout {
     val PageMaxWidth = 600.dp
     /** Space between the two columns: the same as between cards in a column. */
     val ColumnGap = 12.dp
-    /** The arc gauge stops growing here, however wide its card. */
-    val GaugeMaxWidth = 440.dp
     /**
      * Beside a detail pane a dashboard is a narrow phone's width. A tighter gutter gives the cards back a phone card's
      * inner width, so tile labels and values fit as they do there. A detail takes it too.

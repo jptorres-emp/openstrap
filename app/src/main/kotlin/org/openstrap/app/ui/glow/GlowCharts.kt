@@ -4,14 +4,10 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -26,7 +22,6 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
@@ -40,15 +35,12 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import org.openstrap.app.ui.components.cardNumber
 import org.openstrap.app.ui.components.rememberScrubHaptics
 import org.openstrap.app.ui.components.scrub
 import org.openstrap.app.ui.components.smoothPath
 import org.openstrap.app.ui.theme.FunnelSans
 import org.openstrap.app.ui.theme.MetricColors
-import kotlin.math.cos
 import kotlin.math.roundToInt
-import kotlin.math.sin
 
 /*
  * Charts for glow cards. The card's colour carries the mood, so the marks are white: lines get a soft halo, and grids,
@@ -344,9 +336,10 @@ fun GlowTrend(
 /* ------------------------------------------------------------------------------------------------ */
 
 /**
- * A half-circle gauge from 9 o'clock over the top to 3: a smooth white line with a faint halo up to
- * [progress], a solid hairline track for what's left, and a glowing dot in [color] at the leading edge. Fills
- * the width it's given; [content] sits at the bottom middle, inside the arc.
+ * The arc gauge (chart kit, spec 2.7): a symmetric 240 degree arch open at the foot, with round caps. A solid track of
+ * white at 8% the whole way round and, over it, the value up to [progress] (0..1) in the metric's [color], both the
+ * same weight. [content], the score in dots, sits centred inside. [GaugeWidth] wide, so the Recovery and Sleep score
+ * details draw the same arch.
  */
 @Composable
 fun GlowArcGauge(
@@ -355,34 +348,34 @@ fun GlowArcGauge(
     modifier: Modifier = Modifier,
     content: @Composable BoxScope.() -> Unit = {},
 ) {
-    // A touch taller than half the width, so the top dot's halo isn't clipped. Centred and capped, so a
-    // wide card doesn't turn it into a dome taller than the screen.
-    Box(
-        modifier.fillMaxWidth().wrapContentWidth(Alignment.CenterHorizontally).widthIn(max = GlowLayout.GaugeMaxWidth).fillMaxWidth().aspectRatio(1.9f),
-        contentAlignment = Alignment.BottomCenter,
-    ) {
+    val stroke = GaugeStroke
+    // The circle's radius to the middle of the stroke; the arch's feet end half a radius under its centre.
+    val r = GaugeWidth / 2 - stroke / 2
+    val centreY = stroke / 2 + r
+    val height = centreY + r * GAUGE_FOOT + stroke / 2
+    Box(modifier.size(GaugeWidth, height)) {
         Canvas(Modifier.matchParentSize()) {
-            val r = size.width / 2 - 10.dp.toPx()
-            val c = Offset(size.width / 2, size.height - 3.dp.toPx())
-            val topLeft = Offset(c.x - r, c.y - r)
-            val box = Size(r * 2, r * 2)
-            val sweep = 180f * progress.coerceIn(0f, 1f)
-            drawArc(Grid, 180f + sweep, 180f - sweep, false, topLeft, box, style = Stroke(2.dp.toPx(), cap = StrokeCap.Round))
-            if (sweep <= 0f) return@Canvas
-            drawArc(Ink.copy(alpha = 0.1f), 180f, sweep, false, topLeft, box, style = Stroke(8.dp.toPx(), cap = StrokeCap.Round))
-            // Brighter towards the end, like the ring. Sweep gradients start at 3 o'clock; the arc at 9 (0.5).
-            drawArc(
-                Brush.sweepGradient(0.5f to Ink.copy(alpha = 0.55f), (180f + sweep) / 360f to Ink, center = c),
-                180f, sweep, false, topLeft, box, style = Stroke(3.dp.toPx(), cap = StrokeCap.Round),
-            )
-            val a = Math.toRadians((180f + sweep).toDouble())
-            val end = Offset(c.x + r * cos(a).toFloat(), c.y + r * sin(a).toFloat())
-            drawCircle(color.copy(alpha = 0.3f), 9.dp.toPx(), end)
-            drawCircle(color, 5.dp.toPx(), end)
+            val w = stroke.toPx()
+            val rad = r.toPx()
+            val topLeft = Offset(size.width / 2 - rad, centreY.toPx() - rad)
+            val box = Size(rad * 2, rad * 2)
+            drawArc(Grid, GAUGE_START, GAUGE_SWEEP, false, topLeft, box, style = Stroke(w, cap = StrokeCap.Round))
+            val sweep = GAUGE_SWEEP * progress.coerceIn(0f, 1f)
+            if (sweep > 0f) drawArc(color, GAUGE_START, sweep, false, topLeft, box, style = Stroke(w, cap = StrokeCap.Round))
         }
-        content()
+        // Centred on the circle's centre, not the box's.
+        Box(Modifier.fillMaxWidth().height(centreY * 2), contentAlignment = Alignment.Center, content = content)
     }
 }
+
+/** The arch's width on a detail header, and its stroke. */
+internal val GaugeWidth = 200.dp
+internal val GaugeStroke = 8.dp
+/** From lower left (150 degrees, clockwise from 3 o'clock) over the top to lower right: 240 degrees, symmetric. */
+internal const val GAUGE_START = 150f
+internal const val GAUGE_SWEEP = 240f
+/** How far under the centre the feet reach, as a share of the radius: sin 30 degrees. */
+private const val GAUGE_FOOT = 0.5f
 
 /* ------------------------------------------------------------------------------------------------ */
 
@@ -474,40 +467,6 @@ fun GlowHypnogram(
             guide(x, h)
             readout(m, describe(s), x, yOf(s.row) - pillH / 2)
         }
-    }
-}
-
-/* ------------------------------------------------------------------------------------------------ */
-
-/**
- * The horizon arc (chart kit): the sleep score as a night sky rising from the horizon, a faint track over the top
- * from one end of the horizon to the other and a solid line up to [progress] (0..1), with [value] in dot-matrix
- * digits under the crown. Drawn where it lands, never swept in from zero.
- */
-@Composable
-fun GlowHorizon(progress: Float?, value: String?, modifier: Modifier = Modifier, width: Dp = 170.dp, height: Dp = 92.dp) {
-    Box(modifier.size(width, height), contentAlignment = Alignment.BottomCenter) {
-        Canvas(Modifier.matchParentSize()) {
-            val stroke = 8.dp.toPx()
-            val y0 = size.height - stroke / 2 - 2.dp.toPx()
-            val p0 = Offset(stroke / 2 + 4.dp.toPx(), y0)
-            val p2 = Offset(size.width - p0.x, y0)
-            // The control point above the card, so the crown sits near its top edge.
-            val c = Offset(size.width / 2, y0 - (y0 - stroke) * 2f)
-            fun at(t: Float) = Offset(
-                (1 - t) * (1 - t) * p0.x + 2 * (1 - t) * t * c.x + t * t * p2.x,
-                (1 - t) * (1 - t) * p0.y + 2 * (1 - t) * t * c.y + t * t * p2.y,
-            )
-            fun path(to: Float) = Path().apply {
-                moveTo(p0.x, p0.y)
-                val n = 48
-                for (k in 1..n) at(to * k / n).let { lineTo(it.x, it.y) }
-            }
-            drawPath(path(1f), Ink.copy(alpha = 0.12f), style = Stroke(stroke, cap = StrokeCap.Round))
-            val p = progress?.coerceIn(0f, 1f) ?: return@Canvas
-            if (p > 0f) drawPath(path(p), MetricColors.sleepLight.copy(alpha = 0.9f).compositeOver(Ink), style = Stroke(stroke, cap = StrokeCap.Round))
-        }
-        if (value != null) DotMatrixText(value, dot = DotSize.Hero, modifier = Modifier.padding(bottom = 6.dp).cardNumber(value))
     }
 }
 

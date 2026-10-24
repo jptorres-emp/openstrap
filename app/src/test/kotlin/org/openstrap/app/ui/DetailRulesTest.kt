@@ -34,10 +34,35 @@ class DetailRulesTest {
             dotted.findAll(code).map { "$path:${lineOf(code, it.range.first)}  ${it.value}" }.toList()
         }
         if (found.isNotEmpty()) fail("One dotted number a detail, its header's (spec 2.3):\n" + found.joinToString("\n"))
-        // The header draws its number once; Recovery's arc and the sleep horizon take its place, they don't add one.
+        // The header draws its number once; the score gauge takes its place, they don't add one.
         DETAILS.forEach { path ->
             val n = Regex("""\bDotMatrixText\(""").findAll(sources.getValue(path)).count()
             assertTrue("$path draws $n dotted numbers, the template's header is the only one", n <= 1)
+        }
+    }
+
+    @Test fun `Recovery and Sleep score draw the one arc gauge`() {
+        // Spec 2.7: one shared arch on both score details, no horizon arc, nothing that glows or sweeps in.
+        listOf("glow/ScoreDetail.kt", "glow/SleepDetail.kt").forEach { path ->
+            assertTrue("$path holds its score in ScoreGauge", "ScoreGauge(score, color)" in sources.getValue(path))
+        }
+        val found = sources.flatMap { (path, code) ->
+            Regex("""\bGlowHorizon\b|\bGlowArcGauge\(""").findAll(code)
+                .filter { it.value.startsWith("GlowHorizon") || path !in setOf("glow/GlowCharts.kt", "glow/ScoreDetail.kt") }
+                .map { "$path:${lineOf(code, it.range.first)}  ${it.value}" }.toList()
+        }
+        if (found.isNotEmpty()) fail("Score gauges go through ScoreGauge, and the horizon arc is gone:\n" + found.joinToString("\n"))
+        val gauge = sources.getValue("glow/GlowCharts.kt").substringAfter("fun GlowArcGauge(").substringBefore("\n}\n")
+        assertTrue("the gauge is drawn with round caps and no halo", "StrokeCap.Round" in gauge && "drawCircle" !in gauge && "Brush" !in gauge)
+    }
+
+    @Test fun `every detail's header ends in the (i)`() {
+        // Spec 2.5 and 6.1: the (i) at the right of every detail's header, nothing else there.
+        val nav = sources.getValue("glow/GlowMetricDetail.kt").substringAfter("private fun DetailNav(").substringBefore("\n}\n")
+        assertTrue("DetailNav's trailing is InfoButton", Regex("""PageHeader\([^{]*\)\s*\{\s*InfoButton\(""").containsMatchIn(nav))
+        DETAILS.forEach { path ->
+            val code = sources.getValue(path)
+            assertTrue("$path builds its own header", !Regex("""\bPageHeader\(""").containsMatchIn(code) || path == "glow/GlowMetricDetail.kt")
         }
     }
 

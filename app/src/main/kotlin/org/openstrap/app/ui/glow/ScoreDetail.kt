@@ -4,9 +4,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -15,7 +13,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.flow.flowOf
@@ -131,13 +128,9 @@ private fun RecoveryDetail(
         contentPadding = contentPadding, headline = headline,
         strip = DetailCopy.strip(state.date, today, withData), onDay = onSelectDay,
         ranges = ranges, range = range, onRange = { rangeIndex = ranges.indexOf(it) },
-        // The arc gauge (chart kit) holds the day's score, the number in a dark pool under its crown (spec 2.5).
+        // The arc gauge (chart kit) holds the day's score, the number centred inside (spec 2.7), as on Sleep score.
         heroValue = if (range == Range.Day && score != null && scrub == null) {
-            {
-                Box(Modifier.width(240.dp)) {
-                    GlowArcGauge(score / 100f, color) { DotMatrixText(score.toString(), dot = DotSize.Detail, modifier = Modifier.padding(bottom = 4.dp).detailNumber(score.toString())) }
-                }
-            }
+            { ScoreGauge(score, color) }
         } else null,
     ) {
         if (range == Range.Day) {
@@ -345,3 +338,8 @@ private fun ScoreRelated(score: Score, state: DayUiState, r: RecoveryResult?, hi
         }
     }
 }
+
+/** A score's arc gauge on its detail header: the arch in [color] to [score] of 100, the score in dots inside it. */
+@Composable
+internal fun ScoreGauge(score: Int, color: androidx.compose.ui.graphics.Color) =
+    GlowArcGauge(score / 100f, color) { DotMatrixText(score.toString(), Modifier.detailNumber(score.toString()), dot = DotSize.Detail) }

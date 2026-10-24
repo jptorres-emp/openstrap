@@ -498,22 +498,6 @@ private fun AppRoot(
         afterLocation?.invoke()
         afterLocation = null
     }
-    // GPX of a kept route: the system's save dialog picks where; the start and end are already left out.
-    var pendingGpx by remember { mutableStateOf<String?>(null) }
-    val gpxLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/gpx+xml")) { uri ->
-        val text = pendingGpx
-        pendingGpx = null
-        if (uri != null && text != null) scope.launch(kotlinx.coroutines.Dispatchers.IO) {
-            runCatching { context.contentResolver.openOutputStream(uri)?.use { it.write(text.toByteArray()) } }
-        }
-    }
-    val exportGpx: (Long) -> Unit = { start ->
-        scope.launch {
-            val file = workoutsVm.gpx(start)
-            if (file == null) Toast.makeText(context, "This route is too short to share once its start and end are hidden.", Toast.LENGTH_LONG).show()
-            else { pendingGpx = file.second; gpxLauncher.launch(file.first) }
-        }
-    }
     val requestLocation: (() -> Unit) -> Unit = { then ->
         afterLocation = then
         locationLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
@@ -696,7 +680,7 @@ private fun AppRoot(
                     is Detail.Workout -> WorkoutDetail(
                         openWorkout?.takeIf { it.workout.start == detail.start }, workouts, padding, onBack = pop,
                         onDelete = { container.workout.discard(detail.start); pop() },
-                        workoutsVm = workoutsVm, session = container.workout, exportGpx = exportGpx,
+                        workoutsVm = workoutsVm, session = container.workout,
                     )
                     Detail.AllWorkouts -> org.openstrap.app.ui.glow.GlowWorkoutsScreen(
                         workouts, padding, onOpen = { push(Detail.Workout(it)) }, onBack = pop,
@@ -895,7 +879,7 @@ private fun AppRoot(
             }
         }
         WorkoutLayer(
-            container, workoutState, workoutMinimized, readySport, readyPicking, live, connection, workoutsVm, requestBluetooth, requestLocation, exportGpx,
+            container, workoutState, workoutMinimized, readySport, readyPicking, live, connection, workoutsVm, requestBluetooth, requestLocation,
             onReadySport = { readySport = it },
             onCloseReady = { readySport = null; readyPicking = false },
             capsuleBottom = if (rail) 16.dp else 104.dp,
@@ -991,7 +975,6 @@ private fun androidx.compose.foundation.layout.BoxScope.WorkoutLayer(
     workoutsVm: org.openstrap.app.ui.workout.WorkoutsViewModel,
     requestBluetooth: (() -> Unit) -> Unit,
     requestLocation: (() -> Unit) -> Unit,
-    exportGpx: (Long) -> Unit,
     onReadySport: (Int) -> Unit,
     onCloseReady: () -> Unit,
     capsuleBottom: androidx.compose.ui.unit.Dp,
@@ -1061,7 +1044,6 @@ private fun androidx.compose.foundation.layout.BoxScope.WorkoutLayer(
                 summary, calmDown.takeIf { !state.preview }, if (state.preview) emptyList() else route, workouts, usualDrop, padding,
                 onDone = session::dismissSummary, onDelete = { session.discard(state.start) },
                 onTrim = { from, to -> session.trim(state.start, from, to) }, onUndoTrim = { session.undoTrim(state.start) },
-                onExportGpx = { exportGpx(state.start) },
             )
         }
     }
@@ -1112,7 +1094,6 @@ private fun WorkoutDetail(
     onDelete: () -> Unit,
     workoutsVm: org.openstrap.app.ui.workout.WorkoutsViewModel,
     session: org.openstrap.app.device.WorkoutSession,
-    exportGpx: (Long) -> Unit,
 ) {
     // OpenStrap's own recordings also get their summary (route, laps, sets, the recording for trim) and are deleted
     // through the session; the strap's are deleted and remembered, so the next sync doesn't bring them back.
@@ -1126,6 +1107,5 @@ private fun WorkoutDetail(
         a, summary, workouts, usualDrop, contentPadding, onBack,
         onDelete = if (fromPhone) onDelete else ({ start?.let(workoutsVm::deleteStrapWorkout); onBack() }),
         onTrim = { from, to -> start?.let { session.trim(it, from, to) } }, onUndoTrim = { start?.let(session::undoTrim) },
-        onExportGpx = { start?.let(exportGpx) },
     )
 }

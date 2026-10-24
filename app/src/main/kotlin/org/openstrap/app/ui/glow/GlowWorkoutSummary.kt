@@ -91,7 +91,6 @@ fun GlowWorkoutSummaryScreen(
     onDelete: () -> Unit,
     onTrim: (from: Long, to: Long) -> Unit,
     onUndoTrim: () -> Unit,
-    onExportGpx: () -> Unit,
 ) {
     BackHandler(onBack = onDone)
     val a = summary?.analysis
@@ -140,7 +139,7 @@ fun GlowWorkoutSummaryScreen(
         }
         TrimSection(summary, onTrim, onUndoTrim)
         Spacer(Modifier.weight(1f))
-        SummaryActions(summary, justEnded = true, onExportGpx, onDone = onDone, onDelete = onDelete)
+        SummaryActions(justEnded = true, onDone = onDone, onDelete = onDelete)
     }
 }
 
@@ -239,17 +238,13 @@ private fun WorkoutCard(summary: PhoneSummary) {
     }
 }
 
-/** The kept route in its zones' colours, saying its ends stay private when shared; nothing without a route. */
+/** The kept route in its zones' colours; nothing without a route. */
 @Composable
 internal fun RouteMap(summary: PhoneSummary, modifier: Modifier = Modifier) {
     if (summary.route.size < 2) return
     val stretches = remember(summary) { Route.byZone(summary.route, summary.history, summary.analysis.maxHeartRate) }
     Box(modifier.fillMaxWidth().height(170.dp).clip(RoundedCornerShape(20.dp)).background(Raised)) {
         WorkoutMap(stretches, routeOnly = false, Modifier.fillMaxSize())
-        Text(
-            "Start and end hidden when you share", color = Color.White.copy(alpha = 0.8f), style = MaterialTheme.typography.labelSmall,
-            modifier = Modifier.align(Alignment.BottomStart).padding(10.dp).background(Color.Black, RoundedCornerShape(50)).padding(horizontal = 10.dp, vertical = 5.dp),
-        )
     }
 }
 

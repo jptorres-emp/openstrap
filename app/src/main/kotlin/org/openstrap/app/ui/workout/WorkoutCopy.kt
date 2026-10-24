@@ -52,7 +52,7 @@ object WorkoutCopy {
     }
 
     /** Under Keep route on this phone. */
-    fun routeNote(on: Boolean): String = if (on) "Saved on this phone for the map and export." else "Off. Only the totals are kept."
+    fun routeNote(on: Boolean): String = if (on) "Saved on this phone for the map." else "Off. Only the totals are kept."
 
     /** The Ready info sheet's meaning. */
     const val READY_MEANING = "Heart rate comes from the strap every second. GPS only when you turn it on."
@@ -65,7 +65,7 @@ object WorkoutCopy {
         ("GPS" to "Use GPS turns on the phone's location for this workout only, for distance, pace and the map. Map " +
             "tiles come from OpenFreeMap, which sees roughly where the map is. Route only on the map loads no tiles. " +
             "Without GPS, walks and runs get a distance from the strap's steps, marked ≈.").takeIf { outdoor },
-        ("Keep route" to "With Keep route on, the route is saved on this phone for the map and export. Off, only the " +
+        ("Keep route" to "With Keep route on, the route is saved on this phone for the map. Off, only the " +
             "totals are kept and the route is discarded when the workout ends.").takeIf { outdoor },
     )
 

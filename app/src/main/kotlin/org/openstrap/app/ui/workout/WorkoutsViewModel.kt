@@ -221,25 +221,6 @@ class WorkoutsViewModel(private val dao: HealthDao, private val profile: Flow<Us
         SummaryCopy.usualDrop(drops)
     }
 
-    /**
-     * A GPX file of a kept route for sharing: its first and last [org.openstrap.app.data.Route.PRIVACY_M] metres left
-     * out, so it doesn't show where you live, with heart rate. Null without a route long enough to share.
-     *
-     * TODO: write the smoothed track (`Route.track`) instead of the raw fixes, so the file matches the map and the
-     * distance shown in the app. Deferred on purpose; the smoothing landed in 33b550f.
-     */
-    suspend fun gpx(start: Long): Pair<String, String>? = kotlinx.coroutines.withContext(Dispatchers.Default) {
-        val w = dao.appWorkoutOnce(start) ?: return@withContext null
-        val points = org.openstrap.app.data.Route.privacyTrim(
-            dao.routeOnce(start).map { it.point }.filter { it.t in w.from..(w.end ?: Long.MAX_VALUE) },
-        )
-        if (points.isEmpty()) return@withContext null
-        val hr = dao.appWorkoutHeartRateOnce(start).filter { !it.fromHistory }.associate { it.timestamp to it.bpm }
-        val name = Workouts.sportName(w.sportType)
-        val date = java.time.Instant.ofEpochSecond(w.from).atZone(java.time.ZoneId.systemDefault()).toLocalDate()
-        "openstrap-${name.lowercase().replace(' ', '-')}-$date.gpx" to org.openstrap.app.data.Route.gpx("$name $date", points, hr)
-    }
-
     private companion object {
         /** Drops older than this say little about your fitness now. */
         const val USUAL_DROP_LOOKBACK_S = 180 * 86_400L

@@ -59,7 +59,7 @@ private const val STRAP_DELETE =
 /**
  * The workout [a]. A phone workout shows from its [summary] (route, laps, sets and the whole recording, for trimming),
  * a strap workout from [a] alone. [workouts] are all of them, for your usual Load, as the rows that open this page
- * use; [usualDrop] your usual heart rate drop. Trim, undo and Export GPX are for phone workouts.
+ * use; [usualDrop] your usual heart rate drop. Trim and undo are for phone workouts.
  */
 @Composable
 fun GlowWorkoutDetailScreen(
@@ -72,7 +72,6 @@ fun GlowWorkoutDetailScreen(
     onDelete: () -> Unit,
     onTrim: (from: Long, to: Long) -> Unit = { _, _ -> },
     onUndoTrim: () -> Unit = {},
-    onExportGpx: () -> Unit = {},
 ) {
     BackHandler(onBack = onBack)
     val shown = if (a?.fromPhone == true) summary?.analysis else a
@@ -126,7 +125,7 @@ fun GlowWorkoutDetailScreen(
             if (phone != null) item { TrimSection(phone, onTrim, onUndoTrim) }
             item {
                 Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    if (phone != null) SummaryActions(phone, justEnded = false, onExportGpx, onDone = onBack, onDelete = onDelete)
+                    if (phone != null) SummaryActions(justEnded = false, onDone = onBack, onDelete = onDelete)
                     else DeleteWorkout(STRAP_DELETE, onDelete, Modifier.align(Alignment.CenterHorizontally))
                 }
             }

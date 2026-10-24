@@ -1210,14 +1210,10 @@ fun PulseDot(color: Color, bpm: Int?, size: Dp) {
 
 private fun clock(epoch: Long) = Instant.ofEpochSecond(epoch).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("HH:mm"))
 
-/** Export GPX (for a route kept), Done right after the end, and Delete workout behind a question. */
+/** Done right after the end, and Delete workout behind a question. */
 @Composable
-internal fun ColumnScope.SummaryActions(summary: PhoneSummary, justEnded: Boolean, onExportGpx: () -> Unit, onDone: () -> Unit, onDelete: () -> Unit) {
-    val canExport = Route.privacyTrim(summary.route).isNotEmpty()
-    if (justEnded || canExport) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        if (canExport) Box(Modifier.weight(1f)) { WorkoutButton("Export GPX", Raised, Color.White, onExportGpx) }
-        if (justEnded) Box(Modifier.weight(1f)) { WorkoutButton("Done", Color.White, Color.Black, onDone) }
-    }
+internal fun ColumnScope.SummaryActions(justEnded: Boolean, onDone: () -> Unit, onDelete: () -> Unit) {
+    if (justEnded) WorkoutButton("Done", Color.White, Color.Black, onDone)
     DeleteWorkout(PHONE_DELETE, onDelete, Modifier.align(Alignment.CenterHorizontally))
 }
 

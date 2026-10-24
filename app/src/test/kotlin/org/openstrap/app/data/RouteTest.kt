@@ -65,28 +65,10 @@ class RouteTest {
     }
 
     @Test
-    fun exportsHideTheStartAndEnd() {
-        val trimmed = Route.privacyTrim(run(1000))
-        val first = trimmed.first().lon * 111_195.0
-        val last = trimmed.last().lon * 111_195.0
-        assertTrue(first >= 300 && first < 304)
-        assertTrue(last <= 2700 && last > 2696)
-        assertTrue(Route.privacyTrim(run(150)).isEmpty())
-    }
-
-    @Test
     fun paceAndItsFormat() {
         assertEquals(333.0, Route.currentPace(run(100))!!, 2.0)
         assertEquals("5′33″", Route.formatPace(333.0))
         assertEquals("—", Route.formatPace(null))
-    }
-
-    @Test
-    fun gpxCarriesHeartRate() {
-        val g = Route.gpx("Run <1>", run(2), mapOf(0L to 120, 2L to 125))
-        assertTrue(g.contains("<name>Run &lt;1></name>"))
-        assertTrue(g.contains("<gpxtpx:hr>120</gpxtpx:hr>"))
-        assertEquals(3, Regex("<trkpt").findAll(g).count())
     }
 
     /**

@@ -20,7 +20,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
@@ -79,18 +81,35 @@ fun ListPanel(
         )
         content()
     }
+    // Rows reach out over the side padding, so a tap lights the whole row, edge to edge. The card clips them to its
+    // corners.
+    val rows: @Composable ColumnScope.() -> Unit = { CompositionLocalProvider(LocalRowBleed provides GlowLayout.CardInset) { inner() } }
     if (LocalEdgeOverride.current.edge != null) {
-        EdgeCard(EdgeNeutral, modifier.fillMaxWidth(), contentPadding = GlowLayout.ListPadding, content = inner)
+        EdgeCard(EdgeNeutral, modifier.fillMaxWidth().clip(GlowLayout.CardShape), contentPadding = GlowLayout.ListPadding, content = rows)
         return
     }
     Column(
         modifier
             .fillMaxWidth()
+            .clip(GlowLayout.CardShape)
             .background(ListSurface, GlowLayout.CardShape)
             .border(1.dp, RowHairline, GlowLayout.CardShape)
             .padding(GlowLayout.ListPadding),
-        content = inner,
+        content = rows,
     )
+}
+
+/** How far a [ListRow] reaches past its list's side padding: the padding itself inside a [ListPanel], else nothing. */
+internal val LocalRowBleed = androidx.compose.runtime.staticCompositionLocalOf { 0.dp }
+
+/**
+ * Lays the row out [bleed] wider on each side than its slot, so what's drawn and tapped next (the press light) spans
+ * the list edge to edge, while the row's own content keeps to the slot.
+ */
+private fun Modifier.bleed(bleed: androidx.compose.ui.unit.Dp): Modifier = if (bleed == 0.dp) this else layout { m, c ->
+    val e = bleed.roundToPx()
+    val p = m.measure(c.copy(minWidth = c.minWidth + 2 * e, maxWidth = if (c.hasBoundedWidth) c.maxWidth + 2 * e else c.maxWidth))
+    layout((p.width - 2 * e).coerceAtLeast(0), p.height) { p.place(-e, 0) }
 }
 
 /** A list title row's note: a way on ("All 9") with its caret when [onNote] is given, else plain Secondary. */
@@ -135,13 +154,16 @@ fun ListRow(
     val accent = if (offNormal && !waiting) color else Color.White
     // Tapped, the row grows into what it opens (spec 3.5).
     val opening = cardOpening(onClick)
+    val bleed = LocalRowBleed.current
     Row(
         modifier
             .fillMaxWidth()
+            .bleed(bleed)
             .then(opening?.modifier ?: Modifier)
             .let { if (onClick != null) it.clickable(onClick = opening?.onClick ?: onClick) else it }
-            .let { if (divider) it.drawBehind { drawLine(RowHairline, Offset(0f, 0f), Offset(size.width, 0f), 1.dp.toPx()) } else it }
-            .padding(vertical = GlowLayout.RowPadding),
+            // The hairline keeps to the list's padding, as before.
+            .let { if (divider) it.drawBehind { val e = bleed.toPx(); drawLine(RowHairline, Offset(e, 0f), Offset(size.width - e, 0f), 1.dp.toPx()) } else it }
+            .padding(horizontal = bleed, vertical = GlowLayout.RowPadding),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (icon != null) {

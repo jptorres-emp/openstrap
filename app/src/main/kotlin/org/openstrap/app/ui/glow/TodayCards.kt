@@ -362,7 +362,8 @@ internal fun HeartCard(
 /**
  * Steps toward the day's goal, with the day's steps so far as a line (ghost line, chart kit) on an axis up to the goal,
  * and your [usual] by the end of each hour as the faint solid ghost behind it, with "about usual by now" beside the
- * goal (spec 2.7, compare by pace). Without a usual yet only today's line shows.
+ * goal (spec 2.7, compare by pace). Without a usual yet only today's line shows. The share of the goal is the card's
+ * progress bar. Titled Steps, as the Activity tab and the detail it opens are.
  */
 @Composable
 internal fun ActivityCard(
@@ -380,8 +381,11 @@ internal fun ActivityCard(
     val now = java.time.LocalTime.now()
     val pace = org.openstrap.app.ui.dashboard.ActivityCopy.paceOf(state.steps, usual, isToday, now.hour, now.minute)
     val ghost = usual?.takeIf { it.size == 24 }
-    EdgeCard(MetricColors.steps, modifier.fillMaxWidth().gridSize(CardSize.Wide), kind = EdgeKind.Progress, onClick = onClick) {
-        EdgeTitle("Activity", "Goal %,d".format(goal), marker = upTo, tag = tag)
+    EdgeCard(
+        MetricColors.steps, modifier.fillMaxWidth().gridSize(CardSize.Wide), kind = EdgeKind.Progress,
+        progress = if (goal > 0) state.steps / goal.toFloat() else 0f, onClick = onClick,
+    ) {
+        EdgeTitle("Steps", "Goal %,d".format(goal), marker = upTo, tag = tag)
         EdgeValue("%,d".format(state.steps), "steps", org.openstrap.app.ui.dashboard.ActivityCopy.activityLine(state.steps, goal, pace, isToday))
         if (state.steps > 0 && line.size >= 2) {
             Spacer(Modifier.height(10.dp))

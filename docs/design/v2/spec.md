@@ -600,9 +600,9 @@ changes with the moment, crossfading over 300 ms (3.5).
 
 Heart rate shows at waking, midday, the evening and night, never in the workout window, during or after a workout.
 Its card is the line with scrub: the day's heart rate with your resting range (your normal resting heart rate, mean
-± one standard deviation over 30 days) as a dim band, the big number and its time following the finger. Activity's
-card draws today's steps so far as a line in place of the progress bar. The ghost of your usual by this time waits
-for hourly steps from past days (step 6). Charge's level card draws its line so far until the evening.
+± one standard deviation over 30 days) as a dim band, the big number and its time following the finger. The Steps
+card draws today's steps so far as a line, with the share of the goal as its progress bar. The ghost of your usual by
+this time waits for hourly steps from past days (step 6). Charge's level glow draws its line so far until the evening.
 
 Present in every moment when they apply:
 

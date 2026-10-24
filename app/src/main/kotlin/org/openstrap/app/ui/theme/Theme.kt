@@ -37,8 +37,8 @@ object MetricColors {
     val load = Color(0xFFA78BFA)
     /** Habit Age: orchid. */
     val habitAge = Color(0xFFD86BEA)
-    /** The evening hero's light: a moment, not a metric. */
-    val evening = Color(0xFF8B7BEA)
+    /** The evening hero's light: a moment, not a metric. Violet, well clear of the night's Sleep blue. */
+    val evening = Color(0xFFA274F2)
     /** Green and amber are for the strap and the sync only, never a health value. */
     val good = Color(0xFF3DDC97)
     val warn = Color(0xFFFFB547)

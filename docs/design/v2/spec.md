@@ -98,7 +98,7 @@ reads as the same light:
 | Blood oxygen | `spo2` #38BDF8 | Stress | `stress` #F062C0 |
 | Skin temperature | `temperature` #FF8A3D | Breathing rate, Breathing disturbances | `sleepLight` #8FA8FF |
 | Load, Time to recover | `load` #A78BFA | Habit Age | `habitAge` #D86BEA |
-| Heart points, VO2 max | `heart` | Evening hero (a moment, not a metric) | `evening` #8B7BEA |
+| Heart points, VO2 max | `heart` | Evening hero (a moment, not a metric) | `evening` #A274F2 |
 
 - **Charge is one colour.** Ember orange on every surface. Its level shows as the light's height, never as a hue, so
   `chargeScale`, `chargeAt` and `chargeDeep` go. The old gold `charge` #FFD166 becomes #F66C28.

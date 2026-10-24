@@ -116,6 +116,11 @@ data class GlowStyle(
      */
     val lightLevel: Float? = null,
     /**
+     * HSL lightness the body starts from before the luminance cap darkens it. Raised only where a hue must read as
+     * itself on a hero, like the evening's violet, which at the usual 0.32 sinks into the night's blue.
+     */
+    val bodyLightness: Float = 0.32f,
+    /**
      * The second glow card on a screen, L3 (spec 2.1): the light colour at 70% at the lit edge, reaching the body by
      * 28% of the card, the rim at 70%. A level card ignores it: its light is the value, so it's always at full.
      */
@@ -309,8 +314,8 @@ internal class GlowPalette(style: GlowStyle) {
         // Same lightness looks far brighter in yellow-green than in red or blue, so the body and band
         // are darkened until their actual brightness keeps white text readable, whatever the hue.
         // Only a small hue step from the rim, so the card reads as one colour in different light.
-        mid = capped(h - 4f, s * 0.85f, 0.32f, MID_MAX_LUMINANCE)
-        tone = capped(h + style.toneShift, s * 0.8f, 0.28f, TONE_MAX_LUMINANCE)
+        mid = capped(h - 4f, s * 0.85f, style.bodyLightness, MID_MAX_LUMINANCE)
+        tone = capped(h + style.toneShift, s * 0.8f, style.bodyLightness - 0.04f, TONE_MAX_LUMINANCE)
         core = hsl(h, 0.7f, style.coreLightness)
         // A dimmer mood darkens the whole lit area, like turning the light down.
         val k = style.light().brightness.coerceIn(0f, 1f)

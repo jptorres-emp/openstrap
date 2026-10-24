@@ -49,7 +49,7 @@ class DesignTokenTest {
         )
         assertEquals(14.dp, GlowLayout.RowPadding)
         assertEquals(Color(0xFFF66C28), MetricColors.charge)
-        assertEquals(Color(0xFF8B7BEA), MetricColors.evening)
+        assertEquals(Color(0xFFA274F2), MetricColors.evening)
     }
 
     @Test fun `glow bodies keep white text readable, and are no darker than they need be`() {

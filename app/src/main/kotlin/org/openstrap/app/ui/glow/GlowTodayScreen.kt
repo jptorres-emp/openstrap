@@ -416,6 +416,7 @@ private fun heroStyle(color: Color, lightAngle: Float?, rim: Float = 1f) = GlowS
 /** The workout window's rim, raised for effort, and the calmer one after a workout (spec 4.2). */
 private const val WINDOW_RIM = 1.2f
 private const val AFTER_RIM = 0.8f
+private const val EVENING_BODY = 0.46f
 
 /**
  * Waking up: how you slept and what Recovery says, the score in dots with its word, and Charge at waking as text
@@ -587,8 +588,10 @@ private fun AfterHero(ctx: TodayContext, lightAngle: Float?, onOpenWorkout: (Lon
 private fun EveningHero(ctx: TodayContext, lightAngle: Float?, bedtime: LocalTime?, onOpen: () -> Unit, modifier: Modifier) {
     val goals = LocalGoals.current
     val nouns = ctx.dayWorkouts.map { sportNoun(it.workout.sportType) }
-    val color = if (ctx.moment == Moment.Night) MetricColors.sleepDeep else MetricColors.evening
-    GlowCard(heroStyle(color, lightAngle), modifier, onClick = onOpen) {
+    val night = ctx.moment == Moment.Night
+    val style = heroStyle(if (night) MetricColors.sleepDeep else MetricColors.evening, lightAngle)
+    // The evening's violet is lit lighter so it reads as violet, not as a second night (spec 4.2).
+    GlowCard(if (night) style else style.copy(bodyLightness = EVENING_BODY), modifier, onClick = onOpen) {
         Column {
             GlowHeader("Today", trailing = TodayCopy.bedtimeIn(LocalTime.now(), bedtime), marker = ctx.upTo(ctx.newest), tag = ctx.partial)
             HeroSentence(TodayCopy.evening(nouns, ctx.state.steps, goals.steps, ctx.loadStatus))

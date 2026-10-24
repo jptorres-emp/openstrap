@@ -53,10 +53,12 @@ class TodayPlanTest {
         assertEquals(CardSize.Wide, waking[LastNight])
         // Past midday the night collapses to a strip.
         assertEquals(CardSize.Strip, todayCards(Moment.Midday, TodayFacts()).first { it.card == LastNight }.size)
-        // Charge is the second glow before a workout, a level card after it and in the evening.
-        assertTrue(todayCards(Moment.WorkoutWindow, TodayFacts()).first { it.card == Charge }.secondGlow)
-        assertFalse(todayCards(Moment.After, TodayFacts()).first { it.card == Charge }.secondGlow)
-        assertFalse(todayCards(Moment.Evening, TodayFacts()).first { it.card == Charge }.secondGlow)
+        // Charge is the second glow wherever it shows: before a workout, after it and in the evening.
+        for (m in listOf(Moment.WorkoutWindow, Moment.After, Moment.Evening, Moment.Night)) {
+            assertTrue("$m", todayCards(m, TodayFacts()).first { it.card == Charge }.secondGlow)
+        }
+        // Pinned where the moment doesn't have it, it's the second glow too.
+        assertTrue(applyEdits(todayCards(Moment.Waking, TodayFacts()), TodayEdits(pinned = listOf(Charge)), Moment.Waking).first { it.card == Charge }.secondGlow)
         // After a workout Load and time to recover are a Small pair; before one, a list.
         val after = todayCards(Moment.After, TodayFacts(workout = true)).associate { it.card to it.size }
         assertEquals(CardSize.Small, after[LoadToday])

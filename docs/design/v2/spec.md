@@ -65,8 +65,8 @@ the light reaches.
   and a line (Charge on Today) fills across from the left. The lit edge is the light colour at full, the lit part is
   the value's share of the card, then a soft 22 dp step into the dark core. At 0 the bottom 12% still glows.
 - A level glow is always this bright, because its light is the value. Beside a hero (Charge on Recovery, Charge as the
-  wide card in the workout window, beside the hero on Today) it still counts as the screen's second glow, so no third
-  glow joins it. L3 is for a second glow that isn't a level. Charge is always a level, wherever it shows.
+  wide card under the hero on Today, in every moment that has it) it still counts as the screen's second glow, so no
+  third glow joins it. L3 is for a second glow that isn't a level. Charge is always a level, wherever it shows.
 - On an edge card the light fills from the left to the value at 46% of the ink, 30% at the value, and fades out over
   40 dp past it. No progress bar.
 - When the value changes after a sync, the light moves from the old level to the new over 600 ms with the number (3.5).
@@ -576,8 +576,8 @@ Rows in order. Sizes per 2.4, tiers per 2.5.
 | Waking up | Recovery: "Slept 7 h 40. Recovered enough for your usual training." Score, status word, "Charge at waking 84" | Check-in strip. List "Your body this morning" (resting HR, HRV, blood oxygen, breathing rate). Edge: Last night (with stage strip), Heart rate, Activity |
 | Midday | Charge: sentence, value with `lightLevel`, recharged and drained | Strip: Last night collapsed. Edge: Activity (ghost line), Heart rate. List "Right now" (stress, HRV). Edge: Recovery (left edge) |
 | Workout window | "Ready for effort. You usually run around now." Start button, Other sport | Second glow: Charge (wide), a level glow, the light filling across from the left to the value (Recovery's battery on its side). List "Before you start" (Load today, time to recover). Edge: Activity. Strip: Last night |
-| After a workout | "Since your run, 40 min. Heart rate settling." Drop curve into your resting range (a dim band), calm glow | Edge: the workout (left, with its zone bar). Small pair: Load (toward your usual, from below) and To recover (flips to the top). Level: Charge, with its line so far. Edge: Activity |
-| Evening | "A full day. A run, 13,860 steps and a Load above your usual." Steps, Load, Charge left. "Bedtime in 1 h 10". Dim mood | Level: Charge. Edge: Activity (line so far), Heart rate (the day's line, flips to the top under Activity unless live). Strip: Last night |
+| After a workout | "Since your run, 40 min. Heart rate settling." Drop curve into your resting range (a dim band), calm glow | Edge: the workout (left, with its zone bar). Small pair: Load (toward your usual, from below) and To recover (flips to the top). Second glow: Charge, as in the workout window, with its line so far. Edge: Steps |
+| Evening | "A full day. A run, 13,860 steps and a Load above your usual." Steps, Load, Charge left. "Bedtime in 1 h 10". Dim mood | Second glow: Charge, as in the workout window. Edge: Steps (line so far), Heart rate (the day's line, flips to the top under Activity unless live). Strip: Last night |
 | Night | As evening, Night mood | As evening |
 | During a workout | The workout, live heart rate | As midday without Heart rate (the hero has it) |
 

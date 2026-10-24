@@ -87,6 +87,8 @@ fun todayCards(moment: Moment?, facts: TodayFacts, morning: Boolean = true): Lis
     val strip = { c: TodayCard -> TodaySlot(c, CardSize.Strip) }
     val list = { c: TodayCard -> TodaySlot(c, CardSize.List) }
     val small = { c: TodayCard -> TodaySlot(c, CardSize.Small) }
+    // Charge is always the screen's second glow: a level glow filling across to its value (spec 2.1).
+    val charge = TodaySlot(TodayCard.Charge, CardSize.Wide, secondGlow = true)
     val own = when (m) {
         Moment.Waking -> listOfNotNull(
             strip(TodayCard.CheckIn).takeIf { facts.isToday },
@@ -99,16 +101,16 @@ fun todayCards(moment: Moment?, facts: TodayFacts, morning: Boolean = true): Lis
         // During a workout the hero is the workout and its live heart rate, so the rest stays as midday without it.
         Moment.During -> listOf(strip(TodayCard.LastNight), wide(TodayCard.Activity), list(TodayCard.RightNow), wide(TodayCard.Recovery))
         Moment.WorkoutWindow -> listOf(
-            TodaySlot(TodayCard.Charge, CardSize.Wide, secondGlow = true), list(TodayCard.LoadToday), wide(TodayCard.Activity),
+            charge, list(TodayCard.LoadToday), wide(TodayCard.Activity),
             strip(TodayCard.LastNight),
         )
-        // What the workout did as a Small pair; Charge fills across to its level, so the hero is the one glow.
+        // What the workout did as a Small pair, then Charge as the screen's second glow.
         Moment.After -> listOfNotNull(
             wide(TodayCard.Workout).takeIf { facts.workout }, small(TodayCard.LoadToday), small(TodayCard.Recover),
-            wide(TodayCard.Charge), wide(TodayCard.Activity),
+            charge, wide(TodayCard.Activity),
         )
         Moment.Evening, Moment.Night -> listOf(
-            wide(TodayCard.Charge), wide(TodayCard.Activity), wide(TodayCard.HeartRate), strip(TodayCard.LastNight),
+            charge, wide(TodayCard.Activity), wide(TodayCard.HeartRate), strip(TodayCard.LastNight),
         )
     }
     // Things that need an answer come straight under the hero; the week and Habit Age close the list, then Start a
@@ -178,7 +180,8 @@ data class TodayEdits(val hidden: Set<TodayCard> = emptySet(), val pinned: List<
 fun applyEdits(slots: List<TodaySlot>, edits: TodayEdits, moment: Moment?, unavailable: Set<TodayCard> = emptySet()): List<TodaySlot> {
     val pins = edits.pinned.filter { it != heroSubject(moment) && it !in unavailable }
     val pinned = pins.flatMap { card ->
-        slots.filter { it.card.owner() == card }.ifEmpty { listOf(TodaySlot(card, pinnedSize(card))) }.map { it.copy(pinned = true) }
+        slots.filter { it.card.owner() == card }
+            .ifEmpty { listOf(TodaySlot(card, pinnedSize(card), secondGlow = card == TodayCard.Charge)) }.map { it.copy(pinned = true) }
     }
     val rest = slots.filter { it.card.owner() !in edits.hidden && it.card.owner() !in pins }
     val urgent = setOf(TodayCard.Hero, TodayCard.Offer, TodayCard.Suggestion, TodayCard.Alerts)

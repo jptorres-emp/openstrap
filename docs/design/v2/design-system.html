@@ -1,0 +1,969 @@
+<title>OpenStrap Design System</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Doto:wght@700&family=Funnel+Display:wght@300;400;500&family=Funnel+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: one long reference sheet, a narrow reading column for rules beside wide rows of live specimens drawn in the app's own glow language. Dark only, like the app. */
+:root{
+  color-scheme:dark;
+  --page:#000000;
+  --edge:#0A0A0B;
+  --list:#0F0F11;
+  --sheet:#141416;
+  --control:#1F1F22;
+  --fg:#FFFFFF;
+  --fg2:rgba(255,255,255,.72);
+  --fg3:rgba(255,255,255,.50);
+  --fg4:rgba(255,255,255,.30);
+  --hair:rgba(255,255,255,.08);
+  --div:rgba(255,255,255,.06);
+  --good:#3DDC97;
+  --warn:#FFB547;
+  --display:"Funnel Display",ui-sans-serif,system-ui,sans-serif;
+  --sans:"Funnel Sans",ui-sans-serif,system-ui,sans-serif;
+  --dots:"Doto",ui-monospace,monospace;
+  /* metric hues: h, s */
+  --rec-h:160;--rec-s:83%;   --rec:#7CF2C9;
+  --chg-h:20; --chg-s:92%;   --chg:#F66C28;
+  --slp-h:229;--slp-s:100%;  --slp:#4C6FFF;
+  --hrt-h:358;--hrt-s:100%;  --hrt:#FF5A5F;
+  --stp-h:77; --stp-s:90%;   --stp:#C3F53C;
+  --hrv-h:173;--hrv-s:66%;   --hrv:#2DD4BF;
+  --spo-h:199;--spo-s:93%;   --spo:#38BDF8;
+  --str-h:321;--str-s:83%;   --str:#F062C0;
+  --tmp-h:24; --tmp-s:100%;  --tmp:#FF8A3D;
+  --lod-h:255;--lod-s:92%;   --lod:#A78BFA;
+  --hab-h:291;--hab-s:76%;   --hab:#D86BEA;
+  --eve-h:250;--eve-s:70%;   --eve:#8B7BEA;
+  --neu-h:220;--neu-s:10%;   --neu:#878D99;
+}
+body{background:var(--page);color:var(--fg);font-family:var(--sans);font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased}
+*{box-sizing:border-box}
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:40px 96px;display:flex;flex-direction:column;gap:72px}
+h1,h2,h3{font-family:var(--display);font-weight:400;margin:0;text-wrap:balance}
+h1{font-size:clamp(34px,6vw,56px);line-height:1.02;letter-spacing:-.02em;font-weight:300}
+h2{font-size:28px;line-height:1.1;letter-spacing:-.01em}
+h3{font-size:17px;font-family:var(--sans);font-weight:500}
+p{margin:0;max-width:66ch;color:var(--fg2)}
+p b,li b,td b{color:var(--fg);font-weight:500}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;color:var(--fg);background:var(--control);padding:1px 6px;border-radius:6px}
+a{color:var(--fg)}
+:focus-visible{outline:2px solid #fff;outline-offset:3px}
+.eyebrow{font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--fg3)}
+.top{display:flex;flex-direction:column;gap:18px}
+.status{display:inline-flex;align-items:center;gap:8px;align-self:flex-start;font-size:13px;color:var(--fg2);background:var(--edge);border:1px solid var(--hair);border-radius:999px;padding:6px 14px}
+.status i{width:8px;height:8px;border-radius:50%;background:var(--warn);display:block}
+nav{display:flex;flex-wrap:wrap;gap:8px}
+nav a{font-size:13px;text-decoration:none;color:var(--fg2);border:1px solid var(--hair);border-radius:999px;padding:6px 12px}
+nav a:hover{color:var(--fg);border-color:rgba(255,255,255,.2)}
+section{display:flex;flex-direction:column;gap:24px;scroll-margin-top:24px}
+.sh{display:flex;flex-direction:column;gap:10px}
+.sh .n{font-family:var(--dots);font-size:22px;color:var(--fg3);line-height:1}
+.cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:32px}
+@media (max-width:860px){.cols{grid-template-columns:minmax(0,1fr)}}
+ul.rules{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px;max-width:66ch}
+ul.rules li{color:var(--fg2);padding-left:18px;position:relative}
+ul.rules li::before{content:"";position:absolute;left:0;top:.62em;width:6px;height:6px;border-radius:50%;background:var(--fg3)}
+.tbl{overflow-x:auto;border:1px solid var(--hair);border-radius:20px;background:var(--edge)}
+table{border-collapse:collapse;width:100%;font-size:13.5px;min-width:620px}
+th,td{text-align:left;padding:11px 16px;vertical-align:top;border-top:1px solid var(--div)}
+thead th{border-top:0;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--fg3)}
+td{color:var(--fg2)}
+td:first-child{color:var(--fg);white-space:nowrap}
+.num{font-variant-numeric:tabular-nums}
+.strip{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end}
+.spec{display:flex;flex-direction:column;gap:10px;min-width:0}
+.spec .cap{font-size:13px;color:var(--fg2);max-width:30ch}
+.spec .cap b{display:block;font-weight:500;color:var(--fg);font-size:14px;margin-bottom:2px}
+.was{color:var(--fg3);text-decoration:line-through;text-decoration-color:rgba(255,255,255,.35)}
+
+/* ---------- the glow card ---------- */
+.g{--h:var(--rec-h);--s:var(--rec-s);--a:0deg;--x:0px;--y:-18px;--k:1;
+  --lt:hsl(var(--h) calc(var(--s)*.9) 56%);--bd:hsl(var(--h) calc(var(--s)*.8) 16%);--cr:hsl(var(--h) 70% 3%);
+  position:relative;overflow:hidden;isolation:isolate;border-radius:28px;padding:20px;display:flex;flex-direction:column;color:#fff;
+  filter:brightness(var(--k))}
+.g::before{content:"";position:absolute;inset:0;z-index:-2}
+.g::after{content:"";position:absolute;z-index:-1;border-radius:50%;background:var(--cr);filter:blur(26px);left:var(--cx,10%);top:var(--cy,-30%);width:var(--cw,80%);height:var(--ch,70%)}
+.g.L4::before{background:linear-gradient(var(--a),var(--lt) 0%,color-mix(in oklab,var(--lt) 50%,var(--bd)) 16%,var(--bd) 45%,var(--bd) 100%);box-shadow:inset var(--x) var(--y) 36px -8px var(--lt),inset 0 0 0 1px rgba(255,255,255,.10),inset 0 1px 0 rgba(255,255,255,.20)}
+.g.L3::before{background:linear-gradient(var(--a),color-mix(in oklab,var(--lt) 62%,var(--bd)) 0%,var(--bd) 28%,var(--bd) 100%);box-shadow:inset var(--x) var(--y) 26px -14px color-mix(in oklab,var(--lt) 70%,transparent),inset 0 0 0 1px rgba(255,255,255,.08)}
+.g.raised::before{box-shadow:inset var(--x) var(--y) 44px -4px var(--lt),inset 0 0 26px 2px color-mix(in oklab,var(--lt) 50%,transparent),inset 0 0 0 1px rgba(255,255,255,.14)}
+.g.calm::before{box-shadow:inset var(--x) var(--y) 28px -16px var(--lt),inset 0 0 0 1px rgba(255,255,255,.08)}
+/* level: the light rises from the bottom to the value */
+.g.lvl{--v:74%}
+.g.lvl::before{background:linear-gradient(0deg,var(--lt) 0%,color-mix(in oklab,var(--lt) 55%,var(--bd)) calc(var(--v)*.35),var(--bd) calc(var(--v)*.85),var(--cr) calc(var(--v) + 11%),var(--cr) 100%);box-shadow:inset 0 -26px 40px -10px var(--lt),inset 0 0 0 1px rgba(255,255,255,.10);transition:background .6s cubic-bezier(.2,.8,.2,1)}
+.g.lvl::after{display:none}
+.m-eve{--k:.8}.m-night{--k:.65}
+.h-rec{--h:var(--rec-h);--s:var(--rec-s)}.h-chg{--h:var(--chg-h);--s:var(--chg-s)}.h-slp{--h:var(--slp-h);--s:var(--slp-s)}
+.h-hrt{--h:var(--hrt-h);--s:var(--hrt-s)}.h-stp{--h:var(--stp-h);--s:var(--stp-s)}.h-hrv{--h:var(--hrv-h);--s:var(--hrv-s)}
+.h-lod{--h:var(--lod-h);--s:var(--lod-s)}.h-eve{--h:var(--eve-h);--s:var(--eve-s)}.h-hab{--h:var(--hab-h);--s:var(--hab-s)}
+.from-below{--a:0deg;--x:0px;--y:-18px;--cx:5%;--cy:-35%;--cw:90%;--ch:80%}
+.from-ll{--a:45deg;--x:16px;--y:-16px;--cx:35%;--cy:-30%;--cw:85%;--ch:80%}
+.from-ur{--a:225deg;--x:-16px;--y:16px;--cx:-20%;--cy:35%;--cw:85%;--ch:85%}
+.from-lr{--a:315deg;--x:-16px;--y:-16px;--cx:-25%;--cy:-30%;--cw:90%;--ch:85%}
+.from-above{--a:180deg;--x:0px;--y:18px;--cx:5%;--cy:45%;--cw:90%;--ch:80%}
+.from-pool{--a:0deg;--x:0px;--y:0px;--cx:8%;--cy:22%;--cw:60%;--ch:70%}
+
+/* ---------- edge card ---------- */
+.e{--ink:var(--hrt);--glow:color-mix(in srgb,var(--ink) 70%,transparent);--k:1;
+  position:relative;border-radius:28px;background:var(--edge);border:1px solid var(--hair);padding:20px;display:flex;flex-direction:column;filter:brightness(var(--k))}
+.e.strong{--glow:color-mix(in srgb,var(--ink) 90%,transparent)}
+.e.b{box-shadow:inset 0 -48px 40px -26px var(--glow)}
+.e.t{box-shadow:inset 0 48px 40px -26px var(--glow)}
+.e.l{box-shadow:inset 48px 0 40px -26px var(--glow)}
+.e.r{box-shadow:inset -48px 0 40px -26px var(--glow)}
+.e.strong.b{box-shadow:inset 0 -72px 52px -24px var(--glow)}
+.e.strong.t{box-shadow:inset 0 72px 52px -24px var(--glow)}
+.e.lv{--v:30%;background:linear-gradient(90deg,color-mix(in srgb,var(--ink) 46%,var(--edge)) 0%,color-mix(in srgb,var(--ink) 30%,var(--edge)) var(--v),var(--edge) calc(var(--v) + 22%))}
+.e.m-eve{--k:.9}.e.m-night{--k:.8}
+.ql{border-radius:28px;background:var(--list);border:1px solid var(--div);padding:8px 20px 6px}
+
+/* ---------- parts inside cards ---------- */
+.ct{font-family:var(--sans);font-weight:500;font-size:17px;line-height:22px;display:flex;align-items:center;gap:8px}
+.ct .note{margin-left:auto;font-size:13px;font-weight:400;color:var(--fg2)}
+.sent{font-family:var(--display);font-weight:300;font-size:20px;line-height:24.4px;letter-spacing:-.01em;margin-top:12px;max-width:none;color:#fff}
+.sec{font-size:13px;line-height:18px;color:var(--fg2)}
+.cap11{font-size:11px;line-height:14px;font-weight:500;color:var(--fg3);font-variant-numeric:tabular-nums}
+.d{font-family:var(--dots);font-weight:700;line-height:.8;letter-spacing:.02em;font-size:calc(var(--dot,3) * 11px);font-variant-numeric:tabular-nums}
+.d4{--dot:4.5}.d36{--dot:3.6}.d3{--dot:3}.d24{--dot:2.4}.d6{--dot:6}.d9{--dot:9}
+.unit{font-size:15px;color:var(--fg2);margin-left:6px}
+.fill{flex:1}
+.info{margin-left:auto;width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.10);display:grid;place-items:center;flex:none}
+.info svg{width:16px;height:16px;color:var(--fg2);stroke-width:1.6}
+.sz{display:block}
+.ct .go{width:14px;height:14px;color:var(--fg3);stroke-width:2;flex:none;margin-left:-2px}
+.row .go{width:14px;height:14px;color:var(--fg4);stroke-width:2;margin-left:-4px}
+.row svg.go{width:14px;height:14px}
+.row{display:flex;align-items:center;gap:14px;padding:14px 0;border-top:1px solid var(--div)}
+.row:first-of-type{border-top:0}
+.row svg{width:20px;height:20px;flex:none;stroke-width:1.5}
+.row .nm{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.row .nm span:first-child{font-size:15px;color:#fff}
+.row .nm span:last-child{font-size:13px;color:var(--fg2)}
+.row .d{--dot:2.4;color:#fff}
+.row.off .nm span:last-child,.row.off .d{color:var(--c)}
+.row.wait svg{opacity:.3}
+.wdash{width:14px;height:3px;border-radius:2px;background:var(--fg4)}
+.lt{display:flex;align-items:center;padding:14px 0 6px}
+.bar{height:4px;border-radius:2px;background:rgba(255,255,255,.08)}
+.bar i{display:block;height:100%;border-radius:2px;background:var(--c)}
+.scale{position:relative;height:28px;margin-top:6px}
+.scale .band{position:absolute;top:12px;height:6px;border-radius:3px;background:var(--hab)}
+.scale .you{position:absolute;top:2px;width:1px;height:26px;background:rgba(255,255,255,.6)}
+.scale .est{position:absolute;top:10px;width:10px;height:10px;border-radius:50%;background:#fff;margin-left:-5px}
+.btn{font:500 15px var(--sans);color:#000;background:#fff;border:0;border-radius:999px;padding:10px 18px}
+.btn.ghost{color:#fff;background:rgba(255,255,255,.12)}
+
+/* ---------- swatches ---------- */
+.sw{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
+.sw .c{border-radius:20px;border:1px solid var(--hair);background:var(--edge);overflow:hidden}
+.sw .ramp{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;height:56px}
+.sw .ramp span{display:block}
+.sw .meta{padding:10px 12px;display:flex;flex-direction:column;gap:1px}
+.sw .meta b{font-weight:500;font-size:14px}
+.sw .meta span{font-size:11.5px;color:var(--fg3);font-variant-numeric:tabular-nums}
+.neutral{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+.neutral div{border:1px solid var(--hair);border-radius:16px;padding:12px;font-size:13px;color:var(--fg2);display:flex;flex-direction:column;gap:30px}
+.neutral b{font-weight:500;color:#fff;font-size:14px}
+
+/* ---------- type specimen ---------- */
+.ty{display:flex;flex-direction:column;border:1px solid var(--hair);border-radius:20px;background:var(--edge);overflow:hidden}
+.ty .r{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:16px;padding:16px 20px;border-top:1px solid var(--div);align-items:baseline}
+.ty .r:first-child{border-top:0}
+.ty .r .meta{font-size:12.5px;color:var(--fg3)}
+.ty .r .meta b{color:var(--fg2);font-weight:500;display:block;font-size:13px}
+@media (max-width:640px){.ty .r{grid-template-columns:minmax(0,1fr)}}
+.dots{display:flex;flex-wrap:wrap;gap:28px;align-items:flex-end}
+.dots div{display:flex;flex-direction:column;gap:8px}
+
+/* ---------- phone stack ---------- */
+.phone{width:min(390px,100%);background:#000;border:1px solid var(--hair);border-radius:44px;padding:20px 16px 24px;display:flex;flex-direction:column;gap:12px;position:relative;overflow:hidden}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.tallpair{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.tallpair>div:last-child{display:flex;flex-direction:column;gap:12px}
+.hdr{display:flex;align-items:center;gap:10px;padding:4px 0 6px}
+.hdr .av{width:44px;height:44px;border-radius:50%;background:var(--control);display:grid;place-items:center}
+.hdr .av svg{width:20px;height:20px;stroke-width:1.5;color:#fff}
+.hdr .mid{flex:1;text-align:center;display:flex;flex-direction:column}
+.hdr .mid span:first-child{font-size:13px;font-weight:500;color:rgba(255,255,255,.6)}
+.hdr .mid span:last-child{font-family:var(--display);font-weight:500;font-size:20px;line-height:24px}
+.hdr .chip{display:flex;align-items:center;gap:6px;border:1px solid var(--hair);background:var(--edge);border-radius:999px;padding:8px 12px;font-size:14px}
+.hdr .chip i{width:7px;height:7px;border-radius:50%;background:var(--good)}
+.tabs{position:absolute;left:0;right:0;bottom:0;height:120px;background:linear-gradient(to top,#000 0%,#000 45%,rgba(0,0,0,0) 100%);display:flex;align-items:flex-end;justify-content:center;padding-bottom:16px}
+.tabs .pill{display:flex;gap:2px;background:#0E0E10;border:1px solid var(--hair);border-radius:999px;padding:5px}
+.tabs .pill span{font-size:12px;font-weight:500;color:var(--fg3);padding:9px 14px;border-radius:999px}
+.tabs .pill span.on{background:hsl(var(--rec-h) 45% 18%);color:#fff}
+
+/* ---------- moments ---------- */
+.mo{display:grid;grid-template-columns:minmax(0,390px) minmax(0,1fr);gap:32px;align-items:start}
+@media (max-width:860px){.mo{grid-template-columns:minmax(0,1fr)}}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg button{font:500 13px var(--sans);color:var(--fg2);background:transparent;border:1px solid var(--hair);border-radius:999px;padding:7px 13px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:#fff;color:#000;border-color:#fff}
+.kv{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px 18px;font-size:14px}
+.kv dt{color:var(--fg3)}
+.kv dd{margin:0;color:#fff}
+.order{display:flex;flex-direction:column;gap:6px;margin:0;padding:0;list-style:none}
+.order li{display:flex;align-items:center;gap:10px;font-size:13.5px;color:var(--fg2)}
+.order li .tier{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;border-radius:999px;padding:3px 8px;flex:none;width:58px;text-align:center}
+.tier.glow{background:rgba(255,255,255,.92);color:#000}
+.tier.edge{border:1px solid rgba(255,255,255,.35);color:#fff}
+.tier.list{background:var(--control);color:var(--fg2)}
+.tier.strip{background:rgba(255,255,255,.06);color:var(--fg2)}
+.hero-sm{min-height:236px}
+
+/* ---------- lines ---------- */
+.chart{width:100%;height:auto;display:block}
+.lines{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media (max-width:700px){.lines{grid-template-columns:1fr}}
+.lines .e{gap:8px}
+.tag{display:inline-block;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--fg3)}
+
+/* ---------- motion ---------- */
+.grow{display:flex;gap:16px;flex-wrap:wrap;align-items:center}
+.grow .from{width:44px;height:44px;border-radius:50%;background:var(--control);display:grid;place-items:center;flex:none}
+.grow .from svg{width:20px;height:20px;stroke-width:1.5}
+.grow .arrow{flex:1;min-width:60px;height:1px;background:linear-gradient(90deg,rgba(255,255,255,.5),rgba(255,255,255,.08))}
+.grow .to{width:120px;height:170px;border-radius:28px;background:var(--edge);border:1px solid var(--hair);flex:none;display:flex;flex-direction:column;gap:8px;padding:16px}
+.grow .to i{display:block;height:8px;border-radius:4px;background:rgba(255,255,255,.1)}
+
+/* ---------- workouts and sleep ---------- */
+.phones{display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start}
+.phone.sm{min-height:800px}
+.phd{display:flex;align-items:center;gap:12px;min-height:44px}
+.rb{width:44px;height:44px;border-radius:50%;background:var(--control);display:grid;place-items:center;flex:none}
+.rb svg{width:18px;height:18px;stroke-width:2;color:#fff}
+.pt{font:400 24px/28px var(--display)}
+.pill2{margin:0 auto;display:flex;gap:6px;align-items:center;background:var(--control);border-radius:999px;padding:10px 16px;font:500 15px var(--sans)}
+.pill2 svg{width:16px;height:16px;stroke-width:2}
+.search{display:flex;gap:10px;align-items:center;height:48px;border-radius:16px;background:var(--control);padding:0 16px;color:var(--fg3);font-size:15px}
+.search svg{width:18px;height:18px;stroke-width:1.5;color:var(--fg3)}
+.tiles4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:12px}
+.phone .tiles4{margin-top:0}
+.stile{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:12px;color:var(--fg2);text-align:center;line-height:1.2}
+.ti{position:relative;width:64px;height:64px;border-radius:16px;background:var(--control);display:grid;place-items:center;color:#fff}
+.ti>svg:first-child{width:24px;height:24px;stroke-width:1.5}
+.ti.on{background:#fff;color:#000}
+.ti .gps{position:absolute;right:6px;top:6px;width:12px;height:12px;stroke-width:2;opacity:.7}
+.strip68{height:68px;flex-direction:row;align-items:center;padding:0 12px 0 20px}
+.nm2{flex:1;display:flex;flex-direction:column}
+.play{width:44px;height:44px;border-radius:50%;background:#fff;display:grid;place-items:center;color:#000}
+.play svg,.startbtn svg{width:18px;height:18px;stroke-width:2}
+.sw2{width:44px;height:26px;border-radius:13px;background:var(--control);position:relative;flex:none}
+.sw2::after{content:"";position:absolute;left:3px;top:3px;width:20px;height:20px;border-radius:50%;background:rgba(255,255,255,.7)}
+.sw2.on{background:#fff}.sw2.on::after{left:21px;background:#000}
+.segc{display:grid;grid-template-columns:1fr 1fr;background:var(--control);border-radius:999px;padding:4px}
+.segc span{text-align:center;font:500 14px var(--sans);color:var(--fg2);padding:9px 0;border-radius:999px}
+.segc span.on{background:#fff;color:#000}
+.chips{display:flex;gap:8px;overflow:hidden}
+.chips span{height:40px;padding:0 14px;border-radius:16px;background:var(--control);display:grid;place-items:center;font:500 14px var(--sans);white-space:nowrap}
+.chips span.on{background:#fff;color:#000}
+.fillv{flex:1;min-height:24px}
+.startbtn{height:56px;border-radius:999px;background:#fff;color:#000;border:0;font:600 16px var(--sans);display:flex;align-items:center;justify-content:center;gap:8px;width:100%}
+.zbar{display:flex;gap:2px;height:6px;margin-top:14px}
+.zbar i,.stack i{display:block;border-radius:3px}
+.stack{display:flex;gap:2px;height:8px;margin-top:16px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:10px;font-size:13px;color:var(--fg2)}
+.legend span{display:flex;align-items:center;gap:6px}
+.legend i{width:8px;height:8px;border-radius:2px;display:block}
+footer{font-size:13px;color:var(--fg3);border-top:1px solid var(--hair);padding-top:20px}
+@media (prefers-reduced-motion:reduce){.g.lvl::before{transition:none}}
+</style>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+<symbol id="i-BatteryCharging01" viewBox="0 0 24 24" fill="none"><path d="M2 12C2 9.17157 2 7.75736 2.87868 6.87868C3.75736 6 5.17157 6 8 6H13C15.8284 6 17.2426 6 18.1213 6.87868C19 7.75736 19 9.17157 19 12C19 14.8284 19 16.2426 18.1213 17.1213C17.2426 18 15.8284 18 13 18H8C5.17157 18 3.75736 18 2.87868 17.1213C2 16.2426 2 14.8284 2 12Z" stroke="currentColor" stroke-linecap="round"/><path d="M10.8282 9L9.08572 11.1749C8.89899 11.4079 9.03283 11.7433 9.33733 11.8053L11.1627 12.1773C11.4873 12.2434 11.6111 12.6147 11.3842 12.8413L9.22216 15" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M19 9.5L20.0272 9.6712C20.7085 9.78475 21.0491 9.84152 21.3076 10.0067C21.5618 10.1691 21.7612 10.4044 21.8796 10.6819C22 10.964 22 11.3093 22 12C22 12.6907 22 13.036 21.8796 13.3181C21.7612 13.5956 21.5618 13.8309 21.3076 13.9933C21.0491 14.1585 20.7085 14.2153 20.0272 14.3288L19 14.5" stroke="currentColor" stroke-linecap="round"/></symbol>
+<symbol id="i-Brain02" viewBox="0 0 24 24" fill="none"><path d="M4.22222 21.9948V18.4451C4.22222 17.1737 3.88927 16.5128 3.23482 15.4078C2.4503 14.0833 2 12.5375 2 10.8866C2 5.97866 5.97969 2 10.8889 2C15.7981 2 19.7778 5.97866 19.7778 10.8866C19.7778 11.4663 19.7778 11.7562 19.802 11.9187C19.8598 12.3072 20.0411 12.6414 20.2194 12.9873L22 16.4407L20.6006 17.1402C20.195 17.3429 19.9923 17.4443 19.851 17.6314C19.7097 17.8184 19.67 18.0296 19.5904 18.4519L19.5826 18.4931C19.4004 19.4606 19.1993 20.5286 18.6329 21.2024C18.4329 21.4403 18.1853 21.6336 17.9059 21.7699C17.4447 21.9948 16.8777 21.9948 15.7437 21.9948C15.219 21.9948 14.6928 22.0069 14.1682 21.9942C12.9247 21.9639 12 20.9184 12 19.7044" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M14.388 10.5315C13.9617 10.5315 13.5729 10.3702 13.2784 10.1048M14.388 10.5315C14.388 11.6774 13.7241 12.7658 12.4461 12.7658C11.1681 12.7658 10.5043 13.8541 10.5043 15M14.388 10.5315C16.5373 10.5315 16.5373 7.18017 14.388 7.18017C14.1927 7.18017 14.0053 7.21403 13.8312 7.27624C13.9362 4.77819 10.3349 4.1 9.51923 6.44018M10.5043 8.29729C10.5043 7.52323 10.1133 6.8411 9.51923 6.44018M9.51923 6.44018C7.66742 5.19034 5.19883 7.4331 6.37324 9.43277C4.40226 9.72827 4.61299 12.7658 6.6205 12.7658C7.18344 12.7658 7.68111 12.4844 7.98234 12.0538" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-Droplet" viewBox="0 0 24 24" fill="none"><path d="M3.5 13.678C3.5 9.49387 7.08079 5.35907 9.59413 2.97222C10.9591 1.67593 13.0409 1.67593 14.4059 2.97222C16.9192 5.35907 20.5 9.49387 20.5 13.678C20.5 17.7804 17.2812 22 12 22C6.71878 22 3.5 17.7804 3.5 13.678Z" stroke="currentColor"/><path d="M16 14C16 16.2091 14.2091 18 12 18" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-Dumbbell01" viewBox="0 0 24 24" fill="none"><path d="M7.73438 13.7323C7.73438 13.7323 8.63984 12.5102 9.23438 12.2319C11.0292 11.3915 11.3943 11.0263 12.2344 9.23091C12.5127 8.63618 13.7344 7.73044 13.7344 7.73044M10.2344 16.2331C10.2344 16.2331 11.4561 15.3273 11.7344 14.7326C12.5745 12.9373 12.9396 12.5721 14.7344 11.7317C15.3289 11.4533 16.2344 10.2312 16.2344 10.2312" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M14.4311 2.89207C14.938 2.38343 15.7611 2.38212 16.2696 2.88916L21.0814 7.68726C21.5899 8.1943 21.5912 9.01767 21.0843 9.52632L19.5557 11.0603C19.0488 11.5689 18.2257 11.5702 17.7172 11.0632L12.9054 6.26507C12.397 5.75803 12.3957 4.93466 12.9025 4.42601L14.4311 2.89207Z" stroke="currentColor"/><path d="M4.41377 12.9022C4.92065 12.3936 5.74376 12.3923 6.25225 12.8993L11.0641 17.6974C11.5725 18.2045 11.5738 19.0278 11.067 19.5365L9.53836 21.0704C9.03148 21.5791 8.20837 21.5804 7.69988 21.0733L2.88808 16.2752C2.37959 15.7682 2.37829 14.9448 2.88517 14.4362L4.41377 12.9022Z" stroke="currentColor"/><path d="M17.9377 3.45254C19.8201 0.985467 23.14 3.8401 20.5431 6.02872M3.37811 17.9773C0.998473 19.9687 3.99782 23.1586 6.06742 20.4657" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-FastWind" viewBox="0 0 24 24" fill="none"><path d="M2 5.94145C5.5 9.37313 10.5755 7.90241 11.7324 5.94145C11.9026 5.65301 12 5.31814 12 4.96096C12 3.87795 11.1046 3 10 3C8.89543 3 8 3.87795 8 4.96096" stroke="currentColor" stroke-linecap="round"/><path d="M17 8.92814C17 7.31097 18.1193 6 19.5 6C20.8807 6 22 7.31097 22 8.92814C22 9.6452 21.7799 10.3021 21.4146 10.8111C19.3463 14.1915 9.2764 12.9164 4 11.8563" stroke="currentColor" stroke-linecap="round"/><path d="M13.0854 19.8873C13.2913 20.5356 13.8469 21 14.5 21C15.3284 21 16 20.2528 16 19.331C16 19.0176 15.9224 18.7244 15.7873 18.4738C14.4999 15.9925 7.99996 14.3239 2 18.7746" stroke="currentColor" stroke-linecap="round"/><path d="M19 15.5H21" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-Favourite" viewBox="0 0 24 24" fill="none"><path d="M10.4107 19.9677C7.58942 17.858 2 13.0348 2 8.69444C2 5.82563 4.10526 3.5 7 3.5C8.5 3.5 10 4 12 6C14 4 15.5 3.5 17 3.5C19.8947 3.5 22 5.82563 22 8.69444C22 13.0348 16.4106 17.858 13.5893 19.9677C12.6399 20.6776 11.3601 20.6776 10.4107 19.9677Z" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-Fire" viewBox="0 0 24 24" fill="none"><path d="M13.8561 22C26.0783 19 19.2338 7 10.9227 2C9.9453 5.5 8.47838 6.5 5.54497 10C1.66121 14.6339 3.5895 20 8.96719 22C8.1524 21 6.04958 18.9008 7.5 16C8 15 9 14 8.5 12C9.47778 12.5 11.5 13 12 15.5C12.8148 14.5 13.6604 12.4 12.8783 10C19 14.5 16.5 19 13.8561 22Z" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-FootPrints" viewBox="0 0 24 24" fill="none"><path d="M10.535 10.2187L9.99444 12.4393C9.746 13.4599 9.62179 13.9701 9.24607 14.2823C9.21466 14.3084 9.18215 14.3333 9.14863 14.3568C8.74779 14.6384 8.20467 14.6384 7.11844 14.6384H6.44056C5.71535 14.6384 5.35274 14.6384 5.05823 14.5126C4.7893 14.3978 4.56057 14.2103 4.39963 13.9727C4.22339 13.7125 4.16475 13.3672 4.04748 12.6765L3.5637 9.8272C3.16319 7.46831 4.68869 5.20279 7.08482 4.59797L7.29168 4.54575C8.7774 4.17073 10.2847 5.07654 10.5916 6.52879C10.8492 7.74826 10.8299 9.00715 10.535 10.2187Z" stroke="currentColor" stroke-linejoin="round"/><path d="M5.48863 17.5793H8.32119C8.93314 17.5793 9.42923 18.0581 9.42923 18.6487V19.0641C9.42923 20.4096 8.29905 21.5004 6.90491 21.5004C5.51077 21.5004 4.38059 20.4096 4.38059 19.0641V18.6487C4.38059 18.0581 4.87668 17.5793 5.48863 17.5793Z" stroke="currentColor" stroke-linejoin="round"/><path d="M13.463 8.25779L14.0036 10.4784C14.252 11.4989 14.3763 12.0092 14.752 12.3214C14.7834 12.3475 14.8159 12.3724 14.8494 12.3959C15.2502 12.6775 15.7934 12.6775 16.8796 12.6775H17.5575C18.2827 12.6775 18.6453 12.6775 18.9398 12.5517C19.2087 12.4368 19.4375 12.2493 19.5984 12.0118C19.7747 11.7516 19.8333 11.4063 19.9506 10.7156L20.4343 7.86626C20.8348 5.50737 19.3094 3.24185 16.9132 2.63703L16.7064 2.58482C15.2206 2.20979 13.7133 3.1156 13.4065 4.56785C13.1488 5.78732 13.1681 7.04621 13.463 8.25779Z" stroke="currentColor" stroke-linejoin="round"/><path d="M18.5094 15.6183H15.6769C15.0649 15.6183 14.5688 16.0971 14.5688 16.6877V17.1032C14.5688 18.4487 15.699 19.5394 17.0931 19.5394C18.4873 19.5394 19.6174 18.4487 19.6174 17.1032V16.6877C19.6174 16.0971 19.1214 15.6183 18.5094 15.6183Z" stroke="currentColor" stroke-linejoin="round"/></symbol>
+<symbol id="i-Hourglass" viewBox="0 0 24 24" fill="none"><path d="M4 3H20" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.5 3V5.03039C5.5 6.27227 6.07682 7.4437 7.06116 8.20089L12 12L16.9388 8.20089C17.9232 7.44371 18.5 6.27227 18.5 5.03039V3" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.5 21V18.9696C5.5 17.7277 6.07682 16.5563 7.06116 15.7991L12 12L16.9388 15.7991C17.9232 16.5563 18.5 17.7277 18.5 18.9696V21" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 21H20" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-InformationCircle" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 16V12" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M12.125 8.25H12M12.25 8.25C12.25 8.11193 12.1381 8 12 8C11.8619 8 11.75 8.11193 11.75 8.25C11.75 8.38807 11.8619 8.5 12 8.5C12.1381 8.5 12.25 8.38807 12.25 8.25Z" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-Lungs" viewBox="0 0 24 24" fill="none"><path d="M7.97769 11C8.38875 11.2063 8.71501 11.5615 8.97397 11.9954M8.97397 11.9954C9.97037 13.665 9.97025 16.5 9.97025 16.5C9.97025 20 8.18605 21 5.98512 21C4.98884 21 2 20.5 2 16C2 9.5 5.48698 5 8.47583 5C10.8669 5 9.97174 10 8.97397 11.9954Z" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M16.0216 11C15.6104 11.2063 15.2841 11.5615 15.0251 11.9954M15.0251 11.9954C14.0286 13.665 14.0287 16.5 14.0287 16.5C14.0287 20 15.8132 21 18.0144 21C19.0108 21 22 20.5 22 16C22 9.5 18.5126 5 15.5234 5C13.132 5 14.0301 10 15.0251 11.9954Z" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 7L12 5.66667M12 5.66667L10 7M12 5.66667V3" stroke="currentColor" stroke-linecap="round"/></symbol>
+<symbol id="i-Moon02" viewBox="0 0 24 24" fill="none"><path d="M21.5 14.0784C20.3003 14.7189 18.9301 15.0821 17.4751 15.0821C12.7491 15.0821 8.91792 11.2509 8.91792 6.52485C8.91792 5.06986 9.28105 3.69968 9.92163 2.5C5.66765 3.49698 2.5 7.31513 2.5 11.8731C2.5 17.1899 6.8101 21.5 12.1269 21.5C16.6849 21.5 20.503 18.3324 21.5 14.0784Z" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-Pulse01" viewBox="0 0 24 24" fill="none"><path d="M2 12H6L7.5 8L9.5 15L13 6L15.5 18L18 12H22" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-Route01" viewBox="0 0 24 24" fill="none"><circle cx="18" cy="5" r="3" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><circle cx="6" cy="19" r="3" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 5H8.5C6.567 5 5 6.567 5 8.5C5 10.433 6.567 12 8.5 12H15.5C17.433 12 19 13.567 19 15.5C19 17.433 17.433 19 15.5 19H12" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-Thermometer" viewBox="0 0 24 24" fill="none"><path d="M13.8801 15.9369L20.6738 8.17267C21.4217 7.31791 21.7956 6.89053 21.9252 6.41326C22.0376 5.99901 22.023 5.56052 21.8833 5.15466C21.7223 4.68707 21.3207 4.28551 20.5176 3.4824C19.7145 2.67928 19.3129 2.27773 18.8453 2.11672C18.4395 1.97696 18.001 1.96236 17.5867 2.07481C17.1095 2.20436 16.6821 2.57832 15.8273 3.32623L8.06312 10.1199C7.10741 10.9562 6.62955 11.3743 6.34846 11.9258C6.06738 12.4774 6.00989 13.1098 5.89492 14.3745L5.87152 14.6319C5.81078 15.3 5.78041 15.6341 5.65293 15.9386C5.52546 16.2431 5.30877 16.4992 4.8754 17.0114L2.27543 20.0841C1.88438 20.5462 1.91286 21.231 2.34094 21.6591C2.76903 22.0871 3.45379 22.1156 3.91594 21.7246L6.98863 19.1246C7.5008 18.6912 7.75689 18.4745 8.06139 18.3471C8.36589 18.2196 8.69998 18.1892 9.36814 18.1285L9.62553 18.1051C10.8902 17.9901 11.5226 17.9326 12.0741 17.6515C12.6257 17.3704 13.0438 16.8926 13.8801 15.9369Z" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M7.78906 9.89453L9.36983 10.843C9.74255 11.0666 9.86341 11.5501 9.63978 11.9228L9.34781 12.4094C8.96198 13.0524 9.06331 13.8755 9.59357 14.4058C10.1238 14.9361 10.9469 15.0374 11.59 14.6516L12.0766 14.3596C12.4493 14.136 12.9328 14.2568 13.1564 14.6296L14.1049 16.2103" stroke="currentColor" stroke-linejoin="round"/><path d="M17.2634 6.7373L14.1055 9.8952" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-User" viewBox="0 0 24 24" fill="none"><path d="M20 21.0001C19.713 17.269 16.7289 14.3151 12.995 14.0662L12 13.9999C11.6446 14.0096 11.3134 14.0225 11.0008 14.0378C7.3 14.2192 4.28417 17.3057 4 21.0001" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="6.99988" r="4" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-WorkoutRun" viewBox="0 0 24 24" fill="none"><path d="M17 4.5C17 5.32843 16.3284 6 15.5 6C14.6716 6 14 5.32843 14 4.5C14 3.67157 14.6716 3 15.5 3C16.3284 3 17 3.67157 17 4.5Z" stroke="currentColor"/><path d="M15 21.0008L14.3359 18.3848C14.1161 17.5191 13.6615 16.7284 13.0207 16.0974L11.5 14.5998M20 8.19913C17.9627 10.4921 16.1547 10.1433 15 9.27743C14.8878 9.19326 14.7664 9.06672 14.6482 8.92548C14.2356 8.43256 14.0293 8.18609 13.8282 8.09214C13.6271 7.99818 13.3747 7.99813 12.8698 7.99805C12.5444 7.99799 12.2186 7.99877 12 8.00136C8.53767 8.0423 7 9.18366 6 11.1534M12 8.00136L10.7309 9.95956C10.0332 11.0362 9.68429 11.5745 9.67069 12.1397C9.66463 12.3914 9.70617 12.642 9.79313 12.8784C9.98834 13.409 10.4922 13.8059 11.5 14.5998M15 9.27743L11.5 14.5998" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 17.7303L4.67822 17.8916C6.40663 18.3028 8.20324 17.5164 9 16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-Walking" viewBox="0 0 24 24" fill="none"><path d="M6 12.5L7.73811 9.89287C7.91034 9.63452 8.14035 9.41983 8.40993 9.26578L10.599 8.01487C11.1619 7.69323 11.8483 7.67417 12.4282 7.9641C13.0851 8.29255 13.4658 8.98636 13.7461 9.66522C14.2069 10.7814 15.3984 12 18 12" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M13 9L11.7772 14.5951M10.5 8.5L9.77457 11.7645C9.6069 12.519 9.88897 13.3025 10.4991 13.777L14 16.5L15.5 21" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M9.5 16L9 17.5L6.5 20.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 4.5C15 5.32843 14.3284 6 13.5 6C12.6716 6 12 5.32843 12 4.5C12 3.67157 12.6716 3 13.5 3C14.3284 3 15 3.67157 15 4.5Z" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-Play" viewBox="0 0 24 24" fill="none"><path d="M18.8906 12.846C18.5371 14.189 16.8667 15.138 13.5257 17.0361C10.296 18.8709 8.6812 19.7884 7.37983 19.4196C6.8418 19.2671 6.35159 18.9776 5.95624 18.5787C5 17.6139 5 15.7426 5 12C5 8.2574 5 6.3861 5.95624 5.42132C6.35159 5.02245 6.8418 4.73288 7.37983 4.58042C8.6812 4.21165 10.296 5.12907 13.5257 6.96393C16.8667 8.86197 18.5371 9.811 18.8906 11.154C19.0365 11.7084 19.0365 12.2916 18.8906 12.846Z" stroke="currentColor" stroke-linejoin="round"/></symbol>
+<symbol id="i-GridView" viewBox="0 0 24 24" fill="none"><path d="M3.88884 9.66294C4.39329 10 5.09552 10 6.49998 10C7.90445 10 8.60668 10 9.11113 9.66294C9.32951 9.51702 9.51701 9.32952 9.66292 9.11114C9.99998 8.60669 9.99998 7.90446 9.99998 6.5C9.99998 5.09554 9.99998 4.39331 9.66292 3.88886C9.51701 3.67048 9.32951 3.48298 9.11113 3.33706C8.60668 3 7.90445 3 6.49998 3C5.09552 3 4.39329 3 3.88884 3.33706C3.67046 3.48298 3.48296 3.67048 3.33705 3.88886C2.99998 4.39331 2.99998 5.09554 2.99998 6.5C2.99998 7.90446 2.99998 8.60669 3.33705 9.11114C3.48296 9.32952 3.67046 9.51702 3.88884 9.66294Z" stroke="currentColor" stroke-linejoin="round"/><path d="M14.8888 9.66294C15.3933 10 16.0955 10 17.5 10C18.9044 10 19.6067 10 20.1111 9.66294C20.3295 9.51702 20.517 9.32952 20.6629 9.11114C21 8.60669 21 7.90446 21 6.5C21 5.09554 21 4.39331 20.6629 3.88886C20.517 3.67048 20.3295 3.48298 20.1111 3.33706C19.6067 3 18.9044 3 17.5 3C16.0955 3 15.3933 3 14.8888 3.33706C14.6705 3.48298 14.483 3.67048 14.337 3.88886C14 4.39331 14 5.09554 14 6.5C14 7.90446 14 8.60669 14.337 9.11114C14.483 9.32952 14.6705 9.51702 14.8888 9.66294Z" stroke="currentColor" stroke-linejoin="round"/><path d="M3.88884 20.6629C4.39329 21 5.09552 21 6.49998 21C7.90445 21 8.60668 21 9.11113 20.6629C9.32951 20.517 9.51701 20.3295 9.66292 20.1111C9.99998 19.6067 9.99998 18.9045 9.99998 17.5C9.99998 16.0955 9.99998 15.3933 9.66292 14.8889C9.51701 14.6705 9.32951 14.483 9.11113 14.3371C8.60668 14 7.90445 14 6.49998 14C5.09552 14 4.39329 14 3.88884 14.3371C3.67046 14.483 3.48296 14.6705 3.33705 14.8889C2.99998 15.3933 2.99998 16.0955 2.99998 17.5C2.99998 18.9045 2.99998 19.6067 3.33705 20.1111C3.48296 20.3295 3.67046 20.517 3.88884 20.6629Z" stroke="currentColor" stroke-linejoin="round"/><path d="M14.8888 20.6629C15.3933 21 16.0955 21 17.5 21C18.9044 21 19.6067 21 20.1111 20.6629C20.3295 20.517 20.517 20.3295 20.6629 20.1111C21 19.6067 21 18.9045 21 17.5C21 16.0955 21 15.3933 20.6629 14.8889C20.517 14.6705 20.3295 14.483 20.1111 14.3371C19.6067 14 18.9044 14 17.5 14C16.0955 14 15.3933 14 14.8888 14.3371C14.6705 14.483 14.483 14.6705 14.337 14.8889C14 15.3933 14 16.0955 14 17.5C14 18.9045 14 19.6067 14.337 20.1111C14.483 20.3295 14.6705 20.517 14.8888 20.6629Z" stroke="currentColor" stroke-linejoin="round"/></symbol>
+<symbol id="i-Location01" viewBox="0 0 24 24" fill="none"><path d="M13.6177 21.367C13.1841 21.773 12.6044 22 12.0011 22C11.3978 22 10.8182 21.773 10.3845 21.367C6.41302 17.626 1.09076 13.4469 3.68627 7.37966C5.08963 4.09916 8.45834 2 12.0011 2C15.5439 2 18.9126 4.09916 20.316 7.37966C22.9082 13.4393 17.599 17.6389 13.6177 21.367Z" stroke="currentColor"/><path d="M15.5 11C15.5 12.933 13.933 14.5 12 14.5C10.067 14.5 8.5 12.933 8.5 11C8.5 9.067 10.067 7.5 12 7.5C13.933 7.5 15.5 9.067 15.5 11Z" stroke="currentColor"/></symbol>
+<symbol id="i-Cancel01" viewBox="0 0 24 24" fill="none"><path d="M18 6L6.00081 17.9992M17.9992 18L6 6.00085" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-ArrowDown01" viewBox="0 0 24 24" fill="none"><path d="M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-Search01" viewBox="0 0 24 24" fill="none"><path d="M17 17L21 21" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M19 11C19 6.58172 15.4183 3 11 3C6.58172 3 3 6.58172 3 11C3 15.4183 6.58172 19 11 19C15.4183 19 19 15.4183 19 11Z" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-Bicycle01" viewBox="0 0 24 24" fill="none"><path d="M6 20.0026C8.20914 20.0026 10 18.2118 10 16.0026C10 13.7935 8.20914 12.0026 6 12.0026C3.79086 12.0026 2 13.7935 2 16.0026C2 18.2118 3.79086 20.0026 6 20.0026Z" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M18 20.0026C20.2091 20.0026 22 18.2118 22 16.0026C22 13.7935 20.2091 12.0026 18 12.0026C15.7909 12.0026 14 13.7935 14 16.0026C14 18.2118 15.7909 20.0026 18 20.0026Z" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 16.0026H10.3706C10.7302 16.0026 11.0622 15.8095 11.2399 15.4968L15.5 8.00262" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 13.0026L7 7.00262M7 7.00262H5M7 7.00262H9" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M20.0039 6.21868C19.7999 5.64268 19.4399 4.74268 18.2399 4.32268C17.4599 4.02268 15.5399 3.90268 15.2999 4.08268C14.9527 4.16949 14.9399 4.56268 15.1079 5.10268C15.2444 5.68163 15.4559 6.42824 15.6479 7.14268C16.1399 8.97348 17.2199 12.9387 18.0239 15.9987" stroke="currentColor" stroke-linecap="round"/></symbol>
+<symbol id="i-Yoga01" viewBox="0 0 24 24" fill="none"><path d="M9.0923 16C8.78292 16.6819 8.0701 16.986 7.43887 17.3162L3.79262 19.2233C2.32845 19.9891 3.05949 22 4.62985 22C8.12204 22 10.8836 20.3064 14.0404 19C14.835 18.6711 15.2201 18.7415 16 19.0912" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 19.0912C9.77995 18.7415 10.165 18.6711 10.9596 19C14.1164 20.3064 16.878 22 20.3702 22C21.9405 22 22.6715 19.9891 21.2074 19.2233L17.5611 17.3162C16.9299 16.986 16.2171 16.6819 15.9077 16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 4C10 5.10457 10.8954 6 12 6C13.1046 6 14 5.10457 14 4C14 2.89543 13.1046 2 12 2C10.8954 2 10 2.89543 10 4Z" stroke="currentColor"/><path d="M12 8C8.68629 8 6 10.6863 6 14C9.31371 14 12 11.3137 12 8Z" stroke="currentColor" stroke-linejoin="round"/><path d="M12 8C15.3137 8 18 10.6863 18 14C14.6863 14 12 11.3137 12 8Z" stroke="currentColor" stroke-linejoin="round"/></symbol>
+<symbol id="i-Swimming" viewBox="0 0 24 24" fill="none"><path d="M10.7184 6.86177L15 16C12.8333 16 12.1739 14.8571 9.91304 13.7143C8.10435 12.8 5.57971 12.9524 4.82609 13.1429L7.85739 10.9998C8.16585 10.7817 8.32008 10.6727 8.36937 10.5067C8.41866 10.3407 8.34893 10.1651 8.20947 9.81406L7.78519 8.74593C7.62654 8.34653 7.54721 8.14683 7.40384 8.00197C7.35388 7.9515 7.2987 7.9065 7.23922 7.86772C7.06848 7.7564 6.8569 7.71887 6.43376 7.64379L3.18315 7.06706C2.4987 6.94562 2 6.35065 2 5.65551C2 4.78222 2.77418 4.11181 3.63851 4.23665L8.0343 4.87152C8.82604 4.98586 9.22191 5.04304 9.5521 5.23177C9.68974 5.31045 9.81754 5.40521 9.93281 5.51407C10.2093 5.7752 10.379 6.13739 10.7184 6.86177Z" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><circle cx="19" cy="10" r="3" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 18.0843C3.05556 14.5527 7.7685 16.1736 11.5 18.0843C15.2315 19.995 19 21.2108 21 18.0843" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-Chev" viewBox="0 0 24 24" fill="none"><path d="M9 6L15 12L9 18" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+</svg>
+<main class="wrap">
+
+<header class="top">
+  <span class="eyebrow">OpenStrap 2.0, branch design-v2</span>
+  <h1>Design system</h1>
+  <p>One set of rules for light, colour, type, shape, lines and motion, and for how each moment of the day changes them. Every screen gets checked against this page. Where it disagrees with an older doc, mockup or the code, this page wins, and <code>spec.md</code> is rewritten to match.</p>
+  <span class="status"><i></i>Draft for your approval, Sat 24 Oct</span>
+  <nav aria-label="Sections">
+    <a href="#light">Light</a><a href="#colour">Colour</a><a href="#type">Type</a><a href="#shape">Shape</a><a href="#cards">Cards</a><a href="#rows">List rows</a><a href="#lines">Lines</a><a href="#moments">Moments</a><a href="#motion">Motion</a><a href="#frame">Frame</a><a href="#open">Unfolded</a><a href="#workouts">Workouts</a><a href="#sleep">Sleep hero</a><a href="#change">Up and down</a><a href="#changes">What changes</a>
+  </nav>
+</header>
+
+<!-- ================= LIGHT ================= -->
+<section id="light">
+  <div class="sh"><span class="n">01</span><h2>Light levels</h2>
+    <p>Light is the loudest thing in the app, so it comes in five fixed levels. A card takes a level from what it is and how its value sits against your normal. Nothing is lit between levels, and nothing glows only to decorate.</p></div>
+
+  <div class="strip">
+    <div class="spec"><div class="g L4 h-hrv from-below" style="width:200px;height:170px"><span class="ct">HRV</span><span class="fill"></span><span class="d d36">52</span></div>
+      <div class="cap"><b>L4 Hero glow</b>Rim at full, the light colour at the lit edge, melting into the body by 45% of the card. One per screen.</div></div>
+    <div class="spec"><div class="g L3 h-chg from-below" style="width:200px;height:170px"><span class="ct">Charge</span><span class="fill"></span><span class="d d36">74</span></div>
+      <div class="cap"><b>L3 Second glow</b>Rim at 70%, melting in by 28%. At most one more glow on a screen.</div></div>
+    <div class="spec"><div class="e strong t" style="--ink:var(--tmp);width:200px;height:170px"><span class="ct">Skin temperature</span><span class="fill"></span><span class="d d3" style="color:var(--tmp)">+0.6</span><span class="sec" style="color:var(--tmp);margin-top:6px">Above your normal</span></div>
+      <div class="cap"><b>L2 Strong edge</b>Off your normal. 90% of the colour at the edge, reaching 72 dp in.</div></div>
+    <div class="spec"><div class="e b" style="--ink:var(--hrt);width:200px;height:170px"><span class="ct">Resting heart rate</span><span class="fill"></span><span class="d d3">52</span><span class="sec" style="margin-top:6px">Usual</span></div>
+      <div class="cap"><b>L1 Soft edge</b>A usual value. 70% of the colour at the edge, reaching 48 dp in.</div></div>
+    <div class="spec"><div class="ql" style="width:200px;height:170px"><div class="lt"><span class="ct">Right now</span></div><div class="row"><svg style="color:var(--str)"><use href="#i-Brain02"/></svg><span class="nm"><span>Stress</span><span>Usual</span></span><span class="d">31</span></div></div>
+      <div class="cap"><b>L0 Quiet</b>No light at all. A hairline at 6% and the metric only in its icon.</div></div>
+  </div>
+
+  <div class="cols">
+    <ul class="rules">
+      <li><b>One hero, one second.</b> At most one L4 and one L3 glow on a screen. Everything else is L2, L1 or L0.</li>
+      <li><b>Off your normal is strength, never a new colour.</b> An edge card goes from L1 to L2 and its value and status take the metric colour. The border, the tier and the hue never change.</li>
+      <li><b>Text sits in the dark.</b> White text keeps at least 4.5:1 against what is behind it. The body colour may reach a luminance of 0.18. The code caps it at 0.09 today, which is why the glow cards look muddy.</li>
+      <li><b>Locked on every glow:</b> 28 dp corners, the grain, the hairline, the black the core fades to, text top left. <b>Free per card:</b> hue, where the light comes from, how high it reaches.</li>
+    </ul>
+    <div class="tbl"><table>
+      <thead><tr><th>Level</th><th>At the edge</th><th>Reaches</th><th>Used for</th></tr></thead>
+      <tbody>
+        <tr><td>L4 Hero</td><td class="num">Light colour, 100%</td><td class="num">45% of the card</td><td>The hero of the screen</td></tr>
+        <tr><td>L3 Second</td><td class="num">Light colour, 70%</td><td class="num">28% of the card</td><td>A second glow that isn't a level, like Charge as the wide card in the workout window</td></tr>
+        <tr><td>L2 Strong edge</td><td class="num">Ink, 90%</td><td class="num">72 dp</td><td>Edge cards off your normal</td></tr>
+        <tr><td>L1 Soft edge</td><td class="num">Ink, 70%</td><td class="num">48 dp</td><td>Edge cards, strips</td></tr>
+        <tr><td>L0 Quiet</td><td>None</td><td>None</td><td>Lists</td></tr>
+      </tbody></table></div>
+  </div>
+
+  <h3>Moods turn the light down, never off</h3>
+  <p>A screen's mood multiplies every card's light. Today the Sleep tab is always at Night and reads as nearly black. The new levels keep the colour readable.</p>
+  <div class="strip">
+    <div class="spec"><div class="g L4 h-slp from-below" style="width:220px;height:150px"><span class="ct">Last night</span><span class="fill"></span><span class="d d36">7:40</span></div><div class="cap"><b>Day</b>Glow and edge at 100%.</div></div>
+    <div class="spec"><div class="g L4 h-slp from-below m-eve" style="width:220px;height:150px"><span class="ct">Last night</span><span class="fill"></span><span class="d d36">7:40</span></div><div class="cap"><b>Evening</b>Glow 80%, edge 90%. <span class="was">Was 60%</span></div></div>
+    <div class="spec"><div class="g L4 h-slp from-below m-night" style="width:220px;height:150px"><span class="ct">Last night</span><span class="fill"></span><span class="d d36">7:40</span></div><div class="cap"><b>Night</b>Glow 65%, edge 80%, light from below only. <span class="was">Was 40%</span></div></div>
+  </div>
+
+  <h3>Levels: the light rises to the value</h3>
+  <div class="cols">
+    <div class="strip" style="align-items:flex-start">
+      <div class="g lvl h-chg" id="chgCard" style="width:173px;height:332px"><span class="ct">Charge</span><span class="fill"></span><span class="d d36" id="chgVal">74</span><span class="sec" style="margin-top:6px">85 at waking</span></div>
+      <div class="e lv" id="loadCard" style="--ink:var(--lod);width:173px;height:160px;--v:30%"><span class="ct">Load</span><span class="fill"></span><span class="d d3">12</span><span class="sec" style="margin-top:6px">Your usual is 40</span></div>
+    </div>
+    <div class="spec" style="gap:16px">
+      <label for="lvl" class="sec">Drag to set Charge. Load follows at the same share.</label>
+      <input id="lvl" type="range" min="0" max="100" value="74" style="width:100%;accent-color:#fff">
+      <ul class="rules">
+        <li><b>Bright where it is lit.</b> The bottom edge is the light colour at full, as in the mockup. The lit part is the value's share of the card, with a soft step of 22 dp into the dark.</li>
+        <li><b>Never fully dark.</b> At 0 the card still glows across its bottom 12%.</li>
+        <li><b>Always this bright.</b> A level glow lights its edge at full because the light is the value. Beside a hero it still counts as the screen's second glow.</li>
+        <li><b>Charge is one colour.</b> Ember orange at every level. The level is how high the light reaches, not a change of hue.</li>
+        <li><b>On an edge card</b> (Load, Charge on Today) the light fills from the left to the value and fades out over 40 dp. No progress bar.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ================= COLOUR ================= -->
+<section id="colour">
+  <div class="sh"><span class="n">02</span><h2>Colour</h2>
+    <p>Each metric owns one ink colour, used for its values off normal, its icon and its marks. The glow tones are worked out from the ink by one formula, so every card of a metric looks like the same light. Ramps below: ink, then light, body and core.</p></div>
+  <div class="sw" id="swatches"></div>
+  <div class="cols">
+    <ul class="rules">
+      <li><b>Light</b> is the ink's hue at 90% of its saturation and 56% lightness. <b>Body</b> is 80% saturation, 16% lightness. <b>Core</b> is 70% saturation, 3% lightness.</li>
+      <li><b>Charge</b> becomes Ember orange <code>#F66C28</code> on every surface. <span class="was">Gold #FFD166 and a red to green scale</span></li>
+      <li><b>Recovery</b> keeps one teal. <span class="was">readiness and readinessDeep</span></li>
+      <li><b>Evening violet</b> lights only the evening hero. It is a moment, not a metric.</li>
+      <li><b>Green and amber</b> are for the strap and sync only, never for a health value.</li>
+    </ul>
+    <div class="neutral">
+      <div style="background:var(--page)"><b>Page</b>#000000</div>
+      <div style="background:var(--edge)"><b>Edge card</b>#0A0A0B</div>
+      <div style="background:var(--list)"><b>List</b>#0F0F11</div>
+      <div style="background:var(--sheet)"><b>Sheet</b>#141416</div>
+      <div style="background:var(--control)"><b>Control</b>#1F1F22</div>
+      <div><b>Text</b>100, 72, 50 and 30% white</div>
+      <div><b>Lines</b>Card hairline 8%, divider 6%, chart grid 8%</div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= TYPE ================= -->
+<section id="type">
+  <div class="sh"><span class="n">03</span><h2>Type</h2>
+    <p>Funnel Display and Funnel Sans, the faces the app ships. Seven roles and the dots. The biggest change is the card title: one size on every card, hero included, so a glow card and an edge card beside it read as one family.</p></div>
+  <div class="ty">
+    <div class="r"><span style="font:400 24px/28px var(--display)">Strap</span><span class="meta"><b>Page title</b>Display 400, 24 on 28. You, Strap, every detail page.</span></div>
+    <div class="r"><span style="font:500 20px/24px var(--display)">Sat 24 Oct</span><span class="meta"><b>Header date</b>Display 500, 20 on 24. The moment over it in Sans 500, 13, at 60%.</span></div>
+    <div class="r"><span style="font:500 17px/22px var(--sans)">Recovery</span><span class="meta"><b>Card title</b>Sans 500, 17 on 22. Every card, every tier. <span class="was">Glow 20 to 26 Light, edge 15 Medium</span></span></div>
+    <div class="r"><span style="font:300 20px/24.4px var(--display);letter-spacing:-.01em">Slept 7 h 40. Recovered enough for your usual training.</span><span class="meta"><b>Hero sentence</b>Display 300, 20 on 24.4. Hero only, three lines at most. <span class="was">26 in the build</span></span></div>
+    <div class="r"><span style="font:400 15px/20px var(--sans)">Resting heart rate</span><span class="meta"><b>Body</b>Sans 400, 15 on 20. Row names, buttons, a sentence on an edge card, the word after a number.</span></div>
+    <div class="r"><span style="font:400 13px/18px var(--sans);color:var(--fg2)">This week, goal 150</span><span class="meta"><b>Secondary</b>Sans 400, 13 on 18, at 72%. Status lines, notes, the title row's note. <span class="was">12.5</span></span></div>
+    <div class="r"><span class="cap11">00&nbsp;&nbsp;06&nbsp;&nbsp;12&nbsp;&nbsp;18&nbsp;&nbsp;24</span><span class="meta"><b>Caption</b>Sans 500, 11 on 14, at 50%, tabular figures. Axes, times, tags.</span></div>
+  </div>
+  <ul class="rules"><li><b>One dotted number per card.</b> A card has at most one number in dots, its answer. Times, ranges, totals and second figures are text in Body or Secondary. A list has one per row.</li></ul>
+  <h3>Dot sizes</h3>
+  <p>Six dot sizes, each tied to where the number sits. The gap between dots is 0.38 of the dot. The build uses eight sizes today (1.7 to 9 dp). Drawn here with Doto, the app draws its own.</p>
+  <div class="dots">
+    <div><span class="d d24">48</span><span class="cap11">2.4 dp, list row</span></div>
+    <div><span class="d d3">52</span><span class="cap11">3 dp, edge card, Small</span></div>
+    <div><span class="d d36">74</span><span class="cap11">3.6 dp, Tall, second glow</span></div>
+    <div><span class="d d4">78</span><span class="cap11">4.5 dp, hero</span></div>
+    <div><span class="d d6">41</span><span class="cap11">6 dp, detail header</span></div>
+    <div><span class="d d9">152</span><span class="cap11">9 dp, live workout</span></div>
+  </div>
+</section>
+
+<!-- ================= SHAPE ================= -->
+<section id="shape">
+  <div class="sh"><span class="n">04</span><h2>Shape and space</h2>
+    <p>One corner, one inner padding and one spacing scale for every card. The build mixes 48, 28 and a dozen other radii, and four different paddings.</p></div>
+  <div class="cols">
+    <div class="tbl"><table>
+      <thead><tr><th>Token</th><th>Value</th><th>Was</th></tr></thead>
+      <tbody>
+        <tr><td>Card corner</td><td class="num">28 dp, every tier and the top of sheets</td><td class="num">Glow 48, edge and list 28</td></tr>
+        <tr><td>Tile corner</td><td class="num">16 dp (sport tiles, chart pills, inputs)</td><td class="num">12, 14, 16, 20, 24</td></tr>
+        <tr><td>Pills and chips</td><td>Fully round</td><td></td></tr>
+        <tr><td>Card padding</td><td class="num">20 dp all round</td><td class="num">Glow 30 by 32 by 26, edge 20 by 18, list 18 by 6</td></tr>
+        <tr><td>List row</td><td class="num">14 dp top and bottom, 20 at the sides</td><td class="num">13</td></tr>
+        <tr><td>Space scale</td><td class="num">4, 8, 12, 16, 20, 24, 32</td><td></td></tr>
+        <tr><td>Inside a card</td><td class="num">Title row to content 12, digits to caption 4, block to block 16</td><td></td></tr>
+        <tr><td>Between cards</td><td class="num">12 dp gap, 16 dp side gutter</td><td></td></tr>
+      </tbody></table></div>
+    <div class="spec" style="gap:14px">
+      <div class="strip" style="gap:10px">
+        <div class="spec"><div class="g L3 h-stp from-below" style="width:87px;height:80px;border-radius:14px;padding:0"></div><span class="cap11">Small 1x1</span></div>
+        <div class="spec"><div class="g L3 h-slp from-above" style="width:179px;height:80px;border-radius:14px;padding:0"></div><span class="cap11">Wide 2x1</span></div>
+        <div class="spec"><div class="g lvl h-chg" style="width:87px;height:166px;border-radius:14px;padding:0;--v:60%"></div><span class="cap11">Tall 1x2</span></div>
+        <div class="spec"><div class="g L4 h-rec from-ll" style="width:179px;height:120px;border-radius:14px;padding:0"></div><span class="cap11">Large, as high as its content</span></div>
+        <div class="spec"><div class="e b" style="--ink:var(--neu);width:179px;height:34px;border-radius:14px;padding:0"></div><span class="cap11">Strip, 68 dp</span></div>
+      </div>
+      <p class="sec">Half size. On a 390 dp phone a unit is 173 by 160 dp. A Tall is two units and the gap. A lone Small becomes a Wide. The hero sizes to its content with no empty band under the last line.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= CARDS ================= -->
+<section id="cards">
+  <div class="sh"><span class="n">05</span><h2>Cards</h2>
+    <p>Three tiers and the strip, shown here as the Recovery tab. Habit Age is an edge card lit from the left, with its explanation behind (i) in the card. No card has a dotted or coloured border.</p></div>
+  <div class="mo">
+    <div class="phone" aria-label="Recovery tab example">
+      <div class="hdr"><span class="av"><svg><use href="#i-User"/></svg></span><span class="mid"><span>Recovery</span><span>Sat 24 Oct</span></span><span class="chip"><i></i>36%</span></div>
+      <div class="g L4 h-rec from-pool"><div class="ct">Recovery<svg class="go" aria-hidden="true"><use href="#i-Chev"/></svg><span class="info"><svg><use href="#i-InformationCircle"/></svg></span></div>
+        <p class="sent">Recovered enough for your usual training. Mostly held back by HRV.</p>
+        <div style="display:flex;align-items:flex-end;gap:12px;margin-top:16px"><span class="d d4">78</span><span class="sec">Recovered<br>+3 vs yesterday</span></div></div>
+      <div class="ql"><div class="lt"><span class="ct">What drove it<span class="note">Top 3 of 9</span></span></div>
+        <div class="row" style="--c:var(--rec)"><span class="nm"><span>Last night's sleep</span><span>7 h 40 asleep</span></span><span style="width:90px" class="bar"><i style="width:70%"></i></span><span class="sec" style="width:58px;text-align:right">Helping</span></div>
+        <div class="row off" style="--c:var(--hrv)"><span class="nm"><span>HRV</span><span>41 ms, usual 52</span></span><span style="width:90px" class="bar"><i style="width:30%;background:var(--hrv)"></i></span><span class="sec" style="width:58px;text-align:right;color:var(--hrv)">Holding back</span></div></div>
+      <div class="tallpair">
+        <div class="g lvl h-chg" style="height:332px;--v:74%"><span class="ct">Charge<svg class="go" aria-hidden="true"><use href="#i-Chev"/></svg></span><span class="fill"></span><span class="d d36">74</span><span class="sec" style="margin-top:4px">85 at waking</span></div>
+        <div><div class="e b" style="--ink:var(--chg);height:160px"><span class="ct">Recharged</span><span class="fill"></span><span class="d d3">+39</span><span class="sec" style="margin-top:4px">Sleep and calm rest</span></div>
+          <div class="e t" style="--ink:var(--chg);height:160px"><span class="ct">Drained</span><span class="fill"></span><span class="d d3">15</span><span class="sec" style="margin-top:4px">Mostly being awake</span></div></div>
+      </div>
+      <div class="ql"><div class="lt"><span class="ct">Body signals</span></div>
+        <div class="row off" style="--c:var(--hrt)"><svg style="color:var(--hrt)"><use href="#i-Favourite"/></svg><span class="nm"><span>Resting heart rate</span><span>Above your normal</span></span><span class="d">71</span><svg class="go" aria-hidden="true"><use href="#i-Chev"/></svg></div>
+        <div class="row off" style="--c:var(--hrv)"><svg style="color:var(--hrv)"><use href="#i-Pulse01"/></svg><span class="nm"><span>HRV</span><span>Below your normal</span></span><span class="d">48</span><svg class="go" aria-hidden="true"><use href="#i-Chev"/></svg></div>
+        <div class="row"><svg style="color:var(--spo)"><use href="#i-Droplet"/></svg><span class="nm"><span>Blood oxygen</span><span>Usual</span></span><span class="d">97%</span><svg class="go" aria-hidden="true"><use href="#i-Chev"/></svg></div></div>
+      <div class="e l" style="--ink:var(--hab)"><div class="ct">Habit Age<svg class="go" aria-hidden="true"><use href="#i-Chev"/></svg><span class="info"><svg><use href="#i-InformationCircle"/></svg></span></div>
+        <span class="sec">Updated Sun 18 Oct</span>
+        <div style="display:flex;align-items:flex-end;gap:12px;margin-top:14px"><span class="d d3">29</span><span class="sec" style="color:var(--hab)">1 year younger than last week</span></div>
+        <div class="scale"><span class="band" style="left:22%;width:30%"></span><span class="est" style="left:38%"></span><span class="you" style="left:72%"></span></div>
+        <div style="display:flex;justify-content:space-between" class="cap11"><span style="padding-left:20%">27 to 31</span><span style="padding-right:22%">You, 34</span></div></div>
+      <div style="height:84px"></div>
+      <div class="tabs"><div class="pill"><span>Today</span><span class="on">Recovery</span><span>Sleep</span><span>Activity</span></div></div>
+    </div>
+    <div class="spec" style="gap:20px">
+      <div class="tbl"><table>
+        <thead><tr><th>Edge card</th><th>Light comes from</th></tr></thead>
+        <tbody>
+          <tr><td>A usual value</td><td>Bottom, L1</td></tr>
+          <tr><td>Above your normal</td><td>Top, L2</td></tr>
+          <tr><td>Below your normal</td><td>Bottom, L2</td></tr>
+          <tr><td>Progress to a goal</td><td>Bottom, L1, with a 4 dp bar</td></tr>
+          <tr><td>A level (Load, Charge on Today)</td><td>Fills from the left to the value</td></tr>
+          <tr><td>Live now (heart rate)</td><td>Right</td></tr>
+          <tr><td>About earlier (Recovery later in the day, Habit Age, Naps)</td><td>Left</td></tr>
+          <tr><td>Sleep (last night, regularity)</td><td>Top, like a night sky</td></tr>
+          <tr><td>Strip (check-in, sports, last night collapsed)</td><td>Bottom, L1, neutral or the metric's</td></tr>
+        </tbody></table></div>
+      <ul class="rules">
+        <li><b>Never two neighbours alike.</b> Tier, edge side and shape make a card's design. Colour alone does not. The later card flips its edge first.</li>
+        <li><b>Tappable says so.</b> A card that opens something shows a 14 dp caret right after its title, at 50% white. A row that opens something ends with the same caret at 30%, after its value. A card or row that opens nothing shows none. Pressed, both scale to 0.98.</li>
+        <li><b>(i) lives in the card.</b> A 32 dp round button at 10% white, top right of the title row, the same on every card that has one. It opens the info sheet. No "How it works" panel, no separate card.</li>
+        <li><b>Number and word.</b> The word after the digits ("bpm", "asleep", "today") sits on their baseline in Body 15 at 72%.</li>
+        <li><b>Pages under a card</b> (Habit Age, every detail) use the same tiers. <code>DotPanel</code> and <code>DotHeader</code> are gone everywhere.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ================= ROWS ================= -->
+<section id="rows">
+  <div class="sh"><span class="n">06</span><h2>List rows</h2>
+    <p>Every metric row starts with its icon in the metric's ink, in place of the coloured dot. Name and value stay white and take the colour only off your normal.</p></div>
+  <div class="cols">
+    <div class="ql">
+      <div class="lt"><span class="ct">Your body this morning<span class="note">Against your normal</span></span></div>
+      <div class="row off" style="--c:var(--hrt)"><svg style="color:var(--hrt)"><use href="#i-Favourite"/></svg><span class="nm"><span>Resting heart rate</span><span>Above your normal</span></span><span class="d">71</span><svg class="go" aria-hidden="true"><use href="#i-Chev"/></svg></div>
+      <div class="row off" style="--c:var(--hrv)"><svg style="color:var(--hrv)"><use href="#i-Pulse01"/></svg><span class="nm"><span>HRV</span><span>Below your normal</span></span><span class="d">48</span><svg class="go" aria-hidden="true"><use href="#i-Chev"/></svg></div>
+      <div class="row"><svg style="color:var(--spo)"><use href="#i-Droplet"/></svg><span class="nm"><span>Blood oxygen</span><span>Usual</span></span><span class="d">99%</span><svg class="go" aria-hidden="true"><use href="#i-Chev"/></svg></div>
+      <div class="row"><svg style="color:#8FA8FF"><use href="#i-Lungs"/></svg><span class="nm"><span>Breathing rate</span><span>Usual</span></span><span class="d">14</span><svg class="go" aria-hidden="true"><use href="#i-Chev"/></svg></div>
+      <div class="row wait"><svg style="color:var(--tmp)"><use href="#i-Thermometer"/></svg><span class="nm"><span>Skin temperature</span><span style="color:var(--fg3)">After your first night</span></span><span class="wdash"></span><svg class="go" aria-hidden="true"><use href="#i-Chev"/></svg></div>
+    </div>
+    <div class="tbl"><table>
+      <thead><tr><th>Row</th><th>Icon</th><th>Ink</th></tr></thead>
+      <tbody>
+        <tr><td>Resting, lowest, average heart rate</td><td>Favourite</td><td>Heart</td></tr>
+        <tr><td>HRV</td><td>Pulse01</td><td>HRV</td></tr>
+        <tr><td>Blood oxygen</td><td>Droplet</td><td>SpO2</td></tr>
+        <tr><td>Breathing rate</td><td>Lungs</td><td>Sleep light</td></tr>
+        <tr><td>Skin temperature</td><td>Thermometer</td><td>Temperature</td></tr>
+        <tr><td>Stress</td><td>Brain02</td><td>Stress</td></tr>
+        <tr><td>Charge</td><td>BatteryCharging01</td><td>Charge</td></tr>
+        <tr><td>Last night, naps</td><td>Moon02</td><td>Sleep</td></tr>
+        <tr><td>Steps</td><td>FootPrints</td><td>Steps</td></tr>
+        <tr><td>Load</td><td>Dumbbell01</td><td>Load</td></tr>
+        <tr><td>Time to recover</td><td>Hourglass</td><td>Load</td></tr>
+        <tr><td>Energy</td><td>Fire</td><td>Steps</td></tr>
+        <tr><td>Distance</td><td>Route01</td><td>Steps</td></tr>
+        <tr><td>VO2 max</td><td>FastWind</td><td>Heart</td></tr>
+      </tbody></table></div>
+  </div>
+  <ul class="rules">
+    <li>Every row that opens a detail ends with the caret, 8 dp after the value.</li>
+    <li>Icon 20 dp, stroke 1.5, then 14 dp to the name. A waiting row dims its icon to 30% and shows the dim bar for a value.</li>
+    <li>Contributor rows (What drove it) keep their bar instead of an icon. Workout rows keep the sport tile. Settings rows keep their toned white icons.</li>
+  </ul>
+</section>
+
+<!-- ================= LINES ================= -->
+<section id="lines">
+  <div class="sh"><span class="n">07</span><h2>Lines and charts</h2>
+    <p>Only the digits are made of dots. Every border, grid, baseline, guide, ghost line and gap is solid or simply not drawn.</p></div>
+  <div class="lines">
+    <div class="e" style="--ink:var(--hrt)"><span class="tag">In the build now</span>
+      <svg class="chart" viewBox="0 0 320 120" role="img" aria-label="Chart with dotted grid and dashed ghost line">
+        <g stroke="rgba(255,255,255,.25)" stroke-width="1.5" stroke-dasharray="0 6" stroke-linecap="round"><path d="M0 20H320M0 60H320M0 100H320"/></g>
+        <path d="M0 96 C40 94 60 90 90 84 S150 70 180 58" stroke="rgba(255,255,255,.4)" stroke-width="1.5" stroke-dasharray="3 5" fill="none"/>
+        <path d="M0 98 C30 97 60 95 90 92 S130 86 150 86" stroke="#C3F53C" stroke-width="2" fill="none"/>
+        <path d="M150 86 L200 70" stroke="#C3F53C" stroke-width="2" stroke-dasharray="4 4" fill="none"/>
+        <g fill="#fff" opacity=".35"><circle cx="230" cy="100" r="1.5"/><circle cx="240" cy="100" r="1.5"/><circle cx="250" cy="100" r="1.5"/><circle cx="260" cy="100" r="1.5"/><circle cx="270" cy="100" r="1.5"/><circle cx="280" cy="100" r="1.5"/></g>
+      </svg>
+      <span class="sec">Dotted grid, dashed ghost of your usual, dashed gap, dotted empty hours.</span></div>
+    <div class="e" style="--ink:var(--stp)"><span class="tag">New</span>
+      <svg class="chart" viewBox="0 0 320 120" role="img" aria-label="Chart with solid hairline grid and solid ghost line">
+        <g stroke="rgba(255,255,255,.08)" stroke-width="1"><path d="M0 20.5H320M0 60.5H320M0 100.5H320"/></g>
+        <rect x="0" y="66" width="320" height="22" fill="rgba(195,245,60,.12)"/>
+        <path d="M0 96 C40 94 60 90 90 84 S150 70 180 58" stroke="rgba(255,255,255,.35)" stroke-width="1.5" fill="none"/>
+        <path d="M0 98 C30 97 60 95 90 92 S130 86 150 86" stroke="#C3F53C" stroke-width="2" fill="none"/>
+        <path d="M168 80 L200 70" stroke="#C3F53C" stroke-width="2" fill="none"/>
+        <circle cx="200" cy="70" r="4" fill="#C3F53C"/>
+      </svg>
+      <span class="sec">Hairline grid, solid ghost, a gap is a break in the line, your normal is a soft band, empty hours are not drawn.</span></div>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Thing</th><th>Drawn as</th><th>Weight</th></tr></thead>
+    <tbody>
+      <tr><td>Data line</td><td>Solid, the metric's ink</td><td class="num">2 dp</td></tr>
+      <tr><td>Grid and guides (charts, hypnogram rows)</td><td>Solid, 8% white, at most three</td><td class="num">1 dp</td></tr>
+      <tr><td>Your normal</td><td>A band of the ink at 12%, no edge lines</td><td></td></tr>
+      <tr><td>Ghost of your usual by now</td><td>Solid, 35% white</td><td class="num">1.5 dp</td></tr>
+      <tr><td>Target or goal</td><td>Solid, 40% white</td><td class="num">1 dp</td></tr>
+      <tr><td>A gap in the data</td><td>The line stops and starts again. Nothing joins it</td><td></td></tr>
+      <tr><td>Low confidence point</td><td>A hollow ring</td><td class="num">1.5 dp</td></tr>
+      <tr><td>Hours with no steps, hours to come</td><td>Not drawn, a hairline baseline under the bars</td><td class="num">1 dp</td></tr>
+      <tr><td>Pairing, strap to phone</td><td>A solid hairline</td><td class="num">1 dp</td></tr>
+      <tr><td>Card and panel borders</td><td>Solid hairline, white at 8%. Never dotted, dashed or coloured</td><td class="num">1 dp</td></tr>
+    </tbody></table></div>
+</section>
+
+<!-- ================= MOMENTS ================= -->
+<section id="moments">
+  <div class="sh"><span class="n">08</span><h2>Moments</h2>
+    <p>Today follows the day. Each moment sets the header, the hero, where its light comes from and how strong, the mood, how fast things move, and the order of the cards under it. Pick a moment to see its hero.</p></div>
+  <div class="seg" role="group" aria-label="Moment" id="seg"></div>
+  <div class="mo">
+    <div class="phone" style="gap:12px">
+      <div class="hdr"><span class="av"><svg><use href="#i-User"/></svg></span><span class="mid"><span id="moLabel">Waking up</span><span>Sat 24 Oct</span></span><span class="chip"><i></i>82%</span></div>
+      <div id="moHero" class="g L4 hero-sm"><div class="ct" id="moTitle">Recovery<span class="info"><svg><use href="#i-InformationCircle"/></svg></span></div>
+        <p class="sent" id="moSent"></p><span class="fill"></span>
+        <div style="display:flex;align-items:flex-end;gap:12px;margin-top:16px" id="moNumRow"><span class="d d4" id="moNum">78</span><span class="sec" id="moWord"></span></div>
+        <div id="moBtns" style="display:none;gap:8px;margin-top:16px"><button class="btn" type="button">Start run</button><button class="btn ghost" type="button">Other sport</button></div></div>
+      <ol class="order" id="moOrder"></ol>
+    </div>
+    <div class="spec" style="gap:20px">
+      <dl class="kv" id="moKv"></dl>
+      <ul class="rules">
+        <li><b>The light follows the sun.</b> Lower left on waking, rising to the value at midday, upper right and raised for your usual workout, settling from below after it, lower right and dimmer in the evening, faint from below at night.</li>
+        <li><b>Only at a boundary.</b> The hero crossfades over 300 ms when the moment changes. Cards reorder only at a moment boundary, never while the screen is in view.</li>
+        <li><b>Past days</b> always show the waking layout.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="tbl"><table id="moTable">
+    <thead><tr><th>Moment</th><th>Hero</th><th>Light from</th><th>Strength</th><th>Mood</th><th>Motion</th><th>Leads with</th></tr></thead>
+    <tbody></tbody></table></div>
+</section>
+
+<!-- ================= MOTION ================= -->
+<section id="motion">
+  <div class="sh"><span class="n">09</span><h2>Motion</h2>
+    <p>Motion tells you where something came from, what changed, or that it is alive. Springs never bounce. Nothing moves when idle except the live heart rate.</p></div>
+  <div class="grow" aria-label="The avatar grows into the You page">
+    <span class="from"><svg><use href="#i-User"/></svg></span><span class="arrow"></span><span class="to"><i style="width:60%"></i><i></i><i></i><i style="width:80%"></i></span>
+    <p class="sec" style="max-width:36ch">The avatar grows into the You page and the strap chip into the Strap page, the same way a card grows into its detail. Back shrinks the page into the button it came from.</p>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Motion</th><th>Spec</th><th>Says</th></tr></thead>
+    <tbody>
+      <tr><td>Card to detail</td><td class="num">Shared bounds, the card's surface becomes the page and its number the header. Stiffness 500 in, 300 out</td><td>Where it came from</td></tr>
+      <tr><td>Avatar to You, chip to Strap</td><td class="num">The same shared bounds from the 44 dp button. 500 in, 300 out. <span class="was">Missing in the build</span></td><td>Where it came from</td></tr>
+      <tr><td>Sheets (info, calendar, Edit Today)</td><td class="num">Slide up, stiffness 400, scrim fades to 60% black</td><td>It sits over the page</td></tr>
+      <tr><td>Value change</td><td class="num">From the old number to the new over 450 ms, only after a sync or a live update. Never from zero on open</td><td>What changed</td></tr>
+      <tr><td>Level change (Charge, Load, steps)</td><td class="num">The light rises or falls from the old level to the new over 600 ms, with the value</td><td>What changed</td></tr>
+      <tr><td>Moment change</td><td class="num">Hero crossfade 300 ms</td><td>The day moved on</td></tr>
+      <tr><td>Press</td><td class="num">Scale to 0.98 over 100 ms, back on release. No ripple</td><td>It heard you</td></tr>
+      <tr><td>Live heart rate</td><td class="num">The core pulses at the real bpm</td><td>Alive</td></tr>
+      <tr><td>Tab switch</td><td class="num">The pager slides. Cards inside it do not animate</td><td></td></tr>
+      <tr><td>Speed by moment</td><td class="num">Stiffness 400 by default, 800 for workouts, 250 in the evening and at night</td><td>The tone of the day</td></tr>
+      <tr><td>System animations off</td><td>Everything jumps to its end state</td><td></td></tr>
+    </tbody></table></div>
+</section>
+
+<!-- ================= FRAME ================= -->
+<section id="frame">
+  <div class="sh"><span class="n">10</span><h2>Frame</h2>
+    <p>The header and the tab bar are the same on every tab. Pages opened over a tab share one header of their own.</p></div>
+  <ul class="rules">
+    <li><b>Header:</b> avatar (44 dp) left, the moment or tab name over the date in the middle, the strap chip right. The chip shows words only when they matter: "Charging 64%", "Not synced", "18 min ago".</li>
+    <li><b>Tab bar:</b> four tabs in a centred pill, the active one tinted with its section colour. A black fade 120 dp tall sits behind it, so cards slide under it softly instead of cutting into its edge. The last card ends 24 dp above the pill.</li>
+    <li><b>Pages</b> (You, Strap, details, Habit Age, Alarms, Firmware): a 44 dp round back button, the page title in Display 24, then cards in the same tiers. No Material panels or list items.</li>
+    <li><b>Sheets:</b> the Sheet surface, 28 dp top corners, a 36 by 4 dp handle, the same type roles.</li>
+  </ul>
+</section>
+
+<!-- ================= UNFOLDED ================= -->
+<section id="open">
+  <div class="sh"><span class="n">11</span><h2>Unfolded</h2>
+    <p>On the inner screen of the Fold, and anything 600 dp wide or more, the same rules hold in two columns.</p></div>
+  <ul class="rules">
+    <li>Two columns with a 12 dp gap and a 24 dp gutter. Content stops at 960 dp and centres.</li>
+    <li>Type and dot sizes stay the same. Cards do not grow taller, they only get wider.</li>
+    <li>The hero and strips span both columns. A Pair or a Tall with its Smalls stays together in one column.</li>
+    <li>Neighbours include cards side by side, so the no two alike rule checks across columns too.</li>
+    <li>Pages opened over a tab (details, You, Strap) take one centred column, 600 dp at most.</li>
+  </ul>
+</section>
+
+<!-- ================= WORKOUTS ================= -->
+<section id="workouts">
+  <div class="sh"><span class="n">12</span><h2>Workouts</h2>
+    <p>Starting a workout has to be obvious from anywhere, and the pages from Start to the end screen use the same tiers as every other screen. Today they are a set of their own: dotted panels, Material type, GPS off by default even for a run, and a strip of unlabelled icons as the way in.</p></div>
+
+  <h3>The way in</h3>
+  <div class="phones">
+    <div class="spec">
+      <div class="e b" style="--ink:var(--neu);width:358px;max-width:100%">
+        <div class="ct">Start a workout</div>
+        <div class="tiles4">
+          <span class="stile"><span class="ti"><svg><use href="#i-WorkoutRun"/></svg></span><span>Run</span></span>
+          <span class="stile"><span class="ti"><svg><use href="#i-Walking"/></svg></span><span>Walk</span></span>
+          <span class="stile"><span class="ti"><svg><use href="#i-Dumbbell01"/></svg></span><span>Strength</span></span>
+          <span class="stile"><span class="ti"><svg><use href="#i-GridView"/></svg></span><span>All sports</span></span>
+        </div>
+      </div>
+      <div class="cap"><b>Activity tab, first card</b>A Wide edge card titled "Start a workout": your three most used sports with their names, then All sports. A sport opens Ready with it chosen. Today only.</div>
+    </div>
+    <div class="spec">
+      <div class="e b strip68" style="--ink:var(--hrt);width:358px;max-width:100%">
+        <span class="nm2"><span class="ct">Start a workout</span><span class="sec">Outdoor run, your usual</span></span>
+        <span class="play"><svg><use href="#i-Play"/></svg></span>
+      </div>
+      <div class="cap"><b>Today, a strip in every moment</b>Above Edit Today, except during a workout. A white play button on the right, your usual sport under the title. In the workout window the hero's Start takes its place.</div>
+    </div>
+  </div>
+  <ul class="rules">
+    <li><b>Words with the icons.</b> Every sport tile carries its name. An icon alone does not say "start".</li>
+    <li><b>One path:</b> a sport tile or the strip opens Ready. Ready always ends in one big Start button. Nothing records until it is pressed.</li>
+    <li><b>Indoor or outdoor is a switch, not a second sport.</b> Run, Walk, Cycling and Swim each appear once. Ready asks Outdoor or Indoor (Treadmill, Pool) and remembers your last answer per sport. Outdoor turns GPS on, indoor has no GPS. Hike is always outdoors and carries the location mark.</li>
+  </ul>
+
+  <h3>Choose a sport, Ready, the end</h3>
+  <div class="phones">
+    <div class="phone sm" aria-label="Choose a sport">
+      <div class="phd"><span class="rb"><svg style="transform:rotate(180deg)"><use href="#i-Chev"/></svg></span><span class="pt">Choose a sport</span></div>
+      <div class="search"><svg><use href="#i-Search01"/></svg>Search</div>
+      <span class="cap11" style="padding-left:4px">Recent</span>
+      <div class="tiles4">
+        <span class="stile"><span class="ti on"><svg><use href="#i-WorkoutRun"/></svg></span><span>Run</span></span>
+        <span class="stile"><span class="ti"><svg><use href="#i-Walking"/></svg></span><span>Walk</span></span>
+        <span class="stile"><span class="ti"><svg><use href="#i-Dumbbell01"/></svg></span><span>Strength</span></span>
+        <span class="stile"><span class="ti"><svg><use href="#i-Yoga01"/></svg></span><span>Yoga</span></span>
+      </div>
+      <span class="cap11" style="padding-left:4px">Sports</span>
+      <div class="tiles4">
+        <span class="stile"><span class="ti"><svg><use href="#i-WorkoutRun"/></svg></span><span>Run</span></span>
+        <span class="stile"><span class="ti"><svg><use href="#i-Walking"/></svg></span><span>Walk</span></span>
+        <span class="stile"><span class="ti"><svg><use href="#i-Walking"/></svg><svg class="gps"><use href="#i-Location01"/></svg></span><span>Hike</span></span>
+        <span class="stile"><span class="ti"><svg><use href="#i-Bicycle01"/></svg></span><span>Cycling</span></span>
+        <span class="stile"><span class="ti"><svg><use href="#i-Swimming"/></svg></span><span>Swim</span></span>
+        <span class="stile"><span class="ti"><svg><use href="#i-Dumbbell01"/></svg></span><span>Strength</span></span>
+        <span class="stile"><span class="ti"><svg><use href="#i-Fire"/></svg></span><span>HIIT</span></span>
+        <span class="stile"><span class="ti"><svg><use href="#i-Yoga01"/></svg></span><span>Yoga</span></span>
+        <span class="stile"><span class="ti"><svg><use href="#i-Yoga01"/></svg></span><span>Pilates</span></span>
+        <span class="stile"><span class="ti"><svg><use href="#i-Dumbbell01"/></svg></span><span>Rowing</span></span>
+        <span class="stile"><span class="ti"><svg><use href="#i-Dumbbell01"/></svg></span><span>Elliptical</span></span>
+        <span class="stile"><span class="ti"><svg><use href="#i-Pulse01"/></svg></span><span>Other</span></span>
+      </div>
+      <div class="ql"><div class="row"><span class="nm"><span>More sports</span><span>Tennis, padel, football, dance and the rest</span></span><svg class="go"><use href="#i-Chev"/></svg></div></div>
+    </div>
+
+    <div class="phone sm" aria-label="Ready">
+      <div class="phd"><span class="rb"><svg><use href="#i-Cancel01"/></svg></span><span class="pill2">Run<svg><use href="#i-ArrowDown01"/></svg></span><span style="width:44px"></span></div>
+      <div class="segc"><span class="on">Outdoor</span><span>Treadmill</span></div>
+      <div class="g L4 h-hrt from-below"><div class="ct">Strap connected<span class="info"><svg><use href="#i-InformationCircle"/></svg></span></div>
+        <div style="display:flex;align-items:flex-end;gap:4px;margin-top:20px"><span class="d d4">72</span><span class="unit">bpm</span></div>
+        <span class="sec" style="margin-top:4px">Live from your strap. Battery 64%.</span></div>
+      <div class="ql">
+        <div class="row"><svg style="color:var(--fg2)"><use href="#i-Location01"/></svg><span class="nm"><span>GPS</span><span>On. Distance, pace and the map</span></span><span class="sw2 on"></span></div>
+        <div class="row"><svg style="color:var(--fg2)"><use href="#i-Route01"/></svg><span class="nm"><span>Keep the route</span><span>Off. Only the totals are kept</span></span><span class="sw2"></span></div>
+      </div>
+      <span class="cap11" style="padding-left:4px">Target. The strap buzzes if you drift out.</span>
+      <div class="chips"><span class="on">None</span><span>Zone 2</span><span>Zone 2–3</span><span>Zone 3</span></div>
+      <div class="ql">
+        <div class="row"><span class="nm"><span>Ask to end when I stop</span><span>After 8 min resting with no steps</span></span><span class="sw2 on"></span></div>
+      </div>
+      <div class="fillv"></div>
+      <button class="startbtn" type="button"><svg><use href="#i-Play"/></svg>Start run</button>
+    </div>
+
+    <div class="phone sm" aria-label="Right after a workout">
+      <div class="phd"><span class="pt">Run saved</span></div>
+      <div class="g lvl h-hrt" style="--v:62%"><div class="ct">Heart rate drop<span class="info"><svg><use href="#i-InformationCircle"/></svg></span></div>
+        <p class="sent">Down 34 in the first minute. A quick drop for you.</p>
+        <div style="display:flex;align-items:flex-end;gap:4px;margin-top:16px"><span class="d d4">94</span><span class="unit">bpm now</span></div></div>
+      <div class="e l" style="--ink:var(--hrt)"><div class="ct">Outdoor run<svg class="go"><use href="#i-Chev"/></svg></div>
+        <div style="display:flex;align-items:flex-end;gap:12px;margin-top:12px"><span class="d d3">28:10</span><span class="sec">5.2 km, 5:24 a km</span></div>
+        <div class="zbar"><i style="flex:2;background:#8FA8FF"></i><i style="flex:5;background:#3DDC97"></i><i style="flex:9;background:#FFD166"></i><i style="flex:4;background:#FF9F43"></i><i style="flex:1;background:#FF5A5F"></i></div></div>
+      <div class="e strong t" style="--ink:var(--lod)"><div class="ct">Load<svg class="go"><use href="#i-Chev"/></svg></div>
+        <div style="display:flex;align-items:flex-end;gap:12px;margin-top:12px"><span class="d d3" style="color:var(--lod)">72</span><span class="sec" style="color:var(--lod)">Above your usual 40</span></div>
+        <span class="sec" style="margin-top:8px">Fastest 5 km since March.</span></div>
+      <div class="ql"><div class="row"><svg style="color:var(--fg2)"><use href="#i-Route01"/></svg><span class="nm"><span>Splits</span><span>5 km and the last 200 m</span></span><svg class="go"><use href="#i-Chev"/></svg></div>
+        <div class="row"><svg style="color:var(--fg2)"><use href="#i-Hourglass"/></svg><span class="nm"><span>Trim the start or end</span><span>21:28 to 21:56</span></span><svg class="go"><use href="#i-Chev"/></svg></div></div>
+      <div class="fillv"></div>
+      <button class="startbtn" type="button">Done</button>
+      <span class="sec" style="text-align:center">Delete this workout</span>
+    </div>
+  </div>
+
+  <div class="cols">
+    <ul class="rules">
+      <li><b>Choose a sport</b> is a page like any other: the round back button, the page title, a search field on the Control surface with 16 dp corners. Recent sports first, then twelve everyday sports, then a More sports row that opens the full list. Search looks through every sport. Each tile is a 64 dp Control tile with the icon and its name in Secondary under it.</li>
+      <li><b>Why twelve.</b> The picker lists 38 sports today, most of them racket and ball games that record the same thing: heart rate and time. The strap keeps every sport type for naming the workouts it detects, nothing is removed, they just move behind More sports.</li>
+      <li><b>Ready</b> leads with the strap: a hero glow with the live heart rate pulsing at the real bpm, or an outline card saying "Strap not connected. You can start anyway." Settings are list rows with switches. No dotted panels.</li>
+      <li><b>Start</b> is a 56 dp white button pinned to the bottom, naming the sport ("Start run"). It takes the target's zone colour when a target is set.</li>
+      <li><b>Right after</b> is the calm down: a page titled "Run saved", the drop as the hero (lit from below as high as the effort), the run and Load as edge cards, splits and trim as rows, then Done pinned at the bottom and Delete as quiet text under it.</li>
+      <li><b>A past workout</b> uses the same page: the hero is its sentence and duration instead of the live drop, with Back in place of Done.</li>
+    </ul>
+    <div class="tbl"><table>
+      <thead><tr><th>GPS</th><th>Outdoor sports</th><th>Indoor sports</th></tr></thead>
+      <tbody>
+        <tr><td>Chosen by</td><td>The Outdoor side of the switch on Ready, or a sport that is only done outdoors (hike, trail run, skiing)</td><td>The Indoor side (Treadmill, Pool, Indoor), or a sport only done indoors</td></tr>
+        <tr><td>GPS</td><td>On, with a GPS row to turn it off for this workout</td><td>No GPS row at all</td></tr>
+        <tr><td>Remembered</td><td>Outdoor or indoor, per sport</td><td></td></tr>
+        <tr><td>Keep the route</td><td>A second row under GPS, off by default</td><td></td></tr>
+        <tr><td>Distance without GPS</td><td>From steps for walks and runs, marked ≈</td><td>From steps for treadmill and stairs, marked ≈</td></tr>
+        <tr><td>Location off or not allowed</td><td>The row says "Location is off" with Turn on, and Start still works</td><td></td></tr>
+        <tr><td>Pairs behind one sport</td><td colspan="2">Run: Outdoor run or Treadmill. Cycling: Outdoor or Indoor cycling. Swim: Open water or Pool. Walk: one sport, outdoor with GPS or indoor without. The saved workout keeps the strap's sport type, so history and detection are unchanged.</td></tr>
+      </tbody></table></div>
+  </div>
+</section>
+
+<!-- ================= SLEEP HERO ================= -->
+<section id="sleep">
+  <div class="sh"><span class="n">13</span><h2>The sleep hero</h2>
+    <p>The Last night card carries an arc, a hypnogram on dotted guides and four stage totals in big dots, so five dotted numbers fight for one card. It keeps one answer in dots and turns the rest into text and colour.</p></div>
+  <div class="phones">
+    <div class="spec">
+      <div class="g L4 h-slp from-below m-night" style="width:358px;max-width:100%">
+        <div class="ct">Last night<span class="note" style="font-size:13px">23:20–07:21</span></div>
+        <p class="sent">8 h 01, your longest this week.</p>
+        <svg class="chart" viewBox="0 0 318 120" style="margin-top:12px" aria-hidden="true">
+          <path d="M10 90 A70 70 0 0 1 128 42" stroke="#8FA8FF" stroke-width="8" fill="none" stroke-linecap="round"/>
+          <path d="M128 42 A70 70 0 0 1 150 90" stroke="rgba(255,255,255,.15)" stroke-width="8" fill="none" stroke-linecap="round"/>
+          <text x="80" y="88" text-anchor="middle" font-family="Doto" font-weight="700" font-size="34" fill="#fff">83</text>
+          <text x="310" y="64" text-anchor="end" font-size="12" fill="rgba(255,255,255,.72)" font-family="Funnel Sans">Sleep score, good</text>
+          <text x="310" y="82" text-anchor="end" font-size="12" fill="rgba(255,255,255,.72)" font-family="Funnel Sans">Woke 4 times</text>
+          <g stroke="rgba(255,255,255,.3)" stroke-width="1.5" stroke-dasharray="0 5" stroke-linecap="round"><path d="M10 108H310"/></g>
+        </svg>
+        <div style="display:flex;justify-content:space-between;margin-top:8px"><span class="d d24">2:51</span><span class="d d24">1:31</span><span class="d d24">3:39</span><span class="d d24">0:00</span></div>
+      </div>
+      <div class="cap"><b>Now</b>An arc, the score, a dotted hypnogram, four dotted totals. Five dotted numbers.</div>
+    </div>
+    <div class="spec">
+      <div class="g L4 h-slp from-below m-night" style="width:358px;max-width:100%">
+        <div class="ct">Last night<svg class="go"><use href="#i-Chev"/></svg><span class="note" style="font-size:13px">23:20–07:21</span></div>
+        <p class="sent">8 h 01, your longest this week.</p>
+        <div style="display:flex;align-items:flex-end;gap:12px;margin-top:16px"><span class="d d4">83</span><span class="sec">Sleep score, good<br>Woke 4 times</span></div>
+        <svg class="chart" viewBox="0 0 318 104" style="margin-top:18px" role="img" aria-label="Hypnogram with solid stage bands">
+          <g stroke="rgba(255,255,255,.08)" stroke-width="1"><path d="M44 10.5H318M44 34.5H318M44 58.5H318M44 82.5H318"/></g>
+          <g font-family="Funnel Sans" font-size="10.5" font-weight="500" fill="rgba(255,255,255,.5)"><text x="0" y="14">Awake</text><text x="0" y="38">REM</text><text x="0" y="62">Light</text><text x="0" y="86">Deep</text></g>
+          <g id="hyp"></g>
+          <g font-family="Funnel Sans" font-size="10.5" font-weight="500" fill="rgba(255,255,255,.5)"><text x="44" y="102">23:20</text><text x="318" y="102" text-anchor="end">07:21</text></g>
+        </svg>
+        <div class="stack"><i style="flex:171;background:#4C6FFF"></i><i style="flex:91;background:#B37CFF"></i><i style="flex:219;background:#8FA8FF"></i><i style="flex:18;background:#FFB547"></i></div>
+        <div class="legend"><span><i style="background:#4C6FFF"></i>Deep 2 h 51</span><span><i style="background:#B37CFF"></i>REM 1 h 31</span><span><i style="background:#8FA8FF"></i>Light 3 h 39</span><span><i style="background:#FFB547"></i>Awake 18 min</span></div>
+      </div>
+      <div class="cap"><b>New</b>One dotted number, the score. The hypnogram in the stage colours on hairlines. The totals as one bar with a plain legend.</div>
+    </div>
+  </div>
+  <ul class="rules">
+    <li><b>One dotted number per card.</b> A card has at most one number in dots, its answer. Times, ranges, totals and second figures are text. A list has one per row. This holds on every card, the sleep hero, the Sleep score detail and Your week included.</li>
+    <li><b>The horizon arc goes</b>, on the card and on the Sleep score detail. The score reads as a number and a word like every other score.</li>
+    <li><b>The hypnogram</b> draws each stage as a solid rounded band in its colour (Deep, Light, REM, Awake), on four 1 dp hairlines at 8%, with stage names and the start and end time in Caption. Hold to scrub, the sentence line shows the stage and time under the finger.</li>
+    <li><b>Stage totals</b> are one 8 dp bar split by stage with 2 dp gaps, and a legend in Secondary with a 8 dp colour mark per stage. Awake under a minute leaves its segment and legend out.</li>
+  </ul>
+</section>
+
+<!-- ================= UP AND DOWN ================= -->
+<section id="change">
+  <div class="sh"><span class="n">14</span><h2>Up and down</h2>
+    <p>A change has three parts: which way, how much, and whether it matters. Each part has one carrier, so nothing says the same thing twice and nothing needs an arrow.</p></div>
+  <div class="strip">
+    <div class="spec"><div class="g L4 h-rec from-pool" style="width:240px;height:170px"><span class="ct">Recovery</span><span class="fill"></span><div style="display:flex;align-items:flex-end;gap:12px"><span class="d d4">78</span><span class="sec">Recovered<br>+3 vs yesterday</span></div></div>
+      <div class="cap"><b>Against yesterday</b>A signed number and what it is compared with, under the status word.</div></div>
+    <div class="spec"><div class="e strong t" style="--ink:var(--tmp);width:240px;height:170px"><span class="ct">Skin temperature</span><span class="fill"></span><span class="d d3" style="color:var(--tmp)">+0.6</span><span class="sec" style="color:var(--tmp);margin-top:6px">Above your normal</span><span class="sec">°C vs your normal</span></div>
+      <div class="cap"><b>Against your normal</b>The light from the top says above. The word says it matters. The number says how much.</div></div>
+    <div class="spec"><div class="ql" style="width:240px"><div class="lt"><span class="ct">Body signals</span></div><div class="row off" style="--c:var(--hrv)"><svg style="color:var(--hrv)"><use href="#i-Pulse01"/></svg><span class="nm"><span>HRV</span><span>Below your normal</span></span><span class="d">41</span></div><div class="row"><svg style="color:var(--hrt)"><use href="#i-Favourite"/></svg><span class="nm"><span>Resting heart rate</span><span>Usual</span></span><span class="d">52</span></div></div>
+      <div class="cap"><b>In a list</b>No light, so the word carries it, in the metric's ink when off your normal.</div></div>
+  </div>
+  <div class="cols">
+    <div class="tbl"><table>
+      <thead><tr><th>Part</th><th>Carried by</th><th>Example</th></tr></thead>
+      <tbody>
+        <tr><td>Which way, against your normal</td><td>Where the light sits: top above, bottom below (edge cards)</td><td>Skin temperature lit from the top</td></tr>
+        <tr><td>How much</td><td>A signed number with what it is compared with</td><td class="num">+0.6 °C vs your normal, −3 vs yesterday</td></tr>
+        <tr><td>Whether it matters</td><td>The status word, in the metric's ink when off your normal</td><td>Above your normal, Usual</td></tr>
+        <tr><td>Over time</td><td>The chart's line against the band of your normal</td><td>A detail's week view</td></tr>
+      </tbody></table></div>
+    <ul class="rules">
+      <li><b>No arrows,</b> triangles or dotted arrows. An arrow says up but not whether up is good: resting heart rate up is bad news, HRV up is good news.</li>
+      <li><b>No red and green for change.</b> Colour only marks off your normal, in the metric's own ink, never as a judgement.</li>
+      <li><b>Always say against what:</b> "vs yesterday", "vs your normal", "vs last week". A bare "+3" never appears.</li>
+      <li><b>A real minus sign</b> (−), never a hyphen. No change reads "Same as yesterday", never "+0". The build mixes − and - today.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ================= CHANGES ================= -->
+<section id="changes">
+  <div class="sh"><span class="n">15</span><h2>What changes</h2>
+    <p>Where the old spec, the mockups and the build disagreed, and what wins now. Each line becomes a check in the screen audit that follows.</p></div>
+  <div class="tbl"><table>
+    <thead><tr><th>Topic</th><th>Before</th><th>Now</th></tr></thead>
+    <tbody>
+      <tr><td>Typeface</td><td>Spec and mockups say Outfit, the build ships Funnel</td><td>Funnel Display and Funnel Sans</td></tr>
+      <tr><td>Card title</td><td>Glow 20 to 26 Light, edge 15 Medium</td><td>17 Sans Medium on every card</td></tr>
+      <tr><td>Hero sentence</td><td>Spec 20, build 26</td><td>20, three lines at most</td></tr>
+      <tr><td>Glow brightness</td><td>Body capped at luminance 0.09, fill fades by 40% on a steep curve</td><td>Body up to 0.18, fill per level L4 and L3</td></tr>
+      <tr><td>Edge light</td><td>Soft 62%, strong 75%</td><td>L1 70% over 48 dp, L2 90% over 72 dp</td></tr>
+      <tr><td>Off normal on an edge card</td><td>Mockup colours the hairline, spec says plain</td><td>Plain hairline. Strength and the coloured value only</td></tr>
+      <tr><td>Moods</td><td>Evening 60%, Night 40%</td><td>Evening 80%, Night 65%</td></tr>
+      <tr><td>Charge colour</td><td>Gold, a red to green scale by value, orange on glow</td><td>Ember orange everywhere, level shown by light height</td></tr>
+      <tr><td>Midday hero light</td><td>Spec says from above (90), Charge says from below</td><td>Charge rises from below. The level rule wins</td></tr>
+      <tr><td>Corners</td><td>Glow 48, spec 36, edge 28</td><td>28 on every card</td></tr>
+      <tr><td>Card padding</td><td>Four different paddings</td><td>20 all round</td></tr>
+      <tr><td>List row marker</td><td>8 dp coloured dot</td><td>20 dp icon in the metric's ink</td></tr>
+      <tr><td>Dotted and dashed lines</td><td>Grids, ghosts, gaps, baselines, the pairing line, DotPanel borders</td><td>None anywhere. Only digits are dots</td></tr>
+      <tr><td>Habit Age page</td><td>DotPanel with a "How it works" panel</td><td>Edge card lit from the left, (i) in the card</td></tr>
+      <tr><td>Dot sizes</td><td>Eight sizes from 1.7 to 9 dp</td><td>Six: 2.4, 3, 3.6, 4.5, 6, 9</td></tr>
+      <tr><td>Starting a workout</td><td>Three unlabelled icons on Activity, Start only in the workout window</td><td>A labelled Start a workout card on Activity and a strip on Today in every moment</td></tr>
+      <tr><td>GPS</td><td>Off by default, even for a run</td><td>On by default for outdoor sports and remembered per sport, hidden for indoor ones</td></tr>
+      <tr><td>Workout pages</td><td>Dotted panels, Material type, headline at 26 times 1.25</td><td>Page, tiers and type of every other screen, Start and Done pinned at the bottom</td></tr>
+      <tr><td>Sleep hero</td><td>Arc, dotted hypnogram guides, five dotted numbers</td><td>One dotted score, solid hypnogram, a stage bar with a legend</td></tr>
+      <tr><td>Sport picker</td><td>38 sports in seven sections, indoor and outdoor as separate sports</td><td>Twelve everyday sports, More sports for the rest, an Outdoor or Indoor switch on Ready</td></tr>
+      <tr><td>Up and down</td><td>Signs mixed with hyphens, dotted arrows in places</td><td>Light for which way, a signed number with its reference, the status word, no arrows</td></tr>
+      <tr><td>Dotted numbers</td><td>Several on one card</td><td>At most one per card</td></tr>
+      <tr><td>Tap affordance</td><td>Nothing shows a card or row can be tapped</td><td>A caret after the title, a caret at the end of the row</td></tr>
+      <tr><td>You and Strap</td><td>Open with no transition</td><td>Grow from the avatar and the chip</td></tr>
+      <tr><td>Tab bar</td><td>Cards run under it with no fade</td><td>120 dp black fade behind the pill</td></tr>
+    </tbody></table></div>
+</section>
+
+<footer>Source: <code>openstrap/docs/design/v2/design-system.html</code>. Rules in words: <code>spec.md</code> section 2. Icons: Hugeicons free, stroke rounded.</footer>
+</main>
+
+<script>
+(function(){
+  var M=[["Recovery","rec","#7CF2C9"],["Charge","chg","#F66C28"],["Sleep","slp","#4C6FFF"],["Heart rate","hrt","#FF5A5F"],["Steps","stp","#C3F53C"],["HRV","hrv","#2DD4BF"],["Blood oxygen","spo","#38BDF8"],["Stress","str","#F062C0"],["Skin temperature","tmp","#FF8A3D"],["Load","lod","#A78BFA"],["Habit Age","hab","#D86BEA"],["Evening","eve","#8B7BEA"],["Neutral","neu","#878D99"]];
+  var sw=document.getElementById("swatches");
+  M.forEach(function(m){
+    var k=m[1];var h="var(--"+k+"-h)",s="var(--"+k+"-s)";
+    var c=document.createElement("div");c.className="c";
+    c.innerHTML='<div class="ramp"><span style="background:'+m[2]+'"></span><span style="background:hsl('+h+' calc('+s+' * .9) 56%)"></span><span style="background:hsl('+h+' calc('+s+' * .8) 16%)"></span><span style="background:hsl('+h+' 70% 3%)"></span></div><div class="meta"><b>'+m[0]+'</b><span>'+m[2]+'</span></div>';
+    sw.appendChild(c);
+  });
+
+  var lvl=document.getElementById("lvl"),chg=document.getElementById("chgCard"),val=document.getElementById("chgVal"),load=document.getElementById("loadCard");
+  function setLvl(){var v=+lvl.value;var lit=Math.max(12,v);chg.style.setProperty("--v",lit+"%");val.textContent=v;load.style.setProperty("--v",Math.max(4,v*.4)+"%");}
+  lvl.addEventListener("input",setLvl);setLvl();
+
+  var MO=[
+    {id:"waking",name:"Waking up",title:"Recovery",hue:"h-rec",from:"from-ll",lvl:"L4",mood:"",sent:"Slept 7 h 40. Recovered enough for your usual training.",num:"78",word:"Recovered<br>Charge at waking 84",light:"Lower left, 225",strength:"L4 Hero",moodName:"Day",motion:"400",first:"Sentence",
+      order:[["strip","Check-in"],["list","Your body this morning"],["edge","Last night, from the top"],["edge","Heart rate, from the right"],["edge","Activity, from the bottom with a bar"]]},
+    {id:"midday",name:"Midday",title:"Charge",hue:"h-chg",from:"",lvl:"lvl",mood:"",sent:"62, steady for midday. Your walk took 9.",num:"62",word:"Recharged 39<br>Drained 22",light:"Rises from below to 62%",strength:"L4 level",moodName:"Day",motion:"400",first:"Sentence",
+      order:[["strip","Last night, collapsed"],["edge","Activity, with its line so far"],["edge","Heart rate, from the right"],["list","Right now"],["edge","Recovery, from the left"]]},
+    {id:"workout",name:"Workout time",title:"Ready for effort",hue:"h-hrt",from:"from-ur",lvl:"L4 raised",mood:"",sent:"Ready for effort. You usually run around now.",num:"",word:"",btns:true,light:"Upper right, 45",strength:"L4, rim 120%",moodName:"Day",motion:"800",first:"Short prompt, Start",
+      order:[["glow","Charge, second glow L3"],["list","Before you start"],["edge","Activity"],["strip","Last night"]]},
+    {id:"during",name:"Running",title:"Run",hue:"h-hrt",from:"from-below",lvl:"L4",mood:"",sent:"",num:"152",word:"bpm<br>Zone 3, 24:10",light:"Below, pulses at the real bpm",strength:"L4 Hero",moodName:"Day",motion:"800",first:"Number",
+      order:[["strip","Last night, collapsed"],["edge","Activity"],["list","Right now"],["edge","Recovery, from the left"]]},
+    {id:"after",name:"After your run",title:"Heart rate",hue:"h-hrt",from:"from-below",lvl:"L4 calm",mood:"",sent:"Since your run, 40 min. Heart rate settling.",num:"94",word:"bpm<br>Down 34 in the first minute",light:"Below, 270",strength:"L4, rim 80%",moodName:"Day",motion:"400",first:"Sentence",
+      order:[["edge","The run, from the left with its zone bar"],["edge","Load and To recover, a Small pair"],["edge","Charge as a level"],["edge","Activity"]]},
+    {id:"evening",name:"Evening",title:"Today",hue:"h-eve",from:"from-lr",lvl:"L4",mood:"m-eve",sent:"A full day. A run, 13,860 steps and a Load above your usual.",num:"",word:"",light:"Lower right, 315",strength:"L4 Hero",moodName:"Evening, 80%",motion:"250",first:"Sentence",
+      order:[["edge","Charge as a level"],["edge","Activity, its line so far"],["edge","Heart rate, the day's line, from the top"],["strip","Last night"]]},
+    {id:"night",name:"Night",title:"Today",hue:"h-slp",from:"from-below",lvl:"L4",mood:"m-night",sent:"Bedtime in 40 min. Charge 31 left after a full day.",num:"",word:"",light:"Below only",strength:"L4 Hero",moodName:"Night, 65%",motion:"250",first:"Sentence",
+      order:[["edge","Charge as a level"],["edge","Activity, its line so far"],["edge","Heart rate, from the top"],["strip","Last night"]]}
+  ];
+  var seg=document.getElementById("seg"),hero=document.getElementById("moHero"),tb=document.querySelector("#moTable tbody");
+  function el(id){return document.getElementById(id)}
+  function show(i){
+    var m=MO[i];
+    [].forEach.call(seg.children,function(b,j){b.setAttribute("aria-pressed",j===i?"true":"false")});
+    var cls=["g","hero-sm",m.hue].concat(m.lvl.split(" "));if(m.from)cls.push(m.from);if(m.mood)cls.push(m.mood);
+    hero.className=cls.join(" ");
+    if(m.lvl==="lvl")hero.style.setProperty("--v","62%");else hero.style.removeProperty("--v");
+    el("moLabel").textContent=m.name;
+    el("moTitle").firstChild.nodeValue=m.title;
+    el("moSent").textContent=m.sent;el("moSent").style.display=m.sent?"":"none";
+    el("moNum").textContent=m.num;el("moWord").innerHTML=m.word;el("moNumRow").style.display=m.num?"flex":"none";
+    if(m.id==="during"){el("moNum").className="d d9"}else{el("moNum").className="d d4"}
+    el("moBtns").style.display=m.btns?"flex":"none";
+    el("moOrder").innerHTML=m.order.map(function(o){return '<li><span class="tier '+o[0]+'">'+o[0]+'</span>'+o[1]+'</li>'}).join("");
+    el("moKv").innerHTML=[["Header",m.name],["Hero",m.title],["Light from",m.light],["Strength",m.strength],["Mood",m.moodName],["Motion","Stiffness "+m.motion],["Leads with",m.first]].map(function(p){return "<dt>"+p[0]+"</dt><dd>"+p[1]+"</dd>"}).join("");
+  }
+  MO.forEach(function(m,i){
+    var b=document.createElement("button");b.type="button";b.textContent=m.name;b.addEventListener("click",function(){show(i)});seg.appendChild(b);
+    var tr=document.createElement("tr");tr.innerHTML="<td>"+m.name+"</td><td>"+m.title+"</td><td>"+m.light+"</td><td>"+m.strength+"</td><td>"+m.moodName+"</td><td class='num'>"+m.motion+"</td><td>"+m.first+"</td>";tb.appendChild(tr);
+  });
+  var hyp=document.getElementById("hyp");
+  if(hyp){var seq=[["l",20],["d",50],["l",30],["r",20],["l",25],["d",40],["l",30],["a",4],["r",25],["l",35],["d",35],["l",30],["r",25],["a",5],["l",40],["d",20],["l",25],["r",21],["a",9]];
+    var Y={a:4,r:28,l:52,d:76},C={a:"#FFB547",r:"#B37CFF",l:"#8FA8FF",d:"#4C6FFF"};
+    var tot=seq.reduce(function(t,x){return t+x[1]},0),x=44,W=274,out="";
+    seq.forEach(function(q){var w=q[1]/tot*W;out+='<rect x="'+(x+.5).toFixed(1)+'" y="'+Y[q[0]]+'" width="'+Math.max(2,w-1).toFixed(1)+'" height="12" rx="4" fill="'+C[q[0]]+'"/>';x+=w;});
+    hyp.innerHTML=out;}
+  show(0);
+})();
+</script>

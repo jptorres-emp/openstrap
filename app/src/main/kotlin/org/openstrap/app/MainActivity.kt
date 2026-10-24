@@ -3,6 +3,7 @@ package org.openstrap.app
 import android.Manifest
 import org.openstrap.app.ui.firmware.FirmwareScreen
 import org.openstrap.app.ui.firmware.FirmwareViewModel
+import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -34,6 +35,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import org.openstrap.app.device.ConnectionState
+import org.openstrap.app.device.StrapService
 import org.openstrap.app.ui.dashboard.DayPicker
 import org.openstrap.app.ui.dashboard.DayViewModel
 import org.openstrap.app.ui.dashboard.Detail
@@ -160,6 +162,9 @@ class MainActivity : ComponentActivity() {
 
         /** Debug: true opens the summary right after a workout for the latest stored phone workout. */
         const val EXTRA_SHOW_SUMMARY = "show_summary"
+
+        /** Debug: the workout notification with sample figures, "running", "paused", "indoor", "end" or "clear". */
+        const val EXTRA_WORKOUT_NOTIFICATION = "workout_notification"
     }
 
     /** Debug: `am start -n org.openstrap.app/.MainActivity --ei dump_raw_days 7` dumps raw history to files/raw. */
@@ -226,6 +231,13 @@ class MainActivity : ComponentActivity() {
                 if (latest != null) container.workout.showSummary(latest.start)
                 else Toast.makeText(this@MainActivity, "No phone workout to show", Toast.LENGTH_SHORT).show()
             }
+        }
+        // Debug: `--es workout_notification running` posts the workout notification with sample figures, built as a
+        // real workout's is: running, paused, indoor, end or clear. Nothing records and nothing is written.
+        val sample = intent.getStringExtra(EXTRA_WORKOUT_NOTIFICATION)
+        if (BuildConfig.DEBUG && sample != null) {
+            intent.removeExtra(EXTRA_WORKOUT_NOTIFICATION)
+            startService(Intent(this, StrapService::class.java).setAction(StrapService.ACTION_SAMPLE).putExtra(StrapService.EXTRA_SAMPLE, sample))
         }
         val days = intent.getIntExtra("dump_raw_days", 0)
         if (!BuildConfig.DEBUG || days <= 0) return

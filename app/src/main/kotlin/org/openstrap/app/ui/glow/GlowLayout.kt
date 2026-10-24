@@ -17,39 +17,49 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import org.openstrap.app.ui.dashboard.ScreenList
 import org.openstrap.app.ui.theme.AppIcons
 import org.openstrap.app.ui.theme.MetricColors
 
 /*
- * One set of spacing rules for every glow card and dot panel, so their contents line up down the
- * screen: same gutter, same inset from the rounded edge, same rhythm from title to number to chart.
+ * One set of shape and spacing rules for every card (spec 2.4), so their contents line up down the screen: one
+ * corner, one inset from the edge on every tier, the same rhythm from title to number to chart. Cards take their
+ * corners and padding from here, never a literal of their own.
  */
 object GlowLayout {
     /** Space between the screen edge and a card. */
     val Gutter = 20.dp
-    /** Inside a card: clear of the big rounded corners and the rim light, so text sits on the calm middle. Dot panels use the same, so text columns align. */
-    val CardPadding = PaddingValues(start = 30.dp, end = 30.dp, top = 32.dp, bottom = 26.dp)
+
+    /** Every card's corner, on every tier: glow, edge, list, strip and page panels. */
+    val CardCorner = 28.dp
+    val CardShape = RoundedCornerShape(CardCorner)
+    /** A sheet's top corners match the cards'. */
+    val SheetShape = RoundedCornerShape(topStart = CardCorner, topEnd = CardCorner)
+    /** Sport tiles, chart pills, text fields: rounded, but a step tighter than a card. */
+    val TileCorner = 16.dp
+    val TileShape = RoundedCornerShape(TileCorner)
+
+    /** From a card's edge to its content, on every side and every tier. */
+    val CardInset = 20.dp
+    val CardPadding = PaddingValues(CardInset)
+    /** Above and below each list row; the panel adds the rest of [CardInset] at its top and bottom. */
+    val RowPadding = 14.dp
+    /** Inside a list: [CardInset] at the sides, and with the first and last row's [RowPadding] at the top and bottom. */
+    val ListPadding = PaddingValues(horizontal = CardInset, vertical = CardInset - RowPadding)
+
     /** Title row to the hero number. */
     val TitleGap = 14.dp
     /** Hero number (or the last line of text) to the chart. */
     val ChartGap = 20.dp
     /** Every chart in a card has the same height, axis labels included. */
     val ChartHeight = 116.dp
-    /** Dot-matrix hero numbers. */
-    val HeroDot = 4.5.dp
-    val HeroGap = 1.8.dp
     /** From this width (an unfolded foldable, a tablet, a phone on its side) the dashboards use two columns. */
     val TwoColumnWidth = 600.dp
     /** The widest the cards get; past it the margins grow, so lines stay readable on a tablet. */
@@ -60,17 +70,13 @@ object GlowLayout {
     val GaugeMaxWidth = 440.dp
     /**
      * With two columns on an unfolded foldable each is a little narrower than a phone, and beside a detail pane a
-     * dashboard is a narrow phone's width. A tighter gutter and card sides give the cards back a phone card's inner
-     * width, so tile labels and values fit as they do there.
+     * dashboard is a narrow phone's width. A tighter gutter gives the cards back a phone card's inner width, so tile
+     * labels and values fit as they do there.
      */
     val WideGutter = 16.dp
-    /** Narrower than this (a small phone, a dashboard beside a detail) cards use the tight sides too. */
+    /** Narrower than this (a small phone, a dashboard beside a detail) the gutter is tight too. */
     val NarrowWidth = 400.dp
-    val WideCardPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 32.dp, bottom = 26.dp)
 }
-
-/** The padding inside glow cards and dot panels; two-column dashboards narrow it. */
-val LocalCardPadding = staticCompositionLocalOf { GlowLayout.CardPadding }
 
 /** Where a dashboard block goes when there's room for two columns. On a phone every block stacks in the order given. */
 enum class Pane { Full, Left, Right }
@@ -118,19 +124,17 @@ fun GlowScreenList(
         androidx.compose.runtime.LaunchedEffect(focus, target) {
             if (focus && target != null) { state.animateScrollToItem(target); onFocused() }
         }
-        CompositionLocalProvider(LocalCardPadding provides if (tight) GlowLayout.WideCardPadding else GlowLayout.CardPadding) {
-            ScreenList(contentPadding, state, gutter = gutter) {
-                if (!wide) blocks.forEach { (_, block) -> item { block() } }
-                else sections(blocks).forEach { section ->
-                    val left = section.filter { it.first == Pane.Left }.map { it.second }
-                    val right = section.filter { it.first == Pane.Right }.map { it.second }
-                    // A full block, or a run with nothing on one side, takes the whole width rather than leave a hole.
-                    if (left.isEmpty() || right.isEmpty()) section.forEach { (_, block) -> item { block() } }
-                    else item {
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(GlowLayout.ColumnGap)) {
-                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(GlowLayout.ColumnGap)) { left.forEach { it() } }
-                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(GlowLayout.ColumnGap)) { right.forEach { it() } }
-                        }
+        ScreenList(contentPadding, state, gutter = gutter) {
+            if (!wide) blocks.forEach { (_, block) -> item { block() } }
+            else sections(blocks).forEach { section ->
+                val left = section.filter { it.first == Pane.Left }.map { it.second }
+                val right = section.filter { it.first == Pane.Right }.map { it.second }
+                // A full block, or a run with nothing on one side, takes the whole width rather than leave a hole.
+                if (left.isEmpty() || right.isEmpty()) section.forEach { (_, block) -> item { block() } }
+                else item {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(GlowLayout.ColumnGap)) {
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(GlowLayout.ColumnGap)) { left.forEach { it() } }
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(GlowLayout.ColumnGap)) { right.forEach { it() } }
                     }
                 }
             }
@@ -181,10 +185,10 @@ fun GlowHeader(
             Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp),
             itemVerticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(title, color = Color.White, style = GlowType.title, maxLines = 1)
+            Text(title, color = Color.White, style = GlowType.cardTitle, maxLines = 1)
             TitleMark(marker, tag)
-        } else Text(title, color = Color.White, style = GlowType.title, modifier = Modifier.weight(1f))
-        if (trailing != null) Text(trailing, color = Color.White.copy(alpha = 0.9f), style = MaterialTheme.typography.bodySmall)
+        } else Text(title, color = Color.White, style = GlowType.cardTitle, modifier = Modifier.weight(1f))
+        if (trailing != null) Text(trailing, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary)
         trailingContent?.invoke()
         if (chevron) {
             Spacer(Modifier.width(4.dp))
@@ -200,10 +204,11 @@ fun GlowHeader(
 @Composable
 fun GlowHeroNumber(value: String, unit: String, facts: List<String> = emptyList(), side: (@Composable () -> Unit)? = null) {
     Row(Modifier.fillMaxWidth().padding(top = GlowLayout.TitleGap), verticalAlignment = Alignment.Bottom) {
-        DotMatrixText(value, dot = GlowLayout.HeroDot, gap = GlowLayout.HeroGap)
-        Text(unit, color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(start = 8.dp).weight(1f))
+        DotMatrixText(value, dot = DotSize.Hero)
+        // The word after a number (spec 2.3).
+        Text(unit, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.body, modifier = Modifier.padding(start = 8.dp).weight(1f))
         if (facts.isNotEmpty()) Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            facts.forEach { Text(it, color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodySmall) }
+            facts.forEach { Text(it, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary) }
         }
         side?.invoke()
     }
@@ -219,7 +224,7 @@ fun GlowChartGap() = Spacer(Modifier.padding(top = GlowLayout.ChartGap))
  */
 @Composable
 internal fun StateMarker(text: String, modifier: Modifier = Modifier) {
-    Text(text, modifier, color = MetricColors.warn, style = GlowType.secondary.copy(fontSize = 11.5.sp), maxLines = 1)
+    Text(text, modifier, color = MetricColors.warn, style = GlowType.caption, maxLines = 1)
 }
 
 /**
@@ -240,7 +245,7 @@ internal fun TitleMark(marker: String?, tag: TitleTag?, modifier: Modifier = Mod
             modifier.clip(shape).border(1.dp, Color.White.copy(alpha = 0.22f), shape)
                 .let { if (onClick != null) it.clickable(onClickLabel = "About ${tag.text.lowercase()}", onClick = onClick) else it }
                 .padding(horizontal = 8.dp, vertical = 2.dp),
-            color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary.copy(fontSize = 11.5.sp), maxLines = 1,
+            color = Color.White.copy(alpha = GlowType.CAPTION_ALPHA), style = GlowType.caption, maxLines = 1,
         )
     }
 }

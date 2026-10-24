@@ -141,7 +141,7 @@ internal fun SleepScoreDetail(
             {
                 Box(Modifier.size(240.dp, 118.dp)) {
                     GlowHorizon(score / 100f, null, width = 240.dp, height = 118.dp)
-                    DotMatrixText(score.toString(), dot = 5.dp, gap = 1.9.dp, modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 12.dp).detailNumber(score.toString()))
+                    DotMatrixText(score.toString(), dot = DotSize.Detail, modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 12.dp).detailNumber(score.toString()))
                 }
             }
         } else null,
@@ -454,7 +454,7 @@ private fun SleepRelated(current: Score, state: DayUiState, r: RecoveryResult?, 
         }
         add { divider ->
             ListRow(
-                Score.Recovery.title, MetricColors.readinessDeep, ready?.score?.toString(),
+                Score.Recovery.title, MetricColors.readiness, ready?.score?.toString(),
                 ready?.score?.let { TodayCopy.recoveryWord(it, ready.strainAlert) } ?: "Nothing for this day",
                 onClick = { onOpen(Detail.OfScore(Score.Recovery)) }, divider = divider,
             )

@@ -322,12 +322,12 @@ private fun FactsList(
         }
         // Recovered is the whole answer: no number, no dash.
         ListRow(
-            "Time to recover", MetricColors.readinessDeep, recover?.first, recover?.second ?: "No recent workout", dash = recover?.first != null,
+            "Time to recover", MetricColors.readiness, recover?.first, recover?.second ?: "No recent workout", dash = recover?.first != null,
             onClick = { open(Score.Recover) },
         )
         val e = r?.energy
         ListRow(
-            "Energy", MetricColors.chargeDeep, e?.totalKcal?.roundToInt()?.let { "%,d".format(it) },
+            "Energy", MetricColors.charge, e?.totalKcal?.roundToInt()?.let { "%,d".format(it) },
             e?.let { TabCopy.energy(it.partial, isToday) } ?: "Add age, weight and height to see it",
             onClick = if (e == null && r != null) onEditProfile else { { open(Score.Energy) } }, dash = e != null,
         )
@@ -434,7 +434,7 @@ internal fun WorkoutRow(a: WorkoutAnalysis, usual: Float?, divider: Boolean, onC
                 )
             }
             Spacer(Modifier.width(12.dp))
-            DotMatrixText(workoutClock(a.activeSeconds), dot = ValueDot, gap = ValueGap, color = Color.White)
+            DotMatrixText(workoutClock(a.activeSeconds), dot = DotSize.Row, color = Color.White)
         }
         // Zone bar (chart kit): how the workout's time was spent, thin under its row, lined up with its name.
         ZoneBar(a.zoneSeconds, ZONE_COLORS, Modifier.padding(start = EffortTile + EffortGap, bottom = 10.dp), height = 4.dp)

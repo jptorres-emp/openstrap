@@ -155,7 +155,7 @@ internal fun RowPill(text: String, onClick: () -> Unit, primary: Boolean = false
  */
 @Composable
 internal fun FigureRow(figures: List<Pair<String?, String>>, modifier: Modifier = Modifier) {
-    val dot = if (figures.size >= 4) 2.4.dp else 3.dp
+    val dot = if (figures.size >= 4) DotSize.Row else DotSize.Edge
     Row(modifier.fillMaxWidth()) {
         figures.forEachIndexed { i, (value, label) ->
             val end = i == figures.lastIndex && i > 0

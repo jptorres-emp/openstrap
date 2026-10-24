@@ -50,6 +50,8 @@ private val GLYPHS: Map<Char, List<String>> = mapOf(
     ',' to listOf(".", ".", ".", ".", ".", "#", "#"),
     ':' to listOf(".", ".", "#", ".", ".", "#", "."),
     '-' to listOf("...", "...", "...", "###", "...", "...", "..."),
+    // The real minus sign of signed values (spec 2.3), drawn as the dash is.
+    '\u2212' to listOf("...", "...", "...", "###", "...", "...", "..."),
     '+' to listOf("...", "...", ".#.", "###", ".#.", "...", "..."),
     'k' to listOf("#....", "#....", "#..#.", "#.#..", "##...", "#.#..", "#..#."),
     '%' to listOf("##...", "##..#", "...#.", "..#..", ".#...", "#..##", "...##"),
@@ -58,27 +60,27 @@ private val GLYPHS: Map<Char, List<String>> = mapOf(
 private const val ROWS = 7
 
 /**
- * A number drawn as round dots, like an LED matrix (the "3.3" on the reference cards). [dot] is the
- * dot diameter; the grid pitch is dot + [gap]. Digits, `.`, `,`, `:`, `-`, `+` and `%` are supported.
+ * A number drawn as round dots, like an LED matrix (the "3.3" on the reference cards), in one of the six [DotSize]s
+ * for where it sits. Digits, `.`, `,`, `:`, `-`, `−`, `+` and `%` are supported.
  */
 @Composable
 fun DotMatrixText(
     text: String,
     modifier: Modifier = Modifier,
-    dot: Dp = 5.dp,
-    gap: Dp = 2.dp,
+    dot: DotSize,
     color: Color = Color.White,
 ) {
+    val gap = dot.gap
     val glyphs = text.map { GLYPHS[it] ?: GLYPHS.getValue(' ') }
     // One empty column between glyphs.
     val columns = glyphs.sumOf { it[0].length } + (glyphs.size - 1).coerceAtLeast(0)
-    val pitch = dot + gap
+    val pitch = dot.dot + gap
     Canvas(
         modifier
             .size(pitch * columns - gap, pitch * ROWS - gap)
             .semantics { contentDescription = text },
     ) {
-        val d = dot.toPx()
+        val d = dot.dot.toPx()
         val step = pitch.toPx()
         var x0 = 0f
         glyphs.forEach { rows ->

@@ -146,7 +146,7 @@ private fun WorkoutHero(a: WorkoutAnalysis, usual: Float?, zones: List<Int>) {
         Column {
             GlowHeader(WorkoutDetailCopy.day(a.shownStart, LocalDate.now()), trailing = "${clockAt(a.shownStart)}–${clockAt(a.end)}")
             HeroSentence(WorkoutDetailCopy.sentence(w.sportType, a.activeSeconds, w.trainingLoad, usual, zones))
-            DotMatrixText(workoutClock(a.activeSeconds), Modifier.padding(top = 16.dp), dot = GlowLayout.HeroDot, gap = GlowLayout.HeroGap)
+            DotMatrixText(workoutClock(a.activeSeconds), Modifier.padding(top = 16.dp), dot = DotSize.Hero)
         }
     }
 }
@@ -260,7 +260,7 @@ private fun FactsList(facts: List<WorkoutFact>, summary: PhoneSummary?) {
         facts.forEachIndexed { i, f ->
             val color = when (f.name) {
                 "Paused" -> PausedColor
-                "Energy" -> MetricColors.chargeDeep
+                "Energy" -> MetricColors.charge
                 else -> MetricColors.steps
             }
             ListRow(f.name, color, f.value, f.status, divider = i > 0)

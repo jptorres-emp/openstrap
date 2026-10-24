@@ -135,7 +135,7 @@ private fun RecoveryDetail(
         heroValue = if (range == Range.Day && score != null && scrub == null) {
             {
                 Box(Modifier.width(240.dp)) {
-                    GlowArcGauge(score / 100f, color) { DotMatrixText(score.toString(), dot = 5.dp, gap = 1.9.dp, modifier = Modifier.padding(bottom = 4.dp).detailNumber(score.toString())) }
+                    GlowArcGauge(score / 100f, color) { DotMatrixText(score.toString(), dot = DotSize.Detail, modifier = Modifier.padding(bottom = 4.dp).detailNumber(score.toString())) }
                 }
             }
         } else null,
@@ -160,7 +160,7 @@ private fun RecoveryDetail(
                 ListPanel(Modifier.padding(top = 8.dp), title = "What drove it") {
                     all.forEachIndexed { i, c ->
                         ContributorRow(
-                            TabCopy.factorName(c.factor), MetricColors.readinessDeep, TabCopy.contributorWord(c.score), c.score / 100f,
+                            TabCopy.factorName(c.factor), MetricColors.readiness, TabCopy.contributorWord(c.score), c.score / 100f,
                             offNormal = TabCopy.contributorOff(c.score), divider = i > 0, detail = readable(c.detail),
                         )
                     }
@@ -215,7 +215,7 @@ private fun ChargeDetail(
     val c = r?.charge
     val now = c?.latest?.let(::chargeShown)
     val atWake = c?.atWake?.toInt()
-    val color = MetricColors.chargeDeep
+    val color = MetricColors.charge
     val today = LocalDate.now()
     val isToday = state.date == today
     var scrub by remember(state.date) { mutableStateOf<DetailHeadline?>(null) }
@@ -323,10 +323,10 @@ private fun ScoreRelated(score: Score, state: DayUiState, r: RecoveryResult?, hi
     val metrics = if (score == Score.Recovery) listOf(Metric.Hrv, Metric.RestingHr) else listOf(Metric.Stress)
     ListPanel(Modifier.padding(top = 8.dp), title = "Related") {
         if (score == Score.Recovery) ListRow(
-            "Charge", MetricColors.chargeDeep, charge?.toString(), charge?.let(Narrative::chargeHeadline) ?: "Nothing for this day",
+            "Charge", MetricColors.charge, charge?.toString(), charge?.let(Narrative::chargeHeadline) ?: "Nothing for this day",
             onClick = { onOpen(Detail.OfScore(Score.Charge)) }, divider = false,
         ) else ListRow(
-            "Recovery", MetricColors.readinessDeep, ready?.score?.toString(),
+            "Recovery", MetricColors.readiness, ready?.score?.toString(),
             ready?.score?.let { TodayCopy.recoveryWord(it, ready.strainAlert) } ?: "Nothing for this day",
             onClick = { onOpen(Detail.OfScore(Score.Recovery)) }, divider = false,
         )

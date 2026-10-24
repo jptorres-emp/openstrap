@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -30,7 +29,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import org.openstrap.app.ui.theme.AppIcons
 
-val PanelShape = RoundedCornerShape(22.dp)
+val PanelShape = org.openstrap.app.ui.glow.GlowLayout.CardShape
 
 /** The base card: a slightly raised surface with a hairline border, as in WHOOP/Oura. */
 @Composable

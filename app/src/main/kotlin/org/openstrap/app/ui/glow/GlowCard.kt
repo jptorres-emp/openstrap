@@ -96,7 +96,7 @@ fun GlowCard(
     style: GlowStyle,
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
-    contentPadding: PaddingValues = LocalCardPadding.current,
+    contentPadding: PaddingValues = GlowLayout.CardPadding,
     content: @Composable BoxScope.() -> Unit,
 ) {
     val lit = style.copy(mood = LocalGlowMood.current)

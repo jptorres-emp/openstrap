@@ -83,7 +83,7 @@ val LocalGlowMood = staticCompositionLocalOf { GlowMood.Day }
 @Immutable
 data class GlowStyle(
     val color: Color,
-    val radius: Dp = 48.dp,
+    val radius: Dp = GlowLayout.CardCorner,
     val coreShape: CoreShape = CoreShape.Rounded,
     val coreX: Float = 0.5f,
     val coreY: Float = 0.64f,
@@ -144,9 +144,9 @@ data class GlowStyle(
             lightFrom = LightFrom.Bottom, glowSize = 26.dp, glowStrength = 0.7f,
         )
 
-        /** Black top melting into orange from below ("Breath Volume"). */
+        /** Black top melting into orange from below ("Breath Volume"): Charge's glow, in its one ink. */
         val Ember = GlowStyle(
-            color = Color(0xFFF2582A),
+            color = org.openstrap.app.ui.theme.MetricColors.charge,
             coreShape = CoreShape.Radial,
             coreX = 0.5f, coreY = 0.05f, coreWidth = 1.4f, coreHeight = 1.2f,
             coreBlur = 32.dp, coreLightness = 0.02f,

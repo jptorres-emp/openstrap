@@ -35,7 +35,6 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import org.openstrap.app.ui.components.pressClickable
 import org.openstrap.app.ui.theme.AppIcons
 
@@ -45,14 +44,17 @@ import org.openstrap.app.ui.theme.AppIcons
  * app doesn't turn into another product at the strap's boundary.
  */
 
-private val PanelShape = RoundedCornerShape(28.dp)
+private val PanelShape = GlowLayout.CardShape
 private val PanelSurface = Color(0xFF0F0F11)
 private val ButtonShape = RoundedCornerShape(20.dp)
 private val ButtonSurface = Color(0xFF121214)
 private val Hairline = Color.White.copy(alpha = 0.05f)
 
-/** Red for the one row or button that can't be undone (Forget, Delete all). */
-val DangerColor = Color(0xFFFF8A8D)
+/**
+ * The one row or button that can't be undone (Forget, Delete all, Delete workout): plain white at 72%, no colour, since
+ * colour in the app means a metric or the strap's state (spec 2.2). The confirmation asks before anything goes.
+ */
+val DestructiveInk = Color.White.copy(alpha = 0.72f)
 
 /**
  * A page's top: a round back button and the [title], over the day it's about ([subtitle]) when it's about one, with
@@ -74,7 +76,7 @@ fun PageHeader(
         ) { Icon(AppIcons.ArrowLeft, "Back", Modifier.size(18.dp), tint = Color.White) }
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
-            Text(title, color = Color.White, style = GlowType.label.copy(fontSize = 20.sp, lineHeight = 26.sp), maxLines = 1)
+            Text(title, color = Color.White, style = GlowType.pageTitle, maxLines = 1)
             if (subtitle != null) Text(subtitle, color = Color.White.copy(alpha = 0.6f), style = GlowType.secondary, maxLines = 1)
         }
         trailing?.invoke()
@@ -89,11 +91,11 @@ fun PageHeader(
 fun PagePanel(modifier: Modifier = Modifier, title: String? = null, note: String? = null, content: @Composable ColumnScope.() -> Unit) {
     Column(
         modifier.fillMaxWidth().background(PanelSurface, PanelShape).border(1.dp, Color.White.copy(alpha = 0.06f), PanelShape)
-            .padding(horizontal = 18.dp, vertical = 18.dp),
+            .padding(GlowLayout.CardPadding),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         if (title != null) Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(title, color = Color.White, style = GlowType.label, modifier = Modifier.weight(1f))
+            Text(title, color = Color.White, style = GlowType.cardTitle, modifier = Modifier.weight(1f))
             if (note != null) Text(note, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary)
         }
         content()
@@ -105,7 +107,7 @@ fun PagePanel(modifier: Modifier = Modifier, title: String? = null, note: String
 fun PageRows(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
     Column(
         modifier.fillMaxWidth().background(PanelSurface, PanelShape).border(1.dp, Color.White.copy(alpha = 0.06f), PanelShape)
-            .padding(horizontal = 18.dp, vertical = 4.dp),
+            .padding(GlowLayout.ListPadding),
         content = content,
     )
 }
@@ -132,7 +134,7 @@ fun PageRow(
             .let { if (onClick != null) it.clickable(enabled = enabled, onClick = onClick) else it }
             .let { if (divider) it.drawBehind { drawLine(Hairline, Offset(0f, 0f), Offset(size.width, 0f), 1.dp.toPx()) } else it }
             .alpha(if (enabled) 1f else 0.45f)
-            .padding(vertical = 14.dp),
+            .padding(vertical = GlowLayout.RowPadding),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (icon != null) {
@@ -142,7 +144,7 @@ fun PageRow(
             Spacer(Modifier.width(14.dp))
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            Text(title, color = titleColor, style = GlowType.label.copy(fontWeight = null))
+            Text(title, color = titleColor, style = GlowType.body)
             if (below && value != null) Text(value, color = Color.White.copy(alpha = 0.6f), style = GlowType.secondary)
         }
         if (!below && value != null && trailing == null) {
@@ -150,7 +152,7 @@ fun PageRow(
             // A long value wraps onto a second line before it ever makes the title wrap.
             Text(
                 value, Modifier.widthIn(max = 160.dp), color = Color.White.copy(alpha = 0.6f),
-                style = GlowType.secondary.copy(fontSize = 13.5.sp), textAlign = TextAlign.End,
+                style = GlowType.secondary, textAlign = TextAlign.End,
             )
         }
         if (trailing != null) {
@@ -166,11 +168,11 @@ fun PageSwitchRow(title: String, subtitle: String?, checked: Boolean, onChange: 
     Row(
         Modifier.fillMaxWidth()
             .let { if (divider) it.drawBehind { drawLine(Hairline, Offset(0f, 0f), Offset(size.width, 0f), 1.dp.toPx()) } else it }
-            .padding(vertical = 12.dp),
+            .padding(vertical = GlowLayout.RowPadding),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            Text(title, color = Color.White, style = GlowType.label.copy(fontWeight = null))
+            Text(title, color = Color.White, style = GlowType.body)
             if (subtitle != null) Text(subtitle, color = Color.White.copy(alpha = 0.6f), style = GlowType.secondary)
         }
         Spacer(Modifier.width(12.dp))
@@ -203,7 +205,7 @@ fun PageButton(
             Icon(icon, null, Modifier.size(18.dp), tint = color)
             Spacer(Modifier.width(8.dp))
         }
-        Text(text, color = color, style = GlowType.label.copy(fontWeight = null), maxLines = 1)
+        Text(text, color = color, style = GlowType.body, maxLines = 1)
     }
 }
 
@@ -228,7 +230,7 @@ fun <T> ChoicePills(options: List<T>, selected: T?, label: (T) -> String, onPick
                     .clickable(enabled = enabled, role = Role.RadioButton) { if (!on) onPick(v) }
                     .semantics { this.selected = on }
                     .padding(horizontal = 14.dp, vertical = 8.dp),
-            ) { Text(label(v), color = Color.White, style = GlowType.secondary.copy(fontSize = 13.5.sp)) }
+            ) { Text(label(v), color = Color.White, style = GlowType.secondary) }
         }
     }
 }

@@ -43,7 +43,7 @@ import org.openstrap.app.device.ConnectionState
 import org.openstrap.app.firmware.UpdateCheck
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.sp
-import org.openstrap.app.ui.glow.DangerColor
+import org.openstrap.app.ui.glow.DestructiveInk
 import org.openstrap.app.ui.glow.GlowLayout
 import org.openstrap.app.ui.glow.GlowType
 import org.openstrap.app.ui.glow.PageButton
@@ -153,7 +153,7 @@ private fun StepPanel(step: FirmwareStep, vm: FirmwareViewModel, onInstall: (Rea
             }
             is FirmwareStep.Failed -> {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Icon(AppIcons.WarningCircle, null, tint = MetricColors.bad)
+                    Icon(AppIcons.WarningCircle, null, tint = MetricColors.warn)
                     Title("Something went wrong")
                 }
                 Body(step.message)
@@ -229,7 +229,7 @@ private fun AccountPanel(
             PageButton(if (account == null) "Sign in with Zepp" else "Sign in again", { signIn = true }, Modifier.fillMaxWidth(), enabled = enabled, primary = true)
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 PageButton(if (account == null) "Paste token" else "Edit", { editing = true }, Modifier.weight(1f), enabled = enabled)
-                if (account != null) PageButton("Remove", onClear, Modifier.weight(1f), enabled = enabled, color = DangerColor)
+                if (account != null) PageButton("Remove", onClear, Modifier.weight(1f), enabled = enabled, color = DestructiveInk)
             }
             return@PagePanel
         }

@@ -21,6 +21,12 @@ class TabCopyTest {
         assertNull(TabCopy.vsYesterday(75, null))
     }
 
+    @Test fun `a charge amount signs with a real minus, never a hyphen`() {
+        assertEquals("+32", TabCopy.chargeAmount(32.7f, +1))
+        assertEquals("−12", TabCopy.chargeAmount(12.2f, -1))
+        assertEquals("0", TabCopy.chargeAmount(0.4f, -1))
+    }
+
     @Test fun `the learning caveat counts toward the next step, then goes`() {
         assertEquals("Learning, 4 of 7 nights", TabCopy.learning(Recovery.Phase.Withheld, 4))
         assertEquals("Learning, 9 of 14 nights", TabCopy.learning(Recovery.Phase.Learning, 9))

@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -170,7 +169,7 @@ private fun CalmDownHero(summary: PhoneSummary, live: CalmDown?, usualDrop: Int?
         Column {
             GlowHeader("Heart rate drop", trailing = "Since ${clockAt(a.end)}")
             if (bpmNow != null) Row(Modifier.padding(top = GlowLayout.TitleGap), verticalAlignment = Alignment.Bottom) {
-                DotMatrixText(bpmNow.toString(), dot = GlowLayout.HeroDot, gap = GlowLayout.HeroGap)
+                DotMatrixText(bpmNow.toString(), dot = DotSize.Hero)
                 Text("bpm now", color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(start = 8.dp))
             }
             HeroSentence(line.text)
@@ -243,7 +242,7 @@ private fun WorkoutCard(summary: PhoneSummary) {
 internal fun RouteMap(summary: PhoneSummary, modifier: Modifier = Modifier) {
     if (summary.route.size < 2) return
     val stretches = remember(summary) { Route.byZone(summary.route, summary.history, summary.analysis.maxHeartRate) }
-    Box(modifier.fillMaxWidth().height(170.dp).clip(RoundedCornerShape(20.dp)).background(Raised)) {
+    Box(modifier.fillMaxWidth().height(170.dp).clip(GlowLayout.TileShape).background(Raised)) {
         WorkoutMap(stretches, routeOnly = false, Modifier.fillMaxSize())
     }
 }

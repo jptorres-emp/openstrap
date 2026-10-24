@@ -458,7 +458,7 @@ private fun Vo2Detail(ctx: ActivityDetailContext) {
 /** Time to recover: the hours left after your latest workout that says, and the recent workouts' own estimates. */
 @Composable
 private fun RecoverDetail(ctx: ActivityDetailContext) {
-    val color = MetricColors.readinessDeep
+    val color = MetricColors.readiness
     var info by rememberSaveable { mutableStateOf(false) }
     val zone = ZoneId.systemDefault()
     val now = System.currentTimeMillis() / 1000
@@ -501,7 +501,7 @@ private fun RecoverDetail(ctx: ActivityDetailContext) {
 /** Energy: the day's estimate, your body's use at rest, how active the day was and how much of it was worn. */
 @Composable
 private fun EnergyDetail(ctx: ActivityDetailContext) {
-    val color = MetricColors.chargeDeep
+    val color = MetricColors.charge
     var info by rememberSaveable { mutableStateOf(false) }
     val e = ctx.r?.energy
     val total = e?.totalKcal?.let(Math::round)

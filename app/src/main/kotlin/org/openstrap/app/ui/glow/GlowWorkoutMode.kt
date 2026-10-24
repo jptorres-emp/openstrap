@@ -513,8 +513,8 @@ fun GlowWorkoutReadyScreen(
                     val c = targetColor(t)
                     Text(
                         targetLabel(t), color = if (on) Color.Black else Color.White, style = MaterialTheme.typography.labelLarge,
-                        modifier = Modifier.height(44.dp).clip(RoundedCornerShape(16.dp)).background(if (on) c else Raised)
-                            .pressClickable({ targetCode = t?.code }, RoundedCornerShape(16.dp)).padding(horizontal = 16.dp).wrapContentHeight(Alignment.CenterVertically),
+                        modifier = Modifier.height(44.dp).clip(GlowLayout.TileShape).background(if (on) c else Raised)
+                            .pressClickable({ targetCode = t?.code }, GlowLayout.TileShape).padding(horizontal = 16.dp).wrapContentHeight(Alignment.CenterVertically),
                     )
                 }
             }
@@ -556,8 +556,8 @@ private fun Chips(labels: List<String>, selected: Int, color: Color, onSelect: (
             val on = i == selected
             Text(
                 label, color = if (on) Color.Black else Color.White, style = MaterialTheme.typography.labelLarge,
-                modifier = Modifier.height(44.dp).clip(RoundedCornerShape(16.dp)).background(if (on) color else Raised)
-                    .pressClickable({ onSelect(i) }, RoundedCornerShape(16.dp)).padding(horizontal = 16.dp).wrapContentHeight(Alignment.CenterVertically),
+                modifier = Modifier.height(44.dp).clip(GlowLayout.TileShape).background(if (on) color else Raised)
+                    .pressClickable({ onSelect(i) }, GlowLayout.TileShape).padding(horizontal = 16.dp).wrapContentHeight(Alignment.CenterVertically),
             )
         }
     }
@@ -589,7 +589,7 @@ private fun SportPicker(selected: Int, contentPadding: PaddingValues, onPick: (I
         item {
             OutlinedTextField(
                 query, { query = it }, Modifier.fillMaxWidth(), singleLine = true, placeholder = { Text("Search") },
-                shape = RoundedCornerShape(16.dp),
+                shape = GlowLayout.TileShape,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedTextColor = Color.White, unfocusedTextColor = Color.White,
@@ -895,7 +895,7 @@ private fun WorkoutHeartCard(
                 ZoneArc(bpm, r.maxHeartRate, Modifier.matchParentSize())
                 Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
                     if (bpm != null) {
-                        DotMatrixText(bpm.toString(), dot = if (fill) 11.dp else 8.dp, gap = if (fill) 3.dp else 2.dp)
+                        DotMatrixText(bpm.toString(), dot = DotSize.Live)
                         Spacer(Modifier.height(8.dp))
                         Text("bpm, last 10 min behind", color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.bodySmall)
                     } else Text(
@@ -1008,7 +1008,7 @@ private fun LiveMapPage(
 ) {
     val stretches = remember(route.size, history.size) { Route.byZone(route, history, maxHr) }
     // The whole page is the map; what its tiles reveal is said in the ready screen's (i).
-    Box(modifier.fillMaxWidth().clip(RoundedCornerShape(48.dp)).background(Raised)) {
+    Box(modifier.fillMaxWidth().clip(GlowLayout.CardShape).background(Raised)) {
         // Where you are now, from the latest fix good enough to count, even while standing still.
         val here = route.lastOrNull { it.accuracy <= Route.MAX_ACCURACY_M }
         WorkoutMap(stretches, routeOnly, Modifier.fillMaxSize(), here)
@@ -1031,7 +1031,7 @@ private fun BpmChip(bpm: Int?, color: Color, paused: Boolean, modifier: Modifier
         if (bpm != null) {
             PulseDot(Color.Black, bpm, 8.dp)
             Spacer(Modifier.width(10.dp))
-            DotMatrixText("$bpm", dot = 3.dp, gap = 1.dp, color = Color.Black)
+            DotMatrixText("$bpm", dot = DotSize.Edge, color = Color.Black)
             Spacer(Modifier.width(6.dp))
             Text("bpm", color = Color.Black, style = MaterialTheme.typography.titleSmall)
         } else Text(if (paused) "Paused" else "No heart rate yet", color = Color.Black, style = MaterialTheme.typography.titleSmall)
@@ -1181,7 +1181,7 @@ fun WorkoutCapsule(
             )
         }
         if (bpm != null) {
-            DotMatrixText("$bpm", dot = 3.dp, gap = 1.dp, color = color)
+            DotMatrixText("$bpm", dot = DotSize.Edge, color = color)
             Spacer(Modifier.width(12.dp))
         }
         Box(
@@ -1221,12 +1221,12 @@ internal fun ColumnScope.SummaryActions(justEnded: Boolean, onDone: () -> Unit, 
 /** What deleting a phone workout does. */
 internal const val PHONE_DELETE = "Its heart rate and times are removed from OpenStrap. The strap's own history is kept."
 
-/** "Delete workout" in red, asking first; [what] says what deleting it does. */
+/** "Delete workout" in [DestructiveInk], asking first; [what] says what deleting it does. */
 @Composable
 internal fun DeleteWorkout(what: String, onDelete: () -> Unit, modifier: Modifier = Modifier) {
     var confirmDelete by remember { mutableStateOf(false) }
     Text(
-        "Delete workout", color = TrendBad, style = MaterialTheme.typography.bodyMedium,
+        "Delete workout", color = DestructiveInk, style = MaterialTheme.typography.bodyMedium,
         modifier = modifier.clip(RoundedCornerShape(50))
             .pressClickable({ confirmDelete = true }, RoundedCornerShape(50)).padding(horizontal = 16.dp, vertical = 10.dp),
     )

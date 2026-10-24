@@ -96,10 +96,10 @@ object TabCopy {
     fun topDrivers(contributors: List<Recovery.Contributor>, n: Int = 3): List<Recovery.Contributor> =
         contributors.sortedByDescending { it.factor.weight }.take(n)
 
-    /** A Charge amount with its sign: "+32", "-12", or "0" with none. Dot-matrix digits have no minus sign, only a dash. */
+    /** A Charge amount with its sign: "+32", "−12" with a real minus sign (spec 2.3), or "0" with none. */
     fun chargeAmount(v: Float, sign: Int): String {
         val n = v.toInt()
-        return if (n == 0) "0" else "${if (sign > 0) "+" else "-"}$n"
+        return if (n == 0) "0" else "${if (sign > 0) "+" else "−"}$n"
     }
 
     /**

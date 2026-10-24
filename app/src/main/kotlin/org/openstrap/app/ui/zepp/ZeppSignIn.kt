@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -152,7 +151,7 @@ fun ZeppSignInDialog(
                     }
                     is SignInStep.Failed -> Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Icon(AppIcons.WarningCircle, null, tint = MetricColors.bad)
+                            Icon(AppIcons.WarningCircle, null, tint = MetricColors.warn)
                             Text(if (s.thirdParty) "Use email sign-in" else "Couldn't get your devices", style = MaterialTheme.typography.titleMedium)
                         }
                         Text(s.message)
@@ -263,7 +262,7 @@ fun OptionButton(caption: String, label: String, modifier: Modifier = Modifier.f
     OutlinedButton(
         onClick = onClick,
         modifier = modifier,
-        shape = RoundedCornerShape(14.dp),
+        shape = org.openstrap.app.ui.glow.GlowLayout.TileShape,
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
     ) {
         Column(Modifier.weight(1f)) {

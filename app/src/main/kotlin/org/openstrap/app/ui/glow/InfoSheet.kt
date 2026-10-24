@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -75,7 +74,7 @@ fun InfoSheet(
                 modifier = Modifier.padding(top = if (info.scale.isEmpty()) 16.dp else 10.dp),
             )
             Column(
-                Modifier.padding(top = 24.dp).fillMaxWidth().background(Color(0xFF141416), RoundedCornerShape(24.dp)).padding(horizontal = 18.dp),
+                Modifier.padding(top = 24.dp).fillMaxWidth().background(Color(0xFF141416), GlowLayout.CardShape).padding(horizontal = 18.dp),
             ) {
                 val folds = rows ?: listOf(
                     "How it's worked out" to info.how,

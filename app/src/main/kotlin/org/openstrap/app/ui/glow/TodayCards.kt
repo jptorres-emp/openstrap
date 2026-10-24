@@ -34,7 +34,6 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.time.Instant
@@ -82,14 +81,16 @@ internal fun HeroSentence(text: String, modifier: Modifier = Modifier) =
 /** A number on the hero: dot-matrix digits, or the dim dash while there's none, with a [label] under it. */
 @Composable
 internal fun HeroFigure(
-    value: String?, label: String, big: Boolean = false, horizontal: Alignment.Horizontal = Alignment.Start, dot: Dp = 3.dp,
+    value: String?, label: String, big: Boolean = false, horizontal: Alignment.Horizontal = Alignment.Start,
+    /** The hero's size for a [big] figure, an edge card's otherwise; a Tall or second glow passes [DotSize.Second]. */
+    dot: DotSize = if (big) DotSize.Hero else DotSize.Edge,
     modifier: Modifier = Modifier, labelLines: Int = 1,
 ) {
     Column(modifier, horizontalAlignment = horizontal, verticalArrangement = Arrangement.spacedBy(6.dp)) {
         // A big figure is the card's number: it can move into the detail's headline (spec 3.5).
         if (value != null) DotMatrixText(
             value, if (big) Modifier.cardNumber(value) else Modifier,
-            dot = if (big) GlowLayout.HeroDot else dot, gap = if (big) GlowLayout.HeroGap else dot * 0.37f,
+            dot = dot,
         )
         else WaitingDash(Modifier.padding(vertical = 8.dp))
         Text(label, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary, maxLines = labelLines)
@@ -122,7 +123,8 @@ internal fun HeroSecondaryButton(text: String, onClick: () -> Unit, modifier: Mo
 
 /* ---------------------------------------------- Strips ---------------------------------------------- */
 
-private val StripPadding = PaddingValues(horizontal = 20.dp, vertical = 14.dp)
+/** A strip is only 68 dp high, so its words get less above and below than a card; the sides are a card's. */
+private val StripPadding = PaddingValues(horizontal = GlowLayout.CardInset, vertical = 14.dp)
 
 /** A full-width strip: a state or an action, [GlowGrid.StripHeight] high unless its words need more. */
 @Composable
@@ -138,7 +140,7 @@ internal fun TodayStrip(
 @Composable
 internal fun StripLine(title: String, detail: String?, chevron: Boolean = true) {
     Row(Modifier.fillMaxWidth().heightIn(min = 40.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(title, color = Color.White, style = GlowType.label, modifier = Modifier.weight(1f))
+        Text(title, color = Color.White, style = GlowType.cardTitle, modifier = Modifier.weight(1f))
         if (detail != null) Text(detail, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary, maxLines = 1)
         if (chevron) {
             Spacer(Modifier.width(6.dp))
@@ -169,7 +171,7 @@ internal fun LastNightStrip(state: DayUiState, onClick: () -> Unit, modifier: Mo
 internal fun CheckInStrip(feeling: Int?, onCheckIn: (Int?) -> Unit, modifier: Modifier = Modifier) =
     TodayStrip(MetricColors.readiness, EdgeKind.Earlier, modifier) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text("How do you feel?", color = Color.White, style = GlowType.label, modifier = Modifier.weight(1f))
+            Text("How do you feel?", color = Color.White, style = GlowType.cardTitle, modifier = Modifier.weight(1f))
             if (feeling != null) Text(CheckIn.label(feeling), color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary)
         }
         Spacer(Modifier.height(10.dp))
@@ -224,7 +226,7 @@ internal fun AlertsStrip(alerts: List<HealthAlertRow>, onOpenMetric: (Metric) ->
 internal fun EdgeTitle(title: String, note: String?, marker: String? = null, tag: TitleTag? = null) {
     val marked = marker != null || tag != null
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text(title, color = Color.White, style = GlowType.label, modifier = Modifier.weight(1f, fill = !marked))
+        Text(title, color = Color.White, style = GlowType.cardTitle, modifier = Modifier.weight(1f, fill = !marked))
         if (marked) {
             TitleMark(marker, tag, Modifier.padding(start = 8.dp))
             Spacer(Modifier.weight(1f))
@@ -239,9 +241,11 @@ internal fun EdgeValue(
     value: String?, unit: String?, status: String?, statusColor: Color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA),
     /** Whether a missing [value] shows the waiting dash; false where the [status] says all there is. */
     waiting: Boolean = true,
+    /** An edge card's size; the second glow passes [DotSize.Second]. */
+    dot: DotSize = DotSize.Edge,
 ) {
     if (value != null || waiting) Row(Modifier.padding(top = 14.dp), verticalAlignment = Alignment.Bottom) {
-        if (value != null) DotMatrixText(value, Modifier.cardNumber(value), dot = 3.4.dp, gap = 1.2.dp) else WaitingDash(Modifier.padding(vertical = 8.dp))
+        if (value != null) DotMatrixText(value, Modifier.cardNumber(value), dot = dot) else WaitingDash(Modifier.padding(vertical = 8.dp))
         if (unit != null && value != null) Text(unit, color = Color.White.copy(alpha = 0.7f), style = GlowType.secondary, modifier = Modifier.padding(start = 8.dp))
     }
     if (status != null) Text(status, color = statusColor, style = GlowType.secondary, modifier = Modifier.padding(top = 6.dp), maxLines = 2, overflow = TextOverflow.Ellipsis)
@@ -360,7 +364,7 @@ internal fun RecoveryEarlierCard(
     /** Today's score failed to work out: yesterday's stays, dimmed, with a way to try again (spec 4.3). */
     failure: RecoveryFailure? = null, onRetry: () -> Unit = {},
 ) {
-    EdgeCard(MetricColors.readinessDeep, modifier.fillMaxWidth().gridSize(CardSize.Wide), kind = EdgeKind.Earlier, onClick = onClick) {
+    EdgeCard(MetricColors.readiness, modifier.fillMaxWidth().gridSize(CardSize.Wide), kind = EdgeKind.Earlier, onClick = onClick) {
         EdgeTitle("Recovery", "This morning")
         if (failure != null) RecoveryFailed(failure, onRetry)
         else EdgeValue(shown.value?.toString(), shown.word, shown.line)
@@ -396,10 +400,10 @@ internal fun ChargeWideCard(
         GlowCard(GlowStyle.Ember.copy(lightLevel = (now ?: 0) / 100f, second = true), m, onClick = onClick) {
             Column {
                 GlowHeader("Charge", marker = upTo, tag = tag)
-                EdgeValue(now?.toString(), null, status, Color.White.copy(alpha = 0.8f))
+                EdgeValue(now?.toString(), null, status, Color.White.copy(alpha = 0.8f), dot = DotSize.Second)
             }
         }
-    } else EdgeCard(MetricColors.chargeDeep, modifier.fillMaxWidth(), kind = EdgeKind.Level, progress = (now ?: 0) / 100f, onClick = onClick) {
+    } else EdgeCard(MetricColors.charge, modifier.fillMaxWidth(), kind = EdgeKind.Level, progress = (now ?: 0) / 100f, onClick = onClick) {
         EdgeTitle("Charge", null, marker = upTo, tag = tag)
         if (soFar == null || soFar.count { it != null } < 2) EdgeValue(now?.toString(), null, status)
         else Row(verticalAlignment = Alignment.Bottom) {
@@ -479,8 +483,8 @@ internal fun SmallCard(
     /** Waiting for its first value: the dim dash with [status] under it, rather than the word in its place. */
     waiting: Boolean = false,
 ) {
-    EdgeCard(color, modifier, status = edgeStatus, kind = kind, onClick = onClick, contentPadding = SmallPadding) {
-        Text(title, color = Color.White, style = GlowType.label, maxLines = 2, overflow = TextOverflow.Ellipsis)
+    EdgeCard(color, modifier, status = edgeStatus, kind = kind, onClick = onClick) {
+        Text(title, color = Color.White, style = GlowType.cardTitle, maxLines = 2, overflow = TextOverflow.Ellipsis)
         Spacer(Modifier.weight(1f))
         if (value == null && status != null && !waiting) {
             extra?.invoke()
@@ -488,15 +492,13 @@ internal fun SmallCard(
             return@EdgeCard
         }
         Row(verticalAlignment = Alignment.Bottom) {
-            if (value != null) DotMatrixText(value, Modifier.cardNumber(value), dot = 3.dp, gap = 1.1.dp) else WaitingDash(Modifier.padding(vertical = 8.dp))
+            if (value != null) DotMatrixText(value, Modifier.cardNumber(value), dot = DotSize.Edge) else WaitingDash(Modifier.padding(vertical = 8.dp))
             if (unit != null && value != null) Text(unit, color = Color.White.copy(alpha = 0.7f), style = GlowType.secondary, modifier = Modifier.padding(start = 6.dp))
         }
         extra?.invoke()
         if (status != null) Text(status, color = statusColor, style = GlowType.secondary, modifier = Modifier.padding(top = 6.dp), maxLines = 2, overflow = TextOverflow.Ellipsis)
     }
 }
-
-private val SmallPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp)
 
 /* ---------------------------------------------- Lists ----------------------------------------------- */
 
@@ -531,7 +533,7 @@ internal fun LoadList(
     ListPanel(modifier, title = title) {
         ListRow("Load today", MetricColors.load, load?.roundToInt()?.toString(), loadLine, divider = false, onClick = onLoad)
         // Recovered is the whole answer: no number, no dash.
-        if (recover != null) ListRow("Time to recover", MetricColors.readinessDeep, recover.first, recover.second, dash = recover.first != null, onClick = onRecover)
+        if (recover != null) ListRow("Time to recover", MetricColors.readiness, recover.first, recover.second, dash = recover.first != null, onClick = onRecover)
     }
 }
 

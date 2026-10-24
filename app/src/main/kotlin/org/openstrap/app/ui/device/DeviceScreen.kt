@@ -66,7 +66,7 @@ import org.openstrap.app.ui.alarms.healthAlertsSummary
 import org.openstrap.app.ui.alarms.phoneAlertsSummary
 import org.openstrap.app.ui.dashboard.agoText
 import org.openstrap.app.ui.glow.CoreShape
-import org.openstrap.app.ui.glow.DangerColor
+import org.openstrap.app.ui.glow.DestructiveInk
 import org.openstrap.app.ui.glow.DotMatrixText
 import org.openstrap.app.ui.glow.GlowCard
 import org.openstrap.app.ui.glow.GlowLayout
@@ -169,7 +169,7 @@ fun DeviceScreen(
             confirmButton = {
                 TextButton(
                     onClick = { confirmDisconnect = false; vm.strap.disconnect() },
-                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                    colors = ButtonDefaults.textButtonColors(contentColor = DestructiveInk),
                 ) { Text("Disconnect") }
             },
             dismissButton = { TextButton(onClick = { confirmDisconnect = false }) { Text("Cancel") } },
@@ -208,7 +208,7 @@ fun DeviceScreen(
             confirmButton = {
                 TextButton(
                     onClick = { confirmForget = false; vm.forget() },
-                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                    colors = ButtonDefaults.textButtonColors(contentColor = DestructiveInk),
                 ) { Text("Forget") }
             },
             dismissButton = { TextButton(onClick = { confirmForget = false }) { Text("Cancel") } },
@@ -272,7 +272,7 @@ fun DeviceScreen(
                     PageRow("Restart strap", onClick = { confirmRestart = true }, divider = !first, icon = AppIcons.ArrowClockwise)
                     first = false
                 }
-                PageRow("Forget this strap", onClick = { confirmForget = true }, divider = !first, titleColor = DangerColor, icon = AppIcons.Trash)
+                PageRow("Forget this strap", onClick = { confirmForget = true }, divider = !first, titleColor = DestructiveInk, icon = AppIcons.Trash)
             }
         }
     }
@@ -375,7 +375,7 @@ private fun StrapHero(name: String, connection: ConnectionState, sync: SyncState
         }
         Column(Modifier.fillMaxWidth().padding(top = 128.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             if (battery != null) Row(verticalAlignment = Alignment.Bottom) {
-                DotMatrixText("$battery", dot = GlowLayout.HeroDot, gap = GlowLayout.HeroGap)
+                DotMatrixText("$battery", dot = org.openstrap.app.ui.glow.DotSize.Hero)
                 Text("% battery", color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary, modifier = Modifier.padding(start = 8.dp))
             }
             if (sync is SyncState.Running) {
@@ -549,7 +549,7 @@ private fun ManualPairDialog(
                     Row(
                         Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(14.dp))
+                            .clip(GlowLayout.TileShape)
                             .background(if (selected) MaterialTheme.colorScheme.surfaceContainerHighest else MaterialTheme.colorScheme.surfaceContainerHigh)
                             .clickable { address = d.address; name = d.name }
                             .padding(14.dp),
@@ -568,7 +568,7 @@ private fun ManualPairDialog(
                 OutlinedTextField(
                     value = address, onValueChange = { address = it.uppercase() },
                     label = { Text("Bluetooth address") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp),
+                    shape = GlowLayout.TileShape,
                 )
                 OutlinedTextField(
                     value = key, onValueChange = { key = it },
@@ -577,7 +577,7 @@ private fun ManualPairDialog(
                     visualTransformation = if (showKey) VisualTransformation.None else PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp),
+                    shape = GlowLayout.TileShape,
                 )
             }
         },

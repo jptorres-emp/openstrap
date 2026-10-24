@@ -229,10 +229,10 @@ private fun DriversList(ready: Recovery.Readiness?, onAll: () -> Unit) {
     val top = TabCopy.topDrivers(all)
     // "All" and each row open the Recovery detail, which has every contributor.
     ListPanel(title = "What drove it", note = if (all.size > top.size) "All ${all.size}" else null, onNote = onAll.takeIf { all.isNotEmpty() }) {
-        if (top.isEmpty()) ListRow("Waiting for a night", MetricColors.readinessDeep, null, "What drove Recovery shows here each morning", dash = false, divider = false)
+        if (top.isEmpty()) ListRow("Waiting for a night", MetricColors.readiness, null, "What drove Recovery shows here each morning", dash = false, divider = false)
         top.forEachIndexed { i, c ->
             ContributorRow(
-                TabCopy.factorName(c.factor), MetricColors.readinessDeep, TabCopy.contributorWord(c.score),
+                TabCopy.factorName(c.factor), MetricColors.readiness, TabCopy.contributorWord(c.score),
                 c.score / 100f, offNormal = TabCopy.contributorOff(c.score), divider = i > 0, onClick = onAll,
             )
         }
@@ -275,7 +275,7 @@ private fun ChargeTall(
                     c.strapOffOvernight -> "$atWake at start"
                     else -> "$atWake at waking"
                 },
-                big = true, labelLines = 2,
+                big = true, dot = DotSize.Second, labelLines = 2,
             )
         }
     }
@@ -295,7 +295,7 @@ private fun ChargeSmall(c: Recovery.ChargeDay?, recharged: Boolean, modifier: Mo
         recharged -> TabCopy.RECHARGED
         else -> TabCopy.drainedMostly(c!!.drainedExercise, c.drainedStress, c.drainedLiving)
     }
-    SmallCard(MetricColors.chargeDeep, if (recharged) "Recharged" else "Drained", value, null, status, modifier)
+    SmallCard(MetricColors.charge, if (recharged) "Recharged" else "Drained", value, null, status, modifier)
 }
 
 /** Averages charge samples into evenly spaced buckets across [range]; empty buckets are gaps. */
@@ -362,7 +362,7 @@ private fun SignalsList(signals: List<BodySignal>, waiting: String, onOpen: (Met
             val value = s.today?.let { v ->
                 if (s.asDeviation && s.normal != null) {
                     val d = v - s.normal.mean
-                    (if (d >= 0) "+" else "-") + s.metric.format(kotlin.math.abs(d))
+                    (if (d >= 0) "+" else "−") + s.metric.format(kotlin.math.abs(d))
                 } else s.metric.format(v) + s.unit
             }
             ListRow(

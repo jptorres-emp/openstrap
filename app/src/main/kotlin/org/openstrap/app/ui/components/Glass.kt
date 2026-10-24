@@ -193,7 +193,7 @@ fun GlassOverlay(host: GlassHost, haze: dev.chrisbanes.haze.HazeState) {
 
 /** The glass panel a popup sits on: see-through dark over the blurred page, with a lit top edge. */
 @Composable
-fun GlassPanel(modifier: Modifier = Modifier, shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(28.dp), content: @Composable () -> Unit) {
+fun GlassPanel(modifier: Modifier = Modifier, shape: androidx.compose.ui.graphics.Shape = org.openstrap.app.ui.glow.GlowLayout.CardShape, content: @Composable () -> Unit) {
     Surface(shape = shape, color = GlassTint.copy(alpha = 0.72f), border = GlassEdge, contentColor = Color.White, modifier = modifier, content = content)
 }
 
@@ -246,7 +246,7 @@ fun GlassSheet(onDismiss: () -> Unit, content: @Composable () -> Unit) {
                     rememberDraggableState { d -> pull.floatValue = (pull.floatValue + d).coerceAtLeast(0f) },
                     Orientation.Vertical, onDragStopped = { v -> release(v) },
                 ),
-            RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+            org.openstrap.app.ui.glow.GlowLayout.SheetShape,
         ) {
             Column {
                 Box(Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 8.dp), contentAlignment = Alignment.Center) {

@@ -30,11 +30,13 @@ import androidx.compose.ui.unit.sp
 import org.openstrap.app.ui.glow.CardSize
 import org.openstrap.app.ui.glow.CoreShape
 import org.openstrap.app.ui.glow.DotMatrixText
+import org.openstrap.app.ui.glow.DotSize
 import org.openstrap.app.ui.glow.EdgeCard
 import org.openstrap.app.ui.glow.EdgeKind
 import org.openstrap.app.ui.glow.EdgeStatus
 import org.openstrap.app.ui.glow.GlowCard
 import org.openstrap.app.ui.glow.GlowGrid
+import org.openstrap.app.ui.glow.GlowLayout
 import org.openstrap.app.ui.glow.GlowGridColumn
 import org.openstrap.app.ui.glow.GlowMood
 import org.openstrap.app.ui.glow.GlowMotion
@@ -63,10 +65,9 @@ class ComponentGalleryActivity : ComponentActivity() {
     }
 }
 
-/** A glow card style as the v2 mockups draw it: 36 dp corners, a near-black oval core, light from [angle]. */
+/** A glow card style as the v2 mockups draw it: a near-black oval core, light from [angle]. */
 private fun glow(color: Color, angle: Float? = null) = GlowStyle(
     color = color,
-    radius = 36.dp,
     coreShape = CoreShape.Radial,
     coreWidth = 0.95f, coreHeight = 0.85f, coreBlur = 26.dp, coreLightness = 0.03f,
     toneShift = -12f, toneWidth = 14.dp,
@@ -74,8 +75,8 @@ private fun glow(color: Color, angle: Float? = null) = GlowStyle(
     lightAngle = angle,
 )
 
-private val Charge = GlowStyle.Ember.copy(radius = 36.dp)
-private val SmallPadding = PaddingValues(16.dp)
+private val Charge = GlowStyle.Ember
+private val SmallPadding = GlowLayout.CardPadding
 
 @Composable
 private fun Gallery() {
@@ -228,9 +229,9 @@ private fun Edge(
 /** A title at the top, the number and a status line at the bottom. */
 @Composable
 private fun ColumnScope.CardText(title: String, value: String, status: String, valueColor: Color = Color.White) {
-    Text(title, color = Color.White, style = GlowType.label)
+    Text(title, color = Color.White, style = GlowType.cardTitle)
     Spacer(Modifier.weight(1f))
-    DotMatrixText(value, dot = 2.8.dp, gap = 1.dp, color = valueColor)
+    DotMatrixText(value, dot = DotSize.Edge, color = valueColor)
     Text(status, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary, modifier = Modifier.padding(top = 6.dp))
 }
 
@@ -243,7 +244,7 @@ private fun GlowText(title: String, value: String, status: String) {
 @Composable
 private fun ColumnScope.StripText(title: String, action: String) {
     Row(Modifier.fillMaxWidth().weight(1f), verticalAlignment = Alignment.CenterVertically) {
-        Text(title, color = Color.White, style = GlowType.label, modifier = Modifier.weight(1f))
+        Text(title, color = Color.White, style = GlowType.cardTitle, modifier = Modifier.weight(1f))
         Text(action, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary)
     }
 }

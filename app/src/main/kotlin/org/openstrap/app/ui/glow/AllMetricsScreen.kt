@@ -107,7 +107,7 @@ fun metricIndex(
                     row("Recovery", MetricColors.readiness, rec?.readiness?.score?.toString(), status ?: "Score for the day", IndexTarget.Home(HomeTab.Recovery), waiting = status)
                 },
                 row(
-                    "Charge", MetricColors.chargeAt(rec?.charge?.latest), rec?.charge?.latest?.let(::chargeShown)?.toString(),
+                    "Charge", MetricColors.charge, rec?.charge?.latest?.let(::chargeShown)?.toString(),
                     if (state.date == today) "Latest" else "End of day", IndexTarget.Home(HomeTab.Recovery, charge = true),
                 ),
                 row("Habit Age", MetricColors.habitAge, habitValue, habitStatus, IndexTarget.Open(Detail.Healthspan), waiting = habitStatus),

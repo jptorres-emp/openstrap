@@ -39,10 +39,8 @@ import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import java.time.LocalDate
 import org.openstrap.app.ui.glow.GlowType
 import org.openstrap.app.ui.theme.MetricColors
@@ -174,11 +172,11 @@ private fun DaySwitcher(
             verticalArrangement = Arrangement.spacedBy(1.dp),
         ) {
             Text(
-                title, color = Color.White.copy(alpha = 0.56f), style = GlowType.secondary.copy(fontWeight = FontWeight.Medium),
+                title, color = Color.White.copy(alpha = GlowType.MOMENT_ALPHA), style = GlowType.moment,
                 maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis,
             )
             Text(
-                dateLine(date), color = Color.White, style = GlowType.label.copy(fontSize = 17.sp, lineHeight = 22.sp),
+                dateLine(date), color = Color.White, style = GlowType.headerDate,
                 maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis,
             )
         }
@@ -188,7 +186,7 @@ private fun DaySwitcher(
 
 @Composable
 private fun Peek(text: String) {
-    Text(text, Modifier.width(PeekWidth), color = Color.White.copy(alpha = 0.22f), style = GlowType.label.copy(fontWeight = FontWeight.Normal), maxLines = 1, softWrap = false)
+    Text(text, Modifier.width(PeekWidth), color = Color.White.copy(alpha = 0.22f), style = GlowType.body, maxLines = 1, softWrap = false)
 }
 
 /** The strap chip: a dot, and words only when they matter. */
@@ -208,7 +206,7 @@ private fun StrapChipButton(chip: StrapChip, onClick: () -> Unit) {
             Text(
                 chip.text, maxLines = 1, softWrap = false,
                 color = if (chip.dot == StrapChip.Dot.Warn) MetricColors.warn else Color.White,
-                style = GlowType.secondary.copy(fontSize = 13.sp),
+                style = GlowType.secondary,
             )
         }
     }

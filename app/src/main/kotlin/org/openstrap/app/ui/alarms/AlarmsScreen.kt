@@ -28,7 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Color
 import org.openstrap.app.ui.glow.ChoicePills
-import org.openstrap.app.ui.glow.DangerColor
+import org.openstrap.app.ui.glow.DestructiveInk
 import org.openstrap.app.ui.glow.GlowLayout
 import org.openstrap.app.ui.glow.GlowType
 import org.openstrap.app.ui.glow.PageButton
@@ -105,7 +105,7 @@ fun AlarmsScreen(
             onDismissRequest = { confirmDeleteAll = false },
             title = { Text("Delete all alarms?") },
             text = { Text("This removes every alarm from the strap.") },
-            confirmButton = { TextButton(onClick = { vm.deleteAll(); confirmDeleteAll = false }) { Text("Delete all", color = MetricColors.bad) } },
+            confirmButton = { TextButton(onClick = { vm.deleteAll(); confirmDeleteAll = false }) { Text("Delete all", color = DestructiveInk) } },
             dismissButton = { TextButton(onClick = { confirmDeleteAll = false }) { Text("Cancel") } },
         )
     }
@@ -169,7 +169,7 @@ private fun AlarmsPanel(
             Row(Modifier.fillMaxWidth().clickable(enabled = !state.busy) { onEdit(a) }.padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     org.openstrap.app.ui.glow.DotMatrixText(
-                        "%02d:%02d".format(a.hour, a.minute), dot = 3.2.dp, gap = 1.2.dp,
+                        "%02d:%02d".format(a.hour, a.minute), dot = org.openstrap.app.ui.glow.DotSize.Edge,
                         color = if (a.enabled) Color.White else Color.White.copy(alpha = 0.45f),
                     )
                     Text(daysLabel(a.days), style = GlowType.secondary, color = Color.White.copy(alpha = 0.6f), modifier = Modifier.padding(top = 6.dp))
@@ -179,7 +179,7 @@ private fun AlarmsPanel(
         }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             if (state.canAdd) PageButton("Add alarm", onAdd, Modifier.weight(1f), enabled = !state.busy)
-            if (state.alarms.size > 1) PageButton("Delete all", onDeleteAll, Modifier.weight(1f), enabled = !state.busy, color = DangerColor)
+            if (state.alarms.size > 1) PageButton("Delete all", onDeleteAll, Modifier.weight(1f), enabled = !state.busy, color = DestructiveInk)
         }
         // Zepp's tip for this strap (alarm_stuttgart_close_tips).
         PageNote("The strap vibrates at the alarm time. To stop it, tap the front of the strap several times.")
@@ -250,7 +250,7 @@ private fun AlarmDialog(alarm: Alarm, isNew: Boolean, onSave: (Alarm) -> Unit, o
         },
         dismissButton = {
             Row {
-                if (!isNew) TextButton(onClick = onDelete) { Text("Delete", color = MetricColors.bad) }
+                if (!isNew) TextButton(onClick = onDelete) { Text("Delete", color = DestructiveInk) }
                 TextButton(onClick = onDismiss) { Text("Cancel") }
             }
         },

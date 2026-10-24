@@ -511,7 +511,7 @@ private fun ChargeHero(ctx: TodayContext, onOpen: () -> Unit, onRetry: () -> Uni
         }
     }
     if (info) InfoSheet(
-        org.openstrap.app.ui.dashboard.InfoCopy.of(org.openstrap.app.ui.dashboard.Score.Charge), MetricColors.chargeDeep,
+        org.openstrap.app.ui.dashboard.InfoCopy.of(org.openstrap.app.ui.dashboard.Score.Charge), MetricColors.charge,
         now?.let(org.openstrap.app.ui.dashboard.InfoCopy::chargeBar), now?.let { org.openstrap.app.ui.dashboard.InfoCopy.HERE },
         onDismiss = { info = false }, notes = org.openstrap.app.ui.dashboard.InfoCopy.chargeNotes(c),
     )
@@ -734,7 +734,7 @@ private fun TodayRow(
             val left = ctx.workouts.filter { it.recoveryMinutes != null }.maxByOrNull { it.end }
                 ?.let { w -> TodayCopy.recoverShort(TodayCopy.recoverLeft(w.end, w.recoveryMinutes ?: 0, ctx.now), ctx.now, ctx.zone) }
             SmallCard(
-                MetricColors.readinessDeep, "To recover", left?.first, "h", left?.second ?: "No estimate from the strap", modifier,
+                MetricColors.readiness, "To recover", left?.first, "h", left?.second ?: "No estimate from the strap", modifier,
                 onClick = { openScore(org.openstrap.app.ui.dashboard.Score.Recover) },
             )
         }

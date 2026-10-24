@@ -1,9 +1,7 @@
 package org.openstrap.app.ui.dashboard
 
-import androidx.compose.ui.graphics.Color
 import org.openstrap.app.data.db.SleepSession
 import org.openstrap.app.ui.components.formatDuration
-import org.openstrap.app.ui.theme.MetricColors
 import kotlin.math.abs
 
 /**
@@ -11,11 +9,12 @@ import kotlin.math.abs
  * guidance, not anything the strap reports; the UI says so where ratings appear.
  */
 object Narrative {
-    enum class Rating(val label: String, val color: Color) {
-        OPTIMAL("Very good", MetricColors.good),
-        GOOD("Good", MetricColors.hrv),
-        FAIR("Fair", MetricColors.warn),
-        LOW("Low", MetricColors.stress),
+    /** A rating's word. No colour of its own: a value off your normal takes its metric's ink (spec 2.2). */
+    enum class Rating(val label: String) {
+        OPTIMAL("Very good"),
+        GOOD("Good"),
+        FAIR("Fair"),
+        LOW("Low"),
     }
 
     fun rate(value: Float, optimal: Float, good: Float, fair: Float): Rating = when {

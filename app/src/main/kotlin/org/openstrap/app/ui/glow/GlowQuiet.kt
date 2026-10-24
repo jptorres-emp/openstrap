@@ -20,9 +20,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -44,7 +42,7 @@ import org.openstrap.app.ui.theme.AppIcons
  * secondary charts so the few glow cards on a screen stay special.
  */
 
-private val PanelShape = RoundedCornerShape(28.dp)
+private val PanelShape = GlowLayout.CardShape
 
 /** A black panel outlined in a row of faint dots instead of a border. */
 @Composable
@@ -64,14 +62,14 @@ fun DotPanel(
                     Color.White.copy(alpha = 0.3f),
                     topLeft = Offset(inset, inset),
                     size = Size(size.width - inset * 2, size.height - inset * 2),
-                    cornerRadius = CornerRadius(28.dp.toPx() - inset),
+                    cornerRadius = CornerRadius(GlowLayout.CardCorner.toPx() - inset),
                     style = Stroke(
                         width = 1.6.dp.toPx(), cap = StrokeCap.Round,
                         pathEffect = PathEffect.dashPathEffect(floatArrayOf(0f, 7.dp.toPx())),
                     ),
                 )
             }
-            .padding(LocalCardPadding.current),
+            .padding(GlowLayout.CardPadding),
         verticalArrangement = Arrangement.spacedBy(14.dp),
         content = content,
     )
@@ -90,8 +88,8 @@ fun DotHeader(title: String, trailing: String? = null, chevron: Boolean = false,
             Icon(AppIcons.Warning, null, tint = MetricColors.warn, modifier = Modifier.size(20.dp))
             Spacer(Modifier.width(10.dp))
         }
-        Text(title, color = Color.White, style = GlowType.title, modifier = Modifier.weight(1f))
-        if (trailing != null) Text(trailing, color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.bodySmall)
+        Text(title, color = Color.White, style = GlowType.cardTitle, modifier = Modifier.weight(1f))
+        if (trailing != null) Text(trailing, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary)
         if (chevron) {
             Spacer(Modifier.width(4.dp))
             Icon(AppIcons.CaretRight, null, tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(16.dp))
@@ -118,7 +116,7 @@ fun Modifier.glass(shape: Shape, onClick: (() -> Unit)? = null, scale: Float = 0
         .let { if (onClick != null) it.pressClickable(onClick, shape, scale) else it }
 
 /** The shape of a glass row inside a dotted panel. */
-val GlassRowShape = RoundedCornerShape(16.dp)
+val GlassRowShape = GlowLayout.TileShape
 
 /** A dotted rule between rows. */
 @Composable

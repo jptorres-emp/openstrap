@@ -6,7 +6,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -37,13 +36,8 @@ import org.openstrap.app.ui.components.cardOpening
  * for lists of things (workouts, contributors, settings). No glow at all, so the cards above it keep the light.
  */
 
-private val ListShape = RoundedCornerShape(28.dp)
 private val ListSurface = Color(0xFF0F0F11)
 internal val RowHairline = Color.White.copy(alpha = 0.05f)
-
-/** Row values in dot-matrix digits. */
-internal val ValueDot = 2.4.dp
-internal val ValueGap = 0.9.dp
 
 /**
  * A grouped list: a dark panel with a title row ([title] left, an optional [note] right) over its rows, usually
@@ -65,10 +59,11 @@ fun ListPanel(
     val marked = marker != null || tag != null
     val inner: @Composable ColumnScope.() -> Unit = {
         if (title != null || note != null) Row(
-            Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 8.dp),
+            // The first row's own padding sits under it, so the title row needs only a little below.
+            Modifier.fillMaxWidth().padding(top = GlowLayout.RowPadding, bottom = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(title.orEmpty(), color = Color.White, style = GlowType.label, modifier = Modifier.weight(1f, fill = !marked))
+            Text(title.orEmpty(), color = Color.White, style = GlowType.cardTitle, modifier = Modifier.weight(1f, fill = !marked))
             if (marked) {
                 TitleMark(marker, tag, Modifier.padding(start = 8.dp))
                 Spacer(Modifier.weight(1f))
@@ -87,20 +82,18 @@ fun ListPanel(
         content()
     }
     if (LocalEdgeOverride.current.edge != null) {
-        EdgeCard(EdgeNeutral, modifier.fillMaxWidth(), contentPadding = ListPadding, content = inner)
+        EdgeCard(EdgeNeutral, modifier.fillMaxWidth(), contentPadding = GlowLayout.ListPadding, content = inner)
         return
     }
     Column(
         modifier
             .fillMaxWidth()
-            .background(ListSurface, ListShape)
-            .border(1.dp, Color.White.copy(alpha = 0.06f), ListShape)
-            .padding(ListPadding),
+            .background(ListSurface, GlowLayout.CardShape)
+            .border(1.dp, Color.White.copy(alpha = 0.06f), GlowLayout.CardShape)
+            .padding(GlowLayout.ListPadding),
         content = inner,
     )
 }
-
-private val ListPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 6.dp, bottom = 8.dp)
 
 /**
  * A row in a [ListPanel]: an 8 dp dot in the metric's [color] (or a toned white [icon], as a workout's sport), the [name] with its [status] under it, and the
@@ -132,7 +125,7 @@ fun ListRow(
             .then(opening?.modifier ?: Modifier)
             .let { if (onClick != null) it.clickable(onClick = opening?.onClick ?: onClick) else it }
             .let { if (divider) it.drawBehind { drawLine(RowHairline, Offset(0f, 0f), Offset(size.width, 0f), 1.dp.toPx()) } else it }
-            .padding(vertical = 13.dp),
+            .padding(vertical = GlowLayout.RowPadding),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (icon != null) {
@@ -144,7 +137,7 @@ fun ListRow(
             Spacer(Modifier.width(12.dp))
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            Text(name, color = Color.White, style = GlowType.label.copy(fontWeight = null))
+            Text(name, color = Color.White, style = GlowType.body)
             if (status != null) Text(
                 status,
                 color = when {
@@ -157,7 +150,7 @@ fun ListRow(
         }
         Spacer(Modifier.width(12.dp))
         if (value != null) CompositionLocalProvider(LocalCardNumbers provides opening?.numbers) {
-            DotMatrixText(value, Modifier.cardNumber(value), dot = ValueDot, gap = ValueGap, color = accent)
+            DotMatrixText(value, Modifier.cardNumber(value), dot = DotSize.Row, color = accent)
         }
         else if (dash) WaitingDash()
     }

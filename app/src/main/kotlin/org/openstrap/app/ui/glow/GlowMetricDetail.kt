@@ -85,14 +85,14 @@ import java.util.Locale
 
 /* ------------------------------------------- Shared pieces ------------------------------------------ */
 
-/** Back arrow, the screen's title in the glow title face, and the day or subtitle it shows. */
+/** Back arrow, the screen's page title, and the day or subtitle it shows. */
 @Composable
 internal fun GlowDetailHeader(title: String, subtitle: String?, onBack: () -> Unit) {
     Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         IconButton(onClick = onBack) { Icon(AppIcons.ArrowLeft, "Back", tint = Color.White) }
         Column(Modifier.weight(1f)) {
-            Text(title, color = Color.White, style = GlowType.title.copy(fontSize = GlowType.title.fontSize * 1.25f))
-            if (subtitle != null) Text(subtitle, color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.bodySmall)
+            Text(title, color = Color.White, style = GlowType.pageTitle)
+            if (subtitle != null) Text(subtitle, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary)
         }
     }
 }
@@ -152,9 +152,6 @@ internal fun siblings(detail: Detail, onSwitch: (Detail) -> Unit): List<DetailSi
     DetailSibling(title, d == detail) { if (d != detail) onSwitch(d) }
 }
 
-/** The big value in the detail's hero: larger dots than a card's, like the mockup's 84 px figure. */
-private val DetailDot = 6.dp
-private val DetailGap = 2.2.dp
 
 /**
  * The metric detail template (spec 6.1), one for every number. The hero, tinted with [color] and fading to black,
@@ -201,7 +198,7 @@ internal fun DetailTemplate(
                                     Text(headline.label, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary.copy(fontSize = 13.sp))
                                 }
                                 else -> Row(verticalAlignment = Alignment.Bottom) {
-                                    DotMatrixText(headline.value, Modifier.detailNumber(headline.value), dot = DetailDot, gap = DetailGap)
+                                    DotMatrixText(headline.value, Modifier.detailNumber(headline.value), dot = DotSize.Detail)
                                     Text(
                                         headline.label, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA),
                                         style = GlowType.secondary.copy(fontSize = 13.sp), modifier = Modifier.padding(start = 10.dp, bottom = 2.dp),
@@ -229,7 +226,7 @@ internal fun DetailTemplate(
 /** The hero's tint: the metric's colour at the top fading to black, rounded at the foot, as wide as the screen. */
 @Composable
 private fun DetailHero(color: Color, gutter: Dp, content: @Composable () -> Unit) {
-    val shape = RoundedCornerShape(bottomStart = 36.dp, bottomEnd = 36.dp)
+    val shape = RoundedCornerShape(bottomStart = GlowLayout.CardCorner, bottomEnd = GlowLayout.CardCorner)
     Column(
         Modifier
             // Out to the screen's edges, past the list's gutter.
@@ -246,7 +243,7 @@ private fun DetailHero(color: Color, gutter: Dp, content: @Composable () -> Unit
                 drawRect(Brush.verticalGradient(listOf(lerp(Color.Black, color, 0.2f), Color.Black)))
                 drawRect(Brush.radialGradient(listOf(color.copy(alpha = 0.4f), Color.Transparent), Offset(size.width / 2, -size.height * 0.1f), size.width * 0.7f))
                 // The hairline along the foot; its top is above the clip, so only the foot and its corners show.
-                val r = 36.dp.toPx()
+                val r = GlowLayout.CardCorner.toPx()
                 drawRoundRect(
                     Color.White.copy(alpha = 0.07f), Offset(0.5f, -r), Size(size.width - 1f, size.height + r - 0.5f), CornerRadius(r),
                     style = Stroke(1.dp.toPx()),

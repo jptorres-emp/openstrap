@@ -103,10 +103,7 @@ data class EdgeOverride(val edge: Edge? = null, val color: Color? = null)
 
 val LocalEdgeOverride = staticCompositionLocalOf { EdgeOverride() }
 
-/** Inside an edge card. */
-val EdgeCardPadding = PaddingValues(horizontal = 20.dp, vertical = 18.dp)
-
-private val EdgeShape = RoundedCornerShape(28.dp)
+private val EdgeShape = GlowLayout.CardShape
 private val Surface = Color(0xFF0A0A0B)
 private val Hairline = Color.White.copy(alpha = 0.07f)
 
@@ -124,7 +121,7 @@ fun EdgeCard(
     kind: EdgeKind = EdgeKind.Value,
     progress: Float? = null,
     onClick: (() -> Unit)? = null,
-    contentPadding: PaddingValues = EdgeCardPadding,
+    contentPadding: PaddingValues = GlowLayout.CardPadding,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val override = LocalEdgeOverride.current
@@ -162,7 +159,7 @@ fun EdgeCard(
                         ((end + fade) / w).coerceIn(0f, 1f) to tint.copy(alpha = 0f),
                     )
                 }
-                val radius = CornerRadius(28.dp.toPx())
+                val radius = CornerRadius(GlowLayout.CardCorner.toPx())
                 val stroke = 1.dp.toPx()
                 onDrawBehind {
                     drawRoundRect(Surface, cornerRadius = radius)

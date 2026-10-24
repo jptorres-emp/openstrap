@@ -88,7 +88,7 @@ fun GlowHealthspanScreen(state: Healthspan.Outcome?, contentPadding: PaddingValu
 private fun PacePanel(pace: Float?) {
     DotPanel {
         DotHeader("Pace of aging", trailing = pace?.let { "${paceLabel(it)}, ${paceText(it)}" } ?: paceLabel(null))
-        if (pace != null) PaceScale(marker = (pace + 1f) / 4f, color = if (pace <= 1f) MetricColors.good else MetricColors.warn)
+        if (pace != null) PaceScale(marker = (pace + 1f) / 4f, color = MetricColors.habitAge)
         Note(
             when {
                 pace == null -> "Needs 30 days with enough data, and 3 months before them to tell a real change from day-to-day noise."
@@ -173,7 +173,8 @@ private fun EffectBar(years: Float) {
         drawLine(Color.White.copy(alpha = 0.10f), Offset(x0, y), Offset(x1, y), 2.dp.toPx(), StrokeCap.Round)
         drawLine(Color.White.copy(alpha = 0.35f), Offset(mid, y - 5.dp.toPx()), Offset(mid, y + 5.dp.toPx()), 1.5.dp.toPx(), StrokeCap.Round)
         if (abs(years) < 0.05f) return@Canvas
-        val color = if (years < 0) MetricColors.good else MetricColors.warn
+        // Habit Age's own ink either way: the side of the centre says better or worse, never green or amber.
+        val color = MetricColors.habitAge
         val end = Offset(mid + (years / BAR_FULL_YEARS).coerceIn(-1f, 1f) * (mid - x0), y)
         drawLine(color.copy(alpha = 0.22f), Offset(mid, y), end, 6.dp.toPx(), StrokeCap.Round)
         drawLine(color, Offset(mid, y), end, 2.2.dp.toPx(), StrokeCap.Round)

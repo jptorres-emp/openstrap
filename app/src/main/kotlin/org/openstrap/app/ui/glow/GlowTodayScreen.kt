@@ -110,11 +110,9 @@ fun GlowTodayScreen(
     contentPadding: PaddingValues,
     /** The moment Today is laid out for ([org.openstrap.app.ui.dashboard.layoutMoment]); null while it loads. */
     moment: Moment?,
-    /** Opens the Sleep screen over Today. */
-    onOpenSleep: () -> Unit = {},
     onOpenMetric: (Metric) -> Unit = {},
     recovery: RecoveryResult? = null,
-    /** Opens the Recovery screen over Today. */
+    /** Opens the Recovery screen over Today, from the evening hero's day in a sentence. */
     onOpenRecovery: () -> Unit = {},
     workouts: List<WorkoutAnalysis> = emptyList(),
     onOpenWorkout: (Long) -> Unit = {},
@@ -242,10 +240,10 @@ fun GlowTodayScreen(
                                             ctx, strap, pairing, heroLightAngle, usualBedtime,
                                             running, onOpenRunning, onResumeRunning, onStartSport, onOtherSport, onPair, onSyncNow,
                                             onOpenRecovery, onOpenWorkout, onRetryRecovery,
-                                            onOpenCharge = { onOpen(org.openstrap.app.ui.dashboard.Detail.OfScore(org.openstrap.app.ui.dashboard.Score.Charge)) },
+                                            onOpenScore = { onOpen(org.openstrap.app.ui.dashboard.Detail.OfScore(it)) },
                                         )
                                         TodayCard.EditToday -> EditTodayButton({ editing = true })
-                                        else -> TodayRow(slot, ctx, healthspan, history, checkIn, onCheckIn, onOpenSleep, onOpenMetric, onOpenRecovery,
+                                        else -> TodayRow(slot, ctx, healthspan, history, checkIn, onCheckIn, onOpenMetric,
                                             onOpenWorkout, onOpenHealthspan, onOpenProfile, offer, onRecordOffer, onDeclineOffer, suggestion,
                                             onSaveSuggestion, onDismissSuggestion, onOpen, usualSteps, onRetryRecovery,
                                             if (slot.size == CardSize.Small) Modifier.fillMaxSize() else Modifier, onStartSport = onStartSport)
@@ -366,9 +364,13 @@ private fun Hero(
     running: org.openstrap.app.device.WorkoutState.Recording?, onOpenRunning: () -> Unit, onResumeRunning: () -> Unit,
     onStartSport: (Int) -> Unit, onOtherSport: () -> Unit, onPair: () -> Unit, onSyncNow: () -> Unit,
     onOpenRecovery: () -> Unit, onOpenWorkout: (Long) -> Unit, onRetryRecovery: () -> Unit,
-    /** Charge's own detail, where the Charge heroes lead, as the Charge battery on Recovery does (spec 3.3). */
-    onOpenCharge: () -> Unit,
+    /**
+     * A score's own detail, where a hero about it leads (spec 3.3): Recovery's from waking, Charge's from the Charge
+     * heroes, as the Charge battery on Recovery does.
+     */
+    onOpenScore: (org.openstrap.app.ui.dashboard.Score) -> Unit,
 ) {
+    val onOpenCharge = { onOpenScore(org.openstrap.app.ui.dashboard.Score.Charge) }
     // Every hero is as high as its content with the card padding around it. The floor is only a Wide's height, under
     // every hero's content, so none shows an empty band.
     val m = Modifier.fillMaxWidth().gridSize(CardSize.Wide)
@@ -395,7 +397,7 @@ private fun Hero(
         when (k) {
             HeroKind.Pair -> PairHero(pairing ?: PairStep.Ready, onPair, m)
             HeroKind.Stuck -> StuckHero(ctx, strap, onSyncNow, m)
-            HeroKind.Waking -> WakingHero(ctx, lightAngle, onOpenRecovery, onRetryRecovery, m)
+            HeroKind.Waking -> WakingHero(ctx, lightAngle, { onOpenScore(org.openstrap.app.ui.dashboard.Score.Recovery) }, onRetryRecovery, m)
             HeroKind.Midday -> ChargeHero(ctx, onOpenCharge, onRetryRecovery, m)
             HeroKind.NoSleep -> ChargeHero(ctx, onOpenCharge, onRetryRecovery, m, noSleep = true)
             HeroKind.Window -> WindowHero(ctx, lightAngle, onStartSport, onOtherSport, m)
@@ -677,7 +679,7 @@ private fun StuckHero(ctx: TodayContext, strap: TodayStrap, onSyncNow: () -> Uni
 @Composable
 private fun TodayRow(
     slot: TodaySlot, ctx: TodayContext, healthspan: org.openstrap.app.data.Healthspan.Outcome?, history: DailyHistory?,
-    checkIn: Int?, onCheckIn: (Int?) -> Unit, onOpenSleep: () -> Unit, onOpenMetric: (Metric) -> Unit, onOpenRecovery: () -> Unit,
+    checkIn: Int?, onCheckIn: (Int?) -> Unit, onOpenMetric: (Metric) -> Unit,
     onOpenWorkout: (Long) -> Unit, onOpenHealthspan: () -> Unit, onOpenProfile: () -> Unit,
     offer: org.openstrap.app.data.AutoStart.Offer?, onRecordOffer: () -> Unit, onDeclineOffer: () -> Unit,
     suggestion: org.openstrap.app.data.WorkoutSuggestions.Suggestion?, onSaveSuggestion: () -> Unit, onDismissSuggestion: () -> Unit,
@@ -690,6 +692,8 @@ private fun TodayRow(
     val s = ctx.state
     val b = s.baselines
     val openScore = { score: org.openstrap.app.ui.dashboard.Score -> onOpen(org.openstrap.app.ui.dashboard.Detail.OfScore(score)) }
+    // Last night opens the Sleep score's detail, as the Sleep tab's hero does (spec 3.3).
+    val onOpenSleep = { openScore(org.openstrap.app.ui.dashboard.Score.Sleep) }
     when (slot.card) {
         TodayCard.Offer -> offer?.let { OfferPanel(it, onRecordOffer, onDeclineOffer, edge = EdgeKind.Live) }
         TodayCard.Suggestion -> suggestion?.let { SuggestionPanel(it, onSaveSuggestion, onDismissSuggestion, edge = EdgeKind.Earlier) }
@@ -723,7 +727,7 @@ private fun TodayRow(
         )
         // Steps come in the same records as the rest of the day, so the day's newest reading is how far they go.
         TodayCard.Activity -> ActivityCard(s, { onOpenMetric(Metric.Steps) }, usual = usualSteps, upTo = ctx.upTo(ctx.newest), tag = ctx.partial)
-        TodayCard.Recovery -> RecoveryEarlierCard(ctx.recoveryShown, onOpenRecovery, failure = ctx.recoveryFailure, onRetry = onRetryRecovery)
+        TodayCard.Recovery -> RecoveryEarlierCard(ctx.recoveryShown, { openScore(org.openstrap.app.ui.dashboard.Score.Recovery) }, failure = ctx.recoveryFailure, onRetry = onRetryRecovery)
         TodayCard.Charge -> {
             val c = ctx.rec?.charge
             val used = c?.atWake?.let { w -> c.latest?.let { (w - it).toInt() } }

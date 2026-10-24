@@ -478,8 +478,10 @@ Back or a swipe down closes it. The tab bar under it does nothing while it's ope
 
 ### 3.3 Navigation rules
 
-- A card opens its own detail, grown out of the card (3.5). Charge on Today (the card and the midday hero) opens the
-  Charge detail, as the battery on Recovery does. **No card ever switches tab.** `FocusTarget` and the tab
+- A card opens its own detail, grown out of the card (3.5), on Today as on the tabs. Charge on Today (the card and the
+  midday hero) opens the Charge detail, as the battery on Recovery does. Recovery on Today (the waking hero and the
+  "This morning" card) opens the Recovery detail, and Last night (the card and its strip) the Sleep score detail, as
+  the Sleep tab's hero does. The evening hero, a summary of the day, opens the Recovery screen. **No card ever switches tab.** `FocusTarget` and the tab
   jumps in `MainActivity` are removed.
 - Tapping the current tab scrolls to top. Tapping it again pops to its root. Tapping another tab keeps every stack
   (only reachable unfolded, since folded the bar is hidden over a detail).

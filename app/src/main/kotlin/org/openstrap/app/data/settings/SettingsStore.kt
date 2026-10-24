@@ -188,6 +188,21 @@ class SettingsStore(private val context: Context) {
         context.dataStore.edit { it[workoutLiveViewKey] = view }
     }
 
+    private val workoutSidesKey = stringPreferencesKey("workout_sides")
+
+    /**
+     * The side of Ready's Outdoor or Indoor switch you last chose, per sport (spec 6.3), by the sport's key
+     * ([org.openstrap.app.data.Workouts.Sides.outdoor]), true for indoor. Sports never switched aren't in it.
+     */
+    val workoutSides: Flow<Map<Int, Boolean>> = context.dataStore.data.map { org.openstrap.app.data.Workouts.parseSides(it[workoutSidesKey]) }
+
+    suspend fun setWorkoutSide(sport: Int, indoor: Boolean) {
+        context.dataStore.edit {
+            val sides = org.openstrap.app.data.Workouts.parseSides(it[workoutSidesKey]) + (sport to indoor)
+            it[workoutSidesKey] = org.openstrap.app.data.Workouts.formatSides(sides)
+        }
+    }
+
     private val birthYear = androidx.datastore.preferences.core.intPreferencesKey("profile_birth_year")
     private val sex = stringPreferencesKey("profile_sex")
     private val weight = androidx.datastore.preferences.core.floatPreferencesKey("profile_weight_kg")

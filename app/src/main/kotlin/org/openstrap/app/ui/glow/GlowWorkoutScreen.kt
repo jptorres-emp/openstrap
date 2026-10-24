@@ -4,7 +4,14 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipRect
+import org.openstrap.app.ui.dashboard.TabCopy
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -285,28 +292,68 @@ private fun EffectInfo(a: WorkoutAnalysis, usual: Float?, strap: WorkoutAnalysis
     InfoSheet(sheet.info, MetricColors.load, sheet.here, sheet.hereLine, onDismiss, rows = sheet.rows)
 }
 
-/** Every workout, newest first, one dot panel per day, each a row as on the Activity tab's Workouts card ([WorkoutRow]). */
+/**
+ * Every workout, newest first, as one list under small day headers ("Today", "Yesterday", "Wed 21 Oct"), each a row
+ * as on the Activity tab's Workouts card ([WorkoutRow]). One list rather than a panel a day, so no two cards in a row
+ * look the same (spec 2.5); each day is still its own item, so a long history scrolls lazily.
+ */
 @Composable
 fun GlowWorkoutsScreen(workouts: List<WorkoutAnalysis>, contentPadding: PaddingValues, onOpen: (Long) -> Unit, onBack: () -> Unit) {
     BackHandler(onBack = onBack)
     val zone = ZoneId.systemDefault()
     val usual = remember(workouts) { Workouts.usualLoad(workouts.map { it.workout.trainingLoad }) }
+    val days = remember(workouts) { workouts.groupBy { Instant.ofEpochSecond(it.workout.start).atZone(zone).toLocalDate() }.toList() }
+    val today = LocalDate.now()
     ScreenList(contentPadding, gutter = GlowLayout.Gutter) {
         item { PageHeader("Workouts", onBack, subtitle = "${workouts.size} recorded") }
         if (workouts.isEmpty()) {
-            item { QuietPanel { Note("Workouts you start in OpenStrap show up here, and the strap's own after a sync.") } }
+            item {
+                ListPanel {
+                    ListRow("No workouts yet", MetricColors.heart, null, "Workouts you start in OpenStrap show up here, and the strap's own after a sync.", dash = false, divider = false)
+                }
+            }
             return@ScreenList
         }
-        workouts.groupBy { Instant.ofEpochSecond(it.workout.start).atZone(zone).toLocalDate() }.forEach { (date, day) ->
-            item {
-                QuietPanel {
-                    PanelTitle(dayName(date), trailing = if (date.year != LocalDate.now().year) "${date.year}" else null)
-                    day.forEachIndexed { i, a ->
-                        if (i > 0) PanelDivider()
-                        WorkoutRow(a, usual, divider = false) { onOpen(a.workout.start) }
-                    }
+        days.forEachIndexed { i, (date, day) ->
+            item(key = date.toEpochDay()) {
+                ListSegment(first = i == 0, last = i == days.lastIndex) {
+                    WorkoutDayHeader(TabCopy.workoutDay(date, today))
+                    day.forEachIndexed { j, a -> WorkoutRow(a, usual, divider = j > 0) { onOpen(a.workout.start) } }
                 }
             }
         }
     }
+}
+
+/** The space [ScreenList] leaves between items, which a [ListSegment] fills to join the next. */
+private val ListItemGap = 12.dp
+
+/**
+ * One stretch of a list split over several lazy items: the [ListPanel] surface and hairline, rounded at the top on
+ * the [first] and at the bottom on the [last], and reaching down through the gap to the next stretch otherwise, so
+ * the stretches read as one panel.
+ */
+@Composable
+private fun ListSegment(first: Boolean, last: Boolean, content: @Composable ColumnScope.() -> Unit) {
+    Column(
+        Modifier.fillMaxWidth()
+            .drawBehind {
+                val r = GlowLayout.CardCorner.toPx()
+                val stroke = 1.dp.toPx()
+                val bottom = if (last) size.height else size.height + ListItemGap.toPx()
+                // The rounded panel drawn past the ends that join another stretch, then cut back to this one's span.
+                val top = if (first) 0f else -r
+                val end = if (last) bottom else bottom + r
+                clipRect(top = 0f, bottom = bottom) {
+                    drawRoundRect(ListSurface, Offset(0f, top), Size(size.width, end - top), CornerRadius(r))
+                    drawRoundRect(
+                        RowHairline, Offset(stroke / 2, top + stroke / 2), Size(size.width - stroke, end - top - stroke),
+                        CornerRadius(r - stroke / 2), style = Stroke(stroke),
+                    )
+                }
+            }
+            .padding(horizontal = GlowLayout.CardInset)
+            .padding(top = if (first) GlowLayout.CardInset - GlowLayout.RowPadding else 0.dp, bottom = if (last) GlowLayout.CardInset - GlowLayout.RowPadding else 0.dp),
+        content = content,
+    )
 }

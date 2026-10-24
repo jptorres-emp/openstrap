@@ -15,7 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.MaterialTheme
+import org.openstrap.app.ui.dashboard.Info
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -63,11 +63,8 @@ import org.openstrap.app.ui.workout.ZONE_NAMES
  * page ([GlowWorkoutDetailScreen]), which shares the Load card and the lists.
  */
 
-/** The hero's light right after a workout: calmer than a live card's. */
-private const val CalmGlow = 0.42f
-
-/** How much brighter the hero gets at the top of a personal best's swell. */
-private const val SwellGlow = 0.45f
+/** How much higher the hero's light reaches at the top of a personal best's swell. */
+private const val SwellLevel = 0.25f
 
 /** The drop line shows the last minute of the workout before the end. */
 private const val BeforeS = 60L
@@ -93,10 +90,15 @@ fun GlowWorkoutSummaryScreen(
 ) {
     BackHandler(onBack = onDone)
     val a = summary?.analysis
-    WorkoutPage(Color.Transparent, contentPadding) {
+    var info by rememberSaveable { mutableStateOf(false) }
+    // Done stays on the bottom edge, Delete as quiet text under it; nothing to delete until the workout has loaded.
+    WorkoutPage(
+        Color.Transparent, contentPadding,
+        pinned = { if (a != null) SummaryActions(justEnded = true, onDone = onDone, onDelete = onDelete) else WorkoutButton("Done", Color.White, Color.Black, onDone) },
+    ) {
+        // The page title, "Run saved": the sport's short name (spec 6.3).
         Text(
-            a?.let { "${it.sportName} saved" } ?: "Workout saved",
-            color = Color.White, style = GlowType.headline.copy(fontSize = GlowType.headline.fontSize * 1.1f),
+            SummaryCopy.savedTitle(a?.workout?.sportType), color = Color.White, style = GlowType.pageTitle, maxLines = 1,
             modifier = Modifier.padding(start = 4.dp, top = 12.dp),
         )
         if (summary == null || a == null) {
@@ -127,7 +129,7 @@ fun GlowWorkoutSummaryScreen(
                 swell.animateTo(0f, tween(900))
             }
         }
-        CalmDownHero(summary, calmDown?.takeIf { it.start == w.start }, usualDrop, Workouts.effort(w.trainingLoad, usualLoad), swell.value)
+        CalmDownHero(summary, calmDown?.takeIf { it.start == w.start }, usualDrop, Workouts.effort(w.trainingLoad, usualLoad), swell.value) { info = true }
         WorkoutCard(summary)
         LoadCard(a, usualLoad, best)
         val zones = remember(a) { WorkoutRecorder.liveZoneSeconds(a.heartRate.filter { it.timestamp <= a.end }.map { it.timestamp to it.bpm }, a.maxHeartRate) }
@@ -137,18 +139,21 @@ fun GlowWorkoutSummaryScreen(
             SplitsList(summary, liveRoute)
         }
         TrimSection(summary, onTrim, onUndoTrim)
-        Spacer(Modifier.weight(1f))
-        SummaryActions(justEnded = true, onDone = onDone, onDelete = onDelete)
     }
+    if (info) InfoSheet(
+        Info("Heart rate drop", SummaryCopy.DROP_MEANING, emptyList(), "", "", ""), MetricColors.heart, null, null,
+        onDismiss = { info = false },
+    )
 }
 
 /**
- * The calm down: the heart rate now while it's live, what the drop says ([SummaryCopy.calmDown]) and the line of the
- * last minute and the two after the end, growing as readings arrive. Lit from below and toned down, the light as high
- * as the workout's [effort] (spec 2.5); [swell] brightens it for a personal best.
+ * The calm down, the hero right after a workout (spec 6.3): a level glow in heart red lit from below as high as the
+ * workout's [effort] (spec 2.1, Levels), "Heart rate drop" with its (i) ([onInfo]), what the drop says
+ * ([SummaryCopy.calmDown]), the heart rate now in dots while it's live, and the line of the last minute and the two
+ * after the end, growing as readings arrive. [swell] lifts the light for a personal best, then lets it settle.
  */
 @Composable
-private fun CalmDownHero(summary: PhoneSummary, live: CalmDown?, usualDrop: Int?, effort: Float, swell: Float) {
+private fun CalmDownHero(summary: PhoneSummary, live: CalmDown?, usualDrop: Int?, effort: Float, swell: Float, onInfo: () -> Unit) {
     val a = summary.analysis
     val now by produceState(System.currentTimeMillis() / 1000, live?.until) {
         // Ticks only while the calm down is still live, for the line and the minute.
@@ -162,17 +167,22 @@ private fun CalmDownHero(summary: PhoneSummary, live: CalmDown?, usualDrop: Int?
     }
     val line: CalmDownLine = SummaryCopy.calmDown(readings, a.end, now, live != null && now <= live.until, a.maxHeartRate, usualDrop)
     val bpmNow = live?.readings?.lastOrNull()?.takeIf { now <= live.until && now - it.first <= 5 }?.second
-    val style = GlowStyle.chart(MetricColors.readiness).copy(
-        lightAngle = LightAngle.Below, lightLevel = effort, glowStrength = CalmGlow + SwellGlow * swell,
+    // A level glow is always at full: its light is the value (spec 2.1).
+    val style = GlowStyle.chart(MetricColors.heart).copy(
+        lightAngle = LightAngle.Below, lightLevel = (effort + SwellLevel * swell).coerceAtMost(1f),
     )
     GlowCard(style, Modifier.fillMaxWidth()) {
         Column {
-            GlowHeader("Heart rate drop", trailing = "Since ${clockAt(a.end)}")
-            if (bpmNow != null) Row(Modifier.padding(top = GlowLayout.TitleGap), verticalAlignment = Alignment.Bottom) {
-                DotMatrixText(bpmNow.toString(), dot = DotSize.Hero)
-                Text("bpm now", color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(start = 8.dp))
-            }
+            GlowHeader(
+                "Heart rate drop", trailing = "Since ${clockAt(a.end)}",
+                trailingContent = { Spacer(Modifier.width(10.dp)); RoundButton(AppIcons.Info, "About the heart rate drop", onInfo, size = 32.dp) },
+            )
             HeroSentence(line.text)
+            if (bpmNow != null) Row(Modifier.padding(top = 16.dp), verticalAlignment = Alignment.Bottom) {
+                DotMatrixText(bpmNow.toString(), dot = DotSize.Hero)
+                // The word after a number (spec 2.3).
+                Text("bpm now", color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.body, modifier = Modifier.padding(start = 8.dp))
+            }
             val shown = readings.filter { it.first in (a.end - BeforeS)..(a.end + WorkoutSession.CALM_S) }
             if (shown.size >= 2) DropLine(shown, a.end, Modifier.padding(top = 16.dp))
         }

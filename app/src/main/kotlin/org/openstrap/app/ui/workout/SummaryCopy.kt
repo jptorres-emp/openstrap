@@ -43,6 +43,13 @@ object SummaryCopy {
     /** A drop only says something about fitness after a real effort: ending at this share of max or more. */
     private const val MIN_EFFORT_PCT = 65
 
+    /** The page title right after a workout, by the sport's short name: "Run saved" (spec 6.3). */
+    fun savedTitle(sportType: Int?): String = sportType?.let { "${Workouts.shortName(it)} saved" } ?: "Workout saved"
+
+    /** The (i) on the calm down hero. */
+    const val DROP_MEANING = "How far your heart rate falls in the first minute after you stop. A bigger drop usually " +
+        "means a fitter heart, and under 12 bpm is on the low side. It only says something after a hard effort."
+
     const val WATCHING = "Watching your heart rate come down."
     const val NO_DROP_DATA = "No heart rate after the end, so no drop this time."
 

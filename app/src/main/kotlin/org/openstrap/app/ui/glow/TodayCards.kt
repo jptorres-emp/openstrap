@@ -54,6 +54,7 @@ import org.openstrap.app.ui.dashboard.RecoveryFailure
 import org.openstrap.app.ui.dashboard.TRY_AGAIN
 import org.openstrap.app.ui.dashboard.WAITING_LAST_NIGHT
 import org.openstrap.app.ui.dashboard.Metric
+import org.openstrap.app.ui.dashboard.Score
 import org.openstrap.app.ui.dashboard.TodayCard
 import org.openstrap.app.ui.dashboard.TodayCopy
 import org.openstrap.app.ui.dashboard.TodayEdits
@@ -136,16 +137,12 @@ internal fun TodayStrip(
     contentPadding = StripPadding, content = { Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.Center, content = content) },
 )
 
-/** A strip's single line: a [title] and, on the right, its [detail]. */
+/** A strip's single line: a [title] (with the tap caret when the strip opens a page) and, on the right, its [detail]. */
 @Composable
-internal fun StripLine(title: String, detail: String?, chevron: Boolean = true) {
+internal fun StripLine(title: String, detail: String?) {
     Row(Modifier.fillMaxWidth().heightIn(min = 40.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(title, color = Color.White, style = GlowType.cardTitle, modifier = Modifier.weight(1f))
+        CardTitle(title, Modifier.weight(1f))
         if (detail != null) Text(detail, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary, maxLines = 1)
-        if (chevron) {
-            Spacer(Modifier.width(6.dp))
-            Icon(AppIcons.CaretRight, null, tint = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(14.dp))
-        }
     }
 }
 
@@ -226,7 +223,7 @@ internal fun AlertsStrip(alerts: List<HealthAlertRow>, onOpenMetric: (Metric) ->
 internal fun EdgeTitle(title: String, note: String?, marker: String? = null, tag: TitleTag? = null) {
     val marked = marker != null || tag != null
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text(title, color = Color.White, style = GlowType.cardTitle, modifier = Modifier.weight(1f, fill = !marked))
+        CardTitle(title, Modifier.weight(1f, fill = !marked))
         if (marked) {
             TitleMark(marker, tag, Modifier.padding(start = 8.dp))
             Spacer(Modifier.weight(1f))
@@ -484,7 +481,7 @@ internal fun SmallCard(
     waiting: Boolean = false,
 ) {
     EdgeCard(color, modifier, status = edgeStatus, kind = kind, onClick = onClick) {
-        Text(title, color = Color.White, style = GlowType.cardTitle, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        CardTitle(title, maxLines = 2, overflow = TextOverflow.Ellipsis)
         Spacer(Modifier.weight(1f))
         if (value == null && status != null && !waiting) {
             extra?.invoke()
@@ -519,6 +516,7 @@ internal fun BodyList(
                 r.name, r.color, r.value?.let { "${it.roundToInt()}${r.unit}" },
                 if (r.value == null) waiting else TodayCopy.normalWord(direction),
                 offNormal = direction != null && direction != 0, onClick = { onOpenMetric(r.metric) }, divider = i > 0,
+                icon = r.metric.rowIcon(),
             )
         }
     }
@@ -531,9 +529,12 @@ internal fun LoadList(
     onLoad: (() -> Unit)? = null, onRecover: (() -> Unit)? = null,
 ) {
     ListPanel(modifier, title = title) {
-        ListRow("Load today", MetricColors.load, load?.roundToInt()?.toString(), loadLine, divider = false, onClick = onLoad)
+        ListRow("Load today", MetricColors.load, load?.roundToInt()?.toString(), loadLine, divider = false, onClick = onLoad, icon = Score.Load.rowIcon())
         // Recovered is the whole answer: no number, no dash.
-        if (recover != null) ListRow("Time to recover", MetricColors.readiness, recover.first, recover.second, dash = recover.first != null, onClick = onRecover)
+        if (recover != null) ListRow(
+            "Time to recover", MetricColors.load, recover.first, recover.second, dash = recover.first != null, onClick = onRecover,
+            icon = Score.Recover.rowIcon(),
+        )
     }
 }
 

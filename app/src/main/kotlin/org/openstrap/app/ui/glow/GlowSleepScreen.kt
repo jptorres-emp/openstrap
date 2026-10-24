@@ -199,6 +199,7 @@ private fun VitalsList(state: DayUiState, firstNights: Boolean, onOpen: (Metric)
             ListRow(
                 v.label, v.color, v.value, v.status,
                 offNormal = v.direction != null && v.direction != 0, onClick = { onOpen(v.metric) }, divider = i > 0,
+                icon = v.metric.rowIcon(),
             )
         }
     }

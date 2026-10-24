@@ -140,7 +140,7 @@ internal data class DetailHeadline(val value: String?, val label: String, val wo
 }
 
 /** A detail the switcher can move to: its [title], and whether it's the one showing. */
-internal class DetailSibling(val title: String, val current: Boolean, val open: () -> Unit)
+internal class DetailSibling(val title: String, val current: Boolean, val icon: androidx.compose.ui.graphics.vector.ImageVector?, val open: () -> Unit)
 
 /** The siblings of [detail] for its switcher, each opening in its place through [onSwitch]. */
 internal fun siblings(detail: Detail, onSwitch: (Detail) -> Unit): List<DetailSibling> = siblingsOf(detail).map { d ->
@@ -149,7 +149,7 @@ internal fun siblings(detail: Detail, onSwitch: (Detail) -> Unit): List<DetailSi
         is Detail.OfScore -> d.score.title
         else -> ""
     }
-    DetailSibling(title, d == detail) { if (d != detail) onSwitch(d) }
+    DetailSibling(title, d == detail, d.rowIcon()) { if (d != detail) onSwitch(d) }
 }
 
 
@@ -341,7 +341,7 @@ private fun SwitcherSheet(siblings: List<DetailSibling>, color: Color, onDismiss
                 siblings.forEachIndexed { i, s ->
                     ListRow(
                         s.title, if (s.current) color else Color.White.copy(alpha = 0.3f), null, if (s.current) "Showing" else null,
-                        onClick = { onDismiss(); s.open() }, divider = i > 0, dash = false,
+                        onClick = { onDismiss(); s.open() }, divider = i > 0, dash = false, icon = s.icon,
                     )
                 }
             }
@@ -705,6 +705,7 @@ private fun RelatedList(related: List<Metric>, state: DayUiState, history: Daily
                 org.openstrap.app.ui.dashboard.Score.Sleep.title, org.openstrap.app.ui.theme.MetricColors.sleepDeep, score?.toString(),
                 score?.let(org.openstrap.app.ui.dashboard.TabCopy::sleepScoreWord) ?: "Nothing for this night",
                 onClick = { onOpen(Detail.OfScore(org.openstrap.app.ui.dashboard.Score.Sleep)) }, divider = false,
+                icon = org.openstrap.app.ui.dashboard.Score.Sleep.rowIcon(),
             )
         }
         related.forEachIndexed { i, m ->
@@ -715,6 +716,7 @@ private fun RelatedList(related: List<Metric>, state: DayUiState, history: Daily
                 m.title, colorOf(m), v?.let { m.format(it).replace(",", "") },
                 if (v == null) "Nothing for this day" else DetailCopy.statusWord(status) ?: m.unit.ifEmpty { null },
                 offNormal = status != null && status != 0, onClick = { onOpen(Detail.OfMetric(m)) }, divider = i > 0 || sleepRow,
+                icon = m.rowIcon(),
             )
         }
     }

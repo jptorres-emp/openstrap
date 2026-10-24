@@ -1282,7 +1282,7 @@ internal fun TrimSection(summary: PhoneSummary, onTrim: (from: Long, to: Long) -
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text("Trim start and end", color = Color.White, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-            Icon(AppIcons.CaretRight, null, tint = Color.White.copy(alpha = 0.7f))
+            TapCaret(ROW_CARET_ALPHA)
         }
     }
 }

@@ -75,6 +75,20 @@ class DesignTokenTest {
         if (found.isNotEmpty()) fail("Lines, grids and panels are solid; only numbers are dots (spec 2.7):\n" + found.joinToString("\n"))
     }
 
+    @Test fun `a list row that opens a metric shows its icon`() {
+        // Spec 2.5, Grouped list: the metric's icon in place of the old dot. A row that opens something passes one.
+        val found = mutableListOf<String>()
+        sources.forEach { (path, lines) ->
+            val code = lines.joinToString("\n")
+            Regex("""\bListRow\(""").findAll(code).forEach { m ->
+                val args = balanced(code, m.range.last)
+                val line = code.substring(0, m.range.first).count { it == '\n' } + 1
+                if (Regex("""\bonClick\s*=""").containsMatchIn(args) && !Regex("""\bicon\s*=""").containsMatchIn(args)) found += "$path:$line  ListRow(${args.trim().take(80)})"
+            }
+        }
+        if (found.isNotEmpty()) fail("A row that opens something shows its metric's icon (spec 2.5):\n" + found.joinToString("\n"))
+    }
+
     @Test fun `no metric has a second colour`() {
         val found = find(Regex("""\b(chargeScale|chargeAt|chargeDeep|readinessDeep)\b|MetricColors\.bad\b|\bval bad\b"""))
         if (found.isNotEmpty()) fail("Charge is one Ember, Recovery one teal, and bad is gone (spec 2.2):\n" + found.joinToString("\n"))

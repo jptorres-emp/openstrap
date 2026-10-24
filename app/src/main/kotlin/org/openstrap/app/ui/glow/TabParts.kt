@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -33,7 +32,6 @@ import org.openstrap.app.ui.dashboard.Hue
 import org.openstrap.app.ui.dashboard.TabSlot
 import org.openstrap.app.ui.dashboard.Tier
 import org.openstrap.app.ui.dashboard.items
-import org.openstrap.app.ui.theme.AppIcons
 
 /*
  * What the Recovery, Sleep and Activity tabs share: laying out a tab's planned cards ([tabCards]) with the edge each
@@ -91,7 +89,8 @@ internal fun <T> GridRowBlock(row: GridRow<T>, draw: @Composable (T, Modifier) -
 /**
  * A contributor bar (chart kit): the [name], a bar filled to [fraction] (0..1) and the [word] on the right. Bar and
  * word take [color] only when [offNormal]; otherwise they stay white. [detail] is a dim line under the name (the
- * reading behind it), [onClick] opens what the row is part of, and [divider] draws the hairline above the row.
+ * reading behind it), [onClick] opens what the row is part of (with the tap caret at the end), and [divider] draws the
+ * hairline above the row.
  */
 @Composable
 internal fun ContributorRow(
@@ -120,6 +119,10 @@ internal fun ContributorRow(
         }
         Spacer(Modifier.width(10.dp))
         Text(word, color = if (offNormal) color else Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary, modifier = Modifier.weight(0.9f), textAlign = androidx.compose.ui.text.style.TextAlign.End, maxLines = 2)
+        if (onClick != null) {
+            Spacer(Modifier.width(RowCaretGap))
+            TapCaret(ROW_CARET_ALPHA)
+        }
     }
 }
 
@@ -133,7 +136,7 @@ internal fun LinkRow(text: String, onClick: () -> Unit, divider: Boolean = true)
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(text, color = Color.White, style = GlowType.label.copy(fontWeight = null), modifier = Modifier.weight(1f))
-        Icon(AppIcons.CaretRight, null, tint = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(14.dp))
+        TapCaret(ROW_CARET_ALPHA)
     }
 }
 

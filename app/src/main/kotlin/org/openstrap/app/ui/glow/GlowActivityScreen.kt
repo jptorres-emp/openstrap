@@ -65,6 +65,7 @@ import org.openstrap.app.ui.dashboard.Wear
 import org.openstrap.app.ui.dashboard.TabCopy
 import org.openstrap.app.ui.dashboard.TodayCopy
 import org.openstrap.app.ui.dashboard.activityCards
+import org.openstrap.app.ui.theme.AppIcons
 import org.openstrap.app.ui.theme.MetricColors
 import org.openstrap.app.ui.workout.SportIcons
 import org.openstrap.app.ui.workout.ZONE_COLORS
@@ -209,7 +210,7 @@ private fun StepsGlow(state: DayUiState, usual: List<Float>?, tag: TitleTag?, on
     var hour by remember(state.date, state.hourlySteps) { mutableStateOf<Int?>(null) }
     GlowCard(GlowStyle.chart(MetricColors.steps).copy(lightLevel = share.coerceIn(0f, 1f)), Modifier.fillMaxWidth().gridSize(CardSize.Wide), onClick = onClick) {
         Column {
-            GlowHeader("Steps", trailing = "Goal %,d".format(goal), chevron = true, tag = tag)
+            GlowHeader("Steps", trailing = "Goal %,d".format(goal), tag = tag)
             Spacer(Modifier.height(GlowLayout.TitleGap))
             val picked = hour?.let { h -> state.hourlySteps.getOrNull(h) }
             if (hour != null && picked != null) HeroFigure("%,d".format(Math.round(picked)), ActivityCopy.hourLabel(hour!!), big = true)
@@ -307,14 +308,14 @@ private fun FactsList(
             .firstNotNullOfOrNull { w -> (w.workout.vo2max ?: w.effect?.vo2max?.roundToInt())?.takeIf { it > 0 } }
         val est = r?.vo2max
         ListRow(
-            "VO2 max", MetricColors.hrv,
+            "VO2 max", MetricColors.heart,
             fromWorkouts?.toString() ?: est?.let { "${it.low}-${it.high}" },
             when {
                 fromWorkouts != null -> "From your workouts"
                 est != null -> est.band?.let { "${it.label} for your age" } ?: "Estimated from your profile"
                 else -> "After a workout the strap can read it from"
             },
-            divider = false, onClick = { open(Score.Vo2Max) },
+            divider = false, onClick = { open(Score.Vo2Max) }, icon = Score.Vo2Max.rowIcon(),
         )
         val recover = workouts.filter { it.recoveryMinutes != null }.maxByOrNull { it.end }?.let { w ->
             val now = System.currentTimeMillis() / 1000
@@ -322,21 +323,22 @@ private fun FactsList(
         }
         // Recovered is the whole answer: no number, no dash.
         ListRow(
-            "Time to recover", MetricColors.readiness, recover?.first, recover?.second ?: "No recent workout", dash = recover?.first != null,
-            onClick = { open(Score.Recover) },
+            "Time to recover", MetricColors.load, recover?.first, recover?.second ?: "No recent workout", dash = recover?.first != null,
+            onClick = { open(Score.Recover) }, icon = Score.Recover.rowIcon(),
         )
         val e = r?.energy
         ListRow(
-            "Energy", MetricColors.charge, e?.totalKcal?.roundToInt()?.let { "%,d".format(it) },
+            "Energy", MetricColors.steps, e?.totalKcal?.roundToInt()?.let { "%,d".format(it) },
             e?.let { TabCopy.energy(it.partial, isToday) } ?: "Add age, weight and height to see it",
             onClick = if (e == null && r != null) onEditProfile else { { open(Score.Energy) } }, dash = e != null,
+            icon = Score.Energy.rowIcon(),
         )
         // Ours from step length and height when we can; the strap's own figure otherwise. Always approximate.
         val distance = a?.distanceMeters ?: state.distanceMeters?.toFloat()
         ListRow(
             "Distance", MetricColors.steps, distance?.let { "%.1f".format(it / 1000f) },
             if (distance == null) waiting else ActivityCopy.distanceSource(a?.distanceMeters != null),
-            onClick = { open(Score.Distance) },
+            onClick = { open(Score.Distance) }, icon = Score.Distance.rowIcon(),
         )
     }
 }
@@ -435,6 +437,8 @@ internal fun WorkoutRow(a: WorkoutAnalysis, usual: Float?, divider: Boolean, onC
             }
             Spacer(Modifier.width(12.dp))
             DotMatrixText(workoutClock(a.activeSeconds), dot = DotSize.Row, color = Color.White)
+            Spacer(Modifier.width(RowCaretGap))
+            TapCaret(ROW_CARET_ALPHA)
         }
         // Zone bar (chart kit): how the workout's time was spent, thin under its row, lined up with its name.
         ZoneBar(a.zoneSeconds, ZONE_COLORS, Modifier.padding(start = EffortTile + EffortGap, bottom = 10.dp), height = 4.dp)
@@ -487,7 +491,7 @@ private fun SuggestionRow(s: org.openstrap.app.data.WorkoutSuggestions.Suggestio
         ListRow(
             "Looks like a workout", ZONE_COLORS[s.zone], null,
             "${clockAt(s.start)}–${clockAt(s.end)}, mostly zone ${s.zone + 1}, ${s.averageHeartRate} bpm on average",
-            dash = false, divider = divider,
+            dash = false, divider = divider, icon = AppIcons.Heartbeat,
         )
         Row(Modifier.fillMaxWidth().padding(start = 20.dp, bottom = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             RowPill("Save", onSave, primary = true)

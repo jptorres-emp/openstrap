@@ -181,7 +181,7 @@ fun EdgeCard(
             }
             .padding(contentPadding),
     ) {
-        CompositionLocalProvider(LocalCardNumbers provides opening?.numbers) { content() }
+        CompositionLocalProvider(LocalCardNumbers provides opening?.numbers, LocalCardOpens provides (onClick != null)) { content() }
         if (light.progressBar && progress != null) {
             Spacer(Modifier.weight(1f, fill = false).padding(top = 12.dp))
             ProgressBar(progress, tint)

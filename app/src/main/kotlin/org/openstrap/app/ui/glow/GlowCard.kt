@@ -175,7 +175,7 @@ fun GlowCard(
             // The core on its own layer: moved and scaled, never redrawn.
             CoreLayer(b, lit, core) { drift.at(seconds.floatValue, lit.motion) }
         }
-        CompositionLocalProvider(LocalCardNumbers provides opening?.numbers) {
+        CompositionLocalProvider(LocalCardNumbers provides opening?.numbers, LocalCardOpens provides (onClick != null)) {
             Box(Modifier.padding(contentPadding), content = content)
         }
         // Grain and the hairline edge, on top of everything; static.

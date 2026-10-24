@@ -116,6 +116,7 @@ fun PageRows(modifier: Modifier = Modifier, content: @Composable ColumnScope.() 
  * A settings row: the [title], and its current [value] either on the right ([below] false, the Strap page) or as a
  * second line ([below] true, the You page). [trailing] replaces the value on the right (a switch). [divider] draws
  * the hairline above it. [icon] sits quietly on the left, centred on the row, with the title and value lined up after it.
+ * A row that opens something ([onClick], no [trailing]) ends in the tap caret (spec 2.5).
  */
 @Composable
 fun PageRow(
@@ -158,6 +159,9 @@ fun PageRow(
         if (trailing != null) {
             Spacer(Modifier.width(12.dp))
             trailing()
+        } else if (onClick != null) {
+            Spacer(Modifier.width(RowCaretGap))
+            TapCaret(ROW_CARET_ALPHA)
         }
     }
 }

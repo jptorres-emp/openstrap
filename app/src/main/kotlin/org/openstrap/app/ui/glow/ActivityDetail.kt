@@ -435,7 +435,10 @@ private fun Vo2Detail(ctx: ActivityDetailContext) {
                 var first = true
                 readings.take(5).forEach { (w, v) ->
                     val start = Instant.ofEpochSecond(w.shownStart).atZone(zone)
-                    ListRow(w.sportName, color, v.toString(), start.format(DAY) + ", " + start.format(CLOCK), divider = !first, onClick = { ctx.onOpen(Detail.Workout(w.workout.start)) })
+                    ListRow(
+                        w.sportName, color, v.toString(), start.format(DAY) + ", " + start.format(CLOCK), divider = !first,
+                        onClick = { ctx.onOpen(Detail.Workout(w.workout.start)) }, icon = org.openstrap.app.ui.workout.SportIcons.of(w.workout.sportType), iconTint = SportIconTint,
+                    )
                     first = false
                 }
                 if (latest != null && est != null) ListRow("From your profile", color, "${est.low}-${est.high}", "Estimated weekly", divider = !first)
@@ -482,7 +485,7 @@ private fun RecoverDetail(ctx: ActivityDetailContext) {
                     val start = Instant.ofEpochSecond(w.shownStart).atZone(zone)
                     ListRow(
                         w.sportName, color, ((w.recoveryMinutes ?: 0) + 59).div(60).toString(), "Hours needed, ${start.format(DAY)}, ${start.format(CLOCK)}",
-                        divider = i > 0, onClick = { ctx.onOpen(Detail.Workout(w.workout.start)) },
+                        divider = i > 0, onClick = { ctx.onOpen(Detail.Workout(w.workout.start)) }, icon = org.openstrap.app.ui.workout.SportIcons.of(w.workout.sportType), iconTint = SportIconTint,
                     )
                 }
             }
@@ -578,21 +581,22 @@ private fun ActivityRelated(current: Score, ctx: ActivityDetailContext, heartPoi
         ListRow(
             Metric.Steps.title, MetricColors.steps, ctx.state.steps.takeIf { it > 0 }?.let { "%,d".format(it).replace(",", "") },
             ActivityCopy.goalShare(ctx.state.steps, goal), onClick = { ctx.onOpen(Detail.OfMetric(Metric.Steps)) }, divider = divider(),
+            icon = Metric.Steps.rowIcon(),
         )
         if (current != Score.ActiveMinutes) ListRow(
             Score.ActiveMinutes.title, MetricColors.steps, a?.weekEquivalent?.toString(),
             a?.let { TabCopy.activeMinutes(it.weekEquivalent, Activity.MVPA_WEEKLY_TARGET) } ?: "Nothing for this day",
-            onClick = { ctx.onOpen(Detail.OfScore(Score.ActiveMinutes)) }, divider = divider(),
+            onClick = { ctx.onOpen(Detail.OfScore(Score.ActiveMinutes)) }, divider = divider(), icon = Score.ActiveMinutes.rowIcon(),
         )
         if (current != Score.HeartPoints) ListRow(
             Score.HeartPoints.title, MetricColors.heart, points?.toString(),
             points?.let { TabCopy.heartPoints(it, ActivityCopy.HEART_POINTS_TARGET) } ?: "After the strap's next sync",
-            onClick = { ctx.onOpen(Detail.OfScore(Score.HeartPoints)) }, divider = divider(),
+            onClick = { ctx.onOpen(Detail.OfScore(Score.HeartPoints)) }, divider = divider(), icon = Score.HeartPoints.rowIcon(),
         )
         if (current != Score.Load) ListRow(
             Score.Load.title, MetricColors.load, ctx.r?.load?.let(Math::round)?.toString(),
             ctx.r?.let { TabCopy.loadUsual(it.chronicLoad) } ?: "Nothing for this day",
-            onClick = { ctx.onOpen(Detail.OfScore(Score.Load)) }, divider = divider(),
+            onClick = { ctx.onOpen(Detail.OfScore(Score.Load)) }, divider = divider(), icon = Score.Load.rowIcon(),
         )
     }
 }

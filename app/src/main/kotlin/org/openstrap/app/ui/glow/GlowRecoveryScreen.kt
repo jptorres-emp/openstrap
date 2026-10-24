@@ -369,6 +369,7 @@ private fun SignalsList(signals: List<BodySignal>, waiting: String, onOpen: (Met
                 s.label, s.accent, value,
                 if (s.today == null) waiting else TodayCopy.normalWord(direction),
                 offNormal = direction != null && direction != 0, onClick = { onOpen(s.metric) }, divider = i > 0,
+                icon = s.metric.rowIcon(),
             )
         }
     }

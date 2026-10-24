@@ -44,6 +44,16 @@ sealed interface IndexTarget {
 /** The tabs an index row can go to. */
 enum class HomeTab { Recovery, Sleep }
 
+/** The row icon for where an index row goes (spec 2.5): its metric's, or the tab's own for a tab. */
+internal fun IndexTarget.rowIcon(): androidx.compose.ui.graphics.vector.ImageVector? = when (this) {
+    is IndexTarget.Open -> detail.rowIcon()
+    is IndexTarget.Home -> when {
+        charge -> org.openstrap.app.ui.dashboard.Score.Charge.rowIcon()
+        tab == HomeTab.Sleep -> org.openstrap.app.ui.dashboard.Score.Sleep.rowIcon()
+        else -> org.openstrap.app.ui.dashboard.Score.Recovery.rowIcon()
+    }
+}
+
 /** One row of the index: the metric's [name] and [color], the day's [value] (null when there's none) and where it goes. */
 data class IndexRow(val name: String, val color: Color, val value: String?, val status: String, val target: IndexTarget)
 
@@ -169,7 +179,7 @@ fun AllMetricsSheet(
             groups.forEach { group ->
                 ListPanel(title = group.title) {
                     group.rows.forEachIndexed { i, r ->
-                        ListRow(r.name, r.color, r.value, r.status, onClick = { onOpen(r.target) }, divider = i > 0)
+                        ListRow(r.name, r.color, r.value, r.status, onClick = { onOpen(r.target) }, divider = i > 0, icon = r.target.rowIcon())
                     }
                 }
             }

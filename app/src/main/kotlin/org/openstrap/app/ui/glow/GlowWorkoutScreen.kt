@@ -30,7 +30,10 @@ import org.openstrap.app.data.WorkoutRecorder
 import org.openstrap.app.data.Workouts
 import org.openstrap.app.ui.components.rememberScrubHaptics
 import org.openstrap.app.ui.components.scrub
+import org.openstrap.app.ui.dashboard.Metric
+import org.openstrap.app.ui.dashboard.Score
 import org.openstrap.app.ui.dashboard.ScreenList
+import org.openstrap.app.ui.theme.AppIcons
 import org.openstrap.app.ui.theme.MetricColors
 import org.openstrap.app.ui.workout.EffectFigures
 import org.openstrap.app.ui.workout.PhoneSummary
@@ -253,12 +256,15 @@ private fun ZoneHeartLine(
 private fun FactsList(facts: List<WorkoutFact>, summary: PhoneSummary?) {
     ListPanel(title = "The workout") {
         facts.forEachIndexed { i, f ->
-            val color = when (f.name) {
-                "Paused" -> PausedColor
-                "Energy" -> MetricColors.charge
-                else -> MetricColors.steps
+            val color = if (f.name == "Paused") PausedColor else MetricColors.steps
+            val icon = when (f.name) {
+                "Distance" -> Score.Distance.rowIcon()
+                "Paused" -> AppIcons.Hourglass
+                "Steps" -> Metric.Steps.rowIcon()
+                "Energy" -> Score.Energy.rowIcon()
+                else -> null
             }
-            ListRow(f.name, color, f.value, f.status, divider = i > 0)
+            ListRow(f.name, color, f.value, f.status, divider = i > 0, icon = icon)
         }
         summary?.let { RouteMap(it, Modifier.padding(top = 6.dp, bottom = 10.dp)) }
     }

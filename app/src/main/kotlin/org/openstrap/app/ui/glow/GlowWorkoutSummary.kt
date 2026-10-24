@@ -45,6 +45,7 @@ import org.openstrap.app.device.WorkoutSession
 import org.openstrap.app.ui.components.HapticEvent
 import org.openstrap.app.ui.components.rememberAnimationsOn
 import org.openstrap.app.ui.components.rememberHaptics
+import org.openstrap.app.ui.dashboard.Score
 import org.openstrap.app.ui.dashboard.TodayCopy
 import org.openstrap.app.ui.theme.AppIcons
 import org.openstrap.app.ui.theme.MetricColors
@@ -285,7 +286,11 @@ internal fun ZonesList(zones: IntArray, maxHr: Int) {
         var first = true
         for (z in Workouts.ZONES - 1 downTo 0) {
             if (zones[z] <= 0) continue
-            ListRow("Zone ${z + 1}", ZONE_COLORS[z], workoutClock(zones[z].toLong()), "${ZONE_NAMES[z]}, ${zoneRange(z, maxHr)}", divider = !first)
+            // The heart in its zone's colour, so the rows key the bar above.
+            ListRow(
+                "Zone ${z + 1}", ZONE_COLORS[z], workoutClock(zones[z].toLong()), "${ZONE_NAMES[z]}, ${zoneRange(z, maxHr)}", divider = !first,
+                icon = AppIcons.Heart,
+            )
             first = false
         }
     }
@@ -305,23 +310,27 @@ internal fun SplitsList(summary: PhoneSummary, liveRoute: List<Route.Point>) {
     ) }
     val laps = summary.laps.takeIf { it.size > 1 }.orEmpty()
     val sets = summary.sets.filter { it.end != null }
+    // Each row's heart takes the zone its average heart rate sat in.
     fun dot(bpm: Int?) = bpm?.let { zoneColor(it, maxHr) } ?: EdgeNeutral
     when {
         rows.isNotEmpty() || laps.isNotEmpty() -> ListPanel(
             title = if (rows.isNotEmpty()) "Splits" else "Laps",
             note = if (rows.isNotEmpty()) summary.distanceMeters?.let { km(it) + if (it >= 1000) " km" else "" } else "${laps.size}",
         ) {
-            rows.forEachIndexed { i, r -> ListRow(r.name, dot(r.averageBpm), r.time, r.averageBpm?.let { "Average $it bpm" }, divider = i > 0) }
+            rows.forEachIndexed { i, r -> ListRow(r.name, dot(r.averageBpm), r.time, r.averageBpm?.let { "Average $it bpm" }, divider = i > 0, icon = AppIcons.Heart) }
             if (rows.isNotEmpty() && laps.isNotEmpty()) WorkoutDayHeader("Laps")
             laps.forEachIndexed { i, lap ->
-                ListRow("Lap ${lap.index + 1}", dot(lap.averageHeartRate), workoutClock(lap.end - lap.start), SummaryCopy.lapLine(lap.meters, lap.averageHeartRate), divider = i > 0)
+                ListRow(
+                    "Lap ${lap.index + 1}", dot(lap.averageHeartRate), workoutClock(lap.end - lap.start), SummaryCopy.lapLine(lap.meters, lap.averageHeartRate),
+                    divider = i > 0, icon = AppIcons.Heart,
+                )
             }
         }
         sets.isNotEmpty() -> ListPanel(title = "Sets", note = "${sets.size} done") {
             sets.forEachIndexed { i, set ->
                 ListRow(
                     "Set ${set.index + 1}", MetricColors.heart, workoutClock(set.end!! - set.start),
-                    set.restEnd?.let { "Rest ${workoutClock(it - set.end)}" }, divider = i > 0,
+                    set.restEnd?.let { "Rest ${workoutClock(it - set.end)}" }, divider = i > 0, icon = Score.Load.rowIcon(),
                 )
             }
         }

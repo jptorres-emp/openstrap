@@ -324,15 +324,15 @@ private fun ScoreRelated(score: Score, state: DayUiState, r: RecoveryResult?, hi
     ListPanel(Modifier.padding(top = 8.dp), title = "Related") {
         if (score == Score.Recovery) ListRow(
             "Charge", MetricColors.charge, charge?.toString(), charge?.let(Narrative::chargeHeadline) ?: "Nothing for this day",
-            onClick = { onOpen(Detail.OfScore(Score.Charge)) }, divider = false,
+            onClick = { onOpen(Detail.OfScore(Score.Charge)) }, divider = false, icon = Score.Charge.rowIcon(),
         ) else ListRow(
             "Recovery", MetricColors.readiness, ready?.score?.toString(),
             ready?.score?.let { TodayCopy.recoveryWord(it, ready.strainAlert) } ?: "Nothing for this day",
-            onClick = { onOpen(Detail.OfScore(Score.Recovery)) }, divider = false,
+            onClick = { onOpen(Detail.OfScore(Score.Recovery)) }, divider = false, icon = Score.Recovery.rowIcon(),
         )
         ListRow(
             "Last night", MetricColors.sleepDeep, asleep?.let(::clockDuration), if (asleep == null) "No sleep recorded" else "Asleep",
-            onClick = { onOpen(Detail.OfScore(Score.Sleep)) },
+            onClick = { onOpen(Detail.OfScore(Score.Sleep)) }, icon = Score.Sleep.rowIcon(),
         )
         metrics.forEach { m ->
             val normal = rememberNormal(m, state.date, history)
@@ -340,7 +340,7 @@ private fun ScoreRelated(score: Score, state: DayUiState, r: RecoveryResult?, hi
             val status = History.status(v, normal)
             ListRow(
                 m.title, colorOf(m), v?.let(m::format), if (v == null) "Nothing for this day" else DetailCopy.statusWord(status) ?: m.unit.ifEmpty { null },
-                offNormal = status != null && status != 0, onClick = { onOpen(Detail.OfMetric(m)) },
+                offNormal = status != null && status != 0, onClick = { onOpen(Detail.OfMetric(m)) }, icon = m.rowIcon(),
             )
         }
     }

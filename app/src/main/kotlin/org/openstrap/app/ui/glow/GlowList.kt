@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -26,7 +25,12 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import org.openstrap.app.ui.dashboard.Detail
+import org.openstrap.app.ui.dashboard.Metric
+import org.openstrap.app.ui.dashboard.Score
+import org.openstrap.app.ui.theme.AppIcons
 import org.openstrap.app.ui.components.LocalCardNumbers
 import org.openstrap.app.ui.components.cardNumber
 import org.openstrap.app.ui.components.cardOpening
@@ -75,8 +79,8 @@ fun ListPanel(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(note, color = Color.White, style = GlowType.secondary)
-                Spacer(Modifier.width(4.dp))
-                Icon(org.openstrap.app.ui.theme.AppIcons.CaretRight, null, tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(12.dp))
+                Spacer(Modifier.width(6.dp))
+                TapCaret(CARD_CARET_ALPHA)
             } else if (note != null) Text(note, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary)
         }
         content()
@@ -96,10 +100,11 @@ fun ListPanel(
 }
 
 /**
- * A row in a [ListPanel]: an 8 dp dot in the metric's [color] (or a toned white [icon], as a workout's sport), the [name] with its [status] under it, and the
- * [value] in dot-matrix digits in its own column on the right. Value and status take the metric colour only when
- * [offNormal]. A null [value] is a waiting row: a dim dash, and [status] says what it waits for ("After your first
- * night"). [onClick] opens the metric's detail. [divider] draws the hairline above the row.
+ * A row in a [ListPanel]: the metric's [icon] in its ink [color] (or in [iconTint], as a workout's sport in white), the
+ * [name] with its [status] under it, the [value] in dot-matrix digits in its own column on the right, and the tap caret
+ * when [onClick] opens something (spec 2.5, Grouped list). Value and status take the metric colour only when
+ * [offNormal]. A null [value] is a waiting row: a dim dash, the icon at 30%, and [status] says what it waits for ("After
+ * your first night"). A row that isn't a metric passes no icon. [divider] draws the hairline above the row.
  */
 @Composable
 fun ListRow(
@@ -113,7 +118,8 @@ fun ListRow(
     divider: Boolean = true,
     /** A null value draws the dim dash; false leaves the value column empty, for a row whose [status] is the answer. */
     dash: Boolean = true,
-    icon: androidx.compose.ui.graphics.vector.ImageVector? = null,
+    icon: ImageVector? = null,
+    iconTint: Color = color,
 ) {
     val waiting = value == null && dash
     val accent = if (offNormal && !waiting) color else Color.White
@@ -129,12 +135,8 @@ fun ListRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (icon != null) {
-            // Toned white, like the icons on the You and Strap pages: the icon says what it is, not a metric.
-            Icon(icon, null, tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(RowIcon))
+            Icon(icon, null, tint = iconTint.copy(alpha = iconTint.alpha * if (waiting) WAITING_ICON_ALPHA else 1f), modifier = Modifier.size(RowIcon))
             Spacer(Modifier.width(RowIconGap))
-        } else {
-            Box(Modifier.size(8.dp).background(color, CircleShape))
-            Spacer(Modifier.width(12.dp))
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Text(name, color = Color.White, style = GlowType.body)
@@ -153,12 +155,64 @@ fun ListRow(
             DotMatrixText(value, Modifier.cardNumber(value), dot = DotSize.Row, color = accent)
         }
         else if (dash) WaitingDash()
+        if (onClick != null) {
+            Spacer(Modifier.width(RowCaretGap))
+            TapCaret(ROW_CARET_ALPHA)
+        }
     }
 }
 
-/** A row's icon in place of its dot, and the gap after it, as on the You and Strap pages. */
+/** A row's icon, and the gap after it, as on the You and Strap pages. */
 internal val RowIcon = 20.dp
 internal val RowIconGap = 14.dp
+/** From a row's value to its tap caret. */
+internal val RowCaretGap = 8.dp
+/** A row icon that isn't a metric's (a workout's sport): white at 72% (spec 2.8). */
+internal val SportIconTint = Color.White.copy(alpha = 0.72f)
+/** A waiting row's icon is dimmed to this. */
+private const val WAITING_ICON_ALPHA = 0.3f
+
+/* -------------------------------------------- Row icons --------------------------------------------- */
+
+/** A metric's row icon (spec 2.5, Grouped list), drawn in its ink. Hugeicons names in the comments. */
+internal fun Metric.rowIcon(): ImageVector = when (this) {
+    Metric.HeartRate, Metric.RestingHr -> AppIcons.Heart // Favourite
+    Metric.Hrv -> AppIcons.Pulse01
+    Metric.Spo2 -> AppIcons.Drop // Droplet
+    Metric.Stress -> AppIcons.Brain02
+    Metric.SkinTemperature -> AppIcons.ThermometerSimple // Thermometer
+    Metric.Breathing -> AppIcons.Lungs
+    Metric.Steps -> AppIcons.Footprints // FootPrints
+}
+
+/**
+ * A score's row icon. Recovery, which the spec's table leaves out, takes its tab's icon; Active minutes a timer;
+ * Heart points the heart, in its ink.
+ */
+internal fun Score.rowIcon(): ImageVector = when (this) {
+    Score.Recovery -> AppIcons.Plant
+    Score.Charge -> AppIcons.BatteryCharging // BatteryCharging01
+    Score.Sleep, Score.Regularity, Score.Naps -> AppIcons.Moon // Moon02
+    Score.HeartPoints -> AppIcons.Heart // Favourite
+    Score.ActiveMinutes -> AppIcons.Timer
+    Score.Load -> AppIcons.Barbell // Dumbbell01
+    Score.Vo2Max -> AppIcons.FastWind
+    Score.Recover -> AppIcons.Hourglass
+    Score.Energy -> AppIcons.Fire
+    Score.Distance -> AppIcons.Route01
+}
+
+/** The row icon for what a row opens, when it's a metric's; null for anything else. */
+internal fun Detail.rowIcon(): ImageVector? = when (this) {
+    is Detail.OfMetric -> metric.rowIcon()
+    is Detail.OfScore -> score.rowIcon()
+    Detail.Recovery -> Score.Recovery.rowIcon()
+    Detail.Sleep -> Score.Sleep.rowIcon()
+    // Habit Age isn't in the spec's table: the weeks behind you.
+    Detail.Healthspan -> AppIcons.Hourglass
+    Detail.AllWorkouts -> AppIcons.Barbell
+    else -> null
+}
 
 /** The empty value: a short dim bar drawn by the UI, never a dash character. */
 @Composable

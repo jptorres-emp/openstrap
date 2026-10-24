@@ -436,27 +436,27 @@ private fun SleepRelated(current: Score, state: DayUiState, r: RecoveryResult?, 
         if (current != Score.Sleep) add { divider ->
             ListRow(
                 Score.Sleep.title, MetricColors.sleepDeep, score?.toString(), score?.let(TabCopy::sleepScoreWord) ?: "Nothing for this night",
-                onClick = { onOpen(Detail.OfScore(Score.Sleep)) }, divider = divider,
+                onClick = { onOpen(Detail.OfScore(Score.Sleep)) }, divider = divider, icon = Score.Sleep.rowIcon(),
             )
         }
         if (current != Score.Regularity) add { divider ->
             ListRow(
                 Score.Regularity.title, MetricColors.sleepDeep, reg?.sri?.let { Math.round(it).toString() }, TabCopy.regularity(reg),
-                onClick = { onOpen(Detail.OfScore(Score.Regularity)) }, divider = divider,
+                onClick = { onOpen(Detail.OfScore(Score.Regularity)) }, divider = divider, icon = Score.Regularity.rowIcon(),
             )
         }
         if (current != Score.Naps) add { divider ->
             ListRow(
                 Score.Naps.title, MetricColors.sleepRem, naps.takeIf { it.isNotEmpty() }?.let { n -> clockDuration(n.sumOf { it.end - it.start }) },
                 if (naps.isEmpty()) "None that day" else TabCopy.naps(naps.size, clock(naps.minOf { it.start })),
-                onClick = { onOpen(Detail.OfScore(Score.Naps)) }, divider = divider,
+                onClick = { onOpen(Detail.OfScore(Score.Naps)) }, divider = divider, icon = Score.Naps.rowIcon(),
             )
         }
         add { divider ->
             ListRow(
                 Score.Recovery.title, MetricColors.readiness, ready?.score?.toString(),
                 ready?.score?.let { TodayCopy.recoveryWord(it, ready.strainAlert) } ?: "Nothing for this day",
-                onClick = { onOpen(Detail.OfScore(Score.Recovery)) }, divider = divider,
+                onClick = { onOpen(Detail.OfScore(Score.Recovery)) }, divider = divider, icon = Score.Recovery.rowIcon(),
             )
         }
     }

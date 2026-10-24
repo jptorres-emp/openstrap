@@ -19,10 +19,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import org.openstrap.app.ui.dashboard.ScreenList
 import org.openstrap.app.ui.theme.AppIcons
@@ -171,14 +173,50 @@ private fun sections(blocks: List<Pair<Pane, @Composable () -> Unit>>): List<Lis
 }
 
 /**
- * The title row of a card: the title, an optional [marker] next to it ([StateMarker]) or else a neutral [tag]
- * ([TitleMark]), an optional note on the right (text, or [trailingContent] for anything richer) and an optional chevron.
+ * Whether the card around this content opens something when tapped. [GlowCard] and [EdgeCard] provide it from their
+ * `onClick`, so every card title ([CardTitle]) shows the tap caret on its own (spec 2.5, Tappable says so).
+ */
+val LocalCardOpens = compositionLocalOf { false }
+
+/** The tap caret (spec 2.5): 14 dp, at [alpha] white, 50% after a card's title and 30% at a row's end. */
+@Composable
+internal fun TapCaret(alpha: Float, modifier: Modifier = Modifier) =
+    Icon(AppIcons.TapCaret, null, tint = Color.White.copy(alpha = alpha), modifier = modifier.size(CaretSize))
+
+internal val CaretSize = 14.dp
+/** A card's caret, right after its title. */
+internal const val CARD_CARET_ALPHA = 0.5f
+/** A row's caret, at its end. */
+internal const val ROW_CARET_ALPHA = 0.3f
+
+/** A card's title in [GlowType.cardTitle], with the tap caret 6 dp after the text when the card opens something. */
+@Composable
+internal fun CardTitle(
+    title: String,
+    modifier: Modifier = Modifier,
+    maxLines: Int = Int.MAX_VALUE,
+    overflow: TextOverflow = TextOverflow.Clip,
+) {
+    if (!LocalCardOpens.current) {
+        Text(title, modifier, color = Color.White, style = GlowType.cardTitle, maxLines = maxLines, overflow = overflow)
+        return
+    }
+    Row(modifier, verticalAlignment = Alignment.CenterVertically) {
+        Text(title, Modifier.weight(1f, fill = false), color = Color.White, style = GlowType.cardTitle, maxLines = maxLines, overflow = overflow)
+        Spacer(Modifier.width(6.dp))
+        TapCaret(CARD_CARET_ALPHA)
+    }
+}
+
+/**
+ * The title row of a card: the title (with the tap caret when the card opens something), an optional [marker] next to
+ * it ([StateMarker]) or else a neutral [tag] ([TitleMark]), and an optional note on the right (text, or
+ * [trailingContent] for anything richer).
  */
 @Composable
 fun GlowHeader(
     title: String,
     trailing: String? = null,
-    chevron: Boolean = false,
     trailingContent: (@Composable () -> Unit)? = null,
     marker: String? = null,
     tag: TitleTag? = null,
@@ -190,15 +228,11 @@ fun GlowHeader(
             Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp),
             itemVerticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(title, color = Color.White, style = GlowType.cardTitle, maxLines = 1)
+            CardTitle(title, maxLines = 1)
             TitleMark(marker, tag)
-        } else Text(title, color = Color.White, style = GlowType.cardTitle, modifier = Modifier.weight(1f))
+        } else CardTitle(title, Modifier.weight(1f))
         if (trailing != null) Text(trailing, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary)
         trailingContent?.invoke()
-        if (chevron) {
-            Spacer(Modifier.width(4.dp))
-            Icon(AppIcons.CaretRight, null, tint = Color.White.copy(alpha = 0.9f), modifier = Modifier.size(16.dp))
-        }
     }
 }
 

@@ -303,8 +303,11 @@ private class TodayContext(
 
     val score get() = rec?.readiness?.score
     val alert get() = rec?.readiness?.strainAlert == true
-    /** Charge now; none before the first night, when it would only be the simulation's starting guess. */
-    val charge get() = rec?.charge?.takeIf { it.anchored }?.latest?.toInt()
+    /**
+     * Charge now, cut to a whole number as the Charge detail's headline is ([chargeShown]); none before the first
+     * night, when it would only be the simulation's starting guess.
+     */
+    val charge get() = rec?.charge?.takeIf { it.anchored }?.latest?.let(::chargeShown)
 
     /** Why OpenStrap has no score: still learning comes first, since a learning night has no baseline to score against. */
     val noScore: TodayCopy.NoScore?
@@ -739,12 +742,13 @@ private fun TodayRow(
         TodayCard.Recovery -> RecoveryEarlierCard(ctx.recoveryShown, { openScore(org.openstrap.app.ui.dashboard.Score.Recovery) }, failure = ctx.recoveryFailure, onRetry = onRetryRecovery)
         TodayCard.Charge -> {
             val c = ctx.rec?.charge
-            val used = c?.atWake?.let { w -> c.latest?.let { (w - it).toInt() } }
+            // What the day drained, gross, as the hero, Recovery's Drained Small and the Charge detail say it.
+            val drained = c?.let { it.drainedExercise + it.drainedStress + it.drainedLiving }
             val status = when {
                 // Worked out with Recovery: when that failed, say so here too. The card opens Recovery and its Try again.
                 ctx.charge == null -> if (ctx.recoveryFailure != null) CHARGE_FAILED else ctx.waiting
                 ctx.endOfDay -> "Sleep fills it back"
-                used != null && used > 0 -> "Used $used since waking"
+                drained != null && drained >= 1f -> "Drained ${org.openstrap.app.ui.dashboard.TabCopy.drainedAmount(drained)}"
                 else -> "Steady since waking"
             }
             // The day's Charge so far, beside the number, until the evening says sleep fills it back.

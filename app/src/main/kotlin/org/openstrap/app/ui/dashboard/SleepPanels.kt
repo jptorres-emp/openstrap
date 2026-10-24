@@ -72,11 +72,11 @@ internal fun nightVitals(state: DayUiState, firstNights: Boolean = false): List<
             lowest?.let { "At ${clockOf(it.x)}" } ?: missing,
         ),
         against(Metric.Hrv, "HRV", MetricColors.hrv) { v, _ -> "${v.roundToInt()}" },
-        against(Metric.Breathing, "Breathing rate", MetricColors.sleepLight) { v, _ -> "%.1f".format(v) },
+        against(Metric.Breathing, "Breathing rate", MetricColors.sleepLight) { v, _ -> Metric.Breathing.format(v) },
         against(Metric.Spo2, "Blood oxygen", MetricColors.spo2) { v, _ -> "${v.roundToInt()}%" },
         // Skin temperature means little on its own; once there's a normal, show how far off it is.
         against(Metric.SkinTemperature, "Skin temperature", MetricColors.temperature) { v, n ->
-            n?.let { "%+.1f".format(v - it.mean) } ?: "%.1f".format(v)
+            n?.let { Metric.SkinTemperature.formatChange(v - it.mean) } ?: Metric.SkinTemperature.format(v)
         },
         NightVital(Metric.HeartRate, "Average heart rate", MetricColors.heart, average?.toString(), if (average != null) "While asleep" else missing),
     )

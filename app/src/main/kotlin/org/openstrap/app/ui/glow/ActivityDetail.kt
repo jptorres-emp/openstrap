@@ -409,7 +409,7 @@ private fun loadWordOf(v: Float, usual: Float?): String? = TodayCopy.loadStatus(
 /** VO2 max: the strap's from your latest workout with one, else OpenStrap's estimate from your profile, with the workouts behind it. */
 @Composable
 private fun Vo2Detail(ctx: ActivityDetailContext) {
-    val color = MetricColors.hrv
+    val color = MetricColors.heart
     var info by rememberSaveable { mutableStateOf(false) }
     val zone = ZoneId.systemDefault()
     val readings = ctx.workouts.sortedByDescending { it.workout.start }
@@ -457,7 +457,7 @@ private fun Vo2Detail(ctx: ActivityDetailContext) {
 /** Time to recover: the hours left after your latest workout that says, and the recent workouts' own estimates. */
 @Composable
 private fun RecoverDetail(ctx: ActivityDetailContext) {
-    val color = MetricColors.readiness
+    val color = MetricColors.load
     var info by rememberSaveable { mutableStateOf(false) }
     val zone = ZoneId.systemDefault()
     val now = System.currentTimeMillis() / 1000
@@ -500,7 +500,7 @@ private fun RecoverDetail(ctx: ActivityDetailContext) {
 /** Energy: the day's estimate, your body's use at rest, how active the day was and how much of it was worn. */
 @Composable
 private fun EnergyDetail(ctx: ActivityDetailContext) {
-    val color = MetricColors.charge
+    val color = MetricColors.steps
     var info by rememberSaveable { mutableStateOf(false) }
     val e = ctx.r?.energy
     val total = e?.totalKcal?.let(Math::round)
@@ -579,7 +579,7 @@ private fun ActivityRelated(current: Score, ctx: ActivityDetailContext, heartPoi
         var first = true
         fun divider() = !first.also { first = false }
         ListRow(
-            Metric.Steps.title, MetricColors.steps, ctx.state.steps.takeIf { it > 0 }?.let { "%,d".format(it).replace(",", "") },
+            Metric.Steps.title, MetricColors.steps, ctx.state.steps.takeIf { it > 0 }?.let { "%,d".format(it) },
             ActivityCopy.goalShare(ctx.state.steps, goal), onClick = { ctx.onOpen(Detail.OfMetric(Metric.Steps)) }, divider = divider(),
             icon = Metric.Steps.rowIcon(),
         )
@@ -636,7 +636,7 @@ internal fun WeekDetail(ctx: ActivityDetailContext) {
         dayOf(it) in before..start.minusDays(1) && it.workout.sportType != org.openstrap.app.data.Workouts.GENERIC_ACTIVITY
     } else null
     val headline = scrub ?: when {
-        totals.stepsADay != null -> DetailHeadline("%,d".format(totals.stepsADay).replace(",", ""), WeekStory.label(week), change)
+        totals.stepsADay != null -> DetailHeadline("%,d".format(totals.stepsADay), WeekStory.label(week), change)
         steps == null -> DetailHeadline.none("Loading", WeekStory.label(week).replaceFirstChar { it.uppercase() })
         else -> DetailHeadline.none("No steps", "Monday to Sunday last week")
     }

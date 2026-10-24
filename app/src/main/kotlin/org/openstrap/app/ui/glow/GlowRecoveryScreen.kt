@@ -366,10 +366,8 @@ private fun SignalsList(signals: List<BodySignal>, waiting: String, onOpen: (Met
         signals.forEachIndexed { i, s ->
             val direction = History.status(s.today, s.normal)
             val value = s.today?.let { v ->
-                if (s.asDeviation && s.normal != null) {
-                    val d = v - s.normal.mean
-                    (if (d >= 0) "+" else "−") + s.metric.format(kotlin.math.abs(d))
-                } else s.metric.format(v) + s.unit
+                if (s.asDeviation && s.normal != null) s.metric.formatChange(v - s.normal.mean)
+                else s.metric.format(v) + s.unit
             }
             ListRow(
                 s.label, s.accent, value,

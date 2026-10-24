@@ -360,7 +360,7 @@ internal fun NapsDetail(
 ) {
     val naps = state.naps.sortedBy { it.start }
     val total = naps.sumOf { it.end - it.start }
-    val color = MetricColors.sleepRem
+    val color = MetricColors.sleepDeep
     val today = LocalDate.now()
     val isToday = state.date == today
     var scrub by remember(state.date) { mutableStateOf<DetailHeadline?>(null) }
@@ -440,7 +440,7 @@ private fun SleepRelated(current: Score, state: DayUiState, r: RecoveryResult?, 
         }
         if (current != Score.Naps) add { divider ->
             ListRow(
-                Score.Naps.title, MetricColors.sleepRem, naps.takeIf { it.isNotEmpty() }?.let { n -> clockDuration(n.sumOf { it.end - it.start }) },
+                Score.Naps.title, MetricColors.sleepDeep, naps.takeIf { it.isNotEmpty() }?.let { n -> clockDuration(n.sumOf { it.end - it.start }) },
                 if (naps.isEmpty()) "None that day" else TabCopy.naps(naps.size, clock(naps.minOf { it.start })),
                 onClick = { onOpen(Detail.OfScore(Score.Naps)) }, divider = divider, icon = Score.Naps.rowIcon(),
             )

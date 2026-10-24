@@ -303,7 +303,7 @@ private fun BreathingCard(b: org.openstrap.app.data.Recovery.BreathingDisturbanc
 /** Breathing disturbances as a Small beside the naps: the count an hour and your usual. Lit from below, a value. */
 @Composable
 private fun BreathingSmall(b: org.openstrap.app.data.Recovery.BreathingDisturbances, modifier: Modifier, onInfo: () -> Unit) =
-    SmallCard(MetricColors.sleepLight, "Breathing disturbances", "%.1f".format(b.perHour), "/ h", TabCopy.breathingShort(b), modifier, onClick = onInfo)
+    SmallCard(MetricColors.sleepLight, "Breathing disturbances", "%.1f".format(b.perHour), "an hour", TabCopy.breathingShort(b), modifier, onClick = onInfo)
 
 /**
  * The day's naps as a Small (a Wide when alone): the time napped, a strip of the latest nap's stages and when it was.
@@ -315,7 +315,7 @@ private fun NapsCard(state: DayUiState, modifier: Modifier, onOpen: () -> Unit) 
     if (naps.isEmpty()) return
     val stages = state.napStages[naps.last().start].orEmpty()
     SmallCard(
-        MetricColors.sleepRem, TabCopy.napsTitle(naps.size), clockDuration(naps.sumOf { it.end - it.start }), null,
+        MetricColors.sleepDeep, TabCopy.napsTitle(naps.size), clockDuration(naps.sumOf { it.end - it.start }), null,
         TabCopy.naps(naps.size, clock(naps.first().start)), modifier, kind = EdgeKind.Earlier, onClick = onOpen,
         extra = if (stages.isEmpty()) null else ({ StageStrip(stages, Modifier.padding(top = 8.dp)) }),
     )

@@ -464,7 +464,7 @@ fun GlowMetricDetailScreen(
     }
     val label = if (night) SleepCopy.nightLabel(metric, range) else DetailCopy.valueLabel(metric, range, live = live != null, today = isToday)
     val headline = scrub ?: when {
-        value != null -> DetailHeadline(metric.format(value).replace(",", ""), label, DetailCopy.statusWord(status))
+        value != null -> DetailHeadline(metric.format(value), label, DetailCopy.statusWord(status))
         night && range == Range.Day -> SleepCopy.nightNoValue(state.sleep != null, isToday).let { (word, why) -> DetailHeadline.none(word, why) }
         night && range == Range.Week -> DetailHeadline.none("No reading", "In the last 7 nights")
         range != Range.Day && stats == null -> DetailHeadline.none("Loading", DetailCopy.noValue(metric, range, isToday))
@@ -637,7 +637,7 @@ private fun DayChart(metric: Metric, state: DayUiState, color: Color, hasValue: 
             // Holding an hour puts its steps in the headline.
             Metric.Steps -> GlowBars(
                 state.hourlySteps, height = 200.dp, labels = HOURS, accent = color,
-                onScrub = { h -> onScrub(h?.let { DetailHeadline(Math.round(state.hourlySteps[it]).toString(), "steps, %02d:00 to %02d:00".format(it, (it + 1) % 24), null) }) },
+                onScrub = { h -> onScrub(h?.let { DetailHeadline("%,d".format(Math.round(state.hourlySteps[it])), "steps, %02d:00 to %02d:00".format(it, (it + 1) % 24), null) }) },
             )
             Metric.RestingHr -> if (state.restingTrend.any { it.value != null }) {
                 GlowTrend(state.restingTrend.map { GlowDay(it.label, it.value) }, height = 200.dp)
@@ -678,7 +678,7 @@ private fun HistoryChart(
             onScrub(i?.let { values[it] }?.let { v ->
                 val d = dates[i]
                 val label = if (range == Range.Year) "week of ${d.format(DateTimeFormatter.ofPattern("d MMM"))}" else d.format(day)
-                DetailHeadline(metric.format(v).replace(",", ""), listOf(metric.unit, label).filter { it.isNotEmpty() }.joinToString(", "), DetailCopy.statusWord(History.status(v, normal)))
+                DetailHeadline(metric.format(v), listOf(metric.unit, label).filter { it.isNotEmpty() }.joinToString(", "), DetailCopy.statusWord(History.status(v, normal)))
             })
         },
     )
@@ -730,7 +730,7 @@ private fun RelatedList(related: List<Metric>, state: DayUiState, history: Daily
             val v = dayValue(m, state)
             val status = if (m == Metric.HeartRate) null else History.status(v, normal)
             ListRow(
-                m.title, colorOf(m), v?.let { m.format(it).replace(",", "") },
+                m.title, colorOf(m), v?.let { m.format(it) },
                 if (v == null) "Nothing for this day" else DetailCopy.statusWord(status) ?: m.unit.ifEmpty { null },
                 offNormal = status != null && status != 0, onClick = { onOpen(Detail.OfMetric(m)) }, divider = i > 0 || sleepRow,
                 icon = m.rowIcon(),

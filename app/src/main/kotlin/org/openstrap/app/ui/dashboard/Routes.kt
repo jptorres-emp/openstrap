@@ -13,11 +13,17 @@ enum class Metric(val title: String, val unit: String, val decimals: Int, val da
     Spo2("Blood oxygen", "%", 0, DailyMetric.Spo2),
     Stress("Stress", "", 0, DailyMetric.Stress),
     SkinTemperature("Skin temperature", "°C", 1, DailyMetric.SkinTemperature),
-    Breathing("Breathing rate", "br/min", 0, DailyMetric.Breathing),
+    Breathing("Breathing rate", "br/min", 1, DailyMetric.Breathing),
     Steps("Steps", "steps", 0, DailyMetric.Steps),
     ;
 
     fun format(v: Float): String = if (this == Steps) "%,d".format(Math.round(v)) else "%.${decimals}f".format(v)
+
+    /** A change from your normal, signed with a true minus (spec 2.3): "+0.2", "−0.3"; no sign is lost to rounding. */
+    fun formatChange(d: Float): String {
+        val shown = format(kotlin.math.abs(d))
+        return (if (d < 0 && shown.any { it in '1'..'9' }) "\u2212" else "+") + shown
+    }
 }
 
 /**

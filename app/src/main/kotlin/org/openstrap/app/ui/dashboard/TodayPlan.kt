@@ -25,7 +25,7 @@ enum class TodayCard(val label: String, val editable: Boolean = true, val pinnab
     HeartRate("Heart rate", pinnable = true),
     Activity("Steps", pinnable = true),
     Recovery("Recovery", pinnable = true),
-    Charge("Charge", pinnable = true),
+    Charge("Energy", pinnable = true),
     LoadToday("Load and time to recover", pinnable = true),
     /** Time to recover as a Small beside Load's after a workout: part of [LoadToday], hidden and pinned with it. */
     Recover("", editable = false),

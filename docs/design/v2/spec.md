@@ -57,16 +57,16 @@ how its value sits against your normal. Nothing is lit between levels, and nothi
 - **Locked on every glow card:** 28 dp corners, grain, the 1 dp hairline with its gloss, the black the core fades to,
   text top left. **Free per card:** hue, where the light comes from (`lightAngle`), how high it reaches (`lightLevel`).
 
-**Levels.** A card that shows a level (Charge, steps toward a goal on a glow, Load on an edge card) shows it as how far
+**Levels.** A card that shows a level (Energy, steps toward a goal on a glow, Load on an edge card) shows it as how far
 the light reaches.
 
 - On a glow card the light rises from the bottom, like a battery, on a Tall, a hero and every other level glow, Steps
   on Activity included, because its bars sit in the dark above the light. Only a short wide card with just a number
-  and a line (Charge on Today) fills across from the left. The lit edge is the light colour at full, the lit part is
+  and a line (Energy on Today) fills across from the left. The lit edge is the light colour at full, the lit part is
   the value's share of the card, then a soft 22 dp step into the dark core. At 0 the bottom 12% still glows.
-- A level glow is always this bright, because its light is the value. Beside a hero (Charge on Recovery, Charge as the
+- A level glow is always this bright, because its light is the value. Beside a hero (Energy on Recovery, Energy as the
   wide card under the hero on Today, in every moment that has it) it still counts as the screen's second glow, so no
-  third glow joins it. L3 is for a second glow that isn't a level. Charge is always a level, wherever it shows.
+  third glow joins it. L3 is for a second glow that isn't a level. Energy is always a level, wherever it shows.
 - On an edge card the light fills from the left to the value at 46% of the ink, 30% at the value, and fades out over
   40 dp past it. No progress bar.
 - When the value changes after a sync, the light moves from the old level to the new over 600 ms with the number (3.5).
@@ -95,14 +95,14 @@ reads as the same light:
 | Metric | Ink | Metric | Ink |
 |---|---|---|---|
 | Recovery | `readiness` #7CF2C9 | Heart rate, resting, lowest, average | `heart` #FF5A5F |
-| Charge | `charge` Ember #F66C28 | Steps, Activity, Active minutes, Energy, Distance | `steps` #C3F53C |
+| Energy | `charge` Ember #F66C28 | Steps, Activity, Active minutes, Calories, Distance | `steps` #C3F53C |
 | Sleep, last night, naps, regularity | `sleepDeep` #4C6FFF, stages `sleepLight` `sleepRem` `sleepAwake` | HRV | `hrv` #2DD4BF |
 | Blood oxygen | `spo2` #38BDF8 | Stress | `stress` #F062C0 |
 | Skin temperature | `temperature` #FF8A3D | Breathing rate, Breathing disturbances | `sleepLight` #8FA8FF |
 | Load, Time to recover | `load` #A78BFA | Habit Age | `habitAge` #D86BEA |
 | Heart points, VO2 max | `heart` | Evening hero (a moment, not a metric) | `evening` #A274F2 |
 
-- **Charge is one colour.** Ember orange on every surface. Its level shows as the light's height, never as a hue, so
+- **Energy is one colour.** Ember orange on every surface. Its level shows as the light's height, never as a hue, so
   `chargeScale`, `chargeAt` and `chargeDeep` go. The old gold `charge` #FFD166 becomes #F66C28.
 - **Recovery is one teal.** `readinessDeep` goes, and so does the band hue (teal, amber, coral): the word says the band.
 - **Neutral light** for cards that speak for no one metric (Your week, Workouts, strips): hsl 220 10% 55%.
@@ -136,7 +136,7 @@ app uses one of these roles, through `GlowType`. Material typography is not used
 | Caption | Sans 500 | 11 on 14, tabular | 50% | Axes, times, tags |
 
 - The card title is the same on a glow card and the edge card beside it. The build draws glow titles at 20 to 26
-  Light and edge titles at 15 Medium, which is the mismatch on Recovery (Charge beside Recharged).
+  Light and edge titles at 15 Medium, which is the mismatch on Recovery (Energy beside Recharged).
 - The word after a number ("bpm", "asleep", "today") sits on the digits' baseline in Body at 72%.
 
 **Dots are for numbers.** The main number of a card, list values and live numbers are dot-matrix digits
@@ -193,7 +193,7 @@ Two columns, unit width = (screen width minus 32 minus 12) / 2, 173 dp on a 390 
 | Large | Full width, as high as its content | The hero of the moment, with no empty band under it |
 | Wide | 2x1 | A number with a trend, a strip or a short chart |
 | Small | 1x1 | A number and a status word |
-| Tall | 1x2 | Charge as a battery, when it sits beside Smalls |
+| Tall | 1x2 | Energy as a battery, when it sits beside Smalls |
 | Strip | Full width, 68 dp | A state or an action (check-in, Start a workout on Today, last night collapsed) |
 
 Rows are one of: `Full(Large | Wide | Strip | List)`, `Pair(Small, Small)`, `TallPair(Tall, Small over Small)`. A lone
@@ -236,8 +236,8 @@ Every card on every screen is exactly one of these.
 **Never two cards in a row with the same design.** A card's design is its tier, the edge its light comes in from, and
 its shape: a Small and a Tall each count as a design of their own (`CardLook.shape`), so a Small never matches a Wide.
 Colour (the metric's, or the neutral light) doesn't count: two glows in a row, or two edge cards lit from the same side,
-look the same whatever their colours. A level glow (light filling from an edge, as Charge) is lit from that edge, so it
-differs from a hero's glow: Charge as the second glow sits right under the hero. Neighbours are cards one after the other in reading order, the two Smalls of a
+look the same whatever their colours. A level glow (light filling from an edge, as Energy) is lit from that edge, so it
+differs from a hero's glow: Energy as the second glow sits right under the hero. Neighbours are cards one after the other in reading order, the two Smalls of a
 Pair side by side, a Tall with each of its Smalls, every card of a row with the row over and under it, and on two
 columns also cards side by side or one over the other. On two columns a full-width card touches the top card of each
 column under it and the last of each column over it, on Today as on the tabs. Two Smalls side by side differ by their
@@ -269,7 +269,7 @@ metric's ink: L1 when usual, L2 when off your normal. **The border is never colo
 | Above your normal | Top, L2 |
 | Below your normal | Bottom, L2 |
 | Progress toward a goal or your usual | Bottom, L1, plus a 4 dp progress bar inside the card |
-| A level, like Charge as an edge card, or Load toward your usual | The light fills from the left across to the value, no bar. Its own design under the neighbour rule |
+| A level, like Energy as an edge card, or Load toward your usual | The light fills from the left across to the value, no bar. Its own design under the neighbour rule |
 | Live, now (heart rate today) | Right |
 | About earlier (Recovery after the morning, Habit Age, Naps) | Left |
 | Sleep (last night, regularity) | Top, like a night sky. Breathing disturbances is a value (bottom) |
@@ -298,7 +298,7 @@ icon to 30% and shows the dim bar for a value with "After your first night" or s
 | Breathing rate | `Lungs` |
 | Skin temperature | `Thermometer` |
 | Stress | `Brain02` |
-| Charge | `BatteryCharging01` |
+| Energy | `BatteryCharging01` |
 | Last night, naps | `Moon02` |
 | Steps | `FootPrints` |
 | Load | `Dumbbell01` |
@@ -309,7 +309,7 @@ icon to 30% and shows the dim bar for a value with "After your first night" or s
 | Habit Age (row and page) | `CalendarBlank`, apart from Time to recover's hourglass |
 | Workouts (All metrics) | `PersonSimpleRun`, apart from Load's dumbbell |
 
-Contributor rows (What drove it, where Charge went) keep their bar and no icon. Workout rows keep their sport tile.
+Contributor rows (What drove it, where Energy went) keep their bar and no icon. Workout rows keep their sport tile.
 Settings rows on the You and Strap pages keep their toned white icons.
 
 #### Tappable says so
@@ -323,7 +323,7 @@ Every card and row that opens something shows it, and nothing else does.
 - **A title row's note that opens something** ("All 4") keeps its caret after the note.
 - **Strips** that do one thing are buttons and need no caret. A strip that opens a page (Last night collapsed) has it.
 - Cards and rows that open nothing (What drove it while it has no detail, Recharged and Drained if they don't open
-  Charge) show no caret.
+  Energy) show no caret.
 - Pressed, a card or row scales to 0.98 (3.5).
 
 #### (i) on a card
@@ -336,8 +336,8 @@ never a "How it works" panel, a separate explanation card or an expandable secti
 
 | Card | Rule |
 |---|---|
-| Today hero | Light by moment (4.2): waking 225, midday Charge rising from below, workout window 45 with the rim at 120%, during a workout from below and pulsing, after a workout 270 with the rim at 80%, evening 315 in the Evening mood, night from below in the Night mood |
-| Charge | `lightLevel` = Charge / 100, light from below, Ember orange |
+| Today hero | Light by moment (4.2): waking 225, midday Energy rising from below, workout window 45 with the rim at 120%, during a workout from below and pulsing, after a workout 270 with the rim at 80%, evening 315 in the Evening mood, night from below in the Night mood |
+| Energy | `lightLevel` = Energy / 100, light from below, Ember orange |
 | Steps (Activity tab) | `lightLevel` = share of the goal, from below |
 | Recovery (tab hero, detail header) | The number sits in a dark pool: core behind the number, light all round |
 | Workout summary | Glow size by effort: an easy walk leaves most of the card dark, a hard run floods it |
@@ -366,8 +366,8 @@ Every chart kind in the app, drawn with the rules above:
 | Kind | Tier | Where | Touch |
 |---|---|---|---|
 | Line with scrub | Edge, detail | Heart rate day, night heart rate and breathing | Hold to scrub |
-| Ghost line of your usual | Edge | Steps, Load and Charge so far today | Read only |
-| Charge curve | Glow | Charge card and detail | Hold to scrub |
+| Ghost line of your usual | Edge | Steps, Load and Energy so far today | Read only |
+| Energy curve | Glow | Energy card and detail | Hold to scrub |
 | Hourly pill bars | Glow | Steps card | Tap an hour |
 | Trend dots | Edge, detail, Recovery hero | Recovery over the last 7 days beside the hero score, Habit Age over days | Tap a day |
 | Arc gauge | Detail | Recovery detail header only: a half circle open at the foot, centred, 124 dp radius and a 13 dp stroke with round caps. A track of white at 11% the whole way over, the value from the left end clockwise in a near white tint of the metric's colour (16% of the way from white). The score in dots centred inside, its foot a little above the arc's ends. Fills only to the new value after a sync, never from zero on open | None |
@@ -380,7 +380,7 @@ Every chart kind in the app, drawn with the rules above:
 | Zone arc | Workout | Live workout Heart view only | None |
 | Zone bar | Workout | Workout summary and detail, thin under each workout row and on Today's workout card | Tap a zone |
 | Age scale | Edge | Habit Age | None |
-| Contributor bars | List row | What drove Recovery, where Charge went | Tap a row |
+| Contributor bars | List row | What drove Recovery, where Energy went | Tap a row |
 | Route by zone | Workout | GPS workouts | Pan |
 | Range with handles | Detail | Add a workout, trim a workout | Drag |
 
@@ -414,8 +414,8 @@ metric's ink (2.5, Grouped list). Every other icon is white at 72%, or white whe
 | Edge light | Soft 62%, strong 75% | L1 70% over 48 dp, L2 90% over 72 dp |
 | Off normal on an edge card | The glow mockup coloured the hairline | Plain hairline, strength and the coloured value only |
 | Moods | Evening 60%, Night 40% | Evening 80%, Night 65% |
-| Charge colour | Gold, a red to green scale by value, orange on glow | Ember orange everywhere, level shown by the light's height |
-| Midday hero light | Said from above (90), while Charge rises from below | Charge rises from below, the level rule wins |
+| Energy colour | Gold, a red to green scale by value, orange on glow | Ember orange everywhere, level shown by the light's height |
+| Midday hero light | Said from above (90), while Energy rises from below | Energy rises from below, the level rule wins |
 | Corners | Glow 48 in the build, 36 in the spec, edge 28 | 28 on every card |
 | Card padding | Four different paddings | 20 dp on every side |
 | List row marker | An 8 dp coloured dot | A 20 dp icon in the metric's ink |
@@ -478,16 +478,16 @@ the moment.
 
 **All metrics sheet.** A modal sheet over the current tab, in the style of the sheets over the app: every metric grouped by section,
 each row with its value for the day. Tapping a row closes the sheet, then opens that metric's detail on the current
-tab. Recovery and Sleep rows switch to their tab at its root, and Charge to the Recovery tab with its card in view.
+tab. Recovery and Sleep rows switch to their tab at its root, and Energy to the Recovery tab with its card in view.
 Each row shows what its card shows: Recovery the strap's estimate (so labelled) while OpenStrap's score is withheld,
-Charge a dash "After your first night" until anchored, Habit Age the rounded estimate. Workouts, in heart red (the
+Energy a dash "After your first night" until anchored, Habit Age the rounded estimate. Workouts, in heart red (the
 neutral light is for cards), counts the last 7 days, and says so.
 Back or a swipe down closes it. The tab bar under it does nothing while it's open.
 
 ### 3.3 Navigation rules
 
-- A card opens its own detail, grown out of the card (3.5), on Today as on the tabs. Charge on Today (the card and the
-  midday hero) opens the Charge detail, as the battery on Recovery does. Recovery on Today (the waking hero and the
+- A card opens its own detail, grown out of the card (3.5), on Today as on the tabs. Energy on Today (the card and the
+  midday hero) opens the Energy detail, as the battery on Recovery does. Recovery on Today (the waking hero and the
   "This morning" card) opens the Recovery detail, and Last night (the card and its strip) the Sleep score detail, as
   the Sleep tab's hero does. The evening hero, a summary of the day, opens the Recovery screen. **No card ever switches tab.** `FocusTarget` and the tab
   jumps in `MainActivity` are removed.
@@ -526,11 +526,11 @@ Motion is signal. Specs use Compose springs with no bounce (`dampingRatio = 1f`)
 | Avatar to You, strap chip to Strap | The same shared bounds from the 44 dp button: the button's circle grows into the page, Back shrinks the page into it. 500 in, 300 out. A page opened any other way (Profile from a card) fades in | Where it came from |
 | Sheets (info, calendar, Edit Today, All metrics) | Slide up with stiffness 400, the scrim fades to 60% black | It sits over the page |
 | Value change | Animate from the old to the new value over about 450 ms, only after a sync or a live update. Never from zero on open | What changed |
-| Level change (Charge, steps, Load) | The light rises or falls from the old level to the new over 600 ms, with the number | What changed |
+| Level change (Energy, steps, Load) | The light rises or falls from the old level to the new over 600 ms, with the number | What changed |
 | Moment change | Hero content crossfades over 300 ms. Rows reorder only at a moment boundary, never while the screen is visible | The day moved on |
 | Press | Scale to 0.98 over 100 ms, back on release. No ripple on cards | It heard you |
 | Live heart rate | `Heartbeat` at the real bpm | Alive |
-| Collapsing summary | When the hero scrolls off, a slim strip with Recovery, Charge and Sleep pins under the header, tracking scroll exactly | Keeps the answer in view |
+| Collapsing summary | When the hero scrolls off, a slim strip with Recovery, Energy and Sleep pins under the header, tracking scroll exactly | Keeps the answer in view |
 | Tab switch | The pager slides. Cards inside it don't animate | |
 | Default | Stiffness 400 | |
 | Workout | Stiffness 800 | Snappy |
@@ -583,11 +583,11 @@ Rows in order. Sizes per 2.4, tiers per 2.5.
 
 | Moment | Hero (glow) | Then |
 |---|---|---|
-| Waking up | Recovery: "Slept 7 h 40. Recovered enough for your usual training." Score, status word, "Charge at waking 84" | Check-in strip. List "Your body this morning" (resting HR, HRV, blood oxygen, breathing rate). Edge: Last night (the sleep score in dots with its word and time asleep under it, as on the Sleep tab, then the stage strip), Heart rate, Steps |
-| Midday | Charge: sentence, value with `lightLevel`, recharged and drained | Strip: Last night collapsed. Edge: Steps (ghost line), Heart rate. List "Right now" (stress, HRV). Edge: Recovery (left edge) |
-| Workout window | "Ready for effort. You usually run around now." Start button, Other sport | Second glow: Charge (wide), a level glow, the light filling across from the left to the value (Recovery's battery on its side). List "Before you start" (Load today, time to recover). Edge: Steps. Strip: Last night |
-| After a workout | "Since your run, 40 min. Heart rate settling." Drop curve into your resting range (a dim band), calm glow | Edge: the workout (left, with its zone bar). Small pair: Load (from below, its bar filling toward your usual day's Load) and To recover (flips to the top). Second glow: Charge, as in the workout window, with its line so far. Edge: Steps |
-| Evening | "A full day. A run, 13,860 steps and a Load above your usual." Steps, Load, Charge left. "Bedtime in 1 h 10". Dim mood | Second glow: Charge, as in the workout window. Edge: Steps (line so far), Heart rate (the day's line, flips to the top under Steps unless live). Strip: Last night |
+| Waking up | Recovery: "Slept 7 h 40. Recovered enough for your usual training." Score, status word, "Energy at waking 84" | Check-in strip. List "Your body this morning" (resting HR, HRV, blood oxygen, breathing rate). Edge: Last night (the sleep score in dots with its word and time asleep under it, as on the Sleep tab, then the stage strip), Heart rate, Steps |
+| Midday | Energy: sentence, value with `lightLevel`, recharged and drained | Strip: Last night collapsed. Edge: Steps (ghost line), Heart rate. List "Right now" (stress, HRV). Edge: Recovery (left edge) |
+| Workout window | "Ready for effort. You usually run around now." Start button, Other sport | Second glow: Energy (wide), a level glow, the light filling across from the left to the value (Recovery's battery on its side). List "Before you start" (Load today, time to recover). Edge: Steps. Strip: Last night |
+| After a workout | "Since your run, 40 min. Heart rate settling." Drop curve into your resting range (a dim band), calm glow | Edge: the workout (left, with its zone bar). Small pair: Load (from below, its bar filling toward your usual day's Load) and To recover (flips to the top). Second glow: Energy, as in the workout window, with its line so far. Edge: Steps |
+| Evening | "A full day. A run, 13,860 steps and a Load above your usual." Steps, Load, Energy left. "Bedtime in 1 h 10". Dim mood | Second glow: Energy, as in the workout window. Edge: Steps (line so far), Heart rate (the day's line, flips to the top under Steps unless live). Strip: Last night |
 | Night | As evening, Night mood | As evening |
 | During a workout | The workout, live heart rate | As midday without Heart rate (the hero has it) |
 
@@ -596,7 +596,7 @@ How each moment looks. The [design system page](design-system.html#moments) show
 | Moment | Header | Hero colour | Light from | Strength | Mood | Motion | Leads with |
 |---|---|---|---|---|---|---|---|
 | Waking up | "Waking up" | Recovery | Lower left, 225 | L4 | Day | 400 | A sentence |
-| Midday | "Midday" | Charge | Rises from below to the value | L4 level | Day | 400 | A sentence |
+| Midday | "Midday" | Energy | Rises from below to the value | L4 level | Day | 400 | A sentence |
 | Workout window | "Workout time" | Heart rate | Upper right, 45 | L4, rim at 120% | Day | 800 | A short prompt and Start |
 | During a workout | The sport ("Running") | The current zone's colour | Below, pulsing at the real bpm | L4 | Day | 800 | The number |
 | After a workout | "After your run" | Heart rate | Below, 270 | L4, rim at 80% | Day | 400 | A sentence |
@@ -610,7 +610,7 @@ Heart rate shows at waking, midday, the evening and night, never in the workout 
 Its card is the line with scrub: the day's heart rate with your resting range (your normal resting heart rate, mean
 ± one standard deviation over 30 days) as a dim band, the big number and its time following the finger. The Steps
 card draws today's steps so far as a line, with the share of the goal as its progress bar. The ghost of your usual by
-this time waits for hourly steps from past days (step 6). Charge's level glow draws its line so far until the evening.
+this time waits for hourly steps from past days (step 6). Energy's level glow draws its line so far until the evening.
 
 Present in every moment when they apply:
 
@@ -632,7 +632,7 @@ Present in every moment when they apply:
 |---|---|
 | No strap paired | Hero is the pairing stage: strap render, a solid hairline to the phone, one sentence per step, "Find my strap". Below, waiting cards dimmed |
 | First nights | Cards keep their shape, value as a dim dash, "After your first night" |
-| No sleep last night | Waking hero: "No sleep recorded last night. Was the strap on?" Charge leads from then on |
+| No sleep last night | Waking hero: "No sleep recorded last night. Was the strap on?" Energy leads from then on |
 | Sync stopped | Chip turns amber "Not synced". Stale cards get an "Up to 09:40" marker. The app retries in the background. No bar |
 | Sync stuck when it matters | Still failing after 3 h, or in the morning when last night is on the strap: the hero becomes "Last night is still on the strap" with Sync now and "Last tried 07:42". Lists show "Waiting for last night" |
 | Strap disconnected | Chip shows "18 min ago" in amber. Nothing else changes until data is stale |
@@ -658,14 +658,14 @@ card of each column under it.
    score (step 6).
 2. List "What drove it": the three contributors that weigh most, as contributor bars (name, bar, word, colour when
    off usual). "Top 3 of 9" in the title until the Recovery detail exists to open (step 6).
-3. TallPair: Charge as a Tall glow battery (`lightLevel`, the light rising to the value), the Charge curve (hold to
+3. TallPair: Energy as a Tall glow battery (`lightLevel`, the light rising to the value), the Energy curve (hold to
    scrub, the number follows), the number and "84 at waking". Beside it, Recharged ("+44", "Sleep and calm rest",
    lit from below) over Drained ("-36", "Mostly being awake", lit from above).
 4. List "Body signals": resting heart rate, HRV, skin temperature as deviation, breathing rate, blood oxygen, stress.
    A plain list again: the Smalls sit between it and What drove it.
 5. Edge: Habit Age (left edge), always last. See 5.4.
 
-Wide: the hero spans both columns. What drove it and Habit Age on the left, the Charge battery and Body signals on the
+Wide: the hero spans both columns. What drove it and Habit Age on the left, the Energy battery and Body signals on the
 right, so no two lists sit side by side.
 
 The off-baseline panel, How it works and the strap's own score are gone from the screen. The strap's score and the
@@ -703,7 +703,7 @@ each nap's heart rate (the naps in the Sleep detail, step 6).
 1. Wide edge card "Start a workout", neutral light from below. Today only. Your three most used sports as 64 dp
    tiles with their names under them, then All sports. Outdoor sports carry a small location mark on the tile. A tile
    opens Ready with that sport (6.3).
-2. Level glow: Steps, drawn like the Charge battery (2.1 Levels, the page's level card): the light rises from
+2. Level glow: Steps, drawn like the Energy battery (2.1 Levels, the page's level card): the light rises from
    below to the share of the goal, full at the bottom edge, with the near-black core above it. Title top left with "Goal
    10,000" as its note, then the hourly pill bars in the dark part (white at 45%, the latest hour, or the one tapped,
    full white; hours with no steps and those still to come are not drawn, only the hairline baseline, 2.7), then the
@@ -774,7 +774,7 @@ The method, the pace of aging and what moves it live in its info sheet.
 
 ### 6.1 Metric detail template
 
-One template for every number, including Recovery, Charge, Sleep score, Heart points, Load, VO2 max, active minutes,
+One template for every number, including Recovery, Energy, Sleep score, Heart points, Load, VO2 max, active minutes,
 energy, regularity and steps. Habit Age keeps its own screen in the same style.
 
 1. Hero area tinted with the metric colour, fading to black. Back, metric switcher (siblings in the same group),
@@ -866,7 +866,8 @@ From the brief, enforced in code review and by a test (8.2):
 | Use | Never |
 |---|---|
 | Recovery (the score and the tab) | Readiness, recovered (as a score name) |
-| Charge | Battery, energy score |
+| Energy | Charge (it read as the strap's battery), battery, energy score, BioCharge |
+| Calories | Energy (that's the body's Energy, above) |
 | Load | Strain (on cards), training load, TRIMP |
 | Heart points | PAI (named once, in its info sheet) |
 | Sleep regularity | SRI, regularity index |

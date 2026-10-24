@@ -34,9 +34,9 @@ enum class Metric(val title: String, val unit: String, val decimals: Int, val da
  * the day has them.
  */
 enum class Score(val title: String) {
-    Recovery("Recovery"), Charge("Charge"), Sleep("Sleep score"), Regularity("Sleep regularity"), Naps("Naps"),
+    Recovery("Recovery"), Charge("Energy"), Sleep("Sleep score"), Regularity("Sleep regularity"), Naps("Naps"),
     HeartPoints("Heart points"), ActiveMinutes("Active minutes"), Load("Load"), Vo2Max("VO2 max"),
-    Recover("Time to recover"), Energy("Energy"), Distance("Distance"),
+    Recover("Time to recover"), Energy("Calories"), Distance("Distance"),
 }
 
 /** Your daily goals, provided once at the top of the app so every screen measures against the same ones. */

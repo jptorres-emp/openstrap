@@ -7,7 +7,7 @@ What published research says about each part of OpenStrap's health model, and wh
 ## Summary
 
 * The evidence supports individual signals, not composite scores. A 2025 review of 14 composite scores from 10 manufacturers found no published formulas and little validation ([Doherty et al. 2025](https://www.degruyterbrill.com/document/doi/10.1515/teb-2025-0001/html)).
-* So every weight and curve in Readiness, Strain and Charge is a design choice. What we test them against matters more than the formula.
+* So every weight and curve in Readiness, Strain and Energy is a design choice. What we test them against matters more than the formula.
 * Readiness means "how far last night was from your own normal". It doesn't predict anything. Even HRV-guided training, the best-tested use of nightly HRV, shows small effects: effect size 0.42 in Vesterinen 2016 ([JYX](https://jyx.jyu.fi/handle/123456789/50625)) and no significant group difference in Javaloyes 2019 ([UMH](https://dspace.umh.es/handle/11000/30650?locale=en)).
 * The first job is a backtest harness and a morning check-in, so the 2026-10-30 review has data to decide with.
 
@@ -29,7 +29,7 @@ What published research says about each part of OpenStrap's health model, and wh
 | Training load | Banister on HRR ≥ 0.20 | Keep; 3-of-5-minute filter, 14-day daytime RHR | Probable | S |
 | ACWR | 5 % of Readiness | Out of Readiness; descriptive, labelled contested | Established (against scoring) | S |
 | Strain 0–21 | none | 21·(1 − e^(−TRIMP/180)) plus "vs your usual" | Design choice | S |
-| Charge and stress | Firstbeat-style states | Keep; 3-minute stress gate, new label | Contested | S |
+| Energy and stress | Firstbeat-style states | Keep; 3-minute stress gate, new label | Contested | S |
 | Energy expenditure | none | Mifflin BMR-anchored per-minute model | Established (BMR), Contested (rest) | L |
 | MVPA, steps, distance | none | Cadence 100/130, WHO ×2, step length from height | Established (thresholds), Contested (distance) | M |
 | VO2max, fitness age | none | Jurca 2005 as a band; fitness age optional; healthspan age proposed ([healthspan.md](healthspan.md)), not scheduled | Established (Jurca), design choice (fitness age, combining healthspan terms) | M |
@@ -231,9 +231,9 @@ No HR-load method has been validated on everyday waking minutes. Even in structu
 * A fixed absolute curve keeps today's 12 comparable with last year's. WHOOP's 0–21 Strain has no published validation ([WHOOP](https://www.whoop.com/thelocker/how-does-whoop-strain-work-101/)).
 * Shown separately: "vs your usual" = the percentile of today's TRIMP within the last 90 days.
 
-## Charge and stress (Contested)
+## Energy and stress (Contested)
 
-Charge stays. Firstbeat's method is the best publicly documented template: activity above 30 % of VO2max, 20–30 % as daily activity, and falling post-exercise EPOC never count as stress ([Firstbeat white paper](https://www.firstbeat.com/wp-content/uploads/2015/10/Stress-and-recovery_white-paper_20145.pdf)). Its only support comes from the manufacturer (r ≈ 0.40–0.50 with waking cortisol). Consumer stress scores separate rest from lab stress tasks but barely track self-reported daily stress ([Rosenbach et al. 2025](https://www.biorxiv.org/content/10.1101/2025.01.06.630177v1); [JMIR 2026](https://www.jmir.org/2026/1/e78244)).
+Energy stays. Firstbeat's method is the best publicly documented template: activity above 30 % of VO2max, 20–30 % as daily activity, and falling post-exercise EPOC never count as stress ([Firstbeat white paper](https://www.firstbeat.com/wp-content/uploads/2015/10/Stress-and-recovery_white-paper_20145.pdf)). Its only support comes from the manufacturer (r ≈ 0.40–0.50 with waking cortisol). Consumer stress scores separate rest from lab stress tasks but barely track self-reported daily stress ([Rosenbach et al. 2025](https://www.biorxiv.org/content/10.1101/2025.01.06.630177v1); [JMIR 2026](https://www.jmir.org/2026/1/e78244)).
 
 * Keep every current constant, including the personal threshold *T* (`STRESS_MARGIN`, clamped to 50–70).
 * New: stress drain starts only after ≥ 3 minutes in a row at or above *T*.
@@ -368,7 +368,7 @@ The Helio Strap has no published validation for nightly RMSSD, resting HR, skin 
 6. **Sleep (S):** drop the stage target, age-based need, new debt formula, continuity score.
 7. **Regularity (M):** SRI and the sleep-health count.
 8. **Load (S):** 14-day daytime RHR, 3-of-5 filter, max-HR agreement rule, CTL/ATL/Form, Strain.
-9. **Charge (S):** 3-minute stress gate, labels; BioCharge logging if readable.
+9. **Energy (S):** 3-minute stress gate, labels; BioCharge logging if readable.
 10. **Activity (M):** step difference flag, MVPA, distance.
 11. **Energy expenditure (L).**
 12. **VO2max (M):** Jurca band after checking the coefficients; optional fitness age; GPS phase 2 later.

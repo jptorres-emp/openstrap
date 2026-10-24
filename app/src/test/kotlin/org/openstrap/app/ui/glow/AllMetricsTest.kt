@@ -63,14 +63,14 @@ class AllMetricsTest {
         fun status(date: java.time.LocalDate, name: String) =
             metricIndex(empty.copy(date = date), null, null, emptyList(), today).flatMap { it.rows }.first { it.name == name }
         // Without a value the row says so; the status words are checked through a day that has none of either.
-        assertEquals(NO_VALUE, status(today, "Charge").status)
+        assertEquals(NO_VALUE, status(today, "Energy").status)
         assertEquals("Last 7 days", status(today, "Workouts").status)
     }
 
     @Test fun `rows whose home is a tab go to it, the rest open their detail`() {
         val targets = metricIndex(empty, null, null, emptyList()).flatMap { it.rows }.associate { it.name to it.target }
         assertEquals(IndexTarget.Home(HomeTab.Recovery), targets["Recovery"])
-        assertEquals(IndexTarget.Home(HomeTab.Recovery, charge = true), targets["Charge"])
+        assertEquals(IndexTarget.Home(HomeTab.Recovery, charge = true), targets["Energy"])
         assertEquals(IndexTarget.Home(HomeTab.Sleep), targets["Sleep"])
         assertEquals(IndexTarget.Open(Detail.Healthspan), targets["Habit Age"])
         assertEquals(IndexTarget.Open(Detail.AllWorkouts), targets["Workouts"])

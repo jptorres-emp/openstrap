@@ -263,7 +263,7 @@ private fun ChargeTall(
     val scrubbed = picked?.let { i -> values.getOrNull(i)?.let { it.toInt() to clockAt(day.first + i * step) } }
     GlowCard(GlowStyle.Ember.copy(lightLevel = (now ?: 0) / 100f, second = true), modifier, onClick = onOpen) {
         Column(Modifier.fillMaxHeight()) {
-            GlowHeader("Charge", tag = tag)
+            GlowHeader("Energy", tag = tag)
             if (c != null && now != null && c.points.size >= 2) {
                 Spacer(Modifier.height(10.dp))
                 // The Charge curve (chart kit): sleep fills it, the day drains it. Scrubbing moves the number.

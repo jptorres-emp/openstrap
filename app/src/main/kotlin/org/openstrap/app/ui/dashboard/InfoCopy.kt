@@ -178,7 +178,7 @@ object InfoCopy {
                 "strap's own readings may stand in.",
         )
         Score.Charge -> Info(
-            "Charge",
+            "Energy",
             "Your energy right now, from 0 to 100. Sleep fills it and the day uses it.",
             CHARGE_SCALE,
             how = "Think of it as a battery that runs all day. Sleep fills it, deep sleep most of all, and a calm, steady " +
@@ -186,8 +186,8 @@ object InfoCopy {
                 "quiet, relaxed moments slow the drain. It's worked out on this phone from your heart rate, minute by " +
                 "minute, as a guide to plan your day, not medical advice.",
             moves = "A long, calm night fills it more. Workouts, a stressful day and a late night use it up.",
-            off = "Charge starts after your first night. With the strap off overnight there's no sleep to fill it from, " +
-                "so the day starts from your usual Charge at waking, an estimate.",
+            off = "Energy starts after your first night. With the strap off overnight there's no sleep to fill it from, " +
+                "so the day starts from your usual Energy at waking, an estimate.",
         )
         Score.Sleep -> Info(
             "Sleep score",
@@ -299,7 +299,7 @@ object InfoCopy {
                 "the morning's Recovery score.",
         )
         Score.Energy -> Info(
-            "Energy",
+            "Calories",
             "The energy your body uses in a day, at rest and moving, in kilocalories (kcal). An estimate.",
             emptyList(),
             how = "Your body's use at rest comes from your weight, height, age and sex (Mifflin-St Jeor). On top of it " +

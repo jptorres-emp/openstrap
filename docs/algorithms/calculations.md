@@ -16,7 +16,7 @@ OpenStrap is a wellness app. None of these numbers is a medical measurement.
 4. [Your heart-rate settings: resting and maximum](#4-your-heart-rate-settings-resting-and-maximum)
 5. [Readiness (0–100, each morning)](#5-readiness-0100-each-morning)
 6. [Body signals off baseline](#6-body-signals-off-baseline)
-7. [Charge (0–100, minute by minute)](#7-charge-0100-minute-by-minute)
+7. [Energy (0–100, minute by minute)](#7-charge-0100-minute-by-minute)
 8. [Training load, Strain and fitness/fatigue](#8-training-load-strain-and-fitnessfatigue)
 9. [Sleep screen](#9-sleep-screen)
 10. [Activity: steps, distance, active minutes](#10-activity-steps-distance-active-minutes)
@@ -32,7 +32,7 @@ OpenStrap is a wellness app. None of these numbers is a medical measurement.
 
 **Taken from the strap as is:** heart rate, steps, sleep sessions and stages, RMSSD (HRV) samples, SpO₂, stress (0–100), skin temperature, breathing rate, the daily resting HR, PAI, the strap's sleep score, its sleep-apnea summary (desaturation event count), and workout records with their training effect.
 
-**Calculated by OpenStrap:** everything in sections 3–14: Readiness, body-signal alerts, Charge, training load, Strain, fitness/fatigue, sleep score (when the strap gave none), sleep debt, sleep regularity, sleep-health count, active minutes, distance, calories, VO2max, workout zones and recovery HR, and training effect, EPOC, recovery time and run VO2max for workouts started in OpenStrap.
+**Calculated by OpenStrap:** everything in sections 3–14: Readiness, body-signal alerts, Energy, training load, Strain, fitness/fatigue, sleep score (when the strap gave none), sleep debt, sleep regularity, sleep-health count, active minutes, distance, calories, VO2max, workout zones and recovery HR, and training effect, EPOC, recovery time and run VO2max for workouts started in OpenStrap.
 
 **Logged but not used in any score:** the strap's own Readiness and its parts, and your morning check-in (1–5, asked on Today before noon). They're kept for the calibration review.
 
@@ -96,7 +96,7 @@ How hard your heart is working, from 0 (resting) to 1 (maximum):
 
 HRR = (HR − resting HR) ÷ (max HR − resting HR), kept between 0 and 1.2
 
-This is the intensity measure behind training load, Charge, active minutes and calories. Section 4 explains where resting and max HR come from.
+This is the intensity measure behind training load, Energy, active minutes and calories. Section 4 explains where resting and max HR come from.
 
 ### TRIMP (training impulse) per minute
 
@@ -167,7 +167,7 @@ Heart-rate reserve is defined against resting HR while **awake**. Using the much
 
 ### Maximum HR
 
-One rule for the whole app: Readiness, Charge, load, active minutes, calories, and workout zones when a workout has no max HR of its own (section 13).
+One rule for the whole app: Readiness, Energy, load, active minutes, calories, and workout zones when a workout has no max HR of its own (section 13).
 
 1. A **tested** max you entered in the profile (120–230 bpm) always wins.
 2. Otherwise, an estimate:
@@ -281,7 +281,7 @@ Once on, an Alert stays until **2 nights in a row without a core flag**.
 
 ---
 
-## 7. Charge (0–100, minute by minute)
+## 7. Energy (0–100, minute by minute)
 
 A body-battery: sleep fills it, and the day drains it.
 
@@ -303,12 +303,12 @@ A body-battery: sleep fills it, and the day drains it.
 | **Relax** | stress < 25, < 10 steps and HRR < 20 % | + 0.00015 × (100 − charge), no drain (85 → 86 over 8 hours) |
 | **Rest** | anything else awake | − 0.0005 × charge (0.04 at 80, 0.025 at 50) |
 
-Charge is always kept within 0–100.
+Energy is always kept within 0–100.
 
 * **Moving** means the strap counted 1–250 steps that minute, as for daily load. Sitting with a raised heart rate (heat, coffee, a fever) isn't Activity or Exercise outside a workout, short of a sustained run (below): it's Stress if the stress score says so, otherwise Rest, and it can't Relax.
 * **Sustained effort:** 10 or more minutes in a row at HRR ≥ 30 % outside a workout count as Exercise even without steps (unrecorded cycling or rowing). Shorter spikes stay Stress or Rest.
-* **Not worn** uses the strap's own off-body reports where OpenStrap was connected to hear them, plus the heart-rate gap guess everywhere (an "on body" report doesn't cancel it, as it may be stale). Charge then follows Zepp: it drifts down at Zepp's default no-wear rate (about 2.9 an hour above 50). After 384 not-worn minutes (6.4 hours) since waking, or straight away when the strap is off over your usual sleep time, there is no value (a gap in the chart). After a night off, Charge restarts when the strap is back on from the median of your last 7 wake values (80 without any), and the day says "Strap off overnight, Charge estimated." After a long stretch off in the day, the gap lasts until the next sleep, which starts from 50.
-* **Rest drain** is proportional to charge, so a desk day still runs Charge down but more slowly as it falls, as Zepp's mental pool does; Zepp's physical pool doesn't drain at rest at all.
+* **Not worn** uses the strap's own off-body reports where OpenStrap was connected to hear them, plus the heart-rate gap guess everywhere (an "on body" report doesn't cancel it, as it may be stale). Energy then follows Zepp: it drifts down at Zepp's default no-wear rate (about 2.9 an hour above 50). After 384 not-worn minutes (6.4 hours) since waking, or straight away when the strap is off over your usual sleep time, there is no value (a gap in the chart). After a night off, Energy restarts when the strap is back on from the median of your last 7 wake values (80 without any), and the day says "Strap off overnight, Energy estimated." After a long stretch off in the day, the gap lasts until the next sleep, which starts from 50.
+* **Rest drain** is proportional to charge, so a desk day still runs Energy down but more slowly as it falls, as Zepp's mental pool does; Zepp's physical pool doesn't drain at rest at all.
 * **Body-signal Alert:** from the start of a night in Alert until the next sleep starts, every gain is × 0.5 and every drain × 1.5 (Zepp's health-alarm limits). Watch changes nothing.
 
 **Sleep details**
@@ -324,14 +324,14 @@ Charge is always kept within 0–100.
 **Stress readings:** a minute uses the latest stress reading from the past 10 minutes.
 
 **Stress exclusion around workouts:** the strap's stress score comes from HRV, which exercise suppresses, so readings taken during a stored workout (phone or strap, active time only, pauses left out) or in the **20 minutes after** it ends are ignored. 20 minutes is the half-life of the after-burn tally above. A phone workout's pause counts as an end, so a pause is also covered for its first 20 minutes. In that window:
-* Charge never enters Stress or Relax, and a reading taken there isn't carried into the minutes after it.
+* Energy never enters Stress or Relax, and a reading taken there isn't carried into the minutes after it.
 * The personal stress threshold doesn't use those readings.
 * The day's stress (the Today tile, the day chart, which shows a gap, and the daily average, lowest and highest behind the week, month and year views) leaves them out.
 * The readings are still stored and exported.
 
 ### Your personal stress threshold
 
-The point where the strap's stress score starts to drain Charge.
+The point where the strap's stress score starts to drain Energy.
 
 * Default: **60**, where Zepp's "medium" band begins.
 * Personal: built from **calm readings** over the last 14 days. A calm reading is awake, under 10 steps that minute, HRR under 20 %, and outside the stress exclusion around workouts.
@@ -340,7 +340,7 @@ The point where the strap's stress score starts to drain Charge.
 
 ### What the screen shows
 
-* Charge now (the last minute with data), Charge at wake, and the day's highest and lowest.
+* Energy now (the last minute with data), Energy at wake, and the day's highest and lowest.
 * **Recharged:** the total gained during the day.
 * **Drained:** split into exercise, stress and everyday living. In exercise and stress minutes, the basic 0.04 part (× 1.5 in Alert) goes to "living" and the rest to exercise or stress.
 * Nothing is shown until the simulation has seen at least one sleep, because without one the number would only reflect the starting guess.
@@ -618,7 +618,7 @@ The strap works these out for the workouts it records. Zepp works them out for a
 
 EPOC ← EPOC + [0.01 × (e^(7x) − 1) − 0.034 × (1 − x) × EPOC] × minutes
 
-* The first term rises steeply with intensity, as EPOC does (Børsheim & Bahr 2003). The second clears EPOC at Charge's rate at rest (×0.966 a minute, half-life about 20 minutes) and not at all at max.
+* The first term rises steeply with intensity, as EPOC does (Børsheim & Bahr 2003). The second clears EPOC at Energy's rate at rest (×0.966 a minute, half-life about 20 minutes) and not at all at max.
 * The workout's EPOC is the peak, shown as a whole number labelled "EPOC", as the strap's is, so the two compare. It is the workout's effect figure, not daily load: daily load is TRIMP only (section 8).
 * 0.01 and 7 are OpenStrap's own fit to these points: 30 easy minutes at 60 % HRR ≈ 16; an hour at 65 % ≈ 40; six 3-minute intervals at 92 % ≈ 110; an hour at 85 % ≈ 200.
 

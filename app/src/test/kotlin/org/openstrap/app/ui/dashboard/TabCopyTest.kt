@@ -72,7 +72,7 @@ class TabCopyTest {
         assertEquals("Used 20 since waking", TabCopy.chargeLine(64, 84, true))
         assertEquals("Up 5 since waking", TabCopy.chargeLine(89, 84, true))
         assertEquals("Level since waking", TabCopy.chargeLine(84, 84, true))
-        assertEquals("Charge starts after your first night. Sleep is what fills it.", TabCopy.chargeLine(null, null, false))
+        assertEquals("Energy starts after your first night. Sleep is what fills it.", TabCopy.chargeLine(null, null, false))
     }
 
     @Test fun `the night against the rest of the week`() {

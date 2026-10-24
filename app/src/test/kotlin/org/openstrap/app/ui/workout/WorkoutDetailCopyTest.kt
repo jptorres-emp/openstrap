@@ -95,7 +95,7 @@ class WorkoutDetailCopyTest {
 
     @Test fun `facts leave out what there's nothing to say about`() {
         val all = WorkoutDetailCopy.facts(5210f, false, 4 * 60L + 12, 6201, 412, Locale.UK)
-        assertEquals(listOf("Distance", "Paused", "Steps", "Energy"), all.map { it.name })
+        assertEquals(listOf("Distance", "Paused", "Steps", "Calories"), all.map { it.name })
         assertEquals("5.21", all[0].value)
         assertEquals("Kilometres", all[0].status)
         assertEquals("4:12", all[1].value)

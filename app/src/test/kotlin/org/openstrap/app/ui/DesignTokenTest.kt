@@ -170,7 +170,7 @@ class DesignTokenTest {
 
     @Test fun `no metric has a second colour`() {
         val found = find(Regex("""\b(chargeScale|chargeAt|chargeDeep|readinessDeep)\b|MetricColors\.bad\b|\bval bad\b"""))
-        if (found.isNotEmpty()) fail("Charge is one Ember, Recovery one teal, and bad is gone (spec 2.2):\n" + found.joinToString("\n"))
+        if (found.isNotEmpty()) fail("Energy is one Ember, Recovery one teal, and bad is gone (spec 2.2):\n" + found.joinToString("\n"))
     }
 
     @Test fun `every dot-matrix number takes one of the six dot sizes`() {

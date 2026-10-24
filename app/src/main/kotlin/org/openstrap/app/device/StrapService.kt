@@ -210,11 +210,11 @@ class StrapService : LifecycleService() {
     )
 
     /**
-     * Your day first, the link second: "Recovery 72%, Charge 58" over "Connected, 80%", with the last sync as the
+     * Your day first, the link second: "Recovery 72, Energy 58" over "Strap connected, battery 80%" (the strap's battery named, so it's never taken for Energy), with the last sync as the
      * notification's time. Problems take the text: a failed connection (with Retry), a low battery, a sync under way.
      */
     private fun idleContent(c: ConnectionState, sync: SyncState, f: Figures?): IdleContent {
-        val title = f?.let { listOfNotNull(it.recovery?.let { r -> "Recovery $r%" }, it.charge?.let { ch -> "Charge $ch" }).joinToString(", ") }
+        val title = f?.let { listOfNotNull(it.recovery?.let { r -> "Recovery $r" }, it.charge?.let { ch -> "Energy $ch" }).joinToString(", ") }
             ?.ifEmpty { null } ?: "Helio Strap"
         val connected = c as? ConnectionState.Connected
         val battery = connected?.batteryPercent
@@ -225,8 +225,8 @@ class StrapService : LifecycleService() {
             c is ConnectionState.Authenticating -> "Authenticating…"
             connected == null -> "Strap not connected"
             sync is SyncState.Running -> "Syncing, ${sync.step}"
-            low -> "Battery $battery%. Charge it tonight."
-            else -> listOfNotNull(if (connected.charging) "Charging" else "Connected", battery?.let { "$it%" }).joinToString(", ")
+            low -> "Strap battery $battery%. Charge it tonight."
+            else -> listOfNotNull(if (connected.charging) "Strap charging" else "Strap connected", battery?.let { "battery $it%" }).joinToString(", ")
         }
         return IdleContent(
             title, text, (sync as? SyncState.Done)?.atEpochSeconds ?: f?.syncedAt, (sync as? SyncState.Running)?.progress,

@@ -318,7 +318,7 @@ footer{font-size:13px;color:var(--fg3);border-top:1px solid var(--hair);padding-
   <div class="strip">
     <div class="spec"><div class="g L4 h-hrv from-below" style="width:200px;height:170px"><span class="ct">HRV</span><span class="fill"></span><span class="d d36">52</span></div>
       <div class="cap"><b>L4 Hero glow</b>Rim at full, the light colour at the lit edge, melting into the body by 45% of the card. One per screen.</div></div>
-    <div class="spec"><div class="g L3 h-chg from-below" style="width:200px;height:170px"><span class="ct">Charge</span><span class="fill"></span><span class="d d36">74</span></div>
+    <div class="spec"><div class="g L3 h-chg from-below" style="width:200px;height:170px"><span class="ct">Energy</span><span class="fill"></span><span class="d d36">74</span></div>
       <div class="cap"><b>L3 Second glow</b>Rim at 70%, melting in by 28%. At most one more glow on a screen.</div></div>
     <div class="spec"><div class="e strong t" style="--ink:var(--tmp);width:200px;height:170px"><span class="ct">Skin temperature</span><span class="fill"></span><span class="d d3" style="color:var(--tmp)">+0.6</span><span class="sec" style="color:var(--tmp);margin-top:6px">Above your normal</span></div>
       <div class="cap"><b>L2 Strong edge</b>Off your normal. 90% of the colour at the edge, reaching 72 dp in.</div></div>
@@ -339,7 +339,7 @@ footer{font-size:13px;color:var(--fg3);border-top:1px solid var(--hair);padding-
       <thead><tr><th>Level</th><th>At the edge</th><th>Reaches</th><th>Used for</th></tr></thead>
       <tbody>
         <tr><td>L4 Hero</td><td class="num">Light colour, 100%</td><td class="num">45% of the card</td><td>The hero of the screen</td></tr>
-        <tr><td>L3 Second</td><td class="num">Light colour, 70%</td><td class="num">28% of the card</td><td>A second glow that isn't a level, like Charge as the wide card in the workout window</td></tr>
+        <tr><td>L3 Second</td><td class="num">Light colour, 70%</td><td class="num">28% of the card</td><td>A second glow that isn't a level, like Energy as the wide card in the workout window</td></tr>
         <tr><td>L2 Strong edge</td><td class="num">Ink, 90%</td><td class="num">72 dp</td><td>Edge cards off your normal</td></tr>
         <tr><td>L1 Soft edge</td><td class="num">Ink, 70%</td><td class="num">48 dp</td><td>Edge cards, strips</td></tr>
         <tr><td>L0 Quiet</td><td>None</td><td>None</td><td>Lists</td></tr>
@@ -357,18 +357,18 @@ footer{font-size:13px;color:var(--fg3);border-top:1px solid var(--hair);padding-
   <h3>Levels: the light rises to the value</h3>
   <div class="cols">
     <div class="strip" style="align-items:flex-start">
-      <div class="g lvl h-chg" id="chgCard" style="width:173px;height:332px"><span class="ct">Charge</span><span class="fill"></span><span class="d d36" id="chgVal">74</span><span class="sec" style="margin-top:6px">85 at waking</span></div>
+      <div class="g lvl h-chg" id="chgCard" style="width:173px;height:332px"><span class="ct">Energy</span><span class="fill"></span><span class="d d36" id="chgVal">74</span><span class="sec" style="margin-top:6px">85 at waking</span></div>
       <div class="e lv" id="loadCard" style="--ink:var(--lod);width:173px;height:160px;--v:30%"><span class="ct">Load</span><span class="fill"></span><span class="d d3">12</span><span class="sec" style="margin-top:6px">Your usual is 40</span></div>
     </div>
     <div class="spec" style="gap:16px">
-      <label for="lvl" class="sec">Drag to set Charge. Load follows at the same share.</label>
+      <label for="lvl" class="sec">Drag to set Energy. Load follows at the same share.</label>
       <input id="lvl" type="range" min="0" max="100" value="74" style="width:100%;accent-color:#fff">
       <ul class="rules">
         <li><b>Bright where it is lit.</b> The bottom edge is the light colour at full, as in the mockup. The lit part is the value's share of the card, with a soft step of 22 dp into the dark.</li>
         <li><b>Never fully dark.</b> At 0 the card still glows across its bottom 12%.</li>
         <li><b>Always this bright.</b> A level glow lights its edge at full because the light is the value. Beside a hero it still counts as the screen's second glow.</li>
-        <li><b>Charge is one colour.</b> Ember orange at every level. The level is how high the light reaches, not a change of hue.</li>
-        <li><b>On an edge card</b> (Load, Charge on Today) the light fills from the left to the value and fades out over 40 dp. No progress bar.</li>
+        <li><b>Energy is one colour.</b> Ember orange at every level. The level is how high the light reaches, not a change of hue.</li>
+        <li><b>On an edge card</b> (Load, Energy on Today) the light fills from the left to the value and fades out over 40 dp. No progress bar.</li>
       </ul>
     </div>
   </div>
@@ -382,7 +382,7 @@ footer{font-size:13px;color:var(--fg3);border-top:1px solid var(--hair);padding-
   <div class="cols">
     <ul class="rules">
       <li><b>Light</b> is the ink's hue at 90% of its saturation and 56% lightness. <b>Body</b> is 80% saturation, 16% lightness. <b>Core</b> is 70% saturation, 3% lightness.</li>
-      <li><b>Charge</b> becomes Ember orange <code>#F66C28</code> on every surface. <span class="was">Gold #FFD166 and a red to green scale</span></li>
+      <li><b>Energy</b> becomes Ember orange <code>#F66C28</code> on every surface. <span class="was">Gold #FFD166 and a red to green scale</span></li>
       <li><b>Recovery</b> keeps one teal. <span class="was">readiness and readinessDeep</span></li>
       <li><b>Evening violet</b> lights only the evening hero. It is a moment, not a metric.</li>
       <li><b>Green and amber</b> are for the strap and sync only, never for a health value.</li>
@@ -469,7 +469,7 @@ footer{font-size:13px;color:var(--fg3);border-top:1px solid var(--hair);padding-
         <div class="row" style="--c:var(--rec)"><span class="nm"><span>Last night's sleep</span><span>7 h 40 asleep</span></span><span style="width:90px" class="bar"><i style="width:70%"></i></span><span class="sec" style="width:58px;text-align:right">Helping</span></div>
         <div class="row off" style="--c:var(--hrv)"><span class="nm"><span>HRV</span><span>41 ms, usual 52</span></span><span style="width:90px" class="bar"><i style="width:30%;background:var(--hrv)"></i></span><span class="sec" style="width:58px;text-align:right;color:var(--hrv)">Holding back</span></div></div>
       <div class="tallpair">
-        <div class="g lvl h-chg" style="height:332px;--v:74%"><span class="ct">Charge<svg class="go" aria-hidden="true"><use href="#i-Chev"/></svg></span><span class="fill"></span><span class="d d36">74</span><span class="sec" style="margin-top:4px">85 at waking</span></div>
+        <div class="g lvl h-chg" style="height:332px;--v:74%"><span class="ct">Energy<svg class="go" aria-hidden="true"><use href="#i-Chev"/></svg></span><span class="fill"></span><span class="d d36">74</span><span class="sec" style="margin-top:4px">85 at waking</span></div>
         <div><div class="e b" style="--ink:var(--chg);height:160px"><span class="ct">Recharged</span><span class="fill"></span><span class="d d3">+39</span><span class="sec" style="margin-top:4px">Sleep and calm rest</span></div>
           <div class="e t" style="--ink:var(--chg);height:160px"><span class="ct">Drained</span><span class="fill"></span><span class="d d3">15</span><span class="sec" style="margin-top:4px">Mostly being awake</span></div></div>
       </div>
@@ -493,7 +493,7 @@ footer{font-size:13px;color:var(--fg3);border-top:1px solid var(--hair);padding-
           <tr><td>Above your normal</td><td>Top, L2</td></tr>
           <tr><td>Below your normal</td><td>Bottom, L2</td></tr>
           <tr><td>Progress to a goal</td><td>Bottom, L1, with a 4 dp bar</td></tr>
-          <tr><td>A level (Load, Charge on Today)</td><td>Fills from the left to the value</td></tr>
+          <tr><td>A level (Load, Energy on Today)</td><td>Fills from the left to the value</td></tr>
           <tr><td>Live now (heart rate)</td><td>Right</td></tr>
           <tr><td>About earlier (Recovery later in the day, Habit Age, Naps)</td><td>Left</td></tr>
           <tr><td>Sleep (last night, regularity)</td><td>Top, like a night sky</td></tr>
@@ -532,7 +532,7 @@ footer{font-size:13px;color:var(--fg3);border-top:1px solid var(--hair);padding-
         <tr><td>Breathing rate</td><td>Lungs</td><td>Sleep light</td></tr>
         <tr><td>Skin temperature</td><td>Thermometer</td><td>Temperature</td></tr>
         <tr><td>Stress</td><td>Brain02</td><td>Stress</td></tr>
-        <tr><td>Charge</td><td>BatteryCharging01</td><td>Charge</td></tr>
+        <tr><td>Energy</td><td>BatteryCharging01</td><td>Energy</td></tr>
         <tr><td>Last night, naps</td><td>Moon02</td><td>Sleep</td></tr>
         <tr><td>Steps</td><td>FootPrints</td><td>Steps</td></tr>
         <tr><td>Load</td><td>Dumbbell01</td><td>Load</td></tr>
@@ -633,7 +633,7 @@ footer{font-size:13px;color:var(--fg3);border-top:1px solid var(--hair);padding-
       <tr><td>Avatar to You, chip to Strap</td><td class="num">The same shared bounds from the 44 dp button. 500 in, 300 out. <span class="was">Missing in the build</span></td><td>Where it came from</td></tr>
       <tr><td>Sheets (info, calendar, Edit Today)</td><td class="num">Slide up, stiffness 400, scrim fades to 60% black</td><td>It sits over the page</td></tr>
       <tr><td>Value change</td><td class="num">From the old number to the new over 450 ms, only after a sync or a live update. Never from zero on open</td><td>What changed</td></tr>
-      <tr><td>Level change (Charge, Load, steps)</td><td class="num">The light rises or falls from the old level to the new over 600 ms, with the value</td><td>What changed</td></tr>
+      <tr><td>Level change (Energy, Load, steps)</td><td class="num">The light rises or falls from the old level to the new over 600 ms, with the value</td><td>What changed</td></tr>
       <tr><td>Moment change</td><td class="num">Hero crossfade 300 ms</td><td>The day moved on</td></tr>
       <tr><td>Press</td><td class="num">Scale to 0.98 over 100 ms, back on release. No ripple</td><td>It heard you</td></tr>
       <tr><td>Live heart rate</td><td class="num">The core pulses at the real bpm</td><td>Alive</td></tr>
@@ -882,8 +882,8 @@ footer{font-size:13px;color:var(--fg3);border-top:1px solid var(--hair);padding-
       <tr><td>Edge light</td><td>Soft 62%, strong 75%</td><td>L1 70% over 48 dp, L2 90% over 72 dp</td></tr>
       <tr><td>Off normal on an edge card</td><td>Mockup colours the hairline, spec says plain</td><td>Plain hairline. Strength and the coloured value only</td></tr>
       <tr><td>Moods</td><td>Evening 60%, Night 40%</td><td>Evening 80%, Night 65%</td></tr>
-      <tr><td>Charge colour</td><td>Gold, a red to green scale by value, orange on glow</td><td>Ember orange everywhere, level shown by light height</td></tr>
-      <tr><td>Midday hero light</td><td>Spec says from above (90), Charge says from below</td><td>Charge rises from below. The level rule wins</td></tr>
+      <tr><td>Energy colour</td><td>Gold, a red to green scale by value, orange on glow</td><td>Ember orange everywhere, level shown by light height</td></tr>
+      <tr><td>Midday hero light</td><td>Spec says from above (90), Energy says from below</td><td>Energy rises from below. The level rule wins</td></tr>
       <tr><td>Corners</td><td>Glow 48, spec 36, edge 28</td><td>28 on every card</td></tr>
       <tr><td>Card padding</td><td>Four different paddings</td><td>20 all round</td></tr>
       <tr><td>List row marker</td><td>8 dp coloured dot</td><td>20 dp icon in the metric's ink</td></tr>
@@ -908,7 +908,7 @@ footer{font-size:13px;color:var(--fg3);border-top:1px solid var(--hair);padding-
 
 <script>
 (function(){
-  var M=[["Recovery","rec","#7CF2C9"],["Charge","chg","#F66C28"],["Sleep","slp","#4C6FFF"],["Heart rate","hrt","#FF5A5F"],["Steps","stp","#C3F53C"],["HRV","hrv","#2DD4BF"],["Blood oxygen","spo","#38BDF8"],["Stress","str","#F062C0"],["Skin temperature","tmp","#FF8A3D"],["Load","lod","#A78BFA"],["Habit Age","hab","#D86BEA"],["Evening","eve","#A274F2"],["Neutral","neu","#878D99"]];
+  var M=[["Recovery","rec","#7CF2C9"],["Energy","chg","#F66C28"],["Sleep","slp","#4C6FFF"],["Heart rate","hrt","#FF5A5F"],["Steps","stp","#C3F53C"],["HRV","hrv","#2DD4BF"],["Blood oxygen","spo","#38BDF8"],["Stress","str","#F062C0"],["Skin temperature","tmp","#FF8A3D"],["Load","lod","#A78BFA"],["Habit Age","hab","#D86BEA"],["Evening","eve","#A274F2"],["Neutral","neu","#878D99"]];
   var sw=document.getElementById("swatches");
   M.forEach(function(m){
     var k=m[1];var h="var(--"+k+"-h)",s="var(--"+k+"-s)";
@@ -922,20 +922,20 @@ footer{font-size:13px;color:var(--fg3);border-top:1px solid var(--hair);padding-
   lvl.addEventListener("input",setLvl);setLvl();
 
   var MO=[
-    {id:"waking",name:"Waking up",title:"Recovery",hue:"h-rec",from:"from-ll",lvl:"L4",mood:"",sent:"Slept 7 h 40. Recovered enough for your usual training.",num:"78",word:"Recovered<br>Charge at waking 84",light:"Lower left, 225",strength:"L4 Hero",moodName:"Day",motion:"400",first:"Sentence",
+    {id:"waking",name:"Waking up",title:"Recovery",hue:"h-rec",from:"from-ll",lvl:"L4",mood:"",sent:"Slept 7 h 40. Recovered enough for your usual training.",num:"78",word:"Recovered<br>Energy at waking 84",light:"Lower left, 225",strength:"L4 Hero",moodName:"Day",motion:"400",first:"Sentence",
       order:[["strip","Check-in"],["list","Your body this morning"],["edge","Last night, from the top"],["edge","Heart rate, from the right"],["edge","Activity, from the bottom with a bar"]]},
-    {id:"midday",name:"Midday",title:"Charge",hue:"h-chg",from:"",lvl:"lvl",mood:"",sent:"62, steady for midday. Your walk took 9.",num:"62",word:"Recharged 39<br>Drained 22",light:"Rises from below to 62%",strength:"L4 level",moodName:"Day",motion:"400",first:"Sentence",
+    {id:"midday",name:"Midday",title:"Energy",hue:"h-chg",from:"",lvl:"lvl",mood:"",sent:"62, steady for midday. Your walk took 9.",num:"62",word:"Recharged 39<br>Drained 22",light:"Rises from below to 62%",strength:"L4 level",moodName:"Day",motion:"400",first:"Sentence",
       order:[["strip","Last night, collapsed"],["edge","Activity, with its line so far"],["edge","Heart rate, from the right"],["list","Right now"],["edge","Recovery, from the left"]]},
     {id:"workout",name:"Workout time",title:"Ready for effort",hue:"h-hrt",from:"from-ur",lvl:"L4 raised",mood:"",sent:"Ready for effort. You usually run around now.",num:"",word:"",btns:true,light:"Upper right, 45",strength:"L4, rim 120%",moodName:"Day",motion:"800",first:"Short prompt, Start",
-      order:[["glow","Charge, second glow L3"],["list","Before you start"],["edge","Activity"],["strip","Last night"]]},
+      order:[["glow","Energy, second glow L3"],["list","Before you start"],["edge","Activity"],["strip","Last night"]]},
     {id:"during",name:"Running",title:"Run",hue:"h-hrt",from:"from-below",lvl:"L4",mood:"",sent:"",num:"152",word:"bpm<br>Zone 3, 24:10",light:"Below, pulses at the real bpm",strength:"L4 Hero",moodName:"Day",motion:"800",first:"Number",
       order:[["strip","Last night, collapsed"],["edge","Activity"],["list","Right now"],["edge","Recovery, from the left"]]},
     {id:"after",name:"After your run",title:"Heart rate",hue:"h-hrt",from:"from-below",lvl:"L4 calm",mood:"",sent:"Since your run, 40 min. Heart rate settling.",num:"94",word:"bpm<br>Down 34 in the first minute",light:"Below, 270",strength:"L4, rim 80%",moodName:"Day",motion:"400",first:"Sentence",
-      order:[["edge","The run, from the left with its zone bar"],["edge","Load and To recover, a Small pair"],["edge","Charge as a level"],["edge","Activity"]]},
+      order:[["edge","The run, from the left with its zone bar"],["edge","Load and To recover, a Small pair"],["edge","Energy as a level"],["edge","Activity"]]},
     {id:"evening",name:"Evening",title:"Today",hue:"h-eve",from:"from-lr",lvl:"L4",mood:"m-eve",sent:"A full day. A run, 13,860 steps and a Load above your usual.",num:"",word:"",light:"Lower right, 315",strength:"L4 Hero",moodName:"Evening, 80%",motion:"250",first:"Sentence",
-      order:[["edge","Charge as a level"],["edge","Activity, its line so far"],["edge","Heart rate, the day's line, from the top"],["strip","Last night"]]},
-    {id:"night",name:"Night",title:"Today",hue:"h-slp",from:"from-below",lvl:"L4",mood:"m-night",sent:"Bedtime in 40 min. Charge 31 left after a full day.",num:"",word:"",light:"Below only",strength:"L4 Hero",moodName:"Night, 65%",motion:"250",first:"Sentence",
-      order:[["edge","Charge as a level"],["edge","Activity, its line so far"],["edge","Heart rate, from the top"],["strip","Last night"]]}
+      order:[["edge","Energy as a level"],["edge","Activity, its line so far"],["edge","Heart rate, the day's line, from the top"],["strip","Last night"]]},
+    {id:"night",name:"Night",title:"Today",hue:"h-slp",from:"from-below",lvl:"L4",mood:"m-night",sent:"Bedtime in 40 min. Energy 31 left after a full day.",num:"",word:"",light:"Below only",strength:"L4 Hero",moodName:"Night, 65%",motion:"250",first:"Sentence",
+      order:[["edge","Energy as a level"],["edge","Activity, its line so far"],["edge","Heart rate, from the top"],["strip","Last night"]]}
   ];
   var seg=document.getElementById("seg"),hero=document.getElementById("moHero"),tb=document.querySelector("#moTable tbody");
   function el(id){return document.getElementById(id)}

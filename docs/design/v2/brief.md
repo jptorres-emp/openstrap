@@ -26,7 +26,7 @@ The app follows the user's day. Cards reorder and change tone by moment:
 | Moment | What leads | Tone |
 |---|---|---|
 | Waking up | Last night and Recovery | Sentence first |
-| Midday | Charge (energy left) | Sentence first |
+| Midday | Energy (energy left) | Sentence first |
 | Usual workout time (learned from when they train, or feel like it) | Readiness for effort, start workout | Prompting, short |
 | During a workout | Live numbers | Number first, no prose |
 | After a workout | The effort and recovery, then calm down | Toned down |
@@ -36,7 +36,7 @@ The app follows the user's day. Cards reorder and change tone by moment:
 
 1. **Three depths.** Meaning now (one human sentence), then the number, then how it's worked out (one tap away). No
    formula, method name or caveat on a card, only on its detail page.
-2. **Own the names.** Charge, Readiness, Load and Habit Age stay as names. Acronyms become words: SRI is "Sleep
+2. **Own the names.** Energy, Readiness, Load and Habit Age stay as names. Acronyms become words: SRI is "Sleep
    regularity", PAI gets a plain name, EPOC only on detail pages. HRV and VO2 max stay, with a one-line meaning on
    first sight.
 3. **Tone:** a calm, sharp friend who knows physiology. Short, direct, specific. No cheering, no emoji, no exclamation
@@ -50,7 +50,7 @@ The app follows the user's day. Cards reorder and change tone by moment:
    stop, a comma, a new line, or layout (separate text elements) instead. En dashes in ranges like 22:10–06:40 are
    fine.
 
-Example: "Charge is a running battery: sleep and calm rest fill it, movement, stress and simply being awake drain
+Example: "Energy is a running battery: sleep and calm rest fill it, movement, stress and simply being awake drain
 it." becomes "**62, steady for midday.** Your run took 18. You'll have plenty left this evening." with the
 explanation behind a tap.
 

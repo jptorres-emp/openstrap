@@ -128,7 +128,7 @@ object TodayCopy {
      * so the morning is called the morning.
      */
     fun charge(now: Int?, drained: Int?, anchored: Boolean, hour: Int): String {
-        if (now == null || !anchored) return "Charge starts after your first night. Sleep is what fills it."
+        if (now == null || !anchored) return "Energy starts after your first night. Sleep is what fills it."
         val part = if (hour < 12) "The morning" else "The day so far"
         val first = when {
             drained == null -> null
@@ -151,11 +151,11 @@ object TodayCopy {
         else -> "An easy session suits today"
     }
 
-    /** "You usually run around now. Charge is 58, plenty left." [sport] is a short noun that is also a verb. */
+    /** "You usually run around now. Energy is 58, plenty left." [sport] is a short noun that is also a verb. */
     fun window(sport: String?, charge: Int?): String {
         val usual = "You usually ${sport ?: "work out"} around now."
         val left = charge?.let {
-            " Charge is $it, " + when {
+            " Energy is $it, " + when {
                 it >= 50 -> "plenty left."
                 it >= 25 -> "enough for something easy."
                 else -> "running low."

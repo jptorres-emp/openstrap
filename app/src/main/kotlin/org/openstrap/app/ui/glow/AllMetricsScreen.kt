@@ -128,7 +128,7 @@ fun metricIndex(
                 },
                 // Before the first night Charge is only the simulation's starting guess: a dash, as on the Recovery tab's battery.
                 row(
-                    "Charge", MetricColors.charge, rec?.charge?.takeIf { it.anchored }?.latest?.let(::chargeShown)?.toString(),
+                    "Energy", MetricColors.charge, rec?.charge?.takeIf { it.anchored }?.latest?.let(::chargeShown)?.toString(),
                     if (state.date == today) "Latest" else "End of day", IndexTarget.Home(HomeTab.Recovery, charge = true),
                     waiting = org.openstrap.app.ui.dashboard.AFTER_FIRST_NIGHT.takeIf { rec?.charge?.anchored == false },
                 ),

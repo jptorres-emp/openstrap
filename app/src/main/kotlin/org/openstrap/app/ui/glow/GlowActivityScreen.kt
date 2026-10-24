@@ -362,7 +362,7 @@ private fun FactsList(
         )
         val e = r?.energy
         ListRow(
-            "Energy", MetricColors.steps, e?.totalKcal?.roundToInt()?.let { "%,d".format(it) },
+            "Calories", MetricColors.steps, e?.totalKcal?.roundToInt()?.let { "%,d".format(it) },
             e?.let { TabCopy.energy(it.partial, isToday) } ?: "Add age, weight and height to see it",
             onClick = if (e == null && r != null) onEditProfile else { { open(Score.Energy) } }, dash = e != null,
             icon = Score.Energy.rowIcon(),

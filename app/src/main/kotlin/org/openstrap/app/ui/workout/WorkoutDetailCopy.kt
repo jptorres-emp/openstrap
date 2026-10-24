@@ -107,7 +107,7 @@ object WorkoutDetailCopy {
             },
             pausedSeconds.takeIf { it >= MIN_PAUSED_S }?.let { WorkoutFact("Paused", workoutClock(it), "Not counted in the time") },
             steps?.takeIf { it > 0 }?.let { WorkoutFact("Steps", "%,d".format(locale, it), null) },
-            calories?.takeIf { it > 0 }?.let { WorkoutFact("Energy", it.toString(), "kcal") },
+            calories?.takeIf { it > 0 }?.let { WorkoutFact("Calories", it.toString(), "kcal") },
         )
 
     /**

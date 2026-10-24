@@ -95,7 +95,7 @@ internal fun HeroFigure(
 
 /**
  * The hero's one dotted number (spec 2.3, one per card) with up to two short [lines] beside it on the digits' baseline:
- * its word, and the figures that go with it as text ("Charge at waking 84"). Without a [value] the lines stand alone.
+ * its word, and the figures that go with it as text ("Energy at waking 84"). Without a [value] the lines stand alone.
  */
 @Composable
 internal fun HeroNumber(value: String?, lines: List<String>, modifier: Modifier = Modifier) {
@@ -446,7 +446,7 @@ internal fun ChargeWideCard(
     if (secondGlow) {
         GlowCard(GlowStyle.Ember.copy(lightLevel = (now ?: 0) / 100f, lightAngle = LightAngle.Left, second = true), m, onClick = onClick) {
             Column {
-                GlowHeader("Charge", marker = upTo, tag = tag)
+                GlowHeader("Energy", marker = upTo, tag = tag)
                 if (soFar == null || soFar.count { it != null } < 2) EdgeValue(now?.toString(), null, status, Color.White.copy(alpha = 0.8f), dot = DotSize.Second)
                 else Row(verticalAlignment = Alignment.Bottom) {
                     Column(Modifier.weight(1f)) { EdgeValue(now?.toString(), null, status, Color.White.copy(alpha = 0.8f), dot = DotSize.Second) }
@@ -456,7 +456,7 @@ internal fun ChargeWideCard(
             }
         }
     } else EdgeCard(MetricColors.charge, modifier.fillMaxWidth(), kind = EdgeKind.Level, progress = (now ?: 0) / 100f, onClick = onClick) {
-        EdgeTitle("Charge", null, marker = upTo, tag = tag)
+        EdgeTitle("Energy", null, marker = upTo, tag = tag)
         if (soFar == null || soFar.count { it != null } < 2) EdgeValue(now?.toString(), null, status)
         else Row(verticalAlignment = Alignment.Bottom) {
             Column(Modifier.weight(1f)) { EdgeValue(now?.toString(), null, status) }

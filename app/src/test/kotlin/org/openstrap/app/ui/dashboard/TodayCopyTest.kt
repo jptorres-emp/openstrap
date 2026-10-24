@@ -70,8 +70,8 @@ class TodayCopyTest {
         assertEquals("The day so far drained 40. Enough left for an easy evening.", TodayCopy.charge(44, 40, true, 15))
         assertEquals("Nothing drained since waking. Running low. An early night helps.", TodayCopy.charge(20, 0, true, 15))
         assertEquals("Plenty left for this evening.", TodayCopy.charge(80, null, true, 13))
-        assertEquals("Charge starts after your first night. Sleep is what fills it.", TodayCopy.charge(80, 80, false, 13))
-        assertEquals("Charge starts after your first night. Sleep is what fills it.", TodayCopy.charge(null, null, true, 13))
+        assertEquals("Energy starts after your first night. Sleep is what fills it.", TodayCopy.charge(80, 80, false, 13))
+        assertEquals("Energy starts after your first night. Sleep is what fills it.", TodayCopy.charge(null, null, true, 13))
     }
 
     @Test fun `workout window names the usual sport and the charge`() {
@@ -79,9 +79,9 @@ class TodayCopyTest {
         assertEquals("Fine for a steady session", TodayCopy.windowTitle(60))
         assertEquals("An easy session suits today", TodayCopy.windowTitle(40))
         assertEquals("Your usual workout time", TodayCopy.windowTitle(null))
-        assertEquals("You usually run around now. Charge is 58, plenty left.", TodayCopy.window("run", 58))
+        assertEquals("You usually run around now. Energy is 58, plenty left.", TodayCopy.window("run", 58))
         assertEquals("You usually work out around now.", TodayCopy.window(null, null))
-        assertEquals("You usually ride around now. Charge is 20, running low.", TodayCopy.window("ride", 20))
+        assertEquals("You usually ride around now. Energy is 20, running low.", TodayCopy.window("ride", 20))
     }
 
     @Test fun `after a workout the heart settles toward resting`() {

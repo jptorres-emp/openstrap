@@ -452,7 +452,7 @@ private fun WakingHero(ctx: TodayContext, lightAngle: Float?, onOpen: () -> Unit
             Spacer(Modifier.height(24.dp))
             HeroNumber(
                 shown.value?.toString(),
-                listOfNotNull(shown.value?.let { shown.word ?: ctx.waiting }, atWake?.let { "Charge at waking $it" }),
+                listOfNotNull(shown.value?.let { shown.word ?: ctx.waiting }, atWake?.let { "Energy at waking $it" }),
             )
         }
     }
@@ -489,7 +489,7 @@ private fun ChargeHero(ctx: TodayContext, onOpen: () -> Unit, onRetry: () -> Uni
         Column {
             val start = c?.takeIf { it.anchored }?.atWake?.toInt()
             GlowHeader(
-                "Charge", trailing = start?.let { if (c?.strapOffOvernight == true) "$it at start" else "$it at waking" },
+                "Energy", trailing = start?.let { if (c?.strapOffOvernight == true) "$it at start" else "$it at waking" },
                 marker = ctx.upTo(ctx.newest), tag = ctx.partial,
             )
             // Charge is worked out with Recovery, so when that fails it says so rather than waiting for a first night.
@@ -511,7 +511,7 @@ private fun ChargeHero(ctx: TodayContext, onOpen: () -> Unit, onRetry: () -> Uni
             if (c?.strapOffOvernight == true && !noSleep && ctx.partial == null) Text(
                 "Strap off overnight, so today started from an estimate.",
                 color = Color.White.copy(alpha = 0.7f), style = GlowType.secondary,
-                modifier = Modifier.padding(top = 8.dp).clickable(onClickLabel = "About Charge") { info = true },
+                modifier = Modifier.padding(top = 8.dp).clickable(onClickLabel = "About Energy") { info = true },
             )
             // No lone dash in a hero: before the first night the sentence says Charge starts after it.
             if (now == null) return@Column
@@ -605,7 +605,7 @@ private fun EveningHero(ctx: TodayContext, lightAngle: Float?, bedtime: LocalTim
             HeroSentence(TodayCopy.evening(nouns, ctx.state.steps, goals.steps, ctx.loadStatus))
             Spacer(Modifier.height(24.dp))
             // Figures it doesn't have yet are left out, never a lone dash in the hero.
-            val rest = listOfNotNull(ctx.rec?.load?.let { "Load ${Math.round(it)}" }, ctx.charge?.let { "Charge $it left" })
+            val rest = listOfNotNull(ctx.rec?.load?.let { "Load ${Math.round(it)}" }, ctx.charge?.let { "Energy $it left" })
             HeroNumber("%,d".format(ctx.state.steps), listOfNotNull("steps", rest.joinToString(", ").ifEmpty { null }))
         }
     }

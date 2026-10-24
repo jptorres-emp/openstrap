@@ -92,7 +92,7 @@ fun lastTried(record: SyncRecord, zone: ZoneId, use24Hour: Boolean = APP_24_HOUR
 const val RECOVERY_FAILED = "Couldn't work out today's score."
 
 /** Charge is worked out with Recovery, so it fails with it. */
-const val CHARGE_FAILED = "Couldn't work out today's Charge."
+const val CHARGE_FAILED = "Couldn't work out today's Energy."
 
 /** The same on a small card, whose status line has room for a few words: Load, Charge's parts. */
 const val FAILED_SHORT = "Couldn't work it out"

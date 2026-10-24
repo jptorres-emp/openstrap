@@ -108,7 +108,7 @@ object TabCopy {
      */
     fun drainedAmount(v: Float): String = v.toInt().coerceAtLeast(0).toString()
 
-    /** One row of "Charge today": what moved it, and whether it filled or drained it. */
+    /** One row of "Energy today": what moved it, and whether it filled or drained it. */
     data class ChargeRow(val name: String, val value: String, val status: String)
 
     /** Where today's Charge came from and went, in the order it happened: sleep first, then the day. */
@@ -121,8 +121,8 @@ object TabCopy {
 
     /** The Charge card's line under the number. */
     fun chargeLine(now: Int?, atWake: Int?, anchored: Boolean): String = when {
-        !anchored -> "Charge starts after your first night. Sleep is what fills it."
-        now == null -> "Charge shows once the strap has a few hours of heart rate."
+        !anchored -> "Energy starts after your first night. Sleep is what fills it."
+        now == null -> "Energy shows once the strap has a few hours of heart rate."
         atWake == null -> "Now"
         now < atWake -> "Used ${atWake - now} since waking"
         now > atWake -> "Up ${now - atWake} since waking"

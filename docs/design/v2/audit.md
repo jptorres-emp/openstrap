@@ -32,12 +32,12 @@ where the faults come from. Most screens are wrong for the same few reasons, and
 | # | Fault | Rule | Fixed in | Screens it fixes |
 |---|---|---|---|---|
 | 1 | Glow cards dim and muddy, heroes at 45 to 85% strength | 2.1 L4 | `GlowStyle.kt` (`GlowPalette`, `light()`), `GlowCard.kt` (`fillShader`), `GlowTodayScreen.kt:407` (`heroStyle`) | Every glow card |
-| 2 | Edge light weak, level fills end in a hard edge | 2.1 L1, L2, Levels | `EdgeCard.kt` (`SoftGlow`, `StrongGlow`, the level brush) | Every edge card, Charge and Load levels |
-| 3 | Charge is gold, chargeDeep or a red to green scale | 2.2 | `Theme.kt:28-50`, 14 call sites | Charge everywhere, Recharged and Drained, Energy |
+| 2 | Edge light weak, level fills end in a hard edge | 2.1 L1, L2, Levels | `EdgeCard.kt` (`SoftGlow`, `StrongGlow`, the level brush) | Every edge card, Energy and Load levels |
+| 3 | Energy is gold, chargeDeep or a red to green scale | 2.2 | `Theme.kt:28-50`, 14 call sites | Energy everywhere, Recharged and Drained, Energy |
 | 4 | Dotted and dashed lines | 2.7 | 17 `dashPathEffect` calls in 9 files, 31 `DotPanel` uses in 4 files | Every chart, Habit Age, workouts, pairing |
 | 5 | Two title styles: glow 20 Light, edge 15 Medium | 2.3 | `GlowType.kt`, `GlowLayout.kt:184` (`GlowHeader`) | Every screen with both tiers |
 | 6 | Coloured dots in list rows | 2.5 Grouped list | `GlowList.kt` (`ListRow`), 41 call sites | Every list |
-| 7 | Several dotted numbers on one card | 2.3 | Hero figures, Your week, Charge, Load and Sleep details | Today heroes, Sleep, details |
+| 7 | Several dotted numbers on one card | 2.3 | Hero figures, Your week, Energy, Load and Sleep details | Today heroes, Sleep, details |
 | 8 | No caret on cards and rows that open something | 2.5 Tappable | `GlowCard`, `EdgeCard`, `ListRow` | Every tappable card |
 | 9 | Material pages, dialogs and fields | 3.4 | `ProfileScreen.kt`, `GoalsDialog.kt`, `TodayCards.kt` (Edit Today), `AlarmsScreen.kt`, `DeviceScreen.kt` | You, Strap and their pages |
 | 10 | Cards run under the tab bar with no fade | 3.2 | `MainActivity.kt` tab bar host | Every tab and page |
@@ -48,18 +48,18 @@ where the faults come from. Most screens are wrong for the same few reasons, and
 
 - **Glow body capped too dark.** `GlowPalette` caps the body at luminance 0.09 (`MID_MAX_LUMINANCE`) and the band at
   0.07, and the fill melts from light to body on a cubic ease-out by 40% of the card (`fillShader`), so the lit edge
-  is gone almost at once. Seen on every glow card, worst on Charge (`tab_recovery_0`, `sc_charge_0`).
+  is gone almost at once. Seen on every glow card, worst on Energy (`tab_recovery_0`, `sc_charge_0`).
 - **Heroes not at full strength.** `heroStyle` in `GlowTodayScreen.kt:407` builds every Today hero from `Bloom` with
   `glowStrength` 0.6 by default, 0.45 after a workout (548), 0.85 in the workout window (525), 0.5 for sync stuck
   (642), plus a 0.6 bevel that lights the rim all the way round. L4 is a full rim from one side, no bevel.
-- **The Charge level isn't bright.** The Tall Charge on Recovery is dark red from the top down to the number, with no
+- **The Energy level isn't bright.** The Tall Energy on Recovery is dark red from the top down to the number, with no
   bright edge at the bottom (`tab_recovery_0`). The mockup's lit bottom edge is missing because of the two points
   above.
-- **The Midday hero isn't a level.** Charge as the Today hero is lit evenly from below over the whole card
+- **The Midday hero isn't a level.** Energy as the Today hero is lit evenly from below over the whole card
   (`today_Midday_0`), not risen to 73%.
 - **Edge light too weak.** `SoftGlow` is 62% over about 45 dp and `StrongGlow` 75%. L1 is 70% over 48 dp, L2 90% over
   72 dp. At Night mood (Sleep tab) regularity and Breathing disturbances are barely lit (`tab_sleep_2`).
-- **Level fills end in a hard edge.** Load on Activity and Charge on Today stop in a sharp vertical line at the value
+- **Level fills end in a hard edge.** Load on Activity and Energy on Today stop in a sharp vertical line at the value
   (`tab_activity_1`, `today_WorkoutWindow_0`). The rule is a fade over 40 dp past the value.
 - **Recharged and Drained** show a bright line along their lit border (`tab_recovery_0`), the "bright line on the
   border" the edge card rules out. It comes from the gold `chargeDeep` at the edge stop.
@@ -69,11 +69,11 @@ where the faults come from. Most screens are wrong for the same few reasons, and
 
 ### 2.2 Colour (rule 2.2)
 
-- **Charge colours.** `MetricColors.charge` is gold #FFD166, `chargeDeep` #F5B400, and `chargeScale` with
-  `chargeAt` turns it red to green by value. Used for the Charge edge level (`TodayCards.kt:402`), its ghost line
-  (408), Recharged and Drained (`GlowRecoveryScreen.kt:298`), the Charge detail header (`ScoreDetail.kt:218`, 326),
+- **Energy colours.** `MetricColors.charge` is gold #FFD166, `chargeDeep` #F5B400, and `chargeScale` with
+  `chargeAt` turns it red to green by value. Used for the Energy edge level (`TodayCards.kt:402`), its ghost line
+  (408), Recharged and Drained (`GlowRecoveryScreen.kt:298`), the Energy detail header (`ScoreDetail.kt:218`, 326),
   Energy (`GlowActivityScreen.kt:330`, `GlowWorkoutScreen.kt:263`, `ActivityDetail.kt:504`) and All metrics
-  (`AllMetricsScreen.kt:110`). Charge on Today's level card and on its detail is gold, on the hero orange
+  (`AllMetricsScreen.kt:110`). Energy on Today's level card and on its detail is gold, on the hero orange
   (`sc_charge_0`, `today_WorkoutWindow_0`).
 - **Two Recovery teals.** `readinessDeep` is used in 9 places (contributors, Time to recover, the Recovery edge card
   in `TodayCards.kt:363`, the details).
@@ -92,7 +92,7 @@ where the faults come from. Most screens are wrong for the same few reasons, and
 ### 2.3 Type (rule 2.3)
 
 - **Two card title styles.** Glow cards use `GlowType.title` (Display Light 20, through `GlowHeader` in
-  `GlowLayout.kt:184`), edge cards and lists `GlowType.label` (Sans Medium 15). Side by side on Recovery: Charge
+  `GlowLayout.kt:184`), edge cards and lists `GlowType.label` (Sans Medium 15). Side by side on Recovery: Energy
   against Recharged and Drained (`tab_recovery_0`), and on Activity: Steps against Active minutes.
 - **Hero sentences** use `GlowType.sentence` (20), which is right, but sit under a 20 Light title of the same size, so
   title and sentence read as one block (`today_Waking_0`).
@@ -135,7 +135,7 @@ where the faults come from. Most screens are wrong for the same few reasons, and
 
 - Every metric row has the 8 dp dot, none has its metric icon: 41 `ListRow` calls in 12 files, only workout rows pass
   an `icon`, and that one is toned white. Lists on
-  Today, Recovery, Sleep, Activity, every detail's Related list, Before you start, Charge's Where it went.
+  Today, Recovery, Sleep, Activity, every detail's Related list, Before you start, Energy's Where it went.
 
 ### 2.7 Lines and charts (rule 2.7)
 
@@ -148,7 +148,7 @@ where the faults come from. Most screens are wrong for the same few reasons, and
 | Hypnogram (Last night, Sleep hero, Sleep detail) | Dotted stage guides | `GlowCharts.kt:333` |
 | Gaps in data lines | Dashed | `GlowCharts.kt:655` |
 | Steps card | Dashed baseline for empty hours | `GlowParts.kt:99` (`dotted`), 124 |
-| Charge Tall on Recovery | Dotted grid | `GlowParts.kt` or `GlowCharts.kt` |
+| Energy Tall on Recovery | Dotted grid | `GlowParts.kt` or `GlowCharts.kt` |
 | Resting heart rate week | Dotted stems | `GlowCharts.kt` |
 | Heart points detail | Dashed target line, dash bars | `ActivityDetail.kt:226` |
 | After a workout hero, calm down | Dotted resting band and End marker | `GlowWorkoutSummary.kt:200`, `GlowWorkoutScreen.kt:230-248` |
@@ -168,13 +168,13 @@ Ask to end panels, Add a workout), All workouts (4 in `GlowWorkoutScreen.kt`), q
 
 | Card | Dotted numbers | Screenshot |
 |---|---|---|
-| Waking hero | 2 (score, Charge at waking) | `today_Waking_0` |
+| Waking hero | 2 (score, Energy at waking) | `today_Waking_0` |
 | Midday hero, During | 3 (now, recharged, drained) | `today_Midday_0` |
 | After hero | 2 (now, resting) | `today_After_0` |
-| Evening and Night hero | 3 (steps, Load, Charge left) | `today_Evening_0` |
+| Evening and Night hero | 3 (steps, Load, Energy left) | `today_Evening_0` |
 | Your week | 3 | every Today shot |
 | Sleep hero | 5 (score, four stage totals) | `tab_sleep_0` |
-| Charge detail | 4 (header, at waking, highest, lowest) | `sc_charge_0` |
+| Energy detail | 4 (header, at waking, highest, lowest) | `sc_charge_0` |
 | Load detail | 4 (header, from workouts, moving about, strain) | `sc_load` |
 | Sleep regularity detail | 3 (header, usually asleep, usually up) | `sc_regularity` |
 | Last night's detail (Sleep score) | header plus three times | earlier session shots |
@@ -202,9 +202,9 @@ Faults already listed in section 2 aren't repeated unless the screen shows them 
 |---|---|---|
 | All | Heroes at 45 to 85% strength with a bevel. No carets. No Start a workout strip. Your week has 3 dotted numbers. Dotted grids on Heart rate, dotted ghost on Activity, dotted hypnogram guides on Last night | `today_*` |
 | Waking up | Hero has two dotted numbers. Check-in strip lit from the left in teal. Hero says "Strap's estimate" under the score while learning | `today_Waking_0` |
-| Midday | Charge hero lit evenly, not as a level. Three dotted numbers | `today_Midday_0` |
-| Workout time | Hero in Recovery teal, the rule is heart red from upper right at 120%. Title "Your usual workout time" in Light 20. Charge as a gold edge level with a hard edge. Before you start rows have dots | `today_WorkoutWindow_0` |
-| After a workout | Hero lit from the top, the rule is from below at 80%. Two dotted numbers and a dotted resting band. "Recovered" as a number in To recover. Charge gold | `today_After_0`, `_1` |
+| Midday | Energy hero lit evenly, not as a level. Three dotted numbers | `today_Midday_0` |
+| Workout time | Hero in Recovery teal, the rule is heart red from upper right at 120%. Title "Your usual workout time" in Light 20. Energy as a gold edge level with a hard edge. Before you start rows have dots | `today_WorkoutWindow_0` |
+| After a workout | Hero lit from the top, the rule is from below at 80%. Two dotted numbers and a dotted resting band. "Recovered" as a number in To recover. Energy gold | `today_After_0`, `_1` |
 | Evening | Hero in Sleep blue, not evening violet. Three dotted numbers. Looks the same as Night | `today_Evening_0` |
 | Night | Same as Evening. Night mood's light from below doesn't show | `today_Night_0` |
 | During | Can't be judged without a recording. The header says "Workout", the spec says the sport ("Running") | `today_During_0` |
@@ -213,7 +213,7 @@ States:
 
 | State | Faults | Shots |
 |---|---|---|
-| Stale, Disconnected, Charging | Chip and markers right. Charge hero faults as Midday | `st_stale_0`, `st_disconnected_0`, `st_charging_0` |
+| Stale, Disconnected, Charging | Chip and markers right. Energy hero faults as Midday | `st_stale_0`, `st_disconnected_0`, `st_charging_0` |
 | Sync stuck | Hero glows amber (allowed: a sync state) at 0.5 strength, so it reads muddy brown-gold | `st_stuck_0` |
 | Not paired, pairing steps | Dotted strap-to-phone line, amber dotted when failed. Waiting cards dimmed as the rule says | `st_notpaired_0`, `ds_pair*_0` |
 | Recovery failed | Fine apart from the hero light | `st_recoveryfail_0` |
@@ -221,7 +221,7 @@ States:
 
 ### Recovery tab
 
-- Charge Tall dim with no bright bottom edge, dotted grid in its curve, Display Light title beside Medium titles.
+- Energy Tall dim with no bright bottom edge, dotted grid in its curve, Display Light title beside Medium titles.
 - Recharged and Drained in gold with a bright line on the lit edge.
 - What drove it: contributor words wrap to two lines.
 - Body signals: dots, not icons. No carets.
@@ -252,7 +252,7 @@ States:
 | Heart rate | A red Material "Live" switch in the header | `det_HeartRate_0` |
 | Resting heart rate | Dotted stems in the week chart | `det_RestingHr_0` |
 | Steps | Hourly bars drawn as dots | `det_Steps_0` |
-| Charge | Gold, four dotted numbers | `sc_charge_0` |
+| Energy | Gold, four dotted numbers | `sc_charge_0` |
 | Active minutes | Daily bars drawn as dots | `sc_Active_minutes` |
 | Heart points | Dashed target line and dash bars | `sc_Heart_points` |
 | Load | Four dotted numbers in a row | `sc_load` |
@@ -312,7 +312,7 @@ and the calendar. Shots in `build/v2-shots/audit/open/`. The You and Strap pages
 | Tab bar | A narrow pill centred over two columns, cutting into both, no fade | 3.2 | every shot |
 | Details | A detail opens in a right pane beside the tab (list and detail), not as one centred column. This works better than the rule and the rule should follow it | 2.4 Unfolded | `det_hrv`, `tab_activity_0` |
 | Calendar sheet | Stretches the full width | 3.4 Sheets | `cal_open` |
-| Cards | The same faults as folded: dotted grids, row dots, two title styles, dim Charge | 2 | all |
+| Cards | The same faults as folded: dotted grids, row dots, two title styles, dim Energy | 2 | all |
 
 Proposed rule change for the fixes: on 600 dp and up, a detail opens in the right pane beside its tab (as built), a
 sheet is at most 600 dp wide and centred, and the two columns are balanced by height, moving the last optional card
@@ -323,7 +323,7 @@ sheet is at most 600 dp wide and centred, and the two columns are balanced by he
 Each step is one or a few commits, built by a subagent and checked on the phone screen by screen before the next.
 
 1. **Tokens.** `GlowType` roles (card title 17 Sans Medium, page title, header, caption, secondary 13), the six dot
-   sizes, `MetricColors` (Charge Ember #F66C28, one Recovery teal, evening violet, no `chargeScale`, `chargeDeep`,
+   sizes, `MetricColors` (Energy Ember #F66C28, one Recovery teal, evening violet, no `chargeScale`, `chargeDeep`,
    `readinessDeep`, `bad`), card corner 28 and padding 20 as constants. A token test for the rules in spec 8.2.
 2. **Light.** `GlowPalette` body cap 0.18, L4 and L3 fills, level glows lit at full with the soft step, `heroStyle`
    at full strength with no bevel, `SoftGlow` and `StrongGlow` to L1 and L2, the edge level fade, moods 0.8 and 0.65,
@@ -333,9 +333,9 @@ Each step is one or a few commits, built by a subagent and checked on the phone 
 4. **Rows and carets.** `ListRow` icons with the 14 metric icons, the caret on tappable cards and rows.
 5. **Today.** Hero colours and light per moment, one dotted number per hero, Your week with one, the Start a workout
    strip, the check-in strip from below.
-6. **Tabs.** Recovery (Charge Tall, Recharged and Drained, contributor wrap, Habit Age with (i)), the sleep hero,
+6. **Tabs.** Recovery (Energy Tall, Recharged and Drained, contributor wrap, Habit Age with (i)), the sleep hero,
    Activity's Start a workout card.
-7. **Details.** One dotted number in Charge, Load and regularity, solid charts, one page header for every page,
+7. **Details.** One dotted number in Energy, Load and regularity, solid charts, one page header for every page,
    the info sheet's meaning in a type role.
 8. **Pages.** Profile, Goals, Edit Today, Alarms and the Strap page without Material parts, neutral delete text.
 9. **Workouts.** Choose a sport with twelve sports and More sports, Ready with the strap hero and the outdoor or
@@ -356,7 +356,7 @@ pinned buttons, Smalls two across).
 
 Fixed after the recheck (50d078a to 2574cb2):
 
-- Steps on Activity is a level glow like the Charge battery: lit to the share of the goal over a black core, the
+- Steps on Activity is a level glow like the Energy battery: lit to the share of the goal over a black core, the
   hourly bars in the dark, the number at the foot (it read as a lime card all over, on the chart glow's olive core).
 - The Recovery and Sleep score details share one arc gauge: a symmetric 240 degree arch, round caps, a solid 8% track
   and the value in the metric's ink, the score centred inside. The Sleep detail's horizon arc is gone.
@@ -375,4 +375,4 @@ Still open:
   detail, Steps included, ends its header in `InfoButton` through `DetailTemplate`, and a test now pins that. Check
   on the phone whether it still shows, and from which way in (Today's Activity card, Activity's Steps card, the Today
   list's Steps row).
-- Not covered: during and right after a live workout, the Charge detail, real pairing.
+- Not covered: during and right after a live workout, the Energy detail, real pairing.

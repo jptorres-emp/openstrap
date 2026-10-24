@@ -148,7 +148,7 @@ val PARTIAL_DAY_INFO = Info(
 
 /** The sheet's folded rows: what a partial day lowers, and when a day counts as one. */
 val PARTIAL_DAY_ROWS = listOf(
-    "What it lowers" to "Steps, energy and Charge count only the time the strap was on. Charging pauses them too.",
+    "What it lowers" to "Steps, calories and Energy count only the time the strap was on. Charging pauses them too.",
     "When a day counts as partial" to
         "When the strap was worn for under ${TodayCopy.duration(EnergyExpenditure.FULL_DAY_MINUTES * 60L)} of the day, or under that share of the day so far.",
 )

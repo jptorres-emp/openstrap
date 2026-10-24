@@ -10,23 +10,14 @@
 An open-source Android app for the **Amazfit Helio Strap**, and a quiet alternative to Zepp. It pairs with the strap, syncs your sleep, heart rate, HRV, SpO₂, stress and workouts, and tells you how recovered you are. Everything stays on your phone.
 
 <p align="center">
-  <img src="docs/screenshots/today.png" width="24%" alt="Today in the morning: Recovery 74, and how your body looks against your normal">
-  <img src="docs/screenshots/evening.png" width="24%" alt="Today in the evening: the day in one line, Energy and steps">
-  <img src="docs/screenshots/sleep.png" width="24%" alt="Sleep: last night's stages and night vitals">
-  <img src="docs/screenshots/activity.png" width="24%" alt="Activity: steps, active minutes, Heart points and Load">
-</p>
-<p align="center">
-  <img src="docs/screenshots/recovery.png" width="24%" alt="Recovery and what drove it">
-  <img src="docs/screenshots/recovery-detail.png" width="24%" alt="The Recovery page with its arc">
-  <img src="docs/screenshots/sleep-score.png" width="24%" alt="The Sleep score page">
-</p>
-<p align="center">
-  <img src="docs/screenshots/workout-ready.png" width="24%" alt="Ready to start a run, with the strap's live heart rate">
-  <img src="docs/screenshots/workout-live.png" width="24%" alt="During a workout: 142 bpm in zone 3 on the zone arc">
-  <img src="docs/screenshots/workout-summary.png" width="24%" alt="After a workout: time, Load and time in each zone">
+  <img src="docs/screenshots/today.png" width="19%" alt="Today in the morning: Recovery 74, and how your body looks against your normal">
+  <img src="docs/screenshots/evening.png" width="19%" alt="Today in the evening: the day in one line, Energy and steps">
+  <img src="docs/screenshots/recovery-detail.png" width="19%" alt="The Recovery page: the score in its arc and what drove it">
+  <img src="docs/screenshots/sleep.png" width="19%" alt="Sleep: last night's stages and night vitals">
+  <img src="docs/screenshots/workout-live.png" width="19%" alt="During a workout: 142 bpm in zone 3 on the zone arc">
 </p>
 
-<sub>The day screens use the sample data debug builds can generate. The workout screens are a real walk with a real strap.</sub>
+<sub>The first four use the sample data debug builds can generate. The workout is a real walk with a real strap.</sub>
 
 ## What it feels like
 

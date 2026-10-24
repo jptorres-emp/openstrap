@@ -1,6 +1,15 @@
 package org.openstrap.app.ui.glow
 
-import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.Brush
+import kotlin.math.PI
+import kotlin.math.sin
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
@@ -37,35 +46,90 @@ import org.openstrap.app.ui.theme.MetricColors
  */
 
 /**
- * The pairing stage (E3): this phone, a line across, and the strap, lit and still, on the right as on the Strap page. Only the line changes
- * with the [step], always a solid 1 dp hairline (spec 2.7): faint while it waits, brighter once a strap is in reach,
- * pulsing while it connects, in the strap's light when connected, amber when it couldn't.
+ * The pairing stage (E3): this phone, a line across, and the strap, lit, on the right as on the Strap page. The line
+ * is always a solid 1 dp hairline (spec 2.7), and each [step] moves in its own way: still while it waits; ripples out of
+ * the phone while it searches; the strap answering with a pulse once it's in reach; sparks running along the line while
+ * they connect; the line lighting up from the phone to the strap with a flash at the pod when connected; and the line
+ * broken in the middle, amber, when it couldn't.
  */
 @Composable
 internal fun PairingStage(step: PairStep, modifier: Modifier = Modifier) {
-    val pulse = if (step == PairStep.Connecting) {
-        val t = rememberInfiniteTransition(label = "pairing line")
-        t.animateFloat(0.3f, 1f, infiniteRepeatable(tween(900), RepeatMode.Reverse), label = "pairing pulse").value
-    } else 1f
-    val line = when (step) {
-        PairStep.Ready -> Color.White.copy(alpha = 0.22f)
-        PairStep.Searching -> Color.White.copy(alpha = 0.45f)
-        PairStep.Found -> StrapLight.copy(alpha = 0.6f)
-        PairStep.Connecting -> StrapLight.copy(alpha = pulse)
-        PairStep.Connected -> StrapLight
-        PairStep.Failed, PairStep.KeyRejected -> MetricColors.warn.copy(alpha = 0.75f)
+    val t by rememberInfiniteTransition(label = "pairing").animateFloat(
+        0f, 1f, infiniteRepeatable(tween(PAIR_CYCLE_MS, easing = LinearEasing)), label = "pairing cycle",
+    )
+    // Connected: the line fills from the phone to the strap, then the pod flashes once.
+    val fill = remember { Animatable(0f) }
+    val flash = remember { Animatable(0f) }
+    LaunchedEffect(step) {
+        if (step == PairStep.Connected) {
+            fill.snapTo(0f); flash.snapTo(0f)
+            fill.animateTo(1f, tween(700, easing = FastOutSlowInEasing))
+            flash.animateTo(1f, tween(650, easing = LinearOutSlowInEasing))
+        } else { fill.snapTo(0f); flash.snapTo(0f) }
     }
     // The phone on the left and the strap on the right, where the Strap page shows it. The line runs from the phone's
-    // edge to the pod's, not to the drawing's box, which leaves room round the pod for the band.
-    // Set in from the text's edges on both sides, so the stage sits inside the card's words rather than on them.
+    // edge to the pod's, not to the drawing's box, which leaves room round the pod for the band. The stage is set in
+    // from the text's edges on both sides, so it sits inside the card's words rather than on them.
     Box(modifier.fillMaxWidth().padding(horizontal = StageInset).height(StageHeight)) {
         val strapWidth = StageHeight * 0.8f
         Canvas(Modifier.matchParentSize()) {
             val y = size.height / 2
             val gap = 8.dp.toPx()
+            val hair = 1.dp.toPx()
+            val phoneX = PhoneWidth.toPx() / 2
             val start = PhoneWidth.toPx() + gap
-            val end = size.width - strapWidth.toPx() * (1f - 2 * POD_LEFT) - gap
-            drawLine(line, Offset(start, y), Offset(end, y), 1.dp.toPx(), StrokeCap.Round)
+            val sw = strapWidth.toPx()
+            val podX = size.width - sw + sw * POD_LEFT + sw / 2
+            val end = size.width - sw * (1f - 2 * POD_LEFT) - gap
+            val reach = 46.dp.toPx()
+            fun ripple(cx: Float, phase: Float, color: Color, from: Float) {
+                val r = from + (reach - from) * phase
+                drawCircle(color.copy(alpha = color.alpha * (1f - phase) * 0.7f), r, Offset(cx, y), style = Stroke(hair))
+            }
+            fun spark(x: Float, color: Color) {
+                drawCircle(Brush.radialGradient(listOf(color.copy(alpha = 0.55f), color.copy(alpha = 0f)), Offset(x, y), 9.dp.toPx()), 9.dp.toPx(), Offset(x, y))
+                drawCircle(color, 2.dp.toPx(), Offset(x, y))
+            }
+            when (step) {
+                PairStep.Ready -> drawLine(Color.White.copy(alpha = 0.22f), Offset(start, y), Offset(end, y), hair, StrokeCap.Round)
+                PairStep.Searching -> {
+                    drawLine(Color.White.copy(alpha = 0.3f), Offset(start, y), Offset(end, y), hair, StrokeCap.Round)
+                    // Two ripples out of the phone, half a cycle apart: it's calling.
+                    for (k in 0..1) ripple(phoneX, (t + k / 2f) % 1f, Color.White, 14.dp.toPx())
+                }
+                PairStep.Found -> {
+                    drawLine(StrapLight.copy(alpha = 0.6f), Offset(start, y), Offset(end, y), hair, StrokeCap.Round)
+                    // The strap answers: one pulse out of the pod.
+                    ripple(podX, t, StrapLight, 18.dp.toPx())
+                }
+                PairStep.Connecting -> {
+                    drawLine(StrapLight.copy(alpha = 0.35f), Offset(start, y), Offset(end, y), hair, StrokeCap.Round)
+                    // Three sparks running from the phone to the strap, a third of a cycle apart, eased in and out.
+                    for (k in 0..2) {
+                        val p = (t + k / 3f) % 1f
+                        val e = p * p * (3f - 2f * p)
+                        spark(start + (end - start) * e, StrapLight.copy(alpha = sin(p * PI.toFloat())))
+                    }
+                }
+                PairStep.Connected -> {
+                    drawLine(StrapLight.copy(alpha = 0.2f), Offset(start, y), Offset(end, y), hair, StrokeCap.Round)
+                    val head = start + (end - start) * fill.value
+                    drawLine(StrapLight, Offset(start, y), Offset(head, y), hair, StrokeCap.Round)
+                    if (fill.value < 1f) spark(head, StrapLight)
+                    if (flash.value in 0.001f..0.999f) {
+                        ripple(podX, flash.value, StrapLight, 20.dp.toPx())
+                        drawCircle(StrapLight.copy(alpha = 0.35f * (1f - flash.value)), 30.dp.toPx(), Offset(podX, y))
+                    }
+                }
+                PairStep.Failed, PairStep.KeyRejected -> {
+                    // Broken in the middle.
+                    val mid = (start + end) / 2
+                    val broken = 7.dp.toPx()
+                    val amber = MetricColors.warn.copy(alpha = 0.75f)
+                    drawLine(amber, Offset(start, y), Offset(mid - broken, y), hair, StrokeCap.Round)
+                    drawLine(amber, Offset(mid + broken, y), Offset(end, y), hair, StrokeCap.Round)
+                }
+            }
         }
         PhoneDrawing(Modifier.align(Alignment.CenterStart).size(width = PhoneWidth, height = 52.dp))
         // Shifted out by the room right of the pod, so the pod sits as far from the card's edge as the phone does.
@@ -75,6 +139,9 @@ internal fun PairingStage(step: PairStep, modifier: Modifier = Modifier) {
         )
     }
 }
+
+/** One turn of the pairing stage's moving parts: a ripple, a pulse, a spark's run along the line. */
+private const val PAIR_CYCLE_MS = 1600
 
 private val PhoneWidth = 30.dp
 

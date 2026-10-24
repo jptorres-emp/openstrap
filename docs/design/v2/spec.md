@@ -630,7 +630,7 @@ Present in every moment when they apply:
 
 | State | Today shows |
 |---|---|
-| No strap paired | Hero is the pairing stage: strap render, a solid hairline to the phone, one sentence per step, "Find my strap". Below, waiting cards dimmed |
+| No strap paired | Hero is the pairing stage: the phone on the left, the strap on the right as on the Strap page, both 16 dp in from the text, a solid hairline from the phone to the pod, one sentence per step, "Find my strap". Each step moves: ripples out of the phone while searching, a pulse from the pod once found, sparks along the line while connecting, the line lighting up to the strap with a flash at the pod when connected, the line broken and amber when it fails. Below, waiting cards dimmed |
 | First nights | Cards keep their shape, value as a dim dash, "After your first night" |
 | No sleep last night | Waking hero: "No sleep recorded last night. Was the strap on?" Energy leads from then on |
 | Sync stopped | Chip turns amber "Not synced". Stale cards get an "Up to 09:40" marker. The app retries in the background. No bar |

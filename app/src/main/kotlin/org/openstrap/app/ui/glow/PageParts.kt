@@ -56,9 +56,32 @@ private val Hairline = Color.White.copy(alpha = 0.05f)
  */
 val DestructiveInk = Color.White.copy(alpha = 0.72f)
 
+/** The Control surface (spec 2.2): round buttons, chips, pills. */
+val ControlSurface = Color(0xFF1F1F22)
+
+/** The round back button of every page over a tab (spec 3.4). */
+val BackButtonSize = 44.dp
+
+/** The page header's height: the back button with room round it. */
+val PageHeaderHeight = 64.dp
+
 /**
- * A page's top: a round back button and the [title], over the day it's about ([subtitle]) when it's about one, with
- * optional [trailing] content (Save).
+ * A page's way back (spec 3.4): a [BackButtonSize] round button on the [ControlSurface] with a 20 dp arrow, dimmed
+ * and still while not [enabled] (a firmware install running).
+ */
+@Composable
+fun BackButton(onBack: () -> Unit, enabled: Boolean = true) {
+    Box(
+        Modifier.size(BackButtonSize).clip(CircleShape).background(ControlSurface).alpha(if (enabled) 1f else 0.4f)
+            .clickable(enabled = enabled, onClickLabel = "Back", role = Role.Button, onClick = onBack),
+        contentAlignment = Alignment.Center,
+    ) { Icon(AppIcons.ArrowLeft, "Back", Modifier.size(20.dp), tint = Color.White) }
+}
+
+/**
+ * The one page header (spec 3.4), on every page over a tab, details included: the [BackButton] and the [title] in
+ * Page title type, over the day it's about or a short note ([subtitle]) in Secondary when there is one, then optional
+ * [trailing] content (Save, a detail's (i)). [onTitle] makes the title a button with a caret (a detail's switcher).
  */
 @Composable
 fun PageHeader(
@@ -66,20 +89,30 @@ fun PageHeader(
     onBack: () -> Unit,
     backEnabled: Boolean = true,
     subtitle: String? = null,
+    onTitle: (() -> Unit)? = null,
     trailing: (@Composable () -> Unit)? = null,
 ) {
-    Row(Modifier.fillMaxWidth().height(60.dp), verticalAlignment = Alignment.CenterVertically) {
-        Box(
-            Modifier.size(38.dp).clip(CircleShape).background(Color(0xFF1C1C1E)).alpha(if (backEnabled) 1f else 0.4f)
-                .clickable(enabled = backEnabled, onClickLabel = "Back", onClick = onBack),
-            contentAlignment = Alignment.Center,
-        ) { Icon(AppIcons.ArrowLeft, "Back", Modifier.size(18.dp), tint = Color.White) }
+    Row(Modifier.fillMaxWidth().height(PageHeaderHeight), verticalAlignment = Alignment.CenterVertically) {
+        BackButton(onBack, backEnabled)
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
-            Text(title, color = Color.White, style = GlowType.pageTitle, maxLines = 1)
-            if (subtitle != null) Text(subtitle, color = Color.White.copy(alpha = 0.6f), style = GlowType.secondary, maxLines = 1)
+            Row(
+                Modifier.clip(RoundedCornerShape(8.dp))
+                    .let { if (onTitle != null) it.clickable(onClickLabel = "Switch", role = Role.Button, onClick = onTitle) else it },
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(title, color = Color.White, style = GlowType.pageTitle, maxLines = 1, modifier = Modifier.weight(1f, fill = false))
+                if (onTitle != null) {
+                    Spacer(Modifier.width(6.dp))
+                    Icon(AppIcons.CaretDown, null, tint = Color.White.copy(alpha = GlowType.CAPTION_ALPHA), modifier = Modifier.size(16.dp))
+                }
+            }
+            if (subtitle != null) Text(subtitle, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary, maxLines = 1)
         }
-        trailing?.invoke()
+        if (trailing != null) {
+            Spacer(Modifier.width(12.dp))
+            trailing()
+        }
     }
 }
 

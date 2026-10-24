@@ -163,15 +163,6 @@ fun GlowTile(label: String, accent: Color, onClick: (() -> Unit)?, modifier: Mod
     }
 }
 
-/** A small rounded tag for a status word ("Normal", "Higher"), tinted in [color]. */
-@Composable
-fun StatusPill(text: String, color: Color, modifier: Modifier = Modifier) {
-    Text(
-        text, color = color, style = MaterialTheme.typography.labelSmall,
-        modifier = modifier.background(color.copy(alpha = 0.14f), RoundedCornerShape(50)).padding(horizontal = 8.dp, vertical = 3.dp),
-    )
-}
-
 /** Two tiles a row, evenly spaced; an odd last tile keeps its half width. */
 @Composable
 fun <T> TileGrid(items: List<T>, tile: @Composable (T, Modifier) -> Unit) {

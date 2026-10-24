@@ -46,6 +46,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -69,7 +70,6 @@ import androidx.compose.ui.geometry.Size
 import kotlin.math.roundToInt
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
@@ -103,6 +103,7 @@ import org.openstrap.app.device.ConnectionState
 import org.openstrap.app.device.WorkoutState
 import org.openstrap.app.data.db.AppWorkout
 import org.openstrap.app.ui.workout.PhoneSummary
+import org.openstrap.app.ui.components.GlassAlertDialog
 import org.openstrap.app.ui.components.pressClickable
 import org.openstrap.app.ui.components.HapticEvent
 import org.openstrap.app.ui.components.rememberHaptics
@@ -1209,183 +1210,36 @@ fun PulseDot(color: Color, bpm: Int?, size: Dp) {
 
 private fun clock(epoch: Long) = Instant.ofEpochSecond(epoch).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("HH:mm"))
 
-/**
- * A workout recorded on the phone: "Walk saved" right after it ends, its sport when opened later. Time glows in the
- * calm readiness teal, each figure compared with your usual for similar workouts; the heart rate is drawn in its
- * zones' colours (minutes from the strap's history dashed), and time in each zone carries a "your usual" mark. What
- * the app did to the end says so, with undo, and the start and end can be trimmed.
- */
-@Composable
-fun GlowPhoneWorkoutScreen(
-    summary: PhoneSummary?,
-    contentPadding: PaddingValues,
-    onBack: () -> Unit,
-    onDelete: () -> Unit,
-    onTrim: (from: Long, to: Long) -> Unit,
-    onUndoTrim: () -> Unit,
-    justEnded: Boolean,
-    onExportGpx: () -> Unit = {},
-) {
-    BackHandler(onBack = onBack)
-    val a = summary?.analysis
-    WorkoutPage(Color.Transparent, contentPadding) {
-        Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            if (!justEnded) IconButton(onClick = onBack) { Icon(AppIcons.ArrowLeft, "Back", tint = Color.White) }
-            Text(
-                a?.let { if (justEnded) "${it.sportName} saved" else it.sportName } ?: "Workout",
-                color = Color.White, style = GlowType.headline.copy(fontSize = GlowType.headline.fontSize * 1.1f),
-                modifier = Modifier.weight(1f).padding(start = 4.dp),
-            )
-            a?.let { Text("${clock(it.shownStart)} – ${clock(it.end)}", color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.bodySmall) }
-        }
-        if (summary == null || a == null) {
-            DotPanel { Note("Loading…") }
-            return@WorkoutPage
-        }
-        val w = a.workout
-        val u = summary.usual
-        val active = w.exerciseSeconds?.toLong() ?: a.durationSeconds
-        GlowCard(GlowStyle.chart(MetricColors.readiness), Modifier.fillMaxWidth()) {
-            Column {
-                Row(verticalAlignment = Alignment.Bottom) {
-                    DotMatrixText(workoutClock(active), dot = 6.dp, gap = 2.dp)
-                    summary.distanceMeters?.let { d ->
-                        Spacer(Modifier.width(12.dp))
-                        Text(
-                            (if (summary.distanceFromSteps) "≈ " else "") + km(d) + if (d >= 1000) " km" else "",
-                            color = Color.White.copy(alpha = 0.9f), style = MaterialTheme.typography.titleMedium,
-                        )
-                    }
-                }
-                Spacer(Modifier.height(16.dp))
-                Row(Modifier.fillMaxWidth()) {
-                    CompareFact("Avg HR", w.averageHeartRate?.toString() ?: "—", delta(w.averageHeartRate, u?.averageHeartRate, " bpm"), Modifier.weight(1f))
-                    CompareFact("Max HR", w.maxHeartRate?.toString() ?: "—", delta(w.maxHeartRate, u?.maxHeartRate, ""), Modifier.weight(1f))
-                    CompareFact("Time", workoutClock(active), u?.let { minutesDelta(active - it.activeSeconds) }, Modifier.weight(1f))
-                    CompareFact("Paused", formatShort((a.durationSeconds - active).coerceAtLeast(0)), null, Modifier.weight(1f))
-                }
-                Spacer(Modifier.height(10.dp))
-                Text(
-                    if (u != null) "Compared with your last ${if (u.count == 1) "" else "${u.count} "}${a.sportName.lowercase()}${if (u.count == 1) "" else "s"} of similar length"
-                    else "Comparisons start with your next ${a.sportName.lowercase()} of similar length",
-                    color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.labelSmall,
-                )
-            }
-        }
-        if (w.trainingLoad != null) DotPanel {
-            DotHeader("Training effect", trailing = "Worked out by OpenStrap")
-            EffectFacts(w, w.vo2max?.toFloat(), a.recoveryMinutes)
-            Note(
-                "From your heart rate, on the strap's 0–5 scale; EPOC (ml/kg) as the strap reports it, not daily load. " +
-                    if (w.sportType == org.openstrap.app.data.WorkoutEffect.OUTDOOR_RUN) "VO₂ max needs 10 minutes of steady running with GPS."
-                    else "VO₂ max is worked out for outdoor runs only.",
-            )
-        }
-        summary.strapWorkout?.let { s ->
-            DotPanel {
-                DotHeader("From the strap", trailing = "Its own record")
-                EffectFacts(s.workout, s.effect?.vo2max ?: s.workout.vo2max?.toFloat(), s.recoveryMinutes)
-                Note("The strap recorded this workout too; training effect and recovery are its own figures.")
-            }
-        }
-        if (summary.laps.size > 1) DotPanel {
-            DotHeader("Laps", trailing = "${summary.laps.size}")
-            summary.laps.forEach { lap ->
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Lap ${lap.index + 1}", color = Color.White, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
-                    Text(workoutClock(lap.end - lap.start), color = Color.White, style = MaterialTheme.typography.titleSmall, modifier = Modifier.width(64.dp))
-                    lap.meters?.let { Text(km(it.toFloat()) + if (it >= 1000) " km" else "", color = Color.White.copy(alpha = 0.8f), style = MaterialTheme.typography.bodySmall, modifier = Modifier.width(64.dp)) }
-                    Text(lap.averageHeartRate?.let { "$it bpm" } ?: "—", color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.bodySmall, modifier = Modifier.width(60.dp))
-                }
-            }
-        }
-        if (summary.sets.isNotEmpty()) DotPanel {
-            val done = summary.sets.filter { it.end != null }
-            DotHeader("Sets", trailing = "${done.size} done")
-            done.forEach { set ->
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Set ${set.index + 1}", color = Color.White, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
-                    Text(workoutClock(set.end!! - set.start), color = Color.White, style = MaterialTheme.typography.titleSmall, modifier = Modifier.width(64.dp))
-                    Note(set.restEnd?.let { "rest ${workoutClock(it - set.end)}" } ?: "")
-                }
-            }
-        }
-        if (summary.route.size >= 2) {
-            val stretches = remember(summary) { Route.byZone(summary.route, summary.history, a.maxHeartRate) }
-            Box(Modifier.fillMaxWidth().height(180.dp).clip(RoundedCornerShape(28.dp)).background(Raised)) {
-                WorkoutMap(stretches, routeOnly = false, Modifier.fillMaxSize())
-                Text(
-                    "Start and end hidden when you share", color = Color.White.copy(alpha = 0.8f), style = MaterialTheme.typography.labelSmall,
-                    modifier = Modifier.align(Alignment.BottomStart).padding(12.dp).background(Color.Black, RoundedCornerShape(50)).padding(horizontal = 10.dp, vertical = 5.dp),
-                )
-            }
-        }
-        DotPanel {
-            DotHeader("Heart rate", trailing = w.maxHeartRate?.let { "max $it" })
-            if (a.heartRate.isEmpty()) {
-                Note("No heart rate reached the phone. Once the strap syncs, its own history fills in what it recorded.")
-            } else {
-                ZoneLine(a)
-                Note(
-                    if (a.historyRanges.isEmpty()) "Coloured by zone."
-                    else "Dashed: " + a.historyRanges.joinToString(", ") { "${clock(it.first)}–${clock(it.last + 1)}" } + " came from the strap's history.",
-                )
-            }
-        }
-        val zones = remember(a) { WorkoutRecorder.liveZoneSeconds(a.heartRate.filter { it.timestamp <= a.end }.map { it.timestamp to it.bpm }, a.maxHeartRate) }
-        if (zones.sum() > 0) DotPanel {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.weight(1f)) { DotHeader("Time in zones") }
-                if (u != null) {
-                    Box(Modifier.size(width = 2.dp, height = 12.dp).background(Color.White))
-                    Spacer(Modifier.width(6.dp))
-                    Note("your usual")
-                }
-            }
-            val total = zones.sum().coerceAtLeast(1)
-            for (z in 0 until Workouts.ZONES) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Z${z + 1}", color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.bodySmall, modifier = Modifier.width(28.dp))
-                    Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
-                        GlowBar(zones[z].toFloat() / total, ZONE_COLORS[z], Modifier.fillMaxWidth())
-                        u?.let { usual ->
-                            Canvas(Modifier.fillMaxWidth().height(14.dp)) {
-                                val x = usual.zoneShares[z].coerceIn(0f, 1f) * size.width
-                                drawRect(Color.White, Offset(x - 1.dp.toPx(), 0f), Size(2.dp.toPx(), size.height))
-                            }
-                        }
-                    }
-                    Text(workoutClock(zones[z].toLong()), color = Color.White, style = MaterialTheme.typography.bodySmall, modifier = Modifier.width(56.dp).padding(start = 10.dp))
-                }
-            }
-        }
-        TrimSection(summary, onTrim, onUndoTrim)
-        Spacer(Modifier.weight(1f))
-        SummaryActions(summary, justEnded, onExportGpx, onDone = onBack, onDelete = onDelete)
-    }
-}
-
 /** Export GPX (for a route kept), Done right after the end, and Delete workout behind a question. */
 @Composable
 internal fun ColumnScope.SummaryActions(summary: PhoneSummary, justEnded: Boolean, onExportGpx: () -> Unit, onDone: () -> Unit, onDelete: () -> Unit) {
-    var confirmDelete by remember { mutableStateOf(false) }
     val canExport = Route.privacyTrim(summary.route).isNotEmpty()
     if (justEnded || canExport) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         if (canExport) Box(Modifier.weight(1f)) { WorkoutButton("Export GPX", Raised, Color.White, onExportGpx) }
         if (justEnded) Box(Modifier.weight(1f)) { WorkoutButton("Done", Color.White, Color.Black, onDone) }
     }
+    DeleteWorkout(PHONE_DELETE, onDelete, Modifier.align(Alignment.CenterHorizontally))
+}
+
+/** What deleting a phone workout does. */
+internal const val PHONE_DELETE = "Its heart rate and times are removed from OpenStrap. The strap's own history is kept."
+
+/** "Delete workout" in red, asking first; [what] says what deleting it does. */
+@Composable
+internal fun DeleteWorkout(what: String, onDelete: () -> Unit, modifier: Modifier = Modifier) {
+    var confirmDelete by remember { mutableStateOf(false) }
     Text(
         "Delete workout", color = TrendBad, style = MaterialTheme.typography.bodyMedium,
-        modifier = Modifier.align(Alignment.CenterHorizontally).clip(RoundedCornerShape(50))
+        modifier = modifier.clip(RoundedCornerShape(50))
             .pressClickable({ confirmDelete = true }, RoundedCornerShape(50)).padding(horizontal = 16.dp, vertical = 10.dp),
     )
     if (confirmDelete) {
-        org.openstrap.app.ui.components.GlassAlertDialog(
+        GlassAlertDialog(
             onDismissRequest = { confirmDelete = false },
             title = { Text("Delete this workout?") },
-            text = { Text("Its heart rate and times are removed from OpenStrap. The strap's own history is kept.") },
-            confirmButton = { androidx.compose.material3.TextButton(onClick = { confirmDelete = false; onDelete() }) { Text("Delete") } },
-            dismissButton = { androidx.compose.material3.TextButton(onClick = { confirmDelete = false }) { Text("Cancel") } },
+            text = { Text(what) },
+            confirmButton = { TextButton(onClick = { confirmDelete = false; onDelete() }) { Text("Delete") } },
+            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Cancel") } },
         )
     }
 }
@@ -1435,27 +1289,6 @@ internal fun TrimSection(summary: PhoneSummary, onTrim: (from: Long, to: Long) -
             Icon(AppIcons.CaretRight, null, tint = Color.White.copy(alpha = 0.7f))
         }
     }
-}
-
-/** A figure with how it compares with your usual underneath ("−4 bpm"); nothing under it without a usual. */
-@Composable
-private fun CompareFact(label: String, value: String, delta: String?, modifier: Modifier) {
-    Column(modifier) {
-        Text(label, color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.bodySmall)
-        Text(value, color = Color.White, style = MaterialTheme.typography.titleLarge)
-        if (delta != null) Text(delta, color = MetricColors.readiness, style = MaterialTheme.typography.labelSmall)
-    }
-}
-
-private fun delta(value: Int?, usual: Int?, unit: String): String? {
-    if (value == null || usual == null) return null
-    val d = value - usual
-    return when { d > 0 -> "+$d$unit"; d < 0 -> "−${-d}$unit"; else -> "as usual" }
-}
-
-private fun minutesDelta(seconds: Long): String {
-    val m = Math.round(seconds / 60.0)
-    return when { m > 0 -> "+${m}m"; m < 0 -> "−${-m}m"; else -> "as usual" }
 }
 
 /**
@@ -1552,48 +1385,6 @@ internal fun TrimPanel(summary: PhoneSummary, onSave: (Long, Long) -> Unit, onCa
             Box(Modifier.weight(1f)) { WorkoutButton("Cancel", Raised, Color.White, onCancel) }
             Box(Modifier.weight(1f)) { WorkoutButton("Save", Color.White, Color.Black, { onSave(from, to) }) }
         }
-    }
-}
-
-private fun formatShort(seconds: Long) = if (seconds < 60) "${seconds}s" else org.openstrap.app.ui.components.formatDuration(seconds)
-
-/** Heart rate in ten-second steps, each stretch in its zone's colour; minutes from the strap's history dashed. */
-@Composable
-private fun ZoneLine(a: WorkoutAnalysis) {
-    val step = 10L
-    val first = a.shownStart
-    val points = remember(a) {
-        val n = ((a.end - first) / step + 1).toInt().coerceAtLeast(2)
-        val sums = FloatArray(n)
-        val counts = IntArray(n)
-        a.heartRate.forEach { s ->
-            val i = ((s.timestamp - first) / step).toInt()
-            if (i in 0 until n) { sums[i] += s.bpm.toFloat(); counts[i]++ }
-        }
-        List(n) { if (counts[it] == 0) null else sums[it] / counts[it] }
-    }
-    val known = points.filterNotNull()
-    val lo = (known.minOrNull() ?: 60f) - 5f
-    val hi = (known.maxOrNull() ?: 180f) + 5f
-    Canvas(Modifier.fillMaxWidth().height(72.dp)) {
-        val dx = size.width / (points.size - 1).coerceAtLeast(1)
-        fun y(v: Float) = size.height - (v - lo) / (hi - lo) * size.height
-        val dash = PathEffect.dashPathEffect(floatArrayOf(4.dp.toPx(), 4.dp.toPx()))
-        for (i in 0 until points.size - 1) {
-            val v0 = points[i] ?: continue
-            val v1 = points[i + 1] ?: continue
-            val t = first + i * step
-            val zone = WorkoutRecorder.liveZone(v0.toInt(), a.maxHeartRate)!!
-            drawLine(
-                ZONE_COLORS[zone], Offset(i * dx, y(v0)), Offset((i + 1) * dx, y(v1)), strokeWidth = 2.5.dp.toPx(), cap = StrokeCap.Round,
-                pathEffect = if (a.historyRanges.any { t in it }) dash else null,
-            )
-        }
-    }
-    Row(Modifier.fillMaxWidth()) {
-        Note(clock(first))
-        Spacer(Modifier.weight(1f))
-        Note(clock(a.end))
     }
 }
 

@@ -138,4 +138,12 @@ class SummaryCopyTest {
         // Too short to be a best.
         assertNull(best(BestCandidate(now, 3, 5 * 60, null), emptyList()))
     }
+
+    @Test
+    fun `the last part is what the workout's distance leaves after the whole kilometres`() {
+        // The raw route runs to 2185 m, the workout's smoothed distance is 2176 m.
+        val splits = listOf(Route.Split(0, 300, 300, 1000.0), Route.Split(1, 600, 300, 1000.0), Route.Split(2, 640, 40, 185.0))
+        assertEquals("Last 176 m", SummaryCopy.splitRows(splits, emptyList(), 0L, totalMeters = 2176f).last().name)
+        assertEquals("Last 185 m", SummaryCopy.splitRows(splits, emptyList(), 0L).last().name)
+    }
 }

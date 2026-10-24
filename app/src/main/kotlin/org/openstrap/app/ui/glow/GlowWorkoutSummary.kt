@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -47,6 +48,7 @@ import org.openstrap.app.ui.components.HapticEvent
 import org.openstrap.app.ui.components.rememberAnimationsOn
 import org.openstrap.app.ui.components.rememberHaptics
 import org.openstrap.app.ui.dashboard.TodayCopy
+import org.openstrap.app.ui.theme.AppIcons
 import org.openstrap.app.ui.theme.MetricColors
 import org.openstrap.app.ui.workout.BestCandidate
 import org.openstrap.app.ui.workout.CalmDownLine
@@ -58,8 +60,8 @@ import org.openstrap.app.ui.workout.ZONE_NAMES
 /*
  * The summary right after a workout (spec 6.3, "Right after"): it leads with the calm down, the heart rate drop drawing
  * as it happens on a toned-down glow, then the workout, its Load against your usual, time in zones and the splits. A
- * personal best is one line on the Load card and a short swell of the glow, no modal. Past workouts keep their own
- * page ([GlowPhoneWorkoutScreen]).
+ * personal best is one line on the Load card and a short swell of the glow, no modal. Past workouts open their own
+ * page ([GlowWorkoutDetailScreen]), which shares the Load card and the lists.
  */
 
 /** The hero's light right after a workout: calmer than a live card's. */
@@ -233,25 +235,31 @@ private fun WorkoutCard(summary: PhoneSummary) {
             workoutClock(active), null,
             SummaryCopy.workoutLine(summary.distanceMeters, summary.distanceFromSteps, w.averageHeartRate, (a.durationSeconds - active).coerceAtLeast(0)),
         )
-        if (summary.route.size >= 2) {
-            val stretches = remember(summary) { Route.byZone(summary.route, summary.history, a.maxHeartRate) }
-            Box(Modifier.padding(top = 14.dp).fillMaxWidth().height(170.dp).clip(RoundedCornerShape(20.dp)).background(Raised)) {
-                WorkoutMap(stretches, routeOnly = false, Modifier.fillMaxSize())
-                Text(
-                    "Start and end hidden when you share", color = Color.White.copy(alpha = 0.8f), style = MaterialTheme.typography.labelSmall,
-                    modifier = Modifier.align(Alignment.BottomStart).padding(10.dp).background(Color.Black, RoundedCornerShape(50)).padding(horizontal = 10.dp, vertical = 5.dp),
-                )
-            }
-        }
+        RouteMap(summary, Modifier.padding(top = 14.dp))
+    }
+}
+
+/** The kept route in its zones' colours, saying its ends stay private when shared; nothing without a route. */
+@Composable
+internal fun RouteMap(summary: PhoneSummary, modifier: Modifier = Modifier) {
+    if (summary.route.size < 2) return
+    val stretches = remember(summary) { Route.byZone(summary.route, summary.history, summary.analysis.maxHeartRate) }
+    Box(modifier.fillMaxWidth().height(170.dp).clip(RoundedCornerShape(20.dp)).background(Raised)) {
+        WorkoutMap(stretches, routeOnly = false, Modifier.fillMaxSize())
+        Text(
+            "Start and end hidden when you share", color = Color.White.copy(alpha = 0.8f), style = MaterialTheme.typography.labelSmall,
+            modifier = Modifier.align(Alignment.BottomStart).padding(10.dp).background(Color.Black, RoundedCornerShape(50)).padding(horizontal = 10.dp, vertical = 5.dp),
+        )
     }
 }
 
 /**
  * Load from this workout against your [usual] workout Load: lit from the top when above it, stronger from the bottom
- * when below (spec 2.4). Time to recover under it, and a personal [best] as its last line.
+ * when below (spec 2.4). Time to recover under it, then the heart rate [drop] line when there is one, and a personal
+ * [best] as its last line. [onInfo] puts an (i) beside the title, for training effect and EPOC.
  */
 @Composable
-private fun LoadCard(a: WorkoutAnalysis, usual: Float?, best: String?) {
+internal fun LoadCard(a: WorkoutAnalysis, usual: Float?, best: String?, drop: String? = null, onInfo: (() -> Unit)? = null) {
     val load = a.workout.trainingLoad
     val status = load?.let { TodayCopy.loadStatus(it.toFloat(), usual, endOfDay = true) }
     val edge = when (status) {
@@ -260,7 +268,13 @@ private fun LoadCard(a: WorkoutAnalysis, usual: Float?, best: String?) {
         else -> EdgeStatus.Usual
     }
     EdgeCard(MetricColors.load, Modifier.fillMaxWidth(), status = edge) {
-        EdgeTitle("Load", SummaryCopy.loadTitle(a.workout.sportType))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.weight(1f)) { EdgeTitle("Load", SummaryCopy.loadTitle(a.workout.sportType)) }
+            if (onInfo != null) {
+                Spacer(Modifier.width(10.dp))
+                RoundButton(AppIcons.Info, "About Load and training effect", onInfo, size = 30.dp)
+            }
+        }
         if (load != null) EdgeValue(
             load.toString(), null, SummaryCopy.loadLine(load, usual),
             if (edge != EdgeStatus.Usual) MetricColors.load else Color.White.copy(alpha = GlowType.SECONDARY_ALPHA),
@@ -268,13 +282,14 @@ private fun LoadCard(a: WorkoutAnalysis, usual: Float?, best: String?) {
         SummaryCopy.timeToRecover(a.recoveryMinutes)?.let {
             Text(it, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary, modifier = Modifier.padding(top = 4.dp))
         }
+        drop?.let { Text(it, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary, modifier = Modifier.padding(top = 4.dp)) }
         best?.let { Text(it, color = Color.White, style = GlowType.secondary, modifier = Modifier.padding(top = 12.dp)) }
     }
 }
 
 /** Time in zones: the zone bar, then each zone with time in it, hardest first. */
 @Composable
-private fun ZonesList(zones: IntArray, maxHr: Int) {
+internal fun ZonesList(zones: IntArray, maxHr: Int) {
     ListPanel(title = "Time in zones", note = "Max $maxHr bpm") {
         ZoneBar(zones.toList(), ZONE_COLORS, Modifier.padding(top = 2.dp, bottom = 6.dp))
         var first = true
@@ -291,11 +306,13 @@ private fun ZonesList(zones: IntArray, maxHr: Int) {
  * marked; laps alone without GPS; sets for strength. Nothing without any of them.
  */
 @Composable
-private fun SplitsList(summary: PhoneSummary, liveRoute: List<Route.Point>) {
+internal fun SplitsList(summary: PhoneSummary, liveRoute: List<Route.Point>) {
     val a = summary.analysis
     val maxHr = a.maxHeartRate
     val route = summary.route.ifEmpty { liveRoute.filter { it.t in a.shownStart..a.end } }
-    val rows = remember(route, summary) { SummaryCopy.splitRows(Route.splits(route, summary.pauses), summary.history, route.firstOrNull()?.t) }
+    val rows = remember(route, summary) { SummaryCopy.splitRows(
+        Route.splits(route, summary.pauses), summary.history, route.firstOrNull()?.t, summary.distanceMeters?.takeIf { !summary.distanceFromSteps },
+    ) }
     val laps = summary.laps.takeIf { it.size > 1 }.orEmpty()
     val sets = summary.sets.filter { it.end != null }
     fun dot(bpm: Int?) = bpm?.let { zoneColor(it, maxHr) } ?: EdgeNeutral

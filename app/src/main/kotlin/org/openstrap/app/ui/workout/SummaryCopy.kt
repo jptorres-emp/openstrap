@@ -94,9 +94,12 @@ object SummaryCopy {
     fun loadTitle(sportType: Int): String = "From this ${sportNoun(sportType) ?: "workout"}"
 
     /** "Time to recover 14 h", "Time to recover 40 min"; null without one. */
-    fun timeToRecover(minutes: Int?): String? {
+    fun timeToRecover(minutes: Int?): String? = recoverSpan(minutes)?.let { "Time to recover $it" }
+
+    /** A time to recover on its own: "14 h", "40 min"; null without one. */
+    fun recoverSpan(minutes: Int?): String? {
         val m = minutes?.takeIf { it > 0 } ?: return null
-        return "Time to recover " + if (m < 90) "$m min" else "${Math.round(m / 60.0)} h"
+        return if (m < 90) "$m min" else "${Math.round(m / 60.0)} h"
     }
 
     /**
@@ -127,13 +130,16 @@ object SummaryCopy {
     /**
      * The Splits list: each whole kilometre ("Km 3", "5:42") with the average of [readings] (time, bpm) over it, then the
      * last part ("Last 430 m") when there's enough of it. A kilometre starts where the one before ended, or at [firstT].
+     * With the workout's [totalMeters], the last part is what's left of it after the whole kilometres, so the list adds
+     * up to the distance shown above it (the raw route runs a little longer than the smoothed distance).
      */
-    fun splitRows(splits: List<Route.Split>, readings: List<Pair<Long, Int>>, firstT: Long?): List<SplitRow> =
+    fun splitRows(splits: List<Route.Split>, readings: List<Pair<Long, Int>>, firstT: Long?, totalMeters: Float? = null): List<SplitRow> =
         splits.mapIndexedNotNull { i, sp ->
             val whole = sp.meters >= 1000.0
             if (!whole && (i != splits.lastIndex || sp.meters < PARTIAL_MIN_M)) return@mapIndexedNotNull null
             val from = splits.getOrNull(i - 1)?.endT ?: firstT ?: sp.endT
-            SplitRow(if (whole) "Km ${i + 1}" else "Last ${km(sp.meters.toFloat())}", workoutClock(sp.seconds), WorkoutCopy.averageOver(readings, from, sp.endT))
+            val last = totalMeters?.let { it - 1000f * i }?.takeIf { it > 0f } ?: sp.meters.toFloat()
+            SplitRow(if (whole) "Km ${i + 1}" else "Last ${km(last)}", workoutClock(sp.seconds), WorkoutCopy.averageOver(readings, from, sp.endT))
         }
 
     /** A best counts once the last better one is at least this long ago. */

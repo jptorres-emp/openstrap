@@ -694,7 +694,7 @@ private fun AppRoot(
                         ),
                     )
                     is Detail.Workout -> WorkoutDetail(
-                        openWorkout?.takeIf { it.workout.start == detail.start }, padding, onBack = pop,
+                        openWorkout?.takeIf { it.workout.start == detail.start }, workouts, padding, onBack = pop,
                         onDelete = { container.workout.discard(detail.start); pop() },
                         workoutsVm = workoutsVm, session = container.workout, exportGpx = exportGpx,
                     )
@@ -1102,10 +1102,11 @@ private fun MetricDetail(
     onBack: () -> Unit,
 ) = org.openstrap.app.ui.glow.GlowMetricDetailScreen(metric, night, state, history, liveHeartRate, liveEnabled, canUseLive, onLiveToggle, onOpen, onSwitch, onSelectDay, contentPadding, onBack)
 
-/** A workout's detail. */
+/** A workout's detail: one page for the strap's and the phone's ([org.openstrap.app.ui.glow.GlowWorkoutDetailScreen]). */
 @androidx.compose.runtime.Composable
 private fun WorkoutDetail(
     a: org.openstrap.app.data.WorkoutAnalysis?,
+    workouts: List<org.openstrap.app.data.WorkoutAnalysis>,
     contentPadding: androidx.compose.foundation.layout.PaddingValues,
     onBack: () -> Unit,
     onDelete: () -> Unit,
@@ -1113,18 +1114,18 @@ private fun WorkoutDetail(
     session: org.openstrap.app.device.WorkoutSession,
     exportGpx: (Long) -> Unit,
 ) {
-    // OpenStrap's own recordings get the workout-mode summary, trim and delete; the strap's get delete too, remembered so
-    // the next sync doesn't bring them back.
-    if (a?.fromPhone == true) {
-        val start = a.workout.start
-        val summary by remember(start) { workoutsVm.phoneSummary(start) }.collectAsStateWithLifecycle(null)
-        org.openstrap.app.ui.glow.GlowPhoneWorkoutScreen(
-            summary, contentPadding, onBack, onDelete,
-            onTrim = { from, to -> session.trim(start, from, to) }, onUndoTrim = { session.undoTrim(start) }, justEnded = false,
-            onExportGpx = { exportGpx(start) },
-        )
-    } else org.openstrap.app.ui.glow.GlowWorkoutScreen(
-        a, contentPadding, onBack,
-        onDelete = a?.let { s -> { workoutsVm.deleteStrapWorkout(s.workout.start); onBack() } },
+    // OpenStrap's own recordings also get their summary (route, laps, sets, the recording for trim) and are deleted
+    // through the session; the strap's are deleted and remembered, so the next sync doesn't bring them back.
+    val start = a?.workout?.start
+    val fromPhone = a?.fromPhone == true
+    val summary by remember(start, fromPhone) {
+        if (start != null && fromPhone) workoutsVm.phoneSummary(start) else kotlinx.coroutines.flow.flowOf(null)
+    }.collectAsStateWithLifecycle(null)
+    val usualDrop by produceState<Int?>(null, start, fromPhone) { value = start?.takeIf { !fromPhone }?.let { workoutsVm.usualDrop(it) } }
+    org.openstrap.app.ui.glow.GlowWorkoutDetailScreen(
+        a, summary, workouts, usualDrop, contentPadding, onBack,
+        onDelete = if (fromPhone) onDelete else ({ start?.let(workoutsVm::deleteStrapWorkout); onBack() }),
+        onTrim = { from, to -> start?.let { session.trim(it, from, to) } }, onUndoTrim = { start?.let(session::undoTrim) },
+        onExportGpx = { start?.let(exportGpx) },
     )
 }

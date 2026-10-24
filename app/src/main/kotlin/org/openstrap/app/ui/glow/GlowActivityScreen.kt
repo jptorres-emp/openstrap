@@ -459,7 +459,7 @@ private fun EffortLight(icon: androidx.compose.ui.graphics.vector.ImageVector, e
 
 /** "Found by the strap": a quiet outlined label beside the sport's name. */
 @Composable
-private fun FoundTag() {
+internal fun FoundTag() {
     Text(
         TabCopy.FOUND_BY_STRAP, color = Color.White.copy(alpha = 0.7f), style = GlowType.secondary.copy(fontSize = 11.sp, lineHeight = 14.sp),
         maxLines = 1,

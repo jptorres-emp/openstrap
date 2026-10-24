@@ -340,11 +340,3 @@ internal fun GlowBar(fraction: Float, color: Color, modifier: Modifier = Modifie
 
 @Composable
 internal fun Note(text: String) = Text(text, color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.bodySmall)
-
-@Composable
-internal fun Fact(label: String, value: String) {
-    Column {
-        Text(label, color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.bodySmall)
-        Text(value, color = Color.White, style = MaterialTheme.typography.titleLarge)
-    }
-}

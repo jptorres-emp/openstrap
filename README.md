@@ -7,7 +7,9 @@
 
 # OpenStrap
 
-An open-source Android app for the **Amazfit Helio Strap**, and a quiet alternative to Zepp. It pairs with the strap, syncs your sleep, heart rate, HRV, SpO₂, stress and workouts, and tells you how recovered you are. Everything stays on your phone.
+**Fewer numbers. Clearer answers.**
+
+OpenStrap is a calm Android app for the **Amazfit Helio Strap**. Other apps hand you dashboards to read. OpenStrap tells you how you slept, how ready you are and what your day needs, in plain words. It replaces the Zepp app, syncs your sleep, heart rate, HRV, SpO₂, stress and workouts, and keeps everything on your phone.
 
 <p align="center">
   <img src="docs/screenshots/today.png" width="19%" alt="Today in the morning: Recovery 74, and how your body looks against your normal">

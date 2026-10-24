@@ -183,16 +183,18 @@ private fun RecoveryHero(
                     else -> "Recovery is scored each morning from the night's sleep."
                 },
             )
-            // Before the first score the sentence already says how many nights are in, so the caveat waits for a score.
-            if (score != null) {
-                ready.let { TabCopy.learning(it.phase, it.baselineNights) }?.let { CaveatLine(it, MetricColors.readiness) }
+            // The strap's estimate stands in for a withheld score, under its own word.
+            val figure = score ?: shown?.value?.takeIf { shown.estimate }
+            if (figure != null) {
+                // Before the first score the sentence already says how many nights are in, so the caveat waits for a score.
+                if (score != null) ready.let { TabCopy.learning(it.phase, it.baselineNights) }?.let { CaveatLine(it, MetricColors.readiness) }
                 Spacer(Modifier.height(22.dp))
                 androidx.compose.foundation.layout.Row(verticalAlignment = androidx.compose.ui.Alignment.Bottom) {
-                    HeroFigure(score.toString(), TodayCopy.recoveryWord(score, alert), big = true)
+                    HeroFigure(figure.toString(), if (score != null) TodayCopy.recoveryWord(score, alert) else shown?.word.orEmpty(), big = true)
                     // Trend dots (chart kit): the last 7 days beside the score, today the only full dot. TODO(step 6): your
                     // normal as their band ([TrendDots] draws one) needs a normal of the score, and the app keeps 7 days of it.
-                    val week = r.readinessTrend.map { it.second }
-                    if (week.count { it != null } >= 2) {
+                    val week = r?.readinessTrend.orEmpty().map { it.second }
+                    if (score != null && week.count { it != null } >= 2) {
                         Spacer(Modifier.width(16.dp))
                         Column(Modifier.weight(1f)) {
                             TrendDots(week)
@@ -200,9 +202,6 @@ private fun RecoveryHero(
                         }
                     }
                 }
-            } else if (shown?.estimate == true) {
-                Spacer(Modifier.height(22.dp))
-                HeroFigure(shown.value?.toString(), shown.word.orEmpty(), big = true)
             }
         }
     }

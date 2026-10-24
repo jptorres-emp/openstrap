@@ -179,6 +179,15 @@ class SettingsStore(private val context: Context) {
         context.dataStore.edit { it[strapSessionsKey] = enabled }
     }
 
+    private val workoutLiveViewKey = androidx.datastore.preferences.core.intPreferencesKey("workout_live_view")
+
+    /** The live view a GPS workout was left on, Heart (0) or Map (1); the next one opens on it. Heart by default. */
+    val workoutLiveView: Flow<Int> = context.dataStore.data.map { it[workoutLiveViewKey] ?: 0 }
+
+    suspend fun setWorkoutLiveView(view: Int) {
+        context.dataStore.edit { it[workoutLiveViewKey] = view }
+    }
+
     private val birthYear = androidx.datastore.preferences.core.intPreferencesKey("profile_birth_year")
     private val sex = stringPreferencesKey("profile_sex")
     private val weight = androidx.datastore.preferences.core.floatPreferencesKey("profile_weight_kg")

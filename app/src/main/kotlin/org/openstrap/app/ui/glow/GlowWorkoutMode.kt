@@ -52,13 +52,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.CornerRadius
@@ -70,18 +72,22 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.drop
+import kotlin.math.cos
+import kotlin.math.min
+import kotlin.math.sin
 import org.openstrap.app.data.WorkoutAnalysis
 import org.openstrap.app.data.WorkoutRecorder
 import org.openstrap.app.data.WorkoutSuggestions
@@ -89,6 +95,8 @@ import org.openstrap.app.data.WorkoutTarget
 import org.openstrap.app.data.Route
 import org.openstrap.app.data.Strength
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.layout.wrapContentHeight
 import org.openstrap.app.data.Workouts
 import org.openstrap.app.device.ConnectionState
@@ -96,12 +104,16 @@ import org.openstrap.app.device.WorkoutState
 import org.openstrap.app.data.db.AppWorkout
 import org.openstrap.app.ui.workout.PhoneSummary
 import org.openstrap.app.ui.components.pressClickable
+import org.openstrap.app.ui.components.HapticEvent
+import org.openstrap.app.ui.components.rememberHaptics
+import org.openstrap.app.ui.dashboard.Info
 import org.openstrap.app.ui.dashboard.ScreenList
 import org.openstrap.app.ui.theme.MetricColors
 import org.openstrap.app.ui.theme.AppIcons
 import org.openstrap.app.ui.workout.SportIcons
 import org.openstrap.app.ui.workout.ZONE_COLORS
-import org.openstrap.app.ui.workout.ZONE_NAMES
+import org.openstrap.app.ui.workout.LiveView
+import org.openstrap.app.ui.workout.WorkoutCopy
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -211,34 +223,6 @@ private fun Pill(label: String, dot: Color?, onClick: (() -> Unit)? = null, care
         if (caret) {
             Spacer(Modifier.width(8.dp))
             Icon(AppIcons.CaretDown, null, tint = Color.White, modifier = Modifier.size(14.dp))
-        }
-    }
-}
-
-/** The five zones side by side, the current one lit, with a white marker where [bpm] sits. */
-@Composable
-private fun ZoneBar(bpm: Int?, maxHr: Int, ring: Color, modifier: Modifier = Modifier, barHeight: Dp = 4.dp) {
-    val zone = WorkoutRecorder.liveZone(bpm, maxHr)
-    Canvas(modifier.fillMaxWidth().height(18.dp)) {
-        val gap = 4.dp.toPx()
-        val h = barHeight.toPx()
-        val w = (size.width - gap * (Workouts.ZONES - 1)) / Workouts.ZONES
-        val top = (size.height - h) / 2
-        val halo = 9.dp.toPx()
-        val x = bpm?.let { (WorkoutRecorder.zonePosition(it, maxHr) * size.width).coerceIn(halo, size.width - halo) }
-        // Like the Recovery and Charge gauges: bright up to the marker, faint after it, so the marker stands clear.
-        for (z in 0 until Workouts.ZONES) {
-            val left = z * (w + gap)
-            drawRoundRect(ZONE_COLORS[z].copy(alpha = 0.25f), Offset(left, top), Size(w, h), CornerRadius(h / 2))
-            if (x != null && x > left) clipRect(right = x) {
-                drawRoundRect(ZONE_COLORS[z], Offset(left, top), Size(w, h), CornerRadius(h / 2))
-            }
-        }
-        if (bpm != null && x != null) {
-            // The gauges' marker: the colour in a soft halo of itself.
-            val dot = zone?.let { ZONE_COLORS[it] } ?: ring
-            drawCircle(dot.copy(alpha = 0.3f), radius = halo, center = Offset(x, size.height / 2))
-            drawCircle(dot, radius = 5.dp.toPx(), center = Offset(x, size.height / 2))
         }
     }
 }
@@ -470,6 +454,8 @@ fun GlowWorkoutReadyScreen(
     var restSeconds by rememberSaveable { mutableStateOf(Strength.Rest.DEFAULT.seconds) }
     var restBelow by rememberSaveable { mutableStateOf<Int?>(null) }
     val target = WorkoutTarget.parse(targetCode)
+    var info by rememberSaveable { mutableStateOf(false) }
+    val haptics = rememberHaptics()
     if (picking) {
         SportPicker(sportType, contentPadding, onPick = { onSport(it); picking = false }, onBack = { if (pickSport) onBack() else picking = false })
         return
@@ -489,46 +475,36 @@ fun GlowWorkoutReadyScreen(
             Text("Ready when you are", color = Color.White, style = GlowType.headline.copy(fontSize = GlowType.headline.fontSize * 1.25f))
             Text("Recording starts when you tap Start.", color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.bodyMedium)
         }
-        DotPanel {
-            val connected = connection as? ConnectionState.Connected
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text("Strap", color = Color.White, style = MaterialTheme.typography.titleSmall)
-                    Note(
-                        if (connected == null) "Not connected"
-                        else listOfNotNull("Connected", connected.batteryPercent?.let { "$it%" }, liveHeartRate?.let { "$it bpm live" } ?: "waiting for heart rate").joinToString(" · "),
-                    )
-                }
-                Canvas(Modifier.size(10.dp)) { drawCircle(if (connected != null) TrendGood else TrendBad) }
-            }
-            Note(
-                if (connected == null) "You can start anyway. OpenStrap records once the strap reconnects, and fills the time before from the strap's own history after it syncs."
-                else "Heart rate is recorded every second, with the screen off too. If the strap drops out, the missing minutes are filled from its own history after the next sync.",
+        // One line confirms the strap; how recording, GPS and the route work is behind the (i).
+        Row(Modifier.padding(start = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Canvas(Modifier.size(8.dp)) { drawCircle(if (connection is ConnectionState.Connected) TrendGood else TrendBad) }
+            Spacer(Modifier.width(10.dp))
+            Text(
+                WorkoutCopy.readyLine(connection, liveHeartRate), color = Color.White, style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.weight(1f),
             )
+            Spacer(Modifier.width(12.dp))
+            RoundButton(AppIcons.Info, "About recording", { info = true }, size = 30.dp)
         }
         // GPS is offered for outdoor sports only, off by default; the route is discarded unless kept.
         if (outdoor) DotPanel {
-            SwitchRow("Use GPS", if (useGps) "Only during this workout, for distance, pace and the map. Map tiles come from OpenFreeMap, which sees roughly where the map is; its Route only button loads none." else if (sportType in Workouts.ON_FOOT) "Off · distance from the strap's steps (≈)" else "Off · no distance without it", useGps) { useGps = it }
+            SwitchRow("Use GPS", WorkoutCopy.gpsNote(useGps, sportType), useGps) { useGps = it }
             if (useGps) {
                 DotDivider()
-                SwitchRow(
-                    "Keep route on this phone",
-                    if (keepRoute) "Saved on the phone for the map and export" else "Off · only totals are kept, the route is discarded",
-                    keepRoute,
-                ) { keepRoute = it }
+                SwitchRow("Keep route on this phone", WorkoutCopy.routeNote(keepRoute), keepRoute) { keepRoute = it }
             }
         }
         // Strength counts sets and rest; the strap buzzes when rest is over, so the phone can stay in a pocket.
         if (strength) Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             ChipLabel("Sets")
             Chips(listOf("Open") + listOf(3, 4, 5).map { "$it sets" }, listOf(null, 3, 4, 5).indexOf(setsTarget), Color.White) { setsTarget = listOf(null, 3, 4, 5)[it] }
-            ChipLabel("Rest · the strap buzzes when it's over")
+            ChipLabel("Rest. The strap buzzes when it's over.")
             Chips(Strength.Rest.TIMES.map { "${it} s" }, Strength.Rest.TIMES.indexOf(restSeconds), Color.White) { restSeconds = Strength.Rest.TIMES[it] }
             ChipLabel("Or sooner, once heart rate drops below")
             Chips(Strength.Rest.LEVELS.map { it?.let { b -> "$b bpm" } ?: "Off" }, Strength.Rest.LEVELS.indexOf(restBelow), Color.White) { restBelow = Strength.Rest.LEVELS[it] }
         }
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Target · the strap buzzes if you drift out", color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(start = 4.dp))
+            Text("Target. The strap buzzes if you drift out.", color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(start = 4.dp))
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 (listOf<WorkoutTarget?>(null) + WorkoutTarget.presets).forEach { t ->
                     val on = t?.code == targetCode
@@ -553,12 +529,17 @@ fun GlowWorkoutReadyScreen(
         }
         Spacer(Modifier.weight(1f))
         WorkoutButton("Start", accent, Color.Black, {
+            haptics.perform(HapticEvent.WorkoutStart)
             onStart(
                 sportType, askToEnd, target, outdoor && useGps, outdoor && useGps && keepRoute,
                 Strength.Rest(restSeconds, restBelow).takeIf { strength }, setsTarget.takeIf { strength },
             )
         }, icon = AppIcons.PlayFill)
     }
+    if (info) InfoSheet(
+        Info("Recording", WorkoutCopy.READY_MEANING, emptyList(), "", "", ""), accent, null, null,
+        onDismiss = { info = false }, rows = WorkoutCopy.readyRows(outdoor),
+    )
 }
 
 @Composable
@@ -637,10 +618,12 @@ private fun SportPicker(selected: Int, contentPadding: PaddingValues, onPick: (I
 /* -------------------------------------------- Live screen -------------------------------------------- */
 
 /**
- * The workout as it records, in the current zone's colour. The card beats at the live heart rate with the last ten
- * minutes behind the number; the zone, its range and the time spent in it sit under a zone bar. Back tucks it away;
- * ending takes a one-second hold on the square so a pocket can't end it. With [split] the heart card is on the other
- * half of a folded phone ([GlowWorkoutGlance]), so this half keeps the figures and the controls.
+ * The workout as it records, in the current zone's colour. The card beats at the live heart rate on its zone arc, the
+ * last ten minutes behind the number; the zone, its range and the time spent in it sit under the arc. A GPS workout
+ * swipes between that card and the map, which keeps the heart rate on a chip, and opens on the view used last
+ * ([liveView], saved through [onLiveView]). Back tucks it away; ending takes a one-second hold on the square so a
+ * pocket can't end it. With [split] the heart card is on the other half of a folded phone ([GlowWorkoutGlance]), so
+ * this half keeps the figures and the controls.
  */
 @Composable
 fun GlowWorkoutLiveScreen(
@@ -664,17 +647,39 @@ fun GlowWorkoutLiveScreen(
     onExtendRest: () -> Unit = {},
     onLap: () -> Unit = {},
     split: Boolean = false,
+    liveView: Int? = null,
+    onLiveView: (Int) -> Unit = {},
 ) {
     BackHandler(onBack = onMinimize)
-    val pager = androidx.compose.foundation.pager.rememberPagerState { 3 }
-    // The map and splits pages take the heart card's height, so swiping never moves what's below.
+    // Saved with the screen; [liveView] is the view from the last workout, loaded a moment after the screen opens.
+    val pager = rememberPagerState(initialPage = LiveView.of(liveView).ordinal) { LiveView.entries.size }
+    var viewApplied by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(liveView) {
+        if (!viewApplied && liveView != null) {
+            pager.scrollToPage(LiveView.of(liveView).ordinal)
+            viewApplied = true
+        }
+    }
+    // Only a swipe or a dot saves the view, never the page the screen opened on.
+    val saveView by rememberUpdatedState(onLiveView)
+    LaunchedEffect(pager) { snapshotFlow { pager.settledPage }.drop(1).collect { saveView(it) } }
+    // The map takes the heart card's height, so swiping never moves what's below.
     var cardHeight by remember { mutableStateOf(360.dp) }
-    val density = androidx.compose.ui.platform.LocalDensity.current
-    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val density = LocalDensity.current
+    val scope = rememberCoroutineScope()
     var routeOnly by rememberSaveable { mutableStateOf(false) }
     val connected = connection is ConnectionState.Connected
     val color = workoutColor(r, liveHeartRate, connected)
     val active = activeSeconds(r)
+    val haptics = rememberHaptics()
+    val bpm = liveHeartRate.takeIf { connected && !r.paused }
+    // A tick when the zone changes (spec 3.6); a pause forgets the zone, so resuming in another doesn't tick.
+    val zone = WorkoutRecorder.liveZone(bpm, r.maxHeartRate)
+    var lastZone by remember { mutableStateOf<Int?>(null) }
+    LaunchedEffect(zone, r.paused) {
+        if (WorkoutCopy.zoneTick(lastZone, zone)) haptics.perform(HapticEvent.ZoneChange)
+        lastZone = if (r.paused) null else zone ?: lastZone
+    }
     WorkoutPage(color, contentPadding, scroll = false) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onMinimize) { Icon(AppIcons.CaretDown, "Minimize", tint = Color.White) }
@@ -693,24 +698,21 @@ fun GlowWorkoutLiveScreen(
                 Modifier.fillMaxWidth().onSizeChanged { cardHeight = with(density) { it.height.toDp() } },
             )
         }
-        // GPS workouts have three pages, as on the design: heart rate, the map, and the kilometre splits. They swipe
-        // as well as tap; a drag that starts on the map pans the map. Split across a fold, the card has the other half.
+        // GPS workouts have two views, heart rate and the map, with two dots under them (pattern D5). They swipe as
+        // well as tap; a drag that starts on the map pans the map. Split across a fold, the card has the other half.
         if (split) Unit
         else if (r.workout.useGps) {
-            GlowSegments(listOf("Heart", "Map", "Splits"), pager.currentPage) { scope.launch { pager.animateScrollToPage(it) } }
-            androidx.compose.foundation.pager.HorizontalPager(
-                pager, pageSpacing = 16.dp, verticalAlignment = Alignment.Top, beyondViewportPageCount = 2,
-            ) { page ->
+            HorizontalPager(pager, pageSpacing = 16.dp, verticalAlignment = Alignment.Top, beyondViewportPageCount = 1) { page ->
                 Column(Modifier.fillMaxWidth()) {
-                    when (page) {
-                        1 -> LiveMapPage(route, history, r.maxHeartRate, routeOnly, Modifier.height(cardHeight)) { routeOnly = it }
-                        2 -> SplitsPage(route, history, r.workout.pauseRanges, Modifier.height(cardHeight))
-                        else -> heartCard()
+                    when (LiveView.entries[page]) {
+                        LiveView.Map -> LiveMapPage(route, history, r.maxHeartRate, routeOnly, bpm, color, r.paused, Modifier.height(cardHeight)) { routeOnly = it }
+                        LiveView.Heart -> heartCard()
                     }
                 }
             }
+            PageDots(pager.currentPage, LiveView.entries.size) { scope.launch { pager.animateScrollToPage(it) } }
         } else heartCard()
-        if (r.strength) SetsPanel(r, color, onStartSet, onSetDone, onExtendRest)
+        if (r.strength) SetsPanel(r, color, onStartSet, { haptics.perform(HapticEvent.SetDone); onSetDone() }, onExtendRest)
         // Centred between the card and the buttons: the moving time large in the middle, two smaller figures either
         // side (Oura's avg and max around the live number), labels under the numbers and thin rules between (WHOOP).
         Spacer(Modifier.weight(1f))
@@ -735,13 +737,15 @@ fun GlowWorkoutLiveScreen(
                 else -> LiveStat("Max", Modifier.weight(1f)) { LiveValue(stats?.max?.toString() ?: "—") }
             }
         }
+        // The splits live in the summary; here each kilometre gets a line for a few seconds.
+        if (r.workout.useGps) KmSplitLine(route, WorkoutCopy.readings(history, recent), r.workout.pauseRanges)
         // Once Lap has been pressed: the lap under way and its own clock, so a press shows on screen too.
         r.workout.lapMarks.lastOrNull()?.let { mark ->
             val lap = (active - WorkoutRecorder.activeSeconds(r.workout, mark)).coerceAtLeast(0)
             Text(
-                "Lap ${r.workout.lapMarks.size + 1} · ${workoutClock(lap)}",
+                "Lap ${r.workout.lapMarks.size + 1}, ${workoutClock(lap)}",
                 color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.titleSmall.copy(fontFeatureSettings = "tnum"),
-                modifier = Modifier.fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center,
             )
         }
         if (!connected && !r.paused) {
@@ -754,9 +758,8 @@ fun GlowWorkoutLiveScreen(
             Modifier.align(Alignment.CenterHorizontally).widthIn(max = 360.dp).fillMaxWidth().padding(horizontal = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // Lap (not for strength, which has sets), keeping Pause centred either way.
-            val haptics = LocalHapticFeedback.current
-            if (!r.strength && !r.paused) FlatButton(Raised, 64.dp, onClick = { haptics.performHapticFeedback(HapticFeedbackType.Confirm); onLap() }) {
+            // Lap (not for strength, which has sets), keeping Pause centred either way. An ordinary tap: no tick.
+            if (!r.strength && !r.paused) FlatButton(Raised, 64.dp, onClick = onLap) {
                 Icon(SportIcons.Lap, "Lap", tint = Color.White, modifier = Modifier.size(22.dp))
             } else Spacer(Modifier.size(64.dp))
             Spacer(Modifier.weight(1f))
@@ -768,16 +771,96 @@ fun GlowWorkoutLiveScreen(
         }
         Text(
             "Hold the square to end", color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.bodySmall,
-            modifier = Modifier.fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center,
         )
         // A little room under the controls, so they sit up off the screen's edge.
         Spacer(Modifier.height(20.dp))
     }
 }
 
+/** Two small dots for the live views, the current one white; tapping one goes there (the map keeps its own drags). */
+@Composable
+private fun PageDots(current: Int, count: Int, onSelect: (Int) -> Unit) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+        repeat(count) { i ->
+            Box(
+                Modifier.size(28.dp).clip(CircleShape).pressClickable({ onSelect(i) }, CircleShape),
+                contentAlignment = Alignment.Center,
+            ) {
+                Box(Modifier.size(7.dp).clip(CircleShape).background(Color.White.copy(alpha = if (i == current) 1f else 0.3f)))
+            }
+        }
+    }
+}
+
 /**
- * The live heart card: the beating number over the last ten minutes, then the zone, its range, the zone bar and the
- * time in zone. With [fill] it takes all the height it's given and the number grows, for the standing half of a fold.
+ * "Km 3 in 5:42, avg 152" under the stats for ten seconds after each kilometre, with one tick. Kilometres done before
+ * the screen opened have had theirs.
+ */
+@Composable
+private fun KmSplitLine(route: List<Route.Point>, readings: List<Pair<Long, Int>>, pauses: List<LongRange>) {
+    val splits = remember(route.size, pauses) { Route.splits(route, pauses) }
+    val now by produceState(System.currentTimeMillis() / 1000) {
+        while (true) {
+            delay(1000 - System.currentTimeMillis() % 1000)
+            value = System.currentTimeMillis() / 1000
+        }
+    }
+    val line = WorkoutCopy.splitLine(splits, readings, route.firstOrNull()?.t, now)
+    val haptics = rememberHaptics()
+    var ticked by remember { mutableIntStateOf(WorkoutCopy.wholeKms(splits)) }
+    LaunchedEffect(line?.index) {
+        if (line != null && WorkoutCopy.splitTick(line, ticked)) {
+            haptics.perform(HapticEvent.KmSplit)
+            ticked = line.index
+        }
+    }
+    if (line != null) Text(
+        line.text, color = Color.White, style = MaterialTheme.typography.titleSmall.copy(fontFeatureSettings = "tnum"),
+        modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center,
+    )
+}
+
+/** Where the zone arc starts (lower left, clockwise from three o'clock) and how far it goes, in degrees. */
+private const val ARC_START = 150f
+private const val ARC_SWEEP = 240f
+private const val ARC_GAP = 8f
+
+/**
+ * The five zones as segments of an arc open at the bottom, only the current one lit, with a marker where [bpm] sits
+ * (pattern D2). The number goes in its middle.
+ */
+@Composable
+private fun ZoneArc(bpm: Int?, maxHr: Int, modifier: Modifier) {
+    val zone = WorkoutRecorder.liveZone(bpm, maxHr)
+    Canvas(modifier) {
+        val stroke = 6.dp.toPx()
+        val halo = 9.dp.toPx()
+        val r = min(size.width, size.height) / 2 - halo
+        val topLeft = Offset(center.x - r, center.y - r)
+        val box = Size(r * 2, r * 2)
+        val seg = (ARC_SWEEP - ARC_GAP * (Workouts.ZONES - 1)) / Workouts.ZONES
+        for (z in 0 until Workouts.ZONES) {
+            val start = ARC_START + z * (seg + ARC_GAP)
+            val on = z == zone
+            // The lit segment glows: a wide soft stroke of itself under it.
+            if (on) drawArc(ZONE_COLORS[z].copy(alpha = 0.3f), start, seg, false, topLeft, box, style = Stroke(stroke * 2.6f, cap = StrokeCap.Round))
+            drawArc(ZONE_COLORS[z].copy(alpha = if (on) 1f else 0.22f), start, seg, false, topLeft, box, style = Stroke(stroke, cap = StrokeCap.Round))
+        }
+        if (bpm != null) {
+            val a = Math.toRadians((ARC_START + WorkoutRecorder.zonePosition(bpm, maxHr) * ARC_SWEEP).toDouble())
+            val at = Offset(center.x + r * cos(a).toFloat(), center.y + r * sin(a).toFloat())
+            val dot = zone?.let { ZONE_COLORS[it] } ?: Color.White
+            drawCircle(dot.copy(alpha = 0.3f), radius = halo, center = at)
+            drawCircle(Color.White, radius = 5.dp.toPx(), center = at)
+        }
+    }
+}
+
+/**
+ * The live heart card: the beating number on its zone arc over the last ten minutes, then the zone, its range and the
+ * time in it. Its light reaches as high as the zone (spec 2.5); paused, it drops to an outline of the same layout
+ * (pattern D1). With [fill] it takes all the height it's given and the number grows, for the standing half of a fold.
  */
 @Composable
 private fun WorkoutHeartCard(
@@ -793,36 +876,48 @@ private fun WorkoutHeartCard(
     val bpm = liveHeartRate.takeIf { connected && !r.paused }
     val zone = WorkoutRecorder.liveZone(bpm, r.maxHeartRate)
     val color = workoutColor(r, liveHeartRate, connected)
-    GlowCard(GlowStyle.chart(color).copy(motion = if (bpm != null) GlowMotion.Heartbeat(bpm) else GlowMotion.Still), modifier) {
+    val style = GlowStyle.chart(color).copy(
+        motion = if (bpm != null) GlowMotion.Heartbeat(bpm) else GlowMotion.Still,
+        lightLevel = WorkoutCopy.zoneLightLevel(zone),
+        outline = r.paused,
+    )
+    GlowCard(style, modifier) {
         Column(if (fill) Modifier.fillMaxSize() else Modifier) {
             GlowHeader("Heart rate", trailing = bpm?.let { "${it * 100 / r.maxHeartRate}% of max" })
-            Box(Modifier.fillMaxWidth().then(if (fill) Modifier.weight(1f) else Modifier.height(200.dp))) {
+            Box(Modifier.fillMaxWidth().then(if (fill) Modifier.weight(1f) else Modifier.height(220.dp))) {
                 val now = recent.lastOrNull()?.first ?: (System.currentTimeMillis() / 1000)
                 val values = remember(recent) { bucketRecent(recent, now) }
                 if (values.any { it != null }) {
                     GlowLineChart(values, Modifier.align(Alignment.BottomCenter).alpha(0.45f), height = 120.dp, showAverage = false)
                 }
+                ZoneArc(bpm, r.maxHeartRate, Modifier.matchParentSize())
                 Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
-                    DotMatrixText(bpm?.toString() ?: "--", dot = if (fill) 12.dp else 9.dp, gap = if (fill) 4.dp else 3.dp)
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        when { r.paused -> "paused"; bpm == null && !connected -> "waiting for the strap"; else -> "bpm · last 10 min behind" },
-                        color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.bodySmall,
+                    if (bpm != null) {
+                        DotMatrixText(bpm.toString(), dot = if (fill) 11.dp else 8.dp, gap = if (fill) 3.dp else 2.dp)
+                        Spacer(Modifier.height(8.dp))
+                        Text("bpm, last 10 min behind", color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.bodySmall)
+                    } else Text(
+                        when { r.paused -> "Paused"; !connected -> "Waiting for the strap"; else -> "Waiting for heart rate" },
+                        color = Color.White, style = GlowType.title,
                     )
                 }
             }
             Row(verticalAlignment = Alignment.Bottom) {
-                Text(zone?.let { "Zone ${it + 1} · ${ZONE_NAMES[it]}" } ?: "No zone yet", color = Color.White, style = GlowType.title, modifier = Modifier.weight(1f))
-                zone?.let { Text(zoneRange(it, r.maxHeartRate), color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodySmall) }
+                if (zone != null) {
+                    // "Zone 3, aerobic": two text elements, the name a step quieter.
+                    val (name, word) = WorkoutCopy.zoneTitle(zone)
+                    Text(name, color = Color.White, style = GlowType.title)
+                    Spacer(Modifier.width(6.dp))
+                    Text(word, color = Color.White.copy(alpha = 0.75f), style = GlowType.title, modifier = Modifier.weight(1f))
+                    Text(zoneRange(zone, r.maxHeartRate), color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodySmall)
+                } else Text(if (r.paused) "No zone while paused" else "No zone yet", color = Color.White, style = GlowType.title)
             }
-            Spacer(Modifier.height(10.dp))
-            ZoneBar(bpm, r.maxHeartRate, ring = Color.Black.copy(alpha = 0.6f))
             Spacer(Modifier.height(8.dp))
             Row {
-                zone?.let { Note("${workoutClock(zoneSeconds[it].toLong())} in zone") }
+                zone?.let { Note(WorkoutCopy.zoneTime(zoneSeconds[it])) }
                 Spacer(Modifier.weight(1f))
                 when (val t = WorkoutTarget.parse(r.workout.target)) {
-                    is WorkoutTarget.Zones -> Note("Target ${t.label.removePrefix("Zone ")} · strap buzzes if you drift")
+                    is WorkoutTarget.Zones -> Note("Target ${t.label.removePrefix("Zone ")}, the strap buzzes if you drift")
                     is WorkoutTarget.Time -> Note("${workoutClock(active)} of ${t.label}")
                     null -> Unit
                 }
@@ -864,10 +959,10 @@ private fun SetsPanel(r: WorkoutState.Recording, color: Color, onStartSet: () ->
             Box(Modifier.weight(1f)) {
                 DotHeader(
                     when {
-                        r.inSet -> "Set ${r.sets.size} · ${workoutClock(now - r.sets.last().start)}"
-                        r.resting -> "Resting after set $done · ${workoutClock((r.restUntil!! - now).coerceAtLeast(0))}"
+                        r.inSet -> "Set ${r.sets.size}, ${workoutClock(now - r.sets.last().start)}"
+                        r.resting -> "Resting after set $done, ${workoutClock((r.restUntil!! - now).coerceAtLeast(0))}"
                         done == 0 -> "Ready for set 1"
-                        else -> "Rest over · set ${done + 1} next"
+                        else -> "Rest over. Set ${done + 1} next."
                     },
                 )
             }
@@ -893,16 +988,30 @@ private fun SetsPanel(r: WorkoutState.Recording, color: Color, onStartSet: () ->
 /** "5.21" kilometres, or "820 m" under one. */
 internal fun km(meters: Float): String = if (meters < 1000) "${meters.toInt()} m" else String.format(java.util.Locale.ROOT, "%.2f", meters / 1000)
 
-/** The live route in zone colours, the GPS accuracy, and "route only" (no tiles), with what loading tiles reveals. */
+/**
+ * The live route in zone colours with the heart rate on a chip in the zone's colour, so it's never hidden (pattern
+ * D5), then the GPS accuracy and "route only" (no tiles).
+ */
 @Composable
-private fun LiveMapPage(route: List<Route.Point>, history: List<Pair<Long, Int>>, maxHr: Int, routeOnly: Boolean, modifier: Modifier, onRouteOnly: (Boolean) -> Unit) {
+private fun LiveMapPage(
+    route: List<Route.Point>,
+    history: List<Pair<Long, Int>>,
+    maxHr: Int,
+    routeOnly: Boolean,
+    bpm: Int?,
+    color: Color,
+    paused: Boolean,
+    modifier: Modifier,
+    onRouteOnly: (Boolean) -> Unit,
+) {
     val stretches = remember(route.size, history.size) { Route.byZone(route, history, maxHr) }
-    // The whole page is the map; what its tiles reveal is said on the ready screen, by the GPS switch.
+    // The whole page is the map; what its tiles reveal is said in the ready screen's (i).
     Box(modifier.fillMaxWidth().clip(RoundedCornerShape(48.dp)).background(Raised)) {
         // Where you are now, from the latest fix good enough to count, even while standing still.
         val here = route.lastOrNull { it.accuracy <= Route.MAX_ACCURACY_M }
         WorkoutMap(stretches, routeOnly, Modifier.fillMaxSize(), here)
-        Row(Modifier.align(Alignment.TopStart).padding(16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        BpmChip(bpm, color, paused, Modifier.align(Alignment.TopStart).padding(16.dp))
+        Row(Modifier.align(Alignment.BottomStart).padding(16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             val acc = route.lastOrNull()?.accuracy
             Pill(if (acc == null || acc > 1000) "Finding GPS…" else "GPS ±${acc.toInt()} m", if (acc != null && acc <= Route.MAX_ACCURACY_M) TrendGood else TrendBad)
             Pill(if (routeOnly) "Route only" else "Map", null, onClick = { onRouteOnly(!routeOnly) })
@@ -910,26 +1019,20 @@ private fun LiveMapPage(route: List<Route.Point>, history: List<Pair<Long, Int>>
     }
 }
 
-/** Each kilometre's time, pace and average heart rate; the last one may be partial. */
+/** The live heart rate on the map: a pill in the zone's [color], a dot beating at it, the number in dots. */
 @Composable
-private fun SplitsPage(route: List<Route.Point>, history: List<Pair<Long, Int>>, pauses: List<LongRange>, modifier: Modifier) {
-    val splits = remember(route.size) { Route.splits(route, pauses) }
-    DotPanel(modifier) {
-        DotHeader("Splits", trailing = "per km")
-        if (splits.isEmpty()) Note("The first split shows once GPS has a fix and you've moved.")
-        // A long run's splits scroll inside the panel; the screen itself doesn't.
-        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        var startT = route.firstOrNull()?.t ?: 0L
-        splits.forEach { sp ->
-            val hr = history.filter { it.first in startT..sp.endT }.map { it.second }.takeIf { it.isNotEmpty() }?.average()?.toInt()
-            startT = sp.endT
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(if (sp.meters >= 999) "Km ${sp.index + 1}" else "${km(sp.meters.toFloat())}", color = Color.White, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
-                Text(Route.formatPace(sp.pace), color = Color.White, style = MaterialTheme.typography.titleSmall, modifier = Modifier.width(72.dp))
-                Text(hr?.let { "$it bpm" } ?: "—", color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.bodySmall, modifier = Modifier.width(64.dp))
-            }
-        }
-        }
+private fun BpmChip(bpm: Int?, color: Color, paused: Boolean, modifier: Modifier) {
+    Row(
+        modifier.height(44.dp).clip(RoundedCornerShape(50)).background(color).padding(horizontal = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (bpm != null) {
+            PulseDot(Color.Black, bpm, 8.dp)
+            Spacer(Modifier.width(10.dp))
+            DotMatrixText("$bpm", dot = 3.dp, gap = 1.dp, color = Color.Black)
+            Spacer(Modifier.width(6.dp))
+            Text("bpm", color = Color.Black, style = MaterialTheme.typography.titleSmall)
+        } else Text(if (paused) "Paused" else "No heart rate yet", color = Color.Black, style = MaterialTheme.typography.titleSmall)
     }
 }
 
@@ -1000,7 +1103,7 @@ private fun StoppedPrompt(r: WorkoutState.Recording, at: Long, onEnd: () -> Unit
 @Composable
 private fun HoldToEnd(onEnd: () -> Unit) {
     val progress = remember { Animatable(0f) }
-    val haptics = LocalHapticFeedback.current
+    val haptics = rememberHaptics()
     Box(contentAlignment = Alignment.Center) {
         FlatButton(
             Raised, 64.dp,
@@ -1009,7 +1112,7 @@ private fun HoldToEnd(onEnd: () -> Unit) {
                     coroutineScope {
                         val hold = launch {
                             progress.animateTo(1f, tween(HOLD_MS, easing = LinearEasing))
-                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                            haptics.perform(HapticEvent.WorkoutEnd)
                             onEnd()
                         }
                         tryAwaitRelease()
@@ -1062,12 +1165,12 @@ fun WorkoutCapsule(
         PulseDot(color, bpm, 12.dp)
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
-            Text("${Workouts.sportName(r.workout.sportType)} · ${workoutClock(active)}", color = Color.White, style = MaterialTheme.typography.titleSmall, maxLines = 1)
+            Text("${Workouts.sportName(r.workout.sportType)}, ${workoutClock(active)}", color = Color.White, style = MaterialTheme.typography.titleSmall, maxLines = 1)
             Text(
                 when {
                     r.endPrompt != null -> "Stopped? Tap to answer"
                     r.paused -> "Paused"
-                    zone != null -> "Zone ${zone + 1} · ${ZONE_NAMES[zone]}"
+                    zone != null -> WorkoutCopy.zoneTitle(zone).let { (name, word) -> "$name $word" }
                     connected -> "Waiting for heart rate"
                     else -> "Strap reconnecting"
                 },

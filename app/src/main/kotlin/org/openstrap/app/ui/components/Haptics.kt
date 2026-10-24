@@ -15,8 +15,11 @@ enum class HapticEvent {
     /** A scrub crosses into or out of your normal, or reaches the highest or lowest point. */
     ScrubMark,
 
-    /** The heart rate zone changes. */
+    /** The heart rate zone changes. Throttled, see [Haptics.ZONE_INTERVAL_MS]. */
     ZoneChange,
+
+    /** A kilometre is done during a GPS workout, as its split line shows. */
+    KmSplit,
 
     /** A strength set is done. */
     SetDone,
@@ -38,7 +41,7 @@ enum class HapticEvent {
 /** The feedback for each [HapticEvent]. */
 fun HapticEvent.feedbackType(): HapticFeedbackType = when (this) {
     HapticEvent.ScrubStep -> HapticFeedbackType.SegmentFrequentTick
-    HapticEvent.ScrubMark, HapticEvent.ZoneChange, HapticEvent.SetDone, HapticEvent.RangeMark -> HapticFeedbackType.SegmentTick
+    HapticEvent.ScrubMark, HapticEvent.ZoneChange, HapticEvent.KmSplit, HapticEvent.SetDone, HapticEvent.RangeMark -> HapticFeedbackType.SegmentTick
     HapticEvent.WorkoutStart, HapticEvent.WorkoutEnd, HapticEvent.PairingDone -> HapticFeedbackType.Confirm
     HapticEvent.SyncFailed -> HapticFeedbackType.Reject
 }
@@ -56,18 +59,26 @@ class TickThrottle(private val intervalMs: Long) {
     }
 }
 
-/** Plays [HapticEvent]s, throttling scrub steps so a fast scrub doesn't turn into a buzz. */
+/**
+ * Plays [HapticEvent]s, throttling scrub steps so a fast scrub doesn't turn into a buzz, and zone changes so a heart
+ * rate sitting on a zone's edge doesn't tick every second.
+ */
 class Haptics(private val feedback: HapticFeedback, private val now: () -> Long = SystemClock::uptimeMillis) {
     private val scrub = TickThrottle(SCRUB_INTERVAL_MS)
+    private val zone = TickThrottle(ZONE_INTERVAL_MS)
 
     fun perform(event: HapticEvent) {
         if (event == HapticEvent.ScrubStep && !scrub.allow(now())) return
+        if (event == HapticEvent.ZoneChange && !zone.allow(now())) return
         feedback.performHapticFeedback(event.feedbackType())
     }
 
     companion object {
         /** Scrub steps play at most this often. */
         const val SCRUB_INTERVAL_MS = 40L
+
+        /** Zone changes play at most this often. */
+        const val ZONE_INTERVAL_MS = 10_000L
     }
 }
 

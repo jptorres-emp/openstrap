@@ -138,7 +138,7 @@ fun GlowCard(
     val bitmaps by produceState(GlowCache.peek(key), key) {
         // Always the layers for this key: when the card changes size, the old ones no longer fit.
         value = GlowCache.peek(key)
-        if (key.size == IntSize.Zero || value != null) return@produceState
+        if (key.size == IntSize.Zero || lit.outline || value != null) return@produceState
         value = withContext(Dispatchers.Default) { GlowCache.get(key) }
     }
 
@@ -160,11 +160,15 @@ fun GlowCard(
         // Content gets the card's full size, e.g. to centre itself in a fixed-height card.
         propagateMinConstraints = true,
     ) {
-        val b = bitmaps
-        // Base: fill and rim light. Until its bitmap is ready, the plain mid colour.
+        val b = bitmaps.takeUnless { lit.outline }
+        // Base: fill and rim light. Until its bitmap is ready, the plain mid colour; an outline card is black.
         Spacer(
             Modifier.matchParentSize().drawBehind {
-                if (b == null) drawRect(palette.mid) else drawIntoCanvas { it.nativeCanvas.drawBitmap(b.base, null, b.baseDst, FILTER) }
+                when {
+                    lit.outline -> drawRect(Color.Black)
+                    b == null -> drawRect(palette.mid)
+                    else -> drawIntoCanvas { it.nativeCanvas.drawBitmap(b.base, null, b.baseDst, FILTER) }
+                }
             },
         )
         if (b != null) {
@@ -204,6 +208,10 @@ private fun BoxScope.CoreLayer(b: GlowBitmaps, style: GlowStyle, core: CoreBox, 
 
 private val FILTER = Paint(Paint.FILTER_BITMAP_FLAG)
 
+/** An outline card's edge. */
+private val OUTLINE_WIDTH = 1.5.dp
+private const val OUTLINE_ALPHA = 0.7f
+
 /** Grain and the hairline edge with its gloss. */
 private fun CacheDrawScope.overlay(style: GlowStyle, grainSeed: Int): DrawResult {
     val grainPaint = Paint().apply {
@@ -220,6 +228,8 @@ private fun CacheDrawScope.overlay(style: GlowStyle, grainSeed: Int): DrawResult
     } else {
         Brush.verticalGradient(0f to Color.White.copy(alpha = 0.35f), 0.25f to Color.White.copy(alpha = 0.08f), 1f to Color.White.copy(alpha = 0.04f))
     }
+    // On hold: only the edge, in the card's colour.
+    if (style.outline) return onDrawBehind { drawOutline(outline, style.color.copy(alpha = OUTLINE_ALPHA), style = Stroke(OUTLINE_WIDTH.toPx())) }
     return onDrawBehind {
         if (style.grain > 0f) drawIntoCanvas { it.nativeCanvas.drawPaint(grainPaint) }
         drawOutline(outline, Color.White.copy(alpha = 0.07f), style = hairline)

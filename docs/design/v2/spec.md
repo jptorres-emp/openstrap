@@ -282,7 +282,7 @@ for details. When the system's animator scale is 0, everything jumps to its end 
 |---|---|
 | Scrub lands on a new point (day, hour, stage) | `SegmentFrequentTick`, at most every 40 ms |
 | Scrub crosses into or out of your normal, or hits the highest or lowest point | `SegmentTick` |
-| Heart rate zone changes, a strength set is done | `SegmentTick` |
+| Heart rate zone changes (at most every 10 s), a strength set is done, a km split during a workout | `SegmentTick` |
 | Workout starts, workout ends (hold completes), pairing succeeds | `Confirm` |
 | A manual sync can't start or fails | `Reject` |
 | A range handle passes the detected start or end | `SegmentTick` |

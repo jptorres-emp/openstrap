@@ -970,6 +970,9 @@ private fun androidx.compose.foundation.layout.BoxScope.WorkoutLayer(
     bookHinge: androidx.window.layout.FoldingFeature? = null,
 ) {
     val session = container.workout
+    // Read here, ahead of a workout, so the live screen usually opens on the right view at once.
+    val liveView by container.settings.workoutLiveView.collectAsStateWithLifecycle(null)
+    val viewScope = rememberCoroutineScope()
     val padding = androidx.compose.foundation.layout.WindowInsets.navigationBars.asPaddingValues()
     val full = androidx.compose.ui.Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)
     when {
@@ -995,6 +998,7 @@ private fun androidx.compose.foundation.layout.BoxScope.WorkoutLayer(
                             onStartSet = session::startSet, onSetDone = session::setDone, onExtendRest = session::extendRest,
                             onLap = session::lap,
                             split = tabletop || bookHinge != null,
+                            liveView = liveView, onLiveView = { v -> viewScope.launch { container.settings.setWorkoutLiveView(v) } },
                         )
                     }
                 }

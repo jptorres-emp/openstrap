@@ -21,14 +21,27 @@ class HapticsTest {
 
     @Test fun `the 3_6 table`() {
         assertEquals(HapticFeedbackType.SegmentFrequentTick, HapticEvent.ScrubStep.feedbackType())
-        listOf(HapticEvent.ScrubMark, HapticEvent.ZoneChange, HapticEvent.SetDone, HapticEvent.RangeMark)
+        listOf(HapticEvent.ScrubMark, HapticEvent.ZoneChange, HapticEvent.KmSplit, HapticEvent.SetDone, HapticEvent.RangeMark)
             .forEach { assertEquals(HapticFeedbackType.SegmentTick, it.feedbackType()) }
         listOf(HapticEvent.WorkoutStart, HapticEvent.WorkoutEnd, HapticEvent.PairingDone)
             .forEach { assertEquals(HapticFeedbackType.Confirm, it.feedbackType()) }
         assertEquals(HapticFeedbackType.Reject, HapticEvent.SyncFailed.feedbackType())
     }
 
-    @Test fun `only scrub steps are throttled`() {
+    @Test fun `zone changes are throttled, a split isn't`() {
+        val played = mutableListOf<HapticFeedbackType>()
+        var now = 0L
+        val haptics = Haptics(object : HapticFeedback {
+            override fun performHapticFeedback(hapticFeedbackType: HapticFeedbackType) { played += hapticFeedbackType }
+        }) { now }
+        haptics.perform(HapticEvent.ZoneChange)
+        now = 3_000; haptics.perform(HapticEvent.ZoneChange)
+        haptics.perform(HapticEvent.KmSplit)
+        now = Haptics.ZONE_INTERVAL_MS; haptics.perform(HapticEvent.ZoneChange)
+        assertEquals(3, played.size)
+    }
+
+    @Test fun `scrub steps are throttled, marks are not`() {
         val played = mutableListOf<HapticFeedbackType>()
         var now = 0L
         val haptics = Haptics(object : HapticFeedback {

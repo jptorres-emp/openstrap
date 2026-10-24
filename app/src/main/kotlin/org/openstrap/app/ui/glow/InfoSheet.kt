@@ -49,10 +49,14 @@ import org.openstrap.app.ui.theme.AppIcons
 /**
  * [info] as a sheet over the screen, lit in [color]. [here] is the bar of [Info.scale] you're in (null leaves every bar
  * dim), [hereLine] the line under the scale ("You are here. Your normal is 44 to 58 ms, from 30 days."), and [notes]
- * what's particular about today, under Why it might be off.
+ * what's particular about today, under Why it might be off. [rows], for a sheet that isn't about a number (the workout
+ * Ready screen), replaces the three folded rows with its own titles and texts.
  */
 @Composable
-fun InfoSheet(info: Info, color: Color, here: Int?, hereLine: String?, onDismiss: () -> Unit, notes: List<String> = emptyList()) {
+fun InfoSheet(
+    info: Info, color: Color, here: Int?, hereLine: String?, onDismiss: () -> Unit, notes: List<String> = emptyList(),
+    rows: List<Pair<String, String>>? = null,
+) {
     val maxHeight = (LocalConfiguration.current.screenHeightDp * 0.85f).dp
     org.openstrap.app.ui.components.GlassSheet(onDismiss) {
         Column(
@@ -73,9 +77,12 @@ fun InfoSheet(info: Info, color: Color, here: Int?, hereLine: String?, onDismiss
             Column(
                 Modifier.padding(top = 24.dp).fillMaxWidth().background(Color(0xFF141416), RoundedCornerShape(24.dp)).padding(horizontal = 18.dp),
             ) {
-                Fold("How it's worked out", info.how, divider = false)
-                Fold("What moves it", info.moves)
-                Fold("Why it might be off", (listOf(info.off) + notes).joinToString("\n\n"))
+                val folds = rows ?: listOf(
+                    "How it's worked out" to info.how,
+                    "What moves it" to info.moves,
+                    "Why it might be off" to (listOf(info.off) + notes).joinToString("\n\n"),
+                )
+                folds.forEachIndexed { i, (title, text) -> Fold(title, text, divider = i > 0) }
             }
         }
     }

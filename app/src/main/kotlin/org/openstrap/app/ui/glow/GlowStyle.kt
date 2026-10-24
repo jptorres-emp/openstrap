@@ -119,6 +119,11 @@ data class GlowStyle(
     val lightLevel: Float? = null,
     /** The second glow card on a screen: a weaker rim, a dimmer and shorter fill, a darker body. */
     val second: Boolean = false,
+    /**
+     * Only the card's outline in [color], on black, with no light at all: the same card on hold, like a paused workout
+     * (pattern D1). Nothing is rendered for it but the edge.
+     */
+    val outline: Boolean = false,
     /** Set by [GlowCard] from [LocalGlowMood]; leave it to the screen. */
     val mood: GlowMood = GlowMood.Day,
 ) {

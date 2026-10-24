@@ -381,13 +381,16 @@ internal fun ActivityCard(
     val now = java.time.LocalTime.now()
     val pace = org.openstrap.app.ui.dashboard.ActivityCopy.paceOf(state.steps, usual, isToday, now.hour, now.minute)
     val ghost = usual?.takeIf { it.size == 24 }
+    val chart = state.steps > 0 && line.size >= 2
     EdgeCard(
         MetricColors.steps, modifier.fillMaxWidth().gridSize(CardSize.Wide), kind = EdgeKind.Progress,
-        progress = if (goal > 0) state.steps / goal.toFloat() else 0f, onClick = onClick,
+        // The goal bar only without the day's line: under it, a short bar read as the start of the line. The line
+        // already climbs toward the goal, and the sentence gives the share.
+        progress = if (chart || goal <= 0) null else state.steps / goal.toFloat(), onClick = onClick,
     ) {
         EdgeTitle("Steps", "Goal %,d".format(goal), marker = upTo, tag = tag)
         EdgeValue("%,d".format(state.steps), "steps", org.openstrap.app.ui.dashboard.ActivityCopy.activityLine(state.steps, goal, pace, isToday))
-        if (state.steps > 0 && line.size >= 2) {
+        if (chart) {
             Spacer(Modifier.height(10.dp))
             GhostLine(
                 line, MetricColors.steps, maxOf(goal.toFloat(), state.steps.toFloat(), line.filterNotNull().maxOrNull() ?: 0f, ghost?.maxOrNull() ?: 0f),

@@ -155,8 +155,8 @@ internal object DetailCopy {
      * Charge's sentence for the day shown: today what the day took and what's left ([TodayCopy.charge]), a past day
      * where it started and ended.
      */
-    fun charge(now: Int?, atWake: Int?, anchored: Boolean, today: Boolean, hour: Int): String = when {
-        today || now == null || !anchored -> TodayCopy.charge(now, atWake, anchored, hour)
+    fun charge(now: Int?, atWake: Int?, drained: Int?, anchored: Boolean, today: Boolean, hour: Int): String = when {
+        today || now == null || !anchored -> TodayCopy.charge(now, drained, anchored, hour)
         atWake != null -> "Started the day at $atWake and ended it at $now."
         else -> "Ended the day at $now."
     }

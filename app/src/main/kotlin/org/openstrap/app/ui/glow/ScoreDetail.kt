@@ -100,6 +100,8 @@ private fun RecoveryDetail(
 ) {
     val ready = r?.readiness
     val score = debugRecoveryScore.value ?: ready?.score
+    // While OpenStrap's own score is withheld, the strap's stands in, as on Today and the Recovery tab.
+    val estimate = if (score == null) TodayCopy.recoveryShown(ready, strapScore, "").takeIf { it.estimate }?.value else null
     val alert = ready?.strainAlert == true
     val color = MetricColors.readiness
     // TODO(step 6): Month and Year wait for a stored Recovery history; the app keeps only the last 7 days of it.
@@ -120,6 +122,7 @@ private fun RecoveryDetail(
         range == Range.Week && known.isNotEmpty() -> DetailHeadline(Math.round(known.average()).toString(), "Average of the last 7 days", null)
         range == Range.Week -> DetailHeadline.none("No scores", "In the last 7 days")
         score != null -> DetailHeadline(score.toString(), if (isToday) "this morning" else "that morning", TodayCopy.recoveryWord(score, alert))
+        estimate != null -> DetailHeadline(estimate.toString(), "Strap's estimate", null)
         else -> DetailCopy.recoveryState(ready, isToday).let { (word, why) -> DetailHeadline.none(word, why) }
     }
 
@@ -129,9 +132,9 @@ private fun RecoveryDetail(
         strip = DetailCopy.strip(state.date, today, withData), onDay = onSelectDay,
         ranges = ranges, range = range, onRange = { rangeIndex = ranges.indexOf(it) },
         // The arc gauge (chart kit, spec 2.7) holds the day's score, centred, the number inside the half circle.
-        heroValue = if (range == Range.Day && score != null && scrub == null) {
-            { ArcGauge(score / 100f, color, key = state.date) { DetailScoreNumber(score) } }
-        } else null,
+        heroValue = (score ?: estimate)?.takeIf { range == Range.Day && scrub == null }?.let { shown ->
+            { ArcGauge(shown / 100f, color, key = state.date) { DetailScoreNumber(shown) } }
+        },
     ) {
         if (range == Range.Day) {
             item {
@@ -268,7 +271,7 @@ private fun ChargeDetail(
         }
         if (now != null) item {
             Column {
-                DetailSentence(DetailCopy.charge(now, atWake, c.anchored, isToday, LocalTime.now().hour))
+                DetailSentence(DetailCopy.charge(now, atWake, TabCopy.drainedAmount(c.drainedExercise + c.drainedStress + c.drainedLiving).toInt(), c.anchored, isToday, LocalTime.now().hour))
                 InfoCopy.chargeNotes(c).firstOrNull()?.let { note ->
                     Box(Modifier.clickable { info = true }) { CaveatLine(note, color) }
                 }

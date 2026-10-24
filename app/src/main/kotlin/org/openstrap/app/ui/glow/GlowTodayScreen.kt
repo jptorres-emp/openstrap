@@ -495,7 +495,7 @@ private fun ChargeHero(ctx: TodayContext, onOpen: () -> Unit, onRetry: () -> Uni
                 when {
                     failed -> CHARGE_FAILED
                     noSleep -> TodayCopy.NO_SLEEP
-                    else -> TodayCopy.charge(now, c?.atWake?.toInt(), c?.anchored == true, LocalTime.now().hour)
+                    else -> TodayCopy.charge(now, c?.let { org.openstrap.app.ui.dashboard.TabCopy.drainedAmount(it.drainedExercise + it.drainedStress + it.drainedLiving).toInt() }, c?.anchored == true, LocalTime.now().hour)
                 },
             )
             if (failed) {
@@ -738,8 +738,8 @@ private fun TodayRow(
                 drained != null && drained >= 1f -> "Drained ${org.openstrap.app.ui.dashboard.TabCopy.drainedAmount(drained)}"
                 else -> "Steady since waking"
             }
-            // The day's Charge so far, beside the number, until the evening says sleep fills it back.
-            val soFar = c?.takeIf { !ctx.endOfDay && it.anchored && ctx.isToday }?.let { chargeSoFar(it.points, s.dayStart..s.dayEnd, ctx.now) }
+            // The day's Charge so far beside the number, in the evening too, as on every other Charge card.
+            val soFar = c?.takeIf { it.anchored && ctx.isToday }?.let { chargeSoFar(it.points, s.dayStart..s.dayEnd, ctx.now) }
             ChargeWideCard(ctx.charge, status, slot.secondGlow, { openScore(org.openstrap.app.ui.dashboard.Score.Charge) }, soFar = soFar, upTo = ctx.upTo(ctx.newest), tag = ctx.partial)
         }
         // After a workout, what it did as a Small pair: Load toward your usual (from below) and time to recover.

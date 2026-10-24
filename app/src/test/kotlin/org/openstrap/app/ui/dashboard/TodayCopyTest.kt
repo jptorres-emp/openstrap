@@ -66,10 +66,9 @@ class TodayCopyTest {
     }
 
     @Test fun `charge says what the day took and what's left`() {
-        assertEquals("The morning took 22. Plenty left for this evening.", TodayCopy.charge(62, 84, true, 11))
-        assertEquals("The day so far took 40. Enough left for an easy evening.", TodayCopy.charge(44, 84, true, 15))
-        assertEquals("Up 5 since waking. Running low. An early night helps.", TodayCopy.charge(20, 15, true, 15))
-        assertEquals("Level since waking. Plenty left for this evening.", TodayCopy.charge(80, 80, true, 13))
+        assertEquals("The morning drained 22. Plenty left for this evening.", TodayCopy.charge(62, 22, true, 11))
+        assertEquals("The day so far drained 40. Enough left for an easy evening.", TodayCopy.charge(44, 40, true, 15))
+        assertEquals("Nothing drained since waking. Running low. An early night helps.", TodayCopy.charge(20, 0, true, 15))
         assertEquals("Plenty left for this evening.", TodayCopy.charge(80, null, true, 13))
         assertEquals("Charge starts after your first night. Sleep is what fills it.", TodayCopy.charge(80, 80, false, 13))
         assertEquals("Charge starts after your first night. Sleep is what fills it.", TodayCopy.charge(null, null, true, 13))
@@ -154,7 +153,7 @@ class TodayCopyTest {
     @Test fun `no sentence carries the forbidden marks`() {
         val all = listOf(
             TodayCopy.waking(1000, 80, false, null, false, true), TodayCopy.waking(1000, null, false, learning, false, true),
-            TodayCopy.WEEK_FIRST, TodayCopy.recoverText(5000, at(10), zone).second, TodayCopy.charge(50, 80, true, 10),
+            TodayCopy.WEEK_FIRST, TodayCopy.recoverText(5000, at(10), zone).second, TodayCopy.charge(50, 30, true, 10),
             TodayCopy.window("run", 50), TodayCopy.after(80, 50), TodayCopy.evening(listOf("run"), 9000, 8000, LoadStatus.Usual, Locale.UK),
         )
         all.forEach { s -> listOf("·", ";", "—").forEach { assertFalse("$s has $it", it in s) } }

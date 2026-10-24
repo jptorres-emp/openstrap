@@ -44,7 +44,7 @@ class DetailRulesTest {
     @Test fun `Recovery draws the arc gauge and Sleep score the horizon arc, both centred`() {
         // Spec 2.7: the half circle arc gauge on Recovery's detail, the horizon arc on the Sleep score detail and
         // nowhere else, nothing that glows, and neither sweeps in from zero.
-        assertTrue("Recovery holds its score in ArcGauge", Regex("""\bArcGauge\(score / 100f""").containsMatchIn(sources.getValue("glow/ScoreDetail.kt")))
+        assertTrue("Recovery holds its score in ArcGauge", Regex("""\bArcGauge\((score|shown) / 100f""").containsMatchIn(sources.getValue("glow/ScoreDetail.kt")))
         assertTrue("Sleep score holds its score in HorizonArc", Regex("""\bHorizonArc\(score / 100f""").containsMatchIn(sources.getValue("glow/SleepDetail.kt")))
         val home = mapOf("ArcGauge" to "glow/ScoreDetail.kt", "HorizonArc" to "glow/SleepDetail.kt")
         val found = sources.flatMap { (path, code) ->

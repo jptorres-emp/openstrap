@@ -97,8 +97,8 @@ class DetailCopyTest {
     }
 
     @Test fun `Charge on a past day says where it started and ended`() {
-        assertEquals("Started the day at 84 and ended it at 30.", DetailCopy.charge(30, 84, anchored = true, today = false, hour = 9))
-        assertEquals(TodayCopy.charge(60, 84, true, 9), DetailCopy.charge(60, 84, anchored = true, today = true, hour = 9))
+        assertEquals("Started the day at 84 and ended it at 30.", DetailCopy.charge(30, 84, 60, anchored = true, today = false, hour = 9))
+        assertEquals(TodayCopy.charge(60, 30, true, 9), DetailCopy.charge(60, 84, 30, anchored = true, today = true, hour = 9))
     }
 
     @Test fun `the label under the value names what it is for the range`() {
@@ -125,7 +125,7 @@ class DetailCopyTest {
         val lines = listOfNotNull(
             DetailCopy.day(0, DaySource.Night, true, 30), DetailCopy.heartDay(1, 2, false), DetailCopy.year("1", "2", "ms"),
             DetailCopy.span(Range.Month, listOf(Level.Above, Level.Above), false, true, 30), DetailCopy.scoreWeek(listOf(1, 2)),
-            DetailCopy.charge(1, 2, true, false, 3), DetailCopy.learningNormal(1, true), DetailCopy.bandLabel(normal) { it.toString() },
+            DetailCopy.charge(1, 2, 1, true, false, 3), DetailCopy.learningNormal(1, true), DetailCopy.bandLabel(normal) { it.toString() },
         ) + Metric.entries.flatMap { m -> Range.entries.map { DetailCopy.valueLabel(m, it) } }
         lines.forEach { assertTrue(it, it.none { c -> c == '·' || c == ';' || c == '—' }) }
     }

@@ -123,18 +123,17 @@ object TodayCopy {
     }
 
     /**
-     * The Charge hero at midday: what the day has taken since waking and what's left for the evening. [hour] is the
-     * clock's hour, so the morning is called the morning.
+     * The Charge hero at midday: what the day has [drained] since waking (all of it, as Drained says on the card and
+     * the Recovery tab, not just the drop since waking) and what's left for the evening. [hour] is the clock's hour,
+     * so the morning is called the morning.
      */
-    fun charge(now: Int?, atWake: Int?, anchored: Boolean, hour: Int): String {
+    fun charge(now: Int?, drained: Int?, anchored: Boolean, hour: Int): String {
         if (now == null || !anchored) return "Charge starts after your first night. Sleep is what fills it."
         val part = if (hour < 12) "The morning" else "The day so far"
-        val used = atWake?.let { it - now }
         val first = when {
-            used == null -> null
-            used >= 1 -> "$part took $used."
-            used <= -1 -> "Up ${-used} since waking."
-            else -> "Level since waking."
+            drained == null -> null
+            drained >= 1 -> "$part drained $drained."
+            else -> "Nothing drained since waking."
         }
         val left = when {
             now >= 50 -> "Plenty left for this evening."

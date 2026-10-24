@@ -291,8 +291,9 @@ internal fun EdgeValue(
 internal fun clockDuration(seconds: Long): String = "%d:%02d".format(seconds / 3600, (seconds % 3600) / 60)
 
 /**
- * Last night in full, on waking: time asleep, the score and the stages, lit from the top like a night sky. [stuck]:
- * it's still on the strap, so it waits rather than saying there was none.
+ * Last night in full, on waking: the score in dots with its word and time asleep under it, as the Sleep tab's hero has
+ * them, then the stages, lit from the top like a night sky. [stuck]: it's still on the strap, so it waits rather than
+ * saying there was none.
  */
 @Composable
 internal fun LastNightCard(state: DayUiState, firstNights: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier, stuck: Boolean = false) {
@@ -300,14 +301,16 @@ internal fun LastNightCard(state: DayUiState, firstNights: Boolean, onClick: () 
     EdgeCard(MetricColors.sleepDeep, modifier.fillMaxWidth().gridSize(CardSize.Wide), kind = EdgeKind.Sleep, onClick = onClick) {
         EdgeTitle("Last night", s?.let { "${clockAt(it.start)}–${clockAt(it.end)}" })
         val asleep = state.asleepSeconds
-        val headline = s?.let { n -> asleep?.let { org.openstrap.app.ui.dashboard.Narrative.sleepHeadline(n, it) } }
+        val score = s?.score
+        // A night the strap gave no score says so in words, with no dash where the score would be.
         EdgeValue(
-            asleep?.let(::clockDuration), "asleep",
+            score?.toString(), "score",
             when {
                 asleep == null -> if (firstNights) AFTER_FIRST_NIGHT else if (stuck) WAITING_LAST_NIGHT else "No sleep recorded"
-                s?.score != null -> listOfNotNull("Score ${s.score}", headline?.lowercase()).joinToString(", ")
-                else -> headline
+                score != null -> "${org.openstrap.app.ui.dashboard.TabCopy.sleepScoreWord(score)}, ${TodayCopy.duration(asleep)} asleep"
+                else -> "${TodayCopy.duration(asleep)} asleep, no score from the strap"
             },
+            waiting = asleep == null,
         )
         if (state.sleepStages.isNotEmpty()) {
             Spacer(Modifier.height(10.dp))

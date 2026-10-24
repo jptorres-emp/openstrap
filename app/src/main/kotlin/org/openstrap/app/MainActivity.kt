@@ -741,6 +741,9 @@ private fun AppRoot(
         // left edge, so the pages keep their height.
         val rail = maxWidth > maxHeight && maxWidth >= 600.dp
         val navItems = Tab.entries.map { NavItem(it.label, it.icon, it.selectedIcon, it.tint) }
+        // A detail covering the tab is a screen stepped into: no tab bar, only its back button (spec 3.2). Wide
+        // enough for the detail to open beside the tab, the bar stays with the tab it belongs to.
+        val showBar = !rail && !(currentDetail != null && maxWidth < SideBySideWidth)
         // Another tab keeps every stack. The tab showing scrolls to the top, then pops to its root (spec 3.3). A tap
         // that closes pages over the tab does only that.
         val selectTab: (Int) -> Unit = { t ->
@@ -761,7 +764,11 @@ private fun AppRoot(
         }
         Scaffold(
             bottomBar = {
-                if (!rail) FloatingNavBar(navItems, tab, selectTab, glass = navGlass)
+                androidx.compose.animation.AnimatedVisibility(
+                    showBar,
+                    enter = androidx.compose.animation.slideInVertically { it } + androidx.compose.animation.fadeIn(),
+                    exit = androidx.compose.animation.slideOutVertically { it } + androidx.compose.animation.fadeOut(),
+                ) { FloatingNavBar(navItems, tab, selectTab, glass = navGlass) }
             },
             containerColor = MaterialTheme.colorScheme.background,
         ) { padding ->
@@ -1041,7 +1048,7 @@ private fun AppRoot(
             container, workoutState, workoutMinimized, readySport, readyPicking, live, realConnection, workoutsVm, requestBluetooth, requestLocation,
             onReadySport = { readySport = it },
             onCloseReady = { readySport = null; readyPicking = false },
-            capsuleBottom = if (rail) 16.dp else 104.dp,
+            capsuleBottom = if (showBar) 104.dp else 16.dp,
             tabletop = hinge != null, bookHinge = bookHinge,
         )
         org.openstrap.app.ui.components.GlassOverlay(glassHost, navGlass)

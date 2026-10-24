@@ -450,6 +450,12 @@ Four tabs in a pill, centred, and nothing else: Today, Recovery, Sleep, Activity
 section colour (white on Today). The bar only ever switches tabs. Nothing beside it does an action or changes with
 the moment.
 
+- **Hidden over a detail.** A detail that covers the tab (folded) is a screen stepped into: the bar slides away and
+  only the detail's back button leads out, as in most apps. Back returns to the tab, and the bar slides back. So the
+  bar never names a tab you aren't looking at, and a tab is always left from its root. Unfolded, where the detail
+  opens in the right pane beside the tab, the bar stays. The live workout capsule drops to 16 dp above the bottom
+  while the bar is away.
+
 - **All metrics** is the grid button in the header (3.1).
 - **Start a workout** is the first card on Activity (5.3), a strip on Today in every moment but during a workout, and
   the Start button in Today's workout-window hero (4). All of them open Ready (6.3).
@@ -471,7 +477,8 @@ Back or a swipe down closes it. The tab bar under it does nothing while it's ope
 
 - A card opens its own detail, grown out of the card (3.5). **No card ever switches tab.** `FocusTarget` and the tab
   jumps in `MainActivity` are removed.
-- Tapping the current tab scrolls to top. Tapping it again pops to its root. Tapping another tab keeps every stack.
+- Tapping the current tab scrolls to top. Tapping it again pops to its root. Tapping another tab keeps every stack
+  (only reachable unfolded, since folded the bar is hidden over a detail).
 - Back from a tab root goes to the previous tab, then Today, then leaves.
 - The You page, the Strap page and the All metrics sheet open over the current tab and close back to it. Pages
   opened from them stack on top, so Back from Profile returns to You and Back from Alarms returns to the Strap page.

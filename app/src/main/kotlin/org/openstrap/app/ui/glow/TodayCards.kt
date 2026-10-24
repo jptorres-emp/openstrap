@@ -370,7 +370,7 @@ internal fun WorkoutCard(w: org.openstrap.app.data.WorkoutAnalysis, onClick: () 
         EdgeTitle(Workouts.sportName(w.workout.sportType), "${clockAt(w.shownStart)}–${clockAt(w.end)}")
         val mostly = w.zoneSeconds.withIndex().filter { it.value > 0 }.maxByOrNull { it.value }?.index
         EdgeValue(
-            workoutClock((w.end - w.shownStart).coerceAtLeast(0)), "long",
+            workoutClock(w.activeSeconds.coerceAtLeast(0)), "long",
             listOfNotNull(w.workout.averageHeartRate?.let { "Average $it bpm" }, mostly?.let { "mostly zone ${it + 1}" })
                 .joinToString(", ").replaceFirstChar { it.uppercase() }.ifEmpty { null },
         )

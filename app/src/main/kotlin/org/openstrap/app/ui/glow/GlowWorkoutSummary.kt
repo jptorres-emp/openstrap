@@ -108,7 +108,7 @@ fun GlowWorkoutSummaryScreen(
         val usualLoad = remember(others) { Workouts.usualLoad(others.map { it.workout.trainingLoad }) }
         val best = remember(a, others) {
             fun of(x: WorkoutAnalysis) = BestCandidate(
-                x.workout.start, x.workout.sportType, x.workout.exerciseSeconds?.toLong() ?: x.durationSeconds,
+                x.workout.start, x.workout.sportType, x.activeSeconds,
                 x.distanceMeters?.takeIf { !x.distanceFromSteps },
             )
             SummaryCopy.personalBest(of(a), others.map(::of))
@@ -226,7 +226,7 @@ private fun DropLine(readings: List<Pair<Long, Int>>, end: Long, modifier: Modif
 private fun WorkoutCard(summary: PhoneSummary) {
     val a = summary.analysis
     val w = a.workout
-    val active = w.exerciseSeconds?.toLong() ?: a.durationSeconds
+    val active = a.activeSeconds
     EdgeCard(MetricColors.heart, Modifier.fillMaxWidth(), kind = EdgeKind.Earlier) {
         EdgeTitle(a.sportName, "${clockAt(a.shownStart)}–${clockAt(a.end)}")
         EdgeValue(

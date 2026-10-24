@@ -39,6 +39,12 @@ data class WorkoutAnalysis(
 ) {
     val durationSeconds: Long get() = end - shownStart
 
+    /**
+     * How long the workout was, as every screen shows it: a phone workout's moving time (its shown range less its
+     * pauses), a strap workout's start to end, since the strap records no pauses.
+     */
+    val activeSeconds: Long get() = if (fromPhone) workout.exerciseSeconds?.toLong() ?: durationSeconds else durationSeconds
+
     /** Recovery HR only says something about fitness when you stopped from a real effort. */
     val recoveryIsMeaningful: Boolean get() = endHeartRate != null && endHeartRate * 100 >= maxHeartRate * MIN_EFFORT_PCT
 

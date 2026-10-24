@@ -423,7 +423,7 @@ internal fun WorkoutRow(a: WorkoutAnalysis, usual: Float?, divider: Boolean, onC
                 )
             }
             Spacer(Modifier.width(12.dp))
-            DotMatrixText(workoutClock(a.durationSeconds), dot = ValueDot, gap = ValueGap, color = Color.White)
+            DotMatrixText(workoutClock(a.activeSeconds), dot = ValueDot, gap = ValueGap, color = Color.White)
         }
         // Zone bar (chart kit): how the workout's time was spent, thin under its row, lined up with its name.
         ZoneBar(a.zoneSeconds, ZONE_COLORS, Modifier.padding(start = EffortTile + EffortGap, bottom = 10.dp), height = 4.dp)

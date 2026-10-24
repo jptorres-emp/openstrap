@@ -108,4 +108,13 @@ class WorkoutsTest {
         assertEquals(Workouts.EFFORT_MIN, Workouts.effort(0, null), 0.001f)
         assertEquals(Workouts.EFFORT_MIN, Workouts.effort(2, 60f), 0.001f)
     }
+
+    @Test
+    fun aPhoneWorkoutShowsItsMovingTimeAndAStrapWorkoutItsWholeLength() {
+        // 108 s from start to end, 97 s of them moving.
+        val w = Workout(start, start + 108, 1, 97, null, null, null, null, null, null, null, null, null)
+        val strap = Workouts.analyse(w, emptyList(), emptyList(), 190)
+        assertEquals(108, strap.activeSeconds)
+        assertEquals(97, strap.copy(fromPhone = true).activeSeconds)
+    }
 }

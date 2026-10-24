@@ -5,6 +5,7 @@ import android.os.PowerManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.coroutineScope
@@ -18,6 +19,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeoutOrNull
 import org.openstrap.app.data.AutoStart
 import org.openstrap.app.data.RecoveryEngine
 import org.openstrap.app.data.WorkoutRecorder
@@ -50,9 +52,18 @@ sealed interface WorkoutState {
         val inSet: Boolean get() = sets.lastOrNull()?.let { it.end == null } == true
         val resting: Boolean get() = restUntil != null
     }
-    /** Saved; its summary shows until it is dismissed. */
-    data class Ended(val start: Long) : WorkoutState
+    /**
+     * Saved; its summary shows until it is dismissed. [preview] is a debug build opening the summary for a stored
+     * workout ([WorkoutSession.showSummary]): nothing live, and nothing written just by showing it.
+     */
+    data class Ended(val start: Long, val preview: Boolean = false) : WorkoutState
 }
+
+/**
+ * The heart rate after a workout [start] ended at [end], for the summary's heart rate drop: what the strap sent, a
+ * reading a second (epoch seconds, bpm), until [until].
+ */
+data class CalmDown(val start: Long, val end: Long, val until: Long, val readings: List<Pair<Long, Int>>)
 
 /**
  * The one workout state in the app: it drives the recorder, the notification and the screens. Live readings are
@@ -92,6 +103,11 @@ class WorkoutSession(
     private val _zoneSeconds = MutableStateFlow(IntArray(org.openstrap.app.data.Workouts.ZONES))
     val zoneSeconds: StateFlow<IntArray> = _zoneSeconds
     private var lastReading: Pair<Long, Int>? = null
+
+    /** The heart rate coming down after the last workout ended, while [CALM_S] lasts; null before any. */
+    private val _calmDown = MutableStateFlow<CalmDown?>(null)
+    val calmDown: StateFlow<CalmDown?> = _calmDown
+    private var calmJob: Job? = null
 
     /** A sport a launcher shortcut or the Quick Settings tile asked the ready screen to open with; the screen clears it. */
     val readyRequest = MutableStateFlow<Int?>(null)
@@ -407,9 +423,10 @@ class WorkoutSession(
                         else -> null
                     }
                 }?.let { dao.upsertSets(listOf(it)) }
-                stop()
+                stop(keepLive = true)
                 // Under a minute is a mis-tap or a test, not a workout: nothing is kept, and the app says so.
                 if (WorkoutRecorder.activeSeconds(ended, end) < MIN_SAVED_S) {
+                    strap.setWorkoutActive(false)
                     dao.deleteAppWorkout(w.start)
                     _state.value = WorkoutState.Idle
                     // A toast, so it shows whether it ended in the app or from the notification.
@@ -421,6 +438,7 @@ class WorkoutSession(
                 // The route is still in memory here, kept or not, so a run gets its VO2max either way.
                 dao.upsertAppWorkout(withEffect(ended, dao.appWorkoutHeartRateOnce(w.start), _route.value))
                 _state.value = WorkoutState.Ended(w.start)
+                watchCalmDown(w.start, recorded)
             }
             // The strap's history fills any minutes the phone missed; it batches, so ask now.
             strap.syncNow()
@@ -432,9 +450,50 @@ class WorkoutSession(
         scope.launch {
             lock.withLock {
                 dao.deleteAppWorkout(start)
-                if ((_state.value as? WorkoutState.Ended)?.start == start) _state.value = WorkoutState.Idle
+                if ((_state.value as? WorkoutState.Ended)?.start == start) {
+                    _state.value = WorkoutState.Idle
+                    endCalmDown()
+                }
             }
         }
+    }
+
+    /**
+     * Keeps the strap's live heart rate on for [CALM_S] after the workout [start] stopped recording at [stopped], so
+     * the summary can draw the drop as it happens. Done, a delete or a new workout ends it early.
+     */
+    private fun watchCalmDown(start: Long, stopped: Long) {
+        calmJob?.cancel()
+        _calmDown.value = CalmDown(start, stopped, stopped + CALM_S, emptyList())
+        calmJob = scope.launch {
+            try {
+                withTimeoutOrNull(CALM_S * 1000) {
+                    strap.heartRateReadings.collect { bpm ->
+                        val t = now()
+                        val c = _calmDown.value?.takeIf { it.start == start } ?: return@collect
+                        // The strap sends each reading on two paths; one a second is kept.
+                        if (!WorkoutRecorder.isValid(bpm) || c.readings.lastOrNull()?.first == t) return@collect
+                        _calmDown.value = c.copy(readings = c.readings + (t to bpm))
+                    }
+                }
+            } finally {
+                // A workout started meanwhile wants the stream on.
+                if (_state.value !is WorkoutState.Recording) strap.setWorkoutActive(false)
+            }
+        }
+    }
+
+    private fun endCalmDown() {
+        calmJob?.cancel()
+        calmJob = null
+    }
+
+    /**
+     * Debug: shows the summary for the stored workout [start] as if it had just ended, to check the screen without
+     * ending one. Only while no workout records or shows; nothing is written.
+     */
+    fun showSummary(start: Long) {
+        if (_state.value is WorkoutState.Idle) _state.value = WorkoutState.Ended(start, preview = true)
     }
 
     /**
@@ -538,6 +597,7 @@ class WorkoutSession(
 
     fun dismissSummary() {
         if (_state.value is WorkoutState.Ended) _state.value = WorkoutState.Idle
+        endCalmDown()
     }
 
     private fun update(change: suspend (AppWorkout) -> AppWorkout) {
@@ -613,6 +673,9 @@ class WorkoutSession(
     }
 
     private suspend fun begin(w: AppWorkout, maxHr: Int) {
+        // Waited for, so the calm down's own switch-off can't land after this workout turns the stream on.
+        calmJob?.cancelAndJoin()
+        calmJob = null
         coach = org.openstrap.app.data.Coach(org.openstrap.app.data.WorkoutTarget.parse(w.target))
         strapSessions = runCatching { settings.strapSessions.first() }.getOrDefault(false)
         heightCm = runCatching { settings.profile.first().heightCm }.getOrNull()
@@ -721,14 +784,15 @@ class WorkoutSession(
     private val _lastCue = MutableStateFlow<org.openstrap.app.data.Cue?>(null)
     val lastCue: StateFlow<org.openstrap.app.data.Cue?> = _lastCue
 
-    private fun stop() {
+    /** [keepLive]: the live heart rate stays on for the calm down after the end ([watchCalmDown]). */
+    private fun stop(keepLive: Boolean = false) {
         _lastCue.value = null
         location.stop()
         if (carRegistered) runCatching { context.unregisterReceiver(carReceiver) }
         carRegistered = false
         recordJob?.cancel()
         recordJob = null
-        strap.setWorkoutActive(false)
+        if (!keepLive) strap.setWorkoutActive(false)
         wake?.takeIf { it.isHeld }?.release()
         wake = null
         _recent.value = emptyList()
@@ -776,6 +840,8 @@ class WorkoutSession(
         const val RECENT_S = 600L
         /** Workouts with less moving time than this aren't kept. */
         const val MIN_SAVED_S = 60L
+        /** How long the live heart rate stays on after a workout, for its heart rate drop: the first two minutes. */
+        const val CALM_S = 120L
         /** Long enough to hold the 8 calm minutes and the active moment before them. */
         const val STOP_WINDOW_S = 20 * 60L
         /** Checked every third flush, 30 s. */

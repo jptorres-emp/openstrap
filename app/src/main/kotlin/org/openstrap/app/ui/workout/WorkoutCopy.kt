@@ -87,9 +87,13 @@ object WorkoutCopy {
         // A fix stamped a moment ahead of the phone's clock still shows; one long ago doesn't.
         if (now - sp.endT >= SPLIT_LINE_S || sp.endT - now > SPLIT_LINE_S) return null
         val from = splits.getOrNull(i - 1)?.endT ?: firstT ?: sp.endT
-        val avg = history.filter { it.first in from..sp.endT }.takeIf { it.isNotEmpty() }?.map { it.second }?.average()?.toInt()
+        val avg = averageOver(history, from, sp.endT)
         return SplitLine(i, sp.endT, "Km ${i + 1} in ${workoutClock(sp.seconds)}" + (avg?.let { ", avg $it" } ?: ""))
     }
+
+    /** The average of the [readings] (time, bpm) from [from] to [to], whole bpm; null without any. */
+    fun averageOver(readings: List<Pair<Long, Int>>, from: Long, to: Long): Int? =
+        readings.filter { it.first in from..to }.takeIf { it.isNotEmpty() }?.map { it.second }?.average()?.toInt()
 
     /**
      * Every reading so far for [splitLine]: the session's [history], refreshed every few seconds, then the [recent]

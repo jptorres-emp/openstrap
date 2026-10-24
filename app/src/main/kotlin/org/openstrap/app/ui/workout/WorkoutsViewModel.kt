@@ -49,6 +49,8 @@ data class PhoneSummary(
     val strapWorkout: WorkoutAnalysis? = null,
     /** Laps, when any were marked. */
     val laps: List<WorkoutRecorder.Lap> = emptyList(),
+    /** Finished pauses, which no split counts. */
+    val pauses: List<LongRange> = emptyList(),
 )
 
 /** Workouts list (newest first) and the one open in detail. */
@@ -169,9 +171,10 @@ class WorkoutsViewModel(private val dao: HealthDao, private val profile: Flow<Us
 
     /**
      * A phone workout's summary: its analysis, everything recorded (for trimming), and "your usual" from the last
-     * similar workouts of the same sport, phone or strap ([WorkoutRecorder.similar]).
+     * similar workouts of the same sport, phone or strap ([WorkoutRecorder.similar]). [backfill] works out the effect of
+     * a workout from before there was one and saves it; off, opening the summary writes nothing.
      */
-    fun phoneSummary(start: Long): Flow<PhoneSummary?> =
+    fun phoneSummary(start: Long, backfill: Boolean = true): Flow<PhoneSummary?> =
         combine(dao.appWorkout(start), dao.appWorkoutHeartRate(start), fallbackMaxHr, workouts, combine(dao.route(start), dao.sets(start)) { r, s -> r to s }) { w, hr, maxHr, all, extra ->
             Quad(w, hr, maxHr, all) to extra
         }
@@ -180,7 +183,7 @@ class WorkoutsViewModel(private val dao: HealthDao, private val profile: Flow<Us
                 val (w, hr, maxHr, all) = q
                 w ?: return@mapLatest null
                 // A workout from before its effect was worked out gets it now; saving it brings this summary round again.
-                if (w.end != null && w.epoc == null && hr.isNotEmpty()) {
+                if (backfill && w.end != null && w.epoc == null && hr.isNotEmpty()) {
                     runCatching { org.openstrap.app.data.WorkoutEffectEngine(dao).backfill(w, profile.first()) }
                 }
                 val a = WorkoutRecorder.analyse(w, hr, maxHr)
@@ -198,8 +201,25 @@ class WorkoutsViewModel(private val dao: HealthDao, private val profile: Flow<Us
                     w.lapMarks.takeIf { it.isNotEmpty() }?.let { marks ->
                         WorkoutRecorder.laps(w.from, w.end ?: a.end, marks, hr.filter { !it.fromHistory }.map { it.timestamp to it.bpm }, route, w.pauseRanges)
                     }.orEmpty(),
+                    w.pauseRanges,
                 )
             }.flowOn(Dispatchers.Default)
+
+    /**
+     * Your usual heart rate drop in the first minute after a workout, before [before] ([SummaryCopy.usualDrop]): from
+     * the strap's own workouts, whose recording runs on after the end, and only those ended from a real effort
+     * ([WorkoutAnalysis.recoveryIsMeaningful]). Phone workouts keep no drop yet. Null with too few.
+     */
+    suspend fun usualDrop(before: Long): Int? = kotlinx.coroutines.withContext(Dispatchers.Default) {
+        val maxHr = fallbackMaxHr.first()
+        val effects = dao.sportEffects().first()
+        val drops = dao.workouts().first()
+            .filter { it.start < before && it.start >= before - USUAL_DROP_LOOKBACK_S }
+            .sortedByDescending { it.start }
+            .take(SummaryCopy.USUAL_DROP_OF * 2)
+            .mapNotNull { w -> Workouts.analyse(w, dao.workoutHeartRateOnce(w.start), effects, maxHr).takeIf { it.recoveryIsMeaningful }?.recovery60 }
+        SummaryCopy.usualDrop(drops)
+    }
 
     /**
      * A GPX file of a kept route for sharing: its first and last [org.openstrap.app.data.Route.PRIVACY_M] metres left
@@ -218,6 +238,11 @@ class WorkoutsViewModel(private val dao: HealthDao, private val profile: Flow<Us
         val name = Workouts.sportName(w.sportType)
         val date = java.time.Instant.ofEpochSecond(w.from).atZone(java.time.ZoneId.systemDefault()).toLocalDate()
         "openstrap-${name.lowercase().replace(' ', '-')}-$date.gpx" to org.openstrap.app.data.Route.gpx("$name $date", points, hr)
+    }
+
+    private companion object {
+        /** Drops older than this say little about your fitness now. */
+        const val USUAL_DROP_LOOKBACK_S = 180 * 86_400L
     }
 
     private data class Quad<A, B, C, D>(val a: A, val b: B, val c: C, val d: D)

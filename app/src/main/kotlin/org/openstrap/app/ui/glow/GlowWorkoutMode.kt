@@ -114,6 +114,7 @@ import org.openstrap.app.ui.workout.SportIcons
 import org.openstrap.app.ui.workout.ZONE_COLORS
 import org.openstrap.app.ui.workout.LiveView
 import org.openstrap.app.ui.workout.WorkoutCopy
+import org.openstrap.app.ui.workout.SummaryCopy
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -123,7 +124,7 @@ import java.time.format.DateTimeFormatter
 
 /** A paused workout, or one with no reading yet, is a cool grey rather than a zone. */
 internal val PausedColor = Color(0xFF9AA0B4)
-private val Raised = Color(0xFF1C1C1E)
+internal val Raised = Color(0xFF1C1C1E)
 
 /** The colour a workout takes: its live zone's, or [PausedColor] with no reading. */
 internal fun zoneColor(bpm: Int?, maxHr: Int): Color = WorkoutRecorder.liveZone(bpm, maxHr)?.let { ZONE_COLORS[it] } ?: PausedColor
@@ -136,7 +137,7 @@ fun workoutColor(r: WorkoutState.Recording, liveHeartRate: Int?, connected: Bool
 internal fun workoutClock(seconds: Long): String =
     if (seconds >= 3600) "%d:%02d:%02d".format(seconds / 3600, seconds / 60 % 60, seconds % 60) else "%d:%02d".format(seconds / 60, seconds % 60)
 
-private fun zoneRange(zone: Int, maxHr: Int) =
+internal fun zoneRange(zone: Int, maxHr: Int) =
     if (zone == 0) "under ${60 * maxHr / 100} bpm"
     else "${(50 + zone * 10) * maxHr / 100}–${if (zone == Workouts.ZONES - 1) maxHr else (60 + zone * 10) * maxHr / 100 - 1} bpm"
 
@@ -187,7 +188,7 @@ internal fun WorkoutButton(
  * the height so the controls sit at the bottom.
  */
 @Composable
-private fun WorkoutPage(glow: Color, contentPadding: PaddingValues, scroll: Boolean = true, content: @Composable ColumnScope.() -> Unit) {
+internal fun WorkoutPage(glow: Color, contentPadding: PaddingValues, scroll: Boolean = true, content: @Composable ColumnScope.() -> Unit) {
     BoxWithConstraints(Modifier.fillMaxSize().background(Color.Black)) {
         val width = constraints.maxWidth.toFloat()
         Box(
@@ -1226,8 +1227,6 @@ fun GlowPhoneWorkoutScreen(
     onExportGpx: () -> Unit = {},
 ) {
     BackHandler(onBack = onBack)
-    var confirmDelete by remember { mutableStateOf(false) }
-    var trimming by rememberSaveable { mutableStateOf(false) }
     val a = summary?.analysis
     WorkoutPage(Color.Transparent, contentPadding) {
         Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -1360,54 +1359,26 @@ fun GlowPhoneWorkoutScreen(
                 }
             }
         }
-        // What the app did, with undo: an early end it proposed, or a trim.
-        a.recordedEnd?.let { recorded ->
-            val cut = recorded - a.end
-            val left = if (cut < 60) "$cut s" else "${cut / 60} min"
-            Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    if (summary.endReason == AppWorkout.END_CAR && a.shownStart == w.start) "Ended at ${clock(a.end)}. $left of driving were left out."
-                    else if (summary.endReason == AppWorkout.END_AUTO && a.shownStart == w.start) "Ended at ${clock(a.end)}, when you'd stopped. $left after that were left out."
-                    else "Trimmed to ${clock(a.shownStart)}–${clock(a.end)}. The rest is kept.",
-                    color = Color.White.copy(alpha = 0.8f), style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f),
-                )
-                Text(
-                    "Undo", color = Color.White, style = MaterialTheme.typography.labelLarge,
-                    modifier = Modifier.clip(RoundedCornerShape(50)).pressClickable(onUndoTrim, RoundedCornerShape(50)).padding(horizontal = 12.dp, vertical = 8.dp),
-                )
-            }
-        } ?: if (a.shownStart != w.start) {
-            Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("Trimmed to start at ${clock(a.shownStart)}. The rest is kept.", color = Color.White.copy(alpha = 0.8f), style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
-                Text(
-                    "Undo", color = Color.White, style = MaterialTheme.typography.labelLarge,
-                    modifier = Modifier.clip(RoundedCornerShape(50)).pressClickable(onUndoTrim, RoundedCornerShape(50)).padding(horizontal = 12.dp, vertical = 8.dp),
-                )
-            }
-        } else Unit
-        if (trimming) {
-            TrimPanel(summary, onSave = { from, to -> onTrim(from, to); trimming = false }, onCancel = { trimming = false })
-        } else {
-            Row(
-                Modifier.fillMaxWidth().glass(GlassRowShape, { trimming = true }).padding(horizontal = 14.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text("Trim start and end", color = Color.White, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-                Icon(AppIcons.CaretRight, null, tint = Color.White.copy(alpha = 0.7f))
-            }
-        }
+        TrimSection(summary, onTrim, onUndoTrim)
         Spacer(Modifier.weight(1f))
-        val canExport = Route.privacyTrim(summary.route).isNotEmpty()
-        if (justEnded || canExport) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            if (canExport) Box(Modifier.weight(1f)) { WorkoutButton("Export GPX", Raised, Color.White, onExportGpx) }
-            if (justEnded) Box(Modifier.weight(1f)) { WorkoutButton("Done", Color.White, Color.Black, onBack) }
-        }
-        Text(
-            "Delete workout", color = TrendBad, style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.align(Alignment.CenterHorizontally).clip(RoundedCornerShape(50))
-                .pressClickable({ confirmDelete = true }, RoundedCornerShape(50)).padding(horizontal = 16.dp, vertical = 10.dp),
-        )
+        SummaryActions(summary, justEnded, onExportGpx, onDone = onBack, onDelete = onDelete)
     }
+}
+
+/** Export GPX (for a route kept), Done right after the end, and Delete workout behind a question. */
+@Composable
+internal fun ColumnScope.SummaryActions(summary: PhoneSummary, justEnded: Boolean, onExportGpx: () -> Unit, onDone: () -> Unit, onDelete: () -> Unit) {
+    var confirmDelete by remember { mutableStateOf(false) }
+    val canExport = Route.privacyTrim(summary.route).isNotEmpty()
+    if (justEnded || canExport) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        if (canExport) Box(Modifier.weight(1f)) { WorkoutButton("Export GPX", Raised, Color.White, onExportGpx) }
+        if (justEnded) Box(Modifier.weight(1f)) { WorkoutButton("Done", Color.White, Color.Black, onDone) }
+    }
+    Text(
+        "Delete workout", color = TrendBad, style = MaterialTheme.typography.bodyMedium,
+        modifier = Modifier.align(Alignment.CenterHorizontally).clip(RoundedCornerShape(50))
+            .pressClickable({ confirmDelete = true }, RoundedCornerShape(50)).padding(horizontal = 16.dp, vertical = 10.dp),
+    )
     if (confirmDelete) {
         org.openstrap.app.ui.components.GlassAlertDialog(
             onDismissRequest = { confirmDelete = false },
@@ -1416,6 +1387,53 @@ fun GlowPhoneWorkoutScreen(
             confirmButton = { androidx.compose.material3.TextButton(onClick = { confirmDelete = false; onDelete() }) { Text("Delete") } },
             dismissButton = { androidx.compose.material3.TextButton(onClick = { confirmDelete = false }) { Text("Cancel") } },
         )
+    }
+}
+
+/**
+ * What the app did to the end, with undo (an early end it proposed, or a trim), then "Trim start and end", which opens
+ * the trimmer in place.
+ */
+@Composable
+internal fun TrimSection(summary: PhoneSummary, onTrim: (from: Long, to: Long) -> Unit, onUndoTrim: () -> Unit) {
+    var trimming by rememberSaveable { mutableStateOf(false) }
+    val a = summary.analysis
+    val w = a.workout
+    // What the app did, with undo: an early end it proposed, or a trim.
+    a.recordedEnd?.let { recorded ->
+        val cut = recorded - a.end
+        val left = if (cut < 60) "$cut s" else "${cut / 60} min"
+        Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                if (summary.endReason == AppWorkout.END_CAR && a.shownStart == w.start) "Ended at ${clock(a.end)}. $left of driving were left out."
+                else if (summary.endReason == AppWorkout.END_AUTO && a.shownStart == w.start) "Ended at ${clock(a.end)}, when you'd stopped. $left after that were left out."
+                else "Trimmed to ${clock(a.shownStart)}–${clock(a.end)}. The rest is kept.",
+                color = Color.White.copy(alpha = 0.8f), style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f),
+            )
+            Text(
+                "Undo", color = Color.White, style = MaterialTheme.typography.labelLarge,
+                modifier = Modifier.clip(RoundedCornerShape(50)).pressClickable(onUndoTrim, RoundedCornerShape(50)).padding(horizontal = 12.dp, vertical = 8.dp),
+            )
+        }
+    } ?: if (a.shownStart != w.start) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text("Trimmed to start at ${clock(a.shownStart)}. The rest is kept.", color = Color.White.copy(alpha = 0.8f), style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+            Text(
+                "Undo", color = Color.White, style = MaterialTheme.typography.labelLarge,
+                modifier = Modifier.clip(RoundedCornerShape(50)).pressClickable(onUndoTrim, RoundedCornerShape(50)).padding(horizontal = 12.dp, vertical = 8.dp),
+            )
+        }
+    } else Unit
+    if (trimming) {
+        TrimPanel(summary, onSave = { from, to -> onTrim(from, to); trimming = false }, onCancel = { trimming = false })
+    } else {
+        Row(
+            Modifier.fillMaxWidth().glass(GlassRowShape, { trimming = true }).padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text("Trim start and end", color = Color.White, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+            Icon(AppIcons.CaretRight, null, tint = Color.White.copy(alpha = 0.7f))
+        }
     }
 }
 
@@ -1445,7 +1463,7 @@ private fun minutesDelta(seconds: Long): String {
  * falls outside dims. Saving changes only what is shown; nothing recorded is deleted.
  */
 @Composable
-private fun TrimPanel(summary: PhoneSummary, onSave: (Long, Long) -> Unit, onCancel: () -> Unit) {
+internal fun TrimPanel(summary: PhoneSummary, onSave: (Long, Long) -> Unit, onCancel: () -> Unit) {
     val a = summary.analysis
     val first = summary.recordedStart
     val last = summary.recordedEnd.coerceAtLeast(first + 60)
@@ -1463,7 +1481,7 @@ private fun TrimPanel(summary: PhoneSummary, onSave: (Long, Long) -> Unit, onCan
         List(n) { if (counts[it] == 0) null else sums[it] / counts[it] }
     }
     DotPanel {
-        DotHeader("Trim", trailing = "${clock(from)} – ${clock(to)} · ${workoutClock(to - from)}")
+        DotHeader("Trim", trailing = SummaryCopy.trimHeader(clock(from), clock(to), to - from))
         val known = points.filterNotNull()
         val lo = (known.minOrNull() ?: 60f) - 10f
         val hi = (known.maxOrNull() ?: 180f) + 5f

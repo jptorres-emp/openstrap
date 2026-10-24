@@ -127,6 +127,17 @@ object Workouts {
         return a - b
     }
 
+    /**
+     * The same drop from (time, bpm) [readings], as the summary right after a phone workout reads them: what it
+     * recorded, then what the strap sent after the end.
+     */
+    fun heartRateDrop(readings: List<Pair<Long, Int>>, end: Long, after: Long = 60): Int? = recovery(asSamples(readings), end, after)
+
+    /** Heart rate at [t] from (time, bpm) [readings], as a 5-second median; the starting point of [heartRateDrop]. */
+    fun heartRateAt(readings: List<Pair<Long, Int>>, t: Long): Int? = medianAt(asSamples(readings), t)
+
+    private fun asSamples(readings: List<Pair<Long, Int>>) = readings.map { (t, bpm) -> WorkoutHeartRate(0, t, bpm) }
+
     private fun medianAt(hr: List<WorkoutHeartRate>, t: Long): Int? =
         hr.filter { it.timestamp in t - 2..t + 2 }.map { it.bpm }.sorted().let { if (it.isEmpty()) null else it[it.size / 2] }
 

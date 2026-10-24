@@ -21,7 +21,7 @@ class HapticsTest {
 
     @Test fun `the 3_6 table`() {
         assertEquals(HapticFeedbackType.SegmentFrequentTick, HapticEvent.ScrubStep.feedbackType())
-        listOf(HapticEvent.ScrubMark, HapticEvent.ZoneChange, HapticEvent.KmSplit, HapticEvent.SetDone, HapticEvent.RangeMark)
+        listOf(HapticEvent.ScrubMark, HapticEvent.ZoneChange, HapticEvent.KmSplit, HapticEvent.SetDone, HapticEvent.RangeMark, HapticEvent.PersonalBest)
             .forEach { assertEquals(HapticFeedbackType.SegmentTick, it.feedbackType()) }
         listOf(HapticEvent.WorkoutStart, HapticEvent.WorkoutEnd, HapticEvent.PairingDone)
             .forEach { assertEquals(HapticFeedbackType.Confirm, it.feedbackType()) }

@@ -17,6 +17,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -29,6 +30,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import org.openstrap.app.device.ConnectionState
@@ -67,6 +69,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import org.openstrap.app.ui.theme.OpenStrapTheme
 import org.openstrap.app.ui.theme.AppIcons
+import org.openstrap.app.ui.glow.GlowWorkoutSummaryScreen
 
 class MainActivity : ComponentActivity() {
     /** The latest `open_metric` link, until the app root has opened it. */
@@ -154,6 +157,9 @@ class MainActivity : ComponentActivity() {
 
         /** Debug: a [org.openstrap.app.data.Moment] name to force on Today, or "auto" to follow the clock again. */
         const val EXTRA_MOMENT = "moment"
+
+        /** Debug: true opens the summary right after a workout for the latest stored phone workout. */
+        const val EXTRA_SHOW_SUMMARY = "show_summary"
     }
 
     /** Debug: `am start -n org.openstrap.app/.MainActivity --ei dump_raw_days 7` dumps raw history to files/raw. */
@@ -209,6 +215,17 @@ class MainActivity : ComponentActivity() {
             else org.openstrap.app.data.Moment.entries.firstOrNull { it.name.equals(moment, ignoreCase = true) }
                 ?.let { forcedMoment.value = it }
                 ?: android.util.Log.w("OpenStrap", "moment: no moment called $moment")
+        }
+        // Debug: `--ez show_summary true` opens the summary right after a workout for the latest stored phone workout,
+        // with nothing live and nothing written.
+        if (BuildConfig.DEBUG && intent.getBooleanExtra(EXTRA_SHOW_SUMMARY, false)) {
+            intent.removeExtra(EXTRA_SHOW_SUMMARY)
+            val container = (application as OpenStrapApp).container
+            kotlinx.coroutines.MainScope().launch {
+                val latest = container.database.healthDao().appWorkouts().first().filter { it.end != null }.maxByOrNull { it.start }
+                if (latest != null) container.workout.showSummary(latest.start)
+                else Toast.makeText(this@MainActivity, "No phone workout to show", Toast.LENGTH_SHORT).show()
+            }
         }
         val days = intent.getIntExtra("dump_raw_days", 0)
         if (!BuildConfig.DEBUG || days <= 0) return
@@ -1022,10 +1039,16 @@ private fun androidx.compose.foundation.layout.BoxScope.WorkoutLayer(
             },
         )
         state is org.openstrap.app.device.WorkoutState.Ended -> androidx.compose.foundation.layout.Box(full) {
-            val summary by remember(state.start) { workoutsVm.phoneSummary(state.start) }.collectAsStateWithLifecycle(null)
-            org.openstrap.app.ui.glow.GlowPhoneWorkoutScreen(
-                summary, padding, onBack = session::dismissSummary, onDelete = { session.discard(state.start) },
-                onTrim = { from, to -> session.trim(state.start, from, to) }, onUndoTrim = { session.undoTrim(state.start) }, justEnded = true,
+            // A debug preview of a stored workout writes nothing just by opening, so no effect is worked out for it.
+            val summary by remember(state) { workoutsVm.phoneSummary(state.start, backfill = !state.preview) }.collectAsStateWithLifecycle(null)
+            val calmDown by session.calmDown.collectAsStateWithLifecycle()
+            val route by session.route.collectAsStateWithLifecycle()
+            val workouts by workoutsVm.workouts.collectAsStateWithLifecycle()
+            val usualDrop by produceState<Int?>(null, state.start) { value = workoutsVm.usualDrop(state.start) }
+            GlowWorkoutSummaryScreen(
+                summary, calmDown.takeIf { !state.preview }, if (state.preview) emptyList() else route, workouts, usualDrop, padding,
+                onDone = session::dismissSummary, onDelete = { session.discard(state.start) },
+                onTrim = { from, to -> session.trim(state.start, from, to) }, onUndoTrim = { session.undoTrim(state.start) },
                 onExportGpx = { exportGpx(state.start) },
             )
         }

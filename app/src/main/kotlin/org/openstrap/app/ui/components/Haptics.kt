@@ -36,12 +36,16 @@ enum class HapticEvent {
 
     /** A range handle passes the detected start or end of a workout. */
     RangeMark,
+
+    /** A personal best shows on the summary right after a workout, with its glow swell. */
+    PersonalBest,
 }
 
 /** The feedback for each [HapticEvent]. */
 fun HapticEvent.feedbackType(): HapticFeedbackType = when (this) {
     HapticEvent.ScrubStep -> HapticFeedbackType.SegmentFrequentTick
-    HapticEvent.ScrubMark, HapticEvent.ZoneChange, HapticEvent.KmSplit, HapticEvent.SetDone, HapticEvent.RangeMark -> HapticFeedbackType.SegmentTick
+    HapticEvent.ScrubMark, HapticEvent.ZoneChange, HapticEvent.KmSplit, HapticEvent.SetDone, HapticEvent.RangeMark,
+    HapticEvent.PersonalBest -> HapticFeedbackType.SegmentTick
     HapticEvent.WorkoutStart, HapticEvent.WorkoutEnd, HapticEvent.PairingDone -> HapticFeedbackType.Confirm
     HapticEvent.SyncFailed -> HapticFeedbackType.Reject
 }

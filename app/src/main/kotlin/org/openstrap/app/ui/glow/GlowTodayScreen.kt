@@ -690,7 +690,8 @@ private fun TodayRow(
     onStartSport: (Int) -> Unit = {},
 ) {
     val s = ctx.state
-    val b = s.baselines
+    // Your normal over 30 days, as the Recovery tab's body signals measure against, so both say the same.
+    @Composable fun normal(m: Metric) = rememberNormal(m, s.date, history)
     val openScore = { score: org.openstrap.app.ui.dashboard.Score -> onOpen(org.openstrap.app.ui.dashboard.Detail.OfScore(score)) }
     // Last night opens the Sleep score's detail, as the Sleep tab's hero does (spec 3.3).
     val onOpenSleep = { openScore(org.openstrap.app.ui.dashboard.Score.Sleep) }
@@ -702,18 +703,18 @@ private fun TodayRow(
         TodayCard.BodyMorning -> BodyList(
             "Your body this morning",
             listOf(
-                BodyRow("Resting heart rate", MetricColors.heart, s.restingHeartRate?.toFloat(), b.restingHr, 1.5f, "", Metric.RestingHr),
-                BodyRow("HRV", MetricColors.hrv, s.hrv.avg()?.toFloat(), b.hrv, 3f, "", Metric.Hrv),
-                BodyRow("Blood oxygen", MetricColors.spo2, s.spo2.avg()?.toFloat(), b.spo2, 1f, "%", Metric.Spo2),
-                BodyRow("Breathing rate", MetricColors.sleepLight, s.breathRate.avg()?.toFloat(), b.breathRate, 1f, "", Metric.Breathing),
+                BodyRow("Resting heart rate", MetricColors.heart, s.restingHeartRate?.toFloat(), normal(Metric.RestingHr), "", Metric.RestingHr),
+                BodyRow("HRV", MetricColors.hrv, s.hrv.avg()?.toFloat(), normal(Metric.Hrv), "", Metric.Hrv),
+                BodyRow("Blood oxygen", MetricColors.spo2, s.spo2.avg()?.toFloat(), normal(Metric.Spo2), "%", Metric.Spo2),
+                BodyRow("Breathing rate", MetricColors.sleepLight, s.breathRate.avg()?.toFloat(), normal(Metric.Breathing), "", Metric.Breathing),
             ),
             ctx.waiting, onOpenMetric,
         )
         TodayCard.RightNow -> BodyList(
             "Right now",
             listOf(
-                BodyRow("Stress", MetricColors.stress, s.stress.lastOrNull()?.y, b.stress, 4f, "", Metric.Stress),
-                BodyRow("HRV", MetricColors.hrv, s.hrv.lastOrNull()?.y, b.hrv, 3f, "", Metric.Hrv),
+                BodyRow("Stress", MetricColors.stress, s.stress.lastOrNull()?.y, normal(Metric.Stress), "", Metric.Stress),
+                BodyRow("HRV", MetricColors.hrv, s.hrv.lastOrNull()?.y, normal(Metric.Hrv), "", Metric.Hrv),
             ),
             ctx.waiting, onOpenMetric, upTo = ctx.upTo(listOfNotNull(s.stress.lastOrNull(), s.hrv.lastOrNull()).maxOfOrNull { it.x }),
         )

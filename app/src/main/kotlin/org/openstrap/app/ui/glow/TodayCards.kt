@@ -550,21 +550,24 @@ internal fun SmallCard(
 
 /* ---------------------------------------------- Lists ----------------------------------------------- */
 
-/** A row of a body list: a value against your normal. */
+/** A row of a body list: a value against your [normal] ([org.openstrap.app.ui.glow.rememberNormal]). */
 internal class BodyRow(
-    val name: String, val color: Color, val value: Float?, val baseline: Float?, val tolerance: Float, val unit: String, val metric: Metric,
+    val name: String, val color: Color, val value: Float?, val normal: org.openstrap.app.data.History.Normal?, val unit: String, val metric: Metric,
 )
 
-/** Body values against your normal, each opening its metric. [waiting] is what an empty row says. */
+/**
+ * Body values against your normal, each opening its metric, read and rounded as the Recovery tab's body signals are.
+ * [waiting] is what an empty row says.
+ */
 @Composable
 internal fun BodyList(
     title: String, rows: List<BodyRow>, waiting: String, onOpenMetric: (Metric) -> Unit, modifier: Modifier = Modifier, upTo: String? = null,
 ) {
     ListPanel(modifier, title = title, note = "Against your normal", marker = upTo) {
         rows.forEachIndexed { i, r ->
-            val direction = org.openstrap.app.ui.dashboard.Narrative.direction(r.value, r.baseline, r.tolerance)
+            val direction = org.openstrap.app.data.History.status(r.value, r.normal)
             ListRow(
-                r.name, r.color, r.value?.let { "${it.roundToInt()}${r.unit}" },
+                r.name, r.color, r.value?.let { r.metric.format(it) + r.unit },
                 if (r.value == null) waiting else TodayCopy.normalWord(direction),
                 offNormal = direction != null && direction != 0, onClick = { onOpenMetric(r.metric) }, divider = i > 0,
                 icon = r.metric.rowIcon(),

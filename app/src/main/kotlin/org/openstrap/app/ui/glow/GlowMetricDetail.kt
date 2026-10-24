@@ -252,15 +252,6 @@ private fun DetailNav(title: String, switchable: Boolean, onBack: () -> Unit, on
     PageHeader(title, onBack, onTitle = if (switchable) onSwitch else null) { InfoButton("About $title", onInfo) }
 }
 
-/** The (i) of a card or a detail header (spec 2.5): 32 dp round at 10% white, a 16 dp icon at 72%. */
-@Composable
-internal fun InfoButton(label: String, onClick: () -> Unit) {
-    Box(
-        Modifier.size(32.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.10f)).clickable(onClickLabel = label, role = Role.Button, onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) { Icon(AppIcons.Info, label, Modifier.size(16.dp), tint = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA)) }
-}
-
 /**
  * Heart rate's Live control in its detail header: a chip on the Control surface (spec 2.2, 2.4), white with black
  * text while live, so it reads as the design system's own control and not a coloured switch.

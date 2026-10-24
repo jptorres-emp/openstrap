@@ -196,7 +196,6 @@ private val StartTilesWidth = 344.dp
 
 private val SportTileSize = 64.dp
 private val SportTileShape = RoundedCornerShape(GlowLayout.TileCorner)
-private val ControlSurface = Color(0xFF1F1F22)
 
 /**
  * A sport as a tile: its icon on a 64 dp Control tile, its name in Secondary under it, up to two lines. An [outdoor]

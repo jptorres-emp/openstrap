@@ -60,9 +60,10 @@ how its value sits against your normal. Nothing is lit between levels, and nothi
 **Levels.** A card that shows a level (Charge, steps toward a goal on a glow, Load on an edge card) shows it as how far
 the light reaches.
 
-- On a glow card the light fills along the card's long side, like a battery: up from the bottom on a Tall or a hero,
-  across from the left on a Wide (Charge under the workout hero, Steps on Activity). The lit edge is the light colour at full, the lit part is the
-  value's share of the card, then a soft 22 dp step into the dark core. At 0 the bottom 12% still glows.
+- On a glow card the light rises from the bottom, like a battery, on a Tall, a hero and every other level glow, Steps
+  on Activity included, because its bars sit in the dark above the light. Only a short wide card with just a number
+  and a line (Charge on Today) fills across from the left. The lit edge is the light colour at full, the lit part is
+  the value's share of the card, then a soft 22 dp step into the dark core. At 0 the bottom 12% still glows.
 - A level glow is always this bright, because its light is the value. Beside a hero (Charge on Recovery, Charge as the
   wide card in the workout window, beside the hero on Today) it still counts as the screen's second glow, so no third
   glow joins it. L3 is for a second glow that isn't a level. Charge is always a level, wherever it shows.
@@ -691,8 +692,8 @@ each nap's heart rate (the naps in the Sleep detail, step 6).
 1. Wide edge card "Start a workout", neutral light from below. Today only. Your three most used sports as 64 dp
    tiles with their names under them, then All sports. Outdoor sports carry a small location mark on the tile. A tile
    opens Ready with that sport (6.3).
-2. Level glow: Steps, drawn like the Charge battery (2.1 Levels, the page's level card): the light fills across
-   from the left to the share of the goal, full at the left edge, with the near-black core past it. Title top left with "Goal
+2. Level glow: Steps, drawn like the Charge battery (2.1 Levels, the page's level card): the light rises from
+   below to the share of the goal, full at the bottom edge, with the near-black core above it. Title top left with "Goal
    10,000" as its note, then the hourly pill bars in the dark part (white at 45%, the latest hour, or the one tapped,
    full white; hours with no steps and those still to come are not drawn, only the hairline baseline, 2.7), then the
    number at the foot in the light in 3.6 dp dots with "62% of your goal, fewer than usual by now" under it (the pace

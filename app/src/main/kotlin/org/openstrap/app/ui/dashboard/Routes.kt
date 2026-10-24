@@ -63,11 +63,12 @@ sealed interface Detail {
     companion object {
         /** Saves a tab's stack of details, deepest last, as one string ("m:Hrv|n:Spo2|w:1792227300") so it survives process death. */
         val StackSaver: Saver<List<Detail>, String> = Saver(
-            save = { stack -> stack.joinToString("|", transform = ::key) },
+            save = { stack -> stack.joinToString("|", transform = ::keyOf) },
             restore = { s -> s.split('|').mapNotNull(::restore) },
         )
 
-        private fun key(d: Detail): String = when (d) {
+        /** A detail's saved key ("m:Hrv"), also its key in the card to detail motion. */
+        fun keyOf(d: Detail): String = when (d) {
             is OfMetric -> "${if (d.night) "n" else "m"}:${d.metric.name}"
             is OfScore -> "c:${d.score.name}"
             is Workout -> "w:${d.start}"

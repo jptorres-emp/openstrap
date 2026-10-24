@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -27,6 +28,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import org.openstrap.app.ui.components.LocalCardNumbers
+import org.openstrap.app.ui.components.cardNumber
+import org.openstrap.app.ui.components.cardOpening
 
 /*
  * The quiet tier of the glow language: a grouped list for small facts (body signals, time to recover, energy) and
@@ -61,7 +65,9 @@ fun ListPanel(
         ) {
             Text(title.orEmpty(), color = Color.White, style = GlowType.label, modifier = Modifier.weight(1f))
             if (note != null && onNote != null) Row(
-                Modifier.clickable(onClick = onNote).padding(start = 12.dp, top = 4.dp, bottom = 4.dp),
+                // Tapped, the note grows into what it opens (spec 3.5).
+                cardOpening(onNote).let { o -> Modifier.then(o?.modifier ?: Modifier).clickable(onClick = o?.onClick ?: onNote) }
+                    .padding(start = 12.dp, top = 4.dp, bottom = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(note, color = Color.White, style = GlowType.secondary)
@@ -109,10 +115,13 @@ fun ListRow(
 ) {
     val waiting = value == null && dash
     val accent = if (offNormal && !waiting) color else Color.White
+    // Tapped, the row grows into what it opens (spec 3.5).
+    val opening = cardOpening(onClick)
     Row(
         modifier
             .fillMaxWidth()
-            .let { if (onClick != null) it.clickable(onClick = onClick) else it }
+            .then(opening?.modifier ?: Modifier)
+            .let { if (onClick != null) it.clickable(onClick = opening?.onClick ?: onClick) else it }
             .let { if (divider) it.drawBehind { drawLine(RowHairline, Offset(0f, 0f), Offset(size.width, 0f), 1.dp.toPx()) } else it }
             .padding(vertical = 13.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -138,7 +147,9 @@ fun ListRow(
             )
         }
         Spacer(Modifier.width(12.dp))
-        if (value != null) DotMatrixText(value, dot = ValueDot, gap = ValueGap, color = accent)
+        if (value != null) CompositionLocalProvider(LocalCardNumbers provides opening?.numbers) {
+            DotMatrixText(value, Modifier.cardNumber(value), dot = ValueDot, gap = ValueGap, color = accent)
+        }
         else if (dash) WaitingDash()
     }
 }

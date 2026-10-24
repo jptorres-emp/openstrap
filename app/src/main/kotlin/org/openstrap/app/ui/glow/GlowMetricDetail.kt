@@ -55,6 +55,9 @@ import androidx.compose.ui.unit.sp
 import org.openstrap.app.data.DayStat
 import org.openstrap.app.data.History
 import org.openstrap.app.ui.components.ChartPoint
+import org.openstrap.app.ui.components.LocalCardsGrow
+import org.openstrap.app.ui.components.detailNumber
+import org.openstrap.app.ui.components.detailSurface
 import org.openstrap.app.ui.components.pressClickable
 import org.openstrap.app.ui.dashboard.DailyHistory
 import org.openstrap.app.ui.dashboard.DayUiState
@@ -182,7 +185,8 @@ internal fun DetailTemplate(
     val list = rememberLazyListState()
     var switching by remember { mutableStateOf(false) }
     val gutter = GlowLayout.WideGutter
-    CompositionLocalProvider(LocalGlowPaused provides { list.isScrollInProgress }) {
+    // Rows inside a detail open the next one with a crossfade, not by growing (spec 3.5).
+    CompositionLocalProvider(LocalGlowPaused provides { list.isScrollInProgress }, LocalCardsGrow provides false) {
         ScreenList(contentPadding, list, gutter = gutter) {
             item {
                 DetailHero(color, gutter) {
@@ -197,7 +201,7 @@ internal fun DetailTemplate(
                                     Text(headline.label, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary.copy(fontSize = 13.sp))
                                 }
                                 else -> Row(verticalAlignment = Alignment.Bottom) {
-                                    DotMatrixText(headline.value, dot = DetailDot, gap = DetailGap)
+                                    DotMatrixText(headline.value, Modifier.detailNumber(headline.value), dot = DetailDot, gap = DetailGap)
                                     Text(
                                         headline.label, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA),
                                         style = GlowType.secondary.copy(fontSize = 13.sp), modifier = Modifier.padding(start = 10.dp, bottom = 2.dp),
@@ -235,6 +239,8 @@ private fun DetailHero(color: Color, gutter: Dp, content: @Composable () -> Unit
                 val placeable = measurable.measure(constraints.copy(minWidth = w, maxWidth = w))
                 layout(constraints.maxWidth, placeable.height) { placeable.place(-extra / 2, 0) }
             }
+            // The card tapped grows into this surface (spec 3.5).
+            .detailSurface(hero = true, shape)
             .clip(shape)
             .drawBehind {
                 drawRect(Brush.verticalGradient(listOf(lerp(Color.Black, color, 0.2f), Color.Black)))

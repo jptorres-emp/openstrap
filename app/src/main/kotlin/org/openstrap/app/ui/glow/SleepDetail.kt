@@ -35,6 +35,7 @@ import org.openstrap.app.data.RecoveryResult
 import org.openstrap.app.data.SleepHistory
 import org.openstrap.app.data.Summaries
 import org.openstrap.app.ui.components.ChartPoint
+import org.openstrap.app.ui.components.detailNumber
 import org.openstrap.app.ui.dashboard.DailyHistory
 import org.openstrap.app.ui.dashboard.DayUiState
 import org.openstrap.app.ui.dashboard.Detail
@@ -140,7 +141,7 @@ internal fun SleepScoreDetail(
             {
                 Box(Modifier.size(240.dp, 118.dp)) {
                     GlowHorizon(score / 100f, null, width = 240.dp, height = 118.dp)
-                    DotMatrixText(score.toString(), dot = 5.dp, gap = 1.9.dp, modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 12.dp))
+                    DotMatrixText(score.toString(), dot = 5.dp, gap = 1.9.dp, modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 12.dp).detailNumber(score.toString()))
                 }
             }
         } else null,

@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
@@ -24,6 +25,8 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlin.math.exp
+import org.openstrap.app.ui.components.LocalCardNumbers
+import org.openstrap.app.ui.components.cardOpening
 import org.openstrap.app.ui.components.pressClickable
 
 /*
@@ -130,9 +133,12 @@ fun EdgeCard(
     val level = progress?.takeIf { kind == EdgeKind.Level }?.coerceIn(MinLevel, 1f)
     val tint = override.color ?: color
     val mood = LocalGlowMood.current
+    // Tapped, the card grows into what it opens (spec 3.5).
+    val opening = cardOpening(onClick, EdgeShape)
     Column(
         modifier
-            .let { if (onClick != null) it.pressClickable(onClick, EdgeShape) else it }
+            .then(opening?.modifier ?: Modifier)
+            .let { if (onClick != null) it.pressClickable(opening?.onClick ?: onClick, EdgeShape) else it }
             .drawWithCache {
                 val glow = if (light.strong) StrongGlow else SoftGlow
                 val depth = glow.depth.toPx()
@@ -172,7 +178,7 @@ fun EdgeCard(
             }
             .padding(contentPadding),
     ) {
-        content()
+        CompositionLocalProvider(LocalCardNumbers provides opening?.numbers) { content() }
         if (light.progressBar && progress != null) {
             Spacer(Modifier.weight(1f, fill = false).padding(top = 12.dp))
             ProgressBar(progress, tint)

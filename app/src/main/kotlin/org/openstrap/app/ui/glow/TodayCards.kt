@@ -43,6 +43,7 @@ import kotlin.math.roundToInt
 import org.openstrap.app.data.CheckIn
 import org.openstrap.app.data.Workouts
 import org.openstrap.app.data.db.HealthAlertRow
+import org.openstrap.app.ui.components.cardNumber
 import org.openstrap.app.ui.components.formatDuration
 import org.openstrap.app.ui.components.pressClickable
 import org.openstrap.app.ui.dashboard.DailyHistory
@@ -79,7 +80,11 @@ internal fun HeroFigure(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier, horizontalAlignment = horizontal, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        if (value != null) DotMatrixText(value, dot = if (big) GlowLayout.HeroDot else dot, gap = if (big) GlowLayout.HeroGap else dot * 0.37f)
+        // A big figure is the card's number: it can move into the detail's headline (spec 3.5).
+        if (value != null) DotMatrixText(
+            value, if (big) Modifier.cardNumber(value) else Modifier,
+            dot = if (big) GlowLayout.HeroDot else dot, gap = if (big) GlowLayout.HeroGap else dot * 0.37f,
+        )
         else WaitingDash(Modifier.padding(vertical = 8.dp))
         Text(label, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary, maxLines = 1)
     }
@@ -215,7 +220,7 @@ internal fun EdgeValue(
     waiting: Boolean = true,
 ) {
     if (value != null || waiting) Row(Modifier.padding(top = 14.dp), verticalAlignment = Alignment.Bottom) {
-        if (value != null) DotMatrixText(value, dot = 3.4.dp, gap = 1.2.dp) else WaitingDash(Modifier.padding(vertical = 8.dp))
+        if (value != null) DotMatrixText(value, Modifier.cardNumber(value), dot = 3.4.dp, gap = 1.2.dp) else WaitingDash(Modifier.padding(vertical = 8.dp))
         if (unit != null && value != null) Text(unit, color = Color.White.copy(alpha = 0.7f), style = GlowType.secondary, modifier = Modifier.padding(start = 8.dp))
     }
     if (status != null) Text(status, color = statusColor, style = GlowType.secondary, modifier = Modifier.padding(top = 6.dp), maxLines = 2, overflow = TextOverflow.Ellipsis)
@@ -434,7 +439,7 @@ internal fun SmallCard(
             return@EdgeCard
         }
         Row(verticalAlignment = Alignment.Bottom) {
-            if (value != null) DotMatrixText(value, dot = 3.dp, gap = 1.1.dp) else WaitingDash(Modifier.padding(vertical = 8.dp))
+            if (value != null) DotMatrixText(value, Modifier.cardNumber(value), dot = 3.dp, gap = 1.1.dp) else WaitingDash(Modifier.padding(vertical = 8.dp))
             if (unit != null && value != null) Text(unit, color = Color.White.copy(alpha = 0.7f), style = GlowType.secondary, modifier = Modifier.padding(start = 6.dp))
         }
         extra?.invoke()

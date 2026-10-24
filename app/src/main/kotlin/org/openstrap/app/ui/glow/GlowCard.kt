@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -61,6 +62,8 @@ import kotlin.random.Random
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
+import org.openstrap.app.ui.components.LocalCardNumbers
+import org.openstrap.app.ui.components.cardOpening
 import org.openstrap.app.ui.components.pressClickable
 
 /**
@@ -139,9 +142,12 @@ fun GlowCard(
         value = withContext(Dispatchers.Default) { GlowCache.get(key) }
     }
 
+    // Tapped, the card grows into what it opens (spec 3.5).
+    val opening = cardOpening(onClick, shape)
     Box(
         modifier
-            .let { if (onClick != null) it.pressClickable(onClick, shape) else it }
+            .then(opening?.modifier ?: Modifier)
+            .let { if (onClick != null) it.pressClickable(opening?.onClick ?: onClick, shape) else it }
             // The slab's edge: a darker copy of the card showing underneath, for a 3D look.
             .let {
                 if (lit.depth > 0.dp) it.drawBehind {
@@ -165,7 +171,9 @@ fun GlowCard(
             // The core on its own layer: moved and scaled, never redrawn.
             CoreLayer(b, lit, core) { drift.at(seconds.floatValue, lit.motion) }
         }
-        Box(Modifier.padding(contentPadding), content = content)
+        CompositionLocalProvider(LocalCardNumbers provides opening?.numbers) {
+            Box(Modifier.padding(contentPadding), content = content)
+        }
         // Grain and the hairline edge, on top of everything; static.
         Spacer(Modifier.matchParentSize().drawWithCache { overlay(lit, grainSeed) })
     }

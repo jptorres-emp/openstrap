@@ -41,6 +41,7 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import org.openstrap.app.ui.components.cardNumber
 import org.openstrap.app.ui.components.rememberScrubHaptics
 import org.openstrap.app.ui.components.scrub
 import org.openstrap.app.ui.components.smoothPath
@@ -506,7 +507,7 @@ fun GlowHorizon(progress: Float?, value: String?, modifier: Modifier = Modifier,
             val p = progress?.coerceIn(0f, 1f) ?: return@Canvas
             if (p > 0f) drawPath(path(p), MetricColors.sleepLight.copy(alpha = 0.9f).compositeOver(Ink), style = Stroke(stroke, cap = StrokeCap.Round))
         }
-        if (value != null) DotMatrixText(value, dot = 3.4.dp, gap = 1.2.dp, modifier = Modifier.padding(bottom = 6.dp))
+        if (value != null) DotMatrixText(value, dot = 3.4.dp, gap = 1.2.dp, modifier = Modifier.padding(bottom = 6.dp).cardNumber(value))
     }
 }
 

@@ -27,6 +27,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import org.openstrap.app.ui.components.cardOpening
 import org.openstrap.app.ui.dashboard.CardLook
 import org.openstrap.app.ui.dashboard.Hue
 import org.openstrap.app.ui.dashboard.TabSlot
@@ -98,9 +99,12 @@ internal fun ContributorRow(
     detail: String? = null, onClick: (() -> Unit)? = null,
 ) {
     val accent = if (offNormal) color else Color.White.copy(alpha = 0.7f)
+    // Tapped, the row grows into what it opens (spec 3.5).
+    val opening = cardOpening(onClick)
     Row(
         Modifier.fillMaxWidth()
-            .let { if (onClick != null) it.clickable(onClick = onClick) else it }
+            .then(opening?.modifier ?: Modifier)
+            .let { if (onClick != null) it.clickable(onClick = opening?.onClick ?: onClick) else it }
             .let { if (divider) it.drawBehind { drawLine(RowHairline, Offset(0f, 0f), Offset(size.width, 0f), 1.dp.toPx()) } else it }
             .padding(vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,

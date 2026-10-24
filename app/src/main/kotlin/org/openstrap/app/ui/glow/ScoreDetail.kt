@@ -23,6 +23,7 @@ import org.openstrap.app.data.DailyMetric
 import org.openstrap.app.data.History
 import org.openstrap.app.data.Recovery
 import org.openstrap.app.data.RecoveryResult
+import org.openstrap.app.ui.components.detailNumber
 import org.openstrap.app.ui.dashboard.DailyHistory
 import org.openstrap.app.ui.dashboard.DayUiState
 import org.openstrap.app.ui.dashboard.Detail
@@ -134,7 +135,7 @@ private fun RecoveryDetail(
         heroValue = if (range == Range.Day && score != null && scrub == null) {
             {
                 Box(Modifier.width(240.dp)) {
-                    GlowArcGauge(score / 100f, color) { DotMatrixText(score.toString(), dot = 5.dp, gap = 1.9.dp, modifier = Modifier.padding(bottom = 4.dp)) }
+                    GlowArcGauge(score / 100f, color) { DotMatrixText(score.toString(), dot = 5.dp, gap = 1.9.dp, modifier = Modifier.padding(bottom = 4.dp).detailNumber(score.toString())) }
                 }
             }
         } else null,

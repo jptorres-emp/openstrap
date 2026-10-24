@@ -710,7 +710,7 @@ private fun AppRoot(
                 val t = Tab.entries[page]
                 // A tab's root with its stack opening over it (or beside it, when wide).
                 ListDetail(
-                    stackOf(page), isOpen = { it.isNotEmpty() }, depth = { it.size }, minWidth = SideBySideWidth,
+                    stackOf(page), isOpen = { it.isNotEmpty() }, keys = { s -> s.map(Detail::keyOf) }, minWidth = SideBySideWidth,
                     detail = { stack -> if (stack.isNotEmpty()) detailPage(page, stack) },
                 ) {
                     pullToSync {

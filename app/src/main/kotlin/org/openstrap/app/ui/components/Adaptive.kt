@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -22,19 +23,19 @@ val SidePaneWidth = 600.dp
 val SideBySideWidth = 720.dp
 
 /**
- * A screen and what it opens. On a phone it's [PushContent]: the opened screen slides over [list]. From
- * [minWidth] the opened screen sits in a pane on the right and [list] stays on the left,
- * narrower, so you can tap through one thing after another; back closes the pane. [list] keeps its place in
- * the tree either way, so its scroll position survives the pane opening and closing.
+ * A screen and what it opens. On a phone it's [StackContent]: the card tapped on [list] grows into the screen it
+ * opens, and anything else crossfades. From [minWidth] the opened screen sits in a pane on the right and [list] stays
+ * on the left, narrower, so you can tap through one thing after another; back closes the pane. [list] keeps its
+ * scroll position either way: on a phone its saved state is held while it's away.
  *
- * [isOpen] says whether a [target] has anything to show in the pane. With the pane closed, [closedMaxWidth]
- * keeps [list] from stretching across the whole window.
+ * [isOpen] says whether a [target] has anything to show in the pane, [keys] its saved keys, deepest last (empty for
+ * [list]). With the pane closed, [closedMaxWidth] keeps [list] from stretching across the whole window.
  */
 @Composable
 fun <S> ListDetail(
     target: S,
     isOpen: (S) -> Boolean,
-    depth: (S) -> Int,
+    keys: (S) -> List<String>,
     minWidth: Dp = SidePaneWidth,
     closedMaxWidth: Dp = Dp.Unspecified,
     detail: @Composable (S) -> Unit,
@@ -42,7 +43,9 @@ fun <S> ListDetail(
 ) {
     BoxWithConstraints(Modifier.fillMaxSize()) {
         if (maxWidth < minWidth) {
-            PushContent(target, depth) { if (isOpen(it)) detail(it) else list() }
+            // The root leaves the tree while a screen is open over it; its scroll position and the like wait here.
+            val saved = rememberSaveableStateHolder()
+            StackContent(target, keys) { if (isOpen(it)) detail(it) else saved.SaveableStateProvider("root") { list() } }
             return@BoxWithConstraints
         }
         val open = isOpen(target)
@@ -55,7 +58,7 @@ fun <S> ListDetail(
             ) { list() }
             AnimatedVisibility(open) {
                 Box(Modifier.width(pane).fillMaxHeight()) {
-                    PushContent(target, depth) { if (isOpen(it)) detail(it) }
+                    StackContent(target, keys) { if (isOpen(it)) detail(it) }
                 }
             }
         }

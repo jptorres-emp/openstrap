@@ -57,7 +57,8 @@ internal fun PairingStage(step: PairStep, modifier: Modifier = Modifier) {
     }
     // The phone on the left and the strap on the right, where the Strap page shows it. The line runs from the phone's
     // edge to the pod's, not to the drawing's box, which leaves room round the pod for the band.
-    Box(modifier.fillMaxWidth().height(StageHeight)) {
+    // Set in from the text's edges on both sides, so the stage sits inside the card's words rather than on them.
+    Box(modifier.fillMaxWidth().padding(horizontal = StageInset).height(StageHeight)) {
         val strapWidth = StageHeight * 0.8f
         Canvas(Modifier.matchParentSize()) {
             val y = size.height / 2
@@ -76,6 +77,9 @@ internal fun PairingStage(step: PairStep, modifier: Modifier = Modifier) {
 }
 
 private val PhoneWidth = 30.dp
+
+/** How far the phone and the pod sit in from the card's text on each side. */
+private val StageInset = 16.dp
 
 /** The room either side of the pod in the strap drawing (34 of its 120 grid): where the line meets it, and how far it's shifted. */
 private const val POD_LEFT = 34f / 120f

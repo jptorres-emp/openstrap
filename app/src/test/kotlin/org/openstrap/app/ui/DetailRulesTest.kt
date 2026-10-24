@@ -66,7 +66,7 @@ class DetailRulesTest {
         val DETAILS = listOf("glow/GlowMetricDetail.kt", "glow/ScoreDetail.kt", "glow/SleepDetail.kt", "glow/ActivityDetail.kt")
 
         /** Workout pages that still draw their own back arrow, until step 9 moves them to PageHeader. */
-        val HEADER_NOT_MIGRATED = setOf("glow/GlowWorkoutMode.kt")
+        val HEADER_NOT_MIGRATED = emptySet<String>()
     }
 }
 

@@ -391,7 +391,8 @@ private fun WorkoutsList(
 ) {
     val zone = ZoneId.systemDefault()
     fun dayOf(a: WorkoutAnalysis) = Instant.ofEpochSecond(a.workout.start).atZone(zone).toLocalDate()
-    val today = workouts.filter { dayOf(it) == date }.sortedBy { it.workout.start }
+    // Newest first within the day too, as under every day before it.
+    val today = workouts.filter { dayOf(it) == date }.sortedByDescending { it.workout.start }
     val before = workouts.filter { dayOf(it) < date }.sortedByDescending { it.workout.start }
     val shown = today + before.take((LISTED_WORKOUTS - today.size).coerceAtLeast(0))
     // From every workout (newest first), so a row glows the same here and in All workouts.

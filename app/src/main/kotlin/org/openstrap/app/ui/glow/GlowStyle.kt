@@ -112,7 +112,8 @@ data class GlowStyle(
     /**
      * How high the light reaches, 0..1, for levels like Charge: lit at full up to this share of the card, then a soft
      * [LEVEL_STEP] into the dark (see [levelEdge]). Never under [MIN_LIGHT_LEVEL], so an empty card still glows
-     * faintly. Light from below unless [lightAngle] puts it above.
+     * faintly. Light from below unless [lightAngle] puts it above, or from the left ([LightAngle.Left]) on a wide
+     * card, filling across to the value like a battery on its side.
      */
     val lightLevel: Float? = null,
     /**
@@ -220,8 +221,9 @@ val LEVEL_STEP = 22.dp
 internal const val LEVEL_FILL_REACH = 0.85f
 
 /** The core box for a light [level]: the dark part of the card, from the unlit side to [levelEdge]. */
-internal fun levelCore(level: Float, fromAbove: Boolean): CoreBox {
+internal fun levelCore(level: Float, fromAbove: Boolean, across: Boolean = false): CoreBox {
     val edge = levelEdge(level).coerceAtLeast(0f)
+    if (across) return CoreBox(1f - edge / 2f, 0.5f, edge, 1f)
     return CoreBox(0.5f, if (fromAbove) 1f - edge / 2f else edge / 2f, 1f, edge)
 }
 
@@ -246,6 +248,8 @@ internal class GlowLight(
     /** Set for a level card: the light level the dark part is drawn down to (or up to, [fromAbove]). */
     val level: Float?,
     val fromAbove: Boolean,
+    /** A level lit from the left, filling across the card to the value instead of up it. */
+    val across: Boolean = false,
     /** How bright the whole lit area is (rim, fill, body and band), 0..1: the mood. */
     val brightness: Float,
 ) {
@@ -265,8 +269,9 @@ internal fun GlowStyle.light(): GlowLight {
     val angle = if (mood.belowOnly && own != null) LightAngle.Below else own
     val level = glowLevel(lightLevel)
     val fromAbove = angle != null && lightVector(angle).second < 0f
+    val across = level != null && angle == LightAngle.Left
     val core = when {
-        level != null -> levelCore(level, fromAbove)
+        level != null -> levelCore(level, fromAbove, across)
         // An angle of the card's own, or the mood moved the light: the core goes opposite it.
         angle != null && (lightAngle != null || angle != own) -> angleCore(angle, coreWidth, coreHeight)
         else -> CoreBox(coreX, coreY, coreWidth, coreHeight)
@@ -288,6 +293,7 @@ internal fun GlowStyle.light(): GlowLight {
         tone = mood.tone,
         level = level,
         fromAbove = fromAbove,
+        across = across,
         brightness = mood.glow,
     )
 }

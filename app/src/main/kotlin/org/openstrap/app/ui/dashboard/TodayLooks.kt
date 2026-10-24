@@ -47,9 +47,9 @@ private fun ownLook(slot: TodaySlot, moment: Moment?, live: Boolean): CardLook =
     TodayCard.HeartRate -> edge(Hue.Heart, if (live) Edge.Right else Edge.Bottom)
     TodayCard.Activity -> edge(Hue.Steps, Edge.Bottom)
     TodayCard.Recovery -> edge(Hue.Recovery, Edge.Left)
-    // As the second glow, Charge is a level glow lit from below (the battery on Recovery), so it doesn't read as the
-    // hero's glow above it.
-    TodayCard.Charge -> if (slot.secondGlow) CardLook(Tier.Glow, Hue.Charge, Edge.Bottom) else CardLook(Tier.Level, Hue.Charge, Edge.Left)
+    // As the second glow, Charge is a level glow filling across from the left (Recovery's battery on its side), so it
+    // doesn't read as the hero's glow above it.
+    TodayCard.Charge -> if (slot.secondGlow) CardLook(Tier.Glow, Hue.Charge, Edge.Left) else CardLook(Tier.Level, Hue.Charge, Edge.Left)
     TodayCard.Workout -> edge(Hue.Heart, Edge.Left)
     TodayCard.Week -> edge(Hue.Neutral, Edge.Bottom)
     TodayCard.HabitAge -> edge(Hue.HabitAge, Edge.Left)

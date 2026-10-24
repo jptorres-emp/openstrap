@@ -60,7 +60,8 @@ how its value sits against your normal. Nothing is lit between levels, and nothi
 **Levels.** A card that shows a level (Charge, steps toward a goal on a glow, Load on an edge card) shows it as how far
 the light reaches.
 
-- On a glow card the light rises from the bottom. The bottom edge is the light colour at full, the lit part is the
+- On a glow card the light fills along the card's long side, like a battery: up from the bottom on a Tall or a hero,
+  across from the left on a Wide (Charge under the workout hero, Steps on Activity). The lit edge is the light colour at full, the lit part is the
   value's share of the card, then a soft 22 dp step into the dark core. At 0 the bottom 12% still glows.
 - A level glow is always this bright, because its light is the value. Beside a hero (Charge on Recovery, Charge as the
   wide card in the workout window, beside the hero on Today) it still counts as the screen's second glow, so no third
@@ -231,7 +232,7 @@ Every card on every screen is exactly one of these.
 **Never two cards in a row with the same design.** A card's design is its tier, the edge its light comes in from, and
 its shape: a Small and a Tall each count as a design of their own (`CardLook.shape`), so a Small never matches a Wide.
 Colour (the metric's, or the neutral light) doesn't count: two glows in a row, or two edge cards lit from the same side,
-look the same whatever their colours. A level glow (light rising from below, as Charge) is lit from an edge, so it
+look the same whatever their colours. A level glow (light filling from an edge, as Charge) is lit from that edge, so it
 differs from a hero's glow: Charge as the second glow sits right under the hero. Neighbours are cards one after the other in reading order, the two Smalls of a
 Pair side by side, a Tall with each of its Smalls, every card of a row with the row over and under it, and on two
 columns also cards side by side or one over the other. On two columns a full-width card touches the top card of each
@@ -476,7 +477,8 @@ Back or a swipe down closes it. The tab bar under it does nothing while it's ope
 
 ### 3.3 Navigation rules
 
-- A card opens its own detail, grown out of the card (3.5). **No card ever switches tab.** `FocusTarget` and the tab
+- A card opens its own detail, grown out of the card (3.5). Charge on Today (the card and the midday hero) opens the
+  Charge detail, as the battery on Recovery does. **No card ever switches tab.** `FocusTarget` and the tab
   jumps in `MainActivity` are removed.
 - Tapping the current tab scrolls to top. Tapping it again pops to its root. Tapping another tab keeps every stack
   (only reachable unfolded, since folded the bar is hidden over a detail).
@@ -572,7 +574,7 @@ Rows in order. Sizes per 2.4, tiers per 2.5.
 |---|---|---|
 | Waking up | Recovery: "Slept 7 h 40. Recovered enough for your usual training." Score, status word, "Charge at waking 84" | Check-in strip. List "Your body this morning" (resting HR, HRV, blood oxygen, breathing rate). Edge: Last night (with stage strip), Heart rate, Activity |
 | Midday | Charge: sentence, value with `lightLevel`, recharged and drained | Strip: Last night collapsed. Edge: Activity (ghost line), Heart rate. List "Right now" (stress, HRV). Edge: Recovery (left edge) |
-| Workout window | "Ready for effort. You usually run around now." Start button, Other sport | Second glow: Charge (wide), a level glow, the light rising to the value as on Recovery. List "Before you start" (Load today, time to recover). Edge: Activity. Strip: Last night |
+| Workout window | "Ready for effort. You usually run around now." Start button, Other sport | Second glow: Charge (wide), a level glow, the light filling across from the left to the value (Recovery's battery on its side). List "Before you start" (Load today, time to recover). Edge: Activity. Strip: Last night |
 | After a workout | "Since your run, 40 min. Heart rate settling." Drop curve into your resting range (a dim band), calm glow | Edge: the workout (left, with its zone bar). Small pair: Load (toward your usual, from below) and To recover (flips to the top). Level: Charge, with its line so far. Edge: Activity |
 | Evening | "A full day. A run, 13,860 steps and a Load above your usual." Steps, Load, Charge left. "Bedtime in 1 h 10". Dim mood | Level: Charge. Edge: Activity (line so far), Heart rate (the day's line, flips to the top under Activity unless live). Strip: Last night |
 | Night | As evening, Night mood | As evening |
@@ -689,8 +691,8 @@ each nap's heart rate (the naps in the Sleep detail, step 6).
 1. Wide edge card "Start a workout", neutral light from below. Today only. Your three most used sports as 64 dp
    tiles with their names under them, then All sports. Outdoor sports carry a small location mark on the tile. A tile
    opens Ready with that sport (6.3).
-2. Level glow: Steps, drawn like the Charge battery (2.1 Levels, the page's level card): the light rises from below
-   to the share of the goal, full at the bottom edge, with the near-black core above it. Title top left with "Goal
+2. Level glow: Steps, drawn like the Charge battery (2.1 Levels, the page's level card): the light fills across
+   from the left to the share of the goal, full at the left edge, with the near-black core past it. Title top left with "Goal
    10,000" as its note, then the hourly pill bars in the dark part (white at 45%, the latest hour, or the one tapped,
    full white; hours with no steps and those still to come are not drawn, only the hairline baseline, 2.7), then the
    number at the foot in the light in 3.6 dp dots with "62% of your goal, fewer than usual by now" under it (the pace

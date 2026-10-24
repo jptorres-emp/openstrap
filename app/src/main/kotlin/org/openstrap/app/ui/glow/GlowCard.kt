@@ -232,7 +232,9 @@ private fun CacheDrawScope.overlay(style: GlowStyle, grainSeed: Int): DrawResult
     // A glossy edge: a lighter hairline along the top fading out down the sides. On a level card it follows the
     // light instead: glossy along the lit edge, plain hairline on the unlit side.
     val light = style.light()
-    val gloss = if (light.level != null && !light.fromAbove) {
+    val gloss = if (light.across) {
+        Brush.horizontalGradient(0f to Color.White.copy(alpha = 0.35f), 0.25f to Color.White.copy(alpha = 0.08f), 1f to Color.White.copy(alpha = 0.04f))
+    } else if (light.level != null && !light.fromAbove) {
         Brush.verticalGradient(0f to Color.White.copy(alpha = 0.04f), 0.75f to Color.White.copy(alpha = 0.08f), 1f to Color.White.copy(alpha = 0.35f))
     } else {
         Brush.verticalGradient(0f to Color.White.copy(alpha = 0.35f), 0.25f to Color.White.copy(alpha = 0.08f), 1f to Color.White.copy(alpha = 0.04f))
@@ -290,8 +292,12 @@ private fun render(style: GlowStyle, w: Float, h: Float, density: Density): Glow
             // On a level card the rim lights only the lit part: clipped where the core is fully dark, so the unlit
             // side keeps just its hairline.
             light.level?.let { level ->
-                val dark = levelEdge(level) * h - LEVEL_STEP.toPx()
-                if (light.fromAbove) canvas.clipRect(0f, 0f, w, h - dark) else canvas.clipRect(0f, dark, w, h)
+                val dark = levelEdge(level) * (if (light.across) w else h) - LEVEL_STEP.toPx()
+                when {
+                    light.across -> canvas.clipRect(0f, 0f, w - dark, h)
+                    light.fromAbove -> canvas.clipRect(0f, 0f, w, h - dark)
+                    else -> canvas.clipRect(0f, dark, w, h)
+                }
             }
             val k = light.rim
             // A rim past full (the workout window's 120%) can't get brighter at the edge, so it reaches further in.
@@ -327,9 +333,14 @@ private fun render(style: GlowStyle, w: Float, h: Float, density: Density): Glow
             // A level card: lit at full up to the level, then the core colour fading in over LEVEL_STEP past it (a
             // smoothstep), like light rising in a glass. Only the core's alpha changes, so nothing is ever darker than
             // the unlit part and there's never a hard edge.
-            val edge = levelEdge(level) * h
+            // Measured from the unlit side: the top, the bottom when lit from above, the right when lit from the left.
+            val edge = levelEdge(level) * (if (light.across) w else h)
             val step = LEVEL_STEP.toPx()
-            val (y0, y1) = if (light.fromAbove) h + margin to -margin else -margin to h + margin
+            val (y0, y1) = when {
+                light.across -> w + margin to -margin
+                light.fromAbove -> h + margin to -margin
+                else -> -margin to h + margin
+            }
             val span = abs(y1 - y0)
             fun at(fromUnlit: Float) = ((fromUnlit + margin) / span).coerceIn(0f, 1f)
             val steps = 10
@@ -343,7 +354,10 @@ private fun render(style: GlowStyle, w: Float, h: Float, density: Density): Glow
                 stops[i + 1] = at(edge - step + step * t)
             }
             colors[steps + 2] = Color.Transparent.toArgb(); stops[steps + 2] = 1f
-            val paint = Paint().apply { shader = android.graphics.LinearGradient(0f, y0, 0f, y1, colors, stops, Shader.TileMode.CLAMP) }
+            val paint = Paint().apply {
+                shader = if (light.across) android.graphics.LinearGradient(y0, 0f, y1, 0f, colors, stops, Shader.TileMode.CLAMP)
+                else android.graphics.LinearGradient(0f, y0, 0f, y1, colors, stops, Shader.TileMode.CLAMP)
+            }
             canvas.drawRect(-margin, -margin, w + margin, h + margin, paint)
             return@halfResBitmap
         }

@@ -46,10 +46,10 @@ class TodayLooksTest {
         assertEquals(listOf(0 to 1), lookClashes(bars, wide = false))
     }
 
-    @Test fun `Charge as the second glow is a level glow from below, unlike the hero's glow`() {
+    @Test fun `Charge as the second glow is a level glow across from the left, unlike the hero's glow`() {
         val window = today(Moment.WorkoutWindow, TodayFacts())
         assertEquals(TodayCard.Charge, window[1].card)
-        assertEquals(CardLook(Tier.Glow, Hue.Charge, Edge.Bottom), window[1].look)
+        assertEquals(CardLook(Tier.Glow, Hue.Charge, Edge.Left), window[1].look)
         assertEquals(true, window[1].secondGlow)
         // After a workout Charge is the level card from the start: the hero is the one glow.
         val after = today(Moment.After, TodayFacts(workout = true))
@@ -100,10 +100,10 @@ class TodayLooksTest {
         assertEquals(listOf(Pane.Full, Pane.Left, Pane.Right), todayPanes(slots))
         assertTrue(lookClashes(slots, wide = false).isEmpty())
         assertEquals(listOf(0 to 2), lookClashes(slots, wide = true))
-        // Charge's own second glow is lit from below, so it doesn't clash with the hero's.
+        // Charge's own second glow is lit from the left, so it doesn't clash with the hero's.
         val out = varyLooks(listOf(slots[0], slots[1], slots[2].copy(look = null, secondGlow = true)).map { it.copy(look = null) }, Moment.WorkoutWindow, wide = true)
         assertVaried(out, true, "full over columns")
-        assertEquals(CardLook(Tier.Glow, Hue.Charge, Edge.Bottom), out[2].look)
+        assertEquals(CardLook(Tier.Glow, Hue.Charge, Edge.Left), out[2].look)
     }
 
     @Test fun `every moment's own cards are varied, on a phone and on two columns`() {

@@ -241,7 +241,7 @@ private fun StepsGlow(state: DayUiState, usual: List<Float>?, tag: TitleTag?, on
     val now = java.time.LocalTime.now()
     val pace = ActivityCopy.paceOf(state.steps, usual, isToday, now.hour, now.minute)
     var hour by remember(state.date, state.hourlySteps) { mutableStateOf<Int?>(null) }
-    GlowCard(GlowStyle.level(MetricColors.steps, share), Modifier.fillMaxWidth().gridSize(CardSize.Wide), onClick = onClick) {
+    GlowCard(GlowStyle.level(MetricColors.steps, share).copy(lightAngle = LightAngle.Left), Modifier.fillMaxWidth().gridSize(CardSize.Wide), onClick = onClick) {
         Column {
             GlowHeader("Steps", trailing = "Goal %,d".format(goal), tag = tag)
             Spacer(Modifier.height(GlowLayout.TitleGap))

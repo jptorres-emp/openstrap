@@ -242,6 +242,7 @@ fun GlowTodayScreen(
                                             ctx, strap, pairing, heroLightAngle, usualBedtime,
                                             running, onOpenRunning, onResumeRunning, onStartSport, onOtherSport, onPair, onSyncNow,
                                             onOpenRecovery, onOpenWorkout, onRetryRecovery,
+                                            onOpenCharge = { onOpen(org.openstrap.app.ui.dashboard.Detail.OfScore(org.openstrap.app.ui.dashboard.Score.Charge)) },
                                         )
                                         TodayCard.EditToday -> EditTodayButton({ editing = true })
                                         else -> TodayRow(slot, ctx, healthspan, history, checkIn, onCheckIn, onOpenSleep, onOpenMetric, onOpenRecovery,
@@ -365,6 +366,8 @@ private fun Hero(
     running: org.openstrap.app.device.WorkoutState.Recording?, onOpenRunning: () -> Unit, onResumeRunning: () -> Unit,
     onStartSport: (Int) -> Unit, onOtherSport: () -> Unit, onPair: () -> Unit, onSyncNow: () -> Unit,
     onOpenRecovery: () -> Unit, onOpenWorkout: (Long) -> Unit, onRetryRecovery: () -> Unit,
+    /** Charge's own detail, where the Charge heroes lead, as the Charge battery on Recovery does (spec 3.3). */
+    onOpenCharge: () -> Unit,
 ) {
     // Every hero is as high as its content with the card padding around it. The floor is only a Wide's height, under
     // every hero's content, so none shows an empty band.
@@ -393,8 +396,8 @@ private fun Hero(
             HeroKind.Pair -> PairHero(pairing ?: PairStep.Ready, onPair, m)
             HeroKind.Stuck -> StuckHero(ctx, strap, onSyncNow, m)
             HeroKind.Waking -> WakingHero(ctx, lightAngle, onOpenRecovery, onRetryRecovery, m)
-            HeroKind.Midday -> ChargeHero(ctx, onOpenRecovery, onRetryRecovery, m)
-            HeroKind.NoSleep -> ChargeHero(ctx, onOpenRecovery, onRetryRecovery, m, noSleep = true)
+            HeroKind.Midday -> ChargeHero(ctx, onOpenCharge, onRetryRecovery, m)
+            HeroKind.NoSleep -> ChargeHero(ctx, onOpenCharge, onRetryRecovery, m, noSleep = true)
             HeroKind.Window -> WindowHero(ctx, lightAngle, onStartSport, onOtherSport, m)
             HeroKind.After -> AfterHero(ctx, lightAngle, onOpenWorkout, m)
             HeroKind.Evening -> EveningHero(ctx, lightAngle, bedtime, onOpenRecovery, m)
@@ -733,7 +736,7 @@ private fun TodayRow(
             }
             // The day's Charge so far, beside the number, until the evening says sleep fills it back.
             val soFar = c?.takeIf { !ctx.endOfDay && it.anchored && ctx.isToday }?.let { chargeSoFar(it.points, s.dayStart..s.dayEnd, ctx.now) }
-            ChargeWideCard(ctx.charge, status, slot.secondGlow, onOpenRecovery, soFar = soFar, upTo = ctx.upTo(ctx.newest), tag = ctx.partial)
+            ChargeWideCard(ctx.charge, status, slot.secondGlow, { openScore(org.openstrap.app.ui.dashboard.Score.Charge) }, soFar = soFar, upTo = ctx.upTo(ctx.newest), tag = ctx.partial)
         }
         // After a workout, what it did as a Small pair: Load toward your usual (from below) and time to recover.
         TodayCard.LoadToday -> if (slot.size == CardSize.Small) SmallCard(

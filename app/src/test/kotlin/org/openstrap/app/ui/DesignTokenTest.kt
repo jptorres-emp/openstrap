@@ -152,6 +152,14 @@ class DesignTokenTest {
         assertTrue("the bars come before the number", steps.indexOf("HourPills(") in 0 until steps.indexOf("HeroFigure("))
     }
 
+    @Test fun `every hypnogram is drawn in the stage colours`() {
+        // Spec 2.7: Last night on Today, the sleep hero and the Sleep detail all draw bands in the stage colours.
+        val stages = sources.getValue("glow/GlowSleepScreen.kt").joinToString("\n").substringAfter("fun GlowSleepStages(").substringBefore("\n}\n")
+        assertTrue("GlowSleepStages always passes the stage colours", "rowColors = colors" in stages && "colored" !in stages)
+        val calls = find(Regex("""\bGlowHypnogram\(""")).filter { "fun GlowHypnogram" !in it }
+        assertEquals("GlowHypnogram is drawn only through GlowSleepStages: $calls", 1, calls.size)
+    }
+
     @Test fun `no metric has a second colour`() {
         val found = find(Regex("""\b(chargeScale|chargeAt|chargeDeep|readinessDeep)\b|MetricColors\.bad\b|\bval bad\b"""))
         if (found.isNotEmpty()) fail("Charge is one Ember, Recovery one teal, and bad is gone (spec 2.2):\n" + found.joinToString("\n"))

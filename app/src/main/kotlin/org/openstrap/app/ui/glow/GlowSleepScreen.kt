@@ -167,7 +167,7 @@ private fun NightHero(state: DayUiState, firstNights: Boolean, onOpen: () -> Uni
             )
             if (state.sleepStages.isNotEmpty()) {
                 Spacer(Modifier.height(18.dp))
-                GlowSleepStages(state.sleepStages, 96.dp, colored = true)
+                GlowSleepStages(state.sleepStages, 96.dp)
             }
             state.sleepBreakdown?.let { b ->
                 // Stage totals as text, never dots (spec 2.3): a stage under a minute leaves its segment and legend out.
@@ -212,11 +212,11 @@ private fun StageLegend(totals: List<Pair<Int, Long>>) {
 }
 
 /**
- * Stages as the glow hypnogram, rows Awake to Deep, with start and end times underneath. Shared with Today, where
- * [compact] leaves the names and times out.
+ * Stages as the glow hypnogram, rows Awake to Deep, each stage a band in its own colour (spec 2.7, every hypnogram),
+ * with start and end times underneath. Shared with Today and the Sleep detail; [compact] leaves the names and times out.
  */
 @Composable
-internal fun GlowSleepStages(spans: List<StageSpan>, height: Dp, compact: Boolean = false, colored: Boolean = false) {
+internal fun GlowSleepStages(spans: List<StageSpan>, height: Dp, compact: Boolean = false) {
     val start = spans.minOf { it.start }
     val end = spans.maxOf { it.end }.coerceAtLeast(start + 1)
     val rows = DayViewModel.SLEEP_STAGE_ROWS
@@ -227,8 +227,7 @@ internal fun GlowSleepStages(spans: List<StageSpan>, height: Dp, compact: Boolea
     }
     fun at(f: Float) = clock(start + ((end - start) * f).toLong())
     // Compact, as on Today's Last night card, the rows are too close for their names and the card's title has the times.
-    // [colored], as on the sleep hero, draws each stage as a band in its own colour (spec 2.7, Hypnogram).
-    val colors = if (colored) (0 until rows.size).map { row -> stageColor(rows.entries.first { it.value == row }.key) } else null
+    val colors = (0 until rows.size).map { row -> stageColor(rows.entries.first { it.value == row }.key) }
     GlowHypnogram(
         stages, names, height = height, labels = if (compact) emptyList() else listOf(clock(start), clock(end)), showNames = !compact,
         rowColors = colors,

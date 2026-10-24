@@ -62,9 +62,9 @@ the light reaches.
 
 - On a glow card the light rises from the bottom. The bottom edge is the light colour at full, the lit part is the
   value's share of the card, then a soft 22 dp step into the dark core. At 0 the bottom 12% still glows.
-- A level glow is always this bright, because its light is the value. Beside a hero (Charge on Recovery, beside the
-  hero on Today) it still counts as the screen's second glow, so no third glow joins it. L3 is for a second glow that
-  isn't a level (Charge as the wide card in the workout window).
+- A level glow is always this bright, because its light is the value. Beside a hero (Charge on Recovery, Charge as the
+  wide card in the workout window, beside the hero on Today) it still counts as the screen's second glow, so no third
+  glow joins it. L3 is for a second glow that isn't a level. Charge is always a level, wherever it shows.
 - On an edge card the light fills from the left to the value at 46% of the ink, 30% at the value, and fades out over
   40 dp past it. No progress bar.
 - When the value changes after a sync, the light moves from the old level to the new over 600 ms with the number (3.5).
@@ -231,13 +231,14 @@ Every card on every screen is exactly one of these.
 **Never two cards in a row with the same design.** A card's design is its tier, the edge its light comes in from, and
 its shape: a Small and a Tall each count as a design of their own (`CardLook.shape`), so a Small never matches a Wide.
 Colour (the metric's, or the neutral light) doesn't count: two glows in a row, or two edge cards lit from the same side,
-look the same whatever their colours. Neighbours are cards one after the other in reading order, the two Smalls of a
+look the same whatever their colours. A level glow (light rising from below, as Charge) is lit from an edge, so it
+differs from a hero's glow: Charge as the second glow sits right under the hero. Neighbours are cards one after the other in reading order, the two Smalls of a
 Pair side by side, a Tall with each of its Smalls, every card of a row with the row over and under it, and on two
 columns also cards side by side or one over the other. On two columns a full-width card touches the top card of each
 column under it and the last of each column over it, on Today as on the tabs. Two Smalls side by side differ by their
 edge (one lit from below, one from above, or from the left). When two neighbours would look the same, the later one
 flips its edge first. If that still clashes it takes another tier the spec gives it (Last night as a strip, a list on
-a neutral edge card, the second glow as its edge card) or the neutral light. Only then does a card move, and only one
+a neutral edge card, the second glow as its level edge card) or the neutral light. Only then does a card move, and only one
 whose place is open: a pin, Your week or Habit Age, to the nearest place it fits, never splitting a Small pair.
 `varyLooks` applies this to Today after Edit Today's pins and hides.
 
@@ -571,7 +572,7 @@ Rows in order. Sizes per 2.4, tiers per 2.5.
 |---|---|---|
 | Waking up | Recovery: "Slept 7 h 40. Recovered enough for your usual training." Score, status word, "Charge at waking 84" | Check-in strip. List "Your body this morning" (resting HR, HRV, blood oxygen, breathing rate). Edge: Last night (with stage strip), Heart rate, Activity |
 | Midday | Charge: sentence, value with `lightLevel`, recharged and drained | Strip: Last night collapsed. Edge: Activity (ghost line), Heart rate. List "Right now" (stress, HRV). Edge: Recovery (left edge) |
-| Workout window | "Ready for effort. You usually run around now." Start button, Other sport | Second glow: Charge (wide). List "Before you start" (Load today, time to recover). Edge: Activity. Strip: Last night |
+| Workout window | "Ready for effort. You usually run around now." Start button, Other sport | Second glow: Charge (wide), a level glow, the light rising to the value as on Recovery. List "Before you start" (Load today, time to recover). Edge: Activity. Strip: Last night |
 | After a workout | "Since your run, 40 min. Heart rate settling." Drop curve into your resting range (a dim band), calm glow | Edge: the workout (left, with its zone bar). Small pair: Load (toward your usual, from below) and To recover (flips to the top). Level: Charge, with its line so far. Edge: Activity |
 | Evening | "A full day. A run, 13,860 steps and a Load above your usual." Steps, Load, Charge left. "Bedtime in 1 h 10". Dim mood | Level: Charge. Edge: Activity (line so far), Heart rate (the day's line, flips to the top under Activity unless live). Strip: Last night |
 | Night | As evening, Night mood | As evening |

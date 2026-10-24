@@ -419,8 +419,8 @@ internal fun RecoveryFailed(failure: RecoveryFailure, onRetry: () -> Unit) {
 internal const val FAILED_ALPHA = 0.45f
 
 /**
- * Charge as a wide card: the second glow before a workout (L3, not a level, spec 2.1), or a level card whose light fills
- * across to the value, only as high as its content. [status] says what's happening to it. [soFar] is the day's
+ * Charge as a wide card: the second glow before a workout, a level whose light rises from below to the value like the
+ * Charge battery on Recovery (spec 2.1), or a level edge card whose light fills across to the value, only as high as its content. [status] says what's happening to it. [soFar] is the day's
  * Charge so far (evenly spaced, nulls still to come), drawn beside the number on the level card (ghost line, chart
  * kit). TODO(step 6): the ghost of your usual Charge by this time needs past days' Charge hour by hour. The engine
  * simulates Charge only for the day shown (with a week's lead-in to settle it); past days would each need that whole
@@ -433,10 +433,15 @@ internal fun ChargeWideCard(
 ) {
     val m = modifier.fillMaxWidth().gridSize(CardSize.Wide)
     if (secondGlow) {
-        GlowCard(GlowStyle.Ember.copy(second = true), m, onClick = onClick) {
+        GlowCard(GlowStyle.Ember.copy(lightLevel = (now ?: 0) / 100f, second = true), m, onClick = onClick) {
             Column {
                 GlowHeader("Charge", marker = upTo, tag = tag)
-                EdgeValue(now?.toString(), null, status, Color.White.copy(alpha = 0.8f), dot = DotSize.Second)
+                if (soFar == null || soFar.count { it != null } < 2) EdgeValue(now?.toString(), null, status, Color.White.copy(alpha = 0.8f), dot = DotSize.Second)
+                else Row(verticalAlignment = Alignment.Bottom) {
+                    Column(Modifier.weight(1f)) { EdgeValue(now?.toString(), null, status, Color.White.copy(alpha = 0.8f), dot = DotSize.Second) }
+                    Spacer(Modifier.width(14.dp))
+                    GhostLine(soFar, Color.White, 100f, Modifier.weight(1f), height = 52.dp)
+                }
             }
         }
     } else EdgeCard(MetricColors.charge, modifier.fillMaxWidth(), kind = EdgeKind.Level, progress = (now ?: 0) / 100f, onClick = onClick) {

@@ -62,6 +62,13 @@ class PageRulesTest {
         }
     }
 
+    @Test fun `Profile asks for sex in labelled segments, not bare symbols`() {
+        // Audit section 5: two unlabelled round icons beside Age read as a bulb and a magnifier. Words, like Units.
+        val profile = File(uiRoot, "device/ProfileScreen.kt").readText()
+        assertTrue("no round sex buttons", "SexToggle" !in profile && "GenderFemale" !in profile && "GenderMale" !in profile)
+        assertTrue("Female and Male as segments", "GlowSegments(listOf(\"Female\", \"Male\")" in profile)
+    }
+
     @Test fun `the strap hero is lit at full`() {
         // The Strap page's hero is L4 (spec 2.1): its rim at full strength.
         assertEquals(1f, StrapGlow.glowStrength, 1e-6f)

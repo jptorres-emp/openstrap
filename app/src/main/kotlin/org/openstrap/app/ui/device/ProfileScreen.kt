@@ -1,7 +1,5 @@
 package org.openstrap.app.ui.device
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -16,22 +14,13 @@ import org.openstrap.app.ui.components.PinnedFade
 import org.openstrap.app.ui.components.pinnedFade
 import org.openstrap.app.ui.dashboard.ScreenList
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.selected
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -47,7 +36,6 @@ import org.openstrap.app.data.settings.UserProfile
 import androidx.compose.foundation.layout.height
 import org.openstrap.app.ui.glow.GlowLayout
 import org.openstrap.app.ui.glow.GlowType
-import org.openstrap.app.ui.glow.ControlSurface
 import org.openstrap.app.ui.glow.PageButton
 import org.openstrap.app.ui.glow.PageConfirm
 import org.openstrap.app.ui.glow.PageField
@@ -56,7 +44,6 @@ import org.openstrap.app.ui.glow.PageNote
 import org.openstrap.app.ui.glow.PagePanel
 import org.openstrap.app.ui.glow.PageSwitchRow
 import java.time.LocalDate
-import org.openstrap.app.ui.theme.AppIcons
 
 /** One line for the settings row: "34 years, male, 72 kg, 178 cm", or a prompt when empty. */
 fun UserProfile.summary(): String =
@@ -170,11 +157,12 @@ fun ProfileScreen(profile: UserProfile, contentPadding: PaddingValues, onSave: (
                             "Age sets your maximum heart rate, which every effort and recovery number depends on. " +
                                 "All fields are optional and stay on this phone.",
                         )
-                        Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            NumberField(age, { age = it }, "Age", "years", age.isNotBlank() && ageValue == null, Modifier.weight(1f))
-                            // Tapping the selected sex again clears it.
-                            SexToggle(AppIcons.GenderFemale, "Female", sex == 0) { sex = if (sex == 0) 2 else 0 }
-                            SexToggle(AppIcons.GenderMale, "Male", sex == 1) { sex = if (sex == 1) 2 else 1 }
+                        NumberField(age, { age = it }, "Age", "years", age.isNotBlank() && ageValue == null)
+                        // Sex as labelled segments like Units, not two bare symbols beside Age. Tapping the chosen one
+                        // again clears it.
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            FieldLabel("Sex, for energy, Load, fitness and Habit Age")
+                            org.openstrap.app.ui.glow.GlowSegments(listOf("Female", "Male"), if (sex in 0..1) sex else -1, { i -> sex = if (sex == i) 2 else i })
                         }
                         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             FieldLabel("Units")
@@ -238,20 +226,3 @@ private fun FieldLabel(text: String) = Text(text, color = Color.White.copy(alpha
 
 /** 72.0 -> "72", 158.7 -> "158.7". */
 private fun formatNumber(v: Float): String = "%.1f".format(java.util.Locale.ROOT, v).removeSuffix(".0")
-
-/**
- * A round icon button for one sex: on the Control surface with the icon at 72% white, white with a black icon once
- * selected (spec 2.8: icons are white, and a choice is white like a chosen chip).
- */
-@Composable
-private fun SexToggle(icon: ImageVector, label: String, selected: Boolean, onClick: () -> Unit) {
-    Box(
-        Modifier.size(52.dp).clip(CircleShape)
-            .background(if (selected) Color.White else ControlSurface)
-            .clickable(onClickLabel = label, role = Role.RadioButton, onClick = onClick)
-            .semantics { this.selected = selected; contentDescription = label },
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(icon, null, tint = if (selected) Color.Black else Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), modifier = Modifier.size(24.dp))
-    }
-}

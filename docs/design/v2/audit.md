@@ -354,14 +354,25 @@ Fixed: every system-wide fault in section 2, every screen fault in section 3, an
 balanced columns, details and You/Strap pages in a right pane, 600 dp pages and sheets, fades under the tab bar and
 pinned buttons, Smalls two across).
 
+Fixed after the recheck (50d078a to 2574cb2):
+
+- Steps on Activity is a level glow like the Charge battery: lit to the share of the goal over a black core, the
+  hourly bars in the dark, the number at the foot (it read as a lime card all over, on the chart glow's olive core).
+- The Recovery and Sleep score details share one arc gauge: a symmetric 240 degree arch, round caps, a solid 8% track
+  and the value in the metric's ink, the score centred inside. The Sleep detail's horizon arc is gone.
+- At waking, the header's pull hint fades out before "Syncing strap..." fades in, one line at a time.
+- Profile's two round icons beside Age were the female and male symbols setting sex. Sex is a labelled Female and
+  Male segment control now, saying what it's for.
+- Every hypnogram draws the stage colours, Today's Last night card and the Sleep detail included.
+- Habit Age page: Pace of aging and What moves it are grouped lists with icon rows in their inks.
+- The Zepp sign-in keeps to the 600 dp page column unfolded.
+
 Still open:
 
 - The heartbeat glow fix (0fe4c4d) needs a look while the strap streams live heart rate; during the recheck the strap
   was reconnecting.
-- The Steps detail shows a device icon top right where the other details have (i).
-- At waking, the header's "Pull to sync strap" hint draws over "Syncing strap..." for a moment.
-- Profile's Age row has two round icon buttons whose purpose isn't clear.
-- Today's Last night card keeps the white hypnogram (spec 2.7 says stage colours everywhere).
-- Habit Age page: Pace of aging and What moves it are plain panels, not grouped lists with icons (spec 5.4).
-- The Zepp sign-in dialog isn't limited to the 600 dp column unfolded.
+- The Steps detail showed a device icon top right where the other details have (i). The code has no such icon: every
+  detail, Steps included, ends its header in `InfoButton` through `DetailTemplate`, and a test now pins that. Check
+  on the phone whether it still shows, and from which way in (Today's Activity card, Activity's Steps card, the Today
+  list's Steps row).
 - Not covered: during and right after a live workout, the Charge detail, real pairing.

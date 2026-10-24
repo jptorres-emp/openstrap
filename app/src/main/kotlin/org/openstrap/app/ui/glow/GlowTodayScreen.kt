@@ -571,8 +571,13 @@ private fun AfterHero(ctx: TodayContext, lightAngle: Float?, onOpenWorkout: (Lon
             // The drop since the end, from the readings the strap has sent. A live curve needs live readings kept
             // through the calm down (step 7).
             if (since.size >= 2) {
-                // About 40 points over whatever time has passed: per-minute slots leave gaps that draw as lone dots.
-                val step = maxOf(60L, (ctx.now - w.end) / 40)
+                // About 40 points over whatever time has passed, and never narrower than the strap's usual gap between
+                // readings (it keeps one every few minutes outside a workout): a slot with no reading between two that
+                // have one breaks the line into lone dots.
+                val gaps = since.zipWithNext { a, b -> (b.x - a.x).toLong() }.filter { it > 0 }.sorted()
+                val typical = gaps.getOrNull(gaps.size / 2) ?: 0L
+                // Half as wide again, so a reading a little late still lands in its own slot.
+                val step = maxOf(60L, (ctx.now - w.end) / 40, typical * 3 / 2)
                 val values = remember(since, w.end, step) { bucket(since, w.end..ctx.now, step) }
                 Spacer(Modifier.height(14.dp))
                 // The line drops into your resting range, a dim band, once it's known.

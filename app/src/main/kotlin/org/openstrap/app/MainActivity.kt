@@ -1000,7 +1000,7 @@ private fun AppRoot(
         // A map, not a card: rows whose home is a tab go there, at its root and top (Charge to its card); the rest open
         // their detail on the tab showing. The day is shared, so the tab shows the same one. The sheet closes first.
         if (allMetricsOpen) org.openstrap.app.ui.glow.AllMetricsSheet(
-            org.openstrap.app.ui.glow.metricIndex(day, recovery, healthspan, workouts), day.date,
+            org.openstrap.app.ui.glow.metricIndex(day, recovery, healthspan, workouts, strapScore = strapReadiness?.takeIf { it.day == day.dayStart }?.score), day.date,
             onDismiss = { allMetricsOpen = false },
             onOpen = { target ->
                 allMetricsOpen = false

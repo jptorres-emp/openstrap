@@ -729,7 +729,12 @@ right of the title row (2.5). The glow card and How it works are gone, on the ta
 The method, the pace of aging and what moves it live in its info sheet.
 
 - **Habit Age page** (opened from the card): the same edge card at the top, then "Pace of aging" and "What moves it"
-  as `ListPanel`s with icon rows. No `DotPanel`, no expandable How it works.
+  as `ListPanel`s with icon rows. Pace of aging: the pace as the title row's note ("Slower, 0.5x"), one row
+  (`Hourglass` in Habit Age's ink) with what it means, and the scale from -1x to 3x under it. What moves it: "Over 6
+  months" as the note, the scale's ends in Caption, then a row per habit with its metric's icon in its ink (Load's
+  `Dumbbell01` for strength, `FastWind` and `Favourite` in heart red, `FootPrints` in steps lime, `Moon02` in sleep
+  blue), what it takes off or adds over the numbers behind it, and its bar. No row opens anything, so no carets. No
+  `DotPanel`, no expandable How it works.
 
 - **Status line:** "1 year younger than last week", "2 years older than last week" or "Same as last week", in whole
   years against last week's estimate. Until two weeks exist it says the range, "Likely 27 to 31". Orchid only when

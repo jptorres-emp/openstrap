@@ -160,6 +160,14 @@ class DesignTokenTest {
         assertEquals("GlowHypnogram is drawn only through GlowSleepStages: $calls", 1, calls.size)
     }
 
+    @Test fun `the Habit Age page lists its pace and what moves it`() {
+        // Spec 5.4: grouped lists with icon rows, no plain panels, nothing to open so no carets.
+        val page = sources.getValue("glow/GlowHealthspanScreen.kt").joinToString("\n")
+        assertEquals(2, Regex("""\bListPanel\(""").findAll(page).count())
+        assertTrue("no QuietPanel on the Habit Age page", "QuietPanel(" !in page && "MaterialTheme" !in page)
+        assertTrue("every row has its icon and opens nothing", Regex("""\bListRow\(""").findAll(page).count() == Regex("""icon = """).findAll(page).count() && !Regex("""onClick\s*=(?!\s*null)""").containsMatchIn(page))
+    }
+
     @Test fun `no metric has a second colour`() {
         val found = find(Regex("""\b(chargeScale|chargeAt|chargeDeep|readinessDeep)\b|MetricColors\.bad\b|\bval bad\b"""))
         if (found.isNotEmpty()) fail("Charge is one Ember, Recovery one teal, and bad is gone (spec 2.2):\n" + found.joinToString("\n"))

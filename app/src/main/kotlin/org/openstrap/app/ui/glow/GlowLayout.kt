@@ -22,8 +22,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import org.openstrap.app.ui.dashboard.ScreenList
 import org.openstrap.app.ui.theme.AppIcons
+import org.openstrap.app.ui.theme.MetricColors
 
 /*
  * One set of spacing rules for every glow card and dot panel, so their contents line up down the
@@ -155,8 +157,8 @@ private fun sections(blocks: List<Pair<Pane, @Composable () -> Unit>>): List<Lis
 }
 
 /**
- * The title row of a card: the title, an optional note on the right (text, or [trailingContent] for
- * anything richer) and an optional chevron.
+ * The title row of a card: the title, an optional [marker] next to it ([StateMarker]), an optional note on the right
+ * (text, or [trailingContent] for anything richer) and an optional chevron.
  */
 @Composable
 fun GlowHeader(
@@ -164,9 +166,14 @@ fun GlowHeader(
     trailing: String? = null,
     chevron: Boolean = false,
     trailingContent: (@Composable () -> Unit)? = null,
+    marker: String? = null,
 ) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text(title, color = Color.White, style = GlowType.title, modifier = Modifier.weight(1f))
+        Text(title, color = Color.White, style = GlowType.title, modifier = Modifier.weight(1f, fill = marker == null))
+        if (marker != null) {
+            StateMarker(marker, Modifier.padding(start = 8.dp))
+            Spacer(Modifier.weight(1f))
+        }
         if (trailing != null) Text(trailing, color = Color.White.copy(alpha = 0.9f), style = MaterialTheme.typography.bodySmall)
         trailingContent?.invoke()
         if (chevron) {
@@ -195,3 +202,12 @@ fun GlowHeroNumber(value: String, unit: String, facts: List<String> = emptyList(
 /** The gap above a card's chart. */
 @Composable
 fun GlowChartGap() = Spacer(Modifier.padding(top = GlowLayout.ChartGap))
+
+/**
+ * A small sync marker next to a card's title, "Up to 09:40" (spec 4.3): amber, as the strap chip, since it's about
+ * the sync and not the body.
+ */
+@Composable
+internal fun StateMarker(text: String, modifier: Modifier = Modifier) {
+    Text(text, modifier, color = MetricColors.warn, style = GlowType.secondary.copy(fontSize = 11.5.sp), maxLines = 1)
+}

@@ -30,6 +30,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
@@ -48,6 +49,10 @@ import org.openstrap.app.ui.components.formatDuration
 import org.openstrap.app.ui.components.pressClickable
 import org.openstrap.app.ui.dashboard.DailyHistory
 import org.openstrap.app.ui.dashboard.DayUiState
+import org.openstrap.app.ui.dashboard.RECOVERY_FAILED
+import org.openstrap.app.ui.dashboard.RecoveryFailure
+import org.openstrap.app.ui.dashboard.TRY_AGAIN
+import org.openstrap.app.ui.dashboard.WAITING_LAST_NIGHT
 import org.openstrap.app.ui.dashboard.Metric
 import org.openstrap.app.ui.dashboard.TodayCard
 import org.openstrap.app.ui.dashboard.TodayCopy
@@ -77,7 +82,7 @@ internal fun HeroSentence(text: String, modifier: Modifier = Modifier) =
 @Composable
 internal fun HeroFigure(
     value: String?, label: String, big: Boolean = false, horizontal: Alignment.Horizontal = Alignment.Start, dot: Dp = 3.dp,
-    modifier: Modifier = Modifier,
+    modifier: Modifier = Modifier, labelLines: Int = 1,
 ) {
     Column(modifier, horizontalAlignment = horizontal, verticalArrangement = Arrangement.spacedBy(6.dp)) {
         // A big figure is the card's number: it can move into the detail's headline (spec 3.5).
@@ -86,7 +91,7 @@ internal fun HeroFigure(
             dot = if (big) GlowLayout.HeroDot else dot, gap = if (big) GlowLayout.HeroGap else dot * 0.37f,
         )
         else WaitingDash(Modifier.padding(vertical = 8.dp))
-        Text(label, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary, maxLines = 1)
+        Text(label, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary, maxLines = labelLines)
     }
 }
 
@@ -141,11 +146,11 @@ internal fun StripLine(title: String, detail: String?, chevron: Boolean = true) 
     }
 }
 
-/** Last night, collapsed to one line once the morning is over (spec 4.2). */
+/** Last night, collapsed to one line once the morning is over (spec 4.2). [stuck]: it's still on the strap. */
 @Composable
-internal fun LastNightStrip(state: DayUiState, onClick: () -> Unit, modifier: Modifier = Modifier) =
+internal fun LastNightStrip(state: DayUiState, onClick: () -> Unit, modifier: Modifier = Modifier, stuck: Boolean = false) =
     TodayStrip(MetricColors.sleepDeep, EdgeKind.Sleep, modifier, onClick = onClick) {
-        StripLine("Last night", TodayCopy.lastNight(state.asleepSeconds, state.sleep?.score) ?: "No sleep recorded")
+        StripLine("Last night", TodayCopy.lastNight(state.asleepSeconds, state.sleep?.score) ?: if (stuck) WAITING_LAST_NIGHT else "No sleep recorded")
     }
 
 /** The morning check-in: how you feel, 1 to 5. It never changes the score; it's how the score gets checked. */
@@ -203,11 +208,15 @@ internal fun AlertsStrip(alerts: List<HealthAlertRow>, onOpenMetric: (Metric) ->
 
 /* ------------------------------------------- Edge cards --------------------------------------------- */
 
-/** An edge card's title row: [title] left, [note] right. */
+/** An edge card's title row: [title] left with its sync [marker] beside it ([StateMarker]), [note] right. */
 @Composable
-internal fun EdgeTitle(title: String, note: String?) {
+internal fun EdgeTitle(title: String, note: String?, marker: String? = null) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text(title, color = Color.White, style = GlowType.label, modifier = Modifier.weight(1f))
+        Text(title, color = Color.White, style = GlowType.label, modifier = Modifier.weight(1f, fill = marker == null))
+        if (marker != null) {
+            StateMarker(marker, Modifier.padding(start = 8.dp))
+            Spacer(Modifier.weight(1f))
+        }
         if (note != null) Text(note, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary, maxLines = 1)
     }
 }
@@ -229,9 +238,12 @@ internal fun EdgeValue(
 /** A length of time as dot-matrix digits: "7:40". */
 internal fun clockDuration(seconds: Long): String = "%d:%02d".format(seconds / 3600, (seconds % 3600) / 60)
 
-/** Last night in full, on waking: time asleep, the score and the stages, lit from the top like a night sky. */
+/**
+ * Last night in full, on waking: time asleep, the score and the stages, lit from the top like a night sky. [stuck]:
+ * it's still on the strap, so it waits rather than saying there was none.
+ */
 @Composable
-internal fun LastNightCard(state: DayUiState, firstNights: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+internal fun LastNightCard(state: DayUiState, firstNights: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier, stuck: Boolean = false) {
     val s = state.sleep
     EdgeCard(MetricColors.sleepDeep, modifier.fillMaxWidth().gridSize(CardSize.Wide), kind = EdgeKind.Sleep, onClick = onClick) {
         EdgeTitle("Last night", s?.let { "${clockAt(it.start)}–${clockAt(it.end)}" })
@@ -240,7 +252,7 @@ internal fun LastNightCard(state: DayUiState, firstNights: Boolean, onClick: () 
         EdgeValue(
             asleep?.let(::clockDuration), "asleep",
             when {
-                asleep == null -> if (firstNights) "After your first night" else "No sleep recorded"
+                asleep == null -> if (firstNights) "After your first night" else if (stuck) WAITING_LAST_NIGHT else "No sleep recorded"
                 s?.score != null -> listOfNotNull("Score ${s.score}", headline?.lowercase()).joinToString(", ")
                 else -> headline
             },
@@ -263,6 +275,8 @@ internal fun LastNightCard(state: DayUiState, firstNights: Boolean, onClick: () 
 internal fun HeartCard(
     state: DayUiState, live: Int?, onClick: () -> Unit, modifier: Modifier = Modifier,
     restingRange: org.openstrap.app.data.History.Normal? = null,
+    /** "Up to 09:40" when the line has gone stale ([org.openstrap.app.ui.dashboard.upToMarker]). */
+    upTo: String? = null,
 ) {
     val step = 10 * 60L
     val values = remember(state.heartRate, state.dayStart) { bucket(state.heartRate, state.dayStart..state.dayEnd, step) }
@@ -273,7 +287,7 @@ internal fun HeartCard(
         MetricColors.heart, modifier.fillMaxWidth().gridSize(CardSize.Wide),
         kind = if (live != null) EdgeKind.Live else EdgeKind.Value, onClick = onClick,
     ) {
-        EdgeTitle("Heart rate", state.restingHeartRate?.let { "Resting $it" })
+        EdgeTitle("Heart rate", state.restingHeartRate?.let { "Resting $it" }, marker = upTo)
         val at = scrubbed?.second ?: state.heartRate.lastOrNull()?.x
         EdgeValue(now?.toString(), "bpm", TodayCopy.heartAt(live != null && scrubbed == null, at?.let(::clockAt)))
         if (state.heartRate.size >= 2) {
@@ -296,7 +310,7 @@ internal fun HeartCard(
  * goal (spec 2.7, compare by pace). Without a usual yet only today's line shows.
  */
 @Composable
-internal fun ActivityCard(state: DayUiState, onClick: () -> Unit, modifier: Modifier = Modifier, usual: List<Float>? = null) {
+internal fun ActivityCard(state: DayUiState, onClick: () -> Unit, modifier: Modifier = Modifier, usual: List<Float>? = null, upTo: String? = null) {
     val goal = org.openstrap.app.ui.dashboard.LocalGoals.current.steps
     val isToday = state.date == java.time.LocalDate.now()
     val hour = java.time.LocalTime.now().hour
@@ -308,7 +322,7 @@ internal fun ActivityCard(state: DayUiState, onClick: () -> Unit, modifier: Modi
     val pace = org.openstrap.app.ui.dashboard.ActivityCopy.paceOf(state.steps, usual, isToday, now.hour, now.minute)
     val ghost = usual?.takeIf { it.size == 24 }
     EdgeCard(MetricColors.steps, modifier.fillMaxWidth().gridSize(CardSize.Wide), kind = EdgeKind.Progress, onClick = onClick) {
-        EdgeTitle("Activity", "Goal %,d".format(goal))
+        EdgeTitle("Activity", "Goal %,d".format(goal), marker = upTo)
         EdgeValue("%,d".format(state.steps), "steps", org.openstrap.app.ui.dashboard.ActivityCopy.activityLine(state.steps, goal, pace, isToday))
         if (state.steps > 0 && line.size >= 2) {
             Spacer(Modifier.height(10.dp))
@@ -325,12 +339,28 @@ internal fun ActivityCard(state: DayUiState, onClick: () -> Unit, modifier: Modi
  * OpenStrap's score, the strap's estimate labelled as such, or why there's none yet.
  */
 @Composable
-internal fun RecoveryEarlierCard(shown: TodayCopy.RecoveryShown, onClick: () -> Unit, modifier: Modifier = Modifier) {
+internal fun RecoveryEarlierCard(
+    shown: TodayCopy.RecoveryShown, onClick: () -> Unit, modifier: Modifier = Modifier,
+    /** Today's score failed to work out: yesterday's stays, dimmed, with a way to try again (spec 4.3). */
+    failure: RecoveryFailure? = null, onRetry: () -> Unit = {},
+) {
     EdgeCard(MetricColors.readinessDeep, modifier.fillMaxWidth().gridSize(CardSize.Wide), kind = EdgeKind.Earlier, onClick = onClick) {
         EdgeTitle("Recovery", "This morning")
-        EdgeValue(shown.value?.toString(), shown.word, shown.line)
+        if (failure != null) RecoveryFailed(failure, onRetry)
+        else EdgeValue(shown.value?.toString(), shown.word, shown.line)
     }
 }
+
+/** In place of a Recovery that failed: yesterday's score dimmed, the line, and Try again. */
+@Composable
+internal fun RecoveryFailed(failure: RecoveryFailure, onRetry: () -> Unit) {
+    failure.yesterday?.let { y -> Column(Modifier.alpha(FAILED_ALPHA)) { EdgeValue(y.toString(), "yesterday", null) } }
+    Text(RECOVERY_FAILED, color = Color.White.copy(alpha = 0.85f), style = GlowType.secondary, modifier = Modifier.padding(top = 8.dp))
+    HeroSecondaryButton(TRY_AGAIN, onRetry, Modifier.padding(top = 12.dp))
+}
+
+/** How dim a value kept from before is, beside a failure. */
+internal const val FAILED_ALPHA = 0.45f
 
 /**
  * Charge as a wide card: the second glow before a workout, lit to its level, or a level card whose light fills
@@ -343,17 +373,18 @@ internal fun RecoveryEarlierCard(shown: TodayCopy.RecoveryShown, onClick: () -> 
 @Composable
 internal fun ChargeWideCard(
     now: Int?, status: String, secondGlow: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier, soFar: List<Float?>? = null,
+    upTo: String? = null,
 ) {
     val m = modifier.fillMaxWidth().gridSize(CardSize.Wide)
     if (secondGlow) {
         GlowCard(GlowStyle.Ember.copy(lightLevel = (now ?: 0) / 100f, second = true), m, onClick = onClick) {
             Column {
-                GlowHeader("Charge")
+                GlowHeader("Charge", marker = upTo)
                 EdgeValue(now?.toString(), null, status, Color.White.copy(alpha = 0.8f))
             }
         }
     } else EdgeCard(MetricColors.chargeDeep, modifier.fillMaxWidth(), kind = EdgeKind.Level, progress = (now ?: 0) / 100f, onClick = onClick) {
-        EdgeTitle("Charge", null)
+        EdgeTitle("Charge", null, marker = upTo)
         if (soFar == null || soFar.count { it != null } < 2) EdgeValue(now?.toString(), null, status)
         else Row(verticalAlignment = Alignment.Bottom) {
             Column(Modifier.weight(1f)) { EdgeValue(now?.toString(), null, status) }
@@ -458,8 +489,10 @@ internal class BodyRow(
 
 /** Body values against your normal, each opening its metric. [waiting] is what an empty row says. */
 @Composable
-internal fun BodyList(title: String, rows: List<BodyRow>, waiting: String, onOpenMetric: (Metric) -> Unit, modifier: Modifier = Modifier) {
-    ListPanel(modifier, title = title, note = "Against your normal") {
+internal fun BodyList(
+    title: String, rows: List<BodyRow>, waiting: String, onOpenMetric: (Metric) -> Unit, modifier: Modifier = Modifier, upTo: String? = null,
+) {
+    ListPanel(modifier, title = title, note = "Against your normal", marker = upTo) {
         rows.forEachIndexed { i, r ->
             val direction = org.openstrap.app.ui.dashboard.Narrative.direction(r.value, r.baseline, r.tolerance)
             ListRow(

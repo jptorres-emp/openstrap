@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import org.openstrap.app.data.DayWindow
 import org.openstrap.app.data.HealthRepository
@@ -112,6 +113,15 @@ data class DayUiState(
     val asleepSeconds: Long? get() = sleepBreakdown?.asleepSeconds ?: sleep?.let { it.end - it.start }
 }
 
+/** The day's Recovery couldn't be worked out. [yesterday] is yesterday's score, shown dimmed in its place, when known. */
+data class RecoveryFailure(val date: LocalDate, val yesterday: Int?)
+
+/** Recovery worked out, or why not. */
+private sealed interface RecoveryOutcome {
+    data class Ready(val result: RecoveryResult) : RecoveryOutcome
+    data class Failed(val failure: RecoveryFailure) : RecoveryOutcome
+}
+
 @OptIn(ExperimentalCoroutinesApi::class)
 class DayViewModel(
     private val repo: HealthRepository,
@@ -131,24 +141,63 @@ class DayViewModel(
     val state: StateFlow<DayUiState> = selected.flatMapLatest { date -> stateFor(date) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DayUiState())
 
-    /** Readiness and charge, recomputed (off the main thread) when the day, profile or synced data change. */
+    /** Bumped by [retryRecovery], so the same day and data are worked out again. */
+    private val recoveryRetries = MutableStateFlow(0)
+
+    /** Works out the day's Recovery again, after it failed ([recoveryFailure]). */
+    fun retryRecovery() { recoveryRetries.value++ }
+
+    /** The last Recovery worked out, for yesterday's score when today's fails. */
+    @Volatile private var lastRecovery: RecoveryResult? = null
+
+    /**
+     * Readiness and charge, recomputed (off the main thread) when the day, profile or synced data change: the result,
+     * or why there's none. Null while the first is worked out.
+     */
     @OptIn(FlowPreview::class)
-    val recovery: StateFlow<RecoveryResult?> =
-        combine(selected, profile, repo.changes().debounce(800)) { d, p, _ -> d to p }
+    private val recoveryOutcome: StateFlow<RecoveryOutcome?> =
+        combine(selected, profile, repo.changes().debounce(800), recoveryRetries) { d, p, _, _ -> d to p }
             .mapLatest { (d, p) ->
                 withContext(Dispatchers.Default) {
                     // mapLatest cancels this when newer data arrives; that's not a failure, so let it through.
                     try {
-                        repo.recovery(d, p)
+                        RecoveryOutcome.Ready(repo.recovery(d, p).also { lastRecovery = it })
                     } catch (e: kotlinx.coroutines.CancellationException) {
                         throw e
                     } catch (e: Exception) {
                         Log.w("OpenStrap", "recovery failed", e)
-                        null
+                        RecoveryOutcome.Failed(RecoveryFailure(d, yesterdayScore(d, p)))
                     }
                 }
             }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    /** Readiness and charge for the day shown; null while loading or when it failed ([recoveryFailure] tells which). */
+    val recovery: StateFlow<RecoveryResult?> = recoveryOutcome.map { (it as? RecoveryOutcome.Ready)?.result }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    /** The day's Recovery failed to work out (spec 4.3), so the cards can say so instead of waiting forever. */
+    val recoveryFailure: StateFlow<RecoveryFailure?> = recoveryOutcome.map { (it as? RecoveryOutcome.Failed)?.failure }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    /**
+     * Yesterday's score for a failed [date]: from the last Recovery worked out when its week covers yesterday, else
+     * worked out for yesterday itself; null when that fails too.
+     */
+    private suspend fun yesterdayScore(date: LocalDate, profile: UserProfile): Int? {
+        val yesterday = date.minusDays(1)
+        lastRecovery?.let { last ->
+            if (last.date == yesterday) return last.readiness.score
+            last.readinessTrend.firstOrNull { it.first == yesterday }?.let { return it.second }
+        }
+        return try {
+            repo.recovery(yesterday, profile).readiness.score
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            null
+        }
+    }
 
     /**
      * Your usual steps by the end of each hour ([org.openstrap.app.data.UsualSteps]), from the 28 days before the day

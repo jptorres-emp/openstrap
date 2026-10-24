@@ -190,11 +190,3 @@ fun usualSport(workouts: List<Pair<Int, Long>>): Int? =
     workouts.groupBy { it.first }
         .maxWithOrNull(compareBy<Map.Entry<Int, List<Pair<Int, Long>>>> { it.value.size }.thenBy { e -> e.value.maxOf { it.second } })
         ?.key
-
-/**
- * Whether the hero says last night is still on the strap (spec 4.3): on today's waking moment, with no sleep yet and the
- * last sync failed. The spec's other trigger, failing for 3 hours, needs a time of the last good sync the app doesn't
- * keep yet.
- */
-fun syncStuck(moment: Moment?, isToday: Boolean, hasSleep: Boolean, syncFailed: Boolean): Boolean =
-    isToday && moment == Moment.Waking && !hasSleep && syncFailed

@@ -170,12 +170,4 @@ class TodayPlanTest {
         assertEquals(4, usualSport(listOf(1 to 10L, 4 to 30L)))
         assertEquals(null, usualSport(emptyList()))
     }
-
-    @Test fun `sync is stuck only on a waking morning without last night`() {
-        assertTrue(syncStuck(Moment.Waking, isToday = true, hasSleep = false, syncFailed = true))
-        assertFalse(syncStuck(Moment.Waking, isToday = true, hasSleep = true, syncFailed = true))
-        assertFalse(syncStuck(Moment.Waking, isToday = true, hasSleep = false, syncFailed = false))
-        assertFalse(syncStuck(Moment.Midday, isToday = true, hasSleep = false, syncFailed = true))
-        assertFalse(syncStuck(Moment.Waking, isToday = false, hasSleep = false, syncFailed = true))
-    }
 }

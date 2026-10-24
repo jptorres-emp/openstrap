@@ -26,6 +26,25 @@ sealed interface SyncState {
 }
 
 /**
+ * When syncs last ran and how they ended, for the header chip and Today's stuck sync (spec 4.3). Epoch seconds, null
+ * when not seen since the app started. [failingSince] is the first failure after the last good sync, null while
+ * syncing works.
+ */
+data class SyncRecord(val lastSuccess: Long? = null, val lastAttempt: Long? = null, val failingSince: Long? = null) {
+    /**
+     * The record after the sync state moved from [previous] to [state] at [now]. Each step of a running sync is a new
+     * [SyncState.Running], so only the first counts as an attempt. A failure seen without its running state (a state
+     * flow can skip one) counts as an attempt of its own.
+     */
+    fun next(previous: SyncState, state: SyncState, now: Long): SyncRecord = when (state) {
+        is SyncState.Running -> if (previous is SyncState.Running) this else copy(lastAttempt = now)
+        is SyncState.Done -> SyncRecord(lastSuccess = state.atEpochSeconds, lastAttempt = lastAttempt ?: state.atEpochSeconds)
+        is SyncState.Failed -> copy(lastAttempt = if (previous is SyncState.Running) lastAttempt ?: now else now, failingSince = failingSince ?: now)
+        SyncState.Idle -> this
+    }
+}
+
+/**
  * Details read from the strap at connect time. [deviceInformation] is Settings group 0x00, whose resource versions
  * the firmware check sends (codemap 07 §1.4); null when the strap has no settings module or didn't answer.
  */
@@ -45,6 +64,9 @@ data class StrapInfo(
 interface StrapController {
     val connection: StateFlow<ConnectionState>
     val sync: StateFlow<SyncState>
+
+    /** When syncs last ran and how they ended, kept while the app runs, in the background too. */
+    val syncRecord: StateFlow<SyncRecord>
 
     /** Latest live heart-rate reading in bpm, or null when live HR is off. */
     val liveHeartRate: StateFlow<Int?>

@@ -36,6 +36,17 @@ class FrameTest {
         assertEquals(StrapChip.Dot.Fine, chip.dot)
     }
 
+    @Test fun `when several apply, the chip says the one that explains the rest`() {
+        // Charging explains a failed sync (fast-charge mode stops syncs), so it wins.
+        assertEquals("Charging 64%", strapChip(true, connected(64, charging = true), SyncState.Failed("fast charge"), now, now).text)
+        // Gone for a while: how long, even with a failed sync behind it.
+        assertEquals("18 min ago", strapChip(true, ConnectionState.Disconnected, SyncState.Failed("timeout"), now - 18 * 60, now).text)
+        // Not paired outranks everything.
+        assertEquals("Not paired", strapChip(false, connected(64, charging = true), SyncState.Failed("x"), now, now).text)
+        // A low battery is quieter than a failed sync.
+        assertEquals("Not synced", strapChip(true, connected(10), SyncState.Failed("x"), now, now).text)
+    }
+
     @Test fun `words only when they matter`() {
         assertEquals("Charging 64%", strapChip(true, connected(64, charging = true), SyncState.Idle, null, now).text)
         assertEquals(StrapChip.Dot.Charging, strapChip(true, connected(64, charging = true), SyncState.Idle, null, now).dot)

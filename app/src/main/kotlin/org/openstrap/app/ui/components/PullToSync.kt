@@ -47,6 +47,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import org.openstrap.app.device.SyncState
+import org.openstrap.app.ui.dashboard.DATA_ON_STRAP
 import org.openstrap.app.ui.theme.AppIcons
 import kotlin.math.roundToInt
 
@@ -78,12 +79,20 @@ fun PullToSync(
     val running = sync is SyncState.Running
     // Read from the long-lived effect and lambdas below, which would otherwise keep the first value.
     val runningNow by rememberUpdatedState(running)
+    val syncNow by rememberUpdatedState(sync)
     LaunchedEffect(pulled, running) {
         if (!pulled) return@LaunchedEffect
         when {
             running -> started = true
-            // Done: a soft tick as the gap closes.
-            started -> { pulled = false; started = false; haptics.performHapticFeedback(HapticFeedbackType.SegmentTick) }
+            // Done: a soft tick as the gap closes. Failed: the reject buzz (spec 3.6) and where the data is.
+            started -> {
+                pulled = false
+                started = false
+                if (syncNow is SyncState.Failed) {
+                    feedback.perform(HapticEvent.SyncFailed)
+                    Toast.makeText(context, "Couldn't sync. $DATA_ON_STRAP", Toast.LENGTH_SHORT).show()
+                } else haptics.performHapticFeedback(HapticFeedbackType.SegmentTick)
+            }
             // The strap busy or dropping: a sync that doesn't start soon just lets go.
             else -> { delay(START_GRACE_MS); pulled = false }
         }

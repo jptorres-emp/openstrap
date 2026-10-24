@@ -20,6 +20,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
@@ -33,6 +34,10 @@ import org.openstrap.app.ui.dashboard.DayUiState
 import org.openstrap.app.ui.dashboard.InfoCopy
 import org.openstrap.app.ui.dashboard.Score
 import org.openstrap.app.ui.dashboard.Metric
+import org.openstrap.app.ui.dashboard.FAILED_SHORT
+import org.openstrap.app.ui.dashboard.RECOVERY_FAILED
+import org.openstrap.app.ui.dashboard.RecoveryFailure
+import org.openstrap.app.ui.dashboard.TRY_AGAIN
 import org.openstrap.app.ui.dashboard.RecoveryCard
 import org.openstrap.app.ui.dashboard.RecoveryFacts
 import org.openstrap.app.ui.dashboard.TabCopy
@@ -73,10 +78,15 @@ fun GlowRecoveryScreen(
     /** Scroll to the Charge card once (the All metrics Charge row); [onChargeShown] when it's there. */
     showCharge: Boolean = false,
     onChargeShown: () -> Unit = {},
+    /** The day's Recovery failed to work out; null when it didn't. */
+    recoveryFailure: RecoveryFailure? = null,
+    /** Works Recovery out again after a failure. */
+    onRetryRecovery: () -> Unit = {},
 ) {
     val list = rememberLazyListState()
     val signals = rememberSignals(state, history)
     val r = recovery?.takeIf { it.date == state.date }
+    val failure = recoveryFailure?.takeIf { it.date == state.date && r == null }
     val learning = r?.readiness?.calibrating == true
     val waiting = if (r != null && !r.charge.anchored) "After your first night" else "No reading yet"
     val slots = recoveryCards(RecoveryFacts(habitAge = healthspan != null, learning = learning, hasRecovery = r != null))
@@ -86,11 +96,14 @@ fun GlowRecoveryScreen(
             full { header() }
             tabCards(slots, focus = RecoveryCard.Charge) { card, m ->
                 when (card) {
-                    RecoveryCard.Hero -> RecoveryHero(r, onOpen = { onOpenScore(Score.Recovery) }, onInfo = { info = true })
+                    RecoveryCard.Hero ->
+                        if (failure != null) RecoveryFailedHero(failure, onOpen = { onOpenScore(Score.Recovery) }, onRetry = onRetryRecovery)
+                        else RecoveryHero(r, onOpen = { onOpenScore(Score.Recovery) }, onInfo = { info = true })
                     RecoveryCard.Drivers -> DriversList(r?.readiness, onAll = { onOpenScore(Score.Recovery) })
-                    RecoveryCard.Charge -> ChargeTall(r?.charge, state.dayStart..state.dayEnd, m, onOpen = { onOpenScore(Score.Charge) })
-                    RecoveryCard.Recharged -> ChargeSmall(r?.charge, recharged = true, m)
-                    RecoveryCard.Drained -> ChargeSmall(r?.charge, recharged = false, m)
+                    // Charge is worked out with Recovery, so a failure there says so here too, not "after your first night".
+                    RecoveryCard.Charge -> ChargeTall(r?.charge, state.dayStart..state.dayEnd, m, failed = failure != null, onOpen = { onOpenScore(Score.Charge) })
+                    RecoveryCard.Recharged -> ChargeSmall(r?.charge, recharged = true, m, failed = failure != null)
+                    RecoveryCard.Drained -> ChargeSmall(r?.charge, recharged = false, m, failed = failure != null)
                     RecoveryCard.BodySignals -> SignalsList(signals, waiting, onOpenMetric)
                     RecoveryCard.HabitAge -> HabitAgeEdgeCard(healthspan, onOpenHealthspan, onOpenProfile)
                 }
@@ -165,6 +178,26 @@ private fun RecoveryHero(r: RecoveryResult?, onOpen: () -> Unit, onInfo: () -> U
     }
 }
 
+/**
+ * Today's score failed to work out (spec 4.3, E5): yesterday's stays, dimmed, with the line and Try again, so the
+ * hero never waits forever.
+ */
+@Composable
+private fun RecoveryFailedHero(failure: RecoveryFailure, onOpen: () -> Unit, onRetry: () -> Unit) {
+    GlowCard(recoveryHeroStyle(overviewColor(null, false)), Modifier.fillMaxWidth().gridSize(CardSize.Wide), onClick = onOpen) {
+        Column {
+            GlowHeader("Recovery")
+            HeroSentence(RECOVERY_FAILED)
+            failure.yesterday?.let { y ->
+                Spacer(Modifier.height(22.dp))
+                HeroFigure(y.toString(), "Yesterday", big = true, modifier = Modifier.alpha(FAILED_ALPHA))
+            }
+            Spacer(Modifier.height(22.dp))
+            HeroButton(TRY_AGAIN, onRetry)
+        }
+    }
+}
+
 /** What drove the score: the three that weigh most, each with its bar and word. */
 @Composable
 private fun DriversList(ready: Recovery.Readiness?, onAll: () -> Unit) {
@@ -189,7 +222,7 @@ private fun DriversList(ready: Recovery.Readiness?, onAll: () -> Unit) {
  * and the number now with Charge at waking at the foot.
  */
 @Composable
-private fun ChargeTall(c: Recovery.ChargeDay?, day: LongRange, modifier: Modifier, onOpen: () -> Unit) {
+private fun ChargeTall(c: Recovery.ChargeDay?, day: LongRange, modifier: Modifier, failed: Boolean = false, onOpen: () -> Unit) {
     val now = c?.latest?.let(::chargeShown)
     val atWake = c?.atWake?.toInt()
     val step = 15 * 60L
@@ -209,12 +242,13 @@ private fun ChargeTall(c: Recovery.ChargeDay?, day: LongRange, modifier: Modifie
                 scrubbed?.first?.toString() ?: now?.toString(),
                 when {
                     scrubbed != null -> "At ${scrubbed.second}"
+                    failed -> FAILED_SHORT
                     c == null || !c.anchored -> "After your first night"
                     atWake == null -> "Now"
                     c.strapOffOvernight -> "$atWake at start"
                     else -> "$atWake at waking"
                 },
-                big = true,
+                big = true, labelLines = 2,
             )
         }
     }
@@ -222,13 +256,14 @@ private fun ChargeTall(c: Recovery.ChargeDay?, day: LongRange, modifier: Modifie
 
 /** Recharged or Drained beside the Charge battery: a number and a word. */
 @Composable
-private fun ChargeSmall(c: Recovery.ChargeDay?, recharged: Boolean, modifier: Modifier) {
+private fun ChargeSmall(c: Recovery.ChargeDay?, recharged: Boolean, modifier: Modifier, failed: Boolean = false) {
     val ready = c != null && c.anchored && c.latest != null
     val value = c?.takeIf { ready }?.let {
         if (recharged) TabCopy.chargeAmount(it.recharged, +1)
         else TabCopy.drainedAmount(it.drainedExercise + it.drainedStress + it.drainedLiving)
     }
     val status = when {
+        failed -> FAILED_SHORT
         !ready -> "After your first night"
         recharged -> TabCopy.RECHARGED
         else -> TabCopy.drainedMostly(c!!.drainedExercise, c.drainedStress, c.drainedLiving)

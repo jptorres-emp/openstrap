@@ -115,6 +115,11 @@ const val STARTUP_GRACE_S = 120L
  * [lastSeen] is when the strap was last connected (epoch seconds), null when this run hasn't seen it. [sinceStart] is
  * how long the app's process has been running (seconds): during its first [STARTUP_GRACE_S] a strap that isn't
  * connected yet is still being reconnected, so it shows a quiet dot like a brief connect.
+ *
+ * When several apply, the first wins: "Not paired", then not connected ("18 min ago", after the grace), then
+ * "Charging 64%", then "Not synced", then the battery. A strap that isn't there can't sync, so how long it's been
+ * gone is the news. A charging strap isn't worn and stops syncing in fast-charge mode, so charging explains a failed
+ * sync rather than the other way round; the data waits on the strap.
  */
 fun strapChip(paired: Boolean, connection: ConnectionState, sync: SyncState, lastSeen: Long?, now: Long, sinceStart: Long = Long.MAX_VALUE): StrapChip {
     if (!paired || connection == ConnectionState.NotPaired) return StrapChip("Not paired", StrapChip.Dot.Quiet, "No strap paired")
@@ -128,8 +133,8 @@ fun strapChip(paired: Boolean, connection: ConnectionState, sync: SyncState, las
         is ConnectionState.Connected -> {
             val battery = connection.batteryPercent
             when {
-                sync is SyncState.Failed -> StrapChip("Not synced", StrapChip.Dot.Warn, "Strap connected, not synced")
                 connection.charging && battery != null -> StrapChip("Charging $battery%", StrapChip.Dot.Charging, "Strap charging, battery $battery percent")
+                sync is SyncState.Failed -> StrapChip("Not synced", StrapChip.Dot.Warn, "Strap connected, not synced")
                 battery == null -> StrapChip("", StrapChip.Dot.Fine, "Strap connected")
                 battery <= StrapChip.LOW_BATTERY -> StrapChip("$battery%", StrapChip.Dot.Low, "Strap connected, battery low, $battery percent")
                 else -> StrapChip("$battery%", StrapChip.Dot.Fine, "Strap connected, battery $battery percent")

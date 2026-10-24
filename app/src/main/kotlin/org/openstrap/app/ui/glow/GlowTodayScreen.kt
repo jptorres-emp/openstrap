@@ -35,6 +35,7 @@ import org.openstrap.app.data.RecoveryResult
 import org.openstrap.app.data.WorkoutAnalysis
 import org.openstrap.app.data.Workouts
 import org.openstrap.app.data.db.StrapReadinessRow
+import org.openstrap.app.device.SyncRecord
 import org.openstrap.app.ui.components.ChartPoint
 import org.openstrap.app.ui.components.HapticEvent
 import org.openstrap.app.ui.components.rememberHaptics
@@ -57,7 +58,18 @@ import org.openstrap.app.ui.dashboard.TodaySlot
 import org.openstrap.app.ui.dashboard.applyEdits
 import org.openstrap.app.ui.dashboard.avg
 import org.openstrap.app.ui.dashboard.sportNoun
+import org.openstrap.app.ui.dashboard.CHARGE_FAILED
+import org.openstrap.app.ui.dashboard.FAILED_SHORT
+import org.openstrap.app.ui.dashboard.RECOVERY_FAILED
+import org.openstrap.app.ui.dashboard.RecoveryFailure
+import org.openstrap.app.ui.dashboard.STALE_AFTER_S
+import org.openstrap.app.ui.dashboard.TRY_AGAIN
+import org.openstrap.app.ui.dashboard.WAITING_LAST_NIGHT
+import org.openstrap.app.ui.dashboard.clockText
+import org.openstrap.app.ui.dashboard.lastTried
+import org.openstrap.app.ui.dashboard.stuckCopy
 import org.openstrap.app.ui.dashboard.syncStuck
+import org.openstrap.app.ui.dashboard.upToMarker
 import org.openstrap.app.ui.dashboard.todayCards
 import org.openstrap.app.ui.theme.MetricColors
 
@@ -67,13 +79,16 @@ import org.openstrap.app.ui.theme.MetricColors
  * keeps meaning "look here".
  */
 
-/** The strap's state where Today needs it: paired at all, and whether the last sync failed and when it was seen to. */
+/** The strap's state where Today needs it: paired at all, whether syncing has stopped, and how syncs went. */
 class TodayStrap(
     val paired: Boolean = true,
-    val syncFailed: Boolean = false,
-    /** When the failure was first seen this run (epoch seconds), for "Last tried 07:42". */
-    val failedAt: Long? = null,
+    /** Syncing has stopped ([syncStopped]), so cards whose data is old say how far it goes. */
+    val stopped: Boolean = false,
+    /** When syncs last ran and how they ended: the stuck hero's "Last tried 07:42" and its 3 h rule. */
+    val record: SyncRecord = SyncRecord(),
     val canSync: Boolean = true,
+    /** How old a card's newest reading is before it's marked; a debug preview marks every card at once. */
+    val staleAfter: Long = STALE_AFTER_S,
 )
 
 @Composable
@@ -133,6 +148,10 @@ fun GlowTodayScreen(
     onSyncNow: () -> Unit = {},
     /** When you usually go to sleep, for "Bedtime in 1 h 10". */
     usualBedtime: LocalTime? = null,
+    /** Today's Recovery failed to work out; null when it didn't. */
+    recoveryFailure: RecoveryFailure? = null,
+    /** Works Recovery out again after a failure. */
+    onRetryRecovery: () -> Unit = {},
     /** Opens a detail over Today: Load, time to recover, the week story. */
     onOpen: (org.openstrap.app.ui.dashboard.Detail) -> Unit = {},
     /** Your usual steps by the end of each hour, for the Activity card's ghost line; null until there's a usual. */
@@ -151,8 +170,10 @@ fun GlowTodayScreen(
         state, rec, liveHeartRate, workouts, lastWorkout, isToday, now.epochSecond, zone, moment,
         restingRange = rememberNormal(Metric.RestingHr, state.date, history),
         firstNights = rec != null && !rec.charge.anchored,
-        stuck = syncStuck(moment, isToday, state.asleepSeconds != null, strap.syncFailed),
+        stuck = strap.paired && syncStuck(isToday, state.asleepSeconds != null, strap.record.failingSince, now.epochSecond, zone),
         strapScore = strapReadiness?.takeIf { it.day == state.dayStart }?.score,
+        stopped = strap.stopped, staleAfter = strap.staleAfter,
+        recoveryFailure = recoveryFailure?.takeIf { it.date == state.date && rec == null },
     )
     val facts = TodayFacts(
         isToday = isToday, offer = offer != null, suggestion = suggestion != null, alerts = state.alerts.isNotEmpty(),
@@ -197,12 +218,12 @@ fun GlowTodayScreen(
                                         TodayCard.Hero -> Hero(
                                             ctx, strap, heroLightAngle, usualBedtime,
                                             running, onOpenRunning, onResumeRunning, onStartSport, onOtherSport, onPair, onSyncNow,
-                                            onOpenRecovery, onOpenWorkout,
+                                            onOpenRecovery, onOpenWorkout, onRetryRecovery,
                                         )
                                         TodayCard.EditToday -> EditTodayButton({ editing = true })
                                         else -> TodayRow(slot, ctx, healthspan, history, checkIn, onCheckIn, onOpenSleep, onOpenMetric, onOpenRecovery,
                                             onOpenWorkout, onOpenHealthspan, onOpenProfile, offer, onRecordOffer, onDeclineOffer, suggestion,
-                                            onSaveSuggestion, onDismissSuggestion, onOpen, usualSteps,
+                                            onSaveSuggestion, onDismissSuggestion, onOpen, usualSteps, onRetryRecovery,
                                             if (slot.size == CardSize.Small) Modifier.fillMaxSize() else Modifier)
                                     }
                                 }
@@ -240,7 +261,20 @@ private class TodayContext(
     val stuck: Boolean,
     /** The strap's own Readiness for the day. */
     val strapScore: Int?,
+    /** Syncing has stopped, and how old a reading is before its card is marked. */
+    val stopped: Boolean,
+    val staleAfter: Long,
+    /** Today's Recovery failed to work out (spec 4.3). */
+    val recoveryFailure: RecoveryFailure?,
 ) {
+    /** "Up to 09:40" for a card whose [newest] reading is stale while syncing has stopped ([upToMarker]). */
+    fun upTo(newest: Long?): String? = upToMarker(newest, now, stopped, isToday, zone, staleAfter)
+
+    /** The newest reading of the day, from the series the strap records through it. */
+    val newest: Long?
+        get() = listOfNotNull(state.heartRate.lastOrNull(), state.stress.lastOrNull(), state.hrv.lastOrNull(), state.spo2.lastOrNull())
+            .maxOfOrNull { it.x }
+
     val score get() = rec?.readiness?.score
     val alert get() = rec?.readiness?.strainAlert == true
     val charge get() = rec?.charge?.latest?.toInt()
@@ -266,7 +300,7 @@ private class TodayContext(
     val waiting: String
         get() = when {
             firstNights -> "After your first night"
-            stuck -> "Waiting for last night"
+            stuck -> WAITING_LAST_NIGHT
             else -> "No reading yet"
         }
 
@@ -302,7 +336,7 @@ private fun Hero(
     ctx: TodayContext, strap: TodayStrap, lightAngle: Float?, bedtime: LocalTime?,
     running: org.openstrap.app.device.WorkoutState.Recording?, onOpenRunning: () -> Unit, onResumeRunning: () -> Unit,
     onStartSport: (Int) -> Unit, onOtherSport: () -> Unit, onPair: () -> Unit, onSyncNow: () -> Unit,
-    onOpenRecovery: () -> Unit, onOpenWorkout: (Long) -> Unit,
+    onOpenRecovery: () -> Unit, onOpenWorkout: (Long) -> Unit, onRetryRecovery: () -> Unit,
 ) {
     // Every hero is as high as its content with the card padding around it. The floor is only a Wide's height, under
     // every hero's content, so none shows an empty band.
@@ -324,9 +358,9 @@ private fun Hero(
     Crossfade(kind, animationSpec = tween(300), label = "hero") { k ->
         when (k) {
             HeroKind.Pair -> PairHero(onPair, m)
-            HeroKind.Stuck -> StuckHero(strap, onSyncNow, m)
-            HeroKind.Waking -> WakingHero(ctx, lightAngle, onOpenRecovery, m)
-            HeroKind.Midday -> ChargeHero(ctx, onOpenRecovery, m)
+            HeroKind.Stuck -> StuckHero(ctx, strap, onSyncNow, m)
+            HeroKind.Waking -> WakingHero(ctx, lightAngle, onOpenRecovery, onRetryRecovery, m)
+            HeroKind.Midday -> ChargeHero(ctx, onOpenRecovery, onRetryRecovery, m)
             HeroKind.Window -> WindowHero(ctx, lightAngle, onStartSport, onOtherSport, m)
             HeroKind.After -> AfterHero(ctx, lightAngle, onOpenWorkout, m)
             HeroKind.Evening -> EveningHero(ctx, lightAngle, bedtime, onOpenRecovery, m)
@@ -349,7 +383,23 @@ private fun heroStyle(color: Color, lightAngle: Float?, strength: Float = 0.6f) 
  * OpenStrap's own score the strap's stands in, labelled as its estimate.
  */
 @Composable
-private fun WakingHero(ctx: TodayContext, lightAngle: Float?, onOpen: () -> Unit, modifier: Modifier) {
+private fun WakingHero(ctx: TodayContext, lightAngle: Float?, onOpen: () -> Unit, onRetry: () -> Unit, modifier: Modifier) {
+    ctx.recoveryFailure?.let { f ->
+        // Errors where they happened (E5): yesterday's score dimmed, one line, one action. Never waiting forever.
+        GlowCard(heroStyle(overviewColor(null, false), lightAngle), modifier, onClick = onOpen) {
+            Column {
+                GlowHeader("Recovery")
+                HeroSentence(RECOVERY_FAILED)
+                f.yesterday?.let { y ->
+                    Spacer(Modifier.height(24.dp))
+                    HeroFigure(y.toString(), "Yesterday", big = true, modifier = Modifier.alpha(FAILED_ALPHA))
+                }
+                Spacer(Modifier.height(24.dp))
+                HeroButton(TRY_AGAIN, onRetry)
+            }
+        }
+        return
+    }
     val score = ctx.score
     val shown = ctx.recoveryShown
     val before = ctx.rec?.readinessTrend?.dropLast(1)?.lastOrNull()?.second
@@ -370,15 +420,22 @@ private fun signed(d: Int) = if (d > 0) "+$d" else if (d < 0) "−${-d}" else "S
 
 /** Midday: Charge as a light level, what the day took and what's left, with recharged and drained. */
 @Composable
-private fun ChargeHero(ctx: TodayContext, onOpen: () -> Unit, modifier: Modifier) {
+private fun ChargeHero(ctx: TodayContext, onOpen: () -> Unit, onRetry: () -> Unit, modifier: Modifier) {
     val c = ctx.rec?.charge
     val now = ctx.charge
     var info by rememberSaveable { mutableStateOf(false) }
     // Charge is lit to its level from below (spec 2.5), so the moment's angle gives way here.
     GlowCard(GlowStyle.Ember.copy(lightLevel = (now ?: 0) / 100f), modifier, onClick = onOpen) {
         Column {
-            GlowHeader("Charge", trailing = c?.atWake?.let { "${it.toInt()} at waking" })
-            HeroSentence(TodayCopy.charge(now, c?.atWake?.toInt(), c?.anchored == true, LocalTime.now().hour))
+            GlowHeader("Charge", trailing = c?.atWake?.let { "${it.toInt()} at waking" }, marker = ctx.upTo(ctx.newest))
+            // Charge is worked out with Recovery, so when that fails it says so rather than waiting for a first night.
+            val failed = ctx.recoveryFailure != null
+            HeroSentence(if (failed) CHARGE_FAILED else TodayCopy.charge(now, c?.atWake?.toInt(), c?.anchored == true, LocalTime.now().hour))
+            if (failed) {
+                Spacer(Modifier.height(24.dp))
+                HeroButton(TRY_AGAIN, onRetry)
+                return@Column
+            }
             // The caveat marker: tapping it opens Charge's info sheet, which explains the estimated start.
             if (c?.strapOffOvernight == true) Text(
                 "Strap off overnight, so today started from an estimate.",
@@ -466,7 +523,7 @@ private fun EveningHero(ctx: TodayContext, lightAngle: Float?, bedtime: LocalTim
     val nouns = ctx.dayWorkouts.map { sportNoun(it.workout.sportType) }
     GlowCard(heroStyle(MetricColors.sleepDeep, lightAngle), modifier, onClick = onOpen) {
         Column {
-            GlowHeader("Today", trailing = TodayCopy.bedtimeIn(LocalTime.now(), bedtime))
+            GlowHeader("Today", trailing = TodayCopy.bedtimeIn(LocalTime.now(), bedtime), marker = ctx.upTo(ctx.newest))
             HeroSentence(TodayCopy.evening(nouns, ctx.state.steps, goals.steps, ctx.loadStatus))
             Spacer(Modifier.height(24.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -512,18 +569,19 @@ private fun PairHero(onPair: () -> Unit, modifier: Modifier) {
     }
 }
 
-/** The morning sync is failing and last night hasn't come across yet (spec 4.3). */
+/**
+ * The sync is stuck when it matters (spec 4.3): failing in the morning with last night still on the strap, or failing
+ * for hours. One action, and when it was last tried.
+ */
 @Composable
-private fun StuckHero(strap: TodayStrap, onSyncNow: () -> Unit, modifier: Modifier) {
+private fun StuckHero(ctx: TodayContext, strap: TodayStrap, onSyncNow: () -> Unit, modifier: Modifier) {
     val haptics = rememberHaptics()
+    val copy = stuckCopy(ctx.state.asleepSeconds != null, ctx.newest?.let { clockText(it, ctx.zone) })
     GlowCard(heroStyle(MetricColors.warn, LightAngle.Below, strength = 0.5f), modifier) {
         Column {
-            GlowHeader("Last night", trailing = strap.failedAt?.let { "Last tried ${clockAt(it)}" })
-            HeroSentence("Last night is still on the strap.")
-            Text(
-                "Keep it near your phone and it comes across.",
-                color = Color.White.copy(alpha = 0.8f), style = GlowType.secondary, modifier = Modifier.padding(top = 8.dp),
-            )
+            GlowHeader(copy.title, trailing = lastTried(strap.record, ctx.zone))
+            HeroSentence(copy.sentence)
+            Text(copy.line, color = Color.White.copy(alpha = 0.8f), style = GlowType.secondary, modifier = Modifier.padding(top = 8.dp))
             Spacer(Modifier.height(28.dp))
             HeroButton("Sync now", { if (strap.canSync) onSyncNow() else haptics.perform(HapticEvent.SyncFailed) })
         }
@@ -539,7 +597,7 @@ private fun TodayRow(
     onOpenWorkout: (Long) -> Unit, onOpenHealthspan: () -> Unit, onOpenProfile: () -> Unit,
     offer: org.openstrap.app.data.AutoStart.Offer?, onRecordOffer: () -> Unit, onDeclineOffer: () -> Unit,
     suggestion: org.openstrap.app.data.WorkoutSuggestions.Suggestion?, onSaveSuggestion: () -> Unit, onDismissSuggestion: () -> Unit,
-    onOpen: (org.openstrap.app.ui.dashboard.Detail) -> Unit, usualSteps: List<Float>?,
+    onOpen: (org.openstrap.app.ui.dashboard.Detail) -> Unit, usualSteps: List<Float>?, onRetryRecovery: () -> Unit,
     /** The size a Small takes in its row. */
     modifier: Modifier = Modifier,
 ) {
@@ -567,30 +625,37 @@ private fun TodayRow(
                 BodyRow("Stress", MetricColors.stress, s.stress.lastOrNull()?.y, b.stress, 4f, "", Metric.Stress),
                 BodyRow("HRV", MetricColors.hrv, s.hrv.lastOrNull()?.y, b.hrv, 3f, "", Metric.Hrv),
             ),
-            ctx.waiting, onOpenMetric,
+            ctx.waiting, onOpenMetric, upTo = ctx.upTo(listOfNotNull(s.stress.lastOrNull(), s.hrv.lastOrNull()).maxOfOrNull { it.x }),
         )
         TodayCard.LastNight ->
-            if (slot.size == CardSize.Strip) LastNightStrip(s, onOpenSleep) else LastNightCard(s, ctx.firstNights, onOpenSleep)
-        TodayCard.HeartRate -> HeartCard(s, ctx.live, { onOpenMetric(Metric.HeartRate) }, restingRange = ctx.restingRange)
-        TodayCard.Activity -> ActivityCard(s, { onOpenMetric(Metric.Steps) }, usual = usualSteps)
-        TodayCard.Recovery -> RecoveryEarlierCard(ctx.recoveryShown, onOpenRecovery)
+            if (slot.size == CardSize.Strip) LastNightStrip(s, onOpenSleep, stuck = ctx.stuck) else LastNightCard(s, ctx.firstNights, onOpenSleep, stuck = ctx.stuck)
+        // A live reading is never stale.
+        TodayCard.HeartRate -> HeartCard(
+            s, ctx.live, { onOpenMetric(Metric.HeartRate) }, restingRange = ctx.restingRange,
+            upTo = if (ctx.live == null) ctx.upTo(s.heartRate.lastOrNull()?.x) else null,
+        )
+        // Steps come in the same records as the rest of the day, so the day's newest reading is how far they go.
+        TodayCard.Activity -> ActivityCard(s, { onOpenMetric(Metric.Steps) }, usual = usualSteps, upTo = ctx.upTo(ctx.newest))
+        TodayCard.Recovery -> RecoveryEarlierCard(ctx.recoveryShown, onOpenRecovery, failure = ctx.recoveryFailure, onRetry = onRetryRecovery)
         TodayCard.Charge -> {
             val c = ctx.rec?.charge
             val used = c?.atWake?.let { w -> c.latest?.let { (w - it).toInt() } }
             val status = when {
-                ctx.charge == null -> ctx.waiting
+                // Worked out with Recovery: when that failed, say so here too. The card opens Recovery and its Try again.
+                ctx.charge == null -> if (ctx.recoveryFailure != null) CHARGE_FAILED else ctx.waiting
                 ctx.endOfDay -> "Sleep fills it back"
                 used != null && used > 0 -> "Used $used since waking"
                 else -> "Steady since waking"
             }
             // The day's Charge so far, beside the number, until the evening says sleep fills it back.
             val soFar = c?.takeIf { !ctx.endOfDay && it.anchored && ctx.isToday }?.let { chargeSoFar(it.points, s.dayStart..s.dayEnd, ctx.now) }
-            ChargeWideCard(ctx.charge, status, slot.secondGlow, onOpenRecovery, soFar = soFar)
+            ChargeWideCard(ctx.charge, status, slot.secondGlow, onOpenRecovery, soFar = soFar, upTo = ctx.upTo(ctx.newest))
         }
         // After a workout, what it did as a Small pair: Load toward your usual (from below) and time to recover.
         TodayCard.LoadToday -> if (slot.size == CardSize.Small) SmallCard(
             MetricColors.load, "Load", ctx.rec?.load?.let { Math.round(it).toString() }, null,
-            if (ctx.rec == null) ctx.waiting else TodayCopy.loadWord(ctx.loadStatus), modifier, kind = EdgeKind.Progress,
+            when { ctx.recoveryFailure != null -> FAILED_SHORT; ctx.rec == null -> ctx.waiting; else -> TodayCopy.loadWord(ctx.loadStatus) },
+            modifier, kind = EdgeKind.Progress,
             edgeStatus = if (ctx.loadStatus == TodayCopy.LoadStatus.Above) EdgeStatus.Above else EdgeStatus.Usual,
             onClick = { openScore(org.openstrap.app.ui.dashboard.Score.Load) },
         ) else LoadList(

@@ -92,6 +92,8 @@ import org.openstrap.app.ui.glow.PageRows
 import org.openstrap.app.ui.dashboard.ScreenList
 import org.openstrap.app.ui.theme.MetricColors
 import org.openstrap.app.ui.theme.AppIcons
+import org.openstrap.app.ui.dashboard.DATA_ON_STRAP
+import org.openstrap.app.ui.dashboard.StrapView
 import org.openstrap.app.ui.zepp.ComputerGuideButton
 import org.openstrap.app.ui.zepp.OptionButton
 import org.openstrap.app.ui.zepp.ZeppSignInDialog
@@ -136,6 +138,8 @@ fun DeviceScreen(
     onFirmware: () -> Unit,
     onZeppAccount: () -> Unit,
     onBack: () -> Unit,
+    /** Debug: a previewed strap state, shown on the strap card only ([org.openstrap.app.ui.dashboard.StrapPreview]). */
+    preview: StrapView? = null,
 ) {
     BackHandler(onBack = onBack)
     val scope = rememberCoroutineScope()
@@ -227,7 +231,7 @@ fun DeviceScreen(
             item { PairPanel(vm, scan, onRequestBluetooth) }
             return@ScreenList
         }
-        item { StrapHero(device.name, connection, sync, lastSeen) }
+        item { StrapHero(device.name, preview?.connection ?: connection, preview?.sync ?: sync, preview?.lastSeen ?: lastSeen) }
         val failed = connection as? ConnectionState.Failed
         if (failed?.keyRejected == true) item { KeyRejectedPanel(failed.reason, onPairAgain = vm::forget) }
         else item {
@@ -395,7 +399,13 @@ private fun StrapHero(name: String, connection: ConnectionState, sync: SyncState
                         style = GlowType.secondary, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA),
                     )
                 }
-                sync is SyncState.Failed -> Text("Sync failed. ${sync.reason}", color = MetricColors.warn, style = GlowType.secondary)
+                sync is SyncState.Failed -> {
+                    Text("Sync failed. ${sync.reason}", color = MetricColors.warn, style = GlowType.secondary)
+                    Text(
+                        "$DATA_ON_STRAP OpenStrap tries again by itself.",
+                        style = GlowType.secondary, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA),
+                    )
+                }
             }
         }
     }

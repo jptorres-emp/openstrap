@@ -56,6 +56,8 @@ fun ListPanel(
     title: String? = null,
     note: String? = null,
     onNote: (() -> Unit)? = null,
+    /** A sync marker next to the title ([StateMarker]), "Up to 09:40". */
+    marker: String? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val inner: @Composable ColumnScope.() -> Unit = {
@@ -63,7 +65,11 @@ fun ListPanel(
             Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(title.orEmpty(), color = Color.White, style = GlowType.label, modifier = Modifier.weight(1f))
+            Text(title.orEmpty(), color = Color.White, style = GlowType.label, modifier = Modifier.weight(1f, fill = marker == null))
+            if (marker != null) {
+                StateMarker(marker, Modifier.padding(start = 8.dp))
+                Spacer(Modifier.weight(1f))
+            }
             if (note != null && onNote != null) Row(
                 // Tapped, the note grows into what it opens (spec 3.5).
                 cardOpening(onNote).let { o -> Modifier.then(o?.modifier ?: Modifier).clickable(onClick = o?.onClick ?: onNote) }

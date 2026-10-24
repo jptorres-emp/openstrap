@@ -48,7 +48,12 @@ import org.openstrap.app.ui.dashboard.MomentHeader
 import org.openstrap.app.ui.dashboard.Reselect
 import org.openstrap.app.ui.dashboard.TabNav
 import org.openstrap.app.ui.dashboard.todayTitle
+import org.openstrap.app.ui.dashboard.RecoveryFailure
+import org.openstrap.app.ui.dashboard.StrapPreview
+import org.openstrap.app.ui.dashboard.StrapView
+import org.openstrap.app.ui.dashboard.previewed
 import org.openstrap.app.ui.dashboard.strapChip
+import org.openstrap.app.ui.dashboard.syncStopped
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.widthIn
@@ -80,6 +85,9 @@ class MainActivity : ComponentActivity() {
     /** Debug: the moment forced by the `moment` extra, null to follow the clock. */
     private val forcedMoment = kotlinx.coroutines.flow.MutableStateFlow<org.openstrap.app.data.Moment?>(null)
 
+    /** Debug: the strap state previewed by the `strap_state` extra, null for the real one. */
+    private val strapPreview = kotlinx.coroutines.flow.MutableStateFlow<StrapPreview?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // Dark bars (light icons) whatever the system mode, to match the always-dark theme.
@@ -88,7 +96,7 @@ class MainActivity : ComponentActivity() {
             navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
         )
         val container = (application as OpenStrapApp).container
-        setContent { OpenStrapTheme { AppRoot(container, metricRequests, forcedMoment) } }
+        setContent { OpenStrapTheme { AppRoot(container, metricRequests, forcedMoment, strapPreview) } }
     }
 
     override fun onStart() {
@@ -160,6 +168,9 @@ class MainActivity : ComponentActivity() {
         /** Debug: a [org.openstrap.app.data.Moment] name to force on Today, or "auto" to follow the clock again. */
         const val EXTRA_MOMENT = "moment"
 
+        /** Debug: a [StrapPreview] name ("stale", "stuck", "disconnected", "charging", "notpaired", "recoveryfail") to show, or "auto". */
+        const val EXTRA_STRAP_STATE = "strap_state"
+
         /** Debug: true opens the summary right after a workout for the latest stored phone workout. */
         const val EXTRA_SHOW_SUMMARY = "show_summary"
 
@@ -220,6 +231,17 @@ class MainActivity : ComponentActivity() {
             else org.openstrap.app.data.Moment.entries.firstOrNull { it.name.equals(moment, ignoreCase = true) }
                 ?.let { forcedMoment.value = it }
                 ?: android.util.Log.w("OpenStrap", "moment: no moment called $moment")
+        }
+        // Debug: `--es strap_state stuck` shows a strap state on a phone whose strap is fine, so each can be checked;
+        // `--es strap_state auto` goes back to the real one. Only what the screens are shown changes: no Bluetooth, no
+        // sync, nothing written.
+        val strapState = intent.getStringExtra(EXTRA_STRAP_STATE)
+        if (BuildConfig.DEBUG && strapState != null) {
+            intent.removeExtra(EXTRA_STRAP_STATE)
+            if (strapState.equals("auto", ignoreCase = true)) strapPreview.value = null
+            else StrapPreview.of(strapState)?.let { strapPreview.value = it }
+                ?: android.util.Log.w("OpenStrap", "strap_state: no state called $strapState")
+            android.util.Log.i("OpenStrap", "strap_state: showing ${strapPreview.value ?: "the real state"}")
         }
         // Debug: `--ez show_summary true` opens the summary right after a workout for the latest stored phone workout,
         // with nothing live and nothing written.
@@ -291,6 +313,7 @@ private fun AppRoot(
     container: AppContainer,
     metricRequests: kotlinx.coroutines.flow.MutableStateFlow<MetricRequest?>,
     forcedMoment: kotlinx.coroutines.flow.StateFlow<org.openstrap.app.data.Moment?>,
+    strapPreview: kotlinx.coroutines.flow.StateFlow<StrapPreview?>,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -334,7 +357,15 @@ private fun AppRoot(
     // Remembered, like the picker below: a new object each time the root recomposes (on every tab change) would
     // recompose every tab.
     val todayEdits = remember(todayHidden, todayPinned) { org.openstrap.app.ui.dashboard.TodayEdits.parse(todayHidden, todayPinned) }
-    val recovery by dayVm.recovery.collectAsStateWithLifecycle()
+    val preview by strapPreview.collectAsStateWithLifecycle()
+    val realRecovery by dayVm.recovery.collectAsStateWithLifecycle()
+    val realRecoveryFailure by dayVm.recoveryFailure.collectAsStateWithLifecycle()
+    // The debug preview of a failed Recovery shows the day as failed, with yesterday's score from the real result.
+    val previewFailure = if (preview == StrapPreview.RecoveryFail) realRecovery?.let { r ->
+        RecoveryFailure(r.date, r.readinessTrend.firstOrNull { it.first == r.date.minusDays(1) }?.second)
+    } else null
+    val recovery = if (previewFailure != null) null else realRecovery
+    val recoveryFailure = previewFailure ?: realRecoveryFailure
     val healthspan by dayVm.healthspan.collectAsStateWithLifecycle()
     val habitAgeSeen by container.settings.habitAgeSeenAsOf.collectAsStateWithLifecycle(null)
     // Opening Habit Age marks the estimate seen, so Today stops offering it.
@@ -350,8 +381,9 @@ private fun AppRoot(
     val daysWithData by dayVm.daysWithData.collectAsStateWithLifecycle()
     val picker = remember(daysWithData, dayVm) { DayPicker(daysWithData, dayVm::select) }
     val live by container.strap.liveHeartRate.collectAsStateWithLifecycle()
-    val connection by container.strap.connection.collectAsStateWithLifecycle()
-    val sync by container.strap.sync.collectAsStateWithLifecycle()
+    val realConnection by container.strap.connection.collectAsStateWithLifecycle()
+    val realSync by container.strap.sync.collectAsStateWithLifecycle()
+    val syncRecord by container.strap.syncRecord.collectAsStateWithLifecycle()
     val message by deviceVm.message.collectAsStateWithLifecycle()
     val workoutState by container.workout.state.collectAsStateWithLifecycle()
     val workoutMinimized by container.workout.minimized.collectAsStateWithLifecycle()
@@ -409,20 +441,25 @@ private fun AppRoot(
     // When the strap was last heard from, for the header chip: kept fresh while connected, then left where it stopped.
     // Without that in this run, the last synced reading or the last sync stand in.
     var seenConnected by rememberSaveable { mutableStateOf<Long?>(null) }
-    val connected = connection is ConnectionState.Connected
+    val connected = realConnection is ConnectionState.Connected
     LaunchedEffect(connected) {
         if (connected) while (true) { seenConnected = epochNow(); kotlinx.coroutines.delay(30_000) }
     }
-    val lastSeen = listOfNotNull(
+    val realLastSeen = listOfNotNull(
         seenConnected,
-        (sync as? org.openstrap.app.device.SyncState.Done)?.atEpochSeconds,
+        (realSync as? org.openstrap.app.device.SyncState.Done)?.atEpochSeconds,
         day.heartRate.lastOrNull()?.x?.takeIf { day.date == java.time.LocalDate.now() },
     ).maxOrNull()
     // The chip's "18 min ago" moves on by itself.
     val now by androidx.compose.runtime.produceState(epochNow()) { while (true) { kotlinx.coroutines.delay(30_000); value = epochNow() } }
+    // What the screens are shown of the strap: the real state, or a debug preview's (nothing else changes).
+    val strapView = StrapView(paired != null, realConnection, realSync, syncRecord, realLastSeen).previewed(preview, now)
+    val connection = strapView.connection
+    val sync = strapView.sync
+    val lastSeen = strapView.lastSeen
     // Right after the process starts the service is still reconnecting, so the chip waits before saying "18 min ago".
-    val sinceStart = (android.os.SystemClock.uptimeMillis() - android.os.Process.getStartUptimeMillis()) / 1000
-    val chip = strapChip(paired != null, connection, sync, lastSeen, now, sinceStart)
+    val sinceStart = if (preview != null) Long.MAX_VALUE else (android.os.SystemClock.uptimeMillis() - android.os.Process.getStartUptimeMillis()) / 1000
+    val chip = strapChip(strapView.paired, connection, sync, lastSeen, now, sinceStart)
 
     // The moment (spec 4.1), on a clock that ticks each minute only while the app is in view.
     val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
@@ -453,7 +490,8 @@ private fun AppRoot(
     // when today was last loaded, so a past day doesn't lose them. Until today's recovery has loaded once, the
     // bedtime isn't known and the fallback would show Evening for a second before the real moment, so there's no
     // moment until then: Today's plain title, the day's mood.
-    val todayLoaded = day.date == clockDate && recovery?.date == clockDate
+    // A Recovery that failed counts as loaded: the moment shouldn't wait on it.
+    val todayLoaded = day.date == clockDate && (recovery?.date == clockDate || recoveryFailure?.date == clockDate)
     val freshClockFacts = if (todayLoaded) day.sleep?.end to recovery?.usualBedtime else null
     var keptClockFacts by remember(clockDate) { mutableStateOf<Pair<Long?, java.time.LocalTime?>?>(null) }
     androidx.compose.runtime.SideEffect { if (freshClockFacts != null && freshClockFacts != keptClockFacts) keptClockFacts = freshClockFacts }
@@ -468,13 +506,9 @@ private fun AppRoot(
     val moment = forced ?: clockMoment
     // What Today is laid out for: the moment today, the waking layout for a past day.
     val todayMoment = org.openstrap.app.ui.dashboard.layoutMoment(moment, day.date == clockDate)
-    // When this run first saw the sync failing, for the stuck morning's "Last tried 07:42".
-    var syncFailedAt by remember { mutableStateOf<Long?>(null) }
-    LaunchedEffect(sync is org.openstrap.app.device.SyncState.Failed) {
-        syncFailedAt = if (sync is org.openstrap.app.device.SyncState.Failed) epochNow() else null
-    }
     // Paired until the store says otherwise, so a paired strap never flashes the pairing hero on start.
-    val pairedKnown by remember { container.settings.pairedDevice.map { it != null } }.collectAsStateWithLifecycle(true)
+    val realPairedKnown by remember { container.settings.pairedDevice.map { it != null } }.collectAsStateWithLifecycle(true)
+    val pairedKnown = realPairedKnown && preview != StrapPreview.NotPaired
     LaunchedEffect(forced, clockMoment) {
         forced?.let { android.util.Log.i("OpenStrap", "moment: forced $it, the clock says $clockMoment") }
     }
@@ -600,9 +634,9 @@ private fun AppRoot(
           if (workoutOnTop != null) {
               val recent by container.workout.recent.collectAsStateWithLifecycle()
               val zoneSeconds by container.workout.zoneSeconds.collectAsStateWithLifecycle()
-              org.openstrap.app.ui.glow.GlowWorkoutGlance(workoutOnTop, live, recent, zoneSeconds, connection, top)
+              org.openstrap.app.ui.glow.GlowWorkoutGlance(workoutOnTop, live, recent, zoneSeconds, realConnection, top)
           } else org.openstrap.app.ui.glow.GlowTabletopHeart(
-              day, live, liveEnabled.takeIf { connection is ConnectionState.Connected }, { container.strap.setLiveHeartRate(it) }, top,
+              day, live, liveEnabled.takeIf { realConnection is ConnectionState.Connected }, { container.strap.setLiveHeartRate(it) }, top,
           )
           androidx.compose.foundation.layout.Spacer(androidx.compose.ui.Modifier.height(with(density) { hinge.bounds.height().toDp() }))
       }
@@ -660,7 +694,7 @@ private fun AppRoot(
                     // A switcher pick takes the detail's place; anything else it opens goes on top.
                     is Detail.OfMetric -> MetricDetail(
                         detail.metric, detail.night, day, history = history,
-                        liveHeartRate = live, liveEnabled = liveEnabled, canUseLive = connection is ConnectionState.Connected,
+                        liveHeartRate = live, liveEnabled = liveEnabled, canUseLive = realConnection is ConnectionState.Connected,
                         onLiveToggle = { container.strap.setLiveHeartRate(it) },
                         onOpen = push, onSwitch = { setStack(t, stack.dropLast(1) + it) }, onSelectDay = dayVm::select,
                         contentPadding = padding, onBack = pop,
@@ -695,6 +729,7 @@ private fun AppRoot(
                             contentPadding = padding, onOpenMetric = { push(Detail.OfMetric(it)) },
                             onOpenScore = { push(Detail.OfScore(it)) }, strapScore = strapReadiness?.takeIf { it.day == day.dayStart }?.score,
                             healthspan = healthspan, onOpenHealthspan = { seeHabitAge(); push(Detail.Healthspan) }, onOpenProfile = { openPage(Page.Profile) },
+                            recoveryFailure = recoveryFailure, onRetryRecovery = dayVm::retryRecovery,
                         )
                     }
                     Detail.Sleep -> {
@@ -718,7 +753,7 @@ private fun AppRoot(
                 *(if (page == tab) emptyArray() else arrayOf(androidx.navigationevent.compose.LocalNavigationEventDispatcherOwner provides idleBack)),
             ) {
                 val pullToSync: @androidx.compose.runtime.Composable (@androidx.compose.runtime.Composable () -> Unit) -> Unit = { screen ->
-                    org.openstrap.app.ui.components.PullToSync(sync, connection is ConnectionState.Connected, container.strap::syncNow) { screen() }
+                    org.openstrap.app.ui.components.PullToSync(realSync, realConnection is ConnectionState.Connected, container.strap::syncNow) { screen() }
                 }
                 val t = Tab.entries[page]
                 // A tab's root with its stack opening over it (or beside it, when wide).
@@ -762,9 +797,12 @@ private fun AppRoot(
                                 onResumeRunning = container.workout::resume,
                                 heroLightAngle = todayMoment?.let { org.openstrap.app.ui.dashboard.heroLightAngle(it) },
                                 strap = org.openstrap.app.ui.glow.TodayStrap(
-                                    paired = pairedKnown, syncFailed = sync is org.openstrap.app.device.SyncState.Failed, failedAt = syncFailedAt,
-                                    canSync = connection is ConnectionState.Connected,
+                                    paired = pairedKnown, stopped = syncStopped(pairedKnown, connection, sync), record = strapView.record,
+                                    canSync = realConnection is ConnectionState.Connected,
+                                    staleAfter = preview?.staleAfter ?: org.openstrap.app.ui.dashboard.STALE_AFTER_S,
                                 ),
+                                recoveryFailure = recoveryFailure,
+                                onRetryRecovery = dayVm::retryRecovery,
                                 onPair = { openPage(Page.Strap) },
                                 onSyncNow = container.strap::syncNow,
                                 usualBedtime = usualBedtime,
@@ -777,6 +815,7 @@ private fun AppRoot(
                                 healthspan = healthspan, onOpenHealthspan = { seeHabitAge(); recoveryStack = listOf(Detail.Healthspan) },
                                 onOpenProfile = { openPage(Page.Profile) },
                                 showCharge = showCharge, onChargeShown = { showCharge = false },
+                                recoveryFailure = recoveryFailure, onRetryRecovery = dayVm::retryRecovery,
                             )
                             Tab.Sleep -> org.openstrap.app.ui.glow.GlowSleepScreen(
                                 day, header = { header(Tab.Sleep) }, contentPadding = padding,
@@ -810,7 +849,7 @@ private fun AppRoot(
             ) {
                 org.openstrap.app.ui.components.OledSurfaces {
                     OverPages(
-                        pages, container, deviceVm, firmwareVm, profile, padding, requestBluetooth, lastSeen,
+                        pages, container, deviceVm, firmwareVm, profile, padding, requestBluetooth, lastSeen, strapView.takeIf { preview != null },
                         open = openPage, close = closePage,
                         youPage = {
                             val log by container.strap.log.collectAsStateWithLifecycle()
@@ -879,7 +918,7 @@ private fun AppRoot(
             }
         }
         WorkoutLayer(
-            container, workoutState, workoutMinimized, readySport, readyPicking, live, connection, workoutsVm, requestBluetooth, requestLocation,
+            container, workoutState, workoutMinimized, readySport, readyPicking, live, realConnection, workoutsVm, requestBluetooth, requestLocation,
             onReadySport = { readySport = it },
             onCloseReady = { readySport = null; readyPicking = false },
             capsuleBottom = if (rail) 16.dp else 104.dp,
@@ -902,6 +941,8 @@ private fun OverPages(
     padding: androidx.compose.foundation.layout.PaddingValues,
     requestBluetooth: (() -> Unit) -> Unit,
     lastSeen: Long?,
+    /** Debug: a previewed strap state for the Strap page's card. */
+    preview: StrapView?,
     open: (Page) -> Unit,
     close: () -> Unit,
     /** The You page, built where its launchers and the Goals editor live. */
@@ -933,6 +974,7 @@ private fun OverPages(
                     onFirmware = { open(Page.Firmware) },
                     onZeppAccount = { open(Page.ZeppAccount) },
                     onBack = close,
+                    preview = preview,
                 )
             }
             Page.Alarms -> {

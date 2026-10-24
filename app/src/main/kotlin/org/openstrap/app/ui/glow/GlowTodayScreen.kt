@@ -336,9 +336,17 @@ private class TodayContext(
         get() = workouts.filter { it.workout.start in state.dayStart..state.dayEnd && it.workout.sportType != Workouts.GENERIC_ACTIVITY }
             .sortedBy { it.workout.start }
 
+    /** The evening and night, when Charge waits for sleep to fill it back. */
     val endOfDay get() = moment == Moment.Evening || moment == Moment.Night
 
-    val loadStatus get() = rec?.let { TodayCopy.loadStatus(it.load, it.chronicLoad, endOfDay) }
+    /**
+     * Load against your usual. Only a day that's over is a whole day to compare with your usual one, so that's decided
+     * by the date, as on the Activity tab and in the Load detail, not by the moment.
+     */
+    val loadStatus get() = rec?.let { TodayCopy.loadStatus(it.load, it.chronicLoad, endOfDay = !isToday) }
+
+    /** How far Load has come toward your usual day's, for its light; null before there's a usual. */
+    val loadShare: Float? get() = rec?.let { r -> r.chronicLoad?.takeIf { it > 0f }?.let { r.load / it } }
 
     /** Time to recover from the latest workout that says how long it needs, or null when none does. */
     val recover: Pair<String?, String>?
@@ -747,7 +755,7 @@ private fun TodayRow(
         TodayCard.LoadToday -> if (slot.size == CardSize.Small) SmallCard(
             MetricColors.load, "Load", ctx.rec?.load?.let { Math.round(it).toString() }, null,
             when { ctx.recoveryFailure != null -> FAILED_SHORT; ctx.rec == null -> ctx.waiting; else -> TodayCopy.loadWord(ctx.loadStatus) },
-            modifier, kind = EdgeKind.Progress,
+            modifier, kind = EdgeKind.Progress, progress = ctx.loadShare,
             edgeStatus = if (ctx.loadStatus == TodayCopy.LoadStatus.Above) EdgeStatus.Above else EdgeStatus.Usual,
             onClick = { openScore(org.openstrap.app.ui.dashboard.Score.Load) },
         ) else LoadList(

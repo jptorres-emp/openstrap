@@ -534,8 +534,10 @@ internal fun SmallCard(
     onClick: (() -> Unit)? = null, extra: (@Composable () -> Unit)? = null,
     /** Waiting for its first value: the dim dash with [status] under it, rather than the word in its place. */
     waiting: Boolean = false,
+    /** How far toward its goal or usual, 0..1, for a [EdgeKind.Progress] Small's bar ([EdgeCard]). */
+    progress: Float? = null,
 ) {
-    EdgeCard(color, modifier, status = edgeStatus, kind = kind, onClick = onClick) {
+    EdgeCard(color, modifier, status = edgeStatus, kind = kind, progress = progress, onClick = onClick) {
         CardTitle(title)
         Spacer(Modifier.weight(1f))
         if (value == null && status != null && !waiting) {

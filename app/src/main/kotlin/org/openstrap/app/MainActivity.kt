@@ -446,7 +446,14 @@ private fun AppRoot(
         if (pages.isEmpty() || firmwareInstalling()) false
         else { if (Page.Firmware in pages) firmwareVm.reset(); pages = emptyList(); true }
     }
-    val openPage: (Page) -> Unit = { p -> if (pages.lastOrNull() != p) pages = pages + p }
+    // The first page over the tab grows out of the header button tapped for it, if one was (spec 3.5).
+    val growOrigin = remember { org.openstrap.app.ui.components.GrowOrigin() }
+    var growFrom by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
+    val openPage: (Page) -> Unit = { p ->
+        val tapped = growOrigin.take()
+        if (pages.isEmpty()) growFrom = tapped
+        if (pages.lastOrNull() != p) pages = pages + p
+    }
     val closePage: () -> Unit = { pages = pages.dropLast(1) }
     // A launcher shortcut or the Quick Settings tile asked for the ready screen.
     val readyRequest by container.workout.readyRequest.collectAsStateWithLifecycle()
@@ -697,6 +704,7 @@ private fun AppRoot(
     CompositionLocalProvider(
         org.openstrap.app.ui.dashboard.LocalGoals provides goals,
         org.openstrap.app.ui.components.LocalGlassHost provides glassHost,
+        org.openstrap.app.ui.components.LocalGrowOrigin provides growOrigin,
     ) {
       androidx.compose.foundation.layout.Column(androidx.compose.ui.Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
       if (hinge != null) {
@@ -923,14 +931,22 @@ private fun AppRoot(
                     }
                 }
             } }
-            // The pages over the tab: the You page and the Strap page, and what they open.
-            if (pages.isNotEmpty()) androidx.compose.foundation.layout.Box(
-                androidx.compose.ui.Modifier.fillMaxSize().padding(start = if (rail) org.openstrap.app.ui.components.NavRailWidth else 0.dp)
-                    .background(MaterialTheme.colorScheme.background).hazeSource(navGlass, zIndex = 1f),
+            // The pages over the tab: the You page and the Strap page, and what they open. They grow out of the
+            // button that opened them and shrink back into it, drawn as they were while they go; meanwhile back and
+            // taps belong to the tab again.
+            val keptPages = remember { arrayOf(pages) }
+            if (pages.isNotEmpty()) keptPages[0] = pages
+            val tabBack = androidx.navigationevent.compose.LocalNavigationEventDispatcherOwner.current
+            org.openstrap.app.ui.components.GrowFromButton(
+                pages.isNotEmpty(), growFrom,
+                androidx.compose.ui.Modifier.fillMaxSize().padding(start = if (rail) org.openstrap.app.ui.components.NavRailWidth else 0.dp),
+            ) { closing -> androidx.compose.foundation.layout.Box(
+                androidx.compose.ui.Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).hazeSource(navGlass, zIndex = 1f),
             ) {
+                CompositionLocalProvider(androidx.navigationevent.compose.LocalNavigationEventDispatcherOwner provides (if (closing || tabBack == null) idleBack else tabBack)) {
                 org.openstrap.app.ui.components.OledSurfaces {
                     OverPages(
-                        pages, container, deviceVm, firmwareVm, profile, padding, requestBluetooth, lastSeen, strapView.takeIf { preview != null },
+                        pages.ifEmpty { keptPages[0] }, container, deviceVm, firmwareVm, profile, padding, requestBluetooth, lastSeen, strapView.takeIf { preview != null },
                         open = openPage, close = closePage,
                         youPage = {
                             val log by container.strap.log.collectAsStateWithLifecycle()
@@ -949,7 +965,8 @@ private fun AppRoot(
                         },
                     )
                 }
-            }
+                }
+            } }
         }
         if (rail) org.openstrap.app.ui.components.FloatingNavRail(
             navItems, tab, selectTab, androidx.compose.ui.Modifier.align(androidx.compose.ui.Alignment.CenterStart),

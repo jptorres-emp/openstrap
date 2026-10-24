@@ -27,7 +27,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -39,6 +38,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import dev.chrisbanes.haze.HazeInput
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.blur.HazeBlurStyle
@@ -54,14 +56,19 @@ data class NavItem(val label: String, val icon: ImageVector, val selectedIcon: I
 /**
  * The floating tab bar in black glass (spec 3.2): a pill of tabs, the content scrolling under it (marked with
  * `hazeSource` on [glass]) showing through blurred and darkened. Centred with nothing beside it: the bar only switches
- * tabs. The capsule behind the tab showing slides to it and takes that section's colour.
+ * tabs. The capsule behind the tab showing slides to it and takes that section's colour. Behind the pill a black fade
+ * ([TabBarFade]) rises from the bottom edge, so cards slide under the bar softly instead of being cut by its edge. It
+ * draws past the bar's own top without taking room, so the pages' bottom padding stays the bar's height.
  */
 @Composable
 fun FloatingNavBar(
     items: List<NavItem>, selected: Int, onSelect: (Int) -> Unit, modifier: Modifier = Modifier, glass: HazeState,
 ) {
     Box(
-        modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 28.dp, vertical = 10.dp),
+        modifier.fillMaxWidth().drawBehind {
+            val height = maxOf(TabBarFade.Height.toPx(), size.height)
+            drawRect(TabBarFade.brush(size.height - height, size.height), Offset(0f, size.height - height), Size(size.width, height))
+        }.navigationBarsPadding().padding(horizontal = 28.dp, vertical = 10.dp),
         contentAlignment = Alignment.Center,
     ) {
         Surface(
@@ -115,11 +122,11 @@ fun FloatingNavRail(
         contentAlignment = Alignment.Center,
     ) {
         Surface(
-            shape = RoundedCornerShape(40.dp),
+            shape = CircleShape,
             color = Color.Transparent,
             border = GlassEdge,
             modifier = Modifier.width(NavRailWidth - 20.dp).heightIn(max = 380.dp).fillMaxHeight()
-                .clip(RoundedCornerShape(40.dp)).hazeBlur(HazeInput.Sources(glass), GlassBlur),
+                .clip(CircleShape).hazeBlur(HazeInput.Sources(glass), GlassBlur),
         ) {
             var barHeight by remember { mutableIntStateOf(0) }
             val density = androidx.compose.ui.platform.LocalDensity.current
@@ -130,14 +137,14 @@ fun FloatingNavRail(
                     (cell + gap) * selected, tween(Motion.SWIFT, easing = Motion.easing), label = "nav pill",
                 )
                 Box(
-                    Modifier.offset(y = y).height(cell).fillMaxWidth().clip(RoundedCornerShape(24.dp))
-                        .background(capsuleColor(items.getOrNull(selected)?.tint)).border(GlassChipEdge, RoundedCornerShape(24.dp)),
+                    Modifier.offset(y = y).height(cell).fillMaxWidth().clip(CircleShape)
+                        .background(capsuleColor(items.getOrNull(selected)?.tint)).border(GlassChipEdge, CircleShape),
                 )
                 Column(Modifier.fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(gap)) {
                     items.forEachIndexed { i, item ->
                         NavCell(
                             item, i == selected,
-                            modifier = Modifier.clip(RoundedCornerShape(24.dp)).clickable { onSelect(i) }.weight(1f).fillMaxWidth(),
+                            modifier = Modifier.clip(CircleShape).clickable { onSelect(i) }.weight(1f).fillMaxWidth(),
                             verticalArrangement = Arrangement.Center,
                         )
                     }
@@ -153,6 +160,20 @@ private fun capsuleColor(tint: Color?): Color {
     val target = if (tint == null || tint == Color.White) GlassChip else tint.copy(alpha = 0.22f)
     val eased by androidx.compose.animation.animateColorAsState(target, tween(Motion.SWIFT), label = "nav capsule")
     return eased
+}
+
+/**
+ * The black fade behind the tab bar (spec 3.2): [Height] tall from the window's bottom edge (or the bar's height, if
+ * that is more), clear at its top and solid black for its lower [SOLID] part.
+ */
+object TabBarFade {
+    val Height = 120.dp
+    const val SOLID = 0.45f
+
+    /** The fade's colour stops, top to bottom: clear, then black from [SOLID] up from the bottom. */
+    val stops: Array<Pair<Float, Color>> = arrayOf(0f to Color.Transparent, (1f - SOLID) to Color.Black, 1f to Color.Black)
+
+    fun brush(top: Float, bottom: Float): Brush = Brush.verticalGradient(*stops, startY = top, endY = bottom)
 }
 
 /** How much of the window's width [FloatingNavRail] takes, its margins included. */

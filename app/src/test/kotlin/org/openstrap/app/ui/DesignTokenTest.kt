@@ -203,12 +203,8 @@ class DesignTokenTest {
         /** From this radius up a corner is a card's. Tiles, chips, bars and pills stay under it. */
         const val CARD_SIZED = 20f
 
-        /** Card-sized corners on things that aren't cards, by file and line, each with why. */
-        val cornerAllowed = setOf(
-            // The floating tab bar and its selected capsule: a pill, redone with the tab bar (step 10).
-            "components/Insights.kt" to 118, "components/Insights.kt" to 122, "components/Insights.kt" to 133,
-            "components/Insights.kt" to 134, "components/Insights.kt" to 140,
-        )
+        /** Card-sized corners on things that aren't cards, by file and line, each with why. Empty since step 10. */
+        val cornerAllowed = emptySet<Pair<String, Int>>()
 
         /** Files whose card titles may still wrap, until their step makes them one line. Empty since step 8. */
         val titleNotMigrated = emptySet<String>()

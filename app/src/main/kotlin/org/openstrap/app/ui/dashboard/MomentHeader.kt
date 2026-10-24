@@ -42,6 +42,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import java.time.LocalDate
+import org.openstrap.app.ui.components.growClick
 import org.openstrap.app.ui.glow.GlowType
 import org.openstrap.app.ui.theme.MetricColors
 import org.openstrap.app.ui.theme.AppIcons
@@ -76,7 +77,8 @@ fun MomentHeader(
         // With no day after this one, the room kept for its peek is empty and may tuck under the right side.
         CentredRow(
             overhang = if (hasNext) 0.dp else PeekWidth + 16.dp,
-            start = { RoundButton(AppIcons.User, "You", "Open You", onOpenYou) },
+            // You and the Strap page grow out of the button tapped (spec 3.5).
+            start = { growClick(onOpenYou).let { g -> RoundButton(AppIcons.User, "You", "Open You", g.onClick, g.modifier) } },
             centre = { DaySwitcher(title, date, hasNext, onPrev, onNext, { calendarOpen = true }, Modifier) },
             end = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -84,7 +86,7 @@ fun MomentHeader(
                         RoundButton(AppIcons.ChartBar, "All metrics", "Open all metrics", onOpenAllMetrics)
                         Spacer(Modifier.width(8.dp))
                     }
-                    StrapChipButton(chip, onOpenStrap)
+                    growClick(onOpenStrap).let { g -> StrapChipButton(chip, g.onClick, g.modifier) }
                 }
             },
         )
@@ -122,9 +124,11 @@ private fun CentredRow(
 
 /** A round button at either end of the header: the avatar, and All metrics in its likeness. */
 @Composable
-private fun RoundButton(icon: androidx.compose.ui.graphics.vector.ImageVector, description: String, clickLabel: String, onClick: () -> Unit) {
+private fun RoundButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector, description: String, clickLabel: String, onClick: () -> Unit, modifier: Modifier = Modifier,
+) {
     Box(
-        Modifier.size(38.dp).clip(CircleShape).background(Avatar).clickable(onClickLabel = clickLabel, onClick = onClick),
+        modifier.size(38.dp).clip(CircleShape).background(Avatar).clickable(onClickLabel = clickLabel, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) { Icon(icon, description, Modifier.size(20.dp), tint = Color.White) }
 }
@@ -191,10 +195,10 @@ private fun Peek(text: String) {
 
 /** The strap chip: a dot, and words only when they matter. */
 @Composable
-private fun StrapChipButton(chip: StrapChip, onClick: () -> Unit) {
+private fun StrapChipButton(chip: StrapChip, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val shape = CircleShape
     Row(
-        Modifier.clip(shape).background(ChipSurface).border(1.dp, Color.White.copy(alpha = 0.07f), shape)
+        modifier.clip(shape).background(ChipSurface).border(1.dp, Color.White.copy(alpha = 0.07f), shape)
             .clickable(onClickLabel = "Open your strap", onClick = onClick)
             .semantics { contentDescription = chip.description }
             .padding(horizontal = 12.dp, vertical = 8.dp),

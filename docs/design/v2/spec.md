@@ -481,7 +481,7 @@ Motion is signal. Specs use Compose springs with no bounce (`dampingRatio = 1f`)
 | Motion | Spec | Signals |
 |---|---|---|
 | Card to detail | Shared bounds transform: the card's surface grows into the detail, its number becomes the header. Spring stiffness 500 in, 300 out | Where it came from |
-| Avatar to You, strap chip to Strap | The same shared bounds from the 44 dp button: the button's circle grows into the page, Back shrinks the page into it. 500 in, 300 out. Missing in the build | Where it came from |
+| Avatar to You, strap chip to Strap | The same shared bounds from the 44 dp button: the button's circle grows into the page, Back shrinks the page into it. 500 in, 300 out. A page opened any other way (Profile from a card) fades in | Where it came from |
 | Sheets (info, calendar, Edit Today, All metrics) | Slide up with stiffness 400, the scrim fades to 60% black | It sits over the page |
 | Value change | Animate from the old to the new value over about 450 ms, only after a sync or a live update. Never from zero on open | What changed |
 | Level change (Charge, steps, Load) | The light rises or falls from the old level to the new over 600 ms, with the number | What changed |

@@ -212,6 +212,13 @@ internal fun CardTitle(title: String, modifier: Modifier = Modifier) {
         val c = caret.measure(Constraints())
         val gap = CaretGap.roundToPx()
         val minGap = CaretMinGap.roundToPx()
+        // A title that fits only without its caret keeps every letter and drops the caret: the card still opens.
+        val full = text.maxIntrinsicWidth(cs.maxHeight)
+        if (cs.hasBoundedWidth && full + minGap + c.width > cs.maxWidth && full <= cs.maxWidth) {
+            val t = text.measure(Constraints(maxWidth = cs.maxWidth, maxHeight = cs.maxHeight))
+            val h = t.height.coerceAtLeast(cs.minHeight)
+            return@Layout layout(t.width.coerceIn(cs.minWidth, cs.maxWidth), h) { t.place(0, (h - t.height) / 2) }
+        }
         val t = text.measure(
             if (!cs.hasBoundedWidth) Constraints(maxHeight = cs.maxHeight)
             else Constraints(maxWidth = (cs.maxWidth - c.width - minGap).coerceAtLeast(0), maxHeight = cs.maxHeight),

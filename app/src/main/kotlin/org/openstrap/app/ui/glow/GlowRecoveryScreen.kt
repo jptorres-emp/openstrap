@@ -113,6 +113,7 @@ fun GlowRecoveryScreen(
                         else RecoveryHero(
                             r, onOpen = { onOpenScore(Score.Recovery) }, onInfo = { info = true }, firstNights = firstNights,
                             noSleep = isToday && state.loaded && state.asleepSeconds == null, firstScore = firstScore,
+                            shown = TodayCopy.recoveryShown(r?.readiness, strapScore, waiting),
                         )
                     RecoveryCard.Drivers -> DriversList(r?.readiness, onAll = { onOpenScore(Score.Recovery) })
                     // Charge is worked out with Recovery, so a failure there says so here too, not "after your first night".
@@ -130,7 +131,7 @@ fun GlowRecoveryScreen(
     if (info) {
         val score = r?.readiness?.score
         InfoSheet(
-            InfoCopy.of(Score.Recovery), overviewColor(score, r?.readiness?.strainAlert == true), score?.let(InfoCopy::recoveryBar),
+            InfoCopy.of(Score.Recovery), MetricColors.readiness, score?.let(InfoCopy::recoveryBar),
             score?.let { InfoCopy.HERE }, onDismiss = { info = false }, notes = InfoCopy.recoveryNotes(r?.readiness, strapScore),
         )
     }
@@ -149,17 +150,19 @@ private fun recoveryHeroStyle(color: Color) = GlowStyle.Bloom.copy(
 /**
  * The score: what it means for the day and what held it back, then the number and its word. Compared with yesterday
  * in the title, and the calibration caveat under the sentence while it learns. As high as its content. Before the
- * first night, or with no sleep last night, the sentence says so; the first real score is tagged once (E4).
+ * first night, or with no sleep last night, the sentence says so; the first real score is tagged once (E4). While
+ * OpenStrap's own score is withheld the strap's stands in, labelled as its estimate, as on Today ([shown]).
  */
 @Composable
 private fun RecoveryHero(
     r: RecoveryResult?, onOpen: () -> Unit, onInfo: () -> Unit, firstNights: Boolean = false, noSleep: Boolean = false, firstScore: Boolean = false,
+    shown: TodayCopy.RecoveryShown? = null,
 ) {
     val ready = r?.readiness
     val score = ready?.score
     val yesterday = r?.readinessTrend?.dropLast(1)?.lastOrNull()?.second
     val alert = ready?.strainAlert == true
-    GlowCard(recoveryHeroStyle(overviewColor(score, alert)), Modifier.fillMaxWidth().gridSize(CardSize.Wide), onClick = onOpen) {
+    GlowCard(recoveryHeroStyle(MetricColors.readiness), Modifier.fillMaxWidth().gridSize(CardSize.Wide), onClick = onOpen) {
         Column {
             GlowHeader(
                 "Recovery", trailing = score?.let { TabCopy.vsYesterday(it, yesterday) },
@@ -182,7 +185,7 @@ private fun RecoveryHero(
             )
             // Before the first score the sentence already says how many nights are in, so the caveat waits for a score.
             if (score != null) {
-                ready.let { TabCopy.learning(it.phase, it.baselineNights) }?.let { CaveatLine(it, overviewColor(score, alert)) }
+                ready.let { TabCopy.learning(it.phase, it.baselineNights) }?.let { CaveatLine(it, MetricColors.readiness) }
                 Spacer(Modifier.height(22.dp))
                 androidx.compose.foundation.layout.Row(verticalAlignment = androidx.compose.ui.Alignment.Bottom) {
                     HeroFigure(score.toString(), TodayCopy.recoveryWord(score, alert), big = true)
@@ -197,6 +200,9 @@ private fun RecoveryHero(
                         }
                     }
                 }
+            } else if (shown?.estimate == true) {
+                Spacer(Modifier.height(22.dp))
+                HeroFigure(shown.value?.toString(), shown.word.orEmpty(), big = true)
             }
         }
     }
@@ -208,7 +214,7 @@ private fun RecoveryHero(
  */
 @Composable
 private fun RecoveryFailedHero(failure: RecoveryFailure, onOpen: () -> Unit, onRetry: () -> Unit) {
-    GlowCard(recoveryHeroStyle(overviewColor(null, false)), Modifier.fillMaxWidth().gridSize(CardSize.Wide), onClick = onOpen) {
+    GlowCard(recoveryHeroStyle(MetricColors.readiness), Modifier.fillMaxWidth().gridSize(CardSize.Wide), onClick = onOpen) {
         Column {
             GlowHeader("Recovery")
             HeroSentence(RECOVERY_FAILED)

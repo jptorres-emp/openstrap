@@ -101,7 +101,7 @@ private fun RecoveryDetail(
     val ready = r?.readiness
     val score = debugRecoveryScore.value ?: ready?.score
     val alert = ready?.strainAlert == true
-    val color = overviewColor(score, alert)
+    val color = MetricColors.readiness
     // TODO(step 6): Month and Year wait for a stored Recovery history; the app keeps only the last 7 days of it.
     val ranges = listOf(Range.Day, Range.Week)
     var rangeIndex by rememberSaveable { mutableIntStateOf(0) }

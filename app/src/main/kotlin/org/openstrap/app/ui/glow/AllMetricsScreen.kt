@@ -97,6 +97,8 @@ fun metricIndex(
     healthspan: Healthspan.Outcome?,
     workouts: List<WorkoutAnalysis>,
     today: LocalDate = LocalDate.now(),
+    /** The strap's own Recovery for the day, shown as its estimate while OpenStrap's score is withheld, as on Today. */
+    strapScore: Int? = null,
 ): List<IndexGroup> {
     val rec = recovery?.takeIf { it.date == state.date }
     // A row without a value says why when it knows ([waiting]), otherwise that the day has none.
@@ -114,7 +116,11 @@ fun metricIndex(
             "Recovery",
             listOf(
                 recoveryStatus(rec?.readiness).let { status ->
-                    row("Recovery", MetricColors.readiness, rec?.readiness?.score?.toString(), status ?: "Score for the day", IndexTarget.Home(HomeTab.Recovery), waiting = status)
+                    val shown = org.openstrap.app.ui.dashboard.TodayCopy.recoveryShown(rec?.readiness, strapScore, NO_VALUE)
+                    row(
+                        "Recovery", MetricColors.readiness, shown.value?.toString(),
+                        shown.word.takeIf { shown.estimate } ?: status ?: "Score for the day", IndexTarget.Home(HomeTab.Recovery), waiting = status,
+                    )
                 },
                 row(
                     "Charge", MetricColors.charge, rec?.charge?.latest?.let(::chargeShown)?.toString(),

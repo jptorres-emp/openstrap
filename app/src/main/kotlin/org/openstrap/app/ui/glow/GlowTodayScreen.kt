@@ -308,22 +308,11 @@ private class TodayContext(
     /** Charge now; none before the first night, when it would only be the simulation's starting guess. */
     val charge get() = rec?.charge?.takeIf { it.anchored }?.latest?.toInt()
 
-    /** Why OpenStrap has no score: still learning comes first, since a learning night has no baseline to score against. */
-    val noScore: TodayCopy.NoScore?
-        get() {
-            val r = rec?.readiness ?: return null
-            return when {
-                r.score != null -> null
-                r.phase == Recovery.Phase.Withheld -> TodayCopy.NoScore.Learning(r.baselineNights, Recovery.SCORED_NIGHTS)
-                r.withheld -> TodayCopy.NoScore.NoHeartData
-                else -> null
-            }
-        }
+    /** Why OpenStrap has no score ([TodayCopy.noScore]). */
+    val noScore: TodayCopy.NoScore? get() = TodayCopy.noScore(rec?.readiness)
 
-    /** The strap's estimate, shown as such while OpenStrap's own score is withheld (as on the Recovery tab). */
-    val estimate: Int? get() = rec?.readiness?.takeIf { score == null && it.showStrapEstimate }?.let { strapScore }
-
-    val recoveryShown get() = TodayCopy.recoveryShown(score, alert, noScore, estimate, waiting)
+    /** The score, else the strap's estimate shown as such while OpenStrap's own is withheld (as on the Recovery tab). */
+    val recoveryShown get() = TodayCopy.recoveryShown(rec?.readiness, strapScore, waiting)
 
     /** What a card with no value says while it waits. */
     val waiting: String
@@ -793,17 +782,4 @@ internal fun bucket(points: List<ChartPoint>, range: LongRange, seconds: Long): 
         if (i in 0 until n) { sums[i] += it.y; counts[i]++ }
     }
     return List(n) { if (counts[it] == 0) null else sums[it] / counts[it] }
-}
-
-/**
- * A Recovery card's colour tells how the day looks before you read a number: teal when the score is good, amber when
- * it's middling or there are signs of strain, coral when it's low. With no score at all (still learning) it's a muted
- * teal: Recovery waiting, not grey "no data".
- */
-internal fun overviewColor(score: Int?, strain: Boolean) = when {
-    score == null -> Color(0xFF4E8F86)
-    strain -> Color(0xFFF2A33A)
-    score >= 70 -> MetricColors.hrv
-    score >= 50 -> Color(0xFFF2A33A)
-    else -> Color(0xFFF0605A)
 }

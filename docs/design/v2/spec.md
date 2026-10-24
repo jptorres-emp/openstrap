@@ -103,7 +103,7 @@ reads as the same light:
 
 - **Charge is one colour.** Ember orange on every surface. Its level shows as the light's height, never as a hue, so
   `chargeScale`, `chargeAt` and `chargeDeep` go. The old gold `charge` #FFD166 becomes #F66C28.
-- **Recovery is one teal.** `readinessDeep` goes.
+- **Recovery is one teal.** `readinessDeep` goes, and so does the band hue (teal, amber, coral): the word says the band.
 - **Neutral light** for cards that speak for no one metric (Your week, Workouts, strips): hsl 220 10% 55%.
 - **Green and amber** (`good`, `warn`) are for the strap and sync only, never a health value. `bad` goes.
 

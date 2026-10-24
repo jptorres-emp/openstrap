@@ -105,6 +105,23 @@ object TodayCopy {
         else -> RecoveryShown(null, null, waiting)
     }
 
+    /** Why OpenStrap has no score: still learning comes first, since a learning night has no baseline to score against. */
+    fun noScore(r: Recovery.Readiness?): NoScore? = when {
+        r == null || r.score != null -> null
+        r.phase == Recovery.Phase.Withheld -> NoScore.Learning(r.baselineNights, Recovery.SCORED_NIGHTS)
+        r.withheld -> NoScore.NoHeartData
+        else -> null
+    }
+
+    /**
+     * [recoveryShown] from the day's [r], so Today, the Recovery tab and All metrics show the same value: the strap's
+     * [strapScore] stands in, as its estimate, while OpenStrap's own score is withheld.
+     */
+    fun recoveryShown(r: Recovery.Readiness?, strapScore: Int?, waiting: String): RecoveryShown {
+        val estimate = r?.takeIf { it.score == null && it.showStrapEstimate }?.let { strapScore }
+        return recoveryShown(r?.score, r?.strainAlert == true, noScore(r), estimate, waiting)
+    }
+
     /**
      * The Charge hero at midday: what the day has taken since waking and what's left for the evening. [hour] is the
      * clock's hour, so the morning is called the morning.

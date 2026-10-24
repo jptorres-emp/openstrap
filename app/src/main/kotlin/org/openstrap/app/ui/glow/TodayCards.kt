@@ -291,8 +291,9 @@ internal fun EdgeValue(
 internal fun clockDuration(seconds: Long): String = "%d:%02d".format(seconds / 3600, (seconds % 3600) / 60)
 
 /**
- * Last night in full, on waking: time asleep, the score and the stages, lit from the top like a night sky. [stuck]:
- * it's still on the strap, so it waits rather than saying there was none.
+ * Last night in full, on waking: the score in dots with its word and time asleep under it, as the Sleep tab's hero has
+ * them, then the stages, lit from the top like a night sky. [stuck]: it's still on the strap, so it waits rather than
+ * saying there was none.
  */
 @Composable
 internal fun LastNightCard(state: DayUiState, firstNights: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier, stuck: Boolean = false) {
@@ -300,14 +301,16 @@ internal fun LastNightCard(state: DayUiState, firstNights: Boolean, onClick: () 
     EdgeCard(MetricColors.sleepDeep, modifier.fillMaxWidth().gridSize(CardSize.Wide), kind = EdgeKind.Sleep, onClick = onClick) {
         EdgeTitle("Last night", s?.let { "${clockAt(it.start)}–${clockAt(it.end)}" })
         val asleep = state.asleepSeconds
-        val headline = s?.let { n -> asleep?.let { org.openstrap.app.ui.dashboard.Narrative.sleepHeadline(n, it) } }
+        val score = s?.score
+        // A night the strap gave no score says so in words, with no dash where the score would be.
         EdgeValue(
-            asleep?.let(::clockDuration), "asleep",
+            score?.toString(), "score",
             when {
                 asleep == null -> if (firstNights) AFTER_FIRST_NIGHT else if (stuck) WAITING_LAST_NIGHT else "No sleep recorded"
-                s?.score != null -> listOfNotNull("Score ${s.score}", headline?.lowercase()).joinToString(", ")
-                else -> headline
+                score != null -> "${org.openstrap.app.ui.dashboard.TabCopy.sleepScoreWord(score)}, ${TodayCopy.duration(asleep)} asleep"
+                else -> "${TodayCopy.duration(asleep)} asleep, no score from the strap"
             },
+            waiting = asleep == null,
         )
         if (state.sleepStages.isNotEmpty()) {
             Spacer(Modifier.height(10.dp))
@@ -359,7 +362,8 @@ internal fun HeartCard(
 /**
  * Steps toward the day's goal, with the day's steps so far as a line (ghost line, chart kit) on an axis up to the goal,
  * and your [usual] by the end of each hour as the faint solid ghost behind it, with "about usual by now" beside the
- * goal (spec 2.7, compare by pace). Without a usual yet only today's line shows.
+ * goal (spec 2.7, compare by pace). Without a usual yet only today's line shows. The share of the goal is the card's
+ * progress bar. Titled Steps, as the Activity tab and the detail it opens are.
  */
 @Composable
 internal fun ActivityCard(
@@ -377,8 +381,11 @@ internal fun ActivityCard(
     val now = java.time.LocalTime.now()
     val pace = org.openstrap.app.ui.dashboard.ActivityCopy.paceOf(state.steps, usual, isToday, now.hour, now.minute)
     val ghost = usual?.takeIf { it.size == 24 }
-    EdgeCard(MetricColors.steps, modifier.fillMaxWidth().gridSize(CardSize.Wide), kind = EdgeKind.Progress, onClick = onClick) {
-        EdgeTitle("Activity", "Goal %,d".format(goal), marker = upTo, tag = tag)
+    EdgeCard(
+        MetricColors.steps, modifier.fillMaxWidth().gridSize(CardSize.Wide), kind = EdgeKind.Progress,
+        progress = if (goal > 0) state.steps / goal.toFloat() else 0f, onClick = onClick,
+    ) {
+        EdgeTitle("Steps", "Goal %,d".format(goal), marker = upTo, tag = tag)
         EdgeValue("%,d".format(state.steps), "steps", org.openstrap.app.ui.dashboard.ActivityCopy.activityLine(state.steps, goal, pace, isToday))
         if (state.steps > 0 && line.size >= 2) {
             Spacer(Modifier.height(10.dp))
@@ -419,8 +426,9 @@ internal fun RecoveryFailed(failure: RecoveryFailure, onRetry: () -> Unit) {
 internal const val FAILED_ALPHA = 0.45f
 
 /**
- * Charge as a wide card: the second glow before a workout, a level whose light fills across from the left to the value,
- * the Charge battery of Recovery on its side (spec 2.1), or a level edge card whose light fills across to the value, only as high as its content. [status] says what's happening to it. [soFar] is the day's
+ * Charge as a wide card: the screen's second glow, a level whose light fills across from the left to the value, the
+ * Charge battery of Recovery on its side (spec 2.1). Where that would sit next to another glow it steps down to a level
+ * edge card whose light fills across to the value, only as high as its content. [status] says what's happening to it. [soFar] is the day's
  * Charge so far (evenly spaced, nulls still to come), drawn beside the number on the level card (ghost line, chart
  * kit). TODO(step 6): the ghost of your usual Charge by this time needs past days' Charge hour by hour. The engine
  * simulates Charge only for the day shown (with a week's lead-in to settle it); past days would each need that whole
@@ -526,8 +534,10 @@ internal fun SmallCard(
     onClick: (() -> Unit)? = null, extra: (@Composable () -> Unit)? = null,
     /** Waiting for its first value: the dim dash with [status] under it, rather than the word in its place. */
     waiting: Boolean = false,
+    /** How far toward its goal or usual, 0..1, for a [EdgeKind.Progress] Small's bar ([EdgeCard]). */
+    progress: Float? = null,
 ) {
-    EdgeCard(color, modifier, status = edgeStatus, kind = kind, onClick = onClick) {
+    EdgeCard(color, modifier, status = edgeStatus, kind = kind, progress = progress, onClick = onClick) {
         CardTitle(title)
         Spacer(Modifier.weight(1f))
         if (value == null && status != null && !waiting) {
@@ -546,21 +556,24 @@ internal fun SmallCard(
 
 /* ---------------------------------------------- Lists ----------------------------------------------- */
 
-/** A row of a body list: a value against your normal. */
+/** A row of a body list: a value against your [normal] ([org.openstrap.app.ui.glow.rememberNormal]). */
 internal class BodyRow(
-    val name: String, val color: Color, val value: Float?, val baseline: Float?, val tolerance: Float, val unit: String, val metric: Metric,
+    val name: String, val color: Color, val value: Float?, val normal: org.openstrap.app.data.History.Normal?, val unit: String, val metric: Metric,
 )
 
-/** Body values against your normal, each opening its metric. [waiting] is what an empty row says. */
+/**
+ * Body values against your normal, each opening its metric, read and rounded as the Recovery tab's body signals are.
+ * [waiting] is what an empty row says.
+ */
 @Composable
 internal fun BodyList(
     title: String, rows: List<BodyRow>, waiting: String, onOpenMetric: (Metric) -> Unit, modifier: Modifier = Modifier, upTo: String? = null,
 ) {
     ListPanel(modifier, title = title, note = "Against your normal", marker = upTo) {
         rows.forEachIndexed { i, r ->
-            val direction = org.openstrap.app.ui.dashboard.Narrative.direction(r.value, r.baseline, r.tolerance)
+            val direction = org.openstrap.app.data.History.status(r.value, r.normal)
             ListRow(
-                r.name, r.color, r.value?.let { "${it.roundToInt()}${r.unit}" },
+                r.name, r.color, r.value?.let { r.metric.format(it) + r.unit },
                 if (r.value == null) waiting else TodayCopy.normalWord(direction),
                 offNormal = direction != null && direction != 0, onClick = { onOpenMetric(r.metric) }, divider = i > 0,
                 icon = r.metric.rowIcon(),

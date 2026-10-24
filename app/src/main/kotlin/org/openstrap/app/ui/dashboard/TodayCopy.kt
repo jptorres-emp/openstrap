@@ -28,7 +28,7 @@ object TodayCopy {
         }
     }
 
-    /** A value against your normal, from [Narrative.direction]: null is no normal yet. */
+    /** A value against your normal, from [org.openstrap.app.data.History.status]: null is no normal yet. */
     fun normalWord(direction: Int?): String = when {
         direction == null -> "Learning your normal"
         direction > 0 -> "Above your normal"

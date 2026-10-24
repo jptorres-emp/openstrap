@@ -873,7 +873,6 @@ private fun AppRoot(
                             ) { org.openstrap.app.ui.glow.GlowTodayScreen(
                                 day, live, header = { header(Tab.Today) }, contentPadding = padding, moment = todayMoment,
                                 // Cards about other tabs open those screens here, on Today; none switches tab.
-                                onOpenSleep = { todayStack = listOf(Detail.Sleep) },
                                 onOpenMetric = { todayStack = listOf(Detail.OfMetric(it)) },
                                 onOpen = { todayStack = listOf(it) }, usualSteps = usualSteps,
                                 recovery = recovery,

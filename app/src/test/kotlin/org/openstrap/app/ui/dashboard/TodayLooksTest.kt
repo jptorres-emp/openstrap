@@ -51,10 +51,20 @@ class TodayLooksTest {
         assertEquals(TodayCard.Charge, window[1].card)
         assertEquals(CardLook(Tier.Glow, Hue.Charge, Edge.Left), window[1].look)
         assertEquals(true, window[1].secondGlow)
-        // After a workout Charge is the level card from the start: the hero is the one glow.
-        val after = today(Moment.After, TodayFacts(workout = true))
-        assertEquals(CardLook(Tier.Level, Hue.Charge, Edge.Left), after.first { it.card == TodayCard.Charge }.look)
-        assertEquals(1, after.count { it.look?.tier == Tier.Glow })
+        // After a workout and in the evening it's the same level glow, and the only glow besides the hero.
+        for (m in listOf(Moment.After, Moment.Evening, Moment.Night)) {
+            val out = today(m, TodayFacts(workout = true))
+            assertEquals("$m", CardLook(Tier.Glow, Hue.Charge, Edge.Left), out.first { it.card == TodayCard.Charge }.look)
+            assertEquals("$m", 2, out.count { it.look?.tier == Tier.Glow })
+        }
+    }
+
+    @Test fun `no moment has more than one glow besides the hero, whatever is pinned`() {
+        val pinnable = TodayCard.entries.filter { it.pinnable }
+        for (m in Moment.entries) for (a in pinnable) for (b in pinnable.filter { it != a } + listOf(null)) {
+            val out = today(m, allFacts, TodayEdits(pinned = listOfNotNull(a, b)))
+            assertTrue("$m $a $b", out.count { it.card != Hero && it.look?.tier == Tier.Glow } <= 1)
+        }
     }
 
     @Test fun `after a run Load and time to recover differ side by side, as mocked`() {
@@ -142,8 +152,22 @@ class TodayLooksTest {
         assertVaried(out, false, "midday pins")
     }
 
+    @Test fun `a second glow next to another steps down to its level card`() {
+        val charge = TodaySlot(TodayCard.Charge, CardSize.Wide, secondGlow = true, pinned = true)
+        val slots = listOf(
+            TodaySlot(Hero, CardSize.Large), TodaySlot(Activity, CardSize.Wide), charge, charge, TodaySlot(Recovery, CardSize.Wide),
+            TodaySlot(EditToday, CardSize.Strip),
+        )
+        val out = varyLooks(slots, Moment.Midday)
+        assertEquals(slots.map { it.card }, out.map { it.card })
+        assertEquals(CardLook(Tier.Glow, Hue.Charge, Edge.Left), out[2].look)
+        assertEquals(CardLook(Tier.Level, Hue.Charge, Edge.Left), out[3].look)
+        assertFalse(out[3].secondGlow)
+        assertVaried(out, false, "two glows")
+    }
+
     @Test fun `a card moves only when no other look will do`() {
-        // Two level cards have no other look, so the later one, whose place is open (a pin), moves down a card.
+        // Level cards have no other look, so the later one, whose place is open (a pin), moves down a card.
         val charge = TodaySlot(TodayCard.Charge, CardSize.Wide, pinned = true)
         val slots = listOf(
             TodaySlot(Hero, CardSize.Large), TodaySlot(Activity, CardSize.Wide), charge, charge, TodaySlot(Recovery, CardSize.Wide),

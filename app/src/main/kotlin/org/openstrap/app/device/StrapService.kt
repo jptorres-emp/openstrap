@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
+import org.openstrap.app.ui.glow.chargeShown
 import org.openstrap.app.MainActivity
 import org.openstrap.app.BuildConfig
 import org.openstrap.app.OpenStrapApp
@@ -265,7 +266,7 @@ class StrapService : LifecycleService() {
         val dao = container.database.healthDao()
         val r = org.openstrap.app.data.RecoveryEngine(dao).compute(java.time.LocalDate.now(), container.settings.profile.first())
         val sport = dao.appWorkoutsAll().maxByOrNull { it.start }?.sportType ?: Workouts.DEFAULT_SPORTS.first()
-        return Figures(r.readiness.score, r.charge.latest?.roundToInt(), sport, (container.strap.sync.value as? SyncState.Done)?.atEpochSeconds ?: figures.value?.syncedAt)
+        return Figures(r.readiness.score, r.charge.latest?.let(::chargeShown), sport, (container.strap.sync.value as? SyncState.Done)?.atEpochSeconds ?: figures.value?.syncedAt)
     }
 
     /**

@@ -152,7 +152,12 @@ fun PullSyncReveal() {
                 ready -> "Release to sync strap"
                 else -> "Pull to sync strap"
             }
-            AnimatedContent(label, transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "pull label") {
+            // One line at a time: the old one fades out before the new one fades in, so "Pull to sync strap" never
+            // draws over "Syncing strap…" as a sync starts.
+            AnimatedContent(
+                label, transitionSpec = { fadeIn(tween(LABEL_FADE_MS, delayMillis = LABEL_FADE_MS)) togetherWith fadeOut(tween(LABEL_FADE_MS)) },
+                label = "pull label",
+            ) {
                 Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
             }
         }
@@ -160,4 +165,6 @@ fun PullSyncReveal() {
 }
 
 private val REVEAL = 48.dp
+/** Each half of the label's crossfade: out, then in. */
+internal const val LABEL_FADE_MS = 120
 private const val START_GRACE_MS = 3_000L

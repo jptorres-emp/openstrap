@@ -129,6 +129,12 @@ class FrameRulesTest {
         assertEquals(listOf("Strap", "Alarms"), openBeside(listOf("Strap", "Firmware", "ZeppAccount"), "Alarms"))
     }
 
+    @Test fun `the sync line under the header shows one line at a time`() {
+        // Audit section 5: the pull hint drew over "Syncing strap…". The new line fades in only once the old is out.
+        val reveal = source("ui/components/PullToSync.kt").substringAfter("fun PullSyncReveal(")
+        assertTrue("the label fades out, then in", "fadeIn(tween(LABEL_FADE_MS, delayMillis = LABEL_FADE_MS)) togetherWith fadeOut(tween(LABEL_FADE_MS))" in reveal)
+    }
+
     @Test fun `sheets, workout pages and Profile's Save keep to the page column`() {
         val glass = source("ui/components/Glass.kt").substringAfter("fun GlassSheet(")
         assertTrue("GlassSheet is at most PageMaxWidth", "widthIn(max = org.openstrap.app.ui.glow.GlowLayout.PageMaxWidth)" in glass)

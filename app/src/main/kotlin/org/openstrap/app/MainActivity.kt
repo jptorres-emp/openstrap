@@ -257,6 +257,13 @@ class MainActivity : ComponentActivity() {
                 ?.let { forcedMoment.value = it }
                 ?: android.util.Log.w("OpenStrap", "moment: no moment called $moment")
         }
+        // Debug: `--ei recovery_score 78` shows that score on the Recovery detail (its arc gauge) while Recovery is still
+        // learning; `--ei recovery_score -1` goes back to the real one. Nothing is written.
+        if (BuildConfig.DEBUG && intent.hasExtra("recovery_score")) {
+            val score = intent.getIntExtra("recovery_score", -1)
+            intent.removeExtra("recovery_score")
+            org.openstrap.app.ui.glow.debugRecoveryScore.value = score.takeIf { it in 0..100 }
+        }
         // Debug: `--es strap_state stuck` shows a strap state on a phone whose strap is fine, so each can be checked;
         // `--es strap_state auto` goes back to the real one. Only what the screens are shown changes: no Bluetooth, no
         // sync, nothing written.

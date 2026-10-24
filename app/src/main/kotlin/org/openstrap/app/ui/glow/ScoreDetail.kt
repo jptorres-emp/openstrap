@@ -99,7 +99,7 @@ private fun RecoveryDetail(
     onOpen: (Detail) -> Unit, onSwitch: (Detail) -> Unit, onSelectDay: (LocalDate) -> Unit, contentPadding: PaddingValues, onBack: () -> Unit,
 ) {
     val ready = r?.readiness
-    val score = ready?.score
+    val score = debugRecoveryScore.value ?: ready?.score
     val alert = ready?.strainAlert == true
     val color = overviewColor(score, alert)
     // TODO(step 6): Month and Year wait for a stored Recovery history; the app keeps only the last 7 days of it.
@@ -145,7 +145,7 @@ private fun RecoveryDetail(
                             else -> "Recovery is scored each morning from the night's sleep."
                         },
                     )
-                    if (score != null) TabCopy.learning(ready.phase, ready.baselineNights)?.let { CaveatLine(it, color) }
+                    if (score != null && ready != null) TabCopy.learning(ready.phase, ready.baselineNights)?.let { CaveatLine(it, color) }
                 }
             }
             val all = ready?.contributors.orEmpty().sortedByDescending { it.factor.weight }
@@ -338,6 +338,12 @@ private fun ScoreRelated(score: Score, state: DayUiState, r: RecoveryResult?, hi
         }
     }
 }
+
+/**
+ * Debug only: a Recovery score the detail shows in place of the real one, so the arc gauge can be checked on a phone
+ * whose Recovery is still learning. Set from MainActivity's `recovery_score` extra; null is the real score.
+ */
+internal val debugRecoveryScore = androidx.compose.runtime.mutableStateOf<Int?>(null)
 
 /** The score in a score gauge on a detail header ([ArcGauge], [HorizonArc]): the header's one dotted number. */
 @Composable

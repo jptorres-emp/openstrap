@@ -445,7 +445,7 @@ fun HorizonArc(
 
 /** The hill's width between the middles of its end caps, its height, and its stroke, in the design's proportions. */
 internal val HorizonWidth = 300.dp
-internal val HorizonRise = 103.dp
+internal val HorizonRise = 124.dp
 internal val HorizonStroke = 12.dp
 /** The track: white at 12%, a touch thinner, its crest at 81% of the value's so it shows just under it. */
 internal const val HORIZON_TRACK_ALPHA = 0.12f

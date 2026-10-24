@@ -23,6 +23,7 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 /* ------------------------------------------------------------------------------------------------ */
@@ -64,18 +65,21 @@ fun DotMatrixText(
     modifier: Modifier = Modifier,
     dot: DotSize,
     color: Color = Color.White,
+    /** Shrinks the dots below [dot] where the number must fit a space (the live workout's arc), 0..1. */
+    scale: Float = 1f,
 ) {
-    val gap = dot.gap
+    val size = dot.dot * scale
+    val gap = size * DotSize.DOT_GAP
     val glyphs = text.map { GLYPHS[it] ?: GLYPHS.getValue(' ') }
     // One empty column between glyphs.
     val columns = glyphs.sumOf { it[0].length } + (glyphs.size - 1).coerceAtLeast(0)
-    val pitch = dot.dot + gap
+    val pitch = size + gap
     Canvas(
         modifier
             .size(pitch * columns - gap, pitch * ROWS - gap)
             .semantics { contentDescription = text },
     ) {
-        val d = dot.dot.toPx()
+        val d = size.toPx()
         val step = pitch.toPx()
         var x0 = 0f
         glyphs.forEach { rows ->
@@ -123,4 +127,10 @@ fun GlowSwitch(checked: Boolean, onCheckedChange: (Boolean) -> Unit, modifier: M
                 .background(knobColor, CircleShape),
         )
     }
+}
+
+/** How wide a number of [digits] digits is in [dot] dots, so a space can be sized for the widest it will show. */
+internal fun dotNumberWidth(digits: Int, dot: DotSize): Dp {
+    val columns = digits * 5 + (digits - 1).coerceAtLeast(0)
+    return (dot.dot + dot.gap) * columns - dot.gap
 }

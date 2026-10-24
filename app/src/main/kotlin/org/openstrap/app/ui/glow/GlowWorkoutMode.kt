@@ -1123,16 +1123,20 @@ private fun WorkoutHeartCard(
     GlowCard(style, modifier) {
         Column(if (fill) Modifier.fillMaxSize() else Modifier) {
             GlowHeader("Heart rate", trailing = bpm?.let { "${it * 100 / r.maxHeartRate}% of max" })
-            Box(Modifier.fillMaxWidth().then(if (fill) Modifier.weight(1f) else Modifier.height(220.dp))) {
+            BoxWithConstraints(Modifier.fillMaxWidth().then(if (fill) Modifier.weight(1f) else Modifier.height(220.dp))) {
                 val now = recent.lastOrNull()?.first ?: (System.currentTimeMillis() / 1000)
                 val values = remember(recent) { bucketRecent(recent, now) }
                 if (values.any { it != null }) {
                     GlowLineChart(values, Modifier.align(Alignment.BottomCenter).alpha(0.45f), height = 120.dp, showAverage = false)
                 }
                 ZoneArc(bpm, r.maxHeartRate, Modifier.matchParentSize())
+                // Sized for three digits inside the arc, whatever the reading, so the number never spills past it
+                // and doesn't jump in size as the heart rate crosses 100.
+                val inside = (minOf(maxWidth, maxHeight) - 18.dp) * 0.78f
+                val scale = (inside / dotNumberWidth(3, DotSize.Live)).coerceAtMost(1f)
                 Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
                     if (bpm != null) {
-                        DotMatrixText(bpm.toString(), dot = DotSize.Live)
+                        DotMatrixText(bpm.toString(), dot = DotSize.Live, scale = scale)
                         Spacer(Modifier.height(8.dp))
                         Text("bpm, last 10 min behind", color = Color.White.copy(alpha = 0.75f), style = GlowType.secondary)
                     } else Text(

@@ -393,6 +393,9 @@ private fun Hero(
         if (it == HeroKind.Waking && ctx.state.loaded && ctx.recoveryFailure == null && wakingLead(ctx.firstNights, ctx.state.asleepSeconds, ctx.isToday) == WakingLead.Charge) HeroKind.NoSleep
         else it
     }
+    // The During hero keeps drawing while it fades out after the workout ends, when [running] is already gone.
+    val lastRunning = remember { androidx.compose.runtime.mutableStateOf(running) }
+    if (running != null) lastRunning.value = running
     Crossfade(kind, animationSpec = tween(300), label = "hero") { k ->
         when (k) {
             HeroKind.Pair -> PairHero(pairing ?: PairStep.Ready, onPair, m)
@@ -403,7 +406,7 @@ private fun Hero(
             HeroKind.Window -> WindowHero(ctx, lightAngle, onStartSport, onOtherSport, m)
             HeroKind.After -> AfterHero(ctx, lightAngle, onOpenWorkout, m)
             HeroKind.Evening -> EveningHero(ctx, lightAngle, bedtime, onOpenRecovery, m)
-            HeroKind.During -> DuringHero(ctx, running!!, onOpenRunning, onResumeRunning, m)
+            HeroKind.During -> (running ?: lastRunning.value)?.let { DuringHero(ctx, it, onOpenRunning, onResumeRunning, m) }
         }
     }
 }

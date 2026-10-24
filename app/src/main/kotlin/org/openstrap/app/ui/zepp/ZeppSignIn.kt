@@ -277,7 +277,7 @@ fun OptionButton(caption: String, label: String, modifier: Modifier = Modifier.f
 private fun deviceListError(e: Throwable): String = when {
     e is ZeppCloudException && e.rejected ->
         "Zepp didn't accept the sign-in. It may have expired, or the account is in another region. Sign in again."
-    e is ZeppCloudException -> "${e.message}. Zepp may be having trouble; try again in a few minutes."
+    e is ZeppCloudException -> "${e.message}. Zepp may be having trouble. Try again in a few minutes."
     else -> "Couldn't reach Zepp's servers. Check your internet connection and try again."
 }
 

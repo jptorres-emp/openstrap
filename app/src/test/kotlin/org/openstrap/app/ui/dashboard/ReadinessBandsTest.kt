@@ -11,7 +11,7 @@ class ReadinessBandsTest {
     fun alertCapSitsInTheLowestBand() {
         assertEquals(Recovery.FAIR_FROM - 1, Recovery.ALERT_CAP)
         assertEquals(Rating.LOW, Narrative.ratingFor(Recovery.ALERT_CAP))
-        assertEquals("Prioritise recovery", Narrative.readinessHeadline(Recovery.ALERT_CAP, alert = false))
+        assertEquals("Take it easy", Narrative.readinessHeadline(Recovery.ALERT_CAP, alert = false))
         // One point higher is Fair, so the cap is as high as it can be and still stay out of it.
         assertEquals(Rating.FAIR, Narrative.ratingFor(Recovery.ALERT_CAP + 1))
     }
@@ -25,8 +25,8 @@ class ReadinessBandsTest {
         assertEquals(Rating.GOOD, Narrative.zeppReadinessRating(84))
         assertEquals(Rating.OPTIMAL, Narrative.zeppReadinessRating(85))
         assertEquals(Rating.OPTIMAL, Narrative.zeppReadinessRating(100))
-        assertEquals("Pay attention", Narrative.zeppReadinessRating(69).label)
-        // OpenStrap's own bands are unchanged: 60 is Fair there, Pay attention in Zepp's.
+        assertEquals("Low", Narrative.zeppReadinessRating(69).label)
+        // OpenStrap's own bands are unchanged: 60 is Fair there, Low in Zepp's.
         assertEquals(Rating.FAIR, Narrative.ratingFor(60))
     }
 }

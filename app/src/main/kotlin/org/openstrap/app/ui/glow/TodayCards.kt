@@ -195,7 +195,7 @@ internal fun alertText(a: HealthAlertRow): String = when (a.type) {
     3 -> "High stress, ${a.value}"
     4 -> "Low blood oxygen, ${a.value}%"
     5 -> "Irregular heart rhythm"
-    else -> "Alert from the strap"
+    else -> "A reading the strap flagged"
 }
 
 private fun alertMetric(a: HealthAlertRow) = when (a.type) { 3 -> Metric.Stress; 4 -> Metric.Spo2; else -> Metric.HeartRate }

@@ -1,6 +1,7 @@
 package org.openstrap.app.data
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.Random
@@ -68,7 +69,7 @@ class RouteTest {
     fun paceAndItsFormat() {
         assertEquals(333.0, Route.currentPace(run(100))!!, 2.0)
         assertEquals("5′33″", Route.formatPace(333.0))
-        assertEquals("—", Route.formatPace(null))
+        assertNull(Route.formatPace(null))
     }
 
     /**

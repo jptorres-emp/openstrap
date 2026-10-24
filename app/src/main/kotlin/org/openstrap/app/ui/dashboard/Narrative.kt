@@ -12,10 +12,10 @@ import kotlin.math.abs
  */
 object Narrative {
     enum class Rating(val label: String, val color: Color) {
-        OPTIMAL("Optimal", MetricColors.good),
+        OPTIMAL("Very good", MetricColors.good),
         GOOD("Good", MetricColors.hrv),
         FAIR("Fair", MetricColors.warn),
-        LOW("Pay attention", MetricColors.stress),
+        LOW("Low", MetricColors.stress),
     }
 
     fun rate(value: Float, optimal: Float, good: Float, fair: Float): Rating = when {
@@ -73,7 +73,7 @@ object Narrative {
             short && broken -> "Short, broken night"
             short -> "Short night"
             broken -> "Broken sleep"
-            score >= 90 -> "Great night"
+            score >= 90 -> "Solid night"
             score >= 80 -> "Good night"
             light -> "Light sleep"
             else -> "Okay night"
@@ -151,20 +151,20 @@ object Narrative {
 
     fun readinessHeadline(score: Int, alert: Boolean): String = when {
         alert -> org.openstrap.app.data.BodySignalsCopy.SHORT
-        score >= 85 -> "Primed"
+        score >= 85 -> "Ready for more"
         score >= 70 -> "Ready"
         score >= org.openstrap.app.data.Recovery.FAIR_FROM -> "Take it steady"
-        else -> "Prioritise recovery"
+        else -> "Take it easy"
     }
 
     fun readinessBody(r: org.openstrap.app.data.Recovery.Readiness): String {
         val score = r.score ?: return ""
         val advice = when {
-            r.strainAlert -> "Several overnight signals are outside your usual range. Consider an easier day."
-            score >= 85 -> "You're well recovered. A good day to push hard."
+            r.strainAlert -> "Several overnight signals are outside your usual range. An easier day helps."
+            score >= 85 -> "You're well recovered. Your body is ready for effort today."
             score >= 70 -> "Recovered enough for your usual training."
             score >= org.openstrap.app.data.Recovery.FAIR_FROM -> "Recovery isn't complete. Keep intensity moderate."
-            else -> "Your body is still catching up. Favour rest, light movement and an early night."
+            else -> "Your body is still catching up. Today looks like an easy day. An early night helps tomorrow."
         }
         val ranked = r.contributors.filter { it.factor.weight >= 0.06f }.sortedBy { it.score }
         val weakest = ranked.firstOrNull()?.takeIf { it.score < 70 }
@@ -174,18 +174,14 @@ object Narrative {
         return buildString {
             append(advice)
             if (weakest != null) append(" ${weakest.factor.label} is holding you back")
-            if (weakest != null && strongest != null) append("; ${strongest.factor.label.replaceFirstChar { it.lowercase() }} is a strength.")
+            if (weakest != null && strongest != null) append(". ${strongest.factor.label} is a strength.")
             else if (weakest != null) append(".")
             else if (strongest != null) append(" ${strongest.factor.label} looks strong.")
         }
     }
 
-    fun chargeHeadline(charge: Int): String = when {
-        charge >= 75 -> "Fully charged"
-        charge >= 50 -> "Good energy"
-        charge >= 25 -> "Running low"
-        else -> "Depleted"
-    }
+    /** A Charge as its band's word from the info sheet's scale. */
+    fun chargeHeadline(charge: Int): String = InfoCopy.CHARGE_SCALE[InfoCopy.chargeBar(charge)]
 
     /** Where stress starts counting, and why: the user's calm level, or how long until there is one. */
     fun stressThreshold(t: org.openstrap.app.data.Recovery.StressThreshold): String {
@@ -203,13 +199,13 @@ object Narrative {
         val now = c.latest?.toInt() ?: return ""
         val used = (c.drainedExercise + c.drainedStress + c.drainedLiving).toInt()
         val start = c.atWake?.let {
-            if (c.strapOffOvernight) "With the strap off overnight, today started from an estimated ${it.toInt()}; you've used $used since"
+            if (c.strapOffOvernight) "With the strap off overnight, today started from an estimated ${it.toInt()}. You've used $used since"
             else "You woke at ${it.toInt()} and have used $used since"
         } ?: "You've used $used today"
         val biggest = listOf("movement" to c.drainedExercise, "stress" to c.drainedStress).maxBy { it.second }
         val cause = if (biggest.second >= 8) ", most of it on ${biggest.first}." else "."
         val advice = when {
-            now < 25 -> " Wind down and get to bed early."
+            now < 25 -> " An early night helps."
             now < 50 -> " Pace yourself for the rest of the day."
             else -> " Plenty left for the rest of the day."
         }

@@ -392,7 +392,7 @@ private fun StrapHero(name: String, connection: ConnectionState, sync: SyncState
                     )
                 }
                 sync is SyncState.Failed -> {
-                    Text("Sync failed. ${sync.reason}", color = MetricColors.warn, style = GlowType.secondary)
+                    Text("Sync stopped. ${sync.reason}", color = MetricColors.warn, style = GlowType.secondary)
                     Text(
                         "$DATA_ON_STRAP OpenStrap tries again by itself.",
                         style = GlowType.secondary, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA),

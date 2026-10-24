@@ -191,8 +191,8 @@ private fun RecoveryDetail(
     )
 }
 
-/** A contributor's reading as the engine words it ("52 ms · -8% vs usual"), with commas between its parts. */
-private fun readable(detail: String): String? = detail.replace(" · ", ", ").replace("·", ",").takeIf { it.isNotBlank() }
+/** A contributor's reading as the engine words it ("52 ms, -8% vs usual"). */
+private fun readable(detail: String): String? = detail.takeIf { it.isNotBlank() }
 
 private fun shortDay(d: LocalDate) = d.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault())
 

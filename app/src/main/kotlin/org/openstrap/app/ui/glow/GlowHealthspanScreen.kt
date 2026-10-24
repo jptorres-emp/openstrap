@@ -31,14 +31,14 @@ import org.openstrap.app.ui.theme.MetricColors
 /** The scale on the Healthspan screen's bars: a habit this many years either side of the middle fills its half. */
 private const val BAR_FULL_YEARS = 1.5f
 
-/** "Updated Sunday · next in 5 days", from the Sunday the estimate was made. */
+/** "Updated Sunday, next in 5 days", from the Sunday the estimate was made. */
 private fun updatedText(asOf: Long): String {
     val made = java.time.Instant.ofEpochSecond(asOf).atZone(java.time.ZoneId.systemDefault()).toLocalDate()
     val next = 7 - java.time.temporal.ChronoUnit.DAYS.between(made, java.time.LocalDate.now()).toInt().coerceIn(0, 7)
     return when (next) {
-        7 -> "Updated today · next Sunday"
-        1 -> "Updated Sunday · next tomorrow"
-        else -> "Updated Sunday · next in $next days"
+        7 -> "Updated today, next on Sunday"
+        1 -> "Updated Sunday, next tomorrow"
+        else -> "Updated Sunday, next in $next days"
     }
 }
 
@@ -87,7 +87,7 @@ fun GlowHealthspanScreen(state: Healthspan.Outcome?, contentPadding: PaddingValu
 @Composable
 private fun PacePanel(pace: Float?) {
     DotPanel {
-        DotHeader("Pace of aging", trailing = pace?.let { "${paceText(it)} · ${paceLabel(it)}" } ?: paceLabel(null))
+        DotHeader("Pace of aging", trailing = pace?.let { "${paceLabel(it)}, ${paceText(it)}" } ?: paceLabel(null))
         if (pace != null) PaceScale(marker = (pace + 1f) / 4f, color = if (pace <= 1f) MetricColors.good else MetricColors.warn)
         Note(
             when {
@@ -152,7 +152,7 @@ private fun TermsPanel(r: Healthspan.Result) {
         }
         if (r.fitnessCapped) {
             DotDivider()
-            Note("Fitness terms capped: resting heart rate, steps and VO2max together count for at most 3 years either way.")
+            Note("Fitness terms capped: resting heart rate, steps and VO2 max together count for at most 3 years either way.")
         }
     }
 }

@@ -71,19 +71,19 @@ internal fun effectText(years: Float): String {
 internal fun termDetail(t: Healthspan.Term, age: Int): String {
     val v = t.value
     val ref = t.reference
-    if (v == null) return if (t.habit == Healthspan.Habit.Vo2max) "No VO2max from workouts yet · counted as typical" else "Not enough data yet · counted as typical"
+    if (v == null) return if (t.habit == Healthspan.Habit.Vo2max) "No VO2 max from workouts yet, counted as typical" else "Not enough data yet, counted as typical"
     return when (t.habit) {
         Healthspan.Habit.Strength -> {
             val m = v.roundToInt()
-            (if (m == 0) "None recorded" else "$m min a week") + " · most people your age do none" +
-                (if (m < Healthspan.STRENGTH_TARGET_MINUTES) " · aim for ${Healthspan.STRENGTH_TARGET_MINUTES}" else "")
+            (if (m == 0) "None recorded" else "$m min a week") + ", most people your age do none" +
+                (if (m < Healthspan.STRENGTH_TARGET_MINUTES) ", aim for ${Healthspan.STRENGTH_TARGET_MINUTES}" else "")
         }
-        Healthspan.Habit.Vo2max -> "${v.roundToInt()} ml/kg/min · typical at $age: ${ref?.roundToInt()}"
-        Healthspan.Habit.Steps -> "${"%,d".format(v.roundToInt())} a day · typical: ${"%,d".format(((ref ?: 0f) / 100).roundToInt() * 100)}" +
-            (if (v < 8000f) " · aim for 8,000–10,000" else "")
-        Healthspan.Habit.Regularity -> "${v.roundToInt()} · typical: ${ref?.roundToInt()}"
-        Healthspan.Habit.RestingHr -> "${v.roundToInt()} bpm asleep · typical: about ${ref?.roundToInt()}"
-        Healthspan.Habit.TimeAsleep -> v.roundToInt().let { m -> "${m / 60} h ${m % 60} m · counts only below 6 h 30 m" }
+        Healthspan.Habit.Vo2max -> "${v.roundToInt()} ml/kg/min, typical at $age: ${ref?.roundToInt()}"
+        Healthspan.Habit.Steps -> "${"%,d".format(v.roundToInt())} a day, typical: ${"%,d".format(((ref ?: 0f) / 100).roundToInt() * 100)}" +
+            (if (v < 8000f) ", aim for 8,000–10,000" else "")
+        Healthspan.Habit.Regularity -> "${v.roundToInt()}, typical: ${ref?.roundToInt()}"
+        Healthspan.Habit.RestingHr -> "${v.roundToInt()} bpm asleep, typical: about ${ref?.roundToInt()}"
+        Healthspan.Habit.TimeAsleep -> v.roundToInt().let { m -> "${m / 60} h ${m % 60} m, counts only below 6 h 30 m" }
     }
 }
 

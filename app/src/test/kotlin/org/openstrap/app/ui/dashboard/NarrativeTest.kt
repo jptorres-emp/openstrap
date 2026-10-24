@@ -28,7 +28,7 @@ class NarrativeTest {
 
     @Test
     fun noCauseFollowsTheScore() {
-        assertEquals("Great night", headline(night(8 * 60, 10, 92, wakes = 2, deep = 90, rem = 110)))
+        assertEquals("Solid night", headline(night(8 * 60, 10, 92, wakes = 2, deep = 90, rem = 110)))
         assertEquals("Good night", headline(night(7 * 60 + 20, 15, 84, wakes = 3, deep = 80, rem = 95)))
         assertEquals("Okay night", headline(night(6 * 60 + 40, 12, 72, wakes = 2, deep = 70, rem = 80)))
     }
@@ -73,7 +73,7 @@ class NarrativeTest {
         assertEquals(Rating.FAIR, Narrative.sleepRating(60))
         assertEquals(Rating.LOW, Narrative.sleepRating(59))
         assertEquals(Rating.LOW, Narrative.sleepRating(0))
-        assertEquals("Pay attention", Narrative.sleepRating(58).label)
+        assertEquals("Low", Narrative.sleepRating(58).label)
     }
 
     @Test

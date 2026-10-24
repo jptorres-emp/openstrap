@@ -165,7 +165,7 @@ class FirmwareViewModel(private val container: AppContainer) : ViewModel() {
         if (c !is ConnectionState.Connected) add("Connect the strap.")
         else {
             val battery = c.batteryPercent
-            if (battery == null) add("Battery level unknown — reconnect the strap.")
+            if (battery == null) add("Battery level unknown. Reconnect the strap.")
             else if (battery <= MIN_BATTERY) add("Charge the strap above $MIN_BATTERY% (now $battery%).")
         }
         if (strap.info.value?.dfuAvailable == false) add("This strap doesn't offer the firmware update service.")

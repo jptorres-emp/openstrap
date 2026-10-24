@@ -340,9 +340,9 @@ object Route {
         return if (m < 10 || s <= 0) null else s / (m / 1000)
     }
 
-    /** "5′42″" per kilometre. */
-    fun formatPace(secondsPerKm: Double?): String {
-        if (secondsPerKm == null || secondsPerKm <= 0 || secondsPerKm > 3600) return "—"
+    /** "5′42″" per kilometre, or null with no pace to show. */
+    fun formatPace(secondsPerKm: Double?): String? {
+        if (secondsPerKm == null || secondsPerKm <= 0 || secondsPerKm > 3600) return null
         val s = Math.round(secondsPerKm)
         return "%d′%02d″".format(s / 60, s % 60)
     }

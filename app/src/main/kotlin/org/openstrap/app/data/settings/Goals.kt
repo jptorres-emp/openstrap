@@ -8,12 +8,12 @@ data class Goals(
 ) {
     val sleepSeconds: Long get() = sleepMinutes * 60L
 
-    /** "8,000 steps · 8 h sleep · 10 active hours". */
+    /** "8,000 steps, 8 h sleep, 10 active hours". */
     fun summary(): String {
         val h = sleepMinutes / 60
         val m = sleepMinutes % 60
         val sleep = if (m == 0) "$h h" else "$h h $m min"
-        return "%,d steps · %s sleep · %d active hours".format(steps, sleep, activeHours)
+        return "%,d steps, %s sleep, %d active hours".format(steps, sleep, activeHours)
     }
 
     companion object {

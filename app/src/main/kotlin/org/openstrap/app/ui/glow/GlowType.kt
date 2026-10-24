@@ -12,7 +12,7 @@ import org.openstrap.app.ui.theme.FunnelSans
  * inspiration's big headlines. Body text stays in the app's Funnel Sans.
  */
 object GlowType {
-    /** Verdicts and hero headlines ("Good energy", "Ready"). */
+    /** Verdicts and hero headlines ("Good", "Ready"). */
     val headline = TextStyle(fontFamily = FunnelDisplay, fontWeight = FontWeight.Light, fontSize = 26.sp, letterSpacing = (-0.02).em, lineHeight = 30.sp)
 
     /**

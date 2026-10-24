@@ -131,8 +131,8 @@ class DeviceViewModel(private val container: AppContainer) : ViewModel() {
             withContext(Dispatchers.IO) {
                 container.app.contentResolver.openOutputStream(uri)!!.use { container.csv.exportZip(it) }
             }
-            "Exported."
-        }.getOrElse { "Export failed: ${it.message}" }
+            "Saved a copy."
+        }.getOrElse { "Couldn't save the copy: ${it.message}" }
     }
 
     /** Restores a zip from [exportCsv] into the days before the strap's history. Safe to run twice. */
@@ -141,9 +141,9 @@ class DeviceViewModel(private val container: AppContainer) : ViewModel() {
             val result = withContext(Dispatchers.IO) {
                 container.app.contentResolver.openInputStream(uri)!!.use { org.openstrap.app.export.CsvImporter(container.database).importZip(it) }
             }
-            "Restored %,d records from before the strap's history; left out %,d from days it has.".format(result.total, result.present) +
+            "Restored %,d records from before the strap's history. Left out %,d from days it has.".format(result.total, result.present) +
                 (if (result.skipped > 0) " %,d unreadable rows skipped.".format(result.skipped) else "")
-        }.getOrElse { "Import failed: ${it.message}" }
+        }.getOrElse { "Couldn't restore the copy: ${it.message}" }
     }
 
     /** Brings back what OpenStrap exported to Health Connect, filling gaps only. */
@@ -151,7 +151,7 @@ class DeviceViewModel(private val container: AppContainer) : ViewModel() {
         _message.value = runCatching {
             val n = withContext(Dispatchers.IO) { container.healthConnect.import() }
             if (n == 0) "Health Connect has no OpenStrap data to restore." else "Restored %,d records from Health Connect.".format(n)
-        }.getOrElse { "Health Connect import failed: ${it.message}" }
+        }.getOrElse { "Couldn't restore from Health Connect: ${it.message}" }
     }
 
     fun exportHealthConnect() = viewModelScope.launch {
@@ -159,7 +159,7 @@ class DeviceViewModel(private val container: AppContainer) : ViewModel() {
             val now = System.currentTimeMillis() / 1000
             val n = container.healthConnect.export(now - 30L * 24 * 3600, now)
             "Wrote $n records to Health Connect (last 30 days)."
-        }.getOrElse { "Health Connect export failed: ${it.message}" }
+        }.getOrElse { "Couldn't write to Health Connect: ${it.message}" }
     }
 
     companion object {

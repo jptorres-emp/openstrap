@@ -22,7 +22,7 @@ fun NapsPanel(naps: List<SleepSession>, onClick: (() -> Unit)? = null) {
     Panel(onClick = onClick) {
         PanelHeader("Naps", AppIcons.Moon, MetricColors.sleepLight, chevron = onClick != null)
         naps.forEach { nap ->
-            Text("${clock(nap.start)} – ${clock(nap.end)} · ${formatDuration(nap.end - nap.start)}", style = MaterialTheme.typography.bodyMedium)
+            Text("${clock(nap.start)} – ${clock(nap.end)}, ${formatDuration(nap.end - nap.start)}", style = MaterialTheme.typography.bodyMedium)
         }
     }
 }

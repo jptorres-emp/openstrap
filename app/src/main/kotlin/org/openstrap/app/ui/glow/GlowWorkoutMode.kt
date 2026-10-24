@@ -724,7 +724,7 @@ fun GlowWorkoutLiveScreen(
             // "1.25" alone could be anything: the label carries the unit from a kilometre on.
             val unit = if (distance != null && distance >= 1000) " km" else ""
             when {
-                distance == null -> LiveStat("Avg", Modifier.weight(1f)) { LiveValue(stats?.average?.toString() ?: "—") }
+                distance == null -> LiveStat("Avg", Modifier.weight(1f)) { LiveValue(stats?.average?.toString()) }
                 else -> LiveStat((if (r.workout.distanceFromSteps) "Distance ≈" else "Distance") + unit, Modifier.weight(1f)) { LiveValue(km(distance)) }
             }
             StatRule()
@@ -735,8 +735,8 @@ fun GlowWorkoutLiveScreen(
             StatRule()
             when {
                 distance != null && !r.workout.distanceFromSteps -> LiveStat("Pace /km", Modifier.weight(1f)) { LiveValue(Route.formatPace(Route.currentPace(route))) }
-                distance != null -> LiveStat("Avg", Modifier.weight(1f)) { LiveValue(stats?.average?.toString() ?: "—") }
-                else -> LiveStat("Max", Modifier.weight(1f)) { LiveValue(stats?.max?.toString() ?: "—") }
+                distance != null -> LiveStat("Avg", Modifier.weight(1f)) { LiveValue(stats?.average?.toString()) }
+                else -> LiveStat("Max", Modifier.weight(1f)) { LiveValue(stats?.max?.toString()) }
             }
         }
         // The splits live in the summary; here each kilometre gets a line for a few seconds.
@@ -1050,10 +1050,11 @@ private fun LiveStat(label: String, modifier: Modifier, value: @Composable () ->
 @Composable
 private fun StatRule() = Box(Modifier.padding(vertical = 6.dp).width(1.dp).fillMaxHeight().background(Color.White.copy(alpha = 0.12f)))
 
-/** Avg and Max in the same face and size as the moving time beside them. */
+/** Avg and Max in the same face and size as the moving time beside them, or the dim dash at the same height. */
 @Composable
-private fun LiveValue(text: String) =
-    Text(text, color = Color.White, style = GlowType.headline.copy(fontSize = 26.sp, lineHeight = 30.sp, fontFeatureSettings = "tnum"))
+private fun LiveValue(text: String?) =
+    if (text == null) WaitingDash(Modifier.padding(vertical = 13.5.dp))
+    else Text(text, color = Color.White, style = GlowType.headline.copy(fontSize = 26.sp, lineHeight = 30.sp, fontFeatureSettings = "tnum"))
 
 private const val BUCKET_S = 5L
 private const val WINDOW_S = 600L
@@ -1430,10 +1431,9 @@ fun WorkoutShortcut(r: WorkoutState.Recording, liveHeartRate: Int?, onOpen: () -
         if (r.paused) Icon(AppIcons.PlayFill, null, tint = Color.Black, modifier = Modifier.size(16.dp))
         else PulseDot(Color.Black, liveHeartRate, 10.dp)
         Spacer(Modifier.width(10.dp))
-        Text(
-            if (r.paused) "Resume ${sport.lowercase()} · $clock" else "$sport · $clock",
-            color = Color.Black, style = MaterialTheme.typography.titleSmall.copy(fontFeatureSettings = "tnum"),
-        )
+        Text(if (r.paused) "Resume ${sport.lowercase()}" else sport, color = Color.Black, style = MaterialTheme.typography.titleSmall)
+        Spacer(Modifier.width(8.dp))
+        Text(clock, color = Color.Black, style = MaterialTheme.typography.titleSmall.copy(fontFeatureSettings = "tnum"))
     }
 }
 

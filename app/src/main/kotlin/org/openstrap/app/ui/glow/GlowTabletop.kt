@@ -51,7 +51,7 @@ fun GlowTabletopHeart(
                     },
                 )
                 Row(verticalAlignment = Alignment.Bottom) {
-                    DotMatrixText(now?.toString() ?: "-", dot = 9.dp, gap = 3.dp)
+                    DotMatrixText(now?.toString() ?: "-", dot = DotSize.Live)
                     Column(Modifier.padding(start = 12.dp).weight(1f)) {
                         Text("bpm", color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.titleMedium)
                     }

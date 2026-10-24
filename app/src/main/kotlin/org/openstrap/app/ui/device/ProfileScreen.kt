@@ -1,41 +1,27 @@
 package org.openstrap.app.ui.device
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.isImeVisible
-import androidx.compose.material3.IconButton
-import org.openstrap.app.ui.components.Panel
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.ime
+import androidx.compose.ui.platform.LocalDensity
+import org.openstrap.app.ui.glow.LocalPageColumn
+import org.openstrap.app.ui.components.PinnedFade
+import org.openstrap.app.ui.components.pinnedFade
 import org.openstrap.app.ui.dashboard.ScreenList
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.selected
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -47,10 +33,17 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import org.openstrap.app.data.settings.Units
 import org.openstrap.app.data.settings.UserProfile
-import org.openstrap.app.ui.components.SectionLabel
-import org.openstrap.app.ui.components.SegmentedTabs
+import androidx.compose.foundation.layout.height
+import org.openstrap.app.ui.glow.GlowLayout
+import org.openstrap.app.ui.glow.GlowType
+import org.openstrap.app.ui.glow.PageButton
+import org.openstrap.app.ui.glow.PageConfirm
+import org.openstrap.app.ui.glow.PageField
+import org.openstrap.app.ui.glow.PageHeader
+import org.openstrap.app.ui.glow.PageNote
+import org.openstrap.app.ui.glow.PagePanel
+import org.openstrap.app.ui.glow.PageSwitchRow
 import java.time.LocalDate
-import org.openstrap.app.ui.theme.PhosphorIcons
 
 /** One line for the settings row: "34 years, male, 72 kg, 178 cm", or a prompt when empty. */
 fun UserProfile.summary(): String =
@@ -67,7 +60,6 @@ fun UserProfile.summary(): String =
  * sex picks the training-load curve. Kept on this phone only. A full page over the You list (or beside it, when
  * wide); back leaves without saving, asking first if anything was changed.
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ProfileScreen(profile: UserProfile, contentPadding: PaddingValues, onSave: (UserProfile) -> Unit, onBack: () -> Unit) {
     var age by rememberSaveable { mutableStateOf(profile.age()?.toString().orEmpty()) }
@@ -119,12 +111,10 @@ fun ProfileScreen(profile: UserProfile, contentPadding: PaddingValues, onSave: (
     val back: () -> Unit = { if (dirty) confirmDiscard = true else onBack() }
     BackHandler(onBack = back)
     if (confirmDiscard) {
-        org.openstrap.app.ui.components.GlassAlertDialog(
-            onDismissRequest = { confirmDiscard = false },
-            title = { Text("Discard changes?") },
-            text = { Text("Your profile changes haven't been saved.") },
-            confirmButton = { TextButton(onClick = { confirmDiscard = false; onBack() }) { Text("Discard") } },
-            dismissButton = { TextButton(onClick = { confirmDiscard = false }) { Text("Keep editing") } },
+        PageConfirm(
+            "Discard changes?", "Your profile changes haven't been saved.",
+            confirm = "Discard", onConfirm = { confirmDiscard = false; onBack() }, onDismiss = { confirmDiscard = false },
+            dismiss = "Keep editing",
         )
     }
     val save: () -> Unit = {
@@ -149,33 +139,34 @@ fun ProfileScreen(profile: UserProfile, contentPadding: PaddingValues, onSave: (
     }
 
     // The keyboard shrinks the page rather than covering it, so a focused field scrolls into view above it;
-    // while it's up the nav bar is hidden behind it and needs no room.
-    Box(Modifier.fillMaxSize().imePadding()) {
-        ScreenList(if (WindowInsets.isImeVisible) PaddingValues(0.dp) else contentPadding) {
+    // while it's up the nav bar is hidden behind it and needs no room. Save is pinned at the bottom, over the
+    // keyboard when it's up, like Start and Done on the workout pages (spec 6.3), and as wide as the fields: on a
+    // wide screen both keep to the page's centred column (spec 2.4 Unfolded). Whether the keyboard takes room is
+    // read from its inset, so a keyboard that floats (as it can on an unfolded screen) leaves Save above the tab bar.
+    BoxWithConstraints(Modifier.fillMaxSize().imePadding()) {
+        val keyboard = WindowInsets.ime.getBottom(LocalDensity.current) > 0
+        val bottom = if (keyboard) 0.dp else contentPadding.calculateBottomPadding()
+        val side = GlowLayout.pageSide(maxWidth, LocalPageColumn.current, GlowLayout.Gutter)
+        // The list ends clear of Save and the fade behind it (ScreenList adds its own 24 dp).
+        ScreenList(PaddingValues(bottom = PinnedFade.listClearance(bottom + 12.dp + SaveHeight, listEnd = 24.dp)), gutter = GlowLayout.Gutter) {
+            item { PageHeader("Your profile", back) }
             item {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = back) { Icon(PhosphorIcons.ArrowLeft, "Back") }
-                    Text("Your profile", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.weight(1f))
-                    TextButton(onClick = save, enabled = valid) { Text("Save") }
-                }
-            }
-            item {
-                Panel {
+                PagePanel {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text(
+                        PageNote(
                             "Age sets your maximum heart rate, which every effort and recovery number depends on. " +
                                 "All fields are optional and stay on this phone.",
-                            style = MaterialTheme.typography.bodyMedium,
                         )
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            NumberField(age, { age = it }, "Age", "years", age.isNotBlank() && ageValue == null, Modifier.weight(1f))
-                            // Tapping the selected sex again clears it.
-                            SexToggle(PhosphorIcons.GenderFemale, "Female", FemaleColor, sex == 0) { sex = if (sex == 0) 2 else 0 }
-                            SexToggle(PhosphorIcons.GenderMale, "Male", MaleColor, sex == 1) { sex = if (sex == 1) 2 else 1 }
+                        NumberField(age, { age = it }, "Age", "years", age.isNotBlank() && ageValue == null)
+                        // Sex as labelled segments like Units, not two bare symbols beside Age. Tapping the chosen one
+                        // again clears it.
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            FieldLabel("Sex, for energy, Load, fitness and Habit Age")
+                            org.openstrap.app.ui.glow.GlowSegments(listOf("Female", "Male"), if (sex in 0..1) sex else -1, { i -> sex = if (sex == i) 2 else i })
                         }
                         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            SectionLabel("Units")
-                            SegmentedTabs(listOf("Metric", "Imperial"), if (imperial) 1 else 0, { switchUnits(it == 1) })
+                            FieldLabel("Units")
+                            org.openstrap.app.ui.glow.GlowSegments(listOf("Metric", "Imperial"), if (imperial) 1 else 0, { switchUnits(it == 1) })
                         }
                         NumberField(
                             weight, { weight = it }, "Weight", if (imperial) "lb" else "kg",
@@ -190,30 +181,28 @@ fun ProfileScreen(profile: UserProfile, contentPadding: PaddingValues, onSave: (
                             NumberField(heightCm, { heightCm = it }, "Height", "cm", !heightBlank && heightValue == null)
                         }
                         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            SectionLabel("Usual activity (for the fitness estimate)")
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                (0..4).forEach { i ->
-                                    androidx.compose.material3.FilterChip(
-                                        selected = activity == i, onClick = { activity = if (activity == i) -1 else i },
-                                        label = { Text("${i + 1}") }, modifier = Modifier.weight(1f),
-                                    )
-                                }
-                            }
-                            Text(
-                                if (activity in 0..4) org.openstrap.app.data.Vo2max.ACTIVITY_LEVELS[activity] else "Pick the level that best matches a usual week.",
-                                style = MaterialTheme.typography.bodySmall,
-                            )
+                            FieldLabel("Usual activity, for the fitness estimate")
+                            // Tapping the chosen level again clears it.
+                            org.openstrap.app.ui.glow.GlowSegments((1..5).map { "$it" }, activity, { i -> activity = if (activity == i) -1 else i })
+                            PageNote(if (activity in 0..4) org.openstrap.app.data.Vo2max.ACTIVITY_LEVELS[activity] else "Pick the level that best matches a usual week.")
                         }
-                        CheckRow("Taking beta-blockers", betaBlocker) { betaBlocker = it }
-                        CheckRow("Pregnant", pregnant) { pregnant = it }
+                        PageSwitchRow("Taking beta-blockers", null, betaBlocker, { betaBlocker = it }, divider = false)
+                        PageSwitchRow("Pregnant", null, pregnant, { pregnant = it }, divider = false)
                         NumberField(maxHr, { maxHr = it }, "Max heart rate from a test (optional)", "bpm", maxHr.isNotBlank() && maxHrValue == null)
                         NumberField(sleepNeed, { sleepNeed = it }, "Sleep need (7–9, blank for your age's default)", "h", sleepNeed.isNotBlank() && sleepNeedValue == null, decimal = true)
                     }
                 }
             }
         }
+        // Black from the bottom of the screen up to Save, fading out above it, so the page scrolls away under it.
+        Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().pinnedFade().padding(start = side, end = side, bottom = bottom + 12.dp)) {
+            PageButton("Save", save, Modifier.fillMaxWidth().height(SaveHeight), enabled = valid, primary = true)
+        }
     }
 }
+
+/** The pinned Save button's height, as Start on Ready. */
+private val SaveHeight = 56.dp
 
 @Composable
 internal fun NumberField(
@@ -225,44 +214,15 @@ internal fun NumberField(
     modifier: Modifier = Modifier.fillMaxWidth(),
     decimal: Boolean = false,
 ) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = { v -> onChange(v.filter { it.isDigit() || (decimal && (it == '.' || it == ',')) }.take(5)) },
-        label = if (label.isEmpty()) null else ({ Text(label) }),
-        suffix = { Text(unit) },
-        isError = error,
-        singleLine = true,
+    PageField(
+        value, { v -> onChange(v.filter { it.isDigit() || (decimal && (it == '.' || it == ',')) }.take(5)) },
+        label.ifEmpty { null }, modifier, unit = unit, error = error,
         keyboardOptions = KeyboardOptions(keyboardType = if (decimal) KeyboardType.Decimal else KeyboardType.Number),
-        shape = RoundedCornerShape(14.dp),
-        modifier = modifier,
     )
 }
 
 @Composable
-private fun CheckRow(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().clickable { onChange(!checked) }) {
-        androidx.compose.material3.Checkbox(checked, onChange)
-        Text(label, style = MaterialTheme.typography.bodyMedium)
-    }
-}
+private fun FieldLabel(text: String) = Text(text, color = Color.White.copy(alpha = 0.6f), style = GlowType.secondary)
 
 /** 72.0 -> "72", 158.7 -> "158.7". */
 private fun formatNumber(v: Float): String = "%.1f".format(java.util.Locale.ROOT, v).removeSuffix(".0")
-
-private val FemaleColor = Color(0xFFF472B6)
-private val MaleColor = Color(0xFF60A5FA)
-
-/** A round icon button for one sex, in its own colour: muted until selected, then filled. */
-@Composable
-private fun SexToggle(icon: ImageVector, label: String, accent: Color, selected: Boolean, onClick: () -> Unit) {
-    Box(
-        Modifier.padding(top = 8.dp).size(52.dp).clip(CircleShape)
-            .background(if (selected) accent.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceContainerHigh)
-            .border(if (selected) 1.5.dp else 1.dp, if (selected) accent else MaterialTheme.colorScheme.outline, CircleShape)
-            .clickable(onClickLabel = label, role = Role.RadioButton, onClick = onClick)
-            .semantics { this.selected = selected; contentDescription = label },
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(icon, null, tint = if (selected) accent else accent.copy(alpha = 0.55f), modifier = Modifier.size(26.dp))
-    }
-}

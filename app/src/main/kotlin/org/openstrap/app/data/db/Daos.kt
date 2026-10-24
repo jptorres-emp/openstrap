@@ -57,6 +57,43 @@ interface HealthDao {
     @Query("DELETE FROM workout_hr WHERE workoutStart = :start")
     suspend fun deleteWorkoutHeartRate(start: Long)
 
+    @Query("DELETE FROM workout WHERE start = :start")
+    suspend fun deleteWorkoutRow(start: Long)
+
+    @Query("DELETE FROM recovery_hr WHERE workoutStart = :start")
+    suspend fun deleteRecoveryHeartRate(start: Long)
+
+    @Query("DELETE FROM sport_effect WHERE `end` = :end")
+    suspend fun deleteSportEffect(end: Long)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertDeletedWorkouts(rows: List<DeletedWorkout>)
+
+    /** Strap workouts deleted in OpenStrap, which a sync must not store again. */
+    @Query("SELECT * FROM workout_deleted ORDER BY start")
+    suspend fun deletedWorkoutsAll(): List<DeletedWorkout>
+
+    /**
+     * Deletes a strap workout: its row, its HR stream and recovery HR, and the sport effect that is only its own
+     * ([org.openstrap.app.data.Workouts.ownEffect]). It is remembered in [DeletedWorkout] so the strap's next re-send
+     * isn't stored, and its time as "Not a workout" so the same stretch isn't offered as a suggestion.
+     */
+    @androidx.room.Transaction
+    suspend fun deleteStrapWorkout(start: Long, now: Long) {
+        val w = workoutOnce(start) ?: return
+        val until = start + org.openstrap.app.data.Workouts.EFFECT_WINDOW_S
+        val effects = sportEffectsOnce(start, until)
+        val others = workoutsOnce(start, until).map { it.start }.filter { it != start } + appWorkoutsOnce(start, until).map { it.from }
+        val own = org.openstrap.app.data.Workouts.ownEffect(w, effects, others)
+        val end = org.openstrap.app.data.Workouts.endOf(w, workoutHeartRateOnce(start).maxOfOrNull { it.timestamp }, own)
+        deleteWorkoutHeartRate(start)
+        deleteRecoveryHeartRate(start)
+        own?.let { deleteSportEffect(it.end) }
+        deleteWorkoutRow(start)
+        insertDeletedWorkouts(listOf(DeletedWorkout(start, own?.end, now)))
+        insertDismissedWorkouts(listOf(DismissedWorkout(start, end)))
+    }
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertSportEffects(rows: List<SportEffectRow>)
 
@@ -99,6 +136,10 @@ interface HealthDao {
     @Query("SELECT COUNT(*) FROM workout")
     suspend fun workoutCount(): Int
 
+    /** How many strap workouts there are, as it changes: a delete changes it, so Load and charge are worked out again. */
+    @Query("SELECT COUNT(*) FROM workout")
+    fun workoutCountFlow(): Flow<Int>
+
     @Query("SELECT * FROM workout ORDER BY start DESC")
     fun workouts(): Flow<List<Workout>>
 
@@ -112,6 +153,9 @@ interface HealthDao {
     @Query("SELECT * FROM workout WHERE start = :start")
     fun workout(start: Long): Flow<Workout?>
 
+    @Query("SELECT * FROM workout WHERE start = :start")
+    suspend fun workoutOnce(start: Long): Workout?
+
     @Query("SELECT * FROM workout_hr WHERE workoutStart = :start ORDER BY timestamp")
     fun workoutHeartRate(start: Long): Flow<List<WorkoutHeartRate>>
 
@@ -121,6 +165,10 @@ interface HealthDao {
     /** Last HR sample per workout: the strap records three minutes past the end, so this places the end. */
     @Query("SELECT workoutStart, MAX(timestamp) AS timestamp, 0 AS bpm FROM workout_hr GROUP BY workoutStart")
     fun lastWorkoutHeartRates(): Flow<List<WorkoutHeartRate>>
+
+    /** Each strap workout's HR stream in brief, so the lists redo a workout's zones only when its stream changes. */
+    @Query("SELECT workoutStart, MAX(timestamp) AS lastSample, COUNT(*) AS samples, SUM(bpm) AS bpmSum FROM workout_hr GROUP BY workoutStart")
+    fun workoutHeartRateMarks(): Flow<List<HrStreamMark>>
 
     @Query("SELECT * FROM sport_effect ORDER BY `end`")
     fun sportEffects(): Flow<List<SportEffectRow>>
@@ -173,6 +221,10 @@ interface HealthDao {
     @Query("SELECT * FROM app_workout_hr WHERE workoutStart = :start ORDER BY timestamp")
     suspend fun appWorkoutHeartRateOnce(start: Long): List<AppWorkoutHeartRate>
 
+    /** Each phone workout's HR stream in brief, as [workoutHeartRateMarks]; gap filling adds rows, so it changes then too. */
+    @Query("SELECT workoutStart, MAX(timestamp) AS lastSample, COUNT(*) AS samples, SUM(bpm) AS bpmSum FROM app_workout_hr GROUP BY workoutStart")
+    fun appWorkoutHeartRateMarks(): Flow<List<HrStreamMark>>
+
     @Query("SELECT * FROM app_workout_hr ORDER BY workoutStart, timestamp")
     suspend fun appWorkoutHeartRateAll(): List<AppWorkoutHeartRate>
 
@@ -193,6 +245,10 @@ interface HealthDao {
 
     @Query("SELECT * FROM app_workout_set ORDER BY workoutStart, `index`")
     suspend fun setsAll(): List<AppWorkoutSet>
+
+    /** Finished sets per phone workout, for the workout lists. */
+    @Query("SELECT workoutStart, COUNT(*) AS sets FROM app_workout_set WHERE `end` IS NOT NULL GROUP BY workoutStart")
+    fun setCounts(): Flow<List<SetCount>>
 
     @Query("DELETE FROM app_workout_set WHERE workoutStart = :start")
     suspend fun deleteSets(start: Long)
@@ -480,6 +536,13 @@ interface HealthDao {
     @Query("SELECT * FROM check_in WHERE day BETWEEN :from AND :to ORDER BY day")
     suspend fun checkInsOnce(from: Long, to: Long): List<CheckInRow>
 
+    // Each Sunday's Habit Age estimate, for the next week's comparison.
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertHabitAgeWeek(row: HabitAgeWeekRow)
+
+    @Query("SELECT * FROM habit_age_week WHERE asOf BETWEEN :from AND :to ORDER BY asOf")
+    suspend fun habitAgeWeeksOnce(from: Long, to: Long): List<HabitAgeWeekRow>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertDayTags(rows: List<DayTagRow>)
 
@@ -506,6 +569,13 @@ interface HealthDao {
     /** Steps per local day, minutes over 250 steps left out as bad data. */
     @Query("SELECT date(timestamp, 'unixepoch', 'localtime') AS day, SUM(steps) AS value, MIN(steps) AS min, MAX(steps) AS max, COUNT(*) AS count FROM activity_minute WHERE timestamp BETWEEN :from AND :to AND steps BETWEEN 0 AND 250 GROUP BY day ORDER BY day")
     suspend fun dailyStepsOnce(from: Long, to: Long): List<DailyAggregate>
+
+    /**
+     * Steps per local hour of each local day, for your usual steps by this time of day ([org.openstrap.app.data.UsualSteps]).
+     * Minutes over 250 steps are left out as bad data, as in [dailyStepsOnce].
+     */
+    @Query("SELECT date(timestamp, 'unixepoch', 'localtime') AS day, CAST(strftime('%H', timestamp, 'unixepoch', 'localtime') AS INTEGER) AS hour, SUM(steps) AS steps FROM activity_minute WHERE timestamp BETWEEN :from AND :to AND steps BETWEEN 0 AND 250 GROUP BY day, hour ORDER BY day, hour")
+    suspend fun hourlyStepsOnce(from: Long, to: Long): List<HourSteps>
 
     /** Minutes (epoch seconds / 60) with a heart rate from either table: the strap was worn. */
     @Query("SELECT timestamp / 60 FROM heart_rate WHERE timestamp BETWEEN :from AND :to AND bpm BETWEEN 30 AND 230 UNION SELECT timestamp / 60 FROM activity_minute WHERE timestamp BETWEEN :from AND :to AND heartRate BETWEEN 30 AND 230")

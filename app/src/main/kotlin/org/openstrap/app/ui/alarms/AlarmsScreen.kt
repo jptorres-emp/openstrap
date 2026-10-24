@@ -11,13 +11,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
+import androidx.compose.material3.TimePickerDefaults
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -28,12 +25,22 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import org.openstrap.app.ui.components.EmptyHint
-import org.openstrap.app.ui.components.Panel
-import org.openstrap.app.ui.components.PanelHeader
+import androidx.compose.ui.graphics.Color
+import org.openstrap.app.ui.glow.ChoicePills
+import org.openstrap.app.ui.glow.DestructiveInk
+import org.openstrap.app.ui.glow.GlowLayout
+import org.openstrap.app.ui.glow.GlowType
+import org.openstrap.app.ui.glow.ControlSurface
+import org.openstrap.app.ui.glow.PageButton
+import org.openstrap.app.ui.glow.PageChip
+import org.openstrap.app.ui.glow.PageConfirm
+import org.openstrap.app.ui.glow.PageSheet
+import org.openstrap.app.ui.glow.PageTextButton
+import org.openstrap.app.ui.glow.PageHeader
+import org.openstrap.app.ui.glow.PageNote
+import org.openstrap.app.ui.glow.PagePanel
 import org.openstrap.app.ui.dashboard.ScreenList
 import org.openstrap.app.ui.theme.MetricColors
-import org.openstrap.app.ui.theme.PhosphorIcons
 import org.openstrap.protocol.services.Alarm
 import org.openstrap.protocol.services.SettingsCodec
 
@@ -56,59 +63,103 @@ private fun intervalLabel(v: Int) = when (v) {
     else -> "Every $v min"
 }
 
+/**
+ * What the Strap page's Alarms row says: the first alarm that's on ("06:40 weekdays"), how many more, "None", or null
+ * while nothing has been read from the strap.
+ */
+fun alarmsSummary(state: AlarmsUiState): String? {
+    if (state.caps == null) return null
+    val on = state.alarms.filter { it.enabled }
+    val first = on.firstOrNull() ?: return if (state.alarms.isEmpty()) "None" else "All off"
+    val text = "%02d:%02d %s".format(first.hour, first.minute, daysLabel(first.days).lowercase())
+    return if (on.size > 1) "$text and ${on.size - 1} more" else text
+}
+
+/**
+ * What the Strap page's Health alerts row says, short enough for one line beside the name ([ROW_VALUE_MAX]): the
+ * heart rate limits ("Over 150, under 40", "Over 150 bpm"), the oxygen one ("Oxygen under 90%"), "Heart rate and
+ * oxygen" when both kinds are on, "Off" when none is, or null while the strap's settings haven't been read.
+ */
+fun healthAlertsSummary(state: AlarmsUiState): String? {
+    val g = state.health ?: return null
+    fun on(key: Int) = g[key]?.number?.toInt()?.takeIf { it != 0 }
+    val high = on(SettingsCodec.KEY_HIGH_HR_ALERT)
+    val low = on(SettingsCodec.KEY_LOW_HR_ALERT)
+    val oxygen = on(SettingsCodec.KEY_LOW_SPO2_ALERT)
+    val heart = high != null || low != null
+    return when {
+        heart && oxygen != null -> "Heart rate and oxygen"
+        high != null && low != null -> "Over $high, under $low"
+        high != null -> "Over $high bpm"
+        low != null -> "Under $low bpm"
+        oxygen != null -> "Oxygen under $oxygen%"
+        else -> "Off"
+    }
+}
+
+/** The longest value a Strap page row shows beside its name and still keeps to one line on a 360 dp phone. */
+const val ROW_VALUE_MAX = 22
+
+/** The strap's alarms: each with its days and a switch, add and delete all. Opened from the Strap page. */
 @Composable
 fun AlarmsScreen(
     vm: AlarmsViewModel,
     state: AlarmsUiState,
     contentPadding: PaddingValues,
     onBack: () -> Unit,
-    phoneAlerts: @Composable () -> Unit = {},
 ) {
     BackHandler(onBack = onBack)
     var editing by remember { mutableStateOf<Pair<Alarm, Boolean>?>(null) }
     var confirmDeleteAll by remember { mutableStateOf(false) }
     if (confirmDeleteAll) {
-        org.openstrap.app.ui.components.GlassAlertDialog(
-            onDismissRequest = { confirmDeleteAll = false },
-            title = { Text("Delete all alarms?") },
-            text = { Text("This removes every alarm from the strap.") },
-            confirmButton = { TextButton(onClick = { vm.deleteAll(); confirmDeleteAll = false }) { Text("Delete all", color = MetricColors.bad) } },
-            dismissButton = { TextButton(onClick = { confirmDeleteAll = false }) { Text("Cancel") } },
+        PageConfirm(
+            "Delete all alarms?", "This removes every alarm from the strap.",
+            confirm = "Delete all", onConfirm = { vm.deleteAll(); confirmDeleteAll = false }, onDismiss = { confirmDeleteAll = false },
         )
     }
     editing?.let { (alarm, isNew) ->
-        AlarmDialog(
+        AlarmSheet(
             alarm, isNew,
             onSave = { vm.save(it, isNew); editing = null },
             onDelete = { vm.delete(alarm); editing = null },
             onDismiss = { editing = null },
         )
     }
-    ScreenList(contentPadding) {
-        item {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onBack) { Icon(PhosphorIcons.ArrowLeft, "Back") }
-                Text("Alarms & alerts", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.weight(1f))
-            }
-        }
-        state.error?.let { msg ->
-            item {
-                Panel(highlight = MetricColors.warn) {
-                    PanelHeader(msg, PhosphorIcons.Warning, MetricColors.warn)
-                    TextButton(onClick = vm::refresh, enabled = !state.busy) { Text("Try again") }
-                }
-            }
-        }
-        // Phone-side switches; they don't need the strap to answer.
-        item { phoneAlerts() }
+    ScreenList(contentPadding, gutter = GlowLayout.Gutter) {
+        item { PageHeader("Alarms", onBack) }
+        state.error?.let { msg -> item { ErrorPanel(msg, state.busy, vm::refresh) } }
         if (state.loading) {
-            item { Panel { EmptyHint("Reading from the strap…") } }
+            item { PagePanel { PageNote("Reading from the strap") } }
             return@ScreenList
         }
-        item { AlarmsPanel(state, onToggle = vm::setEnabled, onEdit = { editing = it to false }, onAdd = {
-            vm.freeIndex()?.let { editing = Alarm(it, 7, 0, Alarm.WEEKDAYS, enabled = true) to true }
-        }, onDeleteAll = { confirmDeleteAll = true }) }
+        item {
+            AlarmsPanel(state, onToggle = vm::setEnabled, onEdit = { editing = it to false }, onAdd = {
+                vm.freeIndex()?.let { editing = Alarm(it, 7, 0, Alarm.WEEKDAYS, enabled = true) to true }
+            }, onDeleteAll = { confirmDeleteAll = true })
+        }
+    }
+}
+
+/** How often the strap measures heart rate, and its heart rate and blood oxygen alerts. Opened from the Strap page. */
+@Composable
+fun HealthAlertsScreen(vm: AlarmsViewModel, state: AlarmsUiState, contentPadding: PaddingValues, onBack: () -> Unit) {
+    BackHandler(onBack = onBack)
+    ScreenList(contentPadding, gutter = GlowLayout.Gutter) {
+        item { PageHeader("Health alerts", onBack) }
+        state.error?.let { msg -> item { ErrorPanel(msg, state.busy, vm::refresh) } }
+        if (state.loading) {
+            item { PagePanel { PageNote("Reading from the strap") } }
+            return@ScreenList
+        }
         state.health?.let { item { HeartAlertsPanel(state, vm) } }
+    }
+}
+
+@Composable
+private fun ErrorPanel(message: String, busy: Boolean, onRetry: () -> Unit) {
+    PagePanel {
+        PageNote(message, color = MetricColors.warn)
+        PageButton("Try again", onRetry, Modifier.fillMaxWidth(), enabled = !busy)
     }
 }
 
@@ -120,116 +171,104 @@ private fun AlarmsPanel(
     onAdd: () -> Unit,
     onDeleteAll: () -> Unit,
 ) {
-    Panel {
-        PanelHeader("Alarms", PhosphorIcons.CalendarBlank, MetricColors.charge, trailing = state.caps?.let { "${state.alarms.size} of ${it.maxCount}" })
-        if (state.alarms.isEmpty()) EmptyHint("No alarms on the strap.")
+    PagePanel(title = "On the strap", note = state.caps?.let { "${state.alarms.size} of ${it.maxCount}" }) {
+        if (state.alarms.isEmpty()) PageNote("No alarms on the strap.")
         state.alarms.forEach { a ->
             Row(Modifier.fillMaxWidth().clickable(enabled = !state.busy) { onEdit(a) }.padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text(
-                        "%02d:%02d".format(a.hour, a.minute),
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = if (a.enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+                    org.openstrap.app.ui.glow.DotMatrixText(
+                        "%02d:%02d".format(a.hour, a.minute), dot = org.openstrap.app.ui.glow.DotSize.Edge,
+                        color = if (a.enabled) Color.White else Color.White.copy(alpha = 0.45f),
                     )
-                    Text(daysLabel(a.days), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(daysLabel(a.days), style = GlowType.secondary, color = Color.White.copy(alpha = 0.6f), modifier = Modifier.padding(top = 6.dp))
                 }
                 org.openstrap.app.ui.glow.GlowSwitch(a.enabled, { onToggle(a, it) }, enabled = !state.busy)
             }
         }
-        Row {
-            if (state.canAdd) TextButton(onClick = onAdd, enabled = !state.busy) { Text("Add alarm") }
-            if (state.alarms.size > 1) TextButton(onClick = onDeleteAll, enabled = !state.busy) { Text("Delete all", color = MetricColors.bad) }
+        if (state.canAdd) PageButton("Add alarm", onAdd, Modifier.fillMaxWidth(), enabled = !state.busy, primary = true)
+        if (state.alarms.size > 1) {
+            PageTextButton("Delete all", onDeleteAll, Modifier.align(Alignment.CenterHorizontally), enabled = !state.busy, color = DestructiveInk)
         }
         // Zepp's tip for this strap (alarm_stuttgart_close_tips).
-        Text(
-            "The strap vibrates at the alarm time. To stop it, tap the front of the strap several times.",
-            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        PageNote("The strap vibrates at the alarm time. To stop it, tap the front of the strap several times.")
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun HeartAlertsPanel(state: AlarmsUiState, vm: AlarmsViewModel) {
     val g = state.health ?: return
-    Panel {
-        PanelHeader("Heart & oxygen", PhosphorIcons.Heart, MetricColors.heart)
+    PagePanel(title = "Heart rate and blood oxygen") {
         g[SettingsCodec.KEY_HR_INTERVAL]?.let { s ->
-            ChoiceRow("Heart-rate measuring", s.choices.orEmpty(), s.number?.toInt(), state.busy, ::intervalLabel) { vm.setHrInterval(it) }
+            ChoiceRow("Heart rate measuring", s.choices.orEmpty(), s.number?.toInt(), state.busy, ::intervalLabel) { vm.setHrInterval(it) }
         }
         val alerts = state.alertsAvailable
-        if (!alerts) {
-            Text(
-                "Heart-rate alerts need continuous or every-minute measuring.",
-                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
+        if (!alerts) PageNote("Heart rate alerts need continuous or every-minute measuring.")
         g[SettingsCodec.KEY_HIGH_HR_ALERT]?.let { s ->
-            ChoiceRow("High heart-rate alert", s.choices.orEmpty(), s.number?.toInt(), state.busy || !alerts, { if (it == 0) "Off" else "Above $it" }) {
+            ChoiceRow("High heart rate alert", s.choices.orEmpty(), s.number?.toInt(), state.busy || !alerts, { if (it == 0) "Off" else "Above $it" }) {
                 vm.setEnum(SettingsCodec.KEY_HIGH_HR_ALERT, it)
             }
         }
         g[SettingsCodec.KEY_LOW_HR_ALERT]?.let { s ->
-            ChoiceRow("Low heart-rate alert", s.choices.orEmpty(), s.number?.toInt(), state.busy || !alerts, { if (it == 0) "Off" else "Below $it" }) {
+            ChoiceRow("Low heart rate alert", s.choices.orEmpty(), s.number?.toInt(), state.busy || !alerts, { if (it == 0) "Off" else "Below $it" }) {
                 vm.setEnum(SettingsCodec.KEY_LOW_HR_ALERT, it)
             }
         }
         g[SettingsCodec.KEY_LOW_SPO2_ALERT]?.let { s ->
-            ChoiceRow("Low blood-oxygen alert", s.choices.orEmpty(), s.number?.toInt(), state.busy, { if (it == 0) "Off" else "Below $it%" }) {
+            ChoiceRow("Low blood oxygen alert", s.choices.orEmpty(), s.number?.toInt(), state.busy, { if (it == 0) "Off" else "Below $it%" }) {
                 vm.setEnum(SettingsCodec.KEY_LOW_SPO2_ALERT, it)
             }
         }
-        Text(
-            "The strap vibrates when an alert goes off. OpenStrap isn't a medical device.",
-            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        PageNote("The strap vibrates when an alert goes off. OpenStrap isn't a medical device.")
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ChoiceRow(title: String, choices: List<Int>, current: Int?, disabled: Boolean, label: (Int) -> String, onPick: (Int) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(title, style = MaterialTheme.typography.bodyLarge)
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            choices.forEach { v ->
-                FilterChip(selected = v == current, onClick = { if (v != current) onPick(v) }, label = { Text(label(v)) }, enabled = !disabled)
-            }
-        }
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(title, style = GlowType.body, color = Color.White)
+        ChoicePills(choices, current, label, onPick, enabled = !disabled)
     }
 }
 
+/**
+ * A new alarm or one being changed, in a sheet: the time, the days as chips, then Cancel and Save, with Delete as quiet
+ * text under them. The time wheel is Material's clock, recoloured to white on the sheet.
+ */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-private fun AlarmDialog(alarm: Alarm, isNew: Boolean, onSave: (Alarm) -> Unit, onDelete: () -> Unit, onDismiss: () -> Unit) {
+private fun AlarmSheet(alarm: Alarm, isNew: Boolean, onSave: (Alarm) -> Unit, onDelete: () -> Unit, onDismiss: () -> Unit) {
     val time = rememberTimePickerState(alarm.hour, alarm.minute, is24Hour = true)
     var days by remember { mutableIntStateOf(alarm.days) }
-    org.openstrap.app.ui.components.GlassAlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(if (isNew) "New alarm" else "Edit alarm") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                TimePicker(time)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally)) {
-                    DAY_LETTERS.forEachIndexed { i, d ->
-                        val bit = 1 shl i
-                        // Picking a day replaces the strap's own "workdays" calendar with a plain day set.
-                        FilterChip(selected = days != Alarm.WORKDAYS && days and bit != 0, onClick = {
-                            days = (if (days == Alarm.WORKDAYS) 0 else days) xor bit
-                        }, label = { Text(d) })
-                    }
-                }
-                Text(daysLabel(days), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    PageSheet(onDismiss, if (isNew) "New alarm" else "Edit alarm", note = daysLabel(days)) {
+        TimePicker(time, Modifier.align(Alignment.CenterHorizontally), colors = AlarmClockColors())
+        FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)) {
+            DAY_LETTERS.forEachIndexed { i, d ->
+                val bit = 1 shl i
+                // Picking a day replaces the strap's own "workdays" calendar with a plain day set.
+                PageChip(d, days != Alarm.WORKDAYS && days and bit != 0, {
+                    days = (if (days == Alarm.WORKDAYS) 0 else days) xor bit
+                }, Modifier.widthIn(min = 40.dp))
             }
-        },
-        confirmButton = {
-            TextButton(onClick = { onSave(alarm.copy(hour = time.hour, minute = time.minute, days = days, enabled = true)) }) { Text("Save") }
-        },
-        dismissButton = {
-            Row {
-                if (!isNew) TextButton(onClick = onDelete) { Text("Delete", color = MetricColors.bad) }
-                TextButton(onClick = onDismiss) { Text("Cancel") }
-            }
-        },
-    )
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            PageButton("Cancel", onDismiss, Modifier.weight(1f))
+            PageButton("Save", { onSave(alarm.copy(hour = time.hour, minute = time.minute, days = days, enabled = true)) }, Modifier.weight(1f), primary = true)
+        }
+        if (!isNew) PageTextButton("Delete alarm", onDelete, Modifier.align(Alignment.CenterHorizontally), color = DestructiveInk)
+    }
 }
+
+/** The clock in the page's colours: white for the chosen hand and digits, the Control surface for the rest. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AlarmClockColors() = TimePickerDefaults.colors(
+    clockDialColor = ControlSurface,
+    clockDialSelectedContentColor = Color.Black,
+    clockDialUnselectedContentColor = Color.White,
+    selectorColor = Color.White,
+    containerColor = Color.Transparent,
+    timeSelectorSelectedContainerColor = Color.White,
+    timeSelectorUnselectedContainerColor = ControlSurface,
+    timeSelectorSelectedContentColor = Color.Black,
+    timeSelectorUnselectedContentColor = Color.White,
+)

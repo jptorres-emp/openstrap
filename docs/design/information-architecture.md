@@ -12,19 +12,19 @@ it; "Used" means a computation reads it but no screen shows it directly.
 
 | Table (strap type) | Fields | Used by | Shown where | Gap |
 |---|---|---|---|---|
-| `heart_rate` (history + live) | ts, bpm, source | Day HR series, resting-HR estimate, Readiness, Charge, TRIMP load | Today (HR card + latest), Heart (day chart, low/avg/high), Sleep (HR during sleep, whole day toggle) | — |
-| `activity_minute` (1) | ts, steps, intensity, kind, heartRate | Steps total + hourly, active hours, HR fallback, Charge states | Today (steps, hourly bars, active hours, Steps chip) | `intensity`, `kind` never shown; no steps history beyond today |
+| `heart_rate` (history + live) | ts, bpm, source | Day HR series, resting-HR estimate, Readiness, Energy, TRIMP load | Today (HR card + latest), Heart (day chart, low/avg/high), Sleep (HR during sleep, whole day toggle) | — |
+| `activity_minute` (1) | ts, steps, intensity, kind, heartRate | Steps total + hourly, active hours, HR fallback, Energy states | Today (steps, hourly bars, active hours, Steps chip) | `intensity`, `kind` never shown; no steps history beyond today |
 | `activity_extended` (88) | floors, run, fatBurn, stand, walk, sit, steps, calories, distanceCm | Day distance and calories (data step) | — | `distanceCm` confirmed as cm (≈ 75 cm a step on the strap). `sit/stand/walk/run` are one-hot flags per minute, not durations. Calories look like active kcal per minute; floors always 0 so far |
-| `sleep_session` (sleep) | start, end, day, nap, score, avgHR, deep/light/rem/awake min, wakeCount | Main sleep + naps, Readiness (sleep, sleep balance), Narrative | Today (Sleep chip, overview arc, sleep card, naps), Sleep (hero, in bed vs asleep, contributors, woke N×), Recovery (sleep band on Charge) | No sleep trend (only "vs night before"); no bedtime consistency |
+| `sleep_session` (sleep) | start, end, day, nap, score, avgHR, deep/light/rem/awake min, wakeCount | Main sleep + naps, Readiness (sleep, sleep balance), Narrative | Today (Sleep chip, overview arc, sleep card, naps), Sleep (hero, in bed vs asleep, contributors, woke N×), Recovery (sleep band on Energy) | No sleep trend (only "vs night before"); no bedtime consistency |
 | `sleep_stage` | start, end, sessionStart, stage | Stage breakdown | Today (hypnogram), Sleep (hypnogram + stage rows), nap details | — |
 | `spo2` (daytime) | ts, percent | 7-day baseline | Today (What changed), Heart (day chart) | — |
 | `sleep_spo2` (38) | ts, percent | Readiness (Blood oxygen factor) | — | **Not shown.** Belongs on Sleep |
 | `osa_event` (39) | ts, drop, 240 SpO2 + 240 HR bytes | Day state (data step) | — | One event on the strap so far, with `drop` = 128, which looks like a flag or signed value, not a % drop |
 | `osa_result` (74) | belongTime, validTime, odiRaw, odiScore, dispCode, eventCount | Readiness (Breathing disturbances: eventCount → ODI), day state | Only as a contributor row on Recovery | No rows after two nights on the strap, so units are still unverified |
-| `stress` | ts, value | Baseline, Charge (stress drain + threshold) | Today (chip, What changed), Heart (day chart) | Not tied to Charge visually |
+| `stress` | ts, value | Baseline, Energy (stress drain + threshold) | Today (chip, What changed), Heart (day chart) | Not tied to Energy visually |
 | `hrv` | ts, ms | 7-day trend, baseline, Readiness (HRV balance) | Today (What changed), Heart (7-day trend) | — |
 | `hrv_sdnn` (78) | ts, ms | Day state (data step) | — | Not nightly: the strap sends one every 1–2 h through the day (5 on 17 Oct). Belongs in the HRV detail |
-| `resting_hr` (+ PAI estimate) | day, bpm | 7-day trend, baseline, Readiness, Charge params | Today (What changed, "Resting N" on HR card), Heart (7-day trend) | — |
+| `resting_hr` (+ PAI estimate) | day, bpm | 7-day trend, baseline, Readiness, Energy params | Today (What changed, "Resting N" on HR card), Heart (7-day trend) | — |
 | `skin_temperature` (46) | ts, °C | Baseline, Readiness (Temperature) | Today (What changed), Heart (day chart) | Shown as absolute °C; deviation from normal is what matters |
 | `breath_rate` (56) | ts, /min | Baseline, Readiness (Breathing) | Today (What changed), Sleep (breathing rate chart) | — |
 | `pai` (13) | ts, daily, total, restingHR, maxHR | Resting-HR fallback, max HR | Today classic only (PAI total in Activity panel) | `daily` never shown; **gone from Glow Today** |
@@ -56,7 +56,7 @@ it; "Used" means a computation reads it but no screen shows it directly.
 |---|---|---|
 | Baselines (prev. 7-day mean of RHR, HRV, SpO2, stress, skin temp, breathing) | `DayViewModel` | Today: What changed |
 | Readiness score, 11 contributors, strain alert + signals, calibration (n/14 nights), 7-day readiness trend | `Recovery` / `RecoveryEngine` | Today (overview hero/arc), Recovery screen |
-| Charge: timeline with state per minute, now, at wake, high/low, recharged, drained by exercise/stress/living | `Recovery.charge` | Today (overview), Recovery (Charge card, "Where your charge went") |
+| Energy: timeline with state per minute, now, at wake, high/low, recharged, drained by exercise/stress/living | `Recovery.charge` | Today (overview), Recovery (Energy card, "Where your charge went") |
 | Training load (TRIMP) today, chronic "usual day", max HR (age or fallback), stress threshold | `RecoveryEngine` | Recovery → Training load panel |
 | Workout: zones, recovery HR 60/120 s, end HR, sport name | `Workouts` | Workout detail |
 | Sleep contributors (duration, deep, REM, efficiency…), headlines | `Narrative` | Sleep, Glow sleep card |
@@ -71,10 +71,10 @@ it; "Used" means a computation reads it but no screen shows it directly.
 
 ### 1.5 What the current structure gets wrong
 
-1. **The app's own scores have no tab.** Readiness, Charge and Training load (the parts no other app gives a Helio
+1. **The app's own scores have no tab.** Readiness, Energy and Training load (the parts no other app gives a Helio
    user) live on a push screen under Today.
 2. **"Heart" is really "vitals".** It holds HR, resting HR, HRV, SpO2, stress and skin temperature. Stress and
-   temperature aren't heart; Charge (which stress drains) isn't there.
+   temperature aren't heart; Energy (which stress drains) isn't there.
 3. **Activity has no home.** Steps, active hours and PAI exist only as a Today card. No detail, no history.
 4. **Workouts is often empty.** The strap is screenless, so workouts are rare. A whole tab for a list that is usually
    empty, while training load and VO2 max sit elsewhere.
@@ -109,7 +109,7 @@ Today · Recovery · Sleep · Activity · You
 | Now | Proposed | Why |
 |---|---|---|
 | Today | **Today** | Keep. Glow Today is the base. |
-| Heart | **Recovery** | The scores (Readiness, Charge) and the body signals that feed them. HR becomes a metric, not a tab. |
+| Heart | **Recovery** | The scores (Readiness, Energy) and the body signals that feed them. HR becomes a metric, not a tab. |
 | Sleep | **Sleep** | Keep. It's the richest dataset and the morning's first question. Gains the hidden sleep data. |
 | Workouts | **Activity** | Steps, PAI, load, VO2 max and workouts together. Never empty, because steps always exist. |
 | You | **You** | Keep. |
@@ -127,7 +127,7 @@ Every tab keeps the date header (day picker, sync, strap dot) except You.
 Mostly as Glow Today is now. Each thing appears once; everything links deeper.
 
 1. Date header.
-2. **Overview** (glow, hero): lead score (Recovery in the morning, Charge later), the other score and Sleep as facts,
+2. **Overview** (glow, hero): lead score (Recovery in the morning, Energy later), the other score and Sleep as facts,
    nested half arcs. Strain alert. → Recovery tab.
 3. **Last night** (glow, morning only): asleep, window, score + headline, hypnogram, naps line. → Sleep tab.
 4. **What changed** (quiet): Readiness sentence, then 2-up tiles: RHR, HRV, SpO2, skin temp, stress, breathing vs
@@ -144,8 +144,8 @@ Mostly as Glow Today is now. Each thing appears once; everything links deeper.
 1. Date header.
 2. **Recovery** hero: score / 100, headline, Readiness sentence, calibration progress (n/14 nights).
 3. **Signs of strain** (only when `strainAlert`): the alert signals.
-4. **Charge**: now, at wake, high/low; the day timeline coloured by state (sleep, rest, stress, activity, exercise);
-   recharged vs drained (exercise / stress / living). → Charge detail (= today's "Where your charge went").
+4. **Energy**: now, at wake, high/low; the day timeline coloured by state (sleep, rest, stress, activity, exercise);
+   recharged vs drained (exercise / stress / living). → Energy detail (= today's "Where your charge went").
 5. **Contributors**: the 11 factors with score and detail line. Grouped: *Body* (HRV balance, RHR, temperature,
    breathing, blood oxygen), *Sleep* (last night, balance, recovery index, breathing disturbances), *Load*
    (previous day, balance).
@@ -205,7 +205,7 @@ Every "→ detail" above is the same screen, which is where glow's detail-screen
 - Related metrics (e.g. HRV → RHR, sleep).
 
 Metrics: Heart rate, Resting HR, HRV, Blood oxygen (day / night), Stress, Skin temp, Breathing, Steps, PAI, Sleep
-duration / score, Recovery, Charge, Training load, VO2 max.
+duration / score, Recovery, Energy, Training load, VO2 max.
 
 This needs repository queries over arbitrary ranges with per-day aggregates; today everything is per-day or 7 days.
 
@@ -245,7 +245,7 @@ Tabs (`MainTabActivity.java:432-437`): **Home · Workout · Discover (or Badges)
   VO2 max, workouts this week, and more. Each card opens its own detail page.
 - Two of the tabs are content and upsell (Discover feed, Aura subscription), and one is device management.
 - So Zepp has no structure by outcome. Home is one long list, and Recovery-type questions ("can I push today?") need
-  three cards (Charge, Readiness, Exertion).
+  three cards (Energy, Readiness, Exertion).
 
 ### 6.2 Worth taking
 
@@ -257,9 +257,9 @@ Tabs (`MainTabActivity.java:432-437`): **Home · Workout · Discover (or Badges)
 | **Higher / Lower / Faster / Slower** status words against baseline on each vital (`readiness_hrv_high`, `readiness_rhr_fast`, "VS. LAST %d DAYS") | Recovery → Body signals grid | Baselines |
 | **Weekly / monthly / yearly summaries** and a weekly report for Readiness (`readiness_week_summary`, `readiness_weekly_report`) | Metric detail W/M/Y, plus a weekly recap card on Today on Mondays | Everything |
 | **PAI coaching**: "You can still earn %d PAI today", "Keep the heart rate above %d BPM for N min" (`pai_distance_data_day`, `pai_hint_get_by_sport_*`) | Activity → PAI | `pai`, profile max HR |
-| **Exertion target**: a daily load target that drops when Charge or Readiness is low (`tab_exertion_detail_introduction_content2_v2`), plus fatigue and fitness levels | Activity → Training load: today vs a target, not just vs "usual day". Fatigue/fitness = acute/chronic load we already compute | TRIMP, chronic load |
+| **Exertion target**: a daily load target that drops when Energy or Readiness is low (`tab_exertion_detail_introduction_content2_v2`), plus fatigue and fitness levels | Activity → Training load: today vs a target, not just vs "usual day". Fatigue/fitness = acute/chronic load we already compute | TRIMP, chronic load |
 | **Stress bands** with words: Relaxed 0–39, Normal 40–59, Medium 60–79, High 80–100 | Stress tile and detail | `stress` |
-| **Score bands** for colour and wording: Charge 0–59 / 60–79 / 80–100, Readiness 0–69 / 70–84 / 85–100, sleep 60 / 80 / 90 | Glow colour of each hero (today's overview uses 50 / 70) | — |
+| **Score bands** for colour and wording: Energy 0–59 / 60–79 / 80–100, Readiness 0–69 / 70–84 / 85–100, sleep 60 / 80 / 90 | Glow colour of each hero (today's overview uses 50 / 70) | — |
 | **Monitoring check**: "To calculate Readiness you need to enable all health monitoring" with an "Enable all" button (`readiness_health_detect_*`) | Recovery empty state + Strap screen: read the strap's monitoring settings and offer to turn on what's off | Strap settings module |
 | **Customisable Core Metrics** (choose which stats show) | Today → What changed: let the user pin which tiles show (WHOOP does this too) | — |
 | **Irregular rhythm history**: Zepp has an "Abnormal heartbeat" card | Today alert row + a history list under the HR detail | Health alerts (store them first) |
@@ -278,7 +278,7 @@ Tabs (`MainTabActivity.java:432-437`): **Home · Workout · Discover (or Badges)
 |---|---|---|
 | Privacy | All health data uploaded, no local-only mode; ~520 analytics events; Firebase forced on outside China; contact list upload (`analysis/privacy/tracking-and-network.md` §Executive summary) | Everything stays on the phone. No analytics, no trackers. Network only for sign-in and firmware, on request |
 | Readiness | For a strap, it's the strap's own score with three detail cards (HRV, RHR, temperature) | Our own score with 11 weighted contributors, each with a detail line, a strain alert, calibration progress, and the strap's score shown beside it for comparison |
-| Charge | HybridCharge runs in a closed native library (`libAlgoCharge.so`); the UI shows "Charged" and "Drained" totals | Open model. Timeline with a state per minute; drains split into exercise, stress and living |
+| Energy | HybridCharge runs in a closed native library (`libAlgoCharge.so`); the UI shows "Charged" and "Drained" totals | Open model. Timeline with a state per minute; drains split into exercise, stress and living |
 | What changed | Each metric only on its own card | One place comparing every vital with your 7-day normal |
 | Your data | Behind a Zepp account | CSV zip and Health Connect straight from the phone, no account |
 | Kept data | — | Raw OSA traces, nightly SDNN, undecoded records kept for later parsing |
@@ -289,7 +289,7 @@ Tabs (`MainTabActivity.java:432-437`): **Home · Workout · Discover (or Badges)
 
 - **Sleep** gets *Regularity* in "This week" (since replaced by the Sleep Regularity Index with UK Biobank quintile bands; see algorithms/calculations.md) and the breathing-disturbance bands above.
 - **Recovery** signal tiles use Higher/Lower/Faster/Slower words, not just arrows.
-- **Activity** turns Training load into *today vs target*, where the target drops on a low-Charge or low-Recovery day,
+- **Activity** turns Training load into *today vs target*, where the target drops on a low-Energy or low-Recovery day,
   and PAI gets "earn N more today".
 - **Today** gets a weekly recap card (Mondays) and user-chosen What-changed tiles.
-- **Strap screen** gets a monitoring check, since Readiness and Charge both depend on it.
+- **Strap screen** gets a monitoring check, since Readiness and Energy both depend on it.

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Debug builds only. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <!-- The design v2 component gallery: adb shell am start -n org.openstrap.app/.gallery.ComponentGalleryActivity -->
+        <activity
+            android:name=".gallery.ComponentGalleryActivity"
+            android:exported="true" />
+    </application>
+</manifest>

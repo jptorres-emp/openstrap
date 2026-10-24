@@ -80,6 +80,7 @@ class StrapManager(
 
     override val connection = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
     override val sync = MutableStateFlow<SyncState>(SyncState.Idle)
+    override val syncRecord = MutableStateFlow(SyncRecord())
     override val liveHeartRate = MutableStateFlow<Int?>(null)
     override val heartRateReadings = MutableSharedFlow<Int>(extraBufferCapacity = 64, onBufferOverflow = BufferOverflow.DROP_OLDEST)
     override val sportSessionPushes = MutableSharedFlow<SportSession.Push>(extraBufferCapacity = 8, onBufferOverflow = BufferOverflow.DROP_OLDEST)
@@ -369,6 +370,14 @@ class StrapManager(
         // The app was stopped while it knew the wear state: close that interval now, as nothing is connected yet.
         val now = System.currentTimeMillis() / 1000
         wearEvents.post { if (dao.lastWearEvent()?.worn != null) dao.insertWearEvent(WearEventRow(now, null)) }
+        // Every sync's start and end, pulled or in the background, so Today can tell a stuck sync from a slow one.
+        scope.launch {
+            var previous: SyncState = SyncState.Idle
+            sync.collect { s ->
+                syncRecord.update { it.next(previous, s, System.currentTimeMillis() / 1000) }
+                previous = s
+            }
+        }
     }
 
     /**

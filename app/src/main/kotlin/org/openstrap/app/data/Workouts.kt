@@ -31,8 +31,19 @@ data class WorkoutAnalysis(
     val recordedEnd: Long? = null,
     /** Recovery time in minutes: the strap's sport effect, or OpenStrap's own for a phone workout ([WorkoutEffect]). */
     val recoveryMinutes: Int? = effect?.recoveryMinutes,
+    /** A phone workout's metres, from GPS or estimated from steps ([distanceFromSteps]); the strap stores none. */
+    val distanceMeters: Float? = null,
+    val distanceFromSteps: Boolean = false,
+    /** A phone strength workout's finished sets; null when none were counted, and always for the strap's. */
+    val sets: Int? = null,
 ) {
     val durationSeconds: Long get() = end - shownStart
+
+    /**
+     * How long the workout was, as every screen shows it: a phone workout's moving time (its shown range less its
+     * pauses), a strap workout's start to end, since the strap records no pauses.
+     */
+    val activeSeconds: Long get() = if (fromPhone) workout.exerciseSeconds?.toLong() ?: durationSeconds else durationSeconds
 
     /** Recovery HR only says something about fitness when you stopped from a real effort. */
     val recoveryIsMeaningful: Boolean get() = endHeartRate != null && endHeartRate * 100 >= maxHeartRate * MIN_EFFORT_PCT
@@ -43,13 +54,15 @@ data class WorkoutAnalysis(
     val sportName: String get() = Workouts.sportName(workout.sportType)
     /** The strap recognised this workout by itself rather than being started on it (codemap 05 §8). */
     val autoDetected: Boolean get() = !fromPhone && workout.subtype == Workouts.SUBTYPE_AUTO_DETECTED
+    /** You started it, on the phone or the strap: not one the strap noticed or filed as "Activity" by itself. */
+    val startedByYou: Boolean get() = !autoDetected && workout.sportType != Workouts.GENERIC_ACTIVITY
 }
 
 object Workouts {
     /** The strap keeps recording HR this long after a workout, for recovery heart rate. */
     const val RECOVERY_TAIL_S = 180L
     /** A sport effect belongs to a workout when it ends within this long of the workout's start. */
-    private const val EFFECT_WINDOW_S = 12 * 3600L
+    const val EFFECT_WINDOW_S = 12 * 3600L
     const val ZONES = 5
     /** Summary `Type.subtype` for a workout the strap recognised on its own; 6 is a phone workout it mirrored (codemap 05 §8). */
     const val SUBTYPE_AUTO_DETECTED = 1
@@ -68,11 +81,9 @@ object Workouts {
      * has one, then [fallbackMaxHr] (the app's usual max HR, [RecoveryEngine.maxHeartRate]).
      */
     fun analyse(w: Workout, hr: List<WorkoutHeartRate>, effects: List<SportEffectRow>, fallbackMaxHr: Int): WorkoutAnalysis {
-        val effect = effects.filter { it.end > w.start && it.end <= w.start + EFFECT_WINDOW_S }.minByOrNull { it.end }
+        val effect = effectOf(w, effects)
         val lastSample = hr.maxOfOrNull { it.timestamp }
-        val end = effect?.end
-            ?: lastSample?.let { it - RECOVERY_TAIL_S }?.takeIf { it > w.start }?.let { maxOf(it, w.end) }
-            ?: w.end
+        val end = endOf(w, lastSample, effect)
         val maxHr = effect?.maximalHeartRate ?: fallbackMaxHr
         val during = hr.filter { it.timestamp in w.start..end }
         val zones = IntArray(ZONES)
@@ -91,6 +102,24 @@ object Workouts {
         )
     }
 
+    /** The sport effect shown with [w]: the first that ends after its start, within [EFFECT_WINDOW_S]. */
+    fun effectOf(w: Workout, effects: List<SportEffectRow>): SportEffectRow? =
+        effects.filter { it.end > w.start && it.end <= w.start + EFFECT_WINDOW_S }.minByOrNull { it.end }
+
+    /** [w]'s real end: its sport effect's, else three minutes before its last HR sample ([lastSample]), else its stored end. */
+    fun endOf(w: Workout, lastSample: Long?, effect: SportEffectRow?): Long = effect?.end
+        ?: lastSample?.let { it - RECOVERY_TAIL_S }?.takeIf { it > w.start }?.let { maxOf(it, w.end) }
+        ?: w.end
+
+    /**
+     * The sport effect deleted along with [w]: the one shown with it, unless another workout starts ([otherStarts])
+     * before that effect ends. A strap workout with no effect of its own would otherwise take the next one's.
+     */
+    fun ownEffect(w: Workout, effects: List<SportEffectRow>, otherStarts: List<Long>): SportEffectRow? {
+        val e = effectOf(w, effects) ?: return null
+        return e.takeIf { otherStarts.none { s -> s > w.start && s < e.end } }
+    }
+
     /** Zone 0..4 for 50–60, 60–70, 70–80, 80–90 and 90+ % of max; null below 50 %. */
     fun zoneOf(bpm: Int, maxHr: Int): Int? {
         val pct = bpm * 100 / maxHr
@@ -103,6 +132,17 @@ object Workouts {
         val b = medianAt(hr, end + after) ?: return null
         return a - b
     }
+
+    /**
+     * The same drop from (time, bpm) [readings], as the summary right after a phone workout reads them: what it
+     * recorded, then what the strap sent after the end.
+     */
+    fun heartRateDrop(readings: List<Pair<Long, Int>>, end: Long, after: Long = 60): Int? = recovery(asSamples(readings), end, after)
+
+    /** Heart rate at [t] from (time, bpm) [readings], as a 5-second median; the starting point of [heartRateDrop]. */
+    fun heartRateAt(readings: List<Pair<Long, Int>>, t: Long): Int? = medianAt(asSamples(readings), t)
+
+    private fun asSamples(readings: List<Pair<Long, Int>>) = readings.map { (t, bpm) -> WorkoutHeartRate(0, t, bpm) }
 
     private fun medianAt(hr: List<WorkoutHeartRate>, t: Long): Int? =
         hr.filter { it.timestamp in t - 2..t + 2 }.map { it.bpm }.sorted().let { if (it.isEmpty()) null else it[it.size / 2] }
@@ -121,25 +161,141 @@ object Workouts {
      */
     val HIDDEN = setOf(143, 40, 224, 55, 10, 57, 58, 51, 109, 24, 226, 16, 223)
 
-    /** The picker's sections, each sport once, most-done kinds first. */
-    val SECTIONS: List<Pair<String, List<Int>>> = listOf(
-        "Running & walking" to listOf(1, 2, 11, 3, 15, 215, 225, 108),
-        "Gym" to listOf(52, 50, 49, 130, 222, 9, 21, 5),
-        "Cycling" to listOf(4, 8),
-        "Water" to listOf(6, 7, 23),
-        "Mind & body" to listOf(60, 61, 53, 76),
-        "Racket & ball" to listOf(17, 205, 204, 92, 89, 18, 85, 88, 83, 97),
-        "Outdoors" to listOf(12, 70),
+    /**
+     * A sport offered once with an outdoor and an indoor kind (spec 6.3): Ready's switch picks one, and the workout is
+     * saved as that kind's own sport type, so the name says which it was ("Treadmill", "Indoor walk") wherever it
+     * shows. [outdoor] is the sport's key, the type its tile starts. [indoorByDefault] is the side
+     * shown before you've picked one.
+     */
+    data class Sides(val outdoor: Int, val indoor: Int, val outdoorName: String, val indoorName: String, val indoorByDefault: Boolean = false) {
+        /** The sport type for the [indoor] side. */
+        fun type(indoor: Boolean): Int = if (indoor) this.indoor else outdoor
+    }
+
+    val SIDES = listOf(
+        Sides(1, 2, "Outdoor", "Treadmill"),
+        Sides(4, 8, "Outdoor", "Indoor"),
+        // Most swims are in a pool.
+        Sides(7, 6, "Open water", "Pool", indoorByDefault = true),
+        Sides(3, 40, "Outdoor", "Indoor"),
     )
+
+    /** The [Sides] [type] is one of, or null for a sport with one kind. */
+    fun sidesOf(type: Int): Sides? = SIDES.firstOrNull { type == it.outdoor || type == it.indoor }
+
+    /**
+     * Which side Ready opens on for [type]: the indoor kind when [type] is one (Treadmill picked by name), else the
+     * side you last chose for the sport ([remembered], by its key), else its default. Null for a sport with one kind.
+     */
+    fun indoorSide(type: Int, remembered: Map<Int, Boolean>): Boolean? {
+        val s = sidesOf(type) ?: return null
+        if (type == s.indoor && s.indoor != s.outdoor) return true
+        return remembered[s.outdoor] ?: s.indoorByDefault
+    }
+
+    /** Whether a workout of [type] on the [indoor] side gets GPS: the outdoor side, or a sport done outdoors. */
+    fun gpsOffered(type: Int, indoor: Boolean?): Boolean = if (sidesOf(type) != null) indoor == false else type in OUTDOOR
+
+    /** The sides you chose, stored as "1=0,7=1" (key, 1 for indoor), and back; anything unreadable is left out. */
+    fun formatSides(sides: Map<Int, Boolean>): String = sides.entries.sortedBy { it.key }.joinToString(",") { "${it.key}=${if (it.value) 1 else 0}" }
+
+    fun parseSides(text: String?): Map<Int, Boolean> = text.orEmpty().split(',').mapNotNull { part ->
+        val (k, v) = part.split('=').takeIf { it.size == 2 } ?: return@mapNotNull null
+        val key = k.trim().toIntOrNull()?.takeIf { sidesOf(it)?.outdoor == it } ?: return@mapNotNull null
+        when (v.trim()) { "1" -> key to true; "0" -> key to false; else -> null }
+    }.toMap()
+
+    /**
+     * The picker's twelve everyday sports (spec 6.3), by the type each tile starts: Run, Walk, Hike, Cycling, Swim,
+     * Strength, HIIT, Yoga, Pilates, Rowing, Elliptical, Other. Every other sport is behind More sports.
+     */
+    val EVERYDAY = listOf(1, 3, 15, 4, 7, 52, 49, 60, 61, 23, 9, 5)
+
+    /** The tiles' short names; a sport with two kinds has one name for both. */
+    private val SHORT_NAMES = mapOf(
+        1 to "Run", 2 to "Run", 3 to "Walk", 40 to "Walk", 15 to "Hike", 4 to "Cycling", 8 to "Cycling", 7 to "Swim", 6 to "Swim",
+        52 to "Strength", 49 to "HIIT", 60 to "Yoga", 61 to "Pilates", 23 to "Rowing", 9 to "Elliptical", 5 to "Other",
+    )
+
+    /** "Run" for an outdoor run or a treadmill: the picker's name, else the sport's full name. */
+    fun shortName(type: Int): String = SHORT_NAMES[type] ?: sportName(type)
+
+    /** The type a sport's tile stands for: a sport with two kinds by its key, any other as itself. */
+    fun tileType(type: Int): Int = sidesOf(type)?.outdoor ?: type
+
+    /** More sports: every sport offered that isn't an everyday tile or behind one's switch, A to Z. */
+    val MORE: List<Int> by lazy {
+        val behindTiles = EVERYDAY.toSet() + SIDES.flatMap { listOf(it.outdoor, it.indoor) }
+        sports.map { it.first }.filter { it !in behindTiles }
+    }
+
+    /**
+     * What a search for [query] finds, as tiles: everyday sports by their short name, then every other sport, both
+     * kinds of a two-kind sport included ("Treadmill"), by its full name. Each once; empty for a blank query.
+     */
+    fun search(query: String): List<Int> {
+        val q = query.trim()
+        if (q.isEmpty()) return emptyList()
+        val everyday = EVERYDAY.filter { shortName(it).contains(q, ignoreCase = true) || sportName(it).contains(q, ignoreCase = true) }
+        val others = sports.map { it.first }.filter { it !in everyday && sportName(it).contains(q, ignoreCase = true) }
+        return everyday + others
+    }
+
+    /**
+     * The picker's Recent row: your last [n] sports, [types] newest first, each by its tile ([tileType]), without the
+     * strap's own "Activity".
+     */
+    fun recentSports(types: List<Int>, n: Int = 4): List<Int> =
+        types.filter { it != GENERIC_ACTIVITY && it in SPORT_NAMES }.map(::tileType).distinct().take(n)
 
     /** Sports done outdoors, where the ready screen offers GPS. */
     val OUTDOOR = setOf(1, 3, 4, 11, 12, 15, 215, 224, 225)
+
+    /** Sports done only outdoors, whose tile carries the location mark: no indoor side to choose. */
+    val OUTDOOR_ONLY: Set<Int> get() = OUTDOOR - SIDES.map { it.outdoor }.toSet()
 
     /**
      * Sports done on your feet, where steps times a stride make a distance (≈) without GPS: runs, walks, hikes. On a
      * bike, in water or on a mat, steps say nothing about distance, so those show none.
      */
     val ON_FOOT = setOf(1, 2, 3, 11, 15, 40, 215, 224, 225)
+
+    /** Runs, where distance comes with a pace. */
+    val RUNS = setOf(1, 2, 11)
+
+    /** On foot but not running: walks and hikes, where distance alone says it. */
+    val WALKS = ON_FOOT - RUNS
+
+    /** A workout's effort glow never goes below this, so a light one, or one with no Load, still shows a trace. */
+    const val EFFORT_MIN = 0.12f
+    /** Workouts with a Load before your usual counts: fewer and the fixed [EFFORT_FULL_LOAD] scale is used. */
+    const val USUAL_LOAD_MIN = 3
+    /** How many recent workouts your usual is taken from. */
+    const val USUAL_LOAD_OF = 20
+    /** Without a usual, the Load (EPOC) that lights a workout fully: a hard session's. */
+    const val EFFORT_FULL_LOAD = 150f
+
+    /**
+     * Your usual workout Load: the median [Workout.trainingLoad] (EPOC, the strap's or OpenStrap's on the same scale)
+     * of the latest [USUAL_LOAD_OF] workouts with one, [loads] newest first. Null with fewer than [USUAL_LOAD_MIN].
+     * Not the day's Load: that is TRIMP over every minute, on another scale.
+     */
+    fun usualLoad(loads: List<Int?>): Float? {
+        val recent = loads.filterNotNull().filter { it > 0 }.take(USUAL_LOAD_OF).sorted()
+        if (recent.size < USUAL_LOAD_MIN) return null
+        val mid = recent.size / 2
+        return if (recent.size % 2 == 1) recent[mid].toFloat() else (recent[mid - 1] + recent[mid]) / 2f
+    }
+
+    /**
+     * How strongly a workout's effort light glows, 0..1, from its [load]: a usual workout at half, twice your
+     * [usual] or more at full. Without a usual, [EFFORT_FULL_LOAD] is full. No Load glows at [EFFORT_MIN].
+     */
+    fun effort(load: Int?, usual: Float?): Float {
+        if (load == null || load <= 0) return EFFORT_MIN
+        val full = usual?.takeIf { it > 0f }?.let { it * 2f } ?: EFFORT_FULL_LOAD
+        return (load / full).coerceIn(EFFORT_MIN, 1f)
+    }
 
     /** Offered before any workout has been recorded: outdoor run, walk, strength training. */
     val DEFAULT_SPORTS = listOf(1, 3, 52)

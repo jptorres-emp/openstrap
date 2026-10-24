@@ -123,6 +123,7 @@ object WorkoutRecorder {
             .copy(
                 fromPhone = true, historyMinutes = shown.count { it.fromHistory }, historyRanges = historyRanges(shown),
                 shownStart = w.from, recordedEnd = w.recordedEnd, recoveryMinutes = w.recoveryMinutes,
+                distanceMeters = w.distanceMeters, distanceFromSteps = w.distanceFromSteps,
             )
     }
 

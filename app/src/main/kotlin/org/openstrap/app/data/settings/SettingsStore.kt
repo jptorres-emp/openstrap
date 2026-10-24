@@ -179,6 +179,30 @@ class SettingsStore(private val context: Context) {
         context.dataStore.edit { it[strapSessionsKey] = enabled }
     }
 
+    private val workoutLiveViewKey = androidx.datastore.preferences.core.intPreferencesKey("workout_live_view")
+
+    /** The live view a GPS workout was left on, Heart (0) or Map (1); the next one opens on it. Heart by default. */
+    val workoutLiveView: Flow<Int> = context.dataStore.data.map { it[workoutLiveViewKey] ?: 0 }
+
+    suspend fun setWorkoutLiveView(view: Int) {
+        context.dataStore.edit { it[workoutLiveViewKey] = view }
+    }
+
+    private val workoutSidesKey = stringPreferencesKey("workout_sides")
+
+    /**
+     * The side of Ready's Outdoor or Indoor switch you last chose, per sport (spec 6.3), by the sport's key
+     * ([org.openstrap.app.data.Workouts.Sides.outdoor]), true for indoor. Sports never switched aren't in it.
+     */
+    val workoutSides: Flow<Map<Int, Boolean>> = context.dataStore.data.map { org.openstrap.app.data.Workouts.parseSides(it[workoutSidesKey]) }
+
+    suspend fun setWorkoutSide(sport: Int, indoor: Boolean) {
+        context.dataStore.edit {
+            val sides = org.openstrap.app.data.Workouts.parseSides(it[workoutSidesKey]) + (sport to indoor)
+            it[workoutSidesKey] = org.openstrap.app.data.Workouts.formatSides(sides)
+        }
+    }
+
     private val birthYear = androidx.datastore.preferences.core.intPreferencesKey("profile_birth_year")
     private val sex = stringPreferencesKey("profile_sex")
     private val weight = androidx.datastore.preferences.core.floatPreferencesKey("profile_weight_kg")
@@ -246,15 +270,41 @@ class SettingsStore(private val context: Context) {
         }
     }
 
-    private val todayTiles = stringPreferencesKey("today_tiles")
+    private val todayHidden = stringPreferencesKey("today_hidden")
+    private val todayPinned = stringPreferencesKey("today_pinned")
 
-    /** The metrics Today's What changed shows, by name; null until the user picks (then it shows them all). */
-    val todayTileNames: Flow<List<String>?> = context.dataStore.data.map { prefs ->
-        prefs[todayTiles]?.split(',')?.filter { it.isNotEmpty() }
+    /** Edit Today's choices: the cards hidden and the ones pinned under the hero, by name. Null until first edited. */
+    val todayHiddenNames: Flow<List<String>?> = context.dataStore.data.map { prefs -> prefs[todayHidden]?.split(',')?.filter { it.isNotEmpty() } }
+    val todayPinnedNames: Flow<List<String>?> = context.dataStore.data.map { prefs -> prefs[todayPinned]?.split(',')?.filter { it.isNotEmpty() } }
+
+    private val habitAgeSeen = longPreferencesKey("habit_age_seen")
+
+    /** The Sunday (local midnight) of the last Habit Age estimate opened, so Today stops offering it; null before any. */
+    val habitAgeSeenAsOf: Flow<Long?> = context.dataStore.data.map { it[habitAgeSeen] }
+
+    suspend fun setHabitAgeSeen(asOf: Long) {
+        context.dataStore.edit { it[habitAgeSeen] = asOf }
     }
 
-    suspend fun saveTodayTiles(names: List<String>) {
-        context.dataStore.edit { it[todayTiles] = names.joinToString(",") }
+    private val firstScore = longPreferencesKey("first_score_day")
+
+    /**
+     * The day (epoch day) of the first real Recovery score, so it's marked on that day only; null before one. Scores
+     * from before this was kept are stored as a day long past ([org.openstrap.app.ui.dashboard.BEFORE_FIRST_SCORE]).
+     */
+    val firstScoreDay: Flow<Long?> = context.dataStore.data.map { it[firstScore] }
+
+    suspend fun setFirstScoreDay(epochDay: Long) {
+        context.dataStore.edit { it[firstScore] = epochDay }
+    }
+
+    suspend fun saveTodayEdits(hidden: List<String>, pinned: List<String>) {
+        context.dataStore.edit {
+            it[todayHidden] = hidden.joinToString(",")
+            it[todayPinned] = pinned.joinToString(",")
+            // What changed's tile choice, which Edit Today replaced.
+            it.remove(stringPreferencesKey("today_tiles"))
+        }
     }
 
     private val companionId = androidx.datastore.preferences.core.intPreferencesKey("companion_association_id")
@@ -286,7 +336,7 @@ class SettingsStore(private val context: Context) {
     /** Forgets the strap and the Zepp sign-in; the user's profile and goals stay. */
     suspend fun forgetDevice() {
         context.dataStore.edit { prefs ->
-            val keep = setOf(birthYear, sex, weight, height, imperial, sleepNeed, maxHr, activityLevel, activityAt, bodyAt, betaBlocker, pregnant, stepGoal, sleepGoal, activeGoal, todayTiles, buzzCalls, buzzNotifications, buzzPattern)
+            val keep = setOf(birthYear, sex, weight, height, imperial, sleepNeed, maxHr, activityLevel, activityAt, bodyAt, betaBlocker, pregnant, stepGoal, sleepGoal, activeGoal, todayHidden, todayPinned, buzzCalls, buzzNotifications, buzzPattern)
             prefs.asMap().keys.filter { it !in keep }.forEach { prefs.remove(it) }
         }
     }

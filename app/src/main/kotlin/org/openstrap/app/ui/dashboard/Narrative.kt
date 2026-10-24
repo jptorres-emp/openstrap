@@ -1,9 +1,7 @@
 package org.openstrap.app.ui.dashboard
 
-import androidx.compose.ui.graphics.Color
 import org.openstrap.app.data.db.SleepSession
 import org.openstrap.app.ui.components.formatDuration
-import org.openstrap.app.ui.theme.MetricColors
 import kotlin.math.abs
 
 /**
@@ -11,28 +9,18 @@ import kotlin.math.abs
  * guidance, not anything the strap reports; the UI says so where ratings appear.
  */
 object Narrative {
-    enum class Rating(val label: String, val color: Color) {
-        OPTIMAL("Optimal", MetricColors.good),
-        GOOD("Good", MetricColors.hrv),
-        FAIR("Fair", MetricColors.warn),
-        LOW("Pay attention", MetricColors.stress),
+    /** A rating's word. No colour of its own: a value off your normal takes its metric's ink (spec 2.2). */
+    enum class Rating(val label: String) {
+        OPTIMAL("Very good"),
+        GOOD("Good"),
+        FAIR("Fair"),
+        LOW("Low"),
     }
 
     fun rate(value: Float, optimal: Float, good: Float, fair: Float): Rating = when {
         value >= optimal -> Rating.OPTIMAL
         value >= good -> Rating.GOOD
         value >= fair -> Rating.FAIR
-        else -> Rating.LOW
-    }
-
-    /**
-     * A sleep score in Zepp's bands: 90+ Optimal, 80-89 Good, 60-79 Fair, below 60 Attention (codemap 06 §4.2). Stricter
-     * than [ratingFor] because that's the scale the strap's own score is built for.
-     */
-    fun sleepRating(score: Int): Rating = when {
-        score >= 90 -> Rating.OPTIMAL
-        score >= 80 -> Rating.GOOD
-        score >= 60 -> Rating.FAIR
         else -> Rating.LOW
     }
 
@@ -73,18 +61,11 @@ object Narrative {
             short && broken -> "Short, broken night"
             short -> "Short night"
             broken -> "Broken sleep"
-            score >= 90 -> "Great night"
+            score >= 90 -> "Solid night"
             score >= 80 -> "Good night"
             light -> "Light sleep"
             else -> "Okay night"
         }
-    }
-
-    fun sleepBody(session: SleepSession, asleepSeconds: Long): String = buildString {
-        append("You slept ${formatDuration(asleepSeconds)}")
-        session.deepMinutes?.takeIf { it > 0 }?.let { append(" with ${formatDuration(it * 60L)} of deep sleep") }
-        append(".")
-        session.wakeCount?.takeIf { it > 0 }?.let { append(" You woke $it ${if (it == 1) "time" else "times"}.") }
     }
 
     /** One sleep contributor: rating plus how full its bar is. */
@@ -138,54 +119,8 @@ object Narrative {
         else -> Rating.LOW
     }
 
-    /**
-     * The strap's own readiness score or one of its parts (HRV, resting HR, skin temperature, AHI) in Zepp's three
-     * bands: 85+ Optimal, 70-84 Good, below 70 Pay attention (codemap 06 §2.6). Only for the strap's values; OpenStrap's
-     * own score and contributors use [ratingFor].
-     */
-    fun zeppReadinessRating(score: Int): Rating = when {
-        score >= 85 -> Rating.OPTIMAL
-        score >= 70 -> Rating.GOOD
-        else -> Rating.LOW
-    }
-
-    fun readinessHeadline(score: Int, alert: Boolean): String = when {
-        alert -> org.openstrap.app.data.BodySignalsCopy.SHORT
-        score >= 85 -> "Primed"
-        score >= 70 -> "Ready"
-        score >= org.openstrap.app.data.Recovery.FAIR_FROM -> "Take it steady"
-        else -> "Prioritise recovery"
-    }
-
-    fun readinessBody(r: org.openstrap.app.data.Recovery.Readiness): String {
-        val score = r.score ?: return ""
-        val advice = when {
-            r.strainAlert -> "Several overnight signals are outside your usual range. Consider an easier day."
-            score >= 85 -> "You're well recovered. A good day to push hard."
-            score >= 70 -> "Recovered enough for your usual training."
-            score >= org.openstrap.app.data.Recovery.FAIR_FROM -> "Recovery isn't complete. Keep intensity moderate."
-            else -> "Your body is still catching up. Favour rest, light movement and an early night."
-        }
-        val ranked = r.contributors.filter { it.factor.weight >= 0.06f }.sortedBy { it.score }
-        val weakest = ranked.firstOrNull()?.takeIf { it.score < 70 }
-        // A quiet training day isn't something to praise, so load never counts as a strength.
-        val strongest = ranked.lastOrNull { it.factor.physiological || it.factor == org.openstrap.app.data.Recovery.Factor.Sleep }
-            ?.takeIf { it.score >= 85 && it != weakest }
-        return buildString {
-            append(advice)
-            if (weakest != null) append(" ${weakest.factor.label} is holding you back")
-            if (weakest != null && strongest != null) append("; ${strongest.factor.label.replaceFirstChar { it.lowercase() }} is a strength.")
-            else if (weakest != null) append(".")
-            else if (strongest != null) append(" ${strongest.factor.label} looks strong.")
-        }
-    }
-
-    fun chargeHeadline(charge: Int): String = when {
-        charge >= 75 -> "Fully charged"
-        charge >= 50 -> "Good energy"
-        charge >= 25 -> "Running low"
-        else -> "Depleted"
-    }
+    /** A Charge as its band's word from the info sheet's scale. */
+    fun chargeHeadline(charge: Int): String = InfoCopy.CHARGE_SCALE[InfoCopy.chargeBar(charge)]
 
     /** Where stress starts counting, and why: the user's calm level, or how long until there is one. */
     fun stressThreshold(t: org.openstrap.app.data.Recovery.StressThreshold): String {
@@ -196,23 +131,5 @@ object Narrative {
             left > 0 -> "Stress counts from ${t.value} for now. After ${if (left == 1) "1 more day" else "$left more days"} of wear it adjusts to your own calm level."
             else -> "Stress counts from ${t.value} for now, until there are enough calm readings to find your own level."
         }
-    }
-
-    /** One sentence on where the day's charge went, naming the biggest drain. */
-    fun chargeBody(c: org.openstrap.app.data.Recovery.ChargeDay): String {
-        val now = c.latest?.toInt() ?: return ""
-        val used = (c.drainedExercise + c.drainedStress + c.drainedLiving).toInt()
-        val start = c.atWake?.let {
-            if (c.strapOffOvernight) "With the strap off overnight, today started from an estimated ${it.toInt()}; you've used $used since"
-            else "You woke at ${it.toInt()} and have used $used since"
-        } ?: "You've used $used today"
-        val biggest = listOf("movement" to c.drainedExercise, "stress" to c.drainedStress).maxBy { it.second }
-        val cause = if (biggest.second >= 8) ", most of it on ${biggest.first}." else "."
-        val advice = when {
-            now < 25 -> " Wind down and get to bed early."
-            now < 50 -> " Pace yourself for the rest of the day."
-            else -> " Plenty left for the rest of the day."
-        }
-        return start + cause + advice
     }
 }

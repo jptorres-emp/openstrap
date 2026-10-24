@@ -8,6 +8,7 @@ import android.content.Intent
 import androidx.core.app.NotificationCompat
 import org.openstrap.app.MainActivity
 import org.openstrap.app.data.BodySignalsCopy
+import org.openstrap.app.ui.dashboard.Metric
 import org.openstrap.protocol.services.HealthAlert
 import java.time.Instant
 import java.time.ZoneId
@@ -36,7 +37,13 @@ class HealthAlertNotifier(private val context: Context) {
             HealthAlert.Type.IRREGULAR_RHYTHM ->
                 "Irregular heart rhythm" to "The strap noticed an irregular heart rhythm at ${TIME.format(Instant.ofEpochSecond(at))}."
         }
-        val open = PendingIntent.getActivity(context, 0, Intent(context, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE)
+        val metric = when (alert.type) {
+            HealthAlert.Type.HIGH_HEART_RATE, HealthAlert.Type.LOW_HEART_RATE, HealthAlert.Type.IRREGULAR_RHYTHM -> Metric.HeartRate
+            HealthAlert.Type.HIGH_STRESS -> Metric.Stress
+            HealthAlert.Type.LOW_SPO2 -> Metric.Spo2
+        }
+        val day = Instant.ofEpochSecond(at).atZone(ZoneId.systemDefault()).toLocalDate()
+        val open = openRoute(metric.name, day, NOTIFICATION_BASE + alert.type.code)
         val notification = NotificationCompat.Builder(context, CHANNEL)
             .setSmallIcon(android.R.drawable.stat_sys_warning)
             .setContentTitle(title)
@@ -57,7 +64,8 @@ class HealthAlertNotifier(private val context: Context) {
      */
     fun showBodySignals(signals: List<String>, nights: Int) {
         val text = BodySignalsCopy.pushText(signals, nights)
-        val open = PendingIntent.getActivity(context, 0, Intent(context, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE)
+        // Body signals lead the Recovery screen, so that's where the notification opens.
+        val open = openRoute("Recovery", java.time.LocalDate.now(), BODY_SIGNALS_ID)
         val notification = NotificationCompat.Builder(context, CHANNEL)
             .setSmallIcon(android.R.drawable.stat_sys_warning)
             .setContentTitle(BodySignalsCopy.TITLE)
@@ -69,6 +77,19 @@ class HealthAlertNotifier(private val context: Context) {
             .build()
         manager.notify(BODY_SIGNALS_ID, notification)
     }
+
+    /**
+     * Opens the app on [route]'s screen for [day] (`open_metric`, see [MainActivity.EXTRA_OPEN_METRIC]). Each kind of
+     * notification has its own [requestCode], so their extras don't overwrite each other.
+     */
+    private fun openRoute(route: String, day: java.time.LocalDate, requestCode: Int): PendingIntent = PendingIntent.getActivity(
+        context, requestCode,
+        Intent(context, MainActivity::class.java)
+            .putExtra(MainActivity.EXTRA_OPEN_METRIC, route)
+            .putExtra(MainActivity.EXTRA_METRIC_DAY, day.toString())
+            .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
+        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+    )
 
     private companion object {
         const val CHANNEL = "health"

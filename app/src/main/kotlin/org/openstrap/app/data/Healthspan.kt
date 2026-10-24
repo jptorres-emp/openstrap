@@ -209,7 +209,7 @@ object Healthspan {
 
     enum class Habit(val label: String, val fitness: Boolean) {
         Strength("Strength training", false),
-        Vo2max("Fitness (VO2max)", true),
+        Vo2max("Fitness (VO2 max)", true),
         Steps("Steps", true),
         Regularity("Sleep regularity", false),
         RestingHr("Resting heart rate", true),
@@ -338,7 +338,16 @@ object Healthspan {
         val age: Int? = null,
         val missing: List<String> = emptyList(),
         val firstEstimate: Long? = null,
+        /** Last week's estimate as it was shown ([lastWeek]), for "1 year younger than last week"; null until there's one. */
+        val lastWeek: Float? = null,
     )
+
+    /**
+     * Last week's estimate for the Sunday [asOf]: the latest of the stored [weeks] (Sunday to estimate) from the 8 days
+     * before it, so a clock change between the two Sundays doesn't lose it. Null without one.
+     */
+    fun lastWeek(weeks: List<Pair<Long, Float>>, asOf: Long): Float? =
+        weeks.filter { it.first in asOf - 8 * DAY until asOf }.maxByOrNull { it.first }?.second
 
     /** One habit as the screen shows it: its shown years (after shrinkage) and the numbers behind it. */
     data class Term(val habit: Habit, val years: Float, val value: Float?, val reference: Float?)

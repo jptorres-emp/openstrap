@@ -7,7 +7,7 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 
 /**
- * A workout's GPS route, worked out in pure Kotlin like [Recovery]: distance, splits, and what an export may show.
+ * A workout's GPS route, worked out in pure Kotlin like [Recovery]: distance, splits and the map's stretches.
  * The phone's fixes are filtered before they count: nothing until GPS has settled, poor accuracy and impossible jumps
  * are dropped, then the rest are smoothed both ways in time ([track]) and standing still adds no distance.
  */
@@ -42,9 +42,6 @@ object Route {
     const val MIN_MOVE_M = 5.0
     /** Plausible on foot between two fixes while settling (a sprint), so a runner's start still settles. */
     private const val SETTLE_SPEED_MS = 8.0
-
-    /** An export leaves out this much of the start and the end, so a shared run doesn't show where you live. */
-    const val PRIVACY_M = 300.0
 
     private const val EARTH_M = 6_371_000.0
 
@@ -343,38 +340,11 @@ object Route {
         return if (m < 10 || s <= 0) null else s / (m / 1000)
     }
 
-    /** What an export may show: the route less its first and last [PRIVACY_M] metres. Empty when it's shorter. */
-    fun privacyTrim(points: List<Point>, meters: Double = PRIVACY_M): List<Point> {
-        val clean = clean(points)
-        if (clean.size < 2) return emptyList()
-        val along = DoubleArray(clean.size)
-        for (i in 1 until clean.size) along[i] = along[i - 1] + meters(clean[i - 1], clean[i])
-        val total = along.last()
-        return clean.filterIndexed { i, _ -> along[i] >= meters && along[i] <= total - meters }
-    }
-
-    /** "5′42″" per kilometre. */
-    fun formatPace(secondsPerKm: Double?): String {
-        if (secondsPerKm == null || secondsPerKm <= 0 || secondsPerKm > 3600) return "—"
+    /** "5′42″" per kilometre, or null with no pace to show. */
+    fun formatPace(secondsPerKm: Double?): String? {
+        if (secondsPerKm == null || secondsPerKm <= 0 || secondsPerKm > 3600) return null
         val s = Math.round(secondsPerKm)
         return "%d′%02d″".format(s / 60, s % 60)
-    }
-
-    /**
-     * A GPX 1.1 file of [points] (already privacy-trimmed by the caller) with heart rate from [heartRate] (epoch
-     * seconds to bpm) in Garmin's TrackPointExtension, which Strava and others read.
-     */
-    fun gpx(name: String, points: List<Point>, heartRate: Map<Long, Int>): String = buildString {
-        append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
-        append("<gpx version=\"1.1\" creator=\"OpenStrap\" xmlns=\"http://www.topografix.com/GPX/1/1\" ")
-        append("xmlns:gpxtpx=\"http://www.garmin.com/xmlschemas/TrackPointExtension/v1\">\n")
-        append("  <trk><name>").append(name.replace("&", "&amp;").replace("<", "&lt;")).append("</name><trkseg>\n")
-        points.forEach { p ->
-            append("    <trkpt lat=\"%.7f\" lon=\"%.7f\"><time>%s</time>".format(java.util.Locale.ROOT, p.lat, p.lon, java.time.Instant.ofEpochSecond(p.t)))
-            nearest(heartRate, p.t)?.let { append("<extensions><gpxtpx:TrackPointExtension><gpxtpx:hr>$it</gpxtpx:hr></gpxtpx:TrackPointExtension></extensions>") }
-            append("</trkpt>\n")
-        }
-        append("  </trkseg></trk>\n</gpx>\n")
     }
 
     /**
@@ -405,6 +375,4 @@ object Route {
     }
 
     private const val MAX_HR_GAP_S = 30L
-
-    private fun nearest(hr: Map<Long, Int>, t: Long): Int? = (0L..5L).firstNotNullOfOrNull { d -> hr[t - d] ?: hr[t + d] }
 }

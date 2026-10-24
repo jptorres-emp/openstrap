@@ -6,16 +6,20 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.openstrap.app.data.db.DeletedWorkout
 import org.openstrap.app.data.db.HealthDao
 import org.openstrap.app.data.db.HeartRateSample
 import org.openstrap.app.data.db.OpenStrapDatabase
+import org.openstrap.app.data.db.RecoveryHeartRateRow
 import org.openstrap.app.data.db.SleepSession
 import org.openstrap.app.data.db.SleepStage
+import org.openstrap.app.data.db.SportEffectRow
 import org.openstrap.app.data.db.WearEventRow
 import org.openstrap.app.data.db.Workout
 import org.openstrap.app.data.db.WorkoutHeartRate
@@ -137,6 +141,80 @@ class CsvRestoreTest {
         assertEquals(listOf(99), hr.filter { it.workoutStart == last.start }.map { it.bpm })
         assertEquals(6, hr.count { it.workoutStart != last.start })
         assertEquals(4, phone.healthDao().workouts().first().size)
+    }
+
+    @Test fun `a strap workout deleted on the old phone is still deleted after a restore`() = runTest {
+        fillOldPhone()
+        val first = old.healthDao().workouts().first().minBy { it.start }
+        old.healthDao().deleteStrapWorkout(first.start, day)
+        restore(backup(old))
+
+        assertEquals(old.healthDao().deletedWorkoutsAll(), phone.healthDao().deletedWorkoutsAll())
+        assertEquals(listOf(first.start), phone.healthDao().deletedWorkoutsAll().map { it.start })
+        assertEquals(3, phone.healthDao().workouts().first().size)
+        assertEquals(contents(old), contents(phone))
+    }
+
+    @Test fun `a workout the backup has a tombstone for doesn't come back, nor its heart rate or own sport effect`() = runTest {
+        fillOldPhone()
+        val first = old.healthDao().workouts().first().minBy { it.start }
+        val effectEnd = first.end + 60
+        old.healthDao().insertSportEffects(listOf(SportEffectRow(effectEnd, 600, null, null, null, null, null, null, null)))
+        old.healthDao().insertRecoveryHeartRate(listOf(RecoveryHeartRateRow(first.start, byteArrayOf(1, 2))))
+        // The tombstone and the workout in one backup, as if the row had been left behind.
+        old.healthDao().insertDeletedWorkouts(listOf(DeletedWorkout(first.start, effectEnd, day)))
+        val result = restore(backup(old))
+
+        val d = phone.healthDao()
+        assertNull(d.workoutOnce(first.start))
+        assertEquals(3, d.workouts().first().size)
+        assertTrue(d.workoutHeartRateAll().none { it.workoutStart == first.start })
+        assertEquals(6, d.workoutHeartRateAll().size)
+        assertTrue(d.recoveryHeartRateAll().isEmpty())
+        assertTrue(d.sportEffects().first().isEmpty())
+        assertEquals(listOf(first.start), d.deletedWorkoutsAll().map { it.start })
+        assertEquals(0, result.skipped)
+    }
+
+    @Test fun `a tombstone already on the phone keeps the backup's copy of that workout out`() = runTest {
+        fillOldPhone()
+        val first = old.healthDao().workouts().first().minBy { it.start }
+        phone.healthDao().insertDeletedWorkouts(listOf(DeletedWorkout(first.start, null, day)))
+        restore(backup(old))
+        assertNull(phone.healthDao().workoutOnce(first.start))
+        assertEquals(3, phone.healthDao().workouts().first().size)
+    }
+
+    @Test fun `every tombstone in the backup comes back, even after one the phone already has`() = runTest {
+        fillOldPhone()
+        val (first, second) = old.healthDao().workouts().first().sortedBy { it.start }
+        old.healthDao().deleteStrapWorkout(second.start, day)
+        val mine = DeletedWorkout(first.start, null, day + 5)
+        phone.healthDao().insertDeletedWorkouts(listOf(mine))
+        restore(backup(old))
+        val tombstones = phone.healthDao().deletedWorkoutsAll().associateBy { it.start }
+        assertEquals(setOf(first.start, second.start), tombstones.keys)
+        assertEquals(mine, tombstones[first.start])
+        assertNull(phone.healthDao().workoutOnce(second.start))
+    }
+
+    @Test fun `a backup from before deleted workouts were kept still restores`() = runTest {
+        fillOldPhone()
+        val zip = ByteArrayOutputStream().also { out ->
+            ZipOutputStream(out).use { z ->
+                val src = ZipInputStream(ByteArrayInputStream(backup(old)))
+                while (true) {
+                    val e = src.nextEntry ?: break
+                    if (e.name == "workout_deleted.csv") continue
+                    z.putNextEntry(ZipEntry(e.name)); z.write(src.readBytes()); z.closeEntry()
+                }
+            }
+        }.toByteArray()
+        val result = restore(zip)
+        assertTrue("workout_deleted.csv" !in result.rows)
+        assertEquals(4, phone.healthDao().workouts().first().size)
+        assertEquals(8, phone.healthDao().workoutHeartRateAll().size)
+        assertTrue(phone.healthDao().deletedWorkoutsAll().isEmpty())
     }
 
     @Test fun `a zip that isn't an export changes nothing`() = runTest {

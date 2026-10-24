@@ -33,6 +33,22 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.animation.core.animate
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Velocity
+import kotlinx.coroutines.launch
 
 /** The nav bar's glass: near-black, see-through, with a lit top edge. Popups use it over a blurred screen. */
 val GlassTint = Color(0xFF0B0B0D)
@@ -126,7 +142,7 @@ val LocalGlassHost = staticCompositionLocalOf<GlassHost> { error("No GlassHost p
 /** Shows [content] in the overlay for as long as this is in the composition. */
 @Composable
 private fun GlassPortal(host: GlassHost, sheet: Boolean, onDismiss: () -> Unit, content: @Composable () -> Unit) {
-    val d = androidx.compose.runtime.rememberUpdatedState(onDismiss)
+    val d = rememberUpdatedState(onDismiss)
     val c = androidx.compose.runtime.rememberUpdatedState(content)
     DisposableEffect(host) {
         val layer = GlassLayer(sheet, d, c)
@@ -177,15 +193,63 @@ fun GlassOverlay(host: GlassHost, haze: dev.chrisbanes.haze.HazeState) {
 
 /** The glass panel a popup sits on: see-through dark over the blurred page, with a lit top edge. */
 @Composable
-fun GlassPanel(modifier: Modifier = Modifier, shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(28.dp), content: @Composable () -> Unit) {
+fun GlassPanel(modifier: Modifier = Modifier, shape: androidx.compose.ui.graphics.Shape = org.openstrap.app.ui.glow.GlowLayout.CardShape, content: @Composable () -> Unit) {
     Surface(shape = shape, color = GlassTint.copy(alpha = 0.72f), border = GlassEdge, contentColor = Color.White, modifier = modifier, content = content)
 }
 
-/** A bottom sheet as glass in the overlay. */
+/**
+ * A bottom sheet as glass in the overlay, at most [org.openstrap.app.ui.glow.GlowLayout.PageMaxWidth] wide and centred.
+ * Pulled down by its handle, or past the top of its list, it follows the
+ * finger; let go far enough down (or flung) and it closes, otherwise it springs back.
+ */
 @Composable
 fun GlassSheet(onDismiss: () -> Unit, content: @Composable () -> Unit) {
     GlassPortal(LocalGlassHost.current, sheet = true, onDismiss = onDismiss) {
-        GlassPanel(Modifier.fillMaxWidth(), RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)) {
+        val scope = rememberCoroutineScope()
+        val density = LocalDensity.current
+        val dismiss = rememberUpdatedState(onDismiss)
+        val pull = remember { mutableFloatStateOf(0f) }
+        val release: (Float) -> Unit = { velocity ->
+            if (pull.floatValue > with(density) { 120.dp.toPx() } || velocity > with(density) { 800.dp.toPx() }) dismiss.value()
+            else scope.launch {
+                animate(pull.floatValue, 0f, animationSpec = tween(Motion.QUICK, easing = Motion.easing)) { v, _ -> pull.floatValue = v }
+            }
+        }
+        val pullOnTop = remember {
+            object : NestedScrollConnection {
+                // Pushing back up takes the pull away before the list scrolls.
+                override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                    if (available.y >= 0f || pull.floatValue <= 0f) return Offset.Zero
+                    val used = maxOf(available.y, -pull.floatValue)
+                    pull.floatValue += used
+                    return Offset(0f, used)
+                }
+
+                // What the list can't scroll down any further pulls the sheet.
+                override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
+                    if (source != NestedScrollSource.UserInput || available.y <= 0f) return Offset.Zero
+                    pull.floatValue += available.y
+                    return Offset(0f, available.y)
+                }
+
+                override suspend fun onPreFling(available: Velocity): Velocity {
+                    if (pull.floatValue <= 0f) return Velocity.Zero
+                    release(available.y)
+                    return available
+                }
+            }
+        }
+        // At most a page's column wide, centred, on a wide screen (spec 2.4 Unfolded).
+        GlassPanel(
+            Modifier.widthIn(max = org.openstrap.app.ui.glow.GlowLayout.PageMaxWidth).fillMaxWidth()
+                .graphicsLayer { translationY = pull.floatValue }
+                .nestedScroll(pullOnTop)
+                .draggable(
+                    rememberDraggableState { d -> pull.floatValue = (pull.floatValue + d).coerceAtLeast(0f) },
+                    Orientation.Vertical, onDragStopped = { v -> release(v) },
+                ),
+            org.openstrap.app.ui.glow.GlowLayout.SheetShape,
+        ) {
             Column {
                 Box(Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 8.dp), contentAlignment = Alignment.Center) {
                     Box(Modifier.size(width = 36.dp, height = 4.dp).background(Color.White.copy(alpha = 0.3f), RoundedCornerShape(2.dp)))

@@ -20,10 +20,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
-import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -50,6 +46,9 @@ private val GLYPHS: Map<Char, List<String>> = mapOf(
     ',' to listOf(".", ".", ".", ".", ".", "#", "#"),
     ':' to listOf(".", ".", "#", ".", ".", "#", "."),
     '-' to listOf("...", "...", "...", "###", "...", "...", "..."),
+    // The real minus sign of signed values (spec 2.3), drawn as the dash is.
+    '\u2212' to listOf("...", "...", "...", "###", "...", "...", "..."),
+    '+' to listOf("...", "...", ".#.", "###", ".#.", "...", "..."),
     'k' to listOf("#....", "#....", "#..#.", "#.#..", "##...", "#.#..", "#..#."),
     '%' to listOf("##...", "##..#", "...#.", "..#..", ".#...", "#..##", "...##"),
     ' ' to listOf("..", "..", "..", "..", "..", "..", ".."),
@@ -57,27 +56,30 @@ private val GLYPHS: Map<Char, List<String>> = mapOf(
 private const val ROWS = 7
 
 /**
- * A number drawn as round dots, like an LED matrix (the "3.3" on the reference cards). [dot] is the
- * dot diameter; the grid pitch is dot + [gap]. Digits, `.`, `,`, `:`, `-` and `%` are supported.
+ * A number drawn as round dots, like an LED matrix (the "3.3" on the reference cards), in one of the six [DotSize]s
+ * for where it sits. Digits, `.`, `,`, `:`, `-`, `−`, `+` and `%` are supported.
  */
 @Composable
 fun DotMatrixText(
     text: String,
     modifier: Modifier = Modifier,
-    dot: Dp = 5.dp,
-    gap: Dp = 2.dp,
+    dot: DotSize,
     color: Color = Color.White,
+    /** Shrinks the dots below [dot] where the number must fit a space (the live workout's arc), 0..1. */
+    scale: Float = 1f,
 ) {
+    val size = dot.dot * scale
+    val gap = size * DotSize.DOT_GAP
     val glyphs = text.map { GLYPHS[it] ?: GLYPHS.getValue(' ') }
     // One empty column between glyphs.
     val columns = glyphs.sumOf { it[0].length } + (glyphs.size - 1).coerceAtLeast(0)
-    val pitch = dot + gap
+    val pitch = size + gap
     Canvas(
         modifier
             .size(pitch * columns - gap, pitch * ROWS - gap)
             .semantics { contentDescription = text },
     ) {
-        val d = dot.toPx()
+        val d = size.toPx()
         val step = pitch.toPx()
         var x0 = 0f
         glyphs.forEach { rows ->
@@ -88,51 +90,6 @@ fun DotMatrixText(
             }
             x0 += (rows[0].length + 1) * step
         }
-    }
-}
-
-/* ------------------------------------------------------------------------------------------------ */
-/* Decorations                                                                                       */
-/* ------------------------------------------------------------------------------------------------ */
-
-private fun DrawScope.dotted(gap: Dp, width: Dp) = Stroke(
-    width = width.toPx(),
-    cap = StrokeCap.Round,
-    pathEffect = PathEffect.dashPathEffect(floatArrayOf(0f, gap.toPx())),
-)
-
-/** A marker on an [ArcTimeline]: a position along the line (0..1) and its colour. */
-data class ArcMark(val at: Float, val color: Color)
-
-/**
- * A dotted baseline with arcs bridging consecutive [arcs] marks ("Breath Volume"). Marks listed in
- * [marks] are drawn as coloured dots; [arcs] are pairs of positions (0..1) to bridge.
- */
-@Composable
-fun ArcTimeline(
-    marks: List<ArcMark>,
-    arcs: List<Pair<Float, Float>>,
-    modifier: Modifier = Modifier,
-    color: Color = Color.White,
-) {
-    Canvas(modifier) {
-        val y = size.height - 6.dp.toPx()
-        drawLine(
-            color.copy(alpha = 0.65f), Offset(0f, y), Offset(size.width, y),
-            strokeWidth = 2.dp.toPx(), cap = StrokeCap.Round,
-            pathEffect = PathEffect.dashPathEffect(floatArrayOf(0f, 9.dp.toPx())),
-        )
-        arcs.forEachIndexed { i, (a, b) ->
-            val left = a * size.width
-            val diameter = (b - a) * size.width
-            drawArc(
-                color.copy(alpha = if (i == arcs.lastIndex) 1f else 0.65f),
-                startAngle = 180f, sweepAngle = 180f, useCenter = false,
-                topLeft = Offset(left, y - diameter / 2), size = androidx.compose.ui.geometry.Size(diameter, diameter),
-                style = Stroke(1.5.dp.toPx()),
-            )
-        }
-        marks.forEach { drawCircle(it.color, 4.dp.toPx(), Offset(it.at * size.width, y)) }
     }
 }
 
@@ -170,4 +127,10 @@ fun GlowSwitch(checked: Boolean, onCheckedChange: (Boolean) -> Unit, modifier: M
                 .background(knobColor, CircleShape),
         )
     }
+}
+
+/** How wide a number of [digits] digits is in [dot] dots, so a space can be sized for the widest it will show. */
+internal fun dotNumberWidth(digits: Int, dot: DotSize): Dp {
+    val columns = digits * 5 + (digits - 1).coerceAtLeast(0)
+    return (dot.dot + dot.gap) * columns - dot.gap
 }

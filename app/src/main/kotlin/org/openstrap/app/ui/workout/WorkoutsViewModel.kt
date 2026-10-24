@@ -15,7 +15,9 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.mapLatest
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import org.openstrap.app.data.RecoveryEngine
 import org.openstrap.app.data.WorkoutAnalysis
 import org.openstrap.app.data.WorkoutRecorder
@@ -26,14 +28,13 @@ import kotlin.math.roundToInt
 
 /**
  * What a phone workout's summary shows: [analysis] over its shown range, [recorded] every sample from
- * [recordedStart] to [recordedEnd] (for the trim chart), and [usual] to compare with.
+ * [recordedStart] to [recordedEnd] (for the trim chart).
  */
 data class PhoneSummary(
     val analysis: WorkoutAnalysis,
     val recorded: List<org.openstrap.app.data.db.WorkoutHeartRate>,
     val recordedStart: Long,
     val recordedEnd: Long,
-    val usual: WorkoutRecorder.Usual?,
     val endReason: Int?,
     /** The route, when it was kept; empty otherwise. */
     val route: List<org.openstrap.app.data.Route.Point> = emptyList(),
@@ -47,6 +48,8 @@ data class PhoneSummary(
     val strapWorkout: WorkoutAnalysis? = null,
     /** Laps, when any were marked. */
     val laps: List<WorkoutRecorder.Lap> = emptyList(),
+    /** Finished pauses, which no split counts. */
+    val pauses: List<LongRange> = emptyList(),
 )
 
 /** Workouts list (newest first) and the one open in detail. */
@@ -62,16 +65,52 @@ class WorkoutsViewModel(private val dao: HealthDao, private val profile: Flow<Us
         .stateIn<Int?>(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
         .filterNotNull()
 
+    private val zoneCache = ZoneCache<Pair<Boolean, Long>>()
+
+    /**
+     * Each listed workout's zone seconds, by (from the phone, start), worked out from its whole HR stream as its page
+     * does, so the list and the page agree. Off the main thread, and only for workouts whose row, effect, max HR or
+     * stream changed ([ZoneCache]); empty at first, so the list shows before its zones fill in.
+     */
+    private val listZones: Flow<Map<Pair<Boolean, Long>, List<Int>>> =
+        combine(
+            dao.workouts(), dao.sportEffects(), dao.workoutHeartRateMarks(),
+            combine(dao.appWorkouts(), dao.appWorkoutHeartRateMarks()) { phone, marks -> phone to marks }, fallbackMaxHr,
+        ) { ws, effects, marks, (phone, phoneMarks), maxHr ->
+            val strapMark = marks.associateBy { it.workoutStart }
+            val phoneMark = phoneMarks.associateBy { it.workoutStart }
+            val strapByStart = ws.associateBy { it.start }
+            val phoneByStart = phone.associateBy { it.start }
+            val stamps = ws.associate { w -> (false to w.start) to listOf(w, Workouts.effectOf(w, effects), maxHr, strapMark[w.start]) } +
+                phone.associate { w -> (true to w.start) to listOf(w, maxHr, phoneMark[w.start]) }
+            val work: suspend (Pair<Boolean, Long>) -> List<Int> = { (fromPhone, start) ->
+                if (fromPhone) WorkoutRecorder.analyse(phoneByStart.getValue(start), dao.appWorkoutHeartRateOnce(start), maxHr).zoneSeconds
+                else Workouts.analyse(strapByStart.getValue(start), dao.workoutHeartRateOnce(start), effects, maxHr).zoneSeconds
+            }
+            stamps to work
+        }
+            .mapLatest { (stamps, work) -> zoneCache.zones(stamps, work) }
+            .flowOn(Dispatchers.Default)
+            .onStart { emit(emptyMap()) }
+
     /**
      * The strap's workouts and the phone's, newest first. List rows use the stored end; the detail screen works out
-     * the real one from the HR stream.
+     * the real one from the HR stream. Zones come from [listZones]. A phone strength workout carries its count of
+     * finished sets.
      */
     val workouts: StateFlow<List<WorkoutAnalysis>> =
-        combine(dao.workouts(), dao.sportEffects(), dao.lastWorkoutHeartRates(), dao.appWorkouts(), fallbackMaxHr) { ws, effects, last, phone, maxHr ->
-            val lastByWorkout = last.associateBy { it.workoutStart }
-            val strap = ws.map { w -> Workouts.analyse(w, listOfNotNull(lastByWorkout[w.start]), effects, maxHr) }
-            (strap + phone.map { WorkoutRecorder.analyse(it, emptyList(), maxHr) }).sortedByDescending { it.workout.start }
-        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+        combine(
+            combine(
+                dao.workouts(), dao.sportEffects(), dao.lastWorkoutHeartRates(),
+                combine(dao.appWorkouts(), dao.setCounts()) { phone, sets -> phone to sets.associate { it.workoutStart to it.sets } }, fallbackMaxHr,
+            ) { ws, effects, last, (phone, sets), maxHr ->
+                val lastByWorkout = last.associateBy { it.workoutStart }
+                val strap = ws.map { w -> Workouts.analyse(w, listOfNotNull(lastByWorkout[w.start]), effects, maxHr) }
+                (strap + phone.map { WorkoutRecorder.analyse(it, emptyList(), maxHr).copy(sets = sets[it.start]) }).sortedByDescending { it.workout.start }
+            },
+            listZones,
+        ) { list, zones -> list.map { a -> zones[a.fromPhone to a.workout.start]?.let { a.copy(zoneSeconds = it) } ?: a } }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     /** The strap's sport-effect records, newest last: recovery time, VO2 max and weekly load after each workout. */
     val effects: StateFlow<List<org.openstrap.app.data.db.SportEffectRow>> =
@@ -130,10 +169,11 @@ class WorkoutsViewModel(private val dao: HealthDao, private val profile: Flow<Us
         }
 
     /**
-     * A phone workout's summary: its analysis, everything recorded (for trimming), and "your usual" from the last
-     * similar workouts of the same sport, phone or strap ([WorkoutRecorder.similar]).
+     * A phone workout's summary: its analysis, everything recorded (for trimming), and the strap's own record of it
+     * when there is one. [backfill] works out the effect of a workout from before there was one and saves it; off,
+     * opening the summary writes nothing.
      */
-    fun phoneSummary(start: Long): Flow<PhoneSummary?> =
+    fun phoneSummary(start: Long, backfill: Boolean = true): Flow<PhoneSummary?> =
         combine(dao.appWorkout(start), dao.appWorkoutHeartRate(start), fallbackMaxHr, workouts, combine(dao.route(start), dao.sets(start)) { r, s -> r to s }) { w, hr, maxHr, all, extra ->
             Quad(w, hr, maxHr, all) to extra
         }
@@ -142,47 +182,51 @@ class WorkoutsViewModel(private val dao: HealthDao, private val profile: Flow<Us
                 val (w, hr, maxHr, all) = q
                 w ?: return@mapLatest null
                 // A workout from before its effect was worked out gets it now; saving it brings this summary round again.
-                if (w.end != null && w.epoc == null && hr.isNotEmpty()) {
+                if (backfill && w.end != null && w.epoc == null && hr.isNotEmpty()) {
                     runCatching { org.openstrap.app.data.WorkoutEffectEngine(dao).backfill(w, profile.first()) }
                 }
                 val a = WorkoutRecorder.analyse(w, hr, maxHr)
-                val similar = WorkoutRecorder.similar(a, all).map { s ->
-                    dao.appWorkoutOnce(s.workout.start)?.let { pw -> WorkoutRecorder.analyse(pw, dao.appWorkoutHeartRateOnce(pw.start), maxHr) }
-                        ?: Workouts.analyse(s.workout, dao.workoutHeartRate(s.workout.start).first(), dao.sportEffects().first(), maxHr)
-                }
                 // Merged by time: a strap workout that started within two minutes of this one's shown range.
                 val strap = all.firstOrNull { !it.fromPhone && it.workout.start in (w.from - 120)..((w.end ?: a.end) + 120) }
                     ?.let { s -> Workouts.analyse(s.workout, dao.workoutHeartRate(s.workout.start).first(), dao.sportEffects().first(), maxHr) }
                 val route = routeRows.map { it.point }.filter { it.t in w.from..(w.end ?: Long.MAX_VALUE) }
                 PhoneSummary(
-                    a, WorkoutRecorder.expand(hr), w.start, w.recordedEnd ?: w.end ?: a.end, WorkoutRecorder.usual(similar), w.endReason,
+                    a, WorkoutRecorder.expand(hr), w.start, w.recordedEnd ?: w.end ?: a.end, w.endReason,
                     route, hr.filter { !it.fromHistory }.map { it.timestamp to it.bpm }, w.distanceMeters, w.distanceFromSteps, sets, strap,
                     w.lapMarks.takeIf { it.isNotEmpty() }?.let { marks ->
                         WorkoutRecorder.laps(w.from, w.end ?: a.end, marks, hr.filter { !it.fromHistory }.map { it.timestamp to it.bpm }, route, w.pauseRanges)
                     }.orEmpty(),
+                    w.pauseRanges,
                 )
             }.flowOn(Dispatchers.Default)
 
     /**
-     * A GPX file of a kept route for sharing: its first and last [org.openstrap.app.data.Route.PRIVACY_M] metres left
-     * out, so it doesn't show where you live, with heart rate. Null without a route long enough to share.
-     *
-     * TODO: write the smoothed track (`Route.track`) instead of the raw fixes, so the file matches the map and the
-     * distance shown in the app. Deferred on purpose; the smoothing landed in 33b550f.
+     * Your usual heart rate drop in the first minute after a workout, before [before] ([SummaryCopy.usualDrop]): from
+     * the strap's own workouts, whose recording runs on after the end, and only those ended from a real effort
+     * ([WorkoutAnalysis.recoveryIsMeaningful]). Phone workouts keep no drop yet. Null with too few.
      */
-    suspend fun gpx(start: Long): Pair<String, String>? = kotlinx.coroutines.withContext(Dispatchers.Default) {
-        val w = dao.appWorkoutOnce(start) ?: return@withContext null
-        val points = org.openstrap.app.data.Route.privacyTrim(
-            dao.routeOnce(start).map { it.point }.filter { it.t in w.from..(w.end ?: Long.MAX_VALUE) },
-        )
-        if (points.isEmpty()) return@withContext null
-        val hr = dao.appWorkoutHeartRateOnce(start).filter { !it.fromHistory }.associate { it.timestamp to it.bpm }
-        val name = Workouts.sportName(w.sportType)
-        val date = java.time.Instant.ofEpochSecond(w.from).atZone(java.time.ZoneId.systemDefault()).toLocalDate()
-        "openstrap-${name.lowercase().replace(' ', '-')}-$date.gpx" to org.openstrap.app.data.Route.gpx("$name $date", points, hr)
+    suspend fun usualDrop(before: Long): Int? = kotlinx.coroutines.withContext(Dispatchers.Default) {
+        val maxHr = fallbackMaxHr.first()
+        val effects = dao.sportEffects().first()
+        val drops = dao.workouts().first()
+            .filter { it.start < before && it.start >= before - USUAL_DROP_LOOKBACK_S }
+            .sortedByDescending { it.start }
+            .take(SummaryCopy.USUAL_DROP_OF * 2)
+            .mapNotNull { w -> Workouts.analyse(w, dao.workoutHeartRateOnce(w.start), effects, maxHr).takeIf { it.recoveryIsMeaningful }?.recovery60 }
+        SummaryCopy.usualDrop(drops)
+    }
+
+    private companion object {
+        /** Drops older than this say little about your fitness now. */
+        const val USUAL_DROP_LOOKBACK_S = 180 * 86_400L
     }
 
     private data class Quad<A, B, C, D>(val a: A, val b: B, val c: C, val d: D)
 
     fun open(start: Long?) { openStart.value = start }
+
+    /** Deletes a strap workout and keeps it from coming back with a later sync ([HealthDao.deleteStrapWorkout]). */
+    fun deleteStrapWorkout(start: Long) {
+        viewModelScope.launch { dao.deleteStrapWorkout(start, System.currentTimeMillis() / 1000) }
+    }
 }

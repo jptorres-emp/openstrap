@@ -12,6 +12,7 @@ import org.openstrap.app.data.Workouts
 import org.openstrap.app.data.db.ActivityExtendedMinute
 import org.openstrap.app.data.db.ActivityMinute
 import org.openstrap.app.data.db.DailyMaxHr
+import org.openstrap.app.data.db.DeletedWorkout
 import org.openstrap.app.data.db.OsaEventRow
 import org.openstrap.app.data.db.OsaResultRow
 import org.openstrap.app.data.db.RawRecord
@@ -222,8 +223,9 @@ class HistorySync(
         dao.deleteNapStagesInsideMainSleep()
         val naps = dao.deleteNapsInsideMainSleep()
         if (naps > 0) log("history: removed $naps naps inside a main sleep")
-        // Builds before workouts were decoded moved the workout cursors past workouts they threw away.
-        if (dao.workoutCount() == 0) for (type in WORKOUT_TYPES) {
+        // Builds before workouts were decoded moved the workout cursors past workouts they threw away. None left because
+        // they were all deleted here is not that, and going back would only fetch them again to skip them.
+        if (dao.workoutCount() == 0 && dao.deletedWorkoutsAll().isEmpty()) for (type in WORKOUT_TYPES) {
             val key = "gdsp_${type.code}"
             if ((settings.lastSync(key) ?: continue) > now - WORKOUT_LOOKBACK) settings.setLastSync(key, now - WORKOUT_LOOKBACK)
         }
@@ -337,7 +339,10 @@ class HistorySync(
                 is WorkoutFetch.Failed -> { log("history workout: ${w.reason}"); return }
                 is WorkoutFetch.Workout -> {
                     val now = System.currentTimeMillis() / 1000
-                    if (w.summary.timestamp in MIN_VALID_EPOCH..now + FUTURE_SLACK) {
+                    val deleted = dao.deletedWorkoutsAll().any { it.start == w.summary.trackId }
+                    if (deleted) {
+                        log("history workout ${Instant.ofEpochSecond(w.summary.trackId)}: deleted in OpenStrap, skipped")
+                    } else if (w.summary.timestamp in MIN_VALID_EPOCH..now + FUTURE_SLACK) {
                         log("history workout ${Instant.ofEpochSecond(w.summary.trackId)}: type ${w.summary.sportType}, subtype ${w.summary.subtype}, ${w.detail?.heartRate?.size ?: 0} HR samples")
                         val storedBefore = dao.workout(w.summary.trackId).first() != null
                         store(listOfNotNull(w.summary, w.detail))
@@ -356,7 +361,12 @@ class HistorySync(
         }
     }
 
-    private suspend fun store(records: List<HistoryRecord>) {
+    private suspend fun store(received: List<HistoryRecord>) {
+        val deleted = if (received.any { it is WorkoutSummary || it is WorkoutDetail || it is SportEffect || it is RecoveryHeartRate }) {
+            dao.deletedWorkoutsAll()
+        } else emptyList()
+        val records = withoutDeletedWorkouts(received, deleted)
+        if (records.size < received.size) log("history: skipped ${received.size - records.size} records of workouts deleted in OpenStrap")
         val activity = mutableListOf<ActivityMinute>()
         val hr = mutableListOf<HeartRateSample>()
         val perSecond = mutableMapOf<Long, MutableList<Int>>()
@@ -543,6 +553,24 @@ class HistorySync(
         private const val FUTURE_SLACK = 120L
         private const val MAX_CHUNKS_PER_TYPE = 50
         private const val DUMP_CHUNKS = 5
+    }
+}
+
+/**
+ * [records] less those of strap workouts deleted in OpenStrap ([deleted]), which the strap keeps and re-sends: the
+ * summary, HR stream and recovery HR by the workout's start (all keyed by its trackId), and the sport effect deleted
+ * with it by its end.
+ */
+internal fun withoutDeletedWorkouts(records: List<HistoryRecord>, deleted: Collection<DeletedWorkout>): List<HistoryRecord> {
+    if (deleted.isEmpty()) return records
+    val starts = deleted.mapTo(HashSet()) { it.start }
+    val effectEnds = deleted.mapNotNullTo(HashSet()) { it.effectEnd }
+    return records.filter { r ->
+        when (r) {
+            is WorkoutSummary, is WorkoutDetail, is RecoveryHeartRate -> r.timestamp !in starts
+            is SportEffect -> r.timestamp !in effectEnds
+            else -> true
+        }
     }
 }
 

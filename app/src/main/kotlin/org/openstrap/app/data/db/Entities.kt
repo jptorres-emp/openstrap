@@ -265,6 +265,18 @@ data class AppWorkoutRoutePoint(
     }
 }
 
+/**
+ * A strap workout deleted in OpenStrap, so a later sync doesn't bring it back: the strap still holds it and re-sends
+ * it whenever its workout cursor goes back (a first sync, a cursor repair). [effectEnd] is the end of the sport effect
+ * deleted with it, if one was, which arrives on its own and is skipped the same way.
+ */
+@Entity(tableName = "workout_deleted")
+data class DeletedWorkout(
+    @PrimaryKey val start: Long,
+    val effectEnd: Long?,
+    val deletedAt: Long,
+)
+
 /** A stretch answered "Not a workout", so it isn't offered again ([org.openstrap.app.data.WorkoutSuggestions]). */
 @Entity(tableName = "app_workout_dismissed")
 data class DismissedWorkout(
@@ -412,6 +424,15 @@ data class WearEventRow(
     val worn: Boolean?,
 )
 
+/** A phone workout's finished sets, counted for the workout lists ([HealthDao.setCounts]). */
+data class SetCount(val workoutStart: Long, val sets: Int)
+
+/**
+ * What a workout's HR stream looks like from outside: its last sample, how many there are and their bpm summed. The
+ * workout lists work zones out again only when it changes ([HealthDao.workoutHeartRateMarks]).
+ */
+data class HrStreamMark(val workoutStart: Long, val lastSample: Long, val samples: Int, val bpmSum: Long)
+
 /** One local day of a sampled metric: its average (or total, for steps), lowest, highest and sample count. */
 data class DailyAggregate(
     /** The local date as SQLite prints it, `yyyy-MM-dd`. */
@@ -421,6 +442,9 @@ data class DailyAggregate(
     val max: Double,
     val count: Int,
 )
+
+/** One local hour's steps: the local date as SQLite prints it, the hour 0 to 23, and the steps in it. */
+data class HourSteps(val day: String, val hour: Int, val steps: Int)
 
 /** The day's last PAI reading: what the strap reported for that day and the 7-day total. */
 data class DailyPai(val day: String, val daily: Float, val total: Float, val latest: Long)
@@ -468,4 +492,18 @@ data class NightMetricsRow(
     /** The strap's own values for the same night (strap_readiness), when it reported them. */
     val strapHrv: Int?,
     val strapRestingHr: Int?,
+)
+
+/**
+ * Each Sunday's Habit Age estimate as it was shown, so the next week can say "1 year younger than last week". Kept
+ * rather than worked out again, since a later sync can change the data behind a past estimate.
+ */
+@Entity(tableName = "habit_age_week")
+data class HabitAgeWeekRow(
+    /** Local midnight of the Sunday the estimate is for. */
+    @PrimaryKey val asOf: Long,
+    val estimate: Float,
+    val low: Int,
+    val high: Int,
+    val updatedAt: Long,
 )

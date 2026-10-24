@@ -399,7 +399,7 @@ object Recovery {
             val zNight = hrvBase.z(ln)
             val z = if (hrv7 != null) HRV_NIGHT_WEIGHT * zNight + HRV_WEEK_WEIGHT * hrvBase.z(hrv7) else zNight
             val pct = ((exp(ln - hrvBase.centre.toDouble()) - 1) * 100).toInt()
-            out += Contributor(Factor.HrvBalance, scoreFromZ(deadZone(z)), "${tonight.hrv!!.toInt()} ms · ${signed(pct)}% vs usual")
+            out += Contributor(Factor.HrvBalance, scoreFromZ(deadZone(z)), "${tonight.hrv!!.toInt()} ms, ${signed(pct)}% vs usual")
         }
 
         // Resting heart rate: the night's lowest 30-minute average against baseline; lower is better.
@@ -407,7 +407,7 @@ object Recovery {
         val rhr = tonight.validRestingHr
         if (scored && rhrBase != null && rhr != null) {
             val delta = rhr - rhrBase.centre
-            out += Contributor(Factor.RestingHr, scoreFromZ(deadZone(-rhrBase.z(rhr))), "${rhr.toInt()} bpm · ${signed(delta, 0)} vs usual")
+            out += Contributor(Factor.RestingHr, scoreFromZ(deadZone(-rhrBase.z(rhr))), "${rhr.toInt()} bpm, ${signed(delta, 0)} vs usual")
         }
 
         // The strap's own values: a fallback for display when ours failed the validity rule, and a quality check.
@@ -438,7 +438,7 @@ object Recovery {
             val p = (tonight.nadirTime - tonight.start).toFloat() / (tonight.end - tonight.start)
             val score = if (p <= 0.5f) 100 else (100 - 120 * (p - 0.5f)).toInt().coerceIn(40, 100)
             val after = ((tonight.end - tonight.nadirTime) / 60).toInt()
-            out += Contributor(Factor.RecoveryIndex, score, "Lowest HR ${formatMinutes(after)} before waking")
+            out += Contributor(Factor.RecoveryIndex, score, "Lowest heart rate ${formatMinutes(after)} before waking")
         }
 
         // Body temperature: distance from the usual nightly skin temperature, either direction, through the dead zone.
@@ -465,7 +465,7 @@ object Recovery {
             if (spo2Base != null) {
                 val dev = o - spo2Base.centre
                 val score = (100 - SPO2_POINTS_PER_PERCENT * (-dev - SPO2_DEAD_BAND).coerceAtLeast(0f)).toInt().coerceIn(0, 100)
-                out += Contributor(Factor.BloodOxygen, score, "${"%.1f".format(o)} % · ${signed(dev, 1)} vs usual")
+                out += Contributor(Factor.BloodOxygen, score, "${"%.1f".format(o)} %, ${signed(dev, 1)} vs usual")
             }
         }
 
@@ -475,7 +475,7 @@ object Recovery {
             val yesterday = dailyLoad.last()
             val ratio = yesterday / max(chronic, MIN_CHRONIC_LOAD)
             val score = if (ratio <= 1.5f) 100 else (100 - 25 * (ratio - 1.5f)).toInt().coerceIn(30, 100)
-            out += Contributor(Factor.PreviousDayLoad, score, "Load ${yesterday.toInt()} · usual ${chronic.toInt()}")
+            out += Contributor(Factor.PreviousDayLoad, score, "Load ${yesterday.toInt()}, usual ${chronic.toInt()}")
         }
 
         val alert = body.state == BodySignals.State.Alert
@@ -564,7 +564,7 @@ object Recovery {
     const val RED_FLAG_HEADROOM = 30
     /** Where OpenStrap's "Take it steady" (Fair) band starts; [org.openstrap.app.ui.dashboard.Narrative.ratingFor] uses it. */
     const val FAIR_FROM = 55
-    /** One below the Fair band, so an Alert day always rates in the lowest band ("Prioritise recovery"). */
+    /** One below the Fair band, so an Alert day always rates in the lowest band ("Take it easy"). */
     const val ALERT_CAP = FAIR_FROM - 1
     private const val MIN_CHRONIC_LOAD = 20f
     /** Readiness points lost per % of nightly SpO2 below baseline, beyond a 1 % dead band (−2 % ≈ 75, −3 % ≈ 50). */

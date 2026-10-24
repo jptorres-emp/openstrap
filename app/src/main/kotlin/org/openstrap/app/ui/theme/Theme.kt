@@ -13,7 +13,11 @@ import androidx.compose.ui.text.font.FontWeight
 import org.openstrap.app.R
 import androidx.compose.ui.unit.sp
 
-/** Metric accent colors, shared by cards and charts. Tuned to read well on near-black. */
+/**
+ * Each metric's one ink (spec 2.2): its values and status when off your normal, its row icon, its chart marks and its
+ * edge light. A metric never takes a second colour, and a level shows as how far the light reaches, never as a hue.
+ * Tuned to read well on near-black.
+ */
 object MetricColors {
     val heart = Color(0xFFFF5A5F)
     val steps = Color(0xFFC3F53C)
@@ -25,31 +29,23 @@ object MetricColors {
     val stress = Color(0xFFF062C0)
     val hrv = Color(0xFF2DD4BF)
     val temperature = Color(0xFFFF8A3D)
+    /** Recovery: one teal on every surface. */
     val readiness = Color(0xFF7CF2C9)
-    val charge = Color(0xFFFFD166)
-    /** Recovery and Charge as saturated as [sleepDeep], for marks that sit beside it (the Today top card). */
-    val readinessDeep = Color(0xFF00C99B)
-    val chargeDeep = Color(0xFFF5B400)
+    /** Charge: Ember orange on every surface, whatever the level. */
+    val charge = Color(0xFFF66C28)
+    /** Load: violet, apart from Sleep's blues and REM's purple. */
+    val load = Color(0xFFA78BFA)
+    /** Habit Age: orchid. */
+    val habitAge = Color(0xFFD86BEA)
+    /** The evening hero's light: a moment, not a metric. Violet, well clear of the night's Sleep blue. */
+    val evening = Color(0xFFA274F2)
+    /** Green and amber are for the strap and the sync only, never a health value. */
     val good = Color(0xFF3DDC97)
     val warn = Color(0xFFFFB547)
-    val bad = Color(0xFFFF5A5F)
 
-    /** Charge from empty to full: red, orange, gold, then green. */
-    val chargeScale = listOf(0f to Color(0xFFFF5A5F), 0.3f to Color(0xFFFF9F43), 0.55f to Color(0xFFFFD166), 0.8f to Color(0xFF3DDC97))
-
-    /** The colour for a Charge level (0–100) on [chargeScale]; plain gold when unknown. */
-    fun chargeAt(level: Float?): Color {
-        val f = (level ?: return charge) / 100f
-        val i = chargeScale.indexOfLast { it.first <= f }.coerceAtLeast(0)
-        val (a, ca) = chargeScale[i]
-        val (b, cb) = chargeScale.getOrNull(i + 1) ?: return ca
-        return androidx.compose.ui.graphics.lerp(ca, cb, ((f - a) / (b - a)).coerceIn(0f, 1f))
-    }
-
-    /** Battery colour: red at 15% or below, amber up to 40%, green above. */
+    /** Battery colour: amber up to 40%, green above. */
     fun battery(level: Int?): Color = when {
         level == null -> good
-        level <= 15 -> bad
         level <= 40 -> warn
         else -> good
     }

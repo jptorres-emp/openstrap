@@ -17,12 +17,66 @@ typealias DailyHistory = (DailyMetric, LocalDate, LocalDate) -> Flow<List<DaySta
 
 internal fun colorOf(metric: Metric): Color = when (metric) {
     Metric.HeartRate, Metric.RestingHr -> MetricColors.heart
-    Metric.Hrv, Metric.Breathing -> MetricColors.hrv
+    Metric.Hrv -> MetricColors.hrv
+    Metric.Breathing -> MetricColors.sleepLight
     Metric.Spo2 -> MetricColors.spo2
     Metric.Stress -> MetricColors.stress
     Metric.SkinTemperature -> MetricColors.temperature
     Metric.Steps -> MetricColors.steps
 }
+
+/**
+ * The metrics the Sleep tab's night vitals open scoped to the night, in the list's order. Lowest and average heart
+ * rate are both the night's heart rate, so it's here once.
+ */
+internal val NIGHT_VITALS: List<Metric> = listOf(Metric.HeartRate, Metric.Hrv, Metric.Breathing, Metric.Spo2, Metric.SkinTemperature)
+
+/**
+ * The Activity tab's details, in the tab's order: Steps, the Small pair, Load, Heart rate, then the Today list's VO2
+ * max, time to recover, energy and distance.
+ */
+internal val ACTIVITY_GROUP: List<Detail> = listOf(
+    Detail.OfMetric(Metric.Steps), Detail.OfScore(Score.ActiveMinutes), Detail.OfScore(Score.HeartPoints), Detail.OfScore(Score.Load),
+    Detail.OfMetric(Metric.HeartRate), Detail.OfScore(Score.Vo2Max), Detail.OfScore(Score.Recover), Detail.OfScore(Score.Energy),
+    Detail.OfScore(Score.Distance),
+)
+
+/**
+ * The details a detail's switcher moves between (spec 6.1): its siblings in the same group. The body signals in
+ * Recovery's list order, what the day does, the two scores of the Recovery tab, the Sleep tab's details, and the night
+ * vitals, which switch only among themselves while scoped to the night. Every detail is in one group but the week story.
+ */
+internal val DETAIL_GROUPS: List<List<Detail>> = listOf(
+    listOf(Metric.RestingHr, Metric.Hrv, Metric.SkinTemperature, Metric.Breathing, Metric.Spo2, Metric.Stress).map { Detail.OfMetric(it) },
+    ACTIVITY_GROUP,
+    listOf(Score.Recovery, Score.Charge).map(Detail::OfScore),
+    listOf(Score.Sleep, Score.Regularity, Score.Naps).map(Detail::OfScore),
+    NIGHT_VITALS.map { Detail.OfMetric(it, night = true) },
+)
+
+/** [detail]'s group, itself included, in order; alone when it's in none. */
+internal fun siblingsOf(detail: Detail): List<Detail> = DETAIL_GROUPS.firstOrNull { detail in it } ?: listOf(detail)
+
+/** Where a metric's number for a day comes from, which decides how its sentence talks about the day. */
+internal enum class DaySource {
+    /** From the night: breathing rate in sleep, and the strap's resting heart rate from your calmest stretch. */
+    Night,
+
+    /** The average of every reading dated that day: HRV, blood oxygen spot readings, skin temperature, stress. */
+    Average,
+
+    /** A running total or the latest reading: steps, heart rate. */
+    SoFar,
+}
+
+internal fun daySource(metric: Metric): DaySource = when (metric) {
+    Metric.Breathing, Metric.RestingHr -> DaySource.Night
+    Metric.Hrv, Metric.Spo2, Metric.SkinTemperature, Metric.Stress -> DaySource.Average
+    Metric.Steps, Metric.HeartRate -> DaySource.SoFar
+}
+
+/** Metrics with one value a night, so their words say "nights" and "last night". */
+internal val NIGHTLY: Set<Metric> = Metric.entries.filter { daySource(it) == DaySource.Night }.toSet()
 
 internal val RELATED = mapOf(
     Metric.HeartRate to listOf(Metric.RestingHr, Metric.Hrv, Metric.Stress),
@@ -33,39 +87,4 @@ internal val RELATED = mapOf(
     Metric.SkinTemperature to listOf(Metric.RestingHr, Metric.Breathing),
     Metric.Breathing to listOf(Metric.Spo2, Metric.SkinTemperature, Metric.Hrv),
     Metric.Steps to listOf(Metric.HeartRate),
-)
-
-internal val ABOUT = mapOf(
-    Metric.HeartRate to (
-        "How fast your heart beats, measured all day by the strap." to
-            "Movement, stress, caffeine and heat raise it; rest and sleep bring it down."
-        ),
-    Metric.RestingHr to (
-        "Your heart rate at its calmest, which the strap works out each day. Lower usually means a fitter, well-rested heart." to
-            "It rises after hard training, late meals, alcohol, poor sleep or when your body is fighting something off, and falls as fitness builds."
-        ),
-    Metric.Hrv to (
-        "Heart-rate variability: how much the time between beats varies. Higher than your usual means your body has recovered." to
-            "Good sleep and rest raise it. Stress, hard training and alcohol lower it. Compare it with your own normal, not other people's."
-        ),
-    Metric.Spo2 to (
-        "Blood oxygen: how much of your blood's capacity is carrying oxygen. Most people sit at 95–100%." to
-            "Altitude and breathing pauses in sleep can lower it. A loose strap can also give low readings."
-        ),
-    Metric.Stress to (
-        "The strap's 0–100 stress level, worked out from your heart rate and its variability while you're still." to
-            "Pressure, caffeine and too little sleep raise it; calm breathing, rest and time outdoors bring it down."
-        ),
-    Metric.SkinTemperature to (
-        "The temperature of your skin under the strap. The level depends on fit and room; what matters is the change from your normal." to
-            "It moves with alcohol, a warm room, hard training, the menstrual cycle, or when your body is fighting something off."
-        ),
-    Metric.Breathing to (
-        "How many breaths you take a minute while asleep. It stays very steady for most people." to
-            "It can rise above your normal after a hard training day, in a warm, stuffy room, or when your body is fighting something off."
-        ),
-    Metric.Steps to (
-        "Steps counted by the strap through the day." to
-            "Short walks spread across the day add up; most people aim for 7,000–10,000."
-        ),
 )

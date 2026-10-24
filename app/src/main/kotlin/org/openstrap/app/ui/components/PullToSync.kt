@@ -34,7 +34,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.ui.Alignment
@@ -48,7 +47,8 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import org.openstrap.app.device.SyncState
-import org.openstrap.app.ui.theme.PhosphorIcons
+import org.openstrap.app.ui.dashboard.DATA_ON_STRAP
+import org.openstrap.app.ui.theme.AppIcons
 import kotlin.math.roundToInt
 
 /** How far the pull has gone (1 = far enough to sync) and whether a sync is running. */
@@ -59,8 +59,8 @@ val LocalPullSync = staticCompositionLocalOf<PullSyncState?> { null }
 
 /**
  * Pull down to sync with the strap, and the app's one sync indicator: any sync opens the same gap. There's no floating spinner: [PullSyncReveal], placed in the screen's
- * header, opens as you pull and pushes everything below it down. The pull ticks like a ratchet, clicks once
- * it's far enough, and confirms on release.
+ * header, opens as you pull and pushes everything below it down. The pull itself is silent (spec 3.6); release
+ * confirms, and a sync that can't start says so.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -73,40 +73,38 @@ fun PullToSync(
 ) {
     val context = LocalContext.current
     val haptics = LocalHapticFeedback.current
+    val feedback = rememberHaptics()
     var pulled by remember { mutableStateOf(false) }
     var started by remember { mutableStateOf(false) }
     val running = sync is SyncState.Running
     // Read from the long-lived effect and lambdas below, which would otherwise keep the first value.
     val runningNow by rememberUpdatedState(running)
+    val syncNow by rememberUpdatedState(sync)
     LaunchedEffect(pulled, running) {
         if (!pulled) return@LaunchedEffect
         when {
             running -> started = true
-            // Done: a soft tick as the gap closes.
-            started -> { pulled = false; started = false; haptics.performHapticFeedback(HapticFeedbackType.SegmentTick) }
+            // Done: a soft tick as the gap closes. Failed: the reject buzz (spec 3.6) and where the data is.
+            started -> {
+                pulled = false
+                started = false
+                if (syncNow is SyncState.Failed) {
+                    feedback.perform(HapticEvent.SyncFailed)
+                    Toast.makeText(context, "Couldn't sync. $DATA_ON_STRAP", Toast.LENGTH_SHORT).show()
+                } else haptics.performHapticFeedback(HapticFeedbackType.SegmentTick)
+            }
             // The strap busy or dropping: a sync that doesn't start soon just lets go.
             else -> { delay(START_GRACE_MS); pulled = false }
         }
     }
     val state = rememberPullToRefreshState()
-    // Ratchet: a light tick each quarter of the way, a firm click on reaching the sync point.
-    LaunchedEffect(state) {
-        var last = 0
-        snapshotFlow { (state.distanceFraction * TICKS).toInt().coerceAtMost(TICKS) }.collect { notch ->
-            // Only a finger pulling ticks; the gap opening for a sync on its own stays silent.
-            if (!pulled && !runningNow && notch > last) {
-                haptics.performHapticFeedback(if (notch == TICKS) HapticFeedbackType.ContextClick else HapticFeedbackType.SegmentFrequentTick)
-            }
-            last = notch
-        }
-    }
     val reveal = remember(state) { PullSyncState(fraction = { state.distanceFraction }, syncing = { pulled || runningNow }) }
     PullToRefreshBox(
         // Every sync opens the gap, pulled or not (on connect, in the background), so it's the one sync indicator.
         isRefreshing = pulled || running,
         onRefresh = {
             if (!connected) {
-                haptics.performHapticFeedback(HapticFeedbackType.Reject)
+                feedback.perform(HapticEvent.SyncFailed)
                 Toast.makeText(context, "The strap isn't connected", Toast.LENGTH_SHORT).show()
             } else {
                 haptics.performHapticFeedback(HapticFeedbackType.Confirm)
@@ -144,7 +142,7 @@ fun PullSyncReveal() {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
-                PhosphorIcons.Watch, null,
+                AppIcons.Watch, null,
                 Modifier.size(18.dp).graphicsLayer { rotationZ = if (syncing) turn else pull.fraction() * 180f },
                 tint = if (ready || syncing) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -154,7 +152,12 @@ fun PullSyncReveal() {
                 ready -> "Release to sync strap"
                 else -> "Pull to sync strap"
             }
-            AnimatedContent(label, transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "pull label") {
+            // One line at a time: the old one fades out before the new one fades in, so "Pull to sync strap" never
+            // draws over "Syncing strap…" as a sync starts.
+            AnimatedContent(
+                label, transitionSpec = { fadeIn(tween(LABEL_FADE_MS, delayMillis = LABEL_FADE_MS)) togetherWith fadeOut(tween(LABEL_FADE_MS)) },
+                label = "pull label",
+            ) {
                 Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
             }
         }
@@ -162,5 +165,6 @@ fun PullSyncReveal() {
 }
 
 private val REVEAL = 48.dp
-private const val TICKS = 4
+/** Each half of the label's crossfade: out, then in. */
+internal const val LABEL_FADE_MS = 120
 private const val START_GRACE_MS = 3_000L

@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -13,11 +14,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -25,10 +27,10 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 import org.openstrap.app.data.Healthspan
 import org.openstrap.app.ui.theme.MetricColors
-import org.openstrap.app.ui.theme.PhosphorIcons
+import org.openstrap.app.ui.theme.AppIcons
 
 /** The Healthspan card's orchid, used for the glow: warm enough to stay clear of Sleep's blue. */
-private val Orchid = Color(0xFFD86BEA)
+private val Orchid = MetricColors.habitAge
 
 /** The same recipe as the Heart rate and Activity cards, in orchid. */
 internal val HealthspanGlow = GlowStyle.chart(Orchid)
@@ -70,26 +72,20 @@ internal fun effectText(years: Float): String {
 internal fun termDetail(t: Healthspan.Term, age: Int): String {
     val v = t.value
     val ref = t.reference
-    if (v == null) return if (t.habit == Healthspan.Habit.Vo2max) "No VO2max from workouts yet · counted as typical" else "Not enough data yet · counted as typical"
+    if (v == null) return if (t.habit == Healthspan.Habit.Vo2max) "No VO2 max from workouts yet, counted as typical" else "Not enough data yet, counted as typical"
     return when (t.habit) {
         Healthspan.Habit.Strength -> {
             val m = v.roundToInt()
-            (if (m == 0) "None recorded" else "$m min a week") + " · most people your age do none" +
-                (if (m < Healthspan.STRENGTH_TARGET_MINUTES) " · aim for ${Healthspan.STRENGTH_TARGET_MINUTES}" else "")
+            (if (m == 0) "None recorded" else "$m min a week") + ", most people your age do none" +
+                (if (m < Healthspan.STRENGTH_TARGET_MINUTES) ", aim for ${Healthspan.STRENGTH_TARGET_MINUTES}" else "")
         }
-        Healthspan.Habit.Vo2max -> "${v.roundToInt()} ml/kg/min · typical at $age: ${ref?.roundToInt()}"
-        Healthspan.Habit.Steps -> "${"%,d".format(v.roundToInt())} a day · typical: ${"%,d".format(((ref ?: 0f) / 100).roundToInt() * 100)}" +
-            (if (v < 8000f) " · aim for 8,000–10,000" else "")
-        Healthspan.Habit.Regularity -> "${v.roundToInt()} · typical: ${ref?.roundToInt()}"
-        Healthspan.Habit.RestingHr -> "${v.roundToInt()} bpm asleep · typical: about ${ref?.roundToInt()}"
-        Healthspan.Habit.TimeAsleep -> v.roundToInt().let { m -> "${m / 60} h ${m % 60} m · counts only below 6 h 30 m" }
+        Healthspan.Habit.Vo2max -> "${v.roundToInt()} ml/kg/min, typical at $age: ${ref?.roundToInt()}"
+        Healthspan.Habit.Steps -> "${"%,d".format(v.roundToInt())} a day, typical: ${"%,d".format(((ref ?: 0f) / 100).roundToInt() * 100)}" +
+            (if (v < 8000f) ", aim for 8,000–10,000" else "")
+        Healthspan.Habit.Regularity -> "${v.roundToInt()}, typical: ${ref?.roundToInt()}"
+        Healthspan.Habit.RestingHr -> "${v.roundToInt()} bpm asleep, typical: about ${ref?.roundToInt()}"
+        Healthspan.Habit.TimeAsleep -> v.roundToInt().let { m -> "${m / 60} h ${m % 60} m, counts only below 6 h 30 m" }
     }
-}
-
-/** "Helping most: strength training", "Holding back most: steps", or a line for when every habit is typical. */
-internal fun leverText(r: Healthspan.Result): String {
-    val lever = r.lever ?: return "Every habit is close to typical"
-    return (if (lever.years < 0) "Helping most: " else "Holding back most: ") + lever.habit.label.replaceFirstChar { it.lowercase() }
 }
 
 /** "Sunday 22 Nov" for local midnight [day] (epoch seconds), with no-break spaces so it never wraps inside the date. */
@@ -108,102 +104,97 @@ internal fun learningText(o: Healthspan.Outcome): String = when {
     else -> "Starts at your age. ${o.withheld?.reason.orEmpty()}"
 }
 
+/** The local date of [epoch] (a local midnight). */
+private fun dateOf(epoch: Long) = java.time.Instant.ofEpochSecond(epoch).atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+
 /**
- * Healthspan: how old your habits look, as a range of ages (docs/algorithms/healthspan.md), from [state]. Before there's
- * an estimate it starts at your own age; with no birth year or sex it asks for them, and a tap opens the profile
- * ([onOpenProfile]) instead of the Healthspan screen. Nothing shows until it has been worked out.
+ * Habit Age, one design wherever it shows (Recovery's foot, Today when there's a new estimate, the top of its page):
+ * an edge card lit from the left, since it's about the weeks behind you. The title with its caret when it opens
+ * something and (i) at the right of the title row (spec 5.4), "Updated Sun 18 Oct" under it, the age in dots, one
+ * status line against last week (the range until there's a last week, orchid only when the number moved) and the age
+ * scale. The method, the pace of aging and what moves it are in its info sheet, behind the (i). Before the first
+ * estimate it says when that is, with no number; with no birth year or sex it says what's needed and opens the profile
+ * ([onOpenProfile]) instead of the Habit Age page ([onClick], null on the page itself). Nothing shows until it has been
+ * worked out.
  */
 @Composable
-fun HealthspanCard(state: Healthspan.Outcome?, onClick: (() -> Unit)? = null, onOpenProfile: (() -> Unit)? = null) {
+fun HabitAgeEdgeCard(state: Healthspan.Outcome?, onClick: (() -> Unit)?, onOpenProfile: (() -> Unit)?, modifier: Modifier = Modifier) {
     state ?: return
     val r = state.result
     val withheld = state.withheld
     val needsProfile = r == null && state.missing.isNotEmpty() && withheld?.profile == true
-    GlowCard(HealthspanGlow, Modifier.fillMaxWidth(), onClick = if (needsProfile) onOpenProfile else onClick) {
-        Column {
-            GlowHeader("Habit Age", trailing = if (r?.early == true) "Early" else "Weekly")
-            when {
-                r != null -> {
-                    GlowHeroNumber("${r.low}-${r.high}", "", side = {
-                        Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            Text("Pace", color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.labelSmall)
-                            Text(paceLabel(r.pace), color = Color.White, style = GlowType.number.copy(fontWeight = FontWeight.SemiBold))
-                        }
-                    })
-                    CardText(healthspanVerdict(r.age, r.estimate))
-                    GlowChartGap()
-                    AgeScale(r.age, r.low, r.high, r.estimate)
-                    CardLink(leverText(r))
-                }
-                needsProfile -> {
-                    CardText(profileReminder(state.missing), bright = true)
-                    CardLink("Add to profile")
-                }
-                withheld?.learning == true && state.age != null -> {
-                    GlowHeroNumber("${state.age}", "your age")
-                    CardText(learningText(state))
-                    CardLink("How it works")
-                }
-                else -> {
-                    CardText(withheld?.reason.orEmpty(), bright = true)
-                    CardLink("How it works")
-                }
+    var info by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
+    EdgeCard(
+        // Without an estimate it's one line, so it's only as high as that line.
+        Orchid, modifier.fillMaxWidth().let { if (r != null) it.gridSize(CardSize.Wide) else it }, kind = EdgeKind.Earlier,
+        onClick = if (needsProfile) onOpenProfile else onClick,
+    ) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            CardTitle("Habit Age", Modifier.weight(1f))
+            InfoButton("About Habit Age", { info = true })
+        }
+        r?.let {
+            Text(
+                org.openstrap.app.ui.dashboard.TabCopy.habitAgeUpdated(dateOf(it.asOf)), color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA),
+                style = GlowType.secondary, maxLines = 1,
+            )
+        }
+        when {
+            r != null -> {
+                val line = org.openstrap.app.ui.dashboard.TabCopy.habitAgeLine(r.estimate, state.lastWeek, r.low, r.high)
+                EdgeValue(r.estimate.roundToInt().toString(), "years", line.text, if (line.moved) Orchid else Color.White.copy(alpha = GlowType.SECONDARY_ALPHA))
+                Spacer(Modifier.height(10.dp))
+                AgeScale(r.age, r.low, r.high, r.estimate)
             }
+            needsProfile -> EdgeValue(null, null, profileReminder(state.missing), waiting = false)
+            state.firstEstimate != null -> EdgeValue(null, null, org.openstrap.app.ui.dashboard.TabCopy.firstEstimate(dateOf(state.firstEstimate)), waiting = false)
+            else -> EdgeValue(null, null, withheld?.reason, waiting = false)
         }
     }
-}
-
-/** A line of the card's text under the number; [bright] when it's the card's only text. */
-@Composable
-private fun CardText(text: String, bright: Boolean = false) = Text(
-    text, color = Color.White.copy(alpha = if (bright) 0.85f else 0.75f),
-    style = if (bright) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.bodySmall,
-    modifier = Modifier.padding(top = 10.dp),
-)
-
-/** The card's last row: a line of text and a chevron. */
-@Composable
-private fun CardLink(text: String) {
-    Row(Modifier.fillMaxWidth().padding(top = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(text, color = Color.White, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-        Icon(PhosphorIcons.CaretRight, null, tint = Color.White, modifier = Modifier.size(16.dp))
+    if (info) {
+        val here = r?.let { org.openstrap.app.ui.dashboard.InfoCopy.habitAgeBar(it.age - it.estimate.roundToInt()) }
+        InfoSheet(
+            org.openstrap.app.ui.dashboard.InfoCopy.HABIT_AGE, Orchid, here, here?.let { org.openstrap.app.ui.dashboard.InfoCopy.HERE },
+            onDismiss = { info = false },
+        )
     }
 }
 
 /**
- * A line of ages, seven years either side of yours. The estimate is drawn like the Recovery arc: a dotted track and a
- * soft halo under a solid white line. A dot marks the [estimate], and a hairline your age (always centred). An early
- * estimate's range can run past the ends; it's drawn to them.
+ * The age scale (chart kit): a line of ages, seven years either side of yours, the estimate's range as an orchid band
+ * with a white dot at the [estimate], and a hairline at your [age]. Labelled with the range under the band and you at
+ * the hairline. An early estimate's range can run past the ends; it's drawn to them.
  */
 @Composable
 internal fun AgeScale(age: Int, low: Int, high: Int, estimate: Float) {
     val from = age - 7
     val to = age + 7
-    Column {
-        Canvas(Modifier.fillMaxWidth().height(28.dp)) {
-            val pad = 8.dp.toPx()
-            fun x(a: Float) = pad + (a.coerceIn(from.toFloat(), to.toFloat()) - from) / (to - from) * (size.width - 2 * pad)
-            val y = size.height / 2
-            val start = Offset(x(low.toFloat()), y)
-            val end = Offset(x(high.toFloat()), y)
-            drawLine(
-                Color.White.copy(alpha = 0.22f), Offset(x(from.toFloat()), y), Offset(x(to.toFloat()), y), 2.dp.toPx(),
-                StrokeCap.Round, PathEffect.dashPathEffect(floatArrayOf(0f, 7.dp.toPx())),
-            )
-            drawLine(Color.White.copy(alpha = 0.1f), start, end, 8.dp.toPx(), StrokeCap.Round)
-            drawLine(Color.White, start, end, 3.dp.toPx(), StrokeCap.Round)
-            drawLine(Color.White.copy(alpha = 0.8f), Offset(x(age.toFloat()), y - 11.dp.toPx()), Offset(x(age.toFloat()), y + 11.dp.toPx()), 1.5.dp.toPx(), StrokeCap.Round)
-            val mid = Offset(x(estimate), y)
-            // Green when the estimate is at or under your age, amber when it's over.
-            val dot = if (estimate.roundToInt() <= age) MetricColors.good else MetricColors.warn
-            drawCircle(dot.copy(alpha = 0.3f), 9.dp.toPx(), mid)
-            drawCircle(dot, 5.dp.toPx(), mid)
-        }
-        Box(Modifier.fillMaxWidth()) {
-            val label = Color.White.copy(alpha = 0.7f)
-            Text("$from", color = label, style = MaterialTheme.typography.labelSmall, modifier = Modifier.align(Alignment.CenterStart))
-            Text("you're $age", color = Color.White, style = MaterialTheme.typography.labelSmall, modifier = Modifier.align(Alignment.Center))
-            Text("$to", color = label, style = MaterialTheme.typography.labelSmall, modifier = Modifier.align(Alignment.CenterEnd))
+    androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val w = maxWidth
+        val pad = 8.dp
+        fun f(a: Float) = (a.coerceIn(from.toFloat(), to.toFloat()) - from) / (to - from)
+        fun x(a: Float) = pad + (w - pad * 2) * f(a)
+        val label = Color.White.copy(alpha = 0.6f)
+        Column {
+            // Your age over its hairline, the range under its band, as in the kit, so the two never overlap.
+            Box(Modifier.fillMaxWidth().height(16.dp)) { ScaleLabel(org.openstrap.app.ui.dashboard.TabCopy.yourAge(age), x(age.toFloat()), w, label) }
+            Canvas(Modifier.fillMaxWidth().height(30.dp)) {
+                val y = size.height / 2
+                fun px(a: Float) = x(a).toPx()
+                drawLine(Color.White.copy(alpha = 0.15f), Offset(px(from.toFloat()), y), Offset(px(to.toFloat()), y), 6.dp.toPx(), StrokeCap.Round)
+                drawLine(Orchid.copy(alpha = 0.5f), Offset(px(low.toFloat()), y), Offset(px(high.toFloat()), y), 12.dp.toPx(), StrokeCap.Round)
+                drawLine(Color.White.copy(alpha = 0.6f), Offset(px(age.toFloat()), 0f), Offset(px(age.toFloat()), size.height), 1.dp.toPx())
+                drawCircle(Color.White, 7.dp.toPx(), Offset(px(estimate), y))
+            }
+            Box(Modifier.fillMaxWidth().height(16.dp)) { ScaleLabel(org.openstrap.app.ui.dashboard.TabCopy.ageRange(low, high), x((low + high) / 2f), w, label) }
         }
     }
+}
+
+/** A label centred on [at] across a scale [width] wide, kept inside it. */
+@Composable
+private fun androidx.compose.foundation.layout.BoxScope.ScaleLabel(text: String, at: androidx.compose.ui.unit.Dp, width: androidx.compose.ui.unit.Dp, color: Color) {
+    // Centred on its point by aligning a share of the way across, as BiasAlignment does.
+    val bias = ((at / width) * 2f - 1f).coerceIn(-1f, 1f)
+    Text(text, color = color, style = MaterialTheme.typography.labelSmall, modifier = Modifier.align(androidx.compose.ui.BiasAlignment(bias, 0f)))
 }

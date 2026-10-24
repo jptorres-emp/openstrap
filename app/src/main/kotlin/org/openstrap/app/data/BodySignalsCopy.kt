@@ -6,12 +6,12 @@ package org.openstrap.app.data
  * diagnostic threshold, and never prompt clinical action beyond saying professional evaluation "may be helpful".
  */
 object BodySignalsCopy {
-    const val TITLE = "Body signals off baseline"
-    const val SHORT = "Signals off baseline"
+    const val TITLE = "Some body signals are off your normal"
+    const val SHORT = "Some signals are off your normal"
 
     /** The tail every alert text ends with: likely everyday causes, a gentle suggestion, and the wellness disclaimer. */
     const val CAUSES = "This can happen with heavy training, alcohol, travel, poor sleep, or when your body is fighting something off."
-    const val ADVICE = "Consider an easier day. If you feel unwell, checking in with a healthcare professional may be helpful."
+    const val ADVICE = "An easier day may help. If you feel unwell, checking in with a healthcare professional may be helpful."
     const val DISCLAIMER = "This is a wellness estimate, not a medical assessment."
 
     /**

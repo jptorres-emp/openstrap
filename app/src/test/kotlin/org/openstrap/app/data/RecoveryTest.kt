@@ -771,7 +771,7 @@ class RecoveryTest {
         assertEquals(
             "Several of your overnight signals (resting heart rate, skin temperature) are outside your usual range for the second night. " +
                 "This can happen with heavy training, alcohol, travel, poor sleep, or when your body is fighting something off. " +
-                "Consider an easier day. If you feel unwell, checking in with a healthcare professional may be helpful. " +
+                "An easier day may help. If you feel unwell, checking in with a healthcare professional may be helpful. " +
                 "This is a wellness estimate, not a medical assessment.",
             BodySignalsCopy.pushText(listOf("resting heart rate", "skin temperature"), nights = 2),
         )

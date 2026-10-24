@@ -41,6 +41,11 @@ android {
     }
 
     buildTypes {
+        // `-PdemoApp` builds a debug app that installs beside the real one (org.openstrap.app.demo), so sample data
+        // for screenshots never touches a phone's own data.
+        debug {
+            if (providers.gradleProperty("demoApp").isPresent) applicationIdSuffix = ".demo"
+        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true

@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import org.openstrap.app.data.DayWindow
 import org.openstrap.app.data.HealthRepository
@@ -103,10 +104,24 @@ data class DayUiState(
     val nights: List<SleepNight> = emptyList(),
     /** Heart rate across the night window (5-minute averages), so sleep before midnight is included. */
     val sleepHeartRate: List<ChartPoint> = emptyList(),
+    /** HRV and skin temperature read during the night's main sleep, before midnight too, for the night-scoped details. */
+    val sleepHrv: List<ChartPoint> = emptyList(),
+    val sleepSkinTemperature: List<ChartPoint> = emptyList(),
     val dayStart: Long = 0,
     val dayEnd: Long = 0,
+    /** False for the empty state before the day's rows arrive, so "no sleep" isn't read into data still loading. */
+    val loaded: Boolean = false,
 ) {
     val asleepSeconds: Long? get() = sleepBreakdown?.asleepSeconds ?: sleep?.let { it.end - it.start }
+}
+
+/** The day's Recovery couldn't be worked out. [yesterday] is yesterday's score, shown dimmed in its place, when known. */
+data class RecoveryFailure(val date: LocalDate, val yesterday: Int?)
+
+/** Recovery worked out, or why not. */
+private sealed interface RecoveryOutcome {
+    data class Ready(val result: RecoveryResult) : RecoveryOutcome
+    data class Failed(val failure: RecoveryFailure) : RecoveryOutcome
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -128,24 +143,83 @@ class DayViewModel(
     val state: StateFlow<DayUiState> = selected.flatMapLatest { date -> stateFor(date) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DayUiState())
 
-    /** Readiness and charge, recomputed (off the main thread) when the day, profile or synced data change. */
+    /** Bumped by [retryRecovery], so the same day and data are worked out again. */
+    private val recoveryRetries = MutableStateFlow(0)
+
+    /** Works out the day's Recovery again, after it failed ([recoveryFailure]). */
+    fun retryRecovery() { recoveryRetries.value++ }
+
+    /** The last Recovery worked out, for yesterday's score when today's fails. */
+    @Volatile private var lastRecovery: RecoveryResult? = null
+
+    /**
+     * Readiness and charge, recomputed (off the main thread) when the day, profile or synced data change: the result,
+     * or why there's none. Null while the first is worked out.
+     */
     @OptIn(FlowPreview::class)
-    val recovery: StateFlow<RecoveryResult?> =
-        combine(selected, profile, repo.changes().debounce(800)) { d, p, _ -> d to p }
+    private val recoveryOutcome: StateFlow<RecoveryOutcome?> =
+        combine(selected, profile, repo.changes().debounce(800), recoveryRetries) { d, p, _, _ -> d to p }
             .mapLatest { (d, p) ->
                 withContext(Dispatchers.Default) {
                     // mapLatest cancels this when newer data arrives; that's not a failure, so let it through.
                     try {
-                        repo.recovery(d, p)
+                        RecoveryOutcome.Ready(repo.recovery(d, p).also { lastRecovery = it })
                     } catch (e: kotlinx.coroutines.CancellationException) {
                         throw e
                     } catch (e: Exception) {
                         Log.w("OpenStrap", "recovery failed", e)
-                        null
+                        RecoveryOutcome.Failed(RecoveryFailure(d, yesterdayScore(d, p)))
                     }
                 }
             }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    /** Readiness and charge for the day shown; null while loading or when it failed ([recoveryFailure] tells which). */
+    val recovery: StateFlow<RecoveryResult?> = recoveryOutcome.map { (it as? RecoveryOutcome.Ready)?.result }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    /** The day's Recovery failed to work out (spec 4.3), so the cards can say so instead of waiting forever. */
+    val recoveryFailure: StateFlow<RecoveryFailure?> = recoveryOutcome.map { (it as? RecoveryOutcome.Failed)?.failure }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    /**
+     * Yesterday's score for a failed [date]: from the last Recovery worked out when its week covers yesterday, else
+     * worked out for yesterday itself; null when that fails too.
+     */
+    private suspend fun yesterdayScore(date: LocalDate, profile: UserProfile): Int? {
+        val yesterday = date.minusDays(1)
+        lastRecovery?.let { last ->
+            if (last.date == yesterday) return last.readiness.score
+            last.readinessTrend.firstOrNull { it.first == yesterday }?.let { return it.second }
+        }
+        return try {
+            repo.recovery(yesterday, profile).readiness.score
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    /**
+     * Your usual steps by the end of each hour ([org.openstrap.app.data.UsualSteps]), from the 28 days before the day
+     * shown; null until there are enough worn days. Past days don't change through the day, so it's read once per day
+     * shown, off the main thread, not on every sync.
+     */
+    val usualSteps: StateFlow<List<Float>?> = selected
+        .mapLatest { d ->
+            withContext(Dispatchers.IO) {
+                try {
+                    org.openstrap.app.data.UsualSteps.byHour(repo.hourlySteps(d.minusDays(org.openstrap.app.data.UsualSteps.DAYS.toLong()), d.minusDays(1)), d)
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.w("OpenStrap", "usual steps failed", e)
+                    null
+                }
+            }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     /** The weekly Healthspan estimate for the selected day, or why it's withheld; null while loading or on failure. */
     @OptIn(FlowPreview::class)
@@ -265,9 +339,18 @@ class DayViewModel(
                     breathing = during(breath, { it.timestamp }, { it.perMinute.toFloat() }),
                 )
             }
-            list to Summaries.bucketAverage(Summaries.heartRateSeries(hr, emptyList())).map { ChartPoint(it.first, it.second.toFloat()) }
+            // The night's own readings, for the charts of the night-scoped details.
+            val tonight = main[date]
+            val sleepHrv = tonight?.let { w -> hrv.filter { it.timestamp in w.start..w.end }.map { ChartPoint(it.timestamp, it.milliseconds.toFloat()) } }.orEmpty()
+            val sleepSkin = tonight?.let { w -> skin.filter { it.timestamp in w.start..w.end }.map { ChartPoint(it.timestamp, it.celsius) } }.orEmpty()
+            NightParts(
+                list, Summaries.bucketAverage(Summaries.heartRateSeries(hr, emptyList())).map { ChartPoint(it.first, it.second.toFloat()) },
+                sleepHrv, sleepSkin,
+            )
         }
-        val moreAndNights = combine(more, nights) { m, (n, hr) -> m.copy(nights = n, sleepHeartRate = hr) }
+        val moreAndNights = combine(more, nights) { m, n ->
+            m.copy(nights = n.nights, sleepHeartRate = n.heartRate, sleepHrv = n.hrv, sleepSkinTemperature = n.skinTemperature)
+        }
 
         // The strap's own running total covers steps whose minute records were already taken by another app.
         val liveSteps = if (date == LocalDate.now()) strapSteps else flowOf(null)
@@ -282,6 +365,7 @@ class DayViewModel(
             val series = Summaries.heartRateSeries(hr, act)
             val hourly = Summaries.hourlySteps(act, day.from)
             DayUiState(
+                loaded = true,
                 date = date,
                 steps = liveCounter.today(Summaries.totalSteps(act), live),
                 minuteSteps = Summaries.totalSteps(act),
@@ -317,6 +401,8 @@ class DayViewModel(
                 alerts = m.alerts,
                 nights = m.nights,
                 sleepHeartRate = m.sleepHeartRate,
+                sleepHrv = m.sleepHrv,
+                sleepSkinTemperature = m.sleepSkinTemperature,
                 dayStart = day.from,
                 dayEnd = day.to,
             )
@@ -355,6 +441,15 @@ private data class MoreParts(
     val alerts: List<HealthAlertRow>,
     val nights: List<SleepNight> = emptyList(),
     val sleepHeartRate: List<ChartPoint> = emptyList(),
+    val sleepHrv: List<ChartPoint> = emptyList(),
+    val sleepSkinTemperature: List<ChartPoint> = emptyList(),
+)
+
+private data class NightParts(
+    val nights: List<SleepNight>,
+    val heartRate: List<ChartPoint>,
+    val hrv: List<ChartPoint>,
+    val skinTemperature: List<ChartPoint>,
 )
 
 /** One night's main sleep and the vitals averaged over it. */

@@ -22,13 +22,16 @@ import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
+import org.openstrap.app.ui.glow.chargeShown
 import org.openstrap.app.MainActivity
+import org.openstrap.app.BuildConfig
 import org.openstrap.app.OpenStrapApp
 import org.openstrap.app.R
 import org.openstrap.app.data.WorkoutRecorder
+import org.openstrap.app.data.WorkoutTarget
 import org.openstrap.app.data.Workouts
+import org.openstrap.app.ui.workout.NotificationCopy
 import org.openstrap.app.ui.workout.ZONE_COLORS
-import org.openstrap.app.ui.workout.ZONE_NAMES
 import androidx.compose.ui.graphics.toArgb
 
 /**
@@ -76,6 +79,12 @@ class StrapService : LifecycleService() {
             foreground = true
         }
         when (intent?.action) {
+            // Debug: the workout card with sample figures as this service's notification, or ("clear") its own back.
+            ACTION_SAMPLE -> if (BuildConfig.DEBUG && workout.state.value !is WorkoutState.Recording) {
+                val kind = intent.getStringExtra(EXTRA_SAMPLE) ?: "running"
+                getSystemService(NotificationManager::class.java)
+                    .notify(NOTIFICATION_ID, if (kind == "clear") first else WorkoutNotification.sample(this, kind))
+            }
             ACTION_PAUSE -> workout.pause()
             ACTION_RESUME -> workout.resume()
             ACTION_END_ASK -> confirmEnd.value = SystemClock.elapsedRealtime() + CONFIRM_MS
@@ -165,7 +174,7 @@ class StrapService : LifecycleService() {
         // Left by the old Quiet switch: Android raises a foreground service's MIN channel to LOW anyway.
         nm.deleteNotificationChannel("strap_quiet")
         nm.createNotificationChannel(NotificationChannel(SAVED_CHANNEL, "Workout saved", NotificationManager.IMPORTANCE_LOW))
-        nm.createNotificationChannel(NotificationChannel(WORKOUT_CHANNEL, "Workout", NotificationManager.IMPORTANCE_LOW))
+        WorkoutNotification.createChannel(this)
         // Seen, not heard: the strap's buzz is the alert.
         nm.createNotificationChannel(NotificationChannel(OFFER_CHANNEL, "Workout noticed", NotificationManager.IMPORTANCE_DEFAULT).apply {
             setSound(null, null)
@@ -201,11 +210,11 @@ class StrapService : LifecycleService() {
     )
 
     /**
-     * Your day first, the link second: "Recovery 72% · Charge 58" over "Connected · 80%", with the last sync as the
+     * Your day first, the link second: "Recovery 72, Energy 58" over "Strap connected, battery 80%" (the strap's battery named, so it's never taken for Energy), with the last sync as the
      * notification's time. Problems take the text: a failed connection (with Retry), a low battery, a sync under way.
      */
     private fun idleContent(c: ConnectionState, sync: SyncState, f: Figures?): IdleContent {
-        val title = f?.let { listOfNotNull(it.recovery?.let { r -> "Recovery $r%" }, it.charge?.let { ch -> "Charge $ch" }).joinToString(" · ") }
+        val title = f?.let { listOfNotNull(it.recovery?.let { r -> "Recovery $r" }, it.charge?.let { ch -> "Energy $ch" }).joinToString(", ") }
             ?.ifEmpty { null } ?: "Helio Strap"
         val connected = c as? ConnectionState.Connected
         val battery = connected?.batteryPercent
@@ -215,9 +224,9 @@ class StrapService : LifecycleService() {
             c is ConnectionState.Connecting -> "Connecting…"
             c is ConnectionState.Authenticating -> "Authenticating…"
             connected == null -> "Strap not connected"
-            sync is SyncState.Running -> "Syncing · ${sync.step}"
-            low -> "Battery $battery% · charge it tonight"
-            else -> listOfNotNull(if (connected.charging) "Charging" else "Connected", battery?.let { "$it%" }).joinToString(" · ")
+            sync is SyncState.Running -> "Syncing, ${sync.step}"
+            low -> "Strap battery $battery%. Charge it tonight."
+            else -> listOfNotNull(if (connected.charging) "Strap charging" else "Strap connected", battery?.let { "battery $it%" }).joinToString(", ")
         }
         return IdleContent(
             title, text, (sync as? SyncState.Done)?.atEpochSeconds ?: f?.syncedAt, (sync as? SyncState.Running)?.progress,
@@ -257,12 +266,12 @@ class StrapService : LifecycleService() {
         val dao = container.database.healthDao()
         val r = org.openstrap.app.data.RecoveryEngine(dao).compute(java.time.LocalDate.now(), container.settings.profile.first())
         val sport = dao.appWorkoutsAll().maxByOrNull { it.start }?.sportType ?: Workouts.DEFAULT_SPORTS.first()
-        return Figures(r.readiness.score, r.charge.latest?.roundToInt(), sport, (container.strap.sync.value as? SyncState.Done)?.atEpochSeconds ?: figures.value?.syncedAt)
+        return Figures(r.readiness.score, r.charge.latest?.let(::chargeShown), sport, (container.strap.sync.value as? SyncState.Done)?.atEpochSeconds ?: figures.value?.syncedAt)
     }
 
     /**
-     * Whether this phone shows the workout as a Live Update. A colorized notification can't be one, so the zone colour
-     * fills the whole card only where the chip wouldn't show anyway: before Android 16's Live Updates, when they're
+     * Whether this phone shows the workout as a Live Update. A colorized notification with custom views can't be one, so
+     * the black card shows only where the chip wouldn't show anyway: before Android 16's Live Updates, when they're
      * turned off for the app, and on Samsung, whose One UI keeps the chip for apps it lists.
      */
     private fun liveUpdatesShown(): Boolean =
@@ -270,10 +279,11 @@ class StrapService : LifecycleService() {
             runCatching { getSystemService(NotificationManager::class.java).canPostPromotedNotifications() }.getOrDefault(false)
 
     /**
-     * The workout as a Live Update (Android 16): promoted, it shows as a chip by the status-bar clock with the
-     * running time, and on the lock screen. The clock runs on its own (a chronometer), so it needs no posts to tick.
-     * The five zones are the progress bar's segments with a dot where the heart rate sits; a time target fills the bar
-     * toward the goal instead. Where it can't be a Live Update, the card takes the zone's colour.
+     * The workout notification. Where it shows as a Live Update (Android 16, not Samsung), it's promoted: a chip by the
+     * status-bar clock with the running time, and on the lock screen. The clock runs on its own (a chronometer), so it
+     * needs no posts to tick. The five zones are the progress bar's segments with a dot where the heart rate sits; a
+     * time target fills the bar toward the goal instead. Everywhere else it's the black card of [WorkoutNotification],
+     * custom views a Live Update can't have. Both say the same: [NotificationCopy.card].
      */
     private fun workoutNotification(r: WorkoutState.Recording, bpm: Int?, connected: Boolean, confirming: Boolean, session: WorkoutSession): Notification {
         r.endPrompt?.let { return stoppedNotification(r, it) }
@@ -282,23 +292,13 @@ class StrapService : LifecycleService() {
         val now = System.currentTimeMillis()
         val active = WorkoutRecorder.activeSeconds(w, now / 1000)
         val zone = WorkoutRecorder.liveZone(bpm, r.maxHeartRate)
-        val target = org.openstrap.app.data.WorkoutTarget.parse(w.target)
-        val sport = Workouts.sportName(w.sportType)
-        val distance = w.distanceMeters?.takeIf { it >= 10 }?.let { (if (w.distanceFromSteps) "≈ " else "") + org.openstrap.app.ui.glow.km(it) + if (it >= 1000) " km" else "" }
-        val pace = if (w.useGps) org.openstrap.app.data.Route.currentPace(session.route.value)?.let { org.openstrap.app.data.Route.formatPace(it) + " /km" } else null
-        val goal = when (target) {
-            is org.openstrap.app.data.WorkoutTarget.Time -> "${clock(active)} of ${clock(target.seconds)}"
-            is org.openstrap.app.data.WorkoutTarget.Zones -> {
-                val inTarget = session.zoneSeconds.value.withIndex().filter { it.index in target.low..target.high }.sumOf { it.value }
-                "${clock(inTarget.toLong())} in ${target.label}"
-            }
-            null -> null
-        }
-        val text = when {
-            r.paused -> listOfNotNull("Paused at ${clock(active)}", distance).joinToString(" · ")
-            !connected -> "Still recording · reconnecting…"
-            else -> listOfNotNull(goal, zone?.let { "Zone ${it + 1} ${ZONE_NAMES[it]}" }, bpm?.let { "$it bpm" } ?: "Waiting for heart rate", distance, pace).joinToString(" · ")
-        }
+        val target = WorkoutTarget.parse(w.target)
+        val card = NotificationCopy.card(
+            Workouts.sportName(w.sportType), active, r.paused, connected, bpm, r.maxHeartRate, w.useGps, w.distanceMeters,
+            w.distanceFromSteps, target, session.zoneSeconds.value.toList(), confirming,
+        )
+        val actions = WorkoutNotification.actions(r.paused, confirming, ::service)
+        if (!liveUpdatesShown()) return WorkoutNotification.build(this, card, actions, openApp()).build()
         val color = when {
             r.paused || !connected -> PAUSED_GREY
             zone != null -> ZONE_COLORS[zone].toArgb()
@@ -309,7 +309,7 @@ class StrapService : LifecycleService() {
             // `also`, not `apply`: ProgressStyle has an apply() of its own. The tracker, the gauge marker in the zone colour as on the live
             // screen's zone bar, marks where the heart rate sits; a progress point would draw as a square on some phones.
             .also { style ->
-                if (target is org.openstrap.app.data.WorkoutTarget.Time) {
+                if (target is WorkoutTarget.Time) {
                     style.setStyledByProgress(true)
                     style.setProgressSegments(listOf(NotificationCompat.ProgressStyle.Segment(target.seconds.toInt().coerceAtLeast(1)).setColor(color)))
                     style.setProgress(active.toInt().coerceAtMost(target.seconds.toInt()))
@@ -323,41 +323,30 @@ class StrapService : LifecycleService() {
                     }
                 }
             }
-        val colorize = !liveUpdatesShown()
-        val b = NotificationCompat.Builder(this, WORKOUT_CHANNEL)
+        val b = NotificationCompat.Builder(this, WorkoutNotification.CHANNEL)
             .setSmallIcon(R.drawable.ic_stat_openstrap)
-            .setContentTitle(if (!connected && !r.paused) "$sport · strap disconnected" else sport)
-            .setContentText(text)
+            .setContentTitle(card.sport)
+            .setContentText(card.text)
             .setStyle(bar)
-            // The card is OpenStrap's: the icon's black, a lighter grey when paused or disconnected; the zone stays on the
-            // bar and in the text.
-            .setColor(if (colorize) (if (color == PAUSED_GREY) CARD_PAUSED else CARD_DARK) else BRAND_DOT)
-            .setColorized(colorize)
+            .setColor(BRAND_DOT)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
+            .setSilent(true)
             .setCategory(NotificationCompat.CATEGORY_WORKOUT)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-            .setRequestPromotedOngoing(!colorize)
+            .setRequestPromotedOngoing(true)
             .apply { if (r.paused) setShortCriticalText("Paused") }
             .setContentIntent(openApp())
             .setShowWhen(true)
             .setUsesChronometer(!r.paused)
             .setWhen(if (r.paused) now else now - active * 1000)
-        if (confirming) return b.endConfirmation().build()
-        b.addAction(
-            if (r.paused) NotificationCompat.Action(0, "Resume", service(ACTION_RESUME))
-            else NotificationCompat.Action(0, "Pause", service(ACTION_PAUSE)),
-        )
-        if (!r.paused) b.addAction(NotificationCompat.Action(0, "Lap", service(ACTION_LAP)))
-        b.addAction(NotificationCompat.Action(0, "End", service(ACTION_END_ASK)))
+        actions.forEach(b::addAction)
         return b.build()
     }
 
-    /** "End workout?": a stray tap in a pocket can't end it; it falls back after [CONFIRM_MS]. */
+    /** "End workout?": a stray tap in a pocket can't end it. It falls back after [CONFIRM_MS]. */
     private fun NotificationCompat.Builder.endConfirmation(): NotificationCompat.Builder =
-        setContentText("End the workout? Tap Yes, end to save it.")
-            .addAction(NotificationCompat.Action(0, "Yes, end", service(ACTION_END)))
-            .addAction(NotificationCompat.Action(0, "Cancel", service(ACTION_END_CANCEL)))
+        setContentText(NotificationCopy.END_QUESTION).apply { WorkoutNotification.actions(paused = false, confirming = true, ::service).forEach(::addAction) }
 
     /**
      * Once a workout is saved, a quiet summary with View, and Undo when it ended on its own (the stop or car question)
@@ -386,11 +375,11 @@ class StrapService : LifecycleService() {
             clock(duration),
             w.distanceMeters?.takeIf { it >= 10 }?.let { (if (w.distanceFromSteps) "≈ " else "") + org.openstrap.app.ui.glow.km(it) + if (it >= 1000) " km" else "" },
             w.averageHeartRate?.let { "$it bpm avg" },
-        ).joinToString(" · ")
+        ).joinToString(", ")
         val auto = w.endReason == org.openstrap.app.data.db.AppWorkout.END_AUTO || w.endReason == org.openstrap.app.data.db.AppWorkout.END_CAR
         val cut = w.recordedEnd?.let { it - end }?.takeIf { auto && it >= 60 }
         val time = java.time.Instant.ofEpochSecond(end).atZone(java.time.ZoneId.systemDefault()).format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))
-        val text = if (cut != null) "$facts\nEnded at $time, when you'd stopped; the ${cut / 60} min after were left out." else facts
+        val text = if (cut != null) "$facts\nEnded at $time, when you'd stopped. The ${cut / 60} min after were left out." else facts
         val b = NotificationCompat.Builder(this, SAVED_CHANNEL)
             .setSmallIcon(R.drawable.ic_stat_openstrap)
             .setContentTitle("${Workouts.sportName(w.sportType)} saved")
@@ -420,15 +409,15 @@ class StrapService : LifecycleService() {
         val title = when {
             r.inSet -> "Set ${r.sets.size}"
             until != null -> "Resting after set $done"
-            done == 0 -> "${Workouts.sportName(r.workout.sportType)} · ready for set 1"
-            else -> "Rest over · set ${done + 1} next"
+            done == 0 -> "${Workouts.sportName(r.workout.sportType)}, ready for set 1"
+            else -> "Rest over, set ${done + 1} next"
         }
-        val b = NotificationCompat.Builder(this, WORKOUT_CHANNEL)
+        val b = NotificationCompat.Builder(this, WorkoutNotification.CHANNEL)
             .setSmallIcon(R.drawable.ic_stat_openstrap)
             .setContentTitle(title)
             .setContentText(
-                if (!connected) "Still recording · reconnecting…"
-                else listOfNotNull(bpm?.let { "$it bpm" }, r.workout.setsTarget?.let { "$done of $it sets" }).joinToString(" · "),
+                if (!connected) "Still recording, reconnecting…"
+                else listOfNotNull(bpm?.let { "$it bpm" }, r.workout.setsTarget?.let { "$done of $it sets" }).joinToString(", "),
             )
             .setColor(if (connected) (WorkoutRecorder.liveZone(bpm, r.maxHeartRate)?.let { ZONE_COLORS[it].toArgb() } ?: PAUSED_GREY) else PAUSED_GREY)
             .setOngoing(true)
@@ -461,7 +450,7 @@ class StrapService : LifecycleService() {
         val sport = Workouts.sportName(r.workout.sportType).lowercase()
         val text = if (r.inCar) "You last moved at $time. End the $sport there, so the drive isn't counted?"
         else "Your heart rate has been back near resting since $time. End the $sport at $time?"
-        return NotificationCompat.Builder(this, WORKOUT_CHANNEL)
+        return NotificationCompat.Builder(this, WorkoutNotification.CHANNEL)
             .setSmallIcon(R.drawable.ic_stat_openstrap)
             .setContentTitle(if (r.inCar) "Looks like you're in a car" else "Looks like you've stopped")
             .setContentText(text)
@@ -523,12 +512,11 @@ class StrapService : LifecycleService() {
 
     companion object {
         private const val CHANNEL = "strap"
-        private const val WORKOUT_CHANNEL = "workout"
         private const val NOTIFICATION_ID = 1
         private const val OFFER_ID = 3
         private const val OFFER_CHANNEL = "workout_offer"
-        private const val ACTION_END_ASK = "org.openstrap.app.workout.END_ASK"
-        private const val ACTION_END_CANCEL = "org.openstrap.app.workout.END_CANCEL"
+        internal const val ACTION_END_ASK = "org.openstrap.app.workout.END_ASK"
+        internal const val ACTION_END_CANCEL = "org.openstrap.app.workout.END_CANCEL"
         private const val ACTION_SYNC = "org.openstrap.app.strap.SYNC"
         private const val ACTION_RETRY = "org.openstrap.app.strap.RETRY"
         private const val ACTION_UNDO = "org.openstrap.app.workout.UNDO"
@@ -544,20 +532,19 @@ class StrapService : LifecycleService() {
         private const val LOW_BATTERY = 15
         /** The live screen's paused grey, for a paused or disconnected workout. */
         private const val PAUSED_GREY = 0xFF5A5F6A.toInt()
-        /** The colorized workout card: the launcher icon's background black, and a lighter grey while paused. */
-        private const val CARD_DARK = 0xFF0B0D10.toInt()
-        private const val CARD_PAUSED = 0xFF24272D.toInt()
         /** The red dot in the "OS." logo, the app's heart colour. */
         private val BRAND_DOT = org.openstrap.app.ui.theme.MetricColors.heart.toArgb()
         private const val ACTION_RECORD = "org.openstrap.app.workout.RECORD"
         private const val ACTION_DECLINE = "org.openstrap.app.workout.DECLINE"
         private const val WORKOUT_REFRESH_MS = 10_000L
-        private const val ACTION_PAUSE = "org.openstrap.app.workout.PAUSE"
-        private const val ACTION_RESUME = "org.openstrap.app.workout.RESUME"
-        private const val ACTION_END = "org.openstrap.app.workout.END"
+        internal const val ACTION_PAUSE = "org.openstrap.app.workout.PAUSE"
+        internal const val ACTION_SAMPLE = "org.openstrap.app.workout.SAMPLE"
+        internal const val EXTRA_SAMPLE = "kind"
+        internal const val ACTION_RESUME = "org.openstrap.app.workout.RESUME"
+        internal const val ACTION_END = "org.openstrap.app.workout.END"
         private const val ACTION_END_AT = "org.openstrap.app.workout.END_AT"
         private const val ACTION_KEEP = "org.openstrap.app.workout.KEEP"
-        private const val ACTION_LAP = "org.openstrap.app.workout.LAP"
+        internal const val ACTION_LAP = "org.openstrap.app.workout.LAP"
         private const val ACTION_START_SET = "org.openstrap.app.workout.START_SET"
         private const val ACTION_SET_DONE = "org.openstrap.app.workout.SET_DONE"
         private const val ACTION_EXTEND = "org.openstrap.app.workout.EXTEND"

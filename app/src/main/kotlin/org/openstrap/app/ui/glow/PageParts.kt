@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -75,9 +76,6 @@ private val Hairline = Color.White.copy(alpha = 0.05f)
  * colour in the app means a metric or the strap's state (spec 2.2). The confirmation asks before anything goes.
  */
 val DestructiveInk = Color.White.copy(alpha = 0.72f)
-
-/** The Control surface (spec 2.2): round buttons, chips, pills. */
-val ControlSurface = Color(0xFF1F1F22)
 
 /** The round back button of every page over a tab (spec 3.4). */
 val BackButtonSize = 44.dp

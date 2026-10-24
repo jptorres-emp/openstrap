@@ -46,17 +46,23 @@ internal fun CardLook.edgeOverride(): EdgeOverride =
     if (tier == Tier.Edge || tier == Tier.Strip) EdgeOverride(edge = edge, color = EdgeNeutral.takeIf { hue == Hue.Neutral }) else EdgeOverride()
 
 /**
- * Adds a tab's [slots] to a dashboard as grid rows ([packGrid]), each row in its first card's pane, every card drawn
+ * Adds a tab's [slots] to a dashboard as grid rows ([packGrid]), each row in its first card's pane ([tabPanes]), every card drawn
  * by [draw] under the edge its look fixes. [draw] gets the modifier that sizes a Small or a Tall in its row; a
  * full-width card is as high as its content. The row holding [focus] is the one the list scrolls to when asked.
  */
 internal fun <C> GlowBlocks.tabCards(slots: List<TabSlot<C>>, focus: C? = null, draw: @Composable (C, Modifier) -> Unit) {
-    packGrid(slots.map { it.size to it }).forEach { row ->
-        if (row.items().any { it.card == focus }) focusNext()
+    // On columns too narrow for Smalls, a row of them spans both columns ([GlowBlocks.smallsAcross]).
+    val panes = org.openstrap.app.ui.dashboard.tabPanes(slots, smallsAcross)
+    packGrid(slots.indices.map { slots[it].size to it }).forEach { row ->
+        val pane = panes[row.items().first()]
+        if (row.items().any { slots[it].card == focus }) focusNext()
         val block: @Composable () -> Unit = {
-            GridRowBlock(row) { slot, m -> CompositionLocalProvider(LocalEdgeOverride provides slot.look.edgeOverride()) { draw(slot.card, m) } }
+            GridRowBlock(row) { i, m ->
+                val slot = slots[i]
+                CompositionLocalProvider(LocalEdgeOverride provides slot.look.edgeOverride()) { draw(slot.card, m) }
+            }
         }
-        when (row.items().first().pane) {
+        when (pane) {
             Pane.Full -> full(block)
             Pane.Left -> left(block)
             Pane.Right -> right(block)

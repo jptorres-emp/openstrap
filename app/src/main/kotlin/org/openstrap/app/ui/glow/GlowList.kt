@@ -149,7 +149,7 @@ fun ListRow(
             Spacer(Modifier.width(RowIconGap))
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            Text(name, color = Color.White, style = GlowType.body)
+            RowName(name)
             if (status != null) Text(
                 status,
                 color = when {

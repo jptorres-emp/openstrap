@@ -252,9 +252,13 @@ private fun FoundStrap(
 
 @Composable
 private fun Line(label: String, value: String) {
+    // The label is measured first and keeps to one line (spec 2.3), and the value takes what's left, ellipsized last.
     Row(Modifier.fillMaxWidth()) {
-        Text(label, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.body, modifier = Modifier.weight(1f))
-        Text(value, color = Color.White, style = GlowType.body)
+        Text(label, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.body, maxLines = 1, modifier = Modifier.padding(end = 12.dp))
+        Text(
+            value, color = Color.White, style = GlowType.body, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            textAlign = androidx.compose.ui.text.style.TextAlign.End, modifier = Modifier.weight(1f),
+        )
     }
 }
 

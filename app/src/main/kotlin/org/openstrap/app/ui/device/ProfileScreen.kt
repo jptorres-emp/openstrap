@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.ime
 import androidx.compose.ui.platform.LocalDensity
 import org.openstrap.app.ui.glow.LocalPageColumn
+import org.openstrap.app.ui.components.PinnedFade
+import org.openstrap.app.ui.components.pinnedFade
 import org.openstrap.app.ui.dashboard.ScreenList
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -158,7 +160,8 @@ fun ProfileScreen(profile: UserProfile, contentPadding: PaddingValues, onSave: (
         val keyboard = WindowInsets.ime.getBottom(LocalDensity.current) > 0
         val bottom = if (keyboard) 0.dp else contentPadding.calculateBottomPadding()
         val side = GlowLayout.pageSide(maxWidth, LocalPageColumn.current, GlowLayout.Gutter)
-        ScreenList(PaddingValues(bottom = bottom + SaveHeight + 16.dp), gutter = GlowLayout.Gutter) {
+        // The list ends clear of Save and the fade behind it (ScreenList adds its own 24 dp).
+        ScreenList(PaddingValues(bottom = PinnedFade.listClearance(bottom + 12.dp + SaveHeight, listEnd = 24.dp)), gutter = GlowLayout.Gutter) {
             item { PageHeader("Your profile", back) }
             item {
                 PagePanel {
@@ -203,12 +206,10 @@ fun ProfileScreen(profile: UserProfile, contentPadding: PaddingValues, onSave: (
                 }
             }
         }
-        PageButton(
-            "Save", save,
-            Modifier.align(Alignment.BottomCenter).fillMaxWidth()
-                .padding(start = side, end = side, bottom = bottom + 12.dp).height(SaveHeight),
-            enabled = valid, primary = true,
-        )
+        // Black from the bottom of the screen up to Save, fading out above it, so the page scrolls away under it.
+        Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().pinnedFade().padding(start = side, end = side, bottom = bottom + 12.dp)) {
+            PageButton("Save", save, Modifier.fillMaxWidth().height(SaveHeight), enabled = valid, primary = true)
+        }
     }
 }
 

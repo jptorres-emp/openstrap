@@ -52,19 +52,32 @@ data class CardLook(val tier: Tier, val hue: Hue, val edge: Edge? = null, val sh
 /**
  * Where each card goes on a wide screen when nothing says otherwise: Large cards and strips span both columns, the
  * rows between take turns, as [org.openstrap.app.ui.glow.GlowScreenList] lays them out. A row of two Smalls, or of a
- * Tall and its Smalls, stays together in one column ([packGrid]).
+ * Tall and its Smalls, stays together in one column ([packGrid]). With [smallsAcross] (columns too narrow for Smalls,
+ * [org.openstrap.app.ui.glow.GlowLayout.smallsAcross]) it spans both columns instead and takes no turn.
  */
-fun alternatingPanes(sizes: List<CardSize>): List<Pane> {
+fun alternatingPanes(sizes: List<CardSize>, smallsAcross: Boolean = false): List<Pane> {
     var side = Pane.Left
     val out = MutableList(sizes.size) { Pane.Full }
     packGrid(sizes.mapIndexed { i, s -> s to i }).forEach { row ->
         val first = row.items().first()
-        val pane = when (sizes[first]) {
-            CardSize.Large, CardSize.Strip -> Pane.Full
+        val pane = when {
+            sizes[first] == CardSize.Large || sizes[first] == CardSize.Strip -> Pane.Full
+            smallsAcross && row !is GridRow.Full -> Pane.Full
             else -> side.also { side = if (it == Pane.Left) Pane.Right else Pane.Left }
         }
         row.items().forEach { out[it] = pane }
     }
+    return out
+}
+
+/**
+ * [panes] as drawn on two columns too narrow for Smalls ([org.openstrap.app.ui.glow.GlowLayout.smallsAcross]): every
+ * row of Smalls (two Smalls, or a Tall with its two) spans both columns, so no Small is narrower than on a folded
+ * phone. The other cards keep their column.
+ */
+fun spanSmalls(panes: List<Pane>, sizes: List<CardSize>): List<Pane> {
+    val out = panes.toMutableList()
+    packGrid(sizes.mapIndexed { i, s -> s to i }).forEach { row -> if (row !is GridRow.Full) row.items().forEach { out[it] = Pane.Full } }
     return out
 }
 

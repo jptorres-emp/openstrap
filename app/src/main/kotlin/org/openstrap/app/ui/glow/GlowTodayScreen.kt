@@ -215,8 +215,10 @@ fun GlowTodayScreen(
         BoxWithConstraints(Modifier.fillMaxSize()) {
             // No two cards next to each other look the same (spec 2.4). On two columns, side by side counts too.
             val wide = maxWidth >= GlowLayout.TwoColumnWidth
-            val slots = varyLooks(applyEdits(todayCards(moment, facts, morning), edits, moment, unavailable), looksFor, live, wide)
-            val panes = todayPanes(slots)
+            // On columns too narrow for Smalls (the Fold's inner screen) a Small pair spans both (spec 2.4 Unfolded).
+            val across = GlowLayout.smallsAcross(maxWidth)
+            val slots = varyLooks(applyEdits(todayCards(moment, facts, morning), edits, moment, unavailable), looksFor, live, wide, across)
+            val panes = todayPanes(slots, across)
             GlowScreenList(contentPadding, list) {
                 full { header() }
                 // One block per grid row: a Small pair stays side by side, and on a wide screen in one column.

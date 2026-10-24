@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
@@ -30,10 +29,12 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.FirstBaseline
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloat
@@ -168,7 +169,9 @@ fun PageRows(modifier: Modifier = Modifier, content: @Composable ColumnScope.() 
 
 /**
  * A settings row: the [title], and its current [value] either on the right ([below] false, the Strap page) or as a
- * second line ([below] true, the You page). [trailing] replaces the value on the right (a switch). [divider] draws
+ * second line ([below] true, the You page). The title stays on one line (spec 2.3): where it and a value on the right
+ * don't both fit on one line (a narrow column beside a pane), the value drops under it ([RowNameValue]).
+ * [trailing] replaces the value on the right (a switch). [divider] draws
  * the hairline above it. [icon] sits quietly on the left, centred on the row, with the title and value lined up after it.
  * A row that opens something ([onClick], no [trailing]) ends in the tap caret (spec 2.5). [selected] marks the row
  * whose page is open beside the list on a wide screen: tinted across the panel's width.
@@ -206,24 +209,76 @@ fun PageRow(
             }
             Spacer(Modifier.width(14.dp))
         }
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            Text(title, color = titleColor, style = GlowType.body)
-            if (below && value != null) Text(value, color = Color.White.copy(alpha = 0.6f), style = GlowType.secondary)
-        }
-        if (!below && value != null && trailing == null) {
-            Spacer(Modifier.width(12.dp))
-            // A long value wraps onto a second line before it ever makes the title wrap.
-            Text(
-                value, Modifier.widthIn(max = 160.dp), color = Color.White.copy(alpha = 0.6f),
-                style = GlowType.secondary, textAlign = TextAlign.End,
-            )
-        }
+        if (below) Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            RowName(title, titleColor)
+            if (value != null) Text(value, color = RowValueColor, style = GlowType.secondary)
+        } else RowNameValue(title, titleColor, value.takeIf { trailing == null }, Modifier.weight(1f))
         if (trailing != null) {
             Spacer(Modifier.width(12.dp))
             trailing()
         } else if (onClick != null) {
             Spacer(Modifier.width(RowCaretGap))
             TapCaret(ROW_CARET_ALPHA)
+        }
+    }
+}
+
+/** A row's value in Secondary, on the right or under the name. */
+private val RowValueColor = Color.White.copy(alpha = 0.6f)
+
+/** A row's name in Body, on one line (spec 2.3): ellipsized only when it alone is wider than the row. */
+@Composable
+internal fun RowName(name: String, color: Color = Color.White) =
+    Text(name, color = color, style = GlowType.body, maxLines = 1, overflow = TextOverflow.Ellipsis)
+
+/** Between a row's name and the value on its right. */
+private val RowValueGap = 12.dp
+/** Between a row's name and the value dropped under it. */
+private val RowLineGap = 3.dp
+
+/**
+ * Whether a row's value sits on the right of its name ([nameWidth] and [valueWidth] each on one line) in a row
+ * [available] wide with [gap] between them. When not, it drops under the name, so the name never wraps.
+ */
+internal fun valueBeside(nameWidth: Int, valueWidth: Int, available: Int, gap: Int): Boolean = nameWidth + gap + valueWidth <= available
+
+/**
+ * A row's name with its [value] on the right, on the name's baseline, when both fit on one line each
+ * ([valueBeside]), otherwise the value under the name in Secondary, up to two lines and then ellipsized. The name
+ * keeps to one line either way.
+ */
+@Composable
+internal fun RowNameValue(name: String, nameColor: Color, value: String?, modifier: Modifier = Modifier) {
+    Layout(
+        content = {
+            RowName(name, nameColor)
+            if (value != null) Text(value, color = RowValueColor, style = GlowType.secondary, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        },
+        modifier = modifier,
+    ) { measurables, cs ->
+        val width = if (cs.hasBoundedWidth) cs.maxWidth else measurables.sumOf { it.maxIntrinsicWidth(Constraints.Infinity) }
+        val loose = Constraints(maxWidth = width)
+        val nameP = measurables[0].measure(loose)
+        val v = measurables.getOrNull(1)
+        if (v == null) return@Layout layout(width, nameP.height) { nameP.place(0, 0) }
+        val gap = RowValueGap.roundToPx()
+        if (valueBeside(measurables[0].maxIntrinsicWidth(Constraints.Infinity), v.maxIntrinsicWidth(Constraints.Infinity), width, gap)) {
+            val valueP = v.measure(Constraints(maxWidth = (width - nameP.width - gap).coerceAtLeast(0)))
+            // The value on the name's baseline, at the row's end.
+            val shift = nameP[FirstBaseline] - valueP[FirstBaseline]
+            val top = minOf(0, shift)
+            val height = maxOf(nameP.height, valueP.height + shift) - top
+            layout(width, height) {
+                nameP.place(0, -top)
+                valueP.place(width - valueP.width, shift - top)
+            }
+        } else {
+            val valueP = v.measure(loose)
+            val line = RowLineGap.roundToPx()
+            layout(width, nameP.height + line + valueP.height) {
+                nameP.place(0, 0)
+                valueP.place(0, nameP.height + line)
+            }
         }
     }
 }
@@ -238,8 +293,8 @@ fun PageSwitchRow(title: String, subtitle: String?, checked: Boolean, onChange: 
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            Text(title, color = Color.White, style = GlowType.body)
-            if (subtitle != null) Text(subtitle, color = Color.White.copy(alpha = 0.6f), style = GlowType.secondary)
+            RowName(title)
+            if (subtitle != null) Text(subtitle, color = RowValueColor, style = GlowType.secondary)
         }
         Spacer(Modifier.width(12.dp))
         GlowSwitch(checked, onChange, enabled = enabled)

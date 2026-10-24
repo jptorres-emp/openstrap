@@ -197,7 +197,9 @@ stage strip is the one exception). Smalls and Wides are a unit high (160 dp), Ta
 
 **Unfolded** (600 dp and up, the Fold's inner screen): two columns with a 12 dp gap and a 24 dp gutter, content
 centred and at most 960 dp wide. Type and dot sizes stay the same, and cards only get wider, never taller. The hero and
-strips span both columns. Each grid row is one block, so a Pair or TallPair stays together in one column. The two
+strips span both columns. Each grid row is one block, so a Pair or TallPair stays together in one column. A Small is
+never narrower than on a folded phone (176 dp): where a column can't hold two that wide (the Fold's inner screen), a
+Pair or TallPair spans both columns as a row of its own, and the cards around it keep their columns. The two
 columns are balanced by height: when one would end well below the other, its last block (Habit Age, Your week, as a
 rule the last optional card) moves to the foot of the shorter one. The tab bar stays centred over the content, with
 its fade (3.2).
@@ -276,7 +278,9 @@ optional note in Secondary right).
 
 `ListRow`: the metric's **icon**, 20 dp, stroke 1.5, in the metric's ink, then 14 dp to the name (Body) with its
 status (Secondary) under it, the value in 2.4 dp dots right-aligned in its own column, and the caret when the row
-opens something. The name stays white. The
+opens something. The name stays white, and on one line in every list row (a settings row on You and Strap too):
+where a row's name and the value on its right don't both fit, as in a narrow list beside a pane, the value drops under
+the name in Secondary, ellipsized only as the last resort. The
 value and status take the ink only when off your normal. Each row opens that metric's detail. A waiting row dims its
 icon to 30% and shows the dim bar for a value with "After your first night" or similar.
 
@@ -452,6 +456,9 @@ the moment.
   screen.
 - **The fade behind it.** A black fade 120 dp tall sits behind the pill (solid black for its lower 45%), so cards
   slide under the bar softly instead of cutting into its edge. Every scrolling screen ends 24 dp above the pill.
+- **Under pinned buttons** (Profile's Save, Start on Ready, Done, Choose the sport) the same fade: solid black from the
+  bottom of the screen up to the buttons, then clearing over 66 dp above them, the tab bar fade's ramp. The page ends
+  66 dp above the buttons, so its last content scrolls fully clear of them. Folded, unfolded and in the right pane.
 - The pill sits on the Sheet surface with an 8% hairline. Tabs use 24 dp icons and Caption text, Sans 500.
 
 **All metrics sheet.** A modal sheet over the current tab, in the style of the sheets over the app: every metric grouped by section,

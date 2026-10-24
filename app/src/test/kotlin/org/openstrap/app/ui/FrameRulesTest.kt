@@ -10,7 +10,29 @@ import org.junit.Test
 import org.openstrap.app.ui.components.GrowMotion
 import org.openstrap.app.ui.components.TabBarFade
 import org.openstrap.app.ui.dashboard.openBeside
+import org.openstrap.app.data.Moment
+import org.openstrap.app.ui.components.PinnedFade
+import org.openstrap.app.ui.dashboard.ActivityCard
+import org.openstrap.app.ui.dashboard.ActivityFacts
+import org.openstrap.app.ui.dashboard.RecoveryFacts
+import org.openstrap.app.ui.dashboard.SleepFacts
+import org.openstrap.app.ui.dashboard.TabSlot
+import org.openstrap.app.ui.dashboard.TodayCard
+import org.openstrap.app.ui.dashboard.TodayFacts
+import org.openstrap.app.ui.dashboard.activityCards
+import org.openstrap.app.ui.dashboard.lookClashes
+import org.openstrap.app.ui.dashboard.recoveryCards
+import org.openstrap.app.ui.dashboard.sleepCards
+import org.openstrap.app.ui.dashboard.tabClashes
+import org.openstrap.app.ui.dashboard.tabPanes
+import org.openstrap.app.ui.dashboard.todayCards
+import org.openstrap.app.ui.dashboard.todayPanes
+import org.openstrap.app.ui.dashboard.varyLooks
+import org.openstrap.app.ui.glow.CardSize
+import org.openstrap.app.ui.glow.GlowGrid
 import org.openstrap.app.ui.glow.GlowLayout
+import org.openstrap.app.ui.glow.Pane
+import org.openstrap.app.ui.glow.valueBeside
 import java.io.File
 
 /**
@@ -116,5 +138,129 @@ class FrameRulesTest {
         assertTrue("Profile's Save is as wide as the fields", "start = side, end = side, bottom = bottom + 12.dp" in profile && "widthIn(max = 600.dp)" !in profile)
         val screens = source("ui/dashboard/ScreenParts.kt")
         assertTrue("ScreenList centres a page", "LocalPageColumn.current" in screens)
+    }
+
+    /* ------------------------------ Smalls never narrower than folded (spec 2.4) ------------------------------ */
+
+    @Test fun `a Small is never narrower than two across on a folded phone`() {
+        // Folded (411 dp, 20 dp gutters): about 180 dp each, the narrowest a Small gets.
+        assertTrue(GlowGrid.unitWidthIn(411.dp - 40.dp) >= GlowLayout.SmallMinWidth)
+        assertTrue(GlowLayout.SmallMinWidth >= 176.dp)
+        // The Fold's inner screen: a 345 dp column would make each Small 166 dp, so a row of Smalls spans both columns.
+        assertTrue(GlowLayout.smallsAcross(750.dp))
+        assertTrue(GlowLayout.smallsAcross(GlowLayout.TwoColumnWidth))
+        // A phone has one column, and a tablet's 474 dp columns hold two Smalls of 231 dp.
+        assertTrue(!GlowLayout.smallsAcross(411.dp))
+        assertTrue(!GlowLayout.smallsAcross(1200.dp))
+        // Wherever Smalls stay in a column, each is at least the folded width.
+        for (w in 600..1400 step 10) {
+            val width = w.dp
+            if (width >= GlowLayout.TwoColumnWidth && !GlowLayout.smallsAcross(width)) {
+                val column = (width - GlowLayout.dashboardGutter(width) * 2 - GlowLayout.ColumnGap) / 2
+                assertTrue("Smalls at $w dp", GlowGrid.unitWidthIn(column) >= GlowLayout.SmallMinWidth)
+            }
+        }
+    }
+
+    private fun <C> assertSmallsAcross(slots: List<TabSlot<C>>, what: String) {
+        val panes = tabPanes(slots, smallsAcross = true)
+        slots.forEachIndexed { i, s ->
+            if (s.size == CardSize.Small || s.size == CardSize.Tall) assertEquals("$what ${s.card} spans both columns", Pane.Full, panes[i])
+            else if (s.pane == Pane.Full) assertEquals(Pane.Full, panes[i])
+            else assertEquals("$what ${s.card} keeps its column", s.pane, panes[i])
+        }
+        val clash = tabClashes(slots, wide = true, smallsAcross = true).firstOrNull()
+        assertTrue("$what: ${clash?.let { slots[it.first].card to slots[it.second].card }} look the same", clash == null)
+    }
+
+    @Test fun `unfolded, the tabs' rows of Smalls span both columns and stay varied`() {
+        val bools = listOf(false, true)
+        for (today in bools) for (suggestion in bools) for (live in bools) {
+            assertSmallsAcross(activityCards(ActivityFacts(today, suggestion, live)), "activity")
+        }
+        for (habit in bools) assertSmallsAcross(recoveryCards(RecoveryFacts(habitAge = habit)), "recovery")
+        for (breathing in bools) for (naps in bools) assertSmallsAcross(sleepCards(SleepFacts(breathing, naps)), "sleep")
+        // Activity: Active minutes and Heart points two across on their own row. Heart rate isn't beside them but
+        // in its column under it, beside Load, so the columns are still there to balance.
+        val act = activityCards()
+        val panes = tabPanes(act, smallsAcross = true)
+        fun pane(c: ActivityCard) = panes[act.indexOfFirst { it.card == c }]
+        assertEquals(Pane.Full, pane(ActivityCard.ActiveMinutes))
+        assertEquals(Pane.Full, pane(ActivityCard.HeartPoints))
+        assertEquals(Pane.Left, pane(ActivityCard.Load))
+        assertEquals(Pane.Right, pane(ActivityCard.HeartRate))
+        // With room in each column (a tablet) the pair keeps its column as before.
+        assertEquals(act.map { it.pane }, tabPanes(act, smallsAcross = false))
+    }
+
+    @Test fun `unfolded, Today's Small pair after a workout spans both columns and stays varied`() {
+        for (m in Moment.entries) for (workout in listOf(false, true)) {
+            val slots = varyLooks(todayCards(m, TodayFacts(workout = workout)), m, wide = true, smallsAcross = true)
+            val panes = todayPanes(slots, smallsAcross = true)
+            slots.forEachIndexed { i, s -> if (s.size == CardSize.Small || s.size == CardSize.Tall) assertEquals("$m ${s.card}", Pane.Full, panes[i]) }
+            assertTrue("$m workout=$workout varied", lookClashes(slots, wide = true, moment = m, smallsAcross = true).isEmpty())
+        }
+        val after = varyLooks(todayCards(Moment.After, TodayFacts(workout = true)), Moment.After, wide = true, smallsAcross = true)
+        assertTrue(after.any { it.card == TodayCard.LoadToday && it.size == CardSize.Small })
+    }
+
+    @Test fun `the dashboards decide from their width whether Smalls span`() {
+        val layout = source("ui/glow/GlowLayout.kt")
+        assertTrue("GlowScreenList tells its blocks", "GlowBlocks(smallsAcross = GlowLayout.smallsAcross(maxWidth))" in layout)
+        val tabs = source("ui/glow/TabParts.kt").substringAfter("fun <C> GlowBlocks.tabCards(").substringBefore("\n}\n")
+        assertTrue("tabCards places rows by tabPanes", "tabPanes(slots, smallsAcross)" in tabs)
+        val today = source("ui/glow/GlowTodayScreen.kt")
+        assertTrue("Today spans its Small pair too", "GlowLayout.smallsAcross(maxWidth)" in today && "todayPanes(slots, across)" in today)
+    }
+
+    /* ------------------------------------ A row name on one line (spec 2.3) ----------------------------------- */
+
+    @Test fun `a row's value sits beside its name only when both fit on one line`() {
+        // Folded: "Phone alerts" and "Calls and notifications" fit side by side.
+        assertTrue(valueBeside(nameWidth = 85, valueWidth = 140, available = 260, gap = 12))
+        // Beside a pane the list narrows: the value drops under the name instead of wrapping it.
+        assertTrue(!valueBeside(nameWidth = 85, valueWidth = 140, available = 200, gap = 12))
+        assertTrue(valueBeside(nameWidth = 85, valueWidth = 103, available = 200, gap = 12))
+    }
+
+    @Test fun `row names keep to one line in every list row`() {
+        val parts = source("ui/glow/PageParts.kt")
+        val name = parts.substringAfter("internal fun RowName(").substringBefore("\n\n")
+        assertTrue("RowName is one line", "maxLines = 1" in name && "TextOverflow.Ellipsis" in name)
+        val row = parts.substringAfter("fun PageRow(").substringBefore("\n}\n")
+        assertTrue("PageRow lays out name and value with RowNameValue", "RowNameValue(" in row && "RowName(" in row)
+        assertTrue("PageRow no longer squeezes its value beside the name", "widthIn(max = 160.dp)" !in row)
+        assertTrue("PageSwitchRow keeps its name on one line", "RowName(title)" in parts.substringAfter("fun PageSwitchRow("))
+        assertTrue("ListRow keeps its name on one line", "RowName(name)" in source("ui/glow/GlowList.kt").substringAfter("fun ListRow("))
+        assertTrue("SettingRow keeps its name on one line", "RowName(title)" in source("ui/glow/GlowWorkoutMode.kt").substringAfter("fun SettingRow("))
+    }
+
+    /* --------------------------------- A fade under pinned buttons (spec 3.2) --------------------------------- */
+
+    @Test fun `the fade under pinned buttons has the tab bar fade's ramp, solid below the buttons`() {
+        assertEquals(66f, PinnedFade.Ramp.value, 1e-3f)
+        // The box from the buttons' top (y 0) to the screen's bottom (y 200), the ramp 66 above it.
+        val stops = PinnedFade.stops(top = -66f, solidFrom = 0f, bottom = 200f)
+        assertEquals(0f to Color.Transparent, stops.first())
+        assertEquals(66f / 266f, stops[1].first, 1e-4f)
+        assertEquals(Color.Black, stops[1].second)
+        assertEquals(1f to Color.Black, stops.last())
+        // A list's last content ends the ramp above the buttons.
+        assertEquals(100.dp + 66.dp - 24.dp, PinnedFade.listClearance(100.dp, listEnd = 24.dp))
+    }
+
+    @Test fun `every pinned button has the fade behind it and the page ends clear of it`() {
+        val profile = source("ui/device/ProfileScreen.kt")
+        assertTrue("Profile's Save sits in a box with the fade", Regex("""Box\(Modifier\.align\(Alignment\.BottomCenter\)\.fillMaxWidth\(\)\.pinnedFade\(\)""").containsMatchIn(profile))
+        assertTrue("Profile's list ends clear of Save and its fade", "PinnedFade.listClearance(bottom + 12.dp + SaveHeight, listEnd = 24.dp)" in profile)
+        val workout = source("ui/glow/GlowWorkoutMode.kt").substringAfter("fun WorkoutPage(").substringBefore("\n}\n")
+        assertTrue("WorkoutPage's pinned buttons (Start, Done, Choose the sport) have the fade", ".pinnedFade()" in workout)
+        assertTrue("WorkoutPage's content ends clear of them", "PinnedFade.listClearance(pinnedHeight)" in workout)
+        assertTrue("WorkoutPage's old short fade is gone", "0.25f to Color.Black" !in workout)
+        // Every page with pinned buttons uses WorkoutPage's or Profile's.
+        for (f in listOf("ui/glow/GlowWorkoutMode.kt", "ui/glow/GlowWorkoutSummary.kt")) {
+            val src = source(f)
+            assertTrue("$f pins its buttons through WorkoutPage", "pinned = {" !in src || "WorkoutPage(" in src)
+        }
     }
 }

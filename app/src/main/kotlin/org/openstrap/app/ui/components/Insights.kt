@@ -48,6 +48,7 @@ import dev.chrisbanes.haze.blur.HazeColorEffect
 import dev.chrisbanes.haze.blur.hazeBlur
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 /** One destination in [FloatingNavBar]; [tint] colours its capsule while it's the tab showing (white on Today). */
@@ -174,6 +175,42 @@ object TabBarFade {
     val stops: Array<Pair<Float, Color>> = arrayOf(0f to Color.Transparent, (1f - SOLID) to Color.Black, 1f to Color.Black)
 
     fun brush(top: Float, bottom: Float): Brush = Brush.verticalGradient(*stops, startY = top, endY = bottom)
+}
+
+/**
+ * The black fade behind a page's pinned buttons (Profile's Save, Ready's Start, Done, Choose the sport), in the style
+ * of the tab bar's ([TabBarFade]): solid black from the bottom of the screen up to the buttons' top, so nothing shows
+ * between them and the tab bar, then clearing over [Ramp] above them, the same ramp as the tab bar's fade. A page
+ * leaves [Ramp] clear above its pinned buttons at the end of its list, so its last content scrolls fully clear of
+ * both ([listClearance]).
+ */
+object PinnedFade {
+    /** How far the fade reaches above the buttons: the tab bar fade's clear-to-black part, 66 dp. */
+    val Ramp: Dp = TabBarFade.Height * (1f - TabBarFade.SOLID)
+
+    /** The fade's colour stops between [top] (clear) and [bottom], solid black from [solidFrom] down. */
+    fun stops(top: Float, solidFrom: Float, bottom: Float): Array<Pair<Float, Color>> {
+        val solid = if (bottom > top) ((solidFrom - top) / (bottom - top)).coerceIn(0f, 1f) else 0f
+        return arrayOf(0f to Color.Transparent, solid to Color.Black, 1f to Color.Black)
+    }
+
+    /**
+     * The bottom padding a page's list needs so its last content ends [Ramp] above pinned buttons whose top is
+     * [buttonsTop] over the bottom edge, with [listEnd] the space the list adds on its own (ScreenList's 24 dp).
+     */
+    fun listClearance(buttonsTop: Dp, listEnd: Dp = 0.dp): Dp = buttonsTop + Ramp - listEnd
+}
+
+/**
+ * Draws [PinnedFade] behind a page's pinned buttons. Put it on the box that holds them, reaching from the bottom of
+ * the screen to the buttons' top: that box is solid black and the fade rises [PinnedFade.Ramp] above it.
+ */
+fun Modifier.pinnedFade(): Modifier = drawBehind {
+    val ramp = PinnedFade.Ramp.toPx()
+    drawRect(
+        Brush.verticalGradient(*PinnedFade.stops(-ramp, 0f, size.height), startY = -ramp, endY = size.height),
+        Offset(0f, -ramp), Size(size.width, size.height + ramp),
+    )
 }
 
 /** How much of the window's width [FloatingNavRail] takes, its margins included. */

@@ -105,6 +105,25 @@ object GlowLayout {
     }
 
     /**
+     * The narrowest a Small gets (spec 2.4): about its width two across on a folded phone, (411 - 40 - 12) / 2, so
+     * its title ("Active minutes") stays on one line and its note on two at most.
+     */
+    val SmallMinWidth = 176.dp
+
+    /**
+     * Whether each column of a two-column dashboard [width] wide holds a row of Smalls (two across, or a Tall beside
+     * two) with each Small at least [SmallMinWidth]. When it doesn't (the Fold's inner screen), a row of Smalls spans
+     * both columns instead of being squeezed into one.
+     */
+    fun smallsFitColumn(width: Dp): Boolean {
+        val column = (width - dashboardGutter(width) * 2 - ColumnGap) / 2
+        return GlowGrid.unitWidthIn(column) >= SmallMinWidth
+    }
+
+    /** Whether a dashboard [width] wide spans its rows of Smalls across both columns ([smallsFitColumn]). */
+    fun smallsAcross(width: Dp): Boolean = width >= TwoColumnWidth && !smallsFitColumn(width)
+
+    /**
      * The side padding that keeps a page's content in one centred column [column] wide at most (spec 2.4 Unfolded),
      * [gutter] inside it: just [gutter] on a phone, more on a wider screen.
      */
@@ -144,7 +163,10 @@ val LocalPageColumn = compositionLocalOf { GlowLayout.PageMaxWidth }
 enum class Pane { Full, Left, Right }
 
 /** The blocks of a dashboard, in phone order, each with the column it takes on a wide screen. */
-class GlowBlocks internal constructor() {
+class GlowBlocks internal constructor(
+    /** On two columns too narrow for Smalls ([GlowLayout.smallsAcross]): a row of Smalls is a full block. */
+    val smallsAcross: Boolean = false,
+) {
     internal val blocks = mutableListOf<Pair<Pane, @Composable () -> Unit>>()
 
     /** The block [GlowScreenList] scrolls to when asked ([focus]), or -1. */
@@ -178,7 +200,7 @@ fun GlowScreenList(
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val wide = maxWidth >= GlowLayout.TwoColumnWidth
         val gutter = GlowLayout.dashboardGutter(maxWidth)
-        val built = GlowBlocks().apply(content)
+        val built = GlowBlocks(smallsAcross = GlowLayout.smallsAcross(maxWidth)).apply(content)
         val blocks = built.blocks
         // The lazy item the marked block lands in: its own on a phone; on a wide screen a two-column run is one item.
         val target = built.focusBlock.takeIf { it >= 0 }?.let { if (wide) itemOf(blocks, it) else it }

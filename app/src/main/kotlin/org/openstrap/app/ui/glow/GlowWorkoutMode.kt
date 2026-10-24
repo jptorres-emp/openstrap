@@ -34,6 +34,11 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.statusBars
+import org.openstrap.app.ui.components.PinnedFade
+import org.openstrap.app.ui.components.pinnedFade
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -217,7 +222,7 @@ internal fun WorkoutButton(
 /**
  * A workout screen: black, with the workout's colour glowing softly from the top, scrolling if it must but filling
  * the height so the controls sit at the bottom. [pinned] (Start, Done) stays on the bottom edge while the rest
- * scrolls under it, behind a short fade to black (spec 6.3).
+ * scrolls under it, behind the pinned buttons' fade ([pinnedFade], spec 6.3), and the content ends clear of it.
  */
 @Composable
 internal fun WorkoutPage(
@@ -236,19 +241,25 @@ internal fun WorkoutPage(
         )
         // On a wide screen the page keeps to one centred column (spec 2.4 Unfolded); the glow stays the screen's.
         val side = GlowLayout.pageSide(maxWidth, LocalPageColumn.current, GlowLayout.Gutter)
+        // The content ends [PinnedFade.Ramp] above the pinned buttons (their box already counts the bottom padding),
+        // or 16 dp above the bottom padding without them.
+        val padTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + contentPadding.calculateTopPadding() + 8.dp
+        val padBottom = contentPadding.calculateBottomPadding()
+        val end = if (pinned != null) (PinnedFade.listClearance(pinnedHeight) - padBottom).coerceAtLeast(16.dp) else 16.dp
         // The live screen fits the screen instead (scroll = false): its controls never move.
         Column(
             Modifier.fillMaxSize().then(if (scroll) Modifier.verticalScroll(rememberScrollState()) else Modifier).statusBarsPadding()
-                .padding(contentPadding).padding(start = side, end = side, top = 8.dp, bottom = 16.dp + pinnedHeight)
-                .then(if (scroll) Modifier.heightIn(min = maxHeight - 80.dp - pinnedHeight) else Modifier),
+                .padding(contentPadding).padding(start = side, end = side, top = 8.dp, bottom = end)
+                // At least the screen's height, so the controls sit at the bottom without the page scrolling.
+                .then(if (scroll) Modifier.heightIn(min = (maxHeight - padTop - padBottom - end).coerceAtLeast(0.dp)) else Modifier),
             verticalArrangement = Arrangement.spacedBy(14.dp),
             content = content,
         )
+        // Black from the bottom of the screen up to the buttons, fading out above them.
         if (pinned != null) Column(
-            Modifier.align(Alignment.BottomCenter).fillMaxWidth()
-                .background(Brush.verticalGradient(0f to Color.Transparent, 0.25f to Color.Black, 1f to Color.Black))
-                .padding(contentPadding).padding(start = side, end = side, top = 24.dp, bottom = 16.dp)
-                .onSizeChanged { pinnedHeight = with(density) { it.height.toDp() } - 16.dp },
+            Modifier.align(Alignment.BottomCenter).fillMaxWidth().pinnedFade()
+                .padding(contentPadding).padding(start = side, end = side, bottom = 16.dp)
+                .onSizeChanged { pinnedHeight = with(density) { it.height.toDp() } },
             verticalArrangement = Arrangement.spacedBy(4.dp),
             content = pinned,
         )
@@ -703,7 +714,7 @@ private fun SettingRow(
             Spacer(Modifier.width(RowIconGap))
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            Text(title, color = Color.White, style = GlowType.body)
+            RowName(title)
             Text(note, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary)
         }
         Spacer(Modifier.width(12.dp))

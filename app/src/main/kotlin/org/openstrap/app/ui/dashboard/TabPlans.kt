@@ -18,11 +18,19 @@ import org.openstrap.app.ui.glow.Pane
 data class TabSlot<C>(val card: C, val look: CardLook, val pane: Pane, val size: CardSize = CardSize.Wide)
 
 /**
+ * The pane each of [slots] takes on two columns: its own, except that with [smallsAcross] (columns too narrow for
+ * Smalls) a row of Smalls spans both ([spanSmalls]).
+ */
+fun tabPanes(slots: List<TabSlot<*>>, smallsAcross: Boolean = false): List<Pane> =
+    slots.map { it.pane }.let { if (smallsAcross) spanSmalls(it, slots.map { s -> s.size }) else it }
+
+/**
  * The neighbours among [slots] that look the same. On two columns, a full-width card counts as touching the top and
  * bottom card of each column next to it, as it does on screen. Smalls side by side, and a Tall with its Smalls, touch.
+ * [smallsAcross] is two columns with the rows of Smalls spanning both ([tabPanes]).
  */
-fun tabClashes(slots: List<TabSlot<*>>, wide: Boolean): List<Pair<Int, Int>> =
-    lookClashes(slots.map { it.look }, slots.map { it.pane }, wide, fullTouchesColumns = true, sizes = slots.map { it.size })
+fun tabClashes(slots: List<TabSlot<*>>, wide: Boolean, smallsAcross: Boolean = false): List<Pair<Int, Int>> =
+    lookClashes(slots.map { it.look }, tabPanes(slots, smallsAcross && wide), wide, fullTouchesColumns = true, sizes = slots.map { it.size })
 
 private fun glow(h: Hue) = CardLook(Tier.Glow, h)
 private fun edge(h: Hue, e: Edge) = CardLook(Tier.Edge, h, e)

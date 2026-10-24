@@ -32,6 +32,8 @@ enum class TodayCard(val label: String, val editable: Boolean = true, val pinnab
     Workout("The workout"),
     Week("Your week", pinnable = true),
     HabitAge("Habit Age", pinnable = true),
+    /** Start a workout (spec 4.2): a strip above Edit Today, opening Ready with your usual sport. */
+    StartWorkout("Start a workout"),
     EditToday("", editable = false),
 }
 
@@ -109,7 +111,8 @@ fun todayCards(moment: Moment?, facts: TodayFacts, morning: Boolean = true): Lis
             wide(TodayCard.Charge), wide(TodayCard.Activity), wide(TodayCard.HeartRate), strip(TodayCard.LastNight),
         )
     }
-    // Things that need an answer come straight under the hero; the week and Habit Age close the list.
+    // Things that need an answer come straight under the hero; the week and Habit Age close the list, then Start a
+    // workout, except where the hero is the workout or has Start of its own (spec 4.2).
     return listOfNotNull(
         TodaySlot(TodayCard.Hero, CardSize.Large),
         strip(TodayCard.Offer).takeIf { facts.offer && facts.isToday },
@@ -118,6 +121,7 @@ fun todayCards(moment: Moment?, facts: TodayFacts, morning: Boolean = true): Lis
     ) + own + listOfNotNull(
         wide(TodayCard.Week),
         wide(TodayCard.HabitAge).takeIf { facts.healthspan },
+        strip(TodayCard.StartWorkout).takeIf { facts.isToday && m != Moment.During && m != Moment.WorkoutWindow },
         strip(TodayCard.EditToday),
     )
 }

@@ -11,6 +11,7 @@ import org.openstrap.app.ui.dashboard.TodayCard.BodyMorning
 import org.openstrap.app.ui.dashboard.TodayCard.Charge
 import org.openstrap.app.ui.dashboard.TodayCard.CheckIn
 import org.openstrap.app.ui.dashboard.TodayCard.EditToday
+import org.openstrap.app.ui.dashboard.TodayCard.StartWorkout
 import org.openstrap.app.ui.dashboard.TodayCard.HabitAge
 import org.openstrap.app.ui.dashboard.TodayCard.HeartRate
 import org.openstrap.app.ui.dashboard.TodayCard.Hero
@@ -30,14 +31,16 @@ class TodayPlanTest {
     private fun cards(m: Moment?, facts: TodayFacts = TodayFacts(), morning: Boolean = true) = todayCards(m, facts, morning).map { it.card }
 
     @Test fun `each moment has the spec's cards in order`() {
-        assertEquals(listOf(Hero, CheckIn, BodyMorning, LastNight, HeartRate, Activity, Week, EditToday), cards(Moment.Waking))
-        assertEquals(listOf(Hero, LastNight, Activity, HeartRate, RightNow, Recovery, Week, EditToday), cards(Moment.Midday))
+        assertEquals(listOf(Hero, CheckIn, BodyMorning, LastNight, HeartRate, Activity, Week, StartWorkout, EditToday), cards(Moment.Waking))
+        assertEquals(listOf(Hero, LastNight, Activity, HeartRate, RightNow, Recovery, Week, StartWorkout, EditToday), cards(Moment.Midday))
+        // The workout window's hero has Start, so no strip.
         assertEquals(listOf(Hero, Charge, LoadToday, Activity, LastNight, Week, EditToday), cards(Moment.WorkoutWindow))
-        assertEquals(listOf(Hero, Workout, LoadToday, Recover, Charge, Activity, Week, EditToday), cards(Moment.After, TodayFacts(workout = true)))
-        assertEquals(listOf(Hero, Charge, Activity, HeartRate, LastNight, Week, EditToday), cards(Moment.Evening))
+        assertEquals(listOf(Hero, Workout, LoadToday, Recover, Charge, Activity, Week, StartWorkout, EditToday), cards(Moment.After, TodayFacts(workout = true)))
+        assertEquals(listOf(Hero, Charge, Activity, HeartRate, LastNight, Week, StartWorkout, EditToday), cards(Moment.Evening))
         assertEquals(cards(Moment.Evening), cards(Moment.Night))
-        // During a workout the hero has the live heart rate, so the card leaves; the rest is midday's.
-        assertEquals(cards(Moment.Midday) - HeartRate, cards(Moment.During))
+        // During a workout the hero has the live heart rate, so the card leaves, and one is already under way; the
+        // rest is midday's.
+        assertEquals(cards(Moment.Midday) - HeartRate - StartWorkout, cards(Moment.During))
         // Heart rate shows at waking, midday and the evening, never around a workout.
         for (m in listOf(Moment.WorkoutWindow, Moment.During, Moment.After)) assertFalse("$m", HeartRate in cards(m, TodayFacts(workout = true)))
     }
@@ -66,10 +69,11 @@ class TodayPlanTest {
     @Test fun `strips that need an answer sit under the hero, today only`() {
         val facts = TodayFacts(offer = true, suggestion = true, alerts = true, healthspan = true)
         assertEquals(listOf(Hero, Offer, Suggestion, Alerts, LastNight), cards(Moment.Midday, facts).take(5))
-        assertEquals(listOf(Week, HabitAge, EditToday), cards(Moment.Midday, facts).takeLast(3))
+        assertEquals(listOf(Week, HabitAge, StartWorkout, EditToday), cards(Moment.Midday, facts).takeLast(4))
         // A past day: no offer, suggestion or check-in, but its alerts still show.
         val past = cards(layoutMoment(Moment.Evening, isToday = false), facts.copy(isToday = false))
         assertEquals(listOf(Hero, Alerts, BodyMorning), past.take(3))
+        assertFalse(StartWorkout in past)
         assertFalse(Workout in cards(Moment.After))
     }
 
@@ -112,7 +116,7 @@ class TodayPlanTest {
         val slots = todayCards(Moment.Midday, TodayFacts(alerts = true))
         val edits = TodayEdits(hidden = setOf(RightNow), pinned = listOf(HeartRate, LoadToday))
         val out = applyEdits(slots, edits, Moment.Midday)
-        assertEquals(listOf(Hero, Alerts, HeartRate, LoadToday, LastNight, Activity, Recovery, Week, EditToday), out.map { it.card })
+        assertEquals(listOf(Hero, Alerts, HeartRate, LoadToday, LastNight, Activity, Recovery, Week, StartWorkout, EditToday), out.map { it.card })
         // A pin the moment doesn't have comes in at its usual size.
         assertEquals(CardSize.List, out.first { it.card == LoadToday }.size)
         // A pin keeps the moment's own size.

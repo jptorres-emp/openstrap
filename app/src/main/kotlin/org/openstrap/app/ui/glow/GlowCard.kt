@@ -284,8 +284,9 @@ private fun render(style: GlowStyle, w: Float, h: Float, density: Density): Glow
                 val dark = levelEdge(level) * h - LEVEL_STEP.toPx()
                 if (light.fromAbove) canvas.clipRect(0f, 0f, w, h - dark) else canvas.clipRect(0f, dark, w, h)
             }
-            val g = style.glowSize.toPx()
             val k = light.rim
+            // A rim past full (the workout window's 120%) can't get brighter at the edge, so it reaches further in.
+            val g = style.glowSize.toPx() * k.coerceAtLeast(1f)
             // Rim light: a CSS-style inset shadow leaning toward the lit edge, so the rim is full on one side (L4) and
             // gone on the other. Light all the way round only when the style has no side.
             if (light.angle != null) {

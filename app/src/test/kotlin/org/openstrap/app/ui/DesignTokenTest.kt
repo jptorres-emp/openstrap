@@ -107,6 +107,23 @@ class DesignTokenTest {
         assertTrue(BarMaxWidth <= 6.dp)
     }
 
+    @Test fun `a Today hero and Your week have one dotted number`() {
+        // Spec 2.3 and audit 2.8: one number in dots a card; the rest is text. Each hero is a function of its own.
+        val found = mutableListOf<String>()
+        val dotted = Regex("""\b(HeroNumber|HeroFigure|DotMatrixText|EdgeValue|FigureRow)\(""")
+        listOf("glow/GlowTodayScreen.kt" to Regex("""private fun (\w+Hero)\("""), "glow/TodayCards.kt" to Regex("""internal fun (WeekCard)\(""")).forEach { (path, fn) ->
+            val code = sources.getValue(path).joinToString("\n")
+            val heads = fn.findAll(code).toList()
+            assertTrue("no heroes found in $path", heads.isNotEmpty())
+            heads.forEach { m ->
+                val body = braced(code, code.indexOf('{', m.range.last + balanced(code, m.range.last).length + 1))
+                val n = dotted.findAll(body).count()
+                if (n > 1) found += "$path  ${m.groupValues[1]}: $n dotted numbers"
+            }
+        }
+        if (found.isNotEmpty()) fail("One dotted number a card (spec 2.3):\n" + found.joinToString("\n"))
+    }
+
     @Test fun `no metric has a second colour`() {
         val found = find(Regex("""\b(chargeScale|chargeAt|chargeDeep|readinessDeep)\b|MetricColors\.bad\b|\bval bad\b"""))
         if (found.isNotEmpty()) fail("Charge is one Ember, Recovery one teal, and bad is gone (spec 2.2):\n" + found.joinToString("\n"))
@@ -200,9 +217,20 @@ class DesignTokenTest {
             "glow/GlowWorkoutSummary.kt" to 1,
             "glow/InfoSheet.kt" to 4,
             "glow/TabParts.kt" to 1,
-            "glow/TodayCards.kt" to 1,
         )
     }
+}
+
+/** The text between the `{` at [open] and its matching `}`. */
+private fun braced(code: String, open: Int): String {
+    var depth = 0
+    for (i in open until code.length) {
+        when (code[i]) {
+            '{' -> depth++
+            '}' -> if (--depth == 0) return code.substring(open + 1, i)
+        }
+    }
+    return code.substring(open + 1)
 }
 
 /** The text between the `(` at [open] and its matching `)`. */

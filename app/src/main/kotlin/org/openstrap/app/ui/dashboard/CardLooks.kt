@@ -20,7 +20,7 @@ import org.openstrap.app.ui.glow.packGrid
 enum class Tier { Glow, Edge, Level, List, Strip, Plain }
 
 /** The colour a card is lit in: its metric's, or [Neutral], the cool grey of hsl 220 10% 55%. */
-enum class Hue { Recovery, Charge, Sleep, Heart, Steps, Load, HabitAge, Neutral }
+enum class Hue { Recovery, Charge, Sleep, Heart, Steps, Load, HabitAge, Neutral, /** The evening hero's violet: a moment, not a metric. */ Evening }
 
 /**
  * A card's shape where it counts for its design (spec 2.3, 2.4): a [Small] or a [Tall] reads as its own design whatever

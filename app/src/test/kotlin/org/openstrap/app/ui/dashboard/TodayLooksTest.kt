@@ -61,7 +61,7 @@ class TodayLooksTest {
         for (wide in listOf(false, true)) {
             val after = today(Moment.After, TodayFacts(workout = true), wide = wide)
             assertEquals(CardLook(Tier.Edge, Hue.Load, Edge.Bottom, Shape.Small), after.first { it.card == LoadToday }.look)
-            assertEquals(CardLook(Tier.Edge, Hue.Recovery, Edge.Top, Shape.Small), after.first { it.card == TodayCard.Recover }.look)
+            assertEquals(CardLook(Tier.Edge, Hue.Load, Edge.Top, Shape.Small), after.first { it.card == TodayCard.Recover }.look)
             // Activity is lit from below, so Your week under it flips to the top.
             assertEquals(Edge.Top, after.first { it.card == Week }.look?.edge)
             assertVaried(after, wide, "after wide=$wide")
@@ -70,7 +70,7 @@ class TodayLooksTest {
 
     @Test fun `in the evening heart rate flips to the top under Activity`() {
         val evening = today(Moment.Evening, TodayFacts())
-        assertEquals(listOf(Hero, TodayCard.Charge, Activity, TodayCard.HeartRate, LastNight, Week, EditToday), evening.map { it.card })
+        assertEquals(listOf(Hero, TodayCard.Charge, Activity, TodayCard.HeartRate, LastNight, Week, TodayCard.StartWorkout, EditToday), evening.map { it.card })
         assertEquals(Edge.Bottom, evening.first { it.card == Activity }.look?.edge)
         assertEquals(Edge.Top, evening.first { it.card == TodayCard.HeartRate }.look?.edge)
         // Live, it's lit from the right and needs no flip.

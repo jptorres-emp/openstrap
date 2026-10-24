@@ -98,6 +98,24 @@ internal fun HeroFigure(
     }
 }
 
+/**
+ * The hero's one dotted number (spec 2.3, one per card) with up to two short [lines] beside it on the digits' baseline:
+ * its word, and the figures that go with it as text ("Charge at waking 84"). Without a [value] the lines stand alone.
+ */
+@Composable
+internal fun HeroNumber(value: String?, lines: List<String>, modifier: Modifier = Modifier) {
+    Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
+        // The card's number: it can move into the detail's headline (spec 3.5).
+        if (value != null) {
+            DotMatrixText(value, Modifier.cardNumber(value), dot = DotSize.Hero)
+            Spacer(Modifier.width(12.dp))
+        }
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            lines.forEach { Text(it, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary, maxLines = 1) }
+        }
+    }
+}
+
 /** The white pill that starts something, like the ready screen's Start. */
 @Composable
 internal fun HeroButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, icon: Boolean = false) {
@@ -162,10 +180,13 @@ internal fun LastNightStrip(state: DayUiState, onClick: () -> Unit, modifier: Mo
         )
     }
 
-/** The morning check-in: how you feel, 1 to 5. It never changes the score; it's how the score gets checked. */
+/**
+ * The morning check-in: how you feel, 1 to 5. It never changes the score; it's how the score gets checked. A strip,
+ * so lit from below in the neutral light (spec 2.5): a question, not Recovery's.
+ */
 @Composable
 internal fun CheckInStrip(feeling: Int?, onCheckIn: (Int?) -> Unit, modifier: Modifier = Modifier) =
-    TodayStrip(MetricColors.readiness, EdgeKind.Earlier, modifier) {
+    TodayStrip(EdgeNeutral, EdgeKind.Value, modifier) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text("How do you feel?", color = Color.White, style = GlowType.cardTitle, maxLines = 1, modifier = Modifier.weight(1f))
             if (feeling != null) Text(CheckIn.label(feeling), color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary)
@@ -185,6 +206,29 @@ internal fun CheckInStrip(feeling: Int?, onCheckIn: (Int?) -> Unit, modifier: Mo
             }
         }
     }
+
+/**
+ * Start a workout (spec 4.2): heart light from below, the title with your usual sport under it ("Outdoor run, your
+ * usual") and a white play button. One thing to do, so the whole strip is the button and has no caret; it opens Ready
+ * with that sport.
+ */
+@Composable
+internal fun StartWorkoutStrip(sport: Int, onStart: (Int) -> Unit, modifier: Modifier = Modifier) {
+    val name = Workouts.sportName(sport)
+    // A strip that does one thing is a button: its title is plain text, with no caret (spec 2.5, Tappable says so).
+    TodayStrip(MetricColors.heart, EdgeKind.Value, modifier, onClick = { onStart(sport) }) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text("Start a workout", color = Color.White, style = GlowType.cardTitle, maxLines = 1)
+                Text("$name, your usual", color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary, maxLines = 1)
+            }
+            Spacer(Modifier.width(12.dp))
+            Box(Modifier.size(44.dp).clip(CircleShape).background(Color.White), contentAlignment = Alignment.Center) {
+                Icon(AppIcons.PlayFill, null, tint = Color.Black, modifier = Modifier.size(18.dp))
+            }
+        }
+    }
+}
 
 /** What the strap warned about, in the words of its notification. Codes as in HealthAlert.Type. */
 internal fun alertText(a: HealthAlertRow): String = when (a.type) {
@@ -428,9 +472,9 @@ internal fun WorkoutCard(w: org.openstrap.app.data.WorkoutAnalysis, onClick: () 
 }
 
 /**
- * Your week (spec 4.2): last Monday to Sunday against the week before, every day of this week. Steps a day, time
- * asleep a night and the workouts done. A summary of three metrics borrows none of their colours: a neutral edge
- * from the bottom, soft, like any value at its usual.
+ * Your week (spec 4.2): last Monday to Sunday against the week before, every day of this week. Steps a day in dots,
+ * time asleep a night and the workouts done as text under them (one dotted number a card, spec 2.3). A summary of three
+ * metrics borrows none of their colours: a neutral edge from the bottom, soft, like any value at its usual.
  */
 @Composable
 internal fun WeekCard(
@@ -454,11 +498,13 @@ internal fun WeekCard(
     val range = DateTimeFormatter.ofPattern("d MMM")
     EdgeCard(EdgeNeutral, modifier.fillMaxWidth().gridSize(CardSize.Wide), kind = EdgeKind.Value, onClick = onClick) {
         EdgeTitle("Your week", "${start.format(range)}–${end.format(range)}")
-        Row(Modifier.fillMaxWidth().padding(top = 14.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-            HeroFigure(stepsNow?.let { "%,d".format(it.roundToInt()) }, "Steps a day")
-            HeroFigure(asleep.takeIf { it.isNotEmpty() }?.average()?.let { clockDuration(it.toLong()) }, "Asleep a night")
-            HeroFigure("$done", "Workouts")
-        }
+        EdgeValue(stepsNow?.let { "%,d".format(it.roundToInt()) }, "steps a day", null)
+        val night = asleep.takeIf { it.isNotEmpty() }?.average()?.toLong()?.let { TodayCopy.duration(it) + " asleep a night" }
+        val workoutsDone = if (done == 1) "1 workout" else "$done workouts"
+        Text(
+            listOfNotNull(night, workoutsDone).joinToString(", ").replaceFirstChar { it.uppercase() },
+            color = Color.White, style = GlowType.body, modifier = Modifier.padding(top = 8.dp),
+        )
         val change = TodayCopy.stepsChange(stepsNow, stepsAvg(start.minusDays(7), start.minusDays(1)))
         Text(
             change?.let { "$it on the week before." } ?: TodayCopy.WEEK_FIRST,
@@ -470,7 +516,8 @@ internal fun WeekCard(
 /**
  * A Small (spec 2.3): a number and a word only, in the edge light, filling the [modifier] its row gives it. The title
  * at the top, the number and its word at the foot. [extra] goes between them, for the nap's stage strip. With no
- * number the word alone stands in its place, larger, rather than a dash over it ("Recovered"), unless it's [waiting].
+ * number the word alone stands in its place in Body, rather than a dash over it ("Recovered"), unless it's [waiting]:
+ * a word is never drawn at a number's size.
  */
 @Composable
 internal fun SmallCard(
@@ -485,7 +532,7 @@ internal fun SmallCard(
         Spacer(Modifier.weight(1f))
         if (value == null && status != null && !waiting) {
             extra?.invoke()
-            Text(status, color = Color.White, style = GlowType.label.copy(fontSize = 20.sp, lineHeight = 24.sp), maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text(status, color = Color.White, style = GlowType.body, maxLines = 2, overflow = TextOverflow.Ellipsis)
             return@EdgeCard
         }
         Row(verticalAlignment = Alignment.Bottom) {

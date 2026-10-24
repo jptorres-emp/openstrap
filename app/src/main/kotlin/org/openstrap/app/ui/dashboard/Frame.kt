@@ -24,11 +24,12 @@ fun dayTitle(date: LocalDate, today: LocalDate = LocalDate.now(), locale: Locale
 
 /**
  * The header's title on Today (spec 3.1): the [moment] for today, [dayTitle] for a past day, which keeps its name.
- * After a workout it names the sport when it can ([sportType], "After your ride").
+ * During a workout it's the sport ("Running"), after one it names it when it can ("After your ride"): [sportType] is
+ * the one recording, or the last one done.
  */
 fun todayTitle(moment: Moment, date: LocalDate, sportType: Int? = null, today: LocalDate = LocalDate.now(), locale: Locale = Locale.getDefault()): String =
     if (date < today) dayTitle(date, today, locale) else when (moment) {
-        Moment.During -> "Workout"
+        Moment.During -> sportType?.let(::sportDoing) ?: "Workout"
         Moment.After -> "After your ${sportType?.let(::sportNoun) ?: "workout"}"
         Moment.WorkoutWindow -> "Workout time"
         Moment.Waking -> "Waking up"
@@ -48,6 +49,17 @@ internal fun sportNoun(sportType: Int): String? = when (sportType) {
     else -> null
 }
 
+/** A sport as what you're doing ("Running"), for the header during it; its name where no verb reads well. */
+internal fun sportDoing(sportType: Int): String = when (sportNoun(sportType)) {
+    "run" -> "Running"
+    "walk" -> "Walking"
+    "ride" -> "Cycling"
+    "swim" -> "Swimming"
+    "hike" -> "Hiking"
+    "row" -> "Rowing"
+    else -> org.openstrap.app.data.Workouts.sportName(sportType)
+}
+
 /** Today's light for a moment (spec 2.1 Moods): softer in the evening, calmer and from below at night. */
 fun momentMood(moment: Moment): GlowMood = when (moment) {
     Moment.Evening -> GlowMood.Evening
@@ -56,17 +68,15 @@ fun momentMood(moment: Moment): GlowMood = when (moment) {
 }
 
 /**
- * Where the Today hero's light comes from for a moment (spec 2.5): low on the left on waking, up on the right before a
- * workout, overhead at midday, low on the right in the evening, and below after a workout and at night. During a
- * workout the hero keeps its own light (null).
+ * Where the Today hero's light comes from for a moment (spec 4.2): low on the left on waking, rising from below to
+ * Charge's level at midday, up on the right before a workout, low on the right in the evening, and below during and
+ * after a workout and at night.
  */
-fun heroLightAngle(moment: Moment): Float? = when (moment) {
+fun heroLightAngle(moment: Moment): Float = when (moment) {
     Moment.Waking -> LightAngle.LowerLeft
     Moment.WorkoutWindow -> LightAngle.UpperRight
-    Moment.Midday -> LightAngle.Above
     Moment.Evening -> LightAngle.LowerRight
-    Moment.After, Moment.Night -> LightAngle.Below
-    Moment.During -> null
+    Moment.Midday, Moment.During, Moment.After, Moment.Night -> LightAngle.Below
 }
 
 /** The day under the header's title: "Thu 23 Oct". */

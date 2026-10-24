@@ -16,12 +16,13 @@ private fun edge(h: Hue, e: Edge) = CardLook(Tier.Edge, h, e)
 private fun strip(h: Hue, e: Edge) = CardLook(Tier.Strip, h, e)
 private val ListLook = CardLook(Tier.List, Hue.Neutral)
 
-/** The colour of the hero for [moment] (spec 2.5 and 4.2). */
+/** The colour of the hero for [moment] (spec 4.2, How each moment looks). */
 private fun heroHue(moment: Moment?): Hue = when (moment) {
     Moment.Midday -> Hue.Charge
-    Moment.During, Moment.After -> Hue.Heart
-    Moment.Evening, Moment.Night -> Hue.Sleep
-    Moment.Waking, Moment.WorkoutWindow, null -> Hue.Recovery
+    Moment.WorkoutWindow, Moment.During, Moment.After -> Hue.Heart
+    Moment.Evening -> Hue.Evening
+    Moment.Night -> Hue.Sleep
+    Moment.Waking, null -> Hue.Recovery
 }
 
 /**
@@ -37,10 +38,11 @@ private fun ownLook(slot: TodaySlot, moment: Moment?, live: Boolean): CardLook =
     TodayCard.Offer -> strip(Hue.Heart, Edge.Right)
     TodayCard.Suggestion -> strip(Hue.Heart, Edge.Left)
     TodayCard.Alerts -> strip(Hue.Heart, Edge.Top)
-    TodayCard.CheckIn -> strip(Hue.Recovery, Edge.Left)
+    // A strip is lit from below in the neutral light (spec 2.5): the check-in is a question, not Recovery's.
+    TodayCard.CheckIn -> strip(Hue.Neutral, Edge.Bottom)
     TodayCard.BodyMorning, TodayCard.RightNow -> ListLook
     TodayCard.LoadToday -> if (slot.size == CardSize.Small) edge(Hue.Load, Edge.Bottom) else ListLook
-    TodayCard.Recover -> edge(Hue.Recovery, Edge.Bottom)
+    TodayCard.Recover -> edge(Hue.Load, Edge.Bottom)
     TodayCard.LastNight -> if (slot.size == CardSize.Strip) strip(Hue.Sleep, Edge.Top) else edge(Hue.Sleep, Edge.Top)
     TodayCard.HeartRate -> edge(Hue.Heart, if (live) Edge.Right else Edge.Bottom)
     TodayCard.Activity -> edge(Hue.Steps, Edge.Bottom)
@@ -49,6 +51,7 @@ private fun ownLook(slot: TodaySlot, moment: Moment?, live: Boolean): CardLook =
     TodayCard.Workout -> edge(Hue.Heart, Edge.Left)
     TodayCard.Week -> edge(Hue.Neutral, Edge.Bottom)
     TodayCard.HabitAge -> edge(Hue.HabitAge, Edge.Left)
+    TodayCard.StartWorkout -> strip(Hue.Heart, Edge.Bottom)
     TodayCard.EditToday -> CardLook(Tier.Plain, Hue.Neutral)
 }
 

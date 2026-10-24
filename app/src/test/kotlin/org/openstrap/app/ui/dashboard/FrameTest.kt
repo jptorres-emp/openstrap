@@ -262,6 +262,10 @@ class FrameTest {
             titles,
         )
         assertEquals("After your run", todayTitle(org.openstrap.app.data.Moment.After, today, 1, today, uk))
+        // During a workout the header is the sport under way (spec 4.2).
+        assertEquals("Running", todayTitle(org.openstrap.app.data.Moment.During, today, 1, today, uk))
+        assertEquals("Cycling", todayTitle(org.openstrap.app.data.Moment.During, today, 4, today, uk))
+        assertEquals(org.openstrap.app.data.Workouts.sportName(52), todayTitle(org.openstrap.app.data.Moment.During, today, 52, today, uk))
         assertEquals("After your ride", todayTitle(org.openstrap.app.data.Moment.After, today, 4, today, uk))
         assertEquals("After your workout", todayTitle(org.openstrap.app.data.Moment.After, today, 52, today, uk))
         assertEquals("Yesterday", todayTitle(org.openstrap.app.data.Moment.Waking, today.minusDays(1), today = today, locale = uk))
@@ -281,11 +285,12 @@ class FrameTest {
 
     @Test fun `the hero's light follows the moment`() {
         assertEquals(225f, heroLightAngle(org.openstrap.app.data.Moment.Waking))
-        assertEquals(90f, heroLightAngle(org.openstrap.app.data.Moment.Midday))
+        // Midday's Charge rises from below to its level; during a workout the zone's light is from below too.
+        assertEquals(270f, heroLightAngle(org.openstrap.app.data.Moment.Midday))
         assertEquals(45f, heroLightAngle(org.openstrap.app.data.Moment.WorkoutWindow))
         assertEquals(270f, heroLightAngle(org.openstrap.app.data.Moment.After))
         assertEquals(315f, heroLightAngle(org.openstrap.app.data.Moment.Evening))
         assertEquals(270f, heroLightAngle(org.openstrap.app.data.Moment.Night))
-        assertNull(heroLightAngle(org.openstrap.app.data.Moment.During))
+        assertEquals(270f, heroLightAngle(org.openstrap.app.data.Moment.During))
     }
 }

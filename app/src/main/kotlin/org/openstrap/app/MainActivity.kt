@@ -750,7 +750,11 @@ private fun AppRoot(
             // The header on every tab: the moment on Today (a past day's name for a past day), the tab's name elsewhere.
             val header: @Composable (Tab) -> Unit = { t ->
                 MomentHeader(
-                    if (t != Tab.Today) t.label else todayMoment?.let { todayTitle(it, day.date, lastWorkout?.workout?.sportType) } ?: org.openstrap.app.ui.dashboard.dayTitle(day.date), day.date, chip, dayVm::previousDay, dayVm::nextDay, picker,
+                    if (t != Tab.Today) t.label else todayMoment?.let { m ->
+                        // During a workout the header is the sport under way, after one the sport just done.
+                        val sport = if (m == org.openstrap.app.data.Moment.During) (workoutState as? org.openstrap.app.device.WorkoutState.Recording)?.workout?.sportType else lastWorkout?.workout?.sportType
+                        todayTitle(m, day.date, sport)
+                    } ?: org.openstrap.app.ui.dashboard.dayTitle(day.date), day.date, chip, dayVm::previousDay, dayVm::nextDay, picker,
                     onOpenYou = { openPage(Page.You) }, onOpenStrap = { openPage(Page.Strap) },
                     // All metrics is hidden for now (spec 3.1). Passing { allMetricsOpen = true } brings the button
                     // back; the sheet opens over whatever shows, and no tab hears of it (spec 3.2).

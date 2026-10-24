@@ -58,16 +58,19 @@ fun ListPanel(
     onNote: (() -> Unit)? = null,
     /** A sync marker next to the title ([StateMarker]), "Up to 09:40". */
     marker: String? = null,
+    /** A neutral tag next to the title when there's no [marker] ([TitleMark]), "Partial day". */
+    tag: TitleTag? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    val marked = marker != null || tag != null
     val inner: @Composable ColumnScope.() -> Unit = {
         if (title != null || note != null) Row(
             Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(title.orEmpty(), color = Color.White, style = GlowType.label, modifier = Modifier.weight(1f, fill = marker == null))
-            if (marker != null) {
-                StateMarker(marker, Modifier.padding(start = 8.dp))
+            Text(title.orEmpty(), color = Color.White, style = GlowType.label, modifier = Modifier.weight(1f, fill = !marked))
+            if (marked) {
+                TitleMark(marker, tag, Modifier.padding(start = 8.dp))
                 Spacer(Modifier.weight(1f))
             }
             if (note != null && onNote != null) Row(

@@ -1,7 +1,10 @@
 package org.openstrap.app.ui.glow
 
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.layout.Column
@@ -12,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -20,6 +24,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -157,8 +162,8 @@ private fun sections(blocks: List<Pair<Pane, @Composable () -> Unit>>): List<Lis
 }
 
 /**
- * The title row of a card: the title, an optional [marker] next to it ([StateMarker]), an optional note on the right
- * (text, or [trailingContent] for anything richer) and an optional chevron.
+ * The title row of a card: the title, an optional [marker] next to it ([StateMarker]) or else a neutral [tag]
+ * ([TitleMark]), an optional note on the right (text, or [trailingContent] for anything richer) and an optional chevron.
  */
 @Composable
 fun GlowHeader(
@@ -167,13 +172,18 @@ fun GlowHeader(
     chevron: Boolean = false,
     trailingContent: (@Composable () -> Unit)? = null,
     marker: String? = null,
+    tag: TitleTag? = null,
 ) {
+    val marked = marker != null || tag != null
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text(title, color = Color.White, style = GlowType.title, modifier = Modifier.weight(1f, fill = marker == null))
-        if (marker != null) {
-            StateMarker(marker, Modifier.padding(start = 8.dp))
-            Spacer(Modifier.weight(1f))
-        }
+        // The mark goes beside the title, or under it on a narrow card, so it never squeezes the title.
+        if (marked) FlowRow(
+            Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp),
+            itemVerticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(title, color = Color.White, style = GlowType.title, maxLines = 1)
+            TitleMark(marker, tag)
+        } else Text(title, color = Color.White, style = GlowType.title, modifier = Modifier.weight(1f))
         if (trailing != null) Text(trailing, color = Color.White.copy(alpha = 0.9f), style = MaterialTheme.typography.bodySmall)
         trailingContent?.invoke()
         if (chevron) {
@@ -210,4 +220,27 @@ fun GlowChartGap() = Spacer(Modifier.padding(top = GlowLayout.ChartGap))
 @Composable
 internal fun StateMarker(text: String, modifier: Modifier = Modifier) {
     Text(text, modifier, color = MetricColors.warn, style = GlowType.secondary.copy(fontSize = 11.5.sp), maxLines = 1)
+}
+
+/**
+ * A neutral tag next to a card's title (spec 4.3, E4): "Partial day", "First score". About the data, not the sync,
+ * so white and not amber (spec 2.1). With [onClick], tapping it explains it (spec 7.1, one caveat per card).
+ */
+class TitleTag(val text: String, val onClick: (() -> Unit)? = null)
+
+/** What sits next to a card's title: the sync [marker] when there's one, else the [tag]. One mark per card. */
+@Composable
+internal fun TitleMark(marker: String?, tag: TitleTag?, modifier: Modifier = Modifier) {
+    if (marker != null) StateMarker(marker, modifier)
+    else if (tag != null) {
+        val shape = RoundedCornerShape(50)
+        val onClick = tag.onClick
+        Text(
+            tag.text,
+            modifier.clip(shape).border(1.dp, Color.White.copy(alpha = 0.22f), shape)
+                .let { if (onClick != null) it.clickable(onClickLabel = "About ${tag.text.lowercase()}", onClick = onClick) else it }
+                .padding(horizontal = 8.dp, vertical = 2.dp),
+            color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary.copy(fontSize = 11.5.sp), maxLines = 1,
+        )
+    }
 }

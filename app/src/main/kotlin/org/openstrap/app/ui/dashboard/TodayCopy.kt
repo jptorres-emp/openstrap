@@ -74,8 +74,8 @@ object TodayCopy {
      * strap's own [estimate] when there is one. [firstNights] is before the strap has seen any sleep.
      */
     fun waking(asleepSeconds: Long?, score: Int?, alert: Boolean, noScore: NoScore?, firstNights: Boolean, isToday: Boolean): String {
-        if (firstNights) return "Recovery starts after your first night with the strap."
-        if (asleepSeconds == null) return if (isToday) "No sleep recorded last night. Was the strap on?" else "No sleep recorded that night."
+        if (firstNights) return RECOVERY_FIRST_NIGHT
+        if (asleepSeconds == null) return if (isToday) NO_SLEEP else "No sleep recorded that night."
         val slept = "Slept ${duration(asleepSeconds)}."
         return when {
             score != null -> "$slept ${recoveryMeaning(score, alert)}"
@@ -84,6 +84,12 @@ object TodayCopy {
             else -> slept
         }
     }
+
+    /** The Recovery heroes before the strap has seen a night (spec 4.3). */
+    const val RECOVERY_FIRST_NIGHT = "Recovery starts after your first night with the strap."
+
+    /** Today's waking hero with no sleep recorded last night, and the Sleep tab's night (spec 4.3). */
+    const val NO_SLEEP = "No sleep recorded last night. Was the strap on?"
 
     /** What a Recovery card shows: the number (null for a dash), the word beside it and the line under it. */
     data class RecoveryShown(val value: Int?, val word: String?, val line: String, val estimate: Boolean = false)

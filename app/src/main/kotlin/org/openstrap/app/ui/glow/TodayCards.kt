@@ -48,6 +48,7 @@ import org.openstrap.app.ui.components.cardNumber
 import org.openstrap.app.ui.components.formatDuration
 import org.openstrap.app.ui.components.pressClickable
 import org.openstrap.app.ui.dashboard.DailyHistory
+import org.openstrap.app.ui.dashboard.AFTER_FIRST_NIGHT
 import org.openstrap.app.ui.dashboard.DayUiState
 import org.openstrap.app.ui.dashboard.RECOVERY_FAILED
 import org.openstrap.app.ui.dashboard.RecoveryFailure
@@ -146,11 +147,21 @@ internal fun StripLine(title: String, detail: String?, chevron: Boolean = true) 
     }
 }
 
-/** Last night, collapsed to one line once the morning is over (spec 4.2). [stuck]: it's still on the strap. */
+/**
+ * Last night, collapsed to one line once the morning is over (spec 4.2). [stuck]: it's still on the strap. Before
+ * the first night it says when it fills, not that there was none.
+ */
 @Composable
-internal fun LastNightStrip(state: DayUiState, onClick: () -> Unit, modifier: Modifier = Modifier, stuck: Boolean = false) =
+internal fun LastNightStrip(state: DayUiState, onClick: () -> Unit, modifier: Modifier = Modifier, stuck: Boolean = false, firstNights: Boolean = false) =
     TodayStrip(MetricColors.sleepDeep, EdgeKind.Sleep, modifier, onClick = onClick) {
-        StripLine("Last night", TodayCopy.lastNight(state.asleepSeconds, state.sleep?.score) ?: if (stuck) WAITING_LAST_NIGHT else "No sleep recorded")
+        StripLine(
+            "Last night",
+            TodayCopy.lastNight(state.asleepSeconds, state.sleep?.score) ?: when {
+                firstNights -> AFTER_FIRST_NIGHT
+                stuck -> WAITING_LAST_NIGHT
+                else -> "No sleep recorded"
+            },
+        )
     }
 
 /** The morning check-in: how you feel, 1 to 5. It never changes the score; it's how the score gets checked. */
@@ -208,13 +219,14 @@ internal fun AlertsStrip(alerts: List<HealthAlertRow>, onOpenMetric: (Metric) ->
 
 /* ------------------------------------------- Edge cards --------------------------------------------- */
 
-/** An edge card's title row: [title] left with its sync [marker] beside it ([StateMarker]), [note] right. */
+/** An edge card's title row: [title] left with its sync [marker] or neutral [tag] beside it ([TitleMark]), [note] right. */
 @Composable
-internal fun EdgeTitle(title: String, note: String?, marker: String? = null) {
+internal fun EdgeTitle(title: String, note: String?, marker: String? = null, tag: TitleTag? = null) {
+    val marked = marker != null || tag != null
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text(title, color = Color.White, style = GlowType.label, modifier = Modifier.weight(1f, fill = marker == null))
-        if (marker != null) {
-            StateMarker(marker, Modifier.padding(start = 8.dp))
+        Text(title, color = Color.White, style = GlowType.label, modifier = Modifier.weight(1f, fill = !marked))
+        if (marked) {
+            TitleMark(marker, tag, Modifier.padding(start = 8.dp))
             Spacer(Modifier.weight(1f))
         }
         if (note != null) Text(note, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary, maxLines = 1)
@@ -252,7 +264,7 @@ internal fun LastNightCard(state: DayUiState, firstNights: Boolean, onClick: () 
         EdgeValue(
             asleep?.let(::clockDuration), "asleep",
             when {
-                asleep == null -> if (firstNights) "After your first night" else if (stuck) WAITING_LAST_NIGHT else "No sleep recorded"
+                asleep == null -> if (firstNights) AFTER_FIRST_NIGHT else if (stuck) WAITING_LAST_NIGHT else "No sleep recorded"
                 s?.score != null -> listOfNotNull("Score ${s.score}", headline?.lowercase()).joinToString(", ")
                 else -> headline
             },
@@ -310,7 +322,11 @@ internal fun HeartCard(
  * goal (spec 2.7, compare by pace). Without a usual yet only today's line shows.
  */
 @Composable
-internal fun ActivityCard(state: DayUiState, onClick: () -> Unit, modifier: Modifier = Modifier, usual: List<Float>? = null, upTo: String? = null) {
+internal fun ActivityCard(
+    state: DayUiState, onClick: () -> Unit, modifier: Modifier = Modifier, usual: List<Float>? = null, upTo: String? = null,
+    /** The Partial day tag when the strap was worn for part of the day ([TitleTag]). */
+    tag: TitleTag? = null,
+) {
     val goal = org.openstrap.app.ui.dashboard.LocalGoals.current.steps
     val isToday = state.date == java.time.LocalDate.now()
     val hour = java.time.LocalTime.now().hour
@@ -322,7 +338,7 @@ internal fun ActivityCard(state: DayUiState, onClick: () -> Unit, modifier: Modi
     val pace = org.openstrap.app.ui.dashboard.ActivityCopy.paceOf(state.steps, usual, isToday, now.hour, now.minute)
     val ghost = usual?.takeIf { it.size == 24 }
     EdgeCard(MetricColors.steps, modifier.fillMaxWidth().gridSize(CardSize.Wide), kind = EdgeKind.Progress, onClick = onClick) {
-        EdgeTitle("Activity", "Goal %,d".format(goal), marker = upTo)
+        EdgeTitle("Activity", "Goal %,d".format(goal), marker = upTo, tag = tag)
         EdgeValue("%,d".format(state.steps), "steps", org.openstrap.app.ui.dashboard.ActivityCopy.activityLine(state.steps, goal, pace, isToday))
         if (state.steps > 0 && line.size >= 2) {
             Spacer(Modifier.height(10.dp))
@@ -373,18 +389,18 @@ internal const val FAILED_ALPHA = 0.45f
 @Composable
 internal fun ChargeWideCard(
     now: Int?, status: String, secondGlow: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier, soFar: List<Float?>? = null,
-    upTo: String? = null,
+    upTo: String? = null, tag: TitleTag? = null,
 ) {
     val m = modifier.fillMaxWidth().gridSize(CardSize.Wide)
     if (secondGlow) {
         GlowCard(GlowStyle.Ember.copy(lightLevel = (now ?: 0) / 100f, second = true), m, onClick = onClick) {
             Column {
-                GlowHeader("Charge", marker = upTo)
+                GlowHeader("Charge", marker = upTo, tag = tag)
                 EdgeValue(now?.toString(), null, status, Color.White.copy(alpha = 0.8f))
             }
         }
     } else EdgeCard(MetricColors.chargeDeep, modifier.fillMaxWidth(), kind = EdgeKind.Level, progress = (now ?: 0) / 100f, onClick = onClick) {
-        EdgeTitle("Charge", null, marker = upTo)
+        EdgeTitle("Charge", null, marker = upTo, tag = tag)
         if (soFar == null || soFar.count { it != null } < 2) EdgeValue(now?.toString(), null, status)
         else Row(verticalAlignment = Alignment.Bottom) {
             Column(Modifier.weight(1f)) { EdgeValue(now?.toString(), null, status) }
@@ -453,18 +469,20 @@ internal fun WeekCard(
 /**
  * A Small (spec 2.3): a number and a word only, in the edge light, filling the [modifier] its row gives it. The title
  * at the top, the number and its word at the foot. [extra] goes between them, for the nap's stage strip. With no
- * number the word alone stands in its place, larger, rather than a dash over it ("Recovered").
+ * number the word alone stands in its place, larger, rather than a dash over it ("Recovered"), unless it's [waiting].
  */
 @Composable
 internal fun SmallCard(
     color: Color, title: String, value: String?, unit: String?, status: String?, modifier: Modifier = Modifier,
     kind: EdgeKind = EdgeKind.Value, edgeStatus: EdgeStatus = EdgeStatus.Usual, statusColor: Color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA),
     onClick: (() -> Unit)? = null, extra: (@Composable () -> Unit)? = null,
+    /** Waiting for its first value: the dim dash with [status] under it, rather than the word in its place. */
+    waiting: Boolean = false,
 ) {
     EdgeCard(color, modifier, status = edgeStatus, kind = kind, onClick = onClick, contentPadding = SmallPadding) {
         Text(title, color = Color.White, style = GlowType.label, maxLines = 2, overflow = TextOverflow.Ellipsis)
         Spacer(Modifier.weight(1f))
-        if (value == null && status != null) {
+        if (value == null && status != null && !waiting) {
             extra?.invoke()
             Text(status, color = Color.White, style = GlowType.label.copy(fontSize = 20.sp, lineHeight = 24.sp), maxLines = 2, overflow = TextOverflow.Ellipsis)
             return@EdgeCard

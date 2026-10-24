@@ -25,6 +25,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -59,6 +60,8 @@ import org.openstrap.app.ui.dashboard.ActivityFacts
 import org.openstrap.app.ui.dashboard.DayUiState
 import org.openstrap.app.ui.dashboard.LocalGoals
 import org.openstrap.app.ui.dashboard.Metric
+import org.openstrap.app.ui.dashboard.PARTIAL_DAY
+import org.openstrap.app.ui.dashboard.Wear
 import org.openstrap.app.ui.dashboard.TabCopy
 import org.openstrap.app.ui.dashboard.TodayCopy
 import org.openstrap.app.ui.dashboard.activityCards
@@ -107,6 +110,8 @@ fun GlowActivityScreen(
     onOpen: (org.openstrap.app.ui.dashboard.Detail) -> Unit = {},
     /** Your usual steps by the end of each hour ([org.openstrap.app.data.UsualSteps]); null until there's a usual. */
     usualSteps: List<Float>? = null,
+    /** How much of the day the strap was worn, for the Partial day tag ([org.openstrap.app.ui.dashboard.wear]). */
+    wear: Wear? = null,
 ) {
     val open = { s: Score -> onOpen(Detail.OfScore(s)) }
     val list = rememberLazyListState()
@@ -118,13 +123,17 @@ fun GlowActivityScreen(
     val live = liveHeartRate?.takeIf { isToday }
     val slots = activityCards(ActivityFacts(isToday = isToday, suggestion = suggestion != null, live = live != null))
     val restingRange = rememberNormal(Metric.RestingHr, state.date, history)
+    // A partial day lowers the steps and the day's totals: those two cards carry the tag (spec 4.3).
+    var partialInfo by rememberSaveable { mutableStateOf(false) }
+    val partial = wear?.takeIf { it.partial }?.let { TitleTag(PARTIAL_DAY) { partialInfo = true } }
+    if (partialInfo && wear != null) PartialDaySheet(wear, isToday, onDismiss = { partialInfo = false })
     CompositionLocalProvider(LocalGlowPaused provides { list.isScrollInProgress }) {
         GlowScreenList(contentPadding, list) {
             full { header() }
             tabCards(slots) { card, m ->
                 when (card) {
                     ActivityCard.Start -> StartStrip(sports, onStartWorkout, onAllSports)
-                    ActivityCard.Steps -> StepsGlow(state, usualSteps) { onOpenMetric(Metric.Steps) }
+                    ActivityCard.Steps -> StepsGlow(state, usualSteps, partial) { onOpenMetric(Metric.Steps) }
                     ActivityCard.ActiveMinutes -> r?.activity.let { a ->
                         SmallCard(
                             MetricColors.steps, "Active minutes", a?.weekEquivalent?.toString(), null,
@@ -139,7 +148,7 @@ fun GlowActivityScreen(
                     )
                     ActivityCard.Load -> LoadCard(r) { open(Score.Load) }
                     ActivityCard.HeartRate -> HeartCard(state, live, { onOpenMetric(Metric.HeartRate) }, restingRange = restingRange)
-                    ActivityCard.Facts -> FactsList(state, r, workouts, isToday, onEditProfile, open)
+                    ActivityCard.Facts -> FactsList(state, r, workouts, isToday, onEditProfile, open, partial)
                     ActivityCard.Workouts -> WorkoutsList(
                         state.date, workouts, suggestion?.takeIf { isToday }, onOpenWorkout, onAllWorkouts, onAddWorkout,
                         onSaveSuggestion, onDismissSuggestion,
@@ -191,7 +200,7 @@ private fun SportPill(
  * detail.
  */
 @Composable
-private fun StepsGlow(state: DayUiState, usual: List<Float>?, onClick: () -> Unit) {
+private fun StepsGlow(state: DayUiState, usual: List<Float>?, tag: TitleTag?, onClick: () -> Unit) {
     val goal = LocalGoals.current.steps
     val share = if (goal > 0) state.steps / goal.toFloat() else 0f
     val isToday = state.date == LocalDate.now()
@@ -200,7 +209,7 @@ private fun StepsGlow(state: DayUiState, usual: List<Float>?, onClick: () -> Uni
     var hour by remember(state.date, state.hourlySteps) { mutableStateOf<Int?>(null) }
     GlowCard(GlowStyle.chart(MetricColors.steps).copy(lightLevel = share.coerceIn(0f, 1f)), Modifier.fillMaxWidth().gridSize(CardSize.Wide), onClick = onClick) {
         Column {
-            GlowHeader("Steps", trailing = "Goal %,d".format(goal), chevron = true)
+            GlowHeader("Steps", trailing = "Goal %,d".format(goal), chevron = true, tag = tag)
             Spacer(Modifier.height(GlowLayout.TitleGap))
             val picked = hour?.let { h -> state.hourlySteps.getOrNull(h) }
             if (hour != null && picked != null) HeroFigure("%,d".format(Math.round(picked)), ActivityCopy.hourLabel(hour!!), big = true)
@@ -287,9 +296,11 @@ private fun LoadCard(r: RecoveryResult?, onClick: () -> Unit) {
 @Composable
 private fun FactsList(
     state: DayUiState, r: RecoveryResult?, workouts: List<WorkoutAnalysis>, isToday: Boolean, onEditProfile: () -> Unit, open: (Score) -> Unit,
+    /** The Partial day tag: energy and distance are the day's totals. */
+    tag: TitleTag? = null,
 ) {
     val waiting = "No reading yet"
-    ListPanel(title = "Today", note = if (isToday) "So far" else null) {
+    ListPanel(title = "Today", note = if (isToday) "So far" else null, tag = tag) {
         val a = r?.activity
         // The latest workout the strap read VO2 max from; the estimate from your profile otherwise.
         val fromWorkouts = workouts.sortedByDescending { it.workout.start }

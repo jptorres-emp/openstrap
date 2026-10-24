@@ -271,6 +271,18 @@ class SettingsStore(private val context: Context) {
         context.dataStore.edit { it[habitAgeSeen] = asOf }
     }
 
+    private val firstScore = longPreferencesKey("first_score_day")
+
+    /**
+     * The day (epoch day) of the first real Recovery score, so it's marked on that day only; null before one. Scores
+     * from before this was kept are stored as a day long past ([org.openstrap.app.ui.dashboard.BEFORE_FIRST_SCORE]).
+     */
+    val firstScoreDay: Flow<Long?> = context.dataStore.data.map { it[firstScore] }
+
+    suspend fun setFirstScoreDay(epochDay: Long) {
+        context.dataStore.edit { it[firstScore] = epochDay }
+    }
+
     suspend fun saveTodayEdits(hidden: List<String>, pinned: List<String>) {
         context.dataStore.edit {
             it[todayHidden] = hidden.joinToString(",")

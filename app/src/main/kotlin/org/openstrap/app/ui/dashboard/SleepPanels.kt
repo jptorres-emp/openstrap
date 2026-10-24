@@ -48,9 +48,13 @@ internal class NightVital(
  * rate, blood oxygen, skin temperature (as its change from your normal once there is one) and average heart rate.
  * HRV, breathing, blood oxygen and skin temperature are read against your previous nights once there are a week of them.
  */
-internal fun nightVitals(state: DayUiState): List<NightVital> {
+internal fun nightVitals(state: DayUiState, firstNights: Boolean = false): List<NightVital> {
     val session = state.sleep
-    val missing = if (session == null) "No sleep recorded" else "No reading last night"
+    val missing = when {
+        firstNights && session == null -> AFTER_FIRST_NIGHT
+        session == null -> "No sleep recorded"
+        else -> "No reading last night"
+    }
     // The same value and normal the night-scoped detail shows ([SleepCopy]).
     fun against(metric: Metric, label: String, color: Color, show: (Float, History.Normal?) -> String): NightVital {
         val v = SleepCopy.nightValue(state, metric) ?: return NightVital(metric, label, color, null, missing)

@@ -17,6 +17,7 @@ import androidx.compose.material3.Text
 import androidx.compose.foundation.clickable
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -70,6 +71,14 @@ import org.openstrap.app.ui.dashboard.lastTried
 import org.openstrap.app.ui.dashboard.stuckCopy
 import org.openstrap.app.ui.dashboard.syncStuck
 import org.openstrap.app.ui.dashboard.upToMarker
+import org.openstrap.app.ui.dashboard.AFTER_FIRST_NIGHT
+import org.openstrap.app.ui.dashboard.FIRST_SCORE
+import org.openstrap.app.ui.dashboard.PARTIAL_DAY
+import org.openstrap.app.ui.dashboard.PairStep
+import org.openstrap.app.ui.dashboard.Wear
+import org.openstrap.app.ui.dashboard.WakingLead
+import org.openstrap.app.ui.dashboard.pairSentence
+import org.openstrap.app.ui.dashboard.wakingLead
 import org.openstrap.app.ui.dashboard.todayCards
 import org.openstrap.app.ui.theme.MetricColors
 
@@ -82,6 +91,8 @@ import org.openstrap.app.ui.theme.MetricColors
 /** The strap's state where Today needs it: paired at all, whether syncing has stopped, and how syncs went. */
 class TodayStrap(
     val paired: Boolean = true,
+    /** The pairing stage's step while there's no strap or it's connecting for the first time; null once paired (E3). */
+    val pairing: PairStep? = null,
     /** Syncing has stopped ([syncStopped]), so cards whose data is old say how far it goes. */
     val stopped: Boolean = false,
     /** When syncs last ran and how they ended: the stuck hero's "Last tried 07:42" and its 3 h rule. */
@@ -156,10 +167,15 @@ fun GlowTodayScreen(
     onOpen: (org.openstrap.app.ui.dashboard.Detail) -> Unit = {},
     /** Your usual steps by the end of each hour, for the Activity card's ghost line; null until there's a usual. */
     usualSteps: List<Float>? = null,
+    /** How much of the day the strap was worn, for the Partial day tag ([org.openstrap.app.ui.dashboard.wear]). */
+    wear: Wear? = null,
+    /** Today's Recovery is the first real score, marked once (E4). */
+    firstScore: Boolean = false,
 ) {
     val list = rememberLazyListState()
     var editing by rememberSaveable { mutableStateOf(false) }
     if (editing) EditTodayDialog(edits, onSave = { onEditsChange(it); editing = false }, onDismiss = { editing = false })
+    var partialInfo by rememberSaveable { mutableStateOf(false) }
 
     val zone = ZoneId.systemDefault()
     val now = Instant.now()
@@ -174,7 +190,12 @@ fun GlowTodayScreen(
         strapScore = strapReadiness?.takeIf { it.day == state.dayStart }?.score,
         stopped = strap.stopped, staleAfter = strap.staleAfter,
         recoveryFailure = recoveryFailure?.takeIf { it.date == state.date && rec == null },
+        partial = wear?.takeIf { it.partial }?.let { TitleTag(PARTIAL_DAY) { partialInfo = true } },
+        firstScore = firstScore,
     )
+    if (partialInfo && wear != null) PartialDaySheet(wear, isToday, onDismiss = { partialInfo = false })
+    // Before a strap is paired, or while it connects for the first time, the hero is the pairing stage (E3).
+    val pairing = strap.pairing ?: PairStep.Ready.takeIf { !strap.paired }
     val facts = TodayFacts(
         isToday = isToday, offer = offer != null, suggestion = suggestion != null, alerts = state.alerts.isNotEmpty(),
         workout = lastWorkout != null && isToday,
@@ -204,7 +225,7 @@ fun GlowTodayScreen(
                         GridRowBlock(row) { i, m ->
                             val slot = slots[i]
                             // Before a strap is paired, everything under the pairing hero waits, dimmed.
-                            val dim = if (!strap.paired && slot.card != TodayCard.Hero && slot.card != TodayCard.EditToday) Modifier.alpha(0.45f) else Modifier
+                            val dim = if (pairing != null && slot.card != TodayCard.Hero && slot.card != TodayCard.EditToday) Modifier.alpha(0.45f) else Modifier
                             // Where the look differs from the card's own, its edge card is told the side and colour to use.
                             val own = defaultLook(slot.copy(look = null), looksFor, live)
                             val look = slot.lookOr(looksFor, live)
@@ -216,7 +237,7 @@ fun GlowTodayScreen(
                                 Column(m.then(dim)) {
                                     when (slot.card) {
                                         TodayCard.Hero -> Hero(
-                                            ctx, strap, heroLightAngle, usualBedtime,
+                                            ctx, strap, pairing, heroLightAngle, usualBedtime,
                                             running, onOpenRunning, onResumeRunning, onStartSport, onOtherSport, onPair, onSyncNow,
                                             onOpenRecovery, onOpenWorkout, onRetryRecovery,
                                         )
@@ -266,6 +287,10 @@ private class TodayContext(
     val staleAfter: Long,
     /** Today's Recovery failed to work out (spec 4.3). */
     val recoveryFailure: RecoveryFailure?,
+    /** The Partial day tag for cards whose figures a partial day lowers (spec 4.3); null on a day worn enough. */
+    val partial: TitleTag?,
+    /** Today's Recovery is the first real score (E4). */
+    val firstScore: Boolean,
 ) {
     /** "Up to 09:40" for a card whose [newest] reading is stale while syncing has stopped ([upToMarker]). */
     fun upTo(newest: Long?): String? = upToMarker(newest, now, stopped, isToday, zone, staleAfter)
@@ -277,7 +302,8 @@ private class TodayContext(
 
     val score get() = rec?.readiness?.score
     val alert get() = rec?.readiness?.strainAlert == true
-    val charge get() = rec?.charge?.latest?.toInt()
+    /** Charge now; none before the first night, when it would only be the simulation's starting guess. */
+    val charge get() = rec?.charge?.takeIf { it.anchored }?.latest?.toInt()
 
     /** Why OpenStrap has no score: still learning comes first, since a learning night has no baseline to score against. */
     val noScore: TodayCopy.NoScore?
@@ -299,7 +325,7 @@ private class TodayContext(
     /** What a card with no value says while it waits. */
     val waiting: String
         get() = when {
-            firstNights -> "After your first night"
+            firstNights -> AFTER_FIRST_NIGHT
             stuck -> WAITING_LAST_NIGHT
             else -> "No reading yet"
         }
@@ -333,7 +359,7 @@ private class TodayContext(
 
 @Composable
 private fun Hero(
-    ctx: TodayContext, strap: TodayStrap, lightAngle: Float?, bedtime: LocalTime?,
+    ctx: TodayContext, strap: TodayStrap, pairing: PairStep?, lightAngle: Float?, bedtime: LocalTime?,
     running: org.openstrap.app.device.WorkoutState.Recording?, onOpenRunning: () -> Unit, onResumeRunning: () -> Unit,
     onStartSport: (Int) -> Unit, onOtherSport: () -> Unit, onPair: () -> Unit, onSyncNow: () -> Unit,
     onOpenRecovery: () -> Unit, onOpenWorkout: (Long) -> Unit, onRetryRecovery: () -> Unit,
@@ -343,7 +369,7 @@ private fun Hero(
     val m = Modifier.fillMaxWidth().gridSize(CardSize.Wide)
     // The hero's content crossfades when the moment moves on (spec 3.5); the rows below change only with it.
     val kind = when {
-        !strap.paired -> HeroKind.Pair
+        pairing != null -> HeroKind.Pair
         ctx.stuck -> HeroKind.Stuck
         else -> when (ctx.moment) {
             Moment.During -> if (running != null) HeroKind.During else HeroKind.Midday
@@ -354,13 +380,18 @@ private fun Hero(
             Moment.Waking -> HeroKind.Waking
             null -> if (LocalTime.now().hour < 12 || !ctx.isToday) HeroKind.Waking else HeroKind.Midday
         }
+    }.let {
+        // No sleep last night: nothing for Recovery to score, so Charge leads from waking on (spec 4.3).
+        if (it == HeroKind.Waking && ctx.recoveryFailure == null && wakingLead(ctx.firstNights, ctx.state.asleepSeconds, ctx.isToday) == WakingLead.Charge) HeroKind.NoSleep
+        else it
     }
     Crossfade(kind, animationSpec = tween(300), label = "hero") { k ->
         when (k) {
-            HeroKind.Pair -> PairHero(onPair, m)
+            HeroKind.Pair -> PairHero(pairing ?: PairStep.Ready, onPair, m)
             HeroKind.Stuck -> StuckHero(ctx, strap, onSyncNow, m)
             HeroKind.Waking -> WakingHero(ctx, lightAngle, onOpenRecovery, onRetryRecovery, m)
             HeroKind.Midday -> ChargeHero(ctx, onOpenRecovery, onRetryRecovery, m)
+            HeroKind.NoSleep -> ChargeHero(ctx, onOpenRecovery, onRetryRecovery, m, noSleep = true)
             HeroKind.Window -> WindowHero(ctx, lightAngle, onStartSport, onOtherSport, m)
             HeroKind.After -> AfterHero(ctx, lightAngle, onOpenWorkout, m)
             HeroKind.Evening -> EveningHero(ctx, lightAngle, bedtime, onOpenRecovery, m)
@@ -369,7 +400,7 @@ private fun Hero(
     }
 }
 
-private enum class HeroKind { Pair, Stuck, Waking, Midday, Window, After, Evening, During }
+private enum class HeroKind { Pair, Stuck, Waking, NoSleep, Midday, Window, After, Evening, During }
 
 /** The hero's recipe: the dark core opposite the light, which the moment places. */
 private fun heroStyle(color: Color, lightAngle: Float?, strength: Float = 0.6f) = GlowStyle.Bloom.copy(
@@ -403,14 +434,20 @@ private fun WakingHero(ctx: TodayContext, lightAngle: Float?, onOpen: () -> Unit
     val score = ctx.score
     val shown = ctx.recoveryShown
     val before = ctx.rec?.readinessTrend?.dropLast(1)?.lastOrNull()?.second
+    val atWake = ctx.rec?.charge?.takeIf { it.anchored }?.atWake?.toInt()
     GlowCard(heroStyle(overviewColor(shown.value, ctx.alert), lightAngle), modifier, onClick = onOpen) {
         Column {
-            GlowHeader("Recovery", trailing = if (score != null && before != null) signed(score - before) + " vs yesterday" else null)
+            GlowHeader(
+                "Recovery", trailing = if (score != null && before != null) signed(score - before) + " vs yesterday" else null,
+                tag = if (ctx.firstScore && score != null) TitleTag(FIRST_SCORE) else null,
+            )
             HeroSentence(TodayCopy.waking(ctx.state.asleepSeconds, score, ctx.alert, ctx.noScore, ctx.firstNights, ctx.isToday))
+            // A hero leaves out a figure it doesn't have rather than show a lone dash; the sentence says why.
+            if (shown.value == null && atWake == null) return@Column
             Spacer(Modifier.height(24.dp))
             Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.Bottom) {
-                Column(Modifier.weight(1f)) { HeroFigure(shown.value?.toString(), shown.word ?: ctx.waiting, big = true) }
-                HeroFigure(ctx.rec?.charge?.atWake?.toInt()?.toString(), "Charge at waking", horizontal = androidx.compose.ui.Alignment.End)
+                Column(Modifier.weight(1f)) { shown.value?.let { HeroFigure(it.toString(), shown.word ?: ctx.waiting, big = true) } }
+                atWake?.let { HeroFigure(it.toString(), "Charge at waking", horizontal = androidx.compose.ui.Alignment.End) }
             }
         }
     }
@@ -418,33 +455,49 @@ private fun WakingHero(ctx: TodayContext, lightAngle: Float?, onOpen: () -> Unit
 
 private fun signed(d: Int) = if (d > 0) "+$d" else if (d < 0) "−${-d}" else "Same"
 
-/** Midday: Charge as a light level, what the day took and what's left, with recharged and drained. */
+/**
+ * Midday: Charge as a light level, what the day took and what's left, with recharged and drained. With [noSleep] it
+ * leads the morning too, saying no sleep was recorded (spec 4.3).
+ */
 @Composable
-private fun ChargeHero(ctx: TodayContext, onOpen: () -> Unit, onRetry: () -> Unit, modifier: Modifier) {
+private fun ChargeHero(ctx: TodayContext, onOpen: () -> Unit, onRetry: () -> Unit, modifier: Modifier, noSleep: Boolean = false) {
     val c = ctx.rec?.charge
     val now = ctx.charge
     var info by rememberSaveable { mutableStateOf(false) }
     // Charge is lit to its level from below (spec 2.5), so the moment's angle gives way here.
     GlowCard(GlowStyle.Ember.copy(lightLevel = (now ?: 0) / 100f), modifier, onClick = onOpen) {
         Column {
-            GlowHeader("Charge", trailing = c?.atWake?.let { "${it.toInt()} at waking" }, marker = ctx.upTo(ctx.newest))
+            val start = c?.takeIf { it.anchored }?.atWake?.toInt()
+            GlowHeader(
+                "Charge", trailing = start?.let { if (c?.strapOffOvernight == true) "$it at start" else "$it at waking" },
+                marker = ctx.upTo(ctx.newest), tag = ctx.partial,
+            )
             // Charge is worked out with Recovery, so when that fails it says so rather than waiting for a first night.
             val failed = ctx.recoveryFailure != null
-            HeroSentence(if (failed) CHARGE_FAILED else TodayCopy.charge(now, c?.atWake?.toInt(), c?.anchored == true, LocalTime.now().hour))
+            HeroSentence(
+                when {
+                    failed -> CHARGE_FAILED
+                    noSleep -> TodayCopy.NO_SLEEP
+                    else -> TodayCopy.charge(now, c?.atWake?.toInt(), c?.anchored == true, LocalTime.now().hour)
+                },
+            )
             if (failed) {
                 Spacer(Modifier.height(24.dp))
                 HeroButton(TRY_AGAIN, onRetry)
                 return@Column
             }
-            // The caveat marker: tapping it opens Charge's info sheet, which explains the estimated start.
-            if (c?.strapOffOvernight == true) Text(
+            // The caveat marker: tapping it opens Charge's info sheet, which explains the estimated start. One caveat a
+            // card (spec 7.1): a Partial day tag, or the no sleep sentence, already says the day is short of wear.
+            if (c?.strapOffOvernight == true && !noSleep && ctx.partial == null) Text(
                 "Strap off overnight, so today started from an estimate.",
                 color = Color.White.copy(alpha = 0.7f), style = GlowType.secondary,
                 modifier = Modifier.padding(top = 8.dp).clickable(onClickLabel = "About Charge") { info = true },
             )
+            // No lone dash in a hero: before the first night the sentence says Charge starts after it.
+            if (now == null) return@Column
             Spacer(Modifier.height(24.dp))
             Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.Bottom) {
-                Column(Modifier.weight(1f)) { HeroFigure(now?.toString(), if (now == null) ctx.waiting else "Now", big = true) }
+                Column(Modifier.weight(1f)) { HeroFigure(now.toString(), "Now", big = true) }
                 if (c != null && c.anchored) Column(horizontalAlignment = androidx.compose.ui.Alignment.End, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     HeroFigure("+${c.recharged.toInt()}", "Recharged", horizontal = androidx.compose.ui.Alignment.End)
                     // Under "Drained" the amount needs no minus (and the dots have no U+2212 to draw it with).
@@ -523,13 +576,14 @@ private fun EveningHero(ctx: TodayContext, lightAngle: Float?, bedtime: LocalTim
     val nouns = ctx.dayWorkouts.map { sportNoun(it.workout.sportType) }
     GlowCard(heroStyle(MetricColors.sleepDeep, lightAngle), modifier, onClick = onOpen) {
         Column {
-            GlowHeader("Today", trailing = TodayCopy.bedtimeIn(LocalTime.now(), bedtime), marker = ctx.upTo(ctx.newest))
+            GlowHeader("Today", trailing = TodayCopy.bedtimeIn(LocalTime.now(), bedtime), marker = ctx.upTo(ctx.newest), tag = ctx.partial)
             HeroSentence(TodayCopy.evening(nouns, ctx.state.steps, goals.steps, ctx.loadStatus))
             Spacer(Modifier.height(24.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 HeroFigure("%,d".format(ctx.state.steps), "Steps")
-                HeroFigure(ctx.rec?.load?.let { Math.round(it).toString() }, "Load")
-                HeroFigure(ctx.charge?.toString(), "Charge left", horizontal = androidx.compose.ui.Alignment.End)
+                // Figures it doesn't have yet are left out, never a lone dash in the hero.
+                ctx.rec?.load?.let { HeroFigure(Math.round(it).toString(), "Load") }
+                ctx.charge?.let { HeroFigure(it.toString(), "Charge left", horizontal = androidx.compose.ui.Alignment.End) }
             }
         }
     }
@@ -554,17 +608,24 @@ private fun DuringHero(
 }
 
 /**
- * No strap paired: the hero is where pairing starts. TODO(step 8): the pairing stage itself, the strap and the line
- * to the phone with a sentence per step.
+ * No strap paired, or connecting for the first time: the pairing stage (E3). One sentence per [step], the strap still
+ * and lit, the line to the phone changing under it, and one firm tick when it connects (spec 3.6). Find my strap opens
+ * the Strap page, where pairing is done.
  */
 @Composable
-private fun PairHero(onPair: () -> Unit, modifier: Modifier) {
+private fun PairHero(step: PairStep, onPair: () -> Unit, modifier: Modifier) {
+    val haptics = rememberHaptics()
+    LaunchedEffect(step) { if (step == PairStep.Connected) haptics.perform(HapticEvent.PairingDone) }
     GlowCard(heroStyle(Color(0xFF4E8F86), LightAngle.Below), modifier, onClick = onPair) {
         Column {
             GlowHeader("Pair your Helio Strap")
-            HeroSentence("Put the strap on its charger, close to this phone.")
-            Spacer(Modifier.height(28.dp))
-            HeroButton("Find my strap", onPair)
+            HeroSentence(pairSentence(step))
+            Spacer(Modifier.height(18.dp))
+            PairingStage(step)
+            if (step != PairStep.Connected) {
+                Spacer(Modifier.height(18.dp))
+                HeroButton("Find my strap", onPair)
+            }
         }
     }
 }
@@ -628,14 +689,15 @@ private fun TodayRow(
             ctx.waiting, onOpenMetric, upTo = ctx.upTo(listOfNotNull(s.stress.lastOrNull(), s.hrv.lastOrNull()).maxOfOrNull { it.x }),
         )
         TodayCard.LastNight ->
-            if (slot.size == CardSize.Strip) LastNightStrip(s, onOpenSleep, stuck = ctx.stuck) else LastNightCard(s, ctx.firstNights, onOpenSleep, stuck = ctx.stuck)
+            if (slot.size == CardSize.Strip) LastNightStrip(s, onOpenSleep, stuck = ctx.stuck, firstNights = ctx.firstNights)
+            else LastNightCard(s, ctx.firstNights, onOpenSleep, stuck = ctx.stuck)
         // A live reading is never stale.
         TodayCard.HeartRate -> HeartCard(
             s, ctx.live, { onOpenMetric(Metric.HeartRate) }, restingRange = ctx.restingRange,
             upTo = if (ctx.live == null) ctx.upTo(s.heartRate.lastOrNull()?.x) else null,
         )
         // Steps come in the same records as the rest of the day, so the day's newest reading is how far they go.
-        TodayCard.Activity -> ActivityCard(s, { onOpenMetric(Metric.Steps) }, usual = usualSteps, upTo = ctx.upTo(ctx.newest))
+        TodayCard.Activity -> ActivityCard(s, { onOpenMetric(Metric.Steps) }, usual = usualSteps, upTo = ctx.upTo(ctx.newest), tag = ctx.partial)
         TodayCard.Recovery -> RecoveryEarlierCard(ctx.recoveryShown, onOpenRecovery, failure = ctx.recoveryFailure, onRetry = onRetryRecovery)
         TodayCard.Charge -> {
             val c = ctx.rec?.charge
@@ -649,7 +711,7 @@ private fun TodayRow(
             }
             // The day's Charge so far, beside the number, until the evening says sleep fills it back.
             val soFar = c?.takeIf { !ctx.endOfDay && it.anchored && ctx.isToday }?.let { chargeSoFar(it.points, s.dayStart..s.dayEnd, ctx.now) }
-            ChargeWideCard(ctx.charge, status, slot.secondGlow, onOpenRecovery, soFar = soFar, upTo = ctx.upTo(ctx.newest))
+            ChargeWideCard(ctx.charge, status, slot.secondGlow, onOpenRecovery, soFar = soFar, upTo = ctx.upTo(ctx.newest), tag = ctx.partial)
         }
         // After a workout, what it did as a Small pair: Load toward your usual (from below) and time to recover.
         TodayCard.LoadToday -> if (slot.size == CardSize.Small) SmallCard(

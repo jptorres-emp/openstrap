@@ -78,6 +78,9 @@ object TabCopy {
     /** Before a Recovery has been worked out for the day. */
     const val RECOVERY_WAITING = "Recovery shows once last night is in."
 
+    /** The Recovery hero with no sleep recorded last night: no night to score (spec 4.3). */
+    const val NO_SLEEP_SCORE = "No sleep recorded last night, so there's no score today."
+
     /** A contributor's status word, by the score's own bands. */
     fun contributorWord(score: Int): String = when {
         score >= 85 -> "Helping"
@@ -146,9 +149,12 @@ object TabCopy {
     }
 
     /** The Sleep hero with no night to tell. */
+    /** The Sleep tab's night before the strap has seen one (spec 4.3). */
+    const val FIRST_NIGHT_SLEEP = "Your first night with the strap shows here in the morning."
+
     fun noNight(naps: Boolean, isToday: Boolean): String = when {
         naps -> "No night sleep recorded, only naps."
-        isToday -> "No sleep recorded last night. Was the strap on?"
+        isToday -> TodayCopy.NO_SLEEP
         else -> "No sleep recorded that night."
     }
 

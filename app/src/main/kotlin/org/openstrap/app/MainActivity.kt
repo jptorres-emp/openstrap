@@ -50,6 +50,16 @@ import org.openstrap.app.ui.dashboard.TabNav
 import org.openstrap.app.ui.dashboard.todayTitle
 import org.openstrap.app.ui.dashboard.RecoveryFailure
 import org.openstrap.app.ui.dashboard.StrapPreview
+import org.openstrap.app.ui.dashboard.DataPreview
+import org.openstrap.app.ui.dashboard.FirstScore
+import org.openstrap.app.ui.dashboard.PAIRED_HOLD_MS
+import org.openstrap.app.ui.dashboard.PairStep
+import org.openstrap.app.ui.dashboard.earliestScore
+import org.openstrap.app.ui.dashboard.firstScore
+import org.openstrap.app.ui.dashboard.pairStep
+import org.openstrap.app.ui.dashboard.wear
+import org.openstrap.app.data.Recovery
+import java.time.LocalDate
 import org.openstrap.app.ui.dashboard.StrapView
 import org.openstrap.app.ui.dashboard.previewed
 import org.openstrap.app.ui.dashboard.strapChip
@@ -88,6 +98,9 @@ class MainActivity : ComponentActivity() {
     /** Debug: the strap state previewed by the `strap_state` extra, null for the real one. */
     private val strapPreview = kotlinx.coroutines.flow.MutableStateFlow<StrapPreview?>(null)
 
+    /** Debug: the data state previewed by the `data_state` extra, null for the real one. */
+    private val dataPreview = kotlinx.coroutines.flow.MutableStateFlow<DataPreview?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // Dark bars (light icons) whatever the system mode, to match the always-dark theme.
@@ -96,7 +109,7 @@ class MainActivity : ComponentActivity() {
             navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
         )
         val container = (application as OpenStrapApp).container
-        setContent { OpenStrapTheme { AppRoot(container, metricRequests, forcedMoment, strapPreview) } }
+        setContent { OpenStrapTheme { AppRoot(container, metricRequests, forcedMoment, strapPreview, dataPreview) } }
     }
 
     override fun onStart() {
@@ -171,6 +184,12 @@ class MainActivity : ComponentActivity() {
         /** Debug: a [StrapPreview] name ("stale", "stuck", "disconnected", "charging", "notpaired", "recoveryfail") to show, or "auto". */
         const val EXTRA_STRAP_STATE = "strap_state"
 
+        /**
+         * Debug: a [DataPreview] name to show, or "auto": "pair", "pair_search", "pair_found", "pair_connecting",
+         * "pair_connected", "pair_failed", "firstnights", "nosleep", "partial", "firstscore".
+         */
+        const val EXTRA_DATA_STATE = "data_state"
+
         /** Debug: true opens the summary right after a workout for the latest stored phone workout. */
         const val EXTRA_SHOW_SUMMARY = "show_summary"
 
@@ -243,6 +262,17 @@ class MainActivity : ComponentActivity() {
                 ?: android.util.Log.w("OpenStrap", "strap_state: no state called $strapState")
             android.util.Log.i("OpenStrap", "strap_state: showing ${strapPreview.value ?: "the real state"}")
         }
+        // Debug: `--es data_state nosleep` shows a data state (the pairing stage's steps, first nights, no sleep, a
+        // partial day, the first score) on a phone whose data is fine; `--es data_state auto` goes back to the real
+        // one. Only what the screens are shown changes: no Bluetooth, no scan, no sync, nothing written.
+        val dataState = intent.getStringExtra(EXTRA_DATA_STATE)
+        if (BuildConfig.DEBUG && dataState != null) {
+            intent.removeExtra(EXTRA_DATA_STATE)
+            if (dataState.equals("auto", ignoreCase = true)) dataPreview.value = null
+            else DataPreview.of(dataState)?.let { dataPreview.value = it }
+                ?: android.util.Log.w("OpenStrap", "data_state: no state called $dataState")
+            android.util.Log.i("OpenStrap", "data_state: showing ${dataPreview.value ?: "the real state"}")
+        }
         // Debug: `--ez show_summary true` opens the summary right after a workout for the latest stored phone workout,
         // with nothing live and nothing written.
         if (BuildConfig.DEBUG && intent.getBooleanExtra(EXTRA_SHOW_SUMMARY, false)) {
@@ -308,12 +338,16 @@ private val BLUETOOTH_PERMISSIONS = arrayOf(
 
 private fun epochNow() = System.currentTimeMillis() / 1000
 
+/** The first score's day before the settings store has answered: nothing is decided until it has. */
+private const val FIRST_SCORE_LOADING = Long.MIN_VALUE
+
 @Composable
 private fun AppRoot(
     container: AppContainer,
     metricRequests: kotlinx.coroutines.flow.MutableStateFlow<MetricRequest?>,
     forcedMoment: kotlinx.coroutines.flow.StateFlow<org.openstrap.app.data.Moment?>,
     strapPreview: kotlinx.coroutines.flow.StateFlow<StrapPreview?>,
+    dataPreviews: kotlinx.coroutines.flow.StateFlow<DataPreview?>,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -357,14 +391,18 @@ private fun AppRoot(
     // Remembered, like the picker below: a new object each time the root recomposes (on every tab change) would
     // recompose every tab.
     val todayEdits = remember(todayHidden, todayPinned) { org.openstrap.app.ui.dashboard.TodayEdits.parse(todayHidden, todayPinned) }
-    val preview by strapPreview.collectAsStateWithLifecycle()
+    val strapState by strapPreview.collectAsStateWithLifecycle()
+    val dataPreview by dataPreviews.collectAsStateWithLifecycle()
+    // The pairing steps before a strap is paired show with no strap, as `strap_state notpaired` does.
+    val preview = strapState ?: StrapPreview.NotPaired.takeIf { dataPreview?.unpaired == true }
     val realRecovery by dayVm.recovery.collectAsStateWithLifecycle()
     val realRecoveryFailure by dayVm.recoveryFailure.collectAsStateWithLifecycle()
     // The debug preview of a failed Recovery shows the day as failed, with yesterday's score from the real result.
     val previewFailure = if (preview == StrapPreview.RecoveryFail) realRecovery?.let { r ->
         RecoveryFailure(r.date, r.readinessTrend.firstOrNull { it.first == r.date.minusDays(1) }?.second)
     } else null
-    val recovery = if (previewFailure != null) null else realRecovery
+    // The data previews show first nights or no sleep in the day and its Recovery; nothing else changes.
+    val recovery = if (previewFailure != null) null else realRecovery?.previewed(dataPreview)
     val recoveryFailure = previewFailure ?: realRecoveryFailure
     val healthspan by dayVm.healthspan.collectAsStateWithLifecycle()
     val habitAgeSeen by container.settings.habitAgeSeenAsOf.collectAsStateWithLifecycle(null)
@@ -372,7 +410,8 @@ private fun AppRoot(
     val seeHabitAge: () -> Unit = { healthspan?.result?.asOf?.let { a -> scope.launch { container.settings.setHabitAgeSeen(a) } } }
     val profile by deviceVm.profile.collectAsStateWithLifecycle()
     val paired by deviceVm.paired.collectAsStateWithLifecycle()
-    val day by dayVm.state.collectAsStateWithLifecycle()
+    val realDay by dayVm.state.collectAsStateWithLifecycle()
+    val day = remember(realDay, dataPreview) { realDay.previewed(dataPreview) }
     // Your usual steps by the hour, read once per day shown, off the main thread ([DayViewModel.usualSteps]).
     val usualSteps by dayVm.usualSteps.collectAsStateWithLifecycle()
     val paiHistory: org.openstrap.app.ui.glow.PaiHistory = remember(container) { { from, to -> container.health.dailyPai(from, to) } }
@@ -512,6 +551,34 @@ private fun AppRoot(
     LaunchedEffect(forced, clockMoment) {
         forced?.let { android.util.Log.i("OpenStrap", "moment: forced $it, the clock says $clockMoment") }
     }
+
+    // The pairing stage (E3) from the real pairing: the Strap page's scan before a strap is paired, then the
+    // connection. Once paired it stays on Today until the strap first connects, and holds Connected a moment.
+    val scan by deviceVm.scan.collectAsStateWithLifecycle()
+    var firstConnect by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(realPairedKnown) { if (!realPairedKnown) firstConnect = true }
+    val realStep = if (!realPairedKnown || firstConnect) pairStep(realPairedKnown, scan.scanning, scan.found.isNotEmpty(), realConnection) else null
+    LaunchedEffect(realStep == PairStep.Connected) {
+        if (realStep == PairStep.Connected) { kotlinx.coroutines.delay(PAIRED_HOLD_MS); firstConnect = false }
+    }
+    val pairing = dataPreview?.pair ?: realStep
+
+    // How much of the day the strap was worn, for the Partial day tag on the cards it lowers (spec 4.3).
+    val dayIsToday = day.date == clockDate
+    val wear = day.wear(recovery, dayIsToday)
+        .previewed(dataPreview, (((if (dayIsToday) now else day.dayEnd + 1) - day.dayStart) / 60).toInt())
+
+    // The first real score is marked once (E4): its day is kept, and never written while a preview shows.
+    val firstScoreDay by container.settings.firstScoreDay.collectAsStateWithLifecycle(FIRST_SCORE_LOADING)
+    val dayRecovery = recovery?.takeIf { it.date == day.date }
+    val first = if (firstScoreDay == FIRST_SCORE_LOADING) FirstScore(false) else firstScore(
+        dayRecovery?.readiness?.score, day.date, dayIsToday, dayRecovery?.readiness?.phase == Recovery.Phase.Learning,
+        dayRecovery?.let { earliestScore(it.readinessTrend, day.date) }, firstScoreDay?.let(LocalDate::ofEpochDay),
+    )
+    LaunchedEffect(first.remember, preview, dataPreview) {
+        if (preview == null && dataPreview == null) first.remember?.let { container.settings.setFirstScoreDay(it.toEpochDay()) }
+    }
+    val showFirstScore = first.show || dataPreview == DataPreview.FirstScoreShown
 
     LaunchedEffect(message) {
         message?.let { Toast.makeText(context, it, Toast.LENGTH_LONG).show(); deviceVm.clearMessage() }
@@ -730,6 +797,7 @@ private fun AppRoot(
                             onOpenScore = { push(Detail.OfScore(it)) }, strapScore = strapReadiness?.takeIf { it.day == day.dayStart }?.score,
                             healthspan = healthspan, onOpenHealthspan = { seeHabitAge(); push(Detail.Healthspan) }, onOpenProfile = { openPage(Page.Profile) },
                             recoveryFailure = recoveryFailure, onRetryRecovery = dayVm::retryRecovery,
+                            wear = wear, firstScore = showFirstScore,
                         )
                     }
                     Detail.Sleep -> {
@@ -797,7 +865,7 @@ private fun AppRoot(
                                 onResumeRunning = container.workout::resume,
                                 heroLightAngle = todayMoment?.let { org.openstrap.app.ui.dashboard.heroLightAngle(it) },
                                 strap = org.openstrap.app.ui.glow.TodayStrap(
-                                    paired = pairedKnown, stopped = syncStopped(pairedKnown, connection, sync), record = strapView.record,
+                                    paired = pairedKnown, pairing = pairing, stopped = syncStopped(pairedKnown, connection, sync), record = strapView.record,
                                     canSync = realConnection is ConnectionState.Connected,
                                     staleAfter = preview?.staleAfter ?: org.openstrap.app.ui.dashboard.STALE_AFTER_S,
                                 ),
@@ -806,6 +874,7 @@ private fun AppRoot(
                                 onPair = { openPage(Page.Strap) },
                                 onSyncNow = container.strap::syncNow,
                                 usualBedtime = usualBedtime,
+                                wear = wear, firstScore = showFirstScore,
                             )
                             Tab.Recovery -> org.openstrap.app.ui.glow.GlowRecoveryScreen(
                                 day, recovery, history, header = { header(Tab.Recovery) }, contentPadding = padding,
@@ -816,6 +885,7 @@ private fun AppRoot(
                                 onOpenProfile = { openPage(Page.Profile) },
                                 showCharge = showCharge, onChargeShown = { showCharge = false },
                                 recoveryFailure = recoveryFailure, onRetryRecovery = dayVm::retryRecovery,
+                                wear = wear, firstScore = showFirstScore,
                             )
                             Tab.Sleep -> org.openstrap.app.ui.glow.GlowSleepScreen(
                                 day, header = { header(Tab.Sleep) }, contentPadding = padding,
@@ -836,7 +906,7 @@ private fun AppRoot(
                                 onDismissSuggestion = { suggestion?.let { container.workout.dismissSuggestion(it.start, it.end) } },
                                 onAllSports = { readySport = readySport ?: org.openstrap.app.ui.glow.topSports(workouts).first().sportType; readyPicking = true },
                                 onAddWorkout = { addingOn = day.date },
-                                liveHeartRate = live, history = history,
+                                liveHeartRate = live, history = history, wear = wear,
                             )
                         }
                     }

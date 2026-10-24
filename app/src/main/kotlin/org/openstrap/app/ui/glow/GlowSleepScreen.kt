@@ -35,6 +35,7 @@ import kotlin.math.roundToInt
 import org.openstrap.app.data.SleepHistory
 import org.openstrap.app.ui.components.ChartPoint
 import org.openstrap.app.ui.components.StageSpan
+import org.openstrap.app.ui.dashboard.AFTER_FIRST_NIGHT
 import org.openstrap.app.ui.dashboard.DayUiState
 import org.openstrap.app.ui.dashboard.Detail
 import org.openstrap.app.ui.dashboard.InfoCopy
@@ -75,21 +76,29 @@ fun GlowSleepScreen(
     val list = rememberLazyListState()
     val rec = recovery?.takeIf { it.date == state.date }
     val breathing = rec?.breathingDisturbances
-    val slots = sleepCards(SleepFacts(breathing = breathing != null, naps = state.naps.isNotEmpty(), hasNight = state.sleep != null))
+    // Before the strap has seen a night, cards keep their shape and wait (spec 4.3): breathing disturbances too.
+    val firstNights = rec != null && !rec.charge.anchored && state.sleep == null
+    val slots = sleepCards(SleepFacts(breathing = breathing != null || firstNights, naps = state.naps.isNotEmpty(), hasNight = state.sleep != null))
     var breathingInfo by rememberSaveable { mutableStateOf(false) }
     // The Sleep tab is always at night (spec 2.6): calm glow, light from below only.
     CompositionLocalProvider(LocalGlowPaused provides { list.isScrollInProgress }, LocalGlowMood provides GlowMood.Night) {
         GlowScreenList(contentPadding, list) {
             full { header() }
             // With naps and a breathing summary the two are a Small pair; alone, either is a Wide.
-            val pair = breathing != null && state.naps.isNotEmpty()
+            val pair = (breathing != null || firstNights) && state.naps.isNotEmpty()
             tabCards(slots) { card, m ->
                 when (card) {
-                    SleepCard.Hero -> NightHero(state) { onOpen(Detail.OfScore(Score.Sleep)) }
-                    SleepCard.Vitals -> VitalsList(state) { onOpen(Detail.OfMetric(it, night = true)) }
-                    SleepCard.Regularity -> RegularityCard(state, rec?.regularity) { onOpen(Detail.OfScore(Score.Regularity)) }
-                    SleepCard.Breathing -> breathing?.let {
-                        if (pair) BreathingSmall(it, m) { breathingInfo = true } else BreathingCard(it) { breathingInfo = true }
+                    SleepCard.Hero -> NightHero(state, firstNights) { onOpen(Detail.OfScore(Score.Sleep)) }
+                    SleepCard.Vitals -> VitalsList(state, firstNights) { onOpen(Detail.OfMetric(it, night = true)) }
+                    SleepCard.Regularity -> RegularityCard(state, rec?.regularity, firstNights) { onOpen(Detail.OfScore(Score.Regularity)) }
+                    SleepCard.Breathing -> when {
+                        breathing != null -> if (pair) BreathingSmall(breathing, m) { breathingInfo = true } else BreathingCard(breathing) { breathingInfo = true }
+                        // Waiting for the first night: the same card, a dim dash and when it fills.
+                        pair -> SmallCard(MetricColors.sleepLight, "Breathing disturbances", null, null, AFTER_FIRST_NIGHT, m, waiting = true)
+                        else -> EdgeCard(MetricColors.sleepLight, Modifier.fillMaxWidth().gridSize(CardSize.Wide), kind = EdgeKind.Value) {
+                            EdgeTitle("Breathing disturbances", "Early estimate")
+                            EdgeValue(null, null, AFTER_FIRST_NIGHT)
+                        }
                     }
                     SleepCard.Naps -> NapsCard(state, if (pair) m else Modifier.fillMaxWidth().height(GlowGrid.UnitHeight)) { onOpen(Detail.OfScore(Score.Naps)) }
                 }
@@ -123,14 +132,14 @@ private val STAGE_ORDER = listOf(
  * scrub and their totals. As high as its content. Tapping opens the Sleep score's detail ([onOpen]).
  */
 @Composable
-private fun NightHero(state: DayUiState, onOpen: () -> Unit) {
+private fun NightHero(state: DayUiState, firstNights: Boolean, onOpen: () -> Unit) {
     val session = state.sleep
     val isToday = state.date == LocalDate.now()
     GlowCard(SleepGlow, Modifier.fillMaxWidth().gridSize(CardSize.Wide), onClick = onOpen) {
         Column {
             GlowHeader("Last night", trailing = session?.let { "${clock(it.start)}–${clock(it.end)}" })
             if (session == null) {
-                HeroSentence(TabCopy.noNight(state.naps.isNotEmpty(), isToday))
+                HeroSentence(if (firstNights) TabCopy.FIRST_NIGHT_SLEEP else TabCopy.noNight(state.naps.isNotEmpty(), isToday))
                 return@Column
             }
             val asleep = state.asleepSeconds ?: (session.end - session.start)
@@ -183,9 +192,9 @@ internal fun GlowSleepStages(spans: List<StageSpan>, height: Dp, compact: Boolea
 
 /** The vitals while asleep against your previous nights, each opening its metric scoped to the night. */
 @Composable
-private fun VitalsList(state: DayUiState, onOpen: (Metric) -> Unit) {
+private fun VitalsList(state: DayUiState, firstNights: Boolean, onOpen: (Metric) -> Unit) {
     ListPanel(title = "Night vitals", note = "Against your nights") {
-        nightVitals(state).forEachIndexed { i, v ->
+        nightVitals(state, firstNights).forEachIndexed { i, v ->
             ListRow(
                 v.label, v.color, v.value, v.status,
                 offNormal = v.direction != null && v.direction != 0, onClick = { onOpen(v.metric) }, divider = i > 0,
@@ -200,12 +209,21 @@ private fun VitalsList(state: DayUiState, onOpen: (Metric) -> Unit) {
  * method is in the info sheet.
  */
 @Composable
-private fun RegularityCard(state: DayUiState, reg: org.openstrap.app.data.SleepRegularity.Result?, onOpen: () -> Unit) {
+private fun RegularityCard(state: DayUiState, reg: org.openstrap.app.data.SleepRegularity.Result?, firstNights: Boolean, onOpen: () -> Unit) {
     val zone = ZoneId.systemDefault()
     val w = sleepWeek(state, LocalGoals.current.sleepSeconds, reg, zone)
     EdgeCard(MetricColors.sleepDeep, Modifier.fillMaxWidth().gridSize(CardSize.Wide), kind = EdgeKind.Sleep, onClick = onOpen) {
         EdgeTitle("Sleep regularity", "Last 7 nights")
-        EdgeValue(reg?.sri?.roundToInt()?.toString(), null, if (w == null) "No sleep recorded in the last 7 nights" else TabCopy.regularity(reg), waiting = false)
+        EdgeValue(
+            reg?.sri?.roundToInt()?.toString(), null,
+            when {
+                w != null -> TabCopy.regularity(reg)
+                firstNights -> AFTER_FIRST_NIGHT
+                else -> "No sleep recorded in the last 7 nights"
+            },
+            // Waiting for the first night it keeps its shape with the dim dash (spec 4.3).
+            waiting = firstNights && w == null,
+        )
         if (w != null) {
             w.usual?.let { u ->
                 Text(

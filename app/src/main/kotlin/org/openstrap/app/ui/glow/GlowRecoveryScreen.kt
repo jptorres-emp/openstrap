@@ -29,7 +29,11 @@ import org.openstrap.app.data.Healthspan
 import org.openstrap.app.data.History
 import org.openstrap.app.data.Recovery
 import org.openstrap.app.data.RecoveryResult
+import org.openstrap.app.ui.dashboard.AFTER_FIRST_NIGHT
 import org.openstrap.app.ui.dashboard.DailyHistory
+import org.openstrap.app.ui.dashboard.FIRST_SCORE
+import org.openstrap.app.ui.dashboard.PARTIAL_DAY
+import org.openstrap.app.ui.dashboard.Wear
 import org.openstrap.app.ui.dashboard.DayUiState
 import org.openstrap.app.ui.dashboard.InfoCopy
 import org.openstrap.app.ui.dashboard.Score
@@ -82,15 +86,23 @@ fun GlowRecoveryScreen(
     recoveryFailure: RecoveryFailure? = null,
     /** Works Recovery out again after a failure. */
     onRetryRecovery: () -> Unit = {},
+    /** How much of the day the strap was worn, for the Partial day tag on Charge ([org.openstrap.app.ui.dashboard.wear]). */
+    wear: Wear? = null,
+    /** The day's score is the first real one, marked once (E4). */
+    firstScore: Boolean = false,
 ) {
     val list = rememberLazyListState()
     val signals = rememberSignals(state, history)
     val r = recovery?.takeIf { it.date == state.date }
     val failure = recoveryFailure?.takeIf { it.date == state.date && r == null }
     val learning = r?.readiness?.calibrating == true
-    val waiting = if (r != null && !r.charge.anchored) "After your first night" else "No reading yet"
+    val firstNights = r != null && !r.charge.anchored
+    val waiting = if (firstNights) AFTER_FIRST_NIGHT else "No reading yet"
     val slots = recoveryCards(RecoveryFacts(habitAge = healthspan != null, learning = learning, hasRecovery = r != null))
     var info by rememberSaveable { mutableStateOf(false) }
+    var partialInfo by rememberSaveable { mutableStateOf(false) }
+    val partial = wear?.takeIf { it.partial }?.let { TitleTag(PARTIAL_DAY) { partialInfo = true } }
+    val isToday = state.date == java.time.LocalDate.now()
     CompositionLocalProvider(LocalGlowPaused provides { list.isScrollInProgress }) {
         GlowScreenList(contentPadding, list, focus = showCharge, onFocused = onChargeShown) {
             full { header() }
@@ -98,10 +110,15 @@ fun GlowRecoveryScreen(
                 when (card) {
                     RecoveryCard.Hero ->
                         if (failure != null) RecoveryFailedHero(failure, onOpen = { onOpenScore(Score.Recovery) }, onRetry = onRetryRecovery)
-                        else RecoveryHero(r, onOpen = { onOpenScore(Score.Recovery) }, onInfo = { info = true })
+                        else RecoveryHero(
+                            r, onOpen = { onOpenScore(Score.Recovery) }, onInfo = { info = true }, firstNights = firstNights,
+                            noSleep = isToday && state.asleepSeconds == null, firstScore = firstScore,
+                        )
                     RecoveryCard.Drivers -> DriversList(r?.readiness, onAll = { onOpenScore(Score.Recovery) })
                     // Charge is worked out with Recovery, so a failure there says so here too, not "after your first night".
-                    RecoveryCard.Charge -> ChargeTall(r?.charge, state.dayStart..state.dayEnd, m, failed = failure != null, onOpen = { onOpenScore(Score.Charge) })
+                    RecoveryCard.Charge -> ChargeTall(
+                        r?.charge, state.dayStart..state.dayEnd, m, failed = failure != null, tag = partial, onOpen = { onOpenScore(Score.Charge) },
+                    )
                     RecoveryCard.Recharged -> ChargeSmall(r?.charge, recharged = true, m, failed = failure != null)
                     RecoveryCard.Drained -> ChargeSmall(r?.charge, recharged = false, m, failed = failure != null)
                     RecoveryCard.BodySignals -> SignalsList(signals, waiting, onOpenMetric)
@@ -117,6 +134,7 @@ fun GlowRecoveryScreen(
             score?.let { InfoCopy.HERE }, onDismiss = { info = false }, notes = InfoCopy.recoveryNotes(r?.readiness, strapScore),
         )
     }
+    if (partialInfo && wear != null) PartialDaySheet(wear, isToday, onDismiss = { partialInfo = false })
 }
 
 /* ----------------------------------------------- Hero ----------------------------------------------- */
@@ -130,10 +148,13 @@ private fun recoveryHeroStyle(color: Color) = GlowStyle.Bloom.copy(
 
 /**
  * The score: what it means for the day and what held it back, then the number and its word. Compared with yesterday
- * in the title, and the calibration caveat under the sentence while it learns. As high as its content.
+ * in the title, and the calibration caveat under the sentence while it learns. As high as its content. Before the
+ * first night, or with no sleep last night, the sentence says so; the first real score is tagged once (E4).
  */
 @Composable
-private fun RecoveryHero(r: RecoveryResult?, onOpen: () -> Unit, onInfo: () -> Unit) {
+private fun RecoveryHero(
+    r: RecoveryResult?, onOpen: () -> Unit, onInfo: () -> Unit, firstNights: Boolean = false, noSleep: Boolean = false, firstScore: Boolean = false,
+) {
     val ready = r?.readiness
     val score = ready?.score
     val yesterday = r?.readinessTrend?.dropLast(1)?.lastOrNull()?.second
@@ -142,6 +163,7 @@ private fun RecoveryHero(r: RecoveryResult?, onOpen: () -> Unit, onInfo: () -> U
         Column {
             GlowHeader(
                 "Recovery", trailing = score?.let { TabCopy.vsYesterday(it, yesterday) },
+                tag = if (firstScore && score != null) TitleTag(FIRST_SCORE) else null,
                 trailingContent = {
                     androidx.compose.foundation.layout.Spacer(Modifier.width(10.dp))
                     RoundButton(org.openstrap.app.ui.theme.AppIcons.Info, "About Recovery", onInfo, size = 30.dp)
@@ -149,8 +171,10 @@ private fun RecoveryHero(r: RecoveryResult?, onOpen: () -> Unit, onInfo: () -> U
             )
             HeroSentence(
                 when {
+                    firstNights -> TodayCopy.RECOVERY_FIRST_NIGHT
                     ready == null -> TabCopy.RECOVERY_WAITING
                     score != null -> TabCopy.recovery(score, alert, ready.contributors)
+                    noSleep -> TabCopy.NO_SLEEP_SCORE
                     ready.phase == Recovery.Phase.Withheld -> TodayCopy.noScoreLine(TodayCopy.NoScore.Learning(ready.baselineNights, Recovery.SCORED_NIGHTS))
                     ready.withheld -> TodayCopy.noScoreLine(TodayCopy.NoScore.NoHeartData)
                     else -> "Recovery is scored each morning from the night's sleep."
@@ -222,8 +246,11 @@ private fun DriversList(ready: Recovery.Readiness?, onAll: () -> Unit) {
  * and the number now with Charge at waking at the foot.
  */
 @Composable
-private fun ChargeTall(c: Recovery.ChargeDay?, day: LongRange, modifier: Modifier, failed: Boolean = false, onOpen: () -> Unit) {
-    val now = c?.latest?.let(::chargeShown)
+private fun ChargeTall(
+    c: Recovery.ChargeDay?, day: LongRange, modifier: Modifier, failed: Boolean = false, tag: TitleTag? = null, onOpen: () -> Unit,
+) {
+    // Before the first night the number would only be the simulation's starting guess: a dash until then.
+    val now = c?.takeIf { it.anchored }?.latest?.let(::chargeShown)
     val atWake = c?.atWake?.toInt()
     val step = 15 * 60L
     val values = remember(c?.points, day) { c?.points?.let { bucket(it, day, step) }.orEmpty() }
@@ -231,7 +258,7 @@ private fun ChargeTall(c: Recovery.ChargeDay?, day: LongRange, modifier: Modifie
     val scrubbed = picked?.let { i -> values.getOrNull(i)?.let { it.toInt() to clockAt(day.first + i * step) } }
     GlowCard(GlowStyle.Ember.copy(lightLevel = (now ?: 0) / 100f, second = true), modifier, onClick = onOpen) {
         Column(Modifier.fillMaxHeight()) {
-            GlowHeader("Charge")
+            GlowHeader("Charge", tag = tag)
             if (c != null && now != null && c.points.size >= 2) {
                 Spacer(Modifier.height(10.dp))
                 // The Charge curve (chart kit): sleep fills it, the day drains it. Scrubbing moves the number.
@@ -243,7 +270,7 @@ private fun ChargeTall(c: Recovery.ChargeDay?, day: LongRange, modifier: Modifie
                 when {
                     scrubbed != null -> "At ${scrubbed.second}"
                     failed -> FAILED_SHORT
-                    c == null || !c.anchored -> "After your first night"
+                    c == null || !c.anchored -> AFTER_FIRST_NIGHT
                     atWake == null -> "Now"
                     c.strapOffOvernight -> "$atWake at start"
                     else -> "$atWake at waking"
@@ -264,7 +291,7 @@ private fun ChargeSmall(c: Recovery.ChargeDay?, recharged: Boolean, modifier: Mo
     }
     val status = when {
         failed -> FAILED_SHORT
-        !ready -> "After your first night"
+        !ready -> AFTER_FIRST_NIGHT
         recharged -> TabCopy.RECHARGED
         else -> TabCopy.drainedMostly(c!!.drainedExercise, c.drainedStress, c.drainedLiving)
     }

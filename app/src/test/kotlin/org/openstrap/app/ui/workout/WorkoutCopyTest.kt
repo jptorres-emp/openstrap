@@ -12,26 +12,28 @@ import org.openstrap.app.device.ConnectionState
 class WorkoutCopyTest {
     private val connected = ConnectionState.Connected(batteryPercent = 80, firmware = null)
 
-    @Test fun `the ready line confirms the strap in every state`() {
-        assertEquals("Strap connected. 72 bpm.", WorkoutCopy.readyLine(connected, 72))
-        assertEquals("Strap connected. Waiting for heart rate.", WorkoutCopy.readyLine(connected, null))
-        assertEquals("Strap connected. 72 bpm. Battery 15%.", WorkoutCopy.readyLine(connected.copy(batteryPercent = 15), 72))
+    @Test fun `the ready hero is the strap in every state`() {
+        val live = WorkoutCopy.ReadyHero("Strap connected", "Live from your strap.", live = true)
+        assertEquals(live, WorkoutCopy.readyHero(connected, 72))
+        assertEquals(live.copy(line = "Waiting for heart rate."), WorkoutCopy.readyHero(connected, null))
+        assertEquals(live.copy(line = "Live from your strap. Battery 15%."), WorkoutCopy.readyHero(connected.copy(batteryPercent = 15), 72))
         // Charging, a low battery is on its way up: not worth a word.
-        assertEquals("Strap connected. 72 bpm.", WorkoutCopy.readyLine(connected.copy(batteryPercent = 15, charging = true), 72))
-        assertEquals("Connecting to the strap.", WorkoutCopy.readyLine(ConnectionState.Connecting, null))
-        assertEquals("Connecting to the strap.", WorkoutCopy.readyLine(ConnectionState.Authenticating, null))
-        assertEquals("Strap not connected. You can start anyway.", WorkoutCopy.readyLine(ConnectionState.Disconnected, 72))
-        assertEquals("Strap not connected. You can start anyway.", WorkoutCopy.readyLine(ConnectionState.Failed("gone"), null))
-        assertEquals("No strap paired. You can start anyway.", WorkoutCopy.readyLine(ConnectionState.NotPaired, null))
+        assertEquals(live, WorkoutCopy.readyHero(connected.copy(batteryPercent = 15, charging = true), 72))
+        val away = WorkoutCopy.ReadyHero("Strap not connected", "You can start anyway.", live = false)
+        assertEquals(away.copy(title = "Connecting to the strap"), WorkoutCopy.readyHero(ConnectionState.Connecting, null))
+        assertEquals(away.copy(title = "Connecting to the strap"), WorkoutCopy.readyHero(ConnectionState.Authenticating, null))
+        assertEquals(away, WorkoutCopy.readyHero(ConnectionState.Disconnected, 72))
+        assertEquals(away, WorkoutCopy.readyHero(ConnectionState.Failed("gone"), null))
+        assertEquals(away.copy(title = "No strap paired"), WorkoutCopy.readyHero(ConnectionState.NotPaired, null))
     }
 
     @Test fun `gps and route notes`() {
         assertEquals("Off. No distance without GPS.", WorkoutCopy.gpsNote(false, 4))
         assertEquals("Off. Distance from the strap's steps, roughly.", WorkoutCopy.gpsNote(false, 1))
-        assertTrue(WorkoutCopy.gpsNote(true, 1).startsWith("For distance"))
+        assertEquals("On. Distance, pace and the map.", WorkoutCopy.gpsNote(true, 1))
         assertEquals("Off. Only the totals are kept.", WorkoutCopy.routeNote(false))
         assertEquals(1, WorkoutCopy.readyRows(outdoor = false).size)
-        assertEquals(listOf("Heart rate", "GPS", "Keep route"), WorkoutCopy.readyRows(outdoor = true).map { it.first })
+        assertEquals(listOf("Heart rate", "GPS", "Keep the route"), WorkoutCopy.readyRows(outdoor = true).map { it.first })
     }
 
     @Test fun `zone name and time in it`() {
@@ -42,7 +44,8 @@ class WorkoutCopyTest {
 
     @Test fun `no workout string uses an interpunct, semicolon or em dash`() {
         val strings = listOf(
-            WorkoutCopy.readyLine(connected.copy(batteryPercent = 5), 60), WorkoutCopy.readyLine(ConnectionState.NotPaired, null),
+            WorkoutCopy.readyHero(connected.copy(batteryPercent = 5), 60).line, WorkoutCopy.readyHero(ConnectionState.NotPaired, null).line,
+            WorkoutCopy.LOCATION_OFF, WorkoutCopy.LOCATION_OFF_NOTE, WorkoutCopy.startLabel(1),
             WorkoutCopy.gpsNote(true, 1), WorkoutCopy.gpsNote(false, 1), WorkoutCopy.gpsNote(false, 4),
             WorkoutCopy.routeNote(true), WorkoutCopy.routeNote(false), WorkoutCopy.READY_MEANING, WorkoutCopy.zoneTime(600),
         ) + WorkoutCopy.readyRows(true).flatMap { listOf(it.first, it.second) } + (0..4).flatMap { WorkoutCopy.zoneTitle(it).toList() }

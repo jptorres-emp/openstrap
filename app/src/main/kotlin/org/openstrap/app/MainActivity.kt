@@ -982,19 +982,23 @@ private fun AppRoot(
             androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
                 val series by androidx.compose.runtime.produceState<List<Pair<Long, Int>>?>(null, date) { value = workoutsVm.dayMinuteHeartRate(date) }
                 val maxHr by workoutsVm.maxHeartRate.collectAsStateWithLifecycle()
+                val (recent, sides) = pickerSports(container, workoutsVm)
                 org.openstrap.app.ui.glow.GlowAddWorkoutScreen(
                     date, series, maxHr ?: 190, androidx.compose.foundation.layout.WindowInsets.navigationBars.asPaddingValues(),
                     onSave = { from, to, sport -> container.workout.saveFromHistory(from, to, sport); addingOn = null },
                     onBack = { addingOn = null },
+                    recentSports = recent, sides = sides,
                 )
             }
         }
         savingSuggestion?.let { s ->
             androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+                val (recent, sides) = pickerSports(container, workoutsVm)
                 org.openstrap.app.ui.glow.GlowSportPickerScreen(
                     androidx.compose.foundation.layout.WindowInsets.navigationBars.asPaddingValues(),
                     onPick = { sport -> container.workout.saveFromHistory(s.start, s.end, sport); savingSuggestion = null },
                     onBack = { savingSuggestion = null },
+                    recentSports = recent, sides = sides,
                 )
             }
         }
@@ -1080,6 +1084,20 @@ private fun OverPages(
             }
         }
     }
+}
+
+/**
+ * What the sport picker needs (spec 6.3): your last four sports for its Recent row, newest first and only those you
+ * started, and the Outdoor or Indoor side last chosen per sport on Ready.
+ */
+@Composable
+private fun pickerSports(container: AppContainer, workoutsVm: org.openstrap.app.ui.workout.WorkoutsViewModel): Pair<List<Int>, Map<Int, Boolean>> {
+    val workouts by workoutsVm.workouts.collectAsStateWithLifecycle()
+    val sides by container.settings.workoutSides.collectAsStateWithLifecycle(emptyMap())
+    val recent = remember(workouts) {
+        org.openstrap.app.data.Workouts.recentSports(workouts.filter { it.startedByYou }.sortedByDescending { it.workout.start }.map { it.workout.sportType })
+    }
+    return recent to sides
 }
 
 /**
@@ -1174,8 +1192,12 @@ private fun androidx.compose.foundation.layout.BoxScope.WorkoutLayer(
     val recording = state is org.openstrap.app.device.WorkoutState.Recording || state is org.openstrap.app.device.WorkoutState.Ended
     org.openstrap.app.ui.glow.PushOverlay(readySport.takeIf { !recording }, cut = recording) { sport ->
         androidx.compose.foundation.layout.Box(full) {
+            val (recentSports, sides) = pickerSports(container, workoutsVm)
             org.openstrap.app.ui.glow.GlowWorkoutReadyScreen(
                 sport, readyPicking, connection, live, padding,
+                recentSports = recentSports, sides = sides,
+                onSide = { s, indoor -> viewScope.launch { container.settings.setWorkoutSide(s, indoor) } },
+                onTurnOnLocation = requestLocation,
                 onSport = onReadySport,
                 onStart = { sport, askToEnd, target, useGps, keepRoute, rest, setsTarget ->
                     val start = { session.start(sport, askToEnd, target, useGps, keepRoute, rest, setsTarget); onCloseReady() }

@@ -32,40 +32,62 @@ object WorkoutCopy {
 
     private const val KM = 1000.0
 
-    /** The one line on Ready that confirms the strap: "Strap connected. 72 bpm." */
-    fun readyLine(connection: ConnectionState, bpm: Int?): String = when (connection) {
-        is ConnectionState.Connected -> listOfNotNull(
-            "Strap connected.",
-            bpm?.let { "$it bpm." } ?: "Waiting for heart rate.",
-            connection.batteryPercent?.takeIf { it <= LOW_BATTERY && !connection.charging }?.let { "Battery $it%." },
-        ).joinToString(" ")
-        ConnectionState.Connecting, ConnectionState.Authenticating -> "Connecting to the strap."
-        ConnectionState.NotPaired -> "No strap paired. You can start anyway."
-        ConnectionState.Disconnected, is ConnectionState.Failed -> "Strap not connected. You can start anyway."
+    /**
+     * Ready's hero, the strap (spec 6.3): its [title], the [line] under it, and whether it's [live], the glow with the
+     * heart rate, or an outline card while the strap is away.
+     */
+    data class ReadyHero(val title: String, val line: String, val live: Boolean)
+
+    /** "Strap connected" and "Live from your strap.", with the battery when low; "Strap not connected" otherwise. */
+    fun readyHero(connection: ConnectionState, bpm: Int?): ReadyHero = when (connection) {
+        is ConnectionState.Connected -> ReadyHero(
+            "Strap connected",
+            listOfNotNull(
+                if (bpm != null) "Live from your strap." else "Waiting for heart rate.",
+                connection.batteryPercent?.takeIf { it <= LOW_BATTERY && !connection.charging }?.let { "Battery $it%." },
+            ).joinToString(" "),
+            live = true,
+        )
+        ConnectionState.Connecting, ConnectionState.Authenticating -> ReadyHero("Connecting to the strap", ANYWAY, live = false)
+        ConnectionState.NotPaired -> ReadyHero("No strap paired", ANYWAY, live = false)
+        ConnectionState.Disconnected, is ConnectionState.Failed -> ReadyHero("Strap not connected", ANYWAY, live = false)
     }
 
-    /** Under Use GPS: what it gives, or what's missing without it. */
+    private const val ANYWAY = "You can start anyway."
+
+    /** Under GPS: what it gives, or what's missing without it. */
     fun gpsNote(on: Boolean, sportType: Int): String = when {
-        on -> "For distance, pace and the map, during this workout only."
+        on -> "On. Distance, pace and the map."
         sportType in Workouts.ON_FOOT -> "Off. Distance from the strap's steps, roughly."
         else -> "Off. No distance without GPS."
     }
 
-    /** Under Keep route on this phone. */
-    fun routeNote(on: Boolean): String = if (on) "Saved on this phone for the map." else "Off. Only the totals are kept."
+    /** The GPS row while the phone's location is off or not allowed. Start still works, without GPS. */
+    const val LOCATION_OFF = "Location is off"
+    const val LOCATION_OFF_NOTE = "Turn it on for distance and the map, or start without it."
+
+    /** Under Keep the route. */
+    fun routeNote(on: Boolean): String = if (on) "On. Saved on this phone for the map." else "Off. Only the totals are kept."
+
+    /** Start, naming the sport: "Start run", "Start HIIT", and "Start workout" for Other. */
+    fun startLabel(sportType: Int): String = when (val name = Workouts.shortName(sportType)) {
+        "Other" -> "Start workout"
+        else -> "Start " + if (name.any { it.isLowerCase() }) name.lowercase() else name
+    }
 
     /** The Ready info sheet's meaning. */
-    const val READY_MEANING = "Heart rate comes from the strap every second. GPS only when you turn it on."
+    const val READY_MEANING = "Heart rate comes from the strap every second. GPS is on for outdoor workouts, and you can turn it off."
 
     /** The Ready info sheet's rows: the strap always, GPS and the route for an [outdoor] sport. */
     fun readyRows(outdoor: Boolean): List<Pair<String, String>> = listOfNotNull(
         "Heart rate" to "The strap sends heart rate every second, with the phone's screen off too. If it drops out or " +
             "isn't connected at the start, recording carries on, and the missing minutes are filled from the strap's own " +
             "history after the next sync.",
-        ("GPS" to "Use GPS turns on the phone's location for this workout only, for distance, pace and the map. Map " +
-            "tiles come from OpenFreeMap, which sees roughly where the map is. Route only on the map loads no tiles. " +
-            "Without GPS, walks and runs get a distance from the strap's steps, marked ≈.").takeIf { outdoor },
-        ("Keep route" to "With Keep route on, the route is saved on this phone for the map. Off, only the " +
+        ("GPS" to "Outdoors, GPS uses the phone's location during this workout only, for distance, pace and the map. " +
+            "Its switch turns it off for this workout. Map tiles come from OpenFreeMap, which sees roughly where the map " +
+            "is. Route only on the map loads no tiles. Without GPS, walks and runs get a distance from the strap's " +
+            "steps, marked ≈.").takeIf { outdoor },
+        ("Keep the route" to "With Keep the route on, the route is saved on this phone for the map. Off, only the " +
             "totals are kept and the route is discarded when the workout ends.").takeIf { outdoor },
     )
 

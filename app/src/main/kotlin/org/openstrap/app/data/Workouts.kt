@@ -161,19 +161,98 @@ object Workouts {
      */
     val HIDDEN = setOf(143, 40, 224, 55, 10, 57, 58, 51, 109, 24, 226, 16, 223)
 
-    /** The picker's sections, each sport once, most-done kinds first. */
-    val SECTIONS: List<Pair<String, List<Int>>> = listOf(
-        "Running & walking" to listOf(1, 2, 11, 3, 15, 215, 225, 108),
-        "Gym" to listOf(52, 50, 49, 130, 222, 9, 21, 5),
-        "Cycling" to listOf(4, 8),
-        "Water" to listOf(6, 7, 23),
-        "Mind & body" to listOf(60, 61, 53, 76),
-        "Racket & ball" to listOf(17, 205, 204, 92, 89, 18, 85, 88, 83, 97),
-        "Outdoors" to listOf(12, 70),
+    /**
+     * A sport offered once with an outdoor and an indoor kind (spec 6.3): Ready's switch picks one, and the workout is
+     * saved as that kind's own sport type, so history and detection don't change. [outdoor] is the sport's key, the
+     * type its tile starts; Walk is one type either way, the switch only decides GPS. [indoorByDefault] is the side
+     * shown before you've picked one.
+     */
+    data class Sides(val outdoor: Int, val indoor: Int, val outdoorName: String, val indoorName: String, val indoorByDefault: Boolean = false) {
+        /** The sport type for the [indoor] side. */
+        fun type(indoor: Boolean): Int = if (indoor) this.indoor else outdoor
+    }
+
+    val SIDES = listOf(
+        Sides(1, 2, "Outdoor", "Treadmill"),
+        Sides(4, 8, "Outdoor", "Indoor"),
+        // Most swims are in a pool.
+        Sides(7, 6, "Open water", "Pool", indoorByDefault = true),
+        Sides(3, 3, "Outdoor", "Indoor"),
     )
+
+    /** The [Sides] [type] is one of, or null for a sport with one kind. */
+    fun sidesOf(type: Int): Sides? = SIDES.firstOrNull { type == it.outdoor || type == it.indoor }
+
+    /**
+     * Which side Ready opens on for [type]: the indoor kind when [type] is one (Treadmill picked by name), else the
+     * side you last chose for the sport ([remembered], by its key), else its default. Null for a sport with one kind.
+     */
+    fun indoorSide(type: Int, remembered: Map<Int, Boolean>): Boolean? {
+        val s = sidesOf(type) ?: return null
+        if (type == s.indoor && s.indoor != s.outdoor) return true
+        return remembered[s.outdoor] ?: s.indoorByDefault
+    }
+
+    /** Whether a workout of [type] on the [indoor] side gets GPS: the outdoor side, or a sport done outdoors. */
+    fun gpsOffered(type: Int, indoor: Boolean?): Boolean = if (sidesOf(type) != null) indoor == false else type in OUTDOOR
+
+    /** The sides you chose, stored as "1=0,7=1" (key, 1 for indoor), and back; anything unreadable is left out. */
+    fun formatSides(sides: Map<Int, Boolean>): String = sides.entries.sortedBy { it.key }.joinToString(",") { "${it.key}=${if (it.value) 1 else 0}" }
+
+    fun parseSides(text: String?): Map<Int, Boolean> = text.orEmpty().split(',').mapNotNull { part ->
+        val (k, v) = part.split('=').takeIf { it.size == 2 } ?: return@mapNotNull null
+        val key = k.trim().toIntOrNull()?.takeIf { sidesOf(it)?.outdoor == it } ?: return@mapNotNull null
+        when (v.trim()) { "1" -> key to true; "0" -> key to false; else -> null }
+    }.toMap()
+
+    /**
+     * The picker's twelve everyday sports (spec 6.3), by the type each tile starts: Run, Walk, Hike, Cycling, Swim,
+     * Strength, HIIT, Yoga, Pilates, Rowing, Elliptical, Other. Every other sport is behind More sports.
+     */
+    val EVERYDAY = listOf(1, 3, 15, 4, 7, 52, 49, 60, 61, 23, 9, 5)
+
+    /** The tiles' short names; a sport with two kinds has one name for both. */
+    private val SHORT_NAMES = mapOf(
+        1 to "Run", 2 to "Run", 3 to "Walk", 15 to "Hike", 4 to "Cycling", 8 to "Cycling", 7 to "Swim", 6 to "Swim",
+        52 to "Strength", 49 to "HIIT", 60 to "Yoga", 61 to "Pilates", 23 to "Rowing", 9 to "Elliptical", 5 to "Other",
+    )
+
+    /** "Run" for an outdoor run or a treadmill: the picker's name, else the sport's full name. */
+    fun shortName(type: Int): String = SHORT_NAMES[type] ?: sportName(type)
+
+    /** The type a sport's tile stands for: a sport with two kinds by its key, any other as itself. */
+    fun tileType(type: Int): Int = sidesOf(type)?.outdoor ?: type
+
+    /** More sports: every sport offered that isn't an everyday tile or behind one's switch, A to Z. */
+    val MORE: List<Int> by lazy {
+        val behindTiles = EVERYDAY.toSet() + SIDES.flatMap { listOf(it.outdoor, it.indoor) }
+        sports.map { it.first }.filter { it !in behindTiles }
+    }
+
+    /**
+     * What a search for [query] finds, as tiles: everyday sports by their short name, then every other sport, both
+     * kinds of a two-kind sport included ("Treadmill"), by its full name. Each once; empty for a blank query.
+     */
+    fun search(query: String): List<Int> {
+        val q = query.trim()
+        if (q.isEmpty()) return emptyList()
+        val everyday = EVERYDAY.filter { shortName(it).contains(q, ignoreCase = true) || sportName(it).contains(q, ignoreCase = true) }
+        val others = sports.map { it.first }.filter { it !in everyday && sportName(it).contains(q, ignoreCase = true) }
+        return everyday + others
+    }
+
+    /**
+     * The picker's Recent row: your last [n] sports, [types] newest first, each by its tile ([tileType]), without the
+     * strap's own "Activity".
+     */
+    fun recentSports(types: List<Int>, n: Int = 4): List<Int> =
+        types.filter { it != GENERIC_ACTIVITY && it in SPORT_NAMES }.map(::tileType).distinct().take(n)
 
     /** Sports done outdoors, where the ready screen offers GPS. */
     val OUTDOOR = setOf(1, 3, 4, 11, 12, 15, 215, 224, 225)
+
+    /** Sports done only outdoors, whose tile carries the location mark: no indoor side to choose. */
+    val OUTDOOR_ONLY: Set<Int> get() = OUTDOOR - SIDES.map { it.outdoor }.toSet()
 
     /**
      * Sports done on your feet, where steps times a stride make a distance (≈) without GPS: runs, walks, hikes. On a

@@ -348,7 +348,7 @@ private class TodayContext(
      */
     val loadStatus get() = rec?.let { TodayCopy.loadStatus(it.load, it.chronicLoad, endOfDay = !isToday) }
 
-    /** How far Load has come toward your usual day's, for its light; null before there's a usual. */
+    /** How far Load has come toward your usual day's, for its bar. Null before there's a usual. */
     val loadShare: Float? get() = rec?.let { r -> r.chronicLoad?.takeIf { it > 0f }?.let { r.load / it } }
 
     /** Time to recover from the latest workout that says how long it needs, or null when none does. */

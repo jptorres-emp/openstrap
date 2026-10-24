@@ -140,9 +140,8 @@ internal fun TodayStrip(
 /** A strip's single line: a [title] (with the tap caret when the strip opens a page) and, on the right, its [detail]. */
 @Composable
 internal fun StripLine(title: String, detail: String?) {
-    Row(Modifier.fillMaxWidth().heightIn(min = 40.dp), verticalAlignment = Alignment.CenterVertically) {
-        CardTitle(title, Modifier.weight(1f))
-        if (detail != null) Text(detail, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary, maxLines = 1)
+    Box(Modifier.fillMaxWidth().heightIn(min = 40.dp), contentAlignment = Alignment.CenterStart) {
+        TitleRow(start = { CardTitle(title) }, end = detail?.let { { NoteText(it) } })
     }
 }
 
@@ -168,7 +167,7 @@ internal fun LastNightStrip(state: DayUiState, onClick: () -> Unit, modifier: Mo
 internal fun CheckInStrip(feeling: Int?, onCheckIn: (Int?) -> Unit, modifier: Modifier = Modifier) =
     TodayStrip(MetricColors.readiness, EdgeKind.Earlier, modifier) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text("How do you feel?", color = Color.White, style = GlowType.cardTitle, modifier = Modifier.weight(1f))
+            Text("How do you feel?", color = Color.White, style = GlowType.cardTitle, maxLines = 1, modifier = Modifier.weight(1f))
             if (feeling != null) Text(CheckIn.label(feeling), color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary)
         }
         Spacer(Modifier.height(10.dp))
@@ -221,15 +220,16 @@ internal fun AlertsStrip(alerts: List<HealthAlertRow>, onOpenMetric: (Metric) ->
 /** An edge card's title row: [title] left with its sync [marker] or neutral [tag] beside it ([TitleMark]), [note] right. */
 @Composable
 internal fun EdgeTitle(title: String, note: String?, marker: String? = null, tag: TitleTag? = null) {
-    val marked = marker != null || tag != null
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        CardTitle(title, Modifier.weight(1f, fill = !marked))
-        if (marked) {
-            TitleMark(marker, tag, Modifier.padding(start = 8.dp))
-            Spacer(Modifier.weight(1f))
-        }
-        if (note != null) Text(note, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary, maxLines = 1)
-    }
+    // The note drops under the title when they can't share a line, so the title never wraps.
+    TitleRow(
+        start = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                CardTitle(title, Modifier.weight(1f, fill = false))
+                if (marker != null || tag != null) TitleMark(marker, tag, Modifier.padding(start = 8.dp))
+            }
+        },
+        end = note?.let { { NoteText(it) } },
+    )
 }
 
 /** An edge card's number and the line under it; a dim dash and [status] while there's no number. */
@@ -481,7 +481,7 @@ internal fun SmallCard(
     waiting: Boolean = false,
 ) {
     EdgeCard(color, modifier, status = edgeStatus, kind = kind, onClick = onClick) {
-        CardTitle(title, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        CardTitle(title)
         Spacer(Modifier.weight(1f))
         if (value == null && status != null && !waiting) {
             extra?.invoke()

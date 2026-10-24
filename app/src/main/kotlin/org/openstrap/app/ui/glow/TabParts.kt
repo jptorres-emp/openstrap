@@ -87,10 +87,10 @@ internal fun <T> GridRowBlock(row: GridRow<T>, draw: @Composable (T, Modifier) -
 }
 
 /**
- * A contributor bar (chart kit): the [name], a bar filled to [fraction] (0..1) and the [word] on the right. Bar and
- * word take [color] only when [offNormal]; otherwise they stay white. [detail] is a dim line under the name (the
- * reading behind it), [onClick] opens what the row is part of (with the tap caret at the end), and [divider] draws the
- * hairline above the row.
+ * A contributor bar (chart kit): the [name] on its own line, so it never wraps beside the bar, then a bar filled to
+ * [fraction] (0..1) with the [word] after it. Bar and word take [color] only when [offNormal]; otherwise they stay
+ * white. [detail] is a dim line under the name (the reading behind it), [onClick] opens what the row is part of (with
+ * the tap caret at the end), and [divider] draws the hairline above the row.
  */
 @Composable
 internal fun ContributorRow(
@@ -105,20 +105,24 @@ internal fun ContributorRow(
             .then(opening?.modifier ?: Modifier)
             .let { if (onClick != null) it.clickable(onClick = opening?.onClick ?: onClick) else it }
             .let { if (divider) it.drawBehind { drawLine(RowHairline, Offset(0f, 0f), Offset(size.width, 0f), 1.dp.toPx()) } else it }
-            .padding(vertical = 12.dp),
+            .padding(vertical = GlowLayout.RowPadding),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(Modifier.weight(1.1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(name, color = Color.White, style = GlowType.secondary, maxLines = 2)
-            if (detail != null) Text(detail, color = Color.White.copy(alpha = 0.5f), style = GlowType.secondary.copy(fontSize = 11.5.sp), maxLines = 2)
+        Column(Modifier.weight(1f)) {
+            Text(name, color = Color.White, style = GlowType.body, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            if (detail != null) Text(
+                detail, color = Color.White.copy(alpha = 0.5f), style = GlowType.secondary.copy(fontSize = 11.5.sp), maxLines = 2,
+                modifier = Modifier.padding(top = 2.dp),
+            )
+            Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                val shape = RoundedCornerShape(3.dp)
+                Box(Modifier.weight(1f).height(6.dp).background(Color.White.copy(alpha = 0.07f), shape)) {
+                    Box(Modifier.fillMaxWidth(fraction.coerceIn(0f, 1f)).height(6.dp).background(accent, shape))
+                }
+                Spacer(Modifier.width(12.dp))
+                Text(word, color = if (offNormal) color else Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary, maxLines = 1)
+            }
         }
-        Spacer(Modifier.width(10.dp))
-        val shape = RoundedCornerShape(3.dp)
-        Box(Modifier.weight(1f).height(6.dp).background(Color.White.copy(alpha = 0.07f), shape)) {
-            Box(Modifier.fillMaxWidth(fraction.coerceIn(0f, 1f)).height(6.dp).background(accent, shape))
-        }
-        Spacer(Modifier.width(10.dp))
-        Text(word, color = if (offNormal) color else Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary, modifier = Modifier.weight(0.9f), textAlign = androidx.compose.ui.text.style.TextAlign.End, maxLines = 2)
         if (onClick != null) {
             Spacer(Modifier.width(RowCaretGap))
             TapCaret(ROW_CARET_ALPHA)

@@ -70,6 +70,22 @@ private val readoutText = TextStyle(color = Ink, fontSize = 12.sp, fontFamily = 
 private fun DrawScope.gridLine(y: Float, color: Color = Grid, x0: Float = 0f, x1: Float = size.width) =
     drawLine(color, Offset(x0, y), Offset(x1, y), strokeWidth = 1.dp.toPx())
 
+/** The hairline under a chart's bars, for bar charts drawn outside this file. */
+internal fun DrawScope.barBaseline(y: Float) = gridLine(y)
+
+/** The widest a bar gets (spec 2.7, pill bars): a wide card spaces its bars out but keeps them thin. */
+internal val BarMaxWidth = 6.dp
+
+/**
+ * One pill bar in a column [pitch] wide starting at [x], standing on [bottom], [height] tall for its value. At most
+ * [BarMaxWidth] wide, and never shorter than twice its width, so a small value still reads as a bar, not a dot.
+ */
+internal fun DrawScope.pillBar(color: Color, x: Float, pitch: Float, bottom: Float, height: Float) {
+    val w = (pitch * 0.56f).coerceAtMost(BarMaxWidth.toPx())
+    val h = height.coerceAtLeast(w * 2)
+    drawRoundRect(color, topLeft = Offset(x + (pitch - w) / 2, bottom - h), size = Size(w, h), cornerRadius = CornerRadius(w / 2))
+}
+
 private fun DrawScope.text(m: TextMeasurer, s: String, style: TextStyle, x: Float, y: Float, align: Float = 0f) {
     val r = m.measure(s, style)
     drawText(r, topLeft = Offset((x - r.size.width * align).coerceIn(0f, size.width - r.size.width), y))
@@ -260,7 +276,6 @@ fun GlowBars(
         val top = 4.dp.toPx()
         val h = size.height - axisH
         val pitchX = size.width / values.size
-        val barW = (pitchX * 0.56f).coerceAtMost(14.dp.toPx())
         val max = values.max().coerceAtLeast(1f)
         val picked = touchX?.takeIf { scrubbing }?.let { (it / pitchX).toInt().coerceIn(0, values.size - 1) }
         gridLine(h - 0.5.dp.toPx())
@@ -269,14 +284,7 @@ fun GlowBars(
             // While scrubbing, the other columns dim so the picked one stands out.
             val dim = if (picked == null || picked == i) 1f else 0.35f
             val color = if (i == highlight || i == picked) accent else Ink.copy(alpha = 0.6f)
-            // Never shorter than round, so a small value still reads as a bar.
-            val barH = ((h - top) * v / max).coerceAtLeast(barW)
-            drawRoundRect(
-                color.copy(alpha = color.alpha * dim),
-                topLeft = Offset(pitchX * i + (pitchX - barW) / 2, h - barH),
-                size = Size(barW, barH),
-                cornerRadius = CornerRadius(barW / 2),
-            )
+            pillBar(color.copy(alpha = color.alpha * dim), pitchX * i, pitchX, h, (h - top) * v / max)
         }
         axis(m, labels, h + 4.dp.toPx())
         if (picked != null && describe != null) readout(m, describe(picked, values[picked]), pitchX * picked + pitchX / 2, 0f)

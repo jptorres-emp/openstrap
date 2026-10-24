@@ -171,7 +171,8 @@ private fun StartStrip(sports: List<SportUse>, onStart: (Int) -> Unit, onAllSpor
                 // Three named pills and All sports don't fit a phone, so the sports are icons, named for TalkBack.
                 SportPill(SportIcons.of(s.sportType), Workouts.sportName(s.sportType), Modifier.width(52.dp), iconOnly = true) { onStart(s.sportType) }
             }
-            SportPill(null, "All sports", Modifier.weight(1f), onClick = onAllSports)
+            // A compact pill after the sports at every width: its name is all it needs.
+            SportPill(null, "All sports", Modifier, onClick = onAllSports)
         }
     }
 }
@@ -181,7 +182,7 @@ private fun SportPill(
     icon: androidx.compose.ui.graphics.vector.ImageVector?, name: String, modifier: Modifier, iconOnly: Boolean = false, onClick: () -> Unit,
 ) {
     Row(
-        modifier.height(40.dp).glass(RoundedCornerShape(50), onClick).padding(horizontal = 10.dp),
+        modifier.height(40.dp).glass(RoundedCornerShape(50), onClick).padding(horizontal = if (iconOnly) 10.dp else 16.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center,
     ) {
         if (icon != null) {
@@ -223,7 +224,7 @@ private fun StepsGlow(state: DayUiState, usual: List<Float>?, tag: TitleTag?, on
 
 /**
  * Hourly pill bars (chart kit): the day's steps as 24 pills, one an hour, as high as the hour's share of the busiest.
- * The latest hour with steps is lit full white; hours with none, and those still to come, are faint stubs. Tapping an
+ * The latest hour with steps is lit full white; hours with none, and those still to come, are left out over a hairline. Tapping an
  * hour picks it ([onPick]) and lights it in place of the latest; tapping it again lets it go.
  */
 @Composable
@@ -242,19 +243,11 @@ private fun HourPills(hourly: List<Float>, picked: Int?, onPick: (Int?) -> Unit)
             },
         ) {
             val slot = size.width / hourly.size
-            val w = slot * 0.56f
+            // Hours with no steps and those to come aren't drawn, only the hairline under the bars (spec 2.7).
+            barBaseline(size.height - 0.5.dp.toPx())
             hourly.forEachIndexed { i, v ->
-                val x = slot * i + (slot - w) / 2
-                if (v <= 0f) {
-                    val stub = 2.dp.toPx()
-                    drawRoundRect(Color.White.copy(alpha = 0.18f), Offset(x, size.height - stub), Size(w, stub), CornerRadius(stub / 2))
-                    return@forEachIndexed
-                }
-                val h = (size.height * v / top).coerceAtLeast(w)
-                drawRoundRect(
-                    if (i == last) Color.White else Color.White.copy(alpha = 0.45f),
-                    Offset(x, size.height - h), Size(w, h), CornerRadius(w / 2),
-                )
+                if (v <= 0f) return@forEachIndexed
+                pillBar(if (i == last) Color.White else Color.White.copy(alpha = 0.45f), slot * i, slot, size.height, size.height * v / top)
             }
         }
         Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.SpaceBetween) {

@@ -24,6 +24,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import org.openstrap.app.ui.dashboard.ScreenList
@@ -189,24 +191,84 @@ internal const val CARD_CARET_ALPHA = 0.5f
 /** A row's caret, at its end. */
 internal const val ROW_CARET_ALPHA = 0.3f
 
-/** A card's title in [GlowType.cardTitle], with the tap caret 6 dp after the text when the card opens something. */
+/**
+ * A card's title in [GlowType.cardTitle], on one line, with the tap caret 6 dp after the text when the card opens
+ * something. Where a title only just fits (a Small on a narrow phone) the gap closes to [CaretMinGap] before the title
+ * would ever wrap; an ellipsis is the last resort.
+ */
 @Composable
-internal fun CardTitle(
-    title: String,
-    modifier: Modifier = Modifier,
-    maxLines: Int = Int.MAX_VALUE,
-    overflow: TextOverflow = TextOverflow.Clip,
-) {
+internal fun CardTitle(title: String, modifier: Modifier = Modifier) {
     if (!LocalCardOpens.current) {
-        Text(title, modifier, color = Color.White, style = GlowType.cardTitle, maxLines = maxLines, overflow = overflow)
+        Text(title, modifier, color = Color.White, style = GlowType.cardTitle, maxLines = 1, overflow = TextOverflow.Ellipsis)
         return
     }
-    Row(modifier, verticalAlignment = Alignment.CenterVertically) {
-        Text(title, Modifier.weight(1f, fill = false), color = Color.White, style = GlowType.cardTitle, maxLines = maxLines, overflow = overflow)
-        Spacer(Modifier.width(6.dp))
-        TapCaret(CARD_CARET_ALPHA)
+    Layout(
+        content = {
+            Text(title, color = Color.White, style = GlowType.cardTitle, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            TapCaret(CARD_CARET_ALPHA)
+        },
+        modifier = modifier,
+    ) { (text, caret), cs ->
+        val c = caret.measure(Constraints())
+        val gap = CaretGap.roundToPx()
+        val minGap = CaretMinGap.roundToPx()
+        val t = text.measure(
+            if (!cs.hasBoundedWidth) Constraints(maxHeight = cs.maxHeight)
+            else Constraints(maxWidth = (cs.maxWidth - c.width - minGap).coerceAtLeast(0), maxHeight = cs.maxHeight),
+        )
+        val g = if (!cs.hasBoundedWidth) gap else (cs.maxWidth - t.width - c.width).coerceIn(minGap, gap)
+        val w = (t.width + g + c.width).let { if (cs.hasBoundedWidth) it.coerceIn(cs.minWidth, cs.maxWidth) else it.coerceAtLeast(cs.minWidth) }
+        val h = maxOf(t.height, c.height).coerceAtLeast(cs.minHeight)
+        layout(w, h) {
+            t.place(0, (h - t.height) / 2)
+            c.place(t.width + g, (h - c.height) / 2)
+        }
     }
 }
+
+/** From a card's title to its caret, and the least it closes to when the title only just fits. */
+private val CaretGap = 6.dp
+private val CaretMinGap = 2.dp
+
+/**
+ * A title row: [start] (the title, with its caret and mark) on the left and [end] (the note) on the right when both
+ * fit on one line. When they don't, the note drops to the line under the title rather than wrap it (spec 2.3, a card
+ * title stays on one line).
+ */
+@Composable
+internal fun TitleRow(modifier: Modifier = Modifier, start: @Composable () -> Unit, end: (@Composable () -> Unit)?) {
+    if (end == null) {
+        Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) { start() }
+        return
+    }
+    Layout(content = { start(); end() }, modifier = modifier.fillMaxWidth()) { (s, e), cs ->
+        val gap = NoteGap.roundToPx()
+        val note = e.measure(Constraints(maxWidth = cs.maxWidth))
+        val wanted = s.maxIntrinsicWidth(cs.maxHeight) + gap + note.width
+        // Asked how wide it would like to be (an intrinsic measure), it's the one line.
+        val w = if (cs.hasBoundedWidth) cs.maxWidth else wanted
+        val oneLine = wanted <= w
+        if (oneLine) {
+            val title = s.measure(Constraints(maxWidth = w - gap - note.width))
+            val h = maxOf(title.height, note.height)
+            layout(w, h) {
+                title.place(0, (h - title.height) / 2)
+                note.place(w - note.width, (h - note.height) / 2)
+            }
+        } else {
+            val title = s.measure(Constraints(maxWidth = w))
+            val under = NoteUnder.roundToPx()
+            layout(w, title.height + under + note.height) {
+                title.place(0, 0)
+                note.place(0, title.height + under)
+            }
+        }
+    }
+}
+
+/** Between a title and its note on one line, and from the title to a note dropped under it. */
+private val NoteGap = 12.dp
+private val NoteUnder = 2.dp
 
 /**
  * The title row of a card: the title (with the tap caret when the card opens something), an optional [marker] next to
@@ -222,19 +284,41 @@ fun GlowHeader(
     tag: TitleTag? = null,
 ) {
     val marked = marker != null || tag != null
+    // A text note drops under the title when they can't share a line; richer trailing content (the (i) button) is
+    // small enough to stay beside it.
+    if (trailingContent == null) {
+        TitleRow(
+            start = {
+                // The mark goes beside the title, or under it on a narrow card, so it never squeezes the title.
+                if (marked) FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp),
+                    itemVerticalAlignment = Alignment.CenterVertically,
+                ) {
+                    CardTitle(title)
+                    TitleMark(marker, tag)
+                } else CardTitle(title)
+            },
+            end = trailing?.let { { NoteText(it) } },
+        )
+        return
+    }
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        // The mark goes beside the title, or under it on a narrow card, so it never squeezes the title.
         if (marked) FlowRow(
             Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp),
             itemVerticalAlignment = Alignment.CenterVertically,
         ) {
-            CardTitle(title, maxLines = 1)
+            CardTitle(title)
             TitleMark(marker, tag)
         } else CardTitle(title, Modifier.weight(1f))
-        if (trailing != null) Text(trailing, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary)
-        trailingContent?.invoke()
+        if (trailing != null) NoteText(trailing)
+        trailingContent()
     }
 }
+
+/** A title row's note, in Secondary on one line. */
+@Composable
+internal fun NoteText(text: String) =
+    Text(text, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary, maxLines = 1)
 
 /**
  * The hero number of a card in dot-matrix, its unit beside it, and up to two short facts on the right

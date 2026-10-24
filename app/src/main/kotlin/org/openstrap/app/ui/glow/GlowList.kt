@@ -62,27 +62,21 @@ fun ListPanel(
 ) {
     val marked = marker != null || tag != null
     val inner: @Composable ColumnScope.() -> Unit = {
-        if (title != null || note != null) Row(
-            // The first row's own padding sits under it, so the title row needs only a little below.
-            Modifier.fillMaxWidth().padding(top = GlowLayout.RowPadding, bottom = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(title.orEmpty(), color = Color.White, style = GlowType.cardTitle, modifier = Modifier.weight(1f, fill = !marked))
-            if (marked) {
-                TitleMark(marker, tag, Modifier.padding(start = 8.dp))
-                Spacer(Modifier.weight(1f))
-            }
-            if (note != null && onNote != null) Row(
-                // Tapped, the note grows into what it opens (spec 3.5).
-                cardOpening(onNote).let { o -> Modifier.then(o?.modifier ?: Modifier).clickable(onClick = o?.onClick ?: onNote) }
-                    .padding(start = 12.dp, top = 4.dp, bottom = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(note, color = Color.White, style = GlowType.secondary)
-                Spacer(Modifier.width(6.dp))
-                TapCaret(CARD_CARET_ALPHA)
-            } else if (note != null) Text(note, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary)
-        }
+        // The first row's own padding sits under it, so the title row needs only a little below. The note drops
+        // under the title when they can't share a line, so the title never wraps.
+        if (title != null || note != null) TitleRow(
+            Modifier.padding(top = GlowLayout.RowPadding, bottom = 6.dp),
+            start = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        title.orEmpty(), color = Color.White, style = GlowType.cardTitle, maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false),
+                    )
+                    if (marked) TitleMark(marker, tag, Modifier.padding(start = 8.dp))
+                }
+            },
+            end = note?.let { n -> { ListNote(n, onNote) } },
+        )
         content()
     }
     if (LocalEdgeOverride.current.edge != null) {
@@ -97,6 +91,22 @@ fun ListPanel(
             .padding(GlowLayout.ListPadding),
         content = inner,
     )
+}
+
+/** A list title row's note: a way on ("All 9") with its caret when [onNote] is given, else plain Secondary. */
+@Composable
+private fun ListNote(note: String, onNote: (() -> Unit)?) {
+    if (onNote == null) return NoteText(note)
+    Row(
+        // Tapped, the note grows into what it opens (spec 3.5).
+        cardOpening(onNote).let { o -> Modifier.then(o?.modifier ?: Modifier).clickable(onClick = o?.onClick ?: onNote) }
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(note, color = Color.White, style = GlowType.secondary, maxLines = 1)
+        Spacer(Modifier.width(6.dp))
+        TapCaret(CARD_CARET_ALPHA)
+    }
 }
 
 /**

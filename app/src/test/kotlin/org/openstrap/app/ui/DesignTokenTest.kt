@@ -7,6 +7,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
+import org.openstrap.app.ui.glow.BarMaxWidth
 import org.openstrap.app.ui.glow.DotSize
 import androidx.compose.ui.graphics.luminance
 import org.openstrap.app.ui.glow.GlowLayout
@@ -89,6 +90,23 @@ class DesignTokenTest {
         if (found.isNotEmpty()) fail("A row that opens something shows its metric's icon (spec 2.5):\n" + found.joinToString("\n"))
     }
 
+    @Test fun `a card title stays on one line`() {
+        // Spec 2.3: a note drops under the title ([TitleRow]) rather than wrap it. Every title text is one line.
+        val found = mutableListOf<String>()
+        sources.forEach { (path, lines) ->
+            if (path in titleNotMigrated) return@forEach
+            val code = lines.joinToString("\n")
+            Regex("""\bText\(""").findAll(code).forEach { m ->
+                val args = balanced(code, m.range.last)
+                val line = code.substring(0, m.range.first).count { it == '\n' } + 1
+                if ("GlowType.cardTitle" in args && !Regex("""\bmaxLines\s*=\s*1\b""").containsMatchIn(args)) found += "$path:$line  Text(${args.trim().take(80)})"
+            }
+        }
+        if (found.isNotEmpty()) fail("A card title is one line (spec 2.3):\n" + found.joinToString("\n"))
+        // Bars stay thin on a wide card, so a short one is never a dot (spec 2.7).
+        assertTrue(BarMaxWidth <= 6.dp)
+    }
+
     @Test fun `no metric has a second colour`() {
         val found = find(Regex("""\b(chargeScale|chargeAt|chargeDeep|readinessDeep)\b|MetricColors\.bad\b|\bval bad\b"""))
         if (found.isNotEmpty()) fail("Charge is one Ember, Recovery one teal, and bad is gone (spec 2.2):\n" + found.joinToString("\n"))
@@ -158,6 +176,9 @@ class DesignTokenTest {
             // The page buttons: fully round in step 8 (spec 2.4, pills and buttons).
             "glow/PageParts.kt" to 49,
         )
+
+        /** Pages whose panel titles move to the page parts in step 8, so the one-line rule waits for them. */
+        val titleNotMigrated = setOf("glow/PageParts.kt", "glow/GlowQuiet.kt")
 
         /** Where type sizes are defined. */
         val typeHomes = setOf("glow/GlowType.kt", "theme/Theme.kt")

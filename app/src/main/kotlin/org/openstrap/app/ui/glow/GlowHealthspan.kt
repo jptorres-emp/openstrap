@@ -87,12 +87,6 @@ internal fun termDetail(t: Healthspan.Term, age: Int): String {
     }
 }
 
-/** "Helping most: strength training", "Holding back most: steps", or a line for when every habit is typical. */
-internal fun leverText(r: Healthspan.Result): String {
-    val lever = r.lever ?: return "Every habit is close to typical"
-    return (if (lever.years < 0) "Helping most: " else "Holding back most: ") + lever.habit.label.replaceFirstChar { it.lowercase() }
-}
-
 /** "Sunday 22 Nov" for local midnight [day] (epoch seconds), with no-break spaces so it never wraps inside the date. */
 internal fun sundayText(day: Long): String = java.time.Instant.ofEpochSecond(day).atZone(java.time.ZoneId.systemDefault()).toLocalDate()
     .format(java.time.format.DateTimeFormatter.ofPattern("EEEE d MMM")).replace(' ', '\u00A0')

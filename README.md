@@ -22,7 +22,7 @@ OpenStrap replaces the Zepp app for the **Amazfit Helio Strap**. It pairs the st
 <p align="center">
   <img src="docs/screenshots/activity.png" width="30%" alt="Activity">
   <img src="docs/screenshots/heart-rate.png" width="30%" alt="Heart rate">
-  <img src="docs/screenshots/you.png" width="30%" alt="You">
+  <img src="docs/screenshots/workout.png" width="30%" alt="Live workout">
 </p>
 
 *Screenshots use the sample data that debug builds can generate.*

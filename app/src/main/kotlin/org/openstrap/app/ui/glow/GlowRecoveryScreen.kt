@@ -112,7 +112,7 @@ fun GlowRecoveryScreen(
                         if (failure != null) RecoveryFailedHero(failure, onOpen = { onOpenScore(Score.Recovery) }, onRetry = onRetryRecovery)
                         else RecoveryHero(
                             r, onOpen = { onOpenScore(Score.Recovery) }, onInfo = { info = true }, firstNights = firstNights,
-                            noSleep = isToday && state.asleepSeconds == null, firstScore = firstScore,
+                            noSleep = isToday && state.loaded && state.asleepSeconds == null, firstScore = firstScore,
                         )
                     RecoveryCard.Drivers -> DriversList(r?.readiness, onAll = { onOpenScore(Score.Recovery) })
                     // Charge is worked out with Recovery, so a failure there says so here too, not "after your first night".

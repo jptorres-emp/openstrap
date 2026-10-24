@@ -438,7 +438,7 @@ object Recovery {
             val p = (tonight.nadirTime - tonight.start).toFloat() / (tonight.end - tonight.start)
             val score = if (p <= 0.5f) 100 else (100 - 120 * (p - 0.5f)).toInt().coerceIn(40, 100)
             val after = ((tonight.end - tonight.nadirTime) / 60).toInt()
-            out += Contributor(Factor.RecoveryIndex, score, "Lowest HR ${formatMinutes(after)} before waking")
+            out += Contributor(Factor.RecoveryIndex, score, "Lowest heart rate ${formatMinutes(after)} before waking")
         }
 
         // Body temperature: distance from the usual nightly skin temperature, either direction, through the dead zone.

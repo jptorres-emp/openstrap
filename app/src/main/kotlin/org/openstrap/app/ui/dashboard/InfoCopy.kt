@@ -79,7 +79,7 @@ object InfoCopy {
     fun of(metric: Metric): Info = when (metric) {
         Metric.HeartRate -> Info(
             "Heart rate",
-            "How fast your heart beats, read by the strap through the day and night.",
+            "How fast your heart beats, in beats per minute (bpm), read by the strap through the day and night.",
             NORMAL_SCALE,
             how = "The strap reads your pulse with light through the skin, about once a minute, and more often in a " +
                 "workout or while Live is on. The band behind the day's line is your resting range: your usual resting " +
@@ -102,9 +102,9 @@ object InfoCopy {
             "HRV",
             "Heart rate variability, the small changes in time between heartbeats. Higher than your usual means your body has recovered.",
             NORMAL_SCALE,
-            how = "The strap measures the time between beats while you're still, mostly in sleep, and the day's value is " +
-                "the average of its readings. It's read against your own normal: the middle of your last 30 days, give " +
-                "or take a usual spread.",
+            how = "The strap measures the time between beats, in milliseconds (ms), while you're still, mostly in " +
+                "sleep, and the day's value is the average of its readings. It's read against your own normal: " +
+                "the middle of your last 30 days, give or take a usual spread.",
             moves = "Good sleep and rest raise it. Stress, hard training and alcohol lower it. Compare it with your own " +
                 "normal, not other people's.",
             off = "Moving during a reading, a loose strap or a short night leave fewer clean readings. HRV swings a lot " +
@@ -165,11 +165,12 @@ object InfoCopy {
             "Recovery",
             "How ready your body is for effort today, from 0 to 100, worked out each morning from your night.",
             RECOVERY_SCALE,
-            how = "Each morning OpenStrap compares your night with what's normal for you, not with other people: HRV, " +
-                "resting heart rate, skin temperature, breathing rate and blood oxygen, last night's sleep and the past " +
-                "few nights, and how hard yesterday was. About half the score comes from HRV and resting heart rate, " +
-                "about a quarter from sleep. One signal far from your normal caps it, so good sleep can't fully make up " +
-                "for it. Everything is worked out on this phone from your strap's data.",
+            how = "Each morning OpenStrap compares your night with what's normal for you, not with other people: " +
+                "HRV (heart rate variability), resting heart rate, skin temperature, breathing rate and blood " +
+                "oxygen, last night's sleep and the past few nights, and how hard yesterday was. About half the " +
+                "score comes from HRV and resting heart rate, about a quarter from sleep. One signal far from " +
+                "your normal caps it, so good sleep can't fully make up for it. Everything is worked out on this " +
+                "phone from your strap's data.",
             moves = "Good sleep, easy days and nights without alcohol lift it. Hard training, short nights, late meals, " +
                 "stress and illness hold it down.",
             off = "It needs ${Recovery.SCORED_NIGHTS} good nights to start and settles over ${Recovery.SETTLED_NIGHTS}. A " +
@@ -192,11 +193,13 @@ object InfoCopy {
             "Sleep score",
             "How well you slept, from 0 to 100, scored by the strap from the night.",
             SLEEP_SCALE,
-            how = "The score is the strap's own, from the length and the stages of the night, and it mostly follows how " +
-                "long you slept. What shaped the score rates the night against general sleep guidance: time asleep " +
-                "against your sleep need, and staying asleep, with under 30 minutes awake after falling asleep counting " +
-                "as settled. Too much sleep counts against it too, past 9½ hours. Stages aren't rated, since a strap " +
-                "reads them less surely than sleep from waking. It's a guide, not a medical assessment.",
+            how = "The score is the strap's own, from the length and the stages of the night, and it mostly " +
+                "follows how long you slept. The stages are light, deep and REM (rapid eye movement), when most " +
+                "dreams happen. What shaped the score rates the night against general sleep guidance: time asleep " +
+                "against your sleep need, and staying asleep, with under 30 minutes awake after falling asleep " +
+                "counting as settled. Too much sleep counts against it too, past 9½ hours. Stages aren't rated, " +
+                "since a strap reads them less surely than sleep from waking. It's a guide, not a medical " +
+                "assessment.",
             moves = "Regular bedtimes, a dark, cool room and less caffeine and alcohol late in the day help. Late nights, " +
                 "a restless night and waking early pull it down.",
             off = "Lying still awake can count as asleep, and light and deep sleep are hard to tell apart through the " +
@@ -250,7 +253,7 @@ object InfoCopy {
                 "or more as vigorous, inside a run of at least ${Activity.CADENCE_RUN_MINUTES} such minutes. Effort " +
                 "without steps, like cycling or rowing, counts from heart rate after ${Activity.HR_RUN_MINUTES} minutes in " +
                 "a row at ${(Activity.HR_MODERATE_HRR * 100).toInt()}% of your heart rate reserve or more, vigorous from " +
-                "${(Activity.HR_VIGOROUS_HRR * 100).toInt()}%. A vigorous minute counts double, as in the WHO's 2020 guidelines.",
+                "${(Activity.HR_VIGOROUS_HRR * 100).toInt()}%. A vigorous minute counts double, as in the World Health Organization's 2020 guidelines.",
             moves = "Brisk walks of a few minutes or more, cycling, running and sport all count. Strolling and short bursts don't.",
             off = "No study has checked a strap's step counts against walking pace, so brisk minutes near the line can be " +
                 "missed or counted. Pushing a trolley or holding a rail hides steps.",
@@ -275,10 +278,11 @@ object InfoCopy {
             "VO2 max",
             "The most oxygen your body can use in hard effort, a measure of fitness. Higher is fitter.",
             emptyList(),
-            how = "After a workout the strap can read it from, the number is the strap's own estimate from your heart " +
-                "rate and pace. Otherwise OpenStrap estimates it from your age, sex, BMI, resting heart rate while asleep " +
-                "and how active you say you are (Jurca and others, 2005), updated weekly, and shows it as a range. Where " +
-                "you sit for your age and sex comes from treadmill tests of thousands of adults (FRIEND, 2022).",
+            how = "It's measured in millilitres of oxygen per kilogram of body weight a minute (ml/kg/min). After a " +
+                "workout the strap can read it from, the number is the strap's own estimate from your heart rate and " +
+                "pace. Otherwise OpenStrap estimates it from your age, sex, body mass index, resting heart rate while " +
+                "asleep and how active you say you are (Jurca and others, 2005), updated weekly, and shows it as a " +
+                "range. Where you sit for your age and sex comes from treadmill tests of thousands of adults (FRIEND, 2022).",
             moves = "Regular hard effort raises it over weeks. Weight, age and long breaks from training lower it.",
             off = "The estimate from your profile is typically within about 5 either way. A resting heart rate thrown " +
                 "by a short night or illness moves it.",
@@ -296,7 +300,7 @@ object InfoCopy {
         )
         Score.Energy -> Info(
             "Energy",
-            "The energy your body uses in a day, at rest and moving, in kcal. An estimate.",
+            "The energy your body uses in a day, at rest and moving, in kilocalories (kcal). An estimate.",
             emptyList(),
             how = "Your body's use at rest comes from your weight, height, age and sex (Mifflin-St Jeor). On top of it " +
                 "come your steps each minute and, for effort without steps, your heart rate. A recorded workout uses " +

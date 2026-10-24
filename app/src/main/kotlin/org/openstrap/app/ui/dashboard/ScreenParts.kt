@@ -23,13 +23,6 @@ import org.openstrap.app.data.db.SleepStage
 import org.openstrap.app.ui.components.ChartPoint
 import org.openstrap.app.ui.theme.MetricColors
 
-val SLEEP_COLORS = mapOf(
-    SleepStage.AWAKE to MetricColors.sleepAwake,
-    SleepStage.REM to MetricColors.sleepRem,
-    SleepStage.LIGHT to MetricColors.sleepLight,
-    SleepStage.DEEP to MetricColors.sleepDeep,
-)
-
 val SLEEP_NAMES = mapOf(
     SleepStage.AWAKE to "Awake",
     SleepStage.REM to "REM",

@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -130,49 +129,6 @@ fun DotDivider(modifier: Modifier = Modifier) {
             strokeWidth = 1.5.dp.toPx(), cap = StrokeCap.Round,
             pathEffect = PathEffect.dashPathEffect(floatArrayOf(0f, 6.dp.toPx())),
         )
-    }
-}
-
-private val TileShape = RoundedCornerShape(18.dp)
-
-/**
- * A tappable tile for a grid of statistics: a soft raised surface, the metric's dot and label, and a chevron
- * that says it opens the metric's detail. [content] sits underneath.
- */
-@Composable
-fun GlowTile(label: String, accent: Color, onClick: (() -> Unit)?, modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
-    Column(
-        modifier
-            .background(Color.White.copy(alpha = 0.05f), TileShape)
-            .let { if (onClick != null) it.pressClickable(onClick, TileShape, scale = 0.97f) else it }
-            .drawBehind {
-                drawRoundRect(
-                    Color.White.copy(alpha = 0.08f), cornerRadius = CornerRadius(18.dp.toPx()),
-                    style = Stroke(1.dp.toPx()),
-                )
-            }
-            .padding(horizontal = 14.dp, vertical = 12.dp),
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(6.dp).background(accent, CircleShape))
-            Spacer(Modifier.width(8.dp))
-            Text(label, color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.bodySmall, maxLines = 2, modifier = Modifier.weight(1f))
-            if (onClick != null) Icon(AppIcons.CaretRight, null, tint = Color.White.copy(alpha = 0.55f), modifier = Modifier.size(14.dp))
-        }
-        content()
-    }
-}
-
-/** Two tiles a row, evenly spaced; an odd last tile keeps its half width. */
-@Composable
-fun <T> TileGrid(items: List<T>, tile: @Composable (T, Modifier) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        items.chunked(2).forEach { pair ->
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.height(androidx.compose.foundation.layout.IntrinsicSize.Max)) {
-                pair.forEach { tile(it, Modifier.weight(1f).fillMaxHeight()) }
-                if (pair.size == 1) Spacer(Modifier.weight(1f))
-            }
-        }
     }
 }
 

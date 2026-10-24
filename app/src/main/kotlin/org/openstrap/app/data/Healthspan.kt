@@ -209,7 +209,7 @@ object Healthspan {
 
     enum class Habit(val label: String, val fitness: Boolean) {
         Strength("Strength training", false),
-        Vo2max("Fitness (VO2max)", true),
+        Vo2max("Fitness (VO2 max)", true),
         Steps("Steps", true),
         Regularity("Sleep regularity", false),
         RestingHr("Resting heart rate", true),

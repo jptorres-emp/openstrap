@@ -64,19 +64,6 @@ class NarrativeTest {
     }
 
     @Test
-    fun sleepRatingUsesZeppBands() {
-        assertEquals(Rating.OPTIMAL, Narrative.sleepRating(100))
-        assertEquals(Rating.OPTIMAL, Narrative.sleepRating(90))
-        assertEquals(Rating.GOOD, Narrative.sleepRating(89))
-        assertEquals(Rating.GOOD, Narrative.sleepRating(80))
-        assertEquals(Rating.FAIR, Narrative.sleepRating(79))
-        assertEquals(Rating.FAIR, Narrative.sleepRating(60))
-        assertEquals(Rating.LOW, Narrative.sleepRating(59))
-        assertEquals(Rating.LOW, Narrative.sleepRating(0))
-        assertEquals("Low", Narrative.sleepRating(58).label)
-    }
-
-    @Test
     fun totalSleepRatesOversleep() {
         fun total(min: Int) = Narrative.sleepContributors(SleepSession(start = 0, end = min * 60L), min * 60L).first { it.label == "Total sleep" }.rating
         assertEquals(Rating.OPTIMAL, total(8 * 60))

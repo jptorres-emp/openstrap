@@ -25,17 +25,6 @@ object Narrative {
         else -> Rating.LOW
     }
 
-    /**
-     * A sleep score in Zepp's bands: 90+ Optimal, 80-89 Good, 60-79 Fair, below 60 Attention (codemap 06 §4.2). Stricter
-     * than [ratingFor] because that's the scale the strap's own score is built for.
-     */
-    fun sleepRating(score: Int): Rating = when {
-        score >= 90 -> Rating.OPTIMAL
-        score >= 80 -> Rating.GOOD
-        score >= 60 -> Rating.FAIR
-        else -> Rating.LOW
-    }
-
     /** Under 6 h asleep: the bottom of Zepp's duration bands (codemap 06 §4.2), and 56 on [org.openstrap.app.data.Recovery.durationScore]. */
     const val SHORT_NIGHT_MINUTES = 6 * 60
 
@@ -78,13 +67,6 @@ object Narrative {
             light -> "Light sleep"
             else -> "Okay night"
         }
-    }
-
-    fun sleepBody(session: SleepSession, asleepSeconds: Long): String = buildString {
-        append("You slept ${formatDuration(asleepSeconds)}")
-        session.deepMinutes?.takeIf { it > 0 }?.let { append(" with ${formatDuration(it * 60L)} of deep sleep") }
-        append(".")
-        session.wakeCount?.takeIf { it > 0 }?.let { append(" You woke $it ${if (it == 1) "time" else "times"}.") }
     }
 
     /** One sleep contributor: rating plus how full its bar is. */
@@ -138,48 +120,6 @@ object Narrative {
         else -> Rating.LOW
     }
 
-    /**
-     * The strap's own readiness score or one of its parts (HRV, resting HR, skin temperature, AHI) in Zepp's three
-     * bands: 85+ Optimal, 70-84 Good, below 70 Pay attention (codemap 06 §2.6). Only for the strap's values; OpenStrap's
-     * own score and contributors use [ratingFor].
-     */
-    fun zeppReadinessRating(score: Int): Rating = when {
-        score >= 85 -> Rating.OPTIMAL
-        score >= 70 -> Rating.GOOD
-        else -> Rating.LOW
-    }
-
-    fun readinessHeadline(score: Int, alert: Boolean): String = when {
-        alert -> org.openstrap.app.data.BodySignalsCopy.SHORT
-        score >= 85 -> "Ready for more"
-        score >= 70 -> "Ready"
-        score >= org.openstrap.app.data.Recovery.FAIR_FROM -> "Take it steady"
-        else -> "Take it easy"
-    }
-
-    fun readinessBody(r: org.openstrap.app.data.Recovery.Readiness): String {
-        val score = r.score ?: return ""
-        val advice = when {
-            r.strainAlert -> "Several overnight signals are outside your usual range. An easier day helps."
-            score >= 85 -> "You're well recovered. Your body is ready for effort today."
-            score >= 70 -> "Recovered enough for your usual training."
-            score >= org.openstrap.app.data.Recovery.FAIR_FROM -> "Recovery isn't complete. Keep intensity moderate."
-            else -> "Your body is still catching up. Today looks like an easy day. An early night helps tomorrow."
-        }
-        val ranked = r.contributors.filter { it.factor.weight >= 0.06f }.sortedBy { it.score }
-        val weakest = ranked.firstOrNull()?.takeIf { it.score < 70 }
-        // A quiet training day isn't something to praise, so load never counts as a strength.
-        val strongest = ranked.lastOrNull { it.factor.physiological || it.factor == org.openstrap.app.data.Recovery.Factor.Sleep }
-            ?.takeIf { it.score >= 85 && it != weakest }
-        return buildString {
-            append(advice)
-            if (weakest != null) append(" ${weakest.factor.label} is holding you back")
-            if (weakest != null && strongest != null) append(". ${strongest.factor.label} is a strength.")
-            else if (weakest != null) append(".")
-            else if (strongest != null) append(" ${strongest.factor.label} looks strong.")
-        }
-    }
-
     /** A Charge as its band's word from the info sheet's scale. */
     fun chargeHeadline(charge: Int): String = InfoCopy.CHARGE_SCALE[InfoCopy.chargeBar(charge)]
 
@@ -192,23 +132,5 @@ object Narrative {
             left > 0 -> "Stress counts from ${t.value} for now. After ${if (left == 1) "1 more day" else "$left more days"} of wear it adjusts to your own calm level."
             else -> "Stress counts from ${t.value} for now, until there are enough calm readings to find your own level."
         }
-    }
-
-    /** One sentence on where the day's charge went, naming the biggest drain. */
-    fun chargeBody(c: org.openstrap.app.data.Recovery.ChargeDay): String {
-        val now = c.latest?.toInt() ?: return ""
-        val used = (c.drainedExercise + c.drainedStress + c.drainedLiving).toInt()
-        val start = c.atWake?.let {
-            if (c.strapOffOvernight) "With the strap off overnight, today started from an estimated ${it.toInt()}. You've used $used since"
-            else "You woke at ${it.toInt()} and have used $used since"
-        } ?: "You've used $used today"
-        val biggest = listOf("movement" to c.drainedExercise, "stress" to c.drainedStress).maxBy { it.second }
-        val cause = if (biggest.second >= 8) ", most of it on ${biggest.first}." else "."
-        val advice = when {
-            now < 25 -> " An early night helps."
-            now < 50 -> " Pace yourself for the rest of the day."
-            else -> " Plenty left for the rest of the day."
-        }
-        return start + cause + advice
     }
 }

@@ -120,7 +120,7 @@ Weights (a design choice, to be checked with the backtest) add up to 1: autonomi
 
 The strap's method is unknown and may change with firmware, and a baseline that mixes two definitions measures the switch, not the body. So:
 
-1. Before 7 valid own nights (and on a withheld day), the strap's Readiness and its parts show as "Strap's estimate". They never enter OpenStrap's score. The strap's score and parts are rated in Zepp's own three bands (85+ Optimal, 70–84 Good, below 70 Pay attention; `Narrative.zeppReadinessRating`), OpenStrap's score and contributors in its four (85 / 70 / 55).
+1. Before 7 valid own nights (and on a withheld day), the strap's Readiness and its parts show as "Strap's estimate". They never enter OpenStrap's score. The strap's score carries that label rather than a rating word. OpenStrap's score and contributors are rated in its four bands (85 / 70 / 55).
 2. On a night where our own value fails the validity rule, the strap's `sleepHrv` / `sleepRestingHr` show (and feed the alerts), flagged "strap fallback", and stay out of the baseline.
 3. A data-quality note appears when own and strap differ by more than `HRV_QA_FRACTION` = 15 % (HRV) or `RHR_QA_BPM` = 3 bpm (resting HR).
 

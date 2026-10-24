@@ -189,9 +189,10 @@ private fun HowItWorksPanel() {
         DotHeader("How it works", expanded = open)
         if (!open) return@DotPanel
         Text(
-            "Each habit is scored against the typical person your age and sex: resting heart rate, steps, sleep regularity, " +
-                "time asleep, strength training and fitness. Better than typical takes years off, worse adds them. " +
-                "The total is shrunk, because the habits overlap, and capped at 5 years either way.",
+            "Each habit is scored against the typical person your age and sex: resting heart rate, steps, sleep " +
+                "regularity, time asleep, strength training and fitness (VO2 max, the most oxygen your body can " +
+                "use in hard effort). Better than typical takes years off, worse adds them. The total is shrunk, " +
+                "because the habits overlap, and capped at 5 years either way.",
             color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodyMedium,
         )
         Text(

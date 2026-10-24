@@ -329,17 +329,3 @@ data class TrendPoint(val label: String, val value: Float?)
 /** A sleep stage interval for the hypnogram. */
 data class StageSpan(val start: Long, val end: Long, val stage: Int)
 
-/** Circular progress ring with a faint track and a round cap. */
-@Composable
-fun ProgressRing(progress: Float, color: Color, modifier: Modifier = Modifier, size: Dp = 120.dp, stroke: Dp = 12.dp) {
-    Canvas(modifier.size(size)) {
-        val s = stroke.toPx()
-        val arcSize = Size(this.size.width - s, this.size.height - s)
-        val topLeft = Offset(s / 2, s / 2)
-        drawArc(color.copy(alpha = 0.14f), 0f, 360f, false, topLeft, arcSize, style = Stroke(s))
-        val sweep = 360f * progress.coerceIn(0f, 1f)
-        if (sweep > 0f) {
-            drawArc(color, -90f, sweep, false, topLeft, arcSize, style = Stroke(s, cap = StrokeCap.Round))
-        }
-    }
-}

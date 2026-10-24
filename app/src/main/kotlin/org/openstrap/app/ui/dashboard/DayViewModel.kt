@@ -109,6 +109,8 @@ data class DayUiState(
     val sleepSkinTemperature: List<ChartPoint> = emptyList(),
     val dayStart: Long = 0,
     val dayEnd: Long = 0,
+    /** False for the empty state before the day's rows arrive, so "no sleep" isn't read into data still loading. */
+    val loaded: Boolean = false,
 ) {
     val asleepSeconds: Long? get() = sleepBreakdown?.asleepSeconds ?: sleep?.let { it.end - it.start }
 }
@@ -363,6 +365,7 @@ class DayViewModel(
             val series = Summaries.heartRateSeries(hr, act)
             val hourly = Summaries.hourlySteps(act, day.from)
             DayUiState(
+                loaded = true,
                 date = date,
                 steps = liveCounter.today(Summaries.totalSteps(act), live),
                 minuteSteps = Summaries.totalSteps(act),

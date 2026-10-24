@@ -28,14 +28,13 @@ import kotlin.math.roundToInt
 
 /**
  * What a phone workout's summary shows: [analysis] over its shown range, [recorded] every sample from
- * [recordedStart] to [recordedEnd] (for the trim chart), and [usual] to compare with.
+ * [recordedStart] to [recordedEnd] (for the trim chart).
  */
 data class PhoneSummary(
     val analysis: WorkoutAnalysis,
     val recorded: List<org.openstrap.app.data.db.WorkoutHeartRate>,
     val recordedStart: Long,
     val recordedEnd: Long,
-    val usual: WorkoutRecorder.Usual?,
     val endReason: Int?,
     /** The route, when it was kept; empty otherwise. */
     val route: List<org.openstrap.app.data.Route.Point> = emptyList(),
@@ -170,9 +169,9 @@ class WorkoutsViewModel(private val dao: HealthDao, private val profile: Flow<Us
         }
 
     /**
-     * A phone workout's summary: its analysis, everything recorded (for trimming), and "your usual" from the last
-     * similar workouts of the same sport, phone or strap ([WorkoutRecorder.similar]). [backfill] works out the effect of
-     * a workout from before there was one and saves it; off, opening the summary writes nothing.
+     * A phone workout's summary: its analysis, everything recorded (for trimming), and the strap's own record of it
+     * when there is one. [backfill] works out the effect of a workout from before there was one and saves it; off,
+     * opening the summary writes nothing.
      */
     fun phoneSummary(start: Long, backfill: Boolean = true): Flow<PhoneSummary?> =
         combine(dao.appWorkout(start), dao.appWorkoutHeartRate(start), fallbackMaxHr, workouts, combine(dao.route(start), dao.sets(start)) { r, s -> r to s }) { w, hr, maxHr, all, extra ->
@@ -187,16 +186,12 @@ class WorkoutsViewModel(private val dao: HealthDao, private val profile: Flow<Us
                     runCatching { org.openstrap.app.data.WorkoutEffectEngine(dao).backfill(w, profile.first()) }
                 }
                 val a = WorkoutRecorder.analyse(w, hr, maxHr)
-                val similar = WorkoutRecorder.similar(a, all).map { s ->
-                    dao.appWorkoutOnce(s.workout.start)?.let { pw -> WorkoutRecorder.analyse(pw, dao.appWorkoutHeartRateOnce(pw.start), maxHr) }
-                        ?: Workouts.analyse(s.workout, dao.workoutHeartRate(s.workout.start).first(), dao.sportEffects().first(), maxHr)
-                }
                 // Merged by time: a strap workout that started within two minutes of this one's shown range.
                 val strap = all.firstOrNull { !it.fromPhone && it.workout.start in (w.from - 120)..((w.end ?: a.end) + 120) }
                     ?.let { s -> Workouts.analyse(s.workout, dao.workoutHeartRate(s.workout.start).first(), dao.sportEffects().first(), maxHr) }
                 val route = routeRows.map { it.point }.filter { it.t in w.from..(w.end ?: Long.MAX_VALUE) }
                 PhoneSummary(
-                    a, WorkoutRecorder.expand(hr), w.start, w.recordedEnd ?: w.end ?: a.end, WorkoutRecorder.usual(similar), w.endReason,
+                    a, WorkoutRecorder.expand(hr), w.start, w.recordedEnd ?: w.end ?: a.end, w.endReason,
                     route, hr.filter { !it.fromHistory }.map { it.timestamp to it.bpm }, w.distanceMeters, w.distanceFromSteps, sets, strap,
                     w.lapMarks.takeIf { it.isNotEmpty() }?.let { marks ->
                         WorkoutRecorder.laps(w.from, w.end ?: a.end, marks, hr.filter { !it.fromHistory }.map { it.timestamp to it.bpm }, route, w.pauseRanges)

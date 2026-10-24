@@ -381,8 +381,9 @@ private fun Hero(
             null -> if (LocalTime.now().hour < 12 || !ctx.isToday) HeroKind.Waking else HeroKind.Midday
         }
     }.let {
-        // No sleep last night: nothing for Recovery to score, so Charge leads from waking on (spec 4.3).
-        if (it == HeroKind.Waking && ctx.recoveryFailure == null && wakingLead(ctx.firstNights, ctx.state.asleepSeconds, ctx.isToday) == WakingLead.Charge) HeroKind.NoSleep
+        // No sleep last night: nothing for Recovery to score, so Charge leads from waking on (spec 4.3). Only once
+        // the day has loaded, or every cold start would flash the no-sleep hero first.
+        if (it == HeroKind.Waking && ctx.state.loaded && ctx.recoveryFailure == null && wakingLead(ctx.firstNights, ctx.state.asleepSeconds, ctx.isToday) == WakingLead.Charge) HeroKind.NoSleep
         else it
     }
     Crossfade(kind, animationSpec = tween(300), label = "hero") { k ->
@@ -441,7 +442,7 @@ private fun WakingHero(ctx: TodayContext, lightAngle: Float?, onOpen: () -> Unit
                 "Recovery", trailing = if (score != null && before != null) signed(score - before) + " vs yesterday" else null,
                 tag = if (ctx.firstScore && score != null) TitleTag(FIRST_SCORE) else null,
             )
-            HeroSentence(TodayCopy.waking(ctx.state.asleepSeconds, score, ctx.alert, ctx.noScore, ctx.firstNights, ctx.isToday))
+            if (ctx.state.loaded) HeroSentence(TodayCopy.waking(ctx.state.asleepSeconds, score, ctx.alert, ctx.noScore, ctx.firstNights, ctx.isToday))
             // A hero leaves out a figure it doesn't have rather than show a lone dash; the sentence says why.
             if (shown.value == null && atWake == null) return@Column
             Spacer(Modifier.height(24.dp))

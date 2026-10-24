@@ -199,11 +199,17 @@ class MainActivity : ComponentActivity() {
 
     /** Debug: `am start -n org.openstrap.app/.MainActivity --ei dump_raw_days 7` dumps raw history to files/raw. */
     private fun handleDebugIntent() {
-        // Debug: `--ez demo_data true` fills an empty database with sample data (for the emulator).
+        // Debug: `--ez demo_data true` fills an empty database with sample data (for the emulator), and stands in a
+        // strap when none is paired, so the screens show a paired phone. Pair with `simulate_hr` to have it connected.
         if (BuildConfig.DEBUG && intent.getBooleanExtra("demo_data", false)) {
             intent.removeExtra("demo_data")
-            val dao = (application as OpenStrapApp).container.database.healthDao()
-            kotlinx.coroutines.MainScope().launch { DemoData.fill(dao) }
+            val container = (application as OpenStrapApp).container
+            kotlinx.coroutines.MainScope().launch {
+                DemoData.fill(container.database.healthDao())
+                if (container.settings.pairedDevice.first() == null) {
+                    container.settings.savePairedDevice(org.openstrap.app.data.settings.PairedDevice("00:00:00:00:00:00", "00", "Helio Strap"))
+                }
+            }
         }
         // Debug: `--ei probe_endpoint 73 --es probe_hex 00` sends raw bytes to a channel endpoint and logs replies.
         val probeEndpoint = intent.getIntExtra("probe_endpoint", -1)
@@ -409,7 +415,6 @@ private fun AppRoot(
     // Opening Habit Age marks the estimate seen, so Today stops offering it.
     val seeHabitAge: () -> Unit = { healthspan?.result?.asOf?.let { a -> scope.launch { container.settings.setHabitAgeSeen(a) } } }
     val profile by deviceVm.profile.collectAsStateWithLifecycle()
-    val paired by deviceVm.paired.collectAsStateWithLifecycle()
     val realDay by dayVm.state.collectAsStateWithLifecycle()
     val day = remember(realDay, dataPreview) { realDay.previewed(dataPreview) }
     // Your usual steps by the hour, read once per day shown, off the main thread ([DayViewModel.usualSteps]).
@@ -492,7 +497,9 @@ private fun AppRoot(
     // The chip's "18 min ago" moves on by itself.
     val now by androidx.compose.runtime.produceState(epochNow()) { while (true) { kotlinx.coroutines.delay(30_000); value = epochNow() } }
     // What the screens are shown of the strap: the real state, or a debug preview's (nothing else changes).
-    val strapView = StrapView(paired != null, realConnection, realSync, syncRecord, realLastSeen).previewed(preview, now)
+    // Paired until the store says otherwise, so a paired strap never flashes the pairing hero or "Not paired" on start.
+    val realPairedKnown by remember { container.settings.pairedDevice.map { it != null } }.collectAsStateWithLifecycle(true)
+    val strapView = StrapView(realPairedKnown, realConnection, realSync, syncRecord, realLastSeen).previewed(preview, now)
     val connection = strapView.connection
     val sync = strapView.sync
     val lastSeen = strapView.lastSeen
@@ -545,8 +552,6 @@ private fun AppRoot(
     val moment = forced ?: clockMoment
     // What Today is laid out for: the moment today, the waking layout for a past day.
     val todayMoment = org.openstrap.app.ui.dashboard.layoutMoment(moment, day.date == clockDate)
-    // Paired until the store says otherwise, so a paired strap never flashes the pairing hero on start.
-    val realPairedKnown by remember { container.settings.pairedDevice.map { it != null } }.collectAsStateWithLifecycle(true)
     val pairedKnown = realPairedKnown && preview != StrapPreview.NotPaired
     LaunchedEffect(forced, clockMoment) {
         forced?.let { android.util.Log.i("OpenStrap", "moment: forced $it, the clock says $clockMoment") }

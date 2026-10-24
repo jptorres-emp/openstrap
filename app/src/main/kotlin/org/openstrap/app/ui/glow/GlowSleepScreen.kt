@@ -139,7 +139,8 @@ private fun NightHero(state: DayUiState, firstNights: Boolean, onOpen: () -> Uni
         Column {
             GlowHeader("Last night", trailing = session?.let { "${clock(it.start)}–${clock(it.end)}" })
             if (session == null) {
-                HeroSentence(if (firstNights) TabCopy.FIRST_NIGHT_SLEEP else TabCopy.noNight(state.naps.isNotEmpty(), isToday))
+                // Nothing said until the night has loaded, so a cold start doesn't open on "No sleep recorded".
+                if (state.loaded) HeroSentence(if (firstNights) TabCopy.FIRST_NIGHT_SLEEP else TabCopy.noNight(state.naps.isNotEmpty(), isToday))
                 return@Column
             }
             val asleep = state.asleepSeconds ?: (session.end - session.start)

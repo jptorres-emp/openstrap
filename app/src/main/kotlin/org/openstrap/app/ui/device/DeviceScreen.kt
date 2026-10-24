@@ -531,7 +531,7 @@ private fun ManualPairDialog(
         title = { Text("Enter the key yourself") },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("Scan with the strap on its charger and tap it to fill in the address, then paste the 32-character auth key.")
+                Text("Scan with the strap on its charger and tap it to fill in the address, then paste the 32-character auth key. The dBm beside each strap is its signal, and nearer zero is closer.")
                 if (scan.scanning) {
                     OutlinedButton(onClick = vm::stopScan, Modifier.fillMaxWidth()) { Text("Stop scanning") }
                     LinearProgressIndicator(Modifier.fillMaxWidth().clip(CircleShape))

@@ -21,6 +21,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -108,6 +109,10 @@ fun GlowCard(
     val grainSeed = remember { Random.nextInt(GRAIN_TILE * GRAIN_TILE) }
     val drift = remember { CoreDrift(Random) }
     val seconds = remember { mutableFloatStateOf(0f) }
+    // Beats so far, counted frame by frame at the bpm of the moment, so a new reading changes the pace from here on
+    // rather than jumping the heart to another point in its cycle.
+    val beats = remember { mutableFloatStateOf(0f) }
+    val bpm by rememberUpdatedState((lit.motion as? GlowMotion.Heartbeat)?.bpm ?: 0)
     val context = LocalContext.current
     val density = LocalDensity.current
     // When the system's animator scale is 0 the heart doesn't beat: the core sits at its resting state.
@@ -126,7 +131,9 @@ fun GlowCard(
                 last = withFrameNanos { it }
             }
             withFrameNanos { now ->
-                seconds.floatValue += (now - last) / 1e9f
+                val dt = (now - last) / 1e9f
+                seconds.floatValue += dt
+                beats.floatValue += dt * bpm / 60f
                 last = now
             }
         }
@@ -134,7 +141,9 @@ fun GlowCard(
 
     var size by remember { mutableStateOf(IntSize.Zero) }
     // The motion doesn't change how the card looks at rest, so it isn't part of the cache key.
-    val key = GlowCache.Key(lit, size, density.density)
+    // A live heart rate changes the motion every reading; keyed on it, each new bpm would drop the drawn layers and
+    // show the plain body colour until they're redrawn, a flash on every beat update.
+    val key = GlowCache.Key(lit.copy(motion = GlowMotion.Still), size, density.density)
     val bitmaps by produceState(GlowCache.peek(key), key) {
         // Always the layers for this key: when the card changes size, the old ones no longer fit.
         value = GlowCache.peek(key)
@@ -173,7 +182,7 @@ fun GlowCard(
         )
         if (b != null) {
             // The core on its own layer: moved and scaled, never redrawn.
-            CoreLayer(b, lit, core) { drift.at(seconds.floatValue, lit.motion) }
+            CoreLayer(b, lit, core) { drift.at(seconds.floatValue, beats.floatValue, lit.motion) }
         }
         CompositionLocalProvider(LocalCardNumbers provides opening?.numbers, LocalCardOpens provides (onClick != null)) {
             Box(Modifier.padding(contentPadding), content = content)
@@ -432,7 +441,7 @@ private class CoreDrift(private val random: Random) {
     /** Where in its cycle each card starts, so two heart cards don't beat in lockstep. */
     private val offset = random.nextFloat() * 10f
 
-    fun at(time: Float, motion: GlowMotion): Drift {
+    fun at(time: Float, beatsSoFar: Float, motion: GlowMotion): Drift {
         val t = time + offset
         return when (motion) {
             GlowMotion.Still -> Drift(0f, 0f, 1f)
@@ -441,7 +450,7 @@ private class CoreDrift(private val random: Random) {
                 // always as dark, so nothing flashes. Each beat also pushes it a little off centre, a new way each
                 // time, and squashes it, so the colour around it surges past a different side, like blood.
                 val base = wander(t, amount = 0.4f)
-                val beats = t * motion.bpm / 60f
+                val beats = beatsSoFar + offset
                 val c = contraction(beats)
                 val angle = beatAngle(floor(beats).toInt())
                 Drift(

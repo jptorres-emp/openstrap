@@ -1,11 +1,13 @@
 package org.openstrap.app.device
 
+import android.Manifest
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.SystemClock
@@ -62,6 +64,11 @@ class StrapService : LifecycleService() {
         val container = (application as OpenStrapApp).container
         val strap = container.strap
         val workout = container.workout
+        // Started before the permission was revoked (a notification button, say): startForeground would throw.
+        if (!allowed(this)) {
+            stopSelf()
+            return START_NOT_STICKY
+        }
         val first = shown ?: notification("Helio Strap", "Connecting…")
         if (intent?.action == ACTION_HIDE) hidden.value = Hidden(idleShown?.problem)
         // A GPS workout adds the location type, allowed because its start comes from the visible ready screen. After a
@@ -558,7 +565,16 @@ class StrapService : LifecycleService() {
         /** Whether the service is up; a start then needn't (and, once swiped away, mustn't) post its notification. */
         @Volatile private var running = false
 
+        /**
+         * Android 14 on refuses a connected-device service to an app holding no Bluetooth permission (never granted, or
+         * revoked in Settings), and the refusal throws inside the service, where no caller can catch it.
+         */
+        fun allowed(context: Context) = Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE ||
+            listOf(Manifest.permission.BLUETOOTH_CONNECT, Manifest.permission.BLUETOOTH_SCAN)
+                .any { context.checkSelfPermission(it) == PackageManager.PERMISSION_GRANTED }
+
         fun start(context: Context) {
+            if (!allowed(context)) return
             val intent = Intent(context, StrapService::class.java)
             if (running && runCatching { context.startService(intent) }.isSuccess) return
             context.startForegroundService(intent)

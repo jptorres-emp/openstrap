@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
@@ -120,70 +121,73 @@ fun ZeppSignInDialog(
     }
 
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Column(Modifier.fillMaxSize().background(Color.Black)) {
-            // A page's top: the round button (a close, since this sits over the page it came from) and the title.
-            Row(Modifier.fillMaxWidth().height(60.dp).padding(horizontal = GlowLayout.Gutter), verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    Modifier.size(44.dp).clip(CircleShape).background(ControlSurface).clickable(onClickLabel = "Close", onClick = onDismiss),
-                    contentAlignment = Alignment.Center,
-                ) { Icon(AppIcons.X, "Close", Modifier.size(20.dp), tint = Color.White) }
-                Spacer(Modifier.width(12.dp))
-                Text("Sign in with Zepp", color = Color.White, style = GlowType.pageTitle, maxLines = 1, modifier = Modifier.weight(1f))
-                if (step is SignInStep.SignIn) PageTextButton("Reset", { clearZeppCookies(); attempt++ })
-            }
-            when (val s = step) {
-                SignInStep.SignIn -> {
-                    Column(Modifier.padding(horizontal = GlowLayout.Gutter, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(
-                            "Use the email and password of the Zepp account your strap is linked to. Google, Apple, " +
-                                "Facebook and Xiaomi sign-in don't work here.",
-                            color = Color.White, style = GlowType.body,
-                        )
-                        PageNote(
-                            "This is Zepp's own page, so OpenStrap never sees your password. It reads only the app token and " +
-                                "user ID, then asks Zepp once for your devices.",
-                        )
-                    }
-                    key(attempt) {
-                        ZeppWebView(Modifier.fillMaxWidth().weight(1f).padding(top = 8.dp)) { provider ->
-                            step = SignInStep.Failed(
-                                "$provider sign-in doesn't work inside OpenStrap, because $provider blocks sign-in in embedded pages.\n\n" +
-                                    "Open the Zepp app and add an email and password to your account in its account settings. " +
-                                    "Then sign in here with that email. Or get the auth key on a computer.",
-                                thirdParty = true,
+        // Black to the screen's edges, the page itself in one centred column like every other page (spec 2.4).
+        Box(Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.TopCenter) {
+            Column(Modifier.widthIn(max = GlowLayout.PageMaxWidth).fillMaxSize()) {
+                // A page's top: the round button (a close, since this sits over the page it came from) and the title.
+                Row(Modifier.fillMaxWidth().height(60.dp).padding(horizontal = GlowLayout.Gutter), verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        Modifier.size(44.dp).clip(CircleShape).background(ControlSurface).clickable(onClickLabel = "Close", onClick = onDismiss),
+                        contentAlignment = Alignment.Center,
+                    ) { Icon(AppIcons.X, "Close", Modifier.size(20.dp), tint = Color.White) }
+                    Spacer(Modifier.width(12.dp))
+                    Text("Sign in with Zepp", color = Color.White, style = GlowType.pageTitle, maxLines = 1, modifier = Modifier.weight(1f))
+                    if (step is SignInStep.SignIn) PageTextButton("Reset", { clearZeppCookies(); attempt++ })
+                }
+                when (val s = step) {
+                    SignInStep.SignIn -> {
+                        Column(Modifier.padding(horizontal = GlowLayout.Gutter, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(
+                                "Use the email and password of the Zepp account your strap is linked to. Google, Apple, " +
+                                    "Facebook and Xiaomi sign-in don't work here.",
+                                color = Color.White, style = GlowType.body,
+                            )
+                            PageNote(
+                                "This is Zepp's own page, so OpenStrap never sees your password. It reads only the app token and " +
+                                    "user ID, then asks Zepp once for your devices.",
                             )
                         }
-                    }
-                }
-                SignInStep.Fetching -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                        PageProgress(modifier = Modifier.width(160.dp))
-                        Text("Signed in. Looking up your devices", color = Color.White, style = GlowType.body)
-                    }
-                }
-                is SignInStep.Failed -> Column(
-                    Modifier.verticalScroll(rememberScrollState()).padding(GlowLayout.Gutter),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    PagePanel {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Icon(AppIcons.WarningCircle, null, Modifier.size(20.dp), tint = MetricColors.warn)
-                            Text(if (s.thirdParty) "Use email sign-in" else "Couldn't get your devices", color = Color.White, style = GlowType.cardTitle, maxLines = 1)
+                        key(attempt) {
+                            ZeppWebView(Modifier.fillMaxWidth().weight(1f).padding(top = 8.dp)) { provider ->
+                                step = SignInStep.Failed(
+                                    "$provider sign-in doesn't work inside OpenStrap, because $provider blocks sign-in in embedded pages.\n\n" +
+                                        "Open the Zepp app and add an email and password to your account in its account settings. " +
+                                        "Then sign in here with that email. Or get the auth key on a computer.",
+                                    thirdParty = true,
+                                )
+                            }
                         }
-                        Text(s.message, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.body)
                     }
-                    PageButton(
-                        if (s.thirdParty) "Sign in with email" else "Sign in again",
-                        { clearZeppCookies(); step = SignInStep.SignIn; attempt++ }, Modifier.fillMaxWidth(), primary = true,
+                    SignInStep.Fetching -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                            PageProgress(modifier = Modifier.width(160.dp))
+                            Text("Signed in. Looking up your devices", color = Color.White, style = GlowType.body)
+                        }
+                    }
+                    is SignInStep.Failed -> Column(
+                        Modifier.verticalScroll(rememberScrollState()).padding(GlowLayout.Gutter),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        PagePanel {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                Icon(AppIcons.WarningCircle, null, Modifier.size(20.dp), tint = MetricColors.warn)
+                                Text(if (s.thirdParty) "Use email sign-in" else "Couldn't get your devices", color = Color.White, style = GlowType.cardTitle, maxLines = 1)
+                            }
+                            Text(s.message, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.body)
+                        }
+                        PageButton(
+                            if (s.thirdParty) "Sign in with email" else "Sign in again",
+                            { clearZeppCookies(); step = SignInStep.SignIn; attempt++ }, Modifier.fillMaxWidth(), primary = true,
+                        )
+                        ComputerGuideButton()
+                        PageButton("Close", onDismiss, Modifier.fillMaxWidth())
+                    }
+                    is SignInStep.Found -> FoundStrap(
+                        s.listing, confirmLabel, requireKey,
+                        onConfirm = { strap -> clearZeppCookies(); onConfirm(s.listing, strap) },
+                        onOtherAccount = { clearZeppCookies(); step = SignInStep.SignIn; attempt++ },
                     )
-                    ComputerGuideButton()
-                    PageButton("Close", onDismiss, Modifier.fillMaxWidth())
                 }
-                is SignInStep.Found -> FoundStrap(
-                    s.listing, confirmLabel, requireKey,
-                    onConfirm = { strap -> clearZeppCookies(); onConfirm(s.listing, strap) },
-                    onOtherAccount = { clearZeppCookies(); step = SignInStep.SignIn; attempt++ },
-                )
             }
         }
     }

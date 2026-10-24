@@ -135,13 +135,15 @@ class FrameRulesTest {
         assertTrue("the label fades out, then in", "fadeIn(tween(LABEL_FADE_MS, delayMillis = LABEL_FADE_MS)) togetherWith fadeOut(tween(LABEL_FADE_MS))" in reveal)
     }
 
-    @Test fun `sheets, workout pages and Profile's Save keep to the page column`() {
+    @Test fun `sheets, workout pages, the Zepp sign-in and Profile's Save keep to the page column`() {
         val glass = source("ui/components/Glass.kt").substringAfter("fun GlassSheet(")
         assertTrue("GlassSheet is at most PageMaxWidth", "widthIn(max = org.openstrap.app.ui.glow.GlowLayout.PageMaxWidth)" in glass)
         val workout = source("ui/glow/GlowWorkoutMode.kt").substringAfter("fun WorkoutPage(").substringBefore("\n}\n")
         assertTrue("WorkoutPage centres its content and its pinned buttons", Regex("""pageSide\(""").findAll(workout).count() == 1 && "start = side, end = side" in workout)
         val profile = source("ui/device/ProfileScreen.kt")
         assertTrue("Profile's Save is as wide as the fields", "start = side, end = side, bottom = bottom + 12.dp" in profile && "widthIn(max = 600.dp)" !in profile)
+        val zepp = source("ui/zepp/ZeppSignIn.kt").substringAfter("fun ZeppSignInDialog(")
+        assertTrue("the Zepp sign-in keeps to the page column", "Column(Modifier.widthIn(max = GlowLayout.PageMaxWidth)" in zepp && "contentAlignment = Alignment.TopCenter" in zepp)
         val screens = source("ui/dashboard/ScreenParts.kt")
         assertTrue("ScreenList centres a page", "LocalPageColumn.current" in screens)
     }

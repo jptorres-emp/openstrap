@@ -18,7 +18,6 @@ git): the file names below are theirs.
 
 **Not covered**, to do in the next pass:
 
-- The inner screen, unfolded. It needs the phone opened by hand.
 - The live workout and the During moment with a recording running. Forcing During without one shows the Midday
   layout, so only the header label could be checked.
 - The real pairing flow (the six pairing previews were checked).
@@ -300,6 +299,25 @@ States:
 | Add a workout | Dotted panel, page header with a bare arrow, headline at 26 times 1.25 | `wk_add` |
 | Notification | Fine | `notif_running` |
 
+### Unfolded (inner screen, 1968 by 2184)
+
+Captured after the first pass with the phone opened: Today at waking, midday and evening, the three tabs, two details
+and the calendar. Shots in `build/v2-shots/audit/open/`. The You and Strap pages weren't reached unfolded.
+
+| Where | Fault | Rule | Shot |
+|---|---|---|---|
+| Every tab | Content runs the full width, no 960 dp limit. A hero sentence becomes one line of 70 characters | 2.4 Unfolded | `today_Waking_0` |
+| Today, Recovery | Columns end at very different heights. On Recovery the left column (What drove it, Habit Age) stops halfway and leaves an empty half screen beside Body signals | 2.4 Unfolded | `tab_recovery_1` |
+| Today | The right column ends after Activity while the left carries on, so the lower right is empty | 2.4 Unfolded | `today_Waking_2` |
+| Tab bar | A narrow pill centred over two columns, cutting into both, no fade | 3.2 | every shot |
+| Details | A detail opens in a right pane beside the tab (list and detail), not as one centred column. This works better than the rule and the rule should follow it | 2.4 Unfolded | `det_hrv`, `tab_activity_0` |
+| Calendar sheet | Stretches the full width | 3.4 Sheets | `cal_open` |
+| Cards | The same faults as folded: dotted grids, row dots, two title styles, dim Charge | 2 | all |
+
+Proposed rule change for the fixes: on 600 dp and up, a detail opens in the right pane beside its tab (as built), a
+sheet is at most 600 dp wide and centred, and the two columns are balanced by height, moving the last optional card
+(Habit Age, Your week) to the shorter column.
+
 ## 4. Fix order
 
 Each step is one or a few commits, built by a subagent and checked on the phone screen by screen before the next.
@@ -323,4 +341,6 @@ Each step is one or a few commits, built by a subagent and checked on the phone 
 9. **Workouts.** Choose a sport with twelve sports and More sports, Ready with the strap hero and the outdoor or
    indoor switch deciding GPS, the calm down page, All workouts and Add a workout without dotted panels.
 10. **Frame and motion.** The tab bar fade, You and Strap growing from their buttons.
-11. **Recheck** every screen in this audit on the phone, folded and unfolded, plus the screens it didn't cover.
+11. **Unfolded.** The 960 dp content limit, balanced columns, sheets at most 600 dp, and the spec's 2.4 updated for
+    the right-pane details.
+12. **Recheck** every screen in this audit on the phone, folded and unfolded, plus the screens it didn't cover.

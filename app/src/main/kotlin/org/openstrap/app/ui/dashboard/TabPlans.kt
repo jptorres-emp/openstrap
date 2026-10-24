@@ -93,22 +93,22 @@ fun sleepCards(facts: SleepFacts = SleepFacts()): List<TabSlot<SleepCard>> {
 enum class ActivityCard { Start, Steps, ActiveMinutes, HeartPoints, Load, HeartRate, Facts, Workouts }
 
 /**
- * What changes the Activity tab: the start strip is [isToday] only, and heart rate is lit from the right while it's
+ * What changes the Activity tab: the Start a workout card is [isToday] only, and heart rate is lit from the right while it's
  * [live]. A [suggestion] to save is a row in the workouts list, not a card of its own.
  */
 data class ActivityFacts(val isToday: Boolean = true, val suggestion: Boolean = false, val live: Boolean = false)
 
 /**
- * Activity (spec 5.3): a strip to start a sport (today only), steps glowing, active minutes (from below) and Heart
- * points (from above) as a Small pair, Load filling across toward your usual, the day's heart rate (from the right
- * while live, else from below like any usual value), the day's facts as a list. The workouts list comes right after
- * another list, so it sits on an edge card in the neutral light, from the top.
+ * Activity (spec 5.3): a Wide edge card to start a sport (today only, the neutral light from below), steps glowing,
+ * active minutes (from below) and Heart points (from above) as a Small pair, Load filling across toward your usual,
+ * the day's heart rate (from the right while live, else from below like any usual value), the day's facts as a list.
+ * The workouts list comes right after another list, so it sits on an edge card in the neutral light, from the top.
  *
- * Wide: the strip and steps span both columns; the Small pair and Load on the left, heart rate, the facts and
- * workouts on the right.
+ * Wide: the Start a workout card and steps span both columns; the Small pair and Load on the left, heart rate, the
+ * facts and workouts on the right.
  */
 fun activityCards(facts: ActivityFacts = ActivityFacts()): List<TabSlot<ActivityCard>> = listOfNotNull(
-    TabSlot(ActivityCard.Start, CardLook(Tier.Strip, Hue.Steps, Edge.Bottom), Pane.Full).takeIf { facts.isToday },
+    TabSlot(ActivityCard.Start, edge(Hue.Neutral, Edge.Bottom), Pane.Full).takeIf { facts.isToday },
     TabSlot(ActivityCard.Steps, glow(Hue.Steps), Pane.Full),
     small(ActivityCard.ActiveMinutes, Hue.Steps, Edge.Bottom, Pane.Left),
     small(ActivityCard.HeartPoints, Hue.Heart, Edge.Top, Pane.Left),

@@ -42,44 +42,22 @@ private fun updatedText(asOf: Long): String {
     }
 }
 
-/** The screen behind the Healthspan card: the estimate, the pace it's moving at, and what moves it; or why it's withheld. */
+/**
+ * The page behind the Habit Age card (spec 5.4): the same edge card at the top, its (i) holding the method, then the
+ * pace it's moving at and what moves it; or, before an estimate, only the card saying why it waits.
+ */
 @Composable
 fun GlowHealthspanScreen(state: Healthspan.Outcome?, contentPadding: PaddingValues, onBack: () -> Unit) {
     BackHandler(onBack = onBack)
     val r = state?.result
     ScreenList(contentPadding, gutter = GlowLayout.Gutter) {
-        item { GlowDetailHeader("Habit Age", r?.let { updatedText(it.asOf) } ?: "Updated weekly, on Sunday", onBack) }
-        item {
-            GlowCard(HealthspanGlow, Modifier.fillMaxWidth()) {
-                Column {
-                    GlowHeader(if (r == null && state?.withheld?.learning == true) "Starting point" else "Your habits look like", trailing = if (r?.early == true) "Early" else "Weekly")
-                    if (r == null) {
-                        val learning = state?.withheld?.learning == true && state.age != null
-                        if (learning) GlowHeroNumber("${state?.age}", "your age")
-                        Text(
-                            when {
-                                state == null -> "Working it out…"
-                                state.missing.isNotEmpty() && state.withheld?.profile == true -> profileReminder(state.missing)
-                                learning -> learningText(state)
-                                else -> state.withheld?.reason.orEmpty()
-                            },
-                            color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 10.dp),
-                        )
-                        if (learning) Note("Everyone starts at their own age. From there, habits better than typical take years off and worse ones add them.")
-                        return@Column
-                    }
-                    GlowHeroNumber("${r.low}-${r.high}", "years", listOf(healthspanVerdict(r.age, r.estimate), "You're ${r.age}"))
-                    GlowChartGap()
-                    AgeScale(r.age, r.low, r.high, r.estimate)
-                    if (r.early) Note("An early estimate from under 6 months of data, so the range is wider.")
-                }
-            }
-        }
+        item { PageHeader("Habit Age", onBack, subtitle = r?.let { updatedText(it.asOf) } ?: "Updated weekly, on Sunday") }
+        // The page is what the card opens, so here it opens nothing: no caret.
+        item { HabitAgeEdgeCard(state, onClick = null, onOpenProfile = null) }
         if (r != null) {
             item { PacePanel(r.pace) }
             item { TermsPanel(r) }
         }
-        item { HowItWorksPanel() }
     }
 }
 
@@ -179,28 +157,5 @@ private fun EffectBar(years: Float) {
         drawLine(color.copy(alpha = 0.22f), Offset(mid, y), end, 6.dp.toPx(), StrokeCap.Round)
         drawLine(color, Offset(mid, y), end, 2.2.dp.toPx(), StrokeCap.Round)
         glowDot(end, color)
-    }
-}
-
-/** How the estimate is worked out, folded away; the full method is docs/algorithms/healthspan.md. */
-@Composable
-private fun HowItWorksPanel() {
-    var open by rememberSaveable { mutableStateOf(false) }
-    QuietPanel(onClick = { open = !open }) {
-        PanelTitle("How it works", expanded = open)
-        if (!open) return@QuietPanel
-        Text(
-            "Each habit is scored against the typical person your age and sex: resting heart rate, steps, sleep " +
-                "regularity, time asleep, strength training and fitness (VO2 max, the most oxygen your body can " +
-                "use in hard effort). Better than typical takes years off, worse adds them. The total is shrunk, " +
-                "because the habits overlap, and capped at 5 years either way.",
-            color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodyMedium,
-        )
-        Text(
-            "It looks back 6 months (3 for fitness). Pace compares the last 30 days with those 6 months. " +
-                "It updates once a week, and it's withheld until there's enough data.",
-            color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodyMedium,
-        )
-        Note("An estimate for personal insight, not a medical measurement. Shown as a range because each habit's effect is uncertain.")
     }
 }

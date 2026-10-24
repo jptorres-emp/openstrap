@@ -1,7 +1,15 @@
 package org.openstrap.app.ui.glow
 
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -95,7 +103,7 @@ fun GlowSleepScreen(
                         breathing != null -> if (pair) BreathingSmall(breathing, m) { breathingInfo = true } else BreathingCard(breathing) { breathingInfo = true }
                         // Waiting for the first night: the same card, a dim dash and when it fills.
                         pair -> SmallCard(MetricColors.sleepLight, "Breathing disturbances", null, null, AFTER_FIRST_NIGHT, m, waiting = true)
-                        else -> EdgeCard(MetricColors.sleepLight, Modifier.fillMaxWidth().gridSize(CardSize.Wide), kind = EdgeKind.Value) {
+                        else -> EdgeCard(MetricColors.sleepLight, Modifier.fillMaxWidth(), kind = EdgeKind.Value) {
                             EdgeTitle("Breathing disturbances", "Early estimate")
                             EdgeValue(null, null, AFTER_FIRST_NIGHT)
                         }
@@ -128,8 +136,10 @@ private val STAGE_ORDER = listOf(
 )
 
 /**
- * The night: how long, against the rest of the week, then the score and its word, how often you woke, the stages to
- * scrub and their totals. As high as its content. Tapping opens the Sleep score's detail ([onOpen]).
+ * The night (spec 5.2, the sleep hero): how long, against the rest of the week, then the score in dots with its word
+ * and how often you woke beside it, the one dotted number on the card. The stages to scrub in their colours, then
+ * their totals as one bar with a plain legend. No arc. As high as its content. Tapping opens the Sleep score's detail
+ * ([onOpen]).
  */
 @Composable
 private fun NightHero(state: DayUiState, firstNights: Boolean, onOpen: () -> Unit) {
@@ -146,35 +156,67 @@ private fun NightHero(state: DayUiState, firstNights: Boolean, onOpen: () -> Uni
             val asleep = state.asleepSeconds ?: (session.end - session.start)
             val others = state.nights.takeLast(SleepHistory.WEEK_NIGHTS).filter { it.date != state.date }.mapNotNull { it.asleepSeconds }
             HeroSentence(TabCopy.night(asleep, others))
-            Spacer(Modifier.height(22.dp))
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
-                val score = session.score
-                // The horizon arc (chart kit): the score rising from the night's horizon.
-                if (score != null) GlowHorizon(score / 100f, score.toString())
-                Spacer(Modifier.weight(1f))
-                Column(horizontalAlignment = Alignment.End) {
-                    Text(
-                        score?.let { "Sleep score, ${TabCopy.sleepScoreWord(it).lowercase()}" } ?: "No score from the strap",
-                        color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary,
-                    )
-                    TabCopy.woke(session.wakeCount)?.let { Text(it, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary) }
-                }
-            }
+            Spacer(Modifier.height(16.dp))
+            val score = session.score
+            HeroNumber(
+                score?.toString(),
+                listOfNotNull(
+                    score?.let { "Sleep score, ${TabCopy.sleepScoreWord(it).lowercase()}" } ?: "No score from the strap",
+                    TabCopy.woke(session.wakeCount),
+                ),
+            )
             if (state.sleepStages.isNotEmpty()) {
                 Spacer(Modifier.height(18.dp))
-                GlowSleepStages(state.sleepStages, 96.dp)
+                GlowSleepStages(state.sleepStages, 96.dp, colored = true)
             }
             state.sleepBreakdown?.let { b ->
-                Spacer(Modifier.height(16.dp))
-                FigureRow(STAGE_ORDER.map { st -> clockDuration(b.byStage[st] ?: 0L) to (SLEEP_NAMES[st] ?: "") })
+                // Stage totals as text, never dots (spec 2.3): a stage under a minute leaves its segment and legend out.
+                val totals = STAGE_ORDER.mapNotNull { st -> (b.byStage[st] ?: 0L).takeIf { it >= 60 }?.let { st to it } }
+                if (totals.isNotEmpty()) {
+                    Spacer(Modifier.height(16.dp))
+                    StageBar(totals)
+                    Spacer(Modifier.height(10.dp))
+                    StageLegend(totals)
+                }
             }
         }
     }
 }
 
-/** Stages as the glow hypnogram, rows Awake to Deep, with start and end times underneath. Shared with Today, where [compact] leaves the names and times out. */
+/** The stage bar (chart kit): one 8 dp bar split by stage, deepest first, with 2 dp gaps. */
 @Composable
-internal fun GlowSleepStages(spans: List<StageSpan>, height: Dp, compact: Boolean = false) {
+private fun StageBar(totals: List<Pair<Int, Long>>) {
+    Row(Modifier.fillMaxWidth().height(8.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+        totals.forEach { (stage, seconds) ->
+            Box(Modifier.weight(seconds.toFloat()).fillMaxHeight().background(stageColor(stage), RoundedCornerShape(3.dp)))
+        }
+    }
+}
+
+/** The stage bar's legend: an 8 dp colour mark and the stage's total in Secondary, "Deep 2 h 51". */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun StageLegend(totals: List<Pair<Int, Long>>) {
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        totals.forEach { (stage, seconds) ->
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(8.dp).background(stageColor(stage), RoundedCornerShape(2.dp)))
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    "${SLEEP_NAMES[stage].orEmpty()} ${TodayCopy.duration(seconds)}", color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA),
+                    style = GlowType.secondary, maxLines = 1,
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Stages as the glow hypnogram, rows Awake to Deep, with start and end times underneath. Shared with Today, where
+ * [compact] leaves the names and times out.
+ */
+@Composable
+internal fun GlowSleepStages(spans: List<StageSpan>, height: Dp, compact: Boolean = false, colored: Boolean = false) {
     val start = spans.minOf { it.start }
     val end = spans.maxOf { it.end }.coerceAtLeast(start + 1)
     val rows = DayViewModel.SLEEP_STAGE_ROWS
@@ -185,7 +227,12 @@ internal fun GlowSleepStages(spans: List<StageSpan>, height: Dp, compact: Boolea
     }
     fun at(f: Float) = clock(start + ((end - start) * f).toLong())
     // Compact, as on Today's Last night card, the rows are too close for their names and the card's title has the times.
-    GlowHypnogram(stages, names, height = height, labels = if (compact) emptyList() else listOf(clock(start), clock(end)), showNames = !compact) { st ->
+    // [colored], as on the sleep hero, draws each stage as a band in its own colour (spec 2.7, Hypnogram).
+    val colors = if (colored) (0 until rows.size).map { row -> stageColor(rows.entries.first { it.value == row }.key) } else null
+    GlowHypnogram(
+        stages, names, height = height, labels = if (compact) emptyList() else listOf(clock(start), clock(end)), showNames = !compact,
+        rowColors = colors,
+    ) { st ->
         val mins = (((end - start) * (st.to - st.from)) / 60).toInt().coerceAtLeast(1)
         "${names[st.row]}, ${at(st.from)}–${at(st.to)}, $mins min"
     }
@@ -247,7 +294,8 @@ private fun RegularityCard(state: DayUiState, reg: org.openstrap.app.data.SleepR
  */
 @Composable
 private fun BreathingCard(b: org.openstrap.app.data.Recovery.BreathingDisturbances, onInfo: () -> Unit) {
-    EdgeCard(MetricColors.sleepLight, Modifier.fillMaxWidth().gridSize(CardSize.Wide), kind = EdgeKind.Value, onClick = onInfo) {
+    // As high as its content: a number and a line, so a unit high would leave an empty band under them (spec 2.4).
+    EdgeCard(MetricColors.sleepLight, Modifier.fillMaxWidth(), kind = EdgeKind.Value, onClick = onInfo) {
         EdgeTitle("Breathing disturbances", "Early estimate")
         EdgeValue("%.1f".format(b.perHour), "an hour", TabCopy.breathing(b))
     }

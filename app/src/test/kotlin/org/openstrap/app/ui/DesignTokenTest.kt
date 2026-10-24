@@ -107,14 +107,23 @@ class DesignTokenTest {
         assertTrue(BarMaxWidth <= 6.dp)
     }
 
-    @Test fun `a Today hero and Your week have one dotted number`() {
-        // Spec 2.3 and audit 2.8: one number in dots a card; the rest is text. Each hero is a function of its own.
+    @Test fun `a card on Today and the tabs has one dotted number`() {
+        // Spec 2.3 and audit 2.8: one number in dots a card; the rest is text. Each card is a function of its own. A
+        // call that passes no number (EdgeValue(null, ...)) draws none.
         val found = mutableListOf<String>()
-        val dotted = Regex("""\b(HeroNumber|HeroFigure|DotMatrixText|EdgeValue|FigureRow)\(""")
-        listOf("glow/GlowTodayScreen.kt" to Regex("""private fun (\w+Hero)\("""), "glow/TodayCards.kt" to Regex("""internal fun (WeekCard)\(""")).forEach { (path, fn) ->
+        val dotted = Regex("""\b(HeroNumber|HeroFigure|DotMatrixText|EdgeValue|FigureRow|GlowHeroNumber)\((?!\s*null\b)""")
+        fun cards(vararg names: String) = Regex("""fun (${names.joinToString("|")})\(""")
+        listOf(
+            "glow/GlowTodayScreen.kt" to Regex("""private fun (\w+Hero)\("""),
+            "glow/TodayCards.kt" to cards("WeekCard"),
+            "glow/GlowRecoveryScreen.kt" to cards("RecoveryHero", "RecoveryFailedHero", "ChargeTall", "ChargeSmall"),
+            "glow/GlowSleepScreen.kt" to cards("NightHero", "RegularityCard", "BreathingCard"),
+            "glow/GlowActivityScreen.kt" to cards("StartCard", "StepsGlow", "LoadCard"),
+            "glow/GlowHealthspan.kt" to cards("HabitAgeEdgeCard"),
+        ).forEach { (path, fn) ->
             val code = sources.getValue(path).joinToString("\n")
             val heads = fn.findAll(code).toList()
-            assertTrue("no heroes found in $path", heads.isNotEmpty())
+            assertTrue("no cards found in $path", heads.isNotEmpty())
             heads.forEach { m ->
                 val body = braced(code, code.indexOf('{', m.range.last + balanced(code, m.range.last).length + 1))
                 val n = dotted.findAll(body).count()
@@ -122,6 +131,15 @@ class DesignTokenTest {
             }
         }
         if (found.isNotEmpty()) fail("One dotted number a card (spec 2.3):\n" + found.joinToString("\n"))
+    }
+
+    @Test fun `the sleep hero has no arc and Habit Age no How it works`() {
+        // Spec 5.2: the score reads as a number and a word, no horizon arc. Spec 2.5 and 5.4: an explanation is behind
+        // (i) in the card, never a How it works panel on the screen.
+        val found = find(Regex("""\bGlowHorizon\("""), except = sources.keys - "glow/GlowSleepScreen.kt") +
+            find(Regex("""\bHowItWorks\w*\("""), except = sources.keys - setOf("glow/GlowHealthspanScreen.kt", "glow/GlowHealthspan.kt"))
+        if (found.isNotEmpty()) fail("No arc on the sleep hero, no How it works on Habit Age:\n" + found.joinToString("\n"))
+        assertTrue(sources.getValue("glow/GlowHealthspan.kt").any { "InfoButton(" in it })
     }
 
     @Test fun `no metric has a second colour`() {

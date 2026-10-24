@@ -384,6 +384,33 @@ object InfoCopy {
             "loose strap can read as a dip. ${org.openstrap.app.data.BodySignalsCopy.DISCLAIMER} It isn't a test for sleep apnea.",
     )
 
+    /** Habit Age's bands, against your age: [habitAgeBar] says which one you're in. */
+    val HABIT_AGE_SCALE = listOf("Younger than you", "Your age", "Older than you")
+
+    /** Which bar of [HABIT_AGE_SCALE] an estimate [years] younger than your age is in. */
+    fun habitAgeBar(years: Int): Int = when {
+        years > 0 -> 0
+        years < 0 -> 2
+        else -> 1
+    }
+
+    /** Habit Age's sheet, behind the (i) on its card (spec 5.4): the method, the pace of aging and what moves it. */
+    val HABIT_AGE = Info(
+        "Habit Age",
+        "How old your habits make your body look, as a range of years, worked out each Sunday.",
+        HABIT_AGE_SCALE,
+        how = "Each habit is scored against the typical person your age and sex: resting heart rate, steps, sleep " +
+            "regularity, time asleep, strength training and fitness (VO2 max, the most oxygen your body can use in " +
+            "hard effort). Better than typical takes years off, worse adds them. The total is shrunk, because the " +
+            "habits overlap, and capped at 5 years either way. It looks back 6 months, 3 for fitness.",
+        moves = "Your habits over months, not a single day. The pace of aging compares your last 30 days with those 6 " +
+            "months: faster than 1x means the estimate is heading up, slower means it's coming down. The Habit Age " +
+            "page shows what each habit takes off or adds.",
+        off = "It updates once a week and is withheld until there's enough data. An estimate from under 6 months of " +
+            "data is early, so its range is wider. It's an estimate for personal insight, not a medical measurement, " +
+            "shown as a range because each habit's effect is uncertain.",
+    )
+
     /** The week story's sheet: what each day's numbers are and how far back the comparisons reach. */
     val WEEK = Info(
         "Your week",

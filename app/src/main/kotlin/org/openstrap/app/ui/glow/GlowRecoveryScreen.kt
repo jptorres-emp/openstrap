@@ -166,7 +166,7 @@ private fun RecoveryHero(
                 tag = if (firstScore && score != null) TitleTag(FIRST_SCORE) else null,
                 trailingContent = {
                     androidx.compose.foundation.layout.Spacer(Modifier.width(10.dp))
-                    RoundButton(org.openstrap.app.ui.theme.AppIcons.Info, "About Recovery", onInfo, size = 30.dp)
+                    InfoButton("About Recovery", onInfo)
                 },
             )
             HeroSentence(

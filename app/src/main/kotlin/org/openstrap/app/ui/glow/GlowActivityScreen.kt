@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
@@ -38,6 +39,10 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -65,6 +70,7 @@ import org.openstrap.app.ui.dashboard.Wear
 import org.openstrap.app.ui.dashboard.TabCopy
 import org.openstrap.app.ui.dashboard.TodayCopy
 import org.openstrap.app.ui.dashboard.activityCards
+import org.openstrap.app.ui.components.pressClickable
 import org.openstrap.app.ui.theme.AppIcons
 import org.openstrap.app.ui.theme.MetricColors
 import org.openstrap.app.ui.workout.SportIcons
@@ -80,7 +86,7 @@ private const val LISTED_WORKOUTS = 5
 typealias PaiHistory = (LocalDate, LocalDate) -> Flow<Map<LocalDate, DailyPai>>
 
 /*
- * The Activity tab (spec 5.3): "how much did I move and train". A strip to start a sport today, steps glowing, Load
+ * The Activity tab (spec 5.3): "how much did I move and train". A card to start a sport today, steps glowing, Load
  * against your usual, this week's facts and the workouts ([activityCards]). Every card and row opens its detail; the
  * method behind each number (energy, active minutes, VO2 max, Load's parts) is in their info sheets. Workouts under
  * way and the morning check-in live on Today.
@@ -133,7 +139,7 @@ fun GlowActivityScreen(
             full { header() }
             tabCards(slots) { card, m ->
                 when (card) {
-                    ActivityCard.Start -> StartStrip(sports, onStartWorkout, onAllSports)
+                    ActivityCard.Start -> StartCard(sports, onStartWorkout, onAllSports)
                     ActivityCard.Steps -> StepsGlow(state, usualSteps, partial) { onOpenMetric(Metric.Steps) }
                     ActivityCard.ActiveMinutes -> r?.activity.let { a ->
                         SmallCard(
@@ -162,34 +168,60 @@ fun GlowActivityScreen(
 
 /* ----------------------------------------------- Start ---------------------------------------------- */
 
-/** "Start": your three most used sports and every sport, as one strip of pills. Today only. */
+/**
+ * Start a workout (spec 5.3): a Wide edge card in the neutral light from below, its title, then your three most used
+ * sports as 64 dp tiles with their names under them and All sports after them. Words with the icons, since an icon
+ * alone doesn't say "start". A sport opens Ready with it chosen ([onStart]); All sports opens Choose a sport. The
+ * tiles are the buttons, so the card itself opens nothing and has no caret. Today only.
+ */
 @Composable
-private fun StartStrip(sports: List<SportUse>, onStart: (Int) -> Unit, onAllSports: () -> Unit) {
-    TodayStrip(MetricColors.steps, EdgeKind.Value) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+private fun StartCard(sports: List<SportUse>, onStart: (Int) -> Unit, onAllSports: () -> Unit) {
+    EdgeCard(EdgeNeutral, Modifier.fillMaxWidth(), kind = EdgeKind.Value) {
+        EdgeTitle("Start a workout", null)
+        Spacer(Modifier.height(GlowLayout.TitleGap))
+        // Four even columns up to the phone's width, so the tiles keep together on an unfolded screen.
+        Row(Modifier.widthIn(max = StartTilesWidth).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             sports.take(3).forEach { s ->
-                // Three named pills and All sports don't fit a phone, so the sports are icons, named for TalkBack.
-                SportPill(SportIcons.of(s.sportType), Workouts.sportName(s.sportType), Modifier.width(52.dp), iconOnly = true) { onStart(s.sportType) }
+                SportTile(SportIcons.of(s.sportType), Workouts.sportName(s.sportType), outdoor = s.sportType in Workouts.OUTDOOR, Modifier.weight(1f)) {
+                    onStart(s.sportType)
+                }
             }
-            // A compact pill after the sports at every width: its name is all it needs.
-            SportPill(null, "All sports", Modifier, onClick = onAllSports)
+            SportTile(AppIcons.GridView, "All sports", outdoor = false, Modifier.weight(1f), onClick = onAllSports)
         }
     }
 }
 
+/** Four tiles and their gaps at most: a phone's width inside the card. */
+private val StartTilesWidth = 344.dp
+
+private val SportTileSize = 64.dp
+private val SportTileShape = RoundedCornerShape(GlowLayout.TileCorner)
+private val ControlSurface = Color(0xFF1F1F22)
+
+/**
+ * A sport as a tile: its icon on a 64 dp Control tile, its name in Secondary under it, up to two lines. An [outdoor]
+ * sport carries a small location mark in the tile's corner.
+ */
 @Composable
-private fun SportPill(
-    icon: androidx.compose.ui.graphics.vector.ImageVector?, name: String, modifier: Modifier, iconOnly: Boolean = false, onClick: () -> Unit,
+private fun SportTile(
+    icon: androidx.compose.ui.graphics.vector.ImageVector, name: String, outdoor: Boolean, modifier: Modifier, onClick: () -> Unit,
 ) {
-    Row(
-        modifier.height(40.dp).glass(RoundedCornerShape(50), onClick).padding(horizontal = if (iconOnly) 10.dp else 16.dp),
-        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center,
+    Column(
+        modifier.pressClickable(onClick, SportTileShape).semantics(mergeDescendants = true) { role = Role.Button },
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        if (icon != null) {
-            Icon(icon, if (iconOnly) "Start $name" else null, tint = Color.White, modifier = Modifier.size(if (iconOnly) 20.dp else 16.dp))
-            if (!iconOnly) Spacer(Modifier.width(6.dp))
+        Box(Modifier.size(SportTileSize).background(ControlSurface, SportTileShape), contentAlignment = Alignment.Center) {
+            Icon(icon, null, tint = Color.White, modifier = Modifier.size(24.dp))
+            if (outdoor) Icon(
+                AppIcons.Location01, null, tint = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA),
+                modifier = Modifier.align(Alignment.TopEnd).padding(7.dp).size(12.dp),
+            )
         }
-        if (!iconOnly) Text(name, color = Color.White, style = GlowType.secondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Spacer(Modifier.height(6.dp))
+        Text(
+            name, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary, maxLines = 2,
+            textAlign = TextAlign.Center, overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 
@@ -213,9 +245,14 @@ private fun StepsGlow(state: DayUiState, usual: List<Float>?, tag: TitleTag?, on
         Column {
             GlowHeader("Steps", trailing = "Goal %,d".format(goal), tag = tag)
             Spacer(Modifier.height(GlowLayout.TitleGap))
-            val picked = hour?.let { h -> state.hourlySteps.getOrNull(h) }
-            if (hour != null && picked != null) HeroFigure("%,d".format(Math.round(picked)), ActivityCopy.hourLabel(hour!!), big = true)
-            else HeroFigure("%,d".format(state.steps), pace?.let { ActivityCopy.pace(it, isToday) } ?: ActivityCopy.goalShare(state.steps, goal), big = true)
+            // A picked hour takes the number's place; one dotted number either way (spec 2.3).
+            val h = hour
+            val picked = h?.let { state.hourlySteps.getOrNull(it) }
+            HeroFigure(
+                "%,d".format(if (h != null && picked != null) Math.round(picked) else state.steps),
+                if (h != null && picked != null) ActivityCopy.hourLabel(h) else pace?.let { ActivityCopy.pace(it, isToday) } ?: ActivityCopy.goalShare(state.steps, goal),
+                big = true,
+            )
             Spacer(Modifier.height(18.dp))
             HourPills(state.hourlySteps, hour) { hour = it }
         }

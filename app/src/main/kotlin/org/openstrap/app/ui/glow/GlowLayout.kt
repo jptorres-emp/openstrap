@@ -1,5 +1,6 @@
 package org.openstrap.app.ui.glow
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -186,6 +187,21 @@ internal fun TapCaret(alpha: Float, modifier: Modifier = Modifier) =
     Icon(AppIcons.TapCaret, null, tint = Color.White.copy(alpha = alpha), modifier = modifier.size(CaretSize))
 
 internal val CaretSize = 14.dp
+
+/**
+ * (i) on a card (spec 2.5): a 32 dp round button at 10% white with a 16 dp icon at 72%, at the right of the title
+ * row. The same on every card that has an explanation; it opens that card's info sheet.
+ */
+@Composable
+internal fun InfoButton(label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    androidx.compose.foundation.layout.Box(
+        modifier.size(InfoButtonSize).clip(androidx.compose.foundation.shape.CircleShape).background(Color.White.copy(alpha = 0.10f))
+            .clickable(onClickLabel = label, role = androidx.compose.ui.semantics.Role.Button, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) { Icon(AppIcons.Info, label, Modifier.size(16.dp), tint = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA)) }
+}
+
+internal val InfoButtonSize = 32.dp
 /** A card's caret, right after its title. */
 internal const val CARD_CARET_ALPHA = 0.5f
 /** A row's caret, at its end. */

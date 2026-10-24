@@ -14,6 +14,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -106,25 +108,37 @@ internal fun learningText(o: Healthspan.Outcome): String = when {
 private fun dateOf(epoch: Long) = java.time.Instant.ofEpochSecond(epoch).atZone(java.time.ZoneId.systemDefault()).toLocalDate()
 
 /**
- * Habit Age, one design wherever it shows (Recovery's foot, Today when there's a new estimate): an edge card lit from
- * the left, since it's about the weeks behind you. The title with "Updated Sun 18 Oct", the age in dots, one status
- * line against last week (the range until there's a last week, orchid only when the number moved) and the age
- * scale. Before the first estimate it says when that is, with no number; with no birth year or sex it says what's
- * needed and opens the profile ([onOpenProfile]) instead of the Healthspan screen. Nothing shows until it has been
+ * Habit Age, one design wherever it shows (Recovery's foot, Today when there's a new estimate, the top of its page):
+ * an edge card lit from the left, since it's about the weeks behind you. The title with its caret when it opens
+ * something and (i) at the right of the title row (spec 5.4), "Updated Sun 18 Oct" under it, the age in dots, one
+ * status line against last week (the range until there's a last week, orchid only when the number moved) and the age
+ * scale. The method, the pace of aging and what moves it are in its info sheet, behind the (i). Before the first
+ * estimate it says when that is, with no number; with no birth year or sex it says what's needed and opens the profile
+ * ([onOpenProfile]) instead of the Habit Age page ([onClick], null on the page itself). Nothing shows until it has been
  * worked out.
  */
 @Composable
-fun HabitAgeEdgeCard(state: Healthspan.Outcome?, onClick: () -> Unit, onOpenProfile: () -> Unit, modifier: Modifier = Modifier) {
+fun HabitAgeEdgeCard(state: Healthspan.Outcome?, onClick: (() -> Unit)?, onOpenProfile: (() -> Unit)?, modifier: Modifier = Modifier) {
     state ?: return
     val r = state.result
     val withheld = state.withheld
     val needsProfile = r == null && state.missing.isNotEmpty() && withheld?.profile == true
+    var info by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
     EdgeCard(
         // Without an estimate it's one line, so it's only as high as that line.
         Orchid, modifier.fillMaxWidth().let { if (r != null) it.gridSize(CardSize.Wide) else it }, kind = EdgeKind.Earlier,
         onClick = if (needsProfile) onOpenProfile else onClick,
     ) {
-        EdgeTitle("Habit Age", r?.let { org.openstrap.app.ui.dashboard.TabCopy.habitAgeUpdated(dateOf(it.asOf)) })
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            CardTitle("Habit Age", Modifier.weight(1f))
+            InfoButton("About Habit Age", { info = true })
+        }
+        r?.let {
+            Text(
+                org.openstrap.app.ui.dashboard.TabCopy.habitAgeUpdated(dateOf(it.asOf)), color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA),
+                style = GlowType.secondary, maxLines = 1,
+            )
+        }
         when {
             r != null -> {
                 val line = org.openstrap.app.ui.dashboard.TabCopy.habitAgeLine(r.estimate, state.lastWeek, r.low, r.high)
@@ -136,6 +150,13 @@ fun HabitAgeEdgeCard(state: Healthspan.Outcome?, onClick: () -> Unit, onOpenProf
             state.firstEstimate != null -> EdgeValue(null, null, org.openstrap.app.ui.dashboard.TabCopy.firstEstimate(dateOf(state.firstEstimate)), waiting = false)
             else -> EdgeValue(null, null, withheld?.reason, waiting = false)
         }
+    }
+    if (info) {
+        val here = r?.let { org.openstrap.app.ui.dashboard.InfoCopy.habitAgeBar(it.age - it.estimate.roundToInt()) }
+        InfoSheet(
+            org.openstrap.app.ui.dashboard.InfoCopy.HABIT_AGE, Orchid, here, here?.let { org.openstrap.app.ui.dashboard.InfoCopy.HERE },
+            onDismiss = { info = false },
+        )
     }
 }
 

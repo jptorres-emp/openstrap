@@ -390,8 +390,8 @@ fun GlowArcGauge(
 data class GlowStage(val from: Float, val to: Float, val row: Int)
 
 /**
- * Sleep stages as white pills on hairline rows (row 0 at the top, e.g. Awake), joined by thin
- * connectors. Deeper rows are drawn brighter so deep sleep stands out on the dark core.
+ * Sleep stages as white pills on hairline rows (row 0 at the top, e.g. Awake), joined by thin connectors, deeper rows
+ * drawn brighter so deep sleep stands out on the dark core; or, with [rowColors], as solid bands in the stage colours.
  */
 @Composable
 fun GlowHypnogram(
@@ -402,6 +402,11 @@ fun GlowHypnogram(
     labels: List<String> = emptyList(),
     /** The stage names down the left; too small a chart has no room for them, so it leaves them out. */
     showNames: Boolean = true,
+    /**
+     * Each row's stage colour. Given, every stage is a solid band in its colour with nothing joining them (the sleep
+     * hero, spec 2.7); null keeps the white pills, brighter the deeper, joined by thin connectors.
+     */
+    rowColors: List<Color>? = null,
     /** Text for the touch readout on a stage; null turns scrubbing off. */
     describe: ((GlowStage) -> String)? = null,
 ) {
@@ -440,7 +445,7 @@ fun GlowHypnogram(
             if (showNames) text(m, name, axisText, 0f, yOf(row) - 7.dp.toPx())
         }
         val sorted = stages.sortedBy { it.from }
-        for (i in 1 until sorted.size) {
+        if (rowColors == null) for (i in 1 until sorted.size) {
             val a = sorted[i - 1]
             val b = sorted[i]
             if (a.row != b.row) drawLine(Ink.copy(alpha = 0.3f), Offset(xOf(b.from), yOf(a.row)), Offset(xOf(b.from), yOf(b.row)), 1.dp.toPx())
@@ -448,7 +453,7 @@ fun GlowHypnogram(
         sorted.forEach { s ->
             val alpha = 0.55f + 0.45f * s.row / (rowNames.size - 1).coerceAtLeast(1)
             drawRoundRect(
-                Ink.copy(alpha = alpha),
+                rowColors?.getOrNull(s.row) ?: Ink.copy(alpha = alpha),
                 topLeft = Offset(xOf(s.from), yOf(s.row) - pillH / 2),
                 size = Size((xOf(s.to) - xOf(s.from)).coerceAtLeast(pillH), pillH),
                 cornerRadius = CornerRadius(pillH / 2),

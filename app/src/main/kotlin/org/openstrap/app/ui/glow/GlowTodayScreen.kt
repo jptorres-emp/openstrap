@@ -451,7 +451,7 @@ private fun WakingHero(ctx: TodayContext, lightAngle: Float?, onOpen: () -> Unit
     GlowCard(heroStyle(MetricColors.readiness, lightAngle), modifier, onClick = onOpen) {
         Column {
             GlowHeader(
-                "Recovery", trailing = if (score != null && before != null) signed(score - before) + " vs yesterday" else null,
+                "Recovery", trailing = score?.let { org.openstrap.app.ui.dashboard.TabCopy.vsYesterday(it, before) },
                 tag = if (ctx.firstScore && score != null) TitleTag(FIRST_SCORE) else null,
             )
             if (ctx.state.loaded) HeroSentence(TodayCopy.waking(ctx.state.asleepSeconds, score, ctx.alert, ctx.noScore, ctx.firstNights, ctx.isToday))
@@ -482,8 +482,6 @@ private fun FailedHero(f: RecoveryFailure, lightAngle: Float?, onOpen: () -> Uni
         }
     }
 }
-
-private fun signed(d: Int) = if (d > 0) "+$d" else if (d < 0) "−${-d}" else "Same"
 
 /**
  * Midday: Charge as a light level, what the day took and what's left: Charge now in dots, recharged and drained as text

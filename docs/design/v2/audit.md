@@ -344,3 +344,24 @@ Each step is one or a few commits, built by a subagent and checked on the phone 
 11. **Unfolded.** The 960 dp content limit, balanced columns, sheets at most 600 dp, and the spec's 2.4 updated for
     the right-pane details.
 12. **Recheck** every screen in this audit on the phone, folded and unfolded, plus the screens it didn't cover.
+
+## 5. Recheck (step 12), 2026-10-24
+
+Every screen above, checked again on the phone folded and unfolded after steps 1 to 11 and the follow-up fixes
+(up to 863f6f5).
+
+Fixed: every system-wide fault in section 2, every screen fault in section 3, and the unfolded faults (960 dp limit,
+balanced columns, details and You/Strap pages in a right pane, 600 dp pages and sheets, fades under the tab bar and
+pinned buttons, Smalls two across).
+
+Still open:
+
+- The heartbeat glow fix (0fe4c4d) needs a look while the strap streams live heart rate; during the recheck the strap
+  was reconnecting.
+- The Steps detail shows a device icon top right where the other details have (i).
+- At waking, the header's "Pull to sync strap" hint draws over "Syncing strap..." for a moment.
+- Profile's Age row has two round icon buttons whose purpose isn't clear.
+- Today's Last night card keeps the white hypnogram (spec 2.7 says stage colours everywhere).
+- Habit Age page: Pace of aging and What moves it are plain panels, not grouped lists with icons (spec 5.4).
+- The Zepp sign-in dialog isn't limited to the 600 dp column unfolded.
+- Not covered: during and right after a live workout, the Charge detail, real pairing.

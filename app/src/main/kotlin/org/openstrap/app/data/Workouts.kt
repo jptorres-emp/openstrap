@@ -163,8 +163,8 @@ object Workouts {
 
     /**
      * A sport offered once with an outdoor and an indoor kind (spec 6.3): Ready's switch picks one, and the workout is
-     * saved as that kind's own sport type, so history and detection don't change. [outdoor] is the sport's key, the
-     * type its tile starts; Walk is one type either way, the switch only decides GPS. [indoorByDefault] is the side
+     * saved as that kind's own sport type, so the name says which it was ("Treadmill", "Indoor walk") wherever it
+     * shows. [outdoor] is the sport's key, the type its tile starts. [indoorByDefault] is the side
      * shown before you've picked one.
      */
     data class Sides(val outdoor: Int, val indoor: Int, val outdoorName: String, val indoorName: String, val indoorByDefault: Boolean = false) {
@@ -177,7 +177,7 @@ object Workouts {
         Sides(4, 8, "Outdoor", "Indoor"),
         // Most swims are in a pool.
         Sides(7, 6, "Open water", "Pool", indoorByDefault = true),
-        Sides(3, 3, "Outdoor", "Indoor"),
+        Sides(3, 40, "Outdoor", "Indoor"),
     )
 
     /** The [Sides] [type] is one of, or null for a sport with one kind. */
@@ -213,7 +213,7 @@ object Workouts {
 
     /** The tiles' short names; a sport with two kinds has one name for both. */
     private val SHORT_NAMES = mapOf(
-        1 to "Run", 2 to "Run", 3 to "Walk", 15 to "Hike", 4 to "Cycling", 8 to "Cycling", 7 to "Swim", 6 to "Swim",
+        1 to "Run", 2 to "Run", 3 to "Walk", 40 to "Walk", 15 to "Hike", 4 to "Cycling", 8 to "Cycling", 7 to "Swim", 6 to "Swim",
         52 to "Strength", 49 to "HIIT", 60 to "Yoga", 61 to "Pilates", 23 to "Rowing", 9 to "Elliptical", 5 to "Other",
     )
 

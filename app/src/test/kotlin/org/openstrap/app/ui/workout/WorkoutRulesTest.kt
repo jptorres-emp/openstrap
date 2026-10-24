@@ -26,12 +26,13 @@ class WorkoutRulesTest {
 
     @Test fun `indoor and outdoor are one sport in the picker`() {
         val indoorKinds = Workouts.SIDES.map { it.indoor }.filter { it !in Workouts.SIDES.map { s -> s.outdoor } }
-        assertEquals(listOf(2, 8, 6), indoorKinds)
+        assertEquals(listOf(2, 8, 6, 40), indoorKinds)
         indoorKinds.forEach { assertFalse("$it has a tile", it in Workouts.EVERYDAY || it in Workouts.MORE) }
         // Run, Cycling, Swim and Walk each have one tile, and it starts the sport's key.
         listOf(1, 4, 7, 3).forEach { assertTrue(it in Workouts.EVERYDAY) }
         assertEquals("Run", Workouts.shortName(2))
         assertEquals("Swim", Workouts.shortName(6))
+        assertEquals("Walk", Workouts.shortName(40))
     }
 
     @Test fun `no sport type is removed, they move behind More sports`() {
@@ -51,8 +52,10 @@ class WorkoutRulesTest {
         assertEquals(1 to 2, sides(2))
         assertEquals(4 to 8, sides(4))
         assertEquals(7 to 6, sides(6))
-        // Walk is one type either way; the switch only decides GPS.
-        assertEquals(3 to 3, sides(3))
+        // An indoor walk is the strap's own Indoor walk, so its name says so.
+        assertEquals(3 to 40, sides(3))
+        assertEquals(3 to 40, sides(40))
+        assertEquals("Indoor walk", Workouts.sportName(40))
         assertNull(Workouts.sidesOf(15))
         assertNull(Workouts.sidesOf(52))
     }

@@ -6,6 +6,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -35,7 +36,7 @@ import org.openstrap.app.ui.theme.MetricColors
  */
 
 /**
- * The pairing stage (E3): the strap, lit and still, a line across to the phone, and the phone. Only the line changes
+ * The pairing stage (E3): this phone, a line across, and the strap, lit and still, on the right as on the Strap page. Only the line changes
  * with the [step], always a solid 1 dp hairline (spec 2.7): faint while it waits, brighter once a strap is in reach,
  * pulsing while it connects, in the strap's light when connected, amber when it couldn't.
  */
@@ -53,15 +54,26 @@ internal fun PairingStage(step: PairStep, modifier: Modifier = Modifier) {
         PairStep.Connected -> StrapLight
         PairStep.Failed, PairStep.KeyRejected -> MetricColors.warn.copy(alpha = 0.75f)
     }
-    Row(modifier.fillMaxWidth().height(StageHeight), verticalAlignment = Alignment.CenterVertically) {
-        StrapDrawing(StrapLight, lit = true, syncing = false, Modifier.size(width = StageHeight * 0.8f, height = StageHeight))
-        Canvas(Modifier.weight(1f).fillMaxHeight().padding(horizontal = 6.dp)) {
+    // The phone on the left and the strap on the right, where the Strap page shows it. The line runs from the phone's
+    // edge to the pod's, not to the drawing's box, which leaves room round the pod for the band.
+    Box(modifier.fillMaxWidth().height(StageHeight)) {
+        val strapWidth = StageHeight * 0.8f
+        Canvas(Modifier.matchParentSize()) {
             val y = size.height / 2
-            drawLine(line, Offset(0f, y), Offset(size.width, y), 1.dp.toPx(), StrokeCap.Round)
+            val gap = 8.dp.toPx()
+            val start = PhoneWidth.toPx() + gap
+            val end = size.width - strapWidth.toPx() * (1f - POD_LEFT) - gap
+            drawLine(line, Offset(start, y), Offset(end, y), 1.dp.toPx(), StrokeCap.Round)
         }
-        PhoneDrawing(Modifier.size(width = 30.dp, height = 52.dp))
+        PhoneDrawing(Modifier.align(Alignment.CenterStart).size(width = PhoneWidth, height = 52.dp))
+        StrapDrawing(StrapLight, lit = true, syncing = false, Modifier.align(Alignment.CenterEnd).size(width = strapWidth, height = StageHeight))
     }
 }
+
+private val PhoneWidth = 30.dp
+
+/** Where the pod's left edge sits across the strap drawing (34 of its 120 grid), so the line meets the pod. */
+private const val POD_LEFT = 34f / 120f
 
 /** The pairing stage's height: the strap drawing's, which sets the hero's. */
 private val StageHeight = 92.dp

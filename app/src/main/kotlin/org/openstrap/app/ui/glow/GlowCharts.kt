@@ -3,6 +3,12 @@ package org.openstrap.app.ui.glow
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.padding
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -19,6 +25,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.lerp
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -41,6 +48,7 @@ import org.openstrap.app.ui.components.smoothPath
 import org.openstrap.app.ui.theme.FunnelSans
 import org.openstrap.app.ui.theme.MetricColors
 import kotlin.math.roundToInt
+import kotlin.math.sin
 
 /*
  * Charts for glow cards. The card's colour carries the mood, so the marks are white: lines get a soft halo, and grids,
@@ -336,46 +344,148 @@ fun GlowTrend(
 /* ------------------------------------------------------------------------------------------------ */
 
 /**
- * The arc gauge (chart kit, spec 2.7): a symmetric 240 degree arch open at the foot, with round caps. A solid track of
- * white at 8% the whole way round and, over it, the value up to [progress] (0..1) in the metric's [color], both the
- * same weight. [content], the score in dots, sits centred inside. [GaugeWidth] wide, so the Recovery and Sleep score
- * details draw the same arch.
+ * The arc gauge (chart kit, spec 2.7), on the Recovery detail's header: a half circle open at the foot, round caps. A
+ * track of white at [ARC_TRACK_ALPHA] the whole way over and, from the left foot clockwise to [progress] (0..1), the
+ * value in a light tint of the metric's [color]. [content], the score in dots, sits centred inside with its foot a
+ * little above the arc's ends. A change of [progress] fills from the value shown to the new one, never from zero;
+ * a new [key] (another day) draws the new value where it lands.
  */
 @Composable
-fun GlowArcGauge(
+fun ArcGauge(
     progress: Float,
     color: Color,
+    key: Any?,
     modifier: Modifier = Modifier,
     content: @Composable BoxScope.() -> Unit = {},
 ) {
-    val stroke = GaugeStroke
-    // The circle's radius to the middle of the stroke; the arch's feet end half a radius under its centre.
-    val r = GaugeWidth / 2 - stroke / 2
-    val centreY = stroke / 2 + r
-    val height = centreY + r * GAUGE_FOOT + stroke / 2
-    Box(modifier.size(GaugeWidth, height)) {
-        Canvas(Modifier.matchParentSize()) {
-            val w = stroke.toPx()
-            val rad = r.toPx()
-            val topLeft = Offset(size.width / 2 - rad, centreY.toPx() - rad)
-            val box = Size(rad * 2, rad * 2)
-            drawArc(Grid, GAUGE_START, GAUGE_SWEEP, false, topLeft, box, style = Stroke(w, cap = StrokeCap.Round))
-            val sweep = GAUGE_SWEEP * progress.coerceIn(0f, 1f)
-            if (sweep > 0f) drawArc(color, GAUGE_START, sweep, false, topLeft, box, style = Stroke(w, cap = StrokeCap.Round))
+    val shown = rememberGaugeProgress(progress, key)
+    val tint = lerp(Ink, color, ARC_TINT)
+    BoxWithConstraints(modifier) {
+        // Scaled down only when the header is narrower than the gauge.
+        val k = (maxWidth / (ArcRadius * 2 + ArcStroke)).coerceAtMost(1f)
+        val r = ArcRadius * k
+        val stroke = ArcStroke * k
+        // The circle's centre is on the line through the ends; the round caps reach half a stroke under it.
+        val centreY = stroke / 2 + r
+        Box(Modifier.size(r * 2 + stroke, centreY + stroke / 2)) {
+            Canvas(Modifier.matchParentSize()) {
+                val w = stroke.toPx()
+                val rad = r.toPx()
+                val topLeft = Offset(size.width / 2 - rad, centreY.toPx() - rad)
+                val box = Size(rad * 2, rad * 2)
+                drawArc(Ink.copy(alpha = ARC_TRACK_ALPHA), 180f, 180f, false, topLeft, box, style = Stroke(w, cap = StrokeCap.Round))
+                val sweep = 180f * shown.coerceIn(0f, 1f)
+                if (sweep > 0f) drawArc(tint, 180f, sweep, false, topLeft, box, style = Stroke(w, cap = StrokeCap.Round))
+            }
+            Box(Modifier.fillMaxWidth().height(centreY - r * ARC_NUMBER_LIFT), contentAlignment = Alignment.BottomCenter, content = content)
         }
-        // Centred on the circle's centre, not the box's.
-        Box(Modifier.fillMaxWidth().height(centreY * 2), contentAlignment = Alignment.Center, content = content)
     }
 }
 
-/** The arch's width on a detail header, and its stroke. */
-internal val GaugeWidth = 200.dp
-internal val GaugeStroke = 8.dp
-/** From lower left (150 degrees, clockwise from 3 o'clock) over the top to lower right: 240 degrees, symmetric. */
-internal const val GAUGE_START = 150f
-internal const val GAUGE_SWEEP = 240f
-/** How far under the centre the feet reach, as a share of the radius: sin 30 degrees. */
-private const val GAUGE_FOOT = 0.5f
+/** The arc's radius to the middle of its stroke, and the stroke: about a tenth of the radius, as in the design. */
+internal val ArcRadius = 124.dp
+internal val ArcStroke = 13.dp
+/** The track's white, and how far the value's colour is from white: a near white with the metric's hue. */
+internal const val ARC_TRACK_ALPHA = 0.11f
+internal const val ARC_TINT = 0.16f
+/** How far above the arc's ends the number's foot sits, as a share of the radius. */
+private const val ARC_NUMBER_LIFT = 0.11f
+
+/**
+ * The horizon arc (chart kit, spec 2.7), on the Sleep score detail's header: a night sky rising from the horizon. A
+ * wide, shallow hill (half a sine wave, [HorizonRise] high over [HorizonWidth]) with round caps, its ends low at both
+ * sides. Under it a flatter track over the same ends in white at [HORIZON_TRACK_ALPHA], and over that the value from
+ * the left end to [progress] (0..1) of the hill's length in a light tint of [color]. [content], the score in dots,
+ * sits centred under the crest. Fills as [ArcGauge] does, never from zero.
+ */
+@Composable
+fun HorizonArc(
+    progress: Float,
+    color: Color,
+    key: Any?,
+    modifier: Modifier = Modifier,
+    content: @Composable BoxScope.() -> Unit = {},
+) {
+    val shown = rememberGaugeProgress(progress, key)
+    val tint = lerp(Ink, color, HORIZON_TINT)
+    BoxWithConstraints(modifier) {
+        val k = (maxWidth / (HorizonWidth + HorizonStroke)).coerceAtMost(1f)
+        val span = HorizonWidth * k
+        val rise = HorizonRise * k
+        val stroke = HorizonStroke * k
+        Box(Modifier.size(span + stroke, rise + stroke)) {
+            Canvas(Modifier.matchParentSize()) {
+                val w = stroke.toPx()
+                val x0 = w / 2
+                val base = size.height - w / 2
+                val width = span.toPx()
+                fun hill(height: Float) = List(HORIZON_STEPS + 1) { i ->
+                    val u = i / HORIZON_STEPS.toFloat()
+                    Offset(x0 + u * width, base - height * sin(Math.PI * u).toFloat())
+                }
+                fun path(points: List<Offset>) = Path().apply {
+                    moveTo(points[0].x, points[0].y)
+                    for (i in 1 until points.size) lineTo(points[i].x, points[i].y)
+                }
+                val value = hill(rise.toPx())
+                drawPath(
+                    path(hill(rise.toPx() * HORIZON_TRACK_RISE)), Ink.copy(alpha = HORIZON_TRACK_ALPHA),
+                    style = Stroke(w * HORIZON_TRACK_STROKE, cap = StrokeCap.Round, join = StrokeJoin.Round),
+                )
+                val upTo = upToLength(value, shown.coerceIn(0f, 1f))
+                if (upTo.size > 1) drawPath(path(upTo), tint, style = Stroke(w, cap = StrokeCap.Round, join = StrokeJoin.Round))
+            }
+            Box(
+                Modifier.matchParentSize().padding(bottom = stroke / 2 + span * HORIZON_NUMBER_LIFT),
+                contentAlignment = Alignment.BottomCenter, content = content,
+            )
+        }
+    }
+}
+
+/** The hill's width between the middles of its end caps, its height, and its stroke, in the design's proportions. */
+internal val HorizonWidth = 300.dp
+internal val HorizonRise = 103.dp
+internal val HorizonStroke = 12.dp
+/** The track: white at 12%, a touch thinner, its crest at 81% of the value's so it shows just under it. */
+internal const val HORIZON_TRACK_ALPHA = 0.12f
+private const val HORIZON_TRACK_STROKE = 0.85f
+private const val HORIZON_TRACK_RISE = 0.81f
+/** How far the value's colour is from white: a light lavender with the sleep ink. */
+internal const val HORIZON_TINT = 0.32f
+/** How far above the ends the number's foot sits, as a share of the width. */
+private const val HORIZON_NUMBER_LIFT = 0.035f
+private const val HORIZON_STEPS = 96
+
+/** [points] cut to [fraction] of their length along the line, the last point placed between two samples. */
+private fun upToLength(points: List<Offset>, fraction: Float): List<Offset> {
+    if (fraction <= 0f) return emptyList()
+    val lengths = points.zipWithNext { a, b -> (b - a).getDistance() }
+    var left = lengths.sum() * fraction
+    val out = mutableListOf(points[0])
+    lengths.forEachIndexed { i, l ->
+        if (left >= l) { out += points[i + 1]; left -= l }
+        else { if (l > 0f) out += lerp(points[i], points[i + 1], left / l); return out }
+    }
+    return out
+}
+
+/**
+ * The value a score gauge draws: [target] at once on open and for each new [key], and after that a change animates
+ * from the value shown to the new one over [GAUGE_FILL_MS] (spec 3.5, Value change). Never from zero. With the
+ * system's animations off it jumps.
+ */
+@Composable
+private fun rememberGaugeProgress(target: Float, key: Any?): Float {
+    val animate = org.openstrap.app.ui.components.rememberAnimationsOn()
+    val shown = remember(key) { Animatable(target) }
+    LaunchedEffect(shown, target, animate) {
+        if (animate) shown.animateTo(target, tween(GAUGE_FILL_MS, easing = FastOutSlowInEasing)) else shown.snapTo(target)
+    }
+    return shown.value
+}
+
+private const val GAUGE_FILL_MS = 450
 
 /* ------------------------------------------------------------------------------------------------ */
 

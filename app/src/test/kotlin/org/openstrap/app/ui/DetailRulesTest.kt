@@ -41,19 +41,28 @@ class DetailRulesTest {
         }
     }
 
-    @Test fun `Recovery and Sleep score draw the one arc gauge`() {
-        // Spec 2.7: one shared arch on both score details, no horizon arc, nothing that glows or sweeps in.
-        listOf("glow/ScoreDetail.kt", "glow/SleepDetail.kt").forEach { path ->
-            assertTrue("$path holds its score in ScoreGauge", "ScoreGauge(score, color)" in sources.getValue(path))
-        }
+    @Test fun `Recovery draws the arc gauge and Sleep score the horizon arc, both centred`() {
+        // Spec 2.7: the half circle arc gauge on Recovery's detail, the horizon arc on the Sleep score detail and
+        // nowhere else, nothing that glows, and neither sweeps in from zero.
+        assertTrue("Recovery holds its score in ArcGauge", Regex("""\bArcGauge\(score / 100f""").containsMatchIn(sources.getValue("glow/ScoreDetail.kt")))
+        assertTrue("Sleep score holds its score in HorizonArc", Regex("""\bHorizonArc\(score / 100f""").containsMatchIn(sources.getValue("glow/SleepDetail.kt")))
+        val home = mapOf("ArcGauge" to "glow/ScoreDetail.kt", "HorizonArc" to "glow/SleepDetail.kt")
         val found = sources.flatMap { (path, code) ->
-            Regex("""\bGlowHorizon\b|\bGlowArcGauge\(""").findAll(code)
-                .filter { it.value.startsWith("GlowHorizon") || path !in setOf("glow/GlowCharts.kt", "glow/ScoreDetail.kt") }
+            Regex("""\b(GlowHorizon|GlowArcGauge|ScoreGauge|ArcGauge|HorizonArc)\(""").findAll(code)
+                .filter { m -> val name = m.groupValues[1]; path != "glow/GlowCharts.kt" && home[name] != path }
                 .map { "$path:${lineOf(code, it.range.first)}  ${it.value}" }.toList()
         }
-        if (found.isNotEmpty()) fail("Score gauges go through ScoreGauge, and the horizon arc is gone:\n" + found.joinToString("\n"))
-        val gauge = sources.getValue("glow/GlowCharts.kt").substringAfter("fun GlowArcGauge(").substringBefore("\n}\n")
-        assertTrue("the gauge is drawn with round caps and no halo", "StrokeCap.Round" in gauge && "drawCircle" !in gauge && "Brush" !in gauge)
+        if (found.isNotEmpty()) fail("The arc gauge is Recovery's, the horizon arc the Sleep score's, nothing else:\n" + found.joinToString("\n"))
+        val charts = sources.getValue("glow/GlowCharts.kt")
+        listOf("fun ArcGauge(", "fun HorizonArc(").forEach { head ->
+            val body = charts.substringAfter(head).substringBefore("\n}\n")
+            assertTrue("$head has round caps and no halo", "StrokeCap.Round" in body && "drawCircle" !in body && "Brush" !in body)
+            assertTrue("$head fills from the value shown", "rememberGaugeProgress(" in body)
+        }
+        val progress = charts.substringAfter("fun rememberGaugeProgress(").substringBefore("\n}\n")
+        assertTrue("a gauge starts at its value, not at zero", "Animatable(target)" in progress)
+        val template = sources.getValue("glow/GlowMetricDetail.kt").substringAfter("fun DetailTemplate(").substringBefore("\n}\n")
+        assertTrue("the gauge block is centred", Regex("""if \(heroValue != null\) Column\([^\n]*CenterHorizontally""").containsMatchIn(template))
     }
 
     @Test fun `every detail's header ends in the (i)`() {

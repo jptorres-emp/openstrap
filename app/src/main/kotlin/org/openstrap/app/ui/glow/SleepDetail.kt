@@ -134,9 +134,9 @@ internal fun SleepScoreDetail(
         contentPadding = contentPadding, headline = headline,
         strip = DetailCopy.strip(state.date, today, sleepDays(state, history)), onDay = onSelectDay,
         ranges = ranges, range = range, onRange = { rangeIndex = ranges.indexOf(it) },
-        // The arc gauge (chart kit) holds the night's score in Sleep's ink, the same arch as Recovery's (spec 2.7).
+        // The horizon arc (chart kit, spec 2.7) holds the night's score, centred, the number under its crest.
         heroValue = if (range == Range.Day && score != null && scrub == null) {
-            { ScoreGauge(score, color) }
+            { HorizonArc(score / 100f, color, key = state.date) { DetailScoreNumber(score) } }
         } else null,
     ) {
         if (range == Range.Day) {

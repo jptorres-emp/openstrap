@@ -147,8 +147,9 @@ internal fun siblings(detail: Detail, onSwitch: (Detail) -> Unit): List<DetailSi
  * The metric detail template (spec 6.1), one for every number. The hero, tinted with [color] and fading to black,
  * carries back, the switcher across [siblings] ([title] on it), the (i) that opens the info sheet ([onInfo]), the
  * [headline] and the seven-day [strip] ([onDay] picks a day). Under it the [ranges] as pills when there's more than
- * one, then [body]: the chart, the sentence and the rows. [heroValue] replaces the value row (Recovery's arc), and
- * [heroSide] sits to its right (heart rate's Live switch).
+ * one, then [body]: the chart, the sentence and the rows. [heroValue] replaces the value row with a score gauge (the
+ * Recovery arc, the Sleep horizon), centred with its label and status word under it; [heroSide] sits to the right of
+ * a plain value row (heart rate's Live switch).
  */
 @Composable
 internal fun DetailTemplate(
@@ -178,10 +179,17 @@ internal fun DetailTemplate(
             item {
                 DetailHero(color, gutter) {
                     DetailNav(title, siblings.size > 1, onBack, onInfo, onSwitch = { switching = true })
-                    Row(Modifier.fillMaxWidth().padding(top = 22.dp), verticalAlignment = Alignment.Bottom) {
+                    // A score gauge, its label and status word make one block, centred in the header (spec 6.1).
+                    if (heroValue != null) Column(Modifier.fillMaxWidth().padding(top = 22.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        heroValue()
+                        Text(
+                            headline.label, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA),
+                            style = GlowType.secondary, modifier = Modifier.padding(top = 8.dp),
+                        )
+                        if (headline.word != null && headline.value != null) StatusWord(headline.word, color, Modifier.padding(top = 12.dp))
+                    } else Row(Modifier.fillMaxWidth().padding(top = 22.dp), verticalAlignment = Alignment.Bottom) {
                         Box(Modifier.weight(1f)) {
                             when {
-                                heroValue != null -> heroValue()
                                 // No number: the state in words, large in the value's place, as a Small does.
                                 headline.value == null -> Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                     Text(headline.word ?: "No reading", color = Color.White, style = GlowType.pageTitle)
@@ -198,11 +206,7 @@ internal fun DetailTemplate(
                         }
                         heroSide?.invoke()
                     }
-                    if (heroValue != null) Text(
-                        headline.label, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA),
-                        style = GlowType.secondary, modifier = Modifier.padding(top = 8.dp),
-                    )
-                    if (headline.word != null && headline.value != null) StatusWord(headline.word, color, Modifier.padding(top = 12.dp))
+                    if (heroValue == null && headline.word != null && headline.value != null) StatusWord(headline.word, color, Modifier.padding(top = 12.dp))
                     if (strip.isNotEmpty()) WeekStrip(strip, color, onDay, Modifier.padding(top = 20.dp))
                 }
             }

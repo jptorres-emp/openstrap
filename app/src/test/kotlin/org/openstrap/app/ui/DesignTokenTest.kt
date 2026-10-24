@@ -134,9 +134,9 @@ class DesignTokenTest {
     }
 
     @Test fun `the sleep hero has no arc and Habit Age no How it works`() {
-        // Spec 5.2: the score reads as a number and a word, no horizon arc. Spec 2.5 and 5.4: an explanation is behind
+        // Spec 5.2: the score reads as a number and a word, no arc. The horizon arc is the Sleep score detail's only. Spec 2.5 and 5.4: an explanation is behind
         // (i) in the card, never a How it works panel on the screen.
-        val found = find(Regex("""\bGlowHorizon\("""), except = sources.keys - "glow/GlowSleepScreen.kt") +
+        val found = find(Regex("""\b(GlowHorizon|HorizonArc|ArcGauge)\("""), except = sources.keys - "glow/GlowSleepScreen.kt") +
             find(Regex("""\bHowItWorks\w*\("""), except = sources.keys - setOf("glow/GlowHealthspanScreen.kt", "glow/GlowHealthspan.kt"))
         if (found.isNotEmpty()) fail("No arc on the sleep hero, no How it works on Habit Age:\n" + found.joinToString("\n"))
         assertTrue(sources.getValue("glow/GlowHealthspan.kt").any { "InfoButton(" in it })

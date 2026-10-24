@@ -362,7 +362,8 @@ Every chart kind in the app, drawn with the rules above:
 | Charge curve | Glow | Charge card and detail | Hold to scrub |
 | Hourly pill bars | Glow | Steps card | Tap an hour |
 | Trend dots | Edge, detail, Recovery hero | Recovery over the last 7 days beside the hero score, Habit Age over days | Tap a day |
-| Arc gauge | Detail | Recovery and Sleep score detail headers: one shared 240 degree arch open at the foot, round caps, an 8 dp solid track of white at 8% and the value over it in the metric's ink, the score in dots centred inside | None |
+| Arc gauge | Detail | Recovery detail header only: a half circle open at the foot, centred, 124 dp radius and a 13 dp stroke with round caps. A track of white at 11% the whole way over, the value from the left end clockwise in a near white tint of the metric's colour (16% of the way from white). The score in dots centred inside, its foot a little above the arc's ends. Fills only to the new value after a sync, never from zero on open | None |
+| Horizon arc | Detail | Sleep score detail header only: a night sky rising from the horizon. A wide shallow hill (half a sine wave, 300 dp wide and 103 dp high, 12 dp stroke, round caps), centred, its ends low at both sides. A flatter track over the same ends just under it in white at 12%, the value from the left end along the hill in a light lavender (32% of the way from white to Sleep's ink). The score in dots centred under the crest. Same rule, never sweeps from zero | None |
 | Progress ring | List row | Goals | None |
 | Hypnogram | Glow | Last night, naps: solid rounded bands in the stage colours on four hairlines | Hold to scrub |
 | Stage bar | Glow, detail | One 8 dp bar split by stage with a legend, on the sleep hero and the Sleep detail | None |
@@ -657,9 +658,9 @@ Night mood always.
    compare, else "7 h 40 asleep."). "Longest" rather than "best": more sleep isn't always better. Bedtime to wake as
    the title row's note. The score in 4.5 dp dots with "Sleep score, good" and "Woke 3 times" beside it, the only
    dotted number on the card. The hypnogram to scrub (2.7), then the stage bar with its legend ("Deep 2 h 51",
-   "REM 1 h 31", "Light 3 h 39", "Awake 18 min", each with an 8 dp colour mark, Secondary type). No arc, no dotted
-   stage totals. The Sleep score detail drops the horizon arc and its dotted times the same way, and holds its score
-   in the arc gauge Recovery's detail uses (2.7), in Sleep's ink.
+   "REM 1 h 31", "Light 3 h 39", "Awake 18 min", each with an 8 dp colour mark, Secondary type). No arc of any kind
+   on the hero, no dotted stage totals. The Sleep score detail drops its dotted times the same way, and holds its
+   score in the horizon arc (2.7), centred in its header. The horizon arc lives only there.
 2. List "Night vitals": lowest heart rate, HRV, breathing rate, blood oxygen, skin temperature, average heart rate.
    Each opens its detail; scoped to the night in step 6.
 3. Edge: Sleep regularity (top edge), score, status word, usual bedtime and wake, the week's bed and wake bars against
@@ -756,7 +757,9 @@ energy, regularity and steps. Habit Age keeps its own screen in the same style.
 
 1. Hero area tinted with the metric colour, fading to black. Back, metric switcher (siblings in the same group),
    (i).
-2. Value in dot-matrix with its status word ("41 ms, Below your normal"), the word in the metric colour.
+2. Value in dot-matrix with its status word ("41 ms, Below your normal"), the word in the metric colour. Recovery's
+   detail holds its score in the arc gauge and the Sleep score detail in the horizon arc (2.7): the gauge, the label
+   and the status word are one block, centred in the header, the number centred in the gauge.
 3. A seven-day strip with a dot under days that have data.
 4. Day, Week, Month, Year pills. The value and the sentence change with the range.
 5. Chart per 2.7 with your normal as a band and off-normal points lit.

@@ -128,9 +128,9 @@ private fun RecoveryDetail(
         contentPadding = contentPadding, headline = headline,
         strip = DetailCopy.strip(state.date, today, withData), onDay = onSelectDay,
         ranges = ranges, range = range, onRange = { rangeIndex = ranges.indexOf(it) },
-        // The arc gauge (chart kit) holds the day's score, the number centred inside (spec 2.7), as on Sleep score.
+        // The arc gauge (chart kit, spec 2.7) holds the day's score, centred, the number inside the half circle.
         heroValue = if (range == Range.Day && score != null && scrub == null) {
-            { ScoreGauge(score, color) }
+            { ArcGauge(score / 100f, color, key = state.date) { DetailScoreNumber(score) } }
         } else null,
     ) {
         if (range == Range.Day) {
@@ -339,7 +339,7 @@ private fun ScoreRelated(score: Score, state: DayUiState, r: RecoveryResult?, hi
     }
 }
 
-/** A score's arc gauge on its detail header: the arch in [color] to [score] of 100, the score in dots inside it. */
+/** The score in a score gauge on a detail header ([ArcGauge], [HorizonArc]): the header's one dotted number. */
 @Composable
-internal fun ScoreGauge(score: Int, color: androidx.compose.ui.graphics.Color) =
-    GlowArcGauge(score / 100f, color) { DotMatrixText(score.toString(), Modifier.detailNumber(score.toString()), dot = DotSize.Detail) }
+internal fun DetailScoreNumber(score: Int) =
+    DotMatrixText(score.toString(), Modifier.detailNumber(score.toString()), dot = DotSize.Detail)

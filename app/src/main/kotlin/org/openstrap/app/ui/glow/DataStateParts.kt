@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
@@ -62,17 +63,21 @@ internal fun PairingStage(step: PairStep, modifier: Modifier = Modifier) {
             val y = size.height / 2
             val gap = 8.dp.toPx()
             val start = PhoneWidth.toPx() + gap
-            val end = size.width - strapWidth.toPx() * (1f - POD_LEFT) - gap
+            val end = size.width - strapWidth.toPx() * (1f - 2 * POD_LEFT) - gap
             drawLine(line, Offset(start, y), Offset(end, y), 1.dp.toPx(), StrokeCap.Round)
         }
         PhoneDrawing(Modifier.align(Alignment.CenterStart).size(width = PhoneWidth, height = 52.dp))
-        StrapDrawing(StrapLight, lit = true, syncing = false, Modifier.align(Alignment.CenterEnd).size(width = strapWidth, height = StageHeight))
+        // Shifted out by the room right of the pod, so the pod sits as far from the card's edge as the phone does.
+        StrapDrawing(
+            StrapLight, lit = true, syncing = false,
+            Modifier.align(Alignment.CenterEnd).offset(x = strapWidth * POD_LEFT).size(width = strapWidth, height = StageHeight),
+        )
     }
 }
 
 private val PhoneWidth = 30.dp
 
-/** Where the pod's left edge sits across the strap drawing (34 of its 120 grid), so the line meets the pod. */
+/** The room either side of the pod in the strap drawing (34 of its 120 grid): where the line meets it, and how far it's shifted. */
 private const val POD_LEFT = 34f / 120f
 
 /** The pairing stage's height: the strap drawing's, which sets the hero's. */

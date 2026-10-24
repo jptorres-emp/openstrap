@@ -173,6 +173,12 @@ fun GlowStyle.Companion.chart(color: Color) = Bloom.copy(
     toneShift = -10f, bevel = 0f,
 )
 
+/**
+ * A level glow in [color] (spec 2.1, Levels): Charge's recipe in any ink, lit from below to [level] (0..1) with the
+ * near-black core above it and no band, so the unlit part reads as dark, not as a dim wash of the colour.
+ */
+fun GlowStyle.Companion.level(color: Color, level: Float) = Ember.copy(color = color, lightLevel = level.coerceIn(0f, 1f))
+
 /** The lowest [GlowStyle.lightLevel] drawn: an empty card still glows faintly. */
 const val MIN_LIGHT_LEVEL = 0.12f
 

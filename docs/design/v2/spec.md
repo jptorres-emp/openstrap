@@ -679,9 +679,13 @@ each nap's heart rate (the naps in the Sleep detail, step 6).
 1. Wide edge card "Start a workout", neutral light from below. Today only. Your three most used sports as 64 dp
    tiles with their names under them, then All sports. Outdoor sports carry a small location mark on the tile. A tile
    opens Ready with that sport (6.3).
-2. Glow: Steps, lit to the share of the goal, value, "62% of your goal", hourly pill bars (hours with no steps and
-   those still to come are faint stubs). Opens the Steps detail. "About usual for midday" waits for usual steps by
-   the hour from past days, which the app doesn't load yet.
+2. Level glow: Steps, drawn like the Charge battery (2.1 Levels, the page's level card): the light rises from below
+   to the share of the goal, full at the bottom edge, with the near-black core above it. Title top left with "Goal
+   10,000" as its note, then the hourly pill bars in the dark part (white at 45%, the latest hour, or the one tapped,
+   full white; hours with no steps and those still to come are not drawn, only the hairline baseline, 2.7), then the
+   number at the foot in the light in 3.6 dp dots with "62% of your goal, fewer than usual by now" under it (the pace
+   against your usual steps by now once there is one, 2.7 Compare by pace). The goal is the card's full height, so no
+   goal line; the pace is in words, so no ghost line on the bars. Opens the Steps detail.
 3. Small pair: Active minutes ("This week, goal 150", from below) and Heart points ("Last 7 days, aim for 100", from
    above).
 4. Level: Load, its light filling across toward your usual, "12 today", "Your usual is 40", balance word ("Building",

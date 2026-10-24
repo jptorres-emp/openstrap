@@ -142,6 +142,16 @@ class DesignTokenTest {
         assertTrue(sources.getValue("glow/GlowHealthspan.kt").any { "InfoButton(" in it })
     }
 
+    @Test fun `Steps on Activity is a level glow like Charge`() {
+        // Spec 2.1 Levels and 5.3: the light rises to the share of the goal over a black core, the number at the foot
+        // in the second glow's dots, empty hours left out over the baseline.
+        val code = sources.getValue("glow/GlowActivityScreen.kt").joinToString("\n")
+        val steps = code.substringAfter("private fun StepsGlow(").substringBefore("\n}\n")
+        assertTrue("StepsGlow uses the level recipe", "GlowStyle.level(MetricColors.steps" in steps)
+        assertTrue("StepsGlow's number is 3.6 dp", "DotSize.Second" in steps)
+        assertTrue("the bars come before the number", steps.indexOf("HourPills(") in 0 until steps.indexOf("HeroFigure("))
+    }
+
     @Test fun `no metric has a second colour`() {
         val found = find(Regex("""\b(chargeScale|chargeAt|chargeDeep|readinessDeep)\b|MetricColors\.bad\b|\bval bad\b"""))
         if (found.isNotEmpty()) fail("Charge is one Ember, Recovery one teal, and bad is gone (spec 2.2):\n" + found.joinToString("\n"))

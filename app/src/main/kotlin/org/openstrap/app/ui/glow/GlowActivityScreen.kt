@@ -227,10 +227,11 @@ private fun SportTile(
 /* ----------------------------------------------- Steps ---------------------------------------------- */
 
 /**
- * Steps glow, lit to the share of the goal walked, with the day's steps hour by hour. Under the number, the steps
- * against your [usual] by now ("About usual by now", compare by pace) once there is one, else how far toward the goal.
- * Tapping an hour puts its steps in the number; tapping it again, or another card, puts the day back. Opens the Steps
- * detail.
+ * Steps as a level glow (spec 2.1 Levels, 2.6, 5.3): the light rises from below to the share of the goal walked, the
+ * dark core above it, like Charge. The title with the goal as its note, the day's steps hour by hour in the dark, then
+ * the number at the foot in the light with how far toward the goal and, once there is one, against your [usual] by now
+ * (compare by pace). Tapping an hour puts its steps in the number; tapping it again, or another card, puts the day
+ * back. Opens the Steps detail.
  */
 @Composable
 private fun StepsGlow(state: DayUiState, usual: List<Float>?, tag: TitleTag?, onClick: () -> Unit) {
@@ -240,28 +241,30 @@ private fun StepsGlow(state: DayUiState, usual: List<Float>?, tag: TitleTag?, on
     val now = java.time.LocalTime.now()
     val pace = ActivityCopy.paceOf(state.steps, usual, isToday, now.hour, now.minute)
     var hour by remember(state.date, state.hourlySteps) { mutableStateOf<Int?>(null) }
-    GlowCard(GlowStyle.chart(MetricColors.steps).copy(lightLevel = share.coerceIn(0f, 1f)), Modifier.fillMaxWidth().gridSize(CardSize.Wide), onClick = onClick) {
+    GlowCard(GlowStyle.level(MetricColors.steps, share), Modifier.fillMaxWidth().gridSize(CardSize.Wide), onClick = onClick) {
         Column {
             GlowHeader("Steps", trailing = "Goal %,d".format(goal), tag = tag)
             Spacer(Modifier.height(GlowLayout.TitleGap))
-            // A picked hour takes the number's place; one dotted number either way (spec 2.3).
+            HourPills(state.hourlySteps, hour) { hour = it }
+            Spacer(Modifier.height(16.dp))
+            // A picked hour takes the number's place; one dotted number either way (spec 2.3). A level glow isn't the
+            // screen's hero, so its number is the second glow's size, as on the Charge battery.
             val h = hour
             val picked = h?.let { state.hourlySteps.getOrNull(it) }
             HeroFigure(
                 "%,d".format(if (h != null && picked != null) Math.round(picked) else state.steps),
-                if (h != null && picked != null) ActivityCopy.hourLabel(h) else pace?.let { ActivityCopy.pace(it, isToday) } ?: ActivityCopy.goalShare(state.steps, goal),
-                big = true,
+                if (h != null && picked != null) ActivityCopy.hourLabel(h) else ActivityCopy.activityLine(state.steps, goal, pace, isToday),
+                big = true, dot = DotSize.Second, labelLines = 2,
             )
-            Spacer(Modifier.height(18.dp))
-            HourPills(state.hourlySteps, hour) { hour = it }
         }
     }
 }
 
 /**
- * Hourly pill bars (chart kit): the day's steps as 24 pills, one an hour, as high as the hour's share of the busiest.
- * The latest hour with steps is lit full white; hours with none, and those still to come, are left out over a hairline. Tapping an
- * hour picks it ([onPick]) and lights it in place of the latest; tapping it again lets it go.
+ * Hourly pill bars (chart kit, spec 2.7): the day's steps as 24 pills, one an hour, as high as the hour's share of the
+ * busiest, white at 45% with the latest hour with steps at full. Hours with none, and those still to come, aren't
+ * drawn, only the hairline baseline under the bars. Tapping an hour picks it ([onPick]) and lights it in place of the
+ * latest; tapping it again lets it go. The hours under it in Caption.
  */
 @Composable
 private fun HourPills(hourly: List<Float>, picked: Int?, onPick: (Int?) -> Unit) {
@@ -269,7 +272,7 @@ private fun HourPills(hourly: List<Float>, picked: Int?, onPick: (Int?) -> Unit)
     val last = picked ?: hourly.indexOfLast { it > 0f }
     Column {
         Canvas(
-            Modifier.fillMaxWidth().height(56.dp).pointerInput(hourly, picked) {
+            Modifier.fillMaxWidth().height(HourPillsHeight).pointerInput(hourly, picked) {
                 detectTapGestures { o ->
                     if (hourly.isEmpty()) return@detectTapGestures
                     val h = (o.x / (size.width.toFloat() / hourly.size)).toInt().coerceIn(0, hourly.lastIndex)
@@ -278,21 +281,23 @@ private fun HourPills(hourly: List<Float>, picked: Int?, onPick: (Int?) -> Unit)
                 }
             },
         ) {
+            if (hourly.isEmpty()) return@Canvas
             val slot = size.width / hourly.size
-            // Hours with no steps and those to come aren't drawn, only the hairline under the bars (spec 2.7).
             barBaseline(size.height - 0.5.dp.toPx())
             hourly.forEachIndexed { i, v ->
                 if (v <= 0f) return@forEachIndexed
                 pillBar(if (i == last) Color.White else Color.White.copy(alpha = 0.45f), slot * i, slot, size.height, size.height * v / top)
             }
         }
-        Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+        Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
             listOf("00", "06", "12", "18", "24").forEach {
-                Text(it, color = Color.White.copy(alpha = 0.55f), style = GlowType.secondary)
+                Text(it, color = Color.White.copy(alpha = GlowType.CAPTION_ALPHA), style = GlowType.caption)
             }
         }
     }
 }
+
+private val HourPillsHeight = 56.dp
 
 /* ------------------------------------------------ Load ---------------------------------------------- */
 

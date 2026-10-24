@@ -311,12 +311,14 @@ private fun bucket(points: List<Recovery.ChargePoint>, range: LongRange, seconds
 @Composable
 private fun ScoreRelated(score: Score, state: DayUiState, r: RecoveryResult?, history: DailyHistory, onOpen: (Detail) -> Unit) {
     val ready = r?.readiness
-    val charge = r?.charge?.latest?.let(::chargeShown)
+    // Before the first night Charge is only the simulation's starting guess: a dash, as on the Recovery tab's battery.
+    val charge = r?.charge?.takeIf { it.anchored }?.latest?.let(::chargeShown)
+    val chargeWaiting = if (r?.charge?.anchored == false) org.openstrap.app.ui.dashboard.AFTER_FIRST_NIGHT else "Nothing for this day"
     val asleep = state.asleepSeconds
     val metrics = if (score == Score.Recovery) listOf(Metric.Hrv, Metric.RestingHr) else listOf(Metric.Stress)
     ListPanel(Modifier.padding(top = 8.dp), title = "Related") {
         if (score == Score.Recovery) ListRow(
-            "Charge", MetricColors.charge, charge?.toString(), charge?.let(Narrative::chargeHeadline) ?: "Nothing for this day",
+            "Charge", MetricColors.charge, charge?.toString(), charge?.let(Narrative::chargeHeadline) ?: chargeWaiting,
             onClick = { onOpen(Detail.OfScore(Score.Charge)) }, divider = false, icon = Score.Charge.rowIcon(),
         ) else ListRow(
             "Recovery", MetricColors.readiness, ready?.score?.toString(),

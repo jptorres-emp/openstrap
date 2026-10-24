@@ -240,9 +240,9 @@ internal fun Detail.rowIcon(): ImageVector? = when (this) {
     is Detail.OfScore -> score.rowIcon()
     Detail.Recovery -> Score.Recovery.rowIcon()
     Detail.Sleep -> Score.Sleep.rowIcon()
-    // Habit Age isn't in the spec's table: the weeks behind you.
-    Detail.Healthspan -> AppIcons.Hourglass
-    Detail.AllWorkouts -> AppIcons.Barbell
+    // Habit Age and the workouts aren't in the spec's table: an age in years, and a runner apart from Load's barbell.
+    Detail.Healthspan -> AppIcons.CalendarBlank
+    Detail.AllWorkouts -> AppIcons.PersonSimpleRun
     else -> null
 }
 

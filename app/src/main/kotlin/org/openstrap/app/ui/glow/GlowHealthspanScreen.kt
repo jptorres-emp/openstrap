@@ -70,7 +70,7 @@ private fun PacePanel(pace: Float?) {
                 pace > 1f -> "Your last 30 days fall behind your 6-month habits. Kept up, the estimate will go up."
                 else -> "Your last 30 days match your 6-month habits, so the estimate is moving in step with the calendar."
             },
-            divider = false, dash = false, icon = AppIcons.Hourglass,
+            divider = false, dash = false, icon = org.openstrap.app.ui.dashboard.Detail.Healthspan.rowIcon(),
         )
         if (pace != null) PaceScale(marker = (pace + 1f) / 4f, color = MetricColors.habitAge, Modifier.padding(start = RowIcon + RowIconGap, bottom = GlowLayout.RowPadding))
     }

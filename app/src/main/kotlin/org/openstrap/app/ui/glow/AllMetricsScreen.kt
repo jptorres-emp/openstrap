@@ -16,6 +16,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.time.LocalDate
+import kotlin.math.roundToInt
 import org.openstrap.app.data.Healthspan
 import org.openstrap.app.data.RecoveryResult
 import org.openstrap.app.data.WorkoutAnalysis
@@ -77,13 +78,13 @@ internal fun recoveryStatus(r: org.openstrap.app.data.Recovery.Readiness?): Stri
 }
 
 /**
- * The Habit Age row's value and status, the same as its page shows: the range once there's an estimate, your age as
+ * The Habit Age row's value and status, the same as its page shows: the estimate once there is one, your age as
  * the starting point while it learns, otherwise no value and why.
  */
 internal fun habitAgeRow(outcome: Healthspan.Outcome?): Pair<String?, String> {
     val r = outcome?.result
     return when {
-        r != null -> "${r.low}-${r.high}" to "Updated weekly"
+        r != null -> "${r.estimate.roundToInt()}" to "Updated weekly"
         outcome?.withheld?.learning == true && outcome.age != null -> "${outcome.age}" to "Starting point"
         outcome?.withheld?.profile == true -> null to "Needs your profile"
         else -> null to "Not worked out yet"
@@ -108,8 +109,11 @@ fun metricIndex(
         row(name, color, value?.let { m.format(it) + suffix }, status, IndexTarget.Open(Detail.OfMetric(m)))
     val (habitValue, habitStatus) = habitAgeRow(healthspan)
     val weekFrom = state.date.minusDays(6)
+    // The 7 days up to the day shown, not Your week's Monday to Sunday, so the row says so. The strap's own
+    // "Activity" records aren't workouts, as on Today and Your week.
     val week = workouts.count { a ->
-        java.time.Instant.ofEpochSecond(a.workout.start).atZone(java.time.ZoneId.systemDefault()).toLocalDate() in weekFrom..state.date
+        a.workout.sportType != org.openstrap.app.data.Workouts.GENERIC_ACTIVITY &&
+            java.time.Instant.ofEpochSecond(a.workout.start).atZone(java.time.ZoneId.systemDefault()).toLocalDate() in weekFrom..state.date
     }
     return listOf(
         IndexGroup(
@@ -122,9 +126,11 @@ fun metricIndex(
                         shown.word.takeIf { shown.estimate } ?: status ?: "Score for the day", IndexTarget.Home(HomeTab.Recovery), waiting = status,
                     )
                 },
+                // Before the first night Charge is only the simulation's starting guess: a dash, as on the Recovery tab's battery.
                 row(
-                    "Charge", MetricColors.charge, rec?.charge?.latest?.let(::chargeShown)?.toString(),
+                    "Charge", MetricColors.charge, rec?.charge?.takeIf { it.anchored }?.latest?.let(::chargeShown)?.toString(),
                     if (state.date == today) "Latest" else "End of day", IndexTarget.Home(HomeTab.Recovery, charge = true),
+                    waiting = org.openstrap.app.ui.dashboard.AFTER_FIRST_NIGHT.takeIf { rec?.charge?.anchored == false },
                 ),
                 row("Habit Age", MetricColors.habitAge, habitValue, habitStatus, IndexTarget.Open(Detail.Healthspan), waiting = habitStatus),
             ),
@@ -154,7 +160,7 @@ fun metricIndex(
             "Activity",
             listOf(
                 metric(Metric.Steps, "Steps", MetricColors.steps, state.steps.toFloat(), "For the day"),
-                row("Workouts", MetricColors.steps, week.toString(), "Last 7 days", IndexTarget.Open(Detail.AllWorkouts)),
+                row("Workouts", MetricColors.heart, week.toString(), "Last 7 days", IndexTarget.Open(Detail.AllWorkouts)),
             ),
         ),
     )

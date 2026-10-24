@@ -153,7 +153,10 @@ app uses one of these roles, through `GlowType`. Material typography is not used
 No arrows, triangles or dotted arrows anywhere: an arrow says up but not whether up is good (resting heart rate up
 is bad news, HRV up is good). No red or green for a change. Always say against what ("vs yesterday", "vs your
 normal", "vs last week"), never a bare "+3". A real minus sign (−), never a hyphen: `TabCopy.signed` and the Recovery
-contributor deltas use "-" today. No change reads "Same as yesterday", never "+0".
+contributor deltas use "-" today. No change reads "Same as yesterday", never "+0". A change from your normal (skin
+temperature) goes through `Metric.formatChange` on every surface. One format per metric everywhere, `Metric.format`:
+steps with the thousands comma ("8,432", the dot font has the comma), breathing rate to one decimal ("14.6").
+Breathing disturbances are "an hour" on the Wide and the Small.
 
 **One dotted number per card.** A card has at most one number in dots, its answer. Times, ranges, totals and second
 figures are text in Body or Secondary. A list has one per row. This holds everywhere: the sleep hero (5.2), the Sleep
@@ -302,6 +305,8 @@ icon to 30% and shows the dim bar for a value with "After your first night" or s
 | Energy | `Fire` |
 | Distance | `Route01` |
 | VO2 max | `FastWind` |
+| Habit Age (row and page) | `CalendarBlank`, apart from Time to recover's hourglass |
+| Workouts (All metrics) | `PersonSimpleRun`, apart from Load's dumbbell |
 
 Contributor rows (What drove it, where Charge went) keep their bar and no icon. Workout rows keep their sport tile.
 Settings rows on the You and Strap pages keep their toned white icons.
@@ -473,6 +478,9 @@ the moment.
 **All metrics sheet.** A modal sheet over the current tab, in the style of the sheets over the app: every metric grouped by section,
 each row with its value for the day. Tapping a row closes the sheet, then opens that metric's detail on the current
 tab. Recovery and Sleep rows switch to their tab at its root, and Charge to the Recovery tab with its card in view.
+Each row shows what its card shows: Recovery the strap's estimate (so labelled) while OpenStrap's score is withheld,
+Charge a dash "After your first night" until anchored, Habit Age the rounded estimate. Workouts, in heart red (the
+neutral light is for cards), counts the last 7 days, and says so.
 Back or a swipe down closes it. The tab bar under it does nothing while it's open.
 
 ### 3.3 Navigation rules
@@ -642,6 +650,7 @@ card of each column under it.
 
 1. Glow hero: sentence ("Recovered enough for your usual training. Mostly held back by HRV."), score in a dark pool,
    status word, "+3 vs yesterday", (i), and trend dots for the last 7 days beside the score, today the only full dot.
+   While OpenStrap's score is withheld the strap's stands in, "Strap's estimate" under it, as on Today.
    "Learning, 9 of 14 nights" marker while calibrating. The normal band behind the dots waits for a normal of the
    score (step 6).
 2. List "What drove it": the three contributors that weigh most, as contributor bars (name, bar, word, colour when

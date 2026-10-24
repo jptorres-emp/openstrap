@@ -6,7 +6,6 @@ import org.openstrap.app.ui.theme.MetricColors
 import androidx.compose.ui.draw.rotate
 import androidx.compose.runtime.getValue
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,28 +24,20 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
 import org.openstrap.app.ui.components.pressClickable
 import org.openstrap.app.ui.theme.AppIcons
 
 /*
- * The quiet half of the glow language: plain black panels drawn with dots. Use these for lists and
- * secondary charts so the few glow cards on a screen stay special.
+ * The quiet tier of the glow language as a free-form panel (spec 2.5, L0): a list's surface and hairline round
+ * content that isn't rows, like controls, a chart or a note. No light and no dots, so the glow cards on a screen stay
+ * special.
  */
 
-private val PanelShape = GlowLayout.CardShape
-
-/** A black panel outlined in a row of faint dots instead of a border. */
+/** A quiet panel: the [ListPanel] surface and its 6% hairline, [GlowLayout.CardPadding] inside, blocks 14 dp apart. */
 @Composable
-fun DotPanel(
+fun QuietPanel(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit,
@@ -54,21 +45,9 @@ fun DotPanel(
     Column(
         modifier
             .fillMaxWidth()
-            .let { if (onClick != null) it.pressClickable(onClick, PanelShape) else it }
-            .drawBehind {
-                val inset = 1.dp.toPx()
-                // A clear step above the charts' dotted gridlines (16%), still well under the text.
-                drawRoundRect(
-                    Color.White.copy(alpha = 0.3f),
-                    topLeft = Offset(inset, inset),
-                    size = Size(size.width - inset * 2, size.height - inset * 2),
-                    cornerRadius = CornerRadius(GlowLayout.CardCorner.toPx() - inset),
-                    style = Stroke(
-                        width = 1.6.dp.toPx(), cap = StrokeCap.Round,
-                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(0f, 7.dp.toPx())),
-                    ),
-                )
-            }
+            .let { if (onClick != null) it.pressClickable(onClick, GlowLayout.CardShape) else it }
+            .background(ListSurface, GlowLayout.CardShape)
+            .border(1.dp, RowHairline, GlowLayout.CardShape)
             .padding(GlowLayout.CardPadding),
         verticalArrangement = Arrangement.spacedBy(14.dp),
         content = content,
@@ -76,13 +55,12 @@ fun DotPanel(
 }
 
 /**
- * The title row of a dotted panel: the title, an optional note on the right and an optional chevron. No
- * leading mark: these panels are the quiet layer, and colour belongs to the data inside them. [warning]
- * puts an amber warning icon in front, for panels that flag a problem. [expanded], when set, shows a caret
- * that turns as a folding panel opens.
+ * The title row of a [QuietPanel]: the title, an optional note on the right and an optional chevron. No leading mark:
+ * colour belongs to the data inside. [warning] puts an amber warning icon in front, for panels that flag a problem.
+ * [expanded], when set, shows a caret that turns as a folding panel opens.
  */
 @Composable
-fun DotHeader(title: String, trailing: String? = null, chevron: Boolean = false, warning: Boolean = false, expanded: Boolean? = null) {
+fun PanelTitle(title: String, trailing: String? = null, chevron: Boolean = false, warning: Boolean = false, expanded: Boolean? = null) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         if (warning) {
             Icon(AppIcons.Warning, null, tint = MetricColors.warn, modifier = Modifier.size(20.dp))
@@ -95,8 +73,8 @@ fun DotHeader(title: String, trailing: String? = null, chevron: Boolean = false,
             Icon(AppIcons.CaretRight, null, tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(16.dp))
         }
         if (expanded != null) {
-            // In a glass circle, like every other control inside a dotted panel.
-            val turn by animateFloatAsState(if (expanded) 180f else 0f, label = "dot header caret")
+            // In a glass circle, like every other control inside a quiet panel.
+            val turn by animateFloatAsState(if (expanded) 180f else 0f, label = "panel title caret")
             Spacer(Modifier.width(8.dp))
             Box(Modifier.size(32.dp).glass(CircleShape), contentAlignment = Alignment.Center) {
                 Icon(AppIcons.CaretDown, if (expanded) "Hide" else "Show", tint = Color.White, modifier = Modifier.size(16.dp).rotate(turn))
@@ -106,8 +84,8 @@ fun DotHeader(title: String, trailing: String? = null, chevron: Boolean = false,
 }
 
 /**
- * The glass surface every control inside a dotted panel wears (rows, pills, buttons): a faint white fill
- * and hairline, so it reads as something to press against the panel's bare black. With [onClick] it
+ * The glass surface every control inside a quiet panel wears (rows, pills, buttons): a faint white fill
+ * and hairline, so it reads as something to press against the panel. With [onClick] it
  * presses like the rest of the glow controls.
  */
 fun Modifier.glass(shape: Shape, onClick: (() -> Unit)? = null, scale: Float = 0.98f): Modifier =
@@ -115,19 +93,13 @@ fun Modifier.glass(shape: Shape, onClick: (() -> Unit)? = null, scale: Float = 0
         .border(1.dp, Color.White.copy(alpha = 0.12f), shape)
         .let { if (onClick != null) it.pressClickable(onClick, shape, scale) else it }
 
-/** The shape of a glass row inside a dotted panel. */
+/** The shape of a glass row inside a quiet panel. */
 val GlassRowShape = GlowLayout.TileShape
 
-/** A dotted rule between rows. */
+/** A quiet rule between blocks in a panel: a solid 1 dp hairline, as between list rows. */
 @Composable
-fun DotDivider(modifier: Modifier = Modifier) {
-    Canvas(modifier.fillMaxWidth().height(2.dp)) {
-        drawLine(
-            Color.White.copy(alpha = 0.16f), Offset(0f, size.height / 2), Offset(size.width, size.height / 2),
-            strokeWidth = 1.5.dp.toPx(), cap = StrokeCap.Round,
-            pathEffect = PathEffect.dashPathEffect(floatArrayOf(0f, 6.dp.toPx())),
-        )
-    }
+fun PanelDivider(modifier: Modifier = Modifier) {
+    Box(modifier.fillMaxWidth().height(1.dp).background(RowHairline))
 }
 
 internal val TrendGood = Color(0xFF3DDC97)

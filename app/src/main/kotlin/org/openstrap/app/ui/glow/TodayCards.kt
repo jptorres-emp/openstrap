@@ -322,7 +322,7 @@ internal fun HeartCard(
 
 /**
  * Steps toward the day's goal, with the day's steps so far as a line (ghost line, chart kit) on an axis up to the goal,
- * and your [usual] by the end of each hour as the faint dashed ghost behind it, with "about usual by now" beside the
+ * and your [usual] by the end of each hour as the faint solid ghost behind it, with "about usual by now" beside the
  * goal (spec 2.7, compare by pace). Without a usual yet only today's line shows.
  */
 @Composable

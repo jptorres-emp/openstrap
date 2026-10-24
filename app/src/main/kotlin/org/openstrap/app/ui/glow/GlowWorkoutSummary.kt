@@ -32,7 +32,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
@@ -180,8 +179,8 @@ private fun CalmDownHero(summary: PhoneSummary, live: CalmDown?, usualDrop: Int?
 }
 
 /**
- * The heart rate from a minute before the [end] to two after: the workout's last minute dim, the drop bright, a dotted
- * mark at the end. Gaps of more than five seconds break the line.
+ * The heart rate from a minute before the [end] to two after: the workout's last minute dim, the drop bright, a solid
+ * hairline mark at the end. Gaps of more than five seconds break the line.
  */
 @Composable
 private fun DropLine(readings: List<Pair<Long, Int>>, end: Long, modifier: Modifier = Modifier) {
@@ -194,10 +193,7 @@ private fun DropLine(readings: List<Pair<Long, Int>>, end: Long, modifier: Modif
             fun x(t: Long) = (t - first) / span * size.width
             fun y(v: Int) = size.height - (v - lo) / (hi - lo) * size.height
             val endX = x(end)
-            drawLine(
-                Color.White.copy(alpha = 0.35f), Offset(endX, 0f), Offset(endX, size.height), strokeWidth = 1.dp.toPx(),
-                pathEffect = PathEffect.dashPathEffect(floatArrayOf(2.dp.toPx(), 3.dp.toPx())),
-            )
+            drawLine(Color.White.copy(alpha = 0.35f), Offset(endX, 0f), Offset(endX, size.height), strokeWidth = 1.dp.toPx())
             fun stroke(part: List<Pair<Long, Int>>, color: Color) {
                 if (part.size < 2) return
                 val path = Path()

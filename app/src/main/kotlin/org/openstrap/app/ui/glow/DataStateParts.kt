@@ -19,7 +19,6 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
@@ -37,8 +36,8 @@ import org.openstrap.app.ui.theme.MetricColors
 
 /**
  * The pairing stage (E3): the strap, lit and still, a line across to the phone, and the phone. Only the line changes
- * with the [step]: faint dots while it waits, brighter once a strap is in reach, pulsing while it connects, solid when
- * connected, amber when it couldn't.
+ * with the [step], always a solid 1 dp hairline (spec 2.7): faint while it waits, brighter once a strap is in reach,
+ * pulsing while it connects, in the strap's light when connected, amber when it couldn't.
  */
 @Composable
 internal fun PairingStage(step: PairStep, modifier: Modifier = Modifier) {
@@ -58,12 +57,7 @@ internal fun PairingStage(step: PairStep, modifier: Modifier = Modifier) {
         StrapDrawing(StrapLight, lit = true, syncing = false, Modifier.size(width = StageHeight * 0.8f, height = StageHeight))
         Canvas(Modifier.weight(1f).fillMaxHeight().padding(horizontal = 6.dp)) {
             val y = size.height / 2
-            if (step == PairStep.Connected) drawLine(line, Offset(0f, y), Offset(size.width, y), 2.dp.toPx(), StrokeCap.Round)
-            else drawLine(
-                line, Offset(0f, y), Offset(size.width, y), 3.dp.toPx(), StrokeCap.Round,
-                // Round dots: a near-zero dash with round caps, a dot's width plus a gap apart.
-                pathEffect = PathEffect.dashPathEffect(floatArrayOf(0.1f, 9.dp.toPx())),
-            )
+            drawLine(line, Offset(0f, y), Offset(size.width, y), 1.dp.toPx(), StrokeCap.Round)
         }
         PhoneDrawing(Modifier.size(width = 30.dp, height = 52.dp))
     }

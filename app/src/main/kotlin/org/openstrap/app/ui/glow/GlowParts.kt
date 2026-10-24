@@ -20,14 +20,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
-import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 /* ------------------------------------------------------------------------------------------------ */
@@ -91,51 +86,6 @@ fun DotMatrixText(
             }
             x0 += (rows[0].length + 1) * step
         }
-    }
-}
-
-/* ------------------------------------------------------------------------------------------------ */
-/* Decorations                                                                                       */
-/* ------------------------------------------------------------------------------------------------ */
-
-private fun DrawScope.dotted(gap: Dp, width: Dp) = Stroke(
-    width = width.toPx(),
-    cap = StrokeCap.Round,
-    pathEffect = PathEffect.dashPathEffect(floatArrayOf(0f, gap.toPx())),
-)
-
-/** A marker on an [ArcTimeline]: a position along the line (0..1) and its colour. */
-data class ArcMark(val at: Float, val color: Color)
-
-/**
- * A dotted baseline with arcs bridging consecutive [arcs] marks ("Breath Volume"). Marks listed in
- * [marks] are drawn as coloured dots; [arcs] are pairs of positions (0..1) to bridge.
- */
-@Composable
-fun ArcTimeline(
-    marks: List<ArcMark>,
-    arcs: List<Pair<Float, Float>>,
-    modifier: Modifier = Modifier,
-    color: Color = Color.White,
-) {
-    Canvas(modifier) {
-        val y = size.height - 6.dp.toPx()
-        drawLine(
-            color.copy(alpha = 0.65f), Offset(0f, y), Offset(size.width, y),
-            strokeWidth = 2.dp.toPx(), cap = StrokeCap.Round,
-            pathEffect = PathEffect.dashPathEffect(floatArrayOf(0f, 9.dp.toPx())),
-        )
-        arcs.forEachIndexed { i, (a, b) ->
-            val left = a * size.width
-            val diameter = (b - a) * size.width
-            drawArc(
-                color.copy(alpha = if (i == arcs.lastIndex) 1f else 0.65f),
-                startAngle = 180f, sweepAngle = 180f, useCenter = false,
-                topLeft = Offset(left, y - diameter / 2), size = androidx.compose.ui.geometry.Size(diameter, diameter),
-                style = Stroke(1.5.dp.toPx()),
-            )
-        }
-        marks.forEach { drawCircle(it.color, 4.dp.toPx(), Offset(it.at * size.width, y)) }
     }
 }
 

@@ -29,7 +29,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -48,29 +47,28 @@ import org.openstrap.app.ui.components.smoothPath
 import org.openstrap.app.ui.theme.FunnelSans
 import org.openstrap.app.ui.theme.MetricColors
 import kotlin.math.cos
-import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.math.sin
 
 /*
- * Charts for glow cards. The card's colour carries the mood, so the marks are white: lines get a soft
- * halo, guides are rows of dots, and bars and rings are built from LED-style dots like the numerals.
+ * Charts for glow cards. The card's colour carries the mood, so the marks are white: lines get a soft halo, and grids,
+ * guides and bars are solid (spec 2.7). Only the digits are made of dots.
  */
 
 private val Ink = Color.White
-private val Faint = Color.White.copy(alpha = 0.16f)
 private val Muted = Color.White.copy(alpha = 0.55f)
+/** Grid rows and stage guides: solid, white at 8%, 1 dp. */
+private val Grid = Color.White.copy(alpha = GlowLayout.HairlineAlpha)
+/** A target, goal or average across a chart: solid, white at 40%, 1 dp. */
+private val Target = Color.White.copy(alpha = 0.40f)
 
 private val axisText = TextStyle(color = Muted, fontSize = 10.sp, fontFamily = FunnelSans)
 private val valueText = TextStyle(color = Ink, fontSize = 11.sp, fontFamily = FunnelSans)
 private val readoutText = TextStyle(color = Ink, fontSize = 12.sp, fontFamily = FunnelSans)
 
-/** A horizontal row of dots, the glow language's grid line. */
-private fun DrawScope.dottedLine(y: Float, color: Color = Faint, gap: Dp = 6.dp, x0: Float = 0f, x1: Float = size.width) =
-    drawLine(
-        color, Offset(x0, y), Offset(x1, y), strokeWidth = 1.6.dp.toPx(), cap = StrokeCap.Round,
-        pathEffect = PathEffect.dashPathEffect(floatArrayOf(0f, gap.toPx())),
-    )
+/** A solid horizontal hairline across the chart: a grid row by default, or a target in [color]. */
+private fun DrawScope.gridLine(y: Float, color: Color = Grid, x0: Float = 0f, x1: Float = size.width) =
+    drawLine(color, Offset(x0, y), Offset(x1, y), strokeWidth = 1.dp.toPx())
 
 private fun DrawScope.text(m: TextMeasurer, s: String, style: TextStyle, x: Float, y: Float, align: Float = 0f) {
     val r = m.measure(s, style)
@@ -89,11 +87,8 @@ private fun DrawScope.readout(m: TextMeasurer, s: String, x: Float, anchorY: Flo
     drawText(r, topLeft = Offset(bx + 9.dp.toPx(), by + 5.dp.toPx()))
 }
 
-/** A vertical guide made of dots, under the finger. */
-private fun DrawScope.guide(x: Float, bottom: Float) = drawLine(
-    Ink.copy(alpha = 0.6f), Offset(x, 0f), Offset(x, bottom), strokeWidth = 1.6.dp.toPx(), cap = StrokeCap.Round,
-    pathEffect = PathEffect.dashPathEffect(floatArrayOf(0f, 4.dp.toPx())),
-)
+/** A solid vertical guide under the finger. */
+private fun DrawScope.guide(x: Float, bottom: Float) = drawLine(Target, Offset(x, 0f), Offset(x, bottom), strokeWidth = 1.dp.toPx())
 
 /** Bottom axis labels spread evenly from the left edge to the right edge. */
 private fun DrawScope.axis(m: TextMeasurer, labels: List<String>, y: Float) {
@@ -107,8 +102,8 @@ private fun DrawScope.axis(m: TextMeasurer, labels: List<String>, y: Float) {
 /* ------------------------------------------------------------------------------------------------ */
 
 /**
- * A day of readings as one smooth white line with a faint halo, a soft fill, dotted guides, a dotted average
- * and a glowing dot on the latest value. [values] are evenly spaced; nulls break the line.
+ * A day of readings as one smooth white line with a faint halo, a soft fill, three hairline grid rows, a solid
+ * average line and a glowing dot on the latest value. [values] are evenly spaced; nulls break the line.
  */
 @Composable
 fun GlowLineChart(
@@ -121,7 +116,7 @@ fun GlowLineChart(
     color: Color = Ink,
     /** A fixed value axis (e.g. 0..100 for scores); null fits the data. */
     yRange: ClosedFloatingPointRange<Float>? = null,
-    /** A usual range drawn as a faint band between two dotted lines (e.g. your normal). */
+    /** A usual range drawn as a band of the colour at 12%, no edge lines (e.g. your normal). */
     band: ClosedFloatingPointRange<Float>? = null,
     /** How the average label prints a value. */
     format: (Float) -> String = { it.roundToInt().toString() },
@@ -162,13 +157,11 @@ fun GlowLineChart(
         fun xOf(i: Int) = inset + i / (values.size - 1f).coerceAtLeast(1f) * (size.width - inset * 2)
         fun yOf(v: Float) = top + (h - top) * (1f - (v - lo) / (hi - lo))
 
-        listOf(0f, 0.5f, 1f).forEach { dottedLine(top + (h - top) * it) }
+        listOf(0f, 0.5f, 1f).forEach { gridLine(top + (h - top) * it) }
         band?.let { b ->
             val y0 = yOf(b.endInclusive)
             val y1 = yOf(b.start)
-            drawRect(color.copy(alpha = 0.10f), Offset(0f, y0), Size(size.width, y1 - y0))
-            dottedLine(y0, color.copy(alpha = 0.45f), gap = 4.dp)
-            dottedLine(y1, color.copy(alpha = 0.45f), gap = 4.dp)
+            drawRect(color.copy(alpha = NormalBandAlpha), Offset(0f, y0), Size(size.width, y1 - y0))
         }
 
         // Runs of consecutive readings; a gap starts a new run.
@@ -190,7 +183,7 @@ fun GlowLineChart(
         if (showAverage) {
             val avg = known.average().toFloat()
             val y = yOf(avg)
-            dottedLine(y, Ink.copy(alpha = 0.5f), gap = 4.dp)
+            gridLine(y, Target)
             text(m, "avg ${format(avg)}", axisText.copy(color = Ink.copy(alpha = 0.8f)), size.width, y - 16.dp.toPx(), align = 1f)
         }
 
@@ -216,6 +209,9 @@ fun GlowLineChart(
     }
 }
 
+/** Your normal behind a chart: a band of the ink at 12% (spec 2.7). */
+private const val NormalBandAlpha = 0.12f
+
 /** The reading nearest [x] on a line chart [width] wide, its ends [inset] in; gaps are skipped, not bridged. */
 internal fun nearestReading(values: List<Float?>, x: Float, width: Float, inset: Float): Int? {
     if (values.isEmpty() || width <= inset * 2) return null
@@ -227,15 +223,14 @@ internal fun nearestReading(values: List<Float?>, x: Float, width: Float, inset:
 /* ------------------------------------------------------------------------------------------------ */
 
 /**
- * Bars made of dots, like an LED meter (e.g. steps per hour). Each column has [rows] dots; the lit ones
- * show the value. The [highlight] column (default: the last one with data) is drawn in [accent].
+ * Solid rounded bars (e.g. steps per hour, active minutes a day), each as tall as its value, on a hairline baseline.
+ * An empty column isn't drawn. The [highlight] column (default: the last one with data) is drawn in [accent].
  */
 @Composable
-fun GlowDotBars(
+fun GlowBars(
     values: List<Float>,
     modifier: Modifier = Modifier,
     height: Dp = 96.dp,
-    rows: Int = 10,
     labels: List<String> = emptyList(),
     highlight: Int = values.indexOfLast { it > 0f },
     accent: Color = Ink,
@@ -262,26 +257,26 @@ fun GlowDotBars(
     ) {
         if (values.isEmpty()) return@Canvas
         val axisH = if (labels.isEmpty()) 0f else 18.dp.toPx()
+        val top = 4.dp.toPx()
         val h = size.height - axisH
         val pitchX = size.width / values.size
-        val pitchY = h / rows
-        val r = min(pitchX, pitchY) * 0.32f
+        val barW = (pitchX * 0.56f).coerceAtMost(14.dp.toPx())
         val max = values.max().coerceAtLeast(1f)
         val picked = touchX?.takeIf { scrubbing }?.let { (it / pitchX).toInt().coerceIn(0, values.size - 1) }
+        gridLine(h - 0.5.dp.toPx())
         values.forEachIndexed { i, v ->
-            val lit = if (v > 0f) (v / max * rows).roundToInt().coerceIn(1, rows) else 0
+            if (v <= 0f) return@forEachIndexed
             // While scrubbing, the other columns dim so the picked one stands out.
             val dim = if (picked == null || picked == i) 1f else 0.35f
-            val cx = pitchX * i + pitchX / 2
-            for (row in 0 until rows) {
-                val on = row < lit
-                val color = when {
-                    !on -> Ink.copy(alpha = 0.10f)
-                    i == highlight || i == picked -> accent
-                    else -> Ink.copy(alpha = 0.55f + 0.45f * (row + 1f) / rows)
-                }
-                drawCircle(color.copy(alpha = color.alpha * dim), r, Offset(cx, h - pitchY * row - pitchY / 2))
-            }
+            val color = if (i == highlight || i == picked) accent else Ink.copy(alpha = 0.6f)
+            // Never shorter than round, so a small value still reads as a bar.
+            val barH = ((h - top) * v / max).coerceAtLeast(barW)
+            drawRoundRect(
+                color.copy(alpha = color.alpha * dim),
+                topLeft = Offset(pitchX * i + (pitchX - barW) / 2, h - barH),
+                size = Size(barW, barH),
+                cornerRadius = CornerRadius(barW / 2),
+            )
         }
         axis(m, labels, h + 4.dp.toPx())
         if (picked != null && describe != null) readout(m, describe(picked, values[picked]), pitchX * picked + pitchX / 2, 0f)
@@ -294,8 +289,8 @@ fun GlowDotBars(
 data class GlowDay(val label: String, val value: Float?)
 
 /**
- * A week as dotted stems rising to each day's value, the value printed above. Today (the last day)
- * gets a glowing ring. [average] draws a dotted line across.
+ * A week as solid stems rising to each day's value, the value printed above. Today (the last day) gets a glowing
+ * ring. A day with no value is left empty. [average] draws a solid line across.
  */
 @Composable
 fun GlowTrend(
@@ -316,21 +311,16 @@ fun GlowTrend(
         val hi = (known.maxOrNull() ?: 1f).coerceAtLeast(lo + 1f)
         fun yOf(v: Float) = top + (h - top - 6.dp.toPx()) * (1f - (v - lo) / (hi - lo))
 
-        average?.let { dottedLine(yOf(it), Ink.copy(alpha = 0.45f), gap = 4.dp) }
+        average?.let { gridLine(yOf(it), Target) }
         days.forEachIndexed { i, d ->
             val cx = slot * i + slot / 2
             val today = i == days.lastIndex
             text(m, d.label, if (today) axisText.copy(color = Ink) else axisText, cx, h + 4.dp.toPx(), align = 0.5f)
-            val v = d.value
-            if (v == null) {
-                drawCircle(Faint, 2.5.dp.toPx(), Offset(cx, h - 3.dp.toPx()))
-                return@forEachIndexed
-            }
+            val v = d.value ?: return@forEachIndexed
             val y = yOf(v)
             drawLine(
                 Ink.copy(alpha = if (today) 0.9f else 0.45f), Offset(cx, h - 3.dp.toPx()), Offset(cx, y),
                 strokeWidth = 2.dp.toPx(), cap = StrokeCap.Round,
-                pathEffect = PathEffect.dashPathEffect(floatArrayOf(0f, 5.dp.toPx())),
             )
             if (today) {
                 drawCircle(Ink.copy(alpha = 0.18f), 11.dp.toPx(), Offset(cx, y))
@@ -347,7 +337,7 @@ fun GlowTrend(
 
 /**
  * A half-circle gauge from 9 o'clock over the top to 3: a smooth white line with a faint halo up to
- * [progress], a dotted track for what's left, and a glowing dot in [color] at the leading edge. Fills
+ * [progress], a solid hairline track for what's left, and a glowing dot in [color] at the leading edge. Fills
  * the width it's given; [content] sits at the bottom middle, inside the arc.
  */
 @Composable
@@ -369,10 +359,7 @@ fun GlowArcGauge(
             val topLeft = Offset(c.x - r, c.y - r)
             val box = Size(r * 2, r * 2)
             val sweep = 180f * progress.coerceIn(0f, 1f)
-            drawArc(
-                Faint.copy(alpha = 0.22f), 180f + sweep, 180f - sweep, false, topLeft, box,
-                style = Stroke(2.dp.toPx(), cap = StrokeCap.Round, pathEffect = PathEffect.dashPathEffect(floatArrayOf(0f, 7.dp.toPx()))),
-            )
+            drawArc(Grid, 180f + sweep, 180f - sweep, false, topLeft, box, style = Stroke(2.dp.toPx(), cap = StrokeCap.Round))
             if (sweep <= 0f) return@Canvas
             drawArc(Ink.copy(alpha = 0.1f), 180f, sweep, false, topLeft, box, style = Stroke(8.dp.toPx(), cap = StrokeCap.Round))
             // Brighter towards the end, like the ring. Sweep gradients start at 3 o'clock; the arc at 9 (0.5).
@@ -395,7 +382,7 @@ fun GlowArcGauge(
 data class GlowStage(val from: Float, val to: Float, val row: Int)
 
 /**
- * Sleep stages as white pills on dotted rows (row 0 at the top, e.g. Awake), joined by thin
+ * Sleep stages as white pills on hairline rows (row 0 at the top, e.g. Awake), joined by thin
  * connectors. Deeper rows are drawn brighter so deep sleep stands out on the dark core.
  */
 @Composable
@@ -441,7 +428,7 @@ fun GlowHypnogram(
         fun xOf(f: Float) = nameW + f * w
 
         rowNames.forEachIndexed { row, name ->
-            dottedLine(yOf(row), x0 = nameW)
+            gridLine(yOf(row), x0 = nameW)
             if (showNames) text(m, name, axisText, 0f, yOf(row) - 7.dp.toPx())
         }
         val sorted = stages.sortedBy { it.from }
@@ -515,7 +502,7 @@ fun GlowHorizon(progress: Float?, value: String?, modifier: Modifier = Modifier,
 
 /**
  * The ghost line of your usual (chart kit): [today] so far as a solid line in [color] ending in a dot, and [usual]
- * by this time of day as a faint dashed line behind it, when there is one. Both are evenly spaced over the same span
+ * by this time of day as a solid ghost line at 35% white behind it, when there is one. Both are evenly spaced over the same span
  * (a day, say) on a value axis from 0 to [max]; nulls in [today] are the hours still to come.
  */
 @Composable
@@ -530,7 +517,7 @@ fun GhostLine(today: List<Float?>, color: Color, max: Float, modifier: Modifier 
         fun yOf(v: Float) = top + (h - top) * (1f - (v / hi).coerceIn(0f, 1f))
         usual?.takeIf { it.size >= 2 }?.let { u ->
             val path = Path().apply { u.forEachIndexed { i, v -> if (i == 0) moveTo(xOf(i, u.size), yOf(v)) else lineTo(xOf(i, u.size), yOf(v)) } }
-            drawPath(path, Ink.copy(alpha = 0.35f), style = Stroke(2.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(3.dp.toPx(), 5.dp.toPx()))))
+            drawPath(path, Ink.copy(alpha = 0.35f), style = Stroke(1.5.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
         }
         val pts = today.mapIndexedNotNull { i, v -> v?.let { Offset(xOf(i, today.size), yOf(it)) } }
         if (pts.isEmpty()) return@Canvas
@@ -578,7 +565,7 @@ fun TrendDots(values: List<Int?>, modifier: Modifier = Modifier, height: Dp = 52
 /**
  * A detail's chart over days (chart kit, trend dots on a detail): each day's value as a dot on a line in [color], your
  * normal as a dim band behind them with its [bandLabel], days inside it dim and days outside it lit with a halo
- * ([levels]). A gap in the days is bridged by a dashed line. [labels] go under each dot when there's one a day,
+ * ([levels]). At a gap in the days the line stops and starts again, nothing joins it. [labels] go under each dot when there's one a day,
  * otherwise spread across. Holding scrubs: [onScrub] gets the point under the finger, or null on release, so the
  * headline can follow it (spec 2.7).
  */
@@ -635,7 +622,7 @@ internal fun NormalTrend(
         fun yOf(v: Float) = top + (h - top) * (1f - (v - lo) / (hi - lo))
         band?.let { b ->
             val y0 = yOf(b.endInclusive)
-            drawRoundRect(color.copy(alpha = 0.14f), Offset(0f, y0), Size(size.width, yOf(b.start) - y0), CornerRadius(12.dp.toPx()))
+            drawRoundRect(color.copy(alpha = NormalBandAlpha), Offset(0f, y0), Size(size.width, yOf(b.start) - y0), CornerRadius(12.dp.toPx()))
             if (bandLabel != null && labelH != null) {
                 val w = m.measure(bandLabel, labelStyle).size.width
                 val sw = 14.dp.toPx()
@@ -648,12 +635,8 @@ internal fun NormalTrend(
         val pts = values.mapIndexedNotNull { i, v -> v?.let { i to Offset(xOf(i), yOf(it)) } }
         val stroke = 2.4.dp.toPx() * (0.6f + 0.4f * scale)
         pts.zipWithNext { (i, a), (j, b) ->
-            // A missing day between two dots: the line goes on, dashed.
-            val gap = j - i > 1
-            drawLine(
-                color.copy(alpha = 0.85f), a, b, stroke, StrokeCap.Round,
-                pathEffect = if (gap) PathEffect.dashPathEffect(floatArrayOf(4.dp.toPx(), 5.dp.toPx())) else null,
-            )
+            // A missing day between two dots: the line stops there.
+            if (j - i == 1) drawLine(color.copy(alpha = 0.85f), a, b, stroke, StrokeCap.Round)
         }
         val dim = lerp(color, Color.Black, 0.5f)
         pts.forEach { (i, p) ->

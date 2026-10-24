@@ -21,7 +21,6 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -106,7 +105,7 @@ data class ChartSegment(val from: Long, val to: Long, val color: Color)
 
 /**
  * Time-series chart in the Oura/WHOOP style: a smooth (monotone, never overshooting) line over a soft
- * gradient, faint dashed grid with values on the right, a haloed dot at the latest reading and a
+ * gradient, a faint solid grid with values on the right, a haloed dot at the latest reading and a
  * labelled average. Drag across it to read any point (see [scrub]). Gaps longer than [gapSeconds] break the line so
  * off-wrist periods aren't bridged. [segments] adds a Garmin-style state strip under the plot.
  */
@@ -178,11 +177,10 @@ fun LineChart(
             if (x1 > x0) drawRoundRect(bandFill, Offset(x0, 0f), Size(x1 - x0, h), CornerRadius(6.dp.toPx()))
         }
 
-        val dash = PathEffect.dashPathEffect(floatArrayOf(2.dp.toPx(), 5.dp.toPx()))
         var v = bottom
         while (v <= top + 0.001f) {
             val y = yOf(v)
-            drawLine(grid, Offset(0f, y), Offset(w, y), 1.dp.toPx(), pathEffect = dash)
+            drawLine(grid, Offset(0f, y), Offset(w, y), 1.dp.toPx())
             label(measurer, v.toInt().toString(), style, size.width, y - 7.sp.toPx(), alignEnd = true)
             v += step
         }
@@ -246,7 +244,7 @@ fun LineChart(
             if (showAverage) {
                 val avg = points.map { it.y }.average().toFloat()
                 val avgY = yOf(avg)
-                drawLine(onSurface.copy(alpha = 0.45f), Offset(0f, avgY), Offset(w, avgY), 1.dp.toPx(), pathEffect = dash)
+                drawLine(onSurface.copy(alpha = 0.4f), Offset(0f, avgY), Offset(w, avgY), 1.dp.toPx())
                 // A small pill so the label stays readable where it crosses the line.
                 val text = measurer.measure("avg ${format(avg)}", style)
                 val pw = text.size.width + 10.dp.toPx()

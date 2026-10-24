@@ -22,7 +22,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.dp
@@ -195,15 +194,15 @@ private fun HeartRateCard(a: WorkoutAnalysis) {
             Note(if (last > a.end + HeartStep) "Drop after ${clockAt(a.end)}" else clockAt(a.end))
         }
         if (a.historyRanges.isNotEmpty()) Text(
-            "Dashed: " + a.historyRanges.joinToString(", ") { "${clockAt(it.first)}–${clockAt(it.last + 1)}" } + " came from the strap's history.",
+            "Dimmed: " + a.historyRanges.joinToString(", ") { "${clockAt(it.first)}–${clockAt(it.last + 1)}" } + " came from the strap's history.",
             color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary, modifier = Modifier.padding(top = 8.dp),
         )
     }
 }
 
 /**
- * The line itself: each ten-second step in its zone's colour up to the [end], dim white after it with a dotted mark at
- * the end; minutes from the strap's [history] dashed. [scrubbed] is the step under the finger, [onScrub] follows it.
+ * The line itself: each ten-second step in its zone's colour up to the [end], dim white after it with a solid hairline
+ * mark at the end; minutes from the strap's [history] dimmed. [scrubbed] is the step under the finger, [onScrub] follows it.
  */
 @Composable
 private fun ZoneHeartLine(
@@ -227,26 +226,22 @@ private fun ZoneHeartLine(
         fun y(v: Float) = size.height - (v - lo) / (hi - lo) * size.height
         if (endIndex in 1 until values.lastIndex) drawLine(
             Color.White.copy(alpha = 0.35f), Offset(endIndex * dx, 0f), Offset(endIndex * dx, size.height), strokeWidth = 1.dp.toPx(),
-            pathEffect = PathEffect.dashPathEffect(floatArrayOf(2.dp.toPx(), 3.dp.toPx())),
         )
-        val dash = PathEffect.dashPathEffect(floatArrayOf(4.dp.toPx(), 4.dp.toPx()))
         for (i in 0 until values.lastIndex) {
             val v0 = values[i] ?: continue
             val v1 = values[i + 1] ?: continue
             val t = first + i * HeartStep
+            val color = if (i >= endIndex) Color.White.copy(alpha = 0.55f) else zoneColor(v0.roundToInt(), maxHr)
             drawLine(
-                if (i >= endIndex) Color.White.copy(alpha = 0.55f) else zoneColor(v0.roundToInt(), maxHr),
+                // The strap's history, filled in after: the same line, dimmed (spec 2.7, no dashes).
+                if (history.any { t in it }) color.copy(alpha = color.alpha * 0.45f) else color,
                 Offset(i * dx, y(v0)), Offset((i + 1) * dx, y(v1)), strokeWidth = 2.5.dp.toPx(), cap = StrokeCap.Round,
-                pathEffect = if (history.any { t in it }) dash else null,
             )
         }
         scrubbed?.let { i ->
             val v = values.getOrNull(i) ?: return@let
             val p = Offset(i * dx, y(v))
-            drawLine(
-                Color.White.copy(alpha = 0.6f), Offset(p.x, 0f), Offset(p.x, size.height), strokeWidth = 1.6.dp.toPx(), cap = StrokeCap.Round,
-                pathEffect = PathEffect.dashPathEffect(floatArrayOf(0f, 4.dp.toPx())),
-            )
+            drawLine(Color.White.copy(alpha = 0.4f), Offset(p.x, 0f), Offset(p.x, size.height), strokeWidth = 1.dp.toPx())
             drawCircle(Color.Black.copy(alpha = 0.6f), 6.dp.toPx(), p)
             drawCircle(Color.White, 4.dp.toPx(), p)
         }
@@ -293,15 +288,15 @@ fun GlowWorkoutsScreen(workouts: List<WorkoutAnalysis>, contentPadding: PaddingV
     ScreenList(contentPadding, gutter = GlowLayout.Gutter) {
         item { PageHeader("Workouts", onBack, subtitle = "${workouts.size} recorded") }
         if (workouts.isEmpty()) {
-            item { DotPanel { Note("Workouts you start in OpenStrap show up here, and the strap's own after a sync.") } }
+            item { QuietPanel { Note("Workouts you start in OpenStrap show up here, and the strap's own after a sync.") } }
             return@ScreenList
         }
         workouts.groupBy { Instant.ofEpochSecond(it.workout.start).atZone(zone).toLocalDate() }.forEach { (date, day) ->
             item {
-                DotPanel {
-                    DotHeader(dayName(date), trailing = if (date.year != LocalDate.now().year) "${date.year}" else null)
+                QuietPanel {
+                    PanelTitle(dayName(date), trailing = if (date.year != LocalDate.now().year) "${date.year}" else null)
                     day.forEachIndexed { i, a ->
-                        if (i > 0) DotDivider()
+                        if (i > 0) PanelDivider()
                         WorkoutRow(a, usual, divider = false) { onOpen(a.workout.start) }
                     }
                 }

@@ -22,7 +22,6 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
@@ -188,7 +187,7 @@ private fun HeartPointsDetail(ctx: ActivityDetailContext) {
 
 /**
  * Stacked day bars (chart kit): each day's [values] stacked on the days before it, so the last bar is the 7-day total.
- * The oldest day's part is lighter at the foot of every bar: it drops off tomorrow. A dotted line marks the [target].
+ * The oldest day's part is lighter at the foot of every bar: it drops off tomorrow. A solid line at 40% marks the [target].
  * Tapping or holding picks a day ([onPick], null on release).
  */
 @Composable
@@ -221,10 +220,7 @@ private fun StackedDayBars(
             val w = slot * 0.6f
             val r = CornerRadius(4.dp.toPx())
             val ty = yOf(target)
-            drawLine(
-                Color.White.copy(alpha = 0.3f), Offset(0f, ty), Offset(size.width, ty), 1.dp.toPx(),
-                pathEffect = PathEffect.dashPathEffect(floatArrayOf(3.dp.toPx(), 5.dp.toPx())),
-            )
+            drawLine(Color.White.copy(alpha = 0.4f), Offset(0f, ty), Offset(size.width, ty), 1.dp.toPx())
             val oldest = values.firstOrNull() ?: 0f
             running.forEachIndexed { i, sum ->
                 if (sum <= 0f) return@forEachIndexed
@@ -285,7 +281,7 @@ private fun ActiveMinutesDetail(ctx: ActivityDetailContext) {
         if (a != null && range == Range.Week) {
             val values = week.map { (byDay[it]?.equivalent ?: 0).toFloat() }
             item {
-                GlowDotBars(
+                GlowBars(
                     values, height = 200.dp, labels = week.map(::shortDay), accent = color, modifier = Modifier.padding(top = 8.dp),
                     onScrub = { i -> scrub = i?.let { DetailHeadline(Math.round(values[it]).toString(), "minutes, ${week[it].format(DAY)}", null) } },
                 )
@@ -646,7 +642,7 @@ internal fun WeekDetail(ctx: ActivityDetailContext) {
     ) {
         val values = days.map { (it.steps ?: 0).toFloat() }
         if (values.any { it > 0f }) item {
-            GlowDotBars(
+            GlowBars(
                 values, height = 180.dp, labels = days.map { shortDay(it.date) }, accent = MetricColors.steps, modifier = Modifier.padding(top = 8.dp),
                 onScrub = { i -> scrub = i?.let { DetailHeadline(Math.round(values[it]).toString(), "steps, ${days[it].date.format(DAY)}", null) } },
             )

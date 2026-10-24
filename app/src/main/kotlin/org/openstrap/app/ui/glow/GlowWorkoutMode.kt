@@ -67,7 +67,6 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import kotlin.math.roundToInt
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
@@ -264,12 +263,12 @@ private fun SportBubble(icon: androidx.compose.ui.graphics.vector.ImageVector, n
 }
 
 /**
- * Where an offer or a suggestion sits: a dotted panel, or on Today a strip lit in heart red from [edge]'s side, so the
+ * Where an offer or a suggestion sits: a quiet panel, or on Today a strip lit in heart red from [edge]'s side, so the
  * two never look alike when both show.
  */
 @Composable
 private fun OfferBox(edge: EdgeKind?, content: @Composable ColumnScope.() -> Unit) {
-    if (edge == null) DotPanel(content = content)
+    if (edge == null) QuietPanel(content = content)
     else EdgeCard(MetricColors.heart, Modifier.fillMaxWidth(), kind = edge) {
         Column(verticalArrangement = Arrangement.spacedBy(14.dp), content = content)
     }
@@ -353,15 +352,15 @@ fun GlowAddWorkoutScreen(
             }
         }
         if (minuteHr == null) {
-            DotPanel { Note("Loading…") }
+            QuietPanel { Note("Loading…") }
             return@WorkoutPage
         }
         if (series.size < 2) {
-            DotPanel { Note("The strap hasn't sent heart rate for this day yet. Sync, then try again.") }
+            QuietPanel { Note("The strap hasn't sent heart rate for this day yet. Sync, then try again.") }
             return@WorkoutPage
         }
-        DotPanel {
-            DotHeader("When was it?", trailing = "${clock(from)} – ${clock(to)}")
+        QuietPanel {
+            PanelTitle("When was it?", trailing = "${clock(from)} – ${clock(to)}")
             RangeChart(series, first, last, from, to, maxHr) { f, t -> from = f; to = t }
             Row(Modifier.fillMaxWidth()) {
                 Note(clock(first))
@@ -489,10 +488,10 @@ fun GlowWorkoutReadyScreen(
             RoundButton(AppIcons.Info, "About recording", { info = true }, size = 30.dp)
         }
         // GPS is offered for outdoor sports only, off by default; the route is discarded unless kept.
-        if (outdoor) DotPanel {
+        if (outdoor) QuietPanel {
             SwitchRow("Use GPS", WorkoutCopy.gpsNote(useGps, sportType), useGps) { useGps = it }
             if (useGps) {
-                DotDivider()
+                PanelDivider()
                 SwitchRow("Keep route on this phone", WorkoutCopy.routeNote(keepRoute), keepRoute) { keepRoute = it }
             }
         }
@@ -519,7 +518,7 @@ fun GlowWorkoutReadyScreen(
                 }
             }
         }
-        DotPanel(onClick = { askToEnd = !askToEnd }) {
+        QuietPanel(onClick = { askToEnd = !askToEnd }) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text("Ask to end when I stop", color = Color.White, style = MaterialTheme.typography.titleSmall)
@@ -597,7 +596,7 @@ private fun SportPicker(selected: Int, contentPadding: PaddingValues, onPick: (I
                 ),
             )
         }
-        if (shown.isEmpty()) item { DotPanel { Note("No sport matches \"$query\".") } }
+        if (shown.isEmpty()) item { QuietPanel { Note("No sport matches \"$query\".") } }
         // Each section a grid of the same round buttons as Start a workout, four to a row.
         shown.forEach { (title, types) ->
             item(key = title) {
@@ -956,10 +955,10 @@ private fun SetsPanel(r: WorkoutState.Recording, color: Color, onStartSet: () ->
     val now by produceState(System.currentTimeMillis() / 1000) { while (true) { value = System.currentTimeMillis() / 1000; delay(1000 - System.currentTimeMillis() % 1000) } }
     val done = r.sets.count { it.end != null }
     val target = r.workout.setsTarget
-    DotPanel {
+    QuietPanel {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.weight(1f)) {
-                DotHeader(
+                PanelTitle(
                     when {
                         r.inSet -> "Set ${r.sets.size}, ${workoutClock(now - r.sets.last().start)}"
                         r.resting -> "Resting after set $done, ${workoutClock((r.restUntil!! - now).coerceAtLeast(0))}"
@@ -1089,8 +1088,8 @@ private fun FlatButton(container: Color, size: Dp, modifier: Modifier = Modifier
 /** "Looks like you've stopped": end where the wearer stopped, or keep going. The strap has buzzed already. */
 @Composable
 private fun StoppedPrompt(r: WorkoutState.Recording, at: Long, onEnd: () -> Unit, onKeep: () -> Unit) {
-    DotPanel {
-        DotHeader(if (r.inCar) "Looks like you're in a car" else "Looks like you've stopped")
+    QuietPanel {
+        PanelTitle(if (r.inCar) "Looks like you're in a car" else "Looks like you've stopped")
         Note(
             if (r.inCar) "You last moved at ${clock(at)}. End the ${Workouts.sportName(r.workout.sportType).lowercase()} there, so the drive isn't counted?"
             else "Your heart rate has been back near resting since ${clock(at)}. End the ${Workouts.sportName(r.workout.sportType).lowercase()} at ${clock(at)}?",
@@ -1310,12 +1309,12 @@ internal fun TrimPanel(summary: PhoneSummary, onSave: (Long, Long) -> Unit, onCa
         }
         List(n) { if (counts[it] == 0) null else sums[it] / counts[it] }
     }
-    DotPanel {
-        DotHeader("Trim", trailing = SummaryCopy.trimHeader(clock(from), clock(to), to - from))
+    QuietPanel {
+        PanelTitle("Trim", trailing = SummaryCopy.trimHeader(clock(from), clock(to), to - from))
         val known = points.filterNotNull()
         val lo = (known.minOrNull() ?: 60f) - 10f
         val hi = (known.maxOrNull() ?: 180f) + 5f
-        // A video trimmer: the workout as columns of dots in their zone colours, inside one rounded frame whose
+        // A video trimmer: the workout as thin solid bars in their zone colours, inside one rounded frame whose
         // thicker sides are the handles (Snapchat's, Polarsteps'); what's left out fades back. Drag either side in.
         Canvas(
             Modifier.fillMaxWidth().height(64.dp).pointerInput(summary) {
@@ -1339,26 +1338,25 @@ internal fun TrimPanel(summary: PhoneSummary, onSave: (Long, Long) -> Unit, onCa
             val edge = 3.dp.toPx()
             fun x(t: Long) = inset + (t - first).toFloat() / (last - first) * w
             drawRoundRect(Raised, Offset(inset, 0f), Size(w, h), CornerRadius(8.dp.toPx()))
-            // Dot columns, as tall as the heart rate in that stretch; unlit dots stay faintly visible, like DotMatrixText.
+            // Solid rounded bars, as tall as the heart rate in that stretch (dots are only for numbers, spec 2.7). A
+            // stretch with no reading is left empty.
             val pitch = 5.dp.toPx()
-            val dot = 1.7.dp.toPx()
+            val bar = 3.dp.toPx()
             val pad = edge + 5.dp.toPx()
-            val rows = ((h - 2 * pad) / pitch).toInt().coerceAtLeast(1)
             val cols = (w / pitch).toInt().coerceAtLeast(1)
             val fx = x(from)
             val tx = x(to)
             for (c in 0 until cols) {
                 val cx = inset + (c + 0.5f) * (w / cols)
                 val i = ((c + 0.5f) / cols * points.size).toInt().coerceIn(0, points.size - 1)
-                val v = points[i]
-                val lit = v?.let { (((it - lo) / (hi - lo)).coerceIn(0.1f, 1f) * rows).roundToInt() } ?: 0
-                val zone = v?.let { WorkoutRecorder.liveZone(it.toInt(), a.maxHeartRate) }
-                val inside = cx in fx..tx
-                for (r in 0 until rows) {
-                    val cy = h - pad - (r + 0.5f) * pitch
-                    val color = if (r < lit && zone != null) ZONE_COLORS[zone] else Color.White.copy(alpha = 0.08f)
-                    drawCircle(if (inside) color else color.copy(alpha = color.alpha * 0.3f), dot, Offset(cx, cy))
-                }
+                val v = points[i] ?: continue
+                val zone = WorkoutRecorder.liveZone(v.toInt(), a.maxHeartRate) ?: continue
+                val barH = ((v - lo) / (hi - lo)).coerceIn(0.1f, 1f) * (h - 2 * pad)
+                val color = ZONE_COLORS[zone]
+                drawRoundRect(
+                    if (cx in fx..tx) color else color.copy(alpha = color.alpha * 0.3f),
+                    Offset(cx - bar / 2, h - pad - barH), Size(bar, barH), CornerRadius(bar / 2),
+                )
             }
             // The frame: one rounded outline, its sides thick enough to grab, each with a short grip.
             val frame = androidx.compose.ui.graphics.Path().apply {

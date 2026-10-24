@@ -103,7 +103,7 @@ internal fun dayName(date: LocalDate): String = when (date) {
     else -> date.format(DateTimeFormatter.ofPattern("EEE d MMM"))
 }
 
-/** A row of choices on a dotted pill; the chosen one is a soft white pill. */
+/** A row of choices on a faint pill; the chosen one is a soft white pill. */
 @Composable
 internal fun GlowSegments(options: List<String>, selected: Int, onSelect: (Int) -> Unit) {
     Row(
@@ -618,7 +618,7 @@ private fun DayChart(metric: Metric, state: DayUiState, color: Color, hasValue: 
     Column(Modifier.padding(top = 8.dp)) {
         when (metric) {
             // Holding an hour puts its steps in the headline.
-            Metric.Steps -> GlowDotBars(
+            Metric.Steps -> GlowBars(
                 state.hourlySteps, height = 200.dp, labels = HOURS, accent = color,
                 onScrub = { h -> onScrub(h?.let { DetailHeadline(Math.round(state.hourlySteps[it]).toString(), "steps, %02d:00 to %02d:00".format(it, (it + 1) % 24), null) }) },
             )

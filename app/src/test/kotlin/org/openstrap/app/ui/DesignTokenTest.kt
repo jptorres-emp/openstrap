@@ -69,6 +69,12 @@ class DesignTokenTest {
         assertEquals(0.06f, GlowLayout.DividerAlpha, 1e-6f)
     }
 
+    @Test fun `only the digits are made of dots`() {
+        // No dotted or dashed line anywhere, and no dotted panels (spec 2.5, 2.7).
+        val found = find(Regex("""\bdashPathEffect\b|\bPathEffect\b|\bDot(Panel|Header|Divider)\b|\bGlowDotBars\b"""))
+        if (found.isNotEmpty()) fail("Lines, grids and panels are solid; only numbers are dots (spec 2.7):\n" + found.joinToString("\n"))
+    }
+
     @Test fun `no metric has a second colour`() {
         val found = find(Regex("""\b(chargeScale|chargeAt|chargeDeep|readinessDeep)\b|MetricColors\.bad\b|\bval bad\b"""))
         if (found.isNotEmpty()) fail("Charge is one Ember, Recovery one teal, and bad is gone (spec 2.2):\n" + found.joinToString("\n"))

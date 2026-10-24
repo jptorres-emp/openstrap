@@ -86,8 +86,8 @@ fun GlowHealthspanScreen(state: Healthspan.Outcome?, contentPadding: PaddingValu
 /** Where the last 30 days sit against the 6-month habits: 1x is in step with the calendar. */
 @Composable
 private fun PacePanel(pace: Float?) {
-    DotPanel {
-        DotHeader("Pace of aging", trailing = pace?.let { "${paceLabel(it)}, ${paceText(it)}" } ?: paceLabel(null))
+    QuietPanel {
+        PanelTitle("Pace of aging", trailing = pace?.let { "${paceLabel(it)}, ${paceText(it)}" } ?: paceLabel(null))
         if (pace != null) PaceScale(marker = (pace + 1f) / 4f, color = MetricColors.habitAge)
         Note(
             when {
@@ -131,8 +131,8 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.glowDot(at: Offset,
 /** Each habit against the typical person your age: what it takes off or adds, and the numbers behind it. */
 @Composable
 private fun TermsPanel(r: Healthspan.Result) {
-    DotPanel {
-        DotHeader("What moves it")
+    QuietPanel {
+        PanelTitle("What moves it")
         Note("Each habit against the typical person your age, over 6 months")
         // One scale for every bar below: a habit at either end takes off, or adds, BAR_FULL_YEARS or more.
         Box(Modifier.fillMaxWidth()) {
@@ -142,7 +142,7 @@ private fun TermsPanel(r: Healthspan.Result) {
             Text("older +1½ y", color = label, style = MaterialTheme.typography.labelSmall, modifier = Modifier.align(Alignment.CenterEnd))
         }
         r.terms.forEach { t ->
-            DotDivider()
+            PanelDivider()
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text(t.habit.label, color = Color.White, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
                 Text(effectText(t.years), color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.bodySmall)
@@ -151,7 +151,7 @@ private fun TermsPanel(r: Healthspan.Result) {
             Note(termDetail(t, r.age))
         }
         if (r.fitnessCapped) {
-            DotDivider()
+            PanelDivider()
             Note("Fitness terms capped: resting heart rate, steps and VO2 max together count for at most 3 years either way.")
         }
     }
@@ -186,9 +186,9 @@ private fun EffectBar(years: Float) {
 @Composable
 private fun HowItWorksPanel() {
     var open by rememberSaveable { mutableStateOf(false) }
-    DotPanel(onClick = { open = !open }) {
-        DotHeader("How it works", expanded = open)
-        if (!open) return@DotPanel
+    QuietPanel(onClick = { open = !open }) {
+        PanelTitle("How it works", expanded = open)
+        if (!open) return@QuietPanel
         Text(
             "Each habit is scored against the typical person your age and sex: resting heart rate, steps, sleep " +
                 "regularity, time asleep, strength training and fitness (VO2 max, the most oxygen your body can " +

@@ -36,7 +36,7 @@ import org.openstrap.app.ui.components.cardOpening
  * for lists of things (workouts, contributors, settings). No glow at all, so the cards above it keep the light.
  */
 
-private val ListSurface = Color(0xFF0F0F11)
+internal val ListSurface = Color(0xFF0F0F11)
 internal val RowHairline = Color.White.copy(alpha = GlowLayout.DividerAlpha)
 
 /**

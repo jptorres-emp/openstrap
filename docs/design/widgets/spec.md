@@ -220,8 +220,9 @@ RemoteViews has no blur, gradients beyond simple ones, shaders or custom canvase
   shared the same way. Each bitmap carries a content description with the number and word.
 - **Charts:** the Energy and Steps lines, the hypnogram, stage bars, week bars: bitmaps from the same code as their
   cards, sized to the layout.
-- **Text:** Glance `Text`, so it scales with the system font size and reads to TalkBack. Glance offers only generic
-  font families, so text uses the system sans, not Funnel (open question 9.1).
+- **Text:** Glance `Text` in the system sans, so it scales with the system font size and reads to TalkBack. Funnel
+  is not used on widgets (decided 2026-10-24, 9.1). Sizes and weights still follow the v2 roles: card title 17
+  Medium, hero sentence 20 Light, Body 15, Secondary 13 at 72%, Caption 11 Medium at 50%.
 - Bitmaps are drawn at the widget's actual size and density from `LocalSize`, kept under the RemoteViews bitmap
   memory limit (screen width × height × 4 × 1.5 bytes for all of a widget's bitmaps together).
 
@@ -273,8 +274,8 @@ The punctuation test (v2 8.2) also scans `widget/` and the widget XML.
 
 ## 9. Open questions
 
-1. **Fonts.** Text in system sans keeps scaling and TalkBack. Drawing titles and sentences into bitmaps would keep
-   Funnel but loses both. Proposal: system sans, revisit if it looks wrong on the phone.
+1. **Fonts. Decided 2026-10-24: system sans.** It keeps font scaling and TalkBack, which bitmapped Funnel would
+   lose. Dotted numbers are bitmaps and unaffected. Revisit only if it looks wrong on the phone in step 7.
 2. **Moment's chart at Large in the workout window**: Energy's line or the usual workout's last heart rate? The
    mockup has neither yet.
 3. **Pixel Launcher stacks**: whether it has them on the user's phone changes nothing in this spec, but the stack

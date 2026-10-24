@@ -24,16 +24,16 @@ class StrapRowsTest {
     private fun health(vararg values: Pair<Int, Int>) =
         SettingsGroup(0, 1, values.associate { (k, v) -> k to SettingsCodec.enumSetting(k, v) })
 
-    @Test fun `health alerts name the first one on, or Off`() {
+    @Test fun `health alerts in a few words, or Off`() {
         assertNull(healthAlertsSummary(AlarmsUiState()))
         assertEquals("Off", healthAlertsSummary(AlarmsUiState(health = health(SettingsCodec.KEY_HIGH_HR_ALERT to 0))))
-        assertEquals("Heart rate over 140", healthAlertsSummary(AlarmsUiState(health = health(SettingsCodec.KEY_HIGH_HR_ALERT to 140))))
-        assertEquals("Heart rate over 140 and under 40", healthAlertsSummary(AlarmsUiState(health = health(SettingsCodec.KEY_HIGH_HR_ALERT to 140, SettingsCodec.KEY_LOW_HR_ALERT to 40))))
-        assertEquals("Heart rate under 40", healthAlertsSummary(AlarmsUiState(health = health(SettingsCodec.KEY_LOW_HR_ALERT to 40))))
-        assertEquals("Blood oxygen under 90%", healthAlertsSummary(AlarmsUiState(health = health(SettingsCodec.KEY_LOW_SPO2_ALERT to 90))))
-        assertEquals("Over 150, oxygen under 90%", healthAlertsSummary(AlarmsUiState(health = health(SettingsCodec.KEY_HIGH_HR_ALERT to 150, SettingsCodec.KEY_LOW_SPO2_ALERT to 90))))
+        assertEquals("Over 140 bpm", healthAlertsSummary(AlarmsUiState(health = health(SettingsCodec.KEY_HIGH_HR_ALERT to 140))))
+        assertEquals("Over 140, under 40", healthAlertsSummary(AlarmsUiState(health = health(SettingsCodec.KEY_HIGH_HR_ALERT to 140, SettingsCodec.KEY_LOW_HR_ALERT to 40))))
+        assertEquals("Under 40 bpm", healthAlertsSummary(AlarmsUiState(health = health(SettingsCodec.KEY_LOW_HR_ALERT to 40))))
+        assertEquals("Oxygen under 90%", healthAlertsSummary(AlarmsUiState(health = health(SettingsCodec.KEY_LOW_SPO2_ALERT to 90))))
+        assertEquals("Heart rate and oxygen", healthAlertsSummary(AlarmsUiState(health = health(SettingsCodec.KEY_HIGH_HR_ALERT to 150, SettingsCodec.KEY_LOW_SPO2_ALERT to 90))))
         assertEquals(
-            "Over 150, under 40, oxygen under 90%",
+            "Heart rate and oxygen",
             healthAlertsSummary(AlarmsUiState(health = health(SettingsCodec.KEY_HIGH_HR_ALERT to 150, SettingsCodec.KEY_LOW_HR_ALERT to 40, SettingsCodec.KEY_LOW_SPO2_ALERT to 90))),
         )
     }

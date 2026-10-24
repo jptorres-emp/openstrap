@@ -1,7 +1,6 @@
 package org.openstrap.app.ui.device
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
@@ -29,9 +28,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Icon
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -46,7 +43,11 @@ import org.openstrap.app.data.settings.UserProfile
 import androidx.compose.foundation.layout.height
 import org.openstrap.app.ui.glow.GlowLayout
 import org.openstrap.app.ui.glow.GlowType
+import org.openstrap.app.ui.glow.ControlSurface
 import org.openstrap.app.ui.glow.PageButton
+import org.openstrap.app.ui.glow.PageConfirm
+import org.openstrap.app.ui.glow.PageField
+import androidx.compose.foundation.layout.widthIn
 import org.openstrap.app.ui.glow.PageHeader
 import org.openstrap.app.ui.glow.PageNote
 import org.openstrap.app.ui.glow.PagePanel
@@ -121,12 +122,10 @@ fun ProfileScreen(profile: UserProfile, contentPadding: PaddingValues, onSave: (
     val back: () -> Unit = { if (dirty) confirmDiscard = true else onBack() }
     BackHandler(onBack = back)
     if (confirmDiscard) {
-        org.openstrap.app.ui.components.GlassAlertDialog(
-            onDismissRequest = { confirmDiscard = false },
-            title = { Text("Discard changes?") },
-            text = { Text("Your profile changes haven't been saved.") },
-            confirmButton = { TextButton(onClick = { confirmDiscard = false; onBack() }) { Text("Discard") } },
-            dismissButton = { TextButton(onClick = { confirmDiscard = false }) { Text("Keep editing") } },
+        PageConfirm(
+            "Discard changes?", "Your profile changes haven't been saved.",
+            confirm = "Discard", onConfirm = { confirmDiscard = false; onBack() }, onDismiss = { confirmDiscard = false },
+            dismiss = "Keep editing",
         )
     }
     val save: () -> Unit = {
@@ -151,14 +150,12 @@ fun ProfileScreen(profile: UserProfile, contentPadding: PaddingValues, onSave: (
     }
 
     // The keyboard shrinks the page rather than covering it, so a focused field scrolls into view above it;
-    // while it's up the nav bar is hidden behind it and needs no room.
+    // while it's up the nav bar is hidden behind it and needs no room. Save is pinned at the bottom, over the
+    // keyboard when it's up, like Start and Done on the workout pages (spec 6.3).
     Box(Modifier.fillMaxSize().imePadding()) {
-        ScreenList(if (WindowInsets.isImeVisible) PaddingValues(0.dp) else contentPadding, gutter = GlowLayout.Gutter) {
-            item {
-                PageHeader("Your profile", back) {
-                    PageButton("Save", save, enabled = valid, primary = true, modifier = Modifier.height(40.dp))
-                }
-            }
+        val bottom = if (WindowInsets.isImeVisible) 0.dp else contentPadding.calculateBottomPadding()
+        ScreenList(PaddingValues(bottom = bottom + SaveHeight + 16.dp), gutter = GlowLayout.Gutter) {
+            item { PageHeader("Your profile", back) }
             item {
                 PagePanel {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -166,11 +163,11 @@ fun ProfileScreen(profile: UserProfile, contentPadding: PaddingValues, onSave: (
                             "Age sets your maximum heart rate, which every effort and recovery number depends on. " +
                                 "All fields are optional and stay on this phone.",
                         )
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             NumberField(age, { age = it }, "Age", "years", age.isNotBlank() && ageValue == null, Modifier.weight(1f))
                             // Tapping the selected sex again clears it.
-                            SexToggle(AppIcons.GenderFemale, "Female", FemaleColor, sex == 0) { sex = if (sex == 0) 2 else 0 }
-                            SexToggle(AppIcons.GenderMale, "Male", MaleColor, sex == 1) { sex = if (sex == 1) 2 else 1 }
+                            SexToggle(AppIcons.GenderFemale, "Female", sex == 0) { sex = if (sex == 0) 2 else 0 }
+                            SexToggle(AppIcons.GenderMale, "Male", sex == 1) { sex = if (sex == 1) 2 else 1 }
                         }
                         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             FieldLabel("Units")
@@ -202,8 +199,17 @@ fun ProfileScreen(profile: UserProfile, contentPadding: PaddingValues, onSave: (
                 }
             }
         }
+        PageButton(
+            "Save", save,
+            Modifier.align(Alignment.BottomCenter).widthIn(max = 600.dp).fillMaxWidth()
+                .padding(start = GlowLayout.Gutter, end = GlowLayout.Gutter, bottom = bottom + 12.dp).height(SaveHeight),
+            enabled = valid, primary = true,
+        )
     }
 }
+
+/** The pinned Save button's height, as Start on Ready. */
+private val SaveHeight = 56.dp
 
 @Composable
 internal fun NumberField(
@@ -215,16 +221,10 @@ internal fun NumberField(
     modifier: Modifier = Modifier.fillMaxWidth(),
     decimal: Boolean = false,
 ) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = { v -> onChange(v.filter { it.isDigit() || (decimal && (it == '.' || it == ',')) }.take(5)) },
-        label = if (label.isEmpty()) null else ({ Text(label) }),
-        suffix = { Text(unit) },
-        isError = error,
-        singleLine = true,
+    PageField(
+        value, { v -> onChange(v.filter { it.isDigit() || (decimal && (it == '.' || it == ',')) }.take(5)) },
+        label.ifEmpty { null }, modifier, unit = unit, error = error,
         keyboardOptions = KeyboardOptions(keyboardType = if (decimal) KeyboardType.Decimal else KeyboardType.Number),
-        shape = org.openstrap.app.ui.glow.GlowLayout.TileShape,
-        modifier = modifier,
     )
 }
 
@@ -234,20 +234,19 @@ private fun FieldLabel(text: String) = Text(text, color = Color.White.copy(alpha
 /** 72.0 -> "72", 158.7 -> "158.7". */
 private fun formatNumber(v: Float): String = "%.1f".format(java.util.Locale.ROOT, v).removeSuffix(".0")
 
-private val FemaleColor = Color(0xFFF472B6)
-private val MaleColor = Color(0xFF60A5FA)
-
-/** A round icon button for one sex, in its own colour: muted until selected, then filled. */
+/**
+ * A round icon button for one sex: on the Control surface with the icon at 72% white, white with a black icon once
+ * selected (spec 2.8: icons are white, and a choice is white like a chosen chip).
+ */
 @Composable
-private fun SexToggle(icon: ImageVector, label: String, accent: Color, selected: Boolean, onClick: () -> Unit) {
+private fun SexToggle(icon: ImageVector, label: String, selected: Boolean, onClick: () -> Unit) {
     Box(
-        Modifier.padding(top = 8.dp).size(52.dp).clip(CircleShape)
-            .background(if (selected) accent.copy(alpha = 0.2f) else Color.White.copy(alpha = 0.05f))
-            .border(if (selected) 1.5.dp else 1.dp, if (selected) accent else Color.White.copy(alpha = 0.12f), CircleShape)
+        Modifier.size(52.dp).clip(CircleShape)
+            .background(if (selected) Color.White else ControlSurface)
             .clickable(onClickLabel = label, role = Role.RadioButton, onClick = onClick)
             .semantics { this.selected = selected; contentDescription = label },
         contentAlignment = Alignment.Center,
     ) {
-        Icon(icon, null, tint = if (selected) accent else accent.copy(alpha = 0.55f), modifier = Modifier.size(26.dp))
+        Icon(icon, null, tint = if (selected) Color.Black else Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), modifier = Modifier.size(24.dp))
     }
 }

@@ -613,7 +613,8 @@ object StartLayout {
     /**
      * The Small recording in [width] by [height] dp: the sport's tile top left (smaller when Open needs the room) and
      * Open top right, then the timer as large as fits up to [TIMER_SMALL_SP], then the sport's name (the short one when
-     * the full one won't fit), then "Since 11:58" under it when the height allows.
+     * the full one won't fit), then "Since 11:58" under it when the height allows. Paused, that line reads "Paused"
+     * and the timer gives way to keep it.
      */
     fun smallRecording(r: StartRecording, width: Float, height: Float, fontScale: Float): Recording {
         val open = PLAY_DP
@@ -626,10 +627,14 @@ object StartLayout {
             if (timerWidth(sp, fontScale) > width) continue
             val base = top + timerLine(sp, fontScale) + words
             if (base + MIN_GAP_DP > height) continue
-            val since = fits(r.since, WidgetText.SECONDARY_SP, width, fontScale) && base + sinceH + MIN_GAP_DP <= height
+            val roomy = base + sinceH + MIN_GAP_DP <= height
+            // Paused, the line reads "Paused" and must show: a smaller timer before leaving it out.
+            if (r.paused && !roomy) continue
+            val since = roomy && (r.paused || fits(r.since, WidgetText.SECONDARY_SP, width, fontScale))
             return Recording(tile, open, name, false, sp, if (since) SincePlace.Under else SincePlace.None, null, base + if (since) sinceH else 0f, 3)
         }
-        return Recording(tile, open, name, false, TIMER_MIN_SP, SincePlace.None, null, top + timerLine(TIMER_MIN_SP, fontScale) + words, 3)
+        // No room for both lines: paused, "Paused" takes the name's (the tile still shows the sport).
+        return Recording(tile, open, if (r.paused) r.status else name, false, TIMER_MIN_SP, SincePlace.None, null, top + timerLine(TIMER_MIN_SP, fontScale) + words, 3)
     }
 
     /** The Wide recording: the top row, then the timer with "Since" beside or under it, as large as fits. */

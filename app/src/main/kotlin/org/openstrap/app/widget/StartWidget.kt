@@ -290,7 +290,7 @@ private fun UsualRow(m: StartWidgetModel, b: StartLayout.Block, f: WidgetFrame) 
 
 /**
  * Small while recording: the sport's tile and Open in the top row, then the live timer, the sport's name and, room
- * allowing, "Since 11:58". The spare height shared above, between and below.
+ * allowing, "Since 11:58" ("Paused" while paused, which always keeps its line). The spare height shared above, between and below.
  */
 @Composable
 private fun ColumnScope.SmallRecording(m: StartWidgetModel, r: StartRecording, f: WidgetFrame) {
@@ -305,7 +305,7 @@ private fun ColumnScope.SmallRecording(m: StartWidgetModel, r: StartRecording, f
     Column(GlanceModifier.fillMaxWidth()) {
         Timer(r, fit.timerSp)
         Text(fit.name, style = NameStyle, maxLines = 1)
-        if (fit.since == StartLayout.SincePlace.Under) Text(r.since, style = WidgetType.secondary, maxLines = 1)
+        if (fit.since == StartLayout.SincePlace.Under) Text(if (r.paused) r.status else r.since, style = WidgetType.secondary, maxLines = 1)
     }
     Spacer(GlanceModifier.defaultWeight())
 }

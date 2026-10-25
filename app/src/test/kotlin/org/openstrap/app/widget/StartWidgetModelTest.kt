@@ -183,6 +183,15 @@ class StartWidgetModelTest {
         assertTrue(StartLayout.largeRecording(r, m, 313f, 290f, 1.08f).timerSp >= 48f)
     }
 
+    @Test fun `the Small says Paused at every cell and the fonts phones use`() {
+        val r = model(recording = StartRecordingInput(40, at(24, 11, 58).epochSecond, 1_500L, paused = true)).recording!!
+        for (s in listOf(1f, 1.08f)) for ((w, h) in smallCells + listOf(110f to 110f)) {
+            val fit = StartLayout.smallRecording(r, w, h, s)
+            assertTrue("Small $w x $h at $s", fit.since == StartLayout.SincePlace.Under || fit.name == "Paused")
+            assertTrue("Small $w x $h at $s: too tall ${fit.content}", fit.content <= h)
+        }
+    }
+
     @Test fun `recording on One UI's cells leaves no gap over 32 dp`() {
         val r = model(recording = StartRecordingInput(40, at(24, 11, 58).epochSecond, 1_500L, paused = false)).recording!!
         val m = model().copy(weekLine = "5 workouts, 10 min", lastLine = "Yesterday, 1 min")

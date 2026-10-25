@@ -59,8 +59,32 @@ class WidgetSizesTest {
                 if (got != value) wrong += "$name: $attr is \"$got\", the spec's is \"$value\""
             }
             if (!e.getAttributeNS(android, "description").startsWith("@string/")) wrong += "$name: no description string"
+            // The picker's preview (spec 6.4): a layout on Android 12 and later, an image before, both real files.
+            val layout = e.getAttributeNS(android, "previewLayout")
+            if (!layout.startsWith("@layout/")) wrong += "$name: no previewLayout"
+            else if (!File(root, "res/layout/${layout.removePrefix("@layout/")}.xml").isFile) wrong += "$name: $layout has no file"
+            val image = e.getAttributeNS(android, "previewImage")
+            if (!image.startsWith("@drawable/")) wrong += "$name: no previewImage"
+            else if (root.resolve("res").listFiles().orEmpty().filter { it.name.startsWith("drawable") }
+                    .none { d -> d.listFiles().orEmpty().any { it.nameWithoutExtension == image.removePrefix("@drawable/") } }) wrong += "$name: $image has no file"
         }
         if (wrong.isNotEmpty()) fail(wrong.joinToString("\n"))
+    }
+
+    @Test fun `every provider's description and name are strings in the copy rules`() {
+        val strings = File(root, "res/values/strings.xml").readText()
+        providers().forEach { (name, e) ->
+            val key = e.getAttributeNS(android, "description").removePrefix("@string/")
+            val text = Regex("<string name=\"$key\">([^<]*)</string>").find(strings)?.groupValues?.get(1)
+            assertTrue("$name: $key missing from strings.xml", text != null)
+            assertTrue("$name: \"$text\" breaks the copy rules", text!!.none { it in "·;—" } && !text.endsWith("."))
+        }
+        // Each widget's receiver has its picker name.
+        val manifest = File(root, "AndroidManifest.xml").readText()
+        listOf("moment", "recovery", "steps", "sleep", "start").forEach {
+            assertTrue("widget_${it}_name not the receiver's label", "@string/widget_${it}_name" in manifest)
+            assertTrue("widget_${it}_name missing", "name=\"widget_${it}_name\"" in strings)
+        }
     }
 
     @Test fun `the layout picked is the largest that fits, else the Small`() {

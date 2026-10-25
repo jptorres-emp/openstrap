@@ -56,6 +56,8 @@ import kotlin.math.roundToInt
 class StepsWidget : LoadingWidget<StepsWidget.Shown>(WidgetKind.Steps) {
     override suspend fun loadShown(context: Context): Shown = load(context)
 
+    override fun sample(): Shown = Shown(WidgetSamples.steps(java.time.LocalDate.now()), GlowMood.Day)
+
     @Composable
     override fun Content(data: Shown) = StepsContent(data)
 
@@ -130,48 +132,66 @@ private fun StepsContent(data: StepsWidget.Shown) {
     }
 }
 
-/** Small: the title, then the steps with "today", the goal bar and the share of the goal at the foot. */
+/** A gap between blocks: they share the spare height alike, with half a gap above and below. */
+@Composable
+private fun ColumnScope.Gap() = Spacer(GlanceModifier.defaultWeight())
+
+/** The half gap above the first block or below the last, at the cell's real height. */
+@Composable
+private fun Edge(spread: Spread, f: WidgetFrame) = Spacer(GlanceModifier.height(spread.edge(f.drawContentHeight).dp))
+
+/** Small: the top row, then the steps with "today", then the goal bar and the share of the goal. */
 @Composable
 private fun ColumnScope.SmallContent(m: StepsWidgetModel, f: WidgetFrame) {
-    val fit = StepsLayout.small(m.stepsText, m.share, f.contentWidth, f.contentHeight, f.fontScale)
-    TitleRow(m.title, null)
-    Spacer(GlanceModifier.defaultWeight())
-    DotNumber(m.stepsText, fit.dot, f.density, m.description)
-    if (fit.word) {
-        Spacer(GlanceModifier.height(StepsLayout.SMALL_WORD_GAP_DP.dp))
-        Text(m.word, style = WidgetType.word, maxLines = 1)
+    val fit = StepsLayout.small(m.stepsText, m.share, f.contentWidth, f.contentHeight, f.fontScale, f.status)
+    Edge(fit.spread, f)
+    TopRowView(m.title, null, fit.top, f)
+    Gap()
+    // Each block one child of the column: Glance drops a column's children past ten.
+    Column(GlanceModifier.fillMaxWidth()) {
+        DotNumber(m.stepsText, fit.dot, f.density, m.description)
+        if (fit.word) {
+            Spacer(GlanceModifier.height(StepsLayout.SMALL_WORD_GAP_DP.dp))
+            Text(m.word, style = WidgetType.word, maxLines = 1)
+        }
     }
-    Spacer(GlanceModifier.height(StepsLayout.SMALL_BAR_GAP_DP.dp))
-    GoalBar(m.progress, f)
-    if (fit.share) {
-        Spacer(GlanceModifier.height(StepsLayout.SMALL_BAR_GAP_DP.dp))
-        Text(m.share, style = WidgetType.secondary, maxLines = 1)
+    Gap()
+    Column(GlanceModifier.fillMaxWidth()) {
+        GoalBar(m.progress, f)
+        if (fit.share) {
+            Spacer(GlanceModifier.height(StepsLayout.SMALL_BAR_GAP_DP.dp))
+            Text(m.share, style = WidgetType.secondary, maxLines = 1)
+        }
     }
+    Edge(fit.spread, f)
 }
 
-/** Wide: the title row with the goal, the steps with what's to go, the day so far as a line, the goal bar. */
+/** Wide: the top row with the goal, the steps with what's to go, the day so far as a line (or the goal bar). */
 @Composable
 private fun ColumnScope.WideContent(m: StepsWidgetModel, f: WidgetFrame) {
-    val row = StepsLayout.numberRow(m.stepsText, m.toGo, f.contentWidth, f.fontScale)
-    TitleRow(m.title, m.goalNote)
-    Spacer(GlanceModifier.defaultWeight())
-    NumberRow(m, row, f)
-    Spacer(GlanceModifier.defaultWeight())
-    StepsLine(m, StepsLayout.wideLine(f.contentHeight, row, f.fontScale), f)
+    val fit = StepsLayout.wide(m, f.contentWidth, f.contentHeight, f.fontScale, f.status)
+    Edge(fit.spread, f)
+    TopRowView(m.title, m.goalNote, fit.top, f)
+    Gap()
+    NumberRow(m, fit.row, f)
+    Gap()
+    StepsLine(m, fit.line, f)
+    Edge(fit.spread, f)
 }
 
 /** Large: the Wide plus this week, day by day against the goal. */
 @Composable
 private fun ColumnScope.LargeContent(m: StepsWidgetModel, f: WidgetFrame) {
-    val row = StepsLayout.numberRow(m.stepsText, m.toGo, f.contentWidth, f.fontScale)
-    val week = StepsLayout.week(m.weekLine, f.contentWidth, f.fontScale, m.week.size)
-    TitleRow(m.title, m.goalNote)
-    Spacer(GlanceModifier.defaultWeight())
-    NumberRow(m, row, f)
-    Spacer(GlanceModifier.defaultWeight())
-    StepsLine(m, StepsLayout.largeLine(f.contentHeight, row, week, f.fontScale), f)
-    Spacer(GlanceModifier.defaultWeight())
-    WeekRow(m, week, f.density)
+    val fit = StepsLayout.large(m, f.contentWidth, f.contentHeight, f.fontScale, f.status)
+    Edge(fit.spread, f)
+    TopRowView(m.title, m.goalNote, fit.top, f)
+    Gap()
+    NumberRow(m, fit.row, f)
+    Gap()
+    StepsLine(m, fit.line, f)
+    Gap()
+    fit.week?.let { WeekRow(m, it, f.density) }
+    Edge(fit.spread, f)
 }
 
 /** The steps in dots with "today" beside them when it fits, what's to go (or "Goal met") on the right. */

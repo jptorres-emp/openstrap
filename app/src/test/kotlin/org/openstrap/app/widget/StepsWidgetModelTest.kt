@@ -146,7 +146,7 @@ class StepsWidgetModelTest {
     @Test fun `the Small keeps everything at the default font and fits at 1_3`() {
         val m = model()
         val normal = StepsLayout.small(m.stepsText, m.share, small.first, small.second, 1f)
-        assertEquals(StepsLayout.Small(StepsLayout.SMALL_DOT, word = true, share = true), normal)
+        assertEquals(Triple(StepsLayout.SMALL_DOT, true, true), Triple(normal.dot, normal.word, normal.share))
         assertTrue(smallHeight(normal, 1f) <= small.second)
         val big = StepsLayout.small(m.stepsText, m.share, small.first, small.second, 1.3f)
         assertTrue(smallHeight(big, 1.3f) <= small.second)

@@ -43,5 +43,7 @@ class OpenStrapApp : Application() {
         if (checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) container.strap.backgroundConnect()
         // Widgets turn the day over at midnight; alarms don't survive a reboot or an update, so set it on each start.
         org.openstrap.app.device.WidgetUpdater.scheduleMidnight(this)
+        // Android 15 and later: the widget picker's previews, from the real layouts (spec 6.4).
+        org.openstrap.app.device.WidgetUpdater.publishPreviews(this)
     }
 }

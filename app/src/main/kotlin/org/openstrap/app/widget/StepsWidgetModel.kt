@@ -188,25 +188,42 @@ object StepsLayout {
     /** The dot that fits [text] into [room] dp, at most [dot]. */
     fun fitDot(text: String, room: Float, dot: Float): Float = WidgetDots.fit(text, room, dot)
 
-    /** What the Small keeps: the dot it draws at, and whether "today" and the share line fit. */
-    data class Small(val dot: Float, val word: Boolean, val share: Boolean)
+    /**
+     * What the Small keeps: the dot it draws at, whether "today" and the share line fit, its [top] row and how its
+     * three blocks (the top row, the number with "today", the bar with the share) share the height.
+     */
+    data class Small(
+        val dot: Float, val word: Boolean, val share: Boolean,
+        val top: TopRow = TopRow(null, false, 0f), val spread: Spread = Spread(0f, 0),
+    )
+
+    /** The Small's dots: the mockup's 3 dp (spec 3), growing to 7 on a tall cell before the gaps do. */
+    val SMALL_DOTS = listOf(3f, 3.6f, 4.5f, 5f, 5.5f, 6f, 6.5f, 7f)
 
     /**
-     * The Small in [width] by [height] dp: the title, the number, the bar always, then the share line and "today" while
-     * they fit, the share first as it says how far. The share only on one line.
+     * The Small in [width] by [height] dp: the top row (the title, or the strap [status] line in its place), the
+     * number, the bar always, then the share line and "today" while they fit, the share first as it says how far. The
+     * share only on one line. The blocks share the spare height, the dots growing from 3 dp until no gap is over
+     * [Spread.TARGET_GAP_DP]; at least [SMALL_BAR_GAP_DP] between them all.
      */
-    fun small(stepsText: String, share: String, width: Float, height: Float, fontScale: Float): Small {
-        val dot = fitDot(stepsText, width, SMALL_DOT)
-        val base = WidgetText.line(WidgetText.TITLE_SP, fontScale) + dotsHeight(dot) + SMALL_BAR_GAP_DP + BAR_DP
-        val word = SMALL_WORD_GAP_DP + WidgetText.line(WidgetText.BODY_SP, fontScale)
-        val shareH = SMALL_BAR_GAP_DP + WidgetText.line(WidgetText.SECONDARY_SP, fontScale)
+    fun small(stepsText: String, share: String, width: Float, height: Float, fontScale: Float, status: StatusLine? = null): Small {
+        val top = TopRow.of(StepsWidgetModel.TITLE, null, status, width, fontScale)
         val shareFits = WidgetText.width(share, WidgetText.SECONDARY_SP, fontScale) <= width
-        return when {
-            shareFits && base + word + shareH <= height -> Small(dot, word = true, share = true)
-            shareFits && base + shareH <= height -> Small(dot, word = false, share = true)
-            base + word <= height -> Small(dot, word = true, share = false)
-            else -> Small(dot, word = false, share = false)
+        fun at(dot: Float, word: Boolean, withShare: Boolean): Small {
+            val d = fitDot(stepsText, width, dot)
+            val number = dotsHeight(d) + (if (word) SMALL_WORD_GAP_DP + WidgetText.line(WidgetText.BODY_SP, fontScale) else 0f)
+            val foot = BAR_DP + (if (withShare) SMALL_BAR_GAP_DP + WidgetText.line(WidgetText.SECONDARY_SP, fontScale) else 0f)
+            return Small(d, word, withShare, top, Spread.of(top.height, number, foot))
         }
+        val gap = SMALL_BAR_GAP_DP / 2
+        for ((withShare, word) in listOf(true to true, true to false, false to true, false to false)) {
+            if (withShare && !shareFits) continue
+            val base = at(SMALL_DOT, word, withShare)
+            if (!base.spread.fits(height, gap)) continue
+            val ladder = SMALL_DOTS.map { at(it, word, withShare) }.distinct()
+            return Spread.grow(ladder, height, gap) { it.spread }
+        }
+        return at(SMALL_DOT, word = false, withShare = false)
     }
 
     /** The Wide's and Large's number row: the dot it draws at and whether "today" fits beside it. */
@@ -254,4 +271,41 @@ object StepsLayout {
         lineIn(height - WidgetText.line(WidgetText.TITLE_SP, fontScale) - row.height(fontScale) - week.height - 3 * MIN_GAP_DP)
 
     private fun lineIn(room: Float): Float? = room.coerceAtMost(LINE_DP).takeIf { it >= MIN_LINE_DP }
+
+    /** As far as the line grows on a tall cell before the gaps do. */
+    const val MAX_LINE_DP = 72f
+
+    /**
+     * The Wide or Large laid out: the [top] row, the number [row], the line's height ([line], null for the goal bar
+     * instead), the Large's [week], and how the blocks share the height ([spread]).
+     */
+    data class Fit(val top: TopRow, val row: NumberRow, val line: Float?, val week: Week?, val spread: Spread)
+
+    /**
+     * The Wide in [width] by [height] dp: the top row (the title with the goal, or the strap [status] line in the
+     * title's place), the number row, then the day's line as tall as fits up to [LINE_DP], growing to [MAX_LINE_DP]
+     * on a tall cell so no gap passes [Spread.TARGET_GAP_DP]; the goal bar when the line doesn't fit.
+     */
+    fun wide(m: StepsWidgetModel, width: Float, height: Float, fontScale: Float, status: StatusLine? = null): Fit =
+        fit(m, width, height, fontScale, status, large = false)
+
+    /** The Large: as the Wide with this week under the line. */
+    fun large(m: StepsWidgetModel, width: Float, height: Float, fontScale: Float, status: StatusLine? = null): Fit =
+        fit(m, width, height, fontScale, status, large = true)
+
+    private fun fit(m: StepsWidgetModel, width: Float, height: Float, fontScale: Float, status: StatusLine?, large: Boolean): Fit {
+        val top = TopRow.of(m.title, m.goalNote, status, width, fontScale)
+        val row = numberRow(m.stepsText, m.toGo, width, fontScale)
+        val week = if (large) week(m.weekLine, width, fontScale, m.week.size) else null
+        val inner = if (large) 3 else 2
+        val fixed = top.height + row.height(fontScale) + (week?.height ?: 0f)
+        val room = height - fixed - inner * MIN_GAP_DP
+        val line = if (!m.showLine) null else lineIn(room)?.let { l ->
+            // A tall cell grows the line until the gaps come down to the target, never past the room.
+            val wanted = height - fixed - (inner + 1) * Spread.TARGET_GAP_DP
+            maxOf(l, wanted.coerceAtMost(MAX_LINE_DP)).coerceAtMost(room)
+        }
+        val spread = Spread.of(top.height, row.height(fontScale), line ?: BAR_DP, week?.height)
+        return Fit(top, row, line, week, spread)
+    }
 }

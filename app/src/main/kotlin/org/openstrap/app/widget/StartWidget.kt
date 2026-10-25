@@ -71,6 +71,8 @@ import java.time.ZoneId
 class StartWidget : LoadingWidget<StartWidget.Shown>(WidgetKind.Start) {
     override suspend fun loadShown(context: Context): Shown = load(context)
 
+    override fun sample(): Shown = Shown(WidgetSamples.start(Instant.now(), ZoneId.systemDefault()), GlowMood.Day)
+
     @Composable
     override fun Content(data: Shown) = StartContent(data)
 
@@ -170,13 +172,24 @@ private fun StartContent(data: StartWidget.Shown) {
     val context = LocalContext.current
     val open = if (m.recording != null) openLiveWorkout(context) else openReady(context, m.usual.sportType)
     // The side padding is half the card's, so the tile captions can run into it; everything else pads back ([Inset]).
-    EdgeWidget(edgeLight(EdgeStatus.Usual, EdgeKind.Live), Ink, data.mood, open, BITMAP_EXTRA, sidePadding = WidgetSizes.PADDING_DP - StartLayout.CAPTION_BLEED_DP) { frame ->
+    // While a workout records, the recording is the news and the live screen shows the strap: no status line.
+    EdgeWidget(
+        edgeLight(EdgeStatus.Usual, EdgeKind.Live), Ink, data.mood, open, BITMAP_EXTRA,
+        sidePadding = WidgetSizes.PADDING_DP - StartLayout.CAPTION_BLEED_DP, showStatus = m.recording == null,
+    ) { whole ->
         val rec = m.recording
+        // No title row to take its place, so the status pill (spec 5) sits above the content, which fits under it.
+        val pill = if (rec != null) null else StartLayout.statusPill(m, whole.status, whole.bucket, whole.contentWidth, whole.contentHeight, whole.fontScale)
+        val frame = if (pill == null) whole else {
+            Row(GlanceModifier.fillMaxWidth().then(Inset)) { StatusPillView(pill, whole) }
+            Spacer(GlanceModifier.height(StartLayout.STATUS_GAP_DP.dp))
+            whole.below(StartLayout.statusHeight(pill, whole.fontScale))
+        }
         when {
-            rec != null && frame.bucket == WidgetSizes.Small -> Column(GlanceModifier.fillMaxSize().then(Inset)) { SmallRecording(m, rec, frame) }
+            rec != null && frame.bucket == WidgetSizes.Small -> Column(GlanceModifier.fillMaxWidth().defaultWeight().then(Inset)) { SmallRecording(m, rec, frame) }
             rec != null && frame.bucket == WidgetSizes.Wide -> WideRecording(m, rec, frame)
             rec != null -> LargeRecording(m, rec, frame)
-            frame.bucket == WidgetSizes.Small -> Column(GlanceModifier.fillMaxSize().then(Inset)) { SmallContent(m, frame) }
+            frame.bucket == WidgetSizes.Small -> Column(GlanceModifier.fillMaxWidth().defaultWeight().then(Inset)) { SmallContent(m, frame) }
             frame.bucket == WidgetSizes.Wide -> WideContent(m, frame)
             else -> LargeContent(m, frame)
         }
@@ -571,10 +584,4 @@ internal fun pillBitmap(w: Float, h: Float, density: Float): Bitmap {
 internal fun dotBitmap(color: Color, density: Float): Bitmap {
     val s = StartLayout.DOT_DP * density
     return renderToBitmap(s, s) { c -> c.drawCircle(s / 2, s / 2, s / 2, Paint(Paint.ANTI_ALIAS_FLAG).apply { this.color = color.toArgb() }) }
-}
-
-/** [icon] alone in [color], [sizeDp] square. */
-private fun iconBitmap(icon: ImageVector, color: Color, sizeDp: Float, density: Float): Bitmap {
-    val s = sizeDp * density
-    return renderToBitmap(s, s) { c -> drawIcon(c, icon, color, 0f, 0f, s) }
 }

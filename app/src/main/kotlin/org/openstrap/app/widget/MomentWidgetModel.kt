@@ -672,6 +672,8 @@ object MomentLayout {
         val open: Boolean = false,
         val content: Float,
         val inner: Int,
+        /** The strap status pill in the name's place (spec 5), null for the name. */
+        val pill: StatusPill.Pill? = null,
     ) {
         /** The gap between blocks in a cell [height] dp high (inside the padding). */
         fun gap(height: Float): Float = if (inner + 1 <= 0) 0f else ((height - content) / (inner + 1)).coerceAtLeast(0f)
@@ -699,6 +701,9 @@ object MomentLayout {
     private fun nameLine(m: MomentWidgetModel, width: Float, fontScale: Float, beside: Float = 0f): Line =
         line(listOf(m.name), NAME_SIZES, width - beside, fontScale) ?: Line(m.name, NAME_SIZES.last())
 
+    /** The top row's height: the status [pill] in the name's place when it shows, else the [name]. */
+    private fun topHeight(name: Line, pill: StatusPill.Pill?, fontScale: Float): Float = pill?.height(fontScale) ?: name.height(fontScale)
+
     /** Open's width at [fontScale]: its word in Body 500 with [OPEN_PAD_DP] each side. */
     fun openWidth(fontScale: Float): Float = WidgetText.fitWidth(OPEN, WidgetText.BODY_SP, fontScale) + 2 * OPEN_PAD_DP
 
@@ -709,15 +714,17 @@ object MomentLayout {
      * window), its word under it. Three blocks, the dots growing from the mockup's 3.6 until no gap is over the
      * target. Without a number, the name and the waiting line; during a workout, [recordingSmall].
      */
-    fun small(m: MomentWidgetModel, width: Float, height: Float, fontScale: Float): Fit {
+    fun small(m: MomentWidgetModel, width: Float, height: Float, fontScale: Float, status: StatusLine? = null): Fit {
         if (m.recording != null) return recordingSmall(m, m.recording, width, height, fontScale)
         val name = nameLine(m, width, fontScale)
+        val pill = StatusPill.fit(status, width, fontScale)
+        val top = topHeight(name, pill, fontScale)
         val number = m.number
         if (number == null) {
             val waiting = m.waiting?.let { line(listOf(it), FIGURE_SIZES, width, fontScale) }
             val play = m.start != null
-            val content = name.height(fontScale) + (waiting?.height(fontScale) ?: 0f) + (if (play) PLAY_DP else 0f)
-            return Fit(name, waiting = waiting, play = play, content = content, inner = (if (waiting != null) 1 else 0) + (if (play) 1 else 0))
+            val content = top + (waiting?.height(fontScale) ?: 0f) + (if (play) PLAY_DP else 0f)
+            return Fit(name, waiting = waiting, play = play, content = content, inner = (if (waiting != null) 1 else 0) + (if (play) 1 else 0), pill = pill)
         }
         fun at(dot: Float): Fit? {
             val dots = WidgetDots.width(number, dot)
@@ -725,8 +732,8 @@ object MomentLayout {
             val play = m.start != null && dots + WORD_GAP_DP + PLAY_DP <= width
             val word = line(m.words, WORD_SIZES, width, fontScale)
             val row = maxOf(WidgetDots.height(dot), if (play) PLAY_DP else 0f)
-            val content = name.height(fontScale) + row + (word?.height(fontScale) ?: 0f)
-            return Fit(name, dot = dot, word = word, play = play, content = content, inner = if (word != null) 2 else 1)
+            val content = top + row + (word?.height(fontScale) ?: 0f)
+            return Fit(name, dot = dot, word = word, play = play, content = content, inner = if (word != null) 2 else 1, pill = pill)
         }
         // Growing never costs the Small its word or its Start button.
         val ladder = (listOf(SMALL_DOT) + SMALL_DOT_GROWTH).mapNotNull(::at).let { l ->
@@ -758,20 +765,22 @@ object MomentLayout {
      * sentence at 20 sp, then 18, then a shorter wording, then left out; grown to 22 and 24 sp and the dots to 6 dp
      * on a tall cell.
      */
-    fun wide(m: MomentWidgetModel, width: Float, height: Float, fontScale: Float): Fit =
+    fun wide(m: MomentWidgetModel, width: Float, height: Float, fontScale: Float, status: StatusLine? = null): Fit =
         if (m.recording != null) recordingWide(m, m.recording, width, height, fontScale, large = false)
-        else pick(ladders(m, width, fontScale, large = false), height)
+        else pick(ladders(m, width, fontScale, large = false, status), height)
 
     /** The Large: the Wide plus the moment's chart, with its times under it. */
-    fun large(m: MomentWidgetModel, width: Float, height: Float, fontScale: Float): Fit =
+    fun large(m: MomentWidgetModel, width: Float, height: Float, fontScale: Float, status: StatusLine? = null): Fit =
         if (m.recording != null) recordingWide(m, m.recording, width, height, fontScale, large = true)
-        else pick(ladders(m, width, fontScale, large = true), height)
+        else pick(ladders(m, width, fontScale, large = true, status), height)
 
     /** A chart's block: the chart [h] dp high and its times under it. */
     fun chartBlock(h: Float, fontScale: Float): Float = if (h <= 0f) 0f else h + CHART_LABEL_GAP_DP + WidgetText.line(WidgetText.CAPTION_SP, fontScale)
 
-    private fun ladders(m: MomentWidgetModel, width: Float, fontScale: Float, large: Boolean): List<List<Fit>> {
+    private fun ladders(m: MomentWidgetModel, width: Float, fontScale: Float, large: Boolean, status: StatusLine?): List<List<Fit>> {
         val name = nameLine(m, width, fontScale)
+        val pill = StatusPill.fit(status, width, fontScale)
+        val top = topHeight(name, pill, fontScale)
         val stages = m.chart?.kind == MomentChartKind.Stages
         val chartBase = when {
             !large || m.chart == null -> emptyList()
@@ -783,10 +792,10 @@ object MomentLayout {
             val row = if (m.number != null) numberRow(m, dot, width, fontScale) ?: return null else null
             val waiting = if (m.number == null && sentence == null) m.waiting?.let { line(listOf(it), FIGURE_SIZES, width, fontScale) } else null
             val blocks = listOfNotNull(
-                name.height(fontScale), sentence?.height(fontScale), row?.height, waiting?.height(fontScale),
+                top, sentence?.height(fontScale), row?.height, waiting?.height(fontScale),
                 chartBlock(chart, fontScale).takeIf { it > 0f },
             )
-            return Fit(name, dot = dot, row = row, sentence = sentence, chart = chart, waiting = waiting, content = blocks.sum(), inner = blocks.size - 1)
+            return Fit(name, dot = dot, row = row, sentence = sentence, chart = chart, waiting = waiting, content = blocks.sum(), inner = blocks.size - 1, pill = pill)
         }
         /**
          * The fit with [text] at [sp], the dots at [dot] and the chart [chart] high, then the fits it grows to on a

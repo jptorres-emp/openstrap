@@ -243,6 +243,28 @@ object StartLayout {
     /** Open's width at [fontScale]: its word in Body 500 with [OPEN_PAD_DP] each side. */
     fun openWidth(fontScale: Float): Float = WidgetText.width(StartWidgetModel.OPEN, WidgetText.BODY_SP, fontScale) + 2 * OPEN_PAD_DP
 
+    /** Between the strap status pill, above everything when it shows (spec 5), and what's under it. */
+    const val STATUS_GAP_DP = 6f
+
+    /** The height the status [pill] takes above the content, its gap included: what the layouts fit under. */
+    fun statusHeight(pill: StatusPill.Pill?, fontScale: Float): Float = pill?.let { it.height(fontScale) + STATUS_GAP_DP } ?: 0f
+
+    /**
+     * The status pill for [line] above the idle layout at [size] in [width] by [height] dp: the first wording that fits
+     * the width, kept only while the layout still fits under it. Start has no title row to give up, so at the
+     * smallest cells and largest fonts the line drops rather than push the usual sport out.
+     */
+    fun statusPill(m: StartWidgetModel, line: StatusLine?, size: androidx.compose.ui.unit.DpSize, width: Float, height: Float, fontScale: Float): StatusPill.Pill? {
+        val pill = StatusPill.fit(line, width, fontScale) ?: return null
+        val h = height - statusHeight(pill, fontScale)
+        val fits = when (size) {
+            WidgetSizes.Small -> smallHeight(small(m.usual, listOf(StartWidgetModel.USUAL), false, width, h, fontScale), fontScale) + MIN_GAP_DP <= h
+            WidgetSizes.Wide -> wide(m, width, h, fontScale).let { it.content + MIN_GAP_DP <= h }
+            else -> large(m, width, h, fontScale).let { it.content + 3 * MIN_GAP_DP <= h }
+        }
+        return pill.takeIf { fits }
+    }
+
     /** Whether [text] fits [room] dp on one line at [sp]. */
     fun fits(text: String, sp: Float, room: Float, fontScale: Float): Boolean = WidgetText.width(text, sp, fontScale) <= room
 

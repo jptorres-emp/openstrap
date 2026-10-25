@@ -65,6 +65,8 @@ import java.time.ZoneId
 class MomentWidget : LoadingWidget<MomentWidgetModel>(WidgetKind.Moment) {
     override suspend fun loadShown(context: Context): MomentWidgetModel = load(context)
 
+    override fun sample(): MomentWidgetModel = java.time.ZoneId.systemDefault().let { WidgetSamples.moment(java.time.LocalDate.now(it), it) }
+
     @Composable
     override fun Content(data: MomentWidgetModel) = MomentContent(data)
 
@@ -188,11 +190,12 @@ private const val BITMAP_EXTRA = 1.4
 private fun MomentContent(m: MomentWidgetModel) {
     val context = LocalContext.current
     val open = if (m.opensLive) openLiveWorkout(context) else openToday(context)
-    GlowWidget(m.light.style(m.mood), open, BITMAP_EXTRA) { f ->
+    // While a workout records, the recording is the news and the live screen shows the strap: no status line.
+    GlowWidget(m.light.style(m.mood), open, BITMAP_EXTRA, showStatus = m.recording == null) { f ->
         when (f.bucket) {
             WidgetSizes.Small -> SmallContent(m, f)
-            WidgetSizes.Wide -> WideContent(m, MomentLayout.wide(m, f.contentWidth, f.contentHeight, f.fontScale), f)
-            else -> WideContent(m, MomentLayout.large(m, f.contentWidth, f.contentHeight, f.fontScale), f)
+            WidgetSizes.Wide -> WideContent(m, MomentLayout.wide(m, f.contentWidth, f.contentHeight, f.fontScale, f.status), f)
+            else -> WideContent(m, MomentLayout.large(m, f.contentWidth, f.contentHeight, f.fontScale, f.status), f)
         }
     }
 }
@@ -203,10 +206,10 @@ private fun edge(fit: MomentLayout.Fit, f: WidgetFrame): Float = fit.edgeGap(f.d
 /** Small: the name, the number (with Start beside it in the workout window), its word; or the recording's. */
 @Composable
 private fun ColumnScope.SmallContent(m: MomentWidgetModel, f: WidgetFrame) {
-    val fit = MomentLayout.small(m, f.contentWidth, f.contentHeight, f.fontScale)
+    val fit = MomentLayout.small(m, f.contentWidth, f.contentHeight, f.fontScale, f.status)
     val edge = edge(fit, f)
     Spacer(GlanceModifier.height(edge.dp))
-    Name(fit.name)
+    Top(fit, f)
     val r = m.recording
     if (r != null) {
         if (fit.tile > 0f) { Gap(); Tile(r, fit.tile, f) }
@@ -245,7 +248,7 @@ private fun ColumnScope.WideContent(m: MomentWidgetModel, fit: MomentLayout.Fit,
         fit.sport?.let { Gap(); Text(it.text, style = WidgetType.hero.copy(fontSize = it.sp.sp), maxLines = 1) }
         fit.since?.let { Gap(); Since(it, f) }
     } else {
-        Name(fit.name)
+        Top(fit, f)
         fit.sentence?.let { Gap(); Text(it.text, style = WidgetType.hero.copy(fontSize = it.sp.sp), maxLines = MomentLayout.SENTENCE_LINES) }
         fit.row?.let { Gap(); NumberRow(m, it, f) }
         fit.waiting?.let { Gap(); Text(it.text, style = WidgetType.secondary.copy(fontSize = it.sp.sp), maxLines = 1) }
@@ -260,6 +263,13 @@ private fun ColumnScope.Gap() = Spacer(GlanceModifier.defaultWeight())
 
 @Composable
 private fun Name(name: MomentLayout.Line) = Text(name.text, style = NameStyle.copy(fontSize = name.sp.sp), maxLines = 1)
+
+/** The top row: the strap status pill in the name's place when it shows (spec 5), else the moment's name. */
+@Composable
+private fun Top(fit: MomentLayout.Fit, f: WidgetFrame) {
+    val pill = fit.pill
+    if (pill != null) StatusPillView(pill, f) else Name(fit.name)
+}
 
 /** The dots with the word beside them, the figure or the Start button on the right, bottoms aligned. */
 @Composable

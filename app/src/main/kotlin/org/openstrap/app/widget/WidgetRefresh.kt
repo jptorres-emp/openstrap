@@ -40,6 +40,28 @@ object WidgetRefresh {
     @Volatile
     var debugPlaced: Set<WidgetKind>? = null
 
+    /**
+     * Debug builds: the strap status line every widget shows instead of the real one, for the gallery: "notpaired",
+     * "low", "stale" (4 hours ago), "yesterday", "week" (3 days ago), "syncing", or "none" for no line; null reads
+     * the strap.
+     */
+    @Volatile
+    var debugStrap: String? = null
+
+    /** [debugStrap] where it applies. */
+    val statusOverride: String? get() = if (BuildConfig.DEBUG) debugStrap else null
+
+    /** [statusOverride]'s status at [now] (epoch seconds); null for "none" or a name it doesn't know. */
+    fun debugStatus(now: Long): StrapStatus? = when (statusOverride?.lowercase()) {
+        "notpaired" -> StrapStatus.NotPaired
+        "low" -> StrapStatus.LowBattery(12)
+        "stale" -> StrapStatus.StaleSync(now - 4 * 3600)
+        "yesterday" -> StrapStatus.StaleSync(now - 86_400)
+        "week" -> StrapStatus.StaleSync(now - 3 * 86_400)
+        "syncing" -> StrapStatus.Syncing
+        else -> null
+    }
+
     /** [debugMoment] and [debugPlaced] where they apply. */
     val momentOverride: org.openstrap.app.data.Moment? get() = if (BuildConfig.DEBUG) debugMoment else null
     val placedOverride: Set<WidgetKind>? get() = if (BuildConfig.DEBUG) debugPlaced else null

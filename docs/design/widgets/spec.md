@@ -239,8 +239,8 @@ Last night's main sleep. Night mood always.
 
 ## 4. Taps
 
-Every tap opens `MainActivity` with an existing extra. The only new ones are the sync action and opening the sport
-picker.
+Every tap opens `MainActivity` with an existing extra. The only new ones are the sync action, opening the sport
+picker and opening the Strap page (`EXTRA_OPEN_STRAP`, step 6).
 
 | Where | Opens | Extra |
 |---|---|---|
@@ -263,7 +263,7 @@ first match wins:
 
 | State | Line | Tap |
 |---|---|---|
-| Strap not paired | "Pair your strap" | Opens the Strap page (`EXTRA_STRAP_STATE`) |
+| Strap not paired | "Pair your strap" | Opens the Strap page (`EXTRA_OPEN_STRAP`) |
 | Battery 15% or less, not charging | "Strap at 12%" | Opens the Strap page |
 | Last sync more than 3 hours ago | "Last sync 09:10", "Last sync yesterday", "Last sync Tuesday" within a week, then "Last sync 13 Oct" | Syncs now |
 
@@ -271,6 +271,22 @@ first match wins:
 - While a sync runs the line reads "Syncing" and the icon turns. When it ends the widget refreshes (7).
 - Last sync time is `SettingsStore.lastSync`. Battery and charging are `StrapManager`'s connection state, kept in
   settings so a widget can read them with the strap away.
+- Decided in step 6 (2026-10-25):
+  - `EXTRA_STRAP_STATE` is the debug strap preview, so the line opens the Strap page with a new `EXTRA_OPEN_STRAP`.
+  - One line, never wrapped. Each state has shorter wordings, tried in order, each at Secondary then Caption size,
+    before the line drops: "Pair your strap", "Pair strap"; "Strap at 12%", "12%"; "Last sync Wednesday", "Last sync
+    Wed", "Wednesday", "Wed"; "Last sync yesterday", "Yesterday"; "Last sync 09:10", "09:10"; "Last sync 13 Oct",
+    "13 Oct". TalkBack reads the whole line whatever shows. Icons: the strap (Watch) for pairing and battery, the
+    sync arrows for a stale sync, an indeterminate spinner while syncing.
+  - The pill is 3 dp taller than its text and takes the top row's height in every layout's sums. The note on the
+    right (bedtime to waking, the goal, "This morning") stays while both fit, and goes first.
+  - Start has no title row, so the pill sits above the usual row, 6 dp over it, and the layout fits under it. At
+    the smallest Small and the largest font the layout wouldn't fit, and there the line drops.
+  - While a workout records, Start and Moment show no line: the recording is the news, and the live screen and its
+    notification show the strap.
+  - A stale line needs no event to appear: `WidgetUpdater` sets an alarm at the last sync plus 3 hours while a
+    widget is placed.
+  - Debug gallery: `--es strap notpaired|low|stale|yesterday|week|syncing|none|auto`.
 
 ## 6. Rendering
 
@@ -315,6 +331,21 @@ A `previewLayout` per widget for Android 12 and later, and generated previews (`
 later from the real layout with sample values, so the picker shows the real look. `description` per widget, one line,
 in the copy rules.
 
+Decided in step 6 (2026-10-25): the generated previews are Glance 1.2's `providePreview` with `WidgetSamples` (the
+mockups' values through the widgets' own factories), sent by `WidgetUpdater.publishPreviews` once per app version
+(the system rate-limits it, so a limited call is tried again on the next start). `previewLayout` is a Small in plain
+views (the card and its light as a drawable, the number as light text, Steps' bar a `ProgressBar`, Sleep's stages
+weighted views). `previewImage`, for launchers before Android 12, is a PNG of each Small rendered off the device
+(dots included, Helvetica Neue standing in for Roboto).
+
+### 6.5 Spare height (decided in step 6)
+
+Every layout shares its spare height as Moment's and Start's do: half a gap above and below, a gap between blocks,
+and on a tall cell the parts grow first so no gap passes 32 dp on One UI's cells. Recovery's Small has three blocks
+(top row, score, word) and its dots grow from 3 to 7 dp; its Wide's and Large's dots grow from 3.6 to 6 and the
+Large's sentence to 22 and 24 sp; the Large's week shows only while it fits beside the score. Steps' Small dots grow
+from 3 to 7 dp and its line from 52 to 72 dp. Sleep's Small dots grow from 3 to 7 dp and its Wide's from 3.6 to 6.
+
 ## 7. Refresh
 
 Glance updates are cheap when the app asks for them. The app asks when something on a widget changed, never on a
@@ -329,6 +360,7 @@ timer it doesn't need.
 | Steps (`LiveSteps`) | Steps, at most every 15 minutes while the strap is connected. Moment shows no steps figure |
 | A widget is added or removed | Moment (the duplicate rule) |
 | Strap state changes (paired, battery crosses 15%, charging) | All five, for the status line |
+| The last sync turns 3 hours old | All five, for the status line (an alarm, step 6) |
 | Mood or settings change (goal, sport GPS) | The widgets that show them |
 
 - `updatePeriodMillis="0"`. No periodic updates from the system.

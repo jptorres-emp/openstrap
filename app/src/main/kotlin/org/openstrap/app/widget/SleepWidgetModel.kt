@@ -234,7 +234,7 @@ object SleepLayout {
      * then without [right]. Without a score, "No score from the strap" with [right] if both fit, else on its own,
      * on up to two lines.
      */
-    fun scoreRow(m: SleepWidgetModel, right: String?, width: Float, fontScale: Float): ScoreRow {
+    fun scoreRow(m: SleepWidgetModel, right: String?, width: Float, fontScale: Float, maxDot: Float = WIDE_DOT): ScoreRow {
         val rightW = right?.let { SIDE_GAP_DP + WidgetText.width(it, WidgetText.SECONDARY_SP, fontScale) } ?: 0f
         val score = m.score
         if (score == null) {
@@ -247,10 +247,10 @@ object SleepLayout {
         for ((word, withRight) in tries) {
             if (word == null || (withRight && right == null)) continue
             val room = width - (if (withRight) rightW else 0f) - WORD_GAP_DP - WidgetText.width(word, WidgetText.BODY_SP, fontScale)
-            val dot = WidgetDots.fit(score, room, WIDE_DOT)
+            val dot = WidgetDots.fit(score, room, maxDot)
             if (room > 0f && dot >= SMALL_DOT) return ScoreRow(dot, word, if (withRight) right else null)
         }
-        return ScoreRow(WidgetDots.fit(score, width, WIDE_DOT), null, null)
+        return ScoreRow(WidgetDots.fit(score, width, maxDot), null, null)
     }
 
     /* ----------------------------------------------- Small ----------------------------------------------- */
@@ -262,7 +262,16 @@ object SleepLayout {
      * What the Small keeps: its score [row], the Secondary [lines] under it ("Last synced night" while stale, then
      * time asleep) and whether the stage [bar] shows.
      */
-    data class Small(val row: ScoreRow, val lines: List<SmallLine>, val bar: Boolean)
+    data class Small(
+        val row: ScoreRow, val lines: List<SmallLine>, val bar: Boolean,
+        val top: TopRow = TopRow(null, false, 0f), val spread: Spread = Spread(0f, 0),
+    )
+
+    /** The Small's dots: the mockup's 3 dp (spec 3), growing to 7 on a tall cell before the gaps do. */
+    val SMALL_DOTS = listOf(3f, 3.6f, 4.5f, 5f, 5.5f, 6f, 6.5f, 7f)
+
+    /** The Wide's dots on a tall cell, from 3.6. */
+    val WIDE_GROWTH = listOf(4.5f, 5f, 5.5f, 6f)
 
     /**
      * The Small in [width] by [height]: the title and the score with its word always (the dots smaller for a long
@@ -271,41 +280,47 @@ object SleepLayout {
      * "Last synced night" on two when one can't hold it, since without it yesterday's night would pass for last
      * night's.
      */
-    fun small(m: SleepWidgetModel, width: Float, height: Float, fontScale: Float): Small {
-        val row = smallRow(m, width, fontScale)
+    fun small(m: SleepWidgetModel, width: Float, height: Float, fontScale: Float, status: StatusLine? = null): Small {
+        val top = TopRow.of(m.title, null, status, width, fontScale)
         val sec = WidgetText.line(WidgetText.SECONDARY_SP, fontScale)
         fun linesOf(text: String) = WidgetText.lines(text, WidgetText.SECONDARY_SP, width, fontScale)
         val note = m.note?.takeIf { m.stale }?.let { SmallLine(it, linesOf(it)) }?.takeIf { it.lines <= 2 }
         val asleep = m.asleep?.let { SmallLine(it, linesOf(it)) }?.takeIf { it.lines == 1 }
-        val base = WidgetText.line(WidgetText.TITLE_SP, fontScale) + MIN_GAP_DP + row.height(fontScale)
-        fun total(lines: List<SmallLine>, bar: Boolean) =
-            base + lines.sumOf { (SMALL_GAP_DP + it.lines * sec).toDouble() }.toFloat() + (if (bar) SMALL_GAP_DP + SMALL_BAR_DP else 0f)
+        fun at(row: ScoreRow, lines: List<SmallLine>, bar: Boolean): Small {
+            val parts = lines.map { it.lines * sec } + listOfNotNull(SMALL_BAR_DP.takeIf { bar })
+            val foot = parts.sum() + (parts.size - 1).coerceAtLeast(0) * SMALL_GAP_DP
+            return Small(row, lines, bar, top, Spread.of(top.height, row.height(fontScale), foot))
+        }
+        // The top row and the score at least MIN_GAP_DP apart, the score and what's under it SMALL_GAP_DP.
+        fun fits(f: Small, h: Float) = f.spread.content + MIN_GAP_DP + (if (f.spread.inner > 1) SMALL_GAP_DP else 0f) <= h + 0.01f
+        val row = smallRow(m, width, fontScale)
         val hasBar = m.totals.isNotEmpty()
         // Time asleep goes first, then the bar, then the note, which says the night isn't last night's.
         val tries = listOf(
             listOfNotNull(note, asleep) to hasBar, listOfNotNull(note) to hasBar, listOfNotNull(note) to false, emptyList<SmallLine>() to false,
         )
-        return tries.firstOrNull { (lines, bar) -> total(lines, bar) <= height }?.let { (lines, bar) -> Small(row, lines, bar) }
-            ?: Small(row, emptyList(), false)
+        val base = tries.map { (lines, bar) -> at(row, lines, bar) }.firstOrNull { fits(it, height) } ?: return at(row, emptyList(), false)
+        // A tall cell grows the dots, never at the cost of the word.
+        val ladder = SMALL_DOTS.map { at(smallRow(m, width, fontScale, it), base.lines, base.bar) }.filter { it.row.word == base.row.word }
+        val fitting = (listOf(base) + ladder.filter { it.row.dot > base.row.dot }).distinct().filter { fits(it, height) }
+        return fitting.firstOrNull { it.spread.gap(height) <= Spread.TARGET_GAP_DP } ?: fitting.last()
     }
 
-    /** The Small's height as laid out, for the tests. */
-    fun smallHeight(f: Small, fontScale: Float): Float =
-        WidgetText.line(WidgetText.TITLE_SP, fontScale) + MIN_GAP_DP + f.row.height(fontScale) +
-            f.lines.sumOf { (SMALL_GAP_DP + it.lines * WidgetText.line(WidgetText.SECONDARY_SP, fontScale)).toDouble() }.toFloat() +
-            (if (f.bar) SMALL_GAP_DP + SMALL_BAR_DP else 0f)
+    /** The Small's height as laid out with the least gaps, for the tests. */
+    fun smallHeight(f: Small, @Suppress("UNUSED_PARAMETER") fontScale: Float): Float =
+        f.spread.content + MIN_GAP_DP + (if (f.spread.inner > 1) SMALL_GAP_DP else 0f)
 
-    private fun smallRow(m: SleepWidgetModel, width: Float, fontScale: Float): ScoreRow {
+    private fun smallRow(m: SleepWidgetModel, width: Float, fontScale: Float, maxDot: Float = SMALL_DOT): ScoreRow {
         val score = m.score ?: return ScoreRow(
             0f, m.scoreLine ?: TabCopy.NO_STRAP_SCORE, null,
             WidgetText.lines(m.scoreLine ?: TabCopy.NO_STRAP_SCORE, WidgetText.BODY_SP, width, fontScale).coerceAtMost(2),
         )
         val word = m.word
         if (word != null) {
-            val dot = WidgetDots.fit(score, width - SMALL_WORD_GAP_DP - WidgetText.width(word, WidgetText.BODY_SP, fontScale), SMALL_DOT)
+            val dot = WidgetDots.fit(score, width - SMALL_WORD_GAP_DP - WidgetText.width(word, WidgetText.BODY_SP, fontScale), maxDot)
             if (dot >= MIN_SMALL_DOT) return ScoreRow(dot, word, null)
         }
-        return ScoreRow(WidgetDots.fit(score, width, SMALL_DOT), null, null)
+        return ScoreRow(WidgetDots.fit(score, width, maxDot), null, null)
     }
 
     /** The smallest the Small's dots go to keep its word beside them. */
@@ -314,7 +329,10 @@ object SleepLayout {
     /* ------------------------------------------------ Wide ----------------------------------------------- */
 
     /** What the Wide keeps: the note, the score row, the bar and the legend's rows (0 without it). */
-    data class Wide(val note: Boolean, val row: ScoreRow, val bar: Boolean, val legendRows: Int)
+    data class Wide(
+        val note: Boolean, val row: ScoreRow, val bar: Boolean, val legendRows: Int,
+        val top: TopRow = TopRow(null, note, 0f), val spread: Spread = Spread(0f, 0),
+    )
 
     /** Whether the title row holds [title] and [note] on one line in [width]. */
     fun noteFits(title: String, note: String?, width: Float, fontScale: Float): Boolean = note != null &&
@@ -324,19 +342,26 @@ object SleepLayout {
      * The Wide in [width] by [height]: the title row, the score row ([scoreRow] with time asleep) and the stage bar
      * always, the legend on one row or two while it fits, else none.
      */
-    fun wide(m: SleepWidgetModel, width: Float, height: Float, fontScale: Float): Wide {
-        val row = scoreRow(m, m.asleep, width, fontScale)
+    fun wide(m: SleepWidgetModel, width: Float, height: Float, fontScale: Float, status: StatusLine? = null): Wide {
+        val top = TopRow.of(m.title, m.note, status, width, fontScale)
         val bar = m.totals.isNotEmpty()
-        val base = WidgetText.line(WidgetText.TITLE_SP, fontScale) + row.height(fontScale) + 2 * MIN_GAP_DP + (if (bar) BAR_DP else 0f)
-        val rows = legendRows(m.legend, width, fontScale).takeIf { bar } ?: 0
-        val legend = rows.takeIf { base + BAR_GAP_DP + legendHeight(it, fontScale) <= height } ?: 0
-        return Wide(noteFits(m.title, m.note, width, fontScale), row, bar, legend)
+        fun at(row: ScoreRow): Wide {
+            val base = top.height + row.height(fontScale) + 2 * MIN_GAP_DP + (if (bar) BAR_DP else 0f)
+            val rows = legendRows(m.legend, width, fontScale).takeIf { bar } ?: 0
+            val legend = rows.takeIf { base + BAR_GAP_DP + legendHeight(it, fontScale) <= height } ?: 0
+            val stages = if (bar) BAR_DP + (if (legend > 0) BAR_GAP_DP + legendHeight(legend, fontScale) else 0f) else null
+            return Wide(top.note, row, bar, legend, top, Spread.of(top.height, row.height(fontScale), stages))
+        }
+        val base = at(scoreRow(m, m.asleep, width, fontScale))
+        // A tall cell grows the dots, never at the cost of the word, what's on the right or the legend.
+        val grown = WIDE_GROWTH.map { at(scoreRow(m, m.asleep, width, fontScale, it)) }
+            .filter { it.row.word == base.row.word && it.row.right == base.row.right && it.legendRows == base.legendRows && it.row.dot > base.row.dot }
+        val fitting = (listOf(base) + grown).filter { wideHeight(it, fontScale) <= height + 0.01f }
+        return fitting.firstOrNull { it.spread.gap(height) <= Spread.TARGET_GAP_DP } ?: fitting.lastOrNull() ?: base
     }
 
-    /** The Wide's height as laid out, for the tests. */
-    fun wideHeight(w: Wide, fontScale: Float): Float =
-        WidgetText.line(WidgetText.TITLE_SP, fontScale) + w.row.height(fontScale) + 2 * MIN_GAP_DP +
-            (if (w.bar) BAR_DP else 0f) + (if (w.legendRows > 0) BAR_GAP_DP + legendHeight(w.legendRows, fontScale) else 0f)
+    /** The Wide's height as laid out with the least gaps, for the tests. */
+    fun wideHeight(w: Wide, @Suppress("UNUSED_PARAMETER") fontScale: Float): Float = w.spread.content + 2 * MIN_GAP_DP
 
     /* ----------------------------------------------- Large ----------------------------------------------- */
 
@@ -344,7 +369,10 @@ object SleepLayout {
      * What the Large keeps: the note, the sentence's lines (0 without it), the score row, and the stage rows or, when
      * they don't fit, the stage bar.
      */
-    data class Large(val note: Boolean, val sentenceLines: Int, val row: ScoreRow, val stages: Boolean, val bar: Boolean)
+    data class Large(
+        val note: Boolean, val sentenceLines: Int, val row: ScoreRow, val stages: Boolean, val bar: Boolean,
+        val top: TopRow = TopRow(null, note, 0f),
+    )
 
     /** The Large's stage rows' height: a Secondary line a stage. */
     fun stagesHeight(count: Int, fontScale: Float): Float =
@@ -355,24 +383,29 @@ object SleepLayout {
      * asleep), then the time in each stage as rows, with the sentence while it fits. The sentence goes first, then
      * the rows give way to the stage bar.
      */
-    fun large(m: SleepWidgetModel, width: Float, height: Float, fontScale: Float): Large {
+    fun large(m: SleepWidgetModel, width: Float, height: Float, fontScale: Float, status: StatusLine? = null): Large {
+        val top = TopRow.of(m.title, m.note, status, width, fontScale)
         val row = scoreRow(m, m.largeRight, width, fontScale)
         val bar = m.totals.isNotEmpty()
         val lines = m.sentence?.let { WidgetText.lines(it, WidgetText.HERO_SP, width, fontScale) }?.takeIf { it <= SENTENCE_LINES } ?: 0
         val rowsFit = bar && width - STAGE_NAME_DP - STAGE_TIME_DP - 2 * STAGE_GAP_DP >= MIN_STAGE_TRACK_DP
-        val note = noteFits(m.title, m.note, width, fontScale)
         // Stage rows with the sentence, without it, then the bar with and without it.
         val tries = listOf(rowsFit to lines, rowsFit to 0, false to lines, false to 0).distinct()
         for ((stages, sentence) in tries) {
-            val l = Large(note, sentence, row, stages, bar)
+            val l = Large(top.note, sentence, row, stages, bar, top)
             if (largeHeight(l, m.stages.size, fontScale) <= height) return l
         }
-        return Large(note, 0, row, false, bar)
+        return Large(top.note, 0, row, false, bar, top)
     }
 
     /** Everything on the Large with the least gaps between its blocks, [stageCount] rows when it shows them. */
-    fun largeHeight(l: Large, stageCount: Int, fontScale: Float): Float =
-        WidgetText.line(WidgetText.TITLE_SP, fontScale) + l.sentenceLines * WidgetText.line(WidgetText.HERO_SP, fontScale) +
-            l.row.height(fontScale) + (if (l.stages) stagesHeight(stageCount, fontScale) else if (l.bar) BAR_DP else 0f) +
-            3 * MIN_GAP_DP
+    fun largeHeight(l: Large, stageCount: Int, fontScale: Float): Float = largeSpread(l, stageCount, fontScale).content + 3 * MIN_GAP_DP
+
+    /** How the Large's blocks share its height: the top row, the sentence, the score row, the rows or the bar. */
+    fun largeSpread(l: Large, stageCount: Int, fontScale: Float): Spread = Spread.of(
+        l.top.height.takeIf { it > 0f } ?: WidgetText.line(WidgetText.TITLE_SP, fontScale),
+        l.sentenceLines * WidgetText.line(WidgetText.HERO_SP, fontScale),
+        l.row.height(fontScale),
+        if (l.stages) stagesHeight(stageCount, fontScale) else if (l.bar) BAR_DP else 0f,
+    )
 }

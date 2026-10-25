@@ -10,6 +10,10 @@ import android.os.Bundle
 import android.util.Log
 import android.util.SizeF
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
@@ -22,7 +26,12 @@ import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.LocalContext
 import androidx.glance.LocalSize
+import androidx.glance.action.Action
 import androidx.glance.action.clickable
+import androidx.glance.appwidget.CircularProgressIndicator
+import androidx.glance.appwidget.action.actionRunCallback
+import androidx.glance.semantics.contentDescription
+import androidx.glance.semantics.semantics
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.LocalAppWidgetOptions
@@ -57,8 +66,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.first
 import org.openstrap.app.AppContainer
 import org.openstrap.app.MainActivity
+import org.openstrap.app.OpenStrapApp
+import org.openstrap.app.device.SyncState
+import org.openstrap.app.ui.glow.draw.drawIcon
+import org.openstrap.app.ui.theme.AppIcons
 import org.openstrap.app.device.WidgetUpdater
 import org.openstrap.app.ui.dashboard.momentMood
 import org.openstrap.app.ui.glow.EdgeLight
@@ -89,8 +103,20 @@ import java.time.ZoneId
 abstract class LoadingWidget<T>(private val kind: WidgetKind) : GlanceAppWidget() {
     override val sizeMode = SizeMode.Responsive(WidgetSizes.all)
 
+    /** The picker's generated preview (spec 6.4, Android 15 and later) has the three sizes too. */
+    override val previewSizeMode = SizeMode.Responsive(WidgetSizes.all)
+
     /** What the widget shows now. */
     protected abstract suspend fun loadShown(context: Context): T
+
+    /** The mockups' sample ([WidgetSamples]) for the picker's preview, lit by day. */
+    protected abstract fun sample(): T
+
+    /** The real layout with [sample]'s values and no status line, so the picker shows the widget as it looks. */
+    override suspend fun providePreview(context: Context, widgetCategory: Int) {
+        val data = sample()
+        provideContent { CompositionLocalProvider(LocalStatusLine provides null) { Content(data) } }
+    }
 
     /** The widget at the size Glance lays out. */
     @Composable
@@ -98,12 +124,41 @@ abstract class LoadingWidget<T>(private val kind: WidgetKind) : GlanceAppWidget(
 
     override suspend fun provideGlance(context: Context, id: GlanceId) = coroutineScope {
         val shown = MutableStateFlow(loadShown(context))
-        launch { WidgetRefresh.version(kind).drop(1).collectLatest { shown.value = loadShown(context) } }
+        val status = MutableStateFlow(loadStatusLine(context))
+        launch {
+            WidgetRefresh.version(kind).drop(1).collectLatest {
+                shown.value = loadShown(context)
+                status.value = loadStatusLine(context)
+            }
+        }
         provideContent {
             val data by shown.collectAsState()
-            Content(data)
+            val line by status.collectAsState()
+            CompositionLocalProvider(LocalStatusLine provides line) { Content(data) }
         }
     }
+}
+
+/** The strap status line every widget's frame reads ([WidgetFrame.status]), null while all is well. */
+internal val LocalStatusLine = staticCompositionLocalOf<StatusLine?> { null }
+
+/**
+ * The strap status line now (spec 5), from what settings keep of the strap so it reads with the strap away, and
+ * whether a sync is running; or the debug gallery's ([WidgetRefresh.statusOverride]). Null while all is well.
+ */
+internal suspend fun loadStatusLine(context: Context, now: Instant = Instant.now(), zone: ZoneId = ZoneId.systemDefault()): StatusLine? = try {
+    val t = now.epochSecond
+    val status = if (WidgetRefresh.statusOverride != null) WidgetRefresh.debugStatus(t) else {
+        val container = (context.applicationContext as OpenStrapApp).container
+        val s = container.settings.strapSnapshot.first()
+        strapStatus(s.paired, s.battery, s.charging, s.lastSyncDone, t, syncing = container.strap.sync.value is SyncState.Running)
+    }
+    status?.let { StatusLine.of(it, t, zone) }
+} catch (e: CancellationException) {
+    throw e
+} catch (e: Exception) {
+    Log.w(WIDGET_TAG, "widgets: strap status not read: $e")
+    null
 }
 
 /**
@@ -144,6 +199,10 @@ internal suspend fun widgetMood(container: AppContainer, usualBedtime: LocalTime
         GlowMood.Day
     }
 
+/** The Strap page (spec 5): the status line's tap while the strap isn't paired or its battery is low. */
+internal fun openStrap(context: Context): Intent =
+    Intent(context, MainActivity::class.java).putExtra(MainActivity.EXTRA_OPEN_STRAP, true).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+
 /** Opens the detail at [route] (`open_metric`, [org.openstrap.app.ui.dashboard.Detail.fromRoute]) for [day]. */
 internal fun openMetric(context: Context, route: String, day: LocalDate?): Intent =
     Intent(context, MainActivity::class.java)
@@ -171,6 +230,8 @@ class WidgetFrame(
     /** The real cell to fit the content to ([WidgetSizes.fitSize]), dp. */
     val fitWidth: Float = bucket.width.value,
     val fitHeight: Float = bucket.height.value,
+    /** The strap status line to show in the top row (spec 5), null for none. */
+    val status: StatusLine? = null,
 ) {
     /** The content's width and height in the real cell, inside the padding, dp: what decides what fits. */
     val contentWidth: Float get() = fitWidth - 2 * WidgetSizes.PADDING_DP
@@ -178,6 +239,11 @@ class WidgetFrame(
 
     /** The content's real width, dp, for bitmaps that span it. */
     val drawContentWidth: Float get() = drawWidth - 2 * WidgetSizes.PADDING_DP
+
+    /** The content's real height, dp: what the gaps share out ([Spread.edge]). */
+    val drawContentHeight: Float get() = drawHeight - 2 * WidgetSizes.PADDING_DP
+    /** The frame for what sits under a block [dp] high at the top (Start's status pill): as tall less that. */
+    fun below(dp: Float): WidgetFrame = WidgetFrame(bucket, drawWidth, drawHeight - dp, density, fontScale, fitWidth, fitHeight - dp, status)
 }
 
 /**
@@ -192,21 +258,26 @@ class WidgetFrame(
 internal fun EdgeWidget(
     light: EdgeLight, ink: Color, mood: GlowMood, open: Intent, bitmapExtra: Double,
     sidePadding: Float = WidgetSizes.PADDING_DP,
+    showStatus: Boolean = true,
     content: @Composable ColumnScope.(WidgetFrame) -> Unit,
-) = CardWidget(open, bitmapExtra, sidePadding, { w, h, corner, density -> edgeBackground(light, ink, mood, w, h, corner, density) }, content)
+) = CardWidget(open, bitmapExtra, sidePadding, showStatus, { w, h, corner, density -> edgeBackground(light, ink, mood, w, h, corner, density) }, content)
 
 /**
  * A glow card widget (Moment, spec 2.2): [style] behind, its mood already set, drawn at the cell's real size as the
  * app's GlowCard draws it ([drawGlow]), the rest as [EdgeWidget].
  */
 @Composable
-internal fun GlowWidget(style: GlowStyle, open: Intent, bitmapExtra: Double, content: @Composable ColumnScope.(WidgetFrame) -> Unit) =
-    CardWidget(open, bitmapExtra, WidgetSizes.PADDING_DP, { w, h, corner, density -> glowBackground(style, w, h, corner, density) }, content)
+internal fun GlowWidget(style: GlowStyle, open: Intent, bitmapExtra: Double, showStatus: Boolean = true, content: @Composable ColumnScope.(WidgetFrame) -> Unit) =
+    CardWidget(open, bitmapExtra, WidgetSizes.PADDING_DP, showStatus, { w, h, corner, density -> glowBackground(style, w, h, corner, density) }, content)
 
-/** A widget card with [background] (dp width, dp height, dp corner, px per dp) behind: what [EdgeWidget] and [GlowWidget] share. */
+/**
+ * A widget card with [background] (dp width, dp height, dp corner, px per dp) behind: what [EdgeWidget] and [GlowWidget]
+ * share. The frame carries the strap status line ([LocalStatusLine]) unless [showStatus] is false (while a workout
+ * records, spec 5).
+ */
 @Composable
 private fun CardWidget(
-    open: Intent, bitmapExtra: Double, sidePadding: Float,
+    open: Intent, bitmapExtra: Double, sidePadding: Float, showStatus: Boolean,
     background: (Float, Float, Float, Float) -> Bitmap,
     content: @Composable ColumnScope.(WidgetFrame) -> Unit,
 ) {
@@ -220,7 +291,8 @@ private fun CardWidget(
     val allPixels = WidgetSizes.all.sumOf { (it.width.value * it.height.value).toDouble() } * bitmapExtra * metrics.density * metrics.density
     val density = metrics.density * WidgetSizes.bitmapScale(allPixels.toLong(), WidgetSizes.bitmapBudget(metrics.widthPixels, metrics.heightPixels))
     val corner = WidgetSizes.corner(systemCorner(context))
-    val frame = WidgetFrame(bucket, w, h, density, context.resources.configuration.fontScale, fitW, fitH)
+    val status = LocalStatusLine.current.takeIf { showStatus }
+    val frame = WidgetFrame(bucket, w, h, density, context.resources.configuration.fontScale, fitW, fitH, status)
     Box(
         GlanceModifier.fillMaxSize()
             .appWidgetBackground()
@@ -293,24 +365,79 @@ internal object WidgetType {
 }
 
 /**
- * The top row: the title, with its note on the right. Step 6's strap status line takes this row's place when the
- * strap needs something ([strapStatus]).
+ * The top row as [top] lays it out: the strap status pill in the title's place when the strap needs something
+ * (spec 5), else [title] in [titleStyle]; [note] on the right when it fits.
  */
 @Composable
-internal fun TitleRow(title: String, note: String?) {
+internal fun TopRowView(title: String, note: String?, top: TopRow, f: WidgetFrame, titleStyle: TextStyle = WidgetType.title) {
     Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text(title, style = WidgetType.title, maxLines = 1)
-        if (note != null) {
+        val pill = top.pill
+        if (pill != null) StatusPillView(pill, f) else Text(title, style = titleStyle, maxLines = 1)
+        if (note != null && top.note) {
             Spacer(GlanceModifier.defaultWeight())
             Text(note, style = WidgetType.secondary, maxLines = 1)
         }
     }
 }
 
-/** Before there's anything to show: the title, then why in Secondary ("After your first night"). */
+/**
+ * The strap status pill (spec 5): black at 45%, fully round, the state's 12 dp icon (turning while it syncs) and the
+ * wording that fits, read out whole. Not paired or a low battery opens the Strap page, a stale sync syncs in place
+ * ([SyncNowAction]); while it syncs, a tap is the widget's own.
+ */
 @Composable
-internal fun WaitingContent(title: String, line: String?) {
-    TitleRow(title, null)
+internal fun StatusPillView(pill: StatusPill.Pill, f: WidgetFrame) {
+    val context = LocalContext.current
+    val w = pill.width(f.fontScale)
+    val h = pill.height(f.fontScale)
+    val status = pill.line.status
+    val action: Action? = when (status) {
+        StrapStatus.NotPaired, is StrapStatus.LowBattery -> actionStartActivity(openStrap(context))
+        is StrapStatus.StaleSync -> actionRunCallback<SyncNowAction>()
+        StrapStatus.Syncing -> null
+    }
+    val base = GlanceModifier.size(w.dp, h.dp)
+        .background(ImageProvider(statusPillBitmap(w, h, f.density)), ContentScale.FillBounds)
+        .semantics { contentDescription = pill.line.full }
+    Box(action?.let { base.clickable(it) } ?: base, contentAlignment = Alignment.Center) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            val icon = GlanceModifier.size(StatusPill.ICON_DP.dp)
+            if (status == StrapStatus.Syncing) {
+                CircularProgressIndicator(icon, color = ColorProvider(Color.White))
+            } else {
+                val vector = if (status is StrapStatus.StaleSync) AppIcons.ArrowsClockwise else AppIcons.Watch
+                Image(ImageProvider(iconBitmap(vector, Color.White, StatusPill.ICON_DP, f.density)), contentDescription = null, modifier = icon, contentScale = ContentScale.FillBounds)
+            }
+            Spacer(GlanceModifier.width(StatusPill.ICON_GAP_DP.dp))
+            Text(pill.text, style = WidgetType.secondaryShown.copy(fontSize = pill.sp.sp), maxLines = 1)
+        }
+    }
+}
+
+/** The pill's ground, [w] by [h] dp: black at [StatusPill.ALPHA], ends fully round. */
+private fun statusPillBitmap(w: Float, h: Float, density: Float): Bitmap {
+    val pw = w * density
+    val ph = h * density
+    return renderToBitmap(pw, ph) { c ->
+        c.drawRoundRect(0f, 0f, pw, ph, ph / 2, ph / 2, android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.Black.copy(alpha = StatusPill.ALPHA).toArgb()
+        })
+    }
+}
+
+/** [icon] alone in [color], [sizeDp] square. */
+internal fun iconBitmap(icon: ImageVector, color: Color, sizeDp: Float, density: Float): Bitmap {
+    val s = sizeDp * density
+    return renderToBitmap(s, s) { c -> drawIcon(c, icon, color, 0f, 0f, s) }
+}
+
+/**
+ * Before there's anything to show: the top row ([f]'s status line in the title's place when it has one), then why
+ * in Secondary ("After your first night"), on as many lines as it needs.
+ */
+@Composable
+internal fun WaitingContent(title: String, line: String?, f: WidgetFrame) {
+    TopRowView(title, null, TopRow.of(title, null, f.status, f.contentWidth, f.fontScale), f)
     Spacer(GlanceModifier.height(6.dp))
     line?.let { Text(it, style = WidgetType.secondary, maxLines = 4) }
 }

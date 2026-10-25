@@ -16,7 +16,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import org.openstrap.app.OpenStrapApp
 import org.openstrap.app.data.MomentInputs
 import org.openstrap.app.widget.MomentWidget
 import org.openstrap.app.widget.MomentWidgetReceiver
@@ -30,6 +32,7 @@ import org.openstrap.app.widget.StepsWidget
 import org.openstrap.app.widget.StepsWidgetReceiver
 import org.openstrap.app.widget.WidgetKind
 import org.openstrap.app.widget.WidgetRefresh
+import org.openstrap.app.widget.SYNC_STALE_SECONDS
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -135,6 +138,36 @@ object WidgetUpdater {
         changed(app, setOf(WidgetKind.Moment))
     }
 
+    /**
+     * Android 15 and later: gives the launcher's picker each widget's generated preview ([GlanceAppWidget.providePreview]),
+     * the real layout with sample values (spec 6.4), once per app version. The system limits how often this may be
+     * called, so a limited or failed call is tried again on the next start; older systems use the provider XML's
+     * `previewLayout` and `previewImage`.
+     */
+    fun publishPreviews(context: Context) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.VANILLA_ICE_CREAM) return
+        val app = context.applicationContext
+        val prefs = app.getSharedPreferences(PREVIEW_PREFS, Context.MODE_PRIVATE)
+        val version = org.openstrap.app.BuildConfig.VERSION_CODE
+        if (prefs.getInt(PREVIEW_VERSION, -1) == version) return
+        scope.launch {
+            try {
+                val manager = androidx.glance.appwidget.GlanceAppWidgetManager(app)
+                val results = widgets.values.map { manager.setWidgetPreviews(it.receiver.kotlin) }
+                if (results.all { it == androidx.glance.appwidget.GlanceAppWidgetManager.SET_WIDGET_PREVIEWS_RESULT_SUCCESS }) {
+                    prefs.edit().putInt(PREVIEW_VERSION, version).apply()
+                } else {
+                    Log.i(TAG, "widgets: previews not all set ($results), trying again next start")
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "widgets: previews not set: $e")
+            }
+        }
+    }
+
+    private const val PREVIEW_PREFS = "widgets"
+    private const val PREVIEW_VERSION = "previews_version"
+
     /** Sets the alarm for the next local midnight while any widget is placed, and clears it when none is. */
     fun scheduleMidnight(context: Context, zone: ZoneId = ZoneId.systemDefault()) {
         try {
@@ -158,8 +191,34 @@ object WidgetUpdater {
                 Log.w(TAG, "widgets: $kind not updated: $e")
             }
         }
-        if (shown.isNotEmpty()) scheduleMidnight(context)
+        if (shown.isNotEmpty()) {
+            scheduleMidnight(context)
+            scheduleStale(context)
+        }
     }
+
+    /**
+     * Sets the alarm for the moment the last sync turns stale ([staleAt]), so the status line says so with the strap
+     * away and nothing else refreshing (spec 5), while any widget is placed; clears it otherwise.
+     */
+    suspend fun scheduleStale(context: Context) {
+        try {
+            val done = (context.applicationContext as OpenStrapApp).container.settings.strapSnapshot.first().lastSyncDone
+            val at = staleAt(placed(context).isNotEmpty(), done, System.currentTimeMillis() / 1000)
+            if (at == null) cancel(context, ACTION_STALE) else setAlarm(context, ACTION_STALE, at * 1000)
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "widgets: stale alarm not set: $e")
+        }
+    }
+
+    /**
+     * When the last sync, done at [lastSyncDone] (epoch seconds), turns stale: a second past [SYNC_STALE_SECONDS],
+     * while widgets are [placed] and that's still ahead of [now]. Null for no alarm.
+     */
+    fun staleAt(placed: Boolean, lastSyncDone: Long?, now: Long): Long? =
+        lastSyncDone?.let { it + SYNC_STALE_SECONDS + 1 }?.takeIf { placed && it > now }
 
     /**
      * Exact while the app may set exact alarms (Android 11 and older always, later with "Alarms and reminders"),
@@ -183,13 +242,14 @@ object WidgetUpdater {
     }
 
     private fun pendingIntent(context: Context, action: String): PendingIntent = PendingIntent.getBroadcast(
-        context, if (action == ACTION_MOMENT) 1 else 2,
+        context, when (action) { ACTION_MOMENT -> 1; ACTION_MIDNIGHT -> 2; else -> 3 },
         Intent(context, WidgetAlarmReceiver::class.java).setAction(action),
         PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
     )
 
     internal const val ACTION_MOMENT = "org.openstrap.app.widget.MOMENT"
     internal const val ACTION_MIDNIGHT = "org.openstrap.app.widget.MIDNIGHT"
+    internal const val ACTION_STALE = "org.openstrap.app.widget.STALE"
 }
 
 /** Where [WidgetUpdater]'s alarms land: the moment changed, or a new day began. Not a widget, and not exported. */
@@ -197,7 +257,7 @@ class WidgetAlarmReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val kinds = when (intent.action) {
             WidgetUpdater.ACTION_MOMENT -> setOf(WidgetKind.Moment)
-            WidgetUpdater.ACTION_MIDNIGHT -> WidgetKind.entries.toSet()
+            WidgetUpdater.ACTION_MIDNIGHT, WidgetUpdater.ACTION_STALE -> WidgetKind.entries.toSet()
             else -> return
         }
         val app = context.applicationContext

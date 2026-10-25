@@ -51,6 +51,10 @@ class CopyPunctuationTest {
         File(root, "res/xml").listFiles().orEmpty().filter { it.name.startsWith("widget_") && it.extension == "xml" }.sortedBy { it.name }.forEach { f ->
             f.readLines().forEachIndexed { i, line -> if (line.any { it in banned }) found += "res/xml/${f.name}:${i + 1}  ${line.trim()}" }
         }
+        // The picker previews' sample copy (widgets spec 6.4).
+        File(root, "res/layout").listFiles().orEmpty().filter { it.name.startsWith("widget_preview_") }.sortedBy { it.name }.forEach { f ->
+            f.readLines().forEachIndexed { i, line -> if (line.any { it in banned }) found += "res/layout/${f.name}:${i + 1}  ${line.trim()}" }
+        }
         if (found.isNotEmpty()) fail("${found.size} user-facing strings use ·, ; or —:\n" + found.joinToString("\n"))
         val stale = allowed.keys - used
         assertTrue("allowlist entries that no longer match: $stale", stale.isEmpty())

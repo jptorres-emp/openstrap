@@ -156,4 +156,115 @@ object RecoveryLayout {
 
     /** Each day's bar as a share of a full 100, null where the day has no score. */
     fun barValues(week: List<RecoveryWeekDay>): List<Float?> = week.map { d -> d.score?.let { it.coerceIn(0, 100) / 100f } }
+
+    /* ------------------------------------------- Fitting ------------------------------------------- */
+
+    /** The least gap between blocks. */
+    const val MIN_GAP_DP = 4f
+
+    /** The Small's dots: the mockup's 3 dp (spec 3), growing to 7 on a tall cell before the gaps do. */
+    val SMALL_DOTS = listOf(3f, 3.6f, 4.5f, 5f, 5.5f, 6f, 6.5f, 7f)
+
+    /** The Wide's and Large's dots: 3.6, the Small's 3 when short of room, up to 6 on a tall cell. */
+    const val WIDE_DOT = 3.6f
+    const val SHORT_DOT = 3f
+    val WIDE_GROWTH = listOf(4.5f, 5f, 5.5f, 6f)
+
+    /** The Large's sentence: Display 300 20 on at most three lines, growing to 22 and 24 sp on a tall cell. */
+    const val SENTENCE_LINES = 3
+    val SENTENCE_SIZES = listOf(WidgetText.HERO_SP, 22f, 24f)
+
+    /** The figures' block: a Caption over a Body value. */
+    fun figuresHeight(fontScale: Float): Float = WidgetText.line(WidgetText.CAPTION_SP, fontScale) + 2f + WidgetText.line(WidgetText.BODY_SP, fontScale)
+
+    /** The week beside the score: its bars and the letters under them. */
+    fun weekHeight(fontScale: Float): Float = org.openstrap.app.ui.glow.draw.WeekBarsLook.HEIGHT_DP + 4f + WidgetText.line(WidgetText.CAPTION_SP, fontScale)
+
+    /**
+     * A size laid out: the [top] row, the dots at [dot], whether the [word] shows, the Large's sentence at
+     * [sentenceSp] on [sentenceLines] lines (0 for none), whether the [figures] and the [week] show, and how the
+     * blocks share the height ([spread]).
+     */
+    data class Fit(
+        val top: TopRow, val dot: Float, val word: Boolean, val spread: Spread,
+        val sentenceLines: Int = 0, val sentenceSp: Float = WidgetText.HERO_SP, val figures: Boolean = false,
+        val week: Boolean = false, val weekColumn: Float = 0f, val wordSp: Float = WORD_SP,
+    )
+
+    /**
+     * The Small in [width] by [height] dp: the top row, the score, its word, three blocks sharing the height, the dots
+     * growing from 3 dp until no gap is over [Spread.TARGET_GAP_DP]. Narrow, the dots shrink to the width; short, the
+     * word goes.
+     */
+    fun small(m: RecoveryWidgetModel, width: Float, height: Float, fontScale: Float, status: StatusLine? = null): Fit {
+        val top = TopRow.of(m.title, null, status, width, fontScale)
+        val score = m.score.orEmpty()
+        // Body, then Secondary's size before the word goes.
+        val wordSp = m.word?.let { w -> listOf(WORD_SP, WidgetText.SECONDARY_SP).firstOrNull { WidgetText.fits(w, it, width, fontScale) } }
+        fun at(dot: Float, withWord: Boolean): Fit {
+            val d = WidgetDots.fit(score, width, dot)
+            val w = withWord && wordSp != null
+            return Fit(top, d, w, Spread.of(top.height, WidgetDots.height(d), if (w) WidgetText.line(wordSp, fontScale) else null), wordSp = wordSp ?: WORD_SP)
+        }
+        val ladder = SMALL_DOTS.map { at(it, true) }.distinct()
+        if (ladder.first().spread.fits(height, MIN_GAP_DP)) return Spread.grow(ladder, height, MIN_GAP_DP) { it.spread }
+        return at(SMALL_DOTS.first(), false)
+    }
+
+    /** The score row's width at [dot]: the dots and the word beside them. */
+    private fun rowWidth(m: RecoveryWidgetModel, dot: Float, fontScale: Float): Float =
+        WidgetDots.width(m.score.orEmpty(), dot) + (m.word?.let { WORD_GAP_DP + textWidth(it, WORD_SP, fontScale) } ?: 0f)
+
+    /**
+     * The Wide in [width] by [height] dp: the top row, the score with its word, the three figures. The dots at 3.6,
+     * growing to 6 on a tall cell, down to 3 when short; the figures go last.
+     */
+    fun wide(m: RecoveryWidgetModel, width: Float, height: Float, fontScale: Float, status: StatusLine? = null): Fit {
+        val top = TopRow.of(m.title, m.note, status, width, fontScale)
+        val score = m.score.orEmpty()
+        val wordW = m.word?.let { WORD_GAP_DP + textWidth(it, WORD_SP, fontScale) } ?: 0f
+        fun at(dot: Float, figures: Boolean): Fit {
+            val d = WidgetDots.fit(score, width - wordW, dot)
+            val row = maxOf(WidgetDots.height(d), WidgetText.line(WORD_SP, fontScale))
+            return Fit(top, d, m.word != null, Spread.of(top.height, row, if (figures) figuresHeight(fontScale) else null), figures = figures)
+        }
+        val ladder = (listOf(WIDE_DOT) + WIDE_GROWTH).map { at(it, true) }.distinct()
+        if (ladder.first().spread.fits(height, MIN_GAP_DP)) return Spread.grow(ladder, height, MIN_GAP_DP) { it.spread }
+        return listOf(at(SHORT_DOT, true), at(SHORT_DOT, false)).firstOrNull { it.spread.fits(height, MIN_GAP_DP) } ?: at(SHORT_DOT, false)
+    }
+
+    /**
+     * The Large in [width] by [height] dp: the Wide plus the sentence under the top row (three lines at most) and the
+     * last seven days beside the score while they fit beside it. On a tall cell the dots grow, then the sentence;
+     * short, the sentence goes first, then the dots go to 3, then the figures.
+     */
+    fun large(m: RecoveryWidgetModel, width: Float, height: Float, fontScale: Float, status: StatusLine? = null): Fit {
+        val top = TopRow.of(m.title, m.note, status, width, fontScale)
+        val score = m.score.orEmpty()
+        val wordW = m.word?.let { WORD_GAP_DP + textWidth(it, WORD_SP, fontScale) } ?: 0f
+        fun at(dot: Float, sp: Float, sentence: Boolean, figures: Boolean): Fit? {
+            val d = WidgetDots.fit(score, width - wordW, dot)
+            val lines = if (sentence) m.sentence?.let { WidgetText.wrappedLines(it, sp, width, fontScale) }?.takeIf { it <= SENTENCE_LINES } ?: return null else 0
+            val column = weekColumn(width, WidgetDots.width(score, d), m.word, fontScale, m.week.size.coerceAtLeast(1))
+            val week = m.week.isNotEmpty() &&
+                rowWidth(m, d, fontScale) + WEEK_GAP_DP + org.openstrap.app.ui.glow.draw.WeekBarsLook.width(m.week.size, column) <= width + 0.01f
+            val row = maxOf(WidgetDots.height(d), WidgetText.line(WORD_SP, fontScale), if (week) weekHeight(fontScale) else 0f)
+            val spread = Spread.of(top.height, lines.takeIf { it > 0 }?.let { it * WidgetText.line(sp, fontScale) }, row, if (figures) figuresHeight(fontScale) else null)
+            return Fit(top, d, m.word != null, spread, lines, sp, figures, week, column)
+        }
+        val hasSentence = m.sentence != null
+        val base = at(WIDE_DOT, SENTENCE_SIZES.first(), hasSentence, true)
+        if (base != null && base.spread.fits(height, MIN_GAP_DP)) {
+            // Growing never costs the week its place beside the score.
+            val dots = WIDE_GROWTH.mapNotNull { at(it, SENTENCE_SIZES.first(), hasSentence, true) }.filter { it.week == base.week }
+            val last = dots.lastOrNull()?.dot ?: WIDE_DOT
+            val sentences = SENTENCE_SIZES.drop(1).mapNotNull { at(last, it, hasSentence, true) }
+            return Spread.grow((listOf(base) + dots + sentences).distinct(), height, MIN_GAP_DP) { it.spread }
+        }
+        val tries = listOfNotNull(
+            at(WIDE_DOT, SENTENCE_SIZES.first(), false, true), at(SHORT_DOT, SENTENCE_SIZES.first(), hasSentence, true),
+            at(SHORT_DOT, SENTENCE_SIZES.first(), false, true), at(SHORT_DOT, SENTENCE_SIZES.first(), false, false),
+        )
+        return tries.firstOrNull { it.spread.fits(height, MIN_GAP_DP) } ?: tries.last()
+    }
 }

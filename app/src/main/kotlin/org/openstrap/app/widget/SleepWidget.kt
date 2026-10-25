@@ -57,6 +57,8 @@ import org.openstrap.app.ui.theme.MetricColors
 class SleepWidget : LoadingWidget<SleepWidgetModel>(WidgetKind.Sleep) {
     override suspend fun loadShown(context: Context): SleepWidgetModel = load(context)
 
+    override fun sample(): SleepWidgetModel = ZoneId.systemDefault().let { WidgetSamples.sleep(LocalDate.now(it), it) }
+
     @Composable
     override fun Content(data: SleepWidgetModel) = SleepContent(data)
 
@@ -118,7 +120,7 @@ private fun SleepContent(m: SleepWidgetModel) {
     val open = if (m.date != null) openMetric(context, Detail.SLEEP_SCORE_ROUTE, m.date) else openMetric(context, SLEEP_ROUTE, null)
     EdgeWidget(edgeLight(EdgeStatus.Usual, EdgeKind.Sleep), Ink, GlowMood.Night, open, BITMAP_EXTRA) { frame ->
         when {
-            m.waiting != null -> WaitingContent(m.title, m.waiting)
+            m.waiting != null -> WaitingContent(m.title, m.waiting, frame)
             frame.bucket == WidgetSizes.Small -> SmallContent(m, frame)
             frame.bucket == WidgetSizes.Wide -> WideContent(m, frame)
             else -> LargeContent(m, frame)
@@ -126,53 +128,72 @@ private fun SleepContent(m: SleepWidgetModel) {
     }
 }
 
-/** Small: the title, then at the foot the score and its word, time asleep and the stage bar. */
+/** A gap between blocks: they share the spare height alike, with half a gap above and below. */
+@Composable
+private fun ColumnScope.Gap() = Spacer(GlanceModifier.defaultWeight())
+
+/** The half gap above the first block or below the last, at the cell's real height. */
+@Composable
+private fun Edge(spread: Spread, f: WidgetFrame) = Spacer(GlanceModifier.height(spread.edge(f.drawContentHeight).dp))
+
+/** Small: the top row, the score and its word, then time asleep and the stage bar. */
 @Composable
 private fun ColumnScope.SmallContent(m: SleepWidgetModel, f: WidgetFrame) {
-    val fit = SleepLayout.small(m, f.contentWidth, f.contentHeight, f.fontScale)
-    TitleRow(m.title, null)
-    Spacer(GlanceModifier.defaultWeight())
-    // One child of the column, its rows inside: Glance drops a column's children past ten.
-    Column(GlanceModifier.fillMaxWidth()) {
-        ScoreRow(m, fit.row, SleepLayout.SMALL_WORD_GAP_DP, f.density)
-        fit.lines.forEach { line ->
-            Spacer(GlanceModifier.height(SleepLayout.SMALL_GAP_DP.dp))
-            Text(line.text, style = WidgetType.secondary, maxLines = line.lines)
-        }
-        if (fit.bar) {
-            Spacer(GlanceModifier.height(SleepLayout.SMALL_GAP_DP.dp))
-            StageBar(m, SleepLayout.SMALL_BAR_DP, f)
+    val fit = SleepLayout.small(m, f.contentWidth, f.contentHeight, f.fontScale, f.status)
+    Edge(fit.spread, f)
+    TopRowView(m.title, null, fit.top, f)
+    Gap()
+    ScoreRow(m, fit.row, SleepLayout.SMALL_WORD_GAP_DP, f.density)
+    if (fit.lines.isNotEmpty() || fit.bar) {
+        Gap()
+        // One child of the column, its rows inside: Glance drops a column's children past ten.
+        Column(GlanceModifier.fillMaxWidth()) {
+            fit.lines.forEachIndexed { i, line ->
+                if (i > 0) Spacer(GlanceModifier.height(SleepLayout.SMALL_GAP_DP.dp))
+                Text(line.text, style = WidgetType.secondary, maxLines = line.lines)
+            }
+            if (fit.bar) {
+                if (fit.lines.isNotEmpty()) Spacer(GlanceModifier.height(SleepLayout.SMALL_GAP_DP.dp))
+                StageBar(m, SleepLayout.SMALL_BAR_DP, f)
+            }
         }
     }
+    Edge(fit.spread, f)
 }
 
-/** Wide: the title row with bedtime to waking, the score with time asleep, the stage bar with its legend. */
+/** Wide: the top row with bedtime to waking, the score with time asleep, the stage bar with its legend. */
 @Composable
 private fun ColumnScope.WideContent(m: SleepWidgetModel, f: WidgetFrame) {
-    val fit = SleepLayout.wide(m, f.contentWidth, f.contentHeight, f.fontScale)
-    TitleRow(m.title, m.note.takeIf { fit.note })
-    Spacer(GlanceModifier.defaultWeight())
+    val fit = SleepLayout.wide(m, f.contentWidth, f.contentHeight, f.fontScale, f.status)
+    Edge(fit.spread, f)
+    TopRowView(m.title, m.note, fit.top, f)
+    Gap()
     ScoreRow(m, fit.row, SleepLayout.WORD_GAP_DP, f.density)
-    Spacer(GlanceModifier.defaultWeight())
-    if (fit.bar) Stages(m, fit.legendRows, f)
+    if (fit.bar) {
+        Gap()
+        Stages(m, fit.legendRows, f)
+    }
+    Edge(fit.spread, f)
 }
 
-/** Large: the Wide's title row, the tab's sentence, the score with how often you woke, then the time in each stage. */
+/** Large: the top row, the tab's sentence, the score with how often you woke, then the time in each stage. */
 @Composable
 private fun ColumnScope.LargeContent(m: SleepWidgetModel, f: WidgetFrame) {
-    val fit = SleepLayout.large(m, f.contentWidth, f.contentHeight, f.fontScale)
-    TitleRow(m.title, m.note.takeIf { fit.note })
-    Spacer(GlanceModifier.defaultWeight())
+    val fit = SleepLayout.large(m, f.contentWidth, f.contentHeight, f.fontScale, f.status)
+    val spread = SleepLayout.largeSpread(fit, m.stages.size, f.fontScale)
+    Edge(spread, f)
+    TopRowView(m.title, m.note, fit.top, f)
     if (fit.sentenceLines > 0 && m.sentence != null) {
+        Gap()
         Text(m.sentence, style = WidgetType.hero, maxLines = fit.sentenceLines)
-        Spacer(GlanceModifier.defaultWeight())
     }
+    Gap()
     ScoreRow(m, fit.row, SleepLayout.WORD_GAP_DP, f.density)
-    Spacer(GlanceModifier.defaultWeight())
     when {
-        fit.stages -> StageRows(m.stages, f)
-        fit.bar -> StageBar(m, SleepLayout.BAR_DP, f)
+        fit.stages -> { Gap(); StageRows(m.stages, f) }
+        fit.bar -> { Gap(); StageBar(m, SleepLayout.BAR_DP, f) }
     }
+    Edge(spread, f)
 }
 
 /**

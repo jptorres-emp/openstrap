@@ -41,7 +41,8 @@ import org.openstrap.app.widget.WidgetSizes
  * 353 × 220, 4 × 3 about 353 × 330) instead of the three minimums, to see what people see; `--es cells min` goes
  * back. For Moment, `--es moment Evening` shows that moment (a Moment name, `auto` for the clock's) and
  * `--es placed recovery,sleep` takes those widgets as placed for the duplicate rule (`none` for none, `auto` for the
- * launcher's). The gallery's own hosted widgets count as placed too while it shows them. The ids it binds are deleted
+ * launcher's). `--es strap stale` shows every widget's strap status line in a state (notpaired, low, stale, yesterday,
+ * week, syncing, none for no line, auto for the strap's). The gallery's own hosted widgets count as placed too while it shows them. The ids it binds are deleted
  * when it closes or hosts another kind.
  */
 class WidgetGalleryActivity : ComponentActivity() {
@@ -58,6 +59,7 @@ class WidgetGalleryActivity : ComponentActivity() {
         applyMood(intent.getStringExtra(EXTRA_MOOD))
         applyCells(intent.getStringExtra(EXTRA_CELLS))
         applyMoment(intent)
+        applyStrap(intent)
         kind = kindOf(intent.getStringExtra(EXTRA_WIDGET)) ?: WidgetKind.Recovery
         column = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -80,7 +82,7 @@ class WidgetGalleryActivity : ComponentActivity() {
         val next = kindOf(intent.getStringExtra(EXTRA_WIDGET))
         if (intent.hasExtra(EXTRA_MOOD)) applyMood(intent.getStringExtra(EXTRA_MOOD))
         val cellsChanged = intent.hasExtra(EXTRA_CELLS) && applyCells(intent.getStringExtra(EXTRA_CELLS))
-        val momentChanged = applyMoment(intent)
+        val momentChanged = applyMoment(intent) or applyStrap(intent)
         when {
             next != null && next != kind -> show(next)
             cellsChanged -> show(kind)
@@ -102,10 +104,11 @@ class WidgetGalleryActivity : ComponentActivity() {
     override fun onDestroy() {
         unbindAll()
         // Placed widgets go back to the moment's mood, and Moment to the clock's moment and the launcher's widgets.
-        if (WidgetRefresh.debugMood != null || WidgetRefresh.debugMoment != null || WidgetRefresh.debugPlaced != null) {
+        if (WidgetRefresh.debugMood != null || WidgetRefresh.debugMoment != null || WidgetRefresh.debugPlaced != null || WidgetRefresh.debugStrap != null) {
             WidgetRefresh.debugMood = null
             WidgetRefresh.debugMoment = null
             WidgetRefresh.debugPlaced = null
+            WidgetRefresh.debugStrap = null
             WidgetUpdater.changedAll(applicationContext)
         }
         super.onDestroy()
@@ -205,6 +208,13 @@ class WidgetGalleryActivity : ComponentActivity() {
         return moment != null || placed != null
     }
 
+    /** The `strap` extra: the status line every widget shows; true when it was given. */
+    private fun applyStrap(intent: android.content.Intent): Boolean {
+        val strap = intent.getStringExtra(EXTRA_STRAP) ?: return false
+        WidgetRefresh.debugStrap = strap.takeUnless { it.equals("auto", ignoreCase = true) }
+        return true
+    }
+
     private fun applyMood(name: String?) {
         WidgetRefresh.debugMood = when (name?.lowercase()) {
             null, "", "auto" -> null
@@ -278,6 +288,7 @@ class WidgetGalleryActivity : ComponentActivity() {
         const val EXTRA_CELLS = "cells"
         const val EXTRA_MOMENT = "moment"
         const val EXTRA_PLACED = "placed"
+        const val EXTRA_STRAP = "strap"
         val SIZES = listOf("Small" to WidgetSizes.Small, "Wide" to WidgetSizes.Wide, "Large" to WidgetSizes.Large)
 
         /** One UI's cells on the phone, roughly (spec 2.1): what the three layouts stretch to there. */

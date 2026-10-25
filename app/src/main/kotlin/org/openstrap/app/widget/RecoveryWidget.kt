@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceModifier
 import androidx.glance.ImageProvider
 import androidx.glance.LocalContext
@@ -21,12 +22,10 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import org.openstrap.app.OpenStrapApp
 import org.openstrap.app.data.DayWindow
-import org.openstrap.app.ui.glow.DotSize
 import org.openstrap.app.ui.glow.EdgeKind
 import org.openstrap.app.ui.glow.EdgeStatus
 import org.openstrap.app.ui.glow.GlowMood
 import org.openstrap.app.ui.glow.draw.WeekBarsLook
-import org.openstrap.app.ui.glow.draw.dotLayout
 import org.openstrap.app.ui.glow.draw.drawWeekBars
 import org.openstrap.app.ui.glow.draw.renderToBitmap
 import org.openstrap.app.ui.glow.draw.weekBars
@@ -44,6 +43,8 @@ import java.time.ZoneId
  */
 class RecoveryWidget : LoadingWidget<RecoveryWidget.Shown>(WidgetKind.Recovery) {
     override suspend fun loadShown(context: Context): Shown = load(context)
+
+    override fun sample(): Shown = Shown(WidgetSamples.recovery(LocalDate.now()), GlowMood.Day)
 
     @Composable
     override fun Content(data: Shown) = RecoveryContent(data)
@@ -101,65 +102,79 @@ private fun RecoveryContent(data: RecoveryWidget.Shown) {
     val open = openMetric(LocalContext.current, RECOVERY_ROUTE, model.date)
     EdgeWidget(edgeLight(EdgeStatus.Usual, EdgeKind.Earlier), Ink, data.mood, open, BITMAP_EXTRA) { frame ->
         when {
-            model.score == null -> WaitingContent(model.title, model.waiting)
-            frame.bucket == WidgetSizes.Small -> SmallContent(model, frame.density)
-            frame.bucket == WidgetSizes.Wide -> WideContent(model, frame.density)
-            else -> LargeContent(model, frame.density, frame.contentWidth, frame.fontScale)
+            model.score == null -> WaitingContent(model.title, model.waiting, frame)
+            frame.bucket == WidgetSizes.Small -> SmallContent(model, RecoveryLayout.small(model, frame.contentWidth, frame.contentHeight, frame.fontScale, frame.status), frame)
+            frame.bucket == WidgetSizes.Wide -> WideContent(model, RecoveryLayout.wide(model, frame.contentWidth, frame.contentHeight, frame.fontScale, frame.status), frame)
+            else -> LargeContent(model, RecoveryLayout.large(model, frame.contentWidth, frame.contentHeight, frame.fontScale, frame.status), frame)
         }
     }
 }
 
-/** Small: the title, then the score and its word at the foot. */
+/** A gap between blocks: they share the spare height alike, with half a gap above and below ([Edge]). */
 @Composable
-private fun ColumnScope.SmallContent(m: RecoveryWidgetModel, density: Float) {
-    TitleRow(m.title, null)
-    Spacer(GlanceModifier.defaultWeight())
-    Score(m, DotSize.Edge, density)
-    Spacer(GlanceModifier.height(6.dp))
-    m.word?.let { Text(it, style = WidgetType.word, maxLines = 1) }
+private fun ColumnScope.Gap() = Spacer(GlanceModifier.defaultWeight())
+
+/** The half gap above the first block or below the last, at the cell's real height. */
+@Composable
+private fun Edge(fit: RecoveryLayout.Fit, f: WidgetFrame) = Spacer(GlanceModifier.height(fit.spread.edge(f.drawContentHeight).dp))
+
+/** Small: the top row, the score, its word, the dots grown to fill a tall cell. */
+@Composable
+private fun ColumnScope.SmallContent(m: RecoveryWidgetModel, fit: RecoveryLayout.Fit, f: WidgetFrame) {
+    Edge(fit, f)
+    TopRowView(m.title, null, fit.top, f)
+    Gap()
+    m.score?.let { DotNumber(it, fit.dot, f.density, m.scoreDescription) }
+    if (fit.word) m.word?.let {
+        Gap()
+        Text(it, style = WidgetType.word.copy(fontSize = fit.wordSp.sp), maxLines = 1)
+    }
+    Edge(fit, f)
 }
 
-/** Wide: the title row with "This morning", the score and word, the three figures. */
+/** Wide: the top row with "This morning", the score and word, the three figures. */
 @Composable
-private fun ColumnScope.WideContent(m: RecoveryWidgetModel, density: Float) {
-    TitleRow(m.title, m.note)
-    Spacer(GlanceModifier.defaultWeight())
-    ScoreRow(m, density)
-    Spacer(GlanceModifier.defaultWeight())
-    Figures(m.figures)
+private fun ColumnScope.WideContent(m: RecoveryWidgetModel, fit: RecoveryLayout.Fit, f: WidgetFrame) {
+    Edge(fit, f)
+    TopRowView(m.title, m.note, fit.top, f)
+    Gap()
+    ScoreRow(m, fit.dot, f.density)
+    if (fit.figures) {
+        Gap()
+        Figures(m.figures)
+    }
+    Edge(fit, f)
 }
 
 /** Large: the Wide plus the sentence and the last seven days beside the score. */
 @Composable
-private fun ColumnScope.LargeContent(m: RecoveryWidgetModel, density: Float, contentWidth: Float, fontScale: Float) {
-    TitleRow(m.title, m.note)
-    Spacer(GlanceModifier.height(8.dp))
-    m.sentence?.let { Text(it, style = WidgetType.hero, maxLines = 3) }
-    Spacer(GlanceModifier.defaultWeight())
+private fun ColumnScope.LargeContent(m: RecoveryWidgetModel, fit: RecoveryLayout.Fit, f: WidgetFrame) {
+    Edge(fit, f)
+    TopRowView(m.title, m.note, fit.top, f)
+    if (fit.sentenceLines > 0) m.sentence?.let {
+        Gap()
+        Text(it, style = WidgetType.hero.copy(fontSize = fit.sentenceSp.sp), maxLines = fit.sentenceLines)
+    }
+    Gap()
     Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
-        ScoreRow(m, density)
-        if (m.week.isNotEmpty()) {
+        ScoreRow(m, fit.dot, f.density)
+        if (fit.week) {
             Spacer(GlanceModifier.defaultWeight())
-            val dots = dotLayout(m.score.orEmpty(), DotSize.Second, 1f).width
-            Week(m.week, RecoveryLayout.weekColumn(contentWidth, dots, m.word, fontScale), density)
+            Week(m.week, fit.weekColumn, f.density)
         }
     }
-    Spacer(GlanceModifier.defaultWeight())
-    Figures(m.figures)
+    if (fit.figures) {
+        Gap()
+        Figures(m.figures)
+    }
+    Edge(fit, f)
 }
 
-/** The score in dots, read out as "78, Ready". */
+/** The score in dots [dot] dp across with its word beside it, read out as "78, Ready". */
 @Composable
-private fun Score(m: RecoveryWidgetModel, dot: DotSize, density: Float) {
-    val text = m.score ?: return
-    DotNumber(text, dot.dot.value, density, m.scoreDescription)
-}
-
-/** The score with its word beside it. */
-@Composable
-private fun ScoreRow(m: RecoveryWidgetModel, density: Float) {
+private fun ScoreRow(m: RecoveryWidgetModel, dot: Float, density: Float) {
     Row(verticalAlignment = Alignment.Bottom) {
-        Score(m, DotSize.Second, density)
+        m.score?.let { DotNumber(it, dot, density, m.scoreDescription) }
         m.word?.let {
             Spacer(GlanceModifier.width(RecoveryLayout.WORD_GAP_DP.dp))
             Text(it, style = WidgetType.word, maxLines = 1)

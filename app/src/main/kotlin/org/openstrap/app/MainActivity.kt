@@ -95,6 +95,9 @@ class MainActivity : ComponentActivity() {
     /** The Moment widget's tap: Today, at its root, until the app root has opened it. */
     private val todayRequests = kotlinx.coroutines.flow.MutableStateFlow(false)
 
+    /** A widget's strap status line (not paired, battery low): the Strap page, until the app root has opened it. */
+    private val strapRequests = kotlinx.coroutines.flow.MutableStateFlow(false)
+
     /** Debug: the moment forced by the `moment` extra, null to follow the clock. */
     private val forcedMoment = kotlinx.coroutines.flow.MutableStateFlow<org.openstrap.app.data.Moment?>(null)
 
@@ -112,7 +115,7 @@ class MainActivity : ComponentActivity() {
             navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
         )
         val container = (application as OpenStrapApp).container
-        setContent { OpenStrapTheme { AppRoot(container, metricRequests, todayRequests, forcedMoment, strapPreview, dataPreview) } }
+        setContent { OpenStrapTheme { AppRoot(container, metricRequests, todayRequests, strapRequests, forcedMoment, strapPreview, dataPreview) } }
     }
 
     override fun onStart() {
@@ -153,6 +156,10 @@ class MainActivity : ComponentActivity() {
         if (intent.getStringExtra(EXTRA_MOMENT) == MOMENT_NOW) {
             intent.removeExtra(EXTRA_MOMENT)
             todayRequests.value = true
+        }
+        if (intent.getBooleanExtra(EXTRA_OPEN_STRAP, false)) {
+            intent.removeExtra(EXTRA_OPEN_STRAP)
+            strapRequests.value = true
         }
         intent.getStringExtra(EXTRA_OPEN_METRIC)?.let { route ->
             val day = intent.getStringExtra(EXTRA_METRIC_DAY)?.let { runCatching { java.time.LocalDate.parse(it) }.getOrNull() }
@@ -199,6 +206,9 @@ class MainActivity : ComponentActivity() {
          */
         const val EXTRA_MOMENT = "moment"
         const val MOMENT_NOW = "now"
+
+        /** True opens the Strap page over the tab showing: a widget's status line while the strap isn't paired or is low. */
+        const val EXTRA_OPEN_STRAP = "open_strap"
 
         /** Debug: a [StrapPreview] name ("stale", "stuck", "disconnected", "charging", "notpaired", "recoveryfail") to show, or "auto". */
         const val EXTRA_STRAP_STATE = "strap_state"
@@ -384,6 +394,7 @@ private fun AppRoot(
     container: AppContainer,
     metricRequests: kotlinx.coroutines.flow.MutableStateFlow<MetricRequest?>,
     todayRequests: kotlinx.coroutines.flow.MutableStateFlow<Boolean>,
+    strapRequests: kotlinx.coroutines.flow.MutableStateFlow<Boolean>,
     forcedMoment: kotlinx.coroutines.flow.StateFlow<org.openstrap.app.data.Moment?>,
     strapPreview: kotlinx.coroutines.flow.StateFlow<StrapPreview?>,
     dataPreviews: kotlinx.coroutines.flow.StateFlow<DataPreview?>,
@@ -518,6 +529,15 @@ private fun AppRoot(
             dayVm.select(java.time.LocalDate.now())
             nav = nav.select(Tab.Today.ordinal)
             todayRequests.value = false
+        }
+    }
+    // A widget's strap status line: the Strap page, over the tab showing, as the header's strap chip opens it.
+    val strapRequest by strapRequests.collectAsStateWithLifecycle()
+    LaunchedEffect(strapRequest) {
+        if (strapRequest) {
+            allMetricsOpen = false
+            if (pages.lastOrNull() != Page.Strap && (pages.isEmpty() || closePages())) openPage(Page.Strap)
+            strapRequests.value = false
         }
     }
     // An auto-detected workout's notification: that workout, on the Activity tab, its home.

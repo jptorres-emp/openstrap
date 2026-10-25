@@ -221,6 +221,9 @@ object StartLayout {
     const val ROW_GAP_DP = 12f
     const val SMALL_GAP_DP = 8f
 
+    /** Between the tile and play on the Small with a status. */
+    const val STATUS_PLAY_GAP_DP = 16f
+
     /** Between a tile and its caption, and a figure's Caption and its Body. */
     const val CAPTION_GAP_DP = 4f
     const val FIGURE_LINE_GAP_DP = 2f
@@ -373,7 +376,7 @@ object StartLayout {
             val wordsH = body(fontScale) + (if (words.line != null) secondary(fontScale) else 0f)
             return StatusSmall(shown, top, sz, words, Spread.of(top.height, maxOf(sz.tile, sz.play), wordsH))
         }
-        val wide = { sz: Sizes -> sz.tile + SMALL_GAP_DP + sz.play <= width }
+        val wide = { sz: Sizes -> sz.tile + STATUS_PLAY_GAP_DP + sz.play <= width }
         val ladder = SMALL_SIZES.reversed().filter(wide)
         val drops = listOf(true to true, false to true, false to false)
         for ((withLine, withTitle) in drops) {

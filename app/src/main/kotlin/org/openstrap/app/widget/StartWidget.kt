@@ -242,7 +242,7 @@ private fun ColumnScope.StatusSmallContent(m: StartWidgetModel, line: StatusLine
     Spacer(GlanceModifier.defaultWeight())
     Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         UsualTile(m.usual, false, fit.sizes, f.density)
-        Spacer(GlanceModifier.width(StartLayout.SMALL_GAP_DP.dp))
+        Spacer(GlanceModifier.width(StartLayout.STATUS_PLAY_GAP_DP.dp))
         Action(m, fit.sizes, f)
     }
     Spacer(GlanceModifier.defaultWeight())

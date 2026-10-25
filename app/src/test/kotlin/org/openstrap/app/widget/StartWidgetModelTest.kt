@@ -443,7 +443,7 @@ class StartWidgetModelTest {
         assertEquals(l, small.top.status)
         assertNull(small.top.words)
         assertEquals(StartWidgetModel.USUAL, small.words.line)
-        assertTrue(small.sizes.tile + StartLayout.SMALL_GAP_DP + small.sizes.play <= 140f)
+        assertTrue(small.sizes.tile + StartLayout.STATUS_PLAY_GAP_DP + small.sizes.play <= 140f)
         assertTrue(small.spread.gap(180f) <= Spread.TARGET_GAP_DP)
         // Short of room "Your usual" goes, then the title; the tile and play stay.
         val tight = StartLayout.statusSmall(m.usual, l, 110f, 110f, 1.3f)

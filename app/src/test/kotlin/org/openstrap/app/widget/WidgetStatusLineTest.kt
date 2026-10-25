@@ -216,7 +216,7 @@ class WidgetStatusLineTest {
                     val f = StartLayout.statusSmall(m.usual, l, w, h, s)
                     assertTrue("$where: ${f.spread.content} in $h", f.spread.fits(h, StartLayout.STATUS_MIN_GAP_DP))
                     checkTop(where, f.top, 0, w, s, l, real)
-                    assertTrue("$where: play beside the tile", f.sizes.tile + StartLayout.SMALL_GAP_DP + f.sizes.play <= w + 0.01f)
+                    assertTrue("$where: play beside the tile", f.sizes.tile + StartLayout.STATUS_PLAY_GAP_DP + f.sizes.play <= w + 0.01f)
                     assertTrue("$where: the name", WidgetText.width(f.words.name, WidgetText.BODY_SP, s) <= w)
                     // The button where Steps' Small has it: the same right edge (both rows span the content) and top.
                     val steps = StepsLayout.small(stepsModel.stepsText, stepsModel.share, w, h, s, l)

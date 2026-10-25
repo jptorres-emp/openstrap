@@ -105,12 +105,14 @@ object WidgetUpdater {
      * Sets the alarm for the moment's next change ([MomentInputs.nextChange]), from the inputs the Moment widget just
      * rendered with, so the two can't drift apart, or for [tick] when that comes first: the time something the widget
      * shows moves on by itself within the moment ("38 min since your run"). When it fires Moment refreshes, and its
-     * render schedules the next. Clears the alarm when there's neither or no Moment widget ([momentAlarm]).
+     * render schedules the next. Clears the alarm when there's neither or no Moment widget ([momentAlarm]). A tick
+     * never wakes the phone ([momentWakes]): it's only worth drawing while the screen is on, so it waits for that.
      */
     fun scheduleMoment(context: Context, inputs: MomentInputs, tick: Instant? = null, now: Instant = Instant.now(), zone: ZoneId = ZoneId.systemDefault()) {
         try {
-            val at = momentAlarm(WidgetKind.Moment in placed(context), inputs.nextChange(now, zone), tick)
-            if (at == null) cancel(context, ACTION_MOMENT) else setAlarm(context, ACTION_MOMENT, at.toEpochMilli())
+            val next = inputs.nextChange(now, zone)
+            val at = momentAlarm(WidgetKind.Moment in placed(context), next, tick)
+            if (at == null) cancel(context, ACTION_MOMENT) else setAlarm(context, ACTION_MOMENT, at.toEpochMilli(), wake = momentWakes(next, tick))
         } catch (e: Exception) {
             Log.w(TAG, "widgets: moment alarm not set: $e")
         }
@@ -122,6 +124,10 @@ object WidgetUpdater {
      */
     fun momentAlarm(placed: Boolean, nextChange: Instant?, tick: Instant?): Instant? =
         if (!placed) null else listOfNotNull(nextChange, tick).minOrNull()
+
+    /** Whether Moment's alarm wakes the phone: only for the moment's [nextChange], not for a [tick] that comes first. */
+    fun momentWakes(nextChange: Instant?, tick: Instant?): Boolean =
+        tick == null || (nextChange != null && nextChange <= tick)
 
     /**
      * A widget was placed or removed (any kind): midnight's alarm follows whether any is placed, Moment's is cleared
@@ -224,9 +230,14 @@ object WidgetUpdater {
      * Exact while the app may set exact alarms (Android 11 and older always, later with "Alarms and reminders"),
      * otherwise inside [ALARM_WINDOW_MS]. Never `USE_EXACT_ALARM`: that's for clocks and calendars (spec 7).
      */
-    private fun setAlarm(context: Context, action: String, atMs: Long) {
+    /** Sets [action]'s alarm for [atMs]; one that doesn't [wake] is held until the phone is awake for something else. */
+    private fun setAlarm(context: Context, action: String, atMs: Long, wake: Boolean = true) {
         val alarms = context.getSystemService(AlarmManager::class.java) ?: return
         val pending = pendingIntent(context, action)
+        if (!wake) {
+            alarms.setWindow(AlarmManager.RTC, atMs, ALARM_WINDOW_MS, pending)
+            return
+        }
         val exact = Build.VERSION.SDK_INT < Build.VERSION_CODES.S || alarms.canScheduleExactAlarms()
         try {
             if (exact) alarms.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, atMs, pending)

@@ -380,6 +380,11 @@ class MomentWidgetModelTest {
         assertEquals(b, WidgetUpdater.momentAlarm(true, a, b))
         assertEquals(b, WidgetUpdater.momentAlarm(true, null, b))
         assertNull(WidgetUpdater.momentAlarm(true, null, null))
+        // Only the moment's change wakes the phone; a tick before it waits for the screen.
+        assertTrue(WidgetUpdater.momentWakes(a, null))
+        assertFalse(WidgetUpdater.momentWakes(a, b))
+        assertFalse(WidgetUpdater.momentWakes(null, b))
+        assertTrue(WidgetUpdater.momentWakes(b, a))
     }
 
     @Test fun `midday's alarm is the evening's start, from the inputs the widget rendered with`() {

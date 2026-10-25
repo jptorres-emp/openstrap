@@ -128,6 +128,9 @@ What each moment shows:
   - Counts move on by themselves ("38 min since your run", "30 min to bedtime", "Bedtime in 1 h 10"), so while one
     shows, the moment alarm also fires at the next five minute mark on the clock (and at bedtime), whichever comes
     first with the moment's end. That's at most 24 refreshes after a workout and about 40 in an evening and night.
+    These count alarms never wake the phone (`RTC`, not `RTC_WAKEUP`): a count is only worth drawing while the screen
+    is on, so a tick that falls while it's off waits until it comes on. Only the moment's end wakes it (decided
+    2026-10-25).
   - During a workout, nothing live as the spec says, but the Wide and Large keep Start's Open pill in the top row,
     the sport's tile under it (44 to 72 dp) and its name in the hero's light type (20 to 28 sp), so a tall cell has
     no hole. The Small has the name, the tile, the sport and "Since 17:42" with the red dot.

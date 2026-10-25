@@ -107,6 +107,7 @@ dependencies {
     implementation(libs.maplibre)
     // Home screen widgets (docs/design/widgets/spec.md 6.1).
     implementation(libs.glance.appwidget)
+    implementation(libs.work.runtime.ktx)
 
     testImplementation(libs.junit)
     // Android's org.json is a stub in plain JVM unit tests.

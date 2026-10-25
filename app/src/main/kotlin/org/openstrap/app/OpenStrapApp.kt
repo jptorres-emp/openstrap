@@ -28,9 +28,13 @@ class AppContainer(val app: Application) {
     val workout = org.openstrap.app.device.WorkoutSession(app, database.healthDao(), settings, strap, callRinging = { phoneAlerts.callRinging })
 }
 
-class OpenStrapApp : Application() {
+class OpenStrapApp : Application(), androidx.work.Configuration.Provider {
     lateinit var container: AppContainer
         private set
+
+    /** WorkManager as Glance's widget sessions need it: rendering on their own thread ([WidgetWork]). */
+    override fun getWorkManagerConfiguration(): androidx.work.Configuration =
+        androidx.work.Configuration.Builder().setWorkerFactory(org.openstrap.app.widget.WidgetWork).build()
 
     override fun onCreate() {
         super.onCreate()

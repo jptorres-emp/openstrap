@@ -78,6 +78,14 @@ class WidgetSizesTest {
         assertEquals(300f to 160f, WidgetSizes.drawSize(WidgetSizes.Wide, listOf(0f to 0f)))
     }
 
+    @Test fun `content fits the smallest real cell of its layout`() {
+        // One UI's 2 x 2 in portrait and landscape: both are the Small, fit to the smaller of each.
+        assertEquals(155.4f to 158.5f, WidgetSizes.fitSize(WidgetSizes.Small, listOf(167.6f to 201.1f, 155.4f to 158.5f)))
+        // A size that maps to another layout doesn't count.
+        assertEquals(167.6f to 201.1f, WidgetSizes.fitSize(WidgetSizes.Small, listOf(167.6f to 201.1f, 353.5f to 201.1f)))
+        assertEquals(150f to 150f, WidgetSizes.fitSize(WidgetSizes.Small, emptyList()))
+    }
+
     @Test fun `the corner is 28 dp, or the launcher's when smaller`() {
         assertEquals(28f, WidgetSizes.corner(null), 0f)
         assertEquals(16f, WidgetSizes.corner(16f), 0f)

@@ -22,31 +22,34 @@ import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 import org.openstrap.app.ui.glow.GlowMood
-import org.openstrap.app.widget.RecoveryWidget
-import org.openstrap.app.widget.RecoveryWidgetReceiver
+import org.openstrap.app.device.WidgetUpdater
 import org.openstrap.app.widget.WidgetKind
 import org.openstrap.app.widget.WidgetRefresh
 import org.openstrap.app.widget.WidgetSizes
 
 /**
- * Debug builds only: the real Recovery widget hosted at exactly its three sizes (Small, Wide, Large) on black, for
- * checking on the phone over adb. Binding needs the permission first:
+ * Debug builds only: a real widget hosted at exactly its three sizes (Small, Wide, Large) on black, for checking on
+ * the phone over adb. Binding needs the permission first:
  *
  *     adb shell appwidget grantbind --package org.openstrap.app --user 0
- *     adb shell am start -n org.openstrap.app/.widget.debug.WidgetGalleryActivity --es mood night
+ *     adb shell am start -n org.openstrap.app/.widget.debug.WidgetGalleryActivity --es widget steps --es mood night
  *
- * `mood` is day, evening, night or auto (the moment's). `--es pin recovery` asks the launcher to pin a Recovery
- * widget to the home screen. The ids it binds are deleted when it closes.
+ * `widget` is the kind to host (recovery, steps), Recovery without it. `mood` is day, evening, night or auto (the
+ * moment's). `--es pin steps` asks the launcher to pin a widget of that kind to the home screen. The ids it binds
+ * are deleted when it closes or hosts another kind.
  */
 class WidgetGalleryActivity : ComponentActivity() {
     private lateinit var host: AppWidgetHost
     private val bound = mutableListOf<Int>()
     private lateinit var column: LinearLayout
+    private lateinit var hosted: LinearLayout
+    private var kind = WidgetKind.Recovery
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         host = AppWidgetHost(this, HOST_ID)
         applyMood(intent.getStringExtra(EXTRA_MOOD))
+        kind = kindOf(intent.getStringExtra(EXTRA_WIDGET)) ?: WidgetKind.Recovery
         column = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(16), dp(48), dp(16), dp(48))
@@ -56,15 +59,19 @@ class WidgetGalleryActivity : ComponentActivity() {
             addView(column)
         })
         column.addView(controls())
+        hosted = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        column.addView(hosted)
         bindAll()
-        if (intent.getStringExtra(EXTRA_PIN) == PIN_RECOVERY) requestPin()
+        kindOf(intent.getStringExtra(EXTRA_PIN))?.let(::requestPin)
     }
 
     override fun onNewIntent(intent: android.content.Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        if (intent.hasExtra(EXTRA_MOOD)) { applyMood(intent.getStringExtra(EXTRA_MOOD)); refresh() }
-        if (intent.getStringExtra(EXTRA_PIN) == PIN_RECOVERY) requestPin()
+        val next = kindOf(intent.getStringExtra(EXTRA_WIDGET))
+        if (intent.hasExtra(EXTRA_MOOD)) applyMood(intent.getStringExtra(EXTRA_MOOD))
+        if (next != null && next != kind) show(next) else if (intent.hasExtra(EXTRA_MOOD)) refresh()
+        kindOf(intent.getStringExtra(EXTRA_PIN))?.let(::requestPin)
     }
 
     override fun onStart() {
@@ -78,22 +85,39 @@ class WidgetGalleryActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
-        bound.forEach { host.deleteAppWidgetId(it) }
-        bound.clear()
+        unbindAll()
         // Placed widgets go back to the moment's mood.
         if (WidgetRefresh.debugMood != null) {
             WidgetRefresh.debugMood = null
-            org.openstrap.app.device.WidgetUpdater.changed(applicationContext, setOf(WidgetKind.Recovery))
+            WidgetUpdater.changedAll(applicationContext)
         }
         super.onDestroy()
+    }
+
+    /** The kind named [name] ("steps", "recovery") that has a widget yet; null for none. */
+    private fun kindOf(name: String?): WidgetKind? =
+        WidgetKind.entries.firstOrNull { it.name.equals(name, ignoreCase = true) }?.takeIf { WidgetUpdater.registration(it) != null }
+
+    /** Hosts [next] in place of the kind shown. */
+    private fun show(next: WidgetKind) {
+        unbindAll()
+        kind = next
+        bindAll()
+    }
+
+    private fun unbindAll() {
+        bound.forEach { host.deleteAppWidgetId(it) }
+        bound.clear()
+        hosted.removeAllViews()
     }
 
     /** Binds an id per size and hosts its view at that size exactly. */
     private fun bindAll() {
         val manager = AppWidgetManager.getInstance(this)
-        val provider = ComponentName(this, RecoveryWidgetReceiver::class.java)
+        val registration = WidgetUpdater.registration(kind) ?: run { note("No $kind widget yet."); return }
+        val provider = ComponentName(this, registration.receiver)
         val info: AppWidgetProviderInfo? = manager.getInstalledProvidersForPackage(packageName, null).firstOrNull { it.provider == provider }
-        if (info == null) { note("The Recovery widget's provider isn't installed."); return }
+        if (info == null) { note("The $kind widget's provider isn't installed."); return }
         for ((name, size) in SIZES) {
             val id = host.allocateAppWidgetId()
             if (!manager.bindAppWidgetIdIfAllowed(id, provider)) {
@@ -104,8 +128,8 @@ class WidgetGalleryActivity : ComponentActivity() {
             bound += id
             manager.updateAppWidgetOptions(id, sizeOptions(size))
             val view: AppWidgetHostView = host.createView(applicationContext, id, info).apply { setPadding(0, 0, 0, 0) }
-            label("$name ${size.width.value.toInt()} × ${size.height.value.toInt()}")
-            column.addView(view, LinearLayout.LayoutParams(dp(size.width.value), dp(size.height.value)).apply { bottomMargin = dp(24) })
+            label("$kind $name ${size.width.value.toInt()} × ${size.height.value.toInt()}")
+            hosted.addView(view, LinearLayout.LayoutParams(dp(size.width.value), dp(size.height.value)).apply { bottomMargin = dp(24) })
         }
         refresh()
     }
@@ -126,11 +150,13 @@ class WidgetGalleryActivity : ComponentActivity() {
     /** Loads the widget again and renders every bound id. */
     private fun refresh() {
         val ids = bound.toList()
+        val shown = kind
+        val widget = WidgetUpdater.registration(shown)?.widget ?: return
         lifecycleScope.launch {
             try {
-                WidgetRefresh.bump(WidgetKind.Recovery)
+                WidgetRefresh.bump(shown)
                 val glance = GlanceAppWidgetManager(applicationContext)
-                ids.forEach { RecoveryWidget().update(applicationContext, glance.getGlanceIdBy(it)) }
+                ids.forEach { widget().update(applicationContext, glance.getGlanceIdBy(it)) }
             } catch (e: Exception) {
                 Log.w(TAG, "widget gallery: update failed: $e")
             }
@@ -144,17 +170,34 @@ class WidgetGalleryActivity : ComponentActivity() {
         }
     }
 
-    private fun requestPin() {
+    /** Asks the launcher to pin a widget of [pin] to the home screen. */
+    private fun requestPin(pin: WidgetKind) {
         val manager = AppWidgetManager.getInstance(this)
+        val registration = WidgetUpdater.registration(pin) ?: return
         if (!manager.isRequestPinAppWidgetSupported) {
             Toast.makeText(this, "This launcher can't pin widgets", Toast.LENGTH_SHORT).show()
             return
         }
-        manager.requestPinAppWidget(ComponentName(this, RecoveryWidgetReceiver::class.java), null, null)
+        manager.requestPinAppWidget(ComponentName(this, registration.receiver), null, null)
     }
 
-    /** Mood buttons and Pin, for checking by hand. */
+    /** A button per kind, mood buttons and Pin, for checking by hand. */
     private fun controls() = LinearLayout(this).apply {
+        orientation = LinearLayout.VERTICAL
+        addView(LinearLayout(this@WidgetGalleryActivity).apply {
+            orientation = LinearLayout.HORIZONTAL
+            WidgetKind.entries.filter { WidgetUpdater.registration(it) != null }.forEach { k ->
+                addView(Button(this@WidgetGalleryActivity).apply {
+                    text = k.name
+                    setOnClickListener { if (k != kind) show(k) }
+                })
+            }
+        })
+        addView(moodRow())
+        layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(16) }
+    }
+
+    private fun moodRow() = LinearLayout(this).apply {
         orientation = LinearLayout.HORIZONTAL
         listOf("Auto" to "auto", "Day" to "day", "Evening" to "evening", "Night" to "night").forEach { (text, mood) ->
             addView(Button(this@WidgetGalleryActivity).apply {
@@ -164,12 +207,11 @@ class WidgetGalleryActivity : ComponentActivity() {
         }
         addView(Button(this@WidgetGalleryActivity).apply {
             text = "Pin"
-            setOnClickListener { requestPin() }
+            setOnClickListener { requestPin(kind) }
         })
-        layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(16) }
     }
 
-    private fun label(text: String) = column.addView(TextView(this).apply {
+    private fun label(text: String) = hosted.addView(TextView(this).apply {
         this.text = text
         setTextColor(0x99FFFFFF.toInt())
         setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
@@ -190,7 +232,7 @@ class WidgetGalleryActivity : ComponentActivity() {
         const val HOST_ID = 0x5753
         const val EXTRA_MOOD = "mood"
         const val EXTRA_PIN = "pin"
-        const val PIN_RECOVERY = "recovery"
+        const val EXTRA_WIDGET = "widget"
         val SIZES = listOf("Small" to WidgetSizes.Small, "Wide" to WidgetSizes.Wide, "Large" to WidgetSizes.Large)
     }
 }

@@ -193,7 +193,10 @@ fun drawDots(canvas: Canvas, layout: DotLayout, color: Color, left: Float = 0f, 
 }
 
 /** [text] in [dot] dots at [density] as a bitmap just big enough for it. */
-fun renderDots(text: String, dot: DotSize, density: Float, color: Color = Color.White): Bitmap {
+fun renderDots(text: String, dot: DotSize, density: Float, color: Color = Color.White): Bitmap = renderDots(text, dot.dot.value, density, color)
+
+/** [text] in dots [dot] dp across (a [DotSize]'s, or one shrunk to fit) at [density], as a bitmap just big enough for it. */
+fun renderDots(text: String, dot: Float, density: Float, color: Color = Color.White): Bitmap {
     val layout = dotLayout(text, dot, density)
     return renderToBitmap(layout.width * density, layout.height * density) { drawDots(it, layout, color) }
 }

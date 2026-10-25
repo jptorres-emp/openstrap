@@ -20,6 +20,8 @@ import kotlinx.coroutines.launch
 import org.openstrap.app.data.MomentInputs
 import org.openstrap.app.widget.RecoveryWidget
 import org.openstrap.app.widget.RecoveryWidgetReceiver
+import org.openstrap.app.widget.StepsWidget
+import org.openstrap.app.widget.StepsWidgetReceiver
 import org.openstrap.app.widget.WidgetKind
 import org.openstrap.app.widget.WidgetRefresh
 import java.time.Instant
@@ -40,8 +42,12 @@ object WidgetUpdater {
 
     /** Each widget, once it exists. */
     private val widgets: Map<WidgetKind, Registration> = mapOf(
+        WidgetKind.Steps to Registration(StepsWidgetReceiver::class.java) { StepsWidget() },
         WidgetKind.Recovery to Registration(RecoveryWidgetReceiver::class.java) { RecoveryWidget() },
     )
+
+    /** [kind]'s receiver and widget, null before it exists: for the debug widget gallery. */
+    internal fun registration(kind: WidgetKind): Registration? = widgets[kind]
 
     /** Steps change by the second while the strap is connected; the widget follows at most this often. */
     const val STEPS_EVERY_MS = 15 * 60_000L

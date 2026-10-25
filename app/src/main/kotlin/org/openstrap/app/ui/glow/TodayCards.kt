@@ -374,10 +374,7 @@ internal fun ActivityCard(
     val goal = org.openstrap.app.ui.dashboard.LocalGoals.current.steps
     val isToday = state.date == java.time.LocalDate.now()
     val hour = java.time.LocalTime.now().hour
-    val line = remember(state.hourlySteps, isToday, hour) {
-        var sum = 0f
-        state.hourlySteps.mapIndexed { i, v -> sum += v; if (isToday && i > hour) null else sum }
-    }
+    val line = remember(state.hourlySteps, isToday, hour) { org.openstrap.app.data.Summaries.runningSteps(state.hourlySteps, if (isToday) hour else null) }
     val now = java.time.LocalTime.now()
     val pace = org.openstrap.app.ui.dashboard.ActivityCopy.paceOf(state.steps, usual, isToday, now.hour, now.minute)
     val ghost = usual?.takeIf { it.size == 24 }

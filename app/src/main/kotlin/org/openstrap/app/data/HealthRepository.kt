@@ -61,6 +61,9 @@ class HealthRepository(private val dao: HealthDao) {
         return r
     }
 
+    /** When you usually go to sleep as of [date] ([RecoveryResult.usualBedtime]), without working out Recovery. */
+    suspend fun usualBedtime(date: LocalDate): java.time.LocalTime? = recoveryEngine.usualBedtime(date)
+
     /** The weekly Healthspan estimate shown on [date] (made the Sunday on or before it), or why it's withheld; heavy. */
     suspend fun healthspan(date: LocalDate, profile: org.openstrap.app.data.settings.UserProfile): Healthspan.Outcome =
         healthspanEngine.compute(date, profile)

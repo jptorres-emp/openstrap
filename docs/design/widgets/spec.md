@@ -133,11 +133,12 @@ Last night's main sleep. Night mood always.
 | Size | Content |
 |---|---|
 | Small | "Steps". Steps today in dots, "today". The goal bar, 4 dp. "84% of your goal" |
-| Wide | Title row with "Goal 10,000". Steps with "today", "1,568 to go" on the right. Today's steps so far as a solid line from waking to now, ending in the Steps card's end dot (drawn by the shared `drawGhostLine`). The goal bar |
-| Large | The Wide plus This week: "This week" and "Goal met 2 of 6 days" on the left, a bar per day Monday to Sunday on the right. A met day is Steps lime, a missed day white at 30%, today white, days to come a 4 dp stub at 12% |
+| Wide | Title row with "Goal 10,000". Steps with "today", "1,568 to go" on the right. Today's steps so far as one solid line from waking to now, ending in the Steps card's end dot. Its top is the goal, so the line fills its height as the day reaches the goal. No goal bar: the line is the progress |
+| Large | The Wide plus This week: "This week" and "Goal met 2 of 6 days" on one line (a large font drops "This week", the count never wraps), then a bar per day Monday to Sunday across the width. A met day is Steps lime, a missed day white at 30%, today white, days to come a 4 dp stub at 12% |
 
 - Steps format with the thousands comma (`Metric.format`). Goal from settings.
-- Past the goal: "Goal met" replaces "to go", the bar stays full.
+- Past the goal: "Goal met" replaces "to go", the line reaches the top.
+- When a large font leaves no room for the line, the goal bar shows instead.
 
 ### 3.4 Recovery
 
@@ -226,6 +227,8 @@ RemoteViews has no blur, gradients beyond simple ones, shaders or custom canvase
 - **Text:** Glance `Text` in the system sans, so it scales with the system font size and reads to TalkBack. Funnel
   is not used on widgets (decided 2026-10-24, 9.1). Sizes and weights still follow the v2 roles: card title 17
   Medium, hero sentence 20 Light, Body 15, Secondary 13 at 72%, Caption 11 Medium at 50%.
+- Glance keeps at most ten children in a Row or Column and drops the rest with only a log line. Group
+  children (a Column per block) and use padding rather than Spacers in repeated rows.
 - Bitmaps are drawn at the widget's actual size and density from `LocalSize`, kept under the RemoteViews bitmap
   memory limit (screen width × height × 4 × 1.5 bytes for all of a widget's bitmaps together).
 

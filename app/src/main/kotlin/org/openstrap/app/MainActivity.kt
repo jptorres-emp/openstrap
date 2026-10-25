@@ -773,7 +773,14 @@ private fun AppRoot(
             containerColor = MaterialTheme.colorScheme.background,
         ) { padding ->
             if (editGoals) {
-                org.openstrap.app.ui.device.GoalsSheet(goals, onSave = { g -> scope.launch { container.settings.saveGoals(g) }; editGoals = false }, onDismiss = { editGoals = false })
+                org.openstrap.app.ui.device.GoalsSheet(goals, onSave = { g ->
+                    scope.launch {
+                        container.settings.saveGoals(g)
+                        // The Steps widget's goal (widgets spec 7).
+                        org.openstrap.app.device.WidgetUpdater.changed(container.app, setOf(org.openstrap.app.widget.WidgetKind.Steps))
+                    }
+                    editGoals = false
+                }, onDismiss = { editGoals = false })
             }
             // The header on every tab: the moment on Today (a past day's name for a past day), the tab's name elsewhere.
             val header: @Composable (Tab) -> Unit = { t ->

@@ -63,6 +63,17 @@ data class RecoveryResult(
 /** Loads what [Recovery] needs from the database and runs it. All work happens off the main thread by the caller. */
 class RecoveryEngine(private val dao: HealthDao) {
 
+    /**
+     * [RecoveryResult.usualBedtime] for [date] without the whole model: the same main sleeps over the same nights
+     * [compute] reads. For the widgets' moment (widgets spec 2.2), which the widgets that don't show Recovery need too.
+     */
+    suspend fun usualBedtime(date: LocalDate, zone: ZoneId = ZoneId.systemDefault()): java.time.LocalTime? {
+        val day = DayWindow.of(date, zone)
+        val from = DayWindow.of(date.minusDays(Recovery.BASELINE_NIGHTS.toLong() + 1), zone).from
+        val mains = mainsByMorning(dao.sleepSessionsOnce(from, day.to), zone)
+        return usualBedtime(mains.filterKeys { it <= day.from }.values, date, zone)
+    }
+
     suspend fun compute(date: LocalDate, profile: UserProfile, zone: ZoneId = ZoneId.systemDefault(), now: Long = System.currentTimeMillis() / 1000): RecoveryResult {
         val day = DayWindow.of(date, zone)
         val from = DayWindow.of(date.minusDays(Recovery.BASELINE_NIGHTS.toLong() + 1), zone).from
@@ -85,10 +96,7 @@ class RecoveryEngine(private val dao: HealthDao) {
             Instant.ofEpochSecond(it.belongTime + 2 * 3600).atZone(zone).toLocalDate().atStartOfDay(zone).toEpochSecond()
         }
 
-        // One main sleep per morning: the longest non-nap session ending that day.
-        val mains = sessions.filter { !it.nap }
-            .groupBy { morningOf(it, zone) }
-            .mapValues { (_, v) -> v.maxBy { it.end - it.start } }
+        val mains = mainsByMorning(sessions, zone)
         val strapNights = dao.strapReadinessOnce(from, to).associateBy { it.day }
         // Naps count toward a day's total sleep for the debt; a nap belongs to the day it started.
         val napsByDay = sessions.filter { it.nap }.groupBy { Instant.ofEpochSecond(it.start).atZone(zone).toLocalDate().atStartOfDay(zone).toEpochSecond() }
@@ -394,6 +402,12 @@ class RecoveryEngine(private val dao: HealthDao) {
         internal fun usualBedtime(mains: Collection<SleepSession>, date: LocalDate, zone: ZoneId): java.time.LocalTime? =
             if (mains.isEmpty()) null
             else usualSleep(mains, date, zone).firstOrNull()?.let { Instant.ofEpochSecond(it.first).atZone(zone).toLocalTime() }
+
+        /** One main sleep per morning ([morningOf]): the longest non-nap session ending that day. */
+        internal fun mainsByMorning(sessions: List<SleepSession>, zone: ZoneId): Map<Long, SleepSession> =
+            sessions.filter { !it.nap }
+                .groupBy { morningOf(it, zone) }
+                .mapValues { (_, v) -> v.maxBy { it.end - it.start } }
 
         /** Asleep minutes: deep + light + REM, else time in bed less awake. */
         fun asleepMinutes(s: SleepSession): Int = listOfNotNull(s.deepMinutes, s.lightMinutes, s.remMinutes).takeIf { it.isNotEmpty() }?.sum()

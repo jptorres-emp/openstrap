@@ -379,6 +379,11 @@ object WeekBarsLook {
     /** The other days, white at this. */
     const val DIM_ALPHA = 0.30f
 
+    /** A day still to come (the Steps widget's week): a stub this high, its corner, and white at this. */
+    const val STUB_DP = 4f
+    const val STUB_CORNER_DP = 2f
+    const val STUB_ALPHA = 0.12f
+
     /** The width of [days] columns [column] dp wide, dp. */
     fun width(days: Int, column: Float = COLUMN_DP): Float = days * column + (days - 1).coerceAtLeast(0) * GAP_DP
 
@@ -407,6 +412,15 @@ fun weekBars(values: List<Float?>, density: Float, column: Float = WeekBarsLook.
             PillBar(Offset(pill.topLeft.x, height - h), Size(pill.size.width, h), corner)
         }
     }
+}
+
+/** A [WeekBarsLook.STUB_DP] stub where day [index]'s bar will be, placed as [weekBars] places its bars. */
+fun weekStub(index: Int, density: Float, column: Float = WeekBarsLook.COLUMN_DP): PillBar {
+    val pitch = column * density
+    val height = WeekBarsLook.HEIGHT_DP * density
+    val h = WeekBarsLook.STUB_DP * density
+    val pill = pillBar(index * (column + WeekBarsLook.GAP_DP) * density, pitch, height, 0f, WeekBarsLook.BAR_DP * density)
+    return PillBar(Offset(pill.topLeft.x, height - h), Size(pill.size.width, h), WeekBarsLook.STUB_CORNER_DP * density)
 }
 
 /** The hour pills' bars, lit or not, and the baseline under them. */

@@ -144,8 +144,8 @@ object RecoveryLayout {
     /** The word's size, Body. */
     const val WORD_SP = 15f
 
-    /** A rough width for [text] at [sp] in the system sans, dp: half an em a character, scaled with the font. */
-    fun textWidth(text: String?, sp: Float, fontScale: Float = 1f): Float = (text?.length ?: 0) * sp * 0.52f * fontScale
+    /** A rough width for [text] at [sp] in the system sans, dp ([WidgetText.width]). */
+    fun textWidth(text: String?, sp: Float, fontScale: Float = 1f): Float = WidgetText.width(text, sp, fontScale)
 
     /**
      * The week's column width beside a score [dots] dp wide and [word], in [content] dp of width: as wide as

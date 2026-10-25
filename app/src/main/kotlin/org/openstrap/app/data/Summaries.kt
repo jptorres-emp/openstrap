@@ -18,6 +18,15 @@ object Summaries {
         return buckets.toList()
     }
 
+    /**
+     * The day's running total at the end of each hour from its [hourly] steps, the Steps card's line: null for the
+     * hours after [upTo] (the hour now, on today), every hour on a past day ([upTo] null).
+     */
+    fun runningSteps(hourly: List<Float>, upTo: Int?): List<Float?> {
+        var sum = 0f
+        return hourly.mapIndexed { i, v -> sum += v; if (upTo != null && i > upTo) null else sum }
+    }
+
     /** Hours of the day with at least [threshold] steps — a simple "stay active" measure. */
     fun activeHours(hourly: List<Float>, threshold: Int = 250): Int = hourly.count { it >= threshold }
 

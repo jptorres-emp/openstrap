@@ -57,6 +57,17 @@ object WidgetSizes {
         reported.firstOrNull { (w, h) -> w > 0f && h > 0f && bucket(w, h) == bucket } ?: (bucket.width.value to bucket.height.value)
 
     /**
+     * The size to fit [bucket]'s content to: the smallest width and height among the widget's [reported] sizes that
+     * Glance lays out as [bucket] (portrait and landscape can differ), so what fits is decided at the real cell, not
+     * the bucket's minimum. [bucket] itself when none is reported or none maps to it.
+     */
+    fun fitSize(bucket: DpSize, reported: List<Pair<Float, Float>>): Pair<Float, Float> {
+        val mine = reported.filter { (w, h) -> w > 0f && h > 0f && bucket(w, h) == bucket }
+        if (mine.isEmpty()) return bucket.width.value to bucket.height.value
+        return mine.minOf { it.first } to mine.minOf { it.second }
+    }
+
+    /**
      * The corner a widget draws (spec 6.3): [CORNER_DP], or the launcher's own widget radius ([system], dp, Android 12
      * and later) when that is smaller, so a widget never looks rounder than the launcher's others.
      */
@@ -83,4 +94,28 @@ object WidgetSizes {
 
     /** The share of the budget the bitmaps may take, leaving room for the rest of the RemoteViews. */
     private const val BUDGET_SHARE = 0.8
+}
+
+/**
+ * Rough text sums for fitting a layout at its smallest cell (spec 2.1) in the system sans, which scales with the
+ * system font: widths and line heights in dp, erring large so a layout that fits here fits on the phone.
+ */
+object WidgetText {
+    /** The v2 type roles' sizes, sp (spec 6.2). */
+    const val TITLE_SP = 17f
+    const val BODY_SP = 15f
+    const val SECONDARY_SP = 13f
+    const val CAPTION_SP = 11f
+
+    /** About half an em a character. */
+    const val CHAR_EM = 0.52f
+
+    /** A line's height in a TextView with its font padding: Roboto's top to bottom is 1.33 em, rounded up. */
+    const val LINE_EM = 1.35f
+
+    /** A rough width for [text] at [sp], dp, scaled with the font. */
+    fun width(text: String?, sp: Float, fontScale: Float = 1f): Float = (text?.length ?: 0) * sp * CHAR_EM * fontScale
+
+    /** One line's height at [sp], dp, scaled with the font. */
+    fun line(sp: Float, fontScale: Float = 1f): Float = sp * LINE_EM * fontScale
 }

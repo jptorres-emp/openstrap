@@ -6,4 +6,6 @@
     <!-- Home screen widgets (widgets spec 8). -->
     <string name="widget_recovery_name">Recovery</string>
     <string name="widget_recovery_description">This morning\'s recovery and what\'s behind it</string>
+    <string name="widget_steps_name">Steps</string>
+    <string name="widget_steps_description">Steps today and your goal</string>
 </resources>

@@ -292,9 +292,11 @@ Any widget, any size, shows the strap's status in its top row when one of these 
   - Wide and Large: while the status shows they get one, "Start a workout" with the button and words at the
     right, a block above the usual row in the spare height's share. Where the layout won't fit under it (the
     smallest cells at the largest font) the status drops.
-  - Small: the button sits at the top right in the usual tile's row, the tile, play and the name where they were.
-    When play has moved up beside the tile, the button sits at the foot's right beside the name and "Your usual",
-    which then have less room. Only when not even the short name fits beside it does the button drop.
+  - Small (revised on the phone, 2026-10-25): laid out as the other Smalls. The top row has "Start a workout" at
+    the left, or "Start" when that won't fit beside the button even at 13 sp (a 2 × 2), and the button at the top
+    right. Then the usual's tile with play right beside it, then the name over "Your usual". The tile and play grow
+    from 44 dp on a tall cell. Short of room "Your usual" goes, then the title (the button stays), then the tile and
+    play shrink to 40 and 36 dp. The tile and play never go. Without a status the Small is as 3.5 has it.
 - Last sync time is `SettingsStore.lastSync`. Battery and charging are `StrapManager`'s connection state, kept in
   settings so a widget can read them with the strap away. When a sync ends the widgets refresh (7).
 - Decided in step 6 (2026-10-25), still holding:

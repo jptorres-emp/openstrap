@@ -425,7 +425,7 @@ class StartWidgetModelTest {
         assertTrue(boxes.last().first + boxes.last().second <= 260f + StartLayout.CAPTION_BLEED_DP + 1e-3f)
     }
 
-    @Test fun `with the strap status the Wide gets a title row and the Small keeps tile, play and name`() {
+    @Test fun `with the strap status the Wide and the Small get a title row with the button`() {
         val m = WidgetSamples.start(now, zone, Locale.UK)
         val l = StatusLine(StrapStatus.StaleSync(0), listOf("Synced Wednesday", "Synced Wed", "Wednesday", "Wed"))
         val top = StartLayout.statusTop(m, l, WidgetSizes.Wide, 313f, 180f, 1f)!!
@@ -435,10 +435,19 @@ class StartWidgetModelTest {
         assertEquals(StartLayout.wide(m, 313f, 180f, 1f).gaps + 1, b.gaps)
         assertNotNull(b.tiles)
         assertNull(StartLayout.statusTop(m, null, WidgetSizes.Wide, 313f, 180f, 1f))
-        // The Small: the button beside the tile, play and the name where they were.
-        val plain = StartLayout.small(m.usual, listOf(StartWidgetModel.USUAL), false, 140f, 180f, 1f)
-        val small = StartLayout.small(m.usual, listOf(StartWidgetModel.USUAL), false, 140f, 180f, 1f, button = true)
-        assertTrue(small.button)
-        assertEquals(plain.copy(button = true), small)
+        // The Small: a title row with the button, the tile with play beside it, the name over "Your usual".
+        val small = StartLayout.statusSmall(m.usual, l, 140f, 180f, 1f)
+        // "Start a workout" won't fit beside the button on a 2 x 2 even at 13 sp, so "Start".
+        assertEquals(StartLayout.SHORT_TITLE, small.title)
+        assertEquals(StartWidgetModel.TITLE, StartLayout.statusSmall(m.usual, l, 200f, 180f, 1f).title)
+        assertEquals(l, small.top.status)
+        assertNull(small.top.words)
+        assertEquals(StartWidgetModel.USUAL, small.words.line)
+        assertTrue(small.sizes.tile + StartLayout.SMALL_GAP_DP + small.sizes.play <= 140f)
+        assertTrue(small.spread.gap(180f) <= Spread.TARGET_GAP_DP)
+        // Short of room "Your usual" goes, then the title; the tile and play stay.
+        val tight = StartLayout.statusSmall(m.usual, l, 110f, 110f, 1.3f)
+        assertNull(tight.words.line)
+        assertTrue(tight.spread.fits(110f, StartLayout.STATUS_MIN_GAP_DP))
     }
 }

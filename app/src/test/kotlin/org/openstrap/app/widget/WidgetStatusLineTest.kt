@@ -43,6 +43,13 @@ class WidgetStatusLineTest {
     private val oneUi = Triple(140f to 180f, 313f to 180f, 313f to 290f)
     private val target = Spread.TARGET_GAP_DP + 0.01f
 
+    /**
+     * How far Start's Small button may sit from Steps' at the same cell, dp. Both rows sit half a gap from the top,
+     * and each widget's gap is its own spare height shared out, so they differ by a few dp: 5 at most, on a One UI
+     * 2 x 2 at font 1.3, under 2 elsewhere.
+     */
+    private val BUTTON_TOP_SLACK = 6f
+
     /* --------------------------------------------- The line itself --------------------------------------------- */
 
     @Test fun `each state's wordings, longest first, the line's own copy first`() {
@@ -196,6 +203,8 @@ class WidgetStatusLineTest {
         }
     }
 
+    private val stepsModel = WidgetSamples.steps(today, Locale.UK)
+
     @Test fun `Start fits with the status line`() {
         val m = WidgetSamples.start(Instant.ofEpochSecond(now), zone, Locale.UK)
         val sizes = listOf(WidgetSizes.Small, WidgetSizes.Wide, WidgetSizes.Large)
@@ -203,18 +212,21 @@ class WidgetStatusLineTest {
             listOf(cells.first, cells.second, cells.third).forEachIndexed { i, (w, h) ->
                 val where = "Start ${sizes[i]} $w x $h at $s with \"${l.full}\""
                 if (i == 0) {
-                    // The Small keeps its tile, play and the name; the button sits beside the tile or the words.
-                    val f = StartLayout.small(m.usual, listOf(StartWidgetModel.USUAL), false, w, h, s, button = true)
-                    assertTrue("$where: ${StartLayout.smallHeight(f, s)} in $h", StartLayout.smallHeight(f, s) + 2 * StartLayout.MIN_GAP_DP <= h + 0.01f)
+                    // As the other Smalls: the title row with the button, the tile with play beside it, the name.
+                    val f = StartLayout.statusSmall(m.usual, l, w, h, s)
+                    assertTrue("$where: ${f.spread.content} in $h", f.spread.fits(h, StartLayout.STATUS_MIN_GAP_DP))
+                    checkTop(where, f.top, 0, w, s, l, real)
+                    assertTrue("$where: play beside the tile", f.sizes.tile + StartLayout.SMALL_GAP_DP + f.sizes.play <= w + 0.01f)
+                    assertTrue("$where: the name", WidgetText.width(f.words.name, WidgetText.BODY_SP, s) <= w)
+                    // The button where Steps' Small has it: the same right edge (both rows span the content) and top.
+                    val steps = StepsLayout.small(stepsModel.stepsText, stepsModel.share, w, h, s, l)
+                    val stepsTop = steps.spread.edge(h) + (steps.top.height - StatusButton.SIZE_DP) / 2
+                    val startTop = StartLayout.statusSmallButtonTop(f, h)
+                    assertEquals("$where: the button's top against Steps'", stepsTop, startTop, BUTTON_TOP_SLACK)
                     if (real) {
-                        assertTrue("$where: the button dropped", f.button)
-                        assertTrue("$where: no tile", f.tile)
-                        val gap = (h - StartLayout.smallHeight(f, s)) / f.gaps
-                        assertTrue("$where: gap $gap", gap <= target)
-                    }
-                    if (f.button) {
-                        val beside = if (f.actionTop) WidgetText.width(f.words.name, WidgetText.BODY_SP, s) else f.sizes.tile
-                        assertTrue("$where: the button's row", beside + StartLayout.SMALL_GAP_DP + StatusButton.SIZE_DP <= w + 0.01f)
+                        assertNotNull("$where: the title", f.title)
+                        assertTrue("$where: gap ${f.spread.gap(h)}", f.spread.gap(h) <= target)
+                        assertTrue("$where: shrunk", f.sizes.tile >= StartLayout.TILE_DP)
                     }
                     return@forEachIndexed
                 }

@@ -179,7 +179,7 @@ private fun StartContent(data: StartWidget.Shown) {
     ) { frame ->
         val rec = m.recording
         // Start has no title row, so with the strap status (spec 5) the Wide and Large get "Start a workout" above the
-        // usual row, the status button at its right; the Small puts the button beside the tile ([SmallContent]).
+        // usual row, the status button at its right; the Small gets a title row too ([StatusSmallContent]).
         val top = if (rec != null || frame.bucket == WidgetSizes.Small) null
         else StartLayout.statusTop(m, frame.status, frame.bucket, frame.contentWidth, frame.contentHeight, frame.fontScale)
         when {
@@ -200,22 +200,14 @@ private fun StartContent(data: StartWidget.Shown) {
 @Composable
 private fun ColumnScope.SmallContent(m: StartWidgetModel, f: WidgetFrame) {
     val sport = m.usual
-    val line = f.status
-    val fit = StartLayout.small(sport, listOf(StartWidgetModel.USUAL), false, f.contentWidth, f.contentHeight, f.fontScale, button = line != null)
+    f.status?.let { return StatusSmallContent(m, it, f) }
+    val fit = StartLayout.small(sport, listOf(StartWidgetModel.USUAL), false, f.contentWidth, f.contentHeight, f.fontScale)
     val sz = fit.sizes
     val words: @Composable () -> Unit = {
         Text(fit.words.name, style = NameStyle, maxLines = 1)
         fit.words.line?.let { Text(it, style = WidgetType.secondary, maxLines = 1) }
     }
-    // With the status button its place is worked out from the gaps, so the one above is fixed at its share.
-    val button = line?.takeIf { fit.button }
-    if (button != null) {
-        val gap = ((f.drawContentHeight - StartLayout.smallHeight(fit, f.fontScale)) / fit.gaps).coerceAtLeast(0f)
-        f.spot.put(StartLayout.smallButtonTop(fit, gap, f.fontScale), button)
-        Spacer(GlanceModifier.height(gap.dp))
-    } else {
-        Spacer(GlanceModifier.defaultWeight())
-    }
+    Spacer(GlanceModifier.defaultWeight())
     if (fit.actionTop) {
         Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             if (fit.tile) UsualTile(sport, false, sz, f.density)
@@ -223,22 +215,9 @@ private fun ColumnScope.SmallContent(m: StartWidgetModel, f: WidgetFrame) {
             Action(m, sz, f)
         }
         Spacer(GlanceModifier.defaultWeight())
-        // Play has moved up beside the tile, so the button sits at the foot's right, beside the words.
-        Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Column(GlanceModifier.defaultWeight()) { words() }
-            if (button != null) {
-                Spacer(GlanceModifier.width(StartLayout.SMALL_GAP_DP.dp))
-                StatusButtonView(button, f)
-            }
-        }
+        Column(GlanceModifier.fillMaxWidth()) { words() }
     } else {
-        Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            UsualTile(sport, false, sz, f.density)
-            if (button != null) {
-                Spacer(GlanceModifier.defaultWeight())
-                StatusButtonView(button, f)
-            }
-        }
+        UsualTile(sport, false, sz, f.density)
         Spacer(GlanceModifier.defaultWeight())
         Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Column(GlanceModifier.defaultWeight()) { words() }
@@ -247,6 +226,31 @@ private fun ColumnScope.SmallContent(m: StartWidgetModel, f: WidgetFrame) {
         }
     }
     Spacer(GlanceModifier.defaultWeight())
+}
+
+/**
+ * Small with the strap status (spec 5), as the other widgets' Smalls: "Start a workout" (or "Start") with the status
+ * button at the top right, then the usual's tile with play right beside it, then the name over "Your usual". Half a
+ * gap above and below, a gap between.
+ */
+@Composable
+private fun ColumnScope.StatusSmallContent(m: StartWidgetModel, line: StatusLine, f: WidgetFrame) {
+    val fit = StartLayout.statusSmall(m.usual, line, f.contentWidth, f.contentHeight, f.fontScale)
+    val edge = fit.spread.edge(f.drawContentHeight)
+    Spacer(GlanceModifier.height(edge.dp))
+    TopRowView(fit.title.orEmpty(), null, fit.top, f, edge)
+    Spacer(GlanceModifier.defaultWeight())
+    Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        UsualTile(m.usual, false, fit.sizes, f.density)
+        Spacer(GlanceModifier.width(StartLayout.SMALL_GAP_DP.dp))
+        Action(m, fit.sizes, f)
+    }
+    Spacer(GlanceModifier.defaultWeight())
+    Column(GlanceModifier.fillMaxWidth()) {
+        Text(fit.words.name, style = NameStyle, maxLines = 1)
+        fit.words.line?.let { Text(it, style = WidgetType.secondary, maxLines = 1) }
+    }
+    Spacer(GlanceModifier.height(edge.dp))
 }
 
 /**

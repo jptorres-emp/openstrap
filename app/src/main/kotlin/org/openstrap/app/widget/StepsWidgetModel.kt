@@ -4,7 +4,6 @@ import org.openstrap.app.data.Summaries
 import org.openstrap.app.ui.dashboard.ActivityCopy
 import org.openstrap.app.ui.dashboard.Metric
 import org.openstrap.app.ui.glow.DotSize
-import org.openstrap.app.ui.glow.draw.DotFont
 import org.openstrap.app.ui.glow.draw.WeekBarsLook
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -183,11 +182,11 @@ object StepsLayout {
     const val WEEK_LINE_GAP_DP = 6f
 
     /** [text]'s dots at [dot] dp, wide and high. */
-    fun dotsWidth(text: String, dot: Float): Float = dot * ((1 + DotSize.DOT_GAP) * DotFont.columns(text) - DotSize.DOT_GAP)
-    fun dotsHeight(dot: Float): Float = dot * ((1 + DotSize.DOT_GAP) * DotFont.ROWS - DotSize.DOT_GAP)
+    fun dotsWidth(text: String, dot: Float): Float = WidgetDots.width(text, dot)
+    fun dotsHeight(dot: Float): Float = WidgetDots.height(dot)
 
     /** The dot that fits [text] into [room] dp, at most [dot]. */
-    fun fitDot(text: String, room: Float, dot: Float): Float = minOf(dot, room / dotsWidth(text, 1f)).coerceAtLeast(0.5f)
+    fun fitDot(text: String, room: Float, dot: Float): Float = WidgetDots.fit(text, room, dot)
 
     /** What the Small keeps: the dot it draws at, and whether "today" and the share line fit. */
     data class Small(val dot: Float, val word: Boolean, val share: Boolean)

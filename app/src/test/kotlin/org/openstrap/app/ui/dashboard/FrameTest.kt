@@ -166,6 +166,7 @@ class FrameTest {
         assertEquals(Detail.OfMetric(Metric.Hrv), Detail.fromRoute("Hrv"))
         assertEquals(Detail.Recovery, Detail.fromRoute("Recovery"))
         assertEquals(Detail.Sleep, Detail.fromRoute("Sleep"))
+        assertEquals(Detail.OfScore(Score.Sleep), Detail.fromRoute(Detail.SLEEP_SCORE_ROUTE))
         assertNull(Detail.fromRoute("Readiness"))
     }
 

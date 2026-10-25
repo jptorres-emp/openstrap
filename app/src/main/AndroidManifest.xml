@@ -141,6 +141,17 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/widget_steps" />
         </receiver>
+        <receiver
+            android:name=".widget.SleepWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_sleep_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_sleep" />
+        </receiver>
 
         <!-- The widgets' moment and midnight alarms (WidgetUpdater). Not a widget. -->
         <receiver

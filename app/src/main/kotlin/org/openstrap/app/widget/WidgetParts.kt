@@ -253,7 +253,7 @@ private fun reportedSizes(options: Bundle, context: Context): List<Pair<Float, F
 /** The v2 type roles in the system sans (spec 6.2): sizes and weights as the app's, colours as its alphas. */
 internal object WidgetType {
     val title = TextStyle(color = ColorProvider(Color.White), fontSize = WidgetText.TITLE_SP.sp, fontWeight = FontWeight.Medium)
-    val hero = TextStyle(color = ColorProvider(Color.White), fontSize = 20.sp, fontFamily = FontFamily("sans-serif-light"))
+    val hero = TextStyle(color = ColorProvider(Color.White), fontSize = WidgetText.HERO_SP.sp, fontFamily = FontFamily("sans-serif-light"))
     val body = TextStyle(color = ColorProvider(Color.White), fontSize = WidgetText.BODY_SP.sp)
     val word = TextStyle(color = ColorProvider(Color.White.copy(alpha = 0.72f)), fontSize = WidgetText.BODY_SP.sp)
     val secondary = TextStyle(color = ColorProvider(Color.White.copy(alpha = 0.72f)), fontSize = WidgetText.SECONDARY_SP.sp)
@@ -275,6 +275,14 @@ internal fun TitleRow(title: String, note: String?) {
             Text(note, style = WidgetType.secondary, maxLines = 1)
         }
     }
+}
+
+/** Before there's anything to show: the title, then why in Secondary ("After your first night"). */
+@Composable
+internal fun WaitingContent(title: String, line: String?) {
+    TitleRow(title, null)
+    Spacer(GlanceModifier.height(6.dp))
+    line?.let { Text(it, style = WidgetType.secondary, maxLines = 4) }
 }
 
 /** [text] in white dots [dot] dp across, read out as [description]: the widget's one dotted number (spec 3). */

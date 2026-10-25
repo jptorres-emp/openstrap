@@ -103,6 +103,7 @@ object WidgetSizes {
 object WidgetText {
     /** The v2 type roles' sizes, sp (spec 6.2). */
     const val TITLE_SP = 17f
+    const val HERO_SP = 20f
     const val BODY_SP = 15f
     const val SECONDARY_SP = 13f
     const val CAPTION_SP = 11f
@@ -118,4 +119,20 @@ object WidgetText {
 
     /** One line's height at [sp], dp, scaled with the font. */
     fun line(sp: Float, fontScale: Float = 1f): Float = sp * LINE_EM * fontScale
+
+    /** How many lines [text] takes at [sp] in [width] dp, at least 1. */
+    fun lines(text: String?, sp: Float, width: Float, fontScale: Float = 1f): Int =
+        if (width <= 0f) Int.MAX_VALUE else kotlin.math.ceil(width(text, sp, fontScale) / width).toInt().coerceAtLeast(1)
+}
+
+/** A dotted number's size for fitting (spec 3): the same sums as the dot geometry, in dp. */
+object WidgetDots {
+    /** [text]'s dots at [dot] dp, wide and high. */
+    fun width(text: String, dot: Float): Float =
+        dot * ((1 + org.openstrap.app.ui.glow.DotSize.DOT_GAP) * org.openstrap.app.ui.glow.draw.DotFont.columns(text) - org.openstrap.app.ui.glow.DotSize.DOT_GAP)
+    fun height(dot: Float): Float =
+        dot * ((1 + org.openstrap.app.ui.glow.DotSize.DOT_GAP) * org.openstrap.app.ui.glow.draw.DotFont.ROWS - org.openstrap.app.ui.glow.DotSize.DOT_GAP)
+
+    /** The dot that fits [text] into [room] dp, at most [dot]. */
+    fun fit(text: String, room: Float, dot: Float): Float = minOf(dot, room / width(text, 1f)).coerceAtLeast(0.5f)
 }

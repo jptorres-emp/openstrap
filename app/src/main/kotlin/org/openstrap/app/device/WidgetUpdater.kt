@@ -20,6 +20,8 @@ import kotlinx.coroutines.launch
 import org.openstrap.app.data.MomentInputs
 import org.openstrap.app.widget.RecoveryWidget
 import org.openstrap.app.widget.RecoveryWidgetReceiver
+import org.openstrap.app.widget.SleepWidget
+import org.openstrap.app.widget.SleepWidgetReceiver
 import org.openstrap.app.widget.StepsWidget
 import org.openstrap.app.widget.StepsWidgetReceiver
 import org.openstrap.app.widget.WidgetKind
@@ -42,6 +44,7 @@ object WidgetUpdater {
 
     /** Each widget, once it exists. */
     private val widgets: Map<WidgetKind, Registration> = mapOf(
+        WidgetKind.Sleep to Registration(SleepWidgetReceiver::class.java) { SleepWidget() },
         WidgetKind.Steps to Registration(StepsWidgetReceiver::class.java) { StepsWidget() },
         WidgetKind.Recovery to Registration(RecoveryWidgetReceiver::class.java) { RecoveryWidget() },
     )

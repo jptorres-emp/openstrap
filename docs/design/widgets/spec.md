@@ -121,7 +121,7 @@ Last night's main sleep. Night mood always.
 |---|---|
 | Small | "Last night". Score in dots with its word ("82", "Good"). "7 h 40 asleep". The stage bar, 6 dp |
 | Wide | Title row with bedtime to wake as its note ("22:58–06:56"). Score with "Sleep score, good", "7 h 40 asleep" on the right. Stage bar 8 dp with its legend ("Deep 1 h 32", "REM 1 h 41", "Light 4 h 27", "Awake 18 min", 8 dp marks) |
-| Large | The Wide plus the Sleep tab's sentence ("7 h 40, your longest this week."), "Woke 3 times" in place of time asleep on the score row, and the hypnogram: solid rounded bands on four 8% hairlines, Awake at the top, Deep at the bottom |
+| Large | Title row with bedtime to wake. The Sleep tab's sentence ("7 h 40, your longest this week."). Score with "Sleep score, good" and "Woke 3 times" on the right. Then the time in each stage as rows, as the Sleep score detail lists them: the name, a bar for its share of the night in the stage's colour on a white 10% track, the time on the right ("Deep 1 h 32"). No hypnogram (the user's call, 2026-10-25). The rows replace the stage bar and legend; when they don't fit, the sentence goes first, then the rows give way to the stage bar |
 
 - Same copy and numbers as the Sleep tab hero (spec 5.2): `SleepCopy`, the stage totals, the longest or shortest
   rule.

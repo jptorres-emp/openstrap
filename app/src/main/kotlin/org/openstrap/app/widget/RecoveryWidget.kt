@@ -101,7 +101,7 @@ private fun RecoveryContent(data: RecoveryWidget.Shown) {
     val open = openMetric(LocalContext.current, RECOVERY_ROUTE, model.date)
     EdgeWidget(edgeLight(EdgeStatus.Usual, EdgeKind.Earlier), Ink, data.mood, open, BITMAP_EXTRA) { frame ->
         when {
-            model.score == null -> Waiting(model)
+            model.score == null -> WaitingContent(model.title, model.waiting)
             frame.bucket == WidgetSizes.Small -> SmallContent(model, frame.density)
             frame.bucket == WidgetSizes.Wide -> WideContent(model, frame.density)
             else -> LargeContent(model, frame.density, frame.contentWidth, frame.fontScale)
@@ -146,14 +146,6 @@ private fun ColumnScope.LargeContent(m: RecoveryWidgetModel, density: Float, con
     }
     Spacer(GlanceModifier.defaultWeight())
     Figures(m.figures)
-}
-
-/** Before a score: the title, then why there's none in Secondary. */
-@Composable
-private fun Waiting(m: RecoveryWidgetModel) {
-    TitleRow(m.title, null)
-    Spacer(GlanceModifier.height(6.dp))
-    m.waiting?.let { Text(it, style = WidgetType.secondary, maxLines = 4) }
 }
 
 /** The score in dots, read out as "78, Ready". */

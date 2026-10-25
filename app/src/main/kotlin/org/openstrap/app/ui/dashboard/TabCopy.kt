@@ -166,6 +166,24 @@ object TabCopy {
         else -> "Poor"
     }
 
+    /** The score's line beside the night's dotted score: "Sleep score, good", or why there's no score. */
+    fun sleepScoreLine(score: Int?): String = score?.let { "Sleep score, ${sleepScoreWord(it).lowercase()}" } ?: NO_STRAP_SCORE
+
+    /** A night the strap gave no score. */
+    const val NO_STRAP_SCORE = "No score from the strap"
+
+    /** A stage's total on the stage bar's legend: "Deep 1 h 32", "Awake 18 min". */
+    fun stageTotal(stage: Int, seconds: Long): String = "${SLEEP_NAMES[stage].orEmpty()} ${TodayCopy.duration(seconds)}"
+
+    /** "7 h 40 asleep". */
+    fun asleep(seconds: Long): String = "${TodayCopy.duration(seconds)} asleep"
+
+    /** When the night ran, bedtime to waking: "22:58–06:56" (an en dash, a time range). */
+    fun nightTimes(start: Long, end: Long, zone: java.time.ZoneId = java.time.ZoneId.systemDefault()): String {
+        fun clock(epoch: Long) = java.time.Instant.ofEpochSecond(epoch).atZone(zone).format(DateTimeFormatter.ofPattern("HH:mm"))
+        return "${clock(start)}–${clock(end)}"
+    }
+
     /** "Woke 3 times", "Woke once", "Slept through"; null when the strap didn't say. */
     fun woke(count: Int?): String? = when (count) {
         null -> null

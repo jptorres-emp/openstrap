@@ -24,6 +24,20 @@ object SleepHistory {
             .groupBy { nightOf(it.end, zone) }
             .mapValues { (_, s) -> s.maxBy { it.end - it.start } }
 
+    /**
+     * The main sleep of the night in [night] (a [DayWindow.nightEndingOn]): the longest session that isn't a nap and
+     * ended in it. What the Sleep tab's hero and the Sleep widget show.
+     */
+    fun mainSleep(sessions: List<SleepSession>, night: DayWindow): SleepSession? =
+        sessions.filter { !it.nap && it.end in night.from..night.to }.maxByOrNull { it.end - it.start }
+
+    /**
+     * Time asleep on the week's other nights, for the longest or shortest rule ([org.openstrap.app.ui.dashboard.TabCopy.night]):
+     * the [WEEK_NIGHTS] nights ending on [date] ([nights] by [mainSleeps]) without [date] itself, those with a sleep.
+     */
+    fun weekOthers(nights: Map<LocalDate, SleepSession>, date: LocalDate): List<Long> =
+        (WEEK_NIGHTS - 1 downTo 1).mapNotNull { nights[date.minusDays(it.toLong())] }.map(::asleepSeconds)
+
     /** Time asleep from the strap's stage totals, or the whole session when it didn't send them. */
     fun asleepSeconds(s: SleepSession): Long {
         val staged = listOfNotNull(s.deepMinutes, s.lightMinutes, s.remMinutes)

@@ -34,9 +34,9 @@ import org.openstrap.app.widget.WidgetSizes
  *     adb shell appwidget grantbind --package org.openstrap.app --user 0
  *     adb shell am start -n org.openstrap.app/.widget.debug.WidgetGalleryActivity --es widget steps --es mood night
  *
- * `widget` is the kind to host (recovery, steps), Recovery without it. `mood` is day, evening, night or auto (the
- * moment's). `--es pin steps` asks the launcher to pin a widget of that kind to the home screen. The ids it binds
- * are deleted when it closes or hosts another kind.
+ * `widget` is the kind to host (recovery, steps, sleep), Recovery without it. `mood` is day, evening, night or auto
+ * (the moment's). Sleep is always night and ignores it. `--es pin sleep` asks the launcher to pin a widget of that
+ * kind to the home screen. The ids it binds are deleted when it closes or hosts another kind.
  */
 class WidgetGalleryActivity : ComponentActivity() {
     private lateinit var host: AppWidgetHost
@@ -94,7 +94,7 @@ class WidgetGalleryActivity : ComponentActivity() {
         super.onDestroy()
     }
 
-    /** The kind named [name] ("steps", "recovery") that has a widget yet; null for none. */
+    /** The kind named [name] ("steps", "recovery", "sleep") that has a widget yet; null for none. */
     private fun kindOf(name: String?): WidgetKind? =
         WidgetKind.entries.firstOrNull { it.name.equals(name, ignoreCase = true) }?.takeIf { WidgetUpdater.registration(it) != null }
 

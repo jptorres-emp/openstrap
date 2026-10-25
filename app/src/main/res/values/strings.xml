@@ -8,4 +8,6 @@
     <string name="widget_recovery_description">This morning\'s recovery and what\'s behind it</string>
     <string name="widget_steps_name">Steps</string>
     <string name="widget_steps_description">Steps today and your goal</string>
+    <string name="widget_sleep_name">Sleep</string>
+    <string name="widget_sleep_description">Last night\'s score, time asleep and stages</string>
 </resources>

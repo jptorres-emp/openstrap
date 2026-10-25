@@ -112,6 +112,40 @@ What each moment shows:
   "Placed" means `AppWidgetManager.getAppWidgetIds` returns at least one id for that provider. It can't tell which
   home screen page, so anywhere counts. A pure function `momentLead(moment, placed: Set<WidgetKind>)` decides it,
   next to `MomentResolver`.
+- Decided in step 5 (2026-10-25):
+  - A lead with nothing to show gives way to the moment's next one: no sleep last night leads with Energy from
+    waking with Today's no-sleep sentence (as Today's hero, spec 4.3); waking with no Recovery value (still learning,
+    no heart data) leads with last night, then Energy; during a workout with nothing recording, or after one with
+    none to tell, it's midday's. Before the first night Energy waits: the name, then "After your first night".
+  - Last night's sentence is the Sleep tab's ("7 h 40, your longest this week."), which already says how long you
+    slept, so its figure is "Woke 3 times" (as the Sleep widget's Large), not "Slept 7 h 40".
+  - The window's sentence is `windowTitle` and `window` without the Energy part ("Ready for effort. You usually run
+    around now."), the number being Energy. Its Start (44 dp, white play) sits right of the number on the Wide and
+    Large and beside it on the Small, and opens Ready with Today's usual sport (started by you over 28 days).
+  - Evening and night have the evening hero's sentence (Today's night shows the same). Past your usual bedtime the
+    night shows Energy left with "Bedtime 22:40"; with no usual bedtime known it shows no bedtime at all, never the
+    22:00 fallback the resolver uses.
+  - Counts move on by themselves ("38 min since your run", "30 min to bedtime", "Bedtime in 1 h 10"), so while one
+    shows, the moment alarm also fires at the next five minute mark on the clock (and at bedtime), whichever comes
+    first with the moment's end. That's at most 24 refreshes after a workout and about 40 in an evening and night.
+  - During a workout, nothing live as the spec says, but the Wide and Large keep Start's Open pill in the top row,
+    the sport's tile under it (44 to 72 dp) and its name in the hero's light type (20 to 28 sp), so a tall cell has
+    no hole. The Small has the name, the tile, the sport and "Since 17:42" with the red dot.
+  - Charts: Energy's line runs from waking to your usual bedtime (or now, when later), quarter hours, the times
+    under it waking and bedtime. The heart rate drop runs from the workout's end to the last reading, the day's heart
+    rate from its first reading; both on an axis fitted to the readings and resting. The stage strip is the Sleep
+    tab's nap strip (shared geometry, `stageStripSegments`), bedtime to waking under it. All solid white lines ending
+    in their dot, as the Steps widget's.
+  - Nothing wraps but the sentence, which takes two lines at most (spec's own rule): 20 sp, then 18, then the dots
+    at 3.6, then a shorter wording (one of its sentences, last night's without the week's comparison), then left out.
+    Other texts have options and sizes: "min since your run", "min since", "min"; "Drained 60, recharged 38", then
+    "Drained 60"; 13 sp then 11 for the name and figure, 15 then 13 for the word.
+  - Spare height grows the parts first: the Small's dots from the mockup's 3.6 to 7 dp, the Wide's and Large's
+    sentence to 22 and 24 sp, the line chart from 44 to 72 dp, the stage strip from 8 to 20 dp, the dots from 4.5 to
+    7 dp, never at the cost of the number row's word, figure or Start. The rest is shared evenly between the blocks,
+    half a gap above and below; the least gap is 4 dp so the minimum Wide keeps its sentence at 1.08.
+  - The tap opens Today at its root on today: `EXTRA_MOMENT` with `"now"` (`MainActivity.MOMENT_NOW`), which
+    release builds act on too. Any other value is still the debug build's forced moment.
 
 ### 3.2 Sleep
 
@@ -321,8 +355,8 @@ The punctuation test (v2 8.2) also scans `widget/` and the widget XML.
 
 1. **Fonts. Decided 2026-10-24: system sans.** It keeps font scaling and TalkBack, which bitmapped Funnel would
    lose. Dotted numbers are bitmaps and unaffected. Revisit only if it looks wrong on the phone in step 7.
-2. **Moment's chart at Large in the workout window**: Energy's line or the usual workout's last heart rate? The
-   mockup has neither yet.
+2. **Moment's chart at Large in the workout window. Decided 2026-10-25 (step 5): Energy's line**, as 3.1's table
+   has it. Revisit on the phone.
 3. **Pixel Launcher stacks**: whether it has them on the user's phone changes nothing in this spec, but the stack
    check in 10 needs a launcher that has them (Samsung One UI, or a test launcher).
 4. **Two Recovery widgets or two Moments**: allowed, both show the same. No rule needed unless the phone shows a

@@ -143,11 +143,11 @@ class WorkoutSession(
             _state.collect { st ->
                 val recording = st is WorkoutState.Recording
                 val paused = (st as? WorkoutState.Recording)?.paused
-                // A summary closing can follow a discard, which takes a workout out of Start's week. A pause or a
-                // resume stops or restarts Start's timer.
+                // A summary closing can follow a discard, which takes a workout out of Start's week and Moment's
+                // after a workout. A pause or a resume stops or restarts Start's timer.
                 val kinds = when {
                     was != null && was != recording -> setOf(WidgetKind.Moment, WidgetKind.Start)
-                    wasKind != null && wasKind != st::class.java -> setOf(WidgetKind.Start)
+                    wasKind != null && wasKind != st::class.java -> setOf(WidgetKind.Moment, WidgetKind.Start)
                     paused != null && wasPaused != null && paused != wasPaused -> setOf(WidgetKind.Start)
                     else -> emptySet()
                 }

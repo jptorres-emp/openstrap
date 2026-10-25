@@ -285,6 +285,13 @@ fun drawStageBar(canvas: Canvas, totals: List<Pair<Int, Long>>, left: Float, top
     }
 }
 
+/** The stage strip ([stageStripSegments]) [height] px thick across the canvas's top, [width] px wide. */
+fun drawStageStrip(canvas: Canvas, spans: List<org.openstrap.app.ui.components.StageSpan>, width: Float, height: Float) {
+    stageStripSegments(spans, width, height).forEach { s ->
+        canvas.drawLine(s.x0, height / 2, s.x1, height / 2, roundStroke(stageColor(s.stage), height).apply { strokeJoin = Paint.Join.ROUND })
+    }
+}
+
 /** Pill bars: the baseline hairline, then each bar, lit in white or white at 45%. */
 fun drawHourPills(canvas: Canvas, g: HourPillsGeometry, width: Float, density: Float) {
     canvas.drawLine(0f, g.baselineY, width, g.baselineY, stroke(ChartInk.Grid, ChartInk.HAIRLINE_DP * density))

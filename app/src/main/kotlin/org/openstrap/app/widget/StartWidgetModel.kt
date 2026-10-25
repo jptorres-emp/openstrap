@@ -388,22 +388,13 @@ object StartLayout {
      * [WidgetText.width] misses: "Swim" showed as "Swi..." on the phone) with [CAPTION_MARGIN] on top, so a tight
      * caption gives its place to the next sport instead of being cut.
      */
-    fun captionWidth(text: String, sp: Float, fontScale: Float): Float = letterEms(text) * sp * fontScale * CAPTION_MARGIN
+    fun captionWidth(text: String, sp: Float, fontScale: Float): Float = WidgetText.fitWidth(text, sp, fontScale)
 
-    /** How much wider than its letters' sum a caption is taken to be. */
-    const val CAPTION_MARGIN = 1.15f
+    /** How much wider than its letters' sum a caption is taken to be ([WidgetText.FIT_MARGIN]). */
+    const val CAPTION_MARGIN = WidgetText.FIT_MARGIN
 
-    /** [text]'s width in ems in the system sans at Medium, by letter, rounded up: Roboto's advances. */
-    fun letterEms(text: String): Float = text.sumOf { c ->
-        when {
-            c == ' ' || c in "iljI.,:!|'" -> 0.27
-            c in "ftr" -> 0.37
-            c in "mwMW" -> 0.88
-            c.isUpperCase() -> 0.68
-            c.isDigit() -> 0.58
-            else -> 0.57
-        }
-    }.toFloat()
+    /** [text]'s width in ems by letter ([WidgetText.letterEms]). */
+    fun letterEms(text: String): Float = WidgetText.letterEms(text)
 
     /**
      * True when the captions' spans keep [CAPTION_SPACE_DP] apart and stay within [CAPTION_BLEED_DP] of the content's

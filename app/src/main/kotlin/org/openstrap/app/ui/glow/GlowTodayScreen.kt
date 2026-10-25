@@ -415,18 +415,19 @@ private enum class HeroKind { Pair, Stuck, Waking, NoSleep, Midday, Window, Afte
 
 /**
  * The hero's recipe, L4 (spec 2.1): the rim at full from the one side the moment places, no bevel, and the dark core
- * opposite the light. [rim] raises or calms it for the moment (spec 4.2: 120% before a workout, 80% after one).
+ * opposite the light. [rim] raises or calms it for the moment (spec 4.2: 120% before a workout, 80% after one). The
+ * Moment widget lights its background with the same recipe (widgets spec 3.1).
  */
-private fun heroStyle(color: Color, lightAngle: Float?, rim: Float = 1f) = GlowStyle.Bloom.copy(
+internal fun heroStyle(color: Color, lightAngle: Float?, rim: Float = 1f) = GlowStyle.Bloom.copy(
     lightAngle = lightAngle, color = color,
     coreShape = CoreShape.Radial, coreX = 0.5f, coreY = 0.6f, coreWidth = 0.95f, coreHeight = 0.75f,
     coreBlur = 30.dp, toneWidth = 16.dp, toneShift = -10f, glowStrength = rim, bevel = 0f,
 )
 
 /** The workout window's rim, raised for effort, and the calmer one after a workout (spec 4.2). */
-private const val WINDOW_RIM = 1.2f
-private const val AFTER_RIM = 0.8f
-private const val EVENING_BODY = 0.46f
+internal const val WINDOW_RIM = 1.2f
+internal const val AFTER_RIM = 0.8f
+internal const val EVENING_BODY = 0.46f
 
 /**
  * Waking up: how you slept and what Recovery says, the score in dots with its word, and Charge at waking as text

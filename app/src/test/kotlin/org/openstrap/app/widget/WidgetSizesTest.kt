@@ -35,7 +35,7 @@ class WidgetSizesTest {
         val all = providers()
         assertTrue("no widget providers in res/xml", all.containsKey("widget_recovery.xml"))
         // Each widget built so far, so a provider dropped by mistake fails here too.
-        listOf("widget_recovery.xml", "widget_steps.xml", "widget_sleep.xml", "widget_start.xml").forEach {
+        listOf("widget_moment.xml", "widget_recovery.xml", "widget_steps.xml", "widget_sleep.xml", "widget_start.xml").forEach {
             assertTrue("$it missing from res/xml", all.containsKey(it))
         }
         val wrong = mutableListOf<String>()

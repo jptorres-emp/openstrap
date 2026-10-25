@@ -63,6 +63,9 @@ import org.openstrap.app.device.WidgetUpdater
 import org.openstrap.app.ui.dashboard.momentMood
 import org.openstrap.app.ui.glow.EdgeLight
 import org.openstrap.app.ui.glow.GlowMood
+import org.openstrap.app.ui.glow.GlowStyle
+import org.openstrap.app.ui.glow.draw.drawGlow
+import org.openstrap.app.ui.glow.draw.renderToBitmap
 import org.openstrap.app.ui.glow.draw.WeekBarsLook
 import org.openstrap.app.ui.glow.draw.dotLayout
 import org.openstrap.app.ui.glow.draw.edgePaint
@@ -105,7 +108,8 @@ abstract class LoadingWidget<T>(private val kind: WidgetKind) : GlanceAppWidget(
 
 /**
  * A widget's receiver, which the launcher knows it by. Placing the first or removing the last of any widget turns
- * midnight's alarm on or off, and Moment follows what's placed (spec 3.1, the duplicate rule).
+ * midnight's alarm on or off, Moment follows what's placed (spec 3.1, the duplicate rule), and removing the last
+ * Moment turns its alarm off ([WidgetUpdater.placedChanged]).
  */
 abstract class PlacedWidgetReceiver : GlanceAppWidgetReceiver() {
     override fun onEnabled(context: Context) {
@@ -123,10 +127,7 @@ abstract class PlacedWidgetReceiver : GlanceAppWidgetReceiver() {
         placedChanged(context)
     }
 
-    private fun placedChanged(context: Context) {
-        WidgetUpdater.scheduleMidnight(context)
-        WidgetUpdater.changed(context, setOf(WidgetKind.Moment))
-    }
+    private fun placedChanged(context: Context) = WidgetUpdater.placedChanged(context)
 }
 
 /**
@@ -192,6 +193,22 @@ internal fun EdgeWidget(
     light: EdgeLight, ink: Color, mood: GlowMood, open: Intent, bitmapExtra: Double,
     sidePadding: Float = WidgetSizes.PADDING_DP,
     content: @Composable ColumnScope.(WidgetFrame) -> Unit,
+) = CardWidget(open, bitmapExtra, sidePadding, { w, h, corner, density -> edgeBackground(light, ink, mood, w, h, corner, density) }, content)
+
+/**
+ * A glow card widget (Moment, spec 2.2): [style] behind, its mood already set, drawn at the cell's real size as the
+ * app's GlowCard draws it ([drawGlow]), the rest as [EdgeWidget].
+ */
+@Composable
+internal fun GlowWidget(style: GlowStyle, open: Intent, bitmapExtra: Double, content: @Composable ColumnScope.(WidgetFrame) -> Unit) =
+    CardWidget(open, bitmapExtra, WidgetSizes.PADDING_DP, { w, h, corner, density -> glowBackground(style, w, h, corner, density) }, content)
+
+/** A widget card with [background] (dp width, dp height, dp corner, px per dp) behind: what [EdgeWidget] and [GlowWidget] share. */
+@Composable
+private fun CardWidget(
+    open: Intent, bitmapExtra: Double, sidePadding: Float,
+    background: (Float, Float, Float, Float) -> Bitmap,
+    content: @Composable ColumnScope.(WidgetFrame) -> Unit,
 ) {
     val context = LocalContext.current
     val size = LocalSize.current
@@ -208,11 +225,18 @@ internal fun EdgeWidget(
         GlanceModifier.fillMaxSize()
             .appWidgetBackground()
             .cornerRadius(corner.dp)
-            .background(ImageProvider(edgeBackground(light, ink, mood, w, h, corner, density)), ContentScale.FillBounds)
+            .background(ImageProvider(background(w, h, corner, density)), ContentScale.FillBounds)
             .clickable(actionStartActivity(open)),
     ) {
         Column(GlanceModifier.fillMaxSize().padding(horizontal = sidePadding.dp, vertical = WidgetSizes.PADDING_DP.dp)) { content(frame) }
     }
+}
+
+/** A glow card's light ([style], its mood set) for a widget [w] by [h] dp with [corner] dp corners, at [density] px per dp. */
+internal fun glowBackground(style: GlowStyle, w: Float, h: Float, corner: Float, density: Float): Bitmap {
+    val pw = w * density
+    val ph = h * density
+    return renderToBitmap(pw, ph) { drawGlow(it, style.copy(radius = corner.dp), pw, ph, density) }
 }
 
 /**

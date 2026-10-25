@@ -28,4 +28,19 @@ object WidgetRefresh {
 
     /** [debugMood] where it applies. */
     val moodOverride: GlowMood? get() = if (BuildConfig.DEBUG) debugMood else null
+
+    /** Debug builds: the moment the Moment widget shows instead of the clock's, for the gallery; null follows it. */
+    @Volatile
+    var debugMoment: org.openstrap.app.data.Moment? = null
+
+    /**
+     * Debug builds: the widgets the Moment widget takes as placed for the duplicate rule (spec 3.1), for the gallery;
+     * null reads the launcher's.
+     */
+    @Volatile
+    var debugPlaced: Set<WidgetKind>? = null
+
+    /** [debugMoment] and [debugPlaced] where they apply. */
+    val momentOverride: org.openstrap.app.data.Moment? get() = if (BuildConfig.DEBUG) debugMoment else null
+    val placedOverride: Set<WidgetKind>? get() = if (BuildConfig.DEBUG) debugPlaced else null
 }

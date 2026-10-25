@@ -714,14 +714,9 @@ fun ZoneBar(zoneSeconds: List<Int>, colors: List<Color>, modifier: Modifier = Mo
 @Composable
 fun StageStrip(spans: List<org.openstrap.app.ui.components.StageSpan>, modifier: Modifier = Modifier, height: Dp = 6.dp) {
     Canvas(modifier.fillMaxWidth().height(height)) {
-        if (spans.isEmpty()) return@Canvas
-        val start = spans.minOf { it.start }
-        val end = spans.maxOf { it.end }.coerceAtLeast(start + 1)
-        val w = size.height
-        spans.sortedBy { it.start }.forEach { s ->
-            val x0 = w / 2 + (size.width - w) * (s.start - start) / (end - start)
-            val x1 = w / 2 + (size.width - w) * (s.end - start) / (end - start)
-            drawLine(stageColor(s.stage), Offset(x0, size.height / 2), Offset(x1.coerceAtLeast(x0 + 0.5f), size.height / 2), w, StrokeCap.Round)
+        // The same geometry a widget's strip is drawn from (widgets spec 6.2).
+        org.openstrap.app.ui.glow.draw.stageStripSegments(spans, size.width, size.height).forEach { s ->
+            drawLine(stageColor(s.stage), Offset(s.x0, size.height / 2), Offset(s.x1, size.height / 2), size.height, StrokeCap.Round)
         }
     }
 }

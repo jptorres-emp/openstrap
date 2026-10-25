@@ -35,11 +35,14 @@ import org.openstrap.app.widget.WidgetSizes
  *     adb shell appwidget grantbind --package org.openstrap.app --user 0
  *     adb shell am start -n org.openstrap.app/.widget.debug.WidgetGalleryActivity --es widget steps --es mood night
  *
- * `widget` is the kind to host (recovery, steps, sleep, start), Recovery without it. `mood` is day, evening, night or auto
+ * `widget` is the kind to host (moment, recovery, steps, sleep, start), Recovery without it. `mood` is day, evening, night or auto
  * (the moment's). Sleep is always night and ignores it. `--es pin sleep` asks the launcher to pin a widget of that
  * kind to the home screen. `--es cells oneui` hosts at One UI's real cells (2 × 2 about 180 × 220, 4 × 2 about
  * 353 × 220, 4 × 3 about 353 × 330) instead of the three minimums, to see what people see; `--es cells min` goes
- * back. The ids it binds are deleted when it closes or hosts another kind.
+ * back. For Moment, `--es moment Evening` shows that moment (a Moment name, `auto` for the clock's) and
+ * `--es placed recovery,sleep` takes those widgets as placed for the duplicate rule (`none` for none, `auto` for the
+ * launcher's). The gallery's own hosted widgets count as placed too while it shows them. The ids it binds are deleted
+ * when it closes or hosts another kind.
  */
 class WidgetGalleryActivity : ComponentActivity() {
     private lateinit var host: AppWidgetHost
@@ -54,6 +57,7 @@ class WidgetGalleryActivity : ComponentActivity() {
         host = AppWidgetHost(this, HOST_ID)
         applyMood(intent.getStringExtra(EXTRA_MOOD))
         applyCells(intent.getStringExtra(EXTRA_CELLS))
+        applyMoment(intent)
         kind = kindOf(intent.getStringExtra(EXTRA_WIDGET)) ?: WidgetKind.Recovery
         column = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -76,10 +80,11 @@ class WidgetGalleryActivity : ComponentActivity() {
         val next = kindOf(intent.getStringExtra(EXTRA_WIDGET))
         if (intent.hasExtra(EXTRA_MOOD)) applyMood(intent.getStringExtra(EXTRA_MOOD))
         val cellsChanged = intent.hasExtra(EXTRA_CELLS) && applyCells(intent.getStringExtra(EXTRA_CELLS))
+        val momentChanged = applyMoment(intent)
         when {
             next != null && next != kind -> show(next)
             cellsChanged -> show(kind)
-            intent.hasExtra(EXTRA_MOOD) -> refresh()
+            intent.hasExtra(EXTRA_MOOD) || momentChanged -> refresh()
         }
         kindOf(intent.getStringExtra(EXTRA_PIN))?.let(::requestPin)
     }
@@ -96,9 +101,11 @@ class WidgetGalleryActivity : ComponentActivity() {
 
     override fun onDestroy() {
         unbindAll()
-        // Placed widgets go back to the moment's mood.
-        if (WidgetRefresh.debugMood != null) {
+        // Placed widgets go back to the moment's mood, and Moment to the clock's moment and the launcher's widgets.
+        if (WidgetRefresh.debugMood != null || WidgetRefresh.debugMoment != null || WidgetRefresh.debugPlaced != null) {
             WidgetRefresh.debugMood = null
+            WidgetRefresh.debugMoment = null
+            WidgetRefresh.debugPlaced = null
             WidgetUpdater.changedAll(applicationContext)
         }
         super.onDestroy()
@@ -181,6 +188,23 @@ class WidgetGalleryActivity : ComponentActivity() {
         return changed
     }
 
+    /** The `moment` and `placed` extras, for Moment; true when either was given. */
+    private fun applyMoment(intent: android.content.Intent): Boolean {
+        val moment = intent.getStringExtra(EXTRA_MOMENT)
+        val placed = intent.getStringExtra(EXTRA_PLACED)
+        if (moment != null) {
+            WidgetRefresh.debugMoment = org.openstrap.app.data.Moment.entries.firstOrNull { it.name.equals(moment, ignoreCase = true) }
+        }
+        if (placed != null) {
+            WidgetRefresh.debugPlaced = when (placed.lowercase()) {
+                "auto" -> null
+                "none", "" -> emptySet()
+                else -> placed.split(',').mapNotNull { n -> WidgetKind.entries.firstOrNull { it.name.equals(n.trim(), ignoreCase = true) } }.toSet()
+            }
+        }
+        return moment != null || placed != null
+    }
+
     private fun applyMood(name: String?) {
         WidgetRefresh.debugMood = when (name?.lowercase()) {
             null, "", "auto" -> null
@@ -252,6 +276,8 @@ class WidgetGalleryActivity : ComponentActivity() {
         const val EXTRA_PIN = "pin"
         const val EXTRA_WIDGET = "widget"
         const val EXTRA_CELLS = "cells"
+        const val EXTRA_MOMENT = "moment"
+        const val EXTRA_PLACED = "placed"
         val SIZES = listOf("Small" to WidgetSizes.Small, "Wide" to WidgetSizes.Wide, "Large" to WidgetSizes.Large)
 
         /** One UI's cells on the phone, roughly (spec 2.1): what the three layouts stretch to there. */

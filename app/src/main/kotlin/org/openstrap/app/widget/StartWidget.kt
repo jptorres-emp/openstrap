@@ -535,7 +535,7 @@ private fun FigureRow(label: String, value: String) {
 private const val BITMAP_EXTRA = 1.3
 
 /** A sport's tile [sizeDp] square: the Control surface with [cornerDp] corners, the icon white at [iconDp] in the middle. */
-private fun tileBitmap(icon: ImageVector, sizeDp: Float, cornerDp: Float, iconDp: Float, density: Float): Bitmap {
+internal fun tileBitmap(icon: ImageVector, sizeDp: Float, cornerDp: Float, iconDp: Float, density: Float): Bitmap {
     val s = sizeDp * density
     val r = cornerDp * density
     val i = iconDp * density
@@ -546,9 +546,12 @@ private fun tileBitmap(icon: ImageVector, sizeDp: Float, cornerDp: Float, iconDp
 }
 
 /** The play button at [sz]: a white circle with the black play triangle, as Ready's Start. */
-private fun playBitmap(sz: StartLayout.Sizes, density: Float): Bitmap {
-    val s = sz.play * density
-    val i = sz.playIcon * density
+private fun playBitmap(sz: StartLayout.Sizes, density: Float): Bitmap = playBitmap(sz.play, sz.playIcon, density)
+
+/** The play button [sizeDp] across with its triangle [iconDp]: a white circle, the black play icon in the middle. */
+internal fun playBitmap(sizeDp: Float, iconDp: Float, density: Float): Bitmap {
+    val s = sizeDp * density
+    val i = iconDp * density
     return renderToBitmap(s, s) { c ->
         c.drawCircle(s / 2, s / 2, s / 2, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.White.toArgb() })
         drawIcon(c, AppIcons.PlayFill, Color.Black, (s - i) / 2, (s - i) / 2, i)
@@ -556,7 +559,7 @@ private fun playBitmap(sz: StartLayout.Sizes, density: Float): Bitmap {
 }
 
 /** Open's white pill, [w] by [h] dp, fully round. */
-private fun pillBitmap(w: Float, h: Float, density: Float): Bitmap {
+internal fun pillBitmap(w: Float, h: Float, density: Float): Bitmap {
     val pw = w * density
     val ph = h * density
     return renderToBitmap(pw, ph) { c ->
@@ -565,7 +568,7 @@ private fun pillBitmap(w: Float, h: Float, density: Float): Bitmap {
 }
 
 /** The recording dot, [color], [StartLayout.DOT_DP] across. */
-private fun dotBitmap(color: Color, density: Float): Bitmap {
+internal fun dotBitmap(color: Color, density: Float): Bitmap {
     val s = StartLayout.DOT_DP * density
     return renderToBitmap(s, s) { c -> c.drawCircle(s / 2, s / 2, s / 2, Paint(Paint.ANTI_ALIAS_FLAG).apply { this.color = color.toArgb() }) }
 }

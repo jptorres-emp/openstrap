@@ -18,6 +18,8 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.openstrap.app.data.MomentInputs
+import org.openstrap.app.widget.MomentWidget
+import org.openstrap.app.widget.MomentWidgetReceiver
 import org.openstrap.app.widget.RecoveryWidget
 import org.openstrap.app.widget.RecoveryWidgetReceiver
 import org.openstrap.app.widget.SleepWidget
@@ -46,6 +48,7 @@ object WidgetUpdater {
 
     /** Each widget, once it exists. */
     private val widgets: Map<WidgetKind, Registration> = mapOf(
+        WidgetKind.Moment to Registration(MomentWidgetReceiver::class.java) { MomentWidget() },
         WidgetKind.Sleep to Registration(SleepWidgetReceiver::class.java) { SleepWidget() },
         WidgetKind.Steps to Registration(StepsWidgetReceiver::class.java) { StepsWidget() },
         WidgetKind.Recovery to Registration(RecoveryWidgetReceiver::class.java) { RecoveryWidget() },
@@ -97,16 +100,39 @@ object WidgetUpdater {
 
     /**
      * Sets the alarm for the moment's next change ([MomentInputs.nextChange]), from the inputs the Moment widget just
-     * rendered with, so the two can't drift apart. When it fires Moment refreshes, and its render schedules the next.
-     * Clears the alarm when there's no next change or no Moment widget.
+     * rendered with, so the two can't drift apart, or for [tick] when that comes first: the time something the widget
+     * shows moves on by itself within the moment ("38 min since your run"). When it fires Moment refreshes, and its
+     * render schedules the next. Clears the alarm when there's neither or no Moment widget ([momentAlarm]).
      */
-    fun scheduleMoment(context: Context, inputs: MomentInputs, now: Instant = Instant.now(), zone: ZoneId = ZoneId.systemDefault()) {
+    fun scheduleMoment(context: Context, inputs: MomentInputs, tick: Instant? = null, now: Instant = Instant.now(), zone: ZoneId = ZoneId.systemDefault()) {
         try {
-            val at = if (WidgetKind.Moment in placed(context)) inputs.nextChange(now, zone) else null
+            val at = momentAlarm(WidgetKind.Moment in placed(context), inputs.nextChange(now, zone), tick)
             if (at == null) cancel(context, ACTION_MOMENT) else setAlarm(context, ACTION_MOMENT, at.toEpochMilli())
         } catch (e: Exception) {
             Log.w(TAG, "widgets: moment alarm not set: $e")
         }
+    }
+
+    /**
+     * When Moment's alarm should next fire: the earlier of the moment's [nextChange] and the shown content's [tick],
+     * only while a Moment widget is [placed]. Null clears it.
+     */
+    fun momentAlarm(placed: Boolean, nextChange: Instant?, tick: Instant?): Instant? =
+        if (!placed) null else listOfNotNull(nextChange, tick).minOrNull()
+
+    /**
+     * A widget was placed or removed (any kind): midnight's alarm follows whether any is placed, Moment's is cleared
+     * once none is (a placed one sets its own as it renders), and Moment refreshes for the duplicate rule (spec 3.1).
+     */
+    fun placedChanged(context: Context) {
+        val app = context.applicationContext
+        scheduleMidnight(app)
+        try {
+            if (WidgetKind.Moment !in placed(app)) cancel(app, ACTION_MOMENT)
+        } catch (e: Exception) {
+            Log.w(TAG, "widgets: moment alarm not cleared: $e")
+        }
+        changed(app, setOf(WidgetKind.Moment))
     }
 
     /** Sets the alarm for the next local midnight while any widget is placed, and clears it when none is. */

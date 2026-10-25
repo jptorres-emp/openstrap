@@ -448,3 +448,27 @@ fun hourPills(hourly: List<Float>, picked: Int?, width: Float, height: Float, de
     }
     return HourPillsGeometry(height - 0.5f * density, bars)
 }
+
+/* ------------------------------------------------------------------------------------------------ */
+/* Stage strip                                                                                       */
+/* ------------------------------------------------------------------------------------------------ */
+
+/** One stretch of a stage strip: from [x0] to [x1] px along its middle, in [stage]'s colour. */
+@Immutable
+data class StageStripSegment(val stage: Int, val x0: Float, val x1: Float)
+
+/**
+ * A night or nap's stages laid flat ([org.openstrap.app.ui.glow.StageStrip]): one round-capped line [height] px thick
+ * across [width] px from the first stage's start to the last's end, each stretch its stage's. The ends sit half the
+ * thickness in, so the round caps stay inside. Empty without stages.
+ */
+fun stageStripSegments(spans: List<org.openstrap.app.ui.components.StageSpan>, width: Float, height: Float): List<StageStripSegment> {
+    if (spans.isEmpty()) return emptyList()
+    val start = spans.minOf { it.start }
+    val end = spans.maxOf { it.end }.coerceAtLeast(start + 1)
+    return spans.sortedBy { it.start }.map { s ->
+        val x0 = height / 2 + (width - height) * (s.start - start) / (end - start)
+        val x1 = height / 2 + (width - height) * (s.end - start) / (end - start)
+        StageStripSegment(s.stage, x0, x1.coerceAtLeast(x0 + 0.5f))
+    }
+}

@@ -120,6 +120,51 @@ object WidgetText {
     /** One line's height at [sp], dp, scaled with the font. */
     fun line(sp: Float, fontScale: Float = 1f): Float = sp * LINE_EM * fontScale
 
+    /**
+     * How much wider than its letters' sum a text is taken to be when deciding what fits on one line: the rough sums
+     * have run short on the phone before ("Swim" showed as "Swi..."), so a tight text gives its place instead of being
+     * cut.
+     */
+    const val FIT_MARGIN = 1.15f
+
+    /** [text]'s width in ems in the system sans at Medium, by letter, rounded up: Roboto's advances. */
+    fun letterEms(text: String): Float = text.sumOf { c ->
+        when {
+            c == ' ' || c in "iljI.,:!|'" -> 0.27
+            c in "ftr" -> 0.37
+            c in "mwMW" -> 0.88
+            c.isUpperCase() -> 0.68
+            c.isDigit() -> 0.58
+            else -> 0.57
+        }
+    }.toFloat()
+
+    /** The room [text] needs on one line at [sp], dp: its width by letter with [FIT_MARGIN] on top, scaled with the font. */
+    fun fitWidth(text: String?, sp: Float, fontScale: Float = 1f): Float = letterEms(text.orEmpty()) * sp * fontScale * FIT_MARGIN
+
+    /** Whether [text] fits [room] dp on one line at [sp] ([fitWidth]). */
+    fun fits(text: String?, sp: Float, room: Float, fontScale: Float = 1f): Boolean = fitWidth(text, sp, fontScale) <= room
+
+    /**
+     * How many lines [text] wraps to at [sp] in [width] dp, word by word as a TextView breaks it, each word measured
+     * by [fitWidth]; [Int.MAX_VALUE] when a single word is wider than the line.
+     */
+    fun wrappedLines(text: String, sp: Float, width: Float, fontScale: Float = 1f): Int {
+        val space = fitWidth(" ", sp, fontScale)
+        var lines = 1
+        var used = 0f
+        for (word in text.split(' ').filter { it.isNotEmpty() }) {
+            val w = fitWidth(word, sp, fontScale)
+            if (w > width) return Int.MAX_VALUE
+            used = when {
+                used == 0f -> w
+                used + space + w <= width -> used + space + w
+                else -> { lines++; w }
+            }
+        }
+        return lines
+    }
+
     /** How many lines [text] takes at [sp] in [width] dp, at least 1. */
     fun lines(text: String?, sp: Float, width: Float, fontScale: Float = 1f): Int =
         if (width <= 0f) Int.MAX_VALUE else kotlin.math.ceil(width(text, sp, fontScale) / width).toInt().coerceAtLeast(1)

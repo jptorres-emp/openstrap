@@ -280,6 +280,11 @@ fun drawHourPills(canvas: Canvas, g: HourPillsGeometry, width: Float, density: F
     g.bars.forEach { (bar, lit) -> drawPillBar(canvas, bar, if (lit) Color.White else Color.White.copy(alpha = HourPillsLook.DIM_ALPHA)) }
 }
 
+/** A week's bars ([weekBars]): the [shown] day's in [color], the others white at [WeekBarsLook.DIM_ALPHA]. */
+fun drawWeekBars(canvas: Canvas, bars: List<PillBar?>, shown: Int, color: Color) {
+    bars.forEachIndexed { i, bar -> bar?.let { drawPillBar(canvas, it, if (i == shown) color else Color.White.copy(alpha = WeekBarsLook.DIM_ALPHA)) } }
+}
+
 /** One pill bar in [color]. */
 fun drawPillBar(canvas: Canvas, bar: PillBar, color: Color) {
     canvas.drawRoundRect(bar.topLeft.x, bar.topLeft.y, bar.topLeft.x + bar.size.width, bar.topLeft.y + bar.size.height, bar.corner, bar.corner, fill(color))

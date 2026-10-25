@@ -6,5 +6,15 @@
         <activity
             android:name=".gallery.ComponentGalleryActivity"
             android:exported="true" />
+        <!--
+          The home screen widgets at their three sizes, hosted for real. Grant binding first
+          (adb shell appwidget grantbind, see WidgetGalleryActivity for the whole command), then
+          adb shell am start -n org.openstrap.app/.widget.debug.WidgetGalleryActivity
+          with the string extras mood (day, evening, night, auto) and pin (recovery).
+        -->
+        <activity
+            android:name=".widget.debug.WidgetGalleryActivity"
+            android:exported="true"
+            android:launchMode="singleTop" />
     </application>
 </manifest>

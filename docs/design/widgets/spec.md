@@ -33,15 +33,16 @@ Five widgets. Energy and Strap were explored and dropped (2.3).
 Stacks (Samsung One UI, iOS Smart Stack, and any launcher that adds them) give every widget in a stack the stack's
 size. So each widget has a layout for each of the same three sizes, and they resize the same way.
 
-| Size | Cells | Layout size | Holds |
-|---|---|---|---|
-| Small | 2 × 2 | 173 × 176 dp | A number and a word, or the one action |
-| Wide | 4 × 2 | 358 × 176 dp | The Small plus one more thing: figures, a chart or a row of choices |
-| Large | 4 × 3 | 358 × 272 dp | Everything the widget has |
+| Size | Cells | Picked from | Drawn at in the mockups | Holds |
+|---|---|---|---|---|
+| Small | 2 × 2 | Any cell (the smallest) | 173 × 176 dp | A number and a word, or the one action |
+| Wide | 4 × 2 | 300 × 160 dp | 358 × 176 dp | The Small plus one more thing: figures, a chart or a row of choices |
+| Large | 4 × 3 | 300 × 260 dp | 358 × 272 dp | Everything the widget has |
 
 - No 4 × 1. One row of text loses too much on Sleep and Start, and stacks of strips are rare.
-- Widths and heights come from the app's card unit (spec 2.4, 173 dp) and the Small's 160 dp plus room for the
-  launcher's label row. Real cell sizes vary by launcher, so layouts are built to stretch (6.1).
+- "Picked from" is the smallest cell each layout needs (`WidgetSizes`): Glance shows the largest that fits. Launcher
+  cells run smaller than the mockups (found on the phone, 2026-10-25: One UI's 2 × 2 is 167 to 201 dp wide, its 4
+  columns 353 dp), so every layout stretches to its cell and must fit at its minimum.
 - Corners 28 dp, padding 20 dp on every side, as every card (spec 2.4). The system's widget corner radius is not used
   where the launcher allows it (6.3).
 
@@ -144,7 +145,7 @@ Last night's main sleep. Night mood always.
 |---|---|
 | Small | "Recovery". Score in dots, status word ("78", "Recovered") |
 | Wide | Title row with "This morning". Score and word. Three figures in a row, Caption over Body: Resting HR "52 bpm", HRV "64 ms", Sleep "82" |
-| Large | The Wide plus the waking sentence ("Recovered enough for your usual training.") and the last seven days as bars beside the score, today in Recovery's ink, the others white at 30% |
+| Large | The Wide plus what the score means, as Today's Recovery card says it (`TodayCopy.recoveryMeaning`: "Recovered enough for your usual training.") and the last seven days as bars beside the score, today in Recovery's ink, the others white at 30% |
 
 - Score, word and sentence from the Recovery tab (`RecoveryEngine`, its copy). Figures use `Metric.format`.
 - Before the morning's score: yesterday's with "Yesterday" as the note. Before the first score ever: "After your
@@ -205,8 +206,10 @@ first match wins:
 - Jetpack Glance (`androidx.glance:glance-appwidget`), one `GlanceAppWidget` and receiver per widget.
 - `SizeMode.Responsive(setOf(Small, Wide, Large))` with the three layout sizes in 2.1. The system picks the largest
   that fits, so any cell size gets one of the three.
-- Provider XML: `targetCellWidth="2" targetCellHeight="2"`, `minResizeWidth` and `minResizeHeight` to the Small,
-  `maxResizeWidth` and `maxResizeHeight` to the Large, `resizeMode="horizontal|vertical"`, the same on all five.
+- Provider XML: `targetCellWidth="2" targetCellHeight="2"`, `minWidth`, `minHeight`, `minResizeWidth` and
+  `minResizeHeight` 110 dp (two cells by the old formula, 70 × 2 − 30, which One UI still uses and which ignores
+  `targetCell*`: anything larger places as 3 × 3), `maxResizeWidth` 480 and `maxResizeHeight` 400 dp,
+  `resizeMode="horizontal|vertical"`, the same on all five.
 - `widgetCategory="home_screen"`. Lock screen and keyguard are out of scope.
 
 ### 6.2 What Glance can't draw

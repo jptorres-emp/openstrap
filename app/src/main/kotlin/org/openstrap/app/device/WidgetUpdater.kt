@@ -18,7 +18,10 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.openstrap.app.data.MomentInputs
+import org.openstrap.app.widget.RecoveryWidget
+import org.openstrap.app.widget.RecoveryWidgetReceiver
 import org.openstrap.app.widget.WidgetKind
+import org.openstrap.app.widget.WidgetRefresh
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -28,15 +31,17 @@ import java.time.ZoneId
  * shows calls [changed]; nothing refreshes on a timer it doesn't need. Calls are cheap, return at once and never
  * throw: the work runs on its own scope and failures are logged.
  *
- * Only widgets that are placed are updated, and the moment and midnight alarms are set only while one is. Until a
- * widget is registered in [widgets] nothing is placed, so all of this is a no-op.
+ * Only widgets that are placed are updated, and the moment and midnight alarms are set only while one is. A kind
+ * not registered in [widgets] yet is never placed.
  */
 object WidgetUpdater {
     /** A widget's receiver, which the launcher knows it by, and its Glance widget. */
     class Registration(val receiver: Class<out GlanceAppWidgetReceiver>, val widget: () -> GlanceAppWidget)
 
-    /** Each widget, once it exists: step 3 on adds `WidgetKind.Recovery to Registration(...)` and so on. */
-    private val widgets: Map<WidgetKind, Registration> = emptyMap()
+    /** Each widget, once it exists. */
+    private val widgets: Map<WidgetKind, Registration> = mapOf(
+        WidgetKind.Recovery to Registration(RecoveryWidgetReceiver::class.java) { RecoveryWidget() },
+    )
 
     /** Steps change by the second while the strap is connected; the widget follows at most this often. */
     const val STEPS_EVERY_MS = 15 * 60_000L
@@ -107,6 +112,8 @@ object WidgetUpdater {
         val shown = placed(context).intersect(kinds)
         for (kind in shown) {
             try {
+                // A running session loads again on its version; one that isn't loads as it starts.
+                WidgetRefresh.bump(kind)
                 widgets.getValue(kind).widget().updateAll(context)
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e

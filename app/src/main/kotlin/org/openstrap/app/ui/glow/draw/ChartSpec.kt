@@ -362,6 +362,53 @@ fun pillBar(x: Float, pitch: Float, bottom: Float, height: Float, maxWidth: Floa
     return PillBar(Offset(x + (pitch - w) / 2, bottom - h), Size(w, h), w / 2)
 }
 
+/** How a week of daily bars is drawn (the Recovery widget's last seven days): solid, the day shown in the ink. */
+object WeekBarsLook {
+    /** Each day's column at its widest and narrowest, and the gap between columns, dp. Each day's letter sits under its column. */
+    const val COLUMN_DP = 30f
+    const val MIN_COLUMN_DP = 18f
+    const val GAP_DP = 2f
+
+    /** A full (100) day's bar, dp. */
+    const val HEIGHT_DP = 40f
+
+    /** The widest a bar gets, and its corner, dp: a solid bar with soft corners, so a low day still reads lower. */
+    const val BAR_DP = 16f
+    const val CORNER_DP = 4f
+
+    /** The other days, white at this. */
+    const val DIM_ALPHA = 0.30f
+
+    /** The width of [days] columns [column] dp wide, dp. */
+    fun width(days: Int, column: Float = COLUMN_DP): Float = days * column + (days - 1).coerceAtLeast(0) * GAP_DP
+
+    /** The widest column, from [MIN_COLUMN_DP] to [COLUMN_DP], that fits [days] into [room] dp. */
+    fun column(days: Int, room: Float): Float {
+        if (days <= 0) return COLUMN_DP
+        return ((room - (days - 1) * GAP_DP) / days).coerceIn(MIN_COLUMN_DP, COLUMN_DP)
+    }
+}
+
+/**
+ * A week of daily [values] (0..1, null for a day without one, which gets no bar) as bars in columns [column] dp wide,
+ * standing on the bottom of a [WeekBarsLook.width] by [WeekBarsLook.HEIGHT_DP] box at [density], each as high as its
+ * share of a full day. Sized like a [pillBar] in its column, but with [WeekBarsLook.CORNER_DP] corners and only as
+ * short as its corners allow: wide bars this short would all look alike if they kept a pill's twice-their-width.
+ */
+fun weekBars(values: List<Float?>, density: Float, column: Float = WeekBarsLook.COLUMN_DP): List<PillBar?> {
+    val pitch = column * density
+    val step = (column + WeekBarsLook.GAP_DP) * density
+    val height = WeekBarsLook.HEIGHT_DP * density
+    val corner = WeekBarsLook.CORNER_DP * density
+    return values.mapIndexed { i, v ->
+        v?.let {
+            val pill = pillBar(i * step, pitch, height, 0f, WeekBarsLook.BAR_DP * density)
+            val h = (height * it.coerceIn(0f, 1f)).coerceAtLeast(corner * 2)
+            PillBar(Offset(pill.topLeft.x, height - h), Size(pill.size.width, h), corner)
+        }
+    }
+}
+
 /** The hour pills' bars, lit or not, and the baseline under them. */
 @Immutable
 class HourPillsGeometry(val baselineY: Float, val bars: List<Pair<PillBar, Boolean>>)

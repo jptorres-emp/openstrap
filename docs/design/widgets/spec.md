@@ -162,7 +162,17 @@ Last night's main sleep. Night mood always.
 
 - The usual sport and the next four come from `topSports` (ui/glow/GlowWorkoutMode.kt), with
   `Workouts.DEFAULT_SPORTS` before there are enough workouts. GPS on or off is the per sport setting from v2.
-- While recording: the sport, "Recording since 17:42" and an Open button in place of play, on every size.
+- While recording (decided 2026-10-25, replacing a row that left the card empty): the workout's active time is the
+  hero, a live timer that ticks on its own (a RemoteViews `Chronometer`, h:mm:ss or mm:ss, light system sans in white,
+  up to 40 sp on the Small, 48 on the Wide, 56 on the Large, stepping down to fit, sized for h:mm:ss from the start).
+  Its base is the active time at load back from now, pauses left out as the live screen counts them. Paused, it
+  stands still and the line reads "Paused". Open replaces play, and it and the whole widget open the live screen.
+  - Small: the sport's tile and Open in the top row, then the timer, the sport's name (short name if needed), then
+    "Since 11:58" when there's room.
+  - Wide: the sport's tile, its name over a red dot and "Recording", and Open, then the timer with "Since 11:58"
+    beside it, else under it, else left out.
+  - Large: the Wide's, then the hairline and This week and the usual's last, secondary to the timer.
+  - Start refreshes on a pause and a resume as well as on the start and end.
 - No dotted number: this widget has none.
 - Decided in step 4 (2026-10-25):
   - `Workouts.DEFAULT_SPORTS` is three sports and the Wide needs five, so `Workouts.EVERYDAY` pads the list after it.
@@ -177,8 +187,8 @@ Last night's main sleep. Night mood always.
     room between. Every caption is centred under its own tile, the first and last too, and may run past its tile
     into the gap and up to half the side padding, never into a neighbour's caption. At a large font in a short
     Wide the captions are the last thing to go, the tiles stay.
-  - A name too long for its line becomes the short name, "Recording since 17:42" becomes "Since 17:42", and the
-    location mark, then ", GPS on", give way in the usual row.
+  - A name too long for its line becomes the short name, and the location mark, then ", GPS on", give way in the
+    usual row.
   - Spare height grows the parts toward the mockup's sizes first (usual tile 48, play up to 52, sport tiles up to
     44, the Small's tile up to 56), then is shared evenly above, between and below the blocks, so a tall cell has no
     hole. On the Large the gap above and below is half of those between, as the padding already frames it. Each
@@ -189,11 +199,9 @@ Last night's main sleep. Night mood always.
   - The GPS line reads "Your usual, GPS on" with the mark, "Your usual, GPS off" when location is off, and "Your
     usual" for a sport without GPS.
   - On a Small too narrow for the name beside play, play moves up beside the tile.
-    While recording, Open always sits there.
   - "Last run" is the usual sport's tile ("Last strength", "Last HIIT"), runs and treadmill runs together. Its value
     is the day and the distance, else the sets, else how long ("Yesterday, 35 min"), and "None yet" before any.
   - This week counts Monday to now as Your week does, without the strap's "Activity" records ("No workouts yet").
-  - While recording the Wide shows the workout's row alone, the Large keeps the hairline and the two figures under it.
 
 ## 4. Taps
 

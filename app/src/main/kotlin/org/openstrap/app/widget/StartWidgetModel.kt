@@ -56,8 +56,37 @@ data class StartSport(
     }
 }
 
-/** A workout under way, which every size shows in place of the usual: the sport and "Recording since 17:42". */
-data class StartRecording(val sport: StartSport, val since: String)
+/**
+ * The workout recording, as the widget reads it from the session: its sport type, its start (epoch seconds), its
+ * active seconds so far (pauses left out, as the live screen counts) and whether it's paused.
+ */
+data class StartRecordingInput(val sportType: Int, val start: Long, val activeSeconds: Long, val paused: Boolean)
+
+/**
+ * A workout under way, which every size shows in place of the usual: the sport, "Recording" (or "Paused"), "Since
+ * 11:58" and a live timer of the active time, [activeMillis] at [atMillis] (epoch ms), standing still while [paused].
+ */
+data class StartRecording(
+    val sport: StartSport,
+    val since: String,
+    val status: String,
+    val activeMillis: Long,
+    val atMillis: Long,
+    val paused: Boolean,
+) {
+    companion object {
+        const val RECORDING = "Recording"
+        const val PAUSED = "Paused"
+
+        /**
+         * The Chronometer's base on the [elapsedRealtime] clock (ms) for [r] at [nowMillis] (epoch ms): the active
+         * time so far back from now, so it reads the workout's time and ticks on its own. Paused, the time at the
+         * pause, and the Chronometer is stopped.
+         */
+        fun chronometerBase(elapsedRealtime: Long, nowMillis: Long, r: StartRecording): Long =
+            elapsedRealtime - (r.activeMillis + if (r.paused) 0L else (nowMillis - r.atMillis).coerceAtLeast(0L))
+    }
+}
 
 /**
  * What the Start widget shows (widgets spec 3.5), the same model at every size: the Small shows [usual] with "Your
@@ -93,12 +122,12 @@ data class StartWidgetModel(
 
         /**
          * The widget from every listed workout ([Workouts.listed]), the [sides] last chosen per sport on Ready, whether
-         * the phone's [location] can be used now and the workout [recording] (its sport type and start), at [now].
+         * the phone's [location] can be used now and the workout [recording], at [now].
          * The usual sport and the next ones are [topSports]' order, then [Workouts.EVERYDAY]'s once those run out
          * ([Workouts.DEFAULT_SPORTS] lead it before there's a history), each once as Ready would open it.
          */
         fun from(
-            workouts: List<WorkoutAnalysis>, sides: Map<Int, Boolean>, location: Boolean, recording: Pair<Int, Long>?,
+            workouts: List<WorkoutAnalysis>, sides: Map<Int, Boolean>, location: Boolean, recording: StartRecordingInput?,
             now: Instant, zone: ZoneId, locale: Locale = Locale.getDefault(),
         ): StartWidgetModel {
             val sports = (topSports(workouts, BY_USE).map { it.sportType } + Workouts.EVERYDAY)
@@ -130,7 +159,13 @@ data class StartWidgetModel(
                     val day = recentDay(Instant.ofEpochSecond(a.workout.start).atZone(zone).toLocalDate(), today, locale)
                     "$day, ${fact(a)}"
                 } ?: NONE_YET,
-                recording = recording?.let { (type, start) -> StartRecording(StartSport.recorded(type), "Recording since ${clockText(start, zone)}") },
+                recording = recording?.let { r ->
+                    StartRecording(
+                        StartSport.recorded(r.sportType), "Since ${clockText(r.start, zone)}",
+                        if (r.paused) StartRecording.PAUSED else StartRecording.RECORDING,
+                        r.activeSeconds * 1000L, now.toEpochMilli(), r.paused,
+                    )
+                },
             )
         }
 
@@ -204,8 +239,6 @@ object StartLayout {
     /** Captions at the Caption role's 11 sp, then a touch smaller before a sport gives its place. */
     val CAPTION_SIZES = listOf(WidgetText.CAPTION_SP, 10f)
 
-    /** "Recording since 17:42" where it won't fit: "Since 17:42". */
-    fun shortSince(since: String): String = since.replaceFirst("Recording since", "Since")
 
     /** Open's width at [fontScale]: its word in Body 500 with [OPEN_PAD_DP] each side. */
     fun openWidth(fontScale: Float): Float = WidgetText.width(StartWidgetModel.OPEN, WidgetText.BODY_SP, fontScale) + 2 * OPEN_PAD_DP
@@ -311,8 +344,6 @@ object StartLayout {
     /** The lines the usual row tries, longest first: "Your usual, GPS on", then "Your usual". */
     fun usualLines(m: StartWidgetModel): List<String> = listOf(m.usualLine, StartWidgetModel.USUAL).distinct()
 
-    /** The recording row's lines: "Recording since 17:42", then "Since 17:42". */
-    fun recordingLines(r: StartRecording): List<String> = listOf(r.since, shortSince(r.since)).distinct()
 
     /**
      * The tile row: the [sports] before All sports, [tile] dp tiles spread from the content's left edge to its right,
@@ -503,21 +534,14 @@ object StartLayout {
     fun large(m: StartWidgetModel, width: Float, height: Float, fontScale: Float): Block = block(m, width, height, fontScale, large = true)
 
     private fun block(m: StartWidgetModel, width: Float, height: Float, fontScale: Float, large: Boolean): Block {
-        val rec = m.recording
         val figures = if (large) figures(m, width, fontScale) else null
         val under = figures?.let { it.height + 1f + 2 * MIN_GAP_DP } ?: 0f
-        fun row(sz: Sizes) = usualRow(
-            rec?.sport ?: m.usual, rec?.let { recordingLines(it) } ?: usualLines(m), rec == null && m.gpsOn, rec != null, sz, width, fontScale,
-        )
+        fun row(sz: Sizes) = usualRow(m.usual, usualLines(m), m.gpsOn, false, sz, width, fontScale)
         fun block(sz: Sizes, row: UsualRow, tiles: Tiles?): Block {
             val content = row.height + (tiles?.height ?: 0f) + (figures?.let { it.height + 1f } ?: 0f)
             // Above and below, and between the row, the tiles, the hairline and the figures.
             val gaps = 2 + (if (tiles != null) 1 else 0) + (if (figures != null) 2 else 0)
             return Block(sz, row, tiles, figures, content, gaps)
-        }
-        if (rec != null) {
-            val blocks = ROW_SIZES.map { block(it, row(it), null) }
-            return blocks.firstOrNull { it.content <= height } ?: blocks.last()
         }
         val rows = ROW_SIZES.associateWith { row(it) }
         fun room(sz: Sizes) = height - rows.getValue(sz).height - under - MIN_GAP_DP
@@ -530,5 +554,122 @@ object StartLayout {
         for (sz in ROW_SIZES) bareTiles(m.next, width, room(sz), sz.sportTile)?.let { return block(sz, rows.getValue(sz), it) }
         val last = ROW_SIZES.last()
         return block(last, rows.getValue(last), null)
+    }
+
+    /* -------------------------------------------------------------------------------------------- */
+    /* Recording: the live timer as the hero                                                         */
+    /* -------------------------------------------------------------------------------------------- */
+
+    /** The timer's largest size per layout, sp, and the least it steps down to. */
+    const val TIMER_SMALL_SP = 40f
+    const val TIMER_WIDE_SP = 48f
+    const val TIMER_LARGE_SP = 56f
+    const val TIMER_MIN_SP = 20f
+    const val TIMER_STEP_SP = 2f
+
+    /** Below this the Small recording leaves the sport's tile out rather than squeeze it beside Open. */
+    const val MIN_TILE_DP = 32f
+
+    /** The red recording dot before "Recording", and the room after it. */
+    const val DOT_DP = 8f
+    const val DOT_GAP_DP = 6f
+
+    /** Between the timer and "Since 11:58" beside it. */
+    const val SINCE_GAP_DP = 12f
+
+    /** The timer's widest text, h:mm:ss past an hour: sized for it from the start so it never outgrows its room. */
+    const val TIMER_PATTERN = "0:00:00"
+
+    /**
+     * The timer's width at [sp], dp: a Chronometer is a TextView, its size in sp, so it scales with the system font
+     * ([fontScale]) as the sums do. By letter with the captions' margin.
+     */
+    fun timerWidth(sp: Float, fontScale: Float): Float = letterEms(TIMER_PATTERN) * sp * fontScale * CAPTION_MARGIN
+
+    /** One line of the timer at [sp], dp. */
+    fun timerLine(sp: Float, fontScale: Float): Float = WidgetText.line(sp, fontScale)
+
+    /** Where "Since 11:58" goes: beside the timer, under it, or nowhere when there's no room. */
+    enum class SincePlace { Beside, Under, None }
+
+    /**
+     * A recording layout: the sport's tile at [tile] dp and Open [open] dp high in the top row, the [name] shown, the
+     * "Recording" line under it when [status] (the Wide and Large), the timer at [timerSp], "Since 11:58" at [since],
+     * the Large's [figures], and the height of it all without gaps, which [gaps] share.
+     */
+    data class Recording(
+        val tile: Float, val open: Float, val name: String, val status: Boolean, val timerSp: Float, val since: SincePlace,
+        val figures: Figures?, val content: Float, val gaps: Int,
+    ) {
+        val sizes: Sizes get() = Sizes(tile, open, 0f)
+
+        /** As [Block.edgeGap]: the Large's gap above and below, half of those between. */
+        fun edgeGap(height: Float): Float = ((height - content) / (gaps - 1) / 2).coerceAtLeast(0f)
+    }
+
+    /** The heights the timer steps through from [top], largest first. */
+    private fun timerSizes(top: Float): List<Float> = generateSequence(top) { it - TIMER_STEP_SP }.takeWhile { it >= TIMER_MIN_SP }.toList()
+
+    /**
+     * The Small recording in [width] by [height] dp: the sport's tile top left (smaller when Open needs the room) and
+     * Open top right, then the timer as large as fits up to [TIMER_SMALL_SP], then the sport's name (the short one when
+     * the full one won't fit), then "Since 11:58" under it when the height allows.
+     */
+    fun smallRecording(r: StartRecording, width: Float, height: Float, fontScale: Float): Recording {
+        val open = PLAY_DP
+        val tile = minOf(56f, width - SMALL_GAP_DP - openWidth(fontScale)).coerceAtLeast(0f)
+        val top = maxOf(tile, open)
+        val name = if (fits(r.sport.name, WidgetText.BODY_SP, width, fontScale)) r.sport.name else r.sport.shortName
+        val words = body(fontScale)
+        val sinceH = secondary(fontScale)
+        for (sp in timerSizes(TIMER_SMALL_SP)) {
+            if (timerWidth(sp, fontScale) > width) continue
+            val base = top + timerLine(sp, fontScale) + words
+            if (base + MIN_GAP_DP > height) continue
+            val since = fits(r.since, WidgetText.SECONDARY_SP, width, fontScale) && base + sinceH + MIN_GAP_DP <= height
+            return Recording(tile, open, name, false, sp, if (since) SincePlace.Under else SincePlace.None, null, base + if (since) sinceH else 0f, 3)
+        }
+        return Recording(tile, open, name, false, TIMER_MIN_SP, SincePlace.None, null, top + timerLine(TIMER_MIN_SP, fontScale) + words, 3)
+    }
+
+    /** The Wide recording: the top row, then the timer with "Since" beside or under it, as large as fits. */
+    fun wideRecording(r: StartRecording, width: Float, height: Float, fontScale: Float): Recording =
+        rowRecording(r, null, TIMER_WIDE_SP, width, height, fontScale)
+
+    /** The Large recording: the Wide's, then the hairline and This week and the usual's last, as idle. */
+    fun largeRecording(r: StartRecording, m: StartWidgetModel, width: Float, height: Float, fontScale: Float): Recording =
+        rowRecording(r, figures(m, width, fontScale), TIMER_LARGE_SP, width, height, fontScale)
+
+    /**
+     * The Wide's and Large's recording in [width] by [height] dp: the top row (the sport's tile, its name over the red
+     * dot and "Recording", Open), then the timer as large as fits up to [top] sp, "Since 11:58" beside it when the
+     * width allows, else under it when the height does, else left out. The biggest timer wins over the biggest tile.
+     */
+    private fun rowRecording(r: StartRecording, figures: Figures?, top: Float, width: Float, height: Float, fontScale: Float): Recording {
+        val under = figures?.let { it.height + 1f + 2 * MIN_GAP_DP } ?: 0f
+        val gaps = if (figures != null) 5 else 3
+        val sinceW = WidgetText.width(r.since, WidgetText.SECONDARY_SP, fontScale)
+        for (sp in timerSizes(top)) for (sz in ROW_SIZES) {
+            val room = width - sz.tile - 2 * ROW_GAP_DP - openWidth(fontScale)
+            val name = if (fits(r.sport.name, WidgetText.BODY_SP, room, fontScale)) r.sport.name else r.sport.shortName
+            val status = fits(r.status, WidgetText.SECONDARY_SP, room - DOT_DP - DOT_GAP_DP, fontScale)
+            val row = maxOf(sz.tile, sz.play, body(fontScale) + if (status) secondary(fontScale) else 0f)
+            val timerW = timerWidth(sp, fontScale)
+            if (timerW > width) continue
+            val timer = timerLine(sp, fontScale)
+            val beside = timerW + SINCE_GAP_DP + sinceW <= width
+            val since = when {
+                beside -> SincePlace.Beside
+                row + timer + secondary(fontScale) + MIN_GAP_DP + under <= height -> SincePlace.Under
+                else -> SincePlace.None
+            }
+            val block = row + timer + (if (since == SincePlace.Under) secondary(fontScale) else 0f)
+            if (block + MIN_GAP_DP + under > height) continue
+            return Recording(sz.tile, sz.play, name, status, sp, since, figures, block + (figures?.let { it.height + 1f } ?: 0f), gaps)
+        }
+        val sz = ROW_SIZES.last()
+        val row = maxOf(sz.tile, sz.play, body(fontScale))
+        return Recording(sz.tile, sz.play, r.sport.shortName, false, TIMER_MIN_SP, SincePlace.None, figures,
+            row + timerLine(TIMER_MIN_SP, fontScale) + (figures?.let { it.height + 1f } ?: 0f), gaps)
     }
 }

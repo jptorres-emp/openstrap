@@ -4,7 +4,10 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Paint
+import android.os.SystemClock
 import android.util.Log
+import android.util.TypedValue
+import android.widget.RemoteViews
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
@@ -16,6 +19,7 @@ import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.LocalContext
 import androidx.glance.action.clickable
+import androidx.glance.appwidget.AndroidRemoteViews
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.background
@@ -40,6 +44,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import org.openstrap.app.MainActivity
 import org.openstrap.app.OpenStrapApp
+import org.openstrap.app.R
+import org.openstrap.app.data.WorkoutRecorder
 import org.openstrap.app.data.Workouts
 import org.openstrap.app.device.WorkoutState
 import org.openstrap.app.ui.glow.ControlSurface
@@ -79,7 +85,10 @@ class StartWidget : LoadingWidget<StartWidget.Shown>(WidgetKind.Start) {
          */
         internal suspend fun load(context: Context, now: Instant = Instant.now(), zone: ZoneId = ZoneId.systemDefault()): Shown {
             val container = (context.applicationContext as OpenStrapApp).container
-            val recording = (container.workout.state.value as? WorkoutState.Recording)?.workout?.let { it.sportType to it.start }
+            val recording = (container.workout.state.value as? WorkoutState.Recording)?.let { r ->
+                val w = r.workout
+                StartRecordingInput(w.sportType, w.start, WorkoutRecorder.activeSeconds(w, now.epochSecond), r.paused)
+            }
             val model = try {
                 val dao = container.database.healthDao()
                 val workouts = Workouts.listed(
@@ -162,9 +171,13 @@ private fun StartContent(data: StartWidget.Shown) {
     val open = if (m.recording != null) openLiveWorkout(context) else openReady(context, m.usual.sportType)
     // The side padding is half the card's, so the tile captions can run into it; everything else pads back ([Inset]).
     EdgeWidget(edgeLight(EdgeStatus.Usual, EdgeKind.Live), Ink, data.mood, open, BITMAP_EXTRA, sidePadding = WidgetSizes.PADDING_DP - StartLayout.CAPTION_BLEED_DP) { frame ->
-        when (frame.bucket) {
-            WidgetSizes.Small -> Column(GlanceModifier.fillMaxSize().then(Inset)) { SmallContent(m, frame) }
-            WidgetSizes.Wide -> WideContent(m, frame)
+        val rec = m.recording
+        when {
+            rec != null && frame.bucket == WidgetSizes.Small -> Column(GlanceModifier.fillMaxSize().then(Inset)) { SmallRecording(m, rec, frame) }
+            rec != null && frame.bucket == WidgetSizes.Wide -> WideRecording(m, rec, frame)
+            rec != null -> LargeRecording(m, rec, frame)
+            frame.bucket == WidgetSizes.Small -> Column(GlanceModifier.fillMaxSize().then(Inset)) { SmallContent(m, frame) }
+            frame.bucket == WidgetSizes.Wide -> WideContent(m, frame)
             else -> LargeContent(m, frame)
         }
     }
@@ -172,15 +185,12 @@ private fun StartContent(data: StartWidget.Shown) {
 
 /**
  * Small: the usual's tile, then its name and "Your usual" with play at the foot, as the mockup has it. When the name
- * won't fit beside play, play moves up beside a bigger tile. While recording: the sport, "Recording since" and Open.
- * One line each, never wrapped. The spare height is shared above, between and below, so nothing leaves a hole.
+ * won't fit beside play, play moves up beside a bigger tile. One line each, never wrapped. The spare height is shared above, between and below, so nothing leaves a hole.
  */
 @Composable
 private fun ColumnScope.SmallContent(m: StartWidgetModel, f: WidgetFrame) {
-    val rec = m.recording
-    val sport = rec?.sport ?: m.usual
-    val lines = rec?.let { StartLayout.recordingLines(it) } ?: listOf(StartWidgetModel.USUAL)
-    val fit = StartLayout.small(sport, lines, rec != null, f.contentWidth, f.contentHeight, f.fontScale)
+    val sport = m.usual
+    val fit = StartLayout.small(sport, listOf(StartWidgetModel.USUAL), false, f.contentWidth, f.contentHeight, f.fontScale)
     val sz = fit.sizes
     val words: @Composable () -> Unit = {
         Text(fit.words.name, style = NameStyle, maxLines = 1)
@@ -189,14 +199,14 @@ private fun ColumnScope.SmallContent(m: StartWidgetModel, f: WidgetFrame) {
     Spacer(GlanceModifier.defaultWeight())
     if (fit.actionTop) {
         Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            if (fit.tile) UsualTile(sport, rec != null, sz, f.density)
+            if (fit.tile) UsualTile(sport, false, sz, f.density)
             Spacer(GlanceModifier.defaultWeight())
             Action(m, sz, f)
         }
         Spacer(GlanceModifier.defaultWeight())
         Column(GlanceModifier.fillMaxWidth()) { words() }
     } else {
-        UsualTile(sport, rec != null, sz, f.density)
+        UsualTile(sport, false, sz, f.density)
         Spacer(GlanceModifier.defaultWeight())
         Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Column(GlanceModifier.defaultWeight()) { words() }
@@ -209,7 +219,7 @@ private fun ColumnScope.SmallContent(m: StartWidgetModel, f: WidgetFrame) {
 
 /**
  * Wide: the usual row over the tiles, at the largest sizes that keep four sports, the spare height shared above,
- * between and below. While recording, the workout's row alone.
+ * between and below.
  */
 @Composable
 private fun ColumnScope.WideContent(m: StartWidgetModel, f: WidgetFrame) {
@@ -225,7 +235,6 @@ private fun ColumnScope.WideContent(m: StartWidgetModel, f: WidgetFrame) {
 
 /**
  * Large: the Wide, a hairline, then This week and the usual sport's last, the spare height shared between them all.
- * While recording, the workout's row over the figures.
  */
 @Composable
 private fun ColumnScope.LargeContent(m: StartWidgetModel, f: WidgetFrame) {
@@ -239,10 +248,7 @@ private fun ColumnScope.LargeContent(m: StartWidgetModel, f: WidgetFrame) {
         TileRow(it, f)
         Spacer(GlanceModifier.defaultWeight())
     }
-    // Padded back to 20 dp outside the line: a background would fill a padding of its own.
-    Box(GlanceModifier.fillMaxWidth().then(Inset)) {
-        Box(GlanceModifier.fillMaxWidth().height(1.dp).background(ColorProvider(Color.White.copy(alpha = HAIRLINE_ALPHA)))) {}
-    }
+    Hairline()
     Spacer(GlanceModifier.defaultWeight())
     b.figures?.let { Figures(m, it) }
     Spacer(GlanceModifier.height(edge.dp))
@@ -251,11 +257,10 @@ private fun ColumnScope.LargeContent(m: StartWidgetModel, f: WidgetFrame) {
 /** The usual's tile, its name over "Your usual, GPS on" with the location mark, and play; or the workout recording. */
 @Composable
 private fun UsualRow(m: StartWidgetModel, b: StartLayout.Block, f: WidgetFrame) {
-    val rec = m.recording
-    val sport = rec?.sport ?: m.usual
+    val sport = m.usual
     val words = b.row.words
     Row(GlanceModifier.fillMaxWidth().then(Inset), verticalAlignment = Alignment.CenterVertically) {
-        UsualTile(sport, rec != null, b.sizes, f.density)
+        UsualTile(sport, false, b.sizes, f.density)
         Spacer(GlanceModifier.width(StartLayout.ROW_GAP_DP.dp))
         Column(GlanceModifier.defaultWeight()) {
             Text(words.name, style = NameStyle, maxLines = 1)
@@ -276,6 +281,123 @@ private fun UsualRow(m: StartWidgetModel, b: StartLayout.Block, f: WidgetFrame) 
         }
         Spacer(GlanceModifier.width(StartLayout.ROW_GAP_DP.dp))
         Action(m, b.sizes, f)
+    }
+}
+
+/* ------------------------------------------------------------------------------------------------ */
+/* Recording                                                                                         */
+/* ------------------------------------------------------------------------------------------------ */
+
+/**
+ * Small while recording: the sport's tile and Open in the top row, then the live timer, the sport's name and, room
+ * allowing, "Since 11:58". The spare height shared above, between and below.
+ */
+@Composable
+private fun ColumnScope.SmallRecording(m: StartWidgetModel, r: StartRecording, f: WidgetFrame) {
+    val fit = StartLayout.smallRecording(r, f.contentWidth, f.contentHeight, f.fontScale)
+    Spacer(GlanceModifier.defaultWeight())
+    Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        if (fit.tile >= StartLayout.MIN_TILE_DP) UsualTile(r.sport, true, StartLayout.Sizes(fit.tile, fit.open, 0f), f.density)
+        Spacer(GlanceModifier.defaultWeight())
+        Action(m, fit.sizes, f)
+    }
+    Spacer(GlanceModifier.defaultWeight())
+    Column(GlanceModifier.fillMaxWidth()) {
+        Timer(r, fit.timerSp)
+        Text(fit.name, style = NameStyle, maxLines = 1)
+        if (fit.since == StartLayout.SincePlace.Under) Text(r.since, style = WidgetType.secondary, maxLines = 1)
+    }
+    Spacer(GlanceModifier.defaultWeight())
+}
+
+/** Wide while recording: the sport's row with "Recording" and Open, then the timer as the hero. */
+@Composable
+private fun ColumnScope.WideRecording(m: StartWidgetModel, r: StartRecording, f: WidgetFrame) {
+    val fit = StartLayout.wideRecording(r, f.contentWidth, f.contentHeight, f.fontScale)
+    Spacer(GlanceModifier.defaultWeight())
+    RecordingRow(m, r, fit, f)
+    Spacer(GlanceModifier.defaultWeight())
+    TimerRow(r, fit)
+    Spacer(GlanceModifier.defaultWeight())
+}
+
+/** Large while recording: the Wide's, then the hairline and the week's figures, secondary to the timer. */
+@Composable
+private fun ColumnScope.LargeRecording(m: StartWidgetModel, r: StartRecording, f: WidgetFrame) {
+    val fit = StartLayout.largeRecording(r, m, f.contentWidth, f.contentHeight, f.fontScale)
+    val edge = fit.edgeGap(f.drawHeight - 2 * WidgetSizes.PADDING_DP)
+    Spacer(GlanceModifier.height(edge.dp))
+    RecordingRow(m, r, fit, f)
+    Spacer(GlanceModifier.defaultWeight())
+    TimerRow(r, fit)
+    Spacer(GlanceModifier.defaultWeight())
+    Hairline()
+    Spacer(GlanceModifier.defaultWeight())
+    fit.figures?.let { Figures(m, it) }
+    Spacer(GlanceModifier.height(edge.dp))
+}
+
+/** The sport's tile, its name over the red dot and "Recording" (white and "Paused" while paused), and Open. */
+@Composable
+private fun RecordingRow(m: StartWidgetModel, r: StartRecording, fit: StartLayout.Recording, f: WidgetFrame) {
+    Row(GlanceModifier.fillMaxWidth().then(Inset), verticalAlignment = Alignment.CenterVertically) {
+        UsualTile(r.sport, true, fit.sizes, f.density)
+        Spacer(GlanceModifier.width(StartLayout.ROW_GAP_DP.dp))
+        Column(GlanceModifier.defaultWeight()) {
+            Text(fit.name, style = NameStyle, maxLines = 1)
+            if (fit.status) Row(verticalAlignment = Alignment.CenterVertically) {
+                Image(
+                    ImageProvider(dotBitmap(if (r.paused) Color.White.copy(alpha = 0.5f) else Ink, f.density)),
+                    contentDescription = null,
+                    modifier = GlanceModifier.size(StartLayout.DOT_DP.dp),
+                    contentScale = ContentScale.FillBounds,
+                )
+                Spacer(GlanceModifier.width(StartLayout.DOT_GAP_DP.dp))
+                Text(r.status, style = WidgetType.secondary, maxLines = 1)
+            }
+        }
+        Spacer(GlanceModifier.width(StartLayout.ROW_GAP_DP.dp))
+        Action(m, fit.sizes, f)
+    }
+}
+
+/** The timer, with "Since 11:58" beside it (on its baseline side) or under it, where the layout found room. */
+@Composable
+private fun TimerRow(r: StartRecording, fit: StartLayout.Recording) {
+    when (fit.since) {
+        StartLayout.SincePlace.Beside -> Row(GlanceModifier.fillMaxWidth().then(Inset), verticalAlignment = Alignment.Bottom) {
+            Timer(r, fit.timerSp)
+            Spacer(GlanceModifier.width(StartLayout.SINCE_GAP_DP.dp))
+            Text(r.since, style = WidgetType.secondary, maxLines = 1)
+        }
+        StartLayout.SincePlace.Under -> Column(GlanceModifier.fillMaxWidth().then(Inset)) {
+            Timer(r, fit.timerSp)
+            Text(r.since, style = WidgetType.secondary, maxLines = 1)
+        }
+        StartLayout.SincePlace.None -> Box(GlanceModifier.fillMaxWidth().then(Inset)) { Timer(r, fit.timerSp) }
+    }
+}
+
+/**
+ * The live timer: a RemoteViews Chronometer, which ticks on its own with no widget updates, h:mm:ss or mm:ss, at
+ * [sp] (so the system font scales it). Its base puts the workout's active time at now; paused, it stands still.
+ */
+@Composable
+private fun Timer(r: StartRecording, sp: Float) {
+    val context = LocalContext.current
+    val views = RemoteViews(context.packageName, R.layout.widget_chronometer).apply {
+        val base = StartRecording.chronometerBase(SystemClock.elapsedRealtime(), System.currentTimeMillis(), r)
+        setChronometer(R.id.widget_chronometer, base, null, !r.paused)
+        setTextViewTextSize(R.id.widget_chronometer, TypedValue.COMPLEX_UNIT_SP, sp)
+    }
+    AndroidRemoteViews(views)
+}
+
+/** The Large's hairline, padded back to 20 dp outside the line: a background would fill a padding of its own. */
+@Composable
+private fun Hairline() {
+    Box(GlanceModifier.fillMaxWidth().then(Inset)) {
+        Box(GlanceModifier.fillMaxWidth().height(1.dp).background(ColorProvider(Color.White.copy(alpha = HAIRLINE_ALPHA)))) {}
     }
 }
 
@@ -440,6 +562,12 @@ private fun pillBitmap(w: Float, h: Float, density: Float): Bitmap {
     return renderToBitmap(pw, ph) { c ->
         c.drawRoundRect(0f, 0f, pw, ph, ph / 2, ph / 2, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.White.toArgb() })
     }
+}
+
+/** The recording dot, [color], [StartLayout.DOT_DP] across. */
+private fun dotBitmap(color: Color, density: Float): Bitmap {
+    val s = StartLayout.DOT_DP * density
+    return renderToBitmap(s, s) { c -> c.drawCircle(s / 2, s / 2, s / 2, Paint(Paint.ANTI_ALIAS_FLAG).apply { this.color = color.toArgb() }) }
 }
 
 /** [icon] alone in [color], [sizeDp] square. */

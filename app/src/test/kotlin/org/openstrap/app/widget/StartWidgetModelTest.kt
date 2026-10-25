@@ -48,7 +48,7 @@ class StartWidgetModelTest {
 
     private fun model(
         workouts: List<WorkoutAnalysis> = history, sides: Map<Int, Boolean> = emptyMap(), location: Boolean = true,
-        recording: Pair<Int, Long>? = null,
+        recording: StartRecordingInput? = null,
     ) = StartWidgetModel.from(workouts, sides, location, recording, now, zone, Locale.UK)
 
     @Test fun `the usual is the sport done most, the next four by use`() {
@@ -125,12 +125,77 @@ class StartWidgetModelTest {
         assertEquals("10 Oct", recentDay(java.time.LocalDate.of(2026, 10, 10), java.time.LocalDate.of(2026, 10, 24), Locale.UK))
     }
 
-    @Test fun `while recording, the sport and since when`() {
-        val m = model(recording = 4 to at(24, 17, 42).epochSecond)
+    @Test fun `while recording, the sport, since when and the active time`() {
+        val m = model(recording = StartRecordingInput(4, at(24, 11, 58).epochSecond, 1_500L, paused = false))
         val rec = assertNotNullAnd(m.recording)
         assertEquals("Outdoor cycling", rec.sport.name)
-        assertEquals("Recording since 17:42", rec.since)
+        assertEquals("Since 11:58", rec.since)
+        assertEquals("Recording", rec.status)
         assertEquals(4, rec.sport.shownType)
+        assertEquals(1_500_000L, rec.activeMillis)
+        assertEquals(now.toEpochMilli(), rec.atMillis)
+        assertEquals("Paused", model(recording = StartRecordingInput(4, 0L, 60L, paused = true)).recording!!.status)
+    }
+
+    @Test fun `the timer's base puts the active time at now, and stands still paused`() {
+        val r = model(recording = StartRecordingInput(4, at(24, 11, 58).epochSecond, 1_500L, paused = false)).recording!!
+        val elapsed = 9_000_000L
+        // Loaded now: 25 minutes back from the elapsed clock.
+        assertEquals(elapsed - 1_500_000L, StartRecording.chronometerBase(elapsed, r.atMillis, r))
+        // Drawn 10 s after loading: 10 s more have passed.
+        assertEquals(elapsed - 1_510_000L, StartRecording.chronometerBase(elapsed, r.atMillis + 10_000L, r))
+        // Paused, the time at the pause whenever it's drawn.
+        val p = r.copy(paused = true)
+        assertEquals(elapsed - 1_500_000L, StartRecording.chronometerBase(elapsed, r.atMillis + 60_000L, p))
+    }
+
+    @Test fun `the recording layouts fit every cell and font, one line each, the timer whole`() {
+        val r = model(recording = StartRecordingInput(60, at(24, 11, 58).epochSecond, 1_500L, paused = false)).recording!!
+        val walk = r.copy(sport = StartSport.recorded(40))
+        val m = model().copy(weekLine = "5 workouts, 10 min", lastLine = "Yesterday, 1 min")
+        for (s in scales) for (rec in listOf(r, walk)) {
+            for ((w, h) in smallCells) {
+                val fit = StartLayout.smallRecording(rec, w, h, s)
+                val where = "Small $w x $h at $s"
+                assertTrue("$where: timer too wide", StartLayout.timerWidth(fit.timerSp, s) <= w)
+                assertTrue("$where: name wraps", one(fit.name, WidgetText.BODY_SP, w, s) || fit.name == rec.sport.shortName)
+                assertTrue("$where: too tall ${fit.content}", fit.content <= h)
+                if (fit.tile >= StartLayout.MIN_TILE_DP) assertTrue("$where: top row", fit.tile + StartLayout.SMALL_GAP_DP + StartLayout.openWidth(s) <= w)
+            }
+            for ((w, h) in wideCells) {
+                val fit = StartLayout.wideRecording(rec, w, h, s)
+                val where = "Wide $w x $h at $s"
+                assertTrue("$where: timer too wide", StartLayout.timerWidth(fit.timerSp, s) <= w)
+                if (fit.since == StartLayout.SincePlace.Beside) {
+                    assertTrue(where, StartLayout.timerWidth(fit.timerSp, s) + StartLayout.SINCE_GAP_DP + WidgetText.width(rec.since, WidgetText.SECONDARY_SP, s) <= w)
+                }
+                assertTrue("$where: too tall ${fit.content}", fit.content + StartLayout.MIN_GAP_DP <= h)
+            }
+            for ((w, h) in largeCells) {
+                val fit = StartLayout.largeRecording(rec, m, w, h, s)
+                assertTrue("Large $w x $h at $s: too tall ${fit.content}", fit.content + 3 * StartLayout.MIN_GAP_DP <= h)
+            }
+        }
+        // At the minimum Small the tile stays beside Open at the fonts phones use.
+        for (s in listOf(1f, 1.08f)) assertTrue(StartLayout.smallRecording(walk, 110f, 110f, s).tile >= StartLayout.MIN_TILE_DP)
+        // The timer is the hero: as large as the spec's sizes on One UI's 4 x 2 and 4 x 3.
+        assertEquals(StartLayout.TIMER_WIDE_SP, StartLayout.wideRecording(r, 313f, 180f, 1f).timerSp, 0f)
+        assertTrue(StartLayout.largeRecording(r, m, 313f, 290f, 1.08f).timerSp >= 48f)
+    }
+
+    @Test fun `recording on One UI's cells leaves no gap over 32 dp`() {
+        val r = model(recording = StartRecordingInput(40, at(24, 11, 58).epochSecond, 1_500L, paused = false)).recording!!
+        val m = model().copy(weekLine = "5 workouts, 10 min", lastLine = "Yesterday, 1 min")
+        for (s in listOf(1f, 1.08f, 1.3f)) {
+            val small = StartLayout.smallRecording(r, 140f, 180f, s)
+            assertTrue("Small at $s: ${(180f - small.content) / small.gaps}", (180f - small.content) / small.gaps <= 32f)
+            val wide = StartLayout.wideRecording(r, 313f, 180f, s)
+            assertTrue("Wide at $s: ${(180f - wide.content) / wide.gaps}", (180f - wide.content) / wide.gaps <= 32f)
+            val large = StartLayout.largeRecording(r, m, 313f, 290f, s)
+            val edge = large.edgeGap(290f)
+            val inner = (290f - large.content - 2 * edge) / (large.gaps - 2)
+            assertTrue("Large at $s: $inner", inner <= 32f)
+        }
     }
 
     private fun <T> assertNotNullAnd(v: T?): T {
@@ -159,8 +224,8 @@ class StartWidgetModelTest {
 
     @Test fun `the Small's words are one line each, in every cell and font`() {
         val sports = listOf(1, 52, 7, 23, 222, 2).map { StartSport.of(it, emptyMap()) }
-        for ((w, h) in smallCells) for (s in scales) for (sp in sports) for (rec in listOf(false, true)) {
-            val lines = if (rec) StartLayout.recordingLines(StartRecording(sp, "Recording since 17:42")) else listOf(StartWidgetModel.USUAL)
+        for ((w, h) in smallCells) for (s in scales) for (sp in sports) for (rec in listOf(false)) {
+            val lines = listOf(StartWidgetModel.USUAL)
             val fit = StartLayout.small(sp, lines, rec, w, h, s)
             val action = fit.sizes.action(rec, s)
             val room = if (fit.actionTop) w else w - action - StartLayout.SMALL_GAP_DP

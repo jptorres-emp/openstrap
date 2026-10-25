@@ -139,17 +139,22 @@ class WorkoutSession(
         scope.launch {
             var was: Boolean? = null
             var wasKind: Class<*>? = null
+            var wasPaused: Boolean? = null
             _state.collect { st ->
                 val recording = st is WorkoutState.Recording
-                // A summary closing can follow a discard, which takes a workout out of Start's week.
+                val paused = (st as? WorkoutState.Recording)?.paused
+                // A summary closing can follow a discard, which takes a workout out of Start's week. A pause or a
+                // resume stops or restarts Start's timer.
                 val kinds = when {
                     was != null && was != recording -> setOf(WidgetKind.Moment, WidgetKind.Start)
                     wasKind != null && wasKind != st::class.java -> setOf(WidgetKind.Start)
+                    paused != null && wasPaused != null && paused != wasPaused -> setOf(WidgetKind.Start)
                     else -> emptySet()
                 }
                 if (kinds.isNotEmpty()) WidgetUpdater.changed(context, kinds)
                 was = recording
                 wasKind = st::class.java
+                wasPaused = paused
             }
         }
     }

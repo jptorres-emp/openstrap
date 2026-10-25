@@ -74,6 +74,12 @@ data class UserProfile(
     val isEmpty get() = birthYear == null && sex == null && weightKg == null && heightCm == null
 }
 
+/**
+ * The strap as last seen, kept for widgets: [battery] and [charging] from the last connection (null battery before
+ * one), [lastSyncDone] when a history sync last finished (epoch seconds), null before one.
+ */
+data class StrapSnapshot(val paired: Boolean, val battery: Int?, val charging: Boolean, val lastSyncDone: Long?)
+
 /** Notification buzz patterns: alternating vibrate and pause milliseconds for the strap's motor. */
 enum class BuzzPattern(val label: String, val millis: List<Int>) {
     ONE_SHORT("Single", listOf(200)),
@@ -367,6 +373,31 @@ class SettingsStore(private val context: Context) {
 
     suspend fun setBuzzOnNotifications(enabled: Boolean) {
         context.dataStore.edit { it[buzzNotifications] = enabled }
+    }
+
+    private val strapBattery = androidx.datastore.preferences.core.intPreferencesKey("strap_battery")
+    private val strapCharging = androidx.datastore.preferences.core.booleanPreferencesKey("strap_charging")
+    private val syncDone = longPreferencesKey("strap_last_sync_done")
+
+    /**
+     * What a widget's strap status line reads with the strap away (widgets spec 5): pairing, the battery and charging
+     * as last connected, and when a sync last finished.
+     */
+    val strapSnapshot: Flow<StrapSnapshot> = context.dataStore.data.map { prefs ->
+        StrapSnapshot(prefs[address] != null && prefs[authKey] != null, prefs[strapBattery], prefs[strapCharging] == true, prefs[syncDone])
+    }
+
+    /** The connected strap's battery and charging, written when either changes. */
+    suspend fun setStrapBattery(percent: Int, charging: Boolean) {
+        context.dataStore.edit {
+            it[strapBattery] = percent
+            it[strapCharging] = charging
+        }
+    }
+
+    /** When a history sync last finished (epoch seconds). Per type cursors are [lastSync]. */
+    suspend fun setLastSyncDone(epochSeconds: Long) {
+        context.dataStore.edit { it[syncDone] = epochSeconds }
     }
 
     /** Last synced timestamp (epoch seconds) for a history data type. */

@@ -21,13 +21,13 @@ class CopyPunctuationTest {
     private val root: File = listOf(File("src/main"), File("app/src/main")).first { it.isDirectory }
     private val kotlinRoot = File(root, "kotlin/org/openstrap/app")
 
-    /** Everything under ui/, every *Copy*.kt, the notification text in StrapService and data the UI shows as is. */
+    /** Everything under ui/ and widget/, every *Copy*.kt, the notification text in StrapService and data the UI shows as is. */
     private fun sources(): List<File> {
         val all = kotlinRoot.walkTopDown().filter { it.isFile && it.extension == "kt" }.toList()
         val named = setOf("device/StrapService.kt", "data/Recovery.kt", "data/settings/Goals.kt")
         return all.filter { f ->
             val path = f.relativeTo(kotlinRoot).invariantSeparatorsPath
-            path.startsWith("ui/") || "Copy" in f.name || path in named
+            path.startsWith("ui/") || path.startsWith("widget/") || "Copy" in f.name || path in named
         }.sortedBy { it.path }
     }
 

@@ -29,6 +29,7 @@ import org.openstrap.app.data.db.AppWorkoutRoutePoint
 import org.openstrap.app.data.Route
 import org.openstrap.app.data.db.HealthDao
 import org.openstrap.app.data.settings.SettingsStore
+import org.openstrap.app.widget.WidgetKind
 import kotlin.math.roundToInt
 
 sealed interface WorkoutState {
@@ -129,6 +130,18 @@ class WorkoutSession(
     private val buffer = mutableListOf<AppWorkoutHeartRate>()
     private var lastSecond = -1L
     private var wake: PowerManager.WakeLock? = null
+
+    init {
+        // A workout starting or ending changes the moment and the Start widget (widgets spec 7).
+        scope.launch {
+            var was: Boolean? = null
+            _state.collect { st ->
+                val recording = st is WorkoutState.Recording
+                if (was != null && was != recording) WidgetUpdater.changed(context, setOf(WidgetKind.Moment, WidgetKind.Start))
+                was = recording
+            }
+        }
+    }
 
     /** Picks up a workout left recording when the process died, then starts watching for auto-start. Called once at app start. */
     fun restore() {

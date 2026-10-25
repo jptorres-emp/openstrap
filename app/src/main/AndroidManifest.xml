@@ -30,6 +30,9 @@
     <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
     <!-- Only to see when a call rings, so the strap can buzz. No numbers or call log are read. -->
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+    <!-- A home screen widget's moment changes on time when "Alarms and reminders" allows it, else up to 5 minutes
+         late (widgets spec 7). Never USE_EXACT_ALARM, which is for clocks and calendars. -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
 
     <!-- Companion device association with the paired strap (no watch profile): lets OpenStrap run and reconnect
          in the background and wakes it when the strap comes into range. -->
@@ -114,6 +117,11 @@
             </intent-filter>
             <meta-data android:name="android.service.quicksettings.ACTIVE_TILE" android:value="false" />
         </service>
+
+        <!-- The widgets' moment and midnight alarms (WidgetUpdater). Not a widget. -->
+        <receiver
+            android:name=".device.WidgetAlarmReceiver"
+            android:exported="false" />
 
         <service
             android:name=".device.StrapPresenceService"

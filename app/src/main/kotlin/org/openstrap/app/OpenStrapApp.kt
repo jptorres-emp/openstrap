@@ -41,5 +41,7 @@ class OpenStrapApp : Application() {
         // Android restarts the process on its own (companion presence, a reboot): reconnect without the screen.
         // A no-op when nothing is paired, a connection is already up, or the user tapped Disconnect.
         if (checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) container.strap.backgroundConnect()
+        // Widgets turn the day over at midnight; alarms don't survive a reboot or an update, so set it on each start.
+        org.openstrap.app.device.WidgetUpdater.scheduleMidnight(this)
     }
 }

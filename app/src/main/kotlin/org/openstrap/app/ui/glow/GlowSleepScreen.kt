@@ -62,6 +62,8 @@ import org.openstrap.app.ui.dashboard.sleepCards
 import org.openstrap.app.ui.dashboard.sleepWeek
 import org.openstrap.app.ui.theme.AppIcons
 import org.openstrap.app.ui.theme.MetricColors
+import org.openstrap.app.ui.glow.draw.StageBarLook
+import org.openstrap.app.ui.glow.draw.stageTotals
 
 /*
  * The Sleep tab (spec 5.2): "how did I sleep, and is it trending right". The night glows with its stages, the
@@ -129,12 +131,6 @@ internal val SleepGlow = GlowStyle.Midnight.copy(
 
 private fun clock(epoch: Long) = Instant.ofEpochSecond(epoch).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("HH:mm"))
 
-/** The stages in the order the hero adds them up: deepest first, awake last. */
-private val STAGE_ORDER = listOf(
-    org.openstrap.app.data.db.SleepStage.DEEP, org.openstrap.app.data.db.SleepStage.REM,
-    org.openstrap.app.data.db.SleepStage.LIGHT, org.openstrap.app.data.db.SleepStage.AWAKE,
-)
-
 /**
  * The night (spec 5.2, the sleep hero): how long, against the rest of the week, then the score in dots with its word
  * and how often you woke beside it, the one dotted number on the card. The stages to scrub in their colours, then
@@ -171,7 +167,7 @@ private fun NightHero(state: DayUiState, firstNights: Boolean, onOpen: () -> Uni
             }
             state.sleepBreakdown?.let { b ->
                 // Stage totals as text, never dots (spec 2.3): a stage under a minute leaves its segment and legend out.
-                val totals = STAGE_ORDER.mapNotNull { st -> (b.byStage[st] ?: 0L).takeIf { it >= 60 }?.let { st to it } }
+                val totals = stageTotals(b.byStage)
                 if (totals.isNotEmpty()) {
                     Spacer(Modifier.height(16.dp))
                     StageBar(totals)
@@ -183,12 +179,15 @@ private fun NightHero(state: DayUiState, firstNights: Boolean, onOpen: () -> Uni
     }
 }
 
-/** The stage bar (chart kit): one 8 dp bar split by stage, deepest first, with 2 dp gaps. */
+/**
+ * The stage bar (chart kit): one 8 dp bar split by stage, deepest first, with 2 dp gaps, sized by [StageBarLook] as a
+ * widget's bar is ([stageBarSegments] lays that one out in whole pixels the way this Row does).
+ */
 @Composable
 private fun StageBar(totals: List<Pair<Int, Long>>) {
-    Row(Modifier.fillMaxWidth().height(8.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+    Row(Modifier.fillMaxWidth().height(StageBarLook.HEIGHT_DP.dp), horizontalArrangement = Arrangement.spacedBy(StageBarLook.GAP_DP.dp)) {
         totals.forEach { (stage, seconds) ->
-            Box(Modifier.weight(seconds.toFloat()).fillMaxHeight().background(stageColor(stage), RoundedCornerShape(3.dp)))
+            Box(Modifier.weight(seconds.toFloat()).fillMaxHeight().background(stageColor(stage), RoundedCornerShape(StageBarLook.CORNER_DP.dp)))
         }
     }
 }

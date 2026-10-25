@@ -16,18 +16,17 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithCache
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlin.math.exp
 import org.openstrap.app.ui.components.LocalCardNumbers
 import org.openstrap.app.ui.components.cardOpening
 import org.openstrap.app.ui.components.pressClickable
+import org.openstrap.app.ui.glow.draw.brush
+import org.openstrap.app.ui.glow.draw.drawEdge
+import org.openstrap.app.ui.glow.draw.edgeLevel
+import org.openstrap.app.ui.glow.draw.edgePaint
 
 /*
  * The middle tier of the glow language: a near-black card with a soft glow coming in from one edge in the metric's
@@ -104,8 +103,6 @@ data class EdgeOverride(val edge: Edge? = null, val color: Color? = null)
 val LocalEdgeOverride = staticCompositionLocalOf { EdgeOverride() }
 
 private val EdgeShape = GlowLayout.CardShape
-private val Surface = Color(0xFF0A0A0B)
-private val Hairline = Color.White.copy(alpha = GlowLayout.HairlineAlpha)
 
 /**
  * A card in the edge light tier, lit in [color] from the edge [edgeLight] picks for [status] and [kind], unless
@@ -127,7 +124,7 @@ fun EdgeCard(
     val override = LocalEdgeOverride.current
     // A level always fills from the left, so only its colour can be overridden.
     val light = edgeLight(status, kind).let { l -> override.edge?.takeIf { kind != EdgeKind.Level }?.let { l.copy(edge = it) } ?: l }
-    val level = progress?.takeIf { kind == EdgeKind.Level }?.coerceIn(MinLevel, 1f)
+    val level = edgeLevel(progress?.takeIf { kind == EdgeKind.Level })
     val tint = override.color ?: color
     val mood = LocalGlowMood.current
     // Tapped, the card grows into what it opens (spec 3.5).
@@ -137,47 +134,10 @@ fun EdgeCard(
             .then(opening?.modifier ?: Modifier)
             .let { if (onClick != null) it.pressClickable(opening?.onClick ?: onClick, EdgeShape) else it }
             .drawWithCache {
-                val glow = if (light.strong) StrongGlow else SoftGlow
-                val depth = glow.depth.toPx()
-                // From the lit edge inward, the colour falling off like the blurred edge of a CSS inset shadow.
-                val (from, to) = when (light.edge) {
-                    Edge.Top -> Offset(0f, 0f) to Offset(0f, depth)
-                    Edge.Bottom -> Offset(0f, size.height) to Offset(0f, size.height - depth)
-                    Edge.Left -> Offset(0f, 0f) to Offset(depth, 0f)
-                    Edge.Right -> Offset(size.width, 0f) to Offset(size.width - depth, 0f)
-                }
-                val stops = glow.stops(mood.edge).map { (at, alpha) -> at to tint.copy(alpha = alpha) }.toTypedArray()
-                val brush = if (level == null) Brush.linearGradient(*stops, start = from, end = to) else {
-                    // The light fills across to the level, 46% of the ink at the left and 30% at the value, then fades
-                    // out over LevelFade past it on a smoothstep, so it never stops in a line (spec 2.1, Levels).
-                    val w = size.width
-                    val end = w * level
-                    val fade = LevelFade.toPx()
-                    val strength = mood.edge * (if (light.strong) 1.2f else 1f)
-                    val atValue = 0.30f * strength
-                    val past = List(LEVEL_FADE_STEPS) { i ->
-                        val t = (i + 1) / LEVEL_FADE_STEPS.toFloat()
-                        ((end + fade * t) / w).coerceIn(0f, 1f) to tint.copy(alpha = (atValue * (1f - t * t * (3f - 2f * t))).coerceIn(0f, 1f))
-                    }
-                    Brush.horizontalGradient(
-                        0f to tint.copy(alpha = (0.46f * strength).coerceIn(0f, 1f)),
-                        (end / w).coerceIn(0f, 1f) to tint.copy(alpha = atValue.coerceIn(0f, 1f)),
-                        *past.toTypedArray(),
-                    )
-                }
-                val radius = CornerRadius(GlowLayout.CardCorner.toPx())
-                val stroke = 1.dp.toPx()
-                onDrawBehind {
-                    drawRoundRect(Surface, cornerRadius = radius)
-                    drawRoundRect(brush, cornerRadius = radius)
-                    drawRoundRect(
-                        Hairline,
-                        topLeft = Offset(stroke / 2, stroke / 2),
-                        size = Size(size.width - stroke, size.height - stroke),
-                        cornerRadius = CornerRadius(radius.x - stroke / 2),
-                        style = Stroke(stroke),
-                    )
-                }
+                // The shared edge light ([edgePaint]), as a widget's background draws it.
+                val paint = edgePaint(light, tint, level, mood, size.width, size.height, density)
+                val glow = paint.glow.brush()
+                onDrawBehind { drawEdge(paint, glow) }
             }
             .padding(contentPadding),
     ) {
@@ -189,12 +149,8 @@ fun EdgeCard(
     }
 }
 
-/** A level card's lowest light, so an empty one still shows where it fills from. */
-private const val MinLevel = 0.04f
-
 /** How far past its level a level card's light fades out. */
 internal val LevelFade = 40.dp
-private const val LEVEL_FADE_STEPS = 6
 
 /** The 4 dp bar inside a progress edge card. */
 @Composable

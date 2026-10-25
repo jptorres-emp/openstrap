@@ -1,11 +1,7 @@
 package org.openstrap.app.ui.glow
 
-import android.graphics.BitmapShader
-import android.graphics.BlurMaskFilter
 import android.graphics.Paint
-import android.graphics.Path
 import android.graphics.RectF
-import android.graphics.Shader
 import android.provider.Settings
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -34,8 +30,6 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.TransformOrigin
@@ -45,7 +39,6 @@ import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.nativeCanvas
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -53,7 +46,6 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import kotlin.math.PI
-import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.exp
 import kotlin.math.floor
@@ -66,6 +58,12 @@ import kotlinx.coroutines.withContext
 import org.openstrap.app.ui.components.LocalCardNumbers
 import org.openstrap.app.ui.components.cardOpening
 import org.openstrap.app.ui.components.pressClickable
+import org.openstrap.app.ui.glow.draw.brush
+import org.openstrap.app.ui.glow.draw.drawGlowBase
+import org.openstrap.app.ui.glow.draw.drawGlowCore
+import org.openstrap.app.ui.glow.draw.glowPaint
+import org.openstrap.app.ui.glow.draw.grainShader
+import org.openstrap.app.ui.glow.draw.randomGrainSeed
 
 /**
  * A card in the glow language (see [GlowStyle]). Layers, back to front: rim-coloured fill, rim light,
@@ -106,7 +104,7 @@ fun GlowCard(
     val core = remember(lit) { lit.light().core }
     val slab = remember(palette) { lerp(palette.mid, Color.Black, 0.55f) }
     // Each card samples the grain tile from its own spot, so neighbouring cards never share a pattern.
-    val grainSeed = remember { Random.nextInt(GRAIN_TILE * GRAIN_TILE) }
+    val grainSeed = remember { randomGrainSeed(Random) }
     val drift = remember { CoreDrift(Random) }
     val seconds = remember { mutableFloatStateOf(0f) }
     // Beats so far, counted frame by frame at the bpm of the moment, so a new reading changes the pace from here on
@@ -217,33 +215,21 @@ private fun BoxScope.CoreLayer(b: GlowBitmaps, style: GlowStyle, core: CoreBox, 
 
 private val FILTER = Paint(Paint.FILTER_BITMAP_FLAG)
 
-/** An outline card's edge. */
-private val OUTLINE_WIDTH = 1.5.dp
-private const val OUTLINE_ALPHA = 0.7f
-
-/** Grain and the hairline edge with its gloss. */
+/** Grain and the hairline edge with its gloss, from the shared light ([glowPaint], as a widget's background draws them). */
 private fun CacheDrawScope.overlay(style: GlowStyle, grainSeed: Int): DrawResult {
+    val spec = glowPaint(style, size.width, size.height, density)
+    val outline = RoundedCornerShape(style.radius).createOutline(size, layoutDirection, this)
+    // On hold: only the edge, in the card's colour.
+    spec.outline?.let { color -> return onDrawBehind { drawOutline(outline, color, style = Stroke(spec.outlineWidth)) } }
     val grainPaint = Paint().apply {
         shader = grainShader(grainSeed)
-        alpha = (style.grain.coerceIn(0f, 1f) * 255).toInt()
+        alpha = spec.grainAlpha
     }
-    val hairline = Stroke(1.dp.toPx())
-    val outline = RoundedCornerShape(style.radius).createOutline(size, layoutDirection, this)
-    // A glossy edge: a lighter hairline along the top fading out down the sides. On a level card it follows the
-    // light instead: glossy along the lit edge, plain hairline on the unlit side.
-    val light = style.light()
-    val gloss = if (light.across) {
-        Brush.horizontalGradient(0f to Color.White.copy(alpha = 0.35f), 0.25f to Color.White.copy(alpha = 0.08f), 1f to Color.White.copy(alpha = 0.04f))
-    } else if (light.level != null && !light.fromAbove) {
-        Brush.verticalGradient(0f to Color.White.copy(alpha = 0.04f), 0.75f to Color.White.copy(alpha = 0.08f), 1f to Color.White.copy(alpha = 0.35f))
-    } else {
-        Brush.verticalGradient(0f to Color.White.copy(alpha = 0.35f), 0.25f to Color.White.copy(alpha = 0.08f), 1f to Color.White.copy(alpha = 0.04f))
-    }
-    // On hold: only the edge, in the card's colour.
-    if (style.outline) return onDrawBehind { drawOutline(outline, style.color.copy(alpha = OUTLINE_ALPHA), style = Stroke(OUTLINE_WIDTH.toPx())) }
+    val hairline = Stroke(spec.hairlineWidth)
+    val gloss = spec.gloss.brush()
     return onDrawBehind {
-        if (style.grain > 0f) drawIntoCanvas { it.nativeCanvas.drawPaint(grainPaint) }
-        drawOutline(outline, Color.White.copy(alpha = GlowLayout.HairlineAlpha), style = hairline)
+        if (spec.grainAlpha > 0) drawIntoCanvas { it.nativeCanvas.drawPaint(grainPaint) }
+        drawOutline(outline, spec.hairline, style = hairline)
         drawOutline(outline, gloss, style = hairline)
     }
 }
@@ -279,102 +265,16 @@ private object GlowCache {
     private const val MAX_ENTRIES = 10
 }
 
-/** Renders the base and the core layer at half resolution (blur hides it), as GPU bitmaps. */
-private fun render(style: GlowStyle, w: Float, h: Float, density: Density): GlowBitmaps = with(density) {
-    val p = GlowPalette(style)
-    val light = style.light()
-    val r = style.radius.toPx()
-    val area = Size(w, h)
-
-    val base = halfResBitmap(w, h, 0f) { canvas ->
-        canvas.drawRect(0f, 0f, w, h, Paint().apply { shader = fillShader(light, p, w, h) })
-        if (light.rim > 0f) {
-            // On a level card the rim lights only the lit part: clipped where the core is fully dark, so the unlit
-            // side keeps just its hairline.
-            light.level?.let { level ->
-                val dark = levelEdge(level) * (if (light.across) w else h) - LEVEL_STEP.toPx()
-                when {
-                    light.across -> canvas.clipRect(0f, 0f, w - dark, h)
-                    light.fromAbove -> canvas.clipRect(0f, 0f, w, h - dark)
-                    else -> canvas.clipRect(0f, dark, w, h)
-                }
-            }
-            val k = light.rim
-            // A rim past full (the workout window's 120%) can't get brighter at the edge, so it reaches further in.
-            val g = style.glowSize.toPx() * k.coerceAtLeast(1f)
-            // Rim light: a CSS-style inset shadow leaning toward the lit edge, so the rim is full on one side (L4) and
-            // gone on the other. Light all the way round only when the style has no side.
-            if (light.angle != null) {
-                // The hole shifts away from the light, so the lit side shows the most.
-                val (vx, vy) = lightVector(light.angle)
-                insetShadow(area, r, -vx * g * 0.6f, -vy * g * 0.6f, blur = g * 1.2f, spread = -g * 0.5f, p.light.copy(alpha = k.coerceAtMost(1f))).let { (path, paint) -> canvas.drawPath(path, paint) }
-            } else {
-                insetShadow(area, r, 0f, 0f, blur = g, spread = g * 0.1f, p.light.copy(alpha = (0.6f * k).coerceAtMost(1f))).let { (path, paint) -> canvas.drawPath(path, paint) }
-            }
-            // Bevel: a thick band of light all the way round, like the edge of a glossy slab.
-            if (style.bevel > 0f) {
-                val b = minOf(w, h) * 0.075f * style.bevel
-                insetShadow(area, r, 0f, 0f, blur = b * 1.6f, spread = b * 0.45f, p.light.copy(alpha = (0.85f * k).coerceAtMost(1f))).let { (path, paint) -> canvas.drawPath(path, paint) }
-            }
-        }
-    }
-
-    // Dark core and the second-tone band around it, pre-blurred.
-    val cw = w * light.core.width
-    val ch = h * light.core.height
-    val core = RectF(w * light.core.x - cw / 2, h * light.core.y - ch / 2, 0f, 0f).apply { right = left + cw; bottom = top + ch }
-    val coreRadius = (r - 8.dp.toPx()).coerceAtLeast(0f)
-    val band = if (light.tone) style.toneWidth.toPx() else 0f
-    val coreBlur = style.coreBlur.toPx()
-    // Just enough room round the card for the core to drift and swell into view.
-    val margin = maxOf(w, h) * 0.08f
-    val coreLayer = halfResBitmap(w, h, margin) { canvas ->
-        light.level?.let { level ->
-            // A level card: lit at full up to the level, then the core colour fading in over LEVEL_STEP past it (a
-            // smoothstep), like light rising in a glass. Only the core's alpha changes, so nothing is ever darker than
-            // the unlit part and there's never a hard edge.
-            // Measured from the unlit side: the top, the bottom when lit from above, the right when lit from the left.
-            val edge = levelEdge(level) * (if (light.across) w else h)
-            val step = LEVEL_STEP.toPx()
-            val (y0, y1) = when {
-                light.across -> w + margin to -margin
-                light.fromAbove -> h + margin to -margin
-                else -> -margin to h + margin
-            }
-            val span = abs(y1 - y0)
-            fun at(fromUnlit: Float) = ((fromUnlit + margin) / span).coerceIn(0f, 1f)
-            val steps = 10
-            val colors = IntArray(steps + 3)
-            val stops = FloatArray(steps + 3)
-            colors[0] = p.core.toArgb(); stops[0] = 0f
-            for (i in 0..steps) {
-                val t = i / steps.toFloat()
-                val fade = t * t * (3f - 2f * t)
-                colors[i + 1] = p.core.copy(alpha = 1f - fade).toArgb()
-                stops[i + 1] = at(edge - step + step * t)
-            }
-            colors[steps + 2] = Color.Transparent.toArgb(); stops[steps + 2] = 1f
-            val paint = Paint().apply {
-                shader = if (light.across) android.graphics.LinearGradient(y0, 0f, y1, 0f, colors, stops, Shader.TileMode.CLAMP)
-                else android.graphics.LinearGradient(0f, y0, 0f, y1, colors, stops, Shader.TileMode.CLAMP)
-            }
-            canvas.drawRect(-margin, -margin, w + margin, h + margin, paint)
-            return@halfResBitmap
-        }
-        val blur = blurFilter(coreBlur)
-        val tonePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = p.tone.toArgb(); maskFilter = blur }
-        val corePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = p.core.toArgb(); maskFilter = blur }
-        val toneRect = RectF(core.left - band, core.top - band, core.right + band, core.bottom + band)
-        if (band > 0f) when (style.coreShape) {
-            CoreShape.Rounded -> canvas.drawRoundRect(toneRect, coreRadius + band, coreRadius + band, tonePaint)
-            CoreShape.Radial -> canvas.drawOval(toneRect, tonePaint)
-        }
-        when (style.coreShape) {
-            CoreShape.Rounded -> canvas.drawRoundRect(core, coreRadius, coreRadius, corePaint)
-            CoreShape.Radial -> canvas.drawOval(core, corePaint)
-        }
-    }
-    GlowBitmaps(
+/**
+ * Renders the base and the core layer at half resolution (blur hides it), as GPU bitmaps, with the shared light
+ * drawing ([glowPaint], [drawGlowBase], [drawGlowCore]) a widget's background uses too.
+ */
+private fun render(style: GlowStyle, w: Float, h: Float, density: Density): GlowBitmaps {
+    val paint = glowPaint(style, w, h, density.density)
+    val base = halfResBitmap(w, h, 0f) { canvas -> drawGlowBase(canvas, paint) }
+    val margin = paint.coreMargin
+    val coreLayer = halfResBitmap(w, h, margin) { canvas -> drawGlowCore(canvas, paint) }
+    return GlowBitmaps(
         base = base,
         core = coreLayer,
         baseDst = RectF(0f, 0f, w, h),
@@ -397,48 +297,6 @@ private fun halfResBitmap(w: Float, h: Float, margin: Float, draw: (android.grap
     // Upload to the GPU now, on this background thread, rather than on the first frame that draws it.
     return bmp.copy(android.graphics.Bitmap.Config.HARDWARE, false)?.also { bmp.recycle() } ?: bmp
 }
-
-/**
- * The card's base fill: the light colour at the lit edge melting into the mid (body) colour along the light's angle,
- * linearly through the level's [GlowLight.fillStops] (spec 2.1): on L4 the light holds for the first part of the card
- * and reaches the body by 45%, on L3 it starts at 70% and is gone by 28%.
- */
-private fun fillShader(light: GlowLight, p: GlowPalette, w: Float, h: Float): Shader {
-    val angle = light.angle ?: return android.graphics.LinearGradient(0f, 0f, 0f, h, p.mid.toArgb(), p.mid.toArgb(), Shader.TileMode.CLAMP)
-    val points = light.fillStops.map { it.at.coerceIn(0f, 1f) to it.light.coerceIn(0f, 1f) }
-    val colors = points.map { (_, k) -> lerp(p.mid, p.light, k).toArgb() } + p.mid.toArgb()
-    val stops = points.map { it.first } + 1f
-    // Like a CSS linear-gradient: the line runs through the centre, just long enough to reach both far corners.
-    val (vx, vy) = lightVector(angle)
-    val half = (abs(w * vx) + abs(h * vy)) / 2f
-    return android.graphics.LinearGradient(
-        w / 2 + vx * half, h / 2 + vy * half, w / 2 - vx * half, h / 2 - vy * half,
-        colors.toIntArray(), stops.toFloatArray(), Shader.TileMode.CLAMP,
-    )
-}
-
-/**
- * The equivalent of CSS `box-shadow: inset [dx] [dy] [blur] [spread] [color]`: everything outside the
- * card's shape (shifted by [dx], [dy], shrunk by [spread]), blurred and clipped to the card.
- */
-private fun insetShadow(size: Size, radius: Float, dx: Float, dy: Float, blur: Float, spread: Float, color: Color): Pair<Path, Paint> {
-    val pad = blur * 2 + abs(dx) + abs(dy) + abs(spread) + 4f
-    val holeRadius = (radius - spread).coerceAtLeast(0f)
-    val path = Path().apply {
-        fillType = Path.FillType.EVEN_ODD
-        addRect(-pad, -pad, size.width + pad, size.height + pad, Path.Direction.CW)
-        addRoundRect(spread + dx, spread + dy, size.width - spread + dx, size.height - spread + dy, holeRadius, holeRadius, Path.Direction.CW)
-    }
-    val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        this.color = color.toArgb()
-        maskFilter = blurFilter(blur / 2f) // CSS shadow blur is twice the standard deviation
-    }
-    return path to paint
-}
-
-/** A Gaussian blur with standard deviation [sigma] px (Android's radius is ~1.73 × sigma). */
-private fun blurFilter(sigma: Float): BlurMaskFilter? =
-    if (sigma > 0.5f) BlurMaskFilter((sigma - 0.5f) / 0.57735f, BlurMaskFilter.Blur.NORMAL) else null
 
 /** How the dark core sits: offset (fractions of the card), scale, and [fade] on top of the style's core opacity. */
 private class Drift(val dx: Float, val dy: Float, val scale: Float, val fade: Float = 1f, val squash: Float = 0f)
@@ -511,31 +369,4 @@ private fun beatAngle(n: Int): Float {
     h *= 0x85EBCA6B.toInt()
     h = h xor (h ushr 13)
     return (h ushr 8) / (1 shl 24).toFloat() * 2f * PI.toFloat()
-}
-
-private const val GRAIN_TILE = 512
-
-/**
- * Film grain: a large tile of sparse specks, one device pixel each, so it reads as texture rather
- * than dots. [seed] shifts where each card starts in the tile, which hides the repeat.
- */
-private fun grainShader(seed: Int): Shader =
-    BitmapShader(grainBitmap, Shader.TileMode.REPEAT, Shader.TileMode.REPEAT).apply {
-        setLocalMatrix(android.graphics.Matrix().apply {
-            setTranslate((seed % GRAIN_TILE).toFloat(), (seed / GRAIN_TILE).toFloat())
-        })
-    }
-
-private val grainBitmap: android.graphics.Bitmap by lazy {
-    val n = GRAIN_TILE
-    val random = Random(7)
-    val pixels = IntArray(n * n) {
-        // Most pixels stay clear; the rest get a random strength, and some darken instead of lighten.
-        val v = random.nextFloat()
-        if (v < 0.55f) 0 else {
-            val alpha = (((v - 0.55f) / 0.45f) * 255).toInt().coerceIn(0, 255)
-            (alpha shl 24) or (if (random.nextFloat() < 0.35f) 0x000000 else 0xFFFFFF)
-        }
-    }
-    android.graphics.Bitmap.createBitmap(pixels, n, n, android.graphics.Bitmap.Config.ARGB_8888)
 }

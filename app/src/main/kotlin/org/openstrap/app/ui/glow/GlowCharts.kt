@@ -26,7 +26,6 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.lerp
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
@@ -44,9 +43,20 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.openstrap.app.ui.components.rememberScrubHaptics
 import org.openstrap.app.ui.components.scrub
-import org.openstrap.app.ui.components.smoothPath
 import org.openstrap.app.ui.theme.FunnelSans
 import org.openstrap.app.ui.theme.MetricColors
+import org.openstrap.app.ui.glow.draw.BAR_MAX_WIDTH_DP
+import org.openstrap.app.ui.glow.draw.ChartInk
+import org.openstrap.app.ui.glow.draw.chartHairline
+import org.openstrap.app.ui.glow.draw.drawGhostLine
+import org.openstrap.app.ui.glow.draw.drawHypnogramBands
+import org.openstrap.app.ui.glow.draw.drawLineChartBody
+import org.openstrap.app.ui.glow.draw.drawLineChartEnd
+import org.openstrap.app.ui.glow.draw.drawPillBar
+import org.openstrap.app.ui.glow.draw.ghostLineGeometry
+import org.openstrap.app.ui.glow.draw.hypnogramGeometry
+import org.openstrap.app.ui.glow.draw.lineChartGeometry
+import org.openstrap.app.ui.glow.draw.pillBar
 import kotlin.math.roundToInt
 import kotlin.math.sin
 
@@ -58,33 +68,26 @@ import kotlin.math.sin
 private val Ink = Color.White
 private val Muted = Color.White.copy(alpha = 0.55f)
 /** Grid rows and stage guides: solid, white at 8%, 1 dp. */
-private val Grid = Color.White.copy(alpha = GlowLayout.HairlineAlpha)
+private val Grid = ChartInk.Grid
 /** A target, goal or average across a chart: solid, white at 40%, 1 dp. */
-private val Target = Color.White.copy(alpha = 0.40f)
+private val Target = ChartInk.Target
 
 private val axisText = TextStyle(color = Muted, fontSize = 10.sp, fontFamily = FunnelSans)
 private val valueText = TextStyle(color = Ink, fontSize = 11.sp, fontFamily = FunnelSans)
 private val readoutText = TextStyle(color = Ink, fontSize = 12.sp, fontFamily = FunnelSans)
 
 /** A solid horizontal hairline across the chart: a grid row by default, or a target in [color]. */
-private fun DrawScope.gridLine(y: Float, color: Color = Grid, x0: Float = 0f, x1: Float = size.width) =
-    drawLine(color, Offset(x0, y), Offset(x1, y), strokeWidth = 1.dp.toPx())
-
-/** The hairline under a chart's bars, for bar charts drawn outside this file. */
-internal fun DrawScope.barBaseline(y: Float) = gridLine(y)
+private fun DrawScope.gridLine(y: Float, color: Color = Grid, x0: Float = 0f, x1: Float = size.width) = chartHairline(y, color, x0, x1)
 
 /** The widest a bar gets (spec 2.7, pill bars): a wide card spaces its bars out but keeps them thin. */
-internal val BarMaxWidth = 6.dp
+internal val BarMaxWidth = BAR_MAX_WIDTH_DP.dp
 
 /**
  * One pill bar in a column [pitch] wide starting at [x], standing on [bottom], [height] tall for its value. At most
  * [BarMaxWidth] wide, and never shorter than twice its width, so a small value still reads as a bar, not a dot.
  */
-internal fun DrawScope.pillBar(color: Color, x: Float, pitch: Float, bottom: Float, height: Float) {
-    val w = (pitch * 0.56f).coerceAtMost(BarMaxWidth.toPx())
-    val h = height.coerceAtLeast(w * 2)
-    drawRoundRect(color, topLeft = Offset(x + (pitch - w) / 2, bottom - h), size = Size(w, h), cornerRadius = CornerRadius(w / 2))
-}
+internal fun DrawScope.pillBar(color: Color, x: Float, pitch: Float, bottom: Float, height: Float) =
+    drawPillBar(pillBar(x, pitch, bottom, height, BarMaxWidth.toPx()), color)
 
 private fun DrawScope.text(m: TextMeasurer, s: String, style: TextStyle, x: Float, y: Float, align: Float = 0f) {
     val r = m.measure(s, style)
@@ -162,51 +165,18 @@ fun GlowLineChart(
                 }
             },
     ) {
-        val known = values.filterNotNull()
-        if (known.isEmpty()) return@Canvas
-        val axisH = if (labels.isEmpty()) 0f else 18.dp.toPx()
-        val top = 10.dp.toPx()
-        val h = size.height - axisH
-        val lo = yRange?.start ?: minOf(known.min(), band?.start ?: Float.MAX_VALUE)
-        val hi = (yRange?.endInclusive ?: maxOf(known.max(), band?.endInclusive ?: -Float.MAX_VALUE)).let { if (it - lo < 1e-3f) lo + 1f else it }
-        // Inset by the end dot's halo, so a reading at the very edge isn't cut off.
-        fun xOf(i: Int) = inset + i / (values.size - 1f).coerceAtLeast(1f) * (size.width - inset * 2)
-        fun yOf(v: Float) = top + (h - top) * (1f - (v - lo) / (hi - lo))
-
-        listOf(0f, 0.5f, 1f).forEach { gridLine(top + (h - top) * it) }
-        band?.let { b ->
-            val y0 = yOf(b.endInclusive)
-            val y1 = yOf(b.start)
-            drawRect(color.copy(alpha = NormalBandAlpha), Offset(0f, y0), Size(size.width, y1 - y0))
-        }
-
-        // Runs of consecutive readings; a gap starts a new run.
-        val runs = mutableListOf<MutableList<Offset>>(mutableListOf())
-        values.forEachIndexed { i, v ->
-            if (v == null) { if (runs.last().isNotEmpty()) runs += mutableListOf<Offset>() } else runs.last() += Offset(xOf(i), yOf(v))
-        }
-        // A lone reading between gaps is a dot, so a sparse week still shows its days.
-        runs.filter { it.size == 1 }.forEach { drawCircle(color, 2.6.dp.toPx(), it.first()) }
-        runs.filter { it.size >= 2 }.forEach { pts ->
-            val line = smoothPath(pts)
-            val fill = Path().apply { addPath(line); lineTo(pts.last().x, h); lineTo(pts.first().x, h); close() }
-            drawPath(fill, Brush.verticalGradient(listOf(color.copy(alpha = 0.14f), Color.Transparent), startY = top, endY = h))
-            // A faint halo just wider than the line.
-            drawPath(line, color.copy(alpha = 0.08f), style = Stroke(4.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
-            drawPath(line, color, style = Stroke(1.8.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
-        }
+        // The shared line geometry ([lineChartGeometry]), as a widget's chart draws it.
+        val g = lineChartGeometry(values, size.width, size.height, density, inset, axis = labels.isNotEmpty(), yRange = yRange, band = band) ?: return@Canvas
+        val h = g.plotBottom
+        drawLineChartBody(g, color)
 
         if (showAverage) {
-            val avg = known.average().toFloat()
-            val y = yOf(avg)
+            val y = g.averageY
             gridLine(y, Target)
-            text(m, "avg ${format(avg)}", axisText.copy(color = Ink.copy(alpha = 0.8f)), size.width, y - 16.dp.toPx(), align = 1f)
+            text(m, "avg ${format(g.average)}", axisText.copy(color = Ink.copy(alpha = 0.8f)), size.width, y - 16.dp.toPx(), align = 1f)
         }
 
-        val lastIndex = values.indexOfLast { it != null }
-        val last = Offset(xOf(lastIndex), yOf(values[lastIndex]!!))
-        drawCircle(color.copy(alpha = 0.2f), 6.5.dp.toPx(), last)
-        drawCircle(color, 3.5.dp.toPx(), last)
+        drawLineChartEnd(g, color)
 
         axis(m, labels, h + 4.dp.toPx())
 
@@ -215,7 +185,7 @@ fun GlowLineChart(
         if (scrubbing && tx != null) {
             val i = nearestReading(values, tx, size.width, inset)
             if (i != null) {
-                val p = Offset(xOf(i), yOf(values[i]!!))
+                val p = Offset(g.xOf(i), g.yOf(values[i]!!))
                 guide(p.x, h)
                 drawCircle(Color.Black.copy(alpha = 0.6f), 6.dp.toPx(), p)
                 drawCircle(color, 4.dp.toPx(), p)
@@ -226,7 +196,7 @@ fun GlowLineChart(
 }
 
 /** Your normal behind a chart: a band of the ink at 12% (spec 2.7). */
-private const val NormalBandAlpha = 0.12f
+private const val NormalBandAlpha = ChartInk.NORMAL_BAND_ALPHA
 
 /** The reading nearest [x] on a line chart [width] wide, its ends [inset] in; gaps are skipped, not bridged. */
 internal fun nearestReading(values: List<Float?>, x: Float, width: Float, inset: Float): Int? {
@@ -533,49 +503,31 @@ fun GlowHypnogram(
             } else it
         },
     ) {
-        if (stages.isEmpty()) return@Canvas
-        val axisH = if (labels.isEmpty()) 0f else 18.dp.toPx()
         val nameW = if (showNames) 46.dp.toPx() else 0f
-        val h = size.height - axisH
-        val w = size.width - nameW
-        val rowH = h / rowNames.size
-        val pillH = rowH * 0.46f
-        fun yOf(row: Int) = rowH * row + rowH / 2
-        fun xOf(f: Float) = nameW + f * w
+        // The shared hypnogram geometry ([hypnogramGeometry]), as a widget's chart draws it.
+        val g = hypnogramGeometry(stages, rowNames.size, size.width, size.height, density, nameW, axis = labels.isNotEmpty()) ?: return@Canvas
+        val h = g.plotBottom
 
         rowNames.forEachIndexed { row, name ->
-            gridLine(yOf(row), x0 = nameW)
-            if (showNames) text(m, name, axisText, 0f, yOf(row) - 7.dp.toPx())
+            gridLine(g.rowY[row], x0 = nameW)
+            if (showNames) text(m, name, axisText, 0f, g.rowY[row] - 7.dp.toPx())
         }
-        val sorted = stages.sortedBy { it.from }
-        if (rowColors == null) for (i in 1 until sorted.size) {
-            val a = sorted[i - 1]
-            val b = sorted[i]
-            if (a.row != b.row) drawLine(Ink.copy(alpha = 0.3f), Offset(xOf(b.from), yOf(a.row)), Offset(xOf(b.from), yOf(b.row)), 1.dp.toPx())
-        }
-        sorted.forEach { s ->
-            val alpha = 0.55f + 0.45f * s.row / (rowNames.size - 1).coerceAtLeast(1)
-            drawRoundRect(
-                rowColors?.getOrNull(s.row) ?: Ink.copy(alpha = alpha),
-                topLeft = Offset(xOf(s.from), yOf(s.row) - pillH / 2),
-                size = Size((xOf(s.to) - xOf(s.from)).coerceAtLeast(pillH), pillH),
-                cornerRadius = CornerRadius(pillH / 2),
-            )
-        }
+        drawHypnogramBands(g, rowColors)
         if (labels.isNotEmpty()) {
             labels.forEachIndexed { i, l ->
                 val f = if (labels.size == 1) 0f else i / (labels.size - 1f)
-                text(m, l, axisText, xOf(f), h + 4.dp.toPx(), align = f)
+                text(m, l, axisText, g.xOf(f), h + 4.dp.toPx(), align = f)
             }
         }
         val tx = touchX
         if (describe != null && tx != null) {
             val x = tx.coerceIn(nameW, size.width)
-            val f = (x - nameW) / w
+            val f = (x - nameW) / (size.width - nameW)
             // The stage under the finger, or the nearest one when the finger is in a gap.
-            val s = sorted.firstOrNull { f >= it.from && f < it.to } ?: sorted.minBy { minOf(kotlin.math.abs(it.from - f), kotlin.math.abs(it.to - f)) }
+            val band = g.bands.firstOrNull { f >= it.stage.from && f < it.stage.to }
+                ?: g.bands.minBy { minOf(kotlin.math.abs(it.stage.from - f), kotlin.math.abs(it.stage.to - f)) }
             guide(x, h)
-            readout(m, describe(s), x, yOf(s.row) - pillH / 2)
+            readout(m, describe(band.stage), x, band.topLeft.y)
         }
     }
 }
@@ -590,24 +542,8 @@ fun GlowHypnogram(
 @Composable
 fun GhostLine(today: List<Float?>, color: Color, max: Float, modifier: Modifier = Modifier, usual: List<Float>? = null, height: Dp = 56.dp) {
     Canvas(modifier.fillMaxWidth().height(height)) {
-        if (today.size < 2) return@Canvas
-        val r = 4.5.dp.toPx()
-        val top = r
-        val h = size.height - r
-        val hi = max.coerceAtLeast(1f)
-        fun xOf(i: Int, n: Int) = r + i / (n - 1f) * (size.width - r * 2)
-        fun yOf(v: Float) = top + (h - top) * (1f - (v / hi).coerceIn(0f, 1f))
-        usual?.takeIf { it.size >= 2 }?.let { u ->
-            val path = Path().apply { u.forEachIndexed { i, v -> if (i == 0) moveTo(xOf(i, u.size), yOf(v)) else lineTo(xOf(i, u.size), yOf(v)) } }
-            drawPath(path, Ink.copy(alpha = 0.35f), style = Stroke(1.5.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
-        }
-        val pts = today.mapIndexedNotNull { i, v -> v?.let { Offset(xOf(i, today.size), yOf(it)) } }
-        if (pts.isEmpty()) return@Canvas
-        if (pts.size >= 2) drawPath(
-            Path().apply { pts.forEachIndexed { i, p -> if (i == 0) moveTo(p.x, p.y) else lineTo(p.x, p.y) } },
-            color, style = Stroke(2.6.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round),
-        )
-        drawCircle(color, r, pts.last())
+        // The shared ghost line geometry ([ghostLineGeometry]), as a widget's chart draws it.
+        ghostLineGeometry(today, usual, max, size.width, size.height, density)?.let { drawGhostLine(it, color) }
     }
 }
 

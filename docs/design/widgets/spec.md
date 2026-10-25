@@ -256,7 +256,8 @@ timer it doesn't need.
 - `updatePeriodMillis="0"`. No periodic updates from the system.
 - Exact alarms need `SCHEDULE_EXACT_ALARM`, which Android 14 and later deny by default, and `USE_EXACT_ALARM` is
   not meant for this. So moment boundaries use `setExactAndAllowWhileIdle` when `canScheduleExactAlarms()` is true
-  and `setWindow` with a 5 minute window when not. A moment a few minutes late on a widget is fine.
+  and `setWindow` with a 5 minute window when not. A moment a few minutes late on a widget is fine. The app declares `SCHEDULE_EXACT_ALARM` for this (decided 2026-10-25), which adds an "Alarms and
+  reminders" entry to the app's system info page.
 - One `WidgetUpdater` in `device/` owns all of this. Everything else calls `WidgetUpdater.changed(kinds)`.
 
 ## 8. Copy

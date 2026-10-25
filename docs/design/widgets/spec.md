@@ -103,7 +103,7 @@ What each moment shows:
 
   | Moment | Leads with | When that widget is placed |
   |---|---|---|
-  | Waking up | Recovery | Last night: sleep score and word, "Slept 7 h 40", Sleep colour lit from above |
+  | Waking up | Recovery | Last night: sleep score and word, "Slept 7 h 40", Sleep colour lit from above. With a Sleep widget placed too: Energy, as at midday |
   | Midday | Energy | No Energy widget exists, no change |
   | Workout window | Start | No change, the window's point is Start |
   | Evening, Night | A sentence | No change |
@@ -191,7 +191,7 @@ first match wins:
 |---|---|---|
 | Strap not paired | "Pair your strap" | Opens the Strap page (`EXTRA_STRAP_STATE`) |
 | Battery 15% or less, not charging | "Strap at 12%" | Opens the Strap page |
-| Last sync more than 3 hours ago | "Last sync 09:10" (or "Last sync yesterday") | Syncs now |
+| Last sync more than 3 hours ago | "Last sync 09:10", "Last sync yesterday", "Last sync Tuesday" within a week, then "Last sync 13 Oct" | Syncs now |
 
 - A pill: black at 45% on the widget, 999 dp corners, a 12 dp icon and Secondary type in white.
 - While a sync runs the line reads "Syncing" and the icon turns. When it ends the widget refreshes (7).
@@ -248,7 +248,7 @@ timer it doesn't need.
 | A workout starts or ends (`WorkoutRecorder`, strap auto-detect) | Moment, Start |
 | The moment changes | Moment. An exact alarm at the next boundary: add `MomentResolver.nextChange(...)` returning the time the current moment ends |
 | Midnight | All five (new day, new goal bar) |
-| Steps (`LiveSteps`) | Steps and Moment's Steps figure, at most every 15 minutes while the strap is connected |
+| Steps (`LiveSteps`) | Steps, at most every 15 minutes while the strap is connected. Moment shows no steps figure |
 | A widget is added or removed | Moment (the duplicate rule) |
 | Strap state changes (paired, battery crosses 15%, charging) | All five, for the status line |
 | Mood or settings change (goal, sport GPS) | The widgets that show them |

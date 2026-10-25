@@ -132,7 +132,7 @@ Last night's main sleep. Night mood always.
 | Size | Content |
 |---|---|
 | Small | "Steps". Steps today in dots, "today". The goal bar, 4 dp. "84% of your goal" |
-| Wide | Title row with "Goal 10,000". Steps with "today", "1,568 to go" on the right. Today's steps so far as a solid line from waking to now, ending in a 3.5 dp dot. The goal bar |
+| Wide | Title row with "Goal 10,000". Steps with "today", "1,568 to go" on the right. Today's steps so far as a solid line from waking to now, ending in the Steps card's end dot (drawn by the shared `drawGhostLine`). The goal bar |
 | Large | The Wide plus This week: "This week" and "Goal met 2 of 6 days" on the left, a bar per day Monday to Sunday on the right. A met day is Steps lime, a missed day white at 30%, today white, days to come a 4 dp stub at 12% |
 
 - Steps format with the thousands comma (`Metric.format`). Goal from settings.

@@ -11,6 +11,14 @@ import android.graphics.Path
 import android.graphics.RectF
 import android.graphics.Shader
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathFillType
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.asAndroidPath
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.VectorGroup
+import androidx.compose.ui.graphics.vector.VectorPath
+import androidx.compose.ui.graphics.vector.toPath
 import androidx.compose.ui.graphics.toArgb
 import kotlin.math.abs
 import kotlin.math.ceil
@@ -291,6 +299,58 @@ fun drawWeekBars(canvas: Canvas, bars: List<PillBar?>, shown: Int, color: Color)
 /** One pill bar in [color]. */
 fun drawPillBar(canvas: Canvas, bar: PillBar, color: Color) {
     canvas.drawRoundRect(bar.topLeft.x, bar.topLeft.y, bar.topLeft.x + bar.size.width, bar.topLeft.y + bar.size.height, bar.corner, bar.corner, fill(color))
+}
+
+/* ------------------------------------------------------------------------------------------------ */
+/* Icons                                                                                             */
+/* ------------------------------------------------------------------------------------------------ */
+
+/**
+ * [icon] (the app's own line icons, `AppIcons` and `SportIcons`) tinted [color] as Icon() tints it, [size] px square
+ * with its top left at [left], [top]: every path stroked and filled as the vector says, its groups' transforms and
+ * clips applied.
+ */
+fun drawIcon(canvas: Canvas, icon: ImageVector, color: Color, left: Float, top: Float, size: Float) {
+    canvas.save()
+    canvas.translate(left, top)
+    canvas.scale(size / icon.viewportWidth, size / icon.viewportHeight)
+    drawVectorGroup(canvas, icon.root, color)
+    canvas.restore()
+}
+
+private fun drawVectorGroup(canvas: Canvas, group: VectorGroup, color: Color) {
+    canvas.save()
+    canvas.translate(group.translationX + group.pivotX, group.translationY + group.pivotY)
+    canvas.rotate(group.rotation)
+    canvas.scale(group.scaleX, group.scaleY)
+    canvas.translate(-group.pivotX, -group.pivotY)
+    if (group.clipPathData.isNotEmpty()) canvas.clipPath(group.clipPathData.toPath().asAndroidPath())
+    for (node in group) when (node) {
+        is VectorGroup -> drawVectorGroup(canvas, node, color)
+        is VectorPath -> drawVectorPath(canvas, node, color)
+    }
+    canvas.restore()
+}
+
+private fun drawVectorPath(canvas: Canvas, node: VectorPath, color: Color) {
+    val path = node.pathData.toPath().asAndroidPath()
+    path.fillType = if (node.pathFillType == PathFillType.EvenOdd) Path.FillType.EVEN_ODD else Path.FillType.WINDING
+    if (node.fill != null) canvas.drawPath(path, fill(color.copy(alpha = color.alpha * node.fillAlpha)))
+    if (node.stroke != null && node.strokeLineWidth > 0f) {
+        canvas.drawPath(path, stroke(color.copy(alpha = color.alpha * node.strokeAlpha), node.strokeLineWidth).apply {
+            strokeCap = when (node.strokeLineCap) {
+                StrokeCap.Round -> Paint.Cap.ROUND
+                StrokeCap.Square -> Paint.Cap.SQUARE
+                else -> Paint.Cap.BUTT
+            }
+            strokeJoin = when (node.strokeLineJoin) {
+                StrokeJoin.Round -> Paint.Join.ROUND
+                StrokeJoin.Bevel -> Paint.Join.BEVEL
+                else -> Paint.Join.MITER
+            }
+            strokeMiter = node.strokeLineMiter
+        })
+    }
 }
 
 /* ------------------------------------------------------------------------------------------------ */

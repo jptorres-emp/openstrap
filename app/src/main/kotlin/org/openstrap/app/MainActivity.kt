@@ -162,6 +162,10 @@ class MainActivity : ComponentActivity() {
             intent.removeExtra(EXTRA_READY_SPORT)
             (application as OpenStrapApp).container.workout.readyRequest.value = ready
         }
+        if (intent.getBooleanExtra(EXTRA_READY_PICK, false)) {
+            intent.removeExtra(EXTRA_READY_PICK)
+            (application as OpenStrapApp).container.workout.readyPickRequest.value = true
+        }
         if (!intent.getBooleanExtra(EXTRA_SHOW_WORKOUT, false)) return
         intent.removeExtra(EXTRA_SHOW_WORKOUT)
         (application as OpenStrapApp).container.workout.minimized.value = false
@@ -170,6 +174,9 @@ class MainActivity : ComponentActivity() {
     companion object {
         const val EXTRA_SHOW_WORKOUT = "show_workout"
         const val EXTRA_READY_SPORT = "ready_sport"
+
+        /** True opens Ready on the sport picker, as All sports does: the Start widget's All sports. */
+        const val EXTRA_READY_PICK = "ready_pick"
         const val EXTRA_OPEN_WORKOUT = "open_workout"
 
         /** A metric's detail by [org.openstrap.app.ui.dashboard.Metric] name ("Hrv"), or "Recovery" or "Sleep". */
@@ -474,6 +481,17 @@ private fun AppRoot(
         readyRequest?.let { sport ->
             if (workoutState !is org.openstrap.app.device.WorkoutState.Recording) { readySport = sport; readyPicking = false }
             container.workout.readyRequest.value = null
+        }
+    }
+    // The Start widget's All sports: Ready on the sport picker, as the Activity tab's All sports opens it.
+    val readyPickRequest by container.workout.readyPickRequest.collectAsStateWithLifecycle()
+    LaunchedEffect(readyPickRequest) {
+        if (readyPickRequest) {
+            if (workoutState !is org.openstrap.app.device.WorkoutState.Recording) {
+                readySport = readySport ?: org.openstrap.app.ui.glow.topSports(workouts).first().sportType
+                readyPicking = true
+            }
+            container.workout.readyPickRequest.value = false
         }
     }
     // An auto-detected workout's notification: that workout, on the Activity tab, its home.
@@ -1269,7 +1287,13 @@ private fun androidx.compose.foundation.layout.BoxScope.WorkoutLayer(
             org.openstrap.app.ui.glow.GlowWorkoutReadyScreen(
                 sport, readyPicking, connection, live, padding,
                 recentSports = recentSports, sides = sides,
-                onSide = { s, indoor -> viewScope.launch { container.settings.setWorkoutSide(s, indoor) } },
+                onSide = { s, indoor ->
+                    viewScope.launch {
+                        container.settings.setWorkoutSide(s, indoor)
+                        // The Start widget names the side Ready opens on and says whether GPS is on (widgets spec 7).
+                        org.openstrap.app.device.WidgetUpdater.changed(container.app, setOf(org.openstrap.app.widget.WidgetKind.Start))
+                    }
+                },
                 onTurnOnLocation = requestLocation,
                 onSport = onReadySport,
                 onStart = { sport, askToEnd, target, useGps, keepRoute, rest, setsTarget ->

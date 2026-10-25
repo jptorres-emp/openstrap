@@ -18,6 +18,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.unit.DpSize
+import androidx.compose.ui.unit.dp
 import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
@@ -34,9 +35,11 @@ import org.openstrap.app.widget.WidgetSizes
  *     adb shell appwidget grantbind --package org.openstrap.app --user 0
  *     adb shell am start -n org.openstrap.app/.widget.debug.WidgetGalleryActivity --es widget steps --es mood night
  *
- * `widget` is the kind to host (recovery, steps, sleep), Recovery without it. `mood` is day, evening, night or auto
+ * `widget` is the kind to host (recovery, steps, sleep, start), Recovery without it. `mood` is day, evening, night or auto
  * (the moment's). Sleep is always night and ignores it. `--es pin sleep` asks the launcher to pin a widget of that
- * kind to the home screen. The ids it binds are deleted when it closes or hosts another kind.
+ * kind to the home screen. `--es cells oneui` hosts at One UI's real cells (2 × 2 about 180 × 220, 4 × 2 about
+ * 353 × 220, 4 × 3 about 353 × 330) instead of the three minimums, to see what people see; `--es cells min` goes
+ * back. The ids it binds are deleted when it closes or hosts another kind.
  */
 class WidgetGalleryActivity : ComponentActivity() {
     private lateinit var host: AppWidgetHost
@@ -44,11 +47,13 @@ class WidgetGalleryActivity : ComponentActivity() {
     private lateinit var column: LinearLayout
     private lateinit var hosted: LinearLayout
     private var kind = WidgetKind.Recovery
+    private var sizes = SIZES
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         host = AppWidgetHost(this, HOST_ID)
         applyMood(intent.getStringExtra(EXTRA_MOOD))
+        applyCells(intent.getStringExtra(EXTRA_CELLS))
         kind = kindOf(intent.getStringExtra(EXTRA_WIDGET)) ?: WidgetKind.Recovery
         column = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -70,7 +75,12 @@ class WidgetGalleryActivity : ComponentActivity() {
         setIntent(intent)
         val next = kindOf(intent.getStringExtra(EXTRA_WIDGET))
         if (intent.hasExtra(EXTRA_MOOD)) applyMood(intent.getStringExtra(EXTRA_MOOD))
-        if (next != null && next != kind) show(next) else if (intent.hasExtra(EXTRA_MOOD)) refresh()
+        val cellsChanged = intent.hasExtra(EXTRA_CELLS) && applyCells(intent.getStringExtra(EXTRA_CELLS))
+        when {
+            next != null && next != kind -> show(next)
+            cellsChanged -> show(kind)
+            intent.hasExtra(EXTRA_MOOD) -> refresh()
+        }
         kindOf(intent.getStringExtra(EXTRA_PIN))?.let(::requestPin)
     }
 
@@ -94,7 +104,7 @@ class WidgetGalleryActivity : ComponentActivity() {
         super.onDestroy()
     }
 
-    /** The kind named [name] ("steps", "recovery", "sleep") that has a widget yet; null for none. */
+    /** The kind named [name] ("steps", "recovery", "sleep", "start") that has a widget yet; null for none. */
     private fun kindOf(name: String?): WidgetKind? =
         WidgetKind.entries.firstOrNull { it.name.equals(name, ignoreCase = true) }?.takeIf { WidgetUpdater.registration(it) != null }
 
@@ -118,7 +128,7 @@ class WidgetGalleryActivity : ComponentActivity() {
         val provider = ComponentName(this, registration.receiver)
         val info: AppWidgetProviderInfo? = manager.getInstalledProvidersForPackage(packageName, null).firstOrNull { it.provider == provider }
         if (info == null) { note("The $kind widget's provider isn't installed."); return }
-        for ((name, size) in SIZES) {
+        for ((name, size) in sizes) {
             val id = host.allocateAppWidgetId()
             if (!manager.bindAppWidgetIdIfAllowed(id, provider)) {
                 host.deleteAppWidgetId(id)
@@ -161,6 +171,14 @@ class WidgetGalleryActivity : ComponentActivity() {
                 Log.w(TAG, "widget gallery: update failed: $e")
             }
         }
+    }
+
+    /** "oneui" for One UI's cells, anything else for the minimums; true when that changed what's hosted. */
+    private fun applyCells(name: String?): Boolean {
+        val next = if (name.equals("oneui", ignoreCase = true)) ONE_UI_SIZES else SIZES
+        val changed = next != sizes
+        sizes = next
+        return changed
     }
 
     private fun applyMood(name: String?) {
@@ -233,6 +251,14 @@ class WidgetGalleryActivity : ComponentActivity() {
         const val EXTRA_MOOD = "mood"
         const val EXTRA_PIN = "pin"
         const val EXTRA_WIDGET = "widget"
+        const val EXTRA_CELLS = "cells"
         val SIZES = listOf("Small" to WidgetSizes.Small, "Wide" to WidgetSizes.Wide, "Large" to WidgetSizes.Large)
+
+        /** One UI's cells on the phone, roughly (spec 2.1): what the three layouts stretch to there. */
+        val ONE_UI_SIZES = listOf(
+            "Small (One UI 2 × 2)" to DpSize(180.dp, 220.dp),
+            "Wide (One UI 4 × 2)" to DpSize(353.dp, 220.dp),
+            "Large (One UI 4 × 3)" to DpSize(353.dp, 330.dp),
+        )
     }
 }

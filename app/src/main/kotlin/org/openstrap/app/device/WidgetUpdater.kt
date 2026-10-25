@@ -22,6 +22,8 @@ import org.openstrap.app.widget.RecoveryWidget
 import org.openstrap.app.widget.RecoveryWidgetReceiver
 import org.openstrap.app.widget.SleepWidget
 import org.openstrap.app.widget.SleepWidgetReceiver
+import org.openstrap.app.widget.StartWidget
+import org.openstrap.app.widget.StartWidgetReceiver
 import org.openstrap.app.widget.StepsWidget
 import org.openstrap.app.widget.StepsWidgetReceiver
 import org.openstrap.app.widget.WidgetKind
@@ -47,6 +49,7 @@ object WidgetUpdater {
         WidgetKind.Sleep to Registration(SleepWidgetReceiver::class.java) { SleepWidget() },
         WidgetKind.Steps to Registration(StepsWidgetReceiver::class.java) { StepsWidget() },
         WidgetKind.Recovery to Registration(RecoveryWidgetReceiver::class.java) { RecoveryWidget() },
+        WidgetKind.Start to Registration(StartWidgetReceiver::class.java) { StartWidget() },
     )
 
     /** [kind]'s receiver and widget, null before it exists: for the debug widget gallery. */

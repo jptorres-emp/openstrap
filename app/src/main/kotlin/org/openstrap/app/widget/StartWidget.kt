@@ -1,0 +1,449 @@
+package org.openstrap.app.widget
+
+import android.content.Context
+import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.Paint
+import android.util.Log
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.glance.GlanceModifier
+import androidx.glance.Image
+import androidx.glance.ImageProvider
+import androidx.glance.LocalContext
+import androidx.glance.action.clickable
+import androidx.glance.appwidget.GlanceAppWidget
+import androidx.glance.appwidget.action.actionStartActivity
+import androidx.glance.background
+import androidx.glance.layout.Alignment
+import androidx.glance.layout.Box
+import androidx.glance.layout.Column
+import androidx.glance.layout.ColumnScope
+import androidx.glance.layout.ContentScale
+import androidx.glance.layout.Row
+import androidx.glance.layout.Spacer
+import androidx.glance.layout.fillMaxSize
+import androidx.glance.layout.fillMaxWidth
+import androidx.glance.layout.padding
+import androidx.glance.layout.height
+import androidx.glance.layout.size
+import androidx.glance.layout.width
+import androidx.glance.text.FontWeight
+import androidx.glance.text.Text
+import androidx.glance.text.TextAlign
+import androidx.glance.unit.ColorProvider
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.first
+import org.openstrap.app.MainActivity
+import org.openstrap.app.OpenStrapApp
+import org.openstrap.app.data.Workouts
+import org.openstrap.app.device.WorkoutState
+import org.openstrap.app.ui.glow.ControlSurface
+import org.openstrap.app.ui.glow.EdgeKind
+import org.openstrap.app.ui.glow.EdgeStatus
+import org.openstrap.app.ui.glow.GlowMood
+import org.openstrap.app.ui.glow.draw.drawIcon
+import org.openstrap.app.ui.glow.draw.renderToBitmap
+import org.openstrap.app.ui.glow.edgeLight
+import org.openstrap.app.ui.glow.locationAvailable
+import org.openstrap.app.ui.theme.AppIcons
+import org.openstrap.app.ui.theme.MetricColors
+import org.openstrap.app.ui.workout.SportIcons
+import java.time.Instant
+import java.time.ZoneId
+
+/**
+ * The Start a workout widget (widgets spec 3.5), the one action widget: home screen to Ready in one tap. The usual
+ * sport with its play button at every size, the next four as tiles on the Wide, this week and the usual's last on the
+ * Large; while a workout records, that workout with Open. An edge card lit from the right, toward Start, in heart ink
+ * and the moment's mood. Play, a tile or the widget opens Ready with that sport, All sports the sport picker.
+ */
+class StartWidget : LoadingWidget<StartWidget.Shown>(WidgetKind.Start) {
+    override suspend fun loadShown(context: Context): Shown = load(context)
+
+    @Composable
+    override fun Content(data: Shown) = StartContent(data)
+
+    /** What the widget shows and the light it's lit in. */
+    data class Shown(val model: StartWidgetModel, val mood: GlowMood)
+
+    companion object {
+        /**
+         * Every workout as the workout lists read them ([Workouts.listed]), the Outdoor or Indoor side last chosen per
+         * sport and whether location is on, as Ready reads them, and the workout recording now. The mood from the
+         * moment now ([widgetMood]).
+         */
+        internal suspend fun load(context: Context, now: Instant = Instant.now(), zone: ZoneId = ZoneId.systemDefault()): Shown {
+            val container = (context.applicationContext as OpenStrapApp).container
+            val recording = (container.workout.state.value as? WorkoutState.Recording)?.workout?.let { it.sportType to it.start }
+            val model = try {
+                val dao = container.database.healthDao()
+                val workouts = Workouts.listed(
+                    dao.workouts().first(), dao.sportEffects().first(), dao.lastWorkoutHeartRates().first(), dao.appWorkouts().first(),
+                    dao.setCounts().first().associate { it.workoutStart to it.sets }, LIST_MAX_HR,
+                )
+                StartWidgetModel.from(workouts, container.settings.workoutSides.first(), locationAvailable(context), recording, now, zone)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(WIDGET_TAG, "widgets: workouts for Start not read: $e")
+                StartWidgetModel.from(emptyList(), emptyMap(), false, recording, now, zone)
+            }
+            val bedtime = try {
+                container.health.usualBedtime(now.atZone(zone).toLocalDate())
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                null
+            }
+            return Shown(model, widgetMood(container, bedtime, now, zone))
+        }
+
+        /**
+         * The max heart rate the lists' zones are shares of. The widget shows no zones, so it skips the app's 90-day
+         * read for it ([org.openstrap.app.data.RecoveryEngine.maxHeartRate]); nothing it shows depends on it.
+         */
+        private const val LIST_MAX_HR = 190
+    }
+}
+
+/** The Start widget's receiver. */
+class StartWidgetReceiver : PlacedWidgetReceiver() {
+    override val glanceAppWidget: GlanceAppWidget = StartWidget()
+}
+
+/* ------------------------------------------------------------------------------------------------ */
+/* Taps                                                                                              */
+/* ------------------------------------------------------------------------------------------------ */
+
+/** Ready with [sport] (spec 4), as a launcher shortcut opens it. */
+internal fun openReady(context: Context, sport: Int): Intent =
+    Intent(context, MainActivity::class.java).putExtra(MainActivity.EXTRA_READY_SPORT, sport).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+
+/** Ready on the sport picker: All sports. */
+internal fun openSportPicker(context: Context): Intent =
+    Intent(context, MainActivity::class.java).putExtra(MainActivity.EXTRA_READY_PICK, true).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+
+/** The live screen of the workout recording, as its notification opens it. */
+internal fun openLiveWorkout(context: Context): Intent =
+    Intent(context, MainActivity::class.java).putExtra(MainActivity.EXTRA_SHOW_WORKOUT, true).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+
+/* ------------------------------------------------------------------------------------------------ */
+/* Layout                                                                                            */
+/* ------------------------------------------------------------------------------------------------ */
+
+/** Heart ink, as Ready's hero: the light toward Start. */
+private val Ink = MetricColors.heart
+
+/** The name in the usual row: Body 500. */
+private val NameStyle = WidgetType.body.copy(fontWeight = FontWeight.Medium)
+
+/** Open's word, black on its white pill. */
+private val OpenStyle = WidgetType.body.copy(color = ColorProvider(Color.Black), fontWeight = FontWeight.Medium)
+
+/** Back to the card's 20 dp side padding, for every row but the tile captions, which may run into it. */
+private val Inset = GlanceModifier.padding(horizontal = StartLayout.CAPTION_BLEED_DP.dp)
+
+/** The Large's hairline: white at 8%, at full strength in every mood (spec 2.2). */
+private const val HAIRLINE_ALPHA = 0.08f
+
+/**
+ * The widget at the size Glance lays out, lit from the right ([EdgeKind.Live]'s edge). The whole widget opens Ready
+ * with the usual, or the live screen while a workout records.
+ */
+@Composable
+private fun StartContent(data: StartWidget.Shown) {
+    val m = data.model
+    val context = LocalContext.current
+    val open = if (m.recording != null) openLiveWorkout(context) else openReady(context, m.usual.sportType)
+    // The side padding is half the card's, so the tile captions can run into it; everything else pads back ([Inset]).
+    EdgeWidget(edgeLight(EdgeStatus.Usual, EdgeKind.Live), Ink, data.mood, open, BITMAP_EXTRA, sidePadding = WidgetSizes.PADDING_DP - StartLayout.CAPTION_BLEED_DP) { frame ->
+        when (frame.bucket) {
+            WidgetSizes.Small -> Column(GlanceModifier.fillMaxSize().then(Inset)) { SmallContent(m, frame) }
+            WidgetSizes.Wide -> WideContent(m, frame)
+            else -> LargeContent(m, frame)
+        }
+    }
+}
+
+/**
+ * Small: the usual's tile, then its name and "Your usual" with play at the foot, as the mockup has it. When the name
+ * won't fit beside play, play moves up beside a bigger tile. While recording: the sport, "Recording since" and Open.
+ * One line each, never wrapped. The spare height is shared above, between and below, so nothing leaves a hole.
+ */
+@Composable
+private fun ColumnScope.SmallContent(m: StartWidgetModel, f: WidgetFrame) {
+    val rec = m.recording
+    val sport = rec?.sport ?: m.usual
+    val lines = rec?.let { StartLayout.recordingLines(it) } ?: listOf(StartWidgetModel.USUAL)
+    val fit = StartLayout.small(sport, lines, rec != null, f.contentWidth, f.contentHeight, f.fontScale)
+    val sz = fit.sizes
+    val words: @Composable () -> Unit = {
+        Text(fit.words.name, style = NameStyle, maxLines = 1)
+        fit.words.line?.let { Text(it, style = WidgetType.secondary, maxLines = 1) }
+    }
+    Spacer(GlanceModifier.defaultWeight())
+    if (fit.actionTop) {
+        Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            if (fit.tile) UsualTile(sport, rec != null, sz, f.density)
+            Spacer(GlanceModifier.defaultWeight())
+            Action(m, sz, f)
+        }
+        Spacer(GlanceModifier.defaultWeight())
+        Column(GlanceModifier.fillMaxWidth()) { words() }
+    } else {
+        UsualTile(sport, rec != null, sz, f.density)
+        Spacer(GlanceModifier.defaultWeight())
+        Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Column(GlanceModifier.defaultWeight()) { words() }
+            Spacer(GlanceModifier.width(StartLayout.SMALL_GAP_DP.dp))
+            Action(m, sz, f)
+        }
+    }
+    Spacer(GlanceModifier.defaultWeight())
+}
+
+/**
+ * Wide: the usual row over the tiles, at the largest sizes that keep four sports, the spare height shared above,
+ * between and below. While recording, the workout's row alone.
+ */
+@Composable
+private fun ColumnScope.WideContent(m: StartWidgetModel, f: WidgetFrame) {
+    val b = StartLayout.wide(m, f.contentWidth, f.contentHeight, f.fontScale)
+    Spacer(GlanceModifier.defaultWeight())
+    UsualRow(m, b, f)
+    b.tiles?.let {
+        Spacer(GlanceModifier.defaultWeight())
+        TileRow(it, f)
+    }
+    Spacer(GlanceModifier.defaultWeight())
+}
+
+/**
+ * Large: the Wide, a hairline, then This week and the usual sport's last, the spare height shared between them all.
+ * While recording, the workout's row over the figures.
+ */
+@Composable
+private fun ColumnScope.LargeContent(m: StartWidgetModel, f: WidgetFrame) {
+    val b = StartLayout.large(m, f.contentWidth, f.contentHeight, f.fontScale)
+    // Half a gap above and below, at the cell's real height: the padding already frames the block.
+    val edge = b.edgeGap(f.drawHeight - 2 * WidgetSizes.PADDING_DP)
+    Spacer(GlanceModifier.height(edge.dp))
+    UsualRow(m, b, f)
+    Spacer(GlanceModifier.defaultWeight())
+    b.tiles?.let {
+        TileRow(it, f)
+        Spacer(GlanceModifier.defaultWeight())
+    }
+    // Padded back to 20 dp outside the line: a background would fill a padding of its own.
+    Box(GlanceModifier.fillMaxWidth().then(Inset)) {
+        Box(GlanceModifier.fillMaxWidth().height(1.dp).background(ColorProvider(Color.White.copy(alpha = HAIRLINE_ALPHA)))) {}
+    }
+    Spacer(GlanceModifier.defaultWeight())
+    b.figures?.let { Figures(m, it) }
+    Spacer(GlanceModifier.height(edge.dp))
+}
+
+/** The usual's tile, its name over "Your usual, GPS on" with the location mark, and play; or the workout recording. */
+@Composable
+private fun UsualRow(m: StartWidgetModel, b: StartLayout.Block, f: WidgetFrame) {
+    val rec = m.recording
+    val sport = rec?.sport ?: m.usual
+    val words = b.row.words
+    Row(GlanceModifier.fillMaxWidth().then(Inset), verticalAlignment = Alignment.CenterVertically) {
+        UsualTile(sport, rec != null, b.sizes, f.density)
+        Spacer(GlanceModifier.width(StartLayout.ROW_GAP_DP.dp))
+        Column(GlanceModifier.defaultWeight()) {
+            Text(words.name, style = NameStyle, maxLines = 1)
+            words.line?.let { line ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(line, style = WidgetType.secondary, maxLines = 1)
+                    if (words.mark) {
+                        Spacer(GlanceModifier.width(StartLayout.MARK_GAP_DP.dp))
+                        Image(
+                            ImageProvider(iconBitmap(SportIcons.Location, Color.White.copy(alpha = 0.72f), StartLayout.MARK_DP, f.density)),
+                            contentDescription = null,
+                            modifier = GlanceModifier.size(StartLayout.MARK_DP.dp),
+                            contentScale = ContentScale.FillBounds,
+                        )
+                    }
+                }
+            }
+        }
+        Spacer(GlanceModifier.width(StartLayout.ROW_GAP_DP.dp))
+        Action(m, b.sizes, f)
+    }
+}
+
+/** Play, white with a black triangle, opening Ready with the usual; or Open while a workout records. */
+@Composable
+private fun Action(m: StartWidgetModel, sz: StartLayout.Sizes, f: WidgetFrame) {
+    val context = LocalContext.current
+    if (m.recording != null) {
+        val w = StartLayout.openWidth(f.fontScale)
+        Box(
+            GlanceModifier.size(w.dp, sz.play.dp)
+                .background(ImageProvider(pillBitmap(w, sz.play, f.density)), ContentScale.FillBounds)
+                .clickable(actionStartActivity(openLiveWorkout(context))),
+            contentAlignment = Alignment.Center,
+        ) { Text(StartWidgetModel.OPEN, style = OpenStyle, maxLines = 1) }
+        return
+    }
+    Image(
+        ImageProvider(playBitmap(sz, f.density)),
+        contentDescription = m.usual.action,
+        modifier = GlanceModifier.size(sz.play.dp).clickable(actionStartActivity(openReady(context, m.usual.sportType))),
+        contentScale = ContentScale.FillBounds,
+    )
+}
+
+/** The usual's tile at [sz]. A tap starts it too, or opens the workout recording. */
+@Composable
+private fun UsualTile(sport: StartSport, recording: Boolean, sz: StartLayout.Sizes, density: Float) {
+    val context = LocalContext.current
+    val tap = if (recording) openLiveWorkout(context) else openReady(context, sport.sportType)
+    Image(
+        ImageProvider(tileBitmap(SportIcons.of(sport.shownType), sz.tile, sz.tileCorner, sz.icon, density)),
+        contentDescription = null,
+        modifier = GlanceModifier.size(sz.tile.dp).clickable(actionStartActivity(tap)),
+        contentScale = ContentScale.FillBounds,
+    )
+}
+
+/**
+ * The next sports and All sports: the tiles spread edge to edge with equal room between (the first under the usual's
+ * tile, the last under play), then their captions on one line, each in a box as wide as its neighbours leave
+ * ([StartLayout.captionBoxes]), each centred under its tile, the first and last running into the side padding when
+ * they're wider than their tile. Each row is at most ten children (Glance drops a row's children past ten). A tile
+ * and its caption open the same.
+ */
+@Composable
+private fun TileRow(tiles: StartLayout.Tiles, f: WidgetFrame) {
+    val context = LocalContext.current
+    val opens = tiles.sports.map { openReady(context, it.sportType) } + openSportPicker(context)
+    val actions = tiles.sports.map { it.action } + StartWidgetModel.ALL_SPORTS_ACTION
+    val icons = tiles.sports.map { SportIcons.of(it.shownType) } + AppIcons.GridView
+    val captions = tiles.captions
+    val n = captions.size
+    val icon = (tiles.tile * StartLayout.ICON_DP / StartLayout.SMALL_TILE_DP).coerceIn(16f, 24f)
+    Column(GlanceModifier.fillMaxWidth()) {
+        Row(GlanceModifier.fillMaxWidth().then(Inset)) {
+            for (i in 0 until n) {
+                if (i > 0) Spacer(GlanceModifier.defaultWeight())
+                Image(
+                    ImageProvider(tileBitmap(icons[i], tiles.tile, tiles.corner, icon, f.density)),
+                    contentDescription = actions[i],
+                    modifier = GlanceModifier.size(tiles.tile.dp).clickable(actionStartActivity(opens[i])),
+                    contentScale = ContentScale.FillBounds,
+                )
+            }
+        }
+        if (!tiles.captioned) return@Column
+        Spacer(GlanceModifier.height(StartLayout.CAPTION_GAP_DP.dp))
+        // Placed at the real width, so the captions sit under tiles spread across it.
+        val boxes = StartLayout.captionBoxes(captions, tiles.tile, tiles.captionSp, f.drawContentWidth, f.fontScale)
+        val style = WidgetType.caption.copy(fontSize = tiles.captionSp.sp)
+        // This row alone spans into the padding: x runs from the bleed's edge. At most ten children: a spacer before
+        // each of the five captions.
+        Row(GlanceModifier.fillMaxWidth()) {
+            var x = -StartLayout.CAPTION_BLEED_DP
+            boxes.forEachIndexed { i, (left, w) ->
+                val gap = left - x
+                if (gap > 0.5f) Spacer(GlanceModifier.width(gap.dp))
+                Text(
+                    captions[i], style = style.copy(textAlign = TextAlign.Center), maxLines = 1,
+                    modifier = GlanceModifier.width(w.dp).clickable(actionStartActivity(opens[i])),
+                )
+                x = left + w
+            }
+        }
+    }
+}
+
+/** This week and the usual's last: side by side, Caption over Body, or a row each when a value won't fit half. */
+@Composable
+private fun Figures(m: StartWidgetModel, fit: StartLayout.Figures) {
+    when (fit.layout) {
+        StartLayout.FigureLayout.Side -> Row(GlanceModifier.fillMaxWidth().then(Inset)) {
+            Figure(StartWidgetModel.THIS_WEEK, m.weekLine, GlanceModifier.defaultWeight())
+            Spacer(GlanceModifier.width(StartLayout.FIGURE_GAP_DP.dp))
+            Figure(m.lastLabel, m.lastLine, GlanceModifier.defaultWeight())
+        }
+        StartLayout.FigureLayout.Rows -> Column(GlanceModifier.fillMaxWidth().then(Inset)) {
+            FigureRow(StartWidgetModel.THIS_WEEK, m.weekLine)
+            Spacer(GlanceModifier.height(StartLayout.FIGURE_ROW_GAP_DP.dp))
+            FigureRow(m.lastLabel, m.lastLine)
+        }
+        StartLayout.FigureLayout.Stacked -> Column(GlanceModifier.fillMaxWidth().then(Inset)) {
+            Figure(StartWidgetModel.THIS_WEEK, m.weekLine, GlanceModifier.fillMaxWidth())
+            Spacer(GlanceModifier.height(StartLayout.FIGURE_ROW_GAP_DP.dp))
+            Figure(m.lastLabel, m.lastLine, GlanceModifier.fillMaxWidth())
+        }
+    }
+}
+
+@Composable
+private fun Figure(label: String, value: String, modifier: GlanceModifier) {
+    Column(modifier) {
+        Text(label, style = WidgetType.caption, maxLines = 1)
+        Spacer(GlanceModifier.height(StartLayout.FIGURE_LINE_GAP_DP.dp))
+        Text(value, style = WidgetType.body, maxLines = 1)
+    }
+}
+
+/** A figure as a row: its Caption on the left, the value on the right. */
+@Composable
+private fun FigureRow(label: String, value: String) {
+    Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(label, style = WidgetType.caption, maxLines = 1)
+        Spacer(GlanceModifier.defaultWeight())
+        Text(value, style = WidgetType.body, maxLines = 1)
+    }
+}
+
+/* ------------------------------------------------------------------------------------------------ */
+/* Bitmaps                                                                                           */
+/* ------------------------------------------------------------------------------------------------ */
+
+/** Room for the tiles, play and the mark beside the backgrounds, in the bitmap budget. */
+private const val BITMAP_EXTRA = 1.3
+
+/** A sport's tile [sizeDp] square: the Control surface with [cornerDp] corners, the icon white at [iconDp] in the middle. */
+private fun tileBitmap(icon: ImageVector, sizeDp: Float, cornerDp: Float, iconDp: Float, density: Float): Bitmap {
+    val s = sizeDp * density
+    val r = cornerDp * density
+    val i = iconDp * density
+    return renderToBitmap(s, s) { c ->
+        c.drawRoundRect(0f, 0f, s, s, r, r, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = ControlSurface.toArgb() })
+        drawIcon(c, icon, Color.White, (s - i) / 2, (s - i) / 2, i)
+    }
+}
+
+/** The play button at [sz]: a white circle with the black play triangle, as Ready's Start. */
+private fun playBitmap(sz: StartLayout.Sizes, density: Float): Bitmap {
+    val s = sz.play * density
+    val i = sz.playIcon * density
+    return renderToBitmap(s, s) { c ->
+        c.drawCircle(s / 2, s / 2, s / 2, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.White.toArgb() })
+        drawIcon(c, AppIcons.PlayFill, Color.Black, (s - i) / 2, (s - i) / 2, i)
+    }
+}
+
+/** Open's white pill, [w] by [h] dp, fully round. */
+private fun pillBitmap(w: Float, h: Float, density: Float): Bitmap {
+    val pw = w * density
+    val ph = h * density
+    return renderToBitmap(pw, ph) { c ->
+        c.drawRoundRect(0f, 0f, pw, ph, ph / 2, ph / 2, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.White.toArgb() })
+    }
+}
+
+/** [icon] alone in [color], [sizeDp] square. */
+private fun iconBitmap(icon: ImageVector, color: Color, sizeDp: Float, density: Float): Bitmap {
+    val s = sizeDp * density
+    return renderToBitmap(s, s) { c -> drawIcon(c, icon, color, 0f, 0f, s) }
+}

@@ -113,6 +113,9 @@ class WorkoutSession(
     /** A sport a launcher shortcut or the Quick Settings tile asked the ready screen to open with; the screen clears it. */
     val readyRequest = MutableStateFlow<Int?>(null)
 
+    /** The Start widget's All sports asked for the ready screen on its sport picker; the screen clears it. */
+    val readyPickRequest = MutableStateFlow(false)
+
     /** The start of a strap workout a notification asked to open on the Activity tab; the screen clears it. */
     val openRequest = MutableStateFlow<Long?>(null)
 
@@ -135,10 +138,18 @@ class WorkoutSession(
         // A workout starting or ending changes the moment and the Start widget (widgets spec 7).
         scope.launch {
             var was: Boolean? = null
+            var wasKind: Class<*>? = null
             _state.collect { st ->
                 val recording = st is WorkoutState.Recording
-                if (was != null && was != recording) WidgetUpdater.changed(context, setOf(WidgetKind.Moment, WidgetKind.Start))
+                // A summary closing can follow a discard, which takes a workout out of Start's week.
+                val kinds = when {
+                    was != null && was != recording -> setOf(WidgetKind.Moment, WidgetKind.Start)
+                    wasKind != null && wasKind != st::class.java -> setOf(WidgetKind.Start)
+                    else -> emptySet()
+                }
+                if (kinds.isNotEmpty()) WidgetUpdater.changed(context, kinds)
                 was = recording
+                wasKind = st::class.java
             }
         }
     }

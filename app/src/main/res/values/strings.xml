@@ -10,4 +10,6 @@
     <string name="widget_steps_description">Steps today and your goal</string>
     <string name="widget_sleep_name">Sleep</string>
     <string name="widget_sleep_description">Last night\'s score, time asleep and stages</string>
+    <string name="widget_start_name">Start a workout</string>
+    <string name="widget_start_description">Start your usual sport in one tap</string>
 </resources>

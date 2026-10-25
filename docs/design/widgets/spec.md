@@ -164,6 +164,36 @@ Last night's main sleep. Night mood always.
   `Workouts.DEFAULT_SPORTS` before there are enough workouts. GPS on or off is the per sport setting from v2.
 - While recording: the sport, "Recording since 17:42" and an Open button in place of play, on every size.
 - No dotted number: this widget has none.
+- Decided in step 4 (2026-10-25):
+  - `Workouts.DEFAULT_SPORTS` is three sports and the Wide needs five, so `Workouts.EVERYDAY` pads the list after it.
+  - A sport with two sides shows the side Ready will open on (your runs, last done on the treadmill, show
+    "Treadmill"), each sport once.
+  - Nothing on this widget wraps (the user's call, 2026-10-25): every text is one line. Captions are the picker's
+    short names ("Walk" for an indoor walk), the full name only where the short one is already said ("Treadmill"
+    beside your outdoor runs). The row is always the sports in their order of use, so every size shows the same row
+    or its start: a caption that won't fit goes to 10 sp, the tiles get smaller, then the row has fewer columns. Only
+    when not even two fit in order does a sport give its place to the next. A short Wide shrinks the tiles to 32 dp before losing a column, and always keeps the row.
+  - The tile row spans the content edge to edge: the first tile under the usual's tile, All sports under play, even
+    room between. Every caption is centred under its own tile, the first and last too, and may run past its tile
+    into the gap and up to half the side padding, never into a neighbour's caption. At a large font in a short
+    Wide the captions are the last thing to go, the tiles stay.
+  - A name too long for its line becomes the short name, "Recording since 17:42" becomes "Since 17:42", and the
+    location mark, then ", GPS on", give way in the usual row.
+  - Spare height grows the parts toward the mockup's sizes first (usual tile 48, play up to 52, sport tiles up to
+    44, the Small's tile up to 56), then is shared evenly above, between and below the blocks, so a tall cell has no
+    hole. On the Large the gap above and below is half of those between, as the padding already frames it. Each
+    caption is drawn in a box as wide as its neighbours leave, never its estimated width. What fits is decided by its
+    letters' widths plus 15%, so a tight one gives its place rather than being cut.
+  - The Large's figures sit side by side when both values fit half the width, else a row each (Caption left, value
+    right), else one under the other.
+  - The GPS line reads "Your usual, GPS on" with the mark, "Your usual, GPS off" when location is off, and "Your
+    usual" for a sport without GPS.
+  - On a Small too narrow for the name beside play, play moves up beside the tile.
+    While recording, Open always sits there.
+  - "Last run" is the usual sport's tile ("Last strength", "Last HIIT"), runs and treadmill runs together. Its value
+    is the day and the distance, else the sets, else how long ("Yesterday, 35 min"), and "None yet" before any.
+  - This week counts Monday to now as Your week does, without the strap's "Activity" records ("No workouts yet").
+  - While recording the Wide shows the workout's row alone, the Large keeps the hairline and the two figures under it.
 
 ## 4. Taps
 

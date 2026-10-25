@@ -183,10 +183,16 @@ class WidgetFrame(
  * An edge card widget at the size Glance lays out ([LocalSize]): [light] in [ink] at [mood] behind, drawn at the
  * cell's real size, the whole widget opening [open], the content inside the padding. [bitmapExtra] is the room the
  * content's bitmaps take beside the backgrounds in the budget (spec 6.2): every size's bitmaps go to the launcher at
- * once and are scaled down together if they'd pass the limit.
+ * once and are scaled down together if they'd pass the limit. [sidePadding] narrower than the card's 20 dp lets a row
+ * reach into the padding (Start's centred captions); the content then pads itself back to 20 dp, and [WidgetFrame]'s
+ * content sizes stay those inside the full padding.
  */
 @Composable
-internal fun EdgeWidget(light: EdgeLight, ink: Color, mood: GlowMood, open: Intent, bitmapExtra: Double, content: @Composable ColumnScope.(WidgetFrame) -> Unit) {
+internal fun EdgeWidget(
+    light: EdgeLight, ink: Color, mood: GlowMood, open: Intent, bitmapExtra: Double,
+    sidePadding: Float = WidgetSizes.PADDING_DP,
+    content: @Composable ColumnScope.(WidgetFrame) -> Unit,
+) {
     val context = LocalContext.current
     val size = LocalSize.current
     val bucket = WidgetSizes.bucket(size.width.value, size.height.value)
@@ -205,7 +211,7 @@ internal fun EdgeWidget(light: EdgeLight, ink: Color, mood: GlowMood, open: Inte
             .background(ImageProvider(edgeBackground(light, ink, mood, w, h, corner, density)), ContentScale.FillBounds)
             .clickable(actionStartActivity(open)),
     ) {
-        Column(GlanceModifier.fillMaxSize().padding(WidgetSizes.PADDING_DP.dp)) { content(frame) }
+        Column(GlanceModifier.fillMaxSize().padding(horizontal = sidePadding.dp, vertical = WidgetSizes.PADDING_DP.dp)) { content(frame) }
     }
 }
 

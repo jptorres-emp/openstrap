@@ -2,6 +2,7 @@ package org.openstrap.app.widget
 
 import org.openstrap.app.ui.dashboard.clockText
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
@@ -60,13 +61,26 @@ fun strapStatusLine(status: StrapStatus, now: Long, zone: ZoneId, locale: Locale
     is StrapStatus.LowBattery -> "Strap at ${status.percent}%"
     StrapStatus.Syncing -> "Syncing"
     is StrapStatus.StaleSync -> {
-        val then = Instant.ofEpochSecond(status.at).atZone(zone)
-        val days = ChronoUnit.DAYS.between(then.toLocalDate(), Instant.ofEpochSecond(now).atZone(zone).toLocalDate())
+        val then = Instant.ofEpochSecond(status.at).atZone(zone).toLocalDate()
+        val days = ChronoUnit.DAYS.between(then, Instant.ofEpochSecond(now).atZone(zone).toLocalDate())
         "Last sync " + when {
             days <= 0 -> clockText(status.at, zone)
-            days == 1L -> "yesterday"
-            days < 7 -> then.dayOfWeek.getDisplayName(TextStyle.FULL, locale)
-            else -> then.format(DateTimeFormatter.ofPattern("d MMM", locale))
+            days == 1L -> recentDay(then, then.plusDays(1), locale).lowercase(locale)
+            else -> recentDay(then, then.plusDays(days), locale)
         }
+    }
+}
+
+/**
+ * [date] as a widget says when something was, seen from [today]: "Today", "Yesterday", the weekday within the week
+ * ("Tuesday") and the date before that ("21 Oct").
+ */
+fun recentDay(date: LocalDate, today: LocalDate, locale: Locale = Locale.getDefault()): String {
+    val days = ChronoUnit.DAYS.between(date, today)
+    return when {
+        days <= 0 -> "Today"
+        days == 1L -> "Yesterday"
+        days < 7 -> date.dayOfWeek.getDisplayName(TextStyle.FULL, locale)
+        else -> date.format(DateTimeFormatter.ofPattern("d MMM", locale))
     }
 }

@@ -56,6 +56,9 @@ class WidgetGalleryActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         host = AppWidgetHost(this, HOST_ID)
+        // Ids from a run that never reached onDestroy (an install kills the process) stay bound and count as
+        // placed, so every widget update would render them all: clear the host's leftovers first.
+        host.deleteHost()
         applyMood(intent.getStringExtra(EXTRA_MOOD))
         applyCells(intent.getStringExtra(EXTRA_CELLS))
         applyMoment(intent)

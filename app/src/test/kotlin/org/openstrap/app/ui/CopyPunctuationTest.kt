@@ -21,13 +21,13 @@ class CopyPunctuationTest {
     private val root: File = listOf(File("src/main"), File("app/src/main")).first { it.isDirectory }
     private val kotlinRoot = File(root, "kotlin/org/openstrap/app")
 
-    /** Everything under ui/, every *Copy*.kt, the notification text in StrapService and data the UI shows as is. */
+    /** Everything under ui/ and widget/, every *Copy*.kt, the notification text in StrapService and data the UI shows as is. */
     private fun sources(): List<File> {
         val all = kotlinRoot.walkTopDown().filter { it.isFile && it.extension == "kt" }.toList()
         val named = setOf("device/StrapService.kt", "data/Recovery.kt", "data/settings/Goals.kt")
         return all.filter { f ->
             val path = f.relativeTo(kotlinRoot).invariantSeparatorsPath
-            path.startsWith("ui/") || "Copy" in f.name || path in named
+            path.startsWith("ui/") || path.startsWith("widget/") || "Copy" in f.name || path in named
         }.sortedBy { it.path }
     }
 
@@ -46,6 +46,14 @@ class CopyPunctuationTest {
         }
         File(root, "res/values/strings.xml").takeIf { it.isFile }?.readLines()?.forEachIndexed { i, line ->
             if (line.any { it in banned }) found += "res/values/strings.xml:${i + 1}  ${line.trim()}"
+        }
+        // The widgets' provider XML (widgets spec 8).
+        File(root, "res/xml").listFiles().orEmpty().filter { it.name.startsWith("widget_") && it.extension == "xml" }.sortedBy { it.name }.forEach { f ->
+            f.readLines().forEachIndexed { i, line -> if (line.any { it in banned }) found += "res/xml/${f.name}:${i + 1}  ${line.trim()}" }
+        }
+        // The picker previews' sample copy (widgets spec 6.4).
+        File(root, "res/layout").listFiles().orEmpty().filter { it.name.startsWith("widget_preview_") }.sortedBy { it.name }.forEach { f ->
+            f.readLines().forEachIndexed { i, line -> if (line.any { it in banned }) found += "res/layout/${f.name}:${i + 1}  ${line.trim()}" }
         }
         if (found.isNotEmpty()) fail("${found.size} user-facing strings use ·, ; or —:\n" + found.joinToString("\n"))
         val stale = allowed.keys - used

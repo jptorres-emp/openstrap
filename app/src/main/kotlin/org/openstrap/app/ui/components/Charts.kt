@@ -287,34 +287,7 @@ fun LineChart(
  * A smooth path through [pts] using monotone cubic interpolation (Fritsch–Carlson): curves like a spline
  * but never overshoots the data, so a smoothed heart rate can't show a peak or dip that didn't happen.
  */
-internal fun smoothPath(pts: List<Offset>): Path {
-    val path = Path()
-    if (pts.isEmpty()) return path
-    path.moveTo(pts[0].x, pts[0].y)
-    if (pts.size == 2) { path.lineTo(pts[1].x, pts[1].y); return path }
-    val n = pts.size
-    val d = FloatArray(n - 1) { i -> (pts[i + 1].y - pts[i].y) / (pts[i + 1].x - pts[i].x).coerceAtLeast(0.001f) }
-    val m = FloatArray(n)
-    m[0] = d[0]
-    m[n - 1] = d[n - 2]
-    for (i in 1 until n - 1) m[i] = if (d[i - 1] * d[i] <= 0f) 0f else (d[i - 1] + d[i]) / 2f
-    for (i in 0 until n - 1) {
-        if (d[i] == 0f) { m[i] = 0f; m[i + 1] = 0f; continue }
-        val a = m[i] / d[i]
-        val b = m[i + 1] / d[i]
-        val s = a * a + b * b
-        if (s > 9f) {
-            val t = 3f / kotlin.math.sqrt(s)
-            m[i] = t * a * d[i]
-            m[i + 1] = t * b * d[i]
-        }
-    }
-    for (i in 0 until n - 1) {
-        val dx = (pts[i + 1].x - pts[i].x) / 3f
-        path.cubicTo(pts[i].x + dx, pts[i].y + m[i] * dx, pts[i + 1].x - dx, pts[i + 1].y - m[i + 1] * dx, pts[i + 1].x, pts[i + 1].y)
-    }
-    return path
-}
+internal fun smoothPath(pts: List<Offset>): Path = org.openstrap.app.ui.glow.draw.composePath(org.openstrap.app.ui.glow.draw.smoothOps(pts))
 
 private fun niceStep(raw: Float): Float {
     val candidates = floatArrayOf(1f, 2f, 5f, 10f, 20f, 25f, 50f, 100f)

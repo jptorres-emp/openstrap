@@ -28,9 +28,13 @@ class AppContainer(val app: Application) {
     val workout = org.openstrap.app.device.WorkoutSession(app, database.healthDao(), settings, strap, callRinging = { phoneAlerts.callRinging })
 }
 
-class OpenStrapApp : Application() {
+class OpenStrapApp : Application(), androidx.work.Configuration.Provider {
     lateinit var container: AppContainer
         private set
+
+    /** WorkManager as Glance's widget sessions need it: rendering on their own thread ([WidgetWork]). */
+    override fun getWorkManagerConfiguration(): androidx.work.Configuration =
+        androidx.work.Configuration.Builder().setWorkerFactory(org.openstrap.app.widget.WidgetWork).build()
 
     override fun onCreate() {
         super.onCreate()
@@ -41,5 +45,9 @@ class OpenStrapApp : Application() {
         // Android restarts the process on its own (companion presence, a reboot): reconnect without the screen.
         // A no-op when nothing is paired, a connection is already up, or the user tapped Disconnect.
         if (checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) container.strap.backgroundConnect()
+        // Widgets turn the day over at midnight; alarms don't survive a reboot or an update, so set it on each start.
+        org.openstrap.app.device.WidgetUpdater.scheduleMidnight(this)
+        // Android 15 and later: the widget picker's previews, from the real layouts (spec 6.4).
+        org.openstrap.app.device.WidgetUpdater.publishPreviews(this)
     }
 }

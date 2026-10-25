@@ -75,6 +75,8 @@ import org.openstrap.app.ui.theme.AppIcons
 import org.openstrap.app.ui.theme.MetricColors
 import org.openstrap.app.ui.workout.SportIcons
 import org.openstrap.app.ui.workout.ZONE_COLORS
+import org.openstrap.app.ui.glow.draw.drawHourPills
+import org.openstrap.app.ui.glow.draw.hourPills
 
 /** Heart points' weekly aim: 100 or more over the last seven days. */
 private const val HEART_POINTS_TARGET = ActivityCopy.HEART_POINTS_TARGET
@@ -268,8 +270,6 @@ private fun StepsGlow(state: DayUiState, usual: List<Float>?, tag: TitleTag?, on
  */
 @Composable
 private fun HourPills(hourly: List<Float>, picked: Int?, onPick: (Int?) -> Unit) {
-    val top = hourly.maxOrNull()?.takeIf { it > 0f } ?: 1f
-    val last = picked ?: hourly.indexOfLast { it > 0f }
     Column {
         Canvas(
             Modifier.fillMaxWidth().height(HourPillsHeight).pointerInput(hourly, picked) {
@@ -281,13 +281,8 @@ private fun HourPills(hourly: List<Float>, picked: Int?, onPick: (Int?) -> Unit)
                 }
             },
         ) {
-            if (hourly.isEmpty()) return@Canvas
-            val slot = size.width / hourly.size
-            barBaseline(size.height - 0.5.dp.toPx())
-            hourly.forEachIndexed { i, v ->
-                if (v <= 0f) return@forEachIndexed
-                pillBar(if (i == last) Color.White else Color.White.copy(alpha = 0.45f), slot * i, slot, size.height, size.height * v / top)
-            }
+            // The shared pill bars ([hourPills]), as a widget's chart draws them.
+            hourPills(hourly, picked, size.width, size.height, density)?.let { drawHourPills(it) }
         }
         Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
             listOf("00", "06", "12", "18", "24").forEach {

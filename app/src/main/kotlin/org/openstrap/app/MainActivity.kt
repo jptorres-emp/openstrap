@@ -92,6 +92,12 @@ class MainActivity : ComponentActivity() {
     /** The latest `open_metric` link, until the app root has opened it. */
     private val metricRequests = kotlinx.coroutines.flow.MutableStateFlow<MetricRequest?>(null)
 
+    /** The Moment widget's tap: Today, at its root, until the app root has opened it. */
+    private val todayRequests = kotlinx.coroutines.flow.MutableStateFlow(false)
+
+    /** A widget's strap status line (not paired, battery low): the Strap page, until the app root has opened it. */
+    private val strapRequests = kotlinx.coroutines.flow.MutableStateFlow(false)
+
     /** Debug: the moment forced by the `moment` extra, null to follow the clock. */
     private val forcedMoment = kotlinx.coroutines.flow.MutableStateFlow<org.openstrap.app.data.Moment?>(null)
 
@@ -109,7 +115,7 @@ class MainActivity : ComponentActivity() {
             navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
         )
         val container = (application as OpenStrapApp).container
-        setContent { OpenStrapTheme { AppRoot(container, metricRequests, forcedMoment, strapPreview, dataPreview) } }
+        setContent { OpenStrapTheme { AppRoot(container, metricRequests, todayRequests, strapRequests, forcedMoment, strapPreview, dataPreview) } }
     }
 
     override fun onStart() {
@@ -146,6 +152,15 @@ class MainActivity : ComponentActivity() {
      * metric's screen for its day.
      */
     private fun showWorkoutFromIntent() {
+        // The Moment widget: Today as it is now, never a forced moment.
+        if (intent.getStringExtra(EXTRA_MOMENT) == MOMENT_NOW) {
+            intent.removeExtra(EXTRA_MOMENT)
+            todayRequests.value = true
+        }
+        if (intent.getBooleanExtra(EXTRA_OPEN_STRAP, false)) {
+            intent.removeExtra(EXTRA_OPEN_STRAP)
+            strapRequests.value = true
+        }
         intent.getStringExtra(EXTRA_OPEN_METRIC)?.let { route ->
             val day = intent.getStringExtra(EXTRA_METRIC_DAY)?.let { runCatching { java.time.LocalDate.parse(it) }.getOrNull() }
             intent.removeExtra(EXTRA_OPEN_METRIC)
@@ -162,6 +177,10 @@ class MainActivity : ComponentActivity() {
             intent.removeExtra(EXTRA_READY_SPORT)
             (application as OpenStrapApp).container.workout.readyRequest.value = ready
         }
+        if (intent.getBooleanExtra(EXTRA_READY_PICK, false)) {
+            intent.removeExtra(EXTRA_READY_PICK)
+            (application as OpenStrapApp).container.workout.readyPickRequest.value = true
+        }
         if (!intent.getBooleanExtra(EXTRA_SHOW_WORKOUT, false)) return
         intent.removeExtra(EXTRA_SHOW_WORKOUT)
         (application as OpenStrapApp).container.workout.minimized.value = false
@@ -170,6 +189,9 @@ class MainActivity : ComponentActivity() {
     companion object {
         const val EXTRA_SHOW_WORKOUT = "show_workout"
         const val EXTRA_READY_SPORT = "ready_sport"
+
+        /** True opens Ready on the sport picker, as All sports does: the Start widget's All sports. */
+        const val EXTRA_READY_PICK = "ready_pick"
         const val EXTRA_OPEN_WORKOUT = "open_workout"
 
         /** A metric's detail by [org.openstrap.app.ui.dashboard.Metric] name ("Hrv"), or "Recovery" or "Sleep". */
@@ -178,8 +200,15 @@ class MainActivity : ComponentActivity() {
         /** The day for [EXTRA_OPEN_METRIC], as an ISO date ("2026-10-23"); without it the day showing stays. */
         const val EXTRA_METRIC_DAY = "metric_day"
 
-        /** Debug: a [org.openstrap.app.data.Moment] name to force on Today, or "auto" to follow the clock again. */
+        /**
+         * [MOMENT_NOW] opens Today at its root, as it is now: the Moment widget's tap (widgets spec 4). Debug: a
+         * [org.openstrap.app.data.Moment] name to force on Today, or "auto" to follow the clock again.
+         */
         const val EXTRA_MOMENT = "moment"
+        const val MOMENT_NOW = "now"
+
+        /** True opens the Strap page over the tab showing: a widget's status line while the strap isn't paired or is low. */
+        const val EXTRA_OPEN_STRAP = "open_strap"
 
         /** Debug: a [StrapPreview] name ("stale", "stuck", "disconnected", "charging", "notpaired", "recoveryfail") to show, or "auto". */
         const val EXTRA_STRAP_STATE = "strap_state"
@@ -250,7 +279,7 @@ class MainActivity : ComponentActivity() {
         // Debug: `--es moment Evening` forces Today's moment (a Moment name), so each can be checked on a phone;
         // `--es moment auto` goes back to the clock.
         val moment = intent.getStringExtra(EXTRA_MOMENT)
-        if (BuildConfig.DEBUG && moment != null) {
+        if (BuildConfig.DEBUG && moment != null && moment != MOMENT_NOW) {
             intent.removeExtra(EXTRA_MOMENT)
             if (moment.equals("auto", ignoreCase = true)) forcedMoment.value = null
             else org.openstrap.app.data.Moment.entries.firstOrNull { it.name.equals(moment, ignoreCase = true) }
@@ -364,6 +393,8 @@ private const val FIRST_SCORE_LOADING = Long.MIN_VALUE
 private fun AppRoot(
     container: AppContainer,
     metricRequests: kotlinx.coroutines.flow.MutableStateFlow<MetricRequest?>,
+    todayRequests: kotlinx.coroutines.flow.MutableStateFlow<Boolean>,
+    strapRequests: kotlinx.coroutines.flow.MutableStateFlow<Boolean>,
     forcedMoment: kotlinx.coroutines.flow.StateFlow<org.openstrap.app.data.Moment?>,
     strapPreview: kotlinx.coroutines.flow.StateFlow<StrapPreview?>,
     dataPreviews: kotlinx.coroutines.flow.StateFlow<DataPreview?>,
@@ -474,6 +505,39 @@ private fun AppRoot(
         readyRequest?.let { sport ->
             if (workoutState !is org.openstrap.app.device.WorkoutState.Recording) { readySport = sport; readyPicking = false }
             container.workout.readyRequest.value = null
+        }
+    }
+    // The Start widget's All sports: Ready on the sport picker, as the Activity tab's All sports opens it.
+    val readyPickRequest by container.workout.readyPickRequest.collectAsStateWithLifecycle()
+    LaunchedEffect(readyPickRequest) {
+        if (readyPickRequest) {
+            if (workoutState !is org.openstrap.app.device.WorkoutState.Recording) {
+                readySport = readySport ?: org.openstrap.app.ui.glow.topSports(workouts).first().sportType
+                readyPicking = true
+            }
+            container.workout.readyPickRequest.value = false
+        }
+    }
+    // The Moment widget: Today at its root, on today, over whatever showed.
+    val todayRequest by todayRequests.collectAsStateWithLifecycle()
+    LaunchedEffect(todayRequest) {
+        if (todayRequest) {
+            closePages()
+            allMetricsOpen = false
+            if (workoutState !is org.openstrap.app.device.WorkoutState.Recording) readySport = null
+            todayStack = emptyList()
+            dayVm.select(java.time.LocalDate.now())
+            nav = nav.select(Tab.Today.ordinal)
+            todayRequests.value = false
+        }
+    }
+    // A widget's strap status line: the Strap page, over the tab showing, as the header's strap chip opens it.
+    val strapRequest by strapRequests.collectAsStateWithLifecycle()
+    LaunchedEffect(strapRequest) {
+        if (strapRequest) {
+            allMetricsOpen = false
+            if (pages.lastOrNull() != Page.Strap && (pages.isEmpty() || closePages())) openPage(Page.Strap)
+            strapRequests.value = false
         }
     }
     // An auto-detected workout's notification: that workout, on the Activity tab, its home.
@@ -773,7 +837,14 @@ private fun AppRoot(
             containerColor = MaterialTheme.colorScheme.background,
         ) { padding ->
             if (editGoals) {
-                org.openstrap.app.ui.device.GoalsSheet(goals, onSave = { g -> scope.launch { container.settings.saveGoals(g) }; editGoals = false }, onDismiss = { editGoals = false })
+                org.openstrap.app.ui.device.GoalsSheet(goals, onSave = { g ->
+                    scope.launch {
+                        container.settings.saveGoals(g)
+                        // The Steps widget's goal, and the evening sentence's on Moment (widgets spec 7).
+                        org.openstrap.app.device.WidgetUpdater.changed(container.app, setOf(org.openstrap.app.widget.WidgetKind.Steps, org.openstrap.app.widget.WidgetKind.Moment))
+                    }
+                    editGoals = false
+                }, onDismiss = { editGoals = false })
             }
             // The header on every tab: the moment on Today (a past day's name for a past day), the tab's name elsewhere.
             val header: @Composable (Tab) -> Unit = { t ->
@@ -1262,7 +1333,13 @@ private fun androidx.compose.foundation.layout.BoxScope.WorkoutLayer(
             org.openstrap.app.ui.glow.GlowWorkoutReadyScreen(
                 sport, readyPicking, connection, live, padding,
                 recentSports = recentSports, sides = sides,
-                onSide = { s, indoor -> viewScope.launch { container.settings.setWorkoutSide(s, indoor) } },
+                onSide = { s, indoor ->
+                    viewScope.launch {
+                        container.settings.setWorkoutSide(s, indoor)
+                        // The Start widget names the side Ready opens on and says whether GPS is on (widgets spec 7).
+                        org.openstrap.app.device.WidgetUpdater.changed(container.app, setOf(org.openstrap.app.widget.WidgetKind.Start))
+                    }
+                },
                 onTurnOnLocation = requestLocation,
                 onSport = onReadySport,
                 onStart = { sport, askToEnd, target, useGps, keepRoute, rest, setsTarget ->

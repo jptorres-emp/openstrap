@@ -103,11 +103,7 @@ class WorkoutsViewModel(private val dao: HealthDao, private val profile: Flow<Us
             combine(
                 dao.workouts(), dao.sportEffects(), dao.lastWorkoutHeartRates(),
                 combine(dao.appWorkouts(), dao.setCounts()) { phone, sets -> phone to sets.associate { it.workoutStart to it.sets } }, fallbackMaxHr,
-            ) { ws, effects, last, (phone, sets), maxHr ->
-                val lastByWorkout = last.associateBy { it.workoutStart }
-                val strap = ws.map { w -> Workouts.analyse(w, listOfNotNull(lastByWorkout[w.start]), effects, maxHr) }
-                (strap + phone.map { WorkoutRecorder.analyse(it, emptyList(), maxHr).copy(sets = sets[it.start]) }).sortedByDescending { it.workout.start }
-            },
+            ) { ws, effects, last, (phone, sets), maxHr -> Workouts.listed(ws, effects, last, phone, sets, maxHr) },
             listZones,
         ) { list, zones -> list.map { a -> zones[a.fromPhone to a.workout.start]?.let { a.copy(zoneSeconds = it) } ?: a } }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())

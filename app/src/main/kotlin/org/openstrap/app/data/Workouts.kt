@@ -102,6 +102,20 @@ object Workouts {
         )
     }
 
+    /**
+     * The strap's workouts [ws] and the phone's [phone] as the workout lists show them, newest first: a strap workout's
+     * end placed by its [last] HR sample or its effect, a phone strength workout with its count of finished [sets]
+     * (by start). Zones are left empty: the lists fill them in apart.
+     */
+    fun listed(
+        ws: List<Workout>, effects: List<SportEffectRow>, last: List<WorkoutHeartRate>, phone: List<org.openstrap.app.data.db.AppWorkout>,
+        sets: Map<Long, Int>, maxHr: Int,
+    ): List<WorkoutAnalysis> {
+        val lastByWorkout = last.associateBy { it.workoutStart }
+        val strap = ws.map { w -> analyse(w, listOfNotNull(lastByWorkout[w.start]), effects, maxHr) }
+        return (strap + phone.map { WorkoutRecorder.analyse(it, emptyList(), maxHr).copy(sets = sets[it.start]) }).sortedByDescending { it.workout.start }
+    }
+
     /** The sport effect shown with [w]: the first that ends after its start, within [EFFECT_WINDOW_S]. */
     fun effectOf(w: Workout, effects: List<SportEffectRow>): SportEffectRow? =
         effects.filter { it.end > w.start && it.end <= w.start + EFFECT_WINDOW_S }.minByOrNull { it.end }

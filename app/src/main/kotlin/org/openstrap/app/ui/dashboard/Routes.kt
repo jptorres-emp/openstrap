@@ -102,12 +102,16 @@ sealed interface Detail {
         }
 
         /**
-         * The screen an `open_metric` link names: a [Metric] by name ("Hrv"), or "Recovery" or "Sleep" for those
-         * screens. Null for anything else.
+         * The screen an `open_metric` link names: a [Metric] by name ("Hrv"), "Recovery" or "Sleep" for those
+         * screens, or [SLEEP_SCORE_ROUTE] for the Sleep score's detail. Null for anything else.
          */
+        /** The Sleep score's detail for the night of the link's day, as the Sleep tab's hero opens it. */
+        const val SLEEP_SCORE_ROUTE = "SleepScore"
+
         fun fromRoute(route: String): Detail? = when (route) {
             "Recovery" -> Recovery
             "Sleep" -> Sleep
+            SLEEP_SCORE_ROUTE -> OfScore(Score.Sleep)
             else -> Metric.entries.firstOrNull { it.name == route }?.let { OfMetric(it) }
         }
     }

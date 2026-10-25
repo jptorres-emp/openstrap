@@ -56,12 +56,13 @@ import org.openstrap.app.ui.dashboard.SleepCard
 import org.openstrap.app.ui.dashboard.SleepFacts
 import org.openstrap.app.ui.dashboard.SleepWindows
 import org.openstrap.app.ui.dashboard.TabCopy
-import org.openstrap.app.ui.dashboard.TodayCopy
 import org.openstrap.app.ui.dashboard.nightVitals
 import org.openstrap.app.ui.dashboard.sleepCards
 import org.openstrap.app.ui.dashboard.sleepWeek
 import org.openstrap.app.ui.theme.AppIcons
 import org.openstrap.app.ui.theme.MetricColors
+import org.openstrap.app.ui.glow.draw.StageBarLook
+import org.openstrap.app.ui.glow.draw.stageTotals
 
 /*
  * The Sleep tab (spec 5.2): "how did I sleep, and is it trending right". The night glows with its stages, the
@@ -129,12 +130,6 @@ internal val SleepGlow = GlowStyle.Midnight.copy(
 
 private fun clock(epoch: Long) = Instant.ofEpochSecond(epoch).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("HH:mm"))
 
-/** The stages in the order the hero adds them up: deepest first, awake last. */
-private val STAGE_ORDER = listOf(
-    org.openstrap.app.data.db.SleepStage.DEEP, org.openstrap.app.data.db.SleepStage.REM,
-    org.openstrap.app.data.db.SleepStage.LIGHT, org.openstrap.app.data.db.SleepStage.AWAKE,
-)
-
 /**
  * The night (spec 5.2, the sleep hero): how long, against the rest of the week, then the score in dots with its word
  * and how often you woke beside it, the one dotted number on the card. The stages to scrub in their colours, then
@@ -147,21 +142,21 @@ private fun NightHero(state: DayUiState, firstNights: Boolean, onOpen: () -> Uni
     val isToday = state.date == LocalDate.now()
     GlowCard(SleepGlow, Modifier.fillMaxWidth().gridSize(CardSize.Wide), onClick = onOpen) {
         Column {
-            GlowHeader("Last night", trailing = session?.let { "${clock(it.start)}–${clock(it.end)}" })
+            GlowHeader("Last night", trailing = session?.let { TabCopy.nightTimes(it.start, it.end) })
             if (session == null) {
                 // Nothing said until the night has loaded, so a cold start doesn't open on "No sleep recorded".
                 if (state.loaded) HeroSentence(if (firstNights) TabCopy.FIRST_NIGHT_SLEEP else TabCopy.noNight(state.naps.isNotEmpty(), isToday))
                 return@Column
             }
             val asleep = state.asleepSeconds ?: (session.end - session.start)
-            val others = state.nights.takeLast(SleepHistory.WEEK_NIGHTS).filter { it.date != state.date }.mapNotNull { it.asleepSeconds }
+            val others = SleepHistory.weekOthers(state.nights.mapNotNull { n -> n.session?.let { n.date to it } }.toMap(), state.date)
             HeroSentence(TabCopy.night(asleep, others))
             Spacer(Modifier.height(16.dp))
             val score = session.score
             HeroNumber(
                 score?.toString(),
                 listOfNotNull(
-                    score?.let { "Sleep score, ${TabCopy.sleepScoreWord(it).lowercase()}" } ?: "No score from the strap",
+                    TabCopy.sleepScoreLine(score),
                     TabCopy.woke(session.wakeCount),
                 ),
             )
@@ -171,7 +166,7 @@ private fun NightHero(state: DayUiState, firstNights: Boolean, onOpen: () -> Uni
             }
             state.sleepBreakdown?.let { b ->
                 // Stage totals as text, never dots (spec 2.3): a stage under a minute leaves its segment and legend out.
-                val totals = STAGE_ORDER.mapNotNull { st -> (b.byStage[st] ?: 0L).takeIf { it >= 60 }?.let { st to it } }
+                val totals = stageTotals(b.byStage)
                 if (totals.isNotEmpty()) {
                     Spacer(Modifier.height(16.dp))
                     StageBar(totals)
@@ -183,12 +178,15 @@ private fun NightHero(state: DayUiState, firstNights: Boolean, onOpen: () -> Uni
     }
 }
 
-/** The stage bar (chart kit): one 8 dp bar split by stage, deepest first, with 2 dp gaps. */
+/**
+ * The stage bar (chart kit): one 8 dp bar split by stage, deepest first, with 2 dp gaps, sized by [StageBarLook] as a
+ * widget's bar is ([stageBarSegments] lays that one out in whole pixels the way this Row does).
+ */
 @Composable
 private fun StageBar(totals: List<Pair<Int, Long>>) {
-    Row(Modifier.fillMaxWidth().height(8.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+    Row(Modifier.fillMaxWidth().height(StageBarLook.HEIGHT_DP.dp), horizontalArrangement = Arrangement.spacedBy(StageBarLook.GAP_DP.dp)) {
         totals.forEach { (stage, seconds) ->
-            Box(Modifier.weight(seconds.toFloat()).fillMaxHeight().background(stageColor(stage), RoundedCornerShape(3.dp)))
+            Box(Modifier.weight(seconds.toFloat()).fillMaxHeight().background(stageColor(stage), RoundedCornerShape(StageBarLook.CORNER_DP.dp)))
         }
     }
 }
@@ -203,7 +201,7 @@ private fun StageLegend(totals: List<Pair<Int, Long>>) {
                 Box(Modifier.size(8.dp).background(stageColor(stage), RoundedCornerShape(2.dp)))
                 Spacer(Modifier.width(6.dp))
                 Text(
-                    "${SLEEP_NAMES[stage].orEmpty()} ${TodayCopy.duration(seconds)}", color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA),
+                    TabCopy.stageTotal(stage, seconds), color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA),
                     style = GlowType.secondary, maxLines = 1,
                 )
             }
@@ -222,12 +220,10 @@ internal fun GlowSleepStages(spans: List<StageSpan>, height: Dp, compact: Boolea
     val rows = DayViewModel.SLEEP_STAGE_ROWS
     val byRow = rows.entries.associate { it.value to (SLEEP_NAMES[it.key] ?: "") }
     val names = (0 until rows.size).map { byRow[it] ?: "" }
-    val stages = remember(spans) {
-        spans.map { GlowStage((it.start - start).toFloat() / (end - start), (it.end - start).toFloat() / (end - start), rows[it.stage] ?: 0) }
-    }
+    val stages = remember(spans) { sleepHypnogramStages(spans) }
     fun at(f: Float) = clock(start + ((end - start) * f).toLong())
     // Compact, as on Today's Last night card, the rows are too close for their names and the card's title has the times.
-    val colors = (0 until rows.size).map { row -> stageColor(rows.entries.first { it.value == row }.key) }
+    val colors = SleepRowColors
     GlowHypnogram(
         stages, names, height = height, labels = if (compact) emptyList() else listOf(clock(start), clock(end)), showNames = !compact,
         rowColors = colors,
@@ -235,6 +231,23 @@ internal fun GlowSleepStages(spans: List<StageSpan>, height: Dp, compact: Boolea
         val mins = (((end - start) * (st.to - st.from)) / 60).toInt().coerceAtLeast(1)
         "${names[st.row]}, ${at(st.from)}–${at(st.to)}, $mins min"
     }
+}
+
+/**
+ * A night's stage [spans] as hypnogram stages: rows Awake (0) to Deep ([DayViewModel.SLEEP_STAGE_ROWS]), times as
+ * fractions of the night. The Sleep tab's, Today's and the Sleep widget's hypnogram.
+ */
+internal fun sleepHypnogramStages(spans: List<StageSpan>): List<GlowStage> {
+    if (spans.isEmpty()) return emptyList()
+    val start = spans.minOf { it.start }
+    val end = spans.maxOf { it.end }.coerceAtLeast(start + 1)
+    val rows = DayViewModel.SLEEP_STAGE_ROWS
+    return spans.map { GlowStage((it.start - start).toFloat() / (end - start), (it.end - start).toFloat() / (end - start), rows[it.stage] ?: 0) }
+}
+
+/** Each hypnogram row's stage colour, Awake at the top, Deep at the foot. */
+internal val SleepRowColors: List<Color> = DayViewModel.SLEEP_STAGE_ROWS.let { rows ->
+    (0 until rows.size).map { row -> stageColor(rows.entries.first { it.value == row }.key) }
 }
 
 /** The vitals while asleep against your previous nights, each opening its metric scoped to the night. */

@@ -16,7 +16,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
@@ -25,35 +24,13 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import org.openstrap.app.ui.glow.draw.DotFont
+import org.openstrap.app.ui.glow.draw.dotLayout
+import org.openstrap.app.ui.glow.draw.drawDots
 
 /* ------------------------------------------------------------------------------------------------ */
 /* Dot-matrix numerals                                                                               */
 /* ------------------------------------------------------------------------------------------------ */
-
-/** 5×7 glyphs, one string per row. Anything not listed draws as a space. */
-private val GLYPHS: Map<Char, List<String>> = mapOf(
-    '0' to listOf(".###.", "#...#", "#...#", "#...#", "#...#", "#...#", ".###."),
-    '1' to listOf("..#..", ".##..", "..#..", "..#..", "..#..", "..#..", ".###."),
-    '2' to listOf(".###.", "#...#", "....#", "...#.", "..#..", ".#...", "#####"),
-    '3' to listOf("####.", "....#", "....#", ".###.", "....#", "....#", "####."),
-    '4' to listOf("...#.", "..##.", ".#.#.", "#..#.", "#####", "...#.", "...#."),
-    '5' to listOf("#####", "#....", "####.", "....#", "....#", "#...#", ".###."),
-    '6' to listOf("..##.", ".#...", "#....", "####.", "#...#", "#...#", ".###."),
-    '7' to listOf("#####", "....#", "...#.", "..#..", ".#...", ".#...", ".#..."),
-    '8' to listOf(".###.", "#...#", "#...#", ".###.", "#...#", "#...#", ".###."),
-    '9' to listOf(".###.", "#...#", "#...#", ".####", "....#", "...#.", ".##.."),
-    '.' to listOf(".", ".", ".", ".", ".", ".", "#"),
-    ',' to listOf(".", ".", ".", ".", ".", "#", "#"),
-    ':' to listOf(".", ".", "#", ".", ".", "#", "."),
-    '-' to listOf("...", "...", "...", "###", "...", "...", "..."),
-    // The real minus sign of signed values (spec 2.3), drawn as the dash is.
-    '\u2212' to listOf("...", "...", "...", "###", "...", "...", "..."),
-    '+' to listOf("...", "...", ".#.", "###", ".#.", "...", "..."),
-    'k' to listOf("#....", "#....", "#..#.", "#.#..", "##...", "#.#..", "#..#."),
-    '%' to listOf("##...", "##..#", "...#.", "..#..", ".#...", "#..##", "...##"),
-    ' ' to listOf("..", "..", "..", "..", "..", "..", ".."),
-)
-private const val ROWS = 7
 
 /**
  * A number drawn as round dots, like an LED matrix (the "3.3" on the reference cards), in one of the six [DotSize]s
@@ -68,28 +45,15 @@ fun DotMatrixText(
     /** Shrinks the dots below [dot] where the number must fit a space (the live workout's arc), 0..1. */
     scale: Float = 1f,
 ) {
-    val size = dot.dot * scale
-    val gap = size * DotSize.DOT_GAP
-    val glyphs = text.map { GLYPHS[it] ?: GLYPHS.getValue(' ') }
-    // One empty column between glyphs.
-    val columns = glyphs.sumOf { it[0].length } + (glyphs.size - 1).coerceAtLeast(0)
-    val pitch = size + gap
+    // The shared dot geometry ([dotLayout]), as a widget's number draws it.
+    val dotDp = (dot.dot * scale).value
+    val box = dotLayout(text, dotDp, 1f)
     Canvas(
         modifier
-            .size(pitch * columns - gap, pitch * ROWS - gap)
+            .size(box.width.dp, box.height.dp)
             .semantics { contentDescription = text },
     ) {
-        val d = size.toPx()
-        val step = pitch.toPx()
-        var x0 = 0f
-        glyphs.forEach { rows ->
-            rows.forEachIndexed { row, line ->
-                line.forEachIndexed { col, c ->
-                    if (c == '#') drawCircle(color, d / 2, Offset(x0 + col * step + d / 2, row * step + d / 2))
-                }
-            }
-            x0 += (rows[0].length + 1) * step
-        }
+        drawDots(dotLayout(text, dotDp, density), color)
     }
 }
 
@@ -131,6 +95,6 @@ fun GlowSwitch(checked: Boolean, onCheckedChange: (Boolean) -> Unit, modifier: M
 
 /** How wide a number of [digits] digits is in [dot] dots, so a space can be sized for the widest it will show. */
 internal fun dotNumberWidth(digits: Int, dot: DotSize): Dp {
-    val columns = digits * 5 + (digits - 1).coerceAtLeast(0)
+    val columns = digits * DotFont.DIGIT_COLUMNS + (digits - 1).coerceAtLeast(0)
     return (dot.dot + dot.gap) * columns - dot.gap
 }

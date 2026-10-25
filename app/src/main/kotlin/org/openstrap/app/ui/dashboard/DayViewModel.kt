@@ -251,8 +251,8 @@ class DayViewModel(
         val nightBefore = DayWindow.nightEndingOn(date.minusDays(1))
         val sleep = repo.sleepSessions(DayWindow(nightBefore.from, day.to + 12 * 3600)).flatMapLatest { sessions ->
             // Main sleep = the longest non-nap session that ended in the night window.
-            val main = sessions.filter { !it.nap && it.end in night.from..night.to }.maxByOrNull { it.end - it.start }
-            val before = sessions.filter { !it.nap && it.end in nightBefore.from..nightBefore.to }.maxByOrNull { it.end - it.start }
+            val main = SleepHistory.mainSleep(sessions, night)
+            val before = SleepHistory.mainSleep(sessions, nightBefore)
             // Naps belong to the calendar day they started on, not the night window (which ends at 18:00).
             val naps = sessions.filter { it.nap && it.start in day.from..day.to }
             val mainStages = if (main == null) flowOf(emptyList()) else repo.sleepStages(main.start)

@@ -30,6 +30,9 @@
     <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
     <!-- Only to see when a call rings, so the strap can buzz. No numbers or call log are read. -->
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+    <!-- A home screen widget's moment changes on time when "Alarms and reminders" allows it, else up to 5 minutes
+         late (widgets spec 7). Never USE_EXACT_ALARM, which is for clocks and calendars. -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
 
     <!-- Companion device association with the paired strap (no watch profile): lets OpenStrap run and reconnect
          in the background and wakes it when the strap comes into range. -->
@@ -115,6 +118,68 @@
             <meta-data android:name="android.service.quicksettings.ACTIVE_TILE" android:value="false" />
         </service>
 
+        <!-- Home screen widgets (widgets spec 6.1). -->
+        <receiver
+            android:name=".widget.MomentWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_moment_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_moment" />
+        </receiver>
+        <receiver
+            android:name=".widget.RecoveryWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_recovery_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_recovery" />
+        </receiver>
+        <receiver
+            android:name=".widget.StepsWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_steps_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_steps" />
+        </receiver>
+        <receiver
+            android:name=".widget.SleepWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_sleep_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_sleep" />
+        </receiver>
+        <receiver
+            android:name=".widget.StartWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_start_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_start" />
+        </receiver>
+
+        <!-- The widgets' moment and midnight alarms (WidgetUpdater). Not a widget. -->
+        <receiver
+            android:name=".device.WidgetAlarmReceiver"
+            android:exported="false" />
+
         <service
             android:name=".device.StrapPresenceService"
             android:exported="true"
@@ -142,5 +207,17 @@
                 android:name="android.service.notification.disabled_filter_types"
                 android:value="ongoing|silent" />
         </service>
+        <!-- WorkManager starts from OpenStrapApp's configuration, so Glance renders off the main thread
+             (widget/WidgetWork.kt), not from its own startup initializer. -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="androidx.work.WorkManagerInitializer"
+                android:value="androidx.startup"
+                tools:node="remove" />
+        </provider>
     </application>
 </manifest>

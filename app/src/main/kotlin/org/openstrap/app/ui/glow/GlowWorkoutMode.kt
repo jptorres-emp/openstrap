@@ -639,7 +639,7 @@ fun GlowWorkoutReadyScreen(
 }
 
 /** Whether the phone's location can be used now: allowed, and turned on. */
-private fun locationAvailable(context: Context): Boolean =
+internal fun locationAvailable(context: Context): Boolean =
     WorkoutLocation.granted(context) && context.getSystemService(LocationManager::class.java)?.isLocationEnabled == true
 
 /**

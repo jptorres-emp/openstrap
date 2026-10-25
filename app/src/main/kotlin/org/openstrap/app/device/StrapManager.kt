@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
@@ -26,7 +27,10 @@ import org.openstrap.app.data.db.HealthAlertRow
 import org.openstrap.app.data.db.HealthDao
 import org.openstrap.app.data.db.WearEventRow
 import org.openstrap.app.data.settings.SettingsStore
+import org.openstrap.app.data.settings.StrapSnapshot
 import org.openstrap.app.data.settings.UserProfile
+import org.openstrap.app.widget.strapStateChanged
+import org.openstrap.app.widget.syncStale
 import org.openstrap.protocol.services.Gender
 import org.openstrap.protocol.services.HealthAlert
 import org.openstrap.protocol.services.UserProfile as StrapUserProfile
@@ -375,7 +379,29 @@ class StrapManager(
             var previous: SyncState = SyncState.Idle
             sync.collect { s ->
                 syncRecord.update { it.next(previous, s, System.currentTimeMillis() / 1000) }
+                // A sync starting while the widgets say the last one is old: their line turns to Syncing (widgets spec 5).
+                if (s is SyncState.Running && previous !is SyncState.Running) launch {
+                    val done = runCatching { settings.strapSnapshot.first().lastSyncDone }.getOrNull()
+                    if (syncStale(done, System.currentTimeMillis() / 1000)) WidgetUpdater.changedAll(context)
+                }
                 previous = s
+            }
+        }
+        // For the widgets' status line with the strap away: the battery and charging as last connected.
+        scope.launch {
+            connection.mapNotNull { c -> (c as? ConnectionState.Connected)?.let { it.batteryPercent?.let { b -> b to it.charging } } }
+                .distinctUntilChanged()
+                .collect { (b, ch) -> runCatching { settings.setStrapBattery(b, ch) }.onFailure { log("strap battery not kept: $it") } }
+        }
+        // And the widgets told when that line could change: pairing, the low battery edge, charging (widgets spec 7).
+        scope.launch {
+            var before: StrapSnapshot? = null
+            settings.strapSnapshot.collect { now ->
+                val was = before
+                before = now
+                if (was != null && strapStateChanged(now.paired, now.battery, now.charging, was.paired, was.battery, was.charging)) {
+                    WidgetUpdater.changedAll(context)
+                }
             }
         }
     }
@@ -579,6 +605,7 @@ class StrapManager(
                         log("steps today=${it.steps} dist=${it.distanceMeters} kcal=${it.calories}" + if (!it.isPlausible) " (total doesn't match distance: counting from synced history)" else "")
                     }
                     todaySteps.value = it
+                    WidgetUpdater.stepsChanged(context)
                 }
             }
         }
@@ -691,9 +718,12 @@ class StrapManager(
                     val only = takeNext()
                     if (only != null && only.isEmpty()) break
                     HistorySync(s, client, dao, settings, sync, ::log, autoDetected::show).run(only)
+                    (sync.value as? SyncState.Done)?.let { d -> runCatching { settings.setLastSyncDone(d.atEpochSeconds) }.onFailure { log("sync time not kept: $it") } }
                 }
                 runCatching { notifyBodySignals() }.onFailure { log("body signals: $it") }
                 runCatching { WorkoutGapFill(dao) { settings.profile.first() }.run()?.let { log(it) } }.onFailure { log("workout gap fill: $it") }
+                // Everything a widget shows may have moved (widgets spec 7).
+                WidgetUpdater.changedAll(context)
             } finally {
                 syncLock.unlock()
             }

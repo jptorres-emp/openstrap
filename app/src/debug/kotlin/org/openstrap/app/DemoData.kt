@@ -21,8 +21,13 @@ import org.openstrap.app.data.db.SleepSession
 import org.openstrap.app.data.db.SleepStage
 import org.openstrap.app.data.db.Spo2Sample
 import org.openstrap.app.data.db.StressSample
+import org.openstrap.app.data.db.AppWorkout
+import org.openstrap.app.data.db.AppWorkoutHeartRate
+import org.openstrap.app.data.db.AppWorkoutRoutePoint
 import java.time.LocalDate
 import java.time.ZoneId
+import kotlin.math.cos
+import kotlin.math.hypot
 import kotlin.math.sin
 import kotlin.random.Random
 
@@ -135,5 +140,47 @@ object DemoData {
             dao.insertSpo2(listOf(Spo2Sample(midnight + 3 * 3600, 96 + rnd.nextInt(0, 4))))
             dao.insertPai(listOf(PaiSample(endOfData - 60, rnd.nextFloat() * 20, 40f + back, 58, 192)))
         }
+        phoneRun(dao, LocalDate.now().minusDays(1).atStartOfDay(zone).toEpochSecond() + 7 * 3600, rnd)
+    }
+
+    /**
+     * A run recorded on the phone with GPS, its route kept: once round Hyde Park in London, a public place, so the
+     * workout page has a map to show without anyone's real location.
+     */
+    private suspend fun phoneRun(dao: HealthDao, start: Long, rnd: Random) {
+        // The park's paths, corner to corner, rounded off by cutting each corner twice.
+        var path = listOf(51.5108 to -0.1747, 51.5126 to -0.1600, 51.5100 to -0.1585, 51.5029 to -0.1528,
+            51.5024 to -0.1610, 51.5030 to -0.1745, 51.5108 to -0.1747)
+        repeat(3) {
+            path = path.zipWithNext { (a, b), (c, d) -> listOf((0.75 * a + 0.25 * c) to (0.75 * b + 0.25 * d), (0.25 * a + 0.75 * c) to (0.25 * b + 0.75 * d)) }
+                .flatten().let { it + it.first() }
+        }
+        fun metres(p: Pair<Double, Double>, q: Pair<Double, Double>) =
+            hypot((q.first - p.first) * 111_320, (q.second - p.second) * 111_320 * cos(Math.toRadians(p.first)))
+        val legs = path.zipWithNext { p, q -> metres(p, q) }
+        val total = legs.sum()
+        // About 5:20 a kilometre, a fix every 3 seconds, a little faster in the middle.
+        val seconds = (total / 1000 * 320).toLong()
+        var leg = 0
+        var done = 0.0
+        val points = (0..seconds step 3L).map { s ->
+            val along = total * s / seconds
+            while (leg < legs.lastIndex && done + legs[leg] < along) done += legs[leg++]
+            val f = ((along - done) / legs[leg]).coerceIn(0.0, 1.0)
+            val (a, b) = path[leg]
+            val (c, d) = path[leg + 1]
+            AppWorkoutRoutePoint(start, start + s, a + (c - a) * f + rnd.nextDouble(-4e-6, 4e-6), b + (d - b) * f + rnd.nextDouble(-6e-6, 6e-6),
+                accuracy = 4f + rnd.nextFloat() * 3, speed = (3.1 + 0.25 * sin(s * Math.PI / seconds)).toFloat())
+        }
+        val hr = (0..seconds step 5L).map { s ->
+            AppWorkoutHeartRate(start, start + s, (118 + 34 * (s / 300.0).coerceAtMost(1.0) + 6 * sin(s / 200.0) + rnd.nextInt(-2, 3)).toInt())
+        }
+        dao.insertAppWorkouts(listOf(AppWorkout(
+            start, start + seconds, sportType = 1, averageHeartRate = hr.map { it.bpm }.average().toInt(), maxHeartRate = hr.maxOf { it.bpm },
+            useGps = true, keepRoute = true, distanceMeters = total.toFloat(), laps = (1..total.toInt() / 1000).joinToString(",") { "${start + it * 320L}" },
+            epoc = 82f, aerobicTrainingEffect = 3.4f, recoveryMinutes = 16 * 60, vo2max = 48f,
+        )))
+        dao.insertAppWorkoutHeartRate(hr)
+        dao.insertRoutePoints(points)
     }
 }

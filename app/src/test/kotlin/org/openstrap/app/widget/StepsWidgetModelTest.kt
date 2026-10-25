@@ -45,9 +45,9 @@ class StepsWidgetModelTest {
         val m = model(steps = 12_345)
         assertTrue(m.goalMet)
         assertEquals("Goal met", m.toGo)
-        assertEquals("Goal reached", m.share)
+        assertEquals("Goal met", m.share)
         assertEquals(1f, m.progress, 0f)
-        assertEquals("12,345 steps today, goal reached", m.description)
+        assertEquals("12,345 steps today, goal met", m.description)
         assertEquals("Goal met", StepsWidgetModel.toGo(10_000, 10_000))
         assertEquals("1 to go", StepsWidgetModel.toGo(9_999, 10_000))
     }
@@ -152,7 +152,7 @@ class StepsWidgetModelTest {
         assertTrue(smallHeight(big, 1.3f) <= small.second)
         assertTrue(big.word || big.share)
         // Five figures shrink the dots to the width rather than clip.
-        val many = StepsLayout.small("12,345", "Goal reached", small.first, small.second, 1f)
+        val many = StepsLayout.small("12,345", "Goal met", small.first, small.second, 1f)
         assertTrue(many.dot < StepsLayout.SMALL_DOT)
         assertTrue(StepsLayout.dotsWidth("12,345", many.dot) <= small.first + 1e-3f)
     }

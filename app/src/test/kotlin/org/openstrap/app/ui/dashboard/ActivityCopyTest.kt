@@ -66,7 +66,7 @@ class ActivityCopyTest {
     @Test fun `active minutes count toward 150 a week`() {
         assertEquals("54 to go for 150.", ActivityCopy.activeWeek(96))
         assertEquals("10 past the 150 to aim for.", ActivityCopy.activeWeek(160))
-        assertEquals("Goal reached", ActivityCopy.activeWord(Activity.MVPA_WEEKLY_TARGET))
+        assertEquals("Goal met", ActivityCopy.activeWord(Activity.MVPA_WEEKLY_TARGET))
         assertEquals("So far today, 20 minutes brisk and 4 minutes hard.", ActivityCopy.activeDay(Activity.Mvpa(20, 4, 0), true))
     }
 

@@ -53,7 +53,7 @@ data class StepsWidgetModel(
     val word: String,
     /** "1,568 to go", or "Goal met" past the goal. */
     val toGo: String,
-    /** The Small's line under the bar, as Today's card says it: "84% of your goal", "Goal reached". */
+    /** The Small's line under the bar, as Today's card says it: "84% of your goal", "Goal met". */
     val share: String,
     /** The goal bar, 0 to 1: full past the goal. */
     val progress: Float,

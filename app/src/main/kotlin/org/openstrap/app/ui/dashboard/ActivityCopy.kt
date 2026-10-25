@@ -36,9 +36,9 @@ internal object ActivityCopy {
         return UsualSteps.pace(steps, if (today) UsualSteps.at(u, hour, minute) else u[23])
     }
 
-    /** How far toward the goal: "Goal reached" or "62% of your goal". */
+    /** How far toward the goal: "Goal met" or "62% of your goal". */
     fun goalShare(steps: Int, goal: Int): String =
-        if (steps >= goal) "Goal reached" else "${steps * 100 / goal.coerceAtLeast(1)}% of your goal"
+        if (steps >= goal) "Goal met" else "${steps * 100 / goal.coerceAtLeast(1)}% of your goal"
 
     /** Today's Activity card under the steps: the goal share, then your usual by now when there is one. */
     fun activityLine(steps: Int, goal: Int, pace: UsualSteps.Pace?, today: Boolean): String {
@@ -85,7 +85,7 @@ internal object ActivityCopy {
     /* ------------------------------------------- Active minutes ----------------------------------------- */
 
     /** The status word beside the week's active minutes; null under the goal. */
-    fun activeWord(week: Int): String? = if (week >= Activity.MVPA_WEEKLY_TARGET) "Goal reached" else null
+    fun activeWord(week: Int): String? = if (week >= Activity.MVPA_WEEKLY_TARGET) "Goal met" else null
 
     /** The week's sentence, under the week's minutes: how far to the 150, or by how much it's past. */
     fun activeWeek(week: Int): String {

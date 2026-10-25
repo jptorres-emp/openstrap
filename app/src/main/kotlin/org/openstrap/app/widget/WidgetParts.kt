@@ -73,6 +73,8 @@ import org.openstrap.app.OpenStrapApp
 import org.openstrap.app.device.SyncState
 import org.openstrap.app.ui.glow.draw.drawIcon
 import org.openstrap.app.ui.theme.AppIcons
+import org.openstrap.app.ui.theme.MetricColors
+import org.openstrap.app.ui.glow.ControlSurface
 import org.openstrap.app.device.WidgetUpdater
 import org.openstrap.app.ui.dashboard.momentMood
 import org.openstrap.app.ui.glow.EdgeLight
@@ -232,6 +234,8 @@ class WidgetFrame(
     val fitHeight: Float = bucket.height.value,
     /** The strap status line to show in the top row (spec 5), null for none. */
     val status: StatusLine? = null,
+    /** Where the top row put the status button, for the card's tap target over it ([StatusTapTarget]). */
+    val spot: StatusSpot = StatusSpot(),
 ) {
     /** The content's width and height in the real cell, inside the padding, dp: what decides what fits. */
     val contentWidth: Float get() = fitWidth - 2 * WidgetSizes.PADDING_DP
@@ -242,8 +246,20 @@ class WidgetFrame(
 
     /** The content's real height, dp: what the gaps share out ([Spread.edge]). */
     val drawContentHeight: Float get() = drawHeight - 2 * WidgetSizes.PADDING_DP
-    /** The frame for what sits under a block [dp] high at the top (Start's status pill): as tall less that. */
-    fun below(dp: Float): WidgetFrame = WidgetFrame(bucket, drawWidth, drawHeight - dp, density, fontScale, fitWidth, fitHeight - dp, status)
+}
+
+/**
+ * The status button's place, set as the content composes and read by the card after it: the circle's [top] from the
+ * content's top, dp, and the [line] it shows. Null [line] for no button.
+ */
+class StatusSpot {
+    var top: Float = 0f
+    var line: StatusLine? = null
+
+    fun put(top: Float, line: StatusLine) {
+        this.top = top
+        this.line = line
+    }
 }
 
 /**
@@ -301,6 +317,39 @@ private fun CardWidget(
             .clickable(actionStartActivity(open)),
     ) {
         Column(GlanceModifier.fillMaxSize().padding(horizontal = sidePadding.dp, vertical = WidgetSizes.PADDING_DP.dp)) { content(frame) }
+        frame.spot.line?.let { StatusTapTarget(it, frame.spot.top) }
+    }
+}
+
+/**
+ * The status button's tap (spec 5), [StatusButton.TOUCH_DP] square over the circle whose top is [top] dp below the
+ * content's: over the content rather than in it, so the title row counts only the circle. Not paired or a low battery
+ * opens the Strap page, a stale sync syncs in place ([SyncNowAction]); while it syncs there's no target and a tap is
+ * the widget's own.
+ */
+@Composable
+private fun StatusTapTarget(line: StatusLine, top: Float) {
+    val action = statusAction(line.status) ?: return
+    val reach = (StatusButton.TOUCH_DP - StatusButton.SIZE_DP) / 2
+    Box(GlanceModifier.fillMaxSize(), contentAlignment = Alignment.TopEnd) {
+        Box(
+            GlanceModifier.padding(top = (WidgetSizes.PADDING_DP + top - reach).coerceAtLeast(0f).dp, end = (WidgetSizes.PADDING_DP - reach).dp),
+        ) {
+            Box(
+                GlanceModifier.size(StatusButton.TOUCH_DP.dp).clickable(action).semantics { contentDescription = line.full },
+            ) {}
+        }
+    }
+}
+
+/** What tapping the status does: the Strap page, a sync, or nothing while it syncs. */
+@Composable
+private fun statusAction(status: StrapStatus): Action? {
+    val context = LocalContext.current
+    return when (status) {
+        StrapStatus.NotPaired, is StrapStatus.LowBattery -> actionStartActivity(openStrap(context))
+        is StrapStatus.StaleSync -> actionRunCallback<SyncNowAction>()
+        StrapStatus.Syncing -> null
     }
 }
 
@@ -365,63 +414,70 @@ internal object WidgetType {
 }
 
 /**
- * The top row as [top] lays it out: the strap status pill in the title's place when the strap needs something
- * (spec 5), else [title] in [titleStyle]; [note] on the right when it fits.
+ * The top row as [top] lays it out (spec 5): [title] in [titleStyle] at the row's size, then on the right the strap
+ * status button with its words when the strap needs something, else [note] when it fits. [above] is the room over the
+ * row in the content, dp, so the card can put the button's tap target over it.
  */
 @Composable
-internal fun TopRowView(title: String, note: String?, top: TopRow, f: WidgetFrame, titleStyle: TextStyle = WidgetType.title) {
-    Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        val pill = top.pill
-        if (pill != null) StatusPillView(pill, f) else Text(title, style = titleStyle, maxLines = 1)
-        if (note != null && top.note) {
-            Spacer(GlanceModifier.defaultWeight())
+internal fun TopRowView(title: String, note: String?, top: TopRow, f: WidgetFrame, above: Float, titleStyle: TextStyle = WidgetType.title) {
+    val line = top.status
+    if (line != null) f.spot.put(above + (top.height - StatusButton.SIZE_DP) / 2, line)
+    Row(GlanceModifier.fillMaxWidth().height(top.height.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(title, style = titleStyle.copy(fontSize = top.titleSp.sp), maxLines = 1, modifier = GlanceModifier.defaultWeight())
+        if (line != null) {
+            top.words?.let {
+                Spacer(GlanceModifier.width(StatusButton.TITLE_GAP_DP.dp))
+                Text(it, style = StatusWords, maxLines = 1)
+                Spacer(GlanceModifier.width(StatusButton.WORDS_GAP_DP.dp))
+            }
+            StatusButtonView(line, f)
+        } else if (note != null && top.note) {
             Text(note, style = WidgetType.secondary, maxLines = 1)
         }
     }
 }
 
+/** The status words: Secondary in amber, the strap and sync colour (v2 spec: amber is for those only). */
+internal val StatusWords = TextStyle(color = ColorProvider(MetricColors.warn), fontSize = StatusButton.WORDS_SP.sp)
+
 /**
- * The strap status pill (spec 5): black at 45%, fully round, the state's 12 dp icon (turning while it syncs) and the
- * wording that fits, read out whole. Not paired or a low battery opens the Strap page, a stale sync syncs in place
- * ([SyncNowAction]); while it syncs, a tap is the widget's own.
+ * The status button (spec 5): a [StatusButton.SIZE_DP] circle in the Control surface Start's tiles wear, the state's
+ * icon in it: the sync arrows in amber for a stale sync, a spinner while it syncs, the strap for pairing, a low
+ * battery in amber. Its tap, read out as the whole line, is [StatusTapTarget]'s (while it syncs, the spinner reads it).
  */
 @Composable
-internal fun StatusPillView(pill: StatusPill.Pill, f: WidgetFrame) {
-    val context = LocalContext.current
-    val w = pill.width(f.fontScale)
-    val h = pill.height(f.fontScale)
-    val status = pill.line.status
-    val action: Action? = when (status) {
-        StrapStatus.NotPaired, is StrapStatus.LowBattery -> actionStartActivity(openStrap(context))
-        is StrapStatus.StaleSync -> actionRunCallback<SyncNowAction>()
-        StrapStatus.Syncing -> null
+internal fun StatusButtonView(line: StatusLine, f: WidgetFrame) {
+    val status = line.status
+    val size = GlanceModifier.size(StatusButton.SIZE_DP.dp)
+    if (status == StrapStatus.Syncing) {
+        Box(
+            size.background(ImageProvider(statusButtonBitmap(null, Color.White, f.density)), ContentScale.FillBounds)
+                .semantics { contentDescription = line.full },
+            contentAlignment = Alignment.Center,
+        ) { CircularProgressIndicator(GlanceModifier.size(StatusButton.ICON_DP.dp), color = ColorProvider(Color.White)) }
+        return
     }
-    val base = GlanceModifier.size(w.dp, h.dp)
-        .background(ImageProvider(statusPillBitmap(w, h, f.density)), ContentScale.FillBounds)
-        .semantics { contentDescription = pill.line.full }
-    Box(action?.let { base.clickable(it) } ?: base, contentAlignment = Alignment.Center) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            val icon = GlanceModifier.size(StatusPill.ICON_DP.dp)
-            if (status == StrapStatus.Syncing) {
-                CircularProgressIndicator(icon, color = ColorProvider(Color.White))
-            } else {
-                val vector = if (status is StrapStatus.StaleSync) AppIcons.ArrowsClockwise else AppIcons.Watch
-                Image(ImageProvider(iconBitmap(vector, Color.White, StatusPill.ICON_DP, f.density)), contentDescription = null, modifier = icon, contentScale = ContentScale.FillBounds)
-            }
-            Spacer(GlanceModifier.width(StatusPill.ICON_GAP_DP.dp))
-            Text(pill.text, style = WidgetType.secondaryShown.copy(fontSize = pill.sp.sp), maxLines = 1)
-        }
+    val (icon, color) = when (status) {
+        is StrapStatus.StaleSync -> AppIcons.ArrowsClockwise to MetricColors.warn
+        is StrapStatus.LowBattery -> AppIcons.BatteryLow to MetricColors.warn
+        else -> AppIcons.Watch to Color.White
     }
+    // The tap target over it reads the line out, so the circle doesn't as well.
+    Image(
+        ImageProvider(statusButtonBitmap(icon, color, f.density)),
+        contentDescription = null,
+        modifier = size,
+        contentScale = ContentScale.FillBounds,
+    )
 }
 
-/** The pill's ground, [w] by [h] dp: black at [StatusPill.ALPHA], ends fully round. */
-private fun statusPillBitmap(w: Float, h: Float, density: Float): Bitmap {
-    val pw = w * density
-    val ph = h * density
-    return renderToBitmap(pw, ph) { c ->
-        c.drawRoundRect(0f, 0f, pw, ph, ph / 2, ph / 2, android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.Black.copy(alpha = StatusPill.ALPHA).toArgb()
-        })
+/** The button's circle in the Control surface with [icon] in [color] in the middle, or none. */
+private fun statusButtonBitmap(icon: ImageVector?, color: Color, density: Float): Bitmap {
+    val s = StatusButton.SIZE_DP * density
+    val i = StatusButton.ICON_DP * density
+    return renderToBitmap(s, s) { c ->
+        c.drawCircle(s / 2, s / 2, s / 2, android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply { this.color = ControlSurface.toArgb() })
+        icon?.let { drawIcon(c, it, color, (s - i) / 2, (s - i) / 2, i) }
     }
 }
 
@@ -432,12 +488,12 @@ internal fun iconBitmap(icon: ImageVector, color: Color, sizeDp: Float, density:
 }
 
 /**
- * Before there's anything to show: the top row ([f]'s status line in the title's place when it has one), then why
- * in Secondary ("After your first night"), on as many lines as it needs.
+ * Before there's anything to show: the top row (with [f]'s status button when it has one, its words on the Wide and
+ * Large), then why in Secondary ("After your first night"), on as many lines as it needs.
  */
 @Composable
 internal fun WaitingContent(title: String, line: String?, f: WidgetFrame) {
-    TopRowView(title, null, TopRow.of(title, null, f.status, f.contentWidth, f.fontScale), f)
+    TopRowView(title, null, TopRow.of(title, null, f.status, f.contentWidth, f.fontScale, withWords = f.bucket != WidgetSizes.Small), f, above = 0f)
     Spacer(GlanceModifier.height(6.dp))
     line?.let { Text(it, style = WidgetType.secondary, maxLines = 4) }
 }

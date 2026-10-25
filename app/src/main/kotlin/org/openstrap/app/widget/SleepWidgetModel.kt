@@ -281,7 +281,7 @@ object SleepLayout {
      * night's.
      */
     fun small(m: SleepWidgetModel, width: Float, height: Float, fontScale: Float, status: StatusLine? = null): Small {
-        val top = TopRow.of(m.title, null, status, width, fontScale)
+        val top = TopRow.of(m.title, null, status, width, fontScale, withWords = false)
         val sec = WidgetText.line(WidgetText.SECONDARY_SP, fontScale)
         fun linesOf(text: String) = WidgetText.lines(text, WidgetText.SECONDARY_SP, width, fontScale)
         val note = m.note?.takeIf { m.stale }?.let { SmallLine(it, linesOf(it)) }?.takeIf { it.lines <= 2 }
@@ -343,7 +343,7 @@ object SleepLayout {
      * always, the legend on one row or two while it fits, else none.
      */
     fun wide(m: SleepWidgetModel, width: Float, height: Float, fontScale: Float, status: StatusLine? = null): Wide {
-        val top = TopRow.of(m.title, m.note, status, width, fontScale)
+        val top = TopRow.of(m.title, m.note, status, width, fontScale, withWords = true)
         val bar = m.totals.isNotEmpty()
         fun at(row: ScoreRow): Wide {
             val base = top.height + row.height(fontScale) + 2 * MIN_GAP_DP + (if (bar) BAR_DP else 0f)
@@ -384,7 +384,7 @@ object SleepLayout {
      * the rows give way to the stage bar.
      */
     fun large(m: SleepWidgetModel, width: Float, height: Float, fontScale: Float, status: StatusLine? = null): Large {
-        val top = TopRow.of(m.title, m.note, status, width, fontScale)
+        val top = TopRow.of(m.title, m.note, status, width, fontScale, withWords = true)
         val row = scoreRow(m, m.largeRight, width, fontScale)
         val bar = m.totals.isNotEmpty()
         val lines = m.sentence?.let { WidgetText.lines(it, WidgetText.HERO_SP, width, fontScale) }?.takeIf { it <= SENTENCE_LINES } ?: 0

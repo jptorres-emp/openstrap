@@ -209,7 +209,7 @@ private fun ColumnScope.SmallContent(m: MomentWidgetModel, f: WidgetFrame) {
     val fit = MomentLayout.small(m, f.contentWidth, f.contentHeight, f.fontScale, f.status)
     val edge = edge(fit, f)
     Spacer(GlanceModifier.height(edge.dp))
-    Top(fit, f)
+    Top(fit, f, edge)
     val r = m.recording
     if (r != null) {
         if (fit.tile > 0f) { Gap(); Tile(r, fit.tile, f) }
@@ -248,7 +248,7 @@ private fun ColumnScope.WideContent(m: MomentWidgetModel, fit: MomentLayout.Fit,
         fit.sport?.let { Gap(); Text(it.text, style = WidgetType.hero.copy(fontSize = it.sp.sp), maxLines = 1) }
         fit.since?.let { Gap(); Since(it, f) }
     } else {
-        Top(fit, f)
+        Top(fit, f, edge)
         fit.sentence?.let { Gap(); Text(it.text, style = WidgetType.hero.copy(fontSize = it.sp.sp), maxLines = MomentLayout.SENTENCE_LINES) }
         fit.row?.let { Gap(); NumberRow(m, it, f) }
         fit.waiting?.let { Gap(); Text(it.text, style = WidgetType.secondary.copy(fontSize = it.sp.sp), maxLines = 1) }
@@ -264,11 +264,11 @@ private fun ColumnScope.Gap() = Spacer(GlanceModifier.defaultWeight())
 @Composable
 private fun Name(name: MomentLayout.Line) = Text(name.text, style = NameStyle.copy(fontSize = name.sp.sp), maxLines = 1)
 
-/** The top row: the strap status pill in the name's place when it shows (spec 5), else the moment's name. */
+/** The top row: the moment's name, with the strap status button at its right when it shows (spec 5), [above] dp under the content's top. */
 @Composable
-private fun Top(fit: MomentLayout.Fit, f: WidgetFrame) {
-    val pill = fit.pill
-    if (pill != null) StatusPillView(pill, f) else Name(fit.name)
+private fun Top(fit: MomentLayout.Fit, f: WidgetFrame, above: Float) {
+    val top = fit.top
+    if (top != null) TopRowView(fit.name.text, null, top, f, above, NameStyle) else Name(fit.name)
 }
 
 /** The dots with the word beside them, the figure or the Start button on the right, bottoms aligned. */

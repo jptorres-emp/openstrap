@@ -161,4 +161,19 @@ class RecoveryWidgetModelTest {
         assertTrue(long < WeekBarsLook.COLUMN_DP && long >= WeekBarsLook.MIN_COLUMN_DP)
         assertEquals(WeekBarsLook.MIN_COLUMN_DP, RecoveryLayout.weekColumn(318f, 55f, "Ready for more", fontScale = 2f), 0.01f)
     }
+
+    @Test fun `with the strap status the title row counts the button and the words replace the note`() {
+        val m = WidgetSamples.recovery(today, java.util.Locale.UK)
+        val l = StatusLine(StrapStatus.StaleSync(0), listOf("Synced Wednesday", "Synced Wed", "Wednesday", "Wed"))
+        val plain = RecoveryLayout.wide(m, 313f, 180f, 1f)
+        val shown = RecoveryLayout.wide(m, 313f, 180f, 1f, l)
+        assertTrue(plain.top.note)
+        assertEquals(StatusButton.SIZE_DP, shown.top.height, 0f)
+        assertEquals("Synced Wednesday", shown.top.words)
+        assertTrue(!shown.top.note)
+        assertTrue(shown.spread.fits(180f, RecoveryLayout.MIN_GAP_DP))
+        // The Small: the button alone.
+        assertNull(RecoveryLayout.small(m, 140f, 180f, 1f, l).top.words)
+        assertEquals(StatusButton.SIZE_DP, RecoveryLayout.small(m, 140f, 180f, 1f, l).top.height, 0f)
+    }
 }

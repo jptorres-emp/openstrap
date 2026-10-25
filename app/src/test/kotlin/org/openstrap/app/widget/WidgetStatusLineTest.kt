@@ -14,8 +14,9 @@ import org.junit.Test
 import org.openstrap.app.device.WidgetUpdater
 
 /**
- * Widgets spec 5: the strap status line's wordings, its pill, and that every widget still fits with it showing, at
- * the three sizes' minimums and on One UI's cells, at the fonts phones use and the largest, no gap over 32 dp on One UI.
+ * Widgets spec 5: the strap status line's wordings, its button and words in the title row, and that every widget
+ * still fits with it showing, the row counted at the button's 32 dp, at the three sizes' minimums and on One UI's
+ * cells, at the fonts phones use and the largest, no gap over 32 dp on One UI.
  */
 class WidgetStatusLineTest {
     private val zone: ZoneId = ZoneOffset.UTC
@@ -24,7 +25,7 @@ class WidgetStatusLineTest {
 
     private fun line(s: StrapStatus) = StatusLine.of(s, now, zone, Locale.UK)
 
-    /** Every state, the longest wording of each: "Last sync Wednesday" is the widest the line gets. */
+    /** Every state, the longest wording of each: "Synced Wednesday" is the widest the line gets. */
     private val lines = listOf(
         line(StrapStatus.NotPaired),
         line(StrapStatus.LowBattery(12)),
@@ -48,46 +49,67 @@ class WidgetStatusLineTest {
         assertEquals(listOf("Pair your strap", "Pair strap"), line(StrapStatus.NotPaired).options)
         assertEquals(listOf("Strap at 12%", "12%"), line(StrapStatus.LowBattery(12)).options)
         assertEquals(listOf("Syncing"), line(StrapStatus.Syncing).options)
-        assertEquals(listOf("Last sync 08:59", "08:59"), line(StrapStatus.StaleSync(now - 3 * 3600 - 60)).options)
-        assertEquals(listOf("Last sync yesterday", "Yesterday"), line(StrapStatus.StaleSync(now - 86_400)).options)
-        assertEquals(listOf("Last sync Wednesday", "Last sync Wed", "Wednesday", "Wed"), line(StrapStatus.StaleSync(now - 3 * 86_400)).options)
-        assertEquals(listOf("Last sync 13 Oct", "13 Oct"), line(StrapStatus.StaleSync(now - 11 * 86_400)).options)
+        assertEquals(listOf("Synced 08:59", "08:59"), line(StrapStatus.StaleSync(now - 3 * 3600 - 60)).options)
+        assertEquals(listOf("Synced yesterday", "Yesterday"), line(StrapStatus.StaleSync(now - 86_400)).options)
+        assertEquals(listOf("Synced Wednesday", "Synced Wed", "Wednesday", "Wed"), line(StrapStatus.StaleSync(now - 3 * 86_400)).options)
+        assertEquals(listOf("Synced 13 Oct", "13 Oct"), line(StrapStatus.StaleSync(now - 11 * 86_400)).options)
         lines.forEach { l ->
             assertEquals(strapStatusLine(l.status, now, zone, Locale.UK), l.full)
             l.options.forEach { assertFalse(it, it.any { c -> c in "·;—–" }) }
         }
     }
 
-    @Test fun `the pill takes a shorter wording, then Caption size, before it drops`() {
+    @Test fun `the words take a shorter wording before they drop, the button stays`() {
         val l = line(StrapStatus.StaleSync(now - 3 * 86_400))
-        val full = StatusPill.width("Last sync Wednesday", WidgetText.SECONDARY_SP, 1f)
-        assertEquals("Last sync Wednesday", StatusPill.fit(l, full, 1f)!!.text)
-        // The whole line at Caption size, then a shorter wording.
-        assertEquals("Last sync Wednesday" to WidgetText.CAPTION_SP, StatusPill.fit(l, full - 1f, 1f)!!.let { it.text to it.sp })
-        val caption = StatusPill.width("Last sync Wednesday", WidgetText.CAPTION_SP, 1f)
-        assertEquals("Last sync Wed", StatusPill.fit(l, caption - 1f, 1f)!!.text)
-        val tiny = StatusPill.width("Wed", WidgetText.CAPTION_SP, 1f)
-        val p = StatusPill.fit(l, tiny, 1f)!!
-        assertEquals("Wed" to WidgetText.CAPTION_SP, p.text to p.sp)
-        assertNull(StatusPill.fit(l, tiny - 1f, 1f))
-        assertNull(StatusPill.fit(null, 400f, 1f))
-        // One line: the pill's height is a line of its type and its padding.
-        assertEquals(WidgetText.line(WidgetText.SECONDARY_SP, 1.3f) + 2 * StatusPill.PAD_V_DP, StatusPill.height(WidgetText.SECONDARY_SP, 1.3f), 1e-4f)
+        val full = WidgetText.fitWidth("Synced Wednesday", StatusButton.WORDS_SP, 1f)
+        assertEquals("Synced Wednesday", StatusButton.words(l, full, 1f))
+        assertEquals("Synced Wed", StatusButton.words(l, full - 1f, 1f))
+        val tiny = WidgetText.fitWidth("Wed", StatusButton.WORDS_SP, 1f)
+        assertEquals("Wed", StatusButton.words(l, tiny, 1f))
+        assertNull(StatusButton.words(l, tiny - 1f, 1f))
+        assertNull(StatusButton.words(null, 400f, 1f))
+        // A Wide too narrow for any wording keeps the title and the button alone.
+        val narrow = TopRow.of("Recovery", "This morning", l, 140f, 1f, withWords = true)
+        assertEquals(l, narrow.status)
+        assertNull(narrow.words)
+        assertFalse(narrow.note)
     }
 
-    @Test fun `the pill takes the title's place and the note goes before it does`() {
+    @Test fun `the title stays, the button sits at the right and the words replace the note`() {
         val l = line(StrapStatus.StaleSync(now - 86_400))
-        val wide = TopRow.of("Steps", "Goal 10,000", l, 313f, 1f)
-        assertNotNull(wide.pill)
-        assertTrue(wide.note)
-        val narrow = TopRow.of("Steps", "Goal 10,000", l, 200f, 1f)
-        assertEquals("Last sync yesterday", narrow.pill!!.text)
-        assertFalse(narrow.note)
-        val none = TopRow.of("Steps", "Goal 10,000", null, 313f, 1f)
-        assertNull(none.pill)
+        val wide = TopRow.of("Steps", "Goal 10,000", l, 313f, 1f, withWords = true)
+        assertEquals(l, wide.status)
+        assertEquals("Synced yesterday", wide.words)
+        assertFalse("the words replace the note", wide.note)
+        assertEquals(WidgetText.TITLE_SP, wide.titleSp, 0f)
+        // The row counts the button's 32 dp, or the title's line when that's taller.
+        assertEquals(StatusButton.SIZE_DP, wide.height, 0f)
+        val big = TopRow.of("Steps", null, l, 313f, 2f, withWords = true)
+        assertEquals(WidgetText.line(WidgetText.TITLE_SP, 2f), big.height, 1e-4f)
+        // The words fit between the title and the button.
+        val used = WidgetText.fitWidth("Steps", wide.titleSp, 1f) + StatusButton.TITLE_GAP_DP +
+            WidgetText.fitWidth(wide.words, StatusButton.WORDS_SP, 1f) + StatusButton.WORDS_GAP_DP + StatusButton.SIZE_DP
+        assertTrue(used <= 313f)
+        // A Small has the button only.
+        val small = TopRow.of("Steps", null, l, 110f, 1f, withWords = false)
+        assertEquals(l, small.status)
+        assertNull(small.words)
+        // A long title steps down to fit beside the button rather than be cut.
+        val tight = TopRow.of("Last night", null, l, 140f, 1.3f, withWords = false)
+        assertTrue(tight.titleSp < WidgetText.TITLE_SP)
+        assertTrue(WidgetText.fitWidth("Last night", tight.titleSp, 1.3f) + StatusButton.TITLE_GAP_DP + StatusButton.SIZE_DP <= 140f)
+        // And one size down, no further, to make room for the words.
+        val start = TopRow.of(StartWidgetModel.TITLE, null, line(StrapStatus.NotPaired), 313f, 1.3f, withWords = true)
+        assertEquals(WidgetText.BODY_SP, start.titleSp, 0f)
+        assertNotNull(start.words)
+        // No status: the title's line, the note while it fits.
+        val none = TopRow.of("Steps", "Goal 10,000", null, 313f, 1f, withWords = true)
+        assertNull(none.status)
         assertTrue(none.note)
         assertEquals(WidgetText.line(WidgetText.TITLE_SP, 1f), none.height, 0f)
-        assertEquals(wide.pill!!.height(1f), wide.height, 0f)
+        // The tap reaches 44 dp, past the 32 dp circle on every side.
+        assertTrue(StatusButton.TOUCH_DP >= 44f)
+        assertTrue(StatusButton.TOUCH_DP > StatusButton.SIZE_DP)
     }
 
     @Test fun `a stale line has an alarm of its own, only while widgets are placed`() {
@@ -109,21 +131,28 @@ class WidgetStatusLineTest {
 
     /* ---------------------------------------------- Each widget ---------------------------------------------- */
 
-    /** Checks [fits] and, on One UI, [gap] at every line, font and size; [pill] must be on One UI. */
+    /** The title row's height at least the button's whenever the status shows: what every layout's sums now count. */
+    private fun checkTop(where: String, top: TopRow, i: Int, w: Float, s: Float, l: StatusLine, real: Boolean) {
+        assertEquals("$where: the button", l, top.status)
+        assertTrue("$where: row ${top.height}", top.height >= StatusButton.SIZE_DP)
+        if (i == 0) assertNull("$where: words on a Small", top.words)
+        top.words?.let { assertTrue("$where: \"$it\" isn't one of the line's", it in l.options) }
+        if (real && i > 0) assertNotNull("$where: no words", top.words)
+        assertFalse("$where: the note stays", top.note)
+    }
+
+    /** Checks [fits] and, on One UI, [gap] at every line, font and size, and the top row ([checkTop]). */
     private fun every(
         what: String,
-        check: (size: Int, w: Float, h: Float, s: Float, l: StatusLine) -> Triple<Boolean, Float, StatusPill.Pill?>,
+        check: (size: Int, w: Float, h: Float, s: Float, l: StatusLine) -> Triple<Boolean, Float, TopRow>,
     ) {
         for (l in lines) for (s in scales) for ((cells, real) in listOf(minimum to false, oneUi to true)) {
             listOf(cells.first, cells.second, cells.third).forEachIndexed { i, (w, h) ->
-                val (fits, gap, pill) = check(i, w, h, s, l)
+                val (fits, gap, top) = check(i, w, h, s, l)
                 val where = "$what ${listOf("Small", "Wide", "Large")[i]} $w x $h at $s with \"${l.full}\""
                 assertTrue("$where: doesn't fit", fits)
-                pill?.let { assertTrue("$where: pill ${it.width(s)} wide", it.width(s) <= w + 0.01f) }
-                if (real) {
-                    assertTrue("$where: gap $gap", gap <= target)
-                    assertNotNull("$where: the line dropped", pill)
-                }
+                checkTop(where, top, i, w, s, l, real)
+                if (real) assertTrue("$where: gap $gap", gap <= target)
             }
         }
     }
@@ -137,7 +166,7 @@ class WidgetStatusLineTest {
                 else -> RecoveryLayout.large(m, w, h, s, l)
             }
             assertTrue(WidgetDots.width(m.score!!, f.dot) <= w)
-            Triple(f.spread.fits(h, RecoveryLayout.MIN_GAP_DP), f.spread.gap(h), f.top.pill)
+            Triple(f.spread.fits(h, RecoveryLayout.MIN_GAP_DP), f.spread.gap(h), f.top)
         }
     }
 
@@ -146,10 +175,10 @@ class WidgetStatusLineTest {
         every("Steps") { i, w, h, s, l ->
             if (i == 0) {
                 val f = StepsLayout.small(m.stepsText, m.share, w, h, s, l)
-                Triple(f.spread.fits(h, StepsLayout.SMALL_BAR_GAP_DP / 2), f.spread.gap(h), f.top.pill)
+                Triple(f.spread.fits(h, StepsLayout.SMALL_BAR_GAP_DP / 2), f.spread.gap(h), f.top)
             } else {
                 val f = if (i == 1) StepsLayout.wide(m, w, h, s, l) else StepsLayout.large(m, w, h, s, l)
-                Triple(f.spread.fits(h, StepsLayout.MIN_GAP_DP), f.spread.gap(h), f.top.pill)
+                Triple(f.spread.fits(h, StepsLayout.MIN_GAP_DP), f.spread.gap(h), f.top)
             }
         }
     }
@@ -158,32 +187,46 @@ class WidgetStatusLineTest {
         val m = WidgetSamples.sleep(today, zone)
         every("Sleep") { i, w, h, s, l ->
             when (i) {
-                0 -> SleepLayout.small(m, w, h, s, l).let { Triple(SleepLayout.smallHeight(it, s) <= h + 0.01f, it.spread.gap(h), it.top.pill) }
-                1 -> SleepLayout.wide(m, w, h, s, l).let { Triple(SleepLayout.wideHeight(it, s) <= h + 0.01f, it.spread.gap(h), it.top.pill) }
+                0 -> SleepLayout.small(m, w, h, s, l).let { Triple(SleepLayout.smallHeight(it, s) <= h + 0.01f, it.spread.gap(h), it.top) }
+                1 -> SleepLayout.wide(m, w, h, s, l).let { Triple(SleepLayout.wideHeight(it, s) <= h + 0.01f, it.spread.gap(h), it.top) }
                 else -> SleepLayout.large(m, w, h, s, l).let {
-                    Triple(SleepLayout.largeHeight(it, m.stages.size, s) <= h + 0.01f, SleepLayout.largeSpread(it, m.stages.size, s).gap(h), it.top.pill)
+                    Triple(SleepLayout.largeHeight(it, m.stages.size, s) <= h + 0.01f, SleepLayout.largeSpread(it, m.stages.size, s).gap(h), it.top)
                 }
             }
         }
     }
 
-    @Test fun `Start fits with the status line above it`() {
+    @Test fun `Start fits with the status line`() {
         val m = WidgetSamples.start(Instant.ofEpochSecond(now), zone, Locale.UK)
         val sizes = listOf(WidgetSizes.Small, WidgetSizes.Wide, WidgetSizes.Large)
         for (l in lines) for (s in scales) for ((cells, real) in listOf(minimum to false, oneUi to true)) {
             listOf(cells.first, cells.second, cells.third).forEachIndexed { i, (w, h) ->
                 val where = "Start ${sizes[i]} $w x $h at $s with \"${l.full}\""
-                val pill = StartLayout.statusPill(m, l, sizes[i], w, h, s)
-                val under = h - StartLayout.statusHeight(pill, s)
-                val (content, gaps, least) = when (i) {
-                    0 -> StartLayout.small(m.usual, listOf(StartWidgetModel.USUAL), false, w, under, s).let { Triple(StartLayout.smallHeight(it, s), it.gaps, StartLayout.MIN_GAP_DP) }
-                    1 -> StartLayout.wide(m, w, under, s).let { Triple(it.content, it.gaps, StartLayout.MIN_GAP_DP) }
-                    else -> StartLayout.large(m, w, under, s).let { Triple(it.content, it.gaps, 3 * StartLayout.MIN_GAP_DP) }
+                if (i == 0) {
+                    // The Small keeps its tile, play and the name; the button sits beside the tile or the words.
+                    val f = StartLayout.small(m.usual, listOf(StartWidgetModel.USUAL), false, w, h, s, button = true)
+                    assertTrue("$where: ${StartLayout.smallHeight(f, s)} in $h", StartLayout.smallHeight(f, s) + 2 * StartLayout.MIN_GAP_DP <= h + 0.01f)
+                    if (real) {
+                        assertTrue("$where: the button dropped", f.button)
+                        assertTrue("$where: no tile", f.tile)
+                        val gap = (h - StartLayout.smallHeight(f, s)) / f.gaps
+                        assertTrue("$where: gap $gap", gap <= target)
+                    }
+                    if (f.button) {
+                        val beside = if (f.actionTop) WidgetText.width(f.words.name, WidgetText.BODY_SP, s) else f.sizes.tile
+                        assertTrue("$where: the button's row", beside + StartLayout.SMALL_GAP_DP + StatusButton.SIZE_DP <= w + 0.01f)
+                    }
+                    return@forEachIndexed
                 }
-                assertTrue("$where: ${content + least} in $under", content + least <= under + 0.01f)
+                val top = StartLayout.statusTop(m, l, sizes[i], w, h, s)
+                val b = if (i == 1) StartLayout.wide(m, w, h, s, top?.height ?: 0f) else StartLayout.large(m, w, h, s, top?.height ?: 0f)
+                val least = (b.gaps - 2) * StartLayout.MIN_GAP_DP
+                assertTrue("$where: ${b.content + least} in $h", b.content + least <= h + 0.01f)
                 if (real) {
-                    assertNotNull("$where: the line dropped", pill)
-                    assertTrue("$where: gap ${(under - content) / gaps}", (under - content) / gaps <= target)
+                    assertNotNull("$where: the line dropped", top)
+                    checkTop(where, top!!, i, w, s, l, real)
+                    assertTrue("$where: gap ${b.gap(h)}", b.gap(h) <= target)
+                    assertNotNull("$where: the tiles", b.tiles)
                 }
             }
         }
@@ -197,7 +240,9 @@ class WidgetStatusLineTest {
                 1 -> MomentLayout.wide(m, w, h, s, l)
                 else -> MomentLayout.large(m, w, h, s, l)
             }
-            Triple(f.fits(h), f.gap(h), f.pill)
+            assertNotNull(f.top)
+            assertEquals(f.top!!.titleSp, f.name.sp, 0f)
+            Triple(f.fits(h), f.gap(h), f.top!!)
         }
     }
 

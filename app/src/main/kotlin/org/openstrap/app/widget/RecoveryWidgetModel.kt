@@ -197,7 +197,7 @@ object RecoveryLayout {
      * word goes.
      */
     fun small(m: RecoveryWidgetModel, width: Float, height: Float, fontScale: Float, status: StatusLine? = null): Fit {
-        val top = TopRow.of(m.title, null, status, width, fontScale)
+        val top = TopRow.of(m.title, null, status, width, fontScale, withWords = false)
         val score = m.score.orEmpty()
         // Body, then Secondary's size before the word goes.
         val wordSp = m.word?.let { w -> listOf(WORD_SP, WidgetText.SECONDARY_SP).firstOrNull { WidgetText.fits(w, it, width, fontScale) } }
@@ -220,7 +220,7 @@ object RecoveryLayout {
      * growing to 6 on a tall cell, down to 3 when short; the figures go last.
      */
     fun wide(m: RecoveryWidgetModel, width: Float, height: Float, fontScale: Float, status: StatusLine? = null): Fit {
-        val top = TopRow.of(m.title, m.note, status, width, fontScale)
+        val top = TopRow.of(m.title, m.note, status, width, fontScale, withWords = true)
         val score = m.score.orEmpty()
         val wordW = m.word?.let { WORD_GAP_DP + textWidth(it, WORD_SP, fontScale) } ?: 0f
         fun at(dot: Float, figures: Boolean): Fit {
@@ -239,7 +239,7 @@ object RecoveryLayout {
      * short, the sentence goes first, then the dots go to 3, then the figures.
      */
     fun large(m: RecoveryWidgetModel, width: Float, height: Float, fontScale: Float, status: StatusLine? = null): Fit {
-        val top = TopRow.of(m.title, m.note, status, width, fontScale)
+        val top = TopRow.of(m.title, m.note, status, width, fontScale, withWords = true)
         val score = m.score.orEmpty()
         val wordW = m.word?.let { WORD_GAP_DP + textWidth(it, WORD_SP, fontScale) } ?: 0f
         fun at(dot: Float, sp: Float, sentence: Boolean, figures: Boolean): Fit? {

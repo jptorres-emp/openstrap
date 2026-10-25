@@ -114,6 +114,8 @@ data class StartWidgetModel(
         const val ALL_SPORTS_ACTION = "Choose a sport"
         const val THIS_WEEK = "This week"
         const val OPEN = "Open"
+        /** The Wide's and Large's title row, only while the strap status shows (spec 5): the picker's name. */
+        const val TITLE = "Start a workout"
         const val NO_WORKOUTS = "No workouts yet"
         const val NONE_YET = "None yet"
 
@@ -243,26 +245,19 @@ object StartLayout {
     /** Open's width at [fontScale]: its word in Body 500 with [OPEN_PAD_DP] each side. */
     fun openWidth(fontScale: Float): Float = WidgetText.width(StartWidgetModel.OPEN, WidgetText.BODY_SP, fontScale) + 2 * OPEN_PAD_DP
 
-    /** Between the strap status pill, above everything when it shows (spec 5), and what's under it. */
-    const val STATUS_GAP_DP = 6f
-
-    /** The height the status [pill] takes above the content, its gap included: what the layouts fit under. */
-    fun statusHeight(pill: StatusPill.Pill?, fontScale: Float): Float = pill?.let { it.height(fontScale) + STATUS_GAP_DP } ?: 0f
-
     /**
-     * The status pill for [line] above the idle layout at [size] in [width] by [height] dp: the first wording that fits
-     * the width, kept only while the layout still fits under it. Start has no title row to give up, so at the
-     * smallest cells and largest fonts the line drops rather than push the usual sport out.
+     * The Wide's or Large's title row for the strap status [line] (spec 5): "Start a workout" with the status button
+     * and its words at the right, a block above the usual row. Null without a line, or when the layout at [size] in
+     * [width] by [height] dp wouldn't fit with it (the line then drops rather than push the usual sport out).
      */
-    fun statusPill(m: StartWidgetModel, line: StatusLine?, size: androidx.compose.ui.unit.DpSize, width: Float, height: Float, fontScale: Float): StatusPill.Pill? {
-        val pill = StatusPill.fit(line, width, fontScale) ?: return null
-        val h = height - statusHeight(pill, fontScale)
+    fun statusTop(m: StartWidgetModel, line: StatusLine?, size: androidx.compose.ui.unit.DpSize, width: Float, height: Float, fontScale: Float): TopRow? {
+        line ?: return null
+        val top = TopRow.of(StartWidgetModel.TITLE, null, line, width, fontScale, withWords = true)
         val fits = when (size) {
-            WidgetSizes.Small -> smallHeight(small(m.usual, listOf(StartWidgetModel.USUAL), false, width, h, fontScale), fontScale) + MIN_GAP_DP <= h
-            WidgetSizes.Wide -> wide(m, width, h, fontScale).let { it.content + MIN_GAP_DP <= h }
-            else -> large(m, width, h, fontScale).let { it.content + 3 * MIN_GAP_DP <= h }
+            WidgetSizes.Wide -> wide(m, width, height, fontScale, top.height).let { it.content + (it.gaps - 2) * MIN_GAP_DP <= height + 0.01f }
+            else -> large(m, width, height, fontScale, top.height).let { it.content + (it.gaps - 2) * MIN_GAP_DP <= height + 0.01f }
         }
-        return pill.takeIf { fits }
+        return top.takeIf { fits }
     }
 
     /** Whether [text] fits [room] dp on one line at [sp]. */
@@ -301,46 +296,66 @@ object StartLayout {
      * The Small: [actionTop] puts play (or Open) in the top row beside the tile instead of at the foot beside the
      * words, and [tile] is false when even the top row can't hold the tile beside Open.
      */
-    data class Small(val actionTop: Boolean, val tile: Boolean, val words: Words, val sizes: Sizes) {
+    data class Small(val actionTop: Boolean, val tile: Boolean, val words: Words, val sizes: Sizes, val button: Boolean = false) {
         /** How many gaps share the spare height: above, between and below the two blocks. */
         val gaps: Int get() = 3
     }
 
-    /** The Small's two blocks' height: the top (tile, or tile and action) and the foot. */
+    /**
+     * The Small's two blocks' height: the top (tile, or tile and action) and the foot. The status [Small.button] sits
+     * beside the tile, or beside the words when play has moved up, so it costs no height unless the words are short.
+     */
     fun smallHeight(s: Small, fontScale: Float): Float {
         val words = body(fontScale) + (if (s.words.line != null) secondary(fontScale) else 0f)
-        return if (s.actionTop) maxOf(s.sizes.tile, s.sizes.play) + words else s.sizes.tile + maxOf(s.sizes.play, words)
+        val button = if (s.button) StatusButton.SIZE_DP else 0f
+        return if (s.actionTop) maxOf(s.sizes.tile, s.sizes.play) + maxOf(words, button) else maxOf(s.sizes.tile, button) + maxOf(s.sizes.play, words)
+    }
+
+    /** The status button's top in the Small's content, dp, its gaps at [gap]: beside the tile, or beside the words. */
+    fun smallButtonTop(s: Small, gap: Float, fontScale: Float): Float {
+        val words = body(fontScale) + (if (s.words.line != null) secondary(fontScale) else 0f)
+        return if (s.actionTop) {
+            val top = maxOf(s.sizes.tile, s.sizes.play)
+            gap + top + gap + (maxOf(words, StatusButton.SIZE_DP) - StatusButton.SIZE_DP) / 2
+        } else gap + (maxOf(s.sizes.tile, StatusButton.SIZE_DP) - StatusButton.SIZE_DP) / 2
     }
 
     /**
      * The Small in [width] by [height] dp. The mockup's layout when the full name fits beside play at the foot: tile
      * at the top, the name over [lines]'s first that fits and play at the foot. Else play goes up beside the tile and
      * the words take the whole width. Each at the largest [SMALL_SIZES] that fits, then the same with the short name.
-     * Every text one line.
+     * Every text one line. With [button] (the strap status, spec 5) the status button sits at the top right beside
+     * the tile, or when play has moved up, at the foot's right beside the words, which then have less room; when not
+     * even the short name fits beside it, the button drops.
      */
-    fun small(sport: StartSport, lines: List<String>, recording: Boolean, width: Float, height: Float, fontScale: Float): Small {
+    fun small(sport: StartSport, lines: List<String>, recording: Boolean, width: Float, height: Float, fontScale: Float, button: Boolean = false): Small {
         val words = body(fontScale) + secondary(fontScale)
+        val buttonW = if (button) StatusButton.SIZE_DP + SMALL_GAP_DP else 0f
         for (name in listOf(sport.name, sport.shortName).distinct()) {
             for (sz in SMALL_SIZES) {
+                if (sz.tile + buttonW > width) continue
                 val action = sz.action(recording, fontScale)
                 val beside = width - action - SMALL_GAP_DP
                 val line = lines.firstOrNull { fits(it, WidgetText.SECONDARY_SP, beside, fontScale) } ?: continue
                 if (fits(name, WidgetText.BODY_SP, beside, fontScale) && sz.tile + MIN_GAP_DP + maxOf(sz.play, words) <= height) {
-                    return Small(actionTop = false, tile = true, words = Words(name, line, false), sizes = sz)
+                    return Small(actionTop = false, tile = true, words = Words(name, line, false), sizes = sz, button = button)
                 }
             }
-            if (!fits(name, WidgetText.BODY_SP, width, fontScale)) continue
-            val line = lines.firstOrNull { fits(it, WidgetText.SECONDARY_SP, width, fontScale) }
+            val room = width - buttonW
+            if (!fits(name, WidgetText.BODY_SP, room, fontScale)) continue
+            val line = lines.firstOrNull { fits(it, WidgetText.SECONDARY_SP, room, fontScale) }
+            val foot = maxOf(words, if (button) StatusButton.SIZE_DP else 0f)
             for (sz in SMALL_SIZES) {
                 val action = sz.action(recording, fontScale)
                 if (sz.tile + SMALL_GAP_DP + action > width) continue
-                if (maxOf(sz.tile, sz.play) + MIN_GAP_DP + words <= height) return Small(true, true, Words(name, line, false), sz)
+                if (maxOf(sz.tile, sz.play) + MIN_GAP_DP + foot <= height) return Small(true, true, Words(name, line, false), sz, button)
             }
             val sz = SMALL_SIZES.last()
             val tile = sz.tile + SMALL_GAP_DP + sz.action(recording, fontScale) <= width
-            val fitsLine = maxOf(sz.tile, sz.play) + MIN_GAP_DP + words <= height
-            return Small(true, tile, Words(name, line?.takeIf { fitsLine }, false), sz)
+            val fitsLine = maxOf(sz.tile, sz.play) + MIN_GAP_DP + foot <= height
+            return Small(true, tile, Words(name, line?.takeIf { fitsLine }, false), sz, button)
         }
+        if (button) return small(sport, lines, recording, width, height, fontScale, button = false)
         return Small(true, false, Words(sport.shortName, null, false), SMALL_SIZES.last())
     }
 
@@ -528,7 +543,14 @@ object StartLayout {
      * when not even a bare row fits), the Large's [figures], and the height of it all without gaps, so the spare
      * height is what the gaps share ([gaps] of them: above, between each block, below).
      */
-    data class Block(val sizes: Sizes, val row: UsualRow, val tiles: Tiles?, val figures: Figures?, val content: Float, val gaps: Int) {
+    data class Block(
+        val sizes: Sizes, val row: UsualRow, val tiles: Tiles?, val figures: Figures?, val content: Float, val gaps: Int,
+        /** The status title row's height above the usual row (spec 5), 0 for none; counted in [content] and [gaps]. */
+        val top: Float = 0f,
+    ) {
+        /** The Wide's gap above, between and below in a cell [height] dp high: all alike. */
+        fun gap(height: Float): Float = ((height - content) / gaps).coerceAtLeast(0f)
+
         /**
          * The gap above and below the block in a cell [height] dp high, for the Large: half of each gap between, so
          * the card doesn't end in a band under its figures (the padding is under it already). The gaps between take
@@ -541,20 +563,21 @@ object StartLayout {
      * The Wide in [width] by [height] dp: the largest [ROW_SIZES] whose tile row still holds four sports and All
      * sports, else the one that holds the most.
      */
-    fun wide(m: StartWidgetModel, width: Float, height: Float, fontScale: Float): Block = block(m, width, height, fontScale, large = false)
+    fun wide(m: StartWidgetModel, width: Float, height: Float, fontScale: Float, top: Float = 0f): Block = block(m, width, height, fontScale, large = false, top)
 
     /** The Large: as the Wide, with the hairline and the figures under the tiles. */
-    fun large(m: StartWidgetModel, width: Float, height: Float, fontScale: Float): Block = block(m, width, height, fontScale, large = true)
+    fun large(m: StartWidgetModel, width: Float, height: Float, fontScale: Float, top: Float = 0f): Block = block(m, width, height, fontScale, large = true, top)
 
-    private fun block(m: StartWidgetModel, width: Float, height: Float, fontScale: Float, large: Boolean): Block {
+    /** [top] is the status title row's height above it all ([statusTop]), 0 for none. */
+    private fun block(m: StartWidgetModel, width: Float, height: Float, fontScale: Float, large: Boolean, top: Float): Block {
         val figures = if (large) figures(m, width, fontScale) else null
-        val under = figures?.let { it.height + 1f + 2 * MIN_GAP_DP } ?: 0f
+        val under = (figures?.let { it.height + 1f + 2 * MIN_GAP_DP } ?: 0f) + (if (top > 0f) top + MIN_GAP_DP else 0f)
         fun row(sz: Sizes) = usualRow(m.usual, usualLines(m), m.gpsOn, false, sz, width, fontScale)
         fun block(sz: Sizes, row: UsualRow, tiles: Tiles?): Block {
-            val content = row.height + (tiles?.height ?: 0f) + (figures?.let { it.height + 1f } ?: 0f)
-            // Above and below, and between the row, the tiles, the hairline and the figures.
-            val gaps = 2 + (if (tiles != null) 1 else 0) + (if (figures != null) 2 else 0)
-            return Block(sz, row, tiles, figures, content, gaps)
+            val content = top + row.height + (tiles?.height ?: 0f) + (figures?.let { it.height + 1f } ?: 0f)
+            // Above and below, and between the title row, the row, the tiles, the hairline and the figures.
+            val gaps = 2 + (if (top > 0f) 1 else 0) + (if (tiles != null) 1 else 0) + (if (figures != null) 2 else 0)
+            return Block(sz, row, tiles, figures, content, gaps, top)
         }
         val rows = ROW_SIZES.associateWith { row(it) }
         fun room(sz: Sizes) = height - rows.getValue(sz).height - under - MIN_GAP_DP

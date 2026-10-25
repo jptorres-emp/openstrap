@@ -176,22 +176,19 @@ private fun StartContent(data: StartWidget.Shown) {
     EdgeWidget(
         edgeLight(EdgeStatus.Usual, EdgeKind.Live), Ink, data.mood, open, BITMAP_EXTRA,
         sidePadding = WidgetSizes.PADDING_DP - StartLayout.CAPTION_BLEED_DP, showStatus = m.recording == null,
-    ) { whole ->
+    ) { frame ->
         val rec = m.recording
-        // No title row to take its place, so the status pill (spec 5) sits above the content, which fits under it.
-        val pill = if (rec != null) null else StartLayout.statusPill(m, whole.status, whole.bucket, whole.contentWidth, whole.contentHeight, whole.fontScale)
-        val frame = if (pill == null) whole else {
-            Row(GlanceModifier.fillMaxWidth().then(Inset)) { StatusPillView(pill, whole) }
-            Spacer(GlanceModifier.height(StartLayout.STATUS_GAP_DP.dp))
-            whole.below(StartLayout.statusHeight(pill, whole.fontScale))
-        }
+        // Start has no title row, so with the strap status (spec 5) the Wide and Large get "Start a workout" above the
+        // usual row, the status button at its right; the Small puts the button beside the tile ([SmallContent]).
+        val top = if (rec != null || frame.bucket == WidgetSizes.Small) null
+        else StartLayout.statusTop(m, frame.status, frame.bucket, frame.contentWidth, frame.contentHeight, frame.fontScale)
         when {
             rec != null && frame.bucket == WidgetSizes.Small -> Column(GlanceModifier.fillMaxWidth().defaultWeight().then(Inset)) { SmallRecording(m, rec, frame) }
             rec != null && frame.bucket == WidgetSizes.Wide -> WideRecording(m, rec, frame)
             rec != null -> LargeRecording(m, rec, frame)
             frame.bucket == WidgetSizes.Small -> Column(GlanceModifier.fillMaxWidth().defaultWeight().then(Inset)) { SmallContent(m, frame) }
-            frame.bucket == WidgetSizes.Wide -> WideContent(m, frame)
-            else -> LargeContent(m, frame)
+            frame.bucket == WidgetSizes.Wide -> WideContent(m, frame, top)
+            else -> LargeContent(m, frame, top)
         }
     }
 }
@@ -203,13 +200,22 @@ private fun StartContent(data: StartWidget.Shown) {
 @Composable
 private fun ColumnScope.SmallContent(m: StartWidgetModel, f: WidgetFrame) {
     val sport = m.usual
-    val fit = StartLayout.small(sport, listOf(StartWidgetModel.USUAL), false, f.contentWidth, f.contentHeight, f.fontScale)
+    val line = f.status
+    val fit = StartLayout.small(sport, listOf(StartWidgetModel.USUAL), false, f.contentWidth, f.contentHeight, f.fontScale, button = line != null)
     val sz = fit.sizes
     val words: @Composable () -> Unit = {
         Text(fit.words.name, style = NameStyle, maxLines = 1)
         fit.words.line?.let { Text(it, style = WidgetType.secondary, maxLines = 1) }
     }
-    Spacer(GlanceModifier.defaultWeight())
+    // With the status button its place is worked out from the gaps, so the one above is fixed at its share.
+    val button = line?.takeIf { fit.button }
+    if (button != null) {
+        val gap = ((f.drawContentHeight - StartLayout.smallHeight(fit, f.fontScale)) / fit.gaps).coerceAtLeast(0f)
+        f.spot.put(StartLayout.smallButtonTop(fit, gap, f.fontScale), button)
+        Spacer(GlanceModifier.height(gap.dp))
+    } else {
+        Spacer(GlanceModifier.defaultWeight())
+    }
     if (fit.actionTop) {
         Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             if (fit.tile) UsualTile(sport, false, sz, f.density)
@@ -217,9 +223,22 @@ private fun ColumnScope.SmallContent(m: StartWidgetModel, f: WidgetFrame) {
             Action(m, sz, f)
         }
         Spacer(GlanceModifier.defaultWeight())
-        Column(GlanceModifier.fillMaxWidth()) { words() }
+        // Play has moved up beside the tile, so the button sits at the foot's right, beside the words.
+        Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Column(GlanceModifier.defaultWeight()) { words() }
+            if (button != null) {
+                Spacer(GlanceModifier.width(StartLayout.SMALL_GAP_DP.dp))
+                StatusButtonView(button, f)
+            }
+        }
     } else {
-        UsualTile(sport, false, sz, f.density)
+        Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            UsualTile(sport, false, sz, f.density)
+            if (button != null) {
+                Spacer(GlanceModifier.defaultWeight())
+                StatusButtonView(button, f)
+            }
+        }
         Spacer(GlanceModifier.defaultWeight())
         Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Column(GlanceModifier.defaultWeight()) { words() }
@@ -235,8 +254,14 @@ private fun ColumnScope.SmallContent(m: StartWidgetModel, f: WidgetFrame) {
  * between and below.
  */
 @Composable
-private fun ColumnScope.WideContent(m: StartWidgetModel, f: WidgetFrame) {
-    val b = StartLayout.wide(m, f.contentWidth, f.contentHeight, f.fontScale)
+private fun ColumnScope.WideContent(m: StartWidgetModel, f: WidgetFrame, top: TopRow?) {
+    val b = StartLayout.wide(m, f.contentWidth, f.contentHeight, f.fontScale, top?.height ?: 0f)
+    if (top != null) {
+        // The status title row (spec 5); the gap above it fixed at its share so the card knows where the button is.
+        val gap = b.gap(f.drawContentHeight)
+        Spacer(GlanceModifier.height(gap.dp))
+        StatusTitle(top, f, gap)
+    }
     Spacer(GlanceModifier.defaultWeight())
     UsualRow(m, b, f)
     b.tiles?.let {
@@ -250,11 +275,15 @@ private fun ColumnScope.WideContent(m: StartWidgetModel, f: WidgetFrame) {
  * Large: the Wide, a hairline, then This week and the usual sport's last, the spare height shared between them all.
  */
 @Composable
-private fun ColumnScope.LargeContent(m: StartWidgetModel, f: WidgetFrame) {
-    val b = StartLayout.large(m, f.contentWidth, f.contentHeight, f.fontScale)
+private fun ColumnScope.LargeContent(m: StartWidgetModel, f: WidgetFrame, top: TopRow?) {
+    val b = StartLayout.large(m, f.contentWidth, f.contentHeight, f.fontScale, top?.height ?: 0f)
     // Half a gap above and below, at the cell's real height: the padding already frames the block.
     val edge = b.edgeGap(f.drawHeight - 2 * WidgetSizes.PADDING_DP)
     Spacer(GlanceModifier.height(edge.dp))
+    if (top != null) {
+        StatusTitle(top, f, edge)
+        Spacer(GlanceModifier.defaultWeight())
+    }
     UsualRow(m, b, f)
     Spacer(GlanceModifier.defaultWeight())
     b.tiles?.let {
@@ -265,6 +294,12 @@ private fun ColumnScope.LargeContent(m: StartWidgetModel, f: WidgetFrame) {
     Spacer(GlanceModifier.defaultWeight())
     b.figures?.let { Figures(m, it) }
     Spacer(GlanceModifier.height(edge.dp))
+}
+
+/** "Start a workout" with the strap status button and its words at the right (spec 5), [above] dp under the content's top. */
+@Composable
+private fun StatusTitle(top: TopRow, f: WidgetFrame, above: Float) {
+    Column(GlanceModifier.fillMaxWidth().then(Inset)) { TopRowView(StartWidgetModel.TITLE, null, top, f, above) }
 }
 
 /** The usual's tile, its name over "Your usual, GPS on" with the location mark, and play; or the workout recording. */

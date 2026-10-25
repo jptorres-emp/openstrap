@@ -53,8 +53,8 @@ fun strapStateChanged(paired: Boolean, battery: Int?, charging: Boolean, wasPair
 }
 
 /**
- * The line's words: "Pair your strap", "Strap at 12%", "Syncing", and "Last sync 09:10" today, "Last sync yesterday",
- * the weekday within the week ("Last sync Tuesday") and the date before that ("Last sync 21 Oct").
+ * The line's words: "Pair your strap", "Strap at 12%", "Syncing", and "Synced 09:10" today, "Synced yesterday", the
+ * weekday within the week ("Synced Tuesday") and the date before that ("Synced 21 Oct").
  */
 fun strapStatusLine(status: StrapStatus, now: Long, zone: ZoneId, locale: Locale = Locale.getDefault()): String = when (status) {
     StrapStatus.NotPaired -> "Pair your strap"
@@ -63,7 +63,7 @@ fun strapStatusLine(status: StrapStatus, now: Long, zone: ZoneId, locale: Locale
     is StrapStatus.StaleSync -> {
         val then = Instant.ofEpochSecond(status.at).atZone(zone).toLocalDate()
         val days = ChronoUnit.DAYS.between(then, Instant.ofEpochSecond(now).atZone(zone).toLocalDate())
-        "Last sync " + when {
+        "Synced " + when {
             days <= 0 -> clockText(status.at, zone)
             days == 1L -> recentDay(then, then.plusDays(1), locale).lowercase(locale)
             else -> recentDay(then, then.plusDays(days), locale)

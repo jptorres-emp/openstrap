@@ -141,7 +141,7 @@ private fun Edge(spread: Spread, f: WidgetFrame) = Spacer(GlanceModifier.height(
 private fun ColumnScope.SmallContent(m: SleepWidgetModel, f: WidgetFrame) {
     val fit = SleepLayout.small(m, f.contentWidth, f.contentHeight, f.fontScale, f.status)
     Edge(fit.spread, f)
-    TopRowView(m.title, null, fit.top, f)
+    TopRowView(m.title, null, fit.top, f, fit.spread.edge(f.drawContentHeight))
     Gap()
     ScoreRow(m, fit.row, SleepLayout.SMALL_WORD_GAP_DP, f.density)
     if (fit.lines.isNotEmpty() || fit.bar) {
@@ -166,7 +166,7 @@ private fun ColumnScope.SmallContent(m: SleepWidgetModel, f: WidgetFrame) {
 private fun ColumnScope.WideContent(m: SleepWidgetModel, f: WidgetFrame) {
     val fit = SleepLayout.wide(m, f.contentWidth, f.contentHeight, f.fontScale, f.status)
     Edge(fit.spread, f)
-    TopRowView(m.title, m.note, fit.top, f)
+    TopRowView(m.title, m.note, fit.top, f, fit.spread.edge(f.drawContentHeight))
     Gap()
     ScoreRow(m, fit.row, SleepLayout.WORD_GAP_DP, f.density)
     if (fit.bar) {
@@ -182,7 +182,7 @@ private fun ColumnScope.LargeContent(m: SleepWidgetModel, f: WidgetFrame) {
     val fit = SleepLayout.large(m, f.contentWidth, f.contentHeight, f.fontScale, f.status)
     val spread = SleepLayout.largeSpread(fit, m.stages.size, f.fontScale)
     Edge(spread, f)
-    TopRowView(m.title, m.note, fit.top, f)
+    TopRowView(m.title, m.note, fit.top, f, spread.edge(f.drawContentHeight))
     if (fit.sentenceLines > 0 && m.sentence != null) {
         Gap()
         Text(m.sentence, style = WidgetType.hero, maxLines = fit.sentenceLines)

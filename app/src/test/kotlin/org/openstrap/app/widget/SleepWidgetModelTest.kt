@@ -273,4 +273,15 @@ class SleepWidgetModelTest {
         assertFalse(b.bar)
         assertTrue(SleepLayout.largeHeight(b, 0, 1.3f) <= large.second)
     }
+
+    @Test fun `with the strap status the title row counts the button and the words replace the times`() {
+        val m = WidgetSamples.sleep(today, zone)
+        val l = StatusLine(StrapStatus.StaleSync(0), listOf("Synced Wednesday", "Synced Wed", "Wednesday", "Wed"))
+        val shown = SleepLayout.large(m, 313f, 290f, 1f, l)
+        assertEquals(StatusButton.SIZE_DP, shown.top.height, 0f)
+        assertNotNull(shown.top.words)
+        assertFalse(shown.top.note)
+        assertTrue(SleepLayout.largeHeight(shown, m.stages.size, 1f) <= 290.01f)
+        assertNull(SleepLayout.small(m, 140f, 180f, 1f, l).top.words)
+    }
 }

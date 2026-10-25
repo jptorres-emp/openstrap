@@ -201,13 +201,13 @@ object StepsLayout {
     val SMALL_DOTS = listOf(3f, 3.6f, 4.5f, 5f, 5.5f, 6f, 6.5f, 7f)
 
     /**
-     * The Small in [width] by [height] dp: the top row (the title, or the strap [status] line in its place), the
+     * The Small in [width] by [height] dp: the top row (the title, with the strap [status] button when it shows), the
      * number, the bar always, then the share line and "today" while they fit, the share first as it says how far. The
      * share only on one line. The blocks share the spare height, the dots growing from 3 dp until no gap is over
      * [Spread.TARGET_GAP_DP]; at least [SMALL_BAR_GAP_DP] between them all.
      */
     fun small(stepsText: String, share: String, width: Float, height: Float, fontScale: Float, status: StatusLine? = null): Small {
-        val top = TopRow.of(StepsWidgetModel.TITLE, null, status, width, fontScale)
+        val top = TopRow.of(StepsWidgetModel.TITLE, null, status, width, fontScale, withWords = false)
         val shareFits = WidgetText.width(share, WidgetText.SECONDARY_SP, fontScale) <= width
         fun at(dot: Float, word: Boolean, withShare: Boolean): Small {
             val d = fitDot(stepsText, width, dot)
@@ -294,7 +294,7 @@ object StepsLayout {
         fit(m, width, height, fontScale, status, large = true)
 
     private fun fit(m: StepsWidgetModel, width: Float, height: Float, fontScale: Float, status: StatusLine?, large: Boolean): Fit {
-        val top = TopRow.of(m.title, m.goalNote, status, width, fontScale)
+        val top = TopRow.of(m.title, m.goalNote, status, width, fontScale, withWords = true)
         val row = numberRow(m.stepsText, m.toGo, width, fontScale)
         val week = if (large) week(m.weekLine, width, fontScale, m.week.size) else null
         val inner = if (large) 3 else 2

@@ -66,7 +66,7 @@ strength at night.
 ### 2.3 Dropped
 
 - **Energy.** Moment leads with it at midday, in the workout window and in the evening. On its own it is a niche.
-- **Strap.** Battery and sync matter only when something is wrong. Every widget carries the strap status line
+- **Strap.** Battery and sync matter only when something is wrong. Every widget carries the strap status button
   instead (5).
 - **4 × 1 strips** of any widget (2.1).
 
@@ -252,40 +252,58 @@ picker and opening the Strap page (`EXTRA_OPEN_STRAP`, step 6).
 | Recovery | The Recovery detail | `EXTRA_OPEN_METRIC` |
 | Start's play or a sport tile | Ready with that sport | `EXTRA_READY_SPORT` |
 | Start's All sports | Choose a sport | New: an extra that opens Ready with the picker open (`readyPicking`). `EXTRA_SHOW_WORKOUT` opens Ready with the last sport, not the picker |
-| The strap status line | Syncs in place (5) | A Glance `actionRunCallback`, no activity |
+| The strap status button | Syncs in place, or the Strap page (5) | A Glance `actionRunCallback`, no activity, or `EXTRA_OPEN_STRAP` |
 
 No carets on widgets: the whole widget is the target. Touch targets stay 44 dp or more.
 
 ## 5. The strap status line
 
-Any widget, any size, takes this line in its top row (replacing the title or moment name) when one of these holds,
-first match wins:
+Any widget, any size, shows the strap's status in its top row when one of these holds, first match wins:
 
-| State | Line | Tap |
-|---|---|---|
-| Strap not paired | "Pair your strap" | Opens the Strap page (`EXTRA_OPEN_STRAP`) |
-| Battery 15% or less, not charging | "Strap at 12%" | Opens the Strap page |
-| Last sync more than 3 hours ago | "Last sync 09:10", "Last sync yesterday", "Last sync Tuesday" within a week, then "Last sync 13 Oct" | Syncs now |
+| State | Words | Icon | Tap |
+|---|---|---|---|
+| Strap not paired | "Pair your strap" | The strap (Watch), white | Opens the Strap page (`EXTRA_OPEN_STRAP`) |
+| Battery 15% or less, not charging | "Strap at 12%" | A low battery, amber | Opens the Strap page |
+| Last sync more than 3 hours ago | "Synced 09:10", "Synced yesterday", "Synced Tuesday" within a week, then "Synced 13 Oct" | The sync arrows, amber | Syncs now, the app stays shut |
+| That sync running | "Syncing" | An indeterminate spinner | None: a tap is the widget's own |
 
-- A pill: black at 45% on the widget, 999 dp corners, a 12 dp icon and Secondary type in white.
-- While a sync runs the line reads "Syncing" and the icon turns. When it ends the widget refreshes (7).
+- Option C (decided 2026-10-25, replacing step 6's pill, which read long and thin in the title's place):
+  - The title always stays ("Recovery", "Steps", "Last night", the moment's name). A round 32 dp button sits at
+    the right end of the title row, its right edge on the content's: a circle in the Control surface Start's tiles
+    wear, the state's 16 dp icon in it.
+  - The tap reaches 44 dp, 6 dp past the circle each way. It's a transparent target laid over the card where the
+    circle is, so the row counts only the circle's 32 dp.
+  - Wide and Large: the state's words sit just left of the button, Secondary (13 sp) in amber (`MetricColors.warn`,
+    amber being for the strap and sync only), 8 dp from it. They replace the row's note ("This morning", "Goal
+    8,000", "22:58–06:56") while the status shows.
+  - Small: the button alone. TalkBack reads the whole line on every size.
+- One line, never wrapped. The words try shorter wordings in order, all at 13 sp, and if not even the shortest fits
+  the button stands alone:
+  - "Pair your strap", "Pair strap"
+  - "Strap at 12%", "12%"
+  - "Synced Wednesday", "Synced Wed", "Wednesday", "Wed"
+  - "Synced yesterday", "Yesterday"
+  - "Synced 09:10", "09:10"
+  - "Synced 13 Oct", "13 Oct"
+- Beside the button the title takes the first of its sizes that fits (17, 15, 13 sp, and Moment's name 13, 11), and
+  may step down one size more only to make room for the words.
+- Every layout counts the title row at the larger of the title's line and 32 dp while the status shows.
+- Start a workout has no title row:
+  - Wide and Large: while the status shows they get one, "Start a workout" with the button and words at the
+    right, a block above the usual row in the spare height's share. Where the layout won't fit under it (the
+    smallest cells at the largest font) the status drops.
+  - Small: the button sits at the top right in the usual tile's row, the tile, play and the name where they were.
+    When play has moved up beside the tile, the button sits at the foot's right beside the name and "Your usual",
+    which then have less room. Only when not even the short name fits beside it does the button drop.
 - Last sync time is `SettingsStore.lastSync`. Battery and charging are `StrapManager`'s connection state, kept in
-  settings so a widget can read them with the strap away.
-- Decided in step 6 (2026-10-25):
-  - `EXTRA_STRAP_STATE` is the debug strap preview, so the line opens the Strap page with a new `EXTRA_OPEN_STRAP`.
-  - One line, never wrapped. Each state has shorter wordings, tried in order, each at Secondary then Caption size,
-    before the line drops: "Pair your strap", "Pair strap"; "Strap at 12%", "12%"; "Last sync Wednesday", "Last sync
-    Wed", "Wednesday", "Wed"; "Last sync yesterday", "Yesterday"; "Last sync 09:10", "09:10"; "Last sync 13 Oct",
-    "13 Oct". TalkBack reads the whole line whatever shows. Icons: the strap (Watch) for pairing and battery, the
-    sync arrows for a stale sync, an indeterminate spinner while syncing.
-  - The pill is 3 dp taller than its text and takes the top row's height in every layout's sums. The note on the
-    right (bedtime to waking, the goal, "This morning") stays while both fit, and goes first.
-  - Start has no title row, so the pill sits above the usual row, 6 dp over it, and the layout fits under it. At
-    the smallest Small and the largest font the layout wouldn't fit, and there the line drops.
-  - While a workout records, Start and Moment show no line: the recording is the news, and the live screen and its
-    notification show the strap.
-  - A stale line needs no event to appear: `WidgetUpdater` sets an alarm at the last sync plus 3 hours while a
-    widget is placed.
+  settings so a widget can read them with the strap away. When a sync ends the widgets refresh (7).
+- Decided in step 6 (2026-10-25), still holding:
+  - `EXTRA_STRAP_STATE` is the debug strap preview, so the status opens the Strap page with a new
+    `EXTRA_OPEN_STRAP`.
+  - While a workout records, Start and Moment show no status: the recording is the news, and the live screen and
+    its notification show the strap.
+  - A stale sync needs no event to show: `WidgetUpdater` sets an alarm at the last sync plus 3 hours while a widget
+    is placed.
   - Debug gallery: `--es strap notpaired|low|stale|yesterday|week|syncing|none|auto`.
 
 ## 6. Rendering
@@ -344,7 +362,9 @@ Every layout shares its spare height as Moment's and Start's do: half a gap abov
 and on a tall cell the parts grow first so no gap passes 32 dp on One UI's cells. Recovery's Small has three blocks
 (top row, score, word) and its dots grow from 3 to 7 dp; its Wide's and Large's dots grow from 3.6 to 6 and the
 Large's sentence to 22 and 24 sp; the Large's week shows only while it fits beside the score. Steps' Small dots grow
-from 3 to 7 dp and its line from 52 to 72 dp. Sleep's Small dots grow from 3 to 7 dp and its Wide's from 3.6 to 6.
+from 3 to 7 dp and its line from 52 to 72 dp. Sleep's Small dots grow from 3 to 7 dp and its Wide's from 3.6 to 6. With the strap status showing (5) the title row counts
+at the larger of its line and the button's 32 dp, and every size still fits at the minimums and One UI's cells at
+font 1.0, 1.08 and 1.3, no gap over 32 dp on One UI.
 
 ## 7. Refresh
 

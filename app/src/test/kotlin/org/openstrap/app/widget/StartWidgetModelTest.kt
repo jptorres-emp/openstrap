@@ -424,4 +424,21 @@ class StartWidgetModelTest {
         assertTrue(boxes.last().first + boxes.last().second > 260f)
         assertTrue(boxes.last().first + boxes.last().second <= 260f + StartLayout.CAPTION_BLEED_DP + 1e-3f)
     }
+
+    @Test fun `with the strap status the Wide gets a title row and the Small keeps tile, play and name`() {
+        val m = WidgetSamples.start(now, zone, Locale.UK)
+        val l = StatusLine(StrapStatus.StaleSync(0), listOf("Synced Wednesday", "Synced Wed", "Wednesday", "Wed"))
+        val top = StartLayout.statusTop(m, l, WidgetSizes.Wide, 313f, 180f, 1f)!!
+        assertEquals(StatusButton.SIZE_DP, top.height, 0f)
+        assertNotNull(top.words)
+        val b = StartLayout.wide(m, 313f, 180f, 1f, top.height)
+        assertEquals(StartLayout.wide(m, 313f, 180f, 1f).gaps + 1, b.gaps)
+        assertNotNull(b.tiles)
+        assertNull(StartLayout.statusTop(m, null, WidgetSizes.Wide, 313f, 180f, 1f))
+        // The Small: the button beside the tile, play and the name where they were.
+        val plain = StartLayout.small(m.usual, listOf(StartWidgetModel.USUAL), false, 140f, 180f, 1f)
+        val small = StartLayout.small(m.usual, listOf(StartWidgetModel.USUAL), false, 140f, 180f, 1f, button = true)
+        assertTrue(small.button)
+        assertEquals(plain.copy(button = true), small)
+    }
 }

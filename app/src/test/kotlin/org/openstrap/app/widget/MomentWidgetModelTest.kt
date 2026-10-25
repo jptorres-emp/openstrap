@@ -594,4 +594,16 @@ class MomentWidgetModelTest {
         assertEquals(LightAngle.LowerRight, evStyle.lightAngle)
         assertEquals(WINDOW_RIM, windowModel().light.style(GlowMood.Day).glowStrength, 1e-4f)
     }
+
+    @Test fun `with the strap status the name stays and the row counts the button`() {
+        val m = WidgetSamples.moment(LocalDate.of(2026, 10, 24), zone)
+        val l = StatusLine(StrapStatus.StaleSync(0), listOf("Synced Wednesday", "Synced Wed", "Wednesday", "Wed"))
+        val wide = MomentLayout.wide(m, 313f, 180f, 1f, l)
+        assertEquals(m.name, wide.name.text)
+        assertEquals(StatusButton.SIZE_DP, wide.top!!.height, 0f)
+        assertNotNull(wide.top!!.words)
+        assertTrue(wide.fits(180f))
+        assertNull(MomentLayout.small(m, 140f, 180f, 1f, l).top!!.words)
+        assertNull(MomentLayout.wide(m, 313f, 180f, 1f).top)
+    }
 }

@@ -9,7 +9,7 @@ import java.util.Locale
 
 /**
  * The strap status line as a widget shows it (widgets spec 5): the [status] and its wordings, longest first, so a
- * narrow top row takes a shorter one before the line drops.
+ * narrow top row takes a shorter one before the words drop and the button stands alone.
  */
 data class StatusLine(val status: StrapStatus, val options: List<String>) {
     /** The whole line, as [strapStatusLine] words it: what TalkBack reads whichever wording shows. */
@@ -17,8 +17,8 @@ data class StatusLine(val status: StrapStatus, val options: List<String>) {
 
     companion object {
         /**
-         * [status]'s wordings at [now] (epoch seconds): the line ("Last sync Tuesday"), then shorter ones that keep its
-         * sense beside the line's icon ("Last sync Tue", "Tuesday", "Tue"). Never a dot, semicolon or dash.
+         * [status]'s wordings at [now] (epoch seconds): the line ("Synced Tuesday"), then shorter ones that keep its
+         * sense beside the button's icon ("Synced Tue", "Tuesday", "Tue"). Never a dot, semicolon or dash.
          */
         fun of(status: StrapStatus, now: Long, zone: ZoneId, locale: Locale = Locale.getDefault()): StatusLine {
             val full = strapStatusLine(status, now, zone, locale)
@@ -35,9 +35,9 @@ data class StatusLine(val status: StrapStatus, val options: List<String>) {
                         days < 7 -> {
                             val day = then.dayOfWeek.getDisplayName(TextStyle.FULL, locale)
                             val short = then.dayOfWeek.getDisplayName(TextStyle.SHORT, locale)
-                            listOf("Last sync $short", day, short)
+                            listOf("Synced $short", day, short)
                         }
-                        else -> listOf(full.removePrefix("Last sync "))
+                        else -> listOf(full.removePrefix("Synced "))
                     }
                 }
             }
@@ -47,63 +47,67 @@ data class StatusLine(val status: StrapStatus, val options: List<String>) {
 }
 
 /**
- * The status line's pill (spec 5): black at 45%, fully round, a [ICON_DP] icon and Secondary type in white, one line.
- * It takes the top row in place of the title or the moment's name, so a layout fits it by its [Pill.height] there.
+ * The status button (spec 5, option C): a [SIZE_DP] dark circle at the right end of the title row with the state's
+ * icon, and on the Wide and Large the state's words just left of it in [WORDS_SP] amber. Its tap reaches past the
+ * circle to [TOUCH_DP] (an overlay, so the row still counts the circle's height).
  */
-object StatusPill {
-    const val ICON_DP = 12f
-    const val ICON_GAP_DP = 5f
-    const val PAD_H_DP = 9f
-    const val PAD_V_DP = 3f
+object StatusButton {
+    const val SIZE_DP = 32f
+    const val TOUCH_DP = 44f
+    const val ICON_DP = 16f
 
-    /** Black at this, under the pill. */
-    const val ALPHA = 0.45f
+    /** The words' size: Secondary, one line, never smaller. */
+    const val WORDS_SP = WidgetText.SECONDARY_SP
 
-    /** Secondary, then Caption size, before a shorter wording. */
-    val SIZES = listOf(WidgetText.SECONDARY_SP, WidgetText.CAPTION_SP)
+    /** Between the words and the button. */
+    const val WORDS_GAP_DP = 8f
 
-    /** Between the pill and a note kept on its right. */
-    const val NOTE_GAP_DP = 12f
+    /** At least this between the title and what's right of it. */
+    const val TITLE_GAP_DP = 12f
 
-    /** The pill as shown: its wording [text] at [sp]. */
-    data class Pill(val line: StatusLine, val text: String, val sp: Float) {
-        fun height(fontScale: Float): Float = StatusPill.height(sp, fontScale)
-        fun width(fontScale: Float): Float = StatusPill.width(text, sp, fontScale)
-    }
-
-    /** A pill's height with its text at [sp], dp. */
-    fun height(sp: Float, fontScale: Float): Float = WidgetText.line(sp, fontScale) + 2 * PAD_V_DP
-
-    /** A pill's width for [text] at [sp], dp: by letter with [WidgetText.FIT_MARGIN], so it's never cut. */
-    fun width(text: String, sp: Float, fontScale: Float): Float = 2 * PAD_H_DP + ICON_DP + ICON_GAP_DP + WidgetText.fitWidth(text, sp, fontScale)
-
-    /** The first wording of [line] that fits [room] dp, at the first size that does; null when none does or no line. */
-    fun fit(line: StatusLine?, room: Float, fontScale: Float): Pill? {
-        line ?: return null
-        for (o in line.options) for (sp in SIZES) if (width(o, sp, fontScale) <= room) return Pill(line, o, sp)
-        return null
-    }
+    /** The first of [line]'s wordings that fits [room] dp at [WORDS_SP]; null for none or no line. */
+    fun words(line: StatusLine?, room: Float, fontScale: Float): String? =
+        line?.options?.firstOrNull { WidgetText.fitWidth(it, WORDS_SP, fontScale) <= room }
 }
 
 /**
- * A widget's top row (spec 5): the [pill] in the title's place when the strap needs something and a wording fits, the
- * title otherwise; whether the [note] on the right still fits; and the row's [height], which every layout's sums use.
+ * A widget's top row (spec 5): the title at [titleSp], always; while the strap needs something its [status] button at
+ * the right with the [words] that fit beside it (none on a Small, or when none fits); else whether the [note] on the
+ * right still fits. [height] is what every layout's sums use: the title's line, or the button's when it shows.
  */
-data class TopRow(val pill: StatusPill.Pill?, val note: Boolean, val height: Float) {
+data class TopRow(
+    val status: StatusLine?, val note: Boolean, val height: Float,
+    val words: String? = null, val titleSp: Float = WidgetText.TITLE_SP,
+) {
     companion object {
+        /** The title's sizes while the button shows, largest first, so a long title steps down rather than be cut. */
+        val TITLE_SIZES = listOf(WidgetText.TITLE_SP, WidgetText.BODY_SP, WidgetText.SECONDARY_SP)
+
         /**
-         * The top row in [width] dp: [title] at [titleSp] with [note] on the right, or the status [line]'s pill in the
-         * title's place with the note kept while both fit. The pill is the news, so the note goes first.
+         * The top row in [width] dp: [title] at [titleSizes]' first with [note] on the right, or with the status
+         * [line]'s button there and, when [withWords], the first wording that fits between the title and the button.
+         * The words replace the note while the line shows. While it shows the title takes the first of [titleSizes]
+         * that fits beside the button, or the next size down when only that leaves room for the words.
          */
-        fun of(title: String, note: String?, line: StatusLine?, width: Float, fontScale: Float, titleSp: Float = WidgetText.TITLE_SP): TopRow {
-            val noteW = note?.let { StatusPill.NOTE_GAP_DP + WidgetText.fitWidth(it, WidgetText.SECONDARY_SP, fontScale) }
-            val pill = StatusPill.fit(line, width, fontScale)
-            if (pill != null) {
-                val keep = noteW != null && pill.width(fontScale) + noteW <= width
-                return TopRow(pill, keep, maxOf(pill.height(fontScale), if (keep) WidgetText.line(WidgetText.SECONDARY_SP, fontScale) else 0f))
+        fun of(
+            title: String, note: String?, line: StatusLine?, width: Float, fontScale: Float, withWords: Boolean,
+            titleSizes: List<Float> = TITLE_SIZES,
+        ): TopRow {
+            if (line == null) {
+                val sp = titleSizes.first()
+                val keep = note != null &&
+                    WidgetText.fitWidth(title, sp, fontScale) + StatusButton.TITLE_GAP_DP + WidgetText.fitWidth(note, WidgetText.SECONDARY_SP, fontScale) <= width
+                return TopRow(null, keep, WidgetText.line(sp, fontScale), titleSp = sp)
             }
-            val keep = noteW != null && WidgetText.fitWidth(title, titleSp, fontScale) + noteW <= width
-            return TopRow(null, keep, WidgetText.line(titleSp, fontScale))
+            val beside = StatusButton.SIZE_DP + StatusButton.TITLE_GAP_DP
+            fun room(sp: Float) = width - WidgetText.fitWidth(title, sp, fontScale) - StatusButton.TITLE_GAP_DP - StatusButton.WORDS_GAP_DP - StatusButton.SIZE_DP
+            val fitting = titleSizes.firstOrNull { WidgetText.fitWidth(title, it, fontScale) + beside <= width } ?: titleSizes.last()
+            // The words are the news: the title may step down one size to make room for them, no further.
+            val sp = if (!withWords) fitting else titleSizes.take(2).filter { it <= fitting }
+                .firstOrNull { StatusButton.words(line, room(it), fontScale) != null } ?: fitting
+            val words = if (withWords) StatusButton.words(line, room(sp), fontScale) else null
+            val h = maxOf(WidgetText.line(sp, fontScale), StatusButton.SIZE_DP, if (words != null) WidgetText.line(StatusButton.WORDS_SP, fontScale) else 0f)
+            return TopRow(line, false, h, words, sp)
         }
     }
 }

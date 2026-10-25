@@ -145,7 +145,7 @@ private fun Edge(spread: Spread, f: WidgetFrame) = Spacer(GlanceModifier.height(
 private fun ColumnScope.SmallContent(m: StepsWidgetModel, f: WidgetFrame) {
     val fit = StepsLayout.small(m.stepsText, m.share, f.contentWidth, f.contentHeight, f.fontScale, f.status)
     Edge(fit.spread, f)
-    TopRowView(m.title, null, fit.top, f)
+    TopRowView(m.title, null, fit.top, f, fit.spread.edge(f.drawContentHeight))
     Gap()
     // Each block one child of the column: Glance drops a column's children past ten.
     Column(GlanceModifier.fillMaxWidth()) {
@@ -171,7 +171,7 @@ private fun ColumnScope.SmallContent(m: StepsWidgetModel, f: WidgetFrame) {
 private fun ColumnScope.WideContent(m: StepsWidgetModel, f: WidgetFrame) {
     val fit = StepsLayout.wide(m, f.contentWidth, f.contentHeight, f.fontScale, f.status)
     Edge(fit.spread, f)
-    TopRowView(m.title, m.goalNote, fit.top, f)
+    TopRowView(m.title, m.goalNote, fit.top, f, fit.spread.edge(f.drawContentHeight))
     Gap()
     NumberRow(m, fit.row, f)
     Gap()
@@ -184,7 +184,7 @@ private fun ColumnScope.WideContent(m: StepsWidgetModel, f: WidgetFrame) {
 private fun ColumnScope.LargeContent(m: StepsWidgetModel, f: WidgetFrame) {
     val fit = StepsLayout.large(m, f.contentWidth, f.contentHeight, f.fontScale, f.status)
     Edge(fit.spread, f)
-    TopRowView(m.title, m.goalNote, fit.top, f)
+    TopRowView(m.title, m.goalNote, fit.top, f, fit.spread.edge(f.drawContentHeight))
     Gap()
     NumberRow(m, fit.row, f)
     Gap()

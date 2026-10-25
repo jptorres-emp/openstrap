@@ -672,8 +672,8 @@ object MomentLayout {
         val open: Boolean = false,
         val content: Float,
         val inner: Int,
-        /** The strap status pill in the name's place (spec 5), null for the name. */
-        val pill: StatusPill.Pill? = null,
+        /** The top row with the strap status button at its right (spec 5), null for the name alone. */
+        val top: TopRow? = null,
     ) {
         /** The gap between blocks in a cell [height] dp high (inside the padding). */
         fun gap(height: Float): Float = if (inner + 1 <= 0) 0f else ((height - content) / (inner + 1)).coerceAtLeast(0f)
@@ -701,8 +701,19 @@ object MomentLayout {
     private fun nameLine(m: MomentWidgetModel, width: Float, fontScale: Float, beside: Float = 0f): Line =
         line(listOf(m.name), NAME_SIZES, width - beside, fontScale) ?: Line(m.name, NAME_SIZES.last())
 
-    /** The top row's height: the status [pill] in the name's place when it shows, else the [name]. */
-    private fun topHeight(name: Line, pill: StatusPill.Pill?, fontScale: Float): Float = pill?.height(fontScale) ?: name.height(fontScale)
+    /** The top row's height: the name's line, or the status button's while it shows ([top]). */
+    private fun topHeight(name: Line, top: TopRow?, fontScale: Float): Float = top?.height ?: name.height(fontScale)
+
+    /**
+     * The top row with [status]'s button at its right (and on the Wide and Large, [withWords], its words before it),
+     * null without a status; the name then at the size the row gives it.
+     */
+    private fun statusRow(m: MomentWidgetModel, status: StatusLine?, width: Float, fontScale: Float, withWords: Boolean): TopRow? =
+        status?.let { TopRow.of(m.name, null, it, width, fontScale, withWords, titleSizes = NAME_SIZES) }
+
+    /** The name as the top row shows it: at [row]'s size beside the button, else the first of [NAME_SIZES] that fits. */
+    private fun nameIn(m: MomentWidgetModel, row: TopRow?, width: Float, fontScale: Float): Line =
+        row?.let { Line(m.name, it.titleSp) } ?: nameLine(m, width, fontScale)
 
     /** Open's width at [fontScale]: its word in Body 500 with [OPEN_PAD_DP] each side. */
     fun openWidth(fontScale: Float): Float = WidgetText.fitWidth(OPEN, WidgetText.BODY_SP, fontScale) + 2 * OPEN_PAD_DP
@@ -716,15 +727,15 @@ object MomentLayout {
      */
     fun small(m: MomentWidgetModel, width: Float, height: Float, fontScale: Float, status: StatusLine? = null): Fit {
         if (m.recording != null) return recordingSmall(m, m.recording, width, height, fontScale)
-        val name = nameLine(m, width, fontScale)
-        val pill = StatusPill.fit(status, width, fontScale)
-        val top = topHeight(name, pill, fontScale)
+        val statusTop = statusRow(m, status, width, fontScale, withWords = false)
+        val name = nameIn(m, statusTop, width, fontScale)
+        val top = topHeight(name, statusTop, fontScale)
         val number = m.number
         if (number == null) {
             val waiting = m.waiting?.let { line(listOf(it), FIGURE_SIZES, width, fontScale) }
             val play = m.start != null
             val content = top + (waiting?.height(fontScale) ?: 0f) + (if (play) PLAY_DP else 0f)
-            return Fit(name, waiting = waiting, play = play, content = content, inner = (if (waiting != null) 1 else 0) + (if (play) 1 else 0), pill = pill)
+            return Fit(name, waiting = waiting, play = play, content = content, inner = (if (waiting != null) 1 else 0) + (if (play) 1 else 0), top = statusTop)
         }
         fun at(dot: Float): Fit? {
             val dots = WidgetDots.width(number, dot)
@@ -733,7 +744,7 @@ object MomentLayout {
             val word = line(m.words, WORD_SIZES, width, fontScale)
             val row = maxOf(WidgetDots.height(dot), if (play) PLAY_DP else 0f)
             val content = top + row + (word?.height(fontScale) ?: 0f)
-            return Fit(name, dot = dot, word = word, play = play, content = content, inner = if (word != null) 2 else 1, pill = pill)
+            return Fit(name, dot = dot, word = word, play = play, content = content, inner = if (word != null) 2 else 1, top = statusTop)
         }
         // Growing never costs the Small its word or its Start button.
         val ladder = (listOf(SMALL_DOT) + SMALL_DOT_GROWTH).mapNotNull(::at).let { l ->
@@ -778,9 +789,9 @@ object MomentLayout {
     fun chartBlock(h: Float, fontScale: Float): Float = if (h <= 0f) 0f else h + CHART_LABEL_GAP_DP + WidgetText.line(WidgetText.CAPTION_SP, fontScale)
 
     private fun ladders(m: MomentWidgetModel, width: Float, fontScale: Float, large: Boolean, status: StatusLine?): List<List<Fit>> {
-        val name = nameLine(m, width, fontScale)
-        val pill = StatusPill.fit(status, width, fontScale)
-        val top = topHeight(name, pill, fontScale)
+        val statusTop = statusRow(m, status, width, fontScale, withWords = true)
+        val name = nameIn(m, statusTop, width, fontScale)
+        val top = topHeight(name, statusTop, fontScale)
         val stages = m.chart?.kind == MomentChartKind.Stages
         val chartBase = when {
             !large || m.chart == null -> emptyList()
@@ -795,7 +806,7 @@ object MomentLayout {
                 top, sentence?.height(fontScale), row?.height, waiting?.height(fontScale),
                 chartBlock(chart, fontScale).takeIf { it > 0f },
             )
-            return Fit(name, dot = dot, row = row, sentence = sentence, chart = chart, waiting = waiting, content = blocks.sum(), inner = blocks.size - 1, pill = pill)
+            return Fit(name, dot = dot, row = row, sentence = sentence, chart = chart, waiting = waiting, content = blocks.sum(), inner = blocks.size - 1, top = statusTop)
         }
         /**
          * The fit with [text] at [sp], the dots at [dot] and the chart [chart] high, then the fits it grows to on a

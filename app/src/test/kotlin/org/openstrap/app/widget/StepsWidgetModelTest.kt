@@ -205,4 +205,17 @@ class StepsWidgetModelTest {
         assertNotNull(v)
         return v!!
     }
+
+    @Test fun `with the strap status the title row counts the button and the words replace the goal`() {
+        val m = WidgetSamples.steps(today, Locale.UK)
+        val l = StatusLine(StrapStatus.StaleSync(0), listOf("Synced Wednesday", "Synced Wed", "Wednesday", "Wed"))
+        val shown = StepsLayout.wide(m, 313f, 180f, 1f, l)
+        assertEquals(StatusButton.SIZE_DP, shown.top.height, 0f)
+        assertNotNull(shown.top.words)
+        assertFalse(shown.top.note)
+        assertTrue(StepsLayout.wide(m, 313f, 180f, 1f).top.note)
+        val small = StepsLayout.small(m.stepsText, m.share, 140f, 180f, 1f, l)
+        assertNull(small.top.words)
+        assertEquals(StatusButton.SIZE_DP, small.top.height, 0f)
+    }
 }

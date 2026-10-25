@@ -11,7 +11,7 @@ import org.openstrap.app.OpenStrapApp
 import org.openstrap.app.device.ConnectionState
 
 /**
- * The strap status line's "Last sync" tap (widgets spec 4, 5): syncs in place, no activity. Connected, it's the same
+ * The strap status button's tap on a stale sync (widgets spec 4, 5): syncs in place, no activity. Connected, it's the same
  * sync as pulling Today down. Away, it reconnects as the app does in the background (a Disconnect the user tapped
  * holds), and connecting syncs on its own. The line reads Syncing while it runs; [org.openstrap.app.device.WidgetUpdater]
  * refreshes the widgets as it starts and ends.

@@ -122,7 +122,7 @@ private fun Edge(fit: RecoveryLayout.Fit, f: WidgetFrame) = Spacer(GlanceModifie
 @Composable
 private fun ColumnScope.SmallContent(m: RecoveryWidgetModel, fit: RecoveryLayout.Fit, f: WidgetFrame) {
     Edge(fit, f)
-    TopRowView(m.title, null, fit.top, f)
+    TopRowView(m.title, null, fit.top, f, fit.spread.edge(f.drawContentHeight))
     Gap()
     m.score?.let { DotNumber(it, fit.dot, f.density, m.scoreDescription) }
     if (fit.word) m.word?.let {
@@ -136,7 +136,7 @@ private fun ColumnScope.SmallContent(m: RecoveryWidgetModel, fit: RecoveryLayout
 @Composable
 private fun ColumnScope.WideContent(m: RecoveryWidgetModel, fit: RecoveryLayout.Fit, f: WidgetFrame) {
     Edge(fit, f)
-    TopRowView(m.title, m.note, fit.top, f)
+    TopRowView(m.title, m.note, fit.top, f, fit.spread.edge(f.drawContentHeight))
     Gap()
     ScoreRow(m, fit.dot, f.density)
     if (fit.figures) {
@@ -150,7 +150,7 @@ private fun ColumnScope.WideContent(m: RecoveryWidgetModel, fit: RecoveryLayout.
 @Composable
 private fun ColumnScope.LargeContent(m: RecoveryWidgetModel, fit: RecoveryLayout.Fit, f: WidgetFrame) {
     Edge(fit, f)
-    TopRowView(m.title, m.note, fit.top, f)
+    TopRowView(m.title, m.note, fit.top, f, fit.spread.edge(f.drawContentHeight))
     if (fit.sentenceLines > 0) m.sentence?.let {
         Gap()
         Text(it, style = WidgetType.hero.copy(fontSize = fit.sentenceSp.sp), maxLines = fit.sentenceLines)

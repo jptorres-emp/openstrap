@@ -174,9 +174,12 @@ interface StrapController {
     /** What the strap pushes on its own during a sport session ("heart rate back to normal", a stop). */
     val sportSessionPushes: kotlinx.coroutines.flow.SharedFlow<org.openstrap.protocol.services.SportSession.Push>
 
-    /** Keeps the strap buzzing (a ringing call) until [stopBuzzing] or the wearer taps the strap. */
-    suspend fun startBuzzing()
-    suspend fun stopBuzzing()
+    /**
+     * Keeps the strap buzzing for a ringing call until [stopCallBuzz]: steady, or [pulsed] on the motor. Notification
+     * and workout buzzes ([buzz]) are dropped from now until the stop, so they can't cut it off.
+     */
+    suspend fun startCallBuzz(pulsed: Boolean)
+    suspend fun stopCallBuzz()
 
     /** True while Find strap is buzzing the strap. */
     val findingStrap: StateFlow<Boolean>

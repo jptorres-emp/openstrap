@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import kotlinx.coroutines.launch
 import org.openstrap.app.data.settings.BuzzPattern
+import org.openstrap.app.data.settings.CallBuzz
 import org.openstrap.app.data.settings.SettingsStore
 import org.openstrap.app.device.PhoneAlerts
 import org.openstrap.app.device.StrapNotificationListener
@@ -63,7 +64,9 @@ fun PhoneAlertsScreen(alerts: PhoneAlerts, settings: SettingsStore, contentPaddi
     val callPermission by alerts.callPermission.collectAsState()
     val notificationAccess by alerts.notificationAccess.collectAsState()
     val pattern by settings.notificationPattern.collectAsState(BuzzPattern.TWO_SHORT)
+    val callStyle by settings.callBuzzStyle.collectAsState(CallBuzz.STEADY)
     var previewError by remember { mutableStateOf<String?>(null) }
+    var callPreviewError by remember { mutableStateOf<String?>(null) }
 
     // The user may grant access in system settings and come back.
     LifecycleResumeEffect(Unit) { alerts.refresh(); onPauseOrDispose { } }
@@ -89,7 +92,7 @@ fun PhoneAlertsScreen(alerts: PhoneAlerts, settings: SettingsStore, contentPaddi
         item {
             PagePanel {
                 PageSwitchRow(
-                    "Incoming calls", "The strap buzzes while your phone rings. With Do Not Disturb on, only if it allows calls from anyone.",
+                    "Incoming calls", "The strap buzzes while your phone rings, and for calls from apps like WhatsApp with notification access. With Do Not Disturb on, only if it allows calls from anyone.",
                     calls && callPermission,
                     { on ->
                         when {
@@ -100,6 +103,20 @@ fun PhoneAlertsScreen(alerts: PhoneAlerts, settings: SettingsStore, contentPaddi
                     },
                     divider = false,
                 )
+                if (calls && callPermission) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Call buzz", style = GlowType.body, color = Color.White)
+                        // Picking one plays it for a few seconds, so the two can be compared on the wrist.
+                        GlowSegments(CallBuzz.entries.map { it.label }, callStyle.ordinal, { i ->
+                            val style = CallBuzz.entries[i]
+                            scope.launch {
+                                settings.setCallBuzzStyle(style)
+                                callPreviewError = runCatching { alerts.previewCall(style) }.exceptionOrNull()?.let { it.message ?: "Couldn't buzz the strap" }
+                            }
+                        })
+                        callPreviewError?.let { PageNote(it, color = MetricColors.warn) }
+                    }
+                }
                 PageSwitchRow("Notifications", "The strap buzzes for notifications that would make a sound.", notifications && notificationAccess, { on ->
                     scope.launch { settings.setBuzzOnNotifications(on) }
                     if (on && !notificationAccess) openNotificationAccess()

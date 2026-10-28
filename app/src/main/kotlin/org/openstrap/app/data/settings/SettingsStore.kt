@@ -88,6 +88,9 @@ enum class BuzzPattern(val label: String, val millis: List<Int>) {
     ONE_LONG("Long", listOf(600)),
 }
 
+/** How the strap buzzes while a call rings: the find-device buzz without a break, or 600 ms motor pulses once a second. */
+enum class CallBuzz(val label: String) { STEADY("Steady"), PULSED("Pulsed") }
+
 class SettingsStore(private val context: Context) {
     private val address = stringPreferencesKey("device_address")
     private val authKey = stringPreferencesKey("device_auth_key")
@@ -342,7 +345,7 @@ class SettingsStore(private val context: Context) {
     /** Forgets the strap and the Zepp sign-in; the user's profile and goals stay. */
     suspend fun forgetDevice() {
         context.dataStore.edit { prefs ->
-            val keep = setOf(birthYear, sex, weight, height, imperial, sleepNeed, maxHr, activityLevel, activityAt, bodyAt, betaBlocker, pregnant, stepGoal, sleepGoal, activeGoal, todayHidden, todayPinned, buzzCalls, buzzNotifications, buzzPattern)
+            val keep = setOf(birthYear, sex, weight, height, imperial, sleepNeed, maxHr, activityLevel, activityAt, bodyAt, betaBlocker, pregnant, stepGoal, sleepGoal, activeGoal, todayHidden, todayPinned, buzzCalls, buzzNotifications, buzzPattern, callBuzz)
             prefs.asMap().keys.filter { it !in keep }.forEach { prefs.remove(it) }
         }
     }
@@ -365,6 +368,17 @@ class SettingsStore(private val context: Context) {
 
     suspend fun setNotificationPattern(pattern: BuzzPattern) {
         context.dataStore.edit { it[buzzPattern] = pattern.name }
+    }
+
+    private val callBuzz = stringPreferencesKey("call_buzz")
+
+    /** How the strap buzzes for a call; steady by default. */
+    val callBuzzStyle: Flow<CallBuzz> = context.dataStore.data.map { prefs ->
+        CallBuzz.entries.firstOrNull { it.name == prefs[callBuzz] } ?: CallBuzz.STEADY
+    }
+
+    suspend fun setCallBuzzStyle(style: CallBuzz) {
+        context.dataStore.edit { it[callBuzz] = style.name }
     }
 
     suspend fun setBuzzOnCalls(enabled: Boolean) {

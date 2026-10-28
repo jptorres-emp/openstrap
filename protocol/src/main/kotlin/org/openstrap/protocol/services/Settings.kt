@@ -90,6 +90,12 @@ object SettingsCodec {
     /** GENERAL key 44 `wearStatusAlertSwitch`: the strap's own switch for the wear reminder (07 §4 N5). */
     const val KEY_WEAR_STATUS_ALERT = 0x2C
 
+    /**
+     * Sound and vibration group (`x960`/`y960`): key 3 notification vibration, key 4 vibration strength (an enum),
+     * key 5 system vibration (codemap 03 §3.6.2). Whether the strap has the group is unknown; OpenStrap only reads it.
+     */
+    const val GROUP_SOUND = 0x03
+
     /** Health group and its keys (kel.java:62-110). */
     const val GROUP_HEALTH = 0x08
     const val KEY_HR_INTERVAL = 0x01

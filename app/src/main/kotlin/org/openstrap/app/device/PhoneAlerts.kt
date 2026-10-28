@@ -11,26 +11,33 @@ import android.os.SystemClock
 import android.provider.Settings
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
-import android.telecom.TelecomManager
 import android.telephony.PhoneStateListener
 import android.telephony.TelephonyCallback
 import android.telephony.TelephonyManager
+import java.util.concurrent.atomic.AtomicInteger
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import org.openstrap.app.data.settings.BuzzPattern
+import org.openstrap.app.data.settings.CallBuzz
 import org.openstrap.app.data.settings.SettingsStore
 
 /**
  * Buzzes the strap for phone calls and notifications. The strap has no notification module (Zepp leaves the
  * feature off for it), so a ringing call uses its find-device buzz until the call is answered or ends, and a
- * notification plays a short motor pattern (docs/protocol/01 §5.8). Both follow Do Not Disturb.
+ * notification plays a short motor pattern (docs/protocol/01 §5.8). Both follow Do Not Disturb. A ringing call wins:
+ * [StrapController.startCallBuzz] drops other buzzes until the stop, and a call notification holds them back
+ * before the ringing state arrives.
  */
 class PhoneAlerts(
     private val context: Context,
@@ -44,6 +51,7 @@ class PhoneAlerts(
     @Volatile var notificationsOn = false
         private set
     @Volatile private var pattern = BuzzPattern.TWO_SHORT
+    @Volatile private var callStyle = CallBuzz.STEADY
 
     /** Re-checked by [refresh]; the screen calls it on resume, after the user may have granted access. */
     val callPermission = MutableStateFlow(hasCallPermission())
@@ -52,6 +60,8 @@ class PhoneAlerts(
     private var callListener: Any? = null
     private var ringing: Job? = null
     private var lastBuzz = 0L
+    /** When a call notification last came in, from any app; Android often posts it before the ringing state. */
+    @Volatile private var callNoticeAt = Long.MIN_VALUE / 2
 
     init {
         scope.launch {
@@ -62,6 +72,7 @@ class PhoneAlerts(
             }
         }
         scope.launch { settings.notificationPattern.collect { pattern = it } }
+        scope.launch { settings.callBuzzStyle.collect { callStyle = it } }
     }
 
     fun refresh() {
@@ -80,6 +91,23 @@ class PhoneAlerts(
 
     /** Plays [p] once, so the pattern picker can be felt. */
     suspend fun preview(p: BuzzPattern) = strap.buzz(p.millis)
+
+    private val previews = AtomicInteger()
+
+    /**
+     * Plays the call buzz [style] for a few seconds, so steady and pulsed can be compared. Not while a call rings.
+     * Picking the other one meanwhile takes over: only the latest preview sends the stop.
+     */
+    suspend fun previewCall(style: CallBuzz) {
+        if (phoneRinging) return
+        val mine = previews.incrementAndGet()
+        try {
+            strap.startCallBuzz(style == CallBuzz.PULSED)
+            delay(CALL_PREVIEW_MS)
+        } finally {
+            if (!phoneRinging && previews.get() == mine) withContext(NonCancellable) { runCatching { strap.stopCallBuzz() } }
+        }
+    }
 
     // ---- Calls ----
 
@@ -133,10 +161,16 @@ class PhoneAlerts(
             val filter = context.getSystemService(NotificationManager::class.java).currentInterruptionFilter
             log("call ringing: ${if (allowed) "buzz" else "held back by Do Not Disturb"} (interruption filter $filter)")
             if (!allowed) return@launch
-            runCatching { strap.startBuzzing() }.onFailure { return@launch }
+            // The strap may be reconnecting (reconnectStrap above): wait for it rather than miss the call.
+            if (strap.connection.value !is ConnectionState.Connected) {
+                log("call ringing: waiting for the strap to connect")
+                withTimeoutOrNull(CONNECT_WAIT_MS) { strap.connection.first { it is ConnectionState.Connected } }
+                    ?: run { log("call ringing: the strap didn't connect in time"); return@launch }
+            }
+            runCatching { strap.startCallBuzz(callStyle == CallBuzz.PULSED) }.onFailure { log("call buzz failed: ${it.message}"); return@launch }
             // A missed call can end without a state change reaching us; don't leave the strap buzzing.
             delay(MAX_RING_MS)
-            runCatching { strap.stopBuzzing() }
+            runCatching { strap.stopCallBuzz() }
         }
     }
 
@@ -144,7 +178,7 @@ class PhoneAlerts(
         val job = ringing ?: return
         ringing = null
         job.cancel()
-        scope.launch { runCatching { strap.stopBuzzing() } }
+        scope.launch { runCatching { strap.stopCallBuzz() } }
     }
 
     /**
@@ -186,10 +220,15 @@ class PhoneAlerts(
     /** Called by [StrapNotificationListener] for every posted notification. */
     fun onNotification(sbn: StatusBarNotification, ranking: NotificationListenerService.Ranking?, update: Boolean) {
         reconnectStrap()
-        // A pattern played on the motor cuts off the call's continuous buzz (seen 2026-10-20), so stay quiet while it rings.
-        if (phoneRinging) return
-        if (!notificationsOn || !shouldBuzz(sbn, ranking, update)) return
         val now = SystemClock.elapsedRealtime()
+        // A call notification, from the dialer, Samsung's call screen or a calling app, never buzzes by itself: it
+        // usually comes just before the ringing state, and a motor pattern then cuts off the call's buzz (seen 2026-10-20).
+        if (sbn.notification.category == Notification.CATEGORY_CALL) {
+            callNoticeAt = now
+            return
+        }
+        if (phoneRinging || now - callNoticeAt < CALL_NOTICE_HOLD_MS) return
+        if (!notificationsOn || !shouldBuzz(sbn, ranking, update)) return
         synchronized(this) {
             if (now - lastBuzz < MIN_GAP_MS) return
             lastBuzz = now
@@ -203,8 +242,6 @@ class PhoneAlerts(
         if (n.flags and Notification.FLAG_GROUP_SUMMARY != 0) return false
         // An update that the app marked "alert once" makes no sound on the phone either.
         if (update && n.flags and Notification.FLAG_ONLY_ALERT_ONCE != 0) return false
-        // A phone call that arrived before its ringing state is handled by the call-state listener above.
-        if (n.category == Notification.CATEGORY_CALL && sbn.packageName == defaultDialer()) return false
         if (ranking != null) {
             // Follow the phone: nothing during Do Not Disturb that the phone itself would hold back, and nothing
             // from channels the user made silent.
@@ -215,10 +252,13 @@ class PhoneAlerts(
         return true
     }
 
-    private fun defaultDialer(): String? = runCatching { context.getSystemService(TelecomManager::class.java).defaultDialerPackage }.getOrNull()
-
     private companion object {
         const val MAX_RING_MS = 60_000L
+        /** How long a call waits for a reconnecting strap. */
+        const val CONNECT_WAIT_MS = 15_000L
+        /** Other notifications stay quiet this long after a call notification, until the ringing state arrives. */
+        const val CALL_NOTICE_HOLD_MS = 3_000L
+        const val CALL_PREVIEW_MS = 4_000L
         /** A burst of notifications (a group chat) buzzes once. */
         const val MIN_GAP_MS = 5_000L
     }

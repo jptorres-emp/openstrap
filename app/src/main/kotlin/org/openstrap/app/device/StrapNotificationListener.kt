@@ -27,5 +27,6 @@ class StrapNotificationListener : NotificationListenerService() {
 
     override fun onNotificationRemoved(sbn: StatusBarNotification) {
         synchronized(shown) { shown -= sbn.key }
+        alerts.onNotificationRemoved(sbn.key)
     }
 }

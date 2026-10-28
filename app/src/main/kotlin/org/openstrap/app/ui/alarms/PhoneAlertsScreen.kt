@@ -92,7 +92,7 @@ fun PhoneAlertsScreen(alerts: PhoneAlerts, settings: SettingsStore, contentPaddi
         item {
             PagePanel {
                 PageSwitchRow(
-                    "Incoming calls", "The strap buzzes while your phone rings. With Do Not Disturb on, only if it allows calls from anyone.",
+                    "Incoming calls", "The strap buzzes while your phone rings, and for calls from apps like WhatsApp with notification access. With Do Not Disturb on, only if it allows calls from anyone.",
                     calls && callPermission,
                     { on ->
                         when {

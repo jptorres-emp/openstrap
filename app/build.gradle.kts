@@ -31,6 +31,16 @@ android {
     }
 
     signingConfigs {
+        // A fork's own debug key (app/debug.keystore), so every CI build installs over the one before: the runner's
+        // throwaway key would make each build a different app to Android, and the update would need an uninstall.
+        file("debug.keystore").takeIf { it.isFile }?.let { key ->
+            getByName("debug") {
+                storeFile = key
+                storePassword = "android"
+                keyAlias = "androiddebugkey"
+                keyPassword = "android"
+            }
+        }
         // The release key, when its env vars are set (CI sets them from secrets); see README "Releases".
         if (releaseKeystore != null) create("release") {
             storeFile = file(releaseKeystore)

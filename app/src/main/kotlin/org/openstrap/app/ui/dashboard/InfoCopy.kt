@@ -156,7 +156,7 @@ object InfoCopy {
                 "The strap measures the time between beats, in milliseconds (ms), while you're still, mostly in " +
                     "sleep, and the day's value is the average of its readings. It's read against your own normal: the " +
                     "middle of your last 30 days, give or take a usual spread.",
-                "A strap mede o tempo entre batimentos, em milissegundos (ms), quando estás quieto, sobretudo a " +
+                "A strap mede o tempo entre batimentos, em milissegundos (ms), quando estás em repouso, sobretudo a " +
                     "dormir, e o valor do dia é a média das leituras. É lida contra o teu próprio normal: o meio dos " +
                     "teus últimos 30 dias, mais ou menos a variação habitual.",
             ),
@@ -208,7 +208,7 @@ object InfoCopy {
             how = tr(
                 "The strap works it out from your heart rate and its variability while you're still. Readings during " +
                     "and just after a workout are left out, since exercise isn't stress.",
-                "A strap calcula-o a partir da frequência cardíaca e da sua variabilidade quando estás quieto. As " +
+                "A strap calcula-o a partir da frequência cardíaca e da sua variabilidade quando estás em repouso. As " +
                     "leituras durante e logo depois de um treino ficam de fora, porque exercício não é stress.",
             ),
             moves = tr(

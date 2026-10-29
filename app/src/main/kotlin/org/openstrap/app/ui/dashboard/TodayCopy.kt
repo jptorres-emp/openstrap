@@ -41,8 +41,8 @@ object TodayCopy {
     fun recoveryMeaning(score: Int, alert: Boolean): String = when {
         alert -> tr("Some overnight signals are off your normal. An easy day suits.", "Alguns sinais da noite estão fora do teu normal. Convém um dia leve.")
         score >= 85 -> tr("Well recovered. A good day for a hard session.", "Bem recuperado. Um bom dia para um treino duro.")
-        score >= 70 -> tr("Recovered enough for your usual training.", "Recuperado o suficiente para o teu treino habitual.")
-        score >= Recovery.FAIR_FROM -> tr("Not fully recovered. Keep the effort moderate.", "Ainda não totalmente recuperado. Mantém o esforço moderado.")
+        score >= 70 -> tr("Recovered enough for your usual training.", "Recuperação suficiente para o teu treino habitual.")
+        score >= Recovery.FAIR_FROM -> tr("Not fully recovered. Keep the effort moderate.", "A recuperação ainda não está completa. Mantém o esforço moderado.")
         else -> tr("Still catching up. An easy day helps.", "Ainda a recuperar. Um dia leve ajuda.")
     }
 

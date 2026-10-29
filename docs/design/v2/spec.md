@@ -509,7 +509,7 @@ Back or a swipe down closes it. The tab bar under it does nothing while it's ope
 ### 3.4 You page and Strap page
 
 **You page** (from the avatar, a page like the Strap page, with the same round back button): Profile, Goals (steps, active hours, sleep goal, and your sleep need shown
-with it), Your data (Save a copy, Restore from a copy, Health Connect), Diagnostics, About. Every row shows its current
+with it), Language (7.3), Your data (Save a copy, Restore from a copy, Health Connect), Diagnostics, About. Every row shows its current
 value as a second line. It was a sheet, but most rows open pages of their own, and a sheet that closes to open a
 page loses its way back.
 
@@ -889,6 +889,37 @@ From the brief, enforced in code review and by a test (8.2):
 | Save a copy, Restore from a copy | Export CSV, Import CSV |
 
 The copy pass of step 9 rewrote the 223 strings the inventory listed.
+
+### 7.3 Languages
+
+English and Portuguese as it's spoken in Portugal, chosen on the You page under Language: the phone's own (Portuguese
+on a phone in Portuguese, English otherwise), English, or Português. The app redraws in the new language at once,
+widgets included.
+
+* **Both side by side.** Every string is written in both languages where it's used, `tr("Recovery", "Recuperação")`
+  (`l10n/L10n.kt`), so they can't drift apart. A value worked out once (an object's or a file's `val`, an enum's
+  argument) is a getter, or it would keep the language it started in. Code never compares a shown word: it compares
+  kinds, keys or types.
+* **Dates and numbers** follow the language (Portugal's formats in Portuguese).
+* **Outside the app** the launcher shows the phone's language, not the setting: the shortcuts, the quick settings
+  tile and the widget picker's names, descriptions and previews are Android resources, in `values-pt` for Portuguese.
+* **Gender.** Portuguese nouns have one, so sentences are built so a sport's or a value's doesn't matter: "Depois de
+  correr" (after a run), "Treino guardado" with the sport named in the text, a sport after "um treino de". The sleep
+  score's words are feminine, after "pontuação": Ótima, Boa, Razoável, Fraca. The strap and OpenStrap are feminine
+  (a strap, a OpenStrap, as "a app").
+* **Tu**, as a friend says it: "Como te sentes?", "Vai com calma".
+
+| English | Portuguese |
+|---|---|
+| Recovery, Energy, Calories, Load | Recuperação, Energia, Calorias, Carga |
+| Heart points, HRV, Resting heart rate | Pontos cardíacos, VFC, FC em repouso |
+| Blood oxygen, Breathing rate | Oxigénio no sangue, Frequência respiratória |
+| Sleep regularity, Time to recover | Regularidade do sono, Tempo de recuperação |
+| VO2 max, Habit Age | VO2 máx, Idade dos hábitos |
+| Training (the tab) | Treino |
+| Above your normal, Usual, Below your normal | Acima do teu normal, Habitual, Abaixo do teu normal |
+| Take it easy, Moderate, Ready, Ready for more | Vai com calma, Moderado, Pronto, Pronto para mais |
+| strap | strap |
 
 ---
 

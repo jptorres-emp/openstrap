@@ -141,7 +141,7 @@ class MomentWidget : LoadingWidget<MomentWidgetModel>(WidgetKind.Moment) {
                 dayWorkouts = dayWorkouts,
                 heartRate = heart,
                 restingHr = resting,
-                steps = LiveSteps().today(Summaries.totalSteps(minutes), container.strap.todaySteps.value),
+                steps = LiveSteps.shared.today(Summaries.totalSteps(minutes), container.strap.todaySteps.value, today),
                 stepGoal = container.settings.goals.first().steps,
                 bedtime = read("tonight's bedtime", null) { container.settings.plannedBedtime.first()?.takeIf { it.first == today }?.second },
             )

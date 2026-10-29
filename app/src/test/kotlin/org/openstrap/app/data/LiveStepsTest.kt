@@ -31,6 +31,27 @@ class LiveStepsTest {
     }
 
     @Test
+    fun olderHistoryCountsFromTheNewerAnchor() {
+        // A widget saw the sync's minutes first; Today, still on the history before them, must not undo that.
+        val live = LiveSteps()
+        live.today(2456, StepTotals(11368, 1836, 151))
+        assertEquals(2480, live.today(2480, StepTotals(11392, 1854, 152)))
+        assertEquals(2490, live.today(2456, StepTotals(11402, 1861, 152)))
+        assertEquals(2490, live.today(2480, StepTotals(11402, 1861, 152)))
+    }
+
+    @Test
+    fun aNewDayStartsAgain() {
+        val live = LiveSteps()
+        val day = java.time.LocalDate.of(2026, 10, 29)
+        live.today(9000, StepTotals(18000, 10, 1), day)
+        assertEquals(9012, live.today(9000, StepTotals(18012, 10, 1), day))
+        // Just after midnight, before the counter has gone back: today's history is all there is.
+        assertEquals(0, live.today(0, StepTotals(18020, 10, 1), day.plusDays(1)))
+        assertEquals(5, live.today(0, StepTotals(18025, 12, 1), day.plusDays(1)))
+    }
+
+    @Test
     fun noLiveReadingFallsBackToHistory() {
         assertEquals(2456, LiveSteps().today(2456, null))
     }

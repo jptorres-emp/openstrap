@@ -874,6 +874,21 @@ class StrapManager(
         if (visible == appVisible) return
         appVisible = visible
         refreshLive()
+        if (visible) syncIfStale()
+    }
+
+    /**
+     * Opening the app brings its data up to date, as Zepp does, when the last sync is [MIN_SYNC_GAP_SECONDS] ago or more:
+     * the hourly sync alone could leave Today an hour behind the strap.
+     */
+    private fun syncIfStale() {
+        if (connection.value !is ConnectionState.Connected || sync.value is SyncState.Running) return
+        val now = System.currentTimeMillis() / 1000
+        val last = maxOf(lastAutoSync, (sync.value as? SyncState.Done)?.atEpochSeconds ?: 0L)
+        if (now - last < MIN_SYNC_GAP_SECONDS) return
+        lastAutoSync = now
+        log("app opened, last sync ${(now - last) / 60} min ago: syncing")
+        syncNow()
     }
 
     override fun setWorkoutActive(active: Boolean) {

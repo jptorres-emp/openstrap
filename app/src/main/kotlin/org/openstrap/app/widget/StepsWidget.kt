@@ -79,7 +79,7 @@ class StepsWidget : LoadingWidget<StepsWidget.Shown>(WidgetKind.Steps) {
             val model = try {
                 val day = DayWindow.of(today, zone)
                 val minutes = container.database.healthDao().activityOnce(day.from, day.to)
-                val steps = LiveSteps().today(Summaries.totalSteps(minutes), container.strap.todaySteps.value)
+                val steps = LiveSteps.shared.today(Summaries.totalSteps(minutes), container.strap.todaySteps.value, today)
                 val monday = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
                 val past = if (monday < today) {
                     container.health.daily(DailyMetric.Steps, monday, today.minusDays(1), zone).first()

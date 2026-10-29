@@ -365,7 +365,7 @@ class DayViewModel(
 
         // The strap's own running total covers steps whose minute records were already taken by another app.
         val liveSteps = if (date == LocalDate.now()) strapSteps else flowOf(null)
-        val liveCounter = LiveSteps()
+        val liveCounter = LiveSteps.shared
         val actAndLive = combine(activityAndHr, liveSteps) { a, live -> a to live }
 
         return combine(actAndLive, vitals, sleepAndExtras, weekly, moreAndNights) { (ah, live), (spo2, stress, hrv), (sleepParts, extraParts, base), (restingWithFlag, hrvTrend), m ->
@@ -378,7 +378,7 @@ class DayViewModel(
             DayUiState(
                 loaded = true,
                 date = date,
-                steps = liveCounter.today(Summaries.totalSteps(act), live),
+                steps = liveCounter.today(Summaries.totalSteps(act), live, date),
                 minuteSteps = Summaries.totalSteps(act),
                 hourlySteps = hourly,
                 activeHours = Summaries.activeHours(hourly),

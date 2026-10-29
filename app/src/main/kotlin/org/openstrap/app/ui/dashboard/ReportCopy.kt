@@ -179,6 +179,9 @@ object ReportCopy {
 
     const val TARGET_TITLE = "Load against your target"
 
+    /** The chart's band: each day's target, as a trend's band is your normal. */
+    const val TARGET_BAND = "Your target"
+
     /** How the finished days landed, for the figures over the target chart. */
     fun balanceFigures(b: Reports.Balance): List<Pair<String, String>> = listOf(
         whole(b.within) to "Within target", whole(b.below) to "Below", whole(b.above) to "Above",
@@ -376,6 +379,28 @@ object ReportCopy {
     /** Lit when the effect is clear and costs Recovery or HRV. */
     fun habitOff(e: Reports.Effect): Boolean =
         (e.recoveryVerdict == Reports.Verdict.Clear && (e.recovery ?: 0f) < 0f) || (e.hrvVerdict == Reports.Verdict.Clear && (e.hrv ?: 0f) < 0f)
+
+    /** The habits listed one a row: those whose effect shows, clear or likely, the clearest first. */
+    fun shownHabits(habits: List<Reports.Effect>): List<Reports.Effect> = habits.filter { habitValue(it) != null }
+
+    /**
+     * The rest, a row each for what they have in common, so the ones that matter aren't lost among them: no clear
+     * effect, too few mornings after them yet, or after almost every morning. Each with the habits' names.
+     */
+    fun quietHabits(habits: List<Reports.Effect>): List<Pair<String, String>> {
+        val rest = habits.filter { habitValue(it) == null }
+        val few = rest.filter { it.recoveryVerdict == Reports.Verdict.TooFew && it.mornings < Reports.MIN_HABIT_DAYS }
+        val always = rest.filter { it.recoveryVerdict == Reports.Verdict.TooFew && it.mornings >= Reports.MIN_HABIT_DAYS }
+        val unclear = rest - few.toSet() - always.toSet()
+        return listOf("No clear effect" to unclear, "Too few mornings yet" to few, "After almost every morning" to always)
+            .filter { it.second.isNotEmpty() }.map { (title, list) -> title to names(list.map { habitName(it.habit) }) }
+    }
+
+    /** "Weekend night, short night and hard day". */
+    private fun names(names: List<String>): String {
+        val all = names.mapIndexed { i, n -> if (i == 0) n else n.replaceFirstChar { it.lowercase() } }
+        return if (all.size == 1) all[0] else all.dropLast(1).joinToString(", ") + " and " + all.last()
+    }
 
     /* ---------------------------------------------- Accessibility ------------------------------------------ */
 

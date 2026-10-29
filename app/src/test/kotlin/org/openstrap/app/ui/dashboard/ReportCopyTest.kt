@@ -194,6 +194,14 @@ class ReportCopyTest {
         val few = Reports.Effect(Reports.Habit.ShortNight, 2, 57, null, null, null, Reports.Verdict.TooFew, null, Reports.Verdict.TooFew, false, emptyList())
         assertEquals("Too few mornings yet, 2 of 4", ReportCopy.habitStatus(few))
         assertEquals("Almost every morning, nothing to compare", ReportCopy.habitStatus(few.copy(mornings = 58, others = 2)))
+        // Only the habits whose effect shows get a row; the rest share a row each for what they have in common.
+        val all = listOf(clear, hrvOnly, none, few, few.copy(habit = Reports.Habit.Weekend, mornings = 58, others = 2), none.copy(habit = Reports.Habit.HardDay))
+        assertEquals(listOf(clear, hrvOnly), ReportCopy.shownHabits(all))
+        assertEquals(
+            listOf("No clear effect" to "Late workout and hard day", "Too few mornings yet" to "Short night", "After almost every morning" to "Weekend night"),
+            ReportCopy.quietHabits(all),
+        )
+        assertEquals(emptyList<Pair<String, String>>(), ReportCopy.quietHabits(listOf(clear)))
         listOf(Reports.Habit.Workout, Reports.Habit.LateWorkout, Reports.Habit.HardDay, Reports.Habit.LateBedtime, Reports.Habit.ShortNight, Reports.Habit.Weekend, Reports.Habit.ActiveDay)
             .forEach { assertTrue(ReportCopy.habitName(it).length <= 14) }
     }

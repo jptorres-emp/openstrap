@@ -306,11 +306,13 @@ fun GlowBars(
 }
 
 /**
- * Each day's Load against that morning's target (the Reports week): the target as a band of the ink at 12% in the
- * day's column, as a normal is drawn, and the day's Load as a pill bar in [color]. A day that landed outside its band
- * is lit, one inside stays dim, as a trend's dots outside your normal are; the day still under way ([partial]) is
- * faint. With [values] each day's Load is printed over its bar, lit with it. Holding scrubs: [onScrub] gets the column
- * under the finger, or null on release, so the figures it belongs to can follow it.
+ * Each day's Load against the target its morning set (the Reports): the targets as one band of the ink at 12%, as
+ * your normal is drawn behind a trend, a run of days with the same target as one stretch, stepping where it changes;
+ * each day's Load as a pill bar in [color] standing into it or not. The target is the goal, so a day within it is in
+ * full colour, one over it lit lighter, the thing to notice, and one under it (often just a rest day) faded; the day
+ * still under way ([partial]) is faint. With [values] each day's Load is printed over its bar. The band's [bandLabel]
+ * has a row of its own over the plot with a swatch of the band, as a trend's normal has. Holding scrubs: [onScrub]
+ * gets the column under the finger, or null on release, so the figures it belongs to can follow it.
  */
 @Composable
 internal fun TargetBars(
@@ -322,6 +324,7 @@ internal fun TargetBars(
     labels: List<String> = emptyList(),
     partial: Int? = null,
     values: Boolean = false,
+    bandLabel: String? = null,
     onScrub: ((Int?) -> Unit)? = null,
 ) {
     val m = rememberTextMeasurer()
@@ -341,42 +344,63 @@ internal fun TargetBars(
     ) {
         if (n == 0) return@Canvas
         val axisH = columnAxisHeight(labels, n)
-        val top = if (values) BarValueRoom.toPx() else 6.dp.toPx()
+        // The band's label sits on a row of its own, clear of the tallest bar and its value.
+        val label = bandLabel?.takeIf { targets.any { it != null } }?.let { m.measure(it, columnText) }
+        val labelRow = label?.let { it.size.height + 6.dp.toPx() } ?: 0f
+        val top = labelRow + if (values) BarValueRoom.toPx() else 6.dp.toPx()
         val h = size.height - axisH
         val pitch = size.width / n
         val max = (loads.filterNotNull() + targets.filterNotNull().map { it.last.toFloat() }).maxOrNull()?.coerceAtLeast(1f) ?: 1f
         fun yOf(v: Float) = h - (h - top) * (v / max).coerceIn(0f, 1f)
         val picked = touchX?.takeIf { onScrub != null }?.let { (it / pitch).toInt().coerceIn(0, n - 1) }
+        if (label != null) {
+            val sw = 14.dp.toPx()
+            val x = size.width - label.size.width
+            drawRoundRect(
+                color.copy(alpha = 0.35f), Offset(x - sw - 6.dp.toPx(), label.size.height / 2f - 4.dp.toPx()), Size(sw, 8.dp.toPx()),
+                CornerRadius(3.dp.toPx()),
+            )
+            drawText(label, topLeft = Offset(x, 0f))
+        }
         gridLine(h - 0.5.dp.toPx())
-        // Wider than the bar, so the target shows on both sides of it.
-        val bandW = (pitch * 0.66f).coerceAtMost(30.dp.toPx())
-        for (i in 0 until n) {
-            // While scrubbing, the other columns dim so the picked one stands out.
-            val dim = if (picked == null || picked == i) 1f else 0.35f
-            val t = targets.getOrNull(i)
+        // The target band: each run of days with the same target one stretch, a hair apart from the next.
+        val gap = 1.dp.toPx()
+        var run = 0
+        while (run < n) {
+            val t = targets.getOrNull(run)
+            var end = run
+            while (t != null && end + 1 < n && targets.getOrNull(end + 1) == t) end++
             if (t != null) {
                 val y0 = yOf(t.last.toFloat())
                 val y1 = yOf(t.first.toFloat())
                 drawRoundRect(
-                    color.copy(alpha = ChartInk.NORMAL_BAND_ALPHA * dim), Offset(pitch * i + (pitch - bandW) / 2, y0),
-                    Size(bandW, (y1 - y0).coerceAtLeast(2.dp.toPx())), CornerRadius(6.dp.toPx()),
+                    color.copy(alpha = ChartInk.NORMAL_BAND_ALPHA), Offset(pitch * run + gap, y0),
+                    Size(pitch * (end - run + 1) - gap * 2, (y1 - y0).coerceAtLeast(2.dp.toPx())), CornerRadius(6.dp.toPx()),
                 )
             }
+            run = end + 1
+        }
+        for (i in 0 until n) {
             val v = loads.getOrNull(i) ?: continue
+            // While scrubbing, the other columns dim so the picked one stands out.
+            val dim = if (picked == null || picked == i) 1f else 0.35f
+            val t = targets.getOrNull(i)
             val shown = Math.round(v)
-            val outside = t != null && (shown < t.first || shown > t.last)
-            val ink = if (outside) lerp(color, Ink, 0.3f) else color
+            val over = t != null && shown > t.last
+            val under = t != null && shown < t.first
+            val ink = if (over) lerp(color, Ink, 0.35f) else color
+            // The day held is in full, whatever it is, so it stands out from the rest.
+            val faded = i != picked && (under || i == partial)
             val alpha = when {
+                !faded -> 1f
                 i == partial -> 0.4f
-                outside -> 1f
-                else -> 0.6f
+                else -> 0.35f
             }
             pillBar(ink.copy(alpha = alpha * dim), pitch * i, pitch, h, h - yOf(v))
-            // The day's Load over its bar: white, in the bar's light when it landed outside its target.
+            // The day's Load over its bar: white, in the bar's light when it went over, faded with a faded bar.
             if (values) {
-                val valueInk = if (outside) ink else Ink.copy(alpha = 0.75f)
-                val faint = if (i == partial) 0.6f else 1f
-                barValue(m, shown.toString(), valueInk.copy(alpha = valueInk.alpha * dim * faint), pitch * i, pitch, pillTop(pitch, h, h - yOf(v)))
+                val valueInk = if (over) ink else Ink.copy(alpha = if (faded) 0.5f else 0.85f)
+                barValue(m, shown.toString(), valueInk.copy(alpha = valueInk.alpha * dim), pitch * i, pitch, pillTop(pitch, h, h - yOf(v)))
             }
         }
         columnAxis(m, labels, n, h + 4.dp.toPx())

@@ -143,6 +143,7 @@ class MomentWidget : LoadingWidget<MomentWidgetModel>(WidgetKind.Moment) {
                 restingHr = resting,
                 steps = LiveSteps().today(Summaries.totalSteps(minutes), container.strap.todaySteps.value),
                 stepGoal = container.settings.goals.first().steps,
+                bedtime = read("tonight's bedtime", null) { container.settings.plannedBedtime.first()?.takeIf { it.first == today }?.second },
             )
             val forced = WidgetRefresh.momentOverride
             val model = MomentWidgetModel.from(input, now, zone, forced)

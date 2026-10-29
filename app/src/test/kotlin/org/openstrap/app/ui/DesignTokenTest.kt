@@ -120,6 +120,7 @@ class DesignTokenTest {
             "glow/GlowSleepScreen.kt" to cards("NightHero", "RegularityCard", "BreathingCard"),
             "glow/GlowActivityScreen.kt" to cards("StartCard", "StepsGlow", "LoadCard"),
             "glow/GlowHealthspan.kt" to cards("HabitAgeEdgeCard"),
+            "glow/TrainingScreen.kt" to cards("TrainingHero", "LoadRiskCard", "CaloriesCard"),
         ).forEach { (path, fn) ->
             val code = sources.getValue(path).joinToString("\n")
             val heads = fn.findAll(code).toList()

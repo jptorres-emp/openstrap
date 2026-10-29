@@ -64,6 +64,8 @@ object Reports {
         val fatigue: Float? = null,
         val steps: Int? = null,
         val partial: Boolean = false,
+        /** The day's energy in kcal, the app's own estimate as the Calories card has it; null without age, weight and height. */
+        val kcal: Float? = null,
     ) {
         val hasData: Boolean get() = recovery != null || asleepMinutes != null || load != null || (steps ?: 0) > 0
     }
@@ -822,6 +824,8 @@ object Reports {
         val habits: List<Effect>,
         val daysWithData: Int,
         val scoredDays: Int,
+        /** Your sports over the last six weeks, each with the Load of a usual day of it ([Training.sports]). */
+        val sports: List<Training.SportLoad> = emptyList(),
     )
 
     /** The report from the engine's [input], your [sessions], your sleep need in minutes, and [today]'s date. */
@@ -843,6 +847,7 @@ object Reports {
             habits = habits(shown, sessions),
             daysWithData = shown.count { it.hasData },
             scoredDays = shown.count { it.recovery != null },
+            sports = Training.sports(shown, sessions, date),
         )
     }
 

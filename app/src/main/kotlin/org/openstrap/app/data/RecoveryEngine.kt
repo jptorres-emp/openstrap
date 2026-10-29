@@ -384,6 +384,31 @@ class RecoveryEngine(private val dao: HealthDao) {
         val shownLoad = loadOf(date)
         val loadList = loads.entries.map { midnight(it.key) to it.value }
 
+        // Each recent day's energy, the app's own estimate worked out as [compute] works out the day's ([EnergyExpenditure]),
+        // for the Training tab's weeks of energy; resting and max heart rate as of the day shown, as for the loads.
+        val energyDays = Training.ENERGY_WEEKS * 7
+        val energyFrom = midnight(date.minusDays(energyDays - 1L))
+        val energyWorkouts = dao.workoutsOnce(energyFrom, to)
+        val energySteps = activityAll.filter { it.timestamp >= energyFrom && it.steps in 0..250 }.associate { it.timestamp / 60 * 60 to it.steps }
+        val energyHr = hrAll.within(energyFrom, to) { it.first }.toMap()
+        val monday = date.with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY))
+        val vo2 = Vo2max.estimate(profile, profile.age(monday), nights.mapNotNull { n -> n.validRestingHr?.let { n.day to it } }.toMap(), midnight(monday)).first
+        val energy = (0 until energyDays).associate { back ->
+            val d0 = date.minusDays(back.toLong())
+            val w = DayWindow.of(d0, zone)
+            val times = (energySteps.keys.filter { it in w.from..w.to } + energyHr.keys.filter { it in w.from..w.to } + sleepMinutes.filter { it in w.from..w.to }).toSortedSet()
+            d0 to EnergyExpenditure.day(
+                times.map { t ->
+                    val wk = energyWorkouts.firstOrNull { t in it.start until it.end }
+                    EnergyExpenditure.Minute(
+                        t, energySteps[t], energyHr[t]?.let { Recovery.hrr(it, restingHr, maxHr) }, t in sleepMinutes,
+                        wk?.calories?.let { kcal -> kcal / ((wk.end - wk.start) / 60f).coerceAtLeast(1f) },
+                    )
+                },
+                profile, profile.age(), vo2?.value?.toFloat(),
+            )?.totalKcal
+        }
+
         val sleepNeed = Recovery.sleepNeed(profile.age(), profile.sleepNeedMinutes)
         val days = (0 until count).map { i ->
             val date0 = first.plusDays(i.toLong())
@@ -422,6 +447,7 @@ class RecoveryEngine(private val dao: HealthDao) {
                 fatigue = trend?.atl,
                 steps = activityByDay[date0]?.sumOf { it.steps },
                 partial = now in w.from..w.to,
+                kcal = energy[date0],
             )
         }
         return Reports.Input(date, days, loads)

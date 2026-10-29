@@ -30,7 +30,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -229,9 +228,20 @@ private fun NavCell(item: NavItem, on: Boolean, modifier: Modifier, verticalArra
             if (on) item.selectedIcon else item.icon, item.label, tint = tint,
             modifier = Modifier.size(22.dp).graphicsLayer { scaleX = iconScale; scaleY = iconScale },
         )
-        Text(item.label, style = MaterialTheme.typography.labelSmall, color = tint, maxLines = 1)
+        // A long name (Recuperação, five tabs across a narrow phone) steps down to fit instead of being cut.
+        val label = MaterialTheme.typography.labelSmall
+        androidx.compose.foundation.text.BasicText(
+            item.label, style = label, maxLines = 1, softWrap = false, color = { tint },
+            autoSize = androidx.compose.foundation.text.TextAutoSize.StepBased(
+                minFontSize = NavLabelMin, maxFontSize = label.fontSize, stepSize = NavLabelStep,
+            ),
+        )
     }
 }
+
+/** The smallest a tab's name steps down to, and by how much at a time. */
+private val NavLabelMin = androidx.compose.ui.unit.TextUnit(8f, androidx.compose.ui.unit.TextUnitType.Sp)
+private val NavLabelStep = androidx.compose.ui.unit.TextUnit(0.5f, androidx.compose.ui.unit.TextUnitType.Sp)
 
 /* Black glass: what passes under is blurred and darkened until only its colour shows; a light catching the top edge, shade along the bottom. */
 private val GlassBlur = HazeBlurStyle {

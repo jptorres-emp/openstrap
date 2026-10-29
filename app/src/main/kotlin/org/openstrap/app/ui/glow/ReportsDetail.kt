@@ -18,7 +18,6 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -37,6 +36,7 @@ import org.openstrap.app.ui.dashboard.Info
 import org.openstrap.app.ui.dashboard.Metric
 import org.openstrap.app.ui.dashboard.Range
 import org.openstrap.app.ui.dashboard.ReportCopy
+import org.openstrap.app.ui.dashboard.ReportOutcome
 import org.openstrap.app.ui.dashboard.Score
 import org.openstrap.app.ui.dashboard.TabCopy
 import org.openstrap.app.ui.dashboard.TodayCopy
@@ -47,56 +47,41 @@ import org.openstrap.app.ui.workout.ZONE_COLORS
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
-/** How the report stands: being worked out, ready, or failed. */
-private sealed interface ReportState {
-    data object Loading : ReportState
-    data class Ready(val report: Reports.Report) : ReportState
-    data object Failed : ReportState
-}
-
 /**
- * Reports, opened from the header's chart button: the week or the month ending on the day shown, against the stretch
+ * Reports, opened from the Training tab's rows: the week or the month ending on the day shown, against the stretch
  * before it, as WHOOP's weekly and monthly assessments compare them. Recovery and effort lead: Recovery's average in
  * dots with the Load a day beside it, Recovery day by day against your normal, then each day's Load against the target
- * its morning set. Week: the day itself (its Recovery, Load target and tonight's bedtime) and the week against the 3
- * before. Month: the mornings in Recovery's bands, the month against the one before, the days of the week, your sports
- * with their zones, and what your habits do to the next morning. Rows open the details behind them. A list right after
- * another sits on a neutral edge card (spec 2.5). [load] works the report out off the main thread. No strip: the
- * report follows the day shown, as the week story does.
+ * its morning set. Week: the week against the 3 before. Month: the mornings in Recovery's bands, the month against the
+ * one before, the days of the week, your sports with their zones, and what your habits do to the next morning. Rows
+ * open the details behind them. A list right after another sits on a neutral edge card (spec 2.5). Looking back only:
+ * what to do today is the Training tab's. [outcome] is the report the app works out for the day shown
+ * ([org.openstrap.app.ui.dashboard.ReportViewModel]), the one the Training tab reads. No strip: the report follows the
+ * day shown, as the week story does.
  */
 @Composable
 internal fun ReportsDetail(
+    outcome: ReportOutcome?,
     date: LocalDate,
-    load: suspend (LocalDate) -> Reports.Report,
+    /** Opens on the month rather than the week. */
+    initialMonth: Boolean,
     contentPadding: PaddingValues,
     onOpen: (Detail) -> Unit,
     onBack: () -> Unit,
 ) {
     val color = MetricColors.readiness
     val ranges = listOf(Range.Week, Range.Month)
-    var rangeIndex by rememberSaveable { mutableIntStateOf(0) }
+    var rangeIndex by rememberSaveable(initialMonth) { mutableIntStateOf(if (initialMonth) 1 else 0) }
     val range = ranges[rangeIndex.coerceIn(ranges.indices)]
     var scrub by remember(range, date) { mutableStateOf<DetailHeadline?>(null) }
     var info by rememberSaveable { mutableStateOf(false) }
-    // Kept while a newer report for the same day is worked out (after a sync); another day starts from Loading.
-    val state by produceState<ReportState>(ReportState.Loading, date, load) {
-        if ((value as? ReportState.Ready)?.report?.date != date) value = ReportState.Loading
-        value = try {
-            ReportState.Ready(load(date))
-        } catch (e: kotlinx.coroutines.CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            android.util.Log.w(TAG, "Report for $date failed", e)
-            ReportState.Failed
-        }
-    }
-    val report = (state as? ReportState.Ready)?.report
-    val isToday = date == LocalDate.now()
+    // A newer report for the same day (after a sync) replaces this one when it's ready; another day's waits as Loading.
+    val failed = outcome is ReportOutcome.Failed && outcome.date == date
+    val report = (outcome as? ReportOutcome.Ready)?.report?.takeIf { it.date == date }
     val days = if (range == Range.Week) Reports.WEEK_DAYS else Reports.MONTH_DAYS
     val figures = report?.let { if (range == Range.Week) it.week.now else it.month.now }
     val average = figures?.recovery
     val headline = scrub ?: when {
-        report == null && state == ReportState.Failed -> DetailHeadline.none(ReportCopy.FAILED_WORD, ReportCopy.FAILED_WHY)
+        report == null && failed -> DetailHeadline.none(ReportCopy.FAILED_WORD, ReportCopy.FAILED_WHY)
         report == null -> DetailHeadline.none(ReportCopy.LOADING_WORD, ReportCopy.averageLabel(days).replaceFirstChar { it.uppercase() })
         average != null -> DetailHeadline(ReportCopy.whole(average), ReportCopy.averageLabel(days), TodayCopy.recoveryWord(Math.round(average), false))
         else -> ReportCopy.noAverage(report.daysWithData).let { (word, why) -> DetailHeadline.none(word, why) }
@@ -110,9 +95,9 @@ internal fun ReportsDetail(
         heroSide = side,
     ) {
         when {
-            report == null && state == ReportState.Failed -> item { DetailEmpty(ReportCopy.FAILED) }
+            report == null && failed -> item { DetailEmpty(ReportCopy.FAILED) }
             report == null -> item { DetailEmpty(ReportCopy.LOADING) }
-            range == Range.Week -> weekBody(report, isToday, onOpen) { scrub = it }
+            range == Range.Week -> weekBody(report, onOpen) { scrub = it }
             else -> monthBody(report, onOpen) { scrub = it }
         }
     }
@@ -137,16 +122,13 @@ private fun HeroLoad(load: Float) {
 
 /* ------------------------------------------------ Week ---------------------------------------------- */
 
-private fun LazyListScope.weekBody(r: Reports.Report, isToday: Boolean, onOpen: (Detail) -> Unit, onScrub: (DetailHeadline?) -> Unit) {
+private fun LazyListScope.weekBody(r: Reports.Report, onOpen: (Detail) -> Unit, onScrub: (DetailHeadline?) -> Unit) {
     val week = r.week
     val labels = week.days.map { ReportCopy.shortDay(it.date.dayOfWeek) }
-    val loads = hasLoads(week.days)
     item { RecoveryTrend(week.days, week.normal, labels, normalDays(r), onScrub) }
     item { DetailSentence(ReportCopy.weekSentence(week.now, week.before)) }
-    item { ReportList(if (isToday) ReportCopy.TODAY_TITLE else ReportCopy.day(r.date), null, ReportCopy.dayRows(r, isToday), onOpen) }
-    if (loads) item { ReportLoad(week.days, week.targets, week.balance, week.balanceBefore, week.now.trend, labels, month = false, onOpen) }
-    // Without the Load card between them, the week's list sits right under the day's: on a neutral edge card.
-    item { ReportList(ReportCopy.WEEK_TITLE, ReportCopy.WEEK_NOTE, ReportCopy.weekRows(week.now, week.before), onOpen, onEdge = !loads) }
+    if (hasLoads(week.days)) item { ReportLoad(week.days, week.targets, week.balance, week.balanceBefore, week.now.trend, labels, month = false, onOpen) }
+    item { ReportList(ReportCopy.WEEK_TITLE, ReportCopy.WEEK_NOTE, ReportCopy.weekRows(week.now, week.before), onOpen) }
 }
 
 /* ------------------------------------------------ Month --------------------------------------------- */
@@ -201,7 +183,7 @@ private fun ReportSports(sports: List<Reports.SportTotals>, onEdge: Boolean) {
         ListPanel(Modifier.padding(top = 8.dp), title = ReportCopy.SPORTS_TITLE, note = ReportCopy.ZONES_NOTE.takeIf { zones }) {
             sports.forEachIndexed { i, s ->
                 ListRow(
-                    s.name, MetricColors.heart, s.sessions.toString(), ReportCopy.sportStatus(s), divider = i > 0,
+                    ReportCopy.sportName(s), MetricColors.heart, s.sessions.toString(), ReportCopy.sportStatus(s), divider = i > 0,
                     icon = SportIcons.of(s.sport), iconTint = SportIconTint,
                 )
                 // Lined up with the name, as under a workout's row.
@@ -306,16 +288,14 @@ private fun ReportLoad(
 
 /** A list of [rows], each in its metric's ink with its icon, opening the detail behind it where there is one. */
 @Composable
-private fun ReportList(title: String, note: String?, rows: List<ReportCopy.Row>, onOpen: (Detail) -> Unit, onEdge: Boolean = false) {
-    OnNeutralEdge(onEdge) {
-        ListPanel(Modifier.padding(top = 8.dp), title = title, note = note) {
-            rows.forEachIndexed { i, row ->
-                val opens = openOf(row.line)
-                ListRow(
-                    row.name, inkOf(row.line), row.value, row.status, offNormal = row.off, divider = i > 0,
-                    onClick = opens?.let { d -> { onOpen(d) } }, icon = iconOf(row.line),
-                )
-            }
+private fun ReportList(title: String, note: String?, rows: List<ReportCopy.Row>, onOpen: (Detail) -> Unit) {
+    ListPanel(Modifier.padding(top = 8.dp), title = title, note = note) {
+        rows.forEachIndexed { i, row ->
+            val opens = openOf(row.line)
+            ListRow(
+                row.name, inkOf(row.line), row.value, row.status, offNormal = row.off, divider = i > 0,
+                onClick = opens?.let { d -> { onOpen(d) } }, icon = iconOf(row.line),
+            )
         }
     }
 }
@@ -352,9 +332,8 @@ private fun levelsIn(values: List<Float?>, band: ClosedFloatingPointRange<Float>
 
 /** The detail a row opens: the one that shows the same figure day by day, where there is one. */
 private fun openOf(line: ReportCopy.Line): Detail? = when (line) {
-    ReportCopy.Line.Recovery -> Detail.OfScore(Score.Recovery)
-    ReportCopy.Line.Target, ReportCopy.Line.Load, ReportCopy.Line.Usual -> Detail.OfScore(Score.Load)
-    ReportCopy.Line.Tonight, ReportCopy.Line.Bedtime, ReportCopy.Line.Wake -> Detail.OfScore(Score.Regularity)
+    ReportCopy.Line.Load, ReportCopy.Line.Usual -> Detail.OfScore(Score.Load)
+    ReportCopy.Line.Bedtime, ReportCopy.Line.Wake -> Detail.OfScore(Score.Regularity)
     ReportCopy.Line.Hrv -> Detail.OfMetric(Metric.Hrv, night = true)
     ReportCopy.Line.RestingHr -> Detail.OfMetric(Metric.RestingHr)
     ReportCopy.Line.Asleep, ReportCopy.Line.Restorative -> Detail.OfScore(Score.Sleep)
@@ -363,21 +342,19 @@ private fun openOf(line: ReportCopy.Line): Detail? = when (line) {
 }
 
 private fun inkOf(line: ReportCopy.Line): Color = when (line) {
-    ReportCopy.Line.Recovery -> MetricColors.readiness
     ReportCopy.Line.Hrv -> MetricColors.hrv
     ReportCopy.Line.RestingHr, ReportCopy.Line.Workouts -> MetricColors.heart
-    ReportCopy.Line.Tonight, ReportCopy.Line.Asleep, ReportCopy.Line.Restorative, ReportCopy.Line.Bedtime, ReportCopy.Line.Wake -> MetricColors.sleepDeep
-    ReportCopy.Line.Target, ReportCopy.Line.Load, ReportCopy.Line.Usual -> MetricColors.load
+    ReportCopy.Line.Asleep, ReportCopy.Line.Restorative, ReportCopy.Line.Bedtime, ReportCopy.Line.Wake -> MetricColors.sleepDeep
+    ReportCopy.Line.Load, ReportCopy.Line.Usual -> MetricColors.load
     ReportCopy.Line.Steps -> MetricColors.steps
 }
 
 private fun iconOf(line: ReportCopy.Line): ImageVector = when (line) {
-    ReportCopy.Line.Recovery -> Score.Recovery.rowIcon()
     ReportCopy.Line.Hrv -> Metric.Hrv.rowIcon()
     ReportCopy.Line.RestingHr -> Metric.RestingHr.rowIcon()
-    ReportCopy.Line.Tonight, ReportCopy.Line.Asleep, ReportCopy.Line.Restorative -> Score.Sleep.rowIcon()
+    ReportCopy.Line.Asleep, ReportCopy.Line.Restorative -> Score.Sleep.rowIcon()
     ReportCopy.Line.Bedtime, ReportCopy.Line.Wake -> Score.Regularity.rowIcon()
-    ReportCopy.Line.Target, ReportCopy.Line.Load, ReportCopy.Line.Usual -> Score.Load.rowIcon()
+    ReportCopy.Line.Load, ReportCopy.Line.Usual -> Score.Load.rowIcon()
     ReportCopy.Line.Workouts -> AppIcons.PersonSimpleRun
     ReportCopy.Line.Steps -> Metric.Steps.rowIcon()
 }
@@ -396,5 +373,3 @@ private fun habitIcon(h: Reports.Habit): ImageVector = when (h) {
 /** Four dates spread across a month's chart, as the Load detail labels its month. */
 private fun spreadLabels(dates: List<LocalDate>): List<String> = if (dates.isEmpty()) emptyList()
 else listOf(0f, 1 / 3f, 2 / 3f, 1f).map { dates[((dates.size - 1) * it).toInt()].format(DateTimeFormatter.ofPattern("d MMM")) }
-
-private const val TAG = "Reports"

@@ -345,16 +345,23 @@ class MainActivity : ComponentActivity() {
 }
 
 private enum class Tab(
-    val label: String,
+    private val en: String,
+    private val pt: String,
     val icon: androidx.compose.ui.graphics.vector.ImageVector,
     val selectedIcon: androidx.compose.ui.graphics.vector.ImageVector,
     /** The capsule's colour while this tab shows (spec 3.2). */
     val tint: androidx.compose.ui.graphics.Color,
 ) {
-    Today("Today", AppIcons.HouseSimple, AppIcons.HouseSimpleFill, androidx.compose.ui.graphics.Color.White),
-    Recovery("Recovery", AppIcons.Plant, AppIcons.PlantFill, org.openstrap.app.ui.theme.MetricColors.readiness),
-    Sleep("Sleep", AppIcons.Moon, AppIcons.MoonFill, org.openstrap.app.ui.theme.MetricColors.sleepDeep),
-    Activity("Activity", AppIcons.SneakerMove, AppIcons.SneakerMoveFill, org.openstrap.app.ui.theme.MetricColors.steps),
+    Today("Today", "Hoje", AppIcons.HouseSimple, AppIcons.HouseSimpleFill, androidx.compose.ui.graphics.Color.White),
+    Recovery("Recovery", "Recuperação", AppIcons.Plant, AppIcons.PlantFill, org.openstrap.app.ui.theme.MetricColors.readiness),
+    Sleep("Sleep", "Sono", AppIcons.Moon, AppIcons.MoonFill, org.openstrap.app.ui.theme.MetricColors.sleepDeep),
+    Activity("Activity", "Atividade", AppIcons.SneakerMove, AppIcons.SneakerMoveFill, org.openstrap.app.ui.theme.MetricColors.steps),
+    /** What the day calls for in your sports, Load and injury risk, calories burned, and the weekly and monthly reports. */
+    Training("Training", "Treino", AppIcons.Barbell, AppIcons.BarbellFill, org.openstrap.app.ui.theme.MetricColors.load),
+    ;
+
+    /** The tab's name in the language the app speaks. */
+    val label: String get() = org.openstrap.app.l10n.tr(en, pt)
 }
 
 /**
@@ -423,11 +430,14 @@ private fun AppRoot(
     var activityStack by rememberSaveable(stateSaver = Detail.StackSaver) { mutableStateOf(emptyList<Detail>()) }
     var recoveryStack by rememberSaveable(stateSaver = Detail.StackSaver) { mutableStateOf(emptyList<Detail>()) }
     var sleepStack by rememberSaveable(stateSaver = Detail.StackSaver) { mutableStateOf(emptyList<Detail>()) }
+    var trainingStack by rememberSaveable(stateSaver = Detail.StackSaver) { mutableStateOf(emptyList<Detail>()) }
     fun stackOf(t: Int): List<Detail> = when (Tab.entries[t]) {
         Tab.Today -> todayStack; Tab.Recovery -> recoveryStack; Tab.Sleep -> sleepStack; Tab.Activity -> activityStack
+        Tab.Training -> trainingStack
     }
     fun setStack(t: Int, stack: List<Detail>) = when (Tab.entries[t]) {
         Tab.Today -> todayStack = stack; Tab.Recovery -> recoveryStack = stack; Tab.Sleep -> sleepStack = stack; Tab.Activity -> activityStack = stack
+        Tab.Training -> trainingStack = stack
     }
     // The All metrics Charge row asks the Recovery tab to scroll to its Charge card, once.
     var showCharge by remember { mutableStateOf(false) }
@@ -459,10 +469,12 @@ private fun AppRoot(
     // Opening Habit Age marks the estimate seen, so Today stops offering it.
     val seeHabitAge: () -> Unit = { healthspan?.result?.asOf?.let { a -> scope.launch { container.settings.setHabitAgeSeen(a) } } }
     val profile by deviceVm.profile.collectAsStateWithLifecycle()
-    // The Reports screen's report, worked out off the main thread when it opens, and again when the profile changes or
-    // a workout comes or goes; it reads the workouts as they stand then, zones and all.
-    val latestWorkouts = androidx.compose.runtime.rememberUpdatedState(workouts)
-    val loadReport = remember(profile, workouts.size) { reportLoader(container.health, profile) { latestWorkouts.value } }
+    // The day's report, worked out once for the day shown and read by the Training tab, the Reports screen and
+    // tonight's bedtime on Today ([ReportViewModel]).
+    val reportVm: org.openstrap.app.ui.dashboard.ReportViewModel = viewModel(factory = viewModelFactory {
+        initializer { org.openstrap.app.ui.dashboard.ReportViewModel(container.health, dayVm.selectedDate, container.settings.profile, workoutsVm.workouts) }
+    })
+    val reportOutcome by reportVm.outcome.collectAsStateWithLifecycle()
     val realDay by dayVm.state.collectAsStateWithLifecycle()
     val day = remember(realDay, dataPreview) { realDay.previewed(dataPreview) }
     // Your usual steps by the hour, read once per day shown, off the main thread ([DayViewModel.usualSteps]).
@@ -631,6 +643,16 @@ private fun AppRoot(
     androidx.compose.runtime.SideEffect { if (freshClockFacts != null && freshClockFacts != keptClockFacts) keptClockFacts = freshClockFacts }
     val clockFacts = freshClockFacts ?: keptClockFacts
     val usualBedtime = clockFacts?.second
+    val tonightsBedtime = (reportOutcome as? org.openstrap.app.ui.dashboard.ReportOutcome.Ready)?.report
+        ?.takeIf { it.date == clockDate }?.plan?.bedtime
+    // Kept for the Moment widget, so it counts down to the same bedtime as Today and the Training tab.
+    LaunchedEffect(tonightsBedtime, clockDate) {
+        val bed = tonightsBedtime ?: return@LaunchedEffect
+        if (container.settings.plannedBedtime.first() != (clockDate to bed)) {
+            container.settings.setPlannedBedtime(clockDate, bed)
+            org.openstrap.app.device.WidgetUpdater.changed(container.app, setOf(org.openstrap.app.widget.WidgetKind.Moment))
+        }
+    }
     val clockMoment = remember(clock.epochSecond / 60, clockDate, recording, lastWorkout?.end, clockFacts, workoutStarts) {
         clockFacts?.let { (sleepEnd, bedtime) ->
             org.openstrap.app.data.MomentResolver.resolve(clock, zone, clockDate, recording, lastWorkout?.end, sleepEnd, bedtime, workoutStarts)
@@ -862,8 +884,6 @@ private fun AppRoot(
                     // All metrics is hidden for now (spec 3.1). Passing { allMetricsOpen = true } brings the button
                     // back; the sheet opens over whatever shows, and no tab hears of it (spec 3.2).
                     onOpenAllMetrics = null,
-                    // Reports open on the tab showing, as any detail does (spec 3.3).
-                    onOpenReports = { if (stackOf(t.ordinal).lastOrNull() != Detail.Reports) setStack(t.ordinal, stackOf(t.ordinal) + Detail.Reports) },
                 )
             }
             // What a tab's stack shows on top: the same screens on every tab, each pushing onto the stack it's on.
@@ -900,7 +920,7 @@ private fun AppRoot(
                         workouts, padding, onOpen = { push(Detail.Workout(it)) }, onBack = pop,
                     )
                     Detail.Healthspan -> org.openstrap.app.ui.glow.GlowHealthspanScreen(healthspan, padding, onBack = pop)
-                    Detail.Reports -> org.openstrap.app.ui.glow.ReportsDetail(day.date, loadReport, padding, onOpen = push, onBack = pop)
+                    is Detail.Reports -> org.openstrap.app.ui.glow.ReportsDetail(reportOutcome, day.date, detail.month, padding, onOpen = push, onBack = pop)
                     // The Recovery and Sleep tabs' screens, opened over another tab from a card about them.
                     Detail.Recovery -> {
                         androidx.activity.compose.BackHandler(onBack = pop)
@@ -989,7 +1009,8 @@ private fun AppRoot(
                                 onRetryRecovery = dayVm::retryRecovery,
                                 onPair = { openPage(Page.Strap) },
                                 onSyncNow = container.strap::syncNow,
-                                usualBedtime = usualBedtime,
+                                // The bedtime the Training tab plans for tonight, so both say the same; your usual until it's ready.
+                                bedtime = tonightsBedtime ?: usualBedtime,
                                 wear = wear, firstScore = showFirstScore,
                             ) }
                             Tab.Recovery -> org.openstrap.app.ui.glow.GlowRecoveryScreen(
@@ -1023,6 +1044,12 @@ private fun AppRoot(
                                 onAllSports = { readySport = readySport ?: org.openstrap.app.ui.glow.topSports(workouts).first().sportType; readyPicking = true },
                                 onAddWorkout = { addingOn = day.date },
                                 liveHeartRate = live, history = history, wear = wear,
+                            )
+                            Tab.Training -> org.openstrap.app.ui.glow.TrainingScreen(
+                                day.date, reportOutcome, hasBody = profile.age() != null && profile.weightKg != null && profile.heightCm != null,
+                                header = { header(Tab.Training) }, contentPadding = padding,
+                                onOpen = { trainingStack = listOf(it) },
+                                onEditProfile = { openPage(Page.Profile) },
                             )
                         }
                     }
@@ -1378,18 +1405,6 @@ private fun MetricDetail(
     contentPadding: androidx.compose.foundation.layout.PaddingValues,
     onBack: () -> Unit,
 ) = org.openstrap.app.ui.glow.GlowMetricDetailScreen(metric, night, state, history, liveHeartRate, liveEnabled, canUseLive, onLiveToggle, onOpen, onSwitch, onSelectDay, contentPadding, onBack)
-
-/**
- * Works out the Reports screen's report for a day ([org.openstrap.app.data.HealthRepository.reports]) off the main
- * thread, with [profile] and the [workouts] as they stand when it runs.
- */
-private fun reportLoader(
-    health: org.openstrap.app.data.HealthRepository,
-    profile: org.openstrap.app.data.settings.UserProfile,
-    workouts: () -> List<org.openstrap.app.data.WorkoutAnalysis>,
-): suspend (LocalDate) -> org.openstrap.app.data.Reports.Report = { d ->
-    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { health.reports(d, profile, workouts()) }
-}
 
 /** A workout's detail: one page for the strap's and the phone's ([org.openstrap.app.ui.glow.GlowWorkoutDetailScreen]). */
 @androidx.compose.runtime.Composable

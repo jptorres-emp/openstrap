@@ -155,8 +155,8 @@ fun GlowTodayScreen(
     /** Opens the Strap page, to pair. */
     onPair: () -> Unit = {},
     onSyncNow: () -> Unit = {},
-    /** When you usually go to sleep, for "Bedtime in 1 h 10". */
-    usualBedtime: LocalTime? = null,
+    /** Tonight's bedtime, for "Bedtime in 1 h 10": the one the Training tab plans, else when you usually go to sleep. */
+    bedtime: LocalTime? = null,
     /** Today's Recovery failed to work out; null when it didn't. */
     recoveryFailure: RecoveryFailure? = null,
     /** Works Recovery out again after a failure. */
@@ -237,7 +237,7 @@ fun GlowTodayScreen(
                                 Column(m.then(dim)) {
                                     when (slot.card) {
                                         TodayCard.Hero -> Hero(
-                                            ctx, strap, pairing, heroLightAngle, usualBedtime,
+                                            ctx, strap, pairing, heroLightAngle, bedtime,
                                             running, onOpenRunning, onResumeRunning, onStartSport, onOtherSport, onPair, onSyncNow,
                                             onOpenRecovery, onOpenWorkout, onRetryRecovery,
                                             onOpenScore = { onOpen(org.openstrap.app.ui.dashboard.Detail.OfScore(it)) },
@@ -595,7 +595,7 @@ private fun AfterHero(ctx: TodayContext, lightAngle: Float?, onOpenWorkout: (Lon
 
 /**
  * Evening and night: the day in a sentence, the steps in dots with Load and Charge left as text beside them, and how
- * long until your usual bedtime. Evening violet from the lower right in the evening, Sleep blue from below at night
+ * long until tonight's bedtime. Evening violet from the lower right in the evening, Sleep blue from below at night
  * (spec 4.2), each in its mood.
  */
 @Composable

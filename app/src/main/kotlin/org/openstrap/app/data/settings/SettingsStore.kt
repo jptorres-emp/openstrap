@@ -307,6 +307,26 @@ class SettingsStore(private val context: Context) {
         context.dataStore.edit { it[firstScore] = epochDay }
     }
 
+    private val plannedBedDay = longPreferencesKey("planned_bedtime_day")
+    private val plannedBedMinute = androidx.datastore.preferences.core.intPreferencesKey("planned_bedtime_minute")
+
+    /**
+     * Tonight's bedtime as the Training tab plans it ([org.openstrap.app.data.Reports.SleepPlan]) and the day it's for,
+     * so the Moment widget counts down to the same time as Today; null before the app has worked one out.
+     */
+    val plannedBedtime: Flow<Pair<java.time.LocalDate, java.time.LocalTime>?> = context.dataStore.data.map { p ->
+        val day = p[plannedBedDay]
+        val minute = p[plannedBedMinute]
+        if (day == null || minute == null) null else java.time.LocalDate.ofEpochDay(day) to java.time.LocalTime.of(minute / 60, minute % 60)
+    }
+
+    suspend fun setPlannedBedtime(day: java.time.LocalDate, bedtime: java.time.LocalTime) {
+        context.dataStore.edit {
+            it[plannedBedDay] = day.toEpochDay()
+            it[plannedBedMinute] = bedtime.hour * 60 + bedtime.minute
+        }
+    }
+
     suspend fun saveTodayEdits(hidden: List<String>, pinned: List<String>) {
         context.dataStore.edit {
             it[todayHidden] = hidden.joinToString(",")

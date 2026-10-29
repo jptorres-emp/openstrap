@@ -11,17 +11,35 @@ import org.openstrap.app.ui.glow.pickedType
 import java.io.File
 
 /**
- * The workout pages' rules (spec 6.3, design step 9): twelve everyday sports and More sports, outdoor or indoor as a
+ * The workout pages' rules (spec 6.3, design step 9): the everyday sports and More sports, outdoor or indoor as a
  * switch on Ready that picks the saved sport type and GPS, and the pages in the design system's type.
  */
 class WorkoutRulesTest {
-    @Test fun `the picker leads with the twelve everyday sports`() {
+    @Test fun `the picker leads with the everyday sports, CrossFit and soccer among them`() {
         assertEquals(
-            listOf("Run", "Walk", "Hike", "Cycling", "Swim", "Strength", "HIIT", "Yoga", "Pilates", "Rowing", "Elliptical", "Other"),
+            listOf("Run", "Walk", "Hike", "Cycling", "Swim", "Strength", "CrossFit", "HIIT", "Soccer", "Yoga", "Pilates", "Rowing", "Elliptical", "Other"),
             Workouts.EVERYDAY.map(Workouts::shortName),
         )
         // Other is free training.
         assertEquals("Free training", Workouts.sportName(Workouts.EVERYDAY.last()))
+        // CrossFit is the strap's cross-training, under its own name; a search for futsal finds soccer.
+        assertEquals("CrossFit", Workouts.sportName(Workouts.CROSSFIT))
+        assertEquals(Workouts.CROSSFIT, Workouts.search("cross").first())
+        assertEquals(18, Workouts.search("futsal").first())
+        assertEquals(Workouts.CROSSFIT, Workouts.search("wod").first())
+    }
+
+    @Test fun `sports are named in Portuguese when the app speaks it`() {
+        org.openstrap.app.l10n.L10n.speak(true)
+        try {
+            assertEquals("Corrida", Workouts.shortName(2))
+            assertEquals("Futebol", Workouts.sportName(18))
+            assertEquals("Passadeira", Workouts.sidesOf(1)!!.indoorName)
+            // More sports is still A to Z, in Portuguese.
+            assertEquals(Workouts.MORE.sortedBy { Workouts.sportName(it) }, Workouts.MORE)
+        } finally {
+            org.openstrap.app.l10n.L10n.speak(false)
+        }
     }
 
     @Test fun `indoor and outdoor are one sport in the picker`() {

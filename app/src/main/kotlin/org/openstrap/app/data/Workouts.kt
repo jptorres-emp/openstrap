@@ -3,6 +3,7 @@ package org.openstrap.app.data
 import org.openstrap.app.data.db.SportEffectRow
 import org.openstrap.app.data.db.Workout
 import org.openstrap.app.data.db.WorkoutHeartRate
+import org.openstrap.app.l10n.tr
 
 /** A workout with what the strap recorded around it, worked out for display. */
 data class WorkoutAnalysis(
@@ -161,13 +162,15 @@ object Workouts {
     private fun medianAt(hr: List<WorkoutHeartRate>, t: Long): Int? =
         hr.filter { it.timestamp in t - 2..t + 2 }.map { it.bpm }.sorted().let { if (it.isEmpty()) null else it[it.size / 2] }
 
-    /** Zepp's sport type ids (Type.type in the summary) for the sports a strap is likely to record. */
-    fun sportName(type: Int): String = SPORT_NAMES[type] ?: "Workout"
+    /** Zepp's sport type ids (Type.type in the summary) for the sports a strap is likely to record, by name. */
+    fun sportName(type: Int): String = SPORT_NAMES[type]?.let { (en, pt) -> tr(en, pt) } ?: tr("Workout", "Treino")
 
-    /** Every sport a workout can be started as, by name, one id per name (Zepp has two "Free training"). */
-    val sports: List<Pair<Int, String>> by lazy {
-        SPORT_NAMES.entries.filter { it.key !in HIDDEN }.distinctBy { it.value }.map { it.key to it.value }.sortedBy { it.second }
-    }
+    /**
+     * Every sport a workout can be started as, by name, one id per name (Zepp has two "Free training"), A to Z in the
+     * language the app speaks.
+     */
+    val sports: List<Pair<Int, String>>
+        get() = SPORT_NAMES.keys.filter { it !in HIDDEN }.map { it to sportName(it) }.distinctBy { it.second }.sortedBy { it.second }
 
     /**
      * Sports kept for naming workouts already recorded (by the strap, Zepp or an import) but not offered for new ones:
@@ -186,13 +189,14 @@ object Workouts {
         fun type(indoor: Boolean): Int = if (indoor) this.indoor else outdoor
     }
 
-    val SIDES = listOf(
-        Sides(1, 2, "Outdoor", "Treadmill"),
-        Sides(4, 8, "Outdoor", "Indoor"),
-        // Most swims are in a pool.
-        Sides(7, 6, "Open water", "Pool", indoorByDefault = true),
-        Sides(3, 40, "Outdoor", "Indoor"),
-    )
+    val SIDES: List<Sides>
+        get() = listOf(
+            Sides(1, 2, tr("Outdoor", "Ao ar livre"), tr("Treadmill", "Passadeira")),
+            Sides(4, 8, tr("Outdoor", "Ao ar livre"), tr("Indoor", "Indoor")),
+            // Most swims are in a pool.
+            Sides(7, 6, tr("Open water", "Águas abertas"), tr("Pool", "Piscina"), indoorByDefault = true),
+            Sides(3, 40, tr("Outdoor", "Ao ar livre"), tr("Indoor", "Indoor")),
+        )
 
     /** The [Sides] [type] is one of, or null for a sport with one kind. */
     fun sidesOf(type: Int): Sides? = SIDES.firstOrNull { type == it.outdoor || type == it.indoor }
@@ -220,28 +224,44 @@ object Workouts {
     }.toMap()
 
     /**
-     * The picker's twelve everyday sports (spec 6.3), by the type each tile starts: Run, Walk, Hike, Cycling, Swim,
-     * Strength, HIIT, Yoga, Pilates, Rowing, Elliptical, Other. Every other sport is behind More sports.
+     * The picker's everyday sports (spec 6.3), by the type each tile starts: Run, Walk, Hike, Cycling, Swim,
+     * Strength, CrossFit, HIIT, Soccer (futsal too), Yoga, Pilates, Rowing, Elliptical, Other. Every other sport is
+     * behind More sports. CrossFit starts the strap's cross-training, the nearest sport it has.
      */
-    val EVERYDAY = listOf(1, 3, 15, 4, 7, 52, 49, 60, 61, 23, 9, 5)
+    val EVERYDAY = listOf(1, 3, 15, 4, 7, 52, CROSSFIT, 49, 18, 60, 61, 23, 9, 5)
+
+    /** The strap's cross-training, offered and named as CrossFit: it has no CrossFit of its own. */
+    const val CROSSFIT = 130
 
     /** The tiles' short names; a sport with two kinds has one name for both. */
     private val SHORT_NAMES = mapOf(
-        1 to "Run", 2 to "Run", 3 to "Walk", 40 to "Walk", 15 to "Hike", 4 to "Cycling", 8 to "Cycling", 7 to "Swim", 6 to "Swim",
-        52 to "Strength", 49 to "HIIT", 60 to "Yoga", 61 to "Pilates", 23 to "Rowing", 9 to "Elliptical", 5 to "Other",
+        1 to ("Run" to "Corrida"), 2 to ("Run" to "Corrida"), 3 to ("Walk" to "Caminhada"), 40 to ("Walk" to "Caminhada"),
+        15 to ("Hike" to "Montanha"), 4 to ("Cycling" to "Ciclismo"), 8 to ("Cycling" to "Ciclismo"), 7 to ("Swim" to "Natação"),
+        6 to ("Swim" to "Natação"), 52 to ("Strength" to "Força"), 49 to ("HIIT" to "HIIT"), 60 to ("Yoga" to "Ioga"),
+        61 to ("Pilates" to "Pilates"), 23 to ("Rowing" to "Remo"), 9 to ("Elliptical" to "Elíptica"), 5 to ("Other" to "Outro"),
+        CROSSFIT to ("CrossFit" to "CrossFit"), 18 to ("Soccer" to "Futebol"),
+    )
+
+    /** Other words a search finds a sport by: futsal is soccer, a WOD is CrossFit. */
+    private val SEARCH_ALSO = mapOf(
+        18 to listOf("futsal", "football", "futebol"),
+        CROSSFIT to listOf("cross-training", "cross training", "wod", "functional", "funcional"),
+        49 to listOf("interval", "intervalos"),
+        52 to listOf("gym", "ginásio", "weights", "pesos", "musculação"),
     )
 
     /** "Run" for an outdoor run or a treadmill: the picker's name, else the sport's full name. */
-    fun shortName(type: Int): String = SHORT_NAMES[type] ?: sportName(type)
+    fun shortName(type: Int): String = SHORT_NAMES[type]?.let { (en, pt) -> tr(en, pt) } ?: sportName(type)
 
     /** The type a sport's tile stands for: a sport with two kinds by its key, any other as itself. */
     fun tileType(type: Int): Int = sidesOf(type)?.outdoor ?: type
 
     /** More sports: every sport offered that isn't an everyday tile or behind one's switch, A to Z. */
-    val MORE: List<Int> by lazy {
-        val behindTiles = EVERYDAY.toSet() + SIDES.flatMap { listOf(it.outdoor, it.indoor) }
-        sports.map { it.first }.filter { it !in behindTiles }
-    }
+    val MORE: List<Int>
+        get() {
+            val behindTiles = EVERYDAY.toSet() + SIDES.flatMap { listOf(it.outdoor, it.indoor) }
+            return sports.map { it.first }.filter { it !in behindTiles }
+        }
 
     /**
      * What a search for [query] finds, as tiles: everyday sports by their short name, then every other sport, both
@@ -250,8 +270,9 @@ object Workouts {
     fun search(query: String): List<Int> {
         val q = query.trim()
         if (q.isEmpty()) return emptyList()
-        val everyday = EVERYDAY.filter { shortName(it).contains(q, ignoreCase = true) || sportName(it).contains(q, ignoreCase = true) }
-        val others = sports.map { it.first }.filter { it !in everyday && sportName(it).contains(q, ignoreCase = true) }
+        fun also(type: Int) = SEARCH_ALSO[type].orEmpty().any { it.contains(q, ignoreCase = true) }
+        val everyday = EVERYDAY.filter { shortName(it).contains(q, ignoreCase = true) || sportName(it).contains(q, ignoreCase = true) || also(it) }
+        val others = sports.map { it.first }.filter { it !in everyday && (sportName(it).contains(q, ignoreCase = true) || also(it)) }
         return everyday + others
     }
 
@@ -317,16 +338,22 @@ object Workouts {
     /** "Activity": what the strap files movement it logged by itself under; a record, not a sport anyone starts. */
     const val GENERIC_ACTIVITY = 223
 
-    private val SPORT_NAMES = mapOf(
-        1 to "Outdoor run", 2 to "Treadmill", 3 to "Walk", 4 to "Outdoor cycling", 5 to "Free training",
-        6 to "Pool swim", 7 to "Open water swim", 8 to "Indoor cycling", 9 to "Elliptical", 10 to "Climbing",
-        11 to "Trail run", 12 to "Skiing", 15 to "Hiking", 16 to "Free training", 17 to "Tennis", 18 to "Soccer",
-        21 to "Jump rope", 23 to "Rowing machine", 24 to "Indoor fitness", 40 to "Indoor walk", 49 to "HIIT",
-        50 to "Core training", 51 to "Mixed aerobic", 52 to "Strength training", 53 to "Stretching",
-        55 to "Flexibility", 57 to "Step training", 58 to "Stair stepper", 60 to "Yoga", 61 to "Pilates",
-        70 to "Rock climbing", 76 to "Dance", 83 to "Golf", 85 to "Basketball", 88 to "Volleyball",
-        89 to "Table tennis", 92 to "Badminton", 97 to "Boxing", 108 to "Stair climbing", 109 to "Aerobics",
-        130 to "Cross-training", 143 to "Spinning", 204 to "Pickleball", 205 to "Padel", 215 to "Dog walking",
-        222 to "HYROX training", 223 to "Activity", 224 to "Mountain hike", 225 to "Rucking", 226 to "Hybrid training",
+    /** Each sport's name in English and in Portuguese (Portugal). */
+    private val SPORT_NAMES: Map<Int, Pair<String, String>> = mapOf(
+        1 to ("Outdoor run" to "Corrida ao ar livre"), 2 to ("Treadmill" to "Passadeira"), 3 to ("Walk" to "Caminhada"),
+        4 to ("Outdoor cycling" to "Ciclismo ao ar livre"), 5 to ("Free training" to "Treino livre"), 6 to ("Pool swim" to "Natação em piscina"),
+        7 to ("Open water swim" to "Natação em águas abertas"), 8 to ("Indoor cycling" to "Ciclismo indoor"), 9 to ("Elliptical" to "Elíptica"),
+        10 to ("Climbing" to "Escalada"), 11 to ("Trail run" to "Trail"), 12 to ("Skiing" to "Esqui"), 15 to ("Hiking" to "Caminhada na montanha"),
+        16 to ("Free training" to "Treino livre"), 17 to ("Tennis" to "Ténis"), 18 to ("Soccer" to "Futebol"), 21 to ("Jump rope" to "Saltar à corda"),
+        23 to ("Rowing machine" to "Remo indoor"), 24 to ("Indoor fitness" to "Fitness indoor"), 40 to ("Indoor walk" to "Caminhada indoor"),
+        49 to ("HIIT" to "HIIT"), 50 to ("Core training" to "Treino de core"), 51 to ("Mixed aerobic" to "Aeróbica mista"),
+        52 to ("Strength training" to "Treino de força"), 53 to ("Stretching" to "Alongamentos"), 55 to ("Flexibility" to "Flexibilidade"),
+        57 to ("Step training" to "Step"), 58 to ("Stair stepper" to "Simulador de escadas"), 60 to ("Yoga" to "Ioga"), 61 to ("Pilates" to "Pilates"),
+        70 to ("Rock climbing" to "Escalada em rocha"), 76 to ("Dance" to "Dança"), 83 to ("Golf" to "Golfe"), 85 to ("Basketball" to "Basquetebol"),
+        88 to ("Volleyball" to "Voleibol"), 89 to ("Table tennis" to "Ténis de mesa"), 92 to ("Badminton" to "Badminton"), 97 to ("Boxing" to "Boxe"),
+        108 to ("Stair climbing" to "Subir escadas"), 109 to ("Aerobics" to "Aeróbica"), CROSSFIT to ("CrossFit" to "CrossFit"),
+        143 to ("Spinning" to "Spinning"), 204 to ("Pickleball" to "Pickleball"), 205 to ("Padel" to "Padel"), 215 to ("Dog walking" to "Passeio com o cão"),
+        222 to ("HYROX training" to "Treino HYROX"), 223 to ("Activity" to "Atividade"), 224 to ("Mountain hike" to "Caminhada de montanha"),
+        225 to ("Rucking" to "Rucking"), 226 to ("Hybrid training" to "Treino híbrido"),
     )
 }

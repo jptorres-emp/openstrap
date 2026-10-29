@@ -1,6 +1,6 @@
 # Reports
 
-The weekly and monthly reports, in the spirit of WHOOP's Weekly and Monthly Performance Assessments, worked out on the phone from the data OpenStrap already has. Recovery and effort lead: the header holds Recovery's average with the Load a day beside it, then Recovery day by day against your normal and each day's Load against its target. The week adds the day itself (its Recovery, Load target and tonight's bedtime) and the week against the 3 before; the month adds how the mornings spread, the month against the one before, the days of the week, your sports with their heart rate zones, and what your habits do to the next morning. Rows open the details behind them. **Status: implemented (2026-10-29)** in `data/Reports.kt` (everything below, pure and unit-tested in `ReportsTest`), `RecoveryEngine.reportDays` (gathering the days) and `ui/glow/ReportsDetail.kt` with `ui/dashboard/ReportCopy.kt` (the screen and its words, tested in `ReportCopyTest`). The screen opens from the chart button in the header, on any tab, for the day shown.
+The weekly and monthly reports, in the spirit of WHOOP's Weekly and Monthly Performance Assessments, worked out on the phone from the data OpenStrap already has. Recovery and effort lead: the header holds Recovery's average with the Load a day beside it, then Recovery day by day against your normal and each day's Load against its target. The week adds the week against the 3 before; the month adds how the mornings spread, the month against the one before, the days of the week, your sports with their heart rate zones, and what your habits do to the next morning. Rows open the details behind them. The reports look back: what to do today (the day's Load target in your own sports, tonight's bedtime) is the Training tab's ([training.md](training.md)), worked out from the same report. **Status: implemented (2026-10-29)** in `data/Reports.kt` (everything below, pure and unit-tested in `ReportsTest`), `RecoveryEngine.reportDays` (gathering the days) and `ui/glow/ReportsDetail.kt` with `ui/dashboard/ReportCopy.kt` (the screen and its words, tested in `ReportCopyTest`). The screen opens from the Training tab's Weekly report and Monthly report rows, on the week or the month, for the day shown.
 
 OpenStrap is a wellness app. These are estimates for personal insight, not medical advice.
 
@@ -36,7 +36,7 @@ OpenStrap is a wellness app. These are estimates for personal insight, not medic
 
 ## 3. Load target
 
-What the morning's Recovery says the day is for, as a range of your own Load.
+What the morning's Recovery says the day is for, as a range of your own Load. The Training tab leads with it ([training.md](training.md)); the reports chart each day's Load against the target its morning set.
 
 | Morning | Kind of day |
 |---|---|
@@ -59,6 +59,8 @@ While Recovery is learning (its first 7 nights) the strap's own readiness stands
 Before that it is built round your usual daily Load (fitness, CTL), with Today's ±25% band for a usual day: Recover 0 to 50%, Moderate 50 to 100%, Usual 75 to 125%, Push 100 to 175%. The range is rounded out to steps of 5 and is at least 20 wide. A finished day's Load is within, below or above it as it reads (rounded). WHOOP's own model is not published; this one says in plain numbers what it asks for and why.
 
 ## 4. Tonight's bedtime
+
+Shown on the Training tab, and the one Today's evening and night count down to ("Bedtime in 1 h 10"), the Moment widget too, so the app gives one bedtime. Until the day's report is worked out, they count down to your usual bedtime.
 
 * **How long**: your sleep need, plus the week's average shortfall a night (need less sleep, earlier days' naps included, rounded to 5 min, at most 45), plus 15 min after a hard day (`Recovery.hardDay`, Load above 1.5 times your usual) or 30 min after one at twice your usual, less today's naps (at most an hour of the night).
 * **When**: counted back from your usual wake time, the median of the last 28 mornings of tomorrow's kind (a weekday or the weekend; all of them with fewer than 3 of that kind), divided by your sleep efficiency (the median share of time in bed spent asleep over the last 14 nights, 0.9 without any).

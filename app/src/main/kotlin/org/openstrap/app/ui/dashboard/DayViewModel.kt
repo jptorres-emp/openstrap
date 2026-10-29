@@ -132,6 +132,9 @@ class DayViewModel(
 ) : ViewModel() {
     private val selected = MutableStateFlow(LocalDate.now())
 
+    /** The day shown on every tab. */
+    val selectedDate: StateFlow<LocalDate> get() = selected
+
     fun previousDay() { selected.value = selected.value.minusDays(1) }
     fun nextDay() { if (selected.value < LocalDate.now()) selected.value = selected.value.plusDays(1) }
     fun select(date: LocalDate) { selected.value = minOf(date, LocalDate.now()) }

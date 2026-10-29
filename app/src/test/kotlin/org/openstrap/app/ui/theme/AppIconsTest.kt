@@ -31,6 +31,7 @@ class AppIconsTest {
             AppIcons.Plant to AppIcons.PlantFill,
             AppIcons.Moon to AppIcons.MoonFill,
             AppIcons.SneakerMove to AppIcons.SneakerMoveFill,
+            AppIcons.Barbell to AppIcons.BarbellFill,
         )) assertTrue(selected.name, width(selected) > width(plain))
     }
 

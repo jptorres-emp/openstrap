@@ -450,13 +450,20 @@ metric's ink (2.5, Grouped list). Every other icon is white at 72%, or white whe
   The strap chip shows battery and a dot when all is well. Words only when they matter: "Charging 64%", "Not
   synced" (amber dot), "18 min ago" (amber, last seen), "Not paired". Tapping it opens the Strap page from any tab.
 
-Chevrons go. Changing the day still changes it on all four tabs (shared `DayViewModel`), as now.
+Chevrons go. Changing the day still changes it on every tab (shared `DayViewModel`), as now.
 
 ### 3.2 Tab bar
 
-Four tabs in a pill, centred, and nothing else: Today, Recovery, Sleep, Activity. The active capsule is tinted with its
-section colour (white on Today). The bar only ever switches tabs. Nothing beside it does an action or changes with
-the moment.
+Five tabs in a pill, centred, and nothing else: Today, Recovery, Sleep, Activity, Training. The active capsule is tinted
+with its section colour (white on Today, Load's on Training). The bar only ever switches tabs. Nothing beside it does an
+action or changes with the moment. A tab's name that doesn't fit its cell (Recuperação, five across a narrow phone)
+steps down from 11 sp to at most 8 sp rather than being cut.
+
+- **Training** says what to do with the numbers the other tabs show: the day's Load target in your own sports with the
+  Recovery behind it and tonight's bedtime, the last week's Load against your usual (injury risk), the calories you
+  burn week by week (fat loss), and the weekly and monthly reports, which open from it (no header button). Each card's
+  (i) says what it's for, how it helps and when to look. All of it comes from the one report the app works out for
+  the day shown, which the Reports screen and Today's bedtime read too ([training.md](../../algorithms/training.md)).
 
 - **Hidden over a detail.** A detail that covers the tab (folded) is a screen stepped into: the bar slides away and
   only the detail's back button leads out, as in most apps. Back returns to the tab, and the bar slides back. So the

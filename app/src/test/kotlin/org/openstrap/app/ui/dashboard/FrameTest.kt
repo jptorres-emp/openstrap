@@ -216,13 +216,14 @@ class FrameTest {
         assertTrue(saved.contains("k:") && saved.contains("c:HeartPoints"))
     }
 
-    @Test fun `the reports survive process death and switch with nothing`() {
-        val stack = listOf(Detail.Reports, Detail.OfScore(Score.Recovery), Detail.Reports)
+    @Test fun `the reports survive process death, the week or the month, and switch with nothing`() {
+        val stack = listOf(Detail.Reports(), Detail.OfScore(Score.Recovery), Detail.Reports(month = true))
         val saved = with(Detail.StackSaver) { androidx.compose.runtime.saveable.SaverScope { true }.save(stack) }!!
         assertEquals(stack, Detail.StackSaver.restore(saved))
-        assertEquals("p:", Detail.keyOf(Detail.Reports))
-        assertEquals(listOf(Detail.Reports), siblingsOf(Detail.Reports))
-        assertFalse(DETAIL_GROUPS.any { Detail.Reports in it })
+        assertEquals("p:w", Detail.keyOf(Detail.Reports()))
+        assertEquals("p:m", Detail.keyOf(Detail.Reports(month = true)))
+        assertEquals(listOf(Detail.Reports()), siblingsOf(Detail.Reports()))
+        assertFalse(DETAIL_GROUPS.any { g -> g.any { it is Detail.Reports } })
     }
 
     @Test fun `the Activity details switch among themselves in the tab's order, the week story alone`() {

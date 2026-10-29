@@ -256,9 +256,26 @@ internal fun AlertsStrip(alerts: List<HealthAlertRow>, onOpenMetric: (Metric) ->
 
 /* ------------------------------------------- Edge cards --------------------------------------------- */
 
-/** An edge card's title row: [title] left with its sync [marker] or neutral [tag] beside it ([TitleMark]), [note] right. */
+/**
+ * An edge card's title row: [title] left with its sync [marker] or neutral [tag] beside it ([TitleMark]), [note] right.
+ * With [onInfo] the card's (i) ends the row (spec 2.5), named [infoLabel] for screen readers, as on a hero.
+ */
 @Composable
-internal fun EdgeTitle(title: String, note: String?, marker: String? = null, tag: TitleTag? = null) {
+internal fun EdgeTitle(
+    title: String, note: String?, marker: String? = null, tag: TitleTag? = null,
+    onInfo: (() -> Unit)? = null, infoLabel: String = "",
+) {
+    if (onInfo != null) {
+        // The (i) is small enough to stay beside the title, as a hero's does ([GlowHeader]).
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            CardTitle(title, Modifier.weight(1f))
+            if (marker != null || tag != null) TitleMark(marker, tag, Modifier.padding(start = 8.dp))
+            if (note != null) NoteText(note)
+            Spacer(Modifier.width(10.dp))
+            InfoButton(infoLabel, onInfo)
+        }
+        return
+    }
     // The note drops under the title when they can't share a line, so the title never wraps.
     TitleRow(
         start = {

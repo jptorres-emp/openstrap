@@ -52,9 +52,9 @@ private val SwipeDistance = 56.dp
 
 /**
  * The header on every tab (spec 3.1): the avatar on the left opens You, the [title] over the day in the middle, the
- * All metrics and Reports buttons and the strap chip on the right open the sheet, the reports and the Strap page.
- * Swipe it sideways to change the day (on every tab at once), or tap the day for the calendar. The day before peeks in
- * dimmed on the left, the day after on the right while there is one. Pull to sync opens its gap underneath.
+ * All metrics button and the strap chip on the right open the sheet and the Strap page. Swipe it sideways to change
+ * the day (on every tab at once), or tap the day for the calendar. The day before peeks in dimmed on the left, the day
+ * after on the right while there is one. Pull to sync opens its gap underneath.
  */
 @Composable
 fun MomentHeader(
@@ -68,8 +68,6 @@ fun MomentHeader(
     onOpenStrap: () -> Unit,
     /** Shows the All metrics button when set. */
     onOpenAllMetrics: (() -> Unit)?,
-    /** Shows the Reports button when set, in All metrics' likeness beside the strap chip. */
-    onOpenReports: (() -> Unit)? = null,
 ) {
     var calendarOpen by rememberSaveable { mutableStateOf(false) }
     if (calendarOpen) DayCalendarSheet(date, picker.available, picker.onPick, onDismiss = { calendarOpen = false })
@@ -86,10 +84,6 @@ fun MomentHeader(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (onOpenAllMetrics != null) {
                         RoundButton(AppIcons.ChartBar, "All metrics", "Open all metrics", onOpenAllMetrics)
-                        Spacer(Modifier.width(8.dp))
-                    }
-                    if (onOpenReports != null) {
-                        RoundButton(AppIcons.ChartLineUp, "Reports", "Open reports", onOpenReports)
                         Spacer(Modifier.width(8.dp))
                     }
                     growClick(onOpenStrap).let { g -> StrapChipButton(chip, g.onClick, g.modifier) }

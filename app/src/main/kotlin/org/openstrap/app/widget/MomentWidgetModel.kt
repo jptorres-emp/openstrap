@@ -103,6 +103,11 @@ data class MomentWidgetInput(
     val restingHr: Int?,
     val steps: Int,
     val stepGoal: Int,
+    /**
+     * Tonight's bedtime as Today shows it: the one the Training tab planned for today, when the app has worked it out,
+     * else null for your usual ([MomentInputs.usualBedtime]).
+     */
+    val bedtime: java.time.LocalTime? = null,
 )
 
 /** How the Large's chart is drawn. */
@@ -400,7 +405,7 @@ data class MomentWidgetModel(
 
         /** The evening: Energy left, the day in a sentence, how long to bedtime, the day's heart rate. */
         fun evening(lead: MomentLead, name: String, mood: GlowMood): MomentWidgetModel {
-            val bed = input.inputs.usualBedtime
+            val bed = input.bedtime ?: input.inputs.usualBedtime
             val bedIn = TodayCopy.bedtimeIn(now.atZone(zone).toLocalTime(), bed)
             return energyModel(
                 lead, name, mood,
@@ -414,11 +419,11 @@ data class MomentWidgetModel(
         }
 
         /**
-         * The night: minutes to your usual bedtime until it comes, then Energy left; the day in a sentence, the
+         * The night: minutes to tonight's bedtime until it comes, then Energy left; the day in a sentence, the
          * bedtime, the day's heart rate. Sleep blue from below.
          */
         fun night(lead: MomentLead, name: String, mood: GlowMood): MomentWidgetModel {
-            val bed = input.inputs.usualBedtime
+            val bed = input.bedtime ?: input.inputs.usualBedtime
             val light = MomentLight(MetricColors.sleepDeep, LightAngle.Below)
             val bedtime = bed?.let { "Bedtime %02d:%02d".format(it.hour, it.minute) }
             val clock = now.atZone(zone).toLocalTime()

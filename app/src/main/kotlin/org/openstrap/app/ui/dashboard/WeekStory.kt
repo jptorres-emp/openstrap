@@ -3,6 +3,7 @@ package org.openstrap.app.ui.dashboard
 import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale
+import org.openstrap.app.l10n.tr
 
 /*
  * The week story (spec 4.2), opened from Your week on Today: last Monday to Sunday day by day, from what the app keeps.
@@ -40,9 +41,9 @@ internal object WeekStory {
 
     /** A day's row under its steps: "42 active minutes, run, 7 h 40 asleep". Null when the day has nothing else. */
     fun dayLine(d: Day): String? = listOfNotNull(
-        d.activeMinutes?.takeIf { it > 0 }?.let { if (it == 1) "1 active minute" else "$it active minutes" },
-        d.workouts.takeIf { it.isNotEmpty() }?.joinToString(", ") { it.lowercase() },
-        d.asleepSeconds?.let { "${TodayCopy.duration(it)} asleep" },
+        d.activeMinutes?.takeIf { it > 0 }?.let { if (it == 1) tr("1 active minute", "1 minuto ativo") else tr("$it active minutes", "$it minutos ativos") },
+        d.workouts.takeIf { it.isNotEmpty() }?.joinToString(", ") { TrainingCopy.inSentence(it) },
+        d.asleepSeconds?.let { tr("${TodayCopy.duration(it)} asleep", "${TodayCopy.duration(it)} a dormir") },
     ).joinToString(", ").replaceFirstChar { it.uppercase() }.ifEmpty { null }
 
     /** "Busiest on Thursday, 12,400 steps." Null with fewer than two days of steps, where there's nothing to pick. */
@@ -50,12 +51,23 @@ internal object WeekStory {
         val withSteps = days.filter { it.steps != null }
         if (withSteps.size < 2) return null
         val top = withSteps.maxBy { it.steps!! }
-        return "Busiest on ${top.date.dayOfWeek.getDisplayName(TextStyle.FULL, locale)}, ${"%,d".format(locale, top.steps)} steps."
+        val day = top.date.dayOfWeek.getDisplayName(TextStyle.FULL, locale)
+        val steps = "%,d".format(locale, top.steps)
+        return tr("Busiest on $day, $steps steps.", "O dia mais ativo foi ${if (top.date.dayOfWeek.value >= 6) "o" else "a"} $day, $steps passos.")
     }
 
     /** Workouts against the week before: "Three workouts, one more than the week before." Null without a week before. */
     fun workoutsChange(now: Int, before: Int?): String? {
         before ?: return null
+        if (org.openstrap.app.l10n.L10n.portuguese) {
+            val n = if (now == 1) "1 treino" else "$now treinos"
+            return when {
+                now == 0 && before == 0 -> "Nenhum treino, nem na semana anterior."
+                now == before -> "$n, tantos como na semana anterior."
+                now > before -> "$n, mais ${now - before} do que na semana anterior."
+                else -> "$n, menos ${before - now} do que na semana anterior."
+            }
+        }
         val n = DetailCopy.count(now, "workout").replaceFirstChar { it.uppercase() }
         return when {
             now == 0 && before == 0 -> "No workouts, nor the week before."
@@ -72,7 +84,7 @@ internal object WeekStory {
     fun sentence(days: List<Day>, stepsChange: String?, workoutsBefore: Int?, locale: Locale = Locale.getDefault()): String? {
         val parts = listOfNotNull(
             busiest(days, locale),
-            stepsChange?.let { "$it on the week before." },
+            stepsChange?.let { tr("$it on the week before.", "$it face à semana anterior.") },
             workoutsChange(days.sumOf { it.workouts.size }, workoutsBefore),
         )
         return parts.joinToString(" ").ifEmpty { null }
@@ -84,7 +96,7 @@ internal object WeekStory {
         val end = week.endInclusive
         val month = { d: LocalDate -> d.month.getDisplayName(TextStyle.SHORT, locale) }
         val from = if (start.month == end.month) "${start.dayOfMonth}" else "${start.dayOfMonth} ${month(start)}"
-        return "steps a day, $from to ${end.dayOfMonth} ${month(end)}"
+        return tr("steps a day, $from to ${end.dayOfMonth} ${month(end)}", "passos por dia, $from a ${end.dayOfMonth} ${month(end)}")
     }
 
     /** One row of Day by day: a day, or a run of days with nothing recorded folded into one ("Monday to Thursday"). */
@@ -92,7 +104,7 @@ internal object WeekStory {
 
     /** [days] as rows, so a week that started late doesn't list its empty days one by one. */
     fun rows(days: List<Day>, locale: Locale = Locale.getDefault()): List<Row> {
-        fun name(d: Day) = d.date.dayOfWeek.getDisplayName(TextStyle.FULL, locale)
+        fun name(d: Day) = d.date.dayOfWeek.getDisplayName(TextStyle.FULL, locale).replaceFirstChar { it.titlecase(locale) }
         val rows = mutableListOf<Row>()
         var i = 0
         while (i < days.size) {
@@ -101,7 +113,7 @@ internal object WeekStory {
             if (d.steps != null || line != null) { rows += Row(name(d), d.steps, line); i++; continue }
             var j = i
             while (j + 1 < days.size && days[j + 1].steps == null && dayLine(days[j + 1]) == null) j++
-            rows += Row(if (j == i) name(d) else "${name(d)} to ${name(days[j])}", null, "Nothing recorded")
+            rows += Row(if (j == i) name(d) else tr("${name(d)} to ${name(days[j])}", "${name(d)} a ${name(days[j])}"), null, tr("Nothing recorded", "Nada registado"))
             i = j + 1
         }
         return rows

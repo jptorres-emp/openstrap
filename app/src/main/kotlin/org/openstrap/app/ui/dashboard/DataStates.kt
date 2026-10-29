@@ -5,6 +5,7 @@ import org.openstrap.app.data.EnergyExpenditure
 import org.openstrap.app.data.Recovery
 import org.openstrap.app.data.RecoveryResult
 import org.openstrap.app.device.ConnectionState
+import org.openstrap.app.l10n.tr
 
 /*
  * Data states (spec 4.3, patterns E3 and E4): pairing as one stage, first nights, no sleep last night and a partial
@@ -34,13 +35,19 @@ fun pairStep(paired: Boolean, scanning: Boolean, found: Boolean, connection: Con
 
 /** The pairing stage's sentence for [step]. */
 fun pairSentence(step: PairStep): String = when (step) {
-    PairStep.Ready -> "Put the strap on its charger, close to this phone."
-    PairStep.Searching -> "Looking for your strap nearby."
-    PairStep.Found -> "Found a strap nearby. Pick it to pair."
-    PairStep.Connecting -> "Connecting to your strap. Keep it close."
-    PairStep.Connected -> "Connected. The first sync starts now."
-    PairStep.Failed -> "Couldn't connect yet. Keep the strap on its charger, near the phone."
-    PairStep.KeyRejected -> "The strap turned the key down. Open your strap to pair again."
+    PairStep.Ready -> tr("Put the strap on its charger, close to this phone.", "Põe a strap no carregador, perto deste telemóvel.")
+    PairStep.Searching -> tr("Looking for your strap nearby.", "À procura da tua strap por perto.")
+    PairStep.Found -> tr("Found a strap nearby. Pick it to pair.", "Encontrei uma strap por perto. Escolhe-a para emparelhar.")
+    PairStep.Connecting -> tr("Connecting to your strap. Keep it close.", "A ligar à tua strap. Mantém-na perto.")
+    PairStep.Connected -> tr("Connected. The first sync starts now.", "Ligada. A primeira sincronização começa agora.")
+    PairStep.Failed -> tr(
+        "Couldn't connect yet. Keep the strap on its charger, near the phone.",
+        "Ainda não deu para ligar. Mantém a strap no carregador, perto do telemóvel.",
+    )
+    PairStep.KeyRejected -> tr(
+        "The strap turned the key down. Open your strap to pair again.",
+        "A strap recusou a chave. Abre a tua strap para emparelhar de novo.",
+    )
 }
 
 /** How long Today keeps the stage on Connected, the line solid, before the day's own hero takes over. */
@@ -49,7 +56,7 @@ const val PAIRED_HOLD_MS = 3_000L
 /* ------------------------------------------ No sleep, first ------------------------------------------ */
 
 /** What a card waiting for the first night says in place of its value (spec 4.3). */
-const val AFTER_FIRST_NIGHT = "After your first night"
+val AFTER_FIRST_NIGHT: String get() = tr("After your first night", "Depois da primeira noite")
 
 /** What leads the waking hero: Recovery, or Charge when there was no sleep to score (spec 4.3). */
 enum class WakingLead { Recovery, Charge }
@@ -62,7 +69,7 @@ fun wakingLead(firstNights: Boolean, asleepSeconds: Long?, isToday: Boolean): Wa
     if (!firstNights && isToday && asleepSeconds == null) WakingLead.Charge else WakingLead.Recovery
 
 /** The tag on the Recovery hero the day the first real score shows (E4). */
-const val FIRST_SCORE = "First score"
+val FIRST_SCORE: String get() = tr("First score", "Primeira pontuação")
 
 /** The day remembered for scores from before the app kept a first score, so the marker never shows for them. */
 val BEFORE_FIRST_SCORE: LocalDate = LocalDate.EPOCH
@@ -130,27 +137,42 @@ fun DayUiState.wear(recovery: RecoveryResult?, isToday: Boolean): Wear? {
 }
 
 /** The marker next to the title of a card whose figures a partial day lowers. */
-const val PARTIAL_DAY = "Partial day"
+val PARTIAL_DAY: String get() = tr("Partial day", "Dia parcial")
 
 /** The partial day sheet's line: how much wear the figures cover. */
 fun partialLine(w: Wear, isToday: Boolean): String {
     val worn = TodayCopy.duration(w.wornMinutes * 60L)
-    return if (isToday) "The strap recorded $worn of the ${TodayCopy.duration(w.ofMinutes * 60L)} so far today."
-    else "The strap recorded $worn of the day."
+    return if (isToday) tr(
+        "The strap recorded $worn of the ${TodayCopy.duration(w.ofMinutes * 60L)} so far today.",
+        "A strap registou $worn das ${TodayCopy.duration(w.ofMinutes * 60L)} de hoje até agora.",
+    )
+    else tr("The strap recorded $worn of the day.", "A strap registou $worn do dia.")
 }
 
 /** The partial day sheet (spec 6.2, with no scale): what it means. [partialLine] and [PARTIAL_DAY_ROWS] go under it. */
-val PARTIAL_DAY_INFO = Info(
+val PARTIAL_DAY_INFO: Info get() = Info(
     name = PARTIAL_DAY,
-    meaning = "The strap was worn for part of the day, so its totals are low.",
+    meaning = tr(
+        "The strap was worn for part of the day, so its totals are low.",
+        "A strap esteve no pulso só parte do dia, por isso os totais estão abaixo do real.",
+    ),
     scale = emptyList(), how = "", moves = "", off = "",
 )
 
 /** The sheet's folded rows: what a partial day lowers, and when a day counts as one. */
-val PARTIAL_DAY_ROWS = listOf(
-    "What it lowers" to "Steps, calories and Energy count only the time the strap was on. Charging pauses them too.",
-    "When a day counts as partial" to
-        "When the strap was worn for under ${TodayCopy.duration(EnergyExpenditure.FULL_DAY_MINUTES * 60L)} of the day, or under that share of the day so far.",
+val PARTIAL_DAY_ROWS: List<Pair<String, String>> get() = listOf(
+    tr("What it lowers", "O que baixa") to tr(
+        "Steps, calories and Energy count only the time the strap was on. Charging pauses them too.",
+        "Passos, calorias e Energia só contam o tempo com a strap posta. Carregar também os pausa.",
+    ),
+    tr("When a day counts as partial", "Quando um dia conta como parcial") to
+        tr(
+            "When the strap was worn for under ${TodayCopy.duration(EnergyExpenditure.FULL_DAY_MINUTES * 60L)} " +
+                "of the day, or under that share of the day so far.",
+            "Quando a strap esteve posta menos de " +
+                "${TodayCopy.duration(EnergyExpenditure.FULL_DAY_MINUTES * 60L)} do dia, ou menos dessa parte do dia " +
+                "até agora.",
+        ),
 )
 
 /* ------------------------------------------ Debug previews ------------------------------------------ */

@@ -340,9 +340,8 @@ data class MomentWidgetModel(
         /** The workout window: Energy left, "Ready for effort. You usually run around now.", the Start button. */
         fun window(lead: MomentLead, name: String, mood: GlowMood): MomentWidgetModel {
             val sport = input.usualSport
-            val noun = sportNoun(sport)
             val title = TodayCopy.windowTitle(input.score)
-            val usual = TodayCopy.window(noun, null)
+            val usual = TodayCopy.window(sport, null)
             val e = energy?.now
             return MomentWidgetModel(
                 moment, lead, name,
@@ -353,7 +352,7 @@ data class MomentWidgetModel(
                 sentences = listOf("$title. $usual", usual, "$title."),
                 waiting = if (e == null) title else null,
                 start = sport,
-                startLabel = "Start ${noun ?: org.openstrap.app.data.Workouts.sportName(sport).lowercase()}",
+                startLabel = TodayCopy.startSport(sport),
                 recording = null,
                 chart = energyChart(),
                 light = MomentLight(MetricColors.heart, LightAngle.UpperRight, rim = WINDOW_RIM),
@@ -474,8 +473,7 @@ data class MomentWidgetModel(
 
         /** The evening hero's sentence: what kind of day it was, then what made it. */
         fun daySentence(): String {
-            val nouns = input.dayWorkouts.map(::sportNoun)
-            return TodayCopy.evening(nouns, input.steps, input.stepGoal, input.loadStatus)
+            return TodayCopy.evening(input.dayWorkouts, input.steps, input.stepGoal, input.loadStatus)
         }
 
         /** The night's stages from bedtime to waking; null without stages. */

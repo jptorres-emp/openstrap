@@ -3,6 +3,7 @@ package org.openstrap.app.ui.dashboard
 import org.openstrap.app.data.db.SleepSession
 import org.openstrap.app.ui.components.formatDuration
 import kotlin.math.abs
+import org.openstrap.app.l10n.tr
 
 /**
  * Plain-language headlines and ratings for the dashboard. The thresholds are general sleep and activity
@@ -10,11 +11,14 @@ import kotlin.math.abs
  */
 object Narrative {
     /** A rating's word. No colour of its own: a value off your normal takes its metric's ink (spec 2.2). */
-    enum class Rating(val label: String) {
-        OPTIMAL("Very good"),
-        GOOD("Good"),
-        FAIR("Fair"),
-        LOW("Low"),
+    enum class Rating(private val en: String, private val pt: String) {
+        OPTIMAL("Very good", "Muito bom"),
+        GOOD("Good", "Bom"),
+        FAIR("Fair", "Razoável"),
+        LOW("Low", "Baixo"),
+        ;
+
+        val label: String get() = tr(en, pt)
     }
 
     fun rate(value: Float, optimal: Float, good: Float, fair: Float): Rating = when {
@@ -58,13 +62,13 @@ object Narrative {
         val rem = session.remMinutes
         val light = deep != null && rem != null && asleepMin > 0 && (deep + rem) < LIGHT_SLEEP_SHARE * asleepMin
         return when {
-            short && broken -> "Short, broken night"
-            short -> "Short night"
-            broken -> "Broken sleep"
-            score >= 90 -> "Solid night"
-            score >= 80 -> "Good night"
-            light -> "Light sleep"
-            else -> "Okay night"
+            short && broken -> tr("Short, broken night", "Noite curta e interrompida")
+            short -> tr("Short night", "Noite curta")
+            broken -> tr("Broken sleep", "Sono interrompido")
+            score >= 90 -> tr("Solid night", "Noite sólida")
+            score >= 80 -> tr("Good night", "Boa noite de sono")
+            light -> tr("Light sleep", "Sono leve")
+            else -> tr("Okay night", "Noite razoável")
         }
     }
 
@@ -127,9 +131,23 @@ object Narrative {
         val calm = t.calmLevel
         val left = org.openstrap.app.data.Recovery.MIN_STRESS_DAYS - t.days
         return when {
-            calm != null -> "Stress counts from ${t.value}: ${org.openstrap.app.data.Recovery.STRESS_MARGIN} above your calm level of $calm over the last ${t.days} days."
-            left > 0 -> "Stress counts from ${t.value} for now. After ${if (left == 1) "1 more day" else "$left more days"} of wear it adjusts to your own calm level."
-            else -> "Stress counts from ${t.value} for now, until there are enough calm readings to find your own level."
+            calm != null -> tr(
+                "Stress counts from ${t.value}: ${org.openstrap.app.data.Recovery.STRESS_MARGIN} above your calm " +
+                    "level of $calm over the last ${t.days} days.",
+                "O stress conta a partir de ${t.value}: ${org.openstrap.app.data.Recovery.STRESS_MARGIN} acima do " +
+                    "teu nível calmo de $calm nos últimos ${t.days} dias.",
+            )
+            left > 0 -> tr(
+                "Stress counts from ${t.value} for now. After ${if (left == 1) "1 more day" else "$left more days"} " +
+                    "of wear it adjusts to your own calm level.",
+                "Por agora o stress conta a partir de ${t.value}. Depois de mais " +
+                    "${if (left == 1) "1 dia" else "$left dias"} de uso, ajusta-se ao teu próprio nível calmo.",
+            )
+            else -> tr(
+                "Stress counts from ${t.value} for now, until there are enough calm readings to find your own level.",
+                "Por agora o stress conta a partir de ${t.value}, até haver leituras calmas suficientes para " +
+                    "encontrar o teu nível.",
+            )
         }
     }
 }

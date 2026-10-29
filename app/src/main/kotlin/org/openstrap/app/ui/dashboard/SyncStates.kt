@@ -8,6 +8,7 @@ import java.util.Locale
 import org.openstrap.app.device.ConnectionState
 import org.openstrap.app.device.SyncRecord
 import org.openstrap.app.device.SyncState
+import org.openstrap.app.l10n.tr
 
 /*
  * Sync and strap states (spec 4.3, patterns E1, E2 and E5): quiet until they matter. A stopped sync turns the chip
@@ -56,7 +57,7 @@ fun upToMarker(
     staleAfter: Long = STALE_AFTER_S, use24Hour: Boolean = APP_24_HOUR,
 ): String? =
     if (!isToday || !stopped || newest == null || now - newest < staleAfter) null
-    else "Up to ${clockText(newest, zone, use24Hour)}"
+    else tr("Up to ${clockText(newest, zone, use24Hour)}", "Até às ${clockText(newest, zone, use24Hour)}")
 
 /**
  * Whether a failing sync takes Today's hero (spec 4.3): on today, still failing [STUCK_AFTER_S] after the first
@@ -77,33 +78,33 @@ data class StuckCopy(val title: String, val sentence: String, val line: String)
  * about the day since [upTo] (a clock time, null when nothing came today).
  */
 fun stuckCopy(hasLastNight: Boolean, upTo: String?): StuckCopy =
-    if (!hasLastNight) StuckCopy("Last night", "Last night is still on the strap.", "Keep it near your phone and it comes across.")
+    if (!hasLastNight) StuckCopy(tr("Last night", "A noite passada"), tr("Last night is still on the strap.", "A noite passada ainda está na strap."), tr("Keep it near your phone and it comes across.", "Mantém-na perto do telemóvel e ela passa."))
     else StuckCopy(
-        "Not synced",
-        upTo?.let { "Your data since $it is still on the strap." } ?: DATA_ON_STRAP,
-        "Keep it near your phone and it comes across.",
+        tr("Not synced", "Não sincronizado"),
+        upTo?.let { tr("Your data since $it is still on the strap.", "Os teus dados desde as $it ainda estão na strap.") } ?: DATA_ON_STRAP,
+        tr("Keep it near your phone and it comes across.", "Mantém-na perto do telemóvel e ela passa."),
     )
 
 /** "Last tried 07:42", for the stuck hero; null when no attempt was seen. */
 fun lastTried(record: SyncRecord, zone: ZoneId, use24Hour: Boolean = APP_24_HOUR): String? =
-    record.lastAttempt?.let { "Last tried ${clockText(it, zone, use24Hour)}" }
+    record.lastAttempt?.let { tr("Last tried ${clockText(it, zone, use24Hour)}", "Última tentativa às ${clockText(it, zone, use24Hour)}") }
 
 /** Recovery couldn't be worked out (spec 4.3, E5): yesterday's score stays, dimmed, with this line and [TRY_AGAIN]. */
-const val RECOVERY_FAILED = "Couldn't work out today's score."
+val RECOVERY_FAILED: String get() = tr("Couldn't work out today's score.", "Não deu para calcular a pontuação de hoje.")
 
 /** Charge is worked out with Recovery, so it fails with it. */
-const val CHARGE_FAILED = "Couldn't work out today's Energy."
+val CHARGE_FAILED: String get() = tr("Couldn't work out today's Energy.", "Não deu para calcular a Energia de hoje.")
 
 /** The same on a small card, whose status line has room for a few words: Load, Charge's parts. */
-const val FAILED_SHORT = "Couldn't work it out"
+val FAILED_SHORT: String get() = tr("Couldn't work it out", "Não deu para calcular")
 
-const val TRY_AGAIN = "Try again"
+val TRY_AGAIN: String get() = tr("Try again", "Tentar de novo")
 
 /** What a card waiting on a stuck night says in place of its value. */
-const val WAITING_LAST_NIGHT = "Waiting for last night"
+val WAITING_LAST_NIGHT: String get() = tr("Waiting for last night", "À espera da noite passada")
 
 /** Where a failed sync or one that can't start is told: the data is safe. */
-const val DATA_ON_STRAP = "Your data is still on the strap."
+val DATA_ON_STRAP: String get() = tr("Your data is still on the strap.", "Os teus dados ainda estão na strap.")
 
 /**
  * Debug only: a strap state to show on a phone whose strap is fine, from the `strap_state` extra. It changes what the

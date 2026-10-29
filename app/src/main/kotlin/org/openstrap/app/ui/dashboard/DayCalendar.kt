@@ -49,6 +49,7 @@ import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.time.temporal.WeekFields
 import java.util.Locale
+import org.openstrap.app.l10n.tr
 
 /** What the date header's calendar needs: the days that have data, and where a picked day goes. */
 data class DayPicker(val available: Set<LocalDate> = emptySet(), val onPick: (LocalDate) -> Unit = {})
@@ -77,10 +78,10 @@ fun DayCalendarSheet(selected: LocalDate, available: Set<LocalDate>, onPick: (Lo
                     modifier = Modifier.weight(1f),
                 )
                 IconButton(onClick = { month = month.minusMonths(1) }, enabled = month > first) {
-                    Icon(AppIcons.CaretLeft, "Previous month")
+                    Icon(AppIcons.CaretLeft, tr("Previous month", "Mês anterior"))
                 }
                 IconButton(onClick = { month = month.plusMonths(1) }, enabled = month < last) {
-                    Icon(AppIcons.CaretRight, "Next month")
+                    Icon(AppIcons.CaretRight, tr("Next month", "Mês seguinte"))
                 }
             }
             Spacer(Modifier.height(12.dp))
@@ -114,13 +115,13 @@ fun DayCalendarSheet(selected: LocalDate, available: Set<LocalDate>, onPick: (Lo
                         .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape),
                 )
                 Spacer(Modifier.width(6.dp))
-                Text("Has data", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(tr("Has data", "Com dados"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.width(14.dp))
                 Box(Modifier.size(6.dp).background(TodayDot, CircleShape))
                 Spacer(Modifier.width(6.dp))
-                Text("Today", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(tr("Today", "Hoje"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.weight(1f))
-                if (selected != today) TextButton(onClick = { onPick(today); onDismiss() }) { Text("Go to today") }
+                if (selected != today) TextButton(onClick = { onPick(today); onDismiss() }) { Text(tr("Go to today", "Ir para hoje")) }
             }
         }
     }

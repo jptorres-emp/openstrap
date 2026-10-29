@@ -46,6 +46,7 @@ import org.openstrap.app.ui.components.growClick
 import org.openstrap.app.ui.glow.GlowType
 import org.openstrap.app.ui.theme.MetricColors
 import org.openstrap.app.ui.theme.AppIcons
+import org.openstrap.app.l10n.tr
 
 /** How far a swipe on the header has to travel to change the day. */
 private val SwipeDistance = 56.dp
@@ -78,12 +79,12 @@ fun MomentHeader(
         CentredRow(
             overhang = if (hasNext) 0.dp else PeekWidth + 16.dp,
             // You and the Strap page grow out of the button tapped (spec 3.5).
-            start = { growClick(onOpenYou).let { g -> RoundButton(AppIcons.User, "You", "Open You", g.onClick, g.modifier) } },
+            start = { growClick(onOpenYou).let { g -> RoundButton(AppIcons.User, tr("You", "Definições"), tr("Open You", "Abrir definições"), g.onClick, g.modifier) } },
             centre = { DaySwitcher(title, date, hasNext, onPrev, onNext, { calendarOpen = true }, Modifier) },
             end = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (onOpenAllMetrics != null) {
-                        RoundButton(AppIcons.ChartBar, "All metrics", "Open all metrics", onOpenAllMetrics)
+                        RoundButton(AppIcons.ChartBar, tr("All metrics", "Todas as métricas"), tr("Open all metrics", "Abrir todas as métricas"), onOpenAllMetrics)
                         Spacer(Modifier.width(8.dp))
                     }
                     growClick(onOpenStrap).let { g -> StrapChipButton(chip, g.onClick, g.modifier) }
@@ -169,7 +170,7 @@ private fun DaySwitcher(
         Peek(peekDay(date.minusDays(1)))
         Column(
             Modifier.padding(horizontal = 16.dp).widthIn(max = 200.dp).clip(CircleShape)
-                .clickable(onClickLabel = "Pick a day", onClick = onPick)
+                .clickable(onClickLabel = tr("Pick a day", "Escolher um dia"), onClick = onPick)
                 .padding(horizontal = 10.dp, vertical = 4.dp)
                 .semantics { contentDescription = "$title, ${dateLine(date)}" },
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -199,7 +200,7 @@ private fun StrapChipButton(chip: StrapChip, onClick: () -> Unit, modifier: Modi
     val shape = CircleShape
     Row(
         modifier.clip(shape).background(ChipSurface).border(1.dp, Color.White.copy(alpha = 0.07f), shape)
-            .clickable(onClickLabel = "Open your strap", onClick = onClick)
+            .clickable(onClickLabel = tr("Open your strap", "Abrir a strap"), onClick = onClick)
             .semantics { contentDescription = chip.description }
             .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,

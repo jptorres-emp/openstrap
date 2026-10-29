@@ -3,6 +3,7 @@ package org.openstrap.app.ui.dashboard
 import org.openstrap.app.data.Moment
 import java.time.LocalDate
 import org.openstrap.app.ui.glow.CardSize
+import org.openstrap.app.l10n.tr
 
 /*
  * Which cards Today shows for a moment, in what order and at what size (spec 4.2), and how Edit Today changes that.
@@ -13,28 +14,32 @@ import org.openstrap.app.ui.glow.CardSize
  * A card on Today. [label] names it in Edit Today. Only [editable] cards can be hidden, only [pinnable] ones pinned
  * under the hero: those that make sense at any time of day.
  */
-enum class TodayCard(val label: String, val editable: Boolean = true, val pinnable: Boolean = false) {
+enum class TodayCard(private val en: String, private val pt: String = en, val editable: Boolean = true, val pinnable: Boolean = false) {
     Hero("", editable = false),
-    Offer("Workout under way", editable = false),
-    Suggestion("Workout to save", editable = false),
-    Alerts("From your strap", editable = false),
-    CheckIn("How do you feel"),
-    BodyMorning("Your body this morning"),
-    RightNow("Right now", pinnable = true),
-    LastNight("Last night", pinnable = true),
-    HeartRate("Heart rate", pinnable = true),
-    Activity("Steps", pinnable = true),
-    Recovery("Recovery", pinnable = true),
-    Charge("Energy", pinnable = true),
-    LoadToday("Load and time to recover", pinnable = true),
+    Offer("Workout under way", "Treino a decorrer", editable = false),
+    Suggestion("Workout to save", "Treino por guardar", editable = false),
+    Alerts("From your strap", "Da tua strap", editable = false),
+    CheckIn("How do you feel", "Como te sentes"),
+    BodyMorning("Your body this morning", "O teu corpo esta manhã"),
+    RightNow("Right now", "Agora mesmo", pinnable = true),
+    LastNight("Last night", "A noite passada", pinnable = true),
+    HeartRate("Heart rate", "Frequência cardíaca", pinnable = true),
+    Activity("Steps", "Passos", pinnable = true),
+    Recovery("Recovery", "Recuperação", pinnable = true),
+    Charge("Energy", "Energia", pinnable = true),
+    LoadToday("Load and time to recover", "Carga e tempo de recuperação", pinnable = true),
     /** Time to recover as a Small beside Load's after a workout: part of [LoadToday], hidden and pinned with it. */
     Recover("", editable = false),
-    Workout("The workout"),
-    Week("Your week", pinnable = true),
-    HabitAge("Habit Age", pinnable = true),
+    Workout("The workout", "O treino"),
+    Week("Your week", "A tua semana", pinnable = true),
+    HabitAge("Habit Age", "Idade dos hábitos", pinnable = true),
     /** Start a workout (spec 4.2): a strip above Edit Today, opening Ready with your usual sport. */
-    StartWorkout("Start a workout"),
+    StartWorkout("Start a workout", "Começar um treino"),
     EditToday("", editable = false),
+    ;
+
+    /** Its name in Edit Today, in the language the app speaks. */
+    val label: String get() = tr(en, pt)
 }
 
 /**

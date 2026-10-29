@@ -81,6 +81,7 @@ import org.openstrap.app.ui.dashboard.pairSentence
 import org.openstrap.app.ui.dashboard.wakingLead
 import org.openstrap.app.ui.dashboard.todayCards
 import org.openstrap.app.ui.theme.MetricColors
+import org.openstrap.app.l10n.tr
 
 /*
  * Today (spec 4): one hero whose content follows the moment, then a stable set of cards for it ([todayCards]), with
@@ -320,7 +321,7 @@ private class TodayContext(
         get() = when {
             firstNights -> AFTER_FIRST_NIGHT
             stuck -> WAITING_LAST_NIGHT
-            else -> "No reading yet"
+            else -> tr("No reading yet", "Ainda sem leitura")
         }
 
     /** The day's workouts you'd call workouts, oldest first: the strap's own "Activity" records aren't. */
@@ -444,7 +445,7 @@ private fun WakingHero(ctx: TodayContext, lightAngle: Float?, onOpen: () -> Unit
     GlowCard(heroStyle(MetricColors.readiness, lightAngle), modifier, onClick = onOpen) {
         Column {
             GlowHeader(
-                "Recovery", trailing = score?.let { org.openstrap.app.ui.dashboard.TabCopy.vsYesterday(it, before) },
+                tr("Recovery", "Recuperação"), trailing = score?.let { org.openstrap.app.ui.dashboard.TabCopy.vsYesterday(it, before) },
                 tag = if (ctx.firstScore && score != null) TitleTag(FIRST_SCORE) else null,
             )
             if (ctx.state.loaded) HeroSentence(TodayCopy.waking(ctx.state.asleepSeconds, score, ctx.alert, ctx.noScore, ctx.firstNights, ctx.isToday))
@@ -453,7 +454,7 @@ private fun WakingHero(ctx: TodayContext, lightAngle: Float?, onOpen: () -> Unit
             Spacer(Modifier.height(24.dp))
             HeroNumber(
                 shown.value?.toString(),
-                listOfNotNull(shown.value?.let { shown.word ?: ctx.waiting }, atWake?.let { "Energy at waking $it" }),
+                listOfNotNull(shown.value?.let { shown.word ?: ctx.waiting }, atWake?.let { tr("Energy at waking $it", "Energia ao acordar $it") }),
             )
         }
     }
@@ -464,11 +465,11 @@ private fun WakingHero(ctx: TodayContext, lightAngle: Float?, onOpen: () -> Unit
 private fun FailedHero(f: RecoveryFailure, lightAngle: Float?, onOpen: () -> Unit, onRetry: () -> Unit, modifier: Modifier) {
     GlowCard(heroStyle(MetricColors.readiness, lightAngle), modifier, onClick = onOpen) {
         Column {
-            GlowHeader("Recovery")
+            GlowHeader(tr("Recovery", "Recuperação"))
             HeroSentence(RECOVERY_FAILED)
             f.yesterday?.let { y ->
                 Spacer(Modifier.height(24.dp))
-                HeroFigure(y.toString(), "Yesterday", big = true, modifier = Modifier.alpha(FAILED_ALPHA))
+                HeroFigure(y.toString(), tr("Yesterday", "Ontem"), big = true, modifier = Modifier.alpha(FAILED_ALPHA))
             }
             Spacer(Modifier.height(24.dp))
             HeroButton(TRY_AGAIN, onRetry)
@@ -490,7 +491,7 @@ private fun ChargeHero(ctx: TodayContext, onOpen: () -> Unit, onRetry: () -> Uni
         Column {
             val start = c?.takeIf { it.anchored }?.atWake?.toInt()
             GlowHeader(
-                "Energy", trailing = start?.let { if (c?.strapOffOvernight == true) "$it at start" else "$it at waking" },
+                tr("Energy", "Energia"), trailing = start?.let { if (c?.strapOffOvernight == true) tr("$it at start", "$it no início") else tr("$it at waking", "$it ao acordar") },
                 marker = ctx.upTo(ctx.newest), tag = ctx.partial,
             )
             // Charge is worked out with Recovery, so when that fails it says so rather than waiting for a first night.
@@ -510,9 +511,12 @@ private fun ChargeHero(ctx: TodayContext, onOpen: () -> Unit, onRetry: () -> Uni
             // The caveat marker: tapping it opens Charge's info sheet, which explains the estimated start. One caveat a
             // card (spec 7.1): a Partial day tag, or the no sleep sentence, already says the day is short of wear.
             if (c?.strapOffOvernight == true && !noSleep && ctx.partial == null) Text(
-                "Strap off overnight, so today started from an estimate.",
+                tr(
+                    "Strap off overnight, so today started from an estimate.",
+                    "A strap não esteve posta durante a noite, por isso o dia começou com uma estimativa.",
+                ),
                 color = Color.White.copy(alpha = 0.7f), style = GlowType.secondary,
-                modifier = Modifier.padding(top = 8.dp).clickable(onClickLabel = "About Energy") { info = true },
+                modifier = Modifier.padding(top = 8.dp).clickable(onClickLabel = tr("About Energy", "Sobre a Energia")) { info = true },
             )
             // No lone dash in a hero: before the first night the sentence says Charge starts after it.
             if (now == null) return@Column
@@ -520,10 +524,15 @@ private fun ChargeHero(ctx: TodayContext, onOpen: () -> Unit, onRetry: () -> Uni
             HeroNumber(
                 now.toString(),
                 if (c != null && c.anchored) listOf(
-                    "Recharged ${c.recharged.toInt()}",
+                    tr("Recharged ${c.recharged.toInt()}", "Recarregou ${c.recharged.toInt()}"),
                     // After "Drained" the amount needs no minus.
-                    "Drained ${org.openstrap.app.ui.dashboard.TabCopy.drainedAmount(c.drainedExercise + c.drainedStress + c.drainedLiving)}",
-                ) else listOf("Now"),
+                    tr(
+                        "Drained " +
+                            "${org.openstrap.app.ui.dashboard.TabCopy.drainedAmount(c.drainedExercise + c.drainedStress + c.drainedLiving)}",
+                        "Gastou " +
+                            "${org.openstrap.app.ui.dashboard.TabCopy.drainedAmount(c.drainedExercise + c.drainedStress + c.drainedLiving)}",
+                    ),
+                ) else listOf(tr("Now", "Agora")),
             )
         }
     }
@@ -541,15 +550,14 @@ private fun ChargeHero(ctx: TodayContext, onOpen: () -> Unit, onRetry: () -> Uni
 @Composable
 private fun WindowHero(ctx: TodayContext, lightAngle: Float?, onStart: (Int) -> Unit, onOther: () -> Unit, modifier: Modifier) {
     val sport = ctx.usualSport
-    val noun = sportNoun(sport)
     GlowCard(heroStyle(MetricColors.heart, lightAngle, rim = WINDOW_RIM), modifier) {
         Column {
-            GlowHeader(TodayCopy.windowTitle(ctx.score), trailing = ctx.score?.let { "Recovery $it" })
-            HeroSentence(TodayCopy.window(noun, ctx.charge))
+            GlowHeader(TodayCopy.windowTitle(ctx.score), trailing = ctx.score?.let { tr("Recovery $it", "Recuperação $it") })
+            HeroSentence(TodayCopy.window(sport, ctx.charge))
             Spacer(Modifier.height(28.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                HeroButton("Start ${noun ?: Workouts.sportName(sport).lowercase()}", { onStart(sport) }, Modifier.weight(1f), icon = true)
-                HeroSecondaryButton("Other sport", onOther)
+                HeroButton(TodayCopy.startSport(sport), { onStart(sport) }, Modifier.weight(1f), icon = true)
+                HeroSecondaryButton(tr("Other sport", "Outro desporto"), onOther)
             }
         }
     }
@@ -564,10 +572,10 @@ private fun AfterHero(ctx: TodayContext, lightAngle: Float?, onOpenWorkout: (Lon
     val w = ctx.lastWorkout ?: return
     val since = ctx.state.heartRate.filter { it.x >= w.end }
     val nowHr = ctx.live ?: since.lastOrNull()?.y?.toInt()
-    val noun = sportNoun(w.workout.sportType) ?: "workout"
+    val noun = sportNoun(w.workout.sportType) ?: tr("workout", "treino")
     GlowCard(heroStyle(MetricColors.heart, lightAngle, rim = AFTER_RIM), modifier, onClick = { onOpenWorkout(w.workout.start) }) {
         Column {
-            GlowHeader("Since your $noun", trailing = TodayCopy.duration(ctx.now - w.end))
+            GlowHeader(tr("Since your $noun", "Desde o fim do treino"), trailing = TodayCopy.duration(ctx.now - w.end))
             HeroSentence(TodayCopy.after(nowHr, ctx.state.restingHeartRate))
             // The drop since the end, from the readings the strap has sent. A live curve needs live readings kept
             // through the calm down (step 7).
@@ -586,9 +594,9 @@ private fun AfterHero(ctx: TodayContext, lightAngle: Float?, onOpenWorkout: (Lon
             }
             Spacer(Modifier.height(18.dp))
             // No readings around the end give no end heart rate: leave it out rather than show a dash.
-            val then = listOfNotNull(w.endHeartRate?.let { "$it at the end" }, ctx.state.restingHeartRate?.let { "resting $it" })
+            val then = listOfNotNull(w.endHeartRate?.let { tr("$it at the end", "$it no fim") }, ctx.state.restingHeartRate?.let { tr("resting $it", "em repouso $it") })
                 .joinToString(", ").replaceFirstChar { it.uppercase() }
-            HeroNumber(nowHr?.toString(), listOfNotNull(nowHr?.let { "bpm now" }, then.ifEmpty { null }))
+            HeroNumber(nowHr?.toString(), listOfNotNull(nowHr?.let { tr("bpm now", "bpm agora") }, then.ifEmpty { null }))
         }
     }
 }
@@ -601,18 +609,18 @@ private fun AfterHero(ctx: TodayContext, lightAngle: Float?, onOpenWorkout: (Lon
 @Composable
 private fun EveningHero(ctx: TodayContext, lightAngle: Float?, bedtime: LocalTime?, onOpen: () -> Unit, modifier: Modifier) {
     val goals = LocalGoals.current
-    val nouns = ctx.dayWorkouts.map { sportNoun(it.workout.sportType) }
+    val sports = ctx.dayWorkouts.map { it.workout.sportType }
     val night = ctx.moment == Moment.Night
     val style = heroStyle(if (night) MetricColors.sleepDeep else MetricColors.evening, lightAngle)
     // The evening's violet is lit lighter so it reads as violet, not as a second night (spec 4.2).
     GlowCard(if (night) style else style.copy(bodyLightness = EVENING_BODY), modifier, onClick = onOpen) {
         Column {
-            GlowHeader("Today", trailing = TodayCopy.bedtimeIn(LocalTime.now(), bedtime), marker = ctx.upTo(ctx.newest), tag = ctx.partial)
-            HeroSentence(TodayCopy.evening(nouns, ctx.state.steps, goals.steps, ctx.loadStatus))
+            GlowHeader(tr("Today", "Hoje"), trailing = TodayCopy.bedtimeIn(LocalTime.now(), bedtime), marker = ctx.upTo(ctx.newest), tag = ctx.partial)
+            HeroSentence(TodayCopy.evening(sports, ctx.state.steps, goals.steps, ctx.loadStatus))
             Spacer(Modifier.height(24.dp))
             // Figures it doesn't have yet are left out, never a lone dash in the hero.
-            val rest = listOfNotNull(ctx.rec?.load?.let { "Load ${Math.round(it)}" }, ctx.charge?.let { "Energy $it left" })
-            HeroNumber("%,d".format(ctx.state.steps), listOfNotNull("steps", rest.joinToString(", ").ifEmpty { null }))
+            val rest = listOfNotNull(ctx.rec?.load?.let { tr("Load ${Math.round(it)}", "Carga ${Math.round(it)}") }, ctx.charge?.let { tr("Energy $it left", "Energia $it restante") })
+            HeroNumber("%,d".format(ctx.state.steps), listOfNotNull(tr("steps", "passos"), rest.joinToString(", ").ifEmpty { null }))
         }
     }
 }
@@ -632,7 +640,7 @@ private fun DuringHero(
         Column {
             GlowHeader(Workouts.sportName(r.workout.sportType))
             Spacer(Modifier.height(18.dp))
-            HeroFigure(live?.toString(), if (live != null) "bpm, live" else "Waiting for heart rate", big = true)
+            HeroFigure(live?.toString(), if (live != null) tr("bpm, live", "bpm, ao vivo") else tr("Waiting for heart rate", "À espera da frequência cardíaca"), big = true)
             Spacer(Modifier.height(28.dp))
             WorkoutShortcut(r, live, onOpen, onResume)
         }
@@ -650,13 +658,13 @@ private fun PairHero(step: PairStep, onPair: () -> Unit, modifier: Modifier) {
     LaunchedEffect(step) { if (step == PairStep.Connected) haptics.perform(HapticEvent.PairingDone) }
     GlowCard(heroStyle(Color(0xFF4E8F86), LightAngle.Below), modifier, onClick = onPair) {
         Column {
-            GlowHeader("Pair your Helio Strap")
+            GlowHeader(tr("Pair your Helio Strap", "Emparelha a tua Helio Strap"))
             HeroSentence(pairSentence(step))
             Spacer(Modifier.height(18.dp))
             PairingStage(step)
             if (step != PairStep.Connected) {
                 Spacer(Modifier.height(18.dp))
-                HeroButton("Find my strap", onPair)
+                HeroButton(tr("Find my strap", "Encontrar a minha strap"), onPair)
             }
         }
     }
@@ -676,7 +684,7 @@ private fun StuckHero(ctx: TodayContext, strap: TodayStrap, onSyncNow: () -> Uni
             HeroSentence(copy.sentence)
             Text(copy.line, color = Color.White.copy(alpha = 0.8f), style = GlowType.secondary, modifier = Modifier.padding(top = 8.dp))
             Spacer(Modifier.height(28.dp))
-            HeroButton("Sync now", { if (strap.canSync) onSyncNow() else haptics.perform(HapticEvent.SyncFailed) })
+            HeroButton(tr("Sync now", "Sincronizar agora"), { if (strap.canSync) onSyncNow() else haptics.perform(HapticEvent.SyncFailed) })
         }
     }
 }
@@ -708,20 +716,20 @@ private fun TodayRow(
         TodayCard.Alerts -> AlertsStrip(s.alerts, onOpenMetric)
         TodayCard.CheckIn -> CheckInStrip(checkIn, onCheckIn)
         TodayCard.BodyMorning -> BodyList(
-            "Your body this morning",
+            tr("Your body this morning", "O teu corpo esta manhã"),
             listOf(
-                BodyRow("Resting heart rate", MetricColors.heart, s.restingHeartRate?.toFloat(), normal(Metric.RestingHr), "", Metric.RestingHr),
-                BodyRow("HRV", MetricColors.hrv, s.hrv.avg()?.toFloat(), normal(Metric.Hrv), "", Metric.Hrv),
-                BodyRow("Blood oxygen", MetricColors.spo2, s.spo2.avg()?.toFloat(), normal(Metric.Spo2), "%", Metric.Spo2),
-                BodyRow("Breathing rate", MetricColors.sleepLight, s.breathRate.avg()?.toFloat(), normal(Metric.Breathing), "", Metric.Breathing),
+                BodyRow(Metric.RestingHr.title, MetricColors.heart, s.restingHeartRate?.toFloat(), normal(Metric.RestingHr), "", Metric.RestingHr),
+                BodyRow(Metric.Hrv.title, MetricColors.hrv, s.hrv.avg()?.toFloat(), normal(Metric.Hrv), "", Metric.Hrv),
+                BodyRow(Metric.Spo2.title, MetricColors.spo2, s.spo2.avg()?.toFloat(), normal(Metric.Spo2), "%", Metric.Spo2),
+                BodyRow(Metric.Breathing.title, MetricColors.sleepLight, s.breathRate.avg()?.toFloat(), normal(Metric.Breathing), "", Metric.Breathing),
             ),
             ctx.waiting, onOpenMetric,
         )
         TodayCard.RightNow -> BodyList(
-            "Right now",
+            tr("Right now", "Agora mesmo"),
             listOf(
-                BodyRow("Stress", MetricColors.stress, s.stress.lastOrNull()?.y, normal(Metric.Stress), "", Metric.Stress),
-                BodyRow("HRV", MetricColors.hrv, s.hrv.lastOrNull()?.y, normal(Metric.Hrv), "", Metric.Hrv),
+                BodyRow(Metric.Stress.title, MetricColors.stress, s.stress.lastOrNull()?.y, normal(Metric.Stress), "", Metric.Stress),
+                BodyRow(Metric.Hrv.title, MetricColors.hrv, s.hrv.lastOrNull()?.y, normal(Metric.Hrv), "", Metric.Hrv),
             ),
             ctx.waiting, onOpenMetric, upTo = ctx.upTo(listOfNotNull(s.stress.lastOrNull(), s.hrv.lastOrNull()).maxOfOrNull { it.x }),
         )
@@ -743,9 +751,12 @@ private fun TodayRow(
             val status = when {
                 // Worked out with Recovery: when that failed, say so here too. The card opens Recovery and its Try again.
                 ctx.charge == null -> if (ctx.recoveryFailure != null) CHARGE_FAILED else ctx.waiting
-                ctx.endOfDay -> "Sleep fills it back"
-                drained != null && drained >= 1f -> "Drained ${org.openstrap.app.ui.dashboard.TabCopy.drainedAmount(drained)}"
-                else -> "Steady since waking"
+                ctx.endOfDay -> tr("Sleep fills it back", "O sono volta a enchê-la")
+                drained != null && drained >= 1f -> tr(
+                    "Drained ${org.openstrap.app.ui.dashboard.TabCopy.drainedAmount(drained)}",
+                    "Gastou ${org.openstrap.app.ui.dashboard.TabCopy.drainedAmount(drained)}",
+                )
+                else -> tr("Steady since waking", "Estável desde que acordaste")
             }
             // The day's Charge so far beside the number, in the evening too, as on every other Charge card.
             val soFar = c?.takeIf { it.anchored && ctx.isToday }?.let { chargeSoFar(it.points, s.dayStart..s.dayEnd, ctx.now) }
@@ -753,16 +764,16 @@ private fun TodayRow(
         }
         // After a workout, what it did as a Small pair: Load toward your usual (from below) and time to recover.
         TodayCard.LoadToday -> if (slot.size == CardSize.Small) SmallCard(
-            MetricColors.load, "Load", ctx.rec?.load?.let { Math.round(it).toString() }, null,
+            MetricColors.load, tr("Load", "Carga"), ctx.rec?.load?.let { Math.round(it).toString() }, null,
             when { ctx.recoveryFailure != null -> FAILED_SHORT; ctx.rec == null -> ctx.waiting; else -> TodayCopy.loadWord(ctx.loadStatus) },
             modifier, kind = EdgeKind.Progress, progress = ctx.loadShare,
             edgeStatus = if (ctx.loadStatus == TodayCopy.LoadStatus.Above) EdgeStatus.Above else EdgeStatus.Usual,
             onClick = { openScore(org.openstrap.app.ui.dashboard.Score.Load) },
         ) else LoadList(
             when (ctx.moment) {
-                Moment.WorkoutWindow -> "Before you start"
-                Moment.After -> "What the ${ctx.lastWorkout?.let { sportNoun(it.workout.sportType) } ?: "workout"} did"
-                else -> "Load today"
+                Moment.WorkoutWindow -> tr("Before you start", "Antes de começares")
+                Moment.After -> tr("What the ${ctx.lastWorkout?.let { sportNoun(it.workout.sportType) } ?: "workout"} did", "O que o treino fez")
+                else -> tr("Load today", "Carga de hoje")
             },
             ctx.rec?.load, TodayCopy.loadLine(ctx.loadStatus), ctx.recover,
             onLoad = { openScore(org.openstrap.app.ui.dashboard.Score.Load) }, onRecover = { openScore(org.openstrap.app.ui.dashboard.Score.Recover) },
@@ -771,7 +782,7 @@ private fun TodayRow(
             val left = ctx.workouts.filter { it.recoveryMinutes != null }.maxByOrNull { it.end }
                 ?.let { w -> TodayCopy.recoverShort(TodayCopy.recoverLeft(w.end, w.recoveryMinutes ?: 0, ctx.now), ctx.now, ctx.zone) }
             SmallCard(
-                MetricColors.load, "To recover", left?.first, "h", left?.second ?: "No estimate from the strap", modifier,
+                MetricColors.load, tr("To recover", "Para recuperar"), left?.first, "h", left?.second ?: tr("No estimate from the strap", "Sem estimativa da strap"), modifier,
                 onClick = { openScore(org.openstrap.app.ui.dashboard.Score.Recover) },
             )
         }

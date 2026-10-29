@@ -4,18 +4,28 @@ import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.saveable.Saver
 import org.openstrap.app.data.settings.Goals
 import org.openstrap.app.data.DailyMetric
+import org.openstrap.app.l10n.tr
 
-/** A metric with its own detail screen: its title, unit, decimals shown, and the per-day series behind it. */
-enum class Metric(val title: String, val unit: String, val decimals: Int, val daily: DailyMetric) {
-    HeartRate("Heart rate", "bpm", 0, DailyMetric.HeartRate),
-    RestingHr("Resting heart rate", "bpm", 0, DailyMetric.RestingHr),
-    Hrv("HRV", "ms", 0, DailyMetric.Hrv),
-    Spo2("Blood oxygen", "%", 0, DailyMetric.Spo2),
-    Stress("Stress", "", 0, DailyMetric.Stress),
-    SkinTemperature("Skin temperature", "°C", 1, DailyMetric.SkinTemperature),
-    Breathing("Breathing rate", "br/min", 1, DailyMetric.Breathing),
-    Steps("Steps", "steps", 0, DailyMetric.Steps),
+/**
+ * A metric with its own detail screen: its title and unit (in English and Portuguese, [title] and [unit] in the language
+ * the app speaks), decimals shown, and the per-day series behind it.
+ */
+enum class Metric(
+    private val en: String, private val pt: String, private val unitEn: String, private val unitPt: String,
+    val decimals: Int, val daily: DailyMetric,
+) {
+    HeartRate("Heart rate", "Frequência cardíaca", "bpm", "bpm", 0, DailyMetric.HeartRate),
+    RestingHr("Resting heart rate", "FC em repouso", "bpm", "bpm", 0, DailyMetric.RestingHr),
+    Hrv("HRV", "VFC", "ms", "ms", 0, DailyMetric.Hrv),
+    Spo2("Blood oxygen", "Oxigénio no sangue", "%", "%", 0, DailyMetric.Spo2),
+    Stress("Stress", "Stress", "", "", 0, DailyMetric.Stress),
+    SkinTemperature("Skin temperature", "Temperatura da pele", "°C", "°C", 1, DailyMetric.SkinTemperature),
+    Breathing("Breathing rate", "Frequência respiratória", "br/min", "resp/min", 1, DailyMetric.Breathing),
+    Steps("Steps", "Passos", "steps", "passos", 0, DailyMetric.Steps),
     ;
+
+    val title: String get() = tr(en, pt)
+    val unit: String get() = tr(unitEn, unitPt)
 
     fun format(v: Float): String = if (this == Steps) "%,d".format(Math.round(v)) else "%.${decimals}f".format(v)
 
@@ -33,10 +43,16 @@ enum class Metric(val title: String, val unit: String, val decimals: Int, val da
  * the 14 days the day works out, Load over the 30 days before it, and VO2 max, Time to recover, Energy and Distance as
  * the day has them.
  */
-enum class Score(val title: String) {
-    Recovery("Recovery"), Charge("Energy"), Sleep("Sleep score"), Regularity("Sleep regularity"), Naps("Naps"),
-    HeartPoints("Heart points"), ActiveMinutes("Active minutes"), Load("Load"), Vo2Max("VO2 max"),
-    Recover("Time to recover"), Energy("Calories"), Distance("Distance"),
+enum class Score(private val en: String, private val pt: String) {
+    Recovery("Recovery", "Recuperação"), Charge("Energy", "Energia"), Sleep("Sleep score", "Pontuação do sono"),
+    Regularity("Sleep regularity", "Regularidade do sono"), Naps("Naps", "Sestas"),
+    HeartPoints("Heart points", "Pontos cardíacos"), ActiveMinutes("Active minutes", "Minutos ativos"), Load("Load", "Carga"),
+    Vo2Max("VO2 max", "VO2 máx"), Recover("Time to recover", "Tempo de recuperação"), Energy("Calories", "Calorias"),
+    Distance("Distance", "Distância"),
+    ;
+
+    /** Its name in the language the app speaks. */
+    val title: String get() = tr(en, pt)
 }
 
 /** Your daily goals, provided once at the top of the app so every screen measures against the same ones. */

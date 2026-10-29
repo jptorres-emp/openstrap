@@ -79,9 +79,9 @@ class TodayCopyTest {
         assertEquals("Fine for a steady session", TodayCopy.windowTitle(60))
         assertEquals("An easy session suits today", TodayCopy.windowTitle(40))
         assertEquals("Your usual workout time", TodayCopy.windowTitle(null))
-        assertEquals("You usually run around now. Energy is 58, plenty left.", TodayCopy.window("run", 58))
+        assertEquals("You usually run around now. Energy is 58, plenty left.", TodayCopy.window(1, 58))
         assertEquals("You usually work out around now.", TodayCopy.window(null, null))
-        assertEquals("You usually ride around now. Energy is 20, running low.", TodayCopy.window("ride", 20))
+        assertEquals("You usually ride around now. Energy is 20, running low.", TodayCopy.window(4, 20))
     }
 
     @Test fun `after a workout the heart settles toward resting`() {
@@ -110,11 +110,11 @@ class TodayCopyTest {
     @Test fun `evening tells the day`() {
         assertEquals(
             "A full day. A run, 13,860 steps and a Load above your usual.",
-            TodayCopy.evening(listOf("run"), 13_860, 8_000, LoadStatus.Above, Locale.UK),
+            TodayCopy.evening(listOf(1), 13_860, 8_000, LoadStatus.Above, Locale.UK),
         )
         assertEquals("A quiet day. 2,100 steps and a Load below your usual.", TodayCopy.evening(emptyList(), 2_100, 8_000, LoadStatus.Below, Locale.UK))
-        assertEquals("A steady day. 2 workouts and 6,000 steps.", TodayCopy.evening(listOf("run", null), 6_000, 8_000, null, Locale.UK))
-        assertEquals("A steady day. A workout and 6,000 steps.", TodayCopy.evening(listOf(null), 6_000, 8_000, LoadStatus.SoFar, Locale.UK))
+        assertEquals("A steady day. 2 workouts and 6,000 steps.", TodayCopy.evening(listOf(1, 130), 6_000, 8_000, null, Locale.UK))
+        assertEquals("A steady day. A workout and 6,000 steps.", TodayCopy.evening(listOf(130), 6_000, 8_000, LoadStatus.SoFar, Locale.UK))
     }
 
     @Test fun `bedtime counts down and stops once passed`() {
@@ -154,7 +154,7 @@ class TodayCopyTest {
         val all = listOf(
             TodayCopy.waking(1000, 80, false, null, false, true), TodayCopy.waking(1000, null, false, learning, false, true),
             TodayCopy.WEEK_FIRST, TodayCopy.recoverText(5000, at(10), zone).second, TodayCopy.charge(50, 30, true, 10),
-            TodayCopy.window("run", 50), TodayCopy.after(80, 50), TodayCopy.evening(listOf("run"), 9000, 8000, LoadStatus.Usual, Locale.UK),
+            TodayCopy.window(1, 50), TodayCopy.after(80, 50), TodayCopy.evening(listOf(1), 9000, 8000, LoadStatus.Usual, Locale.UK),
         )
         all.forEach { s -> listOf("·", ";", "—").forEach { assertFalse("$s has $it", it in s) } }
     }

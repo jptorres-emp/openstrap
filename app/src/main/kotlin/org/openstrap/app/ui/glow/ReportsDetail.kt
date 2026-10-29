@@ -209,17 +209,27 @@ private fun ReportSports(sports: List<Reports.SportTotals>, onEdge: Boolean) {
     }
 }
 
-/** What each habit does to the next morning, the clearest first. */
+/**
+ * What the habits do to the next morning: each one whose effect shows on its own row, the clearest first, then the
+ * rest a row each for what they have in common, so the ones that matter stand out.
+ */
 @Composable
 private fun ReportHabits(habits: List<Reports.Effect>, onEdge: Boolean) {
     OnNeutralEdge(onEdge) {
         ListPanel(Modifier.padding(top = 8.dp), title = ReportCopy.HABITS_TITLE, note = ReportCopy.HABITS_NOTE) {
-            if (habits.all { it.recoveryVerdict == Reports.Verdict.TooFew }) ReportNote(ReportCopy.HABITS_WAITING, Modifier.padding(bottom = 14.dp))
-            else habits.forEachIndexed { i, e ->
-                ListRow(
-                    ReportCopy.habitName(e.habit), MetricColors.readiness, ReportCopy.habitValue(e), ReportCopy.habitStatus(e),
-                    offNormal = ReportCopy.habitOff(e), divider = i > 0, dash = false, icon = habitIcon(e.habit), iconTint = SportIconTint,
-                )
+            if (habits.all { it.recoveryVerdict == Reports.Verdict.TooFew }) {
+                ReportNote(ReportCopy.HABITS_WAITING, Modifier.padding(bottom = 14.dp))
+            } else {
+                val shown = ReportCopy.shownHabits(habits)
+                shown.forEachIndexed { i, e ->
+                    ListRow(
+                        ReportCopy.habitName(e.habit), MetricColors.readiness, ReportCopy.habitValue(e), ReportCopy.habitStatus(e),
+                        offNormal = ReportCopy.habitOff(e), divider = i > 0, icon = habitIcon(e.habit), iconTint = SportIconTint,
+                    )
+                }
+                ReportCopy.quietHabits(habits).forEachIndexed { i, (title, names) ->
+                    ListRow(title, MetricColors.readiness, null, names, divider = shown.isNotEmpty() || i > 0, dash = false, icon = AppIcons.DotsThree, iconTint = SportIconTint)
+                }
             }
         }
     }
@@ -284,8 +294,8 @@ private fun ReportLoad(
         TargetBars(
             days.map { it.load }, targets.map { it?.range }, MetricColors.load,
             Modifier.padding(top = 16.dp).semantics { contentDescription = ReportCopy.describeTargets(days, targets) },
-            height = if (month) 140.dp else 170.dp, labels = labels,
-            partial = days.indexOfFirst { it.partial }.takeIf { it >= 0 }, values = !month,
+            height = if (month) 160.dp else 190.dp, labels = labels,
+            partial = days.indexOfFirst { it.partial }.takeIf { it >= 0 }, values = !month, bandLabel = ReportCopy.TARGET_BAND,
             onScrub = { held = it },
         )
         ReportCopy.balanceBefore(before, month)?.let { ReportNote(it, Modifier.padding(top = 12.dp)) }

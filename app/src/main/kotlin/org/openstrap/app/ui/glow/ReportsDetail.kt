@@ -196,7 +196,9 @@ private fun ReportWeekdays(weekdays: List<Reports.Weekday>) {
 @Composable
 private fun ReportSports(sports: List<Reports.SportTotals>, onEdge: Boolean) {
     OnNeutralEdge(onEdge) {
-        ListPanel(Modifier.padding(top = 8.dp), title = ReportCopy.SPORTS_TITLE, note = ReportCopy.ZONES_NOTE) {
+        // The zones' note only when there are zones to show.
+        val zones = sports.any { it.zoneSeconds.sum() > 0 }
+        ListPanel(Modifier.padding(top = 8.dp), title = ReportCopy.SPORTS_TITLE, note = ReportCopy.ZONES_NOTE.takeIf { zones }) {
             sports.forEachIndexed { i, s ->
                 ListRow(
                     s.name, MetricColors.heart, s.sessions.toString(), ReportCopy.sportStatus(s), divider = i > 0,

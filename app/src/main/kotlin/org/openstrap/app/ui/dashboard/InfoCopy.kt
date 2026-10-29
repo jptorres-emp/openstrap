@@ -863,7 +863,7 @@ object InfoCopy {
 
     /** The week story's sheet: what each day's numbers are and how far back the comparisons reach. */
     val WEEK: Info get() = Info(
-        tr("Your week", "A tua semana"),
+        tr("Last week", "A semana passada"),
         tr(
             "Last Monday to Sunday, day by day: how much you moved, trained and slept.",
             "De segunda a domingo passados, dia a dia: quanto te mexeste, treinaste e dormiste.",
@@ -874,8 +874,8 @@ object InfoCopy {
                 "any. Active minutes are worked out as in their own sheet. A night belongs to the evening it " +
                 "started, so Sunday's is the night into Monday.",
             "Os passos são o total de cada dia a partir dos minutos da strap, e os passos por dia a média dos " +
-                "dias com algum. Os minutos ativos são calculados como na sua própria folha. Uma noite pertence à " +
-                "tarde em que começou, por isso a de domingo é a noite para segunda.",
+                "dias com algum. Os minutos ativos são calculados como na sua própria folha. Uma noite pertence ao " +
+                "dia em que começou, por isso a de domingo é a de domingo para segunda.",
         ),
         moves = tr(
             "Every walk, workout and early night shows here a week later.",

@@ -116,8 +116,8 @@ fun metricIndex(
         row(name, color, value?.let { m.format(it) + suffix }, status, IndexTarget.Open(Detail.OfMetric(m)))
     val (habitValue, habitStatus) = habitAgeRow(healthspan)
     val weekFrom = state.date.minusDays(6)
-    // The 7 days up to the day shown, not Your week's Monday to Sunday, so the row says so. The strap's own
-    // "Activity" records aren't workouts, as on Today and Your week.
+    // The 7 days up to the day shown, as the weekly report counts them, so the row says so. The strap's own
+    // "Activity" records aren't workouts, as on Today and in the reports.
     val week = workouts.count { a ->
         a.workout.sportType != org.openstrap.app.data.Workouts.GENERIC_ACTIVITY &&
             java.time.Instant.ofEpochSecond(a.workout.start).atZone(java.time.ZoneId.systemDefault()).toLocalDate() in weekFrom..state.date

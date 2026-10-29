@@ -461,7 +461,7 @@ class HistorySync(
         if (activity.isNotEmpty()) {
             dao.insertActivity(activity)
             // A minute filled in from type 88 earlier gives way to its own activity record.
-            dao.dropFilledStepsCovered(activity.first().timestamp - 60, activity.last().timestamp + 60)
+            dao.dropFilledStepsCovered(activity.minOf { it.timestamp } - 60, activity.maxOf { it.timestamp } + 60)
         }
         if (hr.isNotEmpty()) dao.insertHeartRate(hr)
         if (spo2.isNotEmpty()) dao.insertSpo2(spo2)

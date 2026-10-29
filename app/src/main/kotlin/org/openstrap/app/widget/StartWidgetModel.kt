@@ -143,7 +143,7 @@ data class StartWidgetModel(
             val gpsOffered = Workouts.gpsOffered(usual.sportType, Workouts.indoorSide(usual.sportType, sides))
             val today = now.atZone(zone).toLocalDate()
             val monday = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)).atStartOfDay(zone).toEpochSecond()
-            // As Today and Your week count them: the strap's own "Activity" records aren't workouts.
+            // As Today and the reports count them: the strap's own "Activity" records aren't workouts.
             val week = workouts.filter { it.workout.sportType != Workouts.GENERIC_ACTIVITY && it.workout.start in monday..now.epochSecond }
             val last = workouts.filter { Workouts.tileType(it.workout.sportType) == Workouts.tileType(usual.sportType) && it.workout.start <= now.epochSecond }
                 .maxByOrNull { it.workout.start }

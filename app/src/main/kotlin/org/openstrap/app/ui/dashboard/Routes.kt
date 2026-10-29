@@ -79,9 +79,9 @@ sealed interface Detail {
     data object Recovery : Detail
     /** The Sleep tab's screen, opened from a card on another tab. */
     data object Sleep : Detail
-    /** The week story: last Monday to Sunday day by day, opened from Your week on Today. */
+    /** The week story: last Monday to Sunday day by day, opened from the foot of the weekly report. */
     data object Week : Detail
-    /** The weekly and monthly reports, opened from the Training tab: the [month] or the week. */
+    /** The weekly and monthly reports, opened from the Training tab and Today's weekly report: the [month] or the week. */
     data class Reports(val month: Boolean = false) : Detail
 
     companion object {

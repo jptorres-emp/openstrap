@@ -133,6 +133,12 @@ private fun LazyListScope.weekBody(r: Reports.Report, imperial: Boolean, onOpen:
     item { ReportList(ReportCopy.WEEK_TITLE, ReportCopy.WEEK_NOTE, ReportCopy.weekRows(week.now, week.before, imperial), onOpen) }
     // Your sports this week against an average week before, right after the list: on a neutral edge card.
     if (week.sports.isNotEmpty()) item { ReportSports(week.sports, onEdge = true, week = true) }
+    // Last Monday to Sunday day by day, under everything: on a neutral edge when it follows the week's list.
+    item {
+        OnNeutralEdge(week.sports.isEmpty()) {
+            ListPanel(Modifier.padding(top = 8.dp)) { LinkRow(ReportCopy.WEEK_STORY_LINK, { onOpen(Detail.Week) }, divider = false) }
+        }
+    }
 }
 
 /* ------------------------------------------------ Month --------------------------------------------- */

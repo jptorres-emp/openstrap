@@ -1,5 +1,5 @@
 # Work in progress on the wip branch: compile the app and run its unit tests, without building or publishing an APK.
-# The log and any failing tests' reports go to the ci-results-wip branch, readable with git alone.
+# The log, any failing tests' reports and Room's schemas go to the ci-results-wip branch, readable with git alone.
 name: WIP check
 
 on:
@@ -44,6 +44,8 @@ jobs:
         run: |
           mkdir -p out/tests
           cp build.log out/ 2>/dev/null || true
+          # Room's schemas as KSP wrote them, so a new database version's file can be committed from here.
+          cp -r app/schemas out/ 2>/dev/null || true
           grep -rl "<failure" --include="*.xml" . 2>/dev/null | grep test-results | xargs -r -I{} cp {} out/tests/ || true
           echo "$OUTCOME ${{ github.sha }}" > out/STATUS
           cd out

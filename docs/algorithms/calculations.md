@@ -473,6 +473,10 @@ Last night's HRV, blood oxygen, breathing and skin temperature are compared with
 
 The synced minute-by-minute steps, plus the strap's live counter. A believable live total is used directly. On firmware 3.25 the live total carries a large fixed offset, so OpenStrap anchors it: it remembers the live reading each time the synced total changes, and adds only the steps counted since.
 
+* **Minutes the strap no longer has.** The strap keeps per-minute activity (type 1) for about 43 hours, but the extended records (type 88, with each minute's steps too) for 60 days and more. A minute with steps in type 88 and no type 1 record gets one from it (`ActivityMinute.KIND_FROM_EXTENDED`), and a type 1 record for the minute replaces it later. The first sync after this change fetches a month of type 88 once, so days the app missed (the strap with Zepp, the phone off) get their steps back.
+* **One rule for every sum.** A minute over 250 steps is a sentinel or an error (the strap's byte tops out at 255) and counts as none, on Today, in the week, month and year charts, the reports, the energy estimate and the Health Connect export alike.
+* **Today in the charts** is Today's count (the live counter included), so today's bar in the week and month matches the number on Today.
+
 * A warning shows when the strap's daily total and the sum of minutes differ by more than 5 %.
 * **Active hours:** hours of the day with at least 250 steps.
 
@@ -659,7 +663,8 @@ EPOC ← EPOC + [0.01 × (e^(7x) − 1) − 0.034 × (1 − x) × EPOC] × minut
 
 ## 14. Trends and "your normal" ranges
 
-* **Daily values** for charts: the average of the day's samples (the total for steps), with the day's lowest and highest. Resting HR uses the strap's one value per day.
+* **Daily values** for charts: the average of the day's samples (the total for steps), with the day's lowest and highest. Resting HR uses the strap's one value per day, the one it sends the Zepp app; Recovery reads its own (the lowest half hour asleep, usually a few bpm lower), and says so where it shows it.
+* **A day's heart rate range** ("Between 48 and 172 bpm") comes from its minutes, not the chart's 5-minute averages, which flatten a workout's peak: the lowest and highest minute with a neighbour within 10 bpm (a lone spike is an artefact), the high raised to the strap's own per-second daily maximum when that's up to 25 bpm above it.
 * **Year view:** days are averaged into Monday-starting weeks.
 * **"Your normal"** on metric screens is the mean ± 1 standard deviation of the last 30 days. It needs 7 days with data. Today is "above", "within" or "below".
 * **Weekly resting-HR chart:** the strap's daily resting HR. Without it, OpenStrap estimates one as the day's lowest 30-minute average HR. That needs ≥ 6 hours of data, ≥ 5 samples in the window, and the window covering at least 80 % of 30 minutes. These days are marked as estimated.

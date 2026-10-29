@@ -105,7 +105,7 @@ reads as the same light:
 - **Energy is one colour.** Ember orange on every surface. Its level shows as the light's height, never as a hue, so
   `chargeScale`, `chargeAt` and `chargeDeep` go. The old gold `charge` #FFD166 becomes #F66C28.
 - **Recovery is one teal.** `readinessDeep` goes, and so does the band hue (teal, amber, coral): the word says the band.
-- **Neutral light** for cards that speak for no one metric (Your week, Workouts, strips): hsl 220 10% 55%.
+- **Neutral light** for cards that speak for no one metric (Weekly report, Workouts, strips): hsl 220 10% 55%.
 - **Green and amber** (`good`, `warn`) are for the strap and sync only, never a health value. `bad` goes.
 
 Surfaces and greys:
@@ -161,7 +161,7 @@ Breathing disturbances are "an hour" on the Wide and the Small.
 
 **One dotted number per card.** A card has at most one number in dots, its answer. Times, ranges, totals and second
 figures are text in Body or Secondary. A list has one per row. This holds everywhere: the sleep hero (5.2), the Sleep
-score detail, Your week (steps a day in dots, sleep and workouts as text under it), the workout pages (6.3). Six dot sizes, the gap between dots 0.38 of the
+score detail, the weekly report (the Recovery average in dots, the rest of the week as text under it), the workout pages (6.3). Six dot sizes, the gap between dots 0.38 of the
 dot:
 
 | Dot | Where |
@@ -205,7 +205,7 @@ centred and at most 960 dp wide. Type and dot sizes stay the same, and cards onl
 strips span both columns. Each grid row is one block, so a Pair or TallPair stays together in one column. A Small is
 never narrower than on a folded phone (176 dp): where a column can't hold two that wide (the Fold's inner screen), a
 Pair or TallPair spans both columns as a row of its own, and the cards around it keep their columns. The two
-columns are balanced by height: when one would end well below the other, its last block (Habit Age, Your week, as a
+columns are balanced by height: when one would end well below the other, its last block (Habit Age, the weekly report, as a
 rule the last optional card) moves to the foot of the shorter one. The tab bar stays centred over the content, with
 its fade (3.2).
 
@@ -244,7 +244,7 @@ column under it and the last of each column over it, on Today as on the tabs. Tw
 edge (one lit from below, one from above, or from the left). When two neighbours would look the same, the later one
 flips its edge first. If that still clashes it takes another tier the spec gives it (Last night as a strip, a list on
 a neutral edge card, the second glow as its level edge card) or the neutral light. Only then does a card move, and only one
-whose place is open: a pin, Your week or Habit Age, to the nearest place it fits, never splitting a Small pair.
+whose place is open: a pin, the weekly report or Habit Age, to the nearest place it fits, never splitting a Small pair.
 `varyLooks` applies this to Today after Edit Today's pins and hides.
 
 #### Glow card
@@ -515,7 +515,8 @@ page loses its way back.
 
 **Strap page**: hero glow card with the strap, state line with relative time and battery. Sync now and Find strap.
 Rows with values: Alarms, Phone alerts, Health alerts, Off-body reminder, Auto-detect workouts (moved from Activity),
-Stay connected in background, Firmware, Zepp account (moved out of Firmware). Then Restart and Forget. Alarms,
+Move reminder (the strap buzzes after a stretch without steps in working hours; the row opens its hours, stretch and
+days, its switch turns it on), Stay connected in background, Firmware, Zepp account (moved out of Firmware). Then Restart and Forget. Alarms,
 Firmware and Profile pages move to the same edge and list styling (no Material panels).
 
 **Every page over a tab** (You, Strap, details, Habit Age, All workouts, Alarms, Phone alerts, Health alerts,
@@ -626,8 +627,10 @@ Present in every moment when they apply:
 - "Start a workout" (strip, heart light from below) above Edit Today, in every moment except during a workout and
   the workout window, whose hero has Start. The title, your usual sport under it ("Outdoor run, your usual") and a
   44 dp white play button. Tapping opens Ready with that sport.
-- "Your week" (wide edge card, neutral light from the bottom) Monday through Sunday, opening the week story. Steps a
-  day in dots, the other two figures as text (2.3).
+- "Weekly report" (wide edge card, neutral light from the bottom), the last 7 days to today, opening Reports on the
+  week. The week's Recovery average in dots, and under it how it compares with the 3 weeks before; the Load a day,
+  the workouts and the sleep a night as a line of text (2.3). On Mondays the week is fresh, so it comes straight under
+  the hero (after anything that needs an answer); the other days it closes the list, before Habit Age.
 - Habit Age (edge, left, the same card as on Recovery) only when there's a new estimate: from the Sunday it updates
   until it has been opened or the Monday ends. Pinned in Edit Today it shows every day. Never before the first
   estimate, pinned or not.

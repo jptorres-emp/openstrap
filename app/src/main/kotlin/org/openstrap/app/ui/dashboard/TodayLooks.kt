@@ -27,8 +27,8 @@ private fun heroHue(moment: Moment?): Hue = when (moment) {
 
 /**
  * The look [slot] has on its own (spec 2.4): the edge follows what the card is about, and a Small or Tall is a shape
- * of its own. Heart rate is lit from the right only while the reading is [live]. Your week is a neutral edge from the
- * bottom: a summary of steps, sleep and workouts at their usual, in no one metric's colour. After a workout Load is a
+ * of its own. Heart rate is lit from the right only while the reading is [live]. The weekly report is a neutral edge
+ * from the bottom: Recovery, effort and sleep over the week, in no one metric's colour. After a workout Load is a
  * Small toward your usual (from below) and Time to recover the Small beside it.
  */
 fun defaultLook(slot: TodaySlot, moment: Moment?, live: Boolean = false): CardLook = ownLook(slot, moment, live).copy(shape = Shape.of(slot.size))
@@ -83,7 +83,7 @@ fun lookClashes(
     neighbours(slots, wide, smallsAcross).filter { (a, b) -> slots[a].lookOr(moment, live).sameDesign(slots[b].lookOr(moment, live)) }
         .sortedWith(compareBy({ it.second }, { it.first }))
 
-/** Cards whose place the spec leaves open: pins (only "under the hero"), and Your week and Habit Age, which close the list. */
+/** Cards whose place the spec leaves open: pins (only "under the hero"), and the weekly report and Habit Age, which close the list. */
 private fun TodaySlot.movable() =
     (pinned || card == TodayCard.Week || card == TodayCard.HabitAge) && size != CardSize.Small && size != CardSize.Tall
 

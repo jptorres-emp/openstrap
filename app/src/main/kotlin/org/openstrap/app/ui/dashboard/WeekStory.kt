@@ -6,7 +6,7 @@ import java.util.Locale
 import org.openstrap.app.l10n.tr
 
 /*
- * The week story (spec 4.2), opened from Your week on Today: last Monday to Sunday day by day, from what the app keeps.
+ * The week story, opened from the foot of the weekly report: last Monday to Sunday day by day, from what the app keeps.
  * Steps a day, active minutes, the workouts done and the night's sleep after each day. It compares with the week
  * before only where that week is kept: steps (stored per day) and workouts. Active minutes are worked out for the
  * 14 days ending on the day shown and nights load 14 back, so neither reaches the week before. Pure, like [TodayCopy].

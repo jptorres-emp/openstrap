@@ -72,7 +72,7 @@ class TodayLooksTest {
             val after = today(Moment.After, TodayFacts(workout = true), wide = wide)
             assertEquals(CardLook(Tier.Edge, Hue.Load, Edge.Bottom, Shape.Small), after.first { it.card == LoadToday }.look)
             assertEquals(CardLook(Tier.Edge, Hue.Load, Edge.Top, Shape.Small), after.first { it.card == TodayCard.Recover }.look)
-            // Activity is lit from below, so Your week under it flips to the top.
+            // Activity is lit from below, so the weekly report under it flips to the top.
             assertEquals(Edge.Top, after.first { it.card == Week }.look?.edge)
             assertVaried(after, wide, "after wide=$wide")
         }

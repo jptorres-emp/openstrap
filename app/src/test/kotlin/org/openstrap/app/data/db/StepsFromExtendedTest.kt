@@ -64,4 +64,18 @@ class StepsFromExtendedTest {
         assertEquals(listOf(48, 66), minutes.map { it.steps })
         assertEquals(listOf(0, 0), minutes.map { it.kind })
     }
+
+    @Test
+    fun theRepairsAfterEachSyncLeaveFilledMinutesAsTheyAre() = runTest {
+        dao.insertActivityExtended(listOf(extended(t0, 50)))
+        dao.fillStepsFromExtended(t0, t0)
+        // A whole mode byte from an earlier build: only that one is cut to its nibble.
+        dao.insertActivity(listOf(ActivityMinute(t0 + 60, 30, 10, 0x21, 90)))
+        assertEquals(1, dao.fixActivityModeNibble())
+        assertEquals(listOf(ActivityMinute.KIND_FROM_EXTENDED, 1), dao.activityOnce(t0, t0 + 120).map { it.kind })
+        // The last activity record is the strap's own, not a filled-in minute after it.
+        dao.insertActivityExtended(listOf(extended(t0 + 300, 20)))
+        dao.fillStepsFromExtended(t0 + 300, t0 + 300)
+        assertEquals(t0 + 60, dao.latestActivity(t0 + 600))
+    }
 }

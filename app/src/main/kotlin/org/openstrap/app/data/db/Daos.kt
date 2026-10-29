@@ -341,7 +341,8 @@ interface HealthDao {
     @Query("SELECT * FROM hrv_sdnn WHERE timestamp BETWEEN :from AND :to ORDER BY timestamp")
     fun hrvSdnn(from: Long, to: Long): Flow<List<HrvSdnnSample>>
 
-    @Query("UPDATE activity_minute SET kind = kind & 15 WHERE kind > 15 AND kind != 126")
+    /** Keeps the mode's low nibble where earlier builds stored the whole byte; not-worn (126) and filled-in minutes keep theirs. */
+    @Query("UPDATE activity_minute SET kind = kind & 15 WHERE kind > 15 AND kind != 126 AND kind != ${ActivityMinute.KIND_FROM_EXTENDED}")
     suspend fun fixActivityModeNibble(): Int
 
     /** The strap re-sends a day's sleep as it updates it; drop the old version first. */
@@ -430,7 +431,8 @@ interface HealthDao {
     @Query("DELETE FROM activity_minute WHERE timestamp < :from OR timestamp > :to")
     suspend fun deleteActivityOutside(from: Long, to: Long): Int
 
-    @Query("SELECT MAX(timestamp) FROM activity_minute WHERE timestamp <= :before")
+    /** The last activity record's minute up to [before]; minutes filled in from the extended records don't count. */
+    @Query("SELECT MAX(timestamp) FROM activity_minute WHERE timestamp <= :before AND kind != ${ActivityMinute.KIND_FROM_EXTENDED}")
     suspend fun latestActivity(before: Long): Long?
 
     @Query("SELECT * FROM activity_minute WHERE timestamp BETWEEN :from AND :to ORDER BY timestamp")

@@ -38,6 +38,9 @@ object ReportCopy {
     /* ------------------------------------------- Today's weekly card --------------------------------------- */
 
     val WEEK_CARD_TITLE: String get() = tr("Weekly report", "Relatório da semana")
+
+    /** At the foot of the weekly report: the week story, last Monday to Sunday day by day. */
+    val WEEK_STORY_LINK: String get() = tr("Last week, day by day", "A semana passada, dia a dia")
     val WEEK_CARD_UNIT: String get() = tr("Recovery average", "Recuperação média")
 
     /** Under the week's Recovery average on Today: how it compares with the 3 weeks before. */

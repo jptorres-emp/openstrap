@@ -67,6 +67,14 @@ plus steps, heart rate and the strap's workout calories), for each of the last 2
 four weeks as bars. A day under way is left out. Food isn't counted, so the card says what the number is for: to lose
 fat, burn more than you eat. Without age, weight and height there's no estimate, and a row to add them.
 
+## 4b. Weight
+
+Fat loss's result, beside the calories that feed it. You log a weight (`WeightEntry`, one a day: a second the same day
+replaces it) from the card or the profile; logging also makes it the profile's weight, which the energy estimate uses.
+The card shows the latest in dots, the last 8 weeks' averages as a line (`Training.weightWeeks`), and the trend
+(`Training.weightTrend`): the last 7 days' average against the first logged week in the 4 weeks before them, so a
+morning's water or salt doesn't read as a trend. The reports carry the average weight of the week or month.
+
 ## 5. What each card leaves to the others
 
 * Today's Recovery, the day's Load and the time to recover stay on Today and Activity: the tab says what to do with

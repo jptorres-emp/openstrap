@@ -153,7 +153,7 @@ class TodayCopyTest {
     @Test fun `no sentence carries the forbidden marks`() {
         val all = listOf(
             TodayCopy.waking(1000, 80, false, null, false, true), TodayCopy.waking(1000, null, false, learning, false, true),
-            TodayCopy.WEEK_FIRST, TodayCopy.recoverText(5000, at(10), zone).second, TodayCopy.charge(50, 30, true, 10),
+            TodayCopy.recoverText(5000, at(10), zone).second, TodayCopy.charge(50, 30, true, 10),
             TodayCopy.window(1, 50), TodayCopy.after(80, 50), TodayCopy.evening(listOf(1), 9000, 8000, LoadStatus.Usual, Locale.UK),
         )
         all.forEach { s -> listOf("·", ";", "—").forEach { assertFalse("$s has $it", it in s) } }

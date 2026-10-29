@@ -288,10 +288,7 @@ object TodayCopy {
         LoadStatus.SoFar -> tr("Load so far today", "Carga de hoje até agora")
     }
 
-    /** Under Your week before there's a week before it to compare with. */
-    val WEEK_FIRST: String get() = tr("Week on week comparisons start next Monday.", "As comparações semana a semana começam na próxima segunda-feira.")
-
-    /** The week Your week tells (spec 4.2): Monday to Sunday, the last full week before [date]. */
+    /** The week the week story tells: Monday to Sunday, the last full week before [date]. */
     fun lastWeek(date: LocalDate): ClosedRange<LocalDate> {
         val start = date.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)).minusWeeks(1)
         return start..start.plusDays(6)

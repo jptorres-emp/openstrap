@@ -57,7 +57,7 @@ import org.openstrap.app.l10n.tr
 
 /*
  * The Activity tab's details (spec 5.3 and 6.1) in the metric template: Heart points, active minutes, Load, VO2 max,
- * time to recover, energy and distance, and the week story opened from Your week on Today. None has a per-day series
+ * time to recover, energy and distance, and the week story opened from the weekly report. None has a per-day series
  * like a metric's, so each range stops where the app's history of it does: Heart points as far as the strap's daily
  * records go, active minutes the 14 days the day works out, Load the 30 days before it, the rest only the day shown.
  * The method behind every number is in its info sheet ([InfoCopy]).
@@ -619,7 +619,7 @@ private fun ActivityRelated(current: Score, ctx: ActivityDetailContext, heartPoi
 /* ----------------------------------------------- Week ----------------------------------------------- */
 
 /**
- * The week story, opened from Your week on Today: last Monday to Sunday, steps a day as dot bars to scrub, the week in
+ * The week story, opened from the foot of the weekly report: last Monday to Sunday, steps a day as dot bars to scrub, the week in
  * a few numbers, a sentence comparing with the week before where it's kept, and each day's line. No strip: tapping a
  * day there would move the day shown, and with it the week.
  */
@@ -656,7 +656,7 @@ internal fun WeekDetail(ctx: ActivityDetailContext) {
         else -> DetailHeadline.none(tr("No steps", "Sem passos"), tr("Monday to Sunday last week", "De segunda a domingo da semana passada"))
     }
     DetailTemplate(
-        tr("Your week", "A tua semana"), color, emptyList(), onInfo = { info = true }, onBack = ctx.onBack, contentPadding = ctx.contentPadding,
+        tr("Last week", "A semana passada"), color, emptyList(), onInfo = { info = true }, onBack = ctx.onBack, contentPadding = ctx.contentPadding,
         headline = headline, strip = emptyList(), onDay = {}, ranges = listOf(Range.Week), range = Range.Week, onRange = {},
     ) {
         val values = days.map { (it.steps ?: 0).toFloat() }

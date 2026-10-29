@@ -44,8 +44,11 @@ class CopyPunctuationTest {
                 if (key in allowed) used += key else found += "$path:${lit.line}  \"${lit.text}\""
             }
         }
-        File(root, "res/values/strings.xml").takeIf { it.isFile }?.readLines()?.forEachIndexed { i, line ->
-            if (line.any { it in banned }) found += "res/values/strings.xml:${i + 1}  ${line.trim()}"
+        // Every language's strings: English and Portuguese.
+        File(root, "res").listFiles().orEmpty().filter { it.name.startsWith("values") }.sortedBy { it.name }.forEach { dir ->
+            File(dir, "strings.xml").takeIf { it.isFile }?.readLines()?.forEachIndexed { i, line ->
+                if (line.any { it in banned }) found += "res/${dir.name}/strings.xml:${i + 1}  ${line.trim()}"
+            }
         }
         // The widgets' provider XML (widgets spec 8).
         File(root, "res/xml").listFiles().orEmpty().filter { it.name.startsWith("widget_") && it.extension == "xml" }.sortedBy { it.name }.forEach { f ->

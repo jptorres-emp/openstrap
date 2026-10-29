@@ -1,0 +1,28 @@
+<resources>
+    <!-- Portuguese (Portugal) for what the launcher shows in the phone's language: the shortcuts, the tile and the
+         widget picker. Everything inside the app follows Settings, Language (l10n/L10n.kt). -->
+    <string name="shortcut_run">Começar a correr</string>
+    <string name="shortcut_strength">Começar treino de força</string>
+    <string name="tile_workout">Começar treino</string>
+    <string name="widget_moment_name">Momento</string>
+    <string name="widget_moment_description">O que importa agora, ao longo do dia</string>
+    <string name="widget_recovery_name">Recuperação</string>
+    <string name="widget_recovery_description">A recuperação desta manhã e o que está por trás dela</string>
+    <string name="widget_steps_name">Passos</string>
+    <string name="widget_steps_description">Os passos de hoje e o teu objetivo</string>
+    <string name="widget_sleep_name">Sono</string>
+    <string name="widget_sleep_description">A pontuação da noite passada, o tempo a dormir e as fases</string>
+    <string name="widget_start_name">Começar um treino</string>
+    <string name="widget_start_description">Começa o teu desporto habitual com um toque</string>
+    <string name="preview_moment_title">Meio do dia</string>
+    <string name="preview_moment_label">Energia restante</string>
+    <string name="preview_recovery_word">Pronto</string>
+    <string name="preview_sleep_title">A noite passada</string>
+    <string name="preview_sleep_word">Boa</string>
+    <string name="preview_sleep_asleep">7 h 40 a dormir</string>
+    <string name="preview_steps_value">8432</string>
+    <string name="preview_steps_today">hoje</string>
+    <string name="preview_steps_goal" formatted="false">84% do objetivo</string>
+    <string name="preview_start_sport">Corrida ao ar livre</string>
+    <string name="preview_start_usual">O habitual</string>
+</resources>

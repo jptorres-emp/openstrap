@@ -15,7 +15,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Midday"
+        android:text="@string/preview_moment_title"
         android:textSize="13sp"
         android:textColor="#99FFFFFF"
         android:fontFamily="sans-serif-medium"
@@ -37,7 +37,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Energy left"
+        android:text="@string/preview_moment_label"
         android:textSize="15sp"
         android:textColor="#B8FFFFFF"
         android:maxLines="1"

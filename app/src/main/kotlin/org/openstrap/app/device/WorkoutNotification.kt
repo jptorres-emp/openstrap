@@ -21,6 +21,7 @@ import org.openstrap.app.data.Workouts
 import org.openstrap.app.ui.workout.NotificationCopy
 import org.openstrap.app.ui.workout.WorkoutCard
 import org.openstrap.app.ui.workout.ZONE_COLORS
+import org.openstrap.app.l10n.tr
 
 /**
  * The ongoing workout notification as the black card (patterns D4), for phones that don't show it as a Live Update,
@@ -46,7 +47,7 @@ object WorkoutNotification {
 
     fun createChannel(context: Context) {
         context.getSystemService(NotificationManager::class.java)
-            .createNotificationChannel(NotificationChannel(CHANNEL, "Workout", NotificationManager.IMPORTANCE_LOW))
+            .createNotificationChannel(NotificationChannel(CHANNEL, tr("Workout", "Treino"), NotificationManager.IMPORTANCE_LOW))
     }
 
     /**
@@ -54,11 +55,11 @@ object WorkoutNotification {
      * [intent] makes each one's pending intent from its service action.
      */
     fun actions(paused: Boolean, confirming: Boolean, intent: (String) -> PendingIntent): List<NotificationCompat.Action> = when {
-        confirming -> listOf(action("Yes, end", intent(StrapService.ACTION_END)), action("Cancel", intent(StrapService.ACTION_END_CANCEL)))
-        paused -> listOf(action("Resume", intent(StrapService.ACTION_RESUME)), action("End", intent(StrapService.ACTION_END_ASK)))
+        confirming -> listOf(action(tr("Yes, end", "Sim, terminar"), intent(StrapService.ACTION_END)), action(tr("Cancel", "Cancelar"), intent(StrapService.ACTION_END_CANCEL)))
+        paused -> listOf(action(tr("Resume", "Retomar"), intent(StrapService.ACTION_RESUME)), action(tr("End", "Terminar"), intent(StrapService.ACTION_END_ASK)))
         else -> listOf(
-            action("Pause", intent(StrapService.ACTION_PAUSE)), action("Lap", intent(StrapService.ACTION_LAP)),
-            action("End", intent(StrapService.ACTION_END_ASK)),
+            action(tr("Pause", "Pausa"), intent(StrapService.ACTION_PAUSE)), action(tr("Lap", "Volta"), intent(StrapService.ACTION_LAP)),
+            action(tr("End", "Terminar"), intent(StrapService.ACTION_END_ASK)),
         )
     }
 

@@ -14,4 +14,16 @@
     <string name="widget_sleep_description">Last night\'s score, time asleep and stages</string>
     <string name="widget_start_name">Start a workout</string>
     <string name="widget_start_description">Start your usual sport in one tap</string>
+    <!-- The picker previews' sample day (widgets spec 6.4), for Android 12 to 14. -->
+    <string name="preview_moment_title">Midday</string>
+    <string name="preview_moment_label">Energy left</string>
+    <string name="preview_recovery_word">Ready</string>
+    <string name="preview_sleep_title">Last night</string>
+    <string name="preview_sleep_word">Good</string>
+    <string name="preview_sleep_asleep">7 h 40 asleep</string>
+    <string name="preview_steps_value">8,432</string>
+    <string name="preview_steps_today">today</string>
+    <string name="preview_steps_goal" formatted="false">84% of your goal</string>
+    <string name="preview_start_sport">Outdoor run</string>
+    <string name="preview_start_usual">Your usual</string>
 </resources>

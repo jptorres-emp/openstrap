@@ -8,6 +8,7 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.pow
 import kotlin.math.sign
+import org.openstrap.app.l10n.tr
 
 /**
  * OpenStrap's own recovery model: a morning **Readiness** score and a minute-by-minute **Charge** (body
@@ -399,7 +400,10 @@ object Recovery {
             val zNight = hrvBase.z(ln)
             val z = if (hrv7 != null) HRV_NIGHT_WEIGHT * zNight + HRV_WEEK_WEIGHT * hrvBase.z(hrv7) else zNight
             val pct = ((exp(ln - hrvBase.centre.toDouble()) - 1) * 100).toInt()
-            out += Contributor(Factor.HrvBalance, scoreFromZ(deadZone(z)), "${tonight.hrv!!.toInt()} ms, ${signed(pct)}% vs usual")
+            out += Contributor(Factor.HrvBalance, scoreFromZ(deadZone(z)), tr(
+                "${tonight.hrv!!.toInt()} ms, ${signed(pct)}% vs usual",
+                "${tonight.hrv!!.toInt()} ms, ${signed(pct)}% face ao habitual",
+            ))
         }
 
         // Resting heart rate: the night's lowest 30-minute average against baseline; lower is better.
@@ -407,7 +411,10 @@ object Recovery {
         val rhr = tonight.validRestingHr
         if (scored && rhrBase != null && rhr != null) {
             val delta = rhr - rhrBase.centre
-            out += Contributor(Factor.RestingHr, scoreFromZ(deadZone(-rhrBase.z(rhr))), "${rhr.toInt()} bpm, ${signed(delta, 0)} vs usual")
+            out += Contributor(Factor.RestingHr, scoreFromZ(deadZone(-rhrBase.z(rhr))), tr(
+                "${rhr.toInt()} bpm, ${signed(delta, 0)} vs usual",
+                "${rhr.toInt()} bpm, ${signed(delta, 0)} face ao habitual",
+            ))
         }
 
         // The strap's own values: a fallback for display when ours failed the validity rule, and a quality check.
@@ -424,12 +431,12 @@ object Recovery {
         }
 
         // Last night's sleep: the strap's own score when there is one, else ours.
-        out += Contributor(Factor.Sleep, tonight.strapScore ?: sleepScore(tonight, sleepNeed), formatMinutes(tonight.asleepMinutes) + " asleep")
+        out += Contributor(Factor.Sleep, tonight.strapScore ?: sleepScore(tonight, sleepNeed), formatMinutes(tonight.asleepMinutes) + tr(" asleep", " a dormir"))
 
         // Sleep balance: debt built over the last 14 nights, against need (naps count).
         sleepDebtMinutes(earlier + tonight, tonight.day, sleepNeed)?.let { debt ->
             val score = (100 - SLEEP_DEBT_POINTS_PER_HOUR * debt / 60f).toInt().coerceIn(0, 100)
-            val detail = if (debt < 3f) "No sleep debt" else "${formatMinutes(debt.toInt())} of sleep debt"
+            val detail = if (debt < 3f) tr("No sleep debt", "Sem dívida de sono") else tr("${formatMinutes(debt.toInt())} of sleep debt", "${formatMinutes(debt.toInt())} de dívida de sono")
             out += Contributor(Factor.SleepBalance, score, detail)
         }
 
@@ -438,7 +445,10 @@ object Recovery {
             val p = (tonight.nadirTime - tonight.start).toFloat() / (tonight.end - tonight.start)
             val score = if (p <= 0.5f) 100 else (100 - 120 * (p - 0.5f)).toInt().coerceIn(40, 100)
             val after = ((tonight.end - tonight.nadirTime) / 60).toInt()
-            out += Contributor(Factor.RecoveryIndex, score, "Lowest heart rate ${formatMinutes(after)} before waking")
+            out += Contributor(Factor.RecoveryIndex, score, tr(
+                "Lowest heart rate ${formatMinutes(after)} before waking",
+                "FC mais baixa ${formatMinutes(after)} antes de acordar",
+            ))
         }
 
         // Body temperature: distance from the usual nightly skin temperature, either direction, through the dead zone.
@@ -446,7 +456,7 @@ object Recovery {
         tonight.skinTemperature?.let { t ->
             if (tempBase != null) {
                 val dev = t - tempBase.centre
-                out += Contributor(Factor.Temperature, scoreFromZ(-abs(deadZone(tempBase.z(t)))), "${signed(dev, 1)} °C vs usual")
+                out += Contributor(Factor.Temperature, scoreFromZ(-abs(deadZone(tempBase.z(t)))), tr("${signed(dev, 1)} °C vs usual", "${signed(dev, 1)} °C face ao habitual"))
             }
         }
 
@@ -455,7 +465,7 @@ object Recovery {
         tonight.breathRate?.let { b ->
             if (breathBase != null) {
                 val dev = b - breathBase.centre
-                out += Contributor(Factor.Breathing, scoreFromZ(-abs(deadZone(breathBase.z(b)))), "${signed(dev, 1)} /min vs usual")
+                out += Contributor(Factor.Breathing, scoreFromZ(-abs(deadZone(breathBase.z(b)))), tr("${signed(dev, 1)} /min vs usual", "${signed(dev, 1)} /min face ao habitual"))
             }
         }
 
@@ -465,7 +475,10 @@ object Recovery {
             if (spo2Base != null) {
                 val dev = o - spo2Base.centre
                 val score = (100 - SPO2_POINTS_PER_PERCENT * (-dev - SPO2_DEAD_BAND).coerceAtLeast(0f)).toInt().coerceIn(0, 100)
-                out += Contributor(Factor.BloodOxygen, score, "${"%.1f".format(o)} %, ${signed(dev, 1)} vs usual")
+                out += Contributor(Factor.BloodOxygen, score, tr(
+                    "${"%.1f".format(o)} %, ${signed(dev, 1)} vs usual",
+                    "${"%.1f".format(o)} %, ${signed(dev, 1)} face ao habitual",
+                ))
             }
         }
 
@@ -475,7 +488,10 @@ object Recovery {
             val yesterday = dailyLoad.last()
             val ratio = yesterday / max(chronic, MIN_CHRONIC_LOAD)
             val score = if (ratio <= 1.5f) 100 else (100 - 25 * (ratio - 1.5f)).toInt().coerceIn(30, 100)
-            out += Contributor(Factor.PreviousDayLoad, score, "Load ${yesterday.toInt()}, usual ${chronic.toInt()}")
+            out += Contributor(Factor.PreviousDayLoad, score, tr(
+                "Load ${yesterday.toInt()}, usual ${chronic.toInt()}",
+                "Carga ${yesterday.toInt()}, habitual ${chronic.toInt()}",
+            ))
         }
 
         val alert = body.state == BodySignals.State.Alert

@@ -103,7 +103,7 @@ fun YouPage(
                 )
                 PageRow(tr("Restore from a copy", "Repor a partir de uma cópia"), tr("For days before the strap's history", "Para dias anteriores ao histórico da strap"), onClick = onRestoreCopy, below = true, icon = AppIcons.UploadSimple)
                 PageRow("Health Connect", tr("Copy your data to Android Health Connect", "Copiar os teus dados para o Health Connect do Android"), onClick = onHealthConnect, below = true, icon = AppIcons.Heartbeat)
-                PageRow(tr("Restore from Health Connect", "Repor do Health Connect"), tr("Bring back what OpenStrap saved there", "Recuperar o que o OpenStrap lá guardou"), onClick = onRestoreHealthConnect, below = true, icon = AppIcons.ArrowCounterClockwise)
+                PageRow(tr("Restore from Health Connect", "Repor do Health Connect"), tr("Bring back what OpenStrap saved there", "Recuperar o que a OpenStrap lá guardou"), onClick = onRestoreHealthConnect, below = true, icon = AppIcons.ArrowCounterClockwise)
             }
         }
         item {

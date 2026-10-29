@@ -318,7 +318,7 @@ private fun KeepConnectedRow(vm: DeviceViewModel, keepConnected: KeepConnected, 
     val associated by vm.companion.associated.collectAsState()
     val ignoringBattery by vm.companion.ignoringBatteryOptimizations.collectAsState()
     val declined by vm.companionDeclined.collectAsState()
-    val title: String get() = tr("Stay connected in background", "Manter ligada em segundo plano")
+    val title = tr("Stay connected in background", "Manter ligada em segundo plano")
     val icon = AppIcons.Bluetooth
     when {
         associated -> PageRow(title, tr("On", "Ligado"), icon = icon)

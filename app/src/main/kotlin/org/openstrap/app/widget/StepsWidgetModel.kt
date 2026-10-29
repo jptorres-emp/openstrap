@@ -11,6 +11,7 @@ import java.time.format.TextStyle
 import java.time.temporal.TemporalAdjusters
 import java.util.Locale
 import kotlin.math.ceil
+import org.openstrap.app.l10n.tr
 
 /** How a day of this week stands against the goal, which colours its bar on the Large. */
 enum class StepsDay {
@@ -71,13 +72,16 @@ data class StepsWidgetModel(
     val showLine: Boolean get() = steps > 0 && line.size >= 2
 
     /** What TalkBack reads for the dotted number: "8,432 steps today, 84% of your goal". */
-    val description: String get() = "$stepsText steps today, ${share.replaceFirstChar { it.lowercase() }}"
+    val description: String get() = tr(
+        "$stepsText steps today, ${share.replaceFirstChar { it.lowercase() }}",
+        "$stepsText passos hoje, ${share.replaceFirstChar { it.lowercase() }}",
+    )
 
     companion object {
-        const val TITLE = "Steps"
-        const val TODAY = "today"
-        const val GOAL_MET = "Goal met"
-        const val THIS_WEEK = "This week"
+        val TITLE: String get() = tr("Steps", "Passos")
+        val TODAY: String get() = tr("today", "hoje")
+        val GOAL_MET: String get() = tr("Goal met", "Objetivo cumprido")
+        val THIS_WEEK: String get() = tr("This week", "Esta semana")
 
         /**
          * The widget for [today] at [hour]: [steps] so far (the live total, as Today's card shows it), the day's
@@ -96,7 +100,7 @@ data class StepsWidgetModel(
                 date = today,
                 title = TITLE,
                 goal = goal,
-                goalNote = "Goal ${format(goal)}",
+                goalNote = tr("Goal ${format(goal)}", "Objetivo ${format(goal)}"),
                 steps = steps,
                 stepsText = format(steps),
                 word = TODAY,
@@ -112,10 +116,13 @@ data class StepsWidgetModel(
         }
 
         /** "1,568 to go", or "Goal met" from the goal on. */
-        fun toGo(steps: Int, goal: Int): String = if (steps >= goal) GOAL_MET else "${format(goal - steps)} to go"
+        fun toGo(steps: Int, goal: Int): String = if (steps >= goal) GOAL_MET else tr("${format(goal - steps)} to go", "Faltam ${format(goal - steps)}")
 
         /** "Goal met 2 of 6 days", "Goal met 0 of 1 day". */
-        fun weekLine(met: Int, of: Int): String = "Goal met $met of $of ${if (of == 1) "day" else "days"}"
+        fun weekLine(met: Int, of: Int): String = tr(
+            "Goal met $met of $of ${if (of == 1) "day" else "days"}",
+            "Objetivo cumprido em $met de $of ${if (of == 1) "dia" else "dias"}",
+        )
 
         /** Monday to Sunday of [today]'s week, each day as it stands against [goal]. */
         fun week(today: LocalDate, steps: Int, goal: Int, past: Map<LocalDate, Int>, locale: Locale): List<StepsWeekDay> {

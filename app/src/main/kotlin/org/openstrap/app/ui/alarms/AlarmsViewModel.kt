@@ -13,6 +13,7 @@ import org.openstrap.protocol.services.AlarmCapabilities
 import org.openstrap.protocol.services.Setting
 import org.openstrap.protocol.services.SettingsCodec
 import org.openstrap.protocol.services.SettingsGroup
+import org.openstrap.app.l10n.tr
 
 data class AlarmsUiState(
     val loading: Boolean = true,
@@ -82,7 +83,7 @@ class AlarmsViewModel(private val strap: StrapController) : ViewModel() {
     fun setEnum(key: Int, value: Int) = writeHealth { listOf(SettingsCodec.enumSetting(key, value)) }
 
     private fun writeHealth(build: (SettingsGroup) -> List<Setting>) = run {
-        val g = _state.value.health ?: throw StrapCommandException("Settings haven't loaded yet")
+        val g = _state.value.health ?: throw StrapCommandException(tr("Settings haven't loaded yet", "As definições ainda não carregaram"))
         strap.writeHealthSettings(g.version, build(g))
     }
 

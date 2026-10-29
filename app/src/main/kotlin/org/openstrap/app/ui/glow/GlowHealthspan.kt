@@ -42,13 +42,13 @@ internal fun healthspanVerdict(age: Int, estimate: Float): String {
     return when {
         years > 0 -> tr(
             "$years ${if (years == 1) "year" else "years"} younger",
-            "$years ${if (years == 1) "ano" else "anos"} mais novo",
-        )")} younger"
+            "$years ${if (years == 1) "ano" else "anos"} abaixo da tua idade",
+        )
         years < 0 -> tr(
             "${-years} ${if (-years == 1) "year" else "years"} older",
-            "${-years} ${if (-years == 1) "ano" else "anos"} mais velho",
-        )os")} older"
-        else -> tr("Right on your age", "Mesmo na tua idade")
+            "${-years} ${if (-years == 1) "ano" else "anos"} acima da tua idade",
+        )
+        else -> tr("Right on your age", "Igual à tua idade")
     }
 }
 
@@ -66,15 +66,17 @@ internal fun paceText(pace: Float): String = if (pace % 1f == 0f) "${pace.toInt(
 /** "takes off about 1 year", "adds about ½ year", "takes off a few months" or "no change". */
 internal fun effectText(years: Float): String {
     val y = abs(years)
-    val verb = if (years < 0) tr("takes off", "tira") else tr("adds", "junta")
+    val verb = if (years < 0) tr("takes off", "tira") else tr("adds", "acrescenta")
     return when {
         y < 0.05f -> tr("no change", "sem mudança")
         y < 0.375f -> tr("$verb a few months", "$verb alguns meses")
         y < 0.75f -> tr("$verb about ½ year", "$verb cerca de ½ ano")
-        else -> y.roundToInt().let { tr(
-            "$verb about $it ${if (it == 1) "year" else "years"}",
-            "$verb cerca de $it ${if (it == 1) "ano" else "anos"}",
-        )", "anos")}" }
+        else -> y.roundToInt().let {
+            tr(
+                "$verb about $it ${if (it == 1) "year" else "years"}",
+                "$verb cerca de $it ${if (it == 1) "ano" else "anos"}",
+            )
+        }
     }
 }
 

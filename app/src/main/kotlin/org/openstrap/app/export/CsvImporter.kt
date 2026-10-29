@@ -6,6 +6,7 @@ import java.io.InputStream
 import java.time.Instant
 import java.time.ZoneId
 import java.util.zip.ZipInputStream
+import org.openstrap.app.l10n.tr
 
 /**
  * Restores a zip made by [CsvExporter] into the days before the strap's history. The strap keeps weeks of it and syncs
@@ -62,7 +63,7 @@ class CsvImporter(private val db: OpenStrapDatabase, private val zone: ZoneId = 
         for ((table, lines) in deletable) count(table, table.backfill(lines, added, gone[table.key.table].orEmpty()))
         for ((table, lines) in children) count(table, table.backfill(lines, added))
         // Throwing rolls back, so a zip that isn't ours leaves the database untouched.
-        if (counts.isEmpty()) throw IllegalArgumentException("This isn't an OpenStrap export.")
+        if (counts.isEmpty()) throw IllegalArgumentException(tr("This isn't an OpenStrap export.", "Isto não é uma exportação da OpenStrap."))
         Result(counts, present, skipped)
     }
 

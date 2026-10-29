@@ -68,6 +68,7 @@ import org.openstrap.protocol.services.TimeSync
 import org.openstrap.protocol.toHex
 import org.openstrap.protocol.u8
 import java.time.ZonedDateTime
+import org.openstrap.app.l10n.tr
 
 /**
  * Owns the connection to the strap: GATT, the channel session and everything built on it.
@@ -204,7 +205,7 @@ class StrapManager(
 
                 afterAuth(client, l, s)
                 // afterAuth swallows step failures, so a link that dropped during it would otherwise show as Connected.
-                if (!client.connected.value) throw GattException("Link lost during setup")
+                if (!client.connected.value) throw GattException(tr("Link lost during setup", "A ligação caiu durante a configuração"))
                 connection.value = ConnectionState.Connected(battery, firmware, charging)
                 watchBattery(s)
                 watchSteps(s)
@@ -228,7 +229,7 @@ class StrapManager(
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
                 log("connect failed: $e")
-                connection.value = ConnectionState.Failed(e.message ?: "Connection failed")
+                connection.value = ConnectionState.Failed(e.message?.let { tr(it, "A ligação falhou ($it)") } ?: tr("Connection failed", "A ligação falhou"))
                 close()
                 scheduleReconnect()
             }
@@ -555,16 +556,16 @@ class StrapManager(
     @Volatile private var sportCaps: SportSession.Capabilities? = null
 
     override suspend fun sportSession(state: SportSession.State, sportType: Int, startTime: Long, elapsedSeconds: Long) {
-        val s = activeSession ?: throw StrapCommandException("The strap isn't connected")
-        if (!s.services.has(SportSession.ENDPOINT)) throw StrapCommandException("The strap has no sport module")
+        val s = activeSession ?: throw StrapCommandException(tr("The strap isn't connected", "A strap não está ligada"))
+        if (!s.services.has(SportSession.ENDPOINT)) throw StrapCommandException(tr("The strap has no sport module", "A strap não tem módulo de desporto"))
         suspend fun send(request: ByteArray): ByteArray {
             val reply = runCatching { s.request(SportSession.ENDPOINT, request, 8_000) { SportSession.isReplyTo(request, it) } }
-                .getOrElse { throw StrapCommandException("The strap didn't answer") }
+                .getOrElse { throw StrapCommandException(tr("The strap didn't answer", "A strap não respondeu")) }
             log("sport > ${request.toHex()} < ${reply.toHex()}")
-            if (!SportSession.isOk(reply)) throw StrapCommandException("The strap refused the workout command")
+            if (!SportSession.isOk(reply)) throw StrapCommandException(tr("The strap refused the workout command", "A strap recusou o comando de treino"))
             return reply
         }
-        val caps = sportCaps ?: (SportSession.parseVersion(send(SportSession.versionRequest)) ?: throw StrapCommandException("Unknown sport module version"))
+        val caps = sportCaps ?: (SportSession.parseVersion(send(SportSession.versionRequest)) ?: throw StrapCommandException(tr("Unknown sport module version", "Versão desconhecida do módulo de desporto")))
             .also { sportCaps = it }
         if (state == SportSession.State.START) send(SportSession.config(sportType, caps))
         send(SportSession.state(state, startTime, elapsedSeconds, caps))
@@ -928,11 +929,11 @@ class StrapManager(
         timeoutMs: Long = 8_000,
         matches: (ByteArray) -> Boolean = { it.isNotEmpty() && it.u8(0) == request.u8(0) + 1 },
     ): ByteArray {
-        val s = activeSession ?: throw StrapCommandException("The strap isn't connected")
-        if (firmwareUpdating.value) throw StrapCommandException("Wait for the firmware update to finish")
+        val s = activeSession ?: throw StrapCommandException(tr("The strap isn't connected", "A strap não está ligada"))
+        if (firmwareUpdating.value) throw StrapCommandException(tr("Wait for the firmware update to finish", "Espera que a atualização de firmware termine"))
         val reply = runCatching {
             s.request(endpoint, request, timeoutMs, matches = matches)
-        }.getOrElse { throw StrapCommandException("The strap didn't answer") }
+        }.getOrElse { throw StrapCommandException(tr("The strap didn't answer", "A strap não respondeu")) }
         log("cmd %04x > %s < %s".format(endpoint, request.toHex(), reply.toHex()))
         return reply
     }
@@ -941,30 +942,30 @@ class StrapManager(
 
     private suspend fun alarmCaps(): AlarmCapabilities = alarmCaps ?: (
         AlarmCodec.parseVersion(command(Endpoints.ALARMS, AlarmCodec.versionRequest))
-            ?: throw StrapCommandException("The strap sent an unexpected alarm reply")
+            ?: throw StrapCommandException(tr("The strap sent an unexpected alarm reply", "A strap enviou uma resposta inesperada sobre os alarmes"))
         ).also { alarmCaps = it }
 
     override suspend fun readAlarms(): Pair<AlarmCapabilities, List<Alarm>> {
         val caps = alarmCaps()
         val list = AlarmCodec.parseList(command(Endpoints.ALARMS, AlarmCodec.listRequest), caps.titles)
-            ?: throw StrapCommandException("The strap sent an unexpected alarm list")
+            ?: throw StrapCommandException(tr("The strap sent an unexpected alarm list", "A strap enviou uma lista de alarmes inesperada"))
         return caps to list
     }
 
     override suspend fun saveAlarm(alarm: Alarm, isNew: Boolean) {
         val caps = alarmCaps()
         val request = if (isNew) AlarmCodec.add(alarm, caps.titles, caps.workdaysSupported) else AlarmCodec.modify(alarm, caps.titles, caps.workdaysSupported)
-        if (!AlarmCodec.isSuccess(request, command(Endpoints.ALARMS, request))) throw StrapCommandException("The strap didn't save the alarm")
+        if (!AlarmCodec.isSuccess(request, command(Endpoints.ALARMS, request))) throw StrapCommandException(tr("The strap didn't save the alarm", "A strap não guardou o alarme"))
     }
 
     override suspend fun deleteAlarm(index: Int) {
         val request = AlarmCodec.delete(index)
-        if (!AlarmCodec.isSuccess(request, command(Endpoints.ALARMS, request))) throw StrapCommandException("The strap didn't delete the alarm")
+        if (!AlarmCodec.isSuccess(request, command(Endpoints.ALARMS, request))) throw StrapCommandException(tr("The strap didn't delete the alarm", "A strap não apagou o alarme"))
     }
 
     override suspend fun clearAlarms() {
         val request = AlarmCodec.clearAllRequest
-        if (!AlarmCodec.isSuccess(request, command(Endpoints.ALARMS, request))) throw StrapCommandException("The strap didn't delete the alarms")
+        if (!AlarmCodec.isSuccess(request, command(Endpoints.ALARMS, request))) throw StrapCommandException(tr("The strap didn't delete the alarms", "A strap não apagou os alarmes"))
     }
 
     /** Learned on connect; null until then or when the strap didn't answer (then replies are read as v1–3). */
@@ -981,23 +982,23 @@ class StrapManager(
     override suspend fun readHealthSettings(): SettingsGroup {
         val protocol = settingsProtocol()
         val reply = settingsQuery(SettingsCodec.GROUP_HEALTH)
-        return SettingsCodec.parse(reply, protocol?.version) ?: throw StrapCommandException("The strap couldn't read its settings (code ${SettingsCodec.replyCode(reply)})")
+        return SettingsCodec.parse(reply, protocol?.version) ?: throw StrapCommandException(tr("The strap couldn't read its settings (code ${SettingsCodec.replyCode(reply)})", "A strap não conseguiu ler as definições (código ${SettingsCodec.replyCode(reply)})"))
     }
 
     override suspend fun writeHealthSettings(version: Int, settings: List<Setting>) {
         val reply = command(Endpoints.SETTINGS, SettingsCodec.write(SettingsCodec.GROUP_HEALTH, version, settings))
-        if (!SettingsCodec.isWriteSuccess(reply)) throw StrapCommandException("The strap didn't accept the setting (code ${reply.getOrNull(1)})")
+        if (!SettingsCodec.isWriteSuccess(reply)) throw StrapCommandException(tr("The strap didn't accept the setting (code ${reply.getOrNull(1)})", "A strap não aceitou a definição (código ${reply.getOrNull(1)})"))
     }
 
     /** Writes GENERAL key 45 = true with the group version just read (07 §0). The strap may drop the link before its ack. */
     override suspend fun restartStrap() {
         val group = SettingsCodec.parse(settingsQuery(SettingsCodec.GROUP_GENERAL, listOf(SettingsCodec.KEY_RESTART), withOptions = false), settingsProtocol()?.version)
-            ?: throw StrapCommandException("The strap couldn't read its settings")
-        val request = SettingsCodec.restartFor(group) ?: throw StrapCommandException("This strap can't be restarted from the app")
+            ?: throw StrapCommandException(tr("The strap couldn't read its settings", "A strap não conseguiu ler as definições"))
+        val request = SettingsCodec.restartFor(group) ?: throw StrapCommandException(tr("This strap can't be restarted from the app", "Esta strap não pode ser reiniciada a partir da app"))
         log("restart: asking the strap to restart")
         val reply = runCatching { command(Endpoints.SETTINGS, request) }
             .getOrElse { e -> if (activeSession == null) { log("restart: link dropped before the ack"); return } else throw e }
-        if (!SettingsCodec.isWriteSuccess(reply)) throw StrapCommandException("The strap didn't accept the restart (code ${reply.getOrNull(1)})")
+        if (!SettingsCodec.isWriteSuccess(reply)) throw StrapCommandException(tr("The strap didn't accept the restart (code ${reply.getOrNull(1)})", "A strap não aceitou reiniciar (código ${reply.getOrNull(1)})"))
     }
 
     /**
@@ -1027,7 +1028,7 @@ class StrapManager(
     }
 
     private suspend fun playMotor(pattern: List<Int>) {
-        if (!MotorVibrate.isOk(command(Endpoints.MOTOR_VIBRATE, MotorVibrate.play(pattern)))) throw StrapCommandException("The strap didn't buzz")
+        if (!MotorVibrate.isOk(command(Endpoints.MOTOR_VIBRATE, MotorVibrate.play(pattern)))) throw StrapCommandException(tr("The strap didn't buzz", "A strap não vibrou"))
         motorBusyUntil = SystemClock.elapsedRealtime() + pattern.sum()
     }
 
@@ -1081,7 +1082,7 @@ class StrapManager(
             delay(BUZZ_RESET_MS)
             command(Endpoints.FIND_DEVICE, FindDevice.BUZZ, BUZZ_REPLY_MS)
         }
-        if (!FindDevice.isBuzzOk(reply)) throw StrapCommandException("The strap didn't buzz")
+        if (!FindDevice.isBuzzOk(reply)) throw StrapCommandException(tr("The strap didn't buzz", "A strap não vibrou"))
         findBuzzOn = true
     }
 
@@ -1143,11 +1144,11 @@ class StrapManager(
 
     /** STOP gets no reply (03 §3.16), so it is only sent. */
     private suspend fun sendFindDevice(request: ByteArray) {
-        val s = activeSession ?: throw StrapCommandException("The strap isn't connected")
-        if (firmwareUpdating.value) throw StrapCommandException("Wait for the firmware update to finish")
+        val s = activeSession ?: throw StrapCommandException(tr("The strap isn't connected", "A strap não está ligada"))
+        if (firmwareUpdating.value) throw StrapCommandException(tr("Wait for the firmware update to finish", "Espera que a atualização de firmware termine"))
         log("cmd %04x > %s".format(Endpoints.FIND_DEVICE, request.toHex()))
         if (request.contentEquals(FindDevice.STOP)) findBuzzOn = false
-        runCatching { s.send(Endpoints.FIND_DEVICE, request) }.getOrElse { throw StrapCommandException("The strap didn't answer") }
+        runCatching { s.send(Endpoints.FIND_DEVICE, request) }.getOrElse { throw StrapCommandException(tr("The strap didn't answer", "A strap não respondeu")) }
     }
 
     /** GENERAL key 47; null when the strap doesn't report it. Zepp refuses OTA while it is on (07 §1.6). */
@@ -1158,7 +1159,7 @@ class StrapManager(
 
     override suspend fun installFirmware(file: ByteArray, type: Int, onProgress: (DfuProgress) -> Unit) {
         val client = gatt
-        if (client == null || connection.value !is ConnectionState.Connected) throw DfuException(-1, "The strap isn't connected")
+        if (client == null || connection.value !is ConnectionState.Connected) throw DfuException(-1, tr("The strap isn't connected", "A strap não está ligada"))
         if (sync.value is SyncState.Running) throw DfuException(-1, "Wait for the sync to finish first")
         if (firmwareUpdating.value) throw DfuException(-1, "An update is already running")
         if (session?.services?.has(Endpoints.SETTINGS) == true && fastRechargeOn() == true) throw DfuException(-1, "Turn off fast-charge mode on the strap first")

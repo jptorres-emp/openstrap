@@ -87,6 +87,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import org.openstrap.app.ui.theme.OpenStrapTheme
 import org.openstrap.app.ui.theme.AppIcons
 import org.openstrap.app.ui.glow.GlowWorkoutSummaryScreen
+import org.openstrap.app.l10n.tr
 
 class MainActivity : ComponentActivity() {
     /** The latest `open_metric` link, until the app root has opened it. */
@@ -703,14 +704,17 @@ private fun AppRoot(
     var pending by remember { mutableStateOf<(() -> Unit)?>(null) }
     val btLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
         val ok = result[Manifest.permission.BLUETOOTH_SCAN] == true && result[Manifest.permission.BLUETOOTH_CONNECT] == true
-        if (ok) pending?.invoke() else Toast.makeText(context, "Bluetooth permission is required.", Toast.LENGTH_LONG).show()
+        if (ok) pending?.invoke() else Toast.makeText(context, tr("Bluetooth permission is required.", "É preciso a permissão de Bluetooth."), Toast.LENGTH_LONG).show()
         pending = null
     }
     val requestBluetooth: (() -> Unit) -> Unit = { then -> pending = then; btLauncher.launch(BLUETOOTH_PERMISSIONS) }
     // Location for a GPS workout: asked only when GPS is turned on; the workout starts either way (steps without it).
     var afterLocation by remember { mutableStateOf<(() -> Unit)?>(null) }
     val locationLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
-        if (result.values.none { it }) Toast.makeText(context, "Without location, distance comes from the strap's steps.", Toast.LENGTH_LONG).show()
+        if (result.values.none { it }) Toast.makeText(context, tr(
+            "Without location, distance comes from the strap's steps.",
+            "Sem localização, a distância vem dos passos da strap.",
+        ), Toast.LENGTH_LONG).show()
         afterLocation?.invoke()
         afterLocation = null
     }
@@ -724,18 +728,21 @@ private fun AppRoot(
     }
     val hcLauncher = rememberLauncherForActivityResult(PermissionController.createRequestPermissionResultContract()) { granted ->
         if (granted.containsAll(container.healthConnect.permissions)) deviceVm.exportHealthConnect()
-        else Toast.makeText(context, "Health Connect permissions were not granted.", Toast.LENGTH_LONG).show()
+        else Toast.makeText(context, tr("Health Connect permissions were not granted.", "As permissões do Health Connect não foram dadas."), Toast.LENGTH_LONG).show()
     }
     val csvImportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.let(deviceVm::importCsv)
     }
     val hcReadLauncher = rememberLauncherForActivityResult(PermissionController.createRequestPermissionResultContract()) { granted ->
         if (granted.any { it in container.healthConnect.readPermissions }) deviceVm.importHealthConnect()
-        else Toast.makeText(context, "Health Connect permissions were not granted.", Toast.LENGTH_LONG).show()
+        else Toast.makeText(context, tr("Health Connect permissions were not granted.", "As permissões do Health Connect não foram dadas."), Toast.LENGTH_LONG).show()
     }
     val importHealthConnect: () -> Unit = {
         if (!container.healthConnect.isAvailable()) {
-            Toast.makeText(context, "Health Connect isn't available on this phone.", Toast.LENGTH_LONG).show()
+            Toast.makeText(context, tr(
+                "Health Connect isn't available on this phone.",
+                "O Health Connect não está disponível neste telemóvel.",
+            ), Toast.LENGTH_LONG).show()
         } else scope.launch {
             if (container.healthConnect.hasReadPermissions()) deviceVm.importHealthConnect()
             else hcReadLauncher.launch(container.healthConnect.readPermissions)
@@ -743,7 +750,10 @@ private fun AppRoot(
     }
     val exportHealthConnect: () -> Unit = {
         if (!container.healthConnect.isAvailable()) {
-            Toast.makeText(context, "Health Connect isn't available on this phone.", Toast.LENGTH_LONG).show()
+            Toast.makeText(context, tr(
+                "Health Connect isn't available on this phone.",
+                "O Health Connect não está disponível neste telemóvel.",
+            ), Toast.LENGTH_LONG).show()
         } else scope.launch {
             if (container.healthConnect.hasPermissions()) deviceVm.exportHealthConnect()
             else hcLauncher.launch(container.healthConnect.permissions)
@@ -926,7 +936,7 @@ private fun AppRoot(
                         androidx.activity.compose.BackHandler(onBack = pop)
                         org.openstrap.app.ui.glow.GlowRecoveryScreen(
                             day, recovery, history,
-                            header = { org.openstrap.app.ui.glow.PageHeader("Recovery", pop, subtitle = org.openstrap.app.ui.glow.dayName(day.date)) },
+                            header = { org.openstrap.app.ui.glow.PageHeader(tr("Recovery", "Recuperação"), pop, subtitle = org.openstrap.app.ui.glow.dayName(day.date)) },
                             contentPadding = padding, onOpenMetric = { push(Detail.OfMetric(it)) },
                             onOpenScore = { push(Detail.OfScore(it)) }, strapScore = strapReadiness?.takeIf { it.day == day.dayStart }?.score,
                             healthspan = healthspan, onOpenHealthspan = { seeHabitAge(); push(Detail.Healthspan) }, onOpenProfile = { openPage(Page.Profile) },
@@ -937,7 +947,7 @@ private fun AppRoot(
                     Detail.Sleep -> {
                         androidx.activity.compose.BackHandler(onBack = pop)
                         org.openstrap.app.ui.glow.GlowSleepScreen(
-                            day, header = { org.openstrap.app.ui.glow.PageHeader("Sleep", pop, subtitle = org.openstrap.app.ui.glow.dayName(day.date)) },
+                            day, header = { org.openstrap.app.ui.glow.PageHeader(tr("Sleep", "Sono"), pop, subtitle = org.openstrap.app.ui.glow.dayName(day.date)) },
                             contentPadding = padding, onOpen = push, recovery = recovery,
                         )
                     }

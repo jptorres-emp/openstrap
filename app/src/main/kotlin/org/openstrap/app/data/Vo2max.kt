@@ -1,5 +1,7 @@
 package org.openstrap.app.data
 
+import org.openstrap.app.l10n.tr
+
 import org.openstrap.app.data.settings.UserProfile
 
 /**
@@ -27,13 +29,17 @@ object Vo2max {
     const val ML_PER_MET = 3.5f
 
     /** The worksheet's question, Jurca 2005 Figure 1 (shortened): the user's usual pattern of physical activity. */
-    val ACTIVITY_LEVELS = listOf(
-        "Inactive, or little activity beyond usual daily activities",
-        "Light activity, at least 10 minutes at a time, 5 or more days a week",
-        "Aerobic exercise 20–60 minutes a week",
-        "Aerobic exercise 1–3 hours a week",
-        "Aerobic exercise over 3 hours a week",
-    )
+    val ACTIVITY_LEVELS: List<String>
+        get() = listOf(
+            tr("Inactive, or little activity beyond usual daily activities", "Inativo, ou pouca atividade além das tarefas do dia a dia"),
+            tr(
+                "Light activity, at least 10 minutes at a time, 5 or more days a week",
+                "Atividade leve, pelo menos 10 minutos de cada vez, 5 ou mais dias por semana",
+            ),
+            tr("Aerobic exercise 20–60 minutes a week", "Exercício aeróbico 20–60 minutos por semana"),
+            tr("Aerobic exercise 1–3 hours a week", "Exercício aeróbico 1–3 horas por semana"),
+            tr("Aerobic exercise over 3 hours a week", "Exercício aeróbico mais de 3 horas por semana"),
+        )
 
     /** Withholding rules. */
     const val MIN_RHR_NIGHTS = 5
@@ -65,13 +71,22 @@ object Vo2max {
     )
 
     /** Why there is no estimate, in the order checked. */
-    enum class Withheld(val reason: String) {
-        Age("Needs an age between 20 and 79."),
-        Sex("Needs your sex: the equation differs for women and men."),
-        Body("Needs a weight and height entered in the last 90 days."),
-        Activity("Answer the activity question (asked every 6 months)."),
-        Medication("Not shown while taking beta-blockers or during pregnancy: resting heart rate doesn't reflect fitness then."),
-        RestingHr("Needs at least 5 nights of resting heart rate in the last 2 weeks."),
+    enum class Withheld(private val en: String, private val pt: String) {
+        Age("Needs an age between 20 and 79.", "Precisa de uma idade entre 20 e 79 anos."),
+        Sex("Needs your sex: the equation differs for women and men.", "Precisa do teu sexo: a equação é diferente para mulheres e homens."),
+        Body("Needs a weight and height entered in the last 90 days.", "Precisa de peso e altura registados nos últimos 90 dias."),
+        Activity("Answer the activity question (asked every 6 months).", "Responde à pergunta sobre atividade (feita a cada 6 meses)."),
+        Medication(
+            "Not shown while taking beta-blockers or during pregnancy: resting heart rate doesn't reflect fitness then.",
+            "Não aparece com beta-bloqueantes ou durante a gravidez: aí a FC em repouso não reflete a forma física.",
+        ),
+        RestingHr(
+            "Needs at least 5 nights of resting heart rate in the last 2 weeks.",
+            "Precisa de pelo menos 5 noites de FC em repouso nas últimas 2 semanas.",
+        ),
+        ;
+
+        val reason: String get() = tr(en, pt)
     }
 
     /**
@@ -115,12 +130,15 @@ object Vo2max {
      * interpolation or a distribution assumption.
      */
     object Friend {
-        enum class Band(val label: String) {
-            Below30("Below the 30th percentile"),
-            P30to50("30th–50th percentile"),
-            P50to70("50th–70th percentile"),
-            P70to90("70th–90th percentile"),
-            Top10("Top 10 %"),
+        enum class Band(private val en: String, private val pt: String) {
+            Below30("Below the 30th percentile", "Abaixo do percentil 30"),
+            P30to50("30th–50th percentile", "Percentil 30–50"),
+            P50to70("50th–70th percentile", "Percentil 50–70"),
+            P70to90("70th–90th percentile", "Percentil 70–90"),
+            Top10("Top 10 %", "10 % melhores"),
+            ;
+
+            val label: String get() = tr(en, pt)
         }
 
         /** The percentiles in each row, ascending. */
@@ -188,8 +206,10 @@ object Vo2max {
         }
 
         /** "typical of a woman aged about 35–55". */
-        fun fitnessAgeText(range: IntRange, sex: UserProfile.Sex): String =
-            "typical of a ${if (sex == UserProfile.Sex.Male) "man" else "woman"} aged about ${range.first}–${range.last}"
+        fun fitnessAgeText(range: IntRange, sex: UserProfile.Sex): String = tr(
+            "typical of a ${if (sex == UserProfile.Sex.Male) "man" else "woman"} aged about ${range.first}–${range.last}",
+            "típico de ${if (sex == UserProfile.Sex.Male) "um homem" else "uma mulher"} com cerca de ${range.first}–${range.last} anos",
+        )
 
         const val FITNESS_AGE_SPREAD = 10
         const val FITNESS_AGE_MIN = 20

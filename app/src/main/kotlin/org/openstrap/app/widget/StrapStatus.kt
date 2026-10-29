@@ -8,6 +8,7 @@ import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.time.temporal.ChronoUnit
 import java.util.Locale
+import org.openstrap.app.l10n.tr
 
 /** At or under this battery level, while not charging, every widget says so (widgets spec 5). */
 const val STRAP_LOW_PERCENT = 15
@@ -57,19 +58,28 @@ fun strapStateChanged(paired: Boolean, battery: Int?, charging: Boolean, wasPair
  * weekday within the week ("Synced Tuesday") and the date before that ("Synced 21 Oct").
  */
 fun strapStatusLine(status: StrapStatus, now: Long, zone: ZoneId, locale: Locale = Locale.getDefault()): String = when (status) {
-    StrapStatus.NotPaired -> "Pair your strap"
-    is StrapStatus.LowBattery -> "Strap at ${status.percent}%"
-    StrapStatus.Syncing -> "Syncing"
+    StrapStatus.NotPaired -> tr("Pair your strap", "Emparelha a strap")
+    is StrapStatus.LowBattery -> tr("Strap at ${status.percent}%", "Strap a ${status.percent}%")
+    StrapStatus.Syncing -> tr("Syncing", "A sincronizar")
     is StrapStatus.StaleSync -> {
         val then = Instant.ofEpochSecond(status.at).atZone(zone).toLocalDate()
         val days = ChronoUnit.DAYS.between(then, Instant.ofEpochSecond(now).atZone(zone).toLocalDate())
-        "Synced " + when {
+        if (org.openstrap.app.l10n.L10n.portuguese) SYNCED_PT + when {
+            days <= 0 -> "às ${clockText(status.at, zone)}"
+            days == 1L -> "ontem"
+            // Saturday and Sunday are "no", the weekdays "na".
+            days < 7 -> (if (then.dayOfWeek.value >= 6) "no " else "na ") + then.dayOfWeek.getDisplayName(TextStyle.FULL, locale)
+            else -> "a " + then.format(DateTimeFormatter.ofPattern("d MMM", locale))
+        } else "Synced " + when {
             days <= 0 -> clockText(status.at, zone)
             days == 1L -> recentDay(then, then.plusDays(1), locale).lowercase(locale)
             else -> recentDay(then, then.plusDays(days), locale)
         }
     }
 }
+
+/** How the Portuguese status line starts, so shorter forms can drop it. */
+internal const val SYNCED_PT = "Sincronizada "
 
 /**
  * [date] as a widget says when something was, seen from [today]: "Today", "Yesterday", the weekday within the week
@@ -78,9 +88,9 @@ fun strapStatusLine(status: StrapStatus, now: Long, zone: ZoneId, locale: Locale
 fun recentDay(date: LocalDate, today: LocalDate, locale: Locale = Locale.getDefault()): String {
     val days = ChronoUnit.DAYS.between(date, today)
     return when {
-        days <= 0 -> "Today"
-        days == 1L -> "Yesterday"
-        days < 7 -> date.dayOfWeek.getDisplayName(TextStyle.FULL, locale)
+        days <= 0 -> tr("Today", "Hoje")
+        days == 1L -> tr("Yesterday", "Ontem")
+        days < 7 -> date.dayOfWeek.getDisplayName(TextStyle.FULL, locale).replaceFirstChar { it.titlecase(locale) }
         else -> date.format(DateTimeFormatter.ofPattern("d MMM", locale))
     }
 }

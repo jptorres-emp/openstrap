@@ -22,8 +22,9 @@ data class StatusLine(val status: StrapStatus, val options: List<String>) {
          */
         fun of(status: StrapStatus, now: Long, zone: ZoneId, locale: Locale = Locale.getDefault()): StatusLine {
             val full = strapStatusLine(status, now, zone, locale)
+            val pt = org.openstrap.app.l10n.L10n.portuguese
             val shorter = when (status) {
-                StrapStatus.NotPaired -> listOf("Pair strap")
+                StrapStatus.NotPaired -> listOf(if (pt) "Emparelhar" else "Pair strap")
                 is StrapStatus.LowBattery -> listOf("${status.percent}%")
                 StrapStatus.Syncing -> emptyList()
                 is StrapStatus.StaleSync -> {
@@ -31,13 +32,15 @@ data class StatusLine(val status: StrapStatus, val options: List<String>) {
                     val days = ChronoUnit.DAYS.between(then, Instant.ofEpochSecond(now).atZone(zone).toLocalDate())
                     when {
                         days <= 0 -> listOf(clockText(status.at, zone))
-                        days == 1L -> listOf("Yesterday")
+                        days == 1L -> listOf(if (pt) "Ontem" else "Yesterday")
                         days < 7 -> {
                             val day = then.dayOfWeek.getDisplayName(TextStyle.FULL, locale)
-                            val short = then.dayOfWeek.getDisplayName(TextStyle.SHORT, locale)
-                            listOf("Synced $short", day, short)
+                            // Portuguese short names end in a dot ("ter."), which the line never has.
+                            val short = then.dayOfWeek.getDisplayName(TextStyle.SHORT, locale).removeSuffix(".")
+                            if (pt) listOf(day.replaceFirstChar { it.titlecase(locale) }, short.replaceFirstChar { it.titlecase(locale) })
+                            else listOf("Synced $short", day, short)
                         }
-                        else -> listOf(full.removePrefix("Synced "))
+                        else -> listOf(if (pt) full.removePrefix(SYNCED_PT + "a ") else full.removePrefix("Synced "))
                     }
                 }
             }

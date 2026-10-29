@@ -13,6 +13,7 @@ import java.net.URLEncoder
 import java.util.Locale
 import java.util.TimeZone
 import java.util.UUID
+import org.openstrap.app.l10n.tr
 
 /**
  * The user's own Zepp sign-in, read from the watchface.zepp.com cookies after they signed in there. [loginToken] and
@@ -131,7 +132,7 @@ object ZeppCloud {
 
     /** Parses the `users/{id}/devices` reply: `{"items":[{…, "additionalInfo":"{\"auth_key\":…}"}]}`. */
     fun parseDeviceList(body: String): List<BoundDevice> {
-        val root = runCatching { JSONObject(body) }.getOrElse { throw ZeppCloudException("Unexpected reply from Zepp's device list") }
+        val root = runCatching { JSONObject(body) }.getOrElse { throw ZeppCloudException(tr("Unexpected reply from Zepp's device list", "Resposta inesperada da lista de dispositivos da Zepp")) }
         val items = root.optJSONArray("items") ?: return emptyList()
         return (0 until items.length()).mapNotNull { i ->
             val item = items.optJSONObject(i) ?: return@mapNotNull null
@@ -193,12 +194,12 @@ object ZeppCloud {
 
     /** Parses A3's reply (`t7s`): `result` must be ok and `token_info.app_token` set (codemap 08 §1.2). */
     fun parseAppTokens(body: String): AppTokenRefresh {
-        val root = runCatching { JSONObject(body) }.getOrElse { throw ZeppCloudException("Unexpected reply when renewing the Zepp sign-in") }
+        val root = runCatching { JSONObject(body) }.getOrElse { throw ZeppCloudException(tr("Unexpected reply when renewing the Zepp sign-in", "Resposta inesperada ao renovar a sessão Zepp")) }
         val result = root.optString("result")
-        if (result.isNotEmpty() && result != "ok") throw ZeppCloudException("Zepp refused to renew the sign-in ($result). Sign in again.", rejected = true)
+        if (result.isNotEmpty() && result != "ok") throw ZeppCloudException(tr("Zepp refused to renew the sign-in ($result). Sign in again.", "A Zepp recusou renovar a sessão ($result). Inicia sessão outra vez."), rejected = true)
         val info = root.optJSONObject("token_info") ?: JSONObject()
         val token = info.optString("app_token").ifBlank { null }
-            ?: throw ZeppCloudException("Zepp didn't renew the sign-in. Sign in again.", rejected = true)
+            ?: throw ZeppCloudException(tr("Zepp didn't renew the sign-in. Sign in again.", "A Zepp não renovou a sessão. Inicia sessão outra vez."), rejected = true)
         return AppTokenRefresh(
             token,
             info.optString("user_id").ifBlank { root.optString("user_id") }.ifBlank { null },
@@ -216,7 +217,7 @@ object ZeppCloud {
 
     /** Gets a new app token with [account]'s login token (A3, `GET v1/client/app_tokens`, codemap 08 §1.4). */
     suspend fun refreshAppToken(account: ZeppAccount, nowMs: Long = System.currentTimeMillis()): ZeppAccount = withContext(Dispatchers.IO) {
-        val login = account.loginToken?.takeIf { it.isNotBlank() } ?: throw ZeppCloudException("No login token to renew the sign-in with. Sign in again.", rejected = true)
+        val login = account.loginToken?.takeIf { it.isNotBlank() } ?: throw ZeppCloudException(tr("No login token to renew the sign-in with. Sign in again.", "Não há token para renovar a sessão. Inicia sessão outra vez."), rejected = true)
         val base = account.apiBase.trim().let { if (it.endsWith("/")) it else "$it/" }
         require(base.startsWith("https://")) { "The server address must start with https://" }
         val query = appTokensQuery(login).entries.joinToString("&") { (k, v) -> "$k=${URLEncoder.encode(v, "UTF-8")}" }
@@ -229,8 +230,8 @@ object ZeppCloud {
             val body = (if (code in 200..299) conn.inputStream else conn.errorStream)?.bufferedReader()?.use { it.readText() }.orEmpty()
             when (code) {
                 in 200..299 -> withRefresh(account, parseAppTokens(body), nowMs)
-                401, 403 -> throw ZeppCloudException("Zepp refused to renew the sign-in (HTTP $code). Sign in again.", rejected = true)
-                else -> throw ZeppCloudException("Renewing the Zepp sign-in returned HTTP $code")
+                401, 403 -> throw ZeppCloudException(tr("Zepp refused to renew the sign-in (HTTP $code). Sign in again.", "A Zepp recusou renovar a sessão (HTTP $code). Inicia sessão outra vez."), rejected = true)
+                else -> throw ZeppCloudException(tr("Renewing the Zepp sign-in returned HTTP $code", "A renovação da sessão Zepp devolveu HTTP $code"))
             }
         } finally {
             conn.disconnect()
@@ -255,7 +256,7 @@ object ZeppCloud {
                 lastError = e
             }
         }
-        empty ?: throw (lastError ?: ZeppCloudException("Couldn't reach Zepp's servers"))
+        empty ?: throw (lastError ?: ZeppCloudException(tr("Couldn't reach Zepp's servers", "Não deu para chegar aos servidores da Zepp")))
     }
 
     private fun get(base: String, session: ZeppSession): String {
@@ -285,8 +286,8 @@ object ZeppCloud {
             val body = (if (code in 200..299) conn.inputStream else conn.errorStream)?.bufferedReader()?.use { it.readText() }.orEmpty()
             return when (code) {
                 in 200..299 -> body
-                401, 403 -> throw ZeppCloudException("Zepp rejected the sign-in (HTTP $code). Sign in again.", rejected = true)
-                else -> throw ZeppCloudException("Zepp's device list returned HTTP $code")
+                401, 403 -> throw ZeppCloudException(tr("Zepp rejected the sign-in (HTTP $code). Sign in again.", "A Zepp rejeitou a sessão (HTTP $code). Inicia sessão outra vez."), rejected = true)
+                else -> throw ZeppCloudException(tr("Zepp's device list returned HTTP $code", "A lista de dispositivos da Zepp devolveu HTTP $code"))
             }
         } finally {
             conn.disconnect()

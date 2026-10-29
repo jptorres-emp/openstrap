@@ -9,6 +9,7 @@ import android.content.Context
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import org.openstrap.app.l10n.tr
 
 data class FoundDevice(val address: String, val name: String, val rssi: Int)
 
@@ -21,7 +22,7 @@ class BleScanner(private val context: Context) {
     fun scan(): Flow<FoundDevice> = callbackFlow {
         val scanner = context.getSystemService(BluetoothManager::class.java).adapter?.bluetoothLeScanner
         if (scanner == null) {
-            close(IllegalStateException("Bluetooth is off"))
+            close(IllegalStateException(tr("Bluetooth is off", "O Bluetooth está desligado")))
             return@callbackFlow
         }
         val callback = object : ScanCallback() {
@@ -33,7 +34,7 @@ class BleScanner(private val context: Context) {
             }
 
             override fun onScanFailed(errorCode: Int) {
-                close(IllegalStateException("Scan failed ($errorCode)"))
+                close(IllegalStateException(tr("Scan failed ($errorCode)", "A procura falhou ($errorCode)")))
             }
         }
         scanner.startScan(null, ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).build(), callback)

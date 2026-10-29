@@ -1,5 +1,7 @@
 package org.openstrap.app.data
 
+import org.openstrap.app.l10n.tr
+
 import kotlin.math.max
 
 /**
@@ -13,7 +15,14 @@ import kotlin.math.max
 object BodySignals {
 
     /** Independent signal families: only flags from different families count as separate votes. */
-    enum class Family(val label: String) { Cardiac("resting heart rate"), Thermal("skin temperature"), Respiratory("breathing rate") }
+    enum class Family(private val en: String, private val pt: String) {
+        Cardiac("resting heart rate", "frequência cardíaca em repouso"),
+        Thermal("skin temperature", "temperatura da pele"),
+        Respiratory("breathing rate", "frequência respiratória"),
+        ;
+
+        val label: String get() = org.openstrap.app.l10n.tr(en, pt)
+    }
 
     enum class Flag(val family: Family?, val core: Boolean) {
         /** rhr − c ≥ max([RHR_FLAG_BPM], [FLAG_SCALES]·s). */

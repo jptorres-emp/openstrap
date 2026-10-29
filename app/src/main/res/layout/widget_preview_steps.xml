@@ -29,7 +29,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="8,432"
+        android:text="@string/preview_steps_value"
         android:textSize="34sp"
         android:textColor="#FFFFFFFF"
         android:fontFamily="sans-serif-light"
@@ -38,7 +38,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="today"
+        android:text="@string/preview_steps_today"
         android:textSize="15sp"
         android:textColor="#B8FFFFFF"
         android:maxLines="1"
@@ -54,7 +54,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="84% of your goal"
+        android:text="@string/preview_steps_goal"
         android:textSize="13sp"
         android:textColor="#B8FFFFFF"
         android:maxLines="1"

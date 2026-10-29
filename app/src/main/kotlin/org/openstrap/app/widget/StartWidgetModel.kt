@@ -12,6 +12,7 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.temporal.TemporalAdjusters
 import java.util.Locale
+import org.openstrap.app.l10n.tr
 
 /**
  * A sport on the Start widget. [sportType] is what a tap hands Ready (`EXTRA_READY_SPORT`), which then opens on the
@@ -75,8 +76,8 @@ data class StartRecording(
     val paused: Boolean,
 ) {
     companion object {
-        const val RECORDING = "Recording"
-        const val PAUSED = "Paused"
+        val RECORDING: String get() = tr("Recording", "A gravar")
+        val PAUSED: String get() = tr("Paused", "Em pausa")
 
         /**
          * The Chronometer's base on the [elapsedRealtime] clock (ms) for [r] at [nowMillis] (epoch ms): the active
@@ -109,15 +110,15 @@ data class StartWidgetModel(
     val recording: StartRecording?,
 ) {
     companion object {
-        const val USUAL = "Your usual"
-        const val ALL_SPORTS = "All sports"
-        const val ALL_SPORTS_ACTION = "Choose a sport"
-        const val THIS_WEEK = "This week"
-        const val OPEN = "Open"
+        val USUAL: String get() = tr("Your usual", "O habitual")
+        val ALL_SPORTS: String get() = tr("All sports", "Todos os desportos")
+        val ALL_SPORTS_ACTION: String get() = tr("Choose a sport", "Escolhe um desporto")
+        val THIS_WEEK: String get() = tr("This week", "Esta semana")
+        val OPEN: String get() = tr("Open", "Abrir")
         /** The Wide's and Large's title row, only while the strap status shows (spec 5): the picker's name. */
-        const val TITLE = "Start a workout"
-        const val NO_WORKOUTS = "No workouts yet"
-        const val NONE_YET = "None yet"
+        val TITLE: String get() = tr("Start a workout", "Começar um treino")
+        val NO_WORKOUTS: String get() = tr("No workouts yet", "Ainda sem treinos")
+        val NONE_YET: String get() = tr("None yet", "Ainda nenhum")
 
         /** How many sports by use to offer before the everyday ones pad the list. */
         const val BY_USE = 8
@@ -149,8 +150,8 @@ data class StartWidgetModel(
             return StartWidgetModel(
                 usual = usual,
                 usualLine = when {
-                    gpsOffered && location -> "$USUAL, GPS on"
-                    gpsOffered -> "$USUAL, GPS off"
+                    gpsOffered && location -> tr("$USUAL, GPS on", "$USUAL, GPS ligado")
+                    gpsOffered -> tr("$USUAL, GPS off", "$USUAL, GPS desligado")
                     else -> USUAL
                 },
                 gpsOn = gpsOffered && location,
@@ -163,7 +164,7 @@ data class StartWidgetModel(
                 } ?: NONE_YET,
                 recording = recording?.let { r ->
                     StartRecording(
-                        StartSport.recorded(r.sportType), "Since ${clockText(r.start, zone)}",
+                        StartSport.recorded(r.sportType), tr("Since ${clockText(r.start, zone)}", "Desde as ${clockText(r.start, zone)}"),
                         if (r.paused) StartRecording.PAUSED else StartRecording.RECORDING,
                         r.activeSeconds * 1000L, now.toEpochMilli(), r.paused,
                     )
@@ -174,20 +175,25 @@ data class StartWidgetModel(
         /** "2 workouts, 1 h 35", "1 workout, 40 min", "No workouts yet". */
         fun weekLine(count: Int, seconds: Long): String = when (count) {
             0 -> NO_WORKOUTS
-            1 -> "1 workout, ${TodayCopy.duration(seconds)}"
-            else -> "$count workouts, ${TodayCopy.duration(seconds)}"
+            1 -> tr("1 workout, ${TodayCopy.duration(seconds)}", "1 treino, ${TodayCopy.duration(seconds)}")
+            else -> tr("$count workouts, ${TodayCopy.duration(seconds)}", "$count treinos, ${TodayCopy.duration(seconds)}")
         }
 
         /** "Last run" for a run outdoors or on a treadmill, "Last HIIT", and "Last workout" for Other. */
         fun lastLabel(sportType: Int): String = when (val name = Workouts.shortName(Workouts.tileType(sportType))) {
-            "Other" -> "Last workout"
-            else -> "Last " + if (name.any { it.isLowerCase() }) name.lowercase() else name
+            // Other's name, in whichever language it's in.
+            Workouts.shortName(OTHER) -> org.openstrap.app.l10n.tr("Last workout", "Último treino")
+            else -> org.openstrap.app.l10n.tr("Last ", "Último: ") +
+                if (name.any { it.isLowerCase() } && name.drop(1).none { it.isUpperCase() }) name.lowercase() else name
         }
+
+        /** The sport type the picker calls Other. */
+        private const val OTHER = 5
 
         /** A workout's one figure here: its distance ("5.2 km"), else its sets ("4 sets"), else how long it was. */
         fun fact(a: WorkoutAnalysis): String {
             a.distanceMeters?.takeIf { it >= 10f }?.let { return TabCopy.distanceText(it, a.distanceFromSteps) }
-            a.sets?.takeIf { it > 0 }?.let { return if (it == 1) "1 set" else "$it sets" }
+            a.sets?.takeIf { it > 0 }?.let { return if (it == 1) tr("1 set", "1 série") else tr("$it sets", "$it séries") }
             return TodayCopy.duration(a.activeSeconds)
         }
     }
@@ -350,7 +356,7 @@ object StartLayout {
     data class StatusSmall(val title: String?, val top: TopRow, val sizes: Sizes, val words: Words, val spread: Spread)
 
     /** The status Small's title: the picker's name, or "Start" when that won't fit beside the button. */
-    const val SHORT_TITLE = "Start"
+    val SHORT_TITLE: String get() = tr("Start", "Começar")
 
     /** The status Small's tile and play below [SMALL_SIZES]' last, for the smallest cells at the largest fonts. */
     val STATUS_SHRINK = listOf(Sizes(40f, 40f, 0f), Sizes(36f, 36f, 0f))

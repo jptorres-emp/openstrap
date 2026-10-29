@@ -82,6 +82,8 @@ import java.time.ZoneId
 import org.openstrap.app.data.db.StressSample as DbStress
 import org.openstrap.protocol.history.RestingHeartRate as StrapRestingHr
 import org.openstrap.protocol.history.StressSample as StrapStress
+import org.openstrap.app.l10n.L10n
+import org.openstrap.app.l10n.tr
 
 /**
  * Pulls history from the strap into Room using the GDSP fetch protocol (docs/protocol/02).
@@ -106,7 +108,7 @@ class HistorySync(
 
     /** Syncs every type, or only the codes in [only] (an on-demand sync after a data-available push). */
     suspend fun run(only: Set<Int>? = null) = coroutineScope {
-        state.value = SyncState.Running("Preparing…")
+        state.value = SyncState.Running(tr("Preparing…", "A preparar…"))
         repairEarlierSyncs()
         val listeners = launch {
             launch { gatt.notifications.filter { it.characteristic == HISTORY_DATA }.collect { data.send(it.value) } }
@@ -129,7 +131,10 @@ class HistorySync(
                 ?.let { log("history: feature bits clear for advertised types $it; fetching them anyway") }
             val plan = HistoryTypeSpecs.plan(advertised, session.features).filter { it.parser != null && (only == null || it.code in only) }
             plan.forEachIndexed { i, spec ->
-                state.value = SyncState.Running("Syncing ${label(spec.type)} (${i + 1}/${plan.size})", i.toFloat() / plan.size)
+                state.value = SyncState.Running(tr(
+                    "Syncing ${label(spec.type)} (${i + 1}/${plan.size})",
+                    "A sincronizar ${label(spec.type)} (${i + 1}/${plan.size})",
+                ), i.toFloat() / plan.size)
                 try {
                     if (spec.followedBy == HistoryDataType.SPORT_DETAIL) syncWorkouts(spec) else syncType(spec)
                 } catch (e: Exception) {
@@ -142,11 +147,14 @@ class HistorySync(
         } catch (e: FastRechargeModeException) {
             // Zepp ends the sync job at once in this mode (xyk.java:66-70); the data waits on the strap.
             log("history: strap is in fast-charge mode, sync stopped")
-            state.value = SyncState.Failed("The strap is in fast-charge mode. Sync again once it's off.")
+            state.value = SyncState.Failed(tr(
+                "The strap is in fast-charge mode. Sync again once it's off.",
+                "A strap está em carregamento rápido. Sincroniza outra vez quando sair desse modo.",
+            ))
         } catch (e: Exception) {
             if (e is kotlinx.coroutines.CancellationException) throw e
             log("history failed: $e")
-            state.value = SyncState.Failed(e.message ?: "Sync failed")
+            state.value = SyncState.Failed(e.message ?: tr("Sync failed", "A sincronização falhou"))
         } finally {
             listeners.cancel()
         }
@@ -539,7 +547,30 @@ class HistorySync(
 
     private fun dayStart(epoch: Long) = Instant.ofEpochSecond(epoch).atZone(zone).toLocalDate().atStartOfDay(zone).toEpochSecond()
 
-    private fun label(t: HistoryDataType) = t.name.lowercase().replace('_', ' ')
+    /** A data type as the sync's progress names it: "heart rate manual"; in Portuguese by what it holds. */
+    private fun label(t: HistoryDataType): String {
+        val name = t.name.lowercase().replace('_', ' ')
+        if (!L10n.portuguese) return name
+        return when (t) {
+            HistoryDataType.ACTIVITY -> "atividade"
+            HistoryDataType.HEART_RATE_MANUAL, HistoryDataType.SEC_HR, HistoryDataType.SEC_HR_V2 -> "frequência cardíaca"
+            HistoryDataType.SPORT_SUMMARY, HistoryDataType.SPORT_DETAIL, HistoryDataType.SPORT_SUMMARY_ALT,
+            HistoryDataType.SPORT_EFFECT -> "treinos"
+            HistoryDataType.PAI -> "PAI"
+            HistoryDataType.STRESS_SINGLE, HistoryDataType.STRESS_ALL_DAY -> "stress"
+            HistoryDataType.SPO2_SINGLE, HistoryDataType.SPO2_OSA, HistoryDataType.SPO2_OSA_EVENT,
+            HistoryDataType.SPO2_OSA_EVENT_ALT -> "oxigénio no sangue"
+            HistoryDataType.BODY_TEMPERATURE_ALL_DAY, HistoryDataType.BODY_TEMPERATURE_SINGLE,
+            HistoryDataType.BODY_TEMPERATURE_80S -> "temperatura"
+            HistoryDataType.SLEEP_BREATH_RATE, HistoryDataType.SLEEP_RESPIRATORY_RATE_EVENT -> "respiração"
+            HistoryDataType.RESTING_HEART_RATE, HistoryDataType.REST_HR -> "FC em repouso"
+            HistoryDataType.DAILY_MAX_EXERCISE_HR -> "FC máxima"
+            HistoryDataType.SLEEP_PLAN, HistoryDataType.SLEEP_RESULT, HistoryDataType.OSA_RESULT -> "sono"
+            HistoryDataType.RECOVERY_HEART_RATE -> "recuperação da FC"
+            HistoryDataType.HRV_RMSSD, HistoryDataType.HRV_SDNN -> "VFC"
+            else -> name
+        }
+    }
 
     companion object {
         private val HISTORY_CONTROL = java.util.UUID.fromString("00000004-0000-3512-2118-0009af100700")

@@ -102,7 +102,7 @@ class FirmwareViewModel(private val container: AppContainer) : ViewModel() {
                     cloud.check(current.apiBase, current.appToken, current.userId, identity)
                 }
                 FirmwareStep.Checked(result)
-            }.getOrElse { FirmwareStep.Failed(it.message ?: "Update check failed") }
+            }.getOrElse { FirmwareStep.Failed(it.message ?: tr("Update check failed", "A verificação de atualizações falhou")) }
         }
     }
 
@@ -140,7 +140,7 @@ class FirmwareViewModel(private val container: AppContainer) : ViewModel() {
             val bytes = withContext(Dispatchers.IO) {
                 container.app.contentResolver.openInputStream(uri)!!.use { it.readBytes() }
             }
-            require(bytes.size in 1024..16 * 1024 * 1024) { "That file is ${bytes.size} bytes, which isn't a plausible firmware image." }
+            require(bytes.size in 1024..16 * 1024 * 1024) { tr("That file is ${bytes.size} bytes, which isn't a plausible firmware image.", "Esse ficheiro tem ${bytes.size} bytes, o que não é plausível para uma imagem de firmware.") }
             val trailer = HmfwTrailer.read(bytes)
             val warnings = buildList {
                 add(tr(

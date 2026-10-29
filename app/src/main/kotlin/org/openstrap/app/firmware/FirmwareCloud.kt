@@ -15,6 +15,7 @@ import java.security.MessageDigest
 import java.util.Locale
 import java.util.TimeZone
 import java.util.UUID
+import org.openstrap.app.l10n.tr
 
 /** What the strap reports about itself; sent so the server can pick the matching image. */
 data class StrapIdentity(
@@ -152,8 +153,11 @@ class FirmwareCloud(private val cacheDir: File) {
                 val body = (if (code in 200..299) conn.inputStream else conn.errorStream)?.bufferedReader()?.use { it.readText() }.orEmpty()
                 when (code) {
                     in 200..299 -> parse(body)
-                    401, 403 -> throw FirmwareCloudException("The server rejected the app token (HTTP $code). It may have expired.", rejected = true)
-                    else -> throw FirmwareCloudException("Update server returned HTTP $code${body.take(200).let { if (it.isBlank()) "" else ": $it" }}")
+                    401, 403 -> throw FirmwareCloudException(tr("The server rejected the app token (HTTP $code). It may have expired.", "O servidor rejeitou o token da app (HTTP $code). Pode ter expirado."), rejected = true)
+                    else -> throw FirmwareCloudException(
+                        tr("Update server returned HTTP $code", "O servidor de atualizações devolveu HTTP $code") +
+                            body.take(200).let { if (it.isBlank()) "" else ": $it" },
+                    )
                 }
             } finally {
                 conn.disconnect()
@@ -172,7 +176,7 @@ class FirmwareCloud(private val cacheDir: File) {
             try {
                 conn.connectTimeout = 15_000
                 conn.readTimeout = 30_000
-                if (conn.responseCode !in 200..299) throw FirmwareCloudException("Download failed (HTTP ${conn.responseCode})")
+                if (conn.responseCode !in 200..299) throw FirmwareCloudException(tr("Download failed (HTTP ${conn.responseCode})", "A transferência falhou (HTTP ${conn.responseCode})"))
                 val total = conn.contentLengthLong.takeIf { it > 0 } ?: part.length
                 val tmp = File(dir, "${part.md5}.part")
                 conn.inputStream.use { input ->
@@ -194,7 +198,7 @@ class FirmwareCloud(private val cacheDir: File) {
                     return@withContext bytes
                 }
                 tmp.delete()
-                if (attempt == 1) throw FirmwareCloudException("Downloaded file failed its MD5 check")
+                if (attempt == 1) throw FirmwareCloudException(tr("Downloaded file failed its MD5 check", "O ficheiro transferido falhou a verificação MD5"))
             } finally {
                 conn.disconnect()
             }
@@ -256,7 +260,7 @@ class FirmwareCloud(private val cacheDir: File) {
 
         /** Parses the §1.2 response. Parts with only some fields set make the whole answer invalid. */
         fun parse(body: String): UpdateCheck {
-            val json = runCatching { JSONObject(body) }.getOrElse { throw FirmwareCloudException("Unexpected reply from the update server") }
+            val json = runCatching { JSONObject(body) }.getOrElse { throw FirmwareCloudException(tr("Unexpected reply from the update server", "Resposta inesperada do servidor de atualizações")) }
             val parts = PREFIXES.mapNotNull { p ->
                 val url = json.optString("${p}Url")
                 val md5 = json.optString("${p}Md5")
@@ -264,7 +268,7 @@ class FirmwareCloud(private val cacheDir: File) {
                 val length = json.optLong("${p}Length", 0)
                 val any = url.isNotEmpty() || md5.isNotEmpty() || version.isNotEmpty() || length > 0
                 val all = url.isNotEmpty() && md5.isNotEmpty() && version.isNotEmpty() && length > 0
-                if (any && !all) throw FirmwareCloudException("The update server sent an incomplete $p entry")
+                if (any && !all) throw FirmwareCloudException(tr("The update server sent an incomplete $p entry", "O servidor de atualizações enviou uma entrada $p incompleta"))
                 if (all) FirmwarePart(p, url, md5, version, length, json.optInt("${p}Flag", -1)) else null
             }
             val ignore = json.optBoolean("ignore", false)

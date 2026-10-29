@@ -12,6 +12,7 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import org.openstrap.app.MainActivity
 import org.openstrap.app.data.db.WearEventRow
+import org.openstrap.app.l10n.tr
 
 /**
  * Zepp's "Wear Reminders" for the strap (codemap 07 §4 N5): a notification while the strap reports it is off-body,
@@ -40,7 +41,7 @@ class WearNotifier(private val context: Context) {
         private set
 
     init {
-        manager.createNotificationChannel(NotificationChannel(CHANNEL, "Wear reminders", NotificationManager.IMPORTANCE_DEFAULT))
+        manager.createNotificationChannel(NotificationChannel(CHANNEL, tr("Wear reminders", "Lembretes para usar a strap"), NotificationManager.IMPORTANCE_DEFAULT))
         // Left from before the app was stopped: whether the strap is still off isn't known now.
         manager.cancel(NOTIFICATION_ID)
     }
@@ -68,8 +69,11 @@ class WearNotifier(private val context: Context) {
     }
 
     companion object {
-        const val TITLE = "Strap is off your body"
-        const val TEXT = "Heart rate and sleep tracking are paused until you put it back on."
+        val TITLE: String get() = tr("Strap is off your body", "A strap não está no corpo")
+        val TEXT: String get() = tr(
+            "Heart rate and sleep tracking are paused until you put it back on.",
+            "A frequência cardíaca e o sono só voltam a ser registados quando a puseres outra vez.",
+        )
         private const val CHANNEL = "wear"
         /** Zepp's id for this notification. */
         private const val NOTIFICATION_ID = 17

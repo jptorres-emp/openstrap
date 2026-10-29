@@ -183,7 +183,7 @@ object TodayCopy {
     fun startSport(sportType: Int): String {
         val name = org.openstrap.app.data.Workouts.sportName(sportType)
         return if (sportNoun(sportType) != null) tr("Start ${sportNoun(sportType)}", "Começar a ${sportVerb(sportType)}")
-        else tr("Start ${TrainingCopy.inSentence(name)}", "Começar $name")
+        else tr("Start ${TrainingCopy.inSentence(name)}", "Começar ${TrainingCopy.inSentence(name)}")
     }
 
     /** After a workout: how the heart is coming down, from the latest reading against resting. */

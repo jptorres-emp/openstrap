@@ -13,6 +13,7 @@ import org.openstrap.app.data.db.Workout
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import org.openstrap.app.l10n.tr
 
 /**
  * Tells the user about a workout the strap recognised on its own, like Zepp's "Auto Detected Activity" channel
@@ -22,7 +23,7 @@ class AutoDetectNotifier(private val context: Context) {
     private val manager = context.getSystemService(NotificationManager::class.java)
 
     init {
-        manager.createNotificationChannel(NotificationChannel(CHANNEL, "Auto-detected workouts", NotificationManager.IMPORTANCE_DEFAULT))
+        manager.createNotificationChannel(NotificationChannel(CHANNEL, tr("Auto-detected workouts", "Treinos detetados automaticamente"), NotificationManager.IMPORTANCE_DEFAULT))
     }
 
     fun show(w: Workout) {
@@ -34,7 +35,7 @@ class AutoDetectNotifier(private val context: Context) {
         val notification = NotificationCompat.Builder(context, CHANNEL)
             .setSmallIcon(R.drawable.ic_stat_openstrap)
             .setContentTitle(title(w))
-            .setContentText("The strap noticed it and recorded it for you.")
+            .setContentText(tr("The strap noticed it and recorded it for you.", "A strap detetou este treino e gravou-o por ti."))
             .setWhen(w.end * 1000)
             .setShowWhen(true)
             .setCategory(NotificationCompat.CATEGORY_WORKOUT)
@@ -51,7 +52,12 @@ class AutoDetectNotifier(private val context: Context) {
         /** "Running detected, 10:02–10:40". */
         fun title(w: Workout, zone: ZoneId = ZoneId.systemDefault()): String {
             val clock = DateTimeFormatter.ofPattern("HH:mm").withZone(zone)
-            return "${Workouts.sportName(w.sportType)} detected, ${clock.format(Instant.ofEpochSecond(w.start))}–${clock.format(Instant.ofEpochSecond(w.end))}"
+            return tr(
+                "${Workouts.sportName(w.sportType)} detected, " +
+                    "${clock.format(Instant.ofEpochSecond(w.start))}–${clock.format(Instant.ofEpochSecond(w.end))}",
+                "${Workouts.sportName(w.sportType)}, " +
+                    "${clock.format(Instant.ofEpochSecond(w.start))}–${clock.format(Instant.ofEpochSecond(w.end))}",
+            )
         }
     }
 }

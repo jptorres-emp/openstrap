@@ -13,6 +13,7 @@ import org.openstrap.protocol.services.HealthAlert
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import org.openstrap.app.l10n.tr
 
 /**
  * Shows the strap's own health alerts (0x001D `0D`) as notifications, like Zepp's "Health Reminders" channel
@@ -22,7 +23,7 @@ class HealthAlertNotifier(private val context: Context) {
     private val manager = context.getSystemService(NotificationManager::class.java)
 
     init {
-        manager.createNotificationChannel(NotificationChannel(CHANNEL, "Health alerts", NotificationManager.IMPORTANCE_HIGH))
+        manager.createNotificationChannel(NotificationChannel(CHANNEL, tr("Health alerts", "Alertas de saúde"), NotificationManager.IMPORTANCE_HIGH))
     }
 
     fun show(alert: HealthAlert) {
@@ -30,12 +31,24 @@ class HealthAlertNotifier(private val context: Context) {
         // The timestamp unit isn't confirmed on hardware (03 §7); fall back to now if it doesn't look like seconds.
         val at = alert.timestamp.takeIf { it in MIN_EPOCH..now + 86_400 } ?: now
         val (title, text) = when (alert.type) {
-            HealthAlert.Type.HIGH_HEART_RATE -> "High heart rate" to "Your heart rate reached ${alert.value} bpm."
-            HealthAlert.Type.LOW_HEART_RATE -> "Low heart rate" to "Your heart rate dropped to ${alert.value} bpm."
-            HealthAlert.Type.HIGH_STRESS -> "High stress" to "Your stress is at ${alert.value}. Take a moment to breathe."
-            HealthAlert.Type.LOW_SPO2 -> "Low blood oxygen" to "Your blood oxygen was ${alert.value}%."
+            HealthAlert.Type.HIGH_HEART_RATE -> tr("High heart rate", "Frequência cardíaca alta") to tr(
+                "Your heart rate reached ${alert.value} bpm.",
+                "A tua frequência cardíaca chegou aos ${alert.value} bpm.",
+            )
+            HealthAlert.Type.LOW_HEART_RATE -> tr("Low heart rate", "Frequência cardíaca baixa") to tr(
+                "Your heart rate dropped to ${alert.value} bpm.",
+                "A tua frequência cardíaca desceu para ${alert.value} bpm.",
+            )
+            HealthAlert.Type.HIGH_STRESS -> tr("High stress", "Stress alto") to tr(
+                "Your stress is at ${alert.value}. Take a moment to breathe.",
+                "O teu stress está em ${alert.value}. Tira um momento para respirar.",
+            )
+            HealthAlert.Type.LOW_SPO2 -> tr("Low blood oxygen", "Oxigénio no sangue baixo") to tr("Your blood oxygen was ${alert.value}%.", "O teu oxigénio no sangue esteve em ${alert.value}%.")
             HealthAlert.Type.IRREGULAR_RHYTHM ->
-                "Irregular heart rhythm" to "The strap noticed an irregular heart rhythm at ${TIME.format(Instant.ofEpochSecond(at))}."
+                tr("Irregular heart rhythm", "Ritmo cardíaco irregular") to tr(
+                    "The strap noticed an irregular heart rhythm at ${TIME.format(Instant.ofEpochSecond(at))}.",
+                    "A strap detetou um ritmo cardíaco irregular às ${TIME.format(Instant.ofEpochSecond(at))}.",
+                )
         }
         val metric = when (alert.type) {
             HealthAlert.Type.HIGH_HEART_RATE, HealthAlert.Type.LOW_HEART_RATE, HealthAlert.Type.IRREGULAR_RHYTHM -> Metric.HeartRate

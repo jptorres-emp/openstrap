@@ -330,7 +330,7 @@ private fun FactsList(
     /** The Partial day tag: energy and distance are the day's totals. */
     tag: TitleTag? = null,
 ) {
-    val waiting: String get() = tr("No reading yet", "Ainda sem leitura")
+    val waiting = tr("No reading yet", "Ainda sem leitura")
     ListPanel(title = tr("Today", "Hoje"), note = if (isToday) tr("So far", "Até agora") else null, tag = tag) {
         val a = r?.activity
         // The latest workout the strap read VO2 max from; the estimate from your profile otherwise.

@@ -459,6 +459,10 @@ private fun AppRoot(
     // Opening Habit Age marks the estimate seen, so Today stops offering it.
     val seeHabitAge: () -> Unit = { healthspan?.result?.asOf?.let { a -> scope.launch { container.settings.setHabitAgeSeen(a) } } }
     val profile by deviceVm.profile.collectAsStateWithLifecycle()
+    // The Reports screen's report, worked out off the main thread when it opens, and again when the profile changes or
+    // a workout comes or goes; it reads the workouts as they stand then, zones and all.
+    val latestWorkouts = androidx.compose.runtime.rememberUpdatedState(workouts)
+    val loadReport = remember(profile, workouts.size) { reportLoader(container.health, profile) { latestWorkouts.value } }
     val realDay by dayVm.state.collectAsStateWithLifecycle()
     val day = remember(realDay, dataPreview) { realDay.previewed(dataPreview) }
     // Your usual steps by the hour, read once per day shown, off the main thread ([DayViewModel.usualSteps]).
@@ -858,6 +862,8 @@ private fun AppRoot(
                     // All metrics is hidden for now (spec 3.1). Passing { allMetricsOpen = true } brings the button
                     // back; the sheet opens over whatever shows, and no tab hears of it (spec 3.2).
                     onOpenAllMetrics = null,
+                    // Reports open on the tab showing, as any detail does (spec 3.3).
+                    onOpenReports = { if (stackOf(t.ordinal).lastOrNull() != Detail.Reports) setStack(t.ordinal, stackOf(t.ordinal) + Detail.Reports) },
                 )
             }
             // What a tab's stack shows on top: the same screens on every tab, each pushing onto the stack it's on.
@@ -894,6 +900,7 @@ private fun AppRoot(
                         workouts, padding, onOpen = { push(Detail.Workout(it)) }, onBack = pop,
                     )
                     Detail.Healthspan -> org.openstrap.app.ui.glow.GlowHealthspanScreen(healthspan, padding, onBack = pop)
+                    Detail.Reports -> org.openstrap.app.ui.glow.ReportsDetail(day.date, loadReport, padding, onBack = pop)
                     // The Recovery and Sleep tabs' screens, opened over another tab from a card about them.
                     Detail.Recovery -> {
                         androidx.activity.compose.BackHandler(onBack = pop)
@@ -1371,6 +1378,18 @@ private fun MetricDetail(
     contentPadding: androidx.compose.foundation.layout.PaddingValues,
     onBack: () -> Unit,
 ) = org.openstrap.app.ui.glow.GlowMetricDetailScreen(metric, night, state, history, liveHeartRate, liveEnabled, canUseLive, onLiveToggle, onOpen, onSwitch, onSelectDay, contentPadding, onBack)
+
+/**
+ * Works out the Reports screen's report for a day ([org.openstrap.app.data.HealthRepository.reports]) off the main
+ * thread, with [profile] and the [workouts] as they stand when it runs.
+ */
+private fun reportLoader(
+    health: org.openstrap.app.data.HealthRepository,
+    profile: org.openstrap.app.data.settings.UserProfile,
+    workouts: () -> List<org.openstrap.app.data.WorkoutAnalysis>,
+): suspend (LocalDate) -> org.openstrap.app.data.Reports.Report = { d ->
+    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { health.reports(d, profile, workouts()) }
+}
 
 /** A workout's detail: one page for the strap's and the phone's ([org.openstrap.app.ui.glow.GlowWorkoutDetailScreen]). */
 @androidx.compose.runtime.Composable

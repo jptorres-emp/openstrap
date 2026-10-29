@@ -6,6 +6,8 @@ import org.openstrap.app.data.settings.UserProfile
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import kotlin.math.exp
+import kotlin.math.roundToInt
 
 /** Everything the Charge screens show for one day. */
 data class RecoveryResult(
@@ -284,6 +286,145 @@ class RecoveryEngine(private val dao: HealthDao) {
     }
 
     /**
+     * What the Reports screen reads ([Reports.Input]): the [count] mornings ending on [date], each scored as [compute]
+     * scores that day, from its own nights ([Recovery.BASELINE_NIGHTS] + 1 days back) and the loads before it
+     * ([LOAD_DAYS] back), so a past morning reads as it did that day. With each, its HRV against the baseline it was
+     * scored with, its night, and the day's Load, usual Load and steps; and every worn day's Load before [date], for the
+     * Load target.
+     * Loads use [date]'s resting and max heart rate, as [compute]'s [RecoveryResult.dailyLoads] do. Heart rate is read
+     * once for the whole span, a month at a time, rather than [compute] running for every day.
+     */
+    suspend fun reportDays(
+        date: LocalDate,
+        profile: UserProfile,
+        zone: ZoneId = ZoneId.systemDefault(),
+        now: Long = System.currentTimeMillis() / 1000,
+        count: Int = Reports.DAYS,
+    ): Reports.Input {
+        val first = date.minusDays(count - 1L)
+        val day = DayWindow.of(date, zone)
+        val to = day.to
+        fun midnight(d: LocalDate) = DayWindow.of(d, zone).from
+        fun dayOf(t: Long) = Instant.ofEpochSecond(t).atZone(zone).toLocalDate()
+        val nightFrom = midnight(first.minusDays(Recovery.BASELINE_NIGHTS.toLong() + 1))
+        val loadFrom = midnight(first.minusDays(LOAD_DAYS.toLong()))
+
+        // A month of heart rate at a time, each reduced to minutes as it's read, so months of samples aren't held at once.
+        val activityAll = dao.activityOnce(loadFrom, to)
+        val hrAll = ArrayList<Pair<Long, Int>>()
+        var chunk = loadFrom
+        while (chunk <= to) {
+            val end = minOf(to, chunk + READ_CHUNK_SECONDS - 1)
+            hrAll += minuteHeartRate(chunk, end, activityAll.within(chunk, end) { it.timestamp })
+            chunk = end + 1
+        }
+        val hr = hrAll.within(nightFrom, to) { it.first }
+        val sessions = dao.sleepSessionsOnce(loadFrom, to)
+        val nightSessions = sessions.filter { it.end >= nightFrom }
+        val hrv = dao.hrvOnce(nightFrom, to).sortedBy { it.timestamp }
+        val skin = dao.skinTemperatureOnce(nightFrom, to).sortedBy { it.timestamp }
+        val breath = dao.breathRateOnce(nightFrom, to).sortedBy { it.timestamp }
+        val sleepSpo2 = dao.sleepSpo2Once(nightFrom, to).sortedBy { it.timestamp }
+        val strapResting = dao.restingHrOnce(nightFrom, to)
+        val osaByMorning = dao.osaResultsOnce(nightFrom - 86_400, to).associateBy {
+            Instant.ofEpochSecond(it.belongTime + 2 * 3600).atZone(zone).toLocalDate().atStartOfDay(zone).toEpochSecond()
+        }
+        val mains = mainsByMorning(nightSessions, zone)
+        val strapNights = dao.strapReadinessOnce(nightFrom, to).associateBy { it.day }
+        val napsByDay = nightSessions.filter { it.nap }.groupBy { midnight(dayOf(it.start)) }.mapValues { (_, v) -> v.sumOf { asleepMinutes(it) } }
+        val firstMidnight = midnight(first)
+        val nights = mains.map { (morning, s) ->
+            // A night's readings are cut to its own span first; only a scored morning's night needs its stages, for the
+            // sleep score when the strap gave none.
+            val waso = if (morning >= firstMidnight) Recovery.wasoMinutes(dao.sleepStagesOnce(s.start).map { Triple(it.start, it.end, it.stage) }) else null
+            night(
+                morning, s, hr.within(s.start, s.end) { it.first }, hrv.within(s.start, s.end) { it.timestamp },
+                skin.within(s.start, s.end) { it.timestamp }, breath.within(s.start, s.end) { it.timestamp },
+                sleepSpo2.within(s.start, s.end) { it.timestamp }, osaByMorning[morning],
+            ).copy(
+                strapHrv = strapNights[morning]?.sleepHrv?.toFloat(),
+                strapRestingHr = strapNights[morning]?.sleepRestingHr?.toFloat(),
+                wasoMinutes = waso,
+                napMinutes = napsByDay[morning] ?: 0,
+            )
+        }.sortedBy { it.day }
+
+        // Resting and max heart rate as of [date], read as [compute] reads them.
+        val restingHr = Recovery.daytimeRestingHr(
+            strapResting.associate { it.day to it.bpm.toFloat() },
+            nights.mapNotNull { n -> n.restingHr?.let { n.day to it } }.toMap(),
+            day.from,
+        ) ?: 60f
+        val maxFrom = midnight(date.minusDays(LOAD_DAYS.toLong()))
+        val pai = dao.paiOnce(midnight(date.minusDays(Recovery.BASELINE_NIGHTS.toLong() + 1)), to).lastOrNull()
+        val maxHr = maxHeartRate(profile, hrAll.within(maxFrom, to) { it.first }, pai?.maxHeartRate, maxFrom, to, zone)
+        val female = profile.sex == UserProfile.Sex.Female
+
+        // Each day's Load as [compute] works it out. Asleep is looked up by minute: every sleep's minutes in a set.
+        val sleepMinutes = HashSet<Long>()
+        for (s in sessions) {
+            var t = (s.start + 59) / 60 * 60
+            while (t <= s.end) { sleepMinutes += t; t += 60 }
+        }
+        val workoutHr = workoutHeartRates(loadFrom, to, now)
+        val workoutRanges = workoutHr.map { it.first }
+        val hrByDay = Recovery.withWorkoutMinutes(hrAll, workoutHr.map { it.second }).groupBy { dayOf(it.first) }
+        val activityByDay = activityAll.groupBy { dayOf(it.timestamp) }
+        fun loadOf(d: LocalDate): Float {
+            val steps = activityByDay[d].orEmpty().associate { it.timestamp / 60 * 60 to it.steps }
+            return Recovery.dailyLoad(hrByDay[d].orEmpty(), restingHr, maxHr, female, workoutRanges, { it in sleepMinutes }) { steps[it] }.total
+        }
+        val loads = LinkedHashMap<LocalDate, Float>()
+        var d = first.minusDays(LOAD_DAYS.toLong())
+        while (d < date) {
+            if (hrByDay[d].orEmpty().size >= MIN_WORN_MINUTES) loads[d] = loadOf(d)
+            d = d.plusDays(1)
+        }
+        // The day shown counts whatever was worn, as [compute]'s Load does.
+        val shownLoad = loadOf(date)
+        val loadList = loads.entries.map { midnight(it.key) to it.value }
+
+        val sleepNeed = Recovery.sleepNeed(profile.age(), profile.sleepNeedMinutes)
+        val days = (0 until count).map { i ->
+            val date0 = first.plusDays(i.toLong())
+            val m = midnight(date0)
+            val seen = nights.filter { it.day in midnight(date0.minusDays(Recovery.BASELINE_NIGHTS.toLong() + 1))..m }
+            val tonight = seen.lastOrNull { it.day == m }
+            val before = loadList.filter { it.first in midnight(date0.minusDays(LOAD_DAYS.toLong())) until m }.map { it.second }
+            val r = Recovery.readiness(tonight, seen, before, sleepNeed = sleepNeed)
+            // The HRV baseline the night was read against, by Readiness's rule: earlier valid nights not in Watch or Alert.
+            val hrvBase = tonight?.let { n ->
+                val earlier = seen.filter { it.day < m }
+                val flagged = BodySignals.evaluate(earlier + n).filter { it.state != BodySignals.State.Normal }.mapTo(HashSet()) { it.day }
+                val valid = earlier.filter { it.day !in flagged && it.valid }.takeLast(Recovery.BASELINE_NIGHTS)
+                Recovery.baseline(valid.mapNotNull { it.hrvLn }, Recovery.HRV_LN_SD_FLOOR)
+            }
+            val w = DayWindow.of(date0, zone)
+            Reports.Day(
+                date = date0,
+                recovery = r.score,
+                strapRecovery = strapNights[m]?.score,
+                hrvRange = r.hrvRange,
+                alert = r.strainAlert,
+                hrv = tonight?.hrv?.takeIf { tonight.valid },
+                restingHr = tonight?.validRestingHr,
+                hrvVsUsual = tonight?.hrvLn?.let { ln -> hrvBase?.let { ((exp(ln - it.centre.toDouble()) - 1) * 100).roundToInt() } },
+                bedtime = tonight?.let { Instant.ofEpochSecond(it.start).atZone(zone).toLocalTime() },
+                wake = tonight?.let { Instant.ofEpochSecond(it.end).atZone(zone).toLocalTime() },
+                inBedMinutes = tonight?.let { ((it.end - it.start) / 60).toInt() },
+                asleepMinutes = tonight?.asleepMinutes,
+                restorativeMinutes = tonight?.takeIf { it.deepMinutes != null || it.remMinutes != null }?.let { (it.deepMinutes ?: 0) + (it.remMinutes ?: 0) },
+                napMinutes = napsByDay[m] ?: 0,
+                load = if (date0 == date) shownLoad else loads[date0],
+                usualLoad = before.takeIf { it.size >= 7 }?.let { Recovery.fitnessFatigue(it).last().ctl },
+                steps = activityByDay[date0]?.sumOf { it.steps },
+                partial = now in w.from..w.to,
+            )
+        }
+        return Reports.Input(date, days, loads)
+    }
+
+    /**
      * Max HR as of [date] by the same rule [compute] uses, for screens that don't run the whole model (workout zones):
      * the tested value, else Tanaka or the strap's PAI value, raised by observed peaks over [LOAD_DAYS].
      */
@@ -440,7 +581,16 @@ class RecoveryEngine(private val dao: HealthDao) {
         const val LOOKAHEAD_SECONDS = 14 * 3600L
         /** Main sleeps the usual sleep time for Charge's not-worn rule is the median of. */
         const val USUAL_SLEEP_NIGHTS = 14
+        /** [reportDays] reads heart rate this many seconds at a time. */
+        const val READ_CHUNK_SECONDS = 30 * 86_400L
     }
+}
+
+/** The part of a list sorted by [time] from [from] to [to] inclusive, found by binary search; a view, not a copy. */
+private inline fun <T> List<T>.within(from: Long, to: Long, crossinline time: (T) -> Long): List<T> {
+    val lo = -(binarySearch { if (time(it) < from) -1 else 1 } + 1)
+    val hi = -(binarySearch { if (time(it) <= to) -1 else 1 } + 1)
+    return subList(lo, maxOf(lo, hi))
 }
 
 private fun List<Float>.mean(): Float? = if (isEmpty()) null else average().toFloat()

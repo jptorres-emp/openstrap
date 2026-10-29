@@ -65,6 +65,8 @@ sealed interface Detail {
     data object Sleep : Detail
     /** The week story: last Monday to Sunday day by day, opened from Your week on Today. */
     data object Week : Detail
+    /** The weekly and monthly reports, opened from the header's chart button on any tab. */
+    data object Reports : Detail
 
     companion object {
         /** Saves a tab's stack of details, deepest last, as one string ("m:Hrv|n:Spo2|w:1792227300") so it survives process death. */
@@ -83,6 +85,7 @@ sealed interface Detail {
             Recovery -> "r:"
             Sleep -> "s:"
             Week -> "k:"
+            Reports -> "p:"
         }
 
         private fun restore(s: String): Detail? {
@@ -97,6 +100,7 @@ sealed interface Detail {
                 "r" -> Recovery
                 "s" -> Sleep
                 "k" -> Week
+                "p" -> Reports
                 else -> null
             }
         }

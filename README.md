@@ -38,6 +38,7 @@ Most health apps hand you a wall of numbers. OpenStrap tries to answer one quest
 - **Energy**, your energy through the day: sleep fills it, effort and stress drain it
 - **Sleep** stages, score, regularity, naps and night vitals
 - **Activity**: steps, active minutes, Heart points, Load and time to recover
+- **Reports**: your week and month against the stretch before, a Load target for the day, tonight's bedtime, and what your habits do to the next morning ([how](docs/algorithms/reports.md))
 - **Workouts** started on the phone with live heart-rate zones, GPS maps and the strap buzzing you back into your zone
 - **Live heart rate**, alarms, health alerts and call or notification buzzes on the strap
 - **Find strap**, restart, firmware updates and an off-body reminder

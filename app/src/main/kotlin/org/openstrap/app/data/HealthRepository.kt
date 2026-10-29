@@ -64,6 +64,20 @@ class HealthRepository(private val dao: HealthDao) {
     /** When you usually go to sleep as of [date] ([RecoveryResult.usualBedtime]), without working out Recovery. */
     suspend fun usualBedtime(date: LocalDate): java.time.LocalTime? = recoveryEngine.usualBedtime(date)
 
+    /**
+     * The Reports screen's report for the week and month ending on [date] ([Reports.build]), from the engine's days and
+     * your [workouts]; heavy (a few months of heart rate, and the habits' permutation tests), so call it off the main thread.
+     */
+    suspend fun reports(
+        date: LocalDate,
+        profile: org.openstrap.app.data.settings.UserProfile,
+        workouts: List<WorkoutAnalysis>,
+        zone: ZoneId = ZoneId.systemDefault(),
+    ): Reports.Report = Reports.build(
+        recoveryEngine.reportDays(date, profile, zone), Reports.sessions(workouts, zone),
+        Recovery.sleepNeed(profile.age(), profile.sleepNeedMinutes), LocalDate.now(zone),
+    )
+
     /** The weekly Healthspan estimate shown on [date] (made the Sunday on or before it), or why it's withheld; heavy. */
     suspend fun healthspan(date: LocalDate, profile: org.openstrap.app.data.settings.UserProfile): Healthspan.Outcome =
         healthspanEngine.compute(date, profile)

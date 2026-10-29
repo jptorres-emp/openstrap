@@ -261,6 +261,75 @@ fun GlowBars(
     }
 }
 
+/**
+ * Each day's Load against that morning's target (the Reports week): the target as a band of the ink at 12% in the
+ * day's column, as a normal is drawn, and the day's Load as a pill bar in [color]. A day that landed outside its band
+ * is lit, one inside stays dim, as a trend's dots outside your normal are; the day still under way ([partial]) is
+ * faint. Holding scrubs: [onScrub] gets the column under the finger, or null on release, so the headline follows it.
+ */
+@Composable
+internal fun TargetBars(
+    loads: List<Float?>,
+    targets: List<IntRange?>,
+    color: Color,
+    modifier: Modifier = Modifier,
+    height: Dp = 180.dp,
+    labels: List<String> = emptyList(),
+    partial: Int? = null,
+    onScrub: ((Int?) -> Unit)? = null,
+) {
+    val m = rememberTextMeasurer()
+    var touchX by remember { mutableStateOf<Float?>(null) }
+    var width by remember { mutableStateOf(0f) }
+    val tick = rememberScrubHaptics()
+    val n = maxOf(loads.size, targets.size)
+    Canvas(
+        modifier.fillMaxWidth().height(height).onSizeChanged { width = it.width.toFloat() }.let {
+            if (onScrub == null) it else it.scrub(loads) { x ->
+                touchX = x
+                val i = x?.takeIf { n > 0 && width > 0f }?.let { tx -> (tx / (width / n)).toInt().coerceIn(0, n - 1) }
+                tick(i, loads, null, false)
+                onScrub(i)
+            }
+        },
+    ) {
+        if (n == 0) return@Canvas
+        val axisH = if (labels.isEmpty()) 0f else 18.dp.toPx()
+        val top = 6.dp.toPx()
+        val h = size.height - axisH
+        val pitch = size.width / n
+        val max = (loads.filterNotNull() + targets.filterNotNull().map { it.last.toFloat() }).maxOrNull()?.coerceAtLeast(1f) ?: 1f
+        fun yOf(v: Float) = h - (h - top) * (v / max).coerceIn(0f, 1f)
+        val picked = touchX?.takeIf { onScrub != null }?.let { (it / pitch).toInt().coerceIn(0, n - 1) }
+        gridLine(h - 0.5.dp.toPx())
+        val bandW = (pitch * 0.6f).coerceAtMost(26.dp.toPx())
+        for (i in 0 until n) {
+            // While scrubbing, the other columns dim so the picked one stands out.
+            val dim = if (picked == null || picked == i) 1f else 0.35f
+            val t = targets.getOrNull(i)
+            if (t != null) {
+                val y0 = yOf(t.last.toFloat())
+                val y1 = yOf(t.first.toFloat())
+                drawRoundRect(
+                    color.copy(alpha = ChartInk.NORMAL_BAND_ALPHA * dim), Offset(pitch * i + (pitch - bandW) / 2, y0),
+                    Size(bandW, (y1 - y0).coerceAtLeast(2.dp.toPx())), CornerRadius(6.dp.toPx()),
+                )
+            }
+            val v = loads.getOrNull(i) ?: continue
+            val shown = Math.round(v)
+            val outside = t != null && (shown < t.first || shown > t.last)
+            val ink = if (outside) lerp(color, Ink, 0.3f) else color
+            val alpha = when {
+                i == partial -> 0.4f
+                outside -> 1f
+                else -> 0.6f
+            }
+            pillBar(ink.copy(alpha = alpha * dim), pitch * i, pitch, h, h - yOf(v))
+        }
+        axis(m, labels, h + 4.dp.toPx())
+    }
+}
+
 /* ------------------------------------------------------------------------------------------------ */
 
 /** A day on a [GlowTrend]. */

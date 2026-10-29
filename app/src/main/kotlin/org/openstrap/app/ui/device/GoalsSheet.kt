@@ -18,6 +18,7 @@ import org.openstrap.app.ui.glow.GlowType
 import org.openstrap.app.ui.glow.PageButton
 import org.openstrap.app.ui.glow.PageNote
 import org.openstrap.app.ui.glow.PageSheet
+import org.openstrap.app.l10n.tr
 
 /**
  * Steps, sleep and active hours to aim for each day, in a sheet over the You page (spec 3.4). Every goal ring and
@@ -35,21 +36,24 @@ fun GoalsSheet(goals: Goals, onSave: (Goals) -> Unit, onDismiss: () -> Unit) {
         ?.takeIf { it in Goals.SLEEP_MINUTES }
     val activeValue = active.toIntOrNull()?.takeIf { it in Goals.ACTIVE_HOURS }
 
-    PageSheet(onDismiss, "Your goals", note = "What you aim for each day. Change them whenever they stop fitting.") {
-        NumberField(steps, { steps = it }, "Steps", "steps", stepsValue == null)
+    PageSheet(onDismiss, tr("Your goals", "Os teus objetivos"), note = tr(
+        "What you aim for each day. Change them whenever they stop fitting.",
+        "O que procuras atingir todos os dias. Muda-os sempre que deixarem de fazer sentido.",
+    )) {
+        NumberField(steps, { steps = it }, tr("Steps", "Passos"), tr("steps", "passos"), stepsValue == null)
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text("Sleep", color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary)
+            Text(tr("Sleep", "Sono"), color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary)
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 NumberField(sleepH, { sleepH = it.take(2) }, "", "h", sleepValue == null, Modifier.weight(1f))
                 NumberField(sleepM, { sleepM = it.take(2) }, "", "min", sleepValue == null, Modifier.weight(1f))
             }
         }
-        NumberField(active, { active = it.take(2) }, "Active hours", "of 24", activeValue == null)
-        PageNote("An active hour is one with at least 250 steps.")
+        NumberField(active, { active = it.take(2) }, tr("Active hours", "Horas ativas"), tr("of 24", "de 24"), activeValue == null)
+        PageNote(tr("An active hour is one with at least 250 steps.", "Uma hora ativa é uma hora com pelo menos 250 passos."))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            PageButton("Cancel", onDismiss, Modifier.weight(1f))
+            PageButton(tr("Cancel", "Cancelar"), onDismiss, Modifier.weight(1f))
             PageButton(
-                "Save", { onSave(Goals(stepsValue!!, sleepValue!!, activeValue!!)) }, Modifier.weight(1f),
+                tr("Save", "Guardar"), { onSave(Goals(stepsValue!!, sleepValue!!, activeValue!!)) }, Modifier.weight(1f),
                 enabled = stepsValue != null && sleepValue != null && activeValue != null, primary = true,
             )
         }

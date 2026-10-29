@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import org.openstrap.app.ui.dashboard.DayUiState
 import org.openstrap.app.ui.theme.MetricColors
+import org.openstrap.app.l10n.tr
 
 /**
  * The top half of a foldable standing half-open on a table: your heart rate, big enough to read from across
@@ -38,12 +39,12 @@ fun GlowTabletopHeart(
         GlowCard(style, Modifier.fillMaxSize()) {
             Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.SpaceBetween) {
                 GlowHeader(
-                    "Heart rate",
-                    trailing = if (live == null && liveEnabled == null) "Latest" else null,
+                    tr("Heart rate", "Frequência cardíaca"),
+                    trailing = if (live == null && liveEnabled == null) tr("Latest", "Mais recente") else null,
                     trailingContent = liveEnabled?.let { on ->
                         {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("Live", color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodySmall)
+                                Text(tr("Live", "Ao vivo"), color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodySmall)
                                 Spacer(Modifier.width(8.dp))
                                 GlowSwitch(on, onLiveToggle, accent = style.color)
                             }
@@ -56,7 +57,7 @@ fun GlowTabletopHeart(
                         Text("bpm", color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.titleMedium)
                     }
                     state.restingHeartRate?.let {
-                        Text("Resting $it", color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodyMedium)
+                        Text(tr("Resting $it", "Em repouso $it"), color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodyMedium)
                     }
                 }
                 if (state.heartRate.isNotEmpty()) {

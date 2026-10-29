@@ -56,6 +56,7 @@ import org.openstrap.app.ui.theme.AppIcons
 import org.openstrap.app.ui.zepp.ZeppSignInDialog
 import org.openstrap.app.zepp.BoundDevice
 import org.openstrap.app.zepp.DeviceListing
+import org.openstrap.app.l10n.tr
 
 /**
  * The strap's firmware: what it runs, checking for and installing an update, or installing from a file. Opened from
@@ -78,15 +79,15 @@ fun FirmwareScreen(vm: FirmwareViewModel, contentPadding: PaddingValues, onBack:
     confirm?.let { image -> ConfirmInstall(image, vm.blockers(), onDismiss = { confirm = null }, onInstall = { confirm = null; vm.install(image) }) }
 
     ScreenList(contentPadding, gutter = GlowLayout.Gutter) {
-        item { PageHeader("Firmware", { vm.reset(); onBack() }, backEnabled = !installing) }
+        item { PageHeader(tr("Firmware", "Firmware"), { vm.reset(); onBack() }, backEnabled = !installing) }
 
         item {
-            PagePanel(title = "This strap") {
+            PagePanel(title = tr("This strap", "Esta strap")) {
                 val c = connection as? ConnectionState.Connected
-                InfoLine("Firmware", info?.firmware ?: c?.firmware ?: "Unknown")
-                info?.hardware?.let { InfoLine("Hardware", it) }
-                InfoLine("Battery", c?.batteryPercent?.let { "$it%" } ?: "Not connected")
-                InfoLine("Update service", when (info?.dfuAvailable) { true -> "Available"; false -> "Not found"; null -> "Connect to check" })
+                InfoLine(tr("Firmware", "Firmware"), info?.firmware ?: c?.firmware ?: tr("Unknown", "Desconhecido"))
+                info?.hardware?.let { InfoLine(tr("Hardware", "Hardware"), it) }
+                InfoLine(tr("Battery", "Bateria"), c?.batteryPercent?.let { "$it%" } ?: tr("Not connected", "Desligada"))
+                InfoLine(tr("Update service", "Serviço de atualização"), when (info?.dfuAvailable) { true -> tr("Available", "Disponível"); false -> tr("Not found", "Não encontrado"); null -> tr("Connect to check", "Liga para verificar") })
             }
         }
 
@@ -95,17 +96,32 @@ fun FirmwareScreen(vm: FirmwareViewModel, contentPadding: PaddingValues, onBack:
         item {
             PageRows {
                 // Update checks need a signed-in Zepp account; its page is a row away, as on the Strap page.
-                PageRow("Zepp account", if (account != null) "Signed in" else "Not signed in", onClick = onZeppAccount, divider = false, enabled = !installing)
-                PageRow("Install from a file", "For an image you have", onClick = { pickFile.launch(arrayOf("*/*")) }, enabled = !installing)
+                PageRow(tr("Zepp account", "Conta Zepp"), if (account != null) tr("Signed in", "Sessão iniciada") else tr("Not signed in", "Sem sessão iniciada"), onClick = onZeppAccount, divider = false, enabled = !installing)
+                PageRow(tr("Install from a file", "Instalar a partir de um ficheiro"), tr("For an image you have", "Para uma imagem que já tenhas"), onClick = { pickFile.launch(arrayOf("*/*")) }, enabled = !installing)
             }
         }
 
         item {
-            PagePanel(title = "Privacy and safety") {
+            PagePanel(title = tr("Privacy and safety", "Privacidade e segurança")) {
                 Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                    Point(AppIcons.Key, "Sign-in", "Happens on Zepp's own page. OpenStrap keeps only the app token and user ID, and fetches your device list once.")
-                    Point(AppIcons.CloudArrowDown, "Update check", "Sends the update server your token, user ID and the strap's firmware, hardware and serial number. Nothing else.")
-                    Point(AppIcons.CheckCircle, "Safe install", "Downloads are checked against the server's checksum, and the strap verifies the signature before installing.")
+                    Point(AppIcons.Key, tr("Sign-in", "Início de sessão"), tr(
+                        "Happens on Zepp's own page. OpenStrap keeps only the app token and user ID, and fetches your device " +
+                            "list once.",
+                        "Acontece na própria página da Zepp. A OpenStrap só guarda o token da app e o ID de utilizador, e " +
+                            "vai buscar a tua lista de dispositivos uma vez.",
+                    ))
+                    Point(AppIcons.CloudArrowDown, tr("Update check", "Procura de atualizações"), tr(
+                        "Sends the update server your token, user ID and the strap's firmware, hardware and serial number. " +
+                            "Nothing else.",
+                        "Envia ao servidor de atualizações o teu token, ID de utilizador e o firmware, hardware e número de " +
+                            "série da strap. Mais nada.",
+                    ))
+                    Point(AppIcons.CheckCircle, tr("Safe install", "Instalação segura"), tr(
+                        "Downloads are checked against the server's checksum, and the strap verifies the signature before " +
+                            "installing.",
+                        "As transferências são verificadas com o checksum do servidor, e a strap confirma a assinatura antes " +
+                            "de instalar.",
+                    ))
                 }
             }
         }
@@ -117,44 +133,58 @@ private fun StepPanel(step: FirmwareStep, vm: FirmwareViewModel, onInstall: (Rea
     PagePanel {
         when (step) {
             FirmwareStep.Idle -> {
-                Title("Updates")
-                Body("Ask Zepp's update server whether there's newer firmware for this strap.")
-                PageButton("Check for update", vm::check, Modifier.fillMaxWidth(), primary = true)
+                Title(tr("Updates", "Atualizações"))
+                Body(tr(
+                    "Ask Zepp's update server whether there's newer firmware for this strap.",
+                    "Pergunta ao servidor de atualizações da Zepp se há firmware mais recente para esta strap.",
+                ))
+                PageButton(tr("Check for update", "Procurar atualização"), vm::check, Modifier.fillMaxWidth(), primary = true)
             }
-            FirmwareStep.Checking -> Busy("Checking for updates…", null)
+            FirmwareStep.Checking -> Busy(tr("Checking for updates…", "À procura de atualizações…"), null)
             is FirmwareStep.Checked -> CheckResult(step.result, vm)
-            is FirmwareStep.Downloading -> Busy("Downloading ${step.part.label} ${step.part.version}", step.fraction)
+            is FirmwareStep.Downloading -> Busy(tr(
+                "Downloading ${step.part.label} ${step.part.version}",
+                "A transferir ${step.part.label} ${step.part.version}",
+            ), step.fraction)
             is FirmwareStep.Ready -> {
                 val image = step.image
-                Title("Ready to install")
-                InfoLine("Image", image.title)
-                InfoLine("Size", "%,d bytes".format(image.bytes.size))
-                image.trailer?.let { InfoLine("Signed for", "product ${it.pnpId} v${it.pnpVersion}") }
+                Title(tr("Ready to install", "Pronto para instalar"))
+                InfoLine(tr("Image", "Imagem"), image.title)
+                InfoLine(tr("Size", "Tamanho"), tr("%,d bytes", "%,d bytes").format(image.bytes.size))
+                image.trailer?.let { InfoLine(tr("Signed for", "Assinado para"), tr("product ${it.pnpId} v${it.pnpVersion}", "produto ${it.pnpId} v${it.pnpVersion}")) }
                 image.warnings.forEach { Warning(it) }
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    PageButton("Cancel", vm::reset, Modifier.weight(1f))
-                    PageButton("Install", { onInstall(image) }, Modifier.weight(1f), primary = true)
+                    PageButton(tr("Cancel", "Cancelar"), vm::reset, Modifier.weight(1f))
+                    PageButton(tr("Install", "Instalar"), { onInstall(image) }, Modifier.weight(1f), primary = true)
                 }
             }
             is FirmwareStep.Installing -> {
                 Busy(step.label, step.fraction)
-                PageNote("Keep the strap close and this screen open. This can take several minutes.")
+                PageNote(tr(
+                    "Keep the strap close and this screen open. This can take several minutes.",
+                    "Mantém a strap perto e este ecrã aberto. Pode levar vários minutos.",
+                ))
             }
             FirmwareStep.Installed -> {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Icon(AppIcons.CheckCircle, null, tint = MetricColors.good)
-                    Title("Installed")
+                    Title(tr("Installed", "Instalado"))
                 }
-                Body("The strap is restarting. OpenStrap reconnects by itself. Check again afterwards in case there are more parts to install.")
-                PageButton("Done", vm::reset, Modifier.fillMaxWidth())
+                Body(tr(
+                    "The strap is restarting. OpenStrap reconnects by itself. Check again afterwards in case there are " +
+                        "more parts to install.",
+                    "A strap está a reiniciar. A OpenStrap volta a ligar sozinha. Depois procura de novo, caso haja mais " +
+                        "partes para instalar.",
+                ))
+                PageButton(tr("Done", "Feito"), vm::reset, Modifier.fillMaxWidth())
             }
             is FirmwareStep.Failed -> {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Icon(AppIcons.WarningCircle, null, tint = MetricColors.warn)
-                    Title("Something went wrong")
+                    Title(tr("Something went wrong", "Algo correu mal"))
                 }
                 Body(step.message)
-                PageButton("OK", vm::reset, Modifier.fillMaxWidth())
+                PageButton(tr("OK", "OK"), vm::reset, Modifier.fillMaxWidth())
             }
         }
     }
@@ -165,22 +195,29 @@ private fun CheckResult(result: UpdateCheck, vm: FirmwareViewModel) {
     if (result.upToDate) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Icon(AppIcons.CheckCircle, null, tint = MetricColors.good)
-            Title("Up to date")
+            Title(tr("Up to date", "Atualizado"))
         }
-        Body("The update server has nothing newer for this strap.")
-        PageButton("OK", vm::reset, Modifier.fillMaxWidth())
+        Body(tr(
+            "The update server has nothing newer for this strap.",
+            "O servidor de atualizações não tem nada mais recente para esta strap.",
+        ))
+        PageButton(tr("OK", "OK"), vm::reset, Modifier.fillMaxWidth())
         return
     }
     val next = result.installOrder.firstOrNull()
-    Title(if (result.forced) "Required update" else "Update available")
+    Title(if (result.forced) tr("Required update", "Atualização obrigatória") else tr("Update available", "Atualização disponível"))
     result.parts.forEach { InfoLine(it.label, "${it.version}, ${"%,d".format(it.length / 1024)} KB") }
     result.changeLog?.let { PageNote(it.substringBefore("###summary###").trim()) }
     if (result.installOrder.size > 1) {
-        PageNote("Parts are installed one at a time. After the strap restarts, check again to install the next one.")
+        PageNote(tr(
+            "Parts are installed one at a time. After the strap restarts, check again to install the next one.",
+            "As partes são instaladas uma de cada vez. Depois de a strap reiniciar, procura de novo para " +
+                "instalar a seguinte.",
+        ))
     }
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        PageButton("Not now", vm::reset, Modifier.weight(1f))
-        PageButton(if (next == null) "Unsupported" else "Download", { next?.let(vm::download) }, Modifier.weight(1f), enabled = next != null, primary = true)
+        PageButton(tr("Not now", "Agora não"), vm::reset, Modifier.weight(1f))
+        PageButton(if (next == null) tr("Unsupported", "Não suportado") else tr("Download", "Transferir"), { next?.let(vm::download) }, Modifier.weight(1f), enabled = next != null, primary = true)
     }
 }
 
@@ -194,7 +231,7 @@ fun ZeppAccountScreen(vm: FirmwareViewModel, contentPadding: PaddingValues, onBa
     val account by vm.account.collectAsState()
     val installing = vm.step.collectAsState().value is FirmwareStep.Installing
     ScreenList(contentPadding, gutter = GlowLayout.Gutter) {
-        item { PageHeader("Zepp account", onBack) }
+        item { PageHeader(tr("Zepp account", "Conta Zepp"), onBack) }
         item { AccountPanel(account, enabled = !installing, onSave = vm::saveAccount, onClear = vm::clearAccount, onSignIn = vm::saveSignIn) }
     }
 }
@@ -212,7 +249,7 @@ private fun AccountPanel(
     if (signIn) {
         ZeppSignInDialog(
             preferredApiBase = account?.apiBase,
-            confirmLabel = "Save sign-in",
+            confirmLabel = tr("Save sign-in", "Guardar início de sessão"),
             onDismiss = { signIn = false },
             onConfirm = { listing, strap -> signIn = false; onSignIn(listing, strap) },
         )
@@ -220,13 +257,25 @@ private fun AccountPanel(
     PagePanel {
         if (!editing) {
             Body(
-                if (account == null) "Zepp only answers update checks for signed-in users. Sign in, or paste your own app token and user ID. They're stored on this phone only."
-                else "Update checks use your saved token${if (account.userId.isNotEmpty()) " for user ${account.userId}" else ""} on ${account.apiBase}.",
+                if (account == null) tr(
+                    "Zepp only answers update checks for signed-in users. Sign in, or paste your own app token and user " +
+                        "ID. They're stored on this phone only.",
+                    "A Zepp só responde a procuras de atualizações de quem tem sessão iniciada. Inicia sessão, ou cola o " +
+                        "teu token da app e ID de utilizador. Ficam guardados só neste telemóvel.",
+                )
+                else tr(
+                    "Update checks use your saved " +
+                        "token${if (account.userId.isNotEmpty()) " for user ${account.userId}" else ""} on " +
+                        "${account.apiBase}.",
+                    "As procuras de atualizações usam o teu token " +
+                        "guardado${if (account.userId.isNotEmpty()) " do utilizador ${account.userId}" else ""} em " +
+                        "${account.apiBase}.",
+                ),
             )
-            PageButton(if (account == null) "Sign in with Zepp" else "Sign in again", { signIn = true }, Modifier.fillMaxWidth(), enabled = enabled, primary = true)
+            PageButton(if (account == null) tr("Sign in with Zepp", "Iniciar sessão com a Zepp") else tr("Sign in again", "Iniciar sessão de novo"), { signIn = true }, Modifier.fillMaxWidth(), enabled = enabled, primary = true)
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                PageButton(if (account == null) "Paste token" else "Edit", { editing = true }, Modifier.weight(1f), enabled = enabled)
-                if (account != null) PageButton("Remove", onClear, Modifier.weight(1f), enabled = enabled, color = DestructiveInk)
+                PageButton(if (account == null) tr("Paste token", "Colar token") else tr("Edit", "Editar"), { editing = true }, Modifier.weight(1f), enabled = enabled)
+                if (account != null) PageButton(tr("Remove", "Remover"), onClear, Modifier.weight(1f), enabled = enabled, color = DestructiveInk)
             }
             return@PagePanel
         }
@@ -235,20 +284,20 @@ private fun AccountPanel(
         var api by rememberSaveable { mutableStateOf(account?.apiBase ?: ZeppAccount.DEFAULT_API_BASE) }
         var china by rememberSaveable { mutableStateOf(account?.china == true) }
         PageField(
-            token, { token = it }, "App token", Modifier.fillMaxWidth(),
-            placeholder = if (account != null) "Leave empty to keep the saved token" else null,
+            token, { token = it }, tr("App token", "Token da app"), Modifier.fillMaxWidth(),
+            placeholder = if (account != null) tr("Leave empty to keep the saved token", "Deixa vazio para manter o token guardado") else null,
             visualTransformation = PasswordVisualTransformation(),
         )
         PageField(
-            user, { user = it }, "User ID", Modifier.fillMaxWidth(),
+            user, { user = it }, tr("User ID", "ID de utilizador"), Modifier.fillMaxWidth(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         )
-        PageField(api, { api = it }, "Server", Modifier.fillMaxWidth())
-        PageSwitchRow("Chinese-market strap", "Only if the strap was bought in mainland China", china, { china = it }, divider = false)
+        PageField(api, { api = it }, tr("Server", "Servidor"), Modifier.fillMaxWidth())
+        PageSwitchRow(tr("Chinese-market strap", "Strap do mercado chinês"), tr("Only if the strap was bought in mainland China", "Só se a strap foi comprada na China continental"), china, { china = it }, divider = false)
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            PageButton("Cancel", { editing = false }, Modifier.weight(1f))
+            PageButton(tr("Cancel", "Cancelar"), { editing = false }, Modifier.weight(1f))
             PageButton(
-                "Save", { onSave(token.ifBlank { account?.appToken.orEmpty() }, user, api, china); editing = false }, Modifier.weight(1f),
+                tr("Save", "Guardar"), { onSave(token.ifBlank { account?.appToken.orEmpty() }, user, api, china); editing = false }, Modifier.weight(1f),
                 enabled = token.isNotBlank() || account != null, primary = true,
             )
         }
@@ -259,16 +308,21 @@ private fun AccountPanel(
 private fun ConfirmInstall(image: ReadyImage, blockers: List<String>, onDismiss: () -> Unit, onInstall: () -> Unit) {
     var accepted by remember { mutableStateOf(image.warnings.isEmpty()) }
     PageConfirm(
-        "Install ${image.title}?",
+        tr("Install ${image.title}?", "Instalar ${image.title}?"),
         if (blockers.isNotEmpty()) null
-        else "The strap will receive the image, check it, install it and restart. Keep it near the phone and don't close OpenStrap until it's done.",
-        confirm = "Install", onConfirm = onInstall, onDismiss = onDismiss, confirmEnabled = blockers.isEmpty() && accepted,
+        else tr(
+            "The strap will receive the image, check it, install it and restart. Keep it near the phone and " +
+                "don't close OpenStrap until it's done.",
+            "A strap vai receber a imagem, verificá-la, instalá-la e reiniciar. Mantém-na perto do telemóvel e " +
+                "não feches a OpenStrap até acabar.",
+        ),
+        confirm = tr("Install", "Instalar"), onConfirm = onInstall, onDismiss = onDismiss, confirmEnabled = blockers.isEmpty() && accepted,
     ) {
         if (blockers.isNotEmpty()) {
             blockers.forEach { Warning(it) }
         } else {
             image.warnings.forEach { Warning(it) }
-            if (image.warnings.isNotEmpty()) PageSwitchRow("I understand and want to install it anyway", null, accepted, { accepted = it }, divider = false)
+            if (image.warnings.isNotEmpty()) PageSwitchRow(tr("I understand and want to install it anyway", "Percebo e quero instalar na mesma"), null, accepted, { accepted = it }, divider = false)
         }
     }
 }

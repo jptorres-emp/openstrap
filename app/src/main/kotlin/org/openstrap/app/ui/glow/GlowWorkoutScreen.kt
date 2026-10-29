@@ -50,6 +50,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import kotlin.math.roundToInt
+import org.openstrap.app.l10n.tr
 
 /*
  * The page of a past workout (spec 6.3, "Workout detail"), one for the strap's and the phone's: the sentence first on
@@ -62,8 +63,13 @@ import kotlin.math.roundToInt
 private const val HeartStep = 10L
 
 /** What deleting a strap workout does. */
-private const val STRAP_DELETE =
-    "Its heart rate and times are removed from OpenStrap, and the next sync won't bring it back. The strap's own history is kept."
+private val STRAP_DELETE: String get() =
+    tr(
+        "Its heart rate and times are removed from OpenStrap, and the next sync won't bring it back. The " +
+            "strap's own history is kept.",
+        "A frequência cardíaca e os tempos dele são apagados da OpenStrap, e a próxima sincronização não o " +
+            "traz de volta. O histórico da própria strap fica.",
+    )
 
 /**
  * The workout [a]. A phone workout shows from its [summary] (route, laps, sets and the whole recording, for trimming),
@@ -99,7 +105,7 @@ fun GlowWorkoutDetailScreen(
         ScreenList(contentPadding, list, gutter = GlowLayout.Gutter) {
             item {
                 PageHeader(
-                    (shown ?: a)?.sportName ?: "Workout", onBack,
+                    (shown ?: a)?.sportName ?: tr("Workout", "Treino"), onBack,
                     trailing = if ((shown ?: a)?.startedByYou == false) ({ FoundTag() }) else null,
                 )
             }
@@ -183,16 +189,19 @@ private fun HeartRateCard(a: WorkoutAnalysis) {
     var scrubbed by remember { mutableStateOf<Int?>(null) }
     val at = scrubbed?.let { i -> values.getOrNull(i)?.let { v -> first + i * HeartStep to v.roundToInt() } }
     EdgeCard(MetricColors.heart, Modifier.fillMaxWidth(), kind = EdgeKind.Earlier) {
-        EdgeTitle("Heart rate", if (a.heartRate.isNotEmpty()) "Coloured by zone" else null)
+        EdgeTitle(tr("Heart rate", "Frequência cardíaca"), if (a.heartRate.isNotEmpty()) tr("Coloured by zone", "Cor por zona") else null)
         if (at != null) {
-            EdgeValue(at.second.toString(), "bpm", if (at.first > a.end) "At ${clockAt(at.first)}, after the end" else "At ${clockAt(at.first)}")
+            EdgeValue(at.second.toString(), tr("bpm", "bpm"), if (at.first > a.end) tr("At ${clockAt(at.first)}, after the end", "Às ${clockAt(at.first)}, depois do fim") else tr("At ${clockAt(at.first)}", "Às ${clockAt(at.first)}"))
         } else {
-            val range = listOfNotNull(w.maxHeartRate?.let { "Max $it" }, w.minHeartRate?.let { "lowest $it" }).joinToString(", ")
-            EdgeValue(w.averageHeartRate?.toString(), "bpm average", range.ifEmpty { null }?.let { "$it bpm" }, waiting = false)
+            val range = listOfNotNull(w.maxHeartRate?.let { tr("Max $it", "Máx $it") }, w.minHeartRate?.let { tr("lowest $it", "mínimo $it") }).joinToString(", ")
+            EdgeValue(w.averageHeartRate?.toString(), tr("bpm average", "bpm de média"), range.ifEmpty { null }?.let { tr("$it bpm", "$it bpm") }, waiting = false)
         }
         if (a.heartRate.isEmpty()) {
             Text(
-                "The strap hasn't sent this workout's heart rate yet.", color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA),
+                tr(
+                    "The strap hasn't sent this workout's heart rate yet.",
+                    "A strap ainda não enviou a frequência cardíaca deste treino.",
+                ), color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA),
                 style = GlowType.secondary, modifier = Modifier.padding(top = 10.dp),
             )
             return@EdgeCard
@@ -201,10 +210,10 @@ private fun HeartRateCard(a: WorkoutAnalysis) {
         Row(Modifier.fillMaxWidth().padding(top = 6.dp)) {
             Note(clockAt(first))
             Spacer(Modifier.weight(1f))
-            Note(if (last > a.end + HeartStep) "Drop after ${clockAt(a.end)}" else clockAt(a.end))
+            Note(if (last > a.end + HeartStep) tr("Drop after ${clockAt(a.end)}", "Descida depois das ${clockAt(a.end)}") else clockAt(a.end))
         }
         if (a.historyRanges.isNotEmpty()) Text(
-            "Dimmed: " + a.historyRanges.joinToString(", ") { "${clockAt(it.first)}–${clockAt(it.last + 1)}" } + " came from the strap's history.",
+            tr("Dimmed: ", "Esbatido: ") + a.historyRanges.joinToString(", ") { "${clockAt(it.first)}–${clockAt(it.last + 1)}" } + tr(" came from the strap's history.", " veio do histórico da strap."),
             color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary, modifier = Modifier.padding(top = 8.dp),
         )
     }
@@ -261,15 +270,15 @@ private fun ZoneHeartLine(
 /** The small facts ([WorkoutDetailCopy.facts]) as rows, and the map under them when the route was kept. */
 @Composable
 private fun FactsList(facts: List<WorkoutFact>, summary: PhoneSummary?) {
-    ListPanel(title = "The workout") {
+    ListPanel(title = tr("The workout", "O treino")) {
         facts.forEachIndexed { i, f ->
-            val color = if (f.name == "Paused") PausedColor else MetricColors.steps
-            val icon = when (f.name) {
-                "Distance" -> Score.Distance.rowIcon()
-                "Paused" -> AppIcons.Hourglass
-                "Steps" -> Metric.Steps.rowIcon()
-                "Calories" -> Score.Energy.rowIcon()
-                else -> null
+            val color = if (f.kind == WorkoutFact.Kind.Paused) PausedColor else MetricColors.steps
+            val icon = when (f.kind) {
+                WorkoutFact.Kind.Distance -> Score.Distance.rowIcon()
+                WorkoutFact.Kind.Paused -> AppIcons.Hourglass
+                WorkoutFact.Kind.Steps -> Metric.Steps.rowIcon()
+                WorkoutFact.Kind.Calories -> Score.Energy.rowIcon()
+                null -> null
             }
             ListRow(f.name, color, f.value, f.status, divider = i > 0, icon = icon)
         }
@@ -305,11 +314,14 @@ fun GlowWorkoutsScreen(workouts: List<WorkoutAnalysis>, contentPadding: PaddingV
     val days = remember(workouts) { workouts.groupBy { Instant.ofEpochSecond(it.workout.start).atZone(zone).toLocalDate() }.toList() }
     val today = LocalDate.now()
     ScreenList(contentPadding, gutter = GlowLayout.Gutter) {
-        item { PageHeader("Workouts", onBack, subtitle = "${workouts.size} recorded") }
+        item { PageHeader(tr("Workouts", "Treinos"), onBack, subtitle = tr("${workouts.size} recorded", "${workouts.size} gravados")) }
         if (workouts.isEmpty()) {
             item {
                 ListPanel {
-                    ListRow("No workouts yet", MetricColors.heart, null, "Workouts you start in OpenStrap show up here, and the strap's own after a sync.", dash = false, divider = false)
+                    ListRow(tr("No workouts yet", "Ainda sem treinos"), MetricColors.heart, null, tr(
+                        "Workouts you start in OpenStrap show up here, and the strap's own after a sync.",
+                        "Os treinos que começares na OpenStrap aparecem aqui, e os da própria strap depois de sincronizar.",
+                    ), dash = false, divider = false)
                 }
             }
             return@ScreenList

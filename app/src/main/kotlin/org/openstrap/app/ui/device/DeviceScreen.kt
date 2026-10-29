@@ -86,6 +86,7 @@ import org.openstrap.app.ui.dashboard.StrapView
 import org.openstrap.app.ui.zepp.ComputerGuideButton
 import org.openstrap.app.ui.zepp.OptionButton
 import org.openstrap.app.ui.zepp.ZeppSignInDialog
+import org.openstrap.app.l10n.tr
 
 /**
  * The line under the strap's name on the Strap page: what it's doing and when it was last heard from ("Connected.
@@ -93,16 +94,22 @@ import org.openstrap.app.ui.zepp.ZeppSignInDialog
  */
 internal fun strapStateLine(connection: ConnectionState, sync: SyncState, lastSeen: Long?, now: Long): String = when (connection) {
     is ConnectionState.Connected -> when {
-        connection.charging -> "Charging. Wear data pauses until it's back on."
-        sync is SyncState.Running -> "Connected. Syncing"
-        sync is SyncState.Done -> "Connected. Synced ${agoText(now - sync.atEpochSeconds).lowercase()}"
-        sync is SyncState.Failed -> "Connected. Not synced"
-        else -> "Connected"
+        connection.charging -> tr(
+            "Charging. Wear data pauses until it's back on.",
+            "A carregar. Os dados de uso param até voltares a pô-la.",
+        )
+        sync is SyncState.Running -> tr("Connected. Syncing", "Ligada. A sincronizar")
+        sync is SyncState.Done -> tr(
+            "Connected. Synced ${agoText(now - sync.atEpochSeconds).lowercase()}",
+            "Ligada. Sincronizada ${agoText(now - sync.atEpochSeconds).lowercase()}",
+        )
+        sync is SyncState.Failed -> tr("Connected. Not synced", "Ligada. Não sincronizada")
+        else -> tr("Connected", "Ligada")
     }
-    ConnectionState.Connecting, ConnectionState.Authenticating -> "Connecting"
-    is ConnectionState.Failed -> if (connection.keyRejected) "The strap turned the key down" else "Can't connect"
-    ConnectionState.NotPaired -> "Not paired"
-    ConnectionState.Disconnected -> lastSeen?.let { "Last seen ${agoText(now - it).lowercase()}" } ?: "Not connected"
+    ConnectionState.Connecting, ConnectionState.Authenticating -> tr("Connecting", "A ligar")
+    is ConnectionState.Failed -> if (connection.keyRejected) tr("The strap turned the key down", "A strap recusou a chave") else tr("Can't connect", "Não dá para ligar")
+    ConnectionState.NotPaired -> tr("Not paired", "Não emparelhada")
+    ConnectionState.Disconnected -> lastSeen?.let { tr("Last seen ${agoText(now - it).lowercase()}", "Vista pela última vez ${agoText(now - it).lowercase()}") } ?: tr("Not connected", "Desligada")
 }
 
 /**
@@ -155,34 +162,49 @@ fun DeviceScreen(
 
     if (confirmDisconnect) {
         PageConfirm(
-            "Disconnect the strap?",
-            (if (sync is SyncState.Running) "The sync in progress will stop. " else "") +
-                "The strap keeps recording on its own, but OpenStrap won't sync or show live heart rate until you connect again.",
-            confirm = "Disconnect", onConfirm = { confirmDisconnect = false; vm.strap.disconnect() }, onDismiss = { confirmDisconnect = false },
+            tr("Disconnect the strap?", "Desligar a strap?"),
+            (if (sync is SyncState.Running) tr("The sync in progress will stop. ", "A sincronização em curso vai parar. ") else "") +
+                tr(
+                    "The strap keeps recording on its own, but OpenStrap won't sync or show live heart rate until you " +
+                        "connect again.",
+                    "A strap continua a gravar sozinha, mas a OpenStrap não sincroniza nem mostra a frequência cardíaca " +
+                        "ao vivo até voltares a ligar.",
+                ),
+            confirm = tr("Disconnect", "Desligar"), onConfirm = { confirmDisconnect = false; vm.strap.disconnect() }, onDismiss = { confirmDisconnect = false },
         )
     }
 
     if (confirmRestart) {
         PageConfirm(
-            "Restart the strap?",
-            (if (sync is SyncState.Running) "The sync in progress will stop. " else "") +
-                "The strap restarts and disconnects. OpenStrap reconnects on its own once it's back, which can take a minute.",
-            confirm = "Restart", onConfirm = { confirmRestart = false; vm.restartStrap() }, onDismiss = { confirmRestart = false },
+            tr("Restart the strap?", "Reiniciar a strap?"),
+            (if (sync is SyncState.Running) tr("The sync in progress will stop. ", "A sincronização em curso vai parar. ") else "") +
+                tr(
+                    "The strap restarts and disconnects. OpenStrap reconnects on its own once it's back, which can take " +
+                        "a minute.",
+                    "A strap reinicia e desliga-se. A OpenStrap volta a ligar sozinha quando ela voltar, o que pode " +
+                        "levar um minuto.",
+                ),
+            confirm = tr("Restart", "Reiniciar"), onConfirm = { confirmRestart = false; vm.restartStrap() }, onDismiss = { confirmRestart = false },
         )
     }
 
     if (confirmForget) {
         PageConfirm(
-            "Forget this strap?",
-            "OpenStrap will disconnect and delete the strap's address and auth key from this phone. " +
-                "Your synced health data stays. To pair again you'll need the auth key.\n\n" +
-                "This doesn't unbind the strap from your Zepp account.",
-            confirm = "Forget", onConfirm = { confirmForget = false; vm.forget() }, onDismiss = { confirmForget = false },
+            tr("Forget this strap?", "Esquecer esta strap?"),
+            tr(
+                "OpenStrap will disconnect and delete the strap's address and auth key from this phone. Your synced " +
+                    "health data stays. To pair again you'll need the auth key.\n\nThis doesn't unbind the strap from " +
+                    "your Zepp account.",
+                "A OpenStrap vai desligar e apagar deste telemóvel o endereço e a chave de autenticação da strap. Os " +
+                    "teus dados de saúde sincronizados ficam. Para emparelhar de novo vais precisar da chave de " +
+                    "autenticação.\n\nIsto não desassocia a strap da tua conta Zepp.",
+            ),
+            confirm = tr("Forget", "Esquecer"), onConfirm = { confirmForget = false; vm.forget() }, onDismiss = { confirmForget = false },
         )
     }
 
     ScreenList(contentPadding, gutter = GlowLayout.Gutter) {
-        item { PageHeader("Your strap", onBack) }
+        item { PageHeader(tr("Your strap", "A tua strap"), onBack) }
 
         val device = paired
         if (device == null) {
@@ -197,48 +219,48 @@ fun DeviceScreen(
                 when (connection) {
                     is ConnectionState.Connected -> {
                         PageButton(
-                            "Sync now", vm.strap::syncNow, Modifier.weight(1f).height(56.dp), enabled = sync !is SyncState.Running,
+                            tr("Sync now", "Sincronizar agora"), vm.strap::syncNow, Modifier.weight(1f).height(56.dp), enabled = sync !is SyncState.Running,
                             icon = AppIcons.ArrowsClockwise,
                         )
                         if (info?.findDevice == true) FindStrapButton(vm, Modifier.weight(1f).height(56.dp))
                     }
                     ConnectionState.Connecting, ConnectionState.Authenticating ->
-                        PageButton("Cancel", vm.strap::disconnect, Modifier.fillMaxWidth().height(56.dp))
-                    else -> PageButton("Connect", { onRequestBluetooth { vm.strap.connect() } }, Modifier.fillMaxWidth().height(56.dp), primary = true)
+                        PageButton(tr("Cancel", "Cancelar"), vm.strap::disconnect, Modifier.fillMaxWidth().height(56.dp))
+                    else -> PageButton(tr("Connect", "Ligar"), { onRequestBluetooth { vm.strap.connect() } }, Modifier.fillMaxWidth().height(56.dp), primary = true)
                 }
             }
         }
         item {
             val connected = connection is ConnectionState.Connected
             // What the strap holds is read from it; until then, or without it, the row just opens its page.
-            val waiting = if (connected) "Reading" else "On the strap"
+            val waiting = if (connected) tr("Reading", "A ler") else tr("On the strap", "Na strap")
             PageRows {
-                PageRow("Alarms", alarmsSummary(alarms) ?: waiting, onClick = onAlarms, divider = false, icon = AppIcons.Alarm, selected = selected == "Alarms")
-                PageRow("Phone alerts", phoneAlertsSummary(calls, notifications), onClick = onPhoneAlerts, icon = AppIcons.Vibrate, selected = selected == "Phone alerts")
-                PageRow("Health alerts", healthAlertsSummary(alarms) ?: waiting, onClick = onHealthAlerts, icon = AppIcons.Heartbeat, selected = selected == "Health alerts")
-                PageRow("Off-body reminder", onClick = { scope.launch { settings.setWearReminder(!wearReminder) } }, icon = AppIcons.HandPalm) {
+                PageRow(tr("Alarms", "Alarmes"), alarmsSummary(alarms) ?: waiting, onClick = onAlarms, divider = false, icon = AppIcons.Alarm, selected = selected == "Alarms")
+                PageRow(tr("Phone alerts", "Alertas do telemóvel"), phoneAlertsSummary(calls, notifications), onClick = onPhoneAlerts, icon = AppIcons.Vibrate, selected = selected == "Phone alerts")
+                PageRow(tr("Health alerts", "Alertas de saúde"), healthAlertsSummary(alarms) ?: waiting, onClick = onHealthAlerts, icon = AppIcons.Heartbeat, selected = selected == "Health alerts")
+                PageRow(tr("Off-body reminder", "Aviso de strap tirada"), onClick = { scope.launch { settings.setWearReminder(!wearReminder) } }, icon = AppIcons.HandPalm) {
                     GlowSwitch(wearReminder, { on -> scope.launch { settings.setWearReminder(on) } })
                 }
-                PageRow("Auto-detect workouts", onClick = { scope.launch { settings.setAutoStartWorkouts(!autoStart) } }, icon = AppIcons.PersonSimpleRun) {
+                PageRow(tr("Auto-detect workouts", "Detetar treinos automaticamente"), onClick = { scope.launch { settings.setAutoStartWorkouts(!autoStart) } }, icon = AppIcons.PersonSimpleRun) {
                     GlowSwitch(autoStart, { on -> scope.launch { settings.setAutoStartWorkouts(on) } })
                 }
                 KeepConnectedRow(vm, keepConnected, device.address)
-                PageRow("Firmware", info?.firmware ?: (connection as? ConnectionState.Connected)?.firmware ?: "Check for updates", onClick = onFirmware, icon = AppIcons.Cpu, selected = selected == "Firmware")
-                PageRow("Zepp account", if (zeppSignedIn) "Signed in" else "Not signed in", onClick = onZeppAccount, icon = AppIcons.Key, selected = selected == "Zepp account")
+                PageRow(tr("Firmware", "Firmware"), info?.firmware ?: (connection as? ConnectionState.Connected)?.firmware ?: tr("Check for updates", "Procurar atualizações"), onClick = onFirmware, icon = AppIcons.Cpu, selected = selected == "Firmware")
+                PageRow(tr("Zepp account", "Conta Zepp"), if (zeppSignedIn) tr("Signed in", "Sessão iniciada") else tr("Not signed in", "Sem sessão iniciada"), onClick = onZeppAccount, icon = AppIcons.Key, selected = selected == "Zepp account")
             }
         }
         item {
             PageRows {
                 var first = true
                 if (connection is ConnectionState.Connected) {
-                    PageRow("Disconnect", onClick = { confirmDisconnect = true }, divider = false, icon = AppIcons.LinkBreak)
+                    PageRow(tr("Disconnect", "Desligar"), onClick = { confirmDisconnect = true }, divider = false, icon = AppIcons.LinkBreak)
                     first = false
                 }
                 if (connection is ConnectionState.Connected && info?.canRestart == true) {
-                    PageRow("Restart strap", onClick = { confirmRestart = true }, divider = !first, icon = AppIcons.ArrowClockwise)
+                    PageRow(tr("Restart strap", "Reiniciar a strap"), onClick = { confirmRestart = true }, divider = !first, icon = AppIcons.ArrowClockwise)
                     first = false
                 }
-                PageRow("Forget this strap", onClick = { confirmForget = true }, divider = !first, titleColor = DestructiveInk, icon = AppIcons.Trash)
+                PageRow(tr("Forget this strap", "Esquecer esta strap"), onClick = { confirmForget = true }, divider = !first, titleColor = DestructiveInk, icon = AppIcons.Trash)
             }
         }
     }
@@ -249,7 +271,7 @@ fun DeviceScreen(
 private fun FindStrapButton(vm: DeviceViewModel, modifier: Modifier) {
     val finding by vm.strap.findingStrap.collectAsState()
     PageButton(
-        if (finding) "Stop buzzing" else "Find strap", { if (finding) vm.stopFindingStrap() else vm.findStrap() }, modifier,
+        if (finding) tr("Stop buzzing", "Parar a vibração") else tr("Find strap", "Encontrar a strap"), { if (finding) vm.stopFindingStrap() else vm.findStrap() }, modifier,
         icon = if (finding) AppIcons.StopFill else AppIcons.BellRinging,
     )
 }
@@ -262,7 +284,10 @@ private fun rememberKeepConnected(vm: DeviceViewModel): KeepConnected {
     val context = LocalContext.current
     val companion = vm.companion
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { result ->
-        if (!companion.onResult(result.resultCode)) vm.showMessage("Not linked. You can turn off battery optimization for OpenStrap instead.")
+        if (!companion.onResult(result.resultCode)) vm.showMessage(tr(
+            "Not linked. You can turn off battery optimization for OpenStrap instead.",
+            "Não ficou associada. Em vez disso, podes desligar a otimização da bateria para a OpenStrap.",
+        ))
     }
     return remember(companion, launcher) {
         KeepConnected { address ->
@@ -293,20 +318,23 @@ private fun KeepConnectedRow(vm: DeviceViewModel, keepConnected: KeepConnected, 
     val associated by vm.companion.associated.collectAsState()
     val ignoringBattery by vm.companion.ignoringBatteryOptimizations.collectAsState()
     val declined by vm.companionDeclined.collectAsState()
-    val title = "Stay connected in background"
+    val title: String get() = tr("Stay connected in background", "Manter ligada em segundo plano")
     val icon = AppIcons.Bluetooth
     when {
-        associated -> PageRow(title, "On", icon = icon)
-        vm.companion.supported && !declined -> PageRow(title, "Off", onClick = { keepConnected.associate(address) }, icon = icon)
-        !ignoringBattery -> PageRow(title, "Off", icon = icon, onClick = {
+        associated -> PageRow(title, tr("On", "Ligado"), icon = icon)
+        vm.companion.supported && !declined -> PageRow(title, tr("Off", "Desligado"), onClick = { keepConnected.associate(address) }, icon = icon)
+        !ignoringBattery -> PageRow(title, tr("Off", "Desligado"), icon = icon, onClick = {
             runCatching {
                 context.startActivity(
                     android.content.Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
                         .setData(android.net.Uri.parse("package:${context.packageName}")),
                 )
-            }.onFailure { vm.showMessage("Couldn't open battery settings on this phone.") }
+            }.onFailure { vm.showMessage(tr(
+                "Couldn't open battery settings on this phone.",
+                "Não deu para abrir as definições da bateria neste telemóvel.",
+            )) }
         })
-        else -> PageRow(title, "On", icon = icon)
+        else -> PageRow(title, tr("On", "Ligado"), icon = icon)
     }
 }
 
@@ -343,7 +371,7 @@ private fun StrapHero(name: String, connection: ConnectionState, sync: SyncState
             // The card's one dotted number (spec 2.3); the word after it sits on the digits' baseline in Body at 72%.
             if (battery != null) Row(verticalAlignment = Alignment.Bottom) {
                 DotMatrixText("$battery", dot = org.openstrap.app.ui.glow.DotSize.Hero)
-                Text("% battery", color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.body, modifier = Modifier.padding(start = 8.dp))
+                Text(tr("% battery", "% de bateria"), color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.body, modifier = Modifier.padding(start = 8.dp))
             }
             if (sync is SyncState.Running) {
                 PageProgress()
@@ -353,15 +381,22 @@ private fun StrapHero(name: String, connection: ConnectionState, sync: SyncState
                 connection is ConnectionState.Failed && !connection.keyRejected -> {
                     Text(connection.reason, color = MetricColors.warn, style = GlowType.secondary)
                     Text(
-                        "OpenStrap keeps retrying. Keep the strap on its charger near the phone, and make sure the Zepp app " +
-                            "isn't running. The strap talks to one app at a time.",
+                        tr(
+                            "OpenStrap keeps retrying. Keep the strap on its charger near the phone, and make sure the Zepp app " +
+                                "isn't running. The strap talks to one app at a time.",
+                            "A OpenStrap continua a tentar. Mantém a strap no carregador perto do telemóvel, e confirma que a " +
+                                "app Zepp não está aberta. A strap só fala com uma app de cada vez.",
+                        ),
                         style = GlowType.secondary, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA),
                     )
                 }
                 sync is SyncState.Failed -> {
-                    Text("Sync stopped. ${sync.reason}", color = MetricColors.warn, style = GlowType.secondary)
+                    Text(tr("Sync stopped. ${sync.reason}", "A sincronização parou. ${sync.reason}"), color = MetricColors.warn, style = GlowType.secondary)
                     Text(
-                        "$DATA_ON_STRAP OpenStrap tries again by itself.",
+                        tr(
+                            "$DATA_ON_STRAP OpenStrap tries again by itself.",
+                            "$DATA_ON_STRAP A OpenStrap volta a tentar sozinha.",
+                        ),
                         style = GlowType.secondary, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA),
                     )
                 }
@@ -387,21 +422,21 @@ fun DiagnosticsScreen(lines: List<String>, contentPadding: PaddingValues, onBack
     val context = LocalContext.current
     ScreenList(contentPadding, gutter = GlowLayout.Gutter) {
         item {
-            PageHeader("Diagnostics", onBack) {
-                PageButton("Copy", {
+            PageHeader(tr("Diagnostics", "Diagnóstico"), onBack) {
+                PageButton(tr("Copy", "Copiar"), {
                     context.getSystemService(ClipboardManager::class.java)
                         .setPrimaryClip(ClipData.newPlainText("OpenStrap log", lines.joinToString("\n")))
                 }, Modifier.height(40.dp), icon = AppIcons.Copy)
             }
         }
         item {
-            PagePanel(title = "Strap log", note = "${lines.size} lines") {
+            PagePanel(title = tr("Strap log", "Registo da strap"), note = tr("${lines.size} lines", "${lines.size} linhas")) {
                 Box(
                     Modifier.fillMaxWidth().heightIn(max = 520.dp).clip(RoundedCornerShape(12.dp)).background(Color.Black)
                         .verticalScroll(rememberScrollState()).horizontalScroll(rememberScrollState()).padding(12.dp),
                 ) {
                     Text(
-                        if (lines.isEmpty()) "No events yet." else lines.joinToString("\n"),
+                        if (lines.isEmpty()) tr("No events yet.", "Ainda sem eventos.") else lines.joinToString("\n"),
                         style = GlowType.caption.copy(fontFamily = FontFamily.Monospace),
                         color = Color.White.copy(alpha = 0.7f), textAlign = TextAlign.Start,
                     )
@@ -419,7 +454,7 @@ private fun PairPanel(vm: DeviceViewModel, scan: ScanUiState, onRequestBluetooth
     if (signIn) {
         ZeppSignInDialog(
             preferredApiBase = null,
-            confirmLabel = "Pair this strap",
+            confirmLabel = tr("Pair this strap", "Emparelhar esta strap"),
             requireKey = true,
             onDismiss = { signIn = false },
             onConfirm = { listing, strap ->
@@ -429,28 +464,51 @@ private fun PairPanel(vm: DeviceViewModel, scan: ScanUiState, onRequestBluetooth
         )
     }
 
-    PagePanel(title = "Pair your Helio Strap") {
-        StepText("OpenStrap needs the strap's auth key, which Zepp creates when you link the strap. You only do this once.")
-        PairStep(1, "Link the strap in the Zepp app") {
-            StepText("Install Zepp, sign in, and link your Helio Strap.")
+    PagePanel(title = tr("Pair your Helio Strap", "Emparelha a tua Helio Strap")) {
+        StepText(tr(
+            "OpenStrap needs the strap's auth key, which Zepp creates when you link the strap. You only do this " +
+                "once.",
+            "A OpenStrap precisa da chave de autenticação da strap, que a Zepp cria quando associas a strap. Só " +
+                "fazes isto uma vez.",
+        ))
+        PairStep(1, tr("Link the strap in the Zepp app", "Associa a strap na app Zepp")) {
+            StepText(tr(
+                "Install Zepp, sign in, and link your Helio Strap.",
+                "Instala a Zepp, inicia sessão e associa a tua Helio Strap.",
+            ))
             StepText(
-                "OpenStrap signs in with email only. If you signed up with Google or Apple, add an email and password " +
-                    "to your account in the Zepp app's account settings.",
+                tr(
+                    "OpenStrap signs in with email only. If you signed up with Google or Apple, add an email and " +
+                        "password to your account in the Zepp app's account settings.",
+                    "A OpenStrap só inicia sessão com email. Se te registaste com Google ou Apple, junta um email e uma " +
+                        "palavra-passe à tua conta nas definições de conta da app Zepp.",
+                ),
                 muted = true,
             )
         }
-        PairStep(2, "Get the strap ready") {
-            StepText("Put the strap on its charger, close to this phone.")
-            StepText("Force-stop or uninstall Zepp so it lets go of the strap. Don't unlink the strap in Zepp: that wipes its key.", muted = true)
+        PairStep(2, tr("Get the strap ready", "Prepara a strap")) {
+            StepText(tr(
+                "Put the strap on its charger, close to this phone.",
+                "Põe a strap no carregador, perto deste telemóvel.",
+            ))
+            StepText(tr(
+                "Force-stop or uninstall Zepp so it lets go of the strap. Don't unlink the strap in Zepp: that wipes " +
+                    "its key.",
+                "Força a paragem ou desinstala a Zepp para ela largar a strap. Não desassocies a strap na Zepp: isso " +
+                    "apaga a chave.",
+            ), muted = true)
         }
-        PairStep(3, "Sign in and pair") {
-            StepText("Sign in with the same Zepp email. OpenStrap finds your strap and its key, then pairs.")
+        PairStep(3, tr("Sign in and pair", "Inicia sessão e emparelha")) {
+            StepText(tr(
+                "Sign in with the same Zepp email. OpenStrap finds your strap and its key, then pairs.",
+                "Inicia sessão com o mesmo email da Zepp. A OpenStrap encontra a tua strap e a chave, e emparelha.",
+            ))
         }
         // Full panel width, not indented under step 3, so they line up with the panel's edges.
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            PageButton("Sign in with Zepp", { signIn = true }, Modifier.fillMaxWidth(), primary = true)
+            PageButton(tr("Sign in with Zepp", "Iniciar sessão com a Zepp"), { signIn = true }, Modifier.fillMaxWidth(), primary = true)
             ComputerGuideButton()
-            OptionButton("Have the key already?", "Enter it yourself") { manual = true }
+            OptionButton(tr("Have the key already?", "Já tens a chave?"), tr("Enter it yourself", "Introduz tu mesmo")) { manual = true }
         }
     }
 
@@ -492,41 +550,52 @@ private fun ManualPairSheet(
     var showKey by rememberSaveable { mutableStateOf(false) }
 
     PageSheet(
-        onDismiss, "Enter the key yourself",
-        note = "Scan with the strap on its charger and tap it to fill in the address, then paste the 32-character auth key. " +
-            "The dBm beside each strap is its signal, and nearer zero is closer.",
+        onDismiss, tr("Enter the key yourself", "Introduzir a chave"),
+        note = tr(
+            "Scan with the strap on its charger and tap it to fill in the address, then paste the 32-character " +
+                "auth key. The dBm beside each strap is its signal, and nearer zero is closer.",
+            "Procura com a strap no carregador e toca nela para preencher o endereço, depois cola a chave de " +
+                "autenticação de 32 caracteres. Os dBm ao lado de cada strap são o sinal, e mais perto de zero é " +
+                "mais perto.",
+        ),
     ) {
         if (scan.scanning) {
-            PageButton("Stop scanning", vm::stopScan, Modifier.fillMaxWidth())
+            PageButton(tr("Stop scanning", "Parar a procura"), vm::stopScan, Modifier.fillMaxWidth())
             PageProgress()
         } else {
-            PageButton("Scan for straps", { onRequestBluetooth { vm.startScan() } }, Modifier.fillMaxWidth(), icon = AppIcons.Bluetooth)
+            PageButton(tr("Scan for straps", "Procurar straps"), { onRequestBluetooth { vm.startScan() } }, Modifier.fillMaxWidth(), icon = AppIcons.Bluetooth)
         }
-        scan.error?.let { PageNote("Scanning stopped: $it. Check that Bluetooth is on and try again.", color = MetricColors.warn) }
-        if (scan.scanning && scan.found.isEmpty()) PageNote("Looking for straps nearby. Keep the strap on its charger.")
+        scan.error?.let { PageNote(tr(
+            "Scanning stopped: $it. Check that Bluetooth is on and try again.",
+            "A procura parou: $it. Confirma que o Bluetooth está ligado e tenta de novo.",
+        ), color = MetricColors.warn) }
+        if (scan.scanning && scan.found.isEmpty()) PageNote(tr(
+            "Looking for straps nearby. Keep the strap on its charger.",
+            "À procura de straps por perto. Mantém a strap no carregador.",
+        ))
         if (scan.found.isNotEmpty()) PageRows {
             scan.found.forEachIndexed { i, d ->
                 val selected = d.address == address
                 PageRow(
-                    d.name, if (selected) "Chosen" else "${d.rssi} dBm", onClick = { address = d.address; name = d.name },
+                    d.name, if (selected) tr("Chosen", "Escolhida") else "${d.rssi} dBm", onClick = { address = d.address; name = d.name },
                     divider = i > 0, icon = AppIcons.Watch,
                 )
             }
         }
         PageField(
-            address, { address = it.uppercase() }, "Bluetooth address", placeholder = "C8:0F:10:00:00:00",
+            address, { address = it.uppercase() }, tr("Bluetooth address", "Endereço Bluetooth"), placeholder = "C8:0F:10:00:00:00",
             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters),
         )
         PageField(
-            key, { key = it }, "Auth key",
+            key, { key = it }, tr("Auth key", "Chave de autenticação"),
             visualTransformation = if (showKey) VisualTransformation.None else PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-            trailing = { PageTextButton(if (showKey) "Hide" else "Show", { showKey = !showKey }) },
+            trailing = { PageTextButton(if (showKey) tr("Hide", "Esconder") else tr("Show", "Mostrar"), { showKey = !showKey }) },
         )
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            PageButton("Cancel", onDismiss, Modifier.weight(1f))
+            PageButton(tr("Cancel", "Cancelar"), onDismiss, Modifier.weight(1f))
             PageButton(
-                "Pair",
+                tr("Pair", "Emparelhar"),
                 {
                     // A bad key or address only shows a message; a valid one saves the strap and the screen moves to its status.
                     if (DeviceViewModel.normalizeAuthKey(key) != null && DeviceViewModel.isAddress(address)) onDismiss()
@@ -541,9 +610,9 @@ private fun ManualPairSheet(
 /** Shown under the status when the strap turned the key down: retrying can't help, so offer to start pairing over. */
 @Composable
 private fun KeyRejectedPanel(reason: String, onPairAgain: () -> Unit) {
-    PagePanel(title = "Pairing didn't work") {
+    PagePanel(title = tr("Pairing didn't work", "O emparelhamento não resultou")) {
         StepText(reason)
-        PageButton("Start pairing again", onPairAgain, Modifier.fillMaxWidth(), primary = true)
+        PageButton(tr("Start pairing again", "Começar o emparelhamento de novo"), onPairAgain, Modifier.fillMaxWidth(), primary = true)
         ComputerGuideButton()
     }
 }

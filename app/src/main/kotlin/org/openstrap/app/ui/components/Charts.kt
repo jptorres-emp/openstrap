@@ -38,6 +38,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import kotlin.math.ceil
 import kotlin.math.floor
+import org.openstrap.app.l10n.tr
 
 /** A point on a time axis: x is epoch seconds, y is the value. */
 data class ChartPoint(val x: Long, val y: Float)
@@ -246,7 +247,7 @@ fun LineChart(
                 val avgY = yOf(avg)
                 drawLine(onSurface.copy(alpha = 0.4f), Offset(0f, avgY), Offset(w, avgY), 1.dp.toPx())
                 // A small pill so the label stays readable where it crosses the line.
-                val text = measurer.measure("avg ${format(avg)}", style)
+                val text = measurer.measure(tr("avg ${format(avg)}", "média ${format(avg)}"), style)
                 val pw = text.size.width + 10.dp.toPx()
                 val ph = text.size.height + 2.dp.toPx()
                 val py = (avgY - ph / 2).coerceIn(0f, h - ph)
@@ -278,7 +279,7 @@ fun LineChart(
             drawLine(onSurface.copy(alpha = 0.5f), Offset(px, 0f), Offset(px, h), 1.dp.toPx())
             drawCircle(surface, 6.dp.toPx(), Offset(px, py))
             drawCircle(color, 4.5.dp.toPx(), Offset(px, py))
-            readout(measurer, "${withUnit(format(p.y), unit)} at ${xLabel(p.x)}", readoutStyle, bubble, px, py)
+            readout(measurer, tr("${withUnit(format(p.y), unit)} at ${xLabel(p.x)}", "${withUnit(format(p.y), unit)} às ${xLabel(p.x)}"), readoutStyle, bubble, px, py)
         }
     }
 }

@@ -6,6 +6,8 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 import org.openstrap.app.data.Route
 import org.openstrap.app.data.Workouts
+import org.openstrap.app.l10n.L10n
+import org.openstrap.app.l10n.tr
 import org.openstrap.app.ui.dashboard.TodayCopy
 import org.openstrap.app.ui.dashboard.sportNoun
 import org.openstrap.app.ui.glow.km
@@ -44,14 +46,19 @@ object SummaryCopy {
     private const val MIN_EFFORT_PCT = 65
 
     /** The page title right after a workout, by the sport's short name: "Run saved" (spec 6.3). */
-    fun savedTitle(sportType: Int?): String = sportType?.let { "${Workouts.shortName(it)} saved" } ?: "Workout saved"
+    fun savedTitle(sportType: Int?): String = sportType?.let { tr("${Workouts.shortName(it)} saved", "Treino guardado") } ?: tr("Workout saved", "Treino guardado")
 
     /** The (i) on the calm down hero. */
-    const val DROP_MEANING = "How far your heart rate falls in the first minute after you stop. A bigger drop usually " +
-        "means a fitter heart, and under 12 bpm is on the low side. It only says something after a hard effort."
+    val DROP_MEANING: String
+        get() = tr(
+            "How far your heart rate falls in the first minute after you stop. A bigger drop usually " +
+                "means a fitter heart, and under 12 bpm is on the low side. It only says something after a hard effort.",
+            "Quanto desce a frequência cardíaca no primeiro minuto depois de parares. Uma descida maior costuma " +
+                "querer dizer um coração mais em forma, e abaixo de 12 bpm é baixa. Só diz alguma coisa depois de um esforço duro.",
+        )
 
-    const val WATCHING = "Watching your heart rate come down."
-    const val NO_DROP_DATA = "No heart rate after the end, so no drop this time."
+    val WATCHING: String get() = tr("Watching your heart rate come down.", "A acompanhar a descida da frequência cardíaca.")
+    val NO_DROP_DATA: String get() = tr("No heart rate after the end, so no drop this time.", "Sem frequência cardíaca depois do fim, por isso desta vez não há descida.")
 
     /**
      * The hero's line from every reading around the end ([readings], time and bpm: the workout's, then what came
@@ -70,14 +77,14 @@ object SummaryCopy {
      */
     fun dropLine(drop: Int?, endBpm: Int?, maxHr: Int, usual: Int?): String {
         if (drop == null || endBpm == null) return NO_DROP_DATA
-        if (drop <= 0) return "No drop in the first minute."
-        val head = "Down $drop in the first minute"
-        if (endBpm * 100 < maxHr * MIN_EFFORT_PCT) return "$head, from an easy finish."
+        if (drop <= 0) return tr("No drop in the first minute.", "Sem descida no primeiro minuto.")
+        val head = tr("Down $drop in the first minute", "Desceu $drop no primeiro minuto")
+        if (endBpm * 100 < maxHr * MIN_EFFORT_PCT) return tr("$head, from an easy finish.", "$head, depois de um final leve.")
         return when {
             usual == null -> "$head."
-            drop >= usual + DROP_BAND -> "$head. A quick drop for you."
-            drop <= usual - DROP_BAND -> "$head. A slow drop for you."
-            else -> "$head. About usual for you."
+            drop >= usual + DROP_BAND -> tr("$head. A quick drop for you.", "$head. Uma descida rápida para ti.")
+            drop <= usual - DROP_BAND -> tr("$head. A slow drop for you.", "$head. Uma descida lenta para ti.")
+            else -> tr("$head. About usual for you.", "$head. Perto do teu habitual.")
         }
     }
 
@@ -91,17 +98,17 @@ object SummaryCopy {
 
     /** The Load card's line: against your [usual] workout Load ([Workouts.usualLoad]), with the band Today uses. */
     fun loadLine(load: Int, usual: Float?): String = when (TodayCopy.loadStatus(load.toFloat(), usual, endOfDay = true)) {
-        TodayCopy.LoadStatus.Above -> "Above your usual of ${Math.round(usual!!)}"
-        TodayCopy.LoadStatus.Below -> "Below your usual of ${Math.round(usual!!)}"
-        TodayCopy.LoadStatus.Usual, TodayCopy.LoadStatus.SoFar -> "About your usual"
-        null -> "Learning your usual"
+        TodayCopy.LoadStatus.Above -> tr("Above your usual of ${Math.round(usual!!)}", "Acima do teu habitual de ${Math.round(usual!!)}")
+        TodayCopy.LoadStatus.Below -> tr("Below your usual of ${Math.round(usual!!)}", "Abaixo do teu habitual de ${Math.round(usual!!)}")
+        TodayCopy.LoadStatus.Usual, TodayCopy.LoadStatus.SoFar -> tr("About your usual", "Perto do teu habitual")
+        null -> tr("Learning your usual", "A aprender o habitual")
     }
 
     /** The Load card's note, "From this run", or "this workout" where no short noun reads well. */
-    fun loadTitle(sportType: Int): String = "From this ${sportNoun(sportType) ?: "workout"}"
+    fun loadTitle(sportType: Int): String = tr("From this ${sportNoun(sportType) ?: "workout"}", "Deste treino")
 
     /** "Time to recover 14 h", "Time to recover 40 min"; null without one. */
-    fun timeToRecover(minutes: Int?): String? = recoverSpan(minutes)?.let { "Time to recover $it" }
+    fun timeToRecover(minutes: Int?): String? = recoverSpan(minutes)?.let { tr("Time to recover $it", "Tempo de recuperação $it") }
 
     /** A time to recover on its own: "14 h", "40 min"; null without one. */
     fun recoverSpan(minutes: Int?): String? {
@@ -116,16 +123,16 @@ object SummaryCopy {
     fun workoutLine(meters: Float?, fromSteps: Boolean, averageBpm: Int?, pausedSeconds: Long): String? {
         val parts = listOfNotNull(
             meters?.takeIf { it >= 10f }?.let { (if (fromSteps) "≈ " else "") + km(it) + if (it >= 1000) " km" else "" },
-            averageBpm?.takeIf { it > 0 }?.let { "average $it bpm" },
+            averageBpm?.takeIf { it > 0 }?.let { tr("average $it bpm", "média de $it bpm") },
         ).joinToString(", ").replaceFirstChar { it.uppercase() }
-        val paused = (pausedSeconds / 60).takeIf { it >= 1 }?.let { "Paused $it min." }
+        val paused = (pausedSeconds / 60).takeIf { it >= 1 }?.let { tr("Paused $it min.", "Em pausa $it min.") }
         return listOfNotNull(parts.takeIf { it.isNotEmpty() }?.let { "$it." }, paused).joinToString(" ").ifEmpty { null }
     }
 
     /** A lap's line on the list: "1.02 km, average 150 bpm"; null with neither. */
     fun lapLine(meters: Double?, averageBpm: Int?): String? = listOfNotNull(
         meters?.let { km(it.toFloat()) + if (it >= 1000) " km" else "" },
-        averageBpm?.let { "average $it bpm" },
+        averageBpm?.let { tr("average $it bpm", "média de $it bpm") },
     ).joinToString(", ").replaceFirstChar { it.uppercase() }.ifEmpty { null }
 
     /** The trim panel's header: "18:02–18:40, 38:12". */
@@ -146,7 +153,7 @@ object SummaryCopy {
             if (!whole && (i != splits.lastIndex || sp.meters < PARTIAL_MIN_M)) return@mapIndexedNotNull null
             val from = splits.getOrNull(i - 1)?.endT ?: firstT ?: sp.endT
             val last = totalMeters?.let { it - 1000f * i }?.takeIf { it > 0f } ?: sp.meters.toFloat()
-            SplitRow(if (whole) "Km ${i + 1}" else "Last ${km(last)}", workoutClock(sp.seconds), WorkoutCopy.averageOver(readings, from, sp.endT))
+            SplitRow(if (whole) "Km ${i + 1}" else tr("Last ${km(last)}", "Últimos ${km(last)}"), workoutClock(sp.seconds), WorkoutCopy.averageOver(readings, from, sp.endT))
         }
 
     /** A best counts once the last better one is at least this long ago. */
@@ -176,14 +183,23 @@ object SummaryCopy {
             val mine = value(w)?.takeIf { it >= min } ?: return null
             val measured = before.filter { value(it) != null }
             val better = measured.filter { value(it)!! >= mine }.maxByOrNull { it.start }
+            val sport = org.openstrap.app.ui.dashboard.TrainingCopy.inSentence(Workouts.sportName(w.sportType))
             return when {
-                better == null -> "Your $word $noun yet.".takeIf { measured.size >= BEST_MIN_BEFORE }
-                w.start - better.start >= BEST_GAP_S && measured.count { it.start > better.start } >= BEST_MIN_BEATEN -> "${word.replaceFirstChar { it.uppercase() }} $noun since ${month(better.start, w.start, zone, locale)}."
+                better == null -> (if (L10n.portuguese) bestPt(word, sport, null) else "Your $word $noun yet.").takeIf { measured.size >= BEST_MIN_BEFORE }
+                w.start - better.start >= BEST_GAP_S && measured.count { it.start > better.start } >= BEST_MIN_BEATEN -> month(better.start, w.start, zone, locale).let { m ->
+                    if (L10n.portuguese) bestPt(word, sport, m) else "${word.replaceFirstChar { it.uppercase() }} $noun since $m."
+                }
                 else -> null
             }
         }
         return best("farthest", { it.meters?.toDouble() }, BEST_MIN_M.toDouble())
             ?: best("longest", { it.seconds.toDouble().takeIf { s -> s > 0 } }, BEST_MIN_S.toDouble())
+    }
+
+    /** A best in Portuguese, which words it by the sport: "A maior distância em corrida desde março." */
+    private fun bestPt(word: String, sport: String, since: String?): String = when (word) {
+        "farthest" -> if (since == null) "A maior distância de sempre em $sport." else "A maior distância em $sport desde $since."
+        else -> if (since == null) "O treino de $sport mais longo de sempre." else "O treino de $sport mais longo desde $since."
     }
 
     /** "March", or "March 2025" when [at] is in another year than [now]. */

@@ -41,13 +41,14 @@ import org.openstrap.app.ui.glow.PageSwitchRow
 import androidx.compose.ui.graphics.Color
 import org.openstrap.app.ui.glow.GlowSegments
 import org.openstrap.app.ui.theme.MetricColors
+import org.openstrap.app.l10n.tr
 
 /** What the Strap page's Phone alerts row says: "Calls and notifications", "Calls", "Notifications" or "Off". */
 fun phoneAlertsSummary(calls: Boolean, notifications: Boolean): String = when {
-    calls && notifications -> "Calls and notifications"
-    calls -> "Calls"
-    notifications -> "Notifications"
-    else -> "Off"
+    calls && notifications -> tr("Calls and notifications", "Chamadas e notificações")
+    calls -> tr("Calls", "Chamadas")
+    notifications -> tr("Notifications", "Notificações")
+    else -> tr("Off", "Desligado")
 }
 
 /**
@@ -88,11 +89,16 @@ fun PhoneAlertsScreen(alerts: PhoneAlerts, settings: SettingsStore, contentPaddi
     }
 
     ScreenList(contentPadding, gutter = GlowLayout.Gutter) {
-        item { PageHeader("Phone alerts", onBack) }
+        item { PageHeader(tr("Phone alerts", "Alertas do telemóvel"), onBack) }
         item {
             PagePanel {
                 PageSwitchRow(
-                    "Incoming calls", "The strap buzzes while your phone rings, and for calls from apps like WhatsApp with notification access. With Do Not Disturb on, only if it allows calls from anyone.",
+                    tr("Incoming calls", "Chamadas recebidas"), tr(
+                        "The strap buzzes while your phone rings, and for calls from apps like WhatsApp with notification " +
+                            "access. With Do Not Disturb on, only if it allows calls from anyone.",
+                        "A strap vibra enquanto o telemóvel toca, e para chamadas de apps como o WhatsApp com acesso às " +
+                            "notificações. Com Não incomodar ligado, só se permitir chamadas de qualquer pessoa.",
+                    ),
                     calls && callPermission,
                     { on ->
                         when {
@@ -105,41 +111,51 @@ fun PhoneAlertsScreen(alerts: PhoneAlerts, settings: SettingsStore, contentPaddi
                 )
                 if (calls && callPermission) {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Call buzz", style = GlowType.body, color = Color.White)
+                        Text(tr("Call buzz", "Vibração da chamada"), style = GlowType.body, color = Color.White)
                         // Picking one plays it for a few seconds, so the two can be compared on the wrist.
                         GlowSegments(CallBuzz.entries.map { it.label }, callStyle.ordinal, { i ->
                             val style = CallBuzz.entries[i]
                             scope.launch {
                                 settings.setCallBuzzStyle(style)
-                                callPreviewError = runCatching { alerts.previewCall(style) }.exceptionOrNull()?.let { it.message ?: "Couldn't buzz the strap" }
+                                callPreviewError = runCatching { alerts.previewCall(style) }.exceptionOrNull()?.let { it.message ?: tr("Couldn't buzz the strap", "Não deu para vibrar a strap") }
                             }
                         })
                         callPreviewError?.let { PageNote(it, color = MetricColors.warn) }
                     }
                 }
-                PageSwitchRow("Notifications", "The strap buzzes for notifications that would make a sound.", notifications && notificationAccess, { on ->
+                PageSwitchRow(tr("Notifications", "Notificações"), tr(
+                    "The strap buzzes for notifications that would make a sound.",
+                    "A strap vibra com as notificações que fariam som.",
+                ), notifications && notificationAccess, { on ->
                     scope.launch { settings.setBuzzOnNotifications(on) }
                     if (on && !notificationAccess) openNotificationAccess()
                 })
                 if (notifications && !notificationAccess) {
-                    PageNote("Allow notification access for OpenStrap to turn this on.", color = MetricColors.warn)
-                    PageButton("Open settings", openNotificationAccess, Modifier.fillMaxWidth())
+                    PageNote(tr(
+                        "Allow notification access for OpenStrap to turn this on.",
+                        "Permite o acesso às notificações à OpenStrap para ligar isto.",
+                    ), color = MetricColors.warn)
+                    PageButton(tr("Open settings", "Abrir definições"), openNotificationAccess, Modifier.fillMaxWidth())
                 }
                 if (notifications && notificationAccess) {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Buzz pattern", style = GlowType.body, color = Color.White)
+                        Text(tr("Buzz pattern", "Padrão de vibração"), style = GlowType.body, color = Color.White)
                         // Picking a pattern plays it once, so it can be felt before the next notification.
                         GlowSegments(BuzzPattern.entries.map { it.label }, pattern.ordinal, { i ->
                             val p = BuzzPattern.entries[i]
                             scope.launch {
                                 settings.setNotificationPattern(p)
-                                previewError = runCatching { alerts.preview(p) }.exceptionOrNull()?.let { it.message ?: "Couldn't buzz the strap" }
+                                previewError = runCatching { alerts.preview(p) }.exceptionOrNull()?.let { it.message ?: tr("Couldn't buzz the strap", "Não deu para vibrar a strap") }
                             }
                         })
                         previewError?.let { PageNote(it, color = MetricColors.warn) }
                     }
                 }
-                PageNote("Silent apps and Do Not Disturb are followed. OpenStrap never reads what a notification says.")
+                PageNote(tr(
+                    "Silent apps and Do Not Disturb are followed. OpenStrap never reads what a notification says.",
+                    "As apps silenciadas e o Não incomodar são respeitados. A OpenStrap nunca lê o que uma notificação " +
+                        "diz.",
+                ))
             }
         }
     }

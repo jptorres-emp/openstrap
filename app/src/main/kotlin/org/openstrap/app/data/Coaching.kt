@@ -9,7 +9,7 @@ sealed interface WorkoutTarget {
 
     data class Zones(val low: Int, val high: Int) : WorkoutTarget {
         override val code get() = "z:$low-$high"
-        val label: String get() = if (low == high) "Zone ${low + 1}" else "Zone ${low + 1}–${high + 1}"
+        val label: String get() = if (low == high) org.openstrap.app.l10n.tr("Zone ${low + 1}", "Zona ${low + 1}") else org.openstrap.app.l10n.tr("Zone ${low + 1}–${high + 1}", "Zona ${low + 1}–${high + 1}")
     }
 
     data class Time(val seconds: Long) : WorkoutTarget {

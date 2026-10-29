@@ -49,6 +49,7 @@ import org.openstrap.app.ui.dashboard.TodayCopy
 import org.openstrap.app.ui.dashboard.avg
 import org.openstrap.app.ui.dashboard.recoveryCards
 import org.openstrap.app.ui.theme.MetricColors
+import org.openstrap.app.l10n.tr
 
 /*
  * The Recovery tab (spec 5.1): "can I push today, and why". The score glows with the last 7 days beside it, what
@@ -97,7 +98,7 @@ fun GlowRecoveryScreen(
     val failure = recoveryFailure?.takeIf { it.date == state.date && r == null }
     val learning = r?.readiness?.calibrating == true
     val firstNights = r != null && !r.charge.anchored
-    val waiting = if (firstNights) AFTER_FIRST_NIGHT else "No reading yet"
+    val waiting = if (firstNights) AFTER_FIRST_NIGHT else tr("No reading yet", "Ainda sem leitura")
     val slots = recoveryCards(RecoveryFacts(habitAge = healthspan != null, learning = learning, hasRecovery = r != null))
     var info by rememberSaveable { mutableStateOf(false) }
     var partialInfo by rememberSaveable { mutableStateOf(false) }
@@ -165,11 +166,11 @@ private fun RecoveryHero(
     GlowCard(recoveryHeroStyle(MetricColors.readiness), Modifier.fillMaxWidth().gridSize(CardSize.Wide), onClick = onOpen) {
         Column {
             GlowHeader(
-                "Recovery", trailing = score?.let { TabCopy.vsYesterday(it, yesterday) },
+                tr("Recovery", "Recuperação"), trailing = score?.let { TabCopy.vsYesterday(it, yesterday) },
                 tag = if (firstScore && score != null) TitleTag(FIRST_SCORE) else null,
                 trailingContent = {
                     androidx.compose.foundation.layout.Spacer(Modifier.width(10.dp))
-                    InfoButton("About Recovery", onInfo)
+                    InfoButton(tr("About Recovery", "Sobre a Recuperação"), onInfo)
                 },
             )
             HeroSentence(
@@ -180,7 +181,10 @@ private fun RecoveryHero(
                     noSleep -> TabCopy.NO_SLEEP_SCORE
                     ready.phase == Recovery.Phase.Withheld -> TodayCopy.noScoreLine(TodayCopy.NoScore.Learning(ready.baselineNights, Recovery.SCORED_NIGHTS))
                     ready.withheld -> TodayCopy.noScoreLine(TodayCopy.NoScore.NoHeartData)
-                    else -> "Recovery is scored each morning from the night's sleep."
+                    else -> tr(
+                        "Recovery is scored each morning from the night's sleep.",
+                        "A Recuperação é pontuada todas as manhãs a partir do sono da noite.",
+                    )
                 },
             )
             // The strap's estimate stands in for a withheld score, under its own word.
@@ -215,11 +219,11 @@ private fun RecoveryHero(
 private fun RecoveryFailedHero(failure: RecoveryFailure, onOpen: () -> Unit, onRetry: () -> Unit) {
     GlowCard(recoveryHeroStyle(MetricColors.readiness), Modifier.fillMaxWidth().gridSize(CardSize.Wide), onClick = onOpen) {
         Column {
-            GlowHeader("Recovery")
+            GlowHeader(tr("Recovery", "Recuperação"))
             HeroSentence(RECOVERY_FAILED)
             failure.yesterday?.let { y ->
                 Spacer(Modifier.height(22.dp))
-                HeroFigure(y.toString(), "Yesterday", big = true, modifier = Modifier.alpha(FAILED_ALPHA))
+                HeroFigure(y.toString(), tr("Yesterday", "Ontem"), big = true, modifier = Modifier.alpha(FAILED_ALPHA))
             }
             Spacer(Modifier.height(22.dp))
             HeroButton(TRY_AGAIN, onRetry)
@@ -233,8 +237,11 @@ private fun DriversList(ready: Recovery.Readiness?, onAll: () -> Unit) {
     val all = ready?.contributors.orEmpty()
     val top = TabCopy.topDrivers(all)
     // "All" and each row open the Recovery detail, which has every contributor.
-    ListPanel(title = "What drove it", note = if (all.size > top.size) "All ${all.size}" else null, onNote = onAll.takeIf { all.isNotEmpty() }) {
-        if (top.isEmpty()) ListRow("Waiting for a night", MetricColors.readiness, null, "What drove Recovery shows here each morning", dash = false, divider = false)
+    ListPanel(title = tr("What drove it", "O que a influenciou"), note = if (all.size > top.size) tr("All ${all.size}", "Todos os ${all.size}") else null, onNote = onAll.takeIf { all.isNotEmpty() }) {
+        if (top.isEmpty()) ListRow(tr("Waiting for a night", "À espera de uma noite"), MetricColors.readiness, null, tr(
+            "What drove Recovery shows here each morning",
+            "O que influenciou a Recuperação aparece aqui todas as manhãs",
+        ), dash = false, divider = false)
         top.forEachIndexed { i, c ->
             ContributorRow(
                 TabCopy.factorName(c.factor), MetricColors.readiness, TabCopy.contributorWord(c.score),
@@ -263,7 +270,7 @@ private fun ChargeTall(
     val scrubbed = picked?.let { i -> values.getOrNull(i)?.let { it.toInt() to clockAt(day.first + i * step) } }
     GlowCard(GlowStyle.Ember.copy(lightLevel = (now ?: 0) / 100f, second = true), modifier, onClick = onOpen) {
         Column(Modifier.fillMaxHeight()) {
-            GlowHeader("Energy", tag = tag)
+            GlowHeader(tr("Energy", "Energia"), tag = tag)
             if (c != null && now != null && c.points.size >= 2) {
                 Spacer(Modifier.height(10.dp))
                 // The Charge curve (chart kit): sleep fills it, the day drains it. Scrubbing moves the number.
@@ -273,12 +280,12 @@ private fun ChargeTall(
             HeroFigure(
                 scrubbed?.first?.toString() ?: now?.toString(),
                 when {
-                    scrubbed != null -> "At ${scrubbed.second}"
+                    scrubbed != null -> tr("At ${scrubbed.second}", "Às ${scrubbed.second}")
                     failed -> FAILED_SHORT
                     c == null || !c.anchored -> AFTER_FIRST_NIGHT
-                    atWake == null -> "Now"
-                    c.strapOffOvernight -> "$atWake at start"
-                    else -> "$atWake at waking"
+                    atWake == null -> tr("Now", "Agora")
+                    c.strapOffOvernight -> tr("$atWake at start", "$atWake no início")
+                    else -> tr("$atWake at waking", "$atWake ao acordar")
                 },
                 big = true, dot = DotSize.Second, labelLines = 2,
             )
@@ -300,7 +307,7 @@ private fun ChargeSmall(c: Recovery.ChargeDay?, recharged: Boolean, modifier: Mo
         recharged -> TabCopy.RECHARGED
         else -> TabCopy.drainedMostly(c!!.drainedExercise, c.drainedStress, c.drainedLiving)
     }
-    SmallCard(MetricColors.charge, if (recharged) "Recharged" else "Drained", value, null, status, modifier)
+    SmallCard(MetricColors.charge, if (recharged) tr("Recharged", "Recarregou") else tr("Drained", "Gastou"), value, null, status, modifier)
 }
 
 /** Averages charge samples into evenly spaced buckets across [range]; empty buckets are gaps. */
@@ -343,15 +350,15 @@ private fun rememberSignals(state: DayUiState, history: DailyHistory): List<Body
     val stress by daily(Metric.Stress).collectAsState(emptyList())
     fun normalOf(stats: List<org.openstrap.app.data.DayStat>) = History.normal(stats, end)
     return listOf(
-        BodySignal(Metric.RestingHr, "Resting heart rate", MetricColors.heart, state.restingHeartRate?.toFloat(), normalOf(rhr)),
-        BodySignal(Metric.Hrv, "HRV", MetricColors.hrv, state.hrv.avg()?.toFloat(), normalOf(hrv)),
+        BodySignal(Metric.RestingHr, tr("Resting heart rate", "FC em repouso"), MetricColors.heart, state.restingHeartRate?.toFloat(), normalOf(rhr)),
+        BodySignal(Metric.Hrv, tr("HRV", "VFC"), MetricColors.hrv, state.hrv.avg()?.toFloat(), normalOf(hrv)),
         BodySignal(
-            Metric.SkinTemperature, "Skin temperature", MetricColors.temperature,
+            Metric.SkinTemperature, tr("Skin temperature", "Temperatura da pele"), MetricColors.temperature,
             state.skinTemperature.takeIf { it.isNotEmpty() }?.map { it.y }?.average()?.toFloat(), normalOf(skin), asDeviation = true,
         ),
-        BodySignal(Metric.Breathing, "Breathing rate", MetricColors.sleepLight, state.breathRate.avg()?.toFloat(), normalOf(breath)),
-        BodySignal(Metric.Spo2, "Blood oxygen", MetricColors.spo2, state.spo2.avg()?.toFloat(), normalOf(spo2), unit = "%"),
-        BodySignal(Metric.Stress, "Stress", MetricColors.stress, state.stress.avg()?.toFloat(), normalOf(stress)),
+        BodySignal(Metric.Breathing, tr("Breathing rate", "Frequência respiratória"), MetricColors.sleepLight, state.breathRate.avg()?.toFloat(), normalOf(breath)),
+        BodySignal(Metric.Spo2, tr("Blood oxygen", "Oxigénio no sangue"), MetricColors.spo2, state.spo2.avg()?.toFloat(), normalOf(spo2), unit = "%"),
+        BodySignal(Metric.Stress, tr("Stress", "Stress"), MetricColors.stress, state.stress.avg()?.toFloat(), normalOf(stress)),
     )
 }
 
@@ -361,7 +368,7 @@ private fun rememberSignals(state: DayUiState, history: DailyHistory): List<Body
  */
 @Composable
 private fun SignalsList(signals: List<BodySignal>, waiting: String, onOpen: (Metric) -> Unit) {
-    ListPanel(title = "Body signals", note = "Against your normal") {
+    ListPanel(title = tr("Body signals", "Sinais do corpo"), note = tr("Against your normal", "Contra o teu normal")) {
         signals.forEachIndexed { i, s ->
             val direction = History.status(s.today, s.normal)
             val value = s.today?.let { v ->

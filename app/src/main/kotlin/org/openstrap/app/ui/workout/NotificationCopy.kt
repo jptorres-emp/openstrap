@@ -6,6 +6,7 @@ import org.openstrap.app.data.WorkoutTarget
 import org.openstrap.app.data.Workouts
 import org.openstrap.app.ui.glow.PausedColor
 import org.openstrap.app.ui.glow.km
+import org.openstrap.app.l10n.tr
 
 /**
  * What the ongoing workout notification shows (spec 6.3, patterns D4): the black card with the time, bpm in the zone
@@ -36,7 +37,7 @@ data class WorkoutCard(
 
 object NotificationCopy {
     /** The question while End waits for a second tap. */
-    const val END_QUESTION = "End the workout? Tap Yes, end to save it."
+    val END_QUESTION: String get() = tr("End the workout? Tap Yes, end to save it.", "Terminar o treino? Toca em Sim, terminar para o guardar.")
 
     /** Grey for the bpm slot without a zone: the live screen's paused colour. */
     val MUTED = PausedColor
@@ -53,15 +54,15 @@ object NotificationCopy {
         val reading = bpm.takeIf { connected && !paused }
         val zone = WorkoutRecorder.liveZone(reading, maxHr)
         val slot = when {
-            paused -> "Paused"
-            !connected -> "Reconnecting"
-            reading == null -> "Waiting"
+            paused -> tr("Paused", "Em pausa")
+            !connected -> tr("Reconnecting", "A religar")
+            reading == null -> tr("Waiting", "À espera")
             else -> "$reading bpm"
         }
         val zoneLine = when {
             confirming -> END_QUESTION
             paused -> null
-            !connected -> "Still recording"
+            !connected -> tr("Still recording", "Ainda a gravar")
             else -> zone?.let { WorkoutCopy.zoneTitle(it).let { (a, b) -> "$a $b" } }
         }
         val detail = when {
@@ -69,9 +70,9 @@ object NotificationCopy {
             paused -> null
             target is WorkoutTarget.Zones -> {
                 val inTarget = zoneSeconds.withIndex().filter { it.index in target.low..target.high }.sumOf { it.value }
-                "${inTarget / 60} min in ${target.label}"
+                tr("${inTarget / 60} min in ${target.label}", "${inTarget / 60} min na ${target.label}")
             }
-            target is WorkoutTarget.Time -> "Goal ${target.label}"
+            target is WorkoutTarget.Time -> tr("Goal ${target.label}", "Objetivo ${target.label}")
             zone != null -> WorkoutCopy.zoneTime(zoneSeconds.getOrElse(zone) { 0 })
             else -> null
         }

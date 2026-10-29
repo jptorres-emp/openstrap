@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.style.TextOverflow
 import org.openstrap.app.ui.components.pressClickable
 import org.openstrap.app.ui.theme.AppIcons
+import org.openstrap.app.l10n.tr
 
 /*
  * The quiet tier of the glow language as a free-form panel (spec 2.5, L0): a list's surface and hairline round
@@ -78,7 +79,7 @@ fun PanelTitle(title: String, trailing: String? = null, chevron: Boolean = false
             val turn by animateFloatAsState(if (expanded) 180f else 0f, label = "panel title caret")
             Spacer(Modifier.width(8.dp))
             Box(Modifier.size(32.dp).glass(CircleShape), contentAlignment = Alignment.Center) {
-                Icon(AppIcons.CaretDown, if (expanded) "Hide" else "Show", tint = Color.White, modifier = Modifier.size(16.dp).rotate(turn))
+                Icon(AppIcons.CaretDown, if (expanded) tr("Hide", "Esconder") else tr("Show", "Mostrar"), tint = Color.White, modifier = Modifier.size(16.dp).rotate(turn))
             }
         }
     }

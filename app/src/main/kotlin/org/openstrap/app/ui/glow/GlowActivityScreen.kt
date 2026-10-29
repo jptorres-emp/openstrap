@@ -77,6 +77,7 @@ import org.openstrap.app.ui.workout.SportIcons
 import org.openstrap.app.ui.workout.ZONE_COLORS
 import org.openstrap.app.ui.glow.draw.drawHourPills
 import org.openstrap.app.ui.glow.draw.hourPills
+import org.openstrap.app.l10n.tr
 
 /** Heart points' weekly aim: 100 or more over the last seven days. */
 private const val HEART_POINTS_TARGET = ActivityCopy.HEART_POINTS_TARGET
@@ -145,14 +146,14 @@ fun GlowActivityScreen(
                     ActivityCard.Steps -> StepsGlow(state, usualSteps, partial) { onOpenMetric(Metric.Steps) }
                     ActivityCard.ActiveMinutes -> r?.activity.let { a ->
                         SmallCard(
-                            MetricColors.steps, "Active minutes", a?.weekEquivalent?.toString(), null,
-                            a?.let { TabCopy.activeMinutes(it.weekEquivalent, Activity.MVPA_WEEKLY_TARGET) } ?: "No reading yet", m,
+                            MetricColors.steps, tr("Active minutes", "Minutos ativos"), a?.weekEquivalent?.toString(), null,
+                            a?.let { TabCopy.activeMinutes(it.weekEquivalent, Activity.MVPA_WEEKLY_TARGET) } ?: tr("No reading yet", "Ainda sem leitura"), m,
                             onClick = { open(Score.ActiveMinutes) },
                         )
                     }
                     ActivityCard.HeartPoints -> SmallCard(
-                        MetricColors.heart, "Heart points", heartPoints?.roundToInt()?.toString(), null,
-                        heartPoints?.let { TabCopy.heartPoints(it.roundToInt(), HEART_POINTS_TARGET) } ?: "After the strap's next sync", m,
+                        MetricColors.heart, tr("Heart points", "Pontos cardíacos"), heartPoints?.roundToInt()?.toString(), null,
+                        heartPoints?.let { TabCopy.heartPoints(it.roundToInt(), HEART_POINTS_TARGET) } ?: tr("After the strap's next sync", "Depois da próxima sincronização da strap"), m,
                         onClick = { open(Score.HeartPoints) },
                     )
                     ActivityCard.Load -> LoadCard(r) { open(Score.Load) }
@@ -179,7 +180,7 @@ fun GlowActivityScreen(
 @Composable
 private fun StartCard(sports: List<SportUse>, onStart: (Int) -> Unit, onAllSports: () -> Unit) {
     EdgeCard(EdgeNeutral, Modifier.fillMaxWidth(), kind = EdgeKind.Value) {
-        EdgeTitle("Start a workout", null)
+        EdgeTitle(tr("Start a workout", "Começar um treino"), null)
         Spacer(Modifier.height(GlowLayout.TitleGap))
         // Four even columns up to the phone's width, so the tiles keep together on an unfolded screen.
         Row(Modifier.widthIn(max = StartTilesWidth).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -188,7 +189,7 @@ private fun StartCard(sports: List<SportUse>, onStart: (Int) -> Unit, onAllSport
                     onStart(s.sportType)
                 }
             }
-            SportTile(AppIcons.GridView, "All sports", outdoor = false, Modifier.weight(1f), onClick = onAllSports)
+            SportTile(AppIcons.GridView, tr("All sports", "Todos os desportos"), outdoor = false, Modifier.weight(1f), onClick = onAllSports)
         }
     }
 }
@@ -245,7 +246,7 @@ private fun StepsGlow(state: DayUiState, usual: List<Float>?, tag: TitleTag?, on
     var hour by remember(state.date, state.hourlySteps) { mutableStateOf<Int?>(null) }
     GlowCard(GlowStyle.level(MetricColors.steps, share), Modifier.fillMaxWidth().gridSize(CardSize.Wide), onClick = onClick) {
         Column {
-            GlowHeader("Steps", trailing = "Goal %,d".format(goal), tag = tag)
+            GlowHeader(tr("Steps", "Passos"), trailing = tr("Goal %,d", "Objetivo %,d").format(goal), tag = tag)
             Spacer(Modifier.height(GlowLayout.TitleGap))
             HourPills(state.hourlySteps, hour) { hour = it }
             Spacer(Modifier.height(16.dp))
@@ -312,8 +313,8 @@ private fun LoadCard(r: RecoveryResult?, onClick: () -> Unit) {
         status = if (status == TodayCopy.LoadStatus.Above) EdgeStatus.Above else EdgeStatus.Usual,
         kind = EdgeKind.Level, progress = r?.let { l -> usual?.let { l.load / it } } ?: 0f, onClick = onClick,
     ) {
-        EdgeTitle("Load", TabCopy.loadBalance(r?.loadTrend))
-        EdgeValue(r?.load?.roundToInt()?.toString(), "today", if (r == null) "No reading yet" else TabCopy.loadUsual(usual))
+        EdgeTitle(tr("Load", "Carga"), TabCopy.loadBalance(r?.loadTrend))
+        EdgeValue(r?.load?.roundToInt()?.toString(), tr("today", "hoje"), if (r == null) tr("No reading yet", "Ainda sem leitura") else TabCopy.loadUsual(usual))
     }
 }
 
@@ -329,20 +330,20 @@ private fun FactsList(
     /** The Partial day tag: energy and distance are the day's totals. */
     tag: TitleTag? = null,
 ) {
-    val waiting = "No reading yet"
-    ListPanel(title = "Today", note = if (isToday) "So far" else null, tag = tag) {
+    val waiting: String get() = tr("No reading yet", "Ainda sem leitura")
+    ListPanel(title = tr("Today", "Hoje"), note = if (isToday) tr("So far", "Até agora") else null, tag = tag) {
         val a = r?.activity
         // The latest workout the strap read VO2 max from; the estimate from your profile otherwise.
         val fromWorkouts = workouts.sortedByDescending { it.workout.start }
             .firstNotNullOfOrNull { w -> (w.workout.vo2max ?: w.effect?.vo2max?.roundToInt())?.takeIf { it > 0 } }
         val est = r?.vo2max
         ListRow(
-            "VO2 max", MetricColors.heart,
+            tr("VO2 max", "VO2 máx"), MetricColors.heart,
             fromWorkouts?.toString() ?: est?.let { "${it.low}-${it.high}" },
             when {
-                fromWorkouts != null -> "From your workouts"
-                est != null -> est.band?.let { "${it.label} for your age" } ?: "Estimated from your profile"
-                else -> "After a workout the strap can read it from"
+                fromWorkouts != null -> tr("From your workouts", "Dos teus treinos")
+                est != null -> est.band?.let { tr("${it.label} for your age", "${it.label} para a tua idade") } ?: tr("Estimated from your profile", "Estimado pelo teu perfil")
+                else -> tr("After a workout the strap can read it from", "Depois de um treino em que a strap o consiga ler")
             },
             divider = false, onClick = { open(Score.Vo2Max) }, icon = Score.Vo2Max.rowIcon(),
         )
@@ -352,20 +353,20 @@ private fun FactsList(
         }
         // Recovered is the whole answer: no number, no dash.
         ListRow(
-            "Time to recover", MetricColors.load, recover?.first, recover?.second ?: "No recent workout", dash = recover?.first != null,
+            tr("Time to recover", "Tempo de recuperação"), MetricColors.load, recover?.first, recover?.second ?: tr("No recent workout", "Nenhum treino recente"), dash = recover?.first != null,
             onClick = { open(Score.Recover) }, icon = Score.Recover.rowIcon(),
         )
         val e = r?.energy
         ListRow(
-            "Calories", MetricColors.steps, e?.totalKcal?.roundToInt()?.let { "%,d".format(it) },
-            e?.let { TabCopy.energy(it.partial, isToday) } ?: "Add age, weight and height to see it",
+            tr("Calories", "Calorias"), MetricColors.steps, e?.totalKcal?.roundToInt()?.let { "%,d".format(it) },
+            e?.let { TabCopy.energy(it.partial, isToday) } ?: tr("Add age, weight and height to see it", "Junta idade, peso e altura para ver"),
             onClick = if (e == null && r != null) onEditProfile else { { open(Score.Energy) } }, dash = e != null,
             icon = Score.Energy.rowIcon(),
         )
         // Ours from step length and height when we can; the strap's own figure otherwise. Always approximate.
         val distance = a?.distanceMeters ?: state.distanceMeters?.toFloat()
         ListRow(
-            "Distance", MetricColors.steps, distance?.let { "%.1f".format(it / 1000f) },
+            tr("Distance", "Distância"), MetricColors.steps, distance?.let { "%.1f".format(it / 1000f) },
             if (distance == null) waiting else ActivityCopy.distanceSource(a?.distanceMeters != null),
             onClick = { open(Score.Distance) }, icon = Score.Distance.rowIcon(),
         )
@@ -392,11 +393,11 @@ private fun WorkoutsList(
     val shown = today + before.take((LISTED_WORKOUTS - today.size).coerceAtLeast(0))
     // From every workout (newest first), so a row glows the same here and in All workouts.
     val usual = remember(workouts) { Workouts.usualLoad(workouts.map { it.workout.trainingLoad }) }
-    ListPanel(title = "Workouts", note = if (today.isNotEmpty()) "${today.size} this day" else null) {
+    ListPanel(title = tr("Workouts", "Treinos"), note = if (today.isNotEmpty()) tr("${today.size} this day", "${today.size} neste dia") else null) {
         var first = true
         fun divider() = !first.also { first = false }
         suggestion?.let { SuggestionRow(it, onSave, onDismiss, divider()) }
-        if (shown.isEmpty()) ListRow("No workouts yet", MetricColors.heart, null, "Workouts you record show up here", dash = false, divider = divider())
+        if (shown.isEmpty()) ListRow(tr("No workouts yet", "Ainda sem treinos"), MetricColors.heart, null, tr("Workouts you record show up here", "Os treinos que gravares aparecem aqui"), dash = false, divider = divider())
         var day: LocalDate? = null
         shown.forEach { a ->
             if (dayOf(a) != day) {
@@ -407,8 +408,8 @@ private fun WorkoutsList(
             }
             WorkoutRow(a, usual, divider()) { onOpen(a.workout.start) }
         }
-        LinkRow("Add a workout you didn't record", onAdd, divider = divider())
-        LinkRow("All workouts", onAll)
+        LinkRow(tr("Add a workout you didn't record", "Juntar um treino que não gravaste"), onAdd, divider = divider())
+        LinkRow(tr("All workouts", "Todos os treinos"), onAll)
     }
 }
 
@@ -519,13 +520,18 @@ private val CLOCK = DateTimeFormatter.ofPattern("HH:mm")
 private fun SuggestionRow(s: org.openstrap.app.data.WorkoutSuggestions.Suggestion, onSave: () -> Unit, onDismiss: () -> Unit, divider: Boolean) {
     Column {
         ListRow(
-            "Looks like a workout", ZONE_COLORS[s.zone], null,
-            "${clockAt(s.start)}–${clockAt(s.end)}, mostly zone ${s.zone + 1}, ${s.averageHeartRate} bpm on average",
+            tr("Looks like a workout", "Parece um treino"), ZONE_COLORS[s.zone], null,
+            tr(
+                "${clockAt(s.start)}–${clockAt(s.end)}, mostly zone ${s.zone + 1}, ${s.averageHeartRate} bpm on " +
+                    "average",
+                "${clockAt(s.start)}–${clockAt(s.end)}, sobretudo na zona ${s.zone + 1}, ${s.averageHeartRate} bpm " +
+                    "em média",
+            ),
             dash = false, divider = divider, icon = AppIcons.Heartbeat,
         )
         Row(Modifier.fillMaxWidth().padding(start = 20.dp, bottom = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            RowPill("Save", onSave, primary = true)
-            RowPill("Not a workout", onDismiss)
+            RowPill(tr("Save", "Guardar"), onSave, primary = true)
+            RowPill(tr("Not a workout", "Não é um treino"), onDismiss)
             Box(Modifier.weight(1f))
         }
     }

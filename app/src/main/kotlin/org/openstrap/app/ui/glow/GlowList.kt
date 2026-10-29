@@ -36,6 +36,7 @@ import org.openstrap.app.ui.theme.AppIcons
 import org.openstrap.app.ui.components.LocalCardNumbers
 import org.openstrap.app.ui.components.cardNumber
 import org.openstrap.app.ui.components.cardOpening
+import org.openstrap.app.l10n.tr
 
 /*
  * The quiet tier of the glow language: a grouped list for small facts (body signals, time to recover, energy) and
@@ -253,6 +254,6 @@ fun WaitingDash(modifier: Modifier = Modifier) {
         modifier
             .size(14.dp, 3.dp)
             .background(Color.White.copy(alpha = 0.3f), RoundedCornerShape(2.dp))
-            .semantics { contentDescription = "No value yet" },
+            .semantics { contentDescription = tr("No value yet", "Ainda sem valor") },
     )
 }

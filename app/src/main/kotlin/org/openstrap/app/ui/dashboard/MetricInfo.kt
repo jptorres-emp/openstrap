@@ -8,9 +8,15 @@ import org.openstrap.app.data.DailyMetric
 import org.openstrap.app.data.DayStat
 import org.openstrap.app.ui.theme.MetricColors
 import java.time.LocalDate
+import org.openstrap.app.l10n.tr
 
 /** How far back a metric detail looks: the selected day, or one value per day (per week, for a year). */
-internal enum class Range(val label: String, val days: Int) { Day("Day", 1), Week("Week", 7), Month("Month", 30), Year("Year", 365) }
+internal enum class Range(private val en: String, private val pt: String, val days: Int) {
+    Day("Day", "Dia", 1), Week("Week", "Semana", 7), Month("Month", "Mês", 30), Year("Year", "Ano", 365);
+
+    /** Its name on the range switch, in the language the app speaks. */
+    val label: String get() = tr(en, pt)
+}
 
 /** Loads one value per day of a metric between two dates; the app root passes the repository's. */
 typealias DailyHistory = (DailyMetric, LocalDate, LocalDate) -> Flow<List<DayStat>>

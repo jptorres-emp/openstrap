@@ -44,12 +44,16 @@ import org.openstrap.app.ui.glow.PageNote
 import org.openstrap.app.ui.glow.PagePanel
 import org.openstrap.app.ui.glow.PageSwitchRow
 import java.time.LocalDate
+import org.openstrap.app.l10n.tr
 
 /** One line for the settings row: "34 years, male, 72 kg, 178 cm", or a prompt when empty. */
 fun UserProfile.summary(): String =
-    if (isEmpty) "Add age and sex for accurate effort and recovery"
+    if (isEmpty) tr(
+        "Add age and sex for accurate effort and recovery",
+        "Junta idade e sexo para esforço e recuperação mais certos",
+    )
     else listOfNotNull(
-        age()?.let { "$it years" },
+        age()?.let { tr("$it years", "$it anos") },
         sex?.name?.lowercase(),
         weightKg?.let { Units.formatWeight(it, usesImperial) },
         heightCm?.let { Units.formatHeight(it, usesImperial) },
@@ -112,9 +116,9 @@ fun ProfileScreen(profile: UserProfile, contentPadding: PaddingValues, onSave: (
     BackHandler(onBack = back)
     if (confirmDiscard) {
         PageConfirm(
-            "Discard changes?", "Your profile changes haven't been saved.",
-            confirm = "Discard", onConfirm = { confirmDiscard = false; onBack() }, onDismiss = { confirmDiscard = false },
-            dismiss = "Keep editing",
+            tr("Discard changes?", "Descartar alterações?"), tr("Your profile changes haven't been saved.", "As alterações ao teu perfil não foram guardadas."),
+            confirm = tr("Discard", "Descartar"), onConfirm = { confirmDiscard = false; onBack() }, onDismiss = { confirmDiscard = false },
+            dismiss = tr("Keep editing", "Continuar a editar"),
         )
     }
     val save: () -> Unit = {
@@ -149,54 +153,70 @@ fun ProfileScreen(profile: UserProfile, contentPadding: PaddingValues, onSave: (
         val side = GlowLayout.pageSide(maxWidth, LocalPageColumn.current, GlowLayout.Gutter)
         // The list ends clear of Save and the fade behind it (ScreenList adds its own 24 dp).
         ScreenList(PaddingValues(bottom = PinnedFade.listClearance(bottom + 12.dp + SaveHeight, listEnd = 24.dp)), gutter = GlowLayout.Gutter) {
-            item { PageHeader("Your profile", back) }
+            item { PageHeader(tr("Your profile", "O teu perfil"), back) }
             item {
                 PagePanel {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         PageNote(
-                            "Age sets your maximum heart rate, which every effort and recovery number depends on. " +
-                                "All fields are optional and stay on this phone.",
+                            tr(
+                                "Age sets your maximum heart rate, which every effort and recovery number depends on. All fields are " +
+                                    "optional and stay on this phone.",
+                                "A idade define a tua frequência cardíaca máxima, de que dependem todos os números de esforço e " +
+                                    "recuperação. Todos os campos são opcionais e ficam neste telemóvel.",
+                            ),
                         )
-                        NumberField(age, { age = it }, "Age", "years", age.isNotBlank() && ageValue == null)
+                        NumberField(age, { age = it }, tr("Age", "Idade"), tr("years", "anos"), age.isNotBlank() && ageValue == null)
                         // Sex as labelled segments like Units, not two bare symbols beside Age. Tapping the chosen one
                         // again clears it.
                         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            FieldLabel("Sex, for energy, Load, fitness and Habit Age")
-                            org.openstrap.app.ui.glow.GlowSegments(listOf("Female", "Male"), if (sex in 0..1) sex else -1, { i -> sex = if (sex == i) 2 else i })
+                            FieldLabel(tr(
+                                "Sex, for energy, Load, fitness and Habit Age",
+                                "Sexo, para calorias, Carga, forma física e Idade dos hábitos",
+                            ))
+                            org.openstrap.app.ui.glow.GlowSegments(listOf(tr("Female", "Feminino"), tr("Male", "Masculino")), if (sex in 0..1) sex else -1, { i -> sex = if (sex == i) 2 else i })
                         }
                         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            FieldLabel("Units")
-                            org.openstrap.app.ui.glow.GlowSegments(listOf("Metric", "Imperial"), if (imperial) 1 else 0, { switchUnits(it == 1) })
+                            FieldLabel(tr("Units", "Unidades"))
+                            org.openstrap.app.ui.glow.GlowSegments(listOf(tr("Metric", "Métrico"), tr("Imperial", "Imperial")), if (imperial) 1 else 0, { switchUnits(it == 1) })
                         }
                         NumberField(
-                            weight, { weight = it }, "Weight", if (imperial) "lb" else "kg",
+                            weight, { weight = it }, tr("Weight", "Peso"), if (imperial) "lb" else "kg",
                             weight.isNotBlank() && weightValue == null, decimal = true,
                         )
                         if (imperial) {
                             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                NumberField(feet, { feet = it.take(1) }, "Feet", "ft", !heightBlank && heightValue == null, Modifier.weight(1f))
-                                NumberField(inches, { inches = it.take(2) }, "Inches", "in", !heightBlank && heightValue == null, Modifier.weight(1f))
+                                NumberField(feet, { feet = it.take(1) }, tr("Feet", "Pés"), "ft", !heightBlank && heightValue == null, Modifier.weight(1f))
+                                NumberField(inches, { inches = it.take(2) }, tr("Inches", "Polegadas"), "in", !heightBlank && heightValue == null, Modifier.weight(1f))
                             }
                         } else {
-                            NumberField(heightCm, { heightCm = it }, "Height", "cm", !heightBlank && heightValue == null)
+                            NumberField(heightCm, { heightCm = it }, tr("Height", "Altura"), "cm", !heightBlank && heightValue == null)
                         }
                         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            FieldLabel("Usual activity, for the fitness estimate")
+                            FieldLabel(tr(
+                                "Usual activity, for the fitness estimate",
+                                "Atividade habitual, para a estimativa da forma física",
+                            ))
                             // Tapping the chosen level again clears it.
                             org.openstrap.app.ui.glow.GlowSegments((1..5).map { "$it" }, activity, { i -> activity = if (activity == i) -1 else i })
-                            PageNote(if (activity in 0..4) org.openstrap.app.data.Vo2max.ACTIVITY_LEVELS[activity] else "Pick the level that best matches a usual week.")
+                            PageNote(if (activity in 0..4) org.openstrap.app.data.Vo2max.ACTIVITY_LEVELS[activity] else tr(
+                                "Pick the level that best matches a usual week.",
+                                "Escolhe o nível que melhor descreve uma semana habitual.",
+                            ))
                         }
-                        PageSwitchRow("Taking beta-blockers", null, betaBlocker, { betaBlocker = it }, divider = false)
-                        PageSwitchRow("Pregnant", null, pregnant, { pregnant = it }, divider = false)
-                        NumberField(maxHr, { maxHr = it }, "Max heart rate from a test (optional)", "bpm", maxHr.isNotBlank() && maxHrValue == null)
-                        NumberField(sleepNeed, { sleepNeed = it }, "Sleep need (7–9, blank for your age's default)", "h", sleepNeed.isNotBlank() && sleepNeedValue == null, decimal = true)
+                        PageSwitchRow(tr("Taking beta-blockers", "A tomar beta-bloqueantes"), null, betaBlocker, { betaBlocker = it }, divider = false)
+                        PageSwitchRow(tr("Pregnant", "Grávida"), null, pregnant, { pregnant = it }, divider = false)
+                        NumberField(maxHr, { maxHr = it }, tr("Max heart rate from a test (optional)", "FC máxima de um teste (opcional)"), "bpm", maxHr.isNotBlank() && maxHrValue == null)
+                        NumberField(sleepNeed, { sleepNeed = it }, tr(
+                            "Sleep need (7–9, blank for your age's default)",
+                            "Sono de que precisas (7–9, vazio para o padrão da tua idade)",
+                        ), "h", sleepNeed.isNotBlank() && sleepNeedValue == null, decimal = true)
                     }
                 }
             }
         }
         // Black from the bottom of the screen up to Save, fading out above it, so the page scrolls away under it.
         Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().pinnedFade().padding(start = side, end = side, bottom = bottom + 12.dp)) {
-            PageButton("Save", save, Modifier.fillMaxWidth().height(SaveHeight), enabled = valid, primary = true)
+            PageButton(tr("Save", "Guardar"), save, Modifier.fillMaxWidth().height(SaveHeight), enabled = valid, primary = true)
         }
     }
 }

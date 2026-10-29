@@ -28,6 +28,7 @@ import java.time.ZoneId
 import java.time.format.TextStyle as DayStyle
 import java.util.Locale
 import kotlin.math.roundToInt
+import org.openstrap.app.l10n.tr
 
 /**
  * A row of the Sleep tab's night vitals: the [value] in dot-matrix digits (null while there's none), what it says
@@ -51,8 +52,8 @@ internal fun nightVitals(state: DayUiState, firstNights: Boolean = false): List<
     val session = state.sleep
     val missing = when {
         firstNights && session == null -> AFTER_FIRST_NIGHT
-        session == null -> "No sleep recorded"
-        else -> "No reading last night"
+        session == null -> tr("No sleep recorded", "Nenhum sono registado")
+        else -> tr("No reading last night", "Sem leitura na noite passada")
     }
     // The same value and normal the night-scoped detail shows ([SleepCopy]).
     fun against(metric: Metric, label: String, color: Color, show: (Float, History.Normal?) -> String): NightVital {
@@ -60,7 +61,12 @@ internal fun nightVitals(state: DayUiState, firstNights: Boolean = false): List<
         val n = SleepCopy.nightNormal(state, metric)
         val direction = History.status(v, n)
         val status = if (n == null) {
-            "Learning, ${SleepCopy.nightNormalNights(state, metric).coerceAtMost(History.MIN_NORMAL_DAYS)} of ${History.MIN_NORMAL_DAYS} nights"
+            tr(
+                "Learning, ${SleepCopy.nightNormalNights(state, metric).coerceAtMost(History.MIN_NORMAL_DAYS)} of " +
+                    "${History.MIN_NORMAL_DAYS} nights",
+                "A aprender, ${SleepCopy.nightNormalNights(state, metric).coerceAtMost(History.MIN_NORMAL_DAYS)} de " +
+                    "${History.MIN_NORMAL_DAYS} noites",
+            )
         } else TodayCopy.normalWord(direction)
         return NightVital(metric, label, color, show(v, n), status, direction.takeIf { n != null })
     }
@@ -68,17 +74,17 @@ internal fun nightVitals(state: DayUiState, firstNights: Boolean = false): List<
     val average = SleepCopy.averageHeart(state)
     return listOf(
         NightVital(
-            Metric.HeartRate, "Lowest heart rate", MetricColors.heart, lowest?.y?.roundToInt()?.toString(),
-            lowest?.let { "At ${clockOf(it.x)}" } ?: missing,
+            Metric.HeartRate, tr("Lowest heart rate", "FC mínima"), MetricColors.heart, lowest?.y?.roundToInt()?.toString(),
+            lowest?.let { tr("At ${clockOf(it.x)}", "Às ${clockOf(it.x)}") } ?: missing,
         ),
-        against(Metric.Hrv, "HRV", MetricColors.hrv) { v, _ -> "${v.roundToInt()}" },
-        against(Metric.Breathing, "Breathing rate", MetricColors.sleepLight) { v, _ -> Metric.Breathing.format(v) },
-        against(Metric.Spo2, "Blood oxygen", MetricColors.spo2) { v, _ -> "${v.roundToInt()}%" },
+        against(Metric.Hrv, tr("HRV", "VFC"), MetricColors.hrv) { v, _ -> "${v.roundToInt()}" },
+        against(Metric.Breathing, tr("Breathing rate", "Frequência respiratória"), MetricColors.sleepLight) { v, _ -> Metric.Breathing.format(v) },
+        against(Metric.Spo2, tr("Blood oxygen", "Oxigénio no sangue"), MetricColors.spo2) { v, _ -> "${v.roundToInt()}%" },
         // Skin temperature means little on its own; once there's a normal, show how far off it is.
-        against(Metric.SkinTemperature, "Skin temperature", MetricColors.temperature) { v, n ->
+        against(Metric.SkinTemperature, tr("Skin temperature", "Temperatura da pele"), MetricColors.temperature) { v, n ->
             n?.let { Metric.SkinTemperature.formatChange(v - it.mean) } ?: Metric.SkinTemperature.format(v)
         },
-        NightVital(Metric.HeartRate, "Average heart rate", MetricColors.heart, average?.toString(), if (average != null) "While asleep" else missing),
+        NightVital(Metric.HeartRate, tr("Average heart rate", "FC média"), MetricColors.heart, average?.toString(), if (average != null) tr("While asleep", "A dormir") else missing),
     )
 }
 

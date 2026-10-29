@@ -61,6 +61,7 @@ import org.openstrap.app.zepp.BoundDevice
 import org.openstrap.app.zepp.DeviceListing
 import org.openstrap.app.zepp.ZeppCloud
 import org.openstrap.app.zepp.ZeppCloudException
+import org.openstrap.app.l10n.tr
 
 private sealed interface SignInStep {
     data object SignIn : SignInStep
@@ -127,32 +128,46 @@ fun ZeppSignInDialog(
                 // A page's top: the round button (a close, since this sits over the page it came from) and the title.
                 Row(Modifier.fillMaxWidth().height(60.dp).padding(horizontal = GlowLayout.Gutter), verticalAlignment = Alignment.CenterVertically) {
                     Box(
-                        Modifier.size(44.dp).clip(CircleShape).background(ControlSurface).clickable(onClickLabel = "Close", onClick = onDismiss),
+                        Modifier.size(44.dp).clip(CircleShape).background(ControlSurface).clickable(onClickLabel = tr("Close", "Fechar"), onClick = onDismiss),
                         contentAlignment = Alignment.Center,
-                    ) { Icon(AppIcons.X, "Close", Modifier.size(20.dp), tint = Color.White) }
+                    ) { Icon(AppIcons.X, tr("Close", "Fechar"), Modifier.size(20.dp), tint = Color.White) }
                     Spacer(Modifier.width(12.dp))
-                    Text("Sign in with Zepp", color = Color.White, style = GlowType.pageTitle, maxLines = 1, modifier = Modifier.weight(1f))
-                    if (step is SignInStep.SignIn) PageTextButton("Reset", { clearZeppCookies(); attempt++ })
+                    Text(tr("Sign in with Zepp", "Iniciar sessão com a Zepp"), color = Color.White, style = GlowType.pageTitle, maxLines = 1, modifier = Modifier.weight(1f))
+                    if (step is SignInStep.SignIn) PageTextButton(tr("Reset", "Repor"), { clearZeppCookies(); attempt++ })
                 }
                 when (val s = step) {
                     SignInStep.SignIn -> {
                         Column(Modifier.padding(horizontal = GlowLayout.Gutter, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text(
-                                "Use the email and password of the Zepp account your strap is linked to. Google, Apple, " +
-                                    "Facebook and Xiaomi sign-in don't work here.",
+                                tr(
+                                    "Use the email and password of the Zepp account your strap is linked to. Google, Apple, Facebook and " +
+                                        "Xiaomi sign-in don't work here.",
+                                    "Usa o email e a palavra-passe da conta Zepp a que a tua strap está associada. O início de sessão " +
+                                        "com Google, Apple, Facebook e Xiaomi não funciona aqui.",
+                                ),
                                 color = Color.White, style = GlowType.body,
                             )
                             PageNote(
-                                "This is Zepp's own page, so OpenStrap never sees your password. It reads only the app token and " +
-                                    "user ID, then asks Zepp once for your devices.",
+                                tr(
+                                    "This is Zepp's own page, so OpenStrap never sees your password. It reads only the app token and " +
+                                        "user ID, then asks Zepp once for your devices.",
+                                    "Esta é a própria página da Zepp, por isso a OpenStrap nunca vê a tua palavra-passe. Só lê o token " +
+                                        "da app e o ID de utilizador, e depois pede uma vez à Zepp os teus dispositivos.",
+                                ),
                             )
                         }
                         key(attempt) {
                             ZeppWebView(Modifier.fillMaxWidth().weight(1f).padding(top = 8.dp)) { provider ->
                                 step = SignInStep.Failed(
-                                    "$provider sign-in doesn't work inside OpenStrap, because $provider blocks sign-in in embedded pages.\n\n" +
-                                        "Open the Zepp app and add an email and password to your account in its account settings. " +
-                                        "Then sign in here with that email. Or get the auth key on a computer.",
+                                    tr(
+                                        "$provider sign-in doesn't work inside OpenStrap, because $provider blocks sign-in in embedded " +
+                                            "pages.\n\nOpen the Zepp app and add an email and password to your account in its account settings. " +
+                                            "Then sign in here with that email. Or get the auth key on a computer.",
+                                        "O início de sessão com $provider não funciona dentro da OpenStrap, porque $provider bloqueia o " +
+                                            "início de sessão em páginas embutidas.\n\nAbre a app Zepp e junta um email e uma palavra-passe à " +
+                                            "tua conta nas definições de conta. Depois inicia sessão aqui com esse email. Ou obtém a chave de " +
+                                            "autenticação num computador.",
+                                    ),
                                     thirdParty = true,
                                 )
                             }
@@ -161,7 +176,10 @@ fun ZeppSignInDialog(
                     SignInStep.Fetching -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
                             PageProgress(modifier = Modifier.width(160.dp))
-                            Text("Signed in. Looking up your devices", color = Color.White, style = GlowType.body)
+                            Text(tr(
+                                "Signed in. Looking up your devices",
+                                "Sessão iniciada. À procura dos teus dispositivos",
+                            ), color = Color.White, style = GlowType.body)
                         }
                     }
                     is SignInStep.Failed -> Column(
@@ -171,16 +189,16 @@ fun ZeppSignInDialog(
                         PagePanel {
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                                 Icon(AppIcons.WarningCircle, null, Modifier.size(20.dp), tint = MetricColors.warn)
-                                Text(if (s.thirdParty) "Use email sign-in" else "Couldn't get your devices", color = Color.White, style = GlowType.cardTitle, maxLines = 1)
+                                Text(if (s.thirdParty) tr("Use email sign-in", "Usa o início de sessão com email") else tr("Couldn't get your devices", "Não deu para obter os teus dispositivos"), color = Color.White, style = GlowType.cardTitle, maxLines = 1)
                             }
                             Text(s.message, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.body)
                         }
                         PageButton(
-                            if (s.thirdParty) "Sign in with email" else "Sign in again",
+                            if (s.thirdParty) tr("Sign in with email", "Iniciar sessão com email") else tr("Sign in again", "Iniciar sessão de novo"),
                             { clearZeppCookies(); step = SignInStep.SignIn; attempt++ }, Modifier.fillMaxWidth(), primary = true,
                         )
                         ComputerGuideButton()
-                        PageButton("Close", onDismiss, Modifier.fillMaxWidth())
+                        PageButton(tr("Close", "Fechar"), onDismiss, Modifier.fillMaxWidth())
                     }
                     is SignInStep.Found -> FoundStrap(
                         s.listing, confirmLabel, requireKey,
@@ -205,51 +223,72 @@ private fun FoundStrap(
     val canConfirm = strap != null && (strap.authKey != null || !requireKey)
     var showKey by remember { mutableStateOf(false) }
     Column(Modifier.verticalScroll(rememberScrollState()).padding(GlowLayout.Gutter), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        PagePanel(title = if (strap != null) "Found your Helio Strap" else "No Helio Strap on this account") {
+        PagePanel(title = if (strap != null) tr("Found your Helio Strap", "Encontrei a tua Helio Strap") else tr("No Helio Strap on this account", "Nenhuma Helio Strap nesta conta")) {
             if (strap == null) {
                 Text(
                     if (listing.devices.isEmpty()) {
-                        "This account has no devices. Link the strap in the Zepp app first. If you did, it's on another " +
-                            "account: sign in with the email added to the account you use in the Zepp app."
+                        tr(
+                            "This account has no devices. Link the strap in the Zepp app first. If you did, it's on another " +
+                                "account: sign in with the email added to the account you use in the Zepp app.",
+                            "Esta conta não tem dispositivos. Associa primeiro a strap na app Zepp. Se já o fizeste, está noutra " +
+                                "conta: inicia sessão com o email que juntaste à conta que usas na app Zepp.",
+                        )
                     } else {
-                        "This account has ${listing.devices.size} device(s), but none is an Amazfit Helio Strap. Link the strap " +
-                            "in the Zepp app, then sign in again."
+                        tr(
+                            "This account has ${listing.devices.size} device(s), but none is an Amazfit Helio Strap. Link the " +
+                                "strap in the Zepp app, then sign in again.",
+                            "Esta conta tem ${listing.devices.size} dispositivo(s), mas nenhum é uma Amazfit Helio Strap. " +
+                                "Associa a strap na app Zepp e inicia sessão de novo.",
+                        )
                     },
                     color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.body,
                 )
             } else {
-                Line("Bluetooth address", strap.macAddress)
+                Line(tr("Bluetooth address", "Endereço Bluetooth"), strap.macAddress)
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Auth key", color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.body, modifier = Modifier.weight(1f))
+                    Text(tr("Auth key", "Chave de autenticação"), color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.body, modifier = Modifier.weight(1f))
                     Text(
                         when {
-                            strap.authKey == null -> "Not on the account"
+                            strap.authKey == null -> tr("Not on the account", "Não está na conta")
                             showKey -> strap.authKey
                             else -> "•".repeat(8) + strap.authKey.takeLast(4)
                         },
                         color = Color.White, style = GlowType.body.copy(fontFamily = FontFamily.Monospace),
                     )
-                    if (strap.authKey != null) PageTextButton(if (showKey) "Hide" else "Show", { showKey = !showKey })
+                    if (strap.authKey != null) PageTextButton(if (showKey) tr("Hide", "Esconder") else tr("Show", "Mostrar"), { showKey = !showKey })
                 }
-                strap.serial?.let { Line("Serial", it) }
-                strap.firmwareVersion?.let { Line("Firmware", it) }
-                Line("Region", if (strap.china) "China" else "Global")
+                strap.serial?.let { Line(tr("Serial", "Número de série"), it) }
+                strap.firmwareVersion?.let { Line(tr("Firmware", "Firmware"), it) }
+                Line(tr("Region", "Região"), if (strap.china) tr("China", "China") else tr("Global", "Global"))
                 if (strap.authKey == null) {
                     PageNote(
-                        "Zepp didn't return an auth key for this strap. Open the Zepp app and check the strap is still linked " +
-                            "(unlink and link it again if needed), then sign in here again.",
+                        tr(
+                            "Zepp didn't return an auth key for this strap. Open the Zepp app and check the strap is still " +
+                                "linked (unlink and link it again if needed), then sign in here again.",
+                            "A Zepp não devolveu uma chave de autenticação para esta strap. Abre a app Zepp e confirma que a " +
+                                "strap continua associada (desassocia e associa de novo se for preciso), e depois inicia sessão aqui " +
+                                "de novo.",
+                        ),
                         color = MetricColors.warn,
                     )
                 }
             }
-            Line("Zepp user", listing.session.userId)
+            Line(tr("Zepp user", "Utilizador Zepp"), listing.session.userId)
         }
         if (canConfirm && requireKey) {
-            PageNote("Keep the strap on its charger near the phone. Don't unlink it in the Zepp app: that wipes this key from the strap.")
+            PageNote(tr(
+                "Keep the strap on its charger near the phone. Don't unlink it in the Zepp app: that wipes this key " +
+                    "from the strap.",
+                "Mantém a strap no carregador perto do telemóvel. Não a desassocies na app Zepp: isso apaga esta " +
+                    "chave da strap.",
+            ))
         }
-        PageNote("The app token and user ID stay on this phone only, for firmware checks.")
-        PageButton(if (canConfirm) confirmLabel else "Keep sign-in only", { onConfirm(strap) }, Modifier.fillMaxWidth(), primary = true)
-        PageButton("Use another account", onOtherAccount, Modifier.fillMaxWidth())
+        PageNote(tr(
+            "The app token and user ID stay on this phone only, for firmware checks.",
+            "O token da app e o ID de utilizador ficam só neste telemóvel, para procurar firmware.",
+        ))
+        PageButton(if (canConfirm) confirmLabel else tr("Keep sign-in only", "Guardar só o início de sessão"), { onConfirm(strap) }, Modifier.fillMaxWidth(), primary = true)
+        PageButton(tr("Use another account", "Usar outra conta"), onOtherAccount, Modifier.fillMaxWidth())
         if (!canConfirm && requireKey) ComputerGuideButton()
     }
 }
@@ -270,7 +309,7 @@ private fun Line(label: String, value: String) {
 @Composable
 fun ComputerGuideButton(modifier: Modifier = Modifier.fillMaxWidth()) {
     val uri = LocalUriHandler.current
-    OptionButton("Can't sign in with email?", "Get the key on a computer", modifier) { uri.openUri(COMPUTER_KEY_GUIDE_URL) }
+    OptionButton(tr("Can't sign in with email?", "Não consegues iniciar sessão com email?"), tr("Get the key on a computer", "Obter a chave num computador"), modifier) { uri.openUri(COMPUTER_KEY_GUIDE_URL) }
 }
 
 /**
@@ -295,9 +334,20 @@ fun OptionButton(caption: String, label: String, modifier: Modifier = Modifier.f
 
 private fun deviceListError(e: Throwable): String = when {
     e is ZeppCloudException && e.rejected ->
-        "Zepp didn't accept the sign-in. It may have expired, or the account is in another region. Sign in again."
-    e is ZeppCloudException -> "${e.message}. Zepp may be having trouble. Try again in a few minutes."
-    else -> "Couldn't reach Zepp's servers. Check your internet connection and try again."
+        tr(
+            "Zepp didn't accept the sign-in. It may have expired, or the account is in another region. Sign in " +
+                "again.",
+            "A Zepp não aceitou o início de sessão. Pode ter expirado, ou a conta está noutra região. Inicia " +
+                "sessão de novo.",
+        )
+    e is ZeppCloudException -> tr(
+        "${e.message}. Zepp may be having trouble. Try again in a few minutes.",
+        "${e.message}. A Zepp pode estar com problemas. Tenta de novo daqui a uns minutos.",
+    )
+    else -> tr(
+        "Couldn't reach Zepp's servers. Check your internet connection and try again.",
+        "Não deu para chegar aos servidores da Zepp. Confirma a ligação à internet e tenta de novo.",
+    )
 }
 
 @SuppressLint("SetJavaScriptEnabled")

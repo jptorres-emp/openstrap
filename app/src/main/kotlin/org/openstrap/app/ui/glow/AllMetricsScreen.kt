@@ -25,6 +25,7 @@ import org.openstrap.app.ui.dashboard.Detail
 import org.openstrap.app.ui.dashboard.Metric
 import org.openstrap.app.ui.dashboard.avg
 import org.openstrap.app.ui.theme.MetricColors
+import org.openstrap.app.l10n.tr
 
 /*
  * All metrics (decision 3): a map of every number and screen the app already has, grouped by what it's about, so
@@ -61,7 +62,7 @@ data class IndexRow(val name: String, val color: Color, val value: String?, val 
 data class IndexGroup(val title: String, val rows: List<IndexRow>)
 
 /** Shown under a row's name when the day has no value for it. */
-internal const val NO_VALUE = "Nothing for this day"
+internal val NO_VALUE: String get() = tr("Nothing for this day", "Nada para este dia")
 
 /**
  * What the Recovery row says under its name: the learning state while the baselines fill, as on the Recovery card
@@ -70,10 +71,16 @@ internal const val NO_VALUE = "Nothing for this day"
 internal fun recoveryStatus(r: org.openstrap.app.data.Recovery.Readiness?): String? = when {
     r == null -> null
     r.score != null && r.phase == org.openstrap.app.data.Recovery.Phase.Learning ->
-        "Learning, ${r.baselineNights} of ${org.openstrap.app.data.Recovery.SETTLED_NIGHTS} nights"
-    r.score != null -> "Score for the day"
+        tr(
+            "Learning, ${r.baselineNights} of ${org.openstrap.app.data.Recovery.SETTLED_NIGHTS} nights",
+            "A aprender, ${r.baselineNights} de ${org.openstrap.app.data.Recovery.SETTLED_NIGHTS} noites",
+        )
+    r.score != null -> tr("Score for the day", "Pontuação do dia")
     r.withheld && r.phase == org.openstrap.app.data.Recovery.Phase.Withheld ->
-        "Learning, ${r.baselineNights} of ${org.openstrap.app.data.Recovery.SCORED_NIGHTS} nights"
+        tr(
+            "Learning, ${r.baselineNights} of ${org.openstrap.app.data.Recovery.SCORED_NIGHTS} nights",
+            "A aprender, ${r.baselineNights} de ${org.openstrap.app.data.Recovery.SCORED_NIGHTS} noites",
+        )
     else -> null
 }
 
@@ -84,10 +91,10 @@ internal fun recoveryStatus(r: org.openstrap.app.data.Recovery.Readiness?): Stri
 internal fun habitAgeRow(outcome: Healthspan.Outcome?): Pair<String?, String> {
     val r = outcome?.result
     return when {
-        r != null -> "${r.estimate.roundToInt()}" to "Updated weekly"
-        outcome?.withheld?.learning == true && outcome.age != null -> "${outcome.age}" to "Starting point"
-        outcome?.withheld?.profile == true -> null to "Needs your profile"
-        else -> null to "Not worked out yet"
+        r != null -> "${r.estimate.roundToInt()}" to tr("Updated weekly", "Atualizado todas as semanas")
+        outcome?.withheld?.learning == true && outcome.age != null -> "${outcome.age}" to tr("Starting point", "Ponto de partida")
+        outcome?.withheld?.profile == true -> null to tr("Needs your profile", "Precisa do teu perfil")
+        else -> null to tr("Not worked out yet", "Ainda não calculado")
     }
 }
 
@@ -117,50 +124,50 @@ fun metricIndex(
     }
     return listOf(
         IndexGroup(
-            "Recovery",
+            tr("Recovery", "Recuperação"),
             listOf(
                 recoveryStatus(rec?.readiness).let { status ->
                     val shown = org.openstrap.app.ui.dashboard.TodayCopy.recoveryShown(rec?.readiness, strapScore, NO_VALUE)
                     row(
-                        "Recovery", MetricColors.readiness, shown.value?.toString(),
-                        shown.word.takeIf { shown.estimate } ?: status ?: "Score for the day", IndexTarget.Home(HomeTab.Recovery), waiting = status,
+                        tr("Recovery", "Recuperação"), MetricColors.readiness, shown.value?.toString(),
+                        shown.word.takeIf { shown.estimate } ?: status ?: tr("Score for the day", "Pontuação do dia"), IndexTarget.Home(HomeTab.Recovery), waiting = status,
                     )
                 },
                 // Before the first night Charge is only the simulation's starting guess: a dash, as on the Recovery tab's battery.
                 row(
-                    "Energy", MetricColors.charge, rec?.charge?.takeIf { it.anchored }?.latest?.let(::chargeShown)?.toString(),
-                    if (state.date == today) "Latest" else "End of day", IndexTarget.Home(HomeTab.Recovery, charge = true),
+                    tr("Energy", "Energia"), MetricColors.charge, rec?.charge?.takeIf { it.anchored }?.latest?.let(::chargeShown)?.toString(),
+                    if (state.date == today) tr("Latest", "Mais recente") else tr("End of day", "Fim do dia"), IndexTarget.Home(HomeTab.Recovery, charge = true),
                     waiting = org.openstrap.app.ui.dashboard.AFTER_FIRST_NIGHT.takeIf { rec?.charge?.anchored == false },
                 ),
-                row("Habit Age", MetricColors.habitAge, habitValue, habitStatus, IndexTarget.Open(Detail.Healthspan), waiting = habitStatus),
+                row(tr("Habit Age", "Idade dos hábitos"), MetricColors.habitAge, habitValue, habitStatus, IndexTarget.Open(Detail.Healthspan), waiting = habitStatus),
             ),
         ),
         IndexGroup(
-            "Sleep",
-            listOf(row("Sleep", MetricColors.sleepDeep, state.sleep?.score?.toString(), "Score for the night", IndexTarget.Home(HomeTab.Sleep))),
+            tr("Sleep", "Sono"),
+            listOf(row(tr("Sleep", "Sono"), MetricColors.sleepDeep, state.sleep?.score?.toString(), tr("Score for the night", "Pontuação da noite"), IndexTarget.Home(HomeTab.Sleep))),
         ),
         IndexGroup(
-            "Heart",
+            tr("Heart", "Coração"),
             listOf(
-                metric(Metric.HeartRate, "Heart rate", MetricColors.heart, state.latestHeartRate?.toFloat(), "Latest reading"),
-                metric(Metric.RestingHr, "Resting heart rate", MetricColors.heart, state.restingHeartRate?.toFloat(), "For the day"),
-                metric(Metric.Hrv, "HRV", MetricColors.hrv, state.hrv.avg()?.toFloat(), "Day average"),
+                metric(Metric.HeartRate, tr("Heart rate", "Frequência cardíaca"), MetricColors.heart, state.latestHeartRate?.toFloat(), tr("Latest reading", "Última leitura")),
+                metric(Metric.RestingHr, tr("Resting heart rate", "FC em repouso"), MetricColors.heart, state.restingHeartRate?.toFloat(), tr("For the day", "Do dia")),
+                metric(Metric.Hrv, tr("HRV", "VFC"), MetricColors.hrv, state.hrv.avg()?.toFloat(), tr("Day average", "Média do dia")),
             ),
         ),
         IndexGroup(
-            "Body signals",
+            tr("Body signals", "Sinais do corpo"),
             listOf(
-                metric(Metric.Spo2, "Blood oxygen", MetricColors.spo2, state.spo2.avg()?.toFloat(), "Day average", suffix = "%"),
-                metric(Metric.SkinTemperature, "Skin temperature", MetricColors.temperature, state.skinTemperature.takeIf { it.isNotEmpty() }?.map { it.y }?.average()?.toFloat(), "Day average"),
-                metric(Metric.Breathing, "Breathing rate", MetricColors.sleepLight, state.breathRate.avg()?.toFloat(), "Day average"),
-                metric(Metric.Stress, "Stress", MetricColors.stress, state.stress.avg()?.toFloat(), "Day average"),
+                metric(Metric.Spo2, tr("Blood oxygen", "Oxigénio no sangue"), MetricColors.spo2, state.spo2.avg()?.toFloat(), tr("Day average", "Média do dia"), suffix = "%"),
+                metric(Metric.SkinTemperature, tr("Skin temperature", "Temperatura da pele"), MetricColors.temperature, state.skinTemperature.takeIf { it.isNotEmpty() }?.map { it.y }?.average()?.toFloat(), tr("Day average", "Média do dia")),
+                metric(Metric.Breathing, tr("Breathing rate", "Frequência respiratória"), MetricColors.sleepLight, state.breathRate.avg()?.toFloat(), tr("Day average", "Média do dia")),
+                metric(Metric.Stress, tr("Stress", "Stress"), MetricColors.stress, state.stress.avg()?.toFloat(), tr("Day average", "Média do dia")),
             ),
         ),
         IndexGroup(
-            "Activity",
+            tr("Activity", "Atividade"),
             listOf(
-                metric(Metric.Steps, "Steps", MetricColors.steps, state.steps.toFloat(), "For the day"),
-                row("Workouts", MetricColors.heart, week.toString(), "Last 7 days", IndexTarget.Open(Detail.AllWorkouts)),
+                metric(Metric.Steps, tr("Steps", "Passos"), MetricColors.steps, state.steps.toFloat(), tr("For the day", "Do dia")),
+                row(tr("Workouts", "Treinos"), MetricColors.heart, week.toString(), tr("Last 7 days", "Últimos 7 dias"), IndexTarget.Open(Detail.AllWorkouts)),
             ),
         ),
     )
@@ -185,7 +192,7 @@ fun AllMetricsSheet(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Column(Modifier.fillMaxWidth().padding(start = 4.dp, top = 4.dp, bottom = 4.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text("All metrics", color = Color.White, style = GlowType.label.copy(fontSize = 20.sp, lineHeight = 26.sp))
+                Text(tr("All metrics", "Todas as métricas"), color = Color.White, style = GlowType.label.copy(fontSize = 20.sp, lineHeight = 26.sp))
                 Text(dayName(date), color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary)
             }
             groups.forEach { group ->

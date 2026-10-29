@@ -236,7 +236,7 @@ object Workouts {
     /** The tiles' short names; a sport with two kinds has one name for both. */
     private val SHORT_NAMES = mapOf(
         1 to ("Run" to "Corrida"), 2 to ("Run" to "Corrida"), 3 to ("Walk" to "Caminhada"), 40 to ("Walk" to "Caminhada"),
-        15 to ("Hike" to "Montanha"), 4 to ("Cycling" to "Ciclismo"), 8 to ("Cycling" to "Ciclismo"), 7 to ("Swim" to "Natação"),
+        15 to ("Hike" to "Trilho"), 4 to ("Cycling" to "Ciclismo"), 8 to ("Cycling" to "Ciclismo"), 7 to ("Swim" to "Natação"),
         6 to ("Swim" to "Natação"), 52 to ("Strength" to "Força"), 49 to ("HIIT" to "HIIT"), 60 to ("Yoga" to "Ioga"),
         61 to ("Pilates" to "Pilates"), 23 to ("Rowing" to "Remo"), 9 to ("Elliptical" to "Elíptica"), 5 to ("Other" to "Outro"),
         CROSSFIT to ("CrossFit" to "CrossFit"), 18 to ("Soccer" to "Futebol"),

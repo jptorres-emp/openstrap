@@ -207,13 +207,17 @@ object Healthspan {
     // Combining them (§1, §3.7, §5)
     // ------------------------------------------------------------------------------------------------
 
-    enum class Habit(val label: String, val fitness: Boolean) {
-        Strength("Strength training", false),
-        Vo2max("Fitness (VO2 max)", true),
-        Steps("Steps", true),
-        Regularity("Sleep regularity", false),
-        RestingHr("Resting heart rate", true),
-        TimeAsleep("Time asleep", false),
+    enum class Habit(private val en: String, private val pt: String, val fitness: Boolean) {
+        Strength("Strength training", "Treino de força", false),
+        Vo2max("Fitness (VO2 max)", "Forma física (VO2 máx)", true),
+        Steps("Steps", "Passos", true),
+        Regularity("Sleep regularity", "Regularidade do sono", false),
+        RestingHr("Resting heart rate", "FC em repouso", true),
+        TimeAsleep("Time asleep", "Tempo a dormir", false),
+        ;
+
+        /** Its name in the language the app speaks. */
+        val label: String get() = org.openstrap.app.l10n.tr(en, pt)
     }
 
     /** One window's averaged inputs; null where there isn't enough data for that habit, which scores as typical. */
@@ -315,16 +319,26 @@ object Healthspan {
      * Why there is no estimate, in the order checked. [profile]: the user can fix it in their profile. [learning]: there
      * isn't enough data yet, so the card starts at the user's own age.
      */
-    enum class Withheld(val reason: String, val profile: Boolean = false, val learning: Boolean = false) {
-        NoAge("Add your birth year in your profile to start your estimate.", profile = true),
-        Age("Habit Age is for ages 20 to 79."),
-        Sex("Add your sex in your profile: the typical values differ for women and men.", profile = true),
-        Medication("Not shown while taking beta-blockers or during pregnancy: resting heart rate doesn't reflect fitness then."),
-        Learning("Needs 30 days of wear before a first estimate.", learning = true),
-        RestingHr("Needs more nights of resting heart rate: about half the nights.", learning = true),
-        Steps("Needs more days worn for 10 hours or more: about half the days.", learning = true),
-        Regularity("Needs more weeks of sleep regularity.", learning = true),
-        Sleep("Needs more nights of sleep: about half the nights.", learning = true),
+    enum class Withheld(private val en: String, private val pt: String, val profile: Boolean = false, val learning: Boolean = false) {
+        NoAge("Add your birth year in your profile to start your estimate.", "Junta o teu ano de nascimento no perfil para começar a estimativa.", profile = true),
+        Age("Habit Age is for ages 20 to 79.", "A Idade dos hábitos é para idades dos 20 aos 79."),
+        Sex(
+            "Add your sex in your profile: the typical values differ for women and men.",
+            "Junta o teu sexo no perfil: os valores típicos são diferentes para mulheres e homens.", profile = true,
+        ),
+        Medication(
+            "Not shown while taking beta-blockers or during pregnancy: resting heart rate doesn't reflect fitness then.",
+            "Não aparece com beta-bloqueantes ou durante a gravidez: aí a FC em repouso não reflete a forma física.",
+        ),
+        Learning("Needs 30 days of wear before a first estimate.", "Precisa de 30 dias de uso antes da primeira estimativa.", learning = true),
+        RestingHr("Needs more nights of resting heart rate: about half the nights.", "Precisa de mais noites com FC em repouso: cerca de metade das noites.", learning = true),
+        Steps("Needs more days worn for 10 hours or more: about half the days.", "Precisa de mais dias com a strap 10 horas ou mais: cerca de metade dos dias.", learning = true),
+        Regularity("Needs more weeks of sleep regularity.", "Precisa de mais semanas de regularidade do sono.", learning = true),
+        Sleep("Needs more nights of sleep: about half the nights.", "Precisa de mais noites de sono: cerca de metade das noites.", learning = true),
+        ;
+
+        /** Why, in the language the app speaks. */
+        val reason: String get() = org.openstrap.app.l10n.tr(en, pt)
     }
 
     /**

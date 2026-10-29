@@ -95,7 +95,8 @@ internal fun ActivityScoreDetail(score: Score, ctx: ActivityDetailContext) {
     }
 }
 
-private val DAY = DateTimeFormatter.ofPattern("EEE d MMM")
+// A getter, so the day and month names follow the language chosen (L10n).
+private val DAY: DateTimeFormatter get() = DateTimeFormatter.ofPattern("EEE d MMM")
 private val CLOCK = DateTimeFormatter.ofPattern("HH:mm")
 
 private fun shortDay(d: LocalDate) = d.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault())

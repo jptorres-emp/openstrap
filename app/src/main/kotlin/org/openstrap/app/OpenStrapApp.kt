@@ -38,6 +38,8 @@ class OpenStrapApp : Application(), androidx.work.Configuration.Provider {
 
     override fun onCreate() {
         super.onCreate()
+        // The language chosen on the You page, before anything is worded: screens, widgets and notifications.
+        org.openstrap.app.l10n.L10n.load(this)
         container = AppContainer(this)
         container.companion.refresh()
         // A workout still recording when the process died carries on (the service restarts it too).

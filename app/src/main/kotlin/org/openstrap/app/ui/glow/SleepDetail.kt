@@ -68,7 +68,8 @@ private fun clock(epoch: Long) = Instant.ofEpochSecond(epoch).atZone(ZoneId.syst
 
 private fun shortDay(d: LocalDate) = d.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault())
 
-private val DAY = DateTimeFormatter.ofPattern("EEE d MMM")
+// A getter, so the day and month names follow the language chosen (L10n).
+private val DAY: DateTimeFormatter get() = DateTimeFormatter.ofPattern("EEE d MMM")
 
 /** The days of the strip with a main sleep: the nights the day loads, and later days with breathing rate (measured in sleep). */
 @Composable

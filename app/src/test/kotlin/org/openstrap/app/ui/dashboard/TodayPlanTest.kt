@@ -68,6 +68,13 @@ class TodayPlanTest {
         Moment.entries.forEach { m -> assertTrue(todayCards(m, TodayFacts()).count { it.secondGlow } <= 1) }
     }
 
+    @Test fun `on Mondays the weekly report comes right under the hero and its strips`() {
+        val monday = cards(Moment.Waking, TodayFacts(alerts = true, weekReport = true))
+        assertEquals(listOf(Hero, Alerts, Week, CheckIn), monday.take(4))
+        assertEquals(1, monday.count { it == Week })
+        assertEquals(listOf(StartWorkout, EditToday), monday.takeLast(2))
+    }
+
     @Test fun `strips that need an answer sit under the hero, today only`() {
         val facts = TodayFacts(offer = true, suggestion = true, alerts = true, healthspan = true)
         assertEquals(listOf(Hero, Offer, Suggestion, Alerts, LastNight), cards(Moment.Midday, facts).take(5))

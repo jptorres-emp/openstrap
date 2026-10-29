@@ -38,8 +38,9 @@ internal object SleepCopy {
     fun sleepHeart(state: DayUiState): List<ChartPoint> =
         state.sleep?.let { s -> state.sleepHeartRate.filter { it.x in s.start..s.end } }.orEmpty()
 
-    /** The lowest heart rate while asleep, and when. */
-    fun lowestHeart(state: DayUiState): ChartPoint? = sleepHeart(state).minByOrNull { it.y }
+    /** The lowest heart rate while asleep, and when: its lowest minute, else the lowest 5-minute average. */
+    fun lowestHeart(state: DayUiState): ChartPoint? =
+        state.sleepHeartRateLowest?.takeIf { state.sleep?.let { s -> it.x in s.start..s.end } == true } ?: sleepHeart(state).minByOrNull { it.y }
 
     /** The average heart rate while asleep: the strap's for the night, else the average of the readings. */
     fun averageHeart(state: DayUiState): Int? =

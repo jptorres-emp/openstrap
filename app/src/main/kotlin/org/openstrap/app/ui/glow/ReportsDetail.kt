@@ -67,6 +67,8 @@ internal fun ReportsDetail(
     contentPadding: PaddingValues,
     onOpen: (Detail) -> Unit,
     onBack: () -> Unit,
+    /** Weight in pounds. */
+    imperial: Boolean = false,
 ) {
     val color = MetricColors.readiness
     val ranges = listOf(Range.Week, Range.Month)
@@ -97,8 +99,8 @@ internal fun ReportsDetail(
         when {
             report == null && failed -> item { DetailEmpty(ReportCopy.FAILED) }
             report == null -> item { DetailEmpty(ReportCopy.LOADING) }
-            range == Range.Week -> weekBody(report, onOpen) { scrub = it }
-            else -> monthBody(report, onOpen) { scrub = it }
+            range == Range.Week -> weekBody(report, imperial, onOpen) { scrub = it }
+            else -> monthBody(report, imperial, onOpen) { scrub = it }
         }
     }
     if (info) InfoSheet(
@@ -122,18 +124,20 @@ private fun HeroLoad(load: Float) {
 
 /* ------------------------------------------------ Week ---------------------------------------------- */
 
-private fun LazyListScope.weekBody(r: Reports.Report, onOpen: (Detail) -> Unit, onScrub: (DetailHeadline?) -> Unit) {
+private fun LazyListScope.weekBody(r: Reports.Report, imperial: Boolean, onOpen: (Detail) -> Unit, onScrub: (DetailHeadline?) -> Unit) {
     val week = r.week
     val labels = week.days.map { ReportCopy.shortDay(it.date.dayOfWeek) }
     item { RecoveryTrend(week.days, week.normal, labels, normalDays(r), onScrub) }
     item { DetailSentence(ReportCopy.weekSentence(week.now, week.before)) }
     if (hasLoads(week.days)) item { ReportLoad(week.days, week.targets, week.balance, week.balanceBefore, week.now.trend, labels, month = false, onOpen) }
-    item { ReportList(ReportCopy.WEEK_TITLE, ReportCopy.WEEK_NOTE, ReportCopy.weekRows(week.now, week.before), onOpen) }
+    item { ReportList(ReportCopy.WEEK_TITLE, ReportCopy.WEEK_NOTE, ReportCopy.weekRows(week.now, week.before, imperial), onOpen) }
+    // Your sports this week against an average week before, right after the list: on a neutral edge card.
+    if (week.sports.isNotEmpty()) item { ReportSports(week.sports, onEdge = true, week = true) }
 }
 
 /* ------------------------------------------------ Month --------------------------------------------- */
 
-private fun LazyListScope.monthBody(r: Reports.Report, onOpen: (Detail) -> Unit, onScrub: (DetailHeadline?) -> Unit) {
+private fun LazyListScope.monthBody(r: Reports.Report, imperial: Boolean, onOpen: (Detail) -> Unit, onScrub: (DetailHeadline?) -> Unit) {
     val month = r.month
     val labels = spreadLabels(month.days.map { it.date })
     val weekdays = month.weekdays.count { it.recovery != null } >= 3
@@ -148,7 +152,7 @@ private fun LazyListScope.monthBody(r: Reports.Report, onOpen: (Detail) -> Unit,
     if (hasLoads(month.days)) item {
         ReportLoad(month.days, month.targets, month.balance, month.balanceBefore, month.now.trend, labels, month = true, onOpen)
     }
-    item { ReportList(ReportCopy.MONTH_TITLE, ReportCopy.MONTH_NOTE, ReportCopy.monthRows(month.now, month.before), onOpen) }
+    item { ReportList(ReportCopy.MONTH_TITLE, ReportCopy.MONTH_NOTE, ReportCopy.monthRows(month.now, month.before, imperial), onOpen) }
     if (weekdays) item { ReportWeekdays(month.weekdays) }
     // A list right after a list sits on a neutral edge card: the sports when nothing comes between them and the
     // month's list, else the habits when they follow the sports.
@@ -176,14 +180,14 @@ private fun ReportWeekdays(weekdays: List<Reports.Weekday>) {
 
 /** Sessions by sport, each one's heart rate zones under it, as Activity's workouts have theirs. */
 @Composable
-private fun ReportSports(sports: List<Reports.SportTotals>, onEdge: Boolean) {
+private fun ReportSports(sports: List<Reports.SportTotals>, onEdge: Boolean, week: Boolean = false) {
     OnNeutralEdge(onEdge) {
         // The zones' note only when there are zones to show.
         val zones = sports.any { it.zoneSeconds.sum() > 0 }
         ListPanel(Modifier.padding(top = 8.dp), title = ReportCopy.SPORTS_TITLE, note = ReportCopy.ZONES_NOTE.takeIf { zones }) {
             sports.forEachIndexed { i, s ->
                 ListRow(
-                    ReportCopy.sportName(s), MetricColors.heart, s.sessions.toString(), ReportCopy.sportStatus(s), divider = i > 0,
+                    ReportCopy.sportName(s), MetricColors.heart, s.sessions.toString(), ReportCopy.sportStatus(s, week), divider = i > 0,
                     icon = SportIcons.of(s.sport), iconTint = SportIconTint,
                 )
                 // Lined up with the name, as under a workout's row.
@@ -339,6 +343,8 @@ private fun openOf(line: ReportCopy.Line): Detail? = when (line) {
     ReportCopy.Line.Asleep, ReportCopy.Line.Restorative -> Detail.OfScore(Score.Sleep)
     ReportCopy.Line.Workouts -> Detail.AllWorkouts
     ReportCopy.Line.Steps -> Detail.OfMetric(Metric.Steps)
+    ReportCopy.Line.Calories -> Detail.OfScore(Score.Energy)
+    ReportCopy.Line.Weight -> null
 }
 
 private fun inkOf(line: ReportCopy.Line): Color = when (line) {
@@ -346,7 +352,7 @@ private fun inkOf(line: ReportCopy.Line): Color = when (line) {
     ReportCopy.Line.RestingHr, ReportCopy.Line.Workouts -> MetricColors.heart
     ReportCopy.Line.Asleep, ReportCopy.Line.Restorative, ReportCopy.Line.Bedtime, ReportCopy.Line.Wake -> MetricColors.sleepDeep
     ReportCopy.Line.Load, ReportCopy.Line.Usual -> MetricColors.load
-    ReportCopy.Line.Steps -> MetricColors.steps
+    ReportCopy.Line.Steps, ReportCopy.Line.Calories, ReportCopy.Line.Weight -> MetricColors.steps
 }
 
 private fun iconOf(line: ReportCopy.Line): ImageVector = when (line) {
@@ -357,6 +363,8 @@ private fun iconOf(line: ReportCopy.Line): ImageVector = when (line) {
     ReportCopy.Line.Load, ReportCopy.Line.Usual -> Score.Load.rowIcon()
     ReportCopy.Line.Workouts -> AppIcons.PersonSimpleRun
     ReportCopy.Line.Steps -> Metric.Steps.rowIcon()
+    ReportCopy.Line.Calories -> AppIcons.Fire
+    ReportCopy.Line.Weight -> AppIcons.Scale
 }
 
 private fun habitIcon(h: Reports.Habit): ImageVector = when (h) {

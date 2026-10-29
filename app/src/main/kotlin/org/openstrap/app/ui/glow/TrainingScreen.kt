@@ -13,6 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -22,6 +23,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import org.openstrap.app.data.Reports
 import org.openstrap.app.data.Training
+import org.openstrap.app.data.db.WeightEntry
 import org.openstrap.app.l10n.tr
 import org.openstrap.app.ui.dashboard.Detail
 import org.openstrap.app.ui.dashboard.DetailCopy
@@ -47,10 +49,14 @@ fun TrainingScreen(
     outcome: ReportOutcome?,
     /** Whether the profile has age, weight and height, which the energy estimate needs. */
     hasBody: Boolean,
+    /** The weights you logged over the last weeks, oldest first, and whether to show them in pounds. */
+    weights: List<WeightEntry>,
+    imperial: Boolean,
     header: @Composable () -> Unit,
     contentPadding: PaddingValues,
     onOpen: (Detail) -> Unit,
     onEditProfile: () -> Unit,
+    onLogWeight: () -> Unit,
 ) {
     val list = rememberLazyListState()
     val report = (outcome as? ReportOutcome.Ready)?.report?.takeIf { it.date == date }
@@ -65,6 +71,7 @@ fun TrainingScreen(
                 full { LoadRiskCard(report.month.days, onOpen = { onOpen(Detail.OfScore(Score.Load)) }, onInfo = { info = INFO_RISK }) }
                 full { CaloriesCard(report, hasBody, onOpen = { onOpen(Detail.OfScore(Score.Energy)) }, onEditProfile, onInfo = { info = INFO_CALORIES }) }
             }
+            full { WeightCard(weights, date, imperial, onLogWeight, onInfo = { info = INFO_WEIGHT }) }
             full { ReportsList(onOpen) }
         }
     }
@@ -78,12 +85,14 @@ fun TrainingScreen(
             hereLine = null, onDismiss = { info = null }, rows = TrainingCopy.RISK_ROWS,
         )
         INFO_CALORIES -> InfoSheet(TrainingCopy.caloriesInfo(), MetricColors.steps, here = null, hereLine = null, onDismiss = { info = null }, rows = TrainingCopy.CALORIES_ROWS)
+        INFO_WEIGHT -> InfoSheet(TrainingCopy.weightInfo(), MetricColors.steps, here = null, hereLine = null, onDismiss = { info = null }, rows = TrainingCopy.WEIGHT_ROWS)
     }
 }
 
 private const val INFO_DAY = "day"
 private const val INFO_RISK = "risk"
 private const val INFO_CALORIES = "calories"
+private const val INFO_WEIGHT = "weight"
 
 /**
  * What the day calls for (the hero): the kind of day by the morning's Recovery, a sentence in your own sports, the Load
@@ -189,6 +198,35 @@ private fun CaloriesCard(report: Reports.Report, hasBody: Boolean, onOpen: () ->
             )
             Text(TrainingCopy.CALORIES_LINE, Modifier.padding(top = 14.dp), color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary)
         }
+    }
+}
+
+/**
+ * Your weight week by week (fat loss's result, beside the calories that feed it): the latest you logged in dots, how
+ * the weeks have moved it, and the last weeks' averages as a line. Tapping the card logs today's weight.
+ */
+@Composable
+private fun WeightCard(weights: List<WeightEntry>, date: LocalDate, imperial: Boolean, onLog: () -> Unit, onInfo: () -> Unit) {
+    val zone = java.time.ZoneId.systemDefault()
+    val logged = remember(weights) { weights.associate { java.time.Instant.ofEpochSecond(it.day).atZone(zone).toLocalDate() to it.kg } }
+    val latest = logged.filterKeys { it <= date }.maxByOrNull { it.key }?.value
+    val trend = Training.weightTrend(logged, date)
+    val weeks = Training.weightWeeks(logged, date)
+    EdgeCard(MetricColors.steps, Modifier.fillMaxWidth(), onClick = onLog) {
+        EdgeTitle(TrainingCopy.WEIGHT_TITLE, TrainingCopy.WEIGHT_NOTE, onInfo = onInfo, infoLabel = tr("About weight", "Sobre o peso"))
+        if (latest == null) {
+            EdgeValue(null, null, TrainingCopy.WEIGHT_FIRST, waiting = false)
+        } else {
+            EdgeValue(TrainingCopy.weightValue(latest, imperial), TrainingCopy.weightUnit(imperial), TrainingCopy.weightStatus(trend, imperial))
+            if (weeks.count { it.kg != null } >= 2) GlowLineChart(
+                weeks.map { w -> w.kg?.let { if (imperial) org.openstrap.app.data.settings.Units.kgToLb(it) else it } },
+                Modifier.padding(top = 16.dp).semantics { contentDescription = TrainingCopy.describeWeight(weeks, imperial) },
+                height = 110.dp, labels = listOf(weeks.first(), weeks.last()).map { TrainingCopy.weekLabel(it.end) },
+                showAverage = false, color = MetricColors.steps, format = { "%.1f".format(it) },
+            )
+            Text(TrainingCopy.WEIGHT_LINE, Modifier.padding(top = 14.dp), color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary)
+        }
+        LinkRow(TrainingCopy.WEIGHT_LOG, onLog, divider = latest != null)
     }
 }
 

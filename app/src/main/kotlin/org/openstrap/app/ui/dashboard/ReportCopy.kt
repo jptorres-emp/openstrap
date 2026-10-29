@@ -22,7 +22,7 @@ object ReportCopy {
     val TITLE: String get() = tr("Reports", "Relatórios")
 
     /** What a row of a comparison list is about, for its colour, icon and the detail it opens. */
-    enum class Line { Hrv, RestingHr, Asleep, Restorative, Bedtime, Wake, Load, Usual, Workouts, Steps }
+    enum class Line { Hrv, RestingHr, Asleep, Restorative, Bedtime, Wake, Load, Usual, Workouts, Steps, Calories, Weight }
 
     /**
      * A list row: its [name], its [value] as dot text (null waits, and the [status] says for what), the [status] under
@@ -34,6 +34,34 @@ object ReportCopy {
 
     /** Beside the headline's average. */
     fun averageLabel(days: Int) = tr("average, last $days days", "média, últimos $days dias")
+
+    /* ------------------------------------------- Today's weekly card --------------------------------------- */
+
+    val WEEK_CARD_TITLE: String get() = tr("Weekly report", "Relatório da semana")
+    val WEEK_CARD_UNIT: String get() = tr("Recovery average", "Recuperação média")
+
+    /** Under the week's Recovery average on Today: how it compares with the 3 weeks before. */
+    fun weekCardStatus(now: Reports.Figures, before: Reports.Figures?): String {
+        val rec = now.recovery ?: return tr("Recovery is scored after 7 nights", "A Recuperação tem pontuação ao fim de 7 noites")
+        val then = before?.recovery ?: return tr("Last 7 days", "Últimos 7 dias")
+        val d = Math.round(rec) - Math.round(then)
+        return when {
+            d == 0 -> tr("Level with the 3 weeks before", "Igual às 3 semanas anteriores")
+            d > 0 -> tr("$d up on the 3 weeks before", "Mais $d do que nas 3 semanas anteriores")
+            else -> tr("${-d} down on the 3 weeks before", "Menos ${-d} do que nas 3 semanas anteriores")
+        }
+    }
+
+    /** The week's effort and rest in a line on Today: the Load a day, the workouts and the sleep a night. */
+    fun weekCardLine(now: Reports.Figures): String? = listOfNotNull(
+        now.load?.let { tr("Load ${whole(it)} a day", "Carga ${whole(it)} por dia") },
+        when (Math.round(now.workouts)) {
+            0 -> null
+            1 -> tr("1 workout", "1 treino")
+            else -> tr("${whole(now.workouts)} workouts", "${whole(now.workouts)} treinos")
+        },
+        now.asleep?.let { val t = TodayCopy.duration(Math.round(it) * 60L); tr("$t asleep a night", "$t a dormir por noite") },
+    ).joinToString(", ").ifEmpty { null }
 
     /** Beside the headline, under the Load a day over the same days: effort next to Recovery. */
     val LOAD_A_DAY: String get() = tr("Load a day", "Carga por dia")
@@ -158,8 +186,11 @@ object ReportCopy {
     val MONTH_TITLE: String get() = tr("This month", "Este mês")
     val MONTH_NOTE: String get() = tr("Against the one before", "Contra o anterior")
 
-    /** The week's figures, each against an average week of the 3 before it. Recovery is the headline's, so it's not here. */
-    fun weekRows(now: Reports.Figures, before: Reports.Figures?): List<Row> = listOfNotNull(
+    /**
+     * The week's figures, each against an average week of the 3 before it. Recovery is the headline's, so it's not here.
+     * Calories and weight close it, for fat loss, weight in pounds when [imperial].
+     */
+    fun weekRows(now: Reports.Figures, before: Reports.Figures?, imperial: Boolean = false): List<Row> = listOfNotNull(
         hrvRow(now, before),
         restingHrRow(now, before),
         asleepRow(now, before),
@@ -168,10 +199,12 @@ object ReportCopy {
         loadRow(now, before),
         workoutsRow(now, before),
         stepsRow(now, before),
+        caloriesRow(now, before),
+        weightRow(now, before, imperial),
     )
 
     /** The month's figures against the month before; Recovery and its spread are the headline's and the figures'. */
-    fun monthRows(now: Reports.Figures, before: Reports.Figures?): List<Row> = listOfNotNull(
+    fun monthRows(now: Reports.Figures, before: Reports.Figures?, imperial: Boolean = false): List<Row> = listOfNotNull(
         hrvRow(now, before),
         restingHrRow(now, before),
         asleepRow(now, before),
@@ -191,6 +224,8 @@ object ReportCopy {
         },
         workoutsRow(now, before),
         stepsRow(now, before),
+        caloriesRow(now, before),
+        weightRow(now, before, imperial),
     )
 
     private fun aNight() = tr("A night", "Por noite")
@@ -237,6 +272,29 @@ object ReportCopy {
     private fun stepsRow(now: Reports.Figures, before: Reports.Figures?): Row? = now.steps?.let { s ->
         val then = before?.steps
         Row(Line.Steps, tr("Steps", "Passos"), steps(s), if (then == null) aDay() else aDay() + ", " + vs(s, then, ::steps), off = then != null && then > 0 && (s - then) / then <= -0.2f)
+    }
+
+    /** The energy burned a day, the app's estimate as the Training tab's Calories card has it; lit when it fell by a tenth. */
+    private fun caloriesRow(now: Reports.Figures, before: Reports.Figures?): Row? = now.kcal?.let { k ->
+        val then = before?.kcal
+        Row(
+            Line.Calories, tr("Calories burned", "Calorias gastas"), steps(k), if (then == null) aDay() else aDay() + ", " + vs(k, then, ::steps),
+            off = then != null && then > 0 && (k - then) / then <= -0.1f,
+        )
+    }
+
+    /** The average of the weights logged, to a tenth; never lit, since which way is good is yours to say. */
+    private fun weightRow(now: Reports.Figures, before: Reports.Figures?, imperial: Boolean): Row? = now.weight?.let { w ->
+        val shown = { kg: Float -> "%.1f".format(if (imperial) org.openstrap.app.data.settings.Units.kgToLb(kg) else kg) }
+        val then = before?.weight
+        val average = tr("Average", "Média")
+        val status = if (then == null) average else {
+            val d = (if (imperial) org.openstrap.app.data.settings.Units.kgToLb(w - then) else w - then)
+            val diff = "%.1f".format(abs(d))
+            if (diff == "%.1f".format(0f)) "$average, ${tr("same as before", "igual a antes")}"
+            else "$average, ${if (d < 0) "−" else "+"}$diff vs ${shown(then)}"
+        }
+        Row(Line.Weight, tr("Weight", "Peso"), shown(w), status)
     }
 
     /* ----------------------------------------------- Weekdays ---------------------------------------------- */
@@ -291,12 +349,17 @@ object ReportCopy {
     fun sportName(s: Reports.SportTotals): String = Workouts.sportName(s.sport)
 
     /** A sport's time in all and how many sessions the month before had: the count is the value. */
-    fun sportStatus(s: Reports.SportTotals): String {
+    /** A sport's time in all and its sessions before: the month before, or for a [week] an average week of the 3 before. */
+    fun sportStatus(s: Reports.SportTotals, week: Boolean = false): String {
         val t = TodayCopy.duration(s.seconds)
         val time = tr("$t in all", "$t no total")
         return s.sessionsBefore?.let {
             val n = count(it)
-            if (n == "1") tr("$time, vs 1 session", "$time, vs 1 sessão") else tr("$time, vs $n sessions", "$time, vs $n sessões")
+            when {
+                week -> tr("$time, vs $n a week", "$time, vs $n por semana")
+                n == "1" -> tr("$time, vs 1 session", "$time, vs 1 sessão")
+                else -> tr("$time, vs $n sessions", "$time, vs $n sessões")
+            }
         } ?: time
     }
 

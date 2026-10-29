@@ -53,6 +53,59 @@ class SummariesTest {
     }
 }
 
+class StepSumsTest {
+    private fun minute(t: Long, steps: Int) = ActivityMinute(t, steps, 0, 0, null)
+
+    @Test fun `a sentinel minute counts as no steps, in the day and in its hour`() {
+        val minutes = listOf(minute(0, 90), minute(60, 255), minute(120, 251), minute(180, 40))
+        assertEquals(130, Summaries.totalSteps(minutes))
+        assertEquals(130f, Summaries.hourlySteps(minutes, 0)[0], 0f)
+    }
+
+    @Test fun `today's bar takes Today's count when the synced minutes are behind`() {
+        val today = java.time.LocalDate.of(2026, 10, 29)
+        val days = listOf(DayStat(today.minusDays(1), 9000f, 0f, 120f, 900), DayStat(today, 4000f, 0f, 110f, 500))
+        assertEquals(6500f, Summaries.withToday(days, today, 6500f).last().value, 0f)
+        // Synced minutes already ahead: kept.
+        assertEquals(4000f, Summaries.withToday(days, today, 3000f).last().value, 0f)
+        // No row for today yet: added, in date order.
+        val added = Summaries.withToday(days.dropLast(1), today, 1200f)
+        assertEquals(listOf(today.minusDays(1), today), added.map { it.date })
+        assertEquals(1200f, added.last().value, 0f)
+    }
+}
+
+class HeartRangeTest {
+    /** One reading a minute from t = 0, as the strap's per-second readings are kept. */
+    private fun minutes(vararg bpm: Int) = bpm.mapIndexed { i, v -> i * 60L to v }
+
+    @Test fun `a workout's peak survives that the 5-minute averages flatten`() {
+        val series = minutes(*IntArray(10) { 110 }, 150, 172, 181, 176, 160, *IntArray(10) { 115 })
+        assertEquals(110..181, Summaries.heartRange(series))
+        // The chart's 5-minute average of the same stretch tops out well under the peak.
+        val chartTop = Summaries.bucketAverage(series).maxOf { it.second }
+        assertEquals(true, chartTop < 170)
+    }
+
+    @Test fun `a lone spike or dip is an artefact and left out`() {
+        val series = minutes(62, 64, 63, 210, 65, 64, 35, 63, 62)
+        assertEquals(62..65, Summaries.heartRange(series))
+        assertEquals(0L to 62, Summaries.lowestMinute(series))
+    }
+
+    @Test fun `the strap's per-second maximum raises the high, unless it's far above every minute`() {
+        val series = minutes(140, 146, 156, 166, 176, 178, 174, 168)
+        assertEquals(140..188, Summaries.heartRange(series, strapMax = 188))
+        assertEquals(140..178, Summaries.heartRange(series, strapMax = 215))
+        assertEquals(140..178, Summaries.heartRange(series, strapMax = 170))
+    }
+
+    @Test fun `no readings, no range`() {
+        assertNull(Summaries.heartRange(emptyList(), strapMax = 180))
+        assertNull(Summaries.lowestMinute(emptyList()))
+    }
+}
+
 class BucketTest {
     @Test
     fun averagesIntoFiveMinuteBuckets() {

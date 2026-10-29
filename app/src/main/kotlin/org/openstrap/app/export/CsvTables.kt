@@ -10,6 +10,7 @@ import org.openstrap.app.data.db.DismissedWorkout
 import org.openstrap.app.data.db.ActivityMinute
 import org.openstrap.app.data.db.BreathRate
 import org.openstrap.app.data.db.CheckInRow
+import org.openstrap.app.data.db.WeightEntry
 import org.openstrap.app.data.db.DailyMaxHr
 import org.openstrap.app.data.db.DeletedWorkout
 import org.openstrap.app.data.db.DayTagRow
@@ -313,6 +314,11 @@ val CSV_TABLES: List<CsvTable<*>> = listOf(
         { d, f, t -> d.checkInsOnce(f, t) }, { listOf(iso(it.day), it.day, it.feeling, it.updatedAt) },
         { CheckInRow(it.long("day_epoch"), it.int("feeling"), it.longOrNull("updated_epoch") ?: it.long("day_epoch")) },
         { d, r -> d.insertCheckIns(r) }),
+    CsvTable("weight.csv", "day,day_epoch,kg,updated_epoch",
+        Key("weight", "day", "day_epoch"),
+        { d, f, t -> d.weightsOnce(f, t) }, { listOf(iso(it.day), it.day, it.kg, it.updatedAt) },
+        { WeightEntry(it.long("day_epoch"), it.float("kg"), it.longOrNull("updated_epoch") ?: it.long("day_epoch")) },
+        { d, r -> d.insertWeights(r) }),
     CsvTable("day_tag.csv", "day,day_epoch,tag",
         Key("day_tag", "day", "day_epoch"),
         { d, f, t -> d.dayTagsOnce(f, t) }, { listOf(iso(it.day), it.day, it.tag) },

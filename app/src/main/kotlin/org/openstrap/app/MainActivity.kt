@@ -483,6 +483,12 @@ private fun AppRoot(
     val paiHistory: org.openstrap.app.ui.glow.PaiHistory = remember(container) { { from, to -> container.health.dailyPai(from, to) } }
     val strapReadiness by remember(day.dayStart) { container.database.healthDao().strapReadiness(day.dayStart) }.collectAsStateWithLifecycle(null)
     val checkIn by remember(day.date) { container.health.checkIn(day.date) }.collectAsStateWithLifecycle(null)
+    // The weights logged over the Training tab's weeks and the trend's look back before them.
+    val weights by remember(day.date) {
+        val from = day.date.minusDays(org.openstrap.app.data.Training.WEIGHT_WEEKS * 7L + org.openstrap.app.data.Training.TREND_WEEKS * 7L)
+        container.database.healthDao().weights(org.openstrap.app.data.DayWindow.of(from).from, org.openstrap.app.data.DayWindow.of(day.date).to)
+    }.collectAsStateWithLifecycle(emptyList())
+    var loggingWeight by rememberSaveable { mutableStateOf(false) }
     val daysWithData by dayVm.daysWithData.collectAsStateWithLifecycle()
     val picker = remember(daysWithData, dayVm) { DayPicker(daysWithData, dayVm::select) }
     val live by container.strap.liveHeartRate.collectAsStateWithLifecycle()
@@ -872,6 +878,16 @@ private fun AppRoot(
             },
             containerColor = MaterialTheme.colorScheme.background,
         ) { padding ->
+            if (loggingWeight) {
+                val todayStart = org.openstrap.app.data.DayWindow.of(java.time.LocalDate.now()).from
+                val todays = weights.firstOrNull { it.day == todayStart }?.kg
+                org.openstrap.app.ui.device.WeightSheet(
+                    today = todays, last = weights.lastOrNull()?.kg ?: profile.weightKg, imperial = profile.usesImperial,
+                    onSave = { kg -> deviceVm.logWeight(kg); loggingWeight = false },
+                    onDelete = todays?.let { { deviceVm.deleteTodayWeight(); loggingWeight = false } },
+                    onDismiss = { loggingWeight = false },
+                )
+            }
             if (editGoals) {
                 org.openstrap.app.ui.device.GoalsSheet(goals, onSave = { g ->
                     scope.launch {
@@ -930,7 +946,9 @@ private fun AppRoot(
                         workouts, padding, onOpen = { push(Detail.Workout(it)) }, onBack = pop,
                     )
                     Detail.Healthspan -> org.openstrap.app.ui.glow.GlowHealthspanScreen(healthspan, padding, onBack = pop)
-                    is Detail.Reports -> org.openstrap.app.ui.glow.ReportsDetail(reportOutcome, day.date, detail.month, padding, onOpen = push, onBack = pop)
+                    is Detail.Reports -> org.openstrap.app.ui.glow.ReportsDetail(
+                        reportOutcome, day.date, detail.month, padding, onOpen = push, onBack = pop, imperial = profile.usesImperial,
+                    )
                     // The Recovery and Sleep tabs' screens, opened over another tab from a card about them.
                     Detail.Recovery -> {
                         androidx.activity.compose.BackHandler(onBack = pop)
@@ -988,6 +1006,7 @@ private fun AppRoot(
                                 checkIn = checkIn?.feeling,
                                 onCheckIn = { v -> scope.launch { container.health.saveCheckIn(day.date, v) } },
                                 onOpenRecovery = { todayStack = listOf(Detail.Recovery) },
+                                report = reportOutcome,
                                 workouts = workouts,
                                 onOpenWorkout = { todayStack = listOf(Detail.Workout(it)) },
                                 onOpenHealthspan = { seeHabitAge(); todayStack = listOf(Detail.Healthspan) },
@@ -1057,9 +1076,11 @@ private fun AppRoot(
                             )
                             Tab.Training -> org.openstrap.app.ui.glow.TrainingScreen(
                                 day.date, reportOutcome, hasBody = profile.age() != null && profile.weightKg != null && profile.heightCm != null,
+                                weights = weights, imperial = profile.usesImperial,
                                 header = { header(Tab.Training) }, contentPadding = padding,
                                 onOpen = { trainingStack = listOf(it) },
                                 onEditProfile = { openPage(Page.Profile) },
+                                onLogWeight = { loggingWeight = true },
                             )
                         }
                     }

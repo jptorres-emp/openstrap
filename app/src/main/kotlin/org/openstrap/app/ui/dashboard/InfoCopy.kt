@@ -124,11 +124,14 @@ object InfoCopy {
             ),
             NORMAL_SCALE,
             how = tr(
-                "The strap works it out each day from your calmest stretch, usually in sleep. Your normal is the " +
-                    "middle of your last 30 days, give or take a usual spread, once 7 of them have a value.",
-                "A strap calcula-a todos os dias a partir do teu período mais calmo, normalmente a dormir. O teu " +
-                    "normal é o meio dos teus últimos 30 dias, mais ou menos a variação habitual, quando 7 deles tiverem " +
-                    "valor.",
+                "The strap works it out each day from your calmest stretch, usually in sleep: its own value, the one " +
+                    "it sends the Zepp app too. Your normal is the middle of your last 30 days, give or take a usual " +
+                    "spread, once 7 of them have a value. Recovery reads its own measure, your lowest half hour asleep, " +
+                    "usually a few bpm lower.",
+                "A strap calcula-a todos os dias a partir do teu período mais calmo, normalmente a dormir: é o valor " +
+                    "da própria strap, o mesmo que ela envia à app Zepp. O teu normal é o meio dos teus últimos 30 dias, " +
+                    "mais ou menos a variação habitual, quando 7 deles tiverem valor. A Recuperação usa a sua própria " +
+                    "medida, a tua meia hora mais calma a dormir, normalmente uns bpm abaixo.",
             ),
             moves = tr(
                 "It rises after hard training, late meals, alcohol, poor sleep or when your body is fighting " +

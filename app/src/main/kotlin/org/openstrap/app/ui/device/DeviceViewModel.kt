@@ -37,7 +37,33 @@ class DeviceViewModel(private val container: AppContainer) : ViewModel() {
     val profile: StateFlow<org.openstrap.app.data.settings.UserProfile> =
         container.settings.profile.stateIn(viewModelScope, SharingStarted.Eagerly, org.openstrap.app.data.settings.UserProfile())
 
-    fun saveProfile(p: org.openstrap.app.data.settings.UserProfile) = viewModelScope.launch { container.settings.saveProfile(p) }
+    /** Saves the profile; a weight that changed is logged for today too, so the Training tab's weeks have it. */
+    fun saveProfile(p: org.openstrap.app.data.settings.UserProfile) = viewModelScope.launch {
+        val before = profile.value.weightKg
+        container.settings.saveProfile(p)
+        val kg = p.weightKg
+        if (kg != null && kg != before) insertWeight(kg)
+    }
+
+    /**
+     * Logs [kg] for today (replacing today's if there is one) and makes it the profile's weight, confirmed now when
+     * the height is known, so the calorie estimate and VO2 max use it.
+     */
+    fun logWeight(kg: Float) = viewModelScope.launch {
+        insertWeight(kg)
+        val p = profile.value
+        container.settings.saveProfile(p.copy(weightKg = kg, bodyMeasuredAt = if (p.heightCm != null) System.currentTimeMillis() / 1000 else p.bodyMeasuredAt))
+    }
+
+    /** Takes back today's weight; the profile keeps the weight it has. */
+    fun deleteTodayWeight() = viewModelScope.launch {
+        container.database.healthDao().deleteWeight(org.openstrap.app.data.DayWindow.of(java.time.LocalDate.now()).from)
+    }
+
+    private suspend fun insertWeight(kg: Float) {
+        val day = org.openstrap.app.data.DayWindow.of(java.time.LocalDate.now()).from
+        container.database.healthDao().insertWeights(listOf(org.openstrap.app.data.db.WeightEntry(day, kg, System.currentTimeMillis() / 1000)))
+    }
 
     private val _scan = MutableStateFlow(ScanUiState())
     val scan = _scan.asStateFlow()

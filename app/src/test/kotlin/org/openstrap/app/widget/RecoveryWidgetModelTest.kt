@@ -120,6 +120,21 @@ class RecoveryWidgetModelTest {
         assertEquals(listOf("52 bpm", "62 ms", "82"), RecoveryWidgetModel.figures(d).map { it.value })
     }
 
+    @Test fun `resting heart rate is the strap's daily value, as on Today and in the Zepp app`() {
+        val night = Recovery.Night(
+            day = 0, start = 0, end = 8 * 3600, asleepMinutes = 450, strapScore = 80, hrv = 61.6f, restingHr = 51.6f,
+            hrvSamples = 40, hrMinutes = 400,
+        )
+        val ready = Recovery.Readiness(78, emptyList(), 30, false, emptyList(), false)
+        val r = RecoveryResult(
+            today, ready, Recovery.ChargeDay(emptyList(), null, null, 0f, 0f, 0f, 0f, null, null, anchored = true), week,
+            0f, null, 52f, 190f, true, Recovery.StressThreshold(60, null, 0), tonight = night,
+        )
+        assertEquals(55f, RecoveryDay.of(r, null, strapResting = 55f).restingHr)
+        // Without the strap's value, the night's own.
+        assertEquals(51.6f, RecoveryDay.of(r, null).restingHr)
+    }
+
     @Test fun `the strap's values stand in where the night's failed the validity rule`() {
         val night = Recovery.Night(day = 0, start = 0, end = 3600, asleepMinutes = 50, hrv = 30f, restingHr = 70f, strapScore = 40)
         val ready = Recovery.Readiness(null, emptyList(), 30, false, emptyList(), false, fallbackHrv = 45f, fallbackRestingHr = 55f)

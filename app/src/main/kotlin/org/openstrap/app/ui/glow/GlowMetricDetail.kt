@@ -433,7 +433,13 @@ fun GlowMetricDetailScreen(
     val to = maxOf(end, strip0.last().date)
     val from = minOf(end.minusDays(maxOf(range.days, History.NORMAL_DAYS) - 1L), strip0.first().date)
     val daily = if (night) SleepCopy.nightDaily(metric) else metric.daily
-    val stats by remember(daily, from, to) { history(daily, from, to) }.collectAsState(null)
+    val synced by remember(daily, from, to) { history(daily, from, to) }.collectAsState(null)
+    // Today's steps as Today's card counts them (the strap's live count with the synced minutes), so today's bar in the
+    // week and month matches the number on Today rather than only the minutes synced so far.
+    val stats = remember(synced, metric, state.steps, end, today) {
+        if (metric != Metric.Steps || end != today || state.steps <= 0) synced
+        else synced?.let { list -> org.openstrap.app.data.Summaries.withToday(list, today, state.steps.toFloat()) }
+    }
     val normal = stats?.let { History.normal(it, end) }
     val normalDays = stats?.count { it.date in end.minusDays(History.NORMAL_DAYS - 1L)..end } ?: 0
     // The night's own: its normal from the nights before, and the last 7 nights. Day and Week read against these.
@@ -521,9 +527,9 @@ fun GlowMetricDetailScreen(
             item { DayChart(metric, state, color, value != null, normalOf = { m -> rememberNormal(m, end, history) }) { scrub = it } }
             val sentence = when {
                 value == null -> null
-                metric == Metric.HeartRate -> state.heartRate.takeIf { it.isNotEmpty() }?.let { s ->
-                    DetailCopy.heartDay(s.minOf { it.y }.toInt(), s.maxOf { it.y }.toInt(), isToday)
-                }
+                // Minute by minute, with the strap's own daily maximum, as the strap reads the day: the chart's
+                // 5-minute averages would flatten a workout's peak.
+                metric == Metric.HeartRate -> state.heartRateRange?.let { DetailCopy.heartDay(it.first, it.last, isToday) }
                 else -> DetailCopy.day(status, org.openstrap.app.ui.dashboard.daySource(metric), isToday, normalDays)
             }
             if (sentence != null) item { DetailSentence(sentence) }

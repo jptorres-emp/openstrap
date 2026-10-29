@@ -99,6 +99,42 @@ object Training {
     /** The weeks before the last, as one average a day; null without any. */
     fun energyBefore(weeks: List<EnergyWeek>): Float? = weeks.dropLast(1).mapNotNull { it.kcalADay }.takeIf { it.isNotEmpty() }?.average()?.toFloat()
 
+    /* ------------------------------------------------- Weight ---------------------------------------------- */
+
+    /** The weeks of weight shown, this one last. */
+    const val WEIGHT_WEEKS = 8
+
+    /** How far back the trend looks: about a month, long enough for fat loss to show past day-to-day water. */
+    const val TREND_WEEKS = 4
+
+    /** A week of logged weight ending on [end]: the average of its weights; null without one. */
+    data class WeightWeek(val end: LocalDate, val kg: Float?)
+
+    /** The [weeks] weeks ending on [end], oldest first, from the weights logged ([logged]: day to kg). */
+    fun weightWeeks(logged: Map<LocalDate, Float>, end: LocalDate, weeks: Int = WEIGHT_WEEKS): List<WeightWeek> =
+        (weeks - 1 downTo 0).map { k ->
+            val to = end.minusDays(7L * k)
+            val kg = logged.filterKeys { it in to.minusDays(6)..to }.values
+            WeightWeek(to, if (kg.isEmpty()) null else kg.average().toFloat())
+        }
+
+    /**
+     * How weight has moved: the [kg] between the average of the last 7 days' weights and that of the first week with
+     * a weight in the [TREND_WEEKS] weeks before them, which starts on [since]. Weeks, not single mornings, so a day's
+     * water or salt doesn't read as a trend.
+     */
+    data class WeightTrend(val kg: Float, val since: LocalDate)
+
+    /** The trend to [end]; null without a weight in the last 7 days and one in the weeks before them. */
+    fun weightTrend(logged: Map<LocalDate, Float>, end: LocalDate): WeightTrend? {
+        val weekFrom = end.minusDays(6)
+        val now = logged.filterKeys { it in weekFrom..end }.values.takeIf { it.isNotEmpty() }?.average() ?: return null
+        val earlier = logged.filterKeys { it < weekFrom && it >= weekFrom.minusDays(7L * TREND_WEEKS) }
+        val first = earlier.keys.minOrNull() ?: return null
+        val base = earlier.filterKeys { it <= first.plusDays(6) }.values.average()
+        return WeightTrend((now - base).toFloat(), first)
+    }
+
     private fun median(sorted: List<Float>): Float {
         val n = sorted.size
         return if (n % 2 == 1) sorted[n / 2] else (sorted[n / 2 - 1] + sorted[n / 2]) / 2f

@@ -26,7 +26,16 @@ data class ActivityMinute(
     val intensity: Int,
     val kind: Int,
     val heartRate: Int?,
-)
+) {
+    companion object {
+        /**
+         * A minute's steps taken from the extended record (type 88) because the activity record (type 1) for it was
+         * never synced: the strap keeps type 1 for about 43 hours, type 88 for 60 days and more. No mode, intensity
+         * or heart rate; a type 1 record for the minute replaces it.
+         */
+        const val KIND_FROM_EXTENDED = 0x80
+    }
+}
 
 /** A main sleep or a nap. The strap's own totals and score are kept as it reported them. */
 @Entity(tableName = "sleep_session", indices = [Index("day")])
@@ -448,6 +457,18 @@ data class HourSteps(val day: String, val hour: Int, val steps: Int)
 
 /** The day's last PAI reading: what the strap reported for that day and the 7-day total. */
 data class DailyPai(val day: String, val daily: Float, val total: Float, val latest: Long)
+
+/**
+ * A weight the user logged for the local day [day] (one a day: a second the same day replaces it), in kilograms.
+ * Logged on the Training tab for fat loss, and it updates the profile's weight, which the energy estimate uses.
+ */
+@Entity(tableName = "weight")
+data class WeightEntry(
+    /** Local midnight of the day, epoch seconds. */
+    @PrimaryKey val day: Long,
+    val kg: Float,
+    val updatedAt: Long,
+)
 
 /**
  * The morning check-in: how the user feels, 1 (poor) to 5 (great), for the local day [day]. The only within-user

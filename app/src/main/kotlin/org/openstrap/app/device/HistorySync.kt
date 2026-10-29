@@ -223,6 +223,16 @@ class HistorySync(
         val padding = dao.deletePaddingActivity()
         val outside = dao.deleteActivityOutside(MIN_VALID_EPOCH, now + FUTURE_SLACK)
         if (padding + outside > 0) log("history: removed $padding padding and $outside misdated activity rows")
+        // Once: fetch the extended records (type 88, kept 60 days and more) for the last month, and fill in the steps of
+        // minutes whose activity records (kept about 43 hours) were never synced, so past days' steps are whole.
+        if (settings.lastSync(EXTENDED_BACKFILL_KEY) == null) {
+            val key = "gdsp_${HistoryDataType.TODAY_ACTIVITY_EXTENDED.code}"
+            val from = now - EXTENDED_BACKFILL_DAYS * 86_400L
+            if ((settings.lastSync(key) ?: now) > from) settings.setLastSync(key, from)
+            dao.fillStepsFromExtended(0, now + FUTURE_SLACK)
+            settings.setLastSync(EXTENDED_BACKFILL_KEY, now)
+            log("history: extended records refetched from ${Instant.ofEpochSecond(from)} to fill missing steps")
+        }
         // Earlier builds stored the whole mode byte; the mode is its low nibble.
         val modes = dao.fixActivityModeNibble()
         if (modes > 0) log("history: fixed the mode of $modes activity rows")
@@ -447,8 +457,12 @@ class HistorySync(
             is SleepRespiratoryEvent -> raw += RawRecord(HistoryDataType.SLEEP_RESPIRATORY_RATE_EVENT.code, r.timestamp, r.raw)
             else -> Unit
         }
-        perSecond.forEach { (minute, values) -> hr += HeartRateSample(minute, values.average().toInt()) }
-        if (activity.isNotEmpty()) dao.insertActivity(activity)
+        perSecond.forEach { (minute, values) -> hr += HeartRateSample(minute, Math.round(values.average()).toInt()) }
+        if (activity.isNotEmpty()) {
+            dao.insertActivity(activity)
+            // A minute filled in from type 88 earlier gives way to its own activity record.
+            dao.dropFilledStepsCovered(activity.first().timestamp - 60, activity.last().timestamp + 60)
+        }
         if (hr.isNotEmpty()) dao.insertHeartRate(hr)
         if (spo2.isNotEmpty()) dao.insertSpo2(spo2)
         if (stress.isNotEmpty()) dao.insertStress(stress)
@@ -466,7 +480,11 @@ class HistorySync(
         if (osaResults.isNotEmpty()) dao.insertOsaResults(osaResults)
         if (maxHr.isNotEmpty()) dao.insertDailyMaxHr(maxHr.map { (day, bpm) -> DailyMaxHr(day, bpm) })
         if (recoveryHr.isNotEmpty()) dao.insertRecoveryHeartRate(recoveryHr)
-        if (extended.isNotEmpty()) dao.insertActivityExtended(extended)
+        if (extended.isNotEmpty()) {
+            dao.insertActivityExtended(extended)
+            // Steps for minutes whose activity record (type 1) the strap no longer had: it keeps those about 43 hours.
+            dao.fillStepsFromExtended(extended.minOf { it.timestamp }, extended.maxOf { it.timestamp })
+        }
         if (raw.isNotEmpty()) dao.insertRawRecords(raw)
     }
 
@@ -576,6 +594,9 @@ class HistorySync(
         private val HISTORY_CONTROL = java.util.UUID.fromString("00000004-0000-3512-2118-0009af100700")
         private val HISTORY_DATA = java.util.UUID.fromString("00000005-0000-3512-2118-0009af100700")
         private const val DEFAULT_LOOKBACK = 2L * 24 * 3600
+        /** How far back the one-time extended-records fetch goes: a month of steps, inside the strap's 60 days. */
+        private const val EXTENDED_BACKFILL_DAYS = 30L
+        private const val EXTENDED_BACKFILL_KEY = "backfill_extended_v1"
         /** Workouts are few and worth having: on first sync, take whatever the strap still holds. */
         private const val WORKOUT_LOOKBACK = 30L * 24 * 3600
         private val WORKOUT_TYPES = setOf(HistoryDataType.SPORT_SUMMARY, HistoryDataType.SPORT_DETAIL, HistoryDataType.SPORT_EFFECT)

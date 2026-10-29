@@ -104,13 +104,13 @@ class HealthRepository(private val dao: HealthDao) {
     ) { _, _, _, _ -> }
 
     /**
-     * Where the data stands, as [changes] watches it: the newest heart rate, stress and sleep and how many strap
-     * workouts there are. It moves only when something new lands, so heavy work can tell a real change from a
-     * resubscription and keep what it has.
+     * Where the data stands, as [changes] watches it: the newest heart rate, stress and sleep, how many strap
+     * workouts there are, and when a weight was last logged (the reports show it). It moves only when something new
+     * lands, so heavy work can tell a real change from a resubscription and keep what it has.
      */
     fun dataStamp(): Flow<List<Long?>> = kotlinx.coroutines.flow.combine(
-        dao.latestHeartRateTime(), dao.latestStressTime(), dao.latestSleepEnd(), dao.workoutCountFlow(),
-    ) { hr, stress, sleep, workouts -> listOf(hr, stress, sleep, workouts.toLong()) }.distinctUntilChanged()
+        dao.latestHeartRateTime(), dao.latestStressTime(), dao.latestSleepEnd(), dao.workoutCountFlow(), dao.latestWeightUpdate(),
+    ) { hr, stress, sleep, workouts, weight -> listOf(hr, stress, sleep, workouts.toLong(), weight) }.distinctUntilChanged()
 
     /** Local days that have any heart rate, steps or sleep, for the calendar. */
     fun daysWithData(zone: ZoneId = ZoneId.systemDefault()): Flow<Set<LocalDate>> = dao.hoursWithData().map { hours ->

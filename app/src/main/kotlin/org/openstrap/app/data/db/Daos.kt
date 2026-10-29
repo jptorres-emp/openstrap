@@ -118,6 +118,27 @@ interface HealthDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertActivityExtended(minutes: List<ActivityExtendedMinute>)
 
+    /**
+     * Steps for minutes the activity record (type 1) is missing, from the extended record (type 88), which the strap
+     * keeps far longer: a minute with steps in type 88 and no activity row in the same minute gets one, marked
+     * [ActivityMinute.KIND_FROM_EXTENDED].
+     */
+    @Query(
+        "INSERT INTO activity_minute (timestamp, steps, intensity, kind, heartRate) " +
+            "SELECT e.timestamp / 60 * 60, e.steps, 0, ${ActivityMinute.KIND_FROM_EXTENDED}, NULL FROM activity_extended e " +
+            "WHERE e.timestamp BETWEEN :from AND :to AND e.steps BETWEEN 1 AND 250 AND NOT EXISTS (" +
+            "SELECT 1 FROM activity_minute a WHERE a.timestamp BETWEEN e.timestamp / 60 * 60 AND e.timestamp / 60 * 60 + 59)",
+    )
+    suspend fun fillStepsFromExtended(from: Long, to: Long)
+
+    /** Drops the filled-in minutes ([fillStepsFromExtended]) that an activity record for the same minute now covers. */
+    @Query(
+        "DELETE FROM activity_minute WHERE kind = ${ActivityMinute.KIND_FROM_EXTENDED} AND timestamp BETWEEN :from AND :to AND EXISTS (" +
+            "SELECT 1 FROM activity_minute a WHERE a.kind != ${ActivityMinute.KIND_FROM_EXTENDED} " +
+            "AND a.timestamp BETWEEN activity_minute.timestamp / 60 * 60 AND activity_minute.timestamp / 60 * 60 + 59)",
+    )
+    suspend fun dropFilledStepsCovered(from: Long, to: Long): Int
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertRawRecords(rows: List<RawRecord>)
 
@@ -489,7 +510,8 @@ interface HealthDao {
     @Query("SELECT date(timestamp, 'unixepoch', 'localtime') AS day, AVG(bpm) AS value, MIN(bpm) AS min, MAX(bpm) AS max, COUNT(*) AS count FROM heart_rate WHERE timestamp BETWEEN :from AND :to AND bpm BETWEEN 30 AND 230 GROUP BY day ORDER BY day")
     fun dailyHeartRate(from: Long, to: Long): Flow<List<DailyAggregate>>
 
-    @Query("SELECT date(timestamp, 'unixepoch', 'localtime') AS day, SUM(steps) AS value, MIN(steps) AS min, MAX(steps) AS max, COUNT(*) AS count FROM activity_minute WHERE timestamp BETWEEN :from AND :to GROUP BY day ORDER BY day")
+    /** Steps per local day; a minute over 250 steps is a sentinel or an error and left out, as everywhere steps are summed. */
+    @Query("SELECT date(timestamp, 'unixepoch', 'localtime') AS day, SUM(steps) AS value, MIN(steps) AS min, MAX(steps) AS max, COUNT(*) AS count FROM activity_minute WHERE timestamp BETWEEN :from AND :to AND steps BETWEEN 0 AND 250 GROUP BY day ORDER BY day")
     fun dailySteps(from: Long, to: Long): Flow<List<DailyAggregate>>
 
     @Query("SELECT date(timestamp, 'unixepoch', 'localtime') AS day, AVG(milliseconds) AS value, MIN(milliseconds) AS min, MAX(milliseconds) AS max, COUNT(*) AS count FROM hrv WHERE timestamp BETWEEN :from AND :to GROUP BY day ORDER BY day")
@@ -535,6 +557,23 @@ interface HealthDao {
 
     @Query("SELECT * FROM check_in WHERE day BETWEEN :from AND :to ORDER BY day")
     suspend fun checkInsOnce(from: Long, to: Long): List<CheckInRow>
+
+    // Weights the user logged, one a day.
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertWeights(rows: List<WeightEntry>)
+
+    @Query("DELETE FROM weight WHERE day = :day")
+    suspend fun deleteWeight(day: Long)
+
+    @Query("SELECT * FROM weight WHERE day BETWEEN :from AND :to ORDER BY day")
+    fun weights(from: Long, to: Long): Flow<List<WeightEntry>>
+
+    @Query("SELECT * FROM weight WHERE day BETWEEN :from AND :to ORDER BY day")
+    suspend fun weightsOnce(from: Long, to: Long): List<WeightEntry>
+
+    /** When a weight was last logged or changed, so a report that shows weight follows it. */
+    @Query("SELECT MAX(updatedAt) FROM weight")
+    fun latestWeightUpdate(): Flow<Long?>
 
     // Each Sunday's Habit Age estimate, for the next week's comparison.
     @Insert(onConflict = OnConflictStrategy.REPLACE)

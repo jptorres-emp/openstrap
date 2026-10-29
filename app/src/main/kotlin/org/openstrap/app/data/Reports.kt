@@ -36,7 +36,8 @@ object Reports {
     /**
      * One morning and the day after it. [recovery] is the app's own, scored with the nights and loads before that
      * morning as [RecoveryEngine.compute] scores the day; [strapRecovery] is the strap's, which stands in for the Load
-     * target while the app's is learning. The night's [hrv] and [restingHr] are OpenStrap's own on a valid night, and
+     * target while the app's is learning. The night's [hrv] is OpenStrap's own on a valid night, [restingHr] the
+     * strap's daily value (as the app shows resting heart rate everywhere), else the night's own, and
      * [hrvVsUsual] the change Recovery saw against its baseline, in percent. [partial] marks the day still under way:
      * its Load and steps are so far.
      */
@@ -66,6 +67,8 @@ object Reports {
         val partial: Boolean = false,
         /** The day's energy in kcal, the app's own estimate as the Calories card has it; null without age, weight and height. */
         val kcal: Float? = null,
+        /** The weight logged that day, in kg ([org.openstrap.app.data.db.WeightEntry]); null on a day without one. */
+        val weightKg: Float? = null,
     ) {
         val hasData: Boolean get() = recovery != null || asleepMinutes != null || load != null || (steps ?: 0) > 0
     }
@@ -289,6 +292,10 @@ object Reports {
         val workouts: Float,
         val workoutSeconds: Float,
         val steps: Float?,
+        /** The energy a day over the finished days with an estimate, kcal. */
+        val kcal: Float? = null,
+        /** The average of the weights logged in the stretch, kg. */
+        val weight: Float? = null,
     ) {
         /** Fitness, fatigue and form as the last day began, for the balance word Activity's Load card shows. */
         val trend: Recovery.LoadTrend? get() = usualLoad?.let { c -> fatigue?.let { a -> Recovery.LoadTrend(c, a, c - a) } }
@@ -326,6 +333,8 @@ object Reports {
             workouts = workouts.size.toFloat(),
             workoutSeconds = workouts.sumOf { it.seconds }.toFloat(),
             steps = done.mapNotNull { it.steps?.takeIf { s -> s > 0 }?.toFloat() }.averageOrNull(),
+            kcal = done.mapNotNull { it.kcal }.averageOrNull(),
+            weight = inside.mapNotNull { it.weightKg }.averageOrNull(),
         )
     }
 
@@ -376,6 +385,8 @@ object Reports {
         val balance: Balance,
         val balanceBefore: Balance?,
         val normal: ClosedFloatingPointRange<Float>?,
+        /** The week's sports, each with its sessions and an average week of the 3 before ([SportTotals.sessionsBefore]). */
+        val sports: List<SportTotals> = emptyList(),
     )
 
     fun week(end: LocalDate, days: Map<LocalDate, Day>, sessions: List<Session>, targets: Map<LocalDate, Target?>, firstData: LocalDate?): Week {
@@ -398,6 +409,7 @@ object Reports {
                 Balance(b.below * scale, b.within * scale, b.above * scale)
             },
             normal = normal(dates(end.minusDays(MONTH_DAYS - 1L), end).mapNotNull { days[it]?.recovery?.toFloat() }),
+            sports = sports(sessions, from, end, if (before != null) beforeFrom..beforeTo else null, scale),
         )
     }
 

@@ -25,6 +25,7 @@ import org.openstrap.app.ble.GattClient
 import org.openstrap.app.ble.GattException
 import org.openstrap.app.ble.GattStrapLink
 import org.openstrap.app.ble.StrapUuids
+import org.openstrap.app.data.MoveReminder
 import org.openstrap.app.data.db.HealthAlertRow
 import org.openstrap.app.data.db.HealthDao
 import org.openstrap.app.data.db.WearEventRow
@@ -83,6 +84,11 @@ class StrapManager(
     private val healthAlerts = HealthAlertNotifier(context)
     private val autoDetected = AutoDetectNotifier(context)
     private val wearNotifier = WearNotifier(context)
+    private val moveNotifier = MoveNotifier(context)
+
+    /** The strap's step totals as they came in (epoch seconds, the day's total), the last few hours, for the move reminder. */
+    private val stepSamples = ArrayDeque<Pair<Long, Int>>()
+    @Volatile private var lastMoveNudge: Long? = null
     private val wearEvents = WearEventLog(scope, dao::insertWearEvent) { log("wear event not stored: $it") }
 
     override val connection = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
@@ -216,6 +222,7 @@ class StrapManager(
                 watchSettings(s)
                 watchFindDevice(s)
                 watchWear(s)
+                watchMove(s)
                 watchSportSession(s)
                 watchFeatures(s)
                 retries = 0
@@ -532,6 +539,35 @@ class StrapManager(
         log("wear status: ${when (worn) { true -> "on body"; false -> "off body"; null -> "unknown" }}")
     }
 
+    /**
+     * The move reminder ([MoveReminder]): once a minute, the steps over the chosen stretch from the strap's own running
+     * total (its increments are right even when the total carries the firmware's offset, [LiveSteps]), and a buzz with a
+     * quiet notification when the rule says so. Ends with this connection.
+     */
+    private fun CoroutineScope.watchMove(s: ChannelSession) = launch {
+        while (isActive && session === s) {
+            delay(MOVE_TICK_MS)
+            val now = System.currentTimeMillis() / 1000
+            // A minute with no push still counts: the total stood still.
+            todaySteps.value?.let { recordSteps(now, it.steps) }
+            val m = settings.moveReminder.first()
+            if (!m.on || firmwareUpdating.value) continue
+            val steps = synchronized(stepSamples) { MoveReminder.stepsOver(stepSamples.toList(), now, m.everyMinutes) }
+            if (!MoveReminder.due(m, java.time.LocalDateTime.now(), now, steps, lastMoveNudge, lastWorn, workoutActive) || callHold) continue
+            lastMoveNudge = now
+            log("move reminder: $steps steps in ${m.everyMinutes} min")
+            runCatching { buzz(MoveReminder.PATTERN) }.onFailure { log("move reminder buzz failed: $it") }
+            moveNotifier.show(m.everyMinutes)
+        }
+    }
+
+    private fun recordSteps(at: Long, total: Int) {
+        synchronized(stepSamples) {
+            stepSamples.addLast(at to total)
+            while (stepSamples.isNotEmpty() && stepSamples.first().first < at - STEP_SAMPLES_KEPT_S) stepSamples.removeFirst()
+        }
+    }
+
     /** Zepp re-reads the alarms on the strap's `0F` push (03 §3.14). */
     private fun CoroutineScope.watchAlarms(s: ChannelSession) = launch {
         s.messagesFor(Endpoints.ALARMS).collect { p ->
@@ -620,6 +656,7 @@ class StrapManager(
                         log("steps today=${it.steps} dist=${it.distanceMeters} kcal=${it.calories}" + if (!it.isPlausible) " (total doesn't match distance: counting from synced history)" else "")
                     }
                     todaySteps.value = it
+                    recordSteps(System.currentTimeMillis() / 1000, it.steps)
                     WidgetUpdater.stepsChanged(context)
                 }
             }
@@ -1196,6 +1233,9 @@ class StrapManager(
         val RETRY_SECONDS = longArrayOf(5, 15, 30, 60, 120, 300)
         const val MIN_SYNC_GAP_SECONDS = 15 * 60L
         const val WEAR_POLL_MS = 60_000L
+        const val MOVE_TICK_MS = 60_000L
+        /** The longest stretch a move reminder can ask for, and a margin. */
+        const val STEP_SAMPLES_KEPT_S = 2 * 3600L
         /** Settings key: the local midnight of the last morning a body-signal alert was pushed. */
         const val BODY_SIGNALS_PUSHED = "body_signals_push"
         const val AUTO_SYNC_SECONDS = 60 * 60L

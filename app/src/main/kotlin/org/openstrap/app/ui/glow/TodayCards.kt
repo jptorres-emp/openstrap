@@ -369,7 +369,7 @@ internal fun HeartCard(
         kind = if (live != null) EdgeKind.Live else EdgeKind.Value, onClick = onClick,
     ) {
         EdgeTitle(tr("Heart rate", "Frequência cardíaca"), state.restingHeartRate?.let { tr("Resting $it", "Em repouso $it") }, marker = upTo)
-        val at = scrubbed?.second ?: state.heartRate.lastOrNull()?.x
+        val at = scrubbed?.second ?: state.latestHeartRateAt
         EdgeValue(now?.toString(), "bpm", TodayCopy.heartAt(live != null && scrubbed == null, at?.let(::clockAt)))
         if (state.heartRate.size >= 2) {
             Spacer(Modifier.height(10.dp))
@@ -506,44 +506,38 @@ internal fun WorkoutCard(w: org.openstrap.app.data.WorkoutAnalysis, onClick: () 
 }
 
 /**
- * Your week (spec 4.2): last Monday to Sunday against the week before, every day of this week. Steps a day in dots,
- * time asleep a night and the workouts done as text under them (one dotted number a card, spec 2.3). A summary of three
- * metrics borrows none of their colours: a neutral edge from the bottom, soft, like any value at its usual.
+ * The weekly report on Today (spec 4.2), the week's look back where the day's list ends, on Mondays right under the
+ * hero: the last 7 days' Recovery average in dots against the 3 weeks before, then the Load a day, the workouts and the
+ * sleep a night. It's the report the Training tab and the Reports screen read ([ReportOutcome]), and opens it. A
+ * summary of several metrics borrows none of their colours: a neutral edge from the bottom, soft, like any value at
+ * its usual.
  */
 @Composable
 internal fun WeekCard(
-    state: DayUiState, workouts: List<org.openstrap.app.data.WorkoutAnalysis>, history: DailyHistory?, modifier: Modifier = Modifier,
-    /** Opens the week story. */
+    outcome: org.openstrap.app.ui.dashboard.ReportOutcome?, date: java.time.LocalDate, modifier: Modifier = Modifier,
+    /** Opens the weekly report. */
     onClick: (() -> Unit)? = null,
 ) {
-    val week = TodayCopy.lastWeek(state.date)
-    val start = week.start
-    val end = week.endInclusive
-    val steps by remember(end, history) {
-        history?.invoke(Metric.Steps.daily, start.minusDays(7), end) ?: kotlinx.coroutines.flow.flowOf(emptyList())
-    }.collectAsState(emptyList())
-    fun stepsAvg(from: java.time.LocalDate, to: java.time.LocalDate) =
-        steps.filter { it.date in from..to }.map { it.value.toDouble() }.takeIf { it.isNotEmpty() }?.average()
-    val stepsNow = stepsAvg(start, end)
-    // A night belongs to the morning it ended, so the week's nights end Tuesday through the Monday after.
-    val asleep = state.nights.filter { it.date in start.plusDays(1)..end.plusDays(1) }.mapNotNull { it.asleepSeconds }
-    val zone = ZoneId.systemDefault()
-    val done = workouts.count { Instant.ofEpochSecond(it.workout.start).atZone(zone).toLocalDate() in start..end }
+    val report = (outcome as? org.openstrap.app.ui.dashboard.ReportOutcome.Ready)?.report?.takeIf { it.date == date }
+    val failed = outcome is org.openstrap.app.ui.dashboard.ReportOutcome.Failed && outcome.date == date
+    val week = report?.week
+    val from = date.minusDays(org.openstrap.app.data.Reports.WEEK_DAYS - 1L)
     val range = DateTimeFormatter.ofPattern("d MMM")
+    val average = week?.now?.recovery
     EdgeCard(EdgeNeutral, modifier.fillMaxWidth().gridSize(CardSize.Wide), kind = EdgeKind.Value, onClick = onClick) {
-        EdgeTitle(tr("Your week", "A tua semana"), "${start.format(range)}–${end.format(range)}")
-        EdgeValue(stepsNow?.let { "%,d".format(it.roundToInt()) }, tr("steps a day", "passos por dia"), null)
-        val night = asleep.takeIf { it.isNotEmpty() }?.average()?.toLong()?.let { TodayCopy.duration(it) + tr(" asleep a night", " a dormir por noite") }
-        val workoutsDone = if (done == 1) tr("1 workout", "1 treino") else tr("$done workouts", "$done treinos")
-        Text(
-            listOfNotNull(night, workoutsDone).joinToString(", ").replaceFirstChar { it.uppercase() },
-            color = Color.White, style = GlowType.body, modifier = Modifier.padding(top = 8.dp),
+        EdgeTitle(org.openstrap.app.ui.dashboard.ReportCopy.WEEK_CARD_TITLE, "${from.format(range)}–${date.format(range)}")
+        EdgeValue(
+            average?.let(org.openstrap.app.ui.dashboard.ReportCopy::whole), org.openstrap.app.ui.dashboard.ReportCopy.WEEK_CARD_UNIT.takeIf { average != null },
+            when {
+                week != null -> org.openstrap.app.ui.dashboard.ReportCopy.weekCardStatus(week.now, week.before)
+                failed -> org.openstrap.app.ui.dashboard.ReportCopy.FAILED_WORD
+                else -> org.openstrap.app.ui.dashboard.ReportCopy.LOADING_WORD
+            },
+            waiting = week == null && !failed,
         )
-        val change = TodayCopy.stepsChange(stepsNow, stepsAvg(start.minusDays(7), start.minusDays(1)))
-        Text(
-            change?.let { tr("$it on the week before.", "$it face à semana anterior.") } ?: TodayCopy.WEEK_FIRST,
-            color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary, modifier = Modifier.padding(top = 10.dp),
-        )
+        week?.now?.let(org.openstrap.app.ui.dashboard.ReportCopy::weekCardLine)?.let {
+            Text(it, color = Color.White, style = GlowType.body, modifier = Modifier.padding(top = 8.dp))
+        }
     }
 }
 

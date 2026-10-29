@@ -23,7 +23,10 @@ data class RecoveryDay(
     val sentence: String?,
     /** Before the strap has seen a night. */
     val firstNights: Boolean,
-    /** The night Recovery scored: its resting heart rate (bpm), HRV (ms) and sleep score. */
+    /**
+     * The day's resting heart rate (bpm) as the app shows it everywhere: the strap's own daily value, else the night
+     * Recovery scored; then that night's HRV (ms) and sleep score.
+     */
     val restingHr: Float?,
     val hrv: Float?,
     val sleep: Int?,
@@ -33,10 +36,11 @@ data class RecoveryDay(
     companion object {
         /**
          * [r] as the Recovery tab and Today show it, with the strap's own [strapScore] for the day standing in while
-         * OpenStrap's is withheld. The figures are the night's own values the score was worked out from, the strap's
-         * where those failed the validity rule, and the Sleep contributor (the strap's sleep score, else OpenStrap's).
+         * OpenStrap's is withheld. Resting heart rate is the strap's daily value ([strapResting]) as on Today and in the
+         * Zepp app, else the night's own; HRV is the night's own value the score was worked out from, the strap's where
+         * that failed the validity rule; sleep is the Sleep contributor (the strap's sleep score, else OpenStrap's).
          */
-        fun of(r: RecoveryResult, strapScore: Int?): RecoveryDay {
+        fun of(r: RecoveryResult, strapScore: Int?, strapResting: Float? = null): RecoveryDay {
             val ready = r.readiness
             val score = ready.score
             val night = r.tonight
@@ -45,7 +49,7 @@ data class RecoveryDay(
                 shown = TodayCopy.recoveryShown(ready, strapScore, TabCopy.RECOVERY_WAITING),
                 sentence = score?.let { TodayCopy.recoveryMeaning(it, ready.strainAlert) },
                 firstNights = !r.charge.anchored,
-                restingHr = night?.validRestingHr ?: ready.fallbackRestingHr,
+                restingHr = strapResting ?: night?.validRestingHr ?: ready.fallbackRestingHr,
                 hrv = night?.hrv?.takeIf { night.hrvLn != null } ?: ready.fallbackHrv,
                 sleep = ready.contributors.firstOrNull { it.factor == Recovery.Factor.Sleep }?.score ?: night?.strapScore,
                 week = r.readinessTrend,

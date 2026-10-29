@@ -176,6 +176,34 @@ class SettingsStore(private val context: Context) {
         context.dataStore.edit { it[wearReminderKey] = enabled }
     }
 
+    private val moveOnKey = androidx.datastore.preferences.core.booleanPreferencesKey("move_reminder")
+    private val moveStartKey = androidx.datastore.preferences.core.intPreferencesKey("move_start_minute")
+    private val moveEndKey = androidx.datastore.preferences.core.intPreferencesKey("move_end_minute")
+    private val moveEveryKey = androidx.datastore.preferences.core.intPreferencesKey("move_every_minutes")
+    private val moveWeekdaysKey = androidx.datastore.preferences.core.booleanPreferencesKey("move_weekdays_only")
+
+    /** The reminder to get up after sitting too long ([org.openstrap.app.data.MoveReminder]). Off until turned on. */
+    val moveReminder: Flow<org.openstrap.app.data.MoveSettings> = context.dataStore.data.map { p ->
+        val d = org.openstrap.app.data.MoveSettings()
+        org.openstrap.app.data.MoveSettings(
+            on = p[moveOnKey] ?: d.on,
+            startMinute = p[moveStartKey] ?: d.startMinute,
+            endMinute = p[moveEndKey] ?: d.endMinute,
+            everyMinutes = p[moveEveryKey] ?: d.everyMinutes,
+            weekdaysOnly = p[moveWeekdaysKey] ?: d.weekdaysOnly,
+        )
+    }
+
+    suspend fun setMoveReminder(m: org.openstrap.app.data.MoveSettings) {
+        context.dataStore.edit {
+            it[moveOnKey] = m.on
+            it[moveStartKey] = m.startMinute
+            it[moveEndKey] = m.endMinute
+            it[moveEveryKey] = m.everyMinutes
+            it[moveWeekdaysKey] = m.weekdaysOnly
+        }
+    }
+
     private val strapSessionsKey = androidx.datastore.preferences.core.booleanPreferencesKey("strap_sessions")
 
     /**

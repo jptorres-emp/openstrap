@@ -6,14 +6,22 @@ import org.openstrap.app.data.db.SleepStage
 
 /** Pure aggregation helpers for the dashboard; kept free of Android types so they're unit-testable. */
 object Summaries {
-    fun totalSteps(minutes: List<ActivityMinute>): Int = minutes.sumOf { it.steps }
+    /**
+     * The day's steps from its minutes. A minute over [Recovery.MAX_MINUTE_STEPS] is a sentinel or an error (the
+     * strap's byte tops out at 255), so it counts as none here, as in every other sum of steps: the week and month
+     * charts, the reports and the energy estimate.
+     */
+    fun totalSteps(minutes: List<ActivityMinute>): Int = minutes.sumOf { stepsOf(it) }
+
+    /** A minute's steps, a sentinel or an error counted as none ([totalSteps]). */
+    fun stepsOf(m: ActivityMinute): Int = m.steps.takeIf { it in 0..Recovery.MAX_MINUTE_STEPS } ?: 0
 
     /** 24 buckets of steps for the day starting at [dayStart]. */
     fun hourlySteps(minutes: List<ActivityMinute>, dayStart: Long): List<Float> {
         val buckets = FloatArray(24)
         for (m in minutes) {
             val hour = ((m.timestamp - dayStart) / 3600).toInt()
-            if (hour in 0..23) buckets[hour] += m.steps.toFloat()
+            if (hour in 0..23) buckets[hour] += stepsOf(m).toFloat()
         }
         return buckets.toList()
     }
@@ -36,6 +44,51 @@ object Summaries {
         for (m in minutes) if (m.heartRate != null && m.heartRate in 30..230) byTime[m.timestamp] = m.heartRate
         for (s in hr) if (s.bpm in 30..230) byTime[s.timestamp] = s.bpm
         return byTime.map { it.key to it.value }
+    }
+
+    /**
+     * The lowest and highest minute of the day's [series] (ascending), as a minute-by-minute strap screen reads the day:
+     * the charts' 5-minute averages flatten a workout's peak and a night's low. A minute with no neighbour within
+     * [Recovery.ARTEFACT_JUMP_BPM] of it is an artefact and is skipped. The strap's own daily maximum [strapMax], read
+     * second by second, raises the high when it's above the highest minute by up to [STRAP_MAX_LEAD_BPM]: a sprint's
+     * seconds peak above their minute's average, while a spike far above every minute is noise. Null without readings.
+     */
+    fun heartRange(series: List<Pair<Long, Int>>, strapMax: Int? = null): IntRange? {
+        val low = steadyExtreme(series, lowest = true) ?: return null
+        val high = steadyExtreme(series, lowest = false) ?: return null
+        val raised = strapMax?.takeIf { it in Recovery.HR_MIN_BPM..Recovery.HR_MAX_BPM && it in high.second + 1..high.second + STRAP_MAX_LEAD_BPM }
+        return low.second..(raised ?: high.second)
+    }
+
+    /** The lowest minute of [series] (ascending) and when, artefacts skipped as [heartRange] skips them. */
+    fun lowestMinute(series: List<Pair<Long, Int>>): Pair<Long, Int>? = steadyExtreme(series, lowest = true)
+
+    /** How far the strap's per-second daily maximum may sit above the highest minute and still count. */
+    const val STRAP_MAX_LEAD_BPM = 25
+
+    /** The lowest or highest minute with a neighbouring minute close to it; any minute when none has one. */
+    private fun steadyExtreme(series: List<Pair<Long, Int>>, lowest: Boolean): Pair<Long, Int>? {
+        val valid = series.filter { it.second in Recovery.HR_MIN_BPM..Recovery.HR_MAX_BPM }
+        if (valid.isEmpty()) return null
+        val steady = valid.indices.filter { i ->
+            val (t, bpm) = valid[i]
+            listOfNotNull(valid.getOrNull(i - 1), valid.getOrNull(i + 1))
+                .any { (u, v) -> kotlin.math.abs(u - t) <= 60 && kotlin.math.abs(v - bpm) <= Recovery.ARTEFACT_JUMP_BPM }
+        }.map { valid[it] }.ifEmpty { valid }
+        return if (lowest) steady.minByOrNull { it.second } else steady.maxByOrNull { it.second }
+    }
+
+    /**
+     * [days] with [today]'s total raised to [total] when that's higher (or added when today has no row yet): today's
+     * steps as Today counts them, the strap's live count included, rather than only the minutes synced so far.
+     */
+    fun withToday(days: List<DayStat>, today: java.time.LocalDate, total: Float): List<DayStat> {
+        val row = days.firstOrNull { it.date == today }
+        return when {
+            row == null -> (days + DayStat(today, total, 0f, 0f, 1)).sortedBy { it.date }
+            row.value >= total -> days
+            else -> days.map { if (it.date == today) it.copy(value = total) else it }
+        }
     }
 
     /** Averages a series into fixed buckets (e.g. 5 minutes) for a calmer chart line. */

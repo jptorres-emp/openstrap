@@ -124,8 +124,10 @@ fun GlowTodayScreen(
     healthspan: org.openstrap.app.data.Healthspan.Outcome? = null,
     /** The Sunday of the last Habit Age estimate opened, so Today stops offering it ([habitAgeNew]). */
     habitAgeSeenAsOf: Long? = null,
-    /** Per-day history for Your week; null leaves its steps out. */
+    /** Per-day history, for your resting range on the heart rate card. */
     history: DailyHistory? = null,
+    /** The report the app works out for the day shown, for the weekly report card. */
+    report: org.openstrap.app.ui.dashboard.ReportOutcome? = null,
     /** Edit Today's hidden and pinned cards. */
     edits: TodayEdits = TodayEdits(),
     onEditsChange: (TodayEdits) -> Unit = {},
@@ -201,6 +203,7 @@ fun GlowTodayScreen(
         healthspan = healthspan?.result?.let { r ->
             habitAgeNew(Instant.ofEpochSecond(r.asOf).atZone(zone).toLocalDate(), habitAgeSeenAsOf == r.asOf, state.date, now.atZone(zone).toLocalDate())
         } == true,
+        weekReport = isToday && state.date.dayOfWeek == java.time.DayOfWeek.MONDAY,
     )
     // Before the first estimate Habit Age never shows on Today, pinned or not.
     val unavailable = if (healthspan?.result == null) setOf(TodayCard.HabitAge) else emptySet()
@@ -247,7 +250,8 @@ fun GlowTodayScreen(
                                         else -> TodayRow(slot, ctx, healthspan, history, checkIn, onCheckIn, onOpenMetric,
                                             onOpenWorkout, onOpenHealthspan, onOpenProfile, offer, onRecordOffer, onDeclineOffer, suggestion,
                                             onSaveSuggestion, onDismissSuggestion, onOpen, usualSteps, onRetryRecovery,
-                                            if (slot.size == CardSize.Small) Modifier.fillMaxSize() else Modifier, onStartSport = onStartSport)
+                                            if (slot.size == CardSize.Small) Modifier.fillMaxSize() else Modifier, onStartSport = onStartSport,
+                                            report = report)
                                     }
                                 }
                             }
@@ -703,6 +707,8 @@ private fun TodayRow(
     modifier: Modifier = Modifier,
     /** Opens Ready with a sport, for Start a workout. */
     onStartSport: (Int) -> Unit = {},
+    /** The day's report, for the weekly report card. */
+    report: org.openstrap.app.ui.dashboard.ReportOutcome? = null,
 ) {
     val s = ctx.state
     // Your normal over 30 days, as the Recovery tab's body signals measure against, so both say the same.
@@ -787,7 +793,7 @@ private fun TodayRow(
             )
         }
         TodayCard.Workout -> ctx.lastWorkout?.let { w -> WorkoutCard(w, { onOpenWorkout(w.workout.start) }) }
-        TodayCard.Week -> WeekCard(s, ctx.workouts, history, onClick = { onOpen(org.openstrap.app.ui.dashboard.Detail.Week) })
+        TodayCard.Week -> WeekCard(report, s.date, onClick = { onOpen(org.openstrap.app.ui.dashboard.Detail.Reports()) })
         // Habit Age's home is the foot of Recovery; Today shows the same card when there's a new estimate, or pinned.
         TodayCard.HabitAge -> HabitAgeEdgeCard(healthspan, onOpenHealthspan, onOpenProfile)
         TodayCard.StartWorkout -> StartWorkoutStrip(ctx.usualSport, onStartSport)

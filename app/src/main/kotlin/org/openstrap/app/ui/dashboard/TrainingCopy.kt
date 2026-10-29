@@ -3,6 +3,7 @@ package org.openstrap.app.ui.dashboard
 import org.openstrap.app.data.Reports
 import org.openstrap.app.data.Training
 import org.openstrap.app.data.Workouts
+import org.openstrap.app.data.settings.Units
 import org.openstrap.app.l10n.tr
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -184,6 +185,71 @@ object TrainingCopy {
     /** What a screen reader says for the weeks. */
     fun describeCalories(weeks: List<Training.EnergyWeek>): String = tr("Calories burned a day, week by week. ", "Calorias gastas por dia, semana a semana. ") +
         weeks.joinToString(", ") { w -> "${w.end.dayOfMonth}: ${w.kcalADay?.let(::kcal) ?: tr("no estimate", "sem estimativa")}" } + "."
+
+    /* ------------------------------------------------- Weight ---------------------------------------------- */
+
+    val WEIGHT_TITLE: String get() = tr("Weight", "Peso")
+    val WEIGHT_NOTE: String get() = tr("Week by week", "Semana a semana")
+    val WEIGHT_LOG: String get() = tr("Log your weight", "Registar o peso")
+    val WEIGHT_FIRST: String get() = tr("Log it once or twice a week", "Regista-o 1 a 2 vezes por semana")
+
+    /** A weight as dot text, to one decimal: "78.4", or "78,4" in Portuguese. */
+    fun weightValue(kg: Float, imperial: Boolean): String = "%.1f".format(if (imperial) Units.kgToLb(kg) else kg)
+
+    fun weightUnit(imperial: Boolean): String = if (imperial) "lb" else "kg"
+
+    /** Under the weight: how the weeks have moved it, or what the trend waits for. */
+    fun weightStatus(trend: Training.WeightTrend?, imperial: Boolean): String {
+        val t = trend ?: return tr("The trend shows after two weeks", "A tendência aparece ao fim de duas semanas")
+        val since = t.since.format(DateTimeFormatter.ofPattern("d MMM"))
+        val kg = if (imperial) Units.kgToLb(t.kg) else t.kg
+        val shown = "%.1f".format(kotlin.math.abs(kg))
+        val unit = weightUnit(imperial)
+        return when {
+            kotlin.math.abs(kg) < 0.05f -> tr("Steady since $since", "Estável desde $since")
+            kg < 0 -> tr("−$shown $unit since $since", "−$shown $unit desde $since")
+            else -> tr("+$shown $unit since $since", "+$shown $unit desde $since")
+        }
+    }
+
+    val WEIGHT_LINE: String get() = tr(
+        "Weigh yourself in the morning, after the toilet and before eating, so the weeks compare.",
+        "Pesa-te de manhã, depois da casa de banho e antes de comer, para as semanas serem comparáveis.",
+    )
+
+    /** What a screen reader says for the weeks. */
+    fun describeWeight(weeks: List<Training.WeightWeek>, imperial: Boolean): String =
+        tr("Average weight a week, ", "Peso médio por semana, ") +
+            weeks.joinToString(", ") { w -> "${w.end.dayOfMonth}: ${w.kg?.let { weightValue(it, imperial) } ?: tr("none", "nenhum")}" } + "."
+
+    fun weightInfo(): Info = Info(
+        WEIGHT_TITLE,
+        tr(
+            "Your weight week by week, from what you log. For fat loss it's the result to check the calories against.",
+            "O teu peso semana a semana, a partir do que registas. Para perder gordura, é o resultado a comparar com as calorias.",
+        ),
+        emptyList(), how = "", moves = "", off = "",
+    )
+
+    val WEIGHT_ROWS: List<Pair<String, String>>
+        get() = listOf(
+            HOW_IT_HELPS to tr(
+                "Calories burned are only half of fat loss, food is the other. The weight trend shows whether the two add up: about half a kilo a week down is a steady pace that keeps your strength.",
+                "As calorias gastas são só metade da perda de gordura, a comida é a outra. A tendência do peso mostra se as duas batem certo: cerca de meio quilo por semana a descer é um ritmo estável que mantém a força.",
+            ),
+            WHEN_TO_LOOK to tr(
+                "Once a week, after logging. Look at the line over a few weeks, not one morning.",
+                "Uma vez por semana, depois de registares. Olha para a linha ao longo de algumas semanas, não para uma manhã.",
+            ),
+            HOW_WORKED_OUT to tr(
+                "Each week is the average of the weights you logged in it. The trend compares the last 7 days with the first week you logged in the 4 weeks before them. Logging also updates your profile's weight, which the calorie estimate uses.",
+                "Cada semana é a média dos pesos que registaste nela. A tendência compara os últimos 7 dias com a primeira semana registada nas 4 semanas anteriores. Registar também atualiza o peso do teu perfil, que a estimativa de calorias usa.",
+            ),
+            WHY_OFF to tr(
+                "Water, salt, a late meal or a hard session can move a morning by a kilo. Strength training adds muscle while you lose fat, so the scale can move slower than your waist.",
+                "Água, sal, um jantar tarde ou um treino duro podem mexer uma manhã em um quilo. O treino de força junta músculo enquanto perdes gordura, por isso a balança pode descer mais devagar do que a cintura.",
+            ),
+        )
 
     /* ------------------------------------------------- Reports --------------------------------------------- */
 

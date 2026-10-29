@@ -326,6 +326,7 @@ class RecoveryEngine(private val dao: HealthDao) {
         val breath = dao.breathRateOnce(nightFrom, to).sortedBy { it.timestamp }
         val sleepSpo2 = dao.sleepSpo2Once(nightFrom, to).sortedBy { it.timestamp }
         val strapResting = dao.restingHrOnce(nightFrom, to)
+        val weights = dao.weightsOnce(midnight(first), to).associate { it.day to it.kg }
         val osaByMorning = dao.osaResultsOnce(nightFrom - 86_400, to).associateBy {
             Instant.ofEpochSecond(it.belongTime + 2 * 3600).atZone(zone).toLocalDate().atStartOfDay(zone).toEpochSecond()
         }
@@ -350,8 +351,9 @@ class RecoveryEngine(private val dao: HealthDao) {
         }.sortedBy { it.day }
 
         // Resting and max heart rate as of [date], read as [compute] reads them.
+        val strapDaily = strapResting.associate { it.day to it.bpm.toFloat() }
         val restingHr = Recovery.daytimeRestingHr(
-            strapResting.associate { it.day to it.bpm.toFloat() },
+            strapDaily,
             nights.mapNotNull { n -> n.restingHr?.let { n.day to it } }.toMap(),
             day.from,
         ) ?: 60f
@@ -434,7 +436,8 @@ class RecoveryEngine(private val dao: HealthDao) {
                 hrvRange = r.hrvRange,
                 alert = r.strainAlert,
                 hrv = tonight?.hrv?.takeIf { tonight.valid },
-                restingHr = tonight?.validRestingHr,
+                // The strap's daily value, as the Resting heart rate detail and the Zepp app show it; the night's own else.
+                restingHr = strapDaily[m] ?: tonight?.validRestingHr,
                 hrvVsUsual = tonight?.hrvLn?.let { ln -> hrvBase?.let { ((exp(ln - it.centre.toDouble()) - 1) * 100).roundToInt() } },
                 bedtime = tonight?.let { Instant.ofEpochSecond(it.start).atZone(zone).toLocalTime() },
                 wake = tonight?.let { Instant.ofEpochSecond(it.end).atZone(zone).toLocalTime() },
@@ -445,9 +448,10 @@ class RecoveryEngine(private val dao: HealthDao) {
                 load = if (date0 == date) shownLoad else loads[date0],
                 usualLoad = trend?.ctl,
                 fatigue = trend?.atl,
-                steps = activityByDay[date0]?.sumOf { it.steps },
+                steps = activityByDay[date0]?.let(Summaries::totalSteps),
                 partial = now in w.from..w.to,
                 kcal = energy[date0],
+                weightKg = weights[m],
             )
         }
         return Reports.Input(date, days, loads)

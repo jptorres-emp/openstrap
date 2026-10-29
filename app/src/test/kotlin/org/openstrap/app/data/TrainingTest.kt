@@ -69,4 +69,23 @@ class TrainingTest {
         // Without an estimate (no age, weight or height) there's nothing to average.
         assertNull(Training.energyWeeks(days.map { it.copy(kcal = null) }, end).last().kcalADay)
     }
+
+    @Test fun `weight comes week by week, and its trend compares weeks, not single mornings`() {
+        val logged = mapOf(
+            end.minusDays(30) to 82.0f, end.minusDays(27) to 81.6f,
+            end.minusDays(20) to 81.0f, end.minusDays(13) to 80.6f, end.minusDays(6) to 80.2f, end.minusDays(1) to 79.8f,
+        )
+        val weeks = Training.weightWeeks(logged, end)
+        assertEquals(Training.WEIGHT_WEEKS, weeks.size)
+        assertEquals(end, weeks.last().end)
+        assertEquals(80.0f, weeks.last().kg!!, 1e-3f)
+        assertNull(weeks.first().kg)
+        // The last 7 days (80.0) against the first logged week in the 4 before them (82.0 and 81.6, from day 30 back).
+        val trend = Training.weightTrend(logged, end)!!
+        assertEquals(-1.8f, trend.kg, 1e-3f)
+        assertEquals(end.minusDays(30), trend.since)
+        // Nothing in the last 7 days, or nothing before them: no trend.
+        assertNull(Training.weightTrend(mapOf(end.minusDays(10) to 80f), end))
+        assertNull(Training.weightTrend(mapOf(end to 80f), end))
+    }
 }

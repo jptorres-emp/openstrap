@@ -31,7 +31,7 @@ enum class TodayCard(private val en: String, private val pt: String = en, val ed
     /** Time to recover as a Small beside Load's after a workout: part of [LoadToday], hidden and pinned with it. */
     Recover("", editable = false),
     Workout("The workout", "O treino"),
-    Week("Your week", "A tua semana", pinnable = true),
+    Week("Weekly report", "Relatório da semana", pinnable = true),
     HabitAge("Habit Age", "Idade dos hábitos", pinnable = true),
     /** Start a workout (spec 4.2): a strip above Edit Today, opening Ready with your usual sport. */
     StartWorkout("Start a workout", "Começar um treino"),
@@ -63,6 +63,8 @@ data class TodayFacts(
      * it to keep it every day, but never before there's a first estimate ([applyEdits]' unavailable).
      */
     val healthspan: Boolean = false,
+    /** Monday: the weekly report is fresh, so it comes right under the hero instead of closing the list. */
+    val weekReport: Boolean = false,
 )
 
 /** Cards that come and go with another: they are hidden with it, and a pin moves them with it. */
@@ -118,15 +120,17 @@ fun todayCards(moment: Moment?, facts: TodayFacts, morning: Boolean = true): Lis
             charge, wide(TodayCard.Activity), wide(TodayCard.HeartRate), strip(TodayCard.LastNight),
         )
     }
-    // Things that need an answer come straight under the hero; the week and Habit Age close the list, then Start a
-    // workout, except where the hero is the workout or has Start of its own (spec 4.2).
+    // Things that need an answer come straight under the hero; the weekly report and Habit Age close the list, then
+    // Start a workout, except where the hero is the workout or has Start of its own (spec 4.2). On Mondays the weekly
+    // report is fresh and comes right under the hero.
     return listOfNotNull(
         TodaySlot(TodayCard.Hero, CardSize.Large),
         strip(TodayCard.Offer).takeIf { facts.offer && facts.isToday },
         strip(TodayCard.Suggestion).takeIf { facts.suggestion && facts.isToday },
         strip(TodayCard.Alerts).takeIf { facts.alerts },
+        wide(TodayCard.Week).takeIf { facts.weekReport },
     ) + own + listOfNotNull(
-        wide(TodayCard.Week),
+        wide(TodayCard.Week).takeIf { !facts.weekReport },
         wide(TodayCard.HabitAge).takeIf { facts.healthspan },
         strip(TodayCard.StartWorkout).takeIf { facts.isToday && m != Moment.During && m != Moment.WorkoutWindow },
         strip(TodayCard.EditToday),

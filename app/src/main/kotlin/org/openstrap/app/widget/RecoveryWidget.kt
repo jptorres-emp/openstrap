@@ -65,7 +65,10 @@ class RecoveryWidget : LoadingWidget<RecoveryWidget.Shown>(WidgetKind.Recovery) 
             suspend fun day(date: LocalDate) = try {
                 val r = container.health.recovery(date, profile)
                 val dayStart = DayWindow.of(date, zone).from
-                r to RecoveryDay.of(r, dao.strapReadinessOnce(dayStart, dayStart).firstOrNull()?.score)
+                r to RecoveryDay.of(
+                    r, dao.strapReadinessOnce(dayStart, dayStart).firstOrNull()?.score,
+                    dao.restingHrOnce(dayStart, dayStart + 86_399).firstOrNull()?.bpm?.toFloat(),
+                )
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

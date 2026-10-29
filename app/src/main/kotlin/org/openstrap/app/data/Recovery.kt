@@ -411,9 +411,10 @@ object Recovery {
         val rhr = tonight.validRestingHr
         if (scored && rhrBase != null && rhr != null) {
             val delta = rhr - rhrBase.centre
+            // "asleep": this is the night's own lowest half hour, a few bpm under the strap's daily resting value.
             out += Contributor(Factor.RestingHr, scoreFromZ(deadZone(-rhrBase.z(rhr))), tr(
-                "${rhr.toInt()} bpm, ${signed(delta, 0)} vs usual",
-                "${rhr.toInt()} bpm, ${signed(delta, 0)} face ao habitual",
+                "${rhr.toInt()} bpm asleep, ${signed(delta, 0)} vs usual",
+                "${rhr.toInt()} bpm a dormir, ${signed(delta, 0)} face ao habitual",
             ))
         }
 

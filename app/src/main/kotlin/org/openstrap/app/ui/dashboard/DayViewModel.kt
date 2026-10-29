@@ -62,6 +62,10 @@ data class DayUiState(
     val activeHours: Int = 0,
     val heartRate: List<ChartPoint> = emptyList(),
     val latestHeartRate: Int? = null,
+    /** When [latestHeartRate] was read: its minute, not the chart's 5-minute bucket. */
+    val latestHeartRateAt: Long? = null,
+    /** The day's lowest and highest heart rate minute by minute ([Summaries.heartRange]); null without readings. */
+    val heartRateRange: IntRange? = null,
     val restingHeartRate: Int? = null,
     /** True when [restingHeartRate] is our own estimate rather than the strap's value. */
     val restingEstimated: Boolean = false,
@@ -104,6 +108,8 @@ data class DayUiState(
     val nights: List<SleepNight> = emptyList(),
     /** Heart rate across the night window (5-minute averages), so sleep before midnight is included. */
     val sleepHeartRate: List<ChartPoint> = emptyList(),
+    /** The main sleep's lowest minute of heart rate and when ([Summaries.lowestMinute]), sharper than [sleepHeartRate]. */
+    val sleepHeartRateLowest: ChartPoint? = null,
     /** HRV and skin temperature read during the night's main sleep, before midnight too, for the night-scoped details. */
     val sleepHrv: List<ChartPoint> = emptyList(),
     val sleepSkinTemperature: List<ChartPoint> = emptyList(),
@@ -346,13 +352,15 @@ class DayViewModel(
             val tonight = main[date]
             val sleepHrv = tonight?.let { w -> hrv.filter { it.timestamp in w.start..w.end }.map { ChartPoint(it.timestamp, it.milliseconds.toFloat()) } }.orEmpty()
             val sleepSkin = tonight?.let { w -> skin.filter { it.timestamp in w.start..w.end }.map { ChartPoint(it.timestamp, it.celsius) } }.orEmpty()
+            val minutes = Summaries.heartRateSeries(hr, emptyList())
+            val lowest = tonight?.let { w -> Summaries.lowestMinute(minutes.filter { it.first in w.start..w.end }) }
             NightParts(
-                list, Summaries.bucketAverage(Summaries.heartRateSeries(hr, emptyList())).map { ChartPoint(it.first, it.second.toFloat()) },
-                sleepHrv, sleepSkin,
+                list, Summaries.bucketAverage(minutes).map { ChartPoint(it.first, it.second.toFloat()) },
+                sleepHrv, sleepSkin, lowest?.let { ChartPoint(it.first, it.second.toFloat()) },
             )
         }
         val moreAndNights = combine(more, nights) { m, n ->
-            m.copy(nights = n.nights, sleepHeartRate = n.heartRate, sleepHrv = n.hrv, sleepSkinTemperature = n.skinTemperature)
+            m.copy(nights = n.nights, sleepHeartRate = n.heartRate, sleepHeartRateLowest = n.lowest, sleepHrv = n.hrv, sleepSkinTemperature = n.skinTemperature)
         }
 
         // The strap's own running total covers steps whose minute records were already taken by another app.
@@ -376,6 +384,8 @@ class DayViewModel(
                 activeHours = Summaries.activeHours(hourly),
                 heartRate = Summaries.bucketAverage(series).map { ChartPoint(it.first, it.second.toFloat()) },
                 latestHeartRate = series.lastOrNull()?.second,
+                latestHeartRateAt = series.lastOrNull()?.first,
+                heartRateRange = Summaries.heartRange(series, m.dailyMaxHeartRate),
                 restingHeartRate = restingTrend.last().value?.toInt(),
                 restingEstimated = restingWithFlag.last().second,
                 restingTrend = restingTrend,
@@ -404,6 +414,7 @@ class DayViewModel(
                 alerts = m.alerts,
                 nights = m.nights,
                 sleepHeartRate = m.sleepHeartRate,
+                sleepHeartRateLowest = m.sleepHeartRateLowest,
                 sleepHrv = m.sleepHrv,
                 sleepSkinTemperature = m.sleepSkinTemperature,
                 dayStart = day.from,
@@ -444,6 +455,7 @@ private data class MoreParts(
     val alerts: List<HealthAlertRow>,
     val nights: List<SleepNight> = emptyList(),
     val sleepHeartRate: List<ChartPoint> = emptyList(),
+    val sleepHeartRateLowest: ChartPoint? = null,
     val sleepHrv: List<ChartPoint> = emptyList(),
     val sleepSkinTemperature: List<ChartPoint> = emptyList(),
 )
@@ -453,6 +465,7 @@ private data class NightParts(
     val heartRate: List<ChartPoint>,
     val hrv: List<ChartPoint>,
     val skinTemperature: List<ChartPoint>,
+    val lowest: ChartPoint?,
 )
 
 /** One night's main sleep and the vitals averaged over it. */

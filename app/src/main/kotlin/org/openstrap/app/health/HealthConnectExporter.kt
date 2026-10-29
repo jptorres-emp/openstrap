@@ -122,7 +122,8 @@ class HealthConnectExporter(private val context: Context, private val dao: Healt
         }
 
         for (m in dao.activityOnce(from, to)) {
-            if (m.steps <= 0) continue
+            // A minute over 250 steps is a sentinel or an error, as in the app's own sums.
+            if (m.steps !in 1..org.openstrap.app.data.Recovery.MAX_MINUTE_STEPS) continue
             records += StepsRecord(
                 startTime = Instant.ofEpochSecond(m.timestamp), startZoneOffset = offset(m.timestamp),
                 endTime = Instant.ofEpochSecond(m.timestamp + 60), endZoneOffset = offset(m.timestamp),

@@ -150,6 +150,9 @@ fun DeviceScreen(
     val notifications by settings.buzzOnNotifications.collectAsState(false)
     val wearReminder by settings.wearReminder.collectAsState(true)
     val autoStart by settings.autoStartWorkouts.collectAsState(true)
+    val move by settings.moveReminder.collectAsState(org.openstrap.app.data.MoveSettings())
+    var editingMove by rememberSaveable { mutableStateOf(false) }
+    if (editingMove) MoveSheet(move, onSave = { m -> scope.launch { settings.setMoveReminder(m) }; editingMove = false }, onDismiss = { editingMove = false })
     var confirmForget by rememberSaveable { mutableStateOf(false) }
     var confirmDisconnect by rememberSaveable { mutableStateOf(false) }
     var confirmRestart by rememberSaveable { mutableStateOf(false) }
@@ -243,6 +246,10 @@ fun DeviceScreen(
                 }
                 PageRow(tr("Auto-detect workouts", "Detetar treinos automaticamente"), onClick = { scope.launch { settings.setAutoStartWorkouts(!autoStart) } }, icon = AppIcons.PersonSimpleRun) {
                     GlowSwitch(autoStart, { on -> scope.launch { settings.setAutoStartWorkouts(on) } })
+                }
+                // A desk day's nudge to get up: the row opens its hours and stretch, the switch turns it on or off.
+                PageRow(MoveCopy.TITLE, MoveCopy.summary(move), onClick = { editingMove = true }, below = true, icon = AppIcons.Footprints) {
+                    GlowSwitch(move.on, { on -> scope.launch { settings.setMoveReminder(move.copy(on = on)) } })
                 }
                 KeepConnectedRow(vm, keepConnected, device.address)
                 PageRow(tr("Firmware", "Firmware"), info?.firmware ?: (connection as? ConnectionState.Connected)?.firmware ?: tr("Check for updates", "Procurar atualizações"), onClick = onFirmware, icon = AppIcons.Cpu, selected = selected == "Firmware")

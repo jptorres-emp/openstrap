@@ -118,6 +118,41 @@ private fun DrawScope.axis(m: TextMeasurer, labels: List<String>, y: Float) {
     }
 }
 
+/** A day's label under its column, the size a trend's dots have theirs: one label a column, a week of them at most. */
+private val columnText = readoutText.copy(color = Muted)
+
+/** Whether [labels] go one under each of [n] columns, centred, rather than spread across. */
+private fun perColumn(labels: List<String>, n: Int) = labels.size == n && n in 1..MAX_COLUMN_LABELS
+
+private const val MAX_COLUMN_LABELS = 14
+
+/** The axis under [n] columns: each label centred under its column ([perColumn]), else spread across ([axis]). */
+private fun DrawScope.columnAxis(m: TextMeasurer, labels: List<String>, n: Int, y: Float) {
+    if (!perColumn(labels, n)) return axis(m, labels, y)
+    val pitch = size.width / n
+    labels.forEachIndexed { i, l -> text(m, l, columnText, pitch * i + pitch / 2, y, align = 0.5f) }
+}
+
+/** The axis's height under a bar chart: room for [columnText] when the labels go one a column. */
+private fun DrawScope.columnAxisHeight(labels: List<String>, n: Int): Float = when {
+    labels.isEmpty() -> 0f
+    perColumn(labels, n) -> 22.dp.toPx()
+    else -> 18.dp.toPx()
+}
+
+/** A value printed over its bar, whose top is at [barTop], in the column at [x]..[x]+[pitch]. */
+private fun DrawScope.barValue(m: TextMeasurer, s: String, color: Color, x: Float, pitch: Float, barTop: Float) {
+    val r = m.measure(s, valueText.copy(color = color))
+    drawText(r, topLeft = Offset((x + pitch / 2 - r.size.width / 2f).coerceIn(0f, size.width - r.size.width), (barTop - r.size.height - 3.dp.toPx()).coerceAtLeast(0f)))
+}
+
+/** Where a pill bar of [height] in a column [pitch] wide, on [bottom], has its top: never shorter than twice its width. */
+private fun DrawScope.pillTop(pitch: Float, bottom: Float, height: Float): Float =
+    bottom - height.coerceAtLeast((pitch * 0.56f).coerceAtMost(BarMaxWidth.toPx()) * 2)
+
+/** Room over the tallest bar for its printed value. */
+private val BarValueRoom = 18.dp
+
 /* ------------------------------------------------------------------------------------------------ */
 
 /**
@@ -210,7 +245,8 @@ internal fun nearestReading(values: List<Float?>, x: Float, width: Float, inset:
 
 /**
  * Solid rounded bars (e.g. steps per hour, active minutes a day), each as tall as its value, on a hairline baseline.
- * An empty column isn't drawn. The [highlight] column (default: the last one with data) is drawn in [accent].
+ * An empty column isn't drawn. The [highlight] column (default: the last one with data) is drawn in [accent]. A label
+ * a column (a week's days) sits centred under its bar; fewer spread across.
  */
 @Composable
 fun GlowBars(
@@ -224,6 +260,8 @@ fun GlowBars(
     describe: ((index: Int, value: Float) -> String)? = null,
     /** Scrubbing that moves the headline instead of a readout (spec 2.7): the column under the finger, or null on release. */
     onScrub: ((Int?) -> Unit)? = null,
+    /** A value printed over each bar, by column (null for none), so a week reads without holding. */
+    valueLabel: ((index: Int) -> String?)? = null,
 ) {
     val m = rememberTextMeasurer()
     var touchX by remember { mutableStateOf<Float?>(null) }
@@ -242,8 +280,8 @@ fun GlowBars(
         },
     ) {
         if (values.isEmpty()) return@Canvas
-        val axisH = if (labels.isEmpty()) 0f else 18.dp.toPx()
-        val top = 4.dp.toPx()
+        val axisH = columnAxisHeight(labels, values.size)
+        val top = if (valueLabel != null) BarValueRoom.toPx() else 4.dp.toPx()
         val h = size.height - axisH
         val pitchX = size.width / values.size
         val max = values.max().coerceAtLeast(1f)
@@ -253,10 +291,16 @@ fun GlowBars(
             if (v <= 0f) return@forEachIndexed
             // While scrubbing, the other columns dim so the picked one stands out.
             val dim = if (picked == null || picked == i) 1f else 0.35f
-            val color = if (i == highlight || i == picked) accent else Ink.copy(alpha = 0.6f)
-            pillBar(color.copy(alpha = color.alpha * dim), pitchX * i, pitchX, h, (h - top) * v / max)
+            val lit = i == highlight || i == picked
+            val color = if (lit) accent else Ink.copy(alpha = 0.6f)
+            val barH = (h - top) * v / max
+            pillBar(color.copy(alpha = color.alpha * dim), pitchX * i, pitchX, h, barH)
+            valueLabel?.invoke(i)?.let { s ->
+                val ink = if (lit) accent else Ink.copy(alpha = 0.75f)
+                barValue(m, s, ink.copy(alpha = ink.alpha * dim), pitchX * i, pitchX, pillTop(pitchX, h, barH))
+            }
         }
-        axis(m, labels, h + 4.dp.toPx())
+        columnAxis(m, labels, values.size, h + 4.dp.toPx())
         if (picked != null && describe != null) readout(m, describe(picked, values[picked]), pitchX * picked + pitchX / 2, 0f)
     }
 }
@@ -265,7 +309,8 @@ fun GlowBars(
  * Each day's Load against that morning's target (the Reports week): the target as a band of the ink at 12% in the
  * day's column, as a normal is drawn, and the day's Load as a pill bar in [color]. A day that landed outside its band
  * is lit, one inside stays dim, as a trend's dots outside your normal are; the day still under way ([partial]) is
- * faint. Holding scrubs: [onScrub] gets the column under the finger, or null on release, so the headline follows it.
+ * faint. With [values] each day's Load is printed over its bar, lit with it. Holding scrubs: [onScrub] gets the column
+ * under the finger, or null on release, so the figures it belongs to can follow it.
  */
 @Composable
 internal fun TargetBars(
@@ -276,6 +321,7 @@ internal fun TargetBars(
     height: Dp = 180.dp,
     labels: List<String> = emptyList(),
     partial: Int? = null,
+    values: Boolean = false,
     onScrub: ((Int?) -> Unit)? = null,
 ) {
     val m = rememberTextMeasurer()
@@ -294,15 +340,16 @@ internal fun TargetBars(
         },
     ) {
         if (n == 0) return@Canvas
-        val axisH = if (labels.isEmpty()) 0f else 18.dp.toPx()
-        val top = 6.dp.toPx()
+        val axisH = columnAxisHeight(labels, n)
+        val top = if (values) BarValueRoom.toPx() else 6.dp.toPx()
         val h = size.height - axisH
         val pitch = size.width / n
         val max = (loads.filterNotNull() + targets.filterNotNull().map { it.last.toFloat() }).maxOrNull()?.coerceAtLeast(1f) ?: 1f
         fun yOf(v: Float) = h - (h - top) * (v / max).coerceIn(0f, 1f)
         val picked = touchX?.takeIf { onScrub != null }?.let { (it / pitch).toInt().coerceIn(0, n - 1) }
         gridLine(h - 0.5.dp.toPx())
-        val bandW = (pitch * 0.6f).coerceAtMost(26.dp.toPx())
+        // Wider than the bar, so the target shows on both sides of it.
+        val bandW = (pitch * 0.66f).coerceAtMost(30.dp.toPx())
         for (i in 0 until n) {
             // While scrubbing, the other columns dim so the picked one stands out.
             val dim = if (picked == null || picked == i) 1f else 0.35f
@@ -325,8 +372,14 @@ internal fun TargetBars(
                 else -> 0.6f
             }
             pillBar(ink.copy(alpha = alpha * dim), pitch * i, pitch, h, h - yOf(v))
+            // The day's Load over its bar: white, in the bar's light when it landed outside its target.
+            if (values) {
+                val valueInk = if (outside) ink else Ink.copy(alpha = 0.75f)
+                val faint = if (i == partial) 0.6f else 1f
+                barValue(m, shown.toString(), valueInk.copy(alpha = valueInk.alpha * dim * faint), pitch * i, pitch, pillTop(pitch, h, h - yOf(v)))
+            }
         }
-        axis(m, labels, h + 4.dp.toPx())
+        columnAxis(m, labels, n, h + 4.dp.toPx())
     }
 }
 

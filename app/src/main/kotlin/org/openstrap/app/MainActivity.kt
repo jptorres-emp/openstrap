@@ -900,7 +900,7 @@ private fun AppRoot(
                         workouts, padding, onOpen = { push(Detail.Workout(it)) }, onBack = pop,
                     )
                     Detail.Healthspan -> org.openstrap.app.ui.glow.GlowHealthspanScreen(healthspan, padding, onBack = pop)
-                    Detail.Reports -> org.openstrap.app.ui.glow.ReportsDetail(day.date, loadReport, padding, onBack = pop)
+                    Detail.Reports -> org.openstrap.app.ui.glow.ReportsDetail(day.date, loadReport, padding, onOpen = push, onBack = pop)
                     // The Recovery and Sleep tabs' screens, opened over another tab from a card about them.
                     Detail.Recovery -> {
                         androidx.activity.compose.BackHandler(onBack = pop)

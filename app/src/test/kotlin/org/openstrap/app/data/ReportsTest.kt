@@ -183,14 +183,27 @@ class ReportsTest {
     @Test fun `the month spreads Recovery over its bands and days of the week`() {
         val scores = listOf(40, 60, 75, 90)
         val days = (0..59).map { back -> Reports.Day(end.minusDays(back.toLong()), recovery = scores[back % 4], asleepMinutes = 420) }.associateBy { it.date }
-        val m = Reports.month(end, days, emptyList(), end.minusDays(59))
+        val m = Reports.month(end, days, emptyList(), emptyMap(), end.minusDays(59))
         assertEquals(30, m.bands.sum())
         assertEquals(listOf(8, 8, 7, 7).sorted(), m.bands.sorted())
-        assertNotNull(m.bandsBefore)
+        assertNotNull(m.before)
         assertEquals(7, m.weekdays.size)
         assertEquals(DayOfWeek.MONDAY, m.weekdays.first().day)
         assertTrue(m.weekdays.all { it.days in 8..9 })
         assertNotNull(m.normal)
+    }
+
+    @Test fun `the month's days land against their targets, as the month before did`() {
+        // Every day at 100 against a target of 60 to 90: all above, the month before alike; today, under way, not counted.
+        val days = (0..59).map { back -> Reports.Day(end.minusDays(back.toLong()), recovery = 70, load = 100f, partial = back == 0) }.associateBy { it.date }
+        val targets = days.keys.associateWith { Reports.Target(DayKind.Usual, 60..90, true, false, true) }
+        val m = Reports.month(end, days, emptyList(), targets, end.minusDays(59))
+        assertEquals(29f, m.balance.above, 1e-4f)
+        assertEquals(0f, m.balance.within + m.balance.below, 1e-4f)
+        assertEquals(30f, m.balanceBefore!!.above, 1e-4f)
+        assertEquals(30, m.targets.size)
+        // Without targets nothing lands anywhere.
+        assertEquals(0f, Reports.month(end, days, emptyList(), emptyMap(), end.minusDays(59)).balance.days, 1e-4f)
     }
 
     @Test fun `a habit that costs Recovery shows up, one that doesn't stays unclear`() {

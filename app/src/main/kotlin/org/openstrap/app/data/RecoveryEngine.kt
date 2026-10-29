@@ -392,6 +392,8 @@ class RecoveryEngine(private val dao: HealthDao) {
             val tonight = seen.lastOrNull { it.day == m }
             val before = loadList.filter { it.first in midnight(date0.minusDays(LOAD_DAYS.toLong())) until m }.map { it.second }
             val r = Recovery.readiness(tonight, seen, before, sleepNeed = sleepNeed)
+            // Fitness and fatigue as the day began, as [compute]'s loadTrend for that day.
+            val trend = before.takeIf { it.size >= 7 }?.let { Recovery.fitnessFatigue(it).last() }
             // The HRV baseline the night was read against, by Readiness's rule: earlier valid nights not in Watch or Alert.
             val hrvBase = tonight?.let { n ->
                 val earlier = seen.filter { it.day < m }
@@ -416,7 +418,8 @@ class RecoveryEngine(private val dao: HealthDao) {
                 restorativeMinutes = tonight?.takeIf { it.deepMinutes != null || it.remMinutes != null }?.let { (it.deepMinutes ?: 0) + (it.remMinutes ?: 0) },
                 napMinutes = napsByDay[m] ?: 0,
                 load = if (date0 == date) shownLoad else loads[date0],
-                usualLoad = before.takeIf { it.size >= 7 }?.let { Recovery.fitnessFatigue(it).last().ctl },
+                usualLoad = trend?.ctl,
+                fatigue = trend?.atl,
                 steps = activityByDay[date0]?.sumOf { it.steps },
                 partial = now in w.from..w.to,
             )

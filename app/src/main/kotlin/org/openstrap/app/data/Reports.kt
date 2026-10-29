@@ -59,8 +59,9 @@ object Reports {
         val napMinutes: Int = 0,
         /** The day's Load (TRIMP); null on a day the strap was mostly off, other than the day shown. */
         val load: Float? = null,
-        /** Your usual daily Load (fitness, CTL) as the day began; null before a week of worn days. */
+        /** Your usual daily Load (fitness, CTL) and your last week's (fatigue, ATL) as the day began; null before a week of worn days. */
         val usualLoad: Float? = null,
+        val fatigue: Float? = null,
         val steps: Int? = null,
         val partial: Boolean = false,
     ) {
@@ -280,12 +281,16 @@ object Reports {
         val bedtimeShift: Float?,
         val wakeShift: Float?,
         val load: Float?,
-        /** Your usual daily Load as the last day of the stretch began. */
+        /** Your usual daily Load (fitness) and your last week's (fatigue) as the last day of the stretch began. */
         val usualLoad: Float?,
+        val fatigue: Float?,
         val workouts: Float,
         val workoutSeconds: Float,
         val steps: Float?,
     ) {
+        /** Fitness, fatigue and form as the last day began, for the balance word Activity's Load card shows. */
+        val trend: Recovery.LoadTrend? get() = usualLoad?.let { c -> fatigue?.let { a -> Recovery.LoadTrend(c, a, c - a) } }
+
         /** The totals as if the stretch were [days] long: an average week of three, or a month not all there. */
         fun per(days: Int): Figures {
             if (span <= 0 || span == days) return this
@@ -315,6 +320,7 @@ object Reports {
             wakeShift = shift(inside) { it.wake },
             load = done.mapNotNull { it.load }.averageOrNull(),
             usualLoad = inside.lastOrNull { it.usualLoad != null }?.usualLoad,
+            fatigue = inside.lastOrNull { it.fatigue != null }?.fatigue,
             workouts = workouts.size.toFloat(),
             workoutSeconds = workouts.sumOf { it.seconds }.toFloat(),
             steps = done.mapNotNull { it.steps?.takeIf { s -> s > 0 }?.toFloat() }.averageOrNull(),
@@ -356,18 +362,17 @@ object Reports {
 
     /**
      * The last [WEEK_DAYS] days ending on [end] against the [WEEKS_BEFORE] weeks before them as one average week ([before]
-     * is null with less than a week of them): the [days] with each morning's [targets] and where each finished day's Load
-     * landed ([versus]), and the week's sports. [normal] is your normal Recovery over the last [MONTH_DAYS] days ([normal]).
+     * is null with less than a week of them): the [days] with each morning's [targets], and how the finished days' Load
+     * landed against them ([balance]), the weeks before as one average week. [normal] is your normal Recovery over the
+     * last [MONTH_DAYS] days ([normal]).
      */
     data class Week(
         val now: Figures,
         val before: Figures?,
         val days: List<Day>,
         val targets: List<Target?>,
-        val versus: List<Versus?>,
         val balance: Balance,
         val balanceBefore: Balance?,
-        val sports: List<SportTotals>,
         val normal: ClosedFloatingPointRange<Float>?,
     )
 
@@ -385,13 +390,11 @@ object Reports {
             before = before?.per(WEEK_DAYS),
             days = week,
             targets = week.map { targets[it.date] },
-            versus = week.map(::versusOf),
             balance = balance(week.map(::versusOf)),
             balanceBefore = before?.let {
                 val b = balance(dates(beforeFrom, beforeTo).map { d -> days[d]?.let(::versusOf) })
                 Balance(b.below * scale, b.within * scale, b.above * scale)
             },
-            sports = sports(sessions, from, end, if (before != null) beforeFrom..beforeTo else null, scale),
             normal = normal(dates(end.minusDays(MONTH_DAYS - 1L), end).mapNotNull { days[it]?.recovery?.toFloat() }),
         )
     }
@@ -403,28 +406,28 @@ object Reports {
 
     /**
      * The last [MONTH_DAYS] days ending on [end] against the [MONTH_DAYS] before them ([before] null with under two weeks of
-     * them): the [days], Recovery's spread over its four bands ([bands], lowest first: under [Recovery.FAIR_FROM], then
-     * to [READY_FROM], to [PUSH_FROM], and above), each day of the week over all the reports' days, and the sports with
-     * their zones. [normal], [hrvNormal] and [restingHrNormal] are your normal Recovery, HRV and resting heart rate over
-     * the month ([normal]), as the metric details draw theirs.
+     * them): the [days] with each morning's [targets] and how the finished days' Load landed against them ([balance]),
+     * Recovery's spread over its four bands ([bands], lowest first: under [Recovery.FAIR_FROM], then to [READY_FROM], to
+     * [PUSH_FROM], and above), each day of the week over all the reports' days, and the sports with their zones. [normal]
+     * is your normal Recovery over the month ([normal]), as the metric details draw theirs.
      */
     data class Month(
         val now: Figures,
         val before: Figures?,
         val days: List<Day>,
+        val targets: List<Target?>,
+        val balance: Balance,
+        val balanceBefore: Balance?,
         val bands: List<Int>,
-        val bandsBefore: List<Int>?,
         val weekdays: List<Weekday>,
         val sports: List<SportTotals>,
         val normal: ClosedFloatingPointRange<Float>?,
-        val hrvNormal: ClosedFloatingPointRange<Float>?,
-        val restingHrNormal: ClosedFloatingPointRange<Float>?,
     )
 
     /** Days of the month before needed for the month to be compared with it. */
     const val MIN_MONTH_BEFORE = 14
 
-    fun month(end: LocalDate, days: Map<LocalDate, Day>, sessions: List<Session>, firstData: LocalDate?): Month {
+    fun month(end: LocalDate, days: Map<LocalDate, Day>, sessions: List<Session>, targets: Map<LocalDate, Target?>, firstData: LocalDate?): Month {
         val from = end.minusDays(MONTH_DAYS - 1L)
         val beforeTo = from.minusDays(1)
         val beforeFrom = from.minusDays(MONTH_DAYS.toLong())
@@ -435,12 +438,19 @@ object Reports {
             listOf(s.count { it < Recovery.FAIR_FROM }, s.count { it in Recovery.FAIR_FROM until READY_FROM }, s.count { it in READY_FROM until PUSH_FROM }, s.count { it >= PUSH_FROM })
         }
         val all = days.values.filter { it.date <= end }
+        fun versusOf(d: Day) = d.load?.takeIf { !d.partial }?.let { l -> targets[d.date]?.let { versus(l, it.range) } }
+        val scale = before?.let { MONTH_DAYS.toFloat() / it.span } ?: 1f
         return Month(
             now = figures(days, sessions, from, end, firstData),
             before = before?.per(MONTH_DAYS),
             days = month,
+            targets = month.map { targets[it.date] },
+            balance = balance(month.map(::versusOf)),
+            balanceBefore = before?.let {
+                val b = balance(dates(beforeFrom, beforeTo).map { d -> days[d]?.let(::versusOf) })
+                Balance(b.below * scale, b.within * scale, b.above * scale)
+            },
             bands = bands(month),
-            bandsBefore = before?.let { bands(dates(beforeFrom, beforeTo).mapNotNull { days[it] }) },
             weekdays = DayOfWeek.entries.map { wd ->
                 val on = all.filter { it.date.dayOfWeek == wd }
                 Weekday(
@@ -448,10 +458,8 @@ object Reports {
                     on.mapNotNull { it.asleepMinutes?.toFloat() }.averageOrNull(), on.count { it.recovery != null },
                 )
             },
-            sports = sports(sessions, from, end, if (before != null) beforeFrom..beforeTo else null, before?.let { MONTH_DAYS.toFloat() / it.span } ?: 1f),
+            sports = sports(sessions, from, end, if (before != null) beforeFrom..beforeTo else null, scale),
             normal = normal(month.mapNotNull { it.recovery?.toFloat() }),
-            hrvNormal = normal(month.mapNotNull { it.hrv }),
-            restingHrNormal = normal(month.mapNotNull { it.restingHr }),
         )
     }
 
@@ -827,7 +835,7 @@ object Reports {
         return Report(
             date = date,
             week = week(date, days, sessions, targets, firstData),
-            month = month(date, days, sessions, firstData),
+            month = month(date, days, sessions, targets, firstData),
             target = targets[date],
             load = days[date]?.load,
             finished = date < today,

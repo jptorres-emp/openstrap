@@ -90,6 +90,21 @@ class HealthRepository(private val dao: HealthDao) {
     /** The morning check-in for [date], 1-5, or null before the user answered. */
     fun checkIn(date: LocalDate, zone: ZoneId = ZoneId.systemDefault()): Flow<CheckInRow?> = dao.checkIn(DayWindow.of(date, zone).from)
 
+    /** The journal's answer for [date] ([JournalHabit]): the habits ticked, none, or not answered. */
+    fun journal(date: LocalDate, zone: ZoneId = ZoneId.systemDefault()): Flow<JournalDay> =
+        dao.dayTags(DayWindow.of(date, zone).from).map { rows -> JournalDay(date, JournalHabit.ofDay(rows.map { it.tag })) }
+
+    /**
+     * Saves [habits] as [date]'s journal: answered, those ticked, the rest cleared. The new answer goes in before the old
+     * one comes out, so the day never reads as unanswered meanwhile; tags that aren't the journal's stay.
+     */
+    suspend fun saveJournal(date: LocalDate, habits: Set<JournalHabit>, zone: ZoneId = ZoneId.systemDefault()) {
+        val day = DayWindow.of(date, zone).from
+        dao.insertDayTags(JournalHabit.tags(habits).map { org.openstrap.app.data.db.DayTagRow(day, it) })
+        val cleared = JournalHabit.entries.filter { it !in habits }.map { it.key }
+        if (cleared.isNotEmpty()) dao.deleteDayTagsIn(day, cleared)
+    }
+
     /** Saves the check-in for [date]; null clears it. */
     suspend fun saveCheckIn(date: LocalDate, feeling: Int?, zone: ZoneId = ZoneId.systemDefault()) {
         val day = DayWindow.of(date, zone).from
@@ -105,12 +120,13 @@ class HealthRepository(private val dao: HealthDao) {
 
     /**
      * Where the data stands, as [changes] watches it: the newest heart rate, stress and sleep, how many strap
-     * workouts there are, and when a weight was last logged (the reports show it). It moves only when something new
+     * workouts there are, when a weight was last logged and what the journal says (the reports show both). It moves only when something new
      * lands, so heavy work can tell a real change from a resubscription and keep what it has.
      */
     fun dataStamp(): Flow<List<Long?>> = kotlinx.coroutines.flow.combine(
-        dao.latestHeartRateTime(), dao.latestStressTime(), dao.latestSleepEnd(), dao.workoutCountFlow(), dao.latestWeightUpdate(),
-    ) { hr, stress, sleep, workouts, weight -> listOf(hr, stress, sleep, workouts.toLong(), weight) }.distinctUntilChanged()
+        kotlinx.coroutines.flow.combine(dao.latestHeartRateTime(), dao.latestStressTime(), dao.latestSleepEnd()) { hr, stress, sleep -> listOf(hr, stress, sleep) },
+        dao.workoutCountFlow(), dao.latestWeightUpdate(), dao.dayTagsStamp(),
+    ) { strap, workouts, weight, journal -> strap + listOf(workouts.toLong(), weight, journal?.hashCode()?.toLong()) }.distinctUntilChanged()
 
     /** Local days that have any heart rate, steps or sleep, for the calendar. */
     fun daysWithData(zone: ZoneId = ZoneId.systemDefault()): Flow<Set<LocalDate>> = dao.hoursWithData().map { hours ->

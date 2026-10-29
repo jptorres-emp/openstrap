@@ -327,6 +327,7 @@ class RecoveryEngine(private val dao: HealthDao) {
         val sleepSpo2 = dao.sleepSpo2Once(nightFrom, to).sortedBy { it.timestamp }
         val strapResting = dao.restingHrOnce(nightFrom, to)
         val weights = dao.weightsOnce(midnight(first), to).associate { it.day to it.kg }
+        val journal = dao.dayTagsOnce(midnight(first), to).groupBy({ it.day }, { it.tag })
         val osaByMorning = dao.osaResultsOnce(nightFrom - 86_400, to).associateBy {
             Instant.ofEpochSecond(it.belongTime + 2 * 3600).atZone(zone).toLocalDate().atStartOfDay(zone).toEpochSecond()
         }
@@ -452,6 +453,7 @@ class RecoveryEngine(private val dao: HealthDao) {
                 partial = now in w.from..w.to,
                 kcal = energy[date0],
                 weightKg = weights[m],
+                journal = journal[m]?.let(JournalHabit::ofDay),
             )
         }
         return Reports.Input(date, days, loads)

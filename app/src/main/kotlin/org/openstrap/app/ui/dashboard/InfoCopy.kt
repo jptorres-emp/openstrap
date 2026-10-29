@@ -928,11 +928,19 @@ object InfoCopy {
     }
 
     /** What's particular about the night's Sleep score: the sleep need the guidance measures against. */
-    fun sleepNotes(needMinutes: Int): List<String> = listOf(tr(
-        "Your sleep need here is ${TodayCopy.duration(needMinutes * 60L)}, from your age or your own setting.",
-        "O sono de que precisas aqui é ${TodayCopy.duration(needMinutes * 60L)}, pela tua idade ou pela tua " +
-            "definição.",
-    ))
+    fun sleepNotes(needMinutes: Int): List<String> = listOf(
+        tr(
+            "Your sleep need here is ${TodayCopy.duration(needMinutes * 60L)}, from your age or your own setting.",
+            "O sono de que precisas aqui é ${TodayCopy.duration(needMinutes * 60L)}, pela tua idade ou pela tua " +
+                "definição.",
+        ),
+        tr(
+            "Of your need is your time asleep against that need, at most 100%. Efficiency is the share of the night, " +
+                "from falling asleep to waking, that you spent asleep: 85% and up is good.",
+            "Da necessidade é o tempo a dormir face a essa necessidade, no máximo 100%. A eficiência é a parte da " +
+                "noite, do adormecer ao acordar, que passaste a dormir: 85% ou mais é bom.",
+        ),
+    )
 
     /**
      * What's particular about today's Recovery, for its info sheet: the strap's own score beside ours, and anything that

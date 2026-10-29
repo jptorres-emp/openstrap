@@ -489,6 +489,11 @@ private fun AppRoot(
         container.database.healthDao().weights(org.openstrap.app.data.DayWindow.of(from).from, org.openstrap.app.data.DayWindow.of(day.date).to)
     }.collectAsStateWithLifecycle(emptyList())
     var loggingWeight by rememberSaveable { mutableStateOf(false) }
+    // Yesterday's journal for Today's strip, and the day whose journal is open in its sheet (an epoch day).
+    val journal by remember(day.date) { container.health.journal(day.date.minusDays(1)) }
+        .collectAsStateWithLifecycle(null as org.openstrap.app.data.JournalDay?)
+    var journalFor by rememberSaveable { mutableStateOf<Long?>(null) }
+    val openJournal = { journalFor = java.time.LocalDate.now().minusDays(1).toEpochDay() }
     val daysWithData by dayVm.daysWithData.collectAsStateWithLifecycle()
     val picker = remember(daysWithData, dayVm) { DayPicker(daysWithData, dayVm::select) }
     val live by container.strap.liveHeartRate.collectAsStateWithLifecycle()
@@ -878,6 +883,20 @@ private fun AppRoot(
             },
             containerColor = MaterialTheme.colorScheme.background,
         ) { padding ->
+            journalFor?.let { epochDay ->
+                val date = java.time.LocalDate.ofEpochDay(epochDay)
+                val shown by remember(epochDay) { container.health.journal(date) }.collectAsStateWithLifecycle(null as org.openstrap.app.data.JournalDay?)
+                // Each habit's effect so far, from the report for the day shown.
+                val effects = (reportOutcome as? org.openstrap.app.ui.dashboard.ReportOutcome.Ready)?.report?.habits.orEmpty()
+                    .mapNotNull { e -> (e.habit as? org.openstrap.app.data.Reports.Habit.Logged)?.let { it.habit to e } }.toMap()
+                shown?.takeIf { it.date == date }?.let { j ->
+                    org.openstrap.app.ui.device.JournalSheet(
+                        date, java.time.LocalDate.now(), j.habits, effects,
+                        onSave = { habits -> scope.launch { container.health.saveJournal(date, habits) }; journalFor = null },
+                        onDismiss = { journalFor = null },
+                    )
+                }
+            }
             if (loggingWeight) {
                 val todayStart = org.openstrap.app.data.DayWindow.of(java.time.LocalDate.now()).from
                 val todays = weights.firstOrNull { it.day == todayStart }?.kg
@@ -948,6 +967,7 @@ private fun AppRoot(
                     Detail.Healthspan -> org.openstrap.app.ui.glow.GlowHealthspanScreen(healthspan, padding, onBack = pop)
                     is Detail.Reports -> org.openstrap.app.ui.glow.ReportsDetail(
                         reportOutcome, day.date, detail.month, padding, onOpen = push, onBack = pop, imperial = profile.usesImperial,
+                        onJournal = openJournal,
                     )
                     // The Recovery and Sleep tabs' screens, opened over another tab from a card about them.
                     Detail.Recovery -> {
@@ -1007,6 +1027,8 @@ private fun AppRoot(
                                 onCheckIn = { v -> scope.launch { container.health.saveCheckIn(day.date, v) } },
                                 onOpenRecovery = { todayStack = listOf(Detail.Recovery) },
                                 report = reportOutcome,
+                                journal = journal,
+                                onJournal = openJournal,
                                 workouts = workouts,
                                 onOpenWorkout = { todayStack = listOf(Detail.Workout(it)) },
                                 onOpenHealthspan = { seeHabitAge(); todayStack = listOf(Detail.Healthspan) },

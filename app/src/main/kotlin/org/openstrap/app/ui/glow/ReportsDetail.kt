@@ -69,6 +69,8 @@ internal fun ReportsDetail(
     onBack: () -> Unit,
     /** Weight in pounds. */
     imperial: Boolean = false,
+    /** Opens yesterday's journal, from the foot of the month's habits. */
+    onJournal: (() -> Unit)? = null,
 ) {
     val color = MetricColors.readiness
     val ranges = listOf(Range.Week, Range.Month)
@@ -100,7 +102,7 @@ internal fun ReportsDetail(
             report == null && failed -> item { DetailEmpty(ReportCopy.FAILED) }
             report == null -> item { DetailEmpty(ReportCopy.LOADING) }
             range == Range.Week -> weekBody(report, imperial, onOpen) { scrub = it }
-            else -> monthBody(report, imperial, onOpen) { scrub = it }
+            else -> monthBody(report, imperial, onOpen, onJournal) { scrub = it }
         }
     }
     if (info) InfoSheet(
@@ -143,7 +145,7 @@ private fun LazyListScope.weekBody(r: Reports.Report, imperial: Boolean, onOpen:
 
 /* ------------------------------------------------ Month --------------------------------------------- */
 
-private fun LazyListScope.monthBody(r: Reports.Report, imperial: Boolean, onOpen: (Detail) -> Unit, onScrub: (DetailHeadline?) -> Unit) {
+private fun LazyListScope.monthBody(r: Reports.Report, imperial: Boolean, onOpen: (Detail) -> Unit, onJournal: (() -> Unit)?, onScrub: (DetailHeadline?) -> Unit) {
     val month = r.month
     val labels = spreadLabels(month.days.map { it.date })
     val weekdays = month.weekdays.count { it.recovery != null } >= 3
@@ -164,7 +166,7 @@ private fun LazyListScope.monthBody(r: Reports.Report, imperial: Boolean, onOpen
     // month's list, else the habits when they follow the sports.
     val sportsOnEdge = sports && !weekdays
     if (sports) item { ReportSports(month.sports, onEdge = sportsOnEdge) }
-    item { ReportHabits(r.habits, onEdge = (sports && !sportsOnEdge) || (!sports && !weekdays)) }
+    item { ReportHabits(r.habits, onEdge = (sports && !sportsOnEdge) || (!sports && !weekdays), onJournal = onJournal) }
 }
 
 /** Each day of the week's average Recovery with its value over it, a low one lit; lit from the left, the weeks behind. */
@@ -208,7 +210,7 @@ private fun ReportSports(sports: List<Reports.SportTotals>, onEdge: Boolean, wee
  * rest a row each for what they have in common, so the ones that matter stand out.
  */
 @Composable
-private fun ReportHabits(habits: List<Reports.Effect>, onEdge: Boolean) {
+private fun ReportHabits(habits: List<Reports.Effect>, onEdge: Boolean, onJournal: (() -> Unit)? = null) {
     OnNeutralEdge(onEdge) {
         ListPanel(Modifier.padding(top = 8.dp), title = ReportCopy.HABITS_TITLE, note = ReportCopy.HABITS_NOTE) {
             if (habits.all { it.recoveryVerdict == Reports.Verdict.TooFew }) {
@@ -225,6 +227,8 @@ private fun ReportHabits(habits: List<Reports.Effect>, onEdge: Boolean) {
                     ListRow(title, MetricColors.readiness, null, names, divider = shown.isNotEmpty() || i > 0, dash = false, icon = AppIcons.DotsThree, iconTint = SportIconTint)
                 }
             }
+            // The journal adds what the data can't see; it's filled in from here as well as from Today.
+            if (onJournal != null) LinkRow(org.openstrap.app.ui.dashboard.JournalCopy.FILL_IN, onJournal)
         }
     }
 }
@@ -382,6 +386,7 @@ private fun habitIcon(h: Reports.Habit): ImageVector = when (h) {
     Reports.Habit.ShortNight -> AppIcons.Hourglass
     Reports.Habit.Weekend -> AppIcons.CalendarBlank
     Reports.Habit.ActiveDay -> AppIcons.Footprints
+    is Reports.Habit.Logged -> org.openstrap.app.ui.device.journalIcon(h.habit)
 }
 
 /** Four dates spread across a month's chart, as the Load detail labels its month. */

@@ -98,7 +98,7 @@ fun GlowSleepScreen(
             val pair = (breathing != null || firstNights) && state.naps.isNotEmpty()
             tabCards(slots) { card, m ->
                 when (card) {
-                    SleepCard.Hero -> NightHero(state, firstNights) { onOpen(Detail.OfScore(Score.Sleep)) }
+                    SleepCard.Hero -> NightHero(state, firstNights, rec?.sleepNeed ?: org.openstrap.app.data.Recovery.SLEEP_NEED_MINUTES) { onOpen(Detail.OfScore(Score.Sleep)) }
                     SleepCard.Vitals -> VitalsList(state, firstNights) { onOpen(Detail.OfMetric(it, night = true)) }
                     SleepCard.Regularity -> RegularityCard(state, rec?.regularity, firstNights) { onOpen(Detail.OfScore(Score.Regularity)) }
                     SleepCard.Breathing -> when {
@@ -132,13 +132,13 @@ internal val SleepGlow = GlowStyle.Midnight.copy(
 private fun clock(epoch: Long) = Instant.ofEpochSecond(epoch).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("HH:mm"))
 
 /**
- * The night (spec 5.2, the sleep hero): how long, against the rest of the week, then the score in dots with its word
- * and how often you woke beside it, the one dotted number on the card. The stages to scrub in their colours, then
+ * The night (spec 5.2, the sleep hero): how long, against the rest of the week, then the score in dots with its word,
+ * how often you woke and how much of your [need] you slept beside it, the one dotted number on the card. The stages to scrub in their colours, then
  * their totals as one bar with a plain legend. No arc. As high as its content. Tapping opens the Sleep score's detail
  * ([onOpen]).
  */
 @Composable
-private fun NightHero(state: DayUiState, firstNights: Boolean, onOpen: () -> Unit) {
+private fun NightHero(state: DayUiState, firstNights: Boolean, need: Int, onOpen: () -> Unit) {
     val session = state.sleep
     val isToday = state.date == LocalDate.now()
     GlowCard(SleepGlow, Modifier.fillMaxWidth().gridSize(CardSize.Wide), onClick = onOpen) {
@@ -159,6 +159,7 @@ private fun NightHero(state: DayUiState, firstNights: Boolean, onOpen: () -> Uni
                 listOfNotNull(
                     TabCopy.sleepScoreLine(score),
                     TabCopy.woke(session.wakeCount),
+                    TabCopy.sleepPerformance(asleep, need)?.let(TabCopy::performanceLine),
                 ),
             )
             if (state.sleepStages.isNotEmpty()) {

@@ -69,7 +69,7 @@ Shown on the Training tab, and the one Today's evening and night count down to (
 
 ## 5. Habits
 
-The app keeps no journal, so habits are found in the data. Each is about the day before the morning, except the night's own late bedtime and short night:
+Habits are found in the data, and the journal adds what the data can't see. Each is about the day before the morning, except the night's own late bedtime and short night:
 
 * a workout, and the two sports you do most when you do more than one;
 * a late workout, one that started at 20:00 or later;
@@ -77,11 +77,14 @@ The app keeps no journal, so habits are found in the data. Each is about the day
 * a late bedtime, 45 min or more after your usual;
 * a short night, under 7 h asleep;
 * a weekend night, Friday or Saturday;
-* an active day, steps in your top quarter.
+* an active day, steps in your top quarter;
+* what you ticked in the journal (`data/Journal.kt`): alcohol, late caffeine (after 2 pm), a late dinner (within 2 h of bed), screens in bed, reading in bed, a stressful day, travel, feeling ill, meditation, stretching.
+
+**The journal.** Today asks for yesterday's under the morning check-in, and after the morning until it's answered; the monthly report's habits open it too. A day counts once it's answered, even with nothing ticked (a `day_tag` row `answered`, beside one per habit ticked), so a day nobody answered is left out rather than read as a day without them. A journal habit is compared only over the mornings after answered days, fitted with the data's habits held steady over those same mornings (a stressful day that's also a short night doesn't take its effect); with too few of them, the plain difference. Only habits ticked at least once are listed. A tag from before the journal (`alcohol`, `travel`, `sick`) answers its day.
 
 **Held against each other.** A habit that only keeps company with another would take its effect on a plain comparison: in the tests, CrossFit mornings that never follow a late football game look several points better without doing anything. So the effects come from one least-squares fit of the next morning's Recovery (and, separately, HRV against its baseline) on all the habits at once, each coefficient with its t-test. A habit that's a copy of another (late workouts that are all football) can't be told apart from it: it gets the other's effect, and each lists the other as "often with". "A workout" is the union of the sports and late workouts, so it stays out of the fit and keeps its plain difference, tested by permutation (2000 shuffles, a fixed seed so the same days always give the same answer). Without 20 scored mornings, or with fewer than 10 degrees of freedom left, every habit falls back to the plain difference.
 
-**Verdicts.** Clear: p under 0.05 and at least 3 points (or 3% for HRV). Likely: p under 0.1 and at least 2. Under 4 mornings after a habit, or without it, it's too few to tell. A habit's value on screen is Recovery's effect when that's clear or likely, else HRV's when that is, else none.
+**Verdicts.** Clear: p under 0.05 and at least 3 points (or 3% for HRV). Likely: p under 0.1 and at least 2. Under 4 mornings after a habit, or without it, it's too few to tell. A habit's value on screen is Recovery's effect when that's clear or likely, else HRV's when that is, else none. Recovery's is shown as WHOOP's journal shows it, in percent of your Recovery on the mornings without the habit (−8 points off a usual 72 is −12%); HRV's is already a percentage against its baseline. The journal's sheet shows each habit's effect so far under its name.
 
 ## 6. Known problems
 

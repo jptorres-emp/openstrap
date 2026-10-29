@@ -128,6 +128,9 @@ fun GlowTodayScreen(
     history: DailyHistory? = null,
     /** The report the app works out for the day shown, for the weekly report card. */
     report: org.openstrap.app.ui.dashboard.ReportOutcome? = null,
+    /** Yesterday's journal, null until it has loaded; [onJournal] opens it. */
+    journal: org.openstrap.app.data.JournalDay? = null,
+    onJournal: () -> Unit = {},
     /** Edit Today's hidden and pinned cards. */
     edits: TodayEdits = TodayEdits(),
     onEditsChange: (TodayEdits) -> Unit = {},
@@ -204,6 +207,8 @@ fun GlowTodayScreen(
             habitAgeNew(Instant.ofEpochSecond(r.asOf).atZone(zone).toLocalDate(), habitAgeSeenAsOf == r.asOf, state.date, now.atZone(zone).toLocalDate())
         } == true,
         weekReport = isToday && state.date.dayOfWeek == java.time.DayOfWeek.MONDAY,
+        journal = isToday && journal != null,
+        journalDue = isToday && journal != null && journal.habits == null,
     )
     // Before the first estimate Habit Age never shows on Today, pinned or not.
     val unavailable = if (healthspan?.result == null) setOf(TodayCard.HabitAge) else emptySet()
@@ -251,7 +256,7 @@ fun GlowTodayScreen(
                                             onOpenWorkout, onOpenHealthspan, onOpenProfile, offer, onRecordOffer, onDeclineOffer, suggestion,
                                             onSaveSuggestion, onDismissSuggestion, onOpen, usualSteps, onRetryRecovery,
                                             if (slot.size == CardSize.Small) Modifier.fillMaxSize() else Modifier, onStartSport = onStartSport,
-                                            report = report)
+                                            report = report, journal = journal, onJournal = onJournal)
                                     }
                                 }
                             }
@@ -709,6 +714,9 @@ private fun TodayRow(
     onStartSport: (Int) -> Unit = {},
     /** The day's report, for the weekly report card. */
     report: org.openstrap.app.ui.dashboard.ReportOutcome? = null,
+    /** Yesterday's journal and what opens it, for its strip. */
+    journal: org.openstrap.app.data.JournalDay? = null,
+    onJournal: () -> Unit = {},
 ) {
     val s = ctx.state
     // Your normal over 30 days, as the Recovery tab's body signals measure against, so both say the same.
@@ -721,6 +729,7 @@ private fun TodayRow(
         TodayCard.Suggestion -> suggestion?.let { SuggestionPanel(it, onSaveSuggestion, onDismissSuggestion, edge = EdgeKind.Earlier) }
         TodayCard.Alerts -> AlertsStrip(s.alerts, onOpenMetric)
         TodayCard.CheckIn -> CheckInStrip(checkIn, onCheckIn)
+        TodayCard.Journal -> JournalStrip(journal, java.time.LocalDate.now(), onJournal)
         TodayCard.BodyMorning -> BodyList(
             tr("Your body this morning", "O teu corpo esta manhã"),
             listOf(

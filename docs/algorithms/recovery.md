@@ -158,7 +158,7 @@ The strap's method is unknown and may change with firmware, and a baseline that 
 * **Watch** (in the app, no push): any single core flag, or `RhrWatch` + `HrvSupport`.
 * **Alert** (one push per morning after a sync; Readiness capped at 54), any of: `RhrFlag` on 2 consecutive nights; ≥ 2 different core families on the same night; a core flag tonight and on ≥ 3 of the last 7 nights; rr − c ≥ `RR_ALERT_PER_MIN` = 3.0 /min on its own.
 * One missing night is bridged; two or more reset persistence. An alert clears after `CLEAR_NIGHTS` = 2 consecutive nights with no core flag.
-* A likely cause is annotated, never used to suppress: a previous day with TRIMP > `HARD_DAY_RATIO` = 1.5× the chronic load. (Day tags were removed from the app; old `day_tag` rows are still exported and imported.)
+* A likely cause is annotated, never used to suppress: a previous day with TRIMP > `HARD_DAY_RATIO` = 1.5× the chronic load. (The journal's day tags aren't read here; they're exported and imported with the rest.)
 * SpO2 and desaturations never vote; they stay in Readiness and the Breathing card. +0.5 °C is the lowest temperature line that won't fire every menstrual cycle (the luteal rise is about +0.3 °C), and it is never shown on screen.
 
 ## Energy (0–100, minute by minute)

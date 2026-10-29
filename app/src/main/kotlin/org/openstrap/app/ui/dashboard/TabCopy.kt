@@ -185,6 +185,24 @@ object TabCopy {
     /** A night the strap gave no score. */
     val NO_STRAP_SCORE: String get() = tr("No score from the strap", "Sem pontuação da strap")
 
+    /**
+     * Sleep performance, as WHOOP has it: time asleep against your sleep need, in percent, at most 100. Null without a
+     * need.
+     */
+    fun sleepPerformance(asleepSeconds: Long, needMinutes: Int): Int? =
+        if (needMinutes <= 0) null else minOf(100, Math.round(asleepSeconds / 60f / needMinutes * 100))
+
+    /** Sleep efficiency: the share of the night, from falling asleep to waking, spent asleep, in percent. */
+    fun sleepEfficiency(asleepSeconds: Long, start: Long, end: Long): Int? =
+        if (end <= start) null else Math.round(asleepSeconds.toFloat() / (end - start) * 100).coerceIn(0, 100)
+
+    /** Beside the night's score on the Sleep tab: "92% of your need". */
+    fun performanceLine(percent: Int): String = tr("$percent% of your need", "$percent% da necessidade")
+
+    /** The sleep score detail's figures: performance and efficiency, under the night's times. */
+    val PERFORMANCE: String get() = tr("Of your need", "Da necessidade")
+    val EFFICIENCY: String get() = tr("Efficiency", "Eficiência")
+
     /** A stage's total on the stage bar's legend: "Deep 1 h 32", "Awake 18 min". */
     fun stageTotal(stage: Int, seconds: Long): String = "${SLEEP_NAMES[stage].orEmpty()} ${TodayCopy.duration(seconds)}"
 

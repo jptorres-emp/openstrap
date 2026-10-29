@@ -75,6 +75,23 @@ class TodayPlanTest {
         assertEquals(listOf(StartWorkout, EditToday), monday.takeLast(2))
     }
 
+    @Test fun `yesterday's journal sits under the check-in, and later closes the list until it's filled in`() {
+        val journal = TodayCard.Journal
+        assertEquals(listOf(Hero, CheckIn, journal, BodyMorning), cards(Moment.Waking, TodayFacts(journal = true)).take(4))
+        // Filled in: only the morning shows it.
+        assertFalse(journal in cards(Moment.Midday, TodayFacts(journal = true)))
+        // Still to fill in: past the morning it comes just before Start a workout, and once only in the morning.
+        assertEquals(listOf(journal, StartWorkout, EditToday), cards(Moment.Midday, TodayFacts(journal = true, journalDue = true)).takeLast(3))
+        assertEquals(1, cards(Moment.Waking, TodayFacts(journal = true, journalDue = true)).count { it == journal })
+        // Never on a past day, nor before it has loaded.
+        assertFalse(journal in cards(Moment.Waking, TodayFacts(isToday = false, journal = true, journalDue = true)))
+        assertFalse(journal in cards(Moment.Waking))
+        // On its own it's a strip in the neutral light, and under the check-in it doesn't look like it.
+        val looks = varyLooks(todayCards(Moment.Waking, TodayFacts(journal = true)), Moment.Waking)
+        assertEquals(CardSize.Strip, looks.first { it.card == journal }.size)
+        assertTrue(lookClashes(looks, wide = false).isEmpty())
+    }
+
     @Test fun `strips that need an answer sit under the hero, today only`() {
         val facts = TodayFacts(offer = true, suggestion = true, alerts = true, healthspan = true)
         assertEquals(listOf(Hero, Offer, Suggestion, Alerts, LastNight), cards(Moment.Midday, facts).take(5))

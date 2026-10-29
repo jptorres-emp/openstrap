@@ -14,6 +14,20 @@ import org.openstrap.app.data.SleepRegularity
 class TabCopyTest {
     private fun c(f: Factor, score: Int) = Contributor(f, score, "")
 
+    @Test fun `sleep performance is time asleep against need, at most 100`() {
+        assertEquals(92, TabCopy.sleepPerformance(7 * 3600L + 22 * 60, 480))
+        assertEquals(100, TabCopy.sleepPerformance(9 * 3600L, 480))
+        assertEquals(null, TabCopy.sleepPerformance(7 * 3600L, 0))
+        assertEquals("92% of your need", TabCopy.performanceLine(92))
+    }
+
+    @Test fun `sleep efficiency is the share of the night asleep`() {
+        // 7 h asleep over a night of 7 h 30 from falling asleep to waking.
+        assertEquals(93, TabCopy.sleepEfficiency(7 * 3600L, 0, 7 * 3600L + 1800))
+        assertEquals(100, TabCopy.sleepEfficiency(8 * 3600L, 0, 7 * 3600L))
+        assertEquals(null, TabCopy.sleepEfficiency(3600L, 100, 100))
+    }
+
     @Test fun `recovery against yesterday`() {
         assertEquals("+3 vs yesterday", TabCopy.vsYesterday(78, 75))
         assertEquals("−4 vs yesterday", TabCopy.vsYesterday(71, 75))

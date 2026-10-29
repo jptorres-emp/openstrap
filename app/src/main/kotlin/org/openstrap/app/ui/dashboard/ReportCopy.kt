@@ -381,13 +381,17 @@ object ReportCopy {
         Reports.Habit.ShortNight -> tr("Short night", "Noite curta")
         Reports.Habit.Weekend -> tr("Weekend night", "Fim de semana")
         Reports.Habit.ActiveDay -> tr("Active day", "Dia ativo")
+        is Reports.Habit.Logged -> h.habit.label
     }
 
     private fun decisive(v: Reports.Verdict) = v == Reports.Verdict.Clear || v == Reports.Verdict.Likely
 
-    /** The habit's effect as dot text: Recovery points when that's decisive, else HRV in percent when that is, else none. */
+    /**
+     * The habit's effect as dot text: Recovery's change in percent of your Recovery without it when that's decisive (as
+     * WHOOP's journal has it), else HRV's in percent when that is, else none.
+     */
     fun habitValue(e: Reports.Effect): String? = when {
-        decisive(e.recoveryVerdict) && e.recovery != null -> signed(Math.round(e.recovery))
+        decisive(e.recoveryVerdict) && e.recovery != null -> e.recoveryPercent?.let { signed(Math.round(it)) + "%" } ?: signed(Math.round(e.recovery))
         decisive(e.hrvVerdict) && e.hrv != null -> signed(Math.round(e.hrv)) + "%"
         else -> null
     }
@@ -491,24 +495,27 @@ object ReportCopy {
                     "fizeste: cheia dentro dele, mais clara quando passou, esbatida quando ficou abaixo, muitas vezes só um dia de descanso.",
             ),
             tr("Habits", "Hábitos") to tr(
-                "The app keeps no journal, so habits are found in your data, each on the day before the morning: a workout and " +
-                    "the sports you do most, a late workout (from 20:00), a hard day (a Load 1.5 times your usual), an active day " +
-                    "(your top quarter of steps). And on the night itself: a late bedtime (45 min after your usual), a short night " +
-                    "(under 7 h asleep), a weekend night. They're read together, so a habit that only keeps company with another " +
-                    "doesn't take its effect. The number is Recovery points, or HRV in percent when only HRV moved.",
-                "A app não tem diário, por isso os hábitos são encontrados nos teus dados, cada um no dia antes da manhã: um treino " +
-                    "e os desportos que mais fazes, um treino tardio (a partir das 20:00), um dia duro (Carga 1,5 vezes a habitual), " +
-                    "um dia ativo (o teu quarto de dias com mais passos). E na própria noite: deitar tarde (45 min depois do " +
-                    "habitual), uma noite curta (menos de 7 h a dormir), uma noite de fim de semana. São lidos em conjunto, por isso " +
-                    "um hábito que só anda com outro não fica com o efeito dele. O número são pontos de Recuperação, ou a VFC em " +
+                "Habits come from your data and your journal, each on the day before the morning: a workout and the sports you " +
+                    "do most, a late workout (from 20:00), a hard day (a Load 1.5 times your usual), an active day (your top " +
+                    "quarter of steps), and what you ticked in the journal, over the days you answered it. And on the night itself: " +
+                    "a late bedtime (45 min after your usual), a short night (under 7 h asleep), a weekend night. They're read " +
+                    "together, so a habit that only keeps company with another doesn't take its effect. The number is how much " +
+                    "higher or lower Recovery is the morning after, in percent of your Recovery without it, or HRV in percent when " +
+                    "only HRV moved.",
+                "Os hábitos vêm dos teus dados e do teu diário, cada um no dia antes da manhã: um treino e os desportos que mais " +
+                    "fazes, um treino tardio (a partir das 20:00), um dia duro (Carga 1,5 vezes a habitual), um dia ativo (o teu " +
+                    "quarto de dias com mais passos) e o que marcaste no diário, nos dias a que respondeste. E na própria noite: " +
+                    "deitar tarde (45 min depois do habitual), uma noite curta (menos de 7 h a dormir), uma noite de fim de semana. " +
+                    "São lidos em conjunto, por isso um hábito que só anda com outro não fica com o efeito dele. O número é quanto a " +
+                    "Recuperação da manhã seguinte fica acima ou abaixo da tua Recuperação sem ele, em percentagem, ou a VFC em " +
                     "percentagem quando só a VFC mexeu.",
             ),
             tr("Why it might be off", "Porque pode falhar") to tr(
-                "Clear means a difference of at least 3 points (or 3%) that chance would give less than 1 time in 20, likely less " +
+                "Clear means a difference of at least 3 Recovery points (or 3% of HRV) that chance would give less than 1 time in 20, likely less " +
                     "than 1 in 10. With several habits tested one may still look clear by chance, and a pattern isn't proof of cause. " +
                     "Sleep counts toward Recovery, so short nights and late bedtimes move it partly by definition: HRV is the cleaner " +
                     "sign there. A day with the strap off reads low on Load and steps.",
-                "Claro quer dizer uma diferença de pelo menos 3 pontos (ou 3%) que o acaso daria menos de 1 vez em 20, provável " +
+                "Claro quer dizer uma diferença de pelo menos 3 pontos de Recuperação (ou 3% de VFC) que o acaso daria menos de 1 vez em 20, provável " +
                     "menos de 1 em 10. Com vários hábitos testados, um pode parecer claro por acaso, e um padrão não prova a causa. O " +
                     "sono conta para a Recuperação, por isso noites curtas e deitar tarde mexem nela em parte por definição: aí, a " +
                     "VFC é o sinal mais limpo. Um dia sem a strap conta a menos na Carga e nos passos.",

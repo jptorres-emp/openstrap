@@ -247,6 +247,37 @@ class ReportsTest {
         assertEquals(effects, Reports.habits(days, sessions))
     }
 
+    @Test fun `a journal habit counts only the days answered and shows in percent`() {
+        // 60 mornings. The journal was answered for the last 40 days before them; alcohol on every fifth of those takes
+        // 10 points off the next morning. The 20 days nobody answered are left out, even with low mornings after them.
+        val noise = Random(5)
+        val first = end.minusDays(59)
+        val days = (0..59).map { i ->
+            val d = first.plusDays(i.toLong())
+            val answered = i >= 20
+            val alcohol = answered && i % 5 == 0
+            // The morning after a drink is d + 1, so the drop shows on the next day's row.
+            val after = i > 0 && (i - 1) >= 20 && (i - 1) % 5 == 0
+            val score = 70 - (if (after) 10 else 0) - (if (i < 20) 15 else 0) + noise.nextInt(-3, 4)
+            Reports.Day(
+                d, recovery = score, hrvVsUsual = noise.nextInt(-3, 4), asleepMinutes = 450, bedtime = LocalTime.of(23, 0),
+                journal = if (!answered) null else if (alcohol) setOf(JournalHabit.Alcohol) else emptySet(),
+            )
+        }
+        val effects = Reports.habits(days, emptyList()).associateBy { it.habit }
+        val alcohol = effects.getValue(Habit.Logged(JournalHabit.Alcohol))
+        // The mornings after an answered day: the 39 from the one after day 20 on.
+        assertEquals(39, alcohol.mornings + alcohol.others)
+        assertEquals(8, alcohol.mornings)
+        assertEquals(Verdict.Clear, alcohol.recoveryVerdict)
+        assertEquals(-10f, alcohol.recovery!!, 3f)
+        assertEquals(-10f / 70f * 100f, alcohol.recoveryPercent!!, 5f)
+        // A habit never ticked isn't one.
+        assertTrue(effects.keys.none { it == Habit.Logged(JournalHabit.Travel) })
+        // The data's habits are as before: the journal doesn't change them.
+        assertEquals(Reports.habits(days.map { it.copy(journal = null) }, emptyList()), Reports.habits(days, emptyList()).filter { it.habit !is Habit.Logged })
+    }
+
     @Test fun `with one sport there are no sport habits`() {
         val first = end.minusDays(29)
         val sessions = (0..29 step 2).map { session(first.plusDays(it.toLong())) }

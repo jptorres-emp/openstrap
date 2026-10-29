@@ -69,6 +69,8 @@ object Reports {
         val kcal: Float? = null,
         /** The weight logged that day, in kg ([org.openstrap.app.data.db.WeightEntry]); null on a day without one. */
         val weightKg: Float? = null,
+        /** What the journal says of the day ([JournalHabit]): the habits ticked, none, or null when it wasn't answered. */
+        val journal: Set<JournalHabit>? = null,
     ) {
         val hasData: Boolean get() = recovery != null || asleepMinutes != null || load != null || (steps ?: 0) > 0
     }
@@ -491,8 +493,8 @@ object Reports {
     /* ------------------------------------------------- Habits ---------------------------------------------- */
 
     /**
-     * Something you did, found in your data (the app keeps no journal), whose next mornings are compared with the rest.
-     * Each is about the day before the morning, except the night's own [LateBedtime] and [ShortNight].
+     * Something you did, found in your data or ticked in the journal ([Logged]), whose next mornings are compared with
+     * the rest. Each is about the day before the morning, except the night's own [LateBedtime] and [ShortNight].
      */
     sealed interface Habit {
         /** Any workout. */
@@ -511,6 +513,8 @@ object Reports {
         data object Weekend : Habit
         /** Steps in your top quarter of days. */
         data object ActiveDay : Habit
+        /** Ticked in the journal for the day before the morning. */
+        data class Logged(val habit: JournalHabit) : Habit
     }
 
     /** How sure the reports are of an effect: too few mornings to say, no clear effect, likely, or clear. */
@@ -522,7 +526,8 @@ object Reports {
      * points) and in HRV against its baseline ([hrv], percentage points), each with how sure that is. When [adjusted],
      * the differences are with the other habits held steady (a fit over all of them, [ols]), so a habit that only
      * keeps company with another doesn't take its effect; else they're the plain differences ([permutationP]). [with]
-     * lists the habits that mostly come with it, whose effects can't be told apart from its own.
+     * lists the habits that mostly come with it, whose effects can't be told apart from its own. A journal habit's
+     * mornings are only those whose day before was answered.
      */
     data class Effect(
         val habit: Habit,
@@ -538,6 +543,12 @@ object Reports {
         val with: List<Habit>,
     ) {
         val verdict: Verdict get() = maxOf(recoveryVerdict, hrvVerdict)
+
+        /**
+         * [recovery] against Recovery on the mornings without the habit, in percent, as WHOOP's journal reads an effect:
+         * 6 points off a usual 60 is −10%. Null without both.
+         */
+        val recoveryPercent: Float? get() = recovery?.let { r -> recoveryOthers?.takeIf { it >= 1f }?.let { r / it * 100f } }
     }
 
     /** Mornings needed both after a habit and without it before it's compared. */
@@ -594,19 +605,40 @@ object Reports {
                 Habit.ShortNight -> m.asleepMinutes?.let { it < SHORT_NIGHT_MINUTES } == true
                 Habit.Weekend -> m.date.dayOfWeek == DayOfWeek.SATURDAY || m.date.dayOfWeek == DayOfWeek.SUNDAY
                 Habit.ActiveDay -> activeFrom != null && p.steps?.let { it >= activeFrom } == true
+                is Habit.Logged -> p.journal?.contains(h.habit) == true
             }
         }
 
-        val flags = habits.associateWith { h -> mornings.map { (m, p) -> did(h, m, p) } }
-        val fitted = habits.filter { h -> h != Habit.Workout && flags.getValue(h).count { it }.let { it >= MIN_HABIT_DAYS && it <= mornings.size - MIN_HABIT_DAYS } }
-        val recoveryFit = fit(fitted, flags, mornings.map { it.first.recovery!!.toDouble() })
-        val hrvRows = mornings.indices.filter { mornings[it].first.hrvVsUsual != null }
-        val hrvFit = fit(fitted, flags.mapValues { (_, f) -> hrvRows.map { f[it] } }, hrvRows.map { mornings[it].first.hrvVsUsual!!.toDouble() })
+        // The journal's habits: those ticked at least once, over the mornings whose day before was answered.
+        val answered = mornings.indices.filter { mornings[it].second.journal != null }
+        val logged = JournalHabit.entries.filter { j -> answered.any { j in mornings[it].second.journal.orEmpty() } }.map { Habit.Logged(it) }
+        val flags = (habits + logged).associateWith { h -> mornings.map { (m, p) -> did(h, m, p) } }
+        val found = effects(habits, emptyList(), mornings.indices.toList(), mornings, flags)
+        // Held against the data's habits over the same mornings, so a stressful day that's also a short night doesn't take its effect.
+        val ticked = if (logged.isEmpty()) emptyList() else effects(logged, habits - Habit.Workout, answered, mornings, flags)
+        return (found + ticked).sortedWith(compareByDescending<Effect> { it.verdict }.thenByDescending { abs(it.recovery ?: 0f) })
+    }
+
+    /**
+     * The effects of [group] over the [mornings] at [rows], each against the others in it and the [held] habits, fitted
+     * together when there are enough mornings ([fit]), else their plain differences ([compare]). [flags] has every
+     * habit's answer for every morning.
+     */
+    private fun effects(
+        group: List<Habit>, held: List<Habit>, rows: List<Int>, mornings: List<Pair<Day, Day>>, flags: Map<Habit, List<Boolean>>,
+    ): List<Effect> {
+        val all = (group + held).distinct()
+        val sub = all.associateWith { h -> flags.getValue(h).let { f -> rows.map { f[it] } } }
+        val days = rows.map { mornings[it].first }
+        val fitted = (held + group).distinct().filter { h -> h != Habit.Workout && sub.getValue(h).count { it }.let { it >= MIN_HABIT_DAYS && it <= rows.size - MIN_HABIT_DAYS } }
+        val recoveryFit = fit(fitted, sub, days.map { it.recovery!!.toDouble() })
+        val hrvRows = days.indices.filter { days[it].hrvVsUsual != null }
+        val hrvFit = fit(fitted, sub.mapValues { (_, f) -> hrvRows.map { f[it] } }, hrvRows.map { days[it].hrvVsUsual!!.toDouble() })
         val random = Random(PERMUTATION_SEED)
-        return habits.map { h ->
-            val f = flags.getValue(h)
-            val yes = mornings.filterIndexed { i, _ -> f[i] }.map { it.first }
-            val no = mornings.filterIndexed { i, _ -> !f[i] }.map { it.first }
+        return group.map { h ->
+            val f = sub.getValue(h)
+            val yes = days.filterIndexed { i, _ -> f[i] }
+            val no = days.filterIndexed { i, _ -> !f[i] }
             val yesRecovery = yes.map { it.recovery!!.toFloat() }
             val noRecovery = no.map { it.recovery!!.toFloat() }
             val tooFew = yes.size < MIN_HABIT_DAYS || no.size < MIN_HABIT_DAYS
@@ -615,14 +647,14 @@ object Reports {
             val (plainRecovery, plainRecoveryVerdict) = compare(yesRecovery, noRecovery, random)
             val (plainHrv, plainHrvVerdict) = compare(yes.mapNotNull { it.hrvVsUsual?.toFloat() }, no.mapNotNull { it.hrvVsUsual?.toFloat() }, random)
             // "A workout" comes with every sport and late workout by definition, so it's left out of their company.
-            val with = habits.filter { o -> o != h && h != Habit.Workout && o != Habit.Workout && (phi(f, flags.getValue(o)) ?: 0f) >= TOGETHER_PHI }
+            val with = all.filter { o -> o != h && h != Habit.Workout && o != Habit.Workout && (phi(f, sub.getValue(o)) ?: 0f) >= TOGETHER_PHI }
             Effect(
                 h, yes.size, no.size, yesRecovery.averageOrNull(), noRecovery.averageOrNull(),
                 recovery?.first ?: plainRecovery, recovery?.let { verdict(it.first, it.second) } ?: plainRecoveryVerdict,
                 hrv?.first ?: plainHrv, hrv?.let { verdict(it.first, it.second) } ?: plainHrvVerdict,
                 adjusted = recovery != null, with = with,
             )
-        }.sortedWith(compareByDescending<Effect> { it.verdict }.thenByDescending { abs(it.recovery ?: 0f) })
+        }
     }
 
     /**

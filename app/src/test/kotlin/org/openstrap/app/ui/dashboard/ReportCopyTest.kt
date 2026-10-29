@@ -117,7 +117,8 @@ class ReportCopyTest {
         fun effect(rec: Float?, rv: Reports.Verdict, hrv: Float?, hv: Reports.Verdict, with: List<Reports.Habit> = emptyList()) =
             Reports.Effect(Reports.Habit.LateWorkout, 9, 50, 64f, 72f, rec, rv, hrv, hv, adjusted = true, with = with)
         val clear = effect(-8.4f, Reports.Verdict.Clear, -12.6f, Reports.Verdict.Likely, listOf(Reports.Habit.Sport(18, "Soccer")))
-        assertEquals("−8", ReportCopy.habitValue(clear))
+        // −8.4 points off a usual 72 the mornings without it: −12% of Recovery, as WHOOP's journal reads it.
+        assertEquals("−12%", ReportCopy.habitValue(clear))
         assertDots(ReportCopy.habitValue(clear))
         assertEquals("Clear over 9 mornings, HRV −13%. Often with soccer", ReportCopy.habitStatus(clear))
         assertTrue(ReportCopy.habitOff(clear))
@@ -165,6 +166,25 @@ class ReportCopyTest {
         ReportCopy.INFO_ROWS.forEach { (title, text) -> assertCopy(title); assertCopy(text) }
         // The target's method and tonight's bedtime are the Training tab's (i), not repeated here.
         assertEquals(4, ReportCopy.INFO_ROWS.size)
+    }
+
+    @Test fun `the journal says what a habit does once the report can tell`() {
+        val today = java.time.LocalDate.of(2026, 10, 29)
+        assertEquals("Yesterday's journal", JournalCopy.title(today.minusDays(1), today))
+        assertEquals("To fill in", JournalCopy.summary(null))
+        assertEquals("None", JournalCopy.summary(emptySet()))
+        assertEquals("Alcohol", JournalCopy.summary(setOf(org.openstrap.app.data.JournalHabit.Alcohol)))
+        assertEquals("2 habits", JournalCopy.summary(setOf(org.openstrap.app.data.JournalHabit.Alcohol, org.openstrap.app.data.JournalHabit.Stress)))
+        val alcohol = org.openstrap.app.data.JournalHabit.Alcohol
+        fun effect(mornings: Int, rec: Float?, rv: Reports.Verdict, hrv: Float? = null, hv: Reports.Verdict = Reports.Verdict.Unclear) =
+            Reports.Effect(Reports.Habit.Logged(alcohol), mornings, 30, 60f, 70f, rec, rv, hrv, hv, adjusted = false, with = emptyList())
+        assertEquals("Any drink", JournalCopy.line(alcohol, null))
+        assertEquals("−11% Recovery the morning after", JournalCopy.line(alcohol, effect(8, -8f, Reports.Verdict.Clear)))
+        assertEquals("−9% HRV the morning after", JournalCopy.line(alcohol, effect(8, -1f, Reports.Verdict.Unclear, -9f, Reports.Verdict.Likely)))
+        assertEquals("No clear effect yet, 8 days", JournalCopy.line(alcohol, effect(8, -1f, Reports.Verdict.Unclear)))
+        assertEquals("Learning, 2 of 4 days", JournalCopy.line(alcohol, effect(2, null, Reports.Verdict.TooFew)))
+        assertEquals("Alcohol", ReportCopy.habitName(Reports.Habit.Logged(alcohol)))
+        listOf(JournalCopy.NOTE, JournalCopy.FILL_IN, JournalCopy.line(alcohol, effect(8, -8f, Reports.Verdict.Clear))).forEach { assertCopy(it) }
     }
 
     @Test fun `a habit with a name of its own keeps its capitals mid-sentence`() {

@@ -20,6 +20,8 @@ enum class TodayCard(private val en: String, private val pt: String = en, val ed
     Suggestion("Workout to save", "Treino por guardar", editable = false),
     Alerts("From your strap", "Da tua strap", editable = false),
     CheckIn("How do you feel", "Como te sentes"),
+    /** Yesterday's journal ([org.openstrap.app.data.JournalHabit]): a strip under the check-in, and later until it's filled in. */
+    Journal("Yesterday's journal", "Diário de ontem"),
     BodyMorning("Your body this morning", "O teu corpo esta manhã"),
     RightNow("Right now", "Agora mesmo", pinnable = true),
     LastNight("Last night", "A noite passada", pinnable = true),
@@ -65,6 +67,10 @@ data class TodayFacts(
     val healthspan: Boolean = false,
     /** Monday: the weekly report is fresh, so it comes right under the hero instead of closing the list. */
     val weekReport: Boolean = false,
+    /** Yesterday's journal has loaded: its strip goes under the morning's check-in. */
+    val journal: Boolean = false,
+    /** Yesterday's journal isn't filled in yet: past the morning its strip closes the list until it is. */
+    val journalDue: Boolean = false,
 )
 
 /** Cards that come and go with another: they are hidden with it, and a pin moves them with it. */
@@ -99,6 +105,7 @@ fun todayCards(moment: Moment?, facts: TodayFacts, morning: Boolean = true): Lis
     val own = when (m) {
         Moment.Waking -> listOfNotNull(
             strip(TodayCard.CheckIn).takeIf { facts.isToday },
+            strip(TodayCard.Journal).takeIf { facts.isToday && facts.journal },
             list(TodayCard.BodyMorning), wide(TodayCard.LastNight), wide(TodayCard.HeartRate), wide(TodayCard.Activity),
         )
         Moment.Midday -> listOf(
@@ -121,8 +128,8 @@ fun todayCards(moment: Moment?, facts: TodayFacts, morning: Boolean = true): Lis
         )
     }
     // Things that need an answer come straight under the hero; the weekly report and Habit Age close the list, then
-    // Start a workout, except where the hero is the workout or has Start of its own (spec 4.2). On Mondays the weekly
-    // report is fresh and comes right under the hero.
+    // yesterday's journal while it's still to fill in, and Start a workout, except where the hero is the workout or has
+    // Start of its own (spec 4.2). On Mondays the weekly report is fresh and comes right under the hero.
     return listOfNotNull(
         TodaySlot(TodayCard.Hero, CardSize.Large),
         strip(TodayCard.Offer).takeIf { facts.offer && facts.isToday },
@@ -132,6 +139,7 @@ fun todayCards(moment: Moment?, facts: TodayFacts, morning: Boolean = true): Lis
     ) + own + listOfNotNull(
         wide(TodayCard.Week).takeIf { !facts.weekReport },
         wide(TodayCard.HabitAge).takeIf { facts.healthspan },
+        strip(TodayCard.Journal).takeIf { facts.isToday && facts.journalDue && m != Moment.Waking },
         strip(TodayCard.StartWorkout).takeIf { facts.isToday && m != Moment.During && m != Moment.WorkoutWindow },
         strip(TodayCard.EditToday),
     )

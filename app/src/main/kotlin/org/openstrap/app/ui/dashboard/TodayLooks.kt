@@ -40,6 +40,8 @@ private fun ownLook(slot: TodaySlot, moment: Moment?, live: Boolean): CardLook =
     TodayCard.Alerts -> strip(Hue.Heart, Edge.Top)
     // A strip is lit from below in the neutral light (spec 2.5): the check-in is a question, not Recovery's.
     TodayCard.CheckIn -> strip(Hue.Neutral, Edge.Bottom)
+    // The journal asks too, so it's neutral; under the check-in [varyLooks] flips its edge.
+    TodayCard.Journal -> strip(Hue.Neutral, Edge.Bottom)
     TodayCard.BodyMorning, TodayCard.RightNow -> ListLook
     TodayCard.LoadToday -> if (slot.size == CardSize.Small) edge(Hue.Load, Edge.Bottom) else ListLook
     TodayCard.Recover -> edge(Hue.Load, Edge.Bottom)

@@ -591,7 +591,7 @@ Rows in order. Sizes per 2.4, tiers per 2.5.
 
 | Moment | Hero (glow) | Then |
 |---|---|---|
-| Waking up | Recovery: "Slept 7 h 40. Recovered enough for your usual training." Score, status word, "Energy at waking 84" | Check-in strip. List "Your body this morning" (resting HR, HRV, blood oxygen, breathing rate). Edge: Last night (the sleep score in dots with its word and time asleep under it, as on the Sleep tab, then the stage strip), Heart rate, Steps |
+| Waking up | Recovery: "Slept 7 h 40. Recovered enough for your usual training." Score, status word, "Energy at waking 84" | Check-in strip, then "Yesterday's journal" (a strip in the neutral light, opening the journal's sheet; on the right what was ticked or "To fill in"; past the morning it closes the list, before Start a workout, until it's filled in). List "Your body this morning" (resting HR, HRV, blood oxygen, breathing rate). Edge: Last night (the sleep score in dots with its word and time asleep under it, as on the Sleep tab, then the stage strip), Heart rate, Steps |
 | Midday | Energy: sentence, value with `lightLevel`, recharged and drained | Strip: Last night collapsed. Edge: Steps (ghost line), Heart rate. List "Right now" (stress, HRV). Edge: Recovery (left edge) |
 | Workout window | "Ready for effort. You usually run around now." Start button, Other sport | Second glow: Energy (wide), a level glow, the light filling across from the left to the value (Recovery's battery on its side). List "Before you start" (Load today, time to recover). Edge: Steps. Strip: Last night |
 | After a workout | "Since your run, 40 min. Heart rate settling." Drop curve into your resting range (a dim band), calm glow | Edge: the workout (left, with its zone bar). Small pair: Load (from below, its bar filling toward your usual day's Load) and To recover (flips to the top). Second glow: Energy, as in the workout window, with its line so far. Edge: Steps |
@@ -688,11 +688,13 @@ Night mood always.
 
 1. Glow hero: "7 h 40, your longest this week." (longest or shortest of the week's nights once there are 3 others to
    compare, else "7 h 40 asleep."). "Longest" rather than "best": more sleep isn't always better. Bedtime to wake as
-   the title row's note. The score in 4.5 dp dots with "Sleep score, good" and "Woke 3 times" beside it, the only
-   dotted number on the card. The hypnogram to scrub (2.7), then the stage bar with its legend ("Deep 2 h 51",
+   the title row's note. The score in 4.5 dp dots with "Sleep score, good", "Woke 3 times" and "92% of your need"
+   (sleep performance, time asleep against your need, at most 100%) beside it, the only dotted number on the card. The hypnogram to scrub (2.7), then the stage bar with its legend ("Deep 2 h 51",
    "REM 1 h 31", "Light 3 h 39", "Awake 18 min", each with an 8 dp colour mark, Secondary type). No arc of any kind
    on the hero, no dotted stage totals. The Sleep score detail drops its dotted times the same way, and holds its
-   score in the horizon arc (2.7), centred in its header. The horizon arc lives only there.
+   score in the horizon arc (2.7), centred in its header. Under its fell asleep, woke and asleep figures, a second row:
+   "Of your need" (sleep performance) and "Efficiency" (the share of the night, falling asleep to waking, spent
+   asleep; only when the stages say how long you slept). The horizon arc lives only there.
 2. List "Night vitals": lowest heart rate, HRV, breathing rate, blood oxygen, skin temperature, average heart rate.
    Each opens its detail; scoped to the night in step 6.
 3. Edge: Sleep regularity (top edge), score, status word, usual bedtime and wake, the week's bed and wake bars against

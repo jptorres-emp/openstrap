@@ -590,6 +590,13 @@ interface HealthDao {
     @Query("DELETE FROM day_tag WHERE day = :day AND tag = :tag")
     suspend fun deleteDayTag(day: Long, tag: String)
 
+    @Query("DELETE FROM day_tag WHERE day = :day AND tag IN (:tags)")
+    suspend fun deleteDayTagsIn(day: Long, tags: List<String>)
+
+    /** Every day's tags in one string, so the reports follow a change to the journal. */
+    @Query("SELECT group_concat(tag || day, ',') FROM day_tag")
+    fun dayTagsStamp(): Flow<String?>
+
     @Query("SELECT * FROM day_tag WHERE day = :day ORDER BY tag")
     fun dayTags(day: Long): Flow<List<DayTagRow>>
 

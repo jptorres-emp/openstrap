@@ -154,6 +154,11 @@ internal fun SleepScoreDetail(
                             listOf(clock(session.start) to SleepCopy.FELL_ASLEEP, clock(session.end) to SleepCopy.WOKE, clockDuration(asleep) to SleepCopy.ASLEEP),
                             Modifier.padding(top = 20.dp),
                         )
+                        // Sleep performance and efficiency (WHOOP's): efficiency only when the stages say how long you slept.
+                        val performance = TabCopy.sleepPerformance(asleep, r?.sleepNeed ?: Recovery.SLEEP_NEED_MINUTES)
+                        val efficiency = state.asleepSeconds?.let { TabCopy.sleepEfficiency(it, session.start, session.end) }
+                        val more = listOfNotNull(performance?.let { "$it%" to TabCopy.PERFORMANCE }, efficiency?.let { "$it%" to TabCopy.EFFICIENCY })
+                        if (more.isNotEmpty()) DetailFigures(more, Modifier.padding(top = 14.dp))
                     }
                 }
                 item {

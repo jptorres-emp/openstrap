@@ -204,6 +204,19 @@ internal fun CheckInStrip(feeling: Int?, onCheckIn: (Int?) -> Unit, modifier: Mo
     }
 
 /**
+ * Yesterday's journal ([org.openstrap.app.data.JournalHabit]): its title and, on the right, what was ticked or that
+ * it's still to fill in. A strip that opens the journal's sheet, in the neutral light: a question, like the check-in.
+ */
+@Composable
+internal fun JournalStrip(journal: org.openstrap.app.data.JournalDay?, today: java.time.LocalDate, onClick: () -> Unit, modifier: Modifier = Modifier) =
+    TodayStrip(EdgeNeutral, EdgeKind.Value, modifier, onClick = onClick) {
+        StripLine(
+            org.openstrap.app.ui.dashboard.JournalCopy.title(journal?.date ?: today.minusDays(1), today),
+            org.openstrap.app.ui.dashboard.JournalCopy.summary(journal?.habits),
+        )
+    }
+
+/**
  * Start a workout (spec 4.2): heart light from below, the title with your usual sport under it ("Outdoor run, your
  * usual") and a white play button. One thing to do, so the whole strip is the button and has no caret; it opens Ready
  * with that sport.

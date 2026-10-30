@@ -203,6 +203,22 @@ fun drawDots(canvas: Canvas, layout: DotLayout, color: Color, left: Float = 0f, 
 /** [text] in [dot] dots at [density] as a bitmap just big enough for it. */
 fun renderDots(text: String, dot: DotSize, density: Float, color: Color = Color.White): Bitmap = renderDots(text, dot.dot.value, density, color)
 
+/**
+ * A widget's number ([NumberFont]): [text] in Barlow Condensed with tabular figures, in a bitmap [height] dp high at
+ * [density] and just wide enough, its figures sized so a comma's tail stays inside ([NumberFont.widgetEm]).
+ */
+fun renderNumber(text: String, height: Float, density: Float, typeface: android.graphics.Typeface?, color: Color = Color.White): Bitmap {
+    val em = NumberFont.widgetEm(height)
+    val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        this.typeface = typeface
+        textSize = em * density
+        fontFeatureSettings = "tnum"
+        this.color = color.toArgb()
+    }
+    val h = height * density
+    return renderToBitmap(paint.measureText(text), h) { it.drawText(text, 0f, h - NumberFont.DESCENT * em * density, paint) }
+}
+
 /** [text] in dots [dot] dp across (a [DotSize]'s, or one shrunk to fit) at [density], as a bitmap just big enough for it. */
 fun renderDots(text: String, dot: Float, density: Float, color: Color = Color.White): Bitmap {
     val layout = dotLayout(text, dot, density)

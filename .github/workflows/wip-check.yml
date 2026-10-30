@@ -34,7 +34,7 @@ jobs:
         run: |
           set -o pipefail
           ./gradlew :app:compileDebugKotlin 2>&1 | tee build.log
-          ./gradlew :app:testDebugUnitTest --continue 2>&1 | tee -a build.log
+          OPENSTRAP_SHOTS=1 ./gradlew :app:testDebugUnitTest --continue 2>&1 | tee -a build.log
 
       - name: Publish results
         if: always()
@@ -46,6 +46,8 @@ jobs:
           cp build.log out/ 2>/dev/null || true
           # Room's schemas as KSP wrote them, so a new database version's file can be committed from here.
           cp -r app/schemas out/ 2>/dev/null || true
+          # Screens as ScreenshotsTest drew them.
+          cp -r app/build/shots out/ 2>/dev/null || true
           grep -rl "<failure" --include="*.xml" . 2>/dev/null | grep test-results | xargs -r -I{} cp {} out/tests/ || true
           echo "$OUTCOME ${{ github.sha }}" > out/STATUS
           cd out

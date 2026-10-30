@@ -139,8 +139,12 @@ app uses one of these roles, through `GlowType`. Material typography is not used
   Light and edge titles at 15 Medium, which is the mismatch on Recovery (Energy beside Recharged).
 - The word after a number ("bpm", "asleep", "today") sits on the digits' baseline in Body at 72%.
 
-**Dots are for numbers.** The main number of a card, list values and live numbers are dot-matrix digits
-(`DotMatrixText`). Nothing else in the app is drawn from dots (2.7).
+**Numbers in Barlow Condensed.** The main number of a card, list values and live numbers are set in Barlow
+Condensed SemiBold with tabular figures (`DotMatrixText`, `NumberFont`; SIL OFL 1.1). They were dot-matrix digits
+until 2026-10-30; the size names below keep the dots' terms, and a number keeps the height its dot size gave the dots
+(seven rows and six gaps: 22 dp for list values up to 84 dp for the live workout), so every layout still fits, while
+the condensed figures take about a quarter less width. The size ignores the phone's font scale, as the dots did.
+Widgets draw the same face as a bitmap, its figures a little shorter so a comma's tail stays inside it.
 
 **Up and down.** A change has three parts, each with one carrier:
 
@@ -159,10 +163,10 @@ temperature) goes through `Metric.formatChange` on every surface. One format per
 steps with the thousands comma ("8,432", the dot font has the comma), breathing rate to one decimal ("14.6").
 Breathing disturbances are "an hour" on the Wide and the Small.
 
-**One dotted number per card.** A card has at most one number in dots, its answer. Times, ranges, totals and second
+**One number per card.** A card has at most one number in the number face ("in dots" below), its answer. Times, ranges, totals and second
 figures are text in Body or Secondary. A list has one per row. This holds everywhere: the sleep hero (5.2), the Sleep
-score detail, the weekly report (the Recovery average in dots, the rest of the week as text under it), the workout pages (6.3). Six dot sizes, the gap between dots 0.38 of the
-dot:
+score detail, the weekly report (the Recovery average in dots, the rest of the week as text under it), the workout pages (6.3). Six sizes, named by the dot they had, the gap between dots 0.38 of the
+dot (a number's height is 9.28 dots):
 
 | Dot | Where |
 |---|---|

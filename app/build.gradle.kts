@@ -74,6 +74,11 @@ android {
         compose = true
         buildConfig = true
     }
+
+    // Robolectric tests see the app's resources: the fonts, for ScreenshotsTest.
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+    }
 }
 
 ksp {
@@ -126,4 +131,8 @@ dependencies {
     // A real Room database in unit tests (CSV restore).
     testImplementation(libs.robolectric)
     testImplementation(libs.androidx.test.core)
+    // Screens drawn to PNGs under Robolectric's native graphics (ScreenshotsTest, wip check only).
+    testImplementation(platform(libs.compose.bom))
+    testImplementation(libs.compose.ui.test.junit4)
+    debugImplementation(libs.compose.ui.test.manifest)
 }

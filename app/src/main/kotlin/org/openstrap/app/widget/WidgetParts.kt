@@ -83,9 +83,8 @@ import org.openstrap.app.ui.glow.GlowStyle
 import org.openstrap.app.ui.glow.draw.drawGlow
 import org.openstrap.app.ui.glow.draw.renderToBitmap
 import org.openstrap.app.ui.glow.draw.WeekBarsLook
-import org.openstrap.app.ui.glow.draw.dotLayout
 import org.openstrap.app.ui.glow.draw.edgePaint
-import org.openstrap.app.ui.glow.draw.renderDots
+import org.openstrap.app.ui.glow.draw.renderNumber
 import org.openstrap.app.ui.glow.draw.renderEdge
 import java.time.Instant
 import java.time.LocalDate
@@ -498,14 +497,14 @@ internal fun WaitingContent(title: String, line: String?, f: WidgetFrame) {
     line?.let { Text(it, style = WidgetType.secondary, maxLines = 4) }
 }
 
-/** [text] in white dots [dot] dp across, read out as [description]: the widget's one dotted number (spec 3). */
+/** [text] in white at a dot of [dot] dp's size ([renderNumber]), read out as [description]: the widget's one number (spec 3). */
 @Composable
 internal fun DotNumber(text: String, dot: Float, density: Float, description: String?) {
-    val layout = dotLayout(text, dot, 1f)
+    val bitmap = renderNumber(text, WidgetDots.height(dot), density, org.openstrap.app.ui.glow.draw.NumberFont.typeface(LocalContext.current))
     Image(
-        ImageProvider(renderDots(text, dot, density)),
+        ImageProvider(bitmap),
         contentDescription = description,
-        modifier = GlanceModifier.size(layout.width.dp, layout.height.dp),
+        modifier = GlanceModifier.size((bitmap.width / density).dp, WidgetDots.height(dot).dp),
         contentScale = ContentScale.FillBounds,
     )
 }

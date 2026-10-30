@@ -24,17 +24,26 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import org.openstrap.app.ui.glow.draw.DotFont
-import org.openstrap.app.ui.glow.draw.dotLayout
-import org.openstrap.app.ui.glow.draw.drawDots
+import androidx.compose.runtime.remember
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.PlatformTextStyle
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
+import org.openstrap.app.ui.glow.draw.NumberFont
+import org.openstrap.app.ui.theme.BarlowCondensed
 
 /* ------------------------------------------------------------------------------------------------ */
-/* Dot-matrix numerals                                                                               */
+/* Numbers                                                                                           */
 /* ------------------------------------------------------------------------------------------------ */
 
 /**
- * A number drawn as round dots, like an LED matrix (the "3.3" on the reference cards), in one of the six [DotSize]s
- * for where it sits. Digits, `.`, `,`, `:`, `-`, `−`, `+` and `%` are supported.
+ * A card's number in Barlow Condensed SemiBold with tabular figures ([NumberFont]), in one of the six [DotSize]s for
+ * where it sits: its digits stand as high as the dot numerals did, and the box is exactly their height, so a number
+ * lines up by its digits (a comma's tail reaches just below). The size ignores the phone's font scale, as the dots
+ * did, so a number never outgrows its card.
  */
 @Composable
 fun DotMatrixText(
@@ -42,18 +51,26 @@ fun DotMatrixText(
     modifier: Modifier = Modifier,
     dot: DotSize,
     color: Color = Color.White,
-    /** Shrinks the dots below [dot] where the number must fit a space (the live workout's arc), 0..1. */
+    /** Shrinks the number below [dot] where it must fit a space (the live workout's arc), 0..1. */
     scale: Float = 1f,
 ) {
-    // The shared dot geometry ([dotLayout]), as a widget's number draws it.
-    val dotDp = (dot.dot * scale).value
-    val box = dotLayout(text, dotDp, 1f)
+    val density = LocalDensity.current
+    val height = NumberFont.height(dot.dot.value * scale)
+    val style = remember(height, density) {
+        TextStyle(
+            fontFamily = BarlowCondensed, fontWeight = FontWeight.SemiBold, fontFeatureSettings = "tnum",
+            fontSize = with(density) { NumberFont.em(height).dp.toSp() }, platformStyle = PlatformTextStyle(includeFontPadding = false),
+        )
+    }
+    val measurer = rememberTextMeasurer()
+    val layout = remember(text, style) { measurer.measure(text, style, softWrap = false, maxLines = 1) }
     Canvas(
         modifier
-            .size(box.width.dp, box.height.dp)
+            .size(with(density) { layout.size.width.toDp() }, height.dp)
             .semantics { contentDescription = text },
     ) {
-        drawDots(dotLayout(text, dotDp, density), color)
+        // The baseline on the box's foot, so the digits fill it.
+        drawText(layout, color = color, topLeft = Offset(0f, size.height - layout.firstBaseline))
     }
 }
 
@@ -93,8 +110,6 @@ fun GlowSwitch(checked: Boolean, onCheckedChange: (Boolean) -> Unit, modifier: M
     }
 }
 
-/** How wide a number of [digits] digits is in [dot] dots, so a space can be sized for the widest it will show. */
-internal fun dotNumberWidth(digits: Int, dot: DotSize): Dp {
-    val columns = digits * DotFont.DIGIT_COLUMNS + (digits - 1).coerceAtLeast(0)
-    return (dot.dot + dot.gap) * columns - dot.gap
-}
+/** How wide a number of [digits] digits is at [dot]'s size, so a space can be sized for the widest it will show. */
+internal fun dotNumberWidth(digits: Int, dot: DotSize): Dp =
+    NumberFont.width("0".repeat(digits), NumberFont.em(NumberFont.height(dot.dot.value))).dp

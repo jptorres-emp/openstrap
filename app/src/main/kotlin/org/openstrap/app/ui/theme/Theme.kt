@@ -106,6 +106,9 @@ val FunnelSans = FontFamily(
     variable(R.font.funnel_sans, 700),
 )
 
+/** Barlow Condensed SemiBold for the cards' numbers ([org.openstrap.app.ui.glow.DotMatrixText]). SIL OFL 1.1 (see licenses/). */
+val BarlowCondensed = FontFamily(Font(R.font.barlow_condensed_semibold, FontWeight.SemiBold))
+
 /** MuseoModerno for the OpenStrap wordmark only. SIL OFL 1.1 (see licenses/). */
 val MuseoModerno = FontFamily(variable(R.font.museo_moderno, 600))
 

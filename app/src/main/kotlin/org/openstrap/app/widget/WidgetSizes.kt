@@ -170,13 +170,15 @@ object WidgetText {
         if (width <= 0f) Int.MAX_VALUE else kotlin.math.ceil(width(text, sp, fontScale) / width).toInt().coerceAtLeast(1)
 }
 
-/** A dotted number's size for fitting (spec 3): the same sums as the dot geometry, in dp. */
+/**
+ * A widget's number's size for fitting (spec 3), in dp, at the size a dot of [dot] dp gave the dot numerals: the
+ * number's box keeps their height, and its width is the font's ([org.openstrap.app.ui.glow.draw.NumberFont]).
+ */
 object WidgetDots {
-    /** [text]'s dots at [dot] dp, wide and high. */
+    /** [text] at [dot]'s size, wide and high. */
     fun width(text: String, dot: Float): Float =
-        dot * ((1 + org.openstrap.app.ui.glow.DotSize.DOT_GAP) * org.openstrap.app.ui.glow.draw.DotFont.columns(text) - org.openstrap.app.ui.glow.DotSize.DOT_GAP)
-    fun height(dot: Float): Float =
-        dot * ((1 + org.openstrap.app.ui.glow.DotSize.DOT_GAP) * org.openstrap.app.ui.glow.draw.DotFont.ROWS - org.openstrap.app.ui.glow.DotSize.DOT_GAP)
+        org.openstrap.app.ui.glow.draw.NumberFont.let { it.width(text, it.widgetEm(it.height(dot))) }
+    fun height(dot: Float): Float = org.openstrap.app.ui.glow.draw.NumberFont.height(dot)
 
     /** The dot that fits [text] into [room] dp, at most [dot]. */
     fun fit(text: String, room: Float, dot: Float): Float = minOf(dot, room / width(text, 1f)).coerceAtLeast(0.5f)

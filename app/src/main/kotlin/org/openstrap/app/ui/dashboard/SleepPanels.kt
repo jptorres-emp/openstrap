@@ -176,7 +176,7 @@ internal fun SleepWindows(
         week.forEachIndexed { i, n ->
             val cx = slot * i + slot / 2
             val last = if (selected != null) n.date == selected else i == week.lastIndex
-            val name = n.date.dayOfWeek.getDisplayName(DayStyle.SHORT, Locale.getDefault()).take(2)
+            val name = tinyDayName(n.date.dayOfWeek)
             val label = measurer.measure(name, if (last) today else axis)
             drawText(label, topLeft = Offset(cx - label.size.width / 2, chartBottom + 3.dp.toPx()))
             val span = spans[i]

@@ -83,7 +83,7 @@ object TabCopy {
     fun recovery(score: Int, alert: Boolean, contributors: List<Recovery.Contributor>): String {
         val meaning = TodayCopy.recoveryMeaning(score, alert)
         val by = heldBackBy(contributors)?.takeIf { score < 85 && !alert } ?: return meaning
-        return tr("$meaning Mostly held back by ${factorPhrase(by)}.", "$meaning O que mais pesou foi ${factorPhrase(by)}.")
+        return tr("$meaning Mostly held back by ${factorPhrase(by)}.", "$meaning O que mais a travou foi ${factorPhrase(by)}.")
     }
 
     /** Before a Recovery has been worked out for the day. */
@@ -103,9 +103,16 @@ object TabCopy {
     /** Whether a contributor is far enough from usual to take its colour. */
     fun contributorOff(score: Int): Boolean = score < 70 || score >= 85
 
-    /** The [n] contributors that weigh most, heaviest first: the ones "What drove it" shows. */
-    fun topDrivers(contributors: List<Recovery.Contributor>, n: Int = 3): List<Recovery.Contributor> =
-        contributors.sortedByDescending { it.factor.weight }.take(n)
+    /**
+     * The [n] contributors that weigh most, heaviest first: the ones "What drove it" shows. The one holding Recovery
+     * back most ([heldBackBy]), which the hero's sentence names, takes the last row when it isn't among them, so the
+     * list never leaves out what the sentence points at.
+     */
+    fun topDrivers(contributors: List<Recovery.Contributor>, n: Int = 3): List<Recovery.Contributor> {
+        val top = contributors.sortedByDescending { it.factor.weight }.take(n)
+        val held = heldBackBy(contributors)?.takeIf { f -> top.size == n && top.none { it.factor == f } } ?: return top
+        return top.dropLast(1) + contributors.first { it.factor == held }
+    }
 
     /** A Charge amount with its sign: "+32", "−12" with a real minus sign (spec 2.3), or "0" with none. */
     fun chargeAmount(v: Float, sign: Int): String {

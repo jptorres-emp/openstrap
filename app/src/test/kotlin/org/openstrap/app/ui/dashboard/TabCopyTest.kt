@@ -73,6 +73,9 @@ class TabCopyTest {
         assertTrue(TabCopy.contributorOff(60))
         val all = listOf(c(Factor.BloodOxygen, 50), c(Factor.Sleep, 70), c(Factor.HrvBalance, 80), c(Factor.RestingHr, 90))
         assertEquals(listOf(Factor.HrvBalance, Factor.RestingHr, Factor.Sleep), TabCopy.topDrivers(all).map { it.factor })
+        // The one the sentence names as holding Recovery back is listed, in the last row, though it weighs less.
+        val owed = all + c(Factor.SleepBalance, 30)
+        assertEquals(listOf(Factor.HrvBalance, Factor.RestingHr, Factor.SleepBalance), TabCopy.topDrivers(owed).map { it.factor })
         assertEquals("HRV", TabCopy.factorName(Factor.HrvBalance))
     }
 

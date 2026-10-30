@@ -151,10 +151,13 @@ class StepsWidgetModelTest {
         val big = StepsLayout.small(m.stepsText, m.share, small.first, small.second, 1.3f)
         assertTrue(smallHeight(big, 1.3f) <= small.second)
         assertTrue(big.word || big.share)
-        // Five figures shrink the dots to the width rather than clip.
+        // Five figures fit the width, shrinking rather than clipping when they must.
         val many = StepsLayout.small("12,345", "Goal met", small.first, small.second, 1f)
-        assertTrue(many.dot < StepsLayout.SMALL_DOT)
+        assertTrue(many.dot <= StepsLayout.SMALL_DOT)
         assertTrue(StepsLayout.dotsWidth("12,345", many.dot) <= small.first + 1e-3f)
+        val wider = StepsLayout.small("123,456,789", "Goal met", small.first, small.second, 1f)
+        assertTrue(wider.dot < StepsLayout.SMALL_DOT)
+        assertTrue(StepsLayout.dotsWidth("123,456,789", wider.dot) <= small.first + 1e-3f)
     }
 
     @Test fun `the Wide's number row fits its width at both font sizes`() {

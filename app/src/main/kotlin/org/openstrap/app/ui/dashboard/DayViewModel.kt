@@ -274,7 +274,7 @@ class DayViewModel(
         }
         val weekly = combine(repo.restingHr(week.from, week.to), repo.heartRate(week), repo.activity(week), repo.hrv(week)) { resting, hr, act, hrv ->
             val days = (6 downTo 0).map { date.minusDays(it.toLong()) }
-            val label = { d: LocalDate -> d.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault()).take(2) }
+            val label = { d: LocalDate -> tinyDayName(d.dayOfWeek) }
             val restingTrend = days.map { d ->
                 val w = DayWindow.of(d, zone)
                 val stored = resting.firstOrNull { it.day in w.from..w.to }?.bpm

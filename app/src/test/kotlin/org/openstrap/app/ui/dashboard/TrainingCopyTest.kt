@@ -39,6 +39,8 @@ class TrainingCopyTest {
         assertEquals("Landed at 94, under its target.", TrainingCopy.plan(target, listOf(crossfit), 94.4f, finished = true))
         assertEquals("Landed at 150, within its target.", TrainingCopy.plan(target, listOf(crossfit), 150f, finished = true))
         assertEquals("No Load that day.", TrainingCopy.plan(target, listOf(crossfit), null, finished = true))
+        // Past the target already today: the plan is over, whatever the sports.
+        assertEquals("You're past today's target: keep the rest of the day light.", TrainingCopy.plan(target, listOf(crossfit), 400f, finished = false))
         assertEquals("soccer", TrainingCopy.sportInSentence(18))
         assertEquals("HIIT", TrainingCopy.sportInSentence(49))
     }

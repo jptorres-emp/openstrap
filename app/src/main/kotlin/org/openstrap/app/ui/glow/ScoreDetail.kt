@@ -194,7 +194,7 @@ private fun RecoveryDetail(
 /** A contributor's reading as the engine words it ("52 ms, -8% vs usual"). */
 private fun readable(detail: String): String? = detail.takeIf { it.isNotBlank() }
 
-private fun shortDay(d: LocalDate) = d.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault())
+private fun shortDay(d: LocalDate) = org.openstrap.app.ui.dashboard.shortDayName(d.dayOfWeek)
 
 /* ----------------------------------------------- Charge --------------------------------------------- */
 

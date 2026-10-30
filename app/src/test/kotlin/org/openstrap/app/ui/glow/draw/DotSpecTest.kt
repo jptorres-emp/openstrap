@@ -60,7 +60,8 @@ class DotSpecTest {
     }
 
     @Test fun `a number's width matches its widest digits`() {
-        val four = dotLayout("8888", DotSize.Detail, 1f)
-        assertEquals(four.width, org.openstrap.app.ui.glow.dotNumberWidth(4, DotSize.Detail).value, 1e-4f)
+        // The numbers' face ([NumberFont]): four tabular figures at the detail header's size.
+        val four = NumberFont.width("8888", NumberFont.em(NumberFont.height(DotSize.Detail.dot.value)))
+        assertEquals(four, org.openstrap.app.ui.glow.dotNumberWidth(4, DotSize.Detail).value, 1e-4f)
     }
 }

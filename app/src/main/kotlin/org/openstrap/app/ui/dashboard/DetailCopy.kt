@@ -218,7 +218,7 @@ internal object DetailCopy {
     fun strip(selected: LocalDate, today: LocalDate, withData: Set<LocalDate>, locale: Locale = Locale.getDefault()): List<StripDay> {
         val end = if (!selected.isAfter(today) && selected >= today.minusDays(6)) today else selected
         return (6 downTo 0).map { end.minusDays(it.toLong()) }.map { d ->
-            StripDay(d, d.dayOfWeek.getDisplayName(TextStyle.SHORT, locale), d in withData, d == selected)
+            StripDay(d, shortDayName(d.dayOfWeek, locale), d in withData, d == selected)
         }
     }
 }

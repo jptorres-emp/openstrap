@@ -48,6 +48,10 @@ object TrainingCopy {
                 Reports.Versus.Above -> tr("Landed at $shown, over its target.", "Ficou em $shown, acima do alvo.")
             }
         }
+        // Already past the target (a workout done): the plan is over for today.
+        if (load != null && Reports.versus(load, t.range) == Reports.Versus.Above) {
+            return tr("You're past today's target: keep the rest of the day light.", "Já passaste o alvo de hoje: o resto do dia, leve.")
+        }
         val first = sports.firstOrNull() ?: return when (t.kind.takeIf { t.scored } ?: Reports.DayKind.Usual) {
             Reports.DayKind.Recover -> tr("Keep it light today: a walk or mobility.", "Hoje, mantém leve: uma caminhada ou mobilidade.")
             Reports.DayKind.Moderate -> tr("Train, but lighter than usual.", "Treina, mas mais leve do que o habitual.")

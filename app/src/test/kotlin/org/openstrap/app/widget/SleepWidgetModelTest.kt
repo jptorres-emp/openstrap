@@ -216,14 +216,15 @@ class SleepWidgetModelTest {
         val real = SleepLayout.small(SleepWidgetModel.from(null, night(), false, false, zone), 167.6f - 40f, 201.1f - 40f, 1f)
         assertTrue(real.bar)
         assertEquals(listOf(SleepLayout.SmallLine("Last synced night"), SleepLayout.SmallLine("7 h 40 asleep")), real.lines)
-        // A score of 100 shrinks the dots to keep the word, and at 1.3 drops the word before the dots get too small.
+        // A score of 100 keeps the word, its figures no bigger than the Small's and the row within the width; at 1.3
+        // the word goes before the number gets smaller, or both still fit.
         val hundred = SleepLayout.small(m.copy(score = "100", word = "Great"), small.first, small.second, 1f)
         assertEquals("Great", hundred.row.word)
-        assertTrue(hundred.row.dot < SleepLayout.SMALL_DOT)
+        assertTrue(hundred.row.dot <= SleepLayout.SMALL_DOT)
         assertTrue(hundred.row.width("100", 1f, SleepLayout.SMALL_WORD_GAP_DP) <= small.first + 1e-3f)
         val big = SleepLayout.small(m.copy(score = "100", word = "Great"), small.first, small.second, 1.3f)
-        assertNull(big.row.word)
         assertEquals(SleepLayout.SMALL_DOT, big.row.dot, 0f)
+        assertTrue(big.row.word == null || big.row.width("100", 1.3f, SleepLayout.SMALL_WORD_GAP_DP) <= small.first + 1e-3f)
     }
 
     @Test fun `the Wide fits its width and height at every size, dropping the legend before clipping`() {

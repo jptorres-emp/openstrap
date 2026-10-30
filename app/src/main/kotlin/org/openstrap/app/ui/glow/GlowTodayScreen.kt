@@ -627,9 +627,17 @@ private fun EveningHero(ctx: TodayContext, lightAngle: Float?, bedtime: LocalTim
             GlowHeader(tr("Today", "Hoje"), trailing = TodayCopy.bedtimeIn(LocalTime.now(), bedtime), marker = ctx.upTo(ctx.newest), tag = ctx.partial)
             HeroSentence(TodayCopy.evening(sports, ctx.state.steps, goals.steps, ctx.loadStatus))
             Spacer(Modifier.height(24.dp))
-            // Figures it doesn't have yet are left out, never a lone dash in the hero.
-            val rest = listOfNotNull(ctx.rec?.load?.let { tr("Load ${Math.round(it)}", "Carga ${Math.round(it)}") }, ctx.charge?.let { tr("Energy $it left", "Energia $it restante") })
-            HeroNumber("%,d".format(ctx.state.steps), listOfNotNull(tr("steps", "passos"), rest.joinToString(", ").ifEmpty { null }))
+            // The day's Esforço (Strain, 0 to 21), as WHOOP ends a day; the Steps card under it has the steps. Without
+            // a Recovery yet, the steps. Figures it doesn't have are left out, never a lone dash in the hero.
+            val strain = ctx.rec?.strain
+            val steps = tr("${"%,d".format(ctx.state.steps)} steps", "${"%,d".format(ctx.state.steps)} passos")
+            val energy = ctx.charge?.let { tr("Energy $it left", "Energia $it restante") }
+            val (number, lines) = if (strain != null) {
+                "%.1f".format(strain) to listOf(tr("Strain today", "Esforço de hoje"), listOfNotNull(steps, energy).joinToString(", "))
+            } else {
+                "%,d".format(ctx.state.steps) to listOfNotNull(tr("steps", "passos"), energy)
+            }
+            HeroNumber(number, lines)
         }
     }
 }

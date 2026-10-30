@@ -100,7 +100,7 @@ internal fun ActivityScoreDetail(score: Score, ctx: ActivityDetailContext) {
 private val DAY: DateTimeFormatter get() = DateTimeFormatter.ofPattern("EEE d MMM")
 private val CLOCK = DateTimeFormatter.ofPattern("HH:mm")
 
-private fun shortDay(d: LocalDate) = d.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault())
+private fun shortDay(d: LocalDate) = org.openstrap.app.ui.dashboard.shortDayName(d.dayOfWeek)
 
 /** The seven days ending on [end], oldest first. */
 private fun weekOf(end: LocalDate): List<LocalDate> = (6 downTo 0).map { end.minusDays(it.toLong()) }

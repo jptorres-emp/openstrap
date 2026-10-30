@@ -67,7 +67,7 @@ import org.openstrap.app.l10n.tr
 
 private fun clock(epoch: Long) = Instant.ofEpochSecond(epoch).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("HH:mm"))
 
-private fun shortDay(d: LocalDate) = d.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault())
+private fun shortDay(d: LocalDate) = org.openstrap.app.ui.dashboard.shortDayName(d.dayOfWeek)
 
 // A getter, so the day and month names follow the language chosen (L10n).
 private val DAY: DateTimeFormatter get() = DateTimeFormatter.ofPattern("EEE d MMM")

@@ -6,6 +6,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.PlatformTextStyle
+import androidx.compose.ui.unit.TextUnit
+import org.openstrap.app.ui.theme.BarlowCondensed
 import org.openstrap.app.ui.theme.FunnelDisplay
 import org.openstrap.app.ui.theme.FunnelSans
 
@@ -62,6 +65,15 @@ object GlowType {
 
     @Deprecated("Titles are cardTitle, names and buttons body (spec 2.3). The pages still on it move in later steps.")
     val label = TextStyle(fontFamily = FunnelSans, fontWeight = FontWeight.Medium, fontSize = 15.sp, lineHeight = 20.sp)
+
+    /**
+     * A card's number ([DotMatrixText]): Barlow Condensed SemiBold with tabular figures, at the type size [em] that
+     * gives its digits their [DotSize]'s height ([org.openstrap.app.ui.glow.draw.NumberFont]).
+     */
+    fun number(em: TextUnit) = TextStyle(
+        fontFamily = BarlowCondensed, fontWeight = FontWeight.SemiBold, fontSize = em, fontFeatureSettings = "tnum",
+        platformStyle = PlatformTextStyle(includeFontPadding = false),
+    )
 }
 
 /**

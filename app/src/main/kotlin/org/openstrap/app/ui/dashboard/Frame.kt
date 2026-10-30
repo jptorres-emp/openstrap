@@ -102,8 +102,24 @@ fun dateLine(date: LocalDate, locale: Locale = Locale.getDefault()): String =
     date.format(DateTimeFormatter.ofPattern("EEE d MMM", locale))
 
 /** A neighbouring day's short name, peeking in beside the title: "Wed". */
-fun peekDay(date: LocalDate, locale: Locale = Locale.getDefault()): String =
-    date.dayOfWeek.getDisplayName(TextStyle.SHORT, locale)
+fun peekDay(date: LocalDate, locale: Locale = Locale.getDefault()): String = shortDayName(date.dayOfWeek, locale)
+
+/**
+ * A weekday's short name for a chart, a strip or a calendar: "Mon", and in Portuguese its first three letters without
+ * the abbreviation's dot ("seg", "sáb"): two letters can't tell segunda from sexta, or quarta from quinta.
+ */
+fun shortDayName(d: java.time.DayOfWeek, locale: Locale = Locale.getDefault()): String =
+    if (locale.language == "pt") PT_DAYS.getValue(d) else d.getDisplayName(TextStyle.SHORT, locale)
+
+/** [shortDayName] where only two letters fit in English ("Mo"); Portuguese keeps its three. */
+fun tinyDayName(d: java.time.DayOfWeek, locale: Locale = Locale.getDefault()): String =
+    if (locale.language == "pt") PT_DAYS.getValue(d) else d.getDisplayName(TextStyle.SHORT, locale).take(2)
+
+private val PT_DAYS = mapOf(
+    java.time.DayOfWeek.MONDAY to "seg", java.time.DayOfWeek.TUESDAY to "ter", java.time.DayOfWeek.WEDNESDAY to "qua",
+    java.time.DayOfWeek.THURSDAY to "qui", java.time.DayOfWeek.FRIDAY to "sex", java.time.DayOfWeek.SATURDAY to "sáb",
+    java.time.DayOfWeek.SUNDAY to "dom",
+)
 
 /**
  * What the strap chip in the header shows: a [dot] and, only when they matter, a few words ([text] may be empty).

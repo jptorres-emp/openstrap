@@ -90,7 +90,7 @@ fun DayCalendarSheet(selected: LocalDate, available: Set<LocalDate>, onPick: (Lo
             Row(Modifier.fillMaxWidth()) {
                 for (i in 0 until 7) {
                     SectionLabel(
-                        firstDay.plus(i.toLong()).getDisplayName(TextStyle.SHORT, Locale.getDefault()).take(2),
+                        tinyDayName(firstDay.plus(i.toLong())),
                         Modifier.weight(1f).wrapContentWidth(Alignment.CenterHorizontally),
                     )
                 }

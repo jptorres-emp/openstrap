@@ -580,7 +580,7 @@ fun GlowMetricDetailScreen(
     }
 }
 
-private fun shortDay(d: LocalDate) = d.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault())
+private fun shortDay(d: LocalDate) = org.openstrap.app.ui.dashboard.shortDayName(d.dayOfWeek)
 
 /**
  * The night's readings of [metric] while asleep as a line to scrub, from falling asleep to waking ([SleepCopy.nightSeries]);
@@ -727,7 +727,7 @@ private fun series(range: Range, stats: List<DayStat>, start: LocalDate, end: Lo
         byDate = inRange.associate { it.date to it.value }
     }
     val labels = when (range) {
-        Range.Week -> dates.map { it.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault()) }
+        Range.Week -> dates.map { org.openstrap.app.ui.dashboard.shortDayName(it.dayOfWeek) }
         Range.Month -> listOf(0f, 1 / 3f, 2 / 3f, 1f).map { dates[((dates.size - 1) * it).toInt()].format(DateTimeFormatter.ofPattern("d MMM")) }
         else -> listOf(0f, 1 / 3f, 2 / 3f, 1f).map { dates[((dates.size - 1) * it).toInt()].format(DateTimeFormatter.ofPattern("MMM")) }
     }

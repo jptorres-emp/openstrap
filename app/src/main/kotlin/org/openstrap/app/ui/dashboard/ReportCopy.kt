@@ -340,7 +340,7 @@ object ReportCopy {
         DayOfWeek.SUNDAY -> "Os domingos"
     }
 
-    fun shortDay(d: DayOfWeek, locale: Locale = Locale.getDefault()): String = d.getDisplayName(TextStyle.SHORT, locale)
+    fun shortDay(d: DayOfWeek, locale: Locale = Locale.getDefault()): String = shortDayName(d, locale)
 
     /* ------------------------------------------------- Sports ---------------------------------------------- */
 

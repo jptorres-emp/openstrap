@@ -27,13 +27,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.remember
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.PlatformTextStyle
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import org.openstrap.app.ui.glow.draw.NumberFont
-import org.openstrap.app.ui.theme.BarlowCondensed
 
 /* ------------------------------------------------------------------------------------------------ */
 /* Numbers                                                                                           */
@@ -56,12 +52,7 @@ fun DotMatrixText(
 ) {
     val density = LocalDensity.current
     val height = NumberFont.height(dot.dot.value * scale)
-    val style = remember(height, density) {
-        TextStyle(
-            fontFamily = BarlowCondensed, fontWeight = FontWeight.SemiBold, fontFeatureSettings = "tnum",
-            fontSize = with(density) { NumberFont.em(height).dp.toSp() }, platformStyle = PlatformTextStyle(includeFontPadding = false),
-        )
-    }
+    val style = remember(height, density) { GlowType.number(with(density) { NumberFont.em(height).dp.toSp() }) }
     val measurer = rememberTextMeasurer()
     val layout = remember(text, style) { measurer.measure(text, style, softWrap = false, maxLines = 1) }
     Canvas(

@@ -32,7 +32,9 @@ enum class Metric(
     /** A change from your normal, signed with a true minus (spec 2.3): "+0.2", "−0.3"; no sign is lost to rounding. */
     fun formatChange(d: Float): String {
         val shown = format(kotlin.math.abs(d))
-        return (if (d < 0 && shown.any { it in '1'..'9' }) "\u2212" else "+") + shown
+        // No change reads as it is, "0.0", never "+0.0" (spec 2.3).
+        if (shown.none { it in '1'..'9' }) return shown
+        return (if (d < 0) "\u2212" else "+") + shown
     }
 }
 

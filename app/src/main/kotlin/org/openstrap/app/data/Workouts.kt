@@ -69,6 +69,36 @@ object Workouts {
     const val SUBTYPE_AUTO_DETECTED = 1
     /** Older auto-detected workouts arrive on a first sync of the strap's backlog and get no notification. */
     const val AUTO_DETECT_NOTIFY_WINDOW_S = 24 * 3600L
+    /** Summary `Type.subtype` for a workout started in a phone app (Zepp's) that the strap mirrored (codemap 05 §8). */
+    const val SUBTYPE_MIRRORED = 6
+    /** How far a mirrored workout's heart rate must run past its summary before the summary is set aside. */
+    const val MIRRORED_EXTRA_S = 10 * 60L
+
+    /**
+     * A mirrored workout ([SUBTYPE_MIRRORED]) whose summary stops short of its own heart rate track: the strap sums up
+     * a workout started in Zepp's app over its first minutes, while it records the heart rate to the end (seen on a
+     * 53-minute session summed up as 3 min 19 s, load 24). [w] then ends where the track does, less the recovery
+     * tail, and takes its heart rate figures and load from the track: EPOC peak on the strap's scale
+     * ([WorkoutEffect.epoc]) and the aerobic training effect at the activity class Zepp's app uses without history. Null when the summary
+     * covers the track, or for any other workout.
+     */
+    fun wholeTrack(w: Workout, hr: List<org.openstrap.app.data.db.WorkoutHeartRate>, restingHr: Float, maxHr: Float): Workout? {
+        if (w.subtype != SUBTYPE_MIRRORED) return null
+        val end = (hr.maxOfOrNull { it.timestamp } ?: return null) - RECOVERY_TAIL_S
+        if (end - w.end < MIRRORED_EXTRA_S) return null
+        val inside = hr.filter { it.timestamp in w.start..end && it.bpm in 30..230 }
+        if (inside.size < 60) return null
+        val epochs = WorkoutEffect.epochs(inside.map { it.timestamp to it.bpm }, w.start, end)
+        if (epochs.isEmpty()) return null
+        val epoc = WorkoutEffect.epoc(epochs, restingHr, maxHr)
+        val bpm = inside.map { it.bpm }
+        return w.copy(
+            end = end, exerciseSeconds = (end - w.start).toInt(),
+            averageHeartRate = Math.round(bpm.average()).toInt(), maxHeartRate = bpm.max(), minHeartRate = bpm.min(),
+            trainingLoad = Math.round(epoc), aerobicTrainingEffect = WorkoutEffect.aerobicTe(epoc, epochs.size, WorkoutEffect.activityClass(0f)),
+            anaerobicTrainingEffect = null, calories = null,
+        )
+    }
 
     /**
      * Whether a strap workout just stored gets Zepp's "detected" notification (codemap 05 §8): only one the strap

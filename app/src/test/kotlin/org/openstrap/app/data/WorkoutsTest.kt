@@ -37,6 +37,24 @@ class WorkoutsTest {
     }
 
     @Test
+    fun aMirroredPhoneWorkoutTakesItsWholeTrack() {
+        // Started in Zepp's app: the summary covers 199 s at 132 bpm (load 24), the strap's track runs 53 minutes, the
+        // last ten of them hard.
+        val mirrored = Workout(start, start + 199, 52, 199, 33, 132, 159, 79, 2.4f, 2.4f, 24, null, null, subtype = Workouts.SUBTYPE_MIRRORED)
+        val track = (0 until 3180).map { t -> WorkoutHeartRate(start, start + t, if (t < 2580) 130 else 178) }
+        val fixed = Workouts.wholeTrack(mirrored, track, restingHr = 58f, maxHr = 185f)!!
+        assertEquals(start + 3180 - 1 - Workouts.RECOVERY_TAIL_S, fixed.end)
+        assertEquals((fixed.end - start).toInt(), fixed.exerciseSeconds)
+        assertEquals(178, fixed.maxHeartRate)
+        org.junit.Assert.assertTrue("load ${fixed.trainingLoad}", fixed.trainingLoad!! > 24)
+        org.junit.Assert.assertTrue((fixed.aerobicTrainingEffect ?: 0f) > 2.4f)
+        assertNull(fixed.anaerobicTrainingEffect)
+        // A workout of the strap's own, or a mirrored one whose summary covers its track, stays as it is.
+        assertNull(Workouts.wholeTrack(mirrored.copy(subtype = 0), track, 58f, 185f))
+        assertNull(Workouts.wholeTrack(mirrored.copy(end = start + 3000 - Workouts.RECOVERY_TAIL_S), track, 58f, 185f))
+    }
+
+    @Test
     fun noHeartRateFallsBackToExerciseTime() {
         val a = Workouts.analyse(workout(600), emptyList(), emptyList(), 190)
         assertEquals(start + 600, a.end)

@@ -9,6 +9,7 @@ import kotlinx.coroutines.launch
 import org.openstrap.app.ble.GattClient
 import org.openstrap.app.ble.StrapUuids
 import org.openstrap.app.data.Workouts
+import org.openstrap.app.data.WorkoutEffectEngine
 import org.openstrap.app.data.db.ActivityExtendedMinute
 import org.openstrap.app.data.db.ActivityMinute
 import org.openstrap.app.data.db.DailyMaxHr
@@ -233,6 +234,25 @@ class HistorySync(
             settings.setLastSync(EXTENDED_BACKFILL_KEY, now)
             log("history: extended records refetched from ${Instant.ofEpochSecond(from)} to fill missing steps")
         }
+        // Once: mirrored phone workouts stored before their summary was set aside take their whole track.
+        if (settings.lastSync(MIRRORED_REPAIR_KEY) == null) {
+            dao.workouts().first().filter { it.subtype == Workouts.SUBTYPE_MIRRORED }.forEach { wholeTrack(it) }
+            settings.setLastSync(MIRRORED_REPAIR_KEY, now)
+        }
+        // Once: earlier builds' first sync looked back only 2 days, so the days between first wearing the strap and
+        // pairing OpenStrap were never fetched. Go back a month for every type the strap keeps longer than that (sleep,
+        // heart rate, HRV, stress, the extended records' steps...): it sends what it still has, and what's here already
+        // is replaced by the same. Per-minute activity (kept about 43 hours) and workouts (already a month) stay.
+        if (settings.lastSync(HISTORY_BACKFILL_KEY) == null) {
+            val from = now - FIRST_SYNC_LOOKBACK
+            val moved = HistoryDataType.entries.filter { it != HistoryDataType.ACTIVITY && it !in WORKOUT_TYPES }.count { type ->
+                val key = "gdsp_${type.code}"
+                val cursor = settings.lastSync(key)
+                (cursor != null && cursor > from).also { if (it) settings.setLastSync(key, from) }
+            }
+            settings.setLastSync(HISTORY_BACKFILL_KEY, now)
+            log("history: $moved types refetched from ${Instant.ofEpochSecond(from)} to fill the days before pairing")
+        }
         // Earlier builds stored the whole mode byte; the mode is its low nibble.
         val modes = dao.fixActivityModeNibble()
         if (modes > 0) log("history: fixed the mode of $modes activity rows")
@@ -264,7 +284,9 @@ class HistorySync(
 
     private suspend fun syncType(spec: HistoryTypeSpec) {
         val key = "gdsp_${spec.code}"
-        val lookback = if (spec.type in WORKOUT_TYPES) WORKOUT_LOOKBACK else DEFAULT_LOOKBACK
+        // A type never synced starts a month back: the strap sends what it still holds, so a new strap's first days are
+        // there from the start (per-minute activity it keeps about 43 hours, the rest days to months).
+        val lookback = if (spec.type in WORKOUT_TYPES) WORKOUT_LOOKBACK else FIRST_SYNC_LOOKBACK
         var cursor = settings.lastSync(key) ?: (System.currentTimeMillis() / 1000 - lookback)
         // The strap keeps updating a day's max exercise HR, so Zepp re-fetches it from the start of the day on every
         // sync (y4t.java:62-69).
@@ -331,6 +353,15 @@ class HistorySync(
     }
 
     /** Saves the strap's latest readiness score; it keeps no history, so this runs every sync. */
+    /** Replaces [w] with its whole-track version when it's a mirrored phone workout whose summary stops short. */
+    private suspend fun wholeTrack(w: Workout) {
+        runCatching {
+            val fixed = WorkoutEffectEngine(dao).wholeTrack(w, settings.profile.first(), zone) ?: return
+            dao.insertWorkouts(listOf(fixed))
+            log("history workout ${Instant.ofEpochSecond(w.start)}: mirrored from a phone, summary ${w.exerciseSeconds} s, track ${fixed.exerciseSeconds} s, load ${w.trainingLoad} -> ${fixed.trainingLoad}")
+        }.onFailure { log("history workout ${Instant.ofEpochSecond(w.start)}: whole track failed: $it") }
+    }
+
     private suspend fun syncReadiness() {
         val since = System.currentTimeMillis() / 1000 - DEFAULT_LOOKBACK
         val reply = session.request(Endpoints.READINESS, ReadinessCodec.scoreRequest(since), 8_000) { it.isNotEmpty() && it.u8(0) == ReadinessCodec.SCORE + 1 }
@@ -473,7 +504,11 @@ class HistorySync(
         if (breath.isNotEmpty()) dao.insertBreathRate(breath)
         if (pai.isNotEmpty()) dao.insertPai(pai)
         if (sdnn.isNotEmpty()) dao.insertHrvSdnn(sdnn)
-        if (workouts.isNotEmpty()) dao.insertWorkouts(workouts)
+        if (workouts.isNotEmpty()) {
+            dao.insertWorkouts(workouts)
+            // A workout started in Zepp's app is summed up over its first minutes only: take it from its whole track.
+            for (w in workouts) wholeTrack(w)
+        }
         if (effects.isNotEmpty()) dao.insertSportEffects(effects)
         if (sleepSpo2.isNotEmpty()) dao.insertSleepSpo2(sleepSpo2)
         if (osaEvents.isNotEmpty()) dao.insertOsaEvents(osaEvents)
@@ -593,10 +628,15 @@ class HistorySync(
     companion object {
         private val HISTORY_CONTROL = java.util.UUID.fromString("00000004-0000-3512-2118-0009af100700")
         private val HISTORY_DATA = java.util.UUID.fromString("00000005-0000-3512-2118-0009af100700")
+        /** Zepp's start for a type with no cursor (02 §1.6); here it resets a broken cursor and bounds readiness. */
         private const val DEFAULT_LOOKBACK = 2L * 24 * 3600
         /** How far back the one-time extended-records fetch goes: a month of steps, inside the strap's 60 days. */
         private const val EXTENDED_BACKFILL_DAYS = 30L
         private const val EXTENDED_BACKFILL_KEY = "backfill_extended_v1"
+        /** How far back a type's first sync goes, and the one-time refetch for installs whose first sync went back 2 days. */
+        private const val FIRST_SYNC_LOOKBACK = 30L * 24 * 3600
+        private const val HISTORY_BACKFILL_KEY = "backfill_history_v1"
+        private const val MIRRORED_REPAIR_KEY = "repair_mirrored_v1"
         /** Workouts are few and worth having: on first sync, take whatever the strap still holds. */
         private const val WORKOUT_LOOKBACK = 30L * 24 * 3600
         private val WORKOUT_TYPES = setOf(HistoryDataType.SPORT_SUMMARY, HistoryDataType.SPORT_DETAIL, HistoryDataType.SPORT_EFFECT)

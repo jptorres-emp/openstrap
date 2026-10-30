@@ -50,6 +50,21 @@ class WorkoutEffectEngine(private val dao: HealthDao) {
         )
     }
 
+    /**
+     * [w] taken from its whole heart rate track when it's a mirrored phone workout whose summary stops short
+     * ([Workouts.wholeTrack]), with resting and max heart rate as a phone workout gets them; null when it needs none.
+     */
+    suspend fun wholeTrack(w: org.openstrap.app.data.db.Workout, profile: UserProfile, zone: ZoneId = ZoneId.systemDefault()): org.openstrap.app.data.db.Workout? {
+        if (w.subtype != Workouts.SUBTYPE_MIRRORED) return null
+        val hr = dao.workoutHeartRateOnce(w.start)
+        if (hr.isEmpty()) return null
+        val maxHr = RecoveryEngine(dao).maxHeartRate(profile, Instant.ofEpochSecond(w.start).atZone(zone).toLocalDate(), zone)
+        val restingHr = Recovery.daytimeRestingHr(
+            dao.restingHrOnce(w.start - Recovery.RHR_DAYS * DAY, w.start).associate { it.day to it.bpm.toFloat() }, emptyMap(), dayStart(w.start, zone),
+        ) ?: DEFAULT_RESTING_HR
+        return Workouts.wholeTrack(w, hr, restingHr, maxHr)
+    }
+
     /** Works out and saves the figures of a finished workout that has none yet (one from before version 14). */
     suspend fun backfill(w: AppWorkout, profile: UserProfile) {
         if (w.end == null || w.epoc != null) return

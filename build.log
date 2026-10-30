@@ -1,0 +1,129 @@
+Starting a Gradle Daemon (subsequent builds will be faster)
+Calculating task graph as no cached configuration is available for tasks: :app:compileDebugKotlin
+> Task :protocol:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :protocol:processResources NO-SOURCE
+> Task :app:generateDebugBuildConfig
+> Task :app:generateDebugResources
+> Task :app:packageDebugResources
+> Task :app:processDebugNavigationResources
+> Task :app:parseDebugLocalResources
+> Task :app:generateDebugRFile
+
+> Task :protocol:compileKotlin
+w: file:///home/runner/work/openstrap/openstrap/protocol/src/main/kotlin/org/openstrap/protocol/ChannelSession.kt:183:34 Unnecessary non-null assertion (!!) on a non-null receiver of type 'ChannelCipher'.
+w: file:///home/runner/work/openstrap/openstrap/protocol/src/main/kotlin/org/openstrap/protocol/history/GdspClient.kt:183:45 Expression is unused.
+w: file:///home/runner/work/openstrap/openstrap/protocol/src/main/kotlin/org/openstrap/protocol/services/Settings.kt:233:62 Expression is unused.
+
+> Task :protocol:compileJava NO-SOURCE
+> Task :protocol:classes UP-TO-DATE
+> Task :protocol:jar
+> Task :app:kspDebugKotlin
+> Task :app:compileDebugKotlin
+w: file:///home/runner/work/openstrap/openstrap/app/src/main/kotlin/org/openstrap/app/data/Recovery.kt:405:31 Unnecessary non-null assertion (!!) on a non-null receiver of type 'Float'.
+w: file:///home/runner/work/openstrap/openstrap/app/src/main/kotlin/org/openstrap/app/device/PhoneAlerts.kt:145:33 'class PhoneStateListener : Any' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/openstrap/openstrap/app/src/main/kotlin/org/openstrap/app/ui/glow/AllMetricsScreen.kt:195:100 'val label: TextStyle' is deprecated. Titles are cardTitle, names and buttons body (spec 2.3). The pages still on it move in later steps.
+w: file:///home/runner/work/openstrap/openstrap/app/src/main/kotlin/org/openstrap/app/ui/glow/GlowActivityScreen.kt:456:76 'val label: TextStyle' is deprecated. Titles are cardTitle, names and buttons body (spec 2.3). The pages still on it move in later steps.
+w: file:///home/runner/work/openstrap/openstrap/app/src/main/kotlin/org/openstrap/app/ui/glow/GlowRecoveryScreen.kt:308:40 Unnecessary non-null assertion (!!) on a non-null receiver of type 'Recovery.ChargeDay'.
+w: file:///home/runner/work/openstrap/openstrap/app/src/main/kotlin/org/openstrap/app/ui/glow/GlowTodayScreen.kt:503:71 Unnecessary safe call on a non-null receiver of type 'Recovery.ChargeDay'.
+w: file:///home/runner/work/openstrap/openstrap/app/src/main/kotlin/org/openstrap/app/ui/glow/GlowTodayScreen.kt:595:68 Redundant call of conversion method.
+w: file:///home/runner/work/openstrap/openstrap/app/src/main/kotlin/org/openstrap/app/ui/glow/GlowWorkoutMode.kt:1246:92 Unnecessary non-null assertion (!!) on a non-null receiver of type 'Long'.
+w: file:///home/runner/work/openstrap/openstrap/app/src/main/kotlin/org/openstrap/app/ui/glow/ScoreDetail.kt:235:49 Unnecessary non-null assertion (!!) on a non-null receiver of type 'Long'.
+w: file:///home/runner/work/openstrap/openstrap/app/src/main/kotlin/org/openstrap/app/ui/glow/ScoreDetail.kt:235:76 Unnecessary non-null assertion (!!) on a non-null receiver of type 'Long'.
+w: file:///home/runner/work/openstrap/openstrap/app/src/main/kotlin/org/openstrap/app/ui/glow/TabParts.kt:148:58 'val label: TextStyle' is deprecated. Titles are cardTitle, names and buttons body (spec 2.3). The pages still on it move in later steps.
+w: file:///home/runner/work/openstrap/openstrap/app/src/main/kotlin/org/openstrap/app/ui/workout/SummaryCopy.kt:101:132 Unnecessary non-null assertion (!!) on a non-null receiver of type 'Float'.
+w: file:///home/runner/work/openstrap/openstrap/app/src/main/kotlin/org/openstrap/app/ui/workout/SummaryCopy.kt:102:133 Unnecessary non-null assertion (!!) on a non-null receiver of type 'Float'.
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/build-1793355671905.json
+
+[Incubating] Problems report is available at: file:///home/runner/work/openstrap/openstrap/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.8.1/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 1m 42s
+10 actionable tasks: 10 executed
+Configuration cache entry stored.
+Calculating task graph as no cached configuration is available for tasks: :app:testDebugUnitTest
+> Task :protocol:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :app:generateDebugAssets UP-TO-DATE
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugUnitTestBuild UP-TO-DATE
+> Task :protocol:processResources NO-SOURCE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:generateDebugBuildConfig UP-TO-DATE
+> Task :app:generateDebugResources UP-TO-DATE
+> Task :protocol:compileKotlin UP-TO-DATE
+> Task :protocol:compileJava NO-SOURCE
+> Task :protocol:classes UP-TO-DATE
+> Task :protocol:jar UP-TO-DATE
+> Task :app:processDebugNavigationResources UP-TO-DATE
+> Task :app:packageDebugResources UP-TO-DATE
+> Task :app:parseDebugLocalResources UP-TO-DATE
+> Task :app:generateDebugRFile UP-TO-DATE
+> Task :app:mapDebugSourceSetPaths
+> Task :app:kspDebugKotlin UP-TO-DATE
+> Task :app:compileDebugKotlin UP-TO-DATE
+> Task :app:compileDebugNavigationResources
+> Task :app:createDebugCompatibleScreenManifests
+> Task :app:extractDeepLinksDebug
+> Task :app:javaPreCompileDebug
+> Task :app:checkDebugAarMetadata
+> Task :app:javaPreCompileDebugUnitTest
+> Task :app:mergeDebugAssets
+> Task :app:processDebugJavaRes
+> Task :app:processDebugMainManifest
+> Task :app:processDebugManifest
+> Task :app:processDebugManifestForPackage
+
+> Task :app:mergeDebugUnitTestManifest
+/home/runner/work/openstrap/openstrap/app/src/debug/AndroidManifest.xml Warning:
+	meta-data#androidx.work.WorkManagerInitializer was tagged at AndroidManifest.xml:0 to remove other declarations but no other declaration present
+
+> Task :app:processDebugUnitTestManifest
+> Task :app:mergeDebugResources
+> Task :app:compileDebugJavaWithJavac
+> Task :app:processDebugResources
+> Task :app:packageDebugUnitTestForUnitTest
+> Task :app:generateDebugUnitTestConfig
+> Task :app:bundleDebugClassesToRuntimeJar
+> Task :app:bundleDebugClassesToCompileJar
+> Task :app:kspDebugUnitTestKotlin
+
+> Task :app:compileDebugUnitTestKotlin
+w: file:///home/runner/work/openstrap/openstrap/app/src/test/kotlin/org/openstrap/app/data/RecoveryTest.kt:436:88 Unnecessary non-null assertion (!!) on a non-null receiver of type 'Float'.
+w: file:///home/runner/work/openstrap/openstrap/app/src/test/kotlin/org/openstrap/app/data/ReportsTest.kt:235:56 Unnecessary non-null assertion (!!) on a non-null receiver of type 'Float'.
+w: file:///home/runner/work/openstrap/openstrap/app/src/test/kotlin/org/openstrap/app/data/WorkoutEffectTest.kt:44:77 Unnecessary non-null assertion (!!) on a non-null receiver of type 'Float'.
+w: file:///home/runner/work/openstrap/openstrap/app/src/test/kotlin/org/openstrap/app/device/WearEventLogTest.kt:31:9 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///home/runner/work/openstrap/openstrap/app/src/test/kotlin/org/openstrap/app/device/WearEventLogTest.kt:44:9 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///home/runner/work/openstrap/openstrap/app/src/test/kotlin/org/openstrap/app/device/WearEventLogTest.kt:55:9 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///home/runner/work/openstrap/openstrap/app/src/test/kotlin/org/openstrap/app/ui/ScreenshotsTest.kt:76:29 'fun createComposeRule(effectContext: CoroutineContext = ...): ComposeContentTestRule' is deprecated. Use `androidx.compose.ui.test.junit4.v2.createComposeRule` instead. The v2 APIs use StandardTestDispatcher instead of UnconfinedTestDispatcher, which aligns with standard coroutine behavior by queuing tasks rather than executing them immediately. Tests relying on immediate execution may require explicit synchronization. Please refer to the migration guide for more details.
+w: file:///home/runner/work/openstrap/openstrap/app/src/test/kotlin/org/openstrap/app/ui/dashboard/SleepWeekTest.kt:41:51 Unnecessary non-null assertion (!!) on a non-null receiver of type 'SleepHistory.UsualTimes'.
+w: file:///home/runner/work/openstrap/openstrap/app/src/test/kotlin/org/openstrap/app/ui/glow/draw/LightSpecTest.kt:30:15 Name contains character(s) that can cause problems on Windows: %
+w: file:///home/runner/work/openstrap/openstrap/app/src/test/kotlin/org/openstrap/app/ui/glow/draw/LightSpecTest.kt:52:15 Name contains character(s) that can cause problems on Windows: %
+w: file:///home/runner/work/openstrap/openstrap/app/src/test/kotlin/org/openstrap/app/ui/workout/WorkoutListZonesTest.kt:41:21 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///home/runner/work/openstrap/openstrap/app/src/test/kotlin/org/openstrap/app/ui/workout/WorkoutListZonesTest.kt:41:29 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///home/runner/work/openstrap/openstrap/app/src/test/kotlin/org/openstrap/app/ui/workout/WorkoutListZonesTest.kt:45:53 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///home/runner/work/openstrap/openstrap/app/src/test/kotlin/org/openstrap/app/widget/MomentWidgetModelTest.kt:609:31 Unnecessary non-null assertion (!!) on a non-null receiver of type 'TopRow'.
+w: file:///home/runner/work/openstrap/openstrap/app/src/test/kotlin/org/openstrap/app/widget/StartWidgetModelTest.kt:316:40 Unnecessary non-null assertion (!!) on a non-null receiver of type 'StartLayout.Tiles'.
+w: file:///home/runner/work/openstrap/openstrap/app/src/test/kotlin/org/openstrap/app/widget/WidgetStatusLineTest.kt:257:46 Unnecessary non-null assertion (!!) on a non-null receiver of type 'TopRow'.
+
+> Task :app:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :app:processDebugUnitTestJavaRes
+> Task :app:testDebugUnitTest
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/build-1793355771127.json
+
+[Incubating] Problems report is available at: file:///home/runner/work/openstrap/openstrap/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.8.1/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 1m 8s
+35 actionable tasks: 25 executed, 10 up-to-date
+Configuration cache entry stored.

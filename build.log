@@ -1,0 +1,163 @@
+Starting a Gradle Daemon (subsequent builds will be faster)
+Calculating task graph as no cached configuration is available for tasks: :protocol:test :app:testDebugUnitTest
+> Task :app:preBuild UP-TO-DATE
+> Task :protocol:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :protocol:processResources NO-SOURCE
+> Task :app:generateDebugBuildConfig FROM-CACHE
+> Task :protocol:processTestResources
+> Task :app:generateDebugResources FROM-CACHE
+> Task :app:javaPreCompileDebug FROM-CACHE
+> Task :app:packageDebugResources FROM-CACHE
+> Task :app:mapDebugSourceSetPaths
+> Task :protocol:compileKotlin FROM-CACHE
+> Task :protocol:compileJava NO-SOURCE
+> Task :protocol:classes UP-TO-DATE
+> Task :protocol:jar
+> Task :protocol:compileTestKotlin FROM-CACHE
+> Task :protocol:compileTestJava NO-SOURCE
+> Task :protocol:testClasses
+> Task :protocol:test FROM-CACHE
+> Task :app:createDebugCompatibleScreenManifests
+> Task :app:extractDeepLinksDebug FROM-CACHE
+> Task :app:processDebugNavigationResources FROM-CACHE
+> Task :app:mergeDebugResources FROM-CACHE
+> Task :app:compileDebugNavigationResources FROM-CACHE
+> Task :app:preDebugUnitTestBuild UP-TO-DATE
+> Task :app:javaPreCompileDebugUnitTest FROM-CACHE
+> Task :app:generateDebugAssets UP-TO-DATE
+> Task :app:checkDebugAarMetadata
+> Task :app:processDebugMainManifest FROM-CACHE
+> Task :app:mergeDebugAssets
+> Task :app:processDebugManifest FROM-CACHE
+> Task :app:processDebugManifestForPackage FROM-CACHE
+> Task :app:parseDebugLocalResources FROM-CACHE
+> Task :app:generateDebugRFile FROM-CACHE
+
+> Task :app:mergeDebugUnitTestManifest
+/home/runner/work/openstrap/openstrap/app/src/debug/AndroidManifest.xml Warning:
+	meta-data#androidx.work.WorkManagerInitializer was tagged at AndroidManifest.xml:0 to remove other declarations but no other declaration present
+
+> Task :app:processDebugUnitTestManifest
+> Task :app:processDebugResources FROM-CACHE
+> Task :app:kspDebugKotlin FROM-CACHE
+> Task :app:packageDebugUnitTestForUnitTest
+> Task :app:generateDebugUnitTestConfig
+> Task :app:compileDebugKotlin FROM-CACHE
+> Task :app:processDebugJavaRes
+> Task :app:compileDebugJavaWithJavac FROM-CACHE
+> Task :app:bundleDebugClassesToCompileJar
+> Task :app:bundleDebugClassesToRuntimeJar
+> Task :app:kspDebugUnitTestKotlin FROM-CACHE
+> Task :app:compileDebugUnitTestKotlin FROM-CACHE
+> Task :app:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :app:processDebugUnitTestJavaRes
+> Task :app:testDebugUnitTest FROM-CACHE
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/build-1793432008350.json
+
+[Incubating] Problems report is available at: file:///home/runner/work/openstrap/openstrap/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.8.1/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 24s
+38 actionable tasks: 14 executed, 24 from cache
+Configuration cache entry stored.
+Calculating task graph as no cached configuration is available for tasks: :app:assembleRelease
+> Task :app:preBuild UP-TO-DATE
+> Task :protocol:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :app:preReleaseBuild UP-TO-DATE
+> Task :protocol:processResources NO-SOURCE
+> Task :protocol:compileKotlin UP-TO-DATE
+> Task :app:generateReleaseBuildConfig
+> Task :protocol:compileJava NO-SOURCE
+> Task :protocol:classes UP-TO-DATE
+> Task :protocol:jar UP-TO-DATE
+> Task :app:generateReleaseResources FROM-CACHE
+> Task :app:mergeReleaseJniLibFolders
+> Task :app:processReleaseNavigationResources FROM-CACHE
+> Task :app:javaPreCompileRelease FROM-CACHE
+> Task :app:packageReleaseResources
+> Task :app:parseReleaseLocalResources FROM-CACHE
+> Task :app:generateReleaseRFile FROM-CACHE
+> Task :app:mergeReleaseArtProfile
+> Task :app:checkReleaseAarMetadata
+> Task :app:mapReleaseSourceSetPaths
+> Task :app:compileReleaseNavigationResources FROM-CACHE
+> Task :app:checkReleaseDuplicateClasses
+> Task :app:createReleaseCompatibleScreenManifests
+> Task :app:extractDeepLinksRelease FROM-CACHE
+> Task :app:mergeReleaseNativeLibs
+> Task :app:processReleaseMainManifest
+> Task :app:processReleaseManifest
+> Task :app:processReleaseManifestForPackage
+> Task :app:extractProguardFiles
+
+> Task :app:stripReleaseDebugSymbols
+Unable to strip the following libraries, packaging them as they are: libandroidx.graphics.path.so, libdatastore_shared_counter.so, libmaplibre.so. Run with --info option to learn more.
+
+> Task :app:mergeReleaseStartupProfile
+> Task :app:generateReleaseAssets UP-TO-DATE
+> Task :app:extractReleaseNativeSymbolTables
+> Task :app:mergeReleaseNativeDebugMetadata NO-SOURCE
+> Task :app:mergeReleaseAssets
+> Task :app:compressReleaseAssets
+> Task :app:collectReleaseDependencies
+> Task :app:extractReleaseVersionControlInfo
+> Task :app:validateSigningRelease
+> Task :app:writeReleaseAppMetadata
+> Task :app:writeReleaseSigningConfigVersions
+> Task :app:sdkReleaseDependencyData
+> Task :app:mergeReleaseResources
+> Task :app:processReleaseResources
+> Task :app:kspReleaseKotlin
+> Task :app:compileReleaseKotlin
+w: file:///home/runner/work/openstrap/openstrap/app/src/main/kotlin/org/openstrap/app/data/Recovery.kt:405:31 Unnecessary non-null assertion (!!) on a non-null receiver of type 'Float'.
+w: file:///home/runner/work/openstrap/openstrap/app/src/main/kotlin/org/openstrap/app/device/PhoneAlerts.kt:145:33 'class PhoneStateListener : Any' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/openstrap/openstrap/app/src/main/kotlin/org/openstrap/app/ui/glow/AllMetricsScreen.kt:195:100 'val label: TextStyle' is deprecated. Titles are cardTitle, names and buttons body (spec 2.3). The pages still on it move in later steps.
+w: file:///home/runner/work/openstrap/openstrap/app/src/main/kotlin/org/openstrap/app/ui/glow/GlowActivityScreen.kt:456:76 'val label: TextStyle' is deprecated. Titles are cardTitle, names and buttons body (spec 2.3). The pages still on it move in later steps.
+w: file:///home/runner/work/openstrap/openstrap/app/src/main/kotlin/org/openstrap/app/ui/glow/GlowRecoveryScreen.kt:308:40 Unnecessary non-null assertion (!!) on a non-null receiver of type 'Recovery.ChargeDay'.
+w: file:///home/runner/work/openstrap/openstrap/app/src/main/kotlin/org/openstrap/app/ui/glow/GlowTodayScreen.kt:503:71 Unnecessary safe call on a non-null receiver of type 'Recovery.ChargeDay'.
+w: file:///home/runner/work/openstrap/openstrap/app/src/main/kotlin/org/openstrap/app/ui/glow/GlowTodayScreen.kt:595:68 Redundant call of conversion method.
+w: file:///home/runner/work/openstrap/openstrap/app/src/main/kotlin/org/openstrap/app/ui/glow/GlowWorkoutMode.kt:1246:92 Unnecessary non-null assertion (!!) on a non-null receiver of type 'Long'.
+w: file:///home/runner/work/openstrap/openstrap/app/src/main/kotlin/org/openstrap/app/ui/glow/ScoreDetail.kt:235:49 Unnecessary non-null assertion (!!) on a non-null receiver of type 'Long'.
+w: file:///home/runner/work/openstrap/openstrap/app/src/main/kotlin/org/openstrap/app/ui/glow/ScoreDetail.kt:235:76 Unnecessary non-null assertion (!!) on a non-null receiver of type 'Long'.
+w: file:///home/runner/work/openstrap/openstrap/app/src/main/kotlin/org/openstrap/app/ui/glow/TabParts.kt:148:58 'val label: TextStyle' is deprecated. Titles are cardTitle, names and buttons body (spec 2.3). The pages still on it move in later steps.
+w: file:///home/runner/work/openstrap/openstrap/app/src/main/kotlin/org/openstrap/app/ui/workout/SummaryCopy.kt:101:132 Unnecessary non-null assertion (!!) on a non-null receiver of type 'Float'.
+w: file:///home/runner/work/openstrap/openstrap/app/src/main/kotlin/org/openstrap/app/ui/workout/SummaryCopy.kt:102:133 Unnecessary non-null assertion (!!) on a non-null receiver of type 'Float'.
+
+> Task :app:processReleaseJavaRes
+> Task :app:mergeReleaseJavaResource
+> Task :app:compileReleaseJavaWithJavac
+> Task :app:mergeReleaseGeneratedProguardFiles
+> Task :app:expandReleaseArtProfileWildcards
+> Task :app:generateReleaseLintVitalReportModel
+> Task :app:produceReleaseComposeMapping
+> Task :app:reportReleaseComposeMappingErrors
+> Task :app:lintVitalAnalyzeRelease
+> Task :app:minifyReleaseWithR8
+> Task :app:lintVitalReportRelease
+> Task :app:lintVitalRelease
+> Task :app:convertShrunkResourcesToBinaryRelease
+> Task :app:optimizeReleaseResources
+> Task :app:mergeReleaseComposeMapping
+> Task :app:compileReleaseArtProfile
+> Task :app:packageRelease
+> Task :app:assembleRelease
+> Task :app:createReleaseApkListingFileRedirect
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/build-1793432028784.json
+
+[Incubating] Problems report is available at: file:///home/runner/work/openstrap/openstrap/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.8.1/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 5m 13s
+55 actionable tasks: 46 executed, 7 from cache, 2 up-to-date
+Configuration cache entry stored.

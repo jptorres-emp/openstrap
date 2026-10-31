@@ -1,4 +1,4 @@
-# The fork's own build: the tests and a debug APK on every push to main. The log, any failing tests' reports and the
+# The fork's own build: the tests and a release APK (R8, lighter than debug) on every push to main. The log, any failing tests' reports and the
 # APK go to the ci-results branch (readable with git alone), and the APK to the "latest" pre-release, for a phone to
 # download straight from the fork's Releases.
 name: Fork build
@@ -35,7 +35,7 @@ jobs:
         id: build
         run: |
           set -o pipefail
-          { ./gradlew :protocol:test :app:testDebugUnitTest --continue && ./gradlew :app:assembleDebug; } 2>&1 | tee build.log
+          { ./gradlew :protocol:test :app:testDebugUnitTest --continue && ./gradlew :app:assembleRelease; } 2>&1 | tee build.log
 
       - name: Publish results
         if: always()
@@ -46,7 +46,7 @@ jobs:
           mkdir -p out/tests
           cp build.log out/ 2>/dev/null || true
           grep -rl "<failure" --include="*.xml" . 2>/dev/null | grep test-results | xargs -r -I{} cp {} out/tests/ || true
-          if [ -f app/build/outputs/apk/debug/app-debug.apk ]; then cp app/build/outputs/apk/debug/app-debug.apk out/OpenStrap-debug.apk; fi
+          if [ -f app/build/outputs/apk/release/app-release.apk ]; then cp app/build/outputs/apk/release/app-release.apk out/OpenStrap.apk; fi
           echo "$OUTCOME ${{ github.sha }}" > out/STATUS
           cd out
           git init -q -b ci-results
@@ -56,8 +56,8 @@ jobs:
           git commit -qm "Build of ${{ github.sha }}: $OUTCOME"
           git push -fq "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" ci-results
           cd ..
-          if [ -f out/OpenStrap-debug.apk ]; then
+          if [ -f out/OpenStrap.apk ]; then
             gh release delete latest --yes --cleanup-tag 2>/dev/null || true
-            gh release create latest out/OpenStrap-debug.apk --prerelease --target "${{ github.sha }}" \
-              --title "OpenStrap with reports (fork build)" --notes "Debug build of ${{ github.sha }}, signed with this fork's own key."
+            gh release create latest out/OpenStrap.apk --prerelease --target "${{ github.sha }}" \
+              --title "OpenStrap with reports (fork build)" --notes "Release build (R8) of ${{ github.sha }}, signed with this fork's own key."
           fi

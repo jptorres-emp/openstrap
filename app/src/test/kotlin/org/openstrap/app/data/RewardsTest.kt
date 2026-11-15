@@ -131,6 +131,34 @@ class RewardsTest {
     }
 
     @Test
+    fun mostRoundsIsTheHighestFinishedCountAndATieKeepsTheFirst() {
+        fun hiit(date: String, rounds: Int, mine: Boolean = true) = workout(date, 7, mine = mine).copy(rounds = rounds)
+        val tabata = hiit("2026-10-20", 8)
+        val longer = hiit("2026-10-22", 12)
+        val tie = hiit("2026-10-24", 12)
+        val none = hiit("2026-10-26", 0)
+        val noticed = hiit("2026-10-27", 20, mine = false)
+        val best = Rewards.bests(listOf(tabata, longer, tie, none, noticed), emptyList(), utc).single { it.kind == Rewards.Kind.MOST_ROUNDS }
+        assertEquals(12.0, best.value, 0.0)
+        assertEquals(longer.start, best.workoutStart)
+        // Workouts without recorded rounds (the strap's, or from before rounds were kept) set none.
+        assertTrue(Rewards.bests(listOf(none), emptyList(), utc).none { it.kind == Rewards.Kind.MOST_ROUNDS })
+    }
+
+    @Test
+    fun moreRoundsThanBeforeIsANewBestAndAFirstIsNot() {
+        fun hiit(date: String, rounds: Int) = workout(date, 7).copy(rounds = rounds)
+        val first = hiit("2026-10-20", 8)
+        assertTrue(Rewards.newBests(first, listOf(first), emptyList(), utc).none { it.best.kind == Rewards.Kind.MOST_ROUNDS })
+        val fewer = hiit("2026-10-22", 6)
+        assertTrue(Rewards.newBests(fewer, listOf(first, fewer), emptyList(), utc).none { it.best.kind == Rewards.Kind.MOST_ROUNDS })
+        val more = hiit("2026-10-27", 11)
+        val new = Rewards.newBests(more, listOf(first, fewer, more), emptyList(), utc).single { it.best.kind == Rewards.Kind.MOST_ROUNDS }
+        assertEquals(8.0, new.before.value, 0.0)
+        assertEquals(11.0, new.best.value, 0.0)
+    }
+
+    @Test
     fun aLiftTypedInAnotherCaseStillBeatsItsBest() {
         fun lift(date: String, name: String, kg: Float) =
             workout(date, 7).let { w -> w.copy(sets = listOf(AppWorkoutSet(w.start, 0, w.start, w.start + 60, null, name, 10, kg))) }

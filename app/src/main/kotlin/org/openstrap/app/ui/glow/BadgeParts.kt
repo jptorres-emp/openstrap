@@ -188,21 +188,24 @@ private fun TokenCell(
     }
 }
 
-/** Bests in a fixed order: runs, then the longest workout, lifts, steps. */
+/** Bests in a fixed order: runs, then the longest workout, the most rounds, lifts, steps. */
 private fun order(kind: String): Int = Rewards.Kind.fastestMeters(kind)
     ?: when {
         kind == Rewards.Kind.LONGEST_RUN -> RUN_ORDER
         kind == Rewards.Kind.LONGEST_WORKOUT -> RUN_ORDER + 1
-        Rewards.Kind.liftName(kind) != null -> RUN_ORDER + 2
+        kind == Rewards.Kind.MOST_ROUNDS -> ROUNDS_ORDER
+        Rewards.Kind.liftName(kind) != null -> LIFT_ORDER
         else -> STEPS_ORDER
     }
 
 /** Before any best, the kinds there are to set: the ones any workout or day can set. */
 private val FIRST_BESTS = listOf(Rewards.Kind.LONGEST_WORKOUT, Rewards.Kind.MOST_STEPS, Rewards.Kind.fastest(FIVE_KM))
 
-/** After every fastest stretch (their metres), the longest run, the longest workout, the lifts, then the steps. */
+/** After every fastest stretch (their metres), the longest run, the longest workout, the most rounds, the lifts, then the steps. */
 private const val RUN_ORDER = 100_000
-private const val STEPS_ORDER = 100_003
+private const val ROUNDS_ORDER = 100_002
+private const val LIFT_ORDER = 100_003
+private const val STEPS_ORDER = 100_004
 private const val FIVE_KM = 5000
 private const val PANEL_BADGES = 9
 private val GRID_GAP = 16.dp

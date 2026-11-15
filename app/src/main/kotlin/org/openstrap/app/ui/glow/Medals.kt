@@ -183,7 +183,11 @@ internal fun badgeInk(b: Rewards.Badge): Color = when (b.id) {
 }
 
 /** A personal best's colour: the sport colour of what it measures (rules A1), lime for distance, time and steps. */
-internal fun bestInk(kind: String): Color = if (Rewards.Kind.liftName(kind) != null) StrengthInk else RewardLime
+internal fun bestInk(kind: String): Color = when {
+    Rewards.Kind.liftName(kind) != null -> StrengthInk
+    kind == Rewards.Kind.MOST_ROUNDS -> IntervalInk
+    else -> RewardLime
+}
 
 /**
  * [b]'s medal, its art reading [face] ([RewardsCopy.face]). The first weekly goal shows the goal it was met at ("3/3")
@@ -204,6 +208,7 @@ internal fun bestLook(kind: String): MedalLook {
         Rewards.Kind.liftName(kind) != null -> Emblems.Barbell
         kind == Rewards.Kind.LONGEST_RUN -> Emblems.Road
         kind == Rewards.Kind.MOST_STEPS -> Emblems.Steps
+        kind == Rewards.Kind.MOST_ROUNDS -> Emblems.Interval
         else -> Emblems.Hourglass
     }
     return MedalLook(MedalShape.Rosette, bestInk(kind), emblem, RewardsCopy.bestShort(kind).takeIf { fastest })

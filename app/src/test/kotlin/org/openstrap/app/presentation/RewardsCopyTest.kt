@@ -51,6 +51,17 @@ class RewardsCopyTest {
     }
 
     @Test
+    fun mostRoundsReadsAsRoundsAndBeatsByHowManyMore() {
+        assertEquals("Most rounds", RewardsCopy.bestTitle(Rewards.Kind.MOST_ROUNDS))
+        assertEquals("12 rounds", RewardsCopy.bestValue(Rewards.Kind.MOST_ROUNDS, 12.0, Locale.UK))
+        assertEquals("1 round", RewardsCopy.bestValue(Rewards.Kind.MOST_ROUNDS, 1.0, Locale.UK))
+        assertEquals("3 more", RewardsCopy.beatBy(PersonalBest(Rewards.Kind.MOST_ROUNDS, 11.0, 0), PersonalBest(Rewards.Kind.MOST_ROUNDS, 8.0, 0)))
+        val before = PersonalBest(Rewards.Kind.MOST_ROUNDS, 8.0, at("2026-08-12", 7))
+        val now = PersonalBest(Rewards.Kind.MOST_ROUNDS, 11.0, at("2026-10-30", 7))
+        assertEquals("3 more than your best from August.", RewardsCopy.beatLine(Rewards.NewBest(now, before), at("2026-10-30", 9), utc, Locale.UK))
+    }
+
+    @Test
     fun aNewBestSaysHowFarItBeatTheLast() {
         val before = PersonalBest(Rewards.Kind.fastest(5000), 1623.0, at("2026-08-12", 7))
         val now = PersonalBest(Rewards.Kind.fastest(5000), 1601.0, at("2026-10-30", 7))

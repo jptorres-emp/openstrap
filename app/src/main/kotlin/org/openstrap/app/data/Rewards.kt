@@ -105,6 +105,8 @@ object Rewards {
         val sets: List<AppWorkoutSet> = emptyList(),
         /** Active kcal, for the weekly recap; null when not worked out. */
         val activeKcal: Float? = null,
+        /** Rounds finished in a HIIT or interval workout from the phone (board HaloGoalsBests); 0 when none were recorded. */
+        val rounds: Int = 0,
     ) {
         /** Counts toward the weekly goal (workouts spec 3.1). */
         val counts: Boolean get() = countsTowardGoal(startedByYou, activeSeconds)
@@ -196,6 +198,7 @@ object Rewards {
         const val LONGEST_RUN = "longest_run"
         const val LONGEST_WORKOUT = "longest_workout"
         const val MOST_STEPS = "most_steps"
+        const val MOST_ROUNDS = "most_rounds"
         private const val FASTEST = "fastest_"
         private const val LIFT = "lift:"
 
@@ -207,7 +210,8 @@ object Rewards {
 
     /**
      * Every personal best in [workouts] and [days] (workouts spec 3.2): the fastest stretches and the longest of GPS
-     * runs only, the longest workout you started, the heaviest logged set of each exercise, the day with the most
+     * runs only, the longest workout you started, the most rounds of a HIIT or interval
+     * workout you started, the heaviest logged set of each exercise, the day with the most
      * steps. A tie keeps the first.
      */
     fun bests(workouts: List<Done>, days: List<Day>, zone: ZoneId): List<PersonalBest> {
@@ -222,6 +226,8 @@ object Rewards {
         runs.maxByOrNull { it.gpsMeters!! }?.let { out += PersonalBest(Kind.LONGEST_RUN, it.gpsMeters!!.toDouble(), it.shownStart, it.start) }
         ordered.filter { it.startedByYou && it.activeSeconds > 0 }.maxByOrNull { it.activeSeconds }
             ?.let { out += PersonalBest(Kind.LONGEST_WORKOUT, it.activeSeconds.toDouble(), it.shownStart, it.start) }
+        ordered.filter { it.startedByYou && it.rounds > 0 }.maxByOrNull { it.rounds }
+            ?.let { out += PersonalBest(Kind.MOST_ROUNDS, it.rounds.toDouble(), it.shownStart, it.start) }
         ordered.flatMap { w -> w.sets.filter { it.end != null && it.weightKg != null && (it.reps ?: 0) > 0 && !it.exercise.isNullOrBlank() }.map { w to it } }
             .groupBy { it.second.exercise!!.trim().lowercase() }.values
             .forEach { sets ->

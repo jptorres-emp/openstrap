@@ -43,7 +43,8 @@ import org.openstrap.app.ui.components.cardOpening
  * for lists of things (workouts, contributors, settings). No glow at all, so the cards above it keep the light.
  */
 
-internal val ListSurface = Color(0xFF0F0F11)
+/** The list card's fill: the solid card's shade (Halo System board, Solid card), not a flat colour. */
+internal val ListSurface: androidx.compose.ui.graphics.Brush = SolidSurface
 internal val RowHairline = Color.White.copy(alpha = GlowLayout.DividerAlpha)
 
 /**

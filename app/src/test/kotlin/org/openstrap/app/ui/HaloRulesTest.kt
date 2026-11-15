@@ -23,23 +23,15 @@ class HaloRulesTest {
     }
 
     /**
-     * Plan section 1 and wave 0 (squircle shapes and radius tokens): shapes come from GlowLayout's tokens. Card-sized
-     * corners are guarded by DesignTokenTest. The small corners (tiles, chips, bars under 20 dp) still written as a dp
-     * literal are counted per file, and the count only shrinks: move a corner to a GlowLayout token and lower its entry.
+     * Plan section 1 and wave 0 (squircle shapes and radius tokens): a corner is never a dp literal outside GlowLayout.
+     * Card-sized corners are DesignTokenTest's. Small ones come from GlowLayout's InnerShape, ChipShape, BarShape and PipShape.
      */
-    @Test fun `no new corner literal outside GlowLayout`() {
-        val counts = sources.keys.filter { it != "glow/GlowLayout.kt" }.associateWith { path ->
-            ui.calls(Regex("RoundedCornerShape"), listOf(path)).count { (_, _, args) -> Regex("""\d+(\.\d+)?\.dp""").containsMatchIn(args) }
-        }.filterValues { it > 0 }
-        val over = counts.filter { (path, n) -> n > (cornerLiterals[path] ?: 0) }
-        if (over.isNotEmpty()) {
-            fail(
-                "Corners come from GlowLayout's squircle tokens or CircleShape (plan section 1), not a dp literal:\n" +
-                    over.keys.flatMap { p -> ui.find(Regex("""\bRoundedCornerShape\(""")).filter { it.startsWith("$p:") } }.joinToString("\n"),
-            )
+    @Test fun `no corner literal outside GlowLayout`() {
+        val found = sources.keys.filter { it != "glow/GlowLayout.kt" }.flatMap { path ->
+            ui.calls(Regex("RoundedCornerShape"), listOf(path)).filter { (_, _, args) -> Regex("""\d+(\.\d+)?\.dp""").containsMatchIn(args) }
+                .map { "${it.first}:${it.second}  RoundedCornerShape(${it.third.trim()})" }
         }
-        val stale = cornerLiterals.filter { (path, n) -> (counts[path] ?: 0) < n }
-        assertTrue("corner allowlist is higher than the code, lower it: $stale (now ${stale.keys.associateWith { counts[it] ?: 0 }})", stale.isEmpty())
+        if (found.isNotEmpty()) fail("Corners come from GlowLayout's tokens or CircleShape (plan section 1):\n" + found.joinToString("\n"))
     }
 
     /**
@@ -84,18 +76,13 @@ class HaloRulesTest {
     /**
      * Type scale, "The one big number" (type.md) and workout rules section 3: the one dotted number is DotSpec dots at
      * the board's Doto size, through BigNumberText, never the Doto font itself and never a DotMatrixText of a screen's own.
-     * The files below still call DotMatrixText with a DotSize (their step has not moved them to BigNumberText); the list
-     * only shrinks.
      */
     @Test fun `the one dotted big number goes through BigNumberText or DotSpec`() {
         val doto = ui.find(Regex("""\bDoto\w*"""))
         if (doto.isNotEmpty()) fail("The big number is DotSpec dots, not the Doto font (type.md):\n" + doto.joinToString("\n"))
         val homes = setOf("glow/GlowType.kt", "glow/GlowParts.kt")
-        val callers = ui.calls(Regex("DotMatrixText")).filter { it.first !in homes }
-        val over = callers.filter { it.first !in dotMatrixNotMigrated }
+        val over = ui.calls(Regex("DotMatrixText")).filter { it.first !in homes }
         if (over.isNotEmpty()) fail("A screen's big number is BigNumberText (type.md):\n" + over.joinToString("\n") { "${it.first}:${it.second}" })
-        val stale = dotMatrixNotMigrated - callers.map { it.first }.toSet()
-        assertTrue("DotMatrixText allowlist entries that no longer match: $stale", stale.isEmpty())
     }
 
     /**
@@ -137,32 +124,5 @@ class HaloRulesTest {
             }
         }
         if (hits.isNotEmpty()) fail("A detail's picture is solid, only its header number is dots (detail rules, plan section 1):\n" + hits.joinToString("\n"))
-    }
-
-    private companion object {
-        /**
-         * Files that still write a small corner (under 20 dp) as a dp literal, with how many, until their step moves it to
-         * a GlowLayout token. The list shrinks and never grows.
-         */
-        val cornerLiterals = mapOf(
-            "components/Glass.kt" to 1,
-            "device/DeviceScreen.kt" to 1,
-            "glow/ChooseScreen.kt" to 3,
-            "glow/GlowList.kt" to 1,
-            "glow/GlowRecoveryScreen.kt" to 1,
-            "glow/GlowSleepScreen.kt" to 1,
-            "glow/HeartZonesScreen.kt" to 2,
-            "glow/PageParts.kt" to 2,
-            "glow/ReadyCardio.kt" to 5,
-            "glow/SummarySections.kt" to 2,
-            "glow/TabParts.kt" to 1,
-            "glow/WorkoutCapsule.kt" to 1,
-            "glow/live/LiveDistance.kt" to 2,
-        )
-
-        /** Screens that draw a dotted number with DotMatrixText and a DotSize of their own, until they move to BigNumberText. */
-        val dotMatrixNotMigrated = setOf(
-            "glow/GlowTabletop.kt", "glow/ShareCards.kt", "glow/SummarySections.kt", "glow/WorkoutCapsule.kt",
-        )
     }
 }

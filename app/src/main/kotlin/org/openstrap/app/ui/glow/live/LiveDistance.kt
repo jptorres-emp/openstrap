@@ -22,7 +22,6 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -56,7 +55,7 @@ import org.openstrap.app.device.ConnectionState
 import org.openstrap.app.device.WorkoutState
 import org.openstrap.app.ui.components.HapticEvent
 import org.openstrap.app.ui.components.rememberHaptics
-import org.openstrap.app.ui.glow.DotMatrixText
+import org.openstrap.app.ui.glow.GlowLayout
 import org.openstrap.app.ui.glow.draw.DotSize
 import org.openstrap.app.ui.glow.PictureCard
 import org.openstrap.app.ui.glow.GlowType
@@ -315,7 +314,7 @@ private fun RepPage(
             ) {
                 done.forEach { round ->
                     Column(
-                        Modifier.clip(RoundedCornerShape(18.dp)).background(RepChip)
+                        Modifier.clip(GlowLayout.InnerShape).background(RepChip)
                             .padding(horizontal = 14.dp, vertical = 12.dp),
                         verticalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
@@ -430,7 +429,7 @@ private fun KmSplitBars(splits: List<Route.Split>) {
                 verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Box(Modifier.fillMaxWidth().height(52.dp), contentAlignment = Alignment.BottomCenter) {
                     Box(
-                        Modifier.fillMaxWidth().fillMaxHeight(height).clip(RoundedCornerShape(6.dp))
+                        Modifier.fillMaxWidth().fillMaxHeight(height).clip(GlowLayout.PipShape)
                             .background(if (underWay) Color.White else SplitBar),
                     )
                 }

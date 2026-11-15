@@ -14,7 +14,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -213,7 +212,7 @@ fun GlassSheet(onDismiss: () -> Unit, content: @Composable () -> Unit) {
         ) {
             Column {
                 Box(Modifier.fillMaxWidth().padding(top = 10.dp), contentAlignment = Alignment.Center) {
-                    Box(Modifier.size(width = 40.dp, height = 5.dp).background(GrabberColor, RoundedCornerShape(3.dp)))
+                    Box(Modifier.size(width = 40.dp, height = 5.dp).background(GrabberColor, org.openstrap.app.ui.glow.GlowLayout.BarShape))
                 }
                 content()
             }

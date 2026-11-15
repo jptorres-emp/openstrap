@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -120,7 +119,7 @@ internal fun ContributorRow(
                 modifier = Modifier.padding(top = 2.dp),
             )
             Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                val shape = RoundedCornerShape(4.dp)
+                val shape = GlowLayout.BarShape
                 Box(Modifier.weight(1f).height(8.dp).background(Color.White.copy(alpha = 0.07f), shape)) {
                     Box(Modifier.fillMaxWidth(fraction.coerceIn(0f, 1f)).height(8.dp).background(accent, shape))
                 }

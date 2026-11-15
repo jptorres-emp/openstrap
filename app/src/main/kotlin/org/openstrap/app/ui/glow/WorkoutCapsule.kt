@@ -26,7 +26,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -54,7 +53,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import org.openstrap.app.ui.glow.draw.LightAngle
 import org.openstrap.app.ui.glow.draw.GlowMotion
 import org.openstrap.app.ui.glow.draw.heroStyle
-import org.openstrap.app.ui.glow.draw.DotSize
 import org.openstrap.app.ui.theme.ControlSurface
 
 /* ------------------------------------- Rest of the app meanwhile ------------------------------------- */
@@ -108,7 +106,7 @@ fun WorkoutCapsule(glance: LiveGlance, onClick: () -> Unit, onAction: (GlanceAct
             }
             if (glance.action == GlanceAction.Pause) {
                 glance.bpm?.let {
-                    DotMatrixText("$it", dot = DotSize.Edge, color = color)
+                    BigNumberText("$it", BigNumber.Small, color = color)
                     Spacer(Modifier.width(12.dp))
                 }
                 Box(
@@ -219,7 +217,7 @@ internal fun LiveHero(glance: LiveGlance, sportType: Int, clock: String, onOpen:
             }
             glance.next?.let { next ->
                 Spacer(Modifier.height(16.dp))
-                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Color.Black.copy(alpha = 0.4f)).padding(14.dp)) {
+                Column(Modifier.fillMaxWidth().clip(GlowLayout.InnerShape).background(Color.Black.copy(alpha = 0.4f)).padding(14.dp)) {
                     Text(
                         stringResource(R.string.glow_workout_capsule_next), color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA),
                         style = GlowType.secondary,

@@ -24,7 +24,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -189,7 +188,7 @@ private fun placeIcon(sides: Workouts.Sides, indoor: Boolean): ImageVector = whe
 @Composable
 private fun PlaceRow(icon: ImageVector, tint: Color, title: String, note: String, trailing: (@Composable () -> Unit)?) {
     Row(Modifier.fillMaxWidth().padding(vertical = GlowLayout.RowPadding), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(tint.copy(alpha = 0.15f)),
+        Box(Modifier.size(44.dp).clip(GlowLayout.InnerShape).background(tint.copy(alpha = 0.15f)),
             contentAlignment = Alignment.Center) {
             Icon(icon, null, tint = tint, modifier = Modifier.size(24.dp))
         }
@@ -413,7 +412,7 @@ private fun ValueStepper(less: String, more: String, onLess: () -> Unit, onMore:
 @Composable
 private fun TapValue(parts: List<Pair<String, String>>, hint: String?, onClick: () -> Unit) {
     Column(
-        Modifier.clip(RoundedCornerShape(12.dp)).clickable(onClickLabel = StartCopy.TAP_TO_TYPE,
+        Modifier.clip(GlowLayout.ChipShape).clickable(onClickLabel = StartCopy.TAP_TO_TYPE,
             onClick = onClick).padding(horizontal = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -608,10 +607,10 @@ private fun ZoneGoal(goal: WorkoutTarget.Zones, onGoal: (WorkoutTarget.Zones) ->
             val on = z in goal.low..goal.high
             val color = ZONE_COLORS[z]
             Column(
-                Modifier.weight(1f).height(56.dp).clip(RoundedCornerShape(14.dp)).background(if (on) color else ZoneOff)
+                Modifier.weight(1f).height(56.dp).clip(GlowLayout.InnerShape).background(if (on) color else ZoneOff)
                     .drawBehind { if (!on) drawRect(color, Offset(0f, size.height - 3.dp.toPx()),
                         androidx.compose.ui.geometry.Size(size.width, 3.dp.toPx())) }
-                    .pressClickable({ onGoal(WorkoutSetup.pickZone(goal, z)) }, RoundedCornerShape(14.dp))
+                    .pressClickable({ onGoal(WorkoutSetup.pickZone(goal, z)) }, GlowLayout.InnerShape)
                     .semantics { selected = on; role = Role.Button },
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
@@ -809,7 +808,7 @@ private const val SAVED = 1
 /** One number of the intervals to tap and type, with its [unit] after it, on the shared baseline. */
 @Composable
 internal fun RowScope.TapNumber(n: String, unit: String?, style: TextStyle, onClick: () -> Unit) {
-    Row(Modifier.alignByBaseline().clip(RoundedCornerShape(10.dp)).clickable(onClickLabel = StartCopy.TAP_TO_TYPE,
+    Row(Modifier.alignByBaseline().clip(GlowLayout.ChipShape).clickable(onClickLabel = StartCopy.TAP_TO_TYPE,
         onClick = onClick).padding(horizontal = 4.dp)) {
         Text(n, color = Color.White, style = style, modifier = Modifier.alignByBaseline())
         if (unit != null) {

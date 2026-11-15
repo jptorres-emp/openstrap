@@ -34,7 +34,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
@@ -828,7 +827,7 @@ private fun ManualPairSheet(
             scan.found.forEach { d ->
                 val selected = d.address == address
                 Row(
-                    Modifier.fillMaxWidth().heightIn(min = 60.dp).clip(RoundedCornerShape(18.dp))
+                    Modifier.fillMaxWidth().heightIn(min = 60.dp).clip(org.openstrap.app.ui.glow.GlowLayout.InnerShape)
                         .background(if (selected) PickedSurface else HaloButtonSurface)
                         .clickable { address = d.address; name = d.name }
                         .semantics { this.selected = selected }

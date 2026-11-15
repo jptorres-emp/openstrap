@@ -895,7 +895,7 @@ fun Legend(
  */
 @Composable
 fun FillBar(share: Float, color: Color, modifier: Modifier = Modifier, height: Dp = 4.dp) {
-    val shape = androidx.compose.foundation.shape.RoundedCornerShape(height / 2)
+    val shape = androidx.compose.foundation.shape.CircleShape
     Box(modifier.fillMaxWidth().height(height).background(Ink.copy(alpha = FILL_TRACK_ALPHA), shape)) {
         Box(Modifier.fillMaxWidth(share.coerceIn(0f, 1f)).fillMaxHeight().background(color, shape))
     }

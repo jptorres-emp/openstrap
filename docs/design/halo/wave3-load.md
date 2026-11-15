@@ -8,7 +8,7 @@ Boards HaloSummaryRun and HaloPastWorkout print "Load, usual 80 to 120". Plan se
 - The edges are that usual minus and plus 25 per cent, the same share `LoadBands.BAND` gives the day Load band
   and the "Above usual" / "Below usual" tag. So a Load inside the printed edges is never tagged off usual.
 - Rounded to whole numbers, low and high each to the nearest. A usual of 100 reads "usual 75 to 125".
-- Pure function in data/LoadBand.kt (`WorkoutLoadBand`), unit tested. It calls `Workouts.usualLoad`, no edit to Workouts.kt.
+- Pure function in data/WorkoutLoadBand.kt (`WorkoutLoadBand`), unit tested. It calls `Workouts.usualLoad`, no edit to Workouts.kt.
 
 ## Too few workouts
 - Under 3 workouts with a Load there is no usual and no band: the card keeps its plain "Load" label and draws no band.

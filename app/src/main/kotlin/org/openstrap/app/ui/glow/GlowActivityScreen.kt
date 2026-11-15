@@ -347,7 +347,7 @@ private val HourPillsHeight = 56.dp
 /* ------------------------------------------------ Load ---------------------------------------------- */
 
 /**
- * Load today as a level fill over your usual band ([LoadBands.usualRange], spec 2.7), "12 today", "Your usual is 40"
+ * Load today as a level fill over your usual band ([LoadBands.usualRange], spec 2.7), "12 today", "Your usual, 30 to 50"
  * and the week's balance in a word beside the title. Off your usual it carries the rim at the fill's end and "Above
  * usual" or "Below usual" after the number. A low Load is only so far until the day is over, so today never says Below
  * ([loadOffStatus]). Opens the Load detail, where Strain, fitness and fatigue live. TODO(step 6): the ghost line of
@@ -374,7 +374,7 @@ private fun DayLoadCard(r: RecoveryResult?, onClick: () -> Unit) {
             stringResource(if (past) R.string.glow_activity_load_that_day else R.string.glow_activity_load_today), tag,
             Modifier.padding(top = 14.dp),
         )
-        StatusLine(if (r == null) NO_READING else TabCopy.loadUsual(usual))
+        StatusLine(if (r == null) NO_READING else band?.let(ActivityCopy::usualBandLabel) ?: TabCopy.loadUsual(usual))
     }
 }
 

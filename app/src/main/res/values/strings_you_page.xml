@@ -192,4 +192,29 @@
         <item quantity="other"><xliff:g id="count" example="250">%1$d</xliff:g> lines</item>
     </plurals>
     <string name="you_diagnostics_empty">No events yet.</string>
+    <!-- Profile page (Halo): value rows, group headings and footnotes, and the picker sheets' notes. -->
+    <string name="you_profile_not_set">Not set</string>
+    <string name="you_profile_row_sex">Sex</string>
+    <string name="you_profile_row_activity">Usual activity</string>
+    <string name="you_profile_row_sleep_need">Sleep need</string>
+    <string name="you_profile_sleep_default">Default for your age</string>
+    <string name="you_profile_group_about">About you</string>
+    <string name="you_profile_group_body">Body</string>
+    <string name="you_profile_group_estimates">For your estimates</string>
+    <!-- Calories, Load and Habit Age are names of unstrap's pages and scores. -->
+    <string name="you_profile_foot_about">Age sets your maximum heart rate, which every effort and recovery number depends on. Sex is for Calories, Load, fitness and Habit Age.</string>
+    <string name="you_profile_foot_all">All fields are optional and stay on this phone.</string>
+    <string name="you_profile_age_note">Sets your maximum heart rate, which every effort and recovery number depends on.</string>
+    <string name="you_profile_sex_sheet_note">Used for Calories, Load, fitness and Habit Age.</string>
+    <string name="you_profile_beta_note">Lowers your heart rate, so zones adjust</string>
+    <string name="you_profile_sleep_note">Between 7 and 9 hours. Recovery uses it to judge your sleep.</string>
+    <!-- The minus and plus buttons of a picker sheet, read by screen readers. -->
+    <string name="you_sheet_less">Less</string>
+    <string name="you_sheet_more">More</string>
+    <!-- The You page's About group. -->
+    <string name="you_section_about_you">About you</string>
+    <string name="you_section_about">About</string>
+    <string name="you_row_version">Version</string>
+    <string name="you_version_value">unstrap <xliff:g id="version" example="3.0.7">%1$s</xliff:g></string>
+    <string name="you_data_footnote">Everything stays on this phone. unstrap has no account and sends nothing.</string>
 </resources>

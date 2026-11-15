@@ -2,16 +2,11 @@ package org.openstrap.app.ui.device
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import org.openstrap.app.BuildConfig
 import org.openstrap.app.R
@@ -26,13 +21,10 @@ import org.openstrap.app.presentation.Units
 import java.util.concurrent.TimeUnit.MINUTES
 import org.openstrap.app.ui.dashboard.ScreenList
 import org.openstrap.app.ui.glow.GlowLayout
-import org.openstrap.app.ui.glow.GlowType
 import org.openstrap.app.ui.glow.PageHeader
 import org.openstrap.app.update.UpdateCopy
+import org.openstrap.app.ui.glow.PageGroup
 import org.openstrap.app.ui.glow.PageRow
-import org.openstrap.app.ui.glow.PanelLabelInset
-import org.openstrap.app.ui.glow.SectionLabel
-import org.openstrap.app.ui.glow.PageRows
 import org.openstrap.app.ui.theme.AppIcons
 
 /** The Goals row's value: "8,000 steps, 300 active kcal, 8 active hours". */
@@ -145,7 +137,7 @@ fun YouPage(
     ScreenList(contentPadding, gutter = GlowLayout.Gutter) {
         item { PageHeader(stringResource(R.string.you_title), onBack) }
         item {
-            PageRows {
+            PageGroup(heading = stringResource(R.string.you_section_about_you)) {
                 PageRow(
                     stringResource(R.string.you_row_profile), profile.summary(), onClick = onProfile, below = true, divider = false,
                     icon = AppIcons.User,
@@ -168,9 +160,8 @@ fun YouPage(
                 )
             }
         }
-        item { SectionLabel(stringResource(R.string.you_section_your_data), Modifier.padding(top = 4.dp), PanelLabelInset) }
         item {
-            PageRows {
+            PageGroup(heading = stringResource(R.string.you_section_your_data), footnote = stringResource(R.string.you_data_footnote)) {
                 // Read again whenever either changes, so "today" and "yesterday" follow the last one.
                 val now = remember(healthConnectAuto, backup) { System.currentTimeMillis() / 1000 }
                 val zone = java.time.ZoneId.systemDefault()
@@ -191,9 +182,8 @@ fun YouPage(
                 )
             }
         }
-        item { SectionLabel(stringResource(R.string.you_section_help), Modifier.padding(top = 4.dp), PanelLabelInset) }
         item {
-            PageRows {
+            PageGroup(heading = stringResource(R.string.you_section_help)) {
                 val now = remember(updates) { System.currentTimeMillis() / 1000 }
                 PageRow(
                     stringResource(R.string.you_row_updates), UpdateCopy.summary(updates, installedVersion, now), onClick = onUpdates,
@@ -212,11 +202,9 @@ fun YouPage(
             }
         }
         item {
-            Text(
-                stringResource(R.string.you_footer, BuildConfig.VERSION_NAME),
-                Modifier.fillMaxWidth().padding(top = 4.dp),
-                color = Color.White.copy(alpha = 0.45f), style = GlowType.secondary, textAlign = TextAlign.Center,
-            )
+            PageGroup(heading = stringResource(R.string.you_section_about)) {
+                PageRow(stringResource(R.string.you_row_version), stringResource(R.string.you_version_value, BuildConfig.VERSION_NAME), divider = false)
+            }
         }
     }
 }

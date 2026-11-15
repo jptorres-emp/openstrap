@@ -115,4 +115,25 @@
         <item quantity="other">%1$d 行</item>
     </plurals>
     <string name="you_diagnostics_empty">暂无事件。</string>
+    <string name="you_profile_not_set">未设置</string>
+    <string name="you_profile_row_sex">性别</string>
+    <string name="you_profile_row_activity">日常活动量</string>
+    <string name="you_profile_row_sleep_need">睡眠需求</string>
+    <string name="you_profile_sleep_default">按年龄默认</string>
+    <string name="you_profile_group_about">关于你</string>
+    <string name="you_profile_group_body">身体</string>
+    <string name="you_profile_group_estimates">用于估算</string>
+    <string name="you_profile_foot_about">年龄用于决定你的最大心率，各项运动强度与恢复数据都基于此计算。性别用于卡路里、负荷、体能和习惯年龄。</string>
+    <string name="you_profile_foot_all">所有信息均为选填，且仅保存在本手机上。</string>
+    <string name="you_profile_age_note">用于决定你的最大心率，各项运动强度与恢复数据都基于此计算。</string>
+    <string name="you_profile_sex_sheet_note">用于卡路里、负荷、体能和习惯年龄。</string>
+    <string name="you_profile_beta_note">会降低心率，因此心率区间会相应调整</string>
+    <string name="you_profile_sleep_note">7 到 9 小时之间，恢复评分据此判断你的睡眠。</string>
+    <string name="you_sheet_less">减少</string>
+    <string name="you_sheet_more">增加</string>
+    <string name="you_section_about_you">关于你</string>
+    <string name="you_section_about">关于</string>
+    <string name="you_row_version">版本</string>
+    <string name="you_version_value">unstrap %1$s</string>
+    <string name="you_data_footnote">所有内容都留在本手机上。unstrap 没有账号，也不会发送任何数据。</string>
 </resources>

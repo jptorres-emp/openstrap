@@ -120,5 +120,8 @@ enum class DotSize(val dot: Dp) {
     companion object {
         /** The gap between dots as a share of the dot. */
         const val DOT_GAP = 0.38f
+
+        /** A digit's height in dots: 7 rows, 6 gaps of [DOT_GAP] between them, and 7 * (1 + gap) - gap in all. */
+        const val ROWS_IN_DOTS = 7 * (1 + DOT_GAP) - DOT_GAP
     }
 }

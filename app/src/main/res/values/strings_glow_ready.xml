@@ -13,10 +13,6 @@
     <string name="glow_choose_recent">Recent</string>
     <!-- A section label over the everyday sports' tiles on Choose, and the search page's line before anything is typed. -->
     <string name="glow_choose_all_sports">All sports</string>
-    <!-- The row, page title and section label for the sports that aren't on a tile. -->
-    <string name="glow_choose_more_sports">More sports</string>
-    <!-- Under More sports in its row: some of what's behind it. -->
-    <string name="glow_choose_more_sports_detail">Tennis, padel, dance and the rest</string>
     <!-- Over the sport most often started, in a slim row on Choose. -->
     <string name="glow_choose_your_usual">Your usual</string>
     <!-- The button at the end of Your usual that starts that sport straight away. One short word. -->
@@ -45,8 +41,20 @@
     <string name="glow_choose_pick_title">Choose a sport</string>
     <!-- The sport picker's search field hint. One short word. -->
     <string name="glow_choose_search">Search</string>
-    <!-- A section label over the everyday sports' tiles in the sport picker. -->
-    <string name="glow_choose_sports">Sports</string>
+    <!-- Section titles over the sports on Choose a sport, Change sport and Search. One line each. -->
+    <string name="glow_choose_group_distance">Distance</string>
+    <string name="glow_choose_group_indoor">Indoor cardio</string>
+    <string name="glow_choose_group_strength">Strength and intervals</string>
+    <string name="glow_choose_group_mind">Mind and body</string>
+    <string name="glow_choose_group_games">Games</string>
+    <string name="glow_choose_group_other">Other</string>
+    <!-- The line under each section title: what its sports record. One line each. -->
+    <string name="glow_choose_group_distance_note">Route, distance and pace</string>
+    <string name="glow_choose_group_indoor_note">Time, heart rate and calories</string>
+    <string name="glow_choose_group_strength_note">Sets, rounds and rest</string>
+    <string name="glow_choose_group_mind_note">Calm heart rate and time</string>
+    <string name="glow_choose_group_games_note">Time, heart rate and effort</string>
+    <string name="glow_choose_group_other_note">Anything not listed. Time and heart rate</string>
     <!-- When the search finds nothing. The query is what was typed, in quotes. -->
     <string name="glow_choose_no_match">No sport matches \"<xliff:g id="query" example="curling">%1$s</xliff:g>\".</string>
     <!-- Spoken for the X at the end of the search field that clears it, for screen readers. -->

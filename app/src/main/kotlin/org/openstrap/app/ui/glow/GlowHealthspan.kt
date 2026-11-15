@@ -177,7 +177,7 @@ fun HabitAgeEdgeCard(state: Healthspan.Outcome?, onClick: (() -> Unit)?, onOpenP
         if (shown != null) {
             NumberWithTag(tag, Modifier.padding(top = 14.dp)) {
                 Row(verticalAlignment = Alignment.Bottom) {
-                    DotMatrixText(shown.toString(), Modifier.cardNumber(shown.toString()), dot = DotSize.Edge)
+                    HaloNumber(shown.toString(), Modifier.cardNumber(shown.toString()), dot = DotSize.Edge)
                     Text(
                         stringResource(R.string.glow_healthspan_years), color = Color.White.copy(alpha = 0.7f), style = GlowType.secondary,
                         modifier = Modifier.padding(start = 8.dp),

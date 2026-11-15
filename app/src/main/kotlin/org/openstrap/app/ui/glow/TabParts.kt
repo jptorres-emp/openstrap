@@ -22,6 +22,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
+import org.openstrap.app.ui.glow.draw.DotSize
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -120,9 +121,9 @@ internal fun ContributorRow(
                 modifier = Modifier.padding(top = 2.dp),
             )
             Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                val shape = RoundedCornerShape(3.dp)
-                Box(Modifier.weight(1f).height(6.dp).background(Color.White.copy(alpha = 0.07f), shape)) {
-                    Box(Modifier.fillMaxWidth(fraction.coerceIn(0f, 1f)).height(6.dp).background(accent, shape))
+                val shape = RoundedCornerShape(4.dp)
+                Box(Modifier.weight(1f).height(8.dp).background(Color.White.copy(alpha = 0.07f), shape)) {
+                    Box(Modifier.fillMaxWidth(fraction.coerceIn(0f, 1f)).height(8.dp).background(accent, shape))
                 }
                 Spacer(Modifier.width(12.dp))
                 Text(word, color = if (offNormal) color else Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary, maxLines = 1)
@@ -158,3 +159,19 @@ internal fun rememberNormal(metric: org.openstrap.app.presentation.Metric, date:
     }.collectAsStateWithLifecycle(emptyList())
     return androidx.compose.runtime.remember(stats, date) { org.openstrap.app.data.History.normal(stats, date) }
 }
+
+/**
+ * A card's dotted number at the board's size (HaloTodayMidday, HaloRecovery): the hero's 68, a second card's 52 and
+ * every other card's 44, as [BigNumberText] draws them in DotSpec dots. The old [DotSize] says which.
+ */
+@Composable
+internal fun HaloNumber(text: String, modifier: Modifier = Modifier, dot: DotSize = DotSize.Edge, color: Color = Color.White) =
+    BigNumberText(
+        text,
+        when (dot) {
+            DotSize.Hero, DotSize.Detail, DotSize.Live -> BigNumber.Hero
+            DotSize.Second -> BigNumber.Second
+            else -> BigNumber.Tile
+        },
+        modifier, color,
+    )

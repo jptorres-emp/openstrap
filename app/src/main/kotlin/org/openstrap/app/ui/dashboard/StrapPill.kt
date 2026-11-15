@@ -96,7 +96,6 @@ internal fun StrapPill(chip: StrapChip, onClick: () -> Unit, modifier: Modifier 
             .clip(CircleShape).background(ControlSurface)
             // Read where it is drawn, so the fill and its flow redraw without composing the pill again.
             .drawBehind { if (tint != null) drawFill(tint, fill, flow.value) }
-            .border(1.dp, Color.White.copy(alpha = 0.07f), CircleShape)
             .clickable(onClickLabel = stringResource(R.string.day_header_open_strap), onClick = onClick)
             .semantics { contentDescription = chip.description }
             .defaultMinSize(minWidth = MIN_WIDTH, minHeight = HEIGHT)

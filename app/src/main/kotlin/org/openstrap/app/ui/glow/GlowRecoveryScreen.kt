@@ -75,6 +75,7 @@ import org.openstrap.app.ui.theme.MetricColors
 import org.openstrap.app.ui.glow.draw.GlowStyle
 import org.openstrap.app.ui.glow.draw.LightAngle
 import org.openstrap.app.ui.glow.draw.heroStyle
+import org.openstrap.app.ui.glow.pictures.EnergyRuler
 import org.openstrap.app.ui.glow.draw.DotSize
 
 /*
@@ -321,9 +322,9 @@ private fun DriverRow(name: String, word: String, fraction: Float, tag: NewsTag?
         Column(Modifier.weight(1f)) {
             Text(name, color = Color.White, style = GlowType.body, maxLines = 1, overflow = TextOverflow.Ellipsis)
             androidx.compose.foundation.layout.Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                val shape = RoundedCornerShape(3.dp)
-                Box(Modifier.weight(1f).height(6.dp).background(Color.White.copy(alpha = 0.07f), shape)) {
-                    Box(Modifier.fillMaxWidth(fraction.coerceIn(0f, 1f)).height(6.dp).background(Color.White.copy(alpha = 0.7f), shape))
+                val shape = RoundedCornerShape(4.dp)
+                Box(Modifier.weight(1f).height(8.dp).background(Color.White.copy(alpha = 0.07f), shape)) {
+                    Box(Modifier.fillMaxWidth(fraction.coerceIn(0f, 1f)).height(8.dp).background(Color.White.copy(alpha = 0.7f), shape))
                 }
                 Spacer(Modifier.width(12.dp))
                 if (tag != null) NewsPill(tag)
@@ -362,6 +363,10 @@ private fun ChargeTall(
                     else -> stringResource(R.string.glow_recovery_charge_at_waking, atWake)
                 },
                 big = true, dot = DotSize.Second, labelLines = 2,
+            )
+            // The level ruler under the figure, a white tick at now (board HaloRecovery, Energy card).
+            if (now != null) EnergyRuler(
+                now.toFloat(), Color.White.copy(alpha = 0.85f), Modifier.padding(top = 8.dp).fillMaxWidth().height(16.dp),
             )
         }
     }
@@ -443,7 +448,7 @@ private fun SkinTempCard(
                 NumberWithTag(tag) {
                     androidx.compose.foundation.layout.Row(verticalAlignment = Alignment.Bottom) {
                         val shown = today?.let { Metric.SkinTemperature.format(it, Units.DOT_LOCALE) }
-                        if (shown != null) DotMatrixText(shown, Modifier.cardNumber(shown), dot = DotSize.Edge)
+                        if (shown != null) HaloNumber(shown, Modifier.cardNumber(shown), dot = DotSize.Edge)
                         else WaitingDash(Modifier.padding(vertical = 8.dp))
                         if (shown != null) Text(
                             Metric.SkinTemperature.unit, color = Color.White.copy(alpha = 0.7f), style = GlowType.secondary,

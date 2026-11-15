@@ -111,7 +111,7 @@ internal fun HeroFigure(
 ) {
     Column(modifier, horizontalAlignment = horizontal, verticalArrangement = Arrangement.spacedBy(6.dp)) {
         // A big figure is the card's number: it can move into the detail's headline (spec 3.5).
-        if (value != null) DotMatrixText(
+        if (value != null) HaloNumber(
             value, if (big) Modifier.cardNumber(value) else Modifier,
             dot = dot,
         )
@@ -125,15 +125,31 @@ internal fun HeroFigure(
  * its word, and the figures that go with it as text ("Energy at waking 84"). Without a [value] the lines stand alone.
  */
 @Composable
-internal fun HeroNumber(value: String?, lines: List<String>, modifier: Modifier = Modifier) {
+internal fun HeroNumber(
+    value: String?, lines: List<String>, modifier: Modifier = Modifier,
+    /** A picture over the lines, right-aligned (the Energy ruler on the midday hero, HaloTodayMidday). */
+    above: (@Composable () -> Unit)? = null,
+) {
     Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
         // The card's number: it can move into the detail's headline (spec 3.5).
         if (value != null) {
-            DotMatrixText(value, Modifier.cardNumber(value), dot = DotSize.Hero)
+            HaloNumber(value, Modifier.cardNumber(value), dot = DotSize.Hero)
             Spacer(Modifier.width(12.dp))
         }
-        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            lines.forEach { Text(it, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary, maxLines = 1) }
+        if (above != null) Spacer(Modifier.weight(1f))
+        Column(
+            verticalArrangement = Arrangement.spacedBy(if (above != null) 8.dp else 2.dp),
+            horizontalAlignment = if (above != null) Alignment.End else Alignment.Start,
+        ) {
+            above?.invoke()
+            Column(
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+                horizontalAlignment = if (above != null) Alignment.End else Alignment.Start,
+            ) {
+                lines.forEach {
+                    Text(it, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary, maxLines = 1)
+                }
+            }
         }
     }
 }
@@ -303,7 +319,7 @@ internal fun EdgeValue(
     dot: DotSize = DotSize.Edge,
 ) {
     if (value != null || waiting) Row(Modifier.padding(top = 14.dp), verticalAlignment = Alignment.Bottom) {
-        if (value != null) DotMatrixText(value, Modifier.cardNumber(value), dot = dot) else WaitingDash(Modifier.padding(vertical = 8.dp))
+        if (value != null) HaloNumber(value, Modifier.cardNumber(value), dot = dot) else WaitingDash(Modifier.padding(vertical = 8.dp))
         if (unit != null && value != null) Text(unit, color = Color.White.copy(alpha = 0.7f), style = GlowType.secondary, modifier = Modifier.padding(start = 8.dp))
     }
     if (status != null) Text(status, color = statusColor, style = GlowType.secondary, modifier = Modifier.padding(top = 6.dp), maxLines = 2, overflow = TextOverflow.Ellipsis)
@@ -325,7 +341,7 @@ private val WidePictureHeight = 52.dp
 internal fun PictureNumber(value: String?, unit: String?, tag: NewsTag?, modifier: Modifier = Modifier) {
     if (value == null) WaitingDash(modifier.padding(vertical = 8.dp))
     else NumberWithTag(tag, modifier) {
-        DotMatrixText(value, Modifier.cardNumber(value), dot = DotSize.Edge)
+        HaloNumber(value, Modifier.cardNumber(value), dot = DotSize.Edge)
         // Its own item, so on a Small too narrow for both the unit drops under the number whole, never split.
         if (unit != null) Text(unit, color = Color.White.copy(alpha = 0.7f), style = GlowType.secondary, maxLines = 1, softWrap = false)
     }
@@ -839,7 +855,7 @@ internal fun SmallCard(
             when {
                 value == null -> WaitingDash(Modifier.padding(vertical = 8.dp))
                 plain -> Text(value, Modifier.cardNumber(value), color = Color.White, style = GlowType.smallValue, maxLines = 1)
-                else -> DotMatrixText(value, Modifier.cardNumber(value), dot = DotSize.Edge)
+                else -> HaloNumber(value, Modifier.cardNumber(value), dot = DotSize.Edge)
             }
             if (unit != null && value != null) Text(unit, color = Color.White.copy(alpha = 0.7f), style = GlowType.secondary, modifier = Modifier.padding(start = 6.dp))
         }
@@ -912,14 +928,8 @@ internal fun BodyList(
 /** The last thing on Today: a way to change what it shows. */
 @Composable
 internal fun EditTodayButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    // A dark pill, no glass (board HaloTodayEvening, the foot of Today).
     Box(modifier.fillMaxWidth().padding(vertical = 8.dp), contentAlignment = Alignment.Center) {
-        Row(
-            Modifier.glass(CircleShape, onClick, scale = 0.97f).padding(horizontal = 16.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(AppIcons.SlidersHorizontal, null, tint = Color.White, modifier = Modifier.size(14.dp))
-            Spacer(Modifier.width(8.dp))
-            Text(stringResource(R.string.glow_today_edit), color = Color.White, style = GlowType.body)
-        }
+        PageButton(stringResource(R.string.glow_today_edit), onClick, icon = AppIcons.SlidersHorizontal, size = ButtonSize.Compact)
     }
 }

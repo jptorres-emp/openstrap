@@ -489,7 +489,7 @@ internal fun heartPointsWeek(
 private fun TaggedNumber(value: String?, unit: String?, tag: NewsTag?, modifier: Modifier = Modifier, dot: DotSize = DotSize.Edge) {
     NumberWithTag(tag.takeIf { value != null }, modifier) {
         Row(verticalAlignment = Alignment.Bottom) {
-            if (value != null) DotMatrixText(value, Modifier.cardNumber(value), dot = dot) else WaitingDash(Modifier.padding(vertical = 8.dp))
+            if (value != null) HaloNumber(value, Modifier.cardNumber(value), dot = dot) else WaitingDash(Modifier.padding(vertical = 8.dp))
             if (unit != null && value != null) {
                 Text(unit, color = Color.White.copy(alpha = 0.7f), style = GlowType.secondary, modifier = Modifier.padding(start = 8.dp))
             }
@@ -633,7 +633,7 @@ internal fun WorkoutDayHeader(text: String) {
 
 /** The effort light's tile, as the mock draws it: 38 dp, 12 dp corners, a shade above the panel. */
 private val EffortTile = 38.dp
-private val EffortShape = RoundedCornerShape(12.dp)
+private val EffortShape = GlowLayout.IconShape
 private val EffortSurface = Color(0xFF151517)
 private val EffortGap = 12.dp
 
@@ -705,8 +705,7 @@ private fun EffortLight(icon: androidx.compose.ui.graphics.vector.ImageVector, e
                         center = centre, radius = size.minDimension * 0.56f,
                     ),
                 )
-            }
-            .border(1.dp, Color.White.copy(alpha = 0.06f), EffortShape),
+            },
         contentAlignment = Alignment.Center,
     ) {
         Icon(icon, null, tint = Color.White.copy(alpha = 0.85f), modifier = Modifier.size(RowIcon))

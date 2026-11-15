@@ -101,6 +101,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.background
 import org.openstrap.app.ui.glow.draw.LightAngle
+import org.openstrap.app.ui.glow.pictures.EnergyRuler
 import org.openstrap.app.ui.glow.draw.GlowStyle
 import org.openstrap.app.ui.glow.draw.heroStyle
 import org.openstrap.app.ui.glow.draw.WINDOW_RIM
@@ -439,8 +440,8 @@ private fun Hero(
             HeroKind.Pair -> PairHero(pairing ?: PairStep.Ready, onPair, m)
             HeroKind.Stuck -> StuckHero(ctx, strap, onSyncNow, m)
             HeroKind.Waking -> WakingHero(ctx, lightAngle, { onOpenScore(org.openstrap.app.ui.dashboard.Score.Recovery) }, onRetryRecovery, m)
-            HeroKind.Midday -> ChargeHero(ctx, onOpenCharge, onRetryRecovery, m)
-            HeroKind.NoSleep -> ChargeHero(ctx, onOpenCharge, onRetryRecovery, m, noSleep = true)
+            HeroKind.Midday -> ChargeHero(ctx, lightAngle, onOpenCharge, onRetryRecovery, m)
+            HeroKind.NoSleep -> ChargeHero(ctx, lightAngle, onOpenCharge, onRetryRecovery, m, noSleep = true)
             HeroKind.Window -> WindowHero(ctx, lightAngle, onStartSport, onOtherSport, m)
             HeroKind.After -> AfterHero(ctx, onOpenWorkout, m)
             HeroKind.Evening -> EveningHero(ctx, lightAngle, bedtime, energyHidden, onOpenRecovery, m)
@@ -491,12 +492,12 @@ private fun WakingHero(ctx: TodayContext, lightAngle: Float?, onOpen: () -> Unit
  * beside it. With [noSleep] it leads the morning too, saying no sleep was recorded (spec 4.3).
  */
 @Composable
-private fun ChargeHero(ctx: TodayContext, onOpen: () -> Unit, onRetry: () -> Unit, modifier: Modifier, noSleep: Boolean = false) {
+private fun ChargeHero(ctx: TodayContext, lightAngle: Float?, onOpen: () -> Unit, onRetry: () -> Unit, modifier: Modifier, noSleep: Boolean = false) {
     val c = ctx.rec?.charge
     val now = ctx.charge
     var info by rememberSaveable { mutableStateOf(false) }
-    // Charge is lit to its level from below (spec 2.5), so the moment's angle gives way here.
-    GlowCard(GlowStyle.Ember.copy(lightLevel = (now ?: 0) / 100f), modifier, onClick = onOpen) {
+    // The midday hero is Energy's orange lit from above, like every hero at its moment's angle (HaloTodayMidday).
+    GlowCard(heroStyle(MetricColors.charge, lightAngle ?: LightAngle.Above), modifier, onClick = onOpen) {
         Column {
             val start = c?.takeIf { it.anchored }?.atWake?.toInt()
             GlowHeader(
@@ -543,6 +544,8 @@ private fun ChargeHero(ctx: TodayContext, onOpen: () -> Unit, onRetry: () -> Uni
                         R.string.glow_today_drained, TabCopy.drainedAmount(c.drainedExercise + c.drainedStress + c.drainedLiving),
                     ),
                 ) else listOf(stringResource(R.string.glow_today_now)),
+                // The ruler of the day's level, a white tick at now (HaloCharts, Energy level).
+                above = { EnergyRuler(now.toFloat(), Color.White.copy(alpha = 0.85f), Modifier.width(150.dp).height(20.dp)) },
             )
         }
     }
@@ -637,7 +640,8 @@ private fun EveningHero(ctx: TodayContext, lightAngle: Float?, bedtime: LocalTim
     val goals = LocalGoals.current
     val sports = ctx.dayWorkouts.map { it.workout.sportType }
     val night = ctx.moment == Moment.Night
-    val style = heroStyle(if (night) MetricColors.sleepDeep else MetricColors.evening, lightAngle)
+    // The evening glows at 0.8 and the night at 0.65 (boards HaloTodayEvening, HaloTodayNight).
+    val style = heroStyle(if (night) MetricColors.sleepDeep else MetricColors.evening, lightAngle, rim = if (night) 0.65f else 0.8f)
     // The evening's violet is lit lighter so it reads as violet, not as a second night (spec 4.2).
     GlowCard(if (night) style else style.copy(bodyLightness = EVENING_BODY), modifier, onClick = onOpen) {
         Column {

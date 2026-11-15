@@ -139,12 +139,8 @@ fun GlowSleepScreen(
 
 /* ------------------------------------------------------------------------------------------------ */
 
-/** Sleep glows midnight blue. */
-internal val SleepGlow = GlowStyle.Midnight.copy(
-    color = MetricColors.sleepDeep, lightAngle = LightAngle.Below,
-    coreX = 0.5f, coreY = 0.6f, coreWidth = 1.1f, coreHeight = 0.9f,
-)
-
+/** Sleep glows midnight blue, lit from below at 0.85 (board HaloSleep), the same hero as Today's night. */
+internal val SleepGlow = org.openstrap.app.ui.glow.draw.heroStyle(MetricColors.sleepDeep, LightAngle.Below, rim = 0.85f)
 
 /**
  * The night (spec 5.2, the sleep hero): how long, against the rest of the week, then the score in dots with its word
@@ -383,7 +379,8 @@ private fun SleepNumber(value: String?, unit: String?, tag: NewsTag?, modifier: 
     if (value == null && !waiting) return
     NumberWithTag(if (value == null) null else tag, modifier) {
         Row(verticalAlignment = Alignment.Bottom) {
-            if (value != null) DotMatrixText(value, Modifier.cardNumber(value), dot = DotSize.Edge) else WaitingDash(Modifier.padding(vertical = 8.dp))
+            if (value != null) HaloNumber(value, Modifier.cardNumber(value), dot = DotSize.Edge)
+            else WaitingDash(Modifier.padding(vertical = 8.dp))
             if (unit != null && value != null) {
                 Text(unit, color = Color.White.copy(alpha = 0.7f), style = GlowType.secondary, modifier = Modifier.padding(start = 6.dp))
             }

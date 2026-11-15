@@ -10,6 +10,8 @@
 
     <!-- The All metrics sheet's title: every number the app has, grouped. -->
     <string name="glow_metrics_all_metrics">All metrics</string>
+    <string name="glow_metrics_search">Search metrics</string>
+    <string name="glow_metrics_no_match">No metric called %1$s</string>
     <!-- A group's title in All metrics, and a row's name: the Recovery score. -->
     <string name="glow_metrics_recovery">Recovery</string>
     <!-- A group's title in All metrics, and a row's name: the Sleep score. -->

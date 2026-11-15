@@ -166,3 +166,42 @@ class AllMetricsTest {
         }
     }
 }
+
+/** The search over the All metrics index (board HaloAllMetrics). */
+class AllMetricsSearchTest {
+    private fun r(name: String) = IndexRow(name, androidx.compose.ui.graphics.Color.White, null, "", IndexTarget.Home(HomeTab.Sleep))
+    private val groups = listOf(
+        IndexGroup("Recovery", listOf(r("Recovery"), r("Energy"))),
+        IndexGroup("Heart", listOf(r("Heart rate"), r("Resting heart rate"), r("HRV"))),
+        IndexGroup("Body signals", listOf(r("Blood oxygen"), r("Breathing rate"), r("Skin temperature"))),
+    )
+    private fun names(q: String) = filterIndex(groups, q).flatMap { it.rows }.map { it.name }
+
+    @Test fun `blank query keeps everything`() {
+        assertEquals(groups, filterIndex(groups, ""))
+        assertEquals(groups, filterIndex(groups, "   "))
+    }
+
+    @Test fun `case insensitive`() = assertEquals(names("heart"), names("HEART"))
+
+    @Test fun `accent insensitive both ways`() {
+        assertEquals(listOf("Energy"), names("énergy"))
+        val accented = listOf(IndexGroup("Sommeil", listOf(r("Fréquence cardiaque"))))
+        assertEquals(1, filterIndex(accented, "frequence").size)
+    }
+
+    @Test fun `matches inside any word`() = assertEquals(listOf("Heart rate", "Resting heart rate", "Breathing rate"), names("rate"))
+
+    @Test fun `every query word must match`() = assertEquals(listOf("Resting heart rate"), names("rest rate"))
+
+    @Test fun `group title keeps the whole group`() = assertEquals(listOf("Blood oxygen", "Breathing rate", "Skin temperature"), names("body"))
+
+    @Test fun `empty groups are hidden`() = assertEquals(listOf("Heart", "Body signals"), filterIndex(groups, "rate").map { it.title })
+
+    @Test fun `nothing matches gives an empty list`() = assertTrue(filterIndex(groups, "zzz").isEmpty())
+
+    @Test fun `chinese names match by substring`() {
+        val zh = listOf(IndexGroup("心脏", listOf(r("静息心率"), r("心率变异性"))))
+        assertEquals(1, filterIndex(zh, "变异").single().rows.size)
+    }
+}

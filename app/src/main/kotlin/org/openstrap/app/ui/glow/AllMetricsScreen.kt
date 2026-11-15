@@ -1,6 +1,37 @@
 package org.openstrap.app.ui.glow
 
+import androidx.activity.compose.BackHandler
 import androidx.annotation.StringRes
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.input.ImeAction
+import org.openstrap.app.ui.theme.AppIcons
+import org.openstrap.app.ui.theme.SportIcons
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
@@ -244,9 +275,10 @@ private fun signalGroups(state: DayUiState, now: Long, strings: Strings): List<I
 )
 
 /**
- * The index as a sheet over the tab (spec 3.2), from the grid button in the header: one grouped list per section.
- * [onOpen] gets the tapped row's target; the caller closes the sheet and goes there.
+ * The index as a sheet over the tab (spec 3.2), from the grid button in the header: a search field, then one grouped
+ * list per section. [onOpen] gets the tapped row's target; the caller closes the sheet and goes there.
  */
+@Suppress("ModifierMissing")
 @Composable
 fun AllMetricsSheet(
     groups: List<IndexGroup>,
@@ -254,8 +286,17 @@ fun AllMetricsSheet(
     onDismiss: () -> Unit,
     onOpen: (IndexTarget) -> Unit,
 ) {
+    var query by rememberSaveable { mutableStateOf("") }
+    // Back clears what's typed before it closes the sheet (this handler is the innermost, so it is asked first).
+    BackHandler(enabled = query.isNotEmpty()) { query = "" }
+    val shown = remember(groups, query) { filterIndex(groups, query) }
     PageSheet(onDismiss, stringResource(R.string.glow_metrics_all_metrics), dayName(date), side = 16.dp) {
-        groups.forEach { group ->
+        MetricSearchField(query, { query = it })
+        if (shown.isEmpty()) Text(
+            stringResource(R.string.glow_metrics_no_match, query.trim()), color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA),
+            style = GlowType.secondary, modifier = Modifier.padding(start = 4.dp, top = 8.dp),
+        )
+        shown.forEach { group ->
             DetailPanel(title = group.title, muted = true) {
                 group.rows.forEachIndexed { i, r ->
                     DetailRow(

@@ -114,8 +114,21 @@ fun GlowWorkoutSummaryScreen(
         }
     }
     val done = { next(step) }
+    val hero = remember(summary, workouts) {
+        if (summary == null || a == null) null
+        else summaryHero(FamilySummary.familyOf(a.workout.sportType, summary.structure), summary, Workouts.usualLoad(workouts.filter { it.workout.start != a.workout.start }.map { it.workout.trainingLoad }))
+    }
+    // Share opens the share screen (workouts spec 2.9) in the summary's place; close comes back here.
+    var sharing by rememberSaveable { mutableStateOf(false) }
+    if (sharing && summary != null && hero != null) {
+        WorkoutShareScreen(summary, hero, rewards?.earned.orEmpty(), liveRoute, contentPadding, onClose = { sharing = false })
+        return
+    }
     if (step == SummaryStep.Best && rewards?.best != null && a != null) {
-        BestCardScreen(rewards.best, a.sportName, contentPadding, onContinue = done)
+        BestCardScreen(
+            rewards.best, a.sportName, contentPadding, onContinue = done,
+            onShare = if (summary != null && hero != null) ({ sharing = true }) else null,
+        )
         return
     }
     if (step == SummaryStep.Moment && rewards != null) {
@@ -128,16 +141,6 @@ fun GlowWorkoutSummaryScreen(
     }
     BackHandler(onBack = done)
     var info by rememberSaveable { mutableStateOf(false) }
-    val hero = remember(summary, workouts) {
-        if (summary == null || a == null) null
-        else summaryHero(FamilySummary.familyOf(a.workout.sportType, summary.structure), summary, Workouts.usualLoad(workouts.filter { it.workout.start != a.workout.start }.map { it.workout.trainingLoad }))
-    }
-    // Share opens the share screen (workouts spec 2.9) in the summary's place; close comes back here.
-    var sharing by rememberSaveable { mutableStateOf(false) }
-    if (sharing && summary != null && hero != null) {
-        WorkoutShareScreen(summary, hero, rewards?.earned.orEmpty(), liveRoute, contentPadding, onClose = { sharing = false })
-        return
-    }
     val trim = summary?.let { rememberWorkoutTrim(it, onTrim, onUndoTrim) }
     // Share and Done stay on the bottom edge; Delete waits at the end of the page. Nothing to share until the workout
     // has loaded.

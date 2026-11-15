@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.shape.CircleShape
 import org.openstrap.app.data.WorkoutAnalysis
+import org.openstrap.app.data.WorkoutLoadBand
 import org.openstrap.app.ui.theme.AppIcons
 import org.openstrap.app.ui.workout.SummaryCopy
 import org.openstrap.app.ui.dashboard.OffWords
@@ -45,9 +46,8 @@ import androidx.compose.ui.text.style.TextOverflow
  */
 
 /**
- * What a workout's usual Load is, to print under its Load and draw as the band on the bar. Today develop has one usual
- * value, so [low] equals [high] and it reads "usual 100" with a tick; the boards print "usual 80 to 120", which is a
- * [low] under [high]: build the range here and the label and the band follow, nothing else changes (plan, Open calls 4).
+ * What a workout's usual Load is, to print under its Load and draw as the band on the bar: "usual 80 to 120" as the
+ * boards print it, [low] under [high] (plan, Open calls 4). Edges that round to one number read as that number.
  */
 internal class LoadUsual(val low: Float, val high: Float) {
     /** The usual as words: "100", or "80 to 120" for a range. */
@@ -55,8 +55,8 @@ internal class LoadUsual(val low: Float, val high: Float) {
         if (Math.round(low) == Math.round(high)) "${Math.round(low)}" else Ranges.numbers(Math.round(low), Math.round(high))
 
     companion object {
-        /** The single usual value develop has, as a range of no width. */
-        fun of(usual: Float?): LoadUsual? = usual?.let { LoadUsual(it, it) }
+        /** The usual workout Load as the two edges the boards print, "80 to 120" ([WorkoutLoadBand]). */
+        fun of(usual: Float?): LoadUsual? = WorkoutLoadBand.edges(usual)?.let { (low, high) -> LoadUsual(low.toFloat(), high.toFloat()) }
     }
 }
 

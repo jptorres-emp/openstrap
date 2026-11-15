@@ -82,6 +82,7 @@ import org.openstrap.app.ui.glow.pictures.WeekOfDots
 import org.openstrap.app.ui.glow.pictures.WeekRings
 import org.openstrap.app.ui.glow.pictures.dayLineRim
 import org.openstrap.app.ui.glow.pictures.dayStripRim
+import org.openstrap.app.ui.glow.pictures.drawHourDots
 import org.openstrap.app.ui.glow.pictures.levelFillRim
 import org.openstrap.app.ui.glow.pictures.weekOfDotsRim
 
@@ -589,33 +590,15 @@ internal fun ActivityCard(
 }
 
 /**
- * The day's steps hour by hour as solid pill bars in [ink] on a hairline (spec 2.7): hours with no steps and hours to
- * come aren't drawn, the latest hour with steps in full ink and the rest a little dimmer.
+ * The day's steps hour by hour as dots in [ink], a dot per 250 steps (HaloCharts, Steps by hour): the latest hour with
+ * steps in full ink and the rest a little dimmer.
  */
 @Composable
 // The hours arrive whole with each update and never change in place.
 @Suppress("UnstableCollections", "ComposeUnstableCollections")
 private fun HourBars(hourly: List<Float>, ink: Color, modifier: Modifier = Modifier) {
-    androidx.compose.foundation.Canvas(modifier) {
-        if (hourly.isEmpty()) return@Canvas
-        val line = org.openstrap.app.ui.glow.draw.ChartInk.HAIRLINE_DP.dp.toPx()
-        val base = size.height - line / 2
-        drawLine(
-            org.openstrap.app.ui.glow.draw.ChartInk.Grid, androidx.compose.ui.geometry.Offset(0f, base),
-            androidx.compose.ui.geometry.Offset(size.width, base), line,
-        )
-        val max = hourly.max().coerceAtLeast(1f)
-        val pitch = size.width / hourly.size
-        val latest = hourly.indexOfLast { it > 0f }
-        val room = base - 2.dp.toPx()
-        hourly.forEachIndexed { i, v ->
-            if (v > 0f) pillBar(if (i == latest) ink else ink.copy(alpha = HOUR_BAR_ALPHA), pitch * i, pitch, base - line, room * v / max)
-        }
-    }
+    androidx.compose.foundation.Canvas(modifier) { drawHourDots(hourly, null, ink) }
 }
-
-/** The hours before the latest, a little dimmer than it. */
-private const val HOUR_BAR_ALPHA = 0.6f
 
 /**
  * This morning's Recovery, later in the day (spec 4.2): a week of dots through the band of your usual

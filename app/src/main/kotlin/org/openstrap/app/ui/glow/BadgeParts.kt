@@ -1,5 +1,6 @@
 package org.openstrap.app.ui.glow
 
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -131,8 +132,8 @@ internal fun BadgeCell(
         bar = if (row == null) share(view, badge) else null, ink = badgeInk(badge), modifier = modifier,
     ) {
         Text(
-            badge.title, color = if (row != null) Color.White else GlowType.noteColor, style = nameStyle,
-            textAlign = TextAlign.Center, maxLines = 2,
+            badge.title, Modifier.fillMaxWidth(), color = if (row != null) Color.White else GlowType.noteColor, style = nameStyle,
+            textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis,
         )
     }
 }
@@ -149,8 +150,8 @@ private fun BestCell(kind: String, best: PersonalBest?, onOpen: (String) -> Unit
         bar = if (best == null) 0f else null, ink = bestInk(kind), modifier = modifier,
     ) {
         Text(
-            title, color = if (best != null) Color.White else GlowType.noteColor, style = GlowType.footnote,
-            textAlign = TextAlign.Center, maxLines = 2,
+            title, Modifier.fillMaxWidth(), color = if (best != null) Color.White else GlowType.noteColor, style = GlowType.footnote,
+            textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis,
         )
         Text(
             figure, color = if (best != null) Color.White else GlowType.footnoteColor, style = GlowType.secondary, maxLines = 1,
@@ -171,7 +172,7 @@ private fun TokenCell(
     lines: @Composable () -> Unit,
 ) {
     Column(
-        modifier.clip(GlowLayout.TileShape).pressClickable(onClick, GlowLayout.TileShape)
+        modifier.fillMaxWidth().pressClickable(onClick)
             .clearAndSetSemantics {
                 contentDescription = described
                 role = Role.Button

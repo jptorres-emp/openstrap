@@ -11,8 +11,6 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.ui.graphics.graphicsLayer
-import dev.chrisbanes.haze.HazeInput
-import dev.chrisbanes.haze.blur.hazeBlur
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
@@ -104,17 +102,19 @@ private fun GlassPortal(host: GlassHost, sheet: Boolean, onDismiss: () -> Unit, 
     }
 }
 
-/** The page behind a popup: blurred and darkened, the nav bar's glass spread across the screen. */
-private val BackdropBlur = dev.chrisbanes.haze.blur.HazeBlurStyle {
-    blurRadius(28.dp)
-    backgroundColor(Color.Black)
-    colorEffects(listOf(dev.chrisbanes.haze.blur.HazeColorEffect.tint(Color.Black.copy(alpha = 0.45f))))
-    fallbackColorEffect(dev.chrisbanes.haze.blur.HazeColorEffect.tint(Color.Black.copy(alpha = 0.8f)))
-}
+/** The dim behind a popup (Halo sheet boards): plain black at 0.62, no blur. */
+private val Dim = Color.Black.copy(alpha = 0.62f)
 
+/** A sheet's solid surface (HaloQuietHoursSheet board, #111215). */
+private val SheetSurface = Color(0xFF111215)
+
+/** A sheet's grabber (HaloDeleteSleepSheet board: 40 by 5, #3A3D45). */
+private val GrabberColor = Color(0xFF3A3D45)
 /** Draws the registered popups; place it last at the root, over everything, with the pages' [haze]. */
 @Composable
 fun GlassOverlay(host: GlassHost, haze: dev.chrisbanes.haze.HazeState) {
+    // Halo has no blur behind a sheet, so [haze] is kept only for the root's call.
+    check(haze === haze)
     host.layers.forEach { layer ->
         androidx.compose.runtime.key(layer) {
             androidx.activity.compose.BackHandler { layer.onDismiss.value() }
@@ -124,7 +124,7 @@ fun GlassOverlay(host: GlassHost, haze: dev.chrisbanes.haze.HazeState) {
             Box(
                 Modifier.fillMaxSize()
                     .graphicsLayer { alpha = shown.value }
-                    .hazeBlur(HazeInput.Sources(haze), BackdropBlur)
+                    .background(Dim)
                     .clickable(tap, indication = null) { layer.onDismiss.value() },
             )
             Box(
@@ -201,19 +201,19 @@ fun GlassSheet(onDismiss: () -> Unit, content: @Composable () -> Unit) {
             }
         }
         // At most a page's column wide, centred, on a wide screen (spec 2.4 Unfolded).
-        GlassPanel(
-            Modifier.widthIn(max = org.openstrap.app.ui.glow.GlowLayout.PageMaxWidth).fillMaxWidth()
+        Surface(
+            shape = org.openstrap.app.ui.glow.GlowLayout.SheetShape, color = SheetSurface, contentColor = Color.White,
+            modifier = Modifier.widthIn(max = org.openstrap.app.ui.glow.GlowLayout.PageMaxWidth).fillMaxWidth()
                 .graphicsLayer { translationY = pull.floatValue }
                 .nestedScroll(pullOnTop)
                 .draggable(
                     rememberDraggableState { d -> pull.floatValue = (pull.floatValue + d).coerceAtLeast(0f) },
                     Orientation.Vertical, onDragStopped = { v -> release(v) },
                 ),
-            org.openstrap.app.ui.glow.GlowLayout.SheetShape,
         ) {
             Column {
-                Box(Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 8.dp), contentAlignment = Alignment.Center) {
-                    Box(Modifier.size(width = 36.dp, height = 4.dp).background(Color.White.copy(alpha = 0.3f), RoundedCornerShape(2.dp)))
+                Box(Modifier.fillMaxWidth().padding(top = 10.dp), contentAlignment = Alignment.Center) {
+                    Box(Modifier.size(width = 40.dp, height = 5.dp).background(GrabberColor, RoundedCornerShape(3.dp)))
                 }
                 content()
             }

@@ -310,7 +310,7 @@ data class SleepEditing(
 
 /**
  * Under a sleep's or nap's figures: the note that the times are the user's ([note], with a pencil, when they are),
- * then Adjust times and Delete side by side, Delete in the warning colour.
+ * then Adjust times and Delete side by side, Delete a dark pill with red text (HaloDeleteSleepSheet board).
  */
 @Composable
 private fun SleepEditActions(note: String?, onAdjust: () -> Unit, onDelete: () -> Unit, modifier: Modifier = Modifier) {

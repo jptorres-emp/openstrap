@@ -168,8 +168,14 @@ fun ListRow(
             ProgressRing({ ring }, color, Modifier.size(RowIcon).padding(1.dp), stroke = 2.5.dp, track = 0.12f)
             Spacer(Modifier.width(RowIconGap))
         } else if (icon != null) {
-            Icon(icon, null, tint = iconTint.copy(alpha = iconTint.alpha * if (waiting) WAITING_ICON_ALPHA else 1f), modifier = Modifier.size(RowIcon))
-            Spacer(Modifier.width(RowIconGap))
+            // The icon sits on a 36 dp squircle tile at 14% of its ink (HaloTodayMidday board, "Your body" rows).
+            Box(
+                Modifier.size(RowTile).clip(GlowLayout.IconShape).background(iconTint.copy(alpha = iconTint.alpha * ROW_TILE_ALPHA)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(icon, null, tint = iconTint.copy(alpha = iconTint.alpha * if (waiting) WAITING_ICON_ALPHA else 1f), modifier = Modifier.size(RowIcon))
+            }
+            Spacer(Modifier.width(RowTileGap))
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             RowName(name)
@@ -182,7 +188,7 @@ fun ListRow(
         else if (dash) WaitingDash()
         if (onClick != null) {
             Spacer(Modifier.width(RowCaretGap))
-            TapCaret(ROW_CARET_ALPHA)
+            RowChevron()
         }
     }
 }
@@ -209,6 +215,10 @@ private fun RowLine(status: String?, tag: org.openstrap.app.ui.dashboard.NewsTag
 /** A row's icon, and the gap after it, as on the You and Strap pages. */
 internal val RowIcon = 20.dp
 internal val RowIconGap = 14.dp
+/** A list row's icon tile and the gap after it (HaloTodayMidday board: 36 across, 12 apart), and the tile's fill, 14% of the icon's ink. */
+private val RowTile = 36.dp
+private val RowTileGap = 12.dp
+private const val ROW_TILE_ALPHA = 0.14f
 /** From a row's value to its tap caret. */
 internal val RowCaretGap = 8.dp
 /** A row icon that isn't a metric's (a workout's sport): white at 72% (spec 2.8). */

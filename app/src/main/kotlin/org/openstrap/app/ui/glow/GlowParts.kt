@@ -22,7 +22,6 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -67,21 +66,19 @@ fun DotMatrixText(
 /* ------------------------------------------------------------------------------------------------ */
 
 /**
- * The pill switch, monochrome like the workout buttons: white with a black knob when on, dim grey when off.
- * Inside a glow card, pass the card's colour as [accent]: on, it's a deeper shade of that colour with a white knob.
+ * The pill switch (HaloRewardsSettingsRules board, B3), 50 by 30: white with a black knob when on, #2A2C33 with a grey
+ * knob (#8A909A) when off. Never a colour: [accent] is kept for callers' signatures and ignored, since a switch track is
+ * white when on, not a sport's colour.
  */
+@Suppress("UNUSED_PARAMETER")
 @Composable
 fun GlowSwitch(checked: Boolean, onCheckedChange: (Boolean) -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true, accent: Color? = null) {
-    val onTrack = accent?.let { lerp(it, Color.Black, 0.25f) } ?: Color.White
-    val track by animateColorAsState(if (checked) onTrack else Color.White.copy(alpha = 0.12f), label = "glow switch track")
-    val knobColor by animateColorAsState(
-        if (!checked) Color.White.copy(alpha = 0.6f) else if (accent != null) Color.White else Color.Black,
-        label = "glow switch knob colour",
-    )
-    val knob by animateDpAsState(if (checked) 26.dp else 0.dp, spring(dampingRatio = 0.6f, stiffness = 500f), label = "glow switch knob")
+    val track by animateColorAsState(if (checked) Color.White else Color(0xFF2A2C33), label = "glow switch track")
+    val knobColor by animateColorAsState(if (checked) Color.Black else Color(0xFF8A909A), label = "glow switch knob colour")
+    val knob by animateDpAsState(if (checked) 20.dp else 0.dp, spring(dampingRatio = 0.6f, stiffness = 500f), label = "glow switch knob")
     Box(
         modifier
-            .size(60.dp, 34.dp)
+            .size(50.dp, 30.dp)
             .alpha(if (enabled) 1f else 0.4f)
             // Clipped so the press ripple stays inside the pill.
             .clip(CircleShape)
@@ -92,7 +89,7 @@ fun GlowSwitch(checked: Boolean, onCheckedChange: (Boolean) -> Unit, modifier: M
         Box(
             Modifier
                 .offset(x = knob)
-                .size(28.dp)
+                .size(24.dp)
                 .background(knobColor, CircleShape),
         )
     }

@@ -64,7 +64,7 @@ import org.openstrap.app.ui.alarms.phoneAlertsSummary
 import org.openstrap.app.ui.dashboard.agoText
 import org.openstrap.app.ui.firmware.FirmwareViewModel
 import org.openstrap.app.ui.glow.draw.CoreShape
-import org.openstrap.app.ui.glow.DestructiveInk
+import org.openstrap.app.ui.glow.PageActionRow
 import org.openstrap.app.ui.glow.HeroValue
 import org.openstrap.app.ui.glow.GlowCard
 import org.openstrap.app.ui.glow.GlowLayout
@@ -289,23 +289,22 @@ fun DeviceScreen(
             PageRows {
                 var first = true
                 if (connection is ConnectionState.Connected) {
-                    PageRow(
-                        stringResource(R.string.you_strap_disconnect), onClick = { confirmDisconnect = true }, divider = false,
+                    PageActionRow(
+                        stringResource(R.string.you_strap_disconnect), { confirmDisconnect = true }, divider = false,
                         icon = AppIcons.LinkBreak,
                     )
                     first = false
                 }
                 if (connection is ConnectionState.Connected && info?.canRestart == true) {
-                    PageRow(
-                        stringResource(R.string.you_strap_row_restart), onClick = { confirmRestart = true }, divider = !first,
+                    PageActionRow(
+                        stringResource(R.string.you_strap_row_restart), { confirmRestart = true }, divider = !first,
                         icon = AppIcons.ShutDown,
                     )
                     first = false
                 }
-                PageRow(
-                    stringResource(R.string.you_strap_row_forget), onClick = { confirmForget = true }, divider = !first,
-                    titleColor = DestructiveInk,
-                    icon = AppIcons.Trash,
+                PageActionRow(
+                    stringResource(R.string.you_strap_row_forget), { confirmForget = true }, divider = !first,
+                    icon = AppIcons.Trash, destructive = true,
                 )
             }
         }

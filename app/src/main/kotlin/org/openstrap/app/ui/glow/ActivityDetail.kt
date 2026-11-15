@@ -867,13 +867,7 @@ private fun StackedBars(
                     }
                 }
             }
-            goal?.let { g ->
-                val y = yOf(g)
-                drawLine(
-                    Color.White.copy(alpha = 0.35f), Offset(0f, y), Offset(size.width, y), 1.dp.toPx(),
-                    pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(4.dp.toPx(), 4.dp.toPx())),
-                )
-            }
+            goal?.let { g -> dashedGoalLine(yOf(g), size.width) }
         }
         androidx.compose.foundation.layout.Row(
             Modifier.fillMaxWidth().padding(top = 6.dp),

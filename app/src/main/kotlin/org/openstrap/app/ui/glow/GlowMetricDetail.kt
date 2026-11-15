@@ -74,7 +74,6 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
 import org.openstrap.app.R
@@ -573,7 +572,7 @@ private fun FigureValue(value: String, style: TextStyle) {
     val split = Regex("""^([+\-\u2212]?[\d.,:]+)(\s*.*)$""").matchEntire(value)
     val text = if (split == null || split.groupValues[2].isBlank()) AnnotatedString(value) else buildAnnotatedString {
         append(split.groupValues[1])
-        withStyle(SpanStyle(fontSize = 13.sp, color = GlowType.noteColor, fontFamily = org.openstrap.app.ui.theme.FunnelSans)) {
+        withStyle(GlowType.secondary.toSpanStyle().copy(color = GlowType.noteColor)) {
             append(" " + split.groupValues[2].trim())
         }
     }

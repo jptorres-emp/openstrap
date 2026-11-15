@@ -46,12 +46,10 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.floor
@@ -61,7 +59,6 @@ import org.openstrap.app.ui.components.rememberAnimationsOn
 import org.openstrap.app.ui.components.rememberScrubHaptics
 import org.openstrap.app.ui.components.scrub
 import org.openstrap.app.ui.dashboard.NewsTag
-import org.openstrap.app.ui.theme.FunnelSans
 
 /*
  * A card's own picture on the page it opens (spec 2.7, "Each metric draws its own picture"): the page draws the same
@@ -104,10 +101,10 @@ private val DetailBandInk = Color.White.copy(alpha = 0.07f)
 private val DetailGutter = 30.dp
 
 /** A chart's axis text (boards: 11 px #6E7480). */
-private val DetailAxisText = TextStyle(color = DetailAxisInk, fontSize = 11.sp, fontFamily = FunnelSans)
+private val DetailAxisText = GlowType.caption.copy(color = DetailAxisInk)
 
 /** A column's value above it (boards: 12 px #9AA0AA). */
-private val DetailValueText = TextStyle(color = GlowType.noteColor, fontSize = 12.sp, fontFamily = FunnelSans)
+private val DetailValueText = GlowType.noteSmall.copy(color = GlowType.noteColor)
 
 /** How far a status word's tint is from the metric colour toward white (boards: 42%). */
 private const val STATUS_TINT = 0.42f
@@ -495,12 +492,7 @@ internal fun DetailColumns(
             val r = m.measure(format(baseline), DetailAxisText)
             drawText(r, topLeft = Offset(size.width - 2.dp.toPx() - r.size.width, plot.y(baseline) - r.size.height / 2f))
         }
-        goal?.let { g ->
-            drawLine(
-                Color.White.copy(alpha = 0.35f), Offset(0f, plot.y(g)), Offset(plot.plotRight, plot.y(g)), 1.dp.toPx(),
-                pathEffect = PathEffect.dashPathEffect(floatArrayOf(4.dp.toPx(), 4.dp.toPx())),
-            )
-        }
+        goal?.let { g -> dashedGoalLine(plot.y(g), plot.plotRight) }
         val barW = (pitch * if (few) 0.55f else 0.78f).coerceIn(2.dp.toPx(), if (few) 30.dp.toPx() else 14.dp.toPx())
         val radius = if (few) 9.dp.toPx().coerceAtMost(barW / 2f) else minOf(3.dp.toPx(), barW / 2f)
         val on = picked ?: highlight
@@ -627,4 +619,13 @@ internal fun scaleWords(): Triple<String, String, String> = Triple(
     androidx.compose.ui.res.stringResource(org.openstrap.app.R.string.glow_detail_worse),
     androidx.compose.ui.res.stringResource(org.openstrap.app.R.string.glow_detail_your_normal),
     androidx.compose.ui.res.stringResource(org.openstrap.app.R.string.glow_detail_better),
+)
+
+/**
+ * A goal across a chart: a dashed line in white 0.35 (boards HaloDetailSteps, HaloCharts: the goal is the one dashed mark on
+ * a detail). The only dash in the chart code, so the solid-lines rule has one place to look.
+ */
+internal fun DrawScope.dashedGoalLine(y: Float, right: Float) = drawLine(
+    Color.White.copy(alpha = 0.35f), Offset(0f, y), Offset(right, y), 1.dp.toPx(),
+    pathEffect = PathEffect.dashPathEffect(floatArrayOf(4.dp.toPx(), 4.dp.toPx())),
 )

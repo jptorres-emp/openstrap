@@ -46,7 +46,6 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.sp
 import org.openstrap.app.ui.glow.draw.DotSize
 import org.openstrap.app.ui.glow.draw.LightAngle
 import org.openstrap.app.ui.glow.draw.heroStyle
@@ -298,7 +297,7 @@ private val CardRule = Color(0xFF1E2025)
 internal val SoftInk = Color(0xFFC9CED6)
 
 /** A figure's small unit after its value ("km" after 2.1): Funnel Sans 13 in grey. */
-private val UnitSpan = SpanStyle(color = GlowType.noteColor, fontSize = 13.sp, fontFamily = FunnelSans)
+private val UnitSpan = GlowType.secondary.toSpanStyle().copy(color = GlowType.noteColor, fontFamily = FunnelSans)
 
 /** A caption under a chart (boards: 11 px #6E7480). */
 private val CaptionInk = GlowType.footnoteColor
@@ -535,7 +534,7 @@ private fun SplitLine(name: String, share: Float, time: String, dot: Color, bold
         }
         Text(
             time, Modifier.widthIn(min = 44.dp), color = Color.White, textAlign = TextAlign.End, maxLines = 1,
-            style = GlowType.rowValue.copy(fontSize = 14.sp, fontWeight = if (bold) FontWeight.SemiBold else FontWeight.Normal),
+            style = if (bold) FigureText14.copy(fontWeight = FontWeight.SemiBold) else FigureText14,
         )
         Box(Modifier.size(8.dp).background(dot, CircleShape))
     }
@@ -568,7 +567,7 @@ private fun SplitBars(rows: List<SplitRow>, fastest: Int?, maxHr: Int) {
 private val SplitBarInk = Color(0xFF2E3038)
 
 /** A value in a row of a card (boards: 14 px with tabular digits). */
-private val FigureText14 = GlowType.rowValue.copy(fontSize = 14.sp)
+private val FigureText14 = GlowType.buttonSmall.copy(fontWeight = FontWeight.Normal, fontFeatureSettings = "tnum")
 
 /** A period's name and average heart rate (board HaloSummaryGames: 14 px regular). */
 private val PeriodText = GlowType.buttonSmall.copy(fontWeight = FontWeight.Normal)

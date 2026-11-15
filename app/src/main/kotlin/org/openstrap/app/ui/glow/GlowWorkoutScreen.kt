@@ -1,5 +1,6 @@
 package org.openstrap.app.ui.glow
 
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
 import org.openstrap.app.ui.workout.FamilySummary
@@ -8,7 +9,6 @@ import org.openstrap.app.ui.components.pressClickable
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.Alignment
 import androidx.compose.material3.Icon
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.background
@@ -305,7 +305,7 @@ private fun HeartRateCard(a: WorkoutAnalysis, trim: WorkoutTrim? = null) {
             stringResource(R.string.glow_workout_heart_none), color = GlowType.noteColor, style = GlowType.secondary,
         ) else {
             ZoneHeartLine(values, first, a.end, a.maxHeartRate, a.historyRanges, scrubbed, { scrubbed = it })
-            Row(Modifier.fillMaxWidth().padding(top = (-6).dp)) {
+            Row(Modifier.fillMaxWidth()) {
                 PageNote(clock(first))
                 Spacer(Modifier.weight(1f))
                 val after = stringResource(R.string.glow_workout_heart_drop_after, clock(a.end))
@@ -383,7 +383,7 @@ private fun InYourDayCard(text: String, onOpen: (() -> Unit)?) {
             Text(stringResource(R.string.glow_workout_in_your_day), color = Color.White, style = GlowType.cardTitle, maxLines = 1)
             if (onOpen != null) Icon(AppIcons.TapCaret, null, Modifier.size(14.dp), tint = Color.White.copy(alpha = CARD_CARET_ALPHA))
         }
-        Text(text, color = SoftInk, style = GlowType.body.copy(fontSize = 14.sp, lineHeight = 20.sp))
+        Text(text, color = SoftInk, style = GlowType.buttonSmall.copy(fontWeight = FontWeight.Normal))
     }
 }
 
@@ -431,7 +431,7 @@ private fun FactRow(f: WorkoutFact) {
         Text(f.name, Modifier.weight(1f), color = GlowType.noteColor, style = GlowType.secondary, maxLines = 1)
         Text(
             listOfNotNull(f.value, f.status).joinToString(" "), color = Color.White,
-            style = GlowType.rowValue.copy(fontSize = 14.sp), maxLines = 1, overflow = TextOverflow.Ellipsis,
+            style = GlowType.buttonSmall.copy(fontWeight = FontWeight.Normal), maxLines = 1, overflow = TextOverflow.Ellipsis,
         )
     }
 }

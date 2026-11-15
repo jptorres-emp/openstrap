@@ -7,7 +7,6 @@ import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.material3.Text
-import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.mutableLongStateOf
 import org.openstrap.app.ui.workout.ZONE_COLORS
@@ -50,7 +49,8 @@ private val PlotInset = 14.dp
 
 /** The panel behind the line (board HaloTrimSheet: #0A0B0D, corner 20). */
 private val PanelInk = Color(0xFF0A0B0D)
-private val PanelShape = SquircleShape(radius = 20.dp, smoothing = GlowLayout.SMOOTHING)
+private val PanelCorner = 20.dp
+private val PanelShape = SquircleShape(PanelCorner, GlowLayout.SMOOTHING)
 
 /** Under the track, room for the line that marks what was recorded or detected. */
 private val MarkRoom = 10.dp
@@ -310,7 +310,7 @@ private fun HaloTrimContent(summary: PhoneSummary, onSave: (Long, Long) -> Unit,
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text(
             SummaryCopy.trimHeader(clock(from), clock(to), to - from), color = Color.White,
-            style = GlowType.figure.copy(fontSize = 22.sp, lineHeight = 26.sp),
+            style = GlowType.sentence,
         )
         // Recorded is all it can reach for now: the core and the reach are one, so the bar only trims.
         TrimBar(

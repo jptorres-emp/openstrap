@@ -292,7 +292,8 @@ private fun DropLine(readings: List<Pair<Long, Int>>, end: Long, modifier: Modif
 }
 
 /** The corner of the map inside a card (board HaloSummaryRun: 18 across the card's 36, so half). */
-private val MapShape = SquircleShape(radius = 18.dp, smoothing = GlowLayout.SMOOTHING)
+private val MapCorner = 18.dp
+private val MapShape = SquircleShape(MapCorner, GlowLayout.SMOOTHING)
 
 /** The kept route in its zones' colours on the map's own near black; nothing without a route that goes somewhere. */
 @Composable

@@ -5,7 +5,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.material3.Icon
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.foundation.layout.size
 import org.openstrap.app.ui.components.pressClickable
@@ -140,7 +139,7 @@ private fun LoadFigure(value: String, unit: String?, label: String, modifier: Mo
         Text(
             buildAnnotatedString {
                 append(value)
-                if (unit != null) withStyle(GlowType.noteSmall.copy(fontSize = 13.sp).toSpanStyle()) { append(" $unit") }
+                if (unit != null) withStyle(GlowType.secondary.toSpanStyle().copy(color = GlowType.noteColor)) { append(" $unit") }
             },
             color = Color.White, style = GlowType.figure, maxLines = 1,
         )

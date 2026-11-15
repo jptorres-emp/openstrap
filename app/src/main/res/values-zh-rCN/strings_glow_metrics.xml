@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="glow_metrics_all_metrics">全部指标</string>
+    <string name="glow_metrics_search">搜索指标</string>
+    <string name="glow_metrics_no_match">没有名为“%1$s”的指标</string>
     <string name="glow_metrics_recovery">恢复</string>
     <string name="glow_metrics_sleep">睡眠</string>
     <string name="glow_metrics_group_heart">心脏</string>

@@ -71,7 +71,6 @@
     <string name="you_strap_row_background">Stay connected in the background</string>
     <string name="you_strap_battery_settings_failed">Couldn\'t open battery settings on this phone.</string>
     <!-- After the battery's number in large dots, "86% battery". The number isn't part of it: the placeholder is the percent sign, which can move or take a space before it. -->
-    <string name="you_strap_battery_unit"><xliff:g id="percent_sign" example="%">%1$s</xliff:g> battery</string>
     <!-- Under the reason the strap couldn't connect. -->
     <string name="you_strap_retrying">unstrap keeps retrying. Keep the strap on its charger near the phone, and make sure the Zepp app isn\'t running. The strap talks to one app at a time.</string>
     <!-- Why the sync stopped, a sentence from the sync. -->
@@ -119,7 +118,6 @@
     <!-- The button that pairs. -->
     <string name="you_pair_pair">Pair</string>
     <!-- The panel when the strap refused the key. -->
-    <string name="you_pair_key_rejected_title">Pairing didn\'t work</string>
     <string name="you_pair_again">Start pairing again</string>
 
     <!-- Messages from the Strap page's actions. -->

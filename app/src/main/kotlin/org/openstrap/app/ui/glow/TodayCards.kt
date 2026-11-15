@@ -802,7 +802,10 @@ internal fun ChargeWideCard(
         EdgeTitle(stringResource(R.string.glow_today_energy_title), null, marker = upTo, tag = tag)
         EdgeValue(now?.toString(), null, status)
         Spacer(Modifier.weight(1f))
-        if (now != null) EnergyRuler(now.toFloat(), Color.White.copy(alpha = 0.85f), Modifier.fillMaxWidth().height(18.dp))
+        if (now != null) EnergyRuler(
+            now.toFloat(), MetricColors.charge, Modifier.fillMaxWidth().height(16.dp),
+            dots = 16, track = Color.White.copy(alpha = 0.14f),
+        )
     } else PictureCard(MetricColors.charge, modifier.fillMaxWidth(), onClick = onClick) {
         // Energy as a plain Wide (boards HaloTodayEvening, HaloTodayAfter): the figure and its line, the ruler beside.
         EdgeTitle(
@@ -811,7 +814,10 @@ internal fun ChargeWideCard(
         )
         Row(verticalAlignment = Alignment.Bottom) {
             Column(Modifier.weight(1f)) { EdgeValue(now?.toString(), null, status) }
-            if (now != null) EnergyRuler(now.toFloat(), Color.White.copy(alpha = 0.85f), Modifier.width(150.dp).height(22.dp))
+            if (now != null) EnergyRuler(
+                now.toFloat(), MetricColors.charge, Modifier.width(150.dp).height(18.dp),
+                dots = 22, track = Color.White.copy(alpha = 0.14f),
+            )
         }
     }
 }

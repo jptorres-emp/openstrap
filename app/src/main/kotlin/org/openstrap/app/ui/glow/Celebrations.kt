@@ -1,6 +1,7 @@
 package org.openstrap.app.ui.glow
 
 import org.openstrap.app.R
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.activity.compose.BackHandler
@@ -36,7 +37,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import java.time.LocalDate
 import java.time.format.TextStyle as DayStyle
-import java.util.Locale
 import org.openstrap.app.data.Rewards
 import org.openstrap.app.data.Weeks
 import org.openstrap.app.presentation.RewardsCopy
@@ -178,8 +178,9 @@ fun GoalMomentScreen(
         DotFigure(dotFormat("%d/%d", count, goal), BigNumber.Feature, Modifier.padding(top = 4.dp))
         MomentName(stringResource(R.string.glow_celebrate_goal_met))
         MomentLine(RewardsCopy.momentLine(inARow), RewardLime)
+        val locale = LocalConfiguration.current.locales[0]
         DayPills(
-            days.map { (d, on) -> d.dayOfWeek.getDisplayName(DayStyle.NARROW, Locale.getDefault()) to on },
+            days.map { (d, on) -> d.dayOfWeek.getDisplayName(DayStyle.NARROW, locale) to on },
             today = days.indexOfFirst { it.first == today }.takeIf { it >= 0 },
             modifier = Modifier.padding(start = 8.dp, end = 8.dp, top = 10.dp),
         )

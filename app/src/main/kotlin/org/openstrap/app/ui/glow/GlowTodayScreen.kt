@@ -87,6 +87,7 @@ import org.openstrap.app.presentation.wakingLead
 import org.openstrap.app.ui.dashboard.todayCards
 import org.openstrap.app.ui.theme.AppIcons
 import org.openstrap.app.ui.theme.MetricColors
+import org.openstrap.app.ui.glow.pictures.EnergyRuler
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -540,7 +541,10 @@ private fun ChargeHero(ctx: TodayContext, lightAngle: Float?, onOpen: () -> Unit
                     ),
                 ) else listOf(stringResource(R.string.glow_today_now)),
                 // The ruler of the day's level, a white tick at now (HaloCharts, Energy level).
-                above = { HeroEnergyRuler(now.toFloat(), Modifier.fillMaxWidth().height(20.dp)) },
+                above = { EnergyRuler(
+                    now.toFloat(), Color.White.copy(alpha = 0.85f), Modifier.fillMaxWidth().height(20.dp),
+                    dots = 20, track = Color.White.copy(alpha = 0.25f),
+                ) },
             )
         }
     }

@@ -11,12 +11,7 @@
     <!-- The title of the card with this week's workouts against the weekly goal. -->
     <string name="glow_goals_this_week">This week</string>
     <!-- A small button on the This week card that opens the goal sheet. The number is the weekly goal in workouts. -->
-    <string name="glow_goals_goal_button">Goal <xliff:g id="goal" example="4">%1$d</xliff:g></string>
     <!-- Beside a big count of the week's workouts, as its unit: "3 of 4 workouts". The number is the weekly goal. English keeps "workouts" for any goal. -->
-    <plurals name="glow_goals_of_workouts">
-        <item quantity="one">of <xliff:g id="goal" example="1">%d</xliff:g> workouts</item>
-        <item quantity="other">of <xliff:g id="goal" example="4">%d</xliff:g> workouts</item>
-    </plurals>
     <!-- Read out by screen readers for the week's bar: the workouts done and the weekly goal. -->
     <plurals name="glow_goals_count_of_goal">
         <item quantity="one"><xliff:g id="count" example="3">%1$d</xliff:g> of <xliff:g id="goal" example="4">%2$d</xliff:g> workout</item>
@@ -72,7 +67,6 @@
     <!-- The weekly recap's title. -->
     <string name="glow_goals_your_week">Your week</string>
     <!-- The weekly recap card's title when the week's goal was met. -->
-    <string name="glow_goals_goal_met">Goal met</string>
     <!-- Under the weekly recap's dots: how many weeks in a row met the goal. -->
     <plurals name="glow_goals_weekly_streak">
         <item quantity="one">Goal met <xliff:g id="weeks" example="1">%d</xliff:g> week in a row</item>
@@ -101,7 +95,6 @@
     <!-- Under the total calories burned in workouts. -->
     <string name="glow_goals_active_kcal">Active kcal</string>
     <!-- A button that opens the goal sheet for next week. The number is the goal in workouts. -->
-    <string name="glow_goals_next_week">Next week: <xliff:g id="goal" example="4">%1$d</xliff:g></string>
     <!-- A button that opens the share screen for the week. -->
     <string name="glow_goals_share_week">Share week</string>
 

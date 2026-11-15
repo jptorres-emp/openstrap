@@ -44,7 +44,6 @@
     <string name="you_strap_row_forget">忽略此手环</string>
     <string name="you_strap_row_background">后台保持连接</string>
     <string name="you_strap_battery_settings_failed">无法打开本手机的电池设置。</string>
-    <string name="you_strap_battery_unit">%1$s 电量</string>
     <string name="you_strap_retrying">unstrap 正在持续重试。请将手环放在手机旁的充电座上，并确保 Zepp 应用未在运行。手环一次只能与一个应用通信。</string>
     <string name="you_strap_sync_stopped">同步已停止。%1$s</string>
     <string name="you_strap_sync_retry">%1$s unstrap 会自动重试。</string>
@@ -75,7 +74,6 @@
     <string name="you_pair_address">蓝牙地址</string>
     <string name="you_pair_key">配对密钥</string>
     <string name="you_pair_pair">配对</string>
-    <string name="you_pair_key_rejected_title">配对未成功</string>
     <string name="you_pair_again">重新开始配对</string>
     <string name="you_pair_key_invalid">配对密钥为 32 位字符，且仅包含 0 到 9 以及 a 到 f。你输入了 %1$d 位。</string>
     <string name="you_pair_address_invalid">蓝牙地址格式应类似于 C8:0F:10:AB:CD:EF。可通过扫描自动填入。</string>

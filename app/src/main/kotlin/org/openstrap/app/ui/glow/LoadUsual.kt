@@ -60,9 +60,6 @@ internal class LoadUsual(val low: Float, val high: Float) {
     }
 }
 
-/** The plain panel's fill (workout rules, Tokens: #0C0D10). */
-private val PlainPanel = Color(0xFF0C0D10)
-
 /** The track and band of the Load bar (boards: #1E2025 and #3A3D45). */
 private val LoadTrack = Color(0xFF1E2025)
 private val LoadBand = Color(0xFF3A3D45)

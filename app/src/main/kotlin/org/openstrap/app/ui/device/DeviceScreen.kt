@@ -588,7 +588,7 @@ internal fun StrapHero(
 
 /** A pill on the strap card (HaloStrap board: 52 tall, 15 semibold): white as the one tap, or black at 45% on the silver. */
 @Composable
-private fun CardButton(text: String, onClick: () -> Unit, modifier: Modifier, white: Boolean = false, icon: ImageVector? = null,
+private fun CardButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, white: Boolean = false, icon: ImageVector? = null,
     enabled: Boolean = true) {
     val ink = if (white) Color.Black else Color.White
     Row(

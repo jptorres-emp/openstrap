@@ -51,7 +51,6 @@
         <item quantity="other"><xliff:g id="count" example="250">%1$d</xliff:g> lines, for bug reports</item>
     </plurals>
     <!-- Centred at the foot of the You page: the version running. -->
-    <string name="you_footer">unstrap <xliff:g id="version" example="2.1.0">%1$s</xliff:g>. Everything stays on this phone.</string>
 
     <!-- The Goals row, one line: the three daily goals joined, "8,000 steps, 450 active kcal, 8 active hours". -->
     <string name="you_goals_line"><xliff:g id="steps" example="8,000 steps">%1$s</xliff:g>, <xliff:g id="calories" example="450 active kcal">%2$s</xliff:g>, <xliff:g id="hours" example="8 active hours">%3$s</xliff:g></string>
@@ -88,12 +87,10 @@
     <string name="you_profile_discard">Discard</string>
     <string name="you_profile_keep_editing">Keep editing</string>
     <!-- At the top of the Profile page. -->
-    <string name="you_profile_note">Age sets your maximum heart rate, which every effort and recovery number depends on. All fields are optional and stay on this phone.</string>
     <!-- A field's label, then the unit shown inside it, short. -->
     <string name="you_profile_age">Age</string>
     <string name="you_profile_age_unit">years</string>
     <!-- Over the Female and Male segments. Calories, Load and Habit Age are names of unstrap's pages and scores. -->
-    <string name="you_profile_sex_note">Sex, for Calories, Load, fitness and Habit Age</string>
     <!-- Two segments side by side, a word each. -->
     <string name="you_profile_sex_female">Female</string>
     <string name="you_profile_sex_male">Male</string>
@@ -104,33 +101,26 @@
     <string name="you_profile_weight">Weight</string>
     <string name="you_profile_unit_lb">lb</string>
     <string name="you_profile_unit_kg">kg</string>
-    <string name="you_profile_feet">Feet</string>
     <string name="you_profile_unit_ft">ft</string>
-    <string name="you_profile_inches">Inches</string>
     <string name="you_profile_unit_in">in</string>
     <string name="you_profile_height">Height</string>
     <string name="you_profile_unit_cm">cm</string>
     <!-- Over five numbered segments, 1 to 5. -->
     <string name="you_profile_activity_note">Usual activity, for the fitness estimate</string>
     <!-- Under the activity segments while none is picked. -->
-    <string name="you_profile_activity_pick">Pick the level that best matches a usual week.</string>
     <!-- Switch rows. -->
     <string name="you_profile_beta_blockers">Taking beta-blockers</string>
     <string name="you_profile_pregnant">Pregnant</string>
     <!-- The sleep need field's label: hours, 7 to 9, or empty for the default for the user's age. -->
-    <string name="you_profile_sleep_need">Sleep need in hours (7 to 9, or blank)</string>
     <!-- The unit for hours, short. -->
     <string name="you_unit_h">h</string>
 
     <!-- The goals sheet's title and its note. -->
     <string name="you_goals_title">Your goals</string>
-    <string name="you_goals_note">What you aim for each day and week. Change them whenever they stop fitting.</string>
     <!-- The steps field's label, then its unit. -->
     <string name="you_goals_steps_label">Steps</string>
-    <string name="you_goals_steps_unit">steps</string>
     <string name="you_goals_sleep_label">Sleep</string>
     <!-- The unit for minutes, short. -->
-    <string name="you_unit_min">min</string>
     <string name="you_goals_active_label">Active hours</string>
     <!-- The active hours field's unit: hours out of the day's 24. -->
     <string name="you_goals_active_unit">of 24</string>
@@ -162,7 +152,6 @@
     <string name="you_updates_title">Updates</string>
     <string name="you_updates_check_now">Check now</string>
     <!-- The row of the newest version, to install it. -->
-    <string name="you_updates_release">unstrap <xliff:g id="version" example="2.2.0">%1$s</xliff:g></string>
     <!-- The daily check's switch and its line. -->
     <string name="you_updates_daily">Check every day</string>
     <string name="you_updates_daily_note">Notifies you of new versions</string>

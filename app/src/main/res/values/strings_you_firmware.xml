@@ -23,7 +23,6 @@
     <string name="you_firmware_service_unknown">Connect to check</string>
     <!-- A row that opens a firmware file from the phone. -->
     <string name="you_firmware_from_file">Install from a file</string>
-    <string name="you_firmware_from_file_note">For an image you have</string>
     <!-- The privacy panel: its title, then three points, a short title and one sentence each. -->
     <string name="you_firmware_privacy">Privacy and safety</string>
     <string name="you_firmware_privacy_sign_in">Sign-in</string>
@@ -34,7 +33,6 @@
     <string name="you_firmware_privacy_install_text">Downloads are checked against the server\'s checksum, and the strap verifies the signature before installing.</string>
 
     <!-- The update panel before a check: its title, what it does and the button. -->
-    <string name="you_firmware_updates">Updates</string>
     <string name="you_firmware_updates_text">Ask Zepp\'s update server whether there\'s newer firmware for this strap.</string>
     <string name="you_firmware_check">Check for updates</string>
     <string name="you_firmware_checking">Checking for updates…</string>
@@ -125,8 +123,6 @@
     <string name="you_zepp_save_sign_in">Save sign-in</string>
     <string name="you_zepp_account_none">Zepp only answers update checks for signed-in users. Sign in, or paste your own app token and user ID. They\'re stored on this phone only.</string>
     <!-- The server is an address, "https://api-mifit-us2.zepp.com". -->
-    <string name="you_zepp_account_user">Update checks use your saved token for user <xliff:g id="user" example="1234567890">%1$s</xliff:g> on <xliff:g id="server" example="https://api-mifit-us2.zepp.com">%2$s</xliff:g>.</string>
-    <string name="you_zepp_account">Update checks use your saved token on <xliff:g id="server" example="https://api-mifit-us2.zepp.com">%1$s</xliff:g>.</string>
     <string name="you_zepp_sign_in_again">Sign in again</string>
     <string name="you_zepp_paste_token">Paste token</string>
     <string name="you_zepp_edit">Edit</string>

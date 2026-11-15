@@ -51,10 +51,7 @@
     <string name="you_hc_summary_stopped_unavailable">已停止。此手机不支持</string>
     <string name="you_hc_title">Health Connect</string>
     <string name="you_hc_auto">自动复制到 Health Connect</string>
-    <string name="you_hc_any_time">随时</string>
     <string name="you_hc_copy_now">立即复制</string>
-    <string name="you_hc_copy_now_note">最近 30 天，复制到 Health Connect</string>
-    <string name="you_hc_restore_note">找回 unstrap 曾保存在那里的数据</string>
     <string name="you_hc_open">打开 Health Connect</string>
     <string name="you_hc_open_note">权限与数据</string>
     <string name="you_hc_calories_note">允许后才会复制卡路里、呼吸频率和最大摄氧量。</string>

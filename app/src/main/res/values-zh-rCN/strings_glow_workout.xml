@@ -10,7 +10,6 @@
     <string name="glow_workout_suggestion_save">保存为运动</string>
     <string name="glow_workout_suggestion_dismiss">不是运动</string>
     <string name="glow_workout_add_title">添加运动</string>
-    <string name="glow_workout_add_choose_sport">选择运动项目</string>
     <string name="glow_workout_add_no_heart">手环尚未同步当天的心率数据。请先同步，然后再试。</string>
     <string name="glow_workout_add_when">运动时间是？</string>
     <string name="glow_workout_add_hint">拖动滑块调整运动的起止时间。心率数据取自手环的分钟级记录。</string>
@@ -37,7 +36,6 @@
     <string name="glow_workout_heart_drop_after">%1$s 后的心率下降</string>
     <string name="glow_workout_heart_dimmed">置灰部分：%1$s 来自手环历史记录。</string>
     <string name="glow_workout_in_your_day">全天占比</string>
-    <string name="glow_workout_facts_title">运动</string>
     <string name="glow_workout_list_title">运动记录</string>
     <plurals name="glow_workout_list_recorded">
         <item quantity="other">已记录 %d 项</item>

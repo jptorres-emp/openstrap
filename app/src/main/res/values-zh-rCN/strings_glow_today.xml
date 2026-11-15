@@ -14,11 +14,6 @@
     <string name="glow_today_start_sport">开始%1$s</string>
     <string name="glow_today_other_sport">其他运动</string>
     <string name="glow_today_workout_noun">运动</string>
-    <string name="glow_today_since_your">自%1$s以来</string>
-    <string name="glow_today_after_end_resting">结束时 %1$d，静息 %2$d</string>
-    <string name="glow_today_after_end">结束时 %1$d</string>
-    <string name="glow_today_after_resting">静息 %1$d</string>
-    <string name="glow_today_bpm_now">当前 bpm</string>
     <string name="glow_today_title">今日</string>
     <string name="glow_today_steps">步</string>
     <string name="glow_today_energy_left">剩余精力 %1$d</string>

@@ -3,10 +3,6 @@
     <string name="glow_goals_title">目标与个人最佳</string>
     <string name="glow_goals_loading">正在加载…</string>
     <string name="glow_goals_this_week">本周</string>
-    <string name="glow_goals_goal_button">目标 %1$d</string>
-    <plurals name="glow_goals_of_workouts">
-        <item quantity="other">/ %d 次运动</item>
-    </plurals>
     <plurals name="glow_goals_count_of_goal">
         <item quantity="other">%1$d / %2$d 次运动</item>
     </plurals>
@@ -34,7 +30,6 @@
     <string name="glow_goals_weekly_goal">周目标</string>
     <string name="glow_goals_sheet_note">只要时长达到 10 分钟的运动都会计入。更改从本周开始，连续达标的周数会继续累计。</string>
     <string name="glow_goals_your_week">你的一周</string>
-    <string name="glow_goals_goal_met">已达标</string>
     <plurals name="glow_goals_weekly_streak">
         <item quantity="other">连续 %d 周达成目标</item>
     </plurals>
@@ -50,7 +45,6 @@
     <string name="glow_goals_hours">小时</string>
     <string name="glow_goals_distance">距离</string>
     <string name="glow_goals_active_kcal">活动千卡</string>
-    <string name="glow_goals_next_week">下周：%1$d</string>
     <string name="glow_goals_share_week">分享本周</string>
     <plurals name="glow_goals_workouts_word">
         <item quantity="other">运动</item>

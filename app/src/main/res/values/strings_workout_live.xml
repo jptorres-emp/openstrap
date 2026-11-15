@@ -38,7 +38,6 @@
     <!-- A label under a figure in a row of three, on a paused interval workout. About 12 characters. -->
     <string name="workout_live_figure_sets">Sets</string>
     <string name="workout_live_figure_rounds">Rounds</string>
-    <string name="workout_live_figure_rounds_done">Rounds done</string>
     <!-- A label under a figure in a row of three, on a paused strength workout: the sets finished. No number in it, the number is the figure above. About 12 characters. -->
     <plurals name="workout_live_figure_sets_done">
         <item quantity="one">Set done</item>
@@ -47,13 +46,11 @@
     <!-- A label under a figure in a row of three, on a paused strength workout: all the weight lifted. About 12 characters. -->
     <string name="workout_live_figure_kg_lifted">kg lifted</string>
     <!-- Under the big moving time (the time not paused). About 12 characters. -->
-    <string name="workout_live_moving_time">Moving time</string>
     <!-- Heart rate's unit, small beside the heart rate in dots. -->
     <string name="workout_live_unit_bpm">bpm</string>
     <!-- A heart rate in a short line. -->
     <string name="workout_live_bpm"><xliff:g id="bpm" example="142">%1$d</xliff:g> bpm</string>
     <!-- A heart rate in a short line, and how far it has come down since the work stopped. -->
-    <string name="workout_live_bpm_down"><xliff:g id="bpm" example="118">%1$d</xliff:g> bpm, down <xliff:g id="drop" example="24">%2$d</xliff:g></string>
 
     <!-- ======================================== The frame every live screen shares ======================================== -->
 
@@ -66,15 +63,12 @@
     <!-- Top right, small, beside a dot: the strap is connected. About 10 characters. -->
     <string name="workout_live_status_strap">Strap</string>
     <!-- Top right, small, under the total time, where a set's or a round's clock is the screen's big number. About 10 characters. -->
-    <string name="workout_live_status_total">Total</string>
     <!-- A pill on a paused workout, held to end it. About 14 characters. -->
-    <string name="workout_live_end_workout">End workout</string>
     <!-- The button that carries on a paused workout, and its label under it. About 10 characters. -->
     <string name="workout_live_resume">Resume</string>
     <!-- The button that pauses the workout, and its label under it. About 10 characters. -->
     <string name="workout_live_pause">Pause</string>
     <!-- Under End workout and Resume on a paused workout. Two short lines at most. -->
-    <string name="workout_live_paused_hint">Hold End workout to finish. Resume carries on where you stopped.</string>
     <!-- Under the square that ends the workout when held, and on a pill that does the same. About 12 characters. -->
     <string name="workout_live_hold_to_end">Hold to stop</string>
     <!-- The end square and pill for a screen reader: holding them ends the workout. -->
@@ -82,7 +76,6 @@
     <!-- Under the buttons of the dimmed mind and body screen: a tap lights it again. One line. -->
     <string name="workout_live_tap_to_light">Tap anywhere to light the screen</string>
     <!-- Under the controls on the older live screen, whose buttons have no labels. One line. -->
-    <string name="workout_live_hold_square_hint">Hold the square to end</string>
     <!-- The left button under a run or a ride, which marks a lap, and its label. About 8 characters. -->
     <string name="workout_live_lap">Lap</string>
     <!-- The left button under run reps and intervals, which skips to the next rep or rest, and its label. About 8 characters. -->
@@ -149,11 +142,9 @@
         <item quantity="other">Then <xliff:g id="reps" example="6">%1$d</xliff:g> reps</item>
     </plurals>
     <!-- Small over the big number during a rep: its length, "400 m rep". About 14 characters. -->
-    <string name="workout_live_rep_word"><xliff:g id="length" example="400 m">%1$s</xliff:g> rep</string>
     <!-- Small over the big number during a rest, and in large capitals on interval workouts. About 10 characters. -->
     <string name="workout_live_phase_rest">Rest</string>
     <!-- Small over the big number, and in large capitals, before the reps or rounds start. About 10 characters. -->
-    <string name="workout_live_phase_warming_up">Warming up</string>
     <!-- Small over the big number, and in large capitals, once every rep or round is done. About 10 characters. -->
     <string name="workout_live_phase_done">Done</string>
     <!-- Under the big number during a run rep: the metres left in it. About 12 characters. -->
@@ -203,7 +194,6 @@
     <!-- Beside the heart card's title: the heart rate as a share of your max. -->
     <string name="workout_live_heart_of_max"><xliff:g id="percent" example="78">%1$d</xliff:g>%% of max</string>
     <!-- Under the heart rate in dots, over a faint line of the last ten minutes behind it. One line. -->
-    <string name="workout_live_heart_behind">bpm, line shows last 10 min</string>
     <!-- At the foot of the heart card with a zone goal: the zone. One line. -->
     <string name="workout_live_target_zone">Target zone <xliff:g id="zone" example="2">%1$d</xliff:g>. The strap buzzes if you drift</string>
     <!-- At the foot of the heart card with a goal of a range of zones. One line. -->
@@ -265,7 +255,6 @@
     <!-- The peaks card's bars for a screen reader: the peaks, "168, 172, 175". -->
     <string name="workout_live_peaks_description">Peak heart rate per round: <xliff:g id="peaks" example="168, 172, 175">%1$s</xliff:g></string>
     <!-- Under the peaks card's bars: the peaks, "168, 172, 175 bpm". -->
-    <string name="workout_live_peaks_bpm"><xliff:g id="peaks" example="168, 172, 175">%1$s</xliff:g> bpm</string>
     <!-- The treadmill rep card's title while resting: the rep after the rest. One line. -->
     <string name="workout_live_rest_rep_next" tools:ignore="PluralsCandidate">Rest, rep <xliff:g id="rep" example="3">%1$d</xliff:g> next</string>
     <!-- Beside the rep card's title: the pace now, minutes per kilometre. -->
@@ -280,9 +269,7 @@
     <string name="workout_live_paused_down">Down <xliff:g id="drop" example="28">%1$d</xliff:g></string>
     <string name="workout_live_paused_for">Paused for</string>
     <!-- Under the time paused: the heart rate now. -->
-    <string name="workout_live_paused_heart">Heart rate <xliff:g id="bpm" example="104">%1$d</xliff:g></string>
     <!-- Under the time paused: the heart rate now and how far it has come down since the pause. -->
-    <string name="workout_live_paused_heart_down" tools:ignore="PluralsCandidate">Heart rate <xliff:g id="bpm" example="104">%1$d</xliff:g>, down <xliff:g id="drop" example="38">%2$d</xliff:g> since you stopped</string>
     <!-- Under the time paused: why pausing is worth it. Two short lines at most. -->
     <string name="workout_live_paused_note">Pausing keeps this time out of your pace and averages</string>
 
@@ -295,7 +282,6 @@
     <!-- Under the time in the ring: the session's length. -->
     <string name="workout_live_mind_length">of <xliff:g id="minutes" example="45">%1$d</xliff:g> min</string>
     <!-- Under the time in the ring once the session's length has passed. -->
-    <string name="workout_live_mind_length_up">of <xliff:g id="minutes" example="45">%1$d</xliff:g> min, time\'s up</string>
     <!-- Under the time in the ring for a session with no length. -->
     <string name="workout_live_mind_time_title">Time</string>
     <string name="workout_live_mind_buzz">One soft buzz when the time is up</string>
@@ -308,7 +294,6 @@
     <string name="workout_live_sets_set_line">Rest <xliff:g id="rest" example="90 s">%1$s</xliff:g> after. The strap buzzes when it\'s over.</string>
     <string name="workout_live_sets_next_line">Next: <xliff:g id="next" example="Set 4, bench press">%1$s</xliff:g></string>
     <string name="workout_live_bpm_down_unit">bpm, down <xliff:g id="drop" example="32">%1$d</xliff:g></string>
-    <string name="workout_live_sets_since_ended">Since the set ended</string>
     <string name="workout_live_sets_set_done">Set done</string>
     <!-- A small button during rest: thirty seconds more rest. About 6 characters. -->
     <string name="workout_live_sets_add_30_s">+30 s</string>
@@ -322,7 +307,6 @@
     <!-- Under the set's clock in dots. About 12 characters. -->
     <string name="workout_live_sets_in_this_set">in this set</string>
     <!-- A short card's title during rest: which set it follows, in lower case, "set 3" or "set 3 of 5". One line. -->
-    <string name="workout_live_sets_rest_after">Rest after <xliff:g id="set" example="set 3 of 5">%1$s</xliff:g></string>
     <!-- The card's title before the first set. One line. -->
     <string name="workout_live_sets_ready_first">Ready for set 1</string>
     <!-- The card's title once the rest is over. One line. -->
@@ -334,7 +318,6 @@
     <!-- Beside the rest card's title: which set it follows, in lower case, "set 3" or "set 3 of 5". -->
     <string name="workout_live_sets_after">after <xliff:g id="set" example="set 3 of 5">%1$s</xliff:g></string>
     <!-- Left of the line under the rest card that says what's next. -->
-    <string name="workout_live_sets_next">Next</string>
     <!-- Right of Next under the rest card: the set after the rest. -->
     <string name="workout_live_sets_next_set">Set <xliff:g id="set" example="4">%1$d</xliff:g></string>
     <!-- Right of Next under the rest card: the set after the rest and its exercise in lower case, with its last load ("bench press 10 × 60 kg"). -->

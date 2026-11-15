@@ -79,16 +79,13 @@
 
     <!-- The Health alerts page's title, and its panel's. -->
     <string name="you_health_title">Health alerts</string>
-    <string name="you_health_panel">Heart rate and blood oxygen</string>
     <!-- Rows with a menu of values each. -->
     <string name="you_health_measuring">Heart rate measuring</string>
     <!-- Under Heart rate measuring when the alerts can't work at the interval chosen. Continuous is a value of that menu. -->
     <string name="you_health_measuring_note">Heart rate alerts need Continuous or every minute.</string>
     <string name="you_health_high">High heart rate alert</string>
     <!-- A heart rate alert's value, in beats a minute. -->
-    <string name="you_health_above">Above <xliff:g id="bpm" example="150">%1$d</xliff:g></string>
     <string name="you_health_low">Low heart rate alert</string>
-    <string name="you_health_below">Below <xliff:g id="bpm" example="40">%1$d</xliff:g></string>
     <!-- A switch: the strap measures blood oxygen on its own while you rest. -->
     <string name="you_health_auto_oxygen">Auto blood oxygen</string>
     <string name="you_health_auto_oxygen_note">Measures while you rest</string>
@@ -96,7 +93,6 @@
     <!-- Under the blood oxygen alert while Auto blood oxygen is off. -->
     <string name="you_health_oxygen_note">Needs Auto blood oxygen on.</string>
     <!-- The blood oxygen alert's value, in percent. -->
-    <string name="you_health_below_percent">Below <xliff:g id="percent" example="90">%1$d</xliff:g>%%</string>
     <string name="you_health_note">The strap buzzes when an alert goes off. unstrap isn\'t a medical device.</string>
 
     <!-- The Strap page's Phone alerts row. -->

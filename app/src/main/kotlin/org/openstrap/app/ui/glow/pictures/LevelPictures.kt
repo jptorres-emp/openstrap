@@ -448,30 +448,38 @@ fun WeekRings(shares: List<Float?>, ink: Color, size: PictureSize, modifier: Mod
 
 private const val WEEK_RING_DOTS = 10
 
-/** The Energy level ruler's dots. */
+/** The Energy level ruler's dots when a board doesn't say. */
 internal const val ENERGY_RULER_DOTS = 24
 
 /**
- * The Energy level ruler (HaloCharts, Energy level): [level] 0 to 100 as a row of dots, the share of them lit in [ink]
- * and the rest dim, with a white tick at today's level. Dotted, as a level at a glance on the lit hero.
+ * The Energy level ruler (HaloCharts, Energy level): [level] 0 to 100 as [dots] dots of 5 spread across the width, the
+ * ones below the level in [ink] and the rest in [track], and a 3 dp white tick in place of the dot at the level, as
+ * tall as the ruler up to 18 dp. Boards: HaloTodayMidday 20, HaloTodayEvening 22, HaloTodayNight and HaloRecovery 16.
  */
 @Composable
-fun EnergyRuler(level: Float, ink: Color, modifier: Modifier = Modifier) {
+fun EnergyRuler(
+    level: Float,
+    ink: Color,
+    modifier: Modifier = Modifier,
+    dots: Int = ENERGY_RULER_DOTS,
+    track: Color = DotTrack,
+) {
     Canvas(modifier) {
-        val dotR = 2.6.dp.toPx()
-        val w = this.size.width - 2 * dotR
-        val cy = this.size.height / 2
-        val f = (level / 100f).coerceIn(0f, 1f)
-        val lit = (f * ENERGY_RULER_DOTS).roundToInt()
-        for (i in 0 until ENERGY_RULER_DOTS) {
-            // The dot under the tick makes way for it.
-            if (i == lit - 1 && lit in 1 until ENERGY_RULER_DOTS) continue
-            drawCircle(if (i < lit) ink else DotTrack, dotR, Offset(dotR + w * i / (ENERGY_RULER_DOTS - 1), cy))
+        val r = 2.5.dp.toPx()
+        val at = (level.coerceIn(0f, 100f) / 100f * (dots - 1)).roundToInt()
+        val pitch = (size.width - 2 * r) / (dots - 1)
+        val cy = size.height / 2
+        val tickH = min(size.height, 18.dp.toPx())
+        for (i in 0 until dots) {
+            val x = r + pitch * i
+            if (i == at) {
+                drawRoundRect(
+                    Color.White, Offset(x - 1.5.dp.toPx(), cy - tickH / 2), Size(3.dp.toPx(), tickH), CornerRadius(1.5.dp.toPx()),
+                )
+            } else {
+                drawCircle(if (i < at) ink else track, r, Offset(x, cy))
+            }
         }
-        val tick = Offset(dotR + w * f, cy)
-        drawRoundRect(
-            Color.White, Offset(tick.x - 1.5.dp.toPx(), cy - 10.dp.toPx()), Size(3.dp.toPx(), 20.dp.toPx()), CornerRadius(1.5.dp.toPx()),
-        )
     }
 }
 

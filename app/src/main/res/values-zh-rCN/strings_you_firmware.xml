@@ -12,7 +12,6 @@
     <string name="you_firmware_service_not_found">未找到</string>
     <string name="you_firmware_service_unknown">连接以检查</string>
     <string name="you_firmware_from_file">从文件安装</string>
-    <string name="you_firmware_from_file_note">适用于你已有的固件镜像</string>
     <string name="you_firmware_privacy">隐私与安全</string>
     <string name="you_firmware_privacy_sign_in">登录</string>
     <string name="you_firmware_privacy_sign_in_text">在 Zepp 官方页面上完成。unstrap 仅保留应用 Token 和用户 ID，并只获取一次你的设备列表。</string>
@@ -20,7 +19,6 @@
     <string name="you_firmware_privacy_check_text">仅向更新服务器发送你的 Token、用户 ID 以及手环的固件版本、硬件版本和序列号，不包含其他任何内容。</string>
     <string name="you_firmware_privacy_install">安全安装</string>
     <string name="you_firmware_privacy_install_text">下载内容会与服务器校验和比对，且手环在安装前会验证签名。</string>
-    <string name="you_firmware_updates">固件更新</string>
     <string name="you_firmware_updates_text">向 Zepp 更新服务器查询此手环是否有更新的固件。</string>
     <string name="you_firmware_check">检查更新</string>
     <string name="you_firmware_checking">正在检查更新…</string>
@@ -87,8 +85,6 @@
     <string name="you_zepp_title">Zepp 账号</string>
     <string name="you_zepp_save_sign_in">保存登录信息</string>
     <string name="you_zepp_account_none">Zepp 仅响应已登录用户的更新检查。请登录，或直接粘贴你的应用 Token 和用户 ID。它们仅保存在此手机上。</string>
-    <string name="you_zepp_account_user">检查更新将使用你在 %2$s 上保存的用户 %1$s 的 Token。</string>
-    <string name="you_zepp_account">检查更新将使用你在 %1$s 上保存的 Token。</string>
     <string name="you_zepp_sign_in_again">重新登录</string>
     <string name="you_zepp_paste_token">粘贴 Token</string>
     <string name="you_zepp_edit">编辑</string>

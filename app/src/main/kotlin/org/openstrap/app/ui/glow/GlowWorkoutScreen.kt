@@ -436,9 +436,6 @@ private fun FactRow(f: WorkoutFact) {
     }
 }
 
-/** The plain panel's fill (workout rules, Tokens: #0C0D10). */
-private val PlainPanel = Color(0xFF0C0D10)
-
 /** The (i) on the Load card: Load, training effect, time to recover, the heart rate drop and VO2 max explained. */
 @Composable
 private fun EffectInfo(a: WorkoutAnalysis, usual: Float?, strap: List<WorkoutAnalysis>, fromStrap: Boolean, onDismiss: () -> Unit) {

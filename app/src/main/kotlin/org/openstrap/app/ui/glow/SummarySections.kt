@@ -467,6 +467,7 @@ private fun IntervalsCard(summary: PhoneSummary, readings: List<Pair<Long, Int>>
 }
 
 /** A game's card (board HaloSummaryGames): each half or period, then the time in zones. */
+@Suppress("UnstableCollections", "ComposeUnstableCollections")
 @Composable
 private fun GamesCard(summary: PhoneSummary, readings: List<Pair<Long, Int>>, zones: ZoneSeconds) {
     val heartZones = LocalHeartZones.current
@@ -854,6 +855,7 @@ internal fun ZoneStripPanel(zones: ZoneSeconds) = QuietPanel { ZoneStripBlock(zo
  * smooth line with its two ends marked, then the clocks of its start and end. Without the line ([chart] off, or too few
  * readings) nothing.
  */
+@Suppress("UnstableCollections", "ComposeUnstableCollections")
 @Composable
 private fun HeartLineCard(
     readings: List<Pair<Long, Int>>, color: Color, start: Long, end: Long, settled: Pair<Int, Int>? = null, chart: Boolean = true,

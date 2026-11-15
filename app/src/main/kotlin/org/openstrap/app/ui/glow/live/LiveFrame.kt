@@ -354,6 +354,7 @@ private fun TotalTime(time: () -> Long, paused: Boolean) {
  * its colour with a dot before it and the total time under it in the middle, the strap and GPS lines at the right.
  * [title] is the words when more than the sport's name; [quiet] leaves the strap lines out (mind and body).
  */
+@Suppress("UnstableCollections", "ComposeUnstableCollections")
 @Composable
 private fun LiveTopBar(
     r: WorkoutState.Recording, connected: Boolean, controls: LiveControls, title: String?, time: (() -> Long)?,

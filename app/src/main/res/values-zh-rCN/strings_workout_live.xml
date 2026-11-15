@@ -13,28 +13,21 @@
     <string name="workout_live_unit_kmh">km/h</string>
     <string name="workout_live_figure_pace_km">配速 /km</string>
     <string name="workout_live_figure_climb">累计爬升 (m)</string>
-    <string name="workout_live_figure_rounds_done">已完成轮数</string>
     <plurals name="workout_live_figure_sets_done">
         <item quantity="other">已完成</item>
     </plurals>
     <string name="workout_live_figure_kg_lifted">总负重 (kg)</string>
-    <string name="workout_live_moving_time">运动用时</string>
     <string name="workout_live_unit_bpm">bpm</string>
     <string name="workout_live_bpm">%1$d bpm</string>
-    <string name="workout_live_bpm_down">%1$d bpm，下降 %2$d</string>
     <string name="workout_live_minimize">最小化</string>
     <string name="workout_live_status_paused">已暂停</string>
     <string name="workout_live_status_strap_battery">手环 %1$d%%</string>
     <string name="workout_live_status_strap">手环</string>
-    <string name="workout_live_status_total">总用时</string>
-    <string name="workout_live_end_workout">结束运动</string>
     <string name="workout_live_resume">继续</string>
     <string name="workout_live_pause">暂停</string>
-    <string name="workout_live_paused_hint">长按“结束运动”以完成。轻点“继续”从暂停处接着进行。</string>
     <string name="workout_live_hold_to_end">长按停止</string>
     <string name="workout_live_hold_to_end_description">长按停止运动</string>
     <string name="workout_live_tap_to_light">轻点任意处点亮屏幕</string>
-    <string name="workout_live_hold_square_hint">长按方块结束</string>
     <string name="workout_live_lap">计圈</string>
     <string name="workout_live_skip">跳过</string>
     <string name="workout_live_view_of">第 %1$d/%2$d 个视图</string>
@@ -65,9 +58,7 @@
     <plurals name="workout_live_reps_after">
         <item quantity="other">随后进行 %1$d 次</item>
     </plurals>
-    <string name="workout_live_rep_word">%1$s 间歇</string>
     <string name="workout_live_phase_rest">休息</string>
-    <string name="workout_live_phase_warming_up">热身</string>
     <string name="workout_live_phase_done">完成</string>
     <string name="workout_live_unit_m_to_go">待跑米数</string>
     <string name="workout_live_unit_rest_left">休息剩余</string>
@@ -88,7 +79,6 @@
     <string name="workout_live_map_follow">跟随我的位置</string>
     <string name="workout_live_heart_title">心率</string>
     <string name="workout_live_heart_of_max">最大心率的 %1$d%%</string>
-    <string name="workout_live_heart_behind">bpm，折线显示最近 10 分钟</string>
     <string name="workout_live_target_zone">目标 %1$d 区。偏离时手环会振动</string>
     <string name="workout_live_target_zones">目标 %1$d 至 %2$d 区。偏离时手环会振动</string>
     <string name="workout_live_time_target">%1$s / 共 %2$d 分钟</string>
@@ -119,18 +109,14 @@
     </plurals>
     <string name="workout_live_peaks_title">每轮峰值心率</string>
     <string name="workout_live_peaks_description">每轮峰值心率：%1$s</string>
-    <string name="workout_live_peaks_bpm">%1$s bpm</string>
     <string name="workout_live_rest_rep_next">休息，接下来第 %1$d 次</string>
     <string name="workout_live_pace_now">当前 %1$s/km</string>
     <string name="workout_live_reps_start_hint">点击“跳过”即可开始训练</string>
     <string name="workout_live_paused_for">已暂停</string>
-    <string name="workout_live_paused_heart">心率 %1$d</string>
-    <string name="workout_live_paused_heart_down">心率 %1$d，暂停后已下降 %2$d</string>
     <string name="workout_live_paused_note">暂停可避免此段时间计入配速和平均数据</string>
     <string name="workout_live_mind_heart">心率 %1$d，逐渐平稳</string>
     <string name="workout_live_mind_heart_down">心率 %1$d，逐渐平稳，较开始时已下降 %2$d</string>
     <string name="workout_live_mind_length">共 %1$d 分钟</string>
-    <string name="workout_live_mind_length_up">共 %1$d 分钟，时间已到</string>
     <string name="workout_live_mind_open">未设时长</string>
     <string name="workout_live_sets_set_done">完成本组</string>
     <string name="workout_live_sets_add_30_s">+30 秒</string>
@@ -139,13 +125,11 @@
         <item quantity="other">已完成全部 %1$d 组。长按方块结束，或继续训练。</item>
     </plurals>
     <string name="workout_live_sets_in_this_set">本组用时</string>
-    <string name="workout_live_sets_rest_after">%1$s 后休息</string>
     <string name="workout_live_sets_ready_first">准备第 1 组</string>
     <string name="workout_live_sets_rest_over">休息结束</string>
     <string name="workout_live_sets_next_tap_start">接下来进行 %1$s。拿起器械时点击“开始”。</string>
     <string name="workout_live_sets_rest_title">休息</string>
     <string name="workout_live_sets_after">%1$s 后</string>
-    <string name="workout_live_sets_next">接下来</string>
     <string name="workout_live_sets_next_set">第 %1$d 组</string>
     <string name="workout_live_sets_next_set_exercise">第 %1$d 组，%2$s</string>
     <string name="workout_live_sets_falling_description">本组结束后的心率变化</string>
@@ -197,5 +181,4 @@
     <string name="workout_live_sets_set_line">之后休息 %1$s。休息结束时手环会震动。</string>
     <string name="workout_live_sets_next_line">下一组：%1$s</string>
     <string name="workout_live_bpm_down_unit">bpm，下降 %1$d</string>
-    <string name="workout_live_sets_since_ended">自本组结束以来</string>
 </resources>

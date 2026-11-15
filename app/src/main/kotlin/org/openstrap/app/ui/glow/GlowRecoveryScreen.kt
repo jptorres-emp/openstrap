@@ -365,7 +365,8 @@ private fun ChargeTall(
             )
             // The level ruler under the figure, a white tick at now (board HaloRecovery, Energy card).
             if (now != null) EnergyRuler(
-                now.toFloat(), Color.White.copy(alpha = 0.85f), Modifier.padding(top = 8.dp).fillMaxWidth().height(16.dp),
+                now.toFloat(), Color.White.copy(alpha = 0.85f), Modifier.padding(top = 8.dp).fillMaxWidth().height(14.dp),
+                dots = 16,
             )
         }
     }

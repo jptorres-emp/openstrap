@@ -355,6 +355,7 @@ internal fun speedText(secondsPerKm: Double?, locale: java.util.Locale = java.ut
  * The pace as the hero (workout-rules.md, Run; board HaloLiveRun): "Pace now" with the average beside it, the pace in
  * the one dotted number, and the latest kilometre's line under it. Lit in the sport's lime from its edge.
  */
+@Suppress("UnstableCollections", "ComposeUnstableCollections")
 @Composable
 private fun PaceHero(
     r: WorkoutState.Recording, pace: Double?, averagePace: () -> Double?, speed: Boolean, route: List<Route.Point>,

@@ -32,7 +32,6 @@
     <!-- Title of the page that adds a workout after the fact. -->
     <string name="glow_workout_add_title">Add a workout</string>
     <!-- The button at the foot of that page, which opens the sports. -->
-    <string name="glow_workout_add_choose_sport">Choose the sport</string>
     <!-- On that page when the day has no heart rate yet. -->
     <string name="glow_workout_add_no_heart">The strap hasn\'t sent heart rate for this day yet. Sync, then try again.</string>
     <!-- Title over the day's heart rate with its two handles. The times beside it are "18:02 to 18:44". -->
@@ -94,7 +93,6 @@
     <!-- Title of the card with the workout's share of its day's active kcal. -->
     <string name="glow_workout_in_your_day">In your day</string>
     <!-- Title of the list with the workout's distance, steps, kcal and pauses. -->
-    <string name="glow_workout_facts_title">The workout</string>
 
     <!-- Title of the page with every workout. -->
     <string name="glow_workout_list_title">Workouts</string>

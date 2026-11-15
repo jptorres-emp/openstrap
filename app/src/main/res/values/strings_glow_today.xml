@@ -33,15 +33,10 @@
     <!-- The word for a workout whose sport has no noun of its own, lower case, inside a sentence: "Since your workout". -->
     <string name="glow_today_workout_noun">workout</string>
     <!-- Title of the hero after a workout. The noun is the sport, lower case: "run", "ride" or "workout". The sport is a lower case noun phrase dropped in as it is, so give it whatever article or case your language needs around it. -->
-    <string name="glow_today_since_your">Since your <xliff:g id="sport" example="run">%1$s</xliff:g></string>
     <!-- Beside the heart rate in dots after a workout: the rate at the workout's end and your resting rate. -->
-    <string name="glow_today_after_end_resting"><xliff:g id="end" example="142">%1$d</xliff:g> at the end, resting <xliff:g id="resting" example="58">%2$d</xliff:g></string>
     <!-- Beside the heart rate in dots after a workout: the rate at the workout's end. -->
-    <string name="glow_today_after_end"><xliff:g id="end" example="142">%1$d</xliff:g> at the end</string>
     <!-- Beside the heart rate in dots after a workout: your resting rate. -->
-    <string name="glow_today_after_resting">Resting <xliff:g id="resting" example="58">%1$d</xliff:g></string>
     <!-- Beside the heart rate in dots after a workout: the number is your heart rate now. -->
-    <string name="glow_today_bpm_now">bpm now</string>
     <!-- Title of the evening and night hero: the day so far. -->
     <string name="glow_today_title">Today</string>
     <!-- Beside a step count in dots. Very short. -->

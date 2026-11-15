@@ -17,11 +17,9 @@
     <plurals name="glow_choose_sports_count">
         <item quantity="other">%d 项运动</item>
     </plurals>
-    <string name="glow_ready_bpm_live">bpm，手环实时读数</string>
     <string name="glow_ready_plan_description">%1$s。%2$s</string>
     <string name="glow_ready_shorter">缩短</string>
     <string name="glow_ready_longer">延长</string>
-    <string name="glow_ready_save_title">%1$s%2$s</string>
     <string name="glow_ready_with">含</string>
     <string name="glow_ready_rest_between">组间休息</string>
     <string name="glow_ready_rest_after_set">每组后休息</string>

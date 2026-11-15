@@ -72,6 +72,8 @@ These three items and the Load range go in wave 3. Everything else is a restyle.
 
 ## 5. Waves
 
+All five waves were built on 2026-11-15. The calls made along the way are in decisions.md.
+
 The workflow is the one from earlier redesigns:
 
 - Each step is built by a subagent in its own worktree branch (`design/halo-w<n>-<part>`).

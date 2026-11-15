@@ -36,7 +36,8 @@ import org.openstrap.app.R
  * ([recent], the live readings, hold the one at the pause), then the workout's [figures] so far (value, label).
  */
 @Composable
-internal fun ColumnScope.LivePaused(r: WorkoutState.Recording, liveHeartRate: Int?, recent: List<Pair<Long, Int>>, figures: List<Pair<String?, String>>) {
+internal fun ColumnScope.LivePaused(r: WorkoutState.Recording, liveHeartRate: Int?, recent: List<Pair<Long, Int>>,
+    figures: List<Pair<String?, String>>) {
     val at = r.workout.pausedAt ?: return
     val now = nowTicking()
     val tint = heroTint(PausedGrey)
@@ -49,7 +50,8 @@ internal fun ColumnScope.LivePaused(r: WorkoutState.Recording, liveHeartRate: In
     val drop = if (before != null && liveHeartRate != null) before - liveHeartRate else null
     if (liveHeartRate != null) LiveCard {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(stringResource(R.string.workout_live_heart_title), color = Color.White, style = GlowType.cardTitle, modifier = Modifier.weight(1f))
+            Text(stringResource(R.string.workout_live_heart_title), color = Color.White, style = GlowType.cardTitle,
+                modifier = Modifier.weight(1f))
             Text(stringResource(R.string.workout_live_paused_since), color = GlowType.noteColor, style = GlowType.noteSmall)
         }
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {

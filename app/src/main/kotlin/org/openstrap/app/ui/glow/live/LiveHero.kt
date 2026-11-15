@@ -41,7 +41,15 @@ internal fun liveColor(r: WorkoutState.Recording): Color =
 internal fun liveAngle(r: WorkoutState.Recording): Float = familyLightAngle(Workouts.family(r.workout.sportType))
 
 /** The notes on a hero are the colour's tint, as the boards' #EEFBD0 on lime. */
-internal fun heroTint(color: Color): Color = lerp(color, Color.White, 0.82f)
+private const val TINT_TOWARD_WHITE = 0.82f
+
+internal fun heroTint(color: Color): Color = lerp(color, Color.White, TINT_TOWARD_WHITE)
+
+/** The grey of a side button's label, a plan line and a card's own words (workout-rules.md, Frame: #C9CED6). */
+internal val LiveLabelInk = Color(0xFFC9CED6)
+
+/** The 1 px rule between a live card's blocks and left of a figure (workout-rules.md: #24262C). */
+internal val LiveRule = Color(0xFF24262C)
 
 /**
  * The lit hero: a solid squircle lit from one edge in [color], nothing outside it (board HaloLiveRun). [content] is
@@ -58,7 +66,8 @@ internal fun LiveHero(color: Color, angle: Float, modifier: Modifier = Modifier,
 @Composable
 internal fun HeroTitle(title: String, note: String?, tint: Color, trailing: (@Composable () -> Unit)? = null) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(title, color = Color.White, style = GlowType.heroTitle, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+        Text(title, color = Color.White, style = GlowType.heroTitle, maxLines = 1, overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f, fill = false))
         Spacer(Modifier.weight(1f))
         if (trailing != null) trailing()
         else if (note != null) Text(note, color = tint, style = GlowType.secondary, maxLines = 1)
@@ -83,6 +92,7 @@ internal fun HeroLine(text: String, tint: Color) =
     Text(text, color = tint, style = GlowType.secondary)
 
 /** The sport's own card on a live screen: solid, 14 between its blocks. */
+@androidx.compose.runtime.NonRestartableComposable
 @Composable
 internal fun LiveCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) =
     org.openstrap.app.ui.glow.QuietPanel(modifier, content = content)
@@ -92,7 +102,7 @@ internal fun LiveCard(modifier: Modifier = Modifier, content: @Composable Column
  * [unit] after it, the zone's name at the right. Put it in a [LiveCard].
  */
 @Composable
-internal fun HeartLine(bpm: Int?, maxHr: Int, paused: Boolean, unit: String? = null, modifier: Modifier = Modifier) {
+internal fun HeartLine(bpm: Int?, maxHr: Int, paused: Boolean, modifier: Modifier = Modifier, unit: String? = null) {
     val heartZones = org.openstrap.app.ui.dashboard.LocalHeartZones.current
     val zone = org.openstrap.app.data.WorkoutRecorder.liveZone(bpm, maxHr, heartZones)
     Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -102,7 +112,8 @@ internal fun HeartLine(bpm: Int?, maxHr: Int, paused: Boolean, unit: String? = n
         }
         Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             androidx.compose.material3.Icon(
-                org.openstrap.app.ui.theme.AppIcons.Heartbeat, null, tint = zone?.let { org.openstrap.app.ui.workout.ZONE_COLORS[it] } ?: Color.White,
+                org.openstrap.app.ui.theme.AppIcons.Heartbeat, null,
+                    tint = zone?.let { org.openstrap.app.ui.workout.ZONE_COLORS[it] } ?: Color.White,
                 modifier = Modifier.size(16.dp),
             )
             Text("$bpm", color = Color.White, style = GlowType.figureInline)
@@ -111,6 +122,7 @@ internal fun HeartLine(bpm: Int?, maxHr: Int, paused: Boolean, unit: String? = n
                 color = GlowType.noteColor, style = GlowType.secondary, maxLines = 1,
             )
         }
-        zone?.let { Text(org.openstrap.app.presentation.WorkoutCopy.zoneTitle(it).first, color = GlowType.noteColor, style = GlowType.secondary, maxLines = 1) }
+        zone?.let { Text(org.openstrap.app.presentation.WorkoutCopy.zoneTitle(it).first, color = GlowType.noteColor,
+            style = GlowType.secondary, maxLines = 1) }
     }
 }

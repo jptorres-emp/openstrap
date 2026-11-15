@@ -91,8 +91,10 @@ import org.openstrap.app.R
  * middle and the two figures either side, in Display Light. The only two sizes on the workout pages no role has; a
  * live clock read at arm's length isn't one of spec 2.3's.
  */
-internal val LiveClock = GlowType.sentence.copy(fontSize = 46.sp, lineHeight = 50.sp, letterSpacing = (-0.02).em, fontFeatureSettings = "tnum")
-internal val LiveFigure = GlowType.sentence.copy(fontSize = 26.sp, lineHeight = 30.sp, letterSpacing = (-0.02).em, fontFeatureSettings = "tnum")
+internal val LiveClock = GlowType.sentence.copy(fontSize = 46.sp, lineHeight = 50.sp, letterSpacing = (-0.02).em,
+    fontFeatureSettings = "tnum")
+internal val LiveFigure = GlowType.sentence.copy(fontSize = 26.sp, lineHeight = 30.sp, letterSpacing = (-0.02).em,
+    fontFeatureSettings = "tnum")
 
 /** What every live screen can do to the workout, passed down as one. */
 @androidx.compose.runtime.Immutable
@@ -116,6 +118,7 @@ internal class LiveControls(
  * ending still takes a hold) and Resume. [status] adds lines to the strap's on the top right (GPS and its accuracy).
  */
 @Composable
+@Suppress("UnusedParameter")
 internal fun LiveFrame(
     r: WorkoutState.Recording,
     color: Color,
@@ -125,7 +128,7 @@ internal fun LiveFrame(
     lap: (@Composable () -> Unit)? = null,
     /** The total time, read by its own text so only the clock is composed again each second. */
     time: (() -> Long)? = null,
-    /** The total time small on the top right instead of large under it (strength, intervals). */
+    /** Kept for the screens that pass it: the total is always small under the sport's name now. */
     smallTime: Boolean = false,
     battery: Int? = null,
     status: List<Pair<String, Color>> = emptyList(),
@@ -159,7 +162,7 @@ internal fun LiveFrame(
             if (landscape) {
                 LandscapePanes(
                     r, connected, controls, null, bottomRoom != null, paused,
-                    frameControls = { FrameControls(r, controls, lap, labelled, paused != null, quiet, tapHint, pauseWhite) },
+                    frameControls = { FrameControls(r, controls, lap, quiet, tapHint, pauseWhite) },
                     content = content,
                 )
                 return@WorkoutPage
@@ -175,7 +178,7 @@ internal fun LiveFrame(
             if (r.endFailed) NotSavedNotice(controls.onEnd)
             r.endPrompt?.let { at -> StoppedPrompt(r, at, controls.onEndAtPrompt, controls.onKeepGoing) }
             if (!fill || r.paused) Spacer(Modifier.weight(1f))
-            FrameControls(r, controls, lap, labelled, paused != null, quiet, tapHint, pauseWhite)
+            FrameControls(r, controls, lap, quiet, tapHint, pauseWhite)
         }
     }
 }
@@ -276,8 +279,8 @@ private val LandscapeGap = 24.dp
  */
 @Composable
 private fun ColumnScope.FrameControls(
-    r: WorkoutState.Recording, controls: LiveControls, lap: (@Composable () -> Unit)?, labelled: Boolean, hasPaused: Boolean,
-    quiet: Boolean, tapHint: Boolean, pauseWhite: Boolean,
+    r: WorkoutState.Recording, controls: LiveControls, lap: (@Composable () -> Unit)?, quiet: Boolean, tapHint: Boolean,
+        pauseWhite: Boolean,
 ) {
     // One controls row on every screen, paused too: Resume takes Pause's place as the white tap (board HaloLivePaused).
     if (quiet && tapHint && !r.paused) ControlsHint(stringResource(R.string.workout_live_tap_to_light), alpha = 1f)
@@ -329,7 +332,7 @@ private fun Labelled(label: String, show: Boolean, button: @Composable () -> Uni
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
         // The side buttons are 60 tall, centred on Pause's 88 so the row reads as one line.
         Box(Modifier.height(88.dp), contentAlignment = Alignment.Center) { button() }
-        if (show) Text(label, color = LabelInk, style = GlowType.noteSmall, maxLines = 1, softWrap = false)
+        if (show) Text(label, color = LiveLabelInk, style = GlowType.noteSmall, maxLines = 1, softWrap = false)
     }
 }
 
@@ -351,8 +354,7 @@ internal fun SideAction(text: String, icon: androidx.compose.ui.graphics.vector.
     }
 }
 
-/** The grey of a side button's label and of the strap lines (workout-rules.md, Frame). */
-private val LabelInk = Color(0xFFC9CED6)
+/** The grey of a side button's hint under the controls (workout-rules.md, Frame). */
 private val HintInk = Color(0xFF5C616B)
 
 /** The total time under the sport's name, read in its own scope so only it is composed again each second. */
@@ -378,7 +380,8 @@ private fun LiveTopBar(
     val color = liveColor(r)
     Row(Modifier.fillMaxWidth().height(48.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.width(96.dp), contentAlignment = Alignment.CenterStart) {
-            RoundIconButton(AppIcons.CaretDown, stringResource(R.string.workout_live_minimize), controls.onMinimize, size = 44.dp, iconSize = 18.dp)
+            RoundIconButton(AppIcons.CaretDown, stringResource(R.string.workout_live_minimize), controls.onMinimize,
+                size = 44.dp, iconSize = 18.dp)
         }
         Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(1.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
@@ -437,7 +440,8 @@ internal fun LiveBottomBar(
         return
     }
     androidx.compose.foundation.layout.BoxWithConstraints(modifier.fillMaxWidth()) {
-        val side = org.openstrap.app.ui.glow.GlowLayout.pageSide(maxWidth, org.openstrap.app.ui.glow.LocalPageColumn.current, org.openstrap.app.ui.glow.GlowLayout.Gutter)
+        val side = org.openstrap.app.ui.glow.GlowLayout.pageSide(maxWidth, org.openstrap.app.ui.glow.LocalPageColumn.current,
+            org.openstrap.app.ui.glow.GlowLayout.Gutter)
         Column(
             Modifier.fillMaxWidth().padding(bottom = contentPadding.calculateBottomPadding())
                 .onSizeChanged { onHeight(with(density) { it.height.toDp() }) }
@@ -468,7 +472,8 @@ internal fun PageDots(current: Int, count: Int, position: Float? = null, onSelec
             ) {
                 val lit = if (position != null) (1f - kotlin.math.abs(position - i)).coerceIn(0f, 1f) else if (i == current) 1f else 0f
                 // The current view is an 18 wide white pill, the others 6 dots (board HaloLiveRun, "View 1 of 2").
-                Box(Modifier.size(width = (6f + 12f * lit).dp, height = 6.dp).clip(CircleShape).background(androidx.compose.ui.graphics.lerp(DotOff, Color.White, lit)))
+                Box(Modifier.size(width = (6f + 12f * lit).dp,
+                    height = 6.dp).clip(CircleShape).background(androidx.compose.ui.graphics.lerp(DotOff, Color.White, lit)))
             }
         }
     }
@@ -505,7 +510,8 @@ internal fun LiveValue(text: String?) =
  * [onClick] null leaves the touch handling to [modifier] (the end square's hold).
  */
 @Composable
-internal fun FlatButton(container: Color, size: Dp, modifier: Modifier = Modifier, onClick: (() -> Unit)? = null, content: @Composable () -> Unit) {
+internal fun FlatButton(container: Color, size: Dp, modifier: Modifier = Modifier, onClick: (() -> Unit)? = null,
+    content: @Composable () -> Unit) {
     // Flat, like the app's Start and Done: the live screen's card already carries the glow.
     Box(
         modifier.size(size).clip(CircleShape).background(container)
@@ -577,9 +583,11 @@ internal fun HoldToEnd(onEnd: () -> Unit) {
             val inset = stroke / 2
             val arc = Size(size.width - stroke, size.height - stroke)
             drawArc(Color.White.copy(alpha = 0.18f), 0f, 360f, false, Offset(inset, inset), arc, style = Stroke(stroke))
-            if (progress.value > 0f) drawArc(Color.White, -90f, 360f * progress.value, false, Offset(inset, inset), arc, style = Stroke(stroke, cap = StrokeCap.Round))
+            if (progress.value > 0f) drawArc(Color.White, -90f, 360f * progress.value, false, Offset(inset, inset), arc,
+                style = Stroke(stroke, cap = StrokeCap.Round))
             val side = 18.dp.toPx()
-            drawRoundRect(Color.White, Offset((size.width - side) / 2, (size.height - side) / 2), Size(side, side), CornerRadius(5.dp.toPx()))
+            drawRoundRect(Color.White, Offset((size.width - side) / 2, (size.height - side) / 2), Size(side, side),
+                CornerRadius(5.dp.toPx()))
         }
     }
 }

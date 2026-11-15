@@ -157,12 +157,16 @@ internal fun LiveStrengthScreen(
         StrengthHero(r, moment, momentNow, sport) { naming = true }
         if (!compact) LiveCard {
             if (r.resting && !r.inSet) {
-                HeartLine(bpm, r.maxHeartRate, r.paused, moment.drop?.takeIf { it > 0 && bpm != null }?.let { stringResource(R.string.workout_live_bpm_down_unit, it) })
+                HeartLine(
+                    bpm, r.maxHeartRate, r.paused,
+                    unit = moment.drop?.takeIf { it > 0 && bpm != null }?.let { stringResource(R.string.workout_live_bpm_down_unit, it) },
+                )
                 val since = r.sets.lastOrNull()?.end
                 val rule = Strength.Rest.parse(r.workout.rest) ?: Strength.Rest.DEFAULT
                 if (since != null) FallingHeart(remember(history, since) { history.filter { it.first >= since - 10 } }, rule.belowBpm)
                 Row(Modifier.fillMaxWidth()) {
-                    Text(stringResource(R.string.workout_live_sets_falling_description), color = GlowType.noteColor, style = GlowType.noteSmall, modifier = Modifier.weight(1f))
+                    Text(stringResource(R.string.workout_live_sets_falling_description), color = GlowType.noteColor,
+                        style = GlowType.noteSmall, modifier = Modifier.weight(1f))
                     Text(WorkoutCopy.restRule(rule.belowBpm), color = RestTeal, style = GlowType.noteSmall, maxLines = 1)
                 }
             } else {
@@ -187,7 +191,8 @@ internal fun LiveStrengthScreen(
             )
             else -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 if (r.resting) Box(Modifier.width(96.dp)) {
-                    WorkoutButton(stringResource(R.string.workout_live_sets_add_30_s), HaloButtonSurface, Color.White, onExtendRest, height = tall)
+                    WorkoutButton(stringResource(R.string.workout_live_sets_add_30_s), HaloButtonSurface, Color.White,
+                        onExtendRest, height = tall)
                 }
                 Box(Modifier.weight(1f)) {
                     WorkoutButton(
@@ -211,7 +216,8 @@ internal fun LiveStrengthScreen(
         onSkip = { skipped += unlogged.index },
         onNextExercise = { skipped += unlogged.index; naming = true },
     )
-    if (naming) ExerciseSheet(r.exercise, exercises.map { it.name }, onPick = { onExercise(it); naming = false }, onDismiss = { naming = false })
+    if (naming) ExerciseSheet(r.exercise, exercises.map { it.name }, onPick = { onExercise(it); naming = false },
+        onDismiss = { naming = false })
 }
 
 /**
@@ -243,7 +249,8 @@ private fun StrengthHero(
             r.inSet -> {
                 DotClock({ dotClock(now().setSeconds) }, stringResource(R.string.workout_live_sets_in_this_set), tint)
                 val rest = Strength.Rest.parse(r.workout.rest) ?: Strength.Rest.DEFAULT
-                HeroLine(stringResource(R.string.workout_live_sets_set_line, org.openstrap.app.ui.workout.StartCopy.restText(rest.seconds)), tint)
+                HeroLine(stringResource(R.string.workout_live_sets_set_line,
+                    org.openstrap.app.ui.workout.StartCopy.restText(rest.seconds)), tint)
             }
             resting -> {
                 DotClock({ dotClock((now().restLeft ?: 0).coerceAtLeast(0)) }, stringResource(R.string.workout_live_unit_left), tint)
@@ -252,7 +259,8 @@ private fun StrengthHero(
                     ?: stringResource(R.string.workout_live_sets_next_set, moment.setNumber)
                 HeroLine(stringResource(R.string.workout_live_sets_next_line, next), tint)
             }
-            else -> HeroLine(stringResource(R.string.workout_live_sets_next_tap_start, WorkoutCopy.setOf(moment.setNumber, r.workout.setsTarget)), tint)
+            else -> HeroLine(stringResource(R.string.workout_live_sets_next_tap_start, WorkoutCopy.setOf(moment.setNumber,
+                r.workout.setsTarget)), tint)
         }
     }
 }
@@ -320,8 +328,10 @@ private fun DoneSets(sets: List<AppWorkoutSet>, history: List<Pair<Long, Int>>) 
     Column(Modifier.fillMaxWidth()) {
         done.take(4).forEachIndexed { i, s ->
             Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(stringResource(R.string.workout_live_sets_row, s.index + 1), color = GlowType.noteColor, style = GlowType.body.copy(fontSize = 14.sp))
-                Text(lines[i], color = Color.White, style = GlowType.body.copy(fontSize = 14.sp), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(stringResource(R.string.workout_live_sets_row, s.index + 1), color = GlowType.noteColor,
+                    style = GlowType.body.copy(fontSize = 14.sp))
+                Text(lines[i], color = Color.White, style = GlowType.body.copy(fontSize = 14.sp), maxLines = 1,
+                    overflow = TextOverflow.Ellipsis)
             }
         }
     }
@@ -380,8 +390,10 @@ private fun LogCard(
 
 /** A log card stepper: its label, the value large, and minus and plus. */
 @Composable
-private fun LogStepper(label: String, value: String, less: String, more: String, modifier: Modifier, onLess: () -> Unit, onMore: () -> Unit) {
-    Column(modifier.clip(GlowLayout.CardShape).background(org.openstrap.app.ui.glow.ListSurface).padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+private fun LogStepper(label: String, value: String, less: String, more: String, modifier: Modifier, onLess: () -> Unit,
+    onMore: () -> Unit) {
+    Column(modifier.clip(GlowLayout.CardShape).background(org.openstrap.app.ui.glow.ListSurface).padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(label, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary)
         MinusPlus(less, more, onLess, onMore) {
             Text(value, color = Color.White, style = GlowType.pageTitle, textAlign = TextAlign.Center)

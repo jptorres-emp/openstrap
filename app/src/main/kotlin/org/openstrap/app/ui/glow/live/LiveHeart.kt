@@ -130,7 +130,8 @@ fun GlowWorkoutLiveScreen(
             Box(Modifier.fillMaxSize().then(cutout)) {
                 when {
                     family == Workouts.Family.Distance && r.workout.useGps ->
-                        LiveDistanceScreen(r, liveHeartRate, recent, stats, connection, contentPadding, controls, route, history, onLap, liveView, onLiveView, kcal, onSkip, split, compact)
+                        LiveDistanceScreen(r, liveHeartRate, recent, stats, connection, contentPadding, controls, route,
+                            history, onLap, liveView, onLiveView, kcal, onSkip, split, compact)
                     family == Workouts.Family.Strength -> LiveStrengthScreen(
                         r, liveHeartRate, remember(history, recent) { WorkoutCopy.readings(history, recent) }, connection, contentPadding,
                         controls, exercises,
@@ -141,7 +142,8 @@ fun GlowWorkoutLiveScreen(
                             r, liveHeartRate, remember(history, recent) { WorkoutCopy.readings(history, recent) }, connection,
                             contentPadding, controls, onSkip, onAddRest, split, compact, kcal,
                         )
-                    family == Workouts.Family.MindBody -> LiveMindScreen(r, liveHeartRate, recent, connection, contentPadding, controls, split, compact)
+                    family == Workouts.Family.MindBody -> LiveMindScreen(r, liveHeartRate, recent, connection,
+                        contentPadding, controls, split, compact)
                     family == Workouts.Family.Games ->
                         LiveGameScreen(
                             r, liveHeartRate, remember(history, recent) { WorkoutCopy.readings(history, recent) }, stats, zoneSeconds,
@@ -149,7 +151,8 @@ fun GlowWorkoutLiveScreen(
                         )
                     // Indoor cardio, a distance sport without GPS, and HIIT's Free, which has no timer: heart rate only, laps mark
                     // the rounds.
-                    else -> LiveIndoorScreen(r, liveHeartRate, recent, stats, zoneSeconds, connection, contentPadding, controls, onLap, kcal, split, compact)
+                    else -> LiveIndoorScreen(r, liveHeartRate, recent, stats, zoneSeconds, connection, contentPadding,
+                        controls, onLap, kcal, split, compact)
                 }
             }
         }
@@ -186,7 +189,8 @@ internal fun KmSplitLine(
         }
     }
     if (line != null || keepRoom) Text(
-        line?.text.orEmpty(), color = color, style = if (center) MediumBody.copy(fontFeatureSettings = "tnum") else GlowType.secondary.copy(fontFeatureSettings = "tnum"),
+        line?.text.orEmpty(), color = color,
+            style = if (center) MediumBody.copy(fontFeatureSettings = "tnum") else GlowType.secondary.copy(fontFeatureSettings = "tnum"),
         modifier = Modifier.fillMaxWidth(), textAlign = if (center) TextAlign.Center else TextAlign.Start,
     )
 }
@@ -259,6 +263,7 @@ internal fun HeartNotes(r: WorkoutState.Recording, zone: Int?, zoneSeconds: Zone
  * The standing half of a foldable half-open during a workout (on a table, or stood up like a book): the live heart
  * card as big as the half allows, readable from a step away. The controls stay on the other half, under your hand.
  */
+@Suppress("UnusedParameter")
 @Composable
 fun GlowWorkoutGlance(
     r: WorkoutState.Recording,
@@ -291,5 +296,6 @@ private const val WINDOW_S = 600L
 /** The last ten minutes in five-second averages, oldest first; gaps stay null and break the line. */
 internal fun bucketRecent(recent: List<Pair<Long, Int>>, now: Long): List<Float?> {
     val from = now - WINDOW_S + 1
-    return org.openstrap.app.data.Summaries.bucketMeans(recent, (WINDOW_S / BUCKET_S).toInt(), { ((it.first - from) / BUCKET_S).toInt() }, { it.second.toFloat() })
+    return org.openstrap.app.data.Summaries.bucketMeans(recent, (WINDOW_S / BUCKET_S).toInt(),
+        { ((it.first - from) / BUCKET_S).toInt() }, { it.second.toFloat() })
 }

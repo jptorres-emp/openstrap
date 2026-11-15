@@ -52,6 +52,7 @@ import org.openstrap.app.R
  * early. The strap buzzes at the end of each period and break, so nothing needs the phone. Free play has no periods.
  */
 @Composable
+@Suppress("UnusedParameter")
 internal fun LiveGameScreen(
     r: WorkoutState.Recording,
     liveHeartRate: Int?,
@@ -91,7 +92,8 @@ internal fun LiveGameScreen(
     LiveFrame(
         r, color, connected, contentPadding, controls, time = { active.value },
         // Half time stays on the left, the way every sport's own action does; a break's next step is the white tap.
-        lap = if (periods != null && phase is Phase.Work && !r.paused) ({ SideAction(StartCopy.breakName(periods.rounds), AppIcons.PauseFill, onHalfTime) }) else null,
+        lap = if (periods != null && phase is Phase.Work && !r.paused) ({ SideAction(StartCopy.breakName(periods.rounds),
+            AppIcons.PauseFill, onHalfTime) }) else null,
         pauseWhite = !inBreak,
         paused = { LivePaused(r, liveHeartRate.takeIf { connected }, readings, figures) },
     ) {
@@ -105,9 +107,11 @@ internal fun LiveGameScreen(
         }
         if (!split) LiveCard {
             Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                Text(stringResource(R.string.workout_live_effort), color = Color.White, style = GlowType.cardTitle, modifier = Modifier.weight(1f))
+                Text(stringResource(R.string.workout_live_effort), color = Color.White, style = GlowType.cardTitle,
+                    modifier = Modifier.weight(1f))
                 Text(
-                    effort?.let { stringResource(R.string.workout_live_effort_of, it) } ?: stringResource(R.string.workout_live_effort_none),
+                    effort?.let { stringResource(R.string.workout_live_effort_of,
+                        it) } ?: stringResource(R.string.workout_live_effort_none),
                     color = GlowType.noteColor, style = GlowType.noteSmall,
                 )
             }
@@ -125,10 +129,12 @@ internal fun LiveGameScreen(
 
 /** The period and the time in it, or the break and its time left, as the hero's line: its own scope, so only it reads each second. */
 @Composable
-private fun PeriodLine(r: WorkoutState.Recording, periods: Structure.Periods, phase: Phase, now: () -> Long, active: () -> Long, tint: Color) {
+private fun PeriodLine(r: WorkoutState.Recording, periods: Structure.Periods, phase: Phase, now: () -> Long,
+    active: () -> Long, tint: Color) {
     val (title, clock) = when (phase) {
         is Phase.Work -> StartCopy.periodName(phase.round, periods.rounds) to
-            workoutClock((WorkoutRecorder.activeSeconds(r.workout, now()) - WorkoutRecorder.activeSeconds(r.workout, phase.start)).coerceAtLeast(0))
+            workoutClock((WorkoutRecorder.activeSeconds(r.workout, now()) - WorkoutRecorder.activeSeconds(r.workout,
+                phase.start)).coerceAtLeast(0))
         is Phase.Rest -> StartCopy.breakName(periods.rounds) to
             stringResource(
                 R.string.workout_live_game_break_left,

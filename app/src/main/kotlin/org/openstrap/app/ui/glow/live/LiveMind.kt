@@ -121,7 +121,8 @@ internal fun LiveMindScreen(
                 )
                 MindNumber({ active.value }, tint, onClock = { clock.value = it })
                 HeroLine(
-                    if (length != null) stringResource(R.string.workout_live_mind_buzz) else stringResource(R.string.workout_live_mind_open), tint,
+                    if (length != null) stringResource(R.string.workout_live_mind_buzz) else
+                        stringResource(R.string.workout_live_mind_open), tint,
                 )
             }
             if (split) return@LiveFrame
@@ -130,7 +131,8 @@ internal fun LiveMindScreen(
             val first = values.firstOrNull { it != null }?.toInt()
             LiveCard {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Text(stringResource(R.string.workout_live_heart_title), color = Color.White, style = GlowType.cardTitle, modifier = Modifier.weight(1f))
+                    Text(stringResource(R.string.workout_live_heart_title), color = Color.White, style = GlowType.cardTitle,
+                        modifier = Modifier.weight(1f))
                     Text(stringResource(R.string.workout_live_mind_settling), color = GlowType.noteColor, style = GlowType.noteSmall)
                 }
                 // The heart rate as one thin line edge to edge, with a dot at now: no axis, no numbers.
@@ -140,7 +142,7 @@ internal fun LiveMindScreen(
                         first?.minus(b)?.takeIf { it > 0 }?.let { stringResource(R.string.workout_live_mind_heart_down, b, it) }
                             ?: stringResource(R.string.workout_live_mind_heart, b)
                     } ?: WorkoutCopy.noHeartRate(r.paused, connected),
-                    color = Color(0xFFC9CED6), style = GlowType.secondary,
+                    color = LiveLabelInk, style = GlowType.secondary,
                 )
             }
         }

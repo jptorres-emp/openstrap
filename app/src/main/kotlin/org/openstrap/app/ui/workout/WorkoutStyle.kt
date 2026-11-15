@@ -16,17 +16,24 @@ internal fun mainZoneColor(zones: List<Int>, fallback: Color): Color =
 /** Read each time, so the names follow the app's language. */
 internal val ZONE_NAMES: List<String> get() = WorkoutWords.ZONE_NAMES
 
+private val FamilyDistance = Color(0xFFC6F55A)
+private val FamilyIndoorCardio = Color(0xFF52ACFC)
+private val FamilyStrength = Color(0xFFFF8410)
+private val FamilyIntervals = Color(0xFFFF5A5F)
+private val FamilyMindBody = Color(0xFFB67AE8)
+private val FamilyGames = Color(0xFF6E8FB8)
+
 /**
  * Each kind of workout's colour (workout-rules.md, Tokens; board HaloWorkoutRules): distance lime, indoor cardio blue,
  * strength orange, HIIT red, mind and body violet, games slate blue.
  */
 internal fun familyColor(family: org.openstrap.app.data.Workouts.Family): Color = when (family) {
-    org.openstrap.app.data.Workouts.Family.Distance -> Color(0xFFC6F55A)
-    org.openstrap.app.data.Workouts.Family.IndoorCardio -> Color(0xFF52ACFC)
-    org.openstrap.app.data.Workouts.Family.Strength -> Color(0xFFFF8410)
-    org.openstrap.app.data.Workouts.Family.Intervals -> Color(0xFFFF5A5F)
-    org.openstrap.app.data.Workouts.Family.MindBody -> Color(0xFFB67AE8)
-    org.openstrap.app.data.Workouts.Family.Games -> Color(0xFF6E8FB8)
+    org.openstrap.app.data.Workouts.Family.Distance -> FamilyDistance
+    org.openstrap.app.data.Workouts.Family.IndoorCardio -> FamilyIndoorCardio
+    org.openstrap.app.data.Workouts.Family.Strength -> FamilyStrength
+    org.openstrap.app.data.Workouts.Family.Intervals -> FamilyIntervals
+    org.openstrap.app.data.Workouts.Family.MindBody -> FamilyMindBody
+    org.openstrap.app.data.Workouts.Family.Games -> FamilyGames
 }
 
 /** Rest and recovery, in any family (workout-rules.md, Colour): strength rest, HIIT rest. */
@@ -39,8 +46,12 @@ internal val PausedGrey = Color(0xFFAEB6C2)
  * Where the light comes from on a sport's Ready and Live (workout-rules.md, Tokens): strength from the morning side,
  * mind and body low on the left, the rest from the upper right. Degrees counterclockwise from the right edge.
  */
+private const val LIGHT_STRENGTH = 225f
+private const val LIGHT_MIND = 160f
+private const val LIGHT_DEFAULT = 45f
+
 internal fun familyLightAngle(family: org.openstrap.app.data.Workouts.Family): Float = when (family) {
-    org.openstrap.app.data.Workouts.Family.Strength -> 225f
-    org.openstrap.app.data.Workouts.Family.MindBody -> 160f
-    else -> 45f
+    org.openstrap.app.data.Workouts.Family.Strength -> LIGHT_STRENGTH
+    org.openstrap.app.data.Workouts.Family.MindBody -> LIGHT_MIND
+    else -> LIGHT_DEFAULT
 }

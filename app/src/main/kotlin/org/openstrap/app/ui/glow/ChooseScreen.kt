@@ -202,7 +202,8 @@ private fun ChooseBody(
             WorkoutPage(Color.Transparent, contentPadding, scroll = false) {
                 header()
                 Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(GlowLayout.ColumnGap * 2)) {
-                    Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(14.dp), content = choose)
+                    Column(Modifier.weight(1f).verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(14.dp), content = choose)
                     Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         SectionLabel(stringResource(R.string.glow_choose_more_sports))
                         MoreSportsList(onReady)
@@ -225,7 +226,8 @@ private fun ChooseBody(
 private fun UsualRow(s: ChooseSport, onStart: () -> Unit, onOpen: () -> Unit) {
     val color = familyColor(Workouts.family(s.type))
     val haptics = org.openstrap.app.ui.components.rememberHaptics()
-    PictureCard(color, Modifier.fillMaxWidth(), onClick = onOpen, contentPadding = PaddingValues(start = 18.dp, top = 14.dp, end = 14.dp, bottom = 14.dp)) {
+    PictureCard(color, Modifier.fillMaxWidth(), onClick = onOpen, contentPadding = PaddingValues(start = 18.dp, top = 14.dp,
+        end = 14.dp, bottom = 14.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             SportIconTile(s.type, color)
             Spacer(Modifier.width(14.dp))
@@ -235,7 +237,8 @@ private fun UsualRow(s: ChooseSport, onStart: () -> Unit, onOpen: () -> Unit) {
                     style = GlowType.secondary,
                 )
                 Text(
-                    Workouts.sportName(s.type), color = Color.White, style = GlowType.headerDate, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    Workouts.sportName(s.type), color = Color.White, style = GlowType.headerDate, maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.padding(top = 2.dp),
                 )
                 if (s.line.isNotEmpty()) Text(
@@ -358,7 +361,8 @@ internal fun SportPicker(selected: Int, recent: List<Int>, contentPadding: Paddi
     var query by rememberSaveable { mutableStateOf("") }
     val chosen = Workouts.tileType(selected)
     ScreenList(contentPadding, gutter = GlowLayout.Gutter) {
-        item { PageHeader(stringResource(if (selected >= 0) R.string.glow_choose_change_title else R.string.glow_choose_pick_title), onBack) }
+        item { PageHeader(stringResource(if (selected >= 0) R.string.glow_choose_change_title else
+            R.string.glow_choose_pick_title), onBack) }
         if (selected >= 0) item(key = "now") { NowCard(selected) }
         item { SearchField(query, stringResource(R.string.glow_choose_search)) { query = it } }
         if (query.isNotBlank()) {
@@ -412,7 +416,8 @@ private fun SearchResults(query: String, selected: Int, onPick: (Int) -> Unit) {
         stringResource(R.string.glow_choose_no_match, query.trim()), color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA),
         style = GlowType.secondary, modifier = Modifier.padding(start = 4.dp, top = 8.dp),
     )
-    else SportTiles(null, found, { if (it in Workouts.EVERYDAY) Workouts.shortName(it) else Workouts.sportName(it) }, { it == selected }, pick)
+    else SportTiles(null, found, { if (it in Workouts.EVERYDAY) Workouts.shortName(it) else Workouts.sportName(it) },
+        { it == selected }, pick)
 }
 
 /** Choose's search field before it's typed in: it looks like the field and opens [SearchPage]. */
@@ -471,13 +476,15 @@ private fun SearchPage(contentPadding: PaddingValues, onPick: (Int) -> Unit, onB
                     found.isEmpty() -> stringResource(R.string.glow_choose_no_match, query.trim())
                     else -> pluralStringResource(R.plurals.glow_choose_sports_count, found.size, found.size)
                 },
-                color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary, modifier = Modifier.padding(start = 4.dp),
+                color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary,
+                    modifier = Modifier.padding(start = 4.dp),
             )
         }
         if (found.isNotEmpty()) item {
             ListPanel {
                 found.forEachIndexed { i, type ->
-                    PageRow(Workouts.sportName(type), icon = SportIcons.of(type), divider = i > 0, onClick = { keyboard?.hide(); onPick(type) })
+                    PageRow(Workouts.sportName(type), icon = SportIcons.of(type), divider = i > 0,
+                        onClick = { keyboard?.hide(); onPick(type) })
                 }
             }
         }
@@ -519,7 +526,8 @@ private fun SearchField(query: String, hint: String, modifier: Modifier = Modifi
                 Icon(SportIcons.Search, null, tint = Color.White.copy(alpha = GlowType.CAPTION_ALPHA), modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(10.dp))
                 Box(Modifier.weight(1f)) {
-                    if (query.isEmpty()) Text(hint, color = Color.White.copy(alpha = GlowType.CAPTION_ALPHA), style = GlowType.body, maxLines = 1)
+                    if (query.isEmpty()) Text(hint, color = Color.White.copy(alpha = GlowType.CAPTION_ALPHA),
+                        style = GlowType.body, maxLines = 1)
                     field()
                 }
                 if (query.isNotEmpty()) Icon(

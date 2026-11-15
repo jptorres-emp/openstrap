@@ -186,7 +186,7 @@ internal fun LiveDistanceScreen(
                     fill = true, title = stringResource(R.string.workout_live_reps_title, Workouts.sportName(r.workout.sportType)),
                     bottomRoom = bar,
                 ) {
-                    RepPage(r, route, readings, bpm, color, compact, if (shortLandscape(compact)) Modifier else Modifier.weight(1f))
+                    RepPage(r, route, readings, bpm, color, if (shortLandscape(compact)) Modifier else Modifier.weight(1f))
                 } else LiveFrame(
                     r, color, connected, pagePadding, controls, lap, time = { active.value }, smallTime = compact, battery = battery,
                     status = status, fill = true, bottomRoom = bar,
@@ -228,7 +228,8 @@ internal fun LiveDistanceScreen(
             }
         }
         LiveBottomBar(
-            r, connected, contentPadding, controls, lap, { pager.currentPage + pager.currentPageOffsetFraction }, LiveView.entries.size, onPage,
+            r, connected, contentPadding, controls, lap, { pager.currentPage + pager.currentPageOffsetFraction },
+                LiveView.entries.size, onPage,
             onHeight = { if (it != measured) measured = it },
             modifier = if (landscape) Modifier.align(Alignment.CenterEnd).width(side) else Modifier.align(Alignment.BottomCenter),
         )
@@ -242,7 +243,7 @@ internal fun LiveDistanceScreen(
  */
 @Composable
 private fun RepPage(
-    r: WorkoutState.Recording, route: List<Route.Point>, readings: List<Pair<Long, Int>>, bpm: Int?, color: Color, compact: Boolean,
+    r: WorkoutState.Recording, route: List<Route.Point>, readings: List<Pair<Long, Int>>, bpm: Int?, color: Color,
     modifier: Modifier,
 ) {
     val now = nowTicking()
@@ -274,9 +275,10 @@ private fun RepPage(
                 },
                 next, tint,
             )
-            RoundBar(m, structure.seconds, null)
+            RoundBar(m)
             val (value, unit) = when {
-                m.phase is org.openstrap.app.data.Phase.Work && m.metersLeft != null -> "${m.metersLeft.toInt()}" to stringResource(R.string.workout_live_unit_m_to_go)
+                m.phase is org.openstrap.app.data.Phase.Work &&
+                    m.metersLeft != null -> "${m.metersLeft.toInt()}" to stringResource(R.string.workout_live_unit_m_to_go)
                 m.left != null -> dotClock(m.left) to stringResource(
                     if (rest) R.string.workout_live_unit_rest_left else R.string.workout_live_unit_left,
                 )
@@ -313,15 +315,18 @@ private fun RepPage(
             ) {
                 done.forEach { round ->
                     Column(
-                        Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(18.dp)).background(RepChip).padding(horizontal = 14.dp, vertical = 12.dp),
+                        Modifier.clip(RoundedCornerShape(18.dp)).background(RepChip)
+                            .padding(horizontal = 14.dp, vertical = 12.dp),
                         verticalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
-                        Text(stringResource(R.string.workout_live_rep_chip, round.index + 1), color = GlowType.noteColor, style = GlowType.noteSmall, maxLines = 1)
-                        Text(workoutClock(round.workEnd!! - round.workStart), color = Color.White, style = GlowType.figureInline, maxLines = 1)
+                        Text(stringResource(R.string.workout_live_rep_chip, round.index + 1), color = GlowType.noteColor,
+                            style = GlowType.noteSmall, maxLines = 1)
+                        Text(workoutClock(round.workEnd!! - round.workStart), color = Color.White,
+                            style = GlowType.figureInline, maxLines = 1)
                     }
                 }
             }
-            Box(Modifier.fillMaxWidth().height(1.dp).background(Color(0xFF24262C)))
+            Box(Modifier.fillMaxWidth().height(1.dp).background(LiveRule))
             HeartLine(bpm, r.maxHeartRate, r.paused)
         }
     }
@@ -383,12 +388,13 @@ private fun AveragePace(averagePace: () -> Double?, speed: Boolean, tint: Color)
 private fun SplitsCard(splits: List<Route.Split>, bpm: Int?, r: WorkoutState.Recording, showHeart: Boolean) {
     LiveCard {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(stringResource(R.string.workout_live_splits_title), color = Color.White, style = GlowType.cardTitle, modifier = Modifier.weight(1f))
+            Text(stringResource(R.string.workout_live_splits_title), color = Color.White, style = GlowType.cardTitle,
+                modifier = Modifier.weight(1f))
             Text(stringResource(R.string.workout_live_splits_note), color = GlowType.noteColor, style = GlowType.noteSmall)
         }
         KmSplitBars(splits)
         if (showHeart) {
-            Box(Modifier.fillMaxWidth().height(1.dp).background(Color(0xFF24262C)))
+            Box(Modifier.fillMaxWidth().height(1.dp).background(LiveRule))
             HeartLine(bpm, r.maxHeartRate, r.paused)
         }
     }
@@ -419,12 +425,17 @@ private fun KmSplitBars(splits: List<Route.Split>) {
                 slowest <= quickest -> 1f
                 else -> (0.4f + 0.6f * ((slowest - s.pace) / (slowest - quickest)).toFloat()).coerceIn(0.4f, 1f)
             }
-            Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Box(Modifier.fillMaxWidth().height(52.dp), contentAlignment = Alignment.BottomCenter) {
-                    Box(Modifier.fillMaxWidth().fillMaxHeight(height).clip(RoundedCornerShape(6.dp)).background(if (underWay) Color.White else SplitBar))
+                    Box(
+                        Modifier.fillMaxWidth().fillMaxHeight(height).clip(RoundedCornerShape(6.dp))
+                            .background(if (underWay) Color.White else SplitBar),
+                    )
                 }
                 Text(
-                    if (underWay) stringResource(R.string.workout_live_split_now) else stringResource(R.string.workout_live_split_km, s.index + 1),
+                    if (underWay) stringResource(R.string.workout_live_split_now) else
+                        stringResource(R.string.workout_live_split_km, s.index + 1),
                     color = if (underWay) Color.White else GlowType.noteColor, style = GlowType.caption, maxLines = 1,
                 )
             }
@@ -437,6 +448,3 @@ private fun KmSplitBars(splits: List<Route.Split>) {
 private val SplitBar = Color(0xFF2E3038)
 
 private const val SPLIT_SLOTS = 5
-
-/** Room left beside the pace for "km/h" and its gap. */
-private val UnitRoom = 56.dp

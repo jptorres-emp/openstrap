@@ -201,7 +201,8 @@ fun GlowWorkoutReadyScreen(
     // the swap was a cut both ways).
     PushContent(picking, { if (it) 1 else 0 }) { showPicker ->
         if (showPicker) {
-            SportPicker(type, recentSports, contentPadding, onPick = { onSport(it); picking = false }, onBack = { if (pickSport) onBack() else picking = false })
+            SportPicker(type, recentSports, contentPadding, onPick = { onSport(it); picking = false },
+                onBack = { if (pickSport) onBack() else picking = false })
             return@PushContent
         }
         BackHandler(onBack = onBack)
@@ -230,7 +231,8 @@ fun GlowWorkoutReadyScreen(
         WorkoutPage(
             Color.Transparent, contentPadding,
             // While a goal is typed the keyboard has the bottom of the screen.
-            pinned = if (typing) null else ({ WorkoutButton(StartCopy.startLabel(type), Color.White, Color.Black, start, icon = AppIcons.PlayFill, height = 64.dp) }),
+            pinned = if (typing) null else ({ WorkoutButton(StartCopy.startLabel(type), Color.White, Color.Black, start,
+                icon = AppIcons.PlayFill, height = 64.dp) }),
         ) {
             ReadyTopBar(type, family, connection, liveHeartRate, onBack) { picking = true }
             StrapHeldNotice(connection)
@@ -252,7 +254,8 @@ fun GlowWorkoutReadyScreen(
                 )
                 val zones = LocalHeartZones.current
                 ReadyGoal(
-                    type, kinds, hasDistance, draft.copy(kind = kind), { draft = it }, typing, { typing = it }, zones, maxHeartRate, onYourZones,
+                    type, kinds, hasDistance, draft.copy(kind = kind), { draft = it }, typing, { typing = it }, zones,
+                        maxHeartRate, onYourZones,
                     saved.filter { Workouts.tileType(it.sport) == key },
                     onSave = { name, reps -> onSaveIntervals(name, reps.code) },
                 )
@@ -261,12 +264,14 @@ fun GlowWorkoutReadyScreen(
             ReadyHeartCard(connection, liveHeartRate, familyColor(family), familyLightAngle(family))
             when (family) {
                 Workouts.Family.Strength -> StrengthPlanCard(
-                    type, sets, { sets = it; if (it != null) planSets = it }, planSets, restSeconds, { restSeconds = it }, typing, { typing = it },
+                    type, sets, { sets = it; if (it != null) planSets = it }, planSets, restSeconds, { restSeconds = it },
+                        typing, { typing = it },
                 )
                 Workouts.Family.Intervals -> HiitPlanCard(type, rounds, { structureCode = it?.code }, typing, { typing = it })
                 Workouts.Family.MindBody -> MindPlanCard(
                     type, draft.seconds.takeIf { draft.kind == WorkoutSetup.GoalKind.Time },
-                    { draft = if (it == null) draft.copy(kind = WorkoutSetup.GoalKind.None) else draft.copy(kind = WorkoutSetup.GoalKind.Time, seconds = it) },
+                    { draft = if (it == null) draft.copy(kind = WorkoutSetup.GoalKind.None) else
+                        draft.copy(kind = WorkoutSetup.GoalKind.Time, seconds = it) },
                     draft.seconds, typing, { typing = it },
                 )
                 else -> GamePlanCard(type, rounds as? Structure.Periods, { structureCode = it?.code }, typing, { typing = it })
@@ -282,7 +287,8 @@ fun GlowWorkoutReadyScreen(
                     divider = true
                 }
                 if (rounds != null && family == Workouts.Family.Intervals) {
-                    PageSwitchRow(StartCopy.WARM_UP, StartCopy.WARM_UP_NOTE, rounds.warmUp, { structureCode = rounds.warm(it).code }, divider = false)
+                    PageSwitchRow(StartCopy.WARM_UP, StartCopy.WARM_UP_NOTE, rounds.warmUp,
+                        { structureCode = rounds.warm(it).code }, divider = false)
                     divider = true
                 }
                 PageSwitchRow(StartCopy.ASK_TO_END, StartCopy.ASK_TO_END_NOTE, askToEnd, { askToEnd = it }, divider = divider)
@@ -297,7 +303,8 @@ fun GlowWorkoutReadyScreen(
  * strap's charge at the right in grey.
  */
 @Composable
-private fun ReadyTopBar(type: Int, family: Workouts.Family, connection: ConnectionState, bpm: Int?, onClose: () -> Unit, onSport: () -> Unit) {
+private fun ReadyTopBar(type: Int, family: Workouts.Family, connection: ConnectionState, bpm: Int?, onClose: () -> Unit,
+    onSport: () -> Unit) {
     val battery = (connection as? ConnectionState.Connected)?.batteryPercent
     Row(Modifier.fillMaxWidth().height(48.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.width(96.dp), contentAlignment = Alignment.CenterStart) {
@@ -310,12 +317,14 @@ private fun ReadyTopBar(type: Int, family: Workouts.Family, connection: Connecti
             )
         }
         Column(Modifier.width(96.dp), horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            if (bpm != null && connection is ConnectionState.Connected) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            if (bpm != null && connection is ConnectionState.Connected) Row(verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 Icon(AppIcons.Heartbeat, null, tint = org.openstrap.app.ui.theme.MetricColors.heart, modifier = Modifier.size(12.dp))
                 Text(stringResource(R.string.workout_live_bpm, bpm), color = GlowType.noteColor, style = GlowType.noteSmall, maxLines = 1)
             }
             if (connection is ConnectionState.Connected) Text(
-                if (battery != null) stringResource(R.string.workout_live_status_strap_battery, battery) else stringResource(R.string.workout_live_status_strap),
+                if (battery != null) stringResource(R.string.workout_live_status_strap_battery,
+                    battery) else stringResource(R.string.workout_live_status_strap),
                 color = GlowType.noteColor, style = GlowType.noteSmall, maxLines = 1,
             )
         }
@@ -370,7 +379,8 @@ internal fun MinusPlus(
     val iconSize = if (buttonSize > 44.dp) 20.dp else 18.dp
     Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(gap)) {
         RoundIcon(AppIcons.Minus, less, onLess, size = buttonSize, iconSize = iconSize)
-        Row(Modifier.weight(1f), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically, content = value)
+        Row(Modifier.weight(1f), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically,
+            content = value)
         RoundIcon(AppIcons.Plus, more, onMore, size = buttonSize, iconSize = iconSize)
     }
 }

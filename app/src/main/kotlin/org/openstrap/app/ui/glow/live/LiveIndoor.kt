@@ -84,7 +84,8 @@ internal fun LiveIndoorScreen(
         paused = { LivePaused(r, liveHeartRate.takeIf { connected }, recent, figures) },
     ) {
         // Time reps on the treadmill side: the rep above the heart.
-        if (r.structure is org.openstrap.app.data.Structure.Reps) RepCard(r, emptyList(), recent, liveHeartRate.takeIf { connected && !r.paused })
+        if (r.structure is org.openstrap.app.data.Structure.Reps) RepCard(r, emptyList(), recent,
+            liveHeartRate.takeIf { connected && !r.paused })
         val reading = liveHeartRate.takeIf { connected && !r.paused }
         if (split) ZoneTimeBar(zoneSeconds, WorkoutRecorder.liveZone(reading, r.maxHeartRate, heartZones))
         else WorkoutHeartCard(

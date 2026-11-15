@@ -153,7 +153,8 @@ internal fun ReadyWhere(
             rows++
         }
         if (outdoor && !locationOn) {
-            PageButton(StartCopy.TURN_ON_LOCATION, onTurnOnLocation, Modifier.fillMaxWidth().padding(bottom = 14.dp), icon = SportIconsLocation)
+            PageButton(StartCopy.TURN_ON_LOCATION, onTurnOnLocation, Modifier.fillMaxWidth().padding(bottom = 14.dp),
+                icon = SportIconsLocation)
         }
         PageSwitchRow(StartCopy.ASK_TO_END, StartCopy.ASK_TO_END_NOTE, askToEnd, onAskToEnd, divider = rows > 0)
         if (keepRoute != null) PageSwitchRow(StartCopy.keepRoute(type), WorkoutCopy.routeNote(keepRoute), keepRoute, onKeepRoute)
@@ -177,7 +178,8 @@ private fun placeIcon(sides: Workouts.Sides, indoor: Boolean): ImageVector = whe
 @Composable
 private fun PlaceRow(icon: ImageVector, tint: Color, title: String, note: String, trailing: (@Composable () -> Unit)?) {
     Row(Modifier.fillMaxWidth().padding(vertical = GlowLayout.RowPadding), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(tint.copy(alpha = 0.15f)), contentAlignment = Alignment.Center) {
+        Box(Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(tint.copy(alpha = 0.15f)),
+            contentAlignment = Alignment.Center) {
             Icon(icon, null, tint = tint, modifier = Modifier.size(24.dp))
         }
         Spacer(Modifier.width(14.dp))
@@ -257,7 +259,8 @@ internal fun <T> PlanChoice(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val at = choices.indexOfFirst { isChosen(it.first) }.takeIf { it >= 0 }
-    ReadyPlanCard(family, choices.map { it.second }, at?.let { choices[it].second } ?: other(), at, { onChoose(choices[it].first) }, typing, onTyping, content)
+    ReadyPlanCard(family, choices.map { it.second }, at?.let { choices[it].second } ?: other(), at,
+        { onChoose(choices[it].first) }, typing, onTyping, content)
 }
 
 /**
@@ -277,7 +280,8 @@ private fun ReadyPlanCard(
     onTyping: (Boolean) -> Unit,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Text(StartCopy.planTitle(family), color = GlowType.noteColor, style = GlowType.secondary, modifier = Modifier.padding(horizontal = 4.dp))
+    Text(StartCopy.planTitle(family), color = GlowType.noteColor, style = GlowType.secondary,
+        modifier = Modifier.padding(horizontal = 4.dp))
     val inView = remember { BringIntoViewRequester() }
     val ime = WindowInsets.ime
     val density = LocalDensity.current
@@ -364,9 +368,10 @@ private fun KindRow(icon: ImageVector, label: String, note: String, on: Boolean,
 /** The line under a goal: what the strap will do. */
 @Composable
 internal fun GoalNote(text: String) =
-    Text(text, color = Color.White.copy(alpha = 0.6f), style = GlowType.secondary, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+    Text(text, color = Color.White.copy(alpha = 0.6f), style = GlowType.secondary, textAlign = TextAlign.Center,
+        modifier = Modifier.fillMaxWidth())
 
-/** A row of presets under a value, each as wide as the others; the one matching the value ([on]) has the white ring (board HaloReadyRun). */
+/** A row of presets under a value, each as wide as the others; the one matching the value ([on]) has the white ring. */
 @Composable
 internal fun <T> Presets(presets: List<Pair<T, String>>, on: T?, onPick: (T) -> Unit) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -383,7 +388,8 @@ private fun ValueStepper(less: String, more: String, onLess: () -> Unit, onMore:
 @Composable
 private fun TapValue(parts: List<Pair<String, String>>, hint: String?, onClick: () -> Unit) {
     Column(
-        Modifier.clip(RoundedCornerShape(12.dp)).clickable(onClickLabel = StartCopy.TAP_TO_TYPE, onClick = onClick).padding(horizontal = 8.dp),
+        Modifier.clip(RoundedCornerShape(12.dp)).clickable(onClickLabel = StartCopy.TAP_TO_TYPE,
+            onClick = onClick).padding(horizontal = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Row {
@@ -394,7 +400,8 @@ private fun TapValue(parts: List<Pair<String, String>>, hint: String?, onClick: 
                 Text(unit, color = Color.White.copy(alpha = 0.75f), style = GlowType.body, modifier = Modifier.alignByBaseline())
             }
         }
-        if (hint != null) Text(hint, color = Color.White.copy(alpha = GlowType.CAPTION_ALPHA), style = GlowType.caption, modifier = Modifier.padding(top = 4.dp))
+        if (hint != null) Text(hint, color = Color.White.copy(alpha = GlowType.CAPTION_ALPHA), style = GlowType.caption,
+            modifier = Modifier.padding(top = 4.dp))
     }
 }
 
@@ -529,7 +536,8 @@ internal fun TimeGoal(
                     // Once on to the minutes, the hours field can still send its old figure as it lets go: ignored.
                     if (hoursDone) return@TypedNumber
                     // The figure just typed, whether the keyboard replaced the selected hour or added after it.
-                    hours = v.copy(text = v.text.filter { it.isDigit() }.takeLast(1), selection = TextRange(1).takeIf { v.text.length > 1 } ?: v.selection)
+                    hours = v.copy(text = v.text.filter { it.isDigit() }.takeLast(1),
+                        selection = TextRange(1).takeIf { v.text.length > 1 } ?: v.selection)
                     // One figure of hours, then on to the minutes.
                     if (hours.text.length == 1 && v.text != selectedText(v)) { hoursDone = true; minutesFocus.requestFocus() }
                 },
@@ -540,7 +548,8 @@ internal fun TimeGoal(
             TypedNumber(
                 minutes, { v -> minutes = v.copy(text = v.text.filter { it.isDigit() }.take(3)) },
                 stringResource(R.string.glow_unit_min), focused == 1,
-                Modifier.focusRequester(minutesFocus).tracked(1).onFocusChanged { if (!it.isFocused) hoursDone = false }, KeyboardType.Number, ImeAction.Done, { focusManager.clearFocus() },
+                Modifier.focusRequester(minutesFocus).tracked(1).onFocusChanged { if (!it.isFocused) hoursDone = false },
+                    KeyboardType.Number, ImeAction.Done, { focusManager.clearFocus() },
             )
         } else TapValue(StartCopy.timeParts(seconds), StartCopy.TAP_TO_TYPE) {
             hours = selected("${seconds / 3600}"); minutes = selected("${seconds / 60 % 60}"); everFocused = false; hoursDone = false; onTyping(true)
@@ -562,10 +571,12 @@ private fun selectedText(v: TextFieldValue): String = v.text.substring(v.selecti
  * zones' colours with where each starts, its note, and Your zones to open the Heart rate zones page.
  */
 @Composable
-private fun ZoneGoal(goal: WorkoutTarget.Zones, onGoal: (WorkoutTarget.Zones) -> Unit, zones: HeartZones, maxHr: Int?, onYourZones: () -> Unit) {
+private fun ZoneGoal(goal: WorkoutTarget.Zones, onGoal: (WorkoutTarget.Zones) -> Unit, zones: HeartZones, maxHr: Int?,
+    onYourZones: () -> Unit) {
     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(goal.label, color = Color.White, style = GlowType.smallValue)
-        if (maxHr != null) Text(StartCopy.zoneRangeLine(goal, zones, maxHr), color = Color.White.copy(alpha = 0.7f), style = GlowType.body, textAlign = TextAlign.Center)
+        if (maxHr != null) Text(StartCopy.zoneRangeLine(goal, zones, maxHr), color = Color.White.copy(alpha = 0.7f),
+            style = GlowType.body, textAlign = TextAlign.Center)
     }
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         (0 until Workouts.ZONES).forEach { z ->
@@ -573,7 +584,8 @@ private fun ZoneGoal(goal: WorkoutTarget.Zones, onGoal: (WorkoutTarget.Zones) ->
             val color = ZONE_COLORS[z]
             Column(
                 Modifier.weight(1f).height(56.dp).clip(RoundedCornerShape(14.dp)).background(if (on) color else ZoneOff)
-                    .drawBehind { if (!on) drawRect(color, Offset(0f, size.height - 3.dp.toPx()), androidx.compose.ui.geometry.Size(size.width, 3.dp.toPx())) }
+                    .drawBehind { if (!on) drawRect(color, Offset(0f, size.height - 3.dp.toPx()),
+                        androidx.compose.ui.geometry.Size(size.width, 3.dp.toPx())) }
                     .pressClickable({ onGoal(WorkoutSetup.pickZone(goal, z)) }, RoundedCornerShape(14.dp))
                     .semantics { selected = on; role = Role.Button },
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -581,7 +593,8 @@ private fun ZoneGoal(goal: WorkoutTarget.Zones, onGoal: (WorkoutTarget.Zones) ->
             ) {
                 val ink = if (on) Color.Black else Color.White.copy(alpha = 0.75f)
                 Text("Z${z + 1}", color = ink, style = GlowType.body.copy(fontWeight = FontWeight.SemiBold))
-                if (maxHr != null) Text("${zones.startBpm(z, maxHr)}", color = ink.copy(alpha = ink.alpha * 0.75f), style = GlowType.caption)
+                if (maxHr != null) Text("${zones.startBpm(z, maxHr)}", color = ink.copy(alpha = ink.alpha * 0.75f),
+                    style = GlowType.caption)
             }
         }
     }
@@ -637,7 +650,8 @@ private fun IntervalsGoal(
             Number(2)
             ValueWords(stringResource(R.string.glow_ready_rest_between))
         }
-        if (focused == 1) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+        if (focused == 1) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically) {
             Text(StartCopy.EACH_REP_IN, color = Color.White.copy(alpha = 0.6f), style = GlowType.secondary)
             Spacer(Modifier.width(10.dp))
             StartCopy.RepUnit.entries.forEach { e ->
@@ -650,7 +664,8 @@ private fun IntervalsGoal(
         GoalNote(StartCopy.INTERVALS_TYPING)
         return
     }
-    Presets(StartCopy.INTERVAL_PRESETS.map { it to StartCopy.structureName(it) }, reps.copy(warmUp = false)) { onReps(it.warm(reps.warmUp)) }
+    Presets(StartCopy.INTERVAL_PRESETS.map { it to StartCopy.structureName(it) },
+        reps.copy(warmUp = false)) { onReps(it.warm(reps.warmUp)) }
     GoalNote(StartCopy.intervalsNote(reps))
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally)) {
         PageButton(StartCopy.SAVE_INTERVALS, { sheet = SAVE }, icon = AppIcons.Plus)
@@ -743,7 +758,8 @@ internal fun TypedValue(
             onTyping(true)
         }
     }
-    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(if (typing) 10.dp else 8.dp)) {
+    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(if (typing) 10.dp else 8.dp)) {
         TypedValueScope(texts.map { it.text }.takeIf { typing }, focused.takeIf { typing }, number).lines()
         if (!typing && hint != null) Text(hint, color = Color.White.copy(alpha = GlowType.CAPTION_ALPHA), style = GlowType.caption)
     }
@@ -757,7 +773,8 @@ internal fun RowScope.ValueWords(text: String) =
 /** The × between a count and what's counted: "6 × 400 m". */
 @Composable
 internal fun RowScope.Times() =
-    Text("×", color = Color.White.copy(alpha = 0.5f), style = GlowType.goalValueMinor, modifier = Modifier.alignByBaseline().padding(horizontal = 4.dp))
+    Text("×", color = Color.White.copy(alpha = 0.5f), style = GlowType.goalValueMinor,
+        modifier = Modifier.alignByBaseline().padding(horizontal = 4.dp))
 
 private const val SAVE = 0
 private const val SAVED = 1
@@ -765,7 +782,8 @@ private const val SAVED = 1
 /** One number of the intervals to tap and type, with its [unit] after it, on the shared baseline. */
 @Composable
 internal fun RowScope.TapNumber(n: String, unit: String?, style: TextStyle, onClick: () -> Unit) {
-    Row(Modifier.alignByBaseline().clip(RoundedCornerShape(10.dp)).clickable(onClickLabel = StartCopy.TAP_TO_TYPE, onClick = onClick).padding(horizontal = 4.dp)) {
+    Row(Modifier.alignByBaseline().clip(RoundedCornerShape(10.dp)).clickable(onClickLabel = StartCopy.TAP_TO_TYPE,
+        onClick = onClick).padding(horizontal = 4.dp)) {
         Text(n, color = Color.White, style = style, modifier = Modifier.alignByBaseline())
         if (unit != null) {
             Spacer(Modifier.width(4.dp))
@@ -780,11 +798,12 @@ private fun SaveIntervalsSheet(reps: Structure.Reps, onSave: (String) -> Unit, o
     var name by rememberSaveable { mutableStateOf("") }
     // Board HaloSaveIntervals: the title, the rounds under it, the name, the note, then Cancel and Save.
     PageSheet(onDismiss, StartCopy.SAVE_INTERVALS, note = StartCopy.SAVE_NOTE) {
-        Text(StartCopy.structureName(reps), color = Color(0xFFC9CED6), style = GlowType.body)
+        Text(StartCopy.structureName(reps), color = org.openstrap.app.ui.glow.live.LiveLabelInk, style = GlowType.body)
         PageField(name, { name = it.take(40) }, null, placeholder = StartCopy.NAME_HINT)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             PageButton(stringResource(R.string.glow_cancel), onDismiss, Modifier.weight(1f))
-            PageButton(stringResource(R.string.glow_save), { onSave(name.trim()) }, Modifier.weight(1f), enabled = name.isNotBlank(), primary = true)
+            PageButton(stringResource(R.string.glow_save), { onSave(name.trim()) }, Modifier.weight(1f),
+                enabled = name.isNotBlank(), primary = true)
         }
     }
 }

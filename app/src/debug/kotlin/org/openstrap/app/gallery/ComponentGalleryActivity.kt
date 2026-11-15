@@ -243,12 +243,6 @@ private val LiveRun = WorkoutState.Recording(AppWorkout(start = LIVE_START, end 
 private const val LIVE_START = 1_792_000_000L
 private const val LIVE_ACTIVE = 1534L
 
-/** The last ten minutes of [LiveRun] every five seconds, climbing into zone 3 with a little wave. */
-private val LiveRecent = (0 until 120).map { i ->
-    val t = LIVE_START + LIVE_ACTIVE - 600 + i * 5L
-    t to (128 + i / 6 + (i % 9) - 4)
-}
-
 private val LiveZones = ZoneSeconds(listOf(120, 420, 780, 180, 34))
 
 /** A calm session's heart rate settling from the high 80s, as the mind screen draws it. */
@@ -276,7 +270,7 @@ private fun LiveParts(modifier: Modifier = Modifier) {
         Label("Effort bar, a game at 3 of 5")
         EffortBar(3)
         Label("Round bar, round 3 of 8 under way")
-        RoundBar(IntervalMoment(Phase.Work(round = 3, start = 0, endsAt = 20), round = 3, rounds = 8, left = 8), workLength = 20)
+        RoundBar(IntervalMoment(Phase.Work(round = 3, start = 0, endsAt = 20), round = 3, rounds = 8, left = 8))
         Label("Peak bars, five rounds of eight")
         PeakBars(
             listOf(158, 166, 171, null, 169), { MetricColors.heart }, Modifier.fillMaxWidth(), height = 56.dp, rounds = 8, corner = 3.dp,

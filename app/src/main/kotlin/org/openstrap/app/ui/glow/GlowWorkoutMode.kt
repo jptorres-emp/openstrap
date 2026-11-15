@@ -99,14 +99,16 @@ private val ButtonText = GlowType.body.copy(fontWeight = FontWeight.SemiBold)
 internal val MediumBody = GlowType.body.copy(fontWeight = FontWeight.Medium)
 
 /** The colour a workout takes: its live zone's in your [zones], or [PausedColor] with no reading. */
-internal fun zoneColor(bpm: Int?, maxHr: Int, zones: HeartZones): Color = WorkoutRecorder.liveZone(bpm, maxHr, zones)?.let { ZONE_COLORS[it] } ?: PausedColor
+internal fun zoneColor(bpm: Int?, maxHr: Int, zones: HeartZones): Color = WorkoutRecorder.liveZone(bpm, maxHr,
+    zones)?.let { ZONE_COLORS[it] } ?: PausedColor
 
 /** The colour the whole app takes while [r] records. */
 fun workoutColor(r: WorkoutState.Recording, liveHeartRate: Int?, connected: Boolean, zones: HeartZones): Color =
     if (r.paused) PausedColor else zoneColor(liveHeartRate.takeIf { connected }, r.maxHeartRate, zones)
 
 /** "12:34", or "1:02:03" past the hour, in the phone's digits. Text drawn in dots passes [Units.DOT_LOCALE]. */
-internal fun workoutClock(seconds: Long, locale: java.util.Locale = java.util.Locale.getDefault()): String = Units.workoutClock(seconds, locale)
+internal fun workoutClock(seconds: Long,
+    locale: java.util.Locale = java.util.Locale.getDefault()): String = Units.workoutClock(seconds, locale)
 
 /** [workoutClock] for the dot font, whose digits are ASCII only. */
 internal fun dotClock(seconds: Long): String = Units.workoutClock(seconds, Units.DOT_LOCALE)
@@ -170,6 +172,7 @@ internal fun WorkoutButton(
  * scrolls under it, behind the pinned buttons' fade ([pinnedFade], spec 6.3), and the content ends clear of it.
  */
 @Composable
+@Suppress("UnusedParameter")
 internal fun WorkoutPage(
     glow: Color, contentPadding: PaddingValues, scroll: Boolean = true,
     pinned: (@Composable ColumnScope.() -> Unit)? = null,
@@ -192,7 +195,8 @@ internal fun WorkoutPage(
         // The live screen fits the screen instead (scroll = false): its controls never move. A scrolling page ends at
         // the keyboard, so what's typed can scroll above it.
         Column(
-            Modifier.fillMaxSize().then(if (scroll) Modifier.imePadding().verticalScroll(rememberScrollState()) else Modifier).statusBarsPadding()
+            Modifier.fillMaxSize().then(if (scroll) Modifier.imePadding().verticalScroll(rememberScrollState()) else
+                Modifier).statusBarsPadding()
                 .padding(contentPadding).padding(start = side, end = side, top = 8.dp, bottom = end)
                 // At least the screen's height, so the controls sit at the bottom without the page scrolling.
                 .then(if (scroll) Modifier.heightIn(min = (maxHeight - padTop - padBottom - end).coerceAtLeast(0.dp)) else Modifier),
@@ -275,7 +279,8 @@ fun GlowAddWorkoutScreen(
     if (picking) {
         // The picker is a page of its own over the app; the sheet is back once a sport is picked.
         Box(Modifier.fillMaxSize().background(Color.Black)) {
-            SportPicker(sport, recentSports, contentPadding, onPick = { sport = pickedType(it, sides); picking = false }, onBack = { picking = false })
+            SportPicker(sport, recentSports, contentPadding, onPick = { sport = pickedType(it, sides); picking = false },
+                onBack = { picking = false })
         }
         return
     }
@@ -287,7 +292,8 @@ fun GlowAddWorkoutScreen(
             PageNote(stringResource(R.string.glow_workout_add_no_heart))
         } else {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(stringResource(R.string.glow_workout_add_when), color = GlowType.noteColor, style = GlowType.secondary, modifier = Modifier.padding(horizontal = 4.dp))
+                Text(stringResource(R.string.glow_workout_add_when), color = GlowType.noteColor, style = GlowType.secondary,
+                    modifier = Modifier.padding(horizontal = 4.dp))
                 Column(Modifier.padding(horizontal = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(Ranges.times(from, to), color = Color.White, style = GlowType.figure, maxLines = 1)
                     val inside = series.filter { it.first in from until to }.map { it.second }
@@ -306,13 +312,15 @@ fun GlowAddWorkoutScreen(
             }
             Text(stringResource(R.string.glow_workout_add_hint), color = GlowType.footnoteColor, style = GlowType.footnote)
             PageRows {
-                PageRow(stringResource(R.string.glow_workout_add_sport), Workouts.sportName(sport), onClick = { picking = true }, divider = false)
+                PageRow(stringResource(R.string.glow_workout_add_sport), Workouts.sportName(sport),
+                    onClick = { picking = true }, divider = false)
                 PageRow(stringResource(R.string.glow_workout_add_day), dayName(date))
             }
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             PageButton(stringResource(R.string.glow_cancel), onBack, Modifier.weight(1f))
-            PageButton(stringResource(R.string.glow_save), { onSave(from, to, sport) }, Modifier.weight(1f), enabled = ready, primary = true)
+            PageButton(stringResource(R.string.glow_save), { onSave(from, to, sport) }, Modifier.weight(1f), enabled = ready,
+                primary = true)
         }
     }
 }
@@ -329,7 +337,8 @@ private val HandleInset = 14.dp
 
 /** A day of minute heart rate in its zones' colours, with two handles marking a range; outside it dims. */
 @Composable
-private fun RangeChart(series: List<Pair<Long, Int>>, first: Long, last: Long, from: Long, to: Long, maxHr: Int, onChange: (Long, Long) -> Unit) {
+private fun RangeChart(series: List<Pair<Long, Int>>, first: Long, last: Long, from: Long, to: Long, maxHr: Int,
+    onChange: (Long, Long) -> Unit) {
     val heartZones = LocalHeartZones.current
     val lo = (series.minOfOrNull { it.second } ?: 60) - 5f
     val hi = (series.maxOfOrNull { it.second } ?: 180) + 5f

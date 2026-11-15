@@ -280,7 +280,7 @@ fun DeviceScreen(
                 PageFootnote(rejected.reason)
                 PageFootnote(stringResource(R.string.you_strap_key_rejected_note))
             }
-        } else if (connection is ConnectionState.Disconnected || failed != null) item {
+        } else if (connection is ConnectionState.Disconnected) item {
             PageFootnote(stringResource(R.string.you_strap_away_note))
         }
         val connected = connection is ConnectionState.Connected

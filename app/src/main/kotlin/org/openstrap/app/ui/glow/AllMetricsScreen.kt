@@ -278,7 +278,7 @@ private fun signalGroups(state: DayUiState, now: Long, strings: Strings): List<I
  * The index as a sheet over the tab (spec 3.2), from the grid button in the header: a search field, then one grouped
  * list per section. [onOpen] gets the tapped row's target; the caller closes the sheet and goes there.
  */
-@Suppress("ModifierMissing")
+@Suppress("ModifierMissing", "ComposeModifierMissing")
 @Composable
 fun AllMetricsSheet(
     groups: List<IndexGroup>,

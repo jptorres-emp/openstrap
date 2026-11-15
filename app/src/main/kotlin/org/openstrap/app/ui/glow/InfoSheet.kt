@@ -37,6 +37,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import org.openstrap.app.R
 import org.openstrap.app.ui.dashboard.Info
 import org.openstrap.app.ui.theme.AppIcons
@@ -59,30 +60,27 @@ fun InfoSheet(
     rows: List<Pair<String, String>>? = null,
 ) {
     PageSheet(onDismiss) {
-        // One block, so the sheet's gap between blocks leaves this one's own spacing alone.
-        Column {
-            Text(info.name, color = Color.White.copy(alpha = 0.5f), style = GlowType.secondary)
-            Text(
-                info.meaning, color = Color.White, modifier = Modifier.padding(top = 6.dp),
-                style = GlowType.sentence,
-            )
-            // Some numbers have no scale to place them on (naps, breathing disturbances, whose only words are apnea bands).
-            if (info.scale.isNotEmpty()) Scale(info.scale, color, here, Modifier.padding(top = 22.dp))
-            if (hereLine != null) Text(
-                hereLine, color = Color.White, style = GlowType.secondary,
-                modifier = Modifier.padding(top = if (info.scale.isEmpty()) 16.dp else 10.dp),
-            )
-            Column(
-                Modifier.padding(top = 24.dp).fillMaxWidth().background(Color(0xFF141416), GlowLayout.CardShape).padding(horizontal = 18.dp),
-            ) {
-                val folds = rows ?: listOf(
-                    stringResource(R.string.glow_info_how) to info.how,
-                    stringResource(R.string.glow_info_moves) to info.moves,
-                    stringResource(R.string.glow_info_off) to (listOf(info.off) + notes).joinToString("\n\n"),
-                )
-                folds.forEachIndexed { i, (title, text) -> Fold(title, text, divider = i > 0) }
-            }
+        // The metric's colour is only the 4 px bar beside the title (board HaloInfoSheet).
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Box(Modifier.size(4.dp, 24.dp).background(color, CircleShape))
+            Text(info.name, color = Color.White, style = GlowType.sheetTitle, maxLines = 2)
         }
+        val sections = rows ?: listOf(
+            stringResource(R.string.glow_info_what) to info.meaning,
+            stringResource(R.string.glow_info_how) to info.how,
+            stringResource(R.string.glow_info_normal) to listOfNotNull(hereLine, info.moves).joinToString(" "),
+            stringResource(R.string.glow_info_off) to (listOf(info.off) + notes).joinToString("\n\n"),
+        )
+        sections.forEachIndexed { i, (title, text) ->
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(title, color = GlowType.noteColor, style = GlowType.secondary)
+                Text(text, color = Color.White.copy(alpha = 0.9f), style = GlowType.body.copy(lineHeight = 22.5.sp))
+            }
+            // Some numbers have no scale to place them on (naps, whose only words are apnea bands); the rest show it
+            // under what the number is.
+            if (rows == null && i == 0 && info.scale.isNotEmpty()) Scale(info.scale, color, here, Modifier.padding(top = 2.dp))
+        }
+        PageButton(stringResource(R.string.glow_close), onDismiss, Modifier.fillMaxWidth())
     }
 }
 
@@ -128,26 +126,3 @@ private fun fitWords(labels: List<String>, roles: List<TextStyle>, width: Int, m
     return roles.firstOrNull { widest(it) <= width } ?: roles.last()
 }
 
-/** A folded row: its [title] with a caret, opening onto [text]. */
-@Composable
-private fun Fold(title: String, text: String, divider: Boolean = true) {
-    var open by rememberSaveable(title) { mutableStateOf(false) }
-    val turn by animateFloatAsState(if (open) 180f else 0f, label = "fold caret")
-    val clickLabel = stringResource(if (open) R.string.glow_info_fold else R.string.glow_info_open)
-    Column(
-        Modifier.fillMaxWidth()
-            .topHairline(divider, RowHairline),
-    ) {
-        Row(
-            Modifier.fillMaxWidth().clickable(onClickLabel = clickLabel) { open = !open }.padding(vertical = 16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(title, color = Color.White, style = GlowType.body, modifier = Modifier.weight(1f))
-            Spacer(Modifier.size(12.dp))
-            Icon(AppIcons.CaretDown, null, tint = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(16.dp).rotate(turn))
-        }
-        AnimatedVisibility(open) {
-            Text(text, color = Color.White.copy(alpha = 0.8f), style = GlowType.secondary, modifier = Modifier.padding(bottom = 16.dp))
-        }
-    }
-}

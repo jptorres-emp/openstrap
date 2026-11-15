@@ -189,7 +189,7 @@ internal fun SleepScoreDetail(
             // The horizon arc (chart kit, spec 2.7) holds the night's score, centred, the number under its crest. A
             // scrub takes its place in the hero alone, so the rest of the detail stays put (audit K4).
             heroValue = if (range == Range.Day && score != null) {
-                { HorizonArc(score / 100f, color, key = Score.Sleep) { DetailScoreNumber(score, state.date) } }
+                { DetailGauge(score / 100f, color, key = Score.Sleep) { DetailScoreNumber(score, state.date) } }
             } else null,
             scrubbed = { scrub },
         ) {
@@ -241,7 +241,7 @@ internal fun SleepScoreDetail(
                     val waso = Recovery.wasoMinutes(state.sleepStages.map { Triple(it.start, it.end, it.stage) })
                     val factors = SleepCopy.factors(Narrative.sleepContributors(session, asleep, need, waso), asleep, need, waso)
                     if (factors.isNotEmpty()) item {
-                        ListPanel(Modifier.padding(top = 8.dp), title = stringResource(R.string.glow_sleep_what_shaped)) {
+                        DetailPanel(Modifier.padding(top = 8.dp), title = stringResource(R.string.glow_sleep_what_shaped)) {
                             factors.forEachIndexed { i, f ->
                                 ContributorRow(f.name, color, f.word, f.fraction, offNormal = f.off, divider = i > 0, detail = f.detail, onClick = { info = true })
                             }
@@ -254,9 +254,9 @@ internal fun SleepScoreDetail(
                     if (known.isEmpty()) DetailEmpty(stringResource(R.string.glow_sleep_no_scores_week))
                     else Column {
                         val values = week.map { it.second }
-                        NormalTrend(
-                            values, DetailCopy.levels(values, normal), color, labels = week.map { DayWords.weekdayShort(it.first) },
-                            band = normal?.let { it.low..it.high }, bandLabel = normal?.let { DetailCopy.bandLabel(it) { v -> Math.round(v).toString() } },
+                        DetailColumns(
+                            values, color, week.map { DayWords.weekdayShort(it.first) }, valueLabels = true, fixed = 0f..100f,
+                            band = normal?.let { it.low..it.high }, bandLabel = stringResource(R.string.glow_detail_your_normal),
                             onScrub = { i ->
                                 scrub = i?.let { week[it] }?.let { (d, v) ->
                                     v?.let { Math.round(it) }?.let { score ->
@@ -336,7 +336,7 @@ private fun DeleteSleepSheet(title: String, times: String, onDelete: () -> Unit,
             style = GlowType.body,
         )
         PageNote(SleepCopy.DELETE_RESTORE)
-        Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             PageButton(stringResource(R.string.glow_cancel), onDismiss, Modifier.weight(1f))
             PageButton(
                 stringResource(R.string.glow_delete), onDelete, Modifier.weight(1f), destructive = true, icon = AppIcons.Trash,
@@ -482,8 +482,8 @@ private fun ScrubLine(
     val step = 5 * 60L
     val values = remember(points, window) { bucket(points, window, step) }
     val resources = LocalResources.current
-    GlowLineChart(
-        values, height = height, labels = labels, color = color, showAverage = false,
+    DetailLineChart(
+        values, color, labels, height = height,
         onScrub = { i ->
             val headline = i?.let { values[it] }?.let { v ->
                 val at = resources.getString(R.string.glow_sleep_scrub_at, unit, clock(window.first + i * step))

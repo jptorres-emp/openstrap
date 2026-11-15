@@ -33,6 +33,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -71,6 +72,11 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import org.openstrap.app.R
 import org.openstrap.app.data.DayStat
 import org.openstrap.app.i18n.Strings
@@ -117,12 +123,33 @@ internal fun dayName(date: LocalDate): String = DayWords.relative(date, LocalDat
  * state ("Learning", "No reading") and stands large in the value's place, the [label] under it says why, never a lone
  * dash ([DetailHeadline.none]).
  */
-internal data class DetailHeadline(val value: String?, val label: String, val word: String?) {
+internal data class DetailHeadline(val value: String?, val label: String, val word: String?, val unit: String? = null) {
+    /**
+     * The unit that sits beside the value and the context that sits under the status word (board HaloDetailHeart: "bpm" by
+     * the number, "Live, 15:40" under it). [unit] when given, else a short first word before a comma ("bpm, day average").
+     */
+    fun parts(): Pair<String?, String?> {
+        if (unit != null) {
+            val rest = label.removePrefix(unit).removePrefix(",").trim()
+            return unit to rest.replaceFirstChar { it.uppercase() }.ifBlank { null }
+        }
+        val head = label.substringBefore(", ", "")
+        return when {
+            head.isNotEmpty() && ' ' !in head && head.length <= UNIT_LENGTH ->
+                head to label.substringAfter(", ").replaceFirstChar { it.uppercase() }
+            ' ' !in label && label.length <= UNIT_LENGTH -> label to null
+            else -> null to label.replaceFirstChar { it.uppercase() }.ifBlank { null }
+        }
+    }
+
     companion object {
         /** No value: the state as a word, and what it waits for or why. */
         fun none(state: String, why: String) = DetailHeadline(null, why, state)
     }
 }
+
+/** The longest a unit is ("steps", "kcal"), which tells it from the start of a sentence. */
+private const val UNIT_LENGTH = 8
 
 /** A detail the switcher can move to: its [title], and whether it's the one showing. */
 internal class DetailSibling(val title: String, val current: Boolean, val icon: androidx.compose.ui.graphics.vector.ImageVector?, val open: () -> Unit)
@@ -166,6 +193,8 @@ internal fun DetailTemplate(
     heroValue: (@Composable () -> Unit)? = null,
     heroSide: (@Composable () -> Unit)? = null,
     heroPicture: (@Composable () -> Unit)? = null,
+    /** Under the status and context, still in the headline: a count's goal bar. */
+    heroBelow: (@Composable () -> Unit)? = null,
     scrubbed: () -> DetailHeadline? = { null },
     headlineDay: LocalDate? = strip.firstOrNull { it.selected }?.date,
     body: LazyListScope.() -> Unit,
@@ -185,52 +214,65 @@ internal fun DetailTemplate(
                     // A scrubbed reading takes the gauge's place, as the value row.
                     val gauge = heroValue.takeIf { scrub == null }
                     DetailNav(title, siblings.size > 1, onBack, onInfo, onSwitch = { switching = true })
-                    // A score gauge, its label and status word make one block, centred in the header (spec 6.1).
-                    if (gauge != null) Column(
-                        Modifier.fillMaxWidth().padding(top = 22.dp), horizontalAlignment = Alignment.CenterHorizontally,
+                    val (unit, context) = shown.parts()
+                    // A score: the gauge on the left, the status word and context stacked to its right (rules, score headline).
+                    if (gauge != null) Row(
+                        Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(18.dp),
                     ) {
                         gauge()
-                        Text(
-                            shown.label, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA),
-                            style = GlowType.secondary, modifier = Modifier.padding(top = 8.dp),
-                        )
-                        if (shown.word != null && shown.value != null) StatusWord(shown.word, color, Modifier.padding(top = 12.dp))
-                    } else Row(Modifier.fillMaxWidth().padding(top = 22.dp), verticalAlignment = Alignment.Bottom) {
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            if (shown.word != null && shown.value != null) Text(
+                                shown.word, color = statusTint(color), style = GlowType.verdict, maxLines = 2,
+                            )
+                            (context ?: shown.label.takeIf { it.isNotBlank() })?.let {
+                                Text(it, color = Color.White.copy(alpha = GlowType.MOMENT_ALPHA), style = GlowType.secondary)
+                            }
+                        }
+                    } else Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.Top) {
                         Box(Modifier.weight(1f)) {
                             when {
-                                // No number: the state in words, large in the value's place, as a Small does.
-                                shown.value == null -> Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                // No number: the state in words, large in the value's place, never a lone dash.
+                                shown.value == null -> Column(
+                                    Modifier.padding(horizontal = 4.dp), verticalArrangement = Arrangement.spacedBy(8.dp),
+                                ) {
                                     Text(
                                         shown.word ?: stringResource(R.string.glow_no_reading), color = Color.White,
-                                        style = GlowType.pageTitle,
+                                        style = GlowType.verdict,
                                     )
                                     Text(
-                                        shown.label, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA),
+                                        shown.label, color = Color.White.copy(alpha = GlowType.MOMENT_ALPHA),
                                         style = GlowType.secondary,
                                     )
                                 }
-                                else -> Row(verticalAlignment = Alignment.Bottom) {
-                                    DayNumber(shown.value, headlineDay, Modifier.detailNumber(shown.value))
-                                    Text(
-                                        shown.label, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA),
-                                        style = GlowType.secondary, modifier = Modifier.padding(start = 10.dp, bottom = 2.dp),
+                                else -> Column(Modifier.padding(start = 4.dp, end = 4.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        DayNumber(shown.value, headlineDay, Modifier.detailNumber(shown.value))
+                                        if (unit != null) Text(
+                                            unit, color = Color.White.copy(alpha = 0.7f), style = GlowType.body,
+                                            modifier = Modifier.padding(bottom = 6.dp),
+                                        )
+                                    }
+                                    if (shown.word != null) Text(
+                                        shown.word, color = statusTint(color), style = GlowType.cardTitle, maxLines = 1,
                                     )
+                                    if (context != null) Text(
+                                        context, color = Color.White.copy(alpha = GlowType.MOMENT_ALPHA), style = GlowType.secondary,
+                                    )
+                                    heroBelow?.invoke()
                                 }
                             }
                         }
                         heroSide?.invoke()
                     }
-                    if (gauge == null && shown.word != null && shown.value != null) {
-                        StatusWord(shown.word, color, Modifier.padding(top = 12.dp))
-                    }
                     // The card's picture, under the value and above the days, as the gauges sit.
                     if (heroPicture != null) Column(Modifier.fillMaxWidth().padding(top = 16.dp)) { heroPicture() }
-                    if (strip.isNotEmpty()) WeekStrip(strip, color, onDay, Modifier.padding(top = 20.dp))
+                    if (strip.isNotEmpty()) WeekStrip(strip, onDay, Modifier.padding(top = 20.dp))
                 }
             }
             if (ranges.size > 1) item {
                 GlowSegments(
-                    ranges.map { it.label }, ranges.indexOf(range), { onRange(ranges[it]) }, Modifier.padding(top = 6.dp),
+                    ranges.map { it.label }, ranges.indexOf(range), { onRange(ranges[it]) }, Modifier.padding(top = 0.dp),
                     role = Role.Tab,
                 )
             }
@@ -252,7 +294,7 @@ internal fun DetailTemplate(
  * a day whose figure came in the same as the last day's.
  */
 @Composable
-internal fun DayNumber(value: String, day: LocalDate?, modifier: Modifier = Modifier) {
+internal fun DayNumber(value: String, day: LocalDate?, modifier: Modifier = Modifier, size: BigNumber = BigNumber.Detail) {
     val animate = rememberAnimationsOn()
     val parsed = remember(value) { PlainNumber.parse(value) }
     val count = remember { Animatable(parsed?.number ?: 0f) }
@@ -283,7 +325,7 @@ internal fun DayNumber(value: String, day: LocalDate?, modifier: Modifier = Modi
         transitionSpec = {
             if (step == Step.Roll) roll(up) else ContentTransform(EnterTransition.None, ExitTransition.None, sizeTransform = null)
         },
-    ) { text -> DotMatrixText(countedText(text, value, parsed, count, step, from, shown.countFrom), dot = DotSize.Detail) }
+    ) { text -> BigNumberText(countedText(text, value, parsed, count, step, from, shown.countFrom), size) }
 }
 
 /**
@@ -412,96 +454,130 @@ private fun DetailNav(title: String, switchable: Boolean, onBack: () -> Unit, on
     }
 }
 
-/** The status word under the value, in the metric's colour with a soft glow of it. */
+/**
+ * The seven days (board HaloDetailHeart): each a 62 tall squircle with its letter (11) over its date (15), the day shown on
+ * a white pill with black text, and a short 12 by 3 bar under days with data, none under days without. No dots.
+ */
 @Composable
-private fun StatusWord(word: String, color: Color, modifier: Modifier = Modifier) {
-    Text(
-        word, modifier = modifier, color = lerp(color, Color.White, 0.25f),
-        style = GlowType.cardTitle.copy(shadow = Shadow(color.copy(alpha = 0.8f), blurRadius = 16f)), maxLines = 1,
-    )
-}
-
-/** The seven days: each day's short name, a dot under days with data, the day shown on a soft pill. */
-@Composable
-private fun WeekStrip(days: List<DetailCopy.StripDay>, color: Color, onDay: (LocalDate) -> Unit, modifier: Modifier = Modifier) {
-    Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+private fun WeekStrip(days: List<DetailCopy.StripDay>, onDay: (LocalDate) -> Unit, modifier: Modifier = Modifier) {
+    Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         days.forEach { d ->
             val show = stringResource(R.string.glow_metrics_show_day, d.label)
-            // The pill moves to the day tapped, and its dot comes and goes, rather than cutting.
+            // The pill moves to the day tapped, and its bar comes and goes, rather than cutting.
             val quick = tween<Color>(Motion.QUICK)
-            val pill by animateColorAsState(
-                if (d.selected) Color.White.copy(alpha = 0.10f) else Color.Transparent, quick, label = "day pill",
+            val pill by animateColorAsState(if (d.selected) Color.White else Color.Transparent, quick, label = "day pill")
+            val ink by animateColorAsState(if (d.selected) Color.Black else Color.White, quick, label = "day ink")
+            val bar by animateColorAsState(
+                when {
+                    !d.hasData -> Color.Transparent
+                    d.selected -> Color.Black
+                    else -> Color.White.copy(alpha = 0.55f)
+                },
+                quick, label = "day bar",
             )
-            val ink by animateColorAsState(if (d.selected) Color.White else Color.White.copy(alpha = 0.5f), quick, label = "day ink")
-            val dot by animateColorAsState(if (d.hasData) color else Color.Transparent, quick, label = "day dot")
             Column(
-                Modifier.width(40.dp).clip(RoundedCornerShape(14.dp))
+                Modifier.weight(1f).height(62.dp).clip(GlowLayout.IconShape)
                     .background(pill)
-                    .clickable(onClickLabel = show, role = Role.Button) { onDay(d.date) }
-                    .padding(vertical = 8.dp),
+                    .clickable(onClickLabel = show, role = Role.Button) { onDay(d.date) },
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterVertically),
             ) {
-                Text(d.label, color = ink, style = GlowType.secondary, maxLines = 1)
-                Box(Modifier.size(5.dp).background(dot, CircleShape))
+                Text(d.label, color = ink.copy(alpha = 0.7f), style = GlowType.caption, maxLines = 1)
+                Text(d.date.dayOfMonth.toString(), color = ink, style = GlowType.cardTitle, maxLines = 1)
+                Box(Modifier.size(12.dp, 3.dp).background(bar, CircleShape))
             }
         }
     }
 }
 
-/** The switcher's choices, as a sheet over the detail: the group's details, the one showing ticked. */
+/**
+ * The switcher's choices, as a sheet over the detail (board HaloDetailSwitcher): one plain panel of rows, each a 32 tile
+ * (the metric's colour with a dark icon for the one showing, #17181C with a white one for the rest), the name, and
+ * "Showing" in the metric's colour on the one that is.
+ */
 @Composable
 private fun SwitcherSheet(siblings: List<DetailSibling>, color: Color, onDismiss: () -> Unit) {
-    PageSheet(onDismiss, side = 16.dp) {
-        ListPanel {
+    PageSheet(onDismiss, side = 20.dp) {
+        Column(Modifier.fillMaxWidth().clip(GlowLayout.TileShape).background(DetailPanelInk, GlowLayout.TileShape)) {
             siblings.forEachIndexed { i, s ->
-                ListRow(
-                    s.title, if (s.current) color else Color.White.copy(alpha = 0.3f), null,
-                    if (s.current) stringResource(R.string.glow_metrics_showing) else null,
-                    onClick = { onDismiss(); s.open() }, divider = i > 0, dash = false, icon = s.icon,
-                )
+                Row(
+                    Modifier.fillMaxWidth().clickable { onDismiss(); s.open() }.topHairline(i > 0, DetailRowLine)
+                        .heightIn(min = 56.dp).padding(start = 12.dp, end = 16.dp, top = 10.dp, bottom = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Box(
+                        Modifier.size(32.dp).clip(GlowLayout.IconShape).background(if (s.current) color else HaloTile),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        s.icon?.let { Icon(it, null, tint = if (s.current) Color.Black else Color.White, modifier = Modifier.size(17.dp)) }
+                    }
+                    Text(
+                        s.title, Modifier.weight(1f), color = Color.White,
+                        style = if (s.current) GlowType.cardTitle else GlowType.body, maxLines = 1,
+                    )
+                    if (s.current) Text(stringResource(R.string.glow_metrics_showing), color = color, style = GlowType.secondary)
+                }
             }
         }
     }
 }
+
+/** The dark tile of a switcher row that isn't showing (board HaloDetailSwitcher: #17181C). */
+internal val HaloTile = Color(0xFF17181C)
 
 /** The one time-aware sentence under the chart. */
 @Composable
 internal fun DetailSentence(text: String) {
-    Text(text, color = Color.White, style = GlowType.sentence, modifier = Modifier.padding(top = 4.dp))
+    Text(text, color = Color.White, style = GlowType.detailSentence, modifier = Modifier.padding(horizontal = 4.dp))
 }
 
 /**
- * A detail's second figures side by side, each in an equal share of the width: the value as text in Body, its name
- * under it in Secondary. Text, not dots, since the header's number is the detail's one dotted number (spec 2.3). A
- * figure without a value shows [missing] ("No reading") in its place, or the waiting dash when [missing] is null. A
- * workout's hero shows its three figures larger ([valueStyle] Row value) and close under them ([gap]).
+ * A detail's three figures side by side (board HaloDetailHeart): each the value in Funnel Display Light 28 with its unit
+ * in 13 #9AA0AA, over its name in 12 #9AA0AA, a 1 px #24262C rule between them with 16 after it. A figure without a
+ * value shows [missing] ("No reading") in its place, or the waiting dash when [missing] is null.
  */
 @Composable
 internal fun DetailFigures(
     figures: List<Pair<String?, String>>,
     modifier: Modifier = Modifier,
-    valueStyle: TextStyle = GlowType.body.copy(fontFeatureSettings = "tnum"),
+    valueStyle: TextStyle = GlowType.figure,
     missing: String? = stringResource(R.string.glow_no_reading),
-    gap: Dp = 4.dp,
+    gap: Dp = 3.dp,
 ) {
-    Row(modifier.fillMaxWidth()) {
+    Row(modifier.fillMaxWidth().padding(horizontal = 4.dp)) {
         figures.forEachIndexed { i, (value, label) ->
-            val end = i == figures.lastIndex && i > 0
             Column(
-                Modifier.weight(1f), horizontalAlignment = if (end) Alignment.End else Alignment.Start,
+                Modifier.weight(1f)
+                    .let { if (i > 0) it.figureRule().padding(start = 16.dp) else it },
                 verticalArrangement = Arrangement.spacedBy(gap),
             ) {
                 when {
-                    value != null -> Text(value, color = Color.White, style = valueStyle, maxLines = 1)
+                    value != null -> FigureValue(value, valueStyle)
                     missing != null -> Text(missing, color = Color.White.copy(alpha = 0.3f), style = valueStyle, maxLines = 1)
-                    // As tall as a Row value line, so a missing figure keeps its label level with the others.
-                    else -> WaitingDash(Modifier.padding(vertical = 10.5.dp))
+                    // As tall as a figure line, so a missing figure keeps its label level with the others.
+                    else -> WaitingDash(Modifier.padding(vertical = 6.dp))
                 }
-                Text(label, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary, maxLines = 1)
+                Text(label, color = GlowType.noteColor, style = GlowType.noteSmall, maxLines = 1)
             }
         }
     }
+}
+
+/** The 1 px rule down a figure's left edge. */
+private fun Modifier.figureRule(): Modifier =
+    drawBehind { drawLine(DetailFigureRule, Offset(0f, 0f), Offset(0f, size.height), 1.dp.toPx()) }
+
+/** A figure's number with whatever follows it (" bpm", " ms") smaller and grey, as the boards set it. */
+@Composable
+private fun FigureValue(value: String, style: TextStyle) {
+    val split = Regex("""^([+\-\u2212]?[\d.,:]+)(\s*.*)$""").matchEntire(value)
+    val text = if (split == null || split.groupValues[2].isBlank()) AnnotatedString(value) else buildAnnotatedString {
+        append(split.groupValues[1])
+        withStyle(SpanStyle(fontSize = 13.sp, color = GlowType.noteColor, fontFamily = org.openstrap.app.ui.theme.FunnelSans)) {
+            append(" " + split.groupValues[2].trim())
+        }
+    }
+    Text(text, color = Color.White, style = style, maxLines = 1)
 }
 
 /** What a chart says while there's nothing to draw. */
@@ -581,6 +657,8 @@ fun GlowMetricDetailScreen(
     org.openstrap.app.ui.components.HoldLiveHeartRate(heartToday && canUseLive)
     var scrub by remember(metric, night, range, end) { mutableStateOf<DetailHeadline?>(null) }
     var info by rememberSaveable(metric, night) { mutableStateOf(false) }
+    // A count's goal bar shows on the day (board HaloDetailSteps).
+    val goalBar = !night && metric == Metric.Steps && range == Range.Day
 
     // The range's number and the daily values its chart draws (weekly over a year).
     val start = end.minusDays(range.days - 1L)
@@ -640,6 +718,13 @@ fun GlowMetricDetailScreen(
         contentPadding = contentPadding, headline = headline,
         strip = DetailCopy.strip(end, today, withData), onDay = onSelectDay,
         ranges = Range.entries, range = range, onRange = { rangeIndex = it.ordinal }, scrubbed = { scrub },
+        // A count's goal: a solid bar with its mark, and "of 8,000" (board HaloDetailSteps).
+        heroBelow = if (goalBar && value != null) {
+            {
+                val goal = org.openstrap.app.ui.dashboard.LocalGoals.current.steps
+                DetailGoalBar(value / goal, color, stringResource(R.string.glow_detail_of_goal, Units.count(goal, Units.DOT_LOCALE)))
+            }
+        } else null,
         // The Stress card's picture: the day as one strip, calm to high.
         heroPicture = if (!night && range == Range.Day && metric == Metric.Stress && state.stressStrip.any { it != null }) {
             { DetailPicture(height = 28.dp) { m -> DayStrip(state.stressStrip, color, PictureSize.Wide, m) } }
@@ -662,9 +747,10 @@ fun GlowMetricDetailScreen(
                     DetailEmpty(stringResource(R.string.glow_metrics_none_last_7_nights))
                 }
                 else Column {
-                    NormalTrend(
-                        values, DetailCopy.levels(values, nightNormal), color, labels = nightWeek.map { DayWords.weekdayShort(it.first) },
-                        band = nightNormal?.let { it.low..it.high }, bandLabel = nightNormal?.let { DetailCopy.bandLabel(it, metric::format) },
+                    DetailColumns(
+                        values, color, nightWeek.map { DayWords.weekdayShort(it.first) },
+                        baseline = nightNormal?.mean, band = nightNormal?.let { it.low..it.high },
+                        bandLabel = stringResource(R.string.glow_detail_your_normal), format = { metric.format(it) },
                         onScrub = { i ->
                             scrub = i?.let { nightWeek[it] }?.let { (d, v) ->
                                 v?.let {
@@ -760,9 +846,9 @@ private fun NightChart(metric: Metric, state: DayUiState, color: Color, onScrub:
     val slot = if (metric == Metric.HeartRate || metric == Metric.Breathing) 5 * 60L else 15 * 60L
     val values = remember(series, window) { bucket(series, window, slot) }
     Column(Modifier.padding(top = 8.dp)) {
-        GlowLineChart(
-            values, height = 220.dp, labels = listOf(clock(window.first), clock(window.last)), color = color, showAverage = false, format = metric::format,
-            yRange = SPO2_AXIS.takeIf { metric == Metric.Spo2 },
+        DetailLineChart(
+            values, color, listOf(clock(window.first), clock(window.last)), yRange = SPO2_AXIS.takeIf { metric == Metric.Spo2 },
+            format = metric::format,
             onScrub = { i ->
                 onScrub(i?.let { values[it] }?.let { v -> scrubAt(metric, v, window.first + i * slot, slot) })
             },
@@ -827,13 +913,18 @@ private fun DayChart(metric: Metric, state: DayUiState, color: Color, hasValue: 
     }
     Column(Modifier.padding(top = 8.dp)) {
         when (metric) {
-            // Holding an hour puts its steps in the headline.
-            Metric.Steps -> GlowBars(
-                state.hourlySteps, height = 200.dp, labels = HOURS, accent = color,
+            // Holding an hour puts its steps in the headline. The hour now is white (board HaloDetailSteps).
+            Metric.Steps -> DetailColumns(
+                state.hourlySteps, color, HOURS, alpha = 0.75f,
+                highlight = java.time.LocalTime.now().hour.takeIf { state.date == LocalDate.now() },
+                format = { Units.count(Math.round(it), Units.DOT_LOCALE) },
                 onScrub = { h -> onScrub(h?.let { hourSteps(it, state.hourlySteps[it]) }) },
             )
             Metric.RestingHr -> if (state.restingTrend.any { it.value != null }) {
-                GlowTrend(state.restingTrend.map { GlowDay(it.label, it.value) }, height = 200.dp)
+                DetailColumns(
+                    state.restingTrend.map { it.value }, color, state.restingTrend.map { it.label },
+                    highlight = state.restingTrend.indexOfLast { it.value != null },
+                )
             }
             else -> if (series.isNotEmpty()) {
                 // Readings come every minute for heart rate, sparser for the rest.
@@ -844,8 +935,8 @@ private fun DayChart(metric: Metric, state: DayUiState, color: Color, hasValue: 
                 // Blood oxygen's hours inside the sleep window are shaded, so a night reading shows as one.
                 val sleep = LatestReading.sleepWindow(state)
                 val shade = if (metric == Metric.Spo2) LatestReading.shadeIndices(sleep, window, slot, values.size) else null
-                GlowLineChart(
-                    values, height = 220.dp, labels = labels, color = color, showAverage = false, band = band, shade = shade,
+                DetailLineChart(
+                    values, color, labels, band = band, shade = shade, hourBands = window == day && metric != Metric.SkinTemperature,
                     yRange = SPO2_AXIS.takeIf { metric == Metric.Spo2 },
                     format = metric::format,
                     onScrub = { i ->
@@ -867,31 +958,41 @@ private fun HistoryChart(
     nightly: Boolean, onScrub: (DetailHeadline?) -> Unit,
 ) {
     val (values, labels, dates) = remember(stats, range, start, end) { series(range, stats, start, end) }
-    val levels = remember(values, normal) { DetailCopy.levels(values, normal) }
-    NormalTrend(
-        values, levels, color, labels = labels,
-        band = normal?.let { it.low..it.high }, bandLabel = normal?.let { DetailCopy.bandLabel(it, metric::format) },
-        onScrub = { i ->
-            onScrub(i?.let { values[it] }?.let { v ->
-                val d = dates[i]
-                val label = if (range == Range.Year) {
-                    Strings.app.format(R.string.glow_metrics_week_of, DayWords.dayMonth(d))
-                } else {
-                    DayWords.short(d)
-                }
-                val unitAndDay = if (metric.unit.isEmpty()) {
-                    label
-                } else {
-                    Strings.app.format(R.string.glow_metrics_unit_day, metric.unit, label)
-                }
-                DetailHeadline(metric.format(v, Units.DOT_LOCALE), unitAndDay, DetailCopy.statusWord(History.status(v, normal)))
-            })
-        },
-    )
-    if (normal == null) Text(
-        DetailCopy.learningNormal(stats.count { it.date in end.minusDays(History.NORMAL_DAYS - 1L)..end }, nightly),
-        color = Color.White.copy(alpha = 0.6f), style = GlowType.secondary,
-    )
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        // A count stands on the axis; the rest run from your normal, its band behind them (rules, Vital and Count).
+        val count = metric == Metric.Steps
+        val few = values.size <= 7
+        if (normal != null && !few && !count) Text(
+            stringResource(R.string.glow_detail_band_note), color = GlowType.noteColor, style = GlowType.noteSmall,
+            modifier = Modifier.padding(horizontal = 4.dp),
+        )
+        DetailColumns(
+            values, color, labels, alpha = if (count) 0.75f else 0.55f,
+            baseline = normal?.mean?.takeIf { !count }, band = normal?.takeIf { !count }?.let { it.low..it.high },
+            bandLabel = stringResource(R.string.glow_detail_your_normal),
+            format = { metric.format(it) },
+            onScrub = { i ->
+                onScrub(i?.let { values[it] }?.let { v ->
+                    val d = dates[i]
+                    val label = if (range == Range.Year) {
+                        Strings.app.format(R.string.glow_metrics_week_of, DayWords.dayMonth(d))
+                    } else {
+                        DayWords.short(d)
+                    }
+                    val unitAndDay = if (metric.unit.isEmpty()) {
+                        label
+                    } else {
+                        Strings.app.format(R.string.glow_metrics_unit_day, metric.unit, label)
+                    }
+                    DetailHeadline(metric.format(v, Units.DOT_LOCALE), unitAndDay, DetailCopy.statusWord(History.status(v, normal)))
+                })
+            },
+        )
+        if (normal == null) Text(
+            DetailCopy.learningNormal(stats.count { it.date in end.minusDays(History.NORMAL_DAYS - 1L)..end }, nightly),
+            color = Color.White.copy(alpha = 0.6f), style = GlowType.secondary,
+        )
+    }
 }
 
 /** Evenly spaced values for the chart: one a day, or one a week over a year; gaps are null. Also axis labels and each point's date. */
@@ -933,11 +1034,11 @@ private fun RelatedList(related: List<Metric>, state: DayUiState, history: Daily
 /** The "Related" list at the foot of a detail: the details next to this one, each a row opening it. */
 @Composable
 internal fun RelatedPanel(content: @Composable ColumnScope.() -> Unit) =
-    ListPanel(Modifier.padding(top = 8.dp), title = stringResource(R.string.glow_metrics_related), content = content)
+    DetailPanel(Modifier.padding(top = 8.dp), title = stringResource(R.string.glow_metrics_related), content = content)
 
 /** A score as a related row: its [value] and [word] beside its name and icon, opening its detail. */
 @Composable
-internal fun ScoreRow(score: Score, color: Color, value: String?, word: String, divider: Boolean, onOpen: (Detail) -> Unit) = ListRow(
+internal fun ScoreRow(score: Score, color: Color, value: String?, word: String, divider: Boolean, onOpen: (Detail) -> Unit) = DetailRow(
     score.title, color, value, word, onClick = { onOpen(Detail.OfScore(score)) }, divider = divider, icon = score.rowIcon(),
 )
 
@@ -978,7 +1079,7 @@ internal fun RelatedMetricRow(
     val status = if (m == Metric.HeartRate || latest) null else History.status(v, normal)
     // A percent stays on its number, as on Recovery ("99%"): the line under it is the word, not the unit.
     val tag = relatedTag(m, v, status)
-    ListRow(
+    DetailRow(
         m.title, colorOf(m), v?.let { if (m == Metric.Spo2) "${m.format(it)}%" else m.format(it) },
         when {
             v == null -> NO_VALUE

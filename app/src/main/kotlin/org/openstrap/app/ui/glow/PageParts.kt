@@ -105,8 +105,11 @@ private val DestructiveInkSmall = Color(0xFFFF7A7E)
 /** The round back button of every page over a tab (spec 3.4). */
 val BackButtonSize = 44.dp
 
-/** The page header's height: the back button with room round it. */
-val PageHeaderHeight = 64.dp
+/** The page header's height (HaloProfile and HaloDetailRecovery boards: a 48 dp row, 96 / 1fr / 96 columns). */
+val PageHeaderHeight = 48.dp
+
+/** The header's two side columns, equal so the title stays centred whatever sits in them (HaloProfile board). */
+private val PageHeaderSide = 96.dp
 
 /**
  * A page's way back (spec 3.4): a [BackButtonSize] round button on the [ControlSurface] with a 20 dp arrow, dimmed
@@ -156,9 +159,12 @@ fun RoundIconButton(
 }
 
 /**
- * The one page header (spec 3.4), on every page over a tab, details included: the [BackButton] and the [title] in
- * Page title type, over the day it's about or a short note ([subtitle]) in Secondary when there is one, then optional
- * [trailing] content (Save, a detail's (i)). [onTitle] makes the title a button with a caret (a detail's switcher).
+ * The one page header (HaloProfile, HaloAlarms and HaloDetailRecovery boards): a 96 / 1fr / 96 grid with the back
+ * button at the left, the [title] centred in Page title type (over the day it's about or a short note, [subtitle],
+ * in Secondary), and [trailing] content at the right (a detail's (i), or the Save pill). The Save pill is the page's
+ * to show: pass it as [trailing] only while the page has unsaved edits, and the column keeps its width without it.
+ * [onTitle] makes the title a button with a caret (a detail's switcher). [buttonSurface] is the back button's fill:
+ * the dark #17181C, or translucent black over a detail's wash.
  */
 @Composable
 fun PageHeader(
@@ -167,13 +173,18 @@ fun PageHeader(
     backEnabled: Boolean = true,
     subtitle: String? = null,
     onTitle: (() -> Unit)? = null,
+    buttonSurface: Color = HaloButtonSurface,
     trailing: (@Composable () -> Unit)? = null,
 ) {
     val switchLabel = stringResource(R.string.glow_page_switch)
     Row(Modifier.fillMaxWidth().height(PageHeaderHeight), verticalAlignment = Alignment.CenterVertically) {
-        BackButton(onBack, backEnabled)
-        Spacer(Modifier.width(12.dp))
-        Column(Modifier.weight(1f)) {
+        Box(Modifier.width(PageHeaderSide), contentAlignment = Alignment.CenterStart) {
+            RoundIconButton(
+                AppIcons.ArrowLeft, stringResource(R.string.glow_back), onBack,
+                size = BackButtonSize, surface = buttonSurface, iconSize = 18.dp, enabled = backEnabled,
+            )
+        }
+        Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
             Row(
                 Modifier.clip(RoundedCornerShape(8.dp))
                     .let { if (onTitle != null) it.clickable(onClickLabel = switchLabel, role = Role.Button, onClick = onTitle) else it },
@@ -182,15 +193,15 @@ fun PageHeader(
                 Text(title, color = Color.White, style = GlowType.pageTitle, maxLines = 1, modifier = Modifier.weight(1f, fill = false))
                 if (onTitle != null) {
                     Spacer(Modifier.width(6.dp))
-                    Icon(AppIcons.CaretDown, null, tint = Color.White.copy(alpha = GlowType.CAPTION_ALPHA), modifier = Modifier.size(16.dp))
+                    Icon(
+                        AppIcons.CaretDown, null, modifier = Modifier.size(12.dp),
+                        tint = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA),
+                    )
                 }
             }
             if (subtitle != null) Text(subtitle, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary, maxLines = 1)
         }
-        if (trailing != null) {
-            Spacer(Modifier.width(12.dp))
-            trailing()
-        }
+        Box(Modifier.width(PageHeaderSide), contentAlignment = Alignment.CenterEnd) { trailing?.invoke() }
     }
 }
 
@@ -612,7 +623,8 @@ fun PageProgress(fraction: Float? = null, modifier: Modifier = Modifier.fillMaxW
 }
 
 /**
- * A sheet over the page (spec 2.5, sheets): the glass sheet with its handle, the [title] as a card title, an
+ * A sheet over the page (HaloQuietHoursSheet and HaloDeleteSleepSheet boards): the solid #111215 sheet with its
+ * grabber, the [title] in Sheet title type, an
  * optional [note] under it, then [content], [side] from the edges (narrower for a sheet of grouped lists, which
  * bring their own inset). It scrolls when taller than most of the screen. Without a [title] the content starts at
  * the top, for a sheet that heads itself (the calendar's month, the info sheet's name).
@@ -629,11 +641,11 @@ fun PageSheet(
     GlassSheet(onDismiss) {
         Column(
             Modifier.fillMaxWidth().heightIn(max = maxHeight).verticalScroll(rememberScrollState())
-                .padding(horizontal = side).navigationBarsPadding().padding(top = 4.dp, bottom = 20.dp),
+                .padding(horizontal = side).navigationBarsPadding().padding(top = 16.dp, bottom = 28.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             if (title != null) Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(title, color = Color.White, style = GlowType.cardTitle, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(title, color = Color.White, style = GlowType.sheetTitle, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 if (note != null) Text(note, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary)
             }
             content()
@@ -659,9 +671,9 @@ fun PageConfirm(
     content: (@Composable ColumnScope.() -> Unit)? = null,
 ) {
     PageSheet(onDismiss, title) {
-        if (text != null) Text(text, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.body)
+        if (text != null) Text(text, color = Color.White.copy(alpha = 0.8f), style = GlowType.body)
         content?.invoke(this)
-        Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             PageButton(dismiss, onDismiss, Modifier.weight(1f))
             PageButton(
                 confirm, onConfirm, Modifier.weight(1f), enabled = confirmEnabled, primary = !destructive, destructive = destructive,

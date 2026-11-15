@@ -56,6 +56,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -98,6 +99,7 @@ import org.openstrap.app.ui.dashboard.SleepCopy
 import org.openstrap.app.ui.dashboard.siblingsOf
 import java.time.LocalDate
 import org.openstrap.app.ui.glow.draw.DotSize
+import org.openstrap.app.ui.theme.AppIcons
 import org.openstrap.app.ui.glow.pictures.DayStrip
 import org.openstrap.app.ui.glow.pictures.PictureSize
 import org.openstrap.app.ui.theme.ControlSurface
@@ -352,7 +354,17 @@ private class PlainNumber(val number: Float, decimals: Int, grouped: Boolean) {
     }
 }
 
-/** The hero's tint: the metric's colour at the top fading to black, rounded at the foot, as wide as the screen. */
+/** The header buttons over a detail's wash (HaloDetailRecovery board: rgba(0,0,0,0.35)). */
+private val OverWash = Color.Black.copy(alpha = 0.35f)
+
+/** The wash's box (HaloDetailRecovery board: 420 tall, an ellipse 120% by 90% centred at 50% by -12%). */
+private val WashHeight = 420.dp
+
+/**
+ * The hero: the metric's wash at the top of the page, as wide as the screen (HaloDetailRecovery, HaloDetailHeart
+ * boards). The colour is 0.55 at the centre, 0.22 at 38% and clear at 72%, so it fades into the black with no edge and
+ * no hairline along a foot. Its corners stay its own, rounded at the foot only.
+ */
 @Composable
 private fun DetailHero(color: Color, gutter: Dp, content: @Composable () -> Unit) {
     val shape = RoundedCornerShape(bottomStart = GlowLayout.CardCorner, bottomEnd = GlowLayout.CardCorner)
@@ -369,27 +381,34 @@ private fun DetailHero(color: Color, gutter: Dp, content: @Composable () -> Unit
             .detailSurface(hero = true, shape)
             .clip(shape)
             .drawBehind {
-                drawRect(Brush.verticalGradient(listOf(lerp(Color.Black, color, 0.2f), Color.Black)))
-                drawRect(Brush.radialGradient(listOf(color.copy(alpha = 0.4f), Color.Transparent), Offset(size.width / 2, -size.height * 0.1f), size.width * 0.7f))
-                // The hairline along the foot; its top is above the clip, so only the foot and its corners show.
-                val r = GlowLayout.CardCorner.toPx()
-                drawRoundRect(
-                    Color.White.copy(alpha = 0.07f), Offset(0.5f, -r), Size(size.width - 1f, size.height + r - 0.5f), CornerRadius(r),
-                    style = Stroke(1.dp.toPx()),
+                val boxH = WashHeight.toPx()
+                val rx = size.width * 1.2f
+                val ry = boxH * 0.9f
+                val center = Offset(size.width / 2, -boxH * 0.12f)
+                val brush = Brush.radialGradient(
+                    0f to color.copy(alpha = 0.55f), 0.38f to color.copy(alpha = 0.22f), 0.72f to Color.Transparent,
+                    center = center, radius = rx,
                 )
+                // The circle is squashed to the board's ellipse about its centre.
+                withTransform({ scale(1f, ry / rx, pivot = center) }) {
+                    drawRect(brush, Offset(0f, center.y), Size(size.width, (size.height - center.y) * rx / ry))
+                }
             }
             .padding(start = gutter, end = gutter, top = 4.dp, bottom = 22.dp),
     ) { content() }
 }
 
 /**
- * The detail's page header ([PageHeader], spec 3.4 and 6.1): back, the title, which opens the switcher when there's
- * something to switch to, and the (i).
+ * The detail's page header ([PageHeader], HaloDetailRecovery board): back, the title, which opens the switcher when
+ * there's something to switch to, and the (i), both buttons translucent black over the wash.
  */
 @Composable
 private fun DetailNav(title: String, switchable: Boolean, onBack: () -> Unit, onInfo: () -> Unit, onSwitch: () -> Unit) {
-    PageHeader(title, onBack, onTitle = if (switchable) onSwitch else null) {
-        InfoButton(stringResource(R.string.glow_metrics_about, title), onInfo)
+    PageHeader(title, onBack, onTitle = if (switchable) onSwitch else null, buttonSurface = OverWash) {
+        RoundIconButton(
+            AppIcons.Info, stringResource(R.string.glow_metrics_about, title), onInfo,
+            size = BackButtonSize, surface = OverWash, iconSize = 18.dp,
+        )
     }
 }
 

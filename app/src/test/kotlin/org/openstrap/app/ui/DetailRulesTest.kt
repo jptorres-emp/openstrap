@@ -68,7 +68,8 @@ class DetailRulesTest {
     @Test fun `every detail's header ends in the (i)`() {
         // Spec 2.5 and 6.1: the (i) at the right of every detail's header, nothing else there.
         val nav = sources.getValue("glow/GlowMetricDetail.kt").substringAfter("private fun DetailNav(").substringBefore("\n}\n")
-        assertTrue("DetailNav's trailing is InfoButton", Regex("""PageHeader\([^{]*\)\s*\{\s*InfoButton\(""").containsMatchIn(nav))
+        // HaloDetailRecovery board: the (i) is a 44 dp squircle button over the wash, not the card's small InfoButton.
+        assertTrue("DetailNav's trailing is the (i)", Regex("""PageHeader\([^{]*\)\s*\{\s*RoundIconButton\(\s*AppIcons\.Info\b""").containsMatchIn(nav))
         DETAILS.forEach { path ->
             val code = sources.getValue(path)
             assertTrue("$path builds its own header", !Regex("""\bPageHeader\(""").containsMatchIn(code) || path == "glow/GlowMetricDetail.kt")

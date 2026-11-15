@@ -66,7 +66,6 @@ import org.openstrap.app.ui.workout.FamilySummary
 import org.openstrap.app.ui.workout.PhoneSummary
 import org.openstrap.app.ui.workout.ZONE_COLORS
 import org.openstrap.app.ui.workout.familyColor
-import org.openstrap.app.ui.glow.draw.DotSize
 import org.openstrap.app.ui.dashboard.LocalHeartZones
 
 /*
@@ -378,14 +377,12 @@ private fun StoryStack(card: StoryCard, modifier: Modifier = Modifier) {
 
 /**
  * The card's one number in Doto 76 ([BigNumber.Live], board HaloShareCards) with its unit after it in 16 px at 80% white, on
- * the digits' baseline, shrunk to fit [StoryHeroRoom]. A private variant of [BigNumberText], which can't shrink.
+ * the digits' baseline, shrunk to fit [StoryHeroRoom]. BigNumberText's fitWidth does the shrinking.
  */
 @Composable
 private fun StoryNumber(value: String, unit: String) {
-    val base = BigNumber.Live.dot / DotSize.Detail.dot.value
-    val scale = minOf(base, StoryHeroRoom / dotTextWidth(value, DotSize.Detail))
     Row(verticalAlignment = Alignment.Bottom) {
-        DotMatrixText(value, dot = DotSize.Detail, scale = scale)
+        BigNumberText(value, BigNumber.Live, fitWidth = StoryHeroRoom)
         if (unit.isNotBlank()) Text(
             unit, Modifier.padding(start = 10.dp, bottom = 4.dp).weight(1f, fill = false), color = Color.White.copy(alpha = 0.8f),
             style = GlowType.button.copy(fontWeight = FontWeight.Normal), maxLines = 1,

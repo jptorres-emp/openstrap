@@ -6,6 +6,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.em
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.sp
 import org.openstrap.app.ui.glow.draw.DotSize
 import org.openstrap.app.ui.theme.FunnelDisplay
@@ -207,9 +208,12 @@ enum class BigNumber(val doto: Int) {
 /**
  * The one big number of a screen, drawn in DotSpec dots at the boards' Doto size for [size]. Use this, not DotMatrixText
  * with a DotSize, on every Halo screen. One per screen: the Today hero, a detail's header, a live workout's hero, a
- * summary's, a goal moment's. Everything else is [GlowType.figure] or plain text.
+ * summary's, a goal moment's. Everything else is [GlowType.figure] or plain text. With a [fitWidth] a number wider than
+ * it shrinks to fit, never grows past [size].
  */
 @Composable
-fun BigNumberText(text: String, size: BigNumber, modifier: Modifier = Modifier, color: Color = Color.White) {
-    DotMatrixText(text, modifier, dot = DotSize.Detail, color = color, scale = size.dot / DotSize.Detail.dot.value)
+fun BigNumberText(text: String, size: BigNumber, modifier: Modifier = Modifier, color: Color = Color.White, fitWidth: Dp = Dp.Unspecified) {
+    val base = size.dot / DotSize.Detail.dot.value
+    val scale = if (fitWidth == Dp.Unspecified) base else minOf(base, fitWidth / dotTextWidth(text, DotSize.Detail))
+    DotMatrixText(text, modifier, dot = DotSize.Detail, color = color, scale = scale)
 }

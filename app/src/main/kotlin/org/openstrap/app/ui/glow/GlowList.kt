@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -276,7 +275,7 @@ fun WaitingDash(modifier: Modifier = Modifier) {
     Box(
         modifier
             .size(14.dp, 3.dp)
-            .background(Color.White.copy(alpha = 0.3f), RoundedCornerShape(2.dp))
+            .background(Color.White.copy(alpha = 0.3f), GlowLayout.BarShape)
             .semantics { contentDescription = described },
     )
 }

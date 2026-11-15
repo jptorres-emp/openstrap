@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -117,7 +116,7 @@ private fun ZoneRow(zone: Int, bpm: String, divider: Boolean, onClick: () -> Uni
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Box(Modifier.size(10.dp).clip(RoundedCornerShape(3.dp)).background(ZONE_COLORS[zone]))
+        Box(Modifier.size(10.dp).clip(GlowLayout.PipShape).background(ZONE_COLORS[zone]))
         Text(
             stringResource(R.string.glow_metrics_zone_title, HeartZonesCopy.zoneName(zone), ZONE_NAMES[zone]), Modifier.weight(1f),
             color = Color.White, style = GlowType.body, maxLines = 1,
@@ -140,7 +139,7 @@ private fun ZoneSheet(zone: Int, zones: HeartZones, maxHr: Int, onZones: (HeartZ
         val start = draft.startBpm(zone, maxHr)
         // The zone's colour bar and its range under the title.
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Box(Modifier.size(10.dp, 26.dp).clip(RoundedCornerShape(3.dp)).background(ZONE_COLORS[zone]))
+            Box(Modifier.size(10.dp, 26.dp).clip(GlowLayout.PipShape).background(ZONE_COLORS[zone]))
             Text(HeartZonesCopy.zoneBpm(draft, zone, maxHr), color = ZoneRangeInk, style = GlowType.body)
         }
         BpmStepper(

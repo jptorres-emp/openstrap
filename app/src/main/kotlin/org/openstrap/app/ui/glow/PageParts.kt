@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -190,7 +189,7 @@ fun PageHeader(
         }
         Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
             Row(
-                Modifier.clip(RoundedCornerShape(8.dp))
+                Modifier.clip(GlowLayout.ChipShape)
                     .let { if (onTitle != null) it.clickable(onClickLabel = switchLabel, role = Role.Button, onClick = onTitle) else it },
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -486,7 +485,7 @@ fun <T> PageMenuRow(
     }
 }
 
-private val MenuShape = RoundedCornerShape(18.dp)
+private val MenuShape = GlowLayout.InnerShape
 private val MenuSurface = Color(0xFF232326)
 
 /**

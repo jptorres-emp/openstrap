@@ -5,7 +5,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalResources
 import org.openstrap.app.presentation.dotFormat
 import org.openstrap.app.presentation.Ranges
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -193,7 +192,7 @@ private fun NightHero(state: DayUiState, firstNights: Boolean, onRestore: (org.o
                     Spacer(Modifier.height(10.dp))
                     Legend(
                         totals.map { (stage, seconds) -> TabCopy.stageTotal(stage, seconds) to stageColor(stage) },
-                        swatch = RoundedCornerShape(2.dp), layout = LegendLayout.Flow,
+                        swatch = GlowLayout.PipShape, layout = LegendLayout.Flow,
                     )
                 }
             }

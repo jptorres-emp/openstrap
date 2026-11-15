@@ -24,7 +24,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -46,7 +45,6 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.text.style.TextOverflow
-import org.openstrap.app.ui.glow.draw.DotSize
 import org.openstrap.app.ui.glow.draw.LightAngle
 import org.openstrap.app.ui.glow.draw.heroStyle
 import org.openstrap.app.ui.workout.SplitRow
@@ -268,16 +266,14 @@ internal fun SummaryHeroCard(
 
 /**
  * The hero's one number in the summary's [BigNumber.Detail] size with its unit after it on the digits' baseline, shrunk
- * to fit when it's wide ("8,225"). A private variant of [BigNumberText], which can't shrink.
+ * to fit when it's wide ("8,225"). BigNumberText's fitWidth does the shrinking.
  */
 @Composable
 private fun HeroNumber(value: String, unit: String, tint: Color) {
     BoxWithConstraints(Modifier.fillMaxWidth()) {
-        val base = BigNumber.Detail.dot / DotSize.Detail.dot.value
         val room = maxWidth - if (unit.isBlank()) 0.dp else HeroUnitRoom
-        val scale = minOf(base, room / dotTextWidth(value, DotSize.Detail))
         Row(verticalAlignment = Alignment.Bottom) {
-            DotMatrixText(value, dot = DotSize.Detail, scale = scale)
+            BigNumberText(value, BigNumber.Detail, fitWidth = room)
             if (unit.isNotBlank()) Text(
                 unit, Modifier.padding(start = 8.dp).weight(1f, fill = false), color = tint, style = GlowType.body, maxLines = 2,
             )
@@ -722,7 +718,7 @@ private fun RoundsBlock(lines: List<RoundLine>, title: String, maxHr: Int, struc
         val hardest = remember(lines) { FamilySummary.hardestRound(lines) }
         val labelled = lines.size <= LabelledRounds
         val gap = if (labelled) 6.dp else 3.dp
-        val shape = RoundedCornerShape(6.dp)
+        val shape = GlowLayout.PipShape
         CardHead(title, stringResource(R.string.glow_summary_figure_peak_bpm))
         Row(Modifier.fillMaxWidth().height(RoundColumnHeight + 24.dp), horizontalArrangement = Arrangement.spacedBy(gap), verticalAlignment = Alignment.Bottom) {
             lines.forEachIndexed { i, r ->
@@ -758,7 +754,7 @@ private fun RepTimesBlock(times: List<Long>) {
     val best = times.indexOf(fastest)
     val labelled = times.size <= LabelledRounds
     val gap = if (labelled) 6.dp else 3.dp
-    val shape = RoundedCornerShape(6.dp)
+    val shape = GlowLayout.PipShape
     val color = familyColor(Workouts.Family.Intervals)
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         CardHead(stringResource(R.string.glow_summary_each_rep), stringResource(R.string.glow_summary_rep_times_time))

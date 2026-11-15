@@ -22,7 +22,6 @@ import org.openstrap.app.ui.dashboard.DayUiState
 import org.openstrap.app.ui.theme.MetricColors
 import org.openstrap.app.ui.glow.draw.GlowMotion
 import org.openstrap.app.ui.glow.draw.GlowStyle
-import org.openstrap.app.ui.glow.draw.DotSize
 import org.openstrap.app.ui.glow.draw.chart
 
 /**
@@ -46,7 +45,7 @@ fun GlowTabletopHeart(
                     trailing = stringResource(if (live == null) R.string.glow_tabletop_latest else R.string.glow_tabletop_live),
                 )
                 Row(verticalAlignment = Alignment.Bottom) {
-                    DotMatrixText(now?.toString() ?: "-", dot = DotSize.Live)
+                    BigNumberText(now?.toString() ?: "-", BigNumber.Live)
                     Column(Modifier.padding(start = 12.dp).weight(1f)) {
                         Text(
                             stringResource(R.string.glow_unit_bpm), color = Color.White.copy(alpha = 0.7f), style = GlowType.cardTitle,

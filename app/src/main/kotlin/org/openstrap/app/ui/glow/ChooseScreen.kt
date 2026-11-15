@@ -32,7 +32,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -290,7 +289,7 @@ internal fun SportTile(
 ) {
     // Tight corners and room underneath, so the press area never clips a label that fills the width.
     Column(
-        modifier.pressClickable(onClick, RoundedCornerShape(8.dp)).semantics(mergeDescendants = true) { role = Role.Button }
+        modifier.pressClickable(onClick, GlowLayout.ChipShape).semantics(mergeDescendants = true) { role = Role.Button }
             .padding(vertical = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -438,7 +437,7 @@ private fun SportSections(sections: List<SportSection>, isSelected: (Int) -> Boo
 @Composable
 private fun SectionHeader(group: SportGroup, count: Int) {
     Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(width = 4.dp, height = 28.dp).clip(RoundedCornerShape(2.dp)).background(groupColor(group)))
+        Box(Modifier.size(width = 4.dp, height = 28.dp).clip(GlowLayout.BarShape).background(groupColor(group)))
         Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f)) {
             Text(groupTitle(group), color = Color.White, style = GlowType.pageTitle, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -461,7 +460,7 @@ private fun SectionHeader(group: SportGroup, count: Int) {
 private fun FamilyTile(type: Int, selected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
     val color = sportColor(type)
     Column(
-        modifier.pressClickable(onClick, RoundedCornerShape(8.dp)).semantics(mergeDescendants = true) {
+        modifier.pressClickable(onClick, GlowLayout.ChipShape).semantics(mergeDescendants = true) {
             role = Role.Button
             this.selected = selected
         }.padding(vertical = 4.dp),

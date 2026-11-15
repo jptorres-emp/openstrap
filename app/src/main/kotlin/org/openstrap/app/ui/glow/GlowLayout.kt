@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import sv.lib.squircleshape.SquircleShape
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.Outline
@@ -79,6 +80,15 @@ object GlowLayout {
     val TileShape: Shape = CardShape
     /** An icon tile or an icon button: the same rule, so a 44 dp button gets about 15 dp. */
     val IconShape: Shape = CardShape
+
+    /** What sits inside a card or a panel and is not a card: a map, a menu, a goal's or a plan's tile (about 0.45 of a tile). */
+    val InnerShape: Shape = SquircleShape(16.dp, smoothing = SMOOTHING)
+    /** A chip, a tappable label or a field inside a row: about half the inner shape. */
+    val ChipShape: Shape = SquircleShape(10.dp, smoothing = SMOOTHING)
+    /** A bar, a grabber or a rule: a pill. */
+    val BarShape: Shape = CircleShape
+    /** A colour pip, a legend swatch or a chart column: a barely rounded corner. */
+    val PipShape: Shape = RoundedCornerShape(4.dp)
 
     /** From a card's edge to its content, on every side and every tier. */
     val CardInset = 20.dp

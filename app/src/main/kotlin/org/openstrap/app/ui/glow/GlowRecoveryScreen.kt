@@ -7,7 +7,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.text.style.TextOverflow
 import kotlin.math.roundToInt
@@ -321,7 +320,7 @@ private fun DriverRow(name: String, word: String, fraction: Float, tag: NewsTag?
         Column(Modifier.weight(1f)) {
             Text(name, color = Color.White, style = GlowType.body, maxLines = 1, overflow = TextOverflow.Ellipsis)
             androidx.compose.foundation.layout.Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                val shape = RoundedCornerShape(4.dp)
+                val shape = GlowLayout.BarShape
                 Box(Modifier.weight(1f).height(8.dp).background(Color.White.copy(alpha = 0.07f), shape)) {
                     Box(Modifier.fillMaxWidth(fraction.coerceIn(0f, 1f)).height(8.dp).background(Color.White.copy(alpha = 0.7f), shape))
                 }

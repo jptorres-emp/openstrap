@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import sv.lib.squircleshape.SquircleShape
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -43,14 +45,22 @@ object GlowLayout {
     /** Space between the screen edge and a card. */
     val Gutter = 20.dp
 
-    /** Every card's corner, on every tier: glow, edge, list, strip and page panels. */
-    val CardCorner = 28.dp
-    val CardShape = RoundedCornerShape(CardCorner)
+    /** How far a squircle's curve reaches into the straight edge (the library's 0 to 100), as Glow × Glass chose. */
+    const val SMOOTHING = 35
+
+    /** Every card's corner, on every tier: glow, edge, list, strip and page panels (Halo System board: card 36). */
+    val CardCorner = 36.dp
+    val CardShape: Shape = SquircleShape(radius = CardCorner, smoothing = SMOOTHING)
     /** A sheet's top corners match the cards'. */
-    val SheetShape = RoundedCornerShape(topStart = CardCorner, topEnd = CardCorner)
-    /** Sport tiles, chart pills, text fields: rounded, but a step tighter than a card. */
-    val TileCorner = 16.dp
-    val TileShape = RoundedCornerShape(TileCorner)
+    val SheetShape: Shape =
+        SquircleShape(topStart = CardCorner, topEnd = CardCorner, bottomStart = 0.dp, bottomEnd = 0.dp, smoothing = SMOOTHING)
+    /** Sport tiles, chart pills, text fields and panels inside a card (System board: tile 27). */
+    val TileCorner = 27.dp
+    val TileShape: Shape = SquircleShape(radius = TileCorner, smoothing = SMOOTHING)
+    /** An icon tile's corner is about this share of its parent's (System board: icon 16 in a 27 tile). */
+    const val ICON_CORNER_RATIO = 0.75f
+    /** A squircle for an icon tile inside a shape with corner [parentCorner], scaled by [ICON_CORNER_RATIO]. */
+    fun iconShape(parentCorner: Dp = TileCorner): Shape = SquircleShape(radius = parentCorner * ICON_CORNER_RATIO, smoothing = SMOOTHING)
 
     /** From a card's edge to its content, on every side and every tier. */
     val CardInset = 20.dp

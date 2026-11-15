@@ -237,6 +237,7 @@ dependencies {
     implementation(libs.core.ktx)
     implementation(libs.window)
     implementation(libs.haze.blur)
+    implementation(libs.squircle.shape)
     // Workout maps: open source, no API key; tiles from OpenFreeMap (README, Network use).
     implementation(libs.maplibre)
     // Home screen widgets.

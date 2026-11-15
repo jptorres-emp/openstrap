@@ -16,6 +16,8 @@ robolectric = "4.17"
 androidxTestCore = "1.7.0"
 bouncycastle = "1.86"
 coreKtx = "1.19.1"
+# Squircle corners for the Halo design (docs/design/halo/plan.md, section 2).
+squircleShape = "5.4.0"
 haze = "2.0.1"
 window = "1.5.1"
 maplibre = "13.7.1"
@@ -72,6 +74,7 @@ androidx-test-core = { group = "androidx.test", name = "core-ktx", version.ref =
 compose-rules-detekt = { group = "io.nlopez.compose.rules", name = "detekt", version.ref = "composeRulesDetekt" }
 slack-compose-lint = { group = "com.slack.lint.compose", name = "compose-lint-checks", version.ref = "slackComposeLint" }
 haze-blur = { group = "dev.chrisbanes.haze", name = "haze-blur", version.ref = "haze" }
+squircle-shape = { group = "com.stoyanvuchev", name = "squircle-shape", version.ref = "squircleShape" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

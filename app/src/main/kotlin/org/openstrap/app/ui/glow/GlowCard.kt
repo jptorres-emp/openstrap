@@ -8,7 +8,7 @@ import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
+import sv.lib.squircleshape.SquircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -58,7 +58,6 @@ import kotlinx.coroutines.withContext
 import org.openstrap.app.ui.components.LocalCardNumbers
 import org.openstrap.app.ui.components.cardOpening
 import org.openstrap.app.ui.components.pressClickable
-import org.openstrap.app.ui.glow.draw.brush
 import org.openstrap.app.ui.glow.draw.drawGlowBase
 import org.openstrap.app.ui.glow.draw.drawGlowCore
 import org.openstrap.app.ui.glow.draw.glowPaint
@@ -106,7 +105,7 @@ fun GlowCard(
     content: @Composable BoxScope.() -> Unit,
 ) {
     val lit = style.copy(mood = LocalGlowMood.current)
-    val shape = remember(lit.radius) { RoundedCornerShape(lit.radius) }
+    val shape = remember(lit.radius) { cardShape(lit.radius) }
     val palette = remember(lit) { GlowPalette(lit) }
     val core = remember(lit) { lit.light().core }
     val slab = remember(palette) { lerp(palette.mid, Color.Black, 0.55f) }
@@ -261,22 +260,38 @@ private fun BoxScope.CoreLayer(b: GlowBitmaps, style: GlowStyle, core: CoreBox, 
 
 private val FILTER = Paint(Paint.FILTER_BITMAP_FLAG)
 
-/** Grain and the hairline edge with its gloss, from the shared light ([glowPaint], as a widget's background draws them). */
+/**
+ * The squircle for a card of corner [radius]: the layout's own card or tile shape when it is one of those, else a
+ * squircle of that radius (Halo System board: card 36, tile 27).
+ */
+private fun cardShape(radius: androidx.compose.ui.unit.Dp): androidx.compose.ui.graphics.Shape = when (radius) {
+    GlowLayout.CardCorner -> GlowLayout.CardShape
+    GlowLayout.TileCorner -> GlowLayout.TileShape
+    else -> SquircleShape(radius = radius, smoothing = GlowLayout.SMOOTHING)
+}
+
+/** The hero's edge inside its shape: its own colour at 30%, 25% on a level tile (Halo System board, `inset 0 0 0 1px`). */
+private const val HERO_EDGE_ALPHA = 0.3f
+private const val TILE_EDGE_ALPHA = 0.25f
+
+/**
+ * Grain and the card's edge, from the shared light ([glowPaint]). The edge is the card's own colour, drawn inside its
+ * shape: no white inner rim and no highlight line along the top (Halo System board, "Gone from the canvas").
+ */
 private fun CacheDrawScope.overlay(style: GlowStyle, grainSeed: Int): DrawResult {
     val spec = glowPaint(style, size.width, size.height, density)
-    val outline = RoundedCornerShape(style.radius).createOutline(size, layoutDirection, this)
+    val outline = cardShape(style.radius).createOutline(size, layoutDirection, this)
     // On hold: only the edge, in the card's colour.
     spec.outline?.let { color -> return onDrawBehind { drawOutline(outline, color, style = Stroke(spec.outlineWidth)) } }
     val grainPaint = Paint().apply {
         shader = grainShader(grainSeed)
         alpha = spec.grainAlpha
     }
-    val hairline = Stroke(spec.hairlineWidth)
-    val gloss = spec.gloss.brush()
+    val edge = Stroke(spec.hairlineWidth)
+    val edgeColor = style.color.copy(alpha = if (style.lightLevel != null) TILE_EDGE_ALPHA else HERO_EDGE_ALPHA)
     return onDrawBehind {
         if (spec.grainAlpha > 0) drawIntoCanvas { it.nativeCanvas.drawPaint(grainPaint) }
-        drawOutline(outline, spec.hairline, style = hairline)
-        drawOutline(outline, gloss, style = hairline)
+        drawOutline(outline, edgeColor, style = edge)
     }
 }
 

@@ -15,6 +15,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.unit.dp
@@ -22,6 +23,17 @@ import org.openstrap.app.ui.glow.draw.EdgeSurface
 import org.openstrap.app.ui.glow.draw.GlowStyle
 import org.openstrap.app.ui.glow.draw.LightAngle
 import org.openstrap.app.ui.glow.draw.chart
+
+/** The solid card's fill, top to bottom (Halo System board, Solid card: `linear-gradient(180deg, #1A1B20, #101115)`). */
+internal val SolidTop = Color(0xFF1A1B20)
+internal val SolidBottom = Color(0xFF101115)
+internal val SolidSurface: Brush = Brush.verticalGradient(listOf(SolidTop, SolidBottom))
+
+/**
+ * The solid card: opaque, a faint shade from [SolidTop] down to [SolidBottom], no rim and no light, colour only in the
+ * marks drawn on it (Halo System board, "Every other card"). Clips to [shape] and fills it.
+ */
+internal fun Modifier.solidCard(shape: Shape = GlowLayout.CardShape): Modifier = clip(shape).background(SolidSurface, shape)
 
 /**
  * A card lit by a soft light off its edge, as Ready's heart and the share cards are from below and the Heart rate zones

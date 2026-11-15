@@ -84,6 +84,7 @@ import org.openstrap.app.ui.glow.draw.drawHourPills
 import org.openstrap.app.ui.glow.draw.hourPills
 import androidx.compose.foundation.layout.BoxWithConstraints
 import org.openstrap.app.ui.glow.draw.DotSize
+import org.openstrap.app.ui.glow.draw.LightAngle
 import org.openstrap.app.ui.glow.draw.limeHero
 import org.openstrap.app.ui.theme.ControlSurface
 import org.openstrap.app.presentation.topSports
@@ -293,7 +294,7 @@ private fun StepsGlow(state: DayUiState, usual: List<Float>?, history: ActivityH
     val now = java.time.LocalTime.now()
     val pace = ActivityCopy.paceOf(state.steps, usual, isToday, now.hour, now.minute)
     var hour by remember(state.date, state.hourlySteps) { mutableStateOf<Int?>(null) }
-    GlowCard(limeHero(MetricColors.steps), Modifier.fillMaxWidth().gridSize(CardSize.Wide), onClick = onClick) {
+    GlowCard(limeHero(MetricColors.steps, LocalHeroLightAngle.current ?: LightAngle.UpperRight), Modifier.fillMaxWidth().gridSize(CardSize.Wide), onClick = onClick) {
         Column {
             GlowHeader(
                 stringResource(R.string.glow_activity_steps), trailing = stringResource(R.string.glow_activity_goal, Units.count(goal)),

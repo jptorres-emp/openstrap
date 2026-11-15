@@ -79,6 +79,7 @@ import org.openstrap.app.ui.glow.draw.StageBarLook
 import org.openstrap.app.ui.glow.draw.stageTotals
 import org.openstrap.app.ui.glow.draw.GlowMood
 import org.openstrap.app.ui.glow.draw.GlowStyle
+import org.openstrap.app.ui.glow.draw.LightAngle
 import org.openstrap.app.ui.glow.draw.stageColor
 
 /*
@@ -140,7 +141,7 @@ fun GlowSleepScreen(
 
 /** Sleep glows midnight blue. */
 internal val SleepGlow = GlowStyle.Midnight.copy(
-    color = MetricColors.sleepDeep,
+    color = MetricColors.sleepDeep, lightAngle = LightAngle.Below,
     coreX = 0.5f, coreY = 0.6f, coreWidth = 1.1f, coreHeight = 0.9f,
 )
 

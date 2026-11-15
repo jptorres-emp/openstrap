@@ -35,7 +35,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.unit.Dp
@@ -94,8 +93,8 @@ fun WorkoutCapsule(glance: LiveGlance, onClick: () -> Unit, onAction: (GlanceAct
     val shape = RoundedCornerShape(50)
     val quiet = glance.tint == GlanceTint.Mind
     Box(
-        // Mind and body is quieter: 56 dp and no glow.
-        modifier.fillMaxWidth().height(if (quiet) 56.dp else 64.dp).then(if (quiet) Modifier else Modifier.shadow(24.dp, shape, ambientColor = color, spotColor = color))
+        // Mind and body is quieter: 56 dp.
+        modifier.fillMaxWidth().height(if (quiet) 56.dp else 64.dp)
             .clip(shape).background(Raised).border(BorderStroke(1.5.dp, color), shape).pressClickable(onClick, shape),
     ) {
         Row(Modifier.fillMaxSize().padding(start = 18.dp, end = 10.dp), verticalAlignment = Alignment.CenterVertically) {

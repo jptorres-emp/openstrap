@@ -174,6 +174,9 @@ object GlowType {
  */
 @Suppress("MagicNumber") // each size is the board's Doto size, named by its entry
 enum class BigNumber(val doto: Int) {
+    /** Doto 120: the heart rate on the Fold half open, read from across a room (no board, the size it had before Halo). */
+    Tabletop(120),
+
     /** Doto 76: the live workout's number (board HaloLiveRun). */
     Live(76),
 

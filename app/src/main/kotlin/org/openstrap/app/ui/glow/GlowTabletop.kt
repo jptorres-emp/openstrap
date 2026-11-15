@@ -45,7 +45,7 @@ fun GlowTabletopHeart(
                     trailing = stringResource(if (live == null) R.string.glow_tabletop_latest else R.string.glow_tabletop_live),
                 )
                 Row(verticalAlignment = Alignment.Bottom) {
-                    BigNumberText(now?.toString() ?: "-", BigNumber.Live)
+                    BigNumberText(now?.toString() ?: "-", BigNumber.Tabletop)
                     Column(Modifier.padding(start = 12.dp).weight(1f)) {
                         Text(
                             stringResource(R.string.glow_unit_bpm), color = Color.White.copy(alpha = 0.7f), style = GlowType.cardTitle,

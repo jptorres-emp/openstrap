@@ -36,6 +36,10 @@
     <!-- On that page when the day has no heart rate yet. -->
     <string name="glow_workout_add_no_heart">The strap hasn\'t sent heart rate for this day yet. Sync, then try again.</string>
     <!-- Title over the day's heart rate with its two handles. The times beside it are "18:02 to 18:44". -->
+    <string name="glow_workout_add_sport">Sport</string>
+    <string name="glow_workout_add_day">Day</string>
+    <string name="glow_workout_add_range_length"><xliff:g id="minutes" example="42">%1$d</xliff:g> min</string>
+    <string name="glow_workout_add_range_note"><xliff:g id="minutes" example="42">%1$d</xliff:g> min, average <xliff:g id="bpm" example="136">%2$d</xliff:g> bpm</string>
     <string name="glow_workout_add_when">When was it?</string>
     <!-- Under the day's heart rate: how to use the handles. -->
     <string name="glow_workout_add_hint">Drag the handles to where the workout began and ended. Its heart rate comes from the strap\'s minute records.</string>

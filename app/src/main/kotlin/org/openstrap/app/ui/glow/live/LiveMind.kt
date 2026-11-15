@@ -41,6 +41,8 @@ import org.openstrap.app.data.WorkoutTarget
 import org.openstrap.app.device.ConnectionState
 import org.openstrap.app.device.WorkoutState
 import org.openstrap.app.ui.glow.GlowType
+import org.openstrap.app.ui.glow.dotClock
+import androidx.compose.foundation.layout.Row
 import org.openstrap.app.ui.glow.LineDots
 import org.openstrap.app.ui.glow.PlainLine
 import org.openstrap.app.ui.glow.ProgressRing
@@ -108,31 +110,41 @@ internal fun LiveMindScreen(
             }
         },
     ) {
-        LiveFrame(r, MindColor.copy(alpha = 0.5f), connected, contentPadding, controls, time = null, quiet = true, fill = true, tapHint = !compact) {
-            Spacer(Modifier.weight(0.6f))
-            MindRing({ active.value }, length, ring = !compact, onClock = { clock.value = it })
-            Spacer(Modifier.weight(0.5f))
-            if (split) {
-                Spacer(Modifier.weight(0.6f))
-                return@LiveFrame
+        // Board HaloLiveMind: the time as the violet hero, the heart line in a solid card, a quiet hint under them.
+        val color = liveColor(r)
+        val tint = heroTint(color)
+        LiveFrame(r, color, connected, contentPadding, controls, time = null, quiet = true, fill = true, tapHint = !compact) {
+            LiveHero(color, liveAngle(r)) {
+                HeroTitle(
+                    stringResource(R.string.workout_live_mind_time_title),
+                    length?.let { stringResource(R.string.workout_live_mind_length, it / 60) }, tint,
+                )
+                MindNumber({ active.value }, tint, onClock = { clock.value = it })
+                HeroLine(
+                    if (length != null) stringResource(R.string.workout_live_mind_buzz) else
+                        stringResource(R.string.workout_live_mind_open), tint,
+                )
             }
+            if (split) return@LiveFrame
             val now = recent.lastOrNull()?.first ?: (System.currentTimeMillis() / 1000)
             val values = remember(recent) { bucketRecent(recent, now) }
-            // Lower on a short screen (a phone on its side), so the heart rate line under it still fits beside the buttons.
-            // The heart rate as one thin violet line edge to edge, with a dot at now: no axis, no numbers.
-            PlainLine(
-                values, MindColor.copy(alpha = 0.7f), if (compact) 40.dp else 64.dp, smooth = false, dots = LineDots.Last, stroke = 2.dp,
-            )
             val first = values.firstOrNull { it != null }?.toInt()
-            Text(
-                bpm?.let { b ->
-                    first?.minus(b)?.takeIf { it > 0 }?.let { stringResource(R.string.workout_live_mind_heart_down, b, it) }
-                        ?: stringResource(R.string.workout_live_mind_heart, b)
-                } ?: WorkoutCopy.noHeartRate(r.paused, connected),
-                color = Color.White.copy(alpha = 0.8f), style = GlowType.body,
-                modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center,
-            )
-            Spacer(Modifier.weight(0.6f))
+            LiveCard {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text(stringResource(R.string.workout_live_heart_title), color = Color.White, style = GlowType.cardTitle, maxLines = 1,
+                        modifier = Modifier.weight(1f))
+                    Text(stringResource(R.string.workout_live_mind_settling), color = GlowType.noteColor, style = GlowType.noteSmall)
+                }
+                // The heart rate as one thin line edge to edge, with a dot at now: no axis, no numbers.
+                PlainLine(values, color, if (compact) 40.dp else 64.dp, smooth = false, dots = LineDots.Last, stroke = 2.dp)
+                Text(
+                    bpm?.let { b ->
+                        first?.minus(b)?.takeIf { it > 0 }?.let { stringResource(R.string.workout_live_mind_heart_down, b, it) }
+                            ?: stringResource(R.string.workout_live_mind_heart, b)
+                    } ?: WorkoutCopy.noHeartRate(r.paused, connected),
+                    color = LiveLabelInk, style = GlowType.secondary,
+                )
+            }
         }
         // Dimmed, the first touch only lights the screen: the veil takes it.
         Box(
@@ -143,35 +155,11 @@ internal fun LiveMindScreen(
     }
 }
 
-/**
- * The time in a thin ring that fills in violet towards the length, "of 45 min" under it; open, the ring stays a
- * faint track. Without the [ring], the time and its line alone.
- */
+/** The hero's time in dots, its own scope so only it reads the second; [onClock] reports where it sits for the veil's spot. */
 @Composable
-internal fun MindRing(time: () -> Long, length: Long?, ring: Boolean = true, onClock: (Rect) -> Unit = {}) {
-    // The time is read by the ring's draw and the clock's text, so the second composes only the text again.
-    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-        // The strength rest ring's line and track, so the app's rings read as one.
-        if (ring) ProgressRing({ if (length != null && length > 0) time().toFloat() / length else 0f }, MindColor, Modifier.size(280.dp))
-        MindClock(time, length, onClock)
-    }
-}
-
-/** The mind ring's time and its line under it, its own scope so only it reads the second. */
-@Composable
-private fun MindClock(time: () -> Long, length: Long?, onClock: (Rect) -> Unit) {
-    val active = time()
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(
-            workoutClock(active), color = Color.White.copy(alpha = 0.9f), style = GlowType.mindClock, maxLines = 1,
-            modifier = Modifier.onGloballyPositioned { onClock(it.boundsInRoot()) },
-        )
-        Text(
-            length?.let {
-                stringResource(if (active >= it) R.string.workout_live_mind_length_up else R.string.workout_live_mind_length, it / 60)
-            } ?: stringResource(R.string.workout_live_mind_open),
-            color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.body, textAlign = TextAlign.Center,
-        )
+private fun MindNumber(time: () -> Long, tint: Color, onClock: (Rect) -> Unit) {
+    Box(Modifier.onGloballyPositioned { onClock(it.boundsInRoot()) }) {
+        HeroNumber(dotClock(time()), null, tint)
     }
 }
 
@@ -198,5 +186,3 @@ private fun DrawScope.drawVeil(alpha: Float, clock: Rect) {
     }
 }
 
-/** Mind and body's colour: the evening violet, never a zone's. */
-private val MindColor = MetricColors.evening

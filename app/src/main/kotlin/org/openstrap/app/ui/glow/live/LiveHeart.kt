@@ -130,7 +130,8 @@ fun GlowWorkoutLiveScreen(
             Box(Modifier.fillMaxSize().then(cutout)) {
                 when {
                     family == Workouts.Family.Distance && r.workout.useGps ->
-                        LiveDistanceScreen(r, liveHeartRate, recent, stats, connection, contentPadding, controls, route, history, onLap, liveView, onLiveView, kcal, onSkip, split, compact)
+                        LiveDistanceScreen(r, liveHeartRate, recent, stats, connection, contentPadding, controls, route,
+                            history, onLap, liveView, onLiveView, kcal, onSkip, split, compact)
                     family == Workouts.Family.Strength -> LiveStrengthScreen(
                         r, liveHeartRate, remember(history, recent) { WorkoutCopy.readings(history, recent) }, connection, contentPadding,
                         controls, exercises,
@@ -139,9 +140,10 @@ fun GlowWorkoutLiveScreen(
                     family == Workouts.Family.Intervals && r.structure != null ->
                         LiveIntervalsScreen(
                             r, liveHeartRate, remember(history, recent) { WorkoutCopy.readings(history, recent) }, connection,
-                            contentPadding, controls, onSkip, onAddRest, split, compact,
+                            contentPadding, controls, onSkip, onAddRest, split, compact, kcal,
                         )
-                    family == Workouts.Family.MindBody -> LiveMindScreen(r, liveHeartRate, recent, connection, contentPadding, controls, split, compact)
+                    family == Workouts.Family.MindBody -> LiveMindScreen(r, liveHeartRate, recent, connection,
+                        contentPadding, controls, split, compact)
                     family == Workouts.Family.Games ->
                         LiveGameScreen(
                             r, liveHeartRate, remember(history, recent) { WorkoutCopy.readings(history, recent) }, stats, zoneSeconds,
@@ -149,7 +151,8 @@ fun GlowWorkoutLiveScreen(
                         )
                     // Indoor cardio, a distance sport without GPS, and HIIT's Free, which has no timer: heart rate only, laps mark
                     // the rounds.
-                    else -> LiveIndoorScreen(r, liveHeartRate, recent, stats, zoneSeconds, connection, contentPadding, controls, onLap, kcal, split, compact)
+                    else -> LiveIndoorScreen(r, liveHeartRate, recent, stats, zoneSeconds, connection, contentPadding,
+                        controls, onLap, kcal, split, compact)
                 }
             }
         }
@@ -168,6 +171,9 @@ internal fun KmSplitLine(
     route: List<Route.Point>, readings: List<Pair<Long, Int>>, pauses: List<LongRange>,
     /** Its line's height is kept while there's none, so views filling the screen don't shrink when it shows. */
     keepRoom: Boolean = false,
+    /** The line's colour and whether it is centred: a hero's line is left aligned in its tint. */
+    color: Color = Color.White,
+    center: Boolean = true,
 ) {
     val splits = remember(route.size, pauses) { Route.splits(route, pauses) }
     val now = nowTickingState()
@@ -183,58 +189,22 @@ internal fun KmSplitLine(
         }
     }
     if (line != null || keepRoom) Text(
-        line?.text.orEmpty(), color = Color.White, style = MediumBody.copy(fontFeatureSettings = "tnum"),
-        modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center,
+        line?.text.orEmpty(), color = color,
+            style = if (center) MediumBody.copy(fontFeatureSettings = "tnum") else GlowType.secondary.copy(fontFeatureSettings = "tnum"),
+        modifier = Modifier.fillMaxWidth(), textAlign = if (center) TextAlign.Center else TextAlign.Start,
     )
 }
 
-/** Where the zone arc starts (lower left, clockwise from three o'clock) and how far it goes, in degrees. */
-private const val ARC_START = 150f
-private const val ARC_SWEEP = 240f
-private const val ARC_GAP = 8f
-
 /**
- * The five zones as segments of an arc open at the bottom, only the current one lit, with a marker where [bpm] sits
- * (pattern D2). The number goes in its middle.
- */
-@Composable
-internal fun ZoneArc(bpm: Int?, maxHr: Int, modifier: Modifier) {
-    val heartZones = LocalHeartZones.current
-    val zone = WorkoutRecorder.liveZone(bpm, maxHr, heartZones)
-    Canvas(modifier) {
-        val stroke = 6.dp.toPx()
-        val halo = 9.dp.toPx()
-        val r = min(size.width, size.height) / 2 - halo
-        val topLeft = Offset(center.x - r, center.y - r)
-        val box = Size(r * 2, r * 2)
-        val seg = (ARC_SWEEP - ARC_GAP * (Workouts.ZONES - 1)) / Workouts.ZONES
-        for (z in 0 until Workouts.ZONES) {
-            val start = ARC_START + z * (seg + ARC_GAP)
-            val on = z == zone
-            // The lit segment glows: a wide soft stroke of itself under it.
-            if (on) drawArc(ZONE_COLORS[z].copy(alpha = 0.3f), start, seg, false, topLeft, box, style = Stroke(stroke * 2.6f, cap = StrokeCap.Round))
-            drawArc(ZONE_COLORS[z].copy(alpha = if (on) 1f else 0.22f), start, seg, false, topLeft, box, style = Stroke(stroke, cap = StrokeCap.Round))
-        }
-        if (bpm != null) {
-            val a = Math.toRadians((ARC_START + WorkoutRecorder.zonePosition(bpm, maxHr, heartZones) * ARC_SWEEP).toDouble())
-            val at = Offset(center.x + r * cos(a).toFloat(), center.y + r * sin(a).toFloat())
-            val dot = zone?.let { ZONE_COLORS[it] } ?: Color.White
-            drawCircle(dot.copy(alpha = 0.3f), radius = halo, center = at)
-            drawCircle(Color.White, radius = 5.dp.toPx(), center = at)
-        }
-    }
-}
-
-/**
- * The live heart card: the beating number on its zone arc over the last ten minutes, then the zone, its range and the
- * time in it. Its light reaches as high as the zone (spec 2.5); paused, it drops to an outline of the same layout
- * (pattern D1). With [fill] it takes all the height it's given and the number grows, for the standing half of a fold.
+ * The live heart rate as the hero (workout-rules.md, Rowing; board HaloLiveIndoor): the sport's colour lights it, the
+ * bpm is the one dotted number, and one line says the zone, its range and the time in it. With [zoneBar] a solid card
+ * under it holds the time in each zone as one bar and the target's note. With [fill] it takes all the height it's
+ * given, for the standing half of a fold. Paused, it turns grey.
  */
 @Composable
 internal fun WorkoutHeartCard(
     r: WorkoutState.Recording,
     liveHeartRate: Int?,
-    recent: List<Pair<Long, Int>>,
     zoneSeconds: ZoneSeconds,
     connected: Boolean,
     /** The active seconds, read only by the time target's note, so the card isn't composed again each second. */
@@ -243,73 +213,32 @@ internal fun WorkoutHeartCard(
     fill: Boolean = false,
     /** The live active kcal, for a kcal target's progress. */
     kcal: Float? = null,
-    /** The time in each zone as a bar under the zone (indoor cardio, board Main). */
+    /** The time in each zone as a bar in a card under the hero (indoor cardio, board HaloLiveIndoor). */
     zoneBar: Boolean = false,
 ) {
     val heartZones = LocalHeartZones.current
     val bpm = liveHeartRate.takeIf { connected && !r.paused }
     val zone = WorkoutRecorder.liveZone(bpm, r.maxHeartRate, heartZones)
-    val color = workoutColor(r, liveHeartRate, connected, heartZones)
-    GlowCard(liveHeartStyle(color, bpm, zone, r.paused), modifier) {
-        Column(if (fill) Modifier.fillMaxSize() else Modifier) {
-            GlowHeader(
-                stringResource(R.string.workout_live_heart_title),
-                trailing = bpm?.let { stringResource(R.string.workout_live_heart_of_max, it * 100 / r.maxHeartRate) },
-            )
-            BoxWithConstraints(Modifier.fillMaxWidth().then(if (fill) Modifier.weight(1f) else Modifier.height(220.dp))) {
-                val now = recent.lastOrNull()?.first ?: (System.currentTimeMillis() / 1000)
-                val values = remember(recent) { bucketRecent(recent, now) }
-                if (values.any { it != null }) {
-                    GlowLineChart(values, Modifier.align(Alignment.BottomCenter).alpha(0.45f), height = 120.dp, showAverage = false)
-                }
-                ZoneArc(bpm, r.maxHeartRate, Modifier.matchParentSize())
-                // Sized for three digits inside the arc, whatever the reading, so the number never spills past it
-                // and doesn't jump in size as the heart rate crosses 100.
-                val inside = (minOf(maxWidth, maxHeight) - 18.dp) * 0.78f
-                val scale = dotFitScale("000", DotSize.Live, inside)
-                Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
-                    if (bpm != null) {
-                        DotMatrixText(bpm.toString(), dot = DotSize.Live, scale = scale)
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            stringResource(R.string.workout_live_heart_behind), color = Color.White.copy(alpha = 0.75f),
-                            style = GlowType.secondary,
-                        )
-                    } else Text(
-                        WorkoutCopy.noHeartRate(r.paused, connected),
-                        color = Color.White, style = GlowType.sentence,
-                    )
-                }
-            }
-            Row(verticalAlignment = Alignment.Bottom) {
-                if (zone != null) {
-                    // "Zone 3, aerobic": two text elements, the name a step quieter.
-                    val (name, word) = WorkoutCopy.zoneTitle(zone)
-                    Text(name, color = Color.White, style = GlowType.sentence)
-                    Spacer(Modifier.width(6.dp))
-                    Text(word, color = Color.White.copy(alpha = 0.75f), style = GlowType.sentence, modifier = Modifier.weight(1f))
-                    Text(zoneRange(zone, r.maxHeartRate), color = Color.White.copy(alpha = 0.85f), style = GlowType.secondary)
-                } else Text(WorkoutCopy.noZone(r.paused), color = Color.White, style = GlowType.sentence)
-            }
-            if (zoneBar) {
-                Spacer(Modifier.height(12.dp))
-                ZoneTimeBar(zoneSeconds, zone)
-            }
-            Spacer(Modifier.height(8.dp))
-            HeartNotes(r, zone, zoneSeconds, active, kcal)
-        }
+    val color = liveColor(r)
+    val tint = heroTint(color)
+    LiveHero(color, liveAngle(r), if (fill) modifier.fillMaxSize() else modifier) {
+        HeroTitle(
+            stringResource(R.string.workout_live_heart_title),
+            bpm?.let { stringResource(R.string.workout_live_heart_of_max, it * 100 / r.maxHeartRate) }, tint,
+        )
+        if (bpm != null) HeroNumber("$bpm", stringResource(R.string.workout_live_unit_bpm), tint)
+        else Text(WorkoutCopy.noHeartRate(r.paused, connected), color = Color.White, style = GlowType.sentence)
+        if (zone != null) {
+            val (name, _) = WorkoutCopy.zoneTitle(zone)
+            HeroLine("$name, ${zoneRange(zone, r.maxHeartRate)}, ${WorkoutCopy.zoneTime(zoneSeconds[zone])}", tint)
+        } else HeroLine(WorkoutCopy.noZone(r.paused), tint)
+    }
+    if (zoneBar && !fill) LiveCard {
+        Text(stringResource(R.string.workout_live_zones_title), color = Color.White, style = GlowType.cardTitle, maxLines = 1)
+        ZoneTimeBar(zoneSeconds, zone)
+        HeartNotes(r, zone, zoneSeconds, active, kcal)
     }
 }
-
-/**
- * The live heart card's glow (pattern D1): [color] beating at [bpm], lit as high as the [zone], and only its outline
- * while [paused]. The full card and the short one on a phone on its side light alike.
- */
-internal fun liveHeartStyle(color: Color, bpm: Int?, zone: Int?, paused: Boolean) = GlowStyle.chart(color).copy(
-    motion = if (bpm != null) GlowMotion.Heartbeat(bpm) else GlowMotion.Still,
-    lightLevel = WorkoutCopy.zoneLightLevel(zone),
-    outline = paused,
-)
 
 /** The time in the [zone] you're in on the left of the heart card's foot, and the target's progress on the right. */
 @Composable
@@ -334,6 +263,7 @@ internal fun HeartNotes(r: WorkoutState.Recording, zone: Int?, zoneSeconds: Zone
  * The standing half of a foldable half-open during a workout (on a table, or stood up like a book): the live heart
  * card as big as the half allows, readable from a step away. The controls stay on the other half, under your hand.
  */
+@Suppress("UnusedParameter")
 @Composable
 fun GlowWorkoutGlance(
     r: WorkoutState.Recording,
@@ -348,7 +278,7 @@ fun GlowWorkoutGlance(
     val active = activeSecondsState(r)
     Box(modifier.background(Color.Black).statusBarsPadding().padding(horizontal = GlowLayout.Gutter, vertical = 12.dp)) {
         WorkoutHeartCard(
-            r, liveHeartRate, recent, zoneSeconds, connected, { active.value }, Modifier.fillMaxSize(), fill = true, kcal = kcal?.active,
+            r, liveHeartRate, zoneSeconds, connected, { active.value }, Modifier.fillMaxSize(), fill = true, kcal = kcal?.active,
         )
     }
 }
@@ -366,5 +296,6 @@ private const val WINDOW_S = 600L
 /** The last ten minutes in five-second averages, oldest first; gaps stay null and break the line. */
 internal fun bucketRecent(recent: List<Pair<Long, Int>>, now: Long): List<Float?> {
     val from = now - WINDOW_S + 1
-    return org.openstrap.app.data.Summaries.bucketMeans(recent, (WINDOW_S / BUCKET_S).toInt(), { ((it.first - from) / BUCKET_S).toInt() }, { it.second.toFloat() })
+    return org.openstrap.app.data.Summaries.bucketMeans(recent, (WINDOW_S / BUCKET_S).toInt(),
+        { ((it.first - from) / BUCKET_S).toInt() }, { it.second.toFloat() })
 }

@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberUpdatedState
@@ -56,10 +57,12 @@ import org.openstrap.app.ui.components.rememberHaptics
 import org.openstrap.app.ui.theme.AppIcons
 import org.openstrap.app.ui.workout.StartCopy
 import org.openstrap.app.ui.workout.familyColor
+import org.openstrap.app.ui.workout.familyLightAngle
 import org.openstrap.app.data.Structure
 import androidx.compose.ui.unit.Dp
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.width
 import org.openstrap.app.device.locationAvailable
 import org.openstrap.app.ui.dashboard.LocalHeartZones
 
@@ -125,6 +128,9 @@ fun GlowWorkoutReadyScreen(
     onSaveIntervals: (name: String, structure: String) -> Unit = { _, _ -> },
     /** Rounds to open on instead of last time's, from a saved workout picked on Choose. */
     structure: String? = null,
+    /** Last time's figures for the sport and its seconds a km, from the workouts on file; null leaves those lines out. */
+    last: ReadyLast? = null,
+    lastPace: Double? = null,
 ) {
     var picking by rememberSaveable { mutableStateOf(pickSport) }
     val pair = Workouts.sidesOf(sportType)
@@ -195,11 +201,26 @@ fun GlowWorkoutReadyScreen(
         onDispose { location.stop() }
     }
     val haptics = rememberHaptics()
+    // Keeps the live heart rate coming for the top bar, which the old heart card did.
+    org.openstrap.app.ui.components.HoldLiveHeartRate()
+    val nowMillis by rememberNowMillis()
+    // Tapping the hero edits the goal in a sheet: what is open now is what Cancel puts back.
+    val editor = remember { GoalEditor() }
+    val openEditor = {
+        val d0 = draft
+        val s0 = sets
+        val p0 = planSets
+        val r0 = restSeconds
+        val c0 = structureCode
+        editor.revert = { draft = d0; sets = s0; planSets = p0; restSeconds = r0; structureCode = c0 }
+        editor.open = true
+    }
     // The sport picker opens like a deeper screen and a pick slides Ready back in on the new sport (user, 2026-11-06:
     // the swap was a cut both ways).
     PushContent(picking, { if (it) 1 else 0 }) { showPicker ->
         if (showPicker) {
-            SportPicker(type, recentSports, contentPadding, onPick = { onSport(it); picking = false }, onBack = { if (pickSport) onBack() else picking = false })
+            SportPicker(type, recentSports, contentPadding, onPick = { onSport(it); picking = false },
+                onBack = { if (pickSport) onBack() else picking = false })
             return@PushContent
         }
         BackHandler(onBack = onBack)
@@ -225,18 +246,30 @@ fun GlowWorkoutReadyScreen(
                 ),
             )
         }
+        CompositionLocalProvider(LocalGoalEditor provides editor) {
         WorkoutPage(
             Color.Transparent, contentPadding,
             // While a goal is typed the keyboard has the bottom of the screen.
-            pinned = if (typing) null else ({ WorkoutButton(StartCopy.startLabel(type), Color.White, Color.Black, start, icon = AppIcons.PlayFill, height = 64.dp) }),
+            pinned = if (typing) null else ({ WorkoutButton(StartCopy.startLabel(type), Color.White, Color.Black, start,
+                icon = AppIcons.PlayFill, height = 64.dp) }),
         ) {
-            Box(Modifier.fillMaxWidth()) {
-                RoundIcon(AppIcons.X, stringResource(R.string.glow_close), onBack, Modifier.align(Alignment.CenterStart))
-                Box(Modifier.align(Alignment.Center)) { IconPill(Workouts.shortName(type), { picking = true }, caret = true) }
-            }
+            ReadyTopBar(type, family, connection, liveHeartRate, onBack) { picking = true }
             StrapHeldNotice(connection)
+            GoalHero(
+                goalHeroSpec(
+                    type, family, kind, draft, sets, restSeconds, rounds, hasDistance,
+                    zoneLine = maxHeartRate?.let { StartCopy.zoneRangeLine(draft.zones, LocalHeartZones.current, it) },
+                    lastPace = lastPace, nowMillis = nowMillis,
+                ),
+                familyColor(family), familyLightAngle(family), openEditor,
+            )
             if (cardio) {
-                ReadyHeartCard(connection, liveHeartRate)
+                ReadyGoal(
+                    type, kinds, hasDistance, draft.copy(kind = kind), { draft = it }, typing, { typing = it }, LocalHeartZones.current, maxHeartRate,
+                    onYourZones, saved.filter { Workouts.tileType(it.sport) == key },
+                    onSave = { name, reps -> onSaveIntervals(name, reps.code) },
+                )
+                ReadyLastRow(last)
                 ReadyWhere(
                     type, pair, indoor == true, outdoor, locationOn, StartCopy.gpsStatus(accuracy),
                     onSwitch = {
@@ -251,27 +284,23 @@ fun GlowWorkoutReadyScreen(
                     askToEnd = askToEnd, onAskToEnd = { askToEnd = it },
                     keepRoute = keepRoute.takeIf { useGps }, onKeepRoute = { keepRoute = it },
                 )
-                val zones = LocalHeartZones.current
-                ReadyGoal(
-                    type, kinds, hasDistance, draft.copy(kind = kind), { draft = it }, typing, { typing = it }, zones, maxHeartRate, onYourZones,
-                    saved.filter { Workouts.tileType(it.sport) == key },
-                    onSave = { name, reps -> onSaveIntervals(name, reps.code) },
-                )
                 return@WorkoutPage
             }
-            ReadyHeartCard(connection, liveHeartRate, familyColor(family))
             when (family) {
                 Workouts.Family.Strength -> StrengthPlanCard(
-                    type, sets, { sets = it; if (it != null) planSets = it }, planSets, restSeconds, { restSeconds = it }, typing, { typing = it },
+                    type, sets, { sets = it; if (it != null) planSets = it }, planSets, restSeconds, { restSeconds = it },
+                        typing, { typing = it },
                 )
                 Workouts.Family.Intervals -> HiitPlanCard(type, rounds, { structureCode = it?.code }, typing, { typing = it })
                 Workouts.Family.MindBody -> MindPlanCard(
                     type, draft.seconds.takeIf { draft.kind == WorkoutSetup.GoalKind.Time },
-                    { draft = if (it == null) draft.copy(kind = WorkoutSetup.GoalKind.None) else draft.copy(kind = WorkoutSetup.GoalKind.Time, seconds = it) },
+                    { draft = if (it == null) draft.copy(kind = WorkoutSetup.GoalKind.None) else
+                        draft.copy(kind = WorkoutSetup.GoalKind.Time, seconds = it) },
                     draft.seconds, typing, { typing = it },
                 )
                 else -> GamePlanCard(type, rounds as? Structure.Periods, { structureCode = it?.code }, typing, { typing = it })
             }
+            ReadyLastRow(last)
             ReadyRows {
                 var divider = false
                 if (strength) {
@@ -283,11 +312,47 @@ fun GlowWorkoutReadyScreen(
                     divider = true
                 }
                 if (rounds != null && family == Workouts.Family.Intervals) {
-                    PageSwitchRow(StartCopy.WARM_UP, StartCopy.WARM_UP_NOTE, rounds.warmUp, { structureCode = rounds.warm(it).code }, divider = false)
+                    PageSwitchRow(StartCopy.WARM_UP, StartCopy.WARM_UP_NOTE, rounds.warmUp,
+                        { structureCode = rounds.warm(it).code }, divider = false)
                     divider = true
                 }
                 PageSwitchRow(StartCopy.ASK_TO_END, StartCopy.ASK_TO_END_NOTE, askToEnd, { askToEnd = it }, divider = divider)
             }
+        }
+        }
+    }
+}
+
+/**
+ * Ready's top bar (workout-rules.md, Frame; board HaloReadyRun): a 96 / 1fr / 96 grid. Close at the left, the sport as
+ * a pill with its icon tinted in the family's colour in the middle (tap to change it), the live heart rate and the
+ * strap's charge at the right in grey.
+ */
+@Composable
+private fun ReadyTopBar(type: Int, family: Workouts.Family, connection: ConnectionState, bpm: Int?, onClose: () -> Unit,
+    onSport: () -> Unit) {
+    val battery = (connection as? ConnectionState.Connected)?.batteryPercent
+    Row(Modifier.fillMaxWidth().height(48.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.width(96.dp), contentAlignment = Alignment.CenterStart) {
+            RoundIconButton(AppIcons.X, stringResource(R.string.glow_close), onClose, size = 44.dp, iconSize = 18.dp)
+        }
+        Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+            IconPill(
+                Workouts.shortName(type), onSport, icon = org.openstrap.app.ui.theme.SportIcons.of(type), tint = familyColor(family),
+                caret = true, height = 40.dp, style = GlowType.body.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold),
+            )
+        }
+        Column(Modifier.width(96.dp), horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            if (bpm != null && connection is ConnectionState.Connected) Row(verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Icon(AppIcons.Heartbeat, null, tint = org.openstrap.app.ui.theme.MetricColors.heart, modifier = Modifier.size(12.dp))
+                Text(stringResource(R.string.workout_live_bpm, bpm), color = GlowType.noteColor, style = GlowType.noteSmall, maxLines = 1)
+            }
+            if (connection is ConnectionState.Connected) Text(
+                if (battery != null) stringResource(R.string.workout_live_status_strap_battery,
+                    battery) else stringResource(R.string.workout_live_status_strap),
+                color = GlowType.noteColor, style = GlowType.noteSmall, maxLines = 1,
+            )
         }
     }
 }
@@ -340,7 +405,8 @@ internal fun MinusPlus(
     val iconSize = if (buttonSize > 44.dp) 20.dp else 18.dp
     Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(gap)) {
         RoundIcon(AppIcons.Minus, less, onLess, size = buttonSize, iconSize = iconSize)
-        Row(Modifier.weight(1f), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically, content = value)
+        Row(Modifier.weight(1f), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically,
+            content = value)
         RoundIcon(AppIcons.Plus, more, onMore, size = buttonSize, iconSize = iconSize)
     }
 }

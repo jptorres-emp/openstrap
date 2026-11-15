@@ -37,4 +37,23 @@
     </plurals>
     <string name="glow_ready_strap_disconnected">手环未连接。没有手环也能记录，但没有实时心率。</string>
     <string name="glow_ready_connect">连接手环</string>
+    <string name="glow_ready_edit_goal">修改</string>
+    <string name="glow_ready_hero_zones">个心率区间</string>
+    <string name="glow_ready_hero_zone_range">%1$d 至 %2$d</string>
+    <string name="glow_ready_hero_sets_rest">组，休息 %1$s</string>
+    <string name="glow_ready_hero_periods">分钟%1$s</string>
+    <string name="glow_ready_hero_free">自由</string>
+    <string name="glow_ready_last_caption">上次，%1$s</string>
+    <string name="glow_ready_last_today">今天</string>
+    <string name="glow_ready_last_time">时间</string>
+    <string name="glow_ready_last_distance">距离</string>
+    <string name="glow_ready_last_pace">平均配速</string>
+    <string name="glow_ready_last_avg_bpm">平均心率</string>
+    <string name="glow_ready_last_peak_bpm">最高心率</string>
+    <string name="glow_ready_last_kcal">活动千卡</string>
+    <string name="glow_ready_last_load">负荷</string>
+    <string name="glow_ready_last_sets">组数</string>
+    <string name="glow_choose_change_title">更换运动</string>
+    <string name="glow_choose_now">当前</string>
+    <string name="glow_choose_now_note">新运动有类似目标时，你的目标会保留</string>
 </resources>

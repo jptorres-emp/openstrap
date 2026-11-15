@@ -94,7 +94,8 @@ internal fun StrengthPlanCard(
 internal fun HiitPlanCard(type: Int, rounds: Structure?, onChange: (Structure?) -> Unit, typing: Boolean, onTyping: (Boolean) -> Unit) {
     val choices = StartCopy.PRESETS.map { it.rounds to PlanOption(it.icon ?: SportIcons.of(type), it.name, it.note) }
     PlanChoice(
-        Workouts.Family.Intervals, choices, { it?.code == rounds?.warm(false)?.code }, { onChange(it?.warm(rounds?.warmUp == true)) }, typing, onTyping,
+        Workouts.Family.Intervals, choices, { it?.code == rounds?.warm(false)?.code },
+            { onChange(it?.warm(rounds?.warmUp == true)) }, typing, onTyping,
         other = { PlanOption(if (rounds is Structure.EveryMinute) AppIcons.Alarm else AppIcons.Timer, StartCopy.hiitName(rounds!!), "") },
     ) {
         when (rounds) {
@@ -150,12 +151,14 @@ internal fun HiitPlanCard(type: Int, rounds: Structure?, onChange: (Structure?) 
 
 /** Mind and body's length: Open or Time in the pill; a time is the run's Time card with its own presets and note. */
 @Composable
-internal fun MindPlanCard(type: Int, seconds: Long?, onSeconds: (Long?) -> Unit, lastSeconds: Long, typing: Boolean, onTyping: (Boolean) -> Unit) {
+internal fun MindPlanCard(type: Int, seconds: Long?, onSeconds: (Long?) -> Unit, lastSeconds: Long, typing: Boolean,
+    onTyping: (Boolean) -> Unit) {
     val choices = listOf(
         false to PlanOption(SportIcons.of(type), StartCopy.OPEN, StartCopy.MIND_OPEN_KIND_NOTE),
         true to PlanOption(AppIcons.Timer, StartCopy.TIME, StartCopy.MIND_TIME_KIND_NOTE),
     )
-    PlanChoice(Workouts.Family.MindBody, choices, { it == (seconds != null) }, { onSeconds(if (it) lastSeconds else null) }, typing, onTyping) {
+    PlanChoice(Workouts.Family.MindBody, choices, { it == (seconds != null) }, { onSeconds(if (it) lastSeconds else null) },
+        typing, onTyping) {
         if (seconds == null) GoalNote(StartCopy.MIND_OPEN_NOTE)
         else TimeGoal(seconds, { onSeconds(it) }, typing, onTyping, StartCopy.MIND_PRESETS, StartCopy.MIND_STATUS)
     }
@@ -166,7 +169,8 @@ internal fun MindPlanCard(type: Int, seconds: Long?, onSeconds: (Long?) -> Unit,
  * each number typed in place (in minutes). Another count of periods says so in the pill ("3 periods").
  */
 @Composable
-internal fun GamePlanCard(type: Int, periods: Structure.Periods?, onChange: (Structure.Periods?) -> Unit, typing: Boolean, onTyping: (Boolean) -> Unit) {
+internal fun GamePlanCard(type: Int, periods: Structure.Periods?, onChange: (Structure.Periods?) -> Unit, typing: Boolean,
+    onTyping: (Boolean) -> Unit) {
     val choices = listOf(
         null to PlanOption(SportIcons.of(type), StartCopy.FREE_PLAY, StartCopy.FREE_PLAY_KIND_NOTE),
         Structure.HALVES to PlanOption(AppIcons.Hourglass, StartCopy.periodsName(Structure.HALVES), StartCopy.HALVES_KIND_NOTE),
@@ -207,7 +211,7 @@ internal fun GamePlanCard(type: Int, periods: Structure.Periods?, onChange: (Str
 /** Ready's switch rows under the plan card, on a plain panel. */
 @Composable
 internal fun ReadyRows(content: @Composable ColumnScope.() -> Unit) {
-    Column(Modifier.fillMaxWidth().clip(GlowLayout.CardShape).background(ListSurface).padding(horizontal = 18.dp), content = content)
+    Column(Modifier.fillMaxWidth().clip(GlowLayout.TileShape).background(PlainPanel).padding(horizontal = 18.dp), content = content)
 }
 
 /** Work and rest along the rounds, each as wide as its time: work in heart red, rest in sleep blue. */

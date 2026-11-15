@@ -90,39 +90,6 @@ import org.openstrap.app.ui.workout.readyHero
  * No settings sheet: everything it held is a row here or went with the design.
  */
 
-/** Where Ready's heart light sits, in card heights from the top, and its size in card widths and heights. */
-private const val HEART_LIGHT_BELOW = 1.25f
-private const val HEART_LIGHT_WIDTH = 1.2f
-private const val HEART_LIGHT_HEIGHT = 1.1f
-
-/** Ready's heart light at full strength: 70% in the middle, 18% halfway out. */
-private val HeartLight = listOf(0f to 0.7f, 0.5f to 0.18f)
-
-/**
- * Ready's heart: the live bpm in dots on a card lit from below in [color] (heart red, or the family's colour), as
- * Today's hero, "bpm, live from your strap" beside it. While the strap is away, what's wrong and that you can start
- * anyway, on a dimmer light.
- */
-@Composable
-internal fun ReadyHeartCard(connection: ConnectionState, liveHeartRate: Int?, color: Color = MetricColors.heart) {
-    org.openstrap.app.ui.components.HoldLiveHeartRate()
-    val hero = WorkoutCopy.readyHero(connection, liveHeartRate)
-    val bpm = liveHeartRate.takeIf { hero.live }
-    val light = if (bpm != null) 1f else 0.4f
-    // An ellipse 1.2 widths across and 1.1 heights tall, centred a quarter of the height below the card.
-    LitPanel(
-        color, HeartLight.map { (at, alpha) -> at to alpha * light },
-        lightCenter = { Offset(it.width / 2, it.height * HEART_LIGHT_BELOW) },
-        reach = { Size(it.width * HEART_LIGHT_WIDTH, it.height * HEART_LIGHT_HEIGHT) },
-    ) {
-        if (bpm != null) HeroValue(bpm.toString(), stringResource(R.string.glow_ready_bpm_live), gap = 14.dp)
-        else Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(hero.title, color = Color.White, style = GlowType.sentence)
-            Text(hero.line, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary)
-        }
-    }
-}
-
 /**
  * Where you are and the switch rows, on one quiet panel. For a sport with an indoor side ([sides]), its title is the
  * side you're on: outside with a green pin and the GPS line, or indoors with its amber icon and what you get without
@@ -144,7 +111,7 @@ internal fun ReadyWhere(
     keepRoute: Boolean?,
     onKeepRoute: (Boolean) -> Unit,
 ) {
-    Column(Modifier.fillMaxWidth().clip(GlowLayout.CardShape).background(ListSurface).padding(horizontal = 18.dp)) {
+    Column(Modifier.fillMaxWidth().clip(GlowLayout.TileShape).background(PlainPanel).padding(horizontal = 18.dp)) {
         var rows = 0
         if (sides != null) {
             PlaceRow(
@@ -164,7 +131,8 @@ internal fun ReadyWhere(
             rows++
         }
         if (outdoor && !locationOn) {
-            PageButton(StartCopy.TURN_ON_LOCATION, onTurnOnLocation, Modifier.fillMaxWidth().padding(bottom = 14.dp), icon = SportIconsLocation)
+            PageButton(StartCopy.TURN_ON_LOCATION, onTurnOnLocation, Modifier.fillMaxWidth().padding(bottom = 14.dp),
+                icon = SportIconsLocation)
         }
         PageSwitchRow(StartCopy.ASK_TO_END, StartCopy.ASK_TO_END_NOTE, askToEnd, onAskToEnd, divider = rows > 0)
         if (keepRoute != null) PageSwitchRow(StartCopy.keepRoute(type), WorkoutCopy.routeNote(keepRoute), keepRoute, onKeepRoute)
@@ -188,7 +156,8 @@ private fun placeIcon(sides: Workouts.Sides, indoor: Boolean): ImageVector = whe
 @Composable
 private fun PlaceRow(icon: ImageVector, tint: Color, title: String, note: String, trailing: (@Composable () -> Unit)?) {
     Row(Modifier.fillMaxWidth().padding(vertical = GlowLayout.RowPadding), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(tint.copy(alpha = 0.15f)), contentAlignment = Alignment.Center) {
+        Box(Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(tint.copy(alpha = 0.15f)),
+            contentAlignment = Alignment.Center) {
             Icon(icon, null, tint = tint, modifier = Modifier.size(24.dp))
         }
         Spacer(Modifier.width(14.dp))
@@ -268,7 +237,8 @@ internal fun <T> PlanChoice(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val at = choices.indexOfFirst { isChosen(it.first) }.takeIf { it >= 0 }
-    ReadyPlanCard(family, choices.map { it.second }, at?.let { choices[it].second } ?: other(), at, { onChoose(choices[it].first) }, typing, onTyping, content)
+    ReadyPlanCard(family, choices.map { it.second }, at?.let { choices[it].second } ?: other(), at,
+        { onChoose(choices[it].first) }, typing, onTyping, content)
 }
 
 /**
@@ -288,7 +258,8 @@ private fun ReadyPlanCard(
     onTyping: (Boolean) -> Unit,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Text(StartCopy.planTitle(family), color = Color.White.copy(alpha = 0.6f), style = GlowType.body, modifier = Modifier.padding(horizontal = 4.dp))
+    Text(StartCopy.planTitle(family), color = GlowType.noteColor, style = GlowType.secondary,
+        modifier = Modifier.padding(horizontal = 4.dp))
     val inView = remember { BringIntoViewRequester() }
     val ime = WindowInsets.ime
     val density = LocalDensity.current
@@ -300,8 +271,9 @@ private fun ReadyPlanCard(
             if (keyboard > 0) { kotlinx.coroutines.delay(80); inView.bringIntoView() }
         }
     }
+    val editor = LocalGoalEditor.current
     Column(
-        Modifier.fillMaxWidth().bringIntoViewRequester(inView).solidCard(GlowLayout.CardShape).padding(16.dp),
+        Modifier.fillMaxWidth().bringIntoViewRequester(inView).solidCard(GlowLayout.CardShape).padding(GlowLayout.CardInset),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         var choosing by rememberSaveable { mutableStateOf(false) }
@@ -322,8 +294,31 @@ private fun ReadyPlanCard(
                 }
             }
         }
-        content()
+        // The value is the hero's number: it is changed here, in a sheet, from the hero or this button.
+        PageButton(
+            stringResource(R.string.glow_ready_edit_goal), {
+                onTyping(false)
+                editor.revert = {}
+                editor.open = true
+            },
+            Modifier.fillMaxWidth(), icon = AppIcons.PencilEdit,
+        )
     }
+    if (editor.open) PageSheet({ closeGoal(editor, onTyping, save = false) }, StartCopy.planSheet(family)) {
+        content()
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            PageButton(stringResource(R.string.glow_cancel), { closeGoal(editor, onTyping, save = false) }, Modifier.weight(1f))
+            PageButton(stringResource(R.string.glow_save), { closeGoal(editor, onTyping, save = true) }, Modifier.weight(1f),
+                primary = true)
+        }
+    }
+}
+
+/** Closes the goal's sheet: Save keeps what was changed in it, Cancel (and dismissing) puts back what was there. */
+private fun closeGoal(editor: GoalEditor, onTyping: (Boolean) -> Unit, save: Boolean) {
+    if (!save) editor.revert()
+    editor.open = false
+    onTyping(false)
 }
 
 private fun kindName(k: GoalKind, type: Int): String = when (k) {
@@ -375,20 +370,14 @@ private fun KindRow(icon: ImageVector, label: String, note: String, on: Boolean,
 /** The line under a goal: what the strap will do. */
 @Composable
 internal fun GoalNote(text: String) =
-    Text(text, color = Color.White.copy(alpha = 0.6f), style = GlowType.secondary, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+    Text(text, color = Color.White.copy(alpha = 0.6f), style = GlowType.secondary, textAlign = TextAlign.Center,
+        modifier = Modifier.fillMaxWidth())
 
-/** A row of presets under a value, each as wide as the others, on a hairline; the one matching the value ([on]) in white. */
+/** A row of presets under a value, each as wide as the others; the one matching the value ([on]) has the white ring. */
 @Composable
 internal fun <T> Presets(presets: List<Pair<T, String>>, on: T?, onPick: (T) -> Unit) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        presets.forEach { (v, label) ->
-            val chosen = v == on
-            Box(
-                Modifier.weight(1f).height(34.dp).clip(CircleShape).border(1.dp, if (chosen) Color.White else Color.White.copy(alpha = 0.15f), CircleShape)
-                    .pressClickable({ onPick(v) }, CircleShape).semantics { role = Role.Button; selected = chosen },
-                contentAlignment = Alignment.Center,
-            ) { Text(label, color = if (chosen) Color.White else Color.White.copy(alpha = 0.8f), style = GlowType.secondary, maxLines = 1) }
-        }
+        presets.forEach { (v, label) -> PageChip(label, v == on, { onPick(v) }, Modifier.weight(1f), role = Role.Button, filled = true) }
     }
 }
 
@@ -401,7 +390,8 @@ private fun ValueStepper(less: String, more: String, onLess: () -> Unit, onMore:
 @Composable
 private fun TapValue(parts: List<Pair<String, String>>, hint: String?, onClick: () -> Unit) {
     Column(
-        Modifier.clip(RoundedCornerShape(12.dp)).clickable(onClickLabel = StartCopy.TAP_TO_TYPE, onClick = onClick).padding(horizontal = 8.dp),
+        Modifier.clip(RoundedCornerShape(12.dp)).clickable(onClickLabel = StartCopy.TAP_TO_TYPE,
+            onClick = onClick).padding(horizontal = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Row {
@@ -412,7 +402,8 @@ private fun TapValue(parts: List<Pair<String, String>>, hint: String?, onClick: 
                 Text(unit, color = Color.White.copy(alpha = 0.75f), style = GlowType.body, modifier = Modifier.alignByBaseline())
             }
         }
-        if (hint != null) Text(hint, color = Color.White.copy(alpha = GlowType.CAPTION_ALPHA), style = GlowType.caption, modifier = Modifier.padding(top = 4.dp))
+        if (hint != null) Text(hint, color = Color.White.copy(alpha = GlowType.CAPTION_ALPHA), style = GlowType.caption,
+            modifier = Modifier.padding(top = 4.dp))
     }
 }
 
@@ -547,7 +538,8 @@ internal fun TimeGoal(
                     // Once on to the minutes, the hours field can still send its old figure as it lets go: ignored.
                     if (hoursDone) return@TypedNumber
                     // The figure just typed, whether the keyboard replaced the selected hour or added after it.
-                    hours = v.copy(text = v.text.filter { it.isDigit() }.takeLast(1), selection = TextRange(1).takeIf { v.text.length > 1 } ?: v.selection)
+                    hours = v.copy(text = v.text.filter { it.isDigit() }.takeLast(1),
+                        selection = TextRange(1).takeIf { v.text.length > 1 } ?: v.selection)
                     // One figure of hours, then on to the minutes.
                     if (hours.text.length == 1 && v.text != selectedText(v)) { hoursDone = true; minutesFocus.requestFocus() }
                 },
@@ -558,7 +550,8 @@ internal fun TimeGoal(
             TypedNumber(
                 minutes, { v -> minutes = v.copy(text = v.text.filter { it.isDigit() }.take(3)) },
                 stringResource(R.string.glow_unit_min), focused == 1,
-                Modifier.focusRequester(minutesFocus).tracked(1).onFocusChanged { if (!it.isFocused) hoursDone = false }, KeyboardType.Number, ImeAction.Done, { focusManager.clearFocus() },
+                Modifier.focusRequester(minutesFocus).tracked(1).onFocusChanged { if (!it.isFocused) hoursDone = false },
+                    KeyboardType.Number, ImeAction.Done, { focusManager.clearFocus() },
             )
         } else TapValue(StartCopy.timeParts(seconds), StartCopy.TAP_TO_TYPE) {
             hours = selected("${seconds / 3600}"); minutes = selected("${seconds / 60 % 60}"); everFocused = false; hoursDone = false; onTyping(true)
@@ -580,10 +573,12 @@ private fun selectedText(v: TextFieldValue): String = v.text.substring(v.selecti
  * zones' colours with where each starts, its note, and Your zones to open the Heart rate zones page.
  */
 @Composable
-private fun ZoneGoal(goal: WorkoutTarget.Zones, onGoal: (WorkoutTarget.Zones) -> Unit, zones: HeartZones, maxHr: Int?, onYourZones: () -> Unit) {
+private fun ZoneGoal(goal: WorkoutTarget.Zones, onGoal: (WorkoutTarget.Zones) -> Unit, zones: HeartZones, maxHr: Int?,
+    onYourZones: () -> Unit) {
     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(goal.label, color = Color.White, style = GlowType.smallValue)
-        if (maxHr != null) Text(StartCopy.zoneRangeLine(goal, zones, maxHr), color = Color.White.copy(alpha = 0.7f), style = GlowType.body, textAlign = TextAlign.Center)
+        if (maxHr != null) Text(StartCopy.zoneRangeLine(goal, zones, maxHr), color = Color.White.copy(alpha = 0.7f),
+            style = GlowType.body, textAlign = TextAlign.Center)
     }
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         (0 until Workouts.ZONES).forEach { z ->
@@ -591,7 +586,8 @@ private fun ZoneGoal(goal: WorkoutTarget.Zones, onGoal: (WorkoutTarget.Zones) ->
             val color = ZONE_COLORS[z]
             Column(
                 Modifier.weight(1f).height(56.dp).clip(RoundedCornerShape(14.dp)).background(if (on) color else ZoneOff)
-                    .drawBehind { if (!on) drawRect(color, Offset(0f, size.height - 3.dp.toPx()), androidx.compose.ui.geometry.Size(size.width, 3.dp.toPx())) }
+                    .drawBehind { if (!on) drawRect(color, Offset(0f, size.height - 3.dp.toPx()),
+                        androidx.compose.ui.geometry.Size(size.width, 3.dp.toPx())) }
                     .pressClickable({ onGoal(WorkoutSetup.pickZone(goal, z)) }, RoundedCornerShape(14.dp))
                     .semantics { selected = on; role = Role.Button },
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -599,7 +595,8 @@ private fun ZoneGoal(goal: WorkoutTarget.Zones, onGoal: (WorkoutTarget.Zones) ->
             ) {
                 val ink = if (on) Color.Black else Color.White.copy(alpha = 0.75f)
                 Text("Z${z + 1}", color = ink, style = GlowType.body.copy(fontWeight = FontWeight.SemiBold))
-                if (maxHr != null) Text("${zones.startBpm(z, maxHr)}", color = ink.copy(alpha = ink.alpha * 0.75f), style = GlowType.caption)
+                if (maxHr != null) Text("${zones.startBpm(z, maxHr)}", color = ink.copy(alpha = ink.alpha * 0.75f),
+                    style = GlowType.caption)
             }
         }
     }
@@ -655,7 +652,8 @@ private fun IntervalsGoal(
             Number(2)
             ValueWords(stringResource(R.string.glow_ready_rest_between))
         }
-        if (focused == 1) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+        if (focused == 1) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically) {
             Text(StartCopy.EACH_REP_IN, color = Color.White.copy(alpha = 0.6f), style = GlowType.secondary)
             Spacer(Modifier.width(10.dp))
             StartCopy.RepUnit.entries.forEach { e ->
@@ -668,7 +666,8 @@ private fun IntervalsGoal(
         GoalNote(StartCopy.INTERVALS_TYPING)
         return
     }
-    Presets(StartCopy.INTERVAL_PRESETS.map { it to StartCopy.structureName(it) }, reps.copy(warmUp = false)) { onReps(it.warm(reps.warmUp)) }
+    Presets(StartCopy.INTERVAL_PRESETS.map { it to StartCopy.structureName(it) },
+        reps.copy(warmUp = false)) { onReps(it.warm(reps.warmUp)) }
     GoalNote(StartCopy.intervalsNote(reps))
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally)) {
         PageButton(StartCopy.SAVE_INTERVALS, { sheet = SAVE }, icon = AppIcons.Plus)
@@ -761,7 +760,8 @@ internal fun TypedValue(
             onTyping(true)
         }
     }
-    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(if (typing) 10.dp else 8.dp)) {
+    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(if (typing) 10.dp else 8.dp)) {
         TypedValueScope(texts.map { it.text }.takeIf { typing }, focused.takeIf { typing }, number).lines()
         if (!typing && hint != null) Text(hint, color = Color.White.copy(alpha = GlowType.CAPTION_ALPHA), style = GlowType.caption)
     }
@@ -775,7 +775,8 @@ internal fun RowScope.ValueWords(text: String) =
 /** The × between a count and what's counted: "6 × 400 m". */
 @Composable
 internal fun RowScope.Times() =
-    Text("×", color = Color.White.copy(alpha = 0.5f), style = GlowType.goalValueMinor, modifier = Modifier.alignByBaseline().padding(horizontal = 4.dp))
+    Text("×", color = Color.White.copy(alpha = 0.5f), style = GlowType.goalValueMinor,
+        modifier = Modifier.alignByBaseline().padding(horizontal = 4.dp))
 
 private const val SAVE = 0
 private const val SAVED = 1
@@ -783,7 +784,8 @@ private const val SAVED = 1
 /** One number of the intervals to tap and type, with its [unit] after it, on the shared baseline. */
 @Composable
 internal fun RowScope.TapNumber(n: String, unit: String?, style: TextStyle, onClick: () -> Unit) {
-    Row(Modifier.alignByBaseline().clip(RoundedCornerShape(10.dp)).clickable(onClickLabel = StartCopy.TAP_TO_TYPE, onClick = onClick).padding(horizontal = 4.dp)) {
+    Row(Modifier.alignByBaseline().clip(RoundedCornerShape(10.dp)).clickable(onClickLabel = StartCopy.TAP_TO_TYPE,
+        onClick = onClick).padding(horizontal = 4.dp)) {
         Text(n, color = Color.White, style = style, modifier = Modifier.alignByBaseline())
         if (unit != null) {
             Spacer(Modifier.width(4.dp))
@@ -796,9 +798,14 @@ internal fun RowScope.TapNumber(n: String, unit: String?, style: TextStyle, onCl
 @Composable
 private fun SaveIntervalsSheet(reps: Structure.Reps, onSave: (String) -> Unit, onDismiss: () -> Unit) {
     var name by rememberSaveable { mutableStateOf("") }
-    val title = stringResource(R.string.glow_ready_save_title, StartCopy.SAVE_INTERVALS, StartCopy.structureName(reps))
-    PageSheet(onDismiss, title, note = StartCopy.SAVE_NOTE) {
+    // Board HaloSaveIntervals: the title, the rounds under it, the name, the note, then Cancel and Save.
+    PageSheet(onDismiss, StartCopy.SAVE_INTERVALS, note = StartCopy.SAVE_NOTE) {
+        Text(StartCopy.structureName(reps), color = org.openstrap.app.ui.glow.live.LiveLabelInk, style = GlowType.body)
         PageField(name, { name = it.take(40) }, null, placeholder = StartCopy.NAME_HINT)
-        PageButton(StartCopy.SAVE_INTERVALS, { onSave(name.trim()) }, Modifier.fillMaxWidth(), enabled = name.isNotBlank(), primary = true, icon = AppIcons.Plus)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            PageButton(stringResource(R.string.glow_cancel), onDismiss, Modifier.weight(1f))
+            PageButton(stringResource(R.string.glow_save), { onSave(name.trim()) }, Modifier.weight(1f),
+                enabled = name.isNotBlank(), primary = true)
+        }
     }
 }

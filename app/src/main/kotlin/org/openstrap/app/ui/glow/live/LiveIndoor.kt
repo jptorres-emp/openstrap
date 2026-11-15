@@ -84,14 +84,13 @@ internal fun LiveIndoorScreen(
         paused = { LivePaused(r, liveHeartRate.takeIf { connected }, recent, figures) },
     ) {
         // Time reps on the treadmill side: the rep above the heart.
-        if (r.structure is org.openstrap.app.data.Structure.Reps) RepCard(r, emptyList(), recent, liveHeartRate.takeIf { connected && !r.paused })
+        if (r.structure is org.openstrap.app.data.Structure.Reps) RepCard(r, emptyList(), recent,
+            liveHeartRate.takeIf { connected && !r.paused })
         val reading = liveHeartRate.takeIf { connected && !r.paused }
         if (split) ZoneTimeBar(zoneSeconds, WorkoutRecorder.liveZone(reading, r.maxHeartRate, heartZones))
-        // A whole screen this short is a phone on its side: the arc can't fit beside the controls, the number can.
-        else if (compact) CompactHeartCard(r, liveHeartRate, zoneSeconds, connected, { active.value }, kcal?.active)
         else WorkoutHeartCard(
-            r, liveHeartRate, recent, zoneSeconds, connected, { active.value }, Modifier.fillMaxWidth(),
-            kcal = kcal?.active, zoneBar = true,
+            r, liveHeartRate, zoneSeconds, connected, { active.value }, Modifier.fillMaxWidth(),
+            kcal = kcal?.active, zoneBar = !compact,
         )
         LiveFigures(figures, Modifier.padding(top = 4.dp))
     }
@@ -118,35 +117,5 @@ internal fun ZoneTimeBar(zoneSeconds: ZoneSeconds, current: Int?) {
         }
         Segment(maxOf(s.toFloat() / total, 0.04f), color)
     }
-    SegmentBar(segments, Modifier.semantics { contentDescription = described }, height = 8.dp, gap = 3.dp)
-}
-
-/**
- * The live heart card on a short screen (a phone on its side): the bpm in dots with the zone beside it, the time in
- * each zone as a bar, and the card's notes, lit as the full card is ([WorkoutHeartCard]), without the arc and the
- * last ten minutes that need its height.
- */
-@Composable
-private fun CompactHeartCard(
-    r: WorkoutState.Recording, liveHeartRate: Int?, zoneSeconds: ZoneSeconds, connected: Boolean, active: () -> Long, kcal: Float?,
-) {
-    val heartZones = LocalHeartZones.current
-    val bpm = liveHeartRate.takeIf { connected && !r.paused }
-    val zone = WorkoutRecorder.liveZone(bpm, r.maxHeartRate, heartZones)
-    val style = liveHeartStyle(workoutColor(r, liveHeartRate, connected, heartZones), bpm, zone, r.paused)
-    GlowCard(style, Modifier.fillMaxWidth()) {
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Row(verticalAlignment = Alignment.Bottom) {
-                if (bpm != null) HeroValue("$bpm", stringResource(R.string.workout_live_unit_bpm), dot = DotSize.Detail)
-                else Text(WorkoutCopy.noHeartRate(r.paused, connected), color = Color.White, style = GlowType.sentence)
-                Spacer(Modifier.weight(1f))
-                Text(
-                    zone?.let { WorkoutCopy.zoneLine(it) } ?: WorkoutCopy.noZone(r.paused),
-                    color = Color.White, style = GlowType.secondary, maxLines = 1,
-                )
-            }
-            ZoneTimeBar(zoneSeconds, zone)
-            HeartNotes(r, zone, zoneSeconds, active, kcal)
-        }
-    }
+    SegmentBar(segments, Modifier.semantics { contentDescription = described }, height = 10.dp, gap = 3.dp, corner = 3.dp)
 }

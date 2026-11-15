@@ -43,8 +43,6 @@ import androidx.compose.ui.unit.dp
 import org.openstrap.app.R
 import org.openstrap.app.data.Activity
 import org.openstrap.app.ui.glow.pictures.CountdownRing
-import org.openstrap.app.ui.glow.pictures.LevelFill
-import org.openstrap.app.ui.glow.pictures.PictureSize
 import org.openstrap.app.i18n.Strings
 import org.openstrap.app.data.DailyMetric
 import org.openstrap.app.data.RecoveryResult
@@ -182,7 +180,7 @@ private fun HeartPointsDetail(ctx: ActivityDetailContext) {
                 else StackedBars(
                     remember(daily) { dayOnDay(daily.map { it ?: 0f }) }, dayOnDayColor(color, daily.lastIndex),
                     ActivityCopy.HEART_POINTS_TARGET.toFloat(), week.map { DayWords.weekdayShort(it) }, spread = false,
-                    Modifier.padding(top = 8.dp), headroom = 18.dp, widest = Dp.Infinity,
+                    Modifier.padding(top = 8.dp), widest = Dp.Infinity,
                 ) { i ->
                     scrub = i?.let {
                         DetailHeadline(Math.round(daily[it] ?: 0f).toString(), ActivityCopy.earnedLabel(DayWords.short(week[it])), null)
@@ -365,12 +363,22 @@ private fun LoadDetail(ctx: ActivityDetailContext) {
         ranges = ranges, range = range, onRange = { rangeIndex = ranges.indexOf(it) }, scrubbed = { scrub },
         // The figures are the held day's ([ActivityDetailContext.stripDate]), so they move when it does.
         headlineDay = ctx.state.date,
-        // The Load card's picture: today's Load filling over your usual band, as on Today and Activity.
-        heroPicture = if (r != null && range == Range.Day) {
-            { DetailPicture(height = 40.dp) { m -> LevelFill(r.load, band, color, PictureSize.Wide, m) } }
-        } else null,
     ) {
         if (r != null && range == Range.Day) {
+            // The last 7 days as columns, the day shown white, your usual band behind them as a range (rules, Week picture).
+            item {
+                val last7 = (WEEK_DAYS - 1 downTo 0).map { date.minusDays(it.toLong()) }
+                val loads = last7.map { byDay[it] }
+                DetailColumns(
+                    loads, color, last7.map { DayWords.weekdayShort(it) }, modifier = Modifier.padding(top = 8.dp),
+                    band = band, bandLabel = band?.let(ActivityCopy::usualBandLabel),
+                    onScrub = { i ->
+                        scrub = i?.let { loads[it] }?.let { v ->
+                            DetailHeadline(Math.round(v).toString(), DayWords.short(last7[i]), loadWordOf(v, usual))
+                        }
+                    },
+                )
+            }
             item {
                 Column(Modifier.padding(top = 8.dp)) {
                     DetailFigures(
@@ -438,6 +446,9 @@ private fun LoadDetail(ctx: ActivityDetailContext) {
         notes = r?.let { InfoCopy.loadNotes(it.restingHr, it.maxHr, it.maxHrTested, it.acwr) }.orEmpty(),
     )
 }
+
+/** The days of the Load detail's Day picture. */
+private const val WEEK_DAYS = 7
 
 /** Each day's place against your usual band: above it lit, inside or below dim (a low day isn't off, just easy). */
 private fun levels(values: List<Float?>, band: ClosedFloatingPointRange<Float>?): List<DetailCopy.Level?> = values.map { v ->
@@ -748,7 +759,7 @@ private fun HourlyKcal(e: org.openstrap.app.data.EnergyExpenditure.Day, color: C
         val colors = listOf(color, WalkingKcal, EverydayKcal)
         StackedBars(
             stacks, { _, k -> colors[k] }, goal = null, labels = listOf("00", "06", "12", "18", "24"), spread = true,
-            Modifier.padding(top = 16.dp), height = 120.dp, onPick = onPick,
+            Modifier.padding(top = 16.dp), height = 140.dp, onPick = onPick,
         )
         Legend(
             listOf(
@@ -814,72 +825,46 @@ private fun RangeKcal(
 }
 
 /**
- * Bars stacked from the foot, one list of parts a bar, each part in the colour [colorOf] gives it. An empty bar isn't
- * drawn, only the hairline baseline under them. [goal] draws a solid line at 40% white over the bars. The tallest bar
- * or the goal stops [headroom] under the top, and a bar is at most [widest]. Labels under it: one a bar, or [spread]
- * across the width. Tapping or holding picks a bar ([onPick], null on release), and the others dim.
+ * Bars stacked from the foot, one list of parts a bar, each part in the colour [colorOf] gives it, on the detail chart frame
+ * (gridlines, values in the right gutter, labels under). An empty bar isn't drawn. [goal] is a dashed line. A bar is at most
+ * [widest]. Labels under it: one a bar, or [spread] across the width. Scrubbing or tapping picks a bar ([onPick], null
+ * on release), and the others dim.
  */
 @Composable
 private fun StackedBars(
     stacks: List<List<Float>>, colorOf: (bar: Int, part: Int) -> Color, goal: Float?, labels: List<String>, spread: Boolean,
-    modifier: Modifier = Modifier, height: Dp = 200.dp, headroom: Dp = 8.dp, widest: Dp = 14.dp, onPick: (Int?) -> Unit,
+    modifier: Modifier = Modifier, height: Dp = 200.dp, widest: Dp = 14.dp, onPick: (Int?) -> Unit,
 ) {
     val sums = remember(stacks) { stacks.map { it.sum() } }
-    var picked by remember(stacks) { mutableStateOf<Int?>(null) }
-    var width by remember { mutableStateOf(0f) }
-    val tick = rememberScrubHaptics()
-    fun indexAt(x: Float) = if (width <= 0f || stacks.isEmpty()) null else (x / (width / stacks.size)).toInt().coerceIn(0, stacks.lastIndex)
-    Column(modifier) {
-        Canvas(
-            Modifier.fillMaxWidth().height(height).onSizeChanged { width = it.width.toFloat() }
-                .scrub(sums) { x -> val i = x?.let(::indexAt); picked = i; tick(i, sums, null, false); onPick(i) }
-                .pointerInput(stacks) {
-                    detectTapGestures { o ->
-                        val i = indexAt(o.x)
-                        picked = if (picked == i) null else i
-                        tick(picked, sums, null, false)
-                        onPick(picked)
-                    }
-                },
-        ) {
-            val top = headroom.toPx()
-            val hi = maxOf(goal ?: 0f, sums.maxOrNull() ?: 0f).coerceAtLeast(1f)
-            fun yOf(v: Float) = top + (size.height - top) * (1f - v / hi)
-            val slot = size.width / stacks.size.coerceAtLeast(1)
-            val w = (slot * 0.6f).coerceAtMost(widest.toPx())
-            val r = CornerRadius(minOf(4.dp.toPx(), w / 2))
-            drawLine(DetailGridInk, Offset(0f, size.height - 0.5.dp.toPx()), Offset(size.width, size.height - 0.5.dp.toPx()), 1.dp.toPx())
-            stacks.forEachIndexed { i, parts ->
-                val sum = sums[i]
-                if (sum <= 0f) return@forEachIndexed
-                val x = slot * i + (slot - w) / 2
-                val a = if (picked != null && picked != i) 0.35f else 1f
-                val bar = androidx.compose.ui.graphics.Path().apply {
-                    addRoundRect(androidx.compose.ui.geometry.RoundRect(x, yOf(sum), x + w, size.height, r))
-                }
-                clipPath(bar) {
-                    var below = 0f
-                    parts.forEachIndexed { k, v ->
-                        if (v <= 0f) return@forEachIndexed
-                        val c = colorOf(i, k)
-                        drawRect(c.copy(alpha = c.alpha * a), Offset(x, yOf(below + v)), Size(w, yOf(below) - yOf(below + v)))
-                        below += v
-                    }
+    val hi = maxOf(goal ?: 0f, sums.maxOrNull() ?: 0f).coerceAtLeast(1f)
+    val (scale, ticks) = remember(hi) { niceScale(0f, hi) }
+    DetailChart(
+        sums, scale, ticks, { Units.count(Math.round(it), Units.DOT_LOCALE) }, labels, modifier, height,
+        perColumn = !spread && labels.size == stacks.size, onScrub = onPick,
+    ) { plot, picked ->
+        val slot = plot.plotRight / stacks.size.coerceAtLeast(1)
+        val w = (slot * 0.6f).coerceAtMost(widest.toPx())
+        val r = CornerRadius(minOf(4.dp.toPx(), w / 2))
+        val base = plot.y(0f)
+        stacks.forEachIndexed { i, parts ->
+            val sum = sums[i]
+            if (sum <= 0f) return@forEachIndexed
+            val x = slot * i + (slot - w) / 2
+            val a = if (picked != null && picked != i) 0.35f else 1f
+            val bar = androidx.compose.ui.graphics.Path().apply {
+                addRoundRect(androidx.compose.ui.geometry.RoundRect(x, plot.y(sum), x + w, base, r))
+            }
+            clipPath(bar) {
+                var below = 0f
+                parts.forEachIndexed { k, v ->
+                    if (v <= 0f) return@forEachIndexed
+                    val c = colorOf(i, k)
+                    drawRect(c.copy(alpha = c.alpha * a), Offset(x, plot.y(below + v)), Size(w, plot.y(below) - plot.y(below + v)))
+                    below += v
                 }
             }
-            goal?.let { g -> dashedGoalLine(yOf(g), size.width) }
         }
-        androidx.compose.foundation.layout.Row(
-            Modifier.fillMaxWidth().padding(top = 6.dp),
-            horizontalArrangement = if (spread) androidx.compose.foundation.layout.Arrangement.SpaceBetween else androidx.compose.foundation.layout.Arrangement.Start,
-        ) {
-            labels.forEach { l ->
-                Text(
-                    l, color = DetailAxisInk, style = GlowType.caption, maxLines = 1,
-                    modifier = if (spread) Modifier else Modifier.weight(1f), textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                )
-            }
-        }
+        goal?.let { g -> dashedGoalLine(plot.y(g), plot.plotRight) }
     }
 }
 

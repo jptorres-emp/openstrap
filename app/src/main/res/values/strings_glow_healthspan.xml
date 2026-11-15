@@ -87,8 +87,6 @@
     <string name="glow_healthspan_pace_title">Pace of aging</string>
     <!-- The pace list's note: its word and its multiple, "Slower" and "0.5x". -->
     <string name="glow_healthspan_pace_note"><xliff:g id="word" example="Slower">%1$s</xliff:g>, <xliff:g id="pace" example="0.5x">%2$s</xliff:g></string>
-    <!-- The pace list's row. -->
-    <string name="glow_healthspan_last_30_days">Last 30 days</string>
     <!-- The pace row before there's enough history. -->
     <string name="glow_healthspan_pace_needs">Needs 30 days with enough data, and 3 months before them to tell a real change from day-to-day noise.</string>
     <!-- The pace row when the last 30 days were better than usual. -->

@@ -135,6 +135,4 @@
     <string name="glow_metrics_zone_lower"><xliff:g id="label" example="Starts at">%1$s</xliff:g> lower</string>
     <!-- Read out by screen readers for the plus button. The label is "Starts at" or "Ends at". -->
     <string name="glow_metrics_zone_higher"><xliff:g id="label" example="Starts at">%1$s</xliff:g> higher</string>
-    <!-- A zone edge's heart rate between the minus and plus buttons. -->
-    <string name="glow_metrics_zone_bpm"><xliff:g id="bpm" example="132">%1$d</xliff:g> bpm</string>
 </resources>

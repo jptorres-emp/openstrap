@@ -53,5 +53,18 @@
     <string name="glow_metrics_zone_title">%1$s，%2$s</string>
     <string name="glow_metrics_zone_lower">%1$s调低</string>
     <string name="glow_metrics_zone_higher">%1$s调高</string>
-    <string name="glow_metrics_zone_bpm">%1$d bpm</string>
+    <string name="glow_detail_band_note">色带为你的常态</string>
+    <string name="glow_detail_your_normal">你的常态</string>
+    <string name="glow_detail_of_goal">目标 %1$s</string>
+    <string name="glow_zones_bpm_value">%1$d bpm</string>
+    <string name="glow_zones_worked_out_from">计算依据</string>
+    <string name="glow_zones_heading">区间</string>
+    <string name="glow_detail_worse">更差</string>
+    <string name="glow_detail_better">更好</string>
+    <string name="glow_detail_against_normal">对照你的常态</string>
+    <string name="glow_detail_since_woke">醒来以来</string>
+    <string name="glow_detail_through_day">全天变化</string>
+    <string name="glow_detail_at_waking_note">醒来时 %1$d</string>
+    <string name="glow_detail_seven_day_average">7 天平均</string>
+    <string name="glow_detail_vs_yesterday">较昨天</string>
 </resources>

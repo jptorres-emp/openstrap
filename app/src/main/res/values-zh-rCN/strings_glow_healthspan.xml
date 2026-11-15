@@ -42,7 +42,6 @@
     <string name="glow_healthspan_updated_weekly">每周更新，于周日</string>
     <string name="glow_healthspan_pace_title">衰老速率</string>
     <string name="glow_healthspan_pace_note">%1$s，%2$s</string>
-    <string name="glow_healthspan_last_30_days">近 30 天</string>
     <string name="glow_healthspan_pace_needs">需要 30 天充足的数据以及此前 3 个月的基线，以区分真实的趋势变化与日常波动。</string>
     <string name="glow_healthspan_pace_beat">你近 30 天的表现优于过去 6 个月的习惯水平。若继续保持，估算年龄将会下降。</string>
     <string name="glow_healthspan_pace_behind">你近 30 天的表现落后于过去 6 个月的习惯水平。若长期如此，估算年龄将会上升。</string>

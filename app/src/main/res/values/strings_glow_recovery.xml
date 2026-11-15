@@ -82,8 +82,6 @@
     <string name="glow_recovery_highest">Highest</string>
     <!-- Under a figure in the Energy detail: the day's lowest Energy. -->
     <string name="glow_recovery_lowest">Lowest</string>
-    <!-- Title of the list of what filled and drained Energy. -->
-    <string name="glow_recovery_where_it_went">Where it went</string>
     <!-- A row under a score's detail that opens last night's sleep. -->
     <string name="glow_recovery_last_night">Last night</string>
     <!-- The Last night row when the strap recorded no sleep. -->

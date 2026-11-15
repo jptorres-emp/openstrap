@@ -7,6 +7,8 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -319,6 +321,15 @@ internal fun DetailChart(
                     val i = x?.let { tx -> currentPick((tx / (width - gutter).coerceAtLeast(1f)).coerceIn(0f, 1f)) }
                     tick(i, values, null, false)
                     currentScrub?.invoke(i)
+                }.pointerInput(values) {
+                    // A tap picks a column, a second tap on it lets go.
+                    detectTapGestures { o ->
+                        val span = (width - gutter).coerceAtLeast(1f)
+                        val i = currentPick((o.x / span).coerceIn(0f, 1f))
+                        val same = touchX?.let { currentPick((it / span).coerceIn(0f, 1f)) } == i
+                        touchX = if (same) null else o.x
+                        currentScrub?.invoke(if (same) null else i)
+                    }
                 }
             },
     ) {

@@ -69,7 +69,6 @@ import org.openstrap.app.presentation.SLEEP_NAMES
 import org.openstrap.app.ui.dashboard.SLEEP_NIGHTS
 import org.openstrap.app.ui.dashboard.Score
 import org.openstrap.app.ui.dashboard.SleepCopy
-import org.openstrap.app.ui.dashboard.SleepWindows
 import org.openstrap.app.presentation.TabCopy
 import org.openstrap.app.ui.dashboard.sleepWeek
 import org.openstrap.app.ui.theme.AppIcons
@@ -207,9 +206,9 @@ internal fun SleepScoreDetail(
                     item {
                         Column(Modifier.padding(top = 8.dp)) {
                             // Moved, the strap's whole night shows with what's outside the user's times dimmed.
-                            if (moved && state.strapSleepStages.isNotEmpty()) GlowSleepStages(state.strapSleepStages, 150.dp, kept = session.start..session.end)
-                            else if (state.sleepStages.isNotEmpty()) GlowSleepStages(state.sleepStages, 150.dp)
-                            state.sleepBreakdown?.let { StageBars(it, Modifier.padding(top = 18.dp)) }
+                            if (moved && state.strapSleepStages.isNotEmpty()) DetailStages(state.strapSleepStages, kept = session.start..session.end)
+                            else if (state.sleepStages.isNotEmpty()) DetailStages(state.sleepStages)
+                            state.sleepBreakdown?.let { DetailStageShares(it, Modifier.padding(top = 18.dp)) }
                             // Times extended past the strap's have no stages for the added time, so the page says so.
                             if (detected != null && state.sleepBreakdown != null) {
                                 SleepCopy.stagesCover(session.start, session.end, detected.start, detected.end)?.let {
@@ -410,32 +409,6 @@ private fun EditedNote(text: String) {
 }
 
 /**
- * Stage bars (chart kit): each stage's name, a bar in its colour as long as its share of the night, and its time.
- * Under the hypnogram, deepest first.
- */
-@Composable
-private fun StageBars(b: Summaries.SleepBreakdown, modifier: Modifier = Modifier) {
-    val total = (b.asleepSeconds + b.awakeSeconds).coerceAtLeast(1)
-    val order = listOf(
-        org.openstrap.app.data.db.SleepStage.DEEP, org.openstrap.app.data.db.SleepStage.REM,
-        org.openstrap.app.data.db.SleepStage.LIGHT, org.openstrap.app.data.db.SleepStage.AWAKE,
-    )
-    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        order.forEach { st ->
-            val secs = b.byStage[st] ?: 0L
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(SLEEP_NAMES[st].orEmpty(), color = Color.White.copy(alpha = 0.85f), style = GlowType.secondary, modifier = Modifier.width(56.dp))
-                FillBar(secs.toFloat() / total, stageColor(st), Modifier.weight(1f), height = 10.dp)
-                Text(
-                    Units.duration(secs), color = Color.White, style = GlowType.secondary,
-                    modifier = Modifier.padding(start = 12.dp).width(56.dp), textAlign = androidx.compose.ui.text.style.TextAlign.End,
-                )
-            }
-        }
-    }
-}
-
-/**
  * The night's heart rate and breathing as lines with scrub (chart kit), each scrub moving the detail's headline
  * ([onScrub], null on release). Either is left out without readings. They sit below the fold, where the headline has
  * scrolled away, so a scrub also puts the reading in the line's own title row.
@@ -530,7 +503,7 @@ internal fun RegularityDetail(
         item {
             if (w == null) DetailEmpty(stringResource(R.string.glow_sleep_none_week))
             else Column(Modifier.padding(top = 8.dp)) {
-                SleepWindows(w.nights, w.usual, zone, selected = state.date, onNight = onSelectDay, height = 200.dp)
+                DetailSleepWindows(w.nights, w.usual, zone, selected = state.date, onNight = onSelectDay, height = 200.dp)
                 val night = state.sleep
                 val u = w.usual
                 Caption(

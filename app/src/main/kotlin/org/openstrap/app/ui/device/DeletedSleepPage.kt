@@ -16,12 +16,10 @@ import org.openstrap.app.ui.dashboard.ScreenList
 import org.openstrap.app.ui.dashboard.SleepCopy
 import org.openstrap.app.ui.glow.GlowLayout
 import org.openstrap.app.ui.glow.GlowType
-import org.openstrap.app.ui.glow.PageButton
 import org.openstrap.app.ui.glow.PageHeader
 import org.openstrap.app.ui.glow.PageNote
-import org.openstrap.app.ui.glow.PageRow
+import org.openstrap.app.ui.glow.PageItemRow
 import org.openstrap.app.ui.glow.PageRows
-import org.openstrap.app.ui.theme.AppIcons
 import java.time.ZoneId
 import org.openstrap.app.presentation.DayWords
 import org.openstrap.app.presentation.TimeOfDay
@@ -49,15 +47,11 @@ fun DeletedSleepPage(
         else item {
             PageRows {
                 deleted.forEachIndexed { i, r ->
-                    PageRow(
+                    PageItemRow(
                         SleepCopy.deletedName(r.strap.nap, DayWords.short(SleepCopy.deletedDay(r, zone))),
                         SleepCopy.deletedLine(clock(r.start), clock(r.end), r.edit?.let { SleepEdits.daysLeft(it, now) } ?: SleepEdits.KEEP_DAYS),
-                        below = true, divider = i > 0, icon = AppIcons.Moon,
-                    ) {
-                        PageButton(
-                            stringResource(R.string.you_action_restore), { onRestore(r.strap) }, icon = AppIcons.ArrowCounterClockwise,
-                        )
-                    }
+                        divider = i > 0, action = stringResource(R.string.you_action_restore), onAction = { onRestore(r.strap) },
+                    )
                 }
             }
         }

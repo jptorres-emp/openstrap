@@ -25,6 +25,9 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.NonRestartableComposable
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -85,8 +88,9 @@ import org.openstrap.app.ui.theme.ControlSurface
  */
 
 private val PanelShape = GlowLayout.CardShape
-private val PanelSurface = ListSurface
-private val Hairline = Color.White.copy(alpha = 0.05f)
+/** A settings group's panel (HaloYou board: #0C0D10), and the 1 px line between its rows (#1C1D22). */
+private val PanelSurface = Color(0xFF0C0D10)
+private val Hairline = Color(0xFF1C1D22)
 /** A [PageRow] whose page is open beside the list. */
 private val SelectedTint = Color.White.copy(alpha = 0.08f)
 
@@ -221,21 +225,26 @@ fun PagePanel(modifier: Modifier = Modifier, title: String? = null, note: String
 fun PageRows(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
     Column(
         // Clipped, so a selected row's tint keeps to the panel's corners.
-        modifier.fillMaxWidth().clip(PanelShape).background(PanelSurface, PanelShape)
-            .padding(GlowLayout.ListPadding),
-        content = content,
+        // No rim (HaloSystem board), and the rows carry their own sides, so a divider runs edge to edge (HaloYou board).
+        modifier.fillMaxWidth().clip(PanelShape).background(PanelSurface, PanelShape),
+        content = { CompositionLocalProvider(LocalRowInset provides PanelRowInset) { content() } },
     )
 }
 
+/** How far a settings row's content sits in from its panel's edge (HaloYou board: 16, or 12 before an icon tile). */
+internal val LocalRowInset = androidx.compose.runtime.staticCompositionLocalOf { 0.dp }
+private val PanelRowInset = 16.dp
+/** A row's least height inside a settings panel (HaloYou board: 56). */
+private val PanelRowHeight = 56.dp
+
 /**
- * A settings row: the [title], and its current [value] either on the right ([below] false, the Strap page) or as a
- * second line ([below] true, the You page). The title stays on one line (spec 2.3): where it and a value on the right
- * don't both fit on one line (a narrow column beside a pane), the value drops under it ([RowNameValue]).
- * [trailing] replaces the value on the right (a switch). [divider] draws
- * the hairline above it. [icon] sits quietly on the left, centred on the row, with the title and value lined up after it.
- * A row that opens something ([onClick], no [trailing]) ends in the tap caret (spec 2.5). [selected] marks the row
- * whose page is open beside the list on a wide screen: tinted across the panel's width. [dot] puts a [NoticeDot]
- * after the title of a [below] row: something new waits behind it.
+ * A settings row (HaloYou, HaloProfile and HaloRewardsSettingsRules boards): the [title], and its current [value] either
+ * on the right ([below] false: a value row, or an info row when nothing opens) or as a second line ([below] true: a nav
+ * row). The title stays on one line (spec 2.3): where it and a value on the right don't both fit on one line, the value
+ * drops under it ([RowNameValue]). [trailing] replaces the value on the right (a switch). [divider] draws the 1 px line
+ * above it. [icon] sits on a neutral 32 dp tile on the left. A row that opens something ([onClick], no [trailing]) ends in
+ * the small chevron. [selected] marks the row whose page is open beside the list on a wide screen: tinted across the
+ * panel's width. [dot] puts a [NoticeDot] after the title of a [below] row: something new waits behind it.
  */
 @Composable
 fun PageRow(
@@ -251,46 +260,67 @@ fun PageRow(
     dot: Boolean = false,
     trailing: (@Composable () -> Unit)? = null,
 ) {
+    val inPanel = LocalRowInset.current > 0.dp
+    // Read only when nothing opens and nothing trails: an info row, grey and without a chevron.
+    val info = onClick == null && trailing == null
+    // A nav row (an icon tile, a way on, a value) keeps its value under the name (HaloYou board).
+    val stacked = below || (icon != null && value != null && onClick != null && trailing == null)
     Row(
         Modifier.fillMaxWidth()
-            .let {
-                if (!selected) it else it.semantics { this.selected = true }.drawBehind {
-                    val inset = GlowLayout.CardInset.toPx()
-                    drawRect(SelectedTint, Offset(-inset, 0f), Size(size.width + 2 * inset, size.height))
-                }
-            }
+            .selectedTint(selected, inPanel)
             .let { if (onClick != null) it.clickable(enabled = enabled, onClick = onClick) else it }
             .topHairline(divider, Hairline)
             .alpha(if (enabled) 1f else 0.45f)
-            .padding(vertical = GlowLayout.RowPadding),
+            .rowFrame(hasIcon = icon != null),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (icon != null) RowIcon(icon)
-        if (below) Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        if (stacked) Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(RowLineGap)) {
             if (dot) Row(verticalAlignment = Alignment.CenterVertically) {
                 RowName(title, titleColor)
                 Spacer(Modifier.width(8.dp))
                 NoticeDot()
             } else RowName(title, titleColor)
             if (value != null) Text(value, color = RowValueColor, style = GlowType.secondary)
-        } else RowNameValue(title, titleColor, value.takeIf { trailing == null }, Modifier.weight(1f))
+        } else RowNameValue(
+            title, titleColor, value.takeIf { trailing == null }, Modifier.weight(1f),
+            valueColor = if (info) RowValueColor else RowPickedValueColor, valueStyle = GlowType.rowValue,
+        )
         if (trailing != null) {
             Spacer(Modifier.width(12.dp))
             trailing()
         } else if (onClick != null) {
             Spacer(Modifier.width(RowCaretGap))
-            TapCaret(ROW_CARET_ALPHA)
+            RowChevron()
         }
     }
 }
 
-/** A settings row's [icon], quiet on the left and centred on the row, with the gap to its title after it. */
+/** The tint of the [selected] row whose page is open beside the list, across the panel (or the card's padding too, outside a panel). */
+private fun Modifier.selectedTint(selected: Boolean, inPanel: Boolean): Modifier =
+    if (!selected) this else semantics { this.selected = true }.drawBehind {
+        val bleed = if (inPanel) 0f else GlowLayout.CardInset.toPx()
+        drawRect(SelectedTint, Offset(-bleed, 0f), Size(size.width + 2 * bleed, size.height))
+    }
+
+/** A settings row's [icon] on a neutral tile (HaloYou board: 32 across, #17181C, the icon 17 in #C9CED6), then the gap to its title. */
 @Composable
 private fun RowIcon(icon: ImageVector) {
-    Box(Modifier.padding(end = 14.dp).width(20.dp), contentAlignment = Alignment.Center) {
-        Icon(icon, null, Modifier.size(20.dp), tint = Color.White.copy(alpha = 0.7f))
-    }
+    Box(
+        Modifier.padding(end = 12.dp).size(IconTileSize).clip(GlowLayout.IconShape).background(HaloButtonSurface),
+        contentAlignment = Alignment.Center,
+    ) { Icon(icon, null, Modifier.size(17.dp), tint = IconTileInk) }
 }
+
+/** A settings icon tile (HaloYou board). */
+private val IconTileSize = 32.dp
+private val IconTileInk = Color(0xFFC9CED6)
+
+/** The small chevron at the end of a row that opens something (HaloYou board: 14, #6E7480). */
+@Composable
+internal fun RowChevron() = Icon(AppIcons.TapCaret, null, tint = ChevronInk, modifier = Modifier.size(CaretSize))
+
+private val ChevronInk = Color(0xFF6E7480)
 
 /**
  * Something new waits behind what it sits on (a new version, on the avatar and the Updates row): a small white dot,
@@ -302,18 +332,37 @@ fun NoticeDot(modifier: Modifier = Modifier, ring: Color? = null) {
     else Box(modifier.size(11.dp).background(ring, CircleShape).padding(2.dp).background(Color.White, CircleShape))
 }
 
-/** A row's value in Secondary, on the right or under the name. */
-private val RowValueColor = Color.White.copy(alpha = 0.6f)
+/** A row's note, an info row's value and a second line: #9AA0AA (HaloRewardsSettingsRules board). */
+private val RowValueColor = GlowType.noteColor
+
+/** A value row's value, which opens a picker: white at 80% (HaloProfile board). */
+private val RowPickedValueColor = Color.White.copy(alpha = GlowType.ROW_VALUE_ALPHA)
 
 /** A row's name in Body, on one line (spec 2.3): ellipsized only when it alone is wider than the row. */
 @Composable
 internal fun RowName(name: String, color: Color = Color.White) =
     Text(name, color = color, style = GlowType.body, maxLines = 1, overflow = TextOverflow.Ellipsis)
 
-/** Between a row's name and the value on its right. */
-private val RowValueGap = 12.dp
-/** Between a row's name and the value dropped under it. */
-private val RowLineGap = 3.dp
+/** Between a row's name and the value on its right (HaloProfile board: 10). */
+private val RowValueGap = 10.dp
+/** Between a row's name and the value dropped under it (HaloYou board: 2). */
+private val RowLineGap = 2.dp
+
+/**
+ * A settings row's frame (HaloYou board): at least 56 tall with 10 above and below, 16 in from the panel's edge (12 before
+ * an icon tile) and 14 at its end. Outside a settings panel (a row on a card or in a sheet) the sides are the container's.
+ */
+@Composable
+@ReadOnlyComposable
+private fun Modifier.rowFrame(hasIcon: Boolean): Modifier {
+    val inset = LocalRowInset.current
+    val inPanel = inset > 0.dp
+    return heightIn(min = if (inPanel) PanelRowHeight else 0.dp).padding(
+        start = if (!inPanel) 0.dp else if (hasIcon) 12.dp else inset,
+        end = if (inPanel) 14.dp else 0.dp,
+        top = if (inPanel) 10.dp else GlowLayout.RowPadding, bottom = if (inPanel) 10.dp else GlowLayout.RowPadding,
+    )
+}
 
 /**
  * Whether a row's value sits on the right of its name ([nameWidth] and [valueWidth] each on one line) in a row
@@ -327,11 +376,18 @@ internal fun valueBeside(nameWidth: Int, valueWidth: Int, available: Int, gap: I
  * keeps to one line either way.
  */
 @Composable
-internal fun RowNameValue(name: String, nameColor: Color, value: String?, modifier: Modifier = Modifier) {
+internal fun RowNameValue(
+    name: String,
+    nameColor: Color,
+    value: String?,
+    modifier: Modifier = Modifier,
+    valueColor: Color = RowValueColor,
+    valueStyle: TextStyle = GlowType.secondary,
+) {
     Layout(
         content = {
             RowName(name, nameColor)
-            if (value != null) Text(value, color = RowValueColor, style = GlowType.secondary, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            if (value != null) Text(value, color = valueColor, style = valueStyle, maxLines = 2, overflow = TextOverflow.Ellipsis)
         },
         modifier = modifier,
     ) { measurables, cs ->
@@ -390,7 +446,7 @@ fun <T> PageMenuRow(
                 Modifier.fillMaxWidth()
                     .clickable(enabled = enabled, onClickLabel = changeLabel, role = Role.DropdownList) { open = true }
                     .alpha(if (enabled) 1f else 0.45f)
-                    .padding(vertical = GlowLayout.RowPadding),
+                    .rowFrame(hasIcon = false),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 val value = selected?.let(label)
@@ -399,11 +455,11 @@ fun <T> PageMenuRow(
                     Spacer(Modifier.width(RowValueGap))
                     Text(
                         value, style = GlowType.secondary, maxLines = 1,
-                        color = if (selected.let(quiet)) Color.White.copy(alpha = 0.4f) else RowValueColor,
+                        color = if (selected.let(quiet)) Color.White.copy(alpha = 0.4f) else RowPickedValueColor,
                     )
                 }
                 Spacer(Modifier.width(RowCaretGap))
-                Icon(AppIcons.CaretDown, null, tint = Color.White.copy(alpha = ROW_CARET_ALPHA), modifier = Modifier.size(CaretSize))
+                Icon(AppIcons.CaretDown, null, tint = ChevronInk, modifier = Modifier.size(CaretSize))
             }
             Box(Modifier.align(Alignment.BottomEnd)) {
                 DropdownMenu(
@@ -414,7 +470,7 @@ fun <T> PageMenuRow(
                     options.forEach { o ->
                         val on = o == selected
                         DropdownMenuItem(
-                            text = { Text(label(o), style = GlowType.body, color = if (on) Color.White else RowValueColor) },
+                            text = { Text(label(o), style = GlowType.body, color = if (on) Color.White else RowPickedValueColor) },
                             onClick = { open = false; if (!on) onPick(o) },
                             trailingIcon = if (on) ({ Icon(AppIcons.Tick02, null, tint = Color.White, modifier = Modifier.size(18.dp)) }) else null,
                             modifier = Modifier.widthIn(min = 180.dp).semantics { this.selected = on },
@@ -423,7 +479,10 @@ fun <T> PageMenuRow(
                 }
             }
         }
-        if (note != null) Text(note, color = RowValueColor, style = GlowType.secondary, modifier = Modifier.padding(bottom = GlowLayout.RowPadding))
+        if (note != null) Text(
+            note, color = RowValueColor, style = GlowType.secondary,
+            modifier = Modifier.padding(start = LocalRowInset.current, end = 14.dp, bottom = GlowLayout.RowPadding),
+        )
     }
 }
 
@@ -431,7 +490,7 @@ private val MenuShape = RoundedCornerShape(18.dp)
 private val MenuSurface = Color(0xFF232326)
 
 /**
- * A row with a switch: the [title], an optional [subtitle] under it, and the switch on the right. A tap anywhere on
+ * A row with a switch (HaloBackup board): the [title], an optional [subtitle] under it, and the switch on the right. A tap anywhere on
  * the row flips it, so a long name is as easy to hit as the switch. [icon] sits on the left as on a [PageRow].
  */
 @Composable
@@ -448,11 +507,11 @@ fun PageSwitchRow(
         Modifier.fillMaxWidth()
             .toggleable(checked, enabled = enabled, role = Role.Switch, onValueChange = onChange)
             .topHairline(divider, Hairline)
-            .padding(vertical = GlowLayout.RowPadding),
+            .rowFrame(hasIcon = icon != null),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (icon != null) RowIcon(icon)
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(RowLineGap)) {
             RowName(title)
             if (subtitle != null) Text(subtitle, color = RowValueColor, style = GlowType.secondary)
         }
@@ -552,7 +611,7 @@ fun PageTextButton(
 }
 
 /**
- * A text field in the tile style (spec 2.4): the Control surface with 16 dp corners, the [label] over it in
+ * A text field in the tile style (HaloRewardsSettingsRules board, B5: #17181C, a squircle), the [label] over it in
  * Secondary, the text in Body, an optional [unit] after it. [error] draws an amber hairline round it.
  */
 @Composable
@@ -570,9 +629,9 @@ fun PageField(
     trailing: (@Composable () -> Unit)? = null,
 ) {
     Column(modifier.alpha(if (enabled) 1f else 0.45f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        if (label != null) Text(label, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary)
+        if (label != null) Text(label, color = GlowType.noteColor, style = GlowType.secondary)
         Row(
-            Modifier.fillMaxWidth().heightIn(min = 52.dp).clip(GlowLayout.TileShape).background(ControlSurface)
+            Modifier.fillMaxWidth().heightIn(min = 52.dp).clip(GlowLayout.TileShape).background(HaloButtonSurface)
                 .let { if (error) it.border(1.dp, MetricColors.warn, GlowLayout.TileShape) else it }
                 .padding(start = 16.dp, end = if (trailing != null) 4.dp else 16.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -683,8 +742,9 @@ fun PageConfirm(
 }
 
 /**
- * A chip (spec 2.4, fully round): a hairline and 72% text, or white with black text when [selected]. A [filled] chip
- * sits on the Control surface instead of the hairline, for a lone chip like Live. Secondary type, at least 36 dp tall.
+ * A chip (spec 2.4, fully round): a hairline and 72% text, or, when [selected], dark (#34363E) with a 1.5 dp white ring
+ * and white text, because a picked chip is not the next tap (HaloRewardsSettingsRules board, picked state). A [filled]
+ * chip sits on the dark button surface instead of the hairline, for a lone chip like Live. Secondary type, at least 36 dp tall.
  * A [description] is what TalkBack reads in place of a [text] too short to say it, like a day's letter.
  */
 @Composable
@@ -700,8 +760,14 @@ fun PageChip(
 ) {
     Box(
         modifier.heightIn(min = 36.dp).clip(CircleShape)
-            .background(if (selected) Color.White else if (filled) ControlSurface else Color.Transparent)
-            .let { if (selected || filled) it else it.border(1.dp, Color.White.copy(alpha = 0.16f), CircleShape) }
+            .background(if (selected) PickedSurface else if (filled) HaloButtonSurface else Color.Transparent)
+            .let {
+                when {
+                    selected -> it.border(PickedRing, Color.White, CircleShape)
+                    filled -> it
+                    else -> it.border(1.dp, Color.White.copy(alpha = 0.16f), CircleShape)
+                }
+            }
             .alpha(if (enabled) 1f else 0.4f)
             .clickable(enabled = enabled, role = role, onClick = onClick)
             .semantics {
@@ -712,12 +778,16 @@ fun PageChip(
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            text, color = if (selected) Color.Black else Color.White.copy(alpha = GlowType.SECONDARY_ALPHA),
+            text, color = if (selected) Color.White else Color.White.copy(alpha = GlowType.SECONDARY_ALPHA),
             style = GlowType.secondary, maxLines = 1,
             modifier = if (description != null) Modifier.clearAndSetSemantics {} else Modifier,
         )
     }
 }
+
+/** A picked chip or option's fill and ring (HaloManualPair board: #34363E with a 1.5 px white ring). */
+internal val PickedSurface = Color(0xFF34363E)
+internal val PickedRing = 1.5.dp
 
 /**
  * A pill that names a choice or does one thing: an [icon] in [tint] or a [dot], the [label] in [style] (Body), and a
@@ -764,8 +834,11 @@ internal fun IconPill(
     }
 }
 
+/** A segmented control's track (HaloRewardsSettingsRules board, B4: #111215, the picked segment white). */
+private val SegmentTrack = Color(0xFF111215)
+
 /**
- * A row of choices on a faint pill, the chosen one on a soft white pill: Female or Male, Day to Year, a route on or
+ * A row of choices on a dark track, the chosen one on a white pill: Female or Male, Day to Year, a route on or
  * off, how you feel. [selected] -1 leaves none chosen. [role] is what each choice is to a screen reader (a tab for
  * the ranges that switch a detail's chart).
  */
@@ -779,18 +852,18 @@ internal fun GlowSegments(
     modifier: Modifier = Modifier,
     role: Role = Role.RadioButton,
 ) {
-    Row(modifier.fillMaxWidth().clip(CircleShape).background(Color.White.copy(alpha = 0.06f)).padding(4.dp)) {
+    Row(modifier.fillMaxWidth().clip(CircleShape).background(SegmentTrack).padding(4.dp)) {
         options.forEachIndexed { i, label ->
             val on = i == selected
             Box(
                 Modifier.weight(1f).clip(CircleShape)
-                    .background(if (on) Color.White.copy(alpha = 0.16f) else Color.Transparent)
+                    .background(if (on) Color.White else Color.Transparent)
                     .pressClickable({ onSelect(i) }, CircleShape, scale = 0.97f)
                     .semantics { this.role = role; this.selected = on }
                     .padding(vertical = 9.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(label, color = if (on) Color.White else Color.White.copy(alpha = 0.6f), style = GlowType.body, maxLines = 1)
+                Text(label, color = if (on) Color.Black else Color.White.copy(alpha = 0.6f), style = GlowType.body, maxLines = 1)
             }
         }
     }
@@ -798,18 +871,18 @@ internal fun GlowSegments(
 
 /**
  * A small heading in Secondary over what it names: a panel of rows (so two panels never sit back to back), a row of
- * chips, what a workout earned. [inset] lines it up with what's under it: a panel's rows sit [PanelLabelInset] in.
+ * chips, what a workout earned. [inset] lines it up with what's under it: a group heading sits 4 in (HaloYou board).
  */
 @Composable
 fun SectionLabel(text: String, modifier: Modifier = Modifier, inset: Dp = 4.dp) {
     Text(
-        text, modifier.padding(start = inset), color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary,
+        text, modifier.padding(start = inset), color = GlowType.noteColor, style = GlowType.secondary,
         maxLines = 1, overflow = TextOverflow.Ellipsis,
     )
 }
 
-/** How far a [SectionLabel] over a panel of rows sits in, near the rows' own inset. */
-val PanelLabelInset = 18.dp
+/** How far a [SectionLabel] over a panel of rows sits in (HaloYou board: 4). */
+val PanelLabelInset = 4.dp
 
 /**
  * A status in a few words with a coloured dot (spec 2.1, the strap's state): "Strap ready, 72 bpm", "GPS good". The
@@ -819,28 +892,29 @@ val PanelLabelInset = 18.dp
 internal fun StatusDot(text: String, dot: Color, modifier: Modifier = Modifier, dotAfter: Boolean = false) {
     Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         if (!dotAfter) Canvas(Modifier.size(6.dp)) { drawCircle(dot) }
-        Text(text, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary, maxLines = 1)
+        Text(text, color = GlowType.noteColor, style = GlowType.secondary, maxLines = 1)
         if (dotAfter) Canvas(Modifier.size(6.dp)) { drawCircle(dot) }
     }
 }
 
 /**
- * A secondary choice: a tile on the Control surface (spec 2.4) with a [caption] in Secondary over the [label] in Body,
+ * A secondary choice: a tile on the dark button surface (HaloRewardsSettingsRules board, B5) with a [caption] in Secondary
+ * over the [label] in Body,
  * and the tap caret at its end, so it reads as something that opens. As wide as it's given.
  */
 @Composable
 fun OptionButton(caption: String, label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Row(
-        modifier.fillMaxWidth().clip(GlowLayout.TileShape).background(ControlSurface).pressClickable(onClick, GlowLayout.TileShape)
+        modifier.fillMaxWidth().clip(GlowLayout.TileShape).background(HaloButtonSurface).pressClickable(onClick, GlowLayout.TileShape)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
-            Text(caption, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary)
+            Text(caption, color = GlowType.noteColor, style = GlowType.secondary)
             Text(label, color = Color.White, style = GlowType.body)
         }
         Spacer(Modifier.width(RowCaretGap))
-        TapCaret(ROW_CARET_ALPHA)
+        RowChevron()
     }
 }
 
@@ -871,8 +945,186 @@ private const val NUMBER_FIELD_LENGTH = 5
 
 /** A secondary line of explanation on a page. */
 @Composable
-fun PageNote(text: String, color: Color = Color.White.copy(alpha = 0.6f)) {
+fun PageNote(text: String, color: Color = GlowType.noteColor) {
     Text(text, color = color, style = GlowType.secondary)
+}
+
+/** A footnote under a group's panel (HaloYou board: 12 px, #6E7480, 4 in) for a panel that [PageGroup] doesn't build. */
+@Composable
+fun PageFootnote(text: String, modifier: Modifier = Modifier) =
+    Text(text, modifier.padding(horizontal = 4.dp), color = FootnoteInk, style = GlowType.footnote)
+
+/**
+ * The header's Save (HaloRewardsSettingsRules board, B1): a text pill on the right of a page that edits. Show it only
+ * while the page has unsaved edits: then it's the page's one white thing, and while [enabled] is false (edits that
+ * can't be saved yet) it stays dark and still.
+ */
+@Composable
+@NonRestartableComposable
+fun PageSaveButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true) =
+    PageButton(text, onClick, modifier, enabled = enabled, primary = enabled, size = ButtonSize.Row)
+
+/** A footnote under a group's panel (HaloYou board: 12, #6E7480). */
+private val FootnoteInk = GlowType.footnoteColor
+
+/**
+ * One settings group (HaloRewardsSettingsRules board, B2): a grey [heading] above, the panel of [rows] ([PageRows]), and
+ * a [footnote] under it, 8 apart and 4 in. Groups sit 24 apart in the page's column; a destructive group goes last.
+ */
+@Composable
+fun PageGroup(
+    modifier: Modifier = Modifier,
+    heading: String? = null,
+    footnote: String? = null,
+    rows: @Composable ColumnScope.() -> Unit,
+) {
+    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (heading != null) SectionLabel(heading)
+        PageRows(content = rows)
+        if (footnote != null) Text(footnote, Modifier.padding(horizontal = 4.dp), color = GlowType.footnoteColor, style = GlowType.footnote)
+    }
+}
+
+/**
+ * An action row, one that does something now (HaloBackup board): the [icon] and the [label] in white at 15 medium, or
+ * both in red when [destructive], and no chevron. While [busy] a spinner takes the icon's place and the row doesn't take taps.
+ */
+@Composable
+fun PageActionRow(
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    icon: ImageVector? = null,
+    destructive: Boolean = false,
+    busy: Boolean = false,
+    enabled: Boolean = true,
+    divider: Boolean = true,
+) {
+    val ink = if (destructive) DestructiveInk else Color.White
+    val inset = LocalRowInset.current
+    Row(
+        modifier.fillMaxWidth()
+            .clickable(enabled = enabled && !busy, role = Role.Button, onClick = onClick)
+            .topHairline(divider, Hairline)
+            .alpha(if (enabled) 1f else 0.45f)
+            .heightIn(min = PanelRowHeight)
+            .padding(horizontal = if (inset > 0.dp) inset else 0.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        if (busy) RowSpinner(ink) else if (icon != null) Icon(icon, null, Modifier.size(18.dp), tint = ink)
+        Text(label, color = ink, style = GlowType.body.copy(fontWeight = FontWeight.Medium), maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+private const val FULL_TURN = 360f
+private const val SPINNER_SWEEP = 270f
+private const val SPINNER_MS = 1000
+
+/** The 18 dp spinner that replaces an action row's icon while it works: a three-quarter ring turning once a second. */
+@Composable
+private fun RowSpinner(color: Color) {
+    val turn by rememberInfiniteTransition(label = "row spinner")
+        .animateFloat(0f, FULL_TURN, infiniteRepeatable(tween(SPINNER_MS, easing = LinearEasing)), label = "row spinner turn")
+    Canvas(Modifier.size(18.dp)) {
+        val stroke = 2.dp.toPx()
+        drawArc(
+            color, startAngle = turn, sweepAngle = SPINNER_SWEEP, useCenter = false,
+            topLeft = Offset(stroke / 2, stroke / 2), size = Size(size.width - stroke, size.height - stroke),
+            style = androidx.compose.ui.graphics.drawscope.Stroke(stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round),
+        )
+    }
+}
+
+/** An info row, read only (HaloRewardsSettingsRules board): the [name] on the left, the [value] on the right in #9AA0AA, no chevron. */
+@Composable
+@NonRestartableComposable
+fun PageInfoRow(name: String, value: String, divider: Boolean = true) = PageRow(name, value, divider = divider)
+
+/**
+ * An item row, a thing you own (HaloDeletedSleep and HaloAlarms boards): the [name] at 15 over its [details] at 13 in
+ * #9AA0AA, and one action pill on the right ([action], #17181C and 36 tall), or a [trailing] switch instead.
+ */
+@Composable
+fun PageItemRow(
+    name: String,
+    details: String,
+    modifier: Modifier = Modifier,
+    action: String? = null,
+    onAction: (() -> Unit)? = null,
+    divider: Boolean = true,
+    onClick: (() -> Unit)? = null,
+    trailing: (@Composable () -> Unit)? = null,
+) {
+    val inset = LocalRowInset.current
+    Row(
+        modifier.fillMaxWidth().let { if (onClick != null) it.clickable(onClick = onClick) else it }
+            .topHairline(divider, Hairline).heightIn(min = 64.dp)
+            .padding(start = inset, end = if (inset > 0.dp) 12.dp else 0.dp, top = 10.dp, bottom = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(RowLineGap)) {
+            RowName(name)
+            Text(details, color = RowValueColor, style = GlowType.secondary)
+        }
+        if (trailing != null) trailing()
+        else if (action != null && onAction != null) PageButton(action, onAction, size = ButtonSize.Row, modifier = Modifier.height(36.dp))
+    }
+}
+
+/** A text panel, for paragraphs such as release notes (HaloUpdates board): a plain panel, a 15 semibold [title] and 14 px text, no rows. */
+@Suppress("UnstableCollections", "ComposeUnstableCollections")
+@Composable
+fun PageTextPanel(title: String, paragraphs: List<String>, modifier: Modifier = Modifier) {
+    Column(
+        modifier.fillMaxWidth().clip(PanelShape).background(PanelSurface, PanelShape).padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Text(title, color = Color.White, style = GlowType.cardTitle, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        paragraphs.forEach { Text(it, color = TextPanelInk, style = GlowType.body) }
+    }
+}
+
+private val TextPanelInk = Color(0xFFC9CED6)
+
+/** How a [StatusBanner] reads: its bar is [color] (HaloRewardsSettingsRules board, B1). */
+enum class BannerKind(val color: Color) {
+    Good(MetricColors.good),
+    Warn(MetricColors.warn),
+    Problem(DestructiveInk),
+}
+
+/**
+ * A status banner, only when there's news (an update ready, a backup that failed, the strap away): a plain panel with a
+ * 4 dp bar on its left in the [kind]'s colour, a 15 semibold [title], a 13 px [note] and one action pill on the right
+ * when [action] is given.
+ */
+@Composable
+fun StatusBanner(
+    kind: BannerKind,
+    title: String,
+    modifier: Modifier = Modifier,
+    note: String? = null,
+    action: String? = null,
+    onAction: (() -> Unit)? = null,
+) {
+    Row(
+        modifier.fillMaxWidth().clip(PanelShape).background(PanelSurface, PanelShape).heightIn(min = 56.dp)
+            .padding(end = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Modifier.width(4.dp).height(56.dp).background(kind.color))
+        Spacer(Modifier.width(10.dp))
+        Column(Modifier.weight(1f).padding(vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Text(title, color = Color.White, style = GlowType.cardTitle, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if (note != null) Text(note, color = RowValueColor, style = GlowType.secondary)
+        }
+        if (action != null && onAction != null) {
+            Spacer(Modifier.width(12.dp))
+            PageButton(action, onAction, size = ButtonSize.Row, modifier = Modifier.height(36.dp))
+        }
+    }
 }
 
 /** A list row's divider: a 1 dp [color] line along its top, when [show] (every row but the first). */

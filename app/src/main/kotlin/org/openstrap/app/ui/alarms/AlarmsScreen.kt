@@ -33,15 +33,19 @@ import androidx.compose.ui.res.stringResource
 import org.openstrap.app.R
 import org.openstrap.app.i18n.Strings
 import androidx.compose.ui.graphics.Color
-import org.openstrap.app.ui.glow.DestructiveInk
 import org.openstrap.app.ui.glow.GlowLayout
 import org.openstrap.app.ui.glow.GlowType
 import org.openstrap.app.ui.theme.ControlSurface
+import org.openstrap.app.ui.glow.PageActionRow
 import org.openstrap.app.ui.glow.PageButton
+import org.openstrap.app.ui.glow.PageFootnote
+import org.openstrap.app.ui.glow.PageItemRow
+import org.openstrap.app.ui.glow.PageRows
+import org.openstrap.app.ui.glow.SectionLabel
+import org.openstrap.app.ui.theme.AppIcons
 import org.openstrap.app.ui.glow.PageChip
 import org.openstrap.app.ui.glow.PageConfirm
 import org.openstrap.app.ui.glow.PageSheet
-import org.openstrap.app.ui.glow.PageTextButton
 import org.openstrap.app.ui.glow.PageHeader
 import org.openstrap.app.ui.glow.PageMenuRow
 import org.openstrap.app.ui.glow.PageSwitchRow
@@ -220,36 +224,35 @@ private fun AlarmsPanel(
     onAdd: () -> Unit,
     onDeleteAll: () -> Unit,
 ) {
-    PagePanel(
-        title = stringResource(R.string.you_alarms_on_strap),
-        note = state.caps?.let { stringResource(R.string.you_alarms_count, state.alarms.size, it.maxCount) },
-    ) {
-        if (state.alarms.isEmpty()) PageNote(stringResource(R.string.you_alarms_none))
-        state.alarms.forEach { a ->
-            Row(Modifier.fillMaxWidth().clickable(enabled = !state.busy) { onEdit(a) }.padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    val ink = if (a.enabled) Color.White else Color.White.copy(alpha = 0.45f)
+    // Plain rows on the black page, the strap's alarms as item rows with a switch each (HaloAlarms board).
+    Column(verticalArrangement = Arrangement.spacedBy(24.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            val count = state.caps?.let { stringResource(R.string.you_alarms_count, state.alarms.size, it.maxCount) }
+            SectionLabel(listOfNotNull(stringResource(R.string.you_alarms_on_strap), count).joinToString(", "))
+            if (state.alarms.isEmpty()) PageNote(stringResource(R.string.you_alarms_none))
+            else PageRows {
+                state.alarms.forEachIndexed { i, a ->
                     val (digits, marker) = dotClock(a.hour, a.minute)
-                    Row(verticalAlignment = Alignment.Bottom) {
-                        org.openstrap.app.ui.glow.DotMatrixText(digits, dot = org.openstrap.app.ui.glow.draw.DotSize.Edge, color = ink)
-                        marker?.let { Text(it, style = GlowType.secondary, color = ink, modifier = Modifier.padding(start = 6.dp)) }
-                    }
-                    Text(daysLabel(a.days), style = GlowType.secondary, color = Color.White.copy(alpha = 0.6f), modifier = Modifier.padding(top = 6.dp))
+                    PageItemRow(
+                        listOfNotNull(digits, marker).joinToString(" "), daysLabel(a.days), divider = i > 0,
+                        onClick = if (state.busy) null else ({ onEdit(a) }),
+                        trailing = { org.openstrap.app.ui.glow.GlowSwitch(a.enabled, { onToggle(a, it) }, enabled = !state.busy) },
+                    )
                 }
-                org.openstrap.app.ui.glow.GlowSwitch(a.enabled, { onToggle(a, it) }, enabled = !state.busy)
             }
+            // Zepp's tip for this strap (alarm_stuttgart_close_tips).
+            PageFootnote(stringResource(R.string.you_alarms_tip))
         }
-        if (state.canAdd) {
-            PageButton(stringResource(R.string.you_alarms_add), onAdd, Modifier.fillMaxWidth(), enabled = !state.busy, primary = true)
+        if (state.canAdd) PageRows {
+            PageActionRow(stringResource(R.string.you_alarms_add), onAdd, icon = AppIcons.Plus, enabled = !state.busy, divider = false)
         }
-        if (state.alarms.size > 1) {
-            PageTextButton(
-                stringResource(R.string.you_alarms_delete_all), onDeleteAll, Modifier.align(Alignment.CenterHorizontally),
-                enabled = !state.busy, color = DestructiveInk,
+        // Destructive actions sit in a group of their own, last.
+        if (state.alarms.size > 1) PageRows {
+            PageActionRow(
+                stringResource(R.string.you_alarms_delete_all), onDeleteAll, icon = AppIcons.Trash, destructive = true,
+                enabled = !state.busy, divider = false,
             )
         }
-        // Zepp's tip for this strap (alarm_stuttgart_close_tips).
-        PageNote(stringResource(R.string.you_alarms_tip))
     }
 }
 
@@ -335,9 +338,9 @@ private fun AlarmSheet(alarm: Alarm, isNew: Boolean, busy: Boolean, onSave: (Ala
             )
         }
         if (!isNew) {
-            PageTextButton(
-                stringResource(R.string.you_alarms_delete), onDelete, Modifier.align(Alignment.CenterHorizontally),
-                enabled = !busy, color = DestructiveInk,
+            PageButton(
+                stringResource(R.string.you_alarms_delete), onDelete, Modifier.fillMaxWidth(),
+                enabled = !busy, destructive = true,
             )
         }
     }

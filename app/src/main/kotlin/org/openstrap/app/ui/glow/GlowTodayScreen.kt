@@ -98,7 +98,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.background
 import org.openstrap.app.ui.glow.draw.LightAngle
-import org.openstrap.app.ui.glow.pictures.EnergyRuler
 import org.openstrap.app.ui.glow.draw.heroStyle
 import org.openstrap.app.ui.glow.draw.WINDOW_RIM
 import org.openstrap.app.ui.glow.draw.AFTER_RIM
@@ -541,7 +540,7 @@ private fun ChargeHero(ctx: TodayContext, lightAngle: Float?, onOpen: () -> Unit
                     ),
                 ) else listOf(stringResource(R.string.glow_today_now)),
                 // The ruler of the day's level, a white tick at now (HaloCharts, Energy level).
-                above = { EnergyRuler(now.toFloat(), Color.White.copy(alpha = 0.85f), Modifier.width(150.dp).height(20.dp)) },
+                above = { HeroEnergyRuler(now.toFloat(), Modifier.fillMaxWidth().height(20.dp)) },
             )
         }
     }

@@ -69,6 +69,10 @@ import org.openstrap.app.ui.dashboard.goalTag
 import org.openstrap.app.ui.dashboard.offTag
 import org.openstrap.app.ui.dashboard.rimLit
 import org.openstrap.app.ui.glow.pictures.CountdownRing
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.foundation.layout.fillMaxHeight
+import org.openstrap.app.ui.glow.draw.level
+import org.openstrap.app.ui.glow.pictures.dotRing
 import org.openstrap.app.ui.glow.pictures.DayLine
 import org.openstrap.app.ui.glow.pictures.DayStrip
 import org.openstrap.app.ui.glow.pictures.LevelFill
@@ -130,8 +134,8 @@ internal fun HeroNumber(
             HaloNumber(value, Modifier.cardNumber(value), dot = DotSize.Hero)
             Spacer(Modifier.width(12.dp))
         }
-        if (above != null) Spacer(Modifier.weight(1f))
         Column(
+            Modifier.then(if (above != null) Modifier.weight(1f) else Modifier),
             verticalArrangement = Arrangement.spacedBy(if (above != null) 8.dp else 2.dp),
             horizontalAlignment = if (above != null) Alignment.End else Alignment.Start,
         ) {
@@ -637,6 +641,11 @@ internal fun RecoveryEarlierCard(
         }
         return
     }
+    // The Small is its score and a ring of 24 dots filled to it, progress to the full score (board HaloTodayMidday).
+    if (size == PictureSize.Small && shown.value != null) {
+        RecoveryRingSmall(title, shown, onClick, modifier)
+        return
+    }
     val week = remember(recovery) { recovery?.readinessTrend?.map { it.second?.toFloat() }.orEmpty() }
     val usual = recovery?.readinessUsual?.let { it.low..it.high }
     val off = org.openstrap.app.ui.dashboard.recoveryOffStatus(recovery)
@@ -657,11 +666,62 @@ internal fun RecoveryEarlierCard(
  * the day is over ([org.openstrap.app.ui.dashboard.loadOffStatus]), so it's never news before then.
  */
 @Composable
+private fun RecoveryRingSmall(title: String, shown: TodayCopy.RecoveryShown, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val value = shown.value ?: return
+    PictureCard(MetricColors.readiness, modifier, onClick = onClick) {
+        CardTitle(title)
+        Row(Modifier.weight(1f).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            HaloNumber(value.toString(), Modifier.cardNumber(value.toString()), dot = DotSize.Edge)
+            Spacer(Modifier.weight(1f))
+            androidx.compose.foundation.Canvas(Modifier.size(52.dp)) {
+                val dotR = size.minDimension * RING_DOT_SHARE
+                dotRing(
+                    Offset(size.width / 2, size.height / 2), size.minDimension / 2 - dotR, RING_DOTS,
+                    Math.round(value.coerceIn(0, FULL_SCORE) / FULL_SCORE.toFloat() * RING_DOTS), MetricColors.readiness, dotR,
+                )
+            }
+        }
+        (shown.word ?: shown.line).let {
+            Text(it, color = GlowType.noteColor, style = GlowType.noteSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+    }
+}
+
+private const val LOAD_LEVEL_SPAN = 1.5f
+private const val LOAD_LEVEL_MIN = 0.15f
+private const val LOAD_LEVEL_DEFAULT = 0.5f
+private const val FULL_SCORE = 100
+private const val RING_DOTS = 24
+private const val RING_DOT_SHARE = 3f / 64f
+
+/**
+ * Load: a Small lit from below to its level in Load's violet (boards HaloTodayWorkoutTime, HaloTodayAfter, the level
+ * look), else the picture card with its fill over your usual.
+ */
+@Composable
 internal fun LoadCard(
     load: Float?, usual: Float?, endOfDay: Boolean, status: String, size: PictureSize, onClick: () -> Unit, modifier: Modifier = Modifier,
 ) {
     val off = org.openstrap.app.ui.dashboard.loadOffStatus(load, usual, endOfDay)
     val band = org.openstrap.app.presentation.LoadBands.usualRange(usual)
+    if (size == PictureSize.Small && load != null) {
+        // The level look: Load's violet rising from below to where today's Load stands against your usual.
+        val level = band?.let { (load / (it.endInclusive * LOAD_LEVEL_SPAN)).coerceIn(LOAD_LEVEL_MIN, 1f) } ?: LOAD_LEVEL_DEFAULT
+        GlowCard(GlowStyle.level(MetricColors.load, level).copy(second = true), modifier, onClick = onClick) {
+            Column(Modifier.fillMaxHeight()) {
+                EdgeTitle(stringResource(R.string.glow_today_load), null)
+                offTag(OffWords.Usual, off)?.let { NewsPill(it, Modifier.padding(top = 6.dp)) }
+                Spacer(Modifier.weight(1f))
+                val shown = load.roundToInt().toString()
+                HaloNumber(shown, Modifier.cardNumber(shown), dot = DotSize.Edge)
+                Text(
+                    status, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary,
+                    modifier = Modifier.padding(top = 4.dp), maxLines = 1, overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+        return
+    }
     TodayPictureCard(
         MetricColors.load, stringResource(R.string.glow_today_load), size, load?.roundToInt()?.toString(), null, offTag(OffWords.Usual, off), status,
         modifier, rim = if (load != null && rimLit(OffWords.Usual, off)) levelFillRim(load, band, size) else null, onClick = onClick,

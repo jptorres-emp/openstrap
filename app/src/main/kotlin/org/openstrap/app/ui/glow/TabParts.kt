@@ -22,6 +22,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import org.openstrap.app.ui.glow.draw.DotSize
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -173,3 +174,30 @@ internal fun HaloNumber(text: String, modifier: Modifier = Modifier, dot: DotSiz
         },
         modifier, color,
     )
+
+/**
+ * The midday hero's Energy ruler (board HaloTodayMidday): 20 dots of 5 across the width it is given, the ones up to
+ * [level] white at 85%, the rest at 25%, and a 3 by 18 white tick where the level is. [EnergyRuler] in glow/pictures
+ * draws 24 at a fixed look, so the hero keeps this variant.
+ */
+@Composable
+internal fun HeroEnergyRuler(level: Float, modifier: Modifier = Modifier) {
+    androidx.compose.foundation.Canvas(modifier) {
+        val dots = HERO_RULER_DOTS
+        val r = 2.5.dp.toPx()
+        val at = (level.coerceIn(0f, 100f) / 100f * (dots - 1)).let { Math.round(it) }
+        val pitch = (size.width - 2 * r) / (dots - 1)
+        val cy = size.height / 2
+        for (i in 0 until dots) {
+            val x = r + pitch * i
+            if (i == at) {
+                drawRoundRect(
+                    Color.White, Offset(x - 1.5.dp.toPx(), cy - 9.dp.toPx()), androidx.compose.ui.geometry.Size(3.dp.toPx(), 18.dp.toPx()),
+                    androidx.compose.ui.geometry.CornerRadius(1.5.dp.toPx()),
+                )
+            } else drawCircle(Color.White.copy(alpha = if (i < at) 0.85f else 0.25f), r, Offset(x, cy))
+        }
+    }
+}
+
+private const val HERO_RULER_DOTS = 20

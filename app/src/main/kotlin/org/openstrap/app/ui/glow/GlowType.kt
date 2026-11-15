@@ -17,7 +17,10 @@ import org.openstrap.app.ui.theme.FunnelSans
  * roles drawn dimmed, which name their alpha.
  */
 object GlowType {
-    /** The title in a page's top bar and in a sheet's header, centred (boards HaloProfile, HaloQuietHoursSheet, HaloDetailSteps): Display 600, 17 on 22. */
+    /**
+     * The title in a page's top bar and in a sheet's header, centred (boards HaloProfile, HaloQuietHoursSheet,
+     * HaloDetailSteps): Display 600, 17 on 22.
+     */
     val pageTitle = TextStyle(fontFamily = FunnelDisplay, fontWeight = FontWeight.SemiBold, fontSize = 17.sp, lineHeight = 22.sp)
 
     /** A sheet's question or heading in its body ("Quiet from", board HaloQuietHoursSheet): Display 600, 22 on 26. */
@@ -104,7 +107,10 @@ object GlowType {
     /** A secondary or in-card button's label (boards HaloDetailRecovery, HaloSummaryRun): Sans 600, 14 on 18. */
     val buttonSmall = TextStyle(fontFamily = FunnelSans, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, lineHeight = 18.sp)
 
-    /** Axes, times, tags (boards HaloLiveRun, HaloDetailRecovery): Sans 400, 11 on 14, tabular so times line up, drawn at [CAPTION_ALPHA] white. */
+    /**
+     * Axes, times, tags (boards HaloLiveRun, HaloDetailRecovery): Sans 400, 11 on 14, tabular so times line up, drawn
+     * at [CAPTION_ALPHA] white.
+     */
     val caption = TextStyle(fontFamily = FunnelSans, fontWeight = FontWeight.Normal, fontSize = 11.sp, lineHeight = 14.sp, fontFeatureSettings = "tnum")
 
     /** White for [caption] text. */
@@ -165,6 +171,7 @@ object GlowType {
  * [dot] is the DotSpec dot that stands in for it: the 5 by 7 matrix is 9.28 dots tall, and Doto's digits are about 0.7 em
  * tall, so dot = 0.7 * doto / 9.28. Widgets share DotSpec, so the number can't drift from them.
  */
+@Suppress("MagicNumber") // each size is the board's Doto size, named by its entry
 enum class BigNumber(val doto: Int) {
     /** Doto 76: the live workout's number (board HaloLiveRun). */
     Live(76),

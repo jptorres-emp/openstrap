@@ -39,8 +39,8 @@ class DesignTokenTest {
     @Test fun `the tokens hold the spec's values`() {
         assertEquals(listOf(2.4f, 3f, 3.6f, 4.5f, 6f, 9f), DotSize.entries.map { it.dot.value })
         DotSize.entries.forEach { assertEquals(it.name, it.dot.value * 0.38f, it.gap.value, 1e-4f) }
-        assertEquals(28.dp, GlowLayout.CardCorner)
-        assertEquals(16.dp, GlowLayout.TileCorner)
+        assertEquals(36.dp, GlowLayout.CardCorner)
+        assertEquals(27.dp, GlowLayout.TileCorner)
         assertEquals(GlowLayout.CardCorner, GlowStyle(Color.White).radius)
         val p = GlowLayout.CardPadding
         assertEquals(

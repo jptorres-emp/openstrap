@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import sv.lib.squircleshape.SquircleShape
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -116,7 +117,8 @@ val PageHeaderHeight = 64.dp
 @Composable
 fun BackButton(onBack: () -> Unit, enabled: Boolean = true) =
     RoundIconButton(
-        AppIcons.ArrowLeft, stringResource(R.string.glow_back), onBack, size = BackButtonSize, surface = HaloButtonSurface, iconSize = 18.dp,
+        AppIcons.ArrowLeft, stringResource(R.string.glow_back), onBack,
+        size = BackButtonSize, surface = HaloButtonSurface, iconSize = 18.dp,
         enabled = enabled,
     )
 
@@ -144,7 +146,9 @@ fun RoundIconButton(
 ) {
     Box(modifier.size(size)) {
         Box(
-            Modifier.matchParentSize().clip(RoundedCornerShape(size * ICON_BUTTON_CORNER_SHARE)).background(surface).alpha(if (enabled) 1f else 0.4f)
+            Modifier.matchParentSize()
+                .clip(SquircleShape(radius = size * ICON_BUTTON_CORNER_SHARE, smoothing = GlowLayout.SMOOTHING))
+                .background(surface).alpha(if (enabled) 1f else 0.4f)
                 .clickable(enabled = enabled, onClickLabel = clickLabel, role = Role.Button, onClick = onClick),
             contentAlignment = Alignment.Center,
         ) { Icon(icon, label, Modifier.size(iconSize), tint = tint) }
@@ -469,7 +473,8 @@ enum class ButtonSize(val height: Dp, val padding: Dp, val icon: Dp) {
 
 /**
  * A page's button, fully round (Halo boards): white with black text when it's the page's main action ([primary]),
- * otherwise dark (#17181C) with white text, or with red text when [destructive], or on glass when it sits [onCard] and its colour shows through.
+ * otherwise dark (#17181C) with white text, or with red text when [destructive], or on glass when it sits [onCard]
+ * and its colour shows through.
  * Body type (Secondary at [ButtonSize.Row]), an [icon] before the text when given.
  */
 @Composable
@@ -510,7 +515,7 @@ fun PageButton(
             ButtonSize.Row -> GlowType.secondary
             ButtonSize.Compact, ButtonSize.Hero -> GlowType.body
             // Semibold on the page's own buttons and the main tap (Halo boards: 17 and 16). Card title is the nearest role, 17.
-            ButtonSize.Main, ButtonSize.Page -> GlowType.cardTitle.copy(fontWeight = FontWeight.SemiBold)
+            ButtonSize.Main, ButtonSize.Page -> GlowType.button
         }
         Text(text, color = ink, style = style, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
@@ -640,7 +645,8 @@ fun PageSheet(
 
 /**
  * A question before something that can't be taken back (Forget, Disconnect, Delete all): a [PageSheet] with the
- * [text], any extra [content], then Cancel and the [confirm] button side by side: white, or dark with red text when [destructive] (HaloDeleteSleepSheet board).
+ * [text], any extra [content], then Cancel and the [confirm] button side by side: white, or dark with red text when
+ * [destructive] (HaloDeleteSleepSheet board).
  */
 @Composable
 fun PageConfirm(

@@ -18,15 +18,16 @@ import org.openstrap.app.ui.glow.draw.LightAngle
  */
 
 /**
- * Where the Today hero's light comes from for a moment (spec 4.2): low on the left on waking, rising from below to
- * Charge's level at midday, up on the right before a workout, low on the right in the evening, and below during and
- * after a workout and at night.
+ * Where the hero's light comes from for a moment (HaloSystem board, the sun table): lower left on waking, above at
+ * midday, upper right at workout time and during a workout, right after it, lower right in the evening, below at night.
  */
 fun heroLightAngle(moment: Moment): Float = when (moment) {
     Moment.Waking -> LightAngle.LowerLeft
-    Moment.WorkoutWindow -> LightAngle.UpperRight
+    Moment.Midday -> LightAngle.Above
+    Moment.WorkoutWindow, Moment.During -> LightAngle.UpperRight
+    Moment.After -> LightAngle.Right
     Moment.Evening -> LightAngle.LowerRight
-    Moment.Midday, Moment.During, Moment.After, Moment.Night -> LightAngle.Below
+    Moment.Night -> LightAngle.Below
 }
 
 /** The day under the header's title: "Thu 23 Oct". */

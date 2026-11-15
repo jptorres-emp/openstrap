@@ -1,5 +1,6 @@
 package org.openstrap.app.ui.glow
 
+import androidx.compose.runtime.getValue
 import org.openstrap.app.R
 import org.openstrap.app.i18n.Strings
 import org.openstrap.app.presentation.DayWords
@@ -360,8 +361,8 @@ private val StoryHeroRoom = 230.dp
 private fun StoryStack(card: StoryCard, modifier: Modifier = Modifier) {
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(StoryGap.Part)) {
         Column(verticalArrangement = Arrangement.spacedBy(StoryGap.Inner)) {
-            Text(card.title, color = Color.White, style = GlowType.cardTitle, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            HeroValue(card.value, card.unit, dot = DotSize.Detail, gap = 10.dp, maxWidth = StoryHeroRoom)
+            Text(card.title, color = Color.White, style = GlowType.storyTitle, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            StoryNumber(card.value, card.unit)
         }
         StoryDetail(card)
         if (card.stats.isNotEmpty() || card.chips.isNotEmpty()) {
@@ -372,6 +373,23 @@ private fun StoryStack(card: StoryCard, modifier: Modifier = Modifier) {
                 }
             }
         }
+    }
+}
+
+/**
+ * The card's one number in Doto 76 ([BigNumber.Live], board HaloShareCards) with its unit after it in 16 px at 80% white, on
+ * the digits' baseline, shrunk to fit [StoryHeroRoom]. A private variant of [BigNumberText], which can't shrink.
+ */
+@Composable
+private fun StoryNumber(value: String, unit: String) {
+    val base = BigNumber.Live.dot / DotSize.Detail.dot.value
+    val scale = minOf(base, StoryHeroRoom / dotTextWidth(value, DotSize.Detail))
+    Row(verticalAlignment = Alignment.Bottom) {
+        DotMatrixText(value, dot = DotSize.Detail, scale = scale)
+        if (unit.isNotBlank()) Text(
+            unit, Modifier.padding(start = 10.dp, bottom = 4.dp).weight(1f, fill = false), color = Color.White.copy(alpha = 0.8f),
+            style = GlowType.button.copy(fontWeight = FontWeight.Normal), maxLines = 1,
+        )
     }
 }
 
@@ -541,7 +559,7 @@ private fun BrandRow(date: String) {
 private fun StoryChipView(chip: StoryChip) {
     val (icon, tint) = if (chip.best) AppIcons.FlagCheckered to MetricColors.calories else AppIcons.Target to if (chip.met) MetricColors.good else Color.White
     Row(
-        Modifier.height(30.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.45f)).padding(start = 10.dp, end = 12.dp),
+        Modifier.height(32.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.45f)).padding(start = 10.dp, end = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(icon, null, tint = tint, modifier = Modifier.size(15.dp))
@@ -549,7 +567,7 @@ private fun StoryChipView(chip: StoryChip) {
     }
 }
 
-private val ChipText = GlowType.secondary.copy(fontWeight = FontWeight.Medium)
+private val ChipText = GlowType.secondary
 
 /** White for a card's dimmer lines, as on the boards. */
 private const val StoryDim = 0.7f

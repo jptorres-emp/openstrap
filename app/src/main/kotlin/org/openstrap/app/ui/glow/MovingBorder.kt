@@ -61,7 +61,7 @@ fun Modifier.movingBorder(): Modifier {
         }
     }
     return drawWithCache {
-        val corner = GlowLayout.cornerPx(size)
+        val corner = GlowLayout.cornerPx(size, this)
         val ring = RingWidth.toPx()
         val halo = HaloWidth.toPx()
         val cx = size.width / 2f

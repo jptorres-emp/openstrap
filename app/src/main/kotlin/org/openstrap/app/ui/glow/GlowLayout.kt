@@ -17,6 +17,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import sv.lib.squircleshape.SquircleShape
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.Outline
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.geometry.Size
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -49,21 +52,24 @@ object GlowLayout {
     /**
      * Corners follow Airofit's rule, measured from its Behance screens on 15 Nov 2026 and made a step rounder by the user:
      * a squircle whose radius is [CORNER_PERCENT] of the shape's shorter side, at [SMOOTHING] (the library's 0 to 100,
-     * how far the curve reaches into the straight edge). A 200 dp hero gets 70 dp, a half-width tile 63 dp.
+     * how far the curve reaches into the straight edge), and never more than [MAX_CORNER] so a tall list stays a card. A
+     * 170 dp hero gets 60 dp, a half-width tile 63 dp, anything taller than about 183 dp gets 64 dp.
      */
     const val CORNER_PERCENT = 35
     const val SMOOTHING = 65
     private const val PERCENT = 100f
+    val MAX_CORNER = 64.dp
 
     /** A card's corner in px for a card of [size], for code that draws the outline itself. */
-    fun cornerPx(size: Size): Float = size.minDimension * CORNER_PERCENT / PERCENT
+    fun cornerPx(size: Size, density: Density): Float =
+        minOf(size.minDimension * CORNER_PERCENT / PERCENT, with(density) { MAX_CORNER.toPx() })
 
     /**
      * A fixed corner for what has no card of its own to measure: home screen widgets and strips drawn piece by piece.
      * Cards themselves use [CardShape].
      */
     val CardCorner = 36.dp
-    val CardShape: Shape = SquircleShape(percent = CORNER_PERCENT, smoothing = SMOOTHING)
+    val CardShape: Shape = HaloSquircle
     /** A sheet is taller than the screen is wide, so its top corners are fixed: about a hero's. */
     val SheetCorner = 56.dp
     val SheetShape: Shape =
@@ -530,4 +536,12 @@ internal fun OutlineTag(text: String, modifier: Modifier = Modifier, onClick: ((
             .padding(horizontal = 8.dp, vertical = 2.dp),
         color = Color.White.copy(alpha = GlowType.CAPTION_ALPHA), style = GlowType.caption, maxLines = 1,
     )
+}
+
+/** The card squircle: [GlowLayout.cornerPx] for the shape's own size, at [GlowLayout.SMOOTHING]. */
+private object HaloSquircle : Shape {
+    override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density): Outline {
+        val radius = with(density) { GlowLayout.cornerPx(size, density).toDp() }
+        return SquircleShape(radius = radius, smoothing = GlowLayout.SMOOTHING).createOutline(size, layoutDirection, density)
+    }
 }

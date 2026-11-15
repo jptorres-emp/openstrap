@@ -115,7 +115,7 @@ private fun Modifier.rimLight(rim: Rim, ink: Color, strength: Float): Modifier =
         listOf(0f, RIM_HALF_AT, 1f),
     )
     val w = RimWidth.toPx()
-    val corner = GlowLayout.cornerPx(size)
+    val corner = GlowLayout.cornerPx(size, this)
     onDrawBehind {
         drawRect(wash)
         drawRoundRect(

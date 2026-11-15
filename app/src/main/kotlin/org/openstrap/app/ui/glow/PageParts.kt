@@ -42,7 +42,6 @@ import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Constraints
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
@@ -510,9 +509,8 @@ fun PageButton(
         val style = when (size) {
             ButtonSize.Row -> GlowType.secondary
             ButtonSize.Compact, ButtonSize.Hero -> GlowType.body
-            // Semibold on the page's own buttons and the main tap (Halo boards).
-            ButtonSize.Main -> GlowType.body.copy(fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
-            ButtonSize.Page -> GlowType.body.copy(fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+            // Semibold on the page's own buttons and the main tap (Halo boards: 17 and 16). Card title is the nearest role, 17.
+            ButtonSize.Main, ButtonSize.Page -> GlowType.cardTitle.copy(fontWeight = FontWeight.SemiBold)
         }
         Text(text, color = ink, style = style, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }

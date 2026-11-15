@@ -127,7 +127,7 @@ fun GlowWorkoutSummaryScreen(
     if (step == SummaryStep.Best && rewards?.best != null && a != null) {
         BestCardScreen(
             rewards.best, a.sportName, contentPadding, onContinue = done,
-            onShare = if (summary != null && hero != null) ({ sharing = true }) else null,
+            onShare = if (hero != null) ({ sharing = true }) else null,
         )
         return
     }

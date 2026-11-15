@@ -207,7 +207,7 @@ internal fun GamePlanCard(type: Int, periods: Structure.Periods?, onChange: (Str
 /** Ready's switch rows under the plan card, on a plain panel. */
 @Composable
 internal fun ReadyRows(content: @Composable ColumnScope.() -> Unit) {
-    Column(Modifier.fillMaxWidth().clip(GlowLayout.CardShape).background(ListSurface).padding(horizontal = 18.dp), content = content)
+    Column(Modifier.fillMaxWidth().clip(GlowLayout.TileShape).background(PlainPanel).padding(horizontal = 18.dp), content = content)
 }
 
 /** Work and rest along the rounds, each as wide as its time: work in heart red, rest in sleep blue. */

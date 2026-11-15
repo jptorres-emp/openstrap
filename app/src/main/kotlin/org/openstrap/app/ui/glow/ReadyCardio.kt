@@ -90,35 +90,24 @@ import org.openstrap.app.ui.workout.readyHero
  * No settings sheet: everything it held is a row here or went with the design.
  */
 
-/** Where Ready's heart light sits, in card heights from the top, and its size in card widths and heights. */
-private const val HEART_LIGHT_BELOW = 1.25f
-private const val HEART_LIGHT_WIDTH = 1.2f
-private const val HEART_LIGHT_HEIGHT = 1.1f
-
-/** Ready's heart light at full strength: 70% in the middle, 18% halfway out. */
-private val HeartLight = listOf(0f to 0.7f, 0.5f to 0.18f)
-
 /**
- * Ready's heart: the live bpm in dots on a card lit from below in [color] (heart red, or the family's colour), as
- * Today's hero, "bpm, live from your strap" beside it. While the strap is away, what's wrong and that you can start
- * anyway, on a dimmer light.
+ * Ready's hero (workout-rules.md, Body order; board HaloReadyRun): a card lit from one edge in the family's [color] at
+ * [angle], holding the live bpm as the screen's one dotted number with "live from your strap" after it. While the strap
+ * is away, what's wrong and that you can start anyway.
  */
 @Composable
-internal fun ReadyHeartCard(connection: ConnectionState, liveHeartRate: Int?, color: Color = MetricColors.heart) {
+internal fun ReadyHeartCard(connection: ConnectionState, liveHeartRate: Int?, color: Color = MetricColors.heart, angle: Float = 45f) {
     org.openstrap.app.ui.components.HoldLiveHeartRate()
     val hero = WorkoutCopy.readyHero(connection, liveHeartRate)
     val bpm = liveHeartRate.takeIf { hero.live }
-    val light = if (bpm != null) 1f else 0.4f
-    // An ellipse 1.2 widths across and 1.1 heights tall, centred a quarter of the height below the card.
-    LitPanel(
-        color, HeartLight.map { (at, alpha) -> at to alpha * light },
-        lightCenter = { Offset(it.width / 2, it.height * HEART_LIGHT_BELOW) },
-        reach = { Size(it.width * HEART_LIGHT_WIDTH, it.height * HEART_LIGHT_HEIGHT) },
-    ) {
-        if (bpm != null) HeroValue(bpm.toString(), stringResource(R.string.glow_ready_bpm_live), gap = 14.dp)
-        else Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    val tint = org.openstrap.app.ui.glow.live.heroTint(color)
+    org.openstrap.app.ui.glow.live.LiveHero(color, angle) {
+        if (bpm != null) {
+            org.openstrap.app.ui.glow.live.HeroTitle(stringResource(R.string.workout_live_heart_title), null, tint)
+            org.openstrap.app.ui.glow.live.HeroNumber(bpm.toString(), stringResource(R.string.glow_ready_bpm_live), tint, BigNumber.Feature)
+        } else Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(hero.title, color = Color.White, style = GlowType.sentence)
-            Text(hero.line, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary)
+            Text(hero.line, color = tint, style = GlowType.secondary)
         }
     }
 }
@@ -144,7 +133,7 @@ internal fun ReadyWhere(
     keepRoute: Boolean?,
     onKeepRoute: (Boolean) -> Unit,
 ) {
-    Column(Modifier.fillMaxWidth().clip(GlowLayout.CardShape).background(ListSurface).padding(horizontal = 18.dp)) {
+    Column(Modifier.fillMaxWidth().clip(GlowLayout.TileShape).background(PlainPanel).padding(horizontal = 18.dp)) {
         var rows = 0
         if (sides != null) {
             PlaceRow(
@@ -288,7 +277,7 @@ private fun ReadyPlanCard(
     onTyping: (Boolean) -> Unit,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Text(StartCopy.planTitle(family), color = Color.White.copy(alpha = 0.6f), style = GlowType.body, modifier = Modifier.padding(horizontal = 4.dp))
+    Text(StartCopy.planTitle(family), color = GlowType.noteColor, style = GlowType.secondary, modifier = Modifier.padding(horizontal = 4.dp))
     val inView = remember { BringIntoViewRequester() }
     val ime = WindowInsets.ime
     val density = LocalDensity.current
@@ -301,7 +290,7 @@ private fun ReadyPlanCard(
         }
     }
     Column(
-        Modifier.fillMaxWidth().bringIntoViewRequester(inView).solidCard(GlowLayout.CardShape).padding(16.dp),
+        Modifier.fillMaxWidth().bringIntoViewRequester(inView).solidCard(GlowLayout.CardShape).padding(GlowLayout.CardInset),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         var choosing by rememberSaveable { mutableStateOf(false) }
@@ -377,18 +366,11 @@ private fun KindRow(icon: ImageVector, label: String, note: String, on: Boolean,
 internal fun GoalNote(text: String) =
     Text(text, color = Color.White.copy(alpha = 0.6f), style = GlowType.secondary, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
 
-/** A row of presets under a value, each as wide as the others, on a hairline; the one matching the value ([on]) in white. */
+/** A row of presets under a value, each as wide as the others; the one matching the value ([on]) has the white ring (board HaloReadyRun). */
 @Composable
 internal fun <T> Presets(presets: List<Pair<T, String>>, on: T?, onPick: (T) -> Unit) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        presets.forEach { (v, label) ->
-            val chosen = v == on
-            Box(
-                Modifier.weight(1f).height(34.dp).clip(CircleShape).border(1.dp, if (chosen) Color.White else Color.White.copy(alpha = 0.15f), CircleShape)
-                    .pressClickable({ onPick(v) }, CircleShape).semantics { role = Role.Button; selected = chosen },
-                contentAlignment = Alignment.Center,
-            ) { Text(label, color = if (chosen) Color.White else Color.White.copy(alpha = 0.8f), style = GlowType.secondary, maxLines = 1) }
-        }
+        presets.forEach { (v, label) -> PageChip(label, v == on, { onPick(v) }, Modifier.weight(1f), role = Role.Button, filled = true) }
     }
 }
 
@@ -796,9 +778,13 @@ internal fun RowScope.TapNumber(n: String, unit: String?, style: TextStyle, onCl
 @Composable
 private fun SaveIntervalsSheet(reps: Structure.Reps, onSave: (String) -> Unit, onDismiss: () -> Unit) {
     var name by rememberSaveable { mutableStateOf("") }
-    val title = stringResource(R.string.glow_ready_save_title, StartCopy.SAVE_INTERVALS, StartCopy.structureName(reps))
-    PageSheet(onDismiss, title, note = StartCopy.SAVE_NOTE) {
+    // Board HaloSaveIntervals: the title, the rounds under it, the name, the note, then Cancel and Save.
+    PageSheet(onDismiss, StartCopy.SAVE_INTERVALS, note = StartCopy.SAVE_NOTE) {
+        Text(StartCopy.structureName(reps), color = Color(0xFFC9CED6), style = GlowType.body)
         PageField(name, { name = it.take(40) }, null, placeholder = StartCopy.NAME_HINT)
-        PageButton(StartCopy.SAVE_INTERVALS, { onSave(name.trim()) }, Modifier.fillMaxWidth(), enabled = name.isNotBlank(), primary = true, icon = AppIcons.Plus)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            PageButton(stringResource(R.string.glow_cancel), onDismiss, Modifier.weight(1f))
+            PageButton(stringResource(R.string.glow_save), { onSave(name.trim()) }, Modifier.weight(1f), enabled = name.isNotBlank(), primary = true)
+        }
     }
 }

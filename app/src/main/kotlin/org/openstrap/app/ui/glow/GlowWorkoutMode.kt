@@ -139,6 +139,9 @@ internal fun activeSecondsState(r: WorkoutState.Recording): androidx.compose.run
     }
 }
 
+/** The plain panel (workout-rules.md, Tokens): #0C0D10 in the tile squircle, no light. Ready's switch rows sit on it. */
+internal val PlainPanel = Color(0xFF0C0D10)
+
 /** The workout boards' side gutter (workout-rules.md, Tokens: gutter 16). */
 internal val WORKOUT_GUTTER = 16.dp
 
@@ -244,8 +247,10 @@ internal fun SuggestionPanel(
 }
 
 /**
- * Adds a workout nobody started, after the fact: the day's heart rate with two handles to drag to where it began
- * and ended (first set on the day's likeliest stretch), then the sport. Built from the strap's stored minutes.
+ * Adds a workout nobody started, after the fact, as a sheet with Cancel and Save (user decision 2026-11-15, over the
+ * board HaloAddWorkout's page): the day's heart rate with two handles to drag to where it began and ended (first set
+ * on the day's likeliest stretch), the range and its length above it, then the sport and the day in one panel. The
+ * sport opens the picker page and comes back to the sheet. Built from the strap's stored minutes.
  */
 @Composable
 fun GlowAddWorkoutScreen(
@@ -266,31 +271,48 @@ fun GlowAddWorkoutScreen(
     val likely = remember(series, heartZones) { WorkoutSuggestions.find(series, 60, maxHr, emptyList(), heartZones).firstOrNull() }
     var from by rememberSaveable(series.size) { mutableStateOf(likely?.start ?: (last - 1800).coerceAtLeast(first)) }
     var to by rememberSaveable(series.size) { mutableStateOf(likely?.end ?: last) }
+    var sport by rememberSaveable { mutableStateOf(recentSports.firstOrNull() ?: Workouts.EVERYDAY.first()) }
     if (picking) {
-        SportPicker(-1, recentSports, contentPadding, onPick = { onSave(from, to, pickedType(it, sides)) }, onBack = { picking = false })
+        // The picker is a page of its own over the app; the sheet is back once a sport is picked.
+        Box(Modifier.fillMaxSize().background(Color.Black)) {
+            SportPicker(sport, recentSports, contentPadding, onPick = { sport = pickedType(it, sides); picking = false }, onBack = { picking = false })
+        }
         return
     }
-    BackHandler(onBack = onBack)
-    val choose = stringResource(R.string.glow_workout_add_choose_sport)
-    WorkoutPage(Color.Transparent, contentPadding, pinned = { WorkoutButton(choose, Color.White, Color.Black, { picking = true }) }) {
-        PageHeader(stringResource(R.string.glow_workout_add_title), onBack, subtitle = dayName(date))
+    val ready = minuteHr != null && series.size >= 2
+    PageSheet(onBack, stringResource(R.string.glow_workout_add_title)) {
         if (minuteHr == null) {
-            QuietPanel { PageNote(stringResource(R.string.glow_workout_loading)) }
-            return@WorkoutPage
-        }
-        if (series.size < 2) {
-            QuietPanel { PageNote(stringResource(R.string.glow_workout_add_no_heart)) }
-            return@WorkoutPage
-        }
-        QuietPanel {
-            GlowHeader(stringResource(R.string.glow_workout_add_when), trailing = Ranges.times(from, to))
+            PageNote(stringResource(R.string.glow_workout_loading))
+        } else if (series.size < 2) {
+            PageNote(stringResource(R.string.glow_workout_add_no_heart))
+        } else {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(stringResource(R.string.glow_workout_add_when), color = GlowType.noteColor, style = GlowType.secondary, modifier = Modifier.padding(horizontal = 4.dp))
+                Column(Modifier.padding(horizontal = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(Ranges.times(from, to), color = Color.White, style = GlowType.figure, maxLines = 1)
+                    val inside = series.filter { it.first in from until to }.map { it.second }
+                    Text(
+                        if (inside.isEmpty()) stringResource(R.string.glow_workout_add_range_length, ((to - from) / 60).toInt())
+                        else stringResource(R.string.glow_workout_add_range_note, ((to - from) / 60).toInt(), inside.average().toInt()),
+                        color = GlowType.noteColor, style = GlowType.secondary,
+                    )
+                }
+            }
             RangeChart(series, first, last, from, to, maxHr) { f, t -> from = f; to = t }
             Row(Modifier.fillMaxWidth()) {
                 PageNote(clock(first))
                 Spacer(Modifier.weight(1f))
                 PageNote(clock(last))
             }
-            PageNote(stringResource(R.string.glow_workout_add_hint))
+            Text(stringResource(R.string.glow_workout_add_hint), color = GlowType.footnoteColor, style = GlowType.footnote)
+            PageRows {
+                PageRow(stringResource(R.string.glow_workout_add_sport), Workouts.sportName(sport), onClick = { picking = true }, divider = false)
+                PageRow(stringResource(R.string.glow_workout_add_day), dayName(date))
+            }
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            PageButton(stringResource(R.string.glow_cancel), onBack, Modifier.weight(1f))
+            PageButton(stringResource(R.string.glow_save), { onSave(from, to, sport) }, Modifier.weight(1f), enabled = ready, primary = true)
         }
     }
 }

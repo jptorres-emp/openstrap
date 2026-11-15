@@ -152,7 +152,8 @@ internal fun pickerSports(workoutsVm: WorkoutsViewModel, rootVm: AppRootViewMode
 @Composable
 internal fun AddWorkoutHost(nav: AppNavState, container: AppContainer, workoutsVm: WorkoutsViewModel, rootVm: AppRootViewModel) {
     val date = nav.addingOn ?: return
-    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+    // A sheet over the app, so no page behind it (the sport picker brings its own black page).
+    Box(Modifier.fillMaxSize()) {
         val series by produceState<List<Pair<Long, Int>>?>(null, date) { value = workoutsVm.dayMinuteHeartRate(date) }
         val maxHr by workoutsVm.maxHeartRate.collectAsStateWithLifecycle()
         val (recent, sides) = pickerSports(workoutsVm, rootVm)

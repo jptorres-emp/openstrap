@@ -24,6 +24,9 @@
     <!-- Spoken for the small location mark on a sport's tile that is only done outdoors, for screen readers. -->
     <string name="glow_choose_outdoors">Outdoors</string>
     <!-- The sport picker's page title, opened from Ready. -->
+    <string name="glow_choose_change_title">Change sport</string>
+    <string name="glow_choose_now">Now</string>
+    <string name="glow_choose_now_note">Your goal comes along when the new sport has one like it</string>
     <string name="glow_choose_pick_title">Choose a sport</string>
     <!-- The sport picker's search field hint. One short word. -->
     <string name="glow_choose_search">Search</string>

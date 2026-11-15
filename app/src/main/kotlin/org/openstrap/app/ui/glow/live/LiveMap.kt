@@ -139,8 +139,6 @@ internal fun LiveMapScreen(
 /** How far the map runs under the panel's rounded top. */
 private val PANEL_OVERLAP = 28.dp
 
-/** The plain panel: #0C0D10, no light (workout-rules.md, Tokens). */
-private val PlainPanel = Color(0xFF0C0D10)
 
 /** Buttons and pills drawn over the map: near black, a little see-through. */
 private val OverMap = OverMapSurface

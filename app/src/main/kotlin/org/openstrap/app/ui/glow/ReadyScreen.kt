@@ -56,10 +56,12 @@ import org.openstrap.app.ui.components.rememberHaptics
 import org.openstrap.app.ui.theme.AppIcons
 import org.openstrap.app.ui.workout.StartCopy
 import org.openstrap.app.ui.workout.familyColor
+import org.openstrap.app.ui.workout.familyLightAngle
 import org.openstrap.app.data.Structure
 import androidx.compose.ui.unit.Dp
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.width
 import org.openstrap.app.device.locationAvailable
 import org.openstrap.app.ui.dashboard.LocalHeartZones
 
@@ -230,13 +232,10 @@ fun GlowWorkoutReadyScreen(
             // While a goal is typed the keyboard has the bottom of the screen.
             pinned = if (typing) null else ({ WorkoutButton(StartCopy.startLabel(type), Color.White, Color.Black, start, icon = AppIcons.PlayFill, height = 64.dp) }),
         ) {
-            Box(Modifier.fillMaxWidth()) {
-                RoundIcon(AppIcons.X, stringResource(R.string.glow_close), onBack, Modifier.align(Alignment.CenterStart))
-                Box(Modifier.align(Alignment.Center)) { IconPill(Workouts.shortName(type), { picking = true }, caret = true) }
-            }
+            ReadyTopBar(type, family, connection, liveHeartRate, onBack) { picking = true }
             StrapHeldNotice(connection)
             if (cardio) {
-                ReadyHeartCard(connection, liveHeartRate)
+                ReadyHeartCard(connection, liveHeartRate, familyColor(family), familyLightAngle(family))
                 ReadyWhere(
                     type, pair, indoor == true, outdoor, locationOn, StartCopy.gpsStatus(accuracy),
                     onSwitch = {
@@ -259,7 +258,7 @@ fun GlowWorkoutReadyScreen(
                 )
                 return@WorkoutPage
             }
-            ReadyHeartCard(connection, liveHeartRate, familyColor(family))
+            ReadyHeartCard(connection, liveHeartRate, familyColor(family), familyLightAngle(family))
             when (family) {
                 Workouts.Family.Strength -> StrengthPlanCard(
                     type, sets, { sets = it; if (it != null) planSets = it }, planSets, restSeconds, { restSeconds = it }, typing, { typing = it },
@@ -288,6 +287,37 @@ fun GlowWorkoutReadyScreen(
                 }
                 PageSwitchRow(StartCopy.ASK_TO_END, StartCopy.ASK_TO_END_NOTE, askToEnd, { askToEnd = it }, divider = divider)
             }
+        }
+    }
+}
+
+/**
+ * Ready's top bar (workout-rules.md, Frame; board HaloReadyRun): a 96 / 1fr / 96 grid. Close at the left, the sport as
+ * a pill with its icon tinted in the family's colour in the middle (tap to change it), the live heart rate and the
+ * strap's charge at the right in grey.
+ */
+@Composable
+private fun ReadyTopBar(type: Int, family: Workouts.Family, connection: ConnectionState, bpm: Int?, onClose: () -> Unit, onSport: () -> Unit) {
+    val battery = (connection as? ConnectionState.Connected)?.batteryPercent
+    Row(Modifier.fillMaxWidth().height(48.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.width(96.dp), contentAlignment = Alignment.CenterStart) {
+            RoundIconButton(AppIcons.X, stringResource(R.string.glow_close), onClose, size = 44.dp, iconSize = 18.dp)
+        }
+        Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+            IconPill(
+                Workouts.shortName(type), onSport, icon = org.openstrap.app.ui.theme.SportIcons.of(type), tint = familyColor(family),
+                caret = true, height = 40.dp, style = GlowType.body.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold),
+            )
+        }
+        Column(Modifier.width(96.dp), horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            if (bpm != null && connection is ConnectionState.Connected) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Icon(AppIcons.Heartbeat, null, tint = org.openstrap.app.ui.theme.MetricColors.heart, modifier = Modifier.size(12.dp))
+                Text(stringResource(R.string.workout_live_bpm, bpm), color = GlowType.noteColor, style = GlowType.noteSmall, maxLines = 1)
+            }
+            if (connection is ConnectionState.Connected) Text(
+                if (battery != null) stringResource(R.string.workout_live_status_strap_battery, battery) else stringResource(R.string.workout_live_status_strap),
+                color = GlowType.noteColor, style = GlowType.noteSmall, maxLines = 1,
+            )
         }
     }
 }

@@ -62,6 +62,7 @@ import org.openstrap.app.ui.glow.Segment
 import org.openstrap.app.ui.glow.SegmentBar
 import org.openstrap.app.ui.workout.RestTeal
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.graphics.PathEffect
 import org.openstrap.app.ui.glow.GlowLayout
 import org.openstrap.app.ui.glow.OutlineCard
 import org.openstrap.app.ui.glow.draw.GlowMotion
@@ -269,7 +270,10 @@ private fun StrengthHero(
 @Composable
 private fun DotClock(text: () -> String, unit: String, tint: Color) = HeroNumber(text(), unit, tint)
 
-/** The heart rate since the set ended, falling, with the level that ends rest sooner as a thin solid rule. */
+/**
+ * The heart rate since the set ended (board HaloLiveStrengthRest): a white line with a dot at now, the level that ends
+ * rest as a dashed teal rule, and a faint dashed run from the dot toward that level.
+ */
 @Composable
 private fun FallingHeart(readings: List<Pair<Long, Int>>, level: Int?) {
     if (readings.size < 2) return
@@ -278,16 +282,28 @@ private fun FallingHeart(readings: List<Pair<Long, Int>>, level: Int?) {
     val from = readings.first().first
     val to = maxOf(readings.last().first, from + 60)
     val described = stringResource(R.string.workout_live_sets_falling_description)
-    Canvas(Modifier.fillMaxWidth().height(56.dp).semantics { contentDescription = described }) {
-        fun x(t: Long) = (t - from).toFloat() / (to - from) * size.width
+    Canvas(Modifier.fillMaxWidth().height(72.dp).semantics { contentDescription = described }) {
+        // The line takes the first 63 percent of the width, the rest is the run toward the level.
+        val reach = size.width * FALLING_REACH
+        fun x(t: Long) = (t - from).toFloat() / (to - from) * reach
         fun y(v: Int) = size.height - (v - lo).toFloat() / (hi - lo) * size.height
-        if (level != null) drawLine(Color.White.copy(alpha = 0.35f), Offset(0f, y(level)), Offset(size.width, y(level)), 1.dp.toPx())
+        val dash = PathEffect.dashPathEffect(floatArrayOf(4.dp.toPx(), 4.dp.toPx()))
+        if (level != null) drawLine(RestTeal.copy(alpha = 0.8f), Offset(0f, y(level)), Offset(size.width, y(level)), 1.5.dp.toPx(), pathEffect = dash)
         val path = Path().apply {
             readings.forEachIndexed { i, (t, v) -> if (i == 0) moveTo(x(t), y(v)) else lineTo(x(t), y(v)) }
         }
-        drawPath(path, EndRed, style = Stroke(2.5.dp.toPx(), cap = StrokeCap.Round))
+        drawPath(path, Color.White, style = Stroke(2.4.dp.toPx(), cap = StrokeCap.Round, join = androidx.compose.ui.graphics.StrokeJoin.Round))
+        val now = Offset(x(readings.last().first), y(readings.last().second))
+        if (level != null) drawLine(
+            Color.White.copy(alpha = 0.35f), now, Offset(size.width * FALLING_TARGET, y(level)), 2.dp.toPx(),
+            pathEffect = PathEffect.dashPathEffect(floatArrayOf(3.dp.toPx(), 4.dp.toPx())),
+        )
+        drawCircle(Color.White, 4.5.dp.toPx(), now)
     }
 }
+
+private const val FALLING_REACH = 0.63f
+private const val FALLING_TARGET = 0.85f
 
 /**
  * The sets as a row of solid segments (workout-rules.md, Progress): done at 55 percent, the set under way or next white,

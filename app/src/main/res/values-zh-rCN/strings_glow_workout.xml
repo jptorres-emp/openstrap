@@ -48,4 +48,8 @@
     <string name="glow_workout_capsule_next">下一项</string>
     <string name="glow_workout_capsule_lines">%1$s。%2$s</string>
     <string name="glow_workout_deleted">此次运动已删除。</string>
+    <string name="glow_workout_add_sport">运动</string>
+    <string name="glow_workout_add_day">日期</string>
+    <string name="glow_workout_add_range_length">%1$d 分钟</string>
+    <string name="glow_workout_add_range_note">%1$d 分钟，平均 %2$d bpm</string>
 </resources>

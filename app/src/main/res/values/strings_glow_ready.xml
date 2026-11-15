@@ -24,6 +24,22 @@
     <!-- Spoken for the small location mark on a sport's tile that is only done outdoors, for screen readers. -->
     <string name="glow_choose_outdoors">Outdoors</string>
     <!-- The sport picker's page title, opened from Ready. -->
+    <string name="glow_ready_edit_goal">Change it</string>
+    <string name="glow_ready_hero_zones">zones</string>
+    <string name="glow_ready_hero_zone_range"><xliff:g id="low" example="2">%1$d</xliff:g> to <xliff:g id="high" example="3">%2$d</xliff:g></string>
+    <string name="glow_ready_hero_sets_rest">sets, <xliff:g id="rest" example="90 s">%1$s</xliff:g> rest</string>
+    <string name="glow_ready_hero_periods">min <xliff:g id="periods" example="halves">%1$s</xliff:g></string>
+    <string name="glow_ready_hero_free">Free</string>
+    <string name="glow_ready_last_caption">Last time, <xliff:g id="day" example="Tue">%1$s</xliff:g></string>
+    <string name="glow_ready_last_today">today</string>
+    <string name="glow_ready_last_time">Time</string>
+    <string name="glow_ready_last_distance">Distance</string>
+    <string name="glow_ready_last_pace">Avg pace</string>
+    <string name="glow_ready_last_avg_bpm">Avg bpm</string>
+    <string name="glow_ready_last_peak_bpm">Peak bpm</string>
+    <string name="glow_ready_last_kcal">Active kcal</string>
+    <string name="glow_ready_last_load">Load</string>
+    <string name="glow_ready_last_sets">Sets</string>
     <string name="glow_choose_change_title">Change sport</string>
     <string name="glow_choose_now">Now</string>
     <string name="glow_choose_now_note">Your goal comes along when the new sport has one like it</string>

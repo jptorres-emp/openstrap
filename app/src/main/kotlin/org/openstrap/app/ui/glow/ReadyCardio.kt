@@ -91,28 +91,6 @@ import org.openstrap.app.ui.workout.readyHero
  */
 
 /**
- * Ready's hero (workout-rules.md, Body order; board HaloReadyRun): a card lit from one edge in the family's [color] at
- * [angle], holding the live bpm as the screen's one dotted number with "live from your strap" after it. While the strap
- * is away, what's wrong and that you can start anyway.
- */
-@Composable
-internal fun ReadyHeartCard(connection: ConnectionState, liveHeartRate: Int?, color: Color = MetricColors.heart, angle: Float = 45f) {
-    org.openstrap.app.ui.components.HoldLiveHeartRate()
-    val hero = WorkoutCopy.readyHero(connection, liveHeartRate)
-    val bpm = liveHeartRate.takeIf { hero.live }
-    val tint = org.openstrap.app.ui.glow.live.heroTint(color)
-    org.openstrap.app.ui.glow.live.LiveHero(color, angle) {
-        if (bpm != null) {
-            org.openstrap.app.ui.glow.live.HeroTitle(stringResource(R.string.workout_live_heart_title), null, tint)
-            org.openstrap.app.ui.glow.live.HeroNumber(bpm.toString(), stringResource(R.string.glow_ready_bpm_live), tint, BigNumber.Feature)
-        } else Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(hero.title, color = Color.White, style = GlowType.sentence)
-            Text(hero.line, color = tint, style = GlowType.secondary)
-        }
-    }
-}
-
-/**
  * Where you are and the switch rows, on one quiet panel. For a sport with an indoor side ([sides]), its title is the
  * side you're on: outside with a green pin and the GPS line, or indoors with its amber icon and what you get without
  * GPS; its pill names the other side and switches to it ([onSwitch]). An outdoor sport whose location is off says so,
@@ -293,6 +271,7 @@ private fun ReadyPlanCard(
             if (keyboard > 0) { kotlinx.coroutines.delay(80); inView.bringIntoView() }
         }
     }
+    val editor = LocalGoalEditor.current
     Column(
         Modifier.fillMaxWidth().bringIntoViewRequester(inView).solidCard(GlowLayout.CardShape).padding(GlowLayout.CardInset),
         verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -315,8 +294,30 @@ private fun ReadyPlanCard(
                 }
             }
         }
-        content()
+        // The value is the hero's number: it is changed here, in a sheet, from the hero or this button.
+        PageButton(
+            stringResource(R.string.glow_ready_edit_goal), {
+                onTyping(false)
+                editor.revert = {}
+                editor.open = true
+            },
+            Modifier.fillMaxWidth(), icon = AppIcons.PencilEdit,
+        )
     }
+    if (editor.open) PageSheet({ closeGoal(editor, onTyping, save = false) }, StartCopy.planSheet(family)) {
+        content()
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            PageButton(stringResource(R.string.glow_cancel), { closeGoal(editor, onTyping, save = false) }, Modifier.weight(1f))
+            PageButton(stringResource(R.string.glow_save), { closeGoal(editor, onTyping, save = true) }, Modifier.weight(1f), primary = true)
+        }
+    }
+}
+
+/** Closes the goal's sheet: Save keeps what was changed in it, Cancel (and dismissing) puts back what was there. */
+private fun closeGoal(editor: GoalEditor, onTyping: (Boolean) -> Unit, save: Boolean) {
+    if (!save) editor.revert()
+    editor.open = false
+    onTyping(false)
 }
 
 private fun kindName(k: GoalKind, type: Int): String = when (k) {

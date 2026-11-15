@@ -57,6 +57,8 @@ import org.openstrap.app.ui.glow.GlowTabletopHeart
 import org.openstrap.app.ui.glow.GlowWorkoutReadyScreen
 import org.openstrap.app.ui.glow.GlowWorkoutSummaryScreen
 import org.openstrap.app.ui.glow.PushOverlay
+import org.openstrap.app.ui.glow.readyLast
+import org.openstrap.app.presentation.Pace
 import org.openstrap.app.ui.glow.WorkoutCapsule
 import org.openstrap.app.ui.glow.WorkoutMorph
 import org.openstrap.app.ui.glow.live.GlowWorkoutGlance
@@ -412,6 +414,14 @@ private fun ReadyOverlay(
     val (recentSports, sides) = pickerSports(workoutsVm, rootVm)
     val key = Workouts.tileType(sport)
     val maxHr by workoutsVm.maxHeartRate.collectAsStateWithLifecycle()
+    // The last workout you started in this sport: its figures and pace for Ready's last-time row and "Ends about".
+    val workouts by workoutsVm.workouts.collectAsStateWithLifecycle()
+    val lastOne = remember(workouts, key) {
+        workouts.filter { it.startedByYou && Workouts.tileType(it.workout.sportType) == key }.maxByOrNull { it.workout.start }
+    }
+    val zone = ZoneId.systemDefault()
+    val last = remember(lastOne) { lastOne?.let { readyLast(it, LocalDate.now(zone), zone) } }
+    val lastPace = remember(lastOne) { lastOne?.let { Pace.of(it.distanceMeters, it.activeSeconds) } }
     GlowWorkoutReadyScreen(
         sport, ready?.picking == true, hooks.connection, hooks.live, padding,
         settings = sportSettings()[key] ?: SportSettings(),
@@ -423,6 +433,7 @@ private fun ReadyOverlay(
         onSport = nav::readySport,
         onStart = hooks.startPlan,
         onBack = nav::closeReady,
+        last = last, lastPace = lastPace,
     )
 }
 

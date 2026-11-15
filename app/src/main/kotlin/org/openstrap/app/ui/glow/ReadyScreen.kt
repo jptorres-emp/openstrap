@@ -16,6 +16,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.produceState
+import kotlinx.coroutines.delay
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberUpdatedState
@@ -127,6 +130,9 @@ fun GlowWorkoutReadyScreen(
     onSaveIntervals: (name: String, structure: String) -> Unit = { _, _ -> },
     /** Rounds to open on instead of last time's, from a saved workout picked on Choose. */
     structure: String? = null,
+    /** Last time's figures for the sport and its seconds a km, from the workouts on file; null leaves those lines out. */
+    last: ReadyLast? = null,
+    lastPace: Double? = null,
 ) {
     var picking by rememberSaveable { mutableStateOf(pickSport) }
     val pair = Workouts.sidesOf(sportType)
@@ -197,6 +203,25 @@ fun GlowWorkoutReadyScreen(
         onDispose { location.stop() }
     }
     val haptics = rememberHaptics()
+    // Keeps the live heart rate coming for the top bar, which the old heart card did.
+    org.openstrap.app.ui.components.HoldLiveHeartRate()
+    val nowMillis by produceState(System.currentTimeMillis()) {
+        while (true) {
+            value = System.currentTimeMillis()
+            delay(NOW_REFRESH_MS)
+        }
+    }
+    // Tapping the hero edits the goal in a sheet: what is open now is what Cancel puts back.
+    val editor = remember { GoalEditor() }
+    val openEditor = {
+        val d0 = draft
+        val s0 = sets
+        val p0 = planSets
+        val r0 = restSeconds
+        val c0 = structureCode
+        editor.revert = { draft = d0; sets = s0; planSets = p0; restSeconds = r0; structureCode = c0 }
+        editor.open = true
+    }
     // The sport picker opens like a deeper screen and a pick slides Ready back in on the new sport (user, 2026-11-06:
     // the swap was a cut both ways).
     PushContent(picking, { if (it) 1 else 0 }) { showPicker ->
@@ -228,6 +253,7 @@ fun GlowWorkoutReadyScreen(
                 ),
             )
         }
+        CompositionLocalProvider(LocalGoalEditor provides editor) {
         WorkoutPage(
             Color.Transparent, contentPadding,
             // While a goal is typed the keyboard has the bottom of the screen.
@@ -236,8 +262,21 @@ fun GlowWorkoutReadyScreen(
         ) {
             ReadyTopBar(type, family, connection, liveHeartRate, onBack) { picking = true }
             StrapHeldNotice(connection)
+            GoalHero(
+                goalHeroSpec(
+                    type, family, kind, draft, sets, restSeconds, rounds, hasDistance,
+                    zoneLine = maxHeartRate?.let { StartCopy.zoneRangeLine(draft.zones, LocalHeartZones.current, it) },
+                    lastPace = lastPace, nowMillis = nowMillis,
+                ),
+                familyColor(family), familyLightAngle(family), openEditor,
+            )
             if (cardio) {
-                ReadyHeartCard(connection, liveHeartRate, familyColor(family), familyLightAngle(family))
+                ReadyGoal(
+                    type, kinds, hasDistance, draft.copy(kind = kind), { draft = it }, typing, { typing = it }, LocalHeartZones.current, maxHeartRate,
+                    onYourZones, saved.filter { Workouts.tileType(it.sport) == key },
+                    onSave = { name, reps -> onSaveIntervals(name, reps.code) },
+                )
+                ReadyLastRow(last)
                 ReadyWhere(
                     type, pair, indoor == true, outdoor, locationOn, StartCopy.gpsStatus(accuracy),
                     onSwitch = {
@@ -252,16 +291,8 @@ fun GlowWorkoutReadyScreen(
                     askToEnd = askToEnd, onAskToEnd = { askToEnd = it },
                     keepRoute = keepRoute.takeIf { useGps }, onKeepRoute = { keepRoute = it },
                 )
-                val zones = LocalHeartZones.current
-                ReadyGoal(
-                    type, kinds, hasDistance, draft.copy(kind = kind), { draft = it }, typing, { typing = it }, zones,
-                        maxHeartRate, onYourZones,
-                    saved.filter { Workouts.tileType(it.sport) == key },
-                    onSave = { name, reps -> onSaveIntervals(name, reps.code) },
-                )
                 return@WorkoutPage
             }
-            ReadyHeartCard(connection, liveHeartRate, familyColor(family), familyLightAngle(family))
             when (family) {
                 Workouts.Family.Strength -> StrengthPlanCard(
                     type, sets, { sets = it; if (it != null) planSets = it }, planSets, restSeconds, { restSeconds = it },
@@ -276,6 +307,7 @@ fun GlowWorkoutReadyScreen(
                 )
                 else -> GamePlanCard(type, rounds as? Structure.Periods, { structureCode = it?.code }, typing, { typing = it })
             }
+            ReadyLastRow(last)
             ReadyRows {
                 var divider = false
                 if (strength) {
@@ -293,6 +325,7 @@ fun GlowWorkoutReadyScreen(
                 }
                 PageSwitchRow(StartCopy.ASK_TO_END, StartCopy.ASK_TO_END_NOTE, askToEnd, { askToEnd = it }, divider = divider)
             }
+        }
         }
     }
 }
@@ -330,6 +363,8 @@ private fun ReadyTopBar(type: Int, family: Workouts.Family, connection: Connecti
         }
     }
 }
+
+private const val NOW_REFRESH_MS = 30_000L
 
 /** What a cardio sport's goal card opens on: last time's goal or reps ([structure] first, from Choose), each kind's default else. */
 private fun goalDraft(settings: SportSettings, structure: String?): GoalDraft {

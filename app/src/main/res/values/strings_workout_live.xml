@@ -308,6 +308,7 @@
     <string name="workout_live_sets_set_line">Rest <xliff:g id="rest" example="90 s">%1$s</xliff:g> after. The strap buzzes when it\'s over.</string>
     <string name="workout_live_sets_next_line">Next: <xliff:g id="next" example="Set 4, bench press">%1$s</xliff:g></string>
     <string name="workout_live_bpm_down_unit">bpm, down <xliff:g id="drop" example="32">%1$d</xliff:g></string>
+    <string name="workout_live_sets_since_ended">Since the set ended</string>
     <string name="workout_live_sets_set_done">Set done</string>
     <!-- A small button during rest: thirty seconds more rest. About 6 characters. -->
     <string name="workout_live_sets_add_30_s">+30 s</string>

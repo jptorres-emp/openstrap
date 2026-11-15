@@ -254,7 +254,7 @@ fun DeviceScreen(
         val keyRejected = rejected != null
         val installedUpdate = updates?.let { Releases.newer(it.releases, installedVersion).firstOrNull() }
         // The app's own update is news here too (HaloStrap board, B1).
-        if (installedUpdate != null && updates != null && onUpdates != null) item {
+        if (installedUpdate != null && onUpdates != null) item {
             StatusBanner(
                 BannerKind.Good, stringResource(R.string.you_updates_ready, installedUpdate.versionName),
                 note = UpdateCopy.install(installedUpdate, updates.install, recording = false),

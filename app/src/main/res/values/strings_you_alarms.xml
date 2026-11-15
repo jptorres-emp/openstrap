@@ -135,4 +135,15 @@
     <!-- The time sheet's title for each end of quiet hours. -->
     <string name="you_phone_quiet_from_title">Quiet from</string>
     <string name="you_phone_quiet_until_title">Quiet until</string>
+    <!-- Health alerts (Halo): a limit row's value, its row names, the group headings, and the alarm sheet's repeat line. -->
+    <string name="you_health_bpm_value"><xliff:g id="bpm" example="150">%1$d</xliff:g> bpm</string>
+    <string name="you_health_percent_value"><xliff:g id="percent" example="90">%1$d</xliff:g>%%</string>
+    <string name="you_health_row_above">Above</string>
+    <string name="you_health_row_below">Below</string>
+    <string name="you_health_group_heart">Heart rate</string>
+    <string name="you_health_group_oxygen">Blood oxygen</string>
+    <string name="you_alarms_repeat">Repeat, <xliff:g id="days" example="Weekdays">%1$s</xliff:g></string>
+    <!-- Phone alerts (Halo): the group headings. -->
+    <string name="you_phone_group_calls">Calls</string>
+    <string name="you_phone_group_notifications">Notifications</string>
 </resources>

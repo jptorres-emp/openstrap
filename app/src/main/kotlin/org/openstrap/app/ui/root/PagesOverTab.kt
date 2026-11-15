@@ -327,6 +327,7 @@ private fun StrapPageHost(
     val container = hooks.container
     val alarmsState by alarms.state.collectAsStateWithLifecycle()
     val account by hooks.firmwareVm.account.collectAsStateWithLifecycle()
+    val updates by container.updater.state.collectAsStateWithLifecycle()
     val connection by container.strap.connection.collectAsStateWithLifecycle()
     // Nothing read yet (the strap wasn't there when it was asked): ask again once it's connected.
     LaunchedEffect(connection is ConnectionState.Connected) {
@@ -342,6 +343,9 @@ private fun StrapPageHost(
         onBack = onBack,
         preview = preview,
         selected = selected?.row,
+        updates = updates,
+        installedVersion = container.updater.installed,
+        onUpdates = { open(Page.Updates) },
     )
 }
 

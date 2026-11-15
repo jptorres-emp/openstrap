@@ -1,3 +1,5 @@
+@file:Suppress("MagicNumber") // the panel colours are the boards' hex values
+
 package org.openstrap.app.ui.device
 
 import androidx.activity.compose.BackHandler
@@ -16,13 +18,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import org.openstrap.app.R
@@ -31,9 +33,12 @@ import org.openstrap.app.ui.glow.GlowLayout
 import org.openstrap.app.ui.glow.PageSwitchRow
 import org.openstrap.app.ui.glow.GlowType
 import org.openstrap.app.ui.glow.PageHeader
-import org.openstrap.app.ui.glow.PagePanel
+import org.openstrap.app.ui.glow.BannerKind
+import org.openstrap.app.ui.glow.PageActionRow
+import org.openstrap.app.ui.glow.PageGroup
+import org.openstrap.app.ui.glow.SectionLabel
+import org.openstrap.app.ui.glow.StatusBanner
 import org.openstrap.app.ui.glow.PageRow
-import org.openstrap.app.ui.glow.PageRows
 import org.openstrap.app.ui.theme.AppIcons
 import org.openstrap.app.update.Check
 import org.openstrap.app.update.Install
@@ -72,26 +77,30 @@ fun UpdatesPage(
     val busy = state.install is Install.Downloading || state.install is Install.Installing
     ScreenList(contentPadding, gutter = GlowLayout.Gutter) {
         item { PageHeader(stringResource(R.string.you_updates_title), onBack) }
+        // An update ready is news, so it heads the page as a banner with Install (HaloUpdates board, B1).
+        if (newest != null) item {
+            val waits = busy || (recording && newest.apk != null)
+            StatusBanner(
+                if (state.install is Install.Failed) BannerKind.Warn else BannerKind.Good,
+                stringResource(R.string.you_updates_ready, newest.versionName),
+                note = UpdateCopy.install(newest, state.install, recording),
+                action = if (waits) null else stringResource(R.string.you_updates_install), onAction = { onInstall(newest) },
+            )
+        }
         item {
-            PageRows {
-                if (newest != null) PageRow(
-                    stringResource(R.string.you_updates_release, newest.versionName), UpdateCopy.install(newest, state.install, recording),
-                    onClick = { onInstall(newest) }, below = true, divider = false, enabled = !busy && !(recording && newest.apk != null),
-                    icon = AppIcons.DownloadSimple,
+            PageGroup(footnote = UpdateCopy.checkStatus(state, now) + " " + stringResource(R.string.you_updates_installed, installed)) {
+                PageActionRow(
+                    stringResource(R.string.you_updates_check_now), onCheck, icon = AppIcons.Refresh04,
+                    busy = state.check == Check.Checking, divider = false,
                 )
-                PageRow(
-                    stringResource(R.string.you_updates_check_now), UpdateCopy.checkStatus(state, now), onClick = onCheck, below = true,
-                    divider = newest != null,
-                    enabled = state.check != Check.Checking, icon = AppIcons.Refresh04,
-                )
-                PageSwitchRow(
-                    stringResource(R.string.you_updates_daily), stringResource(R.string.you_updates_daily_note), auto, onAuto,
-                    icon = AppIcons.CalendarBlank,
-                )
+                PageSwitchRow(stringResource(R.string.you_updates_daily), stringResource(R.string.you_updates_daily_note), auto, onAuto)
+            }
+        }
+        item {
+            PageGroup {
                 PageRow(
                     stringResource(R.string.you_updates_all_releases), stringResource(R.string.you_updates_on_github), onClick = onGitHub,
-                    below = true,
-                    icon = AppIcons.Info,
+                    below = true, divider = false, icon = AppIcons.Info,
                 )
             }
         }
@@ -106,19 +115,19 @@ fun UpdatesPage(
                     else -> R.string.you_updates_latest
                 },
             )
-            PagePanel(title = title) {
-                shown.forEachIndexed { i, release ->
-                    if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(Color.White.copy(alpha = 0.08f)))
-                    ReleaseNotesView(release)
+            // The release notes are a text panel (rules B3, row type 7): a plain panel, no rows.
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                SectionLabel(title)
+                Column(
+                    Modifier.fillMaxWidth().clip(GlowLayout.CardShape).background(Color(0xFF0C0D10)).padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    shown.forEachIndexed { i, release ->
+                        if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(Color(0xFF1C1D22)))
+                        ReleaseNotesView(release)
+                    }
                 }
             }
-        }
-        item {
-            Text(
-                stringResource(R.string.you_updates_installed, installed),
-                Modifier.fillMaxWidth().padding(top = 4.dp),
-                color = Color.White.copy(alpha = 0.45f), style = GlowType.secondary, textAlign = TextAlign.Center,
-            )
         }
     }
 }
@@ -129,7 +138,8 @@ private fun ReleaseNotesView(release: Release) {
     val blocks = remember(release.notes) { ReleaseNotes.parse(release.notes) }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(release.versionName, color = Color.White, style = GlowType.body.copy(fontWeight = FontWeight.Medium), modifier = Modifier.weight(1f))
+            Text(release.versionName, color = Color.White, style = GlowType.body.copy(fontWeight = FontWeight.Medium),
+                modifier = Modifier.weight(1f))
             release.publishedAt?.let {
                 Text(UpdateCopy.date(it), color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary)
             }
@@ -142,7 +152,8 @@ private fun ReleaseNotesView(release: Release) {
         }
         blocks.forEachIndexed { i, block -> when (block) {
             is NoteBlock.Heading -> Text(
-                spans(block.spans), color = Color.White, style = GlowType.body.copy(fontWeight = FontWeight.Medium), modifier = Modifier.padding(top = 6.dp),
+                spans(block.spans), color = Color.White, style = GlowType.body.copy(fontWeight = FontWeight.Medium),
+                    modifier = Modifier.padding(top = 6.dp),
             )
             // The opening paragraph leads, larger; any later one reads like the bullets.
             is NoteBlock.Paragraph ->
@@ -150,7 +161,8 @@ private fun ReleaseNotesView(release: Release) {
                 else Text(spans(block.spans), color = Color.White.copy(alpha = 0.75f), style = GlowType.secondary)
             is NoteBlock.Bullet -> Row {
                 Text("•", color = Color.White.copy(alpha = 0.5f), style = GlowType.body, modifier = Modifier.width(16.dp))
-                Text(spans(block.spans), color = Color.White.copy(alpha = 0.75f), style = GlowType.secondary, modifier = Modifier.padding(top = 1.dp))
+                Text(spans(block.spans), color = Color.White.copy(alpha = 0.75f), style = GlowType.secondary,
+                    modifier = Modifier.padding(top = 1.dp))
             }
         } }
     }

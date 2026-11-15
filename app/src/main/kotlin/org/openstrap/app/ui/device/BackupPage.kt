@@ -10,7 +10,9 @@ import org.openstrap.app.data.settings.BackupState
 import org.openstrap.app.ui.dashboard.ScreenList
 import org.openstrap.app.ui.glow.GlowLayout
 import org.openstrap.app.ui.glow.PageActionRow
+import org.openstrap.app.ui.glow.BannerKind
 import org.openstrap.app.ui.glow.PageGroup
+import org.openstrap.app.ui.glow.StatusBanner
 import org.openstrap.app.ui.glow.PageSwitchRow
 import org.openstrap.app.ui.glow.PageHeader
 import org.openstrap.app.ui.glow.PageRow
@@ -40,13 +42,26 @@ fun BackupPage(
     val toggle = { on: Boolean -> if (on) onTurnOn() else onTurnOff() }
     ScreenList(contentPadding, gutter = GlowLayout.Gutter) {
         item { PageHeader(stringResource(R.string.you_backup_title), onBack) }
+        // A failed backup is news, so it heads the page as a banner (HaloBackup board, B1).
+        state.failed?.let { failure ->
+            item {
+                StatusBanner(
+                    BannerKind.Warn, stringResource(R.string.you_backup_banner_failed),
+                    note = listOfNotNull(
+                        BackupCopy.failure(failure), state.failedAt?.let { BackupCopy.whenDone(it, now, java.time.ZoneId.systemDefault()) },
+                    ).joinToString(". "),
+                    action = stringResource(R.string.you_alarms_try_again), onAction = onBackUpNow,
+                )
+            }
+        }
         // Groups as on the HaloBackup board: the switch, the folder and Back up now; Restore; Save a copy.
         item {
             PageGroup(
                 footnote = if (state.on) stringResource(R.string.you_backup_now_note) else null,
             ) {
                 PageSwitchRow(
-                    stringResource(R.string.you_backup_automatic), BackupCopy.status(state, now), state.on, toggle, divider = false,
+                    stringResource(R.string.you_backup_automatic), BackupCopy.status(state.copy(failed = null),
+                        now), state.on, toggle, divider = false,
                     icon = AppIcons.ShieldCheck,
                 )
                 if (state.on) {

@@ -1,72 +1,51 @@
 package org.openstrap.app.ui.alarms
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Text
-import androidx.compose.material3.TimePicker
-import androidx.compose.material3.TimePickerDefaults
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.key
-import androidx.compose.runtime.rememberCoroutineScope
-import kotlinx.coroutines.launch
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import org.openstrap.app.R
 import org.openstrap.app.i18n.Strings
-import androidx.compose.ui.graphics.Color
+import org.openstrap.app.presentation.TimeOfDay
+import org.openstrap.app.ui.dashboard.ScreenList
 import org.openstrap.app.ui.glow.GlowLayout
-import org.openstrap.app.ui.glow.GlowType
-import org.openstrap.app.ui.theme.ControlSurface
 import org.openstrap.app.ui.glow.PageActionRow
 import org.openstrap.app.ui.glow.PageButton
 import org.openstrap.app.ui.glow.PageFootnote
-import org.openstrap.app.ui.glow.PageItemRow
-import org.openstrap.app.ui.glow.PageRows
-import org.openstrap.app.ui.glow.SectionLabel
-import org.openstrap.app.ui.theme.AppIcons
-import org.openstrap.app.ui.glow.PageChip
-import org.openstrap.app.ui.glow.PageConfirm
-import org.openstrap.app.ui.glow.PageSheet
 import org.openstrap.app.ui.glow.PageHeader
-import org.openstrap.app.ui.glow.PageMenuRow
-import org.openstrap.app.ui.glow.PageSwitchRow
+import org.openstrap.app.ui.glow.PageItemRow
 import org.openstrap.app.ui.glow.PageNote
 import org.openstrap.app.ui.glow.PagePanel
-import org.openstrap.app.ui.dashboard.ScreenList
+import org.openstrap.app.ui.glow.PageRows
+import org.openstrap.app.ui.glow.PageConfirm
+import org.openstrap.app.ui.glow.SectionLabel
+import org.openstrap.app.ui.theme.AppIcons
 import org.openstrap.app.ui.theme.MetricColors
 import org.openstrap.protocol.services.Alarm
 import org.openstrap.protocol.services.SettingsCodec
-import org.openstrap.app.presentation.ClockSetting
-import org.openstrap.app.presentation.TimeOfDay
 import java.time.LocalTime
 
 /** The days of the week, short, Monday first: "Mon", for an alarm on chosen days. */
-private val DAY_NAMES = listOf(
+internal val DAY_NAMES = listOf(
     R.string.you_alarms_day_mon, R.string.you_alarms_day_tue, R.string.you_alarms_day_wed, R.string.you_alarms_day_thu,
     R.string.you_alarms_day_fri, R.string.you_alarms_day_sat, R.string.you_alarms_day_sun,
 )
 
 /** The days of the week as one letter, Monday first, on the alarm sheet's chips. */
-private val DAY_LETTERS = listOf(
+internal val DAY_LETTERS = listOf(
     R.string.you_alarms_letter_mon, R.string.you_alarms_letter_tue, R.string.you_alarms_letter_wed, R.string.you_alarms_letter_thu,
     R.string.you_alarms_letter_fri, R.string.you_alarms_letter_sat, R.string.you_alarms_letter_sun,
 )
@@ -82,7 +61,7 @@ fun daysLabel(days: Int, strings: Strings = Strings.app): String = when (days) {
 }
 
 /** How often the strap measures heart rate, as its menu says it. */
-private fun intervalLabel(v: Int, strings: Strings = Strings.app) = when (v) {
+internal fun intervalLabel(v: Int, strings: Strings = Strings.app) = when (v) {
     0 -> strings.get(R.string.you_value_off)
     SettingsCodec.HR_CONTINUOUS -> strings.get(R.string.you_alarms_interval_continuous)
     else -> strings.format(R.string.you_alarms_interval_every, v)
@@ -255,108 +234,3 @@ private fun AlarmsPanel(
         }
     }
 }
-
-@Composable
-private fun HeartAlertsPanel(state: AlarmsUiState, vm: AlarmsViewModel) {
-    val g = state.health ?: return
-    val alerts = state.alertsAvailable
-    val off: (Int) -> Boolean = { it == 0 }
-    // A health alert's value in its menu: off, or the limit by [limit] ("Above 150", "Below 90%").
-    fun alertLabel(v: Int, limit: Int) = if (v == 0) Strings.app.get(R.string.you_value_off) else Strings.app.format(limit, v)
-    PagePanel(title = stringResource(R.string.you_health_panel)) {
-        // Rows with a menu each, in place of 21 chips; the measuring note only when it turns the heart rate alerts off.
-        Column {
-            var first = true
-            fun divider() = !first.also { first = false }
-            g[SettingsCodec.KEY_HR_INTERVAL]?.let { s ->
-                PageMenuRow(
-                    stringResource(R.string.you_health_measuring), s.choices.orEmpty(), s.number?.toInt(), { intervalLabel(it) },
-                    { vm.setHrInterval(it) }, divider = divider(), enabled = !state.busy, quiet = off,
-                    note = if (alerts) null else stringResource(R.string.you_health_measuring_note),
-                )
-            }
-            g[SettingsCodec.KEY_HIGH_HR_ALERT]?.let { s ->
-                PageMenuRow(
-                    stringResource(R.string.you_health_high), s.choices.orEmpty(), s.number?.toInt(),
-                    { alertLabel(it, R.string.you_health_above) },
-                    { vm.setEnum(SettingsCodec.KEY_HIGH_HR_ALERT, it) }, divider = divider(), enabled = !state.busy && alerts, quiet = off,
-                )
-            }
-            g[SettingsCodec.KEY_LOW_HR_ALERT]?.let { s ->
-                PageMenuRow(
-                    stringResource(R.string.you_health_low), s.choices.orEmpty(), s.number?.toInt(),
-                    { alertLabel(it, R.string.you_health_below) },
-                    { vm.setEnum(SettingsCodec.KEY_LOW_HR_ALERT, it) }, divider = divider(), enabled = !state.busy && alerts, quiet = off,
-                )
-            }
-            g[SettingsCodec.KEY_SMART_SPO2]?.bool?.let { on ->
-                PageSwitchRow(
-                    stringResource(R.string.you_health_auto_oxygen), stringResource(R.string.you_health_auto_oxygen_note), on,
-                    { vm.setAutoOxygen(it) }, divider = divider(), enabled = !state.busy,
-                )
-            }
-            g[SettingsCodec.KEY_LOW_SPO2_ALERT]?.let { s ->
-                val oxygen = state.oxygenAlertAvailable
-                PageMenuRow(
-                    stringResource(R.string.you_health_oxygen), s.choices.orEmpty(), s.number?.toInt(),
-                    { alertLabel(it, R.string.you_health_below_percent) },
-                    { vm.setEnum(SettingsCodec.KEY_LOW_SPO2_ALERT, it) }, divider = divider(), enabled = !state.busy && oxygen, quiet = off,
-                    note = if (oxygen) null else stringResource(R.string.you_health_oxygen_note),
-                )
-            }
-        }
-        PageNote(stringResource(R.string.you_health_note))
-    }
-}
-
-/**
- * A new alarm or one being changed, in a sheet: the time, the days as chips, then Cancel and Save, with Delete as quiet
- * text under them. The time wheel is Material's clock, recoloured to white on the sheet.
- */
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
-@Composable
-private fun AlarmSheet(alarm: Alarm, isNew: Boolean, busy: Boolean, onSave: (Alarm) -> Unit, onDelete: () -> Unit, onDismiss: () -> Unit) {
-    val time = rememberTimePickerState(alarm.hour, alarm.minute, is24Hour = ClockSetting.use24Hour)
-    var days by remember { mutableIntStateOf(alarm.days) }
-    PageSheet(onDismiss, stringResource(if (isNew) R.string.you_alarms_new else R.string.you_alarms_edit), note = daysLabel(days)) {
-        TimePicker(time, Modifier.align(Alignment.CenterHorizontally), colors = AlarmClockColors())
-        FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)) {
-            DAY_LETTERS.forEachIndexed { i, d ->
-                val bit = 1 shl i
-                // Picking a day replaces the strap's own "workdays" calendar with a plain day set.
-                PageChip(stringResource(d), days != Alarm.WORKDAYS && days and bit != 0, {
-                    days = (if (days == Alarm.WORKDAYS) 0 else days) xor bit
-                }, Modifier.widthIn(min = 40.dp), description = stringResource(DAY_NAMES[i]))
-            }
-        }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            PageButton(stringResource(R.string.you_action_cancel), onDismiss, Modifier.weight(1f))
-            PageButton(
-                stringResource(R.string.you_action_save),
-                { onSave(alarm.copy(hour = time.hour, minute = time.minute, days = days, enabled = true)) }, Modifier.weight(1f),
-                enabled = !busy, primary = true,
-            )
-        }
-        if (!isNew) {
-            PageButton(
-                stringResource(R.string.you_alarms_delete), onDelete, Modifier.fillMaxWidth(),
-                enabled = !busy, destructive = true,
-            )
-        }
-    }
-}
-
-/** The clock in the page's colours: white for the chosen hand and digits, the Control surface for the rest. */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-internal fun AlarmClockColors() = TimePickerDefaults.colors(
-    clockDialColor = ControlSurface,
-    clockDialSelectedContentColor = Color.Black,
-    clockDialUnselectedContentColor = Color.White,
-    selectorColor = Color.White,
-    containerColor = Color.Transparent,
-    timeSelectorSelectedContainerColor = Color.White,
-    timeSelectorUnselectedContainerColor = ControlSurface,
-    timeSelectorSelectedContentColor = Color.Black,
-    timeSelectorUnselectedContentColor = Color.White,
-)

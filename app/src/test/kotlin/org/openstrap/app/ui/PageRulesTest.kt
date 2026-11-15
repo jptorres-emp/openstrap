@@ -62,12 +62,13 @@ class PageRulesTest {
         }
     }
 
-    @Test fun `Profile asks for sex in labelled segments, not bare symbols`() {
-        // Audit section 5: two unlabelled round icons beside Age read as a bulb and a magnifier. Words, like Units.
+    @Test fun `Profile asks for sex in a labelled picker sheet, not bare symbols`() {
+        // Audit section 5: two unlabelled round icons beside Age read as a bulb and a magnifier. Words, in a sheet
+        // (HaloProfile board: Sex is a value row that opens Female and Male as segments, with Cancel and Save).
         val profile = File(uiRoot, "device/ProfileScreen.kt").readText()
         assertTrue("no round sex buttons", "SexToggle" !in profile && "GenderFemale" !in profile && "GenderMale" !in profile)
         // The words are in res/values (i18n), so the segments read them from there.
-        val segments = Regex("""GlowSegments\(\s*listOf\(stringResource\(R\.string\.you_profile_sex_female\), stringResource\(R\.string\.you_profile_sex_male\)\)""")
+        val segments = Regex("""SegmentSheet\(\s*stringResource\(R\.string\.you_profile_row_sex\),\s*listOf\(stringResource\(R\.string\.you_profile_sex_female\), stringResource\(R\.string\.you_profile_sex_male\)\)""")
         assertTrue("Female and Male as segments", segments.containsMatchIn(profile))
     }
 

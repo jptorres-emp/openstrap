@@ -17,9 +17,8 @@ import org.openstrap.app.ui.dashboard.SleepCopy
 import org.openstrap.app.ui.glow.GlowLayout
 import org.openstrap.app.ui.glow.GlowType
 import org.openstrap.app.ui.glow.PageHeader
-import org.openstrap.app.ui.glow.PageNote
 import org.openstrap.app.ui.glow.PageItemRow
-import org.openstrap.app.ui.glow.PageRows
+import org.openstrap.app.ui.glow.PageGroup
 import java.time.ZoneId
 import org.openstrap.app.presentation.DayWords
 import org.openstrap.app.presentation.TimeOfDay
@@ -45,7 +44,8 @@ fun DeletedSleepPage(
         // Once the last one is restored the page stays open, saying so, with no empty panel under it.
         if (deleted.isEmpty()) item { Text(SleepCopy.DELETED_NONE, color = Color.White, style = GlowType.body, modifier = Modifier.padding(horizontal = 4.dp)) }
         else item {
-            PageRows {
+            // The note under the panel is a footnote (HaloDeletedSleep board).
+            PageGroup(footnote = SleepCopy.DELETED_FOOT) {
                 deleted.forEachIndexed { i, r ->
                     PageItemRow(
                         SleepCopy.deletedName(r.strap.nap, DayWords.short(SleepCopy.deletedDay(r, zone))),
@@ -55,6 +55,5 @@ fun DeletedSleepPage(
                 }
             }
         }
-        if (deleted.isNotEmpty()) item { PageNote(SleepCopy.DELETED_FOOT) }
     }
 }

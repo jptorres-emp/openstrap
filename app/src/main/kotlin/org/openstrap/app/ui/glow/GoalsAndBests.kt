@@ -1,31 +1,33 @@
 package org.openstrap.app.ui.glow
 
-import org.openstrap.app.presentation.DayWords
-import org.openstrap.app.presentation.Ranges
-import org.openstrap.app.presentation.Units
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import java.time.Instant
 import java.time.LocalDate
@@ -34,23 +36,21 @@ import java.time.format.TextStyle as DayStyle
 import java.util.Locale
 import org.openstrap.app.R
 import org.openstrap.app.data.Rewards
+import org.openstrap.app.data.settings.Goals
 import org.openstrap.app.i18n.Strings
-import org.openstrap.app.ui.dashboard.ScreenList
-import org.openstrap.app.ui.theme.AppIcons
-import org.openstrap.app.ui.theme.MetricColors
+import org.openstrap.app.presentation.DayWords
+import org.openstrap.app.presentation.Ranges
 import org.openstrap.app.presentation.RewardsCopy
 import org.openstrap.app.presentation.RewardsView
-import org.openstrap.app.ui.glow.draw.GlowStyle
-import org.openstrap.app.ui.glow.draw.level
+import org.openstrap.app.presentation.Units
+import org.openstrap.app.ui.dashboard.ScreenList
+import org.openstrap.app.ui.theme.AppIcons
 
 /*
- * The Goals and bests page from You (workouts spec 3.5, board AchievementsV1), All badges, and the weekly recap the
- * Monday notification opens (board WeeklyRecap). The pages show each best and badge as its medal ([Medal]) with only
+ * The Goals and bests page from You (workouts spec 3.5, board HaloGoalsBests), All badges, and the weekly recap the
+ * Monday notification opens (board HaloWeeklyRecap). The pages show each best and badge as its token ([Medal]) with only
  * its name and figure; a tap opens its sheet, with what it is, when it was earned and how far along a locked one is.
  */
-
-/** The goal colour: met weeks, the goal moment. */
-private val GoalColor = MetricColors.good
 
 /** The days of [first]'s week, each a letter and whether a workout in [view] counted on it. */
 private fun weekDots(view: RewardsView, first: LocalDate, zone: ZoneId = ZoneId.systemDefault()): List<Pair<String, Boolean>> {
@@ -61,45 +61,31 @@ private fun weekDots(view: RewardsView, first: LocalDate, zone: ZoneId = ZoneId.
 }
 
 /**
- * A week against its goal on a glow lit as far as the count is toward it: the count in dots, "of 4 workouts", its days,
- * and [line] under them. [trailing] goes on the title row.
+ * A week against its goal on a solid card (rules A3, boards HaloGoalsBests and HaloWeeklyRecap): the goal's ring at 72, the
+ * count against the goal in Doto beside it, what the count is under it and [line] under that, in lime when it's good
+ * news ([good]) and grey when not. The page's one Doto number.
  */
 @Composable
-private fun GoalWeekCard(
-    title: String, count: Int, goal: Int, dots: List<Pair<String, Boolean>>, line: String,
-    /** The week as a bar of the goal's workouts (board AchievementsV1) rather than its days (WeeklyRecap). */
-    bar: Boolean = false, trailing: @Composable (() -> Unit)? = null,
-) {
-    val style = GlowStyle.level(GoalColor, (count.toFloat() / goal).coerceIn(0f, 1f))
-    GlowCard(style, Modifier.fillMaxWidth()) {
-        Column {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(title, color = Color.White, style = GlowType.cardTitle, maxLines = 1, modifier = Modifier.weight(1f))
-                trailing?.invoke()
-            }
-            HeroValue(
-                "$count", pluralStringResource(R.plurals.glow_goals_of_workouts, goal, goal), Modifier.padding(top = GlowLayout.TitleGap),
-            )
-            // The week's workouts against the goal as a bar of [goal] parts, [count] of them white.
-            val described = pluralStringResource(R.plurals.glow_goals_count_of_goal, goal, count, goal)
-            if (bar) SegmentBar(
-                List(goal.coerceIn(1, MAX_GOAL_SHOWN)) { i -> Segment(1f, Color.White.copy(alpha = if (i < count) 1f else 0.2f)) },
-                Modifier.padding(top = 18.dp).semantics { contentDescription = described }, height = 8.dp, gap = 6.dp,
-            ) else WeekDots(dots, Color.White, Modifier.padding(top = 18.dp))
-            Text(line, color = Color.White, style = GlowType.body, modifier = Modifier.padding(top = 14.dp))
+private fun WeekCard(count: Int, goal: Int, caption: String, line: String, good: Boolean) {
+    val shown = count.coerceAtMost(goal)
+    Row(
+        Modifier.fillMaxWidth().solidCard(GlowLayout.CardShape).padding(20.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(18.dp),
+    ) {
+        WeeklyGoalRing(shown, goal, 72.dp, pluralStringResource(R.plurals.glow_goals_count_of_goal, goal, shown, goal))
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            DotFigure(stringResource(R.string.glow_goals_count_big, shown, goal), BigNumber.Tile)
+            Text(caption, color = GlowType.noteColor, style = GlowType.secondary)
+            Text(line, color = if (good) GoodLine else GlowType.noteColor, style = GlowType.secondary)
         }
     }
 }
 
-/** The most workouts the goal bar splits into, so each part stays wide enough to read. */
-private const val MAX_GOAL_SHOWN = 14
+/** The tint of a good line under the week's figure (#DEF99F, lime toward white). */
+private val GoodLine = lerp(RewardLime, Color.White, 0.42f)
 
 /** A week's distance shows from a tenth of a km, the first the figure can write. */
 private const val MIN_WEEK_METERS = 100f
-
-/** All badges: three medals to a row, 8 dp apart. */
-private const val ALL_PER_ROW = 3
-private val ALL_GAP = 8.dp
 
 /**
  * The share card for the week from [first]: the count against the goal, its days, the hours, km and active kcal, and
@@ -143,13 +129,36 @@ private fun weekStory(view: RewardsView, first: LocalDate, strings: Strings = St
     )
 }
 
-/** The weekly goal on its own, in a sheet: the pencil on the Goals and bests page and the recap. */
+/**
+ * The weekly goal on its own, in a sheet (board HaloWeeklyGoalSheet): the pencil on the Goals and bests page and the
+ * recap. A stepper with the number in Funnel Display Light 44 and its word, a note, then Cancel and Save.
+ */
 @Composable
 fun WeeklyGoalSheet(goal: Int, onSave: (Int) -> Unit, onDismiss: () -> Unit) {
     var value by rememberSaveable { mutableIntStateOf(goal) }
-    PageSheet(onDismiss, stringResource(R.string.glow_goals_weekly_goal), note = stringResource(R.string.glow_goals_sheet_note)) {
-        org.openstrap.app.ui.device.WorkoutGoalField(value) { value = it }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+    PageSheet(onDismiss, stringResource(R.string.glow_goals_weekly_goal)) {
+        Row(
+            Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            RoundIconButton(
+                AppIcons.Minus, stringResource(R.string.you_goals_workouts_fewer),
+                { value = (value - 1).coerceIn(Goals.WORKOUTS_PER_WEEK) }, size = 44.dp, iconSize = 18.dp,
+            )
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text("$value", color = Color.White, style = GlowType.goalValue, maxLines = 1)
+                Text(
+                    pluralStringResource(R.plurals.glow_goals_workouts_word, value), Modifier.padding(start = 6.dp, bottom = 6.dp),
+                    color = GlowType.noteColor, style = GlowType.body, maxLines = 1,
+                )
+            }
+            RoundIconButton(
+                AppIcons.Plus, stringResource(R.string.you_goals_workouts_more), { value = (value + 1).coerceIn(Goals.WORKOUTS_PER_WEEK) },
+                size = 44.dp, iconSize = 18.dp,
+            )
+        }
+        Text(stringResource(R.string.glow_goals_sheet_note), color = GlowType.noteColor, style = GlowType.secondary)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             PageButton(stringResource(R.string.glow_cancel), onDismiss, Modifier.weight(1f))
             PageButton(stringResource(R.string.glow_save), { onSave(value) }, Modifier.weight(1f), primary = true)
         }
@@ -157,10 +166,10 @@ fun WeeklyGoalSheet(goal: Int, onSave: (Int) -> Unit, onDismiss: () -> Unit) {
 }
 
 /**
- * Goals and bests (board AchievementsV1): this week against the goal with the weeks in a row and the best run, the
- * personal bests as rosettes, the next badge to earn and how far along, the badges earned as medals, and the ways on.
- * Each best and badge opens its sheet. Before any workout there's still a page: the week at nought, the bests and
- * badges there are to go for.
+ * Goals and bests (board HaloGoalsBests): this week against the goal with the weeks in a row, the personal bests as
+ * rosettes, the next badge to earn and how far along, the badges as medals, and the ways on. Each best and badge opens
+ * its sheet. Before any workout there's still a page: the week at nought, the bests and badges there are to go for.
+ * [celebrations] is the Celebrations row's line, what is switched on.
  */
 @Composable
 fun GoalsAndBestsPage(
@@ -171,6 +180,7 @@ fun GoalsAndBestsPage(
     onRecap: () -> Unit,
     onCelebrations: () -> Unit,
     onBack: () -> Unit,
+    celebrations: String? = null,
 ) {
     BackHandler(onBack = onBack)
     var openBadge by rememberSaveable { mutableStateOf<String?>(null) }
@@ -182,16 +192,19 @@ fun GoalsAndBestsPage(
             return@ScreenList
         }
         item {
-            val week = view.week(view.thisWeek)
-            GoalWeekCard(
-                stringResource(R.string.glow_goals_this_week), week?.count ?: 0, view.goal, weekDots(view, view.thisWeek),
-                RewardsCopy.runLine(view.inARow, view.bestRun), bar = true,
-            ) { PageButton(stringResource(R.string.glow_goals_goal_button, view.goal), onGoal, icon = AppIcons.PencilEdit) }
+            val count = view.week(view.thisWeek)?.count ?: 0
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(SECTION_GAP)) {
+                SectionHead(stringResource(R.string.glow_goals_this_week))
+                WeekCard(
+                    count, view.goal, pluralStringResource(R.plurals.glow_goals_workouts_this_week, count, count),
+                    RewardsCopy.runLine(view.inARow, view.bestRun), good = view.inARow > 0,
+                )
+            }
         }
         item { BestsPanel(view, onOpen = { openBest = it }) }
         view.next?.let { next -> item { NextBadgeCard(next, view, onOpen = { openBadge = it.id }) } }
-        item { BadgesPanel(view, onOpen = { openBadge = it.id }, onAllBadges = onAllBadges) }
-        item { WaysOn(onAllBadges, onRecap, onCelebrations) }
+        item { BadgesPanel(view, onOpen = { openBadge = it.id }) }
+        item { WaysOn(view, celebrations, onAllBadges, onGoal, onRecap, onCelebrations) }
     }
     if (view != null) {
         openBadge?.let(Rewards::badge)?.let { b -> BadgeSheet(b, view, onDismiss = { openBadge = null }) }
@@ -199,40 +212,50 @@ fun GoalsAndBestsPage(
     }
 }
 
-/** All badges, last week's recap and the celebration settings, as rows in one panel. */
+/** All badges, the weekly goal, last week's recap and the celebration settings, as nav rows in one panel (rules A3, B3). */
 @Composable
-private fun WaysOn(onAllBadges: () -> Unit, onRecap: () -> Unit, onCelebrations: () -> Unit) {
-    PageRows {
-        PageRow(stringResource(R.string.glow_goals_all_badges), onClick = onAllBadges, icon = AppIcons.CheckCircle, divider = false)
+private fun WaysOn(
+    view: RewardsView, celebrations: String?, onAllBadges: () -> Unit, onGoal: () -> Unit, onRecap: () -> Unit, onCelebrations: () -> Unit,
+) {
+    PageGroup(footnote = stringResource(R.string.glow_goals_counts_rule)) {
+        PageRow(
+            stringResource(R.string.glow_goals_all_badges),
+            stringResource(R.string.glow_goals_earned_count, view.earned.size, Rewards.BADGES.size),
+            onClick = onAllBadges, below = true, icon = AppIcons.CheckCircle, divider = false,
+        )
+        PageRow(
+            stringResource(R.string.glow_goals_weekly_goal), pluralStringResource(R.plurals.you_goals_workouts_value, view.goal, view.goal),
+            onClick = onGoal, below = true, icon = AppIcons.Target,
+        )
         PageRow(stringResource(R.string.glow_goals_last_week), onClick = onRecap, icon = AppIcons.CalendarBlank)
-        PageRow(stringResource(R.string.glow_goals_celebrations), onClick = onCelebrations, icon = AppIcons.SlidersHorizontal)
+        PageRow(
+            stringResource(R.string.glow_goals_celebrations), celebrations, onClick = onCelebrations, below = celebrations != null,
+            icon = AppIcons.SlidersHorizontal,
+        )
     }
 }
 
 /**
- * Every badge by group, three medals to a row with only their names: earned ones lit, locked ones quiet with a bar for
- * how far along. Each opens its sheet.
+ * Every badge by group (board HaloAllBadges), each group a section with how many of it are earned and its badges three to
+ * a row with only their names: earned ones filled, locked ones quiet with a bar for how far along. Each opens its sheet.
  */
 @Composable
 fun AllBadgesPage(view: RewardsView?, contentPadding: PaddingValues, onBack: () -> Unit) {
     BackHandler(onBack = onBack)
     var open by rememberSaveable { mutableStateOf<String?>(null) }
     ScreenList(contentPadding, gutter = GlowLayout.Gutter) {
-        item {
-            val subtitle = view?.let { stringResource(R.string.glow_goals_earned_count, it.earned.size, Rewards.BADGES.size) }
-            PageHeader(stringResource(R.string.glow_goals_all_badges), onBack, subtitle = subtitle)
-        }
+        item { PageHeader(stringResource(R.string.glow_goals_all_badges), onBack) }
         if (view == null) return@ScreenList
         Rewards.Group.entries.forEach { group ->
             item {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    SectionLabel(groupName(group), Modifier.padding(top = 6.dp))
-                    QuietPanel {
-                        Rewards.BADGES.filter { it.group == group }.chunked(ALL_PER_ROW).forEach { row ->
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(ALL_GAP)) {
-                                row.forEach { b -> BadgeCell(b, view, { open = it.id }, GlowType.secondary, Modifier.weight(1f)) }
-                                repeat(ALL_PER_ROW - row.size) { Spacer(Modifier.weight(1f)) }
-                            }
+                val badges = Rewards.BADGES.filter { it.group == group }
+                val got = badges.count { b -> view.earned.any { it.id == b.id } }
+                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(SECTION_GAP)) {
+                    SectionHead(groupName(group), note = stringResource(R.string.glow_goals_earned_count, got, badges.size))
+                    badges.chunked(GRID_COLUMNS).forEach { row ->
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(SECTION_GAP)) {
+                            row.forEach { b -> BadgeCell(b, view, { open = it.id }, Modifier.weight(1f)) }
+                            repeat(GRID_COLUMNS - row.size) { Spacer(Modifier.weight(1f)) }
                         }
                     }
                 }
@@ -243,8 +266,9 @@ fun AllBadgesPage(view: RewardsView?, contentPadding: PaddingValues, onBack: () 
 }
 
 /**
- * The weekly recap (board WeeklyRecap) for the week from [first]: the goal and the days, the weeks in a row, the bests
- * set that week, and its time, distance and active kcal. Next week's goal can be changed from here.
+ * The weekly recap (board HaloWeeklyRecap) for the week from [first]: the week card and its days as solid pills, the
+ * bests set that week as tokens, its time, distance and active kcal, and next week's goal as a value row. Share week
+ * is a dark button under them.
  */
 @Composable
 fun WeeklyRecapPage(view: RewardsView?, first: LocalDate, contentPadding: PaddingValues, onGoal: () -> Unit, onBack: () -> Unit) {
@@ -256,38 +280,47 @@ fun WeeklyRecapPage(view: RewardsView?, first: LocalDate, contentPadding: Paddin
         return
     }
     BackHandler(onBack = onBack)
+    var openBest by rememberSaveable { mutableStateOf<String?>(null) }
     ScreenList(contentPadding, gutter = GlowLayout.Gutter) {
         item { PageHeader(stringResource(R.string.glow_goals_your_week), onBack, subtitle = RewardsCopy.weekRange(first)) }
         if (view == null) return@ScreenList
         val week = view.week(first)
         val count = week?.count ?: 0
         val goal = week?.goal ?: view.goal
+        val met = week?.met == true
+        val run = Rewards.inARow(view.weeks, first)
         item {
-            val run = Rewards.inARow(view.weeks, first)
-            GoalWeekCard(
-                stringResource(if (week?.met == true) R.string.glow_goals_goal_met else R.string.glow_goals_weekly_goal),
-                count, goal, weekDots(view, first),
-                if (week?.met == true && run > 0) {
-                    pluralStringResource(R.plurals.glow_goals_weekly_streak, run, run)
-                } else {
-                    (goal - count).coerceAtLeast(0).let { pluralStringResource(R.plurals.glow_goals_short_of_goal, it, it) }
-                },
-            )
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(SECTION_GAP)) {
+                WeekCard(
+                    count, goal,
+                    if (met) {
+                        stringResource(R.string.glow_goals_workouts_goal_met)
+                    } else {
+                        pluralStringResource(R.plurals.glow_goals_workouts_word, count)
+                    },
+                    if (met && run > 0) {
+                        pluralStringResource(R.plurals.glow_goals_weekly_streak, run, run)
+                    } else {
+                        (goal - count).coerceAtLeast(0).let { pluralStringResource(R.plurals.glow_goals_short_of_goal, it, it) }
+                    },
+                    good = met && run > 0,
+                )
+                val days = weekDots(view, first)
+                val today = LocalDate.now()
+                DayPills(days, today = (0 until 7).firstOrNull { first.plusDays(it.toLong()) == today })
+            }
         }
         val zone = ZoneId.systemDefault()
         val from = first.atStartOfDay(zone).toEpochSecond()
         val to = first.plusDays(7).atStartOfDay(zone).toEpochSecond()
         val highlights = view.bests.filter { it.date in from until to }
         if (highlights.isNotEmpty()) item {
-            ListPanel(title = stringResource(R.string.glow_goals_highlights)) {
-                highlights.forEachIndexed { i, b ->
-                    ListRow(
-                        stringResource(R.string.glow_goals_best, RewardsCopy.bestTitle(b.kind), RewardsCopy.bestValue(b.kind, b.value)),
-                        BestColor,
-                        DayWords.weekdayShort(Instant.ofEpochSecond(b.date).atZone(zone).toLocalDate()), null,
-                        divider = i > 0, icon = AppIcons.FlagCheckered,
-                    )
-                }
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(SECTION_GAP)) {
+                SectionHead(
+                    stringResource(R.string.glow_goals_highlights),
+                    note = pluralStringResource(R.plurals.glow_goals_bests_count, highlights.size, highlights.size),
+                )
+                BestsGrid(highlights, onOpen = { openBest = it })
             }
         }
         item {
@@ -295,32 +328,71 @@ fun WeeklyRecapPage(view: RewardsView?, first: LocalDate, contentPadding: Paddin
             val seconds = mine.sumOf { it.activeSeconds }
             val meters = mine.sumOf { (it.meters ?: 0f).toDouble() }.toFloat()
             val kcal = mine.mapNotNull { it.activeKcal }.sum()
-            PictureCard(GoalColor, Modifier.fillMaxWidth()) {
-                EdgeTitle(
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(SECTION_GAP)) {
+                SectionHead(
                     stringResource(R.string.glow_goals_in_all),
-                    pluralStringResource(R.plurals.glow_goals_workouts_count, mine.size, mine.size),
+                    note = pluralStringResource(R.plurals.glow_goals_workouts_count, mine.size, mine.size),
                 )
-                DetailFigures(
-                    listOf(
-                        Units.clockDuration(seconds) to stringResource(R.string.glow_goals_hours),
-                        Units.km(meters, Units.Precision.Day) to stringResource(R.string.glow_unit_km),
-                        Units.count(Math.round(kcal)) to stringResource(R.string.glow_goals_active_kcal),
+                RecapFigures(
+                    RecapFigure(
+                        Units.clockDuration(seconds), stringResource(R.string.you_unit_h), stringResource(R.string.glow_goals_hours),
                     ),
-                    Modifier.padding(top = 12.dp), valueStyle = GlowType.rowValue, missing = null, gap = 0.dp,
+                    RecapFigure(
+                        Units.km(meters, Units.Precision.Day), stringResource(R.string.glow_unit_km),
+                        stringResource(R.string.glow_goals_distance),
+                    ),
+                    RecapFigure(Units.count(Math.round(kcal)), "", stringResource(R.string.glow_goals_active_kcal)),
                 )
             }
         }
         item {
-            // Board WeeklyRecap: next week's goal and Share week side by side, Share the bright one.
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                PageButton(
-                    stringResource(R.string.glow_goals_next_week, view.goal), onGoal, Modifier.weight(1f), icon = AppIcons.PencilEdit,
+            PageRows {
+                PageRow(
+                    stringResource(R.string.glow_goals_next_week_goal),
+                    pluralStringResource(R.plurals.glow_goals_workouts_count, view.goal, view.goal),
+                    onClick = onGoal, divider = false,
                 )
-                PageButton(
-                    stringResource(R.string.glow_goals_share_week), { sharing = true }, Modifier.weight(1f), primary = true,
-                    icon = AppIcons.UploadSimple,
-                )
+            }
+        }
+        item {
+            PageButton(
+                stringResource(R.string.glow_goals_share_week), { sharing = true }, Modifier.fillMaxWidth(), icon = AppIcons.UploadSimple,
+            )
+        }
+    }
+    if (view != null) openBest?.let { kind -> BestSheet(kind, view, onDismiss = { openBest = null }) }
+}
+
+/**
+ * The week's totals as plain columns (board HaloWeeklyRecap): the figure in Funnel Display Light 28 with its unit, its
+ * label under, a 1 px rule between.
+ */
+@Composable
+private fun RecapFigures(vararg figures: RecapFigure) {
+    Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp).height(IntrinsicSize.Min)) {
+        figures.forEachIndexed { i, (value, unit, label) ->
+            if (i > 0) Box(Modifier.fillMaxHeight().width(1.dp).background(FigureRule))
+            Column(
+                Modifier.weight(1f).padding(start = if (i > 0) 16.dp else 0.dp), verticalArrangement = Arrangement.spacedBy(3.dp),
+            ) {
+                Row(verticalAlignment = Alignment.Bottom) {
+                    Text(value, color = Color.White, style = GlowType.figure, maxLines = 1)
+                    if (unit.isNotEmpty()) {
+                        Text(
+                            unit, Modifier.padding(start = 4.dp, bottom = 3.dp), color = GlowType.noteColor, style = GlowType.secondary,
+                            maxLines = 1,
+                        )
+                    }
+                }
+                Text(label, color = GlowType.noteColor, style = GlowType.footnote, maxLines = 1)
             }
         }
     }
 }
+
+/** One of the recap's totals: the figure, its unit after it (blank for none) and its label under. */
+private data class RecapFigure(val value: String, val unit: String, val label: String)
+
+private val FigureRule = Color(0xFF24262C)
+private val SECTION_GAP = 16.dp
+private const val GRID_COLUMNS = 3

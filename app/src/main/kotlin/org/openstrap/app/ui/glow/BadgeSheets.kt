@@ -1,6 +1,13 @@
 package org.openstrap.app.ui.glow
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -25,51 +32,50 @@ import org.openstrap.app.presentation.RewardsView
 import org.openstrap.app.presentation.Units
 
 /*
- * A badge or a personal best on its own, in a sheet over Goals and bests or All badges: the medal large, lighting up as
- * the sheet opens when it's earned, then what it is and how it's earned, and when it was, or how far along. The pages
- * show only the medal and its name, so the words are here (spec 2.5: an explanation behind a tap, never on the page).
+ * A badge or a personal best on its own, in a sheet over Goals and bests or All badges (rules A4, boards HaloBadgeSheet
+ * and HaloBestSheet): the token at 96, lighting up as the sheet opens when it's earned, its group, its name, how it's
+ * earned, and when it was or how far along, then a dark Close. The pages show only the token and its name, so the words
+ * are here (spec 2.5: an explanation behind a tap, never on the page).
  */
 
 /**
- * A badge on its own: its medal, its group and name, how it's earned, then when it was, or how far along with a bar,
- * or that it's still to earn. Badges counted from workouts say which workouts count.
+ * A badge on its own: its token, its group and name, how it's earned, then when it was in a pill of its colour, or how
+ * far along with a bar, or that it's still to earn. Badges counted from workouts say which workouts count.
  */
 @Composable
 internal fun BadgeSheet(badge: Rewards.Badge, view: RewardsView, onDismiss: () -> Unit) {
     val row = view.earned.firstOrNull { it.id == badge.id }
     val progress = view.progress[badge.id]
     val lit = rememberLightRise(row != null)
+    val ink = badgeInk(badge)
     PageSheet(onDismiss) {
         SheetColumn {
-            Medal(badgeLook(badge, view.face(badge)), SHEET_MEDAL, Modifier.padding(vertical = 12.dp), locked = row == null, lit = lit)
+            Medal(badgeLook(badge, view.face(badge)), SHEET_MEDAL, locked = row == null, lit = lit)
             SheetText(groupName(badge.group))
             SheetTitle(badge.title)
             howToEarn(badge)?.let { SheetText(it, Color.White.copy(alpha = LINE_ALPHA), GlowType.body) }
             when {
-                row != null -> SheetText(stringResource(R.string.glow_goals_earned_on, RewardsCopy.dayLong(row.earnedAt)), Color.White)
+                row != null -> StatusPill(stringResource(R.string.glow_goals_earned_on, RewardsCopy.dayLong(row.earnedAt)), ink)
                 progress != null -> Column(
-                    Modifier.fillMaxWidth().padding(top = 8.dp, start = 24.dp, end = 24.dp),
+                    Modifier.fillMaxWidth().padding(top = 4.dp, start = 24.dp, end = 24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    ShareBar(progress.first.toFloat() / progress.second, badgeColor(badge.group), Modifier.fillMaxWidth())
-                    SheetText(RewardsCopy.progressLine(progress.first, progress.second, badge.unit))
+                    ShareBar(progress.first.toFloat() / progress.second, ink, Modifier.fillMaxWidth())
+                    SheetText(RewardsCopy.progressLine(progress.first, progress.second, badge.unit), Color.White)
                 }
                 else -> SheetText(stringResource(R.string.glow_goals_not_earned))
             }
             if (countsWorkouts(badge)) {
-                SheetText(
-                    stringResource(R.string.glow_goals_counts_rule), Color.White.copy(alpha = GlowType.CAPTION_ALPHA), GlowType.caption,
-                    top = 8.dp,
-                )
+                SheetText(stringResource(R.string.glow_goals_counts_rule), GlowType.footnoteColor, GlowType.footnote, top = 4.dp)
             }
         }
-        PageButton(stringResource(R.string.glow_done), onDismiss, Modifier.fillMaxWidth(), primary = true)
+        PageButton(stringResource(R.string.glow_close), onDismiss, Modifier.fillMaxWidth())
     }
 }
 
 /**
- * A personal best on its own: its rosette, its name and figure, when it was set and in what, and what it measures. One
- * not set yet says so, with what it will measure.
+ * A personal best on its own: its rosette, its name and figure, when it was set and in what in a pill of its colour, and
+ * what it measures. One not set yet says so, with what it will measure.
  */
 @Composable
 internal fun BestSheet(kind: String, view: RewardsView, onDismiss: () -> Unit) {
@@ -77,18 +83,36 @@ internal fun BestSheet(kind: String, view: RewardsView, onDismiss: () -> Unit) {
     val lit = rememberLightRise(best != null)
     PageSheet(onDismiss) {
         SheetColumn {
-            Medal(bestLook(kind), SHEET_MEDAL, Modifier.padding(vertical = 12.dp), locked = best == null, lit = lit)
+            Medal(bestLook(kind), SHEET_MEDAL, locked = best == null, lit = lit)
             SheetText(stringResource(R.string.glow_goals_personal_bests))
             SheetTitle(RewardsCopy.bestTitle(kind))
             if (best != null) {
                 Text(RewardsCopy.bestValue(kind, best.value), color = Color.White, style = GlowType.goalValue, maxLines = 1)
-                SheetText(whenSet(best, view), Color.White)
+                StatusPill(whenSet(best, view), bestInk(kind))
             } else {
                 SheetText(stringResource(R.string.glow_goals_not_set))
             }
-            SheetText(bestHow(kind), Color.White.copy(alpha = LINE_ALPHA), GlowType.body)
         }
-        PageButton(stringResource(R.string.glow_done), onDismiss, Modifier.fillMaxWidth(), primary = true)
+        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(stringResource(R.string.glow_goals_what_it_measures), color = GlowType.noteColor, style = GlowType.secondary)
+            Text(bestHow(kind), color = Color.White.copy(alpha = LINE_ALPHA), style = GlowType.body)
+        }
+        PageButton(stringResource(R.string.glow_close), onDismiss, Modifier.fillMaxWidth())
+    }
+}
+
+/** What happened, in a pill 34 high in [ink] at 16% with its text in a lighter tint of it (boards HaloBadgeSheet, HaloBestSheet). */
+@Composable
+private fun StatusPill(text: String, ink: Color) {
+    Box(
+        Modifier.heightIn(min = 34.dp).clip(CircleShape).background(ink.copy(alpha = PILL_ALPHA))
+            .padding(horizontal = 14.dp, vertical = 6.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text, color = lerp(ink, Color.White, PILL_TINT), style = GlowType.body.copy(fontWeight = FontWeight.SemiBold),
+            textAlign = TextAlign.Center,
+        )
     }
 }
 
@@ -104,11 +128,11 @@ internal fun groupName(group: Rewards.Group): String = stringResource(
     },
 )
 
-/** A sheet's centred column, its parts 8 dp apart. */
+/** A sheet's centred column, its parts 10 dp apart (boards HaloBadgeSheet, HaloBestSheet). */
 @Composable
 private fun SheetColumn(content: @Composable ColumnScope.() -> Unit) = Column(
-    Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp),
-    content = content,
+    Modifier.fillMaxWidth().padding(top = 4.dp), horizontalAlignment = Alignment.CenterHorizontally,
+    verticalArrangement = Arrangement.spacedBy(10.dp), content = content,
 )
 
 @Composable
@@ -119,7 +143,7 @@ private fun SheetTitle(text: String) =
 @Composable
 private fun SheetText(
     text: String,
-    color: Color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA),
+    color: Color = GlowType.noteColor,
     style: TextStyle = GlowType.secondary,
     top: Dp = 0.dp,
 ) = Text(
@@ -192,4 +216,6 @@ private const val KM_PREFIX = "km_"
 private const val GOAL_PREFIX = "goal_"
 private const val GOAL_FIRST_ID = "goal_first"
 private const val LINE_ALPHA = 0.85f
-private val SHEET_MEDAL = 156.dp
+private val SHEET_MEDAL = 96.dp
+private const val PILL_ALPHA = 0.16f
+private const val PILL_TINT = 0.42f

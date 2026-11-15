@@ -32,7 +32,7 @@
     <string name="glow_goals_group_milestones">里程碑</string>
     <string name="glow_goals_group_kinds">全新尝试</string>
     <string name="glow_goals_weekly_goal">周目标</string>
-    <string name="glow_goals_sheet_note">更改将应用于本周。以往各周保持原定目标不变。</string>
+    <string name="glow_goals_sheet_note">只要时长达到 10 分钟的运动都会计入。更改从本周开始，连续达标的周数会继续累计。</string>
     <string name="glow_goals_your_week">你的一周</string>
     <string name="glow_goals_goal_met">已达标</string>
     <plurals name="glow_goals_weekly_streak">
@@ -59,4 +59,23 @@
     <plurals name="glow_goals_weeks_in_a_row">
         <item quantity="other">连续 %d 周</item>
     </plurals>
+    <string name="glow_goals_count_big">%1$d / %2$d</string>
+    <plurals name="glow_goals_workouts_this_week">
+        <item quantity="other">本周 %d 次运动</item>
+    </plurals>
+    <string name="glow_goals_workouts_goal_met">次运动，目标已达成</string>
+    <plurals name="glow_goals_bests_count">
+        <item quantity="other">%d 项个人最佳</item>
+    </plurals>
+    <string name="glow_goals_next_week_goal">下周目标</string>
+    <string name="glow_goals_what_it_measures">衡量内容</string>
+    <string name="glow_goals_celebrations_both">目标时刻和每周回顾已开启</string>
+    <string name="glow_goals_celebrations_goal">目标时刻已开启</string>
+    <string name="glow_goals_celebrations_recap">每周回顾已开启</string>
+    <string name="glow_goals_celebrations_off">已关闭</string>
+    <string name="glow_goals_unit_kcal">千卡</string>
+    <string name="glow_goals_per_week">每周</string>
+    <string name="glow_goals_lower">降低%1$s</string>
+    <string name="glow_goals_raise">提高%1$s</string>
+    <string name="glow_goals_type">输入%1$s</string>
 </resources>

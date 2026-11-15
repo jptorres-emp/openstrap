@@ -8,6 +8,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -49,7 +50,17 @@ import org.openstrap.app.ui.theme.AppIcons
 
 /** Cancel and Save, half and half, 56 tall (rules B4). Save is the sheet's one white thing. */
 @Composable
-internal fun SheetActions(onCancel: () -> Unit, onSave: () -> Unit, saveEnabled: Boolean = true) {
+internal fun ColumnScope.SheetActions(
+    onCancel: () -> Unit,
+    onSave: () -> Unit,
+    saveEnabled: Boolean = true,
+    clearLabel: String? = null,
+    onClear: (() -> Unit)? = null,
+) {
+    // A field that may be left blank (the page's values are all optional) has a quiet way back to blank or the default.
+    if (clearLabel != null && onClear != null) {
+        org.openstrap.app.ui.glow.PageTextButton(clearLabel, onClear, Modifier.align(Alignment.CenterHorizontally))
+    }
     Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         PageButton(stringResource(R.string.you_action_cancel), onCancel, Modifier.weight(1f))
         PageButton(stringResource(R.string.you_action_save), onSave, Modifier.weight(1f), enabled = saveEnabled, primary = true)
@@ -68,6 +79,8 @@ internal fun StepperSheet(
     onSave: (Int) -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
+    clearLabel: String? = null,
+    onClear: (() -> Unit)? = null,
     step: Int = 1,
     note: String? = null,
     unit: String? = null,
@@ -92,7 +105,7 @@ internal fun StepperSheet(
             )
         }
         if (note != null) PageNote(note)
-        SheetActions(onDismiss, { onSave(value) })
+        SheetActions(onDismiss, { onSave(value) }, clearLabel = clearLabel, onClear = onClear)
     }
 }
 
@@ -106,12 +119,14 @@ internal fun SegmentSheet(
     onSave: (Int) -> Unit,
     onDismiss: () -> Unit,
     note: String? = null,
+    clearLabel: String? = null,
+    onClear: (() -> Unit)? = null,
 ) {
     var picked by rememberSaveable { mutableIntStateOf(initial) }
     PageSheet(onDismiss, title) {
         Box(Modifier.padding(vertical = 8.dp)) { GlowSegments(options, picked, { picked = it }) }
         if (note != null) PageNote(note)
-        SheetActions(onDismiss, { onSave(picked) }, saveEnabled = picked in options.indices)
+        SheetActions(onDismiss, { onSave(picked) }, saveEnabled = picked in options.indices, clearLabel = clearLabel, onClear = onClear)
     }
 }
 
@@ -125,6 +140,8 @@ internal fun RadioSheet(
     onSave: (Int) -> Unit,
     onDismiss: () -> Unit,
     note: String? = null,
+    clearLabel: String? = null,
+    onClear: (() -> Unit)? = null,
 ) {
     var picked by rememberSaveable { mutableIntStateOf(initial) }
     PageSheet(onDismiss, title) {
@@ -134,7 +151,7 @@ internal fun RadioSheet(
             }
         }
         if (note != null) PageNote(note)
-        SheetActions(onDismiss, { onSave(picked) }, saveEnabled = picked in options.indices)
+        SheetActions(onDismiss, { onSave(picked) }, saveEnabled = picked in options.indices, clearLabel = clearLabel, onClear = onClear)
     }
 }
 

@@ -214,13 +214,16 @@ fun ProfileScreen(profile: UserProfile, contentPadding: PaddingValues, onSave: (
         "age" -> StepperSheet(
             stringResource(R.string.you_profile_age), ageValue ?: DEFAULT_AGE, AGE_RANGE,
             onSave = { age = it.toString(); sheet = null }, onDismiss = { sheet = null },
+            clearLabel = if (age.isNotBlank()) stringResource(R.string.you_profile_clear) else null, onClear = { age = ""; sheet = null },
             note = stringResource(R.string.you_profile_age_note), unit = stringResource(R.string.you_profile_age_unit),
         )
         "sex" -> SegmentSheet(
             stringResource(R.string.you_profile_row_sex),
             listOf(stringResource(R.string.you_profile_sex_female), stringResource(R.string.you_profile_sex_male)),
             if (sex in 0..1) sex else -1,
-            onSave = { sex = it; sheet = null }, onDismiss = { sheet = null }, note = stringResource(R.string.you_profile_sex_sheet_note),
+            onSave = { sex = it; sheet = null }, onDismiss = { sheet = null },
+            clearLabel = if (sex in 0..1) stringResource(R.string.you_profile_clear) else null,
+            onClear = { sex = 2; sheet = null }, note = stringResource(R.string.you_profile_sex_sheet_note),
         )
         "units" -> SegmentSheet(
             stringResource(R.string.you_profile_units),
@@ -232,7 +235,9 @@ fun ProfileScreen(profile: UserProfile, contentPadding: PaddingValues, onSave: (
             stringResource(R.string.you_profile_weight),
             weightNumber?.let { Math.round(it) } ?: if (imperial) DEFAULT_WEIGHT_LB else DEFAULT_WEIGHT_KG,
             if (imperial) 55..660 else 25..300,
-            onSave = { weight = it.toString(); sheet = null }, onDismiss = { sheet = null }, unit = if (imperial) unitLb else unitKg,
+            onSave = { weight = it.toString(); sheet = null }, onDismiss = { sheet = null },
+            clearLabel = if (weight.isNotBlank()) stringResource(R.string.you_profile_clear) else null,
+            onClear = { weight = ""; sheet = null }, unit = if (imperial) unitLb else unitKg,
         )
         "height" -> if (imperial) StepperSheet(
             stringResource(R.string.you_profile_height),
@@ -242,20 +247,28 @@ fun ProfileScreen(profile: UserProfile, contentPadding: PaddingValues, onSave: (
                 heightCm = Units.feetInchesToCm(total / 12, total % 12).toString(); sheet = null
             },
             onDismiss = { sheet = null }, format = { "${it / 12} $unitFt ${it % 12} $unitIn" },
+            clearLabel = if (!heightBlank) stringResource(R.string.you_profile_clear) else null,
+            onClear = { heightCm = ""; feet = ""; inches = ""; sheet = null },
         ) else StepperSheet(
             stringResource(R.string.you_profile_height), heightValue ?: DEFAULT_HEIGHT_CM, 100..250,
             onSave = { heightCm = it.toString(); sheet = null }, onDismiss = { sheet = null },
+            clearLabel = if (!heightBlank) stringResource(R.string.you_profile_clear) else null,
+            onClear = { heightCm = ""; feet = ""; inches = ""; sheet = null },
             unit = stringResource(R.string.you_profile_unit_cm),
         )
         "activity" -> RadioSheet(
             stringResource(R.string.you_profile_row_activity), levels, activity,
             onSave = { activity = it; sheet = null }, onDismiss = { sheet = null },
+            clearLabel = if (activity in 0..4) stringResource(R.string.you_profile_clear) else null,
+            onClear = { activity = -1; sheet = null },
             note = stringResource(R.string.you_profile_activity_note),
         )
         "sleep" -> StepperSheet(
             stringResource(R.string.you_profile_row_sleep_need),
             sleepNeedValue?.let { Math.round(it / 30f) } ?: DEFAULT_SLEEP_HALF_HOURS, 14..18,
             onSave = { sleepNeed = formatNumber(it / 2f); sheet = null }, onDismiss = { sheet = null },
+            clearLabel = if (sleepNeed.isNotBlank()) stringResource(R.string.you_profile_sleep_use_usual) else null,
+            onClear = { sleepNeed = ""; sheet = null },
             note = stringResource(R.string.you_profile_sleep_note), unit = stringResource(R.string.you_unit_h),
             format = { formatNumber(it / 2f) },
         )

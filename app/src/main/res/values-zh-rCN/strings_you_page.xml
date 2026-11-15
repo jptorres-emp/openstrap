@@ -149,4 +149,6 @@
     <string name="you_updates_view">查看</string>
     <string name="you_pair_key_placeholder">32 个字符，0 到 9 和 a 到 f</string>
     <string name="you_diagnostics_note">用于提交问题反馈。复制会把完整日志放到剪贴板。</string>
+    <string name="you_profile_clear">清除</string>
+    <string name="you_profile_sleep_use_usual">使用按年龄的默认值</string>
 </resources>

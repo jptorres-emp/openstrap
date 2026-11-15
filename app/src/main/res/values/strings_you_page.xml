@@ -232,4 +232,6 @@
     <string name="you_updates_view">View</string>
     <string name="you_pair_key_placeholder">32 characters, 0 to 9 and a to f</string>
     <string name="you_diagnostics_note">For bug reports. Copy puts the whole log on the clipboard.</string>
+    <string name="you_profile_clear">Clear</string>
+    <string name="you_profile_sleep_use_usual">Use the default for my age</string>
 </resources>

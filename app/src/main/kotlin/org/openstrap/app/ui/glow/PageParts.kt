@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import sv.lib.squircleshape.SquircleShape
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -101,7 +100,6 @@ val DestructiveInk = Color(0xFFFF5A5F)
 private val DestructiveInkSmall = Color(0xFFFF7A7E)
 
 /** The corner of a header icon button (HaloSummaryRun board: 44 across with a 16 corner), kept in step with the icon's size. */
-private const val ICON_BUTTON_CORNER_SHARE = 16f / 44f
 
 
 /** The round back button of every page over a tab (spec 3.4). */
@@ -147,7 +145,7 @@ fun RoundIconButton(
     Box(modifier.size(size)) {
         Box(
             Modifier.matchParentSize()
-                .clip(SquircleShape(radius = size * ICON_BUTTON_CORNER_SHARE, smoothing = GlowLayout.SMOOTHING))
+                .clip(GlowLayout.IconShape)
                 .background(surface).alpha(if (enabled) 1f else 0.4f)
                 .clickable(enabled = enabled, onClickLabel = clickLabel, role = Role.Button, onClick = onClick),
             contentAlignment = Alignment.Center,

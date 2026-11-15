@@ -31,6 +31,7 @@ import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawOutline
@@ -179,7 +180,8 @@ fun GlowCard(
             .let {
                 if (lit.depth > 0.dp) it.drawBehind {
                     val d = lit.depth.toPx()
-                    drawRoundRect(slab, topLeft = Offset(0f, d), size = this.size, cornerRadius = CornerRadius(lit.radius.toPx()))
+                    // The same squircle as the card, so its corner never shows past the card's.
+                    translate(top = d) { drawOutline(shape.createOutline(this.size, layoutDirection, this), slab) }
                 } else it
             }
             .clip(shape)

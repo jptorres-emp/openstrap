@@ -139,14 +139,17 @@ internal fun activeSecondsState(r: WorkoutState.Recording): androidx.compose.run
     }
 }
 
-/** A full-width pill button, 56 dp like Start and Done (spec 6.3). */
+/** The workout boards' side gutter (workout-rules.md, Tokens: gutter 16). */
+internal val WORKOUT_GUTTER = 16.dp
+
+/** A full-width pill button, 56 dp like Start and Done (spec 6.3). Flat: no glow under it (Halo, one white tap). */
 @Composable
 internal fun WorkoutButton(
     label: String, background: Color, content: Color, onClick: () -> Unit,
     modifier: Modifier = Modifier, icon: androidx.compose.ui.graphics.vector.ImageVector? = null, height: Dp = 56.dp,
 ) {
     Row(
-        modifier.fillMaxWidth().height(height).shadow(28.dp, RoundedCornerShape(50), ambientColor = background, spotColor = background)
+        modifier.fillMaxWidth().height(height)
             .clip(RoundedCornerShape(50)).background(background).pressClickable(onClick, RoundedCornerShape(50)),
         horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -172,19 +175,12 @@ internal fun WorkoutPage(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     BoxWithConstraints(Modifier.fillMaxSize().background(Color.Black)) {
-        val width = constraints.maxWidth.toFloat()
         val density = LocalDensity.current
         var pinnedHeight by remember { mutableStateOf(0.dp) }
-        // No wider than the box is tall: on a wide screen (unfolded) a wider glow would be cut off in a straight line.
-        val glowHeight = 420.dp
-        val radius = minOf(width * 0.9f, with(density) { glowHeight.toPx() })
-        if (backdrop != null) Box(Modifier.fillMaxSize().background(backdrop)) else Box(
-            Modifier.fillMaxWidth().height(glowHeight).background(
-                Brush.radialGradient(listOf(glow.copy(alpha = 0.22f), Color.Transparent), center = Offset(width / 2f, 0f), radius = radius),
-            ),
-        )
+        // Black, with no light on the page: the hero card carries the colour (workout-rules.md). [glow] and [backdrop]
+        // stay so the screens placing the page compile.
         // On a wide screen the page keeps to one centred column (spec 2.4 Unfolded); the glow stays the screen's.
-        val side = GlowLayout.pageSide(maxWidth, LocalPageColumn.current, GlowLayout.Gutter)
+        val side = GlowLayout.pageSide(maxWidth, LocalPageColumn.current, WORKOUT_GUTTER)
         // The content ends [PinnedFade.Ramp] above the pinned buttons (their box already counts the bottom padding),
         // or 16 dp above the bottom padding without them.
         val padTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + contentPadding.calculateTopPadding() + 8.dp

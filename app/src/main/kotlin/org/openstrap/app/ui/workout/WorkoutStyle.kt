@@ -17,14 +17,30 @@ internal fun mainZoneColor(zones: List<Int>, fallback: Color): Color =
 internal val ZONE_NAMES: List<String> get() = WorkoutWords.ZONE_NAMES
 
 /**
- * Each kind of workout's colour on Choose and Ready (workouts spec 2.1): lime for distance, strength's orange, heart red
- * for intervals, a calm blue for indoor cardio, the evening's violet for mind and body, and a clear blue for games.
+ * Each kind of workout's colour (workout-rules.md, Tokens; board HaloWorkoutRules): distance lime, indoor cardio blue,
+ * strength orange, HIIT red, mind and body violet, games slate blue.
  */
 internal fun familyColor(family: org.openstrap.app.data.Workouts.Family): Color = when (family) {
-    org.openstrap.app.data.Workouts.Family.Distance -> org.openstrap.app.ui.theme.MetricColors.steps
-    org.openstrap.app.data.Workouts.Family.IndoorCardio -> ZONE_COLORS[0]
-    org.openstrap.app.data.Workouts.Family.Strength -> ZONE_COLORS[3]
-    org.openstrap.app.data.Workouts.Family.Intervals -> org.openstrap.app.ui.theme.MetricColors.heart
-    org.openstrap.app.data.Workouts.Family.MindBody -> org.openstrap.app.ui.theme.MetricColors.evening
-    org.openstrap.app.data.Workouts.Family.Games -> org.openstrap.app.ui.theme.MetricColors.spo2
+    org.openstrap.app.data.Workouts.Family.Distance -> Color(0xFFC6F55A)
+    org.openstrap.app.data.Workouts.Family.IndoorCardio -> Color(0xFF52ACFC)
+    org.openstrap.app.data.Workouts.Family.Strength -> Color(0xFFFF8410)
+    org.openstrap.app.data.Workouts.Family.Intervals -> Color(0xFFFF5A5F)
+    org.openstrap.app.data.Workouts.Family.MindBody -> Color(0xFFB67AE8)
+    org.openstrap.app.data.Workouts.Family.Games -> Color(0xFF6E8FB8)
+}
+
+/** Rest and recovery, in any family (workout-rules.md, Colour): strength rest, HIIT rest. */
+internal val RestTeal = Color(0xFF7CF2C9)
+
+/** A paused workout's hero (workout-rules.md, Tokens). */
+internal val PausedGrey = Color(0xFFAEB6C2)
+
+/**
+ * Where the light comes from on a sport's Ready and Live (workout-rules.md, Tokens): strength from the morning side,
+ * mind and body low on the left, the rest from the upper right. Degrees counterclockwise from the right edge.
+ */
+internal fun familyLightAngle(family: org.openstrap.app.data.Workouts.Family): Float = when (family) {
+    org.openstrap.app.data.Workouts.Family.Strength -> 225f
+    org.openstrap.app.data.Workouts.Family.MindBody -> 160f
+    else -> 45f
 }

@@ -61,6 +61,7 @@ import org.openstrap.app.ui.glow.draw.DotSize
 import org.openstrap.app.ui.glow.PictureCard
 import org.openstrap.app.ui.glow.GlowType
 import org.openstrap.app.ui.glow.MediumBody
+import org.openstrap.app.ui.workout.RestTeal
 import org.openstrap.app.ui.glow.TrendBad
 import org.openstrap.app.ui.glow.TrendGood
 import org.openstrap.app.ui.glow.activeSecondsState
@@ -197,18 +198,19 @@ internal fun LiveDistanceScreen(
                                 stringResource(if (speed) R.string.workout_live_unit_kmh else R.string.workout_live_figure_pace_km),
                             kcal?.active?.toInt()?.toString() to stringResource(R.string.workout_live_figure_active_kcal),
                         ))
-                    } else Column(Modifier.fillMaxWidth().weight(1f), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                        PaceCard(pace, averagePace, splits, speed, Modifier.weight(1f))
-                        if (!split) LitHeartPill(bpm, r.maxHeartRate, color, r.paused, 56.dp, Modifier.fillMaxWidth())
+                    } else Column(Modifier.fillMaxWidth().weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        // Board HaloLiveRun: the pace as the lit hero, the splits and the heart rate in a solid card, the figures.
+                        PaceHero(r, pace, averagePace, speed, route, readings, Modifier.fillMaxWidth())
+                        SplitsCard(splits, bpm, r, showHeart = !split)
                         LiveFigures(listOf(
                             Units.km(distance, Units.Precision.Workout) to stringResource(R.string.workout_live_figure_km),
                             climb?.toInt()?.toString() to stringResource(R.string.workout_live_figure_climb),
                             kcal?.active?.toInt()?.toString() to stringResource(R.string.workout_live_figure_active_kcal),
                         ))
                     }
-                    // Each kilometre gets a line for a few seconds, with one tick. This page stays composed beside the
-                    // map, so the tick comes on either.
-                    KmSplitLine(route, readings, r.workout.pauseRanges, keepRoom = !compact)
+                    // Each kilometre gets a line for a few seconds, with one tick, in the pace hero. On a short screen the
+                    // hero is left out, so the line follows the figures.
+                    if (compact) KmSplitLine(route, readings, r.workout.pauseRanges)
                 }
                 // On its side the map stops short of the bar, so the controls stay on black, and of the nav bar.
                 LiveView.Map -> Box(Modifier.fillMaxSize().padding(start = mapStart, end = clear)) {
@@ -216,10 +218,11 @@ internal fun LiveDistanceScreen(
                         r, route, readings, bpm, color, contentPadding, controls,
                         figures = listOf(
                             Units.km(distance, Units.Precision.Workout) to stringResource(R.string.workout_live_figure_km),
-                            (if (speed) speedText(pace) else Pace.clock(pace)) to
-                                stringResource(if (speed) R.string.workout_live_unit_kmh else R.string.workout_live_figure_pace_km),
+                            (if (speed) speedText(averagePace()) else Pace.clock(averagePace())) to
+                                stringResource(if (speed) R.string.workout_live_figure_avg_kmh else R.string.workout_live_figure_avg_pace),
+                            kcal?.active?.toInt()?.toString() to stringResource(R.string.workout_live_figure_active_kcal),
                         ),
-                        time = { active.value }, bottomRoom = bar, heartPill = !split,
+                        bottomRoom = bar, heartPill = !split,
                     )
                 }
             }
@@ -247,27 +250,13 @@ private fun RepPage(
     val structure = r.structure as? org.openstrap.app.data.Structure.Reps ?: return
     val (repLength, repUnit) = org.openstrap.app.ui.workout.StartCopy.repParts(structure)
     val repName = stringResource(R.string.workout_live_rep_length, repLength, repUnit)
-    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        Text(
-            stringResource(
-                R.string.workout_live_reps_plan,
-                org.openstrap.app.ui.workout.StartCopy.structureName(structure),
-                org.openstrap.app.ui.workout.StartCopy.restText(structure.rest),
-            ),
-            color = Color.White.copy(alpha = 0.8f), style = GlowType.secondary, maxLines = 1,
-        )
-        val underWay = structure.meters?.let { meters -> m.metersLeft?.let { 1f - it / meters } }
-        RoundBar(m, structure.seconds, underWay)
-        Row(Modifier.fillMaxWidth()) {
-            Text(
-                when (m.phase) {
-                    is org.openstrap.app.data.Phase.Work -> stringResource(R.string.workout_live_rep_of, m.round, m.rounds)
-                    is org.openstrap.app.data.Phase.Rest -> stringResource(R.string.workout_live_done_of, m.round - 1, m.rounds)
-                    org.openstrap.app.data.Phase.WarmUp -> stringResource(R.string.workout_live_warm_up)
-                    org.openstrap.app.data.Phase.Done -> pluralStringResource(R.plurals.workout_live_all_reps_done, m.rounds, m.rounds)
-                },
-                color = Color.White, style = MediumBody, maxLines = 1, modifier = Modifier.weight(1f),
-            )
+    val rest = m.phase is org.openstrap.app.data.Phase.Rest
+    val sport = if (rest) RestTeal else color
+    val tint = heroTint(sport)
+    // Board HaloLiveRunReps: the rep as the lit hero with its bar, the plan and each rep's time in a solid card with the
+    // heart rate under a rule, then the plain figures.
+    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        LiveHero(sport, liveAngle(r)) {
             val next = when (m.phase) {
                 is org.openstrap.app.data.Phase.Work ->
                     m.nextRest?.let { stringResource(R.string.workout_live_then_rest, org.openstrap.app.ui.workout.StartCopy.restText(it)) }
@@ -276,37 +265,26 @@ private fun RepPage(
                 org.openstrap.app.data.Phase.WarmUp -> pluralStringResource(R.plurals.workout_live_reps_after, m.rounds, m.rounds)
                 org.openstrap.app.data.Phase.Done -> ""
             }
-            Text(next, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary, maxLines = 1)
-        }
-        Column(
-            Modifier.fillMaxWidth().then(if (shortLandscape(compact)) Modifier else Modifier.weight(1f)),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterVertically),
-        ) {
-            val work = m.phase is org.openstrap.app.data.Phase.Work
-            val rest = m.phase is org.openstrap.app.data.Phase.Rest
-            Text(
-                when {
-                    work -> stringResource(R.string.workout_live_rep_word, repName)
-                    rest -> stringResource(R.string.workout_live_phase_rest)
-                    m.phase == org.openstrap.app.data.Phase.WarmUp -> stringResource(R.string.workout_live_phase_warming_up)
-                    else -> stringResource(R.string.workout_live_phase_done)
+            HeroTitle(
+                when (m.phase) {
+                    is org.openstrap.app.data.Phase.Work -> stringResource(R.string.workout_live_rep_of, m.round, m.rounds)
+                    is org.openstrap.app.data.Phase.Rest -> stringResource(R.string.workout_live_done_of, m.round - 1, m.rounds)
+                    org.openstrap.app.data.Phase.WarmUp -> stringResource(R.string.workout_live_warm_up)
+                    org.openstrap.app.data.Phase.Done -> pluralStringResource(R.plurals.workout_live_all_reps_done, m.rounds, m.rounds)
                 },
-                color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary,
+                next, tint,
             )
+            RoundBar(m, structure.seconds, null)
             val (value, unit) = when {
-                work && m.metersLeft != null -> "${m.metersLeft.toInt()}" to stringResource(R.string.workout_live_unit_m_to_go)
+                m.phase is org.openstrap.app.data.Phase.Work && m.metersLeft != null -> "${m.metersLeft.toInt()}" to stringResource(R.string.workout_live_unit_m_to_go)
                 m.left != null -> dotClock(m.left) to stringResource(
                     if (rest) R.string.workout_live_unit_rest_left else R.string.workout_live_unit_left,
                 )
                 else -> null to ""
             }
-            if (value != null) {
-                DotMatrixText(value, dot = DotSize.Live, scale = 1.2f)
-                Text(unit, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.body)
-            }
+            if (value != null) HeroNumber(value, unit, tint)
             val line = when {
-                work -> Route.currentPace(route)?.let { pace ->
+                m.phase is org.openstrap.app.data.Phase.Work -> Route.currentPace(route)?.let { pace ->
                     structure.meters?.let { meters -> workoutClock((pace * meters / 1000).toLong()) }
                         ?.let { stringResource(R.string.workout_live_rep_pace, it, repName) }
                         ?: Pace.clock(pace)?.let { stringResource(R.string.workout_live_rep_pace_km, it) }
@@ -315,30 +293,41 @@ private fun RepPage(
                 m.phase == org.openstrap.app.data.Phase.Done -> stringResource(R.string.workout_live_end_or_keep)
                 else -> null
             }
-            if (line != null) Text(line, color = Color.White, style = GlowType.sentence, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            if (line != null) HeroLine(line, tint)
         }
-        LitHeartPill(bpm, r.maxHeartRate, color, r.paused, 56.dp, Modifier.fillMaxWidth())
-        val done = r.rounds.filter { it.workEnd != null }
-        if (done.isNotEmpty()) Row(
-            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState(Int.MAX_VALUE)),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            done.forEach { round ->
-                Row(
-                    Modifier.clip(RoundedCornerShape(50)).background(org.openstrap.app.ui.glow.Raised).padding(horizontal = 14.dp, vertical = 9.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        stringResource(R.string.workout_live_rep_chip, round.index + 1),
-                        color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary, maxLines = 1,
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text(workoutClock(round.workEnd!! - round.workStart), color = Color.White, style = MediumBody, maxLines = 1)
+        LiveCard {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    stringResource(
+                        R.string.workout_live_reps_plan,
+                        org.openstrap.app.ui.workout.StartCopy.structureName(structure),
+                        org.openstrap.app.ui.workout.StartCopy.restText(structure.rest),
+                    ),
+                    color = Color.White, style = GlowType.cardTitle, maxLines = 1, modifier = Modifier.weight(1f),
+                )
+            }
+            val done = r.rounds.filter { it.workEnd != null }
+            if (done.isNotEmpty()) Row(
+                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState(Int.MAX_VALUE)),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                done.forEach { round ->
+                    Column(
+                        Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(18.dp)).background(RepChip).padding(horizontal = 14.dp, vertical = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        Text(stringResource(R.string.workout_live_rep_chip, round.index + 1), color = GlowType.noteColor, style = GlowType.noteSmall, maxLines = 1)
+                        Text(workoutClock(round.workEnd!! - round.workStart), color = Color.White, style = GlowType.figureInline, maxLines = 1)
+                    }
                 }
             }
+            Box(Modifier.fillMaxWidth().height(1.dp).background(Color(0xFF24262C)))
+            HeartLine(bpm, r.maxHeartRate, r.paused)
         }
     }
 }
+
+private val RepChip = Color(0xFF22242A)
 
 /** A tick when the zone changes (spec 3.6); a pause forgets the zone, so resuming in another doesn't tick. */
 @Composable
@@ -358,99 +347,85 @@ internal fun speedText(secondsPerKm: Double?, locale: java.util.Locale = java.ut
     secondsPerKm?.takeIf { it > 0 && it < Pace.SLOWEST_S }?.let { String.format(locale, "%.1f", 3600 / it) }
 
 /**
- * The Pace card: "Pace" with the average beside it, the pace now in the card's one dotted number, and a bar per
- * kilometre under it ([KmSplitBars]). Lit in the distance lime from its edge, so it never looks like the heart strip
- * under it.
+ * The pace as the hero (workout-rules.md, Run; board HaloLiveRun): "Pace now" with the average beside it, the pace in
+ * the one dotted number, and the latest kilometre's line under it. Lit in the sport's lime from its edge.
  */
 @Composable
-private fun PaceCard(pace: Double?, averagePace: () -> Double?, splits: List<Route.Split>, speed: Boolean, modifier: Modifier = Modifier) {
-    PictureCard(MetricColors.steps, modifier.fillMaxWidth()) {
-        Row(Modifier.fillMaxWidth()) {
-            Text(
-                stringResource(if (speed) R.string.workout_live_speed_title else R.string.workout_live_pace_title), color = Color.White,
-                style = GlowType.cardTitle, maxLines = 1, modifier = Modifier.weight(1f),
-            )
-            AveragePace(averagePace, speed)
+private fun PaceHero(
+    r: WorkoutState.Recording, pace: Double?, averagePace: () -> Double?, speed: Boolean, route: List<Route.Point>,
+    readings: List<Pair<Long, Int>>, modifier: Modifier = Modifier,
+) {
+    val color = liveColor(r)
+    val tint = heroTint(color)
+    LiveHero(color, liveAngle(r), modifier) {
+        HeroTitle(
+            stringResource(if (speed) R.string.workout_live_speed_title else R.string.workout_live_pace_title), null, tint,
+            trailing = { AveragePace(averagePace, speed, tint) },
+        )
+        val now = if (speed) speedText(pace, Units.DOT_LOCALE) else Pace.clock(pace, Units.DOT_LOCALE)
+        if (now != null) HeroNumber(
+            now, stringResource(if (speed) R.string.workout_live_unit_kmh else R.string.workout_live_unit_per_km), tint,
+        ) else WaitingDash(Modifier.padding(vertical = 18.dp))
+        KmSplitLine(route, readings, r.workout.pauseRanges, keepRoom = true, color = tint, center = false)
+    }
+}
+
+/** "Avg 5:42" on the hero's title row: the average moves with the clock, so it's read in its own scope. */
+@Composable
+private fun AveragePace(averagePace: () -> Double?, speed: Boolean, tint: Color) {
+    val average = averagePace()
+    val avg = (if (speed) speedText(average) else Pace.clock(average))?.let { stringResource(R.string.workout_live_avg, it) }
+    if (avg != null) Text(avg, color = tint, style = GlowType.secondary)
+}
+
+/** The splits card: the kilometres as bars, and under a rule the heart rate with its zone (board HaloLiveRun). */
+@Composable
+private fun SplitsCard(splits: List<Route.Split>, bpm: Int?, r: WorkoutState.Recording, showHeart: Boolean) {
+    LiveCard {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(stringResource(R.string.workout_live_splits_title), color = Color.White, style = GlowType.cardTitle, modifier = Modifier.weight(1f))
+            Text(stringResource(R.string.workout_live_splits_note), color = GlowType.noteColor, style = GlowType.noteSmall)
         }
-        // The pace sits in the middle of whatever height the card is given, the splits on its floor.
-        Spacer(Modifier.height(12.dp).weight(1f))
-        BoxWithConstraints(Modifier.fillMaxWidth()) {
-            val room = maxWidth - UnitRoom
-            // Centred, as the board has it: the one number the card is for.
-            Row(Modifier.align(Alignment.Center), verticalAlignment = Alignment.Bottom) {
-                val now = if (speed) speedText(pace, Units.DOT_LOCALE) else Pace.clock(pace, Units.DOT_LOCALE)
-                // The live size, shrunk only as far as a walk's 12:30 needs to fit beside its unit.
-                val fit = now?.let { dotFitScale(it, DotSize.Live, room).coerceAtLeast(0.5f) } ?: 1f
-                if (now != null) DotMatrixText(now, dot = DotSize.Live, scale = fit) else WaitingDash(Modifier.padding(vertical = 18.dp))
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    stringResource(if (speed) R.string.workout_live_unit_kmh else R.string.workout_live_unit_per_km),
-                    color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.body, maxLines = 1,
-                )
-            }
-        }
-        Spacer(Modifier.height(16.dp).weight(1f))
-        if (splits.isNotEmpty()) {
-            KmSplitBars(splits)
+        KmSplitBars(splits)
+        if (showHeart) {
+            Box(Modifier.fillMaxWidth().height(1.dp).background(Color(0xFF24262C)))
+            HeartLine(bpm, r.maxHeartRate, r.paused)
         }
     }
 }
 
-/** "Avg 5:42" beside the card's title: the average moves with the clock, so it's read in its own scope. */
-@Composable
-private fun AveragePace(averagePace: () -> Double?, speed: Boolean) {
-    val average = averagePace()
-    val avg = (if (speed) speedText(average) else Pace.clock(average))?.let { stringResource(R.string.workout_live_avg, it) }
-    if (avg != null) Text(avg, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary)
-}
-
 /**
- * The last five kilometres as bars, taller for faster, the fastest finished one bright with its time in white and bold,
- * the rest dim, each with its time under it; the one under way is an outlined full bar filling from the bottom, named
- * by its kilometre.
+ * The last five kilometres as bars, taller for faster, each with its time under it; the one under way is white and
+ * filling from the bottom, named "Now" (board HaloLiveRun). Never dotted.
  */
 @Composable
 private fun KmSplitBars(splits: List<Route.Split>) {
     val shown = splits.takeLast(SPLIT_SLOTS)
     val done = splits.filter { it.meters >= 1000 }
-    val fastest = done.minByOrNull { it.pace }
     val slowest = done.maxOfOrNull { it.pace } ?: 0.0
-    val quickest = fastest?.pace ?: 0.0
+    val quickest = done.minByOrNull { it.pace }?.pace ?: 0.0
     val described = stringResource(
         R.string.workout_live_splits_description, done.takeLast(4).joinToString(", ") { workoutClock(it.seconds) },
     )
     Row(
         Modifier.fillMaxWidth().semantics { contentDescription = described },
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         shown.forEach { s ->
             val underWay = s.meters < 1000
-            // Faster is taller: from 60 % for the slowest to full for the fastest.
+            // Faster is taller: from 40 percent for the slowest to full for the fastest.
             val height = when {
-                underWay -> 1f
+                underWay -> (s.meters / 1000).toFloat().coerceIn(0.1f, 1f)
                 slowest <= quickest -> 1f
-                else -> (0.6f + 0.4f * ((slowest - s.pace) / (slowest - quickest)).toFloat()).coerceIn(0.6f, 1f)
+                else -> (0.4f + 0.6f * ((slowest - s.pace) / (slowest - quickest)).toFloat()).coerceIn(0.4f, 1f)
             }
-            val best = s == fastest
-            Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                val lime = MetricColors.steps
-                Canvas(Modifier.fillMaxWidth().height(30.dp)) {
-                    val h = size.height * height
-                    val corner = CornerRadius(5.dp.toPx())
-                    if (underWay) {
-                        val filled = size.height * (s.meters / 1000).toFloat().coerceIn(0f, 1f)
-                        drawRoundRect(lime.copy(alpha = 0.35f), Offset(0f, size.height - filled), Size(size.width, filled), corner)
-                        val w = 1.5.dp.toPx()
-                        drawRoundRect(
-                            lime.copy(alpha = 0.6f), Offset(w / 2, w / 2), Size(size.width - w, size.height - w), corner,
-                            style = androidx.compose.ui.graphics.drawscope.Stroke(w),
-                        )
-                    } else drawRoundRect(if (best) lime else lime.copy(alpha = 0.35f), Offset(0f, size.height - h), Size(size.width, h), corner)
+            Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Box(Modifier.fillMaxWidth().height(52.dp), contentAlignment = Alignment.BottomCenter) {
+                    Box(Modifier.fillMaxWidth().fillMaxHeight(height).clip(RoundedCornerShape(6.dp)).background(if (underWay) Color.White else SplitBar))
                 }
                 Text(
-                    if (underWay) stringResource(R.string.workout_live_split_km, s.index + 1) else workoutClock(s.seconds),
-                    color = if (best) Color.White else Color.White.copy(alpha = GlowType.SECONDARY_ALPHA),
-                    style = GlowType.caption.copy(fontWeight = if (best) FontWeight.SemiBold else null), maxLines = 1,
+                    if (underWay) stringResource(R.string.workout_live_split_now) else stringResource(R.string.workout_live_split_km, s.index + 1),
+                    color = if (underWay) Color.White else GlowType.noteColor, style = GlowType.caption, maxLines = 1,
                 )
             }
         }
@@ -458,6 +433,8 @@ private fun KmSplitBars(splits: List<Route.Split>) {
         repeat(SPLIT_SLOTS - shown.size) { Spacer(Modifier.weight(1f)) }
     }
 }
+
+private val SplitBar = Color(0xFF2E3038)
 
 private const val SPLIT_SLOTS = 5
 

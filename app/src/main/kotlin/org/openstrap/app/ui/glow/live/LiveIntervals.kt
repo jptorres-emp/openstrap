@@ -49,6 +49,10 @@ import org.openstrap.app.ui.glow.PeakBars
 import org.openstrap.app.ui.glow.Segment
 import org.openstrap.app.ui.glow.SegmentBar
 import org.openstrap.app.ui.glow.Raised
+import org.openstrap.app.ui.glow.PageButton
+import org.openstrap.app.ui.glow.ButtonSize
+import org.openstrap.app.ui.workout.PausedGrey
+import org.openstrap.app.ui.workout.RestTeal
 import org.openstrap.app.ui.glow.WorkoutButton
 import org.openstrap.app.ui.glow.activeSecondsState
 import org.openstrap.app.ui.glow.workoutClock
@@ -65,17 +69,16 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import org.openstrap.app.R
 
-/** Work red and rest green, the intervals' two colours. */
-private val WorkRed = MetricColors.heart
-private val RestGreen = Color(WorkoutColors.REST_GREEN)
+/** Work is HIIT's red, rest the teal of every rest (workout-rules.md, Colour). */
+private val RestGreen = RestTeal
 
 /**
- * HIIT (workouts spec 2.5, boards HiitWork and HiitRest), with the total small on top and the screen in the phase's
- * colour. Work: round N of M as dots, what's next, the seconds left large in dots, the heart rate and zone; Skip on the
- * left moves to rest (Done, every minute). Rest: what's done and next, the seconds left, the heart rate and its drop
- * since work ended, each round's peak so far, and +10 s. A warm up waits for Start rounds. With [split] the heart rate
- * is on the other half of a folded phone, so this half leaves it out, and [compact] (a short half) puts the seconds
- * left on one row with the phase and +10 s.
+ * HIIT (workout-rules.md, HIIT; boards HaloLiveHiitWork and HaloLiveHiitRest): the phase's hero lit red for work and
+ * teal for rest, with the round N of M and a bar of the rounds in it, the seconds left as the one dotted number and
+ * what's next in its line. Work then has the heart rate in a solid card, rest each round's peak; the plain figures
+ * row is Rounds, Peak bpm and Active kcal. Skip (Done, every minute) is the left action of work, +10 s of rest, with Skip
+ * rest on the hero's title row. A warm up waits on Start rounds, which is then the white tap. With [split] the heart
+ * rate is on the other half of a folded phone, so this half leaves it out.
  */
 @Composable
 internal fun LiveIntervalsScreen(
@@ -89,6 +92,7 @@ internal fun LiveIntervalsScreen(
     onAddRest: () -> Unit,
     split: Boolean = false,
     compact: Boolean = false,
+    kcal: WorkoutRecorder.Kcal? = null,
 ) {
     val heartZones = LocalHeartZones.current
     val now = nowTickingState()
@@ -100,132 +104,101 @@ internal fun LiveIntervalsScreen(
     val phase = androidx.compose.runtime.remember(r) { androidx.compose.runtime.derivedStateOf { r.phase(now.value) } }.value
     if (r.structure == null || phase == null) return
     val color = when {
-        r.paused -> org.openstrap.app.ui.glow.PausedColor
-        phase is Phase.Work -> WorkRed
+        r.paused -> PausedGrey
         phase is Phase.Rest -> RestGreen
-        else -> org.openstrap.app.ui.glow.workoutColor(r, liveHeartRate, connected, heartZones)
+        else -> liveColor(r)
     }
-    // Every minute's work ends on Done, which shows a tick. The rest skip.
+    // Every minute's work ends on Done, which shows a tick. The rest takes +10 s.
     val skipDone = phase is Phase.Work && r.structure is org.openstrap.app.data.Structure.EveryMinute
-    val skipLabel = when (phase) {
+    val leftLabel = when (phase) {
         is Phase.Work -> stringResource(if (skipDone) R.string.workout_live_done_button else R.string.workout_live_skip)
-        is Phase.Rest -> stringResource(R.string.workout_live_skip_rest)
+        is Phase.Rest -> stringResource(R.string.workout_live_add_10_s)
         else -> null
     }
     // Parsed once with the recording, not on each recomposition.
     val structure = r.structure
     val plan = structure?.let { StartCopy.structureName(it) }
     val active = activeSecondsState(r)
+    val tint = heroTint(color)
+    val warmUp = phase == Phase.WarmUp
     LiveFrame(
-        r, color, connected, contentPadding, controls, time = { active.value }, smallTime = true,
-        lap = skipLabel?.takeIf { !r.paused }?.let { label -> { SkipButton(label, skipDone, onSkip) } },
+        r, color, connected, contentPadding, controls, time = { active.value },
+        lap = leftLabel?.takeIf { !r.paused }?.let { label ->
+            {
+                if (phase is Phase.Rest) SideAction(label, AppIcons.Plus, onAddRest)
+                else SideAction(label, if (skipDone) AppIcons.Tick02 else AppIcons.SkipFill, onSkip)
+            }
+        },
+        pauseWhite = !warmUp,
         paused = { LivePaused(r, liveHeartRate.takeIf { connected }, readings, listOf(
-            "${org.openstrap.app.data.Phases.roundsDone(r.rounds)}" to stringResource(R.string.workout_live_figure_rounds_done),
+            "${org.openstrap.app.data.Phases.roundsDone(r.rounds)}" to stringResource(R.string.workout_live_figure_rounds),
             r.rounds.mapNotNull { it.peakBpm }.maxOrNull()?.toString() to stringResource(R.string.workout_live_figure_peak_bpm),
+            kcal?.active?.toInt()?.toString() to stringResource(R.string.workout_live_figure_active_kcal),
         )) },
         fill = true,
         title = listOfNotNull(org.openstrap.app.data.Workouts.sportName(r.workout.sportType), plan).joinToString(", "),
-        backdrop = when {
-            r.paused -> null
-            phase is Phase.Work -> WorkGlow
-            phase is Phase.Rest -> RestGlow
-            else -> null
-        },
     ) {
         val m = intervalMoment(r, now.value, bpm, readings, emptyList()) ?: return@LiveFrame
-        RoundBar(m, when (structure) {
+        val workLength = when (structure) {
             is org.openstrap.app.data.Structure.Timed -> structure.work
             is org.openstrap.app.data.Structure.EveryMinute -> structure.period
             else -> null
-        })
-        when (m.phase) {
-            is Phase.Work -> PhaseFigure(
-                stringResource(R.string.workout_live_round_of, m.round, m.rounds),
-                m.nextRest?.let { stringResource(R.string.workout_live_then_rest, StartCopy.restText(it)) }
-                    ?: stringResource(R.string.workout_live_last_round),
-                stringResource(R.string.workout_live_phase_work), m.left?.let { dotFormat("%02d", it) },
-                stringResource(if (m.everyMinute) R.string.workout_live_seconds_left_minute else R.string.workout_live_seconds_left),
-                compact,
+        }
+        LiveHero(color, liveAngle(r)) {
+            val (title, note) = when (m.phase) {
+                is Phase.Work -> stringResource(R.string.workout_live_phase_work) to stringResource(R.string.workout_live_round_of, m.round, m.rounds)
+                is Phase.Rest -> stringResource(R.string.workout_live_phase_rest) to stringResource(R.string.workout_live_round_next, m.round)
+                Phase.WarmUp -> stringResource(R.string.workout_live_warm_up) to pluralStringResource(R.plurals.workout_live_rounds_after, m.rounds, m.rounds)
+                Phase.Done -> stringResource(R.string.workout_live_phase_done) to pluralStringResource(R.plurals.workout_live_all_rounds_done, m.rounds, m.rounds)
+            }
+            HeroTitle(title, note, tint)
+            RoundBar(m, workLength)
+            val seconds = m.left?.let { dotFormat("%02d", it) }
+            if (seconds != null) HeroNumber(
+                seconds,
+                stringResource(
+                    when {
+                        m.phase is Phase.Rest -> R.string.workout_live_unit_rest_left
+                        m.everyMinute -> R.string.workout_live_seconds_left_minute
+                        else -> R.string.workout_live_seconds_left
+                    },
+                ),
+                tint,
             )
-            is Phase.Rest -> PhaseFigure(
-                stringResource(R.string.workout_live_done_of, m.round - 1, m.rounds),
-                stringResource(R.string.workout_live_round_next, m.round),
-                stringResource(R.string.workout_live_phase_rest), m.left?.let { dotFormat("%02d", it) },
-                bpm?.let { b ->
-                    m.drop?.takeIf { it > 0 }?.let { stringResource(R.string.workout_live_heart_rate_down, b, it) }
-                        ?: stringResource(R.string.workout_live_heart_rate, b)
-                } ?: stringResource(R.string.workout_live_seconds_left),
-                compact,
-                // Folded, +10 s sits beside the seconds: the half has no room for a row of its own.
-                action = {
-                    val more = stringResource(R.string.workout_live_add_10_s)
-                    WorkoutButton(more, OverGlow, Color.White, onAddRest, Modifier.width(120.dp), height = 44.dp)
+            HeroLine(
+                when (m.phase) {
+                    is Phase.Work -> m.nextRest?.let { stringResource(R.string.workout_live_then_rest, StartCopy.restText(it)) }
+                        ?: stringResource(R.string.workout_live_last_round)
+                    is Phase.Rest -> bpm?.let { b ->
+                        m.drop?.takeIf { it > 0 }?.let { stringResource(R.string.workout_live_heart_rate_down, b, it) }
+                            ?: stringResource(R.string.workout_live_heart_rate, b)
+                    } ?: stringResource(R.string.workout_live_seconds_left)
+                    Phase.WarmUp -> stringResource(R.string.workout_live_rounds_start_hint)
+                    Phase.Done -> stringResource(R.string.workout_live_end_or_keep)
                 },
+                tint,
             )
-            Phase.WarmUp -> PhaseFigure(
-                stringResource(R.string.workout_live_warm_up),
-                pluralStringResource(R.plurals.workout_live_rounds_after, m.rounds, m.rounds),
-                stringResource(R.string.workout_live_phase_warming_up), null,
-                stringResource(R.string.workout_live_rounds_start_hint), compact,
-            )
-            Phase.Done -> PhaseFigure(
-                pluralStringResource(R.plurals.workout_live_all_rounds_done, m.rounds, m.rounds),
-                stringResource(R.string.workout_live_end_or_keep),
-                stringResource(R.string.workout_live_phase_done), null, "", compact,
+            if (m.phase is Phase.Rest) PageButton(
+                stringResource(R.string.workout_live_skip_rest), onSkip, Modifier.fillMaxWidth(), size = ButtonSize.Compact, onCard = true,
             )
         }
         if (!split && (m.phase is Phase.Rest || m.phase == Phase.Done)) RoundPeaks(r.rounds, m.rounds)
-        if (!split && m.phase !is Phase.Rest) HeartStripDark(bpm, r.maxHeartRate, r.paused, Modifier.align(Alignment.CenterHorizontally))
-        val tall = if (compact) 48.dp else 64.dp
+        if (!split && m.phase !is Phase.Rest) HeartRow(bpm, r.maxHeartRate, r.paused)
+        LiveFigures(listOf(
+            "${org.openstrap.app.data.Phases.roundsDone(r.rounds)}" to stringResource(R.string.workout_live_figure_rounds),
+            r.rounds.mapNotNull { it.peakBpm }.maxOrNull()?.toString() to stringResource(R.string.workout_live_figure_peak_bpm),
+            kcal?.active?.toInt()?.toString() to stringResource(R.string.workout_live_figure_active_kcal),
+        ))
+        Spacer(Modifier.weight(1f))
         when (m.phase) {
             Phase.WarmUp -> WorkoutButton(
-                stringResource(R.string.workout_live_start_rounds), Color.White, Color.Black, onSkip, icon = AppIcons.PlayFill,
-                height = tall,
-            )
-            // A pill as high as the heart rate strip and, like it, no wider than its words need.
-            is Phase.Rest -> if (!compact) WorkoutButton(
-                stringResource(R.string.workout_live_add_10_s), OverGlow, Color.White, onAddRest,
-                Modifier.align(Alignment.CenterHorizontally).width(140.dp), height = 52.dp,
+                stringResource(R.string.workout_live_start_rounds), Color.White, Color.Black, onSkip, icon = AppIcons.PlayFill, height = 64.dp,
             )
             is Phase.Work -> if (m.everyMinute) WorkoutButton(
-                stringResource(R.string.workout_live_done_button), Color.White, Color.Black, onSkip, icon = AppIcons.Tick02, height = tall,
+                stringResource(R.string.workout_live_done_button), Color.White, Color.Black, onSkip, icon = AppIcons.Tick02, height = 64.dp,
             )
-            Phase.Done -> Unit
+            else -> Unit
         }
-    }
-}
-
-/** A see-through button colour that reads both on the phase's light and on black. */
-private val OverGlow = Color.White.copy(alpha = 0.16f)
-
-/**
- * The phase's light over the whole screen (boards HiitWork and HiitRest): work rises from the bottom, rest falls from
- * the top, strongest at the edge and gone by the middle, so the seconds stay on black.
- */
-// Made once: a new brush each second would draw the backdrop again.
-private val WorkGlow by lazy { phaseGlow(WorkRed, fromTop = false) }
-private val RestGlow by lazy { phaseGlow(RestGreen, fromTop = true) }
-
-private fun phaseGlow(color: Color, fromTop: Boolean) = object : ShaderBrush() {
-    override fun createShader(size: Size) = RadialGradientShader(
-        Offset(size.width / 2f, if (fromTop) -size.height * 0.08f else size.height * 1.08f),
-        size.height * if (fromTop) 0.7f else 0.88f,
-        // A white-hot core in the phase's colour, as on the boards.
-        listOf(lerp(color, Color.White, 0.6f), color.copy(alpha = 0.85f), color.copy(alpha = 0.3f), Color.Transparent),
-        listOf(0f, 0.3f, 0.62f, 1f),
-    )
-}
-
-/** Skip, Done ([done], with a tick) or Skip rest on the controls row's left, labelled under it. */
-@Composable
-private fun SkipButton(label: String, done: Boolean, onSkip: () -> Unit) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Box(Modifier.height(88.dp), contentAlignment = Alignment.Center) {
-            FlatButton(OverGlow, 64.dp, onClick = onSkip) {
-                Icon(if (done) AppIcons.Tick02 else AppIcons.SkipFill, label, tint = Color.White, modifier = Modifier.size(20.dp))
-            }
-        }
-        Text(label, color = Color.White.copy(alpha = 0.6f), style = GlowType.secondary, maxLines = 1)
     }
 }
 
@@ -240,69 +213,22 @@ internal fun RoundBar(m: IntervalMoment, workLength: Long?, underWay: Float? = n
         Phase.Done -> m.rounds
         Phase.WarmUp -> 0
     }
-    // How far into the round under way: the work's seconds gone of [workLength], when it runs on a clock.
-    val under = if (m.phase is Phase.Work && underWay != null) underWay.coerceIn(0f, 1f)
-    else if (m.phase is Phase.Work && m.left != null && workLength != null && workLength > 0) {
-        (1f - m.left.toFloat() / workLength).coerceIn(0f, 1f)
-    } else 0f
     val described = pluralStringResource(R.plurals.workout_live_rounds_done_description, m.rounds, done, m.rounds)
     SegmentBar(
         List(m.rounds.coerceIn(1, MAX_ROUNDS_SHOWN)) { i ->
-            Segment(1f, Color.White.copy(alpha = if (i < done) 1f else 0.25f), filled = if (i == done) under else 0f, fill = Color.White)
+            // Done at 55 percent, the one under way white, the rest 18 percent (workout-rules.md, Progress); never dots.
+            Segment(1f, Color.White.copy(alpha = if (i < done) 0.55f else if (i == done && m.phase !is Phase.Done) 1f else 0.18f))
         },
-        Modifier.semantics { contentDescription = described }, height = 6.dp, gap = 6.dp,
+        Modifier.semantics { contentDescription = described }, height = 6.dp, gap = 4.dp, corner = 3.dp,
     )
 }
 
 /** The most rounds the bar splits into, so each stays wide enough to read. */
 private const val MAX_ROUNDS_SHOWN = 20
 
-/**
- * A phase: where you are and what's next, its word large, the seconds in the screen's one dotted number, a line under.
- * [compact] (half a folded phone, or a phone on its side) puts the word, the seconds and the phase's [action] side by
- * side, smaller, with no line.
- */
+/** The heart rate in a solid card (board HaloLiveHiitWork). */
 @Composable
-private fun ColumnScope.PhaseFigure(
-    where: String, next: String, word: String, seconds: String?, line: String, compact: Boolean = false, action: (@Composable () -> Unit)? = null,
-) {
-    Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp)) {
-        Text(where, color = Color.White, style = GlowType.body, modifier = Modifier.weight(1f))
-        Text(next, color = Color.White.copy(alpha = 0.8f), style = GlowType.secondary)
-    }
-    if (compact) {
-        Row(Modifier.fillMaxWidth().then(if (shortLandscape(compact)) Modifier else Modifier.weight(1f)), horizontalArrangement = Arrangement.spacedBy(20.dp, Alignment.CenterHorizontally), verticalAlignment = Alignment.CenterVertically) {
-            Text(word.uppercase(), color = Color.White, style = GlowType.phaseWord, maxLines = 1)
-            if (seconds != null) DotMatrixText(seconds, dot = DotSize.Detail)
-            action?.invoke()
-        }
-        return
-    }
-    Column(Modifier.fillMaxWidth().weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterVertically)) {
-        Text(word.uppercase(), color = Color.White, style = GlowType.phaseWord)
-        if (seconds != null) DotMatrixText(seconds, dot = DotSize.Live, scale = 1.4f)
-        if (line.isNotEmpty()) Text(line, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.body, textAlign = TextAlign.Center)
-    }
-}
-
-/** The heart rate on a black pill as wide as its words, with the zone's dot and name: the phase's colour is all around it. */
-@Composable
-private fun HeartStripDark(bpm: Int?, maxHr: Int, paused: Boolean, modifier: Modifier = Modifier) {
-    val heartZones = LocalHeartZones.current
-    Row(
-        modifier.height(52.dp).clip(CircleShape).background(Color.Black).padding(horizontal = 18.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        val zone = WorkoutRecorder.liveZone(bpm, maxHr, heartZones)
-        Canvas(Modifier.size(8.dp)) { drawCircle(zone?.let { ZONE_COLORS[it] } ?: Color.White) }
-        Spacer(Modifier.width(10.dp))
-        Text(
-            bpm?.let { stringResource(R.string.workout_live_bpm, it) } ?: WorkoutCopy.noHeartRate(paused), color = Color.White,
-            style = GlowType.body,
-        )
-        zone?.let { Spacer(Modifier.width(16.dp)); Text(WorkoutCopy.zoneLine(it), color = Color.White, style = GlowType.secondary, maxLines = 1) }
-    }
-}
+private fun HeartRow(bpm: Int?, maxHr: Int, paused: Boolean) = LiveCard { HeartLine(bpm, maxHr, paused) }
 
 /**
  * Each round's peak heart rate so far as bars in the peak's zone colour, rounds to come as faint stubs, with how far
@@ -314,49 +240,42 @@ private fun RoundPeaks(rounds: List<AppWorkoutRound>, total: Int) {
     if (peaks.all { it == null }) return
     val shown = peaks.filterNotNull().joinToString(", ")
     val described = stringResource(R.string.workout_live_peaks_description, shown)
-    PictureCard(WorkRed, Modifier.fillMaxWidth()) {
-        Text(stringResource(R.string.workout_live_peaks_title), color = Color.White, style = GlowType.cardTitle, maxLines = 1)
-        Spacer(Modifier.height(12.dp))
+    LiveCard {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(stringResource(R.string.workout_live_peaks_title), color = Color.White, style = GlowType.cardTitle, maxLines = 1, modifier = Modifier.weight(1f))
+            Text(stringResource(R.string.workout_live_unit_bpm), color = GlowType.noteColor, style = GlowType.noteSmall)
+        }
         PeakBars(
             peaks, { MetricColors.heart },
             Modifier.semantics { contentDescription = described },
             height = 56.dp, rounds = total, corner = 3.dp,
         )
-        Spacer(Modifier.height(6.dp))
-        Text(
-            stringResource(R.string.workout_live_peaks_bpm, shown), color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA),
-            style = GlowType.secondary,
-        )
     }
 }
 
 /**
- * A run rep (workouts spec 2.5, board RunIntervals), in place of the Pace card: rep N of M, the metres to go (or the
- * seconds of a time rep) in dots, the rep's pace now, and the reps done with their times. Rest shows its time left.
+ * A run rep (workouts spec 2.5, board HaloLiveRunReps), in place of the Pace card: the hero lit in the run's lime, or
+ * the rest's teal, with rep N of M and the pace now, the metres to go (or the seconds of a time rep) as the one dotted
+ * number, and the reps done with their times in its line.
  */
 @Composable
 internal fun RepCard(r: WorkoutState.Recording, route: List<Route.Point>, readings: List<Pair<Long, Int>>, bpm: Int?) {
     val now = nowTicking()
     val m = intervalMoment(r, now, bpm, readings, route) ?: return
     val resting = m.phase is Phase.Rest
-    PictureCard(if (resting) RestGreen else MetricColors.steps, Modifier.fillMaxWidth()) {
-        Row(Modifier.fillMaxWidth()) {
-            Text(
-                when (m.phase) {
-                    is Phase.Work -> stringResource(R.string.workout_live_rep_of, m.round, m.rounds)
-                    is Phase.Rest -> stringResource(R.string.workout_live_rest_rep_next, m.round)
-                    Phase.WarmUp -> stringResource(R.string.workout_live_warm_up)
-                    Phase.Done -> pluralStringResource(R.plurals.workout_live_all_reps_done, m.rounds, m.rounds)
-                },
-                color = Color.White, style = GlowType.cardTitle, maxLines = 1, modifier = Modifier.weight(1f),
-            )
-            val pace = if (m.phase is Phase.Work) org.openstrap.app.presentation.Pace.clock(Route.currentPace(route)) else null
-            if (pace != null) Text(
-                stringResource(R.string.workout_live_pace_now, pace), color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA),
-                style = GlowType.secondary,
-            )
-        }
-        Spacer(Modifier.height(12.dp))
+    val color = if (resting) RestGreen else liveColor(r)
+    val tint = heroTint(color)
+    LiveHero(color, liveAngle(r)) {
+        val pace = if (m.phase is Phase.Work) org.openstrap.app.presentation.Pace.clock(Route.currentPace(route)) else null
+        HeroTitle(
+            when (m.phase) {
+                is Phase.Work -> stringResource(R.string.workout_live_rep_of, m.round, m.rounds)
+                is Phase.Rest -> stringResource(R.string.workout_live_rest_rep_next, m.round)
+                Phase.WarmUp -> stringResource(R.string.workout_live_warm_up)
+                Phase.Done -> pluralStringResource(R.plurals.workout_live_all_reps_done, m.rounds, m.rounds)
+            },
+            pace?.let { stringResource(R.string.workout_live_pace_now, it) }, tint,
+        )
         val (value, unit) = when {
             m.metersLeft != null && m.phase is Phase.Work -> "${m.metersLeft.toInt()}" to stringResource(R.string.workout_live_unit_m_to_go)
             m.left != null -> dotClock(m.left) to stringResource(
@@ -364,18 +283,13 @@ internal fun RepCard(r: WorkoutState.Recording, route: List<Route.Point>, readin
             )
             else -> null to ""
         }
-        if (value != null) HeroValue(value, unit, dot = DotSize.Detail)
-        else Text(
-            if (m.phase == Phase.WarmUp) stringResource(R.string.workout_live_reps_start_hint) else "", color = Color.White,
-            style = GlowType.body,
-        )
+        if (value != null) HeroNumber(value, unit, tint)
         val done = r.rounds.filter { it.workEnd != null }
-        if (done.isNotEmpty()) {
-            Spacer(Modifier.height(12.dp))
-            Text(
-                done.takeLast(6).joinToString(", ") { "${it.index + 1}: ${workoutClock(it.workEnd!! - it.workStart)}" },
-                color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary,
-            )
+        val line = when {
+            done.isNotEmpty() -> done.takeLast(6).joinToString(", ") { "${it.index + 1}: ${workoutClock(it.workEnd!! - it.workStart)}" }
+            m.phase == Phase.WarmUp -> stringResource(R.string.workout_live_reps_start_hint)
+            else -> ""
         }
+        if (line.isNotEmpty()) HeroLine(line, tint)
     }
 }

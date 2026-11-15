@@ -61,9 +61,7 @@ import org.openstrap.app.ui.glow.StatusDot
 import org.openstrap.app.ui.glow.TrendBad
 import org.openstrap.app.ui.glow.TrendGood
 import org.openstrap.app.ui.glow.live.EffortBar
-import org.openstrap.app.ui.glow.live.MindRing
 import org.openstrap.app.ui.glow.live.MovingTime
-import org.openstrap.app.ui.glow.live.RestRing
 import org.openstrap.app.ui.glow.live.RoundBar
 import org.openstrap.app.ui.glow.live.WorkoutHeartCard
 import org.openstrap.app.ui.glow.live.ZoneTimeBar
@@ -268,11 +266,11 @@ private fun LiveParts(modifier: Modifier = Modifier) {
         Heading("Live parts")
         Label("Live heart card, with the zone time bar")
         WorkoutHeartCard(
-            LiveRun, 148, LiveRecent, LiveZones, connected = true, active = { LIVE_ACTIVE }, Modifier.fillMaxWidth(), zoneBar = true,
+            LiveRun, 148, LiveZones, connected = true, active = { LIVE_ACTIVE }, Modifier.fillMaxWidth(), zoneBar = true,
         )
         Label("Live heart card, paused")
         val paused = LiveRun.copy(workout = LiveRun.workout.copy(pausedAt = LIVE_START + LIVE_ACTIVE))
-        WorkoutHeartCard(paused, 148, LiveRecent, LiveZones, connected = true, active = { LIVE_ACTIVE }, Modifier.fillMaxWidth())
+        WorkoutHeartCard(paused, 148, LiveZones, connected = true, active = { LIVE_ACTIVE }, Modifier.fillMaxWidth())
         Label("Zone time bar, in zone 3")
         ZoneTimeBar(LiveZones, current = 2)
         Label("Effort bar, a game at 3 of 5")
@@ -283,10 +281,6 @@ private fun LiveParts(modifier: Modifier = Modifier) {
         PeakBars(
             listOf(158, 166, 171, null, 169), { MetricColors.heart }, Modifier.fillMaxWidth(), height = 56.dp, rounds = 8, corner = 3.dp,
         )
-        Label("Rest ring, 45 s of 90 left")
-        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { RestRing({ 45L }, 90L) }
-        Label("Mind ring, 10 min of 30")
-        MindRing({ 600L }, 1800L)
         Label("Mind heart line")
         PlainLine(MindLine, MetricColors.evening.copy(alpha = 0.7f), 64.dp, smooth = false, dots = LineDots.Last, stroke = 2.dp)
         Label("Status dots")

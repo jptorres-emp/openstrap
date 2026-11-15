@@ -42,6 +42,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.unit.dp
 import org.openstrap.app.data.Route
+import org.openstrap.app.data.WorkoutRecorder
+import androidx.compose.ui.unit.sp
 import org.openstrap.app.ui.glow.*
 import org.openstrap.app.ui.dashboard.LocalHeartZones
 import androidx.compose.ui.res.stringResource
@@ -63,8 +65,6 @@ internal fun LiveMapScreen(
     contentPadding: PaddingValues,
     controls: LiveControls,
     figures: List<Pair<String?, String>>,
-    /** The moving time, read by its own text so the page isn't composed again each second. */
-    time: () -> Long,
     /** The height of the bar shared with the other view ([LiveBottomBar]): the panel leaves this much room for it. */
     bottomRoom: Dp,
     /** False when the heart rate is on the other half of a folded phone. */
@@ -94,8 +94,8 @@ internal fun LiveMapScreen(
                 Modifier.fillMaxWidth().padding(top = top, start = 16.dp, end = 16.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                RoundIcon(AppIcons.CaretDown, stringResource(R.string.workout_live_minimize), controls.onMinimize, surface = OverMap)
-                if (heartPill) LitHeartPill(bpm, null, color, r.paused, 44.dp)
+                RoundIconButton(AppIcons.CaretDown, stringResource(R.string.workout_live_minimize), controls.onMinimize, size = 44.dp, surface = OverMap, iconSize = 18.dp)
+                if (heartPill) LitHeartPill(bpm, r.maxHeartRate, WorkoutRecorder.liveZone(bpm, r.maxHeartRate, heartZones)?.let { org.openstrap.app.ui.workout.ZONE_COLORS[it] } ?: Color.White, r.paused, 36.dp)
                 Spacer(Modifier.weight(1f))
                 val acc = route.lastOrNull()?.accuracy
                 Row(
@@ -128,15 +128,8 @@ internal fun LiveMapScreen(
                 .padding(start = 16.dp, end = 16.dp, top = 18.dp, bottom = contentPadding.calculateBottomPadding()),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            // The moving time in the middle and larger: on this page it isn't above the views.
-            Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), verticalAlignment = Alignment.Bottom) {
-                LiveStat(figures[0].second, Modifier.weight(1f)) { LiveValue(figures[0].first) }
-                StatRule()
-                val moving = stringResource(R.string.workout_live_moving_time)
-                LiveStat(moving, Modifier.weight(1.3f)) { ClockText(time, GlowType.mapClock, maxLines = 1) }
-                StatRule()
-                LiveStat(figures[1].second, Modifier.weight(1f)) { LiveValue(figures[1].first) }
-            }
+            // Board HaloLiveMap: three plain figures, then the latest kilometre on a plain panel.
+            LiveFigures(figures)
             LastSplit(route, readings, r.workout.pauseRanges)
             Spacer(Modifier.height(bottomRoom))
         }
@@ -146,8 +139,11 @@ internal fun LiveMapScreen(
 /** How far the map runs under the panel's rounded top. */
 private val PANEL_OVERLAP = 28.dp
 
+/** The plain panel: #0C0D10, no light (workout-rules.md, Tokens). */
+private val PlainPanel = Color(0xFF0C0D10)
+
 /** Buttons and pills drawn over the map: near black, a little see-through. */
-private val OverMap = Color(0xD9141416)
+private val OverMap = OverMapSurface
 
 /** A round button over the map, white while what it does is on ([lit]). */
 @Composable
@@ -161,12 +157,10 @@ private fun LastSplit(route: List<Route.Point>, readings: List<Pair<Long, Int>>,
     val now = nowTicking()
     val (line, ago) = WorkoutCopy.lastSplit(splits, readings, route.firstOrNull()?.t, now) ?: return
     Row(
-        Modifier.fillMaxWidth().height(44.dp).clip(RoundedCornerShape(14.dp)).background(Raised).padding(horizontal = 14.dp),
+        Modifier.fillMaxWidth().height(48.dp).clip(GlowLayout.TileShape).background(PlainPanel).padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(Modifier.size(8.dp).clip(CircleShape).background(MetricColors.steps))
-        Spacer(Modifier.width(10.dp))
-        Text(line, color = Color.White, style = GlowType.body.copy(fontFeatureSettings = "tnum"), maxLines = 1, modifier = Modifier.weight(1f))
-        Text(ago, color = Color.White.copy(alpha = 0.6f), style = GlowType.secondary, maxLines = 1)
+        Text(line, color = Color.White, style = GlowType.body.copy(fontSize = 14.sp, fontFeatureSettings = "tnum"), maxLines = 1, modifier = Modifier.weight(1f))
+        Text(ago, color = GlowType.noteColor, style = GlowType.noteSmall, maxLines = 1)
     }
 }

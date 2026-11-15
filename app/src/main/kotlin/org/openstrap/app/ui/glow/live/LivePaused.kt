@@ -8,6 +8,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
+import org.openstrap.app.ui.theme.AppIcons
+import org.openstrap.app.ui.theme.MetricColors
+import org.openstrap.app.ui.workout.PausedGrey
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -26,45 +31,51 @@ import androidx.compose.ui.res.stringResource
 import org.openstrap.app.R
 
 /**
- * A paused workout (workouts spec 2.3, board Paused): the time stops and the pause counts up in dots, "Paused for",
- * the heart rate now and how far it has dropped since you stopped ([recent], the live readings, hold the one at the
- * pause), then the workout's [figures] so far (value, label).
+ * A paused workout (workout-rules.md, Colour; board HaloLivePaused): a grey hero, "Paused for" and the pause counting up
+ * in the one dotted number, then a solid card with the heart rate now and how far it has dropped since you stopped
+ * ([recent], the live readings, hold the one at the pause), then the workout's [figures] so far (value, label).
  */
 @Composable
 internal fun ColumnScope.LivePaused(r: WorkoutState.Recording, liveHeartRate: Int?, recent: List<Pair<Long, Int>>, figures: List<Pair<String?, String>>) {
     val at = r.workout.pausedAt ?: return
     val now = nowTicking()
-    Column(
-        Modifier.fillMaxWidth().padding(top = 24.dp), horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        Text(
-            stringResource(R.string.workout_live_paused_for), color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA),
-            style = GlowType.secondary,
-        )
-        DotMatrixText(dotClock((now - at).coerceAtLeast(0)), dot = DotSize.Detail)
-        val before = Workouts.heartRateAt(recent, at) ?: recent.lastOrNull { it.first <= at }?.second
-        val drop = if (before != null && liveHeartRate != null) before - liveHeartRate else null
-        if (liveHeartRate != null) Text(
-            drop?.takeIf { it > 0 }?.let { stringResource(R.string.workout_live_paused_heart_down, liveHeartRate, it) }
-                ?: stringResource(R.string.workout_live_paused_heart, liveHeartRate),
-            color = Color.White, style = GlowType.sentence, textAlign = TextAlign.Center,
-        )
-        Text(
-            stringResource(R.string.workout_live_paused_note), color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA),
-            style = GlowType.secondary, textAlign = TextAlign.Center,
-        )
+    val tint = heroTint(PausedGrey)
+    LiveHero(PausedGrey, liveAngle(r)) {
+        HeroTitle(stringResource(R.string.workout_live_paused_for), null, tint)
+        HeroNumber(dotClock((now - at).coerceAtLeast(0)), null, tint)
+        HeroLine(stringResource(R.string.workout_live_paused_note), tint)
     }
-    LiveFigures(figures, Modifier.padding(top = 16.dp))
+    val before = Workouts.heartRateAt(recent, at) ?: recent.lastOrNull { it.first <= at }?.second
+    val drop = if (before != null && liveHeartRate != null) before - liveHeartRate else null
+    if (liveHeartRate != null) LiveCard {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(stringResource(R.string.workout_live_heart_title), color = Color.White, style = GlowType.cardTitle, modifier = Modifier.weight(1f))
+            Text(stringResource(R.string.workout_live_paused_since), color = GlowType.noteColor, style = GlowType.noteSmall)
+        }
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Icon(AppIcons.Heartbeat, null, tint = MetricColors.heart, modifier = Modifier.size(16.dp))
+                Text("$liveHeartRate", color = Color.White, style = GlowType.figureInline)
+                Text(stringResource(R.string.workout_live_unit_bpm), color = GlowType.noteColor, style = GlowType.secondary)
+            }
+            if (drop != null && drop > 0) {
+                Text(stringResource(R.string.workout_live_paused_down, drop), color = GlowType.noteColor, style = GlowType.secondary)
+            }
+        }
+    }
+    LiveFigures(figures)
 }
 
-/** A row of plain live figures (value over label) with thin rules between, a missing value as the waiting dash. */
+/**
+ * A row of plain live figures (value over label), no card: each column after the first has a rule on its left and 16 of
+ * room after it (workout-rules.md, section 2; board HaloLiveRun). A missing value is the waiting dash.
+ */
 @Composable
 internal fun LiveFigures(figures: List<Pair<String?, String>>, modifier: Modifier = Modifier) {
-    Row(modifier.fillMaxWidth().height(IntrinsicSize.Min), verticalAlignment = Alignment.Bottom) {
+    Row(modifier.fillMaxWidth().padding(horizontal = 4.dp).height(IntrinsicSize.Min)) {
         figures.forEachIndexed { i, (value, label) ->
             if (i > 0) StatRule()
-            LiveStat(label, Modifier.weight(1f)) { LiveValue(value) }
+            LiveStat(label, Modifier.weight(1f).padding(start = if (i > 0) 16.dp else 0.dp)) { LiveValue(value) }
         }
     }
 }

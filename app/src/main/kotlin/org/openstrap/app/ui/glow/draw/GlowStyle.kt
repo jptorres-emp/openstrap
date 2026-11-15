@@ -402,7 +402,7 @@ internal fun heroStyle(color: Color, lightAngle: Float?, rim: Float = 1f) = Glow
  * and its line, which on a bright lime body weren't readable (user, 2026-11-06). Its body, band and core turn toward
  * green, since lime darkened to a body reads as khaki.
  */
-internal fun limeHero(color: Color) = heroStyle(color, LightAngle.UpperRight).copy(
+internal fun limeHero(color: Color, lightAngle: Float = LightAngle.UpperRight) = heroStyle(color, lightAngle).copy(
     bodyHueShift = LIME_BODY_HUE, toneShift = LIME_BODY_HUE, coreHueShift = LIME_BODY_HUE,
 )
 

@@ -1,7 +1,5 @@
 package org.openstrap.app.ui.glow
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
@@ -11,7 +9,6 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -25,7 +22,6 @@ import androidx.compose.ui.unit.dp
 import org.openstrap.app.ui.components.LocalCardNumbers
 import org.openstrap.app.ui.components.cardOpening
 import org.openstrap.app.ui.components.pressClickable
-import org.openstrap.app.ui.glow.draw.EdgeSurface
 
 /*
  * The middle tier (spec 2.5, Picture card): a dark card with a hairline that draws its metric's picture in the ink.
@@ -86,9 +82,9 @@ fun PictureCard(
             .then(opening?.modifier ?: Modifier)
             .let { if (onClick != null) it.pressClickable(opening?.onClick ?: onClick, CardShape) else it }
             .let {
-                if (plain) it.clip(CardShape).background(ListSurface, CardShape).border(1.dp, CardHairline, CardShape)
-                else it.clip(CardShape).background(EdgeSurface, CardShape).border(1.dp, CardHairline, CardShape)
-                    .let { m -> if (rim != null) m.rimLight(rim, ink, mood.edge) else m }
+                // Solid card: no white rim (Halo System board). Off your normal, the ink's own light shows inside it.
+                if (plain) it.solidCard(CardShape)
+                else it.solidCard(CardShape).let { m -> if (rim != null) m.rimLight(rim, ink, mood.edge) else m }
             }
             .padding(contentPadding),
     ) {

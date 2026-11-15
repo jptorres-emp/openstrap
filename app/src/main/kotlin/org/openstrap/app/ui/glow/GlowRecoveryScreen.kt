@@ -72,8 +72,9 @@ import org.openstrap.app.presentation.TodayCopy
 import org.openstrap.app.ui.dashboard.avg
 import org.openstrap.app.ui.dashboard.recoveryCards
 import org.openstrap.app.ui.theme.MetricColors
-import org.openstrap.app.ui.glow.draw.CoreShape
 import org.openstrap.app.ui.glow.draw.GlowStyle
+import org.openstrap.app.ui.glow.draw.LightAngle
+import org.openstrap.app.ui.glow.draw.heroStyle
 import org.openstrap.app.ui.glow.draw.DotSize
 
 /*
@@ -172,12 +173,12 @@ fun GlowRecoveryScreen(
 
 /* ----------------------------------------------- Hero ----------------------------------------------- */
 
-/** The score sits in a dark pool, light all round it (spec 2.5): the core behind the number, low on the left. */
-private fun recoveryHeroStyle(color: Color) = GlowStyle.Bloom.copy(
-    color = color,
-    coreShape = CoreShape.Radial, coreX = 0.3f, coreY = 0.72f, coreWidth = 0.75f, coreHeight = 0.6f,
-    coreBlur = 30.dp, toneWidth = 16.dp, toneShift = -10f, glowStrength = 1f, bevel = 0.9f,
-)
+/**
+ * The Recovery hero is develop's hero lit from the moment's side, the core opposite it, no bevel band (Halo Recovery
+ * board: lit from [LocalHeroLightAngle], 225 on waking). Below when there is no moment.
+ */
+@Composable
+private fun recoveryHeroStyle(color: Color) = heroStyle(color, LocalHeroLightAngle.current ?: LightAngle.Below)
 
 /**
  * The score: what it means for the day and what held it back, then the number and its word. Compared with yesterday

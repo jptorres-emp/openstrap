@@ -1,7 +1,6 @@
 package org.openstrap.app.ui.glow
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -88,9 +87,7 @@ fun ListPanel(
     Column(
         modifier
             .fillMaxWidth()
-            .clip(GlowLayout.CardShape)
-            .background(ListSurface, GlowLayout.CardShape)
-            .border(1.dp, CardHairline, GlowLayout.CardShape)
+            .solidCard(GlowLayout.CardShape)
             .padding(GlowLayout.ListPadding),
         content = rows,
     )

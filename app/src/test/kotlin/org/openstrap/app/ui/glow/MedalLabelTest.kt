@@ -2,6 +2,8 @@ package org.openstrap.app.ui.glow
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
@@ -53,7 +55,8 @@ class MedalLabelTest {
 
     private fun assertInside(diameter: Dp) {
         rules.compose.setContent {
-            Column {
+            // Scrolls, so every token gets its full size however short the test screen is.
+            Column(Modifier.verticalScroll(rememberScrollState())) {
                 looks.forEachIndexed { i, (_, look) -> Box(Modifier.testTag("medal$i")) { Medal(look, diameter) } }
             }
         }

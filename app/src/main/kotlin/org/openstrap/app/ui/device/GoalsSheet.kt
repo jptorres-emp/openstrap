@@ -82,11 +82,11 @@ fun GoalsSheet(goals: Goals, onSave: (Goals) -> Unit, onDismiss: () -> Unit, sug
                 { CalorieGoal.step(calories, it * Goals.CALORIES_STEP) }, { t -> CalorieGoal.parse(t) }, { it.toString() },
                 lowerLabel = R.string.you_goals_calories_lower, raiseLabel = R.string.you_goals_calories_raise,
                 typeLabel = R.string.you_goals_calories_type,
-            ) { suggestion(suggestedCalories, calories) { calories = it } }
+            ) { Suggestion(suggestedCalories, calories) { calories = it } }
             GoalStepper(
                 stringResource(R.string.you_goals_sleep_label), sleepText(sleep, hourUnit), null, Goals.SLEEP_MINUTES, sleep,
                 { sleep = it }, { (sleep + it * SLEEP_STEP).coerceIn(Goals.SLEEP_MINUTES) }, ::parseSleep, ::sleepEdit,
-                rangeNote = Goals.SLEEP_MINUTES.first / 60..Goals.SLEEP_MINUTES.last / 60,
+                rangeNote = Goals.SLEEP_MINUTES.first / MINUTES_PER_HOUR..Goals.SLEEP_MINUTES.last / MINUTES_PER_HOUR,
             )
             GoalStepper(
                 stringResource(R.string.you_goals_active_label), "$active", stringResource(R.string.you_goals_active_unit),
@@ -126,28 +126,34 @@ private fun digits(text: String): Int? = text.filter { it.isDigit() }.toIntOrNul
 
 /** Sleep as "7 h 30", or "8 h" on the hour. */
 private fun sleepText(minutes: Int, hourUnit: String): String =
-    if (minutes % 60 == 0) "${minutes / 60} $hourUnit" else "${minutes / 60} $hourUnit ${(minutes % 60).toString().padStart(2, '0')}"
+    if (minutes % MINUTES_PER_HOUR == 0) {
+        "${minutes / MINUTES_PER_HOUR} $hourUnit"
+    } else {
+        "${minutes / MINUTES_PER_HOUR} $hourUnit ${(minutes % MINUTES_PER_HOUR).toString().padStart(2, '0')}"
+    }
 
 /** What typing a sleep goal starts with: "7:30", or "8" on the hour. */
-private fun sleepEdit(minutes: Int): String =
-    if (minutes % 60 == 0) "${minutes / 60}" else "${minutes / 60}:${(minutes % 60).toString().padStart(2, '0')}"
+private fun sleepEdit(minutes: Int): String = if (minutes % MINUTES_PER_HOUR == 0) {
+    "${minutes / MINUTES_PER_HOUR}"
+} else {
+    "${minutes / MINUTES_PER_HOUR}:${(minutes % MINUTES_PER_HOUR).toString().padStart(2, '0')}"
+}
 
 /** A typed sleep goal, "7:30" or "8" or "7.5", as minutes; null when it isn't one. */
 private fun parseSleep(text: String): Int? {
     val t = text.trim()
-    val minutes = when {
+    return when {
         ':' in t -> t.split(':').let { (h, m) ->
-            h.toIntOrNull()?.let { hh -> m.toIntOrNull()?.takeIf { it in 0..59 }?.let { hh * 60 + it } }
+            h.toIntOrNull()?.let { hh -> m.toIntOrNull()?.takeIf { it < MINUTES_PER_HOUR }?.let { hh * MINUTES_PER_HOUR + it } }
         }
-        '.' in t || ',' in t -> t.replace(',', '.').toDoubleOrNull()?.let { Math.round(it * 60).toInt() }
-        else -> t.toIntOrNull()?.let { it * 60 }
+        '.' in t || ',' in t -> t.replace(',', '.').toDoubleOrNull()?.let { Math.round(it * MINUTES_PER_HOUR).toInt() }
+        else -> t.toIntOrNull()?.let { it * MINUTES_PER_HOUR }
     }
-    return minutes
 }
 
 /** The calorie goal's suggestion under its row (calories spec 4.6): what it is, with Use while it differs. */
 @Composable
-private fun suggestion(suggested: Int?, value: Int, use: (Int) -> Unit) {
+private fun Suggestion(suggested: Int?, value: Int, use: (Int) -> Unit) {
     if (suggested == null) return
     val count = Units.count(suggested.toLong())
     if (suggested == value) {
@@ -254,6 +260,9 @@ private fun GoalStepper(
         extra()
     }
 }
+
+/** Minutes in an hour, for the sleep goal. */
+private const val MINUTES_PER_HOUR = 60
 
 /** The steps goal moves by this many at a tap. */
 private const val STEPS_STEP = 500

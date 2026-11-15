@@ -319,7 +319,7 @@ private fun SleepEditActions(note: String?, onAdjust: () -> Unit, onDelete: () -
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             PageButton(stringResource(R.string.glow_sleep_adjust_times), onAdjust, Modifier.weight(1f), icon = AppIcons.PencilEdit)
             PageButton(
-                stringResource(R.string.glow_delete), onDelete, Modifier.weight(1f), color = MetricColors.warn, icon = AppIcons.Trash,
+                stringResource(R.string.glow_delete), onDelete, Modifier.weight(1f), destructive = true, icon = AppIcons.Trash,
             )
         }
     }
@@ -340,7 +340,7 @@ private fun DeleteSleepSheet(title: String, times: String, onDelete: () -> Unit,
         Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             PageButton(stringResource(R.string.glow_cancel), onDismiss, Modifier.weight(1f))
             PageButton(
-                stringResource(R.string.glow_delete), onDelete, Modifier.weight(1f), color = MetricColors.warn, icon = AppIcons.Trash,
+                stringResource(R.string.glow_delete), onDelete, Modifier.weight(1f), destructive = true, icon = AppIcons.Trash,
             )
         }
     }

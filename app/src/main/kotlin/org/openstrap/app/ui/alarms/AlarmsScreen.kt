@@ -142,7 +142,7 @@ fun AlarmsScreen(
         PageConfirm(
             stringResource(R.string.you_alarms_delete_all_title), stringResource(R.string.you_alarms_delete_all_text),
             confirm = stringResource(R.string.you_alarms_delete_all), onConfirm = { vm.deleteAll(); confirmDeleteAll = false },
-            onDismiss = { confirmDeleteAll = false },
+            onDismiss = { confirmDeleteAll = false }, destructive = true,
         )
     }
     // A refresh can change the alarm under an open sheet (a one-time alarm switching itself off, say). Saving the old copy

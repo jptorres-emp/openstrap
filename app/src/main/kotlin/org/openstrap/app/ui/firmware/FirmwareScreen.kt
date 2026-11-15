@@ -41,7 +41,6 @@ import org.openstrap.app.presentation.Units
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import org.openstrap.app.ui.glow.CardTitle
-import org.openstrap.app.ui.glow.DestructiveInk
 import org.openstrap.app.ui.glow.GlowLayout
 import org.openstrap.app.ui.glow.GlowType
 import org.openstrap.app.ui.glow.PageButton
@@ -290,7 +289,7 @@ private fun AccountPanel(
                 )
                 if (account != null) {
                     PageButton(
-                        stringResource(R.string.you_zepp_remove), onClear, Modifier.weight(1f), enabled = enabled, color = DestructiveInk,
+                        stringResource(R.string.you_zepp_remove), onClear, Modifier.weight(1f), enabled = enabled, destructive = true,
                     )
                 }
             }

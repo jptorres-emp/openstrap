@@ -1,3 +1,5 @@
+@file:Suppress("MagicNumber") // the ranges and steps of the pickers are the page's own limits
+
 package org.openstrap.app.ui.device
 
 import androidx.activity.compose.BackHandler
@@ -146,12 +148,17 @@ fun ProfileScreen(profile: UserProfile, contentPadding: PaddingValues, onSave: (
                 footnote = stringResource(R.string.you_profile_foot_about),
             ) {
                 PageRow(
-                    stringResource(R.string.you_profile_age), ageValue?.let { pluralStringResource(R.plurals.you_profile_age, it, it) } ?: notSet,
+                    stringResource(R.string.you_profile_age),
+                    ageValue?.let { pluralStringResource(R.plurals.you_profile_age, it, it) } ?: notSet,
                     onClick = { sheet = "age" }, divider = false,
                 )
                 PageRow(
                     stringResource(R.string.you_profile_row_sex),
-                    when (sex) { 0 -> stringResource(R.string.you_profile_sex_female); 1 -> stringResource(R.string.you_profile_sex_male); else -> notSet },
+                    when (sex) {
+                        0 -> stringResource(R.string.you_profile_sex_female)
+                        1 -> stringResource(R.string.you_profile_sex_male)
+                        else -> notSet
+                    },
                     onClick = { sheet = "sex" },
                 )
             }
@@ -188,11 +195,15 @@ fun ProfileScreen(profile: UserProfile, contentPadding: PaddingValues, onSave: (
                         ?: stringResource(R.string.you_profile_sleep_default),
                     onClick = { sheet = "sleep" },
                 )
-                PageSwitchRow(stringResource(R.string.you_profile_beta_blockers), stringResource(R.string.you_profile_beta_note), betaBlocker, { betaBlocker = it })
+                PageSwitchRow(
+                    stringResource(R.string.you_profile_beta_blockers), stringResource(R.string.you_profile_beta_note),
+                    betaBlocker, { betaBlocker = it },
+                )
                 PageSwitchRow(stringResource(R.string.you_profile_pregnant), null, pregnant, { pregnant = it })
                 // Your max is set on the Heart rate zones page, with the zones that follow it.
                 PageRow(
-                    org.openstrap.app.ui.workout.HeartZonesCopy.MAX_ROW, org.openstrap.app.ui.workout.HeartZonesCopy.profileLine(profile.maxHeartRate),
+                    org.openstrap.app.ui.workout.HeartZonesCopy.MAX_ROW,
+                    org.openstrap.app.ui.workout.HeartZonesCopy.profileLine(profile.maxHeartRate),
                     onClick = onHeartZones, below = true,
                 )
             }
@@ -233,14 +244,17 @@ fun ProfileScreen(profile: UserProfile, contentPadding: PaddingValues, onSave: (
             onDismiss = { sheet = null }, format = { "${it / 12} $unitFt ${it % 12} $unitIn" },
         ) else StepperSheet(
             stringResource(R.string.you_profile_height), heightValue ?: DEFAULT_HEIGHT_CM, 100..250,
-            onSave = { heightCm = it.toString(); sheet = null }, onDismiss = { sheet = null }, unit = stringResource(R.string.you_profile_unit_cm),
+            onSave = { heightCm = it.toString(); sheet = null }, onDismiss = { sheet = null },
+            unit = stringResource(R.string.you_profile_unit_cm),
         )
         "activity" -> RadioSheet(
             stringResource(R.string.you_profile_row_activity), levels, activity,
-            onSave = { activity = it; sheet = null }, onDismiss = { sheet = null }, note = stringResource(R.string.you_profile_activity_note),
+            onSave = { activity = it; sheet = null }, onDismiss = { sheet = null },
+            note = stringResource(R.string.you_profile_activity_note),
         )
         "sleep" -> StepperSheet(
-            stringResource(R.string.you_profile_row_sleep_need), sleepNeedValue?.let { Math.round(it / 30f) } ?: DEFAULT_SLEEP_HALF_HOURS, 14..18,
+            stringResource(R.string.you_profile_row_sleep_need),
+            sleepNeedValue?.let { Math.round(it / 30f) } ?: DEFAULT_SLEEP_HALF_HOURS, 14..18,
             onSave = { sleepNeed = formatNumber(it / 2f); sheet = null }, onDismiss = { sheet = null },
             note = stringResource(R.string.you_profile_sleep_note), unit = stringResource(R.string.you_unit_h),
             format = { formatNumber(it / 2f) },

@@ -15,11 +15,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -42,6 +43,16 @@ import kotlin.math.abs
 
 private val RowHeight = 56.dp
 private const val VISIBLE_PAD = 2
+private const val HOURS_A_DAY = 24
+private const val HALF_DAY = 12
+private const val MINUTES_AN_HOUR = 60
+private const val MINUTE_STEP = 5
+private val PillSurface = Color(0xFF17181C)
+private val HourWheelWidth = 96.dp
+private val MeridiemWheelWidth = 84.dp
+
+/** A wheel's number as two digits. */
+private fun two(n: Int) = n.toString().padStart(2, '0')
 
 /**
  * The time of day in minutes after midnight, [initial] to start with, [onChange] on every change. Minutes step by 5, or by 1
@@ -49,32 +60,38 @@ private const val VISIBLE_PAD = 2
  */
 @Composable
 internal fun TimeWheels(initial: Int, onChange: (Int) -> Unit, modifier: Modifier = Modifier, use24Hour: Boolean = ClockSetting.use24Hour) {
-    var hour by rememberSaveable { mutableIntStateOf(initial / 60) }
-    var minute by rememberSaveable { mutableIntStateOf(initial % 60) }
-    val minuteStep = remember { if (initial % 60 % 5 == 0) 5 else 1 }
-    LaunchedEffect(hour, minute) { onChange(hour * 60 + minute) }
+    var hour by rememberSaveable { mutableIntStateOf(initial / MINUTES_AN_HOUR) }
+    var minute by rememberSaveable { mutableIntStateOf(initial % MINUTES_AN_HOUR) }
+    val minuteStep = remember { if (initial % MINUTES_AN_HOUR % MINUTE_STEP == 0) MINUTE_STEP else 1 }
+    SideEffect { onChange(hour * MINUTES_AN_HOUR + minute) }
     Box(modifier.fillMaxWidth().padding(vertical = 4.dp), contentAlignment = Alignment.Center) {
-        Box(Modifier.fillMaxWidth().height(64.dp).clip(GlowLayout.TileShape).background(Color(0xFF17181C)))
+        Box(Modifier.fillMaxWidth().height(64.dp).clip(GlowLayout.TileShape).background(PillSurface))
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
             if (use24Hour) {
-                Wheel((0..23).toList(), hour, { hour = it }, { "%02d".format(it) }, Modifier.width(96.dp))
+                Wheel((0 until HOURS_A_DAY).toList(), hour, { hour = it }, ::two, Modifier.width(HourWheelWidth))
             } else {
-                // 1 to 12 on the wheel, 12 standing for 0 of its half of the day.
-                val twelve = (listOf(12) + (1..11)).toList()
-                Wheel(twelve, if (hour % 12 == 0) 12 else hour % 12, { hour = (it % 12) + (hour / 12) * 12 }, { "%02d".format(it) }, Modifier.width(96.dp))
+                // 12 first, then 1 to 11: the hour within its half of the day.
+                val twelve = listOf(HALF_DAY) + (1 until HALF_DAY)
+                Wheel(
+                    twelve, if (hour % HALF_DAY == 0) HALF_DAY else hour % HALF_DAY,
+                    { hour = it % HALF_DAY + hour / HALF_DAY * HALF_DAY }, ::two, Modifier.width(HourWheelWidth),
+                )
             }
             Text(":", Modifier.padding(horizontal = 6.dp), color = Color.White, style = GlowType.figureLarge)
-            Wheel((0..59 step minuteStep).toList(), minute, { minute = it }, { "%02d".format(it) }, Modifier.width(96.dp))
+            Wheel((0 until MINUTES_AN_HOUR step minuteStep).toList(), minute, { minute = it }, ::two, Modifier.width(HourWheelWidth))
             if (!use24Hour) {
                 val names = remember { DateFormatSymbols.getInstance().amPmStrings }
-                Wheel(listOf(0, 1), hour / 12, { hour = hour % 12 + it * 12 }, { names[it] }, Modifier.width(84.dp))
+                Wheel(
+                    listOf(0, 1), hour / HALF_DAY, { hour = hour % HALF_DAY + it * HALF_DAY }, { names[it] },
+                    Modifier.width(MeridiemWheelWidth),
+                )
             }
         }
     }
 }
 
 /** One wheel: [values] with the [chosen] one centred, snapping to each. Scrolling reports the centred value to [onPick]. */
-@OptIn(ExperimentalFoundationApi::class)
+@Suppress("UnstableCollections", "ComposeUnstableCollections")
 @Composable
 private fun Wheel(values: List<Int>, chosen: Int, onPick: (Int) -> Unit, label: (Int) -> String, modifier: Modifier = Modifier) {
     val start = remember { values.indexOf(chosen).coerceAtLeast(0) }
@@ -86,7 +103,8 @@ private fun Wheel(values: List<Int>, chosen: Int, onPick: (Int) -> Unit, label: 
             (state.firstVisibleItemIndex + if (state.firstVisibleItemScrollOffset * 2 >= px) 1 else 0).coerceIn(0, values.lastIndex)
         }
     }
-    LaunchedEffect(centre) { values.getOrNull(centre)?.let(onPick) }
+    val pick by rememberUpdatedState(onPick)
+    SideEffect { values.getOrNull(centre)?.let(pick) }
     LazyColumn(
         modifier.height(RowHeight * (2 * VISIBLE_PAD + 1)),
         state = state, flingBehavior = rememberSnapFlingBehavior(state),
@@ -96,8 +114,7 @@ private fun Wheel(values: List<Int>, chosen: Int, onPick: (Int) -> Unit, label: 
             val v = i - VISIBLE_PAD
             Box(Modifier.height(RowHeight), contentAlignment = Alignment.Center) {
                 if (v in values.indices) {
-                    val d = abs(v - centre)
-                    val (style, alpha) = when (d) {
+                    val (style, alpha) = when (abs(v - centre)) {
                         0 -> GlowType.wheelChosen to 1f
                         1 -> GlowType.wheelNear to GlowType.WHEEL_NEAR_ALPHA
                         else -> GlowType.wheelFar to GlowType.WHEEL_FAR_ALPHA

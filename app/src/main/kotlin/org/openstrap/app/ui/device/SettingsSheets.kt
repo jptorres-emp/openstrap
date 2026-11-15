@@ -1,3 +1,5 @@
+@file:Suppress("MagicNumber") // the sheet colours are the boards' hex values
+
 package org.openstrap.app.ui.device
 
 import androidx.compose.foundation.background
@@ -73,14 +75,16 @@ internal fun StepperSheet(
 ) {
     var value by rememberSaveable { mutableIntStateOf(initial.coerceIn(range)) }
     PageSheet(onDismiss, title) {
-        Row(modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+        Row(modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween) {
             RoundIconButton(
                 AppIcons.Minus, stringResource(R.string.you_sheet_less), { value = (value - step).coerceIn(range) }, size = 44.dp,
                 enabled = value > range.first,
             )
             Row(verticalAlignment = Alignment.Bottom) {
                 Text(format(value), color = Color.White, style = GlowType.goalValue)
-                if (unit != null) Text(" $unit", color = GlowType.noteColor, style = GlowType.body, modifier = Modifier.padding(bottom = 6.dp))
+                if (unit != null) Text(" $unit", color = GlowType.noteColor, style = GlowType.body,
+                    modifier = Modifier.padding(bottom = 6.dp))
             }
             RoundIconButton(
                 AppIcons.Plus, stringResource(R.string.you_sheet_more), { value = (value + step).coerceIn(range) }, size = 44.dp,

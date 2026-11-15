@@ -1,3 +1,5 @@
+@file:Suppress("MagicNumber") // the drawing's coordinates are the boards' 74 by 92 grid
+
 package org.openstrap.app.ui.glow
 
 import androidx.compose.animation.core.LinearEasing
@@ -66,7 +68,8 @@ internal fun StrapDrawing(
                 for (y in WeaveRows) drawLine(white.copy(alpha = 0.12f), o(27f, y), o(47f, y), s)
                 // The pod, its bevel and one highlight on the top left.
                 drawRoundRect(Color(0xFF0B0C0E), o(21f, 20f), Size(32f * k, 52f * k), CornerRadius(9f * k))
-                drawRoundRect(white.copy(alpha = 0.85f), o(21f, 20f), Size(32f * k, 52f * k), CornerRadius(9f * k), style = Stroke(1.4f * s))
+                drawRoundRect(white.copy(alpha = 0.85f), o(21f, 20f), Size(32f * k, 52f * k), CornerRadius(9f * k),
+                    style = Stroke(1.4f * s))
                 drawRoundRect(white.copy(alpha = 0.18f), o(25f, 24f), Size(24f * k, 44f * k), CornerRadius(6f * k), style = Stroke(s))
                 drawPath(highlight, white.copy(alpha = 0.35f), style = Stroke(1.4f * s, cap = StrokeCap.Round))
                 // The light.
@@ -74,7 +77,8 @@ internal fun StrapDrawing(
                     drawCircle(led.copy(alpha = 0.35f), 9f * k, c)
                     drawCircle(led, 3.2f * k, c)
                     if (syncing) rotate(turn.value, c) {
-                        drawArc(led, -90f, 75f, false, o(c.x / k - 6f, c.y / k - 6f), Size(12f * k, 12f * k), style = Stroke(1.2f * s, cap = StrokeCap.Round))
+                        drawArc(led, -90f, 75f, false, o(c.x / k - 6f, c.y / k - 6f), Size(12f * k, 12f * k), style = Stroke(1.2f * s,
+                            cap = StrokeCap.Round))
                     }
                 } else drawCircle(white.copy(alpha = 0.6f), 3.2f * k, c, style = Stroke(s))
             }

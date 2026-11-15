@@ -203,7 +203,8 @@ fun YouPage(
         }
         item {
             PageGroup(heading = stringResource(R.string.you_section_about)) {
-                PageRow(stringResource(R.string.you_row_version), stringResource(R.string.you_version_value, BuildConfig.VERSION_NAME), divider = false)
+                PageRow(stringResource(R.string.you_row_version), stringResource(R.string.you_version_value, BuildConfig.VERSION_NAME),
+                    divider = false)
             }
         }
     }

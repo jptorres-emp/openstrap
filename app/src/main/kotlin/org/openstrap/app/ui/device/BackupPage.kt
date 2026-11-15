@@ -60,7 +60,8 @@ fun BackupPage(
                 footnote = if (state.on) stringResource(R.string.you_backup_now_note) else null,
             ) {
                 PageSwitchRow(
-                    stringResource(R.string.you_backup_automatic), BackupCopy.status(state.copy(failed = null), now), state.on, toggle, divider = false,
+                    stringResource(R.string.you_backup_automatic), BackupCopy.status(state.copy(failed = null),
+                        now), state.on, toggle, divider = false,
                     icon = AppIcons.ShieldCheck,
                 )
                 if (state.on) {

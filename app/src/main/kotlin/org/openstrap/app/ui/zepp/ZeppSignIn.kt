@@ -1,3 +1,5 @@
+@file:Suppress("MagicNumber") // the sheet colours and sizes are the boards'
+
 package org.openstrap.app.ui.zepp
 
 import android.annotation.SuppressLint
@@ -167,7 +169,8 @@ fun ZeppSignInDialog(
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.weight(1f),
                     )
                     Box(Modifier.width(96.dp), contentAlignment = Alignment.CenterEnd) {
-                        if (step is SignInStep.SignIn) PageTextButton(stringResource(R.string.you_zepp_reset), { clearZeppCookies(); attempt++ })
+                        if (step is SignInStep.SignIn) PageTextButton(stringResource(R.string.you_zepp_reset),
+                            { clearZeppCookies(); attempt++ })
                     }
                 }
                 when (val s = step) {
@@ -264,10 +267,12 @@ private fun FoundStrap(
     Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.62f)), contentAlignment = Alignment.BottomCenter) {
         Column(
             Modifier.widthIn(max = GlowLayout.PageMaxWidth).fillMaxWidth().clip(GlowLayout.SheetShape).background(Color(0xFF111215))
-                .verticalScroll(rememberScrollState()).navigationBarsPadding().padding(start = 20.dp, end = 20.dp, top = 10.dp, bottom = 28.dp),
+                .verticalScroll(rememberScrollState()).navigationBarsPadding().padding(start = 20.dp, end = 20.dp, top = 10.dp,
+                    bottom = 28.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Box(Modifier.align(Alignment.CenterHorizontally).size(width = 40.dp, height = 5.dp).clip(CircleShape).background(Color(0xFF3A3D45)))
+            Box(Modifier.align(Alignment.CenterHorizontally).size(width = 40.dp,
+                height = 5.dp).clip(CircleShape).background(Color(0xFF3A3D45)))
             Text(
                 stringResource(if (strap != null) R.string.you_zepp_found else R.string.you_zepp_not_found),
                 color = Color.White, style = GlowType.sheetTitle,
@@ -284,8 +289,10 @@ private fun FoundStrap(
             } else {
                 PageRows {
                     PageInfoRow(stringResource(R.string.you_pair_address), strap.macAddress, divider = false)
-                    Row(Modifier.fillMaxWidth().heightIn(min = 52.dp).padding(start = 16.dp, end = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text(stringResource(R.string.you_pair_key), color = Color.White, style = GlowType.body, modifier = Modifier.weight(1f))
+                    Row(Modifier.fillMaxWidth().heightIn(min = 52.dp).padding(start = 16.dp, end = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically) {
+                        Text(stringResource(R.string.you_pair_key), color = Color.White, style = GlowType.body,
+                            modifier = Modifier.weight(1f))
                         Text(
                             when {
                                 strap.authKey == null -> stringResource(R.string.you_zepp_key_missing)
@@ -332,7 +339,8 @@ fun ComputerGuideButton(modifier: Modifier = Modifier.fillMaxWidth()) {
     // A nav row on its own panel (HaloPair and HaloZeppSignIn boards).
     PageRows(modifier) {
         PageRow(
-            stringResource(R.string.you_zepp_guide), stringResource(R.string.you_zepp_guide_note), onClick = { uri.openUri(COMPUTER_KEY_GUIDE_URL) },
+            stringResource(R.string.you_zepp_guide), stringResource(R.string.you_zepp_guide_note),
+                onClick = { uri.openUri(COMPUTER_KEY_GUIDE_URL) },
             below = true, divider = false, icon = AppIcons.Info,
         )
     }

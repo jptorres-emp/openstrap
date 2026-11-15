@@ -1,3 +1,5 @@
+@file:Suppress("MagicNumber") // the strap drawing and its card follow the boards' sizes
+
 package org.openstrap.app.ui.device
 
 import android.content.ClipData
@@ -185,6 +187,7 @@ fun DeviceScreen(
     val paired by vm.paired.collectAsStateWithLifecycle()
     val connection by vm.connection.collectAsStateWithLifecycle()
     val strapConnected = connection is ConnectionState.Connected
+    val finding by vm.findingStrap.collectAsStateWithLifecycle()
     androidx.compose.runtime.LaunchedEffect(strapConnected) { if (strapConnected) vm.checkCanRestart() }
     val sync by vm.sync.collectAsStateWithLifecycle()
     val record by vm.syncRecord.collectAsStateWithLifecycle()
@@ -239,32 +242,44 @@ fun DeviceScreen(
 
         val device = paired
         if (device == null) {
-            item { StrapCard(stringResource(R.string.you_strap_no_strap), stringResource(R.string.you_strap_state_not_paired), NotPairedDot, linked = true) }
+            item {
+                StrapCard(
+                    stringResource(R.string.you_strap_no_strap), stringResource(R.string.you_strap_state_not_paired), NotPairedDot,
+                    linked = true,
+                )
+            }
             item { PairPanel(vm, scan, onRequestBluetooth) }
             return@ScreenList
         }
         val failed = connection as? ConnectionState.Failed
-        val keyRejected = failed?.keyRejected == true
-        val installedUpdate = if (updates != null && onUpdates != null) Releases.newer(updates.releases, installedVersion).firstOrNull() else null
+        val rejected = failed?.takeIf { it.keyRejected }
+        val keyRejected = rejected != null
+        val installedUpdate = updates?.let { Releases.newer(it.releases, installedVersion).firstOrNull() }
         // The app's own update is news here too (HaloStrap board, B1).
         if (installedUpdate != null && updates != null && onUpdates != null) item {
-            val now = remember(updates) { System.currentTimeMillis() / 1000 }
             StatusBanner(
                 BannerKind.Good, stringResource(R.string.you_updates_ready, installedUpdate.versionName),
-                note = UpdateCopy.install(installedUpdate, updates.install, recording = false), action = stringResource(R.string.you_updates_view),
-                onAction = onUpdates,
+                note = UpdateCopy.install(installedUpdate, updates.install, recording = false),
+                action = stringResource(R.string.you_updates_view), onAction = onUpdates,
             )
         }
         item {
             StrapHero(
                 device.name, preview?.connection ?: connection, preview?.sync ?: sync, preview?.lastSeen ?: lastSeen,
                 (preview?.record ?: record).lastSuccess,
-            ) { HeroActions(vm, connection, sync, info?.findDevice == true, onRequestBluetooth) }
+            ) {
+                HeroActions(
+                    connection, sync, canFind = info?.findDevice == true, finding = finding,
+                    onFind = { if (finding) vm.stopFindingStrap() else vm.findStrap() }, onSync = vm::syncNow,
+                    onDisconnect = vm::disconnect, onForget = vm::forget, onConnect = { onRequestBluetooth { vm.connect() } },
+                    onBluetooth = { context -> onRequestBluetooth { turnOnBluetooth(context) } },
+                )
+            }
         }
         // What the card's button can't say: why the key was turned down, or how to bring a strap that is away back.
-        if (keyRejected) item {
+        if (rejected != null) item {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                PageFootnote(failed?.reason.orEmpty())
+                PageFootnote(rejected.reason)
                 PageFootnote(stringResource(R.string.you_strap_key_rejected_note))
             }
         } else if (connection is ConnectionState.Disconnected || failed != null) item {
@@ -297,52 +312,48 @@ fun DeviceScreen(
         }
         item {
             PageGroup(heading = stringResource(R.string.you_strap_group_software)) {
-                var first = true
+                val hasFirmware = FirmwareViewModel.UPDATES_ENABLED || firmware != null
                 if (FirmwareViewModel.UPDATES_ENABLED) {
                     PageRow(
                         stringResource(R.string.you_strap_row_firmware),
                         firmware ?: stringResource(R.string.you_strap_check_for_updates),
-                        onClick = onFirmware, below = true, divider = false, icon = AppIcons.Cpu, selected = selected == PageRowKeys.FIRMWARE,
+                        onClick = onFirmware, below = true, divider = false, icon = AppIcons.Cpu,
+                        selected = selected == PageRowKeys.FIRMWARE,
                     )
-                    first = false
                 } else if (firmware != null) {
                     PageRow(stringResource(R.string.you_strap_row_firmware), firmware, below = true, divider = false, icon = AppIcons.Cpu)
-                    first = false
                 }
                 if (updates != null && onUpdates != null) {
                     val now = remember(updates) { System.currentTimeMillis() / 1000 }
                     PageRow(
-                        stringResource(R.string.you_strap_row_app_updates), UpdateCopy.summary(updates, installedVersion, now), onClick = onUpdates,
-                        below = true, divider = !first, icon = AppIcons.ArrowCircleUp, selected = selected == PageRowKeys.UPDATES,
+                        stringResource(R.string.you_strap_row_app_updates), UpdateCopy.summary(updates, installedVersion, now),
+                        onClick = onUpdates, below = true, divider = hasFirmware, icon = AppIcons.ArrowCircleUp,
+                        selected = selected == PageRowKeys.UPDATES,
                     )
-                    first = false
                 }
                 PageRow(
                     stringResource(R.string.you_strap_row_zepp),
                     stringResource(if (zeppSignedIn) R.string.you_strap_signed_in else R.string.you_strap_not_signed_in),
-                    onClick = onZeppAccount, below = true, divider = !first, icon = AppIcons.Key, selected = selected == PageRowKeys.ZEPP_ACCOUNT,
+                    onClick = onZeppAccount, below = true, divider = hasFirmware || (updates != null && onUpdates != null),
+                    icon = AppIcons.Key, selected = selected == PageRowKeys.ZEPP_ACCOUNT,
                 )
             }
         }
         item {
             PageGroup(footnote = stringResource(R.string.you_strap_forget_note)) {
-                var first = true
-                if (connection is ConnectionState.Connected) {
+                if (connected) {
                     PageActionRow(
                         stringResource(R.string.you_strap_disconnect), { confirmDisconnect = true }, divider = false,
                         icon = AppIcons.LinkBreak,
                     )
-                    first = false
                 }
-                if (connection is ConnectionState.Connected && info?.canRestart == true) {
+                if (connected && info?.canRestart == true) {
                     PageActionRow(
-                        stringResource(R.string.you_strap_row_restart), { confirmRestart = true }, divider = !first,
-                        icon = AppIcons.ShutDown,
+                        stringResource(R.string.you_strap_row_restart), { confirmRestart = true }, icon = AppIcons.ShutDown,
                     )
-                    first = false
                 }
                 PageActionRow(
-                    stringResource(R.string.you_strap_row_forget), { confirmForget = true }, divider = !first,
+                    stringResource(R.string.you_strap_row_forget), { confirmForget = true }, divider = connected,
                     icon = AppIcons.Trash, destructive = true,
                 )
             }
@@ -453,7 +464,8 @@ internal fun StrapCard(
             }
             if (linked) {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp), content = text)
-                Row(Modifier.fillMaxWidth().height(92.dp).padding(start = 16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(Modifier.fillMaxWidth().height(92.dp).padding(start = 16.dp), verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     PhoneOutline()
                     LinkLine(dashed, Modifier.weight(1f))
                     StrapDrawing(led, lit, syncing, Modifier.padding(end = 0.dp).size(width = 74.dp, height = 92.dp).offset(x = 6.dp))
@@ -572,7 +584,8 @@ internal fun StrapHero(
 
 /** A pill on the strap card (HaloStrap board: 52 tall, 15 semibold): white as the one tap, or black at 45% on the silver. */
 @Composable
-private fun CardButton(text: String, onClick: () -> Unit, modifier: Modifier, white: Boolean = false, icon: ImageVector? = null, enabled: Boolean = true) {
+private fun CardButton(text: String, onClick: () -> Unit, modifier: Modifier, white: Boolean = false, icon: ImageVector? = null,
+    enabled: Boolean = true) {
     val ink = if (white) Color.Black else Color.White
     Row(
         modifier.height(52.dp).alpha(if (enabled) 1f else 0.4f).clip(CircleShape)
@@ -590,49 +603,55 @@ private fun CardButton(text: String, onClick: () -> Unit, modifier: Modifier, wh
 
 /** What the card's foot holds for each state of the connection. */
 @Composable
+@Suppress("LongParameterList")
 private fun RowScope.HeroActions(
-    vm: DeviceViewModel,
     connection: ConnectionState,
     sync: SyncState,
     canFind: Boolean,
-    onRequestBluetooth: (then: () -> Unit) -> Unit,
+    finding: Boolean,
+    onFind: () -> Unit,
+    onSync: () -> Unit,
+    onDisconnect: () -> Unit,
+    onForget: () -> Unit,
+    onConnect: () -> Unit,
+    onBluetooth: (android.content.Context) -> Unit,
 ) {
-    val finding by vm.findingStrap.collectAsStateWithLifecycle()
     when {
         connection is ConnectionState.Connected -> {
             val syncing = sync is SyncState.Running
             if (canFind) {
                 CardButton(
-                    stringResource(if (finding) R.string.you_strap_find_stop else R.string.you_strap_find),
-                    { if (finding) vm.stopFindingStrap() else vm.findStrap() }, Modifier.weight(1f),
+                    stringResource(if (finding) R.string.you_strap_find_stop else R.string.you_strap_find), onFind, Modifier.weight(1f),
                     icon = if (finding) AppIcons.StopFill else AppIcons.SearchArea,
                 )
                 // Sync now is the card's one white tap, a 52 circle with just its icon.
                 val label = stringResource(R.string.you_strap_sync_now)
                 Box(
                     Modifier.size(52.dp).alpha(if (syncing) 0.4f else 1f).clip(CircleShape).background(Color.White)
-                        .clickable(enabled = !syncing, role = Role.Button, onClickLabel = label, onClick = vm::syncNow),
+                        .clickable(enabled = !syncing, role = Role.Button, onClickLabel = label, onClick = onSync),
                     contentAlignment = Alignment.Center,
                 ) { Icon(AppIcons.Refresh04, label, Modifier.size(20.dp), tint = Color.Black) }
             } else {
-                CardButton(stringResource(R.string.you_strap_sync_now), vm::syncNow, Modifier.weight(1f), white = true, icon = AppIcons.Refresh04, enabled = !syncing)
+                CardButton(
+                    stringResource(R.string.you_strap_sync_now), onSync, Modifier.weight(1f), white = true, icon = AppIcons.Refresh04,
+                    enabled = !syncing,
+                )
             }
         }
         connection == ConnectionState.Connecting || connection == ConnectionState.Authenticating ->
-            CardButton(stringResource(R.string.you_action_cancel), vm::disconnect, Modifier.weight(1f))
+            CardButton(stringResource(R.string.you_action_cancel), onDisconnect, Modifier.weight(1f))
         connection == ConnectionState.BluetoothOff -> {
             val context = LocalContext.current
             CardButton(
-                stringResource(R.string.you_strap_turn_on_bluetooth), { onRequestBluetooth { turnOnBluetooth(context) } }, Modifier.weight(1f),
+                stringResource(R.string.you_strap_turn_on_bluetooth), { onBluetooth(context) }, Modifier.weight(1f),
                 white = true, icon = AppIcons.Bluetooth,
             )
         }
         (connection as? ConnectionState.Failed)?.keyRejected == true ->
-            CardButton(stringResource(R.string.you_pair_again), vm::forget, Modifier.weight(1f), white = true)
-        else -> CardButton(stringResource(R.string.you_strap_connect), { onRequestBluetooth { vm.connect() } }, Modifier.weight(1f), white = true)
+            CardButton(stringResource(R.string.you_pair_again), onForget, Modifier.weight(1f), white = true)
+        else -> CardButton(stringResource(R.string.you_strap_connect), onConnect, Modifier.weight(1f), white = true)
     }
 }
-
 
 /**
  * The strap's card: the silver hero lit from below, so it doesn't read as any metric (Halo Strap and Pair boards,
@@ -741,7 +760,8 @@ internal fun PairStep(number: Int, title: String, content: @Composable () -> Uni
             Modifier.size(28.dp).border(1.5.dp, Color(0xFF3A3D45), CircleShape),
             contentAlignment = Alignment.Center,
         ) {
-            Text("$number", style = GlowType.secondary.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold), color = Color.White)
+            Text("$number", style = GlowType.secondary.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold),
+                color = Color.White)
         }
         Column(Modifier.weight(1f).padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(title, style = GlowType.cardTitle, color = Color.White)
@@ -781,7 +801,8 @@ private fun ManualPairSheet(
     // The sheet of the HaloManualPair board: scan, the straps found as tiles, the two fields, a note, Cancel and Pair.
     PageSheet(onDismiss, stringResource(R.string.you_pair_manual_title)) {
         if (scan.scanning) {
-            PageButton(stringResource(R.string.you_pair_scan_stop), vm::stopScan, Modifier.fillMaxWidth(), icon = AppIcons.StopFill, size = ButtonSize.Hero)
+            PageButton(stringResource(R.string.you_pair_scan_stop), vm::stopScan, Modifier.fillMaxWidth(), icon = AppIcons.StopFill,
+                size = ButtonSize.Hero)
             PageProgress()
         } else {
             PageButton(

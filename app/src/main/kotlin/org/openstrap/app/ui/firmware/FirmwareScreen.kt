@@ -80,7 +80,8 @@ fun FirmwareScreen(vm: FirmwareViewModel, contentPadding: PaddingValues, onBack:
 
     val pickFile = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let(vm::loadFile) }
     var confirm by remember { mutableStateOf<ReadyImage?>(null) }
-    confirm?.let { image -> ConfirmInstall(image, vm.blockers(), onDismiss = { confirm = null }, onInstall = { confirm = null; vm.install(image) }) }
+    confirm?.let { image -> ConfirmInstall(image, vm.blockers(), onDismiss = { confirm = null },
+        onInstall = { confirm = null; vm.install(image) }) }
 
     ScreenList(contentPadding, gutter = GlowLayout.Gutter) {
         item { PageHeader(stringResource(R.string.you_firmware_title), { vm.reset(); onBack() }, backEnabled = !installing) }
@@ -116,7 +117,8 @@ fun FirmwareScreen(vm: FirmwareViewModel, contentPadding: PaddingValues, onBack:
         if (step != FirmwareStep.Idle) item { StepPanel(step, vm, onInstall = { confirm = it }) }
 
         item {
-            PageGroup(heading = stringResource(R.string.you_firmware_group_new), footnote = stringResource(R.string.you_firmware_updates_text)) {
+            PageGroup(heading = stringResource(R.string.you_firmware_group_new),
+                footnote = stringResource(R.string.you_firmware_updates_text)) {
                 if (step == FirmwareStep.Idle) PageActionRow(
                     stringResource(R.string.you_firmware_check), vm::check, icon = AppIcons.Refresh04, divider = false,
                 )
@@ -251,7 +253,8 @@ fun ZeppAccountScreen(vm: FirmwareViewModel, contentPadding: PaddingValues, onBa
     val installing = vm.step.collectAsStateWithLifecycle().value is FirmwareStep.Installing
     ScreenList(contentPadding, gutter = GlowLayout.Gutter) {
         item { PageHeader(stringResource(R.string.you_zepp_title), onBack) }
-        item { AccountPanel(account, enabled = !installing, onSave = vm::saveAccount, onClear = vm::clearAccount, onSignIn = vm::saveSignIn) }
+        item { AccountPanel(account, enabled = !installing, onSave = vm::saveAccount, onClear = vm::clearAccount,
+            onSignIn = vm::saveSignIn) }
     }
 }
 
@@ -280,12 +283,9 @@ private fun AccountPanel(
         Column(verticalArrangement = Arrangement.spacedBy(24.dp)) {
             if (account == null) PageNote(stringResource(R.string.you_zepp_account_none))
             else PageGroup(heading = stringResource(R.string.you_zepp_saved), footnote = stringResource(R.string.you_zepp_token_stays)) {
-                var first = true
-                if (account.userId.isNotEmpty()) {
-                    PageInfoRow(stringResource(R.string.you_zepp_user), account.userId, divider = false)
-                    first = false
-                }
-                PageInfoRow(stringResource(R.string.you_zepp_server), account.apiBase.removePrefix("https://"), divider = !first)
+                val hasUser = account.userId.isNotEmpty()
+                if (hasUser) PageInfoRow(stringResource(R.string.you_zepp_user), account.userId, divider = false)
+                PageInfoRow(stringResource(R.string.you_zepp_server), account.apiBase.removePrefix("https://"), divider = hasUser)
                 PageInfoRow(
                     stringResource(R.string.you_zepp_china),
                     stringResource(if (account.china) R.string.you_value_on else R.string.you_value_off),

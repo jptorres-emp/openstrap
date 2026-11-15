@@ -10,13 +10,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -155,7 +155,8 @@ fun PhoneAlertsScreen(vm: PhoneAlertsViewModel, contentPadding: PaddingValues, o
         callPreviewError?.let { msg -> item { PageNote(msg, color = MetricColors.warn) } }
         item {
             // Do Not Disturb is said once, here, for calls and notifications both.
-            PageGroup(heading = stringResource(R.string.you_phone_group_notifications), footnote = stringResource(R.string.you_phone_note)) {
+            PageGroup(heading = stringResource(R.string.you_phone_group_notifications),
+                footnote = stringResource(R.string.you_phone_note)) {
                 PageSwitchRow(
                     stringResource(R.string.you_phone_notifications), stringResource(R.string.you_phone_notifications_note),
                     notificationsOn,

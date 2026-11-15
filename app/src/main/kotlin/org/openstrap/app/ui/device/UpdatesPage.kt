@@ -1,3 +1,5 @@
+@file:Suppress("MagicNumber") // the panel colours are the boards' hex values
+
 package org.openstrap.app.ui.device
 
 import androidx.activity.compose.BackHandler
@@ -136,7 +138,8 @@ private fun ReleaseNotesView(release: Release) {
     val blocks = remember(release.notes) { ReleaseNotes.parse(release.notes) }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(release.versionName, color = Color.White, style = GlowType.body.copy(fontWeight = FontWeight.Medium), modifier = Modifier.weight(1f))
+            Text(release.versionName, color = Color.White, style = GlowType.body.copy(fontWeight = FontWeight.Medium),
+                modifier = Modifier.weight(1f))
             release.publishedAt?.let {
                 Text(UpdateCopy.date(it), color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary)
             }
@@ -149,7 +152,8 @@ private fun ReleaseNotesView(release: Release) {
         }
         blocks.forEachIndexed { i, block -> when (block) {
             is NoteBlock.Heading -> Text(
-                spans(block.spans), color = Color.White, style = GlowType.body.copy(fontWeight = FontWeight.Medium), modifier = Modifier.padding(top = 6.dp),
+                spans(block.spans), color = Color.White, style = GlowType.body.copy(fontWeight = FontWeight.Medium),
+                    modifier = Modifier.padding(top = 6.dp),
             )
             // The opening paragraph leads, larger; any later one reads like the bullets.
             is NoteBlock.Paragraph ->
@@ -157,7 +161,8 @@ private fun ReleaseNotesView(release: Release) {
                 else Text(spans(block.spans), color = Color.White.copy(alpha = 0.75f), style = GlowType.secondary)
             is NoteBlock.Bullet -> Row {
                 Text("•", color = Color.White.copy(alpha = 0.5f), style = GlowType.body, modifier = Modifier.width(16.dp))
-                Text(spans(block.spans), color = Color.White.copy(alpha = 0.75f), style = GlowType.secondary, modifier = Modifier.padding(top = 1.dp))
+                Text(spans(block.spans), color = Color.White.copy(alpha = 0.75f), style = GlowType.secondary,
+                    modifier = Modifier.padding(top = 1.dp))
             }
         } }
     }

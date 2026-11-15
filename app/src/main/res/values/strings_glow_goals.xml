@@ -67,7 +67,7 @@
     <!-- The weekly goal sheet's title, the recap card's title when the goal wasn't met, and a group of badges. -->
     <string name="glow_goals_weekly_goal">Weekly goal</string>
     <!-- Under the weekly goal sheet's title. -->
-    <string name="glow_goals_sheet_note">A change applies to this week. Past weeks keep the goal they had.</string>
+    <string name="glow_goals_sheet_note">Counts any workout of 10 min or more. Changes start this week, and your weeks in a row carry on.</string>
 
     <!-- The weekly recap's title. -->
     <string name="glow_goals_your_week">Your week</string>
@@ -117,4 +117,34 @@
         <item quantity="one"><xliff:g id="weeks" example="1">%d</xliff:g> week in a row</item>
         <item quantity="other"><xliff:g id="weeks" example="3">%d</xliff:g> weeks in a row</item>
     </plurals>
+    <!-- Beside the big count in the week card: "4 of 4". The numbers are the workouts done, capped at the goal, and the goal. -->
+    <string name="glow_goals_count_big" tools:ignore="PluralsCandidate"><xliff:g id="count" example="3">%1$d</xliff:g> of <xliff:g id="goal" example="4">%2$d</xliff:g></string>
+    <!-- Under the week card's count on Goals and bests: how many workouts counted this week. -->
+    <plurals name="glow_goals_workouts_this_week">
+        <item quantity="one"><xliff:g id="count" example="1">%d</xliff:g> workout this week</item>
+        <item quantity="other"><xliff:g id="count" example="8">%d</xliff:g> workouts this week</item>
+    </plurals>
+    <!-- Under the week card's count in the recap when the goal was met. -->
+    <string name="glow_goals_workouts_goal_met">workouts, goal met</string>
+    <!-- The note over the bests set in the recap's week. -->
+    <plurals name="glow_goals_bests_count">
+        <item quantity="one"><xliff:g id="count" example="1">%d</xliff:g> personal best</item>
+        <item quantity="other"><xliff:g id="count" example="2">%d</xliff:g> personal bests</item>
+    </plurals>
+    <!-- The recap's value row that opens the weekly goal sheet. -->
+    <string name="glow_goals_next_week_goal">Next week\'s goal</string>
+    <!-- Over what a best measures, in its sheet. -->
+    <string name="glow_goals_what_it_measures">What it measures</string>
+    <!-- The Celebrations row's line on Goals and bests: what is switched on. -->
+    <string name="glow_goals_celebrations_both">Goal moment and weekly recap on</string>
+    <string name="glow_goals_celebrations_goal">Goal moment on</string>
+    <string name="glow_goals_celebrations_recap">Weekly recap on</string>
+    <string name="glow_goals_celebrations_off">Off</string>
+    <!-- The goals sheet's unit after the calorie goal, and after the workouts goal. -->
+    <string name="glow_goals_unit_kcal">kcal</string>
+    <string name="glow_goals_per_week">a week</string>
+    <!-- The minus and plus buttons of a goal, and the tap on its number to type it, read by screen readers. The word is the goal's name. -->
+    <string name="glow_goals_lower">Lower <xliff:g id="goal" example="Steps">%1$s</xliff:g></string>
+    <string name="glow_goals_raise">Raise <xliff:g id="goal" example="Steps">%1$s</xliff:g></string>
+    <string name="glow_goals_type">Type <xliff:g id="goal" example="Steps">%1$s</xliff:g></string>
 </resources>

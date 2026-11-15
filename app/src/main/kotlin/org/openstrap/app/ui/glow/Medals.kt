@@ -3,9 +3,9 @@ package org.openstrap.app.ui.glow
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -15,10 +15,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
@@ -30,12 +33,9 @@ import org.openstrap.app.ui.components.Motion
 import org.openstrap.app.ui.components.rememberAnimationsOn
 
 /*
- * The badges and personal bests as struck medals, in the glow language: the face lit from below like a glow card,
- * melting from the light colour into the body and the dark core, with the 1 dp hairline and its gloss (spec 2.1). The
- * tones come from the ink by the cards' own formula ([MedalTones]), so a badge reads as the same light as a card of
- * its colour. Each group has its own outline as well as its colour, so a collection reads at a glance, and each badge
- * its own line picture. A medal still to earn is drawn quiet: no light, the picture faint. How it's drawn is in
- * MedalDrawing.kt.
+ * The badges and personal bests as tokens (rules A1, boards HaloGoalsBests and HaloAllBadges): a badge is a medal, a tile
+ * with a ribbon notch, a best a rosette, each filled with the colour of what it counts, its line picture in black. One
+ * not yet earned is quiet, never hidden. How they are drawn is in MedalDrawing.kt.
  */
 
 /** A line picture on a 24 unit frame: [strokeData] drawn as lines, [fillData] filled, both SVG path data. */
@@ -164,12 +164,26 @@ private val LABELLED_BADGES = setOf(
 
 private const val GOAL_FIRST = "goal_first"
 
-private fun shapeOf(group: Rewards.Group): MedalShape = when (group) {
-    Rewards.Group.Firsts -> MedalShape.Round
-    Rewards.Group.Milestones -> MedalShape.Hex
-    Rewards.Group.Weekly -> MedalShape.Laurel
-    Rewards.Group.Kinds -> MedalShape.Soft
+/** Lime, for counts, distance and goals (rules A1). */
+internal val RewardLime = Color(0xFFC6F55A)
+private val IndoorInk = Color(0xFF52ACFC)
+private val StrengthInk = Color(0xFFFF8410)
+private val IntervalInk = Color(0xFFFF5A5F)
+private val MindInk = Color(0xFFB67AE8)
+private val GamesInk = Color(0xFF6E8FB8)
+
+/** A badge's colour: lime for counts, distance and goals, the sport's colour for a sport's first (rules A1). */
+internal fun badgeInk(b: Rewards.Badge): Color = when (b.id) {
+    "first_indoor" -> IndoorInk
+    "first_log" -> StrengthInk
+    "first_tabata" -> IntervalInk
+    "first_mind" -> MindInk
+    "first_game" -> GamesInk
+    else -> RewardLime
 }
+
+/** A personal best's colour: the sport colour of what it measures (rules A1), lime for distance, time and steps. */
+internal fun bestInk(kind: String): Color = if (Rewards.Kind.liftName(kind) != null) StrengthInk else RewardLime
 
 /**
  * [b]'s medal, its art reading [face] ([RewardsCopy.face]). The first weekly goal shows the goal it was met at ("3/3")
@@ -179,10 +193,10 @@ internal fun badgeLook(b: Rewards.Badge, face: String): MedalLook {
     val goalShown = b.id == GOAL_FIRST && '/' in face
     val emblem = if (goalShown) null else BADGE_EMBLEMS[b.id]
     val label = face.takeIf { goalShown || b.id in LABELLED_BADGES }
-    return MedalLook(shapeOf(b.group), badgeColor(b.group), emblem, label)
+    return MedalLook(MedalShape.Tile, badgeInk(b), emblem, label)
 }
 
-/** A personal best of [kind] as a rosette in the best's gold, a fastest stretch with its distance under ("5K", "HM"). */
+/** A personal best of [kind] as a rosette in its colour, a fastest stretch with its distance under ("5K", "HM"). */
 internal fun bestLook(kind: String): MedalLook {
     val fastest = Rewards.Kind.fastestMeters(kind) != null
     val emblem = when {
@@ -192,52 +206,53 @@ internal fun bestLook(kind: String): MedalLook {
         kind == Rewards.Kind.MOST_STEPS -> Emblems.Steps
         else -> Emblems.Hourglass
     }
-    return MedalLook(MedalShape.Rosette, BestColor, emblem, RewardsCopy.bestShort(kind).takeIf { fastest })
+    return MedalLook(MedalShape.Rosette, bestInk(kind), emblem, RewardsCopy.bestShort(kind).takeIf { fastest })
 }
 
 /**
- * A medal [diameter] across: the [look]'s outline and lit face, its picture and label. [locked] draws it quiet, still
- * to earn. [lit] (0..1) is how far its light has risen, read only while drawing, so a medal can light up as its sheet
- * opens ([rememberLightRise]) without composing again.
+ * A token [diameter] across: the [look]'s shape and fill, its picture and label. [locked] draws it quiet, still to
+ * earn. [lit] (0..1) is how far its fill has risen, read only while drawing, so a token can light up as its sheet opens
+ * ([rememberLightRise]) without composing again.
  */
 @Composable
 internal fun Medal(look: MedalLook, diameter: Dp, modifier: Modifier = Modifier, locked: Boolean = false, lit: () -> Float = { 1f }) {
-    val tones = remember(look.ink) { MedalTones(look.ink) }
+    val layout = look.shape.layout
+    val mark = if (locked) LockedMark else Color.Black
+    val emblemBox = if (look.label != null) layout.emblemOver else layout.emblemAlone
     Box(modifier.size(diameter), contentAlignment = Alignment.Center) {
         Canvas(Modifier.matchParentSize()) {
-            scale(this.size.width / FRAME, pivot = Offset.Zero) { drawFrame(look.shape, tones, locked, lit()) }
+            scale(this.size.width / FRAME, pivot = Offset.Zero) {
+                drawToken(look.shape, look.ink, locked, lit())
+                look.emblem?.let { drawEmblemIn(it, emblemBox, mark) }
+            }
         }
-        MedalContent(look, diameter * look.shape.content, if (locked) LockedMark else tones.mark, if (locked) LockedLabel else Color.White)
+        look.label?.let { label ->
+            val band = if (look.emblem != null) layout.labelUnder else layout.labelAlone
+            MedalLabel(label, look.emblem != null, diameter, band, mark)
+        }
     }
 }
 
 /**
- * The picture over the label, centred on the face, the picture sized from the face's room [box]. The label takes a type
- * role (spec 2.3) by the medal's size and whether it stands alone, and scales down to the face's width when it's
- * longer than the face holds ("14/14").
+ * The label in its [band] of the frame, centred: under a picture a caption to it, on its own the picture, scaled down to
+ * fit the band's width.
  */
 @Composable
-private fun MedalContent(look: MedalLook, box: Dp, mark: Color, text: Color) {
-    val emblemShare = if (look.label != null) EMBLEM_OVER_LABEL else EMBLEM_ALONE
-    val large = box >= LARGE_FACE
-    // Under a picture the label is a caption to it, a size down; on its own (the weeks in a row) it is the picture.
+private fun BoxScope.MedalLabel(label: String, underPicture: Boolean, diameter: Dp, band: Rect, color: Color) {
+    val large = diameter >= LARGE_FACE
     val style = when {
-        look.emblem == null -> if (large) GlowType.goalValue else GlowType.headerDate
+        !underPicture -> if (large) GlowType.goalValue else GlowType.headerDate
         else -> if (large) GlowType.smallValue else GlowType.secondary.copy(fontWeight = FontWeight.SemiBold)
     }
-    // Under a picture the label sits low, where a round face narrows, so it keeps to less of the width there.
-    val room = box * if (look.emblem != null) LABEL_ROOM_UNDER else LABEL_ROOM_ALONE
-    Column(
-        Modifier.size(box), horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(box * LABEL_GAP, Alignment.CenterVertically),
+    Box(
+        Modifier.align(Alignment.TopStart).offset(diameter * (band.left / FRAME), diameter * (band.top / FRAME))
+            .size(diameter * (band.width / FRAME), diameter * (band.height / FRAME)),
+        contentAlignment = Alignment.Center,
     ) {
-        look.emblem?.let { e -> Canvas(Modifier.size(box * emblemShare)) { drawEmblem(e, mark) } }
-        look.label?.let { label ->
-            Text(
-                label, Modifier.fitWidth(room), color = text, maxLines = 1, softWrap = false,
-                style = style.copy(fontFeatureSettings = "tnum", lineHeight = style.fontSize),
-            )
-        }
+        Text(
+            label, Modifier.fitWidth(diameter * (band.width / FRAME)), color = color, maxLines = 1, softWrap = false,
+            style = style.copy(fontFeatureSettings = "tnum", lineHeight = style.fontSize),
+        )
     }
 }
 
@@ -257,8 +272,19 @@ private fun Modifier.fitWidth(max: Dp): Modifier = layout { measurable, _ ->
 }
 
 /**
- * How far a medal's light has risen: from [RISE_FROM] to full over [RISE_MS] when [on], as an earned medal's sheet
- * opens, else full at once. Full with the system's animations off.
+ * The weekly goal as a ring of [goal] solid arcs, the first [count] filled (rules A1: lime, N arcs for N workouts).
+ * [description] is what screen readers say.
+ */
+@Composable
+internal fun WeeklyGoalRing(count: Int, goal: Int, size: Dp, description: String, modifier: Modifier = Modifier, ink: Color = RewardLime) {
+    Canvas(modifier.size(size).semantics { contentDescription = description }) {
+        scale(this.size.width / FRAME, pivot = Offset.Zero) { drawGoalRing(count, goal, ink) }
+    }
+}
+
+/**
+ * How far a token's fill has risen: from the floor to full over [RISE_MS] when [on], as an earned token's sheet opens,
+ * else full at once. Full with the system's animations off.
  */
 @Composable
 internal fun rememberLightRise(on: Boolean): () -> Float {
@@ -270,23 +296,12 @@ internal fun rememberLightRise(on: Boolean): () -> Float {
     return remember(level) { { level.value } }
 }
 
-/** A medal still to earn: its picture and label dim. */
-private val LockedMark = Color.White.copy(alpha = 0.34f)
-private val LockedLabel = Color.White.copy(alpha = 0.42f)
+/** A token still to earn: its picture and label in #4A4E57 (rules A1). */
+private val LockedMark = Color(0xFF4A4E57)
 
-/**
- * The picture's share of the face's room, alone or over a label; how much of the face's width a label may take, under
- * a picture or on its own; and the space between the two. Every label keeps clear of the inner ring.
- */
-private const val EMBLEM_ALONE = 0.56f
-private const val EMBLEM_OVER_LABEL = 0.34f
-private const val LABEL_ROOM_UNDER = 0.5f
-private const val LABEL_ROOM_ALONE = 0.68f
-private const val LABEL_GAP = 0.05f
+/** From this size the label takes the large display roles: a moment's token. */
+private val LARGE_FACE = 120.dp
 
-/** From this much room on the face, the label takes the large display roles: a sheet's medal, the best card's. */
-private val LARGE_FACE = 80.dp
-
-/** An earned medal's light rises from here as its sheet opens. */
+/** An earned token's fill rises from here as its sheet opens. */
 private const val RISE_FROM = 0.15f
 private const val RISE_MS = 700

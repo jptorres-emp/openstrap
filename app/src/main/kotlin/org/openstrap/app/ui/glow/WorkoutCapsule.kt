@@ -90,7 +90,7 @@ private fun actionIcon(a: GlanceAction) = when (a) {
 @Composable
 fun WorkoutCapsule(glance: LiveGlance, onClick: () -> Unit, onAction: (GlanceAction) -> Unit, modifier: Modifier = Modifier) {
     val color = glanceColor(glance)
-    val shape = RoundedCornerShape(50)
+    val shape = CircleShape
     val quiet = glance.tint == GlanceTint.Mind
     Box(
         // Mind and body is quieter: 56 dp.
@@ -141,7 +141,7 @@ fun WorkoutCapsule(glance: LiveGlance, onClick: () -> Unit, onAction: (GlanceAct
 /** A pill on the bar: white with its [icon] for the next action ([primary]), else dark, End with its red dot. */
 @Composable
 private fun BarPill(label: String, primary: Boolean, icon: androidx.compose.ui.graphics.vector.ImageVector? = null, endDot: Boolean = false, onClick: () -> Unit) {
-    val shape = RoundedCornerShape(50)
+    val shape = CircleShape
     Row(
         Modifier.height(44.dp).clip(shape).background(if (primary) Color.White else ControlSurface).pressClickable(onClick, shape)
             .padding(horizontal = 14.dp),
@@ -194,8 +194,8 @@ internal fun LiveHero(glance: LiveGlance, sportType: Int, clock: String, onOpen:
             }
             glance.progress?.let { p ->
                 Spacer(Modifier.height(16.dp))
-                Box(Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha = 0.4f))) {
-                    Box(Modifier.fillMaxWidth(p.fraction).height(6.dp).clip(RoundedCornerShape(50)).background(Color.White))
+                Box(Modifier.fillMaxWidth().height(6.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.4f))) {
+                    Box(Modifier.fillMaxWidth(p.fraction).height(6.dp).clip(CircleShape).background(Color.White))
                 }
             }
             if (glance.goal != null || glance.toGo != null) {
@@ -234,8 +234,8 @@ internal fun LiveHero(glance: LiveGlance, sportType: Int, clock: String, onOpen:
                 dark?.let { a ->
                     val label = glance.secondLabel.takeIf { a == glance.second }
                     Box(
-                        Modifier.height(52.dp).then(if (label == null) Modifier.size(52.dp) else Modifier).clip(RoundedCornerShape(50))
-                            .background(Color.Black.copy(alpha = 0.45f)).pressClickable({ onAction(a) }, RoundedCornerShape(50))
+                        Modifier.height(52.dp).then(if (label == null) Modifier.size(52.dp) else Modifier).clip(CircleShape)
+                            .background(Color.Black.copy(alpha = 0.45f)).pressClickable({ onAction(a) }, CircleShape)
                             .padding(horizontal = if (label == null) 0.dp else 18.dp),
                         contentAlignment = Alignment.Center,
                     ) {

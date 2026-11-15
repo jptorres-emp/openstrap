@@ -1,9 +1,7 @@
 package org.openstrap.app.ui.glow
 
-import androidx.compose.ui.graphics.Shape
 import androidx.compose.foundation.border
 import org.openstrap.app.ui.theme.MetricColors
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -60,15 +58,6 @@ internal fun OutlineCard(
         content = content,
     )
 }
-
-/**
- * The surface every control inside a quiet panel wears (rows, pills, buttons): the dark button fill, with no hairline
- * (Halo System board: no white rims), so it reads as something to press against the panel. With [onClick] it presses
- * like the rest of the glow controls.
- */
-fun Modifier.glass(shape: Shape, onClick: (() -> Unit)? = null, scale: Float = 0.98f): Modifier =
-    background(HaloButtonSurface, shape)
-        .let { if (onClick != null) it.pressClickable(onClick, shape, scale) else it }
 
 /** A change for the better, or a GPS fix good enough: the app's good green. */
 internal val TrendGood = MetricColors.good

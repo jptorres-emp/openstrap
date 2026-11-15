@@ -13,9 +13,10 @@ import org.openstrap.protocol.services.SettingsGroup
 import java.io.File
 
 /**
- * The pages over a tab (spec 3.4: You, Strap and what they open, Edit Today and Goals) are built from the page parts,
- * not Material's: no outlined fields, text buttons, dialogs, checkboxes or Material type. Scans their code, comments
- * and strings left out, and fails with file and line.
+ * The settings pages (rewards-settings-rules.md part B, boards HaloProfile, HaloQuietHoursSheet and the Strap boards:
+ * You, Strap and what they open, Edit Today and Goals) are built from the page parts, not Material's: no outlined
+ * fields, text buttons, dialogs, checkboxes or Material type. Scans their code, comments and strings left out, and
+ * fails with file and line.
  */
 class PageRulesTest {
     private val root: File = listOf(File("src/main"), File("app/src/main")).first { it.isDirectory }
@@ -36,6 +37,7 @@ class PageRulesTest {
         }
     }
 
+    /** Settings rules B3 and B4: rows, buttons and sheets are the page parts. */
     @Test fun `pages use no Material parts`() {
         // TimePicker stays: the alarm sheet recolours Material's clock rather than drawing one of its own.
         val material = Regex(
@@ -46,11 +48,13 @@ class PageRulesTest {
         if (found.isNotEmpty()) fail("Pages are built from PageButton, PageField, PageSheet and the rest (spec 3.4):\n" + found.joinToString("\n"))
     }
 
+    /** Type scale (type.md): page text uses a GlowType role. */
     @Test fun `pages take their type from GlowType`() {
         val found = scan(Regex("""MaterialTheme\.(typography|colorScheme)|\bfontSize\s*=|GlowType\.(label|title|headline)\b"""))
         if (found.isNotEmpty()) fail("Page text uses a GlowType role and the page's colours (spec 2.3):\n" + found.joinToString("\n"))
     }
 
+    /** Settings rules B3, value row and nav row: the value under or beside the name stays one line. */
     @Test fun `a Strap page value stays on one line`() {
         // Every combination of the three health alerts, each off or on.
         val keys = listOf(SettingsCodec.KEY_HIGH_HR_ALERT to 150, SettingsCodec.KEY_LOW_HR_ALERT to 40, SettingsCodec.KEY_LOW_SPO2_ALERT to 90)
@@ -72,8 +76,9 @@ class PageRulesTest {
         assertTrue("Female and Male as segments", segments.containsMatchIn(profile))
     }
 
+    /** Plan section 3, Strap and Getting started: the white strap card is the hero, lit at full strength. */
     @Test fun `the strap hero is lit at full`() {
-        // The Strap page's hero is L4 (spec 2.1): its rim at full strength.
+        // The Strap page's hero is L4: its rim at full strength.
         assertEquals(1f, StrapGlow.glowStrength, 1e-6f)
     }
 

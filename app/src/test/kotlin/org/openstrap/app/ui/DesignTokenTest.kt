@@ -17,8 +17,10 @@ import org.openstrap.app.ui.theme.MetricColors
 import java.io.File
 
 /**
- * The design system's tokens (spec 2.2 to 2.4, 8.2): the values match the spec, and the UI takes them from their one
- * place. Scans the code under ui/, comments and strings left out, and fails with file and line.
+ * The Halo design system's tokens and card rules (docs/design/halo/plan.md section 1, type.md, boards HaloSystem and
+ * HaloCharts): the values match, and the UI takes them from their one place. Scans the code under ui/, comments and
+ * strings left out, and fails with file and line. The "spec 2.x" numbers in the failure messages are the older
+ * design spec's section numbers, kept where a rule carried over unchanged. Rules that only Halo has are in HaloRulesTest.
  */
 class DesignTokenTest {
     private val root: File = listOf(File("src/main"), File("app/src/main")).first { it.isDirectory }
@@ -36,7 +38,8 @@ class DesignTokenTest {
         else lines.mapIndexedNotNull { i, line -> if (pattern.containsMatchIn(line)) "$path:${i + 1}  ${line.trim()}" else null }
     }
 
-    @Test fun `the tokens hold the spec's values`() {
+    /** Plan section 1: squircle corners 36 and 27, the card inset and the metric colours develop keeps (detail-rules.md). */
+    @Test fun `the tokens hold the Halo values`() {
         assertEquals(listOf(2.4f, 3f, 3.6f, 4.5f, 6f, 9f), DotSize.entries.map { it.dot.value })
         DotSize.entries.forEach { assertEquals(it.name, it.dot.value * 0.38f, it.gap.value, 1e-4f) }
         assertEquals(36.dp, GlowLayout.CardCorner)
@@ -54,7 +57,8 @@ class DesignTokenTest {
         assertEquals(Color(0xFF8C7314), MetricColors.caloriesShade)
     }
 
-    @Test fun `glow bodies keep white text readable, and are no darker than they need be`() {
+    /** Plan section 1 (keep: develop's hero card look): white text stays readable on every metric's lit body. */
+    @Test fun `hero bodies keep white text readable, and are no darker than they need be`() {
         assertEquals(0.18f, GlowPalette.MID_MAX_LUMINANCE, 1e-6f)
         assertTrue(GlowPalette.TONE_MAX_LUMINANCE < GlowPalette.MID_MAX_LUMINANCE)
         // White on the body: at least 4.5:1 (spec 2.1), for every metric's ink.
@@ -73,14 +77,16 @@ class DesignTokenTest {
         assertEquals(0.12f, GlowLayout.CardEdgeAlpha, 1e-6f)
     }
 
-    @Test fun `only the digits are made of dots`() {
-        // No dotted or dashed line anywhere, and no dotted panels (spec 2.5, 2.7). The one dash is a detail chart's goal
+    /** Plan section 1 (drop: dotted charts outside HaloCharts) and board HaloCharts: lines, grids and panels are solid. */
+    @Test fun `only the numbers are made of dots, lines and panels are solid`() {
+        // No dotted or dashed line anywhere, and no dotted panels. The one dash is a detail chart's goal
         // and the dashed guide at its latest reading, which the Halo detail boards draw (HaloDetailSteps, HaloDetailHeart).
         val found = find(Regex("""\bdashPathEffect\b|\bPathEffect\b|\bDot(Panel|Header|Divider)\b|\bGlowDotBars\b"""), setOf("glow/DetailPicture.kt"))
         if (found.isNotEmpty()) fail("Lines, grids and panels are solid; only numbers are dots (spec 2.7):\n" + found.joinToString("\n"))
     }
 
-    @Test fun `a list row that opens a metric shows its icon`() {
+    /** Settings rules B3, nav row: a row that opens something has its icon tile. */
+    @Test fun `a list row that opens a page shows its icon`() {
         // Spec 2.5, Grouped list: the metric's icon in place of the old dot. A row that opens something passes one.
         val found = mutableListOf<String>()
         sources.forEach { (path, lines) ->
@@ -94,6 +100,7 @@ class DesignTokenTest {
         if (found.isNotEmpty()) fail("A row that opens something shows its metric's icon (spec 2.5):\n" + found.joinToString("\n"))
     }
 
+    /** Type scale, card title (type.md): one line, 15 Sans 600. */
     @Test fun `a card title stays on one line`() {
         // Spec 2.3: a note drops under the title ([TitleRow]) rather than wrap it. Every title text is one line.
         val found = mutableListOf<String>()
@@ -111,6 +118,7 @@ class DesignTokenTest {
         assertTrue(BarMaxWidth <= 6.dp)
     }
 
+    /** Plan section 1 and workout rules section 3 (one big number per screen): one dotted number a card on Today and the tabs. */
     @Test fun `a card on Today and the tabs has one dotted number`() {
         // Spec 2.3 and audit 2.8: one number in dots a card; the rest is text. Each card is a function of its own. A
         // call that passes no number (EdgeValue(null, ...)) draws none.
@@ -137,6 +145,7 @@ class DesignTokenTest {
         if (found.isNotEmpty()) fail("One dotted number a card (spec 2.3):\n" + found.joinToString("\n"))
     }
 
+    /** Detail rules section 2 (Score kind: the arc is the Sleep score detail's, board HaloDetailRecovery) and board HaloDetailHabitAge. */
     @Test fun `the sleep hero has no arc and Habit Age no How it works`() {
         // Spec 5.2: the score reads as a number and a word, no arc. The horizon arc is the Sleep score detail's only. Spec 2.5 and 5.4: an explanation is behind
         // (i) in the card, never a How it works panel on the screen.
@@ -146,16 +155,7 @@ class DesignTokenTest {
         assertTrue(sources.getValue("glow/GlowHealthspan.kt").any { "InfoButton(" in it })
     }
 
-    @Test fun `Steps on Activity is a hero glow like Recovery and Sleep`() {
-        // Spec 2.1 and 5.3: the tab's hero, lit all over with the core behind the number, not a level over a black top.
-        // The number at the foot in the second glow's dots, under the hour bars.
-        val code = sources.getValue("glow/GlowActivityScreen.kt").joinToString("\n")
-        val steps = code.substringAfter("private fun StepsGlow(").substringBefore("\n}\n")
-        assertTrue("StepsGlow uses the hero recipe", "limeHero(MetricColors.steps" in steps)
-        assertTrue("StepsGlow's number is 3.6 dp", "DotSize.Second" in steps)
-        assertTrue("the bars come before the number", steps.indexOf("HourPills(") in 0 until steps.indexOf("TaggedNumber("))
-    }
-
+    /** Detail rules, Record and Estimate pictures and board HaloSleep: every hypnogram uses the stage colours. */
     @Test fun `every hypnogram is drawn in the stage colours`() {
         // Spec 2.7: Last night on Today, the sleep hero and the Sleep detail all draw bands in the stage colours.
         val stages = sources.getValue("glow/GlowSleepScreen.kt").joinToString("\n").substringAfter("fun GlowSleepStages(").substringBefore("\n}\n")
@@ -164,6 +164,7 @@ class DesignTokenTest {
         assertEquals("GlowHypnogram is drawn only through GlowSleepStages: $calls", 1, calls.size)
     }
 
+    /** Detail rules section 2 (Estimate kind), board HaloDetailHabitAge. */
     @Test fun `the Habit Age page lists its pace and what moves it`() {
         // Board HaloDetailHabitAge: the pace is a heading over a scale, what moves it one plain detail panel of habit rows
         // with an icon tile each, and nothing to open so no carets and no taps.
@@ -173,12 +174,14 @@ class DesignTokenTest {
         assertTrue("every habit has its icon and opens nothing", "habitIcon(" in page && !Regex("""onClick\s*=(?!\s*null)""").containsMatchIn(page))
     }
 
+    /** Plan section 1 (drop: the Glow x Glass two-stop blends) and detail-rules.md metric colours: one colour a metric. */
     @Test fun `no metric has a second colour`() {
         val found = find(Regex("""\b(chargeScale|chargeAt|chargeDeep|readinessDeep)\b|MetricColors\.bad\b|\bval bad\b"""))
         if (found.isNotEmpty()) fail("Energy is one Ember, Recovery one teal, and bad is gone (spec 2.2):\n" + found.joinToString("\n"))
     }
 
-    @Test fun `every dot-matrix number takes one of the six dot sizes`() {
+    /** Type scale (type.md): the old DotSize steps stay for the widgets, and a call never sets a dot size of its own. */
+    @Test fun `every dot-matrix number takes one of the dot sizes`() {
         assertTrue("found no source under ${uiRoot.absolutePath}", sources.size > 50)
         val found = mutableListOf<String>()
         sources.forEach { (path, lines) ->
@@ -193,7 +196,8 @@ class DesignTokenTest {
         if (found.isNotEmpty()) fail("Dot sizes come from DotSize (spec 2.3):\n" + found.joinToString("\n"))
     }
 
-    @Test fun `a workout hero's glow and a lit panel are each built in one place`() {
+    /** Plan wave 0, hero(colour, angle): the lit hero and the lit panel are each built in one place. */
+    @Test fun `a hero's light and a lit panel are each built in one place`() {
         // The summary, the past workout and the heart rate drop light by effortGlow, Ready's heart and the max heart
         // rate's hero are LitPanel (component consolidation, 2026-11-04). The share cards light a whole image, not a panel.
         val found = find(Regex("""lightAngle\s*=\s*LightAngle\.Below,\s*lightLevel"""), except = setOf("glow/CardLight.kt")) +
@@ -201,7 +205,7 @@ class DesignTokenTest {
         if (found.isNotEmpty()) fail("Use effortGlow and LitPanel:\n" + found.joinToString("\n"))
     }
 
-    /** Card-sized corners: anything this round is a card, a panel or a sheet, and takes [GlowLayout.CardShape]. */
+    /** Plan section 1, squircle corners: anything card-sized is a card, a panel or a sheet, and takes [GlowLayout.CardShape]. */
     @Test fun `cards take their corners from GlowLayout`() {
         val found = mutableListOf<String>()
         sources.forEach { (path, lines) ->
@@ -223,6 +227,7 @@ class DesignTokenTest {
         assertTrue("corner allowlist entries that no longer match: $stale", stale.isEmpty())
     }
 
+    /** Type scale (type.md): sizes come from the GlowType roles. The allowlist only shrinks. */
     @Test fun `type sizes come from the type roles`() {
         val counts = sources.mapValues { (_, lines) -> lines.count { Regex("""\bfontSize\s*=""").containsMatchIn(it) } }
             .filterValues { it > 0 }
@@ -238,7 +243,8 @@ class DesignTokenTest {
         assertTrue("type allowlist is higher than the code, lower it: $stale (now ${stale.keys.associateWith { counts[it] ?: 0 }})", stale.isEmpty())
     }
 
-    @Test fun `the glow screens and the app's frame take no type or colour from Material`() {
+    /** Type scale (type.md) and plan section 3: no Material type or controls on the Halo screens. */
+    @Test fun `the Halo screens and the app's frame take no type or colour from Material`() {
         // Material's roles are another product's type (spec 2.3). The theme glue in components/Glass.kt and the
         // colorScheme.background blacks behind whole screens stay, as does PageMenuRow's DropdownMenu.
         val frame = setOf("dashboard/DayCalendar.kt", "components/PullToSync.kt", "components/Insights.kt")
@@ -276,69 +282,4 @@ class DesignTokenTest {
             "glow/TabParts.kt" to 1,
         )
     }
-}
-
-/** The text between the `{` at [open] and its matching `}`. */
-private fun braced(code: String, open: Int): String {
-    var depth = 0
-    for (i in open until code.length) {
-        when (code[i]) {
-            '{' -> depth++
-            '}' -> if (--depth == 0) return code.substring(open + 1, i)
-        }
-    }
-    return code.substring(open + 1)
-}
-
-/** The text between the `(` at [open] and its matching `)`. */
-private fun balanced(code: String, open: Int): String {
-    var depth = 0
-    for (i in open until code.length) {
-        when (code[i]) {
-            '(' -> depth++
-            ')' -> if (--depth == 0) return code.substring(open + 1, i)
-        }
-    }
-    return code.substring(open + 1)
-}
-
-/**
- * [src] with comments and the contents of string and char literals blanked, line breaks kept, so a scan sees only
- * code and line numbers still match. Template code inside strings is blanked too.
- */
-private fun codeOnly(src: String): String {
-    val out = StringBuilder(src.length)
-    var i = 0
-    fun blank(c: Char) = out.append(if (c == '\n') '\n' else ' ')
-    while (i < src.length) {
-        val c = src[i]
-        when {
-            src.startsWith("//", i) -> while (i < src.length && src[i] != '\n') { blank(src[i]); i++ }
-            src.startsWith("/*", i) -> {
-                var depth = 0
-                do {
-                    when {
-                        src.startsWith("/*", i) -> { depth++; blank(src[i]); blank(src[i + 1]); i += 2 }
-                        src.startsWith("*/", i) -> { depth--; blank(src[i]); blank(src[i + 1]); i += 2 }
-                        else -> { blank(src[i]); i++ }
-                    }
-                } while (depth > 0 && i < src.length)
-            }
-            src.startsWith("\"\"\"", i) -> {
-                out.append("\"\"\""); i += 3
-                while (i < src.length && !src.startsWith("\"\"\"", i)) { blank(src[i]); i++ }
-                out.append("\"\"\""); i += 3
-            }
-            c == '"' || c == '\'' -> {
-                out.append(c); i++
-                while (i < src.length && src[i] != c && src[i] != '\n') {
-                    if (src[i] == '\\') { blank(src[i]); i++ }
-                    if (i < src.length) { blank(src[i]); i++ }
-                }
-                if (i < src.length) { out.append(src[i]); i++ }
-            }
-            else -> { out.append(c); i++ }
-        }
-    }
-    return out.toString()
 }

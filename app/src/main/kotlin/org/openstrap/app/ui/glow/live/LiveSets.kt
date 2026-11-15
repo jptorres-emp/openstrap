@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -337,7 +336,7 @@ private fun SetSegments(done: Int, target: Int?) {
 /** The exercise as a dark pill to tap, or "Name it" while the sets are only numbered. */
 @Composable
 private fun ExercisePill(name: String?, onClick: () -> Unit) {
-    val shape = RoundedCornerShape(50)
+    val shape = CircleShape
     Text(
         name ?: stringResource(R.string.workout_live_sets_name_it), color = Color.White, style = GlowType.secondary, maxLines = 1,
         overflow = TextOverflow.Ellipsis,

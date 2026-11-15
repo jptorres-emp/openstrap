@@ -14,7 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import sv.lib.squircleshape.SquircleShape
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.Outline
@@ -527,7 +527,7 @@ internal fun TitleMark(marker: String?, tag: TitleTag?, modifier: Modifier = Mod
  */
 @Composable
 internal fun OutlineTag(text: String, modifier: Modifier = Modifier, onClick: (() -> Unit)? = null) {
-    val shape = RoundedCornerShape(50)
+    val shape = CircleShape
     val about = stringResource(R.string.glow_tag_about, text.lowercase())
     Text(
         text,

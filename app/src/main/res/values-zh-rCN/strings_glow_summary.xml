@@ -85,4 +85,26 @@
     </plurals>
     <string name="glow_summary_set">第 %1$d 组</string>
     <string name="glow_summary_set_rest">休息 %1$s</string>
+    <string name="glow_summary_hero_distance">距离</string>
+    <string name="glow_summary_hero_avg_bpm">平均心率</string>
+    <string name="glow_summary_hero_rounds">回合</string>
+    <string name="glow_summary_hero_lifted">举重量</string>
+    <string name="glow_summary_hero_played">时长</string>
+    <string name="glow_summary_drop_unit">次/分，一分钟内</string>
+    <string name="glow_summary_load_usual">负荷，通常 %1$s</string>
+    <string name="glow_summary_load_tag_usual">接近平时</string>
+    <string name="glow_summary_recover_label">恢复所需时间</string>
+    <string name="glow_summary_zone_minutes">区间 %1$d，%2$d 分钟</string>
+    <string name="glow_summary_exercise_total">%1$s 千克</string>
+    <string name="glow_summary_rest_average">平均 %1$s</string>
+    <string name="glow_summary_in_each_rest">每次休息中</string>
+    <string name="glow_summary_rounds_span">第 %1$d 至 %2$d 回合</string>
+    <plurals name="glow_summary_week_sessions">
+        <item quantity="other">%d 次</item>
+    </plurals>
+    <string name="glow_summary_hero_reps">次数</string>
+    <string name="glow_summary_route_zones">路线按心率区间着色</string>
+    <string name="glow_summary_splits_note">每公里配速</string>
+    <string name="glow_summary_work_rest">运动 %1$d 秒，休息 %2$d 秒</string>
+    <string name="glow_summary_period_note">平均心率</string>
 </resources>

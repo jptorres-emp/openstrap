@@ -64,7 +64,7 @@
     <string name="glow_summary_line_active_kcal" tools:ignore="PluralsCandidate"><xliff:g id="kcal" example="80">%1$d</xliff:g> active kcal</string>
 
     <!-- Title of the quiet card that says how the heart rate came down between sets. One word. -->
-    <string name="glow_summary_rest_title">Rest</string>
+    <string name="glow_summary_rest_title">Rest after the sets</string>
     <!-- Title of the quiet card that says how the heart rate came down between rounds. One word. -->
     <string name="glow_summary_recovery_title">Rest</string>
     <!-- Title of the card with a column for each rep of a run. Short. -->
@@ -182,4 +182,44 @@
     <string name="glow_summary_set">Set <xliff:g id="number" example="2">%1$d</xliff:g></string>
     <!-- Under a set's row: the rest after it. The time is "1:30". -->
     <string name="glow_summary_set_rest">Rest <xliff:g id="time" example="1:30">%1$s</xliff:g></string>
+
+    <!-- The hero's title row on a summary (board SummaryRun to SummaryGames): what the big number counts. One or two words. -->
+    <string name="glow_summary_hero_distance">Distance</string>
+    <string name="glow_summary_hero_avg_bpm">Average heart rate</string>
+    <string name="glow_summary_hero_rounds">Rounds</string>
+    <string name="glow_summary_hero_lifted">Lifted</string>
+    <string name="glow_summary_hero_played">Played</string>
+    <!-- Beside the heart rate drop's number: what it is. Short. -->
+    <string name="glow_summary_drop_unit">bpm in a minute</string>
+    <!-- Label under the Load figure, with your usual. Keep "Load" as one word. A range reads "80 to 120". -->
+    <string name="glow_summary_load_usual">Load, usual <xliff:g id="usual" example="100">%1$s</xliff:g></string>
+    <!-- The Load panel's tag when this workout is about as hard as your usual. Short. -->
+    <string name="glow_summary_load_tag_usual">About usual</string>
+    <!-- Label under the time to recover figure on the Load panel. Short. -->
+    <string name="glow_summary_recover_label">Time to recover</string>
+    <!-- Under a zone strip: a zone and its minutes, as "Zone 4, 27 min". -->
+    <string name="glow_summary_zone_minutes">Zone <xliff:g id="zone" example="4">%1$d</xliff:g>, <xliff:g id="minutes" example="27">%2$d</xliff:g> min</string>
+    <!-- Beside the sets card's exercise name: the kilograms lifted in it, as "2,620 kg". -->
+    <string name="glow_summary_exercise_total"><xliff:g id="kg" example="2,620">%1$s</xliff:g> kg</string>
+    <!-- Beside the rest card's title: the average rest between sets, as "Average 1:38". -->
+    <string name="glow_summary_rest_average">Average <xliff:g id="time" example="1:38">%1$s</xliff:g></string>
+    <!-- Beside the recovery title on a round card: where in the round it is read. Short. -->
+    <string name="glow_summary_in_each_rest">In each rest</string>
+    <!-- Under the round columns: which rounds are drawn, as "Round 1 to 8". -->
+    <string name="glow_summary_rounds_span">Round <xliff:g id="first" example="1">%1$d</xliff:g> to <xliff:g id="last" example="8">%2$d</xliff:g></string>
+    <!-- Beside the week row: how many sessions that week, as "1 session". -->
+    <plurals name="glow_summary_week_sessions">
+        <item quantity="one"><xliff:g id="count" example="1">%d</xliff:g> session</item>
+        <item quantity="other"><xliff:g id="count" example="3">%d</xliff:g> sessions</item>
+    </plurals>
+    <!-- The hero's title on an intervals run's summary: what the big number counts. One word. -->
+    <string name="glow_summary_hero_reps">Reps</string>
+    <!-- Beside the route's climb on a run's card: how the route is drawn. Short. -->
+    <string name="glow_summary_route_zones">Route coloured by heart zone</string>
+    <!-- Beside the Splits title on a run's card. Short. -->
+    <string name="glow_summary_splits_note">Pace per km</string>
+    <!-- Under the round columns: what the rounds were set up as, as "20 s work, 10 s rest". -->
+    <string name="glow_summary_work_rest"><xliff:g id="work" example="20">%1$d</xliff:g> s work, <xliff:g id="rest" example="10">%2$d</xliff:g> s rest</string>
+    <!-- Beside a game's halves title: each bar is the period's average heart rate. Short. -->
+    <string name="glow_summary_period_note">Average bpm</string>
 </resources>

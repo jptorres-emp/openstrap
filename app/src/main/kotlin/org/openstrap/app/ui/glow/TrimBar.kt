@@ -1,5 +1,21 @@
 package org.openstrap.app.ui.glow
 
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
+import sv.lib.squircleshape.SquircleShape
+import androidx.compose.ui.graphics.drawOutline
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.material3.Text
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.mutableLongStateOf
+import org.openstrap.app.ui.workout.ZONE_COLORS
+import org.openstrap.app.ui.dashboard.LocalHeartZones
+import org.openstrap.app.data.WorkoutRecorder
+import org.openstrap.app.ui.workout.PhoneSummary
+import org.openstrap.app.ui.workout.SummaryCopy
+import androidx.compose.ui.res.stringResource
+import org.openstrap.app.R
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -9,16 +25,13 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
@@ -28,8 +41,16 @@ import org.openstrap.app.data.db.SleepSession
 /** The trim frame's sides, the handles. The strip is inset by as much so either side can reach its end. */
 internal val TrimSide = 12.dp
 
-/** The track's height, the frame's and the bars'. */
-private val TrackHeight = 64.dp
+/** The track's height: the panel the line sits on. */
+private val TrackHeight = 110.dp
+
+/** Above and below the line inside the panel. */
+private val PlotInset = 14.dp
+
+/** The panel behind the line (board HaloTrimSheet: #0A0B0D, corner 20). */
+private val PanelInk = Color(0xFF0A0B0D)
+private val PanelCorner = 20.dp
+private val PanelShape = SquircleShape(PanelCorner, GlowLayout.SMOOTHING)
 
 /** Under the track, room for the line that marks what was recorded or detected. */
 private val MarkRoom = 10.dp
@@ -192,53 +213,57 @@ internal fun TrimBar(
             val inset = TrimSide.toPx()
             val w = size.width - 2 * inset
             val h = TrackHeight.toPx()
-            val edge = 3.dp.toPx()
             fun x(time: Long) = inset + (time - first).toFloat() / (last - first) * w
-            drawRoundRect(Raised, Offset(inset, 0f), Size(w, h), CornerRadius(8.dp.toPx()))
-            // Solid rounded bars, as tall as the heart rate in that stretch (dots are only for numbers, spec 2.7). A
-            // stretch with no reading is left empty.
-            val pitch = 5.dp.toPx()
-            val bar = 3.dp.toPx()
-            val pad = edge + 5.dp.toPx()
-            val cols = (w / pitch).toInt().coerceAtLeast(1)
             val fx = x(from)
             val tx = x(to)
-            if (points.isNotEmpty()) for (c in 0 until cols) {
-                val cx = inset + (c + 0.5f) * (w / cols)
-                val i = ((c + 0.5f) / cols * points.size).toInt().coerceIn(0, points.size - 1)
-                val v = points[i]
-                val color = v?.let(colorOf)
-                if (v == null || color == null) continue
-                val barH = ((v - lo) / (hi - lo)).coerceIn(0.1f, 1f) * (h - 2 * pad)
-                val at = first + ((c + 0.5f) / cols * (last - first)).toLong()
-                // Kept by where the column sits on screen, as the frame is drawn, so a bar is never half in.
-                val shade = Trim.shade(cx in fx..tx, at, core)
+            // The panel the line sits on (board HaloTrimSheet: #0A0B0D, a squircle of 20).
+            drawOutline(PanelShape.createOutline(Size(size.width, h), layoutDirection, this), PanelInk)
+            // The heart rate as one rounded line in its zones' colours (board HaloTrimSheet): each stretch coloured by the
+            // zone it sits in, as bright as the shade of where it lies. A stretch with no reading is left empty.
+            val top = PlotInset.toPx()
+            val plot = h - 2 * top
+            fun y(v: Float) = top + (1f - ((v - lo) / (hi - lo)).coerceIn(0f, 1f)) * plot
+            if (points.size >= 2) for (i in 1 until points.size) {
+                val v0 = points[i - 1]
+                val v1 = points[i]
+                val color = if (v0 != null && v1 != null) colorOf((v0 + v1) / 2f) else null
+                if (color != null && v0 != null && v1 != null) {
+                    val x0 = inset + (i - 1) / (points.size - 1f) * w
+                    val x1 = inset + i / (points.size - 1f) * w
+                    // Kept by where the segment sits on screen, as the frame is drawn, so a stretch is never half in.
+                    val at = first + ((i - 0.5f) / (points.size - 1f) * (last - first)).toLong()
+                    val shade = Trim.shade((x0 + x1) / 2 in fx..tx, at, core)
+                    drawLine(
+                        color.copy(alpha = color.alpha * shade.alpha), Offset(x0, y(v0)), Offset(x1, y(v1)),
+                        strokeWidth = 2.6.dp.toPx(), cap = StrokeCap.Round,
+                    )
+                }
+            }
+            // What lies outside the handles is dimmed once more.
+            drawRect(Color.Black.copy(alpha = 0.45f), Offset(0f, 0f), Size(fx, h))
+            drawRect(Color.Black.copy(alpha = 0.45f), Offset(tx, 0f), Size(size.width - tx, h))
+            // The frame: a white outline round what is kept, a pill handle on each side with a short grip.
+            drawRoundRect(
+                Color.White.copy(alpha = 0.9f), Offset(fx, 1.dp.toPx()), Size(tx - fx, h - 2.dp.toPx()), CornerRadius(12.dp.toPx()),
+                style = Stroke(2.dp.toPx()),
+            )
+            val handleW = 14.dp.toPx()
+            val handleH = 44.dp.toPx()
+            val grip = 2.dp.toPx()
+            listOf(fx, tx).forEach { gx ->
+                drawRoundRect(Color.White, Offset(gx - handleW / 2, (h - handleH) / 2), Size(handleW, handleH), CornerRadius(handleW / 2))
                 drawRoundRect(
-                    color.copy(alpha = color.alpha * shade.alpha),
-                    Offset(cx - bar / 2, h - pad - barH), Size(bar, barH), CornerRadius(bar / 2),
+                    Color.Black.copy(alpha = 0.35f), Offset(gx - grip / 2, h / 2 - 10.dp.toPx()), Size(grip, 20.dp.toPx()),
+                    CornerRadius(grip / 2),
                 )
             }
-            // The frame: one rounded outline, its sides thick enough to grab, each with a short grip.
-            val frame = Path().apply {
-                fillType = PathFillType.EvenOdd
-                addRoundRect(RoundRect(fx - inset, 0f, tx + inset, h, CornerRadius(10.dp.toPx())))
-                addRoundRect(RoundRect(fx, edge, tx, h - edge, CornerRadius(4.dp.toPx())))
-            }
-            drawPath(frame, Color.White)
             if (marked) {
-                val y = h + MarkRoom.toPx() / 2
+                val my = h + MarkRoom.toPx() / 2
                 val mark = 2.dp.toPx()
                 drawLine(
                     Color.White.copy(alpha = 0.35f),
-                    Offset(x(core.first.coerceIn(first, last)), y), Offset(x(core.last.coerceIn(first, last)), y),
-                    strokeWidth = mark, cap = androidx.compose.ui.graphics.StrokeCap.Round,
-                )
-            }
-            val grip = 2.dp.toPx()
-            listOf(fx - inset / 2, tx + inset / 2).forEach { gx ->
-                drawRoundRect(
-                    Color.Black.copy(alpha = 0.55f), Offset(gx - grip / 2, h / 2 - 8.dp.toPx()), Size(grip, 16.dp.toPx()),
-                    CornerRadius(grip / 2),
+                    Offset(x(core.first.coerceIn(first, last)), my), Offset(x(core.last.coerceIn(first, last)), my),
+                    strokeWidth = mark, cap = StrokeCap.Round,
                 )
             }
         }
@@ -246,6 +271,57 @@ internal fun TrimBar(
             PageNote(clock(first))
             Spacer(Modifier.weight(1f))
             PageNote(clock(last))
+        }
+    }
+}
+
+/**
+ * The trim sheet (board HaloTrimSheet) while [trim] is open: "Trim start and end" with when it was recorded, the times and
+ * length kept in Funnel Display Light, the line with its handles and the clocks of what was recorded, a hint, then Cancel
+ * and Save. Saving changes only what is shown, and nothing recorded is deleted. This replaces `TrimSheet(trim)` of
+ * GlowWorkoutMode.kt for the summary and a past workout.
+ */
+@Composable
+internal fun HaloTrimSheet(trim: WorkoutTrim) {
+    if (!trim.isOpen) return
+    val summary = trim.summary
+    val note = SummaryCopy.trimRecorded(clock(summary.recordedStart), clock(summary.recordedEnd))
+    PageSheet(trim.close, stringResource(R.string.glow_workout_trim_title), note = note) {
+        HaloTrimContent(summary, onSave = { from, to -> trim.close(); trim.save(from, to) }, onCancel = trim.close)
+    }
+}
+
+/** What the sheet holds: the kept times, the [TrimBar] with its zone colours, the hint and the two buttons. */
+@Composable
+private fun HaloTrimContent(summary: PhoneSummary, onSave: (Long, Long) -> Unit, onCancel: () -> Unit) {
+    val heartZones = LocalHeartZones.current
+    val a = summary.analysis
+    val first = summary.recordedStart
+    val last = summary.recordedEnd.coerceAtLeast(first + 60)
+    // The handles outlive a rotation, a fold and process death while the sheet stays open (audit K7). They start again
+    // only when the workout or its shown range changes.
+    var from by rememberSaveable(a.workout.start, a.shownStart, a.end) { mutableLongStateOf(a.shownStart) }
+    var to by rememberSaveable(a.workout.start, a.shownStart, a.end) { mutableLongStateOf(a.end) }
+    val step = 10L
+    val points = remember(summary) {
+        val n = ((last - first) / step + 1).toInt().coerceAtLeast(2)
+        org.openstrap.app.data.Summaries.bucketMeans(summary.recorded, n, { ((it.timestamp - first) / step).toInt() }, { it.bpm.toFloat() })
+    }
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Text(
+            SummaryCopy.trimHeader(clock(from), clock(to), to - from), color = Color.White,
+            style = GlowType.sentence,
+        )
+        // Recorded is all it can reach for now: the core and the reach are one, so the bar only trims.
+        TrimBar(
+            points, core = first..last, reach = first..last, from = from, to = to,
+            colorOf = { v -> WorkoutRecorder.liveZone(v.toInt(), a.maxHeartRate, heartZones)?.let { ZONE_COLORS[it] } },
+            onChange = { f, t -> from = f; to = t },
+        )
+        Text(SummaryCopy.TRIM_HINT, color = GlowType.noteColor, style = GlowType.secondary)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            PageButton(stringResource(R.string.glow_cancel), onCancel, Modifier.weight(1f))
+            PageButton(stringResource(R.string.glow_save), { onSave(from, to) }, Modifier.weight(1f), primary = true)
         }
     }
 }

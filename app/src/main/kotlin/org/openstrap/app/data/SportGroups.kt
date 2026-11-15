@@ -31,7 +31,8 @@ object SportGroups {
     fun sections(types: List<Int>): List<SportSection> = types.distinct().groupBy(::of).let { byGroup ->
         SportGroup.entries.mapNotNull { group ->
             val list = byGroup[group] ?: return@mapNotNull null
-            SportSection(group, if (group == SportGroup.StrengthIntervals) list.sortedBy { Workouts.family(it) == Workouts.Family.Intervals } else list)
+            val hiitLast = { type: Int -> Workouts.family(type) == Workouts.Family.Intervals }
+            SportSection(group, if (group == SportGroup.StrengthIntervals) list.sortedBy(hiitLast) else list)
         }
     }
 

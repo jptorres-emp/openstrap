@@ -71,7 +71,6 @@
     <string name="glow_ready_connect">Connect strap</string>
     <!-- Ready's heart card beside the live heart rate drawn large. -->
     <!-- Spoken for the plan pill on Ready, for screen readers: the plan's name, then what tapping it does. -->
-    <string name="glow_ready_plan_description"><xliff:g id="plan" example="Distance">%1$s</xliff:g>. <xliff:g id="hint" example="Tap to choose another goal">%2$s</xliff:g></string>
     <!-- Spoken for the minus button beside a distance or time goal, for screen readers. -->
     <string name="glow_ready_shorter">Shorter</string>
     <!-- Spoken for the plus button beside a distance or time goal, for screen readers. -->

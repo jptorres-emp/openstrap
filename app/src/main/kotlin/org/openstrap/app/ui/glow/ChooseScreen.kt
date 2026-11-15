@@ -40,6 +40,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -354,7 +355,11 @@ internal fun SportPicker(selected: Int, recent: List<Int>, contentPadding: Paddi
                 }
             }
         }
-        item(key = "sections") { Column(verticalArrangement = Arrangement.spacedBy(14.dp)) { SportSections(SportGroups.chooseSections(), { it == chosen }, onPick) } }
+        item(key = "sections") {
+            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                SportSections(SportGroups.chooseSections(), { it == chosen }, onPick)
+            }
+        }
     }
 }
 
@@ -375,6 +380,7 @@ private fun SearchResults(query: String, onPick: (Int) -> Unit) {
 
 /** A section's title (board HaloChooseSport): the family, as the boards name it. */
 @Composable
+@ReadOnlyComposable
 private fun groupTitle(group: SportGroup): String = stringResource(when (group) {
     SportGroup.Distance -> R.string.glow_choose_group_distance
     SportGroup.IndoorCardio -> R.string.glow_choose_group_indoor
@@ -386,6 +392,7 @@ private fun groupTitle(group: SportGroup): String = stringResource(when (group) 
 
 /** The line under a section's title: what its sports record. */
 @Composable
+@ReadOnlyComposable
 private fun groupNote(group: SportGroup): String = stringResource(when (group) {
     SportGroup.Distance -> R.string.glow_choose_group_distance_note
     SportGroup.IndoorCardio -> R.string.glow_choose_group_indoor_note
@@ -409,6 +416,7 @@ private fun groupColor(group: SportGroup): Color = when (group) {
 private fun sportColor(type: Int): Color = groupColor(SportGroups.of(type))
 
 /** The sections of sport tiles, four to a row, each under its family's title (board HaloChooseSport). */
+@Suppress("UnstableCollections", "ComposeUnstableCollections")
 @Composable
 private fun SportSections(sections: List<SportSection>, isSelected: (Int) -> Boolean, onPick: (Int) -> Unit) {
     sections.forEach { section ->
@@ -417,7 +425,7 @@ private fun SportSections(sections: List<SportSection>, isSelected: (Int) -> Boo
             section.types.chunked(4).forEach { row ->
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Top) {
                     row.forEach { type ->
-                        FamilyTile(type, Modifier.weight(1f), isSelected(type)) { onPick(type) }
+                        FamilyTile(type, isSelected(type), Modifier.weight(1f)) { onPick(type) }
                     }
                     repeat(4 - row.size) { Spacer(Modifier.weight(1f)) }
                 }
@@ -437,7 +445,10 @@ private fun SectionHeader(group: SportGroup, count: Int) {
             Text(groupNote(group), color = GlowType.noteColor, style = GlowType.noteSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         Spacer(Modifier.width(8.dp))
-        Text(pluralStringResource(R.plurals.glow_choose_sports_count, count, count), color = GlowType.footnoteColor, style = GlowType.noteSmall)
+        Text(
+            pluralStringResource(R.plurals.glow_choose_sports_count, count, count), color = GlowType.footnoteColor,
+            style = GlowType.noteSmall,
+        )
     }
 }
 
@@ -447,7 +458,7 @@ private fun SectionHeader(group: SportGroup, count: Int) {
  * HaloSwitchSport). A sport done only outdoors carries the location mark.
  */
 @Composable
-private fun FamilyTile(type: Int, modifier: Modifier, selected: Boolean, onClick: () -> Unit) {
+private fun FamilyTile(type: Int, selected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
     val color = sportColor(type)
     Column(
         modifier.pressClickable(onClick, RoundedCornerShape(8.dp)).semantics(mergeDescendants = true) {
@@ -484,10 +495,14 @@ private fun FoundRow(type: Int, divider: Boolean, onClick: () -> Unit) {
     Column {
         if (divider) Box(Modifier.fillMaxWidth().height(1.dp).background(RowHairline))
         Row(
-            Modifier.fillMaxWidth().heightIn(min = 56.dp).clickable(onClick = onClick).padding(start = 12.dp, end = 14.dp, top = 10.dp, bottom = 10.dp),
+            Modifier.fillMaxWidth().heightIn(min = 56.dp).clickable(onClick = onClick)
+                .padding(start = 12.dp, end = 14.dp, top = 10.dp, bottom = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(Modifier.size(32.dp).clip(GlowLayout.IconShape).background(color.copy(alpha = 0.16f)), contentAlignment = Alignment.Center) {
+            Box(
+                Modifier.size(32.dp).clip(GlowLayout.IconShape).background(color.copy(alpha = 0.16f)),
+                contentAlignment = Alignment.Center,
+            ) {
                 Icon(SportIcons.of(type), null, tint = color, modifier = Modifier.size(17.dp))
             }
             Spacer(Modifier.width(12.dp))

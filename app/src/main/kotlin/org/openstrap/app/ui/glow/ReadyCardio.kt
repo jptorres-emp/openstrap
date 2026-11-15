@@ -345,6 +345,7 @@ private fun ReadyPlanCard(
 }
 
 /** The kinds as chips in a wrapping row, the picked one ringed; a typed value that is none of them is named, picked. */
+@Suppress("UnstableCollections", "ComposeUnstableCollections")
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 private fun PlanChips(options: List<PlanOption>, chosen: Int?, shown: PlanOption, onChoose: (Int) -> Unit) {

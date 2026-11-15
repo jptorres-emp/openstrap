@@ -80,8 +80,6 @@ import org.openstrap.app.ui.theme.AppIcons
 import org.openstrap.app.ui.theme.MetricColors
 import org.openstrap.app.ui.theme.SportIcons
 import org.openstrap.app.ui.workout.ZONE_COLORS
-import org.openstrap.app.ui.glow.draw.drawHourPills
-import org.openstrap.app.ui.glow.draw.hourPills
 import androidx.compose.foundation.layout.BoxWithConstraints
 import org.openstrap.app.ui.glow.draw.DotSize
 import org.openstrap.app.ui.glow.draw.LightAngle
@@ -108,6 +106,7 @@ import org.openstrap.app.ui.glow.pictures.DayLine
 import org.openstrap.app.ui.glow.pictures.LevelFill
 import org.openstrap.app.ui.glow.pictures.PictureSize
 import org.openstrap.app.ui.glow.pictures.dayLineRim
+import org.openstrap.app.ui.glow.pictures.drawHourDots
 import org.openstrap.app.ui.glow.pictures.levelFillRim
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
@@ -326,10 +325,9 @@ private fun StepsGlow(state: DayUiState, usual: List<Float>?, history: ActivityH
 }
 
 /**
- * Hourly pill bars (chart kit, spec 2.7): the day's steps as 24 pills, one an hour, as high as the hour's share of the
- * busiest, white at 45% with the latest hour with steps at full. Hours with none, and those still to come, aren't
- * drawn, only the hairline baseline under the bars. Tapping an hour picks it ([onPick]) and lights it in place of the
- * latest; tapping it again lets it go. The hours under it in Caption.
+ * Hourly dots (HaloCharts, Steps by hour): the day's steps as 24 columns, one an hour, a dot per 250 steps, white with
+ * the latest hour with steps at full and the rest dimmer. Hours with none show one faint dot. Tapping an hour picks
+ * it ([onPick]) and lights it in place of the latest; tapping it again lets it go. The hours under it in Caption.
  */
 @Composable
 private fun HourPills(hourly: List<Float>, picked: Int?, onPick: (Int?) -> Unit) {
@@ -344,8 +342,8 @@ private fun HourPills(hourly: List<Float>, picked: Int?, onPick: (Int?) -> Unit)
                 }
             },
         ) {
-            // The shared pill bars ([hourPills]), as a widget's chart draws them.
-            hourPills(hourly, picked, size.width, size.height, density)?.let { drawHourPills(it) }
+            // A dot per 250 steps an hour (HaloCharts, Steps by hour).
+            drawHourDots(hourly, picked, Color.White)
         }
         Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
             listOf("00", "06", "12", "18", "24").forEach {

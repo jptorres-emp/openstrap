@@ -76,12 +76,6 @@
     <string name="glow_activity_recovered">已恢复</string>
     <string name="glow_activity_recovered_after">在%1$s（%2$s）之后</string>
     <string name="glow_activity_recover_ready">准备就绪</string>
-    <plurals name="glow_activity_blocks_of">
-        <item quantity="other">%1$d / %2$d 分钟</item>
-    </plurals>
-    <plurals name="glow_activity_block_is">
-        <item quantity="other">每格代表 %1$d 分钟</item>
-    </plurals>
     <plurals name="glow_activity_hours_to_go">
         <item quantity="other">小时恢复所需</item>
     </plurals>

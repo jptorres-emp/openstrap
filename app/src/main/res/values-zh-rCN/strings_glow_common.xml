@@ -23,11 +23,10 @@
     <string name="glow_page_switch">切换</string>
     <string name="glow_page_change">更改</string>
     <string name="glow_tag_about">关于 %1$s</string>
+    <string name="glow_info_what">它是什么</string>
+    <string name="glow_info_normal">你的常态是多少</string>
     <string name="glow_info_how">计算方式</string>
-    <string name="glow_info_moves">影响因素</string>
     <string name="glow_info_off">为何可能不准</string>
-    <string name="glow_info_fold">折叠</string>
-    <string name="glow_info_open">展开</string>
     <string name="glow_tabletop_heart_rate">心率</string>
     <string name="glow_tabletop_latest">最新</string>
     <string name="glow_tabletop_live">实时</string>

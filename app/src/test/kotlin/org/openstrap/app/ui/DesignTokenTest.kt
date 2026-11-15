@@ -74,8 +74,9 @@ class DesignTokenTest {
     }
 
     @Test fun `only the digits are made of dots`() {
-        // No dotted or dashed line anywhere, and no dotted panels (spec 2.5, 2.7).
-        val found = find(Regex("""\bdashPathEffect\b|\bPathEffect\b|\bDot(Panel|Header|Divider)\b|\bGlowDotBars\b"""))
+        // No dotted or dashed line anywhere, and no dotted panels (spec 2.5, 2.7). The one dash is a detail chart's goal
+        // and the dashed guide at its latest reading, which the Halo detail boards draw (HaloDetailSteps, HaloDetailHeart).
+        val found = find(Regex("""\bdashPathEffect\b|\bPathEffect\b|\bDot(Panel|Header|Divider)\b|\bGlowDotBars\b"""), setOf("glow/DetailPicture.kt"))
         if (found.isNotEmpty()) fail("Lines, grids and panels are solid; only numbers are dots (spec 2.7):\n" + found.joinToString("\n"))
     }
 
@@ -164,11 +165,12 @@ class DesignTokenTest {
     }
 
     @Test fun `the Habit Age page lists its pace and what moves it`() {
-        // Spec 5.4: grouped lists with icon rows, no plain panels, nothing to open so no carets.
+        // Board HaloDetailHabitAge: the pace is a heading over a scale, what moves it one plain detail panel of habit rows
+        // with an icon tile each, and nothing to open so no carets and no taps.
         val page = sources.getValue("glow/GlowHealthspanScreen.kt").joinToString("\n")
-        assertEquals(2, Regex("""\bListPanel\(""").findAll(page).count())
+        assertEquals(1, Regex("""\bDetailPanel\(""").findAll(page).count())
         assertTrue("no QuietPanel on the Habit Age page", "QuietPanel(" !in page && "MaterialTheme" !in page)
-        assertTrue("every row has its icon and opens nothing", Regex("""\bListRow\(""").findAll(page).count() == Regex("""icon = """).findAll(page).count() && !Regex("""onClick\s*=(?!\s*null)""").containsMatchIn(page))
+        assertTrue("every habit has its icon and opens nothing", "habitIcon(" in page && !Regex("""onClick\s*=(?!\s*null)""").containsMatchIn(page))
     }
 
     @Test fun `no metric has a second colour`() {

@@ -256,9 +256,12 @@ fun AllMetricsSheet(
 ) {
     PageSheet(onDismiss, stringResource(R.string.glow_metrics_all_metrics), dayName(date), side = 16.dp) {
         groups.forEach { group ->
-            ListPanel(title = group.title) {
+            DetailPanel(title = group.title, muted = true) {
                 group.rows.forEachIndexed { i, r ->
-                    ListRow(r.name, r.color, r.value, r.status, onClick = { onOpen(r.target) }, divider = i > 0, icon = r.target.rowIcon())
+                    DetailRow(
+                        r.name, r.color, r.value, r.status, onClick = { onOpen(r.target) }, divider = i > 0,
+                        icon = r.target.rowIcon(),
+                    )
                 }
             }
         }

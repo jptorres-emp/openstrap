@@ -69,7 +69,6 @@ import org.openstrap.app.presentation.SLEEP_NAMES
 import org.openstrap.app.ui.dashboard.SLEEP_NIGHTS
 import org.openstrap.app.ui.dashboard.Score
 import org.openstrap.app.ui.dashboard.SleepCopy
-import org.openstrap.app.ui.dashboard.SleepWindows
 import org.openstrap.app.presentation.TabCopy
 import org.openstrap.app.ui.dashboard.sleepWeek
 import org.openstrap.app.ui.theme.AppIcons
@@ -189,7 +188,7 @@ internal fun SleepScoreDetail(
             // The horizon arc (chart kit, spec 2.7) holds the night's score, centred, the number under its crest. A
             // scrub takes its place in the hero alone, so the rest of the detail stays put (audit K4).
             heroValue = if (range == Range.Day && score != null) {
-                { HorizonArc(score / 100f, color, key = Score.Sleep) { DetailScoreNumber(score, state.date) } }
+                { DetailGauge(score / 100f, color, key = Score.Sleep) { DetailScoreNumber(score, state.date) } }
             } else null,
             scrubbed = { scrub },
         ) {
@@ -207,9 +206,9 @@ internal fun SleepScoreDetail(
                     item {
                         Column(Modifier.padding(top = 8.dp)) {
                             // Moved, the strap's whole night shows with what's outside the user's times dimmed.
-                            if (moved && state.strapSleepStages.isNotEmpty()) GlowSleepStages(state.strapSleepStages, 150.dp, kept = session.start..session.end)
-                            else if (state.sleepStages.isNotEmpty()) GlowSleepStages(state.sleepStages, 150.dp)
-                            state.sleepBreakdown?.let { StageBars(it, Modifier.padding(top = 18.dp)) }
+                            if (moved && state.strapSleepStages.isNotEmpty()) DetailStages(state.strapSleepStages, kept = session.start..session.end)
+                            else if (state.sleepStages.isNotEmpty()) DetailStages(state.sleepStages)
+                            state.sleepBreakdown?.let { DetailStageShares(it, Modifier.padding(top = 18.dp)) }
                             // Times extended past the strap's have no stages for the added time, so the page says so.
                             if (detected != null && state.sleepBreakdown != null) {
                                 SleepCopy.stagesCover(session.start, session.end, detected.start, detected.end)?.let {
@@ -241,7 +240,7 @@ internal fun SleepScoreDetail(
                     val waso = Recovery.wasoMinutes(state.sleepStages.map { Triple(it.start, it.end, it.stage) })
                     val factors = SleepCopy.factors(Narrative.sleepContributors(session, asleep, need, waso), asleep, need, waso)
                     if (factors.isNotEmpty()) item {
-                        ListPanel(Modifier.padding(top = 8.dp), title = stringResource(R.string.glow_sleep_what_shaped)) {
+                        DetailPanel(Modifier.padding(top = 8.dp), title = stringResource(R.string.glow_sleep_what_shaped)) {
                             factors.forEachIndexed { i, f ->
                                 ContributorRow(f.name, color, f.word, f.fraction, offNormal = f.off, divider = i > 0, detail = f.detail, onClick = { info = true })
                             }
@@ -254,9 +253,9 @@ internal fun SleepScoreDetail(
                     if (known.isEmpty()) DetailEmpty(stringResource(R.string.glow_sleep_no_scores_week))
                     else Column {
                         val values = week.map { it.second }
-                        NormalTrend(
-                            values, DetailCopy.levels(values, normal), color, labels = week.map { DayWords.weekdayShort(it.first) },
-                            band = normal?.let { it.low..it.high }, bandLabel = normal?.let { DetailCopy.bandLabel(it) { v -> Math.round(v).toString() } },
+                        DetailColumns(
+                            values, color, week.map { DayWords.weekdayShort(it.first) }, valueLabels = true, fixed = 0f..100f,
+                            band = normal?.let { it.low..it.high }, bandLabel = stringResource(R.string.glow_detail_your_normal),
                             onScrub = { i ->
                                 scrub = i?.let { week[it] }?.let { (d, v) ->
                                     v?.let { Math.round(it) }?.let { score ->
@@ -336,7 +335,7 @@ private fun DeleteSleepSheet(title: String, times: String, onDelete: () -> Unit,
             style = GlowType.body,
         )
         PageNote(SleepCopy.DELETE_RESTORE)
-        Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             PageButton(stringResource(R.string.glow_cancel), onDismiss, Modifier.weight(1f))
             PageButton(
                 stringResource(R.string.glow_delete), onDelete, Modifier.weight(1f), destructive = true, icon = AppIcons.Trash,
@@ -410,32 +409,6 @@ private fun EditedNote(text: String) {
 }
 
 /**
- * Stage bars (chart kit): each stage's name, a bar in its colour as long as its share of the night, and its time.
- * Under the hypnogram, deepest first.
- */
-@Composable
-private fun StageBars(b: Summaries.SleepBreakdown, modifier: Modifier = Modifier) {
-    val total = (b.asleepSeconds + b.awakeSeconds).coerceAtLeast(1)
-    val order = listOf(
-        org.openstrap.app.data.db.SleepStage.DEEP, org.openstrap.app.data.db.SleepStage.REM,
-        org.openstrap.app.data.db.SleepStage.LIGHT, org.openstrap.app.data.db.SleepStage.AWAKE,
-    )
-    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        order.forEach { st ->
-            val secs = b.byStage[st] ?: 0L
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(SLEEP_NAMES[st].orEmpty(), color = Color.White.copy(alpha = 0.85f), style = GlowType.secondary, modifier = Modifier.width(56.dp))
-                FillBar(secs.toFloat() / total, stageColor(st), Modifier.weight(1f), height = 10.dp)
-                Text(
-                    Units.duration(secs), color = Color.White, style = GlowType.secondary,
-                    modifier = Modifier.padding(start = 12.dp).width(56.dp), textAlign = androidx.compose.ui.text.style.TextAlign.End,
-                )
-            }
-        }
-    }
-}
-
-/**
  * The night's heart rate and breathing as lines with scrub (chart kit), each scrub moving the detail's headline
  * ([onScrub], null on release). Either is left out without readings. They sit below the fold, where the headline has
  * scrolled away, so a scrub also puts the reading in the line's own title row.
@@ -482,8 +455,8 @@ private fun ScrubLine(
     val step = 5 * 60L
     val values = remember(points, window) { bucket(points, window, step) }
     val resources = LocalResources.current
-    GlowLineChart(
-        values, height = height, labels = labels, color = color, showAverage = false,
+    DetailLineChart(
+        values, color, labels, height = height,
         onScrub = { i ->
             val headline = i?.let { values[it] }?.let { v ->
                 val at = resources.getString(R.string.glow_sleep_scrub_at, unit, clock(window.first + i * step))
@@ -530,7 +503,7 @@ internal fun RegularityDetail(
         item {
             if (w == null) DetailEmpty(stringResource(R.string.glow_sleep_none_week))
             else Column(Modifier.padding(top = 8.dp)) {
-                SleepWindows(w.nights, w.usual, zone, selected = state.date, onNight = onSelectDay, height = 200.dp)
+                DetailSleepWindows(w.nights, w.usual, zone, selected = state.date, onNight = onSelectDay, height = 200.dp)
                 val night = state.sleep
                 val u = w.usual
                 Caption(

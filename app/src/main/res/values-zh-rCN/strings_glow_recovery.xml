@@ -38,7 +38,6 @@
     <string name="glow_recovery_at_waking">起床时</string>
     <string name="glow_recovery_highest">最高</string>
     <string name="glow_recovery_lowest">最低</string>
-    <string name="glow_recovery_where_it_went">精力去向</string>
     <string name="glow_recovery_last_night">昨晚</string>
     <string name="glow_recovery_no_sleep">未记录到睡眠</string>
     <string name="glow_recovery_asleep">睡眠时长</string>

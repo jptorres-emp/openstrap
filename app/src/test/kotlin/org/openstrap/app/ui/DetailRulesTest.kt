@@ -42,11 +42,11 @@ class DetailRulesTest {
     }
 
     @Test fun `Recovery draws the arc gauge and Sleep score the horizon arc, both centred`() {
-        // Spec 2.7: the half circle arc gauge on Recovery's detail, the horizon arc on the Sleep score detail and
-        // nowhere else, nothing that glows, and neither sweeps in from zero.
-        assertTrue("Recovery holds its score in ArcGauge", Regex("""\bArcGauge\((score|shown) / 100f""").containsMatchIn(sources.getValue("glow/ScoreDetail.kt")))
-        assertTrue("Sleep score holds its score in HorizonArc", Regex("""\bHorizonArc\(score / 100f""").containsMatchIn(sources.getValue("glow/SleepDetail.kt")))
-        val home = mapOf("ArcGauge" to "glow/ScoreDetail.kt", "HorizonArc" to "glow/SleepDetail.kt")
+        // Board HaloDetailRecovery: the thin gauge (DetailGauge) holds the score on the score details, and the arcs of the chart
+        // kit stay for their cards: nothing that glows, and neither sweeps in from zero.
+        assertTrue("Recovery holds its score in DetailGauge", Regex("""\bDetailGauge\((score|shown) / 100f""").containsMatchIn(sources.getValue("glow/ScoreDetail.kt")))
+        assertTrue("Sleep score holds its score in DetailGauge", Regex("""\bDetailGauge\(score / 100f""").containsMatchIn(sources.getValue("glow/SleepDetail.kt")))
+        val home = emptyMap<String, String>()
         val found = sources.flatMap { (path, code) ->
             Regex("""\b(GlowHorizon|GlowArcGauge|ScoreGauge|ArcGauge|HorizonArc)\(""").findAll(code)
                 .filter { m -> val name = m.groupValues[1]; path != "glow/GlowCharts.kt" && home[name] != path }
@@ -62,7 +62,7 @@ class DetailRulesTest {
         val progress = charts.substringAfter("fun rememberGaugeProgress(").substringBefore("\n}\n")
         assertTrue("a gauge starts at its value, not at zero", "Animatable(target)" in progress)
         val template = sources.getValue("glow/GlowMetricDetail.kt").substringAfter("fun DetailTemplate(").substringBefore("\n}\n")
-        assertTrue("the gauge block is centred", Regex("""if \(gauge != null\) Column\(\s*[^\n]*CenterHorizontally""").containsMatchIn(template))
+        assertTrue("the gauge sits left of the status, centred on it", Regex("""if \(gauge != null\) Row\(\s*[^\n]*\s*verticalAlignment = Alignment.CenterVertically""").containsMatchIn(template))
     }
 
     @Test fun `every detail's header ends in the (i)`() {

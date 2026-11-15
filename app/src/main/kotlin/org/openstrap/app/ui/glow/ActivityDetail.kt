@@ -42,10 +42,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import org.openstrap.app.R
 import org.openstrap.app.data.Activity
-import org.openstrap.app.ui.glow.pictures.Blocks
 import org.openstrap.app.ui.glow.pictures.CountdownRing
-import org.openstrap.app.ui.glow.pictures.LevelFill
-import org.openstrap.app.ui.glow.pictures.PictureSize
 import org.openstrap.app.i18n.Strings
 import org.openstrap.app.data.DailyMetric
 import org.openstrap.app.data.RecoveryResult
@@ -183,7 +180,7 @@ private fun HeartPointsDetail(ctx: ActivityDetailContext) {
                 else StackedBars(
                     remember(daily) { dayOnDay(daily.map { it ?: 0f }) }, dayOnDayColor(color, daily.lastIndex),
                     ActivityCopy.HEART_POINTS_TARGET.toFloat(), week.map { DayWords.weekdayShort(it) }, spread = false,
-                    Modifier.padding(top = 8.dp), headroom = 18.dp, widest = Dp.Infinity,
+                    Modifier.padding(top = 8.dp), widest = Dp.Infinity,
                 ) { i ->
                     scrub = i?.let {
                         DetailHeadline(Math.round(daily[it] ?: 0f).toString(), ActivityCopy.earnedLabel(DayWords.short(week[it])), null)
@@ -201,9 +198,9 @@ private fun HeartPointsDetail(ctx: ActivityDetailContext) {
                 if (totals.all { it == null }) DetailEmpty(stringResource(R.string.glow_activity_no_heart_points_month))
                 else {
                     val values = totals.map { it?.toFloat() }
-                    NormalTrend(
-                        values, DetailCopy.levels(values, null), color,
-                        labels = listOf(0f, 1 / 3f, 2 / 3f, 1f).map { DayWords.dayMonth(month[((month.size - 1) * it).toInt()]) },
+                    DetailColumns(
+                        values, color, listOf(0f, 1 / 3f, 2 / 3f, 1f).map { DayWords.dayMonth(month[((month.size - 1) * it).toInt()]) },
+                        alpha = 0.75f,
                         onScrub = { i ->
                             scrub = i?.let { totals[it] }?.let { v ->
                                 val label = Strings.app.format(R.string.glow_activity_week_total_on, DayWords.short(month[i]))
@@ -281,32 +278,21 @@ private fun ActiveMinutesDetail(ctx: ActivityDetailContext) {
         ranges = ranges, range = range, onRange = { rangeIndex = ranges.indexOf(it) }, scrubbed = { scrub },
         // The figures are the held day's ([ActivityDetailContext.stripDate]), so they move when it does.
         headlineDay = date,
-        // The card's picture: the week's minutes as blocks toward the 150 to aim for. It's the week's number the card
-        // shows, so the blocks belong to Week, over the days that make them.
-        heroPicture = if (a != null && range == Range.Week) {
+        // The week's minutes toward the 150 to aim for, a solid bar (rules, Count), not the card's blocks.
+        heroBelow = if (a != null && range == Range.Week) {
             {
-                DetailPicture(height = 28.dp) { m ->
-                    Blocks(a.weekEquivalent, color, PictureSize.Wide, m, target = Activity.MVPA_WEEKLY_TARGET, perBlock = ACTIVE_BLOCK_MINUTES)
-                }
-                // What the blocks count, which the card leaves to its number.
-                androidx.compose.foundation.layout.Row(Modifier.fillMaxWidth().padding(top = 4.dp)) {
-                    Text(
-                        pluralStringResource(R.plurals.glow_activity_blocks_of, Activity.MVPA_WEEKLY_TARGET, a.weekEquivalent, Activity.MVPA_WEEKLY_TARGET),
-                        Modifier.weight(1f), color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary,
-                    )
-                    Text(
-                        pluralStringResource(R.plurals.glow_activity_block_is, ACTIVE_BLOCK_MINUTES, ACTIVE_BLOCK_MINUTES),
-                        color = Color.White.copy(alpha = GlowType.CAPTION_ALPHA), style = GlowType.caption,
-                    )
-                }
+                DetailGoalBar(
+                    a.weekEquivalent / Activity.MVPA_WEEKLY_TARGET.toFloat(), color,
+                    stringResource(R.string.glow_detail_of_goal, Activity.MVPA_WEEKLY_TARGET.toString()),
+                )
             }
         } else null,
     ) {
         if (a != null && range == Range.Week) {
             val values = week.map { (byDay[it]?.equivalent ?: 0).toFloat() }
             item {
-                GlowBars(
-                    values, height = 200.dp, labels = week.map { DayWords.weekdayShort(it) }, accent = color, modifier = Modifier.padding(top = 8.dp),
+                DetailColumns(
+                    values, color, week.map { DayWords.weekdayShort(it) }, alpha = 0.75f, modifier = Modifier.padding(top = 8.dp),
                     onScrub = { i ->
                         scrub = i?.let {
                             val label = Strings.app.format(R.string.glow_activity_minutes_on, DayWords.short(week[it]))
@@ -377,12 +363,22 @@ private fun LoadDetail(ctx: ActivityDetailContext) {
         ranges = ranges, range = range, onRange = { rangeIndex = ranges.indexOf(it) }, scrubbed = { scrub },
         // The figures are the held day's ([ActivityDetailContext.stripDate]), so they move when it does.
         headlineDay = ctx.state.date,
-        // The Load card's picture: today's Load filling over your usual band, as on Today and Activity.
-        heroPicture = if (r != null && range == Range.Day) {
-            { DetailPicture(height = 40.dp) { m -> LevelFill(r.load, band, color, PictureSize.Wide, m) } }
-        } else null,
     ) {
         if (r != null && range == Range.Day) {
+            // The last 7 days as columns, the day shown white, your usual band behind them as a range (rules, Week picture).
+            item {
+                val last7 = (WEEK_DAYS - 1 downTo 0).map { date.minusDays(it.toLong()) }
+                val loads = last7.map { byDay[it] }
+                DetailColumns(
+                    loads, color, last7.map { DayWords.weekdayShort(it) }, modifier = Modifier.padding(top = 8.dp),
+                    band = band, bandLabel = band?.let(ActivityCopy::usualBandLabel),
+                    onScrub = { i ->
+                        scrub = i?.let { loads[it] }?.let { v ->
+                            DetailHeadline(Math.round(v).toString(), DayWords.short(last7[i]), loadWordOf(v, usual))
+                        }
+                    },
+                )
+            }
             item {
                 Column(Modifier.padding(top = 8.dp)) {
                     DetailFigures(
@@ -399,9 +395,9 @@ private fun LoadDetail(ctx: ActivityDetailContext) {
         } else if (r != null) {
             item {
                 if (known.isEmpty()) DetailEmpty(pluralStringResource(R.plurals.glow_activity_no_load, range.days, range.days))
-                else NormalTrend(
-                    values, levels(values, band), color,
-                    labels = if (range == Range.Week) days.map { DayWords.weekdayShort(it) }
+                else DetailColumns(
+                    values, color,
+                    if (range == Range.Week) days.map { DayWords.weekdayShort(it) }
                     else listOf(0f, 1 / 3f, 2 / 3f, 1f).map { DayWords.dayMonth(days[((days.size - 1) * it).toInt()]) },
                     band = band, bandLabel = band?.let(ActivityCopy::usualBandLabel),
                     onScrub = { i ->
@@ -419,19 +415,19 @@ private fun LoadDetail(ctx: ActivityDetailContext) {
         if (t != null && t.ctl > 0f) item {
             // On Week the balance is the headline's word already.
             val title = stringResource(R.string.glow_activity_this_week)
-            ListPanel(Modifier.padding(top = 8.dp), title = title, note = balance.takeIf { range != Range.Week }) {
-                ListRow(
+            DetailPanel(Modifier.padding(top = 8.dp), title = title, note = balance.takeIf { range != Range.Week }) {
+                DetailRow(
                     stringResource(R.string.glow_activity_your_usual), color, Math.round(t.ctl).toString(),
                     stringResource(R.string.glow_activity_your_usual_line), divider = false,
                 )
-                ListRow(
+                DetailRow(
                     stringResource(R.string.glow_activity_last_7_days), color, Math.round(t.atl).toString(),
                     stringResource(R.string.glow_activity_last_7_days_line),
                 )
                 strap?.let { e ->
                     val low = e.optimalLoadMin
                     val high = e.optimalLoadMax
-                    ListRow(
+                    DetailRow(
                         stringResource(R.string.glow_activity_strap_weekly_load), color, e.weeklyLoad?.let(Math::round)?.toString(),
                         if (low != null && high != null) {
                             ActivityCopy.strapRange(low, high)
@@ -450,6 +446,9 @@ private fun LoadDetail(ctx: ActivityDetailContext) {
         notes = r?.let { InfoCopy.loadNotes(it.restingHr, it.maxHr, it.maxHrTested, it.acwr) }.orEmpty(),
     )
 }
+
+/** The days of the Load detail's Day picture. */
+private const val WEEK_DAYS = 7
 
 /** Each day's place against your usual band: above it lit, inside or below dim (a low day isn't off, just easy). */
 private fun levels(values: List<Float?>, band: ClosedFloatingPointRange<Float>?): List<DetailCopy.Level?> = values.map { v ->
@@ -493,11 +492,11 @@ private fun Vo2Detail(ctx: ActivityDetailContext) {
     ) {
         if (latest != null || est != null) item { DetailSentence(ActivityCopy.vo2(latest != null)) }
         if (readings.isNotEmpty() || (latest != null && est != null)) item {
-            ListPanel(Modifier.padding(top = 8.dp), title = stringResource(R.string.glow_activity_where_it_comes_from)) {
+            DetailPanel(Modifier.padding(top = 8.dp), title = stringResource(R.string.glow_activity_where_it_comes_from)) {
                 var first = true
                 readings.take(5).forEach { (w, v) ->
                     val start = Instant.ofEpochSecond(w.shownStart).atZone(zone)
-                    ListRow(
+                    DetailRow(
                         w.sportName, color, v.toString(),
                         stringResource(R.string.glow_activity_day_time, DayWords.short(start.toLocalDate()), clockOf(start)),
                         divider = !first,
@@ -506,7 +505,7 @@ private fun Vo2Detail(ctx: ActivityDetailContext) {
                     first = false
                 }
                 if (latest != null && est != null) {
-                    ListRow(
+                    DetailRow(
                         stringResource(R.string.glow_activity_from_your_profile), color, Vo2maxCopy.estimate(est.low, est.high),
                         stringResource(R.string.glow_activity_estimated_weekly), divider = !first,
                     )
@@ -576,13 +575,13 @@ private fun RecoverDetail(ctx: ActivityDetailContext) {
         // Recovered says which workout under the word already.
         if (source != null && shown?.first != null && ended != null) item { DetailSentence(ActivityCopy.recover(source.sportName, ended)) }
         if (rated.isNotEmpty()) item {
-            ListPanel(Modifier.padding(top = 8.dp), title = stringResource(R.string.glow_activity_recent_workouts)) {
+            DetailPanel(Modifier.padding(top = 8.dp), title = stringResource(R.string.glow_activity_recent_workouts)) {
                 rated.take(5).forEachIndexed { i, w ->
                     val start = Instant.ofEpochSecond(w.shownStart).atZone(zone)
                     // Its own, not what earlier workouts left on top ([SummaryCopy.carriedOver]).
                     val own = org.openstrap.app.ui.workout.SummaryCopy.recoverSpan(w.ownRecoveryMinutes ?: w.recoveryMinutes)
                         ?: stringResource(R.string.glow_activity_none)
-                    ListRow(
+                    DetailRow(
                         w.sportName, color, own,
                         stringResource(R.string.glow_activity_on_its_own, DayWords.short(start.toLocalDate()), clockOf(start)),
                         divider = i > 0, onClick = { ctx.onOpen(Detail.Workout(w.workout.start)) }, icon = org.openstrap.app.ui.theme.SportIcons.of(w.workout.sportType), iconTint = SportIconTint,
@@ -659,7 +658,7 @@ private fun CaloriesDetail(ctx: ActivityDetailContext) {
     ) {
         if (e == null || active == null) {
             if (ctx.r != null) item {
-                ListPanel(Modifier.padding(top = 8.dp)) { PageRow(ADD_PROFILE, onClick = ctx.onEditProfile, divider = false) }
+                DetailPanel(Modifier.padding(top = 8.dp)) { PageRow(ADD_PROFILE, onClick = ctx.onEditProfile, divider = false) }
             }
         } else if (range == Range.Day) {
             // The day toward the goal: the bar filled to its share, "102 to your goal of 450" under it.
@@ -700,13 +699,13 @@ private fun CaloriesDetail(ctx: ActivityDetailContext) {
             item {
                 val zone = ZoneId.systemDefault()
                 val sources = remember(ctx.workouts, date, e) { CaloriesCopy.sources(ctx.workouts, date, e, e.bmrKcal / 1440f, zone) }
-                ListPanel(Modifier.padding(top = 8.dp), title = stringResource(R.string.glow_activity_where_it_came_from)) {
+                DetailPanel(Modifier.padding(top = 8.dp), title = stringResource(R.string.glow_activity_where_it_came_from)) {
                     sources.forEachIndexed { i, s ->
                         val start = s.workoutStart
-                        if (start != null) ListRow(
+                        if (start != null) DetailRow(
                             s.name, color, Units.count(s.kcal), s.line, divider = i > 0, onClick = { ctx.onOpen(Detail.Workout(start)) },
                             icon = org.openstrap.app.ui.theme.SportIcons.of(s.sportType ?: 0), iconTint = SportIconTint,
-                        ) else ListRow(
+                        ) else DetailRow(
                             s.name, color, Units.count(s.kcal), s.line, divider = i > 0,
                             // Walking, then everyday moving, close the list ([CaloriesCopy.sources]).
                             icon = if (i < sources.lastIndex) Metric.Steps.rowIcon() else AppIcons.PersonArmsSpread,
@@ -755,12 +754,12 @@ private val EverydayKcal = Color.White.copy(alpha = 0.4f)
 private fun HourlyKcal(e: org.openstrap.app.data.EnergyExpenditure.Day, color: Color, onPick: (Int?) -> Unit) {
     val h = e.hourly
     val stacks = remember(h) { List(24) { listOf(h.workout[it], h.walking[it], h.everyday[it].coerceAtLeast(0f)) } }
-    PictureCard(color, Modifier.fillMaxWidth().padding(top = 8.dp)) {
-        EdgeTitle(stringResource(R.string.glow_activity_by_the_hour), CaloriesCopy.peak(h.total))
+    Column(Modifier.fillMaxWidth().padding(top = 8.dp)) {
+        DetailHeading(stringResource(R.string.glow_activity_by_the_hour), note = CaloriesCopy.peak(h.total))
         val colors = listOf(color, WalkingKcal, EverydayKcal)
         StackedBars(
             stacks, { _, k -> colors[k] }, goal = null, labels = listOf("00", "06", "12", "18", "24"), spread = true,
-            Modifier.padding(top = 16.dp), height = 120.dp, onPick = onPick,
+            Modifier.padding(top = 16.dp), height = 140.dp, onPick = onPick,
         )
         Legend(
             listOf(
@@ -826,72 +825,46 @@ private fun RangeKcal(
 }
 
 /**
- * Bars stacked from the foot, one list of parts a bar, each part in the colour [colorOf] gives it. An empty bar isn't
- * drawn, only the hairline baseline under them. [goal] draws a solid line at 40% white over the bars. The tallest bar
- * or the goal stops [headroom] under the top, and a bar is at most [widest]. Labels under it: one a bar, or [spread]
- * across the width. Tapping or holding picks a bar ([onPick], null on release), and the others dim.
+ * Bars stacked from the foot, one list of parts a bar, each part in the colour [colorOf] gives it, on the detail chart frame
+ * (gridlines, values in the right gutter, labels under). An empty bar isn't drawn. [goal] is a dashed line. A bar is at most
+ * [widest]. Labels under it: one a bar, or [spread] across the width. Scrubbing or tapping picks a bar ([onPick], null
+ * on release), and the others dim.
  */
 @Composable
 private fun StackedBars(
     stacks: List<List<Float>>, colorOf: (bar: Int, part: Int) -> Color, goal: Float?, labels: List<String>, spread: Boolean,
-    modifier: Modifier = Modifier, height: Dp = 200.dp, headroom: Dp = 8.dp, widest: Dp = 14.dp, onPick: (Int?) -> Unit,
+    modifier: Modifier = Modifier, height: Dp = 200.dp, widest: Dp = 14.dp, onPick: (Int?) -> Unit,
 ) {
     val sums = remember(stacks) { stacks.map { it.sum() } }
-    var picked by remember(stacks) { mutableStateOf<Int?>(null) }
-    var width by remember { mutableStateOf(0f) }
-    val tick = rememberScrubHaptics()
-    fun indexAt(x: Float) = if (width <= 0f || stacks.isEmpty()) null else (x / (width / stacks.size)).toInt().coerceIn(0, stacks.lastIndex)
-    Column(modifier) {
-        Canvas(
-            Modifier.fillMaxWidth().height(height).onSizeChanged { width = it.width.toFloat() }
-                .scrub(sums) { x -> val i = x?.let(::indexAt); picked = i; tick(i, sums, null, false); onPick(i) }
-                .pointerInput(stacks) {
-                    detectTapGestures { o ->
-                        val i = indexAt(o.x)
-                        picked = if (picked == i) null else i
-                        tick(picked, sums, null, false)
-                        onPick(picked)
-                    }
-                },
-        ) {
-            val top = headroom.toPx()
-            val hi = maxOf(goal ?: 0f, sums.maxOrNull() ?: 0f).coerceAtLeast(1f)
-            fun yOf(v: Float) = top + (size.height - top) * (1f - v / hi)
-            val slot = size.width / stacks.size.coerceAtLeast(1)
-            val w = (slot * 0.6f).coerceAtMost(widest.toPx())
-            val r = CornerRadius(minOf(4.dp.toPx(), w / 2))
-            drawLine(Color.White.copy(alpha = 0.08f), Offset(0f, size.height - 0.5.dp.toPx()), Offset(size.width, size.height - 0.5.dp.toPx()), 1.dp.toPx())
-            stacks.forEachIndexed { i, parts ->
-                val sum = sums[i]
-                if (sum <= 0f) return@forEachIndexed
-                val x = slot * i + (slot - w) / 2
-                val a = if (picked != null && picked != i) 0.35f else 1f
-                val bar = androidx.compose.ui.graphics.Path().apply {
-                    addRoundRect(androidx.compose.ui.geometry.RoundRect(x, yOf(sum), x + w, size.height, r))
-                }
-                clipPath(bar) {
-                    var below = 0f
-                    parts.forEachIndexed { k, v ->
-                        if (v <= 0f) return@forEachIndexed
-                        val c = colorOf(i, k)
-                        drawRect(c.copy(alpha = c.alpha * a), Offset(x, yOf(below + v)), Size(w, yOf(below) - yOf(below + v)))
-                        below += v
-                    }
+    val hi = maxOf(goal ?: 0f, sums.maxOrNull() ?: 0f).coerceAtLeast(1f)
+    val (scale, ticks) = remember(hi) { niceScale(0f, hi) }
+    DetailChart(
+        sums, scale, ticks, { Units.count(Math.round(it), Units.DOT_LOCALE) }, labels, modifier, height,
+        perColumn = !spread && labels.size == stacks.size, onScrub = onPick,
+    ) { plot, picked ->
+        val slot = plot.plotRight / stacks.size.coerceAtLeast(1)
+        val w = (slot * 0.6f).coerceAtMost(widest.toPx())
+        val r = CornerRadius(minOf(4.dp.toPx(), w / 2))
+        val base = plot.y(0f)
+        stacks.forEachIndexed { i, parts ->
+            val sum = sums[i]
+            if (sum <= 0f) return@forEachIndexed
+            val x = slot * i + (slot - w) / 2
+            val a = if (picked != null && picked != i) 0.35f else 1f
+            val bar = androidx.compose.ui.graphics.Path().apply {
+                addRoundRect(androidx.compose.ui.geometry.RoundRect(x, plot.y(sum), x + w, base, r))
+            }
+            clipPath(bar) {
+                var below = 0f
+                parts.forEachIndexed { k, v ->
+                    if (v <= 0f) return@forEachIndexed
+                    val c = colorOf(i, k)
+                    drawRect(c.copy(alpha = c.alpha * a), Offset(x, plot.y(below + v)), Size(w, plot.y(below) - plot.y(below + v)))
+                    below += v
                 }
             }
-            goal?.let { g -> val y = yOf(g); drawLine(Color.White.copy(alpha = 0.4f), Offset(0f, y), Offset(size.width, y), 1.dp.toPx()) }
         }
-        androidx.compose.foundation.layout.Row(
-            Modifier.fillMaxWidth().padding(top = 6.dp),
-            horizontalArrangement = if (spread) androidx.compose.foundation.layout.Arrangement.SpaceBetween else androidx.compose.foundation.layout.Arrangement.Start,
-        ) {
-            labels.forEach { l ->
-                Text(
-                    l, color = Color.White.copy(alpha = 0.55f), style = GlowType.secondary, maxLines = 1,
-                    modifier = if (spread) Modifier else Modifier.weight(1f), textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                )
-            }
-        }
+        goal?.let { g -> dashedGoalLine(plot.y(g), plot.plotRight) }
     }
 }
 
@@ -931,25 +904,25 @@ private fun ActivityRelated(current: Score, ctx: ActivityDetailContext, heartPoi
     val a = ctx.r?.activity
     val goal = org.openstrap.app.ui.dashboard.LocalGoals.current.steps
     val points = heartPoints ?: ctx.state.pai?.total?.let(Math::round)
-    ListPanel(Modifier.padding(top = 8.dp), title = stringResource(R.string.glow_metrics_related)) {
+    DetailPanel(Modifier.padding(top = 8.dp), title = stringResource(R.string.glow_metrics_related)) {
         var first = true
         fun divider() = !first.also { first = false }
-        ListRow(
+        DetailRow(
             Metric.Steps.title, MetricColors.steps, ctx.state.steps.takeIf { it > 0 }?.let { Units.count(it) },
             ActivityCopy.goalShare(ctx.state.steps, goal), onClick = { ctx.onOpen(Detail.OfMetric(Metric.Steps)) }, divider = divider(),
             icon = Metric.Steps.rowIcon(),
         )
-        if (current != Score.ActiveMinutes) ListRow(
+        if (current != Score.ActiveMinutes) DetailRow(
             Score.ActiveMinutes.title, MetricColors.steps, a?.weekEquivalent?.toString(),
             a?.let { TabCopy.activeMinutes(it.weekEquivalent, Activity.MVPA_WEEKLY_TARGET) } ?: NO_VALUE,
             onClick = { ctx.onOpen(Detail.OfScore(Score.ActiveMinutes)) }, divider = divider(), icon = Score.ActiveMinutes.rowIcon(),
         )
-        if (current != Score.HeartPoints) ListRow(
+        if (current != Score.HeartPoints) DetailRow(
             Score.HeartPoints.title, MetricColors.heart, points?.toString(),
             points?.let { TabCopy.heartPoints(it, ActivityCopy.HEART_POINTS_TARGET) } ?: AFTER_NEXT_SYNC,
             onClick = { ctx.onOpen(Detail.OfScore(Score.HeartPoints)) }, divider = divider(), icon = Score.HeartPoints.rowIcon(),
         )
-        if (current != Score.Load) ListRow(
+        if (current != Score.Load) DetailRow(
             Score.Load.title, MetricColors.load, ctx.r?.load?.let(Math::round)?.toString(),
             ctx.r?.let { TabCopy.loadUsual(it.chronicLoad) } ?: NO_VALUE,
             onClick = { ctx.onOpen(Detail.OfScore(Score.Load)) }, divider = divider(), icon = Score.Load.rowIcon(),
@@ -1026,8 +999,9 @@ internal fun WeekDetail(ctx: ActivityDetailContext) {
     ) {
         val values = days.map { (it.steps ?: 0).toFloat() }
         if (values.any { it > 0f }) item {
-            GlowBars(
-                values, height = 180.dp, labels = days.map { DayWords.weekdayShort(it.date) }, accent = MetricColors.steps, modifier = Modifier.padding(top = 8.dp),
+            DetailColumns(
+                values, MetricColors.steps, days.map { DayWords.weekdayShort(it.date) }, alpha = 0.75f,
+                goal = org.openstrap.app.ui.dashboard.LocalGoals.current.steps.toFloat(), modifier = Modifier.padding(top = 8.dp),
                 onScrub = { i ->
                     scrub = i?.let {
                         val label = Strings.app.format(R.string.glow_activity_steps_on, DayWords.short(days[it].date))
@@ -1049,9 +1023,9 @@ internal fun WeekDetail(ctx: ActivityDetailContext) {
         // The steps against the week before are the headline's word already, so the sentence leaves them out.
         WeekStory.sentence(days, null, workoutsBefore)?.let { item { DetailSentence(it) } }
         item {
-            ListPanel(Modifier.padding(top = 8.dp), title = stringResource(R.string.glow_activity_day_by_day)) {
+            DetailPanel(Modifier.padding(top = 8.dp), title = stringResource(R.string.glow_activity_day_by_day)) {
                 WeekStory.rows(days).forEachIndexed { i, r ->
-                    ListRow(r.title, MetricColors.steps, r.steps?.let { Units.count(it) }, r.line, divider = i > 0, dash = false)
+                    DetailRow(r.title, MetricColors.steps, r.steps?.let { Units.count(it) }, r.line, divider = i > 0, dash = false)
                 }
             }
         }

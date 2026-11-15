@@ -56,15 +56,11 @@
     <string name="glow_tag_about">About <xliff:g id="tag" example="partial day">%1$s</xliff:g></string>
 
     <!-- The info sheet's folded rows, which open onto how a number is calculated. One line each. -->
-    <string name="glow_info_how">How it\'s calculated</string>
-    <!-- The info sheet's folded row about what raises and lowers a number. -->
-    <string name="glow_info_moves">What moves it</string>
+    <string name="glow_info_what">What it is</string>
+    <string name="glow_info_normal">What\'s normal for you</string>
+    <string name="glow_info_how">How it\'s worked out</string>
     <!-- The info sheet's folded row about why a number might be wrong. -->
     <string name="glow_info_off">Why it might be off</string>
-    <!-- What a tap on an open folded row does, for screen readers. -->
-    <string name="glow_info_fold">Collapse</string>
-    <!-- What a tap on a folded row does, for screen readers. -->
-    <string name="glow_info_open">Expand</string>
 
     <!-- The tabletop page (the phone half folded): its card's title. -->
     <string name="glow_tabletop_heart_rate">Heart rate</string>

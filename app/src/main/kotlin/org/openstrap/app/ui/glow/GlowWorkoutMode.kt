@@ -35,7 +35,7 @@ import org.openstrap.app.ui.components.PinnedFade
 import org.openstrap.app.ui.components.pinnedFade
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -155,7 +155,7 @@ internal fun WorkoutButton(
 ) {
     Row(
         modifier.fillMaxWidth().height(height)
-            .clip(RoundedCornerShape(50)).background(background).pressClickable(onClick, RoundedCornerShape(50)),
+            .clip(CircleShape).background(background).pressClickable(onClick, CircleShape),
         horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically,
     ) {
         if (icon != null) {

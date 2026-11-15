@@ -11,8 +11,10 @@ import org.openstrap.app.ui.theme.ControlSurface
 import java.io.File
 
 /**
- * The details' rules (spec 2.3, 3.4, 6.1, 6.2, audit step 7): one dotted number a detail, one page header on every
- * page, and controls in the design system's own style. Scans the code under ui/, comments left out.
+ * The details' rules (docs/design/halo/detail-rules.md sections 1 to 3, boards HaloDetailRecovery, HaloDetailSteps and
+ * HaloDetailHabitAge): one dotted number a detail, one frame with one header on every page, and controls in the design
+ * system's own style. Scans the code under ui/, comments left out. Dotted charts in the pictures are guarded by
+ * HaloRulesTest.
  */
 class DetailRulesTest {
     private val root: File = listOf(File("src/main"), File("app/src/main")).first { it.isDirectory }
@@ -26,6 +28,7 @@ class DetailRulesTest {
 
     private fun lineOf(code: String, at: Int) = code.substring(0, at).count { it == '\n' } + 1
 
+    /** Detail rules section 1.3 (headline) and 1.8 (figures row are plain text): the header's number is the only dotted one. */
     @Test fun `a detail's one dotted number is its header`() {
         // Spec 2.3: times, ranges, totals and second figures are text (DetailFigures), never a row of dotted figures.
         val dotted = Regex("""\b(FigureRow|HeroFigure|HeroNumber|EdgeValue)\(""")
@@ -65,6 +68,7 @@ class DetailRulesTest {
         assertTrue("the gauge sits left of the status, centred on it", Regex("""if \(gauge != null\) Row\(\s*[^\n]*\s*verticalAlignment = Alignment.CenterVertically""").containsMatchIn(template))
     }
 
+    /** Detail rules section 1.2: the header is back, title, (i), in a 96 / 1fr / 96 grid. */
     @Test fun `every detail's header ends in the (i)`() {
         // Spec 2.5 and 6.1: the (i) at the right of every detail's header, nothing else there.
         val nav = sources.getValue("glow/GlowMetricDetail.kt").substringAfter("private fun DetailNav(").substringBefore("\n}\n")
@@ -76,6 +80,7 @@ class DetailRulesTest {
         }
     }
 
+    /** Detail rules section 1.2 and settings rules B1: back is the 44 squircle from PageHeader, never a page's own arrow. */
     @Test fun `every page has the one page header`() {
         // Spec 3.4: the round back button and the page title, from PageHeader. No bare arrow of a page's own.
         val found = sources.filterKeys { it != "glow/PageParts.kt" && it !in HEADER_NOT_MIGRATED }.flatMap { (path, code) ->
@@ -86,6 +91,7 @@ class DetailRulesTest {
         assertEquals(Color(0xFF1F1F22), ControlSurface)
     }
 
+    /** Detail rules section 3 and workout rules section 5: no coloured switch in a detail, no type of its own. */
     @Test fun `details use the design system's controls and type`() {
         // Audit step 7: no coloured switch in a detail header, and no type of a detail's own (spec 2.3, 6.2).
         val found = (DETAILS + "glow/InfoSheet.kt").flatMap { path ->

@@ -15,7 +15,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import org.openstrap.app.ui.theme.MetricColors
@@ -100,7 +99,7 @@ internal fun LiveMapScreen(
                 Spacer(Modifier.weight(1f))
                 val acc = route.lastOrNull()?.accuracy
                 Row(
-                    Modifier.height(32.dp).clip(RoundedCornerShape(50)).background(OverMap).padding(horizontal = 12.dp),
+                    Modifier.height(32.dp).clip(CircleShape).background(OverMap).padding(horizontal = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Box(Modifier.size(6.dp).clip(CircleShape).background(if (acc != null &&

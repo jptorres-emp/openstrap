@@ -67,12 +67,11 @@ fun DotMatrixText(
 
 /**
  * The pill switch (HaloRewardsSettingsRules board, B3), 50 by 30: white with a black knob when on, #2A2C33 with a grey
- * knob (#8A909A) when off. Never a colour: [accent] is kept for callers' signatures and ignored, since a switch track is
- * white when on, not a sport's colour.
+ * knob (#8A909A) when off. Never a colour: a switch track is white when on, not a sport's (workout rules section 5,
+ * guarded by HaloRulesTest).
  */
-@Suppress("UNUSED_PARAMETER")
 @Composable
-fun GlowSwitch(checked: Boolean, onCheckedChange: (Boolean) -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true, accent: Color? = null) {
+fun GlowSwitch(checked: Boolean, onCheckedChange: (Boolean) -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true) {
     val track by animateColorAsState(if (checked) Color.White else Color(0xFF2A2C33), label = "glow switch track")
     val knobColor by animateColorAsState(if (checked) Color.Black else Color(0xFF8A909A), label = "glow switch knob colour")
     val knob by animateDpAsState(if (checked) 20.dp else 0.dp, spring(dampingRatio = 0.6f, stiffness = 500f), label = "glow switch knob")

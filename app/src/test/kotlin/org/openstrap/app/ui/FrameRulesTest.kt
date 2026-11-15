@@ -36,13 +36,15 @@ import org.openstrap.app.ui.glow.valueBeside
 import java.io.File
 
 /**
- * The frame's rules (spec 2.4 Unfolded, 3.2, 3.5): the fade behind the tab bar, You and Strap growing from their
- * buttons, and the layout on an unfolded screen.
+ * The frame's rules that Halo keeps (plan section 1, workout rules section 1 for the 120 dp fade under pinned buttons):
+ * the fade behind the tab bar, You and Strap growing from their buttons, and the layout on an unfolded screen. These
+ * check behaviour and layout numbers, not the Glow x Glass look, so none changed with Halo.
  */
 class FrameRulesTest {
     private val root: File = listOf(File("src/main"), File("app/src/main")).first { it.isDirectory }
     private fun source(path: String) = File(root, "kotlin/org/openstrap/app/$path").readText()
 
+    /** Workout rules section 1: the 120 px fade to black behind a bottom bar, the tab bar's too. */
     @Test fun `the fade behind the tab bar is 120 dp, solid black for its lower 45 percent`() {
         assertEquals(120.dp, TabBarFade.Height)
         val stops = TabBarFade.stops
@@ -58,6 +60,7 @@ class FrameRulesTest {
         assertTrue("FloatingNavBar draws TabBarFade behind the pill", "TabBarFade.brush(" in body && "drawBehind" in body)
     }
 
+    /** Halo page growth (plan wave 2): a page starts as its button's squircle outline and ends as the page. */
     @Test fun `a page starts as its button's circle and ends as the page`() {
         val button = Rect(Offset(16f, 40f), androidx.compose.ui.geometry.Size(38f, 38f))
         val page = Rect(0f, 0f, 400f, 800f)
@@ -245,6 +248,7 @@ class FrameRulesTest {
         assertTrue(valueBeside(nameWidth = 85, valueWidth = 103, available = 200, gap = 12))
     }
 
+    /** Settings rules B3 (row types): the name is one line in every row type. */
     @Test fun `row names keep to one line in every list row`() {
         val parts = source("ui/glow/PageParts.kt")
         val name = parts.substringAfter("internal fun RowName(").substringBefore("\n\n")
@@ -270,6 +274,7 @@ class FrameRulesTest {
         assertEquals(100.dp + 66.dp - 24.dp, PinnedFade.listClearance(100.dp, listEnd = 24.dp))
     }
 
+    /** Workout rules section 1: the 120 px fade behind every bottom bar (Ready, Live, Summary). */
     @Test fun `every pinned button has the fade behind it and the page ends clear of it`() {
         val workout = source("ui/glow/GlowWorkoutMode.kt").substringAfter("fun WorkoutPage(").substringBefore("\n}\n")
         assertTrue("WorkoutPage's pinned buttons (Start, Done, Choose the sport) have the fade", ".pinnedFade()" in workout)

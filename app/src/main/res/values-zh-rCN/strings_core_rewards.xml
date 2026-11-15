@@ -5,6 +5,10 @@
     <string name="core_rewards_best_longest_run">最长跑步</string>
     <string name="core_rewards_best_longest_workout">最长运动</string>
     <string name="core_rewards_best_most_steps">单日最多步数</string>
+    <string name="core_rewards_best_most_rounds">最多轮数</string>
+    <plurals name="core_rewards_rounds">
+        <item quantity="other">%1$s 轮</item>
+    </plurals>
     <string name="core_rewards_best_personal">个人最佳</string>
     <string name="core_rewards_half_marathon">半程马拉松</string>
     <string name="core_rewards_km">%1$d km</string>
@@ -15,11 +19,13 @@
     <string name="core_rewards_beat_farther">远了 %1$s</string>
     <string name="core_rewards_beat_longer">长了 %1$d 分钟</string>
     <string name="core_rewards_beat_more">多了 %1$s 步</string>
+    <string name="core_rewards_beat_rounds">多了 %1$s 轮</string>
     <string name="core_rewards_beat_line_faster">比你在 %2$s 的最佳纪录快了 %1$s。</string>
     <string name="core_rewards_beat_line_kg_more">比你在 %2$s 的最佳纪录增加了 %1$s kg。</string>
     <string name="core_rewards_beat_line_farther">比你在 %2$s 的最佳纪录远了 %1$s。</string>
     <string name="core_rewards_beat_line_longer">比你在 %2$s 的最佳纪录长了 %1$d 分钟。</string>
     <string name="core_rewards_beat_line_more">比你在 %2$s 的最佳纪录多了 %1$s 步。</string>
+    <string name="core_rewards_beat_line_rounds">比你在 %2$s 的最佳纪录多了 %1$s 轮。</string>
     <plurals name="core_rewards_goal_weeks_in_a_row">
         <item quantity="other">连续 %1$d 周</item>
     </plurals>

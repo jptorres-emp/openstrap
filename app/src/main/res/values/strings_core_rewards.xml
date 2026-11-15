@@ -12,6 +12,12 @@
     <string name="core_rewards_best_longest_run">Longest run</string>
     <string name="core_rewards_best_longest_workout">Longest workout</string>
     <string name="core_rewards_best_most_steps">Most steps in a day</string>
+    <string name="core_rewards_best_most_rounds">Most rounds</string>
+    <!-- A personal best's value: how many rounds a HIIT or interval workout finished. The number has the phone's thousands mark. -->
+    <plurals name="core_rewards_rounds">
+        <item quantity="one"><xliff:g id="rounds" example="1">%1$s</xliff:g> round</item>
+        <item quantity="other"><xliff:g id="rounds" example="12">%1$s</xliff:g> rounds</item>
+    </plurals>
     <string name="core_rewards_best_personal">Personal best</string>
     <!-- A race distance, inside "Fastest half marathon". In lower case. -->
     <string name="core_rewards_half_marathon">half marathon</string>
@@ -32,12 +38,16 @@
     <string name="core_rewards_beat_longer"><xliff:g id="minutes" example="4">%1$d</xliff:g> min longer</string>
     <!-- How far a new best beat the old one: more steps. The number has the phone's thousands mark. -->
     <string name="core_rewards_beat_more"><xliff:g id="steps" example="1,240">%1$s</xliff:g> more steps</string>
+    <!-- How far a new best beat the old one: more rounds. -->
+    <string name="core_rewards_beat_rounds"><xliff:g id="rounds" example="3">%1$s</xliff:g> more</string>
     <!-- The best card's sentence: how far it beat the old best, and the month of the old best ("August", or "August 2025" in another year). -->
     <string name="core_rewards_beat_line_faster"><xliff:g id="time" example="22 s">%1$s</xliff:g> faster than your best from <xliff:g id="month" example="August">%2$s</xliff:g>.</string>
     <string name="core_rewards_beat_line_kg_more"><xliff:g id="kg" example="2.5">%1$s</xliff:g> kg more than your best from <xliff:g id="month" example="August">%2$s</xliff:g>.</string>
     <string name="core_rewards_beat_line_farther"><xliff:g id="distance" example="1.23 km">%1$s</xliff:g> farther than your best from <xliff:g id="month" example="August">%2$s</xliff:g>.</string>
     <string name="core_rewards_beat_line_longer"><xliff:g id="minutes" example="4">%1$d</xliff:g> min longer than your best from <xliff:g id="month" example="August">%2$s</xliff:g>.</string>
     <string name="core_rewards_beat_line_more"><xliff:g id="steps" example="1,240">%1$s</xliff:g> more steps than your best from <xliff:g id="month" example="August">%2$s</xliff:g>.</string>
+    <!-- The best card's sentence for rounds: how many more, and the month of the old best. -->
+    <string name="core_rewards_beat_line_rounds"><xliff:g id="rounds" example="3">%1$s</xliff:g> more than your best from <xliff:g id="month" example="August">%2$s</xliff:g>.</string>
 
     <!-- The weekly goal row under Earned, its note: the goal met this many weeks in a row. Used from 2 weeks up. -->
     <plurals name="core_rewards_goal_weeks_in_a_row">

@@ -144,4 +144,7 @@
     <string name="you_error_hc"><xliff:g id="what" example="Couldn't copy to Health Connect">%1$s</xliff:g>. <xliff:g id="reason" example="Try again.">%2$s</xliff:g></string>
     <string name="you_error_hc_permission">unstrap no longer has permission. Allow it in Health Connect.</string>
     <string name="you_error_hc_no_answer">Health Connect didn\'t answer. Try again.</string>
+    <!-- Backup page banner (Halo) and the Health Connect page's note under Copy now and Restore. -->
+    <string name="you_backup_banner_failed">Last backup failed</string>
+    <string name="you_hc_actions_note">Copy now sends the last 30 days. Restore brings back what unstrap saved there.</string>
 </resources>

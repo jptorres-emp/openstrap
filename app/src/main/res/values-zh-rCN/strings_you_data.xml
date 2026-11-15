@@ -86,4 +86,6 @@
     <string name="you_error_hc">%1$s。%2$s</string>
     <string name="you_error_hc_permission">unstrap 已失去权限。请在 Health Connect 中允许访问。</string>
     <string name="you_error_hc_no_answer">Health Connect 没有响应。请重试。</string>
+    <string name="you_backup_banner_failed">上次备份失败</string>
+    <string name="you_hc_actions_note">立即复制会发送最近 30 天的数据。恢复会找回 unstrap 保存在那里的数据。</string>
 </resources>

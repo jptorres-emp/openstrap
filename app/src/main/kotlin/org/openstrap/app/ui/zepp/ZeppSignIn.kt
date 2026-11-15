@@ -14,6 +14,16 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.ui.unit.sp
+import org.openstrap.app.ui.glow.HaloButtonSurface
+import org.openstrap.app.ui.glow.PageFootnote
+import org.openstrap.app.ui.glow.PageHeaderHeight
+import org.openstrap.app.ui.glow.PageInfoRow
+import org.openstrap.app.ui.glow.PageRow
+import org.openstrap.app.ui.glow.PageRows
+import org.openstrap.app.ui.glow.RoundIconButton
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -53,11 +63,9 @@ import org.openstrap.app.OpenStrapApp
 import org.openstrap.app.data.catching
 import org.openstrap.app.device.StrapManager
 import org.openstrap.app.ui.device.ErrorCopy
-import org.openstrap.app.ui.theme.ControlSurface
 import org.openstrap.app.ui.glow.GlowLayout
 import org.openstrap.app.ui.glow.GlowType
 import org.openstrap.app.ui.glow.PageButton
-import org.openstrap.app.ui.glow.OptionButton
 import org.openstrap.app.ui.glow.PageNote
 import org.openstrap.app.ui.glow.PagePanel
 import org.openstrap.app.ui.glow.PageProgress
@@ -144,45 +152,55 @@ fun ZeppSignInDialog(
         // Black to the screen's edges, the page itself in one centred column like every other page (spec 2.4).
         Box(Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.TopCenter) {
             Column(Modifier.widthIn(max = GlowLayout.PageMaxWidth).fillMaxSize()) {
-                // A page's top: the round button (a close, since this sits over the page it came from) and the title.
+                // The page's top (HaloZeppSignIn board): the close button at the left, the title centred, Reset at the right,
+                // in the header's 96 / 1fr / 96 grid.
                 val close = stringResource(R.string.you_zepp_close)
-                Row(Modifier.fillMaxWidth().height(60.dp).padding(horizontal = GlowLayout.Gutter), verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        Modifier.size(44.dp).clip(CircleShape).background(ControlSurface)
-                            .clickable(onClickLabel = close, onClick = onDismiss),
-                        contentAlignment = Alignment.Center,
-                    ) { Icon(AppIcons.X, close, Modifier.size(20.dp), tint = Color.White) }
-                    Spacer(Modifier.width(12.dp))
+                Row(
+                    Modifier.fillMaxWidth().height(PageHeaderHeight).padding(horizontal = GlowLayout.Gutter).padding(top = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(Modifier.width(96.dp), contentAlignment = Alignment.CenterStart) {
+                        RoundIconButton(AppIcons.X, close, onDismiss, size = 44.dp, iconSize = 18.dp)
+                    }
                     Text(
                         stringResource(R.string.you_zepp_sign_in_title), color = Color.White, style = GlowType.pageTitle, maxLines = 1,
-                        modifier = Modifier.weight(1f),
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.weight(1f),
                     )
-                    if (step is SignInStep.SignIn) {
-                        PageTextButton(stringResource(R.string.you_zepp_reset), { clearZeppCookies(); attempt++ })
+                    Box(Modifier.width(96.dp), contentAlignment = Alignment.CenterEnd) {
+                        if (step is SignInStep.SignIn) PageTextButton(stringResource(R.string.you_zepp_reset), { clearZeppCookies(); attempt++ })
                     }
                 }
                 when (val s = step) {
                     SignInStep.SignIn -> {
-                        // The intro can be hidden, in case Zepp's page needs the room on a short screen.
+                        // The intro can be hidden, in case Zepp's page needs the room on a short screen. Zepp's own page sits in a
+                        // panel, then the note on what unstrap reads, then the way to a computer (HaloZeppSignIn board).
                         if (showIntro) {
-                            Row(Modifier.padding(start = GlowLayout.Gutter, end = GlowLayout.Gutter, top = 4.dp, bottom = 4.dp)) {
-                                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                    Text(stringResource(R.string.you_zepp_sign_in_text), color = Color.White, style = GlowType.body)
-                                    PageNote(stringResource(R.string.you_zepp_sign_in_note))
-                                }
+                            Row(Modifier.padding(start = GlowLayout.Gutter, end = GlowLayout.Gutter, top = 16.dp, bottom = 4.dp)) {
+                                Text(
+                                    stringResource(R.string.you_zepp_sign_in_text), Modifier.weight(1f).padding(horizontal = 4.dp),
+                                    color = Color(0xFFC9CED6), style = GlowType.body.copy(fontSize = 14.sp),
+                                )
                                 Spacer(Modifier.width(8.dp))
                                 val hide = stringResource(R.string.you_action_hide)
                                 Box(
-                                    Modifier.size(32.dp).clip(CircleShape).background(ControlSurface)
+                                    Modifier.size(32.dp).clip(GlowLayout.IconShape).background(HaloButtonSurface)
                                         .clickable(onClickLabel = hide, onClick = { showIntro = false }),
                                     contentAlignment = Alignment.Center,
                                 ) { Icon(AppIcons.CaretDown, hide, Modifier.size(18.dp).rotate(UP_DEGREES), tint = Color.White) }
                             }
                         }
                         key(attempt) {
-                            ZeppWebView(Modifier.fillMaxWidth().weight(1f).padding(top = 8.dp)) { provider ->
-                                step = SignInStep.ThirdParty(provider)
-                            }
+                            ZeppWebView(
+                                Modifier.fillMaxWidth().weight(1f).padding(horizontal = GlowLayout.Gutter, vertical = 12.dp)
+                                    .clip(GlowLayout.CardShape),
+                            ) { provider -> step = SignInStep.ThirdParty(provider) }
+                        }
+                        Column(
+                            Modifier.padding(start = GlowLayout.Gutter, end = GlowLayout.Gutter, bottom = 16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            PageFootnote(stringResource(R.string.you_zepp_sign_in_note))
+                            ComputerGuideButton()
                         }
                     }
                     SignInStep.Fetching -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -241,8 +259,19 @@ private fun FoundStrap(
     val strap = listing.helioStrap
     val canConfirm = strap != null && (strap.authKey != null || !requireKey)
     var showKey by remember { mutableStateOf(false) }
-    Column(Modifier.verticalScroll(rememberScrollState()).padding(GlowLayout.Gutter), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        PagePanel(title = stringResource(if (strap != null) R.string.you_zepp_found else R.string.you_zepp_not_found)) {
+    // The board draws this as a sheet over the pairing page: the dialog is its own window, so it is drawn here, at the
+    // foot, on the sheet's #111215 under the same dim (HaloPairFound board).
+    Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.62f)), contentAlignment = Alignment.BottomCenter) {
+        Column(
+            Modifier.widthIn(max = GlowLayout.PageMaxWidth).fillMaxWidth().clip(GlowLayout.SheetShape).background(Color(0xFF111215))
+                .verticalScroll(rememberScrollState()).navigationBarsPadding().padding(start = 20.dp, end = 20.dp, top = 10.dp, bottom = 28.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            Box(Modifier.align(Alignment.CenterHorizontally).size(width = 40.dp, height = 5.dp).clip(CircleShape).background(Color(0xFF3A3D45)))
+            Text(
+                stringResource(if (strap != null) R.string.you_zepp_found else R.string.you_zepp_not_found),
+                color = Color.White, style = GlowType.sheetTitle,
+            )
             if (strap == null) {
                 Text(
                     if (listing.devices.isEmpty()) {
@@ -250,63 +279,49 @@ private fun FoundStrap(
                     } else {
                         pluralStringResource(R.plurals.you_zepp_account_other_devices, listing.devices.size, listing.devices.size)
                     },
-                    color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.body,
+                    color = Color(0xFFC9CED6), style = GlowType.body,
                 )
             } else {
-                Line(stringResource(R.string.you_pair_address), strap.macAddress)
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        stringResource(R.string.you_pair_key), color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA),
-                        style = GlowType.body, modifier = Modifier.weight(1f),
-                    )
-                    Text(
-                        when {
-                            strap.authKey == null -> stringResource(R.string.you_zepp_key_missing)
-                            showKey -> strap.authKey
-                            else -> "•".repeat(8) + strap.authKey.takeLast(4)
-                        },
-                        color = Color.White, style = GlowType.body.copy(fontFamily = FontFamily.Monospace),
-                    )
-                    if (strap.authKey != null) {
-                        PageTextButton(
-                            stringResource(if (showKey) R.string.you_action_hide else R.string.you_action_show), { showKey = !showKey },
+                PageRows {
+                    PageInfoRow(stringResource(R.string.you_pair_address), strap.macAddress, divider = false)
+                    Row(Modifier.fillMaxWidth().heightIn(min = 52.dp).padding(start = 16.dp, end = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(stringResource(R.string.you_pair_key), color = Color.White, style = GlowType.body, modifier = Modifier.weight(1f))
+                        Text(
+                            when {
+                                strap.authKey == null -> stringResource(R.string.you_zepp_key_missing)
+                                showKey -> strap.authKey
+                                else -> "•".repeat(8) + strap.authKey.takeLast(4)
+                            },
+                            color = GlowType.noteColor, style = GlowType.body.copy(fontFamily = FontFamily.Monospace),
                         )
+                        if (strap.authKey != null) {
+                            PageTextButton(
+                                stringResource(if (showKey) R.string.you_action_hide else R.string.you_action_show), { showKey = !showKey },
+                            )
+                        }
                     }
+                    strap.serial?.let { PageInfoRow(stringResource(R.string.you_zepp_serial), it) }
+                    strap.firmwareVersion?.let { PageInfoRow(stringResource(R.string.you_firmware_title), it) }
+                    PageInfoRow(
+                        stringResource(R.string.you_zepp_region),
+                        stringResource(if (strap.china) R.string.you_zepp_region_china else R.string.you_zepp_region_global),
+                    )
+                    PageInfoRow(stringResource(R.string.you_zepp_user), listing.session.userId)
                 }
-                strap.serial?.let { Line(stringResource(R.string.you_zepp_serial), it) }
-                strap.firmwareVersion?.let { Line(stringResource(R.string.you_firmware_title), it) }
-                Line(
-                    stringResource(R.string.you_zepp_region),
-                    stringResource(if (strap.china) R.string.you_zepp_region_china else R.string.you_zepp_region_global),
-                )
-                if (strap.authKey == null) {
-                    PageNote(stringResource(R.string.you_zepp_no_key), color = MetricColors.warn)
-                }
+                if (strap.authKey == null) PageNote(stringResource(R.string.you_zepp_no_key), color = MetricColors.warn)
             }
-            Line(stringResource(R.string.you_zepp_user), listing.session.userId)
+            if (canConfirm && requireKey) PageNote(stringResource(R.string.you_zepp_keep_on_charger))
+            PageNote(stringResource(R.string.you_zepp_token_stays))
+            if (!canConfirm && requireKey) ComputerGuideButton()
+            // Another account (dark) and the confirming tap (white), half and half; a lone sign-in is kept the same way.
+            Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                PageButton(stringResource(R.string.you_zepp_other_account), onOtherAccount, Modifier.weight(1f))
+                PageButton(
+                    if (canConfirm) confirmLabel else stringResource(R.string.you_zepp_keep_sign_in), { onConfirm(strap) },
+                    Modifier.weight(1f), primary = true,
+                )
+            }
         }
-        if (canConfirm && requireKey) {
-            PageNote(stringResource(R.string.you_zepp_keep_on_charger))
-        }
-        PageNote(stringResource(R.string.you_zepp_token_stays))
-        PageButton(
-            if (canConfirm) confirmLabel else stringResource(R.string.you_zepp_keep_sign_in), { onConfirm(strap) }, Modifier.fillMaxWidth(),
-            primary = true,
-        )
-        PageButton(stringResource(R.string.you_zepp_other_account), onOtherAccount, Modifier.fillMaxWidth())
-        if (!canConfirm && requireKey) ComputerGuideButton()
-    }
-}
-
-@Composable
-private fun Line(label: String, value: String) {
-    // The label is measured first and keeps to one line (spec 2.3), and the value takes what's left, ellipsized last.
-    Row(Modifier.fillMaxWidth()) {
-        Text(label, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.body, maxLines = 1, modifier = Modifier.padding(end = 12.dp))
-        Text(
-            value, color = Color.White, style = GlowType.body, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-            textAlign = androidx.compose.ui.text.style.TextAlign.End, modifier = Modifier.weight(1f),
-        )
     }
 }
 
@@ -314,10 +329,13 @@ private fun Line(label: String, value: String) {
 @Composable
 fun ComputerGuideButton(modifier: Modifier = Modifier.fillMaxWidth()) {
     val uri = LocalUriHandler.current
-    OptionButton(
-        stringResource(R.string.you_zepp_guide), stringResource(R.string.you_zepp_guide_note), { uri.openUri(COMPUTER_KEY_GUIDE_URL) },
-        modifier,
-    )
+    // A nav row on its own panel (HaloPair and HaloZeppSignIn boards).
+    PageRows(modifier) {
+        PageRow(
+            stringResource(R.string.you_zepp_guide), stringResource(R.string.you_zepp_guide_note), onClick = { uri.openUri(COMPUTER_KEY_GUIDE_URL) },
+            below = true, divider = false, icon = AppIcons.Info,
+        )
+    }
 }
 
 @SuppressLint("SetJavaScriptEnabled")

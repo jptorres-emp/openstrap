@@ -136,4 +136,17 @@
     <string name="you_row_version">版本</string>
     <string name="you_version_value">unstrap %1$s</string>
     <string name="you_data_footnote">所有内容都留在本手机上。unstrap 没有账号，也不会发送任何数据。</string>
+    <string name="you_updates_ready">unstrap %1$s 已可安装</string>
+    <string name="you_updates_install">安装</string>
+    <string name="you_strap_group_on_strap">手环上</string>
+    <string name="you_strap_group_software">软件</string>
+    <string name="you_strap_row_app_updates">应用更新</string>
+    <string name="you_strap_no_strap">还没有手环</string>
+    <string name="you_strap_last_read">为上次从手环读取的内容。</string>
+    <string name="you_strap_away_note">请把手环放在充电座上并靠近手机，同时确保 Zepp 应用没有在运行。手环一次只能与一个应用通信。</string>
+    <string name="you_strap_key_rejected_note">重试没有用。请重新配对，从 Zepp 获取手环当前的密钥。</string>
+    <string name="you_strap_forget_note">忘记手环会从本手机删除它的地址和认证密钥。已同步的健康数据会保留。</string>
+    <string name="you_updates_view">查看</string>
+    <string name="you_pair_key_placeholder">32 个字符，0 到 9 和 a 到 f</string>
+    <string name="you_diagnostics_note">用于提交问题反馈。复制会把完整日志放到剪贴板。</string>
 </resources>

@@ -44,6 +44,9 @@ import org.openstrap.app.ui.glow.CardTitle
 import org.openstrap.app.ui.glow.GlowLayout
 import org.openstrap.app.ui.glow.GlowType
 import org.openstrap.app.ui.glow.PageButton
+import org.openstrap.app.ui.glow.PageActionRow
+import org.openstrap.app.ui.glow.PageGroup
+import org.openstrap.app.ui.glow.PageInfoRow
 import org.openstrap.app.ui.glow.PageConfirm
 import org.openstrap.app.ui.glow.PageField
 import org.openstrap.app.ui.glow.PageProgress
@@ -51,7 +54,6 @@ import org.openstrap.app.ui.glow.PageHeader
 import org.openstrap.app.ui.glow.PageNote
 import org.openstrap.app.ui.glow.PagePanel
 import org.openstrap.app.ui.glow.PageRow
-import org.openstrap.app.ui.glow.PageRows
 import org.openstrap.app.ui.glow.PageSwitchRow
 import org.openstrap.app.ui.dashboard.ScreenList
 import org.openstrap.app.ui.theme.MetricColors
@@ -83,20 +85,21 @@ fun FirmwareScreen(vm: FirmwareViewModel, contentPadding: PaddingValues, onBack:
     ScreenList(contentPadding, gutter = GlowLayout.Gutter) {
         item { PageHeader(stringResource(R.string.you_firmware_title), { vm.reset(); onBack() }, backEnabled = !installing) }
 
+        // This strap: read only values as info rows (HaloFirmware board).
         item {
-            PagePanel(title = stringResource(R.string.you_firmware_this_strap)) {
+            PageGroup(heading = stringResource(R.string.you_firmware_this_strap)) {
                 val c = connection as? ConnectionState.Connected
-                InfoLine(
+                PageInfoRow(
                     stringResource(R.string.you_firmware_title),
-                    info?.firmware ?: c?.firmware ?: stringResource(R.string.you_firmware_unknown),
+                    info?.firmware ?: c?.firmware ?: stringResource(R.string.you_firmware_unknown), divider = false,
                 )
-                info?.hardware?.let { InfoLine(stringResource(R.string.you_firmware_hardware), it) }
-                InfoLine(
+                info?.hardware?.let { PageInfoRow(stringResource(R.string.you_firmware_hardware), it) }
+                PageInfoRow(
                     stringResource(R.string.you_firmware_battery),
                     c?.batteryPercent?.let { stringResource(R.string.you_firmware_percent, it) }
                         ?: stringResource(R.string.you_firmware_not_connected),
                 )
-                InfoLine(
+                PageInfoRow(
                     stringResource(R.string.you_firmware_service),
                     stringResource(
                         when (info?.dfuAvailable) {
@@ -109,19 +112,28 @@ fun FirmwareScreen(vm: FirmwareViewModel, contentPadding: PaddingValues, onBack:
             }
         }
 
-        item { StepPanel(step, vm, onInstall = { confirm = it }) }
+        // While a check, download or install is under way (or has an answer to read) its panel stands in for the Check row.
+        if (step != FirmwareStep.Idle) item { StepPanel(step, vm, onInstall = { confirm = it }) }
 
         item {
-            PageRows {
-                // Update checks need a signed-in Zepp account; its page is a row away, as on the Strap page.
-                PageRow(
-                    stringResource(R.string.you_strap_row_zepp),
-                    stringResource(if (account != null) R.string.you_strap_signed_in else R.string.you_strap_not_signed_in),
-                    onClick = onZeppAccount, divider = false, enabled = !installing,
+            PageGroup(heading = stringResource(R.string.you_firmware_group_new), footnote = stringResource(R.string.you_firmware_updates_text)) {
+                if (step == FirmwareStep.Idle) PageActionRow(
+                    stringResource(R.string.you_firmware_check), vm::check, icon = AppIcons.Refresh04, divider = false,
                 )
+                PageActionRow(
+                    stringResource(R.string.you_firmware_from_file), { pickFile.launch(arrayOf("*/*")) },
+                    icon = AppIcons.DownloadSimple, enabled = !installing, divider = step == FirmwareStep.Idle,
+                )
+            }
+        }
+
+        // Update checks need a signed-in Zepp account; its page is a row away, as on the Strap page.
+        item {
+            PageGroup(heading = stringResource(R.string.you_firmware_service)) {
                 PageRow(
-                    stringResource(R.string.you_firmware_from_file), stringResource(R.string.you_firmware_from_file_note),
-                    onClick = { pickFile.launch(arrayOf("*/*")) }, enabled = !installing,
+                    stringResource(R.string.you_zepp_title),
+                    stringResource(if (account != null) R.string.you_firmware_account_signed_in else R.string.you_strap_not_signed_in),
+                    onClick = onZeppAccount, below = true, divider = false, enabled = !installing, icon = AppIcons.Key,
                 )
             }
         }
@@ -151,11 +163,7 @@ fun FirmwareScreen(vm: FirmwareViewModel, contentPadding: PaddingValues, onBack:
 private fun StepPanel(step: FirmwareStep, vm: FirmwareViewModel, onInstall: (ReadyImage) -> Unit) {
     PagePanel {
         when (step) {
-            FirmwareStep.Idle -> {
-                CardTitle(stringResource(R.string.you_firmware_updates))
-                Body(stringResource(R.string.you_firmware_updates_text))
-                PageButton(stringResource(R.string.you_firmware_check), vm::check, Modifier.fillMaxWidth(), primary = true)
-            }
+            FirmwareStep.Idle -> Unit
             FirmwareStep.Checking -> Busy(stringResource(R.string.you_firmware_checking), null)
             is FirmwareStep.Checked -> CheckResult(step.result, vm)
             is FirmwareStep.Downloading -> Busy(
@@ -267,34 +275,43 @@ private fun AccountPanel(
             onConfirm = { listing, strap -> mode = AccountMode.Idle; onSignIn(listing, strap) },
         )
     }
-    PagePanel {
-        if (mode != AccountMode.EditingToken) {
-            Body(
-                when {
-                    account == null -> stringResource(R.string.you_zepp_account_none)
-                    account.userId.isNotEmpty() -> stringResource(R.string.you_zepp_account_user, account.userId, account.apiBase)
-                    else -> stringResource(R.string.you_zepp_account, account.apiBase)
-                },
-            )
-            PageButton(
-                stringResource(if (account == null) R.string.you_pair_sign_in else R.string.you_zepp_sign_in_again),
-                { mode = AccountMode.SigningIn },
-                Modifier.fillMaxWidth(), enabled = enabled, primary = true,
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                PageButton(
-                    stringResource(if (account == null) R.string.you_zepp_paste_token else R.string.you_zepp_edit),
-                    { mode = AccountMode.EditingToken },
-                    Modifier.weight(1f), enabled = enabled,
-                )
-                if (account != null) {
-                    PageButton(
-                        stringResource(R.string.you_zepp_remove), onClear, Modifier.weight(1f), enabled = enabled, destructive = true,
-                    )
+    if (mode != AccountMode.EditingToken) {
+        // The saved sign-in as read only rows, then what can be done with it (HaloZeppAccount board).
+        Column(verticalArrangement = Arrangement.spacedBy(24.dp)) {
+            if (account == null) PageNote(stringResource(R.string.you_zepp_account_none))
+            else PageGroup(heading = stringResource(R.string.you_zepp_saved), footnote = stringResource(R.string.you_zepp_token_stays)) {
+                var first = true
+                if (account.userId.isNotEmpty()) {
+                    PageInfoRow(stringResource(R.string.you_zepp_user), account.userId, divider = false)
+                    first = false
                 }
+                PageInfoRow(stringResource(R.string.you_zepp_server), account.apiBase.removePrefix("https://"), divider = !first)
+                PageInfoRow(
+                    stringResource(R.string.you_zepp_china),
+                    stringResource(if (account.china) R.string.you_value_on else R.string.you_value_off),
+                )
             }
-            return@PagePanel
+            PageGroup {
+                PageActionRow(
+                    stringResource(if (account == null) R.string.you_pair_sign_in else R.string.you_zepp_sign_in_again),
+                    { mode = AccountMode.SigningIn }, icon = AppIcons.Key, enabled = enabled, divider = false,
+                )
+                PageRow(
+                    stringResource(if (account == null) R.string.you_zepp_paste_token else R.string.you_zepp_edit),
+                    stringResource(R.string.you_zepp_edit_note), onClick = { mode = AccountMode.EditingToken }, below = true,
+                    enabled = enabled, icon = AppIcons.SlidersHorizontal,
+                )
+            }
+            if (account != null) PageGroup(footnote = stringResource(R.string.you_zepp_remove_note)) {
+                PageActionRow(
+                    stringResource(R.string.you_zepp_remove), onClear, icon = AppIcons.Trash, destructive = true, enabled = enabled,
+                    divider = false,
+                )
+            }
         }
+        return
+    }
+    PagePanel {
         // Keyed on the account, so a fresh sign-in or renewed token starts the fields again from it and a stale copy
         // can't be written back over it. The pasted token is the secret: plain remember, so it never reaches the saved state.
         var token by remember(account) { mutableStateOf("") }

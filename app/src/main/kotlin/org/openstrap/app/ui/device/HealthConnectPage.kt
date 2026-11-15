@@ -31,9 +31,8 @@ import org.openstrap.app.ui.glow.PageButton
 import org.openstrap.app.ui.glow.PageHeader
 import org.openstrap.app.ui.glow.PageNote
 import org.openstrap.app.ui.glow.PageRow
-import org.openstrap.app.ui.glow.PanelLabelInset
-import org.openstrap.app.ui.glow.SectionLabel
-import org.openstrap.app.ui.glow.PageRows
+import org.openstrap.app.ui.glow.PageActionRow
+import org.openstrap.app.ui.glow.PageGroup
 import org.openstrap.app.ui.theme.AppIcons
 
 /**
@@ -63,32 +62,32 @@ fun HealthConnectPage(
         item { PageHeader(stringResource(R.string.you_hc_title), onBack) }
         if (availability == HcAvailability.INSTALLABLE) item { InstallPanel(onInstall) }
         item {
-            PageRows {
-                val now = System.currentTimeMillis() / 1000
-                val line = healthConnectLine(auto, now, java.time.ZoneId.systemDefault(), availability = availability)
+            val now = System.currentTimeMillis() / 1000
+            val line = healthConnectLine(auto, now, java.time.ZoneId.systemDefault(), availability = availability)
+            PageGroup(footnote = if (caloriesMissing) stringResource(R.string.you_hc_calories_note) else null) {
                 PageSwitchRow(stringResource(R.string.you_hc_auto), line, auto.on, onAuto, divider = false, icon = AppIcons.Refresh04)
             }
         }
-        item { SectionLabel(stringResource(R.string.you_hc_any_time), Modifier.padding(top = 4.dp), PanelLabelInset) }
+        if (caloriesMissing) item {
+            PageGroup {
+                PageActionRow(stringResource(R.string.you_hc_calories_offer), onOfferCalories, icon = AppIcons.Plus, divider = false)
+            }
+        }
+        // Copy now and Restore do something now, so they are action rows (HaloHealthConnect board, rules B3).
         item {
-            PageRows {
-                PageRow(
-                    stringResource(R.string.you_hc_copy_now), stringResource(R.string.you_hc_copy_now_note), onClick = onCopyNow,
-                    below = true,
-                    divider = false, icon = AppIcons.Heartbeat,
-                )
-                PageRow(
-                    stringResource(R.string.you_action_restore), stringResource(R.string.you_hc_restore_note), onClick = onRestore,
-                    below = true,
-                    icon = AppIcons.ArrowCounterClockwise,
-                )
+            PageGroup(footnote = stringResource(R.string.you_hc_actions_note)) {
+                PageActionRow(stringResource(R.string.you_hc_copy_now), onCopyNow, icon = AppIcons.Heartbeat, divider = false)
+                PageActionRow(stringResource(R.string.you_action_restore), onRestore, icon = AppIcons.ArrowCounterClockwise)
+            }
+        }
+        item {
+            PageGroup {
                 PageRow(
                     stringResource(R.string.you_hc_open), stringResource(R.string.you_hc_open_note), onClick = onOpen, below = true,
-                    icon = AppIcons.SlidersHorizontal,
+                    divider = false, icon = AppIcons.SlidersHorizontal,
                 )
             }
         }
-        if (caloriesMissing) item { CaloriesOffer(onOfferCalories) }
     }
 }
 
@@ -103,15 +102,6 @@ private fun InstallPanel(onInstall: () -> Unit) {
         PageButton(
             stringResource(R.string.you_hc_install), onInstall, Modifier.fillMaxWidth(), primary = true, icon = AppIcons.DownloadSimple,
         )
-    }
-}
-
-/** Calories off: why they are left out, and the button that asks for just those permissions. */
-@Composable
-private fun CaloriesOffer(onOffer: () -> Unit) {
-    Column(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        PageNote(stringResource(R.string.you_hc_calories_note))
-        PageButton(stringResource(R.string.you_hc_calories_offer), onOffer, Modifier.fillMaxWidth(), icon = AppIcons.Plus)
     }
 }
 

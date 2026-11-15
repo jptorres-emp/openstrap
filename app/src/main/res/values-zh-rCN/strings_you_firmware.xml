@@ -128,4 +128,9 @@
     <string name="you_zepp_other_account">使用其他账号</string>
     <string name="you_zepp_guide">无法使用邮箱登录？</string>
     <string name="you_zepp_guide_note">在电脑上获取密钥</string>
+    <string name="you_firmware_group_new">新固件</string>
+    <string name="you_firmware_account_signed_in">已登录，用于检查更新</string>
+    <string name="you_zepp_saved">已保存的登录</string>
+    <string name="you_zepp_edit_note">应用令牌、用户 ID 和服务器</string>
+    <string name="you_zepp_remove_note">在你重新登录之前，固件检查会停止。手环仍保持配对。</string>
 </resources>

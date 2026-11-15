@@ -173,4 +173,10 @@
     <!-- A two line button that opens a guide in the browser: the question, then what it does. -->
     <string name="you_zepp_guide">Can\'t sign in with email?</string>
     <string name="you_zepp_guide_note">Get the key on a computer</string>
+    <!-- Firmware and Zepp account pages (Halo). -->
+    <string name="you_firmware_group_new">New firmware</string>
+    <string name="you_firmware_account_signed_in">Signed in, used for update checks</string>
+    <string name="you_zepp_saved">Saved sign-in</string>
+    <string name="you_zepp_edit_note">App token, user ID and server</string>
+    <string name="you_zepp_remove_note">Firmware checks stop until you sign in again. Your strap stays paired.</string>
 </resources>

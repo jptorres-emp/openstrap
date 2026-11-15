@@ -217,4 +217,19 @@
     <string name="you_row_version">Version</string>
     <string name="you_version_value">unstrap <xliff:g id="version" example="3.0.7">%1$s</xliff:g></string>
     <string name="you_data_footnote">Everything stays on this phone. unstrap has no account and sends nothing.</string>
+    <!-- Updates page banner (Halo). -->
+    <string name="you_updates_ready">unstrap <xliff:g id="version" example="3.0.8">%1$s</xliff:g> is ready</string>
+    <string name="you_updates_install">Install</string>
+    <!-- Strap page (Halo): group headings and footnotes, the card for a strap not paired, the pairing sheet's key hint. -->
+    <string name="you_strap_group_on_strap">On the strap</string>
+    <string name="you_strap_group_software">Software</string>
+    <string name="you_strap_row_app_updates">App updates</string>
+    <string name="you_strap_no_strap">No strap yet</string>
+    <string name="you_strap_last_read">As last read from the strap.</string>
+    <string name="you_strap_away_note">Keep the strap on its charger near the phone, and make sure the Zepp app isn\'t running. The strap talks to one app at a time.</string>
+    <string name="you_strap_key_rejected_note">Retrying won\'t help. Pair again to fetch the strap\'s current key from Zepp.</string>
+    <string name="you_strap_forget_note">Forget deletes the strap\'s address and auth key from this phone. Your synced health data stays.</string>
+    <string name="you_updates_view">View</string>
+    <string name="you_pair_key_placeholder">32 characters, 0 to 9 and a to f</string>
+    <string name="you_diagnostics_note">For bug reports. Copy puts the whole log on the clipboard.</string>
 </resources>

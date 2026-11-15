@@ -11,6 +11,7 @@ import org.openstrap.app.presentation.DayWords
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -380,7 +381,7 @@ private fun LoadDetail(ctx: ActivityDetailContext) {
                 )
             }
             item {
-                Column(Modifier.padding(top = 8.dp)) {
+                Column(Modifier.padding(top = 8.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     DetailFigures(
                         listOf(
                             Math.round(r.workoutLoad).toString() to stringResource(R.string.glow_activity_from_workouts),

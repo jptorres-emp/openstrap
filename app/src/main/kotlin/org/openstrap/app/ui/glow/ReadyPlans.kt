@@ -51,7 +51,10 @@ internal fun StrengthPlanCard(
         false to PlanOption(SportIcons.of(type), StartCopy.OPEN, StartCopy.OPEN_SETS_KIND_NOTE),
         true to PlanOption(AppIcons.ChartBar, StartCopy.PLAN, StartCopy.PLAN_KIND_NOTE),
     )
-    PlanChoice(Workouts.Family.Strength, choices, { it == (sets != null) }, { onSets(if (it) planSets else null) }, typing, onTyping) {
+    PlanChoice(
+        Workouts.Family.Strength, choices, { it == (sets != null) }, { onSets(if (it) planSets else null) }, typing, onTyping,
+        presets = { if (sets != null) Presets(StartCopy.SET_PRESETS, sets) { onSets(it) } },
+    ) {
         val (restN, restU) = StartCopy.restParts(restSeconds)
         val rest = NumberField(
             restN, restU, edit = "$restSeconds", editUnit = stringResource(R.string.glow_unit_s), style = GlowType.goalValueMinor,
@@ -80,7 +83,6 @@ internal fun StrengthPlanCard(
                 ValueWords(stringResource(R.string.glow_ready_rest_between))
             }
         }
-        if (!typing) Presets(StartCopy.SET_PRESETS, sets) { onSets(it) }
         GoalNote(if (typing) StartCopy.STRENGTH_TYPING else StartCopy.STRENGTH_STATUS)
     }
 }
@@ -157,10 +159,11 @@ internal fun MindPlanCard(type: Int, seconds: Long?, onSeconds: (Long?) -> Unit,
         false to PlanOption(SportIcons.of(type), StartCopy.OPEN, StartCopy.MIND_OPEN_KIND_NOTE),
         true to PlanOption(AppIcons.Timer, StartCopy.TIME, StartCopy.MIND_TIME_KIND_NOTE),
     )
-    PlanChoice(Workouts.Family.MindBody, choices, { it == (seconds != null) }, { onSeconds(if (it) lastSeconds else null) },
-        typing, onTyping) {
-        if (seconds == null) GoalNote(StartCopy.MIND_OPEN_NOTE)
-        else TimeGoal(seconds, { onSeconds(it) }, typing, onTyping, StartCopy.MIND_PRESETS, StartCopy.MIND_STATUS)
+    PlanChoice(
+        Workouts.Family.MindBody, choices, { it == (seconds != null) }, { onSeconds(if (it) lastSeconds else null) }, typing, onTyping,
+        presets = { if (seconds != null) Presets(StartCopy.MIND_PRESETS, seconds) { onSeconds(it) } },
+    ) {
+        if (seconds != null) TimeGoal(seconds, { onSeconds(it) }, typing, onTyping, StartCopy.MIND_PRESETS, StartCopy.MIND_STATUS)
     }
 }
 

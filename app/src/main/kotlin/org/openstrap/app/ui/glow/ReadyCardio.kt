@@ -139,6 +139,39 @@ internal fun ReadyWhere(
     }
 }
 
+/**
+ * Where you are, at the top of Ready's plan card (board HaloReadyRun): Outside and On a treadmill as two chips on a plain
+ * track, the picked one lit, and under them the GPS line with its dot, or what you get without it.
+ */
+@Composable
+internal fun ReadyPlace(type: Int, sides: Workouts.Sides, indoor: Boolean, locationOn: Boolean, gpsLine: String, onSwitch: () -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(
+            Modifier.fillMaxWidth().clip(CircleShape).background(PlainPanel).padding(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            listOf(false to StartCopy.place(sides, false), true to StartCopy.place(sides, true)).forEach { (isIndoor, name) ->
+                val picked = indoor == isIndoor
+                Box(
+                    Modifier.weight(1f).height(40.dp).clip(CircleShape).background(if (picked) PickedSurface else Color.Transparent)
+                        .clickable(role = Role.RadioButton, onClick = { if (!picked) onSwitch() }).semantics { selected = picked },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(name, color = if (picked) Color.White else GlowType.noteColor, style = GlowType.secondary, maxLines = 1)
+                }
+            }
+        }
+        StatusDot(
+            when {
+                indoor -> StartCopy.indoorNote(type)
+                !locationOn -> WorkoutCopy.LOCATION_OFF
+                else -> gpsLine
+            },
+            if (indoor) IndoorTint else if (locationOn) TrendGood else TrendBad,
+        )
+    }
+}
+
 private val SportIconsLocation: ImageVector get() = org.openstrap.app.ui.theme.SportIcons.Location
 
 /** Amber, for an indoor side: zone 3's yellow, as the board has it. */
@@ -202,17 +235,31 @@ internal fun ReadyGoal(
     onYourZones: () -> Unit,
     saved: List<SavedWorkout>,
     onSave: (String, Structure.Reps) -> Unit,
+    /** Where you are, at the top of the card: outside or on a treadmill, and the GPS line. */
+    place: (@Composable ColumnScope.() -> Unit)? = null,
 ) {
     PlanChoice(
         Workouts.family(type), kinds.map { it to PlanOption(kindIcon(it, type), kindName(it, type), kindNote(it, hasDistance)) },
         { it == draft.kind }, { onDraft(draft.copy(kind = it)) }, typing, onTyping,
+        top = place,
+        // The picked kind's presets sit in the card; a custom value is typed in the hero's sheet (the content below).
+        presets = {
+            when (draft.kind) {
+                GoalKind.Distance -> Presets(StartCopy.DISTANCE_PRESETS, draft.meters) { onDraft(draft.copy(meters = it)) }
+                GoalKind.Time -> Presets(StartCopy.TIME_PRESETS, draft.seconds) { onDraft(draft.copy(seconds = it)) }
+                GoalKind.Zone -> ZoneGoal(draft.zones, { onDraft(draft.copy(zones = it)) }, zones, maxHr, onYourZones)
+                GoalKind.Intervals ->
+                    IntervalsGoal(draft.reps, { onDraft(draft.copy(reps = it)) }, typing, onTyping, saved, onSave, valueOnly = false)
+                GoalKind.None -> Unit
+            }
+        },
     ) {
         when (draft.kind) {
-            GoalKind.None -> GoalNote(StartCopy.noGoalNote(hasDistance))
             GoalKind.Distance -> DistanceGoal(draft.meters, { onDraft(draft.copy(meters = it)) }, typing, onTyping)
             GoalKind.Time -> TimeGoal(draft.seconds, { onDraft(draft.copy(seconds = it)) }, typing, onTyping)
-            GoalKind.Zone -> ZoneGoal(draft.zones, { onDraft(draft.copy(zones = it)) }, zones, maxHr, onYourZones)
-            GoalKind.Intervals -> IntervalsGoal(draft.reps, { onDraft(draft.copy(reps = it)) }, typing, onTyping, saved, onSave)
+            GoalKind.Intervals ->
+                IntervalsGoal(draft.reps, { onDraft(draft.copy(reps = it)) }, typing, onTyping, saved, onSave, valueOnly = true)
+            GoalKind.Zone, GoalKind.None -> Unit
         }
     }
 }
@@ -234,11 +281,15 @@ internal fun <T> PlanChoice(
     typing: Boolean,
     onTyping: (Boolean) -> Unit,
     other: () -> PlanOption = { choices[0].second },
+    top: (@Composable ColumnScope.() -> Unit)? = null,
+    presets: @Composable ColumnScope.() -> Unit = {},
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val at = choices.indexOfFirst { isChosen(it.first) }.takeIf { it >= 0 }
-    ReadyPlanCard(family, choices.map { it.second }, at?.let { choices[it].second } ?: other(), at,
-        { onChoose(choices[it].first) }, typing, onTyping, content)
+    ReadyPlanCard(
+        family, choices.map { it.second }, at?.let { choices[it].second } ?: other(), at,
+        { onChoose(choices[it].first) }, typing, onTyping, top, presets, content,
+    )
 }
 
 /**
@@ -256,10 +307,10 @@ private fun ReadyPlanCard(
     onChoose: (Int) -> Unit,
     typing: Boolean,
     onTyping: (Boolean) -> Unit,
+    top: (@Composable ColumnScope.() -> Unit)?,
+    presets: @Composable ColumnScope.() -> Unit,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Text(StartCopy.planTitle(family), color = GlowType.noteColor, style = GlowType.secondary,
-        modifier = Modifier.padding(horizontal = 4.dp))
     val inView = remember { BringIntoViewRequester() }
     val ime = WindowInsets.ime
     val density = LocalDensity.current
@@ -272,45 +323,38 @@ private fun ReadyPlanCard(
         }
     }
     val editor = LocalGoalEditor.current
+    // Inline, as the boards draw it: where you are, the kinds as chips, then the picked kind's presets. Picking one
+    // changes the hero's number at once; a typed value lives in the sheet the hero opens.
     Column(
         Modifier.fillMaxWidth().bringIntoViewRequester(inView).solidCard(GlowLayout.CardShape).padding(GlowLayout.CardInset),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        var choosing by rememberSaveable { mutableStateOf(false) }
-        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-            IconPill(
-                shown.name, { onTyping(false); choosing = true }, icon = shown.icon, tint = TypingLime, caret = true, height = 40.dp,
-                description = stringResource(R.string.glow_ready_plan_description, shown.name, StartCopy.planHint(family)),
-            )
-        }
-        if (choosing) PageSheet({ choosing = false }, StartCopy.planSheet(family)) {
-            Column {
-                options.forEachIndexed { i, o ->
-                    KindRow(o.icon, o.name, o.note, i == chosen, divider = i > 0) {
-                        // The one already chosen keeps what was typed into it.
-                        if (i != chosen) onChoose(i)
-                        choosing = false
-                    }
-                }
-            }
-        }
-        // The value is the hero's number: it is changed here, in a sheet, from the hero or this button.
-        PageButton(
-            stringResource(R.string.glow_ready_edit_goal), {
-                onTyping(false)
-                editor.revert = {}
-                editor.open = true
-            },
-            Modifier.fillMaxWidth(), icon = AppIcons.PencilEdit,
-        )
+        top?.invoke(this)
+        PlanChips(options, chosen, shown, onChoose)
+        presets()
     }
     if (editor.open) PageSheet({ closeGoal(editor, onTyping, save = false) }, StartCopy.planSheet(family)) {
         content()
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             PageButton(stringResource(R.string.glow_cancel), { closeGoal(editor, onTyping, save = false) }, Modifier.weight(1f))
-            PageButton(stringResource(R.string.glow_save), { closeGoal(editor, onTyping, save = true) }, Modifier.weight(1f),
-                primary = true)
+            PageButton(
+                stringResource(R.string.glow_save), { closeGoal(editor, onTyping, save = true) }, Modifier.weight(1f), primary = true,
+            )
         }
+    }
+}
+
+/** The kinds as chips in a wrapping row, the picked one ringed; a typed value that is none of them is named, picked. */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+private fun PlanChips(options: List<PlanOption>, chosen: Int?, shown: PlanOption, onChoose: (Int) -> Unit) {
+    androidx.compose.foundation.layout.FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        options.forEachIndexed { i, o ->
+            PageChip(o.name, i == chosen, { if (i != chosen) onChoose(i) }, role = Role.RadioButton, filled = true, description = o.note)
+        }
+        if (chosen == null) PageChip(shown.name, true, {}, role = Role.RadioButton, filled = true)
     }
 }
 
@@ -343,28 +387,6 @@ private fun kindNote(k: GoalKind, hasDistance: Boolean): String = when (k) {
     GoalKind.Time -> StartCopy.TIME_KIND_NOTE
     GoalKind.Zone -> StartCopy.ZONE_KIND_NOTE
     GoalKind.Intervals -> StartCopy.INTERVALS_KIND_NOTE
-}
-
-/** A plan's choice in the sheet (board ReadyKindSheet): its icon on a tile, its name, what the strap does, a tick when chosen. */
-@Composable
-private fun KindRow(icon: ImageVector, label: String, note: String, on: Boolean, divider: Boolean, onClick: () -> Unit) {
-    Row(
-        Modifier.fillMaxWidth()
-            .topHairline(divider, RowHairline)
-            .clickable(onClick = onClick).semantics { selected = on }.padding(vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(14.dp),
-    ) {
-        Box(
-            Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(if (on) TypingLime.copy(alpha = 0.14f) else Raised),
-            contentAlignment = Alignment.Center,
-        ) { Icon(icon, null, tint = if (on) TypingLime else Color.White, modifier = Modifier.size(20.dp)) }
-        Column(Modifier.weight(1f)) {
-            Text(label, color = Color.White, style = GlowType.body)
-            Text(note, color = Color.White.copy(alpha = 0.6f), style = GlowType.secondary, modifier = Modifier.padding(top = 2.dp))
-        }
-        if (on) Icon(AppIcons.CheckCircle, null, tint = TypingLime, modifier = Modifier.size(20.dp))
-    }
 }
 
 /** The line under a goal: what the strap will do. */
@@ -622,6 +644,8 @@ private fun IntervalsGoal(
     onTyping: (Boolean) -> Unit,
     saved: List<SavedWorkout>,
     onSave: (String, Structure.Reps) -> Unit,
+    /** True for the typed value (the hero's sheet), false for the presets, note and saved ones (the card). */
+    valueOnly: Boolean = false,
 ) {
     var unit by rememberSaveable { mutableStateOf(StartCopy.repUnit(reps)) }
     var sheet by rememberSaveable { mutableStateOf<Int?>(null) }
@@ -632,7 +656,7 @@ private fun IntervalsGoal(
     }
     val (n, u) = StartCopy.repParts(reps)
     val (restN, restU) = StartCopy.restParts(reps.rest)
-    TypedValue(
+    if (valueOnly) TypedValue(
         listOf(
             NumberField("${reps.rounds}", null, length = 2),
             NumberField(n, u, editUnit = unit.label, length = 5, decimal = true),
@@ -662,8 +686,8 @@ private fun IntervalsGoal(
             }
         }
     }
-    if (typing) {
-        GoalNote(StartCopy.INTERVALS_TYPING)
+    if (valueOnly) {
+        if (typing) GoalNote(StartCopy.INTERVALS_TYPING)
         return
     }
     Presets(StartCopy.INTERVAL_PRESETS.map { it to StartCopy.structureName(it) },

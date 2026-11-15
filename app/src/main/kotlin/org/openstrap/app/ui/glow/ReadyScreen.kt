@@ -255,23 +255,45 @@ fun GlowWorkoutReadyScreen(
         ) {
             ReadyTopBar(type, family, connection, liveHeartRate, onBack) { picking = true }
             StrapHeldNotice(connection)
+            val editable = when (family) {
+                Workouts.Family.Distance, Workouts.Family.IndoorCardio ->
+                    kind == WorkoutSetup.GoalKind.Distance || kind == WorkoutSetup.GoalKind.Time || kind == WorkoutSetup.GoalKind.Intervals
+                Workouts.Family.Strength -> true
+                Workouts.Family.Intervals -> rounds is Structure.Timed || rounds is Structure.EveryMinute
+                Workouts.Family.MindBody -> kind == WorkoutSetup.GoalKind.Time
+                Workouts.Family.Games -> rounds is Structure.Periods
+            }
             GoalHero(
                 goalHeroSpec(
                     type, family, kind, draft, sets, restSeconds, rounds, hasDistance,
                     zoneLine = maxHeartRate?.let { StartCopy.zoneRangeLine(draft.zones, LocalHeartZones.current, it) },
                     lastPace = lastPace, nowMillis = nowMillis,
                 ),
-                familyColor(family), familyLightAngle(family), openEditor,
+                familyColor(family), familyLightAngle(family),
+                // Only a kind that takes a value opens the sheet to type one (Just run, zones and Free have none).
+                openEditor.takeIf { editable },
             )
             if (cardio) {
                 ReadyGoal(
                     type, kinds, hasDistance, draft.copy(kind = kind), { draft = it }, typing, { typing = it }, LocalHeartZones.current, maxHeartRate,
                     onYourZones, saved.filter { Workouts.tileType(it.sport) == key },
                     onSave = { name, reps -> onSaveIntervals(name, reps.code) },
+                    place = pair?.let { placeSides ->
+                        {
+                            ReadyPlace(
+                                type, placeSides, indoor == true, locationOn, StartCopy.gpsStatus(accuracy),
+                                onSwitch = {
+                                    val next = indoor != true
+                                    chosenIndoor = next
+                                    onSide(placeSides.outdoor, next)
+                                },
+                            )
+                        }
+                    },
                 )
                 ReadyLastRow(last)
                 ReadyWhere(
-                    type, pair, indoor == true, outdoor, locationOn, StartCopy.gpsStatus(accuracy),
+                    type, null, indoor == true, outdoor, locationOn, StartCopy.gpsStatus(accuracy),
                     onSwitch = {
                         val next = indoor != true
                         chosenIndoor = next

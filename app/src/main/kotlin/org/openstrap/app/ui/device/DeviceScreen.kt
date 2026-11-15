@@ -54,7 +54,6 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -72,7 +71,6 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.openstrap.app.R
@@ -512,14 +510,20 @@ private fun PhoneOutline() {
     }
 }
 
-/** The line from the phone to the strap: dashed while the strap is away, a plain hairline when it was never paired. */
+/** The line from the phone to the strap: short dashes while the strap is away, a plain hairline when it was never paired. */
 @Composable
 private fun LinkLine(dashed: Boolean, modifier: Modifier) {
     Canvas(modifier.height(2.dp)) {
-        if (dashed) drawLine(
-            Color.White.copy(alpha = 0.3f), Offset(0f, 1.dp.toPx()), Offset(size.width, 1.dp.toPx()), 1.dp.toPx(),
-            pathEffect = PathEffect.dashPathEffect(floatArrayOf(4.dp.toPx(), 3.dp.toPx())),
-        ) else drawLine(Color.White.copy(alpha = 0.12f), Offset(0f, 1.dp.toPx()), Offset(size.width, 1.dp.toPx()), 1.dp.toPx())
+        val y = 1.dp.toPx()
+        if (dashed) {
+            // Drawn dash by dash (a path effect would be a dotted line, which the rules keep for numbers).
+            val dash = 4.dp.toPx()
+            var x = 0f
+            while (x < size.width) {
+                drawLine(Color.White.copy(alpha = 0.3f), Offset(x, y), Offset(minOf(x + dash, size.width), y), 1.dp.toPx())
+                x += dash + 3.dp.toPx()
+            }
+        } else drawLine(Color.White.copy(alpha = 0.12f), Offset(0f, y), Offset(size.width, y), 1.dp.toPx())
     }
 }
 
@@ -691,7 +695,7 @@ fun DiagnosticsScreen(lines: List<String>, contentPadding: PaddingValues, onBack
                     ) {
                         Text(
                             if (lines.isEmpty()) stringResource(R.string.you_diagnostics_empty) else lines.joinToString("\n"),
-                            style = GlowType.caption.copy(fontFamily = FontFamily.Monospace, fontSize = 11.5.sp),
+                            style = GlowType.caption.copy(fontFamily = FontFamily.Monospace),
                             color = Color.White.copy(alpha = 0.7f), textAlign = TextAlign.Start,
                         )
                     }
@@ -764,7 +768,7 @@ internal fun PairStep(number: Int, title: String, content: @Composable () -> Uni
                 color = Color.White)
         }
         Column(Modifier.weight(1f).padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(title, style = GlowType.cardTitle, color = Color.White)
+            Text(title, style = GlowType.cardTitle, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
             content()
         }
     }
@@ -774,7 +778,7 @@ internal fun PairStep(number: Int, title: String, content: @Composable () -> Uni
 @Composable
 private fun StepText(text: String, muted: Boolean = false) {
     if (muted) Text(text, style = GlowType.secondary, color = GlowType.footnoteColor)
-    else Text(text, style = GlowType.body.copy(fontSize = 14.sp), color = Color(0xFFC9CED6))
+    else Text(text, style = GlowType.body, color = Color(0xFFC9CED6))
 }
 
 /** For keys read on a computer or from an earlier pairing: scan for the address, paste the key, pair. */

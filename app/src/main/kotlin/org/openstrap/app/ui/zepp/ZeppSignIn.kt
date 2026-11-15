@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.ui.unit.sp
 import org.openstrap.app.ui.glow.HaloButtonSurface
 import org.openstrap.app.ui.glow.PageFootnote
 import org.openstrap.app.ui.glow.PageHeaderHeight
@@ -181,7 +180,7 @@ fun ZeppSignInDialog(
                             Row(Modifier.padding(start = GlowLayout.Gutter, end = GlowLayout.Gutter, top = 16.dp, bottom = 4.dp)) {
                                 Text(
                                     stringResource(R.string.you_zepp_sign_in_text), Modifier.weight(1f).padding(horizontal = 4.dp),
-                                    color = Color(0xFFC9CED6), style = GlowType.body.copy(fontSize = 14.sp),
+                                    color = Color(0xFFC9CED6), style = GlowType.body,
                                 )
                                 Spacer(Modifier.width(8.dp))
                                 val hide = stringResource(R.string.you_action_hide)

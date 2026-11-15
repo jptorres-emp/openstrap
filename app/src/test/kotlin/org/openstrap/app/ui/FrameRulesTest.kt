@@ -150,13 +150,12 @@ class FrameRulesTest {
         assertTrue("the label fades out, then in", "fadeIn(tween(LABEL_FADE_MS, delayMillis = LABEL_FADE_MS)) togetherWith fadeOut(tween(LABEL_FADE_MS))" in reveal)
     }
 
-    @Test fun `sheets, workout pages, the Zepp sign-in and Profile's Save keep to the page column`() {
+    @Test fun `sheets, workout pages and the Zepp sign-in keep to the page column`() {
         val glass = source("ui/components/Glass.kt").substringAfter("fun GlassSheet(")
         assertTrue("GlassSheet is at most PageMaxWidth", "widthIn(max = org.openstrap.app.ui.glow.GlowLayout.PageMaxWidth)" in glass)
         val workout = source("ui/glow/GlowWorkoutMode.kt").substringAfter("fun WorkoutPage(").substringBefore("\n}\n")
         assertTrue("WorkoutPage centres its content and its pinned buttons", Regex("""pageSide\(""").findAll(workout).count() == 1 && "start = side, end = side" in workout)
-        val profile = source("ui/device/ProfileScreen.kt")
-        assertTrue("Profile's Save is as wide as the fields", "start = side, end = side, bottom = bottom + 12.dp" in profile && "widthIn(max = 600.dp)" !in profile)
+        // Profile's Save is the header's pill now (HaloProfile board), so it is in the page column with the header.
         val zepp = source("ui/zepp/ZeppSignIn.kt").substringAfter("fun ZeppSignInDialog(")
         assertTrue("the Zepp sign-in keeps to the page column", "Column(Modifier.widthIn(max = GlowLayout.PageMaxWidth)" in zepp && "contentAlignment = Alignment.TopCenter" in zepp)
         val screens = source("ui/dashboard/ScreenParts.kt")
@@ -272,14 +271,11 @@ class FrameRulesTest {
     }
 
     @Test fun `every pinned button has the fade behind it and the page ends clear of it`() {
-        val profile = source("ui/device/ProfileScreen.kt")
-        assertTrue("Profile's Save sits in a box with the fade", Regex("""Box\(Modifier\.align\(Alignment\.BottomCenter\)\.fillMaxWidth\(\)\.pinnedFade\(\)""").containsMatchIn(profile))
-        assertTrue("Profile's list ends clear of Save and its fade", "PinnedFade.listClearance(bottom + 12.dp + SaveHeight, listEnd = 24.dp)" in profile)
         val workout = source("ui/glow/GlowWorkoutMode.kt").substringAfter("fun WorkoutPage(").substringBefore("\n}\n")
         assertTrue("WorkoutPage's pinned buttons (Start, Done, Choose the sport) have the fade", ".pinnedFade()" in workout)
         assertTrue("WorkoutPage's content ends clear of them", "PinnedFade.listClearance(pinnedHeight)" in workout)
         assertTrue("WorkoutPage's old short fade is gone", "0.25f to Color.Black" !in workout)
-        // Every page with pinned buttons uses WorkoutPage's or Profile's.
+        // Every page with pinned buttons uses WorkoutPage's.
         for (f in listOf("ui/glow/GlowWorkoutMode.kt", "ui/glow/ReadyScreen.kt", "ui/glow/ChooseScreen.kt", "ui/glow/GlowWorkoutSummary.kt")) {
             val src = source(f)
             assertTrue("$f pins its buttons through WorkoutPage", "pinned = {" !in src || "WorkoutPage(" in src)

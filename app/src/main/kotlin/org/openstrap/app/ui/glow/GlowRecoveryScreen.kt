@@ -69,7 +69,6 @@ import org.openstrap.app.ui.dashboard.RecoveryCard
 import org.openstrap.app.ui.dashboard.RecoveryFacts
 import org.openstrap.app.presentation.TabCopy
 import org.openstrap.app.presentation.TodayCopy
-import org.openstrap.app.ui.dashboard.avg
 import org.openstrap.app.ui.dashboard.recoveryCards
 import org.openstrap.app.ui.theme.MetricColors
 import org.openstrap.app.ui.glow.draw.GlowStyle

@@ -23,7 +23,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -37,18 +36,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.role
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -75,7 +68,6 @@ import org.openstrap.app.ui.dashboard.Wear
 import org.openstrap.app.presentation.TabCopy
 import org.openstrap.app.presentation.TodayCopy
 import org.openstrap.app.ui.dashboard.activityCards
-import org.openstrap.app.ui.components.pressClickable
 import org.openstrap.app.ui.theme.AppIcons
 import org.openstrap.app.ui.theme.MetricColors
 import org.openstrap.app.ui.theme.SportIcons
@@ -84,7 +76,6 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import org.openstrap.app.ui.glow.draw.DotSize
 import org.openstrap.app.ui.glow.draw.LightAngle
 import org.openstrap.app.ui.glow.draw.limeHero
-import org.openstrap.app.ui.theme.ControlSurface
 import org.openstrap.app.presentation.topSports
 import org.openstrap.app.presentation.LoadBands
 import org.openstrap.app.data.History
@@ -95,7 +86,6 @@ import org.openstrap.app.ui.dashboard.GoalMetric
 import org.openstrap.app.ui.dashboard.NewsTag
 import org.openstrap.app.ui.dashboard.OffStatus
 import org.openstrap.app.ui.dashboard.OffWords
-import org.openstrap.app.ui.dashboard.bodyOffStatus
 import org.openstrap.app.ui.dashboard.goalTag
 import org.openstrap.app.ui.dashboard.loadOffStatus
 import org.openstrap.app.ui.dashboard.offTag
@@ -105,7 +95,6 @@ import org.openstrap.app.ui.glow.pictures.DayBars
 import org.openstrap.app.ui.glow.pictures.DayLine
 import org.openstrap.app.ui.glow.pictures.LevelFill
 import org.openstrap.app.ui.glow.pictures.PictureSize
-import org.openstrap.app.ui.glow.pictures.dayLineRim
 import org.openstrap.app.ui.glow.pictures.drawHourDots
 import org.openstrap.app.ui.glow.pictures.levelFillRim
 import androidx.compose.ui.layout.onSizeChanged

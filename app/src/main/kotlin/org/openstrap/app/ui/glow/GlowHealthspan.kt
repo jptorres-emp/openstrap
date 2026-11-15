@@ -212,7 +212,7 @@ private val AgeScaleInset = 6.dp
  */
 @Composable
 private fun AgeScale(age: Int, low: Int, high: Int, estimate: Float) {
-    val label = Color.White.copy(alpha = GlowType.CAPTION_ALPHA)
+    val label = GlowType.footnoteColor
     fun at(a: Float) = ageScaleX(a, low.toFloat(), high.toFloat(), age.toFloat())
     Column(Modifier.fillMaxWidth()) {
         LabelAt(TabCopy.yourAge(age), at(age.toFloat()), label)

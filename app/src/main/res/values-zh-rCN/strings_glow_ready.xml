@@ -35,7 +35,6 @@
     </plurals>
     <string name="glow_ready_strap_disconnected">手环未连接。没有手环也能记录，但没有实时心率。</string>
     <string name="glow_ready_connect">连接手环</string>
-    <string name="glow_ready_edit_goal">修改</string>
     <string name="glow_ready_hero_zones">个心率区间</string>
     <string name="glow_ready_hero_zone_range">%1$d 至 %2$d</string>
     <string name="glow_ready_hero_sets_rest">组，休息 %1$s</string>

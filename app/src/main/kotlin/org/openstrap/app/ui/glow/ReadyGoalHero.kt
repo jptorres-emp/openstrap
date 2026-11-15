@@ -68,9 +68,9 @@ internal class GoalHeroSpec(
 
 /** The hero: lit in the family's colour, the goal as the big number, tapping it opens the goal's sheet ([onEdit]). */
 @Composable
-internal fun GoalHero(spec: GoalHeroSpec, color: Color, angle: Float, onEdit: () -> Unit) {
+internal fun GoalHero(spec: GoalHeroSpec, color: Color, angle: Float, onEdit: (() -> Unit)?) {
     val tint = heroTint(color)
-    LiveHero(color, angle, Modifier.pressClickable(onEdit, GlowLayout.CardShape)) {
+    LiveHero(color, angle, if (onEdit != null) Modifier.pressClickable(onEdit, GlowLayout.CardShape) else Modifier) {
         HeroTitle(spec.title, spec.note, tint)
         if (spec.number != null) HeroNumber(spec.number, spec.unit, tint, BigNumber.Feature)
         else Text(spec.words.orEmpty(), color = Color.White, style = GlowType.sentence)

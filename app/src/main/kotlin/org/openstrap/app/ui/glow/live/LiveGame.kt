@@ -107,7 +107,7 @@ internal fun LiveGameScreen(
         }
         if (!split) LiveCard {
             Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                Text(stringResource(R.string.workout_live_effort), color = Color.White, style = GlowType.cardTitle,
+                Text(stringResource(R.string.workout_live_effort), color = Color.White, style = GlowType.cardTitle, maxLines = 1,
                     modifier = Modifier.weight(1f))
                 Text(
                     effort?.let { stringResource(R.string.workout_live_effort_of,

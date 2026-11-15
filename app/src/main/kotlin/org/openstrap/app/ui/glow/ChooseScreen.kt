@@ -69,7 +69,6 @@ import androidx.compose.ui.text.style.Hyphens
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import org.openstrap.app.R
 import org.openstrap.app.data.RecentChip
 import org.openstrap.app.data.Workouts
@@ -275,7 +274,7 @@ private fun NowCard(type: Int) {
         Spacer(Modifier.width(14.dp))
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(stringResource(R.string.glow_choose_now), color = GlowType.noteColor, style = GlowType.noteSmall)
-            Text(Workouts.sportName(type), color = Color.White, style = GlowType.headerDate.copy(fontSize = 17.sp), maxLines = 1)
+            Text(Workouts.sportName(type), color = Color.White, style = GlowType.pageTitle, maxLines = 1)
             Text(stringResource(R.string.glow_choose_now_note), color = GlowType.noteColor, style = GlowType.noteSmall)
         }
     }

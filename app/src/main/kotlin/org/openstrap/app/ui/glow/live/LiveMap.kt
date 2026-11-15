@@ -43,7 +43,6 @@ import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.unit.dp
 import org.openstrap.app.data.Route
 import org.openstrap.app.data.WorkoutRecorder
-import androidx.compose.ui.unit.sp
 import org.openstrap.app.ui.glow.*
 import org.openstrap.app.ui.dashboard.LocalHeartZones
 import androidx.compose.ui.res.stringResource
@@ -162,7 +161,7 @@ private fun LastSplit(route: List<Route.Point>, readings: List<Pair<Long, Int>>,
         Modifier.fillMaxWidth().height(48.dp).clip(GlowLayout.TileShape).background(PlainPanel).padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(line, color = Color.White, style = GlowType.body.copy(fontSize = 14.sp, fontFeatureSettings = "tnum"),
+        Text(line, color = Color.White, style = GlowType.secondary.copy(fontFeatureSettings = "tnum"),
             maxLines = 1, modifier = Modifier.weight(1f))
         Text(ago, color = GlowType.noteColor, style = GlowType.noteSmall, maxLines = 1)
     }

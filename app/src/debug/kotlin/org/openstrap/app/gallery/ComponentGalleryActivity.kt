@@ -61,7 +61,6 @@ import org.openstrap.app.ui.glow.StatusDot
 import org.openstrap.app.ui.glow.TrendBad
 import org.openstrap.app.ui.glow.TrendGood
 import org.openstrap.app.ui.glow.live.EffortBar
-import org.openstrap.app.ui.glow.live.MovingTime
 import org.openstrap.app.ui.glow.live.RoundBar
 import org.openstrap.app.ui.glow.live.WorkoutHeartCard
 import org.openstrap.app.ui.glow.live.ZoneTimeBar
@@ -283,8 +282,6 @@ private fun LiveParts(modifier: Modifier = Modifier) {
             StatusDot("Strap 82%", TrendGood, dotAfter = true)
             StatusDot(WorkoutWords.STRAP_GONE, TrendBad, dotAfter = true)
         }
-        Label("Moving time")
-        MovingTime { LIVE_ACTIVE }
     }
 }
 

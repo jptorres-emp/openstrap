@@ -1,3 +1,5 @@
+@file:Suppress("MatchingDeclarationName")
+
 package org.openstrap.app.ui.glow.live
 
 import kotlinx.coroutines.delay
@@ -86,16 +88,6 @@ import org.openstrap.app.ui.dashboard.LocalHeartZones
 import androidx.compose.ui.res.stringResource
 import org.openstrap.app.R
 
-/**
- * The live stats row's figures, unchanged from before spec 6.3 ("Stats row unchanged"): the moving time large in the
- * middle and the two figures either side, in Display Light. The only two sizes on the workout pages no role has; a
- * live clock read at arm's length isn't one of spec 2.3's.
- */
-internal val LiveClock = GlowType.sentence.copy(fontSize = 46.sp, lineHeight = 50.sp, letterSpacing = (-0.02).em,
-    fontFeatureSettings = "tnum")
-internal val LiveFigure = GlowType.sentence.copy(fontSize = 26.sp, lineHeight = 30.sp, letterSpacing = (-0.02).em,
-    fontFeatureSettings = "tnum")
-
 /** What every live screen can do to the workout, passed down as one. */
 @androidx.compose.runtime.Immutable
 internal class LiveControls(
@@ -161,7 +153,7 @@ internal fun LiveFrame(
             LiveTopBar(r, connected, controls, title, time, status, battery, labelled, quiet)
             if (landscape) {
                 LandscapePanes(
-                    r, connected, controls, null, bottomRoom != null, paused,
+                    r, connected, controls, bottomRoom != null, paused,
                     frameControls = { FrameControls(r, controls, lap, quiet, tapHint, pauseWhite) },
                     content = content,
                 )
@@ -190,12 +182,6 @@ internal fun LiveFrame(
 @Suppress("CompositionLocalAllowlist", "ComposeCompositionLocalUsage")
 internal val LocalLiveLandscape = staticCompositionLocalOf { false }
 
-/** The moving time large under the top bar, or over the controls on a phone on its side. */
-@Composable
-internal fun MovingTime(time: () -> Long) =
-    // Plain digits: the screen's one dot-matrix number is further down.
-    LiveStat(stringResource(R.string.workout_live_moving_time), Modifier.fillMaxWidth()) { ClockText(time, LiveClock) }
-
 /**
  * A phone on its side (or an unfolded one) is too short for the screen above its controls: the controls take a column
  * on the right, under the moving time when it's large, and the screen's own [content] the rest, scrolling only when
@@ -207,7 +193,6 @@ private fun ColumnScope.LandscapePanes(
     r: WorkoutState.Recording,
     connected: Boolean,
     controls: LiveControls,
-    time: (() -> Long)?,
     sharedBar: Boolean,
     paused: (@Composable ColumnScope.() -> Unit)?,
     frameControls: @Composable ColumnScope.() -> Unit,
@@ -219,8 +204,6 @@ private fun ColumnScope.LandscapePanes(
         val side = landscapeControlsWidth(maxWidth)
         Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(LandscapeGap)) {
             ScrollPane(Modifier.weight(1f).fillMaxHeight(), Arrangement.spacedBy(14.dp)) {
-                // Beside a shared bar the moving time stays over the page, as it is upright.
-                if (bar && time != null) MovingTime(time)
                 if (!bar && !connected && !r.paused) PageNote(WorkoutCopy.STRAP_GONE_NOTE)
                 if (!bar && r.endFailed) NotSavedNotice(controls.onEnd)
                 if (!bar) r.endPrompt?.let { at -> StoppedPrompt(r, at, controls.onEndAtPrompt, controls.onKeepGoing) }
@@ -230,7 +213,6 @@ private fun ColumnScope.LandscapePanes(
             // Centred in the height, and like the content, scrolling rather than cut on a screen too short for it.
             val centred = Arrangement.spacedBy(14.dp, Alignment.CenterVertically)
             ScrollPane(Modifier.width(side).fillMaxHeight(), centred, Alignment.CenterHorizontally) {
-                if (time != null) MovingTime(time)
                 frameControls()
             }
         }
@@ -393,7 +375,7 @@ private fun LiveTopBar(
             }
             if (time != null) TotalTime(time, r.paused)
         }
-        Column(Modifier.width(96.dp), horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Column(Modifier.widthIn(min = 96.dp), horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
             if (quiet) return@Column
             val strap = when {
                 !connected -> WorkoutWords.STRAP_GONE
@@ -631,7 +613,7 @@ internal fun LitHeartPill(bpm: Int?, maxHr: Int?, color: Color, paused: Boolean,
             return@Row
         }
         Icon(AppIcons.Heartbeat, null, tint = color, modifier = Modifier.size(16.dp))
-        Text("$bpm", color = Color.White, style = GlowType.figureInline.copy(fontSize = 18.sp))
+        Text("$bpm", color = Color.White, style = GlowType.figureInline)
         val zone = maxHr?.let { WorkoutRecorder.liveZone(bpm, it, heartZones) }
         val unit = stringResource(R.string.workout_live_unit_bpm)
         Text(

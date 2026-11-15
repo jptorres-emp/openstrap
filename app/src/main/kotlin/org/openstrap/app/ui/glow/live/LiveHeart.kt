@@ -234,7 +234,7 @@ internal fun WorkoutHeartCard(
         } else HeroLine(WorkoutCopy.noZone(r.paused), tint)
     }
     if (zoneBar && !fill) LiveCard {
-        Text(stringResource(R.string.workout_live_zones_title), color = Color.White, style = GlowType.cardTitle)
+        Text(stringResource(R.string.workout_live_zones_title), color = Color.White, style = GlowType.cardTitle, maxLines = 1)
         ZoneTimeBar(zoneSeconds, zone)
         HeartNotes(r, zone, zoneSeconds, active, kcal)
     }

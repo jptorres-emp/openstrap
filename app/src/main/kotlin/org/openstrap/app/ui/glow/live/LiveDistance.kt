@@ -388,7 +388,7 @@ private fun AveragePace(averagePace: () -> Double?, speed: Boolean, tint: Color)
 private fun SplitsCard(splits: List<Route.Split>, bpm: Int?, r: WorkoutState.Recording, showHeart: Boolean) {
     LiveCard {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(stringResource(R.string.workout_live_splits_title), color = Color.White, style = GlowType.cardTitle,
+            Text(stringResource(R.string.workout_live_splits_title), color = Color.White, style = GlowType.cardTitle, maxLines = 1,
                 modifier = Modifier.weight(1f))
             Text(stringResource(R.string.workout_live_splits_note), color = GlowType.noteColor, style = GlowType.noteSmall)
         }

@@ -50,7 +50,7 @@ internal fun ColumnScope.LivePaused(r: WorkoutState.Recording, liveHeartRate: In
     val drop = if (before != null && liveHeartRate != null) before - liveHeartRate else null
     if (liveHeartRate != null) LiveCard {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(stringResource(R.string.workout_live_heart_title), color = Color.White, style = GlowType.cardTitle,
+            Text(stringResource(R.string.workout_live_heart_title), color = Color.White, style = GlowType.cardTitle, maxLines = 1,
                 modifier = Modifier.weight(1f))
             Text(stringResource(R.string.workout_live_paused_since), color = GlowType.noteColor, style = GlowType.noteSmall)
         }

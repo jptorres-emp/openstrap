@@ -329,8 +329,8 @@ private fun DoneSets(sets: List<AppWorkoutSet>, history: List<Pair<Long, Int>>) 
         done.take(4).forEachIndexed { i, s ->
             Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(stringResource(R.string.workout_live_sets_row, s.index + 1), color = GlowType.noteColor,
-                    style = GlowType.body.copy(fontSize = 14.sp))
-                Text(lines[i], color = Color.White, style = GlowType.body.copy(fontSize = 14.sp), maxLines = 1,
+                    style = GlowType.secondary)
+                Text(lines[i], color = Color.White, style = GlowType.secondary, maxLines = 1,
                     overflow = TextOverflow.Ellipsis)
             }
         }

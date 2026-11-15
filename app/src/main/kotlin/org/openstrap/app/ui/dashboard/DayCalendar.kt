@@ -10,6 +10,7 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -137,7 +138,8 @@ fun DayCalendarSheet(selected: LocalDate, available: Set<LocalDate>, onPick: (Lo
 }
 
 /** A day with data: a light grey disc, so the days that can be picked read as something to press. */
-private val DayFill = Color(0xFF2C2C2E)
+private val DayFill = Color(0xFF1E2025)
+private val PickedFill = Color(0xFF34363E)
 
 /** The legend's words, quieter than the days. */
 private val LegendInk = Color.White.copy(alpha = 0.6f)
@@ -173,7 +175,6 @@ private fun MonthGrid(
 @Composable
 private fun DayCell(date: LocalDate, selected: Boolean, today: Boolean, enabled: Boolean, onPick: (LocalDate) -> Unit) {
     val text = when {
-        selected -> Color.Black
         enabled -> Color.White
         else -> Color.White.copy(alpha = 0.2f)
     }
@@ -183,7 +184,8 @@ private fun DayCell(date: LocalDate, selected: Boolean, today: Boolean, enabled:
             .clip(CircleShape)
             .then(
                 when {
-                    selected -> Modifier.background(Color.White)
+                    // The picked day is a lifted dark disc with a white ring, not a second white tap (board HaloDayCalendar).
+                    selected -> Modifier.background(PickedFill).border(1.5.dp, Color.White, CircleShape)
                     enabled -> Modifier.background(DayFill)
                     else -> Modifier
                 },

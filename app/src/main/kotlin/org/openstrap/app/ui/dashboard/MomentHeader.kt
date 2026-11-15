@@ -5,24 +5,18 @@ import org.openstrap.app.R
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import org.openstrap.app.ui.theme.ControlSurface
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -48,7 +42,6 @@ import java.time.LocalDate
 import org.openstrap.app.ui.components.growClick
 import org.openstrap.app.ui.glow.GlowType
 import org.openstrap.app.ui.glow.RoundIconButton
-import org.openstrap.app.ui.theme.MetricColors
 import org.openstrap.app.ui.theme.AppIcons
 
 /** How far a swipe on the header has to travel to change the day. */
@@ -201,6 +194,6 @@ private fun Peek(text: String) {
     Text(text, Modifier.width(PeekWidth), color = Color.White.copy(alpha = 0.22f), style = GlowType.body, maxLines = 1, softWrap = false)
 }
 
-// The Control surface (spec 2.2): the avatar is a control.
-private val Avatar = ControlSurface
+// The avatar is a control, the header's dark #17181C like the strap pill (board HaloTodayMidday).
+private val Avatar = Color(0xFF17181C)
 private val PeekWidth = 34.dp

@@ -105,19 +105,22 @@ fun todayCards(moment: Moment?, facts: TodayFacts, morning: Boolean = true): Lis
     fun pair(a: TodayCard, b: TodayCard) = listOf(TodaySlot(a, CardSize.Small), TodaySlot(b, CardSize.Small))
     // Energy, where the hero isn't, is always the screen's second glow: a level glow filling across to its value.
     val energy = TodaySlot(TodayCard.Charge, CardSize.Wide, secondGlow = true)
+    val plainEnergy = TodaySlot(TodayCard.Charge, CardSize.Wide)
     val own = when (m) {
         // Last night is the Wide the morning is about; heart rate and steps shrink to a pair.
         Moment.Waking -> listOfNotNull(strip(TodayCard.CheckIn).takeIf { facts.isToday }, list(TodayCard.BodyMorning), wide(TodayCard.LastNight)) +
             pair(TodayCard.HeartRate, TodayCard.Activity)
-        // Energy is the hero. The Right now list is gone: Stress has its card, HRV lives on Recovery.
-        Moment.Midday -> pair(TodayCard.Recovery, TodayCard.LastNight) + wide(TodayCard.Activity) + pair(TodayCard.HeartRate, TodayCard.Stress)
+        // Energy is the hero; the body list closes the day's cards (board HaloTodayMidday).
+        Moment.Midday -> pair(TodayCard.Recovery, TodayCard.LastNight) + wide(TodayCard.Activity) + list(TodayCard.BodyMorning)
         // Load and To recover as a pair in place of the "Before you start" list.
         Moment.WorkoutWindow -> listOf(energy) + pair(TodayCard.LoadToday, TodayCard.Recover) + wide(TodayCard.Activity) + strip(TodayCard.LastNight)
         // The hero is the workout and its live heart rate, so Heart rate and Stress leave.
         Moment.During -> listOf(wide(TodayCard.Activity)) + pair(TodayCard.Recovery, TodayCard.LastNight)
-        Moment.After -> listOfNotNull(wide(TodayCard.Workout).takeIf { facts.workout }) + pair(TodayCard.LoadToday, TodayCard.Recover) +
-            energy + pair(TodayCard.Activity, TodayCard.LastNight)
-        Moment.Evening, Moment.Night -> listOf(energy) + pair(TodayCard.Activity, TodayCard.HeartRate) + strip(TodayCard.LastNight)
+        // The hero is the run itself (board HaloTodayAfter), so no card of it under it; Energy is a plain card.
+        Moment.After -> pair(TodayCard.LoadToday, TodayCard.Recover) + plainEnergy + pair(TodayCard.Activity, TodayCard.LastNight)
+        Moment.Evening -> listOf(plainEnergy) + pair(TodayCard.Activity, TodayCard.HeartRate) + strip(TodayCard.LastNight)
+        // Energy and Heart rate as a pair, Steps wide under them (board HaloTodayNight).
+        Moment.Night -> pair(TodayCard.Charge, TodayCard.HeartRate) + wide(TodayCard.Activity) + strip(TodayCard.LastNight)
     }
     // Things that need an answer come straight under the hero; the week and Habit Age close the list, then Start a
     // workout, except where the hero is the workout or has Start of its own, and at night (spec 4.2).

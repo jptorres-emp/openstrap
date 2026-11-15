@@ -5,7 +5,6 @@ import org.openstrap.app.R
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.pluralStringResource
 import org.openstrap.app.i18n.Strings
-import org.openstrap.app.presentation.DayWords
 import org.openstrap.app.presentation.Ranges
 import org.openstrap.app.presentation.StressLevel
 import org.openstrap.app.presentation.Units
@@ -39,7 +38,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import java.time.Instant
 import java.time.ZoneId
 import kotlin.math.roundToInt
@@ -47,7 +45,6 @@ import org.openstrap.app.data.CheckIn
 import org.openstrap.app.data.Workouts
 import org.openstrap.app.data.db.HealthAlertRow
 import org.openstrap.app.ui.components.cardNumber
-import org.openstrap.app.ui.components.pressClickable
 import org.openstrap.app.ui.dashboard.DailyHistory
 import org.openstrap.app.presentation.AFTER_FIRST_NIGHT
 import org.openstrap.app.ui.dashboard.DayUiState
@@ -56,31 +53,32 @@ import org.openstrap.app.ui.dashboard.RecoveryFailure
 import org.openstrap.app.ui.dashboard.TRY_AGAIN
 import org.openstrap.app.ui.dashboard.WAITING_LAST_NIGHT
 import org.openstrap.app.presentation.Metric
-import org.openstrap.app.ui.dashboard.Score
 import org.openstrap.app.presentation.TodayCopy
 import org.openstrap.app.ui.theme.MetricColors
 import org.openstrap.app.ui.theme.AppIcons
 import org.openstrap.app.ui.glow.draw.LightAngle
 import org.openstrap.app.ui.glow.draw.GlowStyle
 import org.openstrap.app.ui.glow.draw.DotSize
+import org.openstrap.app.ui.glow.pictures.EnergyRuler
 import org.openstrap.app.ui.dashboard.FAILED_SHORT
 import org.openstrap.app.ui.dashboard.GoalFacts
 import org.openstrap.app.ui.dashboard.GoalMetric
 import org.openstrap.app.ui.dashboard.NewsTag
-import org.openstrap.app.ui.dashboard.OffStatus
 import org.openstrap.app.ui.dashboard.OffWords
-import org.openstrap.app.ui.dashboard.bodyOffStatus
 import org.openstrap.app.ui.dashboard.goalTag
 import org.openstrap.app.ui.dashboard.offTag
 import org.openstrap.app.ui.dashboard.rimLit
 import org.openstrap.app.ui.glow.pictures.CountdownRing
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.foundation.layout.fillMaxHeight
+import org.openstrap.app.ui.glow.draw.level
+import org.openstrap.app.ui.glow.pictures.dotRing
 import org.openstrap.app.ui.glow.pictures.DayLine
 import org.openstrap.app.ui.glow.pictures.DayStrip
 import org.openstrap.app.ui.glow.pictures.LevelFill
 import org.openstrap.app.ui.glow.pictures.PictureSize
 import org.openstrap.app.ui.glow.pictures.WeekOfDots
 import org.openstrap.app.ui.glow.pictures.WeekRings
-import org.openstrap.app.ui.glow.pictures.dayLineRim
 import org.openstrap.app.ui.glow.pictures.dayStripRim
 import org.openstrap.app.ui.glow.pictures.drawHourDots
 import org.openstrap.app.ui.glow.pictures.levelFillRim
@@ -111,7 +109,7 @@ internal fun HeroFigure(
 ) {
     Column(modifier, horizontalAlignment = horizontal, verticalArrangement = Arrangement.spacedBy(6.dp)) {
         // A big figure is the card's number: it can move into the detail's headline (spec 3.5).
-        if (value != null) DotMatrixText(
+        if (value != null) HaloNumber(
             value, if (big) Modifier.cardNumber(value) else Modifier,
             dot = dot,
         )
@@ -125,15 +123,31 @@ internal fun HeroFigure(
  * its word, and the figures that go with it as text ("Energy at waking 84"). Without a [value] the lines stand alone.
  */
 @Composable
-internal fun HeroNumber(value: String?, lines: List<String>, modifier: Modifier = Modifier) {
+internal fun HeroNumber(
+    value: String?, lines: List<String>, modifier: Modifier = Modifier,
+    /** A picture over the lines, right-aligned (the Energy ruler on the midday hero, HaloTodayMidday). */
+    above: (@Composable () -> Unit)? = null,
+) {
     Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
         // The card's number: it can move into the detail's headline (spec 3.5).
         if (value != null) {
-            DotMatrixText(value, Modifier.cardNumber(value), dot = DotSize.Hero)
+            HaloNumber(value, Modifier.cardNumber(value), dot = DotSize.Hero)
             Spacer(Modifier.width(12.dp))
         }
-        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            lines.forEach { Text(it, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary, maxLines = 1) }
+        Column(
+            Modifier.then(if (above != null) Modifier.weight(1f) else Modifier),
+            verticalArrangement = Arrangement.spacedBy(if (above != null) 8.dp else 2.dp),
+            horizontalAlignment = if (above != null) Alignment.End else Alignment.Start,
+        ) {
+            above?.invoke()
+            Column(
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+                horizontalAlignment = if (above != null) Alignment.End else Alignment.Start,
+            ) {
+                lines.forEach {
+                    Text(it, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary, maxLines = 1)
+                }
+            }
         }
     }
 }
@@ -303,7 +317,7 @@ internal fun EdgeValue(
     dot: DotSize = DotSize.Edge,
 ) {
     if (value != null || waiting) Row(Modifier.padding(top = 14.dp), verticalAlignment = Alignment.Bottom) {
-        if (value != null) DotMatrixText(value, Modifier.cardNumber(value), dot = dot) else WaitingDash(Modifier.padding(vertical = 8.dp))
+        if (value != null) HaloNumber(value, Modifier.cardNumber(value), dot = dot) else WaitingDash(Modifier.padding(vertical = 8.dp))
         if (unit != null && value != null) Text(unit, color = Color.White.copy(alpha = 0.7f), style = GlowType.secondary, modifier = Modifier.padding(start = 8.dp))
     }
     if (status != null) Text(status, color = statusColor, style = GlowType.secondary, modifier = Modifier.padding(top = 6.dp), maxLines = 2, overflow = TextOverflow.Ellipsis)
@@ -325,7 +339,7 @@ private val WidePictureHeight = 52.dp
 internal fun PictureNumber(value: String?, unit: String?, tag: NewsTag?, modifier: Modifier = Modifier) {
     if (value == null) WaitingDash(modifier.padding(vertical = 8.dp))
     else NumberWithTag(tag, modifier) {
-        DotMatrixText(value, Modifier.cardNumber(value), dot = DotSize.Edge)
+        HaloNumber(value, Modifier.cardNumber(value), dot = DotSize.Edge)
         // Its own item, so on a Small too narrow for both the unit drops under the number whole, never split.
         if (unit != null) Text(unit, color = Color.White.copy(alpha = 0.7f), style = GlowType.secondary, maxLines = 1, softWrap = false)
     }
@@ -627,6 +641,11 @@ internal fun RecoveryEarlierCard(
         }
         return
     }
+    // The Small is its score and a ring of 24 dots filled to it, progress to the full score (board HaloTodayMidday).
+    if (size == PictureSize.Small && shown.value != null) {
+        RecoveryRingSmall(title, shown, onClick, modifier)
+        return
+    }
     val week = remember(recovery) { recovery?.readinessTrend?.map { it.second?.toFloat() }.orEmpty() }
     val usual = recovery?.readinessUsual?.let { it.low..it.high }
     val off = org.openstrap.app.ui.dashboard.recoveryOffStatus(recovery)
@@ -647,11 +666,62 @@ internal fun RecoveryEarlierCard(
  * the day is over ([org.openstrap.app.ui.dashboard.loadOffStatus]), so it's never news before then.
  */
 @Composable
+private fun RecoveryRingSmall(title: String, shown: TodayCopy.RecoveryShown, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val value = shown.value ?: return
+    PictureCard(MetricColors.readiness, modifier, onClick = onClick) {
+        CardTitle(title)
+        Row(Modifier.weight(1f).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            HaloNumber(value.toString(), Modifier.cardNumber(value.toString()), dot = DotSize.Edge)
+            Spacer(Modifier.weight(1f))
+            androidx.compose.foundation.Canvas(Modifier.size(52.dp)) {
+                val dotR = size.minDimension * RING_DOT_SHARE
+                dotRing(
+                    Offset(size.width / 2, size.height / 2), size.minDimension / 2 - dotR, RING_DOTS,
+                    Math.round(value.coerceIn(0, FULL_SCORE) / FULL_SCORE.toFloat() * RING_DOTS), MetricColors.readiness, dotR,
+                )
+            }
+        }
+        (shown.word ?: shown.line).let {
+            Text(it, color = GlowType.noteColor, style = GlowType.noteSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+    }
+}
+
+private const val LOAD_LEVEL_SPAN = 1.5f
+private const val LOAD_LEVEL_MIN = 0.15f
+private const val LOAD_LEVEL_DEFAULT = 0.5f
+private const val FULL_SCORE = 100
+private const val RING_DOTS = 24
+private const val RING_DOT_SHARE = 3f / 64f
+
+/**
+ * Load: a Small lit from below to its level in Load's violet (boards HaloTodayWorkoutTime, HaloTodayAfter, the level
+ * look), else the picture card with its fill over your usual.
+ */
+@Composable
 internal fun LoadCard(
     load: Float?, usual: Float?, endOfDay: Boolean, status: String, size: PictureSize, onClick: () -> Unit, modifier: Modifier = Modifier,
 ) {
     val off = org.openstrap.app.ui.dashboard.loadOffStatus(load, usual, endOfDay)
     val band = org.openstrap.app.presentation.LoadBands.usualRange(usual)
+    if (size == PictureSize.Small && load != null) {
+        // The level look: Load's violet rising from below to where today's Load stands against your usual.
+        val level = band?.let { (load / (it.endInclusive * LOAD_LEVEL_SPAN)).coerceIn(LOAD_LEVEL_MIN, 1f) } ?: LOAD_LEVEL_DEFAULT
+        GlowCard(GlowStyle.level(MetricColors.load, level).copy(second = true), modifier, onClick = onClick) {
+            Column(Modifier.fillMaxHeight()) {
+                EdgeTitle(stringResource(R.string.glow_today_load), null)
+                offTag(OffWords.Usual, off)?.let { NewsPill(it, Modifier.padding(top = 6.dp)) }
+                Spacer(Modifier.weight(1f))
+                val shown = load.roundToInt().toString()
+                HaloNumber(shown, Modifier.cardNumber(shown), dot = DotSize.Edge)
+                Text(
+                    status, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary,
+                    modifier = Modifier.padding(top = 4.dp), maxLines = 1, overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+        return
+    }
     TodayPictureCard(
         MetricColors.load, stringResource(R.string.glow_today_load), size, load?.roundToInt()?.toString(), null, offTag(OffWords.Usual, off), status,
         modifier, rim = if (load != null && rimLit(OffWords.Usual, off)) levelFillRim(load, band, size) else null, onClick = onClick,
@@ -712,7 +782,7 @@ internal const val FAILED_ALPHA = 0.45f
 @Composable
 internal fun ChargeWideCard(
     now: Int?, status: String, secondGlow: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier, soFar: List<Float?>? = null,
-    upTo: String? = null, tag: TitleTag? = null,
+    upTo: String? = null, tag: TitleTag? = null, small: Boolean = false, atWake: Int? = null,
 ) {
     val m = modifier.fillMaxWidth().gridSize(CardSize.Wide)
     if (secondGlow) {
@@ -727,13 +797,21 @@ internal fun ChargeWideCard(
                 }
             }
         }
-    } else PictureCard(MetricColors.charge, modifier.fillMaxWidth(), onClick = onClick) {
+    } else if (small) PictureCard(MetricColors.charge, modifier, onClick = onClick) {
+        // Energy as a Small (board HaloTodayNight): the figure, what happens to it, the ruler at the foot.
         EdgeTitle(stringResource(R.string.glow_today_energy_title), null, marker = upTo, tag = tag)
-        if (soFar == null || soFar.count { it != null } < 2) EdgeValue(now?.toString(), null, status)
-        else Row(verticalAlignment = Alignment.Bottom) {
+        EdgeValue(now?.toString(), null, status)
+        Spacer(Modifier.weight(1f))
+        if (now != null) EnergyRuler(now.toFloat(), Color.White.copy(alpha = 0.85f), Modifier.fillMaxWidth().height(18.dp))
+    } else PictureCard(MetricColors.charge, modifier.fillMaxWidth(), onClick = onClick) {
+        // Energy as a plain Wide (boards HaloTodayEvening, HaloTodayAfter): the figure and its line, the ruler beside.
+        EdgeTitle(
+            stringResource(R.string.glow_today_energy_title),
+            atWake?.let { stringResource(R.string.glow_today_energy_waking, it) }, marker = upTo, tag = tag,
+        )
+        Row(verticalAlignment = Alignment.Bottom) {
             Column(Modifier.weight(1f)) { EdgeValue(now?.toString(), null, status) }
-            Spacer(Modifier.width(14.dp))
-            GhostLine(soFar, MetricColors.charge, 100f, Modifier.weight(1f), height = 52.dp)
+            if (now != null) EnergyRuler(now.toFloat(), Color.White.copy(alpha = 0.85f), Modifier.width(150.dp).height(22.dp))
         }
     }
 }
@@ -752,6 +830,27 @@ internal fun WorkoutCard(w: org.openstrap.app.data.WorkoutAnalysis, onClick: () 
         ZoneBar(w.zoneSeconds, org.openstrap.app.ui.workout.ZONE_COLORS, Modifier.padding(top = 8.dp))
     }
 }
+
+/**
+ * What the after-workout hero shows of the run (board HaloTodayAfter): its distance, else its length, as the one dotted
+ * number, the length and the average heart rate beside it, and the time in zones as a bar under.
+ */
+@Composable
+internal fun AfterWorkoutBody(w: org.openstrap.app.data.WorkoutAnalysis) = Column {
+    val metres = w.distanceMeters?.takeIf { it >= MIN_KM_METRES }
+    val mostly = w.zoneSeconds.withIndex().filter { it.value > 0 }.maxByOrNull { it.value }?.index
+    HeroNumber(
+        metres?.let { Units.km(it, Units.Precision.Day, Units.DOT_LOCALE) } ?: dotClock(w.activeSeconds.coerceAtLeast(0)),
+        listOfNotNull(
+            Units.duration(w.activeSeconds.coerceAtLeast(0)),
+            workoutLine(w.workout.averageHeartRate, mostly?.let { it + 1 }),
+        ),
+    )
+    Spacer(Modifier.height(14.dp))
+    ZoneBar(w.zoneSeconds, org.openstrap.app.ui.workout.ZONE_COLORS, Modifier)
+}
+
+private const val MIN_KM_METRES = 1000f
 
 /** The workout card's line: its average heart rate and the zone it mostly sat in, either alone, or null with neither. */
 @Composable
@@ -803,7 +902,7 @@ internal fun WeekCard(
             week.days.forEach { (day, _) ->
                 Text(
                     day.dayOfWeek.getDisplayName(java.time.format.TextStyle.NARROW, locale),
-                    Modifier.weight(1f), color = Color.White.copy(alpha = if (day == state.date) 1f else GlowType.CAPTION_ALPHA),
+                    Modifier.weight(1f), color = if (day == state.date) Color.White else GlowType.footnoteColor,
                     style = GlowType.caption, textAlign = androidx.compose.ui.text.style.TextAlign.Center, maxLines = 1,
                 )
             }
@@ -839,7 +938,7 @@ internal fun SmallCard(
             when {
                 value == null -> WaitingDash(Modifier.padding(vertical = 8.dp))
                 plain -> Text(value, Modifier.cardNumber(value), color = Color.White, style = GlowType.smallValue, maxLines = 1)
-                else -> DotMatrixText(value, Modifier.cardNumber(value), dot = DotSize.Edge)
+                else -> HaloNumber(value, Modifier.cardNumber(value), dot = DotSize.Edge)
             }
             if (unit != null && value != null) Text(unit, color = Color.White.copy(alpha = 0.7f), style = GlowType.secondary, modifier = Modifier.padding(start = 6.dp))
         }
@@ -912,14 +1011,8 @@ internal fun BodyList(
 /** The last thing on Today: a way to change what it shows. */
 @Composable
 internal fun EditTodayButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    // A dark pill, no glass (board HaloTodayEvening, the foot of Today).
     Box(modifier.fillMaxWidth().padding(vertical = 8.dp), contentAlignment = Alignment.Center) {
-        Row(
-            Modifier.glass(CircleShape, onClick, scale = 0.97f).padding(horizontal = 16.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(AppIcons.SlidersHorizontal, null, tint = Color.White, modifier = Modifier.size(14.dp))
-            Spacer(Modifier.width(8.dp))
-            Text(stringResource(R.string.glow_today_edit), color = Color.White, style = GlowType.body)
-        }
+        PageButton(stringResource(R.string.glow_today_edit), onClick, icon = AppIcons.SlidersHorizontal, size = ButtonSize.Compact)
     }
 }

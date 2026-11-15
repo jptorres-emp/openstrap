@@ -177,7 +177,7 @@ fun HabitAgeEdgeCard(state: Healthspan.Outcome?, onClick: (() -> Unit)?, onOpenP
         if (shown != null) {
             NumberWithTag(tag, Modifier.padding(top = 14.dp)) {
                 Row(verticalAlignment = Alignment.Bottom) {
-                    DotMatrixText(shown.toString(), Modifier.cardNumber(shown.toString()), dot = DotSize.Edge)
+                    HaloNumber(shown.toString(), Modifier.cardNumber(shown.toString()), dot = DotSize.Edge)
                     Text(
                         stringResource(R.string.glow_healthspan_years), color = Color.White.copy(alpha = 0.7f), style = GlowType.secondary,
                         modifier = Modifier.padding(start = 8.dp),
@@ -212,7 +212,7 @@ private val AgeScaleInset = 6.dp
  */
 @Composable
 private fun AgeScale(age: Int, low: Int, high: Int, estimate: Float) {
-    val label = Color.White.copy(alpha = GlowType.CAPTION_ALPHA)
+    val label = GlowType.footnoteColor
     fun at(a: Float) = ageScaleX(a, low.toFloat(), high.toFloat(), age.toFloat())
     Column(Modifier.fillMaxWidth()) {
         LabelAt(TabCopy.yourAge(age), at(age.toFloat()), label)

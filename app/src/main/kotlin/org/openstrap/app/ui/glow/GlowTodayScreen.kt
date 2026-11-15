@@ -4,7 +4,6 @@ import org.openstrap.app.R
 import androidx.compose.ui.res.stringResource
 import org.openstrap.app.presentation.Units
 import org.openstrap.app.presentation.TimeOfDay
-import org.openstrap.app.data.Stats
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import org.openstrap.app.ui.components.Motion
@@ -66,11 +65,9 @@ import org.openstrap.app.ui.dashboard.TodayEdits
 import org.openstrap.app.ui.dashboard.TodayFacts
 import org.openstrap.app.ui.dashboard.TodaySlot
 import org.openstrap.app.ui.dashboard.applyEdits
-import org.openstrap.app.ui.dashboard.avg
 import org.openstrap.app.presentation.sportNoun
 import org.openstrap.app.ui.dashboard.CHARGE_FAILED
 import org.openstrap.app.ui.dashboard.FAILED_SHORT
-import org.openstrap.app.ui.dashboard.RECOVERY_FAILED
 import org.openstrap.app.ui.dashboard.RecoveryFailure
 import org.openstrap.app.ui.dashboard.STALE_AFTER_S
 import org.openstrap.app.ui.dashboard.TRY_AGAIN
@@ -101,7 +98,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.background
 import org.openstrap.app.ui.glow.draw.LightAngle
-import org.openstrap.app.ui.glow.draw.GlowStyle
 import org.openstrap.app.ui.glow.draw.heroStyle
 import org.openstrap.app.ui.glow.draw.WINDOW_RIM
 import org.openstrap.app.ui.glow.draw.AFTER_RIM
@@ -439,10 +435,10 @@ private fun Hero(
             HeroKind.Pair -> PairHero(pairing ?: PairStep.Ready, onPair, m)
             HeroKind.Stuck -> StuckHero(ctx, strap, onSyncNow, m)
             HeroKind.Waking -> WakingHero(ctx, lightAngle, { onOpenScore(org.openstrap.app.ui.dashboard.Score.Recovery) }, onRetryRecovery, m)
-            HeroKind.Midday -> ChargeHero(ctx, onOpenCharge, onRetryRecovery, m)
-            HeroKind.NoSleep -> ChargeHero(ctx, onOpenCharge, onRetryRecovery, m, noSleep = true)
+            HeroKind.Midday -> ChargeHero(ctx, lightAngle, onOpenCharge, onRetryRecovery, m)
+            HeroKind.NoSleep -> ChargeHero(ctx, lightAngle, onOpenCharge, onRetryRecovery, m, noSleep = true)
             HeroKind.Window -> WindowHero(ctx, lightAngle, onStartSport, onOtherSport, m)
-            HeroKind.After -> AfterHero(ctx, onOpenWorkout, m)
+            HeroKind.After -> AfterHero(ctx, lightAngle, onOpenWorkout, m)
             HeroKind.Evening -> EveningHero(ctx, lightAngle, bedtime, energyHidden, onOpenRecovery, m)
             HeroKind.During -> (running ?: lastRunning.value)?.let { DuringHero(it, onOpenRunning, liveHero, m) }
         }
@@ -491,12 +487,12 @@ private fun WakingHero(ctx: TodayContext, lightAngle: Float?, onOpen: () -> Unit
  * beside it. With [noSleep] it leads the morning too, saying no sleep was recorded (spec 4.3).
  */
 @Composable
-private fun ChargeHero(ctx: TodayContext, onOpen: () -> Unit, onRetry: () -> Unit, modifier: Modifier, noSleep: Boolean = false) {
+private fun ChargeHero(ctx: TodayContext, lightAngle: Float?, onOpen: () -> Unit, onRetry: () -> Unit, modifier: Modifier, noSleep: Boolean = false) {
     val c = ctx.rec?.charge
     val now = ctx.charge
     var info by rememberSaveable { mutableStateOf(false) }
-    // Charge is lit to its level from below (spec 2.5), so the moment's angle gives way here.
-    GlowCard(GlowStyle.Ember.copy(lightLevel = (now ?: 0) / 100f), modifier, onClick = onOpen) {
+    // The midday hero is Energy's orange lit from above, like every hero at its moment's angle (HaloTodayMidday).
+    GlowCard(heroStyle(MetricColors.charge, lightAngle ?: LightAngle.Above), modifier, onClick = onOpen) {
         Column {
             val start = c?.takeIf { it.anchored }?.atWake?.toInt()
             GlowHeader(
@@ -543,6 +539,8 @@ private fun ChargeHero(ctx: TodayContext, onOpen: () -> Unit, onRetry: () -> Uni
                         R.string.glow_today_drained, TabCopy.drainedAmount(c.drainedExercise + c.drainedStress + c.drainedLiving),
                     ),
                 ) else listOf(stringResource(R.string.glow_today_now)),
+                // The ruler of the day's level, a white tick at now (HaloCharts, Energy level).
+                above = { HeroEnergyRuler(now.toFloat(), Modifier.fillMaxWidth().height(20.dp)) },
             )
         }
     }
@@ -586,42 +584,18 @@ private fun WindowHero(ctx: TodayContext, lightAngle: Float?, onStart: (Int) -> 
  * (spec 4.2).
  */
 @Composable
-private fun AfterHero(ctx: TodayContext, onOpenWorkout: (Long) -> Unit, modifier: Modifier) {
+private fun AfterHero(ctx: TodayContext, lightAngle: Float?, onOpenWorkout: (Long) -> Unit, modifier: Modifier) {
     val w = ctx.lastWorkout ?: return
     val since = ctx.state.heartRate.filter { it.x >= w.end }
     val nowHr = ctx.live ?: since.lastOrNull()?.y?.toInt()
-    val noun = sportNoun(w.workout.sportType) ?: stringResource(R.string.glow_today_workout_noun)
     // Recovery teal, from below with the rim calmed: red stays for effort, so it stops once the run is done (spec 2.6, 4.2).
-    GlowCard(heroStyle(MetricColors.readiness, LightAngle.Below, rim = AFTER_RIM), modifier, onClick = { onOpenWorkout(w.workout.start) }) {
+    val style = heroStyle(MetricColors.readiness, lightAngle ?: LightAngle.Right, rim = AFTER_RIM)
+    GlowCard(style, modifier, onClick = { onOpenWorkout(w.workout.start) }) {
         Column {
-            GlowHeader(stringResource(R.string.glow_today_since_your, noun), trailing = Units.duration(ctx.now - w.end))
+            GlowHeader(Workouts.sportName(w.workout.sportType), trailing = Units.duration(ctx.now - w.end))
             HeroSentence(TodayCopy.after(nowHr, ctx.state.restingHeartRate))
-            // The drop since the end, from the readings the strap has sent. A live curve needs live readings kept
-            // through the calm down (step 7).
-            if (since.size >= 2) {
-                // About 40 points over whatever time has passed, and never narrower than the strap's usual gap between
-                // readings (it keeps one every few minutes outside a workout): a slot with no reading between two that
-                // have one breaks the line into lone dots.
-                val gaps = since.zipWithNext { a, b -> (b.x - a.x).toInt() }.filter { it > 0 }
-                val typical = Stats.upperMiddle(gaps)?.toLong() ?: 0L
-                // Half as wide again, so a reading a little late still lands in its own slot.
-                val step = maxOf(60L, (ctx.now - w.end) / 40, typical * 3 / 2)
-                val values = remember(since, w.end, step) { bucket(since, w.end..ctx.now, step) }
-                Spacer(Modifier.height(14.dp))
-                // The line drops into your resting range, a dim band, once it's known.
-                GlowLineChart(values, height = 64.dp, showAverage = false, band = ctx.restingRange?.let { it.low..it.high })
-            }
             Spacer(Modifier.height(18.dp))
-            // No readings around the end give no end heart rate: leave it out rather than show a dash.
-            val end = w.endHeartRate
-            val resting = ctx.state.restingHeartRate
-            val then = when {
-                end != null && resting != null -> stringResource(R.string.glow_today_after_end_resting, end, resting)
-                end != null -> stringResource(R.string.glow_today_after_end, end)
-                resting != null -> stringResource(R.string.glow_today_after_resting, resting)
-                else -> null
-            }
-            HeroNumber(nowHr?.toString(), listOfNotNull(nowHr?.let { stringResource(R.string.glow_today_bpm_now) }, then))
+            AfterWorkoutBody(w)
         }
     }
 }
@@ -637,7 +611,8 @@ private fun EveningHero(ctx: TodayContext, lightAngle: Float?, bedtime: LocalTim
     val goals = LocalGoals.current
     val sports = ctx.dayWorkouts.map { it.workout.sportType }
     val night = ctx.moment == Moment.Night
-    val style = heroStyle(if (night) MetricColors.sleepDeep else MetricColors.evening, lightAngle)
+    // The evening glows at 0.8 and the night at 0.65 (boards HaloTodayEvening, HaloTodayNight).
+    val style = heroStyle(if (night) MetricColors.sleepDeep else MetricColors.evening, lightAngle, rim = if (night) 0.65f else 0.8f)
     // The evening's violet is lit lighter so it reads as violet, not as a second night (spec 4.2).
     GlowCard(if (night) style else style.copy(bodyLightness = EVENING_BODY), modifier, onClick = onOpen) {
         Column {
@@ -848,7 +823,8 @@ private fun TodayRow(
             val soFar = c?.takeIf { it.anchored && ctx.isToday }?.let { chargeSoFar(it.points, s.dayStart..s.dayEnd, ctx.now) }
             ChargeWideCard(
                 ctx.charge, status, slot.secondGlow, { openScore(org.openstrap.app.ui.dashboard.Score.Energy) }, soFar = soFar,
-                upTo = ctx.upTo(ctx.newest), tag = ctx.partial,
+                upTo = ctx.upTo(ctx.newest), tag = ctx.partial, small = slot.size == CardSize.Small,
+                atWake = c?.takeIf { it.anchored }?.atWake?.toInt(),
             )
         }
         // Before and after a workout, as a pair: Load filling toward your usual, and the ring toward Ready.

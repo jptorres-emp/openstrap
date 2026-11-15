@@ -5,8 +5,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalResources
 import org.openstrap.app.presentation.dotFormat
 import org.openstrap.app.presentation.Ranges
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -17,28 +15,22 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 import kotlin.math.roundToInt
 import org.openstrap.app.data.SleepHistory
-import org.openstrap.app.presentation.ChartPoint
 import org.openstrap.app.presentation.StageSpan
 import org.openstrap.app.presentation.AFTER_FIRST_NIGHT
 import org.openstrap.app.ui.dashboard.DayUiState
@@ -78,7 +70,6 @@ import org.openstrap.app.ui.theme.MetricColors
 import org.openstrap.app.ui.glow.draw.StageBarLook
 import org.openstrap.app.ui.glow.draw.stageTotals
 import org.openstrap.app.ui.glow.draw.GlowMood
-import org.openstrap.app.ui.glow.draw.GlowStyle
 import org.openstrap.app.ui.glow.draw.LightAngle
 import org.openstrap.app.ui.glow.draw.stageColor
 
@@ -139,12 +130,8 @@ fun GlowSleepScreen(
 
 /* ------------------------------------------------------------------------------------------------ */
 
-/** Sleep glows midnight blue. */
-internal val SleepGlow = GlowStyle.Midnight.copy(
-    color = MetricColors.sleepDeep, lightAngle = LightAngle.Below,
-    coreX = 0.5f, coreY = 0.6f, coreWidth = 1.1f, coreHeight = 0.9f,
-)
-
+/** Sleep glows midnight blue, lit from below at 0.85 (board HaloSleep), the same hero as Today's night. */
+internal val SleepGlow = org.openstrap.app.ui.glow.draw.heroStyle(MetricColors.sleepDeep, LightAngle.Below, rim = 0.85f)
 
 /**
  * The night (spec 5.2, the sleep hero): how long, against the rest of the week, then the score in dots with its word
@@ -383,7 +370,8 @@ private fun SleepNumber(value: String?, unit: String?, tag: NewsTag?, modifier: 
     if (value == null && !waiting) return
     NumberWithTag(if (value == null) null else tag, modifier) {
         Row(verticalAlignment = Alignment.Bottom) {
-            if (value != null) DotMatrixText(value, Modifier.cardNumber(value), dot = DotSize.Edge) else WaitingDash(Modifier.padding(vertical = 8.dp))
+            if (value != null) HaloNumber(value, Modifier.cardNumber(value), dot = DotSize.Edge)
+            else WaitingDash(Modifier.padding(vertical = 8.dp))
             if (unit != null && value != null) {
                 Text(unit, color = Color.White.copy(alpha = 0.7f), style = GlowType.secondary, modifier = Modifier.padding(start = 6.dp))
             }

@@ -17,8 +17,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.produceState
-import kotlinx.coroutines.delay
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberUpdatedState
@@ -205,12 +203,7 @@ fun GlowWorkoutReadyScreen(
     val haptics = rememberHaptics()
     // Keeps the live heart rate coming for the top bar, which the old heart card did.
     org.openstrap.app.ui.components.HoldLiveHeartRate()
-    val nowMillis by produceState(System.currentTimeMillis()) {
-        while (true) {
-            value = System.currentTimeMillis()
-            delay(NOW_REFRESH_MS)
-        }
-    }
+    val nowMillis by rememberNowMillis()
     // Tapping the hero edits the goal in a sheet: what is open now is what Cancel puts back.
     val editor = remember { GoalEditor() }
     val openEditor = {
@@ -363,8 +356,6 @@ private fun ReadyTopBar(type: Int, family: Workouts.Family, connection: Connecti
         }
     }
 }
-
-private const val NOW_REFRESH_MS = 30_000L
 
 /** What a cardio sport's goal card opens on: last time's goal or reps ([structure] first, from Choose), each kind's default else. */
 private fun goalDraft(settings: SportSettings, structure: String?): GoalDraft {

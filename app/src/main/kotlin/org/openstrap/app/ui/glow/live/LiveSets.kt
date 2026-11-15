@@ -62,7 +62,6 @@ import org.openstrap.app.ui.glow.Segment
 import org.openstrap.app.ui.glow.SegmentBar
 import org.openstrap.app.ui.workout.RestTeal
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.graphics.PathEffect
 import org.openstrap.app.ui.glow.GlowLayout
 import org.openstrap.app.ui.glow.OutlineCard
 import org.openstrap.app.ui.glow.draw.GlowMotion
@@ -287,18 +286,31 @@ private fun FallingHeart(readings: List<Pair<Long, Int>>, level: Int?) {
         val reach = size.width * FALLING_REACH
         fun x(t: Long) = (t - from).toFloat() / (to - from) * reach
         fun y(v: Int) = size.height - (v - lo).toFloat() / (hi - lo) * size.height
-        val dash = PathEffect.dashPathEffect(floatArrayOf(4.dp.toPx(), 4.dp.toPx()))
-        if (level != null) drawLine(RestTeal.copy(alpha = 0.8f), Offset(0f, y(level)), Offset(size.width, y(level)), 1.5.dp.toPx(), pathEffect = dash)
+        if (level != null) dashedLine(RestTeal.copy(alpha = 0.8f), Offset(0f, y(level)), Offset(size.width, y(level)),
+            1.5.dp.toPx(), 4.dp.toPx(), 4.dp.toPx())
         val path = Path().apply {
             readings.forEachIndexed { i, (t, v) -> if (i == 0) moveTo(x(t), y(v)) else lineTo(x(t), y(v)) }
         }
-        drawPath(path, Color.White, style = Stroke(2.4.dp.toPx(), cap = StrokeCap.Round, join = androidx.compose.ui.graphics.StrokeJoin.Round))
+        drawPath(path, Color.White, style = Stroke(2.4.dp.toPx(), cap = StrokeCap.Round,
+            join = androidx.compose.ui.graphics.StrokeJoin.Round))
         val now = Offset(x(readings.last().first), y(readings.last().second))
-        if (level != null) drawLine(
-            Color.White.copy(alpha = 0.35f), now, Offset(size.width * FALLING_TARGET, y(level)), 2.dp.toPx(),
-            pathEffect = PathEffect.dashPathEffect(floatArrayOf(3.dp.toPx(), 4.dp.toPx())),
+        if (level != null) dashedLine(
+            Color.White.copy(alpha = 0.35f), now, Offset(size.width * FALLING_TARGET, y(level)), 2.dp.toPx(), 3.dp.toPx(), 4.dp.toPx(),
         )
         drawCircle(Color.White, 4.5.dp.toPx(), now)
+    }
+}
+
+/** A line of short strokes [on] long with [off] between, drawn stroke by stroke (the boards' dashed rule). */
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.dashedLine(color: Color, from: Offset, to: Offset, width: Float,
+    on: Float, off: Float) {
+    val length = (to - from).getDistance()
+    if (length <= 0f) return
+    val step = (to - from) / length
+    var at = 0f
+    while (at < length) {
+        drawLine(color, from + step * at, from + step * minOf(at + on, length), width)
+        at += on + off
     }
 }
 

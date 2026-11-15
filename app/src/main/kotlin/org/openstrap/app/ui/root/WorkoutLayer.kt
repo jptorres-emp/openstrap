@@ -397,6 +397,7 @@ private fun ChooseOverlay(
     )
 }
 
+@Suppress("ForbiddenMethodCall/uiClock")
 @Composable
 private fun ReadyOverlay(
     nav: AppNavState,

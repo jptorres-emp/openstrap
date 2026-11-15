@@ -129,23 +129,39 @@ internal fun ReadyLastRow(last: ReadyLast?) {
 
 /** "Ends about 18:12" for a goal [seconds] long started at [nowMillis], null where nothing says how long it takes. */
 @Composable
+@androidx.compose.runtime.ReadOnlyComposable
 internal fun endsAbout(seconds: Long?, nowMillis: Long): String? {
     if (seconds == null || seconds <= 0) return null
     val at = Instant.ofEpochMilli(nowMillis + seconds * MS_PER_S).atZone(ZoneId.systemDefault())
     return stringResource(R.string.workout_start_ends_near, DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).format(at))
 }
 
+/** The clock "Ends about" counts from, read again every half minute. */
+@Suppress("ForbiddenMethodCall/uiClock")
+@Composable
+internal fun rememberNowMillis(): androidx.compose.runtime.State<Long> = androidx.compose.runtime.produceState(System.currentTimeMillis()) {
+    while (true) {
+        value = System.currentTimeMillis()
+        kotlinx.coroutines.delay(NOW_REFRESH_MS)
+    }
+}
+
+private const val NOW_REFRESH_MS = 30_000L
 private const val MS_PER_S = 1000L
+private const val SECONDS_PER_MINUTE = 60L
+private const val UNIT_DIVIDER = "\u00D7"
 
 /** A time goal as the figure: whole minutes in min, else the clock. */
 private fun timeFigure(seconds: Long): Pair<String, String?> =
-    if (seconds % 60 == 0L) "${seconds / 60}" to null else Units.workoutClock(seconds, Units.DOT_LOCALE) to null
+    if (seconds % SECONDS_PER_MINUTE == 0L) "${seconds / SECONDS_PER_MINUTE}" to null else Units.workoutClock(seconds,
+        Units.DOT_LOCALE) to null
 
 /**
  * The hero's words for the family's goal (workout-rules.md, section 3 table). [lastPace] is last time's seconds a km, for
  * when a distance goal would end; [nowMillis] is the clock the "Ends about" note counts from.
  */
 @Composable
+@androidx.compose.runtime.ReadOnlyComposable
 @Suppress("LongParameterList", "CyclomaticComplexMethod")
 internal fun goalHeroSpec(
     type: Int,
@@ -170,24 +186,27 @@ internal fun goalHeroSpec(
             )
             WorkoutSetup.GoalKind.Time -> {
                 val (n, _) = timeFigure(draft.seconds)
-                GoalHeroSpec(title, n, if (draft.seconds % 60 == 0L) min else null, null, StartCopy.TIME_KIND_NOTE, endsAbout(draft.seconds, nowMillis))
+                GoalHeroSpec(title, n, if (draft.seconds % SECONDS_PER_MINUTE == 0L) min else null, null,
+                    StartCopy.TIME_KIND_NOTE, endsAbout(draft.seconds, nowMillis))
             }
             WorkoutSetup.GoalKind.Zone -> {
                 val z = draft.zones
                 GoalHeroSpec(
-                    title, if (z.low == z.high) "${z.low + 1}" else stringResource(R.string.glow_ready_hero_zone_range, z.low + 1, z.high + 1),
+                    title, if (z.low == z.high) "${z.low + 1}" else stringResource(R.string.glow_ready_hero_zone_range,
+                        z.low + 1, z.high + 1),
                     stringResource(R.string.glow_ready_hero_zones), null, zoneLine ?: StartCopy.ZONE_NOTE,
                 )
             }
             WorkoutSetup.GoalKind.Intervals -> {
                 val (len, unit) = StartCopy.repParts(draft.reps)
-                GoalHeroSpec(title, "${draft.reps.rounds}×$len", unit, null, StartCopy.structureName(draft.reps))
+                GoalHeroSpec(title, "${draft.reps.rounds}$UNIT_DIVIDER$len", unit, null, StartCopy.structureName(draft.reps))
             }
             WorkoutSetup.GoalKind.None -> GoalHeroSpec(title, null, null, StartCopy.noGoal(type), StartCopy.noGoalNote(hasDistance))
         }
         Workouts.Family.Strength ->
             if (sets != null) GoalHeroSpec(
-                title, "$sets", stringResource(R.string.glow_ready_hero_sets_rest, StartCopy.restText(restSeconds)), null, StartCopy.STRENGTH_STATUS,
+                title, "$sets", stringResource(R.string.glow_ready_hero_sets_rest, StartCopy.restText(restSeconds)), null,
+                    StartCopy.STRENGTH_STATUS,
             ) else GoalHeroSpec(title, null, null, StartCopy.OPEN, StartCopy.OPEN_SETS_NOTE)
         Workouts.Family.Intervals -> {
             val total = rounds?.let { StartCopy.totalTime(it) }
@@ -198,13 +217,15 @@ internal fun goalHeroSpec(
         }
         Workouts.Family.MindBody ->
             if (kind == WorkoutSetup.GoalKind.Time) GoalHeroSpec(
-                title, timeFigure(draft.seconds).first, if (draft.seconds % 60 == 0L) min else null, null, StartCopy.MIND_STATUS,
+                title, timeFigure(draft.seconds).first, if (draft.seconds % SECONDS_PER_MINUTE == 0L) min else null, null,
+                    StartCopy.MIND_STATUS,
                 endsAbout(draft.seconds, nowMillis),
             ) else GoalHeroSpec(title, null, null, StartCopy.OPEN, StartCopy.MIND_OPEN_NOTE)
         Workouts.Family.Games -> {
             val p = rounds as? Structure.Periods
             if (p != null) GoalHeroSpec(
-                title, "${p.rounds} × ${p.length / 60}", stringResource(R.string.glow_ready_hero_periods, StartCopy.periodsName(p).lowercase()),
+                title, "${p.rounds} $UNIT_DIVIDER ${p.length / SECONDS_PER_MINUTE}", stringResource(R.string.glow_ready_hero_periods,
+                    StartCopy.periodsName(p).lowercase()),
                 null, StartCopy.gamesNote(p), endsAbout(StartCopy.totalTime(p), nowMillis),
             ) else GoalHeroSpec(title, null, null, StartCopy.FREE_PLAY, StartCopy.gamesNote(null))
         }

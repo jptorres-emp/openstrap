@@ -308,7 +308,8 @@ private fun ReadyPlanCard(
         content()
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             PageButton(stringResource(R.string.glow_cancel), { closeGoal(editor, onTyping, save = false) }, Modifier.weight(1f))
-            PageButton(stringResource(R.string.glow_save), { closeGoal(editor, onTyping, save = true) }, Modifier.weight(1f), primary = true)
+            PageButton(stringResource(R.string.glow_save), { closeGoal(editor, onTyping, save = true) }, Modifier.weight(1f),
+                primary = true)
         }
     }
 }

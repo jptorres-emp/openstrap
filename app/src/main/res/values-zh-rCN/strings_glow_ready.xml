@@ -17,7 +17,6 @@
     <plurals name="glow_choose_sports_count">
         <item quantity="other">%d 项运动</item>
     </plurals>
-    <string name="glow_ready_plan_description">%1$s。%2$s</string>
     <string name="glow_ready_shorter">缩短</string>
     <string name="glow_ready_longer">延长</string>
     <string name="glow_ready_with">含</string>

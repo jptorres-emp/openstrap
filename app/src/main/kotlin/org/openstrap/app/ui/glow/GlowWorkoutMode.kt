@@ -374,12 +374,13 @@ internal fun DeleteWorkout(what: String, onDelete: () -> Unit, modifier: Modifie
     var confirmDelete by rememberSaveable { mutableStateOf(false) }
     PageButton(
         stringResource(R.string.glow_workout_delete), { confirmDelete = true }, modifier.fillMaxWidth(),
-        color = MetricColors.warn, icon = AppIcons.Trash,
+        destructive = true, icon = AppIcons.Trash,
     )
     if (confirmDelete) {
         PageConfirm(
             stringResource(R.string.glow_workout_delete_confirm), what, stringResource(R.string.glow_delete),
             { confirmDelete = false; onDelete() }, { confirmDelete = false },
+            destructive = true,
         )
     }
 }

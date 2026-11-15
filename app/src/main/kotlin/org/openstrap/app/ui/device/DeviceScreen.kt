@@ -200,7 +200,7 @@ fun DeviceScreen(
             stringResource(R.string.you_strap_forget_title),
             stringResource(R.string.you_strap_forget_text),
             confirm = stringResource(R.string.you_strap_forget), onConfirm = { confirmForget = false; vm.forget() },
-            onDismiss = { confirmForget = false },
+            onDismiss = { confirmForget = false }, destructive = true,
         )
     }
 

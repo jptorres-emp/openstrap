@@ -40,6 +40,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.FirstBaseline
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -89,11 +90,18 @@ private val Hairline = Color.White.copy(alpha = 0.05f)
 /** A [PageRow] whose page is open beside the list. */
 private val SelectedTint = Color.White.copy(alpha = 0.08f)
 
-/**
- * The one row or button that can't be undone (Forget, Delete all, Delete workout): plain white at 72%, no colour, since
- * colour in the app means a metric or the strap's state (spec 2.2). The confirmation asks before anything goes.
- */
-val DestructiveInk = Color.White.copy(alpha = 0.72f)
+/** The dark fill of every secondary button (HaloSummaryRun and HaloQuietHoursSheet boards, #17181C). */
+internal val HaloButtonSurface = Color(0xFF17181C)
+
+/** The red of a destructive button's text on its dark pill (HaloDeleteSleepSheet board, #FF5A5F). */
+val DestructiveInk = Color(0xFFFF5A5F)
+
+/** The lighter red of a small destructive pill (HaloSummaryRun and HaloPastWorkout boards, #FF7A7E). */
+private val DestructiveInkSmall = Color(0xFFFF7A7E)
+
+/** The corner of a header icon button (HaloSummaryRun board: 44 across with a 16 corner), kept in step with the icon's size. */
+private const val ICON_BUTTON_CORNER_SHARE = 16f / 44f
+
 
 /** The round back button of every page over a tab (spec 3.4). */
 val BackButtonSize = 44.dp
@@ -108,7 +116,7 @@ val PageHeaderHeight = 64.dp
 @Composable
 fun BackButton(onBack: () -> Unit, enabled: Boolean = true) =
     RoundIconButton(
-        AppIcons.ArrowLeft, stringResource(R.string.glow_back), onBack, size = BackButtonSize, surface = ControlSurface, iconSize = 20.dp,
+        AppIcons.ArrowLeft, stringResource(R.string.glow_back), onBack, size = BackButtonSize, surface = HaloButtonSurface, iconSize = 18.dp,
         enabled = enabled,
     )
 
@@ -116,7 +124,7 @@ fun BackButton(onBack: () -> Unit, enabled: Boolean = true) =
 private const val ROUND_ICON_SHARE = 0.47f
 
 /**
- * A round button holding just an [icon]: [size] across on [surface] (10% white by default), the icon [iconSize]
+ * A button holding just an [icon] (HaloSummaryRun board: a rounded square with a 16 corner at 44, #17181C): [size] across on [surface], the icon [iconSize]
  * across in [tint]. [label] is read out, [clickLabel] says what a tap does when that's different, and [dot] marks the
  * top right with a [NoticeDot]. Back, (i), close and the header's avatar are all this button.
  */
@@ -127,7 +135,7 @@ fun RoundIconButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     size: Dp = 38.dp,
-    surface: Color = Color.White.copy(alpha = 0.10f),
+    surface: Color = HaloButtonSurface,
     iconSize: Dp = size * ROUND_ICON_SHARE,
     tint: Color = Color.White,
     clickLabel: String = label,
@@ -136,7 +144,7 @@ fun RoundIconButton(
 ) {
     Box(modifier.size(size)) {
         Box(
-            Modifier.matchParentSize().clip(CircleShape).background(surface).alpha(if (enabled) 1f else 0.4f)
+            Modifier.matchParentSize().clip(RoundedCornerShape(size * ICON_BUTTON_CORNER_SHARE)).background(surface).alpha(if (enabled) 1f else 0.4f)
                 .clickable(enabled = enabled, onClickLabel = clickLabel, role = Role.Button, onClick = onClick),
             contentAlignment = Alignment.Center,
         ) { Icon(icon, label, Modifier.size(iconSize), tint = tint) }
@@ -443,8 +451,14 @@ fun PageSwitchRow(
 
 /** How big a [PageButton] is: its height, side padding, icon and type. */
 enum class ButtonSize(val height: Dp, val padding: Dp, val icon: Dp) {
-    /** A page's own buttons. */
-    Page(52.dp, 18.dp, 20.dp),
+    /** The one white tap at the foot of a page (HaloReadyRun and HaloPastWorkout boards: 64 tall, 17 semibold). */
+    Main(64.dp, 22.dp, 18.dp),
+
+    /** A page's own buttons and a sheet's pair (HaloQuietHoursSheet board: 56 tall, 16 semibold). */
+    Page(56.dp, 18.dp, 20.dp),
+
+    /** A small pill beside content, like Delete under a summary (HaloSummaryRun board: 44 tall, 14 regular). */
+    Compact(44.dp, 18.dp, 16.dp),
 
     /** On a hero card, like Start or Try again. */
     Hero(48.dp, 18.dp, 16.dp),
@@ -454,8 +468,8 @@ enum class ButtonSize(val height: Dp, val padding: Dp, val icon: Dp) {
 }
 
 /**
- * A page's button, fully round (spec 2.4): white with black text when it's the page's main action ([primary]),
- * otherwise on the Control surface with white text, or on glass when it sits [onCard] and its colour shows through.
+ * A page's button, fully round (Halo boards): white with black text when it's the page's main action ([primary]),
+ * otherwise dark (#17181C) with white text, or with red text when [destructive], or on glass when it sits [onCard] and its colour shows through.
  * Body type (Secondary at [ButtonSize.Row]), an [icon] before the text when given.
  */
 @Composable
@@ -469,7 +483,9 @@ fun PageButton(
     icon: ImageVector? = null,
     size: ButtonSize = ButtonSize.Page,
     onCard: Boolean = false,
+    destructive: Boolean = false,
 ) {
+    val ink = if (destructive) (if (size == ButtonSize.Compact) DestructiveInkSmall else DestructiveInk) else color
     Row(
         // Dimmed before the pill is drawn, so a disabled button fades whole, pill and label (user, 2026-11-03).
         modifier.height(size.height).alpha(if (enabled) 1f else 0.4f).clip(CircleShape)
@@ -477,7 +493,7 @@ fun PageButton(
                 when {
                     primary -> it.background(Color.White)
                     onCard -> it.background(Color.White.copy(alpha = 0.08f)).border(1.dp, Color.White.copy(alpha = 0.12f), CircleShape)
-                    else -> it.background(ControlSurface)
+                    else -> it.background(HaloButtonSurface)
                 }
             }
             .let { if (enabled) it.pressClickable(onClick, CircleShape) else it }
@@ -487,11 +503,16 @@ fun PageButton(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (icon != null) {
-            Icon(icon, null, Modifier.size(size.icon), tint = color)
+            Icon(icon, null, Modifier.size(size.icon), tint = ink)
             Spacer(Modifier.width(8.dp))
         }
-        val style = if (size == ButtonSize.Row) GlowType.secondary else GlowType.body
-        Text(text, color = color, style = style, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        val style = when (size) {
+            ButtonSize.Row -> GlowType.secondary
+            ButtonSize.Compact, ButtonSize.Hero -> GlowType.body
+            // Semibold on the page's own buttons and the main tap (Halo boards: 17 and 16). Card title is the nearest role, 17.
+            ButtonSize.Main, ButtonSize.Page -> GlowType.cardTitle.copy(fontWeight = FontWeight.SemiBold)
+        }
+        Text(text, color = ink, style = style, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -619,7 +640,7 @@ fun PageSheet(
 
 /**
  * A question before something that can't be taken back (Forget, Disconnect, Delete all): a [PageSheet] with the
- * [text], any extra [content], then Cancel and the [confirm] button, the white one, side by side.
+ * [text], any extra [content], then Cancel and the [confirm] button side by side: white, or dark with red text when [destructive] (HaloDeleteSleepSheet board).
  */
 @Composable
 fun PageConfirm(
@@ -630,6 +651,7 @@ fun PageConfirm(
     onDismiss: () -> Unit,
     dismiss: String = stringResource(R.string.glow_cancel),
     confirmEnabled: Boolean = true,
+    destructive: Boolean = false,
     content: (@Composable ColumnScope.() -> Unit)? = null,
 ) {
     PageSheet(onDismiss, title) {
@@ -637,7 +659,9 @@ fun PageConfirm(
         content?.invoke(this)
         Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             PageButton(dismiss, onDismiss, Modifier.weight(1f))
-            PageButton(confirm, onConfirm, Modifier.weight(1f), enabled = confirmEnabled, primary = true)
+            PageButton(
+                confirm, onConfirm, Modifier.weight(1f), enabled = confirmEnabled, primary = !destructive, destructive = destructive,
+            )
         }
     }
 }
@@ -696,7 +720,7 @@ internal fun IconPill(
     dot: Color? = null,
     caret: Boolean = false,
     height: Dp = 44.dp,
-    surface: Color = ControlSurface,
+    surface: Color = HaloButtonSurface,
     hairline: Boolean = false,
     description: String? = null,
     style: TextStyle = GlowType.body,

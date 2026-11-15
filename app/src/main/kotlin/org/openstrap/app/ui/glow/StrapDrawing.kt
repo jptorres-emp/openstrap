@@ -110,3 +110,6 @@ private val NoTurn: State<Float> = mutableFloatStateOf(0f)
 
 /** The strap's own light, a soft green, as it glows when connected. */
 internal val StrapLight = Color(0xFF7DE0C0)
+
+/** The strap card's silver, its light from below (Halo Strap and Pair boards: `rgb(201 206 214)`). */
+internal val StrapSilver = Color(0xFFC9CED6)

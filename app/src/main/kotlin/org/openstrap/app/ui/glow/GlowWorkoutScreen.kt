@@ -14,7 +14,8 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawOutline
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.drawscope.clipRect
 import org.openstrap.app.presentation.TabCopy
 import androidx.compose.foundation.layout.Row
@@ -461,18 +462,15 @@ private fun ListSegment(first: Boolean, last: Boolean, content: @Composable Colu
     Column(
         Modifier.fillMaxWidth()
             .drawBehind {
-                val r = GlowLayout.CardCorner.toPx()
-                val stroke = 1.dp.toPx()
                 val bottom = if (last) size.height else size.height + ListItemGap.toPx()
-                // The rounded panel drawn past the ends that join another stretch, then cut back to this one's span.
+                // The squircle drawn past the ends that join another stretch, then cut back to this one's span. Its
+                // size is that of a whole tall panel, so its corners are the card's own (the cap) (Halo System board, Solid card).
+                val r = GlowLayout.cornerPx(androidx.compose.ui.geometry.Size(size.width, size.width), this)
                 val top = if (first) 0f else -r
                 val end = if (last) bottom else bottom + r
+                val panel = androidx.compose.ui.geometry.Size(size.width, end - top)
                 clipRect(top = 0f, bottom = bottom) {
-                    drawRoundRect(ListSurface, Offset(0f, top), Size(size.width, end - top), CornerRadius(r))
-                    drawRoundRect(
-                        RowHairline, Offset(stroke / 2, top + stroke / 2), Size(size.width - stroke, end - top - stroke),
-                        CornerRadius(r - stroke / 2), style = Stroke(stroke),
-                    )
+                    translate(top = top) { drawOutline(GlowLayout.CardShape.createOutline(panel, layoutDirection, this), ListSurface) }
                 }
             }
             .padding(horizontal = GlowLayout.CardInset)

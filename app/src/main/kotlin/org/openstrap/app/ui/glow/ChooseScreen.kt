@@ -251,7 +251,7 @@ private fun UsualRow(s: ChooseSport, onStart: () -> Unit, onOpen: () -> Unit) {
 }
 
 /** Choose's quiet chips, a step off black. */
-private val QuietCard = ListSurface
+private val QuietCard = SolidTop
 
 /** A Recent chip: the sport's icon in its colour and a name, a sport's or a saved workout's, on a quiet pill. */
 @Composable

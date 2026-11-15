@@ -715,7 +715,7 @@ private fun DuringHero(r: org.openstrap.app.device.WorkoutState.Recording, onOpe
 private fun PairHero(step: PairStep, onPair: () -> Unit, modifier: Modifier) {
     val haptics = rememberHaptics()
     LaunchedEffect(step) { if (step == PairStep.Connected) haptics.perform(HapticEvent.PairingDone) }
-    GlowCard(heroStyle(Color(0xFF4E8F86), LightAngle.Below), modifier, onClick = onPair) {
+    GlowCard(heroStyle(StrapSilver, LightAngle.Below), modifier, onClick = onPair) {
         Column {
             GlowHeader(stringResource(R.string.glow_today_pair_title))
             HeroSentence(pairSentence(step))

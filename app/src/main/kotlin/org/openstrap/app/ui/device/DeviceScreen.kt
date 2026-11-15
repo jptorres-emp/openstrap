@@ -454,13 +454,10 @@ internal fun StrapHero(name: String, connection: ConnectionState, sync: SyncStat
 
 
 /**
- * The strap's card: a quiet grey-green lit from above, so it doesn't read as any metric. The page's hero, so its light
- * is L4 at full strength (spec 2.1).
+ * The strap's card: the silver hero lit from below, so it doesn't read as any metric (Halo Strap and Pair boards,
+ * `rgba(201,206,214)` from the bottom).
  */
-internal val StrapGlow = GlowStyle(
-    color = Color(0xFF6AAF98), coreShape = CoreShape.Radial, coreWidth = 1.2f, coreHeight = 1.1f, coreBlur = 30.dp,
-    coreLightness = 0.03f, toneWidth = 0.dp, lightAngle = LightAngle.Above,
-)
+internal val StrapGlow = org.openstrap.app.ui.glow.draw.heroStyle(org.openstrap.app.ui.glow.StrapSilver, LightAngle.Below)
 
 /** The protocol log, for bug reports, opened from the You page; the whole log can be copied. */
 @Composable

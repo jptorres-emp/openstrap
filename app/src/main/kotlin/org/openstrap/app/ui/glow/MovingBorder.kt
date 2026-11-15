@@ -13,12 +13,13 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithCache
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ShaderBrush
+import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
@@ -61,7 +62,6 @@ fun Modifier.movingBorder(): Modifier {
         }
     }
     return drawWithCache {
-        val corner = GlowLayout.cornerPx(size, this)
         val ring = RingWidth.toPx()
         val halo = HaloWidth.toPx()
         val cx = size.width / 2f
@@ -78,8 +78,12 @@ fun Modifier.movingBorder(): Modifier {
             val ringShader = SweepGradient(cx, cy, colors, stops).apply { setLocalMatrix(matrix) }
             val glowShader = SweepGradient(cx, cy, glows, stops).apply { setLocalMatrix(matrix) }
             val box = Size(size.width - ring, size.height - ring)
-            drawRoundRect(ShaderBrush(glowShader), Offset(inset, inset), box, CornerRadius(corner), style = Stroke(halo))
-            drawRoundRect(ShaderBrush(ringShader), Offset(inset, inset), box, CornerRadius(corner - inset), style = Stroke(ring))
+            // Along the card's squircle, inset by half the ring (Halo System board: squircle corners everywhere).
+            val outline = GlowLayout.CardShape.createOutline(box, layoutDirection, this)
+            translate(inset, inset) {
+                drawOutline(outline, ShaderBrush(glowShader), style = Stroke(halo))
+                drawOutline(outline, ShaderBrush(ringShader), style = Stroke(ring))
+            }
         }
     }
 }

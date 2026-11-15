@@ -18,12 +18,11 @@ import androidx.compose.ui.unit.dp
 import org.openstrap.app.ui.components.pressClickable
 
 /*
- * The quiet tier of the glow language as a free-form panel (spec 2.5, L0): a list's surface and hairline round
- * content that isn't rows, like controls, a chart or a note. No light and no dots, so the glow cards on a screen stay
- * special.
+ * The quiet tier as a free-form panel (L0): the solid card round content that isn't rows, like controls, a chart or a
+ * note. No light, no rim and no dots, so the lit cards on a screen stay special.
  */
 
-/** A quiet panel: the [ListPanel] surface and its 6% hairline, [GlowLayout.CardPadding] inside, blocks 14 dp apart. */
+/** A quiet panel: the solid card, [GlowLayout.CardPadding] inside, blocks 14 dp apart. */
 @Composable
 fun QuietPanel(
     modifier: Modifier = Modifier,
@@ -63,13 +62,12 @@ internal fun OutlineCard(
 }
 
 /**
- * The glass surface every control inside a quiet panel wears (rows, pills, buttons): a faint white fill
- * and hairline, so it reads as something to press against the panel. With [onClick] it
- * presses like the rest of the glow controls.
+ * The surface every control inside a quiet panel wears (rows, pills, buttons): the dark button fill, with no hairline
+ * (Halo System board: no white rims), so it reads as something to press against the panel. With [onClick] it presses
+ * like the rest of the glow controls.
  */
 fun Modifier.glass(shape: Shape, onClick: (() -> Unit)? = null, scale: Float = 0.98f): Modifier =
-    background(Color.White.copy(alpha = 0.08f), shape)
-        .border(1.dp, Color.White.copy(alpha = 0.12f), shape)
+    background(HaloButtonSurface, shape)
         .let { if (onClick != null) it.pressClickable(onClick, shape, scale) else it }
 
 /** A change for the better, or a GPS fix good enough: the app's good green. */

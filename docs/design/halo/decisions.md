@@ -94,7 +94,7 @@ Written 2026-11-15, when the waves were finished without stopping for review. Ea
 - Every big number goes through BigNumberText. The Fold tabletop keeps its old size as BigNumber.Tabletop.
 - The TalkBack check was scripted. It found no unlabelled tappable on Today, the four tabs, You, Profile, Goals and bests, Strap, Ready or Choose. It wasn't a listen-through.
 - At font scale 1.3 nothing overlaps. Long captions end in "...".
-- The baseline profile was re-recorded on the emulator, with the Fold data copy.
+- The baseline profile is the Fold's old profile with a new emulator recording added. The emulator had less data, so it opened fewer cards. Re-record it on the Fold once Halo is on it.
 
 ## Left for you
 

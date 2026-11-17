@@ -1,5 +1,6 @@
 package org.openstrap.app.ui.glow
 
+import org.openstrap.app.ui.theme.Space
 import android.content.Intent
 import android.provider.Settings
 import androidx.activity.compose.BackHandler
@@ -55,6 +56,7 @@ import org.openstrap.app.ui.components.HapticEvent
 import org.openstrap.app.ui.components.pressClickable
 import org.openstrap.app.ui.components.rememberHaptics
 import org.openstrap.app.ui.theme.AppIcons
+import org.openstrap.app.ui.theme.Ink
 import org.openstrap.app.ui.workout.StartCopy
 import org.openstrap.app.ui.workout.familyColor
 import org.openstrap.app.ui.workout.familyLightAngle
@@ -247,11 +249,15 @@ fun GlowWorkoutReadyScreen(
             )
         }
         CompositionLocalProvider(LocalGoalEditor provides editor) {
-        WorkoutPage(
-            Color.Transparent, contentPadding,
+        HaloPageColumn(
+            contentPadding,
             // While a goal is typed the keyboard has the bottom of the screen.
-            pinned = if (typing) null else ({ WorkoutButton(StartCopy.startLabel(type), Color.White, Color.Black, start,
-                icon = AppIcons.PlayFill, height = 64.dp) }),
+            pinned = if (typing) null else ({
+                HaloButton(
+                    StartCopy.startLabel(type), start, Modifier.fillMaxWidth(), variant = HaloButtonVariant.Primary,
+                    size = HaloButtonSize.Main, icon = AppIcons.PlayFill,
+                )
+            }),
         ) {
             ReadyTopBar(type, family, connection, liveHeartRate, onBack) { picking = true }
             StrapHeldNotice(connection)
@@ -306,7 +312,7 @@ fun GlowWorkoutReadyScreen(
                     askToEnd = askToEnd, onAskToEnd = { askToEnd = it },
                     keepRoute = keepRoute.takeIf { useGps }, onKeepRoute = { keepRoute = it },
                 )
-                return@WorkoutPage
+                return@HaloPageColumn
             }
             when (family) {
                 Workouts.Family.Strength -> StrengthPlanCard(
@@ -326,19 +332,19 @@ fun GlowWorkoutReadyScreen(
             ReadyRows {
                 var divider = false
                 if (strength) {
-                    PageSwitchRow(
+                    SwitchRow(
                         StartCopy.END_REST_EARLY, StartCopy.endRestNote(restBelow ?: belowLevel), restBelow != null,
                         { restBelow = if (it) belowLevel else null }, divider = false,
                     )
-                    PageSwitchRow(StartCopy.LOG_SETS, StartCopy.LOG_SETS_NOTE, log, { log = it })
+                    SwitchRow(StartCopy.LOG_SETS, StartCopy.LOG_SETS_NOTE, log, { log = it })
                     divider = true
                 }
                 if (rounds != null && family == Workouts.Family.Intervals) {
-                    PageSwitchRow(StartCopy.WARM_UP, StartCopy.WARM_UP_NOTE, rounds.warmUp,
+                    SwitchRow(StartCopy.WARM_UP, StartCopy.WARM_UP_NOTE, rounds.warmUp,
                         { structureCode = rounds.warm(it).code }, divider = false)
                     divider = true
                 }
-                PageSwitchRow(StartCopy.ASK_TO_END, StartCopy.ASK_TO_END_NOTE, askToEnd, { askToEnd = it }, divider = divider)
+                SwitchRow(StartCopy.ASK_TO_END, StartCopy.ASK_TO_END_NOTE, askToEnd, { askToEnd = it }, divider = divider)
             }
         }
         }
@@ -354,19 +360,19 @@ fun GlowWorkoutReadyScreen(
 private fun ReadyTopBar(type: Int, family: Workouts.Family, connection: ConnectionState, bpm: Int?, onClose: () -> Unit,
     onSport: () -> Unit) {
     val battery = (connection as? ConnectionState.Connected)?.batteryPercent
-    Row(Modifier.fillMaxWidth().height(48.dp), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.width(96.dp), contentAlignment = Alignment.CenterStart) {
-            RoundIconButton(AppIcons.X, stringResource(R.string.glow_close), onClose, size = 44.dp, iconSize = 18.dp)
-        }
-        Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
-            IconPill(
+    HaloPageHeader(
+        variant = HeaderVariant.Workout,
+        start = { HaloIconButton(AppIcons.X, stringResource(R.string.glow_close), onClose) },
+        centre = {
+            HaloChip(
                 Workouts.shortName(type), onSport, icon = org.openstrap.app.ui.theme.SportIcons.of(type), tint = familyColor(family),
-                caret = true, height = 40.dp, style = GlowType.body.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold),
+                caret = true, size = ChipSize.Main,
             )
-        }
-        Column(Modifier.width(96.dp), horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        },
+    ) {
+        Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(Space.S2)) {
             if (bpm != null && connection is ConnectionState.Connected) Row(verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                horizontalArrangement = Arrangement.spacedBy(Space.S4)) {
                 Icon(AppIcons.Heartbeat, null, tint = org.openstrap.app.ui.theme.MetricColors.heart, modifier = Modifier.size(12.dp))
                 Text(stringResource(R.string.workout_live_bpm, bpm), color = GlowType.noteColor, style = GlowType.noteSmall, maxLines = 1)
             }
@@ -404,36 +410,6 @@ private val GoalDraftSaver = androidx.compose.runtime.saveable.listSaver<GoalDra
 )
 
 /**
- * A round button with its icon, 44 dp on the Control surface as on the workout pages' top bars; a stepper's are 52 dp,
- * the map's sit on [surface] over the map.
- */
-@Composable
-internal fun RoundIcon(
-    icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, onClick: () -> Unit, modifier: Modifier = Modifier,
-    size: Dp = 44.dp, surface: Color = Raised, ink: Color = Color.White, iconSize: Dp = 18.dp,
-) {
-    Box(
-        modifier.size(size).clip(CircleShape).background(surface).pressClickable(onClick, CircleShape),
-        contentAlignment = Alignment.Center,
-    ) { Icon(icon, label, tint = ink, modifier = Modifier.size(iconSize)) }
-}
-
-/** Minus, the [value] between, and plus: Ready's goal steppers ([buttonSize] 52 dp) and the log card's. */
-@Composable
-internal fun MinusPlus(
-    less: String, more: String, onLess: () -> Unit, onMore: () -> Unit, modifier: Modifier = Modifier,
-    buttonSize: Dp = 44.dp, gap: Dp = 0.dp, value: @Composable RowScope.() -> Unit,
-) {
-    val iconSize = if (buttonSize > 44.dp) 20.dp else 18.dp
-    Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(gap)) {
-        RoundIcon(AppIcons.Minus, less, onLess, size = buttonSize, iconSize = iconSize)
-        Row(Modifier.weight(1f), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically,
-            content = value)
-        RoundIcon(AppIcons.Plus, more, onMore, size = buttonSize, iconSize = iconSize)
-    }
-}
-
-/**
  * When the strap is away because you disconnected it, nothing reconnects it on its own (starting a workout doesn't):
  * says so and offers Connect, which is an explicit connect. Nothing shows while it is connected, connecting, or away
  * for any other reason.
@@ -445,15 +421,10 @@ private fun StrapHeldNotice(connection: ConnectionState) {
     val away = connection == ConnectionState.Disconnected || connection == ConnectionState.BluetoothOff ||
         connection is ConnectionState.Failed
     if (!held || !away) return
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(
-            stringResource(R.string.glow_ready_strap_disconnected),
-            color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary,
-        )
-        PageButton(
-            stringResource(R.string.glow_ready_connect), container.strap::connect, Modifier.fillMaxWidth(), icon = AppIcons.Bluetooth,
-        )
-    }
+    HaloBanner(
+        BannerKind.Info, stringResource(R.string.glow_ready_strap_disconnected), icon = AppIcons.Bluetooth,
+        action = stringResource(R.string.glow_ready_connect), onAction = container.strap::connect,
+    )
 }
 
 /** The strap in one line with its dot, on Choose: "Strap ready, 72 bpm". */
@@ -462,7 +433,7 @@ internal fun StrapLine(connection: ConnectionState, liveHeartRate: Int?) {
     org.openstrap.app.ui.components.HoldLiveHeartRate()
     StatusDot(
         StartCopy.strapLine(connection, liveHeartRate), if (connection is ConnectionState.Connected) TrendGood else TrendBad,
-        Modifier.padding(horizontal = 4.dp),
+        Modifier.padding(horizontal = Space.S4),
     )
 }
 

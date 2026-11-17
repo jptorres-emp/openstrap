@@ -70,6 +70,7 @@ import org.openstrap.app.MainActivity
 import org.openstrap.app.data.WidgetKind
 import org.openstrap.app.ui.glow.draw.drawIcon
 import org.openstrap.app.ui.theme.AppIcons
+import org.openstrap.app.ui.theme.Ink
 import org.openstrap.app.ui.theme.MetricColors
 import org.openstrap.app.ui.theme.ControlSurface
 import org.openstrap.app.ui.glow.draw.momentMood
@@ -423,10 +424,10 @@ internal object WidgetType {
     val title = TextStyle(color = ColorProvider(Color.White), fontSize = WidgetText.TITLE_SP.sp, fontWeight = FontWeight.Medium)
     val hero = TextStyle(color = ColorProvider(Color.White), fontSize = WidgetText.HERO_SP.sp, fontFamily = FontFamily("sans-serif-light"))
     val body = TextStyle(color = ColorProvider(Color.White), fontSize = WidgetText.BODY_SP.sp)
-    val word = TextStyle(color = ColorProvider(Color.White.copy(alpha = 0.72f)), fontSize = WidgetText.BODY_SP.sp)
-    val secondary = TextStyle(color = ColorProvider(Color.White.copy(alpha = 0.72f)), fontSize = WidgetText.SECONDARY_SP.sp)
+    val word = TextStyle(color = ColorProvider(Ink.Secondary), fontSize = WidgetText.BODY_SP.sp)
+    val secondary = TextStyle(color = ColorProvider(Ink.Secondary), fontSize = WidgetText.SECONDARY_SP.sp)
     val secondaryShown = secondary.copy(color = ColorProvider(Color.White))
-    val caption = TextStyle(color = ColorProvider(Color.White.copy(alpha = 0.50f)), fontSize = WidgetText.CAPTION_SP.sp, fontWeight = FontWeight.Medium)
+    val caption = TextStyle(color = ColorProvider(Ink.Tertiary), fontSize = WidgetText.CAPTION_SP.sp, fontWeight = FontWeight.Medium)
     val captionShown = caption.copy(color = ColorProvider(Color.White))
 }
 

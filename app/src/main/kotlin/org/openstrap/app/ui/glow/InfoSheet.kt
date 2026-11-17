@@ -1,46 +1,14 @@
 package org.openstrap.app.ui.glow
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.TextMeasurer
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.rememberTextMeasurer
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import org.openstrap.app.R
 import org.openstrap.app.ui.dashboard.Info
-import org.openstrap.app.ui.theme.AppIcons
+import org.openstrap.app.ui.theme.Space
 
 /*
  * The info sheet (spec 6.2): what a number means, the scale it's read on with where you are, and how it's worked out,
@@ -59,12 +27,11 @@ fun InfoSheet(
     info: Info, color: Color, here: Int?, hereLine: String?, onDismiss: () -> Unit, notes: List<String> = emptyList(),
     rows: List<Pair<String, String>>? = null,
 ) {
-    PageSheet(onDismiss) {
-        // The metric's colour is only the 4 px bar beside the title (board HaloInfoSheet).
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Box(Modifier.size(4.dp, 24.dp).background(color, CircleShape))
-            Text(info.name, color = Color.White, style = GlowType.sheetTitle, maxLines = 2)
-        }
+    // The metric's colour is only the 4 px bar beside the title (board HaloInfoSheet).
+    HaloSheet(
+        onDismiss, info.name, variant = HaloSheetVariant.Info, accent = color,
+        footer = { HaloButton(stringResource(R.string.glow_close), onDismiss, Modifier.fillMaxWidth()) },
+    ) {
         val sections = rows ?: listOf(
             stringResource(R.string.glow_info_what) to info.meaning,
             stringResource(R.string.glow_info_how) to info.how,
@@ -72,57 +39,10 @@ fun InfoSheet(
             stringResource(R.string.glow_info_off) to (listOf(info.off) + notes).joinToString("\n\n"),
         )
         sections.forEachIndexed { i, (title, text) ->
-            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(title, color = GlowType.noteColor, style = GlowType.secondary)
-                Text(text, color = Color.White.copy(alpha = 0.9f), style = GlowType.body.copy(lineHeight = 22.5.sp))
-            }
+            SheetSection(title, text)
             // Some numbers have no scale to place them on (naps, whose only words are apnea bands); the rest show it
             // under what the number is.
-            if (rows == null && i == 0 && info.scale.isNotEmpty()) Scale(info.scale, color, here, Modifier.padding(top = 2.dp))
-        }
-        PageButton(stringResource(R.string.glow_close), onDismiss, Modifier.fillMaxWidth())
-    }
-}
-
-/**
- * The scale as coloured bars, low to high, each named under it; the bar you're in is lit and glows. A name may wrap
- * between its words but never inside one: when the widest word of any name doesn't fit its bar, every name steps
- * down to the caption role together, so the row keeps one type size from the design system.
- */
-@Composable
-private fun Scale(labels: List<String>, color: Color, here: Int?, modifier: Modifier = Modifier) {
-    val gap = 6.dp
-    val measurer = rememberTextMeasurer()
-    BoxWithConstraints(modifier.fillMaxWidth()) {
-        val cell = ((constraints.maxWidth - with(LocalDensity.current) { gap.roundToPx() } * (labels.size - 1)) / labels.size)
-        val style = remember(labels, cell) { fitWords(labels, listOf(GlowType.secondary, GlowType.caption), cell, measurer) }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(gap)) {
-            labels.forEachIndexed { i, label ->
-                val on = i == here
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Box(
-                        Modifier.fillMaxWidth().height(10.dp)
-                            .let { if (on) it.shadow(10.dp, CircleShape, ambientColor = color, spotColor = color) else it }
-                            .background(if (on) color else color.copy(alpha = 0.18f + 0.12f * i / (labels.size - 1).coerceAtLeast(1)), CircleShape),
-                    )
-                    Text(
-                        label, color = if (on) Color.White else Color.White.copy(alpha = GlowType.SECONDARY_ALPHA),
-                        style = style.copy(fontWeight = if (on) FontWeight.Medium else FontWeight.Normal),
-                    )
-                }
-            }
+            if (rows == null && i == 0 && info.scale.isNotEmpty()) SheetScale(info.scale, color, here, Modifier.padding(top = Space.S2))
         }
     }
 }
-
-/**
- * The first of [roles] in which the widest single word of [labels] fits [width] px on one line, measured at Medium,
- * the lit bar's weight and the wider one. The last, the smallest, when none does.
- */
-private fun fitWords(labels: List<String>, roles: List<TextStyle>, width: Int, measurer: TextMeasurer): TextStyle {
-    val words = labels.flatMap { it.split(' ') }.filter { it.isNotEmpty() }
-    if (words.isEmpty() || width <= 0) return roles.first()
-    fun widest(s: TextStyle) = words.maxOf { measurer.measure(it, s.copy(fontWeight = FontWeight.Medium), softWrap = false, maxLines = 1).size.width }
-    return roles.firstOrNull { widest(it) <= width } ?: roles.last()
-}
-

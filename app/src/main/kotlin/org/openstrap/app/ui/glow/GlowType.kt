@@ -11,6 +11,7 @@ import androidx.compose.ui.unit.sp
 import org.openstrap.app.ui.glow.draw.DotSize
 import org.openstrap.app.ui.theme.FunnelDisplay
 import org.openstrap.app.ui.theme.FunnelSans
+import org.openstrap.app.ui.theme.Ink
 
 /**
  * The type roles of the design system (spec 2.3): Funnel Display for display roles, Funnel Sans for the rest. Every
@@ -54,11 +55,8 @@ object GlowType {
     /** The date in the moment header ("Fri 13 Nov", boards HaloRecovery, HaloTodayMidday): Display 600, 20 on 24. */
     val headerDate = TextStyle(fontFamily = FunnelDisplay, fontWeight = FontWeight.SemiBold, fontSize = 20.sp, lineHeight = 24.sp)
 
-    /** The moment over the header date ("Waking up"): Sans 500, 13, drawn at [MOMENT_ALPHA] white. */
+    /** The moment over the header date ("Waking up"): Sans 500, 13, drawn in [Ink.Secondary]. */
     val moment = TextStyle(fontFamily = FunnelSans, fontWeight = FontWeight.Medium, fontSize = 13.sp, lineHeight = 16.sp)
-
-    /** White for [moment] text. */
-    const val MOMENT_ALPHA = 0.6f
 
     /**
      * Every card's title on every tier, and list titles (boards HaloRecovery, HaloDetailRecovery, HaloAllBadges): Sans
@@ -83,18 +81,15 @@ object GlowType {
 
     /**
      * Section labels over a panel, status lines, notes (boards HaloProfile, HaloRecovery, HaloLiveRun): Sans 400, 13 on 18,
-     * drawn at [SECONDARY_ALPHA] white unless coloured. The boards' grey is [noteColor].
+     * drawn in [Ink.Secondary] unless coloured. The boards' grey is [noteColor].
      */
     val secondary = TextStyle(fontFamily = FunnelSans, fontWeight = FontWeight.Normal, fontSize = 13.sp, lineHeight = 18.sp)
 
-    /** White for [secondary] text, about the boards' #9AA0AA on black. */
-    const val SECONDARY_ALPHA = 0.62f
+    /** The grey of every note, label and axis on the boards: [Ink.Secondary]. */
+    val noteColor = Ink.Secondary
 
-    /** The grey of every note, label and axis on the boards: #9AA0AA. */
-    val noteColor = Color(0xFF9AA0AA)
-
-    /** The dimmest grey on the boards, for footnotes and chevrons: #6E7480. */
-    val footnoteColor = Color(0xFF6E7480)
+    /** The dimmest grey on the boards, for footnotes and chevrons: [Ink.Tertiary]. */
+    val footnoteColor = Ink.Tertiary
 
     /** A smaller note, and a badge's name and line (boards HaloRecovery, HaloAllBadges): Sans 400, 12 on 15.6. */
     val noteSmall = TextStyle(fontFamily = FunnelSans, fontWeight = FontWeight.Normal, fontSize = 12.sp, lineHeight = 15.6.sp)
@@ -102,29 +97,35 @@ object GlowType {
     /** The small print at the foot of a page (board HaloProfile): Sans 400, 12 on 17.4, in [footnoteColor]. */
     val footnote = TextStyle(fontFamily = FunnelSans, fontWeight = FontWeight.Normal, fontSize = 12.sp, lineHeight = 17.4.sp)
 
+    /** The 64 high button's label (boards HaloReadyRun, HaloPastWorkout): Sans 600, 17 on 22. */
+    val buttonMain = TextStyle(fontFamily = FunnelSans, fontWeight = FontWeight.SemiBold, fontSize = 17.sp, lineHeight = 22.sp)
+
     /** A primary button's label, black on white or white on a tint (boards HaloQuietHoursSheet, HaloGoalMoment): Sans 600, 16 on 20. */
     val button = TextStyle(fontFamily = FunnelSans, fontWeight = FontWeight.SemiBold, fontSize = 16.sp, lineHeight = 20.sp)
 
     /** A secondary or in-card button's label (boards HaloDetailRecovery, HaloSummaryRun): Sans 600, 14 on 18. */
     val buttonSmall = TextStyle(fontFamily = FunnelSans, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, lineHeight = 18.sp)
 
+    /** The 36 high button's label (a pill beside content, Save in a row): Sans 600, 13 on 18. */
+    val buttonMini = TextStyle(fontFamily = FunnelSans, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, lineHeight = 18.sp)
+
+    /** A chip's label (HaloComponents board): Sans 400, 14 on 18. */
+    val chip = TextStyle(fontFamily = FunnelSans, fontWeight = FontWeight.Normal, fontSize = 14.sp, lineHeight = 18.sp)
+
+    /** A tag's words (HaloComponents board): Sans 600, 11 on 14. */
+    val tag = TextStyle(fontFamily = FunnelSans, fontWeight = FontWeight.SemiBold, fontSize = 11.sp, lineHeight = 14.sp)
+
     /**
      * Axes, times, tags (boards HaloLiveRun, HaloDetailRecovery): Sans 400, 11 on 14, tabular so times line up, drawn
-     * at [CAPTION_ALPHA] white.
+     * in [Ink.Secondary].
      */
     val caption = TextStyle(fontFamily = FunnelSans, fontWeight = FontWeight.Normal, fontSize = 11.sp, lineHeight = 14.sp, fontFeatureSettings = "tnum")
 
-    /** White for [caption] text. */
-    const val CAPTION_ALPHA = 0.62f
-
     /**
      * A list row's value, beside its [body] name (boards HaloProfile, HaloDetailRecovery): Sans 400, 15 on 20, tabular
-     * so a column of values lines up, drawn at [ROW_VALUE_ALPHA] white. Plain text, never dots.
+     * so a column of values lines up, drawn in [Ink.Strong]. Plain text, never dots.
      */
     val rowValue = TextStyle(fontFamily = FunnelSans, fontWeight = FontWeight.Normal, fontSize = 15.sp, lineHeight = 20.sp, fontFeatureSettings = "tnum")
-
-    /** White for [rowValue] text. */
-    const val ROW_VALUE_ALPHA = 0.8f
 
     /**
      * A figure on a card or a summary, the "+29" of Recharged and the distance of a run (boards HaloRecovery,
@@ -197,6 +198,9 @@ enum class BigNumber(val doto: Int) {
 
     /** Doto 40: a small card's number (board HaloRecovery). */
     Small(40),
+
+    /** Doto 36: a grey Small's number (boards HaloActivity, HaloTodayWaking). A lit Small keeps [Tile]. */
+    GreySmall(36),
     ;
 
     /** The DotSpec dot, in dp, that matches the board's Doto size. */

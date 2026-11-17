@@ -1,5 +1,6 @@
 package org.openstrap.app.ui.glow
 
+import org.openstrap.app.ui.theme.Space
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import org.openstrap.app.data.Weeks
@@ -66,6 +67,7 @@ import org.openstrap.app.presentation.TodayCopy
 import org.openstrap.app.ui.dashboard.WeekLater
 import org.openstrap.app.ui.dashboard.WeekStory
 import org.openstrap.app.ui.theme.AppIcons
+import org.openstrap.app.ui.theme.Ink
 import org.openstrap.app.ui.theme.MetricColors
 import java.time.Instant
 import java.time.LocalDate
@@ -181,7 +183,7 @@ private fun HeartPointsDetail(ctx: ActivityDetailContext) {
                 else StackedBars(
                     remember(daily) { dayOnDay(daily.map { it ?: 0f }) }, dayOnDayColor(color, daily.lastIndex),
                     ActivityCopy.HEART_POINTS_TARGET.toFloat(), week.map { DayWords.weekdayShort(it) }, spread = false,
-                    Modifier.padding(top = 8.dp), widest = Dp.Infinity,
+                    Modifier.padding(top = Space.S8), widest = Dp.Infinity,
                 ) { i ->
                     scrub = i?.let {
                         DetailHeadline(Math.round(daily[it] ?: 0f).toString(), ActivityCopy.earnedLabel(DayWords.short(week[it])), null)
@@ -191,7 +193,9 @@ private fun HeartPointsDetail(ctx: ActivityDetailContext) {
             if (total != null) item {
                 Column {
                     DetailSentence(ActivityCopy.heartPointsWeek(total))
-                    if (ctx.isToday) ActivityCopy.dropsOff(week.first(), Math.round(daily.first() ?: 0f))?.let { CaveatLine(it, color) }
+                    if (ctx.isToday) ActivityCopy.dropsOff(week.first(), Math.round(daily.first() ?: 0f))?.let {
+                        HaloNote(it, variant = NoteVariant.Caveat, dot = color)
+                    }
                 }
             }
         } else {
@@ -264,14 +268,16 @@ private fun ActiveMinutesDetail(ctx: ActivityDetailContext) {
     val byDay = a?.byDay.orEmpty()
     val day = byDay[date] ?: a?.mvpa
     val headline = when {
-        a == null -> DetailHeadline.none(stringResource(R.string.glow_no_reading), stringResource(R.string.glow_activity_needs_steps_heart))
+        a == null -> DetailHeadline.none(
+            stringResource(R.string.glow_no_reading_yet), stringResource(R.string.glow_activity_needs_steps_heart),
+        )
         range == Range.Week -> DetailHeadline(
             a.weekEquivalent.toString(), stringResource(R.string.glow_activity_minutes_last_7_days),
             ActivityCopy.activeWord(a.weekEquivalent),
         )
         // The sentence says when ("So far today"), and which minutes.
         day != null -> DetailHeadline(day.equivalent.toString(), stringResource(R.string.glow_activity_minutes), null)
-        else -> DetailHeadline.none(stringResource(R.string.glow_no_reading), DetailCopy.noValue(Metric.Steps, Range.Day, ctx.isToday))
+        else -> DetailHeadline.none(stringResource(R.string.glow_no_reading_yet), DetailCopy.noValue(Metric.Steps, Range.Day, ctx.isToday))
     }
     DetailTemplate(
         Score.ActiveMinutes.title, color, siblings(Detail.OfScore(Score.ActiveMinutes), ctx.onSwitch), onInfo = { info = true }, onBack = ctx.onBack,
@@ -293,7 +299,7 @@ private fun ActiveMinutesDetail(ctx: ActivityDetailContext) {
             val values = week.map { (byDay[it]?.equivalent ?: 0).toFloat() }
             item {
                 DetailColumns(
-                    values, color, week.map { DayWords.weekdayShort(it) }, alpha = 0.75f, modifier = Modifier.padding(top = 8.dp),
+                    values, color, week.map { DayWords.weekdayShort(it) }, alpha = 0.75f, modifier = Modifier.padding(top = Space.S8),
                     onScrub = { i ->
                         scrub = i?.let {
                             val label = Strings.app.format(R.string.glow_activity_minutes_on, DayWords.short(week[it]))
@@ -340,7 +346,9 @@ private fun LoadDetail(ctx: ActivityDetailContext) {
     val balance = TabCopy.loadBalance(r?.loadTrend)
     val known = values.filterNotNull()
     val headline = when {
-        r == null -> DetailHeadline.none(stringResource(R.string.glow_no_reading), stringResource(R.string.glow_activity_needs_heart_day))
+        r == null -> DetailHeadline.none(
+            stringResource(R.string.glow_no_reading_yet), stringResource(R.string.glow_activity_needs_heart_day),
+        )
         // "So far today" and "learning your usual" are the sentence's to say, so the word is only a comparison.
         range == Range.Day -> DetailHeadline(
             Math.round(r.load).toString(),
@@ -352,7 +360,8 @@ private fun LoadDetail(ctx: ActivityDetailContext) {
             balance.takeIf { range == Range.Week },
         )
         else -> DetailHeadline.none(
-            stringResource(R.string.glow_no_reading), pluralStringResource(R.plurals.glow_activity_in_last_days, range.days, range.days),
+            stringResource(R.string.glow_no_reading_yet),
+            pluralStringResource(R.plurals.glow_activity_in_last_days, range.days, range.days),
         )
     }
     // The strap's own weekly load (its EPOC over 7 days) and the range it calls productive, from its latest workout.
@@ -371,7 +380,7 @@ private fun LoadDetail(ctx: ActivityDetailContext) {
                 val last7 = (WEEK_DAYS - 1 downTo 0).map { date.minusDays(it.toLong()) }
                 val loads = last7.map { byDay[it] }
                 DetailColumns(
-                    loads, color, last7.map { DayWords.weekdayShort(it) }, modifier = Modifier.padding(top = 8.dp),
+                    loads, color, last7.map { DayWords.weekdayShort(it) }, modifier = Modifier.padding(top = Space.S8),
                     band = band, bandLabel = band?.let(ActivityCopy::usualBandLabel),
                     onScrub = { i ->
                         scrub = i?.let { loads[it] }?.let { v ->
@@ -381,8 +390,8 @@ private fun LoadDetail(ctx: ActivityDetailContext) {
                 )
             }
             item {
-                Column(Modifier.padding(top = 8.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    DetailFigures(
+                Column(Modifier.padding(top = Space.S8), verticalArrangement = Arrangement.spacedBy(Space.S16)) {
+                    HaloFigures(
                         listOf(
                             Math.round(r.workoutLoad).toString() to stringResource(R.string.glow_activity_from_workouts),
                             Math.round(r.everydayLoad).toString() to stringResource(R.string.glow_activity_moving_about),
@@ -416,19 +425,19 @@ private fun LoadDetail(ctx: ActivityDetailContext) {
         if (t != null && t.ctl > 0f) item {
             // On Week the balance is the headline's word already.
             val title = stringResource(R.string.glow_activity_this_week)
-            DetailPanel(Modifier.padding(top = 8.dp), title = title, note = balance.takeIf { range != Range.Week }) {
-                DetailRow(
+            DetailPanel(Modifier.padding(top = Space.S8), title = title, note = balance.takeIf { range != Range.Week }) {
+                MetricRow(
                     stringResource(R.string.glow_activity_your_usual), color, Math.round(t.ctl).toString(),
                     stringResource(R.string.glow_activity_your_usual_line), divider = false,
                 )
-                DetailRow(
+                MetricRow(
                     stringResource(R.string.glow_activity_last_7_days), color, Math.round(t.atl).toString(),
                     stringResource(R.string.glow_activity_last_7_days_line),
                 )
                 strap?.let { e ->
                     val low = e.optimalLoadMin
                     val high = e.optimalLoadMax
-                    DetailRow(
+                    MetricRow(
                         stringResource(R.string.glow_activity_strap_weekly_load), color, e.weeklyLoad?.let(Math::round)?.toString(),
                         if (low != null && high != null) {
                             ActivityCopy.strapRange(low, high)
@@ -493,11 +502,11 @@ private fun Vo2Detail(ctx: ActivityDetailContext) {
     ) {
         if (latest != null || est != null) item { DetailSentence(ActivityCopy.vo2(latest != null)) }
         if (readings.isNotEmpty() || (latest != null && est != null)) item {
-            DetailPanel(Modifier.padding(top = 8.dp), title = stringResource(R.string.glow_activity_where_it_comes_from)) {
+            DetailPanel(Modifier.padding(top = Space.S8), title = stringResource(R.string.glow_activity_where_it_comes_from)) {
                 var first = true
                 readings.take(5).forEach { (w, v) ->
                     val start = Instant.ofEpochSecond(w.shownStart).atZone(zone)
-                    DetailRow(
+                    MetricRow(
                         w.sportName, color, v.toString(),
                         stringResource(R.string.glow_activity_day_time, DayWords.short(start.toLocalDate()), clockOf(start)),
                         divider = !first,
@@ -506,7 +515,7 @@ private fun Vo2Detail(ctx: ActivityDetailContext) {
                     first = false
                 }
                 if (latest != null && est != null) {
-                    DetailRow(
+                    MetricRow(
                         stringResource(R.string.glow_activity_from_your_profile), color, Vo2maxCopy.estimate(est.low, est.high),
                         stringResource(R.string.glow_activity_estimated_weekly), divider = !first,
                     )
@@ -576,13 +585,13 @@ private fun RecoverDetail(ctx: ActivityDetailContext) {
         // Recovered says which workout under the word already.
         if (source != null && shown?.first != null && ended != null) item { DetailSentence(ActivityCopy.recover(source.sportName, ended)) }
         if (rated.isNotEmpty()) item {
-            DetailPanel(Modifier.padding(top = 8.dp), title = stringResource(R.string.glow_activity_recent_workouts)) {
+            DetailPanel(Modifier.padding(top = Space.S8), title = stringResource(R.string.glow_activity_recent_workouts)) {
                 rated.take(5).forEachIndexed { i, w ->
                     val start = Instant.ofEpochSecond(w.shownStart).atZone(zone)
                     // Its own, not what earlier workouts left on top ([SummaryCopy.carriedOver]).
                     val own = org.openstrap.app.ui.workout.SummaryCopy.recoverSpan(w.ownRecoveryMinutes ?: w.recoveryMinutes)
                         ?: stringResource(R.string.glow_activity_none)
-                    DetailRow(
+                    MetricRow(
                         w.sportName, color, own,
                         stringResource(R.string.glow_activity_on_its_own, DayWords.short(start.toLocalDate()), clockOf(start)),
                         divider = i > 0, onClick = { ctx.onOpen(Detail.Workout(w.workout.start)) }, icon = org.openstrap.app.ui.theme.SportIcons.of(w.workout.sportType), iconTint = SportIconTint,
@@ -635,7 +644,7 @@ private fun CaloriesDetail(ctx: ActivityDetailContext) {
     }
     val headline = when {
         ctx.r == null ->
-            DetailHeadline.none(stringResource(R.string.glow_no_reading), DetailCopy.noValue(Metric.Steps, Range.Day, ctx.isToday))
+            DetailHeadline.none(stringResource(R.string.glow_no_reading_yet), DetailCopy.noValue(Metric.Steps, Range.Day, ctx.isToday))
         e == null || active == null ->
             DetailHeadline.none(stringResource(R.string.glow_activity_no_estimate), stringResource(R.string.glow_activity_needs_profile))
         range == Range.Day ->
@@ -659,16 +668,16 @@ private fun CaloriesDetail(ctx: ActivityDetailContext) {
     ) {
         if (e == null || active == null) {
             if (ctx.r != null) item {
-                DetailPanel(Modifier.padding(top = 8.dp)) { PageRow(ADD_PROFILE, onClick = ctx.onEditProfile, divider = false) }
+                DetailPanel(Modifier.padding(top = Space.S8)) { NavRow(ADD_PROFILE, onClick = ctx.onEditProfile, divider = false) }
             }
         } else if (range == Range.Day) {
             // The day toward the goal: the bar filled to its share, "102 to your goal of 450" under it.
             item {
-                Column(Modifier.padding(top = 8.dp)) {
+                Column(Modifier.padding(top = Space.S8)) {
                     FillBar(CaloriesCopy.share(active, goal), color)
                     Text(
-                        CaloriesCopy.toGoal(active, goal), color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA),
-                        style = GlowType.secondary, modifier = Modifier.padding(top = 8.dp),
+                        CaloriesCopy.toGoal(active, goal), color = Ink.Secondary,
+                        style = GlowType.secondary, modifier = Modifier.padding(top = Space.S8),
                     )
                 }
             }
@@ -682,7 +691,7 @@ private fun CaloriesDetail(ctx: ActivityDetailContext) {
             item {
                 Column {
                     // So far today both are; the activity level only means something for a whole day, in the goal's place.
-                    DetailFigures(
+                    HaloFigures(
                         listOf(
                             Units.count(Math.round(e.totalKcal)) to stringResource(R.string.glow_activity_total_kcal),
                             Units.count(Math.round(e.totalKcal - e.activeKcal)) to stringResource(R.string.glow_activity_at_rest),
@@ -693,20 +702,22 @@ private fun CaloriesDetail(ctx: ActivityDetailContext) {
                     )
                     DetailSentence(ActivityCopy.caloriesAtRest(Math.round(e.bmrKcal)))
                     InfoCopy.caloriesNotes(e).firstOrNull()?.let { note ->
-                        androidx.compose.foundation.layout.Box(Modifier.clickable { info = true }) { CaveatLine(note, color) }
+                        androidx.compose.foundation.layout.Box(Modifier.clickable { info = true }) {
+                            HaloNote(note, variant = NoteVariant.Caveat, dot = color)
+                        }
                     }
                 }
             }
             item {
                 val zone = ZoneId.systemDefault()
                 val sources = remember(ctx.workouts, date, e) { CaloriesCopy.sources(ctx.workouts, date, e, e.bmrKcal / 1440f, zone) }
-                DetailPanel(Modifier.padding(top = 8.dp), title = stringResource(R.string.glow_activity_where_it_came_from)) {
+                DetailPanel(Modifier.padding(top = Space.S8), title = stringResource(R.string.glow_activity_where_it_came_from)) {
                     sources.forEachIndexed { i, s ->
                         val start = s.workoutStart
-                        if (start != null) DetailRow(
+                        if (start != null) MetricRow(
                             s.name, color, Units.count(s.kcal), s.line, divider = i > 0, onClick = { ctx.onOpen(Detail.Workout(start)) },
                             icon = org.openstrap.app.ui.theme.SportIcons.of(s.sportType ?: 0), iconTint = SportIconTint,
-                        ) else DetailRow(
+                        ) else MetricRow(
                             s.name, color, Units.count(s.kcal), s.line, divider = i > 0,
                             // Walking, then everyday moving, close the list ([CaloriesCopy.sources]).
                             icon = if (i < sources.lastIndex) Metric.Steps.rowIcon() else AppIcons.PersonArmsSpread,
@@ -725,13 +736,13 @@ private fun CaloriesDetail(ctx: ActivityDetailContext) {
             }
             if (summary != null && summary.days > 0) {
                 item {
-                    DetailFigures(
+                    HaloFigures(
                         listOfNotNull(
                             Units.count(summary.activeTotal) to stringResource(R.string.glow_activity_active_kcal_in_all),
                             summary.totalADay?.let { Units.count(it) to stringResource(R.string.glow_activity_total_a_day) },
                             summary.vsBefore?.let { CaloriesCopy.signed(it) to CaloriesCopy.vsLabel(range) },
                         ),
-                        Modifier.padding(top = 18.dp),
+                        Modifier.padding(top = Space.S16),
                     )
                 }
                 CaloriesCopy.rangeSentence(summary)?.let { item { DetailSentence(it) } }
@@ -744,7 +755,7 @@ private fun CaloriesDetail(ctx: ActivityDetailContext) {
 
 /** The hours' colours: workouts in the ink, walking in its darker shade, everyday moving in white at 40%. */
 private val WalkingKcal = MetricColors.caloriesShade
-private val EverydayKcal = Color.White.copy(alpha = 0.4f)
+private val EverydayKcal = Ink.Tertiary
 
 /**
  * By the hour: the day's 24 hours as bars split by where the kcal came from (workouts at the foot, then walking, then
@@ -755,12 +766,12 @@ private val EverydayKcal = Color.White.copy(alpha = 0.4f)
 private fun HourlyKcal(e: org.openstrap.app.data.EnergyExpenditure.Day, color: Color, onPick: (Int?) -> Unit) {
     val h = e.hourly
     val stacks = remember(h) { List(24) { listOf(h.workout[it], h.walking[it], h.everyday[it].coerceAtLeast(0f)) } }
-    Column(Modifier.fillMaxWidth().padding(top = 8.dp)) {
-        DetailHeading(stringResource(R.string.glow_activity_by_the_hour), note = CaloriesCopy.peak(h.total))
+    Column(Modifier.fillMaxWidth().padding(top = Space.S8)) {
+        HaloTitle(stringResource(R.string.glow_activity_by_the_hour), variant = TitleVariant.OutOfCard, note = CaloriesCopy.peak(h.total))
         val colors = listOf(color, WalkingKcal, EverydayKcal)
         StackedBars(
             stacks, { _, k -> colors[k] }, goal = null, labels = listOf("00", "06", "12", "18", "24"), spread = true,
-            Modifier.padding(top = 16.dp), height = 140.dp, onPick = onPick,
+            Modifier.padding(top = Space.S16), height = 140.dp, onPick = onPick,
         )
         Legend(
             listOf(
@@ -768,7 +779,7 @@ private fun HourlyKcal(e: org.openstrap.app.data.EnergyExpenditure.Day, color: C
                 stringResource(R.string.glow_activity_legend_walking) to WalkingKcal,
                 stringResource(R.string.glow_activity_legend_everyday) to EverydayKcal,
             ),
-            Modifier.padding(top = 12.dp),
+            Modifier.padding(top = Space.S12),
         )
     }
 }
@@ -798,7 +809,7 @@ private fun RangeKcal(
         Range.Month -> listOf(0f, 1 / 3f, 2 / 3f, 1f).map { DayWords.dayMonth(bars[((bars.size - 1) * it).toInt()].first) }
         else -> listOf(0f, 1 / 3f, 2 / 3f, 1f).map { DayWords.monthShort(bars[((bars.size - 1) * it).toInt()].first) }
     }
-    Column(Modifier.padding(top = 8.dp)) {
+    Column(Modifier.padding(top = Space.S8)) {
         StackedBars(
             bars.map { it.second ?: emptyList() }, { _, k -> if (k == 0) color else WalkingKcal }, goal.toFloat(), labels,
             spread = range != Range.Week, height = 200.dp,
@@ -820,7 +831,7 @@ private fun RangeKcal(
                 stringResource(R.string.glow_activity_workouts) to color,
                 stringResource(R.string.glow_activity_legend_rest) to WalkingKcal,
             ),
-            Modifier.padding(top = 12.dp),
+            Modifier.padding(top = Space.S12),
         )
     }
 }
@@ -881,7 +892,7 @@ private fun DistanceDetail(ctx: ActivityDetailContext) {
     val meters = ours ?: ctx.state.distanceMeters?.toFloat()
     val km = meters?.let { Units.km(it, Units.Precision.Day, Units.DOT_LOCALE) }
     val headline = if (km != null) DetailHeadline(km, ActivityCopy.distanceSource(ours != null), null)
-    else DetailHeadline.none(stringResource(R.string.glow_no_reading), DetailCopy.noValue(Metric.Steps, Range.Day, ctx.isToday))
+    else DetailHeadline.none(stringResource(R.string.glow_no_reading_yet), DetailCopy.noValue(Metric.Steps, Range.Day, ctx.isToday))
     DetailTemplate(
         Score.Distance.title, color, siblings(Detail.OfScore(Score.Distance), ctx.onSwitch), onInfo = { info = true }, onBack = ctx.onBack,
         contentPadding = ctx.contentPadding, headline = headline, strip = stepsStrip(ctx), onDay = ctx.onSelectDay,
@@ -905,25 +916,25 @@ private fun ActivityRelated(current: Score, ctx: ActivityDetailContext, heartPoi
     val a = ctx.r?.activity
     val goal = org.openstrap.app.ui.dashboard.LocalGoals.current.steps
     val points = heartPoints ?: ctx.state.pai?.total?.let(Math::round)
-    DetailPanel(Modifier.padding(top = 8.dp), title = stringResource(R.string.glow_metrics_related)) {
+    DetailPanel(Modifier.padding(top = Space.S8), title = stringResource(R.string.glow_metrics_related)) {
         var first = true
         fun divider() = !first.also { first = false }
-        DetailRow(
+        MetricRow(
             Metric.Steps.title, MetricColors.steps, ctx.state.steps.takeIf { it > 0 }?.let { Units.count(it) },
             ActivityCopy.goalShare(ctx.state.steps, goal), onClick = { ctx.onOpen(Detail.OfMetric(Metric.Steps)) }, divider = divider(),
             icon = Metric.Steps.rowIcon(),
         )
-        if (current != Score.ActiveMinutes) DetailRow(
+        if (current != Score.ActiveMinutes) MetricRow(
             Score.ActiveMinutes.title, MetricColors.steps, a?.weekEquivalent?.toString(),
             a?.let { TabCopy.activeMinutes(it.weekEquivalent, Activity.MVPA_WEEKLY_TARGET) } ?: NO_VALUE,
             onClick = { ctx.onOpen(Detail.OfScore(Score.ActiveMinutes)) }, divider = divider(), icon = Score.ActiveMinutes.rowIcon(),
         )
-        if (current != Score.HeartPoints) DetailRow(
+        if (current != Score.HeartPoints) MetricRow(
             Score.HeartPoints.title, MetricColors.heart, points?.toString(),
             points?.let { TabCopy.heartPoints(it, ActivityCopy.HEART_POINTS_TARGET) } ?: AFTER_NEXT_SYNC,
             onClick = { ctx.onOpen(Detail.OfScore(Score.HeartPoints)) }, divider = divider(), icon = Score.HeartPoints.rowIcon(),
         )
-        if (current != Score.Load) DetailRow(
+        if (current != Score.Load) MetricRow(
             Score.Load.title, MetricColors.load, ctx.r?.load?.let(Math::round)?.toString(),
             ctx.r?.let { TabCopy.loadUsual(it.chronicLoad) } ?: NO_VALUE,
             onClick = { ctx.onOpen(Detail.OfScore(Score.Load)) }, divider = divider(), icon = Score.Load.rowIcon(),
@@ -1002,7 +1013,7 @@ internal fun WeekDetail(ctx: ActivityDetailContext) {
         if (values.any { it > 0f }) item {
             DetailColumns(
                 values, MetricColors.steps, days.map { DayWords.weekdayShort(it.date) }, alpha = 0.75f,
-                goal = org.openstrap.app.ui.dashboard.LocalGoals.current.steps.toFloat(), modifier = Modifier.padding(top = 8.dp),
+                goal = org.openstrap.app.ui.dashboard.LocalGoals.current.steps.toFloat(), modifier = Modifier.padding(top = Space.S8),
                 onScrub = { i ->
                     scrub = i?.let {
                         val label = Strings.app.format(R.string.glow_activity_steps_on, DayWords.short(days[it].date))
@@ -1012,21 +1023,21 @@ internal fun WeekDetail(ctx: ActivityDetailContext) {
             )
         }
         item {
-            DetailFigures(
+            HaloFigures(
                 listOf(
-                    totals.activeMinutes?.toString() to stringResource(R.string.glow_activity_active_minutes),
+                    totals.activeMinutes?.toString() to stringResource(R.string.glow_activity_active_min_short),
                     totals.workouts.toString() to stringResource(R.string.glow_activity_workouts),
                     totals.asleepANight?.let { Units.duration(it) } to stringResource(R.string.glow_activity_asleep_a_night),
                 ).filter { it.first != null },
-                Modifier.padding(top = 18.dp),
+                Modifier.padding(top = Space.S16),
             )
         }
         // The steps against the week before are the headline's word already, so the sentence leaves them out.
         WeekStory.sentence(days, null, workoutsBefore)?.let { item { DetailSentence(it) } }
         item {
-            DetailPanel(Modifier.padding(top = 8.dp), title = stringResource(R.string.glow_activity_day_by_day)) {
+            DetailPanel(Modifier.padding(top = Space.S8), title = stringResource(R.string.glow_activity_day_by_day)) {
                 WeekStory.rows(days).forEachIndexed { i, r ->
-                    DetailRow(r.title, MetricColors.steps, r.steps?.let { Units.count(it) }, r.line, divider = i > 0, dash = false)
+                    MetricRow(r.title, MetricColors.steps, r.steps?.let { Units.count(it) }, r.line, divider = i > 0, dash = false)
                 }
             }
         }

@@ -2,6 +2,18 @@
 
 package org.openstrap.app.ui.glow.live
 
+import org.openstrap.app.ui.glow.HaloNote
+import org.openstrap.app.ui.glow.HeaderVariant
+import org.openstrap.app.ui.glow.HaloPageHeader
+import org.openstrap.app.ui.glow.BannerKind
+import org.openstrap.app.ui.glow.HaloBanner
+import org.openstrap.app.ui.glow.HaloCard
+import org.openstrap.app.ui.glow.HaloPageColumn
+import org.openstrap.app.ui.glow.HaloTitle
+import org.openstrap.app.ui.theme.IconSize
+import org.openstrap.app.ui.theme.Corner
+import org.openstrap.app.ui.theme.Space
+import org.openstrap.app.ui.theme.Greys
 import kotlinx.coroutines.delay
 import androidx.compose.runtime.produceState
 import androidx.compose.animation.core.Animatable
@@ -23,7 +35,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import org.openstrap.app.presentation.Units
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -42,8 +56,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import org.openstrap.app.ui.glow.HaloButtonSurface
-import org.openstrap.app.ui.glow.RoundIconButton
+import org.openstrap.app.ui.glow.HaloIconButton
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.runtime.getValue
@@ -63,6 +76,7 @@ import org.openstrap.app.ui.components.pressClickable
 import org.openstrap.app.ui.components.rememberHaptics
 import org.openstrap.app.ui.glow.*
 import org.openstrap.app.ui.theme.AppIcons
+import org.openstrap.app.ui.theme.Ink
 import org.openstrap.app.ui.theme.MetricColors
 import org.openstrap.app.ui.theme.SportIcons
 import androidx.activity.compose.BackHandler
@@ -73,7 +87,11 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.style.TextAlign
+import org.openstrap.app.ui.theme.FunnelSans
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
@@ -149,7 +167,7 @@ internal fun LiveFrame(
     val landscape = LocalLiveLandscape.current
     // On its side the screen keeps a wider column than a page's, so the content and the controls fit side by side.
     CompositionLocalProvider(LocalPageColumn provides if (landscape) GlowLayout.MaxContentWidth else LocalPageColumn.current) {
-        WorkoutPage(color, contentPadding, scroll = false, backdrop = backdrop) {
+        HaloPageColumn(contentPadding, scroll = false) {
             LiveTopBar(r, connected, controls, title, time, status, battery, labelled, quiet)
             if (landscape) {
                 LandscapePanes(
@@ -157,15 +175,15 @@ internal fun LiveFrame(
                     frameControls = { FrameControls(r, controls, lap, quiet, tapHint, pauseWhite) },
                     content = content,
                 )
-                return@WorkoutPage
+                return@HaloPageColumn
             }
             if (r.paused && paused != null) paused() else content()
             if (bottomRoom != null && !r.paused) {
                 Spacer(Modifier.height(bottomRoom))
-                return@WorkoutPage
+                return@HaloPageColumn
             }
             if (!connected && !r.paused) {
-                PageNote(WorkoutCopy.STRAP_GONE_NOTE)
+                HaloNote(WorkoutCopy.STRAP_GONE_NOTE)
             }
             if (r.endFailed) NotSavedNotice(controls.onEnd)
             r.endPrompt?.let { at -> StoppedPrompt(r, at, controls.onEndAtPrompt, controls.onKeepGoing) }
@@ -203,15 +221,15 @@ private fun ColumnScope.LandscapePanes(
     androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {
         val side = landscapeControlsWidth(maxWidth)
         Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(LandscapeGap)) {
-            ScrollPane(Modifier.weight(1f).fillMaxHeight(), Arrangement.spacedBy(14.dp)) {
-                if (!bar && !connected && !r.paused) PageNote(WorkoutCopy.STRAP_GONE_NOTE)
+            ScrollPane(Modifier.weight(1f).fillMaxHeight(), Arrangement.spacedBy(Space.S12)) {
+                if (!bar && !connected && !r.paused) HaloNote(WorkoutCopy.STRAP_GONE_NOTE)
                 if (!bar && r.endFailed) NotSavedNotice(controls.onEnd)
                 if (!bar) r.endPrompt?.let { at -> StoppedPrompt(r, at, controls.onEndAtPrompt, controls.onKeepGoing) }
                 if (r.paused && paused != null) paused() else content()
             }
             if (bar) return@Row
             // Centred in the height, and like the content, scrolling rather than cut on a screen too short for it.
-            val centred = Arrangement.spacedBy(14.dp, Alignment.CenterVertically)
+            val centred = Arrangement.spacedBy(Space.S12, Alignment.CenterVertically)
             ScrollPane(Modifier.width(side).fillMaxHeight(), centred, Alignment.CenterHorizontally) {
                 frameControls()
             }
@@ -268,7 +286,7 @@ private fun ColumnScope.FrameControls(
     if (quiet && tapHint && !r.paused) ControlsHint(stringResource(R.string.workout_live_tap_to_light), alpha = 1f)
     ControlsRow(r, controls, lap, true, Modifier.align(Alignment.CenterHorizontally), pauseWhite)
     // A little room under the controls, so they sit up off the screen's edge.
-    Spacer(Modifier.height(8.dp))
+    Spacer(Modifier.height(Space.S8))
 }
 
 /** A line under the controls saying how to use them, centred. Quieter on the dimmed mind screen ([alpha]). */
@@ -295,12 +313,10 @@ internal fun ControlsRow(
         Spacer(Modifier.weight(1f))
         // The label of Pause is its description only; the boards put no word under the white circle.
         val white = pauseWhite || r.paused
-        FlatButton(if (white) Color.White else HaloButtonSurface, 88.dp, onClick = if (r.paused) controls.onResume else controls.onPause) {
-            Icon(
-                if (r.paused) AppIcons.PlayFill else AppIcons.PauseFill, pauseLabel, tint = if (white) Color.Black else Color.White,
-                modifier = Modifier.size(28.dp),
-            )
-        }
+        HaloIconButton(
+            if (r.paused) AppIcons.PlayFill else AppIcons.PauseFill, pauseLabel, if (r.paused) controls.onResume else controls.onPause,
+            variant = if (white) HaloIconVariant.Primary else HaloIconVariant.Control, size = HaloIconSize.Pause,
+        )
         Spacer(Modifier.weight(1f))
         Box(Modifier.width(72.dp), contentAlignment = Alignment.TopCenter) {
             Labelled(stringResource(R.string.workout_live_hold_to_end), labelled) { HoldToEnd(controls.onEnd) }
@@ -311,7 +327,7 @@ internal fun ControlsRow(
 /** A control on the controls row, with its [label] under it (12, #C9CED6). */
 @Composable
 private fun Labelled(label: String, show: Boolean, button: @Composable () -> Unit) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(Space.S8)) {
         // The side buttons are 60 tall, centred on Pause's 88 so the row reads as one line.
         Box(Modifier.height(88.dp), contentAlignment = Alignment.Center) { button() }
         if (show) Text(label, color = LiveLabelInk, style = GlowType.noteSmall, maxLines = 1, softWrap = false)
@@ -325,19 +341,16 @@ internal fun LapButton(onLap: () -> Unit, label: Boolean = false, skip: Boolean 
     SideAction(text, if (skip) AppIcons.SkipFill else SportIcons.Lap, onLap, label)
 }
 
-/** A side action of the controls row: a 60 dark squircle holding an icon, its [label] under it (board HaloLiveRun, Lap). */
+/** A side action of the controls row: a 60 [HaloIconButton] circle holding an icon, its [label] under it (board HaloLiveRun, Lap). */
 @Composable
 internal fun SideAction(text: String, icon: androidx.compose.ui.graphics.vector.ImageVector, onClick: () -> Unit, label: Boolean = true) {
     Labelled(text, label) {
-        Box(
-            Modifier.size(60.dp).clip(GlowLayout.IconShape).background(HaloButtonSurface).pressClickable(onClick, GlowLayout.IconShape),
-            contentAlignment = Alignment.Center,
-        ) { Icon(icon, text, tint = Color.White, modifier = Modifier.size(22.dp)) }
+        HaloIconButton(icon, text, onClick, size = HaloIconSize.Live)
     }
 }
 
 /** The grey of a side button's hint under the controls (workout-rules.md, Frame). */
-private val HintInk = Color(0xFF5C616B)
+private val HintInk = Ink.Disabled
 
 /** The total time under the sport's name, read in its own scope so only it is composed again each second. */
 @Composable
@@ -361,13 +374,11 @@ private fun LiveTopBar(
     status: List<Pair<String, Color>>, battery: Int?, labelled: Boolean, quiet: Boolean,
 ) {
     val color = liveColor(r)
-    Row(Modifier.fillMaxWidth().height(48.dp), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.width(96.dp), contentAlignment = Alignment.CenterStart) {
-            RoundIconButton(AppIcons.CaretDown, stringResource(R.string.workout_live_minimize), controls.onMinimize,
-                size = 44.dp, iconSize = 18.dp)
-        }
-        Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(1.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+    HaloPageHeader(
+        variant = HeaderVariant.Workout,
+        start = { HaloIconButton(AppIcons.CaretDown, stringResource(R.string.workout_live_minimize), controls.onMinimize) },
+        centre = { Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(1.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.S8)) {
                 Box(Modifier.size(8.dp).background(color, CircleShape))
                 Text(
                     title ?: Workouts.sportName(r.workout.sportType), color = color,
@@ -375,8 +386,9 @@ private fun LiveTopBar(
                 )
             }
             if (time != null) TotalTime(time, r.paused)
-        }
-        Column(Modifier.widthIn(min = 96.dp), horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        } },
+    ) {
+        Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(Space.S2)) {
             if (quiet) return@Column
             val strap = when {
                 !connected -> WorkoutWords.STRAP_GONE
@@ -402,7 +414,7 @@ internal fun LiveBottomBar(
 ) {
     val density = androidx.compose.ui.platform.LocalDensity.current
     val items: @Composable ColumnScope.() -> Unit = {
-        if (!connected) PageNote(WorkoutCopy.STRAP_GONE_NOTE)
+        if (!connected) HaloNote(WorkoutCopy.STRAP_GONE_NOTE)
         if (r.endFailed) NotSavedNotice(controls.onEnd)
         r.endPrompt?.let { at -> StoppedPrompt(r, at, controls.onEndAtPrompt, controls.onKeepGoing) }
         val at = position()
@@ -417,8 +429,9 @@ internal fun LiveBottomBar(
         // Centred in the height, scrolling only when the stopped prompt makes it taller than the screen.
         ScrollPane(
             modifier.fillMaxHeight().statusBarsPadding()
-                .padding(top = contentPadding.calculateTopPadding() + 8.dp, bottom = contentPadding.calculateBottomPadding(), end = end),
-            Arrangement.spacedBy(14.dp, Alignment.CenterVertically), Alignment.CenterHorizontally, items,
+                .padding(top = contentPadding.calculateTopPadding() + Space.S8, bottom = contentPadding.calculateBottomPadding(),
+                    end = end),
+            Arrangement.spacedBy(Space.S12, Alignment.CenterVertically), Alignment.CenterHorizontally, items,
         )
         return
     }
@@ -428,8 +441,8 @@ internal fun LiveBottomBar(
         Column(
             Modifier.fillMaxWidth().padding(bottom = contentPadding.calculateBottomPadding())
                 .onSizeChanged { onHeight(with(density) { it.height.toDp() }) }
-                .padding(start = side, end = side, bottom = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+                .padding(start = side, end = side, bottom = Space.S20),
+            verticalArrangement = Arrangement.spacedBy(Space.S12),
             content = items,
         )
     }
@@ -462,77 +475,56 @@ internal fun PageDots(current: Int, count: Int, position: Float? = null, onSelec
     }
 }
 
-private val DotOff = Color(0xFF3A3D45)
+private val DotOff = Greys.Line
 
 /** A page dot's tap target, and the height the dots' row takes in the bottom bar. */
 private val DotTap = 48.dp
 private val DotsRowHeight = 28.dp
 
+/** A distance for a live figure: "4.02 km", the unit after the number. */
 @Composable
-internal fun LiveStat(label: String, modifier: Modifier = Modifier, value: @Composable () -> Unit) {
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        value()
-        Text(label, color = GlowType.noteColor, style = GlowType.noteSmall, maxLines = 1)
-    }
-}
+@ReadOnlyComposable
+internal fun km(meters: Float): String =
+    Units.km(meters, Units.Precision.Workout) + " " + stringResource(R.string.workout_live_unit_km)
 
-/** The 1 px rule left of every figure after the first (workout-rules.md, section 2: #24262C). */
+/** A speed for a live figure: "24.5 km/h", or null while there is none. */
 @Composable
-internal fun StatRule() = Box(Modifier.width(1.dp).fillMaxHeight().background(FigureRule))
-
-private val FigureRule = Color(0xFF24262C)
-
-/** A live figure: Funnel Display Light 28, or the dim dash while there is none (board HaloLiveRun, figures row). */
-@Composable
-internal fun LiveValue(text: String?) =
-    if (text == null) WaitingDash(Modifier.padding(vertical = 6.dp))
-    else Text(text, color = Color.White, style = GlowType.figure, maxLines = 1, softWrap = false)
-
-/**
- * A round button in the glow language: a small glow card lit from its rim in [color], its icon on the dark core.
- * [onClick] null leaves the touch handling to [modifier] (the end square's hold).
- */
-@Composable
-internal fun FlatButton(container: Color, size: Dp, modifier: Modifier = Modifier, onClick: (() -> Unit)? = null,
-    content: @Composable () -> Unit) {
-    // Flat, like the app's Start and Done: the live screen's card already carries the glow.
-    Box(
-        modifier.size(size).clip(CircleShape).background(container)
-            .then(if (onClick != null) Modifier.pressClickable(onClick, CircleShape) else Modifier),
-        contentAlignment = Alignment.Center,
-    ) { content() }
-}
+@ReadOnlyComposable
+internal fun kmh(speed: String?): String? = speed?.let { it + " " + stringResource(R.string.workout_live_unit_kmh) }
 
 /** End was tried and couldn't save: the workout records on, and Try again runs End again. */
 @Composable
 internal fun NotSavedNotice(onTryAgain: () -> Unit) {
-    QuietPanel {
-        GlowHeader(stringResource(R.string.workout_live_not_saved_title))
-        PageNote(stringResource(R.string.workout_live_not_saved_note))
-        WorkoutButton(stringResource(R.string.workout_live_try_again), Color.White, Color.Black, onTryAgain)
+    HaloBanner(
+        BannerKind.Problem, stringResource(R.string.workout_live_not_saved_title),
+        note = stringResource(R.string.workout_live_not_saved_note),
+    ) {
+        HaloButton(
+            stringResource(R.string.workout_live_try_again), onTryAgain, Modifier.fillMaxWidth(), HaloButtonVariant.Primary,
+        )
     }
 }
 
 /** "Looks like you've stopped": end where the wearer stopped, or keep going. The strap has buzzed already. */
 @Composable
 internal fun StoppedPrompt(r: WorkoutState.Recording, at: Long, onEnd: () -> Unit, onKeep: () -> Unit) {
-    QuietPanel {
-        GlowHeader(stringResource(if (r.inCar) R.string.workout_live_stopped_car_title else R.string.workout_live_stopped_title))
-        val sport = sportNoun(r.workout.sportType) ?: stringResource(R.string.glow_today_workout_noun)
-        PageNote(
-            stringResource(if (r.inCar) R.string.workout_live_stopped_car_note else R.string.workout_live_stopped_note, clock(at), sport),
+    val sport = sportNoun(r.workout.sportType) ?: stringResource(R.string.glow_today_workout_noun)
+    HaloBanner(
+        BannerKind.Info, stringResource(if (r.inCar) R.string.workout_live_stopped_car_title else R.string.workout_live_stopped_title),
+        note = stringResource(
+            if (r.inCar) R.string.workout_live_stopped_car_note else R.string.workout_live_stopped_note, clock(at),
+            sport,
+        ),
+    ) {
+        ButtonPair(
+            stringResource(R.string.workout_live_keep_going), onKeep, stringResource(R.string.workout_live_stopped_end_at, clock(at)),
+            onEnd,
         )
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Box(Modifier.weight(1f)) {
-                WorkoutButton(stringResource(R.string.workout_live_stopped_end_at, clock(at)), Color.White, Color.Black, onEnd)
-            }
-            Box(Modifier.weight(1f)) { WorkoutButton(stringResource(R.string.workout_live_keep_going), Raised, Color.White, onKeep) }
-        }
     }
 }
 
 /**
- * Stop (workout-rules.md, Frame; board HaloLiveRun): a 60 dark squircle holding an 18 white rounded square inside a 44
+ * Stop (workout-rules.md, Frame; board HaloLiveRun): a 60 circle ([HaloIconSurface]) holding an 18 white rounded square inside a 44
  * ring. Held, a white arc fills the ring and the workout ends when it completes at [HOLD_MS]; letting go early empties it.
  */
 @Composable
@@ -540,8 +532,9 @@ internal fun HoldToEnd(onEnd: () -> Unit) {
     val progress = remember { Animatable(0f) }
     val haptics = rememberHaptics()
     val described = stringResource(R.string.workout_live_hold_to_end_description)
-    Box(
-        Modifier.size(60.dp).clip(GlowLayout.IconShape).background(HaloButtonSurface)
+    // A 60 icon button's circle, with the hold's own press handling and ring in place of a tap.
+    HaloIconSurface(
+        Modifier
             .pointerInput(Unit) {
                 detectTapGestures(onPress = {
                     coroutineScope {
@@ -559,13 +552,13 @@ internal fun HoldToEnd(onEnd: () -> Unit) {
                 })
             }
             .semantics { contentDescription = described },
-        contentAlignment = Alignment.Center,
+        size = HaloIconSize.Live,
     ) {
-        Canvas(Modifier.size(44.dp)) {
+        Canvas(Modifier.size(ButtonSpec.IconDefault)) {
             val stroke = 3.dp.toPx()
             val inset = stroke / 2
             val arc = Size(size.width - stroke, size.height - stroke)
-            drawArc(Color.White.copy(alpha = 0.18f), 0f, 360f, false, Offset(inset, inset), arc, style = Stroke(stroke))
+            drawArc(Ink.Line, 0f, 360f, false, Offset(inset, inset), arc, style = Stroke(stroke))
             if (progress.value > 0f) drawArc(Color.White, -90f, 360f * progress.value, false, Offset(inset, inset), arc,
                 style = Stroke(stroke, cap = StrokeCap.Round))
             val side = 18.dp.toPx()
@@ -605,15 +598,15 @@ internal fun nowTickingState(): androidx.compose.runtime.State<Long> = produceSt
 internal fun LitHeartPill(bpm: Int?, maxHr: Int?, color: Color, paused: Boolean, height: Dp, modifier: Modifier = Modifier) {
     val heartZones = LocalHeartZones.current
     Row(
-        modifier.height(height).clip(CircleShape).background(OverMapSurface).padding(horizontal = 14.dp),
+        modifier.height(height).clip(CircleShape).background(OverMapSurface).padding(horizontal = Space.S16),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(Space.S8),
     ) {
         if (bpm == null) {
             Text(WorkoutCopy.noHeartRate(paused), color = GlowType.noteColor, style = GlowType.secondary)
             return@Row
         }
-        Icon(AppIcons.Heartbeat, null, tint = color, modifier = Modifier.size(16.dp))
+        Icon(AppIcons.Heartbeat, null, tint = color, modifier = Modifier.size(IconSize.GlyphS))
         Text("$bpm", color = Color.White, style = GlowType.figureInline)
         val zone = maxHr?.let { WorkoutRecorder.liveZone(bpm, it, heartZones) }
         val unit = stringResource(R.string.workout_live_unit_bpm)
@@ -625,4 +618,4 @@ internal fun LitHeartPill(bpm: Int?, maxHr: Int?, color: Color, paused: Boolean,
 }
 
 /** Over the map: near black, a little see-through (board HaloLiveMap: rgba(12,13,16,0.82)). */
-internal val OverMapSurface = Color(0xD10C0D10)
+internal val OverMapSurface = Greys.OverMap

@@ -33,6 +33,9 @@ object DotFont {
         'k' to listOf("#....", "#....", "#..#.", "#.#..", "##...", "#.#..", "#..#."),
         '%' to listOf("##...", "##..#", "...#.", "..#..", ".#...", "#..##", "...##"),
         ' ' to listOf("..", "..", "..", "..", "..", "..", ".."),
+        // The thin space grouping big numbers ("26 120"): no columns of its own, so the groups sit two empty columns apart,
+        // twice the gap between digits.
+        '\u2009' to listOf("", "", "", "", "", "", ""),
     )
 
     /** Rows in every glyph. */

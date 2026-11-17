@@ -60,11 +60,11 @@
     <!-- The time asleep habit's line: yours, and the length below which it counts. -->
     <string name="glow_healthspan_time_asleep"><xliff:g id="duration" example="5 h 40">%1$s</xliff:g> a night, only counts below <xliff:g id="limit" example="7 h">%2$s</xliff:g></string>
     <!-- The Habit Age card when the profile has no birth year. -->
-    <string name="glow_healthspan_profile_birth_year">Add your birth year to your profile to see your Habit Age.</string>
+    <string name="glow_healthspan_profile_birth_year">Needs your birth year</string>
     <!-- The Habit Age card when the profile has no sex. -->
-    <string name="glow_healthspan_profile_sex">Add your sex to your profile to see your Habit Age.</string>
+    <string name="glow_healthspan_profile_sex">Needs your sex</string>
     <!-- The Habit Age card when the profile has neither birth year nor sex. -->
-    <string name="glow_healthspan_profile_both">Add your birth year and sex to your profile to see your Habit Age.</string>
+    <string name="glow_healthspan_profile_both">Needs birth year and sex</string>
     <!-- Title of the Habit Age card and page. -->
     <string name="glow_healthspan_title">Habit Age</string>
     <!-- What the info button beside the Habit Age title does, for screen readers. -->
@@ -111,4 +111,6 @@
     <string name="glow_healthspan_scale_older">older +1½ y</string>
     <!-- Under the habits list when the fitness habits hit their cap. -->
     <string name="glow_healthspan_fitness_capped">Fitness habits capped: resting heart rate, steps and VO2 max together count for at most 3 years either way.</string>
+    <!-- Habit Age detail context: the unit, then what it says ("years, Updated Sun 18 Oct"). Parsed on its first comma into unit and context. -->
+    <string name="glow_healthspan_years_line"><xliff:g id="unit" example="years">%1$s</xliff:g>, <xliff:g id="context" example="Updated Sun 18 Oct">%2$s</xliff:g></string>
 </resources>

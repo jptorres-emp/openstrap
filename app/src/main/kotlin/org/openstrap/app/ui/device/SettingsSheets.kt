@@ -2,6 +2,14 @@
 
 package org.openstrap.app.ui.device
 
+import org.openstrap.app.ui.glow.HaloNote
+import org.openstrap.app.ui.glow.HaloStepper
+import org.openstrap.app.ui.glow.StepperSize
+import org.openstrap.app.ui.glow.StepperNumber
+import org.openstrap.app.ui.glow.CardFill
+import org.openstrap.app.ui.glow.HaloCard
+import org.openstrap.app.ui.theme.Space
+import org.openstrap.app.ui.theme.Greys
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -34,13 +42,14 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import org.openstrap.app.R
+import org.openstrap.app.ui.glow.ButtonPair
+import org.openstrap.app.ui.glow.HaloButton
+import org.openstrap.app.ui.glow.HaloButtonVariant
+import org.openstrap.app.ui.glow.ChoiceRow
 import org.openstrap.app.ui.glow.GlowSegments
 import org.openstrap.app.ui.glow.GlowType
-import org.openstrap.app.ui.glow.PageButton
-import org.openstrap.app.ui.glow.PageNote
-import org.openstrap.app.ui.glow.PageRows
-import org.openstrap.app.ui.glow.PageSheet
-import org.openstrap.app.ui.glow.RoundIconButton
+import org.openstrap.app.ui.glow.HaloSheet
+import org.openstrap.app.ui.glow.HaloIconButton
 import org.openstrap.app.ui.theme.AppIcons
 
 /*
@@ -48,28 +57,20 @@ import org.openstrap.app.ui.theme.AppIcons
  * a grabber, the title, one picker, a note on what it changes, then Cancel (dark) and Save (white) half and half.
  */
 
-/** Cancel and Save, half and half, 56 tall (rules B4). Save is the sheet's one white thing. */
+/**
+ * A field that may be left blank (the page's values are all optional) has a quiet way back to blank or the default:
+ * [label] as a text button over the sheet's Cancel and Save pair.
+ */
 @Composable
-internal fun ColumnScope.SheetActions(
-    onCancel: () -> Unit,
-    onSave: () -> Unit,
-    saveEnabled: Boolean = true,
-    clearLabel: String? = null,
-    onClear: (() -> Unit)? = null,
-) {
-    // A field that may be left blank (the page's values are all optional) has a quiet way back to blank or the default.
-    if (clearLabel != null && onClear != null) {
-        org.openstrap.app.ui.glow.PageTextButton(clearLabel, onClear, Modifier.align(Alignment.CenterHorizontally))
-    }
-    Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        PageButton(stringResource(R.string.you_action_cancel), onCancel, Modifier.weight(1f))
-        PageButton(stringResource(R.string.you_action_save), onSave, Modifier.weight(1f), enabled = saveEnabled, primary = true)
+internal fun ColumnScope.SheetClear(label: String?, onClear: (() -> Unit)?) {
+    if (label != null && onClear != null) {
+        HaloButton(label, onClear, Modifier.align(Alignment.CenterHorizontally), variant = HaloButtonVariant.Text)
     }
 }
 
 /**
- * A number between minus and plus (rules B4): the value in Funnel Display Light 44 with its [unit] after it in 15,
- * and a 44 squircle each side. Holds its own draft; Save hands it to [onSave].
+ * A number between minus and plus (rules B4): a [StepperSize.Sheet] [HaloStepper] with its [unit] after the number.
+ * Holds its own draft; Save hands it to [onSave].
  */
 @Composable
 internal fun StepperSheet(
@@ -87,25 +88,22 @@ internal fun StepperSheet(
     format: (Int) -> String = { it.toString() },
 ) {
     var value by rememberSaveable { mutableIntStateOf(initial.coerceIn(range)) }
-    PageSheet(onDismiss, title) {
-        Row(modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween) {
-            RoundIconButton(
-                AppIcons.Minus, stringResource(R.string.you_sheet_less), { value = (value - step).coerceIn(range) }, size = 44.dp,
-                enabled = value > range.first,
+    HaloSheet(
+        onDismiss, title,
+        footer = {
+            ButtonPair(
+                stringResource(R.string.you_action_cancel), onDismiss, stringResource(R.string.you_action_save), { onSave(value) },
             )
-            Row(verticalAlignment = Alignment.Bottom) {
-                Text(format(value), color = Color.White, style = GlowType.goalValue)
-                if (unit != null) Text(" $unit", color = GlowType.noteColor, style = GlowType.body,
-                    modifier = Modifier.padding(bottom = 6.dp))
-            }
-            RoundIconButton(
-                AppIcons.Plus, stringResource(R.string.you_sheet_more), { value = (value + step).coerceIn(range) }, size = 44.dp,
-                enabled = value < range.last,
-            )
-        }
-        if (note != null) PageNote(note)
-        SheetActions(onDismiss, { onSave(value) }, clearLabel = clearLabel, onClear = onClear)
+        },
+    ) {
+        HaloStepper(
+            stringResource(R.string.you_sheet_less), stringResource(R.string.you_sheet_more),
+            { value = (value - step).coerceIn(range) }, { value = (value + step).coerceIn(range) },
+            modifier.fillMaxWidth().padding(vertical = Space.S8),
+            lessEnabled = value > range.first, moreEnabled = value < range.last,
+        ) { StepperNumber(format(value), unit) }
+        if (note != null) HaloNote(note)
+        SheetClear(clearLabel, onClear)
     }
 }
 
@@ -123,10 +121,18 @@ internal fun SegmentSheet(
     onClear: (() -> Unit)? = null,
 ) {
     var picked by rememberSaveable { mutableIntStateOf(initial) }
-    PageSheet(onDismiss, title) {
-        Box(Modifier.padding(vertical = 8.dp)) { GlowSegments(options, picked, { picked = it }) }
-        if (note != null) PageNote(note)
-        SheetActions(onDismiss, { onSave(picked) }, saveEnabled = picked in options.indices, clearLabel = clearLabel, onClear = onClear)
+    HaloSheet(
+        onDismiss, title,
+        footer = {
+            ButtonPair(
+                stringResource(R.string.you_action_cancel), onDismiss, stringResource(R.string.you_action_save), { onSave(picked) },
+                rightEnabled = picked in options.indices,
+            )
+        },
+    ) {
+        Box(Modifier.padding(vertical = Space.S8)) { GlowSegments(options, picked, { picked = it }) }
+        if (note != null) HaloNote(note)
+        SheetClear(clearLabel, onClear)
     }
 }
 
@@ -144,36 +150,21 @@ internal fun RadioSheet(
     onClear: (() -> Unit)? = null,
 ) {
     var picked by rememberSaveable { mutableIntStateOf(initial) }
-    PageSheet(onDismiss, title) {
-        PageRows {
+    HaloSheet(
+        onDismiss, title,
+        footer = {
+            ButtonPair(
+                stringResource(R.string.you_action_cancel), onDismiss, stringResource(R.string.you_action_save), { onSave(picked) },
+                rightEnabled = picked in options.indices,
+            )
+        },
+    ) {
+        HaloCard(fill = CardFill.Rows) {
             options.forEachIndexed { i, name ->
-                RadioRow(name, i == picked, { picked = i }, divider = i > 0)
+                ChoiceRow(name, i == picked, { picked = i }, divider = i > 0)
             }
         }
-        if (note != null) PageNote(note)
-        SheetActions(onDismiss, { onSave(picked) }, saveEnabled = picked in options.indices, clearLabel = clearLabel, onClear = onClear)
-    }
-}
-
-/** A radio row: the name at 15 and a ring that fills white when picked. */
-@Composable
-private fun RadioRow(name: String, picked: Boolean, onClick: () -> Unit, divider: Boolean) {
-    Column {
-        if (divider) Box(Modifier.fillMaxWidth().height(1.dp).background(Color(0xFF1C1D22)))
-        Row(
-            Modifier.fillMaxWidth().heightIn(min = 56.dp)
-                .clickable(role = Role.RadioButton, onClick = onClick)
-                .semantics { this.selected = picked; this.role = Role.RadioButton }
-                .padding(horizontal = 16.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Text(name, Modifier.weight(1f), color = Color.White, style = GlowType.body, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            Box(
-                Modifier.size(22.dp).clip(CircleShape)
-                    .let { if (picked) it.background(Color.White) else it.border(1.5.dp, Color(0xFF3A3D45), CircleShape) },
-                contentAlignment = Alignment.Center,
-            ) { if (picked) Box(Modifier.size(8.dp).clip(CircleShape).background(Color.Black)) }
-        }
+        if (note != null) HaloNote(note)
+        SheetClear(clearLabel, onClear)
     }
 }

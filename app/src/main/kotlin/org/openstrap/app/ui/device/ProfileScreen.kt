@@ -2,6 +2,10 @@
 
 package org.openstrap.app.ui.device
 
+import org.openstrap.app.ui.glow.HaloPageHeader
+import org.openstrap.app.ui.glow.HaloPageList
+import org.openstrap.app.ui.glow.PageVariant
+import androidx.compose.ui.Modifier
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.Composable
@@ -17,14 +21,14 @@ import org.openstrap.app.R
 import org.openstrap.app.data.settings.Units
 import org.openstrap.app.data.settings.UserProfile
 import org.openstrap.app.i18n.Strings
-import org.openstrap.app.ui.dashboard.ScreenList
 import org.openstrap.app.ui.glow.GlowLayout
-import org.openstrap.app.ui.glow.PageConfirm
+import org.openstrap.app.ui.glow.HaloConfirmSheet
 import org.openstrap.app.ui.glow.PageGroup
-import org.openstrap.app.ui.glow.PageHeader
-import org.openstrap.app.ui.glow.PageRow
-import org.openstrap.app.ui.glow.PageSaveButton
-import org.openstrap.app.ui.glow.PageSwitchRow
+import org.openstrap.app.ui.glow.NavRow
+import org.openstrap.app.ui.glow.HaloButton
+import org.openstrap.app.ui.glow.HaloButtonSize
+import org.openstrap.app.ui.glow.HaloButtonVariant
+import org.openstrap.app.ui.glow.SwitchRow
 import java.time.LocalDate
 
 /** One line for the settings row: "34 years, male, 72 kg, 178 cm", or a prompt when empty. */
@@ -98,7 +102,7 @@ fun ProfileScreen(profile: UserProfile, contentPadding: PaddingValues, onSave: (
     val back: () -> Unit = { if (dirty) confirmDiscard = true else onBack() }
     BackHandler(onBack = back)
     if (confirmDiscard) {
-        PageConfirm(
+        HaloConfirmSheet(
             stringResource(R.string.you_profile_discard_title), stringResource(R.string.you_profile_discard_text),
             confirm = stringResource(R.string.you_profile_discard), onConfirm = { confirmDiscard = false; onBack() },
             onDismiss = { confirmDiscard = false },
@@ -131,28 +135,31 @@ fun ProfileScreen(profile: UserProfile, contentPadding: PaddingValues, onSave: (
     val notSet = stringResource(R.string.you_profile_not_set)
     val unitKg = stringResource(R.string.you_profile_unit_kg)
     val unitLb = stringResource(R.string.you_profile_unit_lb)
-    val unitFt = stringResource(R.string.you_profile_unit_ft)
-    val unitIn = stringResource(R.string.you_profile_unit_in)
     val levels = remember { org.openstrap.app.data.Vo2max.ACTIVITY_LEVELS }
+    // The row says a word for the level, the picker the whole description.
+    val shortLevels = listOf(
+        R.string.you_profile_activity_short_inactive, R.string.you_profile_activity_short_light,
+        R.string.you_profile_activity_short_low, R.string.you_profile_activity_short_mid, R.string.you_profile_activity_short_high,
+    ).map { stringResource(it) }
 
-    ScreenList(contentPadding, gutter = GlowLayout.Gutter) {
+    HaloPageList(contentPadding, variant = PageVariant.Settings) {
         item {
-            PageHeader(
-                stringResource(R.string.you_profile_title), back,
-                trailing = if (dirty) ({ PageSaveButton(stringResource(R.string.you_action_save), save, enabled = valid) }) else null,
-            )
+            HaloPageHeader(stringResource(R.string.you_profile_title), back, trailing = if (dirty) ({ HaloButton(
+                        stringResource(R.string.you_action_save), save, Modifier,
+                        if (valid) HaloButtonVariant.Primary else HaloButtonVariant.Secondary, HaloButtonSize.Small, enabled = valid,
+                    ) }) else null)
         }
         item {
             PageGroup(
                 heading = stringResource(R.string.you_profile_group_about),
                 footnote = stringResource(R.string.you_profile_foot_about),
             ) {
-                PageRow(
+                NavRow(
                     stringResource(R.string.you_profile_age),
                     ageValue?.let { pluralStringResource(R.plurals.you_profile_age, it, it) } ?: notSet,
                     onClick = { sheet = "age" }, divider = false,
                 )
-                PageRow(
+                NavRow(
                     stringResource(R.string.you_profile_row_sex),
                     when (sex) {
                         0 -> stringResource(R.string.you_profile_sex_female)
@@ -165,16 +172,16 @@ fun ProfileScreen(profile: UserProfile, contentPadding: PaddingValues, onSave: (
         }
         item {
             PageGroup(heading = stringResource(R.string.you_profile_group_body)) {
-                PageRow(
+                NavRow(
                     stringResource(R.string.you_profile_units),
                     stringResource(if (imperial) R.string.you_profile_units_imperial else R.string.you_profile_units_metric),
                     onClick = { sheet = "units" }, divider = false,
                 )
-                PageRow(
+                NavRow(
                     stringResource(R.string.you_profile_weight), weightValue?.let { Units.formatWeight(it, imperial) } ?: notSet,
                     onClick = { sheet = "weight" },
                 )
-                PageRow(
+                NavRow(
                     stringResource(R.string.you_profile_height), heightValue?.let { Units.formatHeight(it, imperial) } ?: notSet,
                     onClick = { sheet = "height" },
                 )
@@ -185,23 +192,26 @@ fun ProfileScreen(profile: UserProfile, contentPadding: PaddingValues, onSave: (
                 heading = stringResource(R.string.you_profile_group_estimates),
                 footnote = stringResource(R.string.you_profile_foot_all),
             ) {
-                PageRow(
-                    stringResource(R.string.you_profile_row_activity), levels.getOrNull(activity) ?: notSet,
+                NavRow(
+                    stringResource(R.string.you_profile_row_activity), shortLevels.getOrNull(activity) ?: notSet,
                     onClick = { sheet = "activity" }, divider = false,
                 )
-                PageRow(
+                NavRow(
                     stringResource(R.string.you_profile_row_sleep_need),
                     sleepNeedValue?.let { org.openstrap.app.presentation.Units.duration(it * 60L) }
                         ?: stringResource(R.string.you_profile_sleep_default),
                     onClick = { sheet = "sleep" },
                 )
-                PageSwitchRow(
+                SwitchRow(
                     stringResource(R.string.you_profile_beta_blockers), stringResource(R.string.you_profile_beta_note),
                     betaBlocker, { betaBlocker = it },
                 )
-                PageSwitchRow(stringResource(R.string.you_profile_pregnant), null, pregnant, { pregnant = it })
+                SwitchRow(
+                    stringResource(R.string.you_profile_pregnant), stringResource(R.string.you_profile_pregnant_note),
+                    pregnant, { pregnant = it },
+                )
                 // Your max is set on the Heart rate zones page, with the zones that follow it.
-                PageRow(
+                NavRow(
                     org.openstrap.app.ui.workout.HeartZonesCopy.MAX_ROW,
                     org.openstrap.app.ui.workout.HeartZonesCopy.profileLine(profile.maxHeartRate),
                     onClick = onHeartZones, below = true,
@@ -246,7 +256,7 @@ fun ProfileScreen(profile: UserProfile, contentPadding: PaddingValues, onSave: (
                 feet = (total / 12).toString(); inches = (total % 12).toString()
                 heightCm = Units.feetInchesToCm(total / 12, total % 12).toString(); sheet = null
             },
-            onDismiss = { sheet = null }, format = { "${it / 12} $unitFt ${it % 12} $unitIn" },
+            onDismiss = { sheet = null }, format = { "${it / 12}′${it % 12}″" },
             clearLabel = if (!heightBlank) stringResource(R.string.you_profile_clear) else null,
             onClear = { heightCm = ""; feet = ""; inches = ""; sheet = null },
         ) else StepperSheet(

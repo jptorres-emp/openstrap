@@ -20,7 +20,7 @@
     <string name="you_firmware_service">Update service</string>
     <string name="you_firmware_service_available">Available</string>
     <string name="you_firmware_service_not_found">Not found</string>
-    <string name="you_firmware_service_unknown">Connect to check</string>
+    <string name="you_firmware_service_unknown">Unknown</string>
     <!-- A row that opens a firmware file from the phone. -->
     <string name="you_firmware_from_file">Install from a file</string>
     <!-- The privacy panel: its title, then three points, a short title and one sentence each. -->
@@ -35,9 +35,9 @@
     <!-- The update panel before a check: its title, what it does and the button. -->
     <string name="you_firmware_updates_text">Ask Zepp\'s update server whether there\'s newer firmware for this strap.</string>
     <string name="you_firmware_check">Check for updates</string>
-    <string name="you_firmware_checking">Checking for updates…</string>
+    <string name="you_firmware_checking">Checking for updates</string>
     <!-- While a part downloads: its name and version, "Firmware 3.25.1". -->
-    <string name="you_firmware_downloading">Downloading <xliff:g id="part" example="Firmware">%1$s</xliff:g> <xliff:g id="version" example="3.25.1">%2$s</xliff:g>…</string>
+    <string name="you_firmware_downloading">Downloading %1$s %2$s</string>
     <!-- A downloaded part's title: its name and version. -->
     <string name="you_firmware_part_title"><xliff:g id="part" example="Firmware">%1$s</xliff:g> <xliff:g id="version" example="3.25.1">%2$s</xliff:g></string>
     <string name="you_firmware_ready">Ready to install</string>
@@ -55,7 +55,6 @@
     <string name="you_firmware_installed_text">The strap is restarting. unstrap reconnects by itself. Check again afterwards in case there are more parts to install.</string>
     <string name="you_firmware_done">Done</string>
     <string name="you_firmware_failed">Something went wrong</string>
-    <string name="you_firmware_ok">OK</string>
     <string name="you_firmware_up_to_date">Up to date</string>
     <string name="you_firmware_up_to_date_text">The update server has nothing newer for this strap.</string>
     <string name="you_firmware_required">Required update</string>
@@ -67,9 +66,9 @@
     <!-- The download button when no part can be installed by unstrap. -->
     <string name="you_firmware_unsupported">Can\'t install</string>
     <string name="you_firmware_download">Download</string>
-    <!-- Asked before installing. The title is the image's, "Firmware 3.25.1". -->
-    <string name="you_firmware_confirm_title">Install <xliff:g id="title" example="Firmware 3.25.1">%1$s</xliff:g>?</string>
-    <string name="you_firmware_confirm_text">The strap will receive the image, check it, install it and restart. Keep it near the phone and don\'t close unstrap until it\'s done.</string>
+    <!-- Asked before installing. A sheet title, 28 characters at most, so the part's name goes in the text below. -->
+    <string name="you_firmware_confirm_title">Install update?</string>
+    <string name="you_firmware_confirm_text">Installing %1$s. The strap will check it, install it and restart. Keep it near the phone and don\'t close unstrap until it\'s done.</string>
     <!-- A switch under the warnings, which allows the install. -->
     <string name="you_firmware_confirm_anyway">I understand and want to install it anyway</string>
 
@@ -82,8 +81,8 @@
     <string name="you_firmware_download_failed">Download failed</string>
     <string name="you_firmware_install_failed">Install failed</string>
     <plurals name="you_firmware_file_size">
-        <item quantity="one">That file is <xliff:g id="bytes" example="512">%1$d</xliff:g> byte, which isn\'t a plausible firmware image.</item>
-        <item quantity="other">That file is <xliff:g id="bytes" example="512">%1$d</xliff:g> bytes, which isn\'t a plausible firmware image.</item>
+        <item quantity="one">That file is %1$,d byte, which isn\'t a plausible firmware image.</item>
+        <item quantity="other">That file is %1$,d bytes, which isn\'t a plausible firmware image.</item>
     </plurals>
     <!-- Warnings to read before installing a file. -->
     <string name="you_firmware_file_untrusted">This file didn\'t come from Zepp\'s update server for this strap. Only install files you trust.</string>
@@ -93,35 +92,35 @@
     <string name="you_firmware_file_unread">Couldn\'t read the file. Choose it again.</string>
     <string name="you_firmware_wrong_product">The image says it\'s for product <xliff:g id="image" example="158">%1$d</xliff:g>, but this strap is product <xliff:g id="strap" example="157">%2$d</xliff:g>.</string>
     <plurals name="you_firmware_wrong_size">
-        <item quantity="one">The file is shorter than the image says (<xliff:g id="size" example="1234567">%1$d</xliff:g> byte). It may be incomplete.</item>
-        <item quantity="other">The file is shorter than the image says (<xliff:g id="size" example="1234567">%1$d</xliff:g> bytes). It may be incomplete.</item>
+        <item quantity="one">The file is shorter than the image says, %1$,d byte. It may be incomplete.</item>
+        <item quantity="other">The file is shorter than the image says, %1$,d bytes. It may be incomplete.</item>
     </plurals>
     <!-- What must be done before installing. -->
     <string name="you_firmware_block_connect">Connect the strap.</string>
     <string name="you_firmware_block_battery_unknown">Battery level unknown. Reconnect the strap.</string>
-    <string name="you_firmware_block_battery">Charge the strap above <xliff:g id="min" example="30">%1$d</xliff:g>%% (now <xliff:g id="battery" example="20">%2$d</xliff:g>%%).</string>
+    <string name="you_firmware_block_battery">Charge the strap above %1$d%% first, it\'s at %2$d%%.</string>
     <!-- Install steps, one line each. -->
-    <string name="you_firmware_step_starting">Starting…</string>
-    <string name="you_firmware_step_sending">Sending to strap…</string>
-    <string name="you_firmware_step_validating">Strap is checking the image…</string>
-    <string name="you_firmware_step_applying">Strap is installing…</string>
-    <string name="you_firmware_step_restarting">Restarting…</string>
+    <string name="you_firmware_step_starting">Starting</string>
+    <string name="you_firmware_step_sending">Sending to strap</string>
+    <string name="you_firmware_step_validating">Strap is checking the image</string>
+    <string name="you_firmware_step_applying">Strap is installing</string>
+    <string name="you_firmware_step_restarting">Restarting</string>
 
     <!-- Why the update server or Zepp failed. -->
-    <string name="you_error_firmware_rejected">Zepp\'s update server didn\'t accept the sign-in. It may have expired. Sign in again.</string>
-    <string name="you_error_firmware_server">Zepp\'s update server didn\'t answer as expected. Try again in a few minutes.</string>
-    <string name="you_error_firmware_download">The firmware download failed. Try again in a few minutes.</string>
-    <string name="you_error_firmware_damaged">The firmware download was damaged. Try again.</string>
-    <string name="you_error_firmware_network">Couldn\'t reach the update server. Check your internet connection and try again.</string>
-    <string name="you_error_zepp_rejected">Zepp didn\'t accept the sign-in. It may have expired, or the account is in another region. Sign in again.</string>
-    <string name="you_error_zepp_server">Zepp didn\'t answer as expected. It may be having trouble. Try again in a few minutes.</string>
-    <string name="you_error_zepp_network">Couldn\'t reach Zepp\'s servers. Check your internet connection and try again.</string>
+    <string name="you_error_firmware_rejected">Zepp\'s update server didn\'t accept the sign-in. Sign in again.</string>
+    <string name="you_error_firmware_server">Zepp\'s update server didn\'t answer as expected. Try again later.</string>
+    <string name="you_error_firmware_download">The firmware download failed. Try again later.</string>
+    <string name="you_error_firmware_damaged">The firmware download was damaged. Try again later.</string>
+    <string name="you_error_firmware_network">Couldn\'t reach the update server. Check your connection and try again.</string>
+    <string name="you_error_zepp_rejected">Zepp didn\'t accept the sign-in. Sign in again.</string>
+    <string name="you_error_zepp_server">Zepp didn\'t answer as expected. Try again later.</string>
+    <string name="you_error_zepp_network">Couldn\'t reach Zepp. Check your connection and try again.</string>
 
     <!-- The Zepp account page's title. -->
     <string name="you_zepp_title">Zepp account</string>
     <!-- The sign-in's confirm button from the Zepp account page. -->
     <string name="you_zepp_save_sign_in">Save sign-in</string>
-    <string name="you_zepp_account_none">Zepp only answers update checks for signed-in users. Sign in, or paste your own app token and user ID. They\'re stored on this phone only.</string>
+    <string name="you_zepp_account_none">Sign in to check for firmware updates, or paste your own app token and user ID.</string>
     <!-- The server is an address, "https://api-mifit-us2.zepp.com". -->
     <string name="you_zepp_sign_in_again">Sign in again</string>
     <string name="you_zepp_paste_token">Paste token</string>
@@ -140,10 +139,12 @@
     <string name="you_zepp_sign_in_title">Sign in with Zepp</string>
     <string name="you_zepp_reset">Reset</string>
     <string name="you_zepp_sign_in_text">Use the email and password of the Zepp account your strap is linked to. Google, Apple, Facebook and Xiaomi sign-in don\'t work here.</string>
-    <string name="you_zepp_sign_in_note">This is Zepp\'s own page, so unstrap never sees your password. It reads only the app token and user ID, then asks Zepp once for your devices.</string>
+    <string name="you_zepp_sign_in_note">This is Zepp\'s own page, so unstrap never sees your password. It reads only the app token and user ID.</string>
     <!-- The provider is a sign-in the user picked, "Google" or "Apple", named twice. "sign-in in" is meant, not a typo. -->
-    <string name="you_zepp_third_party" tools:ignore="Typos"><xliff:g id="provider" example="Google">%1$s</xliff:g> sign-in doesn\'t work inside unstrap, because <xliff:g id="provider" example="Google">%1$s</xliff:g> blocks sign-in in embedded pages.\n\nOpen the Zepp app and add an email and password to your account in its account settings. Then sign in here with that email. Or get the auth key on a computer.</string>
-    <string name="you_zepp_fetching">Signed in. Looking up your devices…</string>
+    <string name="you_zepp_third_party" tools:ignore="Typos">%1$s sign-in doesn\'t work here, because %1$s blocks sign-in in embedded pages.
+
+Add an email and password to your account in the Zepp app, then sign in here with that email. Or get the auth key on a computer.</string>
+    <string name="you_zepp_fetching">Signed in, looking up your devices</string>
     <string name="you_zepp_use_email">Use email sign-in</string>
     <string name="you_zepp_no_devices">Couldn\'t get your devices</string>
     <string name="you_zepp_sign_in_email">Sign in with email</string>
@@ -151,8 +152,8 @@
     <string name="you_zepp_not_found">No Helio Strap on this account</string>
     <string name="you_zepp_account_empty">This account has no devices. Link the strap in the Zepp app first. If it\'s already linked, sign in with the email of the account the Zepp app uses.</string>
     <plurals name="you_zepp_account_other_devices">
-        <item quantity="one">This account has <xliff:g id="count" example="2">%1$d</xliff:g> device, but it isn\'t an Amazfit Helio Strap. Link the strap in the Zepp app, then sign in again.</item>
-        <item quantity="other">This account has <xliff:g id="count" example="2">%1$d</xliff:g> devices, but none is an Amazfit Helio Strap. Link the strap in the Zepp app, then sign in again.</item>
+        <item quantity="one">This account has %1$d device, but it isn\'t a Helio Strap. Link the strap in the Zepp app, then sign in again.</item>
+        <item quantity="other">This account has %1$d devices, but none is a Helio Strap. Link the strap in the Zepp app, then sign in again.</item>
     </plurals>
     <string name="you_zepp_key_missing">Not on the account</string>
     <!-- Labels beside the found strap's details. -->
@@ -160,9 +161,9 @@
     <string name="you_zepp_region">Region</string>
     <string name="you_zepp_region_china">China</string>
     <string name="you_zepp_region_global">Global</string>
-    <string name="you_zepp_no_key">Zepp didn\'t return an auth key for this strap. Check in the Zepp app that the strap is still linked, then sign in here again.</string>
-    <string name="you_zepp_user">Zepp user</string>
-    <string name="you_zepp_keep_on_charger">Keep the strap on its charger near the phone. Don\'t unlink it in the Zepp app: that wipes this key from the strap.</string>
+    <string name="you_zepp_no_key">Zepp sent no auth key for this strap. Check the strap is still linked in the Zepp app, then sign in again.</string>
+    <string name="you_zepp_user">User ID</string>
+    <string name="you_zepp_keep_on_charger">Keep the strap on its charger near the phone. Never unlink it in the Zepp app, as that wipes this key from the strap.</string>
     <string name="you_zepp_token_stays">The app token and user ID stay on this phone only, for firmware checks.</string>
     <string name="you_zepp_keep_sign_in">Save sign-in only</string>
     <string name="you_zepp_other_account">Use another account</string>
@@ -171,8 +172,9 @@
     <string name="you_zepp_guide_note">Get the key on a computer</string>
     <!-- Firmware and Zepp account pages (Halo). -->
     <string name="you_firmware_group_new">New firmware</string>
-    <string name="you_firmware_account_signed_in">Signed in, used for update checks</string>
+    <string name="you_firmware_account_signed_in">Signed in</string>
     <string name="you_zepp_saved">Saved sign-in</string>
     <string name="you_zepp_edit_note">App token, user ID and server</string>
     <string name="you_zepp_remove_note">Firmware checks stop until you sign in again. Your strap stays paired.</string>
+    <string name="you_firmware_group_updates">Update checks</string>
 </resources>

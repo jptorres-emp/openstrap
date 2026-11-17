@@ -1,5 +1,12 @@
 package org.openstrap.app.ui.dashboard
 
+import org.openstrap.app.ui.theme.Corner
+import org.openstrap.app.ui.theme.Space
+import org.openstrap.app.ui.theme.Greys
+import org.openstrap.app.ui.theme.OnSurface
+import org.openstrap.app.ui.glow.ChipSpec
+import androidx.compose.foundation.layout.sizeIn
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.res.stringResource
 import org.openstrap.app.R
 import androidx.compose.animation.AnimatedContent
@@ -25,6 +32,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.CircleShape
+import org.openstrap.app.ui.glow.HaloButton
+import org.openstrap.app.ui.glow.HaloButtonSize
+import org.openstrap.app.ui.glow.GlowLayout
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -37,11 +47,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import org.openstrap.app.ui.glow.ButtonSize
 import org.openstrap.app.ui.glow.GlowType
-import org.openstrap.app.ui.glow.PageButton
-import org.openstrap.app.ui.glow.PageSheet
-import org.openstrap.app.ui.glow.RoundIconButton
+import org.openstrap.app.ui.glow.HaloSheet
+import org.openstrap.app.ui.glow.HaloIconButton
 import org.openstrap.app.ui.theme.AppIcons
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -50,6 +58,8 @@ import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
 import org.openstrap.app.data.Weeks
+import org.openstrap.app.ui.theme.Ink
+import org.openstrap.app.ui.theme.MetricColors
 
 /**
  * What the date header's calendar needs: the days that have data, and where a picked day goes. Immutable, so a header
@@ -59,7 +69,7 @@ import org.openstrap.app.data.Weeks
 data class DayPicker(val available: Set<LocalDate> = emptySet(), val onPick: (LocalDate) -> Unit = {})
 
 /** The red full stop from the wordmark marks today. */
-private val TodayDot = Color(0xFFFF4D5E)
+private val TodayDot = MetricColors.heart
 
 /**
  * Month calendar in a bottom sheet. Days with data are lit and tappable; the rest are dimmed and can't be
@@ -74,23 +84,23 @@ fun DayCalendarSheet(selected: LocalDate, available: Set<LocalDate>, onPick: (Lo
     var month by rememberSaveable(selected) { mutableStateOf(YearMonth.from(selected)) }
 
     // Glass over the blurred page, in the app's overlay. The month heads the sheet, between its arrows.
-    PageSheet(onDismiss) {
+    HaloSheet(onDismiss) {
         Column {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.S8)) {
                 Text(
                     month.format(DateTimeFormatter.ofPattern("MMMM yyyy")), color = Color.White, style = GlowType.cardTitle,
                     maxLines = 1, modifier = Modifier.weight(1f),
                 )
-                RoundIconButton(
+                HaloIconButton(
                     AppIcons.CaretLeft, stringResource(R.string.day_calendar_previous_month), { month = month.minusMonths(1) },
                     enabled = month > first,
                 )
-                RoundIconButton(
+                HaloIconButton(
                     AppIcons.CaretRight, stringResource(R.string.day_calendar_next_month), { month = month.plusMonths(1) },
                     enabled = month < last,
                 )
             }
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(Space.S16))
 
             val firstDay = Weeks.firstDay()
             Row(Modifier.fillMaxWidth()) {
@@ -98,12 +108,12 @@ fun DayCalendarSheet(selected: LocalDate, available: Set<LocalDate>, onPick: (Lo
                     Text(
                         firstDay.plus(i.toLong()).getDisplayName(TextStyle.SHORT, Locale.getDefault()).take(2).uppercase(),
                         Modifier.weight(1f).wrapContentWidth(Alignment.CenterHorizontally),
-                        color = Color.White.copy(alpha = GlowType.CAPTION_ALPHA),
+                        color = Ink.Secondary,
                         style = GlowType.caption,
                     )
                 }
             }
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(Space.S8))
 
             AnimatedContent(
                 targetState = month,
@@ -117,19 +127,19 @@ fun DayCalendarSheet(selected: LocalDate, available: Set<LocalDate>, onPick: (Lo
                 MonthGrid(m, firstDay, selected, today, available) { onPick(it); onDismiss() }
             }
 
-            Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(12.dp).background(DayFill, CircleShape))
-                Spacer(Modifier.width(6.dp))
+            Row(Modifier.fillMaxWidth().padding(top = Space.S8), verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(12.dp).background(Greys.Control, CircleShape))
+                Spacer(Modifier.width(Space.S8))
                 Text(stringResource(R.string.day_calendar_has_data), style = GlowType.secondary, color = LegendInk)
-                Spacer(Modifier.width(14.dp))
+                Spacer(Modifier.width(Space.S12))
                 Box(Modifier.size(6.dp).background(TodayDot, CircleShape))
-                Spacer(Modifier.width(6.dp))
+                Spacer(Modifier.width(Space.S8))
                 Text(stringResource(R.string.day_calendar_today), style = GlowType.secondary, color = LegendInk)
                 Spacer(Modifier.weight(1f))
                 if (selected != today) {
-                    PageButton(
+                    HaloButton(
                         stringResource(R.string.day_calendar_go_to_today), { onPick(today); onDismiss() }, icon = AppIcons.CalendarBlank,
-                        size = ButtonSize.Row,
+                        size = HaloButtonSize.Small,
                     )
                 }
             }
@@ -137,12 +147,9 @@ fun DayCalendarSheet(selected: LocalDate, available: Set<LocalDate>, onPick: (Lo
     }
 }
 
-/** A day with data: a light grey disc, so the days that can be picked read as something to press. */
-private val DayFill = Color(0xFF1E2025)
-private val PickedFill = Color(0xFF34363E)
 
 /** The legend's words, quieter than the days. */
-private val LegendInk = Color.White.copy(alpha = 0.6f)
+private val LegendInk = Ink.Secondary
 
 @Composable
 private fun MonthGrid(
@@ -155,7 +162,7 @@ private fun MonthGrid(
 ) {
     val lead = (month.atDay(1).dayOfWeek.value - firstDay.value + 7) % 7
     val cells = lead + month.lengthOfMonth()
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(Space.S4)) {
         for (week in 0 until (cells + 6) / 7) {
             Row(Modifier.fillMaxWidth()) {
                 for (col in 0 until 7) {
@@ -176,17 +183,19 @@ private fun MonthGrid(
 private fun DayCell(date: LocalDate, selected: Boolean, today: Boolean, enabled: Boolean, onPick: (LocalDate) -> Unit) {
     val text = when {
         enabled -> Color.White
-        else -> Color.White.copy(alpha = 0.2f)
+        else -> Ink.Line
     }
     Box(
         Modifier
-            .size(42.dp)
-            .clip(CircleShape)
+            // 54 across (section 5 row 18), or the column's width on a narrow screen.
+            .sizeIn(maxWidth = ChipSpec.DayCalendar, maxHeight = ChipSpec.DayCalendar).fillMaxSize()
+            .clip(Corner.Pill)
             .then(
                 when {
-                    // The picked day is a lifted dark disc with a white ring, not a second white tap (board HaloDayCalendar).
-                    selected -> Modifier.background(PickedFill).border(1.5.dp, Color.White, CircleShape)
-                    enabled -> Modifier.background(DayFill)
+                    // A squircle like the day pills (board HaloDayCalendar). The picked day is lifted dark with a white
+                    // ring, not a second white tap.
+                    selected -> Modifier.background(OnSurface.picked).border(ChipSpec.Ring, Color.White, Corner.Pill)
+                    enabled -> Modifier.background(OnSurface.control)
                     else -> Modifier
                 },
             )
@@ -201,7 +210,7 @@ private fun DayCell(date: LocalDate, selected: Boolean, today: Boolean, enabled:
         )
         if (today) {
             Box(
-                Modifier.align(Alignment.BottomCenter).padding(bottom = 5.dp).size(5.dp)
+                Modifier.align(Alignment.BottomCenter).padding(bottom = Space.S4).size(5.dp)
                     .background(TodayDot, CircleShape),
             )
         }

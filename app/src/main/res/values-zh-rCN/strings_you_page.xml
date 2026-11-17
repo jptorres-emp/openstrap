@@ -18,11 +18,11 @@
     <string name="you_row_updates">固件更新</string>
     <string name="you_row_diagnostics">诊断</string>
     <string name="you_row_sample_data">添加示例数据</string>
-    <string name="you_row_sample_data_note">仅限调试版本</string>
+    <string name="you_row_sample_data_note">仅调试版本</string>
     <string name="you_section_your_data">你的数据</string>
     <string name="you_section_help">帮助</string>
     <plurals name="you_goals_and_bests_line">
-        <item quantity="other">每周 %1$d 次运动、个人最佳与徽章</item>
+        <item quantity="other">每周 %1$d 次锻炼</item>
     </plurals>
     <plurals name="you_diagnostics_line">
         <item quantity="other">%1$d 行，用于反馈问题</item>
@@ -31,12 +31,12 @@
     <plurals name="you_goals_steps">
         <item quantity="other">%1$s 步</item>
     </plurals>
-    <string name="you_goals_active_kcal">%1$s 活动千卡</string>
+    <string name="you_goals_active_kcal">%1$s 千卡</string>
     <plurals name="you_goals_active_hours">
-        <item quantity="other">%1$d 活跃小时</item>
+        <item quantity="other">活跃 %1$d 小时</item>
     </plurals>
-    <string name="you_sleep_goal_line">%1$s。你的睡眠需求为 %2$s</string>
-    <string name="you_profile_empty">添加年龄和性别，以便更准确地计算负荷与恢复</string>
+    <string name="you_sleep_goal_line">%1$s，睡眠需求 %2$s</string>
+    <string name="you_profile_empty">添加年龄和性别</string>
     <plurals name="you_profile_age">
         <item quantity="other">%1$d 岁</item>
     </plurals>
@@ -57,15 +57,19 @@
     <string name="you_profile_weight">体重</string>
     <string name="you_profile_unit_lb">lb</string>
     <string name="you_profile_unit_kg">kg</string>
-    <string name="you_profile_unit_ft">ft</string>
-    <string name="you_profile_unit_in">in</string>
     <string name="you_profile_height">身高</string>
     <string name="you_profile_unit_cm">cm</string>
-    <string name="you_profile_activity_note">平时活动量，用于估算体能</string>
+    <string name="you_profile_activity_note">用于体能估算。</string>
     <string name="you_profile_beta_blockers">服用 β 受体阻滞剂</string>
     <string name="you_profile_pregnant">怀孕</string>
     <string name="you_unit_h">小时</string>
-    <string name="you_goals_title">你的目标</string>
+    <string name="you_unit_min">分钟</string>
+    <string name="you_sleep_goal_title">睡眠目标</string>
+    <string name="you_sleep_goal_need">睡眠需求 %1$s</string>
+    <string name="you_sleep_goal_need_profile">来自你的个人资料</string>
+    <string name="you_sleep_goal_need_age">来自你的年龄</string>
+    <string name="you_sleep_goal_note">它决定睡眠目标环，以及目标何时达成。</string>
+    <string name="you_goals_title">目标</string>
     <string name="you_goals_steps_label">步数</string>
     <string name="you_goals_sleep_label">睡眠</string>
     <string name="you_goals_active_label">活跃小时</string>
@@ -77,7 +81,7 @@
     <plurals name="you_goals_workouts_value">
         <item quantity="other">每周 %1$d 次</item>
     </plurals>
-    <string name="you_goals_workouts_note">10 分钟及以上的运动计入统计，每天最多 2 次。</string>
+    <string name="you_goals_workouts_note">满 10 分钟的锻炼才计入，每天最多两次。</string>
     <string name="you_goals_calories_label">卡路里</string>
     <string name="you_goals_calories_lower">降低卡路里目标</string>
     <string name="you_goals_calories_raise">提高卡路里目标</string>
@@ -94,7 +98,6 @@
     <string name="you_updates_whats_new">更新内容</string>
     <string name="you_updates_in_your_version">当前版本新内容</string>
     <string name="you_updates_latest">最新版本</string>
-    <string name="you_updates_installed">当前安装的是 unstrap %1$s。</string>
     <string name="you_updates_no_notes">此版本暂无更新说明。</string>
     <string name="you_diagnostics_title">诊断</string>
     <string name="you_diagnostics_copy">复制</string>
@@ -112,9 +115,9 @@
     <string name="you_profile_group_about">关于你</string>
     <string name="you_profile_group_body">身体</string>
     <string name="you_profile_group_estimates">用于估算</string>
-    <string name="you_profile_foot_about">年龄用于决定你的最大心率，各项运动强度与恢复数据都基于此计算。性别用于卡路里、负荷、体能和习惯年龄。</string>
+    <string name="you_profile_foot_about">年龄决定你的最大心率。性别用于热量、负荷、体能和习惯年龄。</string>
     <string name="you_profile_foot_all">所有信息均为选填，且仅保存在本手机上。</string>
-    <string name="you_profile_age_note">用于决定你的最大心率，各项运动强度与恢复数据都基于此计算。</string>
+    <string name="you_profile_age_note">决定你的最大心率，强度和恢复数据都以它为基础。</string>
     <string name="you_profile_sex_sheet_note">用于卡路里、负荷、体能和习惯年龄。</string>
     <string name="you_profile_beta_note">会降低心率，因此心率区间会相应调整</string>
     <string name="you_profile_sleep_note">7 到 9 小时之间，恢复评分据此判断你的睡眠。</string>
@@ -130,9 +133,9 @@
     <string name="you_strap_group_on_strap">手环上</string>
     <string name="you_strap_group_software">软件</string>
     <string name="you_strap_row_app_updates">应用更新</string>
-    <string name="you_strap_no_strap">还没有手环</string>
+    <string name="you_strap_no_strap">无手环</string>
     <string name="you_strap_last_read">为上次从手环读取的内容。</string>
-    <string name="you_strap_away_note">请把手环放在充电座上并靠近手机，同时确保 Zepp 应用没有在运行。手环一次只能与一个应用通信。</string>
+    <string name="you_strap_away_note">请让手环留在充电座上并靠近手机，同时关闭 Zepp 应用。</string>
     <string name="you_strap_key_rejected_note">重试没有用。请重新配对，从 Zepp 获取手环当前的密钥。</string>
     <string name="you_strap_forget_note">忘记手环会从本手机删除它的地址和认证密钥。已同步的健康数据会保留。</string>
     <string name="you_updates_view">查看</string>
@@ -140,4 +143,13 @@
     <string name="you_diagnostics_note">用于提交问题反馈。复制会把完整日志放到剪贴板。</string>
     <string name="you_profile_clear">清除</string>
     <string name="you_profile_sleep_use_usual">使用按年龄的默认值</string>
+    <string name="you_profile_pregnant_note">暂停体能估算</string>
+    <string name="you_profile_activity_short_inactive">久坐</string>
+    <string name="you_profile_activity_short_light">轻度</string>
+    <string name="you_profile_activity_short_low">低强度有氧</string>
+    <string name="you_profile_activity_short_mid">中等有氧</string>
+    <string name="you_profile_activity_short_high">高强度有氧</string>
+    <string name="you_updates_footnote">%1$s。当前版本 unstrap %2$s。</string>
+    <string name="you_stamp_yesterday">昨天 %1$s</string>
+    <string name="you_stamp_dated">%1$s %2$s</string>
 </resources>

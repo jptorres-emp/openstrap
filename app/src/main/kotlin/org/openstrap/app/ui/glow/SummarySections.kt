@@ -1,5 +1,10 @@
 package org.openstrap.app.ui.glow
 
+import org.openstrap.app.ui.theme.IconSize
+import org.openstrap.app.ui.theme.Corner
+import org.openstrap.app.ui.theme.Space
+import org.openstrap.app.ui.theme.Greys
+import org.openstrap.app.ui.theme.OnSurface
 import androidx.compose.runtime.getValue
 import org.openstrap.app.R
 import org.openstrap.app.data.Weeks
@@ -47,6 +52,7 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.text.style.TextOverflow
 import org.openstrap.app.ui.glow.draw.LightAngle
 import org.openstrap.app.ui.glow.draw.heroStyle
+import org.openstrap.app.ui.theme.Ink
 import org.openstrap.app.ui.workout.SplitRow
 import org.openstrap.app.ui.theme.FunnelSans
 import java.time.LocalDate
@@ -232,9 +238,6 @@ private const val MIND_RIM = 0.8f
 /** How far a hero's text tint reaches from its colour to white (board SummaryRun: #C6F55A gives #EFFCD1). */
 private const val HERO_TINT = 0.72f
 
-/** Where a dotted number may not grow past: what its unit needs beside it. */
-private val HeroUnitRoom = 96.dp
-
 /**
  * The summary's hero (board HaloSummaryRun): a card lit from one edge in the workout's [color], at the light angle of
  * its [family]. A title row (what the number counts, with [note] on the right), the one number in dots with its unit,
@@ -249,107 +252,34 @@ internal fun SummaryHeroCard(
 ) {
     val tint = remember(color) { lerp(color, Color.White, HERO_TINT) }
     val style = remember(color, family) { heroStyle(color, heroAngle(family), if (family == Workouts.Family.MindBody) MIND_RIM else 1f) }
-    GlowCard(style, Modifier.fillMaxWidth()) {
-        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+    HaloCard(Modifier.fillMaxWidth(), tone = CardTone.lit(style)) {
+        Column(verticalArrangement = Arrangement.spacedBy(Space.S12)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     hero.title.orEmpty(), Modifier.weight(1f, fill = false), color = Color.White, style = GlowType.heroTitle, maxLines = 1,
                 )
-                if (note != null) Text(note, Modifier.padding(start = 12.dp), color = tint, style = GlowType.noteSmall, maxLines = 1)
+                if (note != null) Text(note, Modifier.padding(start = Space.S12), color = tint, style = GlowType.noteSmall, maxLines = 1)
             }
-            HeroNumber(hero.value, hero.unit, tint)
+            HaloBigNumber(hero.value, BigNumber.Detail, unit = hero.unit, unitColor = tint, unitLines = 2, fit = true)
             val sentence = hero.sentence ?: hero.line
             if (sentence != null) Text(sentence, color = tint, style = GlowType.secondary)
         }
     }
 }
 
-/**
- * The hero's one number in the summary's [BigNumber.Detail] size with its unit after it on the digits' baseline, shrunk
- * to fit when it's wide ("8,225"). BigNumberText's fitWidth does the shrinking.
- */
-@Composable
-private fun HeroNumber(value: String, unit: String, tint: Color) {
-    BoxWithConstraints(Modifier.fillMaxWidth()) {
-        val room = maxWidth - if (unit.isBlank()) 0.dp else HeroUnitRoom
-        Row(verticalAlignment = Alignment.Bottom) {
-            BigNumberText(value, BigNumber.Detail, fitWidth = room)
-            if (unit.isNotBlank()) Text(
-                unit, Modifier.padding(start = 8.dp).weight(1f, fill = false), color = tint, style = GlowType.body, maxLines = 2,
-            )
-        }
-    }
-}
-
 /* ------------------------------------------------ Shared pieces ------------------------------------------------ */
 
-/** The 1 px rule between the figures (workout rules, Body order 3: #24262C). */
-private val FigureRule = Color(0xFF24262C)
 
-/** The hairline between two parts of one card (boards HaloSummaryRun to HaloSummaryGames: #1E2025). */
-private val CardRule = Color(0xFF1E2025)
 
 /** The soft white of a sentence, a peak and a chip (boards: #C9CED6). */
-internal val SoftInk = Color(0xFFC9CED6)
-
-/** A figure's small unit after its value ("km" after 2.1): Funnel Sans 13 in grey. */
-private val UnitSpan = GlowType.secondary.toSpanStyle().copy(color = GlowType.noteColor, fontFamily = FunnelSans)
+internal val SoftInk = Ink.Strong
 
 /** A caption under a chart (boards: 11 px #6E7480). */
 private val CaptionInk = GlowType.footnoteColor
 
-/**
- * The three figures under a kind's card (workout rules, Body order 3): plain, no card, the value in Funnel Display Light
- * 28 over its 12 px label, each column after the first behind a 1 px rule 16 dp from its figure.
- */
-// The lists arrive whole with the workout and never change in place.
-@Suppress("UnstableCollections", "ComposeUnstableCollections")
+/** The hairline between two parts of a card: one step above the surface ([OnSurface.line], section 5 row 19). */
 @Composable
-internal fun SummaryFigures(figures: List<Pair<String?, String>>, modifier: Modifier = Modifier, units: List<String?> = emptyList()) {
-    if (figures.isEmpty()) return
-    Row(modifier.fillMaxWidth().padding(start = 4.dp, end = 4.dp, top = 4.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-        figures.forEachIndexed { i, (value, label) ->
-            Column(
-                Modifier.weight(1f)
-                    .let { m ->
-                        if (i == 0) m else m.drawBehind {
-                            drawLine(FigureRule, Offset(0f, 0f), Offset(0f, size.height), strokeWidth = 1.dp.toPx())
-                        }.padding(start = 16.dp)
-                    },
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                val unit = units.getOrNull(i)
-                if (value != null) Text(
-                    buildAnnotatedString {
-                        append(value)
-                        if (unit != null) withStyle(UnitSpan) { append(" $unit") }
-                    },
-                    color = Color.White, style = GlowType.figure, maxLines = 1, softWrap = false,
-                )
-                else WaitingDash(Modifier.padding(vertical = 12.5.dp))
-                Text(label, color = GlowType.noteColor, style = GlowType.noteSmall, maxLines = 1, softWrap = false)
-            }
-        }
-    }
-}
-
-/** A card part's title row: [title] in Card title with its [note] in grey on the right (boards: 15 and 12), then an [action]. */
-@Composable
-internal fun CardHead(title: String, note: String? = null, action: (@Composable () -> Unit)? = null) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-        Text(title, color = Color.White, style = GlowType.cardTitle, maxLines = 1, modifier = Modifier.weight(1f, fill = false))
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            if (note != null) {
-                Text(note, Modifier.padding(start = 12.dp), color = GlowType.noteColor, style = GlowType.noteSmall, maxLines = 1)
-            }
-            action?.invoke()
-        }
-    }
-}
-
-/** The hairline between two parts of a card. */
-@Composable
-internal fun CardDivider() = Box(Modifier.fillMaxWidth().height(1.dp).background(CardRule))
+internal fun CardDivider() = Box(Modifier.fillMaxWidth().height(RowSpec.Divider).background(OnSurface.line))
 
 /** A short sentence under a card part (boards: 13 px #C9CED6). */
 @Composable
@@ -398,7 +328,7 @@ internal fun FamilySection(
         }
         Workouts.Family.Games -> GamesCard(summary, readings, zones)
     }
-    SummaryFigures(figures)
+    HaloFigures(figures)
     // What each kind says after its figures: how indoor cardio compares with last time, a calm session's week.
     if (family == Workouts.Family.IndoorCardio) {
         FamilySummary.versusLast(a, others)?.let { VersusLast(it.replaceFirstChar { c -> c.lowercase() }) }
@@ -426,13 +356,13 @@ private fun StrengthCard(summary: PhoneSummary, readings: List<Pair<Long, Int>>)
     val rest = remember(summary) { FamilySummary.restRecovery(summary.sets, readings, below) }
     val restLine = if (below != null && rest != null) FamilySummary.restLine(rest, below, summary.restBefore) else null
     if (groups.isEmpty() && restLine == null) return
-    QuietPanel {
+    HaloCard {
         if (groups.isNotEmpty()) SetsBlock(groups, summary, summary.analysis.maxHeartRate)
         if (restLine != null) {
             if (groups.isNotEmpty()) CardDivider()
             val average = FamilySummary.averageRest(summary.sets)
                 ?.let { stringResource(R.string.glow_summary_rest_average, workoutClock(it)) }
-            CardHead(stringResource(R.string.glow_summary_rest_title), average)
+            HaloTitle(stringResource(R.string.glow_summary_rest_title), note = average)
             CardSentence(restLine)
         }
     }
@@ -451,12 +381,12 @@ private fun IntervalsCard(summary: PhoneSummary, readings: List<Pair<Long, Int>>
     val line = FamilySummary.roundsLine(lines, rest)
     val showRounds = peaks || (reps && times.isNotEmpty())
     if (!showRounds && line == null) return
-    QuietPanel {
+    HaloCard {
         if (peaks) RoundsBlock(lines, roundsTitle, summary.analysis.maxHeartRate, summary.structure as? Structure.Timed)
         else if (reps && times.isNotEmpty()) RepTimesBlock(times)
         if (line != null) {
             if (showRounds) CardDivider()
-            CardHead(stringResource(R.string.glow_summary_recovery_title), stringResource(R.string.glow_summary_in_each_rest))
+            HaloTitle(stringResource(R.string.glow_summary_recovery_title), note = stringResource(R.string.glow_summary_in_each_rest))
             CardSentence(line)
         }
     }
@@ -475,7 +405,7 @@ private fun GamesCard(summary: PhoneSummary, readings: List<Pair<Long, Int>>, zo
     val showPeriods = periods.isNotEmpty() || read != null
     val showZones = zones.sum() > 0
     if (!showPeriods && !showZones) return
-    QuietPanel {
+    HaloCard {
         if (showPeriods) PeriodsBlock(periods, of, read, a.maxHeartRate)
         if (showPeriods && showZones) CardDivider()
         if (showZones) ZoneStripBlock(zones)
@@ -494,20 +424,20 @@ private fun RunCard(summary: PhoneSummary, liveRoute: List<Route.Point>) {
     if (!mapped && rows.isEmpty() && laps.isEmpty()) return
     val heartZones = LocalHeartZones.current
     val maxHr = summary.analysis.maxHeartRate
-    QuietPanel {
+    HaloCard {
         if (mapped) {
             RouteMap(summary)
             val climb = Route.climb(summary.route)?.let { stringResource(R.string.glow_summary_climb, Math.round(it)) }
-            CardHead(climb ?: stringResource(R.string.glow_summary_route), stringResource(R.string.glow_summary_route_zones))
+            HaloTitle(climb ?: stringResource(R.string.glow_summary_route), note = stringResource(R.string.glow_summary_route_zones))
         }
         if (rows.isNotEmpty()) {
             if (mapped) CardDivider()
-            CardHead(stringResource(R.string.glow_summary_splits), stringResource(R.string.glow_summary_splits_note))
+            HaloTitle(stringResource(R.string.glow_summary_splits), note = stringResource(R.string.glow_summary_splits_note))
             SplitBars(rows, FamilySummary.fastestSplit(rows), maxHr)
         }
         if (laps.isNotEmpty()) {
             if (mapped || rows.isNotEmpty()) CardDivider()
-            CardHead(stringResource(R.string.glow_summary_laps), "${laps.size}")
+            HaloTitle(stringResource(R.string.glow_summary_laps), note = "${laps.size}")
             Column {
                 laps.forEach { lap ->
                     SplitLine(
@@ -521,21 +451,25 @@ private fun RunCard(summary: PhoneSummary, liveRoute: List<Route.Point>) {
     }
 }
 
-/** One row of the splits (board HaloSummaryRun): its name in 58 dp, a bar, its time in 44 dp and a dot in its zone's colour. */
+/** One row of the splits (board HaloSummaryRun): its name, a bar, its time and a dot in its zone's colour. A compact row. */
 @Composable
-private fun SplitLine(name: String, share: Float, time: String, dot: Color, bold: Boolean, bar: Color) {
-    Row(Modifier.fillMaxWidth().height(30.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text(name, Modifier.width(58.dp), color = GlowType.noteColor, style = GlowType.secondary, maxLines = 1)
-        Box(Modifier.weight(1f).height(8.dp)) {
+private fun SplitLine(name: String, share: Float, time: String, dot: Color, bold: Boolean, bar: Color) = HaloRow(
+    name, titleInk = GlowType.noteColor, titleWidth = SplitNameWidth,
+    middle = {
+        Box(Modifier.weight(1f).height(Space.S8)) {
             if (share > 0f) Box(Modifier.fillMaxWidth(share).fillMaxHeight().clip(CircleShape).background(bar))
         }
-        Text(
-            time, Modifier.widthIn(min = 44.dp), color = Color.White, textAlign = TextAlign.End, maxLines = 1,
-            style = if (bold) FigureText14.copy(fontWeight = FontWeight.SemiBold) else FigureText14,
-        )
-        Box(Modifier.size(8.dp).background(dot, CircleShape))
-    }
-}
+    },
+    value = time, valueInk = Color.White,
+    valueStyle = (if (bold) FigureText14.copy(fontWeight = FontWeight.SemiBold) else FigureText14).copy(textAlign = TextAlign.End),
+    valueModifier = Modifier.widthIn(min = SplitTimeWidth),
+    trail = { Box(Modifier.size(Space.S8).background(dot, CircleShape)) },
+    compact = true, divider = false,
+)
+
+/** A split's name column and the least its time takes, so the bars line up down the list. */
+private val SplitNameWidth = 58.dp
+private val SplitTimeWidth = 44.dp
 
 /**
  * Each kilometre as a bar as long as its speed against the fastest one's: grey, the fastest white with its time bold. A
@@ -561,7 +495,7 @@ private fun SplitBars(rows: List<SplitRow>, fastest: Int?, maxHr: Int) {
 }
 
 /** A kilometre's bar (board HaloSummaryRun: #2E3038). */
-private val SplitBarInk = Color(0xFF2E3038)
+private val SplitBarInk = Greys.SplitBar
 
 /** A value in a row of a card (boards: 14 px with tabular digits). */
 private val FigureText14 = GlowType.buttonSmall.copy(fontWeight = FontWeight.Normal, fontFeatureSettings = "tnum")
@@ -575,15 +509,15 @@ private val PeriodText = GlowType.buttonSmall.copy(fontWeight = FontWeight.Norma
  */
 @Composable
 internal fun ZonesBlock(zones: ZoneSeconds, maxHr: Int) {
-    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        CardHead(stringResource(R.string.glow_summary_time_in_zones), stringResource(R.string.glow_summary_zones_max, maxHr))
+    Column(verticalArrangement = Arrangement.spacedBy(Space.S12)) {
+        HaloTitle(stringResource(R.string.glow_summary_time_in_zones), note = stringResource(R.string.glow_summary_zones_max, maxHr))
         ZoneBar(zones, ZONE_COLORS, height = 8.dp, gap = 2.dp, corner = 4.dp, ends = 4.dp)
         Column {
             for (z in zones.indices.reversed()) {
                 if (zones[z] <= 0) continue
                 Row(
                     Modifier.fillMaxWidth().height(28.dp), verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(Space.S8),
                 ) {
                     Box(Modifier.size(8.dp).background(ZONE_COLORS[z], CircleShape))
                     Text(
@@ -614,12 +548,12 @@ private fun IndoorCard(zones: ZoneSeconds, maxHr: Int, readings: List<Pair<Long,
     val line = chart && readings.size >= 10
     if (!hasZones && !line && target == null) return
     val values = remember(readings) { FamilySummary.heartLine(readings, HeartPoints, window = 3) }
-    QuietPanel {
+    HaloCard {
         if (hasZones) ZonesBlock(zones, maxHr)
         if (hasZones && (line || target != null)) CardDivider()
         if (line) {
             val range = Ranges.of("${readings.minOf { it.second }}", "${readings.maxOf { it.second }}")
-            CardHead(stringResource(R.string.glow_summary_heart_rate), range)
+            HaloTitle(stringResource(R.string.glow_summary_heart_rate), note = range)
             PlainLine(values, MetricColors.heart, 90.dp, dots = LineDots.Highest)
             CaptionRow(clock(readings.first().first), clock(readings.last().first))
         }
@@ -629,7 +563,7 @@ private fun IndoorCard(zones: ZoneSeconds, maxHr: Int, readings: List<Pair<Long,
                     Modifier.size(20.dp).background((if (reached) MetricColors.good else Color.White).copy(alpha = 0.16f), CircleShape),
                     contentAlignment = Alignment.Center,
                 ) { Icon(if (reached) AppIcons.Tick02 else AppIcons.Target, null, tint = if (reached) MetricColors.good else Color.White, modifier = Modifier.size(12.dp)) }
-                Text(text, color = Color.White, style = GlowType.secondary, modifier = Modifier.padding(start = 8.dp))
+                Text(text, color = Color.White, style = GlowType.secondary, modifier = Modifier.padding(start = Space.S8))
             }
         }
     }
@@ -638,13 +572,14 @@ private fun IndoorCard(zones: ZoneSeconds, maxHr: Int, readings: List<Pair<Long,
 /** "vs last time:" and how this one compares, as a line of its own under the figures (board HaloSummaryIndoor). */
 @Composable
 private fun VersusLast(line: String) {
-    val versus = stringResource(R.string.glow_summary_vs_last)
+    val full = stringResource(R.string.glow_summary_vs_last, line)
+    val split = full.lastIndexOf(line).coerceAtLeast(0)
     Text(
         buildAnnotatedString {
-            withStyle(SpanStyle(color = GlowType.noteColor)) { append(versus) }
-            append(line)
+            withStyle(SpanStyle(color = GlowType.noteColor)) { append(full.substring(0, split)) }
+            append(full.substring(split))
         },
-        color = SoftInk, style = GlowType.secondary, modifier = Modifier.padding(horizontal = 4.dp),
+        color = SoftInk, style = GlowType.secondary, modifier = Modifier.padding(horizontal = Space.S4),
     )
 }
 
@@ -659,29 +594,30 @@ private const val HeartPoints = 60
 private fun SetsBlock(groups: List<ExerciseSets>, summary: PhoneSummary, maxHr: Int) {
     val heartZones = LocalHeartZones.current
     val shares = remember(groups) { FamilySummary.peakShares(groups.flatMap { g -> g.sets.map { it.peak } }) }
-    CardHead(stringResource(R.string.glow_summary_sets_title), stringResource(R.string.glow_summary_peak_heart_rate))
+    HaloTitle(stringResource(R.string.glow_summary_sets_title), note = stringResource(R.string.glow_summary_peak_heart_rate))
     var i = 0
     groups.forEach { g ->
-        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(Space.S2)) {
             if (g.name != null) {
                 val kg = remember(summary, g.name) {
                     val mine = summary.sets.filter { it.exercise?.trim()?.lowercase() == g.name.trim().lowercase() }
                     org.openstrap.app.data.Strength.kgLifted(mine)
                 }
-                Row(Modifier.fillMaxWidth().padding(bottom = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                Row(Modifier.fillMaxWidth().padding(bottom = Space.S4), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text(
                         g.name, Modifier.weight(1f), color = Color.White, style = GlowType.buttonSmall, maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
                     if (kg != null) Text(
                         stringResource(R.string.glow_summary_exercise_total, Units.count(Math.round(kg))),
-                        Modifier.padding(start = 12.dp), color = GlowType.noteColor, style = GlowType.noteSmall, maxLines = 1,
+                        Modifier.padding(start = Space.S12), color = GlowType.noteColor, style = GlowType.noteSmall, maxLines = 1,
                     )
                 }
             }
             g.sets.forEach { s ->
                 val share = shares[i++]
-                Row(Modifier.fillMaxWidth().height(22.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(Modifier.fillMaxWidth().height(22.dp), verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(Space.S8)) {
                     Text("${s.number}", Modifier.width(14.dp), color = CaptionInk, style = GlowType.secondary, maxLines = 1)
                     Text(s.text, Modifier.width(80.dp), color = Color.White, style = GlowType.secondary, maxLines = 1)
                     Box(Modifier.weight(1f).height(6.dp)) {
@@ -712,17 +648,18 @@ private val RoundColumnHeight = 96.dp
  */
 @Composable
 private fun RoundsBlock(lines: List<RoundLine>, title: String, maxHr: Int, structure: Structure.Timed?) {
-    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(Space.S12)) {
         val heartZones = LocalHeartZones.current
         val shares = remember(lines) { FamilySummary.peakShares(lines.map { it.peak }) }
         val hardest = remember(lines) { FamilySummary.hardestRound(lines) }
         val labelled = lines.size <= LabelledRounds
         val gap = if (labelled) 6.dp else 3.dp
-        val shape = GlowLayout.PipShape
-        CardHead(title, stringResource(R.string.glow_summary_figure_peak_bpm))
+        val shape = Corner.Pip
+        HaloTitle(title, note = stringResource(R.string.glow_summary_figure_peak_bpm))
         Row(Modifier.fillMaxWidth().height(RoundColumnHeight + 24.dp), horizontalArrangement = Arrangement.spacedBy(gap), verticalAlignment = Alignment.Bottom) {
             lines.forEachIndexed { i, r ->
-                Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(Space.S4)) {
                     if (labelled && r.peak != null) Text(
                         "${r.peak}", color = SoftInk, maxLines = 1,
                         style = if (i == hardest) GlowType.caption.copy(fontWeight = FontWeight.SemiBold) else GlowType.caption,
@@ -731,7 +668,7 @@ private fun RoundsBlock(lines: List<RoundLine>, title: String, maxHr: Int, struc
                         Box(
                             Modifier.fillMaxWidth().height(RoundColumnHeight * share).clip(shape)
                                 .background(zoneColor(r.peak, maxHr, heartZones))
-                                .let { if (i == hardest) it.border(2.dp, Color.White, shape) else it },
+                                .let { if (i == hardest) it.border(ChipSpec.Ring, Color.White, shape) else it },
                         )
                     }
                 }
@@ -754,16 +691,16 @@ private fun RepTimesBlock(times: List<Long>) {
     val best = times.indexOf(fastest)
     val labelled = times.size <= LabelledRounds
     val gap = if (labelled) 6.dp else 3.dp
-    val shape = GlowLayout.PipShape
+    val shape = Corner.Pip
     val color = familyColor(Workouts.Family.Intervals)
-    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        CardHead(stringResource(R.string.glow_summary_each_rep), stringResource(R.string.glow_summary_rep_times_time))
+    Column(verticalArrangement = Arrangement.spacedBy(Space.S12)) {
+        HaloTitle(stringResource(R.string.glow_summary_each_rep), note = stringResource(R.string.glow_summary_rep_times_time))
         Row(Modifier.fillMaxWidth().height(RoundColumnHeight), horizontalArrangement = Arrangement.spacedBy(gap), verticalAlignment = Alignment.Bottom) {
             times.forEachIndexed { i, t ->
                 val share = if (t > 0) (fastest.toFloat() / t).coerceIn(0.3f, 1f) else 0.3f
                 Box(
                     Modifier.weight(1f).height(RoundColumnHeight * share).clip(shape).background(if (i == best) color else color.copy(alpha = 0.45f))
-                        .let { if (i == best) it.border(2.dp, Color.White, shape) else it },
+                        .let { if (i == best) it.border(ChipSpec.Ring, Color.White, shape) else it },
                 )
             }
         }
@@ -787,18 +724,15 @@ private fun RepTimesBlock(times: List<Long>) {
 private fun PeriodsBlock(periods: List<PeriodLine>, of: Int, read: String?, maxHr: Int) {
     val heartZones = LocalHeartZones.current
     val shares = remember(periods) { FamilySummary.peakShares(periods.map { it.averageBpm }) }
-    CardHead(
-        stringResource(
+    HaloTitle(stringResource(
             when (of) {
                 2 -> R.string.glow_summary_each_half
                 4 -> R.string.glow_summary_each_quarter
                 else -> R.string.glow_summary_each_period
             },
-        ),
-        stringResource(R.string.glow_summary_period_note),
-    )
+        ), note = stringResource(R.string.glow_summary_period_note))
     periods.forEachIndexed { i, p ->
-        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Space.S8)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(
                     buildAnnotatedString {
@@ -827,9 +761,9 @@ private fun PeriodsBlock(periods: List<PeriodLine>, of: Int, read: String?, maxH
  */
 @Composable
 internal fun ZoneStripBlock(zones: ZoneSeconds) {
-    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(Space.S12)) {
         val minutes = remember(zones) { FamilySummary.zoneMinutes(zones) }
-        CardHead(stringResource(R.string.glow_summary_time_in_zones), FamilySummary.mostlyZone(zones))
+        HaloTitle(stringResource(R.string.glow_summary_time_in_zones), note = FamilySummary.mostlyZone(zones))
         ZoneBar(zones, ZONE_COLORS, height = 8.dp, gap = 2.dp, corner = 4.dp, ends = 4.dp)
         val shown = zones.indices.filter { zones[it] > 0 }
         val most = shown.maxByOrNull { zones[it] }
@@ -844,7 +778,7 @@ internal fun ZoneStripBlock(zones: ZoneSeconds) {
 
 /** Time in zones on its own solid card, for a past workout whose kind has no section showing it. */
 @Composable
-internal fun ZoneStripPanel(zones: ZoneSeconds) = QuietPanel { ZoneStripBlock(zones) }
+internal fun ZoneStripPanel(zones: ZoneSeconds) = HaloCard { ZoneStripBlock(zones) }
 
 /**
  * The heart rate over a calm session (board HaloSummaryMind): its range or how far it came down in the title row, a
@@ -858,11 +792,11 @@ private fun HeartLineCard(
 ) {
     if (readings.size < 10 || !chart) return
     val values = remember(readings) { FamilySummary.heartLine(readings, HeartPoints, window = 9) }
-    QuietPanel {
+    HaloCard {
         val drop = settled?.let { FamilySummary.settledDrop(it.first, it.second) }
         val range = Ranges.of("${readings.minOf { it.second }}", "${readings.maxOf { it.second }}")
         val down = drop?.let { stringResource(R.string.glow_summary_heart_down, it) }
-        CardHead(stringResource(R.string.glow_summary_heart_rate), down ?: range)
+        HaloTitle(stringResource(R.string.glow_summary_heart_rate), note = down ?: range)
         PlainLine(values, color, 100.dp, dots = LineDots.Ends)
         CaptionRow(clock(start), clock(end))
     }
@@ -887,7 +821,7 @@ internal fun WeekDaysPanel(weekStarts: List<Long>, note: String? = null, day: Lo
     val today = LocalDate.now()
     val thisWeek = days.any { it.first == today }
     val n = days.count { it.second }
-    Column(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = Space.S4), verticalArrangement = Arrangement.spacedBy(Space.S12)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text(
                 stringResource(if (thisWeek) R.string.glow_summary_this_week else R.string.glow_summary_that_week),
@@ -896,13 +830,14 @@ internal fun WeekDaysPanel(weekStarts: List<Long>, note: String? = null, day: Lo
             val right = note ?: pluralStringResource(R.plurals.glow_summary_week_sessions, n, n)
             Text(right, color = GlowType.noteColor, style = GlowType.secondary)
         }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Space.S8)) {
             days.forEach { (d, on) ->
                 val isToday = d == today
-                Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(Space.S4)) {
                     Box(
-                        Modifier.fillMaxWidth().height(22.dp).clip(GlowLayout.IconShape).background(if (on) color else HaloButtonSurface)
-                            .let { if (isToday) it.border(2.dp, Color.White, GlowLayout.IconShape) else it },
+                        Modifier.fillMaxWidth().height(22.dp).clip(Corner.Pill).background(if (on) color else Greys.Control)
+                            .let { if (isToday) it.border(ChipSpec.Ring, Color.White, Corner.Pill) else it },
                     )
                     Text(
                         d.dayOfWeek.getDisplayName(TextStyle.NARROW, Locale.getDefault()),
@@ -924,16 +859,16 @@ internal fun WeekDots(
 ) {
     Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
         days.forEachIndexed { i, (letter, on) ->
-            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(Space.S8)) {
                 Box(
                     Modifier.size(dot)
                         // Today's ring sits just outside the mark, so it keeps its size.
                         .let { if (i == today) it.drawBehind { drawCircle((if (on) color else Color.White).copy(alpha = 0.3f), radius = size.minDimension / 2 + 3.dp.toPx()) } else it }
-                        .background(if (on) color else Color.White.copy(alpha = 0.16f), CircleShape),
+                        .background(if (on) color else Ink.Line, CircleShape),
                     contentAlignment = Alignment.Center,
-                ) { if (on && ticks) Icon(AppIcons.Tick02, null, tint = Color.Black, modifier = Modifier.size(16.dp)) }
+                ) { if (on && ticks) Icon(AppIcons.Tick02, null, tint = Color.Black, modifier = Modifier.size(IconSize.GlyphS)) }
                 Text(
-                    letter, color = if (i == today) Color.White else Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.caption,
+                    letter, color = if (i == today) Color.White else Ink.Secondary, style = GlowType.caption,
                     textAlign = TextAlign.Center,
                 )
             }
@@ -949,7 +884,8 @@ internal fun WeekDots(
 @Composable
 internal fun EarnedChips(lines: List<EarnedLine>) {
     if (lines.isEmpty()) return
-    FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Space.S8),
+        verticalArrangement = Arrangement.spacedBy(Space.S8)) {
         lines.forEach { l ->
             val (icon, color) = when (l.kind) {
                 EarnedLine.Kind.Best -> AppIcons.FlagCheckered to MetricColors.calories
@@ -957,14 +893,7 @@ internal fun EarnedChips(lines: List<EarnedLine>) {
                 EarnedLine.Kind.Goal -> AppIcons.Target to if (l.met) MetricColors.good else Color.White
             }
             val text = l.value?.let { stringResource(R.string.glow_summary_join, l.text, it) } ?: l.text
-            Row(
-                Modifier.height(34.dp).clip(CircleShape).background(HaloButtonSurface).padding(horizontal = 13.dp),
-                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp),
-            ) {
-                Icon(icon, null, tint = color, modifier = Modifier.size(14.dp))
-                val ink = if (l.kind == EarnedLine.Kind.Best) Color.White else SoftInk
-                Text(text, color = ink, style = GlowType.secondary, maxLines = 1)
-            }
+            HaloChip(text, null, icon = icon, tint = color)
         }
     }
 }

@@ -1,5 +1,6 @@
 package org.openstrap.app.ui.glow
 
+import org.openstrap.app.ui.theme.Space
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -33,7 +34,6 @@ import org.openstrap.app.presentation.Pace
 import org.openstrap.app.presentation.Units
 import org.openstrap.app.ui.components.pressClickable
 import org.openstrap.app.ui.glow.live.HeroLine
-import org.openstrap.app.ui.glow.live.HeroNumber
 import org.openstrap.app.ui.glow.live.HeroTitle
 import org.openstrap.app.ui.glow.live.LiveFigures
 import org.openstrap.app.ui.glow.live.LiveHero
@@ -72,7 +72,7 @@ internal fun GoalHero(spec: GoalHeroSpec, color: Color, angle: Float, onEdit: ((
     val tint = heroTint(color)
     LiveHero(color, angle, if (onEdit != null) Modifier.pressClickable(onEdit, GlowLayout.CardShape) else Modifier) {
         HeroTitle(spec.title, spec.note, tint)
-        if (spec.number != null) HeroNumber(spec.number, spec.unit, tint, BigNumber.Feature)
+        if (spec.number != null) HaloBigNumber(spec.number, BigNumber.Feature, unit = spec.unit, unitColor = tint)
         else Text(spec.words.orEmpty(), color = Color.White, style = GlowType.sentence)
         HeroLine(spec.line, tint)
     }
@@ -118,10 +118,10 @@ internal fun readyLast(a: WorkoutAnalysis, today: LocalDate, zone: ZoneId, strin
 @Composable
 internal fun ReadyLastRow(last: ReadyLast?) {
     if (last == null) return
-    Column(Modifier.fillMaxWidth().padding(top = 6.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(Modifier.fillMaxWidth().padding(top = Space.S8), verticalArrangement = Arrangement.spacedBy(Space.S12)) {
         Text(
             stringResource(R.string.glow_ready_last_caption, last.day), color = GlowType.noteColor, style = GlowType.noteSmall,
-            modifier = Modifier.padding(horizontal = 4.dp),
+            modifier = Modifier.padding(horizontal = Space.S4),
         )
         LiveFigures(last.figures.map { it.first to it.second })
     }

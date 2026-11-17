@@ -34,7 +34,7 @@ class StepsWidgetModelTest {
         val m = model()
         assertEquals("Steps", m.title)
         assertEquals("Goal 10,000", m.goalNote)
-        assertEquals("8,432", m.stepsText)
+        assertEquals("8432", m.stepsText)
         assertEquals("today", m.word)
         assertEquals("1,568 to go", m.toGo)
         assertEquals("84% of your goal", m.share)
@@ -47,17 +47,17 @@ class StepsWidgetModelTest {
     @Test fun `the dots keep the dot font's marks, the words follow the phone's language`() {
         Locale.setDefault(Locale.GERMANY)
         val m = StepsWidgetModel.from(today, 8_432, hourly, 14, 10_000, past, Locale.GERMANY)
-        assertEquals("8,432", m.stepsText)
+        assertEquals("8432", m.stepsText)
         assertEquals("Goal 10.000", m.goalNote)
         assertEquals("1.568 to go", m.toGo)
         assertEquals("8.432 steps today, 84% of your goal", m.description)
     }
 
     @Test fun `the Small shortens five digits to thousands, the Wide and Large keep them all`() {
-        assertEquals("9,999", model(steps = 9_999).smallText)
+        assertEquals("9999", model(steps = 9_999).smallText)
         val m = model(steps = 10_000)
         assertEquals("10k", m.smallText)
-        assertEquals("10,000", m.stepsText)
+        assertEquals("10\u2009000", m.stepsText)
         assertEquals("12.3k", model(steps = 12_345).smallText)
         // Cut down, never up: 12,999 hasn't reached 13,000.
         assertEquals("12.9k", model(steps = 12_999).smallText)
@@ -88,7 +88,7 @@ class StepsWidgetModelTest {
 
     @Test fun `the Small's decimal mark follows the locale, in the dot font's digits`() {
         assertEquals("12,3k", StepsWidgetModel.short(12_345, Locale.GERMANY))
-        assertEquals("9,999", StepsWidgetModel.short(9_999, Locale.GERMANY))
+        assertEquals("9999", StepsWidgetModel.short(9_999, Locale.GERMANY))
         assertEquals("12.3k", StepsWidgetModel.short(12_345, Locale.US))
         // Arabic digits and mark are not in the dot font: ASCII digits, and its mark only when it is a comma.
         for (l in listOf(Locale.GERMANY, Locale.US, Locale.forLanguageTag("ar-EG"), Locale.forLanguageTag("fa-IR"))) {

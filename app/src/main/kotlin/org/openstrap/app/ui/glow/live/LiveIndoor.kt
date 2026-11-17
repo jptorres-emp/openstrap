@@ -1,11 +1,11 @@
 package org.openstrap.app.ui.glow.live
 
+import org.openstrap.app.ui.theme.Space
 import org.openstrap.app.presentation.Units
 import androidx.compose.foundation.layout.Arrangement
 import org.openstrap.app.ui.glow.draw.DotSize
 import org.openstrap.app.ui.glow.HeroValue
 import org.openstrap.app.ui.glow.GlowType
-import org.openstrap.app.ui.glow.GlowCard
 import org.openstrap.app.ui.glow.Segment
 import org.openstrap.app.ui.glow.SegmentBar
 import org.openstrap.app.presentation.WorkoutCopy
@@ -29,6 +29,7 @@ import org.openstrap.app.device.ConnectionState
 import org.openstrap.app.device.WorkoutState
 import org.openstrap.app.ui.glow.activeSecondsState
 import org.openstrap.app.ui.glow.workoutColor
+import org.openstrap.app.ui.theme.Ink
 import org.openstrap.app.ui.workout.ZONE_COLORS
 import org.openstrap.app.ui.workout.ZoneSeconds
 import org.openstrap.app.ui.dashboard.LocalHeartZones
@@ -39,7 +40,8 @@ import org.openstrap.app.R
 /**
  * Indoor cardio, and a distance sport without GPS (workouts spec 2.3, board Main): one view under the moving time.
  * Heart rate is the hero, on its zone arc with the time in each zone as a bar and the target if one is set; then
- * the distance from steps when there is one, the average heart rate and active kcal.
+ * the last ten minutes of heart rate as a line over it, then the average and peak heart rate and active kcal, the
+ * distance taking the peak's place when there is one.
  */
 @Composable
 internal fun LiveIndoorScreen(
@@ -63,20 +65,19 @@ internal fun LiveIndoorScreen(
     val color = workoutColor(r, liveHeartRate, connected, heartZones)
     ZoneTick(liveHeartRate.takeIf { connected && !r.paused }, r)
     val active = activeSecondsState(r)
-    val figures = listOfNotNull(
-        // "2.14 km from steps", or metres under a kilometre.
-        r.workout.distanceMeters?.takeIf { it >= Units.SHOWN_FROM_METERS }?.let { m ->
-            val km = m >= Units.METERS_PER_KM
-            val label = when {
-                !r.workout.distanceFromSteps -> if (km) R.string.workout_live_figure_km else R.string.workout_live_figure_m
-                km -> R.string.workout_live_figure_km_from_steps
-                else -> R.string.workout_live_figure_m_from_steps
-            }
-            (if (km) Units.km(m, Units.Precision.Workout) else Units.count(m.toLong())) to stringResource(label)
-        },
-        stats?.average?.toString() to stringResource(R.string.workout_live_figure_avg_bpm),
-        kcal?.active?.toInt()?.toString() to stringResource(R.string.workout_live_figure_active_kcal),
-    )
+    // Board HaloLiveIndoor: the average and the peak heart rate and the active kcal. A treadmill or a sport counted in
+    // steps has a distance, which takes the peak's place ("2.14 km" from steps, or metres under a kilometre).
+    val distance = r.workout.distanceMeters?.takeIf { it >= Units.SHOWN_FROM_METERS }?.let { m ->
+        val shown = if (m >= Units.METERS_PER_KM) km(m)
+        else Units.count(m.toLong()) + " " + stringResource(R.string.workout_live_unit_m)
+        shown to stringResource(
+            if (r.workout.distanceFromSteps) R.string.workout_live_figure_from_steps else R.string.workout_live_figure_distance,
+        )
+    }
+    val average = stats?.average?.toString() to stringResource(R.string.workout_live_figure_avg_bpm)
+    val activeKcal = kcal?.active?.toInt()?.toString() to stringResource(R.string.workout_live_figure_active_kcal)
+    val figures = if (distance != null) listOf(distance, average, activeKcal)
+    else listOf(average, stats?.max?.toString() to stringResource(R.string.workout_live_figure_peak_bpm), activeKcal)
     LiveFrame(
         r, color, connected, contentPadding, controls,
         lap = if (!r.paused) ({ LapButton(onLap, label = true) }) else null,
@@ -90,9 +91,9 @@ internal fun LiveIndoorScreen(
         if (split) ZoneTimeBar(zoneSeconds, WorkoutRecorder.liveZone(reading, r.maxHeartRate, heartZones))
         else WorkoutHeartCard(
             r, liveHeartRate, zoneSeconds, connected, { active.value }, Modifier.fillMaxWidth(),
-            kcal = kcal?.active, zoneBar = !compact,
+            kcal = kcal?.active, zoneBar = !compact, recent = recent,
         )
-        LiveFigures(figures, Modifier.padding(top = 4.dp))
+        LiveFigures(figures, Modifier.padding(top = Space.S4))
     }
 }
 
@@ -112,10 +113,10 @@ internal fun ZoneTimeBar(zoneSeconds: ZoneSeconds, current: Int?) {
     val segments = zoneSeconds.mapIndexed { z, s ->
         val color = when {
             z == current -> Color.White
-            s == 0 -> Color.White.copy(alpha = 0.18f)
+            s == 0 -> Ink.Line
             else -> ZONE_COLORS[z]
         }
         Segment(maxOf(s.toFloat() / total, 0.04f), color)
     }
-    SegmentBar(segments, Modifier.semantics { contentDescription = described }, height = 10.dp, gap = 3.dp, corner = 3.dp)
+    SegmentBar(segments, Modifier.semantics { contentDescription = described }, height = 10.dp, gap = Space.S2, corner = 3.dp)
 }

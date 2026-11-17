@@ -1,17 +1,19 @@
 package org.openstrap.app.ui.glow
 
+import org.openstrap.app.ui.theme.IconSize
+import org.openstrap.app.ui.theme.Space
+import org.openstrap.app.ui.theme.Greys
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
+import org.openstrap.app.ui.theme.Ink
 import org.openstrap.app.ui.workout.FamilySummary
 import org.openstrap.app.presentation.Pace
-import org.openstrap.app.ui.components.pressClickable
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.Alignment
 import androidx.compose.material3.Icon
-import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.background
 import org.openstrap.app.R
 import org.openstrap.app.presentation.TimeOfDay
 import androidx.compose.ui.res.pluralStringResource
@@ -53,7 +55,6 @@ import org.openstrap.app.data.Workouts
 import org.openstrap.app.ui.components.rememberScrubHaptics
 import org.openstrap.app.ui.components.scrub
 import org.openstrap.app.ui.dashboard.CaloriesCopy
-import org.openstrap.app.ui.dashboard.ScreenList
 import org.openstrap.app.ui.theme.AppIcons
 import org.openstrap.app.ui.theme.MetricColors
 import org.openstrap.app.ui.workout.EffectFigures
@@ -116,7 +117,7 @@ fun GlowWorkoutDetailScreen(
     val usual = remember(workouts) { Workouts.usualLoad(workouts.map { it.workout.trainingLoad }) }
     val zones = shown?.zoneSeconds.orEmpty()
     CompositionLocalProvider(LocalGlowPaused provides { list.isScrollInProgress }) {
-        ScreenList(contentPadding, list, gutter = GlowLayout.Gutter) {
+        HaloPageList(contentPadding, variant = PageVariant.Tab, state = list) {
             item {
                 // The day and times under the name, as a phone workout's page has them.
                 val day = shown?.let {
@@ -125,12 +126,12 @@ fun GlowWorkoutDetailScreen(
                         Ranges.times(it.shownStart, it.end),
                     )
                 }
-                PageHeader(
+                HaloPageHeader(
                     (shown ?: a)?.sportName ?: stringResource(R.string.glow_workout_untitled), onBack, subtitle = day,
-                    trailing = if ((shown ?: a)?.startedByYou == false) ({ OutlineTag(TabCopy.AUTO_DETECTED) }) else null,
+                    trailing = if ((shown ?: a)?.startedByYou == false) ({ HaloTag(TabCopy.AUTO_DETECTED) }) else null,
                 )
             }
-            if (shown == null) return@ScreenList
+            if (shown == null) return@HaloPageList
             val w = shown.workout
             val family = FamilySummary.familyOf(w.sportType, null)
             item {
@@ -159,7 +160,7 @@ fun GlowWorkoutDetailScreen(
             val drop = WorkoutDetailCopy.dropLine(shown.recovery60, shown.recoveryIsMeaningful, usualDrop)
             val loadShown = w.trainingLoad != null || (shown.recoveryMinutes ?: 0) > 0 || drop != null
             if (loadShown) item { WorkoutLoadCard(shown, usual, drop = drop, onInfo = { info = true }) }
-            item { HaloDeleteWorkout(stringResource(R.string.glow_workout_delete_strap), onDelete) }
+            item { DeleteWorkout(stringResource(R.string.glow_workout_delete_strap), onDelete) }
         }
     }
     if (info && shown != null) EffectInfo(shown, usual, emptyList(), false, onDismiss = { info = false })
@@ -194,20 +195,34 @@ private fun PastSummary(
     val family = org.openstrap.app.ui.workout.FamilySummary.familyOf(w.sportType, summary.structure)
     val weekStarts = remember(workouts) { goalWeekStarts(workouts) }
     val trim = rememberWorkoutTrim(summary, onTrim, onUndoTrim)
+    // Share opens the share screen in the page's place, as after the workout (board HaloPastWorkout); close comes back.
+    var sharing by rememberSaveable { mutableStateOf(false) }
+    val shareHero = remember(family, summary, usual) { summaryHero(family, summary, usual) }
+    if (sharing) {
+        // Full screen over the tabs: just the navigation bar, not the tab page's room for the header and the hidden bar.
+        WorkoutShareScreen(
+            summary, shareHero, emptyList(), emptyList(),
+            androidx.compose.foundation.layout.WindowInsets.navigationBars.asPaddingValues(), onClose = { sharing = false },
+        )
+        return
+    }
     CompositionLocalProvider(LocalGlowPaused provides { list.isScrollInProgress }) {
-        ScreenList(contentPadding, list, gutter = GlowLayout.Gutter) {
+        HaloPageList(contentPadding, variant = PageVariant.Tab, state = list) {
             item {
-                PageHeader(
-                    a.sportName, onBack,
-                    subtitle = stringResource(
+                HaloPageHeader(a.sportName, onBack, subtitle = stringResource(
                         R.string.glow_workout_day_times, WorkoutDetailCopy.day(a.shownStart, LocalDate.now()),
                         Ranges.times(a.shownStart, a.end),
-                    ),
-                    trailing = if (foundTag) ({ OutlineTag(TabCopy.AUTO_DETECTED) }) else null,
-                )
+                    ), // Share in the header's corner, matching the back button, so it is there without scrolling.
+                    trailing = {
+                        HaloIconButton(
+                            AppIcons.UploadSimple, stringResource(R.string.glow_share), { sharing = true },
+                        )
+                    })
             }
             item {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(Space.S12)) {
+                    // The header's corner holds Share, so a workout the strap found says so here.
+                    if (foundTag) HaloTag(TabCopy.AUTO_DETECTED)
                     val zones = remember(a, heartZones) {
                         val shown = a.heartRate.filter { it.timestamp <= a.end }.map { it.timestamp to it.bpm }
                         ZoneSeconds(WorkoutRecorder.liveZoneSeconds(shown, a.maxHeartRate, heartZones).toList())
@@ -244,7 +259,7 @@ private fun PastSummary(
                         WorkoutLoadCard(a, usual, drop = drop, onInfo = { info = true })
                     }
                     if (family != Workouts.Family.Distance && family != Workouts.Family.Strength) SplitsList(summary, liveRoute = emptyList())
-                    HaloDeleteWorkout(stringResource(R.string.glow_workout_delete_phone), onDelete)
+                    DeleteWorkout(stringResource(R.string.glow_workout_delete_phone), onDelete)
                 }
             }
         }
@@ -271,9 +286,14 @@ private fun HeartRateCard(a: WorkoutAnalysis, trim: WorkoutTrim? = null) {
     }
     var scrubbed by remember { mutableStateOf<Int?>(null) }
     val at = scrubbed?.let { i -> values.getOrNull(i)?.let { v -> first + i * HeartStep to v.roundToInt() } }
-    QuietPanel {
+    HaloCard {
         val byZone = if (a.heartRate.isNotEmpty()) stringResource(R.string.glow_workout_heart_by_zone) else null
-        CardHead(stringResource(R.string.glow_summary_heart_rate), byZone, action = trim?.let { { TrimButton(it.open) } })
+        HaloTitle(stringResource(R.string.glow_summary_heart_rate), note = byZone, trailing = trim?.let { {
+            HaloButton(
+                stringResource(R.string.glow_trim), it.open, variant = HaloButtonVariant.Glass, size = HaloButtonSize.Small,
+                icon = AppIcons.Scissors,
+            )
+        } })
         val figure: String?
         val figureLabel: String
         val under: String?
@@ -294,10 +314,10 @@ private fun HeartRateCard(a: WorkoutAnalysis, trim: WorkoutTrim? = null) {
                 else -> null
             }
         }
-        if (figure != null) Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        if (figure != null) Column(verticalArrangement = Arrangement.spacedBy(Space.S4)) {
+            Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(Space.S8)) {
                 Text(figure, color = Color.White, style = GlowType.figureLarge)
-                Text(figureLabel, Modifier.padding(bottom = 4.dp), color = SoftInk, style = GlowType.secondary)
+                Text(figureLabel, Modifier.padding(bottom = Space.S4), color = SoftInk, style = GlowType.secondary)
             }
             if (under != null) Text(under, color = GlowType.noteColor, style = GlowType.noteSmall)
         }
@@ -306,10 +326,10 @@ private fun HeartRateCard(a: WorkoutAnalysis, trim: WorkoutTrim? = null) {
         ) else {
             ZoneHeartLine(values, first, a.end, a.maxHeartRate, a.historyRanges, scrubbed, { scrubbed = it })
             Row(Modifier.fillMaxWidth()) {
-                PageNote(clock(first))
+                HaloNote(clock(first))
                 Spacer(Modifier.weight(1f))
                 val after = stringResource(R.string.glow_workout_heart_drop_after, clock(a.end))
-                PageNote(if (last > a.end + HeartStep) after else clock(a.end))
+                HaloNote(if (last > a.end + HeartStep) after else clock(a.end))
             }
             if (a.historyRanges.isNotEmpty()) Text(
                 stringResource(
@@ -348,20 +368,20 @@ private fun ZoneHeartLine(
         val dx = size.width / (values.size - 1).coerceAtLeast(1)
         fun y(v: Float) = size.height - (v - lo) / (hi - lo) * size.height
         if (endIndex in 1 until values.lastIndex) drawLine(
-            Color.White.copy(alpha = 0.35f), Offset(endIndex * dx, 0f), Offset(endIndex * dx, size.height), strokeWidth = 1.dp.toPx(),
+            Ink.Disabled, Offset(endIndex * dx, 0f), Offset(endIndex * dx, size.height), strokeWidth = 1.dp.toPx(),
         )
         drawZoneLine(values.size, 2.5.dp.toPx(), at = { i -> values[i]?.let { Offset(i * dx, y(it)) } }) { i ->
             val v = values[i] ?: return@drawZoneLine null
             val t = first + i * HeartStep
-            val color = if (i >= endIndex) Color.White.copy(alpha = 0.55f) else zoneColor(v.roundToInt(), maxHr, heartZones)
+            val color = if (i >= endIndex) Ink.Tertiary else zoneColor(v.roundToInt(), maxHr, heartZones)
             // The strap's history, filled in after: the same line, dimmed (spec 2.7, no dashes).
             if (history.any { t in it }) color.copy(alpha = color.alpha * 0.45f) else color
         }
         scrubbed?.let { i ->
             val v = values.getOrNull(i) ?: return@let
             val p = Offset(i * dx, y(v))
-            drawLine(Color.White.copy(alpha = 0.4f), Offset(p.x, 0f), Offset(p.x, size.height), strokeWidth = 1.dp.toPx())
-            drawCircle(Color.Black.copy(alpha = 0.6f), 6.dp.toPx(), p)
+            drawLine(Ink.Tertiary, Offset(p.x, 0f), Offset(p.x, size.height), strokeWidth = 1.dp.toPx())
+            drawCircle(Ink.ScrimDeep, 6.dp.toPx(), p)
             drawCircle(Color.White, 4.dp.toPx(), p)
         }
     }
@@ -373,15 +393,10 @@ private fun ZoneHeartLine(
  */
 @Composable
 private fun InYourDayCard(text: String, onOpen: (() -> Unit)?) {
-    Column(
-        Modifier.fillMaxWidth().clip(GlowLayout.TileShape).background(PlainPanel)
-            .let { if (onOpen != null) it.pressClickable(onOpen, GlowLayout.TileShape) else it }
-            .padding(horizontal = 20.dp, vertical = 18.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
+    HaloCard(onClick = onOpen) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Text(stringResource(R.string.glow_workout_in_your_day), color = Color.White, style = GlowType.cardTitle, maxLines = 1)
-            if (onOpen != null) Icon(AppIcons.TapCaret, null, Modifier.size(14.dp), tint = Color.White.copy(alpha = CARD_CARET_ALPHA))
+            if (onOpen != null) Icon(AppIcons.TapCaret, null, Modifier.size(IconSize.Caret), tint = Ink.Tertiary)
         }
         Text(text, color = SoftInk, style = GlowType.buttonSmall.copy(fontWeight = FontWeight.Normal))
     }
@@ -394,7 +409,7 @@ private fun InYourDayCard(text: String, onOpen: (() -> Unit)?) {
  */
 @Composable
 private fun WorkoutFacts(facts: List<WorkoutFact>, summary: PhoneSummary?, workout: WorkoutAnalysis?) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(Space.S12)) {
         if (workout != null) {
             val distance = facts.firstOrNull { it.kind == WorkoutFact.Kind.Distance }
             val kcal = facts.firstOrNull { it.kind == WorkoutFact.Kind.Calories }
@@ -409,30 +424,15 @@ private fun WorkoutFacts(facts: List<WorkoutFact>, summary: PhoneSummary?, worko
             )
             val figures = shown.map { it.first to it.second }
             val padded = shown.map { it.third }
-            SummaryFigures(figures, units = padded)
+            HaloFigures(figures, units = padded)
         }
         val rest = facts.filter { workout == null || (it.kind != WorkoutFact.Kind.Distance && it.kind != WorkoutFact.Kind.Calories) }
-        if (rest.isNotEmpty() || summary != null) QuietPanel {
+        if (rest.isNotEmpty() || summary != null) HaloCard {
             if (rest.isNotEmpty()) Column {
-                rest.forEach { f -> FactRow(f) }
+                rest.forEach { f -> FactRow(f.name, listOfNotNull(f.value, f.status).joinToString(" ")) }
             }
             summary?.let { RouteMap(it) }
         }
-    }
-}
-
-/** One fact as a row of a card: its name at the left, its value and note at the right. */
-@Composable
-private fun FactRow(f: WorkoutFact) {
-    Row(
-        Modifier.fillMaxWidth().height(32.dp), verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Text(f.name, Modifier.weight(1f), color = GlowType.noteColor, style = GlowType.secondary, maxLines = 1)
-        Text(
-            listOfNotNull(f.value, f.status).joinToString(" "), color = Color.White,
-            style = GlowType.buttonSmall.copy(fontWeight = FontWeight.Normal), maxLines = 1, overflow = TextOverflow.Ellipsis,
-        )
     }
 }
 
@@ -460,6 +460,8 @@ private fun EffectInfo(a: WorkoutAnalysis, usual: Float?, strap: List<WorkoutAna
  * as on the Activity tab's Workouts card ([WorkoutRow]). One list rather than a panel a day, so no two cards in a row
  * look the same (spec 2.5); each day is still its own item, so a long history scrolls lazily.
  */
+// A whole screen, placed by the host, which sizes it.
+@Suppress("ModifierMissing", "ComposeModifierMissing")
 @Composable
 fun GlowWorkoutsScreen(workouts: List<WorkoutAnalysis>, contentPadding: PaddingValues, onOpen: (Long) -> Unit, onBack: () -> Unit) {
     BackHandler(onBack = onBack)
@@ -467,9 +469,9 @@ fun GlowWorkoutsScreen(workouts: List<WorkoutAnalysis>, contentPadding: PaddingV
     val usual = remember(workouts) { Workouts.usualLoad(workouts.map { it.workout.trainingLoad }) }
     val days = remember(workouts) { workouts.groupBy { Instant.ofEpochSecond(it.workout.start).atZone(zone).toLocalDate() }.toList() }
     val today = LocalDate.now()
-    ScreenList(contentPadding, gutter = GlowLayout.Gutter) {
+    HaloPageList(contentPadding, variant = PageVariant.Tab) {
         item {
-            PageHeader(
+            HaloPageHeader(
                 stringResource(R.string.glow_workout_list_title), onBack,
                 subtitle = pluralStringResource(R.plurals.glow_workout_list_recorded, workouts.size, workouts.size),
             )
@@ -477,19 +479,19 @@ fun GlowWorkoutsScreen(workouts: List<WorkoutAnalysis>, contentPadding: PaddingV
         if (workouts.isEmpty()) {
             item {
                 ListPanel {
-                    ListRow(
+                    MetricRow(
                         stringResource(R.string.glow_workout_list_empty), MetricColors.heart, null,
                         stringResource(R.string.glow_workout_list_empty_text),
                         dash = false, divider = false,
                     )
                 }
             }
-            return@ScreenList
+            return@HaloPageList
         }
         days.forEachIndexed { i, (date, day) ->
             item(key = date.toEpochDay()) {
                 ListSegment(first = i == 0, last = i == days.lastIndex) {
-                    WorkoutDayHeader(TabCopy.workoutDay(date, today))
+                    HaloTitle(TabCopy.workoutDay(date, today), Modifier.rowSides().padding(top = Space.S12), variant = TitleVariant.Group)
                     day.forEachIndexed { j, a -> WorkoutRow(a, usual, divider = j > 0) { onOpen(a.workout.start) } }
                 }
             }
@@ -518,7 +520,7 @@ private fun ListSegment(first: Boolean, last: Boolean, content: @Composable Colu
                 val end = if (last) bottom else bottom + r
                 val panel = androidx.compose.ui.geometry.Size(size.width, end - top)
                 clipRect(top = 0f, bottom = bottom) {
-                    translate(top = top) { drawOutline(GlowLayout.CardShape.createOutline(panel, layoutDirection, this), ListSurface) }
+                    translate(top = top) { drawOutline(CardTuning.shape.createOutline(panel, layoutDirection, this), Greys.Card) }
                 }
             }
             .padding(horizontal = GlowLayout.CardInset)

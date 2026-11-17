@@ -3,6 +3,9 @@
 
 package org.openstrap.app.ui.root
 
+import org.openstrap.app.ui.glow.HaloPageHeader
+import org.openstrap.app.ui.glow.HaloPageList
+import org.openstrap.app.ui.glow.PageVariant
 import androidx.compose.ui.res.stringResource
 import org.openstrap.app.R
 import androidx.activity.compose.BackHandler
@@ -37,13 +40,12 @@ import org.openstrap.app.ui.glow.GlowScoreDetailScreen
 import org.openstrap.app.ui.glow.GlowSleepScreen
 import org.openstrap.app.ui.glow.GlowWorkoutDetailScreen
 import org.openstrap.app.ui.glow.GlowWorkoutsScreen
-import org.openstrap.app.ui.dashboard.ScreenList
 import org.openstrap.app.ui.glow.GlowLayout
 import org.openstrap.app.ui.glow.GlowType
-import org.openstrap.app.ui.glow.PageHeader
 import org.openstrap.app.ui.glow.SleepEditing
 import org.openstrap.app.ui.glow.WeekDetail
 import org.openstrap.app.ui.glow.dayName
+import org.openstrap.app.ui.theme.Ink
 import org.openstrap.app.ui.workout.OpenedWorkout
 import org.openstrap.app.ui.workout.WorkoutsViewModel
 
@@ -78,7 +80,7 @@ internal fun DetailHost(
         // is the night's only when the Sleep or Recovery tab opened it, so it comes with its own scope.
         is Detail.OfMetric -> GlowMetricDetailScreen(
             detail.metric, detail.night || detail.metric in SleepCopy.NIGHT_SIGNALS, day, histories.daily, live.bpm, live.canUse,
-            push, onSwitch, dayVm::select, padding, pop,
+            push, onSwitch, dayVm::select, padding, pop, recovery = shown.recovery,
         )
         is Detail.OfScore -> GlowScoreDetailScreen(
             detail.score, day, shown.recovery, shown.strapScore, histories.daily,
@@ -116,7 +118,7 @@ internal fun DetailHost(
             BackHandler(onBack = pop)
             GlowRecoveryScreen(
                 day, shown.recovery,
-                header = { PageHeader(stringResource(R.string.day_tab_recovery), pop, subtitle = dayName(day.date)) },
+                header = { HaloPageHeader(stringResource(R.string.day_tab_recovery), pop, subtitle = dayName(day.date)) },
                 contentPadding = padding, onOpenMetric = { push(Detail.OfMetric(it, night = it in SleepCopy.NIGHT_FIGURES)) },
                 onOpenScore = { push(Detail.OfScore(it)) }, strapScore = shown.strapScore,
                 healthspan = shown.healthspan, onOpenHealthspan = { seeHabitAge(); push(Detail.Healthspan) }, onOpenProfile = onOpenProfile,
@@ -127,7 +129,7 @@ internal fun DetailHost(
         Detail.Sleep -> {
             BackHandler(onBack = pop)
             GlowSleepScreen(
-                day, header = { PageHeader(stringResource(R.string.day_tab_sleep), pop, subtitle = dayName(day.date)) },
+                day, header = { HaloPageHeader(stringResource(R.string.day_tab_sleep), pop, subtitle = dayName(day.date)) },
                 contentPadding = padding, onOpen = push, recovery = shown.recovery, onRestore = dayVm::restoreSleep,
             )
         }
@@ -141,12 +143,12 @@ internal fun DetailHost(
 @Composable
 private fun WorkoutMissing(contentPadding: PaddingValues, onBack: () -> Unit) {
     BackHandler(onBack = onBack)
-    ScreenList(contentPadding, gutter = GlowLayout.Gutter) {
-        item { PageHeader(stringResource(R.string.glow_workout_untitled), onBack) }
+    HaloPageList(contentPadding, variant = PageVariant.Detail) {
+        item { HaloPageHeader(stringResource(R.string.glow_workout_untitled), onBack) }
         item {
             Text(
                 stringResource(R.string.glow_workout_deleted),
-                color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary,
+                color = Ink.Secondary, style = GlowType.secondary,
             )
         }
     }

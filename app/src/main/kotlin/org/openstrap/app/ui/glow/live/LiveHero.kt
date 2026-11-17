@@ -1,5 +1,8 @@
 package org.openstrap.app.ui.glow.live
 
+import org.openstrap.app.ui.glow.CardTone
+import org.openstrap.app.ui.glow.HaloCard
+import org.openstrap.app.ui.theme.Space
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -20,9 +23,9 @@ import org.openstrap.app.data.Workouts
 import org.openstrap.app.device.WorkoutState
 import org.openstrap.app.ui.glow.BigNumber
 import org.openstrap.app.ui.glow.BigNumberText
-import org.openstrap.app.ui.glow.GlowCard
 import org.openstrap.app.ui.glow.GlowType
 import org.openstrap.app.ui.glow.draw.heroStyle
+import org.openstrap.app.ui.theme.Ink
 import org.openstrap.app.ui.workout.PausedGrey
 import org.openstrap.app.ui.workout.familyColor
 import org.openstrap.app.ui.workout.familyLightAngle
@@ -46,10 +49,8 @@ private const val TINT_TOWARD_WHITE = 0.82f
 internal fun heroTint(color: Color): Color = lerp(color, Color.White, TINT_TOWARD_WHITE)
 
 /** The grey of a side button's label, a plan line and a card's own words (workout-rules.md, Frame: #C9CED6). */
-internal val LiveLabelInk = Color(0xFFC9CED6)
+internal val LiveLabelInk = Ink.Strong
 
-/** The 1 px rule between a live card's blocks and left of a figure (workout-rules.md: #24262C). */
-internal val LiveRule = Color(0xFF24262C)
 
 /**
  * The lit hero: a solid squircle lit from one edge in [color], nothing outside it (board HaloLiveRun). [content] is
@@ -57,15 +58,15 @@ internal val LiveRule = Color(0xFF24262C)
  */
 @Composable
 internal fun LiveHero(color: Color, angle: Float, modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
-    GlowCard(heroStyle(color, angle), modifier.fillMaxWidth()) {
-        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(14.dp), content = content)
+    HaloCard(modifier.fillMaxWidth(), tone = CardTone.lit(heroStyle(color, angle))) {
+        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Space.S12), content = content)
     }
 }
 
 /** The hero's title row: 16 semibold at the left, one small note in the tint at the right. */
 @Composable
 internal fun HeroTitle(title: String, note: String?, tint: Color, trailing: (@Composable () -> Unit)? = null) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Space.S12), verticalAlignment = Alignment.CenterVertically) {
         Text(title, color = Color.White, style = GlowType.heroTitle, maxLines = 1, overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f, fill = false))
         Spacer(Modifier.weight(1f))
@@ -74,28 +75,16 @@ internal fun HeroTitle(title: String, note: String?, tint: Color, trailing: (@Co
     }
 }
 
-/** The screen's one big number in dots with its unit after it in 15 (workout-rules.md, section 3). */
-@Composable
-internal fun HeroNumber(value: String, unit: String?, tint: Color, size: BigNumber = BigNumber.Live) {
-    Row(verticalAlignment = Alignment.Bottom) {
-        BigNumberText(value, size)
-        if (!unit.isNullOrEmpty()) {
-            Spacer(Modifier.width(8.dp))
-            Text(unit, color = tint, style = GlowType.body, maxLines = 1)
-        }
-    }
-}
-
 /** The hero's one 13 px line in the tint: what the strap will do, or what is next. */
 @Composable
 internal fun HeroLine(text: String, tint: Color) =
     Text(text, color = tint, style = GlowType.secondary)
 
-/** The sport's own card on a live screen: solid, 14 between its blocks. */
+/** The sport's own card on a live screen: a grey [org.openstrap.app.ui.glow.HaloCard] (kept as a name: 20 call sites). */
 @androidx.compose.runtime.NonRestartableComposable
 @Composable
 internal fun LiveCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) =
-    org.openstrap.app.ui.glow.QuietPanel(modifier, content = content)
+    org.openstrap.app.ui.glow.HaloCard(modifier, content = content)
 
 /**
  * The heart rate as a row (board HaloLiveHiitWork): the heart in its zone's colour, the bpm in Display Light 20 and
@@ -110,7 +99,7 @@ internal fun HeartLine(bpm: Int?, maxHr: Int, paused: Boolean, modifier: Modifie
             Text(org.openstrap.app.presentation.WorkoutCopy.noHeartRate(paused), color = GlowType.noteColor, style = GlowType.secondary)
             return@Row
         }
-        Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.S8)) {
             androidx.compose.material3.Icon(
                 org.openstrap.app.ui.theme.AppIcons.Heartbeat, null,
                     tint = zone?.let { org.openstrap.app.ui.workout.ZONE_COLORS[it] } ?: Color.White,

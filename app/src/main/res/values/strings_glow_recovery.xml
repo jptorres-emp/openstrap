@@ -9,7 +9,7 @@
     <!-- What the info button beside the Recovery title does, for screen readers. -->
     <string name="glow_recovery_about">About Recovery</string>
     <!-- The Recovery sentence when there's no score yet and no other reason to give. -->
-    <string name="glow_recovery_scored_each_morning">Recovery is scored each morning from the night\'s sleep.</string>
+    <string name="glow_recovery_scored_each_morning">Recovery shows once last night\'s sleep syncs.</string>
     <!-- Under yesterday's score, dimmed, when today's couldn't be calculated. One word. -->
     <string name="glow_recovery_yesterday">Yesterday</string>
     <!-- Title of the list of what raised or lowered Recovery. -->
@@ -19,7 +19,7 @@
     <!-- The drivers list's only row before the first night. -->
     <string name="glow_recovery_waiting_night">Waiting for a night</string>
     <!-- Beside Waiting for a night: when the list fills. -->
-    <string name="glow_recovery_drivers_waiting">What drove Recovery shows here each morning</string>
+    <string name="glow_recovery_drivers_waiting">Shows here each morning</string>
     <!-- Title of the Energy battery card: the Energy score's name. -->
     <string name="glow_recovery_energy">Energy</string>
     <!-- Under the Energy battery's number while its curve is scrubbed: the time picked. -->
@@ -59,7 +59,7 @@
     <!-- Under an earlier day's Recovery score, lower case: when it was scored. -->
     <string name="glow_recovery_that_morning">that morning</string>
     <!-- Under the strap's own score, shown while unstrap's is held back. -->
-    <string name="glow_recovery_strap_estimate">The strap\'s estimate</string>
+    <string name="glow_recovery_strap_estimate">Strap\'s estimate</string>
     <!-- The Recovery detail's week view when no day has a score. -->
     <string name="glow_recovery_none_week">No Recovery scores in the last 7 days yet.</string>
     <!-- Stands large in Energy's place before the first night. -->
@@ -88,4 +88,6 @@
     <string name="glow_recovery_no_sleep">No sleep recorded</string>
     <!-- The Last night row's word beside the time asleep. One word. -->
     <string name="glow_recovery_asleep">Asleep</string>
+    <!-- Under Skin temperature's number: last night against your normal, with its sign and unit, "+0.2 °C". Short. -->
+    <string name="glow_recovery_temp_change"><xliff:g id="change" example="+0.2 °C">%1$s</xliff:g> against your normal</string>
 </resources>

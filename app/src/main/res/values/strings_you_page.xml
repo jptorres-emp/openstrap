@@ -37,13 +37,13 @@
     <string name="you_row_sample_data">Add sample data</string>
     <!-- Under the sample data row. -->
     <string name="you_row_sample_data_note">Debug builds only</string>
-    <!-- Section labels over the You page's panels, a few words in capitals' style. -->
+    <!-- Section labels over the You page's panels, a few words. -->
     <string name="you_section_your_data">Your data</string>
     <string name="you_section_help">Help</string>
     <!-- Under the Goals and bests row: the weekly workout goal, then what else the page holds. -->
     <plurals name="you_goals_and_bests_line">
-        <item quantity="one"><xliff:g id="count" example="3">%1$d</xliff:g> workout a week, personal bests and badges</item>
-        <item quantity="other"><xliff:g id="count" example="3">%1$d</xliff:g> workouts a week, personal bests and badges</item>
+        <item quantity="one">%1$d workout a week</item>
+        <item quantity="other">%1$d workouts a week</item>
     </plurals>
     <!-- Under the Diagnostics row: how many lines the log holds. -->
     <plurals name="you_diagnostics_line">
@@ -52,7 +52,7 @@
     </plurals>
     <!-- Centred at the foot of the You page: the version running. -->
 
-    <!-- The Goals row, one line: the three daily goals joined, "8,000 steps, 450 active kcal, 8 active hours". -->
+    <!-- The Goals row, one line of 36 characters: the three daily goals joined, "8,000 steps, 450 kcal, 8 h active". -->
     <string name="you_goals_line"><xliff:g id="steps" example="8,000 steps">%1$s</xliff:g>, <xliff:g id="calories" example="450 active kcal">%2$s</xliff:g>, <xliff:g id="hours" example="8 active hours">%3$s</xliff:g></string>
     <!-- The steps goal in the Goals row. The number is already formatted, "8,000". -->
     <plurals name="you_goals_steps">
@@ -60,17 +60,17 @@
         <item quantity="other"><xliff:g id="steps" example="8,000">%1$s</xliff:g> steps</item>
     </plurals>
     <!-- The calorie goal, in the Goals row and the goals sheet. The number is already formatted, "450". -->
-    <string name="you_goals_active_kcal"><xliff:g id="calories" example="450">%1$s</xliff:g> active kcal</string>
+    <string name="you_goals_active_kcal">%1$s kcal</string>
     <!-- The active hours goal in the Goals row. -->
     <plurals name="you_goals_active_hours">
-        <item quantity="one"><xliff:g id="hours" example="8">%1$d</xliff:g> active hour</item>
-        <item quantity="other"><xliff:g id="hours" example="8">%1$d</xliff:g> active hours</item>
+        <item quantity="one">%1$d h active</item>
+        <item quantity="other">%1$d h active</item>
     </plurals>
     <!-- The Sleep goal row: the goal, then the sleep need Recovery uses. Both are lengths of time, "7 h 30" and "8 h". -->
-    <string name="you_sleep_goal_line"><xliff:g id="goal" example="7 h 30">%1$s</xliff:g>. Your sleep need is <xliff:g id="need" example="8 h">%2$s</xliff:g></string>
+    <string name="you_sleep_goal_line">%1$s, sleep need %2$s</string>
 
     <!-- The Profile row when nothing is filled in. One line. -->
-    <string name="you_profile_empty">Add age and sex for accurate Load and Recovery</string>
+    <string name="you_profile_empty">Add your age and sex</string>
     <!-- The age in the Profile row, "34 years, male, 72 kg, 178 cm". -->
     <plurals name="you_profile_age">
         <item quantity="one"><xliff:g id="age" example="34">%1$d</xliff:g> year</item>
@@ -101,12 +101,10 @@
     <string name="you_profile_weight">Weight</string>
     <string name="you_profile_unit_lb">lb</string>
     <string name="you_profile_unit_kg">kg</string>
-    <string name="you_profile_unit_ft">ft</string>
-    <string name="you_profile_unit_in">in</string>
     <string name="you_profile_height">Height</string>
     <string name="you_profile_unit_cm">cm</string>
     <!-- Over five numbered segments, 1 to 5. -->
-    <string name="you_profile_activity_note">Usual activity, for the fitness estimate</string>
+    <string name="you_profile_activity_note">Used for the fitness estimate.</string>
     <!-- Under the activity segments while none is picked. -->
     <!-- Switch rows. -->
     <string name="you_profile_beta_blockers">Taking beta-blockers</string>
@@ -114,9 +112,16 @@
     <!-- The sleep need field's label: hours, 7 to 9, or empty for the default for the user's age. -->
     <!-- The unit for hours, short. -->
     <string name="you_unit_h">h</string>
+    <string name="you_unit_min">min</string>
+    <!-- The sleep goal sheet (board HaloSleepGoalSheet): its title, the sleep need under the wheels, where it comes from, and the note. -->
+    <string name="you_sleep_goal_title">Sleep goal</string>
+    <string name="you_sleep_goal_need">Sleep need %1$s</string>
+    <string name="you_sleep_goal_need_profile">From your profile</string>
+    <string name="you_sleep_goal_need_age">From your age</string>
+    <string name="you_sleep_goal_note">It sets the sleep goal ring and when the goal is met.</string>
 
     <!-- The goals sheet's title and its note. -->
-    <string name="you_goals_title">Your goals</string>
+    <string name="you_goals_title">Goals</string>
     <!-- The steps field's label, then its unit. -->
     <string name="you_goals_steps_label">Steps</string>
     <string name="you_goals_sleep_label">Sleep</string>
@@ -134,7 +139,7 @@
         <item quantity="one"><xliff:g id="count" example="3">%1$d</xliff:g> a week</item>
         <item quantity="other"><xliff:g id="count" example="3">%1$d</xliff:g> a week</item>
     </plurals>
-    <string name="you_goals_workouts_note">Workouts of 10 minutes or more count, two a day at most.</string>
+    <string name="you_goals_workouts_note">Workouts of 10 min or more count, two a day at most.</string>
     <string name="you_goals_calories_label">Calories</string>
     <!-- The minus and plus buttons beside the calorie goal, read by screen readers. -->
     <string name="you_goals_calories_lower">Lower the calorie goal</string>
@@ -165,7 +170,6 @@
     <!-- The panel's title when this build is newer than every release, a developer's. -->
     <string name="you_updates_latest">Latest release</string>
     <!-- Centred at the foot of the Updates page. -->
-    <string name="you_updates_installed">You have unstrap <xliff:g id="version" example="2.1.0">%1$s</xliff:g>.</string>
     <string name="you_updates_no_notes">No notes for this release.</string>
 
     <!-- The Diagnostics page: the strap's log, for bug reports. -->
@@ -191,9 +195,9 @@
     <string name="you_profile_group_body">Body</string>
     <string name="you_profile_group_estimates">For your estimates</string>
     <!-- Calories, Load and Habit Age are names of unstrap's pages and scores. -->
-    <string name="you_profile_foot_about">Age sets your maximum heart rate, which every effort and recovery number depends on. Sex is for Calories, Load, fitness and Habit Age.</string>
+    <string name="you_profile_foot_about">Age sets your max heart rate. Sex is used for Calories, Load, fitness and Habit Age.</string>
     <string name="you_profile_foot_all">All fields are optional and stay on this phone.</string>
-    <string name="you_profile_age_note">Sets your maximum heart rate, which every effort and recovery number depends on.</string>
+    <string name="you_profile_age_note">Sets your max heart rate, which your effort and recovery numbers depend on.</string>
     <string name="you_profile_sex_sheet_note">Used for Calories, Load, fitness and Habit Age.</string>
     <string name="you_profile_beta_note">Lowers your heart rate, so zones adjust</string>
     <string name="you_profile_sleep_note">Between 7 and 9 hours. Recovery uses it to judge your sleep.</string>
@@ -213,9 +217,9 @@
     <string name="you_strap_group_on_strap">On the strap</string>
     <string name="you_strap_group_software">Software</string>
     <string name="you_strap_row_app_updates">App updates</string>
-    <string name="you_strap_no_strap">No strap yet</string>
+    <string name="you_strap_no_strap">No strap</string>
     <string name="you_strap_last_read">As last read from the strap.</string>
-    <string name="you_strap_away_note">Keep the strap on its charger near the phone, and make sure the Zepp app isn\'t running. The strap talks to one app at a time.</string>
+    <string name="you_strap_away_note">Keep the strap on its charger near the phone, and close the Zepp app.</string>
     <string name="you_strap_key_rejected_note">Retrying won\'t help. Pair again to fetch the strap\'s current key from Zepp.</string>
     <string name="you_strap_forget_note">Forget deletes the strap\'s address and auth key from this phone. Your synced health data stays.</string>
     <string name="you_updates_view">View</string>
@@ -223,4 +227,13 @@
     <string name="you_diagnostics_note">For bug reports. Copy puts the whole log on the clipboard.</string>
     <string name="you_profile_clear">Clear</string>
     <string name="you_profile_sleep_use_usual">Use the default for my age</string>
+    <string name="you_profile_pregnant_note">Pauses the fitness estimate</string>
+    <string name="you_profile_activity_short_inactive">Inactive</string>
+    <string name="you_profile_activity_short_light">Light</string>
+    <string name="you_profile_activity_short_low">Low aerobic</string>
+    <string name="you_profile_activity_short_mid">Mid aerobic</string>
+    <string name="you_profile_activity_short_high">High aerobic</string>
+    <string name="you_updates_footnote">%1$s. You have unstrap %2$s.</string>
+    <string name="you_stamp_yesterday">Yesterday %1$s</string>
+    <string name="you_stamp_dated">%1$s, %2$s</string>
 </resources>

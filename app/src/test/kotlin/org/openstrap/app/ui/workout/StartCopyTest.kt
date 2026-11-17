@@ -22,7 +22,7 @@ class StartCopyTest {
     @Test fun `the strap line says it's ready, or what's wrong`() {
         assertEquals("Strap ready, 72 bpm", StartCopy.strapLine(ConnectionState.Connected(80, null), 72))
         assertEquals("Strap ready", StartCopy.strapLine(ConnectionState.Connected(80, null), null))
-        assertEquals("Strap not connected. You can start anyway.", StartCopy.strapLine(ConnectionState.Disconnected, null))
+        assertEquals("Strap not connected, start anyway", StartCopy.strapLine(ConnectionState.Disconnected, null))
     }
 
     @Test fun `no goal is named for the sport`() {
@@ -89,10 +89,10 @@ class StartCopyTest {
     }
 
     @Test fun `a game's note says what the strap does, and typed periods are in minutes`() {
-        assertEquals("Phone in your bag? That's fine.", StartCopy.gamesNote(null))
-        assertEquals("Phone in your bag? That's fine. The strap buzzes at the end of each half and break.", StartCopy.gamesNote(org.openstrap.app.data.Structure.HALVES))
+        assertEquals("Phone can stay in your bag", StartCopy.gamesNote(null))
+        assertEquals("The strap buzzes each half and break", StartCopy.gamesNote(org.openstrap.app.data.Structure.HALVES))
         assertEquals(
-            "Phone in your bag? That's fine. The strap buzzes at the end of each quarter.",
+            "The strap buzzes each quarter",
             StartCopy.gamesNote(org.openstrap.app.data.Structure.QUARTERS.copy(rest = 0)),
         )
         val halves = org.openstrap.app.data.Structure.HALVES
@@ -192,7 +192,7 @@ class StartCopyTest {
         assertEquals("7.5", StartCopy.distanceValue(7500))
         assertEquals("12.45", StartCopy.distanceValue(12_450))
         assertEquals("21.1", StartCopy.distanceValue(StartCopy.HALF_MARATHON))
-        assertEquals("The strap buzzes at halfway and at 7.5 km.", StartCopy.distanceNote(7500))
+        assertEquals("A buzz at halfway and at 7.5 km", StartCopy.distanceNote(7500))
         assertEquals(8000, StartCopy.stepDistance(7500, up = true))
         assertEquals(7000, StartCopy.stepDistance(7500, up = false))
         assertEquals(12_500, StartCopy.stepDistance(12_400, up = true))
@@ -225,7 +225,7 @@ class StartCopyTest {
         assertEquals(null, StartCopy.parseTime("1", "x"))
         assertEquals(listOf("30 min", "45 min", "1 h", "1 h 30"), StartCopy.TIME_PRESETS.map { it.second })
         assertEquals("Ends about 19:15", StartCopy.endsNear(java.time.LocalTime.of(18, 0), 4500, is24Hour = true))
-        assertEquals("Type hours, then minutes. Ends about 19:15", StartCopy.timeTypingNote("Ends about 19:15"))
+        assertEquals("Type hours, then minutes", StartCopy.timeTypingNote("Ends about 19:15"))
     }
 
     @Test fun `a zone goal reads its heart rates and names from your zones`() {
@@ -246,10 +246,10 @@ class StartCopyTest {
         assertEquals("90" to "s", StartCopy.restParts(90))
         assertEquals("2" to "min", StartCopy.restParts(120))
         assertEquals("150" to "s", StartCopy.restParts(150))
-        assertEquals("The strap buzzes at the end of each 400 m rep and when rest is up. 2.4 km of reps in all.", StartCopy.intervalsNote(reps))
-        assertEquals("The strap buzzes at the end of each 200 m rep and when rest is up. 800 m of reps in all.", StartCopy.intervalsNote(reps.copy(meters = 200, rounds = 4)))
+        assertEquals("A buzz each 400 m rep, 2.4 km in all", StartCopy.intervalsNote(reps))
+        assertEquals("A buzz each 200 m rep, 800 m in all", StartCopy.intervalsNote(reps.copy(meters = 200, rounds = 4)))
         assertEquals(
-            "The strap buzzes at the end of each 4 min rep and when rest is up. 16 min of reps in all.",
+            "A buzz each 4 min rep, 16 min in all",
             StartCopy.intervalsNote(org.openstrap.app.data.Structure.Reps(null, 240, 180, 4)),
         )
         assertEquals(8, StartCopy.parseCount("8"))
@@ -268,13 +268,13 @@ class StartCopyTest {
     }
 
     @Test fun `no goal says what's recorded`() {
-        assertEquals("No goal. Time, distance and heart rate.", StartCopy.noGoalNote(hasDistance = true))
-        assertEquals("No goal. Time and heart rate.", StartCopy.noGoalNote(hasDistance = false))
+        assertEquals("No goal, time, distance and heart rate", StartCopy.noGoalNote(hasDistance = true))
+        assertEquals("No goal, time and heart rate", StartCopy.noGoalNote(hasDistance = false))
     }
 
     @Test fun `the zones page says where your max comes from and each zone's heart rates`() {
         val d = LocalDate.of(2026, 10, 3)
-        assertEquals("Learned from your hardest efforts, 3 Oct", HeartZonesCopy.source(org.openstrap.app.data.MaxHeartRate(192, org.openstrap.app.data.MaxHeartRate.Source.Learned, d), Locale.UK))
+        assertEquals("Learned from hard efforts, 3 Oct", HeartZonesCopy.source(org.openstrap.app.data.MaxHeartRate(192, org.openstrap.app.data.MaxHeartRate.Source.Learned, d), Locale.UK))
         assertEquals("Set by you", HeartZonesCopy.source(org.openstrap.app.data.MaxHeartRate(185, org.openstrap.app.data.MaxHeartRate.Source.Set)))
         val zones = org.openstrap.app.data.HeartZones.STANDARD
         assertEquals("96 to 115", HeartZonesCopy.zoneBpm(zones, 0, 192))

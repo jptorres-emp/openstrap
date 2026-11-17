@@ -40,7 +40,7 @@
     <string name="core_tab_charge_movement">身体活动</string>
     <string name="core_tab_charge_stress">压力</string>
     <string name="core_tab_charge_awake">清醒状态</string>
-    <string name="core_tab_charge_recharged">已充满</string>
+    <string name="core_tab_charge_recharged">恢复</string>
     <string name="core_tab_charge_drained">已消耗</string>
     <string name="core_tab_charge_first_night">度过首晚后即可开启精力。睡眠能为你补充精力。</string>
     <string name="core_tab_charge_waiting">手环记录几小时心率后显示精力。</string>
@@ -68,24 +68,24 @@
     <string name="core_tab_regularity_needs">需要佩戴约 5 天</string>
     <string name="core_tab_regularity_steady">本周入睡时间稳定</string>
     <string name="core_tab_regularity_moved">本周入睡时间有所变动</string>
-    <string name="core_tab_usual_times">通常在 %1$s 入睡，%2$s 起床。</string>
+    <string name="core_tab_usual_times">通常 %1$s 前入睡，%2$s 起床</string>
     <plurals name="core_tab_breathing_learning">
-        <item quantity="other">正在了解你的常态，%1$d/%2$d 晚</item>
+        <item quantity="other">了解中，%1$d/%2$d 晚</item>
     </plurals>
-    <string name="core_tab_breathing_usual">你平时为每小时 %1$s 次</string>
+    <string name="core_tab_breathing_usual">你的常态，每小时 %1$s 次</string>
     <plurals name="core_tab_breathing_short_learning">
-        <item quantity="other">正在了解，%1$d/%2$d 晚</item>
+        <item quantity="other">了解中，%1$d/%2$d</item>
     </plurals>
-    <string name="core_tab_breathing_short_usual">平时 %1$s，早期预估</string>
-    <string name="core_tab_load_usual">你平时为 %1$d</string>
-    <string name="core_tab_load_learning">正在了解你的常态</string>
+    <string name="core_tab_breathing_short_usual">常态 %1$s</string>
+    <string name="core_tab_load_usual">你的常态，%1$d</string>
+    <string name="core_tab_load_learning">了解中</string>
     <string name="core_tab_balance_building">提升中</string>
     <string name="core_tab_balance_easing">减量中</string>
     <string name="core_tab_balance_steady">平稳</string>
-    <string name="core_tab_active_reached">过去 7 天，已达成目标 %1$d</string>
-    <string name="core_tab_active_goal">过去 7 天，目标 %1$d</string>
-    <string name="core_tab_points_reached">过去 7 天，达到 %1$d 或以上</string>
-    <string name="core_tab_points_aim">过去 7 天，目标 %1$d</string>
+    <string name="core_tab_active_reached">目标已达成，%1$d 分钟</string>
+    <string name="core_tab_active_goal">目标 %1$d</string>
+    <string name="core_tab_points_reached">目标已达成，%1$d 分</string>
+    <string name="core_tab_points_aim">目标 %1$d</string>
     <string name="core_tab_calories_today">今日至今预估 kcal</string>
     <string name="core_tab_calories_partial">预估 kcal（仅佩戴部分时段）</string>
     <string name="core_tab_calories">预估 kcal</string>
@@ -98,7 +98,7 @@
     </plurals>
     <string name="core_tab_nap_at">于 %1$s</string>
     <plurals name="core_tab_naps_first_at">
-        <item quantity="other">%1$d 次小睡，首次于 %2$s</item>
+        <item quantity="other">%1$d 次小睡，%2$s 起</item>
     </plurals>
     <string name="core_tab_last_7_days">最近 7 天</string>
     <string name="core_tab_auto_detected">自动识别</string>
@@ -111,7 +111,7 @@
     <string name="core_tab_habit_age_updated">更新于 %1$s</string>
     <string name="core_tab_first_estimate">首次预估于 %1$s</string>
     <string name="core_tab_age_for_now">目前显示你的实际年龄</string>
-    <string name="core_tab_age_for_now_waiting">目前显示你的实际年龄。%1$s</string>
+    <string name="core_tab_age_for_now_waiting">%1$s</string>
     <string name="core_tab_habit_age_likely">预计 %1$d 至 %2$d 岁</string>
     <plurals name="core_tab_habit_age_younger">
         <item quantity="other">比上周年轻 %d 岁</item>

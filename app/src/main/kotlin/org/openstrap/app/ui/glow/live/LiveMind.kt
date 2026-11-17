@@ -1,5 +1,7 @@
 package org.openstrap.app.ui.glow.live
 
+import org.openstrap.app.ui.glow.HaloBigNumber
+import org.openstrap.app.ui.glow.BigNumber
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Spacer
@@ -159,7 +161,7 @@ internal fun LiveMindScreen(
 @Composable
 private fun MindNumber(time: () -> Long, tint: Color, onClock: (Rect) -> Unit) {
     Box(Modifier.onGloballyPositioned { onClock(it.boundsInRoot()) }) {
-        HeroNumber(dotClock(time()), null, tint)
+        HaloBigNumber(dotClock(time()), BigNumber.Live, unitColor = tint)
     }
 }
 

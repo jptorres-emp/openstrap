@@ -1,5 +1,6 @@
 package org.openstrap.app.ui.glow
 
+import org.openstrap.app.ui.theme.Greys
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
@@ -53,7 +54,7 @@ internal val MedalShape.layout: MedalLayout
 internal fun DrawScope.drawToken(shape: MedalShape, ink: Color, locked: Boolean, lit: Float) {
     val face = faceOf(shape)
     if (locked) {
-        drawPath(face, LockedFill)
+        drawPath(face, Greys.Raised)
         drawPath(face, LockedRim, style = Stroke(RIM_LINE))
         return
     }
@@ -132,12 +133,10 @@ private val RosetteFace: Path by lazy {
     }
 }
 
-/** A token still to earn (rules A1): #121317, its rim #24262C. */
-private val LockedFill = Color(0xFF121317)
-private val LockedRim = Color(0xFF24262C)
+private val LockedRim = Greys.MedalQuiet
 
 /** The quiet arcs of the weekly goal's ring. */
-private val RingQuiet = Color(0xFF24262C)
+private val RingQuiet = Greys.MedalQuiet
 
 /** The frame a token is drawn on, units across, and its middle. */
 internal const val FRAME = 100f

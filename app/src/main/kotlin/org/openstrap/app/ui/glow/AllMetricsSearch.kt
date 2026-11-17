@@ -1,5 +1,7 @@
 package org.openstrap.app.ui.glow
 
+import org.openstrap.app.ui.theme.Space
+import org.openstrap.app.ui.theme.Greys
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -29,6 +31,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import org.openstrap.app.R
 import org.openstrap.app.ui.theme.AppIcons
+import org.openstrap.app.ui.theme.Ink
 import org.openstrap.app.ui.theme.SportIcons
 
 /* The search on All metrics (board HaloAllMetrics, "Search metrics"): the filter over the index and its field. */
@@ -69,22 +72,22 @@ internal fun MetricSearchField(query: String, onChange: (String) -> Unit, modifi
         keyboardActions = KeyboardActions(onSearch = { keyboard?.hide() }),
         decorationBox = { field ->
             Row(
-                Modifier.fillMaxWidth().height(48.dp).clip(GlowLayout.TileShape).background(HaloButtonSurface).padding(horizontal = 16.dp),
+                Modifier.fillMaxWidth().height(48.dp).clip(GlowLayout.TileShape).background(Greys.Control).padding(horizontal = Space.S16),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(SportIcons.Search, null, tint = Color.White.copy(alpha = GlowType.CAPTION_ALPHA), modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(10.dp))
+                Icon(SportIcons.Search, null, tint = Ink.Secondary, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(Space.S8))
                 Box(Modifier.weight(1f)) {
                     if (query.isEmpty()) Text(
-                        stringResource(R.string.glow_metrics_search), color = Color.White.copy(alpha = GlowType.CAPTION_ALPHA),
+                        stringResource(R.string.glow_metrics_search), color = Ink.Secondary,
                         style = GlowType.body, maxLines = 1,
                     )
                     field()
                 }
                 if (query.isNotEmpty()) Icon(
-                    AppIcons.X, stringResource(R.string.glow_choose_clear), tint = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA),
+                    AppIcons.X, stringResource(R.string.glow_choose_clear), tint = Ink.Secondary,
                     // 48 dp to tap, the mark drawn 16 dp, as on Choose.
-                    modifier = Modifier.offset(x = 10.dp).size(48.dp).clip(CircleShape).clickable { onChange("") }.padding(16.dp),
+                    modifier = Modifier.offset(x = 10.dp).size(48.dp).clip(CircleShape).clickable { onChange("") }.padding(Space.S16),
                 )
             }
         },

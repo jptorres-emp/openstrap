@@ -1,5 +1,16 @@
 package org.openstrap.app.ui.firmware
 
+import org.openstrap.app.ui.glow.HaloNote
+import org.openstrap.app.ui.glow.HaloProgress
+import org.openstrap.app.ui.glow.BannerKind
+import org.openstrap.app.ui.glow.HaloBanner
+import org.openstrap.app.ui.glow.HaloCard
+import org.openstrap.app.ui.glow.HaloPageHeader
+import org.openstrap.app.ui.glow.HaloPageList
+import org.openstrap.app.ui.glow.HaloTitle
+import org.openstrap.app.ui.glow.PageVariant
+import org.openstrap.app.ui.theme.IconSize
+import org.openstrap.app.ui.theme.Space
 import android.app.Activity
 import android.view.WindowManager
 import androidx.activity.compose.BackHandler
@@ -40,22 +51,19 @@ import org.openstrap.app.firmware.UpdateCheck
 import org.openstrap.app.presentation.Units
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
-import org.openstrap.app.ui.glow.CardTitle
+import org.openstrap.app.ui.glow.ButtonPair
+import org.openstrap.app.ui.glow.HaloButton
+import org.openstrap.app.ui.glow.HaloButtonVariant
 import org.openstrap.app.ui.glow.GlowLayout
 import org.openstrap.app.ui.glow.GlowType
-import org.openstrap.app.ui.glow.PageButton
-import org.openstrap.app.ui.glow.PageActionRow
+import org.openstrap.app.ui.glow.ActionRow
 import org.openstrap.app.ui.glow.PageGroup
-import org.openstrap.app.ui.glow.PageInfoRow
-import org.openstrap.app.ui.glow.PageConfirm
+import org.openstrap.app.ui.glow.InfoRow
+import org.openstrap.app.ui.glow.HaloConfirmSheet
 import org.openstrap.app.ui.glow.PageField
-import org.openstrap.app.ui.glow.PageProgress
-import org.openstrap.app.ui.glow.PageHeader
-import org.openstrap.app.ui.glow.PageNote
-import org.openstrap.app.ui.glow.PagePanel
-import org.openstrap.app.ui.glow.PageRow
-import org.openstrap.app.ui.glow.PageSwitchRow
-import org.openstrap.app.ui.dashboard.ScreenList
+import org.openstrap.app.ui.glow.NavRow
+import org.openstrap.app.ui.glow.SwitchRow
+import org.openstrap.app.ui.theme.Ink
 import org.openstrap.app.ui.theme.MetricColors
 import org.openstrap.app.ui.theme.AppIcons
 import org.openstrap.app.ui.zepp.ZeppSignInDialog
@@ -83,24 +91,24 @@ fun FirmwareScreen(vm: FirmwareViewModel, contentPadding: PaddingValues, onBack:
     confirm?.let { image -> ConfirmInstall(image, vm.blockers(), onDismiss = { confirm = null },
         onInstall = { confirm = null; vm.install(image) }) }
 
-    ScreenList(contentPadding, gutter = GlowLayout.Gutter) {
-        item { PageHeader(stringResource(R.string.you_firmware_title), { vm.reset(); onBack() }, backEnabled = !installing) }
+    HaloPageList(contentPadding, variant = PageVariant.Settings) {
+        item { HaloPageHeader(stringResource(R.string.you_firmware_title), { vm.reset(); onBack() }, backEnabled = !installing) }
 
         // This strap: read only values as info rows (HaloFirmware board).
         item {
             PageGroup(heading = stringResource(R.string.you_firmware_this_strap)) {
                 val c = connection as? ConnectionState.Connected
-                PageInfoRow(
+                InfoRow(
                     stringResource(R.string.you_firmware_title),
                     info?.firmware ?: c?.firmware ?: stringResource(R.string.you_firmware_unknown), divider = false,
                 )
-                info?.hardware?.let { PageInfoRow(stringResource(R.string.you_firmware_hardware), it) }
-                PageInfoRow(
+                info?.hardware?.let { InfoRow(stringResource(R.string.you_firmware_hardware), it) }
+                InfoRow(
                     stringResource(R.string.you_firmware_battery),
                     c?.batteryPercent?.let { stringResource(R.string.you_firmware_percent, it) }
                         ?: stringResource(R.string.you_firmware_not_connected),
                 )
-                PageInfoRow(
+                InfoRow(
                     stringResource(R.string.you_firmware_service),
                     stringResource(
                         when (info?.dfuAvailable) {
@@ -119,10 +127,10 @@ fun FirmwareScreen(vm: FirmwareViewModel, contentPadding: PaddingValues, onBack:
         item {
             PageGroup(heading = stringResource(R.string.you_firmware_group_new),
                 footnote = stringResource(R.string.you_firmware_updates_text)) {
-                if (step == FirmwareStep.Idle) PageActionRow(
+                if (step == FirmwareStep.Idle) ActionRow(
                     stringResource(R.string.you_firmware_check), vm::check, icon = AppIcons.Refresh04, divider = false,
                 )
-                PageActionRow(
+                ActionRow(
                     stringResource(R.string.you_firmware_from_file), { pickFile.launch(arrayOf("*/*")) },
                     icon = AppIcons.DownloadSimple, enabled = !installing, divider = step == FirmwareStep.Idle,
                 )
@@ -131,8 +139,8 @@ fun FirmwareScreen(vm: FirmwareViewModel, contentPadding: PaddingValues, onBack:
 
         // Update checks need a signed-in Zepp account; its page is a row away, as on the Strap page.
         item {
-            PageGroup(heading = stringResource(R.string.you_firmware_service)) {
-                PageRow(
+            PageGroup(heading = stringResource(R.string.you_firmware_group_updates)) {
+                NavRow(
                     stringResource(R.string.you_zepp_title),
                     stringResource(if (account != null) R.string.you_firmware_account_signed_in else R.string.you_strap_not_signed_in),
                     onClick = onZeppAccount, below = true, divider = false, enabled = !installing, icon = AppIcons.Key,
@@ -141,8 +149,8 @@ fun FirmwareScreen(vm: FirmwareViewModel, contentPadding: PaddingValues, onBack:
         }
 
         item {
-            PagePanel(title = stringResource(R.string.you_firmware_privacy)) {
-                Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            HaloCard(title = { HaloTitle(stringResource(R.string.you_firmware_privacy)) }) {
+                Column(verticalArrangement = Arrangement.spacedBy(Space.S12)) {
                     Point(
                         AppIcons.Key, stringResource(R.string.you_firmware_privacy_sign_in),
                         stringResource(R.string.you_firmware_privacy_sign_in_text),
@@ -163,7 +171,7 @@ fun FirmwareScreen(vm: FirmwareViewModel, contentPadding: PaddingValues, onBack:
 
 @Composable
 private fun StepPanel(step: FirmwareStep, vm: FirmwareViewModel, onInstall: (ReadyImage) -> Unit) {
-    PagePanel {
+    HaloCard {
         when (step) {
             FirmwareStep.Idle -> Unit
             FirmwareStep.Checking -> Busy(stringResource(R.string.you_firmware_checking), null)
@@ -173,43 +181,45 @@ private fun StepPanel(step: FirmwareStep, vm: FirmwareViewModel, onInstall: (Rea
             )
             is FirmwareStep.Ready -> {
                 val image = step.image
-                CardTitle(stringResource(R.string.you_firmware_ready))
-                InfoLine(stringResource(R.string.you_firmware_image), image.title)
-                InfoLine(
+                HaloTitle(stringResource(R.string.you_firmware_ready))
+                InfoRow(stringResource(R.string.you_firmware_image), image.title)
+                InfoRow(
                     stringResource(R.string.you_firmware_size),
                     stringResource(R.string.you_firmware_megabytes, image.bytes.size / BYTES_PER_MB),
                 )
                 image.trailer?.let {
-                    InfoLine(
+                    InfoRow(
                         stringResource(R.string.you_firmware_signed_for),
                         stringResource(R.string.you_firmware_signed_for_value, it.pnpId, it.pnpVersion),
                     )
                 }
-                image.warnings.forEach { Warning(it) }
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    PageButton(stringResource(R.string.you_action_cancel), vm::reset, Modifier.weight(1f))
-                    PageButton(stringResource(R.string.you_firmware_install), { onInstall(image) }, Modifier.weight(1f), primary = true)
-                }
+                image.warnings.forEach { HaloBanner(BannerKind.Warn, it, framed = false) }
+                ButtonPair(
+                    stringResource(R.string.you_action_cancel),
+                    vm::reset,
+                    stringResource(R.string.you_firmware_install),
+                    { onInstall(image) },
+                )
             }
             is FirmwareStep.Installing -> {
                 Busy(step.label, step.fraction)
-                PageNote(stringResource(R.string.you_firmware_installing_note))
+                HaloNote(stringResource(R.string.you_firmware_installing_note))
             }
             FirmwareStep.Installed -> {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.S8)) {
                     Icon(AppIcons.CheckCircle, null, tint = MetricColors.good)
-                    CardTitle(stringResource(R.string.you_firmware_installed))
+                    HaloTitle(stringResource(R.string.you_firmware_installed))
                 }
                 Body(stringResource(R.string.you_firmware_installed_text))
-                PageButton(stringResource(R.string.you_firmware_done), vm::reset, Modifier.fillMaxWidth())
+                HaloButton(stringResource(R.string.you_firmware_done), vm::reset, Modifier.fillMaxWidth())
             }
             is FirmwareStep.Failed -> {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.S8)) {
                     Icon(AppIcons.WarningCircle, null, tint = MetricColors.warn)
-                    CardTitle(stringResource(R.string.you_firmware_failed))
+                    HaloTitle(stringResource(R.string.you_firmware_failed))
                 }
                 Body(step.message)
-                PageButton(stringResource(R.string.you_firmware_ok), vm::reset, Modifier.fillMaxWidth())
+                HaloButton(stringResource(R.string.you_firmware_done), vm::reset, Modifier.fillMaxWidth())
             }
         }
     }
@@ -218,28 +228,28 @@ private fun StepPanel(step: FirmwareStep, vm: FirmwareViewModel, onInstall: (Rea
 @Composable
 private fun CheckResult(result: UpdateCheck, vm: FirmwareViewModel) {
     if (result.upToDate) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.S8)) {
             Icon(AppIcons.CheckCircle, null, tint = MetricColors.good)
-            CardTitle(stringResource(R.string.you_firmware_up_to_date))
+            HaloTitle(stringResource(R.string.you_firmware_up_to_date))
         }
         Body(stringResource(R.string.you_firmware_up_to_date_text))
-        PageButton(stringResource(R.string.you_firmware_ok), vm::reset, Modifier.fillMaxWidth())
+        HaloButton(stringResource(R.string.you_firmware_done), vm::reset, Modifier.fillMaxWidth())
         return
     }
     val next = result.installOrder.firstOrNull()
-    CardTitle(stringResource(if (result.forced) R.string.you_firmware_required else R.string.you_firmware_available))
-    result.parts.forEach { InfoLine(it.label, stringResource(R.string.you_firmware_part_size, it.version, Units.count(it.length / 1024))) }
-    result.changeLog?.let { PageNote(it.substringBefore("###summary###").trim()) }
+    HaloTitle(stringResource(if (result.forced) R.string.you_firmware_required else R.string.you_firmware_available))
+    result.parts.forEach { InfoRow(it.label, stringResource(R.string.you_firmware_part_size, it.version, Units.count(it.length / 1024))) }
+    result.changeLog?.let { HaloNote(it.substringBefore("###summary###").trim()) }
     if (result.installOrder.size > 1) {
-        PageNote(stringResource(R.string.you_firmware_parts_note))
+        HaloNote(stringResource(R.string.you_firmware_parts_note))
     }
-    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        PageButton(stringResource(R.string.you_firmware_not_now), vm::reset, Modifier.weight(1f))
-        PageButton(
-            stringResource(if (next == null) R.string.you_firmware_unsupported else R.string.you_firmware_download),
-            { next?.let(vm::download) }, Modifier.weight(1f), enabled = next != null, primary = true,
-        )
-    }
+    ButtonPair(
+        stringResource(R.string.you_firmware_not_now),
+        vm::reset,
+        stringResource(if (next == null) R.string.you_firmware_unsupported else R.string.you_firmware_download),
+        { next?.let(vm::download) },
+        rightEnabled = next != null,
+    )
 }
 
 /**
@@ -251,8 +261,8 @@ fun ZeppAccountScreen(vm: FirmwareViewModel, contentPadding: PaddingValues, onBa
     BackHandler(onBack = onBack)
     val account by vm.account.collectAsStateWithLifecycle()
     val installing = vm.step.collectAsStateWithLifecycle().value is FirmwareStep.Installing
-    ScreenList(contentPadding, gutter = GlowLayout.Gutter) {
-        item { PageHeader(stringResource(R.string.you_zepp_title), onBack) }
+    HaloPageList(contentPadding, variant = PageVariant.Settings) {
+        item { HaloPageHeader(stringResource(R.string.you_zepp_title), onBack) }
         item { AccountPanel(account, enabled = !installing, onSave = vm::saveAccount, onClear = vm::clearAccount,
             onSignIn = vm::saveSignIn) }
     }
@@ -280,30 +290,30 @@ private fun AccountPanel(
     }
     if (mode != AccountMode.EditingToken) {
         // The saved sign-in as read only rows, then what can be done with it (HaloZeppAccount board).
-        Column(verticalArrangement = Arrangement.spacedBy(24.dp)) {
-            if (account == null) PageNote(stringResource(R.string.you_zepp_account_none))
+        Column(verticalArrangement = Arrangement.spacedBy(Space.S24)) {
+            if (account == null) HaloNote(stringResource(R.string.you_zepp_account_none))
             else PageGroup(heading = stringResource(R.string.you_zepp_saved), footnote = stringResource(R.string.you_zepp_token_stays)) {
                 val hasUser = account.userId.isNotEmpty()
-                if (hasUser) PageInfoRow(stringResource(R.string.you_zepp_user), account.userId, divider = false)
-                PageInfoRow(stringResource(R.string.you_zepp_server), account.apiBase.removePrefix("https://"), divider = hasUser)
-                PageInfoRow(
+                if (hasUser) InfoRow(stringResource(R.string.you_zepp_user), account.userId, divider = false)
+                InfoRow(stringResource(R.string.you_zepp_server), account.apiBase.removePrefix("https://"), divider = hasUser)
+                InfoRow(
                     stringResource(R.string.you_zepp_china),
                     stringResource(if (account.china) R.string.you_value_on else R.string.you_value_off),
                 )
             }
             PageGroup {
-                PageActionRow(
+                ActionRow(
                     stringResource(if (account == null) R.string.you_pair_sign_in else R.string.you_zepp_sign_in_again),
                     { mode = AccountMode.SigningIn }, icon = AppIcons.Key, enabled = enabled, divider = false,
                 )
-                PageRow(
+                NavRow(
                     stringResource(if (account == null) R.string.you_zepp_paste_token else R.string.you_zepp_edit),
                     stringResource(R.string.you_zepp_edit_note), onClick = { mode = AccountMode.EditingToken }, below = true,
                     enabled = enabled, icon = AppIcons.SlidersHorizontal,
                 )
             }
             if (account != null) PageGroup(footnote = stringResource(R.string.you_zepp_remove_note)) {
-                PageActionRow(
+                ActionRow(
                     stringResource(R.string.you_zepp_remove), onClear, icon = AppIcons.Trash, destructive = true, enabled = enabled,
                     divider = false,
                 )
@@ -311,7 +321,7 @@ private fun AccountPanel(
         }
         return
     }
-    PagePanel {
+    HaloCard {
         // Keyed on the account, so a fresh sign-in or renewed token starts the fields again from it and a stale copy
         // can't be written back over it. The pasted token is the secret: plain remember, so it never reaches the saved state.
         var token by remember(account) { mutableStateOf("") }
@@ -328,35 +338,34 @@ private fun AccountPanel(
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         )
         PageField(api, { api = it }, stringResource(R.string.you_zepp_server), Modifier.fillMaxWidth())
-        PageSwitchRow(
+        SwitchRow(
             stringResource(R.string.you_zepp_china), stringResource(R.string.you_zepp_china_note), china, { china = it }, divider = false,
         )
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            PageButton(stringResource(R.string.you_action_cancel), { mode = AccountMode.Idle }, Modifier.weight(1f))
-            PageButton(
-                stringResource(R.string.you_action_save),
-                { onSave(token.ifBlank { account?.appToken.orEmpty() }, user, api, china); mode = AccountMode.Idle }, Modifier.weight(1f),
-                enabled = token.isNotBlank() || account != null, primary = true,
-            )
-        }
+        ButtonPair(
+            stringResource(R.string.you_action_cancel),
+            { mode = AccountMode.Idle },
+            stringResource(R.string.you_action_save),
+            { onSave(token.ifBlank { account?.appToken.orEmpty() }, user, api, china); mode = AccountMode.Idle },
+            rightEnabled = token.isNotBlank() || account != null,
+        )
     }
 }
 
 @Composable
 private fun ConfirmInstall(image: ReadyImage, blockers: List<String>, onDismiss: () -> Unit, onInstall: () -> Unit) {
     var accepted by remember { mutableStateOf(image.warnings.isEmpty()) }
-    PageConfirm(
-        stringResource(R.string.you_firmware_confirm_title, image.title),
-        if (blockers.isNotEmpty()) null else stringResource(R.string.you_firmware_confirm_text),
+    HaloConfirmSheet(
+        stringResource(R.string.you_firmware_confirm_title),
+        if (blockers.isNotEmpty()) null else stringResource(R.string.you_firmware_confirm_text, image.title),
         confirm = stringResource(R.string.you_firmware_install), onConfirm = onInstall, onDismiss = onDismiss,
         confirmEnabled = blockers.isEmpty() && accepted,
     ) {
         if (blockers.isNotEmpty()) {
-            blockers.forEach { Warning(it) }
+            blockers.forEach { HaloBanner(BannerKind.Warn, it, framed = false) }
         } else {
-            image.warnings.forEach { Warning(it) }
+            image.warnings.forEach { HaloBanner(BannerKind.Warn, it, framed = false) }
             if (image.warnings.isNotEmpty()) {
-                PageSwitchRow(stringResource(R.string.you_firmware_confirm_anyway), null, accepted, { accepted = it }, divider = false)
+                SwitchRow(stringResource(R.string.you_firmware_confirm_anyway), null, accepted, { accepted = it }, divider = false)
             }
         }
     }
@@ -364,44 +373,28 @@ private fun ConfirmInstall(image: ReadyImage, blockers: List<String>, onDismiss:
 
 @Composable
 private fun Busy(label: String, fraction: Float?) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.S12)) {
         Text(label, style = GlowType.body, color = Color.White, modifier = Modifier.weight(1f))
         fraction?.let {
             Text(stringResource(R.string.you_firmware_percent, (it * 100).toInt()), style = GlowType.body, color = Color.White)
         }
     }
-    PageProgress(fraction)
+    HaloProgress(fraction)
 }
 
 @Composable
-private fun Body(text: String) = Text(text, style = GlowType.body, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA))
+private fun Body(text: String) = Text(text, style = GlowType.body, color = Ink.Secondary)
 
 /** One line of the privacy card: icon, short title, one sentence. */
 @Composable
 private fun Point(icon: ImageVector, title: String, body: String) {
     Row(verticalAlignment = Alignment.Top) {
-        Icon(icon, null, Modifier.padding(top = 2.dp).size(20.dp), tint = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA))
-        Spacer(Modifier.width(12.dp))
+        Icon(icon, null, Modifier.padding(top = Space.S2).size(20.dp), tint = Ink.Secondary)
+        Spacer(Modifier.width(Space.S12))
         Column {
             Text(title, style = GlowType.body, color = Color.White)
-            PageNote(body)
+            HaloNote(body)
         }
-    }
-}
-
-@Composable
-private fun InfoLine(label: String, value: String) {
-    Row(Modifier.fillMaxWidth()) {
-        Text(label, style = GlowType.body, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), modifier = Modifier.weight(1f))
-        Text(value, style = GlowType.body, color = Color.White)
-    }
-}
-
-@Composable
-private fun Warning(text: String) {
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Icon(AppIcons.Warning, null, tint = MetricColors.warn, modifier = Modifier.size(20.dp))
-        Text(text, style = GlowType.secondary, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA))
     }
 }
 

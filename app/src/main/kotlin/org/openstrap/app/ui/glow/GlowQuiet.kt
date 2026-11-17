@@ -1,6 +1,8 @@
 package org.openstrap.app.ui.glow
 
+import org.openstrap.app.ui.theme.Space
 import androidx.compose.foundation.border
+import org.openstrap.app.ui.theme.Ink
 import org.openstrap.app.ui.theme.MetricColors
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -19,45 +21,6 @@ import org.openstrap.app.ui.components.pressClickable
  * The quiet tier as a free-form panel (L0): the solid card round content that isn't rows, like controls, a chart or a
  * note. No light, no rim and no dots, so the lit cards on a screen stay special.
  */
-
-/** A quiet panel: the solid card, [GlowLayout.CardPadding] inside, blocks 14 dp apart. */
-@Composable
-fun QuietPanel(
-    modifier: Modifier = Modifier,
-    onClick: (() -> Unit)? = null,
-    content: @Composable ColumnScope.() -> Unit,
-) {
-    Column(
-        modifier
-            .fillMaxWidth()
-            .let { if (onClick != null) it.pressClickable(onClick, GlowLayout.CardShape) else it }
-            .solidCard(GlowLayout.CardShape)
-            .padding(GlowLayout.CardPadding),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
-        content = content,
-    )
-}
-
-/**
- * A card that is only its outline, 1.5 dp of white at 20% on black, for something on hold or gone with nothing lit:
- * the rest between sets, a deleted night. Not [GlowCard]'s outline, which draws the card's colour at 70%, louder
- * than these want.
- */
-@Composable
-internal fun OutlineCard(
-    modifier: Modifier = Modifier,
-    horizontalAlignment: Alignment.Horizontal = Alignment.Start,
-    verticalArrangement: Arrangement.Vertical = Arrangement.Top,
-    content: @Composable ColumnScope.() -> Unit,
-) {
-    Column(
-        modifier.fillMaxWidth().clip(GlowLayout.CardShape)
-            .border(1.5.dp, Color.White.copy(alpha = 0.2f), GlowLayout.CardShape).padding(20.dp),
-        verticalArrangement = verticalArrangement,
-        horizontalAlignment = horizontalAlignment,
-        content = content,
-    )
-}
 
 /** A change for the better, or a GPS fix good enough: the app's good green. */
 internal val TrendGood = MetricColors.good

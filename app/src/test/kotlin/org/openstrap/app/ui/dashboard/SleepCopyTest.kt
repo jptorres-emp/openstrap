@@ -139,8 +139,8 @@ class SleepCopyTest {
         assertEquals("ms, last 30 nights", SleepCopy.nightLabel(Metric.Hrv, Range.Month))
         assertTrue("day and night" in SleepCopy.nightLabel(Metric.SkinTemperature, Range.Month))
         assertEquals("%, last 30 nights", SleepCopy.nightLabel(Metric.Spo2, Range.Month))
-        assertEquals("No sleep" to "None recorded last night", SleepCopy.nightNoValue(hasSleep = false, today = true))
-        assertEquals("No reading" to "Not measured that night", SleepCopy.nightNoValue(hasSleep = true, today = false))
+        assertEquals("No sleep" to "No sleep recorded", SleepCopy.nightNoValue(hasSleep = false, today = true))
+        assertEquals("No reading yet" to "Not measured that night", SleepCopy.nightNoValue(hasSleep = true, today = false))
     }
 
     @Test fun `blood oxygen is the night's on the Sleep and Recovery tabs only, the day's latest reading elsewhere`() {

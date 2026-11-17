@@ -107,7 +107,7 @@ class FrameRulesTest {
     }
 
     @Test fun `tabs keep their phone gutters folded, and unfolded are at most 960 dp with a 24 dp gutter`() {
-        assertEquals(20.dp, GlowLayout.dashboardGutter(411.dp))
+        assertEquals(16.dp, GlowLayout.dashboardGutter(411.dp))
         assertEquals(16.dp, GlowLayout.dashboardGutter(375.dp))
         assertEquals(24.dp, GlowLayout.dashboardGutter(750.dp))
         // A tablet: the content is 960 dp, centred.
@@ -118,9 +118,9 @@ class FrameRulesTest {
 
     @Test fun `a page keeps to one centred column of at most 600 dp, and a phone's page is unchanged`() {
         assertEquals(600.dp, GlowLayout.PageMaxWidth)
-        assertEquals(20.dp, GlowLayout.pageSide(411.dp, GlowLayout.PageMaxWidth, GlowLayout.Gutter))
+        assertEquals(16.dp, GlowLayout.pageSide(411.dp, GlowLayout.PageMaxWidth, GlowLayout.Gutter))
         val side = GlowLayout.pageSide(750.dp, GlowLayout.PageMaxWidth, GlowLayout.Gutter)
-        assertEquals(560.dp, 750.dp - side * 2)
+        assertEquals(568.dp, 750.dp - side * 2)
         // A dashboard clears the column and lays out its own width.
         assertEquals(16.dp, GlowLayout.pageSide(750.dp, androidx.compose.ui.unit.Dp.Unspecified, 16.dp))
     }
@@ -156,20 +156,20 @@ class FrameRulesTest {
     @Test fun `sheets, workout pages and the Zepp sign-in keep to the page column`() {
         val glass = source("ui/components/Glass.kt").substringAfter("fun GlassSheet(")
         assertTrue("GlassSheet is at most PageMaxWidth", "widthIn(max = org.openstrap.app.ui.glow.GlowLayout.PageMaxWidth)" in glass)
-        val workout = source("ui/glow/GlowWorkoutMode.kt").substringAfter("fun WorkoutPage(").substringBefore("\n}\n")
-        assertTrue("WorkoutPage centres its content and its pinned buttons", Regex("""pageSide\(""").findAll(workout).count() == 1 && "start = side, end = side" in workout)
+        val workout = source("ui/glow/HaloPage.kt").substringAfter("fun HaloPageColumn(").substringBefore("\n}\n")
+        assertTrue("HaloPageColumn centres its content and its pinned buttons", Regex("""pageSide\(""").findAll(workout).count() == 1 && "start = side, end = side" in workout)
         // Profile's Save is the header's pill now (HaloProfile board), so it is in the page column with the header.
         val zepp = source("ui/zepp/ZeppSignIn.kt").substringAfter("fun ZeppSignInDialog(")
         assertTrue("the Zepp sign-in keeps to the page column", "Column(Modifier.widthIn(max = GlowLayout.PageMaxWidth)" in zepp && "contentAlignment = Alignment.TopCenter" in zepp)
-        val screens = source("ui/dashboard/ScreenParts.kt")
-        assertTrue("ScreenList centres a page", "LocalPageColumn.current" in screens)
+        val screens = source("ui/glow/HaloPage.kt").substringAfter("fun HaloPageList(")
+        assertTrue("HaloPageList centres a page", "LocalPageColumn.current" in screens)
     }
 
     /* ------------------------------ Smalls never narrower than folded (spec 2.4) ------------------------------ */
 
     @Test fun `a Small is never narrower than two across on a folded phone`() {
-        // Folded (411 dp, 20 dp gutters): about 180 dp each, the narrowest a Small gets.
-        assertTrue(GlowGrid.unitWidthIn(411.dp - 40.dp) >= GlowLayout.SmallMinWidth)
+        // Folded (411 dp, 16 dp gutters): about 180 dp each, the narrowest a Small gets.
+        assertTrue(GlowGrid.unitWidthIn(411.dp - 32.dp) >= GlowLayout.SmallMinWidth)
         assertTrue(GlowLayout.SmallMinWidth >= 176.dp)
         // The Fold's inner screen: a 345 dp column would make each Small 166 dp, so a row of Smalls spans both columns.
         assertTrue(GlowLayout.smallsAcross(750.dp))
@@ -253,11 +253,13 @@ class FrameRulesTest {
         val parts = source("ui/glow/PageParts.kt")
         val name = parts.substringAfter("internal fun RowName(").substringBefore("\n\n")
         assertTrue("RowName is one line", "maxLines = 1" in name && "TextOverflow.Ellipsis" in name)
-        val row = parts.substringAfter("fun PageRow(").substringBefore("\n}\n")
-        assertTrue("PageRow lays out name and value with RowNameValue", "RowNameValue(" in row && "RowName(" in row)
-        assertTrue("PageRow no longer squeezes its value beside the name", "widthIn(max = 160.dp)" !in row)
-        assertTrue("PageSwitchRow keeps its name on one line", "RowName(title)" in parts.substringAfter("fun PageSwitchRow("))
-        assertTrue("ListRow keeps its name on one line", "RowName(name)" in source("ui/glow/GlowList.kt").substringAfter("fun ListRow("))
+        // Every row is HaloRow: its title is RowName (or the same one-line text beside a suffix), and a value without a
+        // line shares the title's column through RowNameValue, so the title never wraps.
+        val row = source("ui/glow/HaloRow.kt")
+        val text = row.substringAfter("private fun RowText(").substringBefore("\n}\n")
+        assertTrue("HaloRow lays out title and value with RowNameValue", "RowNameValue(" in text && "RowName(title, titleInk)" in text)
+        assertTrue("a title beside a suffix is one line too", "maxLines = 1" in text && "TextOverflow.Ellipsis" in text)
+        assertTrue("HaloRow no longer squeezes its value beside the name", "widthIn(max = 160.dp)" !in row)
     }
 
     /* --------------------------------- A fade under pinned buttons (spec 3.2) --------------------------------- */
@@ -276,14 +278,14 @@ class FrameRulesTest {
 
     /** Workout rules section 1: the 120 px fade behind every bottom bar (Ready, Live, Summary). */
     @Test fun `every pinned button has the fade behind it and the page ends clear of it`() {
-        val workout = source("ui/glow/GlowWorkoutMode.kt").substringAfter("fun WorkoutPage(").substringBefore("\n}\n")
-        assertTrue("WorkoutPage's pinned buttons (Start, Done, Choose the sport) have the fade", ".pinnedFade()" in workout)
-        assertTrue("WorkoutPage's content ends clear of them", "PinnedFade.listClearance(pinnedHeight)" in workout)
-        assertTrue("WorkoutPage's old short fade is gone", "0.25f to Color.Black" !in workout)
-        // Every page with pinned buttons uses WorkoutPage's.
+        val workout = source("ui/glow/HaloPage.kt").substringAfter("fun HaloPageColumn(").substringBefore("\n}\n")
+        assertTrue("HaloPageColumn's pinned buttons (Start, Done, Choose the sport) have the fade", ".pinnedFade()" in workout)
+        assertTrue("HaloPageColumn's content ends clear of them", "PinnedFade.listClearance(pinnedHeight)" in workout)
+        assertTrue("HaloPageColumn's old short fade is gone", "0.25f to Color.Black" !in workout)
+        // Every page with pinned buttons uses HaloPageColumn's.
         for (f in listOf("ui/glow/GlowWorkoutMode.kt", "ui/glow/ReadyScreen.kt", "ui/glow/ChooseScreen.kt", "ui/glow/GlowWorkoutSummary.kt")) {
             val src = source(f)
-            assertTrue("$f pins its buttons through WorkoutPage", "pinned = {" !in src || "WorkoutPage(" in src)
+            assertTrue("$f pins its buttons through HaloPageColumn", "pinned = {" !in src || "HaloPageColumn(" in src)
         }
     }
 }

@@ -27,7 +27,7 @@ object WorkoutColors {
     const val REST_GREEN = ZONE_2
 
     /** A paused workout, a lost strap or no reading yet: a cool grey rather than a zone, in the app and the notification. */
-    const val PAUSED_GREY = 0xFF9AA0B4.toInt()
+    const val PAUSED_GREY = 0xFFA0A0A0.toInt()
 
     /** Zone [index] (0 to 4)'s colour, or [PAUSED_GREY] with no zone. */
     fun zone(index: Int?): Int = index?.let(ZONES::getOrNull) ?: PAUSED_GREY

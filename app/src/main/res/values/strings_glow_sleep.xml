@@ -24,7 +24,7 @@
     <!-- The regularity card's note on its title row. -->
     <string name="glow_sleep_last_7_nights">Last 7 nights</string>
     <!-- The regularity card when no night in the week has sleep. -->
-    <string name="glow_sleep_regularity_none">No sleep recorded in the last 7 nights</string>
+    <string name="glow_sleep_regularity_none">No sleep recorded</string>
     <!-- Beside the count of breathing disturbances: the count is per hour asleep. Short. -->
     <string name="glow_sleep_an_hour">an hour</string>
 
@@ -76,4 +76,8 @@
     <string name="glow_sleep_use_strap_times">Use the strap\'s times</string>
     <!-- The naps row in a sleep detail's related list when the day had none. -->
     <string name="glow_sleep_naps_none">None that day</string>
+    <!-- Under a Sleep Small's number before its first night: the word form of waiting, 18 characters at most. -->
+    <string name="glow_sleep_after_a_night">After a night</string>
+    <!-- Unit beside the naps total, which is shown as hours and minutes ("1:30 h"). -->
+    <string name="glow_sleep_unit_hours">h</string>
 </resources>

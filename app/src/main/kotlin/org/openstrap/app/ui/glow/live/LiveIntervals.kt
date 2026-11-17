@@ -1,5 +1,7 @@
 package org.openstrap.app.ui.glow.live
 
+import org.openstrap.app.ui.glow.HaloBigNumber
+import org.openstrap.app.ui.glow.BigNumber
 import org.openstrap.app.presentation.WorkoutColors
 import org.openstrap.app.presentation.dotFormat
 import androidx.compose.foundation.Canvas
@@ -40,20 +42,20 @@ import org.openstrap.app.data.WorkoutRecorder
 import org.openstrap.app.data.db.AppWorkoutRound
 import org.openstrap.app.device.ConnectionState
 import org.openstrap.app.device.WorkoutState
+import org.openstrap.app.ui.glow.HaloButton
+import org.openstrap.app.ui.glow.HaloButtonVariant
+import org.openstrap.app.ui.glow.HaloButtonSize
 import org.openstrap.app.ui.glow.DotMatrixText
 import org.openstrap.app.ui.glow.HeroValue
 import org.openstrap.app.ui.glow.draw.DotSize
-import org.openstrap.app.ui.glow.PictureCard
 import org.openstrap.app.ui.glow.GlowType
 import org.openstrap.app.ui.glow.PeakBars
 import org.openstrap.app.ui.glow.Segment
 import org.openstrap.app.ui.glow.SegmentBar
 import org.openstrap.app.ui.glow.Raised
-import org.openstrap.app.ui.glow.PageButton
-import org.openstrap.app.ui.glow.ButtonSize
+import org.openstrap.app.ui.theme.Ink
 import org.openstrap.app.ui.workout.PausedGrey
 import org.openstrap.app.ui.workout.RestTeal
-import org.openstrap.app.ui.glow.WorkoutButton
 import org.openstrap.app.ui.glow.activeSecondsState
 import org.openstrap.app.ui.glow.workoutClock
 import org.openstrap.app.ui.glow.dotClock
@@ -124,10 +126,21 @@ internal fun LiveIntervalsScreen(
         val m = intervalMoment(r, now.value, bpm, readings, emptyList()) ?: return@LiveFrame
         PhaseHero(m, color, liveAngle(r), bpm, onSkip)
         if (!split && (m.phase is Phase.Rest || m.phase == Phase.Done)) RoundPeaks(r.rounds, m.rounds)
-        if (!split && m.phase !is Phase.Rest) HeartRow(bpm, r.maxHeartRate, r.paused)
+        if (!split && m.phase !is Phase.Rest) HeartRow(bpm, r.maxHeartRate, r.paused, readings)
         LiveFigures(roundFigures(r, kcal))
         Spacer(Modifier.weight(1f))
-        PhaseAction(m, onSkip)
+        // The phase's own next step as the one white tap: Start rounds after a warm up, Done on every minute's work.
+        when (m.phase) {
+            Phase.WarmUp -> HaloButton(
+                stringResource(R.string.workout_live_start_rounds), onSkip, Modifier.fillMaxWidth(),
+                HaloButtonVariant.Primary, HaloButtonSize.Main, icon = AppIcons.PlayFill,
+            )
+            is Phase.Work -> if (m.everyMinute) HaloButton(
+                stringResource(R.string.workout_live_done_button), onSkip, Modifier.fillMaxWidth(),
+                HaloButtonVariant.Primary, HaloButtonSize.Main, icon = AppIcons.Tick02,
+            )
+            else -> Unit
+        }
     }
 }
 
@@ -162,21 +175,6 @@ private fun roundFigures(r: WorkoutState.Recording, kcal: WorkoutRecorder.Kcal?)
     kcal?.active?.toInt()?.toString() to stringResource(R.string.workout_live_figure_active_kcal),
 )
 
-/** The phase's own next step as the one white tap: Start rounds after a warm up, Done on every minute's work. */
-@Composable
-private fun PhaseAction(m: IntervalMoment, onSkip: () -> Unit) {
-    when (m.phase) {
-        Phase.WarmUp -> WorkoutButton(
-            stringResource(R.string.workout_live_start_rounds), Color.White, Color.Black, onSkip,
-            icon = AppIcons.PlayFill, height = 64.dp,
-        )
-        is Phase.Work -> if (m.everyMinute) WorkoutButton(
-            stringResource(R.string.workout_live_done_button), Color.White, Color.Black, onSkip, icon = AppIcons.Tick02, height = 64.dp,
-        )
-        else -> Unit
-    }
-}
-
 /** The phase's hero (boards HaloLiveHiitWork and HaloLiveHiitRest): its word, the rounds, the seconds and what is next. */
 @Composable
 private fun PhaseHero(m: IntervalMoment, color: Color, angle: Float, bpm: Int?, onSkip: () -> Unit) {
@@ -186,10 +184,11 @@ private fun PhaseHero(m: IntervalMoment, color: Color, angle: Float, bpm: Int?, 
         HeroTitle(title, note, tint)
         RoundBar(m)
         val seconds = m.left?.let { dotFormat("%02d", it) }
-        if (seconds != null) HeroNumber(seconds, stringResource(secondsUnit(m)), tint)
+        if (seconds != null) HaloBigNumber(seconds, BigNumber.Live, unit = stringResource(secondsUnit(m)), unitColor = tint)
         HeroLine(phaseLine(m, bpm), tint)
-        if (m.phase is Phase.Rest) PageButton(
-            stringResource(R.string.workout_live_skip_rest), onSkip, Modifier.fillMaxWidth(), size = ButtonSize.Compact, onCard = true,
+        if (m.phase is Phase.Rest) HaloButton(
+            stringResource(R.string.workout_live_skip_rest), onSkip, Modifier.fillMaxWidth(), size = HaloButtonSize.Card,
+            variant = HaloButtonVariant.Glass,
         )
     }
 }
@@ -209,7 +208,7 @@ internal fun RoundBar(m: IntervalMoment) {
     SegmentBar(
         List(m.rounds.coerceIn(1, MAX_ROUNDS_SHOWN)) { i ->
             // Done at 55 percent, the one under way white, the rest 18 percent (workout-rules.md, Progress); never dots.
-            Segment(1f, Color.White.copy(alpha = if (i < done) 0.55f else if (i == done && m.phase !is Phase.Done) 1f else 0.18f))
+            Segment(1f, if (i < done) Ink.Tertiary else if (i == done && m.phase !is Phase.Done) Ink.Primary else Ink.Line)
         },
         Modifier.semantics { contentDescription = described }, height = 6.dp, gap = 4.dp, corner = 3.dp,
     )
@@ -218,9 +217,17 @@ internal fun RoundBar(m: IntervalMoment) {
 /** The most rounds the bar splits into, so each stays wide enough to read. */
 private const val MAX_ROUNDS_SHOWN = 20
 
-/** The heart rate in a solid card (board HaloLiveHiitWork). */
+/** How many seconds of heart rate the Interval card's line shows: two minutes. */
+private const val HEART_LINE_WINDOW_S = 120L
+
+/** The heart rate in a solid card with its last two minutes as a line in the zone's colour (board HaloLiveHiitWork). */
 @Composable
-private fun HeartRow(bpm: Int?, maxHr: Int, paused: Boolean) = LiveCard { HeartLine(bpm, maxHr, paused) }
+private fun HeartRow(bpm: Int?, maxHr: Int, paused: Boolean, readings: List<Pair<Long, Int>>) = LiveCard {
+    HeartLine(bpm, maxHr, paused)
+    val zone = org.openstrap.app.data.WorkoutRecorder.liveZone(bpm, maxHr, org.openstrap.app.ui.dashboard.LocalHeartZones.current)
+    RecentHeartLine(readings, zone?.let { org.openstrap.app.ui.workout.ZONE_COLORS[it] } ?: Color.White, 48.dp, HEART_LINE_WINDOW_S, 2.4.dp)
+    Text(stringResource(R.string.workout_live_last_2_min), color = GlowType.noteColor, style = GlowType.noteSmall)
+}
 
 /**
  * Each round's peak heart rate so far as bars in the peak's zone colour, rounds to come as faint stubs, with how far
@@ -251,6 +258,8 @@ private fun RoundPeaks(rounds: List<AppWorkoutRound>, total: Int) {
  * the rest's teal, with rep N of M and the pace now, the metres to go (or the seconds of a time rep) as the one dotted
  * number, and the reps done with their times in its line.
  */
+// The route and readings arrive whole with each update and never change in place.
+@Suppress("UnstableCollections", "ComposeUnstableCollections")
 @Composable
 internal fun RepCard(r: WorkoutState.Recording, route: List<Route.Point>, readings: List<Pair<Long, Int>>, bpm: Int?) {
     val now = nowTicking()
@@ -276,7 +285,7 @@ internal fun RepCard(r: WorkoutState.Recording, route: List<Route.Point>, readin
             )
             else -> null to ""
         }
-        if (value != null) HeroNumber(value, unit, tint)
+        if (value != null) HaloBigNumber(value, BigNumber.Live, unit = unit, unitColor = tint)
         val done = r.rounds.filter { it.workEnd != null }
         val line = when {
             done.isNotEmpty() -> done.takeLast(6).joinToString(", ") { "${it.index + 1}: ${workoutClock(it.workEnd!! - it.workStart)}" }

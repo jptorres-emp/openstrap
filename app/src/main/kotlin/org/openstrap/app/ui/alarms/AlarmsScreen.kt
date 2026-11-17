@@ -1,5 +1,17 @@
 package org.openstrap.app.ui.alarms
 
+import org.openstrap.app.ui.glow.HaloNote
+import org.openstrap.app.ui.glow.NoteVariant
+import org.openstrap.app.ui.glow.BannerKind
+import org.openstrap.app.ui.glow.HaloBanner
+import org.openstrap.app.ui.glow.CardFill
+import org.openstrap.app.ui.glow.HaloCard
+import org.openstrap.app.ui.glow.HaloPageHeader
+import org.openstrap.app.ui.glow.HaloPageList
+import org.openstrap.app.ui.glow.HaloTitle
+import org.openstrap.app.ui.glow.PageVariant
+import org.openstrap.app.ui.glow.TitleVariant
+import org.openstrap.app.ui.theme.Space
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -20,18 +32,11 @@ import kotlinx.coroutines.launch
 import org.openstrap.app.R
 import org.openstrap.app.i18n.Strings
 import org.openstrap.app.presentation.TimeOfDay
-import org.openstrap.app.ui.dashboard.ScreenList
+import org.openstrap.app.ui.glow.HaloButton
 import org.openstrap.app.ui.glow.GlowLayout
-import org.openstrap.app.ui.glow.PageActionRow
-import org.openstrap.app.ui.glow.PageButton
-import org.openstrap.app.ui.glow.PageFootnote
-import org.openstrap.app.ui.glow.PageHeader
-import org.openstrap.app.ui.glow.PageItemRow
-import org.openstrap.app.ui.glow.PageNote
-import org.openstrap.app.ui.glow.PagePanel
-import org.openstrap.app.ui.glow.PageRows
-import org.openstrap.app.ui.glow.PageConfirm
-import org.openstrap.app.ui.glow.SectionLabel
+import org.openstrap.app.ui.glow.ActionRow
+import org.openstrap.app.ui.glow.ItemRow
+import org.openstrap.app.ui.glow.HaloConfirmSheet
 import org.openstrap.app.ui.theme.AppIcons
 import org.openstrap.app.ui.theme.MetricColors
 import org.openstrap.protocol.services.Alarm
@@ -79,7 +84,7 @@ fun alarmsSummary(state: AlarmsUiState, strings: Strings = Strings.app): String?
     val text = strings.format(
         R.string.you_alarms_summary_first,
         TimeOfDay.format(LocalTime.of(first.hour, first.minute)),
-        daysLabel(first.days, strings).lowercase(),
+        daysLabel(first.days, strings),
     )
     val more = on.size - 1
     return if (more > 0) strings.plural(R.plurals.you_alarms_summary_more, more, more, text) else text
@@ -122,7 +127,7 @@ fun AlarmsScreen(
     var editing by remember { mutableStateOf<Pair<Alarm, Boolean>?>(null) }
     var confirmDeleteAll by remember { mutableStateOf(false) }
     if (confirmDeleteAll) {
-        PageConfirm(
+        HaloConfirmSheet(
             stringResource(R.string.you_alarms_delete_all_title), stringResource(R.string.you_alarms_delete_all_text),
             confirm = stringResource(R.string.you_alarms_delete_all), onConfirm = { vm.deleteAll(); confirmDeleteAll = false },
             onDismiss = { confirmDeleteAll = false }, destructive = true,
@@ -155,15 +160,20 @@ fun AlarmsScreen(
             )
         }
     }
-    ScreenList(contentPadding, gutter = GlowLayout.Gutter) {
-        item { PageHeader(stringResource(R.string.you_alarms_title), onBack) }
-        (state.error ?: state.alarmsError)?.let { msg -> item { ErrorPanel(msg, state.busy, vm::refresh) } }
+    HaloPageList(contentPadding, variant = PageVariant.Settings) {
+        item { HaloPageHeader(stringResource(R.string.you_alarms_title), onBack) }
+        (state.error ?: state.alarmsError)?.let { msg -> item {
+            HaloBanner(
+                BannerKind.Warn, msg,
+                action = stringResource(R.string.you_alarms_try_again), onAction = { if (!state.busy) vm.refresh() },
+            )
+        } }
         if (state.loading) {
-            item { PagePanel { PageNote(stringResource(R.string.you_alarms_reading)) } }
-            return@ScreenList
+            item { HaloCard { HaloNote(stringResource(R.string.you_alarms_reading)) } }
+            return@HaloPageList
         }
         // Never read: the alarms are unknown, not empty, so the error above is all there is to show.
-        if (state.read is AlarmsRead.Failed) return@ScreenList
+        if (state.read is AlarmsRead.Failed) return@HaloPageList
         item {
             AlarmsPanel(state, onToggle = vm::setEnabled, onEdit = { editing = it to false }, onAdd = {
                 vm.freeIndex()?.let { editing = Alarm(it, 7, 0, Alarm.WEEKDAYS, enabled = true) to true }
@@ -176,22 +186,19 @@ fun AlarmsScreen(
 @Composable
 fun HealthAlertsScreen(vm: AlarmsViewModel, state: AlarmsUiState, contentPadding: PaddingValues, onBack: () -> Unit) {
     BackHandler(onBack = onBack)
-    ScreenList(contentPadding, gutter = GlowLayout.Gutter) {
-        item { PageHeader(stringResource(R.string.you_health_title), onBack) }
-        (state.error ?: state.healthError)?.let { msg -> item { ErrorPanel(msg, state.busy, vm::refresh) } }
+    HaloPageList(contentPadding, variant = PageVariant.Settings) {
+        item { HaloPageHeader(stringResource(R.string.you_health_title), onBack) }
+        (state.error ?: state.healthError)?.let { msg -> item {
+            HaloBanner(
+                BannerKind.Warn, msg,
+                action = stringResource(R.string.you_alarms_try_again), onAction = { if (!state.busy) vm.refresh() },
+            )
+        } }
         if (state.loading) {
-            item { PagePanel { PageNote(stringResource(R.string.you_alarms_reading)) } }
-            return@ScreenList
+            item { HaloCard { HaloNote(stringResource(R.string.you_alarms_reading)) } }
+            return@HaloPageList
         }
         state.health?.let { item { HeartAlertsPanel(state, vm) } }
-    }
-}
-
-@Composable
-private fun ErrorPanel(message: String, busy: Boolean, onRetry: () -> Unit) {
-    PagePanel {
-        PageNote(message, color = MetricColors.warn)
-        PageButton(stringResource(R.string.you_alarms_try_again), onRetry, Modifier.fillMaxWidth(), enabled = !busy)
     }
 }
 
@@ -204,15 +211,15 @@ private fun AlarmsPanel(
     onDeleteAll: () -> Unit,
 ) {
     // Plain rows on the black page, the strap's alarms as item rows with a switch each (HaloAlarms board).
-    Column(verticalArrangement = Arrangement.spacedBy(24.dp)) {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            val count = state.caps?.let { stringResource(R.string.you_alarms_count, state.alarms.size, it.maxCount) }
-            SectionLabel(listOfNotNull(stringResource(R.string.you_alarms_on_strap), count).joinToString(", "))
-            if (state.alarms.isEmpty()) PageNote(stringResource(R.string.you_alarms_none))
-            else PageRows {
+    Column(verticalArrangement = Arrangement.spacedBy(Space.S24)) {
+        Column(verticalArrangement = Arrangement.spacedBy(Space.S8)) {
+            HaloTitle(state.caps?.let { stringResource(R.string.you_alarms_panel_count, state.alarms.size, it.maxCount) }
+                    ?: stringResource(R.string.you_alarms_on_strap), variant = TitleVariant.Group)
+            if (state.alarms.isEmpty()) HaloNote(stringResource(R.string.you_alarms_none))
+            else HaloCard(fill = CardFill.Rows) {
                 state.alarms.forEachIndexed { i, a ->
                     val (digits, marker) = dotClock(a.hour, a.minute)
-                    PageItemRow(
+                    ItemRow(
                         listOfNotNull(digits, marker).joinToString(" "), daysLabel(a.days), divider = i > 0,
                         onClick = if (state.busy) null else ({ onEdit(a) }),
                         trailing = { org.openstrap.app.ui.glow.GlowSwitch(a.enabled, { onToggle(a, it) }, enabled = !state.busy) },
@@ -220,14 +227,14 @@ private fun AlarmsPanel(
                 }
             }
             // Zepp's tip for this strap (alarm_stuttgart_close_tips).
-            PageFootnote(stringResource(R.string.you_alarms_tip))
+            HaloNote(stringResource(R.string.you_alarms_tip), variant = NoteVariant.Footnote)
         }
-        if (state.canAdd) PageRows {
-            PageActionRow(stringResource(R.string.you_alarms_add), onAdd, icon = AppIcons.Plus, enabled = !state.busy, divider = false)
+        if (state.canAdd) HaloCard(fill = CardFill.Rows) {
+            ActionRow(stringResource(R.string.you_alarms_add), onAdd, icon = AppIcons.Plus, enabled = !state.busy, divider = false)
         }
         // Destructive actions sit in a group of their own, last.
-        if (state.alarms.size > 1) PageRows {
-            PageActionRow(
+        if (state.alarms.size > 1) HaloCard(fill = CardFill.Rows) {
+            ActionRow(
                 stringResource(R.string.you_alarms_delete_all), onDeleteAll, icon = AppIcons.Trash, destructive = true,
                 enabled = !state.busy, divider = false,
             )

@@ -14,8 +14,8 @@
     <string name="glow_today_energy_at_start"><xliff:g id="energy" example="82">%1$d</xliff:g> at start</string>
     <!-- The Energy hero's note on its title row: Energy when you woke. -->
     <string name="glow_today_energy_waking"><xliff:g id="energy" example="82">%1$d</xliff:g> at waking</string>
-    <!-- Under the Energy hero when the strap was off overnight. Tapping it explains. -->
-    <string name="glow_today_strap_off">Strap off overnight, so today started from an estimate.</string>
+    <!-- Under the Energy hero when the strap was off overnight: one phrase, no full stop. Tapping it explains. -->
+    <string name="glow_today_strap_off">Strap off overnight, start estimated</string>
     <!-- What tapping the strap off line does, for screen readers. -->
     <string name="glow_today_about_energy">About Energy</string>
     <!-- Beside Energy now in dots: how much sleep and rest added today. -->
@@ -24,12 +24,10 @@
     <string name="glow_today_drained">Drained <xliff:g id="amount" example="38">%1$s</xliff:g></string>
     <!-- Beside Energy in dots before the day has a start: the value is Energy now. One word. -->
     <string name="glow_today_now">Now</string>
-    <!-- The workout window hero's note on its title row: this morning's Recovery score. -->
-    <string name="glow_today_recovery_score">Recovery <xliff:g id="score" example="72">%1$d</xliff:g></string>
     <!-- A button on the workout window hero that starts your usual sport. The sport is lower case, "run" or "outdoor cycling". The sport is a lower case noun phrase dropped in as it is, so give it whatever article or case your language needs around it. -->
     <string name="glow_today_start_sport">Start <xliff:g id="sport" example="run">%1$s</xliff:g></string>
     <!-- A button beside Start that opens the list of sports. -->
-    <string name="glow_today_other_sport">Other sport</string>
+    <string name="glow_today_other_sport">Other</string>
     <!-- The word for a workout whose sport has no noun of its own, lower case, inside a sentence: "Since your workout". -->
     <string name="glow_today_workout_noun">workout</string>
     <!-- Title of the hero after a workout. The noun is the sport, lower case: "run", "ride" or "workout". The sport is a lower case noun phrase dropped in as it is, so give it whatever article or case your language needs around it. -->
@@ -50,6 +48,8 @@
     <!-- A button on the hero when syncing is stuck. -->
     <string name="glow_today_sync_now">Sync now</string>
     <!-- Title of the morning list of body signals. -->
+    <!-- The body list's title before the strap has a night of data, pairing or the first day. -->
+    <string name="glow_today_body_today">Your body today</string>
     <string name="glow_today_body_morning">Your body this morning</string>
     <!-- A row in the body lists. -->
     <string name="glow_today_resting_hr">Resting heart rate</string>
@@ -67,12 +67,32 @@
     <string name="glow_today_charge_steady">Steady since waking</string>
     <!-- Title of the small Load card: the Load score's name. -->
     <string name="glow_today_load">Load</string>
-    <!-- Title of the small card with the hours left to recover. -->
-    <string name="glow_today_to_recover">Time to recover</string>
+    <!-- Title of the small card with the hours left to recover. The same name as in Edit Today. -->
+    <string name="glow_today_to_recover">To recover</string>
     <!-- Unit beside the hours left to recover, hours. Very short. -->
     <string name="glow_today_hours_unit">h</string>
     <!-- The Time to recover card when the strap gave no time to recover. -->
     <string name="glow_today_recover_no_estimate">No estimate from the strap</string>
+    <!-- A Small card's state word in the place of its number while it learns: one word, at most 3, no full stop. Shown in the figure style, so keep it short. The same word as in the Recovery tab. -->
+    <string name="glow_today_word_learning">Learning</string>
+    <!-- A Small card's state word when a score could not be worked out for lack of data. Two words at most. -->
+    <string name="glow_today_word_no_score">No score</string>
+    <!-- A Small card's state word when nothing was read today yet. At most 3 words. -->
+    <string name="glow_today_word_no_reading">No reading yet</string>
+    <!-- A Small card's state word when no sleep was recorded last night. Two words at most. -->
+    <string name="glow_today_word_no_sleep">No sleep</string>
+    <!-- A Small card's state word while it waits for the first night with the strap. At most 3 words. -->
+    <string name="glow_today_word_after_night">After a night</string>
+    <!-- A Small card's state word while last night is still on the strap. One word. -->
+    <string name="glow_today_word_waiting">Waiting</string>
+    <!-- The line under that word: what it waits for. 18 characters at most. -->
+    <string name="glow_today_for_last_night">For last night</string>
+    <!-- A Small card's state word when its figure could not be worked out. One word. -->
+    <string name="glow_today_word_unavailable">Unavailable</string>
+    <!-- A Small card's state word when the strap gave no time to recover. Two words at most. -->
+    <string name="glow_today_word_no_estimate">No estimate</string>
+    <!-- The line under "No score" on a Small Recovery card. 18 characters at most. -->
+    <string name="glow_today_few_readings">Too few readings</string>
 
     <!-- Title of the Last night strip and card. -->
     <string name="glow_today_last_night">Last night</string>
@@ -82,8 +102,8 @@
     <string name="glow_today_check_in_title">How do you feel?</string>
     <!-- Title of the Start a workout strip. -->
     <string name="glow_today_start_title">Start a workout</string>
-    <!-- Under Start a workout: the sport you usually do now. -->
-    <string name="glow_today_start_usual"><xliff:g id="sport" example="Outdoor run">%1$s</xliff:g>, your usual</string>
+    <!-- Under Start a workout: the sport you usually do now, lower case inside the phrase ("outdoor run", "HIIT"). -->
+    <string name="glow_today_start_usual">Your usual, <xliff:g id="sport" example="outdoor run">%1$s</xliff:g></string>
     <!-- A strap alert: heart rate above your limit. -->
     <string name="glow_today_alert_high_hr">High heart rate, <xliff:g id="bpm" example="142">%1$d</xliff:g> bpm</string>
     <!-- A strap alert: heart rate below your limit. -->
@@ -103,10 +123,10 @@
         <item quantity="one"><xliff:g id="count" example="1">%d</xliff:g> more today</item>
         <item quantity="other"><xliff:g id="count" example="2">%d</xliff:g> more today</item>
     </plurals>
-    <!-- The newest alert and the time it came, as a sentence. The alert is "High heart rate, 142 bpm". -->
-    <string name="glow_today_alert_at"><xliff:g id="alert" example="High heart rate, 142 bpm">%1$s</xliff:g> at <xliff:g id="time" example="14:05">%2$s</xliff:g>.</string>
-    <!-- The only alert today, as a sentence. The alert is "High heart rate, 142 bpm". -->
-    <string name="glow_today_alert_line"><xliff:g id="alert" example="High heart rate, 142 bpm">%1$s</xliff:g>.</string>
+    <!-- The newest alert and the time it came, as a phrase. The alert is "High heart rate, 142 bpm". -->
+    <string name="glow_today_alert_at"><xliff:g id="alert" example="High heart rate, 142 bpm">%1$s</xliff:g> at <xliff:g id="time" example="14:05">%2$s</xliff:g></string>
+    <!-- The only alert today, as a phrase. The alert is "High heart rate, 142 bpm". -->
+    <string name="glow_today_alert_line"><xliff:g id="alert" example="High heart rate, 142 bpm">%1$s</xliff:g></string>
     <!-- Beside the sleep score in dots. Very short. -->
     <string name="glow_today_score_unit">score</string>
     <!-- Under the sleep score: its word and the time asleep. -->
@@ -125,7 +145,7 @@
     <!-- The level with when the reading was taken, once it is an hour old or more. -->
     <string name="glow_today_stress_level_at"><xliff:g id="level" example="Normal">%1$s</xliff:g>, <xliff:g id="time" example="13:10">%2$s</xliff:g></string>
     <!-- Under a body list value unstrap estimated itself (the day's resting heart rate), after the word against your normal. -->
-    <string name="glow_today_body_estimated"><xliff:g id="word" example="Within normal">%1$s</xliff:g>, estimated</string>
+    <string name="glow_today_body_estimated"><xliff:g id="word" example="Usual">%1$s</xliff:g>, estimated</string>
     <!-- Under stress's latest reading (a card or a row) once it is an hour old or more: when it was taken. -->
     <string name="glow_today_latest_at">Latest at <xliff:g id="time" example="14:05">%1$s</xliff:g></string>
     <!-- Under a body list value unstrap estimated itself, when its tag already says which way it is off. -->

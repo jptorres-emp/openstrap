@@ -1,5 +1,11 @@
 package org.openstrap.app.ui.glow.live
 
+import org.openstrap.app.ui.glow.HaloStepper
+import org.openstrap.app.ui.glow.HaloBigNumber
+import org.openstrap.app.ui.glow.BigNumber
+import org.openstrap.app.ui.glow.ButtonSpec
+import org.openstrap.app.ui.glow.HaloButtonSize
+import org.openstrap.app.ui.theme.Space
 import org.openstrap.app.presentation.WorkoutColors
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -22,7 +28,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -45,7 +50,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import org.openstrap.app.data.Strength
-import org.openstrap.app.data.WorkoutRecorder
 import org.openstrap.app.data.db.AppWorkoutSet
 import org.openstrap.app.data.db.ExerciseRow
 import org.openstrap.app.device.ConnectionState
@@ -53,37 +57,24 @@ import org.openstrap.app.device.WorkoutState
 import org.openstrap.app.ui.components.HapticEvent
 import org.openstrap.app.ui.components.pressClickable
 import org.openstrap.app.ui.components.rememberHaptics
-import org.openstrap.app.ui.glow.DotMatrixText
-import org.openstrap.app.ui.glow.draw.DotSize
-import org.openstrap.app.ui.glow.PictureCard
-import org.openstrap.app.ui.glow.HaloButtonSurface
+import org.openstrap.app.ui.glow.ButtonPair
+import org.openstrap.app.ui.glow.HaloButton
+import org.openstrap.app.ui.glow.HaloButtonVariant
 import org.openstrap.app.ui.glow.Segment
 import org.openstrap.app.ui.glow.SegmentBar
+import org.openstrap.app.ui.theme.Ink
 import org.openstrap.app.ui.workout.RestTeal
-import androidx.compose.ui.unit.sp
 import org.openstrap.app.ui.glow.GlowLayout
-import org.openstrap.app.ui.glow.OutlineCard
-import org.openstrap.app.ui.glow.draw.GlowMotion
 import org.openstrap.app.ui.glow.GlowType
-import org.openstrap.app.ui.glow.draw.LightAngle
-import org.openstrap.app.ui.glow.MediumBody
-import org.openstrap.app.ui.glow.PageButton
-import org.openstrap.app.ui.glow.PageRow
-import org.openstrap.app.ui.glow.PageSheet
-import org.openstrap.app.ui.glow.ProgressRing
-import org.openstrap.app.ui.glow.QuietPanel
+import org.openstrap.app.ui.glow.NavRow
+import org.openstrap.app.ui.glow.HaloSheet
 import org.openstrap.app.ui.glow.Raised
-import org.openstrap.app.ui.glow.MinusPlus
-import org.openstrap.app.ui.glow.RoundIcon
-import org.openstrap.app.ui.glow.WorkoutButton
 import org.openstrap.app.ui.glow.activeSecondsState
-import org.openstrap.app.ui.glow.draw.heroStyle
 import org.openstrap.app.ui.glow.workoutClock
 import org.openstrap.app.ui.glow.dotClock
 import org.openstrap.app.ui.glow.workoutColor
 import org.openstrap.app.ui.theme.AppIcons
 import org.openstrap.app.presentation.WorkoutCopy
-import org.openstrap.app.ui.workout.ZONE_COLORS
 import org.openstrap.app.ui.workout.strengthMoment
 import org.openstrap.app.ui.dashboard.LocalHeartZones
 import androidx.compose.ui.res.pluralStringResource
@@ -150,7 +141,6 @@ internal fun LiveStrengthScreen(
         )) },
     ) {
         val moment = steady
-        val tall = 64.dp
         // Board HaloLiveStrengthSet and HaloLiveStrengthRest: the lit hero, a solid card, the plain figures, then the
         // screen's own next step as the one white tap, with Pause dark.
         StrengthHero(r, moment, momentNow, sport) { naming = true }
@@ -184,21 +174,19 @@ internal fun LiveStrengthScreen(
         }
         Spacer(Modifier.weight(1f))
         when {
-            r.inSet -> WorkoutButton(
-                stringResource(R.string.workout_live_sets_set_done), Color.White, Color.Black,
-                { haptics.perform(HapticEvent.SetDone); onSetDone() }, icon = AppIcons.Tick02, height = tall,
+            r.inSet -> HaloButton(
+                stringResource(R.string.workout_live_sets_set_done), { haptics.perform(HapticEvent.SetDone); onSetDone() },
+                Modifier.fillMaxWidth(), HaloButtonVariant.Primary, HaloButtonSize.Main, icon = AppIcons.Tick02,
             )
-            else -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                if (r.resting) Box(Modifier.width(96.dp)) {
-                    WorkoutButton(stringResource(R.string.workout_live_sets_add_30_s), HaloButtonSurface, Color.White,
-                        onExtendRest, height = tall)
-                }
-                Box(Modifier.weight(1f)) {
-                    WorkoutButton(
-                        stringResource(R.string.workout_live_sets_start_set, moment.setNumber), Color.White, Color.Black, onStartSet,
-                        icon = AppIcons.PlayFill, height = tall,
-                    )
-                }
+            else -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(ButtonSpec.PairGap)) {
+                if (r.resting) HaloButton(
+                    stringResource(R.string.workout_live_sets_add_30_s), onExtendRest, Modifier.width(96.dp),
+                    HaloButtonVariant.Secondary, HaloButtonSize.Main,
+                )
+                HaloButton(
+                    stringResource(R.string.workout_live_sets_start_set, moment.setNumber), onStartSet, Modifier.weight(1f),
+                    HaloButtonVariant.Primary, HaloButtonSize.Main, icon = AppIcons.PlayFill,
+                )
             }
         }
         val target = r.workout.setsTarget
@@ -266,7 +254,7 @@ private fun StrengthHero(
 
 /** A clock as the hero's one number, its own scope: the second it reads composes only it again, not the card around it. */
 @Composable
-private fun DotClock(text: () -> String, unit: String, tint: Color) = HeroNumber(text(), unit, tint)
+private fun DotClock(text: () -> String, unit: String, tint: Color) = HaloBigNumber(text(), BigNumber.Live, unit = unit, unitColor = tint)
 
 /**
  * The heart rate since the set ended (board HaloLiveStrengthRest): a white line with a dot at now, the level that ends
@@ -294,7 +282,7 @@ private fun FallingHeart(readings: List<Pair<Long, Int>>, level: Int?) {
             join = androidx.compose.ui.graphics.StrokeJoin.Round))
         val now = Offset(x(readings.last().first), y(readings.last().second))
         if (level != null) dashedLine(
-            Color.White.copy(alpha = 0.35f), now, Offset(size.width * FALLING_TARGET, y(level)), 2.dp.toPx(), 3.dp.toPx(), 4.dp.toPx(),
+            Ink.Disabled, now, Offset(size.width * FALLING_TARGET, y(level)), 2.dp.toPx(), 3.dp.toPx(), 4.dp.toPx(),
         )
         drawCircle(Color.White, 4.5.dp.toPx(), now)
     }
@@ -327,10 +315,7 @@ private fun SetSegments(done: Int, target: Int?) {
         pluralStringResource(R.plurals.workout_live_sets_dots_description_to_go, done, done, (it - done).coerceAtLeast(0))
     }
         ?: pluralStringResource(R.plurals.workout_live_sets_dots_description, done, done)
-    SegmentBar(
-        List(total) { i -> Segment(1f, Color.White.copy(alpha = if (i < done) 0.55f else if (i == done) 1f else 0.18f)) },
-        Modifier.semantics { contentDescription = described }, height = 6.dp, gap = 4.dp, corner = 3.dp,
-    )
+    org.openstrap.app.ui.glow.HaloProgressSegments(total, done, Modifier.semantics { contentDescription = described })
 }
 
 /** The exercise as a dark pill to tap, or "Name it" while the sets are only numbered. */
@@ -340,8 +325,8 @@ private fun ExercisePill(name: String?, onClick: () -> Unit) {
     Text(
         name ?: stringResource(R.string.workout_live_sets_name_it), color = Color.White, style = GlowType.secondary, maxLines = 1,
         overflow = TextOverflow.Ellipsis,
-        modifier = Modifier.clip(shape).background(Color.Black.copy(alpha = 0.32f)).pressClickable(onClick, shape)
-            .padding(horizontal = 12.dp, vertical = 6.dp),
+        modifier = Modifier.clip(shape).background(Ink.Scrim).pressClickable(onClick, shape)
+            .padding(horizontal = Space.S12, vertical = Space.S8),
     )
 }
 
@@ -354,7 +339,7 @@ private fun DoneSets(sets: List<AppWorkoutSet>, history: List<Pair<Long, Int>>) 
     val lines = remember(done, history) { done.take(4).map { s -> WorkoutCopy.setLine(s, Strength.peak(history, s.start, s.end!!)) } }
     Column(Modifier.fillMaxWidth()) {
         done.take(4).forEachIndexed { i, s ->
-            Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(Modifier.fillMaxWidth().padding(vertical = Space.S8), horizontalArrangement = Arrangement.spacedBy(Space.S12)) {
                 Text(stringResource(R.string.workout_live_sets_row, s.index + 1), color = GlowType.noteColor,
                     style = GlowType.secondary)
                 Text(lines[i], color = Color.White, style = GlowType.secondary, maxLines = 1,
@@ -386,44 +371,54 @@ private fun LogCard(
         left != null -> stringResource(R.string.workout_live_log_note_rest, time, left)
         else -> stringResource(R.string.workout_live_log_note, time)
     }
-    PageSheet(onSkip, stringResource(R.string.workout_live_log_title, set.index + 1), note = note) {
+    HaloSheet(onSkip, stringResource(R.string.workout_live_log_title, set.index + 1), note = note) {
         Text(set.exercise ?: stringResource(R.string.workout_live_log_numbered_set), color = Color.White, style = GlowType.body)
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            LogStepper(
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Space.S8)) {
+            LogCard(
                 stringResource(R.string.workout_live_log_reps), reps.toString(), stringResource(R.string.workout_live_log_fewer_reps),
                 stringResource(R.string.workout_live_log_more_reps), Modifier.weight(1f),
                 { reps = Strength.stepReps(reps, -1) }, { reps = Strength.stepReps(reps, 1) },
             )
-            LogStepper(
+            LogCard(
                 stringResource(R.string.workout_live_log_kg), Strength.kgText(kg), stringResource(R.string.workout_live_log_less_weight),
                 stringResource(R.string.workout_live_log_more_weight), Modifier.weight(1f),
                 { kg = Strength.stepKg(kg, -1) }, { kg = Strength.stepKg(kg, 1) },
             )
         }
         Text(
-            stringResource(R.string.workout_live_log_filled), color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA),
+            stringResource(R.string.workout_live_log_filled), color = Ink.Secondary,
             style = GlowType.secondary,
         )
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            PageButton(stringResource(R.string.workout_live_log_skip), onSkip, Modifier.weight(1f), icon = AppIcons.X)
-            PageButton(
-                stringResource(R.string.workout_live_log_save), { onSave(set.exercise, reps, kg) }, Modifier.weight(1f), primary = true,
-                icon = AppIcons.Tick02,
-            )
-        }
-        PageButton(stringResource(R.string.workout_live_log_next_exercise), onNextExercise, Modifier.fillMaxWidth(), icon = AppIcons.Plus)
+        ButtonPair(
+            stringResource(R.string.workout_live_log_skip),
+            onSkip,
+            stringResource(R.string.workout_live_log_save),
+            { onSave(set.exercise, reps, kg) },
+            leftIcon = AppIcons.X,
+            rightIcon = AppIcons.Tick02,
+        )
+        HaloButton(stringResource(R.string.workout_live_log_next_exercise), onNextExercise, Modifier.fillMaxWidth(), icon = AppIcons.Plus)
     }
 }
 
-/** A log card stepper: its label, the value large, and minus and plus. */
+/** A log card: its label over a [HaloStepper] with the value in a row's size, two abreast on the sheet. */
 @Composable
-private fun LogStepper(label: String, value: String, less: String, more: String, modifier: Modifier, onLess: () -> Unit,
-    onMore: () -> Unit) {
-    Column(modifier.clip(GlowLayout.CardShape).background(org.openstrap.app.ui.glow.ListSurface).padding(14.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(label, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary)
-        MinusPlus(less, more, onLess, onMore) {
-            Text(value, color = Color.White, style = GlowType.pageTitle, textAlign = TextAlign.Center)
+private fun LogCard(
+    label: String,
+    value: String,
+    less: String,
+    more: String,
+    modifier: Modifier,
+    onLess: () -> Unit,
+    onMore: () -> Unit,
+) {
+    // Half a sheet wide, two steppers abreast: the card rule's inset would leave the 44 buttons no room, so it keeps 12.
+    org.openstrap.app.ui.glow.HaloCard(modifier, fill = org.openstrap.app.ui.glow.CardFill.None) {
+        Column(Modifier.padding(Space.S12), verticalArrangement = Arrangement.spacedBy(Space.S8)) {
+            Text(label, color = Ink.Secondary, style = GlowType.secondary)
+            org.openstrap.app.ui.glow.HaloStepper(less, more, onLess, onMore, Modifier.fillMaxWidth()) {
+                org.openstrap.app.ui.glow.StepperNumber(value, null, size = org.openstrap.app.ui.glow.StepperSize.Row)
+            }
         }
     }
 }
@@ -435,7 +430,7 @@ private fun LogStepper(label: String, value: String, less: String, more: String,
 @Composable
 private fun ExerciseSheet(current: String?, used: List<String>, onPick: (String?) -> Unit, onDismiss: () -> Unit) {
     var typed by rememberSaveable { mutableStateOf("") }
-    PageSheet(onDismiss, stringResource(R.string.workout_live_exercise_title), note = stringResource(R.string.workout_live_exercise_note)) {
+    HaloSheet(onDismiss, stringResource(R.string.workout_live_exercise_title), note = stringResource(R.string.workout_live_exercise_note)) {
         BasicTextField(
             typed, { typed = it }, Modifier.fillMaxWidth(), singleLine = true,
             textStyle = GlowType.body.copy(color = Color.White), cursorBrush = SolidColor(Color.White),
@@ -443,12 +438,12 @@ private fun ExerciseSheet(current: String?, used: List<String>, onPick: (String?
             keyboardActions = KeyboardActions(onDone = { if (typed.isNotBlank()) onPick(typed) }),
             decorationBox = { field ->
                 Row(
-                    Modifier.fillMaxWidth().height(48.dp).clip(GlowLayout.TileShape).background(Raised).padding(horizontal = 16.dp),
+                    Modifier.fillMaxWidth().height(48.dp).clip(GlowLayout.TileShape).background(Raised).padding(horizontal = Space.S16),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Box(Modifier.weight(1f)) {
                         if (typed.isEmpty()) Text(
-                            stringResource(R.string.workout_live_exercise_type), color = Color.White.copy(alpha = GlowType.CAPTION_ALPHA),
+                            stringResource(R.string.workout_live_exercise_type), color = Ink.Secondary,
                             style = GlowType.body,
                         )
                         field()
@@ -457,7 +452,7 @@ private fun ExerciseSheet(current: String?, used: List<String>, onPick: (String?
                         AppIcons.Tick02, stringResource(R.string.workout_live_exercise_use), tint = Color.White,
                         // 48 dp to tap, the mark drawn 20 dp as before, and moved out so it stays where it was.
                         modifier = Modifier.offset(x = 10.dp).size(48.dp).clip(CircleShape)
-                            .pressClickable({ onPick(typed) }, CircleShape).padding(14.dp),
+                            .pressClickable({ onPick(typed) }, CircleShape).padding(Space.S12),
                     )
                 }
             },
@@ -467,10 +462,10 @@ private fun ExerciseSheet(current: String?, used: List<String>, onPick: (String?
         Column {
             names.forEachIndexed { i, name ->
                 val value = if (name.equals(current, ignoreCase = true)) nowLabel else null
-                PageRow(name, value = value, divider = i > 0, onClick = { onPick(name) })
+                NavRow(name, value = value, divider = i > 0, onClick = { onPick(name) })
             }
         }
-        if (current != null) PageButton(
+        if (current != null) HaloButton(
             stringResource(R.string.workout_live_exercise_no_name), { onPick(null) }, Modifier.fillMaxWidth(), icon = AppIcons.X,
         )
     }

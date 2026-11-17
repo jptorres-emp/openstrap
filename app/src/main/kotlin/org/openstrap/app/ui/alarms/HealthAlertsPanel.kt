@@ -13,8 +13,8 @@ import org.openstrap.app.R
 import org.openstrap.app.i18n.Strings
 import org.openstrap.app.ui.device.RadioSheet
 import org.openstrap.app.ui.glow.PageGroup
-import org.openstrap.app.ui.glow.PageRow
-import org.openstrap.app.ui.glow.PageSwitchRow
+import org.openstrap.app.ui.glow.NavRow
+import org.openstrap.app.ui.glow.SwitchRow
 import org.openstrap.protocol.services.Setting
 import org.openstrap.protocol.services.SettingsCodec
 
@@ -72,7 +72,7 @@ private const val GROUP_GAP = 24
 @Composable
 private fun IntervalGroup(interval: Setting, busy: Boolean, onOpen: () -> Unit) {
     PageGroup(footnote = stringResource(R.string.you_health_measuring_note)) {
-        PageRow(
+        NavRow(
             stringResource(R.string.you_health_measuring), interval.number?.toInt()?.let { intervalLabel(it) },
             onClick = onOpen, enabled = !busy, divider = false,
         )
@@ -112,7 +112,7 @@ private fun OxygenGroup(
     val available = state.oxygenAlertAvailable
     val percent = { v: Int -> Strings.app.format(R.string.you_health_percent_value, v) }
     PageGroup(heading = stringResource(R.string.you_health_group_oxygen), footnote = stringResource(R.string.you_health_note)) {
-        if (auto != null) PageSwitchRow(
+        if (auto != null) SwitchRow(
             stringResource(R.string.you_health_auto_oxygen), stringResource(R.string.you_health_auto_oxygen_note), auto,
             setAuto, divider = false, enabled = !state.busy,
         )
@@ -145,8 +145,8 @@ private fun AlertRows(
     note: String? = null,
 ) {
     val limit = setting.number?.toInt() ?: 0
-    PageSwitchRow(name, note, limit != 0, onSwitch, divider = divider, enabled = enabled)
-    if (limit != 0) PageRow(limitName, label(limit), onClick = onLimit, enabled = enabled)
+    SwitchRow(name, note, limit != 0, onSwitch, divider = divider, enabled = enabled)
+    if (limit != 0) NavRow(limitName, label(limit), onClick = onLimit, enabled = enabled)
 }
 
 /** The choices of an alert's limit, "off" left to its switch. */

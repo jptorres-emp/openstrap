@@ -1,5 +1,9 @@
 package org.openstrap.app.ui.glow.live
 
+import org.openstrap.app.ui.glow.HaloBigNumber
+import org.openstrap.app.ui.glow.BigNumber
+import org.openstrap.app.ui.theme.IconSize
+import org.openstrap.app.ui.theme.Space
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -43,7 +47,7 @@ internal fun ColumnScope.LivePaused(r: WorkoutState.Recording, liveHeartRate: In
     val tint = heroTint(PausedGrey)
     LiveHero(PausedGrey, liveAngle(r)) {
         HeroTitle(stringResource(R.string.workout_live_paused_for), null, tint)
-        HeroNumber(dotClock((now - at).coerceAtLeast(0)), null, tint)
+        HaloBigNumber(dotClock((now - at).coerceAtLeast(0)), BigNumber.Live, unitColor = tint)
         HeroLine(stringResource(R.string.workout_live_paused_note), tint)
     }
     val before = Workouts.heartRateAt(recent, at) ?: recent.lastOrNull { it.first <= at }?.second
@@ -55,8 +59,9 @@ internal fun ColumnScope.LivePaused(r: WorkoutState.Recording, liveHeartRate: In
             Text(stringResource(R.string.workout_live_paused_since), color = GlowType.noteColor, style = GlowType.noteSmall)
         }
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Icon(AppIcons.Heartbeat, null, tint = MetricColors.heart, modifier = Modifier.size(16.dp))
+            Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Space.S8)) {
+                Icon(AppIcons.Heartbeat, null, tint = MetricColors.heart, modifier = Modifier.size(IconSize.GlyphS))
                 Text("$liveHeartRate", color = Color.White, style = GlowType.figureInline)
                 Text(stringResource(R.string.workout_live_unit_bpm), color = GlowType.noteColor, style = GlowType.secondary)
             }
@@ -69,15 +74,11 @@ internal fun ColumnScope.LivePaused(r: WorkoutState.Recording, liveHeartRate: In
 }
 
 /**
- * A row of plain live figures (value over label), no card: each column after the first has a rule on its left and 16 of
- * room after it (workout-rules.md, section 2; board HaloLiveRun). A missing value is the waiting dash.
+ * A row of plain live figures (value over label), no card (workout-rules.md, section 2; board HaloLiveRun): a pure
+ * rename of [org.openstrap.app.ui.glow.HaloFigures] with [org.openstrap.app.ui.glow.FiguresVariant.Live], kept so the
+ * nine live screens read as before.
  */
+@androidx.compose.runtime.NonRestartableComposable
 @Composable
-internal fun LiveFigures(figures: List<Pair<String?, String>>, modifier: Modifier = Modifier) {
-    Row(modifier.fillMaxWidth().padding(horizontal = 4.dp).height(IntrinsicSize.Min)) {
-        figures.forEachIndexed { i, (value, label) ->
-            if (i > 0) StatRule()
-            LiveStat(label, Modifier.weight(1f).padding(start = if (i > 0) 16.dp else 0.dp)) { LiveValue(value) }
-        }
-    }
-}
+internal fun LiveFigures(figures: List<Pair<String?, String>>, modifier: Modifier = Modifier) =
+    org.openstrap.app.ui.glow.HaloFigures(figures, modifier, org.openstrap.app.ui.glow.FiguresVariant.Live)

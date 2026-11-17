@@ -1,5 +1,7 @@
 package org.openstrap.app.ui.glow
 
+import org.openstrap.app.ui.theme.Space
+import org.openstrap.app.ui.theme.Greys
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.LayoutDirection
@@ -45,7 +47,7 @@ import java.util.Locale
 private const val TILES_STYLE = "https://tiles.openfreemap.org/styles/dark"
 
 /** The black of [BLANK_STYLE], for a map that can't be drawn. */
-private val RouteOnlyBlack = Color(0xFF0B0B0D)
+private val RouteOnlyBlack = Greys.Tint
 
 /** "Route only": no tile requests at all, just the line on black. */
 private const val BLANK_STYLE = """{"version":8,"sources":{},"layers":[{"id":"bg","type":"background","paint":{"background-color":"#0B0B0D"}}]}"""
@@ -61,7 +63,7 @@ private const val BLANK_STYLE = """{"version":8,"sources":{},"layers":[{"id":"bg
 @Composable
 fun WorkoutMap(
     stretches: List<Pair<List<Route.Point>, Int>>, routeOnly: Boolean, modifier: Modifier = Modifier, here: Route.Point? = null,
-    fitPadding: PaddingValues = PaddingValues(horizontal = 28.dp, vertical = 24.dp),
+    fitPadding: PaddingValues = PaddingValues(horizontal = Space.S24, vertical = Space.S24),
     /** How far up from the map's bottom edge the OpenStreetMap credit sits, clear of a panel drawn over it. */
     creditBottom: Dp = 18.dp,
     hereColor: Color? = null,
@@ -129,7 +131,7 @@ fun WorkoutMap(
             s.addLayer(
                 CircleLayer(START_DOT, START).withProperties(
                     PropertyFactory.circleRadius(5f),
-                    PropertyFactory.circleColor(0xFF121316.toInt()),
+                    PropertyFactory.circleColor(Greys.MapDot.toArgb()),
                     PropertyFactory.circleStrokeWidth(2f),
                     PropertyFactory.circleStrokeColor(Color.White.toArgb()),
                 ),

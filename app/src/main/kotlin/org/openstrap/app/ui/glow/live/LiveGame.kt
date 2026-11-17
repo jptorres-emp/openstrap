@@ -1,9 +1,19 @@
 package org.openstrap.app.ui.glow.live
 
+import org.openstrap.app.ui.glow.HaloBigNumber
+import org.openstrap.app.ui.glow.BigNumber
+import org.openstrap.app.ui.glow.HaloButtonSize
+import org.openstrap.app.ui.glow.HaloButtonVariant
+import org.openstrap.app.ui.glow.HaloButton
+import org.openstrap.app.ui.theme.Greys
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import org.openstrap.app.ui.theme.Ink
+import org.openstrap.app.ui.workout.FamilySummary
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -25,13 +35,11 @@ import org.openstrap.app.device.ConnectionState
 import org.openstrap.app.device.WorkoutState
 import org.openstrap.app.ui.glow.HeroValue
 import org.openstrap.app.ui.glow.draw.DotSize
-import org.openstrap.app.ui.glow.GlowCard
 import org.openstrap.app.ui.glow.draw.GlowMotion
 import org.openstrap.app.ui.glow.GlowType
 import org.openstrap.app.ui.glow.Segment
 import org.openstrap.app.ui.glow.SegmentBar
 import org.openstrap.app.ui.glow.draw.LightAngle
-import org.openstrap.app.ui.glow.WorkoutButton
 import org.openstrap.app.ui.glow.activeSecondsState
 import org.openstrap.app.ui.glow.draw.heroStyle
 import org.openstrap.app.ui.glow.workoutClock
@@ -101,7 +109,7 @@ internal fun LiveGameScreen(
         // Board HaloLiveGame: the heart rate as the hero, the period in its one line, then the effort in a solid card.
         LiveHero(sport, liveAngle(r)) {
             HeroTitle(stringResource(R.string.workout_live_heart_title), zone?.let { WorkoutCopy.zoneTitle(it).first }, tint)
-            if (bpm != null) HeroNumber("$bpm", stringResource(R.string.workout_live_unit_bpm), tint)
+            if (bpm != null) HaloBigNumber("$bpm", BigNumber.Live, unit = stringResource(R.string.workout_live_unit_bpm), unitColor = tint)
             else Text(WorkoutCopy.noHeartRate(r.paused, connected), color = Color.White, style = GlowType.sentence)
             if (periods != null && phase != null) PeriodLine(r, periods, phase, { now.value }, { active.value }, tint)
         }
@@ -116,13 +124,21 @@ internal fun LiveGameScreen(
                 )
             }
             EffortBar(effort)
+            Box(Modifier.fillMaxWidth().height(1.dp).background(Greys.Control))
+            Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                Text(stringResource(R.string.workout_live_zones_title), color = GlowType.noteColor, style = GlowType.noteSmall,
+                    maxLines = 1, modifier = Modifier.weight(1f))
+                FamilySummary.mostlyZone(zoneSeconds)?.let {
+                    Text(it, color = GlowType.noteColor, style = GlowType.noteSmall, maxLines = 1)
+                }
+            }
             ZoneTimeBar(zoneSeconds, zone)
         }
         LiveFigures(figures)
         Spacer(Modifier.weight(1f))
-        if (periods != null && phase is Phase.Rest) WorkoutButton(
+        if (periods != null && phase is Phase.Rest) HaloButton(
             stringResource(R.string.workout_live_game_start_period, StartCopy.periodName(phase.round + 1, periods.rounds).lowercase()),
-            Color.White, Color.Black, onHalfTime, icon = AppIcons.PlayFill, height = 64.dp,
+            onHalfTime, Modifier.fillMaxWidth(), HaloButtonVariant.Primary, HaloButtonSize.Main, icon = AppIcons.PlayFill,
         )
     }
 }
@@ -150,7 +166,7 @@ private fun PeriodLine(r: WorkoutState.Recording, periods: Structure.Periods, ph
 internal fun EffortBar(effort: Int?) {
     val described = effort?.let { stringResource(R.string.workout_live_effort_of, it) } ?: stringResource(R.string.workout_live_effort_none)
     SegmentBar(
-        List(5) { i -> Segment(1f, if (effort != null && i < effort) ZONE_COLORS[i] else Color.White.copy(alpha = 0.14f)) },
+        List(5) { i -> Segment(1f, if (effort != null && i < effort) ZONE_COLORS[i] else Ink.Edge) },
         Modifier.fillMaxWidth().semantics { contentDescription = described },
         height = 14.dp, gap = 4.dp, corner = 4.dp,
     )

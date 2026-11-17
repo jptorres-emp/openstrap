@@ -1,5 +1,6 @@
 package org.openstrap.app.ui.glow
 
+import org.openstrap.app.ui.theme.Space
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -11,7 +12,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -42,10 +42,10 @@ import org.openstrap.app.ui.components.pressClickable
 internal fun BestsPanel(view: RewardsView, onOpen: (String) -> Unit) {
     val shown = view.bests
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(GRID_GAP)) {
-        SectionHead(stringResource(R.string.glow_goals_personal_bests))
+        HaloTitle(stringResource(R.string.glow_goals_personal_bests), variant = TitleVariant.OutOfCard)
         if (shown.isEmpty()) {
             Text(
-                stringResource(R.string.glow_goals_no_bests), Modifier.padding(horizontal = 4.dp), color = GlowType.noteColor,
+                stringResource(R.string.glow_goals_no_bests), Modifier.padding(horizontal = Space.S4), color = GlowType.noteColor,
                 style = GlowType.secondary,
             )
             TokenGrid(FIRST_BESTS) { kind, m -> BestCell(kind, null, onOpen, m) }
@@ -72,19 +72,17 @@ internal fun NextBadgeCard(badge: Rewards.Badge, view: RewardsView, onOpen: (Rew
     val ink = badgeInk(badge)
     val (have, need) = view.progress[badge.id] ?: (0L to 1L)
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(GRID_GAP)) {
-        SectionHead(stringResource(R.string.glow_goals_next_badge))
-        Row(
-            Modifier.fillMaxWidth().pressClickable({ onOpen(badge) }, GlowLayout.CardShape).solidCard(GlowLayout.CardShape)
-                .padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp),
-        ) {
-            Medal(badgeLook(badge, view.face(badge)), NEXT_MEDAL, locked = true)
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(badge.title, color = Color.White, style = GlowType.cardTitle, maxLines = 1)
-                Text(RewardsCopy.progressLine(have, need, badge.unit), color = GlowType.noteColor, style = GlowType.secondary)
-                ShareBar(have.toFloat() / need, ink, Modifier.fillMaxWidth())
+        HaloTitle(stringResource(R.string.glow_goals_next_badge), variant = TitleVariant.OutOfCard)
+        HaloCard(onClick = { onOpen(badge) }) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.S12)) {
+                Medal(badgeLook(badge, view.face(badge)), TokenSize.Next.size, locked = true)
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Space.S8)) {
+                    Text(badge.title, color = Color.White, style = GlowType.cardTitle, maxLines = 1)
+                    Text(RewardsCopy.progressLine(have, need, badge.unit), color = GlowType.noteColor, style = GlowType.secondary)
+                    HaloProgress(have.toFloat() / need, Modifier.fillMaxWidth(), ink)
+                }
+                RowChevron()
             }
-            RowChevron()
         }
     }
 }
@@ -99,8 +97,8 @@ internal fun BadgesPanel(view: RewardsView, onOpen: (Rewards.Badge) -> Unit) {
     val got = earned.map { it.id }.toSet()
     val next = Rewards.BADGES.filter { it.id !in got }.sortedByDescending { share(view, it) }
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(GRID_GAP)) {
-        SectionHead(
-            stringResource(R.string.glow_goals_badges),
+        HaloTitle(
+            stringResource(R.string.glow_goals_badges), variant = TitleVariant.OutOfCard,
             note = stringResource(R.string.glow_goals_earned_count, view.earned.size, Rewards.BADGES.size),
         )
         TokenGrid((earned + next).take(PANEL_BADGES)) { b, m -> BadgeCell(b, view, onOpen, modifier = m) }
@@ -128,7 +126,7 @@ internal fun BadgeCell(
     val described = stringResource(R.string.glow_goals_badge_described, badge.title, state)
     TokenCell(
         { onOpen(badge) }, described,
-        token = { Medal(badgeLook(badge, view.face(badge)), TOKEN, locked = row == null) },
+        token = { Medal(badgeLook(badge, view.face(badge)), TokenSize.Grid.size, locked = row == null) },
         bar = if (row == null) share(view, badge) else null, ink = badgeInk(badge), modifier = modifier,
     ) {
         Text(
@@ -146,7 +144,7 @@ private fun BestCell(kind: String, best: PersonalBest?, onOpen: (String) -> Unit
     val described = stringResource(R.string.glow_goals_badge_described, title, figure)
     TokenCell(
         { onOpen(kind) }, described,
-        token = { Medal(bestLook(kind), TOKEN, locked = best == null) },
+        token = { Medal(bestLook(kind), TokenSize.Grid.size, locked = best == null) },
         bar = if (best == null) 0f else null, ink = bestInk(kind), modifier = modifier,
     ) {
         Text(
@@ -178,11 +176,11 @@ private fun TokenCell(
                 role = Role.Button
             },
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(Space.S8),
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(Space.S8)) {
             token()
-            if (bar != null) ShareBar(bar, ink, Modifier.width(CELL_BAR))
+            if (bar != null) HaloProgress(bar, Modifier.width(CELL_BAR), ink)
         }
         lines()
     }
@@ -209,7 +207,5 @@ private const val STEPS_ORDER = 100_004
 private const val FIVE_KM = 5000
 private const val PANEL_BADGES = 9
 private val GRID_GAP = 16.dp
-private val TOKEN = 72.dp
 private val CELL_BAR = 58.dp
-private val NEXT_MEDAL = 56.dp
 

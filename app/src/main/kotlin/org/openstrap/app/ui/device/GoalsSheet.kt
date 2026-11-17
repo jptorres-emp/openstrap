@@ -1,5 +1,15 @@
 package org.openstrap.app.ui.device
 
+import org.openstrap.app.ui.theme.Corner
+import org.openstrap.app.ui.glow.HaloNote
+import org.openstrap.app.ui.glow.NoteVariant
+import org.openstrap.app.ui.glow.HaloStepper
+import org.openstrap.app.ui.glow.StepperSize
+import org.openstrap.app.ui.glow.StepperNumber
+import androidx.compose.foundation.layout.fillMaxSize
+import org.openstrap.app.ui.glow.CardFill
+import org.openstrap.app.ui.glow.HaloCard
+import org.openstrap.app.ui.theme.Space
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -41,15 +51,15 @@ import org.openstrap.app.data.settings.CalorieGoal
 import org.openstrap.app.data.settings.Goals
 import org.openstrap.app.presentation.GoalCopy
 import org.openstrap.app.presentation.Units
+import org.openstrap.app.ui.glow.ButtonPair
+import org.openstrap.app.ui.glow.HaloButton
+import org.openstrap.app.ui.glow.HaloButtonVariant
+import org.openstrap.app.ui.glow.HaloButtonSize
 import org.openstrap.app.ui.glow.GlowLayout
 import org.openstrap.app.ui.glow.GlowType
-import org.openstrap.app.ui.glow.PageButton
-import org.openstrap.app.ui.glow.PageNote
-import org.openstrap.app.ui.glow.PageRows
-import org.openstrap.app.ui.glow.ButtonSize
-import org.openstrap.app.ui.glow.topHairline
-import org.openstrap.app.ui.glow.PageSheet
-import org.openstrap.app.ui.glow.RoundIconButton
+import org.openstrap.app.ui.glow.HaloRow
+import org.openstrap.app.ui.glow.HaloSheet
+import org.openstrap.app.ui.glow.HaloIconButton
 import org.openstrap.app.ui.theme.AppIcons
 import org.openstrap.app.ui.theme.MetricColors
 
@@ -69,57 +79,55 @@ fun GoalsSheet(goals: Goals, onSave: (Goals) -> Unit, onDismiss: () -> Unit, sug
     var workouts by rememberSaveable { mutableIntStateOf(goals.workoutsPerWeek) }
     val hourUnit = stringResource(R.string.you_unit_h)
 
-    PageSheet(onDismiss, stringResource(R.string.you_goals_title)) {
-        PageRows {
-            GoalStepper(
+    HaloSheet(
+        onDismiss, stringResource(R.string.you_goals_title),
+        footer = {
+            ButtonPair(
+                stringResource(R.string.you_action_cancel),
+                onDismiss,
+                stringResource(R.string.you_action_save),
+                {
+                        onSave(
+                            goals.copy(
+                                steps = steps, sleepMinutes = sleep, activeHours = active, calories = calories, workoutsPerWeek = workouts,
+                            ),
+            )
+                        },
+            )
+        },
+    ) {
+        HaloCard(fill = CardFill.Rows) {
+            GoalRow(
                 stringResource(R.string.you_goals_steps_label), Units.count(steps.toLong()), null, Goals.STEPS, steps,
                 { steps = it }, { (steps + it * STEPS_STEP).coerceIn(Goals.STEPS) }, { t -> digits(t) }, { it.toString() },
                 divider = false,
             )
-            GoalStepper(
+            GoalRow(
                 stringResource(R.string.you_goals_calories_label), Units.count(calories.toLong()),
                 stringResource(R.string.glow_goals_unit_kcal), Goals.CALORIES, calories, { calories = it },
                 { CalorieGoal.step(calories, it * Goals.CALORIES_STEP) }, { t -> CalorieGoal.parse(t) }, { it.toString() },
                 lowerLabel = R.string.you_goals_calories_lower, raiseLabel = R.string.you_goals_calories_raise,
                 typeLabel = R.string.you_goals_calories_type,
             ) { Suggestion(suggestedCalories, calories) { calories = it } }
-            GoalStepper(
+            GoalRow(
                 stringResource(R.string.you_goals_sleep_label), sleepText(sleep, hourUnit), null, Goals.SLEEP_MINUTES, sleep,
                 { sleep = it }, { (sleep + it * SLEEP_STEP).coerceIn(Goals.SLEEP_MINUTES) }, ::parseSleep, ::sleepEdit,
                 rangeNote = Goals.SLEEP_MINUTES.first / MINUTES_PER_HOUR..Goals.SLEEP_MINUTES.last / MINUTES_PER_HOUR,
             )
-            GoalStepper(
+            GoalRow(
                 stringResource(R.string.you_goals_active_label), "$active", stringResource(R.string.you_goals_active_unit),
                 Goals.ACTIVE_HOURS, active, { active = it }, { (active + it).coerceIn(Goals.ACTIVE_HOURS) },
                 { t -> digits(t) }, { it.toString() },
-            ) { RowNote(stringResource(R.string.you_goals_active_note)) }
-            GoalStepper(
+            ) { HaloNote(stringResource(R.string.you_goals_active_note), variant = NoteVariant.Footnote) }
+            GoalRow(
                 stringResource(R.string.you_goals_workouts_label), "$workouts", stringResource(R.string.glow_goals_per_week),
                 Goals.WORKOUTS_PER_WEEK, workouts, { workouts = it }, { (workouts + it).coerceIn(Goals.WORKOUTS_PER_WEEK) },
                 { t -> digits(t) }, { it.toString() },
                 lowerLabel = R.string.you_goals_workouts_fewer, raiseLabel = R.string.you_goals_workouts_more,
-            ) { RowNote(stringResource(R.string.you_goals_workouts_note)) }
-        }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            PageButton(stringResource(R.string.you_action_cancel), onDismiss, Modifier.weight(1f))
-            PageButton(
-                stringResource(R.string.you_action_save),
-                {
-                    onSave(
-                        goals.copy(
-                            steps = steps, sleepMinutes = sleep, activeHours = active, calories = calories, workoutsPerWeek = workouts,
-                        ),
-                    )
-                },
-                Modifier.weight(1f), primary = true,
-            )
+            ) { HaloNote(stringResource(R.string.you_goals_workouts_note), variant = NoteVariant.Footnote) }
         }
     }
 }
-
-/** A line of the goals panel's small print under a row (board HaloGoalsSheet: 12, #6E7480). */
-@Composable
-private fun RowNote(text: String) = Text(text, color = GlowType.footnoteColor, style = GlowType.footnote)
 
 /** A typed whole number: digits only, commas and spaces ignored, null when there are none. */
 private fun digits(text: String): Int? = text.filter { it.isDigit() }.toIntOrNull()
@@ -157,24 +165,24 @@ private fun Suggestion(suggested: Int?, value: Int, use: (Int) -> Unit) {
     if (suggested == null) return
     val count = Units.count(suggested.toLong())
     if (suggested == value) {
-        RowNote(stringResource(R.string.you_goals_suggested_matched, count))
+        HaloNote(stringResource(R.string.you_goals_suggested_matched, count), variant = NoteVariant.Footnote)
     } else {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Box(Modifier.weight(1f)) { RowNote(stringResource(R.string.you_goals_suggested, count)) }
-            PageButton(stringResource(R.string.you_goals_use), { use(suggested) }, size = ButtonSize.Row)
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.S12)) {
+            Box(Modifier.weight(1f)) { HaloNote(stringResource(R.string.you_goals_suggested, count), variant = NoteVariant.Footnote) }
+            HaloButton(stringResource(R.string.you_goals_use), { use(suggested) }, size = HaloButtonSize.Small)
         }
     }
 }
 
 /**
- * One goal as a row of the goals panel (board HaloGoalsSheet): its [label], a minus, the goal in Funnel Display Light 26
- * with its [unit], and a plus, 40 squares for the buttons and the number 104 wide. [step] moves it by one step down or
+ * One goal as a row of the goals panel (board HaloGoalsSheet): its [label], then a [StepperSize.Row] [HaloStepper] with
+ * the goal and its [unit]. [step] moves it by one step down or
  * up (-1, 1) already held in [range]. A tap on the number opens it for typing ([edit] is what it starts with, [parse]
  * reads it): Enter or leaving the field keeps a value in range, anything else keeps the goal as it was and says the
  * range. [extra] sits under it, a note or the calorie suggestion.
  */
 @Composable
-private fun GoalStepper(
+private fun GoalRow(
     label: String,
     display: String,
     unit: String?,
@@ -189,7 +197,7 @@ private fun GoalStepper(
     lowerLabel: Int = R.string.glow_goals_lower,
     raiseLabel: Int = R.string.glow_goals_raise,
     typeLabel: Int = R.string.glow_goals_type,
-    extra: @Composable ColumnScope.() -> Unit = {},
+    extra: (@Composable ColumnScope.() -> Unit)? = null,
 ) {
     var typing by remember { mutableStateOf(false) }
     var text by remember { mutableStateOf("") }
@@ -206,59 +214,49 @@ private fun GoalStepper(
         if (typed != null) onChange(typed)
     }
     val typeText = stringResource(typeLabel, label)
-    Column(
-        Modifier.fillMaxWidth().topHairline(divider).padding(start = 16.dp, end = 12.dp, top = 10.dp, bottom = 10.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(label, Modifier.weight(1f), color = Color.White, style = GlowType.body, maxLines = 1)
-            RoundIconButton(
-                AppIcons.Minus, stringResource(lowerLabel, label), { typing = false; refused = false; onChange(step(-1)) },
-                size = 40.dp, iconSize = 18.dp,
-            )
-            Box(
-                Modifier.width(104.dp).height(40.dp).clip(GlowLayout.TileShape)
-                    .let {
-                        if (typing) it
-                        else it.clickable(onClickLabel = typeText, role = Role.Button) {
-                            text = edit(value)
-                            refused = false
-                            typing = true
-                        }
-                    },
-                contentAlignment = Alignment.Center,
+    HaloRow(
+        label,
+        trail = {
+            HaloStepper(
+                stringResource(lowerLabel, label), stringResource(raiseLabel, label),
+                { typing = false; refused = false; onChange(step(-1)) }, { typing = false; refused = false; onChange(step(1)) },
+                size = StepperSize.Row,
             ) {
-                if (typing) {
-                    BasicTextField(
-                        text, { t -> text = t.filter { it.isDigit() || it == ':' || it == '.' || it == ',' }.take(MAX_TYPED) },
-                        Modifier.fillMaxWidth().focusRequester(focus)
-                            .onFocusChanged { if (it.isFocused) focused = true else if (focused) commit() },
-                        textStyle = GlowType.goalValueMinor.copy(color = Color.White, textAlign = TextAlign.Center), singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
-                        keyboardActions = KeyboardActions(onDone = { commit() }),
-                        cursorBrush = SolidColor(Color.White),
-                    )
-                    LaunchedEffect(Unit) { focus.requestFocus() }
-                } else {
-                    Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.Center) {
-                        Text(display, color = Color.White, style = GlowType.goalValueMinor, maxLines = 1)
-                        if (unit != null) {
-                            Text(
-                                unit, Modifier.padding(start = 4.dp, bottom = 3.dp), color = GlowType.noteColor,
-                                style = GlowType.secondary, maxLines = 1,
-                            )
-                        }
-                    }
+                Box(
+                    Modifier.fillMaxSize().clip(Corner.Chip)
+                        .let {
+                            if (typing) it
+                            else it.clickable(onClickLabel = typeText, role = Role.Button) {
+                                text = edit(value)
+                                refused = false
+                                typing = true
+                            }
+                        },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    if (typing) {
+                        BasicTextField(
+                            text, { t -> text = t.filter { it.isDigit() || it == ':' || it == '.' || it == ',' }.take(MAX_TYPED) },
+                            Modifier.fillMaxWidth().focusRequester(focus)
+                                .onFocusChanged { if (it.isFocused) focused = true else if (focused) commit() },
+                            textStyle = StepperSize.Row.number.copy(color = Color.White, textAlign = TextAlign.Center), singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
+                            keyboardActions = KeyboardActions(onDone = { commit() }),
+                            cursorBrush = SolidColor(Color.White),
+                        )
+                        LaunchedEffect(Unit) { focus.requestFocus() }
+                    } else StepperNumber(display, unit, size = StepperSize.Row)
                 }
             }
-            RoundIconButton(
-                AppIcons.Plus, stringResource(raiseLabel, label), { typing = false; refused = false; onChange(step(1)) },
-                size = 40.dp, iconSize = 18.dp,
-            )
-        }
-        if (refused) PageNote(GoalCopy.outOfRange(rangeNote), MetricColors.warn)
-        extra()
-    }
+        },
+        below = if (refused || extra != null) ({
+            Column(verticalArrangement = Arrangement.spacedBy(Space.S8)) {
+                if (refused) HaloNote(GoalCopy.outOfRange(rangeNote), color = MetricColors.warn)
+                extra?.invoke(this)
+            }
+        }) else null,
+        divider = divider,
+    )
 }
 
 /** Minutes in an hour, for the sleep goal. */

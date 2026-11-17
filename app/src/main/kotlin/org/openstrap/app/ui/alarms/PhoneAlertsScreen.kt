@@ -1,5 +1,12 @@
 package org.openstrap.app.ui.alarms
 
+import org.openstrap.app.ui.glow.HaloNote
+import org.openstrap.app.ui.glow.HaloPageHeader
+import org.openstrap.app.ui.glow.HaloPageList
+import org.openstrap.app.ui.glow.PageVariant
+import androidx.compose.foundation.layout.padding
+import org.openstrap.app.ui.glow.ButtonPair
+import org.openstrap.app.ui.theme.Space
 import android.Manifest
 import android.content.ComponentName
 import android.content.Intent
@@ -33,17 +40,13 @@ import org.openstrap.app.device.BlePermissions
 import org.openstrap.app.device.StrapNotificationListener
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.PaddingValues
-import org.openstrap.app.ui.dashboard.ScreenList
+import org.openstrap.app.ui.glow.HaloButton
 import org.openstrap.app.ui.glow.GlowLayout
 import org.openstrap.app.ui.device.SegmentSheet
-import org.openstrap.app.ui.device.SheetActions
-import org.openstrap.app.ui.glow.PageButton
 import org.openstrap.app.ui.glow.PageGroup
-import org.openstrap.app.ui.glow.PageHeader
-import org.openstrap.app.ui.glow.PageNote
-import org.openstrap.app.ui.glow.PageRow
-import org.openstrap.app.ui.glow.PageSheet
-import org.openstrap.app.ui.glow.PageSwitchRow
+import org.openstrap.app.ui.glow.NavRow
+import org.openstrap.app.ui.glow.HaloSheet
+import org.openstrap.app.ui.glow.SwitchRow
 import org.openstrap.app.ui.theme.MetricColors
 import org.openstrap.app.presentation.Ranges
 import org.openstrap.app.presentation.TimeOfDay
@@ -122,12 +125,12 @@ fun PhoneAlertsScreen(vm: PhoneAlertsViewModel, contentPadding: PaddingValues, o
     val callsOn = calls && callPermission
     val notificationsOn = notifications && notificationAccess
 
-    ScreenList(contentPadding, gutter = GlowLayout.Gutter) {
-        item { PageHeader(stringResource(R.string.you_phone_title), onBack) }
+    HaloPageList(contentPadding, variant = PageVariant.Settings) {
+        item { HaloPageHeader(stringResource(R.string.you_phone_title), onBack) }
         // Rows as the HaloPhoneAlerts board draws them: switches, and value rows that open a picker sheet.
         item {
             PageGroup(heading = stringResource(R.string.you_phone_group_calls)) {
-                PageSwitchRow(
+                SwitchRow(
                     stringResource(R.string.you_phone_calls), stringResource(R.string.you_phone_calls_note),
                     callsOn,
                     { on ->
@@ -141,23 +144,23 @@ fun PhoneAlertsScreen(vm: PhoneAlertsViewModel, contentPadding: PaddingValues, o
                     divider = false,
                 )
                 if (callsOn) {
-                    PageRow(stringResource(R.string.you_phone_call_buzz), callStyle.label, onClick = { picking = "callBuzz" })
-                    PageRow(stringResource(R.string.you_phone_call_length), callLength.label, onClick = { picking = "callLength" })
+                    NavRow(stringResource(R.string.you_phone_call_buzz), callStyle.label, onClick = { picking = "callBuzz" })
+                    NavRow(stringResource(R.string.you_phone_call_length), callLength.label, onClick = { picking = "callLength" })
                 }
             }
         }
         if (phoneBlocked && !callPermission) item {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                PageNote(stringResource(R.string.you_phone_calls_blocked), color = MetricColors.warn)
-                PageButton(stringResource(R.string.you_phone_open_settings), openAppSettings, Modifier.fillMaxWidth())
+            Column(verticalArrangement = Arrangement.spacedBy(Space.S8)) {
+                HaloNote(stringResource(R.string.you_phone_calls_blocked), color = MetricColors.warn)
+                HaloButton(stringResource(R.string.you_phone_open_settings), openAppSettings, Modifier.fillMaxWidth())
             }
         }
-        callPreviewError?.let { msg -> item { PageNote(msg, color = MetricColors.warn) } }
+        callPreviewError?.let { msg -> item { HaloNote(msg, color = MetricColors.warn) } }
         item {
             // Do Not Disturb is said once, here, for calls and notifications both.
             PageGroup(heading = stringResource(R.string.you_phone_group_notifications),
                 footnote = stringResource(R.string.you_phone_note)) {
-                PageSwitchRow(
+                SwitchRow(
                     stringResource(R.string.you_phone_notifications), stringResource(R.string.you_phone_notifications_note),
                     notificationsOn,
                     { on ->
@@ -167,20 +170,20 @@ fun PhoneAlertsScreen(vm: PhoneAlertsViewModel, contentPadding: PaddingValues, o
                     divider = false,
                 )
                 if (notificationsOn) {
-                    PageRow(stringResource(R.string.you_phone_pattern), pattern.label, onClick = { picking = "pattern" })
+                    NavRow(stringResource(R.string.you_phone_pattern), pattern.label, onClick = { picking = "pattern" })
                 }
             }
         }
         if (notifications && !notificationAccess) item {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                PageNote(stringResource(R.string.you_phone_notifications_access), color = MetricColors.warn)
-                PageButton(stringResource(R.string.you_phone_open_settings), openNotificationAccess, Modifier.fillMaxWidth())
+            Column(verticalArrangement = Arrangement.spacedBy(Space.S8)) {
+                HaloNote(stringResource(R.string.you_phone_notifications_access), color = MetricColors.warn)
+                HaloButton(stringResource(R.string.you_phone_open_settings), openNotificationAccess, Modifier.fillMaxWidth())
             }
         }
-        previewError?.let { msg -> item { PageNote(msg, color = MetricColors.warn) } }
+        previewError?.let { msg -> item { HaloNote(msg, color = MetricColors.warn) } }
         if (notificationsOn) item {
             PageGroup(heading = stringResource(R.string.you_phone_quiet)) {
-                PageSwitchRow(
+                SwitchRow(
                     stringResource(R.string.you_phone_quiet),
                     // The summary is only needed here when it warns (the same start and end).
                     if (quiet.on && quiet.from == quiet.to) quietHoursSummary(quiet, callsOn) else null, quiet.on,
@@ -188,10 +191,10 @@ fun PhoneAlertsScreen(vm: PhoneAlertsViewModel, contentPadding: PaddingValues, o
                     divider = false,
                 )
                 if (quiet.on) {
-                    PageRow(stringResource(R.string.you_phone_quiet_from), quietClock(quiet.from), onClick = { pickingFrom = true })
-                    PageRow(stringResource(R.string.you_phone_quiet_to), quietClock(quiet.to), onClick = { pickingFrom = false })
+                    NavRow(stringResource(R.string.you_phone_quiet_from), quietClock(quiet.from), onClick = { pickingFrom = true })
+                    NavRow(stringResource(R.string.you_phone_quiet_to), quietClock(quiet.to), onClick = { pickingFrom = false })
                     if (callsOn) {
-                        PageSwitchRow(
+                        SwitchRow(
                             stringResource(R.string.you_phone_quiet_calls), stringResource(R.string.you_phone_quiet_calls_note),
                             quiet.calls,
                             { on -> vm.updateQuietHours { it.copy(calls = on) } },
@@ -236,9 +239,15 @@ fun PhoneAlertsScreen(vm: PhoneAlertsViewModel, contentPadding: PaddingValues, o
 @Composable
 private fun QuietTimeSheet(title: String, minutes: Int, note: String, onSave: (Int) -> Unit, onDismiss: () -> Unit) {
     var picked by remember { mutableIntStateOf(minutes) }
-    PageSheet(onDismiss, title) {
+    HaloSheet(
+        onDismiss, title,
+        footer = {
+            ButtonPair(
+                stringResource(R.string.you_action_cancel), onDismiss, stringResource(R.string.you_action_save), { onSave(picked) },
+            )
+        },
+    ) {
         TimeWheels(minutes, { picked = it })
-        PageNote(note)
-        SheetActions(onDismiss, { onSave(picked) })
+        HaloNote(note)
     }
 }

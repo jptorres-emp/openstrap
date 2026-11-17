@@ -110,16 +110,16 @@ class RewardsCopyTest {
 
     @Test
     fun runsOfWeeksAndProgressRead() {
-        assertEquals("Goal met 6 weeks in a row. Your best is 9.", RewardsCopy.runLine(6, 9))
-        assertEquals("Goal met 1 week in a row, your best yet.", RewardsCopy.runLine(1, 1))
+        assertEquals("Goal met 6 weeks in a row, best is 9", RewardsCopy.runLine(6, 9))
+        assertEquals("Goal met 1 week in a row, best yet", RewardsCopy.runLine(1, 1))
         assertEquals("712 of 1,000 km", RewardsCopy.progressLine(712, 1000, "km", Locale.UK))
         assertEquals("4.2 of 5 km", RewardsCopy.progressLine(4200, 5000, "m", Locale.UK))
         assertEquals("712 of 1.000 km", RewardsCopy.progressLine(712, 1000, "km", Locale.GERMANY))
         assertEquals("4,2 of 5 km", RewardsCopy.progressLine(4200, 5000, "m", Locale.GERMANY))
-        assertEquals("27 October to 2 November", RewardsCopy.weekRange(LocalDate.parse("2026-10-27"), Locale.UK))
-        assertEquals("5 of 4 workouts, goal met. 6 weeks in a row.", RewardsCopy.recapText(WeekResult(0, 4, 5, true), 6))
-        assertEquals("2 of 4 workouts.", RewardsCopy.recapText(WeekResult(0, 4, 2, false), 0))
-        assertEquals("0 of 1 workout.", RewardsCopy.recapText(WeekResult(0, 1, 0, false), 0))
+        assertEquals("27 Oct to 2 Nov", RewardsCopy.weekRange(LocalDate.parse("2026-10-27"), Locale.UK))
+        assertEquals("5 of 4 workouts, 6 weeks in a row", RewardsCopy.recapText(WeekResult(0, 4, 5, true), 6))
+        assertEquals("2 of 4 workouts", RewardsCopy.recapText(WeekResult(0, 4, 2, false), 0))
+        assertEquals("0 of 1 workout", RewardsCopy.recapText(WeekResult(0, 1, 0, false), 0))
     }
 
     @Test

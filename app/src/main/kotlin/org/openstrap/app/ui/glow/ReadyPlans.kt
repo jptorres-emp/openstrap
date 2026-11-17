@@ -1,14 +1,14 @@
 package org.openstrap.app.ui.glow
 
+import androidx.compose.ui.text.style.TextAlign
+import org.openstrap.app.ui.theme.Space
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -61,12 +61,12 @@ internal fun StrengthPlanCard(
         )
         if (sets == null) {
             TypedValue(listOf(rest), typing, onTyping, onDone = { t -> StartCopy.parseSetRest(t[0])?.let(onRest) }) {
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(Space.S8)) {
                     Number(0)
                     ValueWords(stringResource(R.string.glow_ready_rest_after_set))
                 }
             }
-            GoalNote(if (typing) StartCopy.STRENGTH_TYPING else StartCopy.OPEN_SETS_NOTE)
+            HaloNote(if (typing) StartCopy.STRENGTH_TYPING else StartCopy.OPEN_SETS_NOTE, textAlign = TextAlign.Center)
             return@PlanChoice
         }
         TypedValue(
@@ -77,13 +77,13 @@ internal fun StrengthPlanCard(
             },
         ) {
             Row { Number(0) }
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(Space.S8)) {
                 ValueWords(stringResource(R.string.glow_ready_with))
                 Number(1)
                 ValueWords(stringResource(R.string.glow_ready_rest_between))
             }
         }
-        GoalNote(if (typing) StartCopy.STRENGTH_TYPING else StartCopy.STRENGTH_STATUS)
+        HaloNote(if (typing) StartCopy.STRENGTH_TYPING else StartCopy.STRENGTH_STATUS, textAlign = TextAlign.Center)
     }
 }
 
@@ -114,17 +114,17 @@ internal fun HiitPlanCard(type: Int, rounds: Structure?, onChange: (Structure?) 
                     typing, onTyping, onDone = { onChange(StartCopy.typedTimed(rounds, it)) },
                 ) {
                     val now = typed?.let { StartCopy.typedTimed(rounds, it) } ?: rounds
-                    Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(Space.S12)) {
                         Number(0)
                         Number(1)
                     }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(Space.S8)) {
                         Number(2)
                         StartCopy.totalLine(now)?.let { ValueWords(it) }
                     }
                 }
                 if (!typing) RoundsStrip(rounds)
-                GoalNote(if (typing) StartCopy.HIIT_TYPING else StartCopy.INTERVALS_STATUS)
+                HaloNote(if (typing) StartCopy.HIIT_TYPING else StartCopy.INTERVALS_STATUS, textAlign = TextAlign.Center)
             }
             is Structure.EveryMinute -> {
                 TypedValue(
@@ -139,14 +139,14 @@ internal fun HiitPlanCard(type: Int, rounds: Structure?, onChange: (Structure?) 
                 ) {
                     val now = typed?.let { StartCopy.typedEveryMinute(rounds, it) } ?: rounds
                     Row { Number(0) }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(Space.S8)) {
                         Number(1)
                         StartCopy.totalLine(now)?.let { ValueWords(it) }
                     }
                 }
-                GoalNote(if (typing) StartCopy.EVERY_TYPING else StartCopy.INTERVALS_STATUS)
+                HaloNote(if (typing) StartCopy.EVERY_TYPING else StartCopy.INTERVALS_STATUS, textAlign = TextAlign.Center)
             }
-            else -> GoalNote(StartCopy.HIIT_FREE_NOTE)
+            else -> HaloNote(StartCopy.HIIT_FREE_NOTE, textAlign = TextAlign.Center)
         }
     }
 }
@@ -195,27 +195,26 @@ internal fun GamePlanCard(type: Int, periods: Structure.Periods?, onChange: (Str
                 ),
                 typing, onTyping, onDone = { onChange(StartCopy.typedPeriods(periods, it)) },
             ) {
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(Space.S8)) {
                     Number(0)
                     Times()
                     Number(1)
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(Space.S8)) {
                     ValueWords(stringResource(R.string.glow_ready_with_a))
                     Number(2)
                     ValueWords(stringResource(R.string.glow_ready_break))
                 }
             }
         }
-        GoalNote(if (typing) StartCopy.GAMES_TYPING else StartCopy.gamesNote(periods))
+        HaloNote(if (typing) StartCopy.GAMES_TYPING else StartCopy.gamesNote(periods), textAlign = TextAlign.Center)
     }
 }
 
-/** Ready's switch rows under the plan card, on a plain panel. */
+/** Ready's switch rows under the plan card: a [HaloCard] of rows. */
+@androidx.compose.runtime.NonRestartableComposable
 @Composable
-internal fun ReadyRows(content: @Composable ColumnScope.() -> Unit) {
-    Column(Modifier.fillMaxWidth().clip(GlowLayout.TileShape).background(PlainPanel).padding(horizontal = 18.dp), content = content)
-}
+internal fun ReadyRows(content: @Composable ColumnScope.() -> Unit) = HaloCard(fill = CardFill.Rows, content = content)
 
 /** Work and rest along the rounds, each as wide as its time: work in heart red, rest in sleep blue. */
 @Composable
@@ -223,7 +222,7 @@ private fun RoundsStrip(s: Structure.Timed) {
     val described = pluralStringResource(R.plurals.glow_ready_rounds_description, s.rounds, s.rounds, s.work, s.rest)
     Row(
         Modifier.fillMaxWidth().height(10.dp).semantics { contentDescription = described },
-        horizontalArrangement = Arrangement.spacedBy(2.dp),
+        horizontalArrangement = Arrangement.spacedBy(Space.S2),
     ) {
         repeat(s.rounds) { i ->
             Box(Modifier.weight(s.work.toFloat()).height(10.dp).clip(CircleShape).background(MetricColors.heart))

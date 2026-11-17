@@ -16,8 +16,8 @@ class StrapRowsTest {
         assertNull(alarmsSummary(AlarmsUiState()))
         assertEquals("None", alarmsSummary(AlarmsUiState(caps = caps)))
         val alarms = listOf(Alarm(0, 6, 40, Alarm.WEEKDAYS, enabled = true), Alarm(1, 8, 0, Alarm.WEEKEND, enabled = true), Alarm(2, 9, 0, 0, enabled = false))
-        assertEquals("06:40 weekdays and 1 more", alarmsSummary(AlarmsUiState(caps = caps, alarms = alarms)))
-        assertEquals("06:40 weekdays", alarmsSummary(AlarmsUiState(caps = caps, alarms = alarms.take(1))))
+        assertEquals("06:40, Weekdays and 1 more", alarmsSummary(AlarmsUiState(caps = caps, alarms = alarms)))
+        assertEquals("06:40, Weekdays", alarmsSummary(AlarmsUiState(caps = caps, alarms = alarms.take(1))))
         assertEquals("All off", alarmsSummary(AlarmsUiState(caps = caps, alarms = alarms.drop(2))))
     }
 
@@ -27,9 +27,9 @@ class StrapRowsTest {
     @Test fun `health alerts in a few words, or Off`() {
         assertNull(healthAlertsSummary(AlarmsUiState()))
         assertEquals("Off", healthAlertsSummary(AlarmsUiState(health = health(SettingsCodec.KEY_HIGH_HR_ALERT to 0))))
-        assertEquals("Above 140 bpm", healthAlertsSummary(AlarmsUiState(health = health(SettingsCodec.KEY_HIGH_HR_ALERT to 140))))
-        assertEquals("Above 140, below 40", healthAlertsSummary(AlarmsUiState(health = health(SettingsCodec.KEY_HIGH_HR_ALERT to 140, SettingsCodec.KEY_LOW_HR_ALERT to 40))))
-        assertEquals("Below 40 bpm", healthAlertsSummary(AlarmsUiState(health = health(SettingsCodec.KEY_LOW_HR_ALERT to 40))))
+        assertEquals("Over 140 bpm", healthAlertsSummary(AlarmsUiState(health = health(SettingsCodec.KEY_HIGH_HR_ALERT to 140))))
+        assertEquals("Over 140, under 40 bpm", healthAlertsSummary(AlarmsUiState(health = health(SettingsCodec.KEY_HIGH_HR_ALERT to 140, SettingsCodec.KEY_LOW_HR_ALERT to 40))))
+        assertEquals("Under 40 bpm", healthAlertsSummary(AlarmsUiState(health = health(SettingsCodec.KEY_LOW_HR_ALERT to 40))))
         assertEquals("Oxygen below 90%", healthAlertsSummary(AlarmsUiState(health = health(SettingsCodec.KEY_LOW_SPO2_ALERT to 90))))
         assertEquals("Heart rate and oxygen", healthAlertsSummary(AlarmsUiState(health = health(SettingsCodec.KEY_HIGH_HR_ALERT to 150, SettingsCodec.KEY_LOW_SPO2_ALERT to 90))))
         assertEquals(
@@ -68,7 +68,7 @@ class StrapRowsTest {
             assertEquals("10:00" to "PM", dotClock(22, 0, use24Hour = false))
             org.openstrap.app.presentation.ClockSetting.use24Hour = false
             val alarms = listOf(Alarm(0, 6, 40, Alarm.WEEKDAYS, enabled = true))
-            assertEquals("6:40 AM weekdays", alarmsSummary(AlarmsUiState(caps = caps, alarms = alarms)))
+            assertEquals("6:40 AM, Weekdays", alarmsSummary(AlarmsUiState(caps = caps, alarms = alarms)))
             assertEquals("10:00 PM", quietClock(22 * 60))
             org.openstrap.app.presentation.ClockSetting.use24Hour = true
             assertEquals("22:00", quietClock(22 * 60))

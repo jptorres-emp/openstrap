@@ -1,5 +1,9 @@
 package org.openstrap.app.ui.glow
 
+import org.openstrap.app.ui.theme.IconSize
+import org.openstrap.app.ui.theme.Corner
+import org.openstrap.app.ui.theme.Space
+import org.openstrap.app.ui.theme.Greys
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
@@ -37,9 +41,9 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.padding
 import org.openstrap.app.data.Healthspan
-import org.openstrap.app.ui.dashboard.ScreenList
 import kotlin.math.abs
 import org.openstrap.app.ui.theme.AppIcons
+import org.openstrap.app.ui.theme.Ink
 import org.openstrap.app.ui.theme.MetricColors
 
 /** The scale on the Healthspan screen's bars: a habit this many years either side of the middle fills its half. */
@@ -85,7 +89,7 @@ fun GlowHealthspanScreen(state: Healthspan.Outcome?, contentPadding: PaddingValu
     val headline = when {
         shown != null -> DetailHeadline(
             shown.toString(),
-            "$years, " + (r?.let { updatedText(it.asOf) } ?: TabCopy.habitAgeForNow(waiting)),
+            stringResource(R.string.glow_healthspan_years_line, years, r?.let { updatedText(it.asOf) } ?: TabCopy.habitAgeForNow(waiting)),
             line?.text, unit = years,
         )
         else -> DetailHeadline.none(
@@ -112,7 +116,7 @@ fun GlowHealthspanScreen(state: Healthspan.Outcome?, contentPadding: PaddingValu
 /** "Likely 29 to 33" under the headline. */
 @Composable
 private fun RangeLine(text: String) =
-    Text(text, color = Color.White.copy(alpha = GlowType.MOMENT_ALPHA), style = GlowType.secondary)
+    Text(text, color = Ink.Secondary, style = GlowType.secondary)
 
 /**
  * Where the last 30 days sit against the 6-month habits: "Pace of aging" with its pace as the note, the scale from -1x to
@@ -120,12 +124,12 @@ private fun RangeLine(text: String) =
  */
 @Composable
 private fun PacePanel(pace: Float?) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        DetailHeading(
-            stringResource(R.string.glow_healthspan_pace_title),
+    Column(verticalArrangement = Arrangement.spacedBy(Space.S12)) {
+        HaloTitle(
+            stringResource(R.string.glow_healthspan_pace_title), variant = TitleVariant.OutOfCard,
             note = pace?.let { stringResource(R.string.glow_healthspan_pace_note, paceLabel(it), paceText(it)) } ?: paceLabel(null),
         )
-        if (pace != null) PaceScale(marker = (pace + 1f) / 4f, color = MetricColors.habitAge, Modifier.padding(horizontal = 4.dp))
+        if (pace != null) PaceScale(marker = (pace + 1f) / 4f, color = MetricColors.habitAge, Modifier.padding(horizontal = Space.S4))
         Text(
             stringResource(
                 when {
@@ -135,7 +139,7 @@ private fun PacePanel(pace: Float?) {
                     else -> R.string.glow_healthspan_pace_match
                 },
             ),
-            color = Color.White, style = GlowType.detailSentence, modifier = Modifier.padding(horizontal = 4.dp),
+            color = Color.White, style = GlowType.detailSentence, modifier = Modifier.padding(horizontal = Space.S4),
         )
     }
 }
@@ -143,11 +147,11 @@ private fun PacePanel(pace: Float?) {
 /** A solid track from -1x to 3x with the marker at the pace and the ends named under it. */
 @Composable
 private fun PaceScale(marker: Float, color: Color, modifier: Modifier = Modifier) {
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(Space.S8)) {
         Canvas(Modifier.fillMaxWidth().height(16.dp)) {
             val y = size.height / 2
             val track = Size(size.width, 6.dp.toPx())
-            drawRoundRect(DetailGridInk, Offset(0f, y - 3.dp.toPx()), track, CornerRadius(3.dp.toPx()))
+            drawRoundRect(Greys.Raised, Offset(0f, y - 3.dp.toPx()), track, CornerRadius(3.dp.toPx()))
             val x = 8.dp.toPx() + (size.width - 16.dp.toPx()) * marker.coerceIn(0f, 1f)
             drawRoundRect(color, Offset(0f, y - 3.dp.toPx()), Size(x, 6.dp.toPx()), CornerRadius(3.dp.toPx()))
             drawCircle(Color.Black, 8.dp.toPx(), Offset(x, y))
@@ -170,38 +174,25 @@ private fun TermsPanel(r: Healthspan.Result) {
     DetailPanel(title = stringResource(R.string.glow_healthspan_terms_title), note = stringResource(R.string.glow_healthspan_terms_note)) {
         r.terms.forEachIndexed { i, t ->
             val (icon, ink) = habitIcon(t.habit)
-            Column(
-                Modifier.fillMaxWidth().topHairline(i > 0, DetailRowLine).padding(horizontal = 16.dp, vertical = 14.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Box(
-                        Modifier.size(32.dp).clip(GlowLayout.IconShape).background(ink.copy(alpha = 0.16f)),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        androidx.compose.material3.Icon(icon, null, tint = ink, modifier = Modifier.size(17.dp))
-                    }
-                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        RowName(t.habit.label)
-                        Text(termDetail(t, r.age), color = GlowType.noteColor, style = GlowType.noteSmall)
-                    }
-                    Text(
-                        effectText(t.years), Modifier.widthIn(max = 96.dp),
-                        color = effectInk(t.years),
-                        style = GlowType.secondary, textAlign = androidx.compose.ui.text.style.TextAlign.End,
-                    )
-                }
-                EffectBar(t.years, Modifier.padding(start = 44.dp))
-            }
+            HaloRow(
+                t.habit.label, lead = RowLead.tile(icon, ink),
+                line = { RowLine(termDetail(t, r.age)) },
+                value = effectText(t.years), valueInk = effectInk(t.years),
+                valueStyle = GlowType.secondary.copy(textAlign = androidx.compose.ui.text.style.TextAlign.End),
+                valueModifier = Modifier.widthIn(max = 96.dp),
+                below = { EffectBar(t.years, Modifier.fillMaxWidth()) },
+                divider = i > 0,
+            )
         }
-        Row(Modifier.fillMaxWidth().padding(start = 60.dp, end = 16.dp, bottom = 12.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+        Row(Modifier.fillMaxWidth().rowSides().padding(start = IconSize.TileS + RowSpec.Gap, bottom = Space.S12),
+            horizontalArrangement = Arrangement.SpaceBetween) {
             Text(stringResource(R.string.glow_healthspan_scale_younger), color = DetailAxisInk, style = GlowType.caption)
             Text(stringResource(R.string.glow_healthspan_scale_older), color = DetailAxisInk, style = GlowType.caption)
         }
     }
     if (r.fitnessCapped) Text(
         stringResource(R.string.glow_healthspan_fitness_capped),
-        color = GlowType.footnoteColor, style = GlowType.footnote, modifier = Modifier.padding(horizontal = 4.dp),
+        color = GlowType.footnoteColor, style = GlowType.footnote, modifier = Modifier.padding(horizontal = Space.S4),
     )
 }
 
@@ -226,7 +217,7 @@ private fun ScaleLabels(start: String, middle: String, end: String, modifier: Mo
 
 /** A scale's label in Caption, centred on [at] (0 to 1) across the scale and kept inside it. */
 @Composable
-internal fun BoxScope.ScaleLabel(text: String, at: Float, color: Color = Color.White.copy(alpha = GlowType.CAPTION_ALPHA)) {
+internal fun BoxScope.ScaleLabel(text: String, at: Float, color: Color = Ink.Secondary) {
     // Centred on its point by aligning a share of the way across, as BiasAlignment does.
     Text(text, color = color, style = GlowType.caption, modifier = Modifier.align(BiasAlignment((at * 2f - 1f).coerceIn(-1f, 1f), 0f)))
 }
@@ -235,7 +226,7 @@ internal fun BoxScope.ScaleLabel(text: String, at: Float, color: Color = Color.W
 private fun effectInk(years: Float): Color = when {
     abs(years) < NO_EFFECT -> GlowType.noteColor
     years < 0 -> statusTint(MetricColors.habitAge)
-    else -> Color.White.copy(alpha = GlowType.ROW_VALUE_ALPHA)
+    else -> Ink.Strong
 }
 
 /** Under this many years a habit has no effect to show. */
@@ -250,7 +241,7 @@ private fun EffectBar(years: Float, modifier: Modifier = Modifier) {
     Canvas(modifier.fillMaxWidth().height(10.dp)) {
         val mid = size.width / 2
         val track = Size(size.width, 4.dp.toPx())
-        drawRoundRect(DetailGridInk, Offset(0f, 3.dp.toPx()), track, CornerRadius(2.dp.toPx()))
+        drawRoundRect(Greys.Raised, Offset(0f, 3.dp.toPx()), track, CornerRadius(2.dp.toPx()))
         if (abs(years) >= NO_EFFECT) {
             val end = mid + (years / BAR_FULL_YEARS).coerceIn(-1f, 1f) * mid
             drawRoundRect(
@@ -259,6 +250,6 @@ private fun EffectBar(years: Float, modifier: Modifier = Modifier) {
             )
         }
         val mark = Size(2.dp.toPx(), 10.dp.toPx())
-        drawRoundRect(Color.White.copy(alpha = 0.5f), Offset(mid - 1.dp.toPx(), 0f), mark, CornerRadius(1.dp.toPx()))
+        drawRoundRect(Ink.Tertiary, Offset(mid - 1.dp.toPx(), 0f), mark, CornerRadius(1.dp.toPx()))
     }
 }

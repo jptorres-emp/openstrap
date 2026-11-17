@@ -7,17 +7,16 @@
 -->
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <!-- The Automatic backup row while off. One line. -->
-    <string name="you_backup_status_off">Off. A zip each day in a folder you choose</string>
+    <string name="you_backup_status_off">Off, a zip each day in your folder</string>
     <!-- The Automatic backup row when the last one failed. The reason is one of the you_backup_failure sentences. -->
-    <string name="you_backup_status_failed">Last backup failed. <xliff:g id="reason" example="There isn't enough space for it.">%1$s</xliff:g></string>
     <!-- The Automatic backup row before the first backup. -->
-    <string name="you_backup_status_waiting">Each day while the phone charges. No backup yet</string>
-    <!-- The Automatic backup row and the You page's Backup row. The time is "today at 03:12", "yesterday at 03:12" or "on Tue 20 Oct". -->
-    <string name="you_backup_last">Last backup <xliff:g id="when" example="today at 03:12">%1$s</xliff:g></string>
+    <string name="you_backup_status_waiting">No backup yet, runs while charging</string>
+    <!-- The Automatic backup row and the You page's Backup row. The time is "03:12", "Yesterday 03:12" or "Tue 20 Oct, 03:12". A phrase slot, 36 characters. -->
+    <string name="you_backup_last">Last backup %1$s</string>
     <!-- The You page's Backup row when the last one failed (the Backup page says why). -->
     <string name="you_backup_summary_failed">Last backup failed</string>
     <!-- The You page's Backup row when on, before the first backup. -->
-    <string name="you_backup_summary_waiting">On. No backup yet</string>
+    <string name="you_backup_summary_waiting">On, no backup yet</string>
 
     <!-- Why a backup failed, one sentence each. -->
     <string name="you_backup_failure_folder_gone">The folder is no longer available.</string>
@@ -65,30 +64,30 @@
     <string name="you_backup_folder">Backup folder</string>
     <string name="you_backup_now">Back up now</string>
     <!-- Under Back up now while it runs. -->
-    <string name="you_backup_now_running">Backing up…</string>
-    <string name="you_backup_now_note">Saves today\'s zip in that folder</string>
-    <string name="you_backup_restore_note">Any unstrap zip. Fills in what this phone is missing</string>
+    <string name="you_backup_now_running">Backing up</string>
+    <string name="you_backup_now_note">Saves today\'s zip in that folder.</string>
+    <string name="you_backup_restore_note">Any unstrap zip. It fills in what this phone is missing.</string>
     <string name="you_backup_save_copy">Save a copy</string>
-    <string name="you_backup_save_copy_note">A zip where you choose. unstrap never deletes it</string>
+    <string name="you_backup_save_copy_note">A zip where you choose. It\'s never deleted.</string>
 
     <!-- The Deleted sleep page's title. -->
     <string name="you_deleted_sleep_title">Deleted sleep</string>
 
     <!-- The auto copy row on the Health Connect page, stopped by itself because its permissions were taken back. -->
-    <string name="you_hc_line_stopped_permissions">Stopped. Health Connect permissions were turned off</string>
+    <string name="you_hc_line_stopped_permissions">Stopped, permissions turned off</string>
     <!-- Stopped because Health Connect was removed, where the Play Store can install it again. -->
-    <string name="you_hc_line_stopped_install">Stopped. Install Health Connect to turn it back on</string>
+    <string name="you_hc_line_stopped_install">Stopped, install Health Connect</string>
     <!-- Stopped because Health Connect isn't there and can't be installed. -->
-    <string name="you_hc_line_stopped_unavailable">Stopped. Health Connect isn\'t available on this phone</string>
-    <string name="you_hc_line_off">Off. Copies new data after each strap sync</string>
+    <string name="you_hc_line_stopped_unavailable">Stopped, not available on this phone</string>
+    <string name="you_hc_line_off">Off, copies after each sync</string>
     <!-- On, before its first copy. -->
-    <string name="you_hc_line_on">On. Copies new data after each strap sync</string>
-    <!-- On, with the last copy. The time is "10:42", "yesterday 10:42", "Tuesday 10:42" or "Tue 12 Oct 10:42". -->
-    <string name="you_hc_line_last">On. Last copied <xliff:g id="when" example="yesterday 10:42">%1$s</xliff:g></string>
+    <string name="you_hc_line_on">On, copies after each sync</string>
+    <!-- On, with the last copy. The time is "10:42", "Yesterday 10:42" or "Tue 12 Oct, 10:42". A phrase slot, 36 characters. -->
+    <string name="you_hc_line_last">On, last copied %1$s</string>
     <!-- The You page's Health Connect row, shorter: stopped, and why. -->
-    <string name="you_hc_summary_stopped_permissions">Stopped. Permissions were turned off</string>
-    <string name="you_hc_summary_stopped_install">Stopped. Install Health Connect</string>
-    <string name="you_hc_summary_stopped_unavailable">Stopped. Not available on this phone</string>
+    <string name="you_hc_summary_stopped_permissions">Stopped, permissions turned off</string>
+    <string name="you_hc_summary_stopped_install">Stopped, install Health Connect</string>
+    <string name="you_hc_summary_stopped_unavailable">Stopped, not available on this phone</string>
 
     <!-- The Health Connect page: its title, the auto copy switch and the rows under Any time. -->
     <string name="you_hc_title">Health Connect</string>
@@ -98,7 +97,7 @@
     <string name="you_hc_open_note">Permissions and data</string>
     <!-- The note and button when the optional permissions (calories, breathing rate, VO2 max) are off: asks for just those. -->
     <string name="you_hc_calories_note">Calories, breathing rate and VO2 max are left out until you allow them.</string>
-    <string name="you_hc_calories_offer">Ask again</string>
+    <string name="you_hc_calories_offer">Ask for access</string>
     <!-- Where Health Connect is a Play Store app that's missing or out of date: the button, and why. -->
     <string name="you_hc_install">Install Health Connect</string>
     <string name="you_hc_install_note">On this phone Health Connect is an app from the Play Store. Install it to copy your data there.</string>
@@ -113,13 +112,13 @@
         <item quantity="other">Restored <xliff:g id="count" example="1,234">%1$s</xliff:g> records from Health Connect.</item>
     </plurals>
     <plurals name="you_hc_wrote">
-        <item quantity="one">Copied <xliff:g id="count" example="1234">%1$d</xliff:g> record to Health Connect (last 30 days).</item>
-        <item quantity="other">Copied <xliff:g id="count" example="1234">%1$d</xliff:g> records to Health Connect (last 30 days).</item>
+        <item quantity="one">Copied %1$,d record from the last 30 days to Health Connect.</item>
+        <item quantity="other">Copied %1$,d records from the last 30 days to Health Connect.</item>
     </plurals>
     <!-- After the auto copy switch is turned on, which copies the last 30 days at once. -->
     <plurals name="you_hc_auto_wrote">
-        <item quantity="one">Auto copy is on. Copied <xliff:g id="count" example="1234">%1$d</xliff:g> record to Health Connect (last 30 days).</item>
-        <item quantity="other">Auto copy is on. Copied <xliff:g id="count" example="1234">%1$d</xliff:g> records to Health Connect (last 30 days).</item>
+        <item quantity="one">Auto copy is on. Copied %1$,d record from the last 30 days.</item>
+        <item quantity="other">Auto copy is on. Copied %1$,d records from the last 30 days.</item>
     </plurals>
     <!-- What failed, before the reason (you_error_hc). -->
     <string name="you_hc_restore_failed">Couldn\'t restore from Health Connect</string>
@@ -144,4 +143,9 @@
     <!-- Backup page banner (Halo) and the Health Connect page's note under Copy now and Restore. -->
     <string name="you_backup_banner_failed">Last backup failed</string>
     <string name="you_hc_actions_note">Copy now sends the last 30 days. Restore brings back what unstrap saved there.</string>
+    <string name="you_backup_failed_folder_gone">The folder is no longer available</string>
+    <string name="you_backup_failed_permission">Can\'t reach the folder, choose it again</string>
+    <string name="you_backup_failed_no_space">Not enough space on this phone</string>
+    <string name="you_backup_failed_cant_write">Couldn\'t write to the folder</string>
+    <string name="you_backup_failed_other">Try again, or wait for tomorrow</string>
 </resources>

@@ -37,6 +37,7 @@
     <string name="glow_metrics_stress">Stress</string>
     <string name="glow_metrics_steps">Steps</string>
     <string name="glow_metrics_workouts">Workouts</string>
+    <string name="glow_metrics_active_kcal">Active kcal</string>
     <!-- Under Recovery while the app learns your baselines: nights so far out of the nights it needs. -->
     <plurals name="glow_metrics_learning_nights">
         <item quantity="one">Learning, <xliff:g id="nights" example="2">%1$d</xliff:g> of <xliff:g id="needed" example="4">%2$d</xliff:g> night</item>
@@ -82,13 +83,13 @@
     <!-- Under No reading on a night's week. -->
     <string name="glow_metrics_last_7_nights">In the last 7 nights</string>
     <!-- In the chart's place when the last 7 nights have no readings of this metric. The page title names the metric. -->
-    <string name="glow_metrics_none_last_7_nights">Nothing in the last 7 nights yet.</string>
+    <string name="glow_metrics_none_last_7_nights">No reading in the last 7 nights yet.</string>
     <!-- In the chart's place when the chosen range has no readings of this metric. -->
-    <string name="glow_metrics_none_in_range">Nothing in this range yet.</string>
+    <string name="glow_metrics_none_in_range">No reading in this range yet.</string>
     <!-- In the chart's place on a night with no readings of this metric while asleep. -->
-    <string name="glow_metrics_none_asleep">No readings while asleep.</string>
+    <string name="glow_metrics_none_asleep">No reading while asleep.</string>
     <!-- In the chart's place on a day with no readings of this metric. -->
-    <string name="glow_metrics_none_this_day">Nothing for this day yet.</string>
+    <string name="glow_metrics_none_this_day">No reading for this day.</string>
     <!-- In the chart's place on a day for breathing rate, which the strap reads only in sleep. -->
     <string name="glow_metrics_breathing_in_sleep">Breathing rate is measured during sleep.</string>
     <!-- Beside a held reading's number: its unit and the day. The unit is "bpm", "ms" or "%", the day "Wed 21". -->
@@ -107,6 +108,13 @@
     <string name="glow_detail_band_note">The band is your normal</string>
     <!-- The label on the band of your normal in a detail chart. -->
     <string name="glow_detail_your_normal">Your normal</string>
+    <!-- The three figures under a heart rate chart: its lowest, average and highest. A day's are Low and High. -->
+    <string name="glow_detail_low">Low</string>
+    <string name="glow_detail_high">High</string>
+    <string name="glow_detail_average">Average</string>
+    <!-- The three figures under a vital's chart: the last 7 nights (or days) averaged, and how far that is from your normal. -->
+    <string name="glow_detail_seven_night_average">7 night avg</string>
+    <string name="glow_detail_vs_normal">vs normal</string>
     <!-- Under a count's goal bar: "of 8,000". -->
     <string name="glow_detail_of_goal">of %1$s</string>
     <!-- Under Worse and Better on a score's drivers: the three marks of the scale. -->
@@ -120,7 +128,7 @@
     <string name="glow_detail_since_woke">Since you woke</string>
     <string name="glow_detail_through_day">Through the day</string>
     <string name="glow_detail_at_waking_note">%1$d at waking</string>
-    <string name="glow_detail_seven_day_average">7 day average</string>
+    <string name="glow_detail_seven_day_average">7 day avg</string>
     <string name="glow_detail_vs_yesterday">vs yesterday</string>
     <string name="glow_detail_better">Better</string>
 

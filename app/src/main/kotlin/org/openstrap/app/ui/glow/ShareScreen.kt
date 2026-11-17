@@ -1,8 +1,8 @@
 package org.openstrap.app.ui.glow
 
+import org.openstrap.app.ui.theme.Space
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
-import androidx.compose.foundation.background
 import org.openstrap.app.R
 import androidx.compose.ui.res.stringResource
 import android.content.ClipData
@@ -43,7 +43,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
@@ -67,6 +66,7 @@ import org.openstrap.app.data.catching
 import org.openstrap.app.data.Route
 import org.openstrap.app.ui.theme.AppIcons
 import org.openstrap.app.presentation.EarnedLine
+import org.openstrap.app.ui.theme.Ink
 import org.openstrap.app.ui.workout.FamilySummary
 import org.openstrap.app.ui.workout.PhoneSummary
 
@@ -204,11 +204,9 @@ private fun ShareScreen(card: StoryCard, route: List<Route.Point>, fileName: Str
         saved = null
     }
 
-    WorkoutPage(
-        Color.Transparent, contentPadding, scroll = false,
-        pinned = {
+    HaloPageColumn(contentPadding, scroll = false, pinned = {
             // Save dark and Share white, half each (workout rules, Frame: the Share bottom bar).
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            run {
                 val saveLabel = stringResource(
                     when (saved) {
                         true -> R.string.glow_share_saved
@@ -218,22 +216,18 @@ private fun ShareScreen(card: StoryCard, route: List<Route.Point>, fileName: Str
                 )
                 // Not while the photo is still being read (the card would save without it) or another export is running.
                 val ready = canExport && export == null
-                val dim = Modifier.alpha(if (canExport) 1f else 0.4f)
-                PageButton(
-                    saveLabel, { if (ready) save() }, Modifier.weight(1f).then(dim),
-                    icon = if (saved == true) AppIcons.Tick02 else AppIcons.DownloadSimple, size = ButtonSize.Main,
-                )
-                PageButton(
-                    stringResource(R.string.glow_share), { if (ready) export = Export.Share }, Modifier.weight(1f).then(dim),
-                    primary = true, icon = AppIcons.UploadSimple, size = ButtonSize.Main,
+                ButtonPair(
+                    saveLabel, { if (ready) save() }, stringResource(R.string.glow_share), { if (ready) export = Export.Share },
+                    size = HaloButtonSize.Main,
+                    leftIcon = if (saved == true) AppIcons.Tick02 else AppIcons.DownloadSimple, rightIcon = AppIcons.UploadSimple,
+                    leftEnabled = canExport, rightEnabled = canExport,
                 )
             }
-        },
-    ) {
+        }) {
         // Close on the left, the title in the middle (board ShareRun).
         Box(Modifier.fillMaxWidth().height(44.dp), contentAlignment = Alignment.Center) {
             val close = stringResource(R.string.glow_close)
-            Box(Modifier.align(Alignment.CenterStart)) { RoundIconButton(AppIcons.X, close, onClose, size = 44.dp) }
+            Box(Modifier.align(Alignment.CenterStart)) { HaloIconButton(AppIcons.X, close, onClose) }
             Text(stringResource(R.string.glow_share), color = Color.White, style = GlowType.pageTitle, maxLines = 1)
             // The picture for Save and Share: the same card at 1080 by 1920, recorded but never drawn on screen.
             if (export != null) Box(
@@ -259,33 +253,33 @@ private fun ShareScreen(card: StoryCard, route: List<Route.Point>, fileName: Str
                         StoryCardView(card, photo, shown)
                     }
                 }
-                Spacer(Modifier.height(12.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    IconPill(
+                Spacer(Modifier.height(Space.S12))
+                Row(horizontalArrangement = Arrangement.spacedBy(Space.S8)) {
+                    HaloChip(
                         stringResource(if (photo != null) R.string.glow_share_change_photo else R.string.glow_share_add_photo),
                         { pick.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }, icon = AppIcons.Image,
-                        height = 40.dp,
+                        size = ChipSize.Main,
                     )
                     // Remove sits beside Change in red (board HaloSharePhoto).
-                    if (photo != null) PageButton(
+                    if (photo != null) HaloButton(
                         stringResource(R.string.glow_share_remove_photo), { photoUri = null },
-                        size = ButtonSize.Compact, destructive = true, icon = AppIcons.X,
+                        size = HaloButtonSize.Card, variant = HaloButtonVariant.Destructive, icon = AppIcons.X,
                     )
                 }
                 if (photoState is SharePhoto.Failed) {
                     Text(
                         stringResource(R.string.glow_share_photo_failed),
-                        color = Color.White.copy(alpha = 0.6f), style = GlowType.secondary,
-                        modifier = Modifier.padding(top = 8.dp),
+                        color = Ink.Secondary, style = GlowType.secondary,
+                        modifier = Modifier.padding(top = Space.S8),
                     )
                 }
             }
         }
         if (hasRoute) {
             // The route choices on a plain panel (board HaloShareRun): the label and the Off or Line track, then the switch.
-            Column(Modifier.fillMaxWidth().clip(GlowLayout.TileShape).background(SharePanel)) {
+            HaloCard(fill = CardFill.Rows) {
                 Row(
-                    Modifier.fillMaxWidth().padding(start = 18.dp, end = 12.dp, top = 12.dp, bottom = 12.dp),
+                    Modifier.fillMaxWidth().rowSides().padding(vertical = RowSpec.Pad),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
@@ -303,20 +297,17 @@ private fun ShareScreen(card: StoryCard, route: List<Route.Point>, fileName: Str
                     }
                     GlowSegments(routeNames, routeMode.ordinal, { routeMode = routes[it] }, Modifier.weight(1f))
                 }
-                if (routeMode == StoryRoute.Line) {
-                    PageSwitchRow(
-                        stringResource(R.string.glow_share_hide_ends),
-                        stringResource(R.string.glow_share_hide_ends_note, StoryRouteShape.HIDE_M.toInt()),
-                        hideEnds, { hideEnds = it }, divider = true,
-                    )
-                }
+                // The card gives the switch row the same sides as the Route row above.
+                if (routeMode == StoryRoute.Line) SwitchRow(
+                    stringResource(R.string.glow_share_hide_ends),
+                    stringResource(R.string.glow_share_hide_ends_note, StoryRouteShape.HIDE_M.toInt()),
+                    hideEnds, { hideEnds = it }, divider = true,
+                )
             }
         }
     }
 }
 
-/** The plain panel under the card (workout rules, Tokens: #0C0D10). */
-private val SharePanel = Color(0xFF0C0D10)
 
 /** The tallest the preview grows on a big screen. */
 private val MaxPreviewHeight = 560.dp

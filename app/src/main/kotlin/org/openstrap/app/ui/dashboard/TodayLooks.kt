@@ -94,9 +94,14 @@ fun lookClashes(
     neighbours(slots, wide, smallsAcross).filter { (a, b) -> clash(slots[a], slots[b]) { it.lookOr(moment, live) } }
         .sortedWith(compareBy({ it.second }, { it.first }))
 
-/** Cards whose place the spec leaves open: pins (only "under the hero"), and Your week and Habit Age, which close the list. */
+/**
+ * Cards whose place the spec leaves open: pins (only "under the hero"), and Your week and Habit Age, which close the
+ * list. The check-in may also rise above pins to the strips over them, when below a Small pair it would touch Start a
+ * workout ([move] only lets it go up).
+ */
 private fun TodaySlot.movable() =
-    (pinned || card == TodayCard.Week || card == TodayCard.HabitAge) && size != CardSize.Small && size != CardSize.Tall
+    (pinned || card == TodayCard.Week || card == TodayCard.HabitAge || card == TodayCard.CheckIn) &&
+        size != CardSize.Small && size != CardSize.Tall
 
 /** The places a card can be put in [slots] without splitting a Small pair: the start of each grid row, and the end. */
 private fun rowStarts(slots: List<TodaySlot>): Set<Int> {
@@ -181,7 +186,9 @@ private fun move(
         val rest = base.toMutableList().also { it.removeAt(from) }
         // Nearest first, and down before up.
         val starts = rowStarts(rest)
-        val places = (top until end).filter { it != from && it in starts }.sortedWith(compareBy({ kotlin.math.abs(it - from) }, { it < from }))
+        val places = (top until end)
+            .filter { it != from && it in starts && (card.card != TodayCard.CheckIn || it < from) }
+            .sortedWith(compareBy({ kotlin.math.abs(it - from) }, { it < from }))
         for (to in places) {
             val moved = dress(rest.toMutableList().also { it.add(to, card) })
             val clashes = lookClashes(restyle(moved, wide, across), wide, smallsAcross = across)

@@ -14,13 +14,13 @@
     <string name="glow_celebrate_title">Celebrations</string>
     <!-- The note under the Celebrations sheet's title. -->
     <!-- A switch in the Celebrations sheet. -->
-    <string name="glow_celebrate_goal_moment">Weekly goal moment</string>
+    <string name="glow_celebrate_goal_moment">Goal moment</string>
     <!-- Under the Weekly goal moment switch. -->
-    <string name="glow_celebrate_goal_moment_line">A full screen once a week, when you reach your goal</string>
+    <string name="glow_celebrate_goal_moment_line">A full screen when you meet your goal</string>
     <!-- A switch in the Celebrations sheet. -->
     <string name="glow_celebrate_recap">Weekly recap</string>
     <!-- Under the Weekly recap switch. -->
-    <string name="glow_celebrate_recap_line">One notification on Monday morning about your week</string>
+    <string name="glow_celebrate_recap_line">A notification on Monday morning</string>
     <!-- Title of the screen with the badges past workouts earned, shown once. -->
     <string name="glow_celebrate_history_title">From your workouts so far</string>
     <!-- Under its title on the history badges screen: how many badges past workouts earned. -->

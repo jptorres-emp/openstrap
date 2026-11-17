@@ -448,8 +448,9 @@ object StartCopy {
         strings.format(R.string.workout_start_ends_near, TimeOfDay.format(now.plusSeconds(seconds), is24Hour))
 
     /** While a time is typed: "Type hours, then minutes. Ends near 19:15". */
+    @Suppress("UNUSED_PARAMETER")
     fun timeTypingNote(endsNear: String, strings: Strings = Strings.app): String =
-        strings.format(R.string.workout_start_time_typing_note, endsNear)
+        strings.get(R.string.workout_start_time_typing_note)
 
     /** How the zone buttons work, and what the strap does. */
     val ZONE_NOTE: String get() = Strings.app.get(R.string.workout_start_zone_note)

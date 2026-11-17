@@ -39,7 +39,7 @@
     <!-- Under VO2 max when it's calculated from age, weight and height. -->
     <string name="glow_activity_vo2max_estimated">Estimated from your profile</string>
     <!-- Under VO2 max when there's no number yet: the strap reads it after a kind of workout it can. -->
-    <string name="glow_activity_vo2max_after_workout">After a workout the strap rates</string>
+    <string name="glow_activity_vo2max_after_workout">After a workout</string>
     <!-- A row's name: how long until the body has recovered from the latest workout. -->
     <string name="glow_activity_time_to_recover">Time to recover</string>
     <!-- Under Time to recover when no recent workout says. -->
@@ -47,7 +47,7 @@
     <!-- A row's name: the day's calories burned. -->
     <string name="glow_activity_calories">Calories</string>
     <!-- Under Calories when the profile misses what the estimate needs. -->
-    <string name="glow_activity_add_profile_to_see">Add age, weight and height to see it</string>
+    <string name="glow_activity_add_profile_to_see">Needs age, weight and height</string>
     <!-- A row's name: the day's distance walked. -->
     <string name="glow_activity_distance">Distance</string>
     <!-- The title of the list of the day's workouts, a figure's name in the week story, and a part in a chart's key. -->
@@ -60,7 +60,7 @@
     <!-- The Workouts list's row before there are any. -->
     <string name="glow_activity_no_workouts">No workouts yet</string>
     <!-- Under No workouts yet. -->
-    <string name="glow_activity_no_workouts_note">Workouts you record show up here</string>
+    <string name="glow_activity_no_workouts_note">Recorded workouts show here</string>
     <!-- A row in the Workouts list that opens adding a workout by hand. -->
     <string name="glow_activity_add_workout">Add a workout you didn\'t record</string>
     <!-- A row in the Workouts list that opens every workout. -->
@@ -122,11 +122,11 @@
         <item quantity="other">No Load in the last <xliff:g id="days" example="7">%d</xliff:g> days yet.</item>
     </plurals>
     <!-- Under a Load number: the part from workouts. Short, a third of the width. -->
-    <string name="glow_activity_from_workouts">From workouts</string>
+    <string name="glow_activity_from_workouts">Workouts</string>
     <!-- Under a Load number: the part from moving about the rest of the day. Short, a third of the width. -->
     <string name="glow_activity_moving_about">Moving about</string>
     <!-- Under a number: how hard the day was against your usual days. Short, a third of the width. -->
-    <string name="glow_activity_strain">Vs usual</string>
+    <string name="glow_activity_strain">vs usual</string>
     <!-- The title of the Load detail's list of the week's loads. -->
     <string name="glow_activity_this_week">This week</string>
     <!-- A row's name: the Load you usually carry. -->
@@ -142,7 +142,7 @@
     <!-- Under the strap's weekly load when it gave no range. -->
     <string name="glow_activity_from_the_strap">From the strap</string>
     <!-- In the Load info sheet, beside the bar's marker. The number is your usual Load a day. -->
-    <string name="glow_activity_load_you_are_here">You are here. Your usual is <xliff:g id="load" example="85">%1$d</xliff:g> a day.</string>
+    <string name="glow_activity_load_you_are_here">You are here, your usual is <xliff:g id="usual" example="85">%1$d</xliff:g> a day.</string>
 
     <!-- VO2 max detail -->
 
@@ -159,12 +159,12 @@
     <!-- Under From your profile. -->
     <string name="glow_activity_estimated_weekly">Estimated weekly</string>
     <!-- In the VO2 max info sheet, beside the bar's marker. The word is "Good", "Fair" and the like. -->
-    <string name="glow_activity_vo2max_you_are_here">You are here: <xliff:g id="band" example="Good">%1$s</xliff:g> for your age.</string>
+    <string name="glow_activity_vo2max_you_are_here">You are here, <xliff:g id="band" example="Good">%1$s</xliff:g> for your age.</string>
 
     <!-- Time to recover detail -->
 
     <!-- Under No estimate when no workout has a recovery time. -->
-    <string name="glow_activity_recover_after_workout">After a workout the strap rates</string>
+    <string name="glow_activity_recover_after_workout">After a workout</string>
     <!-- Headline in the number's place when the body has recovered. -->
     <string name="glow_activity_recovered">Recovered</string>
     <!-- Under Recovered: the workout it counted from, in lower case, and when it ended ("yesterday at 18:40"). The sport is a lower case noun phrase dropped in as it is, so give it whatever article or case your language needs around it. -->
@@ -196,7 +196,7 @@
     <!-- Under a number: the calories the body uses at rest. Short, a third of the width. -->
     <string name="glow_activity_at_rest">At rest</string>
     <!-- Under a number: the day's activity level (total over resting). Short, a third of the width. -->
-    <string name="glow_activity_activity_level">Activity level</string>
+    <string name="glow_activity_activity_level">Activity</string>
     <!-- Under a number: the day's active kcal goal. Short, a third of the width. -->
     <string name="glow_activity_goal_label">Goal</string>
     <!-- The title of the list of where the day's calories came from. -->
@@ -229,7 +229,9 @@
     <!-- Beside a held day's steps. The day is "Wed 21" or "Today". -->
     <string name="glow_activity_steps_on">steps, <xliff:g id="day" example="Wed 21">%1$s</xliff:g></string>
     <!-- Under a number: the hours asleep a night on average. Short, a third of the width. -->
-    <string name="glow_activity_asleep_a_night">Asleep a night</string>
+    <string name="glow_activity_asleep_a_night">Avg asleep</string>
     <!-- The title of the list of the week's days. -->
     <string name="glow_activity_day_by_day">Day by day</string>
+    <!-- Figure label (12 characters at most) for active minutes in a row of three; the card title keeps "Active minutes". -->
+    <string name="glow_activity_active_min_short">Active min</string>
 </resources>

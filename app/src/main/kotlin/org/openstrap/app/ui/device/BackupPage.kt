@@ -1,5 +1,9 @@
 package org.openstrap.app.ui.device
 
+import org.openstrap.app.ui.glow.HaloBanner
+import org.openstrap.app.ui.glow.HaloPageHeader
+import org.openstrap.app.ui.glow.HaloPageList
+import org.openstrap.app.ui.glow.PageVariant
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.Composable
@@ -7,15 +11,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.res.stringResource
 import org.openstrap.app.R
 import org.openstrap.app.data.settings.BackupState
-import org.openstrap.app.ui.dashboard.ScreenList
 import org.openstrap.app.ui.glow.GlowLayout
-import org.openstrap.app.ui.glow.PageActionRow
+import org.openstrap.app.ui.glow.ActionRow
 import org.openstrap.app.ui.glow.BannerKind
 import org.openstrap.app.ui.glow.PageGroup
-import org.openstrap.app.ui.glow.StatusBanner
-import org.openstrap.app.ui.glow.PageSwitchRow
-import org.openstrap.app.ui.glow.PageHeader
-import org.openstrap.app.ui.glow.PageRow
+import org.openstrap.app.ui.glow.SwitchRow
+import org.openstrap.app.ui.glow.NavRow
 import org.openstrap.app.ui.theme.AppIcons
 
 /**
@@ -40,17 +41,15 @@ fun BackupPage(
     // Read again whenever the state changes, so "today" follows the last backup.
     val now = remember(state, backingUp) { System.currentTimeMillis() / 1000 }
     val toggle = { on: Boolean -> if (on) onTurnOn() else onTurnOff() }
-    ScreenList(contentPadding, gutter = GlowLayout.Gutter) {
-        item { PageHeader(stringResource(R.string.you_backup_title), onBack) }
+    HaloPageList(contentPadding, variant = PageVariant.Settings) {
+        item { HaloPageHeader(stringResource(R.string.you_backup_title), onBack) }
         // A failed backup is news, so it heads the page as a banner (HaloBackup board, B1).
         state.failed?.let { failure ->
             item {
-                StatusBanner(
+                HaloBanner(
                     BannerKind.Warn, stringResource(R.string.you_backup_banner_failed),
-                    note = listOfNotNull(
-                        BackupCopy.failure(failure), state.failedAt?.let { BackupCopy.whenDone(it, now, java.time.ZoneId.systemDefault()) },
-                    ).joinToString(". "),
-                    action = stringResource(R.string.you_alarms_try_again), onAction = onBackUpNow,
+                    note = BackupCopy.failureShort(failure), action = stringResource(R.string.you_alarms_try_again),
+                    onAction = onBackUpNow,
                 )
             }
         }
@@ -59,14 +58,14 @@ fun BackupPage(
             PageGroup(
                 footnote = if (state.on) stringResource(R.string.you_backup_now_note) else null,
             ) {
-                PageSwitchRow(
+                SwitchRow(
                     stringResource(R.string.you_backup_automatic), BackupCopy.status(state.copy(failed = null),
                         now), state.on, toggle, divider = false,
                     icon = AppIcons.ShieldCheck,
                 )
                 if (state.on) {
-                    PageRow(stringResource(R.string.you_backup_folder), BackupCopy.folder(state), onClick = onFolder)
-                    PageActionRow(
+                    NavRow(stringResource(R.string.you_backup_folder), BackupCopy.folder(state), onClick = onFolder)
+                    ActionRow(
                         stringResource(if (backingUp) R.string.you_backup_now_running else R.string.you_backup_now), onBackUpNow,
                         icon = AppIcons.CloudArrowDown, busy = backingUp,
                     )
@@ -75,14 +74,14 @@ fun BackupPage(
         }
         item {
             PageGroup(footnote = stringResource(R.string.you_backup_restore_note)) {
-                PageActionRow(
+                ActionRow(
                     stringResource(R.string.you_action_restore), onRestore, icon = AppIcons.ArrowCounterClockwise, divider = false,
                 )
             }
         }
         item {
             PageGroup(footnote = stringResource(R.string.you_backup_save_copy_note)) {
-                PageActionRow(stringResource(R.string.you_backup_save_copy), onSaveCopy, icon = AppIcons.DownloadSimple, divider = false)
+                ActionRow(stringResource(R.string.you_backup_save_copy), onSaveCopy, icon = AppIcons.DownloadSimple, divider = false)
             }
         }
     }

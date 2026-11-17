@@ -20,8 +20,8 @@
     <string name="glow_choose_group_strength_note">组数、轮数和休息</string>
     <string name="glow_choose_group_mind_note">平静心率和时间</string>
     <string name="glow_choose_group_games_note">时间、心率和强度</string>
-    <string name="glow_choose_group_other_note">未列出的运动，记录时间和心率</string>
-    <string name="glow_choose_no_match">没有找到与“%1$s”匹配的运动。</string>
+    <string name="glow_choose_group_other_note">其他运动，记录时间和心率</string>
+    <string name="glow_choose_no_match">没有名为 %1$s 的运动</string>
     <string name="glow_choose_clear">清除</string>
     <plurals name="glow_choose_sports_count">
         <item quantity="other">%d 项运动</item>
@@ -41,7 +41,7 @@
     <plurals name="glow_ready_rounds_description">
         <item quantity="other">%1$d 轮，%2$d 秒运动，%3$d 秒休息</item>
     </plurals>
-    <string name="glow_ready_strap_disconnected">手环未连接。没有手环也能记录，但没有实时心率。</string>
+    <string name="glow_ready_strap_disconnected">手环已断开，没有实时心率</string>
     <string name="glow_ready_connect">连接手环</string>
     <string name="glow_ready_hero_zones">个心率区间</string>
     <string name="glow_ready_hero_zone_range">%1$d 至 %2$d</string>
@@ -60,5 +60,5 @@
     <string name="glow_ready_last_sets">组数</string>
     <string name="glow_choose_change_title">更换运动</string>
     <string name="glow_choose_now">当前</string>
-    <string name="glow_choose_now_note">新运动有类似目标时，你的目标会保留</string>
+    <string name="glow_choose_now_note">目标合适时会保留</string>
 </resources>

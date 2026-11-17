@@ -1,5 +1,6 @@
 package org.openstrap.app.ui.glow.draw
 
+import org.openstrap.app.ui.theme.Greys
 import android.graphics.Bitmap
 import android.graphics.BitmapShader
 import android.graphics.BlurMaskFilter
@@ -200,7 +201,7 @@ fun drawPictureCard(
     canvas: Canvas, w: Float, h: Float, r: Float, density: Float,
     ink: Color, rim: Rim?, strength: Float = 1f, wash: Boolean = true,
 ) {
-    canvas.drawRoundRect(0f, 0f, w, h, r, r, fill(EdgeSurface))
+    canvas.drawRoundRect(0f, 0f, w, h, r, r, fill(Greys.Card))
     if (rim != null) {
         val cx = rim.x * w
         val cy = rim.y * h

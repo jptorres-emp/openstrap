@@ -1,5 +1,6 @@
 package org.openstrap.app.ui.glow
 
+import org.openstrap.app.ui.theme.Space
 import org.openstrap.app.R
 import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.Arrangement
@@ -27,25 +28,33 @@ import org.openstrap.app.ui.dashboard.TodayEdits
 @Composable
 internal fun EditTodaySheet(edits: TodayEdits, onSave: (TodayEdits) -> Unit, onDismiss: () -> Unit) {
     var e by rememberSaveable(stateSaver = TodayEditsSaver) { mutableStateOf(edits) }
-    PageSheet(onDismiss, stringResource(R.string.glow_today_edit), note = stringResource(R.string.glow_today_edit_note)) {
-        PageRows {
+    HaloSheet(
+        onDismiss, stringResource(R.string.glow_today_edit), note = stringResource(R.string.glow_today_edit_note),
+        footer = {
+            ButtonPair(
+                stringResource(R.string.glow_cancel),
+                onDismiss,
+                stringResource(R.string.glow_done),
+                { onSave(e) },
+            )
+        },
+    ) {
+        HaloCard(fill = CardFill.Rows) {
             TodayCard.entries.filter { it.editable }.forEachIndexed { i, card ->
                 val shown = card !in e.hidden
-                PageRow(card.label, divider = i > 0) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                NavRow(card.label, divider = i > 0) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.S8)) {
                         if (card.pinnable) {
                             val pinned = card in e.pinned
                             val pin = stringResource(if (pinned) R.string.glow_today_edit_pinned else R.string.glow_today_edit_pin)
-                            PageChip(pin, pinned, { e = e.togglePin(card) }, enabled = e.canPin(card))
+                            HaloChip(
+                                pin, { e = e.togglePin(card) }, variant = ChipVariant.Choice, selected = pinned, enabled = e.canPin(card),
+                            )
                         }
                         GlowSwitch(shown, { e = e.toggleHidden(card) })
                     }
                 }
             }
-        }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            PageButton(stringResource(R.string.glow_cancel), onDismiss, Modifier.weight(1f))
-            PageButton(stringResource(R.string.glow_done), { onSave(e) }, Modifier.weight(1f), primary = true)
         }
     }
 }

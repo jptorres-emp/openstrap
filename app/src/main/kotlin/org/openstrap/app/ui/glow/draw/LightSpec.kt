@@ -1,5 +1,6 @@
 package org.openstrap.app.ui.glow.draw
 
+import org.openstrap.app.ui.theme.Greys
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
@@ -248,8 +249,6 @@ private fun glowFill(light: org.openstrap.app.ui.glow.draw.GlowLight, p: GlowPal
 /* Edge light                                                                                        */
 /* ------------------------------------------------------------------------------------------------ */
 
-/** The edge card's surface, under its light, and the one near-black every lit card and share card sits on. */
-val EdgeSurface = Color(0xFF0A0A0B)
 
 /** A level edge card's lowest light, so an empty one still shows where it fills from. */
 const val EDGE_MIN_LEVEL = 0.04f
@@ -310,7 +309,7 @@ fun edgePaint(light: EdgeLight, tint: Color, level: Float?, mood: GlowMood, w: F
     return EdgePaint(
         width = w,
         height = h,
-        surface = EdgeSurface,
+        surface = Greys.Card,
         glow = gradient,
         radius = GlowLayout.CardCorner.value * density,
         hairline = Color.White.copy(alpha = GlowLayout.CardEdgeAlpha),

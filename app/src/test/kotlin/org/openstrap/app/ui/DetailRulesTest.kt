@@ -6,7 +6,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
-import org.openstrap.app.ui.glow.BackButtonSize
+import org.openstrap.app.ui.glow.PageSpec
 import org.openstrap.app.ui.theme.ControlSurface
 import java.io.File
 
@@ -30,8 +30,8 @@ class DetailRulesTest {
 
     /** Detail rules section 1.3 (headline) and 1.8 (figures row are plain text): the header's number is the only dotted one. */
     @Test fun `a detail's one dotted number is its header`() {
-        // Spec 2.3: times, ranges, totals and second figures are text (DetailFigures), never a row of dotted figures.
-        val dotted = Regex("""\b(FigureRow|HeroFigure|HeroNumber|EdgeValue)\(""")
+        // Spec 2.3: times, ranges, totals and second figures are text (HaloFigures), never a row of dotted figures.
+        val dotted = Regex("""\b(FigureRow|HeroFigure|HeroReading|EdgeValue)\(""")
         val found = DETAILS.flatMap { path ->
             val code = sources.getValue(path)
             dotted.findAll(code).map { "$path:${lineOf(code, it.range.first)}  ${it.value}" }.toList()
@@ -71,24 +71,24 @@ class DetailRulesTest {
     /** Detail rules section 1.2: the header is back, title, (i), in a 96 / 1fr / 96 grid. */
     @Test fun `every detail's header ends in the (i)`() {
         // Spec 2.5 and 6.1: the (i) at the right of every detail's header, nothing else there.
-        val nav = sources.getValue("glow/GlowMetricDetail.kt").substringAfter("private fun DetailNav(").substringBefore("\n}\n")
-        // HaloDetailRecovery board: the (i) is a 44 dp squircle button over the wash, not the card's small InfoButton.
-        assertTrue("DetailNav's trailing is the (i)", Regex("""PageHeader\([^{]*\)\s*\{\s*RoundIconButton\(\s*AppIcons\.Info\b""").containsMatchIn(nav))
+        val nav = sources.getValue("glow/GlowMetricDetail.kt").substringAfter("fun DetailTemplate(").substringBefore("\n}\n")
+        // HaloDetailRecovery board: the (i) is a 44 dp button over the wash, not the card's small InfoButton.
+        assertTrue("the detail header's trailing is the (i)", Regex("""HaloPageHeader\([^{]*HeaderVariant\.Detail[^{]*\)\s*\{\s*HaloIconButton\(\s*AppIcons\.Info\b""").containsMatchIn(nav))
         DETAILS.forEach { path ->
             val code = sources.getValue(path)
-            assertTrue("$path builds its own header", !Regex("""\bPageHeader\(""").containsMatchIn(code) || path == "glow/GlowMetricDetail.kt")
+            assertTrue("$path builds its own header", !Regex("""\bHaloPageHeader\(""").containsMatchIn(code) || path == "glow/GlowMetricDetail.kt")
         }
     }
 
     /** Detail rules section 1.2 and settings rules B1: back is the 44 squircle from PageHeader, never a page's own arrow. */
     @Test fun `every page has the one page header`() {
         // Spec 3.4: the round back button and the page title, from PageHeader. No bare arrow of a page's own.
-        val found = sources.filterKeys { it != "glow/PageParts.kt" && it !in HEADER_NOT_MIGRATED }.flatMap { (path, code) ->
+        val found = sources.filterKeys { it != "glow/HaloPage.kt" && it !in HEADER_NOT_MIGRATED }.flatMap { (path, code) ->
             Regex("""\bAppIcons\.ArrowLeft\b""").findAll(code).map { "$path:${lineOf(code, it.range.first)}" }.toList()
         }
-        if (found.isNotEmpty()) fail("A page's way back is PageHeader's BackButton (spec 3.4):\n" + found.joinToString("\n"))
-        assertEquals(44.dp, BackButtonSize)
-        assertEquals(Color(0xFF1F1F22), ControlSurface)
+        if (found.isNotEmpty()) fail("A page's way back is PageHeader's back button (spec 3.4):\n" + found.joinToString("\n"))
+        assertEquals(44.dp, PageSpec.HeaderButton)
+        assertEquals(Color(0xFF282828), ControlSurface)
     }
 
     /** Detail rules section 3 and workout rules section 5: no coloured switch in a detail, no type of its own. */
@@ -107,7 +107,8 @@ class DetailRulesTest {
         val DETAILS = listOf("glow/GlowMetricDetail.kt", "glow/ScoreDetail.kt", "glow/SleepDetail.kt", "glow/ActivityDetail.kt")
 
         /** Workout pages that still draw their own back arrow, until step 9 moves them to PageHeader. */
-        val HEADER_NOT_MIGRATED = emptySet<String>()
+        // The search page puts its back arrow beside the search field in place of a title, so it sets its own HaloIconButton.
+        val HEADER_NOT_MIGRATED = setOf("glow/ChooseScreen.kt")
     }
 }
 

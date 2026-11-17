@@ -2,6 +2,7 @@
 
 package org.openstrap.app.ui.glow
 
+import org.openstrap.app.ui.theme.Space
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -43,6 +44,7 @@ import org.openstrap.app.presentation.StageSpan
 import org.openstrap.app.presentation.Units
 import org.openstrap.app.ui.dashboard.DayViewModel
 import org.openstrap.app.ui.glow.draw.stageColor
+import org.openstrap.app.ui.theme.Ink
 import org.openstrap.app.ui.theme.MetricColors
 
 /*
@@ -52,7 +54,7 @@ import org.openstrap.app.ui.theme.MetricColors
  */
 
 /** The stage rows' track (board HaloSleep: white 0.06). */
-private val StageTrack = Color.White.copy(alpha = 0.06f)
+private val StageTrack = Ink.Faint
 
 /**
  * A night's stages as rows Awake to Deep (board HaloSleep, the hypnogram): a name 40 wide, an 8 dp track and the
@@ -66,9 +68,9 @@ internal fun DetailStages(spans: List<StageSpan>, modifier: Modifier = Modifier,
     val end = spans.maxOf { it.end }.coerceAtLeast(start + 1)
     val rows = DayViewModel.SLEEP_STAGE_ROWS
     val order = rows.entries.sortedBy { it.value }.map { it.key }
-    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Space.S8)) {
         order.forEach { stage ->
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.S8)) {
                 Text(SLEEP_NAMES[stage].orEmpty(), Modifier.width(40.dp), color = DetailAxisInk, style = GlowType.caption, maxLines = 1)
                 Canvas(Modifier.weight(1f).height(8.dp)) {
                     drawRoundRect(StageTrack, Offset.Zero, size, CornerRadius(4.dp.toPx()))
@@ -100,7 +102,7 @@ internal fun DetailStages(spans: List<StageSpan>, modifier: Modifier = Modifier,
 internal fun DetailStageShares(b: Summaries.SleepBreakdown, modifier: Modifier = Modifier) {
     val order = listOf(SleepStage.DEEP, SleepStage.REM, SleepStage.LIGHT, SleepStage.AWAKE)
     val total = (b.asleepSeconds + b.awakeSeconds).coerceAtLeast(1)
-    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Space.S12)) {
         Canvas(Modifier.fillMaxWidth().height(8.dp)) {
             val gap = 2.dp.toPx()
             val parts = order.filter { (b.byStage[it] ?: 0L) > 0L }
@@ -117,12 +119,12 @@ internal fun DetailStageShares(b: Summaries.SleepBreakdown, modifier: Modifier =
                 pair.forEach { st ->
                     Row(
                         Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        horizontalArrangement = Arrangement.spacedBy(Space.S8),
                     ) {
                         Box(Modifier.size(8.dp).background(stageColor(st), CircleShape))
                         Text(
                             SLEEP_NAMES[st].orEmpty() + " " + Units.duration(b.byStage[st] ?: 0L),
-                            color = Color.White.copy(alpha = 0.85f), style = GlowType.secondary, maxLines = 1,
+                            color = Ink.Strong, style = GlowType.secondary, maxLines = 1,
                         )
                     }
                 }
@@ -177,7 +179,7 @@ internal fun DetailSleepWindows(
         listOf(usualBed to usual?.bedtime, usualWake to usual?.wake).forEach { (at, clockMin) ->
             if (at == null || clockMin == null) return@forEach
             val band = 14.dp.toPx()
-            drawRect(Color.White.copy(alpha = 0.07f), Offset(0f, yOf(at) - band / 2), Size(plotRight, band))
+            drawRect(Ink.Faint, Offset(0f, yOf(at) - band / 2), Size(plotRight, band))
             val label = m.measure(org.openstrap.app.presentation.TimeOfDay.minutes(clockMin), GlowType.caption.copy(color = DetailAxisInk))
             drawText(label, topLeft = Offset(size.width - label.size.width, yOf(at) - label.size.height / 2f))
         }

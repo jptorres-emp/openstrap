@@ -53,6 +53,7 @@ import org.openstrap.app.ui.glow.draw.GlowMood
 import org.openstrap.app.ui.glow.draw.drawIcon
 import org.openstrap.app.ui.glow.draw.renderToBitmap
 import org.openstrap.app.ui.theme.AppIcons
+import org.openstrap.app.ui.theme.Ink
 import org.openstrap.app.ui.theme.MetricColors
 import org.openstrap.app.ui.theme.SportIcons
 import java.time.Instant
@@ -119,7 +120,7 @@ internal fun openLiveWorkout(context: Context): Intent =
 /* ------------------------------------------------------------------------------------------------ */
 
 /** Heart ink, as Ready's hero: the light toward Start. */
-private val Ink = MetricColors.heart
+private val Hue = MetricColors.heart
 
 /** The still light on the top right corner, where the app's Start card's travelling light is when it starts. */
 private val StartCorner = Rim(1f, 0f, reachX = 0.45f, reachY = 0.9f)
@@ -132,9 +133,6 @@ private val OpenStyle = WidgetType.body.copy(color = ColorProvider(Color.Black),
 
 /** Back to the card's 20 dp side padding, for every row but the tile captions, which may run into it. */
 private val Inset = GlanceModifier.padding(horizontal = StartLayout.CAPTION_BLEED_DP.dp)
-
-/** The Large's hairline: white at 8%, at full strength in every mood (spec 2.2). */
-private const val HAIRLINE_ALPHA = 0.08f
 
 /**
  * The widget at the size Glance lays out, lit from the right ([EdgeKind.Live]'s edge). The whole widget opens Ready
@@ -150,7 +148,7 @@ private fun StartContent(data: StartWidget.Shown) {
     // Unlit like the app's Start card. A widget can't move the card's travelling light, so it holds still on the top
     // right corner, only the edge, no wash.
     PictureWidget(
-        Ink, StartCorner, data.mood, open, BITMAP_EXTRA, wash = false,
+        Hue, StartCorner, data.mood, open, BITMAP_EXTRA, wash = false,
         sidePadding = WidgetSizes.PADDING_DP - StartLayout.CAPTION_BLEED_DP, showStatus = m.recording == null,
     ) { frame ->
         val rec = m.recording
@@ -298,7 +296,7 @@ private fun UsualRow(m: StartWidgetModel, b: StartLayout.Block, f: WidgetFrame) 
                     if (words.mark) {
                         Spacer(GlanceModifier.width(StartLayout.MARK_GAP_DP.dp))
                         Image(
-                            ImageProvider(iconBitmap(SportIcons.Location, Color.White.copy(alpha = 0.72f), StartLayout.MARK_DP, f.density)),
+                            ImageProvider(iconBitmap(SportIcons.Location, Ink.Secondary, StartLayout.MARK_DP, f.density)),
                             contentDescription = null,
                             modifier = GlanceModifier.size(StartLayout.MARK_DP.dp),
                             contentScale = ContentScale.FillBounds,
@@ -375,7 +373,7 @@ private fun RecordingRow(m: StartWidgetModel, r: StartRecording, fit: StartLayou
             Text(fit.name, style = NameStyle, maxLines = 1)
             if (fit.status) Row(verticalAlignment = Alignment.CenterVertically) {
                 Image(
-                    ImageProvider(dotBitmap(if (r.paused) Color.White.copy(alpha = 0.5f) else Ink, f.density)),
+                    ImageProvider(dotBitmap(if (r.paused) Ink.Tertiary else Hue, f.density)),
                     contentDescription = null,
                     modifier = GlanceModifier.size(StartLayout.DOT_DP.dp),
                     contentScale = ContentScale.FillBounds,
@@ -425,7 +423,7 @@ private fun Timer(r: StartRecording, sp: Float) {
 @Composable
 private fun Hairline() {
     Box(GlanceModifier.fillMaxWidth().then(Inset)) {
-        Box(GlanceModifier.fillMaxWidth().height(1.dp).background(ColorProvider(Color.White.copy(alpha = HAIRLINE_ALPHA)))) {}
+        Box(GlanceModifier.fillMaxWidth().height(1.dp).background(ColorProvider(Ink.Faint))) {}
     }
 }
 

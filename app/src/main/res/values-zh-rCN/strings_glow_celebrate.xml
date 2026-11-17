@@ -3,9 +3,9 @@
     <string name="glow_celebrate_settings">庆祝</string>
     <string name="glow_celebrate_goal_met">本周目标达成</string>
     <string name="glow_celebrate_title">庆祝</string>
-    <string name="glow_celebrate_goal_moment">周目标达成时刻</string>
-    <string name="glow_celebrate_goal_moment_line">每周达成目标时全屏展示一次</string>
+    <string name="glow_celebrate_goal_moment">目标时刻</string>
+    <string name="glow_celebrate_goal_moment_line">达成目标时显示全屏画面</string>
     <string name="glow_celebrate_recap">每周回顾</string>
-    <string name="glow_celebrate_recap_line">周一早晨发送一条通知，回顾你过去一周的情况</string>
+    <string name="glow_celebrate_recap_line">周一早晨发送一条通知</string>
     <string name="glow_celebrate_history_title">来自你过往的运动</string>
 </resources>

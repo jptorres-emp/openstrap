@@ -2,6 +2,13 @@
 
 package org.openstrap.app.ui.glow
 
+import org.openstrap.app.ui.theme.OnSurface
+import org.openstrap.app.ui.theme.IconSize
+import org.openstrap.app.ui.theme.Inset
+import androidx.compose.runtime.CompositionLocalProvider
+import org.openstrap.app.ui.theme.Corner
+import org.openstrap.app.ui.theme.Space
+import org.openstrap.app.ui.theme.Greys
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -61,6 +68,7 @@ import org.openstrap.app.ui.components.rememberAnimationsOn
 import org.openstrap.app.ui.components.rememberScrubHaptics
 import org.openstrap.app.ui.components.scrub
 import org.openstrap.app.ui.dashboard.NewsTag
+import org.openstrap.app.ui.theme.Ink
 
 /*
  * A card's own picture on the page it opens (spec 2.7, "Each metric draws its own picture"): the page draws the same
@@ -76,28 +84,20 @@ import org.openstrap.app.ui.dashboard.NewsTag
 /** The card's [picture] across the page, [height] tall, under the headline and above the rest of the day. */
 @Composable
 internal fun DetailPicture(modifier: Modifier = Modifier, height: Dp = DetailPictureHeight, picture: @Composable (Modifier) -> Unit) =
-    picture(modifier.fillMaxWidth().padding(top = 12.dp, bottom = 4.dp).height(height))
+    picture(modifier.fillMaxWidth().padding(top = Space.S12, bottom = Space.S4).height(height))
 
 /** How tall a card's picture stands on its page, a little over a Wide's 52 dp on Today. */
 internal val DetailPictureHeight = 64.dp
 
 /* ------------------------------------------- Ink and type ------------------------------------------- */
 
-/** The plain panel under a detail (board HaloDetailHeart, Related): #0C0D10. */
-internal val DetailPanelInk = Color(0xFF0C0D10)
 
-/** The line between two rows of that panel (boards: #1C1D22). */
-internal val DetailRowLine = Color(0xFF1C1D22)
 
-/** A chart's gridlines (boards: #16171B) and its labels (#6E7480). */
-internal val DetailGridInk = Color(0xFF16171B)
-internal val DetailAxisInk = Color(0xFF6E7480)
+internal val DetailAxisInk = Ink.Tertiary
 
-/** The line between two figures (boards: #24262C). */
-internal val DetailFigureRule = Color(0xFF24262C)
 
 /** Your normal as a band behind a chart (boards: white at 0.07). */
-private val DetailBandInk = Color.White.copy(alpha = 0.07f)
+private val DetailBandInk = Ink.Faint
 
 /** A chart's value labels sit in this gutter on the right, which data never enters (rules, picture). */
 private val DetailGutter = 30.dp
@@ -132,7 +132,7 @@ internal fun statusTint(color: Color): Color = androidx.compose.ui.graphics.lerp
 
 /**
  * A detail's list (board HaloDetailHeart, Related): a heading (15 semibold, or 13 #9AA0AA when [muted] as All metrics
- * groups have it) with a [note] on its right, over one plain panel of rows. The rows are [DetailRow]s.
+ * groups have it) with a [note] on its right, over one plain panel of rows. The rows are [MetricRow]s.
  */
 @Composable
 internal fun DetailPanel(
@@ -143,87 +143,11 @@ internal fun DetailPanel(
     muted: Boolean = false,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        if (title != null || note != null) Row(
-            Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.Bottom,
-        ) {
-            Text(
-                title.orEmpty(), Modifier.weight(1f, fill = false),
-                color = if (muted) GlowType.noteColor else Color.White,
-                style = if (muted) GlowType.secondary else GlowType.cardTitle, maxLines = 1,
-            )
-            Spacer(Modifier.weight(1f))
-            if (note != null) Text(
-                note, color = GlowType.noteColor, style = GlowType.noteSmall, maxLines = 1,
-                modifier = if (onNote != null) Modifier.clickable(onClick = onNote) else Modifier,
-            )
-        }
-        Column(Modifier.fillMaxWidth().clip(GlowLayout.TileShape).background(DetailPanelInk, GlowLayout.TileShape), content = content)
-    }
-}
-
-/**
- * A row of a [DetailPanel] (boards HaloDetailHeart, HaloAllMetrics): a 32 squircle tile in the metric's colour at 0.16
- * holding its [icon], the [name] (15), the [value] on the right (15, white 0.8) and a chevron when it opens something.
- * A [status] under the name (12, #9AA0AA) makes the row 60 tall instead of 56. A null [value] is a dash when [dash].
- */
-@Suppress("CyclomaticComplexMethod")
-@Composable
-internal fun DetailRow(
-    name: String,
-    color: Color,
-    value: String?,
-    status: String?,
-    modifier: Modifier = Modifier,
-    tag: NewsTag? = null,
-    onClick: (() -> Unit)? = null,
-    divider: Boolean = true,
-    dash: Boolean = true,
-    icon: ImageVector? = null,
-    iconTint: Color = color,
-    ring: Float? = null,
-) {
-    val waiting = value == null && dash
-    val taller = status != null || tag != null
-    Row(
-        modifier.fillMaxWidth()
-            .let { if (onClick != null) it.clickable(onClick = onClick) else it }
-            .topHairline(divider, DetailRowLine)
-            .heightIn(min = if (taller) 60.dp else 56.dp)
-            .padding(start = 12.dp, end = 14.dp, top = if (taller) 10.dp else 0.dp, bottom = if (taller) 10.dp else 0.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        if (ring != null) {
-            ProgressRing({ ring }, color, Modifier.size(32.dp).padding(5.dp), stroke = 2.5.dp, track = 0.12f)
-            Spacer(Modifier.width(12.dp))
-        } else if (icon != null) {
-            Box(
-                Modifier.size(32.dp).clip(GlowLayout.IconShape).background(iconTint.copy(alpha = iconTint.alpha * 0.16f)),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(icon, null, tint = iconTint.copy(alpha = iconTint.alpha * if (waiting) 0.3f else 1f), modifier = Modifier.size(17.dp))
-            }
-            Spacer(Modifier.width(12.dp))
-        }
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            RowName(name)
-            if (status != null || tag != null) Row(verticalAlignment = Alignment.CenterVertically) {
-                if (status != null) Text(
-                    status, Modifier.weight(1f, fill = false), color = GlowType.noteColor, style = GlowType.noteSmall,
-                    maxLines = if (tag != null) 1 else 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                )
-                if (status != null && tag != null) Spacer(Modifier.width(8.dp))
-                if (tag != null) NewsPill(tag)
-            }
-        }
-        Spacer(Modifier.width(12.dp))
-        if (value != null) Text(
-            value, color = Color.White.copy(alpha = GlowType.ROW_VALUE_ALPHA), style = GlowType.rowValue, maxLines = 1,
-        ) else if (dash) WaitingDash()
-        if (onClick != null) {
-            Spacer(Modifier.width(8.dp))
-            RowChevron()
-        }
+    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(CardSpec.Gap)) {
+        if (title != null || note != null) HaloTitle(
+            title.orEmpty(), variant = if (muted) TitleVariant.Group else TitleVariant.OutOfCard, note = note, onNote = onNote,
+        )
+        HaloCard(fill = CardFill.Rows, content = content)
     }
 }
 
@@ -253,7 +177,7 @@ internal fun DetailGauge(
             val box = Size(128.dp.toPx(), 128.dp.toPx())
             val topLeft = Offset(11.dp.toPx(), 4.dp.toPx())
             // Open at the foot: from the lower left round to the lower right, 270 degrees.
-            val track = Color.White.copy(alpha = 0.14f)
+            val track = Ink.Edge
             drawArc(track, GAUGE_START, GAUGE_SWEEP, false, topLeft, box, style = Stroke(w, cap = StrokeCap.Round))
             val sweep = GAUGE_SWEEP * shown.value.coerceIn(0f, 1f)
             if (sweep > 0f) drawArc(color, GAUGE_START, sweep, false, topLeft, box, style = Stroke(w, cap = StrokeCap.Round))
@@ -338,7 +262,7 @@ internal fun DetailChart(
         val plot = DetailPlot(size.width - gutter, top, bottom, scale.start, scale.endInclusive)
         ticks.forEach { t ->
             val y = plot.y(t)
-            drawLine(DetailGridInk, Offset(0f, y), Offset(size.width, y), 1.dp.toPx())
+            drawLine(Greys.Raised, Offset(0f, y), Offset(size.width, y), 1.dp.toPx())
             val r = m.measure(tickText(t), DetailAxisText)
             drawText(r, topLeft = Offset(size.width - 2.dp.toPx() - r.size.width, y - 4.dp.toPx() - r.size.height))
         }
@@ -429,7 +353,7 @@ internal fun DetailLineChart(
         values.getOrNull(at)?.let { v ->
             val p = Offset(xOf(at), plot.y(v))
             if (picked == null) drawLine(
-                Color.White.copy(alpha = 0.12f), Offset(p.x, 0f), Offset(p.x, size.height), 1.dp.toPx(),
+                Ink.Edge, Offset(p.x, 0f), Offset(p.x, size.height), 1.dp.toPx(),
                 pathEffect = PathEffect.dashPathEffect(floatArrayOf(2.dp.toPx(), 3.dp.toPx())),
             )
             drawCircle(Color.Black, 6.dp.toPx(), p)
@@ -499,7 +423,7 @@ internal fun DetailColumns(
             }
         }
         if (baseline != null) {
-            drawLine(Color.White.copy(alpha = 0.35f), Offset(0f, plot.y(baseline)), Offset(plot.plotRight, plot.y(baseline)), 1.dp.toPx())
+            drawLine(Ink.Disabled, Offset(0f, plot.y(baseline)), Offset(plot.plotRight, plot.y(baseline)), 1.dp.toPx())
             val r = m.measure(format(baseline), DetailAxisText)
             drawText(r, topLeft = Offset(size.width - 2.dp.toPx() - r.size.width, plot.y(baseline) - r.size.height / 2f))
         }
@@ -514,7 +438,7 @@ internal fun DetailColumns(
             val y1 = plot.y(floor)
             val top = minOf(y0, y1)
             val h = abs(y1 - y0).coerceAtLeast(3.dp.toPx())
-            val fill = if (i == on) Color.White.copy(alpha = if (few) 1f else 1f) else color.copy(alpha = alpha)
+            val fill = if (i == on) Ink.Primary else color.copy(alpha = alpha)
             drawRoundRect(fill, Offset(x, if (y0 > y1) y1 else top), Size(barW, h), CornerRadius(radius))
             if (valueLabels && few) {
                 val r = m.measure(format(v), DetailValueText.copy(color = if (i == on) Color.White else GlowType.noteColor))
@@ -547,30 +471,33 @@ internal fun DetailDrivers(
     labels: Triple<String, String, String>,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier.fillMaxWidth().padding(horizontal = 4.dp)) {
+    Column(modifier.fillMaxWidth().padding(horizontal = Space.S4)) {
         drivers.forEachIndexed { i, d ->
+            val longNote = d.note != null && d.note.length + (d.reading?.length ?: 0) > 16
             Column(
-                Modifier.fillMaxWidth().topHairline(i > 0, DetailGridInk).padding(vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                Modifier.fillMaxWidth().topHairline(i > 0, OnSurface.line).padding(vertical = Space.S12),
+                verticalArrangement = Arrangement.spacedBy(Space.S8),
             ) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
                     Text(d.name, Modifier.weight(1f), color = Color.White, style = GlowType.body, maxLines = 1)
-                    Spacer(Modifier.width(12.dp))
+                    Spacer(Modifier.width(Space.S12))
                     if (d.reading != null) Text(d.reading, color = Color.White, style = GlowType.body, maxLines = 1)
-                    if (d.note != null) Text(
+                    // A long note would be measured first and squeeze the name, so it goes on its own line under it.
+                    if (d.note != null && !longNote) Text(
                         (if (d.reading != null) " " else "") + d.note, color = GlowType.noteColor, style = GlowType.secondary, maxLines = 1,
                     )
                 }
+                if (d.note != null && longNote) Text(d.note, color = GlowType.noteColor, style = GlowType.secondary)
                 Canvas(Modifier.fillMaxWidth().padding(end = DetailGutter).height(10.dp)) {
-                    drawRoundRect(DetailGridInk, Offset(0f, 3.dp.toPx()), Size(size.width, 4.dp.toPx()), CornerRadius(2.dp.toPx()))
+                    drawRoundRect(Greys.Raised, Offset(0f, 3.dp.toPx()), Size(size.width, 4.dp.toPx()), CornerRadius(2.dp.toPx()))
                     val mid = size.width / 2f
                     val end = mid + d.pull.coerceIn(-1f, 1f) * mid
                     if (abs(end - mid) > HALF) drawRoundRect(
-                        if (d.pull >= 0f) color else Color.White.copy(alpha = 0.35f),
+                        if (d.pull >= 0f) color else Ink.Disabled,
                         Offset(minOf(mid, end), 1.dp.toPx()), Size(abs(end - mid), 8.dp.toPx()), CornerRadius(4.dp.toPx()),
                     )
                     drawRoundRect(
-                        Color.White.copy(alpha = HALF), Offset(mid - 1.dp.toPx(), 0f), Size(2.dp.toPx(), 10.dp.toPx()),
+                        Ink.Tertiary, Offset(mid - 1.dp.toPx(), 0f), Size(2.dp.toPx(), 10.dp.toPx()),
                         CornerRadius(1.dp.toPx()),
                     )
                 }
@@ -596,32 +523,22 @@ internal fun DetailDrivers(
  */
 @Composable
 internal fun DetailGoalBar(share: Float, color: Color, goalText: String, modifier: Modifier = Modifier) {
-    Column(modifier.fillMaxWidth().padding(top = 6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Column(modifier.fillMaxWidth().padding(top = Space.S8), verticalArrangement = Arrangement.spacedBy(Space.S8)) {
         Canvas(Modifier.fillMaxWidth().height(14.dp)) {
             val goalAt = size.width * GOAL_MARK
             val y = (size.height - 6.dp.toPx()) / 2f
-            drawRoundRect(Color.White.copy(alpha = 0.12f), Offset(0f, y), Size(size.width, 6.dp.toPx()), CornerRadius(3.dp.toPx()))
+            drawRoundRect(Ink.Edge, Offset(0f, y), Size(size.width, 6.dp.toPx()), CornerRadius(3.dp.toPx()))
             // The bar is scaled so the goal sits at the mark, and a bar past the goal runs on past it.
             val w = (size.width * (share.coerceIn(0f, 1.25f) * GOAL_MARK)).coerceAtLeast(0f)
             if (w > 0f) drawRoundRect(color, Offset(0f, y), Size(w, 6.dp.toPx()), CornerRadius(3.dp.toPx()))
             drawRoundRect(Color.White, Offset(goalAt - 1.5.dp.toPx(), 0f), Size(3.dp.toPx(), 14.dp.toPx()), CornerRadius(2.dp.toPx()))
         }
-        Text(goalText, color = Color.White.copy(alpha = GlowType.MOMENT_ALPHA), style = GlowType.secondary)
+        Text(goalText, color = Ink.Secondary, style = GlowType.secondary)
     }
 }
 
 /** Where the goal's mark stands along the bar (board HaloDetailSteps: 80%). */
 private const val GOAL_MARK = 0.8f
-
-/** A heading over plain content (board HaloDetailRecovery, "What drove it"): 15 semibold, a 12 #9AA0AA [note] on its right. */
-@Composable
-internal fun DetailHeading(title: String, modifier: Modifier = Modifier, note: String? = null) {
-    Row(modifier.fillMaxWidth().padding(start = 4.dp, end = 4.dp, top = 8.dp), verticalAlignment = Alignment.Bottom) {
-        Text(title, Modifier.weight(1f, fill = false), color = Color.White, style = GlowType.cardTitle, maxLines = 1)
-        Spacer(Modifier.weight(1f))
-        if (note != null) Text(note, color = GlowType.noteColor, style = GlowType.noteSmall, maxLines = 1)
-    }
-}
 
 /** The three marks under a score's drivers: Worse, Your normal, Better. */
 @Composable
@@ -637,6 +554,6 @@ internal fun scaleWords(): Triple<String, String, String> = Triple(
  * a detail). The only dash in the chart code, so the solid-lines rule has one place to look.
  */
 internal fun DrawScope.dashedGoalLine(y: Float, right: Float) = drawLine(
-    Color.White.copy(alpha = 0.35f), Offset(0f, y), Offset(right, y), 1.dp.toPx(),
+    Ink.Disabled, Offset(0f, y), Offset(right, y), 1.dp.toPx(),
     pathEffect = PathEffect.dashPathEffect(floatArrayOf(4.dp.toPx(), 4.dp.toPx())),
 )

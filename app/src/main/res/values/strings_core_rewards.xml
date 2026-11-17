@@ -89,21 +89,21 @@
     <!-- A number of weeks, inside the Goals and bests page's run line below. -->
     <!-- Goals and bests page: the current run of weeks with the goal met, then the best run in weeks. The form follows the current run. -->
     <plurals name="core_rewards_run_best_is">
-        <item quantity="one">Goal met <xliff:g id="weeks" example="1">%1$d</xliff:g> week in a row. Your best is <xliff:g id="best" example="9">%2$d</xliff:g>.</item>
-        <item quantity="other">Goal met <xliff:g id="weeks" example="6">%1$d</xliff:g> weeks in a row. Your best is <xliff:g id="best" example="9">%2$d</xliff:g>.</item>
+        <item quantity="one">Goal met %1$d week in a row, best is %2$d</item>
+        <item quantity="other">Goal met %1$d weeks in a row, best is %2$d</item>
     </plurals>
     <!-- Goals and bests page: the current run, when it is the best run yet. -->
     <plurals name="core_rewards_run_best_yet">
-        <item quantity="one">Goal met <xliff:g id="weeks" example="1">%1$d</xliff:g> week in a row, your best yet.</item>
-        <item quantity="other">Goal met <xliff:g id="weeks" example="6">%1$d</xliff:g> weeks in a row, your best yet.</item>
+        <item quantity="one">Goal met %1$d week in a row, best yet</item>
+        <item quantity="other">Goal met %1$d weeks in a row, best yet</item>
     </plurals>
     <!-- Goals and bests page with no current run: the best run so far. -->
     <plurals name="core_rewards_run_best_was">
-        <item quantity="one">Your best is <xliff:g id="weeks" example="1">%1$d</xliff:g> week in a row.</item>
-        <item quantity="other">Your best is <xliff:g id="weeks" example="9">%1$d</xliff:g> weeks in a row.</item>
+        <item quantity="one">Best run is %1$d week in a row</item>
+        <item quantity="other">Best run is %1$d weeks in a row</item>
     </plurals>
     <!-- Goals and bests page before the goal was ever met. -->
-    <string name="core_rewards_run_none">Meet your goal to start a run of weeks.</string>
+    <string name="core_rewards_run_none">No weeks in a row yet</string>
 
     <!-- A locked badge's progress in kilometres. The numbers have the phone's decimal and thousands marks. -->
     <string name="core_rewards_progress_km"><xliff:g id="have" example="4.2">%1$s</xliff:g> of <xliff:g id="need" example="5">%2$s</xliff:g> km</string>
@@ -116,17 +116,17 @@
 
     <!-- The weekly recap notification: the week's workouts against the goal, not met. The form follows the goal. -->
     <plurals name="core_rewards_recap">
-        <item quantity="one"><xliff:g id="count" example="0">%2$d</xliff:g> of <xliff:g id="goal" example="1">%1$d</xliff:g> workout.</item>
-        <item quantity="other"><xliff:g id="count" example="2">%2$d</xliff:g> of <xliff:g id="goal" example="4">%1$d</xliff:g> workouts.</item>
+        <item quantity="one">%2$d of %1$d workout</item>
+        <item quantity="other">%2$d of %1$d workouts</item>
     </plurals>
     <!-- The weekly recap notification: the goal met. -->
     <plurals name="core_rewards_recap_met">
-        <item quantity="one"><xliff:g id="count" example="4">%1$d</xliff:g> of <xliff:g id="goal" example="4">%2$d</xliff:g> workout, goal met.</item>
-        <item quantity="other"><xliff:g id="count" example="4">%1$d</xliff:g> of <xliff:g id="goal" example="4">%2$d</xliff:g> workouts, goal met.</item>
+        <item quantity="one">%1$d of %2$d workout, goal met</item>
+        <item quantity="other">%1$d of %2$d workouts, goal met</item>
     </plurals>
     <!-- The weekly recap notification: the goal met, and the weeks in a row it has been. The form follows the weeks. -->
     <plurals name="core_rewards_recap_met_in_a_row">
-        <item quantity="one"><xliff:g id="count" example="4">%2$d</xliff:g> of <xliff:g id="goal" example="4">%3$d</xliff:g> workouts, goal met. <xliff:g id="weeks" example="1">%1$d</xliff:g> week in a row.</item>
-        <item quantity="other"><xliff:g id="count" example="4">%2$d</xliff:g> of <xliff:g id="goal" example="4">%3$d</xliff:g> workouts, goal met. <xliff:g id="weeks" example="6">%1$d</xliff:g> weeks in a row.</item>
+        <item quantity="one">%2$d of %3$d workouts, %1$d week in a row</item>
+        <item quantity="other">%2$d of %3$d workouts, %1$d weeks in a row</item>
     </plurals>
 </resources>

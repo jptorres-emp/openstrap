@@ -1,5 +1,6 @@
 package org.openstrap.app.ui.glow
 
+import org.openstrap.app.ui.theme.Greys
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -31,6 +32,7 @@ import org.openstrap.app.data.Rewards
 import org.openstrap.app.presentation.RewardsCopy
 import org.openstrap.app.ui.components.Motion
 import org.openstrap.app.ui.components.rememberAnimationsOn
+import org.openstrap.app.ui.theme.SportColors
 
 /*
  * The badges and personal bests as tokens (rules A1, boards HaloGoalsBests and HaloAllBadges): a badge is a medal, a tile
@@ -165,12 +167,12 @@ private val LABELLED_BADGES = setOf(
 private const val GOAL_FIRST = "goal_first"
 
 /** Lime, for counts, distance and goals (rules A1). */
-internal val RewardLime = Color(0xFFC6F55A)
-private val IndoorInk = Color(0xFF52ACFC)
-private val StrengthInk = Color(0xFFFF8410)
-private val IntervalInk = Color(0xFFFF5A5F)
-private val MindInk = Color(0xFFB67AE8)
-private val GamesInk = Color(0xFF6E8FB8)
+internal val RewardLime = SportColors.distance
+private val IndoorInk = SportColors.indoorCardio
+private val StrengthInk = SportColors.strength
+private val IntervalInk = SportColors.intervals
+private val MindInk = SportColors.mindBody
+private val GamesInk = SportColors.games
 
 /** A badge's colour: lime for counts, distance and goals, the sport's colour for a sport's first (rules A1). */
 internal fun badgeInk(b: Rewards.Badge): Color = when (b.id) {
@@ -302,7 +304,7 @@ internal fun rememberLightRise(on: Boolean): () -> Float {
 }
 
 /** A token still to earn: its picture and label in #4A4E57 (rules A1). */
-private val LockedMark = Color(0xFF4A4E57)
+private val LockedMark = Greys.MedalMark
 
 /** From this size the label takes the large display roles: a moment's token. */
 private val LARGE_FACE = 120.dp

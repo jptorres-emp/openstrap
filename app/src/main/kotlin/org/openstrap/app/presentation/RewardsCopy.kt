@@ -199,7 +199,7 @@ object RewardsCopy {
         if (inARow > 1) strings.plural(R.plurals.core_rewards_moment_weeks, inARow, inARow)
         else strings.get(R.string.core_rewards_moment_first)
 
-    /** "Thursday, 30 October 2026, morning run": when a best was set, and what. */
+    /** "Tue 10 Nov, morning run": when a best was set, and what. */
     fun whenSet(
         date: Long, sportName: String, zone: ZoneId = ZoneId.systemDefault(), locale: Locale = Locale.getDefault(),
         strings: Strings = Strings.app,
@@ -211,16 +211,18 @@ object RewardsCopy {
             in 17..21 -> R.string.core_rewards_when_evening
             else -> R.string.core_rewards_when_night
         }
-        return strings.format(part, t.format(Formatters.of("EEEE, d MMMM yyyy", locale)), sportName.lowercase(locale))
+        return strings.format(part, dayLong(date, zone, locale), sportName.lowercase(locale))
     }
 
-    /** "Thursday, 30 October 2026": the day a badge was earned, or a best set by a day rather than a workout. */
-    fun dayLong(date: Long, zone: ZoneId = ZoneId.systemDefault(), locale: Locale = Locale.getDefault()): String =
-        Instant.ofEpochSecond(date).atZone(zone).format(Formatters.of("EEEE, d MMMM yyyy", locale))
+    /** "Tue 10 Nov", "10 Nov 2025" from an earlier year: the day a badge was earned, or a best set by a day rather than a workout. */
+    fun dayLong(date: Long, zone: ZoneId = ZoneId.systemDefault(), locale: Locale = Locale.getDefault()): String {
+        val day = Instant.ofEpochSecond(date).atZone(zone).toLocalDate()
+        return if (day.year == LocalDate.now(zone).year) DayWords.short(day, locale) else DayWords.dayMonthYear(day, locale)
+    }
 
-    /** "27 October to 2 November": a week from its first day. */
+    /** "27 Oct to 2 Nov": a week from its first day. */
     fun weekRange(first: LocalDate, locale: Locale = Locale.getDefault()): String {
-        val f = Formatters.of("d MMMM", locale)
+        val f = Formatters.of("d MMM", locale)
         return Ranges.of(first.format(f), first.plusDays(6).format(f))
     }
 
@@ -256,7 +258,7 @@ object RewardsCopy {
             }
         }
 
-    /** The recap notification: "4 of 4 workouts, goal met. 6 weeks in a row." */
+    /** The recap notification: "4 of 4 workouts, 6 weeks in a row" */
     fun recapText(week: WeekResult, inARow: Int, strings: Strings = Strings.app): String = when {
         !week.met -> strings.plural(R.plurals.core_rewards_recap, week.goal, week.goal, week.count)
         inARow > 1 -> strings.plural(R.plurals.core_rewards_recap_met_in_a_row, inARow, inARow, week.count, week.goal)

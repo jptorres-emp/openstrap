@@ -1,5 +1,8 @@
 package org.openstrap.app.ui.glow
 
+import androidx.compose.foundation.layout.Arrangement
+import org.openstrap.app.ui.theme.Corner
+import org.openstrap.app.ui.theme.Space
 import org.openstrap.app.R
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalResources
@@ -65,6 +68,7 @@ import org.openstrap.app.ui.dashboard.nightVitals
 import org.openstrap.app.ui.dashboard.sleepCards
 import org.openstrap.app.ui.dashboard.sleepWeek
 import org.openstrap.app.ui.theme.AppIcons
+import org.openstrap.app.ui.theme.Ink
 import org.openstrap.app.ui.theme.MetricColors
 import org.openstrap.app.ui.glow.draw.StageBarLook
 import org.openstrap.app.ui.glow.draw.stageTotals
@@ -142,9 +146,9 @@ internal val SleepGlow = org.openstrap.app.ui.glow.draw.heroStyle(MetricColors.s
 private fun NightHero(state: DayUiState, firstNights: Boolean, onRestore: (org.openstrap.app.data.db.SleepSession) -> Unit, onOpen: () -> Unit) {
     val session = state.sleep
     val isToday = state.date == LocalDate.now()
-    GlowCard(SleepGlow, Modifier.fillMaxWidth().gridSize(CardSize.Wide), onClick = onOpen) {
+    HaloCard(Modifier.fillMaxWidth().gridSize(CardSize.Wide), tone = CardTone.lit(SleepGlow), onClick = onOpen) {
         Column {
-            GlowHeader(stringResource(R.string.glow_sleep_last_night), trailing = session?.let { TabCopy.nightTimes(it.start, it.end) })
+            HaloTitle(stringResource(R.string.glow_sleep_last_night), note = session?.let { TabCopy.nightTimes(it.start, it.end) })
             if (session == null) {
                 // Nothing said until the night has loaded, so a cold start doesn't open on "No sleep recorded".
                 val deleted = state.deletedSleep
@@ -152,8 +156,8 @@ private fun NightHero(state: DayUiState, firstNights: Boolean, onRestore: (org.o
                     if (firstNights) TabCopy.FIRST_NIGHT_SLEEP else TabCopy.noNight(state.naps.isNotEmpty(), isToday, deleted = deleted != null),
                 )
                 if (state.loaded && deleted != null) {
-                    Spacer(Modifier.height(20.dp))
-                    PageButton(
+                    Spacer(Modifier.height(Space.S20))
+                    HaloButton(
                         stringResource(R.string.glow_sleep_restore), { onRestore(deleted.strap) },
                         icon = org.openstrap.app.ui.theme.AppIcons.ArrowCounterClockwise,
                     )
@@ -163,9 +167,9 @@ private fun NightHero(state: DayUiState, firstNights: Boolean, onRestore: (org.o
             val asleep = state.asleepSeconds ?: (session.end - session.start)
             val others = SleepHistory.weekOthers(state.nights.mapNotNull { n -> n.session?.let { n.date to it } }.toMap(), state.date)
             HeroSentence(TabCopy.night(asleep, others))
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(Space.S16))
             val score = session.score
-            HeroNumber(
+            HeroReading(
                 score?.toString(),
                 listOfNotNull(
                     TabCopy.sleepScoreLine(score).let {
@@ -175,24 +179,24 @@ private fun NightHero(state: DayUiState, firstNights: Boolean, onRestore: (org.o
                 ),
             )
             if (state.sleepStages.isNotEmpty()) {
-                Spacer(Modifier.height(18.dp))
+                Spacer(Modifier.height(Space.S20))
                 GlowSleepStages(state.sleepStages, 96.dp)
             }
             state.sleepBreakdown?.let { b ->
                 // Stage totals as text, never dots (spec 2.3): a stage under a minute leaves its segment and legend out.
                 val totals = stageTotals(b.byStage)
                 if (totals.isNotEmpty()) {
-                    Spacer(Modifier.height(16.dp))
+                    Spacer(Modifier.height(Space.S16))
                     // The stage bar: sized by [StageBarLook] as a widget's bar is ([stageBarSegments] lays that one out in
                     // whole pixels the way this bar's Row does), its legend the stage's total by a square mark, "Deep 2 h 51".
                     SegmentBar(
                         totals.map { (stage, seconds) -> Segment(seconds.toFloat(), stageColor(stage)) },
                         height = StageBarLook.HEIGHT_DP.dp, gap = StageBarLook.GAP_DP.dp, corner = StageBarLook.CORNER_DP.dp,
                     )
-                    Spacer(Modifier.height(10.dp))
+                    Spacer(Modifier.height(Space.S12))
                     Legend(
                         totals.map { (stage, seconds) -> TabCopy.stageTotal(stage, seconds) to stageColor(stage) },
-                        swatch = GlowLayout.PipShape, layout = LegendLayout.Flow,
+                        swatch = Corner.Pip, layout = LegendLayout.Flow,
                     )
                 }
             }
@@ -250,7 +254,7 @@ private fun VitalsList(state: DayUiState, firstNights: Boolean, onOpen: (Metric)
     ListPanel(title = stringResource(R.string.glow_sleep_vitals_title), note = stringResource(R.string.glow_sleep_vitals_note)) {
         nightVitals(state, firstNights).forEachIndexed { i, v ->
             val tag = org.openstrap.app.ui.dashboard.bodyTag(v.metric, v.direction)
-            ListRow(
+            MetricRow(
                 v.label, v.color, v.value,
                 // The tag already says which way it is off, so the plain word against your normal gives way to it.
                 v.status.takeUnless { tag != null && it == org.openstrap.app.presentation.TodayCopy.normalWord(v.direction) },
@@ -274,22 +278,22 @@ private fun RegularityCard(state: DayUiState, reg: org.openstrap.app.data.SleepR
     val w = sleepWeek(state, LocalGoals.current.sleepSeconds, reg, zone)
     val week = w?.let { bedWakeWeek(it, zone) }
     val tag = if (w == null) null else offTag(OffWords.Timing, bedtimeOffStatus(state, zone))
-    val rim = if (tag != null && week != null) bedWakeRim(week.first, week.second, PictureSize.Wide) else null
-    PictureCard(MetricColors.sleepDeep, Modifier.fillMaxWidth().gridSize(CardSize.Wide), rim = rim, onClick = onOpen) {
-        EdgeTitle(stringResource(R.string.glow_sleep_regularity_title), stringResource(R.string.glow_sleep_last_7_nights))
+    HaloCard(size = HaloCardSize.Wide, onClick = onOpen) {
+        HaloTitle(stringResource(R.string.glow_sleep_regularity_title), note = stringResource(R.string.glow_sleep_last_7_nights))
         // Waiting for the first night it keeps its shape with the dim dash (spec 4.3).
-        SleepNumber(reg?.sri?.roundToInt()?.toString(), null, tag, Modifier.padding(top = 14.dp), waiting = firstNights && w == null)
+        SleepNumber(reg?.sri?.roundToInt()?.toString(), null, tag, Modifier.padding(top = Space.S12), waiting = firstNights && w == null)
         val status = when {
             w == null -> if (firstNights) AFTER_FIRST_NIGHT else stringResource(R.string.glow_sleep_regularity_none)
             tag != null -> null
             else -> TabCopy.regularity(reg)
         }
-        status?.let { SleepStatus(it, Modifier.padding(top = 6.dp)) }
+        status?.let { SleepStatus(it, Modifier.padding(top = Space.S8)) }
         w?.usual?.let { u ->
-            SleepStatus(TabCopy.usualTimes(SleepHistory.clockMinutes(u.bedtime), SleepHistory.clockMinutes(u.wake)), Modifier.padding(top = 4.dp))
+            SleepStatus(TabCopy.usualTimes(SleepHistory.clockMinutes(u.bedtime), SleepHistory.clockMinutes(u.wake)),
+                Modifier.padding(top = Space.S4))
         }
         if (week != null) {
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(Space.S12))
             BedWakeBars(week.first, week.second, MetricColors.sleepDeep, PictureSize.Wide, Modifier.fillMaxWidth().height(RegularityBarsHeight))
         }
     }
@@ -315,7 +319,7 @@ private fun BreathingCard(rec: org.openstrap.app.data.RecoveryResult?, size: Pic
     SleepPictureCard(
         MetricColors.sleepLight, stringResource(R.string.glow_sleep_breathing_title), rim, onInfo, modifier = modifier,
         value = b?.let { dotFormat("%.1f", it.perHour) }, unit = stringResource(R.string.glow_sleep_an_hour), tag = tag,
-        status = if (b == null) AFTER_FIRST_NIGHT else TabCopy.breathingShort(b),
+        status = if (b == null) stringResource(R.string.glow_sleep_after_a_night) else TabCopy.breathingShort(b),
         picture = if (values.none { it != null }) null else ({ m -> WeekOfDots(values, usual, MetricColors.sleepLight, size, m) }),
     )
 }
@@ -333,7 +337,7 @@ private fun NapsCard(state: DayUiState, size: PictureSize, modifier: Modifier, o
     val pictured = naps.map { Nap(it.start, it.end, state.napStages[it.start].orEmpty()) }
     SleepPictureCard(
         MetricColors.sleepDeep, TabCopy.napsTitle(naps.size), null, onOpen, modifier = modifier,
-        value = clockDuration(naps.sumOf { it.end - it.start }), unit = null, tag = null,
+        value = clockDuration(naps.sumOf { it.end - it.start }), unit = stringResource(R.string.glow_sleep_unit_hours), tag = null,
         status = TabCopy.naps(naps.size, clock(naps.first().start)),
         picture = { m -> NapDay(pictured, span.first, span.last, MetricColors.sleepDeep, size, m) },
     )
@@ -344,6 +348,8 @@ private fun NapsCard(state: DayUiState, size: PictureSize, modifier: Modifier, o
  * filling what's left, the number in white dots with its [tag], then the [status] in Secondary. With no [value] the
  * dim dash waits in its place.
  */
+// The ink and the rim stay so the screens placing it compile: a Halo card has no coloured rim (Halo System board).
+@Suppress("UnusedParameter")
 @Composable
 private fun SleepPictureCard(
     ink: Color, title: String, rim: Rim?, onClick: (() -> Unit)?,
@@ -351,15 +357,15 @@ private fun SleepPictureCard(
     picture: (@Composable (Modifier) -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
-    PictureCard(ink, modifier, rim = rim, onClick = onClick) {
-        CardTitle(title)
+    HaloCard(modifier, onClick = onClick, verticalArrangement = Arrangement.Top) {
+        HaloTitle(title)
         if (picture != null) {
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(Space.S12))
             picture(Modifier.fillMaxWidth().weight(1f))
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(Space.S8))
         } else Spacer(Modifier.weight(1f))
         SleepNumber(value, unit, tag)
-        status?.let { SleepStatus(it, Modifier.padding(top = 4.dp)) }
+        status?.let { SleepStatus(it, Modifier.padding(top = Space.S4)) }
     }
 }
 
@@ -369,10 +375,10 @@ private fun SleepNumber(value: String?, unit: String?, tag: NewsTag?, modifier: 
     if (value == null && !waiting) return
     NumberWithTag(if (value == null) null else tag, modifier) {
         Row(verticalAlignment = Alignment.Bottom) {
-            if (value != null) HaloNumber(value, Modifier.cardNumber(value), dot = DotSize.Edge)
-            else WaitingDash(Modifier.padding(vertical = 8.dp))
+            if (value != null) HaloBigNumber(value, cardNumberSize(DotSize.Edge), Modifier.cardNumber(value))
+            else WaitingDash(Modifier.padding(vertical = Space.S8), onTile = true)
             if (unit != null && value != null) {
-                Text(unit, color = Color.White.copy(alpha = 0.7f), style = GlowType.secondary, modifier = Modifier.padding(start = 6.dp))
+                Text(unit, color = Ink.Secondary, style = GlowType.secondary, modifier = Modifier.padding(start = Space.S8))
             }
         }
     }
@@ -381,6 +387,6 @@ private fun SleepNumber(value: String?, unit: String?, tag: NewsTag?, modifier: 
 /** A Sleep card's status line, always Secondary (spec 2.2): colour never says how it's going. */
 @Composable
 private fun SleepStatus(text: String, modifier: Modifier = Modifier) = Text(
-    text, modifier, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary,
+    text, modifier, color = Ink.Secondary, style = GlowType.secondary,
     maxLines = 1, overflow = TextOverflow.Ellipsis,
 )

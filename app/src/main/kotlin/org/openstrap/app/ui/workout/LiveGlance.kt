@@ -432,7 +432,8 @@ object Glance {
                 ?: strings.format(R.string.workout_glance_rest_bpm_sentence, b)
         }
         val sooner = s.restBelow?.let { strings.format(R.string.workout_glance_rest_ends_sooner, it) }
-        return if (heart != null && sooner != null) strings.format(R.string.workout_sentences, heart, sooner) else heart ?: sooner
+        return (if (heart != null && sooner != null) strings.format(R.string.workout_glance_join, heart, sooner) else heart ?: sooner)
+            ?.replaceFirstChar { it.uppercase() }
     }
 
     /**
@@ -553,7 +554,8 @@ object Glance {
         val fastest = i.fastestSplit?.takeIf { it != s.index }?.let { strings.format(R.string.workout_glance_fastest_was, it + 1) }
             ?: strings.get(R.string.workout_glance_fastest_this).takeIf { s.index > 0 }
         val avg = i.lastSplitBpm?.let { strings.format(R.string.workout_glance_split_average, it) }
-        val line = if (avg != null && fastest != null) strings.format(R.string.workout_sentences, avg, fastest) else avg ?: fastest
+        val line = (if (avg != null && fastest != null) strings.format(R.string.workout_glance_join, avg, fastest) else avg ?: fastest)
+            ?.replaceFirstChar { it.uppercase() }
         return WorkoutWords.split(s.index, s.seconds) to line
     }
 

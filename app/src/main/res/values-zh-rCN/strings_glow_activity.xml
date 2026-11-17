@@ -15,18 +15,18 @@
     <string name="glow_activity_vo2max_from_workouts">来自你的运动</string>
     <string name="glow_activity_vo2max_band">在同龄人中处于%1$s水平</string>
     <string name="glow_activity_vo2max_estimated">根据你的个人资料估算</string>
-    <string name="glow_activity_vo2max_after_workout">手环评估运动后显示</string>
+    <string name="glow_activity_vo2max_after_workout">运动之后</string>
     <string name="glow_activity_time_to_recover">恢复所需时间</string>
     <string name="glow_activity_no_recent_workout">近期无运动记录</string>
     <string name="glow_activity_calories">卡路里</string>
-    <string name="glow_activity_add_profile_to_see">添加年龄、体重和身高即可查看</string>
+    <string name="glow_activity_add_profile_to_see">需要年龄、体重和身高</string>
     <string name="glow_activity_distance">距离</string>
     <string name="glow_activity_workouts">运动记录</string>
     <plurals name="glow_activity_this_day">
         <item quantity="other">当天 %d 次</item>
     </plurals>
     <string name="glow_activity_no_workouts">暂无运动记录</string>
-    <string name="glow_activity_no_workouts_note">记录的运动将显示在此处</string>
+    <string name="glow_activity_no_workouts_note">记录的运动会显示在这里</string>
     <string name="glow_activity_add_workout">补记未记录的运动</string>
     <string name="glow_activity_all_workouts">全部运动</string>
     <string name="glow_activity_suggestion">看起来是一次运动</string>
@@ -54,9 +54,9 @@
     <plurals name="glow_activity_no_load">
         <item quantity="other">近 %d 天暂无负荷记录。</item>
     </plurals>
-    <string name="glow_activity_from_workouts">来自运动</string>
+    <string name="glow_activity_from_workouts">运动</string>
     <string name="glow_activity_moving_about">日常活动</string>
-    <string name="glow_activity_strain">相比平时</string>
+    <string name="glow_activity_strain">对比常态</string>
     <string name="glow_activity_this_week">本周</string>
     <string name="glow_activity_your_usual">你平时</string>
     <string name="glow_activity_your_usual_line">近 6 周日均</string>
@@ -64,15 +64,15 @@
     <string name="glow_activity_last_7_days_line">日均</string>
     <string name="glow_activity_strap_weekly_load">手环评估的周负荷</string>
     <string name="glow_activity_from_the_strap">来自手环</string>
-    <string name="glow_activity_load_you_are_here">你当前的位置。你平时日均为 %1$d。</string>
+    <string name="glow_activity_load_you_are_here">你在这里，常态为每天 %1$d。</string>
     <string name="glow_activity_vo2max_unit">ml/kg/min</string>
     <string name="glow_activity_no_estimate">暂无估算</string>
     <string name="glow_activity_where_it_comes_from">数据来源</string>
     <string name="glow_activity_day_time">%1$s，%2$s</string>
     <string name="glow_activity_from_your_profile">来自个人资料</string>
     <string name="glow_activity_estimated_weekly">每周估算</string>
-    <string name="glow_activity_vo2max_you_are_here">你当前的位置：在同龄人中处于%1$s水平。</string>
-    <string name="glow_activity_recover_after_workout">手环评估运动后显示</string>
+    <string name="glow_activity_vo2max_you_are_here">你在这里，%1$s（同龄人）。</string>
+    <string name="glow_activity_recover_after_workout">运动之后</string>
     <string name="glow_activity_recovered">已恢复</string>
     <string name="glow_activity_recovered_after">在%1$s（%2$s）之后</string>
     <string name="glow_activity_recover_ready">准备就绪</string>
@@ -87,7 +87,7 @@
     <string name="glow_activity_no_full_days">尚无完整天数</string>
     <string name="glow_activity_total_kcal">总千卡</string>
     <string name="glow_activity_at_rest">静息消耗</string>
-    <string name="glow_activity_activity_level">活动水平</string>
+    <string name="glow_activity_activity_level">活动</string>
     <string name="glow_activity_goal_label">目标</string>
     <string name="glow_activity_where_it_came_from">消耗来源</string>
     <string name="glow_activity_no_calories">此范围内暂无卡路里数据。</string>
@@ -102,6 +102,7 @@
     <string name="glow_activity_your_week">你的一周</string>
     <string name="glow_activity_no_steps">无步数记录</string>
     <string name="glow_activity_steps_on">步，%1$s</string>
-    <string name="glow_activity_asleep_a_night">每晚睡眠</string>
+    <string name="glow_activity_asleep_a_night">平均睡眠</string>
     <string name="glow_activity_day_by_day">每日明细</string>
+    <string name="glow_activity_active_min_short">活跃分钟</string>
 </resources>

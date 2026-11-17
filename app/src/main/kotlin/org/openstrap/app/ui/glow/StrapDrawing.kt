@@ -2,6 +2,7 @@
 
 package org.openstrap.app.ui.glow
 
+import org.openstrap.app.ui.theme.Greys
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -22,6 +23,8 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.graphicsLayer
+import org.openstrap.app.ui.theme.Ink
+import org.openstrap.app.ui.theme.MetricColors
 
 /*
  * The strap as a line drawing, shared by the Strap page's card, Today's pairing stage and the header's strap pill.
@@ -67,7 +70,7 @@ internal fun StrapDrawing(
                 }
                 for (y in WeaveRows) drawLine(white.copy(alpha = 0.12f), o(27f, y), o(47f, y), s)
                 // The pod, its bevel and one highlight on the top left.
-                drawRoundRect(Color(0xFF0B0C0E), o(21f, 20f), Size(32f * k, 52f * k), CornerRadius(9f * k))
+                drawRoundRect(Greys.StrapBody, o(21f, 20f), Size(32f * k, 52f * k), CornerRadius(9f * k))
                 drawRoundRect(white.copy(alpha = 0.85f), o(21f, 20f), Size(32f * k, 52f * k), CornerRadius(9f * k),
                     style = Stroke(1.4f * s))
                 drawRoundRect(white.copy(alpha = 0.18f), o(25f, 24f), Size(24f * k, 44f * k), CornerRadius(6f * k), style = Stroke(s))
@@ -99,7 +102,7 @@ private val WeaveRows = floatArrayOf(4f, 10f, 16f, 76f, 82f, 88f)
 private val NoTurn: State<Float> = mutableFloatStateOf(0f)
 
 /** The strap's own light, a soft green, as it glows when connected. */
-internal val StrapLight = Color(0xFF7DE0C0)
+internal val StrapLight = MetricColors.readinessSoft
 
 /** The strap card's silver, its light from below (Halo Strap and Pair boards: `rgb(201 206 214)`). */
-internal val StrapSilver = Color(0xFFC9CED6)
+internal val StrapSilver = Ink.Silver

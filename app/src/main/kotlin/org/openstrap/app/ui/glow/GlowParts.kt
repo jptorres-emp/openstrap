@@ -1,5 +1,7 @@
 package org.openstrap.app.ui.glow
 
+import org.openstrap.app.ui.theme.Space
+import org.openstrap.app.ui.theme.Greys
 import androidx.compose.material3.ripple
 import androidx.compose.ui.draw.clip
 import androidx.compose.animation.animateColorAsState
@@ -31,6 +33,7 @@ import org.openstrap.app.ui.glow.draw.DotFont
 import org.openstrap.app.ui.glow.draw.dotLayout
 import org.openstrap.app.ui.glow.draw.drawDots
 import org.openstrap.app.ui.glow.draw.DotSize
+import org.openstrap.app.ui.theme.Ink
 
 /* ------------------------------------------------------------------------------------------------ */
 /* Dot-matrix numerals                                                                               */
@@ -72,8 +75,8 @@ fun DotMatrixText(
  */
 @Composable
 fun GlowSwitch(checked: Boolean, onCheckedChange: (Boolean) -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true) {
-    val track by animateColorAsState(if (checked) Color.White else Color(0xFF2A2C33), label = "glow switch track")
-    val knobColor by animateColorAsState(if (checked) Color.Black else Color(0xFF8A909A), label = "glow switch knob colour")
+    val track by animateColorAsState(if (checked) Color.White else Greys.Control, label = "glow switch track")
+    val knobColor by animateColorAsState(if (checked) Color.Black else Ink.Tertiary, label = "glow switch knob colour")
     val knob by animateDpAsState(if (checked) 20.dp else 0.dp, spring(dampingRatio = 0.6f, stiffness = 500f), label = "glow switch knob")
     Box(
         modifier
@@ -83,7 +86,7 @@ fun GlowSwitch(checked: Boolean, onCheckedChange: (Boolean) -> Unit, modifier: M
             .clip(CircleShape)
             .background(track)
             .toggleable(checked, enabled = enabled, interactionSource = null, indication = ripple(color = Color.Gray), role = Role.Switch, onValueChange = onCheckedChange)
-            .padding(3.dp),
+            .padding(Space.S2),
     ) {
         Box(
             Modifier
@@ -124,7 +127,7 @@ internal fun HeroValue(
         DotMatrixText(value, dot = dot, color = color, scale = dotFitScale(value, dot, maxWidth))
         if (unit.isNotBlank()) Text(
             unit, Modifier.padding(start = gap).weight(1f, fill = false),
-            color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = unitStyle,
+            color = Ink.Secondary, style = unitStyle,
         )
     }
 }

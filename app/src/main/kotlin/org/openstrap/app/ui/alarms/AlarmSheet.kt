@@ -1,5 +1,14 @@
 package org.openstrap.app.ui.alarms
 
+import org.openstrap.app.ui.glow.HaloNote
+import org.openstrap.app.ui.glow.HaloChip
+import org.openstrap.app.ui.glow.ChipVariant
+import org.openstrap.app.ui.glow.ChipSize
+import androidx.compose.foundation.layout.padding
+import org.openstrap.app.ui.glow.ButtonPair
+import org.openstrap.app.ui.theme.Corner
+import org.openstrap.app.ui.theme.Space
+import org.openstrap.app.ui.theme.Greys
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -27,15 +36,11 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import org.openstrap.app.R
-import org.openstrap.app.ui.device.SheetActions
+import org.openstrap.app.ui.glow.HaloButton
+import org.openstrap.app.ui.glow.HaloButtonVariant
 import org.openstrap.app.ui.glow.GlowLayout
 import org.openstrap.app.ui.glow.GlowType
-import org.openstrap.app.ui.glow.HaloButtonSurface
-import org.openstrap.app.ui.glow.PageButton
-import org.openstrap.app.ui.glow.PageNote
-import org.openstrap.app.ui.glow.PageSheet
-import org.openstrap.app.ui.glow.PickedRing
-import org.openstrap.app.ui.glow.PickedSurface
+import org.openstrap.app.ui.glow.HaloSheet
 import org.openstrap.protocol.services.Alarm
 
 /**
@@ -54,45 +59,33 @@ internal fun AlarmSheet(
 ) {
     var minutes by remember { mutableIntStateOf(alarm.hour * 60 + alarm.minute) }
     var days by remember { mutableIntStateOf(alarm.days) }
-    PageSheet(onDismiss, stringResource(if (isNew) R.string.you_alarms_new else R.string.you_alarms_edit)) {
+    HaloSheet(onDismiss, stringResource(if (isNew) R.string.you_alarms_new else R.string.you_alarms_edit)) {
         TimeWheels(minutes, { minutes = it })
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            PageNote(stringResource(R.string.you_alarms_repeat, daysLabel(days)))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(Space.S8)) {
+            HaloNote(stringResource(R.string.you_alarms_repeat, daysLabel(days)))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Space.S8)) {
                 DAY_LETTERS.forEachIndexed { i, d ->
                     val bit = 1 shl i
                     // Picking a day replaces the strap's own "workdays" calendar with a plain day set.
-                    DayChip(
-                        stringResource(d), days != Alarm.WORKDAYS && days and bit != 0, stringResource(DAY_NAMES[i]),
-                        { days = (if (days == Alarm.WORKDAYS) 0 else days) xor bit }, Modifier.weight(1f),
+                    HaloChip(
+                        stringResource(d), { days = (if (days == Alarm.WORKDAYS) 0 else days) xor bit }, Modifier.weight(1f),
+                        ChipVariant.Choice, ChipSize.Main, selected = days != Alarm.WORKDAYS && days and bit != 0,
+                        description = stringResource(DAY_NAMES[i]),
                     )
                 }
             }
         }
-        SheetActions(
-            onDismiss, { onSave(alarm.copy(hour = minutes / 60, minute = minutes % 60, days = days, enabled = true)) }, saveEnabled = !busy,
+        ButtonPair(
+            stringResource(R.string.you_action_cancel), onDismiss, stringResource(R.string.you_action_save),
+            { onSave(alarm.copy(hour = minutes / 60, minute = minutes % 60, days = days, enabled = true)) },
+            rightEnabled = !busy,
         )
         if (!isNew) {
-            PageButton(
+            HaloButton(
                 stringResource(R.string.you_alarms_delete), onDelete, Modifier.fillMaxWidth(),
-                enabled = !busy, destructive = true,
+                enabled = !busy, variant = HaloButtonVariant.Destructive,
             )
         }
     }
 }
 
-/** A day of the week: 44 tall, a squircle, the letter at 14 semibold. Unpicked is dark with grey text. */
-@Composable
-private fun DayChip(letter: String, picked: Boolean, description: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    Box(
-        modifier.height(44.dp).clip(GlowLayout.IconShape)
-            .background(if (picked) PickedSurface else HaloButtonSurface)
-            .let { if (picked) it.border(PickedRing, Color.White, GlowLayout.IconShape) else it }
-            .clickable(role = Role.Checkbox, onClick = onClick)
-            .semantics { selected = picked; contentDescription = description },
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(letter, color = if (picked) Color.White else GlowType.noteColor, style = GlowType.buttonSmall,
-            modifier = Modifier.clearAndSetSemantics {})
-    }
-}

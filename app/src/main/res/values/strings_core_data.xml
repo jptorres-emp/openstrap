@@ -48,13 +48,13 @@
     <!-- VO2 max, why there is no estimate: the age is outside the equation's range. -->
     <string name="core_data_vo2_needs_age">Needs an age between 20 and 79.</string>
     <!-- VO2 max, why there is no estimate: the profile has no sex. -->
-    <string name="core_data_vo2_needs_sex">Needs your sex: the equation differs for women and men.</string>
+    <string name="core_data_vo2_needs_sex">Needs your sex, as the equation differs for women and men.</string>
     <!-- VO2 max, why there is no estimate: no recent weight and height. -->
     <string name="core_data_vo2_needs_body">Needs a weight and height entered in the last 90 days.</string>
     <!-- VO2 max, why there is no estimate: the activity question is unanswered or too old. -->
-    <string name="core_data_vo2_needs_activity">Answer the activity question (asked every 6 months).</string>
+    <string name="core_data_vo2_needs_activity">Answer the activity question, asked every 6 months.</string>
     <!-- VO2 max, why there is no estimate: medication or pregnancy set in the profile. -->
-    <string name="core_data_vo2_medication">Not shown while taking beta-blockers or during pregnancy: resting heart rate doesn\'t reflect fitness then.</string>
+    <string name="core_data_vo2_medication">Not shown while taking beta-blockers or during pregnancy, as resting heart rate doesn\'t reflect fitness then.</string>
     <!-- VO2 max, why there is no estimate: too few nights of resting heart rate. -->
     <string name="core_data_vo2_needs_resting_hr">Needs at least 5 nights of resting heart rate in the last 2 weeks.</string>
     <!-- VO2 max, where the estimate falls among people of your age and sex (FRIEND). Short, one line. -->

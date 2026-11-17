@@ -1,5 +1,6 @@
 package org.openstrap.app.ui.glow
 
+import org.openstrap.app.ui.theme.Space
 import androidx.activity.compose.BackHandler
 import androidx.annotation.StringRes
 import androidx.compose.foundation.background
@@ -31,6 +32,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.ImeAction
 import org.openstrap.app.ui.theme.AppIcons
+import org.openstrap.app.ui.theme.Ink
 import org.openstrap.app.ui.theme.SportIcons
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
@@ -46,6 +48,8 @@ import org.openstrap.app.data.RecoveryResult
 import org.openstrap.app.data.WorkoutAnalysis
 import org.openstrap.app.ui.dashboard.DayUiState
 import org.openstrap.app.ui.dashboard.Detail
+import org.openstrap.app.ui.dashboard.Score
+import org.openstrap.app.presentation.Units
 import org.openstrap.app.presentation.DetailCopy
 import org.openstrap.app.presentation.Metric
 import org.openstrap.app.ui.dashboard.LatestReading
@@ -186,6 +190,25 @@ fun metricIndex(
                     strings, Metric.Steps, R.string.glow_metrics_steps, MetricColors.steps, state.steps.toFloat(),
                     R.string.glow_metrics_for_the_day,
                 ),
+                // Heart points is the 7 day total its Activity card shows; Active kcal is the day's estimate and opens Calories.
+                row(
+                    Score.HeartPoints.title(strings), MetricColors.heart, state.pai?.total?.let { Math.round(it).toString() },
+                    strings.get(R.string.glow_metrics_last_7_days), IndexTarget.Open(Detail.OfScore(Score.HeartPoints)),
+                ),
+                row(
+                    strings.get(R.string.glow_metrics_active_kcal), MetricColors.calories,
+                    rec?.calories?.activeKcal?.let { Units.count(Math.round(it)) },
+                    strings.get(R.string.glow_metrics_for_the_day_estimated), IndexTarget.Open(Detail.OfScore(Score.Calories)),
+                ),
+                row(
+                    Score.Load.title(strings), MetricColors.load, rec?.load?.let { Math.round(it).toString() },
+                    strings.get(R.string.glow_metrics_last_7_days), IndexTarget.Open(Detail.OfScore(Score.Load)),
+                ),
+            ),
+        ),
+        IndexGroup(
+            strings.get(R.string.glow_metrics_workouts),
+            listOf(
                 row(
                     strings.get(R.string.glow_metrics_workouts), MetricColors.heart, week.toString(),
                     strings.get(R.string.glow_metrics_last_7_days), IndexTarget.Open(Detail.AllWorkouts),
@@ -290,16 +313,16 @@ fun AllMetricsSheet(
     // Back clears what's typed before it closes the sheet (this handler is the innermost, so it is asked first).
     BackHandler(enabled = query.isNotEmpty()) { query = "" }
     val shown = remember(groups, query) { filterIndex(groups, query) }
-    PageSheet(onDismiss, stringResource(R.string.glow_metrics_all_metrics), dayName(date), side = 16.dp) {
+    HaloSheet(onDismiss, stringResource(R.string.glow_metrics_all_metrics), dayName(date), variant = HaloSheetVariant.Grouped) {
         MetricSearchField(query, { query = it })
         if (shown.isEmpty()) Text(
-            stringResource(R.string.glow_metrics_no_match, query.trim()), color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA),
-            style = GlowType.secondary, modifier = Modifier.padding(start = 4.dp, top = 8.dp),
+            stringResource(R.string.glow_metrics_no_match, query.trim()), color = Ink.Secondary,
+            style = GlowType.secondary, modifier = Modifier.padding(start = Space.S4, top = Space.S8),
         )
         shown.forEach { group ->
             DetailPanel(title = group.title, muted = true) {
                 group.rows.forEachIndexed { i, r ->
-                    DetailRow(
+                    MetricRow(
                         r.name, r.color, r.value, r.status, onClick = { onOpen(r.target) }, divider = i > 0,
                         icon = r.target.rowIcon(),
                     )

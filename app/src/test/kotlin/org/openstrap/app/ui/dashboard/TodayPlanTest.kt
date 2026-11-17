@@ -210,17 +210,28 @@ class TodayPlanTest {
         assertEquals(TodayEdits(pinned = listOf(Week)), TodayEdits.parse(listOf("Week"), listOf("Week")))
     }
 
-    @Test fun `time to recover goes with Load, hidden or pinned`() {
+    @Test fun `time to recover is its own row, and pinning Load brings it along`() {
         val after = todayCards(Moment.After, TodayFacts(workout = true))
         val hidden = applyEdits(after, TodayEdits(hidden = setOf(LoadToday)), Moment.After).map { it.card }
         assertFalse(LoadToday in hidden)
-        assertFalse(Recover in hidden)
+        assertTrue(Recover in hidden)
         val pinned = applyEdits(after, TodayEdits(pinned = listOf(LoadToday)), Moment.After)
         assertEquals(listOf(Hero, LoadToday, Recover, Charge), pinned.map { it.card }.take(4))
         assertTrue(pinned.take(3).drop(1).all { it.pinned && it.size == CardSize.Small })
-        // Recover is never offered on its own in Edit Today.
-        assertFalse(Recover.editable)
-        assertFalse(Recover.pinnable)
+        // Both pinned is the same pair, once.
+        val both = applyEdits(after, TodayEdits(pinned = listOf(LoadToday, Recover)), Moment.After)
+        assertEquals(listOf(Hero, LoadToday, Recover, Charge), both.map { it.card }.take(4))
+        // Hidden, it stays out of Load's pin.
+        val without = applyEdits(after, TodayEdits(hidden = setOf(Recover), pinned = listOf(LoadToday)), Moment.After)
+        assertFalse(Recover in without.map { it.card })
+        // Edit Today lists it with a name, and it can be pinned.
+        assertTrue(Recover.editable)
+        assertTrue(Recover.pinnable)
+    }
+
+    @Test fun `a bare Today ends with its cards, with no week, Start a workout or Edit Today`() {
+        val out = todayCards(Moment.Midday, TodayFacts(bare = true, healthspan = true)).map { it.card }
+        assertEquals(listOf(Hero, Recovery, LastNight, Activity, BodyMorning), out)
     }
 
     @Test fun `habit age is on Today only while its estimate is new, or pinned once there is one`() {

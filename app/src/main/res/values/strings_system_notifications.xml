@@ -27,27 +27,27 @@
 
     <!-- A workout the strap noticed by itself. The sport is "Outdoor run" or "Yoga", the times "10:02 to 10:40". -->
     <string name="system_auto_detected_title"><xliff:g id="sport" example="Outdoor run">%1$s</xliff:g> detected, <xliff:g id="times" example="10:02 to 10:40">%2$s</xliff:g></string>
-    <!-- Its text. -->
-    <string name="system_auto_detected_text">The strap noticed it and recorded it for you.</string>
+    <!-- Its text, one phrase with no full stop. -->
+    <string name="system_auto_detected_text">The strap recorded it for you</string>
 
     <!-- The strap's health alerts: a title and a text each. -->
     <string name="system_alert_high_heart_rate_title">High heart rate</string>
-    <string name="system_alert_high_heart_rate_text">Your heart rate reached <xliff:g id="bpm" example="165">%1$d</xliff:g> bpm.</string>
+    <string name="system_alert_high_heart_rate_text">Heart rate reached <xliff:g id="bpm" example="165">%1$d</xliff:g> bpm</string>
     <string name="system_alert_low_heart_rate_title">Low heart rate</string>
-    <string name="system_alert_low_heart_rate_text">Your heart rate dropped to <xliff:g id="bpm" example="38">%1$d</xliff:g> bpm.</string>
+    <string name="system_alert_low_heart_rate_text">Heart rate dropped to <xliff:g id="bpm" example="38">%1$d</xliff:g> bpm</string>
     <string name="system_alert_high_stress_title">High stress</string>
     <!-- Stress is a score from 1 to 100. -->
-    <string name="system_alert_high_stress_text">Your stress is at <xliff:g id="stress" example="82">%1$d</xliff:g>.</string>
+    <string name="system_alert_high_stress_text">Stress is at <xliff:g id="stress" example="82">%1$d</xliff:g></string>
     <string name="system_alert_low_spo2_title">Low blood oxygen</string>
-    <string name="system_alert_low_spo2_text">Your blood oxygen was <xliff:g id="percent" example="88">%1$d</xliff:g>%%.</string>
+    <string name="system_alert_low_spo2_text">Blood oxygen was <xliff:g id="percent" example="88">%1$d</xliff:g>%%</string>
     <string name="system_alert_irregular_rhythm_title">Irregular heart rhythm</string>
-    <!-- The time is the phone's clock, "14:05" or "2:05 PM". -->
-    <string name="system_alert_irregular_rhythm_text">The strap noticed an irregular heart rhythm at <xliff:g id="time" example="14:05">%1$s</xliff:g>.</string>
+    <!-- The time is the phone's clock, "14:05" or "2:05 PM". One phrase, no full stop. -->
+    <string name="system_alert_irregular_rhythm_text">Irregular rhythm at <xliff:g id="time" example="14:05">%1$s</xliff:g></string>
 
     <!-- Heads-up when Android may stop a workout. The sport is lower case in the sentence, "outdoor run" or "HIIT". -->
     <string name="system_keep_recording_title">Keep recording your <xliff:g id="sport" example="outdoor run">%1$s</xliff:g></string>
-    <!-- Its text. A tap opens the app. -->
-    <string name="system_keep_recording_text">Android may stop it while unstrap is closed. Tap to keep it going.</string>
+    <!-- Its text, one phrase. A tap opens the app. -->
+    <string name="system_keep_recording_text">Open unstrap so Android doesn\'t stop it</string>
 
     <!-- The strap's ongoing notification. Its title before there's anything of your day to show: the strap's name. -->
     <string name="system_strap_title" translatable="false">Helio Strap</string>
@@ -58,17 +58,17 @@
     <!-- Its title: the moment of the day as Today's header names it, then the number it leads with. -->
     <string name="system_strap_title_moment"><xliff:g id="moment" example="Evening">%1$s</xliff:g>, <xliff:g id="number" example="Energy 35">%2$s</xliff:g></string>
     <!-- Its text while the app connects to the strap. -->
-    <string name="system_strap_connecting">Connecting…</string>
+    <string name="system_strap_connecting">Connecting</string>
     <!-- Its text while the strap checks the app's key. -->
-    <string name="system_strap_authenticating">Checking the key…</string>
+    <string name="system_strap_authenticating">Checking the key</string>
     <!-- Its text when connecting failed. A Retry button is beside it. -->
     <string name="system_strap_failed">Couldn\'t reach the strap</string>
     <string name="system_strap_not_connected">Strap not connected</string>
     <string name="system_strap_bluetooth_off">Bluetooth is off</string>
     <!-- Its text during a sync. The step is "Preparing…" or "Syncing heart rate (3/12)". -->
     <string name="system_strap_syncing"><xliff:g id="step" example="Syncing heart rate (3/12)">%1$s</xliff:g></string>
-    <!-- Its text when the strap's battery is low and it isn't charging. -->
-    <string name="system_strap_low_battery">Strap battery <xliff:g id="percent" example="12">%1$d</xliff:g>%%. Charge it tonight.</string>
+    <!-- Its text when the strap's battery is low and it isn't charging. One phrase, joined with a comma. -->
+    <string name="system_strap_low_battery">Strap battery <xliff:g id="percent" example="12">%1$d</xliff:g>%%, charge it tonight</string>
     <string name="system_strap_connected">Strap connected</string>
     <string name="system_strap_charging">Strap charging</string>
     <!-- The strap's battery is named, so it's never taken for Energy. -->
@@ -101,12 +101,12 @@
     <string name="system_workout_action_end_cancel">Cancel</string>
 
     <!-- A saved workout's figures: the heart rate's average, after the time and distance. -->
-    <string name="system_saved_average_bpm"><xliff:g id="bpm" example="142">%1$d</xliff:g> bpm avg</string>
+    <string name="system_saved_average_bpm">Average <xliff:g id="bpm" example="142">%1$d</xliff:g> bpm</string>
     <!--
       The saved workout's text when it ended where you stopped and the time after was left out. The figures are
-      "42:10, 5.2 km, 142 bpm avg", the time "18:50".
+      "42:10, 5.2 km, Average 142 bpm", the time "18:50".
     -->
-    <string name="system_saved_cut">"<xliff:g id="figures" example="42:10, 5.2 km, 142 bpm avg">%1$s</xliff:g>\nEnded at <xliff:g id="time" example="18:50">%2$s</xliff:g>, when you\'d stopped. The <xliff:g id="minutes" example="12">%3$d</xliff:g> min after were left out."</string>
+    <string name="system_saved_cut">"<xliff:g id="figures" example="42:10, 5.2 km, Average 142 bpm">%1$s</xliff:g>\nEnded at <xliff:g id="time" example="18:50">%2$s</xliff:g>, when you\'d stopped. The <xliff:g id="minutes" example="12">%3$d</xliff:g> min after were left out."</string>
     <!-- The saved workout's title. The sport is "Outdoor run" or "Yoga". -->
     <string name="system_saved_title"><xliff:g id="sport" example="Outdoor run">%1$s</xliff:g> saved</string>
     <string name="system_saved_action_view">View</string>
@@ -119,8 +119,8 @@
     <!-- Before the first set. The sport is "Strength" or "HIIT". -->
     <string name="system_strength_ready">"<xliff:g id="sport" example="Strength">%1$s</xliff:g>, ready for set 1"</string>
     <string name="system_strength_rest_over" tools:ignore="PluralsCandidate">Rest over, set <xliff:g id="set" example="3">%1$d</xliff:g> next</string>
-    <!-- The text when the strap is out of reach. The first part is "Waiting for the strap". -->
-    <string name="system_strength_strap_gone"><xliff:g id="waiting" example="Waiting for the strap">%1$s</xliff:g>. Still recording.</string>
+    <!-- The text when the strap is out of reach. The first part is "Waiting for the strap". One phrase, joined with a comma. -->
+    <string name="system_strength_strap_gone"><xliff:g id="waiting" example="Waiting for the strap">%1$s</xliff:g>, still recording</string>
     <string name="system_strength_bpm"><xliff:g id="bpm" example="128">%1$d</xliff:g> bpm</string>
     <!-- Sets done of the sets planned. -->
     <plurals name="system_strength_sets">

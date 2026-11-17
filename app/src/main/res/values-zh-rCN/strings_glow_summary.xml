@@ -38,7 +38,7 @@
     <string name="glow_summary_zones_max">最高 %1$d bpm</string>
     <string name="glow_summary_heart_rate">心率</string>
     <string name="glow_summary_heart_down">下降 %1$d</string>
-    <string name="glow_summary_vs_last">较上次：</string>
+    <string name="glow_summary_vs_last">较上次，%1$s</string>
     <string name="glow_summary_this_week">本周</string>
     <string name="glow_summary_that_week">那一周</string>
     <string name="glow_summary_drop_title">心率下降</string>

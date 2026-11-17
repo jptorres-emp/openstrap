@@ -34,6 +34,7 @@ import org.openstrap.app.ui.glow.draw.drawWeekRings
 import org.openstrap.app.ui.glow.draw.ChartInk
 import org.openstrap.app.ui.glow.draw.hourPills
 import org.openstrap.app.ui.glow.draw.renderToBitmap
+import org.openstrap.app.ui.theme.Ink
 import org.openstrap.app.ui.theme.MetricColors
 
 /**
@@ -83,17 +84,14 @@ class StepsWidgetReceiver : PlacedWidgetReceiver() {
 /* ------------------------------------------------------------------------------------------------ */
 
 /** Steps' lime, as Today's Steps card. */
-private val Ink = MetricColors.steps
-
-/** The goal bar's track (the mockup's): white at 10%. */
-private const val TRACK_ALPHA = 0.10f
+private val Hue = MetricColors.steps
 
 /** The widget at the size Glance lays out: a dark picture card, as Today's Steps card. */
 @Composable
 private fun StepsContent(data: StepsWidget.Shown) {
     val m = data.model
     val open = openMetric(LocalContext.current, DetailRoutes.STEPS, m.date)
-    PictureWidget(Ink, null, data.mood, open, BITMAP_EXTRA) { frame ->
+    PictureWidget(Hue, null, data.mood, open, BITMAP_EXTRA) { frame ->
         when (frame.bucket) {
             WidgetSizes.Small -> SmallContent(m, frame)
             WidgetSizes.Wide -> WideContent(m, frame)
@@ -189,7 +187,7 @@ private fun StepsLine(m: StepsWidgetModel, height: Float?, f: WidgetFrame) {
                 color = ChartInk.Grid.toArgb()
                 strokeWidth = ChartInk.HAIRLINE_DP * f.density
             })
-            g.bars.forEach { (bar, latest) -> drawPillBar(c, bar, if (latest) Ink else Ink.copy(alpha = HOUR_BAR_ALPHA)) }
+            g.bars.forEach { (bar, latest) -> drawPillBar(c, bar, if (latest) Hue else Hue.copy(alpha = HOUR_BAR_ALPHA)) }
         }
     }
     Image(
@@ -248,9 +246,9 @@ private fun goalBar(progress: Float, width: Float, density: Float): Bitmap {
     val r = h / 2
     return renderToBitmap(w, h) { c ->
         val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-        c.drawRoundRect(0f, 0f, w, h, r, r, paint.apply { color = Color.White.copy(alpha = TRACK_ALPHA).toArgb() })
+        c.drawRoundRect(0f, 0f, w, h, r, r, paint.apply { color = Ink.Edge.toArgb() })
         val fill = w * progress.coerceIn(0f, 1f)
-        if (fill > 0f) c.drawRoundRect(0f, 0f, fill.coerceAtLeast(h), h, r, r, paint.apply { color = Ink.toArgb() })
+        if (fill > 0f) c.drawRoundRect(0f, 0f, fill.coerceAtLeast(h), h, r, r, paint.apply { color = Hue.toArgb() })
     }
 }
 
@@ -258,6 +256,6 @@ private fun goalBar(progress: Float, width: Float, density: Float): Bitmap {
 private fun weekBitmap(m: StepsWidgetModel, column: Float, density: Float): Bitmap {
     val height = StepsLayout.ringHeight(column) * density
     return renderToBitmap(WeekBarsLook.width(m.week.size, column) * density, height) { c ->
-        drawWeekRings(c, StepsWidgetModel.ringShares(m.week, m.goal), Ink, column * density, WeekBarsLook.GAP_DP * density, height, density)
+        drawWeekRings(c, StepsWidgetModel.ringShares(m.week, m.goal), Hue, column * density, WeekBarsLook.GAP_DP * density, height, density)
     }
 }

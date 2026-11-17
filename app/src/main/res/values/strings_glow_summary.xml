@@ -103,7 +103,7 @@
     <!-- Under the heart rate at the start of a calm session. Short. -->
     <!-- Under the heart rate at the end of a calm session. Short. -->
     <!-- Dimmed, before how this workout compares with the last one like it ("3 min longer"). Keep the space after the colon. -->
-    <string name="glow_summary_vs_last">"vs last time: "</string>
+    <string name="glow_summary_vs_last">vs last time, <xliff:g id="v1" example="x">%1$s</xliff:g></string>
 
     <!-- Title of the card with the days of the current week as dots. -->
     <string name="glow_summary_this_week">This week</string>

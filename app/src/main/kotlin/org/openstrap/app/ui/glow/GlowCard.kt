@@ -5,9 +5,7 @@ import android.graphics.RectF
 import android.provider.Settings
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.padding
 import sv.lib.squircleshape.SquircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -70,7 +68,7 @@ import org.openstrap.app.ui.glow.draw.CoreBox
 import org.openstrap.app.ui.glow.draw.GlowPalette
 import org.openstrap.app.ui.glow.draw.light
 
-/**
+/*
  * A card in the glow language (see [GlowStyle]). Layers, back to front: rim-coloured fill, rim light,
  * second-tone band, dark core, [content], film grain, hairline edge.
  *
@@ -82,6 +80,7 @@ import org.openstrap.app.ui.glow.draw.light
  * own layers by changing their position, scale and opacity only, so a moving card never re-draws its
  * text or charts and never re-blurs anything.
  */
+
 /**
  * Whether glow cards should hold still right now; a scrolling screen provides its scroll state, so
  * the cores pause while the list moves and the scroll gets every frame to itself.
@@ -95,18 +94,24 @@ val LocalGlowPaused = staticCompositionLocalOf<() -> Boolean> { { false } }
  */
 val LocalGlowPagePaused = staticCompositionLocalOf<() -> Boolean> { { false } }
 
+/**
+ * The light of a lit [HaloCard] (its tones [CardTone.Lit] and [CardTone.LitLevel]): only [HaloCard] calls it. [padded]
+ * insets [content] by the card rule ([cornerPadding]); a card that places its own content passes false.
+ */
+// The glow's whole drawing in one place (moved here from GlowCard as it was): its branches are the light's layers.
+@Suppress("CyclomaticComplexMethod")
 @Composable
-fun GlowCard(
+internal fun LitSurface(
     style: GlowStyle,
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
-    contentPadding: PaddingValues = GlowLayout.CardPadding,
+    padded: Boolean = true,
     /** A passing lift of the light (a personal best), faded over the card's own layers, so it never renders anew. */
     swell: GlowSwell? = null,
     content: @Composable BoxScope.() -> Unit,
 ) {
     val lit = style.copy(mood = LocalGlowMood.current)
-    val shape = remember(lit.radius) { cardShape(lit.radius) }
+    val shape = cardShape(lit.radius)
     val palette = remember(lit) { GlowPalette(lit) }
     val core = remember(lit) { lit.light().core }
     val slab = remember(palette) { lerp(palette.mid, Color.Black, 0.55f) }
@@ -222,8 +227,13 @@ fun GlowCard(
             // The core on its own layer: moved and scaled, never redrawn.
             CoreLayer(b, lit, core) { drift.at(seconds.floatValue, beats.floatValue, lit.motion) }
         }
-        CompositionLocalProvider(LocalCardNumbers provides opening?.numbers, LocalCardOpens provides (onClick != null)) {
-            Box(Modifier.padding(contentPadding), content = content)
+        CompositionLocalProvider(
+            LocalCardNumbers provides opening?.numbers,
+            LocalCardOpens provides (onClick != null),
+            LocalCardTint provides lit.color,
+        ) {
+            val inset = if (padded) Modifier.cornerPadding { CardTuning.corner } else Modifier
+            Box(inset, content = content)
         }
         // Grain and the hairline edge, on top of everything; static.
         Spacer(Modifier.matchParentSize().drawWithCache { overlay(lit, grainSeed) })
@@ -267,8 +277,7 @@ private val FILTER = Paint(Paint.FILTER_BITMAP_FLAG)
  * squircle of that radius (Halo System board: card 36, tile 27).
  */
 private fun cardShape(radius: androidx.compose.ui.unit.Dp): androidx.compose.ui.graphics.Shape = when (radius) {
-    GlowLayout.CardCorner -> GlowLayout.CardShape
-    GlowLayout.TileCorner -> GlowLayout.TileShape
+    GlowLayout.CardCorner, GlowLayout.TileCorner -> CardTuning.shape
     else -> SquircleShape(radius = radius, smoothing = GlowLayout.SMOOTHING)
 }
 
@@ -293,7 +302,7 @@ private fun CacheDrawScope.overlay(style: GlowStyle, grainSeed: Int): DrawResult
     val edgeColor = style.color.copy(alpha = if (style.lightLevel != null) TILE_EDGE_ALPHA else HERO_EDGE_ALPHA)
     return onDrawBehind {
         if (spec.grainAlpha > 0) drawIntoCanvas { it.nativeCanvas.drawPaint(grainPaint) }
-        drawOutline(outline, edgeColor, style = edge)
+        if (style.edge) drawOutline(outline, edgeColor, style = edge)
     }
 }
 

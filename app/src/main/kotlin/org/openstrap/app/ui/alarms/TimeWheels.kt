@@ -1,5 +1,7 @@
 package org.openstrap.app.ui.alarms
 
+import org.openstrap.app.ui.theme.Space
+import org.openstrap.app.ui.theme.Greys
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
@@ -47,7 +49,6 @@ private const val HOURS_A_DAY = 24
 private const val HALF_DAY = 12
 private const val MINUTES_AN_HOUR = 60
 private const val MINUTE_STEP = 5
-private val PillSurface = Color(0xFF17181C)
 private val HourWheelWidth = 96.dp
 private val MeridiemWheelWidth = 84.dp
 
@@ -64,8 +65,8 @@ internal fun TimeWheels(initial: Int, onChange: (Int) -> Unit, modifier: Modifie
     var minute by rememberSaveable { mutableIntStateOf(initial % MINUTES_AN_HOUR) }
     val minuteStep = remember { if (initial % MINUTES_AN_HOUR % MINUTE_STEP == 0) MINUTE_STEP else 1 }
     SideEffect { onChange(hour * MINUTES_AN_HOUR + minute) }
-    Box(modifier.fillMaxWidth().padding(vertical = 4.dp), contentAlignment = Alignment.Center) {
-        Box(Modifier.fillMaxWidth().height(64.dp).clip(GlowLayout.TileShape).background(PillSurface))
+    Box(modifier.fillMaxWidth().padding(vertical = Space.S4), contentAlignment = Alignment.Center) {
+        Box(Modifier.fillMaxWidth().height(64.dp).clip(GlowLayout.TileShape).background(Greys.Control))
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
             if (use24Hour) {
                 Wheel((0 until HOURS_A_DAY).toList(), hour, { hour = it }, ::two, Modifier.width(HourWheelWidth))
@@ -77,7 +78,7 @@ internal fun TimeWheels(initial: Int, onChange: (Int) -> Unit, modifier: Modifie
                     { hour = it % HALF_DAY + hour / HALF_DAY * HALF_DAY }, ::two, Modifier.width(HourWheelWidth),
                 )
             }
-            Text(":", Modifier.padding(horizontal = 6.dp), color = Color.White, style = GlowType.figureLarge)
+            Text(":", Modifier.padding(horizontal = Space.S8), color = Color.White, style = GlowType.figureLarge)
             Wheel((0 until MINUTES_AN_HOUR step minuteStep).toList(), minute, { minute = it }, ::two, Modifier.width(HourWheelWidth))
             if (!use24Hour) {
                 val names = remember { DateFormatSymbols.getInstance().amPmStrings }
@@ -93,7 +94,7 @@ internal fun TimeWheels(initial: Int, onChange: (Int) -> Unit, modifier: Modifie
 /** One wheel: [values] with the [chosen] one centred, snapping to each. Scrolling reports the centred value to [onPick]. */
 @Suppress("UnstableCollections", "ComposeUnstableCollections")
 @Composable
-private fun Wheel(values: List<Int>, chosen: Int, onPick: (Int) -> Unit, label: (Int) -> String, modifier: Modifier = Modifier) {
+internal fun Wheel(values: List<Int>, chosen: Int, onPick: (Int) -> Unit, label: (Int) -> String, modifier: Modifier = Modifier) {
     val start = remember { values.indexOf(chosen).coerceAtLeast(0) }
     val state = rememberLazyListState(initialFirstVisibleItemIndex = start)
     // Two blank rows lead and trail, so the first and last value can reach the middle.

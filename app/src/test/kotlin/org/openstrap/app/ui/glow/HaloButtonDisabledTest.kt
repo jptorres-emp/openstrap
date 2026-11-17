@@ -20,18 +20,18 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
-/** A disabled page button dims as a whole, its pill with its label, so it never reads half on. */
+/** A disabled button dims as a whole, its pill with its label, so it never reads half on. */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-class PageButtonTest {
+class HaloButtonDisabledTest {
     @get:Rule val rules = ComposeRules()
 
     /** The red of the pill on black, beside its label, for a primary button [enabled] or not. */
     private fun pill(enabled: Boolean): Float {
         rules.compose.setContent {
             Box(Modifier.background(Color.Black)) {
-                PageButton("Save", {}, Modifier.width(240.dp).testTag("button"), enabled = enabled, primary = true)
+                HaloButton("Save", {}, Modifier.width(240.dp).testTag("button"), variant = HaloButtonVariant.Primary, enabled = enabled)
             }
         }
         val pixels = rules.compose.onNodeWithTag("button").captureToImage().toPixelMap()

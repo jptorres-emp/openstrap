@@ -20,5 +20,5 @@
     <!-- 15 seconds. -->
     <string name="core_settings_call_15s">15 s</string>
     <!-- The whole time the call rings, until it is answered or ends. -->
-    <string name="core_settings_call_until_answered">Full ring</string>
+    <string name="core_settings_call_until_answered">Until answered</string>
 </resources>

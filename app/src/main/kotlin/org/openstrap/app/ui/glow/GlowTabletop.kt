@@ -1,5 +1,6 @@
 package org.openstrap.app.ui.glow
 
+import org.openstrap.app.ui.theme.Space
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,6 +20,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import org.openstrap.app.R
 import org.openstrap.app.ui.dashboard.DayUiState
+import org.openstrap.app.ui.theme.Ink
 import org.openstrap.app.ui.theme.MetricColors
 import org.openstrap.app.ui.glow.draw.GlowMotion
 import org.openstrap.app.ui.glow.draw.GlowStyle
@@ -37,24 +39,24 @@ fun GlowTabletopHeart(
 ) {
     val now = live ?: state.latestHeartRate
     val style = GlowStyle.chart(MetricColors.heart).copy(motion = GlowMotion.Heartbeat(now ?: 62))
-    Column(modifier.statusBarsPadding().padding(horizontal = GlowLayout.Gutter, vertical = 12.dp)) {
-        GlowCard(style, Modifier.fillMaxSize()) {
+    Column(modifier.statusBarsPadding().padding(horizontal = GlowLayout.Gutter, vertical = Space.S12)) {
+        HaloCard(Modifier.fillMaxSize(), tone = CardTone.lit(style)) {
             Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.SpaceBetween) {
-                GlowHeader(
+                HaloTitle(
                     stringResource(R.string.glow_tabletop_heart_rate),
-                    trailing = stringResource(if (live == null) R.string.glow_tabletop_latest else R.string.glow_tabletop_live),
+                    note = stringResource(if (live == null) R.string.glow_tabletop_latest else R.string.glow_tabletop_live),
                 )
                 Row(verticalAlignment = Alignment.Bottom) {
-                    BigNumberText(now?.toString() ?: "-", BigNumber.Tabletop)
-                    Column(Modifier.padding(start = 12.dp).weight(1f)) {
+                    HaloBigNumber(now?.toString() ?: "-", BigNumber.Tabletop)
+                    Column(Modifier.padding(start = Space.S12).weight(1f)) {
                         Text(
-                            stringResource(R.string.glow_unit_bpm), color = Color.White.copy(alpha = 0.7f), style = GlowType.cardTitle,
+                            stringResource(R.string.glow_unit_bpm), color = Ink.Secondary, style = GlowType.cardTitle,
                             maxLines = 1,
                         )
                     }
                     state.restingHeartRate?.let {
                         Text(
-                            stringResource(R.string.glow_tabletop_resting, it), color = Color.White.copy(alpha = 0.85f),
+                            stringResource(R.string.glow_tabletop_resting, it), color = Ink.Strong,
                             style = GlowType.body,
                         )
                     }

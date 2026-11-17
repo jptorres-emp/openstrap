@@ -1,7 +1,11 @@
 package org.openstrap.app.ui.glow
 
+import org.openstrap.app.ui.theme.Corner
+import org.openstrap.app.ui.theme.Space
+import org.openstrap.app.ui.theme.Greys
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
+import org.openstrap.app.ui.theme.Ink
 import sv.lib.squircleshape.SquircleShape
 import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -47,10 +51,6 @@ private val TrackHeight = 110.dp
 /** Above and below the line inside the panel. */
 private val PlotInset = 14.dp
 
-/** The panel behind the line (board HaloTrimSheet: #0A0B0D, corner 20). */
-private val PanelInk = Color(0xFF0A0B0D)
-private val PanelCorner = 20.dp
-private val PanelShape = SquircleShape(PanelCorner, GlowLayout.SMOOTHING)
 
 /** Under the track, room for the line that marks what was recorded or detected. */
 private val MarkRoom = 10.dp
@@ -186,7 +186,7 @@ internal fun TrimBar(
     val hi = (known.maxOrNull() ?: 180f) + 5f
     val marked = core != reach
     // The clocks sit as far under the bar as the workout's panel spaces its blocks.
-    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Space.S12)) {
         Canvas(
             Modifier.fillMaxWidth().height(if (marked) TrackHeight + MarkRoom else TrackHeight).testTag(TRIM_BAR_TAG)
                 .pointerInput(first, last, step, keep, length) {
@@ -217,7 +217,7 @@ internal fun TrimBar(
             val fx = x(from)
             val tx = x(to)
             // The panel the line sits on (board HaloTrimSheet: #0A0B0D, a squircle of 20).
-            drawOutline(PanelShape.createOutline(Size(size.width, h), layoutDirection, this), PanelInk)
+            drawOutline(Corner.Inner.createOutline(Size(size.width, h), layoutDirection, this), Greys.Card)
             // The heart rate as one rounded line in its zones' colours (board HaloTrimSheet): each stretch coloured by the
             // zone it sits in, as bright as the shade of where it lies. A stretch with no reading is left empty.
             val top = PlotInset.toPx()
@@ -240,11 +240,11 @@ internal fun TrimBar(
                 }
             }
             // What lies outside the handles is dimmed once more.
-            drawRect(Color.Black.copy(alpha = 0.45f), Offset(0f, 0f), Size(fx, h))
-            drawRect(Color.Black.copy(alpha = 0.45f), Offset(tx, 0f), Size(size.width - tx, h))
+            drawRect(Ink.Scrim, Offset(0f, 0f), Size(fx, h))
+            drawRect(Ink.Scrim, Offset(tx, 0f), Size(size.width - tx, h))
             // The frame: a white outline round what is kept, a pill handle on each side with a short grip.
             drawRoundRect(
-                Color.White.copy(alpha = 0.9f), Offset(fx, 1.dp.toPx()), Size(tx - fx, h - 2.dp.toPx()), CornerRadius(12.dp.toPx()),
+                Ink.Primary, Offset(fx, 1.dp.toPx()), Size(tx - fx, h - 2.dp.toPx()), CornerRadius(12.dp.toPx()),
                 style = Stroke(2.dp.toPx()),
             )
             val handleW = 14.dp.toPx()
@@ -253,7 +253,7 @@ internal fun TrimBar(
             listOf(fx, tx).forEach { gx ->
                 drawRoundRect(Color.White, Offset(gx - handleW / 2, (h - handleH) / 2), Size(handleW, handleH), CornerRadius(handleW / 2))
                 drawRoundRect(
-                    Color.Black.copy(alpha = 0.35f), Offset(gx - grip / 2, h / 2 - 10.dp.toPx()), Size(grip, 20.dp.toPx()),
+                    Ink.Scrim, Offset(gx - grip / 2, h / 2 - 10.dp.toPx()), Size(grip, 20.dp.toPx()),
                     CornerRadius(grip / 2),
                 )
             }
@@ -261,16 +261,16 @@ internal fun TrimBar(
                 val my = h + MarkRoom.toPx() / 2
                 val mark = 2.dp.toPx()
                 drawLine(
-                    Color.White.copy(alpha = 0.35f),
+                    Ink.Disabled,
                     Offset(x(core.first.coerceIn(first, last)), my), Offset(x(core.last.coerceIn(first, last)), my),
                     strokeWidth = mark, cap = StrokeCap.Round,
                 )
             }
         }
         Row(Modifier.fillMaxWidth()) {
-            PageNote(clock(first))
+            HaloNote(clock(first))
             Spacer(Modifier.weight(1f))
-            PageNote(clock(last))
+            HaloNote(clock(last))
         }
     }
 }
@@ -286,7 +286,7 @@ internal fun HaloTrimSheet(trim: WorkoutTrim) {
     if (!trim.isOpen) return
     val summary = trim.summary
     val note = SummaryCopy.trimRecorded(clock(summary.recordedStart), clock(summary.recordedEnd))
-    PageSheet(trim.close, stringResource(R.string.glow_workout_trim_title), note = note) {
+    HaloSheet(trim.close, stringResource(R.string.glow_workout_trim_title), note = note) {
         HaloTrimContent(summary, onSave = { from, to -> trim.close(); trim.save(from, to) }, onCancel = trim.close)
     }
 }
@@ -307,7 +307,7 @@ private fun HaloTrimContent(summary: PhoneSummary, onSave: (Long, Long) -> Unit,
         val n = ((last - first) / step + 1).toInt().coerceAtLeast(2)
         org.openstrap.app.data.Summaries.bucketMeans(summary.recorded, n, { ((it.timestamp - first) / step).toInt() }, { it.bpm.toFloat() })
     }
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Space.S16)) {
         Text(
             SummaryCopy.trimHeader(clock(from), clock(to), to - from), color = Color.White,
             style = GlowType.sentence,
@@ -319,9 +319,11 @@ private fun HaloTrimContent(summary: PhoneSummary, onSave: (Long, Long) -> Unit,
             onChange = { f, t -> from = f; to = t },
         )
         Text(SummaryCopy.TRIM_HINT, color = GlowType.noteColor, style = GlowType.secondary)
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            PageButton(stringResource(R.string.glow_cancel), onCancel, Modifier.weight(1f))
-            PageButton(stringResource(R.string.glow_save), { onSave(from, to) }, Modifier.weight(1f), primary = true)
-        }
+        ButtonPair(
+            stringResource(R.string.glow_cancel),
+            onCancel,
+            stringResource(R.string.glow_save),
+            { onSave(from, to) },
+        )
     }
 }

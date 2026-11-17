@@ -1,5 +1,9 @@
 package org.openstrap.app.ui.glow.live
 
+import org.openstrap.app.ui.glow.HaloNote
+import org.openstrap.app.ui.glow.HaloBigNumber
+import org.openstrap.app.ui.glow.BigNumber
+import org.openstrap.app.ui.theme.Space
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -33,7 +37,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import org.openstrap.app.ui.glow.PlainLine
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
@@ -53,6 +59,7 @@ import org.openstrap.app.ui.components.HapticEvent
 import org.openstrap.app.ui.components.rememberHaptics
 import org.openstrap.app.ui.glow.*
 import org.openstrap.app.presentation.WorkoutCopy
+import org.openstrap.app.ui.theme.Ink
 import org.openstrap.app.ui.workout.ZONE_COLORS
 import org.openstrap.app.ui.workout.ZoneSeconds
 import org.openstrap.app.ui.glow.draw.GlowMotion
@@ -215,6 +222,8 @@ internal fun WorkoutHeartCard(
     kcal: Float? = null,
     /** The time in each zone as a bar in a card under the hero (indoor cardio, board HaloLiveIndoor). */
     zoneBar: Boolean = false,
+    /** The live readings, for the line of the last ten minutes above the zone bar. */
+    recent: List<Pair<Long, Int>> = emptyList(),
 ) {
     val heartZones = LocalHeartZones.current
     val bpm = liveHeartRate.takeIf { connected && !r.paused }
@@ -226,7 +235,7 @@ internal fun WorkoutHeartCard(
             stringResource(R.string.workout_live_heart_title),
             bpm?.let { stringResource(R.string.workout_live_heart_of_max, it * 100 / r.maxHeartRate) }, tint,
         )
-        if (bpm != null) HeroNumber("$bpm", stringResource(R.string.workout_live_unit_bpm), tint)
+        if (bpm != null) HaloBigNumber("$bpm", BigNumber.Live, unit = stringResource(R.string.workout_live_unit_bpm), unitColor = tint)
         else Text(WorkoutCopy.noHeartRate(r.paused, connected), color = Color.White, style = GlowType.sentence)
         if (zone != null) {
             val (name, _) = WorkoutCopy.zoneTitle(zone)
@@ -234,7 +243,12 @@ internal fun WorkoutHeartCard(
         } else HeroLine(WorkoutCopy.noZone(r.paused), tint)
     }
     if (zoneBar && !fill) LiveCard {
-        Text(stringResource(R.string.workout_live_zones_title), color = Color.White, style = GlowType.cardTitle, maxLines = 1)
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(stringResource(R.string.workout_live_zones_title), color = Color.White, style = GlowType.cardTitle, maxLines = 1,
+                modifier = Modifier.weight(1f))
+            Text(stringResource(R.string.workout_live_last_10_min), color = GlowType.noteColor, style = GlowType.noteSmall)
+        }
+        RecentHeartLine(recent, Ink.Tertiary, 40.dp, WINDOW_S)
         ZoneTimeBar(zoneSeconds, zone)
         HeartNotes(r, zone, zoneSeconds, active, kcal)
     }
@@ -244,16 +258,14 @@ internal fun WorkoutHeartCard(
 @Composable
 internal fun HeartNotes(r: WorkoutState.Recording, zone: Int?, zoneSeconds: ZoneSeconds, active: () -> Long, kcal: Float?) {
     Row {
-        zone?.let { PageNote(WorkoutCopy.zoneTime(zoneSeconds[it])) }
+        zone?.let { HaloNote(WorkoutCopy.zoneTime(zoneSeconds[it])) }
         Spacer(Modifier.weight(1f))
         when (val t = WorkoutTarget.parse(r.workout.target)) {
-            is WorkoutTarget.Zones -> PageNote(
-                if (t.low == t.high) stringResource(R.string.workout_live_target_zone, t.low + 1)
-                else stringResource(R.string.workout_live_target_zones, t.low + 1, t.high + 1),
-            )
+            is WorkoutTarget.Zones -> HaloNote(if (t.low == t.high) stringResource(R.string.workout_live_target_zone, t.low + 1)
+                else stringResource(R.string.workout_live_target_zones, t.low + 1, t.high + 1))
             is WorkoutTarget.Time -> TimeTargetNote(active, t.seconds)
-            is WorkoutTarget.Kcal -> PageNote(WorkoutCopy.kcalProgress(kcal, t))
-            is WorkoutTarget.Distance -> PageNote(WorkoutCopy.distanceProgress(r.workout.distanceMeters, t))
+            is WorkoutTarget.Kcal -> HaloNote(WorkoutCopy.kcalProgress(kcal, t))
+            is WorkoutTarget.Distance -> HaloNote(WorkoutCopy.distanceProgress(r.workout.distanceMeters, t))
             null -> Unit
         }
     }
@@ -276,7 +288,7 @@ fun GlowWorkoutGlance(
 ) {
     val connected = connection is ConnectionState.Connected
     val active = activeSecondsState(r)
-    Box(modifier.background(Color.Black).statusBarsPadding().padding(horizontal = GlowLayout.Gutter, vertical = 12.dp)) {
+    Box(modifier.background(Color.Black).statusBarsPadding().padding(horizontal = GlowLayout.Gutter, vertical = Space.S12)) {
         WorkoutHeartCard(
             r, liveHeartRate, zoneSeconds, connected, { active.value }, Modifier.fillMaxSize(), fill = true, kcal = kcal?.active,
         )
@@ -287,15 +299,28 @@ fun GlowWorkoutGlance(
 @Composable
 private fun TimeTargetNote(active: () -> Long, seconds: Long) {
     val minutes = seconds / 60
-    PageNote(stringResource(R.string.workout_live_time_target, workoutClock(active()), minutes))
+    HaloNote(stringResource(R.string.workout_live_time_target, workoutClock(active()), minutes))
 }
 
 private const val BUCKET_S = 5L
 private const val WINDOW_S = 600L
 
-/** The last ten minutes in five-second averages, oldest first; gaps stay null and break the line. */
-internal fun bucketRecent(recent: List<Pair<Long, Int>>, now: Long): List<Float?> {
-    val from = now - WINDOW_S + 1
-    return org.openstrap.app.data.Summaries.bucketMeans(recent, (WINDOW_S / BUCKET_S).toInt(),
+/** The last [windowS] seconds (ten minutes by default) in five-second averages, oldest first; gaps stay null and break the line. */
+internal fun bucketRecent(recent: List<Pair<Long, Int>>, now: Long, windowS: Long = WINDOW_S): List<Float?> {
+    val from = now - windowS + 1
+    return org.openstrap.app.data.Summaries.bucketMeans(recent, (windowS / BUCKET_S).toInt(),
         { ((it.first - from) / BUCKET_S).toInt() }, { it.second.toFloat() })
+}
+
+/**
+ * The last [windowS] seconds of heart rate as one plain line (boards HaloLiveIndoor, HaloLiveHiitWork); nothing until it
+ * has two readings.
+ */
+// The readings arrive whole with each update and never change in place.
+@Suppress("UnstableCollections", "ComposeUnstableCollections")
+@Composable
+internal fun RecentHeartLine(recent: List<Pair<Long, Int>>, color: Color, height: Dp, windowS: Long, stroke: Dp = 2.dp) {
+    val now = recent.lastOrNull()?.first ?: (System.currentTimeMillis() / 1000)
+    val values = remember(recent, windowS) { bucketRecent(recent, now, windowS) }
+    PlainLine(values, color, height, smooth = false, stroke = stroke)
 }

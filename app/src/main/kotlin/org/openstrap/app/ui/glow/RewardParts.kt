@@ -1,5 +1,10 @@
 package org.openstrap.app.ui.glow
 
+import org.openstrap.app.ui.theme.OnSurface
+
+import org.openstrap.app.ui.theme.Corner
+import org.openstrap.app.ui.theme.Space
+import org.openstrap.app.ui.theme.Greys
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -24,6 +29,7 @@ import java.time.ZoneId
 import org.openstrap.app.data.Rewards
 import org.openstrap.app.presentation.RewardsCopy
 import org.openstrap.app.presentation.RewardsView
+import org.openstrap.app.ui.theme.Ink
 
 /*
  * The small parts the rewards pages share (rules A3, boards HaloGoalsBests, HaloGoalMoment, HaloWeeklyRecap): a section's
@@ -35,15 +41,6 @@ import org.openstrap.app.presentation.RewardsView
 internal fun RewardsView.face(b: Rewards.Badge): String =
     earned.firstOrNull { it.id == b.id }?.let { RewardsCopy.face(b, Rewards.goalAt(it, weeks, firstDay, ZoneId.systemDefault())) }
         ?: RewardsCopy.face(b, goal)
-
-/** A section's head (rules A3): its title in 15 semibold and a 12 px note on the right, 4 in. */
-@Composable
-internal fun SectionHead(title: String, modifier: Modifier = Modifier, note: String? = null) {
-    Row(modifier.fillMaxWidth().padding(start = 4.dp, end = 4.dp, top = 4.dp), verticalAlignment = Alignment.Bottom) {
-        Text(title, Modifier.weight(1f), color = Color.White, style = GlowType.cardTitle, maxLines = 1)
-        if (note != null) Text(note, color = GlowType.noteColor, style = GlowType.footnote, maxLines = 1)
-    }
-}
 
 /** [items] as a grid of three, 16 apart (rules A3), each cell given its column's width. */
 // The items arrive whole with each reading and never change in place.
@@ -60,14 +57,6 @@ internal fun <T> TokenGrid(items: List<T>, cell: @Composable (T, Modifier) -> Un
     }
 }
 
-/** How far along, 0..1, as a 4 dp bar: [ink] over #1C1D22 (rules A1). */
-@Composable
-internal fun ShareBar(share: Float, ink: Color, modifier: Modifier = Modifier) {
-    Box(modifier.height(4.dp).clip(CircleShape).background(BarTrack)) {
-        Box(Modifier.fillMaxHeight().fillMaxWidth(share.coerceIn(0f, 1f)).clip(CircleShape).background(ink))
-    }
-}
-
 /**
  * The week's days as seven solid pills, a day's letter under each (boards HaloGoalMoment, HaloWeeklyRecap): a day with a
  * workout in [ink], the rest #17181C, and the [today] pill ringed in white with its letter white.
@@ -76,16 +65,16 @@ internal fun ShareBar(share: Float, ink: Color, modifier: Modifier = Modifier) {
 @Suppress("UnstableCollections", "ComposeUnstableCollections")
 @Composable
 internal fun DayPills(days: List<Pair<String, Boolean>>, today: Int?, modifier: Modifier = Modifier, ink: Color = RewardLime) {
-    Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+    Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Space.S8)) {
         days.forEachIndexed { i, (letter, on) ->
             Column(
                 Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(Space.S8),
             ) {
                 Box(
-                    Modifier.fillMaxWidth().height(PILL_HEIGHT).clip(GlowLayout.IconShape)
-                        .background(if (on) ink else HaloButtonSurface)
-                        .let { if (i == today) it.border(2.dp, Color.White, GlowLayout.IconShape) else it },
+                    Modifier.fillMaxWidth().height(PILL_HEIGHT).clip(Corner.Pill)
+                        .background(if (on) ink else OnSurface.control)
+                        .let { if (i == today) it.border(ChipSpec.Ring, Color.White, Corner.Pill) else it },
                 )
                 Text(letter, color = if (i == today) Color.White else GlowType.noteColor, style = GlowType.caption, maxLines = 1)
             }
@@ -93,35 +82,6 @@ internal fun DayPills(days: List<Pair<String, Boolean>>, today: Int?, modifier: 
     }
 }
 
-/**
- * A figure with its words: each run of ASCII digits (with its point, comma or colon) drawn in Doto at [size] through
- * [BigNumberText], a slash in the display type at the same height (the dot font has none), and any other word small
- * after it in [wordStyle] on the digits' baseline ("4 of 4", "105 kg", "29:48", "4/4"). The screen's one big figure.
- */
-@Composable
-internal fun DotFigure(text: String, size: BigNumber, modifier: Modifier = Modifier, wordStyle: TextStyle = GlowType.body) {
-    Row(modifier, verticalAlignment = Alignment.Bottom) {
-        FIGURE_PART.findAll(text).forEach { m ->
-            val part = m.value
-            when {
-                part[0] in '0'..'9' -> BigNumberText(part, size)
-                part == "/" -> Text(
-                    "/", Modifier.padding(horizontal = 2.dp), color = Color.White.copy(alpha = SLASH_ALPHA), style = GlowType.figureLarge,
-                )
-                part.isBlank() -> Unit
-                else -> Text(
-                    part.trim(), Modifier.padding(horizontal = 8.dp, vertical = 2.dp), color = GlowType.noteColor, style = wordStyle,
-                    maxLines = 1,
-                )
-            }
-        }
-    }
-}
-
-private val FIGURE_PART = Regex("[0-9][0-9.,:]*|/|[^0-9/]+")
-private const val SLASH_ALPHA = 0.6f
-
 private const val GRID_COLUMNS = 3
 private val GRID_GAP = 16.dp
 private val PILL_HEIGHT = 44.dp
-private val BarTrack = Color(0xFF1C1D22)

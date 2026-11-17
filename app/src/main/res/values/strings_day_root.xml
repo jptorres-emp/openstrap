@@ -46,7 +46,7 @@
     <!-- A message when pulling to sync while the strap isn't connected. -->
     <string name="day_pull_not_connected">The strap isn\'t connected.</string>
     <!-- Under the header while pulling down: the line while a sync runs. One line. -->
-    <string name="day_pull_syncing">Syncing strap…</string>
+    <string name="day_pull_syncing">Syncing strap</string>
     <!-- The same once the pull is far enough. -->
     <string name="day_pull_release">Release to sync strap</string>
     <!-- The same while pulling. -->

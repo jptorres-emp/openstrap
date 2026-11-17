@@ -60,6 +60,7 @@ import org.openstrap.app.ui.components.SidePaneWidth
 import org.openstrap.app.ui.dashboard.StrapView
 import org.openstrap.app.ui.device.BackupPage
 import org.openstrap.app.ui.device.DeletedSleepPage
+import org.openstrap.app.ui.device.SleepGoalSheet
 import org.openstrap.app.ui.device.DeviceScreen
 import org.openstrap.app.ui.device.DiagnosticsScreen
 import org.openstrap.app.ui.device.HC_STORE_FAILED
@@ -281,6 +282,8 @@ private fun YouPageHost(
     val updateWaiting by hooks.rootVm.updateWaiting.collectAsStateWithLifecycle()
     val deletedSleep by hooks.dayVm.deletedSleep.collectAsStateWithLifecycle()
     val youMaxHr by hooks.workoutsVm.maxHeartRate.collectAsStateWithLifecycle()
+    // The Sleep goal row's own sheet, a small picker in place of the five goals.
+    var sleepGoalOpen by rememberSaveable { mutableStateOf(false) }
     // Permissions can be taken back in Health Connect while away: the row says so on return.
     LifecycleResumeEffect(Unit) {
         deviceVm.checkAutoHealthConnect()
@@ -292,6 +295,7 @@ private fun YouPageHost(
         maxHeartRate = youMaxHr,
         onHeartZones = { open(Page.HeartZones) },
         onGoals = onGoals,
+        onSleepGoal = { sleepGoalOpen = true },
         onGoalsAndBests = { open(Page.GoalsAndBests) },
         healthConnectAuto = hcAuto,
         healthConnectAvailability = hcAvailability,
@@ -309,6 +313,16 @@ private fun YouPageHost(
         onBack = onBack,
         selected = selected?.row,
     )
+    if (sleepGoalOpen) {
+        SleepGoalSheet(
+            goals.sleepMinutes, Recovery.sleepNeed(profile.age(), profile.sleepNeedMinutes), profile.sleepNeedMinutes != null,
+            onSave = { minutes ->
+                hooks.rootVm.saveGoals(goals.copy(sleepMinutes = minutes))
+                sleepGoalOpen = false
+            },
+            onDismiss = { sleepGoalOpen = false },
+        )
+    }
 }
 
 /** The Strap page, with what the strap holds read once it's connected. */
@@ -327,7 +341,6 @@ private fun StrapPageHost(
     val container = hooks.container
     val alarmsState by alarms.state.collectAsStateWithLifecycle()
     val account by hooks.firmwareVm.account.collectAsStateWithLifecycle()
-    val updates by container.updater.state.collectAsStateWithLifecycle()
     val connection by container.strap.connection.collectAsStateWithLifecycle()
     // Nothing read yet (the strap wasn't there when it was asked): ask again once it's connected.
     LaunchedEffect(connection is ConnectionState.Connected) {
@@ -343,9 +356,6 @@ private fun StrapPageHost(
         onBack = onBack,
         preview = preview,
         selected = selected?.row,
-        updates = updates,
-        installedVersion = container.updater.installed,
-        onUpdates = { open(Page.Updates) },
     )
 }
 

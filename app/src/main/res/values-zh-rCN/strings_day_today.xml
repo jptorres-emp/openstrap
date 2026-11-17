@@ -22,7 +22,8 @@
     <string name="day_card_activity">步数</string>
     <string name="day_card_recovery">恢复</string>
     <string name="day_card_charge">精力</string>
-    <string name="day_card_load">负荷与恢复所需</string>
+    <string name="day_card_recover">恢复所需时间</string>
+    <string name="day_card_load">负荷</string>
     <string name="day_card_workout">运动</string>
     <string name="day_card_week">你的一周</string>
     <string name="day_card_habit_age">习惯年龄</string>
@@ -50,9 +51,9 @@
     <string name="day_stuck_not_synced_title">未同步</string>
     <string name="day_stuck_data_since">%1$s 以来的数据仍在手环上。</string>
     <string name="day_last_tried">上次尝试于 %1$s</string>
-    <string name="day_recovery_failed">未能计算今日分数。</string>
-    <string name="day_charge_failed">未能计算今日精力。</string>
-    <string name="day_failed_short">未能计算</string>
+    <string name="day_recovery_failed">未能算出今日恢复分数。</string>
+    <string name="day_charge_failed">未能算出今日精力。</string>
+    <string name="day_failed_short">未能算出</string>
     <string name="day_try_again">重试</string>
     <string name="day_waiting_last_night">等待昨晚数据</string>
     <string name="day_data_on_strap">你的数据仍在手环上。</string>

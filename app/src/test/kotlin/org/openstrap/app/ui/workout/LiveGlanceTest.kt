@@ -99,7 +99,7 @@ class LiveGlanceTest {
 
     @Test fun `the hero's split strip names the last kilometre and the fastest`() {
         val g = Glance.of(run().copy(lastSplit = Route.Split(3, now - 30, 355, 1000.0), lastSplitBpm = 146, fastestSplit = 2))
-        assertEquals("Km 4 in 5:55" to "Avg 146 bpm. Fastest so far was km 3.", g.split)
+        assertEquals("Km 4 in 5:55" to "Average 146 bpm, fastest so far was km 3", g.split)
         assertNull(Glance.of(run()).split)
     }
 
@@ -130,7 +130,7 @@ class LiveGlanceTest {
         assertEquals("Set 4", g.shortLabel)
         assertEquals(GlanceAction.AddRest, g.second)
         assertEquals("+30 s", g.secondLabel)
-        assertEquals("118 bpm, down 28. Ends early once you're under 110 bpm.", g.goal)
+        assertEquals("118 bpm, down 28, ends early under 110 bpm", g.goal)
         assertEquals("Set 4, bench press 10 × 60 kg", g.next)
     }
 

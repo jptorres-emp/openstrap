@@ -50,7 +50,7 @@ class DesignTokenTest {
             List(4) { 20.dp },
             listOf(p.calculateLeftPadding(LayoutDirection.Ltr), p.calculateTopPadding(), p.calculateRightPadding(LayoutDirection.Ltr), p.calculateBottomPadding()),
         )
-        assertEquals(14.dp, GlowLayout.RowPadding)
+        assertEquals(12.dp, GlowLayout.RowPadding)
         assertEquals(Color(0xFFF66C28), MetricColors.charge)
         assertEquals(Color(0xFFA274F2), MetricColors.evening)
         assertEquals(Color(0xFFFFD23F), MetricColors.calories)
@@ -91,10 +91,10 @@ class DesignTokenTest {
         val found = mutableListOf<String>()
         sources.forEach { (path, lines) ->
             val code = lines.joinToString("\n")
-            Regex("""\bListRow\(""").findAll(code).forEach { m ->
+            Regex("""\bMetricRow\(""").findAll(code).forEach { m ->
                 val args = balanced(code, m.range.last)
                 val line = code.substring(0, m.range.first).count { it == '\n' } + 1
-                if (Regex("""\bonClick\s*=""").containsMatchIn(args) && !Regex("""\bicon\s*=""").containsMatchIn(args)) found += "$path:$line  ListRow(${args.trim().take(80)})"
+                if (Regex("""\bonClick\s*=""").containsMatchIn(args) && !Regex("""\bicon\s*=""").containsMatchIn(args)) found += "$path:$line  MetricRow(${args.trim().take(80)})"
             }
         }
         if (found.isNotEmpty()) fail("A row that opens something shows its metric's icon (spec 2.5):\n" + found.joinToString("\n"))
@@ -102,7 +102,8 @@ class DesignTokenTest {
 
     /** Type scale, card title (type.md): one line, 15 Sans 600. */
     @Test fun `a card title stays on one line`() {
-        // Spec 2.3: a note drops under the title ([TitleRow]) rather than wrap it. Every title text is one line.
+        // Spec 2.3: a note drops under the title ([HaloTitle]) rather than wrap it. A title text is one line, or two where
+        // it's too long for a Small (HaloTitle in a card: "Active minutes").
         val found = mutableListOf<String>()
         sources.forEach { (path, lines) ->
             if (path in titleNotMigrated) return@forEach
@@ -110,10 +111,10 @@ class DesignTokenTest {
             Regex("""\bText\(""").findAll(code).forEach { m ->
                 val args = balanced(code, m.range.last)
                 val line = code.substring(0, m.range.first).count { it == '\n' } + 1
-                if ("GlowType.cardTitle" in args && !Regex("""\bmaxLines\s*=\s*1\b""").containsMatchIn(args)) found += "$path:$line  Text(${args.trim().take(80)})"
+                if ("GlowType.cardTitle" in args && !Regex("""\bmaxLines\s*=\s*[12]\b""").containsMatchIn(args)) found += "$path:$line  Text(${args.trim().take(80)})"
             }
         }
-        if (found.isNotEmpty()) fail("A card title is one line (spec 2.3):\n" + found.joinToString("\n"))
+        if (found.isNotEmpty()) fail("A card title is one line, at most two (spec 2.3):\n" + found.joinToString("\n"))
         // Bars stay thin on a wide card, so a short one is never a dot (spec 2.7).
         assertTrue(BarMaxWidth <= 6.dp)
     }
@@ -123,7 +124,7 @@ class DesignTokenTest {
         // Spec 2.3 and audit 2.8: one number in dots a card; the rest is text. Each card is a function of its own. A
         // call that passes no number (EdgeValue(null, ...)) draws none.
         val found = mutableListOf<String>()
-        val dotted = Regex("""\b(HeroNumber|HeroFigure|DotMatrixText|EdgeValue|FigureRow)\((?!\s*null\b)""")
+        val dotted = Regex("""\b(HeroReading|HeroFigure|DotMatrixText|EdgeValue|FigureRow)\((?!\s*null\b)""")
         fun cards(vararg names: String) = Regex("""fun (${names.joinToString("|")})\(""")
         listOf(
             "glow/GlowTodayScreen.kt" to Regex("""private fun (\w+Hero)\("""),
@@ -170,7 +171,7 @@ class DesignTokenTest {
         // with an icon tile each, and nothing to open so no carets and no taps.
         val page = sources.getValue("glow/GlowHealthspanScreen.kt").joinToString("\n")
         assertEquals(1, Regex("""\bDetailPanel\(""").findAll(page).count())
-        assertTrue("no QuietPanel on the Habit Age page", "QuietPanel(" !in page && "MaterialTheme" !in page)
+        assertTrue("no free card on the Habit Age page", "HaloCard(" !in page && "MaterialTheme" !in page)
         assertTrue("every habit has its icon and opens nothing", "habitIcon(" in page && !Regex("""onClick\s*=(?!\s*null)""").containsMatchIn(page))
     }
 
@@ -199,10 +200,10 @@ class DesignTokenTest {
     /** Plan wave 0, hero(colour, angle): the lit hero and the lit panel are each built in one place. */
     @Test fun `a hero's light and a lit panel are each built in one place`() {
         // The summary, the past workout and the heart rate drop light by effortGlow, Ready's heart and the max heart
-        // rate's hero are LitPanel (component consolidation, 2026-11-04). The share cards light a whole image, not a panel.
+        // rate's hero draw drawCardLight in CardLight.kt (component consolidation, 2026-11-04). The share cards light a whole image, not a panel.
         val found = find(Regex("""lightAngle\s*=\s*LightAngle\.Below,\s*lightLevel"""), except = setOf("glow/CardLight.kt")) +
             find(Regex("""\bdrawCardLight\("""), except = setOf("glow/CardLight.kt", "glow/ShareCards.kt"))
-        if (found.isNotEmpty()) fail("Use effortGlow and LitPanel:\n" + found.joinToString("\n"))
+        if (found.isNotEmpty()) fail("Use effortGlow and drawCardLight:\n" + found.joinToString("\n"))
     }
 
     /** Plan section 1, squircle corners: anything card-sized is a card, a panel or a sheet, and takes [GlowLayout.CardShape]. */
@@ -277,9 +278,7 @@ class DesignTokenTest {
          */
         val typeNotMigrated = mapOf(
             "dashboard/SleepPanels.kt" to 1,
-            "glow/GlowActivityScreen.kt" to 1,
             "glow/GlowCharts.kt" to 4,
-            "glow/TabParts.kt" to 1,
         )
     }
 }

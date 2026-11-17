@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -40,23 +41,40 @@ enum class CardSize {
 /** The grid's measures. */
 object GlowGrid {
     /** Screen edge to the grid. */
-    val Gutter = 16.dp
+    val Gutter = PageSpec.Gutter
 
     /** Between columns and between rows. */
-    val Gap = 12.dp
+    val Gap = CardSpec.Gap
 
     /** One unit's height: 160 dp, so a Small sits just under square on a phone and two stacked meet a Tall. */
-    val UnitHeight = 160.dp
+    val UnitHeight = CardSpec.WideHeight
 
-    val StripHeight = 68.dp
+    /**
+     * A Small's height: about square on a phone (reference tiles, 17 Nov 2026), so its picture keeps room beside a
+     * title that wraps and the chevron circle. A Tall is shorter than two of them ([TallHeight]).
+     */
+    val SmallHeight = CardSpec.SmallHeight
+
+    val StripHeight = CardSpec.StripHeight
+
+    /**
+     * A Tall (Energy on Recovery): two Wide units and the gap, 332, so each Small stacked beside it is 160 and keeps room
+     * for its title, picture, number and two status lines inside the card's corner inset. At 280 they cropped.
+     */
+    val TallHeight = UnitHeight * 2 + Gap
+
+    /** Each of the two Smalls stacked beside a Tall: half its height less the gap. */
+    val StackedHeight = (TallHeight - Gap) / 2
 
     /** One unit's width inside a column already [width] wide (the gutters already taken off). */
     fun unitWidthIn(width: Dp): Dp = (width - Gap) / 2
 
     /** The height of a card of [size]; null for a list, which takes its content's height. */
     fun height(size: CardSize): Dp? = when (size) {
-        CardSize.Large, CardSize.Tall -> UnitHeight * 2 + Gap
-        CardSize.Wide, CardSize.Small -> UnitHeight
+        CardSize.Large -> UnitHeight * 2 + Gap
+        CardSize.Tall -> TallHeight
+        CardSize.Wide -> UnitHeight
+        CardSize.Small -> SmallHeight
         CardSize.Strip -> StripHeight
         CardSize.List -> null
     }
@@ -113,14 +131,18 @@ fun GlowGridRow(row: GridRow<GridCard>, modifier: Modifier = Modifier) {
     when (row) {
         is GridRow.Full -> row.item.content(sized(row.size, modifier.fillMaxWidth()))
         is GridRow.Pair -> Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(GlowGrid.Gap)) {
-            row.left.content(sized(CardSize.Small, Modifier.weight(1f)))
-            row.right.content(sized(CardSize.Small, Modifier.weight(1f)))
+            CompositionLocalProvider(LocalSmallTile provides true) {
+                row.left.content(sized(CardSize.Small, Modifier.weight(1f)))
+                row.right.content(sized(CardSize.Small, Modifier.weight(1f)))
+            }
         }
         is GridRow.TallPair -> Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(GlowGrid.Gap)) {
             row.tall.content(sized(CardSize.Tall, Modifier.weight(1f)))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(GlowGrid.Gap)) {
-                row.top.content(sized(CardSize.Small, Modifier.fillMaxWidth()))
-                row.bottom.content(sized(CardSize.Small, Modifier.fillMaxWidth()))
+                CompositionLocalProvider(LocalSmallTile provides true) {
+                    row.top.content(Modifier.fillMaxWidth().height(GlowGrid.StackedHeight))
+                    row.bottom.content(Modifier.fillMaxWidth().height(GlowGrid.StackedHeight))
+                }
             }
         }
     }
@@ -140,3 +162,6 @@ fun GlowBlocks.grid(cards: List<GridCard>, pane: Pane = Pane.Full) {
         }
     }
 }
+
+/** True inside a Small, a half-width tile in a grid row, so its number takes a Small's size ([BigNumber.GreySmall]). */
+internal val LocalSmallTile = androidx.compose.runtime.compositionLocalOf { false }

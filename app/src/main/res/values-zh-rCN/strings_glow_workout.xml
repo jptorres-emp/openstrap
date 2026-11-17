@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="glow_workout_untitled">运动</string>
-    <string name="glow_workout_loading">正在加载…</string>
+    <string name="glow_workout_loading">正在加载</string>
     <string name="glow_workout_day_times">%1$s，%2$s</string>
     <string name="glow_workout_zone_under">低于 %1$d bpm</string>
     <string name="glow_workout_zone_range">%1$s bpm</string>
-    <string name="glow_workout_suggestion_title">看起来你刚刚运动了</string>
-    <string name="glow_workout_suggestion_text">%1$s %2$s，主要在 %3$d 区，平均 %4$d bpm。未被记录。</string>
+    <string name="glow_workout_suggestion_title">看起来像一次运动</string>
+    <string name="glow_workout_suggestion_text">%1$s，%2$s，多在 %3$d 区，平均 %4$d bpm</string>
     <string name="glow_workout_suggestion_save">保存为运动</string>
     <string name="glow_workout_suggestion_dismiss">不是运动</string>
     <string name="glow_workout_add_title">添加运动</string>
@@ -28,23 +28,23 @@
     <string name="glow_workout_heart_by_zone">按区间着色</string>
     <string name="glow_workout_heart_at">于 %1$s</string>
     <string name="glow_workout_heart_at_after">于 %1$s（运动结束后）</string>
-    <string name="glow_workout_unit_bpm_average">bpm 平均</string>
+    <string name="glow_workout_unit_bpm_average">平均 bpm</string>
     <string name="glow_workout_heart_max_lowest">最高 %1$d，最低 %2$d bpm</string>
     <string name="glow_workout_heart_max">最高 %1$d bpm</string>
     <string name="glow_workout_heart_lowest">最低 %1$d bpm</string>
     <string name="glow_workout_heart_none">手环尚未发送此运动的心率数据。</string>
     <string name="glow_workout_heart_drop_after">%1$s 后的心率下降</string>
-    <string name="glow_workout_heart_dimmed">置灰部分：%1$s 来自手环历史记录。</string>
+    <string name="glow_workout_heart_dimmed">%1$s 已置灰，来自手环历史记录。</string>
     <string name="glow_workout_in_your_day">全天占比</string>
     <string name="glow_workout_list_title">运动记录</string>
     <plurals name="glow_workout_list_recorded">
         <item quantity="other">已记录 %d 项</item>
     </plurals>
     <string name="glow_workout_list_empty">暂无运动记录</string>
-    <string name="glow_workout_list_empty_text">在 unstrap 中开始的运动会显示在此处，手环端记录的运动会在同步后显示。</string>
+    <string name="glow_workout_list_empty_text">你记录的运动会显示在此处，手环自己的记录同步后显示。</string>
     <string name="glow_workout_capsule_pause">暂停</string>
     <string name="glow_workout_capsule_next">下一项</string>
-    <string name="glow_workout_capsule_lines">%1$s。%2$s</string>
+    <string name="glow_workout_capsule_lines">%1$s，%2$s</string>
     <string name="glow_workout_deleted">此次运动已删除。</string>
     <string name="glow_workout_add_sport">运动</string>
     <string name="glow_workout_add_day">日期</string>

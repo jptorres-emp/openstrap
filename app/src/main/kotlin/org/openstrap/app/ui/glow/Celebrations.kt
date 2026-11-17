@@ -1,5 +1,6 @@
 package org.openstrap.app.ui.glow
 
+import org.openstrap.app.ui.theme.Space
 import org.openstrap.app.R
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
@@ -69,24 +70,24 @@ private fun MomentPage(
         // Scrolls under the bottom bar; the scroll clips to the screen, so the glow spreads across the full width.
         Column(
             Modifier.fillMaxSize().verticalScroll(rememberScrollState()).statusBarsPadding().padding(contentPadding)
-                .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = MOMENT_BAR_ROOM),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+                .padding(start = Space.S16, end = Space.S16, top = Space.S16, bottom = MOMENT_BAR_ROOM),
+            verticalArrangement = Arrangement.spacedBy(Space.S16),
         ) {
             Row(
                 Modifier.fillMaxWidth().height(48.dp), horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                RoundIconButton(AppIcons.X, stringResource(R.string.glow_close), onClose, size = 44.dp, iconSize = 18.dp)
+                HaloIconButton(AppIcons.X, stringResource(R.string.glow_close), onClose)
             }
             Column(
                 Modifier.fillMaxWidth().padding(top = topGap), horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(14.dp), content = content,
+                verticalArrangement = Arrangement.spacedBy(Space.S12), content = content,
             )
         }
         Row(
             Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(contentPadding)
-                .padding(start = 16.dp, end = 16.dp, bottom = 24.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp), content = bottom,
+                .padding(start = Space.S16, end = Space.S16, bottom = Space.S24),
+            horizontalArrangement = Arrangement.spacedBy(ButtonSpec.PairGap), content = bottom,
         )
     }
 }
@@ -139,8 +140,8 @@ fun BestCardScreen(
     val now = System.currentTimeMillis() / 1000
     val ink = bestInk(best.best.kind)
     MomentPage(contentPadding, onClose = onContinue, bottom = { MomentButtons(onShare, onContinue) }) {
-        Box(Modifier.momentGlow(ink)) { Medal(bestLook(best.best.kind), MOMENT_TOKEN, lit = rememberLightRise(true)) }
-        DotFigure(RewardsCopy.bestValue(best.best.kind, best.best.value), BigNumber.Feature, Modifier.padding(top = 4.dp))
+        Box(Modifier.momentGlow(ink)) { Medal(bestLook(best.best.kind), TokenSize.Moment.size, lit = rememberLightRise(true)) }
+        HaloBigNumber(RewardsCopy.bestValue(best.best.kind, best.best.value), BigNumber.Feature, Modifier.padding(top = Space.S4))
         MomentName(RewardsCopy.bestTitle(best.best.kind))
         MomentLine(RewardsCopy.beatLine(best, now), ink)
         Text(
@@ -173,26 +174,29 @@ fun GoalMomentScreen(
     val days = remember(weekStarts) { FamilySummary.weekDays(weekStarts, today, firstDay) }
     MomentPage(contentPadding, onClose = onContinue, bottom = { MomentButtons(null, onContinue) }) {
         Box(Modifier.momentGlow(RewardLime)) {
-            WeeklyGoalRing(count, goal, MOMENT_TOKEN, pluralStringResource(R.plurals.glow_goals_count_of_goal, goal, count, goal))
+            WeeklyGoalRing(count, goal, TokenSize.Moment.size, pluralStringResource(R.plurals.glow_goals_count_of_goal, goal, count, goal))
         }
-        DotFigure(dotFormat("%d/%d", count, goal), BigNumber.Feature, Modifier.padding(top = 4.dp))
+        HaloBigNumber(dotFormat("%d/%d", count, goal), BigNumber.Feature, Modifier.padding(top = Space.S4))
         MomentName(stringResource(R.string.glow_celebrate_goal_met))
         MomentLine(RewardsCopy.momentLine(inARow), RewardLime)
         val locale = LocalConfiguration.current.locales[0]
         DayPills(
             days.map { (d, on) -> d.dayOfWeek.getDisplayName(DayStyle.NARROW, locale) to on },
             today = days.indexOfFirst { it.first == today }.takeIf { it >= 0 },
-            modifier = Modifier.padding(start = 8.dp, end = 8.dp, top = 10.dp),
+            modifier = Modifier.padding(start = Space.S8, end = Space.S8, top = Space.S12),
         )
-        PageTextButton(stringResource(R.string.glow_celebrate_settings), onSettings)
+        HaloButton(stringResource(R.string.glow_celebrate_settings), onSettings, variant = HaloButtonVariant.Text)
     }
 }
 
 /** A moment's bottom bar (rules A2): Share (dark) beside Continue (white) in halves, or Continue alone, full width. */
 @Composable
 private fun RowScope.MomentButtons(onShare: (() -> Unit)?, onContinue: () -> Unit) {
-    if (onShare != null) PageButton(stringResource(R.string.glow_share), onShare, Modifier.weight(1f), size = ButtonSize.Main)
-    PageButton(stringResource(R.string.glow_continue), onContinue, Modifier.weight(1f), primary = true, size = ButtonSize.Main)
+    if (onShare != null) HaloButton(stringResource(R.string.glow_share), onShare, Modifier.weight(1f), size = HaloButtonSize.Main)
+    HaloButton(
+        stringResource(R.string.glow_continue), onContinue, Modifier.weight(1f), variant = HaloButtonVariant.Primary,
+        size = HaloButtonSize.Main,
+    )
 }
 
 /**
@@ -218,18 +222,22 @@ fun CelebrationsSheet(
     onWeeklyRecap: (Boolean) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    PageSheet(onDismiss, stringResource(R.string.glow_celebrate_title)) {
-        PageRows {
-            PageSwitchRow(
+    HaloSheet(
+        onDismiss, stringResource(R.string.glow_celebrate_title),
+        footer = {
+            HaloButton(stringResource(R.string.glow_done), onDismiss, Modifier.fillMaxWidth(), variant = HaloButtonVariant.Primary)
+        },
+    ) {
+        HaloCard(fill = CardFill.Rows) {
+            SwitchRow(
                 stringResource(R.string.glow_celebrate_goal_moment), stringResource(R.string.glow_celebrate_goal_moment_line), goalMoment,
                 onGoalMoment, divider = false,
             )
-            PageSwitchRow(
+            SwitchRow(
                 stringResource(R.string.glow_celebrate_recap), stringResource(R.string.glow_celebrate_recap_line), weeklyRecap,
                 onWeeklyRecap,
             )
         }
-        PageButton(stringResource(R.string.glow_done), onDismiss, Modifier.fillMaxWidth(), primary = true)
     }
 }
 
@@ -247,10 +255,10 @@ fun HistoryBadgesScreen(
 ) {
     BackHandler(onBack = onContinue)
     MomentPage(contentPadding, onClose = onContinue, bottom = { MomentButtons(null, onContinue) }, topGap = HISTORY_TOP_GAP) {
-        Box(Modifier.momentGlow(RewardLime, HISTORY_GLOW)) { BigNumberText("${badges.size}", BigNumber.Feature) }
+        Box(Modifier.momentGlow(RewardLime, HISTORY_GLOW)) { HaloBigNumber("${badges.size}", BigNumber.Feature) }
         MomentName(stringResource(R.string.glow_celebrate_history_title))
         Column(
-            Modifier.fillMaxWidth().padding(start = 8.dp, end = 8.dp, top = 14.dp),
+            Modifier.fillMaxWidth().padding(start = Space.S8, end = Space.S8, top = Space.S12),
             verticalArrangement = Arrangement.spacedBy(HISTORY_GAP),
         ) {
             badges.chunked(HISTORY_PER_ROW).forEach { row ->
@@ -258,7 +266,7 @@ fun HistoryBadgesScreen(
                     row.forEach { b ->
                         Column(
                             Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalArrangement = Arrangement.spacedBy(Space.S8),
                         ) {
                             Medal(badgeLook(b, face(b)), 72.dp)
                             Text(b.title, color = Color.White, style = GlowType.footnote, textAlign = TextAlign.Center, maxLines = 2)
@@ -275,8 +283,6 @@ fun HistoryBadgesScreen(
 private const val HISTORY_PER_ROW = 3
 private val HISTORY_GAP = 16.dp
 
-/** Board HaloBestMoment: the token is 160 and the glow 300 across, the body 100 under the Close. History: 60 under, glow 360. */
-private val MOMENT_TOKEN = 160.dp
 private val MOMENT_GLOW = 300.dp
 private val HISTORY_GLOW = 360.dp
 private val MOMENT_TOP_GAP = 84.dp

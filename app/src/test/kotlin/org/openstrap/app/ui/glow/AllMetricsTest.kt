@@ -36,7 +36,7 @@ class AllMetricsTest {
 
     @Test fun `grouped by section`() {
         assertEquals(
-            listOf("Recovery", "Sleep", "Heart", "Body signals", "Activity"),
+            listOf("Recovery", "Sleep", "Heart", "Body signals", "Activity", "Workouts"),
             metricIndex(empty, null, null, emptyList()).map { it.title },
         )
     }

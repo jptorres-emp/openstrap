@@ -3,6 +3,9 @@ package org.openstrap.app.ui.workout
 import androidx.compose.ui.graphics.Color
 import org.openstrap.app.presentation.WorkoutColors
 import org.openstrap.app.presentation.WorkoutWords
+import org.openstrap.app.ui.theme.Ink
+import org.openstrap.app.ui.theme.MetricColors
+import org.openstrap.app.ui.theme.SportColors
 
 /** Zone 1 (easy) to 5 (max), cool to hot ([WorkoutColors.ZONES]); during a workout the app takes on the current one. */
 internal val ZONE_COLORS: List<Color> = WorkoutColors.ZONES.map(::Color)
@@ -16,12 +19,12 @@ internal fun mainZoneColor(zones: List<Int>, fallback: Color): Color =
 /** Read each time, so the names follow the app's language. */
 internal val ZONE_NAMES: List<String> get() = WorkoutWords.ZONE_NAMES
 
-private val FamilyDistance = Color(0xFFC6F55A)
-private val FamilyIndoorCardio = Color(0xFF52ACFC)
-private val FamilyStrength = Color(0xFFFF8410)
-private val FamilyIntervals = Color(0xFFFF5A5F)
-private val FamilyMindBody = Color(0xFFB67AE8)
-private val FamilyGames = Color(0xFF6E8FB8)
+private val FamilyDistance = SportColors.distance
+private val FamilyIndoorCardio = SportColors.indoorCardio
+private val FamilyStrength = SportColors.strength
+private val FamilyIntervals = SportColors.intervals
+private val FamilyMindBody = SportColors.mindBody
+private val FamilyGames = SportColors.games
 
 /**
  * Each kind of workout's colour (workout-rules.md, Tokens; board HaloWorkoutRules): distance lime, indoor cardio blue,
@@ -37,10 +40,10 @@ internal fun familyColor(family: org.openstrap.app.data.Workouts.Family): Color 
 }
 
 /** Rest and recovery, in any family (workout-rules.md, Colour): strength rest, HIIT rest. */
-internal val RestTeal = Color(0xFF7CF2C9)
+internal val RestTeal = MetricColors.readiness
 
 /** A paused workout's hero (workout-rules.md, Tokens). */
-internal val PausedGrey = Color(0xFFAEB6C2)
+internal val PausedGrey = Ink.Paused
 
 /**
  * Where the light comes from on a sport's Ready and Live (workout-rules.md, Tokens): strength from the morning side,

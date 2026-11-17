@@ -80,7 +80,7 @@ class ErrorCopyTest {
         assertEquals("Couldn't buzz the strap", ErrorCopy.strap(raw[0], "Couldn't buzz the strap"))
         assertEquals("Wait for the sync to finish first", ErrorCopy.firmware(DfuException(-1, "Wait for the sync to finish first"), "Install failed"))
         assertEquals(
-            "Couldn't reach the update server. Check your internet connection and try again.",
+            "Couldn't reach the update server. Check your connection and try again.",
             ErrorCopy.firmware(raw[8], "Update check failed"),
         )
         assertEquals("Install failed", ErrorCopy.firmware(raw[6], "Install failed"))
@@ -91,15 +91,15 @@ class ErrorCopyTest {
             ErrorCopy.firmware(FirmwareCloudException("Raw $kind (HTTP 503): <html>busy</html>", kind), "Update check failed")
         }
         assertEquals(
-            "Zepp's update server didn't accept the sign-in. It may have expired. Sign in again.",
+            "Zepp's update server didn't accept the sign-in. Sign in again.",
             cloud[FirmwareCloudException.Kind.Rejected],
         )
         assertEquals(
-            "Zepp's update server didn't answer as expected. Try again in a few minutes.",
+            "Zepp's update server didn't answer as expected. Try again later.",
             cloud[FirmwareCloudException.Kind.Server],
         )
-        assertEquals("The firmware download failed. Try again in a few minutes.", cloud[FirmwareCloudException.Kind.Download])
-        assertEquals("The firmware download was damaged. Try again.", cloud[FirmwareCloudException.Kind.Damaged])
+        assertEquals("The firmware download failed. Try again later.", cloud[FirmwareCloudException.Kind.Download])
+        assertEquals("The firmware download was damaged. Try again later.", cloud[FirmwareCloudException.Kind.Damaged])
         for (text in cloud.values) {
             assertFalse(text, "HTTP" in text || "<" in text || "Raw" in text)
             assertCleanCopy(text)
@@ -109,8 +109,8 @@ class ErrorCopyTest {
     }
 
     @Test fun `a Zepp reply never shows its HTTP code`() {
-        val troubled = "Zepp didn't answer as expected. It may be having trouble. Try again in a few minutes."
-        val refused = "Zepp didn't accept the sign-in. It may have expired, or the account is in another region. Sign in again."
+        val troubled = "Zepp didn't answer as expected. Try again later."
+        val refused = "Zepp didn't accept the sign-in. Sign in again."
         val replies = listOf(
             ZeppCloudException("Zepp's device list returned HTTP 502"),
             ZeppCloudException("Unexpected reply from Zepp's device list"),
@@ -123,7 +123,7 @@ class ErrorCopyTest {
         val rejected = ZeppCloudException("Zepp rejected the sign-in (HTTP 401). Sign in again.", rejected = true)
         assertEquals(refused, ErrorCopy.zepp(rejected))
         assertEquals(refused, ErrorCopy.firmware(rejected, "Update check failed"))
-        assertEquals("Couldn't reach Zepp's servers. Check your internet connection and try again.", ErrorCopy.zepp(raw[8]))
+        assertEquals("Couldn't reach Zepp. Check your connection and try again.", ErrorCopy.zepp(raw[8]))
         for (text in (replies + rejected).flatMap { listOf(ErrorCopy.zepp(it), ErrorCopy.firmware(it, "Update check failed")) }) {
             assertFalse(text, "HTTP" in text)
         }

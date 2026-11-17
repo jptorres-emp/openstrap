@@ -26,7 +26,7 @@
     <!-- Zone 5's name after its number. -->
     <string name="core_workout_zone_max_in_sentence">max</string>
     <!-- The first part of the live zone's title, drawn apart from the zone's name: "Zone 3," then "tempo". -->
-    <string name="core_workout_zone_number">Zone <xliff:g id="zone" example="3">%1$d</xliff:g>,</string>
+    <string name="core_workout_zone_number">Zone <xliff:g id="zone" example="3">%1$d</xliff:g></string>
     <!-- The live zone's title as one line. The name is the zone's lower case name above. -->
     <string name="core_workout_zone_line">Zone <xliff:g id="zone" example="3">%1$d</xliff:g>, <xliff:g id="name" example="aerobic">%2$s</xliff:g></string>
     <!-- How long the workout has spent in the current zone, under a minute so far. -->
@@ -56,9 +56,9 @@
     <!-- Under it. Starting still works, without GPS. -->
     <string name="core_workout_location_off_note">Turn it on for distance and the map, or start without it.</string>
     <!-- Under the Save a map of my run switch, when on. -->
-    <string name="core_workout_route_on">On. Saved on this phone for the map.</string>
+    <string name="core_workout_route_on">On, saved on this phone for the map</string>
     <!-- Under the Save a map of my run switch, when off. -->
-    <string name="core_workout_route_off">Off. Only the totals are kept.</string>
+    <string name="core_workout_route_off">Off, only the totals are kept</string>
     <!-- The Start button, naming the sport by its short name, lower case unless all capitals ("run", "HIIT"). -->
     <string name="core_workout_start_sport">Start <xliff:g id="sport" example="run">%1$s</xliff:g></string>
     <!-- The Start button for the Other sport. -->

@@ -12,9 +12,9 @@
     <!-- Choose's strap line while the app connects to it. -->
     <string name="workout_start_strap_connecting">Connecting to the strap</string>
     <!-- Choose's strap line with no strap paired. A workout records from the phone alone. -->
-    <string name="workout_start_strap_not_paired">No strap paired. You can start anyway.</string>
+    <string name="workout_start_strap_not_paired">No strap paired, start anyway</string>
     <!-- Choose's strap line when the paired strap isn't connected. -->
-    <string name="workout_start_strap_not_connected">Strap not connected. You can start anyway.</string>
+    <string name="workout_start_strap_not_connected">Strap not connected, start anyway</string>
 
     <!-- The goal chip for no goal on a run. A short chip, about 12 characters. -->
     <string name="workout_start_just_run">Just run</string>
@@ -55,13 +55,13 @@
     <!-- Strength's plan kind with a set number of sets, in its sheet. One word. -->
     <string name="workout_start_strength_plan">Plan</string>
     <!-- Ready's line for strength. -->
-    <string name="workout_start_strength_status">The strap buzzes when rest is over, so the phone can stay on the bench.</string>
+    <string name="workout_start_strength_status">The strap buzzes when rest is over</string>
     <!-- Under Open in strength's sheet. One line. -->
-    <string name="workout_start_open_sets_kind_note">As many sets as you like, rest after each</string>
+    <string name="workout_start_open_sets_kind_note">As many sets as you like</string>
     <!-- Under Plan in strength's sheet. One line. -->
     <string name="workout_start_plan_kind_note">A number of sets with rest between</string>
     <!-- Strength's note with open sets. -->
-    <string name="workout_start_open_sets_note">As many sets as you like. The strap buzzes when rest is over.</string>
+    <string name="workout_start_open_sets_note">No set limit, a buzz when rest is over</string>
     <!-- While the sets and rest are typed: the two fields in order. -->
     <string name="workout_start_strength_typing">How many sets, then the rest in seconds</string>
     <!-- A count of sets: a preset chip ("5 sets") and in "Last time 5 sets, Tuesday". -->
@@ -79,19 +79,19 @@
     <string name="workout_start_log_sets_note">A quick card after each set</string>
 
     <!-- Ready's line for a game in free play: the strap records on its own. -->
-    <string name="workout_start_games_status">Phone in your bag? That\'s fine.</string>
+    <string name="workout_start_games_status">Phone can stay in your bag</string>
     <!-- Ready's line for a game in halves with half time between. -->
-    <string name="workout_start_games_note_half_break">Phone in your bag? That\'s fine. The strap buzzes at the end of each half and break.</string>
+    <string name="workout_start_games_note_half_break">The strap buzzes each half and break</string>
     <!-- Ready's line for a game in halves with no break. -->
-    <string name="workout_start_games_note_half">Phone in your bag? That\'s fine. The strap buzzes at the end of each half.</string>
+    <string name="workout_start_games_note_half">The strap buzzes each half</string>
     <!-- Ready's line for a game in quarters with breaks. -->
-    <string name="workout_start_games_note_quarter_break">Phone in your bag? That\'s fine. The strap buzzes at the end of each quarter and break.</string>
+    <string name="workout_start_games_note_quarter_break">The strap buzzes each quarter and break</string>
     <!-- Ready's line for a game in quarters with no breaks. -->
-    <string name="workout_start_games_note_quarter">Phone in your bag? That\'s fine. The strap buzzes at the end of each quarter.</string>
+    <string name="workout_start_games_note_quarter">The strap buzzes each quarter</string>
     <!-- Ready's line for a game in periods with breaks. -->
-    <string name="workout_start_games_note_period_break">Phone in your bag? That\'s fine. The strap buzzes at the end of each period and break.</string>
+    <string name="workout_start_games_note_period_break">The strap buzzes each period and break</string>
     <!-- Ready's line for a game in periods with no breaks. -->
-    <string name="workout_start_games_note_period">Phone in your bag? That\'s fine. The strap buzzes at the end of each period.</string>
+    <string name="workout_start_games_note_period">The strap buzzes each period</string>
 
     <!-- Ready's GPS line while it looks for a position. One line. -->
     <string name="workout_start_gps_finding">Finding GPS</string>
@@ -160,9 +160,9 @@
     <!-- Run intervals by name: how many reps of what length. -->
     <string name="workout_start_structure_reps"><xliff:g id="reps" example="6">%1$d</xliff:g> × <xliff:g id="length" example="400 m">%2$s</xliff:g></string>
     <!-- HIIT's note with no timer. -->
-    <string name="workout_start_hiit_free_note">No timer. Laps mark the rounds.</string>
+    <string name="workout_start_hiit_free_note">No timer, laps mark the rounds</string>
     <!-- Ready's line for intervals. -->
-    <string name="workout_start_intervals_status">The strap buzzes at every switch, so the phone can stay on the floor.</string>
+    <string name="workout_start_intervals_status">The strap buzzes at every switch</string>
     <!-- While HIIT's rounds are typed: the three fields in order. -->
     <string name="workout_start_hiit_typing">Work, then rest, then how many rounds</string>
     <!-- While Every minute's rounds are typed: the two fields in order. -->
@@ -170,7 +170,7 @@
     <!-- A switch: warm up before the rounds start. One line. -->
     <string name="workout_start_warm_up">Warm up first</string>
     <!-- Under Warm up first. -->
-    <string name="workout_start_warm_up_note">No timer until you start the rounds.</string>
+    <string name="workout_start_warm_up_note">No timer until the rounds start</string>
 
     <!-- A game played in two halves. A pill. -->
     <string name="workout_start_halves">Halves</string>
@@ -206,14 +206,14 @@
     <!-- Under Halves in a game's sheet. -->
     <string name="workout_start_halves_kind_note">Two halves with half time between</string>
     <!-- Under Quarters in a game's sheet. -->
-    <string name="workout_start_quarters_kind_note">Four quarters with a break between each</string>
+    <string name="workout_start_quarters_kind_note">Four quarters, a break between</string>
     <!-- While a game's periods are typed: the three fields in order. -->
     <string name="workout_start_games_typing">How many, how long, then the break</string>
 
     <!-- Ready's line for mind and body with a length. -->
-    <string name="workout_start_mind_status">Quiet strap and a dim screen. One soft buzz at the end.</string>
+    <string name="workout_start_mind_status">Quiet strap, one soft buzz at the end</string>
     <!-- Ready's line for mind and body with no length. -->
-    <string name="workout_start_mind_open_note">Quiet strap and a dim screen. End it when you\'re ready.</string>
+    <string name="workout_start_mind_open_note">Quiet strap, end it when you\'re ready</string>
     <!-- Under Open in mind and body's sheet. -->
     <string name="workout_start_mind_open_kind_note">No length, end it yourself</string>
     <!-- Under a length in mind and body's sheet. -->
@@ -268,21 +268,21 @@
     <!-- Under Zone in the goal sheet. -->
     <string name="workout_start_zone_kind_note">A buzz when you leave your zone</string>
     <!-- Under Intervals in the goal sheet. -->
-    <string name="workout_start_intervals_kind_note">Reps with rest between, a buzz at each switch</string>
+    <string name="workout_start_intervals_kind_note">Reps with rest, a buzz each switch</string>
     <!-- The note with no goal, for a sport that records a distance. -->
-    <string name="workout_start_no_goal_note_distance">No goal. Time, distance and heart rate.</string>
+    <string name="workout_start_no_goal_note_distance">No goal, time, distance and heart rate</string>
     <!-- The note with no goal, for a sport without a distance. -->
-    <string name="workout_start_no_goal_note">No goal. Time and heart rate.</string>
+    <string name="workout_start_no_goal_note">No goal, time and heart rate</string>
     <!-- A distance goal's note. The number is in kilometres, as typed. -->
-    <string name="workout_start_distance_note">The strap buzzes at halfway and at <xliff:g id="km" example="7.5">%1$s</xliff:g> km.</string>
+    <string name="workout_start_distance_note">A buzz at halfway and at <xliff:g id="v1" example="x">%1$s</xliff:g> km</string>
     <!-- The distance preset for a half marathon. A short chip, about 6 characters. -->
     <string name="workout_start_half_marathon">Half</string>
     <!-- A time goal's note: when it would end if started now. -->
     <string name="workout_start_ends_near">Ends about <xliff:g id="time" example="19:15">%1$s</xliff:g></string>
     <!-- While a time goal is typed. The end is "Ends about 19:15". -->
-    <string name="workout_start_time_typing_note">Type hours, then minutes. <xliff:g id="ends_near" example="Ends near 19:15">%1$s</xliff:g></string>
+    <string name="workout_start_time_typing_note">Type hours, then minutes</string>
     <!-- How the zone buttons work. -->
-    <string name="workout_start_zone_note">Tap a zone, or a second one for a range. The strap buzzes when you leave it.</string>
+    <string name="workout_start_zone_note">Tap a zone, or two for a range</string>
     <!-- A heading over the zone buttons. -->
     <string name="workout_start_your_zones">Your zones</string>
     <!-- A zone goal over two zones: the heart rates, then the zones' names in lower case ("aerobic", "tempo"). -->
@@ -295,9 +295,9 @@
     <string name="workout_start_zone_up_one"><xliff:g id="from" example="173">%1$d</xliff:g> bpm and up, <xliff:g id="zone" example="max">%2$s</xliff:g></string>
 
     <!-- What run intervals of a distance do. The rep is "400 m", the total "2.4 km" or "800 m". -->
-    <string name="workout_start_intervals_note_distance">The strap buzzes at the end of each <xliff:g id="rep" example="400 m">%1$s</xliff:g> rep and when rest is up. <xliff:g id="total" example="2.4 km">%2$s</xliff:g> of reps in all.</string>
+    <string name="workout_start_intervals_note_distance">A buzz each <xliff:g id="v1" example="x">%1$s</xliff:g> rep, <xliff:g id="v2" example="x">%2$s</xliff:g> in all</string>
     <!-- What run intervals of a time do. The rep is "4 min", the total "16 min" or "1 h 15". -->
-    <string name="workout_start_intervals_note_time">The strap buzzes at the end of each <xliff:g id="rep" example="4 min">%1$s</xliff:g> rep and when rest is up. <xliff:g id="total" example="16 min">%2$s</xliff:g> of reps in all.</string>
+    <string name="workout_start_intervals_note_time">A buzz each <xliff:g id="v1" example="x">%1$s</xliff:g> rep, <xliff:g id="v2" example="x">%2$s</xliff:g> in all</string>
     <!-- While run intervals are typed: the three fields in order. -->
     <string name="workout_start_intervals_typing">How many, then each rep, then the rest</string>
     <!-- Under the run intervals' numbers. -->
@@ -316,7 +316,7 @@
     <!-- A switch on Ready: the strap asks to end the workout when you stop moving. One line. -->
     <string name="workout_start_ask_to_end">Ask to end when I stop</string>
     <!-- Under Ask to end when I stop. -->
-    <string name="workout_start_ask_to_end_note">The strap buzzes after 8 min without moving</string>
+    <string name="workout_start_ask_to_end_note">A buzz after 8 min without moving</string>
     <!-- The route switch for any sport with GPS. The sport is its name in lower case: "run", "walk", "hike". One line. -->
     <string name="workout_start_keep_route">Save a map of my <xliff:g id="sport" example="run">%1$s</xliff:g></string>
     <!-- The route switch on a bike. One line. -->
@@ -331,13 +331,13 @@
     <!-- Ready's hero title with the strap connected. One line, large. -->
     <string name="workout_ready_connected">Strap connected</string>
     <!-- Ready's hero line under it while the heart rate comes in. -->
-    <string name="workout_ready_live">Live from your strap.</string>
+    <string name="workout_ready_live">Live from your strap</string>
     <!-- Ready's hero line while no heart rate has come yet. -->
-    <string name="workout_ready_waiting">Waiting for heart rate.</string>
+    <string name="workout_ready_waiting">Waiting for heart rate</string>
     <!-- Ready's hero line while the heart rate comes in and the strap's battery is low. -->
-    <string name="workout_ready_live_battery">Live from your strap. Battery <xliff:g id="percent" example="15">%1$d</xliff:g>%%.</string>
+    <string name="workout_ready_live_battery">Live from your strap, battery <xliff:g id="v1" example="5">%1$d</xliff:g>%%</string>
     <!-- Ready's hero line while no heart rate has come yet and the strap's battery is low. -->
-    <string name="workout_ready_waiting_battery">Waiting for heart rate. Battery <xliff:g id="percent" example="15">%1$d</xliff:g>%%.</string>
+    <string name="workout_ready_waiting_battery">Waiting for heart rate, battery <xliff:g id="v1" example="5">%1$d</xliff:g>%%</string>
     <!-- Ready's hero title while the app connects to the strap. One line, large. -->
     <string name="workout_ready_connecting">Connecting to the strap</string>
     <!-- Ready's hero title with no strap paired. One line, large. -->
@@ -345,5 +345,5 @@
     <!-- Ready's hero title when the paired strap isn't connected. One line, large. -->
     <string name="workout_ready_not_connected">Strap not connected</string>
     <!-- Ready's hero line under any of the three above: a workout records from the phone alone. -->
-    <string name="workout_ready_anyway">You can start anyway.</string>
+    <string name="workout_ready_anyway">You can start anyway</string>
 </resources>

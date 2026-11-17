@@ -20,7 +20,7 @@ import org.openstrap.app.PendingStrapAction
 import org.openstrap.app.data.SportSettings
 import org.openstrap.app.data.WorkoutPlan
 import org.openstrap.app.device.BlePermissions
-import org.openstrap.app.ui.glow.PageConfirm
+import org.openstrap.app.ui.glow.HaloConfirmSheet
 
 /** The Bluetooth, location and notification gates in front of a workout and the Strap page's actions. */
 internal class PermissionGates(
@@ -164,7 +164,7 @@ internal fun BluetoothBlockedDialog(gates: PermissionGates) {
         BlockedPermission.LOCATION -> R.string.day_location_blocked_text
         BlockedPermission.NOTIFICATIONS -> R.string.day_notifications_blocked_text
     }
-    PageConfirm(
+    HaloConfirmSheet(
         title = stringResource(title),
         text = stringResource(text),
         confirm = stringResource(R.string.day_nearby_open_settings),

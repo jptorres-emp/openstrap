@@ -12,6 +12,8 @@ import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sin
 import org.openstrap.app.ui.glow.GlowLayout
+import org.openstrap.app.ui.theme.GlowTints
+import org.openstrap.app.ui.theme.MetricColors
 
 /** Shape of the dark core: a rounded rectangle that follows the card, or a soft oval. */
 enum class CoreShape { Rounded, Radial }
@@ -135,6 +137,8 @@ data class GlowStyle(
      * 28% of the card, the rim at 70%. A level card ignores it: its light is the value, so it's always at full.
      */
     val second: Boolean = false,
+    /** Whether the card draws its edge in its own colour. Off where the light alone shapes the card (Energy on Recovery). */
+    val edge: Boolean = true,
     /**
      * Only the card's outline in [color], on black, with no light at all: the same card on hold, like a paused workout
      * (pattern D1). Nothing is rendered for it but the edge.
@@ -148,11 +152,11 @@ data class GlowStyle(
 
     companion object {
         /** Pink rim, violet band, plum core that follows the card ("Last test"). */
-        val Bloom = GlowStyle(color = Color(0xFFD65AA0), bevel = 1f)
+        val Bloom = GlowStyle(color = GlowTints.bloom, bevel = 1f)
 
         /** Near-black core in the upper left, navy light from below ("Training"). */
         val Midnight = GlowStyle(
-            color = Color(0xFF2A44B0),
+            color = MetricColors.sleepNavy,
             coreShape = CoreShape.Radial,
             coreX = 0.30f, coreY = 0.20f, coreWidth = 0.80f, coreHeight = 1.5f,
             coreBlur = 32.dp, coreLightness = 0.03f,
@@ -311,6 +315,9 @@ internal fun GlowStyle.light(): GlowLight {
     )
 }
 
+/** A colour with less saturation than this is a grey, and keeps its own saturation so the core isn't tinted. */
+private const val GREY_SATURATION_BELOW = 0.12f
+
 /** L4: how far into the card the hero's fill reaches the body. */
 private const val HERO_REACH = 0.45f
 
@@ -343,7 +350,8 @@ internal class GlowPalette(style: GlowStyle) {
         // than as a flat slab of colour (design-system.html, Levels).
         val body = if (level) hsl(h, s0, LEVEL_BODY_LIGHTNESS) else capped(h + style.bodyHueShift, s * 0.85f, style.bodyLightness, MID_MAX_LUMINANCE)
         val band = capped(h + style.toneShift, s * 0.8f, style.bodyLightness - 0.04f, TONE_MAX_LUMINANCE)
-        core = hsl(h + style.coreHueShift, 0.7f, style.coreLightness)
+        // A grey card keeps a grey core: its hue is 0 (red), so any saturation would tint it.
+        core = hsl(h + style.coreHueShift, if (s0 < GREY_SATURATION_BELOW) s0 else 0.7f, style.coreLightness)
         // A dimmer mood darkens the whole lit area, like turning the light down.
         val k = style.light().brightness.coerceIn(0f, 1f)
         light = if (k < 1f) lerp(Color.Black, rim, k) else rim

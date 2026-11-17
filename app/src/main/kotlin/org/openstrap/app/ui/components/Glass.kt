@@ -1,5 +1,10 @@
 package org.openstrap.app.ui.components
 
+import org.openstrap.app.ui.theme.Corner
+import org.openstrap.app.ui.theme.Space
+import org.openstrap.app.ui.theme.Greys
+import org.openstrap.app.ui.theme.LocalSurface
+import org.openstrap.app.ui.glow.SheetSpec
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -40,12 +45,15 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Velocity
 import kotlinx.coroutines.launch
+import org.openstrap.app.ui.theme.Ink
 
 /** The nav bar's glass: near-black, see-through, with a lit top edge. Popups use it over a blurred screen. */
-val GlassTint = Color(0xFF0B0B0D)
+val GlassTint = Greys.Tint
 val GlassEdge = BorderStroke(
-    1.dp, Brush.verticalGradient(0f to Color.White.copy(alpha = 0.2f), 0.5f to Color.White.copy(alpha = 0.05f), 1f to Color.Black.copy(alpha = 0.4f)),
+    1.dp, Brush.verticalGradient(0f to Ink.Line, 0.5f to Ink.Faint, 1f to Ink.Scrim),
 )
+
+
 
 /** The screen's cards go OLED black with a faint hairline instead of grey fills, matching the glow tabs. */
 @Composable
@@ -58,10 +66,10 @@ fun OledSurfaces(content: @Composable () -> Unit) {
             surfaceContainerLowest = Color.Black,
             surfaceContainerLow = Color.Black,
             surfaceContainer = Color.Black,
-            surfaceContainerHigh = Color(0xFF101012),
-            surfaceContainerHighest = Color(0xFF1A1A1D),
-            outline = Color.White.copy(alpha = 0.16f),
-            outlineVariant = Color.White.copy(alpha = 0.12f),
+            surfaceContainerHigh = Greys.Card,
+            surfaceContainerHighest = Greys.Raised,
+            outline = Ink.Line,
+            outlineVariant = Ink.Edge,
         ),
         typography = MaterialTheme.typography,
         shapes = MaterialTheme.shapes,
@@ -102,13 +110,9 @@ private fun GlassPortal(host: GlassHost, sheet: Boolean, onDismiss: () -> Unit, 
 }
 
 /** The dim behind a popup (Halo sheet boards): plain black at 0.62, no blur. */
-private val Dim = Color.Black.copy(alpha = 0.62f)
+private val Dim = Ink.ScrimDeep
 
-/** A sheet's solid surface (HaloQuietHoursSheet board, #111215). */
-private val SheetSurface = Color(0xFF111215)
 
-/** A sheet's grabber (HaloDeleteSleepSheet board: 40 by 5, #3A3D45). */
-private val GrabberColor = Color(0xFF3A3D45)
 /** Draws the registered popups; place it last at the root, over everything, with the pages' [haze]. */
 @Composable
 fun GlassOverlay(host: GlassHost, haze: dev.chrisbanes.haze.HazeState) {
@@ -127,7 +131,7 @@ fun GlassOverlay(host: GlassHost, haze: dev.chrisbanes.haze.HazeState) {
                     .clickable(tap, indication = null) { layer.onDismiss.value() },
             )
             Box(
-                Modifier.fillMaxSize().imePadding().let { if (layer.sheet) it else it.systemBarsPadding().padding(24.dp) }
+                Modifier.fillMaxSize().imePadding().let { if (layer.sheet) it else it.systemBarsPadding().padding(Space.S24) }
                     .graphicsLayer {
                         alpha = shown.value
                         translationY = (1f - shown.value) * (if (layer.sheet) 120.dp.toPx() else 16.dp.toPx())
@@ -158,7 +162,8 @@ fun GlassPanel(modifier: Modifier = Modifier, shape: androidx.compose.ui.graphic
 private val GlassPanelAlpha = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) 0.72f else 0.96f
 
 /**
- * A bottom sheet as glass in the overlay, at most [org.openstrap.app.ui.glow.GlowLayout.PageMaxWidth] wide and centred.
+ * The low-level surface of every sheet ([org.openstrap.app.ui.glow.HaloSheet] is the one to call): a bottom sheet in the
+ * overlay, at most [org.openstrap.app.ui.glow.GlowLayout.PageMaxWidth] wide and centred.
  * Pulled down by its handle, or past the top of its list, it follows the
  * finger; let go far enough down (or flung) and it closes, otherwise it springs back.
  */
@@ -201,7 +206,7 @@ fun GlassSheet(onDismiss: () -> Unit, content: @Composable () -> Unit) {
         }
         // At most a page's column wide, centred, on a wide screen (spec 2.4 Unfolded).
         Surface(
-            shape = org.openstrap.app.ui.glow.GlowLayout.SheetShape, color = SheetSurface, contentColor = Color.White,
+            shape = Corner.Sheet, color = SheetSpec.Fill, contentColor = Color.White,
             modifier = Modifier.widthIn(max = org.openstrap.app.ui.glow.GlowLayout.PageMaxWidth).fillMaxWidth()
                 .graphicsLayer { translationY = pull.floatValue }
                 .nestedScroll(pullOnTop)
@@ -211,10 +216,12 @@ fun GlassSheet(onDismiss: () -> Unit, content: @Composable () -> Unit) {
                 ),
         ) {
             Column {
-                Box(Modifier.fillMaxWidth().padding(top = 10.dp), contentAlignment = Alignment.Center) {
-                    Box(Modifier.size(width = 40.dp, height = 5.dp).background(GrabberColor, org.openstrap.app.ui.glow.GlowLayout.BarShape))
+                // The grabber: SheetSpec's 36 by 4 in Ink.Line, 10 from the top edge (HaloComponents board).
+                Box(Modifier.fillMaxWidth().padding(top = SheetSpec.Top), contentAlignment = Alignment.Center) {
+                    Box(Modifier.size(SheetSpec.GrabberWidth, SheetSpec.GrabberHeight).background(Ink.Line, Corner.Pill))
                 }
-                content()
+                // What sits on the sheet steps up from its fill, as inside a card (components audit, grey on a sheet).
+                androidx.compose.runtime.CompositionLocalProvider(LocalSurface provides SheetSpec.Fill) { content() }
             }
         }
     }

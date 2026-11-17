@@ -56,7 +56,7 @@ class GlowFormatTest {
             ).forEach(::assertDrawable)
             assertEquals("1:02:03", dotClock(3723))
             assertEquals("7:40", clockDuration(27_600))
-            assertEquals("13,860", Metric.Steps.format(13_860f, Units.DOT_LOCALE))
+            assertEquals("13\u2009860", Metric.Steps.format(13_860f, Units.DOT_LOCALE))
             assertEquals("36.5", Metric.SkinTemperature.format(36.54f, Units.DOT_LOCALE))
             // Read in a row's text, the same figures take the phone's own marks.
             assertEquals(String.format(locale, "%.1f", 36.54f), Metric.SkinTemperature.format(36.54f, locale))

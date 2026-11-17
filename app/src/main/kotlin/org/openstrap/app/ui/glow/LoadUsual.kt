@@ -1,5 +1,7 @@
 package org.openstrap.app.ui.glow
 
+import org.openstrap.app.ui.theme.Space
+import org.openstrap.app.ui.theme.Greys
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
 import androidx.compose.material3.Icon
@@ -7,7 +9,6 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.foundation.layout.size
-import org.openstrap.app.ui.components.pressClickable
 import org.openstrap.app.presentation.Ranges
 import org.openstrap.app.R
 import androidx.compose.ui.res.stringResource
@@ -23,7 +24,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -34,6 +34,7 @@ import androidx.compose.foundation.shape.CircleShape
 import org.openstrap.app.data.WorkoutAnalysis
 import org.openstrap.app.data.WorkoutLoadBand
 import org.openstrap.app.ui.theme.AppIcons
+import org.openstrap.app.ui.theme.Ink
 import org.openstrap.app.ui.workout.SummaryCopy
 import org.openstrap.app.ui.dashboard.OffWords
 import org.openstrap.app.ui.dashboard.loadOffStatus
@@ -60,9 +61,7 @@ internal class LoadUsual(val low: Float, val high: Float) {
     }
 }
 
-/** The track and band of the Load bar (boards: #1E2025 and #3A3D45). */
-private val LoadTrack = Color(0xFF1E2025)
-private val LoadBand = Color(0xFF3A3D45)
+private val LoadBand = Greys.Line
 
 /**
  * Load from this workout against your usual (board HaloSummaryRun), a plain panel: "From this run" with its tag (above,
@@ -77,12 +76,7 @@ internal fun WorkoutLoadCard(a: WorkoutAnalysis, usual: Float?, drop: String? = 
     val range = LoadUsual.of(usual)
     val usualTag = stringResource(R.string.glow_summary_load_tag_usual).takeIf { load != null && usual != null }
     val tag = offTag(OffWords.Usual, status)?.text ?: usualTag
-    Column(
-        Modifier.fillMaxWidth().clip(GlowLayout.TileShape).background(PlainPanel)
-            .let { if (onInfo != null) it.pressClickable(onInfo, GlowLayout.TileShape) else it }
-            .padding(horizontal = 20.dp, vertical = 18.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
+    HaloCard(onClick = onInfo) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Row(Modifier.weight(1f, fill = false), verticalAlignment = Alignment.CenterVertically) {
                 Text(
@@ -90,29 +84,27 @@ internal fun WorkoutLoadCard(a: WorkoutAnalysis, usual: Float?, drop: String? = 
                     overflow = TextOverflow.Ellipsis,
                 )
                 if (onInfo != null) Icon(
-                    AppIcons.TapCaret, stringResource(R.string.glow_summary_load_about), Modifier.padding(start = 6.dp).size(14.dp),
-                    tint = Color.White.copy(alpha = CARD_CARET_ALPHA),
+                    AppIcons.TapCaret, stringResource(R.string.glow_summary_load_about), Modifier.padding(start = Space.S8).size(14.dp),
+                    tint = Ink.Tertiary,
                 )
             }
             if (tag != null) Text(
-                tag, Modifier.padding(start = 12.dp).background(HaloButtonSurface, CircleShape).padding(horizontal = 8.dp, vertical = 2.dp),
+                tag, Modifier.padding(start = Space.S12).background(Greys.Control, CircleShape).padding(horizontal = Space.S8,
+                    vertical = Space.S2),
                 color = SoftInk, style = GlowType.caption, maxLines = 1,
             )
         }
         if (load != null) {
             val recover = SummaryCopy.recoverSpan(a.recoveryMinutes)
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                LoadFigure(
-                    "$load", null,
-                    range?.let { stringResource(R.string.glow_summary_load_usual, it.words()) }
-                        ?: stringResource(R.string.workout_summary_load_label),
-                    Modifier.weight(1f),
-                )
-                if (recover != null) {
-                    val (number, unit) = recover.split(" ", limit = 2).let { it[0] to it.getOrNull(1) }
-                    LoadFigure(number, unit, stringResource(R.string.glow_summary_recover_label), Modifier.weight(1f), rule = true)
-                }
-            }
+            val (number, unit) = recover?.split(" ", limit = 2)?.let { it[0] to it.getOrNull(1) } ?: (null to null)
+            HaloFigures(
+                listOfNotNull(
+                    "$load" to (range?.let { stringResource(R.string.glow_summary_load_usual, it.words()) }
+                        ?: stringResource(R.string.workout_summary_load_label)),
+                    if (recover != null) number to stringResource(R.string.glow_summary_recover_label) else null,
+                ),
+                units = listOf(null, unit),
+            )
             LoadBar(load.toFloat(), range)
         } else Text(stringResource(R.string.glow_summary_load_none), color = GlowType.noteColor, style = GlowType.secondary)
         SummaryCopy.carriedOver(a.recoveryMinutes, a.ownRecoveryMinutes, a.workout.sportType)?.let {
@@ -121,30 +113,6 @@ internal fun WorkoutLoadCard(a: WorkoutAnalysis, usual: Float?, drop: String? = 
         drop?.let { Text(it, color = GlowType.noteColor, style = GlowType.noteSmall) }
     }
 }
-
-/** A figure of the Load panel: the value in Funnel Display Light 28 with its small [unit], the label under it in 12 px grey. */
-@Composable
-private fun LoadFigure(value: String, unit: String?, label: String, modifier: Modifier = Modifier, rule: Boolean = false) {
-    Column(
-        modifier.let { m ->
-            if (!rule) m else m.drawBehind {
-                drawLine(FigureRuleInk, Offset(0f, 0f), Offset(0f, size.height), strokeWidth = 1.dp.toPx())
-            }.padding(start = 16.dp)
-        },
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        Text(
-            buildAnnotatedString {
-                append(value)
-                if (unit != null) withStyle(GlowType.secondary.toSpanStyle().copy(color = GlowType.noteColor)) { append(" $unit") }
-            },
-            color = Color.White, style = GlowType.figure, maxLines = 1,
-        )
-        Text(label, color = GlowType.noteColor, style = GlowType.noteSmall, maxLines = 2)
-    }
-}
-
-private val FigureRuleInk = Color(0xFF24262C)
 
 /** The scale the Load bar runs to when nothing is higher (board HaloSummaryRun: usual 80 to 120 sits at 40 to 60 per cent). */
 private const val LOAD_SCALE = 200f
@@ -160,7 +128,7 @@ private fun LoadBar(load: Float, usual: LoadUsual?) {
         val round = CornerRadius(2.dp.toPx())
         val y = 3.dp.toPx()
         val thick = 4.dp.toPx()
-        drawRoundRect(LoadTrack, Offset(0f, y), Size(size.width, thick), round)
+        drawRoundRect(Greys.Raised, Offset(0f, y), Size(size.width, thick), round)
         if (usual != null) {
             val from = x(usual.low)
             val to = maxOf(x(usual.high), from + 3.dp.toPx())

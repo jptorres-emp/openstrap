@@ -29,7 +29,7 @@
     <plurals name="core_rewards_goal_weeks_in_a_row">
         <item quantity="other">连续 %1$d 周</item>
     </plurals>
-    <string name="core_rewards_goal_met_this_week">本周已达标</string>
+    <string name="core_rewards_goal_met_this_week">本周目标已达成</string>
     <plurals name="core_rewards_goal_to_go">
         <item quantity="other">本周还差 %1$d 次</item>
     </plurals>
@@ -47,26 +47,26 @@
     <string name="core_rewards_when_evening">%1$s，傍晚%2$s</string>
     <string name="core_rewards_when_night">%1$s，夜间%2$s</string>
     <plurals name="core_rewards_run_best_is">
-        <item quantity="other">已连续 %1$d 周达标。你的最佳纪录是 %2$d 周。</item>
+        <item quantity="other">目标已连续达成 %1$d 周，最佳为 %2$d 周</item>
     </plurals>
     <plurals name="core_rewards_run_best_yet">
-        <item quantity="other">已连续 %1$d 周达标，创下你的个人最佳纪录。</item>
+        <item quantity="other">目标已连续达成 %1$d 周，创纪录</item>
     </plurals>
     <plurals name="core_rewards_run_best_was">
-        <item quantity="other">你的最佳纪录是连续 %1$d 周。</item>
+        <item quantity="other">最佳连续纪录为 %1$d 周</item>
     </plurals>
-    <string name="core_rewards_run_none">达成目标即可开启你的连续周纪录。</string>
+    <string name="core_rewards_run_none">暂无连续周纪录</string>
     <string name="core_rewards_progress_km">%1$s/%2$s km</string>
     <string name="core_rewards_progress_steps">%1$s/%2$s 步</string>
     <string name="core_rewards_progress_workouts">%1$s/%2$s 次运动</string>
     <string name="core_rewards_progress_weeks">%1$s/%2$s 周</string>
     <plurals name="core_rewards_recap">
-        <item quantity="other">完成 %2$d/%1$d 次运动。</item>
+        <item quantity="other">已完成 %2$d 次锻炼，目标 %1$d 次</item>
     </plurals>
     <plurals name="core_rewards_recap_met">
-        <item quantity="other">完成 %1$d/%2$d 次运动，目标已达成。</item>
+        <item quantity="other">%1$d 次锻炼，目标达成</item>
     </plurals>
     <plurals name="core_rewards_recap_met_in_a_row">
-        <item quantity="other">完成 %2$d/%3$d 次运动，目标已达成。已连续 %1$d 周达标。</item>
+        <item quantity="other">%2$d 次锻炼，连续 %1$d 周</item>
     </plurals>
 </resources>

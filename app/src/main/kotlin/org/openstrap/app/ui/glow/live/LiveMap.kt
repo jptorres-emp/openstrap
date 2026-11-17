@@ -1,5 +1,7 @@
 package org.openstrap.app.ui.glow.live
 
+import org.openstrap.app.ui.theme.Corner
+import org.openstrap.app.ui.theme.Space
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.foundation.background
@@ -17,7 +19,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import org.openstrap.app.ui.theme.MetricColors
 import androidx.compose.foundation.layout.Column
 import org.openstrap.app.presentation.WorkoutCopy
 import org.openstrap.app.ui.theme.AppIcons
@@ -31,14 +32,12 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.unit.dp
 import org.openstrap.app.data.Route
 import org.openstrap.app.data.WorkoutRecorder
@@ -83,51 +82,58 @@ internal fun LiveMapScreen(
         Box(Modifier.fillMaxWidth().fillMaxHeight().padding(bottom = (panel - PANEL_OVERLAP).coerceAtLeast(0.dp))) {
             WorkoutMap(
                 stretches, routeOnly, Modifier.fillMaxSize(), here,
-                fitPadding = PaddingValues(start = 28.dp, top = top + 64.dp, end = 76.dp, bottom = PANEL_OVERLAP + 28.dp),
+                fitPadding = PaddingValues(start = Space.S24, top = top + 64.dp, end = 76.dp, bottom = PANEL_OVERLAP + Space.S32),
                 creditBottom = PANEL_OVERLAP + 14.dp,
                 hereColor = color.takeIf { bpm != null },
                 follow = follow, onPanned = { follow = false },
             )
             Row(
-                Modifier.fillMaxWidth().padding(top = top, start = 16.dp, end = 16.dp),
-                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
+                Modifier.fillMaxWidth().padding(top = top, start = Space.S16, end = Space.S16),
+                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.S8),
             ) {
-                RoundIconButton(AppIcons.CaretDown, stringResource(R.string.workout_live_minimize), controls.onMinimize,
-                    size = 44.dp, surface = OverMap, iconSize = 18.dp)
+                HaloIconButton(
+                    AppIcons.CaretDown, stringResource(R.string.workout_live_minimize), controls.onMinimize,
+                    variant = HaloIconVariant.Glass,
+                )
                 if (heartPill) LitHeartPill(bpm, r.maxHeartRate, WorkoutRecorder.liveZone(bpm, r.maxHeartRate,
                     heartZones)?.let { org.openstrap.app.ui.workout.ZONE_COLORS[it] } ?: Color.White, r.paused, 36.dp)
                 Spacer(Modifier.weight(1f))
                 val acc = route.lastOrNull()?.accuracy
                 Row(
-                    Modifier.height(32.dp).clip(CircleShape).background(OverMap).padding(horizontal = 12.dp),
+                    Modifier.height(32.dp).clip(CircleShape).background(OverMap).padding(horizontal = Space.S12),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Box(Modifier.size(6.dp).clip(CircleShape).background(if (acc != null &&
                         acc <= Route.MAX_ACCURACY_M) TrendGood else TrendBad))
-                    Spacer(Modifier.width(6.dp))
+                    Spacer(Modifier.width(Space.S8))
                     Text(WorkoutCopy.gpsPill(acc), color = Color.White, style = GlowType.secondary, maxLines = 1)
                 }
             }
             // On its side the map is short, so the buttons hang under the GPS pill instead of rising into it.
             Column(
-                if (LocalLiveLandscape.current) Modifier.align(Alignment.TopEnd).padding(end = 16.dp, top = top + 54.dp)
-                else Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = PANEL_OVERLAP + 44.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
+                if (LocalLiveLandscape.current) Modifier.align(Alignment.TopEnd).padding(end = Space.S16, top = top + 54.dp)
+                else Modifier.align(Alignment.BottomEnd).padding(end = Space.S16, bottom = PANEL_OVERLAP + 44.dp),
+                verticalArrangement = Arrangement.spacedBy(Space.S12),
             ) {
-                MapButton(
+                // White while what it does is on, translucent near black over the map otherwise.
+                HaloIconButton(
                     AppIcons.MapFold,
                     stringResource(if (routeOnly) R.string.workout_live_map_show_map else R.string.workout_live_map_route_only),
-                    lit = routeOnly,
-                ) { routeOnly = !routeOnly }
-                MapButton(AppIcons.NavigationArrow, stringResource(R.string.workout_live_map_follow), lit = follow) { follow = true }
+                    { routeOnly = !routeOnly },
+                    variant = if (routeOnly) HaloIconVariant.Primary else HaloIconVariant.Glass,
+                )
+                HaloIconButton(
+                    AppIcons.NavigationArrow, stringResource(R.string.workout_live_map_follow), { follow = true },
+                    variant = if (follow) HaloIconVariant.Primary else HaloIconVariant.Glass,
+                )
             }
         }
         Column(
             Modifier.align(Alignment.BottomCenter).fillMaxWidth()
                 .onSizeChanged { panel = with(density) { it.height.toDp() } }
-                .clip(org.openstrap.app.ui.glow.GlowLayout.SheetShape).background(Color.Black)
-                .padding(start = 16.dp, end = 16.dp, top = 18.dp, bottom = contentPadding.calculateBottomPadding()),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+                .clip(Corner.Sheet).background(Color.Black)
+                .padding(start = Space.S16, end = Space.S16, top = Space.S16, bottom = contentPadding.calculateBottomPadding()),
+            verticalArrangement = Arrangement.spacedBy(Space.S12),
         ) {
             // Board HaloLiveMap: three plain figures, then the latest kilometre on a plain panel.
             LiveFigures(figures)
@@ -144,24 +150,18 @@ private val PANEL_OVERLAP = 28.dp
 /** Buttons and pills drawn over the map: near black, a little see-through. */
 private val OverMap = OverMapSurface
 
-/** A round button over the map, white while what it does is on ([lit]). */
-@Composable
-private fun MapButton(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, lit: Boolean, onClick: () -> Unit) =
-    RoundIcon(icon, label, onClick, surface = if (lit) Color.White else OverMap, ink = if (lit) Color.Black else Color.White,
-        iconSize = 20.dp)
-
 /** The latest whole kilometre on a dark row with how long ago it ended, until the next; nothing before the first. */
 @Composable
 private fun LastSplit(route: List<Route.Point>, readings: List<Pair<Long, Int>>, pauses: List<LongRange>) {
     val splits = remember(route.size, pauses) { Route.splits(route, pauses) }
     val now = nowTicking()
     val (line, ago) = WorkoutCopy.lastSplit(splits, readings, route.firstOrNull()?.t, now) ?: return
-    Row(
-        Modifier.fillMaxWidth().height(48.dp).clip(GlowLayout.TileShape).background(PlainPanel).padding(horizontal = 16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(line, color = Color.White, style = GlowType.secondary.copy(fontFeatureSettings = "tnum"),
-            maxLines = 1, modifier = Modifier.weight(1f))
-        Text(ago, color = GlowType.noteColor, style = GlowType.noteSmall, maxLines = 1)
+    // A strip, kept 48 high over the map: one line, its sides from the card rule.
+    HaloCard(Modifier.height(48.dp), size = HaloCardSize.Strip) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(line, color = Color.White, style = GlowType.secondary.copy(fontFeatureSettings = "tnum"),
+                maxLines = 1, modifier = Modifier.weight(1f))
+            Text(ago, color = GlowType.noteColor, style = GlowType.noteSmall, maxLines = 1)
+        }
     }
 }

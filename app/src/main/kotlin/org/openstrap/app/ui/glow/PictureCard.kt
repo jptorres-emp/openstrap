@@ -13,6 +13,7 @@ import androidx.compose.ui.graphics.Color
 import org.openstrap.app.ui.components.LocalCardNumbers
 import org.openstrap.app.ui.components.cardOpening
 import org.openstrap.app.ui.components.pressClickable
+import org.openstrap.app.ui.theme.Ink
 
 /*
  * The middle tier (Picture card): a solid squircle card that draws its metric's picture in the ink, always unlit. The
@@ -37,37 +38,5 @@ data class CardOverride(val plain: Boolean = false)
 @Suppress("CompositionLocalAllowlist", "ComposeCompositionLocalUsage")
 val LocalCardOverride = staticCompositionLocalOf { CardOverride() }
 
-private val CardShape = GlowLayout.CardShape
-
-/**
- * A picture card in [ink], its metric's colour: a solid card, the picture drawn on it in the ink. Halo has no coloured
- * rim for a reading off your normal, so [rim] and [ink] no longer draw anything here; the card's tag says it (Halo
- * System board). The parameters stay so the screens placing it compile. [content] lays out the title row, the picture,
- * the number and its tag.
- */
-@Suppress("UnusedParameter", "UNUSED_PARAMETER")
-@Composable
-fun PictureCard(
-    ink: Color,
-    modifier: Modifier = Modifier,
-    rim: Rim? = null,
-    onClick: (() -> Unit)? = null,
-    contentPadding: PaddingValues = GlowLayout.CardPadding,
-    content: @Composable ColumnScope.() -> Unit,
-) {
-    // Tapped, the card grows into what it opens (spec 3.5).
-    val opening = cardOpening(onClick, CardShape)
-    Column(
-        modifier
-            .then(opening?.modifier ?: Modifier)
-            .let { if (onClick != null) it.pressClickable(opening?.onClick ?: onClick, CardShape) else it }
-            // Solid card in the squircle, no white rim and no coloured one (Halo System board, "Every other card").
-            .solidCard(CardShape)
-            .padding(contentPadding),
-    ) {
-        CompositionLocalProvider(LocalCardNumbers provides opening?.numbers, LocalCardOpens provides (onClick != null)) { content() }
-    }
-}
-
 /** The edge round a card or list panel ([GlowLayout.CardEdgeAlpha]). */
-internal val CardHairline = Color.White.copy(alpha = GlowLayout.CardEdgeAlpha)
+internal val CardHairline = Ink.Edge

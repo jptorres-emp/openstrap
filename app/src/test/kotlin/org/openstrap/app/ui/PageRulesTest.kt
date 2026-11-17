@@ -45,7 +45,7 @@ class PageRulesTest {
                 """FilterChip|LinearProgressIndicator|CircularProgressIndicator|Surface|Panel|PanelHeader)\(""",
         )
         val found = scan(material)
-        if (found.isNotEmpty()) fail("Pages are built from PageButton, PageField, PageSheet and the rest (spec 3.4):\n" + found.joinToString("\n"))
+        if (found.isNotEmpty()) fail("Pages are built from HaloButton, PageField, HaloSheet and the rest (spec 3.4):\n" + found.joinToString("\n"))
     }
 
     /** Type scale (type.md): page text uses a GlowType role. */

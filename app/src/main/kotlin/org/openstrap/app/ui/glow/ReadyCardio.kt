@@ -1,9 +1,11 @@
 package org.openstrap.app.ui.glow
 
+import org.openstrap.app.ui.theme.Corner
+import org.openstrap.app.ui.theme.Space
+import org.openstrap.app.ui.theme.Greys
 import androidx.compose.ui.res.stringResource
 import kotlinx.coroutines.flow.collectLatest
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.clickable
@@ -27,7 +29,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -54,7 +55,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
@@ -74,15 +74,14 @@ import org.openstrap.app.data.WorkoutSetup.GoalKind
 import org.openstrap.app.data.WorkoutTarget
 import org.openstrap.app.data.Workouts
 import org.openstrap.app.data.db.SavedWorkout
-import org.openstrap.app.device.ConnectionState
 import org.openstrap.app.ui.components.pressClickable
 import org.openstrap.app.ui.theme.AppIcons
+import org.openstrap.app.ui.theme.Ink
 import org.openstrap.app.ui.theme.MetricColors
 import org.openstrap.app.ui.workout.StartCopy
 import org.openstrap.app.presentation.WorkoutCopy
 import org.openstrap.app.ui.workout.ZONE_COLORS
 import java.time.LocalTime
-import org.openstrap.app.ui.workout.readyHero
 
 /*
  * Ready for distance and cardio sports (board ReadyFinal): the heart, where you are, then the goal, typed in place.
@@ -110,7 +109,7 @@ internal fun ReadyWhere(
     keepRoute: Boolean?,
     onKeepRoute: (Boolean) -> Unit,
 ) {
-    Column(Modifier.fillMaxWidth().clip(GlowLayout.TileShape).background(PlainPanel).padding(horizontal = 18.dp)) {
+    HaloCard(fill = CardFill.Rows) {
         var rows = 0
         if (sides != null) {
             PlaceRow(
@@ -122,7 +121,7 @@ internal fun ReadyWhere(
                 },
             ) {
                 val other = StartCopy.otherPlace(sides, indoor)
-                IconPill(other, onSwitch, icon = placeIcon(sides, !indoor), height = 36.dp, description = other)
+                HaloChip(other, onSwitch, icon = placeIcon(sides, !indoor), description = other)
             }
             rows++
         } else if (outdoor && !locationOn) {
@@ -130,11 +129,11 @@ internal fun ReadyWhere(
             rows++
         }
         if (outdoor && !locationOn) {
-            PageButton(StartCopy.TURN_ON_LOCATION, onTurnOnLocation, Modifier.fillMaxWidth().padding(bottom = 14.dp),
+            HaloButton(StartCopy.TURN_ON_LOCATION, onTurnOnLocation, Modifier.fillMaxWidth().padding(bottom = Space.S12),
                 icon = SportIconsLocation)
         }
-        PageSwitchRow(StartCopy.ASK_TO_END, StartCopy.ASK_TO_END_NOTE, askToEnd, onAskToEnd, divider = rows > 0)
-        if (keepRoute != null) PageSwitchRow(StartCopy.keepRoute(type), WorkoutCopy.routeNote(keepRoute), keepRoute, onKeepRoute)
+        SwitchRow(StartCopy.ASK_TO_END, StartCopy.ASK_TO_END_NOTE, askToEnd, onAskToEnd, divider = rows > 0)
+        if (keepRoute != null) SwitchRow(StartCopy.keepRoute(type), WorkoutCopy.routeNote(keepRoute), keepRoute, onKeepRoute)
     }
 }
 
@@ -144,15 +143,15 @@ internal fun ReadyWhere(
  */
 @Composable
 internal fun ReadyPlace(type: Int, sides: Workouts.Sides, indoor: Boolean, locationOn: Boolean, gpsLine: String, onSwitch: () -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(Space.S12)) {
         Row(
-            Modifier.fillMaxWidth().clip(CircleShape).background(PlainPanel).padding(4.dp),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            Modifier.fillMaxWidth().clip(CircleShape).background(Greys.Card).padding(Space.S4),
+            horizontalArrangement = Arrangement.spacedBy(Space.S4),
         ) {
             listOf(false to StartCopy.place(sides, false), true to StartCopy.place(sides, true)).forEach { (isIndoor, name) ->
                 val picked = indoor == isIndoor
                 Box(
-                    Modifier.weight(1f).height(40.dp).clip(CircleShape).background(if (picked) PickedSurface else Color.Transparent)
+                    Modifier.weight(1f).height(40.dp).clip(CircleShape).background(if (picked) Greys.Picked else Color.Transparent)
                         .clickable(role = Role.RadioButton, onClick = { if (!picked) onSwitch() }).semantics { selected = picked },
                     contentAlignment = Alignment.Center,
                 ) {
@@ -186,23 +185,9 @@ private fun placeIcon(sides: Workouts.Sides, indoor: Boolean): ImageVector = whe
 
 /** A where row: the icon in a tile tinted its [tint], the title and its note, then [trailing]. */
 @Composable
-private fun PlaceRow(icon: ImageVector, tint: Color, title: String, note: String, trailing: (@Composable () -> Unit)?) {
-    Row(Modifier.fillMaxWidth().padding(vertical = GlowLayout.RowPadding), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(44.dp).clip(GlowLayout.InnerShape).background(tint.copy(alpha = 0.15f)),
-            contentAlignment = Alignment.Center) {
-            Icon(icon, null, tint = tint, modifier = Modifier.size(24.dp))
-        }
-        Spacer(Modifier.width(14.dp))
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            RowName(title)
-            Text(note, color = Color.White.copy(alpha = 0.65f), style = GlowType.secondary)
-        }
-        if (trailing != null) {
-            Spacer(Modifier.width(12.dp))
-            trailing()
-        }
-    }
-}
+private fun PlaceRow(icon: ImageVector, tint: Color, title: String, note: String, trailing: (@Composable () -> Unit)?) = HaloRow(
+    title, lead = RowLead.sport(icon, tint), line = { RowLine(note) }, trail = trailing, divider = false,
+)
 
 /* -------------------------------------------- The goal card ---------------------------------------------- */
 
@@ -324,22 +309,23 @@ private fun ReadyPlanCard(
     val editor = LocalGoalEditor.current
     // Inline, as the boards draw it: where you are, the kinds as chips, then the picked kind's presets. Picking one
     // changes the hero's number at once; a typed value lives in the sheet the hero opens.
-    Column(
-        Modifier.fillMaxWidth().bringIntoViewRequester(inView).solidCard(GlowLayout.CardShape).padding(GlowLayout.CardInset),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
-    ) {
+    HaloCard(Modifier.bringIntoViewRequester(inView)) {
         top?.invoke(this)
         PlanChips(options, chosen, shown, onChoose)
         presets()
     }
-    if (editor.open) PageSheet({ closeGoal(editor, onTyping, save = false) }, StartCopy.planSheet(family)) {
-        content()
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            PageButton(stringResource(R.string.glow_cancel), { closeGoal(editor, onTyping, save = false) }, Modifier.weight(1f))
-            PageButton(
-                stringResource(R.string.glow_save), { closeGoal(editor, onTyping, save = true) }, Modifier.weight(1f), primary = true,
+    if (editor.open) HaloSheet(
+        { closeGoal(editor, onTyping, save = false) }, StartCopy.planSheet(family),
+        footer = {
+            ButtonPair(
+                stringResource(R.string.glow_cancel),
+                { closeGoal(editor, onTyping, save = false) },
+                stringResource(R.string.glow_save),
+                { closeGoal(editor, onTyping, save = true) },
             )
-        }
+        },
+    ) {
+        content()
     }
 }
 
@@ -349,12 +335,15 @@ private fun ReadyPlanCard(
 @Composable
 private fun PlanChips(options: List<PlanOption>, chosen: Int?, shown: PlanOption, onChoose: (Int) -> Unit) {
     androidx.compose.foundation.layout.FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp),
+        horizontalArrangement = Arrangement.spacedBy(Space.S8), verticalArrangement = Arrangement.spacedBy(Space.S8),
     ) {
         options.forEachIndexed { i, o ->
-            PageChip(o.name, i == chosen, { if (i != chosen) onChoose(i) }, role = Role.RadioButton, filled = true, description = o.note)
+            HaloChip(
+                o.name, { if (i != chosen) onChoose(i) }, variant = ChipVariant.Choice, selected = i == chosen, role = Role.RadioButton,
+                description = o.note,
+            )
         }
-        if (chosen == null) PageChip(shown.name, true, {}, role = Role.RadioButton, filled = true)
+        if (chosen == null) HaloChip(shown.name, {}, variant = ChipVariant.Choice, selected = true, role = Role.RadioButton)
     }
 }
 
@@ -389,43 +378,34 @@ private fun kindNote(k: GoalKind, hasDistance: Boolean): String = when (k) {
     GoalKind.Intervals -> StartCopy.INTERVALS_KIND_NOTE
 }
 
-/** The line under a goal: what the strap will do. */
-@Composable
-internal fun GoalNote(text: String) =
-    Text(text, color = Color.White.copy(alpha = 0.6f), style = GlowType.secondary, textAlign = TextAlign.Center,
-        modifier = Modifier.fillMaxWidth())
-
 /** A row of presets under a value, each as wide as the others; the one matching the value ([on]) has the white ring. */
 @Composable
 internal fun <T> Presets(presets: List<Pair<T, String>>, on: T?, onPick: (T) -> Unit) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        presets.forEach { (v, label) -> PageChip(label, v == on, { onPick(v) }, Modifier.weight(1f), role = Role.Button, filled = true) }
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Space.S8)) {
+        presets.forEach { (v, label) ->
+            HaloChip(label, { onPick(v) }, Modifier.weight(1f), ChipVariant.Choice, selected = v == on, role = Role.Button)
+        }
     }
 }
-
-/** A value between round minus and plus buttons. */
-@Composable
-private fun ValueStepper(less: String, more: String, onLess: () -> Unit, onMore: () -> Unit, value: @Composable RowScope.() -> Unit) =
-    MinusPlus(less, more, onLess, onMore, Modifier.fillMaxWidth(), buttonSize = 52.dp, gap = 12.dp, value = value)
 
 /** A value to tap and type: its numbers and units, "Tap to type" under them ([hint]). */
 @Composable
 private fun TapValue(parts: List<Pair<String, String>>, hint: String?, onClick: () -> Unit) {
     Column(
-        Modifier.clip(GlowLayout.ChipShape).clickable(onClickLabel = StartCopy.TAP_TO_TYPE,
-            onClick = onClick).padding(horizontal = 8.dp),
+        Modifier.clip(Corner.Chip).clickable(onClickLabel = StartCopy.TAP_TO_TYPE,
+            onClick = onClick).padding(horizontal = Space.S8),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Row {
             parts.forEachIndexed { i, (n, unit) ->
-                if (i > 0) Spacer(Modifier.width(6.dp))
+                if (i > 0) Spacer(Modifier.width(Space.S8))
                 Text(n, color = Color.White, style = GlowType.goalValue, modifier = Modifier.alignByBaseline())
-                Spacer(Modifier.width(4.dp))
-                Text(unit, color = Color.White.copy(alpha = 0.75f), style = GlowType.body, modifier = Modifier.alignByBaseline())
+                Spacer(Modifier.width(Space.S4))
+                Text(unit, color = Ink.Strong, style = GlowType.body, modifier = Modifier.alignByBaseline())
             }
         }
-        if (hint != null) Text(hint, color = Color.White.copy(alpha = GlowType.CAPTION_ALPHA), style = GlowType.caption,
-            modifier = Modifier.padding(top = 4.dp))
+        if (hint != null) Text(hint, color = Ink.Secondary, style = GlowType.caption,
+            modifier = Modifier.padding(top = Space.S4))
     }
 }
 
@@ -449,8 +429,8 @@ private fun TypedNumber(
     Row(
         modifier.drawBehind {
             val y = size.height - 1.dp.toPx()
-            drawLine(if (focused) TypingLime else Color.White.copy(alpha = 0.2f), Offset(0f, y), Offset(size.width, y), 2.dp.toPx())
-        }.padding(start = 6.dp, end = 6.dp, bottom = 6.dp),
+            drawLine(if (focused) TypingLime else Ink.Line, Offset(0f, y), Offset(size.width, y), 2.dp.toPx())
+        }.padding(start = Space.S8, end = Space.S8, bottom = Space.S8),
     ) {
         BasicTextField(
             value, onValue, field.width(IntrinsicSize.Min).widthIn(min = 18.dp).alignByBaseline(),
@@ -459,8 +439,8 @@ private fun TypedNumber(
             keyboardActions = KeyboardActions(onDone = { onIme() }, onNext = { onIme() }),
         )
         if (unit != null) {
-            Spacer(Modifier.width(4.dp))
-            Text(unit, color = Color.White.copy(alpha = 0.75f), style = GlowType.body, modifier = Modifier.alignByBaseline())
+            Spacer(Modifier.width(Space.S4))
+            Text(unit, color = Ink.Strong, style = GlowType.body, modifier = Modifier.alignByBaseline())
         }
     }
 }
@@ -492,6 +472,8 @@ private fun EndTyping(typing: Boolean, focused: Int?, everFocused: Boolean, onDo
 }
 
 /** Distance: minus and plus by half a km, the value in km to tap and type ([TypedValue]), the presets, and its note. */
+// Its stepper, presets and note go into the goal card's column and take its gaps, as every goal kind's parts do.
+@Suppress("MultipleEmitters", "ComposeMultipleEmitters")
 @Composable
 private fun DistanceGoal(meters: Int, onMeters: (Int) -> Unit, typing: Boolean, onTyping: (Boolean) -> Unit) {
     val focusManager = LocalFocusManager.current
@@ -499,9 +481,10 @@ private fun DistanceGoal(meters: Int, onMeters: (Int) -> Unit, typing: Boolean, 
     var typed by rememberSaveable { mutableStateOf<String?>(null) }
     // A step or preset while typing drops what was typed.
     fun stop() { onTyping(false); focusManager.clearFocus() }
-    ValueStepper(
+    HaloStepper(
         stringResource(R.string.glow_ready_shorter), stringResource(R.string.glow_ready_longer),
         { stop(); onMeters(StartCopy.stepDistance(meters, up = false)) }, { stop(); onMeters(StartCopy.stepDistance(meters, up = true)) },
+        Modifier.fillMaxWidth(), gap = Space.S12,
     ) {
         TypedValue(
             listOf(NumberField(StartCopy.distanceValue(meters), stringResource(R.string.glow_unit_km), length = 6, decimal = true)),
@@ -513,13 +496,17 @@ private fun DistanceGoal(meters: Int, onMeters: (Int) -> Unit, typing: Boolean, 
         }
     }
     Presets(StartCopy.DISTANCE_PRESETS, meters.takeIf { !typing }) { stop(); onMeters(it) }
-    GoalNote(StartCopy.distanceNote(if (typing) typed?.let(StartCopy::parseDistance) ?: meters else meters))
+    HaloNote(
+        StartCopy.distanceNote(if (typing) typed?.let(StartCopy::parseDistance) ?: meters else meters), textAlign = TextAlign.Center,
+    )
 }
 
 /**
  * Time: minus and plus by 5 minutes, the value in hours and minutes to tap and type (hours, then on to the minutes by
  * itself), the [presets], and when it would end if you started now, or [note] in its place (mind and body's length).
  */
+// Its stepper, presets and note go into the goal card's column and take its gaps, as every goal kind's parts do.
+@Suppress("MultipleEmitters", "ComposeMultipleEmitters")
 @Composable
 internal fun TimeGoal(
     seconds: Long,
@@ -548,9 +535,10 @@ internal fun TimeGoal(
     }
     fun stop() { onTyping(false); focusManager.clearFocus() }
     EndTyping(typing, focused, everFocused) { finish() }
-    ValueStepper(
+    HaloStepper(
         stringResource(R.string.glow_ready_shorter), stringResource(R.string.glow_ready_longer),
         { stop(); onSeconds(StartCopy.stepTime(seconds, up = false)) }, { stop(); onSeconds(StartCopy.stepTime(seconds, up = true)) },
+        Modifier.fillMaxWidth(), gap = Space.S12,
     ) {
         if (typing) {
             LaunchedEffect(Unit) { hoursFocus.requestFocus() }
@@ -568,7 +556,7 @@ internal fun TimeGoal(
                 stringResource(R.string.glow_unit_h), focused == 0, Modifier.focusRequester(hoursFocus).tracked(0), KeyboardType.Number,
                 ImeAction.Next, { minutesFocus.requestFocus() },
             )
-            Spacer(Modifier.width(10.dp))
+            Spacer(Modifier.width(Space.S8))
             TypedNumber(
                 minutes, { v -> minutes = v.copy(text = v.text.filter { it.isDigit() }.take(3)) },
                 stringResource(R.string.glow_unit_min), focused == 1,
@@ -584,7 +572,7 @@ internal fun TimeGoal(
     // Ticks with the clock, so the end time stays right while Ready shows.
     val now by produceState(LocalTime.now()) { while (true) { kotlinx.coroutines.delay(15_000); value = LocalTime.now() } }
     val ends = StartCopy.endsNear(now, shown, android.text.format.DateFormat.is24HourFormat(context))
-    GoalNote(if (typing) StartCopy.timeTypingNote(ends) else note ?: ends)
+    HaloNote(if (typing) StartCopy.timeTypingNote(ends) else note ?: ends, textAlign = TextAlign.Center)
 }
 
 /** The text a field's change would leave selected, to tell a key typed from the selection only moving. */
@@ -597,39 +585,38 @@ private fun selectedText(v: TextFieldValue): String = v.text.substring(v.selecti
 @Composable
 private fun ZoneGoal(goal: WorkoutTarget.Zones, onGoal: (WorkoutTarget.Zones) -> Unit, zones: HeartZones, maxHr: Int?,
     onYourZones: () -> Unit) {
-    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(Space.S4)) {
         Text(goal.label, color = Color.White, style = GlowType.smallValue)
-        if (maxHr != null) Text(StartCopy.zoneRangeLine(goal, zones, maxHr), color = Color.White.copy(alpha = 0.7f),
+        if (maxHr != null) Text(StartCopy.zoneRangeLine(goal, zones, maxHr), color = Ink.Secondary,
             style = GlowType.body, textAlign = TextAlign.Center)
     }
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Space.S4)) {
         (0 until Workouts.ZONES).forEach { z ->
             val on = z in goal.low..goal.high
             val color = ZONE_COLORS[z]
             Column(
-                Modifier.weight(1f).height(56.dp).clip(GlowLayout.InnerShape).background(if (on) color else ZoneOff)
+                Modifier.weight(1f).height(56.dp).clip(Corner.Inner).background(if (on) color else Greys.Raised)
                     .drawBehind { if (!on) drawRect(color, Offset(0f, size.height - 3.dp.toPx()),
                         androidx.compose.ui.geometry.Size(size.width, 3.dp.toPx())) }
-                    .pressClickable({ onGoal(WorkoutSetup.pickZone(goal, z)) }, GlowLayout.InnerShape)
+                    .pressClickable({ onGoal(WorkoutSetup.pickZone(goal, z)) }, Corner.Inner)
                     .semantics { selected = on; role = Role.Button },
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
-                val ink = if (on) Color.Black else Color.White.copy(alpha = 0.75f)
+                val ink = if (on) Color.Black else Ink.Strong
                 Text("Z${z + 1}", color = ink, style = GlowType.body.copy(fontWeight = FontWeight.SemiBold))
                 if (maxHr != null) Text("${zones.startBpm(z, maxHr)}", color = ink.copy(alpha = ink.alpha * 0.75f),
                     style = GlowType.caption)
             }
         }
     }
-    GoalNote(StartCopy.ZONE_NOTE)
+    HaloNote(StartCopy.ZONE_NOTE, textAlign = TextAlign.Center)
     Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-        PageButton(StartCopy.YOUR_ZONES, onYourZones, icon = AppIcons.PencilEdit)
+        HaloButton(StartCopy.YOUR_ZONES, onYourZones, icon = AppIcons.PencilEdit)
     }
 }
 
-/** A zone button not chosen: dark, with its colour along the bottom. */
-private val ZoneOff = Color(0xFF1A1A1D)
 
 /**
  * Intervals: "6 × 400 m" over "with 90 s rest between". Any number taps to type, then on to the next: how many, each
@@ -666,44 +653,44 @@ private fun IntervalsGoal(
         ),
         typing, onTyping, onDone = { onReps(typed(it)) }, onStart = { unit = StartCopy.repUnit(reps) },
     ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(Space.S8)) {
             Number(0)
             Times()
             Number(1)
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(Space.S8)) {
             ValueWords(stringResource(R.string.glow_ready_with))
             Number(2)
             ValueWords(stringResource(R.string.glow_ready_rest_between))
         }
         if (focused == 1) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically) {
-            Text(StartCopy.EACH_REP_IN, color = Color.White.copy(alpha = 0.6f), style = GlowType.secondary)
-            Spacer(Modifier.width(10.dp))
+            Text(StartCopy.EACH_REP_IN, color = Ink.Secondary, style = GlowType.secondary)
+            Spacer(Modifier.width(Space.S8))
             StartCopy.RepUnit.entries.forEach { e ->
-                PageChip(e.label, e == unit, { unit = e }, role = Role.RadioButton, filled = true)
-                Spacer(Modifier.width(6.dp))
+                HaloChip(e.label, { unit = e }, variant = ChipVariant.Choice, selected = e == unit, role = Role.RadioButton)
+                Spacer(Modifier.width(Space.S8))
             }
         }
     }
     if (valueOnly) {
-        if (typing) GoalNote(StartCopy.INTERVALS_TYPING)
+        if (typing) HaloNote(StartCopy.INTERVALS_TYPING, textAlign = TextAlign.Center)
         return
     }
     Presets(StartCopy.INTERVAL_PRESETS.map { it to StartCopy.structureName(it) },
         reps.copy(warmUp = false)) { onReps(it.warm(reps.warmUp)) }
-    GoalNote(StartCopy.intervalsNote(reps))
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally)) {
-        PageButton(StartCopy.SAVE_INTERVALS, { sheet = SAVE }, icon = AppIcons.Plus)
-        if (saved.isNotEmpty()) PageButton(StartCopy.SAVED_INTERVALS, { sheet = SAVED }, icon = AppIcons.FolderOpen)
+    HaloNote(StartCopy.intervalsNote(reps), textAlign = TextAlign.Center)
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Space.S8, Alignment.CenterHorizontally)) {
+        HaloButton(StartCopy.SAVE_INTERVALS, { sheet = SAVE }, icon = AppIcons.Plus)
+        if (saved.isNotEmpty()) HaloButton(StartCopy.SAVED_INTERVALS, { sheet = SAVED }, icon = AppIcons.FolderOpen)
     }
     when (sheet) {
         SAVE -> SaveIntervalsSheet(reps, { name -> onSave(name, reps); sheet = null }) { sheet = null }
-        SAVED -> PageSheet({ sheet = null }, StartCopy.SAVED_INTERVALS) {
+        SAVED -> HaloSheet({ sheet = null }, StartCopy.SAVED_INTERVALS) {
             Column {
                 saved.forEachIndexed { i, w ->
                     val s = Structure.parse(w.structure) as? Structure.Reps ?: return@forEachIndexed
-                    PageRow(w.name, value = StartCopy.structureName(s), divider = i > 0, onClick = { onReps(s); sheet = null })
+                    NavRow(w.name, value = StartCopy.structureName(s), divider = i > 0, onClick = { onReps(s); sheet = null })
                 }
             }
         }
@@ -785,22 +772,22 @@ internal fun TypedValue(
         }
     }
     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(if (typing) 10.dp else 8.dp)) {
+        verticalArrangement = Arrangement.spacedBy(if (typing) Space.S12 else Space.S8)) {
         TypedValueScope(texts.map { it.text }.takeIf { typing }, focused.takeIf { typing }, number).lines()
-        if (!typing && hint != null) Text(hint, color = Color.White.copy(alpha = GlowType.CAPTION_ALPHA), style = GlowType.caption)
+        if (!typing && hint != null) Text(hint, color = Ink.Secondary, style = GlowType.caption)
     }
 }
 
 /** Words between a typed value's numbers, on their baseline. */
 @Composable
 internal fun RowScope.ValueWords(text: String) =
-    Text(text, color = Color.White.copy(alpha = 0.7f), style = GlowType.body, modifier = Modifier.alignByBaseline())
+    Text(text, color = Ink.Secondary, style = GlowType.body, modifier = Modifier.alignByBaseline())
 
 /** The × between a count and what's counted: "6 × 400 m". */
 @Composable
 internal fun RowScope.Times() =
-    Text("×", color = Color.White.copy(alpha = 0.5f), style = GlowType.goalValueMinor,
-        modifier = Modifier.alignByBaseline().padding(horizontal = 4.dp))
+    Text("×", color = Ink.Tertiary, style = GlowType.goalValueMinor,
+        modifier = Modifier.alignByBaseline().padding(horizontal = Space.S4))
 
 private const val SAVE = 0
 private const val SAVED = 1
@@ -808,12 +795,12 @@ private const val SAVED = 1
 /** One number of the intervals to tap and type, with its [unit] after it, on the shared baseline. */
 @Composable
 internal fun RowScope.TapNumber(n: String, unit: String?, style: TextStyle, onClick: () -> Unit) {
-    Row(Modifier.alignByBaseline().clip(GlowLayout.ChipShape).clickable(onClickLabel = StartCopy.TAP_TO_TYPE,
-        onClick = onClick).padding(horizontal = 4.dp)) {
+    Row(Modifier.alignByBaseline().clip(Corner.Chip).clickable(onClickLabel = StartCopy.TAP_TO_TYPE,
+        onClick = onClick).padding(horizontal = Space.S4)) {
         Text(n, color = Color.White, style = style, modifier = Modifier.alignByBaseline())
         if (unit != null) {
-            Spacer(Modifier.width(4.dp))
-            Text(unit, color = Color.White.copy(alpha = 0.75f), style = GlowType.body, modifier = Modifier.alignByBaseline())
+            Spacer(Modifier.width(Space.S4))
+            Text(unit, color = Ink.Strong, style = GlowType.body, modifier = Modifier.alignByBaseline())
         }
     }
 }
@@ -823,13 +810,19 @@ internal fun RowScope.TapNumber(n: String, unit: String?, style: TextStyle, onCl
 private fun SaveIntervalsSheet(reps: Structure.Reps, onSave: (String) -> Unit, onDismiss: () -> Unit) {
     var name by rememberSaveable { mutableStateOf("") }
     // Board HaloSaveIntervals: the title, the rounds under it, the name, the note, then Cancel and Save.
-    PageSheet(onDismiss, StartCopy.SAVE_INTERVALS, note = StartCopy.SAVE_NOTE) {
+    HaloSheet(
+        onDismiss, StartCopy.SAVE_INTERVALS, note = StartCopy.SAVE_NOTE,
+        footer = {
+            ButtonPair(
+                stringResource(R.string.glow_cancel),
+                onDismiss,
+                stringResource(R.string.glow_save),
+                { onSave(name.trim()) },
+                rightEnabled = name.isNotBlank(),
+            )
+        },
+    ) {
         Text(StartCopy.structureName(reps), color = org.openstrap.app.ui.glow.live.LiveLabelInk, style = GlowType.body)
         PageField(name, { name = it.take(40) }, null, placeholder = StartCopy.NAME_HINT)
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            PageButton(stringResource(R.string.glow_cancel), onDismiss, Modifier.weight(1f))
-            PageButton(stringResource(R.string.glow_save), { onSave(name.trim()) }, Modifier.weight(1f),
-                enabled = name.isNotBlank(), primary = true)
-        }
     }
 }

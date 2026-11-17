@@ -1,5 +1,6 @@
 package org.openstrap.app.ui.glow
 
+import org.openstrap.app.ui.theme.Space
 import org.openstrap.app.R
 import org.openstrap.app.i18n.Strings
 import org.openstrap.app.presentation.Units
@@ -69,6 +70,7 @@ import org.openstrap.app.data.WorkoutSuggestions
 import org.openstrap.app.data.Workouts
 import org.openstrap.app.device.WorkoutState
 import org.openstrap.app.data.db.AppWorkout
+import org.openstrap.app.ui.theme.Ink
 import org.openstrap.app.ui.workout.PhoneSummary
 import org.openstrap.app.ui.components.pressClickable
 import org.openstrap.app.ui.theme.MetricColors
@@ -91,9 +93,6 @@ internal val PausedColor = Color(WorkoutColors.PAUSED_GREY)
 
 /** The Control surface (spec 2.2): round buttons, chips, pills, tiles and fields on the workout pages. */
 internal val Raised = ControlSurface
-
-/** A button's label: Body (spec 2.3), a step heavier so it reads as the thing to press. */
-private val ButtonText = GlowType.body.copy(fontWeight = FontWeight.SemiBold)
 
 /** Body in Medium, for pills, chips and short live lines. */
 internal val MediumBody = GlowType.body.copy(fontWeight = FontWeight.Medium)
@@ -141,87 +140,15 @@ internal fun activeSecondsState(r: WorkoutState.Recording): androidx.compose.run
     }
 }
 
-/** The plain panel (workout-rules.md, Tokens): #0C0D10 in the tile squircle, no light. Ready's switch rows sit on it. */
-internal val PlainPanel = Color(0xFF0C0D10)
-
-/** The workout boards' side gutter (workout-rules.md, Tokens: gutter 16). */
-internal val WORKOUT_GUTTER = 16.dp
-
-/** A full-width pill button, 56 dp like Start and Done (spec 6.3). Flat: no glow under it (Halo, one white tap). */
-@Composable
-internal fun WorkoutButton(
-    label: String, background: Color, content: Color, onClick: () -> Unit,
-    modifier: Modifier = Modifier, icon: androidx.compose.ui.graphics.vector.ImageVector? = null, height: Dp = 56.dp,
-) {
-    Row(
-        modifier.fillMaxWidth().height(height)
-            .clip(CircleShape).background(background).pressClickable(onClick, CircleShape),
-        horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically,
-    ) {
-        if (icon != null) {
-            Icon(icon, null, tint = content, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(10.dp))
-        }
-        Text(label, color = content, style = ButtonText, maxLines = 1)
-    }
-}
-
-/**
- * A workout screen: black, with the workout's colour glowing softly from the top, scrolling if it must but filling
- * the height so the controls sit at the bottom. [pinned] (Start, Done) stays on the bottom edge while the rest
- * scrolls under it, behind the pinned buttons' fade ([pinnedFade], spec 6.3), and the content ends clear of it.
- */
-@Composable
-@Suppress("UnusedParameter")
-internal fun WorkoutPage(
-    glow: Color, contentPadding: PaddingValues, scroll: Boolean = true,
-    pinned: (@Composable ColumnScope.() -> Unit)? = null,
-    /** Painted over the whole screen in place of the top glow (HIIT's phase light). */
-    backdrop: Brush? = null,
-    content: @Composable ColumnScope.() -> Unit,
-) {
-    BoxWithConstraints(Modifier.fillMaxSize().background(Color.Black)) {
-        val density = LocalDensity.current
-        var pinnedHeight by remember { mutableStateOf(0.dp) }
-        // Black, with no light on the page: the hero card carries the colour (workout-rules.md). [glow] and [backdrop]
-        // stay so the screens placing the page compile.
-        // On a wide screen the page keeps to one centred column (spec 2.4 Unfolded); the glow stays the screen's.
-        val side = GlowLayout.pageSide(maxWidth, LocalPageColumn.current, WORKOUT_GUTTER)
-        // The content ends [PinnedFade.Ramp] above the pinned buttons (their box already counts the bottom padding),
-        // or 16 dp above the bottom padding without them.
-        val padTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + contentPadding.calculateTopPadding() + 8.dp
-        val padBottom = contentPadding.calculateBottomPadding()
-        val end = if (pinned != null) (PinnedFade.listClearance(pinnedHeight) - padBottom).coerceAtLeast(16.dp) else 16.dp
-        // The live screen fits the screen instead (scroll = false): its controls never move. A scrolling page ends at
-        // the keyboard, so what's typed can scroll above it.
-        Column(
-            Modifier.fillMaxSize().then(if (scroll) Modifier.imePadding().verticalScroll(rememberScrollState()) else
-                Modifier).statusBarsPadding()
-                .padding(contentPadding).padding(start = side, end = side, top = 8.dp, bottom = end)
-                // At least the screen's height, so the controls sit at the bottom without the page scrolling.
-                .then(if (scroll) Modifier.heightIn(min = (maxHeight - padTop - padBottom - end).coerceAtLeast(0.dp)) else Modifier),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
-            content = content,
-        )
-        // Black from the bottom of the screen up to the buttons, fading out above them.
-        if (pinned != null) Column(
-            Modifier.align(Alignment.BottomCenter).fillMaxWidth().pinnedFade()
-                .padding(contentPadding).padding(start = side, end = side, bottom = 16.dp)
-                .onSizeChanged { pinnedHeight = with(density) { it.height.toDp() } },
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-            content = pinned,
-        )
-    }
-}
 
 /* ----------------------------------------- Activity tab entry ---------------------------------------- */
 
 /** Where a suggestion sits: a quiet panel, or on Today an unlit strip ([strip]). */
 @Composable
 private fun OfferBox(strip: Boolean, content: @Composable ColumnScope.() -> Unit) {
-    if (!strip) QuietPanel(content = content)
-    else PictureCard(MetricColors.heart, Modifier.fillMaxWidth()) {
-        Column(verticalArrangement = Arrangement.spacedBy(14.dp), content = content)
+    if (!strip) HaloCard(content = content)
+    else HaloCard {
+        Column(verticalArrangement = Arrangement.spacedBy(Space.S12), content = content)
     }
 }
 
@@ -232,21 +159,20 @@ internal fun SuggestionPanel(
 ) {
     OfferBox(strip) {
         Row(verticalAlignment = Alignment.Top) {
-            Icon(AppIcons.Heartbeat, null, tint = ZONE_COLORS[s.zone], modifier = Modifier.padding(top = 2.dp).size(20.dp))
-            Spacer(Modifier.width(10.dp))
+            Icon(AppIcons.Heartbeat, null, tint = ZONE_COLORS[s.zone], modifier = Modifier.padding(top = Space.S2).size(20.dp))
+            Spacer(Modifier.width(Space.S8))
             Column {
                 Text(stringResource(R.string.glow_workout_suggestion_title), color = Color.White, style = GlowType.cardTitle, maxLines = 1)
                 val day = dayName(Instant.ofEpochSecond(s.start).atZone(ZoneId.systemDefault()).toLocalDate())
                 val times = Ranges.times(s.start, s.end)
-                PageNote(stringResource(R.string.glow_workout_suggestion_text, day, times, s.zone + 1, s.averageHeartRate))
+                HaloNote(stringResource(R.string.glow_workout_suggestion_text, day, times, s.zone + 1, s.averageHeartRate))
             }
         }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            val save = stringResource(R.string.glow_workout_suggestion_save)
-            val dismiss = stringResource(R.string.glow_workout_suggestion_dismiss)
-            Box(Modifier.weight(1f)) { WorkoutButton(save, Color.White, Color.Black, onSave, height = 48.dp) }
-            Box(Modifier.weight(1f)) { WorkoutButton(dismiss, Raised, Color.White, onDismiss, height = 48.dp) }
-        }
+        ButtonPair(
+            stringResource(R.string.glow_workout_suggestion_dismiss), onDismiss, stringResource(R.string.glow_workout_suggestion_save),
+            onSave,
+            size = HaloButtonSize.Card,
+        )
     }
 }
 
@@ -285,16 +211,27 @@ fun GlowAddWorkoutScreen(
         return
     }
     val ready = minuteHr != null && series.size >= 2
-    PageSheet(onBack, stringResource(R.string.glow_workout_add_title)) {
+    HaloSheet(
+        onBack, stringResource(R.string.glow_workout_add_title),
+        footer = {
+            ButtonPair(
+                stringResource(R.string.glow_cancel),
+                onBack,
+                stringResource(R.string.glow_save),
+                { onSave(from, to, sport) },
+                rightEnabled = ready,
+            )
+        },
+    ) {
         if (minuteHr == null) {
-            PageNote(stringResource(R.string.glow_workout_loading))
+            HaloNote(stringResource(R.string.glow_workout_loading))
         } else if (series.size < 2) {
-            PageNote(stringResource(R.string.glow_workout_add_no_heart))
+            HaloNote(stringResource(R.string.glow_workout_add_no_heart))
         } else {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(Space.S8)) {
                 Text(stringResource(R.string.glow_workout_add_when), color = GlowType.noteColor, style = GlowType.secondary,
-                    modifier = Modifier.padding(horizontal = 4.dp))
-                Column(Modifier.padding(horizontal = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    modifier = Modifier.padding(horizontal = Space.S4))
+                Column(Modifier.padding(horizontal = Space.S4), verticalArrangement = Arrangement.spacedBy(Space.S4)) {
                     Text(Ranges.times(from, to), color = Color.White, style = GlowType.figure, maxLines = 1)
                     val inside = series.filter { it.first in from until to }.map { it.second }
                     Text(
@@ -306,21 +243,16 @@ fun GlowAddWorkoutScreen(
             }
             RangeChart(series, first, last, from, to, maxHr) { f, t -> from = f; to = t }
             Row(Modifier.fillMaxWidth()) {
-                PageNote(clock(first))
+                HaloNote(clock(first))
                 Spacer(Modifier.weight(1f))
-                PageNote(clock(last))
+                HaloNote(clock(last))
             }
             Text(stringResource(R.string.glow_workout_add_hint), color = GlowType.footnoteColor, style = GlowType.footnote)
-            PageRows {
-                PageRow(stringResource(R.string.glow_workout_add_sport), Workouts.sportName(sport),
+            HaloCard(fill = CardFill.Rows) {
+                NavRow(stringResource(R.string.glow_workout_add_sport), Workouts.sportName(sport),
                     onClick = { picking = true }, divider = false)
-                PageRow(stringResource(R.string.glow_workout_add_day), dayName(date))
+                NavRow(stringResource(R.string.glow_workout_add_day), dayName(date))
             }
-        }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            PageButton(stringResource(R.string.glow_cancel), onBack, Modifier.weight(1f))
-            PageButton(stringResource(R.string.glow_save), { onSave(from, to, sport) }, Modifier.weight(1f), enabled = ready,
-                primary = true)
         }
     }
 }
@@ -391,20 +323,36 @@ private fun RangeChart(series: List<Pair<Long, Int>>, first: Long, last: Long, f
 /** Done right after the end, and Delete workout behind a question. */
 @Composable
 internal fun ColumnScope.SummaryActions(justEnded: Boolean, onDone: () -> Unit, onDelete: () -> Unit) {
-    if (justEnded) WorkoutButton(stringResource(R.string.glow_done), Color.White, Color.Black, onDone)
-    DeleteWorkout(stringResource(R.string.glow_workout_delete_phone), onDelete, Modifier.align(Alignment.CenterHorizontally))
+    if (justEnded) {
+        HaloButton(stringResource(R.string.glow_done), onDone, Modifier.fillMaxWidth(), variant = HaloButtonVariant.Primary)
+    }
+    DeleteWorkout(stringResource(R.string.glow_workout_delete_phone), onDelete, Modifier.align(Alignment.CenterHorizontally), wide = true)
 }
 
-/** "Delete this workout" as a warn coloured button with a trash icon, asking first; [what] says what deleting it does. */
+/**
+ * Delete workout (boards HaloSummaryRun, HaloPastWorkout): a destructive button with a trash icon, asking first; [what]
+ * says what deleting it does. [wide] fills the width at 56 (a screen that ends on it); otherwise it is a small pill
+ * centred under what it deletes.
+ */
 @Composable
-internal fun DeleteWorkout(what: String, onDelete: () -> Unit, modifier: Modifier = Modifier) {
+internal fun DeleteWorkout(what: String, onDelete: () -> Unit, modifier: Modifier = Modifier, wide: Boolean = false) {
     var confirmDelete by rememberSaveable { mutableStateOf(false) }
-    PageButton(
-        stringResource(R.string.glow_workout_delete), { confirmDelete = true }, modifier.fillMaxWidth(),
-        destructive = true, icon = AppIcons.Trash,
-    )
+    val tap = { confirmDelete = true }
+    if (wide) {
+        HaloButton(
+            stringResource(R.string.glow_workout_delete), tap, modifier.fillMaxWidth(),
+            variant = HaloButtonVariant.Destructive, icon = AppIcons.Trash,
+        )
+    } else {
+        Box(modifier.fillMaxWidth().padding(top = Space.S4), contentAlignment = Alignment.Center) {
+            HaloButton(
+                stringResource(R.string.glow_workout_delete), tap,
+                variant = HaloButtonVariant.Destructive, size = HaloButtonSize.Card, icon = AppIcons.Trash,
+            )
+        }
+    }
     if (confirmDelete) {
-        PageConfirm(
+        HaloConfirmSheet(
             stringResource(R.string.glow_workout_delete_confirm), what, stringResource(R.string.glow_delete),
             { confirmDelete = false; onDelete() }, { confirmDelete = false },
             destructive = true,
@@ -450,11 +398,6 @@ internal fun TrimSheet(trim: WorkoutTrim) {
     )
 }
 
-/** "Trim" in a heart rate card's title row: a small button on the card's glass, scissors before the word. */
-@Composable
-internal fun TrimButton(onClick: () -> Unit) =
-    PageButton(stringResource(R.string.glow_trim), onClick, size = ButtonSize.Row, icon = AppIcons.Scissors, onCard = true)
-
 /**
  * What the app did to the workout's times, with Undo as a button: an early end it proposed (in a car, or when you'd
  * stopped), or a trim. Nothing while they're as recorded. [onCard] puts Undo on a card's glass.
@@ -462,11 +405,11 @@ internal fun TrimButton(onClick: () -> Unit) =
 @Composable
 internal fun TrimNote(summary: PhoneSummary, onUndo: () -> Unit, modifier: Modifier = Modifier, onCard: Boolean = true) {
     val text = trimNote(summary) ?: return
-    Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(text, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary, modifier = Modifier.weight(1f))
-        PageButton(
-            stringResource(R.string.glow_workout_undo), onUndo, size = ButtonSize.Row, icon = AppIcons.ArrowCounterClockwise,
-            onCard = onCard,
+    Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Space.S12), verticalAlignment = Alignment.CenterVertically) {
+        HaloNote(text, Modifier.weight(1f))
+        HaloButton(
+            stringResource(R.string.glow_workout_undo), onUndo, size = HaloButtonSize.Small, icon = AppIcons.ArrowCounterClockwise,
+            variant = if (onCard) HaloButtonVariant.Glass else HaloButtonVariant.Secondary,
         )
     }
 }
@@ -496,7 +439,7 @@ internal fun trimNote(summary: PhoneSummary, strings: Strings = Strings.app): St
 @Composable
 internal fun TrimSheet(summary: PhoneSummary, onSave: (Long, Long) -> Unit, onDismiss: () -> Unit) {
     val note = SummaryCopy.trimRecorded(clock(summary.recordedStart), clock(summary.recordedEnd))
-    PageSheet(onDismiss, stringResource(R.string.glow_workout_trim_title), note = note) {
+    HaloSheet(onDismiss, stringResource(R.string.glow_workout_trim_title), note = note) {
         WorkoutTrimBar(summary, onSave, onDismiss)
     }
 }
@@ -520,7 +463,7 @@ internal fun WorkoutTrimBar(summary: PhoneSummary, onSave: (Long, Long) -> Unit,
         val n = ((last - first) / step + 1).toInt().coerceAtLeast(2)
         org.openstrap.app.data.Summaries.bucketMeans(summary.recorded, n, { ((it.timestamp - first) / step).toInt() }, { it.bpm.toFloat() })
     }
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Space.S16)) {
         Text(SummaryCopy.trimHeader(clock(from), clock(to), to - from), color = Color.White, style = GlowType.body)
         // Recorded is all it can reach for now: the core and the reach are one, so the bar only trims.
         TrimBar(
@@ -528,11 +471,13 @@ internal fun WorkoutTrimBar(summary: PhoneSummary, onSave: (Long, Long) -> Unit,
             colorOf = { v -> WorkoutRecorder.liveZone(v.toInt(), a.maxHeartRate, heartZones)?.let { ZONE_COLORS[it] } },
             onChange = { f, t -> from = f; to = t },
         )
-        Text(SummaryCopy.TRIM_HINT, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary)
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            PageButton(stringResource(R.string.glow_cancel), onCancel, Modifier.weight(1f))
-            PageButton(stringResource(R.string.glow_save), { onSave(from, to) }, Modifier.weight(1f), primary = true)
-        }
+        Text(SummaryCopy.TRIM_HINT, color = Ink.Secondary, style = GlowType.secondary)
+        ButtonPair(
+            stringResource(R.string.glow_cancel),
+            onCancel,
+            stringResource(R.string.glow_save),
+            { onSave(from, to) },
+        )
     }
 }
 

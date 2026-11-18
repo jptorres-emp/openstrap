@@ -45,7 +45,9 @@ import org.openstrap.app.data.WorkoutSetup
 import org.openstrap.app.data.WorkoutSetup.GoalKind
 import org.openstrap.app.data.WorkoutTarget
 import org.openstrap.app.data.Workouts
+import org.openstrap.app.ui.components.HapticEvent
 import org.openstrap.app.ui.components.pressClickable
+import org.openstrap.app.ui.components.rememberHaptics
 import org.openstrap.app.ui.theme.Corner
 import org.openstrap.app.ui.theme.Greys
 import org.openstrap.app.ui.theme.IconSize
@@ -159,12 +161,13 @@ internal fun kindName(k: GoalKind, type: Int): String = when (k) {
 /** The zone buttons in the hero: five, the chosen zone or range white with black figures, the rest a light glass. */
 @Composable
 internal fun ZoneButtons(goal: WorkoutTarget.Zones, onGoal: (WorkoutTarget.Zones) -> Unit) {
+    val haptics = rememberHaptics()
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Space.S4)) {
         for (z in 0 until Workouts.ZONES) {
             val on = z in goal.low..goal.high
             Box(
                 Modifier.weight(1f).height(IconSize.TileM).clip(Corner.Inner).background(if (on) Color.White else Ink.Line)
-                    .pressClickable({ onGoal(WorkoutSetup.pickZone(goal, z)) }, Corner.Inner)
+                    .pressClickable({ haptics.perform(HapticEvent.ScrubMark); onGoal(WorkoutSetup.pickZone(goal, z)) }, Corner.Inner)
                     .semantics { selected = on },
                 contentAlignment = Alignment.Center,
             ) {

@@ -223,11 +223,9 @@ object StartCopy {
     fun indoorLine(type: Int, strings: Strings = Strings.app): String =
         strings.get(if (type in SportTypes.ON_FOOT) R.string.ready_outdoor_off_steps else R.string.ready_outdoor_off)
 
-    /** Start on Ready, naming the sport: "Start run", and "Start treadmill run" on the treadmill. */
+    /** Start on Ready, naming the sport as its tile does: "Start run" indoors too, the Outdoor switch says which. */
     fun startLabel(type: Int, strings: Strings = Strings.app): String =
-        if (type == TREADMILL) strings.get(R.string.workout_start_start_treadmill) else WorkoutCopy.startLabel(type)
-
-    private const val TREADMILL = 2
+        WorkoutCopy.startLabel(Workouts.sidesOf(type)?.outdoor ?: type, strings)
 
     /* -------------------------------------------- Ready's goal ---------------------------------------------- */
 

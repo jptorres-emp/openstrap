@@ -217,6 +217,7 @@ internal enum class TagVariant {
  * The tag: a few words about what it sits beside, 22 high, 11 semibold. [color] is the data's colour for a filled, text
  * or status tag. With [onClick] (an outline tag) tapping it explains it.
  */
+@Suppress("CyclomaticComplexMethod") // one branch per TagVariant, kept together so each look reads in one place
 @Composable
 internal fun HaloTag(
     text: String,

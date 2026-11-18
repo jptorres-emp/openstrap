@@ -15,6 +15,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import org.openstrap.app.ui.components.HapticEvent
+import org.openstrap.app.ui.components.rememberHaptics
 import org.openstrap.app.ui.theme.AppIcons
 import org.openstrap.app.ui.theme.IconSize
 import org.openstrap.app.ui.theme.Space
@@ -73,11 +75,15 @@ internal fun HaloStepper(
     value: @Composable RowScope.() -> Unit,
 ) {
     val sheet = size == StepperSize.Sheet
+    // Each step clicks, like a notch on the ruler.
+    val haptics = rememberHaptics()
+    val lessTap = { haptics.perform(HapticEvent.ScrubMark); onLess() }
+    val moreTap = { haptics.perform(HapticEvent.ScrubMark); onMore() }
     Row(
         modifier, verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(if (sheet) gap else StepperSpec.RowGap),
     ) {
-        HaloIconButton(AppIcons.Minus, less, onLess, size = StepperSpec.Button, enabled = lessEnabled)
+        HaloIconButton(AppIcons.Minus, less, lessTap, size = StepperSpec.Button, enabled = lessEnabled)
         if (sheet) {
             Row(
                 Modifier.weight(1f), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically,
@@ -88,7 +94,7 @@ internal fun HaloStepper(
                 Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically, content = value)
             }
         }
-        HaloIconButton(AppIcons.Plus, more, onMore, size = StepperSpec.Button, enabled = moreEnabled)
+        HaloIconButton(AppIcons.Plus, more, moreTap, size = StepperSpec.Button, enabled = moreEnabled)
     }
 }
 

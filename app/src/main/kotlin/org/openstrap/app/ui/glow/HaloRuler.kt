@@ -9,6 +9,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -17,6 +18,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.CornerRadius
@@ -40,6 +42,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import org.openstrap.app.ui.components.HapticEvent
 import org.openstrap.app.ui.components.rememberHaptics
@@ -57,6 +61,9 @@ import kotlin.math.roundToInt
 
 /** The ruler's measurements. */
 internal object RulerSpec {
+    /** Room above the needle, so it stands apart from the number it sets. */
+    val TopGap = 8.dp
+
     /** The whole strip: the needle and ticks above, the labels under them. */
     val Height = 54.dp
 
@@ -101,16 +108,28 @@ internal fun HaloRuler(
     val stepPx = with(LocalDensity.current) { stepWidth.toPx() }
     val position = remember { Animatable(index.toFloat()) }
     var dragging by remember { mutableStateOf(false) }
+    // A tapped label slides the ruler there under the finger's say-so, so it ticks too; a value set from outside doesn't.
+    var tapped by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val haptics = rememberHaptics()
     val onPick by rememberUpdatedState(onIndex)
     val now by rememberUpdatedState(index)
     // A value set from outside (a label, a tab, last time's) slides the ruler there; a drag moves it itself.
-    LaunchedEffect(index) { if (!dragging) position.animateTo(index.toFloat(), spring()) }
+    LaunchedEffect(index) {
+        if (!dragging) position.animateTo(index.toFloat(), spring())
+        tapped = false
+    }
+    val labelled by rememberUpdatedState(labels)
+    // A click for each step that passes the needle while you move it, a firmer one on a labelled tick.
+    LaunchedEffect(Unit) {
+        snapshotFlow { position.value.roundToInt() }.distinctUntilChanged().drop(1).collect { step ->
+            if (dragging || tapped) haptics.perform(if (step in labelled) HapticEvent.ScrubMark else HapticEvent.ScrubStep)
+        }
+    }
     val measurer = rememberTextMeasurer()
     val labelStyle = GlowType.noteSmall
     Spacer(
-        modifier.fillMaxWidth().height(RulerSpec.Height)
+        modifier.padding(top = RulerSpec.TopGap).fillMaxWidth().height(RulerSpec.Height)
             .semantics {
                 if (description != null) contentDescription = description
                 stateDescription = valueText
@@ -136,10 +155,7 @@ internal fun HaloRuler(
                     val target = at
                     scope.launch { position.snapTo(target) }
                     val i = at.roundToInt()
-                    if (i != now) {
-                        haptics.perform(HapticEvent.ScrubStep)
-                        onPick(i)
-                    }
+                    if (i != now) onPick(i)
                 }
             }
             .pointerInput(labels, stepPx) {
@@ -147,7 +163,10 @@ internal fun HaloRuler(
                 detectTapGestures { tap ->
                     val at = position.value + (tap.x - size.width / 2f) / stepPx
                     val nearest = labels.keys.minByOrNull { abs(it - at) } ?: return@detectTapGestures
-                    if (abs(nearest - at) * stepPx <= reach && nearest != now) onPick(nearest)
+                    if (abs(nearest - at) * stepPx <= reach && nearest != now) {
+                        tapped = true
+                        onPick(nearest)
+                    }
                 }
             }
             // Drawn in its own layer, so the fade at the edges takes the ticks and labels out with it.

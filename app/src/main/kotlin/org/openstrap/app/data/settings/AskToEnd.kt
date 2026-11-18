@@ -2,16 +2,22 @@ package org.openstrap.app.data.settings
 
 import org.openstrap.app.data.Workouts
 
+/** Most workouts ask after 8 still minutes out of the box. */
+private const val MOST_MINUTES = 8
+
+/** Games have long breaks between points and periods, so they wait 15. */
+private const val GAMES_MINUTES = 15
+
 /**
  * The groups of sports "Ask to end when I stop" has a time for (Workouts settings page, HaloWorkoutSettings board),
  * each with its time out of the box in minutes, null for Off.
  */
 enum class AskToEndGroup(val defaultMinutes: Int?) {
     /** Runs, rides, walks, strength, HIIT and everything else not below. */
-    Most(8),
+    Most(MOST_MINUTES),
 
     /** Padel, tennis and the other games with long breaks ([Workouts.Family.Games]). */
-    Games(15),
+    Games(GAMES_MINUTES),
 
     /** Yoga and Pilates ([Workouts.Family.MindBody]): long still moments are part of it. */
     MindBody(null),

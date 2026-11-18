@@ -284,8 +284,18 @@ object Workouts {
      */
     fun startable(type: Int): Int? {
         if (type == GENERIC_ACTIVITY || type !in SPORT_NAMES) return null
-        return (STRAP_IDS[type] ?: type).takeIf { it !in NOT_ON_STRAP }
+        return (STRAP_IDS[type] ?: type).takeIf { it !in NOT_ON_STRAP || it in INDOOR_SIDES_OFF_STRAP }
     }
+
+    /** Indoor sides started as their outdoor sport on the strap, which has no id of its own for them. */
+    private val INDOOR_SIDES_OFF_STRAP = setOf(SportTypes.INDOOR_WALK)
+
+    /**
+     * The sport id a session of [type] is sent to the strap as: the outdoor sport for an indoor side the strap doesn't
+     * list (Indoor walk is told Walk, which the strap acks and keeps no session for, the same as an indoor walk would
+     * get), else [type] itself. The workout is still saved as [type].
+     */
+    fun strapType(type: Int): Int = if (type in INDOOR_SIDES_OFF_STRAP) sidesOf(type)?.outdoor ?: type else type
 
     /**
      * Sports kept for naming workouts already recorded (by the strap, Zepp or an import) but not offered for new ones:
@@ -318,10 +328,11 @@ object Workouts {
     val SIDES = listOf(
         Sides(1, 2, R.string.core_workouts_side_outdoor, R.string.core_workouts_side_treadmill),
         Sides(4, 8, R.string.core_workouts_side_outdoor, R.string.core_workouts_side_indoor),
-        // Open water and indoor walk aren't on the strap ([NOT_ON_STRAP]): Swim is the pool and Walk is outdoors for now.
-        // Most swims are in a pool.
+        // Indoor walk isn't on the strap's list, but the strap keeps no session for a walk either way: the phone records
+        // both from live heart rate, and the strap is told Walk ([strapType]).
+        Sides(3, 40, R.string.core_workouts_side_outdoor, R.string.core_workouts_side_indoor),
+        // Open water isn't on the strap ([NOT_ON_STRAP]): Swim is the pool for now. Most swims are in a pool.
         // Sides(7, 6, R.string.core_workouts_side_open_water, R.string.core_workouts_side_pool, indoorByDefault = true),
-        // Sides(3, 40, R.string.core_workouts_side_outdoor, R.string.core_workouts_side_indoor),
     )
 
     /** The [Sides] [type] is one of, or null for a sport with one kind. */

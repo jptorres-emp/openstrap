@@ -54,8 +54,11 @@ internal fun colorFamily(
     type: Int,
     family: org.openstrap.app.data.Workouts.Family = org.openstrap.app.data.Workouts.family(type),
 ): org.openstrap.app.data.Workouts.Family =
-    if (family == org.openstrap.app.data.Workouts.family(type)) org.openstrap.app.data.Workouts.family(org.openstrap.app.data.Workouts.tileType(type))
-    else family
+    if (family == org.openstrap.app.data.Workouts.family(type)) {
+        org.openstrap.app.data.Workouts.family(org.openstrap.app.data.Workouts.tileType(type))
+    } else {
+        family
+    }
 
 /** Rest and recovery, in any family (workout-rules.md, Colour): strength rest, HIIT rest. */
 internal val RestTeal = MetricColors.readiness

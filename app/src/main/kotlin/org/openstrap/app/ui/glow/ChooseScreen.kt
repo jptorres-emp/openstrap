@@ -476,7 +476,8 @@ private fun FamilyTile(type: Int, selected: Boolean, modifier: Modifier = Modifi
 @Composable
 private fun FoundRow(type: Int, divider: Boolean, onClick: () -> Unit) = HaloRow(
     Workouts.sportName(type), lead = RowLead.tile(SportIcons.of(type), sportColor(type)), titleSuffix = workoutTags(type),
-    line = { RowLine(groupTitle(SportGroups.of(Workouts.tileType(type)))) }, trail = { RowTrail.Chevron() }, onClick = onClick, divider = divider,
+    line = { RowLine(groupTitle(SportGroups.of(Workouts.tileType(type)))) }, trail = { RowTrail.Chevron() },
+    onClick = onClick, divider = divider,
 )
 
 /** [types] as rows in one panel, each with its family, in the order given. */

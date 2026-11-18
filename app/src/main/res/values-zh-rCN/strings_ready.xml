@@ -48,8 +48,8 @@
     <string name="ready_outdoor_gps_ready">GPS 记录距离和路线，精度 %1$d 米</string>
     <string name="ready_outdoor_gps_close">GPS 记录距离和路线，目前精度 %1$d 米</string>
     <string name="ready_outdoor_gps_finding">GPS 记录距离和路线，正在定位</string>
-    <string name="ready_outdoor_off_steps">关闭：室内，距离按步数计算</string>
-    <string name="ready_outdoor_off">关闭：室内，记录时间和心率</string>
+    <string name="ready_outdoor_off_steps">距离按步数计算</string>
+    <string name="ready_outdoor_off">室内不记录距离</string>
     <string name="ready_location_off">位置信息已关闭。</string>
     <string name="ready_location_turn_on">开启</string>
 </resources>

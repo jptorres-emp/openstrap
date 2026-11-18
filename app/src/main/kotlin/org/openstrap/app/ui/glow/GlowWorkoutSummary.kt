@@ -148,10 +148,17 @@ fun GlowWorkoutSummaryScreen(
     // Share and Done stay on the bottom edge; Delete waits at the end of the page. Nothing to share until the workout
     // has loaded.
     HaloPageColumn(contentPadding, pinned = {
-            if (a != null && hero != null) ButtonPair(
-                stringResource(R.string.glow_share), { sharing = true }, stringResource(R.string.glow_done), done,
-                size = HaloButtonSize.Main, leftIcon = AppIcons.UploadSimple,
-            )
+            // Share is a round icon at Done's height and Done takes the rest of the row (board HaloSummaryRun).
+            if (a != null && hero != null) Row(
+                Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Space.S12),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                HaloIconButton(AppIcons.UploadSimple, stringResource(R.string.glow_share), { sharing = true }, size = HaloIconSize.Main)
+                HaloButton(
+                    stringResource(R.string.glow_done), done, Modifier.weight(1f), variant = HaloButtonVariant.Primary,
+                    size = HaloButtonSize.Main,
+                )
+            }
             else HaloButton(stringResource(R.string.glow_done), done, Modifier.fillMaxWidth(), variant = HaloButtonVariant.Primary, size = HaloButtonSize.Main)
         }) {
         // Back, the sport and when, with Trim at the right (board HaloSummaryRun). Done is only on the bottom edge,

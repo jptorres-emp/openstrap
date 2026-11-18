@@ -140,7 +140,9 @@ fun GlowWorkoutDetailScreen(
                 val sentence = WorkoutDetailCopy.sentence(w.sportType, shown.activeSeconds, w.trainingLoad, usual, zones)
                 val title = stringResource(R.string.glow_summary_figure_time)
                 val hero = SummaryHero(dotClock(shown.activeSeconds), "", sentence = sentence, title = title)
-                SummaryHeroCard(hero, sportFamilyColor(w.sportType, family), family = family, note = Ranges.times(shown.shownStart, shown.end))
+                SummaryHeroCard(
+                    hero, sportFamilyColor(w.sportType, family), family = family, note = Ranges.times(shown.shownStart, shown.end),
+                )
             }
             if (shown.heartRate.isNotEmpty() || w.averageHeartRate != null) item { HeartRateCard(shown) }
             val activeKcal = Workouts.activeKcal(shown, bmrPerMinute)

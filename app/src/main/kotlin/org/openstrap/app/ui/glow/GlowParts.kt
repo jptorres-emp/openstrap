@@ -1,30 +1,18 @@
 package org.openstrap.app.ui.glow
 
-import org.openstrap.app.ui.theme.Space
 import org.openstrap.app.ui.theme.Greys
-import androidx.compose.material3.ripple
-import androidx.compose.ui.draw.clip
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.selection.toggleable
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.material3.Text
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
@@ -69,32 +57,19 @@ fun DotMatrixText(
 /* ------------------------------------------------------------------------------------------------ */
 
 /**
- * The pill switch (HaloRewardsSettingsRules board, B3), 50 by 30: white with a black knob when on, #2A2C33 with a grey
- * knob (#8A909A) when off. Never a colour: a switch track is white when on, not a sport's (workout rules section 5,
+ * The platform's switch (Material 3), in the app's colours: a white track with a black knob when on, [Greys.Control]
+ * with a grey knob when off. Never a colour: a switch track is white when on, not a sport's (workout rules section 5,
  * guarded by HaloRulesTest).
  */
 @Composable
 fun GlowSwitch(checked: Boolean, onCheckedChange: (Boolean) -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true) {
-    val track by animateColorAsState(if (checked) Color.White else Greys.Control, label = "glow switch track")
-    val knobColor by animateColorAsState(if (checked) Color.Black else Ink.Tertiary, label = "glow switch knob colour")
-    val knob by animateDpAsState(if (checked) 20.dp else 0.dp, spring(dampingRatio = 0.6f, stiffness = 500f), label = "glow switch knob")
-    Box(
-        modifier
-            .size(50.dp, 30.dp)
-            .alpha(if (enabled) 1f else 0.4f)
-            // Clipped so the press ripple stays inside the pill.
-            .clip(CircleShape)
-            .background(track)
-            .toggleable(checked, enabled = enabled, interactionSource = null, indication = ripple(color = Color.Gray), role = Role.Switch, onValueChange = onCheckedChange)
-            .padding(Space.S2),
-    ) {
-        Box(
-            Modifier
-                .offset(x = knob)
-                .size(24.dp)
-                .background(knobColor, CircleShape),
-        )
-    }
+    Switch(
+        checked, onCheckedChange, modifier, enabled = enabled,
+        colors = SwitchDefaults.colors(
+            checkedThumbColor = Color.Black, checkedTrackColor = Color.White, checkedBorderColor = Color.Transparent,
+            uncheckedThumbColor = Ink.Tertiary, uncheckedTrackColor = Greys.Control, uncheckedBorderColor = Color.Transparent,
+        ),
+    )
 }
 
 /** How wide a number of [digits] digits is in [dot] dots, so a space can be sized for the widest it will show. */

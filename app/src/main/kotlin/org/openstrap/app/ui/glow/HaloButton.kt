@@ -195,6 +195,9 @@ internal enum class HaloIconSize(val size: Dp, val glyph: Dp) {
     Default(ButtonSpec.IconDefault, ButtonSpec.GlyphDefault),
     Live(ButtonSpec.IconLive, ButtonSpec.GlyphLive),
     Pause(ButtonSpec.IconPause, ButtonSpec.GlyphPause),
+
+    /** As tall as a Main button, beside one on the bottom edge: the summary's Share next to Done. */
+    Main(ButtonSpec.HeightMain, ButtonSpec.GlyphLive),
 }
 
 /**

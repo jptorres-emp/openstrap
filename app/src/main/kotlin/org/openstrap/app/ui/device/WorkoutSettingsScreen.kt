@@ -1,3 +1,5 @@
+@file:Suppress("MatchingDeclarationName")
+
 package org.openstrap.app.ui.device
 
 import androidx.activity.compose.BackHandler

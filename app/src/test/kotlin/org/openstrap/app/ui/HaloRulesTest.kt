@@ -46,17 +46,18 @@ class HaloRulesTest {
 
     /**
      * Workout rules section 5 and settings rules B3 (switches): on is a white track with a black knob, off is #2C2C2C
-     * with a grey knob, never a sport's colour. So the one switch is GlowSwitch, it takes no accent, and Material's
-     * Switch is not used.
+     * with a grey knob, never a sport's colour. So the one switch is GlowSwitch, which wraps Material's Switch in those
+     * colours, it takes no accent, and Material's Switch is used nowhere else.
      */
     @Test fun `switches have the white track`() {
-        val found = ui.find(Regex("""(?<![A-Za-z])Switch\(|\bSwitchDefaults\b|\bSwitchColors\b"""))
+        val found = ui.find(Regex("""(?<![A-Za-z])Switch\(|\bSwitchDefaults\b|\bSwitchColors\b""")).filterNot { it.startsWith("glow/GlowParts.kt:") }
         if (found.isNotEmpty()) fail("A switch is GlowSwitch (workout rules section 5):\n" + found.joinToString("\n"))
         val accent = ui.calls(Regex("GlowSwitch")).filter { Regex("""\baccent\s*=""").containsMatchIn(it.third) }
         if (accent.isNotEmpty()) fail("A switch track is never a sport colour (workout rules section 5):\n" + accent.joinToString("\n") { "${it.first}:${it.second}" })
         val body = ui.code("glow/GlowParts.kt").substringAfter("fun GlowSwitch(").substringBefore("\n}\n")
-        assertTrue("GlowSwitch's track is white when on, Greys.Control when off", "if (checked) Color.White else Greys.Control" in body)
-        assertTrue("GlowSwitch's knob is black when on", "if (checked) Color.Black" in body)
+        assertTrue("GlowSwitch's track is white when on", "checkedTrackColor = Color.White" in body)
+        assertTrue("GlowSwitch's track is Greys.Control when off", "uncheckedTrackColor = Greys.Control" in body)
+        assertTrue("GlowSwitch's knob is black when on", "checkedThumbColor = Color.Black" in body)
     }
 
     /**

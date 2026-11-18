@@ -20,7 +20,8 @@ class SportNamingTest {
         assertEquals("Cycling", Workouts.sportName(8))
         // A sport with one kind keeps its own name.
         assertEquals("Strength training", Workouts.sportName(52))
-        assertEquals("Indoor walk", Workouts.sportName(40))
+        assertEquals("Walk", Workouts.sportName(40))
+        assertEquals("Indoor walk", Workouts.exactName(40))
     }
 
     @Test fun `the exact name stays for exports and search`() {
@@ -33,7 +34,8 @@ class SportNamingTest {
     @Test fun `only the indoor side gets the Indoor tag`() {
         assertTrue(Workouts.isIndoorSide(2))
         assertTrue(Workouts.isIndoorSide(8))
-        listOf(1, 4, 3, 40, 6, 52).forEach { assertFalse("$it", Workouts.isIndoorSide(it)) }
+        assertTrue(Workouts.isIndoorSide(40))
+        listOf(1, 4, 3, 6, 52).forEach { assertFalse("$it", Workouts.isIndoorSide(it)) }
     }
 
     @Test fun `search still finds Treadmill and Indoor cycling, as the indoor side`() {
@@ -50,5 +52,13 @@ class SportNamingTest {
         // A family the structure gave the workout keeps its own colour.
         assertEquals(familyColor(Workouts.Family.Intervals), sportFamilyColor(2, Workouts.Family.Intervals))
         assertEquals(familyColor(Workouts.Family.Strength), sportFamilyColor(52))
+    }
+
+    @Test fun `walk has an indoor side, sent to the strap as walk`() {
+        assertTrue(Workouts.isIndoorSide(40))
+        assertEquals(3, Workouts.tileType(40))
+        assertEquals(3, Workouts.strapType(40))
+        assertEquals(2, Workouts.strapType(2))
+        assertEquals(40, Workouts.startable(40))
     }
 }

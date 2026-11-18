@@ -122,8 +122,8 @@ class StartCopyTest {
         assertEquals("GPS for distance and a map, 48 m so far", StartCopy.outdoorNote(48f))
         assertEquals("GPS for distance and a map, ready to 8 m", StartCopy.outdoorNote(8f))
         assertEquals("GPS for distance and a map, ready to 6 m", StartCopy.outdoorNote(6.4f))
-        assertEquals("Off: indoors, distance from your steps", StartCopy.indoorLine(2))
-        assertEquals("Off: indoors, time and heart rate", StartCopy.indoorLine(8))
+        assertEquals("Distance from your steps", StartCopy.indoorLine(2))
+        assertEquals("No distance indoors", StartCopy.indoorLine(8))
     }
 
     @Test fun `what the strap will do, without banned punctuation`() {
@@ -140,7 +140,7 @@ class StartCopyTest {
     }
 
     @Test fun `Start is named for the sport`() {
-        assertEquals("Start treadmill run", StartCopy.startLabel(2))
+        assertEquals("Start run", StartCopy.startLabel(2))
         assertEquals("Start run", StartCopy.startLabel(1))
     }
 
@@ -174,8 +174,8 @@ class StartCopyTest {
     }
 
     @Test fun `no goal says what's recorded`() {
-        assertEquals("No goal, time, distance and heart rate", StartCopy.noGoalNote(hasDistance = true))
-        assertEquals("No goal, time and heart rate", StartCopy.noGoalNote(hasDistance = false))
+        assertEquals("Records your time, distance and heart rate", StartCopy.noGoalNote(hasDistance = true))
+        assertEquals("Records your time and heart rate", StartCopy.noGoalNote(hasDistance = false))
     }
 
     @Test fun `the zones page says where your max comes from and each zone's heart rates`() {

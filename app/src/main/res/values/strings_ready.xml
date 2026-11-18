@@ -95,9 +95,9 @@
     <!-- Under Outdoor when on and GPS has no fix yet. -->
     <string name="ready_outdoor_gps_finding">GPS for distance and a map, finding you</string>
     <!-- Under Outdoor when off, for a sport on foot. -->
-    <string name="ready_outdoor_off_steps">Off: indoors, distance from your steps</string>
+    <string name="ready_outdoor_off_steps">Distance from your steps</string>
     <!-- Under Outdoor when off, for a ride. -->
-    <string name="ready_outdoor_off">Off: indoors, time and heart rate</string>
+    <string name="ready_outdoor_off">No distance indoors</string>
     <!-- Under Outdoor when the phone's location is off. Followed by ready_location_turn_on. -->
     <string name="ready_location_off">Location is off.</string>
     <!-- After ready_location_off, a link that turns location on. -->

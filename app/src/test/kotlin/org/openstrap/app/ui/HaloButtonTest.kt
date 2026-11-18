@@ -46,8 +46,8 @@ class HaloButtonTest {
     }
 
     @Test fun `an icon button is 32, 44, 60 or 88 across with a 16, 20, 22 or 28 glyph`() {
-        assertEquals(listOf(32.dp, 44.dp, 60.dp, 88.dp), HaloIconSize.entries.map { it.size })
-        assertEquals(listOf(16.dp, 20.dp, 22.dp, 28.dp), HaloIconSize.entries.map { it.glyph })
+        assertEquals(listOf(32.dp, 44.dp, 60.dp, 88.dp, 64.dp), HaloIconSize.entries.map { it.size })
+        assertEquals(listOf(16.dp, 20.dp, 22.dp, 28.dp, 22.dp), HaloIconSize.entries.map { it.glyph })
         assertEquals(IconSize.Live, HaloIconSize.Live.size)
         assertEquals(IconSize.Pause, HaloIconSize.Pause.size)
         assertEquals(HaloIconSize.Default, HaloIconSize.entries[1])

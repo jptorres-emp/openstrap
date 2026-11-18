@@ -458,7 +458,10 @@ class WorkoutSession(
         val e = unsentEnd ?: return
         if (_state.value is WorkoutState.Recording) return
         log("strap session: the ${e.state} that didn't go out goes now")
-        catching { strap.sportSession(e.state, e.w.sportType, e.w.start, e.elapsed, reconnect = false) }
+        catching {
+            val sport = org.openstrap.app.data.Workouts.strapType(e.w.sportType)
+            strap.sportSession(e.state, sport, e.w.start, e.elapsed, reconnect = false)
+        }
             .onSuccess { if (unsentEnd === e) unsentEnd = null }
             .onFailure { log("strap session ${e.state} not sent again: ${it.message}") }
     }
@@ -479,7 +482,7 @@ class WorkoutSession(
             state == org.openstrap.protocol.services.SportSession.State.ABANDON
         if (state == org.openstrap.protocol.services.SportSession.State.START) unsentEnd = null
         if (send) scope.launch {
-            catching { strap.sportSession(state, w.sportType, w.start, elapsed, reconnect) }
+            catching { strap.sportSession(state, org.openstrap.app.data.Workouts.strapType(w.sportType), w.start, elapsed, reconnect) }
                 .onSuccess { if (end) unsentEnd = null }
                 .onFailure {
                     (strap as? StrapManager)?.log("strap session $state not sent: ${it.message}")

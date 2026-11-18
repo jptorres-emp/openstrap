@@ -142,7 +142,6 @@
     <!-- Your usual workout's line on Choose: what you did and the day. The what is "5.21 km", "5 sets" or "30 min", the day "Tuesday", "yesterday" or "Fri 23 Oct". -->
     <string name="workout_start_last_time">Last time <xliff:g id="what" example="5.21 km">%1$s</xliff:g>, <xliff:g id="day" example="Tuesday">%2$s</xliff:g></string>
     <!-- Ready's start button on a treadmill. A button. -->
-    <string name="workout_start_start_treadmill">Start treadmill run</string>
 
 
     <!-- A goal kind in the goal pill and its sheet. One word. -->
@@ -154,9 +153,9 @@
     <!-- A goal kind: run intervals. One word. -->
     <string name="workout_start_kind_intervals">Intervals</string>
     <!-- The note with no goal, for a sport that records a distance. -->
-    <string name="workout_start_no_goal_note_distance">No goal, time, distance and heart rate</string>
+    <string name="workout_start_no_goal_note_distance">Records your time, distance and heart rate</string>
     <!-- The note with no goal, for a sport without a distance. -->
-    <string name="workout_start_no_goal_note">No goal, time and heart rate</string>
+    <string name="workout_start_no_goal_note">Records your time and heart rate</string>
     <!-- A distance goal's note. The number is in kilometres, as typed. -->
     <string name="workout_start_distance_note">A buzz at halfway and at <xliff:g id="v1" example="x">%1$s</xliff:g> km</string>
     <!-- A time goal's note: when it would end if started now. -->

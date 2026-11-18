@@ -65,13 +65,12 @@
     <string name="workout_start_break">节间休息</string>
     <string name="workout_start_mind_open_note">手环静音，准备好后自行结束</string>
     <string name="workout_start_last_time">上次 %1$s，%2$s</string>
-    <string name="workout_start_start_treadmill">开始跑步机跑步</string>
     <string name="workout_start_kind_distance">距离</string>
     <string name="workout_start_kind_time">时间</string>
     <string name="workout_start_kind_zone">区间</string>
     <string name="workout_start_kind_intervals">间歇</string>
-    <string name="workout_start_no_goal_note_distance">无目标，记录时间、距离和心率</string>
-    <string name="workout_start_no_goal_note">无目标，记录时间和心率</string>
+    <string name="workout_start_no_goal_note_distance">记录你的时间、距离和心率</string>
+    <string name="workout_start_no_goal_note">记录你的时间和心率</string>
     <string name="workout_start_distance_note">过半和 %1$s km 时振动</string>
     <string name="workout_start_ends_near">预计 %1$s 结束</string>
     <string name="workout_start_zone_note">轻点一个区间，或两个设定范围</string>

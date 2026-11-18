@@ -316,9 +316,9 @@ object WorkoutRecorder {
         stillFor: Long = STOPPED_S,
     ): Long? {
         val lastActive = lastActive(hr, steps, restingHr, maxHr) ?: return null
-        if (lastActive <= since || now - lastActive < stillFor) return null
+        val stillLongEnough = lastActive > since && now - lastActive >= stillFor
         val covered = hr.count { it.first > lastActive }.toLong()
-        return if (covered * 2 >= now - lastActive) lastActive else null
+        return lastActive.takeIf { stillLongEnough && covered * 2 >= now - lastActive }
     }
 
     /** The last moment of a heart rate above [CALM_HRR] of the reserve, or of [MOVING_STEPS] between two step totals. */

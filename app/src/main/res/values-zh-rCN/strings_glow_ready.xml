@@ -26,28 +26,9 @@
     <plurals name="glow_choose_sports_count">
         <item quantity="other">%d 项运动</item>
     </plurals>
-    <string name="glow_ready_shorter">缩短</string>
-    <string name="glow_ready_longer">延长</string>
-    <string name="glow_ready_with">含</string>
-    <string name="glow_ready_rest_between">组间休息</string>
-    <string name="glow_ready_rest_after_set">每组后休息</string>
-    <string name="glow_ready_with_a">含</string>
-    <string name="glow_ready_break">休息</string>
-    <string name="glow_ready_unit_sets">组数</string>
-    <string name="glow_ready_unit_rounds">轮</string>
-    <string name="glow_ready_unit_s_on">秒运动</string>
-    <string name="glow_ready_unit_s_off">秒休息</string>
-    <string name="glow_ready_unit_s_a_round">秒/轮</string>
-    <plurals name="glow_ready_rounds_description">
-        <item quantity="other">%1$d 轮，%2$d 秒运动，%3$d 秒休息</item>
-    </plurals>
     <string name="glow_ready_strap_disconnected">手环已断开，没有实时心率</string>
     <string name="glow_ready_connect">连接手环</string>
-    <string name="glow_ready_hero_zones">个心率区间</string>
     <string name="glow_ready_hero_zone_range">%1$d 至 %2$d</string>
-    <string name="glow_ready_hero_sets_rest">组，休息 %1$s</string>
-    <string name="glow_ready_hero_periods">分钟%1$s</string>
-    <string name="glow_ready_hero_free">自由</string>
     <string name="glow_ready_last_caption">上次，%1$s</string>
     <string name="glow_ready_last_today">今天</string>
     <string name="glow_ready_last_time">时间</string>

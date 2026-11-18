@@ -111,6 +111,9 @@ class WorkoutSetupTest {
         val run = SportSettings(goal = "d:5000", keepRoute = true, askToEnd = false)
         val p = WorkoutSetup.plan(1, run, emptyMap(), location = true)
         assertEquals(WorkoutPlan(1, askToEnd = false, target = WorkoutTarget.Distance(5000), useGps = true, keepRoute = true), p)
+        // The route is always kept where GPS is used, even from a line saved with the old switch off.
+        assertTrue(WorkoutSetup.plan(1, run.copy(keepRoute = false), emptyMap(), location = true).keepRoute)
+        assertFalse(WorkoutSetup.plan(1, run, emptyMap(), location = false).keepRoute)
         // On the treadmill side last time: no GPS, and 5 km from steps still counts.
         val treadmill = WorkoutSetup.plan(1, run, mapOf(1 to true), location = true)
         assertEquals(2, treadmill.sportType)

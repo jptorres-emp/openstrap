@@ -230,9 +230,23 @@ object Workouts {
     private fun medianAt(hr: List<WorkoutHeartRate>, t: Long): Int? =
         Stats.upperMiddle(hr.filter { it.timestamp in t - 2..t + 2 }.map { it.bpm })
 
-    /** Zepp's sport type ids (Type.type in the summary) for the sports a strap is likely to record. */
+    /**
+     * The name people read for Zepp's sport type [type] (Type.type in the summary): a sport with an outdoor and an
+     * indoor side has one name for both ("Run" for an outdoor run and a treadmill), and [isIndoorSide] puts the Indoor
+     * tag beside it where it shows. Every other sport by its own name.
+     */
     fun sportName(type: Int, strings: Strings = Strings.app): String =
+        strings.get(sidesOf(type)?.let { SHORT_NAMES[it.outdoor] } ?: SPORT_NAMES[type] ?: R.string.core_workouts_sport_workout)
+
+    /**
+     * The sport type's exact name ("Treadmill", "Indoor cycling"), for what leaves the app (Health Connect) and for
+     * search words. What people read in the app is [sportName].
+     */
+    fun exactName(type: Int, strings: Strings = Strings.app): String =
         strings.get(SPORT_NAMES[type] ?: R.string.core_workouts_sport_workout)
+
+    /** Whether [type] is the indoor side of a sport with two (a treadmill, indoor cycling): it shows the Indoor tag. */
+    fun isIndoorSide(type: Int): Boolean = sidesOf(type)?.let { it.indoor == type && it.indoor != it.outdoor } == true
 
     /**
      * [a]'s active kcal, rounded: a phone workout's saved figure; a strap workout's kcal less [bmrPerMinute] for each
@@ -282,8 +296,8 @@ object Workouts {
 
     /**
      * A sport offered once with an outdoor and an indoor kind (spec 6.3): Ready's switch picks one, and the workout is
-     * saved as that kind's own sport type, so the name says which it was ("Treadmill", "Indoor walk") wherever it
-     * shows. [outdoor] is the sport's key, the type its tile starts. [indoorByDefault] is the side
+     * saved as that kind's own sport type, and the app names both kinds alike ("Run"), with the Indoor tag beside the
+     * indoor one ([isIndoorSide]). [outdoor] is the sport's key, the type its tile starts. [indoorByDefault] is the side
      * shown before you've picked one.
      */
     data class Sides(
@@ -352,7 +366,7 @@ object Workouts {
         5 to R.string.core_workouts_short_other,
     )
 
-    /** "Run" for an outdoor run or a treadmill: the picker's name, else the sport's full name. */
+    /** "Run" for an outdoor run or a treadmill, "Strength" for strength training: the picker's name, else [sportName]. */
     fun shortName(type: Int, strings: Strings = Strings.app): String = SHORT_NAMES[type]?.let(strings::get) ?: sportName(type, strings)
 
     /** The type a sport's tile stands for: a sport with two kinds by its key, any other as itself. */
@@ -367,13 +381,14 @@ object Workouts {
 
     /**
      * What a search for [query] finds, as tiles: everyday sports by their short name, then every other sport, both
-     * kinds of a two-kind sport included ("Treadmill"), by its full name. Each once; empty for a blank query.
+     * kinds of a two-kind sport included ("Treadmill" finds the run's indoor side), by its exact name. Each once; empty
+     * for a blank query.
      */
     fun search(query: String): List<Int> {
         val q = query.trim()
         if (q.isEmpty()) return emptyList()
-        val everyday = EVERYDAY.filter { shortName(it).contains(q, ignoreCase = true) || sportName(it).contains(q, ignoreCase = true) }
-        val others = sports.map { it.first }.filter { it !in everyday && sportName(it).contains(q, ignoreCase = true) }
+        val everyday = EVERYDAY.filter { shortName(it).contains(q, ignoreCase = true) || exactName(it).contains(q, ignoreCase = true) }
+        val others = sports.map { it.first }.filter { it !in everyday && exactName(it).contains(q, ignoreCase = true) }
         return everyday + others
     }
 

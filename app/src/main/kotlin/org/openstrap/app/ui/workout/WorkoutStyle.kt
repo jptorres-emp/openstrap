@@ -39,6 +39,24 @@ internal fun familyColor(family: org.openstrap.app.data.Workouts.Family): Color 
     org.openstrap.app.data.Workouts.Family.Games -> FamilyGames
 }
 
+/**
+ * The colour of a workout of [type] shown as [family]: one sport, one colour, so the indoor side of a sport with two
+ * (a treadmill, indoor cycling) takes its outdoor side's family colour, an indoor run the run's lime. A [family] the
+ * workout's structure gave it (rounds make intervals) keeps its own colour.
+ */
+internal fun sportFamilyColor(
+    type: Int,
+    family: org.openstrap.app.data.Workouts.Family = org.openstrap.app.data.Workouts.family(type),
+): Color = familyColor(colorFamily(type, family))
+
+/** The family whose colour and light [type] takes as [family] ([sportFamilyColor]). */
+internal fun colorFamily(
+    type: Int,
+    family: org.openstrap.app.data.Workouts.Family = org.openstrap.app.data.Workouts.family(type),
+): org.openstrap.app.data.Workouts.Family =
+    if (family == org.openstrap.app.data.Workouts.family(type)) org.openstrap.app.data.Workouts.family(org.openstrap.app.data.Workouts.tileType(type))
+    else family
+
 /** Rest and recovery, in any family (workout-rules.md, Colour): strength rest, HIIT rest. */
 internal val RestTeal = MetricColors.readiness
 

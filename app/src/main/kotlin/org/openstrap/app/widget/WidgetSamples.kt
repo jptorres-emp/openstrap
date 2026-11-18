@@ -72,7 +72,7 @@ object WidgetSamples {
     fun sleep(today: LocalDate, zone: ZoneId): SleepWidgetModel = SleepWidgetModel.from(sleepNight(today, zone), null, firstNight = false, napsToday = false, zone = zone)
 
     /**
-     * Outdoor runs the most (one of 5.2 km this week), then walks, rides, a treadmill run and strength, at [now].
+     * Outdoor runs the most (one of 5.2 km this week), then walks, rides, yoga and strength, at [now].
      */
     fun start(now: Instant, zone: ZoneId, locale: Locale = Locale.getDefault()): StartWidgetModel {
         val today = now.atZone(zone).toLocalDate()
@@ -84,7 +84,7 @@ object WidgetSamples {
         val history = listOf(
             workout(4, 18, 1, 60, meters = 5_200f), workout(11, 7, 1, 45), workout(18, 7, 1, 45),
             workout(8, 8, 3, 30), workout(12, 8, 3, 30), workout(9, 17, 4, 50), workout(15, 17, 4, 50),
-            workout(1, 19, 2, 35), workout(6, 10, 52, 40, sets = 12),
+            workout(1, 19, 60, 35), workout(6, 10, 52, 40, sets = 12),
         )
         return StartWidgetModel.from(history, emptyMap(), true, null, now, zone, locale)
     }

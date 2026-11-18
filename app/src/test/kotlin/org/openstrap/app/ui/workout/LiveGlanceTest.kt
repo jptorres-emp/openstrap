@@ -65,7 +65,7 @@ class LiveGlanceTest {
         val g = Glance.of(run(target = null).copy(sportType = 2, gps = false, distanceMeters = 2140f, distanceFromSteps = true, averageBpm = 128))
         assertEquals("142", g.figure)
         assertEquals("bpm", g.unit)
-        assertEquals("Treadmill, 24:51", g.line1)
+        assertEquals("Run, 24:51", g.line1)
         assertEquals("Zone 3, tempo", g.line2)
         assertEquals(listOf("2.14" to "km from steps", "128" to "Avg bpm", "312" to "Active kcal"), g.figures)
     }
@@ -73,7 +73,7 @@ class LiveGlanceTest {
     @Test fun `paused shows how long, what's done, and Resume`() {
         val g = Glance.of(run(pausedAt = now - 72))
         assertEquals("Paused for 1:12", g.line1)
-        assertEquals("Outdoor run, 4.32 km so far", g.line2)
+        assertEquals("Run, 4.32 km so far", g.line2)
         assertEquals(GlanceAction.Resume, g.action)
         assertEquals(GlanceTint.Paused, g.tint)
         assertNull(g.bpm)

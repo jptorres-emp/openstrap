@@ -47,7 +47,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.Arrangement
 import org.openstrap.app.ui.workout.SplitRow
 import org.openstrap.app.ui.workout.ZoneSeconds
-import org.openstrap.app.ui.workout.familyColor
+import org.openstrap.app.ui.workout.sportFamilyColor
 import kotlinx.coroutines.delay
 import org.openstrap.app.data.Route
 import org.openstrap.app.data.WorkoutAnalysis
@@ -158,6 +158,7 @@ fun GlowWorkoutSummaryScreen(
         // beside Share.
         HaloPageHeader(
             a?.sportName ?: stringResource(R.string.glow_workout_untitled), done,
+            titleSuffix = a?.let { workoutTags(it.workout.sportType) },
             subtitle = a?.let { FamilySummary.whenLine(it.shownStart, System.currentTimeMillis() / 1000) },
             trailing = trim?.let { t ->
                 { HaloChip(stringResource(R.string.glow_trim), t.open, icon = AppIcons.Scissors) }
@@ -189,7 +190,7 @@ fun GlowWorkoutSummaryScreen(
                 SummaryHero(h.value, h.unit, h.figures, said, h.line, h.pace, h.title)
             }
         }
-        SummaryHeroCard(shownHero, familyColor(family), family = family, note = Ranges.times(a.shownStart, a.end))
+        SummaryHeroCard(shownHero, sportFamilyColor(w.sportType, family), family = family, note = Ranges.times(a.shownStart, a.end))
         // What was done to the times, under the hero that says them.
         TrimNote(summary, trim.undo, Modifier.padding(horizontal = Space.S4), onCard = false)
         val weekStarts = remember(workouts) { goalWeekStarts(workouts) }

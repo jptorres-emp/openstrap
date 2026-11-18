@@ -261,7 +261,7 @@ class WidgetStatusLineTest {
         assertEquals("78", WidgetSamples.recovery(today).score)
         assertEquals("8432", WidgetSamples.steps(today).stepsText)
         assertEquals("82", WidgetSamples.sleep(today, zone).score)
-        assertEquals("Outdoor run", WidgetSamples.start(Instant.ofEpochSecond(now), zone, Locale.UK).usual.name)
+        assertEquals("Run", WidgetSamples.start(Instant.ofEpochSecond(now), zone, Locale.UK).usual.name)
         val moment = WidgetSamples.moment(today, zone)
         assertEquals("62", moment.number)
         val texts = listOfNotNull(moment.name, moment.number) + moment.sentences + moment.figures + moment.words +

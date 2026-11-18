@@ -60,7 +60,7 @@ import org.openstrap.app.ui.theme.MetricColors
 import org.openstrap.app.ui.workout.EffectFigures
 import org.openstrap.app.ui.workout.PhoneSummary
 import org.openstrap.app.ui.workout.ZoneSeconds
-import org.openstrap.app.ui.workout.familyColor
+import org.openstrap.app.ui.workout.sportFamilyColor
 import org.openstrap.app.ui.workout.WorkoutDetailCopy
 import org.openstrap.app.ui.workout.WorkoutFact
 import java.time.Instant
@@ -128,6 +128,7 @@ fun GlowWorkoutDetailScreen(
                 }
                 HaloPageHeader(
                     (shown ?: a)?.sportName ?: stringResource(R.string.glow_workout_untitled), onBack, subtitle = day,
+                    titleSuffix = (shown ?: a)?.let { workoutTags(it.workout.sportType) },
                     trailing = if ((shown ?: a)?.startedByYou == false) ({ HaloTag(TabCopy.AUTO_DETECTED) }) else null,
                 )
             }
@@ -139,7 +140,7 @@ fun GlowWorkoutDetailScreen(
                 val sentence = WorkoutDetailCopy.sentence(w.sportType, shown.activeSeconds, w.trainingLoad, usual, zones)
                 val title = stringResource(R.string.glow_summary_figure_time)
                 val hero = SummaryHero(dotClock(shown.activeSeconds), "", sentence = sentence, title = title)
-                SummaryHeroCard(hero, familyColor(family), family = family, note = Ranges.times(shown.shownStart, shown.end))
+                SummaryHeroCard(hero, sportFamilyColor(w.sportType, family), family = family, note = Ranges.times(shown.shownStart, shown.end))
             }
             if (shown.heartRate.isNotEmpty() || w.averageHeartRate != null) item { HeartRateCard(shown) }
             val activeKcal = Workouts.activeKcal(shown, bmrPerMinute)
@@ -209,7 +210,7 @@ private fun PastSummary(
     CompositionLocalProvider(LocalGlowPaused provides { list.isScrollInProgress }) {
         HaloPageList(contentPadding, variant = PageVariant.Tab, state = list) {
             item {
-                HaloPageHeader(a.sportName, onBack, subtitle = stringResource(
+                HaloPageHeader(a.sportName, onBack, titleSuffix = workoutTags(a.workout.sportType), subtitle = stringResource(
                         R.string.glow_workout_day_times, WorkoutDetailCopy.day(a.shownStart, LocalDate.now()),
                         Ranges.times(a.shownStart, a.end),
                     ), // Share in the header's corner, matching the back button, so it is there without scrolling.
@@ -232,7 +233,7 @@ private fun PastSummary(
                         if (h.sentence != null) h
                         else SummaryHero(h.value, h.unit, h.figures, WorkoutDetailCopy.sentence(w.sportType, a.activeSeconds, w.trainingLoad, usual, zones.toList()), h.line, h.pace, h.title)
                     }
-                    SummaryHeroCard(hero, familyColor(family), family = family, note = Ranges.times(a.shownStart, a.end))
+                    SummaryHeroCard(hero, sportFamilyColor(w.sportType, family), family = family, note = Ranges.times(a.shownStart, a.end))
                     FamilySection(family, summary, emptyList(), others, weekStarts, heartLine = false, figures = hero.figures)
                     // Always there, even before any heart rate, since it holds Trim.
                     HeartRateCard(a, trim)

@@ -224,6 +224,7 @@ internal fun HaloPageHeader(
  * The header of a page or a detail (HaloProfile, HaloAlarms and HaloDetailRecovery boards): back at the left, the
  * [title] centred in Page title type (over [subtitle] in Secondary), and [trailing] at the right (a detail's (i), or the
  * Save pill while the page has unsaved edits). [onTitle] makes the title a button with a caret (a detail's switcher).
+ * [titleSuffix] follows the title on its line (a workout's Indoor tag).
  */
 @Composable
 internal fun HaloPageHeader(
@@ -235,6 +236,7 @@ internal fun HaloPageHeader(
     subtitle: String? = null,
     onTitle: (() -> Unit)? = null,
     trailing: (@Composable () -> Unit)? = null,
+    titleSuffix: (@Composable () -> Unit)? = null,
 ) {
     val switchLabel = stringResource(R.string.glow_page_switch)
     HaloPageHeader(
@@ -260,6 +262,10 @@ internal fun HaloPageHeader(
                     if (onTitle != null) {
                         Spacer(Modifier.width(PageSpec.CaretGap))
                         Icon(AppIcons.CaretDown, null, modifier = Modifier.size(PageSpec.Caret), tint = Ink.Secondary)
+                    }
+                    if (titleSuffix != null) {
+                        Spacer(Modifier.width(TagSpec.Gap))
+                        titleSuffix()
                     }
                 }
                 if (subtitle != null) Text(subtitle, color = Ink.Secondary, style = GlowType.secondary, maxLines = 1)

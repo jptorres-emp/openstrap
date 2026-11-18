@@ -206,6 +206,9 @@ internal enum class TagVariant {
     /** Amber words alone: about the sync, not the body ("Up to 09:40"). */
     Marker,
 
+    /** A pill on the control grey with silver words: where a workout was done, beside its sport ("Indoor"). */
+    Quiet,
+
     /** A pill in the colour at 16% with its words lifted toward white: what happened ("Earned 3 Nov"). */
     Status,
 }
@@ -225,11 +228,13 @@ internal fun HaloTag(
     val ink = when (variant) {
         TagVariant.Filled -> Color.White
         TagVariant.Outline -> Ink.Secondary
+        TagVariant.Quiet -> Ink.Silver
         TagVariant.Text, TagVariant.Status -> lerp(color, Color.White, TagSpec.LIFT)
         TagVariant.Marker -> MetricColors.warn
     }
-    val boxed = variant == TagVariant.Filled || variant == TagVariant.Outline || variant == TagVariant.Status
+    val boxed = variant == TagVariant.Filled || variant == TagVariant.Outline || variant == TagVariant.Quiet || variant == TagVariant.Status
     val about = if (onClick != null) stringResource(R.string.glow_tag_about, text.lowercase()) else null
+    val quietFill = OnSurface.control
     Box(
         modifier
             .let { if (boxed) it.heightIn(min = TagSpec.Height).clip(Corner.Pill) else it }
@@ -238,6 +243,7 @@ internal fun HaloTag(
                     TagVariant.Outline -> it.border(TagSpec.Outline, Ink.Line, Corner.Pill)
                     TagVariant.Filled -> it.background(if (color == Color.White) Ink.Edge else color.copy(alpha = TagSpec.FILL))
                     TagVariant.Status -> it.background(color.copy(alpha = TagSpec.FILL))
+                    TagVariant.Quiet -> it.background(quietFill)
                     else -> it
                 }
             }

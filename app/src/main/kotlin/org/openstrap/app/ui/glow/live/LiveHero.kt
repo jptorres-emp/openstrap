@@ -19,7 +19,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import org.openstrap.app.data.Workouts
 import org.openstrap.app.device.WorkoutState
 import org.openstrap.app.ui.glow.BigNumber
 import org.openstrap.app.ui.glow.BigNumberText
@@ -27,7 +26,8 @@ import org.openstrap.app.ui.glow.GlowType
 import org.openstrap.app.ui.glow.draw.heroStyle
 import org.openstrap.app.ui.theme.Ink
 import org.openstrap.app.ui.workout.PausedGrey
-import org.openstrap.app.ui.workout.familyColor
+import org.openstrap.app.ui.workout.colorFamily
+import org.openstrap.app.ui.workout.sportFamilyColor
 import org.openstrap.app.ui.workout.familyLightAngle
 
 /*
@@ -38,10 +38,10 @@ import org.openstrap.app.ui.workout.familyLightAngle
 
 /** The sport's colour on a live screen, or the paused grey (workout-rules.md, Tokens). */
 internal fun liveColor(r: WorkoutState.Recording): Color =
-    if (r.paused) PausedGrey else familyColor(Workouts.family(r.workout.sportType))
+    if (r.paused) PausedGrey else sportFamilyColor(r.workout.sportType)
 
 /** Where the sport's light comes from on a live screen (workout-rules.md, Tokens). */
-internal fun liveAngle(r: WorkoutState.Recording): Float = familyLightAngle(Workouts.family(r.workout.sportType))
+internal fun liveAngle(r: WorkoutState.Recording): Float = familyLightAngle(colorFamily(r.workout.sportType))
 
 /** The notes on a hero are the colour's tint, as the boards' #EEFBD0 on lime. */
 private const val TINT_TOWARD_WHITE = 0.82f

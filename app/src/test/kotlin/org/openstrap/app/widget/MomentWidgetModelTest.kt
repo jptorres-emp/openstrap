@@ -219,7 +219,7 @@ class MomentWidgetModelTest {
         assertTrue(m.sentences.isEmpty() && m.figures.isEmpty())
         assertNull(m.chart)
         val r = m.recording!!
-        assertEquals("Outdoor run", r.sport.name)
+        assertEquals("Run", r.sport.name)
         assertEquals("Recording since 17:42", r.since)
         assertEquals("Since 17:42", r.sinceShort)
         assertTrue(m.opensLive)

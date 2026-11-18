@@ -650,7 +650,7 @@ internal fun WorkoutRow(a: WorkoutAnalysis, usual: Float?, divider: Boolean, onC
                 tone = TileTone.Effort(Workouts.effort(a.workout.trainingLoad, usual)),
             )
         },
-        titleSuffix = if (!a.startedByYou) ({ HaloTag(TabCopy.AUTO_DETECTED) }) else null,
+        titleSuffix = workoutTags(a.workout.sportType, autoDetected = !a.startedByYou),
         line = { RowLine(TabCopy.workoutLine(fact, TimeOfDay.format(start.toLocalTime())), Ink.Secondary) },
         value = workoutClock(a.activeSeconds), valueInk = Color.White,
         // Zone bar (chart kit): how the workout's time was spent, thin under its row, lined up with its name.

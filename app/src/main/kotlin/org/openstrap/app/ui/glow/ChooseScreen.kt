@@ -83,6 +83,7 @@ import org.openstrap.app.ui.theme.AppIcons
 import org.openstrap.app.ui.theme.Ink
 import org.openstrap.app.ui.theme.SportIcons
 import org.openstrap.app.ui.workout.familyColor
+import org.openstrap.app.ui.workout.sportFamilyColor
 
 /* ---------------------------------------------- Choose ----------------------------------------------- */
 
@@ -206,7 +207,7 @@ private fun ChooseBody(
  */
 @Composable
 private fun UsualRow(s: ChooseSport, onStart: () -> Unit, onOpen: () -> Unit) {
-    val color = familyColor(Workouts.family(s.type))
+    val color = sportFamilyColor(s.type)
     val haptics = org.openstrap.app.ui.components.rememberHaptics()
     HaloCard(fill = CardFill.Rows, onClick = onOpen) {
         HaloRow(
@@ -233,7 +234,7 @@ private fun UsualRow(s: ChooseSport, onStart: () -> Unit, onOpen: () -> Unit) {
 private fun NowCard(type: Int) {
     HaloCard(fill = CardFill.Rows) {
         HaloRow(
-            Workouts.sportName(type), lead = RowLead.sport(SportIcons.of(type), familyColor(Workouts.family(type))), divider = false,
+            Workouts.sportName(type), lead = RowLead.sport(SportIcons.of(type), sportFamilyColor(type)), divider = false,
             line = {
                 Column {
                     RowLine(stringResource(R.string.glow_choose_now))
@@ -247,7 +248,7 @@ private fun NowCard(type: Int) {
 /** A Recent sport as a [HaloChip]: its icon in its family's colour and a name, a sport's or a saved workout's. */
 @Composable
 private fun SportChip(sport: Int, name: String, onClick: () -> Unit) =
-    HaloChip(name, onClick, icon = SportIcons.of(sport), tint = familyColor(Workouts.family(sport)), size = ChipSize.Main)
+    HaloChip(name, onClick, icon = SportIcons.of(sport), tint = sportFamilyColor(sport), size = ChipSize.Main)
 
 /* --------------------------------------------- Sport picker -------------------------------------------- */
 
@@ -404,7 +405,7 @@ private fun groupColor(group: SportGroup): Color = when (group) {
 }
 
 /** A sport's own colour: its family's, or Other's grey. */
-internal fun sportColor(type: Int): Color = groupColor(SportGroups.of(type))
+internal fun sportColor(type: Int): Color = groupColor(SportGroups.of(Workouts.tileType(type)))
 
 /** The sections of sport tiles, four to a row, each under its family's title (board HaloChooseSport). */
 @Suppress("UnstableCollections", "ComposeUnstableCollections")
@@ -474,8 +475,8 @@ private fun FamilyTile(type: Int, selected: Boolean, modifier: Modifier = Modifi
 /** One search row (board HaloSearchSports): the icon on a tile in its family's colour, the name over its family, a chevron. */
 @Composable
 private fun FoundRow(type: Int, divider: Boolean, onClick: () -> Unit) = HaloRow(
-    Workouts.sportName(type), lead = RowLead.tile(SportIcons.of(type), sportColor(type)),
-    line = { RowLine(groupTitle(SportGroups.of(type))) }, trail = { RowTrail.Chevron() }, onClick = onClick, divider = divider,
+    Workouts.sportName(type), lead = RowLead.tile(SportIcons.of(type), sportColor(type)), titleSuffix = workoutTags(type),
+    line = { RowLine(groupTitle(SportGroups.of(Workouts.tileType(type)))) }, trail = { RowTrail.Chevron() }, onClick = onClick, divider = divider,
 )
 
 /** [types] as rows in one panel, each with its family, in the order given. */
@@ -512,7 +513,7 @@ private fun SearchPage(contentPadding: PaddingValues, onPick: (Int) -> Unit, onB
         if (query.isBlank()) SportGroups.OFFERED.sortedBy { Workouts.sportName(it) }
         // Names starting with what's typed first, then a word in them starting with it, then the rest.
         else Workouts.search(query).sortedBy { type ->
-            val name = Workouts.sportName(type).lowercase()
+            val name = Workouts.exactName(type).lowercase()
             val q = query.trim().lowercase()
             when {
                 name.startsWith(q) -> 0

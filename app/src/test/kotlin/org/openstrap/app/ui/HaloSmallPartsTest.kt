@@ -47,12 +47,12 @@ class HaloSmallPartsTest {
         assertTrue("a chip's fill steps up from its surface", "OnSurface.control" in chip)
     }
 
-    @Test fun `a tag is 22 high, 8 at the sides, 11 semibold, in five looks`() {
+    @Test fun `a tag is 22 high, 8 at the sides, 11 semibold, in six looks`() {
         assertEquals(22.dp, TagSpec.Height)
         assertEquals(Space.S8, TagSpec.Side)
         assertEquals(11f, TagSpec.Label.fontSize.value)
         assertEquals(GlowType.tag, TagSpec.Label)
-        assertEquals(listOf("Filled", "Outline", "Text", "Marker", "Status"), TagVariant.entries.map { it.name })
+        assertEquals(listOf("Filled", "Outline", "Text", "Marker", "Quiet", "Status"), TagVariant.entries.map { it.name })
     }
 
     @Test fun `segments are 44 or 36 on a track padded 4, the detail range Compact`() {

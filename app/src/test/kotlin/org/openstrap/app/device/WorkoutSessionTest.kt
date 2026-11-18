@@ -992,7 +992,7 @@ class WorkoutSessionTest {
         s.start(sportType = 1)
         s.recording()
         val n = keepRecording(present = true)!!
-        assertEquals("Keep recording your outdoor run", n.extras.getString(android.app.Notification.EXTRA_TITLE))
+        assertEquals("Keep recording your run", n.extras.getString(android.app.Notification.EXTRA_TITLE))
         assertEquals(KeepRecordingNotice.TEXT, n.extras.getCharSequence(android.app.Notification.EXTRA_TEXT).toString())
         assertEquals(KeepRecordingNotice.CHANNEL, n.channelId)
         // A tap brings the app forward on the live screen.

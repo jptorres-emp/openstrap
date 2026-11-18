@@ -443,7 +443,7 @@ class HealthConnectExporter(private val context: Context, private val dao: Healt
                 startTime = Instant.ofEpochSecond(w.start), startZoneOffset = offset(w.start),
                 endTime = Instant.ofEpochSecond(w.end), endZoneOffset = offset(w.end),
                 exerciseType = exerciseType(w.sportType),
-                title = org.openstrap.app.data.Workouts.sportName(w.sportType),
+                title = org.openstrap.app.data.Workouts.exactName(w.sportType),
                 metadata = meta("strapworkout:${w.start}"),
             )
         }
@@ -458,7 +458,7 @@ class HealthConnectExporter(private val context: Context, private val dao: Healt
                 startTime = Instant.ofEpochSecond(w.from), startZoneOffset = offset(w.from),
                 endTime = Instant.ofEpochSecond(end), endZoneOffset = offset(end),
                 exerciseType = exerciseType(w.sportType),
-                title = org.openstrap.app.data.Workouts.sportName(w.sportType),
+                title = org.openstrap.app.data.Workouts.exactName(w.sportType),
                 metadata = meta("workout:${w.start}"),
             )
             val meters = w.distanceMeters?.takeIf { !w.distanceFromSteps && it > 0 } ?: continue

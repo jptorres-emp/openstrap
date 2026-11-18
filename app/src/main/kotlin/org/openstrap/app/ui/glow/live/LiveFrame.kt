@@ -3,6 +3,7 @@
 package org.openstrap.app.ui.glow.live
 
 import org.openstrap.app.ui.glow.HaloNote
+import org.openstrap.app.ui.glow.SideTag
 import org.openstrap.app.ui.glow.HeaderVariant
 import org.openstrap.app.ui.glow.HaloPageHeader
 import org.openstrap.app.ui.glow.BannerKind
@@ -383,7 +384,10 @@ private fun LiveTopBar(
                 Text(
                     title ?: Workouts.sportName(r.workout.sportType), color = color,
                     style = GlowType.cardTitle, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false),
                 )
+                // Where it's done, beside the one name (board HaloRunNaming): Indoor on a treadmill or a bike indoors.
+                SideTag(r.workout.sportType)
             }
             if (time != null) TotalTime(time, r.paused)
         } },

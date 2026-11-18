@@ -15,19 +15,19 @@ import org.openstrap.app.presentation.Units
 
 /**
  * A sport on the Start widget. [sportType] is what a tap hands Ready (`EXTRA_READY_SPORT`), which then opens on the
- * side you last chose for it; [shownType] is that side's own sport, which the icon and names are of, so the widget
- * says what Ready will start ("Treadmill" for a run last done indoors).
+ * side you last chose for it; [shownType] is that side's own sport, which the icon is of. Both sides of a run or a ride
+ * have one name ("Run"), as everywhere in the app.
  */
 data class StartSport(
     val sportType: Int,
     val shownType: Int,
-    /** In the usual row, Body 500: "Outdoor run". */
+    /** In the usual row, Body 500: "Run". */
     val name: String,
     /** The picker's short name ("Run", "Walk", "Strength"): the name when the full one won't fit a line. */
     val shortName: String,
     /**
      * Under its tile, one line: the short name, or the full one where the short one would read as the usual or a
-     * sport before it ("Treadmill" beside your outdoor runs). [StartWidgetModel.from] settles it against the others.
+     * sport before it. [StartWidgetModel.from] settles it against the others.
      */
     val caption: String,
     /** What TalkBack reads for its tile and play: "Start run". */
@@ -137,7 +137,8 @@ data class StartWidgetModel(
         ): StartWidgetModel {
             val sports = (topSports(workouts, BY_USE).map { it.sportType } + Workouts.EVERYDAY)
                 .map { StartSport.of(it, sides) }
-                .distinctBy { it.shownType }
+                // One tile a sport: a run is one sport on either side, as Ready opens it.
+                .distinctBy { Workouts.tileType(it.shownType) }
             val usual = sports.first()
             // A caption says which sport it is: the short name unless the usual or a tile before it already has it.
             val said = mutableSetOf(usual.shortName)

@@ -4,27 +4,17 @@ import org.openstrap.app.ui.theme.Space
 import android.content.Intent
 import android.provider.Settings
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.snapshotFlow
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.ime
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -32,10 +22,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
@@ -44,68 +31,45 @@ import org.openstrap.app.OpenStrapApp
 import org.openstrap.app.R
 import org.openstrap.app.data.SportSettings
 import org.openstrap.app.data.Strength
+import org.openstrap.app.data.Structure
 import org.openstrap.app.data.WorkoutPlan
 import org.openstrap.app.data.WorkoutSetup
+import org.openstrap.app.data.WorkoutSetup.GoalKind
 import org.openstrap.app.data.WorkoutTarget
 import org.openstrap.app.data.SportTypes
 import org.openstrap.app.data.Workouts
 import org.openstrap.app.device.ConnectionState
 import org.openstrap.app.device.WorkoutLocation
-import org.openstrap.app.ui.components.PushContent
+import org.openstrap.app.device.locationAvailable
+import org.openstrap.app.presentation.WorkoutCopy
 import org.openstrap.app.ui.components.HapticEvent
-import org.openstrap.app.ui.components.pressClickable
+import org.openstrap.app.ui.components.PushContent
 import org.openstrap.app.ui.components.rememberHaptics
+import org.openstrap.app.ui.dashboard.LocalHeartZones
 import org.openstrap.app.ui.theme.AppIcons
-import org.openstrap.app.ui.theme.Ink
 import org.openstrap.app.ui.workout.StartCopy
 import org.openstrap.app.ui.workout.familyColor
 import org.openstrap.app.ui.workout.familyLightAngle
-import org.openstrap.app.data.Structure
-import androidx.compose.ui.unit.Dp
-import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.width
-import org.openstrap.app.device.locationAvailable
-import org.openstrap.app.ui.dashboard.LocalHeartZones
 
 /* -------------------------------------------- Ready screen ------------------------------------------- */
 
 /**
- * Calls [end] once the keyboard that came up while [typing] has gone ([keyboardUp] read in a snapshot, so the screen
- * isn't composed again as it moves). Back with the keyboard up only closes the keyboard, leaving the caret in the
- * field and Start hidden until a second Back.
- */
-@Composable
-internal fun EndTypingWithKeyboard(typing: Boolean, keyboardUp: () -> Boolean, end: () -> Unit) {
-    val up by rememberUpdatedState(keyboardUp)
-    val onEnd by rememberUpdatedState(end)
-    LaunchedEffect(typing) {
-        if (!typing) return@LaunchedEffect
-        var seen = false
-        snapshotFlow { up() }.collect { now -> if (now) seen = true else if (seen) onEnd() }
-    }
-}
-
-/**
- * Ready (workouts spec 2.2): the same frame for every sport. Close and the sport as a pill (tap to change it); the
- * live heart rate, what the strap or phone will do, the sport's one choice, and Start named for the sport. Recording
- * starts even when the strap is away; the strap's history fills in after it syncs.
+ * Ready (workouts spec 2.2, board HaloReadyEveryKind): the same frame for every sport. Close and the sport as a pill
+ * (tap to change it), the live heart rate and the strap's charge; the goal type on the page, as tabs or, with five or
+ * more, one Goal row with a menu; the hero in the sport's colour with the big number, the ruler that sets it and one
+ * line; what the ruler doesn't set in a card of steppers under it; last time; the switches; and Start named for the
+ * sport. Recording starts even when the strap is away; the strap's history fills in after it syncs.
  *
  * Everything opens on what was chosen last time for the sport ([settings]); Ready never asks what it can answer
- * itself. A sport with an outdoor and an indoor side saves the type of the side chosen ([Workouts.Sides]) and opens
- * on the side last chosen ([sides], saved through [onSide]). An outdoor sport warms GPS up while Ready shows; Start
- * never waits for it.
+ * itself. A sport with an outdoor and an indoor side has the Outdoor switch: it saves the type of the side chosen
+ * ([Workouts.Sides]) and opens on the side last chosen ([sides], saved through [onSide]); Ready keeps the outdoor
+ * side's colour either way. An outdoor sport warms GPS up while Ready shows; Start never waits for it, and the route
+ * is always kept where GPS is used.
  *
- * No sport has a settings sheet: the heart on its own card, then one plan card typed in place, and switch rows for
- * the rest. A distance or cardio sport (board ReadyFinal) has where you are with Ask to end when I stop, then the goal
- * ([ReadyGoal]). A zone goal reads your zones ([maxHeartRate], [LocalHeartZones]) and Your zones opens them
- * ([onYourZones]). Run intervals save by name ([saved], [onSaveIntervals]) and open on rounds picked on Choose
- * ([structure]).
- *
- * Strength, HIIT, mind and body and games (boards ReadyFinalStrength, ReadyFinalHiit, ReadyFinalMind,
- * ReadyFinalGames) light the heart card in the family's colour, then their plan: the sets and rest, the rounds, the
- * length, or the match ([StrengthPlanCard] and the others); then their switches, Ask to end when I stop last. [onStart] gets the workout to
- * record and the settings to open on next time.
+ * With no goal (Just walk, Open, Free) the hero shows last time ([last]) in its place. A zone goal reads your zones
+ * ([maxHeartRate], [LocalHeartZones]). Run intervals open on reps picked on Choose ([structure]). [onStart] gets the
+ * workout to record and the settings to open on next time. [saved], [onSaveIntervals] and [onYourZones] are kept for
+ * the caller; Ready no longer offers them.
  */
 @Composable
 fun GlowWorkoutReadyScreen(
@@ -124,10 +88,9 @@ fun GlowWorkoutReadyScreen(
     onTurnOnLocation: (then: () -> Unit) -> Unit = { it() },
     /** The max heart rate zones are shares of, once worked out, for a zone goal's heart rates. */
     maxHeartRate: Int? = null,
-    onYourZones: () -> Unit = {},
-    /** Run intervals saved by name, and saving one ([onSaveIntervals], its name and code). */
-    saved: List<org.openstrap.app.data.db.SavedWorkout> = emptyList(),
-    onSaveIntervals: (name: String, structure: String) -> Unit = { _, _ -> },
+    @Suppress("UnusedParameter") onYourZones: () -> Unit = {},
+    @Suppress("UnusedParameter") saved: List<org.openstrap.app.data.db.SavedWorkout> = emptyList(),
+    @Suppress("UnusedParameter") onSaveIntervals: (name: String, structure: String) -> Unit = { _, _ -> },
     /** Rounds to open on instead of last time's, from a saved workout picked on Choose. */
     structure: String? = null,
     /** Last time's figures for the sport and its seconds a km, from the workouts on file; null leaves those lines out. */
@@ -141,13 +104,13 @@ fun GlowWorkoutReadyScreen(
     val indoor = chosenIndoor ?: Workouts.indoorSide(sportType, sides)
     val type = pair?.type(indoor == true) ?: sportType
     val family = Workouts.family(type)
+    // A sport with two sides keeps the outdoor side's colour indoors too: a run on the treadmill is still a run.
+    val colorFamily = Workouts.family(pair?.outdoor ?: type)
     val cardio = family == Workouts.Family.Distance || family == Workouts.Family.IndoorCardio
     // Last time's settings until changed here. Keyed on them too: the stored ones load a moment after the screen opens.
     // Each choice is keyed on the stored field it starts from, so settings arriving again, or another field changing,
-    // keeps what was just picked or typed (audit K7).
+    // keeps what was just picked (audit K7).
     val key = Workouts.tileType(sportType)
-    var askToEnd by rememberSaveable(key, settings.askToEnd) { mutableStateOf(settings.askToEnd) }
-    var keepRoute by rememberSaveable(key, settings.keepRoute) { mutableStateOf(settings.keepRoute) }
     val lastRest = Strength.Rest.parse(settings.rest) ?: Strength.Rest.DEFAULT
     var sets by rememberSaveable(key, settings.sets) { mutableStateOf(settings.sets) }
     var restSeconds by rememberSaveable(key, settings.rest) { mutableStateOf(lastRest.seconds) }
@@ -164,8 +127,6 @@ fun GlowWorkoutReadyScreen(
     var draft by rememberSaveable(key, settings.goal, settings.structure, structure, stateSaver = GoalDraftSaver) {
         mutableStateOf(goalDraft(settings, structure))
     }
-    // Typing outlives a rotation or a fold, so the half-typed value comes back with its keyboard.
-    var typing by rememberSaveable { mutableStateOf(false) }
     val context = LocalContext.current
     var locationOn by remember { mutableStateOf(locationAvailable(context)) }
     LifecycleResumeEffect(Unit) {
@@ -180,18 +141,18 @@ fun GlowWorkoutReadyScreen(
     val hasDistance = useGps || type in SportTypes.ON_FOOT
     val kinds = WorkoutSetup.goalKinds(type, hasDistance)
     // A kind that doesn't fit the side now (a distance indoors on a bike) shows as no goal.
-    val kind = draft.kind.takeIf { it in kinds } ?: WorkoutSetup.GoalKind.None
-    // Rounds only where they fit: HIIT, a game's periods, and reps for a run (from the goal card).
-    val rounds = if (cardio) draft.reps.takeIf { kind == WorkoutSetup.GoalKind.Intervals && Structure.fits(it, type) }
+    val kind = draft.kind.takeIf { it in kinds } ?: GoalKind.None
+    // Rounds only where they fit: HIIT, a game's periods, and reps for a run (from the Intervals goal).
+    val rounds = if (cardio) draft.reps.takeIf { kind == GoalKind.Intervals && Structure.fits(it, type) }
         else Structure.parse(structureCode)?.takeIf { Structure.fits(it, type) }
     val goal = when {
         cardio -> when (kind) {
-            WorkoutSetup.GoalKind.Distance -> WorkoutTarget.Distance(draft.meters)
-            WorkoutSetup.GoalKind.Time -> WorkoutTarget.Time(draft.seconds)
-            WorkoutSetup.GoalKind.Zone -> draft.zones
+            GoalKind.Distance -> WorkoutTarget.Distance(draft.meters)
+            GoalKind.Time -> WorkoutTarget.Time(draft.seconds)
+            GoalKind.Zone -> draft.zones
             else -> null
         }
-        mind -> WorkoutTarget.Time(draft.seconds).takeIf { draft.kind == WorkoutSetup.GoalKind.Time }
+        mind -> WorkoutTarget.Time(draft.seconds).takeIf { draft.kind == GoalKind.Time }
         // Strength, HIIT and games set no goal here; one saved from before still counts where nothing replaces it.
         else -> WorkoutTarget.parse(settings.goal)?.takeIf { rounds == null && WorkoutSetup.offered(it, hasDistance, kcal = false) }
     }
@@ -203,19 +164,12 @@ fun GlowWorkoutReadyScreen(
         onDispose { location.stop() }
     }
     val haptics = rememberHaptics()
-    // Keeps the live heart rate coming for the top bar, which the old heart card did.
+    // Keeps the live heart rate coming for the top bar.
     org.openstrap.app.ui.components.HoldLiveHeartRate()
     val nowMillis by rememberNowMillis()
-    // Tapping the hero edits the goal in a sheet: what is open now is what Cancel puts back.
-    val editor = remember { GoalEditor() }
-    val openEditor = {
-        val d0 = draft
-        val s0 = sets
-        val p0 = planSets
-        val r0 = restSeconds
-        val c0 = structureCode
-        editor.revert = { draft = d0; sets = s0; planSets = p0; restSeconds = r0; structureCode = c0 }
-        editor.open = true
+    val turnOnLocation = {
+        if (!WorkoutLocation.granted(context)) onTurnOnLocation { locationOn = locationAvailable(context) }
+        else context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
     }
     // The sport picker opens like a deeper screen and a pick slides Ready back in on the new sport (user, 2026-11-06:
     // the swap was a cut both ways).
@@ -226,127 +180,106 @@ fun GlowWorkoutReadyScreen(
             return@PushContent
         }
         BackHandler(onBack = onBack)
-        val focusManager = LocalFocusManager.current
-        // Back while typing puts the keyboard and the caret away first. The keyboard takes that Back itself when it's up,
-        // so its going ends typing too, and Start comes back with it.
-        BackHandler(enabled = typing) { focusManager.clearFocus() }
-        val ime = WindowInsets.ime
-        val density = LocalDensity.current
-        EndTypingWithKeyboard(typing, { ime.getBottom(density) > 0 }) { focusManager.clearFocus() }
         val start = {
             haptics.perform(HapticEvent.WorkoutStart)
             val rest = Strength.Rest(restSeconds, restBelow)
             onStart(
                 WorkoutPlan(
-                    type, askToEnd, goal.takeIf { !strength }, useGps, useGps && keepRoute,
+                    type, settings.askToEnd, goal.takeIf { !strength }, useGps, keepRoute = useGps,
                     rest.takeIf { strength }, sets.takeIf { strength }, logSets = strength && log, structure = rounds?.code,
                 ),
                 settings.copy(
-                    goal = if (strength) settings.goal else goal?.code, askToEnd = askToEnd, gps = true, keepRoute = keepRoute,
+                    goal = if (strength) settings.goal else goal?.code, gps = true,
                     rest = if (strength) rest.code else settings.rest, sets = if (strength) sets else settings.sets,
                     log = if (strength) log else settings.log, structure = rounds?.code,
                 ),
             )
         }
-        CompositionLocalProvider(LocalGoalEditor provides editor) {
+        val look = HeroLook(familyColor(colorFamily), familyLightAngle(colorFamily))
         HaloPageColumn(
             contentPadding,
-            // While a goal is typed the keyboard has the bottom of the screen.
-            pinned = if (typing) null else ({
+            pinned = {
                 HaloButton(
                     StartCopy.startLabel(type), start, Modifier.fillMaxWidth(), variant = HaloButtonVariant.Primary,
                     size = HaloButtonSize.Main, icon = AppIcons.PlayFill,
                 )
-            }),
+            },
         ) {
-            ReadyTopBar(type, family, connection, liveHeartRate, onBack) { picking = true }
+            ReadyTopBar(type, colorFamily, connection, liveHeartRate, onBack) { picking = true }
             StrapHeldNotice(connection)
-            val editable = when (family) {
-                Workouts.Family.Distance, Workouts.Family.IndoorCardio ->
-                    kind == WorkoutSetup.GoalKind.Distance || kind == WorkoutSetup.GoalKind.Time || kind == WorkoutSetup.GoalKind.Intervals
-                Workouts.Family.Strength -> true
-                Workouts.Family.Intervals -> rounds is Structure.Timed || rounds is Structure.EveryMinute
-                Workouts.Family.MindBody -> kind == WorkoutSetup.GoalKind.Time
-                Workouts.Family.Games -> rounds is Structure.Periods
-            }
-            GoalHero(
-                goalHeroSpec(
-                    type, family, kind, draft, sets, restSeconds, rounds, hasDistance,
-                    zoneLine = maxHeartRate?.let { StartCopy.zoneRangeLine(draft.zones, LocalHeartZones.current, it) },
-                    lastPace = lastPace, nowMillis = nowMillis,
-                ),
-                familyColor(family), familyLightAngle(family),
-                // Only a kind that takes a value opens the sheet to type one (Just run, zones and Free have none).
-                openEditor.takeIf { editable },
-            )
-            if (cardio) {
-                ReadyGoal(
-                    type, kinds, hasDistance, draft.copy(kind = kind), { draft = it }, typing, { typing = it }, LocalHeartZones.current, maxHeartRate,
-                    onYourZones, saved.filter { Workouts.tileType(it.sport) == key },
-                    onSave = { name, reps -> onSaveIntervals(name, reps.code) },
-                    place = pair?.let { placeSides ->
-                        {
-                            ReadyPlace(
-                                type, placeSides, indoor == true, locationOn, StartCopy.gpsStatus(accuracy),
-                                onSwitch = {
-                                    val next = indoor != true
-                                    chosenIndoor = next
-                                    onSide(placeSides.outdoor, next)
-                                },
-                            )
-                        }
-                    },
-                )
-                ReadyLastRow(last)
-                ReadyWhere(
-                    type, null, indoor == true, outdoor, locationOn, StartCopy.gpsStatus(accuracy),
-                    onSwitch = {
-                        val next = indoor != true
-                        chosenIndoor = next
-                        onSide(pair!!.outdoor, next)
-                    },
-                    onTurnOnLocation = {
-                        if (!WorkoutLocation.granted(context)) onTurnOnLocation { locationOn = locationAvailable(context) }
-                        else context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
-                    },
-                    askToEnd = askToEnd, onAskToEnd = { askToEnd = it },
-                    keepRoute = keepRoute.takeIf { useGps }, onKeepRoute = { keepRoute = it },
-                )
-                return@HaloPageColumn
-            }
             when (family) {
-                Workouts.Family.Strength -> StrengthPlanCard(
+                Workouts.Family.Distance, Workouts.Family.IndoorCardio -> CardioGoal(
+                    type, kinds, kind, draft, { draft = it }, useGps, hasDistance, lastPace, maxHeartRate, nowMillis, last, look,
+                )
+                Workouts.Family.Strength -> StrengthGoal(
                     type, sets, { sets = it; if (it != null) planSets = it }, planSets, restSeconds, { restSeconds = it },
-                        typing, { typing = it },
+                    nowMillis, last, look,
                 )
-                Workouts.Family.Intervals -> HiitPlanCard(type, rounds, { structureCode = it?.code }, typing, { typing = it })
-                Workouts.Family.MindBody -> MindPlanCard(
-                    type, draft.seconds.takeIf { draft.kind == WorkoutSetup.GoalKind.Time },
-                    { draft = if (it == null) draft.copy(kind = WorkoutSetup.GoalKind.None) else
-                        draft.copy(kind = WorkoutSetup.GoalKind.Time, seconds = it) },
-                    draft.seconds, typing, { typing = it },
+                Workouts.Family.Intervals -> HiitGoal(type, rounds, { structureCode = it?.code }, settings.structure, last, look)
+                Workouts.Family.MindBody -> MindGoal(type, draft, { draft = it }, nowMillis, last, look)
+                Workouts.Family.Games -> GamesGoal(
+                    type, rounds as? Structure.Periods, { structureCode = it?.code }, settings.structure, last, look,
                 )
-                else -> GamePlanCard(type, rounds as? Structure.Periods, { structureCode = it?.code }, typing, { typing = it })
             }
-            ReadyLastRow(last)
-            ReadyRows {
-                var divider = false
-                if (strength) {
-                    SwitchRow(
-                        StartCopy.END_REST_EARLY, StartCopy.endRestNote(restBelow ?: belowLevel), restBelow != null,
-                        { restBelow = if (it) belowLevel else null }, divider = false,
-                    )
-                    SwitchRow(StartCopy.LOG_SETS, StartCopy.LOG_SETS_NOTE, log, { log = it })
-                    divider = true
-                }
-                if (rounds != null && family == Workouts.Family.Intervals) {
-                    SwitchRow(StartCopy.WARM_UP, StartCopy.WARM_UP_NOTE, rounds.warmUp,
-                        { structureCode = rounds.warm(it).code }, divider = false)
-                    divider = true
-                }
-                SwitchRow(StartCopy.ASK_TO_END, StartCopy.ASK_TO_END_NOTE, askToEnd, { askToEnd = it }, divider = divider)
+            // With no goal the hero is last time already.
+            if (!showsLastTime(family, kind, sets, rounds, draft)) ReadyLastRow(last)
+            if (pair != null) {
+                OutdoorRow(
+                    indoor != true,
+                    { on ->
+                        chosenIndoor = !on
+                        onSide(pair.outdoor, !on)
+                    },
+                    locationOn, StartCopy.outdoorNote(accuracy), StartCopy.indoorLine(type), turnOnLocation,
+                )
+            } else if (outdoor && !locationOn) {
+                LocationOffRow(turnOnLocation)
             }
+            ReadySwitches(
+                strength, log, { log = it }, restBelow, { restBelow = it }, belowLevel,
+                rounds?.takeIf { family == Workouts.Family.Intervals }, { structureCode = it.code },
+            )
         }
+    }
+}
+
+/** An outdoor sport with no indoor side whose location is off: says so, with Turn on location. */
+@Composable
+private fun LocationOffRow(onTurnOn: () -> Unit) = ReadyRows {
+    HaloRow(
+        WorkoutCopy.LOCATION_OFF, lead = RowLead.tile(org.openstrap.app.ui.theme.SportIcons.Location),
+        line = { RowLine(WorkoutCopy.LOCATION_OFF_NOTE) },
+        trail = { RowTrail.Action(StartCopy.TURN_ON_LOCATION, onTurnOn) }, divider = false,
+    )
+}
+
+/**
+ * The switches at the end: strength's Log reps and weight and End rest early ([restBelow], back on at [belowLevel]),
+ * and HIIT's Warm up first for its [rounds]. Nothing for the rest.
+ */
+@Suppress("LongParameterList")
+@Composable
+private fun ReadySwitches(
+    strength: Boolean,
+    log: Boolean,
+    onLog: (Boolean) -> Unit,
+    restBelow: Int?,
+    onRestBelow: (Int?) -> Unit,
+    belowLevel: Int,
+    rounds: Structure?,
+    onRounds: (Structure) -> Unit,
+) {
+    if (!strength && rounds == null) return
+    ReadyRows {
+        if (strength) {
+            SwitchRow(StartCopy.LOG_SETS, StartCopy.LOG_SETS_NOTE, log, onLog, divider = false)
+            SwitchRow(
+                StartCopy.END_REST_EARLY, StartCopy.endRestNote(restBelow ?: belowLevel), restBelow != null,
+                { onRestBelow(if (it) belowLevel else null) },
+            )
+        }
+        if (rounds != null) {
+            SwitchRow(StartCopy.WARM_UP, StartCopy.WARM_UP_NOTE, rounds.warmUp, { onRounds(rounds.warm(it)) }, divider = false)
         }
     }
 }
@@ -385,7 +318,16 @@ private fun ReadyTopBar(type: Int, family: Workouts.Family, connection: Connecti
     }
 }
 
-/** What a cardio sport's goal card opens on: last time's goal or reps ([structure] first, from Choose), each kind's default else. */
+/** What a cardio goal (or mind and body's length) holds: the kind chosen and each kind's value, kept while you flip between them. */
+internal data class GoalDraft(
+    val kind: GoalKind,
+    val meters: Int,
+    val seconds: Long,
+    val zones: WorkoutTarget.Zones,
+    val reps: Structure.Reps,
+)
+
+/** What the goal opens on: last time's goal or reps ([structure] first, from Choose), each kind's default else. */
 private fun goalDraft(settings: SportSettings, structure: String?): GoalDraft {
     val goal = WorkoutTarget.parse(settings.goal)
     val reps = Structure.parse(structure ?: settings.structure) as? Structure.Reps
@@ -398,12 +340,12 @@ private fun goalDraft(settings: SportSettings, structure: String?): GoalDraft {
     )
 }
 
-/** Keeps the goal card's draft across process death, as the kind, the values and the reps' code. */
+/** Keeps the goal's draft across process death, as the kind, the values and the reps' code. */
 private val GoalDraftSaver = androidx.compose.runtime.saveable.listSaver<GoalDraft, Any>(
     save = { d -> listOf(d.kind.ordinal, d.meters, d.seconds, d.zones.low, d.zones.high, d.reps.code) },
     restore = { v ->
         GoalDraft(
-            WorkoutSetup.GoalKind.entries[v[0] as Int], v[1] as Int, v[2] as Long, WorkoutTarget.Zones(v[3] as Int, v[4] as Int),
+            GoalKind.entries[v[0] as Int], v[1] as Int, v[2] as Long, WorkoutTarget.Zones(v[3] as Int, v[4] as Int),
             Structure.parse(v[5] as String) as? Structure.Reps ?: StartCopy.DEFAULT_INTERVALS,
         )
     },
@@ -436,4 +378,3 @@ internal fun StrapLine(connection: ConnectionState, liveHeartRate: Int?) {
         Modifier.padding(horizontal = Space.S4),
     )
 }
-

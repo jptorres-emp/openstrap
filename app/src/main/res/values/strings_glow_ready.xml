@@ -19,12 +19,7 @@
     <string name="glow_choose_start">Start</string>
     <!-- Spoken for the small location mark on a sport's tile that is only done outdoors, for screen readers. -->
     <string name="glow_choose_outdoors">Outdoors</string>
-    <!-- The sport picker's page title, opened from Ready. -->
-    <string name="glow_ready_hero_zones">zones</string>
     <string name="glow_ready_hero_zone_range"><xliff:g id="low" example="2">%1$d</xliff:g> to <xliff:g id="high" example="3">%2$d</xliff:g></string>
-    <string name="glow_ready_hero_sets_rest">sets, <xliff:g id="rest" example="90 s">%1$s</xliff:g> rest</string>
-    <string name="glow_ready_hero_periods">min <xliff:g id="periods" example="halves">%1$s</xliff:g></string>
-    <string name="glow_ready_hero_free">Free</string>
     <string name="glow_ready_last_caption">Last time, <xliff:g id="day" example="Tue">%1$s</xliff:g></string>
     <string name="glow_ready_last_today">today</string>
     <string name="glow_ready_last_time">Time</string>
@@ -71,39 +66,10 @@
     <string name="glow_ready_connect">Connect strap</string>
     <!-- Ready's heart card beside the live heart rate drawn large. -->
     <!-- Spoken for the plan pill on Ready, for screen readers: the plan's name, then what tapping it does. -->
-    <!-- Spoken for the minus button beside a distance or time goal, for screen readers. -->
-    <string name="glow_ready_shorter">Shorter</string>
-    <!-- Spoken for the plus button beside a distance or time goal, for screen readers. -->
-    <string name="glow_ready_longer">Longer</string>
     <!-- The sheet's title when saving intervals by name: the button's words ("Save intervals") and the intervals ("5 × 400 m"). -->
 
     <!--
       The plan cards lay a typed number out among words, a number drawn large then words beside it: "5 × 400 m" over
       "with [90 s] rest between". Each piece stands on its own beside a number, so keep them short.
     -->
-    <!-- Before the rest time, under the repeats. The line is built in a fixed order around a number, and the whole card reads as "8 × 400 m, with 1:30 rest between" or "4 sets, with 1:30 rest between". -->
-    <string name="glow_ready_with">with</string>
-    <!-- After the rest time, under the repeats or the sets. The line is built in a fixed order around a number, and the whole card reads as "8 × 400 m, with 1:30 rest between" or "4 sets, with 1:30 rest between". -->
-    <string name="glow_ready_rest_between">rest between</string>
-    <!-- After the rest time when strength has no planned sets. -->
-    <string name="glow_ready_rest_after_set">rest after each set</string>
-    <!-- Before a game's break length, under its periods. The line is built in a fixed order around a number, and the whole card reads as "2 × 45 min, with a 15 min break". -->
-    <string name="glow_ready_with_a">with a</string>
-    <!-- After a game's break length. The line is built in a fixed order around a number, and the whole card reads as "2 × 45 min, with a 15 min break". -->
-    <string name="glow_ready_break">break</string>
-    <!-- Beside the number of planned strength sets. Always this form, whatever the number. -->
-    <string name="glow_ready_unit_sets">sets</string>
-    <!-- Beside the number of HIIT rounds. Always this form, whatever the number. -->
-    <string name="glow_ready_unit_rounds">rounds</string>
-    <!-- Beside a HIIT round's work time in seconds, "20 s on". Very short. -->
-    <string name="glow_ready_unit_s_on">s on</string>
-    <!-- Beside a HIIT round's rest time in seconds, "10 s off". Very short. -->
-    <string name="glow_ready_unit_s_off">s off</string>
-    <!-- Beside an every minute round's length in seconds, "60 s a round". Very short. -->
-    <string name="glow_ready_unit_s_a_round">s a round</string>
-    <!-- Spoken for the strip of HIIT work and rest under the plan, for screen readers. The form follows the rounds. Work and rest are seconds. -->
-    <plurals name="glow_ready_rounds_description">
-        <item quantity="one"><xliff:g id="rounds" example="1">%1$d</xliff:g> round, <xliff:g id="work" example="20">%2$d</xliff:g> s work, <xliff:g id="rest" example="10">%3$d</xliff:g> s rest</item>
-        <item quantity="other"><xliff:g id="rounds" example="8">%1$d</xliff:g> rounds, <xliff:g id="work" example="20">%2$d</xliff:g> s work, <xliff:g id="rest" example="10">%3$d</xliff:g> s rest</item>
-    </plurals>
 </resources>

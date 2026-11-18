@@ -73,6 +73,4 @@
 
     <!-- Unit beside a number of hours, typed in a workout's time goal. Very short. -->
     <string name="glow_unit_h">h</string>
-    <!-- Unit beside a number of seconds, typed in a rest time. Very short. -->
-    <string name="glow_unit_s">s</string>
 </resources>

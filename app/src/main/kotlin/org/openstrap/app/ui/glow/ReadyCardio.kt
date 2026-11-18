@@ -1,360 +1,154 @@
+@file:Suppress("MatchingDeclarationName")
+
 package org.openstrap.app.ui.glow
 
-import org.openstrap.app.ui.theme.Corner
-import org.openstrap.app.ui.theme.Space
-import org.openstrap.app.ui.theme.Greys
-import androidx.compose.ui.res.stringResource
-import kotlinx.coroutines.flow.collectLatest
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.relocation.BringIntoViewRequester
-import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.TextRange
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.TextFieldValue
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import org.openstrap.app.R
-import org.openstrap.app.data.HeartZones
-import org.openstrap.app.data.Structure
 import org.openstrap.app.data.WorkoutSetup
 import org.openstrap.app.data.WorkoutSetup.GoalKind
 import org.openstrap.app.data.WorkoutTarget
 import org.openstrap.app.data.Workouts
-import org.openstrap.app.data.db.SavedWorkout
 import org.openstrap.app.ui.components.pressClickable
-import org.openstrap.app.ui.theme.AppIcons
+import org.openstrap.app.ui.theme.Corner
+import org.openstrap.app.ui.theme.Greys
+import org.openstrap.app.ui.theme.IconSize
 import org.openstrap.app.ui.theme.Ink
-import org.openstrap.app.ui.theme.MetricColors
+import org.openstrap.app.ui.theme.SportIcons
+import org.openstrap.app.ui.theme.Space
 import org.openstrap.app.ui.workout.StartCopy
-import org.openstrap.app.presentation.WorkoutCopy
-import org.openstrap.app.ui.workout.ZONE_COLORS
-import java.time.LocalTime
 
 /*
- * Ready for distance and cardio sports (board ReadyFinal): the heart, where you are, then the goal, typed in place.
- * No settings sheet: everything it held is a row here or went with the design.
+ * Ready's goal type and where you are (board HaloReadyEveryKind): the goal type as plain text tabs on the page, or one
+ * Goal row with a menu for a sport with five or more; the zone buttons inside the hero; and the Outdoor switch of a
+ * sport with an indoor side.
  */
 
-/**
- * Where you are and the switch rows, on one quiet panel. For a sport with an indoor side ([sides]), its title is the
- * side you're on: outside with a green pin and the GPS line, or indoors with its amber icon and what you get without
- * GPS; its pill names the other side and switches to it ([onSwitch]). An outdoor sport whose location is off says so,
- * with Turn on location. Then Ask to end when I stop, and Save a map of my run where GPS is used ([keepRoute] not null).
- */
+/** The goal type controls' measurements. */
+internal object GoalTypeSpec {
+    /** Each tab's height: the tap target. */
+    val TabHeight = IconSize.TileM
+
+    /** Between the tabs, and in from the page's edge. */
+    val TabGap = Space.S16
+    val Side = Space.S8
+
+    /** The white line under the picked tab. */
+    val Underline = 2.dp
+
+    /** A sport with more goal types than this gets the Goal menu row instead of tabs. */
+    const val MOST_TABS = 4
+}
+
+/** The goal types as tabs: [names] in a row, the one at [picked] white, semibold and underlined, the rest grey. */
+@Suppress("UnstableCollections", "ComposeUnstableCollections")
 @Composable
-internal fun ReadyWhere(
-    type: Int,
-    sides: Workouts.Sides?,
-    indoor: Boolean,
-    outdoor: Boolean,
-    locationOn: Boolean,
-    gpsLine: String,
-    onSwitch: () -> Unit,
-    onTurnOnLocation: () -> Unit,
-    askToEnd: Boolean,
-    onAskToEnd: (Boolean) -> Unit,
-    keepRoute: Boolean?,
-    onKeepRoute: (Boolean) -> Unit,
-) {
-    HaloCard(fill = CardFill.Rows) {
-        var rows = 0
-        if (sides != null) {
-            PlaceRow(
-                placeIcon(sides, indoor), if (indoor) IndoorTint else TrendGood, StartCopy.place(sides, indoor),
-                when {
-                    indoor -> StartCopy.indoorNote(type)
-                    !locationOn -> WorkoutCopy.LOCATION_OFF
-                    else -> gpsLine
-                },
+internal fun GoalTabs(names: List<String>, picked: Int, onPick: (Int) -> Unit) {
+    val group = stringResource(R.string.ready_goal_type)
+    Row(
+        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = GoalTypeSpec.Side)
+            .selectableGroup().semantics { contentDescription = group },
+        horizontalArrangement = Arrangement.spacedBy(GoalTypeSpec.TabGap),
+    ) {
+        names.forEachIndexed { i, name ->
+            val on = i == picked
+            Box(
+                Modifier.height(GoalTypeSpec.TabHeight)
+                    .selectable(on, role = Role.Tab, onClick = { if (!on) onPick(i) })
+                    .drawWithContent {
+                        drawContent()
+                        if (on) {
+                            val h = GoalTypeSpec.Underline.toPx()
+                            drawRect(Color.White, Offset(0f, size.height - h), androidx.compose.ui.geometry.Size(size.width, h))
+                        }
+                    },
+                contentAlignment = Alignment.Center,
             ) {
-                val other = StartCopy.otherPlace(sides, indoor)
-                HaloChip(other, onSwitch, icon = placeIcon(sides, !indoor), description = other)
+                Text(
+                    name, color = if (on) Color.White else GlowType.noteColor,
+                    style = if (on) GlowType.body.copy(fontWeight = FontWeight.SemiBold) else GlowType.body, maxLines = 1,
+                )
             }
-            rows++
-        } else if (outdoor && !locationOn) {
-            PlaceRow(SportIconsLocation, TrendBad, WorkoutCopy.LOCATION_OFF, WorkoutCopy.LOCATION_OFF_NOTE, trailing = null)
-            rows++
         }
-        if (outdoor && !locationOn) {
-            HaloButton(StartCopy.TURN_ON_LOCATION, onTurnOnLocation, Modifier.fillMaxWidth().padding(bottom = Space.S12),
-                icon = SportIconsLocation)
-        }
-        SwitchRow(StartCopy.ASK_TO_END, StartCopy.ASK_TO_END_NOTE, askToEnd, onAskToEnd, divider = rows > 0)
-        if (keepRoute != null) SwitchRow(StartCopy.keepRoute(type), WorkoutCopy.routeNote(keepRoute), keepRoute, onKeepRoute)
     }
 }
 
-/**
- * Where you are, at the top of Ready's plan card (board HaloReadyRun): Outside and On a treadmill as two chips on a plain
- * track, the picked one lit, and under them the GPS line with its dot, or what you get without it.
- */
+/** The goal type as one row: "Goal" at the left, the picked type as a chip with a caret at the right opening a menu of [names]. */
+@Suppress("UnstableCollections", "ComposeUnstableCollections")
 @Composable
-internal fun ReadyPlace(type: Int, sides: Workouts.Sides, indoor: Boolean, locationOn: Boolean, gpsLine: String, onSwitch: () -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(Space.S12)) {
-        Row(
-            Modifier.fillMaxWidth().clip(CircleShape).background(Greys.Card).padding(Space.S4),
-            horizontalArrangement = Arrangement.spacedBy(Space.S4),
-        ) {
-            listOf(false to StartCopy.place(sides, false), true to StartCopy.place(sides, true)).forEach { (isIndoor, name) ->
-                val picked = indoor == isIndoor
-                Box(
-                    Modifier.weight(1f).height(40.dp).clip(CircleShape).background(if (picked) Greys.Picked else Color.Transparent)
-                        .clickable(role = Role.RadioButton, onClick = { if (!picked) onSwitch() }).semantics { selected = picked },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(name, color = if (picked) Color.White else GlowType.noteColor, style = GlowType.secondary, maxLines = 1)
+internal fun GoalMenuRow(names: List<String>, picked: Int, onPick: (Int) -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    val change = stringResource(R.string.ready_goal_type_change, names[picked])
+    Row(
+        Modifier.fillMaxWidth().height(GoalTypeSpec.TabHeight).padding(horizontal = GoalTypeSpec.Side),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(stringResource(R.string.ready_goal), Modifier.weight(1f), color = GlowType.noteColor, style = GlowType.body)
+        Box {
+            HaloChip(names[picked], { open = true }, caret = true, description = change, role = Role.DropdownList)
+            DropdownMenu(
+                expanded = open, onDismissRequest = { open = false },
+                offset = DpOffset(0.dp, 4.dp), shape = Corner.Inner, containerColor = Greys.Control,
+                tonalElevation = 0.dp, shadowElevation = 12.dp, border = BorderStroke(1.dp, Ink.Edge),
+            ) {
+                names.forEachIndexed { i, name ->
+                    val on = i == picked
+                    DropdownMenuItem(
+                        text = { Text(name, style = GlowType.body, color = if (on) Color.White else Ink.Strong) },
+                        onClick = { open = false; if (!on) onPick(i) },
+                        trailingIcon = if (on) ({ RowTrail.Check() }) else null,
+                        modifier = Modifier.widthIn(min = 180.dp).semantics { this.selected = on },
+                    )
                 }
             }
         }
-        StatusDot(
-            when {
-                indoor -> StartCopy.indoorNote(type)
-                !locationOn -> WorkoutCopy.LOCATION_OFF
-                else -> gpsLine
-            },
-            if (indoor) IndoorTint else if (locationOn) TrendGood else TrendBad,
-        )
     }
 }
 
-private val SportIconsLocation: ImageVector get() = org.openstrap.app.ui.theme.SportIcons.Location
-
-/** Amber, for an indoor side: zone 3's yellow, as the board has it. */
-private val IndoorTint = ZONE_COLORS[2]
-
-/** Each side's icon: the pin outdoors, then the treadmill, the pool or a house. */
-private fun placeIcon(sides: Workouts.Sides, indoor: Boolean): ImageVector = when {
-    !indoor -> SportIconsLocation
-    sides.indoor == 2 -> AppIcons.Treadmill
-    sides.indoor == 6 -> AppIcons.PersonSimpleSwim
-    else -> AppIcons.HouseSimple
-}
-
-/** A where row: the icon in a tile tinted its [tint], the title and its note, then [trailing]. */
-@Composable
-private fun PlaceRow(icon: ImageVector, tint: Color, title: String, note: String, trailing: (@Composable () -> Unit)?) = HaloRow(
-    title, lead = RowLead.sport(icon, tint), line = { RowLine(note) }, trail = trailing, divider = false,
-)
-
-/* -------------------------------------------- The goal card ---------------------------------------------- */
-
-/** What the goal card shows and changes: the kind chosen and each kind's value, kept while you flip between them. */
-internal data class GoalDraft(
-    val kind: GoalKind,
-    val meters: Int,
-    val seconds: Long,
-    val zones: WorkoutTarget.Zones,
-    val reps: Structure.Reps,
-)
-
-/**
- * The goal (board ReadyFinal): the kinds in one pill ([kinds]; Just go named for the sport), and under it the chosen
- * kind's value with what the strap will do. A value is typed in place on the number keyboard; [typing] says when, so
- * Start can make way for the keyboard. Intervals save by name ([onSave]) and open a saved one ([saved]).
- */
-@Composable
-internal fun ReadyGoal(
-    type: Int,
-    kinds: List<GoalKind>,
-    hasDistance: Boolean,
-    draft: GoalDraft,
-    onDraft: (GoalDraft) -> Unit,
-    typing: Boolean,
-    onTyping: (Boolean) -> Unit,
-    zones: HeartZones,
-    maxHr: Int?,
-    onYourZones: () -> Unit,
-    saved: List<SavedWorkout>,
-    onSave: (String, Structure.Reps) -> Unit,
-    /** Where you are, at the top of the card: outside or on a treadmill, and the GPS line. */
-    place: (@Composable ColumnScope.() -> Unit)? = null,
-) {
-    PlanChoice(
-        Workouts.family(type), kinds.map { it to PlanOption(kindIcon(it, type), kindName(it, type), kindNote(it, hasDistance)) },
-        { it == draft.kind }, { onDraft(draft.copy(kind = it)) }, typing, onTyping,
-        top = place,
-        // The picked kind's presets sit in the card; a custom value is typed in the hero's sheet (the content below).
-        presets = {
-            when (draft.kind) {
-                GoalKind.Distance -> Presets(StartCopy.DISTANCE_PRESETS, draft.meters) { onDraft(draft.copy(meters = it)) }
-                GoalKind.Time -> Presets(StartCopy.TIME_PRESETS, draft.seconds) { onDraft(draft.copy(seconds = it)) }
-                GoalKind.Zone -> ZoneGoal(draft.zones, { onDraft(draft.copy(zones = it)) }, zones, maxHr, onYourZones)
-                GoalKind.Intervals ->
-                    IntervalsGoal(draft.reps, { onDraft(draft.copy(reps = it)) }, typing, onTyping, saved, onSave, valueOnly = false)
-                GoalKind.None -> Unit
-            }
-        },
-    ) {
-        when (draft.kind) {
-            GoalKind.Distance -> DistanceGoal(draft.meters, { onDraft(draft.copy(meters = it)) }, typing, onTyping)
-            GoalKind.Time -> TimeGoal(draft.seconds, { onDraft(draft.copy(seconds = it)) }, typing, onTyping)
-            GoalKind.Intervals ->
-                IntervalsGoal(draft.reps, { onDraft(draft.copy(reps = it)) }, typing, onTyping, saved, onSave, valueOnly = true)
-            GoalKind.Zone, GoalKind.None -> Unit
-        }
-    }
-}
-
-/** One choice in a plan card's pill and its sheet: its icon, its name, and what the strap does with it. */
-internal class PlanOption(val icon: ImageVector, val name: String, val note: String)
-
-/**
- * [ReadyPlanCard] over values rather than places: each of [choices] is what it sets and how it reads, the first that
- * [isChosen] is ticked and shown, and picking one hands its value to [onChoose]. Where none is chosen (a value typed
- * that's no preset) the pill shows [other], the first choice unless said.
- */
-@Composable
-internal fun <T> PlanChoice(
-    family: Workouts.Family,
-    choices: List<Pair<T, PlanOption>>,
-    isChosen: (T) -> Boolean,
-    onChoose: (T) -> Unit,
-    typing: Boolean,
-    onTyping: (Boolean) -> Unit,
-    other: () -> PlanOption = { choices[0].second },
-    top: (@Composable ColumnScope.() -> Unit)? = null,
-    presets: @Composable ColumnScope.() -> Unit = {},
-    content: @Composable ColumnScope.() -> Unit,
-) {
-    val at = choices.indexOfFirst { isChosen(it.first) }.takeIf { it >= 0 }
-    ReadyPlanCard(
-        family, choices.map { it.second }, at?.let { choices[it].second } ?: other(), at,
-        { onChoose(choices[it].first) }, typing, onTyping, top, presets, content,
-    )
-}
-
-/**
- * The one plan card every Ready has (boards ReadyFinal, ReadyKindPill, ReadyKindSheet): the family's label over it
- * ([StartCopy.planTitle]), then the choice in one pill ([shown], which may be none of [options] once a value is typed),
- * opening a sheet of every option with what each does, the one [chosen] ticked; then [content], the chosen one's
- * value. While typing ([typing]) the whole card scrolls up over the keyboard, presets and note too.
- */
-@Composable
-private fun ReadyPlanCard(
-    family: Workouts.Family,
-    options: List<PlanOption>,
-    shown: PlanOption,
-    chosen: Int?,
-    onChoose: (Int) -> Unit,
-    typing: Boolean,
-    onTyping: (Boolean) -> Unit,
-    top: (@Composable ColumnScope.() -> Unit)?,
-    presets: @Composable ColumnScope.() -> Unit,
-    content: @Composable ColumnScope.() -> Unit,
-) {
-    val inView = remember { BringIntoViewRequester() }
-    val ime = WindowInsets.ime
-    val density = LocalDensity.current
-    // Once the keyboard has stopped moving. Its height is read in the effect, not in composition, so the card isn't
-    // composed again for every frame of the keyboard rising.
-    LaunchedEffect(typing) {
-        if (!typing) return@LaunchedEffect
-        androidx.compose.runtime.snapshotFlow { ime.getBottom(density) }.collectLatest { keyboard ->
-            if (keyboard > 0) { kotlinx.coroutines.delay(80); inView.bringIntoView() }
-        }
-    }
-    val editor = LocalGoalEditor.current
-    // Inline, as the boards draw it: where you are, the kinds as chips, then the picked kind's presets. Picking one
-    // changes the hero's number at once; a typed value lives in the sheet the hero opens.
-    HaloCard(Modifier.bringIntoViewRequester(inView)) {
-        top?.invoke(this)
-        PlanChips(options, chosen, shown, onChoose)
-        presets()
-    }
-    if (editor.open) HaloSheet(
-        { closeGoal(editor, onTyping, save = false) }, StartCopy.planSheet(family),
-        footer = {
-            ButtonPair(
-                stringResource(R.string.glow_cancel),
-                { closeGoal(editor, onTyping, save = false) },
-                stringResource(R.string.glow_save),
-                { closeGoal(editor, onTyping, save = true) },
-            )
-        },
-    ) {
-        content()
-    }
-}
-
-/** The kinds as chips in a wrapping row, the picked one ringed; a typed value that is none of them is named, picked. */
+/** The goal types on the page: tabs for up to [GoalTypeSpec.MOST_TABS], else the Goal menu row. */
 @Suppress("UnstableCollections", "ComposeUnstableCollections")
-@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
-private fun PlanChips(options: List<PlanOption>, chosen: Int?, shown: PlanOption, onChoose: (Int) -> Unit) {
-    androidx.compose.foundation.layout.FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(Space.S8), verticalArrangement = Arrangement.spacedBy(Space.S8),
-    ) {
-        options.forEachIndexed { i, o ->
-            HaloChip(
-                o.name, { if (i != chosen) onChoose(i) }, variant = ChipVariant.Choice, selected = i == chosen, role = Role.RadioButton,
-                description = o.note,
-            )
-        }
-        if (chosen == null) HaloChip(shown.name, {}, variant = ChipVariant.Choice, selected = true, role = Role.RadioButton)
-    }
-}
+internal fun GoalType(names: List<String>, picked: Int, onPick: (Int) -> Unit) =
+    if (names.size > GoalTypeSpec.MOST_TABS) GoalMenuRow(names, picked, onPick) else GoalTabs(names, picked, onPick)
 
-/** Closes the goal's sheet: Save keeps what was changed in it, Cancel (and dismissing) puts back what was there. */
-private fun closeGoal(editor: GoalEditor, onTyping: (Boolean) -> Unit, save: Boolean) {
-    if (!save) editor.revert()
-    editor.open = false
-    onTyping(false)
-}
-
-private fun kindName(k: GoalKind, type: Int): String = when (k) {
+/** A cardio goal kind's name on its tab: Just go named for the sport, then Distance, Time, Zone and Intervals. */
+internal fun kindName(k: GoalKind, type: Int): String = when (k) {
     GoalKind.None -> StartCopy.noGoal(type)
     GoalKind.Distance -> StartCopy.DISTANCE
     GoalKind.Time -> StartCopy.TIME
@@ -362,467 +156,84 @@ private fun kindName(k: GoalKind, type: Int): String = when (k) {
     GoalKind.Intervals -> StartCopy.INTERVALS
 }
 
-private fun kindIcon(k: GoalKind, type: Int): ImageVector = when (k) {
-    GoalKind.None -> org.openstrap.app.ui.theme.SportIcons.of(type)
-    GoalKind.Distance -> AppIcons.Route01
-    GoalKind.Time -> AppIcons.Timer
-    GoalKind.Zone -> AppIcons.Pulse01
-    GoalKind.Intervals -> AppIcons.ChartBar
-}
-
-private fun kindNote(k: GoalKind, hasDistance: Boolean): String = when (k) {
-    GoalKind.None -> StartCopy.noGoalNote(hasDistance)
-    GoalKind.Distance -> StartCopy.DISTANCE_KIND_NOTE
-    GoalKind.Time -> StartCopy.TIME_KIND_NOTE
-    GoalKind.Zone -> StartCopy.ZONE_KIND_NOTE
-    GoalKind.Intervals -> StartCopy.INTERVALS_KIND_NOTE
-}
-
-/** A row of presets under a value, each as wide as the others; the one matching the value ([on]) has the white ring. */
+/** The zone buttons in the hero: five, the chosen zone or range white with black figures, the rest a light glass. */
 @Composable
-internal fun <T> Presets(presets: List<Pair<T, String>>, on: T?, onPick: (T) -> Unit) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Space.S8)) {
-        presets.forEach { (v, label) ->
-            HaloChip(label, { onPick(v) }, Modifier.weight(1f), ChipVariant.Choice, selected = v == on, role = Role.Button)
-        }
-    }
-}
-
-/** A value to tap and type: its numbers and units, "Tap to type" under them ([hint]). */
-@Composable
-private fun TapValue(parts: List<Pair<String, String>>, hint: String?, onClick: () -> Unit) {
-    Column(
-        Modifier.clip(Corner.Chip).clickable(onClickLabel = StartCopy.TAP_TO_TYPE,
-            onClick = onClick).padding(horizontal = Space.S8),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Row {
-            parts.forEachIndexed { i, (n, unit) ->
-                if (i > 0) Spacer(Modifier.width(Space.S8))
-                Text(n, color = Color.White, style = GlowType.goalValue, modifier = Modifier.alignByBaseline())
-                Spacer(Modifier.width(Space.S4))
-                Text(unit, color = Ink.Strong, style = GlowType.body, modifier = Modifier.alignByBaseline())
+internal fun ZoneButtons(goal: WorkoutTarget.Zones, onGoal: (WorkoutTarget.Zones) -> Unit) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Space.S4)) {
+        for (z in 0 until Workouts.ZONES) {
+            val on = z in goal.low..goal.high
+            Box(
+                Modifier.weight(1f).height(IconSize.TileM).clip(Corner.Inner).background(if (on) Color.White else Ink.Line)
+                    .pressClickable({ onGoal(WorkoutSetup.pickZone(goal, z)) }, Corner.Inner)
+                    .semantics { selected = on },
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    "${z + 1}", color = if (on) Color.Black else Color.White,
+                    style = if (on) GlowType.body.copy(fontWeight = FontWeight.SemiBold) else GlowType.body,
+                )
             }
         }
-        if (hint != null) Text(hint, color = Ink.Secondary, style = GlowType.caption,
-            modifier = Modifier.padding(top = Space.S4))
     }
 }
 
 /**
- * A number typed in place: [GlowType.goalValue] (or [style]) on the phone's number keyboard, with the lime caret and
- * a lime underline while it has focus ([focused]), a faint one otherwise. [unit] follows it.
+ * Outdoor, for a sport with an indoor side: on is outdoors with GPS ([gpsLine]), off is indoors ([offLine]). With the
+ * phone's location off ([locationOn] false) the switch stays on, the pin is grey and struck through, and the line
+ * says so with Turn it on ([onTurnOnLocation]).
  */
 @Composable
-private fun TypedNumber(
-    value: TextFieldValue,
-    onValue: (TextFieldValue) -> Unit,
-    unit: String?,
-    focused: Boolean,
-    field: Modifier,
-    keyboard: KeyboardType,
-    ime: ImeAction,
-    onIme: () -> Unit,
-    style: TextStyle = GlowType.goalValue,
-    modifier: Modifier = Modifier,
+internal fun OutdoorRow(
+    outdoor: Boolean,
+    onOutdoor: (Boolean) -> Unit,
+    locationOn: Boolean,
+    gpsLine: String,
+    offLine: String,
+    onTurnOnLocation: () -> Unit,
 ) {
-    Row(
-        modifier.drawBehind {
-            val y = size.height - 1.dp.toPx()
-            drawLine(if (focused) TypingLime else Ink.Line, Offset(0f, y), Offset(size.width, y), 2.dp.toPx())
-        }.padding(start = Space.S8, end = Space.S8, bottom = Space.S8),
-    ) {
-        BasicTextField(
-            value, onValue, field.width(IntrinsicSize.Min).widthIn(min = 18.dp).alignByBaseline(),
-            textStyle = style.copy(color = Color.White), cursorBrush = SolidColor(TypingLime), singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = keyboard, imeAction = ime),
-            keyboardActions = KeyboardActions(onDone = { onIme() }, onNext = { onIme() }),
+    val blocked = outdoor && !locationOn
+    HaloCard(fill = CardFill.Rows) {
+        HaloRow(
+            stringResource(R.string.ready_outdoor),
+            lead = RowLead.custom(RowSpec.Tile) { PinTile(struck = blocked) },
+            line = {
+                if (blocked) Row(horizontalArrangement = Arrangement.spacedBy(Space.S4)) {
+                    RowLine(stringResource(R.string.ready_location_off))
+                    Text(
+                        stringResource(R.string.ready_location_turn_on),
+                        Modifier.clickable(role = Role.Button, onClick = onTurnOnLocation),
+                        color = Color.White, style = LinkStyle,
+                    )
+                } else RowLine(if (outdoor) gpsLine else offLine)
+            },
+            trail = { RowTrail.Toggle(outdoor, onOutdoor) },
+            tapModifier = Modifier.toggleable(outdoor, role = Role.Switch, onValueChange = onOutdoor),
+            divider = false,
         )
-        if (unit != null) {
-            Spacer(Modifier.width(Space.S4))
-            Text(unit, color = Ink.Strong, style = GlowType.body, modifier = Modifier.alignByBaseline())
-        }
     }
 }
 
-/** Keeps a [TypedValue]'s numbers as typed: each one's text and selection, three plain values a number. */
-private val TextFieldValuesSaver = androidx.compose.runtime.saveable.listSaver<List<TextFieldValue>, Any>(
-    save = { l -> l.flatMap { listOf(it.text, it.selection.start, it.selection.end) } },
-    restore = { v -> v.chunked(3) { (t, a, b) -> TextFieldValue(t as String, TextRange(a as Int, b as Int)) } },
-)
-
-/** The caret and underline of a number being typed. */
-private val TypingLime = MetricColors.steps
-
-/** [text] with all of it selected, so the first key typed replaces it. */
-private fun selected(text: String) = TextFieldValue(text, TextRange(0, text.length))
-
-/**
- * While typing, which field has focus ([focused], null for none). Once none has had it for a moment (focus moving
- * from one field to the next passes through none), typing is over and [onDone] reads what was typed.
- */
+/** The location pin on a row's tile, grey and struck through when location is off. */
 @Composable
-private fun EndTyping(typing: Boolean, focused: Int?, everFocused: Boolean, onDone: () -> Unit) {
-    LaunchedEffect(typing, focused, everFocused) {
-        if (typing && everFocused && focused == null) {
-            kotlinx.coroutines.delay(120)
-            onDone()
-        }
-    }
-}
-
-/** Distance: minus and plus by half a km, the value in km to tap and type ([TypedValue]), the presets, and its note. */
-// Its stepper, presets and note go into the goal card's column and take its gaps, as every goal kind's parts do.
-@Suppress("MultipleEmitters", "ComposeMultipleEmitters")
-@Composable
-private fun DistanceGoal(meters: Int, onMeters: (Int) -> Unit, typing: Boolean, onTyping: (Boolean) -> Unit) {
-    val focusManager = LocalFocusManager.current
-    // What's typed so far, for the note while typing, set as it's typed, never during composition (audit K6).
-    var typed by rememberSaveable { mutableStateOf<String?>(null) }
-    // A step or preset while typing drops what was typed.
-    fun stop() { onTyping(false); focusManager.clearFocus() }
-    HaloStepper(
-        stringResource(R.string.glow_ready_shorter), stringResource(R.string.glow_ready_longer),
-        { stop(); onMeters(StartCopy.stepDistance(meters, up = false)) }, { stop(); onMeters(StartCopy.stepDistance(meters, up = true)) },
-        Modifier.fillMaxWidth(), gap = Space.S12,
-    ) {
-        TypedValue(
-            listOf(NumberField(StartCopy.distanceValue(meters), stringResource(R.string.glow_unit_km), length = 6, decimal = true)),
-            typing, onTyping,
-            onDone = { t -> StartCopy.parseDistance(t[0])?.let(onMeters) }, hint = StartCopy.TAP_TO_TYPE,
-            onTexts = { typed = it.firstOrNull() },
-        ) {
-            Row { Number(0) }
-        }
-    }
-    Presets(StartCopy.DISTANCE_PRESETS, meters.takeIf { !typing }) { stop(); onMeters(it) }
-    HaloNote(
-        StartCopy.distanceNote(if (typing) typed?.let(StartCopy::parseDistance) ?: meters else meters), textAlign = TextAlign.Center,
+private fun PinTile(struck: Boolean) {
+    HaloTile(
+        SportIcons.Location,
+        Modifier.drawWithContent {
+            drawContent()
+            if (struck) {
+                val inset = size.width * SLASH_INSET
+                drawLine(
+                    Ink.Tertiary, Offset(inset, inset), Offset(size.width - inset, size.height - inset),
+                    strokeWidth = SLASH_WIDTH.toPx(), cap = StrokeCap.Round,
+                )
+            }
+        },
+        glyph = if (struck) Ink.Tertiary else null,
     )
 }
 
-/**
- * Time: minus and plus by 5 minutes, the value in hours and minutes to tap and type (hours, then on to the minutes by
- * itself), the [presets], and when it would end if you started now, or [note] in its place (mind and body's length).
- */
-// Its stepper, presets and note go into the goal card's column and take its gaps, as every goal kind's parts do.
-@Suppress("MultipleEmitters", "ComposeMultipleEmitters")
-@Composable
-internal fun TimeGoal(
-    seconds: Long,
-    onSeconds: (Long) -> Unit,
-    typing: Boolean,
-    onTyping: (Boolean) -> Unit,
-    presets: List<Pair<Long, String>> = StartCopy.TIME_PRESETS,
-    note: String? = null,
-) {
-    val focusManager = LocalFocusManager.current
-    val context = LocalContext.current
-    // What's typed outlives a rotation, a fold and process death (audit K7). Focus doesn't, so typing starts again on
-    // the hours, as it does when tapped.
-    var hours by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue()) }
-    var minutes by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue()) }
-    var focused by remember { mutableStateOf<Int?>(null) }
-    var everFocused by remember { mutableStateOf(false) }
-    // Set once the hour is typed and the minutes have focus, until the minutes let it go.
-    var hoursDone by remember { mutableStateOf(false) }
-    val hoursFocus = remember { FocusRequester() }
-    val minutesFocus = remember { FocusRequester() }
-    fun finish() {
-        if (!typing) return
-        StartCopy.parseTime(hours.text, minutes.text)?.let(onSeconds)
-        onTyping(false)
-    }
-    fun stop() { onTyping(false); focusManager.clearFocus() }
-    EndTyping(typing, focused, everFocused) { finish() }
-    HaloStepper(
-        stringResource(R.string.glow_ready_shorter), stringResource(R.string.glow_ready_longer),
-        { stop(); onSeconds(StartCopy.stepTime(seconds, up = false)) }, { stop(); onSeconds(StartCopy.stepTime(seconds, up = true)) },
-        Modifier.fillMaxWidth(), gap = Space.S12,
-    ) {
-        if (typing) {
-            LaunchedEffect(Unit) { hoursFocus.requestFocus() }
-            fun Modifier.tracked(i: Int) = onFocusChanged { if (it.isFocused) { focused = i; everFocused = true } else if (focused == i) focused = null }
-            TypedNumber(
-                hours, { v ->
-                    // Once on to the minutes, the hours field can still send its old figure as it lets go: ignored.
-                    if (hoursDone) return@TypedNumber
-                    // The figure just typed, whether the keyboard replaced the selected hour or added after it.
-                    hours = v.copy(text = v.text.filter { it.isDigit() }.takeLast(1),
-                        selection = TextRange(1).takeIf { v.text.length > 1 } ?: v.selection)
-                    // One figure of hours, then on to the minutes.
-                    if (hours.text.length == 1 && v.text != selectedText(v)) { hoursDone = true; minutesFocus.requestFocus() }
-                },
-                stringResource(R.string.glow_unit_h), focused == 0, Modifier.focusRequester(hoursFocus).tracked(0), KeyboardType.Number,
-                ImeAction.Next, { minutesFocus.requestFocus() },
-            )
-            Spacer(Modifier.width(Space.S8))
-            TypedNumber(
-                minutes, { v -> minutes = v.copy(text = v.text.filter { it.isDigit() }.take(3)) },
-                stringResource(R.string.glow_unit_min), focused == 1,
-                Modifier.focusRequester(minutesFocus).tracked(1).onFocusChanged { if (!it.isFocused) hoursDone = false },
-                    KeyboardType.Number, ImeAction.Done, { focusManager.clearFocus() },
-            )
-        } else TapValue(StartCopy.timeParts(seconds), StartCopy.TAP_TO_TYPE) {
-            hours = selected("${seconds / 3600}"); minutes = selected("${seconds / 60 % 60}"); everFocused = false; hoursDone = false; onTyping(true)
-        }
-    }
-    Presets(presets, seconds.takeIf { !typing }) { stop(); onSeconds(it) }
-    val shown = if (typing) StartCopy.parseTime(hours.text, minutes.text) ?: seconds else seconds
-    // Ticks with the clock, so the end time stays right while Ready shows.
-    val now by produceState(LocalTime.now()) { while (true) { kotlinx.coroutines.delay(15_000); value = LocalTime.now() } }
-    val ends = StartCopy.endsNear(now, shown, android.text.format.DateFormat.is24HourFormat(context))
-    HaloNote(if (typing) StartCopy.timeTypingNote(ends) else note ?: ends, textAlign = TextAlign.Center)
-}
+/** "Turn it on" in a row's line: underlined, as a link. */
+private val LinkStyle = GlowType.secondary.copy(textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline)
 
-/** The text a field's change would leave selected, to tell a key typed from the selection only moving. */
-private fun selectedText(v: TextFieldValue): String = v.text.substring(v.selection.min, v.selection.max)
-
-/**
- * Zone: the chosen zone or range ("Zone 2 to 3") with its heart rates and names from your zones, five buttons in the
- * zones' colours with where each starts, its note, and Your zones to open the Heart rate zones page.
- */
-@Composable
-private fun ZoneGoal(goal: WorkoutTarget.Zones, onGoal: (WorkoutTarget.Zones) -> Unit, zones: HeartZones, maxHr: Int?,
-    onYourZones: () -> Unit) {
-    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(Space.S4)) {
-        Text(goal.label, color = Color.White, style = GlowType.smallValue)
-        if (maxHr != null) Text(StartCopy.zoneRangeLine(goal, zones, maxHr), color = Ink.Secondary,
-            style = GlowType.body, textAlign = TextAlign.Center)
-    }
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Space.S4)) {
-        (0 until Workouts.ZONES).forEach { z ->
-            val on = z in goal.low..goal.high
-            val color = ZONE_COLORS[z]
-            Column(
-                Modifier.weight(1f).height(56.dp).clip(Corner.Inner).background(if (on) color else Greys.Raised)
-                    .drawBehind { if (!on) drawRect(color, Offset(0f, size.height - 3.dp.toPx()),
-                        androidx.compose.ui.geometry.Size(size.width, 3.dp.toPx())) }
-                    .pressClickable({ onGoal(WorkoutSetup.pickZone(goal, z)) }, Corner.Inner)
-                    .semantics { selected = on; role = Role.Button },
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-            ) {
-                val ink = if (on) Color.Black else Ink.Strong
-                Text("Z${z + 1}", color = ink, style = GlowType.body.copy(fontWeight = FontWeight.SemiBold))
-                if (maxHr != null) Text("${zones.startBpm(z, maxHr)}", color = ink.copy(alpha = ink.alpha * 0.75f),
-                    style = GlowType.caption)
-            }
-        }
-    }
-    HaloNote(StartCopy.ZONE_NOTE, textAlign = TextAlign.Center)
-    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-        HaloButton(StartCopy.YOUR_ZONES, onYourZones, icon = AppIcons.PencilEdit)
-    }
-}
-
-
-/**
- * Intervals: "6 × 400 m" over "with 90 s rest between". Any number taps to type, then on to the next: how many, each
- * rep (in m, km or min, chosen while you type it), then the rest. The presets, what the strap will do, and Save by
- * name and Saved, for Choose's chips and here.
- */
-@Composable
-private fun IntervalsGoal(
-    reps: Structure.Reps,
-    onReps: (Structure.Reps) -> Unit,
-    typing: Boolean,
-    onTyping: (Boolean) -> Unit,
-    saved: List<SavedWorkout>,
-    onSave: (String, Structure.Reps) -> Unit,
-    /** True for the typed value (the hero's sheet), false for the presets, note and saved ones (the card). */
-    valueOnly: Boolean = false,
-) {
-    var unit by rememberSaveable { mutableStateOf(StartCopy.repUnit(reps)) }
-    var sheet by rememberSaveable { mutableStateOf<Int?>(null) }
-    fun typed(t: List<String>): Structure.Reps {
-        val withCount = StartCopy.parseCount(t[0])?.let { reps.copy(rounds = it) } ?: reps
-        val withRep = StartCopy.parseRep(t[1], unit, withCount) ?: withCount
-        return StartCopy.parseRest(t[2])?.let { withRep.copy(rest = it) } ?: withRep
-    }
-    val (n, u) = StartCopy.repParts(reps)
-    val (restN, restU) = StartCopy.restParts(reps.rest)
-    if (valueOnly) TypedValue(
-        listOf(
-            NumberField("${reps.rounds}", null, length = 2),
-            NumberField(n, u, editUnit = unit.label, length = 5, decimal = true),
-            NumberField(
-                restN, restU, edit = "${reps.rest}", editUnit = stringResource(R.string.glow_unit_s), style = GlowType.goalValueMinor,
-            ),
-        ),
-        typing, onTyping, onDone = { onReps(typed(it)) }, onStart = { unit = StartCopy.repUnit(reps) },
-    ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(Space.S8)) {
-            Number(0)
-            Times()
-            Number(1)
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(Space.S8)) {
-            ValueWords(stringResource(R.string.glow_ready_with))
-            Number(2)
-            ValueWords(stringResource(R.string.glow_ready_rest_between))
-        }
-        if (focused == 1) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically) {
-            Text(StartCopy.EACH_REP_IN, color = Ink.Secondary, style = GlowType.secondary)
-            Spacer(Modifier.width(Space.S8))
-            StartCopy.RepUnit.entries.forEach { e ->
-                HaloChip(e.label, { unit = e }, variant = ChipVariant.Choice, selected = e == unit, role = Role.RadioButton)
-                Spacer(Modifier.width(Space.S8))
-            }
-        }
-    }
-    if (valueOnly) {
-        if (typing) HaloNote(StartCopy.INTERVALS_TYPING, textAlign = TextAlign.Center)
-        return
-    }
-    Presets(StartCopy.INTERVAL_PRESETS.map { it to StartCopy.structureName(it) },
-        reps.copy(warmUp = false)) { onReps(it.warm(reps.warmUp)) }
-    HaloNote(StartCopy.intervalsNote(reps), textAlign = TextAlign.Center)
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Space.S8, Alignment.CenterHorizontally)) {
-        HaloButton(StartCopy.SAVE_INTERVALS, { sheet = SAVE }, icon = AppIcons.Plus)
-        if (saved.isNotEmpty()) HaloButton(StartCopy.SAVED_INTERVALS, { sheet = SAVED }, icon = AppIcons.FolderOpen)
-    }
-    when (sheet) {
-        SAVE -> SaveIntervalsSheet(reps, { name -> onSave(name, reps); sheet = null }) { sheet = null }
-        SAVED -> HaloSheet({ sheet = null }, StartCopy.SAVED_INTERVALS) {
-            Column {
-                saved.forEachIndexed { i, w ->
-                    val s = Structure.parse(w.structure) as? Structure.Reps ?: return@forEachIndexed
-                    NavRow(w.name, value = StartCopy.structureName(s), divider = i > 0, onClick = { onReps(s); sheet = null })
-                }
-            }
-        }
-    }
-}
-
-/**
- * One number of a value typed in place: as it shows ([shown] and its [unit]) and as it's typed ([edit] in
- * [editUnit], the rest typed in seconds where it shows "2 min"), in [style], up to [length] figures, with a decimal
- * point when [decimal].
- */
-internal data class NumberField(
-    val shown: String,
-    val unit: String?,
-    val edit: String = shown,
-    val editUnit: String? = unit,
-    val style: TextStyle = GlowType.goalValue,
-    val length: Int = 3,
-    val decimal: Boolean = false,
-)
-
-/** What a [TypedValue]'s lines have: its numbers ([Number]), what's typed so far ([typed], null at rest), the number being typed ([focused]). */
-internal class TypedValueScope(val typed: List<String>?, val focused: Int?, private val number: @Composable RowScope.(Int) -> Unit) {
-    @Composable
-    fun RowScope.Number(i: Int) = number(i)
-}
-
-/**
- * A value of several numbers, each typed in place (board ReadyFinalReps): [lines] lay out its numbers ([NumberField],
- * by index) among words. Any number taps to type ([onStart] first), then Next goes on to the next; once none has
- * focus, [onDone] reads what was typed, each number as text. [onTexts] hears each change to what's typed, as it's
- * typed. "Tap a number to type it" ([hint]) under it at rest. What's typed, and which number typing started on, outlive
- * a rotation, a fold and process death (audit K7).
- */
-@Composable
-internal fun TypedValue(
-    fields: List<NumberField>,
-    typing: Boolean,
-    onTyping: (Boolean) -> Unit,
-    onDone: (List<String>) -> Unit,
-    onStart: () -> Unit = {},
-    hint: String? = StartCopy.TAP_A_NUMBER,
-    onTexts: (List<String>) -> Unit = {},
-    lines: @Composable TypedValueScope.() -> Unit,
-) {
-    val focusManager = LocalFocusManager.current
-    var texts by rememberSaveable(fields.size, stateSaver = TextFieldValuesSaver) { mutableStateOf(List(fields.size) { TextFieldValue() }) }
-    var focused by remember { mutableStateOf<Int?>(null) }
-    var everFocused by remember { mutableStateOf(false) }
-    var first by rememberSaveable { mutableIntStateOf(0) }
-    val focus = remember(fields.size) { List(fields.size) { FocusRequester() } }
-    EndTyping(typing, focused, everFocused) {
-        if (typing) {
-            onDone(texts.map { it.text })
-            onTyping(false)
-        }
-    }
-    if (typing) LaunchedEffect(Unit) { focus[first].requestFocus() }
-    val number: @Composable RowScope.(Int) -> Unit = { i ->
-        val f = fields[i]
-        val last = i == fields.lastIndex
-        if (typing) TypedNumber(
-            texts[i], { v ->
-                val typed = v.text.filter { c -> c.isDigit() || f.decimal && (c == '.' || c == ',') }.take(f.length)
-                texts = texts.toMutableList().also { it[i] = v.copy(text = typed) }
-                onTexts(texts.map { it.text })
-            },
-            f.editUnit, focused == i,
-            Modifier.focusRequester(focus[i]).onFocusChanged { if (it.isFocused) { focused = i; everFocused = true } else if (focused == i) focused = null },
-            if (f.decimal) KeyboardType.Decimal else KeyboardType.Number, if (last) ImeAction.Done else ImeAction.Next,
-            { if (last) focusManager.clearFocus() else focus[i + 1].requestFocus() },
-            style = f.style, modifier = Modifier.alignByBaseline(),
-        ) else TapNumber(f.shown, f.unit, f.style) {
-            texts = fields.map { selected(it.edit) }
-            onTexts(texts.map { it.text })
-            first = i; everFocused = false
-            onStart()
-            onTyping(true)
-        }
-    }
-    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(if (typing) Space.S12 else Space.S8)) {
-        TypedValueScope(texts.map { it.text }.takeIf { typing }, focused.takeIf { typing }, number).lines()
-        if (!typing && hint != null) Text(hint, color = Ink.Secondary, style = GlowType.caption)
-    }
-}
-
-/** Words between a typed value's numbers, on their baseline. */
-@Composable
-internal fun RowScope.ValueWords(text: String) =
-    Text(text, color = Ink.Secondary, style = GlowType.body, modifier = Modifier.alignByBaseline())
-
-/** The × between a count and what's counted: "6 × 400 m". */
-@Composable
-internal fun RowScope.Times() =
-    Text("×", color = Ink.Tertiary, style = GlowType.goalValueMinor,
-        modifier = Modifier.alignByBaseline().padding(horizontal = Space.S4))
-
-private const val SAVE = 0
-private const val SAVED = 1
-
-/** One number of the intervals to tap and type, with its [unit] after it, on the shared baseline. */
-@Composable
-internal fun RowScope.TapNumber(n: String, unit: String?, style: TextStyle, onClick: () -> Unit) {
-    Row(Modifier.alignByBaseline().clip(Corner.Chip).clickable(onClickLabel = StartCopy.TAP_TO_TYPE,
-        onClick = onClick).padding(horizontal = Space.S4)) {
-        Text(n, color = Color.White, style = style, modifier = Modifier.alignByBaseline())
-        if (unit != null) {
-            Spacer(Modifier.width(Space.S4))
-            Text(unit, color = Ink.Strong, style = GlowType.body, modifier = Modifier.alignByBaseline())
-        }
-    }
-}
-
-/** Saving [reps] by name, to find on Choose and here. */
-@Composable
-private fun SaveIntervalsSheet(reps: Structure.Reps, onSave: (String) -> Unit, onDismiss: () -> Unit) {
-    var name by rememberSaveable { mutableStateOf("") }
-    // Board HaloSaveIntervals: the title, the rounds under it, the name, the note, then Cancel and Save.
-    HaloSheet(
-        onDismiss, StartCopy.SAVE_INTERVALS, note = StartCopy.SAVE_NOTE,
-        footer = {
-            ButtonPair(
-                stringResource(R.string.glow_cancel),
-                onDismiss,
-                stringResource(R.string.glow_save),
-                { onSave(name.trim()) },
-                rightEnabled = name.isNotBlank(),
-            )
-        },
-    ) {
-        Text(StartCopy.structureName(reps), color = org.openstrap.app.ui.glow.live.LiveLabelInk, style = GlowType.body)
-        PageField(name, { name = it.take(40) }, null, placeholder = StartCopy.NAME_HINT)
-    }
-}
+private const val SLASH_INSET = 0.28f
+private val SLASH_WIDTH = 1.5.dp

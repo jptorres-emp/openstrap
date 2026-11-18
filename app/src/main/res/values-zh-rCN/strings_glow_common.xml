@@ -32,5 +32,4 @@
     <string name="glow_tabletop_resting">静息 %1$d</string>
     <string name="glow_tabletop_bpm">%1$d bpm</string>
     <string name="glow_unit_h">小时</string>
-    <string name="glow_unit_s">秒</string>
 </resources>

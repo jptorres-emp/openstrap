@@ -299,19 +299,24 @@ object WorkoutRecorder {
     const val CALM_HRR = 0.25f
     /** Steps between two of the strap's totals that count as moving. */
     const val MOVING_STEPS = 20
-    /** How long calm and still before asking whether the workout is over (spec: about 8 minutes). */
+    /** How long calm and still before asking whether the workout is over, unless set otherwise (Most workouts: 8 minutes). */
     const val STOPPED_S = 8 * 60L
 
     /**
-     * When the wearer last moved, if they have been calm and still for [STOPPED_S] since: the end a "Looks like
+     * When the wearer last moved, if they have been calm and still for [stillFor] seconds since (the sport's time from
+     * "Ask to end when I stop", [STOPPED_S] unless given): the end a "Looks like
      * you've stopped" prompt proposes. Active is a heart rate above [CALM_HRR] of the reserve, or [MOVING_STEPS]
      * between two step totals ([steps]: time, the strap's running total, ascending). Null while still active, when
      * nothing active has happened since [since] (a calm session, or one already answered "Keep going"), or when
      * heart rate covers less than half of the calm stretch, so a dropped strap never ends a workout.
      */
-    fun stoppedSince(hr: List<Pair<Long, Int>>, steps: List<Pair<Long, Int>>, restingHr: Int, maxHr: Int, since: Long, now: Long): Long? {
+    @Suppress("LongParameterList")
+    fun stoppedSince(
+        hr: List<Pair<Long, Int>>, steps: List<Pair<Long, Int>>, restingHr: Int, maxHr: Int, since: Long, now: Long,
+        stillFor: Long = STOPPED_S,
+    ): Long? {
         val lastActive = lastActive(hr, steps, restingHr, maxHr) ?: return null
-        if (lastActive <= since || now - lastActive < STOPPED_S) return null
+        if (lastActive <= since || now - lastActive < stillFor) return null
         val covered = hr.count { it.first > lastActive }.toLong()
         return if (covered * 2 >= now - lastActive) lastActive else null
     }

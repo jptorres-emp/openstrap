@@ -271,6 +271,12 @@ class AppRootViewModel(
 
     fun setHeartZones(zones: HeartZones) = write("heart zones") { settings.setHeartZones(zones) }
 
+    /** "Ask to end when I stop" with each group's time (the Workouts settings page). A recording workout reads it live. */
+    val askToEnd: StateFlow<org.openstrap.app.data.settings.AskToEnd> =
+        settings.askToEnd.state(org.openstrap.app.data.settings.AskToEnd())
+
+    fun setAskToEnd(a: org.openstrap.app.data.settings.AskToEnd) = write("ask to end") { settings.setAskToEnd(a) }
+
     fun historyBadgesShown() = write("history badges") { settings.historyBadgesShown() }
 
     /** The calorie goal your last four weeks suggest (calories spec 3.4), null when it can't be worked out. */

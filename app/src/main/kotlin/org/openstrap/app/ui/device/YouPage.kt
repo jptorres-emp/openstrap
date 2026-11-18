@@ -113,6 +113,9 @@ fun YouPage(
     onSleepGoal: () -> Unit,
     /** The weekly goal, personal bests and badges (workouts spec 3.5). */
     onGoalsAndBests: () -> Unit,
+    /** "Ask to end when I stop", said on the Workouts row, which opens the Workouts settings page. */
+    askToEnd: org.openstrap.app.data.settings.AskToEnd,
+    onWorkouts: () -> Unit,
     /** Auto sync to Health Connect, said on its row; the row opens the Health Connect page. */
     healthConnectAuto: HealthConnectAuto,
     /** Whether Health Connect is there or can be installed, for the row's stopped wording. */
@@ -160,6 +163,10 @@ fun YouPage(
                     pluralStringResource(R.plurals.you_goals_and_bests_line, goals.workoutsPerWeek, goals.workoutsPerWeek),
                     onClick = onGoalsAndBests,
                     below = true, icon = AppIcons.FlagCheckered, selected = selected == PageRowKeys.GOALS_AND_BESTS,
+                )
+                NavRow(
+                    stringResource(R.string.ask_end_page_title), AskToEndCopy.youLine(askToEnd), onClick = onWorkouts,
+                    below = true, icon = AppIcons.PersonSimpleRun, selected = selected == PageRowKeys.WORKOUTS,
                 )
             }
         }

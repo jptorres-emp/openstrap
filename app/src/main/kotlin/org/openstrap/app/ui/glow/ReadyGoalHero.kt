@@ -35,7 +35,8 @@ import org.openstrap.app.ui.glow.live.heroTint
 
 /**
  * The hero: [caption] over the big [number] and its [unit] (or [words] where there is no number), then [control]
- * (a ruler, the zone buttons) and the one [line], all lit in [color].
+ * (a ruler, the zone buttons) and the one [line] with an optional [lineAction] beside it, all lit in [color]. With
+ * [input] the number can be typed ([TypedGoalNumber]).
  */
 @Composable
 internal fun GoalHero(
@@ -47,15 +48,26 @@ internal fun GoalHero(
     caption: String? = null,
     words: String? = null,
     size: BigNumber = BigNumber.Live,
+    lineAction: (@Composable () -> Unit)? = null,
+    input: HeroInput? = null,
     control: (@Composable () -> Unit)? = null,
 ) {
     val tint = heroTint(color)
     LiveHero(color, angle) {
         if (caption != null) HeroLine(caption, tint)
-        if (number != null) HaloBigNumber(number, size, unit = unit, unitColor = tint, fit = true)
+        if (number != null && input != null) TypedGoalNumber(number, unit, size, tint, input)
+        else if (number != null) HaloBigNumber(number, size, unit = unit, unitColor = tint, fit = true)
         else if (words != null) Text(words, color = Color.White, style = GlowType.sentence)
         control?.invoke()
-        if (line != null) HeroLine(line, tint)
+        if (lineAction == null) { if (line != null) HeroLine(line, tint) } else {
+            androidx.compose.foundation.layout.Row(
+                Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Space.S12),
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+            ) {
+                androidx.compose.foundation.layout.Box(Modifier.weight(1f)) { if (line != null) HeroLine(line, tint) }
+                lineAction()
+            }
+        }
     }
 }
 

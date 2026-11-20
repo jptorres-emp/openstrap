@@ -52,4 +52,10 @@
     <string name="ready_outdoor_off">室内不记录距离</string>
     <string name="ready_location_off">位置信息已关闭。</string>
     <string name="ready_location_turn_on">开启</string>
+    <string name="ready_your_zones">你的心率区间</string>
+    <string name="ready_save_intervals">保存间歇</string>
+    <string name="ready_saved_intervals">已保存</string>
+    <string name="ready_save_note">在开始运动时即可找到。最多可保留 10 个。</string>
+    <string name="ready_name_hint">名称，如周二间歇</string>
+    <string name="ready_type_goal">输入目标</string>
 </resources>

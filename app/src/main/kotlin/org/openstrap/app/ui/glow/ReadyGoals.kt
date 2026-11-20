@@ -8,6 +8,7 @@ import org.openstrap.app.data.Strength
 import org.openstrap.app.data.Structure
 import org.openstrap.app.data.WorkoutSetup.GoalKind
 import org.openstrap.app.data.Workouts
+import org.openstrap.app.data.db.SavedWorkout
 import org.openstrap.app.ui.dashboard.LocalHeartZones
 import org.openstrap.app.ui.workout.StartCopy
 
@@ -19,7 +20,9 @@ import org.openstrap.app.ui.workout.StartCopy
 /**
  * A distance or cardio sport's goal: its [kinds] as tabs (or the Goal menu with five), then the hero for the [kind]
  * picked: last time with none, a distance or time on a ruler, the zone buttons, or run reps with each rep and the rest
- * under it. [gps] says the distance comes from GPS rather than steps; [lastPace] is last time's seconds a km.
+ * under it, and Save intervals and Saved under those ([saved], [onSaveIntervals]). A zone goal's Your zones opens the
+ * Heart rate zones page ([onYourZones]). [gps] says the distance comes from GPS rather than steps; [lastPace] is last
+ * time's seconds a km.
  */
 @Suppress("UnstableCollections", "ComposeUnstableCollections", "LongParameterList")
 @Composable
@@ -36,19 +39,28 @@ internal fun CardioGoal(
     nowMillis: Long,
     last: ReadyLast?,
     look: HeroLook,
+    onYourZones: () -> Unit = {},
+    saved: List<SavedWorkout> = emptyList(),
+    onSaveIntervals: (name: String, reps: Structure.Reps) -> Unit = { _, _ -> },
 ) {
     GoalType(kinds.map { kindName(it, type) }, kinds.indexOf(kind)) { onDraft(draft.copy(kind = kinds[it])) }
     when (kind) {
         GoalKind.None -> LastTimeHero(type, cardio = true, last, look, noGoalWords(Workouts.family(type), hasDistance))
         GoalKind.Distance -> LookHero(
             look, distanceFigure(draft.meters), stringResource(R.string.glow_unit_km), distanceLine(draft.meters, gps, lastPace),
+            input = HeroInput(distanceFigure(draft.meters), stringResource(R.string.glow_unit_km), decimal = true) { t ->
+                typedMeters(t, StartCopy.MAX_KM)?.let { onDraft(draft.copy(meters = it)) }
+            },
         ) { DistanceRuler(draft.meters, { onDraft(draft.copy(meters = it)) }, look.tint) }
         GoalKind.Time -> TimeGoalHero(draft.seconds, { onDraft(draft.copy(seconds = it)) }, look, nowMillis)
-        GoalKind.Zone -> ZoneHero(draft.zones, { onDraft(draft.copy(zones = it)) }, look, LocalHeartZones.current, maxHr)
+        GoalKind.Zone -> ZoneHero(draft.zones, { onDraft(draft.copy(zones = it)) }, look, LocalHeartZones.current, maxHr, onYourZones)
         GoalKind.Intervals -> {
             val reps = draft.reps
             val unit = repsUnit(reps)
-            LookHero(look, "${reps.rounds}", unit, repsLine(reps, lastPace)) {
+            LookHero(
+                look, "${reps.rounds}", unit, repsLine(reps, lastPace),
+                input = countInput(reps.rounds, 1..StartCopy.MAX_REPS) { onDraft(draft.copy(reps = reps.copy(rounds = it))) },
+            ) {
                 CountRuler(
                     reps.rounds, 1..StartCopy.MAX_REPS, { onDraft(draft.copy(reps = reps.copy(rounds = it))) }, ReadyRulerSpec.RepStep,
                     "${reps.rounds} $unit", look.tint,
@@ -68,6 +80,7 @@ internal fun CardioGoal(
                     },
                 ),
             )
+            SavedIntervals(reps, saved, { onDraft(draft.copy(reps = it)) }) { name -> onSaveIntervals(name, reps) }
         }
     }
 }
@@ -97,7 +110,10 @@ internal fun StrengthGoal(
         return
     }
     val unit = pluralStringResource(R.plurals.ready_hero_sets, sets)
-    LookHero(look, "$sets", unit, endsAbout(sets * SET_SECONDS + (sets - 1) * restSeconds, nowMillis)) {
+    LookHero(
+        look, "$sets", unit, endsAbout(sets * SET_SECONDS + (sets - 1) * restSeconds, nowMillis),
+        input = countInput(sets, Strength.SETS) { onSets(it) },
+    ) {
         CountRuler(sets, Strength.SETS, { onSets(it) }, ReadyRulerSpec.SetStep, "$sets $unit", look.tint)
     }
     val rest = stringResource(R.string.ready_rest_between_sets)
@@ -176,6 +192,7 @@ internal fun GamesGoal(
     LookHero(
         look, "${periods.rounds}", unit,
         stringResource(R.string.ready_hero_periods_about, (StartCopy.totalTime(periods) ?: 0) / READY_S_PER_MIN),
+        input = countInput(periods.rounds, PERIODS) { onPeriods(periods.copy(rounds = it)) },
     ) {
         CountRuler(
             periods.rounds, PERIODS, { onPeriods(periods.copy(rounds = it)) }, ReadyRulerSpec.PeriodStep,

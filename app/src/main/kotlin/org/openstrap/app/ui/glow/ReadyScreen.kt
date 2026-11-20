@@ -67,9 +67,9 @@ import org.openstrap.app.ui.workout.familyLightAngle
  * is always kept where GPS is used.
  *
  * With no goal (Just walk, Open, Free) the hero shows last time ([last]) in its place. A zone goal reads your zones
- * ([maxHeartRate], [LocalHeartZones]). Run intervals open on reps picked on Choose ([structure]). [onStart] gets the
- * workout to record and the settings to open on next time. [saved], [onSaveIntervals] and [onYourZones] are kept for
- * the caller; Ready no longer offers them.
+ * ([maxHeartRate], [LocalHeartZones]) and Your zones opens them ([onYourZones]). Run intervals open on reps picked on
+ * Choose ([structure]), save by name ([onSaveIntervals]) and open on one saved for the sport ([saved]). [onStart] gets
+ * the workout to record and the settings to open on next time.
  */
 @Composable
 fun GlowWorkoutReadyScreen(
@@ -88,9 +88,9 @@ fun GlowWorkoutReadyScreen(
     onTurnOnLocation: (then: () -> Unit) -> Unit = { it() },
     /** The max heart rate zones are shares of, once worked out, for a zone goal's heart rates. */
     maxHeartRate: Int? = null,
-    @Suppress("UnusedParameter") onYourZones: () -> Unit = {},
-    @Suppress("UnusedParameter") saved: List<org.openstrap.app.data.db.SavedWorkout> = emptyList(),
-    @Suppress("UnusedParameter") onSaveIntervals: (name: String, structure: String) -> Unit = { _, _ -> },
+    onYourZones: () -> Unit = {},
+    saved: List<org.openstrap.app.data.db.SavedWorkout> = emptyList(),
+    onSaveIntervals: (name: String, structure: String) -> Unit = { _, _ -> },
     /** Rounds to open on instead of last time's, from a saved workout picked on Choose. */
     structure: String? = null,
     /** Last time's figures for the sport and its seconds a km, from the workouts on file; null leaves those lines out. */
@@ -210,7 +210,8 @@ fun GlowWorkoutReadyScreen(
             when (family) {
                 Workouts.Family.Distance, Workouts.Family.IndoorCardio -> CardioGoal(
                     type, kinds, kind, draft, { draft = it }, useGps, hasDistance, lastPace, maxHeartRate, nowMillis, last, look,
-                )
+                    onYourZones, saved.filter { Workouts.tileType(it.sport) == key },
+                ) { name, reps -> onSaveIntervals(name, reps.code) }
                 Workouts.Family.Strength -> StrengthGoal(
                     type, sets, { sets = it; if (it != null) planSets = it }, planSets, restSeconds, { restSeconds = it },
                     nowMillis, last, look,

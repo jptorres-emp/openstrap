@@ -36,19 +36,37 @@ internal fun LookHero(
     caption: String? = null,
     words: String? = null,
     size: BigNumber = BigNumber.Live,
+    lineAction: (@Composable () -> Unit)? = null,
+    input: HeroInput? = null,
     control: (@Composable () -> Unit)? = null,
-) = GoalHero(look.color, look.angle, number, unit, line, caption, words, size, control)
+) = GoalHero(look.color, look.angle, number, unit, line, caption, words, size, lineAction, input, control)
 
 /** A time goal's hero: the minutes, the ruler, and when it would end. */
 @Composable
 internal fun TimeGoalHero(seconds: Long, onSeconds: (Long) -> Unit, look: HeroLook, nowMillis: Long) {
     val (n, unit) = timeFigure(seconds)
-    LookHero(look, n, unit, endsAbout(seconds, nowMillis)) { TimeRuler(seconds, onSeconds, look.tint) }
+    LookHero(
+        look, n, unit, endsAbout(seconds, nowMillis),
+        input = HeroInput("${seconds / SECONDS_A_MIN}", stringResource(R.string.glow_unit_min), decimal = false) { t ->
+            typedSeconds(t, StartCopy.MAX_HOURS)?.let(onSeconds)
+        },
+    ) { TimeRuler(seconds, onSeconds, look.tint) }
 }
 
-/** A zone goal's hero: "2 to 3" heart zones, the five zone buttons, and the heart rates to keep between. */
+/**
+ * A zone goal's hero: "2 to 3" heart zones, the five zone buttons, and the heart rates to keep between with Your zones
+ * beside them, which opens the Heart rate zones page ([onYourZones]).
+ */
+@Suppress("LongParameterList")
 @Composable
-internal fun ZoneHero(zones: WorkoutTarget.Zones, onZones: (WorkoutTarget.Zones) -> Unit, look: HeroLook, heart: HeartZones, maxHr: Int?) {
+internal fun ZoneHero(
+    zones: WorkoutTarget.Zones,
+    onZones: (WorkoutTarget.Zones) -> Unit,
+    look: HeroLook,
+    heart: HeartZones,
+    maxHr: Int?,
+    onYourZones: () -> Unit,
+) {
     val number = if (zones.low == zones.high) "${zones.low + 1}"
         else stringResource(R.string.glow_ready_hero_zone_range, zones.low + 1, zones.high + 1)
     val line = if (maxHr == null) StartCopy.ZONE_NOTE else {
@@ -58,7 +76,14 @@ internal fun ZoneHero(zones: WorkoutTarget.Zones, onZones: (WorkoutTarget.Zones)
     }
     LookHero(
         look, number, pluralStringResource(R.plurals.ready_hero_heart_zones, zones.high - zones.low + 1), line, size = BigNumber.Feature,
-    ) { ZoneButtons(zones, onZones) }
+        control = { ZoneButtons(zones, onZones) },
+        lineAction = {
+            HaloButton(
+                stringResource(R.string.ready_your_zones), onYourZones, variant = HaloButtonVariant.Glass,
+                size = HaloButtonSize.Small, icon = org.openstrap.app.ui.theme.AppIcons.PencilEdit,
+            )
+        },
+    )
 }
 
 /** HIIT's hero: the rounds, the ruler, and all of their time. */
@@ -69,6 +94,15 @@ internal fun HiitHero(rounds: Structure, onRounds: (Structure) -> Unit, look: He
     LookHero(
         look, "${rounds.rounds}", unit,
         stringResource(if (rounds is Structure.EveryMinute) R.string.ready_hero_every_in_all else R.string.ready_hero_in_all, all),
+        input = countInput(rounds.rounds, 1..StartCopy.MAX_ROUNDS) { n ->
+            onRounds(
+                when (rounds) {
+                    is Structure.Timed -> rounds.copy(rounds = n)
+                    is Structure.EveryMinute -> rounds.copy(rounds = n)
+                    else -> rounds
+                },
+            )
+        },
     ) {
         CountRuler(
             rounds.rounds, 1..StartCopy.MAX_ROUNDS,
@@ -134,4 +168,5 @@ internal fun distanceLine(meters: Int, gps: Boolean, lastPace: Double?): String 
 }
 
 private const val HIIT_LABEL_EVERY = 4
+private const val SECONDS_A_MIN = 60L
 private const val HERO_METERS_PER_KM = 1000.0

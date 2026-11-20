@@ -102,4 +102,16 @@
     <string name="ready_location_off">Location is off.</string>
     <!-- After ready_location_off, a link that turns location on. -->
     <string name="ready_location_turn_on">Turn it on</string>
+    <!-- Ready, a zone goal: opens the Heart rate zones page. -->
+    <string name="ready_your_zones">Your zones</string>
+    <!-- Ready, run intervals: names the reps to find again. Also the sheet's title. -->
+    <string name="ready_save_intervals">Save intervals</string>
+    <!-- Ready, run intervals: lists the intervals saved for the sport. -->
+    <string name="ready_saved_intervals">Saved</string>
+    <!-- Under the name in the Save intervals sheet. -->
+    <string name="ready_save_note">Find them when you start a workout. Up to ten are kept.</string>
+    <!-- The empty name field in the Save intervals sheet. -->
+    <string name="ready_name_hint">Name, like Tuesday intervals</string>
+    <!-- What tapping Ready's big goal number does, for a screen reader. -->
+    <string name="ready_type_goal">Type the goal</string>
 </resources>

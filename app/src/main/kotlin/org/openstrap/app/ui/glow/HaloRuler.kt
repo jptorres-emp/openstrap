@@ -146,15 +146,16 @@ internal fun HaloRuler(
                     onDragStart = { dragging = true; at = position.value },
                     onDragEnd = {
                         dragging = false
-                        scope.launch { position.animateTo(at.roundToInt().coerceIn(0, last).toFloat(), spring()) }
+                        scope.launch { position.animateTo(sticky(at, labelled.keys).roundToInt().coerceIn(0, last).toFloat(), spring()) }
                     },
                     onDragCancel = { dragging = false; scope.launch { position.animateTo(now.toFloat(), spring()) } },
                 ) { change, dx ->
                     change.consume()
                     at = (at - dx / stepPx).coerceIn(0f, last.toFloat())
-                    val target = at
+                    // Under the finger, but held near a labelled tick, so the ruler sticks there.
+                    val target = sticky(at, labelled.keys)
                     scope.launch { position.snapTo(target) }
-                    val i = at.roundToInt()
+                    val i = target.roundToInt()
                     if (i != now) onPick(i)
                 }
             }
@@ -208,4 +209,18 @@ internal fun HaloRuler(
                 }
             },
     )
+}
+
+/** How far either side of a labelled tick, in steps, it pulls the ruler. */
+internal const val STICK_REACH = 1.5f
+
+/**
+ * Where the ruler shows for the finger at [at] (in steps): the same, except within [STICK_REACH] of one of the
+ * [labelled] ticks, where it is drawn towards it, flat at the tick and easing back to the finger at the edge. So a
+ * drag hangs on 1, 3 and 5 km for a moment, and letting go nearby settles there.
+ */
+internal fun sticky(at: Float, labelled: Set<Int>): Float {
+    val nearest = labelled.minByOrNull { abs(it - at) } ?: return at
+    val d = at - nearest
+    return if (abs(d) >= STICK_REACH) at else nearest + d * abs(d) / STICK_REACH
 }

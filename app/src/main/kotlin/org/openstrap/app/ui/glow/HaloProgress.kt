@@ -1,5 +1,6 @@
 package org.openstrap.app.ui.glow
 
+import androidx.compose.runtime.NonRestartableComposable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -97,6 +98,7 @@ internal fun HaloProgressSegments(count: Int, done: Int, modifier: Modifier = Mo
 
 /** A ring [share] of the way round in [color], [stroke] wide: 2.5 in a row's lead. */
 @Composable
+@NonRestartableComposable
 internal fun HaloProgressRing(
     share: () -> Float,
     color: Color,

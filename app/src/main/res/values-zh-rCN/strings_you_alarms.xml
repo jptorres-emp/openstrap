@@ -92,5 +92,7 @@
     <string name="you_alarms_repeat">重复：%1$s</string>
     <string name="you_phone_group_calls">来电</string>
     <string name="you_phone_group_notifications">通知</string>
-    <string name="you_alarms_panel_count">闹钟 %1$d 个，上限 %2$d 个</string>
+    <plurals name="you_alarms_panel_count">
+        <item quantity="other">闹钟 %1$d 个，上限 %2$d 个</item>
+    </plurals>
 </resources>

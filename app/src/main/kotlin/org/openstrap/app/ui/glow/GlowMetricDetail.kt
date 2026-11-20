@@ -1,5 +1,6 @@
 package org.openstrap.app.ui.glow
 
+import androidx.compose.runtime.ReadOnlyComposable
 import org.openstrap.app.ui.theme.OnSurface
 import org.openstrap.app.ui.theme.IconSize
 import org.openstrap.app.ui.theme.Corner
@@ -1018,6 +1019,7 @@ private fun RelatedList(
 // The night values arrive whole with each update and never change in place.
 @Suppress("UnstableCollections", "ComposeUnstableCollections")
 @Composable
+@ReadOnlyComposable
 private fun detailFigures(
     metric: Metric, night: Boolean, range: Range, state: DayUiState, summary: History.Summary?, nightValues: List<Float?>,
     normal: History.Normal?, weekAverage: Float?, nightly: Boolean, latestReading: Boolean,

@@ -686,13 +686,15 @@ private fun noScoreWord(noScore: TodayCopy.NoScore?, waitingWord: String): Strin
 @Composable
 @ReadOnlyComposable
 private fun noScoreSmallLine(noScore: TodayCopy.NoScore?): String? = when (noScore) {
-    is TodayCopy.NoScore.Learning -> stringResource(R.string.core_today_no_score_learning_small, noScore.nights, noScore.of)
+    is TodayCopy.NoScore.Learning ->
+        pluralStringResource(R.plurals.core_today_no_score_learning_small, noScore.of, noScore.nights, noScore.of)
     TodayCopy.NoScore.NoHeartData -> stringResource(R.string.glow_today_few_readings)
     null -> null
 }
 
 /** A Wide's status phrase: what the score means for the day, or why there isn't one. */
 @Composable
+@ReadOnlyComposable
 private fun recoveryPhrase(
     shown: TodayCopy.RecoveryShown, noScore: TodayCopy.NoScore?, recovery: org.openstrap.app.data.RecoveryResult?,
 ): String = when {
@@ -705,7 +707,7 @@ private fun recoveryPhrase(
 @Composable
 @ReadOnlyComposable
 private fun noScorePhrase(why: TodayCopy.NoScore?): String? = when (why) {
-    is TodayCopy.NoScore.Learning -> stringResource(R.string.core_today_no_score_learning_phrase, why.nights, why.of)
+    is TodayCopy.NoScore.Learning -> pluralStringResource(R.plurals.core_today_no_score_learning_phrase, why.of, why.nights, why.of)
     TodayCopy.NoScore.NoHeartData -> stringResource(R.string.core_today_no_score_heart_phrase)
     null -> null
 }

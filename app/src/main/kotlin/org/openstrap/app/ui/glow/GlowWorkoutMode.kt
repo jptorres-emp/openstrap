@@ -1,5 +1,6 @@
 package org.openstrap.app.ui.glow
 
+import androidx.compose.runtime.mutableIntStateOf
 import org.openstrap.app.ui.theme.Space
 import org.openstrap.app.R
 import org.openstrap.app.i18n.Strings
@@ -201,7 +202,7 @@ fun GlowAddWorkoutScreen(
     val likely = remember(series, heartZones) { WorkoutSuggestions.find(series, 60, maxHr, emptyList(), heartZones).firstOrNull() }
     var from by rememberSaveable(series.size) { mutableStateOf(likely?.start ?: (last - 1800).coerceAtLeast(first)) }
     var to by rememberSaveable(series.size) { mutableStateOf(likely?.end ?: last) }
-    var sport by rememberSaveable { mutableStateOf(recentSports.firstOrNull() ?: Workouts.EVERYDAY.first()) }
+    var sport by rememberSaveable { mutableIntStateOf(recentSports.firstOrNull() ?: Workouts.EVERYDAY.first()) }
     if (picking) {
         // The picker is a page of its own over the app; the sheet is back once a sport is picked.
         Box(Modifier.fillMaxSize().background(Color.Black)) {

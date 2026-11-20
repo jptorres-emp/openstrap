@@ -293,7 +293,11 @@ object TabCopy {
 
     /** Heart points over the last 7 days against the 100 to aim for. */
     fun heartPoints(total: Int, target: Int, strings: Strings = Strings.app): String =
-        strings.format(if (total >= target) R.string.core_tab_points_reached else R.string.core_tab_points_aim, target)
+        if (total >= target) {
+            strings.plural(R.plurals.core_tab_points_reached, target, target)
+        } else {
+            strings.format(R.string.core_tab_points_aim, target)
+        }
 
     /** Calories under its number. */
     fun calories(partial: Boolean, isToday: Boolean, strings: Strings = Strings.app): String = strings.get(

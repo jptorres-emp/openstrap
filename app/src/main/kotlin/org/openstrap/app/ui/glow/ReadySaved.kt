@@ -1,5 +1,6 @@
 package org.openstrap.app.ui.glow
 
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -37,7 +38,7 @@ private const val NAME_MAX = 40
 @Suppress("UnstableCollections", "ComposeUnstableCollections")
 @Composable
 internal fun SavedIntervals(reps: Structure.Reps, saved: List<SavedWorkout>, onReps: (Structure.Reps) -> Unit, onSave: (String) -> Unit) {
-    var sheet by rememberSaveable { mutableStateOf(SHEET_NONE) }
+    var sheet by rememberSaveable { mutableIntStateOf(SHEET_NONE) }
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Space.S8, androidx.compose.ui.Alignment.CenterHorizontally)) {
         HaloButton(
             stringResource(R.string.ready_save_intervals), { sheet = SHEET_SAVE }, size = HaloButtonSize.Card, icon = AppIcons.Plus,

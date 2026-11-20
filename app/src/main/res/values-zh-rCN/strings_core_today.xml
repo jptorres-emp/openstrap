@@ -36,8 +36,12 @@
     <string name="core_today_meaning_moderate_phrase">尚未恢复，建议中等强度</string>
     <string name="core_today_meaning_low_phrase">仍在恢复，建议放轻松</string>
     <string name="core_today_no_score_learning">仍在了解你的夜晚，已有 %1$d 晚，共需 %2$d 晚。满 %2$d 晚后开始计分。</string>
-    <string name="core_today_no_score_learning_small">%1$d 晚，共 %2$d 晚</string>
-    <string name="core_today_no_score_learning_phrase">学习中，%1$d 晚，共 %2$d 晚</string>
+    <plurals name="core_today_no_score_learning_small">
+        <item quantity="other">%1$d 晚，共 %2$d 晚</item>
+    </plurals>
+    <plurals name="core_today_no_score_learning_phrase">
+        <item quantity="other">学习中，%1$d 晚，共 %2$d 晚</item>
+    </plurals>
     <string name="core_today_no_score_heart">昨晚心率数据不足，无法计算恢复分数。</string>
     <string name="core_today_no_score_heart_phrase">心率读数太少</string>
     <string name="core_today_slept">睡眠时长 %1$s。</string>

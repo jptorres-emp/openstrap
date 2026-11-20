@@ -1,5 +1,6 @@
 package org.openstrap.app.ui.glow.live
 
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -26,6 +27,7 @@ internal fun phaseTitle(m: IntervalMoment): Pair<String, String> = when (m.phase
 
 /** The hero's line: the rest to come, the heart rate coming down, or the next step. */
 @Composable
+@ReadOnlyComposable
 internal fun phaseLine(m: IntervalMoment, bpm: Int?): String = when (m.phase) {
     is Phase.Work -> m.nextRest?.let { stringResource(R.string.workout_live_then_rest, StartCopy.restText(it)) }
         ?: stringResource(R.string.workout_live_last_round)

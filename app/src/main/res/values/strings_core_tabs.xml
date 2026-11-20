@@ -186,7 +186,10 @@
     <!-- Active minutes over the last 7 days, with the goal. -->
     <string name="core_tab_active_goal">Aim for <xliff:g id="goal" example="150">%1$d</xliff:g></string>
     <!-- Heart points over the last 7 days, with the aim reached. -->
-    <string name="core_tab_points_reached">Goal met, <xliff:g id="points" example="100">%1$d</xliff:g> points</string>
+    <plurals name="core_tab_points_reached">
+        <item quantity="one">Goal met, <xliff:g id="points" example="1">%1$d</xliff:g> point</item>
+        <item quantity="other">Goal met, <xliff:g id="points" example="100">%1$d</xliff:g> points</item>
+    </plurals>
     <!-- Heart points over the last 7 days, with the aim. -->
     <string name="core_tab_points_aim">Aim for <xliff:g id="aim" example="100">%1$d</xliff:g></string>
     <!-- Under the calories number, today. kcal is kilocalories. -->

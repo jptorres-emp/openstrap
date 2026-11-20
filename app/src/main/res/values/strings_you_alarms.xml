@@ -141,5 +141,8 @@
     <!-- Phone alerts (Halo): the group headings. -->
     <string name="you_phone_group_calls">Calls</string>
     <string name="you_phone_group_notifications">Notifications</string>
-    <string name="you_alarms_panel_count">%1$d of %2$d alarms</string>
+    <plurals name="you_alarms_panel_count">
+        <item quantity="one">%1$d of %2$d alarm</item>
+        <item quantity="other">%1$d of %2$d alarms</item>
+    </plurals>
 </resources>

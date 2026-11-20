@@ -1,5 +1,6 @@
 package org.openstrap.app.ui.glow
 
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -24,7 +25,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextMeasurer
@@ -140,7 +140,7 @@ internal fun HaloSheet(
     footer: (@Composable () -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    val maxHeight = (LocalConfiguration.current.screenHeightDp * SheetSpec.MAX_HEIGHT).dp
+    val maxHeight = with(LocalDensity.current) { (LocalWindowInfo.current.containerSize.height * SheetSpec.MAX_HEIGHT).toDp() }
     GlassSheet(onDismiss) {
         Column(
             Modifier.fillMaxWidth().heightIn(max = maxHeight).verticalScroll(rememberScrollState())

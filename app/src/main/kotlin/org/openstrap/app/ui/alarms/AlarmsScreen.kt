@@ -1,5 +1,6 @@
 package org.openstrap.app.ui.alarms
 
+import androidx.compose.ui.res.pluralStringResource
 import org.openstrap.app.ui.glow.HaloNote
 import org.openstrap.app.ui.glow.NoteVariant
 import org.openstrap.app.ui.glow.BannerKind
@@ -213,8 +214,10 @@ private fun AlarmsPanel(
     // Plain rows on the black page, the strap's alarms as item rows with a switch each (HaloAlarms board).
     Column(verticalArrangement = Arrangement.spacedBy(Space.S24)) {
         Column(verticalArrangement = Arrangement.spacedBy(Space.S8)) {
-            HaloTitle(state.caps?.let { stringResource(R.string.you_alarms_panel_count, state.alarms.size, it.maxCount) }
-                    ?: stringResource(R.string.you_alarms_on_strap), variant = TitleVariant.Group)
+            val count = state.caps?.let {
+                pluralStringResource(R.plurals.you_alarms_panel_count, it.maxCount, state.alarms.size, it.maxCount)
+            }
+            HaloTitle(count ?: stringResource(R.string.you_alarms_on_strap), variant = TitleVariant.Group)
             if (state.alarms.isEmpty()) HaloNote(stringResource(R.string.you_alarms_none))
             else HaloCard(fill = CardFill.Rows) {
                 state.alarms.forEachIndexed { i, a ->

@@ -84,7 +84,9 @@
     <string name="core_tab_balance_steady">平稳</string>
     <string name="core_tab_active_reached">目标已达成，%1$d 分钟</string>
     <string name="core_tab_active_goal">目标 %1$d</string>
-    <string name="core_tab_points_reached">目标已达成，%1$d 分</string>
+    <plurals name="core_tab_points_reached">
+        <item quantity="other">目标已达成，%1$d 分</item>
+    </plurals>
     <string name="core_tab_points_aim">目标 %1$d</string>
     <string name="core_tab_calories_today">今日至今预估 kcal</string>
     <string name="core_tab_calories_partial">预估 kcal（仅佩戴部分时段）</string>

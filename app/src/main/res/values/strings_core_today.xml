@@ -87,9 +87,15 @@
     <!-- Why there is no Recovery score yet, as a sentence for the hero and the detail: nights so far of the nights the first score needs. A Small card says it as a word and a count (below), a Wide as a phrase. -->
     <string name="core_today_no_score_learning">Still learning your nights, <xliff:g id="nights" example="5">%1$d</xliff:g> of <xliff:g id="needed" example="7">%2$d</xliff:g>. Your score starts after <xliff:g id="needed" example="7">%2$d</xliff:g>.</string>
     <!-- A Small card under its state word "Learning": nights so far of the nights the first score needs. A short line, 18 characters at most. -->
-    <string name="core_today_no_score_learning_small"><xliff:g id="nights" example="5">%1$d</xliff:g> of <xliff:g id="needed" example="7">%2$d</xliff:g> nights</string>
+    <plurals name="core_today_no_score_learning_small">
+        <item quantity="one"><xliff:g id="nights" example="0">%1$d</xliff:g> of <xliff:g id="needed" example="1">%2$d</xliff:g> night</item>
+        <item quantity="other"><xliff:g id="nights" example="5">%1$d</xliff:g> of <xliff:g id="needed" example="7">%2$d</xliff:g> nights</item>
+    </plurals>
     <!-- A Wide card or row status for the same: one phrase, joined with a comma, no full stop. -->
-    <string name="core_today_no_score_learning_phrase">Learning, <xliff:g id="nights" example="5">%1$d</xliff:g> of <xliff:g id="needed" example="7">%2$d</xliff:g> nights</string>
+    <plurals name="core_today_no_score_learning_phrase">
+        <item quantity="one">Learning, <xliff:g id="nights" example="0">%1$d</xliff:g> of <xliff:g id="needed" example="1">%2$d</xliff:g> night</item>
+        <item quantity="other">Learning, <xliff:g id="nights" example="5">%1$d</xliff:g> of <xliff:g id="needed" example="7">%2$d</xliff:g> nights</item>
+    </plurals>
     <!-- Why there is no Recovery score: the night lacked the heart readings a score needs. -->
     <string name="core_today_no_score_heart">Not enough heart data last night for a Recovery score.</string>
     <!-- A Wide card status: the night lacked the heart readings a Recovery score needs. One phrase, no full stop. -->

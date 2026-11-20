@@ -1,5 +1,6 @@
 package org.openstrap.app.ui.glow.live
 
+import androidx.compose.runtime.ReadOnlyComposable
 import org.openstrap.app.ui.glow.HaloBigNumber
 import org.openstrap.app.ui.glow.BigNumber
 import org.openstrap.app.presentation.WorkoutColors
@@ -169,6 +170,7 @@ private fun phaseLap(r: WorkoutState.Recording, phase: Phase, onSkip: () -> Unit
 
 /** Rounds, Peak bpm and Active kcal (workout-rules.md, section 5), the figures row of both phases and of the paused view. */
 @Composable
+@ReadOnlyComposable
 private fun roundFigures(r: WorkoutState.Recording, kcal: WorkoutRecorder.Kcal?): List<Pair<String?, String>> = listOf(
     "${org.openstrap.app.data.Phases.roundsDone(r.rounds)}" to stringResource(R.string.workout_live_figure_rounds),
     r.rounds.mapNotNull { it.peakBpm }.maxOrNull()?.toString() to stringResource(R.string.workout_live_figure_peak_bpm),

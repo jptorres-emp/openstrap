@@ -1,5 +1,6 @@
 package org.openstrap.app.ui.glow
 
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.foundation.layout.Arrangement
 import org.openstrap.app.ui.theme.Corner
 import org.openstrap.app.ui.theme.Space
@@ -181,6 +182,7 @@ fun GlowRecoveryScreen(
  * board: lit from [LocalHeroLightAngle], 225 on waking). Below when there is no moment.
  */
 @Composable
+@ReadOnlyComposable
 private fun recoveryHeroStyle(color: Color) = heroStyle(color, LocalHeroLightAngle.current ?: LightAngle.Below)
 
 /**

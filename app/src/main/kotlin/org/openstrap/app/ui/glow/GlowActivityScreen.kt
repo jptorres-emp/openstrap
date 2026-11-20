@@ -1,5 +1,9 @@
 package org.openstrap.app.ui.glow
 
+import org.openstrap.app.ui.theme.Corner
+import org.openstrap.app.ui.theme.IconSize
+import org.openstrap.app.ui.theme.Space
+import org.openstrap.app.ui.theme.Greys
 import org.openstrap.app.R
 import org.openstrap.app.presentation.Ranges
 import org.openstrap.app.presentation.Units
@@ -23,7 +27,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -37,18 +40,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.role
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -75,17 +72,15 @@ import org.openstrap.app.ui.dashboard.Wear
 import org.openstrap.app.presentation.TabCopy
 import org.openstrap.app.presentation.TodayCopy
 import org.openstrap.app.ui.dashboard.activityCards
-import org.openstrap.app.ui.components.pressClickable
 import org.openstrap.app.ui.theme.AppIcons
+import org.openstrap.app.ui.theme.Ink
 import org.openstrap.app.ui.theme.MetricColors
 import org.openstrap.app.ui.theme.SportIcons
 import org.openstrap.app.ui.workout.ZONE_COLORS
-import org.openstrap.app.ui.glow.draw.drawHourPills
-import org.openstrap.app.ui.glow.draw.hourPills
 import androidx.compose.foundation.layout.BoxWithConstraints
 import org.openstrap.app.ui.glow.draw.DotSize
+import org.openstrap.app.ui.glow.draw.LightAngle
 import org.openstrap.app.ui.glow.draw.limeHero
-import org.openstrap.app.ui.theme.ControlSurface
 import org.openstrap.app.presentation.topSports
 import org.openstrap.app.presentation.LoadBands
 import org.openstrap.app.data.History
@@ -96,7 +91,6 @@ import org.openstrap.app.ui.dashboard.GoalMetric
 import org.openstrap.app.ui.dashboard.NewsTag
 import org.openstrap.app.ui.dashboard.OffStatus
 import org.openstrap.app.ui.dashboard.OffWords
-import org.openstrap.app.ui.dashboard.bodyOffStatus
 import org.openstrap.app.ui.dashboard.goalTag
 import org.openstrap.app.ui.dashboard.loadOffStatus
 import org.openstrap.app.ui.dashboard.offTag
@@ -106,7 +100,7 @@ import org.openstrap.app.ui.glow.pictures.DayBars
 import org.openstrap.app.ui.glow.pictures.DayLine
 import org.openstrap.app.ui.glow.pictures.LevelFill
 import org.openstrap.app.ui.glow.pictures.PictureSize
-import org.openstrap.app.ui.glow.pictures.dayLineRim
+import org.openstrap.app.ui.glow.pictures.drawHourDots
 import org.openstrap.app.ui.glow.pictures.levelFillRim
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
@@ -242,8 +236,8 @@ fun GlowActivityScreen(
 @Composable
 private fun StartCard(sports: List<Int>, onStart: (Int) -> Unit, onAllSports: () -> Unit) {
     // Unlit (its look), with the rainbow light travelling round its border, as on Today.
-    PictureCard(EdgeNeutral, Modifier.fillMaxWidth().movingBorder()) {
-        EdgeTitle(stringResource(R.string.glow_activity_start_workout), null)
+    HaloCard(Modifier.movingBorder(), verticalArrangement = Arrangement.Top) {
+        HaloTitle(stringResource(R.string.glow_activity_start_workout))
         Spacer(Modifier.height(GlowLayout.TitleGap))
         BoxWithConstraints(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
             // Four on a phone; wider, as many as fit at a phone's column, so the tiles never spread apart, centred.
@@ -253,18 +247,23 @@ private fun StartCard(sports: List<Int>, onStart: (Int) -> Unit, onAllSports: ()
                 horizontalArrangement = Arrangement.spacedBy(StartTileGap),
             ) {
                 sports.take(columns - 1).forEach { type ->
-                    SportTile(SportIcons.of(type), Workouts.sportName(type), Modifier.weight(1f), outdoor = type in Workouts.OUTDOOR) {
-                        onStart(type)
-                    }
+                    // Each in its family's colour, as in Choose a sport (board HaloActivity).
+                    SportTile(
+                        SportIcons.of(type), Workouts.sportName(type), Modifier.weight(1f), outdoor = type in Workouts.OUTDOOR,
+                        color = sportColor(type),
+                    ) { onStart(type) }
                 }
                 SportTile(
                     AppIcons.MoreHorizontalCircle01, stringResource(R.string.glow_activity_all_sports), Modifier.weight(1f),
-                    outdoor = false, onClick = onAllSports,
+                    outdoor = false, color = AllSportsInk, onClick = onAllSports,
                 )
             }
         }
     }
 }
+
+/** All sports' tile: light grey, belonging to no family (board HaloActivity). */
+private val AllSportsInk = Ink.Strong
 
 /** A tile's column on a phone: four tiles and their gaps in 344 dp. */
 private val StartTileColumn = 80.dp
@@ -293,15 +292,19 @@ private fun StepsGlow(state: DayUiState, usual: List<Float>?, history: ActivityH
     val now = java.time.LocalTime.now()
     val pace = ActivityCopy.paceOf(state.steps, usual, isToday, now.hour, now.minute)
     var hour by remember(state.date, state.hourlySteps) { mutableStateOf<Int?>(null) }
-    GlowCard(limeHero(MetricColors.steps), Modifier.fillMaxWidth().gridSize(CardSize.Wide), onClick = onClick) {
+    HaloCard(
+        Modifier.fillMaxWidth().gridSize(CardSize.Wide),
+        tone = CardTone.lit(limeHero(MetricColors.steps, LocalHeroLightAngle.current ?: LightAngle.UpperRight)),
+        onClick = onClick,
+    ) {
         Column {
-            GlowHeader(
-                stringResource(R.string.glow_activity_steps), trailing = stringResource(R.string.glow_activity_goal, Units.count(goal)),
-                tag = tag,
+            HaloTitle(
+                stringResource(R.string.glow_activity_steps),
+                note = stringResource(R.string.glow_activity_goal, Units.count(goal)), tag = tag,
             )
             Spacer(Modifier.height(GlowLayout.TitleGap))
             HourPills(state.hourlySteps, hour) { hour = it }
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(Space.S16))
             // A picked hour takes the number's place; one dotted number either way (spec 2.3). Its number stays the
             // second glow's size, so the hour pills above it keep their room.
             val h = hour
@@ -309,11 +312,11 @@ private fun StepsGlow(state: DayUiState, usual: List<Float>?, history: ActivityH
             // The tag is the day's, so a picked hour leaves it out.
             val (count, label) = if (h != null && picked != null) Math.round(picked) to ActivityCopy.hourLabel(h)
             else state.steps to ActivityCopy.activityLine(state.steps, goal, pace, isToday)
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(Space.S8)) {
                 TaggedNumber(Units.count(count, Units.DOT_LOCALE), null, goalTag.takeIf { h == null || picked == null }, dot = DotSize.Second)
                 Text(
                     label,
-                    color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary, maxLines = 2,
+                    color = Ink.Secondary, style = GlowType.secondary, maxLines = 2,
                 )
             }
         }
@@ -321,10 +324,9 @@ private fun StepsGlow(state: DayUiState, usual: List<Float>?, history: ActivityH
 }
 
 /**
- * Hourly pill bars (chart kit, spec 2.7): the day's steps as 24 pills, one an hour, as high as the hour's share of the
- * busiest, white at 45% with the latest hour with steps at full. Hours with none, and those still to come, aren't
- * drawn, only the hairline baseline under the bars. Tapping an hour picks it ([onPick]) and lights it in place of the
- * latest; tapping it again lets it go. The hours under it in Caption.
+ * Hourly dots (HaloCharts, Steps by hour): the day's steps as 24 columns, one an hour, a dot per 250 steps, white with
+ * the latest hour with steps at full and the rest dimmer. Hours with none show one faint dot. Tapping an hour picks
+ * it ([onPick]) and lights it in place of the latest; tapping it again lets it go. The hours under it in Caption.
  */
 @Composable
 private fun HourPills(hourly: List<Float>, picked: Int?, onPick: (Int?) -> Unit) {
@@ -339,12 +341,12 @@ private fun HourPills(hourly: List<Float>, picked: Int?, onPick: (Int?) -> Unit)
                 }
             },
         ) {
-            // The shared pill bars ([hourPills]), as a widget's chart draws them.
-            hourPills(hourly, picked, size.width, size.height, density)?.let { drawHourPills(it) }
+            // A dot per 250 steps an hour (HaloCharts, Steps by hour).
+            drawHourDots(hourly, picked, Color.White)
         }
-        Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+        Row(Modifier.fillMaxWidth().padding(top = Space.S4), horizontalArrangement = Arrangement.SpaceBetween) {
             listOf("00", "06", "12", "18", "24").forEach {
-                Text(it, color = Color.White.copy(alpha = GlowType.CAPTION_ALPHA), style = GlowType.caption)
+                Text(it, color = Ink.Secondary, style = GlowType.caption)
             }
         }
     }
@@ -355,7 +357,7 @@ private val HourPillsHeight = 56.dp
 /* ------------------------------------------------ Load ---------------------------------------------- */
 
 /**
- * Load today as a level fill over your usual band ([LoadBands.usualRange], spec 2.7), "12 today", "Your usual is 40"
+ * Load today as a level fill over your usual band ([LoadBands.usualRange], spec 2.7), "12 today", "Your usual, 30 to 50"
  * and the week's balance in a word beside the title. Off your usual it carries the rim at the fill's end and "Above
  * usual" or "Below usual" after the number. A low Load is only so far until the day is over, so today never says Below
  * ([loadOffStatus]). Opens the Load detail, where Strain, fitness and fatigue live. TODO(step 6): the ghost line of
@@ -370,9 +372,8 @@ private fun DayLoadCard(r: RecoveryResult?, onClick: () -> Unit) {
     val load = r?.load
     val past = r != null && r.date != LocalDate.now()
     val tag = offTag(OffWords.Usual, loadOffStatus(load, usual, endOfDay = past))
-    val rim = if (tag != null && load != null) levelFillRim(load, band, PictureSize.Wide) else null
-    PictureCard(MetricColors.load, Modifier.fillMaxWidth().gridSize(CardSize.Wide), rim = rim, onClick = onClick) {
-        EdgeTitle(stringResource(R.string.glow_activity_load), TabCopy.loadBalance(r?.loadTrend))
+    HaloCard(size = HaloCardSize.Wide, onClick = onClick) {
+        HaloTitle(stringResource(R.string.glow_activity_load), note = TabCopy.loadBalance(r?.loadTrend))
         if (load != null) {
             Spacer(Modifier.height(GlowLayout.TitleGap))
             LevelFill(load, band, MetricColors.load, PictureSize.Wide, Modifier.fillMaxWidth().height(LevelFillHeight))
@@ -380,9 +381,9 @@ private fun DayLoadCard(r: RecoveryResult?, onClick: () -> Unit) {
         TaggedNumber(
             load?.roundToInt()?.toString(),
             stringResource(if (past) R.string.glow_activity_load_that_day else R.string.glow_activity_load_today), tag,
-            Modifier.padding(top = 14.dp),
+            Modifier.padding(top = Space.S12),
         )
-        StatusLine(if (r == null) NO_READING else TabCopy.loadUsual(usual))
+        StatusLine(if (r == null) NO_READING else band?.let(ActivityCopy::usualBandLabel) ?: TabCopy.loadUsual(usual))
     }
 }
 
@@ -405,10 +406,8 @@ private fun HeartRateCard(state: DayUiState, live: Int?, resting: History.Normal
     val pad = with(LocalDensity.current) { LinePad.toPx() }
     val scrubbed = picked?.let { i -> values.getOrNull(i)?.let { it.roundToInt() to state.dayStart + i * step } }
     val now = scrubbed?.first ?: live ?: state.latestHeartRate
-    PictureCard(MetricColors.heart, Modifier.fillMaxWidth().gridSize(CardSize.Wide), onClick = onClick) {
-        EdgeTitle(
-            stringResource(R.string.glow_today_heart_rate), restingNote(state),
-        )
+    HaloCard(size = HaloCardSize.Wide, onClick = onClick) {
+        HaloTitle(stringResource(R.string.glow_today_heart_rate), note = restingNote(state))
         if (state.heartRate.size >= 2) {
             Spacer(Modifier.height(GlowLayout.TitleGap))
             DayLine(
@@ -421,7 +420,7 @@ private fun HeartRateCard(state: DayUiState, live: Int?, resting: History.Normal
             )
         }
         TaggedNumber(
-            now?.toString(), stringResource(R.string.glow_unit_bpm), null, Modifier.padding(top = 14.dp),
+            now?.toString(), stringResource(R.string.glow_unit_bpm), null, Modifier.padding(top = Space.S12),
         )
         val at = scrubbed?.second ?: state.heartRate.lastOrNull()?.x
         // A held point is the average of a 10-minute stretch, not one reading.
@@ -447,23 +446,30 @@ private val LinePad = 4.dp
  * left, the number in dots with its [unit], and the [status] in Secondary. Without a picture (waiting) the number sits
  * at the foot. Never lit: Active minutes and Heart points are targets, not readings with a normal.
  */
+// The ink and the rim stay so the screens placing it compile: a Halo card has no coloured rim (Halo System board).
+@Suppress("UnusedParameter")
 @Composable
 private fun PictureSmall(
     ink: Color, title: String, value: String?, unit: String?, status: String, onClick: () -> Unit,
     picture: (@Composable (Modifier) -> Unit)?, modifier: Modifier = Modifier,
 ) {
-    PictureCard(ink, modifier, onClick = onClick) {
-        CardTitle(title)
+    HaloCard(modifier, onClick = onClick, verticalArrangement = Arrangement.Top) {
+        HaloTitle(title)
         if (picture != null) {
-            Spacer(Modifier.height(10.dp))
-            picture(Modifier.fillMaxWidth().weight(1f))
+            // A short band for the picture (not a wall of dots), centred in the room between the title and the number.
+            Spacer(Modifier.weight(1f))
+            picture(Modifier.fillMaxWidth().height(SmallPictureHeight))
+            Spacer(Modifier.weight(1f))
         } else {
             Spacer(Modifier.weight(1f))
         }
-        TaggedNumber(value, unit, null, Modifier.padding(top = 8.dp))
+        TaggedNumber(value, unit, null, Modifier.padding(top = Space.S8))
         StatusLine(status)
     }
 }
+
+/** A Small's picture: one short band above its number. */
+private val SmallPictureHeight = 24.dp
 
 /**
  * Heart points earned on each of the 7 days ending on [date], oldest first: the stored days, with [today]'s from the
@@ -486,9 +492,10 @@ internal fun heartPointsWeek(
 private fun TaggedNumber(value: String?, unit: String?, tag: NewsTag?, modifier: Modifier = Modifier, dot: DotSize = DotSize.Edge) {
     NumberWithTag(tag.takeIf { value != null }, modifier) {
         Row(verticalAlignment = Alignment.Bottom) {
-            if (value != null) DotMatrixText(value, Modifier.cardNumber(value), dot = dot) else WaitingDash(Modifier.padding(vertical = 8.dp))
+            if (value != null) HaloBigNumber(value, cardNumberSize(dot), Modifier.cardNumber(value))
+            else WaitingDash(Modifier.padding(vertical = Space.S8), onTile = true)
             if (unit != null && value != null) {
-                Text(unit, color = Color.White.copy(alpha = 0.7f), style = GlowType.secondary, modifier = Modifier.padding(start = 8.dp))
+                Text(unit, color = Ink.Secondary, style = GlowType.secondary, modifier = Modifier.padding(start = Space.S8))
             }
         }
     }
@@ -498,8 +505,8 @@ private fun TaggedNumber(value: String?, unit: String?, tag: NewsTag?, modifier:
 @Composable
 private fun StatusLine(text: String) {
     Text(
-        text, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary,
-        modifier = Modifier.padding(top = 6.dp), maxLines = 2, overflow = TextOverflow.Ellipsis,
+        text, color = Ink.Secondary, style = GlowType.secondary,
+        modifier = Modifier.padding(top = Space.S8), maxLines = 2, overflow = TextOverflow.Ellipsis,
     )
 }
 
@@ -525,7 +532,7 @@ private fun DayFactsList(
         val fromWorkouts = workouts.sortedByDescending { it.workout.start }
             .firstNotNullOfOrNull { w -> (w.workout.vo2max ?: w.effect?.vo2max?.roundToInt())?.takeIf { it > 0 } }
         val est = r?.vo2max
-        ListRow(
+        MetricRow(
             stringResource(R.string.glow_activity_vo2max), MetricColors.heart,
             fromWorkouts?.toString() ?: est?.let { Vo2maxCopy.estimate(it.low, it.high) },
             when {
@@ -541,7 +548,7 @@ private fun DayFactsList(
             TodayCopy.recoverText(TodayCopy.recoverLeft(w.end, w.recoveryMinutes ?: 0, now), now, ZoneId.systemDefault())
         }
         // Recovered is the whole answer: no number, no dash.
-        ListRow(
+        MetricRow(
             stringResource(R.string.glow_activity_time_to_recover), MetricColors.load, recover?.first,
             recover?.second ?: stringResource(R.string.glow_activity_no_recent_workout), dash = recover?.first != null,
             onClick = { open(Score.Recover) }, icon = Score.Recover.rowIcon(),
@@ -557,7 +564,7 @@ private fun DayFactsList(
                 recoveryOffStatus(r) == OffStatus.Below
             )
         val caloriesTag = active?.let { goalTag(GoalMetric.Calories, GoalFacts(it, goal), easeOff) }
-        ListRow(
+        MetricRow(
             stringResource(R.string.glow_activity_calories), MetricColors.calories, active?.let { Units.count(it) },
             e?.let { CaloriesCopy.rowLine(active ?: 0, goal, it.totalKcal.roundToInt()) }
                 ?: stringResource(R.string.glow_activity_add_profile_to_see),
@@ -567,7 +574,7 @@ private fun DayFactsList(
         )
         // Ours from step length and height when we can; the strap's own figure otherwise. Always approximate.
         val distance = a?.distanceMeters ?: state.distanceMeters?.toFloat()
-        ListRow(
+        MetricRow(
             stringResource(R.string.glow_activity_distance), MetricColors.steps, distance?.let { Units.km(it, Units.Precision.Day) },
             if (distance == null) waiting else ActivityCopy.distanceSource(a?.distanceMeters != null),
             onClick = { open(Score.Distance) }, icon = Score.Distance.rowIcon(),
@@ -600,7 +607,7 @@ private fun WorkoutsList(
         var first = true
         fun divider() = !first.also { first = false }
         suggestion?.let { SuggestionRow(it, onSave, onDismiss, divider()) }
-        if (shown.isEmpty()) ListRow(
+        if (shown.isEmpty()) MetricRow(
             stringResource(R.string.glow_activity_no_workouts), MetricColors.heart, null,
             stringResource(R.string.glow_activity_no_workouts_note), dash = false, divider = divider(),
         )
@@ -608,36 +615,24 @@ private fun WorkoutsList(
         shown.forEach { a ->
             if (dayOf(a) != day) {
                 day = dayOf(a)
-                WorkoutDayHeader(TabCopy.workoutDay(dayOf(a), LocalDate.now()))
+                HaloTitle(
+                    TabCopy.workoutDay(dayOf(a), LocalDate.now()), Modifier.rowSides().padding(top = Space.S12),
+                    variant = TitleVariant.Group,
+                )
                 // The first row under a header has no hairline: the header already parts it from the day before.
                 first = true
             }
             WorkoutRow(a, usual, divider()) { onOpen(a.workout.start) }
         }
-        PageRow(stringResource(R.string.glow_activity_add_workout), onClick = onAdd, divider = divider())
-        PageRow(stringResource(R.string.glow_activity_all_workouts), onClick = onAll)
+        NavRow(stringResource(R.string.glow_activity_add_workout), onClick = onAdd, divider = divider())
+        NavRow(stringResource(R.string.glow_activity_all_workouts), onClick = onAll)
     }
 }
-
-/** A day's header in a workout list: small dim text, no hairline. */
-@Composable
-internal fun WorkoutDayHeader(text: String) {
-    Text(
-        text, color = Color.White.copy(alpha = 0.5f), style = GlowType.secondary.copy(fontSize = 12.sp),
-        modifier = Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 2.dp),
-    )
-}
-
-/** The effort light's tile, as the mock draws it: 38 dp, 12 dp corners, a shade above the panel. */
-private val EffortTile = 38.dp
-private val EffortShape = RoundedCornerShape(12.dp)
-private val EffortSurface = Color(0xFF151517)
-private val EffortGap = 12.dp
 
 /**
  * A workout as a list row: its sport's toned white icon on the effort light (a heart-red glow as strong as the
  * workout's Load against your [usual], [Workouts.effort]), the sport with "Auto-detected" when the strap logged
- * it by itself, the sport's one fact and the start time ([TabCopy.workoutFact]), and the duration in dots. A thin zone
+ * it by itself, the sport's one fact and the start time ([TabCopy.workoutFact]), and the duration. A thin zone
  * bar under it, lined up with the name. [divider] draws the hairline above.
  */
 @Composable
@@ -647,82 +642,41 @@ internal fun WorkoutRow(a: WorkoutAnalysis, usual: Float?, divider: Boolean, onC
         a.workout.exerciseSeconds?.toLong(), a.sets, a.workout.averageHeartRate,
     )
     val start = Instant.ofEpochSecond(a.shownStart).atZone(ZoneId.systemDefault())
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .topHairline(divider, RowHairline),
-    ) {
-        Row(Modifier.fillMaxWidth().padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-            EffortLight(SportIcons.of(a.workout.sportType), Workouts.effort(a.workout.trainingLoad, usual))
-            Spacer(Modifier.width(EffortGap))
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        a.sportName, color = Color.White, style = GlowType.body,
-                        maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false),
-                    )
-                    if (!a.startedByYou) {
-                        Spacer(Modifier.width(6.dp))
-                        OutlineTag(TabCopy.AUTO_DETECTED)
-                    }
-                }
-                Text(
-                    TabCopy.workoutLine(fact, TimeOfDay.format(start.toLocalTime())),
-                    color = Color.White.copy(alpha = 0.6f), style = GlowType.secondary,
-                    maxLines = 1, overflow = TextOverflow.Ellipsis,
-                )
-            }
-            Spacer(Modifier.width(12.dp))
-            Text(workoutClock(a.activeSeconds), color = Color.White, style = GlowType.rowValue, maxLines = 1)
-            Spacer(Modifier.width(RowCaretGap))
-            TapCaret(ROW_CARET_ALPHA)
-        }
+    HaloRow(
+        a.sportName,
+        lead = RowLead.custom(RowSpec.Sport) {
+            HaloTile(
+                SportIcons.of(a.workout.sportType), size = TileSize.Medium,
+                tone = TileTone.Effort(Workouts.effort(a.workout.trainingLoad, usual)),
+            )
+        },
+        titleSuffix = workoutTags(a.workout.sportType, autoDetected = !a.startedByYou),
+        line = { RowLine(TabCopy.workoutLine(fact, TimeOfDay.format(start.toLocalTime())), Ink.Secondary) },
+        value = workoutClock(a.activeSeconds), valueInk = Color.White,
         // Zone bar (chart kit): how the workout's time was spent, thin under its row, lined up with its name.
-        ZoneBar(a.zoneSeconds, ZONE_COLORS, Modifier.padding(start = EffortTile + EffortGap, bottom = 10.dp), height = 4.dp)
-    }
+        below = { ZoneBar(a.zoneSeconds, ZONE_COLORS, Modifier.fillMaxWidth(), height = Space.S4) },
+        trail = { RowTrail.Chevron() },
+        onClick = onClick, divider = divider,
+    )
 }
 
-/**
- * The effort light: the sport's icon on a small dark tile, a soft heart-red glow behind it, centred a little low as
- * light from below would be. [effort] (0..1) sets the glow's strength.
- */
+/** A stretch nobody started, as a row with Save: when it was and how hard. The buttons are the row's slot under the text. */
 @Composable
-private fun EffortLight(icon: androidx.compose.ui.graphics.vector.ImageVector, effort: Float) {
-    Box(
-        Modifier
-            .size(EffortTile)
-            .clip(EffortShape)
-            .background(EffortSurface)
-            .drawBehind {
-                val centre = Offset(size.width / 2, size.height * 0.6f)
-                drawRect(
-                    Brush.radialGradient(
-                        0f to MetricColors.heart.copy(alpha = 0.7f * effort.coerceIn(0f, 1f)), 1f to Color.Transparent,
-                        center = centre, radius = size.minDimension * 0.56f,
-                    ),
+private fun SuggestionRow(s: org.openstrap.app.data.WorkoutSuggestions.Suggestion, onSave: () -> Unit, onDismiss: () -> Unit, divider: Boolean) =
+    HaloRow(
+        stringResource(R.string.glow_activity_suggestion),
+        lead = RowLead.tile(AppIcons.Heartbeat, ZONE_COLORS[s.zone]),
+        line = {
+            RowLine(stringResource(R.string.glow_activity_suggestion_line, Ranges.times(s.start, s.end), s.zone + 1, s.averageHeartRate))
+        },
+        below = {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(ButtonSpec.PairGap)) {
+                HaloButton(stringResource(R.string.glow_save), onSave, variant = HaloButtonVariant.Primary, size = HaloButtonSize.Small)
+                HaloButton(
+                    stringResource(R.string.glow_activity_not_a_workout), onDismiss, variant = HaloButtonVariant.Glass,
+                    size = HaloButtonSize.Small,
                 )
             }
-            .border(1.dp, Color.White.copy(alpha = 0.06f), EffortShape),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(icon, null, tint = Color.White.copy(alpha = 0.85f), modifier = Modifier.size(RowIcon))
-    }
-}
-
-/** A stretch nobody started, as a row with Save: when it was and how hard. */
-@Composable
-private fun SuggestionRow(s: org.openstrap.app.data.WorkoutSuggestions.Suggestion, onSave: () -> Unit, onDismiss: () -> Unit, divider: Boolean) {
-    Column {
-        ListRow(
-            stringResource(R.string.glow_activity_suggestion), ZONE_COLORS[s.zone], null,
-            stringResource(R.string.glow_activity_suggestion_line, Ranges.times(s.start, s.end), s.zone + 1, s.averageHeartRate),
-            dash = false, divider = divider, icon = AppIcons.Heartbeat,
-        )
-        Row(Modifier.fillMaxWidth().padding(start = 20.dp, bottom = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            PageButton(stringResource(R.string.glow_save), onSave, primary = true, size = ButtonSize.Row)
-            PageButton(stringResource(R.string.glow_activity_not_a_workout), onDismiss, size = ButtonSize.Row, onCard = true)
-            Box(Modifier.weight(1f))
-        }
-    }
-}
+        },
+        divider = divider,
+    )

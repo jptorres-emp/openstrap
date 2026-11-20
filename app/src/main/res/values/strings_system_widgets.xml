@@ -14,7 +14,7 @@
     <string name="system_widget_status_low_battery">Strap at <xliff:g id="percent" example="12">%1$d</xliff:g>%%</string>
     <!-- Shortest, the battery alone. -->
     <string name="system_widget_status_percent"><xliff:g id="percent" example="12">%1$d</xliff:g>%%</string>
-    <string name="system_widget_status_syncing">Syncing…</string>
+    <string name="system_widget_status_syncing">Syncing</string>
     <string name="system_widget_status_not_synced">Not synced</string>
     <string name="system_widget_status_bluetooth_off">Bluetooth is off</string>
     <string name="system_widget_status_bluetooth_off_short">Bluetooth off</string>

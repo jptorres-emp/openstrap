@@ -8,6 +8,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -16,14 +17,20 @@ import androidx.compose.ui.unit.dp
 import org.openstrap.app.ui.glow.Rim
 import kotlin.math.ceil
 import kotlin.math.floor
+import kotlin.math.PI
+import kotlin.math.cos
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.roundToInt
+import kotlin.math.sin
+import org.openstrap.app.ui.theme.Ink
 
 /*
  * The level and count pictures (spec 2.7): a week of dots through your band, a level fill over your usual band, a
  * countdown ring, blocks, day bars, a range fill, a split bar, week rings and the age scale. Each draws in its metric's
- * ink and fills its modifier, about 136 by 60 dp on a Small and 324 by 70 on a Wide. Solid only: no dashes, and no dots
- * but the week's own.
+ * ink and fills its modifier, about 136 by 60 dp on a Small and 324 by 70 on a Wide. Following the HaloCharts board, the
+ * counts and progress to a goal are dots (week of dots, countdown ring, blocks, day columns, week rings, the Energy
+ * ruler, hour dots) and everything else is solid: no dashes.
  *
  * The geometry is in plain functions below each picture, so it can be tested without drawing. Fractions run 0 to 1
  * across the picture, y from the top. The rim functions turn those into fractions of the card ([Rim]), assuming the
@@ -39,16 +46,16 @@ internal const val BAND_ALPHA = 0.12f
 internal const val DIM_ALPHA = 0.55f
 
 /** A track under a fill: white at 8%. */
-private val Track = Color.White.copy(alpha = 0.08f)
+private val Track = Ink.Faint
 
-/** A ring's track: white at 10%. */
-private val RingTrack = Color.White.copy(alpha = 0.10f)
+/** An unlit dot: white at 12% (HaloCharts T). */
+private val DotTrack = Ink.Edge
 
 /** A target or goal: solid white at 40% (spec 2.7). */
-private val Target = Color.White.copy(alpha = 0.40f)
+private val Target = Ink.Tertiary
 
 /** Your own age on the age scale: a white hairline. */
-private val AgeLine = Color.White.copy(alpha = 0.6f)
+private val AgeLine = Ink.Secondary
 
 /** Where the picture's top and foot sit down a 160 dp card: under the 20 dp inset, the title row and its 12 dp gap. */
 internal const val PICTURE_TOP = 0.33f
@@ -227,16 +234,23 @@ internal fun countdownSweep(share: Float): Float = 360f * share.coerceIn(0f, 1f)
 @Composable
 fun CountdownRing(share: Float, ink: Color, modifier: Modifier = Modifier, centred: Boolean = false) {
     Canvas(modifier) {
-        val stroke = 5.dp.toPx()
-        val r = (min(this.size.height, this.size.width) - stroke) / 2 * 0.85f
-        val cx = if (centred) size.width / 2 else r + stroke / 2
+        val dotR = COUNTDOWN_DOT_DP.dp.toPx()
+        val r = (min(this.size.height, this.size.width) - 2 * dotR) / 2 * 0.85f
+        val cx = if (centred) size.width / 2 else r + dotR
         val c = Offset(cx, this.size.height / 2)
-        drawCircle(RingTrack, r, c, style = Stroke(stroke))
-        val sweep = countdownSweep(share)
-        if (sweep > 0f) drawArc(
-            ink.copy(alpha = if (sweep >= 360f) 1f else 0.75f), -90f, sweep, false,
-            Offset(c.x - r, c.y - r), Size(2 * r, 2 * r), style = Stroke(stroke, cap = StrokeCap.Round),
-        )
+        dotRing(c, r, COUNTDOWN_DOTS, (countdownSweep(share) / 360f * COUNTDOWN_DOTS).roundToInt(), ink, dotR, DotTrack)
+    }
+}
+
+/** The countdown ring's dots and their radius, as the board's Time to recover (24 dots, 2.4 on a 24 ring). */
+internal const val COUNTDOWN_DOTS = 24
+private const val COUNTDOWN_DOT_DP = 2.5f
+
+/** A ring of [n] dots from the top, clockwise, the first [filled] in [ink] and the rest in [track] (HaloCharts dotRing). */
+internal fun DrawScope.dotRing(c: Offset, radius: Float, n: Int, filled: Int, ink: Color, dotR: Float, track: Color = DotTrack) {
+    for (j in 0 until n) {
+        val t = -PI / 2 + j * 2 * PI / n
+        drawCircle(if (j < filled) ink else track, dotR, Offset(c.x + (cos(t) * radius).toFloat(), c.y + (sin(t) * radius).toFloat()))
     }
 }
 
@@ -275,9 +289,10 @@ fun Blocks(minutes: Int, ink: Color, size: PictureSize, modifier: Modifier = Mod
         for (i in 0 until count) {
             val col = i % cols
             val row = i / cols
-            drawRoundRect(
-                if (i < filled) ink else Track,
-                Offset(col * (bw + gap), top + row * (bh + gap)), Size(bw, bh), CornerRadius(2.dp.toPx()),
+            // A dot a block, centred in its cell (HaloCharts, Active minutes).
+            drawCircle(
+                if (i < filled) ink else DotTrack, min(bw, bh) / 2,
+                Offset(col * (bw + gap) + bw / 2, top + row * (bh + gap) + bh / 2),
             )
         }
     }
@@ -294,8 +309,8 @@ internal fun dayBarsGeometry(values: List<Float?>, target: Float?): DayBarsGeome
 }
 
 /**
- * The last 7 days as bars (PictureKind.DayBars): Heart points, until a zone split is stored (open decision 3). [values]
- * oldest first, the last today's, drawn as rounded bars from the foot. Today's in full ink, the others dimmer. [target]
+ * The last 7 days as columns of dots (PictureKind.DayBars): Heart points, a dot per 10 points, until a zone split is
+ * stored (open decision 3). [values] oldest first, the last today's, stacked from the foot. Today's in full ink, the others dimmer. [target]
  * a solid hairline in white at 40%. Never off, so no rim.
  */
 // The lists arrive whole with each update and never change in place.
@@ -306,17 +321,16 @@ fun DayBars(values: List<Float?>, ink: Color, size: PictureSize, modifier: Modif
         if (values.isEmpty()) return@Canvas
         val g = dayBarsGeometry(values, target)
         val n = values.size
-        val gap = (if (size == PictureSize.Small) 6.dp else 10.dp).toPx()
-        val bw = (this.size.width - gap * (n - 1)) / n
         val h = this.size.height
-        val minH = 3.dp.toPx()
-        g.heights.forEachIndexed { i, f ->
-            if (values[i] == null) return@forEachIndexed
-            val bh = max(f * h, minH)
-            drawRoundRect(
-                ink.copy(alpha = if (i == n - 1) 1f else DIM_ALPHA),
-                Offset(i * (bw + gap), h - bh), Size(bw, bh), CornerRadius(min(bw / 2, 4.dp.toPx())),
-            )
+        // A dot per DAY_DOT_POINTS, at least one for a day with any reading (HaloCharts, Heart points).
+        val counts = values.map { v -> if (v == null) 0 else max(1, ceil(v / DAY_DOT_POINTS).toInt()) }
+        val tallest = counts.maxOrNull()?.coerceAtLeast(1) ?: 1
+        val slot = this.size.width / n
+        val pitch = h / tallest
+        val r = min(min(slot / 2, pitch * 0.42f), 3.5.dp.toPx())
+        counts.forEachIndexed { i, k ->
+            val color = ink.copy(alpha = if (i == n - 1) 1f else DIM_ALPHA)
+            for (j in 0 until k) drawCircle(color, r, Offset(slot * i + slot / 2, h - pitch * (j + 0.5f)))
         }
         g.target?.let { t ->
             val y = h - t * h
@@ -335,22 +349,34 @@ internal data class RangeFillGeometry(val start: Float, val end: Float) {
 internal fun rangeFillGeometry(start: Float, end: Float): RangeFillGeometry = RangeFillGeometry(share(start, 0f, 100f), share(end, 0f, 100f))
 
 /**
- * One bar from where the night began to where it ended (PictureKind.FillBar): Recharged, [start] to [end] on 0 to 100.
- * The start part is dim, the gain in the ink. A night that lost energy shows the end alone, dim. No rim ever: no
+ * One bar from where the night began to where it ended (PictureKind.FillBar): Recharged, [start] to [end] on 0 to 100,
+ * a 6 dp bar on a faint track (board HaloRecovery, Recharged). The gain runs from [ink] to [deep]; the track alone stands
+ * before it. A night that lost energy shows the end alone, dim. No rim ever: no
  * Energy history is stored, so it has no usual. The numbers ("34 to 72") are the card's status line, not drawn here.
  */
 @Composable
-fun RangeFill(start: Float, end: Float, ink: Color, size: PictureSize, modifier: Modifier = Modifier) {
+fun RangeFill(start: Float, end: Float, ink: Color, size: PictureSize, modifier: Modifier = Modifier, deep: Color = ink) {
     Canvas(modifier) {
         val g = rangeFillGeometry(start, end)
         val w = this.size.width
         val cy = this.size.height / 2
-        val h = 10.dp.toPx()
-        bar(Track, 0f, w, cy, h)
-        bar(Color.White.copy(alpha = 0.2f), 0f, min(g.start, g.end) * w, cy, h)
-        if (g.gain) bar(ink, max(0f, g.start * w - h / 2), g.end * w, cy, h)
+        val h = RANGE_BAR.toPx()
+        bar(RangeTrack, 0f, w, cy, h)
+        if (g.gain) {
+            val x0 = g.start * w
+            val x1 = g.end * w
+            val r = min(h / 2, (x1 - x0) / 2)
+            drawRoundRect(
+                Brush.horizontalGradient(listOf(ink, deep), startX = x0, endX = x1), Offset(x0, cy - h / 2), Size(x1 - x0, h),
+                CornerRadius(r),
+            )
+        } else bar(Ink.Line, 0f, g.end * w, cy, h)
     }
 }
+
+/** Recharged's and Drained's bars: 6 dp on a track of white at 10% (board HaloRecovery). */
+private val RANGE_BAR = 6.dp
+private val RangeTrack = Ink.Edge
 
 // ---- 7. Split bar -----------------------------------------------------------------------------------------------
 
@@ -384,18 +410,20 @@ internal fun splitBarParts(parts: List<Float>, width: Float, gap: Float): List<S
 
 /**
  * One bar split by what took the energy (PictureKind.SplitBar): Drained, [parts] such as exercise, stress and living,
- * in that order, with gaps. The biggest in full ink, the others fainter by size. No rim ever.
+ * in that order, 6 dp with 2 dp gaps (board HaloRecovery, Drained). The biggest in full ink; the others in [deep] when
+ * given, else fainter by size. No rim ever.
  */
 // The lists arrive whole with each update and never change in place.
 @Suppress("UnstableCollections", "ComposeUnstableCollections")
 @Composable
-fun SplitBar(parts: List<Float>, ink: Color, size: PictureSize, modifier: Modifier = Modifier) {
+fun SplitBar(parts: List<Float>, ink: Color, size: PictureSize, modifier: Modifier = Modifier, deep: Color? = null) {
     Canvas(modifier) {
-        val h = 12.dp.toPx()
+        val h = RANGE_BAR.toPx()
         val cy = this.size.height / 2
         val laid = splitBarParts(parts, this.size.width, 2.dp.toPx())
-        laid.forEachIndexed { k, p ->
-            bar(ink.copy(alpha = splitAlpha(p.rank)), p.start, p.end, cy, h, roundStart = k == 0, roundEnd = k == laid.lastIndex, inner = 3.dp.toPx())
+        laid.forEach { p ->
+            val color = if (p.rank == 0) ink else deep ?: ink.copy(alpha = splitAlpha(p.rank))
+            bar(color, p.start, p.end, cy, h)
         }
     }
 }
@@ -420,23 +448,87 @@ internal fun weekRingsGeometry(width: Float, height: Float, stroke: Float, count
 // The lists arrive whole with each update and never change in place.
 @Suppress("UnstableCollections", "ComposeUnstableCollections")
 @Composable
-fun WeekRings(shares: List<Float?>, ink: Color, size: PictureSize, modifier: Modifier = Modifier) {
+fun WeekRings(shares: List<Float?>, ink: Color, size: PictureSize, modifier: Modifier = Modifier, today: Int = -1) {
     Canvas(modifier) {
         val stroke = (if (size == PictureSize.Small) 3.dp else 4.dp).toPx()
         val g = weekRingsGeometry(this.size.width, this.size.height, stroke, shares.size)
         val cy = this.size.height / 2
-        val r = g.radius
+        // Sixteen dots a ring, the share of them lit (HaloCharts, Your week).
+        val dotR = max(g.radius * 0.12f, 1.4.dp.toPx())
         shares.forEachIndexed { i, s ->
-            val c = Offset(g.centres[i], cy)
-            drawCircle(RingTrack, r, c, style = Stroke(stroke))
-            val sweep = countdownSweep(s ?: 0f)
-            if (s != null && sweep > 0f) drawArc(
-                ink.copy(alpha = if (sweep >= 360f) 1f else DIM_ALPHA), -90f, max(sweep, 4f), false,
-                Offset(c.x - r, c.y - r), Size(2 * r, 2 * r), style = Stroke(stroke, cap = StrokeCap.Round),
-            )
+            val lit = if (s == null) 0 else (s.coerceIn(0f, 1f) * WEEK_RING_DOTS).roundToInt()
+            // Only today's ring is in colour; the days before it are light grey (board HaloTodayEvening, Your week).
+            dotRing(Offset(g.centres[i], cy), g.radius, WEEK_RING_DOTS, lit, if (today < 0 || i == today) ink else WeekPast, dotR, DotTrack)
         }
     }
 }
+
+private const val WEEK_RING_DOTS = 16
+private val WeekPast = Ink.Strong
+
+/** The Energy level ruler's dots when a board doesn't say. */
+internal const val ENERGY_RULER_DOTS = 24
+
+/**
+ * The Energy level ruler (HaloCharts, Energy level): [level] 0 to 100 as [dots] dots of 5 spread across the width, the
+ * ones below the level in [ink] and the rest in [track], and a 3 dp white tick in place of the dot at the level, as
+ * tall as the ruler up to 18 dp. Boards: HaloTodayMidday 20, HaloTodayEvening 22, HaloTodayNight and HaloRecovery 16.
+ */
+@Composable
+fun EnergyRuler(
+    level: Float,
+    ink: Color,
+    modifier: Modifier = Modifier,
+    dots: Int = ENERGY_RULER_DOTS,
+    track: Color = DotTrack,
+) {
+    Canvas(modifier) {
+        val r = 2.5.dp.toPx()
+        val at = (level.coerceIn(0f, 100f) / 100f * (dots - 1)).roundToInt()
+        val pitch = (size.width - 2 * r) / (dots - 1)
+        val cy = size.height / 2
+        val tickH = min(size.height, 18.dp.toPx())
+        for (i in 0 until dots) {
+            val x = r + pitch * i
+            if (i == at) {
+                drawRoundRect(
+                    Color.White, Offset(x - 1.5.dp.toPx(), cy - tickH / 2), Size(3.dp.toPx(), tickH), CornerRadius(1.5.dp.toPx()),
+                )
+            } else {
+                drawCircle(if (i < at) ink else track, r, Offset(x, cy))
+            }
+        }
+    }
+}
+
+/**
+ * The day's steps hour by hour as dots (HaloCharts, Steps by hour): a column an hour, a dot for each 250 steps (one
+ * faint dot for an hour with none), the [picked] hour, or else the latest with steps, in [ink] and the rest a little
+ * dimmer. No baseline: the dots are the count.
+ */
+fun DrawScope.drawHourDots(hourly: List<Float>, picked: Int?, ink: Color) {
+    if (hourly.isEmpty()) return
+    val counts = hourly.map { v -> if (v <= 0f) 1 else max(1, ceil(v / HOUR_DOT_STEPS).toInt()) }
+    val tallest = counts.max()
+    val slot = size.width / hourly.size
+    val pitch = size.height / tallest
+    val r = min(min(slot * 0.32f, pitch * 0.4f), 3.dp.toPx())
+    val lit = picked ?: hourly.indexOfLast { it > 0f }
+    hourly.forEachIndexed { i, v ->
+        val color = when {
+            v <= 0f -> DotTrack
+            i == lit -> ink
+            else -> ink.copy(alpha = DIM_ALPHA)
+        }
+        for (j in 0 until counts[i]) drawCircle(color, r, Offset(slot * i + slot / 2, size.height - pitch * (j + 0.5f)))
+    }
+}
+
+/** Heart points a dot stands for. */
+private const val DAY_DOT_POINTS = 10f
+
+/** Steps a dot stands for. */
+private const val HOUR_DOT_STEPS = 250f
 
 // ---- 9. Age scale -----------------------------------------------------------------------------------------------
 

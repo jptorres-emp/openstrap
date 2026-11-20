@@ -89,8 +89,16 @@ class UnitsTest(private val locale: Locale) {
             dotFormat("%02d", 7),
             dotFormat("%,d", 1_234_567),
         )
-        assertEquals(listOf("5.21", "23,410", "1:02:03", "7:40", "5:24", "14.3", "07", "1,234,567"), dotted)
+        assertEquals(listOf("5.21", "23\u2009410", "1:02:03", "7:40", "5:24", "14.3", "07", "1\u2009234\u2009567"), dotted)
         dotted.forEach(::assertDots)
+    }
+
+    @Test
+    fun dotNumbersGroupFromFiveDigitsBySpace() {
+        assertEquals("8225", Units.count(8_225, Units.DOT_LOCALE))
+        assertEquals("26\u2009120", Units.count(26_120, Units.DOT_LOCALE))
+        assertEquals("950", Units.count(950, Units.DOT_LOCALE))
+        assertEquals("12\u2009345.67891", Units.dotGrouped("12,345.67891"))
     }
 
     @Test

@@ -19,10 +19,10 @@
     <string name="core_badge_first_5k">首次 5 km 跑</string>
     <string name="core_badge_first_10k">首次 10 km 跑</string>
     <string name="core_badge_first_indoor">首次室内运动</string>
-    <string name="core_badge_first_log">首次记录力量训练</string>
+    <string name="core_badge_first_log">首次记录组数</string>
     <string name="core_badge_first_tabata">首次 Tabata</string>
     <string name="core_badge_first_reps">首次间歇跑</string>
-    <string name="core_badge_first_mind">首次瑜伽或静心</string>
+    <string name="core_badge_first_mind">首次舒缓训练</string>
     <string name="core_badge_first_game">首次球类运动</string>
     <string name="core_badge_art_run">跑步</string>
     <string name="core_badge_art_indoor">室内</string>

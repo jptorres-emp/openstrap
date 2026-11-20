@@ -21,10 +21,8 @@
     <!-- A small button with scissors that opens a workout's or a night's trimmer. One short word. -->
     <string name="glow_trim">Trim</string>
 
-    <!-- Stands large in a figure's place when the strap gave no value for it. -->
-    <string name="glow_no_reading">No reading</string>
     <!-- Stands in a figure's place while it is read from the database. -->
-    <string name="glow_loading">Loading…</string>
+    <string name="glow_loading">Loading</string>
 
     <!-- Unit beside a heart rate, beats per minute. Very short. -->
     <string name="glow_unit_bpm">bpm</string>
@@ -34,17 +32,17 @@
     <string name="glow_unit_km">km</string>
 
     <!-- Under a row's name in All metrics and the detail pages when the day has no value for it. -->
-    <string name="glow_no_value">Nothing for this day</string>
+    <string name="glow_no_value">No reading</string>
     <!-- Under a sleep row's name when the night has no value for it. -->
     <string name="glow_no_night_value">Nothing for this night</string>
     <!-- On a card or a row whose number hasn't come in yet today. -->
     <string name="glow_no_reading_yet">No reading yet</string>
     <!-- On Heart points and the like, which come with the strap's daily records. -->
-    <string name="glow_after_next_sync">After the strap\'s next sync</string>
+    <string name="glow_after_next_sync">After the next sync</string>
     <!-- A row that opens the profile: Calories needs these before it can be calculated. -->
     <string name="glow_add_profile">Add age, weight and height</string>
     <!-- Spoken for the short dim bar that stands in for a value not in yet, for screen readers. -->
-    <string name="glow_no_value_yet">No value yet</string>
+    <string name="glow_no_value_yet">No reading yet</string>
 
     <!-- The spoken name of the round arrow button at the top left of every page, for screen readers. -->
     <string name="glow_back">Back</string>
@@ -56,15 +54,11 @@
     <string name="glow_tag_about">About <xliff:g id="tag" example="partial day">%1$s</xliff:g></string>
 
     <!-- The info sheet's folded rows, which open onto how a number is calculated. One line each. -->
-    <string name="glow_info_how">How it\'s calculated</string>
-    <!-- The info sheet's folded row about what raises and lowers a number. -->
-    <string name="glow_info_moves">What moves it</string>
+    <string name="glow_info_what">What it is</string>
+    <string name="glow_info_normal">What\'s normal for you</string>
+    <string name="glow_info_how">How it\'s worked out</string>
     <!-- The info sheet's folded row about why a number might be wrong. -->
     <string name="glow_info_off">Why it might be off</string>
-    <!-- What a tap on an open folded row does, for screen readers. -->
-    <string name="glow_info_fold">Collapse</string>
-    <!-- What a tap on a folded row does, for screen readers. -->
-    <string name="glow_info_open">Expand</string>
 
     <!-- The tabletop page (the phone half folded): its card's title. -->
     <string name="glow_tabletop_heart_rate">Heart rate</string>
@@ -79,6 +73,4 @@
 
     <!-- Unit beside a number of hours, typed in a workout's time goal. Very short. -->
     <string name="glow_unit_h">h</string>
-    <!-- Unit beside a number of seconds, typed in a rest time. Very short. -->
-    <string name="glow_unit_s">s</string>
 </resources>

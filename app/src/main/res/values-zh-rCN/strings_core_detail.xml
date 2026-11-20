@@ -5,16 +5,16 @@
     <string name="core_detail_status_usual">符合常态</string>
     <string name="core_detail_band_label">你的常态，%1$s 到 %2$s</string>
     <plurals name="core_detail_learning_nights">
-        <item quantity="other">正在了解你的常态，%1$d/%2$d 晚</item>
+        <item quantity="other">了解中，%1$d/%2$d 晚</item>
     </plurals>
     <plurals name="core_detail_learning_days">
-        <item quantity="other">正在了解你的常态，%1$d/%2$d 天</item>
+        <item quantity="other">了解中，%1$d/%2$d 天</item>
     </plurals>
     <plurals name="core_detail_learning_nights_sentence">
-        <item quantity="other">正在了解你的常态，%1$d/%2$d 晚。</item>
+        <item quantity="other">仍在了解你的常态，%1$d/%2$d 晚。</item>
     </plurals>
     <plurals name="core_detail_learning_days_sentence">
-        <item quantity="other">正在了解你的常态，%1$d/%2$d 天。</item>
+        <item quantity="other">仍在了解你的常态，%1$d/%2$d 天。</item>
     </plurals>
     <string name="core_detail_number_0">0</string>
     <string name="core_detail_number_1">1</string>
@@ -120,6 +120,6 @@
         <item quantity="other">%1$d/%2$d 晚</item>
     </plurals>
     <string name="core_detail_recovery_no_score">暂无分数</string>
-    <string name="core_detail_recovery_no_heart_data">当晚心率数据不足</string>
-    <string name="core_detail_recovery_scored_mornings">每天早晨根据前一晚的数据评分</string>
+    <string name="core_detail_recovery_no_heart_data">心率数据不足</string>
+    <string name="core_detail_recovery_scored_mornings">每天早晨评分</string>
 </resources>

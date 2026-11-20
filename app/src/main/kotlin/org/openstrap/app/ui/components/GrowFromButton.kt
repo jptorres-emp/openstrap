@@ -1,5 +1,6 @@
 package org.openstrap.app.ui.components
 
+import org.openstrap.app.ui.theme.Greys
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
@@ -127,6 +128,7 @@ fun Modifier.sinkBehind(progress: GrowProgress): Modifier = graphicsLayer {
     scaleX = s; scaleY = s
 }
 
+
 /**
  * [content] while [visible], growing out of [from] (a button's bounds in the window) as it turns visible and shrinking
  * back into it as it turns hidden; with no [from] it fades. The outline goes from the button, on [buttonColor], to the
@@ -140,7 +142,7 @@ fun GrowFromButton(
     from: Rect?,
     modifier: Modifier = Modifier,
     progress: GrowProgress = rememberGrowProgress(visible),
-    buttonColor: Color = Color(0xFF1F1F22),
+    buttonColor: Color = Greys.Control,
     pageColor: Color = Color.Black,
     cornerRadius: Dp = 28.dp,
     content: @Composable (closing: Boolean) -> Unit,

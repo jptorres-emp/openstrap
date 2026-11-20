@@ -50,6 +50,7 @@ import org.openstrap.app.ui.alarms.AlarmsScreen
 import org.openstrap.app.ui.alarms.AlarmsViewModel
 import org.openstrap.app.ui.alarms.HealthAlertsScreen
 import org.openstrap.app.ui.alarms.PhoneAlertsScreen
+import org.openstrap.app.ui.device.WorkoutSettingsScreen
 import org.openstrap.app.ui.components.GrowFromButton
 import org.openstrap.app.ui.components.GrowProgress
 import org.openstrap.app.ui.components.ListDetail
@@ -60,6 +61,7 @@ import org.openstrap.app.ui.components.SidePaneWidth
 import org.openstrap.app.ui.dashboard.StrapView
 import org.openstrap.app.ui.device.BackupPage
 import org.openstrap.app.ui.device.DeletedSleepPage
+import org.openstrap.app.ui.device.SleepGoalSheet
 import org.openstrap.app.ui.device.DeviceScreen
 import org.openstrap.app.ui.device.DiagnosticsScreen
 import org.openstrap.app.ui.device.HC_STORE_FAILED
@@ -239,6 +241,14 @@ private fun DataPage(
             onHeartZones = { open(Page.HeartZones) },
         )
         Page.HeartZones -> HeartZonesPage(container, padding, hooks.rootVm::setMaxHeartRate, hooks.rootVm::setHeartZones, close)
+        Page.WorkoutSettings -> {
+            val askToEnd by hooks.rootVm.askToEnd.collectAsStateWithLifecycle()
+            val maxHr by hooks.workoutsVm.maxHeartRate.collectAsStateWithLifecycle()
+            WorkoutSettingsScreen(
+                askToEnd, maxHr, padding, onAskToEnd = hooks.rootVm::setAskToEnd, onHeartZones = { open(Page.HeartZones) },
+                onBack = close,
+            )
+        }
         Page.Diagnostics -> {
             val log by container.strap.log.collectAsStateWithLifecycle()
             DiagnosticsScreen(log, padding, onBack = close)
@@ -281,6 +291,9 @@ private fun YouPageHost(
     val updateWaiting by hooks.rootVm.updateWaiting.collectAsStateWithLifecycle()
     val deletedSleep by hooks.dayVm.deletedSleep.collectAsStateWithLifecycle()
     val youMaxHr by hooks.workoutsVm.maxHeartRate.collectAsStateWithLifecycle()
+    val askToEnd by hooks.rootVm.askToEnd.collectAsStateWithLifecycle()
+    // The Sleep goal row's own sheet, a small picker in place of the five goals.
+    var sleepGoalOpen by rememberSaveable { mutableStateOf(false) }
     // Permissions can be taken back in Health Connect while away: the row says so on return.
     LifecycleResumeEffect(Unit) {
         deviceVm.checkAutoHealthConnect()
@@ -292,7 +305,10 @@ private fun YouPageHost(
         maxHeartRate = youMaxHr,
         onHeartZones = { open(Page.HeartZones) },
         onGoals = onGoals,
+        onSleepGoal = { sleepGoalOpen = true },
         onGoalsAndBests = { open(Page.GoalsAndBests) },
+        askToEnd = askToEnd,
+        onWorkouts = { open(Page.WorkoutSettings) },
         healthConnectAuto = hcAuto,
         healthConnectAvailability = hcAvailability,
         onHealthConnect = { open(Page.HealthConnect) },
@@ -309,6 +325,16 @@ private fun YouPageHost(
         onBack = onBack,
         selected = selected?.row,
     )
+    if (sleepGoalOpen) {
+        SleepGoalSheet(
+            goals.sleepMinutes, Recovery.sleepNeed(profile.age(), profile.sleepNeedMinutes), profile.sleepNeedMinutes != null,
+            onSave = { minutes ->
+                hooks.rootVm.saveGoals(goals.copy(sleepMinutes = minutes))
+                sleepGoalOpen = false
+            },
+            onDismiss = { sleepGoalOpen = false },
+        )
+    }
 }
 
 /** The Strap page, with what the strap holds read once it's connected. */

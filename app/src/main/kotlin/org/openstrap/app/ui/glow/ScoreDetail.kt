@@ -1,5 +1,8 @@
 package org.openstrap.app.ui.glow
 
+import org.openstrap.app.ui.theme.Space
+import org.openstrap.app.presentation.RecoveryBands
+import org.openstrap.app.ui.glow.BigNumber
 import org.openstrap.app.R
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalResources
@@ -190,14 +193,30 @@ private fun RecoveryDetail(
         // The arc gauge (chart kit, spec 2.7) holds the day's score, centred, the number inside the half circle.
         heroValue = (score ?: estimate)?.takeIf { range == Range.Day }?.let { shown ->
             // One key for every day, so the arc sweeps from the score shown to the next day's instead of cutting.
-            { ArcGauge(shown / 100f, color, key = Score.Recovery) { DetailScoreNumber(shown, state.date) } }
-        },
-        // The Recovery card's picture under the gauge: the week to this morning as dots through the band of your usual.
-        heroPicture = week.map { it.second?.toFloat() }.takeIf { range == Range.Day && it.any { v -> v != null } }?.let { dots ->
-            { DetailPicture { m -> WeekOfDots(dots, r?.readinessUsual?.let { it.low..it.high }, color, PictureSize.Wide, m) } }
+            { DetailGauge(shown / 100f, color, key = Score.Recovery) { DetailScoreNumber(shown, state.date) } }
         },
     ) {
         if (range == Range.Day) {
+            val all = ready?.contributors.orEmpty().sortedByDescending { it.factor.weight }
+            if (all.isNotEmpty()) item {
+                val mid = (RecoveryBands.READY_FROM + RecoveryBands.READY_FOR_MORE_FROM) / 2f
+                Column {
+                    HaloTitle(
+                        stringResource(R.string.glow_recovery_what_drove), variant = TitleVariant.OutOfCard,
+                        note = stringResource(R.string.glow_detail_against_normal),
+                    )
+                    DetailDrivers(
+                        all.map { c ->
+                            DetailDriver(
+                                TabCopy.factorName(c.factor), null,
+                                RecoveryCopy.detail(c.detail).takeIf { it.isNotBlank() } ?: TabCopy.contributorWord(c.score),
+                                (c.score - mid) / DRIVER_RANGE,
+                            )
+                        },
+                        color, scaleWords(),
+                    )
+                }
+            }
             item {
                 Column {
                     DetailSentence(
@@ -209,28 +228,32 @@ private fun RecoveryDetail(
                             else -> stringResource(R.string.glow_recovery_scored_each_morning)
                         },
                     )
-                    if (score != null && ready != null) TabCopy.learning(ready.phase, ready.baselineNights)?.let { CaveatLine(it, color) }
-                }
-            }
-            val all = ready?.contributors.orEmpty().sortedByDescending { it.factor.weight }
-            if (all.isNotEmpty()) item {
-                ListPanel(Modifier.padding(top = 8.dp), title = stringResource(R.string.glow_recovery_what_drove)) {
-                    all.forEachIndexed { i, c ->
-                        ContributorRow(
-                            TabCopy.factorName(c.factor), MetricColors.readiness, TabCopy.contributorWord(c.score), c.score / 100f,
-                            offNormal = TabCopy.contributorOff(c.score), divider = i > 0, detail = RecoveryCopy.detail(c.detail),
-                        )
+                    if (score != null && ready != null) TabCopy.learning(ready.phase, ready.baselineNights)?.let {
+                        HaloNote(it, variant = NoteVariant.Caveat, dot = color)
                     }
                 }
+            }
+            val avg = known.takeIf { it.isNotEmpty() }?.average()
+            val usual = r?.readinessUsual
+            if (score != null) item {
+                HaloFigures(
+                    listOf(
+                        usual?.let { Math.round((it.low + it.high) / 2f).toString() } to stringResource(R.string.glow_detail_your_normal),
+                        avg?.let { Math.round(it).toString() } to stringResource(R.string.glow_detail_seven_day_average),
+                        week.getOrNull(week.size - 2)?.second?.let { y -> signed(score - y) } to
+                            stringResource(R.string.glow_detail_vs_yesterday),
+                    ),
+                    missing = null,
+                )
             }
         } else {
             item {
                 if (known.isEmpty()) DetailEmpty(stringResource(R.string.glow_recovery_none_week))
                 else {
                     val values = week.map { it.second?.toFloat() }
-                    // TODO(step 6): your normal as a band, once the app keeps a normal of the score; every day stays dim until then.
-                    NormalTrend(
-                        values, DetailCopy.levels(values, null), color, labels = week.map { DayWords.weekdayShort(it.first) },
+                    DetailColumns(
+                        values, color, week.map { DayWords.weekdayShort(it.first) }, valueLabels = true, fixed = 0f..100f,
+                        band = r?.readinessUsual?.let { it.low..it.high }, bandLabel = stringResource(R.string.glow_detail_your_normal),
                         onScrub = { i ->
                             scrub = i?.let { week[it] }?.let { (d, v) ->
                                 v?.let { DetailHeadline(it.toString(), DayWords.short(d), TodayCopy.recoveryWord(it, false)) }
@@ -251,6 +274,12 @@ private fun RecoveryDetail(
 }
 
 
+
+/** How many score points a driver is from your normal to fill its half of the bar. */
+private const val DRIVER_RANGE = 50f
+
+/** A change with its sign: "+22", "−8" with a real minus sign (spec 2.3), or "0". */
+private fun signed(n: Int): String = if (n > 0) "+$n" else if (n < 0) "\u2212${-n}" else "0"
 
 /* ----------------------------------------------- Charge --------------------------------------------- */
 
@@ -287,7 +316,7 @@ private fun ChargeDetail(
         c == null || !c.anchored ->
             DetailHeadline.none(stringResource(R.string.glow_recovery_waiting), stringResource(R.string.glow_recovery_after_first_night))
         now == null ->
-            DetailHeadline.none(stringResource(R.string.glow_no_reading), stringResource(R.string.glow_recovery_needs_heart_rate))
+            DetailHeadline.none(stringResource(R.string.glow_no_reading_yet), stringResource(R.string.glow_recovery_needs_heart_rate))
         else -> DetailHeadline(
             now.toString(),
             when {
@@ -311,17 +340,41 @@ private fun ChargeDetail(
         ranges = listOf(Range.Day), range = Range.Day, onRange = {}, scrubbed = { scrub },
         // The figures are the held day's, so they move when it does, not with the strip.
         headlineDay = state.date,
+        heroValue = now?.let { shown -> { DetailGauge(shown / 100f, color, key = Score.Energy) { DetailScoreNumber(shown, state.date) } } },
     ) {
+        // What filled and drained it, each a bar from your normal (board HaloDetailEnergy).
+        if (c != null && c.anchored && now != null) item {
+            val rows = TabCopy.chargeRows(c.recharged, c.drainedExercise, c.drainedStress, c.drainedLiving)
+            val biggest = rows.maxOf { row -> row.value.filter { it.isDigit() }.toIntOrNull() ?: 0 }.coerceAtLeast(1)
+            Column {
+                HaloTitle(
+                    stringResource(R.string.glow_recovery_what_drove), variant = TitleVariant.OutOfCard,
+                    note = stringResource(R.string.glow_detail_since_woke),
+                )
+                DetailDrivers(
+                    rows.map { row ->
+                        val n = row.value.filter { it.isDigit() }.toIntOrNull() ?: 0
+                        val up = row.value.startsWith("+")
+                        DetailDriver(row.name, if (up || n == 0) row.value else "\u2212$n", null, (if (up) n else -n) / biggest.toFloat())
+                    },
+                    color, scaleWords(),
+                )
+            }
+        }
         item {
             if (c == null || now == null || c.points.size < 2) DetailEmpty(TabCopy.chargeLine(now, atWake, c?.anchored == true))
-            else Column(Modifier.padding(top = 8.dp)) {
+            else Column(Modifier.padding(top = Space.S8)) {
                 // The Charge curve (chart kit): sleep fills it, the day drains it. Scrubbing moves the number.
                 // A curve covering only a few hours gets a short chart, so it doesn't stand tall and empty; the axis stays
                 // the whole day, so the gap reads as time without a Charge.
                 val known = values.indices.filter { values[it] != null }
                 val hours = if (known.isEmpty()) 0f else (known.last() - known.first()) * step / 3600f
-                GlowLineChart(
-                    values, height = if (hours < SHORT_CURVE_HOURS) 110.dp else 200.dp, labels = HOURS, color = color, showAverage = false, yRange = 0f..100f,
+                HaloTitle(
+                    stringResource(R.string.glow_detail_through_day), variant = TitleVariant.OutOfCard,
+                    note = atWake?.let { stringResource(R.string.glow_detail_at_waking_note, it) },
+                )
+                DetailLineChart(
+                    values, color, HOURS, height = if (hours < SHORT_CURVE_HOURS) 110.dp else 200.dp, yRange = 0f..100f,
                     onScrub = { i ->
                         scrub = i?.let { values[it] }?.let { v ->
                             val shown = chargeShown(v)
@@ -338,21 +391,14 @@ private fun ChargeDetail(
                     c.highest?.let(::chargeShown)?.toString() to stringResource(R.string.glow_recovery_highest),
                     c.lowest?.let(::chargeShown)?.toString() to stringResource(R.string.glow_recovery_lowest),
                 ).filter { it.first != null }
-                if (figures.isNotEmpty()) DetailFigures(figures, Modifier.padding(top = 18.dp))
+                if (figures.isNotEmpty()) HaloFigures(figures, Modifier.padding(top = Space.S16))
             }
         }
         if (now != null) item {
             Column {
                 DetailSentence(DetailCopy.charge(now, atWake, TabCopy.drainedAmount(c.drainedExercise + c.drainedStress + c.drainedLiving).toInt(), c.anchored, isToday, LocalTime.now().hour))
                 InfoCopy.chargeNotes(c).firstOrNull()?.let { note ->
-                    Box(Modifier.clickable { info = true }) { CaveatLine(note, color) }
-                }
-            }
-        }
-        if (c != null && c.anchored && now != null) item {
-            ListPanel(Modifier.padding(top = 8.dp), title = stringResource(R.string.glow_recovery_where_it_went)) {
-                TabCopy.chargeRows(c.recharged, c.drainedExercise, c.drainedStress, c.drainedLiving).forEachIndexed { i, row ->
-                    ListRow(row.name, color, row.value, row.status, divider = i > 0)
+                    Box(Modifier.clickable { info = true }) { HaloNote(note, variant = NoteVariant.Caveat, dot = color) }
                 }
             }
         }
@@ -386,7 +432,7 @@ private fun ScoreRelated(score: Score, state: DayUiState, r: RecoveryResult?, hi
             val word = charge?.let(Narrative::chargeHeadline) ?: chargeWaiting
             ScoreRow(Score.Energy, MetricColors.charge, charge?.toString(), word, divider = false, onOpen)
         } else RecoveryScoreRow(r?.readiness, divider = false, onOpen)
-        ListRow(
+        MetricRow(
             stringResource(R.string.glow_recovery_last_night), MetricColors.sleepDeep, asleep?.let { Units.duration(it) },
             stringResource(if (asleep == null) R.string.glow_recovery_no_sleep else R.string.glow_recovery_asleep),
             onClick = { onOpen(Detail.OfScore(Score.Sleep)) }, icon = Score.Sleep.rowIcon(),
@@ -398,4 +444,4 @@ private fun ScoreRelated(score: Score, state: DayUiState, r: RecoveryResult?, hi
 /** The score in a score gauge on a detail header ([ArcGauge], [HorizonArc]): the header's one dotted number. */
 @Composable
 internal fun DetailScoreNumber(score: Int, day: LocalDate? = null) =
-    DayNumber(score.toString(), day, Modifier.detailNumber(score.toString()))
+    DayNumber(score.toString(), day, Modifier.detailNumber(score.toString()), BigNumber.Second)

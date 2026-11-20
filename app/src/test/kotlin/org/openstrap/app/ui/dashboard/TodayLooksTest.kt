@@ -79,9 +79,9 @@ class TodayLooksTest {
 
     @Test fun `each card draws its own picture, a Small as a Wide`() {
         val expected = mapOf(
-            TodayCard.HeartRate to PictureKind.Line, TodayCard.Stress to PictureKind.DayStrip, Activity to PictureKind.HourlyBars,
+            TodayCard.HeartRate to PictureKind.Line, Activity to PictureKind.HourlyBars,
             Recovery to PictureKind.WeekDots, LoadToday to PictureKind.LevelFill, TodayCard.Recover to PictureKind.CountdownRing,
-            TodayCard.Workout to PictureKind.ZoneBar, Week to PictureKind.WeekRings, TodayCard.HabitAge to PictureKind.AgeScale,
+            Week to PictureKind.WeekRings, TodayCard.HabitAge to PictureKind.AgeScale,
             TodayCard.Charge to PictureKind.Curve,
         )
         val seen = mutableSetOf<TodayCard>()
@@ -107,11 +107,11 @@ class TodayLooksTest {
         assertEquals(look(Tier.Glow, Hue.Charge, PictureKind.Curve), window[1].look)
         assertEquals(true, window[1].secondGlow)
         assertFalse(window[0].look!!.sameDesign(window[1].look))
-        // After a workout and in the evening it's the same level glow, and the only glow besides the hero.
+        // After a workout, in the evening and at night it is a plain picture card with its curve, and the hero is the only glow.
         for (m in listOf(Moment.After, Moment.Evening, Moment.Night)) {
             val out = today(m, TodayFacts(workout = true))
-            assertEquals("$m", look(Tier.Glow, Hue.Charge, PictureKind.Curve), out.first { it.card == TodayCard.Charge }.look)
-            assertEquals("$m", 2, out.count { it.look?.tier == Tier.Glow })
+            assertEquals("$m", Tier.Picture, out.first { it.card == TodayCard.Charge }.look?.tier)
+            assertEquals("$m", 1, out.count { it.look?.tier == Tier.Glow })
         }
         // After a run the hero is Recovery teal: red is for effort.
         assertEquals(Hue.Recovery, today(Moment.After, TodayFacts(workout = true)).first().look?.hue)

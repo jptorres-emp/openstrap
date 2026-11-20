@@ -18,21 +18,21 @@
     <string name="core_healthspan_habit_time_asleep">Time asleep</string>
 
     <!-- Why there is no Habit Age, on its card: no birth year. -->
-    <string name="core_healthspan_withheld_no_age">Add your birth year in your profile to see your Habit Age.</string>
+    <string name="core_healthspan_withheld_no_age">Add your birth year to your profile</string>
     <!-- Why there is no Habit Age: the user's age is outside the range it's built for. -->
-    <string name="core_healthspan_withheld_age">Habit Age is for ages 20 to 79.</string>
+    <string name="core_healthspan_withheld_age">Habit Age is for ages 20 to 79</string>
     <!-- Why there is no Habit Age: no sex in the profile. -->
-    <string name="core_healthspan_withheld_sex">Add your sex in your profile: the typical values differ for women and men.</string>
+    <string name="core_healthspan_withheld_sex">Add your sex to your profile</string>
     <!-- Why there is no Habit Age: the profile says beta-blockers or pregnancy. -->
-    <string name="core_healthspan_withheld_medication">Not shown while taking beta-blockers or during pregnancy: resting heart rate doesn\'t reflect fitness then.</string>
+    <string name="core_healthspan_withheld_medication">Off with beta-blockers or pregnancy</string>
     <!-- Why there is no Habit Age yet: too little wear so far. -->
-    <string name="core_healthspan_withheld_learning">Needs 30 days of wear before a first estimate.</string>
+    <string name="core_healthspan_withheld_learning">Needs 30 days of wear</string>
     <!-- Why there is no Habit Age yet: too few nights with resting heart rate. -->
-    <string name="core_healthspan_withheld_resting_hr">Needs resting heart rate on about half of recent nights.</string>
+    <string name="core_healthspan_withheld_resting_hr">Needs more resting heart rate</string>
     <!-- Why there is no Habit Age yet: too few days worn most of the day. -->
-    <string name="core_healthspan_withheld_steps">Needs about half of recent days worn 10 hours or more.</string>
+    <string name="core_healthspan_withheld_steps">Needs more full days of wear</string>
     <!-- Why there is no Habit Age yet: too few weeks to measure sleep regularity. -->
-    <string name="core_healthspan_withheld_regularity">Needs more weeks of sleep regularity.</string>
+    <string name="core_healthspan_withheld_regularity">Needs more weeks of regularity</string>
     <!-- Why there is no Habit Age yet: too few nights of sleep. -->
-    <string name="core_healthspan_withheld_sleep">Needs sleep on about half of recent nights.</string>
+    <string name="core_healthspan_withheld_sleep">Needs sleep on more nights</string>
 </resources>

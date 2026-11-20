@@ -21,11 +21,11 @@
     <!-- In place of a night value, a word or two, when there was no sleep. -->
     <string name="day_sleep_no_sleep">No sleep</string>
     <!-- Under it, on today. -->
-    <string name="day_sleep_none_last_night">None recorded last night</string>
+    <string name="day_sleep_none_last_night">No sleep recorded</string>
     <!-- Under it, on an earlier day. -->
-    <string name="day_sleep_none_that_night">None recorded that night</string>
+    <string name="day_sleep_none_that_night">No sleep recorded</string>
     <!-- In place of a night vital's value, a word or two, when the night had none of it. -->
-    <string name="day_sleep_no_reading">No reading</string>
+    <string name="day_sleep_no_reading">No reading yet</string>
     <!-- Under it, on today. -->
     <string name="day_sleep_not_measured_last_night">Not measured last night</string>
     <!-- Under it, on an earlier day. -->
@@ -53,9 +53,9 @@
     <!-- In place of the Sleep score when the strap gave none, a word or two. -->
     <string name="day_sleep_no_score">No score</string>
     <!-- Under it, on today. -->
-    <string name="day_sleep_no_score_last_night">The strap didn\'t score last night</string>
+    <string name="day_sleep_no_score_last_night">No score from the strap</string>
     <!-- Under it, on an earlier day. -->
-    <string name="day_sleep_no_score_that_night">The strap didn\'t score that night</string>
+    <string name="day_sleep_no_score_that_night">No score from the strap</string>
     <!-- The night's headline ("Short night") as the first sentence of the Sleep score's sentence. -->
     <string name="day_sleep_headline_sentence"><xliff:g id="headline" example="Short night">%1$s</xliff:g>.</string>
 
@@ -72,9 +72,9 @@
     <!-- What a row did: as guidance asks. -->
     <string name="day_sleep_factor_good">On track</string>
     <!-- What a row did: a little short of guidance. -->
-    <string name="day_sleep_factor_fair">Holding it back a little</string>
+    <string name="day_sleep_factor_fair">Holding back a little</string>
     <!-- What a row did: well short of guidance. -->
-    <string name="day_sleep_factor_low">Holding it back</string>
+    <string name="day_sleep_factor_low">Holding back</string>
 
     <!-- The label over the bedtime figure. -->
     <string name="day_sleep_fell_asleep">Fell asleep</string>
@@ -206,7 +206,7 @@
     <!-- The Sleep tab's night vitals: a value missing because there was no sleep. -->
     <string name="day_sleep_vital_no_sleep">No sleep recorded</string>
     <!-- A night vital missing on a night with sleep. -->
-    <string name="day_sleep_vital_no_reading">No reading</string>
+    <string name="day_sleep_vital_no_reading">No reading yet</string>
     <!-- A night vital while its normal is still being learned: the nights so far, of the nights needed. -->
     <plurals name="day_sleep_vital_learning">
         <item quantity="one">Learning, <xliff:g id="nights" example="4">%1$d</xliff:g> of <xliff:g id="needed" example="7">%2$d</xliff:g> night</item>

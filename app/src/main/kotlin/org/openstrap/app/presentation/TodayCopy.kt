@@ -4,6 +4,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
+import java.time.temporal.ChronoUnit
 import java.time.format.TextStyle
 import java.util.Locale
 import kotlin.math.abs
@@ -162,6 +163,55 @@ object TodayCopy {
             else -> R.string.core_today_window_title_easy
         },
     )
+
+    /**
+     * The workout window hero's title once there is a usual time: "Your usual run", "Your usual workout" for a sport
+     * with no short name ([sportNoun]).
+     */
+    fun windowUsualTitle(sportType: Int?, strings: Strings = Strings.app): String =
+        strings.format(
+            R.string.core_today_window_title_sport,
+            sportType?.let { sportNoun(it, strings) } ?: strings.get(R.string.core_today_window_noun_workout),
+        )
+
+    /** "Usually around 17:30", beside the title. */
+    fun windowAround(usual: LocalTime, strings: Strings = Strings.app): String =
+        strings.format(R.string.core_today_window_around, TimeOfDay.format(usual))
+
+    /** "Last run 2 days ago": [lastStart] is when the last workout of the sport began, [now] both in epoch seconds. */
+    fun windowLast(sportType: Int?, lastStart: Long, now: Long, zone: ZoneId, strings: Strings = Strings.app): String {
+        val days = ChronoUnit.DAYS.between(
+            Instant.ofEpochSecond(lastStart).atZone(zone).toLocalDate(), Instant.ofEpochSecond(now).atZone(zone).toLocalDate(),
+        ).toInt().coerceAtLeast(0)
+        val ago = when (days) {
+            0 -> strings.get(R.string.core_day_today_in_sentence)
+            1 -> strings.get(R.string.core_day_yesterday_in_sentence)
+            else -> strings.plural(R.plurals.core_today_window_days_ago, days, days)
+        }
+        val noun = sportType?.let { sportNoun(it, strings) } ?: strings.get(R.string.core_today_window_noun_workout)
+        return strings.format(R.string.core_today_window_last, noun, ago)
+    }
+
+    /** The workout window hero's sentence: what Recovery says about effort, then Energy left ([window]'s second half). */
+    fun windowSentence(score: Int?, charge: Int?, strings: Strings = Strings.app): String {
+        val say = when {
+            score == null -> null
+            score >= RecoveryBands.READY_FROM -> R.string.core_today_window_say_ready
+            score >= RecoveryBands.MODERATE_FROM -> R.string.core_today_window_say_steady
+            else -> R.string.core_today_window_say_easy
+        }?.let(strings::get)
+        val left = charge?.let {
+            strings.format(
+                when {
+                    it >= 50 -> R.string.core_today_window_energy_plenty
+                    it >= 25 -> R.string.core_today_window_energy_enough
+                    else -> R.string.core_today_window_energy_low
+                },
+                it,
+            )
+        }
+        return listOfNotNull(say, left).joinToString(" ")
+    }
 
     /** "You usually run around now. Energy is 58, plenty left." [sportType] is the usual sport, null for none. */
     fun window(sportType: Int?, charge: Int?, strings: Strings = Strings.app): String {

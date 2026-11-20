@@ -1,17 +1,15 @@
 package org.openstrap.app.ui.device
 
+import org.openstrap.app.ui.glow.HaloPageHeader
+import org.openstrap.app.ui.glow.HaloPageList
+import org.openstrap.app.ui.glow.PageVariant
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import org.openstrap.app.BuildConfig
 import org.openstrap.app.R
@@ -22,17 +20,13 @@ import org.openstrap.app.data.settings.UserProfile
 import org.openstrap.app.health.HcAvailability
 import org.openstrap.app.i18n.Strings
 import org.openstrap.app.presentation.DayWords
+import org.openstrap.app.presentation.Stamp
 import org.openstrap.app.presentation.Units
 import java.util.concurrent.TimeUnit.MINUTES
-import org.openstrap.app.ui.dashboard.ScreenList
 import org.openstrap.app.ui.glow.GlowLayout
-import org.openstrap.app.ui.glow.GlowType
-import org.openstrap.app.ui.glow.PageHeader
 import org.openstrap.app.update.UpdateCopy
-import org.openstrap.app.ui.glow.PageRow
-import org.openstrap.app.ui.glow.PanelLabelInset
-import org.openstrap.app.ui.glow.SectionLabel
-import org.openstrap.app.ui.glow.PageRows
+import org.openstrap.app.ui.glow.PageGroup
+import org.openstrap.app.ui.glow.NavRow
 import org.openstrap.app.ui.theme.AppIcons
 
 /** The Goals row's value: "8,000 steps, 300 active kcal, 8 active hours". */
@@ -44,7 +38,7 @@ fun goalsLine(goals: Goals, locale: java.util.Locale = java.util.Locale.getDefau
         strings.plural(R.plurals.you_goals_active_hours, goals.activeHours, goals.activeHours),
     )
 
-/** The Sleep goal row's value, with the sleep need Recovery uses beside it: "7 h 30. Your sleep need is 8 h". */
+/** The Sleep goal row's value, with the sleep need Recovery uses beside it: "7 h 30, sleep need 8 h". */
 fun sleepGoalLine(goals: Goals, needMinutes: Int, strings: Strings = Strings.app): String =
     strings.format(
         R.string.you_sleep_goal_line,
@@ -53,8 +47,8 @@ fun sleepGoalLine(goals: Goals, needMinutes: Int, strings: Strings = Strings.app
     )
 
 /**
- * The auto sync row's value: on and when it last wrote, by [DayWords.at] ("On. Last synced 10:42", "yesterday 10:42",
- * "Tuesday 10:42", "Tue 12 Oct 10:42"), off, or stopped by itself and why. [now] in epoch seconds. Stopped with
+ * The auto sync row's value: on and when it last wrote, by [Stamp.of] ("On, last copied 10:42", "Yesterday 10:42",
+ * "Tue 10 Nov, 10:42"), off, or stopped by itself and why. [now] in epoch seconds. Stopped with
  * Health Connect gone says to install it where the Play Store has it ([availability]).
  */
 fun healthConnectLine(
@@ -75,7 +69,7 @@ fun healthConnectLine(
         },
     )
     val last = auto.lastSynced ?: return strings.get(R.string.you_hc_line_on)
-    return strings.format(R.string.you_hc_line_last, DayWords.at(last, now, zone, locale = locale))
+    return strings.format(R.string.you_hc_line_last, Stamp.of(last, now, zone, locale = locale))
 }
 
 /** The You page's Health Connect row: on and when it last wrote, off, or stopped and why, in a few words. */
@@ -116,8 +110,12 @@ fun YouPage(
     maxHeartRate: Int?,
     onHeartZones: () -> Unit,
     onGoals: () -> Unit,
+    onSleepGoal: () -> Unit,
     /** The weekly goal, personal bests and badges (workouts spec 3.5). */
     onGoalsAndBests: () -> Unit,
+    /** "Ask to end when I stop", said on the Workouts row, which opens the Workouts settings page. */
+    askToEnd: org.openstrap.app.data.settings.AskToEnd,
+    onWorkouts: () -> Unit,
     /** Auto sync to Health Connect, said on its row; the row opens the Health Connect page. */
     healthConnectAuto: HealthConnectAuto,
     /** Whether Health Connect is there or can be installed, for the row's stopped wording. */
@@ -142,69 +140,71 @@ fun YouPage(
     selected: String? = null,
 ) {
     BackHandler(onBack = onBack)
-    ScreenList(contentPadding, gutter = GlowLayout.Gutter) {
-        item { PageHeader(stringResource(R.string.you_title), onBack) }
+    HaloPageList(contentPadding, variant = PageVariant.Settings) {
+        item { HaloPageHeader(stringResource(R.string.you_title), onBack) }
         item {
-            PageRows {
-                PageRow(
+            PageGroup(heading = stringResource(R.string.you_section_about_you)) {
+                NavRow(
                     stringResource(R.string.you_row_profile), profile.summary(), onClick = onProfile, below = true, divider = false,
                     icon = AppIcons.User,
                     selected = selected == PageRowKeys.PROFILE,
                 )
-                PageRow(
+                NavRow(
                     org.openstrap.app.ui.workout.HeartZonesCopy.TITLE, org.openstrap.app.ui.workout.HeartZonesCopy.youLine(maxHeartRate), onClick = onHeartZones,
                     below = true, icon = AppIcons.Heartbeat, selected = selected == PageRowKeys.HEART_ZONES,
                 )
-                PageRow(stringResource(R.string.you_row_goals), goalsLine(goals), onClick = onGoals, below = true, icon = AppIcons.Target)
-                PageRow(
-                    stringResource(R.string.you_row_sleep_goal), sleepGoalLine(goals, sleepNeedMinutes), onClick = onGoals, below = true,
-                    icon = AppIcons.Moon,
+                NavRow(stringResource(R.string.you_row_goals), goalsLine(goals), onClick = onGoals, below = true, icon = AppIcons.Target)
+                NavRow(
+                    stringResource(R.string.you_row_sleep_goal), sleepGoalLine(goals, sleepNeedMinutes), onClick = onSleepGoal,
+                    below = true, icon = AppIcons.Moon,
                 )
-                PageRow(
+                NavRow(
                     stringResource(R.string.you_row_goals_and_bests),
                     pluralStringResource(R.plurals.you_goals_and_bests_line, goals.workoutsPerWeek, goals.workoutsPerWeek),
                     onClick = onGoalsAndBests,
                     below = true, icon = AppIcons.FlagCheckered, selected = selected == PageRowKeys.GOALS_AND_BESTS,
                 )
+                NavRow(
+                    stringResource(R.string.ask_end_page_title), AskToEndCopy.youLine(askToEnd), onClick = onWorkouts,
+                    below = true, icon = AppIcons.PersonSimpleRun, selected = selected == PageRowKeys.WORKOUTS,
+                )
             }
         }
-        item { SectionLabel(stringResource(R.string.you_section_your_data), Modifier.padding(top = 4.dp), PanelLabelInset) }
         item {
-            PageRows {
+            PageGroup(heading = stringResource(R.string.you_section_your_data), footnote = stringResource(R.string.you_data_footnote)) {
                 // Read again whenever either changes, so "today" and "yesterday" follow the last one.
                 val now = remember(healthConnectAuto, backup) { System.currentTimeMillis() / 1000 }
                 val zone = java.time.ZoneId.systemDefault()
-                PageRow(
+                NavRow(
                     stringResource(R.string.you_row_health_connect),
                     healthConnectSummary(healthConnectAuto, now, zone, availability = healthConnectAvailability), onClick = onHealthConnect,
                     below = true, divider = false,
                     icon = AppIcons.Heartbeat, selected = selected == PageRowKeys.HEALTH_CONNECT,
                 )
-                PageRow(
+                NavRow(
                     stringResource(R.string.you_row_backup), BackupCopy.summary(backup, now, zone), onClick = onBackup, below = true,
                     icon = AppIcons.ShieldCheck, selected = selected == PageRowKeys.BACKUP,
                 )
-                if (deletedSleep > 0) PageRow(
+                if (deletedSleep > 0) NavRow(
                     stringResource(R.string.you_row_deleted_sleep), org.openstrap.app.ui.dashboard.SleepCopy.deletedCount(deletedSleep),
                     onClick = onDeletedSleep, below = true,
                     icon = AppIcons.Trash, selected = selected == PageRowKeys.DELETED_SLEEP,
                 )
             }
         }
-        item { SectionLabel(stringResource(R.string.you_section_help), Modifier.padding(top = 4.dp), PanelLabelInset) }
         item {
-            PageRows {
+            PageGroup(heading = stringResource(R.string.you_section_help)) {
                 val now = remember(updates) { System.currentTimeMillis() / 1000 }
-                PageRow(
+                NavRow(
                     stringResource(R.string.you_row_updates), UpdateCopy.summary(updates, installedVersion, now), onClick = onUpdates,
                     below = true, divider = false,
                     icon = AppIcons.ArrowCircleUp, selected = selected == PageRowKeys.UPDATES, dot = updateWaiting,
                 )
-                PageRow(
+                NavRow(
                     stringResource(R.string.you_row_diagnostics), pluralStringResource(R.plurals.you_diagnostics_line, logLines, logLines),
                     onClick = onDiagnostics, below = true, icon = AppIcons.Bug, selected = selected == PageRowKeys.DIAGNOSTICS,
                 )
-                if (onSampleData != null) PageRow(
+                if (onSampleData != null) NavRow(
                     stringResource(R.string.you_row_sample_data), stringResource(R.string.you_row_sample_data_note), onClick = onSampleData,
                     below = true,
                     icon = AppIcons.Flask,
@@ -212,11 +212,10 @@ fun YouPage(
             }
         }
         item {
-            Text(
-                stringResource(R.string.you_footer, BuildConfig.VERSION_NAME),
-                Modifier.fillMaxWidth().padding(top = 4.dp),
-                color = Color.White.copy(alpha = 0.45f), style = GlowType.secondary, textAlign = TextAlign.Center,
-            )
+            PageGroup(heading = stringResource(R.string.you_section_about)) {
+                NavRow(stringResource(R.string.you_row_version), stringResource(R.string.you_version_value, BuildConfig.VERSION_NAME),
+                    divider = false)
+            }
         }
     }
 }

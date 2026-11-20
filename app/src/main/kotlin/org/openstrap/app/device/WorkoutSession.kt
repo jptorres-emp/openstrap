@@ -161,6 +161,17 @@ class WorkoutSession(
      */
     val heartZones: StateFlow<HeartZones> = settings.heartZones.stateIn(scope, SharingStarted.Eagerly, HeartZones.STANDARD)
 
+    /**
+     * "Ask to end when I stop" as stored (the Workouts settings page), read live so a change applies to the workout under
+     * way. It decides whether and when a workout asks, by the sport's group; the workout's own `askToEnd` no longer does.
+     */
+    @androidx.annotation.VisibleForTesting
+    internal val askToEndSetting: StateFlow<org.openstrap.app.data.settings.AskToEnd> =
+        settings.askToEnd.stateIn(scope, SharingStarted.Eagerly, org.openstrap.app.data.settings.AskToEnd())
+
+    /** How long [r] waits still before it asks, in seconds, or null when it doesn't ask (Off, or the switch off). */
+    private fun stillFor(r: WorkoutState.Recording): Long? = askToEndSetting.value.stillSecondsFor(r.workout.sportType)
+
     private val _state = MutableStateFlow<WorkoutState>(WorkoutState.Idle)
     val state: StateFlow<WorkoutState> = _state
 
@@ -447,7 +458,10 @@ class WorkoutSession(
         val e = unsentEnd ?: return
         if (_state.value is WorkoutState.Recording) return
         log("strap session: the ${e.state} that didn't go out goes now")
-        catching { strap.sportSession(e.state, e.w.sportType, e.w.start, e.elapsed, reconnect = false) }
+        catching {
+            val sport = org.openstrap.app.data.Workouts.strapType(e.w.sportType)
+            strap.sportSession(e.state, sport, e.w.start, e.elapsed, reconnect = false)
+        }
             .onSuccess { if (unsentEnd === e) unsentEnd = null }
             .onFailure { log("strap session ${e.state} not sent again: ${it.message}") }
     }
@@ -468,7 +482,7 @@ class WorkoutSession(
             state == org.openstrap.protocol.services.SportSession.State.ABANDON
         if (state == org.openstrap.protocol.services.SportSession.State.START) unsentEnd = null
         if (send) scope.launch {
-            catching { strap.sportSession(state, w.sportType, w.start, elapsed, reconnect) }
+            catching { strap.sportSession(state, org.openstrap.app.data.Workouts.strapType(w.sportType), w.start, elapsed, reconnect) }
                 .onSuccess { if (end) unsentEnd = null }
                 .onFailure {
                     (strap as? StrapManager)?.log("strap session $state not sent: ${it.message}")
@@ -502,7 +516,8 @@ class WorkoutSession(
             return
         }
         if (p is org.openstrap.protocol.services.SportSession.Push.Status && p.status == org.openstrap.protocol.services.SportSession.STATUS_HR_NORMAL) {
-            if (r.paused || !r.workout.askToEnd || r.endPrompt != null) return
+            val still = stillFor(r)
+            if (r.paused || still == null || r.endPrompt != null) return
             // As Zepp (`lak.f`, `bo60.m`): the strap's workout status first, and the question only once it answers.
             scope.launch {
                 val status = strap.sportStatus()
@@ -512,7 +527,13 @@ class WorkoutSession(
                 }
                 log("workout: strap status ${status.status}, asking to end")
                 val rec = _state.value as? WorkoutState.Recording ?: return@launch
-                askToEnd(WorkoutRecorder.lastActive(window, steps, restingHr, rec.maxHeartRate)?.takeIf { it > rec.workout.start } ?: now())
+                val last = WorkoutRecorder.lastActive(window, steps, restingHr, rec.maxHeartRate)?.takeIf { it > rec.workout.start }
+                // The strap's own sense of normal can come before the sport's time (Games and sports wait 15 minutes).
+                if (last != null && now() - last < still) {
+                    log("workout: strap says normal, still under the sport's ${still / 60} min, no end question yet")
+                    return@launch
+                }
+                askToEnd(last ?: now())
             }
         }
     }
@@ -526,7 +547,7 @@ class WorkoutSession(
         var asked = false
         _state.update { s ->
             val r = s as? WorkoutState.Recording
-            asked = r != null && !r.paused && r.workout.askToEnd && r.endPrompt == null
+            asked = r != null && !r.paused && stillFor(r) != null && r.endPrompt == null
             if (r != null && asked) r.copy(endPrompt = at, inCar = inCar) else s
         }
         if (asked && !callRinging()) scope.launch { catching { strap.buzz(STOP_BUZZ) }.onFailure { log("buzz stop not played: $it") } }
@@ -1284,13 +1305,17 @@ class WorkoutSession(
         }
     }
 
-    /** Asks once the wearer has been calm and still for a while ([WorkoutRecorder.stoppedSince]); the strap buzzes. */
+    /**
+     * Asks once the wearer has been calm and still for the sport's time from "Ask to end when I stop"
+     * ([WorkoutRecorder.stoppedSince]); the strap buzzes. Off for the sport, or the switch off, never asks.
+     */
     @androidx.annotation.VisibleForTesting
     internal fun checkStopped() {
         val r = _state.value as? WorkoutState.Recording ?: return
-        if (r.paused || !r.workout.askToEnd || r.endPrompt != null) return
+        val still = stillFor(r)
+        if (r.paused || still == null || r.endPrompt != null) return
         val since = maxOf(askSince, r.workout.start)
-        WorkoutRecorder.stoppedSince(window, steps, restingHr, r.maxHeartRate, since, now())?.let { askToEnd(it) }
+        WorkoutRecorder.stoppedSince(window, steps, restingHr, r.maxHeartRate, since, now(), still)?.let { askToEnd(it) }
     }
 
     /**
@@ -1303,7 +1328,7 @@ class WorkoutSession(
             val cls = runCatching { device?.bluetoothClass?.deviceClass }.getOrNull() ?: return
             if (cls != android.bluetooth.BluetoothClass.Device.AUDIO_VIDEO_CAR_AUDIO && cls != android.bluetooth.BluetoothClass.Device.AUDIO_VIDEO_HANDSFREE) return
             val r = _state.value as? WorkoutState.Recording ?: return
-            if (r.paused || !r.workout.askToEnd || r.endPrompt != null) return
+            if (r.paused || stillFor(r) == null || r.endPrompt != null) return
             val at = WorkoutRecorder.lastActive(window, steps, restingHr, r.maxHeartRate)?.takeIf { it > r.workout.start } ?: now()
             askToEnd(at, inCar = true)
         }

@@ -1,5 +1,9 @@
 package org.openstrap.app.ui.glow
 
+import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.foundation.layout.Arrangement
+import org.openstrap.app.ui.theme.Corner
+import org.openstrap.app.ui.theme.Space
 import org.openstrap.app.R
 import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.background
@@ -7,7 +11,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.text.style.TextOverflow
 import kotlin.math.roundToInt
@@ -69,11 +72,13 @@ import org.openstrap.app.ui.dashboard.RecoveryCard
 import org.openstrap.app.ui.dashboard.RecoveryFacts
 import org.openstrap.app.presentation.TabCopy
 import org.openstrap.app.presentation.TodayCopy
-import org.openstrap.app.ui.dashboard.avg
 import org.openstrap.app.ui.dashboard.recoveryCards
+import org.openstrap.app.ui.theme.Ink
 import org.openstrap.app.ui.theme.MetricColors
-import org.openstrap.app.ui.glow.draw.CoreShape
 import org.openstrap.app.ui.glow.draw.GlowStyle
+import org.openstrap.app.ui.glow.draw.LightAngle
+import org.openstrap.app.ui.glow.draw.heroStyle
+import org.openstrap.app.ui.glow.pictures.EnergyRuler
 import org.openstrap.app.ui.glow.draw.DotSize
 
 /*
@@ -137,7 +142,7 @@ fun GlowRecoveryScreen(
                     RecoveryCard.Hero ->
                         if (failure != null) RecoveryFailedHero(
                             failure, recoveryHeroStyle(MetricColors.readiness), { onOpenScore(Score.Recovery) }, onRetryRecovery,
-                            Modifier.fillMaxWidth().gridSize(CardSize.Wide), gap = 22.dp,
+                            Modifier.fillMaxWidth().gridSize(CardSize.Wide), gap = Space.S24,
                         )
                         else RecoveryHero(
                             r, onOpen = { onOpenScore(Score.Recovery) }, onInfo = { info = true }, firstNights = firstNights,
@@ -172,12 +177,13 @@ fun GlowRecoveryScreen(
 
 /* ----------------------------------------------- Hero ----------------------------------------------- */
 
-/** The score sits in a dark pool, light all round it (spec 2.5): the core behind the number, low on the left. */
-private fun recoveryHeroStyle(color: Color) = GlowStyle.Bloom.copy(
-    color = color,
-    coreShape = CoreShape.Radial, coreX = 0.3f, coreY = 0.72f, coreWidth = 0.75f, coreHeight = 0.6f,
-    coreBlur = 30.dp, toneWidth = 16.dp, toneShift = -10f, glowStrength = 1f, bevel = 0.9f,
-)
+/**
+ * The Recovery hero is develop's hero lit from the moment's side, the core opposite it, no bevel band (Halo Recovery
+ * board: lit from [LocalHeroLightAngle], 225 on waking). Below when there is no moment.
+ */
+@Composable
+@ReadOnlyComposable
+private fun recoveryHeroStyle(color: Color) = heroStyle(color, LocalHeroLightAngle.current ?: LightAngle.Below)
 
 /**
  * The score: what it means for the day and what held it back, then the number and its word. Compared with yesterday
@@ -194,15 +200,15 @@ private fun RecoveryHero(
     val score = ready?.score
     val yesterday = r?.readinessTrend?.dropLast(1)?.lastOrNull()?.second
     val alert = ready?.strainAlert == true
-    GlowCard(recoveryHeroStyle(MetricColors.readiness), Modifier.fillMaxWidth().gridSize(CardSize.Wide), onClick = onOpen) {
+    HaloCard(
+        Modifier.fillMaxWidth().gridSize(CardSize.Wide), tone = CardTone.lit(recoveryHeroStyle(MetricColors.readiness)),
+        onClick = onOpen,
+    ) {
         Column {
-            GlowHeader(
-                stringResource(R.string.glow_recovery_title), trailing = score?.let { TabCopy.vsYesterday(it, yesterday) },
+            HaloTitle(
+                stringResource(R.string.glow_recovery_title), note = score?.let { TabCopy.vsYesterday(it, yesterday) },
                 tag = if (firstScore && score != null) TitleTag(FIRST_SCORE) else null,
-                trailingContent = {
-                    androidx.compose.foundation.layout.Spacer(Modifier.width(10.dp))
-                    InfoButton(stringResource(R.string.glow_recovery_about), onInfo)
-                },
+                trailing = { InfoButton(stringResource(R.string.glow_recovery_about), onInfo) },
             )
             HeroSentence(
                 when {
@@ -219,18 +225,20 @@ private fun RecoveryHero(
             val figure = score ?: shown?.value?.takeIf { shown.estimate }
             if (figure != null) {
                 // Before the first score the sentence already says how many nights are in, so the caveat waits for a score.
-                if (score != null) ready.let { TabCopy.learning(it.phase, it.baselineNights) }?.let { CaveatLine(it, MetricColors.readiness) }
-                Spacer(Modifier.height(22.dp))
+                if (score != null) ready.let { TabCopy.learning(it.phase, it.baselineNights) }?.let {
+                    HaloNote(it, variant = NoteVariant.Caveat, dot = MetricColors.readiness)
+                }
+                Spacer(Modifier.height(Space.S24))
                 androidx.compose.foundation.layout.Row(verticalAlignment = androidx.compose.ui.Alignment.Bottom) {
                     HeroFigure(figure.toString(), if (score != null) TodayCopy.recoveryWord(score, alert) else shown?.word.orEmpty(), big = true)
                     // Trend dots (chart kit): the last 7 days beside the score, today the only full dot. TODO(step 6): your
                     // normal as their band ([TrendDots] draws one) needs a normal of the score, and the app keeps 7 days of it.
                     val week = r?.readinessTrend.orEmpty().map { it.second }
                     if (score != null && week.count { it != null } >= 2) {
-                        Spacer(Modifier.width(16.dp))
+                        Spacer(Modifier.width(Space.S16))
                         Column(Modifier.weight(1f)) {
                             TrendDots(week)
-                            Text(TabCopy.LAST_7_DAYS, color = Color.White.copy(alpha = 0.6f), style = GlowType.secondary)
+                            Text(TabCopy.LAST_7_DAYS, color = Ink.Secondary, style = GlowType.secondary)
                         }
                     }
                 }
@@ -252,9 +260,9 @@ internal fun RecoveryFailedHero(
     modifier: Modifier,
     gap: Dp,
 ) {
-    GlowCard(style, modifier, onClick = onOpen) {
+    HaloCard(modifier, tone = CardTone.lit(style), onClick = onOpen) {
         Column {
-            GlowHeader(stringResource(R.string.glow_recovery_title))
+            HaloTitle(stringResource(R.string.glow_recovery_title))
             HeroSentence(RECOVERY_FAILED)
             failure.yesterday?.let { y ->
                 Spacer(Modifier.height(gap))
@@ -263,7 +271,7 @@ internal fun RecoveryFailedHero(
                 )
             }
             Spacer(Modifier.height(gap))
-            PageButton(TRY_AGAIN, onRetry, primary = true, size = ButtonSize.Hero)
+            HaloButton(TRY_AGAIN, onRetry, variant = HaloButtonVariant.Primary, size = HaloButtonSize.Card)
         }
     }
 }
@@ -282,14 +290,15 @@ private fun DriversList(ready: Recovery.Readiness?, onAll: () -> Unit) {
         note = if (all.size > top.size) stringResource(R.string.glow_recovery_drivers_all, all.size) else null,
         onNote = onAll.takeIf { all.isNotEmpty() },
     ) {
-        if (top.isEmpty()) ListRow(
+        if (top.isEmpty()) MetricRow(
             stringResource(R.string.glow_recovery_waiting_night), MetricColors.readiness, null,
             stringResource(R.string.glow_recovery_drivers_waiting), dash = false, divider = false,
         )
         top.forEachIndexed { i, c ->
-            DriverRow(
-                TabCopy.factorName(c.factor), TabCopy.contributorWord(c.score), c.score / 100f,
-                offTag(OffWords.Usual, contributorOffStatus(c.score)), divider = i > 0, onClick = onAll,
+            // The bar and the word stay grey: colour never says how it's going (spec 2.2); off usual the tag takes the word's place.
+            ContributorRow(
+                TabCopy.factorName(c.factor), Color.White, TabCopy.contributorWord(c.score), c.score / 100f,
+                divider = i > 0, onClick = onAll, tag = offTag(OffWords.Usual, contributorOffStatus(c.score)),
             )
         }
     }
@@ -300,38 +309,6 @@ internal fun contributorOffStatus(score: Int): OffStatus = when {
     !TabCopy.contributorOff(score) -> OffStatus.Usual
     score >= org.openstrap.app.presentation.RecoveryBands.READY_FOR_MORE_FROM -> OffStatus.Above
     else -> OffStatus.Below
-}
-
-/**
- * A contributor bar (chart kit): the [name] on its own line, then a white bar filled to [fraction] (0..1) with the
- * [word] after it, or the off [tag] in the word's place. [onClick] opens the Recovery detail, with the row's caret.
- */
-@Composable
-private fun DriverRow(name: String, word: String, fraction: Float, tag: NewsTag?, divider: Boolean, onClick: () -> Unit) {
-    val opening = org.openstrap.app.ui.components.cardOpening(onClick)
-    androidx.compose.foundation.layout.Row(
-        Modifier.fillMaxWidth()
-            .then(opening?.modifier ?: Modifier)
-            .clickable(onClick = opening?.onClick ?: onClick)
-            .topHairline(divider, RowHairline)
-            .padding(vertical = GlowLayout.RowPadding),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(Modifier.weight(1f)) {
-            Text(name, color = Color.White, style = GlowType.body, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            androidx.compose.foundation.layout.Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                val shape = RoundedCornerShape(3.dp)
-                Box(Modifier.weight(1f).height(6.dp).background(Color.White.copy(alpha = 0.07f), shape)) {
-                    Box(Modifier.fillMaxWidth(fraction.coerceIn(0f, 1f)).height(6.dp).background(Color.White.copy(alpha = 0.7f), shape))
-                }
-                Spacer(Modifier.width(12.dp))
-                if (tag != null) NewsPill(tag)
-                else Text(word, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary, maxLines = 1)
-            }
-        }
-        Spacer(Modifier.width(RowCaretGap))
-        TapCaret(ROW_CARET_ALPHA)
-    }
 }
 
 /* ---------------------------------------------- Charge ---------------------------------------------- */
@@ -347,9 +324,13 @@ private fun ChargeTall(
     // Before the first night the number would only be the simulation's starting guess: a dash until then.
     val now = c?.takeIf { it.anchored }?.latest?.let(::chargeShown)
     val atWake = c?.atWake?.toInt()
-    GlowCard(GlowStyle.Ember.copy(lightLevel = (now ?: 0) / 100f, second = true), modifier, onClick = onOpen) {
+    HaloCard(
+        modifier,
+        tone = CardTone.lit(GlowStyle.Ember.copy(lightLevel = (now ?: 0) / 100f, second = true, edge = false)),
+        onClick = onOpen,
+    ) {
         Column(Modifier.fillMaxHeight()) {
-            GlowHeader(stringResource(R.string.glow_recovery_energy), tag = tag)
+            HaloTitle(stringResource(R.string.glow_recovery_energy), tag = tag)
             Spacer(Modifier.weight(1f))
             HeroFigure(
                 now?.toString(),
@@ -361,6 +342,11 @@ private fun ChargeTall(
                     else -> stringResource(R.string.glow_recovery_charge_at_waking, atWake)
                 },
                 big = true, dot = DotSize.Second, labelLines = 2,
+            )
+            // The level ruler under the figure, a white tick at now (board HaloRecovery, Energy card).
+            if (now != null) EnergyRuler(
+                now.toFloat(), Ink.Strong, Modifier.padding(top = Space.S8).fillMaxWidth().height(14.dp),
+                dots = 16,
             )
         }
     }
@@ -389,24 +375,29 @@ private fun ChargeSmall(c: Recovery.ChargeDay?, recharged: Boolean, modifier: Mo
         else -> TabCopy.drainedMostly(c.drainedExercise, c.drainedStress, c.drainedLiving)
     }
     val title = stringResource(if (recharged) R.string.glow_recovery_recharged else R.string.glow_recovery_drained)
-    PictureCard(MetricColors.charge, modifier) {
-        CardTitle(title)
-        Spacer(Modifier.height(10.dp))
+    HaloCard(modifier, verticalArrangement = Arrangement.Top) {
+        HaloTitle(title)
+        // Tighter than a Small's 12 and 8: stacked beside the Tall it is 160 high, and its picture needs the room.
+        Spacer(Modifier.height(Space.S8))
         val picture = Modifier.fillMaxWidth().weight(1f)
         when {
-            night != null -> RangeFill(night.first, night.second, MetricColors.charge, PictureSize.Small, picture)
-            parts != null && parts.any { it > 0f } -> SplitBar(parts, MetricColors.charge, PictureSize.Small, picture)
+            night != null -> RangeFill(night.first, night.second, ChargeLight, PictureSize.Small, picture, deep = ChargeDeep)
+            parts != null && parts.any { it > 0f } -> SplitBar(parts, ChargeLight, PictureSize.Small, picture, deep = ChargeDeep)
             else -> Spacer(picture)
         }
         // A plain number, not dots: it breaks down the battery beside it.
         if (value != null) Text(value, Modifier.cardNumber(value), color = Color.White, style = GlowType.smallValue, maxLines = 1)
-        else WaitingDash(Modifier.padding(vertical = 8.dp))
+        else WaitingDash(Modifier.padding(vertical = Space.S8), onTile = true)
         Text(
-            status, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary,
-            modifier = Modifier.padding(top = 6.dp), maxLines = 2, overflow = TextOverflow.Ellipsis,
+            status, color = Ink.Secondary, style = GlowType.secondary,
+            modifier = Modifier.padding(top = Space.S4), maxLines = 2, overflow = TextOverflow.Ellipsis,
         )
     }
 }
+
+/** Recharged's and Drained's bar colours: Energy's orange and a deeper step of it (board HaloRecovery). */
+private val ChargeLight = MetricColors.charge
+private val ChargeDeep = MetricColors.chargeDrained
 
 /* ------------------------------------------ Skin temperature ------------------------------------------ */
 
@@ -415,7 +406,7 @@ private const val DIAL_SHARE = 0.44f
 
 /**
  * Skin temperature as a short Wide (spec 5.1): last night's average in dots with °C and its off tag at the left, the
- * dial at the right centred on your normal with the change from it written in the arc. Off your normal the rim lights at the
+ * dial at the right centred on your normal, its marker at tonight's change, said under the number. Off your normal the rim lights at the
  * dial's top when above, its foot when below. Before there's a normal the line says how far along it is. Opens the skin
  * temperature detail.
  */
@@ -432,39 +423,38 @@ private fun SkinTempCard(
     val band = normal?.let { (it.low - it.mean)..(it.high - it.mean) }
     val status = bodyOffStatus(today, normal)
     val tag = offTag(OffWords.Normal, status)
-    val rim = if (tag != null) tempDialRim(high = status == OffStatus.Above, PictureSize.Wide) else null
-    PictureCard(MetricColors.temperature, modifier.fillMaxWidth(), rim = rim, onClick = onOpen) {
+    HaloCard(modifier, onClick = onOpen, verticalArrangement = Arrangement.Top) {
+        // The title row across the whole card, its chevron circle at the far right (board HaloRecovery).
+        HaloTitle(stringResource(R.string.glow_recovery_skin_temperature))
+        Spacer(Modifier.height(Space.S12))
         androidx.compose.foundation.layout.Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                CardTitle(stringResource(R.string.glow_recovery_skin_temperature))
-                Spacer(Modifier.height(12.dp))
                 // Last night's average, as the Sleep tab shows it; the change from your normal is read in the dial.
                 NumberWithTag(tag) {
                     androidx.compose.foundation.layout.Row(verticalAlignment = Alignment.Bottom) {
                         val shown = today?.let { Metric.SkinTemperature.format(it, Units.DOT_LOCALE) }
-                        if (shown != null) DotMatrixText(shown, Modifier.cardNumber(shown), dot = DotSize.Edge)
-                        else WaitingDash(Modifier.padding(vertical = 8.dp))
+                        if (shown != null) HaloBigNumber(shown, cardNumberSize(DotSize.Edge), Modifier.cardNumber(shown))
+                        else WaitingDash(Modifier.padding(vertical = Space.S8), onTile = true)
                         if (shown != null) Text(
-                            Metric.SkinTemperature.unit, color = Color.White.copy(alpha = 0.7f), style = GlowType.secondary,
-                            modifier = Modifier.padding(start = 6.dp),
+                            Metric.SkinTemperature.unit, color = Ink.Secondary, style = GlowType.secondary,
+                            modifier = Modifier.padding(start = Space.S8),
                         )
                     }
                 }
-                // The change from your normal is the dial's reading; the line under the number is for when there is none.
+                // Under the number: the change from your normal, or why there's none yet (board HaloRecovery).
                 val line = when {
                     today == null -> waiting
                     normal == null || deviation == null -> learning ?: TodayCopy.normalWord(null)
-                    else -> null
+                    else -> stringResource(R.string.glow_recovery_temp_change, DetailCopy.changeWithUnit(Metric.SkinTemperature, deviation))
                 }
                 if (line != null) Text(
                     line,
-                    color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary,
-                    modifier = Modifier.padding(top = 6.dp), maxLines = 2, overflow = TextOverflow.Ellipsis,
+                    color = Ink.Secondary, style = GlowType.secondary,
+                    modifier = Modifier.padding(top = Space.S8), maxLines = 2, overflow = TextOverflow.Ellipsis,
                 )
             }
             TempDial(
                 deviation, band, MetricColors.temperature, PictureSize.Wide, Modifier.fillMaxWidth(DIAL_SHARE).height(84.dp),
-                reading = deviation?.let { DetailCopy.changeWithUnit(Metric.SkinTemperature, it) },
             )
         }
     }
@@ -544,7 +534,7 @@ private fun rememberSignals(state: DayUiState): Signals {
 private fun SignalsList(signals: List<BodySignal>, waiting: String, onOpen: (Metric) -> Unit) {
     ListPanel(title = stringResource(R.string.glow_recovery_body_signals), note = stringResource(R.string.glow_recovery_against_normal)) {
         signals.forEachIndexed { i, s ->
-            ListRow(
+            MetricRow(
                 s.label, s.accent, s.value,
                 // The tag already says which way it is off, so the word against your normal gives way to it.
                 when {

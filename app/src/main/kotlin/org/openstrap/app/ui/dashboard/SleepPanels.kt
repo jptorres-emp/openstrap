@@ -25,6 +25,7 @@ import org.openstrap.app.data.SleepRegularity
 import org.openstrap.app.i18n.Strings
 import org.openstrap.app.presentation.TimeOfDay
 import org.openstrap.app.presentation.Units
+import org.openstrap.app.ui.theme.Ink
 import org.openstrap.app.ui.theme.MetricColors
 import java.time.Instant
 import java.time.LocalTime
@@ -181,7 +182,7 @@ internal fun SleepWindows(
     selected: java.time.LocalDate? = null, onNight: ((java.time.LocalDate) -> Unit)? = null, height: androidx.compose.ui.unit.Dp = 110.dp,
 ) {
     val measurer = rememberTextMeasurer()
-    val axis = TextStyle(color = Color.White.copy(alpha = 0.5f), fontSize = 10.sp)
+    val axis = TextStyle(color = Ink.Tertiary, fontSize = 10.sp)
     val today = axis.copy(color = Color.White)
 
     // Minutes since the noon before each night, so a night never wraps.
@@ -221,7 +222,7 @@ internal fun SleepWindows(
             drawText(label, topLeft = Offset(cx - label.size.width / 2, chartBottom + 3.dp.toPx()))
             val span = spans[i]
             if (span == null) {
-                drawCircle(Color.White.copy(alpha = 0.25f), 2.5.dp.toPx(), Offset(cx, chartBottom / 2))
+                drawCircle(Ink.Disabled, 2.5.dp.toPx(), Offset(cx, chartBottom / 2))
                 return@forEachIndexed
             }
             val y0 = yOf(span.first)

@@ -309,12 +309,12 @@ class FrameTest {
 
     @Test fun `the hero's light follows the moment`() {
         assertEquals(225f, heroLightAngle(org.openstrap.app.data.Moment.Waking))
-        // Midday's Charge rises from below to its level; during a workout the zone's light is from below too.
-        assertEquals(270f, heroLightAngle(org.openstrap.app.data.Moment.Midday))
+        // HaloSystem board, the sun table.
+        assertEquals(90f, heroLightAngle(org.openstrap.app.data.Moment.Midday))
         assertEquals(45f, heroLightAngle(org.openstrap.app.data.Moment.WorkoutWindow))
-        assertEquals(270f, heroLightAngle(org.openstrap.app.data.Moment.After))
+        assertEquals(0f, heroLightAngle(org.openstrap.app.data.Moment.After))
         assertEquals(315f, heroLightAngle(org.openstrap.app.data.Moment.Evening))
         assertEquals(270f, heroLightAngle(org.openstrap.app.data.Moment.Night))
-        assertEquals(270f, heroLightAngle(org.openstrap.app.data.Moment.During))
+        assertEquals(45f, heroLightAngle(org.openstrap.app.data.Moment.During))
     }
 }

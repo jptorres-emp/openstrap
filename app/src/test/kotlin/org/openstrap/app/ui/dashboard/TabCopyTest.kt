@@ -77,7 +77,7 @@ class TabCopyTest {
             listOf("+32", "12", "5", "0"),
             TabCopy.chargeRows(32.7f, 12.2f, 5f, 0.4f).map { it.value },
         )
-        assertEquals(listOf("Filled", "Drained", "Drained", "Drained"), TabCopy.chargeRows(1f, 1f, 1f, 1f).map { it.status })
+        assertEquals(listOf("Recharged", "Drained", "Drained", "Drained"), TabCopy.chargeRows(1f, 1f, 1f, 1f).map { it.status })
         assertEquals("Used 20 since waking", TabCopy.chargeLine(64, 84, true))
         assertEquals("Up 5 since waking", TabCopy.chargeLine(89, 84, true))
         assertEquals("Same as at waking", TabCopy.chargeLine(84, 84, true))
@@ -108,19 +108,19 @@ class TabCopyTest {
         assertEquals("Regular", TabCopy.regularity(SleepRegularity.Result(80f, 7000, null)))
         assertEquals("Steady bedtimes this week", TabCopy.regularity(SleepRegularity.Result(null, 2000, 30f)))
         assertEquals("Needs about 5 days of wear", TabCopy.regularity(SleepRegularity.Result(null, 100, null)))
-        assertEquals("Usually asleep by 23:10, up at 06:50.", TabCopy.usualTimes(23 * 60 + 10, 6 * 60 + 50))
-        assertEquals("Usually asleep by 00:30, up at 07:00.", TabCopy.usualTimes(24 * 60 + 30, 7 * 60))
+        assertEquals("Usually asleep by 23:10, up at 06:50", TabCopy.usualTimes(23 * 60 + 10, 6 * 60 + 50))
+        assertEquals("Usually asleep by 00:30, up at 07:00", TabCopy.usualTimes(24 * 60 + 30, 7 * 60))
     }
 
     @Test fun `breathing disturbances against your usual`() {
-        assertEquals("Your usual is 2.1 an hour", TabCopy.breathing(Recovery.BreathingDisturbances(3.4f, 2.1f, 20)))
-        assertEquals("Learning your usual, 3 of 7 nights", TabCopy.breathing(Recovery.BreathingDisturbances(3.4f, null, 3)))
+        assertEquals("Your usual, 2.1 an hour", TabCopy.breathing(Recovery.BreathingDisturbances(3.4f, 2.1f, 20)))
+        assertEquals("Learning, 3 of 7 nights", TabCopy.breathing(Recovery.BreathingDisturbances(3.4f, null, 3)))
     }
 
     @Test fun `load and its balance`() {
-        assertEquals("Your usual is 40", TabCopy.loadUsual(40.4f))
-        assertEquals("Learning your usual", TabCopy.loadUsual(null))
-        assertEquals("Learning your usual", TabCopy.loadUsual(0f))
+        assertEquals("Your usual, 40", TabCopy.loadUsual(40.4f))
+        assertEquals("Learning", TabCopy.loadUsual(null))
+        assertEquals("Learning", TabCopy.loadUsual(0f))
         assertEquals("Building", TabCopy.loadBalance(Recovery.LoadTrend(ctl = 40f, atl = 55f, form = -15f)))
         assertEquals("Steady", TabCopy.loadBalance(Recovery.LoadTrend(ctl = 40f, atl = 45f, form = -5f)))
         assertEquals("Easing off", TabCopy.loadBalance(Recovery.LoadTrend(ctl = 40f, atl = 25f, form = 15f)))
@@ -129,10 +129,10 @@ class TabCopyTest {
     }
 
     @Test fun `activity facts`() {
-        assertEquals("Last 7 days, goal 150", TabCopy.activeMinutes(90, 150))
-        assertEquals("Last 7 days, goal of 150 reached", TabCopy.activeMinutes(160, 150))
-        assertEquals("Last 7 days, aim for 100", TabCopy.heartPoints(64, 100))
-        assertEquals("Last 7 days, at 100 or more", TabCopy.heartPoints(100, 100))
+        assertEquals("Aim for 150", TabCopy.activeMinutes(90, 150))
+        assertEquals("Goal met, 150 min", TabCopy.activeMinutes(160, 150))
+        assertEquals("Aim for 100", TabCopy.heartPoints(64, 100))
+        assertEquals("Goal met, 100 points", TabCopy.heartPoints(100, 100))
         assertEquals("Estimated kcal so far today", TabCopy.calories(partial = true, isToday = true))
         assertEquals("Estimated kcal, part of the day worn", TabCopy.calories(partial = true, isToday = false))
         assertEquals("Estimated kcal", TabCopy.calories(partial = false, isToday = false))
@@ -169,12 +169,12 @@ class TabCopyTest {
     }
 
     @Test fun `the sleep Smalls`() {
-        assertEquals("Usual 2.1, early estimate", TabCopy.breathingShort(Recovery.BreathingDisturbances(2.4f, 2.1f, 20)))
-        assertEquals("Learning, 3 of 7 nights", TabCopy.breathingShort(Recovery.BreathingDisturbances(2.4f, null, 3)))
+        assertEquals("Usual 2.1", TabCopy.breathingShort(Recovery.BreathingDisturbances(2.4f, 2.1f, 20)))
+        assertEquals("Learning, 3 of 7", TabCopy.breathingShort(Recovery.BreathingDisturbances(2.4f, null, 3)))
         assertEquals("Nap", TabCopy.napsTitle(1))
         assertEquals("Naps", TabCopy.napsTitle(2))
         assertEquals("At 14:10", TabCopy.naps(1, "14:10"))
-        assertEquals("2 naps, first at 14:10", TabCopy.naps(2, "14:10"))
+        assertEquals("2 naps from 14:10", TabCopy.naps(2, "14:10"))
     }
 
     @Test fun `habit age against last week, the range until there is one`() {
@@ -255,14 +255,14 @@ class TabCopyTest {
 
     @Test fun `before Habit Age is learned your age stands in`() {
         assertEquals("Your age for now", TabCopy.habitAgeForNow(null))
-        assertEquals("Your age for now. First estimate Sunday 1 Nov", TabCopy.habitAgeForNow("First estimate Sunday 1 Nov"))
+        assertEquals("First estimate Sunday 1 Nov", TabCopy.habitAgeForNow("First estimate Sunday 1 Nov"))
     }
 
     @Test fun `numbers and pace follow the phone's language`() {
         Locale.setDefault(Locale.GERMANY)
         assertEquals("5,2 km, 5:24/km", TabCopy.workoutFact(TabCopy.SportFact.Run, 5200f, false, 1685, null, 152))
         assertEquals("≈ 1,0 km", TabCopy.distanceText(1000f, true))
-        assertEquals("Your usual is 2,1 an hour", TabCopy.breathing(Recovery.BreathingDisturbances(3.4f, 2.1f, 20)))
+        assertEquals("Your usual, 2,1 an hour", TabCopy.breathing(Recovery.BreathingDisturbances(3.4f, 2.1f, 20)))
     }
 
     @Test fun `the night's times and usual times follow the phone's clock`() {
@@ -273,10 +273,10 @@ class TabCopyTest {
         try {
             ClockSetting.use24Hour = true
             assertEquals("22:58 to 06:56", TabCopy.nightTimes(start, end, zone))
-            assertEquals("Usually asleep by 23:10, up at 06:50.", TabCopy.usualTimes(23 * 60 + 10, 6 * 60 + 50))
+            assertEquals("Usually asleep by 23:10, up at 06:50", TabCopy.usualTimes(23 * 60 + 10, 6 * 60 + 50))
             ClockSetting.use24Hour = false
             assertEquals("10:58 PM to 6:56 AM", TabCopy.nightTimes(start, end, zone))
-            assertEquals("Usually asleep by 11:10 PM, up at 6:50 AM.", TabCopy.usualTimes(23 * 60 + 10, 6 * 60 + 50))
+            assertEquals("Usually asleep by 11:10 PM, up at 6:50 AM", TabCopy.usualTimes(23 * 60 + 10, 6 * 60 + 50))
             assertCleanCopy(TabCopy.usualTimes(23 * 60 + 10, 6 * 60 + 50))
         } finally {
             ClockSetting.use24Hour = was

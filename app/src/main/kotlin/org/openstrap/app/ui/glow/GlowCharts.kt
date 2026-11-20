@@ -1,5 +1,6 @@
 package org.openstrap.app.ui.glow
 
+import org.openstrap.app.ui.theme.Space
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.Box
@@ -70,22 +71,22 @@ import kotlin.math.sin
 import org.openstrap.app.ui.glow.draw.stageColor
 import org.openstrap.app.presentation.StageSpan
 import org.openstrap.app.presentation.DetailCopy
+import org.openstrap.app.ui.theme.Ink
 
 /*
  * Charts for glow cards. The card's colour carries the mood, so the marks are white: lines get a soft halo, and grids,
  * guides and bars are solid (spec 2.7). Only the digits are made of dots.
  */
 
-private val Ink = Color.White
-private val Muted = Color.White.copy(alpha = 0.55f)
+private val Muted = Ink.Tertiary
 /** Grid rows and stage guides: solid, white at 8%, 1 dp. */
 private val Grid = ChartInk.Grid
 /** A target, goal or average across a chart: solid, white at 40%, 1 dp. */
 private val Target = ChartInk.Target
 
 private val axisText = TextStyle(color = Muted, fontSize = 10.sp, fontFamily = FunnelSans)
-private val valueText = TextStyle(color = Ink, fontSize = 11.sp, fontFamily = FunnelSans)
-private val readoutText = TextStyle(color = Ink, fontSize = 12.sp, fontFamily = FunnelSans)
+private val valueText = TextStyle(color = Ink.Primary, fontSize = 11.sp, fontFamily = FunnelSans)
+private val readoutText = TextStyle(color = Ink.Primary, fontSize = 12.sp, fontFamily = FunnelSans)
 
 /** A solid horizontal hairline across the chart: a grid row by default, or a target in [color]. */
 private fun DrawScope.gridLine(y: Float, color: Color = Grid, x0: Float = 0f, x1: Float = size.width) = chartHairline(y, color, x0, x1)
@@ -111,11 +112,11 @@ private fun DrawScope.text(r: TextLayoutResult, x: Float, y: Float, align: Float
 }
 
 /** The average's label: the axis text a touch brighter. */
-private val averageText = axisText.copy(color = Ink.copy(alpha = 0.8f))
+private val averageText = axisText.copy(color = Ink.Strong)
 /** Today's day name and value on a [GlowTrend], and the other days' values. */
-private val todayAxisText = axisText.copy(color = Ink)
-private val todayValueText = valueText.copy(color = Ink)
-private val pastValueText = valueText.copy(color = Ink.copy(alpha = 0.75f))
+private val todayAxisText = axisText.copy(color = Ink.Primary)
+private val todayValueText = valueText.copy(color = Ink.Primary)
+private val pastValueText = valueText.copy(color = Ink.Strong)
 /** A [NormalTrend]'s band label and day labels. */
 private val trendLabelText = axisText.copy(fontSize = 12.sp)
 
@@ -126,8 +127,8 @@ private fun DrawScope.readout(m: TextMeasurer, s: String, x: Float, anchorY: Flo
     val bh = r.size.height + 10.dp.toPx()
     val bx = (x - bw / 2).coerceIn(0f, (size.width - bw).coerceAtLeast(0f))
     val by = (anchorY - bh - 12.dp.toPx()).let { if (it < 0f) anchorY + 12.dp.toPx() else it }
-    drawRoundRect(Color.Black.copy(alpha = 0.72f), Offset(bx, by), Size(bw, bh), CornerRadius(bh / 2))
-    drawRoundRect(Ink.copy(alpha = 0.18f), Offset(bx, by), Size(bw, bh), CornerRadius(bh / 2), style = Stroke(1.dp.toPx()))
+    drawRoundRect(Ink.ScrimDeep, Offset(bx, by), Size(bw, bh), CornerRadius(bh / 2))
+    drawRoundRect(Ink.Line, Offset(bx, by), Size(bw, bh), CornerRadius(bh / 2), style = Stroke(1.dp.toPx()))
     drawText(r, topLeft = Offset(bx + 9.dp.toPx(), by + 5.dp.toPx()))
 }
 
@@ -164,7 +165,7 @@ fun GlowLineChart(
     labels: List<String> = emptyList(),
     showAverage: Boolean = true,
     /** The line's colour; white suits glow cards, a metric colour can suit a black panel. */
-    color: Color = Ink,
+    color: Color = Ink.Primary,
     /** A fixed value axis (e.g. 0..100 for scores); null fits the data. */
     yRange: ClosedFloatingPointRange<Float>? = null,
     /** A usual range drawn as a band of the colour at 12%, no edge lines (e.g. your normal). */
@@ -217,7 +218,7 @@ fun GlowLineChart(
                     if (shade != null) {
                         val x0 = g.xOf(shade.first)
                         val box = Size(g.xOf(shade.last) - x0, g.plotBottom - g.top)
-                        drawRect(Color.White.copy(alpha = SHADE_ALPHA), Offset(x0, g.top), box)
+                        drawRect(Ink.Faint, Offset(x0, g.top), box)
                     }
                     drawLineChartBody(g, paths, color)
 
@@ -239,7 +240,7 @@ fun GlowLineChart(
                         if (i != null) {
                             val p = Offset(g.xOf(i), g.yOf(values[i]!!))
                             guide(p.x, h)
-                            drawCircle(Color.Black.copy(alpha = 0.6f), 6.dp.toPx(), p)
+                            drawCircle(Ink.ScrimDeep, 6.dp.toPx(), p)
                             drawCircle(color, 4.dp.toPx(), p)
                             if (describe != null) readout(m, describe(i, values[i]!!), p.x, p.y)
                         }
@@ -248,9 +249,6 @@ fun GlowLineChart(
             },
     )
 }
-
-/** The hours shaded behind a line chart, in white. */
-private const val SHADE_ALPHA = 0.07f
 
 /** Your normal behind a chart: a band of the ink at 12% (spec 2.7). */
 private const val NormalBandAlpha = ChartInk.NORMAL_BAND_ALPHA
@@ -276,7 +274,7 @@ fun GlowBars(
     height: Dp = 96.dp,
     labels: List<String> = emptyList(),
     highlight: Int = values.indexOfLast { it > 0f },
-    accent: Color = Ink,
+    accent: Color = Ink.Primary,
     /** Text for the touch readout on a column; null turns scrubbing off. */
     describe: ((index: Int, value: Float) -> String)? = null,
     /** Scrubbing that moves the headline instead of a readout (spec 2.7): the column under the finger, or null on release. */
@@ -311,7 +309,7 @@ fun GlowBars(
                     if (v <= 0f) return@forEachIndexed
                     // While scrubbing, the other columns dim so the picked one stands out.
                     val dim = if (picked == null || picked == i) 1f else 0.35f
-                    val color = if (i == highlight || i == picked) accent else Ink.copy(alpha = 0.6f)
+                    val color = if (i == highlight || i == picked) accent else Ink.Secondary
                     pillBar(color.copy(alpha = color.alpha * dim), pitchX * i, pitchX, h, (h - top) * v / max)
                 }
                 axis(axisLabels, h + 4.dp.toPx())
@@ -362,14 +360,14 @@ fun GlowTrend(
                     val v = d.value ?: return@forEachIndexed
                     val y = yOf(v)
                     drawLine(
-                        Ink.copy(alpha = if (today) 0.9f else 0.45f), Offset(cx, h - 3.dp.toPx()), Offset(cx, y),
+                        if (today) Ink.Strong else Ink.Tertiary, Offset(cx, h - 3.dp.toPx()), Offset(cx, y),
                         strokeWidth = 2.dp.toPx(), cap = StrokeCap.Round,
                     )
                     if (today) {
-                        drawCircle(Ink.copy(alpha = 0.18f), 11.dp.toPx(), Offset(cx, y))
-                        drawCircle(Ink, 6.dp.toPx(), Offset(cx, y))
+                        drawCircle(Ink.Line, 11.dp.toPx(), Offset(cx, y))
+                        drawCircle(Ink.Primary, 6.dp.toPx(), Offset(cx, y))
                     } else {
-                        drawCircle(Ink, 4.dp.toPx(), Offset(cx, y))
+                        drawCircle(Ink.Primary, 4.dp.toPx(), Offset(cx, y))
                     }
                     figures[i]?.let { text(it, cx, y - 20.dp.toPx(), align = 0.5f) }
                 }
@@ -382,7 +380,7 @@ fun GlowTrend(
 
 /**
  * The arc gauge (chart kit, spec 2.7), on the Recovery detail's header: a half circle open at the foot, round caps. A
- * track of white at [ARC_TRACK_ALPHA] the whole way over and, from the left foot clockwise to [progress] (0..1), the
+ * track of white at [Ink.Edge] the whole way over and, from the left foot clockwise to [progress] (0..1), the
  * value in a light tint of the metric's [color]. [content], the score in dots, sits centred inside with its foot a
  * little above the arc's ends. A change of [progress] fills from the value shown to the new one, never from zero;
  * a new [key] (another day) draws the new value where it lands.
@@ -396,7 +394,7 @@ fun ArcGauge(
     content: @Composable BoxScope.() -> Unit = {},
 ) {
     val shown = rememberGaugeProgress(progress, key)
-    val tint = lerp(Ink, color, ARC_TINT)
+    val tint = lerp(Ink.Primary, color, ARC_TINT)
     BoxWithConstraints(modifier) {
         // Scaled down only when the header is narrower than the gauge.
         val k = (maxWidth / (ArcRadius * 2 + ArcStroke)).coerceAtMost(1f)
@@ -410,7 +408,7 @@ fun ArcGauge(
                 val rad = r.toPx()
                 val topLeft = Offset(size.width / 2 - rad, centreY.toPx() - rad)
                 val box = Size(rad * 2, rad * 2)
-                drawArc(Ink.copy(alpha = ARC_TRACK_ALPHA), 180f, 180f, false, topLeft, box, style = Stroke(w, cap = StrokeCap.Round))
+                drawArc(Ink.Edge, 180f, 180f, false, topLeft, box, style = Stroke(w, cap = StrokeCap.Round))
                 // Read here, so the fill animates by redrawing only.
                 val sweep = 180f * shown().coerceIn(0f, 1f)
                 if (sweep > 0f) drawArc(tint, 180f, sweep, false, topLeft, box, style = Stroke(w, cap = StrokeCap.Round))
@@ -424,7 +422,6 @@ fun ArcGauge(
 internal val ArcRadius = 124.dp
 internal val ArcStroke = 13.dp
 /** The track's white, and how far the value's colour is from white: a near white with the metric's hue. */
-internal const val ARC_TRACK_ALPHA = 0.11f
 internal const val ARC_TINT = 0.16f
 /** How far above the arc's ends the number's foot sits, as a share of the radius. */
 private const val ARC_NUMBER_LIFT = 0.11f
@@ -432,7 +429,7 @@ private const val ARC_NUMBER_LIFT = 0.11f
 /**
  * The horizon arc (chart kit, spec 2.7), on the Sleep score detail's header: a night sky rising from the horizon. A
  * wide, shallow hill (half a sine wave, [HorizonRise] high over [HorizonWidth]) with round caps, its ends low at both
- * sides. Under it a flatter track over the same ends in white at [HORIZON_TRACK_ALPHA], and over that the value from
+ * sides. Under it a flatter track over the same ends in white at [Ink.Edge], and over that the value from
  * the left end to [progress] (0..1) of the hill's length in a light tint of [color]. [content], the score in dots,
  * sits centred under the crest. Fills as [ArcGauge] does, never from zero.
  */
@@ -445,7 +442,7 @@ fun HorizonArc(
     content: @Composable BoxScope.() -> Unit = {},
 ) {
     val shown = rememberGaugeProgress(progress, key)
-    val tint = lerp(Ink, color, HORIZON_TINT)
+    val tint = lerp(Ink.Primary, color, HORIZON_TINT)
     BoxWithConstraints(modifier) {
         val k = (maxWidth / (HorizonWidth + HorizonStroke)).coerceAtMost(1f)
         val span = HorizonWidth * k
@@ -473,7 +470,7 @@ fun HorizonArc(
                     val valueStroke = Stroke(w, cap = StrokeCap.Round, join = StrokeJoin.Round)
                     val full = path(value)
                     onDrawBehind {
-                        drawPath(track, Ink.copy(alpha = HORIZON_TRACK_ALPHA), style = trackStroke)
+                        drawPath(track, Ink.Edge, style = trackStroke)
                         // Read here, so the fill animates by redrawing only. At rest on a full hill it reuses the path.
                         val f = shown().coerceIn(0f, 1f)
                         if (f >= 1f) drawPath(full, tint, style = valueStroke)
@@ -497,7 +494,6 @@ internal val HorizonWidth = 300.dp
 internal val HorizonRise = 124.dp
 internal val HorizonStroke = 12.dp
 /** The track: white at 12%, a touch thinner, its crest at 81% of the value's so it shows just under it. */
-internal const val HORIZON_TRACK_ALPHA = 0.12f
 private const val HORIZON_TRACK_STROKE = 0.85f
 private const val HORIZON_TRACK_RISE = 0.81f
 /** How far the value's colour is from white: a light lavender with the sleep ink. */
@@ -598,7 +594,7 @@ fun GlowHypnogram(
                 }
                 drawHypnogramBands(g, rowColors)
                 if (kept != null) {
-                    val dim = Color.Black.copy(alpha = 0.65f)
+                    val dim = Ink.ScrimDeep
                     val a = g.xOf(kept.start.coerceIn(0f, 1f))
                     val b = g.xOf(kept.endInclusive.coerceIn(0f, 1f))
                     if (a > nameW) drawRect(dim, Offset(nameW, 0f), Size(a - nameW, h))
@@ -661,16 +657,16 @@ fun TrendDots(values: List<Int?>, modifier: Modifier = Modifier, height: Dp = 52
         fun yOf(v: Float) = ring + (size.height - ring * 2) * (1f - (v - lo) / (hi - lo))
         band?.let { b ->
             val y0 = yOf(b.endInclusive)
-            drawRoundRect(Ink.copy(alpha = 0.10f), Offset(0f, y0), Size(size.width, yOf(b.start) - y0), CornerRadius(6.dp.toPx()))
+            drawRoundRect(Ink.Edge, Offset(0f, y0), Size(size.width, yOf(b.start) - y0), CornerRadius(6.dp.toPx()))
         }
         val pts = values.mapIndexedNotNull { i, v -> v?.let { i to Offset(xOf(i), yOf(it.toFloat())) } }
-        pts.zipWithNext { (_, a), (_, b) -> drawLine(Ink.copy(alpha = 0.25f), a, b, 1.5.dp.toPx()) }
+        pts.zipWithNext { (_, a), (_, b) -> drawLine(Ink.Disabled, a, b, 1.5.dp.toPx()) }
         pts.forEach { (i, p) ->
             val outside = band != null && values[i]!!.toFloat() !in band
             if (i == values.lastIndex) {
-                drawCircle(Ink.copy(alpha = 0.5f), ring, p, style = Stroke(1.dp.toPx()))
-                drawCircle(Ink, 6.dp.toPx(), p)
-            } else drawCircle(Ink.copy(alpha = if (outside) 0.95f else 0.45f), 4.dp.toPx(), p)
+                drawCircle(Ink.Tertiary, ring, p, style = Stroke(1.dp.toPx()))
+                drawCircle(Ink.Primary, 6.dp.toPx(), p)
+            } else drawCircle(if (outside) Ink.Primary else Ink.Tertiary, 4.dp.toPx(), p)
         }
     }
 }
@@ -781,8 +777,8 @@ internal fun NormalTrend(
                         nearestReading(values, tx, size.width, inset)?.let { i ->
                             val p = Offset(xOf(i), yOf(values[i]!!))
                             guide(p.x, h)
-                            drawCircle(Color.Black.copy(alpha = 0.6f), 8.dp.toPx(), p)
-                            drawCircle(Ink, 5.dp.toPx(), p)
+                            drawCircle(Ink.ScrimDeep, 8.dp.toPx(), p)
+                            drawCircle(Ink.Primary, 5.dp.toPx(), p)
                         }
                     }
                 }
@@ -870,21 +866,22 @@ fun Legend(
         items.forEach { (name, color) ->
             androidx.compose.foundation.layout.Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(8.dp).background(color, swatch))
-                Spacer(Modifier.width(6.dp))
+                Spacer(Modifier.width(Space.S8))
                 androidx.compose.material3.Text(
-                    name, color = Ink.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary, maxLines = 1,
+                    name, color = Ink.Secondary, style = GlowType.secondary, maxLines = 1,
                 )
             }
         }
     }
-    val apart = androidx.compose.foundation.layout.Arrangement.spacedBy(16.dp)
+    val apart = androidx.compose.foundation.layout.Arrangement.spacedBy(Space.S16)
     when (layout) {
         LegendLayout.Row -> androidx.compose.foundation.layout.Row(modifier, horizontalArrangement = apart) { keys() }
         LegendLayout.Spread -> androidx.compose.foundation.layout.Row(
             modifier.fillMaxWidth(), horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween,
         ) { keys() }
         LegendLayout.Flow -> androidx.compose.foundation.layout.FlowRow(
-            modifier, horizontalArrangement = apart, verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(6.dp),
+            modifier, horizontalArrangement = apart,
+                verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(Space.S8),
         ) { keys() }
     }
 }
@@ -895,34 +892,32 @@ fun Legend(
  */
 @Composable
 fun FillBar(share: Float, color: Color, modifier: Modifier = Modifier, height: Dp = 4.dp) {
-    val shape = androidx.compose.foundation.shape.RoundedCornerShape(height / 2)
-    Box(modifier.fillMaxWidth().height(height).background(Ink.copy(alpha = FILL_TRACK_ALPHA), shape)) {
+    val shape = androidx.compose.foundation.shape.CircleShape
+    Box(modifier.fillMaxWidth().height(height).background(Ink.Faint, shape)) {
         Box(Modifier.fillMaxWidth(share.coerceIn(0f, 1f)).fillMaxHeight().background(color, shape))
     }
 }
 
 /** A [FillBar]'s track: white at 8%. */
-private const val FILL_TRACK_ALPHA = 0.08f
 
 /**
- * The progress ring (chart kit): a circle of white at [track] the whole way round and, from the top clockwise, the
+ * The progress ring (chart kit): a circle of white at the [track] ink the whole way round and, from the top clockwise, the
  * [share] of it in [color] with round caps, [stroke] thick, inside the box it's given. [share] is read in draw, so a
  * ring that runs with a clock redraws without composing again.
  */
 @Composable
-fun ProgressRing(share: () -> Float, color: Color, modifier: Modifier = Modifier, stroke: Dp = 8.dp, track: Float = RING_TRACK_ALPHA) {
+fun ProgressRing(share: () -> Float, color: Color, modifier: Modifier = Modifier, stroke: Dp = 8.dp, track: Color = Ink.Edge) {
     Canvas(modifier) {
         val w = stroke.toPx()
         val at = Offset(w / 2, w / 2)
         val box = Size(size.width - w, size.height - w)
-        drawArc(Ink.copy(alpha = track), 0f, FULL_TURN, false, at, box, style = Stroke(w))
+        drawArc(track, 0f, FULL_TURN, false, at, box, style = Stroke(w))
         val sweep = FULL_TURN * share().coerceIn(0f, 1f)
         if (sweep > 0f) drawArc(color, RING_START, sweep, false, at, box, style = Stroke(w, cap = StrokeCap.Round))
     }
 }
 
 /** A ring's track: white at 10%. */
-private const val RING_TRACK_ALPHA = 0.1f
 
 /** A whole turn, and the ring's start at the top, in degrees. */
 private const val FULL_TURN = 360f
@@ -977,7 +972,7 @@ fun PlainLine(
             }
             val r = (if (dots == LineDots.Highest) 3.5.dp else 4.dp).toPx()
             onDrawBehind {
-                if (dots == LineDots.Highest) gridLine(size.height - ChartInk.HAIRLINE_DP * density / 2, Ink.copy(alpha = 0.12f))
+                if (dots == LineDots.Highest) gridLine(size.height - ChartInk.HAIRLINE_DP * density / 2, Ink.Edge)
                 drawPath(path, color, style = line)
                 marked.forEach { drawCircle(dot, r, it) }
             }
@@ -1011,7 +1006,7 @@ fun PeakBars(
         for (i in 0 until n) {
             val p = peaks.getOrNull(i)
             val h = if (p == null || hi <= lo) 4.dp.toPx() else (PEAK_LEAST + (1f - PEAK_LEAST) * (p - lo) / (hi - lo)) * size.height
-            val c = if (p == null) Ink.copy(alpha = 0.12f) else colorOf(p)
+            val c = if (p == null) Ink.Edge else colorOf(p)
             drawRoundRect(c, Offset(i * (w + gap), size.height - h), Size(w, h), CornerRadius(corner.toPx()))
         }
     }

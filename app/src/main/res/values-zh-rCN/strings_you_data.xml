@@ -1,11 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="you_backup_status_off">关闭。每天在你选择的文件夹中保存一个压缩包</string>
-    <string name="you_backup_status_failed">上次备份失败。%1$s</string>
-    <string name="you_backup_status_waiting">每天在手机充电时备份。暂无备份</string>
-    <string name="you_backup_last">上次备份于 %1$s</string>
+    <string name="you_backup_status_off">已关闭，每天在你的文件夹保存一个压缩包</string>
+    <string name="you_backup_status_waiting">暂无备份，充电时运行</string>
+    <string name="you_backup_last">上次备份 %1$s</string>
     <string name="you_backup_summary_failed">上次备份失败</string>
-    <string name="you_backup_summary_waiting">开启。暂无备份</string>
+    <string name="you_backup_summary_waiting">已开启，暂无备份</string>
     <string name="you_backup_failure_folder_gone">该文件夹已不可用。</string>
     <string name="you_backup_failure_permission">unstrap 无法再访问该文件夹。请重新选择。</string>
     <string name="you_backup_failure_no_space">存储空间不足。</string>
@@ -34,31 +33,28 @@
     <string name="you_backup_automatic">自动备份</string>
     <string name="you_backup_folder">备份文件夹</string>
     <string name="you_backup_now">立即备份</string>
-    <string name="you_backup_now_running">正在备份…</string>
-    <string name="you_backup_now_note">将今天的压缩包保存到该文件夹</string>
-    <string name="you_backup_restore_note">任意 unstrap 压缩包。补全此手机缺失的数据</string>
+    <string name="you_backup_now_running">正在备份</string>
+    <string name="you_backup_now_note">把今天的压缩包保存到该文件夹。</string>
+    <string name="you_backup_restore_note">任何 unstrap 压缩包。它会补全这台手机缺少的数据。</string>
     <string name="you_backup_save_copy">保存副本</string>
-    <string name="you_backup_save_copy_note">保存在你自选位置的 zip 文件。unstrap 绝不会删除它</string>
+    <string name="you_backup_save_copy_note">保存到你选择的位置，不会被删除。</string>
     <string name="you_deleted_sleep_title">已删除的睡眠</string>
-    <string name="you_hc_line_stopped_permissions">已停止。Health Connect 权限已被关闭</string>
-    <string name="you_hc_line_stopped_install">已停止。安装 Health Connect 即可重新开启</string>
-    <string name="you_hc_line_stopped_unavailable">已停止。此手机不支持 Health Connect</string>
-    <string name="you_hc_line_off">已关闭。每次手环同步后复制新数据</string>
-    <string name="you_hc_line_on">已开启。每次手环同步后复制新数据</string>
-    <string name="you_hc_line_last">已开启。上次复制于 %1$s</string>
-    <string name="you_hc_summary_stopped_permissions">已停止。权限已被关闭</string>
-    <string name="you_hc_summary_stopped_install">已停止。请安装 Health Connect</string>
-    <string name="you_hc_summary_stopped_unavailable">已停止。此手机不支持</string>
+    <string name="you_hc_line_stopped_permissions">已停止，权限已被关闭</string>
+    <string name="you_hc_line_stopped_install">已停止，请安装 Health Connect</string>
+    <string name="you_hc_line_stopped_unavailable">已停止，此手机不支持</string>
+    <string name="you_hc_line_off">已关闭，每次同步后复制</string>
+    <string name="you_hc_line_on">已开启，每次同步后复制</string>
+    <string name="you_hc_line_last">已开启，上次复制于 %1$s</string>
+    <string name="you_hc_summary_stopped_permissions">已停止，权限已被关闭</string>
+    <string name="you_hc_summary_stopped_install">已停止，请安装 Health Connect</string>
+    <string name="you_hc_summary_stopped_unavailable">已停止，此手机不支持</string>
     <string name="you_hc_title">Health Connect</string>
     <string name="you_hc_auto">自动复制到 Health Connect</string>
-    <string name="you_hc_any_time">随时</string>
     <string name="you_hc_copy_now">立即复制</string>
-    <string name="you_hc_copy_now_note">最近 30 天，复制到 Health Connect</string>
-    <string name="you_hc_restore_note">找回 unstrap 曾保存在那里的数据</string>
     <string name="you_hc_open">打开 Health Connect</string>
     <string name="you_hc_open_note">权限与数据</string>
     <string name="you_hc_calories_note">允许后才会复制卡路里、呼吸频率和最大摄氧量。</string>
-    <string name="you_hc_calories_offer">再次请求</string>
+    <string name="you_hc_calories_offer">请求权限</string>
     <string name="you_hc_install">安装 Health Connect</string>
     <string name="you_hc_install_note">在此手机上 Health Connect 是来自 Play 商店的应用。请安装它以便将数据复制到其中。</string>
     <string name="you_hc_store_failed">无法打开 Play 商店。</string>
@@ -67,10 +63,10 @@
         <item quantity="other">已从 Health Connect 恢复 %1$s 条记录。</item>
     </plurals>
     <plurals name="you_hc_wrote">
-        <item quantity="other">已将 %1$d 条记录复制到 Health Connect（最近 30 天）。</item>
+        <item quantity="other">已将最近 30 天的 %1$,d 条记录复制到 Health Connect。</item>
     </plurals>
     <plurals name="you_hc_auto_wrote">
-        <item quantity="other">自动复制已开启。已将 %1$d 条记录复制到 Health Connect（最近 30 天）。</item>
+        <item quantity="other">自动复制已开启。已复制最近 30 天的 %1$,d 条记录。</item>
     </plurals>
     <string name="you_hc_restore_failed">无法从 Health Connect 恢复</string>
     <string name="you_hc_write_failed">无法复制到 Health Connect</string>
@@ -86,4 +82,11 @@
     <string name="you_error_hc">%1$s。%2$s</string>
     <string name="you_error_hc_permission">unstrap 已失去权限。请在 Health Connect 中允许访问。</string>
     <string name="you_error_hc_no_answer">Health Connect 没有响应。请重试。</string>
+    <string name="you_backup_banner_failed">上次备份失败</string>
+    <string name="you_hc_actions_note">立即复制会发送最近 30 天的数据。恢复会找回 unstrap 保存在那里的数据。</string>
+    <string name="you_backup_failed_folder_gone">文件夹已不可用</string>
+    <string name="you_backup_failed_permission">无法访问文件夹，请重新选择</string>
+    <string name="you_backup_failed_no_space">手机空间不足</string>
+    <string name="you_backup_failed_cant_write">无法写入文件夹</string>
+    <string name="you_backup_failed_other">请重试，或等待明天的备份</string>
 </resources>

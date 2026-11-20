@@ -20,9 +20,9 @@
     <string name="core_activity_goal_share"><xliff:g id="percent" example="62">%1$d</xliff:g>%% of your goal</string>
 
     <!-- Today's Activity card under the steps: the goal share, then the steps against your usual. The share is "62% of your goal" or "Goal met". One line. -->
-    <string name="core_activity_line_more_now"><xliff:g id="share" example="62% of your goal">%1$s</xliff:g>, more than usual by now</string>
-    <string name="core_activity_line_about_now"><xliff:g id="share" example="62% of your goal">%1$s</xliff:g>, about usual by now</string>
-    <string name="core_activity_line_fewer_now"><xliff:g id="share" example="62% of your goal">%1$s</xliff:g>, fewer than usual by now</string>
+    <string name="core_activity_line_more_now"><xliff:g id="share" example="62% of your goal">%1$s</xliff:g>, ahead of your usual</string>
+    <string name="core_activity_line_about_now"><xliff:g id="share" example="62% of your goal">%1$s</xliff:g>, about your usual</string>
+    <string name="core_activity_line_fewer_now"><xliff:g id="share" example="62% of your goal">%1$s</xliff:g>, behind your usual</string>
     <!-- The same line for a past day, against your usual whole day. -->
     <string name="core_activity_line_more_day"><xliff:g id="share" example="Goal met">%1$s</xliff:g>, more than your usual day</string>
     <string name="core_activity_line_about_day"><xliff:g id="share" example="Goal met">%1$s</xliff:g>, about your usual day</string>

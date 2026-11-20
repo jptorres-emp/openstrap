@@ -26,7 +26,7 @@ class SummaryHeroTest {
         assertEquals("1", h.value)
         assertEquals("min", h.unit)
         assertEquals(listOf("1:09", null, null), h.figures.map { it.first })
-        assertEquals(listOf("Time", "Active kcal", "Peak"), h.figures.map { it.second })
+        assertEquals(listOf("Time", "Active kcal", "Peak bpm"), h.figures.map { it.second })
     }
 
     @Test

@@ -252,6 +252,33 @@ class SettingsStore private constructor(private val store: DataStore<Preferences
         store.edit { it[strapSessionsKey] = enabled }
     }
 
+    private val askEndOnKey = androidx.datastore.preferences.core.booleanPreferencesKey(SettingsKeys.ASK_END_ON)
+    private val askEndMostKey = androidx.datastore.preferences.core.intPreferencesKey(SettingsKeys.ASK_END_MOST_MINUTES)
+    private val askEndGamesKey = androidx.datastore.preferences.core.intPreferencesKey(SettingsKeys.ASK_END_GAMES_MINUTES)
+    private val askEndMindBodyKey = androidx.datastore.preferences.core.intPreferencesKey(SettingsKeys.ASK_END_MIND_BODY_MINUTES)
+
+    /**
+     * "Ask to end when I stop" (the Workouts settings page): on, and each group's time, out of the box as [AskToEnd]'s
+     * defaults. A time is stored as minutes, [AskToEnd.OFF] for Off; nothing stored is the group's default.
+     */
+    val askToEnd: Flow<AskToEnd> = read { p ->
+        AskToEnd(
+            on = p[askEndOnKey] ?: true,
+            most = AskToEnd.read(p[askEndMostKey], AskToEndGroup.Most.defaultMinutes),
+            games = AskToEnd.read(p[askEndGamesKey], AskToEndGroup.Games.defaultMinutes),
+            mindBody = AskToEnd.read(p[askEndMindBodyKey], AskToEndGroup.MindBody.defaultMinutes),
+        )
+    }
+
+    suspend fun setAskToEnd(a: AskToEnd) {
+        store.edit {
+            it[askEndOnKey] = a.on
+            it[askEndMostKey] = a.most ?: AskToEnd.OFF
+            it[askEndGamesKey] = a.games ?: AskToEnd.OFF
+            it[askEndMindBodyKey] = a.mindBody ?: AskToEnd.OFF
+        }
+    }
+
     private val workoutLiveViewKey = androidx.datastore.preferences.core.intPreferencesKey(SettingsKeys.WORKOUT_LIVE_VIEW)
 
     /** The live view a GPS workout was left on, Heart (0) or Map (1); the next one opens on it. Heart by default. */
@@ -851,6 +878,10 @@ object SettingsKeys {
     const val STRAP_SESSIONS = "strap_sessions"
     const val WORKOUT_LIVE_VIEW = "workout_live_view"
     const val WORKOUT_SIDES = "workout_sides"
+    const val ASK_END_ON = "ask_end_on"
+    const val ASK_END_MOST_MINUTES = "ask_end_most_minutes"
+    const val ASK_END_GAMES_MINUTES = "ask_end_games_minutes"
+    const val ASK_END_MIND_BODY_MINUTES = "ask_end_mind_body_minutes"
     const val PROFILE_BIRTH_YEAR = "profile_birth_year"
     const val PROFILE_SEX = "profile_sex"
     const val PROFILE_WEIGHT_KG = "profile_weight_kg"

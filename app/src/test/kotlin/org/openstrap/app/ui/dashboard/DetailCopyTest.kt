@@ -40,8 +40,8 @@ class DetailCopyTest {
 
     @Test fun `the band is labelled with your normal`() {
         assertEquals("Your normal, 44 to 58", DetailCopy.bandLabel(normal) { Math.round(it).toString() })
-        assertEquals("Learning your normal, 4 of 7 nights", DetailCopy.learningNormal(4, nightly = true))
-        assertEquals("Learning your normal, 7 of 7 days", DetailCopy.learningNormal(12, nightly = false))
+        assertEquals("Learning, 4 of 7 nights", DetailCopy.learningNormal(4, nightly = true))
+        assertEquals("Learning, 7 of 7 days", DetailCopy.learningNormal(12, nightly = false))
     }
 
     @Test fun `the latest run off your normal counts back over missing days`() {
@@ -58,7 +58,7 @@ class DetailCopyTest {
         assertEquals("That day, above your normal.", DetailCopy.day(1, DaySource.SoFar, today = false, days = 30))
         assertEquals("That night, within your normal.", DetailCopy.day(0, DaySource.Night, today = false, days = 30))
         assertEquals("That day's average, within your normal.", DetailCopy.day(0, DaySource.Average, today = false, days = 30))
-        assertEquals("Learning your normal, 3 of 7 days.", DetailCopy.day(null, DaySource.SoFar, today = true, days = 3))
+        assertEquals("Still learning your normal, 3 of 7 days.", DetailCopy.day(null, DaySource.SoFar, today = true, days = 3))
         assertEquals("Between 52 and 148 bpm so far today.", DetailCopy.heartDay(52, 148, today = true))
     }
 
@@ -77,7 +77,7 @@ class DetailCopyTest {
         )
         assertEquals("Learning" to "6 of 7 nights", DetailCopy.recoveryState(learning, today = true))
         assertEquals("Waiting" to "For last night's sleep", DetailCopy.recoveryState(null, today = true))
-        assertEquals("For last night", DetailCopy.noValue(Metric.RestingHr, Range.Day, today = true))
+        assertEquals("Last night", DetailCopy.noValue(Metric.RestingHr, Range.Day, today = true))
         assertEquals("In the last 7 days", DetailCopy.noValue(Metric.Hrv, Range.Week, today = true))
     }
 
@@ -93,7 +93,7 @@ class DetailCopyTest {
         )
         // One day off isn't a run.
         assertEquals("Within your normal on 6 of 7 days.", DetailCopy.span(Range.Week, mixed.reversed(), nightly = false, normalKnown = true, days = 30))
-        assertEquals("Learning your normal, 5 of 7 days.", DetailCopy.span(Range.Week, mixed, nightly = false, normalKnown = false, days = 5))
+        assertEquals("Still learning your normal, 5 of 7 days.", DetailCopy.span(Range.Week, mixed, nightly = false, normalKnown = false, days = 5))
         assertNull(DetailCopy.span(Range.Week, List(7) { null }, nightly = false, normalKnown = true, days = 0))
     }
 

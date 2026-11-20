@@ -14,22 +14,22 @@
     <string name="core_detail_band_label">Your normal, <xliff:g id="low" example="44">%1$s</xliff:g> to <xliff:g id="high" example="58">%2$s</xliff:g></string>
     <!-- Under the value before your normal is known: how many of the 7 nights it needs have data. -->
     <plurals name="core_detail_learning_nights">
-        <item quantity="one">Learning your normal, <xliff:g id="have" example="4">%1$d</xliff:g> of <xliff:g id="need" example="7">%2$d</xliff:g> night</item>
-        <item quantity="other">Learning your normal, <xliff:g id="have" example="4">%1$d</xliff:g> of <xliff:g id="need" example="7">%2$d</xliff:g> nights</item>
+        <item quantity="one">Learning, <xliff:g id="have" example="4">%1$d</xliff:g> of <xliff:g id="need" example="7">%2$d</xliff:g> night</item>
+        <item quantity="other">Learning, <xliff:g id="have" example="4">%1$d</xliff:g> of <xliff:g id="need" example="7">%2$d</xliff:g> nights</item>
     </plurals>
     <!-- Under the value before your normal is known: how many of the 7 days it needs have data. -->
     <plurals name="core_detail_learning_days">
-        <item quantity="one">Learning your normal, <xliff:g id="have" example="4">%1$d</xliff:g> of <xliff:g id="need" example="7">%2$d</xliff:g> day</item>
-        <item quantity="other">Learning your normal, <xliff:g id="have" example="4">%1$d</xliff:g> of <xliff:g id="need" example="7">%2$d</xliff:g> days</item>
+        <item quantity="one">Learning, <xliff:g id="have" example="4">%1$d</xliff:g> of <xliff:g id="need" example="7">%2$d</xliff:g> day</item>
+        <item quantity="other">Learning, <xliff:g id="have" example="4">%1$d</xliff:g> of <xliff:g id="need" example="7">%2$d</xliff:g> days</item>
     </plurals>
     <!-- The same as a sentence, under a chart. -->
     <plurals name="core_detail_learning_nights_sentence">
-        <item quantity="one">Learning your normal, <xliff:g id="have" example="4">%1$d</xliff:g> of <xliff:g id="need" example="7">%2$d</xliff:g> night.</item>
-        <item quantity="other">Learning your normal, <xliff:g id="have" example="4">%1$d</xliff:g> of <xliff:g id="need" example="7">%2$d</xliff:g> nights.</item>
+        <item quantity="one">Still learning your normal, <xliff:g id="have" example="4">%1$d</xliff:g> of <xliff:g id="need" example="7">%2$d</xliff:g> night.</item>
+        <item quantity="other">Still learning your normal, <xliff:g id="have" example="4">%1$d</xliff:g> of <xliff:g id="need" example="7">%2$d</xliff:g> nights.</item>
     </plurals>
     <plurals name="core_detail_learning_days_sentence">
-        <item quantity="one">Learning your normal, <xliff:g id="have" example="4">%1$d</xliff:g> of <xliff:g id="need" example="7">%2$d</xliff:g> day.</item>
-        <item quantity="other">Learning your normal, <xliff:g id="have" example="4">%1$d</xliff:g> of <xliff:g id="need" example="7">%2$d</xliff:g> days.</item>
+        <item quantity="one">Still learning your normal, <xliff:g id="have" example="4">%1$d</xliff:g> of <xliff:g id="need" example="7">%2$d</xliff:g> day.</item>
+        <item quantity="other">Still learning your normal, <xliff:g id="have" example="4">%1$d</xliff:g> of <xliff:g id="need" example="7">%2$d</xliff:g> days.</item>
     </plurals>
 
     <!-- Small numbers in words, inside a sentence: "no", "one" to "nine". Used for counts of nights, days, naps and workouts. -->
@@ -112,10 +112,10 @@
 
     <!-- Under the state word when a metric has no value: why. Short, one line. -->
     <string name="core_detail_none_during_sleep">Measured during sleep</string>
-    <string name="core_detail_none_last_night">For last night</string>
-    <string name="core_detail_none_that_night">For that night</string>
+    <string name="core_detail_none_last_night">Last night</string>
+    <string name="core_detail_none_that_night">That night</string>
     <string name="core_detail_none_so_far_today">So far today</string>
-    <string name="core_detail_none_that_day">For that day</string>
+    <string name="core_detail_none_that_day">That day</string>
     <string name="core_detail_none_week">In the last 7 days</string>
     <string name="core_detail_none_month">In the last 30 days</string>
     <string name="core_detail_none_year">In the last 12 months</string>
@@ -186,7 +186,7 @@
     <!-- Recovery's hero word for a night without a score. Short. -->
     <string name="core_detail_recovery_no_score">No score</string>
     <!-- Under it, when the night had too little heart data. -->
-    <string name="core_detail_recovery_no_heart_data">Not enough heart data that night</string>
+    <string name="core_detail_recovery_no_heart_data">Not enough heart data</string>
     <!-- Under it, otherwise. -->
-    <string name="core_detail_recovery_scored_mornings">Scored each morning from the night before</string>
+    <string name="core_detail_recovery_scored_mornings">Scored each morning</string>
 </resources>

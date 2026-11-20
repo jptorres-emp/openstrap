@@ -101,11 +101,11 @@
     <!-- After the heart rate in the second line while resting, in lower case. About 12 characters. -->
     <string name="workout_glance_set_next_lower" tools:ignore="PluralsCandidate">set <xliff:g id="number" example="4">%1$d</xliff:g> next</string>
     <!-- The hero's line under its bar while resting: the heart rate. -->
-    <string name="workout_glance_rest_bpm_sentence"><xliff:g id="bpm" example="122">%1$d</xliff:g> bpm.</string>
+    <string name="workout_glance_rest_bpm_sentence"><xliff:g id="v1" example="5">%1$d</xliff:g> bpm</string>
     <!-- The hero's line under its bar while resting: the heart rate and how far it has come down. -->
-    <string name="workout_glance_rest_bpm_down_sentence"><xliff:g id="bpm" example="122">%1$d</xliff:g> bpm, down <xliff:g id="drop" example="20">%2$d</xliff:g>.</string>
+    <string name="workout_glance_rest_bpm_down_sentence"><xliff:g id="v1" example="5">%1$d</xliff:g> bpm, down <xliff:g id="v2" example="5">%2$d</xliff:g></string>
     <!-- The hero's line under its bar while resting: rest ends early once the heart rate stays under a level. -->
-    <string name="workout_glance_rest_ends_sooner">Ends early once you\'re under <xliff:g id="bpm" example="110">%1$d</xliff:g> bpm.</string>
+    <string name="workout_glance_rest_ends_sooner">ends early under <xliff:g id="v1" example="5">%1$d</xliff:g> bpm</string>
     <!-- A button: thirty more seconds of rest. About 8 characters. -->
     <string name="workout_glance_add_rest_30">+30 s</string>
     <!-- The first line before the first set. About 30 characters. -->
@@ -160,12 +160,14 @@
         <item quantity="other">All <xliff:g id="rounds" example="8">%1$d</xliff:g> rounds done</item>
     </plurals>
 
+    <!-- Two notification lines joined into one phrase, for example "142 bpm, ends early under 120 bpm". -->
+    <string name="workout_glance_join"><xliff:g id="a" example="142 bpm">%1$s</xliff:g>, <xliff:g id="b" example="ends early">%2$s</xliff:g></string>
     <!-- The hero's split strip, after the last kilometre's time: which kilometre was the fastest. -->
-    <string name="workout_glance_fastest_was">Fastest so far was km <xliff:g id="number" example="3">%1$d</xliff:g>.</string>
+    <string name="workout_glance_fastest_was">fastest so far was km <xliff:g id="v1" example="5">%1$d</xliff:g></string>
     <!-- The hero's split strip when the last kilometre was the fastest. -->
-    <string name="workout_glance_fastest_this">Your fastest so far.</string>
+    <string name="workout_glance_fastest_this">your fastest so far</string>
     <!-- The hero's split strip: the last kilometre's average heart rate. -->
-    <string name="workout_glance_split_average">Avg <xliff:g id="bpm" example="146">%1$d</xliff:g> bpm.</string>
+    <string name="workout_glance_split_average">Average <xliff:g id="v1" example="5">%1$d</xliff:g> bpm</string>
 
     <!-- The hero's line under its bar for a heart rate zone target. The target is "zone 2" or "zone 2 to 3", in lower case. -->
     <string name="workout_glance_target">Target <xliff:g id="target" example="zone 2">%1$s</xliff:g></string>

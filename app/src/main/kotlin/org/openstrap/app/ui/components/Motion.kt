@@ -47,13 +47,26 @@ fun <S> PushContent(target: S, depth: (S) -> Int, modifier: Modifier = Modifier,
     ) { content(it) }
 }
 
-/** Clickable that also shrinks slightly while pressed, so taps feel physical; [shape] clips it and the ripple. */
-fun Modifier.pressClickable(onClick: () -> Unit, shape: androidx.compose.ui.graphics.Shape? = null, scale: Float = 0.97f): Modifier = composed {
+/**
+ * Clickable that also shrinks slightly while pressed, so taps feel physical; [shape] clips it and the ripple. [onClickLabel]
+ * and [role] are what a screen reader says a tap does and what it is; [enabled] false makes it inert.
+ */
+fun Modifier.pressClickable(
+    onClick: () -> Unit,
+    shape: androidx.compose.ui.graphics.Shape? = null,
+    scale: Float = 0.97f,
+    enabled: Boolean = true,
+    onClickLabel: String? = null,
+    role: androidx.compose.ui.semantics.Role? = null,
+): Modifier = composed {
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val s by animateFloatAsState(if (pressed) scale else 1f, tween(Motion.QUICK, easing = Motion.easing), label = "press")
     graphicsLayer {
         scaleX = s; scaleY = s
         if (shape != null) { this.shape = shape; clip = true }
-    }.clickable(interactionSource = interaction, indication = androidx.compose.material3.ripple(), onClick = onClick)
+    }.clickable(
+        interactionSource = interaction, indication = androidx.compose.material3.ripple(), enabled = enabled,
+        onClickLabel = onClickLabel, role = role, onClick = onClick,
+    )
 }

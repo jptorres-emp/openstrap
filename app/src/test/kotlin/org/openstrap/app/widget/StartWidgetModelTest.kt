@@ -31,7 +31,7 @@ class StartWidgetModelTest {
     }
 
     /**
-     * Runs three times (Tuesday's 5.2 km this week), walks and rides twice, a treadmill run on Friday, strength once,
+     * Runs three times (Tuesday's 5.2 km this week), walks and rides twice, yoga on Friday, strength once,
      * and the strap's own "Activity" this week, which isn't a workout.
      */
     private val history = listOf(
@@ -42,7 +42,7 @@ class StartWidgetModelTest {
         workout(12, 8, 3, 30),
         workout(15, 17, 4, 50),
         workout(9, 17, 4, 50),
-        workout(23, 19, 2, 35),
+        workout(23, 19, 60, 35),
         workout(18, 10, 52, 40, sets = 12),
         workout(22, 13, Workouts.GENERIC_ACTIVITY, 20),
     )
@@ -55,11 +55,11 @@ class StartWidgetModelTest {
     @Test fun `the usual is the sport done most, the next four by use`() {
         val m = model()
         assertEquals(1, m.usual.sportType)
-        assertEquals("Outdoor run", m.usual.name)
+        assertEquals("Run", m.usual.name)
         assertEquals("Start run", m.usual.action)
-        // Walk and cycling twice, the walk more recently; treadmill and strength once, the treadmill more recently.
-        assertEquals(listOf("Walk", "Cycling", "Treadmill", "Strength"), m.next.take(4).map { it.caption })
-        assertEquals(listOf(3, 4, 2, 52), m.next.take(4).map { it.sportType })
+        // Walk and cycling twice, the walk more recently; yoga and strength once, the yoga more recently.
+        assertEquals(listOf("Walk", "Cycling", "Yoga", "Strength"), m.next.take(4).map { it.caption })
+        assertEquals(listOf(3, 4, 60, 52), m.next.take(4).map { it.sportType })
         // Then the everyday sports, each once (Hike isn't on the strap for now: Cross training has its place).
         assertEquals("Cross-training", m.next[4].caption)
         assertEquals(m.next.size, m.next.distinctBy { it.shownType }.size)
@@ -91,14 +91,15 @@ class StartWidgetModelTest {
     }
 
     @Test fun `a sport with two sides shows the side Ready opens on, once`() {
-        // Your runs, last done on the treadmill side: Ready opens on Treadmill, so that's what the widget says.
-        val m = model(sides = mapOf(1 to true))
+        // Your runs, last done on the treadmill side: Ready opens on the treadmill, and the run keeps its one name.
+        val m = model(workouts = history + workout(24, 7, 2, 35), sides = mapOf(1 to true))
         assertEquals(1, m.usual.sportType)
         assertEquals(2, m.usual.shownType)
-        assertEquals("Treadmill", m.usual.name)
+        assertEquals("Run", m.usual.name)
         assertEquals("Your usual", m.usualLine)
         assertFalse(m.gpsOn)
-        assertTrue(m.next.none { it.shownType == 2 })
+        // The treadmill run is the same sport as the usual: no second Run tile.
+        assertTrue(m.next.none { Workouts.tileType(it.shownType) == 1 })
     }
 
     @Test fun `this week counts workouts since Monday, not the strap's Activity`() {
@@ -120,11 +121,11 @@ class StartWidgetModelTest {
     }
 
     @Test fun `the usual sport's last, by its tile, with its distance, sets or length`() {
-        // The treadmill on Friday is a run too.
         assertEquals("Last run", model().lastLabel)
-        assertEquals("Yesterday, 35 min", model().lastLine)
-        val outdoors = model(workouts = history.filter { it.workout.sportType != 2 })
-        assertEquals("Tuesday, 5.2 km", outdoors.lastLine)
+        assertEquals("Tuesday, 5.2 km", model().lastLine)
+        // A treadmill on Friday is a run too.
+        val treadmill = model(workouts = history + workout(23, 19, 2, 35))
+        assertEquals("Yesterday, 35 min", treadmill.lastLine)
         val strength = model(workouts = listOf(workout(18, 10, 52, 40, sets = 12), workout(10, 10, 52, 40)))
         assertEquals("Last strength", strength.lastLabel)
         assertEquals("Sunday, 12 sets", strength.lastLine)
@@ -138,7 +139,7 @@ class StartWidgetModelTest {
     @Test fun `while recording, the sport, since when and the active time`() {
         val m = model(recording = StartRecordingInput(4, at(24, 11, 58).epochSecond, 1_500L, paused = false))
         val rec = assertNotNullAnd(m.recording)
-        assertEquals("Outdoor cycling", rec.sport.name)
+        assertEquals("Cycling", rec.sport.name)
         assertEquals("Since 11:58", rec.since)
         assertEquals("Recording", rec.status)
         assertEquals(4, rec.sport.shownType)
@@ -222,12 +223,15 @@ class StartWidgetModelTest {
         return v!!
     }
 
-    @Test fun `captions are short names, the full one where the short one is already said`() {
-        // Indoor cycling alone reads "Cycling", a treadmill beside your outdoor runs "Treadmill". (Indoor walk isn't on
-        // the strap for now.)
+    @Test fun `captions are short names, a sport with two sides once by its one name`() {
+        // Indoor cycling reads "Cycling", and a treadmill beside your outdoor runs is the same Run, not a second tile.
+        // (Indoor walk isn't on the strap for now.)
         val m = model(workouts = listOf(workout(20, 8, 1, 30), workout(21, 8, 1, 30), workout(22, 8, 8, 30), workout(23, 8, 2, 30)))
-        assertEquals(listOf("Treadmill", "Cycling"), m.next.take(2).map { it.caption })
-        assertEquals("Indoor cycling", m.next[1].name)
+        assertEquals("Run", m.usual.caption)
+        assertEquals("Cycling", m.next[0].caption)
+        assertEquals("Cycling", m.next[0].name)
+        assertEquals(8, m.next[0].shownType)
+        assertTrue(m.next.none { Workouts.tileType(it.shownType) == 1 })
     }
 
     /* ------------------------------------------------------------------------------------------ */
@@ -256,7 +260,7 @@ class StartWidgetModelTest {
         }
         // On One UI's 2 x 2 the usual keeps its full name and "Your usual".
         val fit = StartLayout.small(StartSport.of(1, emptyMap()), listOf(StartWidgetModel.USUAL), false, 127f, 161f, 1.08f)
-        assertEquals("Outdoor run", fit.words.name)
+        assertEquals("Run", fit.words.name)
         assertEquals("Your usual", fit.words.line)
     }
 
@@ -269,7 +273,7 @@ class StartWidgetModelTest {
             words.line?.let { assertTrue("$w at $s: line wraps", one(it, WidgetText.SECONDARY_SP, room, s)) }
         }
         // At One UI's 4 columns the whole line and its mark fit; at the minimum the mark gives way first.
-        assertEquals(StartLayout.Words("Outdoor run", "Your usual, GPS on", true), StartLayout.wide(m, 313f, 161f, 1.08f).row.words)
+        assertEquals(StartLayout.Words("Run", "Your usual, GPS on", true), StartLayout.wide(m, 313f, 161f, 1.08f).row.words)
         assertEquals("Your usual, GPS on", StartLayout.wide(m, 260f, 120f, 1.08f).row.words.line)
     }
 

@@ -71,7 +71,7 @@ class RecoveryWidgetReceiver : PlacedWidgetReceiver() {
 /* ------------------------------------------------------------------------------------------------ */
 
 /** Recovery's ink. */
-private val Ink = MetricColors.readiness
+private val Hue = MetricColors.readiness
 
 /**
  * The widget at the size Glance lays out: the edge light behind, drawn at the cell's real size, then the size's
@@ -82,7 +82,7 @@ private fun RecoveryContent(data: RecoveryWidget.Shown) {
     val model = data.model
     val open = openMetric(LocalContext.current, DetailRoutes.RECOVERY, model.date)
     // Off your usual, the rim lights by the latest day, at the bottom right as on Today's Recovery card.
-    PictureWidget(Ink, Rim.Corner.takeIf { model.off }, data.mood, open, BITMAP_EXTRA) { frame ->
+    PictureWidget(Hue, Rim.Corner.takeIf { model.off }, data.mood, open, BITMAP_EXTRA) { frame ->
         when {
             model.score == null -> WaitingContent(model.title, model.waiting, frame)
             frame.bucket == WidgetSizes.Small -> SmallContent(model, RecoveryLayout.small(model, frame.contentWidth, frame.contentHeight, frame.fontScale, frame.status), frame)
@@ -183,7 +183,7 @@ private fun Week(week: List<RecoveryWeekDay>, usual: ClosedFloatingPointRange<Fl
     val width = WeekBarsLook.width(week.size, column)
     val h = RecoveryLayout.DOTS_HEIGHT_DP
     val bitmap = renderToBitmap(width * density, h * density) {
-        drawWeekDots(it, week.map { d -> d.score?.toFloat() }, usual, Ink, column * density, WeekBarsLook.GAP_DP * density, h * density)
+        drawWeekDots(it, week.map { d -> d.score?.toFloat() }, usual, Hue, column * density, WeekBarsLook.GAP_DP * density, h * density)
     }
     Image(
         ImageProvider(bitmap), contentDescription = LocalContext.current.getString(R.string.system_widget_recovery_week_description),

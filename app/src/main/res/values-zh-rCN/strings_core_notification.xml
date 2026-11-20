@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="core_notif_end_question">结束运动？点「是，结束」以保存。</string>
+    <string name="core_notif_end_question">结束运动？</string>
     <string name="core_notif_paused">已暂停</string>
     <string name="core_notif_waiting">等待中</string>
     <string name="core_notif_bpm">%1$d bpm</string>

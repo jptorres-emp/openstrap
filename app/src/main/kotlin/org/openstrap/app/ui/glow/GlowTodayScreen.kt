@@ -1,11 +1,13 @@
 package org.openstrap.app.ui.glow
 
+import androidx.compose.foundation.layout.Box
+import org.openstrap.app.ui.theme.Space
 import org.openstrap.app.R
 import androidx.compose.ui.res.stringResource
 import org.openstrap.app.presentation.Units
 import org.openstrap.app.presentation.TimeOfDay
-import org.openstrap.app.data.Stats
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import org.openstrap.app.ui.components.Motion
 import androidx.compose.ui.graphics.graphicsLayer
@@ -66,11 +68,8 @@ import org.openstrap.app.ui.dashboard.TodayEdits
 import org.openstrap.app.ui.dashboard.TodayFacts
 import org.openstrap.app.ui.dashboard.TodaySlot
 import org.openstrap.app.ui.dashboard.applyEdits
-import org.openstrap.app.ui.dashboard.avg
-import org.openstrap.app.presentation.sportNoun
 import org.openstrap.app.ui.dashboard.CHARGE_FAILED
 import org.openstrap.app.ui.dashboard.FAILED_SHORT
-import org.openstrap.app.ui.dashboard.RECOVERY_FAILED
 import org.openstrap.app.ui.dashboard.RecoveryFailure
 import org.openstrap.app.ui.dashboard.STALE_AFTER_S
 import org.openstrap.app.ui.dashboard.TRY_AGAIN
@@ -89,19 +88,18 @@ import org.openstrap.app.ui.dashboard.pairSentence
 import org.openstrap.app.presentation.wakingLead
 import org.openstrap.app.ui.dashboard.todayCards
 import org.openstrap.app.ui.theme.AppIcons
+import org.openstrap.app.ui.theme.Ink
 import org.openstrap.app.ui.theme.MetricColors
+import org.openstrap.app.ui.glow.pictures.EnergyRuler
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.boundsInWindow
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.Alignment
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.background
 import org.openstrap.app.ui.glow.draw.LightAngle
-import org.openstrap.app.ui.glow.draw.GlowStyle
 import org.openstrap.app.ui.glow.draw.heroStyle
 import org.openstrap.app.ui.glow.draw.WINDOW_RIM
 import org.openstrap.app.ui.glow.draw.AFTER_RIM
@@ -200,6 +198,9 @@ fun GlowTodayScreen(
     val list = rememberLazyListState()
     var editing by rememberSaveable { mutableStateOf(false) }
     if (editing) EditTodaySheet(edits, onSave = { onEditsChange(it); editing = false }, onDismiss = { editing = false })
+    // The card held on Today, lifted with its menu open while the rest dim (board HaloTodayHold).
+    var held by remember { mutableStateOf<TodayCard?>(null) }
+    val haptics = rememberHaptics()
     var partialInfo by rememberSaveable { mutableStateOf(false) }
     // Built once, so the cards given it can skip (audit K11).
     val partialTag = remember { TitleTag(PARTIAL_DAY) { partialInfo = true } }
@@ -220,13 +221,17 @@ fun GlowTodayScreen(
         recoveryFailure = recoveryFailure?.takeIf { rec == null },
         partial = partialTag.takeIf { wear?.partial == true },
         firstScore = firstScore,
+        bare = strap.pairing != null || !strap.paired || rec != null && !rec.charge.anchored,
     )
     if (partialInfo && wear != null) PartialDaySheet(wear, isToday, onDismiss = { partialInfo = false })
     // Before a strap is paired, or while it connects for the first time, the hero is the pairing stage (E3).
     val pairing = strap.pairing ?: PairStep.Ready.takeIf { !strap.paired }
+    // The pairing stage and the first day have no week, no Start a workout and nothing to edit yet (boards HaloTodayNoStrap,
+    // HaloTodayLoading, HaloTodayFirstDay).
     val facts = TodayFacts(
         isToday = isToday, suggestion = suggestion != null, alerts = state.alerts.isNotEmpty(),
         workout = lastWorkout != null && isToday,
+        bare = ctx.bare,
         healthspan = healthspan?.result?.let { r ->
             val asOf = Instant.ofEpochSecond(r.asOf).atZone(zone).toLocalDate()
             habitAgeNew(asOf, habitAgeSeenAsOf == asOf, state.date, now.atZone(zone).toLocalDate())
@@ -276,8 +281,28 @@ fun GlowTodayScreen(
                             val look = slot.lookOr(looksFor, live)
                             // An unlit card drawn as a picture card skips its light.
                             val override = CardOverride(plain = look.tier == Tier.List)
+                            // Every card Edit Today lists can be held for its menu, once there's a strap.
+                            val actions = if (slot.card.editable && pairing == null) {
+                                TodayHoldActions(slot.card, edits, onEditsChange) { editing = true }
+                            } else {
+                                null
+                            }
+                            val lift by animateFloatAsState(
+                                when (held) { null -> 0f; slot.card -> 1f; else -> -1f },
+                                tween(Motion.SWIFT, easing = Motion.easing), label = "hold",
+                            )
                             CompositionLocalProvider(LocalCardOverride provides override) {
-                                Column(m.then(dim).graphicsLayer { alpha = cardsAlpha.value }) {
+                                Column(
+                                    m.then(dim)
+                                        .holdToEdit(slot.card, actions != null) { held = slot.card; haptics.perform(HapticEvent.ScrubMark) }
+                                        .holdActions(slot.card, actions)
+                                        .graphicsLayer {
+                                            alpha = cardsAlpha.value * (1f - HOLD_DIM * (-lift).coerceAtLeast(0f))
+                                            val grow = 1f + HOLD_LIFT * lift.coerceAtLeast(0f)
+                                            scaleX = grow; scaleY = grow
+                                        },
+                                ) {
+                                    if (actions != null) TodayHoldMenu(held == slot.card, actions) { held = null }
                                     when (slot.card) {
                                         TodayCard.Hero -> Hero(
                                             ctx, strap, pairing, heroLightAngle, usualBedtime,
@@ -286,7 +311,15 @@ fun GlowTodayScreen(
                                             onOpenScore = { onOpen(org.openstrap.app.ui.dashboard.Detail.OfScore(it)) },
                                             energyHidden = slots.none { it.card == TodayCard.Charge },
                                         )
-                                        TodayCard.EditToday -> EditTodayButton({ editing = true })
+                                        TodayCard.EditToday -> Box(
+                                            Modifier.fillMaxWidth().padding(vertical = Space.S8), contentAlignment = Alignment.Center,
+                                        ) {
+                                            // A dark pill, no glass (board HaloTodayEvening, the foot of Today).
+                                            HaloButton(
+                                                stringResource(R.string.glow_today_edit), { editing = true },
+                                                icon = AppIcons.SlidersHorizontal, size = HaloButtonSize.Card,
+                                            )
+                                        }
                                         else -> TodayRow(slot, ctx, healthspan, history, checkIn, onCheckIn, onOpenMetric,
                                             onOpenWorkout, onOpenHealthspan, onOpenProfile, suggestion,
                                             onSaveSuggestion, onDismissSuggestion, onOpen, usualSteps, onRetryRecovery,
@@ -337,6 +370,8 @@ private data class TodayContext(
     val partial: TitleTag?,
     /** Today's Recovery is the first real score (E4). */
     val firstScore: Boolean,
+    /** Pairing or the first day: the cards that need a history are left out ([TodayFacts.bare]). */
+    val bare: Boolean = false,
 ) {
     /** "Up to 09:40" for a card whose [newest] reading is stale while syncing has stopped ([upToMarker]). */
     fun upTo(newest: Long?): String? = upToMarker(newest, now, stopped, isToday, zone, staleAfter)
@@ -368,6 +403,17 @@ private data class TodayContext(
             else -> NO_READING
         }
 
+    /** The word a Small says in a number's place while it waits ([waiting] is the phrase for rows and Wides). */
+    val waitingWord: String
+        get() = org.openstrap.app.i18n.Strings.app.get(
+            when {
+                firstNights -> R.string.glow_today_word_after_night
+                stuck -> R.string.glow_today_word_waiting
+                // No night to score, as Last night says "No sleep" beside it.
+                else -> R.string.glow_today_word_no_score
+            },
+        )
+
     /** The day's workouts you'd call workouts, oldest first: the strap's own "Activity" records aren't. */
     val dayWorkouts: List<WorkoutAnalysis>
         get() = workouts.filter { it.workout.start in state.dayStart..state.dayEnd && it.workout.sportType != Workouts.GENERIC_ACTIVITY }
@@ -381,6 +427,12 @@ private data class TodayContext(
      * by the date, as on the Activity tab and in the Load detail, not by the moment.
      */
     val loadStatus get() = rec?.let { TodayCopy.loadStatus(it.load, it.chronicLoad, endOfDay = !isToday) }
+
+    /** Your usual workout time, as the workout window finds it ([org.openstrap.app.data.MomentResolver.usualWorkoutTime]). */
+    val usualTime: LocalTime?
+        get() = org.openstrap.app.data.MomentResolver.usualWorkoutTime(
+            workouts.filter { it.startedByYou }.map { it.workout.start }, Instant.ofEpochSecond(now), zone,
+        )
 
     /** Your usual sport: the one you start most, over the same 28 days as your usual workout time. */
     val usualSport: Int
@@ -439,10 +491,10 @@ private fun Hero(
             HeroKind.Pair -> PairHero(pairing ?: PairStep.Ready, onPair, m)
             HeroKind.Stuck -> StuckHero(ctx, strap, onSyncNow, m)
             HeroKind.Waking -> WakingHero(ctx, lightAngle, { onOpenScore(org.openstrap.app.ui.dashboard.Score.Recovery) }, onRetryRecovery, m)
-            HeroKind.Midday -> ChargeHero(ctx, onOpenCharge, onRetryRecovery, m)
-            HeroKind.NoSleep -> ChargeHero(ctx, onOpenCharge, onRetryRecovery, m, noSleep = true)
+            HeroKind.Midday -> ChargeHero(ctx, lightAngle, onOpenCharge, onRetryRecovery, m)
+            HeroKind.NoSleep -> ChargeHero(ctx, lightAngle, onOpenCharge, onRetryRecovery, m, noSleep = true)
             HeroKind.Window -> WindowHero(ctx, lightAngle, onStartSport, onOtherSport, m)
-            HeroKind.After -> AfterHero(ctx, onOpenWorkout, m)
+            HeroKind.After -> AfterHero(ctx, lightAngle, onOpenWorkout, m)
             HeroKind.Evening -> EveningHero(ctx, lightAngle, bedtime, energyHidden, onOpenRecovery, m)
             HeroKind.During -> (running ?: lastRunning.value)?.let { DuringHero(it, onOpenRunning, liveHero, m) }
         }
@@ -465,17 +517,18 @@ private fun WakingHero(ctx: TodayContext, lightAngle: Float?, onOpen: () -> Unit
     val shown = ctx.recoveryShown
     val before = ctx.rec?.readinessTrend?.dropLast(1)?.lastOrNull()?.second
     val atWake = ctx.rec?.charge?.takeIf { it.anchored }?.atWake?.toInt()
-    GlowCard(heroStyle(MetricColors.readiness, lightAngle), modifier, onClick = onOpen) {
+    HaloCard(modifier, tone = CardTone.lit(heroStyle(MetricColors.readiness, lightAngle)), onClick = onOpen) {
         Column {
-            GlowHeader(
-                stringResource(R.string.glow_today_recovery_title), trailing = score?.let { TabCopy.vsYesterday(it, before) },
+            HaloTitle(
+                stringResource(R.string.glow_today_recovery_title),
+                note = score?.let { TabCopy.vsYesterday(it, before) },
                 tag = if (ctx.firstScore && score != null) TitleTag(FIRST_SCORE) else null,
             )
             if (ctx.state.loaded) HeroSentence(TodayCopy.waking(ctx.state.asleepSeconds, score, ctx.alert, ctx.noScore, ctx.firstNights, ctx.isToday, deleted = ctx.state.deletedSleep != null))
             // A hero leaves out a figure it doesn't have rather than show a lone dash; the sentence says why.
             if (shown.value == null && atWake == null) return@Column
-            Spacer(Modifier.height(24.dp))
-            HeroNumber(
+            Spacer(Modifier.height(Space.S24))
+            HeroReading(
                 shown.value?.toString(),
                 listOfNotNull(
                     shown.value?.let { shown.word ?: ctx.waiting },
@@ -491,21 +544,17 @@ private fun WakingHero(ctx: TodayContext, lightAngle: Float?, onOpen: () -> Unit
  * beside it. With [noSleep] it leads the morning too, saying no sleep was recorded (spec 4.3).
  */
 @Composable
-private fun ChargeHero(ctx: TodayContext, onOpen: () -> Unit, onRetry: () -> Unit, modifier: Modifier, noSleep: Boolean = false) {
+private fun ChargeHero(ctx: TodayContext, lightAngle: Float?, onOpen: () -> Unit, onRetry: () -> Unit, modifier: Modifier, noSleep: Boolean = false) {
     val c = ctx.rec?.charge
     val now = ctx.charge
     var info by rememberSaveable { mutableStateOf(false) }
-    // Charge is lit to its level from below (spec 2.5), so the moment's angle gives way here.
-    GlowCard(GlowStyle.Ember.copy(lightLevel = (now ?: 0) / 100f), modifier, onClick = onOpen) {
+    // The midday hero is Energy's orange lit from above, like every hero at its moment's angle (HaloTodayMidday).
+    HaloCard(modifier, tone = CardTone.lit(heroStyle(MetricColors.charge, lightAngle ?: LightAngle.Above)), onClick = onOpen) {
         Column {
             val start = c?.takeIf { it.anchored }?.atWake?.toInt()
-            GlowHeader(
-                stringResource(R.string.glow_today_energy_title),
-                trailing = start?.let {
+            HaloTitle(stringResource(R.string.glow_today_energy_title), note = start?.let {
                     stringResource(if (c.strapOffOvernight) R.string.glow_today_energy_at_start else R.string.glow_today_energy_waking, it)
-                },
-                marker = ctx.upTo(ctx.newest), tag = ctx.partial,
-            )
+                }, marker = ctx.upTo(ctx.newest), tag = ctx.partial)
             // Charge is worked out with Recovery, so when that fails it says so rather than waiting for a first night.
             val failed = ctx.recoveryFailure != null
             HeroSentence(
@@ -519,22 +568,22 @@ private fun ChargeHero(ctx: TodayContext, onOpen: () -> Unit, onRetry: () -> Uni
                 },
             )
             if (failed) {
-                Spacer(Modifier.height(24.dp))
-                PageButton(TRY_AGAIN, onRetry, primary = true, size = ButtonSize.Hero)
+                Spacer(Modifier.height(Space.S24))
+                HaloButton(TRY_AGAIN, onRetry, variant = HaloButtonVariant.Primary, size = HaloButtonSize.Card)
                 return@Column
             }
             // The caveat marker: tapping it opens Charge's info sheet, which explains the estimated start. One caveat a
             // card (spec 7.1): a Partial day tag, or the no sleep sentence, already says the day is short of wear.
             if (c?.strapOffOvernight == true && !noSleep && ctx.partial == null) Text(
                 stringResource(R.string.glow_today_strap_off),
-                color = Color.White.copy(alpha = 0.7f), style = GlowType.secondary,
-                modifier = Modifier.padding(top = 8.dp)
+                color = Ink.Secondary, style = GlowType.secondary,
+                modifier = Modifier.padding(top = Space.S8)
                     .clickable(onClickLabel = stringResource(R.string.glow_today_about_energy)) { info = true },
             )
             // No lone dash in a hero: before the first night the sentence says Charge starts after it.
             if (now == null) return@Column
-            Spacer(Modifier.height(24.dp))
-            HeroNumber(
+            Spacer(Modifier.height(Space.S24))
+            HeroReading(
                 now.toString(),
                 if (c != null && c.anchored) listOf(
                     stringResource(R.string.glow_today_recharged, c.recharged.toInt()),
@@ -543,6 +592,11 @@ private fun ChargeHero(ctx: TodayContext, onOpen: () -> Unit, onRetry: () -> Uni
                         R.string.glow_today_drained, TabCopy.drainedAmount(c.drainedExercise + c.drainedStress + c.drainedLiving),
                     ),
                 ) else listOf(stringResource(R.string.glow_today_now)),
+                // The ruler of the day's level, a white tick at now (HaloCharts, Energy level).
+                above = { EnergyRuler(
+                    now.toFloat(), Ink.Strong, Modifier.fillMaxWidth().height(20.dp),
+                    dots = 20, track = Ink.Disabled,
+                ) },
             )
         }
     }
@@ -554,27 +608,48 @@ private fun ChargeHero(ctx: TodayContext, onOpen: () -> Unit, onRetry: () -> Uni
 }
 
 /**
- * Your usual workout time: whether you're ready for effort, and a way to start the sport you usually do now. Heart red
- * from the upper right with the rim raised (spec 4.2); Recovery is a note on the title row, not the hero's colour.
+ * Your usual workout time: the sport you usually do now with when, Recovery in dots with the resting rate and the last
+ * time you did it beside it, and a way to start it. Heart red from the upper right with the rim raised (spec 4.2);
+ * Recovery is a figure on the hero, not its colour (board HaloTodayWorkoutTime). Without a usual time it keeps the
+ * title Recovery gives.
  */
 @Composable
 private fun WindowHero(ctx: TodayContext, lightAngle: Float?, onStart: (Int) -> Unit, onOther: () -> Unit, modifier: Modifier) {
     val sport = ctx.usualSport
-    val noun = sportNoun(sport)
-    GlowCard(heroStyle(MetricColors.heart, lightAngle, rim = WINDOW_RIM), modifier) {
+    val usual = ctx.usualTime
+    val last = ctx.workouts.filter { it.startedByYou && it.workout.sportType == sport && it.workout.start < ctx.now }
+        .maxOfOrNull { it.workout.start }
+    HaloCard(modifier, tone = CardTone.lit(heroStyle(MetricColors.heart, lightAngle, rim = WINDOW_RIM))) {
         Column {
-            GlowHeader(
-                TodayCopy.windowTitle(ctx.score), trailing = ctx.score?.let { stringResource(R.string.glow_today_recovery_score, it) },
+            HaloTitle(
+                if (usual != null) TodayCopy.windowUsualTitle(sport) else TodayCopy.windowTitle(ctx.score),
+                note = usual?.let(TodayCopy::windowAround),
             )
-            HeroSentence(TodayCopy.window(sport, ctx.charge))
-            Spacer(Modifier.height(28.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                PageButton(
-                    stringResource(R.string.glow_today_start_sport, noun ?: Workouts.sportName(sport).lowercase()), { onStart(sport) },
+            HeroSentence(TodayCopy.windowSentence(ctx.score, ctx.charge))
+            val lines = listOfNotNull(
+                ctx.state.restingHeartRate?.let { stringResource(R.string.core_today_window_resting, it) },
+                last?.let { TodayCopy.windowLast(sport, it, ctx.now, ctx.zone) },
+            )
+            if (ctx.score != null || lines.isNotEmpty()) {
+                Spacer(Modifier.height(Space.S20))
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom,
+                    horizontalArrangement = Arrangement.spacedBy(Space.S16)) {
+                    ctx.score?.let { HeroFigure(it.toString(), stringResource(R.string.day_card_recovery), big = true) }
+                    Column(Modifier.padding(bottom = Space.S2), verticalArrangement = Arrangement.spacedBy(Space.S8)) {
+                        lines.forEach { Text(it, color = Color.White, style = GlowType.secondary, maxLines = 1) }
+                    }
+                }
+            }
+            Spacer(Modifier.height(Space.S24))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(ButtonSpec.PairGap)) {
+                HaloButton(
+                    stringResource(R.string.glow_today_start_sport, Workouts.sportName(sport).lowercase()), { onStart(sport) },
                     Modifier.weight(1f),
-                    primary = true, icon = AppIcons.PlayFill, size = ButtonSize.Hero,
+                    variant = HaloButtonVariant.Primary, icon = AppIcons.PlayFill, size = HaloButtonSize.Card,
                 )
-                PageButton(stringResource(R.string.glow_today_other_sport), onOther, size = ButtonSize.Hero, onCard = true)
+                HaloButton(
+                    stringResource(R.string.glow_today_other_sport), onOther, variant = HaloButtonVariant.Glass, size = HaloButtonSize.Card,
+                )
             }
         }
     }
@@ -586,42 +661,18 @@ private fun WindowHero(ctx: TodayContext, lightAngle: Float?, onStart: (Int) -> 
  * (spec 4.2).
  */
 @Composable
-private fun AfterHero(ctx: TodayContext, onOpenWorkout: (Long) -> Unit, modifier: Modifier) {
+private fun AfterHero(ctx: TodayContext, lightAngle: Float?, onOpenWorkout: (Long) -> Unit, modifier: Modifier) {
     val w = ctx.lastWorkout ?: return
     val since = ctx.state.heartRate.filter { it.x >= w.end }
     val nowHr = ctx.live ?: since.lastOrNull()?.y?.toInt()
-    val noun = sportNoun(w.workout.sportType) ?: stringResource(R.string.glow_today_workout_noun)
     // Recovery teal, from below with the rim calmed: red stays for effort, so it stops once the run is done (spec 2.6, 4.2).
-    GlowCard(heroStyle(MetricColors.readiness, LightAngle.Below, rim = AFTER_RIM), modifier, onClick = { onOpenWorkout(w.workout.start) }) {
+    val style = heroStyle(MetricColors.readiness, lightAngle ?: LightAngle.Right, rim = AFTER_RIM)
+    HaloCard(modifier, tone = CardTone.lit(style), onClick = { onOpenWorkout(w.workout.start) }) {
         Column {
-            GlowHeader(stringResource(R.string.glow_today_since_your, noun), trailing = Units.duration(ctx.now - w.end))
+            HaloTitle(Workouts.sportName(w.workout.sportType), note = Units.duration(ctx.now - w.end))
             HeroSentence(TodayCopy.after(nowHr, ctx.state.restingHeartRate))
-            // The drop since the end, from the readings the strap has sent. A live curve needs live readings kept
-            // through the calm down (step 7).
-            if (since.size >= 2) {
-                // About 40 points over whatever time has passed, and never narrower than the strap's usual gap between
-                // readings (it keeps one every few minutes outside a workout): a slot with no reading between two that
-                // have one breaks the line into lone dots.
-                val gaps = since.zipWithNext { a, b -> (b.x - a.x).toInt() }.filter { it > 0 }
-                val typical = Stats.upperMiddle(gaps)?.toLong() ?: 0L
-                // Half as wide again, so a reading a little late still lands in its own slot.
-                val step = maxOf(60L, (ctx.now - w.end) / 40, typical * 3 / 2)
-                val values = remember(since, w.end, step) { bucket(since, w.end..ctx.now, step) }
-                Spacer(Modifier.height(14.dp))
-                // The line drops into your resting range, a dim band, once it's known.
-                GlowLineChart(values, height = 64.dp, showAverage = false, band = ctx.restingRange?.let { it.low..it.high })
-            }
-            Spacer(Modifier.height(18.dp))
-            // No readings around the end give no end heart rate: leave it out rather than show a dash.
-            val end = w.endHeartRate
-            val resting = ctx.state.restingHeartRate
-            val then = when {
-                end != null && resting != null -> stringResource(R.string.glow_today_after_end_resting, end, resting)
-                end != null -> stringResource(R.string.glow_today_after_end, end)
-                resting != null -> stringResource(R.string.glow_today_after_resting, resting)
-                else -> null
-            }
-            HeroNumber(nowHr?.toString(), listOfNotNull(nowHr?.let { stringResource(R.string.glow_today_bpm_now) }, then))
+            Spacer(Modifier.height(Space.S20))
+            AfterWorkoutBody(w)
         }
     }
 }
@@ -637,25 +688,26 @@ private fun EveningHero(ctx: TodayContext, lightAngle: Float?, bedtime: LocalTim
     val goals = LocalGoals.current
     val sports = ctx.dayWorkouts.map { it.workout.sportType }
     val night = ctx.moment == Moment.Night
-    val style = heroStyle(if (night) MetricColors.sleepDeep else MetricColors.evening, lightAngle)
+    // The evening glows at 0.8 and the night at 0.65 (boards HaloTodayEvening, HaloTodayNight).
+    val style = heroStyle(if (night) MetricColors.sleepDeep else MetricColors.evening, lightAngle, rim = if (night) 0.65f else 0.8f)
     // The evening's violet is lit lighter so it reads as violet, not as a second night (spec 4.2).
-    GlowCard(if (night) style else style.copy(bodyLightness = EVENING_BODY), modifier, onClick = onOpen) {
+    HaloCard(modifier, tone = CardTone.lit(if (night) style else style.copy(bodyLightness = EVENING_BODY)), onClick = onOpen) {
         Column {
-            GlowHeader(
-                stringResource(R.string.glow_today_title), trailing = TodayCopy.bedtimeIn(LocalTime.now(), bedtime),
+            HaloTitle(
+                stringResource(R.string.glow_today_title), note = TodayCopy.bedtimeIn(LocalTime.now(), bedtime),
                 marker = ctx.upTo(ctx.newest), tag = ctx.partial,
             )
             // The count is in dots below, so the sentence says the steps against the goal instead.
             HeroSentence(TodayCopy.evening(sports, ctx.state.steps, goals.steps, ctx.loadStatus, stepCount = false))
-            Spacer(Modifier.height(24.dp))
-            HeroNumber(Units.count(ctx.state.steps, Units.DOT_LOCALE), listOf(stringResource(R.string.glow_today_steps)))
+            Spacer(Modifier.height(Space.S24))
+            HeroReading(Units.count(ctx.state.steps, Units.DOT_LOCALE), listOf(stringResource(R.string.glow_today_steps)))
             // Load is said in the sentence, and Energy has its own card right under the hero. Only with that card
             // hidden in Edit Today does Energy come back here, last and full width, never a lone dash.
             val energy = ctx.charge?.takeIf { energyHidden }
             if (energy != null) Text(
-                stringResource(R.string.glow_today_energy_left, energy), color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA),
+                stringResource(R.string.glow_today_energy_left, energy), color = Ink.Secondary,
                 style = GlowType.secondary,
-                maxLines = 1, modifier = Modifier.padding(top = 10.dp),
+                maxLines = 1, modifier = Modifier.padding(top = Space.S12),
             )
         }
     }
@@ -691,15 +743,14 @@ private fun DuringHero(r: org.openstrap.app.device.WorkoutState.Recording, onOpe
     ) {
         LiveHero(glance, r.workout.sportType, glance.clock, onOpen, hooks.onAction, modifier)
         glance.split?.let { (title, line) ->
-            Row(
-                Modifier.fillMaxWidth().clip(GlowLayout.CardShape).background(ListSurface).padding(horizontal = 18.dp, vertical = 14.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Canvas(Modifier.size(8.dp)) { drawCircle(TrendGood) }
-                Spacer(Modifier.width(12.dp))
-                Column {
-                    Text(title, color = Color.White, style = GlowType.body)
-                    line?.let { Text(it, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary) }
+            HaloCard {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Canvas(Modifier.size(8.dp)) { drawCircle(TrendGood) }
+                    Spacer(Modifier.width(Space.S12))
+                    Column {
+                        Text(title, color = Color.White, style = GlowType.body)
+                        line?.let { Text(it, color = Ink.Secondary, style = GlowType.secondary) }
+                    }
                 }
             }
         }
@@ -715,15 +766,17 @@ private fun DuringHero(r: org.openstrap.app.device.WorkoutState.Recording, onOpe
 private fun PairHero(step: PairStep, onPair: () -> Unit, modifier: Modifier) {
     val haptics = rememberHaptics()
     LaunchedEffect(step) { if (step == PairStep.Connected) haptics.perform(HapticEvent.PairingDone) }
-    GlowCard(heroStyle(Color(0xFF4E8F86), LightAngle.Below), modifier, onClick = onPair) {
+    HaloCard(modifier, tone = CardTone.lit(heroStyle(StrapSilver, LightAngle.Below)), onClick = onPair) {
         Column {
-            GlowHeader(stringResource(R.string.glow_today_pair_title))
+            HaloTitle(stringResource(R.string.glow_today_pair_title))
             HeroSentence(pairSentence(step))
-            Spacer(Modifier.height(18.dp))
+            Spacer(Modifier.height(Space.S20))
             PairingStage(step)
             if (step != PairStep.Connected) {
-                Spacer(Modifier.height(18.dp))
-                PageButton(stringResource(R.string.glow_today_find_strap), onPair, primary = true, size = ButtonSize.Hero)
+                Spacer(Modifier.height(Space.S20))
+                HaloButton(
+                    stringResource(R.string.glow_today_find_strap), onPair, variant = HaloButtonVariant.Primary, size = HaloButtonSize.Card,
+                )
             }
         }
     }
@@ -737,16 +790,16 @@ private fun PairHero(step: PairStep, onPair: () -> Unit, modifier: Modifier) {
 private fun StuckHero(ctx: TodayContext, strap: TodayStrap, onSyncNow: () -> Unit, modifier: Modifier) {
     val haptics = rememberHaptics()
     val copy = stuckCopy(ctx.state.asleepSeconds != null, ctx.newest?.let { TimeOfDay.format(it, ctx.zone) })
-    GlowCard(heroStyle(MetricColors.warn, LightAngle.Below), modifier) {
+    HaloCard(modifier, tone = CardTone.lit(heroStyle(MetricColors.warn, LightAngle.Below))) {
         Column {
-            GlowHeader(copy.title, trailing = lastTried(strap.record, ctx.zone))
+            HaloTitle(copy.title, note = lastTried(strap.record, ctx.zone))
             HeroSentence(copy.sentence)
-            Text(copy.line, color = Color.White.copy(alpha = 0.8f), style = GlowType.secondary, modifier = Modifier.padding(top = 8.dp))
-            Spacer(Modifier.height(28.dp))
-            PageButton(
+            Text(copy.line, color = Ink.Strong, style = GlowType.secondary, modifier = Modifier.padding(top = Space.S8))
+            Spacer(Modifier.height(Space.S32))
+            HaloButton(
                 stringResource(R.string.glow_today_sync_now),
                 { if (strap.canSync) onSyncNow() else haptics.perform(HapticEvent.SyncFailed) },
-                primary = true, size = ButtonSize.Hero,
+                variant = HaloButtonVariant.Primary, size = HaloButtonSize.Card,
             )
         }
     }
@@ -781,7 +834,7 @@ private fun TodayRow(
         TodayCard.Alerts -> AlertsStrip(s.alerts, onOpenMetric)
         TodayCard.CheckIn -> CheckInStrip(checkIn, onCheckIn)
         TodayCard.BodyMorning -> BodyList(
-            stringResource(R.string.glow_today_body_morning),
+            stringResource(if (ctx.bare) R.string.glow_today_body_today else R.string.glow_today_body_morning),
             listOf(
                 BodyRow(
                     stringResource(R.string.glow_today_resting_hr), MetricColors.heart, s.restingHeartRate?.toFloat(),
@@ -831,7 +884,7 @@ private fun TodayRow(
         )
         TodayCard.Recovery -> RecoveryEarlierCard(
             ctx.recoveryShown, { openScore(org.openstrap.app.ui.dashboard.Score.Recovery) }, modifier, failure = ctx.recoveryFailure,
-            onRetry = onRetryRecovery, size = size, recovery = ctx.rec,
+            onRetry = onRetryRecovery, size = size, recovery = ctx.rec, noScore = ctx.noScore, waitingWord = ctx.waitingWord,
         )
         TodayCard.Charge -> {
             val c = ctx.rec?.charge
@@ -848,7 +901,9 @@ private fun TodayRow(
             val soFar = c?.takeIf { it.anchored && ctx.isToday }?.let { chargeSoFar(it.points, s.dayStart..s.dayEnd, ctx.now) }
             ChargeWideCard(
                 ctx.charge, status, slot.secondGlow, { openScore(org.openstrap.app.ui.dashboard.Score.Energy) }, soFar = soFar,
-                upTo = ctx.upTo(ctx.newest), tag = ctx.partial,
+                upTo = ctx.upTo(ctx.newest), tag = ctx.partial, small = slot.size == CardSize.Small,
+                atWake = c?.takeIf { it.anchored }?.atWake?.toInt(),
+                word = if (ctx.recoveryFailure != null) stringResource(R.string.glow_today_word_unavailable) else ctx.waitingWord,
             )
         }
         // Before and after a workout, as a pair: Load filling toward your usual, and the ring toward Ready.
@@ -856,6 +911,11 @@ private fun TodayRow(
             ctx.rec?.load, ctx.rec?.chronicLoad, endOfDay = !ctx.isToday,
             when { ctx.recoveryFailure != null -> FAILED_SHORT; ctx.rec == null -> ctx.waiting; else -> TodayCopy.loadWord(ctx.loadStatus) },
             size, { openScore(org.openstrap.app.ui.dashboard.Score.Load) }, modifier,
+            word = when {
+                ctx.recoveryFailure != null -> stringResource(R.string.glow_today_word_unavailable)
+                ctx.rec == null -> ctx.waitingWord
+                else -> null
+            },
         )
         TodayCard.Recover -> RecoverCard(
             latestRecoveryEstimate(ctx.workouts), ctx.now, ctx.zone, size, { openScore(org.openstrap.app.ui.dashboard.Score.Recover) }, modifier,
@@ -881,3 +941,7 @@ internal fun chargeSoFar(points: List<Recovery.ChargePoint>, day: LongRange, now
 
 /** The longest Today's cards wait for the moment before showing the fallback layout. */
 private const val CARDS_WAIT_MS = 4_000L
+
+/** How far the other cards fade while one is held, and how much the held one grows (board HaloTodayHold). */
+private const val HOLD_DIM = 0.7f
+private const val HOLD_LIFT = 0.03f

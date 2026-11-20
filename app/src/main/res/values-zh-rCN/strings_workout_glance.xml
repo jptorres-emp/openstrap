@@ -46,9 +46,9 @@
     <string name="workout_glance_set_done">完成本组</string>
     <string name="workout_glance_rest_left">休息还剩 %1$s</string>
     <string name="workout_glance_set_next_lower">接下来第 %1$d 组</string>
-    <string name="workout_glance_rest_bpm_sentence">%1$d bpm。</string>
-    <string name="workout_glance_rest_bpm_down_sentence">%1$d bpm，下降 %2$d。</string>
-    <string name="workout_glance_rest_ends_sooner">心率降至 %1$d bpm 以下即可提前结束。</string>
+    <string name="workout_glance_rest_bpm_sentence">%1$d bpm</string>
+    <string name="workout_glance_rest_bpm_down_sentence">%1$d bpm，下降 %2$d</string>
+    <string name="workout_glance_rest_ends_sooner">心率低于 %1$d bpm 即可提前结束</string>
     <string name="workout_glance_add_rest_30">+30 秒</string>
     <string name="workout_glance_ready_for_set_1">准备第 1 组</string>
     <string name="workout_glance_rest_over_of">休息结束，接下来第 %1$d/%2$d 组</string>
@@ -75,9 +75,10 @@
     <plurals name="workout_glance_all_rounds_done">
         <item quantity="other">已完成全部 %1$d 轮</item>
     </plurals>
-    <string name="workout_glance_fastest_was">目前最快为第 %1$d 公里。</string>
-    <string name="workout_glance_fastest_this">目前最快的一公里。</string>
-    <string name="workout_glance_split_average">平均 %1$d bpm。</string>
+    <string name="workout_glance_join">%1$s，%2$s</string>
+    <string name="workout_glance_fastest_was">目前最快为第 %1$d 公里</string>
+    <string name="workout_glance_fastest_this">目前最快的一公里</string>
+    <string name="workout_glance_split_average">平均 %1$d bpm</string>
     <string name="workout_glance_target">目标 %1$s</string>
     <string name="workout_glance_goal">目标 %1$s</string>
     <string name="workout_glance_reached">已达成</string>

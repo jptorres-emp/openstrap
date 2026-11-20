@@ -1,5 +1,9 @@
 package org.openstrap.app.ui.device
 
+import org.openstrap.app.ui.glow.HaloPageHeader
+import org.openstrap.app.ui.glow.HaloPageList
+import org.openstrap.app.ui.glow.PageVariant
+import org.openstrap.app.ui.theme.Space
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
@@ -12,19 +16,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import org.openstrap.app.data.SleepEdits
 import org.openstrap.app.data.db.SleepSession
-import org.openstrap.app.ui.dashboard.ScreenList
 import org.openstrap.app.ui.dashboard.SleepCopy
 import org.openstrap.app.ui.glow.GlowLayout
 import org.openstrap.app.ui.glow.GlowType
-import org.openstrap.app.ui.glow.PageButton
-import org.openstrap.app.ui.glow.PageHeader
-import org.openstrap.app.ui.glow.PageNote
-import org.openstrap.app.ui.glow.PageRow
-import org.openstrap.app.ui.glow.PageRows
-import org.openstrap.app.ui.theme.AppIcons
+import org.openstrap.app.ui.glow.ItemRow
+import org.openstrap.app.ui.glow.PageGroup
 import java.time.ZoneId
 import org.openstrap.app.presentation.DayWords
 import org.openstrap.app.presentation.TimeOfDay
+import org.openstrap.app.ui.theme.Ink
 
 /**
  * Deleted sleep (edit spec 4.4), from the You page's Your data while there's something in it: each night or nap deleted
@@ -41,26 +41,24 @@ fun DeletedSleepPage(
     val zone = ZoneId.systemDefault()
     val now = System.currentTimeMillis() / 1000
     fun clock(t: Long) = TimeOfDay.format(t, zone)
-    ScreenList(contentPadding, gutter = GlowLayout.Gutter) {
-        item { PageHeader(stringResource(R.string.you_deleted_sleep_title), onBack) }
-        item { Text(SleepCopy.DELETED_INTRO, color = Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.body, modifier = Modifier.padding(horizontal = 4.dp)) }
+    HaloPageList(contentPadding, variant = PageVariant.Settings) {
+        item { HaloPageHeader(stringResource(R.string.you_deleted_sleep_title), onBack) }
+        item { Text(SleepCopy.DELETED_INTRO, color = Ink.Secondary, style = GlowType.body,
+            modifier = Modifier.padding(horizontal = Space.S4)) }
         // Once the last one is restored the page stays open, saying so, with no empty panel under it.
-        if (deleted.isEmpty()) item { Text(SleepCopy.DELETED_NONE, color = Color.White, style = GlowType.body, modifier = Modifier.padding(horizontal = 4.dp)) }
+        if (deleted.isEmpty()) item { Text(SleepCopy.DELETED_NONE, color = Color.White, style = GlowType.body,
+            modifier = Modifier.padding(horizontal = Space.S4)) }
         else item {
-            PageRows {
+            // The note under the panel is a footnote (HaloDeletedSleep board).
+            PageGroup(footnote = SleepCopy.DELETED_FOOT) {
                 deleted.forEachIndexed { i, r ->
-                    PageRow(
+                    ItemRow(
                         SleepCopy.deletedName(r.strap.nap, DayWords.short(SleepCopy.deletedDay(r, zone))),
                         SleepCopy.deletedLine(clock(r.start), clock(r.end), r.edit?.let { SleepEdits.daysLeft(it, now) } ?: SleepEdits.KEEP_DAYS),
-                        below = true, divider = i > 0, icon = AppIcons.Moon,
-                    ) {
-                        PageButton(
-                            stringResource(R.string.you_action_restore), { onRestore(r.strap) }, icon = AppIcons.ArrowCounterClockwise,
-                        )
-                    }
+                        divider = i > 0, action = stringResource(R.string.you_action_restore), onAction = { onRestore(r.strap) },
+                    )
                 }
             }
         }
-        if (deleted.isNotEmpty()) item { PageNote(SleepCopy.DELETED_FOOT) }
     }
 }

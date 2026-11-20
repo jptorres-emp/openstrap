@@ -5,7 +5,6 @@ import android.os.Parcel
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.key
 import androidx.compose.runtime.saveable.SaverScope
-import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
@@ -48,14 +47,17 @@ class EditTodayRestoreTest {
             }
         }
         val hidden = editable.last { !it.pinnable }
-        compose.onAllNodesWithText("Pin")[0].performClick()
-        compose.onAllNodesWithText("Pin")[0].performClick()
-        compose.onAllNodes(isToggleable())[editable.indexOf(hidden)].performScrollTo().performClick()
+        // Each pin moves its card up into the Pinned section, so the next Pin is scrolled to first.
+        compose.onAllNodesWithText("Pin")[0].performScrollTo().performClick()
+        compose.onAllNodesWithText("Pin")[0].performScrollTo().performClick()
+        // The whole row flips its switch, so a tap on the card's name hides it.
+        compose.onNodeWithText(hidden.label).performScrollTo().performClick()
         val expected = TodayEdits().togglePin(pinnable[0]).togglePin(pinnable[1]).toggleHidden(hidden)
 
         tester.emulateSavedInstanceStateRestore()
 
-        compose.onAllNodesWithText("Pinned").assertCountEquals(2)
+        // The Pinned section's heading and the two pinned cards' chips.
+        compose.onAllNodesWithText("Pinned").assertCountEquals(3)
         // Done sits under the rows, scrolled to as a finger would.
         compose.onNodeWithText("Done").performScrollTo().performClick()
         assertEquals(expected, saved)

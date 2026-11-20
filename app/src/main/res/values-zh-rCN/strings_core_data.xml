@@ -20,10 +20,10 @@
     <string name="core_data_edit_runs_into_nap">与你 %1$s 的小睡重叠。</string>
     <string name="core_data_edit_runs_into_sleep">与你 %1$s 的睡眠重叠。</string>
     <string name="core_data_vo2_needs_age">年龄须在 20 至 79 岁之间。</string>
-    <string name="core_data_vo2_needs_sex">需要你的性别信息：女性和男性的计算公式不同。</string>
+    <string name="core_data_vo2_needs_sex">需要你的性别，因为女性和男性的公式不同。</string>
     <string name="core_data_vo2_needs_body">需要过去 90 天内记录的身高和体重。</string>
-    <string name="core_data_vo2_needs_activity">请回答活动情况问卷（每 6 个月询问一次）。</string>
-    <string name="core_data_vo2_medication">服用 β 受体阻滞剂期间或孕期不显示：此时静息心率无法真实反映体能。</string>
+    <string name="core_data_vo2_needs_activity">请回答活动量问题，每 6 个月询问一次。</string>
+    <string name="core_data_vo2_medication">服用 β 受体阻滞剂或怀孕期间不显示，因为此时静息心率不能反映体能。</string>
     <string name="core_data_vo2_needs_resting_hr">需要过去 2 周内至少 5 晚的静息心率数据。</string>
     <string name="core_data_vo2_band_below_30">低于第 30 百分位数</string>
     <string name="core_data_vo2_band_30_50">第 30 至 50 百分位数</string>

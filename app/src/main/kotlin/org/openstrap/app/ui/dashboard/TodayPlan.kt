@@ -35,10 +35,10 @@ enum class TodayCard(@StringRes private val labelRes: Int?, val editable: Boolea
     Charge(R.string.day_card_charge, pinnable = true),
     LoadToday(R.string.day_card_load, pinnable = true),
     /**
-     * Time to recover as a Small beside Load's, in the workout window and after a workout: part of [LoadToday], hidden
-     * and pinned with it.
+     * Time to recover as a Small beside Load's, in the workout window and after a workout. Edit Today lists it on its
+     * own (board HaloEditToday); pinning Load brings it along, unless it's hidden.
      */
-    Recover(null, editable = false),
+    Recover(R.string.day_card_recover, pinnable = true),
     Workout(R.string.day_card_workout),
     Week(R.string.day_card_week, pinnable = true),
     HabitAge(R.string.day_card_habit_age, pinnable = true),
@@ -74,13 +74,12 @@ data class TodayFacts(
      * it to keep it every day, but never before there's a first estimate ([applyEdits]' unavailable).
      */
     val healthspan: Boolean = false,
+    /**
+     * Before there is anything to plan with: no strap paired, the first sync, the first day. Today then ends with its
+     * body list, with no week, Start a workout or Edit Today (boards HaloTodayNoStrap, HaloTodayLoading, HaloTodayFirstDay).
+     */
+    val bare: Boolean = false,
 )
-
-/** Cards that come and go with another: they are hidden with it, and a pin moves them with it. */
-private val PARTNER = mapOf(TodayCard.Recover to TodayCard.LoadToday)
-
-/** [this] card, or the card it belongs to. */
-private fun TodayCard.owner(): TodayCard = PARTNER[this] ?: this
 
 /**
  * Whether Today offers Habit Age without a pin: a new estimate, for the Sunday [asOf], from that day until the end of
@@ -105,19 +104,22 @@ fun todayCards(moment: Moment?, facts: TodayFacts, morning: Boolean = true): Lis
     fun pair(a: TodayCard, b: TodayCard) = listOf(TodaySlot(a, CardSize.Small), TodaySlot(b, CardSize.Small))
     // Energy, where the hero isn't, is always the screen's second glow: a level glow filling across to its value.
     val energy = TodaySlot(TodayCard.Charge, CardSize.Wide, secondGlow = true)
+    val plainEnergy = TodaySlot(TodayCard.Charge, CardSize.Wide)
     val own = when (m) {
         // Last night is the Wide the morning is about; heart rate and steps shrink to a pair.
         Moment.Waking -> listOfNotNull(strip(TodayCard.CheckIn).takeIf { facts.isToday }, list(TodayCard.BodyMorning), wide(TodayCard.LastNight)) +
             pair(TodayCard.HeartRate, TodayCard.Activity)
-        // Energy is the hero. The Right now list is gone: Stress has its card, HRV lives on Recovery.
-        Moment.Midday -> pair(TodayCard.Recovery, TodayCard.LastNight) + wide(TodayCard.Activity) + pair(TodayCard.HeartRate, TodayCard.Stress)
+        // Energy is the hero; the body list closes the day's cards (board HaloTodayMidday).
+        Moment.Midday -> pair(TodayCard.Recovery, TodayCard.LastNight) + wide(TodayCard.Activity) + list(TodayCard.BodyMorning)
         // Load and To recover as a pair in place of the "Before you start" list.
         Moment.WorkoutWindow -> listOf(energy) + pair(TodayCard.LoadToday, TodayCard.Recover) + wide(TodayCard.Activity) + strip(TodayCard.LastNight)
         // The hero is the workout and its live heart rate, so Heart rate and Stress leave.
         Moment.During -> listOf(wide(TodayCard.Activity)) + pair(TodayCard.Recovery, TodayCard.LastNight)
-        Moment.After -> listOfNotNull(wide(TodayCard.Workout).takeIf { facts.workout }) + pair(TodayCard.LoadToday, TodayCard.Recover) +
-            energy + pair(TodayCard.Activity, TodayCard.LastNight)
-        Moment.Evening, Moment.Night -> listOf(energy) + pair(TodayCard.Activity, TodayCard.HeartRate) + strip(TodayCard.LastNight)
+        // The hero is the run itself (board HaloTodayAfter), so no card of it under it; Energy is a plain card.
+        Moment.After -> pair(TodayCard.LoadToday, TodayCard.Recover) + plainEnergy + pair(TodayCard.Activity, TodayCard.LastNight)
+        Moment.Evening -> listOf(plainEnergy) + pair(TodayCard.Activity, TodayCard.HeartRate) + strip(TodayCard.LastNight)
+        // Energy and Heart rate as a pair, Steps wide under them (board HaloTodayNight).
+        Moment.Night -> pair(TodayCard.Charge, TodayCard.HeartRate) + wide(TodayCard.Activity) + strip(TodayCard.LastNight)
     }
     // Things that need an answer come straight under the hero; the week and Habit Age close the list, then Start a
     // workout, except where the hero is the workout or has Start of its own, and at night (spec 4.2).
@@ -127,10 +129,12 @@ fun todayCards(moment: Moment?, facts: TodayFacts, morning: Boolean = true): Lis
             strip(TodayCard.Suggestion).takeIf { facts.suggestion && facts.isToday },
             strip(TodayCard.Alerts).takeIf { facts.alerts },
         ) + own + listOfNotNull(
-            wide(TodayCard.Week),
-            wide(TodayCard.HabitAge).takeIf { facts.healthspan },
-            strip(TodayCard.StartWorkout).takeIf { facts.isToday && m != Moment.During && m != Moment.WorkoutWindow && m != Moment.Night },
-            strip(TodayCard.EditToday),
+            wide(TodayCard.Week).takeIf { !facts.bare },
+            wide(TodayCard.HabitAge).takeIf { facts.healthspan && !facts.bare },
+            strip(TodayCard.StartWorkout).takeIf {
+                !facts.bare && facts.isToday && m != Moment.During && m != Moment.WorkoutWindow && m != Moment.Night
+            },
+            strip(TodayCard.EditToday).takeIf { !facts.bare },
         ),
     )
 }
@@ -167,11 +171,11 @@ fun heroSubject(moment: Moment?): TodayCard? = when (moment) {
 }
 
 /**
- * The slots a pinned card brings in a moment that doesn't have it: Load with To recover as their Small pair, Energy as
+ * The slots a pinned card brings in a moment that doesn't have it: Load and To recover as Smalls (they pair when both come), Energy as
  * the second glow, any other as a Wide.
  */
 private fun pinnedSlots(card: TodayCard): List<TodaySlot> = when (card) {
-    TodayCard.LoadToday -> listOf(TodaySlot(TodayCard.LoadToday, CardSize.Small), TodaySlot(TodayCard.Recover, CardSize.Small))
+    TodayCard.LoadToday, TodayCard.Recover -> listOf(TodaySlot(card, CardSize.Small))
     TodayCard.Charge -> listOf(TodaySlot(card, CardSize.Wide, secondGlow = true))
     else -> listOf(TodaySlot(card, CardSize.Wide))
 }
@@ -194,6 +198,14 @@ data class TodayEdits(val hidden: Set<TodayCard> = emptySet(), val pinned: List<
 
     fun canPin(card: TodayCard) = card.pinnable && (card in pinned || pinned.size < MAX_PINS)
 
+    /** Moves the pin at [from] to [to] (Edit Today's drag), so it comes that far down under the hero. */
+    fun movePin(from: Int, to: Int): TodayEdits {
+        if (from !in pinned.indices || from == to) return this
+        val order = pinned.toMutableList()
+        order.add(to.coerceIn(0, pinned.lastIndex), order.removeAt(from))
+        return copy(pinned = order)
+    }
+
     companion object {
         const val MAX_PINS = 2
 
@@ -211,15 +223,33 @@ data class TodayEdits(val hidden: Set<TodayCard> = emptySet(), val pinned: List<
  * answer), in pin order, never splitting a pair. A pinned card the moment doesn't have is added, unless it's
  * [unavailable] (Habit Age before its first estimate); one the hero already shows is left where it is. A card's
  * partner ([TodayCard.Recover] with Load) goes where it goes. Then the row rules hold again ([fitRows]): a pinned Small
- * pairs only with its own partner, and one left alone, pinned or not, becomes a Wide.
+ * pairs with its own partner, or with the other pin when that is a lone Small too, and one left alone, pinned or not,
+ * becomes a Wide.
  */
 fun applyEdits(slots: List<TodaySlot>, edits: TodayEdits, moment: Moment?, unavailable: Set<TodayCard> = emptySet()): List<TodaySlot> {
     val pins = edits.pinned.filter { it != heroSubject(moment) && it !in unavailable }
-    val pinned = pins.flatMap { card ->
-        slots.filter { it.card.owner() == card }
-            .ifEmpty { pinnedSlots(card) }.map { it.copy(pinned = true) }.let(::fitRows)
+    // Load's pin brings To recover along unless it's hidden; a pin of To recover under Load's is that same pair.
+    fun group(card: TodayCard) =
+        if (card == TodayCard.LoadToday && TodayCard.Recover !in edits.hidden) listOf(card, TodayCard.Recover) else listOf(card)
+    val units = pins.filter { !(it == TodayCard.Recover && TodayCard.LoadToday in pins) }.map(::group)
+    val taken = units.flatten().toSet()
+    val pieces = units.map { cards ->
+        cards.flatMap { c -> slots.filter { it.card == c } }.ifEmpty { cards.flatMap(::pinnedSlots) }.map { it.copy(pinned = true) }
     }
-    val rest = slots.filter { it.card.owner() !in edits.hidden && it.card.owner() !in pins }
+    // Two pins that are each a lone Small here share a row, so they stay square; any other pin keeps to itself.
+    fun lone(piece: List<TodaySlot>?) = piece?.singleOrNull()?.size == CardSize.Small
+    val pinned = mutableListOf<TodaySlot>()
+    var i = 0
+    while (i < pieces.size) {
+        if (lone(pieces[i]) && lone(pieces.getOrNull(i + 1))) {
+            pinned += pieces[i] + pieces[i + 1]
+            i += 2
+        } else {
+            pinned += fitRows(pieces[i])
+            i++
+        }
+    }
+    val rest = slots.filter { it.card !in edits.hidden && it.card !in taken }
     val urgent = setOf(TodayCard.Hero, TodayCard.Suggestion, TodayCard.Alerts)
     val at = rest.indexOfFirst { it.card !in urgent }.let { if (it < 0) rest.size else it }
     return fitRows(rest.take(at) + pinned + fitRows(rest.drop(at)))

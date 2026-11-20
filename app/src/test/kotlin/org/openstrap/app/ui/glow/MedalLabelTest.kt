@@ -2,6 +2,8 @@ package org.openstrap.app.ui.glow
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
@@ -23,8 +25,8 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * A medal's number or distance ("1000", "14/14", "HM") keeps clear of its inner ring at every size it's drawn, the
- * small cells and the sheet's large medal alike, rather than running into the edge.
+ * A token's number or distance ("1000", "14/14", "HM") keeps inside its face at every size it's drawn, the small cells,
+ * a sheet's 96 and a moment's 160 alike, rather than running into the edge (boards HaloGoalsBests, HaloBestMoment).
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
@@ -45,26 +47,27 @@ class MedalLabelTest {
 
     private fun badge(id: String) = Rewards.BADGES.first { it.id == id }
 
-    @Test fun `labels keep inside the ring on a cell's medal`() = assertInside(64.dp)
+    @Test fun `labels keep inside the face on a cell's token`() = assertInside(72.dp)
 
-    @Test fun `labels keep inside the ring on a sheet's medal`() = assertInside(156.dp)
+    @Test fun `labels keep inside the face on a sheet's token`() = assertInside(96.dp)
+
+    @Test fun `labels keep inside the face on a moment's token`() = assertInside(160.dp)
 
     private fun assertInside(diameter: Dp) {
         rules.compose.setContent {
-            Column {
+            // Scrolls, so every token gets its full size however short the test screen is.
+            Column(Modifier.verticalScroll(rememberScrollState())) {
                 looks.forEachIndexed { i, (_, look) -> Box(Modifier.testTag("medal$i")) { Medal(look, diameter) } }
             }
         }
         val out = looks.mapIndexedNotNull { i, (label, look) ->
             val medal = unclipped(rules.compose.onNodeWithTag("medal$i").fetchSemanticsNode())
             val text = unclipped(rules.compose.onNodeWithText(label, useUnmergedTree = true).fetchSemanticsNode())
-            val cx = medal.center.x
-            val cy = medal.center.y
-            // The ring's radius on this medal, in px: the frame is 100 units across.
-            val ring = innerRing(look.shape) * medal.width / FRAME_UNITS
+            val unit = medal.width / FRAME_UNITS
             val corners = listOf(text.topLeft, text.topRight, text.bottomLeft, text.bottomRight)
-            val far = corners.maxOf { hypot(it.x - cx, it.y - cy) }
-            "$label on ${look.shape} at $diameter: reaches $far px, the ring is at $ring".takeIf { far > ring }
+            // Each corner in frame units from the token's top left.
+            val inside = corners.all { c -> within(look.shape, (c.x - medal.left) / unit, (c.y - medal.top) / unit) }
+            "$label on ${look.shape} at $diameter: a corner of $text is outside the face, token $medal".takeIf { !inside }
         }
         assertTrue(out.joinToString("\n"), out.isEmpty())
     }
@@ -76,21 +79,17 @@ class MedalLabelTest {
     }
 
     /**
-     * How far the inner ring is from the middle, in frame units, read safely: the ring at 0.87 of the face, and for the
-     * hexagon (its flats 40.7 from the middle) and the soft square the circle that fits inside them, so a pass means
-     * clear of every edge.
+     * Whether the point ([x], [y], in frame units) is inside the face of [shape]: the medal's straight sides and its
+     * slanted foot, or the rosette's inner circle (its valleys are 42.2 from the middle).
      */
-    private fun innerRing(shape: MedalShape): Float = INNER * when (shape) {
-        MedalShape.Round -> 46f
-        MedalShape.Hex -> 40.7f
-        MedalShape.Laurel -> 34f
-        MedalShape.Soft -> 45f
-        MedalShape.Rosette -> 36f
+    private fun within(shape: MedalShape, x: Float, y: Float): Boolean = when (shape) {
+        MedalShape.Tile -> x in 14f..86f && y in 4f..78f
+        MedalShape.Rosette -> hypot(x - MID, y - MID) <= 42f
     }
 
     private companion object {
         const val HALF_MARATHON = 21097
         const val FRAME_UNITS = 100f
-        const val INNER = 0.87f
+        const val MID = 50f
     }
 }

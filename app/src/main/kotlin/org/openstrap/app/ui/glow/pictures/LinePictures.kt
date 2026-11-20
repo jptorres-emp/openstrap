@@ -1,5 +1,6 @@
 package org.openstrap.app.ui.glow.pictures
 
+import org.openstrap.app.ui.theme.Greys
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.runtime.Composable
@@ -15,8 +16,6 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
-import androidx.compose.ui.text.drawText
-import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import org.openstrap.app.presentation.StageSpan
@@ -30,6 +29,7 @@ import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.min
 import kotlin.math.sin
+import org.openstrap.app.ui.theme.Ink
 
 /*
  * The line-like pictures (spec 2.7): Heart rate's day line through your resting band, Stress's day strip, Skin
@@ -227,12 +227,14 @@ internal fun dialPoint(fit: DialFit, angle: Float, inset: Float = 0f): Offset {
 }
 
 /**
- * Skin temperature's picture (spec 2.7, Dial): a half dial reaching [DIAL_RANGE] either side of your normal, a white
- * track at 8%, your [normal] (a deviation range in °C, like -0.3..0.3) as a band of [ink] at the top, and a needle at
- * tonight's [deviation] in the ink. Centred in its modifier: on a Wide the card puts the number left and gives the dial
- * a square-ish box at the right ([WIDE_DIAL_CENTER_X]). The [reading], when given, is the dial's one line of text, at
- * the foot of the arc inside the needle's reach, in the larger type if it fits there ([dialReadingFits]).
+ * Skin temperature's picture (board HaloRecovery): a half dial reaching [DIAL_RANGE] either side of your normal, a 6 dp
+ * track of white at 10%, a short tick at the top for your normal, a cool zone just past the low edge of your [normal]
+ * (a deviation range in °C, like -0.3..0.3) and a warm zone just past its high edge, and a light marker with a dark
+ * ring at tonight's [deviation]. Centred in its modifier: on a Wide the card puts the number left and gives the dial a
+ * square-ish box at the right ([WIDE_DIAL_CENTER_X]). [ink] and [reading] are no longer drawn: the change is said
+ * under the number.
  */
+@Suppress("UnusedParameter", "UNUSED_PARAMETER")
 @Composable
 fun TempDial(
     deviation: Float?,
@@ -242,35 +244,41 @@ fun TempDial(
     modifier: Modifier = Modifier,
     reading: String? = null,
 ) {
-    val measurer = rememberTextMeasurer()
     Canvas(modifier.pictureArea(size)) {
-        val track = 4.dp.toPx()
-        val bandW = 9.dp.toPx()
-        val dot = 5.dp.toPx()
-        val fit = dialFit(this.size.width, this.size.height, maxOf(bandW / 2, dot) + 1.dp.toPx())
+        val track = 6.dp.toPx()
+        val marker = 6.dp.toPx()
+        val ring = 3.dp.toPx()
+        val fit = dialFit(this.size.width, this.size.height, marker + ring / 2 + 1.dp.toPx())
         val box = Size(fit.radius * 2, fit.radius * 2)
         val corner = Offset(fit.center.x - fit.radius, fit.center.y - fit.radius)
-        drawArc(Color.White.copy(alpha = ChartInk.Grid.alpha), 180f, 180f, false, corner, box, style = Stroke(track, cap = StrokeCap.Round))
+        val round = Stroke(track, cap = StrokeCap.Round)
+        drawArc(DialTrack, 180f, 180f, false, corner, box, style = round)
         if (normal != null) {
             // Compose sweeps clockwise from 3 o'clock with y down, so a maths angle a is at -a.
-            val from = -dialAngle(normal.start)
-            val to = -dialAngle(normal.endInclusive)
-            drawArc(ink.normalBand(), from, to - from, false, corner, box, style = Stroke(bandW, cap = StrokeCap.Round))
+            val warmFrom = dialAngle(normal.endInclusive)
+            val coolFrom = dialAngle(normal.start)
+            drawArc(DialWarm, -warmFrom, DIAL_ZONE_SWEEP, false, corner, box, style = round)
+            drawArc(DialCool, -coolFrom - DIAL_ZONE_SWEEP, DIAL_ZONE_SWEEP, false, corner, box, style = round)
         }
+        // Your normal, a short tick across the top of the arc.
+        drawLine(
+            Ink.Tertiary, dialPoint(fit, 90f, 8.dp.toPx()), dialPoint(fit, 90f, -4.dp.toPx()),
+            1.5.dp.toPx(),
+        )
         if (deviation != null) {
-            val angle = dialAngle(deviation)
-            val tip = dialPoint(fit, angle)
-            drawLine(ink, dialPoint(fit, angle, fit.radius * 0.55f), dialPoint(fit, angle, dot), 2.dp.toPx(), StrokeCap.Round)
-            drawCircle(ink, dot, tip)
-        }
-        if (reading != null) {
-            val large = measurer.measure(reading, GlowType.secondary.copy(color = Color.White))
-            val text = if (dialReadingFits(large.size.width.toFloat(), large.size.height.toFloat(), fit.radius)) large
-            else measurer.measure(reading, GlowType.caption.copy(color = Color.White))
-            drawText(text, topLeft = Offset(fit.center.x - text.size.width / 2f, fit.center.y - text.size.height))
+            val at = dialPoint(fit, dialAngle(deviation))
+            drawCircle(Greys.Card, marker + ring / 2, at)
+            drawCircle(DialMarker, marker - ring / 2, at)
         }
     }
 }
+
+/** How far each of the cool and warm zones runs past your normal, in degrees. */
+private const val DIAL_ZONE_SWEEP = 34f
+private val DialTrack = Ink.Edge
+private val DialCool = org.openstrap.app.ui.theme.MetricColors.temperatureCool.copy(alpha = 0.55f)
+private val DialWarm = org.openstrap.app.ui.theme.MetricColors.temperatureWarm.copy(alpha = 0.55f)
+private val DialMarker = Ink.Strong
 
 /** The share of the dial's radius left clear of the needle, which starts 55% of the way out. */
 private const val DIAL_CLEAR_SHARE = 0.55f

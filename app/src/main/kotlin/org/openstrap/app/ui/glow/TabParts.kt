@@ -1,5 +1,7 @@
 package org.openstrap.app.ui.glow
 
+import org.openstrap.app.ui.theme.Corner
+import org.openstrap.app.ui.theme.Space
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -13,7 +15,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -21,7 +22,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
+import org.openstrap.app.ui.glow.draw.DotSize
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -31,10 +32,11 @@ import org.openstrap.app.ui.dashboard.CardLook
 import org.openstrap.app.ui.dashboard.TabSlot
 import org.openstrap.app.ui.dashboard.Tier
 import org.openstrap.app.ui.dashboard.items
+import org.openstrap.app.ui.theme.Ink
 
 /*
  * What the Recovery, Sleep and Activity tabs share: laying out a tab's planned cards ([tabCards]) with the edge each
- * one's look fixes, and the rows their lists need beyond [ListRow].
+ * one's look fixes, and the rows their lists need beyond [MetricRow].
  */
 
 /**
@@ -78,70 +80,20 @@ internal fun <T> GridRowBlock(row: GridRow<T>, draw: @Composable (T, Modifier) -
     when (row) {
         is GridRow.Full -> draw(row.item, Modifier.fillMaxWidth())
         is GridRow.Pair -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(GlowGrid.Gap)) {
-            draw(row.left, Modifier.weight(1f).height(GlowGrid.UnitHeight))
-            draw(row.right, Modifier.weight(1f).height(GlowGrid.UnitHeight))
+            CompositionLocalProvider(LocalSmallTile provides true) {
+                draw(row.left, Modifier.weight(1f).height(GlowGrid.SmallHeight))
+                draw(row.right, Modifier.weight(1f).height(GlowGrid.SmallHeight))
+            }
         }
         is GridRow.TallPair -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(GlowGrid.Gap)) {
             draw(row.tall, Modifier.weight(1f).height(GlowGrid.height(CardSize.Tall)!!))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(GlowGrid.Gap)) {
-                draw(row.top, Modifier.fillMaxWidth().height(GlowGrid.UnitHeight))
-                draw(row.bottom, Modifier.fillMaxWidth().height(GlowGrid.UnitHeight))
-            }
-        }
-    }
-}
-
-/**
- * A contributor bar (chart kit): the [name] on its own line, so it never wraps beside the bar, then a bar filled to
- * [fraction] (0..1) with the [word] after it. Bar and word take [color] only when [offNormal]; otherwise they stay
- * white. [detail] is a dim line under the name (the reading behind it), [onClick] opens what the row is part of (with
- * the tap caret at the end), and [divider] draws the hairline above the row.
- */
-@Composable
-internal fun ContributorRow(
-    name: String, color: Color, word: String, fraction: Float, offNormal: Boolean = false, divider: Boolean = true,
-    detail: String? = null, onClick: (() -> Unit)? = null,
-) {
-    val accent = if (offNormal) color else Color.White.copy(alpha = 0.7f)
-    // Tapped, the row grows into what it opens (spec 3.5).
-    val opening = cardOpening(onClick)
-    Row(
-        Modifier.fillMaxWidth()
-            .then(opening?.modifier ?: Modifier)
-            .let { if (onClick != null) it.clickable(onClick = opening?.onClick ?: onClick) else it }
-            .topHairline(divider, RowHairline)
-            .padding(vertical = GlowLayout.RowPadding),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(Modifier.weight(1f)) {
-            Text(name, color = Color.White, style = GlowType.body, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-            if (detail != null) Text(
-                detail, color = Color.White.copy(alpha = 0.5f), style = GlowType.secondary.copy(fontSize = 11.5.sp), maxLines = 2,
-                modifier = Modifier.padding(top = 2.dp),
-            )
-            Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                val shape = RoundedCornerShape(3.dp)
-                Box(Modifier.weight(1f).height(6.dp).background(Color.White.copy(alpha = 0.07f), shape)) {
-                    Box(Modifier.fillMaxWidth(fraction.coerceIn(0f, 1f)).height(6.dp).background(accent, shape))
+                CompositionLocalProvider(LocalSmallTile provides true) {
+                    draw(row.top, Modifier.fillMaxWidth().height(GlowGrid.StackedHeight))
+                    draw(row.bottom, Modifier.fillMaxWidth().height(GlowGrid.StackedHeight))
                 }
-                Spacer(Modifier.width(12.dp))
-                Text(word, color = if (offNormal) color else Color.White.copy(alpha = GlowType.SECONDARY_ALPHA), style = GlowType.secondary, maxLines = 1)
             }
         }
-        if (onClick != null) {
-            Spacer(Modifier.width(RowCaretGap))
-            TapCaret(ROW_CARET_ALPHA)
-        }
-    }
-}
-
-/** A dot in [color] and a short [text], for a caveat like "Learning, 9 of 14 nights". */
-@Composable
-internal fun CaveatLine(text: String, color: Color, modifier: Modifier = Modifier) {
-    Row(modifier.padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(6.dp).background(color, CircleShape))
-        Spacer(Modifier.width(8.dp))
-        Text(text, color = Color.White.copy(alpha = 0.8f), style = GlowType.secondary)
     }
 }
 
@@ -158,3 +110,4 @@ internal fun rememberNormal(metric: org.openstrap.app.presentation.Metric, date:
     }.collectAsStateWithLifecycle(emptyList())
     return androidx.compose.runtime.remember(stats, date) { org.openstrap.app.data.History.normal(stats, date) }
 }
+

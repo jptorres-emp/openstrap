@@ -88,8 +88,24 @@ object Units {
     /** Whole metres, cut rather than rounded so 999.6 m never reads as a kilometre's 1000. */
     private fun metres(meters: Float, locale: Locale): String = String.format(locale, "%d", meters.toInt())
 
-    /** A count with the language's grouping: "23,410" steps, "23.410" in German. */
-    fun count(n: Long, locale: Locale = Locale.getDefault()): String = String.format(locale, "%,d", n)
+    /** A count with the language's grouping: "23,410" steps, "23.410" in German. In dots ([DOT_LOCALE]), [dotGrouped]. */
+    fun count(n: Long, locale: Locale = Locale.getDefault()): String =
+        if (locale == DOT_LOCALE) dotGrouped(String.format(locale, "%d", n)) else String.format(locale, "%,d", n)
+
+    /**
+     * A number for the dot font (Halo System board, Dots): up to four digits run together ("8225"), five and up are
+     * grouped in threes by a thin space ([DOT_GROUP_SPACE], "26 120"), never a comma or a dot, so a dot only ever means a
+     * decimal. Any commas in [text] are dropped first; digits after a decimal dot are left alone.
+     */
+    fun dotGrouped(text: String): String = DOT_GROUPED_RUN.replace(text.replace(",", "")) { m ->
+        m.value.reversed().chunked(DOT_GROUP).joinToString(DOT_GROUP_SPACE.toString()).reversed()
+    }
+
+    private val DOT_GROUPED_RUN = Regex("""(?<![.\d])\d{5,}""")
+    private const val DOT_GROUP = 3
+
+    /** The thin space between a big dot number's groups: narrower than a word space (DotFont draws it one column). */
+    const val DOT_GROUP_SPACE = '\u2009'
 
     /** [count] for an Int. */
     fun count(n: Int, locale: Locale = Locale.getDefault()): String = count(n.toLong(), locale)
@@ -208,9 +224,10 @@ object ClockSetting {
 
 /**
  * [String.format] for text drawn in the dot font: ASCII digits and a dot decimal mark whatever the phone's language,
- * since the font has no other script's digits and a comma would read as a thousands mark.
+ * since the font has no other script's digits and a comma would read as a thousands mark. Big numbers are grouped
+ * by a space ([Units.dotGrouped]).
  */
-fun dotFormat(format: String, vararg args: Any?): String = String.format(Units.DOT_LOCALE, format, *args)
+fun dotFormat(format: String, vararg args: Any?): String = Units.dotGrouped(String.format(Units.DOT_LOCALE, format, *args))
 
 /**
  * Date and time formatters by pattern and locale, built once each. They write the locale's own digits

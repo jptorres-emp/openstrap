@@ -187,9 +187,9 @@ class TodayPlanTest {
             CardSize.Strip,
             applyEdits(todayCards(Moment.Evening, TodayFacts()), TodayEdits(pinned = listOf(LastNight)), Moment.Evening).first { it.card == LastNight }.size,
         )
-        // Pins pair only with their own partner: Heart rate and Steps pinned at waking are two Wides.
+        // Two pins that are Smalls here share a row: Heart rate and Steps pinned at waking stay a pair.
         assertEquals(
-            listOf("Hero Large", "HeartRate Wide", "Activity Wide", "CheckIn Strip"),
+            listOf("Hero Large", "HeartRate+Activity", "CheckIn Strip", "BodyMorning List"),
             rows(applyEdits(todayCards(Moment.Waking, TodayFacts()), TodayEdits(pinned = listOf(HeartRate, Activity)), Moment.Waking)).take(4),
         )
     }
@@ -255,5 +255,37 @@ class TodayPlanTest {
         assertEquals(1, usualSport(listOf(1 to 10L, 1 to 20L, 4 to 30L)))
         assertEquals(4, usualSport(listOf(1 to 10L, 4 to 30L)))
         assertEquals(null, usualSport(emptyList()))
+    }
+
+    @Test fun `a pin dragged to another place moves there, out of range or onto itself changes nothing`() {
+        val e = TodayEdits(pinned = listOf(LoadToday, LastNight))
+        assertEquals(listOf(LastNight, LoadToday), e.movePin(0, 1).pinned)
+        assertEquals(listOf(LastNight, LoadToday), e.movePin(1, 0).pinned)
+        assertEquals(listOf(LastNight, LoadToday), e.movePin(0, 5).pinned)
+        assertEquals(e, e.movePin(1, 1))
+        assertEquals(e, e.movePin(3, 0))
+    }
+
+    @Test fun `the pin order is the order under the hero`() {
+        val waking = todayCards(Moment.Waking, TodayFacts())
+        val a = applyEdits(waking, TodayEdits(pinned = listOf(HeartRate, LastNight)), Moment.Waking).map { it.card }
+        val b = applyEdits(waking, TodayEdits(pinned = listOf(LastNight, HeartRate)), Moment.Waking).map { it.card }
+        assertTrue(a.indexOf(HeartRate) < a.indexOf(LastNight))
+        assertTrue(b.indexOf(LastNight) < b.indexOf(HeartRate))
+    }
+
+    @Test fun `two pinned Smalls share a row under the hero, a pinned Small with a pair or a Wide is widened`() {
+        val evening = todayCards(Moment.Evening, TodayFacts())
+        val two = applyEdits(evening, TodayEdits(pinned = listOf(HeartRate, Activity)), Moment.Evening)
+        assertEquals(listOf(HeartRate to CardSize.Small, Activity to CardSize.Small), two.drop(1).take(2).map { it.card to it.size })
+        // Load brings To recover as its own pair, so Heart rate pinned before it stands alone as a Wide.
+        val withLoad = applyEdits(evening, TodayEdits(pinned = listOf(HeartRate, LoadToday)), Moment.Evening)
+        assertEquals(
+            listOf(HeartRate to CardSize.Wide, LoadToday to CardSize.Small, Recover to CardSize.Small),
+            withLoad.drop(1).take(3).map { it.card to it.size },
+        )
+        // Last night is a strip in the evening, so Heart rate pinned with it can't pair.
+        val withStrip = applyEdits(evening, TodayEdits(pinned = listOf(HeartRate, LastNight)), Moment.Evening)
+        assertEquals(CardSize.Wide, withStrip[1].size)
     }
 }

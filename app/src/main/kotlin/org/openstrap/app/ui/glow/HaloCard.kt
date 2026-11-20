@@ -141,7 +141,8 @@ internal fun HaloCard(
     fill: CardFill = CardFill.Inset,
     onClick: (() -> Unit)? = null,
     title: (@Composable () -> Unit)? = null,
-    verticalArrangement: Arrangement.Vertical = size.arrangement,
+    // Rows sit edge to edge, their dividers between them; other cards space their blocks as their size says.
+    verticalArrangement: Arrangement.Vertical = if (fill == CardFill.Rows) Arrangement.Top else size.arrangement,
     horizontalAlignment: Alignment.Horizontal = Alignment.Start,
     swell: GlowSwell? = null,
     content: @Composable ColumnScope.() -> Unit,

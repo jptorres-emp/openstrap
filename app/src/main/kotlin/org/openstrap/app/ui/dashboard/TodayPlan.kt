@@ -198,6 +198,14 @@ data class TodayEdits(val hidden: Set<TodayCard> = emptySet(), val pinned: List<
 
     fun canPin(card: TodayCard) = card.pinnable && (card in pinned || pinned.size < MAX_PINS)
 
+    /** Moves the pin at [from] to [to] (Edit Today's drag), so it comes that far down under the hero. */
+    fun movePin(from: Int, to: Int): TodayEdits {
+        if (from !in pinned.indices || from == to) return this
+        val order = pinned.toMutableList()
+        order.add(to.coerceIn(0, pinned.lastIndex), order.removeAt(from))
+        return copy(pinned = order)
+    }
+
     companion object {
         const val MAX_PINS = 2
 
@@ -215,7 +223,8 @@ data class TodayEdits(val hidden: Set<TodayCard> = emptySet(), val pinned: List<
  * answer), in pin order, never splitting a pair. A pinned card the moment doesn't have is added, unless it's
  * [unavailable] (Habit Age before its first estimate); one the hero already shows is left where it is. A card's
  * partner ([TodayCard.Recover] with Load) goes where it goes. Then the row rules hold again ([fitRows]): a pinned Small
- * pairs only with its own partner, and one left alone, pinned or not, becomes a Wide.
+ * pairs with its own partner, or with the other pin when that is a lone Small too, and one left alone, pinned or not,
+ * becomes a Wide.
  */
 fun applyEdits(slots: List<TodaySlot>, edits: TodayEdits, moment: Moment?, unavailable: Set<TodayCard> = emptySet()): List<TodaySlot> {
     val pins = edits.pinned.filter { it != heroSubject(moment) && it !in unavailable }
@@ -224,9 +233,21 @@ fun applyEdits(slots: List<TodaySlot>, edits: TodayEdits, moment: Moment?, unava
         if (card == TodayCard.LoadToday && TodayCard.Recover !in edits.hidden) listOf(card, TodayCard.Recover) else listOf(card)
     val units = pins.filter { !(it == TodayCard.Recover && TodayCard.LoadToday in pins) }.map(::group)
     val taken = units.flatten().toSet()
-    val pinned = units.flatMap { cards ->
-        cards.flatMap { c -> slots.filter { it.card == c } }
-            .ifEmpty { cards.flatMap(::pinnedSlots) }.map { it.copy(pinned = true) }.let(::fitRows)
+    val pieces = units.map { cards ->
+        cards.flatMap { c -> slots.filter { it.card == c } }.ifEmpty { cards.flatMap(::pinnedSlots) }.map { it.copy(pinned = true) }
+    }
+    // Two pins that are each a lone Small here share a row, so they stay square; any other pin keeps to itself.
+    fun lone(piece: List<TodaySlot>?) = piece?.singleOrNull()?.size == CardSize.Small
+    val pinned = mutableListOf<TodaySlot>()
+    var i = 0
+    while (i < pieces.size) {
+        if (lone(pieces[i]) && lone(pieces.getOrNull(i + 1))) {
+            pinned += pieces[i] + pieces[i + 1]
+            i += 2
+        } else {
+            pinned += fitRows(pieces[i])
+            i++
+        }
     }
     val rest = slots.filter { it.card !in edits.hidden && it.card !in taken }
     val urgent = setOf(TodayCard.Hero, TodayCard.Suggestion, TodayCard.Alerts)

@@ -94,7 +94,14 @@
     <string name="glow_today_week_steps_same">步数与上一周基本持平。</string>
     <string name="glow_today_against_normal">对比你的常态</string>
     <string name="glow_today_edit">编辑今日</string>
-    <string name="glow_today_edit_note">可在顶栏卡片下方置顶最多两张卡片，或隐藏不需要的卡片。</string>
+    <string name="glow_today_edit_note">可在顶栏卡片下方置顶最多两张卡片，并拖动排序。其余卡片随一天的时间变化。</string>
     <string name="glow_today_edit_pin">置顶</string>
     <string name="glow_today_edit_pinned">已置顶</string>
+    <string name="glow_today_edit_rest">其余卡片</string>
+    <string name="glow_today_drag">拖动以排序</string>
+    <string name="glow_today_move_up">上移</string>
+    <string name="glow_today_move_down">下移</string>
+    <string name="glow_today_hold_pin">置顶到顶栏卡片下方</string>
+    <string name="glow_today_hold_unpin">取消置顶</string>
+    <string name="glow_today_hold_hide">从今日隐藏</string>
 </resources>

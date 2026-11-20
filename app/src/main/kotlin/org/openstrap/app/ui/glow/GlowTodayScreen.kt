@@ -7,6 +7,7 @@ import androidx.compose.ui.res.stringResource
 import org.openstrap.app.presentation.Units
 import org.openstrap.app.presentation.TimeOfDay
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import org.openstrap.app.ui.components.Motion
 import androidx.compose.ui.graphics.graphicsLayer
@@ -197,6 +198,9 @@ fun GlowTodayScreen(
     val list = rememberLazyListState()
     var editing by rememberSaveable { mutableStateOf(false) }
     if (editing) EditTodaySheet(edits, onSave = { onEditsChange(it); editing = false }, onDismiss = { editing = false })
+    // The card held on Today, lifted with its menu open while the rest dim (board HaloTodayHold).
+    var held by remember { mutableStateOf<TodayCard?>(null) }
+    val haptics = rememberHaptics()
     var partialInfo by rememberSaveable { mutableStateOf(false) }
     // Built once, so the cards given it can skip (audit K11).
     val partialTag = remember { TitleTag(PARTIAL_DAY) { partialInfo = true } }
@@ -277,8 +281,28 @@ fun GlowTodayScreen(
                             val look = slot.lookOr(looksFor, live)
                             // An unlit card drawn as a picture card skips its light.
                             val override = CardOverride(plain = look.tier == Tier.List)
+                            // Every card Edit Today lists can be held for its menu, once there's a strap.
+                            val actions = if (slot.card.editable && pairing == null) {
+                                TodayHoldActions(slot.card, edits, onEditsChange) { editing = true }
+                            } else {
+                                null
+                            }
+                            val lift by animateFloatAsState(
+                                when (held) { null -> 0f; slot.card -> 1f; else -> -1f },
+                                tween(Motion.SWIFT, easing = Motion.easing), label = "hold",
+                            )
                             CompositionLocalProvider(LocalCardOverride provides override) {
-                                Column(m.then(dim).graphicsLayer { alpha = cardsAlpha.value }) {
+                                Column(
+                                    m.then(dim)
+                                        .holdToEdit(slot.card, actions != null) { held = slot.card; haptics.perform(HapticEvent.ScrubMark) }
+                                        .holdActions(slot.card, actions)
+                                        .graphicsLayer {
+                                            alpha = cardsAlpha.value * (1f - HOLD_DIM * (-lift).coerceAtLeast(0f))
+                                            val grow = 1f + HOLD_LIFT * lift.coerceAtLeast(0f)
+                                            scaleX = grow; scaleY = grow
+                                        },
+                                ) {
+                                    if (actions != null) TodayHoldMenu(held == slot.card, actions) { held = null }
                                     when (slot.card) {
                                         TodayCard.Hero -> Hero(
                                             ctx, strap, pairing, heroLightAngle, usualBedtime,
@@ -917,3 +941,7 @@ internal fun chargeSoFar(points: List<Recovery.ChargePoint>, day: LongRange, now
 
 /** The longest Today's cards wait for the moment before showing the fallback layout. */
 private const val CARDS_WAIT_MS = 4_000L
+
+/** How far the other cards fade while one is held, and how much the held one grows (board HaloTodayHold). */
+private const val HOLD_DIM = 0.7f
+private const val HOLD_LIFT = 0.03f

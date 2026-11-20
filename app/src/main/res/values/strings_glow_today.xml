@@ -191,9 +191,16 @@
     <!-- The button at the foot of Today that opens Edit Today. -->
     <string name="glow_today_edit">Edit Today</string>
     <!-- The note under the Edit Today sheet's title. -->
-    <string name="glow_today_edit_note">Pin up to two cards under the top card, or hide the ones you don\'t need.</string>
+    <string name="glow_today_edit_note">Pin up to two cards under the top card and drag them into order. The rest follow the time of day.</string>
     <!-- A chip on a card's row in Edit Today that pins it under the top card. One short word. -->
     <string name="glow_today_edit_pin">Pin</string>
     <!-- The chip once the card is pinned. One short word. -->
     <string name="glow_today_edit_pinned">Pinned</string>
+    <string name="glow_today_edit_rest">The rest</string>
+    <string name="glow_today_drag">Drag to reorder</string>
+    <string name="glow_today_move_up">Move up</string>
+    <string name="glow_today_move_down">Move down</string>
+    <string name="glow_today_hold_pin">Pin under the top card</string>
+    <string name="glow_today_hold_unpin">Unpin</string>
+    <string name="glow_today_hold_hide">Hide from Today</string>
 </resources>

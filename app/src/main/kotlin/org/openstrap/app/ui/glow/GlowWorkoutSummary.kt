@@ -66,6 +66,9 @@ import org.openstrap.app.ui.workout.FamilySummary
 import org.openstrap.app.ui.workout.PhoneSummary
 import org.openstrap.app.ui.workout.SummaryCopy
 import org.openstrap.app.ui.dashboard.LocalHeartZones
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 
 /*
  * The summary right after a workout (workouts spec 2.8, boards HaloSummaryRun to HaloSummaryGames): back, the sport and
@@ -125,6 +128,12 @@ fun GlowWorkoutSummaryScreen(
     var sharing by rememberSaveable { mutableStateOf(false) }
     if (sharing && summary != null && hero != null) {
         WorkoutShareScreen(summary, hero, rewards?.earned.orEmpty(), liveRoute, contentPadding, onClose = { sharing = false })
+        return
+    }
+    // The route map page in the summary's place, as Share is; its state in a ViewModel ([RouteMapModel]).
+    val routeMap = routeMapModel()
+    if (summary != null && routeMap != null && routeMap.isOpen(summary.analysis.workout.start)) {
+        RouteMapPage(summary, routeMap, contentPadding)
         return
     }
     if (step == SummaryStep.Best && rewards?.best != null && a != null) {
@@ -307,16 +316,24 @@ private fun DropLine(readings: List<Pair<Long, Int>>, end: Long, modifier: Modif
 
 /** The corner of the map inside a card (board HaloSummaryRun: 18 across the card's 36, so half). */
 
-/** The kept route in its zones' colours on the map's own near black; nothing without a route that goes somewhere. */
+/**
+ * The kept route in its zones' colours on the map's own near black, along the roads when chosen ([rememberRouteLine]);
+ * nothing without a route that goes somewhere. A tap opens the route map page ([RouteMapPage]).
+ */
 @Composable
 internal fun RouteMap(summary: PhoneSummary, modifier: Modifier = Modifier) {
-    val heartZones = LocalHeartZones.current
     if (!Route.mappable(summary.route)) return
-    val stretches = remember(summary, heartZones) {
-        Route.byZone(summary.route, summary.history, summary.analysis.maxHeartRate, heartZones)
-    }
+    val line = rememberRouteLine(summary)
+    val model = routeMapModel()
+    val open = stringResource(R.string.glow_route_map_open)
     Box(modifier.fillMaxWidth().height(170.dp).clip(Corner.Inner).background(Greys.Card)) {
-        WorkoutMap(stretches, routeOnly = false, Modifier.fillMaxSize())
+        WorkoutMap(line.stretches, routeOnly = false, Modifier.fillMaxSize())
+        // The map takes touches itself, so a layer above it catches the tap: the card's map is a preview.
+        if (model != null) Box(
+            Modifier.matchParentSize()
+                .clickable(onClickLabel = open) { model.open(summary.analysis.workout.start) }
+                .semantics { contentDescription = open },
+        )
     }
 }
 

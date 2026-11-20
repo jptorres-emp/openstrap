@@ -189,4 +189,20 @@
     <string name="glow_summary_work_rest"><xliff:g id="work" example="20">%1$d</xliff:g> s work, <xliff:g id="rest" example="10">%2$d</xliff:g> s rest</string>
     <!-- Beside a game's halves title: each bar is the period's average heart rate. Short. -->
     <string name="glow_summary_period_note">Average bpm</string>
+    <!-- The route map page (boards HaloRouteMap to HaloRouteMapNotOnRoads). -->
+    <string name="glow_route_map_open">Open the route map</string>
+    <string name="glow_route_map_fit">Fit route</string>
+    <string name="glow_route_map_gpx">GPX</string>
+    <string name="glow_route_map_gpx_failed">Couldn\'t write the route file</string>
+    <string name="glow_route_map_pick_hint">Tap one to show it</string>
+    <string name="glow_route_map_unpick_hint">Tap it again to show the whole route</string>
+    <string name="glow_route_map_split_in"><xliff:g id="split" example="Km 3">%1$s</xliff:g> in <xliff:g id="time" example="6:02">%2$s</xliff:g></string>
+    <string name="glow_route_map_line">Line</string>
+    <string name="glow_route_map_roads">Roads</string>
+    <string name="glow_route_map_gps">GPS</string>
+    <string name="glow_route_map_note_roads">Drawn along the streets you took. Distance and pace stay as recorded.</string>
+    <string name="glow_route_map_note_not_on_roads">Most of this route isn\'t on mapped roads, so it\'s drawn as recorded.</string>
+    <string name="glow_route_map_note_offline">The roads couldn\'t be loaded, so it\'s drawn as recorded.</string>
+    <string name="glow_route_map_note_matching">Matching the route to the roads</string>
+    <string name="glow_route_map_note_gps">Drawn as GPS recorded it.</string>
 </resources>

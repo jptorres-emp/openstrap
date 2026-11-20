@@ -209,6 +209,11 @@ private fun PastSummary(
         )
         return
     }
+    val routeMap = routeMapModel()
+    if (routeMap != null && routeMap.isOpen(w.start)) {
+        RouteMapPage(summary, routeMap, androidx.compose.foundation.layout.WindowInsets.navigationBars.asPaddingValues())
+        return
+    }
     CompositionLocalProvider(LocalGlowPaused provides { list.isScrollInProgress }) {
         HaloPageList(contentPadding, variant = PageVariant.Tab, state = list) {
             item {

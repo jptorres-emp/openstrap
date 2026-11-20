@@ -75,6 +75,65 @@ class RouteTest {
     }
 
     @Test
+    fun `legs cut the track at each kilometre`() {
+        val legs = Route.legs(run(1200))
+        assertEquals(4, legs.size)
+        for (i in 0..2) assertEquals(1000.0, legs[i].points.zipWithNext().sumOf { (a, b) -> Route.meters(a, b) }, 15.0)
+        for (i in 0 until legs.lastIndex) assertEquals(legs[i].points.last(), legs[i + 1].points.first())
+    }
+
+    @Test
+    fun `legs and splits agree`() {
+        assertEquals(Route.splits(run(1200)), Route.legs(run(1200)).map { it.split })
+    }
+
+    @Test
+    fun `a run under a kilometre is one part leg`() {
+        val legs = Route.legs(run(100))
+        assertEquals(1, legs.size)
+        assertTrue(legs[0].split.meters < 1000.0)
+    }
+
+    @Test
+    fun `a pause stays out of a leg's metres`() {
+        val pauses = listOf(500L..600L)
+        val legs = Route.legs(run(1200), pauses)
+        val leg = legs.single { it.points.first().t < 550 && it.points.last().t > 550 }
+        assertEquals(1000.0, leg.split.meters, 15.0)
+        val whole = Route.legs(run(1200)).sumOf { it.split.meters }
+        assertEquals(whole - 300.0, legs.sumOf { it.split.meters }, 15.0)
+    }
+
+    @Test
+    fun `legs move onto a line drawn in the track's place by time`() {
+        val track = run(1200)
+        val legs = Route.legs(track)
+        // The line along the roads: the same times, a little to the north of the track.
+        val line = Route.track(track).map { it.copy(lat = it.lat + 0.0001) }
+        val moved = Route.legsOnLine(line, legs)
+        assertEquals(legs.size, moved.size)
+        for ((leg, on) in legs.zip(moved)) {
+            assertEquals(leg.split, on.split)
+            assertEquals(leg.points.first().t, on.points.first().t)
+            assertEquals(leg.points.last().t, on.points.last().t)
+            assertTrue(on.points.size >= 2)
+            on.points.forEach { p -> assertEquals(Route.positionAt(line, p.t).lat, p.lat, 1e-9) }
+            assertEquals(leg.points.last().lat + 0.0001, on.points.last().lat, 1e-9)
+        }
+    }
+
+    @Test
+    fun `a time between two points of a line falls between them`() {
+        val a = Route.Point(0, 1.0, 2.0, 5f)
+        val b = Route.Point(10, 2.0, 4.0, 5f)
+        val p = Route.positionAt(listOf(a, b), 5)
+        assertEquals(1.5, p.lat, 1e-9)
+        assertEquals(3.0, p.lon, 1e-9)
+        assertEquals(a, Route.positionAt(listOf(a, b), -3))
+        assertEquals(b, Route.positionAt(listOf(a, b), 30))
+    }
+
+    @Test
     fun currentPace() {
         assertEquals(333.0, Route.currentPace(run(100))!!, 2.0)
     }

@@ -279,6 +279,18 @@ class SettingsStore private constructor(private val store: DataStore<Preferences
         }
     }
 
+    private val routeRoadsKey = androidx.datastore.preferences.core.booleanPreferencesKey(SettingsKeys.ROUTE_ROADS)
+
+    /**
+     * The route card draws a GPS workout's route along the roads it took ([org.openstrap.app.maps.RouteSnapper]), the
+     * default, or as GPS recorded it. With GPS chosen no road tiles are fetched for it.
+     */
+    val routeRoads: Flow<Boolean> = read { it[routeRoadsKey] ?: true }
+
+    suspend fun setRouteRoads(on: Boolean) {
+        store.edit { it[routeRoadsKey] = on }
+    }
+
     private val workoutLiveViewKey = androidx.datastore.preferences.core.intPreferencesKey(SettingsKeys.WORKOUT_LIVE_VIEW)
 
     /** The live view a GPS workout was left on, Heart (0) or Map (1); the next one opens on it. Heart by default. */
@@ -876,6 +888,7 @@ object SettingsKeys {
     const val AUTO_START_WORKOUTS = "auto_start_workouts"
     const val WEAR_REMINDER = "wear_reminder"
     const val STRAP_SESSIONS = "strap_sessions"
+    const val ROUTE_ROADS = "route_roads"
     const val WORKOUT_LIVE_VIEW = "workout_live_view"
     const val WORKOUT_SIDES = "workout_sides"
     const val ASK_END_ON = "ask_end_on"

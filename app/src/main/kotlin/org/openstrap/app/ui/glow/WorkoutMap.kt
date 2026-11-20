@@ -205,7 +205,7 @@ private fun point(p: Route.Point?): String =
     p?.let { """{"type":"Feature","geometry":{"type":"Point","coordinates":[${coord(it)}]},"properties":{}}""" }
         ?: """{"type":"FeatureCollection","features":[]}"""
 
-private fun coord(p: Route.Point) = String.format(Locale.ROOT, "%.7f,%.7f", p.lon, p.lat)
+internal fun coord(p: Route.Point) = String.format(Locale.ROOT, "%.7f,%.7f", p.lon, p.lat)
 
 /** Each stretch a LineString feature with its zone's colour (grey without heart rate). */
 private fun geoJson(stretches: List<Pair<List<Route.Point>, Int>>): String = buildString {

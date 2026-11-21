@@ -485,6 +485,9 @@ object StartLayout {
     /** The tile row's height with [tile] dp tiles and captions at [sp]. */
     fun tilesHeight(tile: Float, sp: Float, fontScale: Float): Float = tile + CAPTION_GAP_DP + caption(fontScale, sp)
 
+    /** The least a tap target is, dp. */
+    const val TOUCH_DP = 48f
+
     /** The centre of tile [i] of [n] spread across [width] dp: the first at the left edge, the last at the right. */
     fun centre(i: Int, n: Int, tile: Float, width: Float): Float = tile / 2 + i * (width - tile) / (n - 1)
 

@@ -123,7 +123,7 @@ internal fun recordingFigures(r: WorkoutState.Recording, active: Long, live: Liv
     val meters = r.workout.distanceMeters?.takeIf { it >= org.openstrap.app.presentation.Units.SHOWN_FROM_METERS }
     val all = when {
         r.strength -> listOf(
-            r.sets.count { it.end != null }.toString() to s.get(R.string.workout_live_figure_sets),
+            r.setsCounted.toString() to s.get(R.string.workout_live_figure_sets),
             org.openstrap.app.data.Strength.kgLifted(r.sets)?.let { org.openstrap.app.data.Strength.kgText(it) } to
                 s.get(R.string.workout_live_figure_kg_lifted),
             kcal,
@@ -257,7 +257,9 @@ private fun ColumnScope.SmallContent(m: StartWidgetModel, f: WidgetFrame) {
         Action(m, sz, f)
     }
     Gap(WidgetGrid.GAP_TIGHT_DP)
-    Text(m.usual.name, style = NameStyle, maxLines = 1)
+    // When the strap needs something its words take the name's line, as on the other Smalls, where the top row has no room.
+    val attention = attentionWords(f)
+    if (attention != null) AttentionText(attention) else Text(m.usual.name, style = NameStyle, maxLines = 1)
 }
 
 /** Wide: the top row, the usual row, the sport tiles (bare on this height, each read out by name). */
@@ -570,12 +572,26 @@ private fun TileRow(tiles: StartLayout.Tiles, f: WidgetFrame) {
         Row(GlanceModifier.fillMaxWidth().then(Inset)) {
             for (i in 0 until n) {
                 if (i > 0) Spacer(GlanceModifier.defaultWeight())
-                Image(
-                    ImageProvider(tileBitmap(icons[i], tiles.tile, tiles.corner, icon, f.density)),
-                    contentDescription = actions[i],
-                    modifier = GlanceModifier.size(tiles.tile.dp).clickable(actionStartActivity(opens[i])),
-                    contentScale = ContentScale.FillBounds,
-                )
+                // A 48 dp wide touch area round the tile (it is as tall as the tile, its caption under it opens the same):
+                // the first reaches inward from the left edge, the last from the right, so the tiles stay where they
+                // line up with the usual's tile and play, and the row's height is the tile's.
+                val wide = if (n * StartLayout.TOUCH_DP <= f.contentWidth) maxOf(tiles.tile, StartLayout.TOUCH_DP) else tiles.tile
+                val side = when (i) {
+                    0 -> Alignment.Horizontal.Start
+                    n - 1 -> Alignment.Horizontal.End
+                    else -> Alignment.Horizontal.CenterHorizontally
+                }
+                Box(
+                    GlanceModifier.size(wide.dp, tiles.tile.dp).clickable(actionStartActivity(opens[i])),
+                    contentAlignment = Alignment(side, Alignment.Vertical.CenterVertically),
+                ) {
+                    Image(
+                        ImageProvider(tileBitmap(icons[i], tiles.tile, tiles.corner, icon, f.density)),
+                        contentDescription = actions[i],
+                        modifier = GlanceModifier.size(tiles.tile.dp),
+                        contentScale = ContentScale.FillBounds,
+                    )
+                }
             }
         }
         if (!tiles.captioned) return@Column

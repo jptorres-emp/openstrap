@@ -154,7 +154,10 @@ private fun ColumnScope.SmallContent(m: MomentWidgetModel, f: WidgetFrame) {
             Text(it.text, style = style, maxLines = 1)
         }
     } else {
-        fit.waiting?.let { Text(it.text, style = WidgetType.secondaryShown.copy(fontSize = it.sp.sp), maxLines = 1) }
+        // With nothing to show the Small says what the strap needs, as the status button's words, where the top row has no room.
+        val attention = attentionWords(f)
+        if (attention != null) AttentionText(attention)
+        else fit.waiting?.let { Text(it.text, style = WidgetType.secondaryShown.copy(fontSize = it.sp.sp), maxLines = 1) }
         if (fit.play) { Gap(); Play(m, f) }
     }
 }

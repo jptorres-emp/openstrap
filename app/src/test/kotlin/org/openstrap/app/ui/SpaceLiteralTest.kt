@@ -31,7 +31,7 @@ class SpaceLiteralTest {
      */
     private val measured = mapOf<Pair<String, String>, String>(
         ("glow/DetailPicture.kt" to "46") to "clears the chart's top readout, which is 46 dp tall",
-        ("glow/live/LiveMap.kt" to "64") to "fits the route below the top bar",
+        ("glow/live/LiveMap.kt" to "112") to "fits the route below the top bar and the heart rate under it",
         ("glow/live/LiveMap.kt" to "76") to "fits the route clear of the side actions",
         ("glow/live/LiveMap.kt" to "54") to "the map button sits clear of the top bar",
         ("glow/live/LiveMap.kt" to "44") to "the map button sits above the panel's overlap",

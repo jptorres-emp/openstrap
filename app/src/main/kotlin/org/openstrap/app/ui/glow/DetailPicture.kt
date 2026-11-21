@@ -332,7 +332,9 @@ internal fun DetailLineChart(
     val known = values.filterNotNull()
     if (known.isEmpty()) return
     val lo0 = listOfNotNull(known.min(), band?.start, yRange?.start, spread?.mapNotNull { it?.start }?.minOrNull()).min()
-    val hi0 = listOfNotNull(known.max(), band?.endInclusive, yRange?.endInclusive, spread?.mapNotNull { it?.endInclusive }?.maxOrNull()).max()
+    val hi0 = listOfNotNull(
+        known.max(), band?.endInclusive, yRange?.endInclusive, spread?.mapNotNull { it?.endInclusive }?.maxOrNull(),
+    ).max()
     val (scale, ticks) = remember(lo0, hi0) { niceScale(lo0, hi0) }
     val m = rememberTextMeasurer()
     val last = values.indexOfLast { it != null }
@@ -349,7 +351,10 @@ internal fun DetailLineChart(
         shade?.let { s ->
             drawRect(DetailBandInk, Offset(xOf(s.first), plot.top), Size(xOf(s.last) - xOf(s.first), plot.bottom - plot.top))
             // Said, so the block is not a mystery.
-            if (shadeLabel != null) drawText(m.measure(shadeLabel, DetailAxisText), topLeft = Offset(xOf(s.first) + 4.dp.toPx(), plot.top + 2.dp.toPx()))
+            if (shadeLabel != null) {
+                val labelAt = Offset(xOf(s.first) + 4.dp.toPx(), plot.top + 2.dp.toPx())
+                drawText(m.measure(shadeLabel, DetailAxisText), topLeft = labelAt)
+            }
         }
         if (hourBands) {
             val pitch = plot.plotRight / HOURS_IN_DAY
@@ -359,7 +364,10 @@ internal fun DetailLineChart(
                 val upTo = ((h + 1) * per).toInt().coerceIn(0, n)
                 // The hour's own readings when it has them (their lowest and highest), else the line's averages.
                 val slice = values.subList(from, upTo).filterNotNull() +
-                    (spread?.subList(from, upTo.coerceAtMost(spread.size))?.filterNotNull()?.flatMap { listOf(it.start, it.endInclusive) }.orEmpty())
+                    (
+                        spread?.subList(from, upTo.coerceAtMost(spread.size))?.filterNotNull()
+                            ?.flatMap { listOf(it.start, it.endInclusive) }.orEmpty()
+                        )
                 if (slice.isEmpty()) return@repeat
                 val y0 = plot.y(slice.max())
                 val y1 = plot.y(slice.min())

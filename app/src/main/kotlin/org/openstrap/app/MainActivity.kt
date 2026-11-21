@@ -497,7 +497,7 @@ private fun AppRoot(
                         detail = { t, d ->
                             DetailHost(
                                 t, d, nav, shown, histories, container, dayVm, workoutsVm, liveHeart, profile, padding,
-                                onOpenProfile = { openPage(Page.Profile) }, seeHabitAge = seeHabitAge,
+                                onOpenProfile = { openPage(Page.Profile) },
                             )
                         },
                         onOpenPage = openPage, seeHabitAge = seeHabitAge,

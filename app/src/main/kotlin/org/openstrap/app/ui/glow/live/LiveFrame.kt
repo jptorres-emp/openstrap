@@ -164,13 +164,11 @@ internal fun LiveFrame(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     BackHandler(onBack = controls.onMinimize)
-    // The screens built for each sport label their buttons; the older one says to hold the square under them.
-    val labelled = time != null
     val landscape = LocalLiveLandscape.current
     // On its side the screen keeps a wider column than a page's, so the content and the controls fit side by side.
     CompositionLocalProvider(LocalPageColumn provides if (landscape) GlowLayout.MaxContentWidth else LocalPageColumn.current) {
         HaloPageColumn(contentPadding, scroll = false) {
-            LiveTopBar(r, connected, controls, title, time, status, battery, labelled, quiet)
+            LiveTopBar(r, connected, controls, title, time, status, battery, quiet)
             if (landscape) {
                 LandscapePanes(
                     r, connected, controls, bottomRoom != null, paused,
@@ -377,7 +375,7 @@ private fun TotalTime(time: () -> Long, paused: Boolean) {
 @Composable
 internal fun LiveTopBar(
     r: WorkoutState.Recording, connected: Boolean, controls: LiveControls, title: String?, time: (() -> Long)?,
-    status: List<Pair<String, Color>>, battery: Int?, labelled: Boolean, quiet: Boolean,
+    status: List<Pair<String, Color>>, battery: Int?, quiet: Boolean,
 ) {
     val color = liveColor(r)
     HaloPageHeader(

@@ -254,7 +254,9 @@ internal fun SummaryHeroCard(
                 Text(
                     hero.title.orEmpty(), Modifier.weight(1f, fill = false), color = Color.White, style = GlowType.heroTitle, maxLines = 1,
                 )
-                if (note != null) Text(note, Modifier.padding(start = Space.S12), color = GlowType.noteInk, style = GlowType.noteSmall, maxLines = 1)
+                if (note != null) {
+                    Text(note, Modifier.padding(start = Space.S12), color = GlowType.noteInk, style = GlowType.noteSmall, maxLines = 1)
+                }
             }
             HaloBigNumber(hero.value, BigNumber.Detail, unit = hero.unit, unitColor = GlowType.noteInk, unitLines = 2, fit = true)
             val sentence = hero.sentence ?: hero.line
@@ -630,7 +632,8 @@ private fun SetsBlock(groups: List<ExerciseSets>, summary: PhoneSummary, maxHr: 
                         }
                     }
                     Text(
-                        s.peak?.toString().orEmpty(), Modifier.widthIn(min = 30.dp), color = SoftInk, style = GlowType.secondary, maxLines = 1,
+                        s.peak?.toString().orEmpty(), Modifier.widthIn(min = 30.dp), color = SoftInk,
+                        style = GlowType.secondary, maxLines = 1,
                         textAlign = TextAlign.End,
                     )
                 }

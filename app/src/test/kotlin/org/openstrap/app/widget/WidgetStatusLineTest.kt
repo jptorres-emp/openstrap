@@ -227,7 +227,7 @@ class WidgetStatusLineTest {
                     assertTrue("$where: the title beside the button", WidgetText.fitWidth(StartLayout.SHORT_TITLE, top.titleSp, s) + StatusButton.TITLE_GAP_DP + StatusButton.SIZE_DP <= w)
                     return@forEachIndexed
                 }
-                val top = StartLayout.statusTop(m, l, size, w, h, s)
+                val top = StartLayout.statusTop(l, size, w, s)
                 val b = if (i == 1) StartLayout.wide(m, w, h, s, top.height) else StartLayout.large(m, w, h, s, top.height)
                 val least = (b.gaps - 2) * StartLayout.MIN_GAP_DP
                 assertTrue("$where: ${b.content + least} in $h", b.content + least <= h + 0.01f)

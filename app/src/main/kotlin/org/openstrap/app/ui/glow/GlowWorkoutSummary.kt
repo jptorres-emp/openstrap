@@ -120,17 +120,18 @@ fun GlowWorkoutSummaryScreen(
 ) {
     val a = summary?.analysis
     // A workout too short to count toward the goal and the badges sets no longest-workout best either.
-    @Suppress("NAME_SHADOWING")
-    val rewards = remember(rewards, a?.activeSeconds) { rewards?.withoutShortBest(a != null && !Rewards.countsTowardGoal(true, a.activeSeconds)) }
+    val tooShort = a != null && !Rewards.countsTowardGoal(true, a.activeSeconds)
+    val shownRewards = remember(rewards, tooShort) { rewards?.withoutShortBest(tooShort) }
     // Done goes through the celebrations it earned (workouts spec 3.4): a personal best's card, then the goal moment
     // once a week, then away.
     var step by rememberSaveable { mutableStateOf(SummaryStep.Summary) }
     var settings by rememberSaveable { mutableStateOf(false) }
-    val moment = rewards != null && celebrations != null && rewards.goalMet && celebrations.goalMoment && celebrations.momentWeek != rewards.weekStart
+    val moment = shownRewards != null && celebrations != null && shownRewards.goalMet &&
+        celebrations.goalMoment && celebrations.momentWeek != shownRewards.weekStart
     fun next(from: SummaryStep) {
         step = when {
-            from < SummaryStep.Best && rewards?.best != null -> SummaryStep.Best
-            from < SummaryStep.Moment && moment -> SummaryStep.Moment.also { celebrations.markMoment(rewards.weekStart) }
+            from < SummaryStep.Best && shownRewards?.best != null -> SummaryStep.Best
+            from < SummaryStep.Moment && moment -> SummaryStep.Moment.also { celebrations.markMoment(shownRewards.weekStart) }
             else -> { onDone(); return }
         }
     }
@@ -142,7 +143,7 @@ fun GlowWorkoutSummaryScreen(
     // Share opens the share screen (workouts spec 2.9) in the summary's place; close comes back here.
     var sharing by rememberSaveable { mutableStateOf(false) }
     if (sharing && summary != null && hero != null) {
-        WorkoutShareScreen(summary, hero, rewards?.earned.orEmpty(), liveRoute, contentPadding, onClose = { sharing = false })
+        WorkoutShareScreen(summary, hero, shownRewards?.earned.orEmpty(), liveRoute, contentPadding, onClose = { sharing = false })
         return
     }
     // The route map page in the summary's place, as Share is; its state in a ViewModel ([RouteMapModel]).
@@ -151,16 +152,19 @@ fun GlowWorkoutSummaryScreen(
         RouteMapPage(summary, routeMap, contentPadding)
         return
     }
-    if (step == SummaryStep.Best && rewards?.best != null && a != null) {
+    if (step == SummaryStep.Best && shownRewards?.best != null && a != null) {
         BestCardScreen(
-            rewards.best, a.sportName, contentPadding, onContinue = done,
+            shownRewards.best, a.sportName, contentPadding, onContinue = done,
             onShare = if (hero != null) ({ sharing = true }) else null,
         )
         return
     }
-    if (step == SummaryStep.Moment && rewards != null) {
+    if (step == SummaryStep.Moment && shownRewards != null) {
         val starts = remember(workouts) { goalWeekStarts(workouts) }
-        GoalMomentScreen(rewards.week.count, rewards.week.goal, rewards.inARow, starts, contentPadding, onSettings = { settings = true }, onContinue = done)
+        GoalMomentScreen(
+            shownRewards.week.count, shownRewards.week.goal, shownRewards.inARow, starts, contentPadding,
+            onSettings = { settings = true }, onContinue = done,
+        )
         if (settings && celebrations != null) CelebrationsSheet(
             celebrations.goalMoment, celebrations.weeklyRecap, celebrations.setGoalMoment, celebrations.setWeeklyRecap, onDismiss = { settings = false },
         )
@@ -202,7 +206,7 @@ fun GlowWorkoutSummaryScreen(
         val w = a.workout
         val others = remember(workouts, w.start) { workouts.filter { it.workout.start != w.start }.sortedByDescending { it.workout.start } }
         val usualLoad = remember(others) { Workouts.usualLoad(others.map { it.workout.trainingLoad }) }
-        val earned = rewards?.earned.orEmpty()
+        val earned = shownRewards?.earned.orEmpty()
         // A personal best ticks once (the hero no longer swells: Halo's hero has no effort light).
         val haptics = rememberHaptics()
         var ticked by rememberSaveable(w.start) { mutableStateOf(false) }
@@ -225,7 +229,7 @@ fun GlowWorkoutSummaryScreen(
         // What was done to the times, under the hero that says them.
         TrimNote(summary, trim.undo, Modifier.padding(horizontal = Space.S4), onCard = false)
         val weekStarts = remember(workouts) { goalWeekStarts(workouts) }
-        FamilySection(family, summary, liveRoute, others, weekStarts, week = rewards?.week, figures = shownHero.figures)
+        FamilySection(family, summary, liveRoute, others, weekStarts, week = shownRewards?.week, figures = shownHero.figures)
         EarnedChips(earned)
         // The drop only with heart rate to show: recorded in the workout, or arriving live after it.
         val live = calmDown?.takeIf { it.start == w.start }
@@ -280,7 +284,8 @@ private fun CalmDownHero(summary: PhoneSummary, live: CalmDown?, usualDrop: Int?
                         horizontalArrangement = Arrangement.spacedBy(Space.S8)) {
                         Text("${line.drop}", color = Color.White, style = GlowType.figureLarge)
                         Text(
-                            stringResource(R.string.glow_summary_drop_unit), Modifier.padding(bottom = Space.S4), color = if (beats) ink else DropTealInk,
+                            stringResource(R.string.glow_summary_drop_unit), Modifier.padding(bottom = Space.S4),
+                            color = if (beats) ink else DropTealInk,
                             style = GlowType.secondary,
                         )
                     }
@@ -303,7 +308,8 @@ private val DropTealInk = MetricColors.readinessPale
 
 /**
  * The heart rate from a minute before the [end] to two after, small (board HaloSummaryRun: 120 by 52): the workout's
- * last minute dim, the drop bright ([after]: white on the lit card, teal on the grey one, so it stays apart from the Load card under it), a hairline mark at the end. Gaps of more than five seconds break the line.
+ * last minute dim, the drop bright ([after]: white on the lit card, teal on the grey one, so it stays apart from the
+ * Load card under it), a hairline mark at the end. Gaps of more than five seconds break the line.
  */
 @Composable
 private fun DropLine(readings: List<Pair<Long, Int>>, end: Long, after: Color, modifier: Modifier = Modifier) {

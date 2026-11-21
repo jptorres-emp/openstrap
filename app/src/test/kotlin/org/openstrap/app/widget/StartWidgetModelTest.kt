@@ -442,20 +442,20 @@ class StartWidgetModelTest {
     @Test fun `with the strap status the Wide and the Small get a title row with the button`() {
         val m = WidgetSamples.start(now, zone, Locale.UK)
         val l = StatusLine(StrapStatus.StaleSync(0), listOf("Synced Wednesday", "Synced Wed", "Wednesday", "Wed"))
-        val top = StartLayout.statusTop(m, l, WidgetSizes.Wide, 313f, 120f, 1f)
+        val top = StartLayout.statusTop(l, WidgetSizes.Wide, 313f, 1f)
         assertEquals(StatusButton.SIZE_DP, top.height, 0f)
         assertEquals(WidgetGrid.TOP_ROW_DP, top.height, 0f)
         assertNotNull(top.words)
         val b = StartLayout.wide(m, 313f, 120f, 1f, top.height)
         assertNotNull(b.tiles)
         // The top row is always there, as in every widget: with no status it is the title and a quiet row of the same height.
-        val quiet = StartLayout.statusTop(m, null, WidgetSizes.Wide, 313f, 120f, 1f)
+        val quiet = StartLayout.statusTop(null, WidgetSizes.Wide, 313f, 1f)
         assertNull(quiet.status)
         assertNull(quiet.words)
         assertEquals(WidgetGrid.TOP_ROW_DP, quiet.height, 0f)
         assertEquals(StartLayout.wide(m, 313f, 120f, 1f, top.height).gaps, StartLayout.wide(m, 313f, 120f, 1f, quiet.height).gaps)
         // The Small: the top row with the button and no words, whatever the cell.
-        val small = StartLayout.statusTop(m, l, WidgetSizes.Small, 110f, 110f, 1f)
+        val small = StartLayout.statusTop(l, WidgetSizes.Small, 110f, 1f)
         assertEquals(l, small.status)
         assertNull(small.words)
         assertEquals(WidgetGrid.TOP_ROW_DP, small.height, 0f)

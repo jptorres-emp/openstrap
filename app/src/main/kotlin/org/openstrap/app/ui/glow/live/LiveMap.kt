@@ -1,6 +1,7 @@
 package org.openstrap.app.ui.glow.live
 
 import org.openstrap.app.ui.theme.Corner
+import org.openstrap.app.ui.theme.Ink
 import org.openstrap.app.ui.theme.Space
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
@@ -53,6 +54,8 @@ import org.openstrap.app.R
  * distance, the moving time and the pace (a ride's speed) and the latest kilometre, above the bar shared with the
  * pace page ([LiveBottomBar]). A drag on the map pans it and stops following; follow me fits the route again.
  */
+// The GPS lines are built once per screen from the recording, so the list never changes under a recomposition.
+@Suppress("UnstableCollections", "ComposeUnstableCollections")
 @Composable
 internal fun LiveMapScreen(
     r: WorkoutState.Recording,
@@ -96,11 +99,11 @@ internal fun LiveMapScreen(
             // The frame's own top bar over the map (sport, time, strap and GPS), on a scrim so it reads on any map, and
             // the heart rate under it.
             Column(
-                Modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.7f), Color.Transparent)))
+                Modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(Ink.ScrimMap, Color.Transparent)))
                     .padding(top = top, start = Space.S16, end = Space.S16, bottom = Space.S12),
                 verticalArrangement = Arrangement.spacedBy(Space.S8),
             ) {
-                LiveTopBar(r, connected, controls, null, time, status, battery, labelled = true, quiet = false)
+                LiveTopBar(r, connected, controls, null, time, status, battery, quiet = false)
                 if (heartPill) LitHeartPill(bpm, r.maxHeartRate, r.paused, 36.dp)
             }
             // On its side the map is short, so the buttons hang under the GPS pill instead of rising into it.

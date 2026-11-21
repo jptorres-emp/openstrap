@@ -102,7 +102,8 @@ fun GlowScoreDetailScreen(
     )
     // The held day dims the page through the template, as it does for every detail ([LocalDetailDay]).
     val shownDay = LocalDetailDay.current
-    CompositionLocalProvider(LocalDetailDay provides DetailDay(shownDay.picked, shownDay.pending || (hold.pending && score in HELD_SCORES))) {
+    val dayPending = shownDay.pending || (hold.pending && score in HELD_SCORES)
+    CompositionLocalProvider(LocalDetailDay provides DetailDay(shownDay.picked, dayPending)) {
     Box(modifier) { when (score) {
         Score.Recovery -> RecoveryDetail(
             heldState, heldR, heldStrapScore, history, onOpen, onSwitch, onSelectDay, contentPadding, onBack, state.date,

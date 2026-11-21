@@ -24,6 +24,9 @@ internal object Ink {
     /** Black under chips, wells, grips and trim shades on a picture: a light scrim. */
     val Scrim = Color.Black.copy(alpha = 0.4f)
 
+    /** Black fading out at the top of a map, under the frame's top bar, so the bar reads on any map. */
+    val ScrimMap = Color.Black.copy(alpha = 0.7f)
+
     /** Black behind a sheet's backdrop, a dot's halo on a chart or a label on a picture: a deep scrim. */
     val ScrimDeep = Color.Black.copy(alpha = 0.65f)
 

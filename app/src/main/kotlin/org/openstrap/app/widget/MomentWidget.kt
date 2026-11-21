@@ -148,7 +148,11 @@ private fun ColumnScope.SmallContent(m: MomentWidgetModel, f: WidgetFrame) {
                 Play(m, f)
             }
         }
-        fit.word?.let { Gap(WidgetGrid.GAP_TIGHT_DP); Text(it.text, style = WidgetType.word.copy(color = WidgetType.secondaryShown.color, fontSize = it.sp.sp), maxLines = 1) }
+        fit.word?.let {
+            Gap(WidgetGrid.GAP_TIGHT_DP)
+            val style = WidgetType.word.copy(color = WidgetType.secondaryShown.color, fontSize = it.sp.sp)
+            Text(it.text, style = style, maxLines = 1)
+        }
     } else {
         fit.waiting?.let { Text(it.text, style = WidgetType.secondaryShown.copy(fontSize = it.sp.sp), maxLines = 1) }
         if (fit.play) { Gap(); Play(m, f) }
@@ -172,7 +176,10 @@ private fun ColumnScope.WideContent(m: MomentWidgetModel, fit: MomentLayout.Fit,
     } else {
         Top(fit, f, 0f)
         Flex()
-        fit.sentence?.let { Text(it.text, style = WidgetType.hero.copy(fontSize = it.sp.sp), maxLines = MomentLayout.SENTENCE_LINES); Gap(WidgetGrid.GAP_WIDE_DP) }
+        fit.sentence?.let {
+            Text(it.text, style = WidgetType.hero.copy(fontSize = it.sp.sp), maxLines = MomentLayout.SENTENCE_LINES)
+            Gap(WidgetGrid.GAP_WIDE_DP)
+        }
         fit.row?.let { NumberRow(m, it, f) }
         fit.waiting?.let { Text(it.text, style = WidgetType.secondaryShown.copy(fontSize = it.sp.sp), maxLines = 1) }
         if (fit.chart > 0f) m.chart?.let { Gap(WidgetGrid.GAP_WIDE_DP); Chart(it, fit.chart, f) }
@@ -186,7 +193,14 @@ private fun Name(name: MomentLayout.Line) = Text(name.text, style = NameStyle.co
 @Composable
 private fun Top(fit: MomentLayout.Fit, f: WidgetFrame, above: Float) {
     val top = fit.top
-    if (top != null) TopRowView(fit.name.text, null, top, f, above, NameStyle) else Row(GlanceModifier.fillMaxWidth().height(WidgetGrid.TOP_ROW_DP.dp), verticalAlignment = Alignment.CenterVertically) { Name(fit.name) }
+    if (top != null) {
+        TopRowView(fit.name.text, null, top, f, above, NameStyle)
+    } else {
+        Row(
+            GlanceModifier.fillMaxWidth().height(WidgetGrid.TOP_ROW_DP.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) { Name(fit.name) }
+    }
 }
 
 /** The dots with the word beside them, the figure or the Start button on the right, bottoms aligned. */

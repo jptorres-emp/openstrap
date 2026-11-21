@@ -67,7 +67,6 @@ internal fun DetailHost(
     profile: UserProfile,
     padding: PaddingValues,
     onOpenProfile: () -> Unit,
-    seeHabitAge: () -> Unit,
 ) {
     val day = shown.day
     val pop: () -> Unit = { nav.pop(tab) }

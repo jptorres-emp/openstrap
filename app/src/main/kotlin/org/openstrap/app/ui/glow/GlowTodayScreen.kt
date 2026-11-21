@@ -266,7 +266,9 @@ fun GlowTodayScreen(
             GlowScreenList(contentPadding, list) {
                 add(Pane.Full, GlowBlocks.HEADER) { header() }
                 if (loading) {
-                    add(Pane.Full, GlowBlocks.cardsKey(listOf(TodayCard.Hero))) { LoadingHero(Modifier.fillMaxWidth().gridSize(CardSize.Wide)) }
+                    add(Pane.Full, GlowBlocks.cardsKey(listOf(TodayCard.Hero))) {
+                        LoadingHero(Modifier.fillMaxWidth().gridSize(CardSize.Wide))
+                    }
                     return@GlowScreenList
                 }
                 // One block per grid row: a Small pair stays side by side, and on a wide screen in one column. Each is
@@ -699,7 +701,10 @@ private fun AfterHero(ctx: TodayContext, lightAngle: Float?, onOpenWorkout: (Lon
     val style = heroStyle(MetricColors.readiness, lightAngle ?: LightAngle.Right, rim = AFTER_RIM)
     HaloCard(modifier, tone = CardTone.lit(style), onClick = { onOpenWorkout(w.workout.start) }) {
         Column {
-            HaloTitle(Workouts.sportName(w.workout.sportType), note = stringResource(R.string.glow_today_after_finished, Units.duration(ctx.now - w.end)))
+            HaloTitle(
+                Workouts.sportName(w.workout.sportType),
+                note = stringResource(R.string.glow_today_after_finished, Units.duration(ctx.now - w.end)),
+            )
             HeroSentence(TodayCopy.after(nowHr, ctx.state.restingHeartRate))
             Spacer(Modifier.height(Space.S20))
             AfterWorkoutBody(w)
@@ -841,7 +846,7 @@ private val PairButtonSlot = 48.dp
  * for hours. One action, and when it was last tried.
  */
 @Composable
-private fun StuckHero(ctx: TodayContext, strap: TodayStrap, onSyncNow: () -> Unit, modifier: Modifier) {
+private fun StuckHero(ctx: TodayContext, strap: TodayStrap, onSyncNow: () -> Unit, modifier: Modifier = Modifier) {
     val haptics = rememberHaptics()
     val copy = stuckCopy(ctx.state.asleepSeconds != null, ctx.newest?.let { TimeOfDay.format(it, ctx.zone) })
     HaloCard(modifier, tone = CardTone.lit(heroStyle(MetricColors.warn, LightAngle.Below))) {
@@ -921,7 +926,9 @@ private fun TodayRow(
         )
         TodayCard.LastNight ->
             if (slot.size == CardSize.Strip) LastNightStrip(s, onOpenSleep, stuck = ctx.stuck, firstNights = ctx.firstNights)
-            else LastNightCard(s, ctx.firstNights, onOpenSleep, modifier, stuck = ctx.stuck, size = size, lit = slot.look?.tier == Tier.Glow)
+            else LastNightCard(
+                s, ctx.firstNights, onOpenSleep, modifier, stuck = ctx.stuck, size = size, lit = slot.look?.tier == Tier.Glow,
+            )
         // A live reading is never stale.
         TodayCard.HeartRate -> HeartDayCard(
             s, ctx.live, size, { onOpenMetric(Metric.HeartRate) }, modifier, restingRange = ctx.restingRange,

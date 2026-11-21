@@ -91,7 +91,7 @@ internal fun DetailPicture(modifier: Modifier = Modifier, height: Dp = DetailPic
 internal val DetailPictureHeight = 64.dp
 
 /** Heart points and active minutes share this lime (rules, metric colours), apart from Steps' own. */
-internal val ActivityLime = Color(0xFFC6F55A)
+internal val ActivityLime = org.openstrap.app.ui.theme.MetricColors.activityLime
 
 /** How tall a detail's chart stands, whatever its data: an empty one keeps it too ([DetailEmpty]), so nothing below moves. */
 internal val DetailChartHeight = 200.dp

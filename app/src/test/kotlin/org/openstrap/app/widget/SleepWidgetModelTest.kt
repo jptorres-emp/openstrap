@@ -198,7 +198,9 @@ class SleepWidgetModelTest {
     @Test fun `the Small keeps everything at the default font and fits at every size`() {
         val m = model()
         val normal = SleepLayout.small(m, small.first, small.second, 1f)
-        assertEquals(WidgetHero.dot(WidgetSizes.Small, small.second), normal.row.dot, 0f)
+        // The Small's 110 dp holds the top row, the score, time asleep and the bar on the grid's gaps with the dots at the
+        // Small's 3: the hero's larger dots would cost it a line, and the word and the lines come first.
+        assertEquals(SleepLayout.SMALL_DOT, normal.row.dot, 0f)
         assertEquals("Good", normal.row.word)
         assertEquals(listOf(SleepLayout.SmallLine("7 h 40 asleep")), normal.lines)
         assertTrue(normal.bar)
@@ -240,10 +242,12 @@ class SleepWidgetModelTest {
             assertTrue(f.note || s > 1.08f)
             assertTrue(f.bar)
         }
-        // The default font at the minimum: the short word keeps time asleep, the legend on two rows.
+        // The default font at the minimum: the short word keeps time asleep. The Wide's 120 dp has no room for the legend
+        // under the bar, so it goes before anything is clipped and the bar stays.
         val normal = SleepLayout.wide(m, wide.first, wide.second, 1f)
         assertEquals("Good", normal.row.word)
-        assertEquals(2, normal.legendRows)
+        assertEquals(0, normal.legendRows)
+        assertTrue(normal.bar)
         // A real 4 x 2 (One UI's, 353 dp) has room for the tab's words.
         assertEquals("Sleep score, good", SleepLayout.wide(m, 353f - 40f, 161f, 1.08f).row.word)
         assertEquals(WidgetHero.dot(WidgetSizes.Wide, 161f), SleepLayout.wide(m, 353f - 40f, 161f, 1f).row.dot, 0f)
@@ -279,11 +283,11 @@ class SleepWidgetModelTest {
             assertEquals("Woke 3 times", f.row.right)
             assertTrue("rows at $s", f.stages)
         }
-        // At the default font the minimum Large keeps the sentence beside the rows.
-        assertTrue(SleepLayout.large(m, large.first, large.second, 1f).sentenceLines > 0)
-        // One UI's 4 x 3 (353 x 375, content 313 x 335) keeps it all at its own font size.
-        val oneUi = SleepLayout.large(m, 313f, 335f, 1.08f)
-        assertTrue(oneUi.stages && oneUi.sentenceLines > 0)
+        // The Large's 220 dp holds the top row, the score row and the stage rows: the sentence goes first, at the minimum
+        // width and on One UI's alike, since rows are decided per bucket.
+        assertEquals(0, SleepLayout.large(m, large.first, large.second, 1f).sentenceLines)
+        val oneUi = SleepLayout.large(m, 313f, large.second, 1.08f)
+        assertTrue(oneUi.stages && oneUi.sentenceLines == 0)
         // Too short for the rows: the stage bar.
         val short = SleepLayout.large(m, large.first, 140f, 1f)
         assertFalse(short.stages)

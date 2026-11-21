@@ -23,6 +23,8 @@ object MetricColors {
     /** Heart's lighter step: the text of a small destructive pill (delete, discard) on its dark fill. */
     val heartLight = Color(0xFFFF7A7E)
     val steps = Color(0xFFC3F53C)
+    /** Heart points and Active minutes share this lime, a step apart from Steps' own. */
+    val activityLime = Color(0xFFC6F55A)
     val sleepDeep = Color(0xFF4C6FFF)
     /** Sleep's navy: the near-black "Midnight" glow's light from below (the Training card). */
     val sleepNavy = Color(0xFF2A44B0)

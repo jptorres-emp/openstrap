@@ -30,7 +30,6 @@ class SpaceLiteralTest {
      * alignment (the line sits under a label column or clear of a map's chrome), not a gap between parts.
      */
     private val measured = mapOf<Pair<String, String>, String>(
-        ("glow/DetailSleepPictures.kt" to "48") to "starts under the stage labels, which are 48 dp wide",
         ("glow/DetailPicture.kt" to "46") to "clears the chart's top readout, which is 46 dp tall",
         ("glow/live/LiveMap.kt" to "64") to "fits the route below the top bar",
         ("glow/live/LiveMap.kt" to "76") to "fits the route clear of the side actions",

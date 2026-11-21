@@ -185,21 +185,24 @@ class StepsWidgetModelTest {
     private val wide = WidgetSizes.Wide.width.value - 2 * WidgetSizes.PADDING_DP to WidgetSizes.Wide.height.value - 2 * WidgetSizes.PADDING_DP
     private val large = WidgetSizes.Large.width.value - 2 * WidgetSizes.PADDING_DP to WidgetSizes.Large.height.value - 2 * WidgetSizes.PADDING_DP
 
-    /** The Small's column, as SmallContent stacks it. */
+    /** The Small's column, as SmallContent stacks it: the grid's top row, a flexible space, the number, a gap, the bar and the share. */
     private fun smallHeight(fit: StepsLayout.Small, fontScale: Float): Float =
-        WidgetText.line(WidgetText.TITLE_SP, fontScale) + StepsLayout.dotsHeight(fit.dot) +
+        WidgetGrid.TOP_ROW_DP + StepsLayout.MIN_GAP_DP + StepsLayout.dotsHeight(fit.dot) +
             (if (fit.word) StepsLayout.SMALL_WORD_GAP_DP + WidgetText.line(WidgetText.BODY_SP, fontScale) else 0f) +
-            StepsLayout.SMALL_BAR_GAP_DP + StepsLayout.BAR_DP +
+            StepsLayout.MIN_GAP_DP + StepsLayout.BAR_DP +
             (if (fit.share) StepsLayout.SMALL_BAR_GAP_DP + WidgetText.line(WidgetText.SECONDARY_SP, fontScale) else 0f)
 
-    @Test fun `the Small keeps everything at the default font and fits at 1_3`() {
+    @Test fun `the Small keeps the dots, the bar and the share at the default font and fits at 1_3, dropping lines not cutting them`() {
         val m = model()
         val normal = StepsLayout.small(m.stepsText, m.share, small.first, small.second, 1f)
-        assertEquals(Triple(StepsLayout.SMALL_DOT, true, true), Triple(normal.dot, normal.word, normal.share))
+        // The Small's 110 dp holds the top row, the dots, the bar and the share on the grid's 8 dp gaps: "today" is what goes.
+        assertEquals(Triple(StepsLayout.SMALL_DOT, false, true), Triple(normal.dot, normal.word, normal.share))
         assertTrue(smallHeight(normal, 1f) <= small.second)
         val big = StepsLayout.small(m.stepsText, m.share, small.first, small.second, 1.3f)
         assertTrue(smallHeight(big, 1.3f) <= small.second)
-        assertTrue(big.word || big.share)
+        // At 1.3 the lines are too tall for the grid's gaps: the number and the bar stay, "today" and the share go.
+        assertFalse(big.word)
+        assertFalse(big.share)
         // Five figures shrink the dots to the width rather than clip.
         val many = StepsLayout.small("12,345", "Goal met", small.first, small.second, 1f)
         assertTrue(many.dot < StepsLayout.SMALL_DOT)

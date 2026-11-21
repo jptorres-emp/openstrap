@@ -35,6 +35,15 @@ object DayKeyMerge {
         Table("daily_energy", "day", Rule.NEWEST, "updatedAt"),
     )
 
+    /**
+     * Day-keyed tables that came after version 28, keyed by date from the start, so the migration leaves them alone; a
+     * restore of an old backup still picks its row per date by their rules. The fork's weight log (version 33).
+     */
+    val LATER = listOf(Table("weight", "day", Rule.NEWEST, "updatedAt"))
+
+    /** Every day-keyed table's rule, for a restore ([org.openstrap.app.export.CsvImporter]). */
+    val ALL = TABLES + LATER
+
     /** One row for a date: its old key, and its [Table.value] (0 for a rule that compares none). */
     data class Candidate(val old: Long, val value: Long)
 
@@ -64,6 +73,7 @@ object DayKeyMerge {
         is NightMetricsRow -> row.updatedAt
         is HabitAgeWeekRow -> row.updatedAt
         is DailyCaloriesRow -> row.updatedAt
+        is WeightEntry -> row.updatedAt
         else -> 0
     }
 }

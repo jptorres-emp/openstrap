@@ -774,6 +774,19 @@ interface HealthDao : RangedReads {
     @Query("SELECT * FROM check_in WHERE day BETWEEN :from AND :to ORDER BY day")
     suspend fun checkInsOnce(from: LocalDate, to: LocalDate): List<CheckInRow>
 
+    // Weights the user logged, one a day (the fork's weight log).
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertWeights(rows: List<WeightEntry>)
+
+    @Query("DELETE FROM weight WHERE day = :day")
+    suspend fun deleteWeight(day: LocalDate)
+
+    @Query("SELECT * FROM weight WHERE day BETWEEN :from AND :to ORDER BY day")
+    fun weights(from: LocalDate, to: LocalDate): Flow<List<WeightEntry>>
+
+    @Query("SELECT * FROM weight ORDER BY day")
+    suspend fun weightsAll(): List<WeightEntry>
+
     // Each Sunday's Habit Age estimate, for the next week's comparison.
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertHabitAgeWeek(row: HabitAgeWeekRow)

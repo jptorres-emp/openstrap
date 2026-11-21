@@ -43,6 +43,7 @@ import org.openstrap.app.data.db.Spo2Sample
 import org.openstrap.app.data.db.StrapReadinessRow
 import org.openstrap.app.data.db.StressSample
 import org.openstrap.app.data.db.WearEventRow
+import org.openstrap.app.data.db.WeightEntry
 import org.openstrap.app.data.db.Workout
 import org.openstrap.app.data.db.WorkoutHeartRate
 import java.time.Instant
@@ -207,6 +208,7 @@ private val TAG_DAY = DayColumn("date", "day_epoch")
 private val NIGHT_DAY = DayColumn("date", "day_epoch")
 private val HABIT_DAY = DayColumn("as_of_date", "as_of_epoch")
 private val CALORIES_DAY = DayColumn("date", "day_epoch")
+private val WEIGHT_DAY = DayColumn("date", "day_epoch")
 
 private fun stageCode(name: String) = when (name) {
     "awake" -> SleepStage.AWAKE; "light" -> SleepStage.LIGHT; "deep" -> SleepStage.DEEP; "rem" -> SleepStage.REM
@@ -559,4 +561,11 @@ val CSV_TABLES: List<CsvTable<*>> = listOf(
                 if (it.has("hourly_active_kcal")) it.string("hourly_active_kcal") else "")
         },
         { d, r -> d.insertDailyCalories(r) }),
+    // Weights the user logged (the fork's weight log). A fork backup has no date column: its day_epoch is a local midnight.
+    CsvTable("weight.csv", "day,day_epoch,kg,updated_epoch,date",
+        Key("weight", "day", "day_epoch", day = WEIGHT_DAY),
+        { d, f, t -> d.weightsAll().legacyIn(f, t) { it.day } },
+        { legacy(it.day).let { m -> listOf(iso(m), m, it.kg, it.updatedAt, it.day) } },
+        { WeightEntry(it.date(WEIGHT_DAY), it.float("kg"), it.longOrNull("updated_epoch") ?: DayKey.of(it.date(WEIGHT_DAY))) },
+        { d, r -> d.insertWeights(r) }),
 )

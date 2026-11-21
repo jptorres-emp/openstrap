@@ -54,8 +54,9 @@ import java.time.ZoneId
         PersonalBest::class,
         BadgeRow::class,
         WeekResult::class,
+        WeightEntry::class,
     ],
-    version = 32,
+    version = 33,
     autoMigrations = [
         AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3), AutoMigration(from = 3, to = 4),
         AutoMigration(from = 4, to = 5), AutoMigration(from = 5, to = 6),
@@ -69,6 +70,8 @@ import java.time.ZoneId
         AutoMigration(from = 23, to = 24),
         AutoMigration(from = 24, to = 25, spec = SleepEditMigration::class),
         AutoMigration(from = 28, to = 29), AutoMigration(from = 29, to = 30),
+        // The fork's weight log; a phone with the fork's own version 20 has the table already (ForkDatabase).
+        AutoMigration(from = 32, to = 33),
     ],
 )
 @TypeConverters(DayKeyConverter::class)
@@ -86,7 +89,13 @@ abstract class OpenStrapDatabase : RoomDatabase() {
         /** [migrations] in the phone's zone. */
         val MIGRATIONS = migrations()
 
-        fun create(context: Context): OpenStrapDatabase =
-            Room.databaseBuilder(context, OpenStrapDatabase::class.java, "openstrap.db").addMigrations(*MIGRATIONS).build()
+        const val NAME = "openstrap.db"
+
+        fun create(context: Context): OpenStrapDatabase {
+            // A phone that ran the fork's own version 20 first becomes the original's 20, so the upgrade below works.
+            runCatching { ForkDatabase.repair(context.getDatabasePath(NAME)) }
+                .onFailure { android.util.Log.w("OpenStrapDatabase", "fork database repair failed: $it") }
+            return Room.databaseBuilder(context, OpenStrapDatabase::class.java, NAME).addMigrations(*MIGRATIONS).build()
+        }
     }
 }

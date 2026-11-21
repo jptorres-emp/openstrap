@@ -26,10 +26,13 @@ class MigrationHarness : ExternalResource() {
     private val opened = mutableListOf<OpenStrapDatabase>()
 
     /** A database file at [version] with every table and index of that version, then [seed] run on it. */
-    fun create(version: Int, seed: SQLiteDatabase.() -> Unit = {}): File {
+    fun create(version: Int, seed: SQLiteDatabase.() -> Unit = {}): File = create(File(SourceTree.schemas, "$version.json"), version, seed)
+
+    /** A database file at [version] from the exported schema [schemaFile]: another app's, such as the fork's own 20. */
+    fun create(schemaFile: File, version: Int, seed: SQLiteDatabase.() -> Unit = {}): File {
         val file = File(System.getProperty("java.io.tmpdir"), "openstrap-migration-${System.nanoTime()}.db")
         files += file
-        val schema = JSONObject(File(SourceTree.schemas, "$version.json").readText()).getJSONObject("database")
+        val schema = JSONObject(schemaFile.readText()).getJSONObject("database")
         SQLiteDatabase.openOrCreateDatabase(file, null).use { db ->
             val entities = schema.getJSONArray("entities")
             for (i in 0 until entities.length()) {

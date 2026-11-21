@@ -51,7 +51,7 @@ class CsvRoundTripTest {
     }
 
     /** Each day-keyed table's day column. */
-    private val dayColumns = DayKeyMerge.TABLES.associate { it.name to it.column } + ("sleep_session" to "day")
+    private val dayColumns = DayKeyMerge.ALL.associate { it.name to it.column } + ("sleep_session" to "day")
 
     /** A value for every column, none of them a default: the CSV must carry each one for the row to come back equal. */
     private fun value(table: String, column: Column): Any = when (column.affinity) {

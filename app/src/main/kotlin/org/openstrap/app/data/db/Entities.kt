@@ -702,3 +702,15 @@ data class DailyCaloriesRow(
 ) {
     val hourlyKcal: List<Float> get() = hourly.split(',').map { it.toFloatOrNull() ?: 0f }
 }
+
+/**
+ * A weight the user logged for the day [day] (one a day: a second the same day replaces it), in kilograms (version
+ * 33, the fork's weight log). Logging one also sets the profile's weight, which calories and VO2 max read. A phone that
+ * had the fork's own version 20 already has the table, its days moved to [DayKey]s ([ForkDatabase]).
+ */
+@Entity(tableName = "weight")
+data class WeightEntry(
+    @PrimaryKey val day: LocalDate,
+    val kg: Float,
+    val updatedAt: Long,
+)

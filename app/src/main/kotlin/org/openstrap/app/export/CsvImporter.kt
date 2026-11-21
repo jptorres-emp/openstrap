@@ -237,7 +237,7 @@ class CsvImporter(private val db: OpenStrapDatabase, private val batch: Int = CS
      * here, and the row kept is picked by the migration's rules ([DayKeyMerge]), not by the order of the file.
      */
     private fun <T> oneADay(key: Key, rows: List<Parsed<T>>, zone: ZoneId): List<Parsed<T>> {
-        val rule = DayKeyMerge.TABLES.first { it.name == key.table }.rule
+        val rule = DayKeyMerge.ALL.first { it.name == key.table }.rule
         return rows.groupBy { it.time to it.id }.values.map { same ->
             if (same.size == 1) return@map same.single()
             val midnight = DayKey.legacyMidnight(DayKey.date(same.first().time), zone)

@@ -56,6 +56,10 @@ import org.openstrap.app.ui.theme.MetricColors
 /** The stage rows' track (board HaloSleep: white 0.06). */
 private val StageTrack = Ink.Faint
 
+/** The breakdown with [seconds] as its awake time, so the legend says the awake time the rest of the page does. */
+internal fun Summaries.SleepBreakdown.withAwake(seconds: Long): Summaries.SleepBreakdown =
+    copy(awakeSeconds = seconds, byStage = byStage + (SleepStage.AWAKE to seconds))
+
 /**
  * A night's stages as rows Awake to Deep (board HaloSleep, the hypnogram): a name 40 wide, an 8 dp track and the
  * stage's blocks in its own colour on it, with the start, middle and end times under the rows. [kept], the user's own
@@ -68,10 +72,12 @@ internal fun DetailStages(spans: List<StageSpan>, modifier: Modifier = Modifier,
     val end = spans.maxOf { it.end }.coerceAtLeast(start + 1)
     val rows = DayViewModel.SLEEP_STAGE_ROWS
     val order = rows.entries.sortedBy { it.value }.map { it.key }
+    // The names' column grows with the font, so "Awake" is never cut at a large size.
+    val nameWidth = 40.dp * androidx.compose.ui.platform.LocalDensity.current.fontScale.coerceAtLeast(1f)
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Space.S8)) {
         order.forEach { stage ->
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.S8)) {
-                Text(SLEEP_NAMES[stage].orEmpty(), Modifier.width(40.dp), color = DetailAxisInk, style = GlowType.caption, maxLines = 1)
+                Text(SLEEP_NAMES[stage].orEmpty(), Modifier.width(nameWidth), color = DetailAxisInk, style = GlowType.caption, maxLines = 1)
                 Canvas(Modifier.weight(1f).height(8.dp)) {
                     drawRoundRect(StageTrack, Offset.Zero, size, CornerRadius(4.dp.toPx()))
                     spans.filter { it.stage == stage || (stage == SleepStage.LIGHT && it.stage !in rows) }.forEach { sp ->
@@ -86,7 +92,7 @@ internal fun DetailStages(spans: List<StageSpan>, modifier: Modifier = Modifier,
                 }
             }
         }
-        Row(Modifier.fillMaxWidth().padding(start = 48.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+        Row(Modifier.fillMaxWidth().padding(start = nameWidth + Space.S8), horizontalArrangement = Arrangement.SpaceBetween) {
             listOf(start, start + (end - start) / 2, end).forEach { t ->
                 Text(clock(t), color = DetailAxisInk, style = GlowType.caption)
             }
@@ -147,7 +153,7 @@ internal fun DetailSleepWindows(
     modifier: Modifier = Modifier,
     selected: LocalDate? = null,
     onNight: ((LocalDate) -> Unit)? = null,
-    height: Dp = 200.dp,
+    height: Dp = DetailChartHeight,
 ) {
     val m = rememberTextMeasurer()
     // Minutes since the noon before each night, so a night never wraps.

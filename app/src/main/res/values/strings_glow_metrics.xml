@@ -113,7 +113,7 @@
     <string name="glow_detail_high">High</string>
     <string name="glow_detail_average">Average</string>
     <!-- The three figures under a vital's chart: the last 7 nights (or days) averaged, and how far that is from your normal. -->
-    <string name="glow_detail_seven_night_average">7 night avg</string>
+    <string name="glow_detail_seven_night_average">7 night average</string>
     <string name="glow_detail_vs_normal">vs normal</string>
     <!-- Under a count's goal bar: "of 8,000". -->
     <string name="glow_detail_of_goal">of %1$s</string>
@@ -128,7 +128,7 @@
     <string name="glow_detail_since_woke">Since you woke</string>
     <string name="glow_detail_through_day">Through the day</string>
     <string name="glow_detail_at_waking_note">%1$d at waking</string>
-    <string name="glow_detail_seven_day_average">7 day avg</string>
+    <string name="glow_detail_seven_day_average">7 day average</string>
     <string name="glow_detail_vs_yesterday">vs yesterday</string>
     <string name="glow_detail_better">Better</string>
 
@@ -145,4 +145,30 @@
     <string name="glow_metrics_zone_lower"><xliff:g id="label" example="Starts at">%1$s</xliff:g> lower</string>
     <!-- Read out by screen readers for the plus button. The label is "Starts at" or "Ends at". -->
     <string name="glow_metrics_zone_higher"><xliff:g id="label" example="Starts at">%1$s</xliff:g> higher</string>
+    <!-- A count's three figures under its chart: the goal, the best day and the daily average. -->
+    <string name="glow_detail_goal">Goal</string>
+    <string name="glow_detail_best_day">Best day</string>
+    <string name="glow_detail_daily_average">Daily average</string>
+    <!-- The word under a heart rate reading: calm below 100 beats a minute, raised above. -->
+    <string name="glow_detail_hr_calm">Calm</string>
+    <string name="glow_detail_hr_raised">Raised</string>
+    <!-- The word under a blood oxygen reading: from 95 %, from 90 %, below. -->
+    <string name="glow_detail_spo2_normal">Normal</string>
+    <string name="glow_detail_spo2_slightly_low">Slightly low</string>
+    <string name="glow_detail_spo2_low">Low</string>
+    <!-- Under steps: the word for the day's total against the goal, then the sentence about it. The count is "1,200". -->
+    <string name="glow_detail_steps_below_goal">Below your goal</string>
+    <string name="glow_detail_steps_goal_reached">Goal reached</string>
+    <string name="glow_detail_steps_to_go"><xliff:g id="steps" example="1,200">%1$s</xliff:g> more steps to your goal.</string>
+    <string name="glow_detail_steps_done">You reached your goal.</string>
+    <!-- Under today's steps: the total is only up to the time the data ends. -->
+    <string name="glow_detail_steps_so_far_to">So far today, to <xliff:g id="time" example="09:10">%1$s</xliff:g></string>
+    <!-- Under a live heart rate: it is the strap's reading now. -->
+    <string name="glow_detail_live">Live</string>
+    <!-- On a blood oxygen chart, labelling the shaded hours spent asleep. -->
+    <string name="glow_detail_asleep_note">Asleep</string>
+    <!-- Under stress's line: what the strip of colour is. -->
+    <string name="glow_detail_stress_strip_note">Each hour, from calm to high</string>
+    <!-- After "Last night" under a resting heart rate unstrap worked out itself. -->
+    <string name="glow_detail_estimated">estimated</string>
 </resources>

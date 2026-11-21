@@ -99,6 +99,8 @@ private fun sleepDays(state: DayUiState, history: DailyHistory): Set<LocalDate> 
     return if (state.loaded && state.sleep == null) days - state.date else days
 }
 
+private const val SECONDS_PER_MIN = 60L
+
 /** A chart's title inside a detail's body, with an optional [note] on the right. */
 @Composable
 private fun ChartTitle(title: String, note: String?, modifier: Modifier = Modifier, scrubbed: DetailHeadline? = null) {
@@ -194,6 +196,9 @@ internal fun SleepScoreDetail(
                     if (state.loaded) item { DetailEmpty(TabCopy.noNight(state.naps.isNotEmpty(), isToday)) }
                 } else {
                     val asleep = state.asleepSeconds ?: (session.end - session.start)
+                    // One awake time for the night: the time between falling asleep and waking that wasn't asleep, which is what
+                    // the figures below add up to. The stage legend and the staying asleep line say the same.
+                    val awake = (session.end - session.start - asleep).coerceAtLeast(0L)
                     val detected = state.sleepAsDetected
                     val moved = detected != null && (detected.start != session.start || detected.end != session.end)
                     item {
@@ -201,7 +206,7 @@ internal fun SleepScoreDetail(
                             // Moved, the strap's whole night shows with what's outside the user's times dimmed.
                             if (moved && state.strapSleepStages.isNotEmpty()) DetailStages(state.strapSleepStages, kept = session.start..session.end)
                             else if (state.sleepStages.isNotEmpty()) DetailStages(state.sleepStages)
-                            state.sleepBreakdown?.let { DetailStageShares(it, Modifier.padding(top = Space.S16)) }
+                            state.sleepBreakdown?.let { DetailStageShares(it.withAwake(awake), Modifier.padding(top = Space.S16)) }
                             // Times extended past the strap's have no stages for the added time, so the page says so.
                             if (detected != null && state.sleepBreakdown != null) {
                                 SleepCopy.stagesCover(session.start, session.end, detected.start, detected.end)?.let {
@@ -215,10 +220,6 @@ internal fun SleepScoreDetail(
                                 ),
                                 Modifier.padding(top = Space.S20),
                             )
-                            if (detected != null) SleepEditActions(
-                                if (moved) SleepCopy.yourTimes(clock(detected.start), clock(detected.end)) else null,
-                                onAdjust = { adjusting = true }, onDelete = { deleting = true }, Modifier.padding(top = Space.S20),
-                            )
                         }
                     }
                     item {
@@ -230,9 +231,10 @@ internal fun SleepScoreDetail(
                     }
                     // What shaped the score: time asleep against your need and staying asleep, against sleep guidance.
                     val need = r?.sleepNeed ?: Recovery.SLEEP_NEED_MINUTES
-                    val waso = Recovery.wasoMinutes(state.sleepStages.map { Triple(it.start, it.end, it.stage) })
+                    val waso = (awake / SECONDS_PER_MIN).toInt()
                     val factors = SleepCopy.factors(Narrative.sleepContributors(session, asleep, need, waso), asleep, need, waso)
-                    if (factors.isNotEmpty()) item {
+                    // Without the strap's score there is nothing for the factors to have shaped.
+                    if (factors.isNotEmpty() && score != null) item {
                         DetailPanel(Modifier.padding(top = Space.S8), title = stringResource(R.string.glow_sleep_what_shaped)) {
                             factors.forEachIndexed { i, f ->
                                 ContributorRow(f.name, color, f.word, f.fraction, offNormal = f.off, divider = i > 0, detail = f.detail, onClick = { info = true })
@@ -240,6 +242,13 @@ internal fun SleepScoreDetail(
                         }
                     }
                     item { NightLines(state, session.start..session.end) { scrub = it } }
+                    // Adjusting and deleting come after everything the page reads, not between its figures and its sentence.
+                    if (detected != null) item {
+                        SleepEditActions(
+                            if (moved) SleepCopy.yourTimes(clock(detected.start), clock(detected.end)) else null,
+                            onAdjust = { adjusting = true }, onDelete = { deleting = true }, Modifier.padding(top = Space.S8),
+                        )
+                    }
                 }
             } else {
                 item {

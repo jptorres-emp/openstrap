@@ -4,6 +4,7 @@ import org.openstrap.app.ui.theme.Greys
 import androidx.compose.runtime.getValue
 import org.openstrap.app.R
 import org.openstrap.app.i18n.Strings
+import org.openstrap.app.presentation.Units
 import org.openstrap.app.presentation.DayWords
 import androidx.compose.ui.graphics.asAndroidPath
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
@@ -157,7 +158,7 @@ internal fun storyCard(
                 StoryChip(text, best = false, met = it.met)
             },
     )
-    val time = StoryStat(workoutClock(active), null, strings.get(R.string.glow_share_stat_time))
+    val time = StoryStat(Units.length(active), null, strings.get(R.string.glow_share_stat_time))
     val timeMinutes = StoryStat(minutes, minUnit, strings.get(R.string.glow_share_stat_time))
     val avg = a.workout.averageHeartRate?.let { StoryStat("$it", null, strings.get(R.string.glow_share_stat_avg_bpm)) }
     val peak = readings.maxOfOrNull { it.second }?.let { StoryStat("$it", null, strings.get(R.string.glow_share_stat_peak_bpm)) }
@@ -171,7 +172,7 @@ internal fun storyCard(
                 }
                 StoryCard.Run(date, sport, hero.value, hero.unit, listOfNotNull(time, pace, avg), chips)
             } else {
-                StoryCard.Run(date, sport, dotClock(active), "", listOfNotNull(avg, kcal, peak).take(MAX_STATS), chips)
+                StoryCard.Run(date, sport, Units.length(active, Units.DOT_LOCALE), "", listOfNotNull(avg, kcal, peak).take(MAX_STATS), chips)
             }
         }
         Workouts.Family.Strength -> {
@@ -184,7 +185,7 @@ internal fun storyCard(
             )
         }
         Workouts.Family.IndoorCardio ->
-            StoryCard.Indoor(date, sport, dotClock(active), a.zoneSeconds, listOfNotNull(avg, kcal, peak), chips)
+            StoryCard.Indoor(date, sport, Units.length(active, Units.DOT_LOCALE), a.zoneSeconds, listOfNotNull(avg, kcal, peak), chips)
         Workouts.Family.Intervals -> roundsCard(summary, date, minutes to minUnit, listOfNotNull(peak), time, chips, strings)
         Workouts.Family.MindBody -> {
             val settled = FamilySummary.settled(readings, a.shownStart, a.end)

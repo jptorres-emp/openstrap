@@ -10,6 +10,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
 import org.openstrap.app.ui.theme.Ink
 import org.openstrap.app.ui.workout.FamilySummary
+import org.openstrap.app.presentation.Units
 import org.openstrap.app.presentation.Pace
 import androidx.compose.ui.Alignment
 import androidx.compose.material3.Icon
@@ -139,7 +140,7 @@ fun GlowWorkoutDetailScreen(
                 // The summary's hero with the length in dots: a strap workout has no kind of its own to show.
                 val sentence = WorkoutDetailCopy.sentence(w.sportType, shown.activeSeconds, w.trainingLoad, usual, zones)
                 val title = stringResource(R.string.glow_summary_figure_time)
-                val hero = SummaryHero(dotClock(shown.activeSeconds), "", sentence = sentence, title = title)
+                val hero = SummaryHero(Units.length(shown.activeSeconds, Units.DOT_LOCALE), "", sentence = sentence, title = title)
                 SummaryHeroCard(
                     hero, sportFamilyColor(w.sportType, family), family = family, note = Ranges.times(shown.shownStart, shown.end),
                 )

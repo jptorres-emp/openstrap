@@ -129,7 +129,7 @@ private class HeroParts(val summary: PhoneSummary, val strings: Strings) {
     private val peak = readings.maxOfOrNull { it.second }?.toString()
     private val avg = a.workout.averageHeartRate?.toString()
     private val kcal = kcalFigure(a)
-    private val time = workoutClock(active)
+    private val time = Units.length(active)
     private val minutes = minutesFigure(active, strings)
     private val w = HeroWords(strings)
 

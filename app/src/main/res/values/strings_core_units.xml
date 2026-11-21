@@ -15,6 +15,8 @@
     <string name="core_unit_hours"><xliff:g id="hours" example="7">%1$s</xliff:g> h</string>
     <!-- A length of time in hours and minutes, the minutes always two digits: "7 h 05". -->
     <string name="core_unit_hours_minutes"><xliff:g id="hours" example="7">%1$s</xliff:g> h <xliff:g id="minutes" example="40">%2$s</xliff:g></string>
+    <!-- A finished workout's length from a minute to an hour, the seconds always two digits: "1 min 22". -->
+    <string name="core_unit_minutes_seconds"><xliff:g id="minutes" example="1">%1$s</xliff:g> min <xliff:g id="seconds" example="22">%2$s</xliff:g></string>
     <!-- A finished workout or a gap under a minute, in seconds. -->
     <string name="core_unit_seconds"><xliff:g id="seconds" example="45">%1$s</xliff:g> s</string>
     <!-- A pace, minutes and seconds per kilometre. -->

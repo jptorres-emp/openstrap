@@ -93,17 +93,7 @@ fun WorkoutMap(
         MapView(context).apply {
             onCreate(null)
             getMapAsync { m ->
-                m.uiSettings.isRotateGesturesEnabled = false
-                m.uiSettings.isTiltGesturesEnabled = false
-                m.uiSettings.isCompassEnabled = false
-                // Fitting a route only metres long would zoom to single buildings; streets stay in view.
-                m.setMaxZoomPreference(MAX_ZOOM)
-                // MapLibre's licence doesn't ask for its logo; the ⓘ stays, for the OpenStreetMap credit the tiles need.
-                m.uiSettings.isLogoEnabled = false
-                m.uiSettings.attributionGravity = android.view.Gravity.BOTTOM or android.view.Gravity.END
-                m.addOnCameraMoveStartedListener { reason ->
-                    if (reason == MapLibreMap.OnCameraMoveStartedListener.REASON_API_GESTURE) panned()
-                }
+                m.setUpForRoutes { panned() }
                 map = m
             }
         }
@@ -303,4 +293,22 @@ private fun geoJson(stretches: List<Pair<List<Route.Point>, Int>>): String = bui
         append("]}}")
     }
     append("]}")
+}
+
+/**
+ * A route map's fixed settings: no rotate, tilt or compass, a street level zoom limit, the credit bottom right, and
+ * [onPanned] on a drag.
+ */
+private fun MapLibreMap.setUpForRoutes(onPanned: () -> Unit) {
+    uiSettings.isRotateGesturesEnabled = false
+    uiSettings.isTiltGesturesEnabled = false
+    uiSettings.isCompassEnabled = false
+    // Fitting a route only metres long would zoom to single buildings; streets stay in view.
+    setMaxZoomPreference(MAX_ZOOM)
+    // MapLibre's licence doesn't ask for its logo; the ⓘ stays, for the OpenStreetMap credit the tiles need.
+    uiSettings.isLogoEnabled = false
+    uiSettings.attributionGravity = android.view.Gravity.BOTTOM or android.view.Gravity.END
+    addOnCameraMoveStartedListener { reason ->
+        if (reason == MapLibreMap.OnCameraMoveStartedListener.REASON_API_GESTURE) onPanned()
+    }
 }

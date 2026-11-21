@@ -30,7 +30,6 @@
     <!-- The hero's small figure label: pace in minutes per kilometre. About 12 characters. -->
     <string name="workout_glance_figure_pace">Pace /km</string>
     <!-- The hero's small figure label under a heart rate, in its zone. About 12 characters. -->
-    <string name="workout_glance_figure_bpm_zone">bpm, zone <xliff:g id="zone" example="3">%1$d</xliff:g></string>
     <!-- The hero's small figure label under a heart rate. About 12 characters. -->
     <string name="workout_glance_figure_bpm">bpm</string>
     <!-- The hero's small figure label under the calories burned on top of resting. About 12 characters. -->

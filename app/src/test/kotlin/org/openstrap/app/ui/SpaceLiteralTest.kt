@@ -36,6 +36,12 @@ class SpaceLiteralTest {
         ("glow/live/LiveMap.kt" to "76") to "fits the route clear of the side actions",
         ("glow/live/LiveMap.kt" to "54") to "the map button sits clear of the top bar",
         ("glow/live/LiveMap.kt" to "44") to "the map button sits above the panel's overlap",
+        ("glow/RouteMapPage.kt" to "64") to "fits the route below the top bar, as on the live map",
+        ("glow/RouteMapPage.kt" to "76") to "fits the route clear of the side actions, as on the live map",
+        ("glow/RouteMapPage.kt" to "60") to "the Fit chip sits just under the 48 dp top bar",
+        ("glow/RouteMapPage.kt" to "44") to "the map button sits above the panel's overlap, as on the live map",
+        ("glow/RouteMapPage.kt" to "104") to "the title pill clears the close button and the GPX chip",
+        ("glow/RouteMapPage.kt" to "56") to "the note lines up after the 56 dp Line label",
     )
 
     @Test fun `no spacing is written as a dp literal outside the theme`() {

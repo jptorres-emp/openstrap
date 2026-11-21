@@ -11,7 +11,6 @@
     <string name="workout_glance_unit_s_left">剩余秒数</string>
     <string name="workout_glance_unit_s_rest">休息秒数</string>
     <string name="workout_glance_figure_pace">配速 /km</string>
-    <string name="workout_glance_figure_bpm_zone">bpm，%1$d 区</string>
     <string name="workout_glance_figure_bpm">bpm</string>
     <string name="workout_glance_figure_active_kcal">活动千卡</string>
     <string name="workout_glance_figure_km">km</string>

@@ -137,7 +137,7 @@ internal fun RouteMapPage(summary: PhoneSummary, model: RouteMapModel, contentPa
 
 /** Close on the left, Route with the sport and distance in the middle, GPX on the right (board HaloRouteMap). */
 @Composable
-private fun TopBar(summary: PhoneSummary, onClose: () -> Unit, modifier: Modifier) {
+private fun TopBar(summary: PhoneSummary, onClose: () -> Unit, modifier: Modifier = Modifier) {
     Box(modifier.fillMaxWidth().height(48.dp)) {
         HaloIconButton(
             AppIcons.X, stringResource(R.string.glow_close), onClose,
@@ -147,7 +147,7 @@ private fun TopBar(summary: PhoneSummary, onClose: () -> Unit, modifier: Modifie
         val distance = summary.distanceMeters?.let { Units.distance(it, Units.Precision.Workout) }
         Column(
             Modifier.align(Alignment.Center).padding(horizontal = 104.dp).clip(Corner.Pill).background(Greys.OverMap)
-                .padding(horizontal = Space.S12, vertical = 4.dp),
+                .padding(horizontal = Space.S12, vertical = Space.S4),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(stringResource(R.string.glow_summary_route), color = Color.White, style = GlowType.cardTitle, maxLines = 1)
@@ -162,7 +162,7 @@ private fun TopBar(summary: PhoneSummary, onClose: () -> Unit, modifier: Modifie
 
 /** Hands the recorded route to another app as GPX ([GpxWriter]); a toast when the file can't be written. */
 @Composable
-private fun GpxButton(summary: PhoneSummary, modifier: Modifier) {
+private fun GpxButton(summary: PhoneSummary, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val failed = stringResource(R.string.glow_route_map_gpx_failed)
@@ -171,6 +171,7 @@ private fun GpxButton(summary: PhoneSummary, modifier: Modifier) {
         stringResource(R.string.glow_route_map_gpx),
         {
             scope.launch {
+                @Suppress("InjectDispatcher") // a one-off file write from a tap, nothing to test it with
                 val uri = withContext(Dispatchers.IO) {
                     val gpx = GpxWriter.write(a.sportName, summary.route, summary.history, summary.pauses)
                     GpxShare.forSharing(context, GpxShare.fileName(a.workout.start), gpx)
@@ -183,12 +184,16 @@ private fun GpxButton(summary: PhoneSummary, modifier: Modifier) {
 }
 
 /** Splits and a hint, then the kilometres as chips, the [selected] one white; a tap picks one or clears it. */
+@Suppress("UnstableCollections", "ComposeUnstableCollections") // the split rows are built once per summary and never change
 @Composable
 private fun Splits(rows: List<SplitRow>, selected: Int?, maxHr: Int, onPick: (Int) -> Unit) {
     val heartZones = LocalHeartZones.current
     Column(verticalArrangement = Arrangement.spacedBy(Space.S12)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(stringResource(R.string.glow_summary_splits), color = Color.White, style = GlowType.cardTitle, modifier = Modifier.weight(1f))
+            Text(
+                stringResource(R.string.glow_summary_splits), color = Color.White, style = GlowType.cardTitle,
+                maxLines = 1, modifier = Modifier.weight(1f),
+            )
             Text(
                 stringResource(if (selected == null) R.string.glow_route_map_pick_hint else R.string.glow_route_map_unpick_hint),
                 color = GlowType.noteColor, style = GlowType.noteSmall, maxLines = 1,
@@ -210,7 +215,7 @@ private fun Splits(rows: List<SplitRow>, selected: Int?, maxHr: Int, onPick: (In
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         row.averageBpm?.let {
                             Box(Modifier.size(6.dp).clip(CircleShape).background(zoneColor(it, maxHr, heartZones)))
-                            Spacer(Modifier.width(6.dp))
+                            Spacer(Modifier.width(Space.S4))
                         }
                         Text(row.name, color = ink, style = GlowType.buttonSmall, maxLines = 1)
                     }
@@ -236,8 +241,11 @@ private fun PickedSplit(row: SplitRow, maxHr: Int) {
             )
             row.averageBpm?.let {
                 Box(Modifier.size(8.dp).clip(CircleShape).background(zoneColor(it, maxHr, heartZones)))
-                Spacer(Modifier.width(6.dp))
-                Text(stringResource(R.string.glow_summary_split_average, it), color = GlowType.noteColor, style = GlowType.noteSmall, maxLines = 1)
+                Spacer(Modifier.width(Space.S8))
+                Text(
+                    stringResource(R.string.glow_summary_split_average, it), color = GlowType.noteColor,
+                    style = GlowType.noteSmall, maxLines = 1,
+                )
             }
         }
     }

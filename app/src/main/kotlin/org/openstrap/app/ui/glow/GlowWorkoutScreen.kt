@@ -210,7 +210,7 @@ private fun PastSummary(
         return
     }
     val routeMap = routeMapModel()
-    if (routeMap != null && routeMap.isOpen(w.start)) {
+    if (routeMap?.isOpen(w.start) == true) {
         RouteMapPage(summary, routeMap, androidx.compose.foundation.layout.WindowInsets.navigationBars.asPaddingValues())
         return
     }
@@ -236,10 +236,7 @@ private fun PastSummary(
                         ZoneSeconds(WorkoutRecorder.liveZoneSeconds(shown, a.maxHeartRate, heartZones).toList())
                     }
                     // The page's sentence ("An easy 40 min walk") where the kind has none of its own.
-                    val hero = summaryHero(family, summary, usual).let { h ->
-                        if (h.sentence != null) h
-                        else SummaryHero(h.value, h.unit, h.figures, WorkoutDetailCopy.sentence(w.sportType, a.activeSeconds, w.trainingLoad, usual, zones.toList()), h.line, h.pace, h.title)
-                    }
+                    val hero = pastHero(summaryHero(family, summary, usual), a, usual, zones)
                     SummaryHeroCard(hero, sportFamilyColor(w.sportType, family), family = family, note = Ranges.times(a.shownStart, a.end))
                     FamilySection(family, summary, emptyList(), others, weekStarts, heartLine = false, figures = hero.figures)
                     // Always there, even before any heart rate, since it holds Trim.
@@ -536,3 +533,12 @@ private fun ListSegment(first: Boolean, last: Boolean, content: @Composable Colu
         content = content,
     )
 }
+
+/** The past workout's hero, with the page's sentence ("An easy 40 min walk") where its kind has none of its own. */
+private fun pastHero(h: SummaryHero, a: WorkoutAnalysis, usual: Float?, zones: ZoneSeconds): SummaryHero =
+    if (h.sentence != null) h
+    else SummaryHero(
+        h.value, h.unit, h.figures,
+        WorkoutDetailCopy.sentence(a.workout.sportType, a.activeSeconds, a.workout.trainingLoad, usual, zones.toList()),
+        h.line, h.pace, h.title,
+    )

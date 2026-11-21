@@ -72,7 +72,7 @@ fun NavRow(
         titleSuffix = if (dot && stacked) ({ NoticeDot() }) else null,
         line = if (stacked && value != null) ({ RowLine(value) }) else null,
         value = value.takeIf { !stacked && trailing == null },
-        valueInk = if (info) GlowType.noteColor else Ink.Strong,
+        valueInk = if (info) GlowType.noteInk else Ink.Strong,
         trail = trailing ?: if (onClick != null) ({ RowTrail.Chevron() }) else null,
         onClick = onClick, divider = divider, enabled = enabled, selected = selected,
     )
@@ -201,7 +201,7 @@ fun <T> PageMenuRow(
             }
         }
         if (note != null) Text(
-            note, color = GlowType.noteColor, style = GlowType.secondary,
+            note, color = GlowType.noteInk, style = GlowType.secondary,
             modifier = Modifier.rowSides().padding(bottom = RowSpec.Pad),
         )
     }
@@ -240,7 +240,7 @@ fun MetricRow(
         line = when {
             // Off your normal, the tag says it in place of the status, in the row's colour.
             tag != null && !waiting -> ({ HaloTag(tag.text, variant = TagVariant.Text, color = iconTint) })
-            status != null -> ({ RowLine(status, if (waiting) Ink.Tertiary else GlowType.noteColor) })
+            status != null -> ({ RowLine(status, if (waiting) Ink.Tertiary else GlowType.noteInk) })
             else -> null
         },
         value = value, valueInk = Color.White, valueModifier = Modifier.cardNumber(value), dash = dash,

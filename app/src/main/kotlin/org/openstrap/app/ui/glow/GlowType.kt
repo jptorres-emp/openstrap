@@ -1,6 +1,7 @@
 package org.openstrap.app.ui.glow
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
@@ -90,16 +91,22 @@ object GlowType {
      * Section labels over a panel, status lines, notes (boards HaloProfile, HaloRecovery, HaloLiveRun): Sans 400, 13 on 18,
      * drawn in [Ink.Secondary] unless coloured. The boards' grey is [noteColor].
      */
-    val secondary = token(FunnelSans, TypeScale.SECONDARY_WEIGHT, TypeScale.SECONDARY_SP, TypeScale.SECONDARY_LINE_SP)
+    val secondary = token(FunnelSans, TypeScale.SECONDARY_WEIGHT, TypeScale.SECONDARY_SP, TypeScale.SECONDARY_LINE_SP).copy(fontFeatureSettings = "tnum")
 
     /** The grey of every note, label and axis on the boards: [Ink.Secondary]. */
     val noteColor = Ink.Secondary
+
+    /** [noteColor] on a grey card, the card's own [LitInk] on a lit one: what a note, label or unit takes in a component. */
+    val noteInk: Color @Composable @ReadOnlyComposable get() = LocalLitInk.current ?: noteColor
+
+    /** [footnoteColor] on a grey card, [LitInk] on a lit one. */
+    val footnoteInk: Color @Composable @ReadOnlyComposable get() = LocalLitInk.current ?: footnoteColor
 
     /** The dimmest grey on the boards, for footnotes and chevrons: [Ink.Tertiary]. */
     val footnoteColor = Ink.Tertiary
 
     /** A smaller note, and a badge's name and line (boards HaloRecovery, HaloAllBadges): Sans 400, 12 on 15.6. */
-    val noteSmall = token(FunnelSans, TypeScale.NOTE_SMALL_WEIGHT, TypeScale.NOTE_SMALL_SP, TypeScale.NOTE_SMALL_LINE_SP)
+    val noteSmall = token(FunnelSans, TypeScale.NOTE_SMALL_WEIGHT, TypeScale.NOTE_SMALL_SP, TypeScale.NOTE_SMALL_LINE_SP).copy(fontFeatureSettings = "tnum")
 
     /** The small print at the foot of a page (board HaloProfile): Sans 400, 12 on 17.4, in [footnoteColor]. */
     val footnote = TextStyle(fontFamily = FunnelSans, fontWeight = FontWeight.Normal, fontSize = 12.sp, lineHeight = 17.4.sp)

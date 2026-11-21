@@ -221,8 +221,9 @@ class SleepWidgetModelTest {
         // A score of 100 shrinks the dots to keep the word, and at 1.3 drops the word before the dots get too small.
         val hundred = SleepLayout.small(m.copy(score = "100", word = "Great"), small.first, small.second, 1f)
         assertEquals("Great", hundred.row.word)
-        // The fork's Barlow figures are narrower than the dots were, so 100 may fit without shrinking.
-        assertTrue(hundred.row.dot <= SleepLayout.SMALL_DOT)
+        // The fork's Barlow figures are narrower than the dots were, so 100 may fit without shrinking: never past the
+        // Small's own size.
+        assertTrue(hundred.row.dot <= WidgetHero.dot(WidgetSizes.Small, small.second))
         assertTrue(hundred.row.width("100", 1f, SleepLayout.SMALL_WORD_GAP_DP) <= small.first + 1e-3f)
         val big = SleepLayout.small(m.copy(score = "100", word = "Great"), small.first, small.second, 1.3f)
         assertNull(big.row.word)

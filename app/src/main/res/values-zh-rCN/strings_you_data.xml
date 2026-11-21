@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="you_backup_status_off">已关闭，每天在你的文件夹保存一个压缩包</string>
+    <string name="you_backup_status_off">已关闭，每天在你选的文件夹保存压缩包</string>
     <string name="you_backup_status_waiting">暂无备份，充电时运行</string>
     <string name="you_backup_last">上次备份 %1$s</string>
     <string name="you_backup_summary_failed">上次备份失败</string>
@@ -34,10 +34,11 @@
     <string name="you_backup_folder">备份文件夹</string>
     <string name="you_backup_now">立即备份</string>
     <string name="you_backup_now_running">正在备份</string>
-    <string name="you_backup_now_note">把今天的压缩包保存到该文件夹。</string>
-    <string name="you_backup_restore_note">任何 unstrap 压缩包。它会补全这台手机缺少的数据。</string>
+    <string name="you_backup_now_note">每天把压缩包保存到该文件夹，并保留最近 %1$d 个。</string>
+    <string name="you_backup_off_note">开启时会请你选择文件夹。unstrap 每天在那里保存一个压缩包，并保留最近 %1$d 个。</string>
+    <string name="you_backup_restore_note">任何 unstrap 压缩包都可以。它会补全这台手机缺少的数据。</string>
     <string name="you_backup_save_copy">保存副本</string>
-    <string name="you_backup_save_copy_note">保存到你选择的位置，不会被删除。</string>
+    <string name="you_backup_save_copy_note">保存到你选择的位置，unstrap 不会删除它。</string>
     <string name="you_deleted_sleep_title">已删除的睡眠</string>
     <string name="you_hc_line_stopped_permissions">已停止，权限已被关闭</string>
     <string name="you_hc_line_stopped_install">已停止，请安装 Health Connect</string>

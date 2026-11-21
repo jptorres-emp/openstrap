@@ -36,7 +36,7 @@
     <!-- A debug build's row that fills the app with made up data. -->
     <string name="you_row_sample_data">Add sample data</string>
     <!-- Under the sample data row. -->
-    <string name="you_row_sample_data_note">Debug builds only</string>
+    <string name="you_row_sample_data_note">Dev and demo apps only</string>
     <!-- Section labels over the You page's panels, a few words. -->
     <string name="you_section_your_data">Your data</string>
     <string name="you_section_help">Help</string>
@@ -190,7 +190,9 @@
     <string name="you_profile_row_sex">Sex</string>
     <string name="you_profile_row_activity">Usual activity</string>
     <string name="you_profile_row_sleep_need">Sleep need</string>
-    <string name="you_profile_sleep_default">Default for your age</string>
+    <string name="you_profile_sleep_default">Default for adults</string>
+    <!-- The Profile page's max heart rate row with no age and no max set: where the number comes from. -->
+    <string name="you_profile_max_no_age">Your strap\'s value until you add your age</string>
     <string name="you_profile_group_about">About you</string>
     <string name="you_profile_group_body">Body</string>
     <string name="you_profile_group_estimates">For your estimates</string>
@@ -209,7 +211,7 @@
     <string name="you_section_about">About</string>
     <string name="you_row_version">Version</string>
     <string name="you_version_value">unstrap <xliff:g id="version" example="3.0.7">%1$s</xliff:g></string>
-    <string name="you_data_footnote">Everything stays on this phone. unstrap has no account and sends nothing.</string>
+    <string name="you_data_footnote">Everything stays on this phone. unstrap has no account and no tracking, and only goes online to check GitHub for a new release, to load map tiles and road data from OpenFreeMap when you open a route, and to reach Zepp when you sign in or check firmware.</string>
     <!-- Updates page banner (Halo). -->
     <string name="you_updates_ready">unstrap <xliff:g id="version" example="3.0.8">%1$s</xliff:g> is ready</string>
     <string name="you_updates_install">Install</string>
@@ -224,7 +226,7 @@
     <string name="you_strap_forget_note">Forget deletes the strap\'s address and auth key from this phone. Your synced health data stays.</string>
     <string name="you_updates_view">View</string>
     <string name="you_pair_key_placeholder">32 characters, 0 to 9 and a to f</string>
-    <string name="you_diagnostics_note">For bug reports. Copy puts the whole log on the clipboard.</string>
+    <string name="you_diagnostics_note">For bug reports. Copy puts the whole log on the clipboard, including the strap\'s Bluetooth address.</string>
     <string name="you_profile_clear">Clear</string>
     <string name="you_profile_sleep_use_usual">Use the default for my age</string>
     <string name="you_profile_pregnant_note">Pauses the fitness estimate</string>
@@ -234,6 +236,7 @@
     <string name="you_profile_activity_short_mid">Mid aerobic</string>
     <string name="you_profile_activity_short_high">High aerobic</string>
     <string name="you_updates_footnote">%1$s. You have unstrap %2$s.</string>
+    <string name="you_updates_footnote_ahead">%1$s. You have unstrap %2$s, which is newer than the latest release, %3$s.</string>
     <string name="you_stamp_yesterday">Yesterday %1$s</string>
     <string name="you_stamp_dated">%1$s, %2$s</string>
 </resources>

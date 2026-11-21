@@ -8,6 +8,7 @@
     <string name="you_strap_state_connecting">正在连接</string>
     <string name="you_strap_state_key_rejected">密钥被拒绝</string>
     <string name="you_strap_state_cant_connect">无法连接</string>
+    <string name="you_strap_state_cant_connect_seen">无法连接，上次连接 %1$s</string>
     <string name="you_strap_state_not_paired">未配对手环</string>
     <string name="you_strap_state_last_seen">未连接，上次连接于 %1$s</string>
     <string name="you_strap_state_not_connected">未连接</string>

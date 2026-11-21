@@ -78,6 +78,9 @@ fun UpdatesPage(
     val now = remember(state) { System.currentTimeMillis() / 1000 }
     val newer = Releases.newer(state.releases, installed)
     val newest = newer.firstOrNull()
+    // A build ahead of every release (a prerelease, or a developer's) says so, rather than listing an older "latest".
+    val latest = state.releases.firstOrNull()
+    val ahead = latest != null && newer.isEmpty() && Releases.version(installed)?.let { Releases.compare(it, latest.version) > 0 } == true
     val busy = state.install is Install.Downloading || state.install is Install.Installing
     HaloPageList(contentPadding, variant = PageVariant.Settings) {
         item { HaloPageHeader(stringResource(R.string.you_updates_title), onBack) }
@@ -93,7 +96,13 @@ fun UpdatesPage(
             )
         }
         item {
-            PageGroup(footnote = UpdateCopy.footnote(state, installed, now)) {
+            PageGroup(
+                footnote = if (ahead && latest != null) {
+                    stringResource(R.string.you_updates_footnote_ahead, UpdateCopy.checkStatus(state, now), installed, latest.versionName)
+                } else {
+                    UpdateCopy.footnote(state, installed, now)
+                },
+            ) {
                 ActionRow(
                     stringResource(R.string.you_updates_check_now), onCheck, icon = AppIcons.Refresh04,
                     busy = state.check == Check.Checking, divider = false,

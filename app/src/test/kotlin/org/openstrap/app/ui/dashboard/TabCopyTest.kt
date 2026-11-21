@@ -118,9 +118,9 @@ class TabCopyTest {
     }
 
     @Test fun `load and its balance`() {
-        assertEquals("Your usual, 40", TabCopy.loadUsual(40.4f))
-        assertEquals("Learning", TabCopy.loadUsual(null))
-        assertEquals("Learning", TabCopy.loadUsual(0f))
+        assertEquals("Your usual, 40 a day", TabCopy.loadUsual(40.4f))
+        assertEquals("Learning your usual", TabCopy.loadUsual(null))
+        assertEquals("Learning your usual", TabCopy.loadUsual(0f))
         assertEquals("Building", TabCopy.loadBalance(Recovery.LoadTrend(ctl = 40f, atl = 55f, form = -15f)))
         assertEquals("Steady", TabCopy.loadBalance(Recovery.LoadTrend(ctl = 40f, atl = 45f, form = -5f)))
         assertEquals("Easing off", TabCopy.loadBalance(Recovery.LoadTrend(ctl = 40f, atl = 25f, form = 15f)))
@@ -129,10 +129,10 @@ class TabCopyTest {
     }
 
     @Test fun `activity facts`() {
-        assertEquals("Aim for 150", TabCopy.activeMinutes(90, 150))
-        assertEquals("Goal met, 150 min", TabCopy.activeMinutes(160, 150))
-        assertEquals("Aim for 100", TabCopy.heartPoints(64, 100))
-        assertEquals("Goal met, 100 points", TabCopy.heartPoints(100, 100))
+        assertEquals("Aim 150 a week", TabCopy.activeMinutes(90, 150))
+        assertEquals("Met this week", TabCopy.activeMinutes(160, 150))
+        assertEquals("Aim 100 a week", TabCopy.heartPoints(64, 100))
+        assertEquals("Met this week", TabCopy.heartPoints(100, 100))
         assertEquals("Estimated kcal so far today", TabCopy.calories(partial = true, isToday = true))
         assertEquals("Estimated kcal, part of the day worn", TabCopy.calories(partial = true, isToday = false))
         assertEquals("Estimated kcal", TabCopy.calories(partial = false, isToday = false))

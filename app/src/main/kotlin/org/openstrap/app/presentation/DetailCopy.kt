@@ -127,20 +127,30 @@ internal object DetailCopy {
     /**
      * The label under the value: what the number is for the range. "bpm now", "ms, day average", "steps, average of
      * the last 7 days". [live] is heart rate read live this minute, [estimated] a resting heart rate unstrap worked out itself,
-     * [latest] the day's latest reading of blood oxygen or stress, which their day says instead of an average.
+     * [latest] the day's latest reading of blood oxygen or stress, which their day says instead of an average, and [upTo]
+     * the time a heart rate day's data ends at when it ends early (today, or a partial day): "bpm, up to 09:10".
      */
     fun valueLabel(
         metric: Metric, range: Range, live: Boolean = false, today: Boolean = true, estimated: Boolean = false,
-        latest: Latest? = null, strings: Strings = Strings.app,
+        latest: Latest? = null, upTo: String? = null, strings: Strings = Strings.app,
     ): String {
         val unit = metric.unit
         // One string with the unit and one without, so a translator writes the capital rather than the code adding it.
         fun with(bare: Int, withUnit: Int) = if (unit.isEmpty()) strings.get(bare) else strings.format(withUnit, unit)
         return when (range) {
             Range.Day -> when (metric) {
-                Metric.HeartRate -> strings.get(if (live) R.string.core_detail_label_bpm_now else R.string.core_detail_label_bpm_latest)
+                Metric.HeartRate -> when {
+                    live -> strings.get(R.string.core_detail_label_bpm_now)
+                    upTo != null -> strings.format(R.string.core_detail_label_bpm_up_to, upTo)
+                    else -> strings.get(R.string.core_detail_label_bpm_latest)
+                }
                 Metric.RestingHr -> strings.get(
-                    if (estimated) R.string.core_detail_label_bpm_resting_estimated else R.string.core_detail_label_bpm_resting,
+                    when {
+                        estimated && today -> R.string.core_detail_label_bpm_resting_estimated
+                        estimated -> R.string.core_detail_label_bpm_resting_estimated_that_night
+                        today -> R.string.core_detail_label_bpm_resting
+                        else -> R.string.core_detail_label_bpm_resting_that_night
+                    },
                 )
                 Metric.Steps -> strings.get(if (today) R.string.core_detail_label_steps_today else R.string.core_detail_label_steps)
                 Metric.Breathing -> strings.get(R.string.core_detail_label_breathing)

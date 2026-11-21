@@ -279,7 +279,7 @@
     <!-- The line under Load today's number, before the evening. -->
     <string name="core_today_load_line_so_far">Load so far today</string>
     <!-- A small card's word for Load before there is a usual Load. One word. -->
-    <string name="core_today_load_word_learning">Learning</string>
+    <string name="core_today_load_word_learning">Learning usual</string>
 
     <!-- Under Your week before there is a week to compare with. The day is the week's first, "Monday" or "Sunday". -->
     <string name="core_today_week_first">Week-on-week comparisons start next <xliff:g id="weekday" example="Monday">%1$s</xliff:g>.</string>

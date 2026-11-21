@@ -211,7 +211,7 @@ class TodayCopyTest {
     @Test fun `the after workout Smalls say a number and a word`() {
         assertEquals("Above your usual", TodayCopy.loadWord(LoadBand.Above))
         assertEquals("So far today", TodayCopy.loadWord(LoadBand.SoFar))
-        assertEquals("Learning", TodayCopy.loadWord(null))
+        assertEquals("Learning usual", TodayCopy.loadWord(null))
         val zone = ZoneId.of("Europe/London")
         val now = ZonedDateTime.of(2026, 10, 23, 18, 0, 0, 0, zone).toEpochSecond()
         assertEquals("14" to "Ready tomorrow", TodayCopy.recoverShort(14 * 3600L, now, zone))

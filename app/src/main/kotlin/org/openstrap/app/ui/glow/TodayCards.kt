@@ -293,7 +293,7 @@ internal fun EdgeValue(
         maxLines = 2, overflow = TextOverflow.Ellipsis)
 }
 
-/** A length of time as dot-matrix digits, the clock look the big figures have: "7:40". Text uses [Units.duration]. */
+/** A length of time for a big figure: dot digits with the unit words between them, "7 h 40". Text uses [Units.duration]. */
 internal fun clockDuration(seconds: Long): String = Units.clockDuration(seconds, Units.DOT_LOCALE)
 
 /* ------------------------------------------ Picture cards ------------------------------------------- */
@@ -476,7 +476,7 @@ internal fun LastNightCard(
     if (size == PictureSize.Small) {
         TodayPictureCard(
             MetricColors.sleepDeep, title, size, score?.toString() ?: asleep?.let(::clockDuration),
-            stringResource(if (score != null) R.string.glow_today_score_unit else R.string.glow_today_hours_unit), tag,
+            stringResource(R.string.glow_today_score_unit).takeIf { score != null }, tag,
             when {
                 asleep == null -> if (stuck && !firstNights) stringResource(R.string.glow_today_for_last_night) else null
                 score != null -> Units.duration(asleep)
@@ -495,7 +495,7 @@ internal fun LastNightCard(
     // A night the strap gave no score shows the time asleep in its place, so its tag still has a number to sit by.
     TodayPictureCard(
         MetricColors.sleepDeep, title, size, score?.toString() ?: asleep?.let(::clockDuration),
-        stringResource(if (score != null) R.string.glow_today_score_unit else R.string.glow_today_hours_unit), tag,
+        stringResource(R.string.glow_today_score_unit).takeIf { score != null }, tag,
         when {
             asleep == null -> noNight(firstNights, stuck)
             score != null -> stringResource(
@@ -939,7 +939,7 @@ internal fun WorkoutCard(w: org.openstrap.app.data.WorkoutAnalysis, onClick: () 
         HaloTitle(Workouts.sportName(w.workout.sportType), note = Ranges.times(w.shownStart, w.end))
         val mostly = w.zoneSeconds.withIndex().filter { it.value > 0 }.maxByOrNull { it.value }?.index
         EdgeValue(
-            dotClock(w.activeSeconds.coerceAtLeast(0)), stringResource(R.string.glow_today_workout_long),
+            Units.length(w.activeSeconds, Units.DOT_LOCALE), stringResource(R.string.glow_today_workout_long),
             workoutLine(w.workout.averageHeartRate, mostly?.let { it + 1 }),
         )
         // Zone bar (chart kit): how the time was spent.
@@ -959,7 +959,7 @@ internal fun AfterWorkoutBody(w: org.openstrap.app.data.WorkoutAnalysis) = Colum
     // Each figure says what it is: the big one is the distance, else the active time; the length and the heart rate
     // beside it are named too, so no duration stands alone.
     HeroReading(
-        metres?.let { Units.km(it, Units.Precision.Day, Units.DOT_LOCALE) } ?: dotClock(active),
+        metres?.let { Units.km(it, Units.Precision.Day, Units.DOT_LOCALE) } ?: Units.length(active, Units.DOT_LOCALE),
         listOfNotNull(
             if (metres != null) stringResource(R.string.glow_unit_km) else stringResource(R.string.glow_today_after_active_time),
             if (metres != null) stringResource(R.string.glow_today_after_active, Units.duration(active)) else null,
@@ -1120,7 +1120,7 @@ internal fun BodyList(
             val direction = if (source is BodyValue.Latest) null else org.openstrap.app.data.History.status(r.value, r.normal)
             val tag = org.openstrap.app.ui.dashboard.bodyTag(r.metric, direction)
             MetricRow(
-                r.name, r.color, r.value?.let { r.metric.format(it) + r.unit },
+                r.name, r.color, r.value?.let { r.metric.formatWithUnit(it) },
                 // The tag already says which way it is off, so the word against your normal gives way to it.
                 when {
                     r.value == null -> waiting

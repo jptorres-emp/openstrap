@@ -29,6 +29,7 @@ class StartCopyTest {
         assertEquals("Just walk", StartCopy.noGoal(15))
         assertEquals("Just ride", StartCopy.noGoal(8))
         assertEquals("Just go", StartCopy.noGoal(9))
+        assertEquals("Just row", StartCopy.noGoal(23))
     }
 
     @Test fun `strength's rest note, defaults and rest text`() {
@@ -183,8 +184,8 @@ class StartCopyTest {
         assertEquals("Learned from hard efforts, 3 Oct", HeartZonesCopy.source(org.openstrap.app.data.MaxHeartRate(192, org.openstrap.app.data.MaxHeartRate.Source.Learned, d), Locale.UK))
         assertEquals("Set by you", HeartZonesCopy.source(org.openstrap.app.data.MaxHeartRate(185, org.openstrap.app.data.MaxHeartRate.Source.Set)))
         val zones = org.openstrap.app.data.HeartZones.STANDARD
-        assertEquals("96 to 115", HeartZonesCopy.zoneBpm(zones, 0, 192))
-        assertEquals("173 and up", HeartZonesCopy.zoneBpm(zones, 4, 192))
+        assertEquals("96 to 115 bpm", HeartZonesCopy.zoneBpm(zones, 0, 192))
+        assertEquals("173 bpm and up", HeartZonesCopy.zoneBpm(zones, 4, 192))
         assertEquals("Zone 2", HeartZonesCopy.zoneName(1))
         assertEquals(185, HeartZonesCopy.parseMax("185"))
         assertEquals(null, HeartZonesCopy.parseMax("100"))

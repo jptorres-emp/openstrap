@@ -30,8 +30,8 @@
     <string name="ready_hero_in_all">共 %1$s</string>
     <string name="ready_hero_every_in_all">共 %1$s，剩余时间即休息</string>
     <string name="ready_hero_periods_about">含休息约 %1$d 分钟</string>
-    <string name="ready_last_no_goal">无目标。上次%1$s，%2$s</string>
-    <string name="ready_last_no_plan">无计划。上次训练，%1$s</string>
+    <string name="ready_last_no_goal">无目标，上次训练 %1$s</string>
+    <string name="ready_last_no_plan">无计划，上次训练 %1$s</string>
     <string name="ready_last_pace_line">%1$s，配速 %2$s 每公里</string>
     <string name="ready_no_goal">无目标</string>
     <string name="ready_no_plan">无计划</string>

@@ -133,7 +133,7 @@
     <string name="core_today_load_line_usual">负荷接近你平时水平</string>
     <string name="core_today_load_line_below">负荷低于你平时</string>
     <string name="core_today_load_line_so_far">今日截至目前的负荷</string>
-    <string name="core_today_load_word_learning">学习中</string>
+    <string name="core_today_load_word_learning">了解常态中</string>
     <string name="core_today_week_first">周环比对比将于下个%1$s开始。</string>
     <string name="core_today_steps_up">步数上升 %1$d%%</string>
     <string name="core_today_steps_down">步数下降 %1$d%%</string>

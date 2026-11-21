@@ -66,7 +66,7 @@
     <!-- The Energy card's status when the day has drained less than one point. -->
     <string name="glow_today_charge_steady">Steady since waking</string>
     <!-- Title of the small Load card: the Load score's name. -->
-    <string name="glow_today_load">Load</string>
+    <string name="glow_today_load">Load today</string>
     <!-- Title of the small card with the hours left to recover. The same name as in Edit Today. -->
     <string name="glow_today_to_recover">To recover</string>
     <!-- Unit beside the hours left to recover, hours. Very short. -->

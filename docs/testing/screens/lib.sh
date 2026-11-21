@@ -26,7 +26,7 @@ tap() { front || return 1; adb shell input tap $1 $2; sleep ${T:-2.5}; }
 
 # tapText "Backup": taps the centre of the first element whose text or description is exactly that.
 tapText() {
-  front; adb shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1
+  front || return 1; adb shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1
   local b; b=$(adb shell cat /sdcard/ui.xml | python3 -I -c '
 import sys,re
 t=sys.argv[1]; x=sys.stdin.read()
@@ -40,7 +40,7 @@ for m in re.finditer(r"<node [^>]*>", x):
   adb shell input tap $b; sleep ${T:-2.5}
 }
 
-top() { for k in 1 2 3; do front; adb shell input swipe 540 900 540 2000 200; sleep 0.8; done; sleep 1.5; }
+top() { for k in 1 2 3; do front || return 1; adb shell input swipe 540 900 540 2000 200; sleep 0.8; done; sleep 1.5; }
 
 # shots name [pages]: the screen, then a scroll per page; stops early when a scroll changes nothing.
 shots() {

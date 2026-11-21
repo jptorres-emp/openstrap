@@ -144,6 +144,12 @@ fun YouPage(
     weight: org.openstrap.app.data.WeightLog.Summary? = null,
     /** Opens the weight sheet. */
     onWeight: () -> Unit = {},
+    /** Opens the fork's Reports page. */
+    onReports: () -> Unit = {},
+    /** Whether yesterday's journal is answered, said on the Journal row; null while it's read. */
+    journalDone: Boolean? = null,
+    /** Opens yesterday's journal. */
+    onJournal: () -> Unit = {},
 ) {
     BackHandler(onBack = onBack)
     ScreenList(contentPadding, gutter = GlowLayout.Gutter) {
@@ -158,6 +164,15 @@ fun YouPage(
                 PageRow(
                     stringResource(R.string.fork_weight_row), weightLine(weight, profile.usesImperial), onClick = onWeight, below = true,
                     icon = AppIcons.ChartLine,
+                )
+                PageRow(
+                    stringResource(R.string.fork_reports_row), stringResource(R.string.fork_reports_row_line), onClick = onReports,
+                    below = true, icon = AppIcons.ChartBar, selected = selected == PageRowKeys.REPORTS,
+                )
+                PageRow(
+                    stringResource(R.string.fork_journal_row),
+                    journalDone?.let { stringResource(if (it) R.string.fork_journal_line_done else R.string.fork_journal_line_open) },
+                    onClick = onJournal, below = true, icon = AppIcons.CalendarBlank, dot = journalDone == false,
                 )
                 PageRow(
                     org.openstrap.app.ui.workout.HeartZonesCopy.TITLE, org.openstrap.app.ui.workout.HeartZonesCopy.youLine(maxHeartRate), onClick = onHeartZones,

@@ -50,6 +50,8 @@ enum class Page(
     Updates(PageRowKeys.UPDATES),
     Diagnostics(PageRowKeys.DIAGNOSTICS),
     GoalsAndBests(PageRowKeys.GOALS_AND_BESTS),
+    /** The fork's reports and the journal's effects (jptorres-emp/openstrap). */
+    Reports(PageRowKeys.REPORTS),
     AllBadges,
     WeeklyRecap,
     Strap,

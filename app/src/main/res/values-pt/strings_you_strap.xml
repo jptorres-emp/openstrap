@@ -77,7 +77,7 @@
     <string name="you_pair_pair">Emparelhar</string>
     <string name="you_pair_key_rejected_title">O emparelhamento não funcionou</string>
     <string name="you_pair_again">Começar o emparelhamento de novo</string>
-    <string name="you_pair_key_invalid">A chave de autenticação tem 32 caracteres, só de 0 a 9 e de a a f. Introduziste %1$d.</string>
+    <string name="you_pair_key_invalid">A chave de autenticação tem 32 caracteres, só algarismos de 0 a 9 e letras de «a» até «f». Introduziste %1$d.</string>
     <string name="you_pair_address_invalid">O endereço Bluetooth deve ser parecido com C8:0F:10:AB:CD:EF. Procura para o preencher.</string>
     <string name="you_pair_no_key">Sessão Zepp guardada, mas a Zepp não enviou uma chave de autenticação. Confirma que a strap continua associada na app Zepp e inicia sessão de novo.</string>
     <string name="you_strap_sample_loaded">Carreguei uma semana de dados de exemplo.</string>

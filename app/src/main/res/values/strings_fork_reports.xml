@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The fork's reports and journal (jptorres-emp/openstrap): the Reports page from the You page, with today's ideal
+  effort, the week and the month against the stretch before, and the habits' effect on the next morning, and the
+  journal sheet (ui/glow/ReportsPage.kt, ui/device/JournalSheet.kt). Translated into Portuguese only.
+-->
+<resources xmlns:tools="http://schemas.android.com/tools" xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2" tools:ignore="MissingTranslation">
+    <!-- The You page's rows that open the reports and the journal, and what they say under their names. -->
+    <string name="fork_reports_row">Reports</string>
+    <string name="fork_reports_row_line">Week, month, today\'s effort and habits</string>
+    <string name="fork_journal_row">Journal</string>
+    <string name="fork_journal_line_open">Yesterday\'s to fill in</string>
+    <string name="fork_journal_line_done">Yesterday\'s filled in</string>
+
+    <!-- The Reports page. -->
+    <string name="fork_reports_title">Reports</string>
+    <string name="fork_reports_loading">Working out your reports…</string>
+    <string name="fork_target_title">Today\'s ideal effort</string>
+    <string name="fork_target_range">Load <xliff:g id="low" example="40">%1$d</xliff:g> to <xliff:g id="high" example="60">%2$d</xliff:g></string>
+    <string name="fork_target_kind_recover">A day to recover</string>
+    <string name="fork_target_kind_moderate">A moderate day</string>
+    <string name="fork_target_kind_usual">A usual training day</string>
+    <string name="fork_target_kind_push">A day to push</string>
+    <string name="fork_target_so_far_below"><xliff:g id="load" example="12">%1$d</xliff:g> so far, below the target</string>
+    <string name="fork_target_so_far_within"><xliff:g id="load" example="45">%1$d</xliff:g> so far, within the target</string>
+    <string name="fork_target_so_far_above"><xliff:g id="load" example="75">%1$d</xliff:g> so far, past the target</string>
+    <string name="fork_target_personal">From your own training days in the last 6 weeks.</string>
+    <string name="fork_target_usual">Built round your usual daily Load of <xliff:g id="usual" example="45">%1$d</xliff:g> until there are 4 training days.</string>
+    <string name="fork_target_strap">Recovery is still learning, so the strap\'s score stands in.</string>
+    <string name="fork_target_none">The target shows once there\'s a usual Load, after a week of wear.</string>
+    <string name="fork_week_title">This week</string>
+    <string name="fork_week_note">Last 7 days against the 3 weeks before</string>
+    <string name="fork_month_title">This month</string>
+    <string name="fork_month_note">Last 30 days against the 30 before</string>
+    <string name="fork_metric_recovery">Recovery</string>
+    <string name="fork_metric_ready">Days ready or better</string>
+    <string name="fork_metric_low">Days to take it easy</string>
+    <string name="fork_metric_hrv">HRV</string>
+    <string name="fork_metric_resting_hr">Resting heart rate</string>
+    <string name="fork_metric_asleep">Time asleep</string>
+    <string name="fork_metric_load">Load a day</string>
+    <string name="fork_metric_workouts">Workouts</string>
+    <string name="fork_metric_steps">Steps a day</string>
+    <!-- A figure now and in the stretch before. -->
+    <string name="fork_value_vs"><xliff:g id="now" example="64">%1$s</xliff:g>, before <xliff:g id="before" example="58">%2$s</xliff:g></string>
+    <string name="fork_value_none">No data</string>
+    <string name="fork_habits_title">Habits</string>
+    <string name="fork_habits_note">Their effect on the next morning\'s Recovery</string>
+    <string name="fork_habits_none">Tick the journal each day. After a few weeks this shows what each habit does to your Recovery.</string>
+    <string name="fork_habits_fill_in">Fill in yesterday\'s journal</string>
+    <!-- A habit's effect, the change signed: "−12%". -->
+    <string name="fork_effect_clear"><xliff:g id="change" example="−12">%1$s</xliff:g>%% Recovery the morning after, clear</string>
+    <string name="fork_effect_likely"><xliff:g id="change" example="−12">%1$s</xliff:g>%% Recovery the morning after, likely</string>
+    <string name="fork_effect_unclear">No clear effect yet</string>
+    <string name="fork_effect_learning">Learning: <xliff:g id="have" example="2">%1$d</xliff:g> of the <xliff:g id="need" example="4">%2$d</xliff:g> needed</string>
+    <string name="fork_effect_needs_without">Learning, needs mornings without it</string>
+    <string name="fork_signed_up">+<xliff:g id="value" example="5">%1$d</xliff:g></string>
+    <string name="fork_signed_down">−<xliff:g id="value" example="12">%1$d</xliff:g></string>
+    <string name="fork_habit_hard_day">Hard training day</string>
+    <string name="fork_habit_short_night">Under 7 h asleep</string>
+    <string name="fork_habit_late_workout">Workout after 8 pm</string>
+
+    <!-- The journal: each habit's name and what counts, and the sheet's title and note. -->
+    <string name="fork_habit_alcohol">Alcohol</string>
+    <string name="fork_habit_alcohol_hint">Any drink</string>
+    <string name="fork_habit_caffeine">Late caffeine</string>
+    <string name="fork_habit_caffeine_hint">After 2 pm: coffee, tea or energy drinks</string>
+    <string name="fork_habit_late_meal">Late dinner</string>
+    <string name="fork_habit_late_meal_hint">Eating within 2 h of bed</string>
+    <string name="fork_habit_screens">Screens in bed</string>
+    <string name="fork_habit_screens_hint">Phone, tablet or TV</string>
+    <string name="fork_habit_reading">Reading in bed</string>
+    <string name="fork_habit_reading_hint">A book, not a screen</string>
+    <string name="fork_habit_stress">Stressful day</string>
+    <string name="fork_habit_stress_hint">At work or at home</string>
+    <string name="fork_habit_travel">Travel</string>
+    <string name="fork_habit_travel_hint">A long trip or another time zone</string>
+    <string name="fork_habit_sick">Feeling ill</string>
+    <string name="fork_habit_sick_hint">A cold, a fever or run down</string>
+    <string name="fork_habit_meditation">Meditation</string>
+    <string name="fork_habit_meditation_hint">Or breathing, 10 min or more</string>
+    <string name="fork_habit_stretching">Stretching</string>
+    <string name="fork_habit_stretching_hint">Or mobility, 10 min or more</string>
+    <string name="fork_journal_title">Yesterday\'s journal</string>
+    <string name="fork_journal_note">Tick what you did yesterday. Over the weeks the reports show what each does to your Recovery the morning after. Save even with nothing ticked: the day then counts as one without them.</string>
+</resources>

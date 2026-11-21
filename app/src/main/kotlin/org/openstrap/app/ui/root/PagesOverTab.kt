@@ -239,6 +239,7 @@ private fun DataPage(
             profile, padding, onSave = { hooks.deviceVm.saveProfile(it); close() }, onBack = close,
             onHeartZones = { open(Page.HeartZones) },
         )
+        Page.Reports -> ReportsPageHost(hooks, profile, padding, close)
         Page.HeartZones -> HeartZonesPage(container, padding, hooks.rootVm::setMaxHeartRate, hooks.rootVm::setHeartZones, close)
         Page.Diagnostics -> {
             val log by container.strap.log.collectAsStateWithLifecycle()
@@ -287,6 +288,12 @@ private fun YouPageHost(
     val weights by remember { org.openstrap.app.data.WeightLog.recent(dao) }.collectAsStateWithLifecycle(null)
     var weighing by rememberSaveable { mutableStateOf(false) }
     val weightScope = androidx.compose.runtime.rememberCoroutineScope()
+    // The fork's journal: yesterday's answer for the Journal row and its sheet, read again after a save.
+    var journalRead by remember { androidx.compose.runtime.mutableIntStateOf(0) }
+    val journal by androidx.compose.runtime.produceState<org.openstrap.app.data.Journal.Entry?>(null, journalRead) {
+        value = org.openstrap.app.data.Journal.yesterday(dao)
+    }
+    var journaling by rememberSaveable { mutableStateOf(false) }
     // Permissions can be taken back in Health Connect while away: the row says so on return.
     LifecycleResumeEffect(Unit) {
         deviceVm.checkAutoHealthConnect()
@@ -316,7 +323,24 @@ private fun YouPageHost(
         selected = selected?.row,
         weight = weights?.let { org.openstrap.app.data.WeightLog.summary(it.entries, it.today) },
         onWeight = { weighing = true },
+        onReports = { open(Page.Reports) },
+        journalDone = journal?.habits?.let { true } ?: journal?.let { false },
+        onJournal = { journaling = true },
     )
+    val day = journal
+    if (journaling && day != null) {
+        org.openstrap.app.ui.device.JournalSheet(
+            org.openstrap.app.ui.device.JournalTicks(day.habits.orEmpty()),
+            onSave = { habits ->
+                journaling = false
+                weightScope.launch {
+                    org.openstrap.app.data.Journal.save(dao, day.date, habits)
+                    journalRead++
+                }
+            },
+            onDismiss = { journaling = false },
+        )
+    }
     val recent = weights
     if (weighing && recent != null) {
         org.openstrap.app.ui.device.WeightSheet(
@@ -326,6 +350,38 @@ private fun YouPageHost(
                 weightScope.launch { org.openstrap.app.data.WeightLog.save(dao, container.settings, profile, kg) }
             },
             onDismiss = { weighing = false },
+        )
+    }
+}
+
+/**
+ * The fork's Reports page, worked out as it opens and again after the journal is saved there
+ * ([org.openstrap.app.data.ForkReportsSource]).
+ */
+@Composable
+private fun ReportsPageHost(hooks: PageHooks, profile: UserProfile, padding: PaddingValues, close: () -> Unit) {
+    val container = hooks.container
+    val dao = container.database.healthDao()
+    val source = remember { org.openstrap.app.data.ForkReportsSource(dao, container.workouts) }
+    var version by remember { androidx.compose.runtime.mutableIntStateOf(0) }
+    val report by androidx.compose.runtime.produceState<org.openstrap.app.data.ForkReports.Report?>(null, version, profile) {
+        value = source.load(profile)
+    }
+    var journaling by rememberSaveable { mutableStateOf(false) }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    org.openstrap.app.ui.glow.ReportsPage(report, padding, onJournal = { journaling = true }, onBack = close)
+    val shown = report
+    if (journaling && shown != null) {
+        org.openstrap.app.ui.device.JournalSheet(
+            org.openstrap.app.ui.device.JournalTicks(shown.yesterday.orEmpty()),
+            onSave = { habits ->
+                journaling = false
+                scope.launch {
+                    org.openstrap.app.data.Journal.save(dao, shown.today.minusDays(1), habits)
+                    version++
+                }
+            },
+            onDismiss = { journaling = false },
         )
     }
 }

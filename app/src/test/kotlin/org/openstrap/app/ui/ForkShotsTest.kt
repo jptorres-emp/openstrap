@@ -23,7 +23,15 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.openstrap.app.data.ForkHabits
+import org.openstrap.app.data.ForkReports
+import org.openstrap.app.data.ForkTarget
+import org.openstrap.app.data.JournalHabit
 import org.openstrap.app.data.db.WeightEntry
+import org.openstrap.app.ui.device.JournalContent
+import org.openstrap.app.ui.device.JournalTicks
+import org.openstrap.app.ui.glow.ReportsPage
+import androidx.compose.foundation.layout.PaddingValues
 import org.openstrap.app.testing.ComposeRules
 import org.openstrap.app.ui.device.WeightContent
 import org.openstrap.app.ui.glow.DotMatrixText
@@ -38,7 +46,8 @@ import java.time.LocalDate
 
 /**
  * The fork's own pieces drawn to PNGs under build/shots, for a look without a phone: the numbers in Barlow Condensed
- * at every size, and the weight sheet's body. Off unless OPENSTRAP_SHOTS is set (the wip check sets it).
+ * at every size, the weight sheet's body, and the Reports page and the journal in Portuguese (the fork's language) and
+ * English. Off unless OPENSTRAP_SHOTS is set (the wip check sets it).
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -70,14 +79,47 @@ class ForkShotsTest {
         }
     }
 
-    @Test fun weight() {
+    @Test fun weight() = weight("fork_weight")
+
+    private fun weight(name: String) {
         val today = LocalDate.of(2026, 11, 21)
         val kg = listOf(93.6f, 93.4f, 93.5f, 93.1f, 93.0f, 92.9f, 92.6f, 92.8f, 92.4f, 92.5f, 92.1f, 92.0f)
         val entries = kg.flatMapIndexed { week, w ->
             listOf(0L, 3L).map { d -> WeightEntry(today.minusDays(7L * (kg.size - 1 - week) + d), w + d * 0.1f, 1) }
         }
-        shot("fork_weight") {
+        shot(name) {
             Box(Modifier.width(360.dp)) { WeightContent(org.openstrap.app.ui.device.WeightEntries(entries), today, false, "92.0", {}, 92.0f) }
         }
     }
+
+    private val report = run {
+        val week = ForkReports.Figures(64f, 3f, 1f, 52f, 54f, 412f, 48f, 4f, 8432f)
+        val before = ForkReports.Figures(58f, 2.3f, 1.3f, 49f, 56f, 398f, 41f, 3.3f, 7900f)
+        ForkReports.Report(
+            LocalDate.of(2026, 11, 21),
+            ForkReports.Compare(week, before),
+            ForkReports.Compare(week.copy(ready = 14f, low = 4f, workouts = 15f), before.copy(ready = 11f, low = 6f, workouts = 12f)),
+            ForkTarget.Target(ForkTarget.DayKind.Usual, 40..60, personal = true, fromStrap = false), 32f, 45f,
+            listOf(
+                ForkHabits.Effect(ForkHabits.Habit.Logged(JournalHabit.Alcohol), 6, 20, 52f, 66f, -14f, ForkHabits.Verdict.Clear),
+                ForkHabits.Effect(ForkHabits.Habit.ShortNight, 5, 21, 55f, 64f, -9f, ForkHabits.Verdict.Likely),
+                ForkHabits.Effect(ForkHabits.Habit.Logged(JournalHabit.Meditation), 2, 24, 70f, 63f, null, ForkHabits.Verdict.TooFew),
+            ),
+            yesterday = null,
+        )
+    }
+
+    @Test @Config(qualifiers = "+pt-rPT") fun reportsPortuguese() = shot("fork_reports_pt") {
+        Box(Modifier.width(380.dp)) { ReportsPage(report, PaddingValues(0.dp), {}, {}) }
+    }
+
+    @Test fun reportsEnglish() = shot("fork_reports_en") {
+        Box(Modifier.width(380.dp)) { ReportsPage(report, PaddingValues(0.dp), {}, {}) }
+    }
+
+    @Test @Config(qualifiers = "+pt-rPT") fun journalPortuguese() = shot("fork_journal_pt") {
+        Box(Modifier.width(380.dp)) { JournalContent(JournalTicks(setOf(JournalHabit.Alcohol, JournalHabit.Stretching)), { _, _ -> }) }
+    }
+
+    @Test @Config(qualifiers = "+pt-rPT") fun weightPortuguese() = weight("fork_weight_pt")
 }

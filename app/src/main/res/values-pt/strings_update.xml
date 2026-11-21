@@ -21,7 +21,7 @@
     <string name="update_failure_checksum">A transferência não corresponde ao ficheiro no GitHub. Toca para tentar de novo</string>
     <string name="update_failure_no_checksum">O GitHub não tinha forma de verificar a transferência, por isso não foi instalada</string>
     <string name="update_failure_not_openstrap">A transferência não é o unstrap, por isso não foi instalada</string>
-    <string name="update_failure_signature">Esta cópia do unstrap está assinada com outra chave. Instala-a a partir do GitHub</string>
+    <string name="update_failure_signature">Esta cópia do unstrap está assinada com outra chave. Instala a versão do GitHub</string>
     <string name="update_failure_storage">Não há espaço suficiente para a instalar</string>
     <string name="update_failure_android">O Android não a conseguiu instalar. Toca para tentar de novo</string>
     <string name="update_available_title">unstrap %1$s já saiu</string>

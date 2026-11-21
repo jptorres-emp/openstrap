@@ -185,6 +185,30 @@ class RecoveryEngine(private val dao: HealthDao) {
         )
     }
 
+    /**
+     * Every morning's Recovery over one read up to [date], for the fork's reports ([ForkReports]): each night the read
+     * holds, scored as [compute] scores its morning, with each worn day's Load, the Load so far on [date] and the usual
+     * (fitness) Load. A [compute] for each day would read the whole span again each time.
+     */
+    suspend fun mornings(
+        date: LocalDate,
+        profile: UserProfile,
+        zone: ZoneId = ZoneId.systemDefault(),
+        now: Long = System.currentTimeMillis() / 1000,
+    ): ForkReports.Mornings {
+        val span = Span(date, zone, now)
+        val reads = gather(span)
+        val base = basis(span, reads, profile)
+        val mornings = base.nights.groupBy { it.day }.map { (day, nights) ->
+            val n = nights.last()
+            val r = Recovery.readiness(n, base.nights, loadsBefore(base.loadDays, day), base.causes, base.sleepNeed)
+            val strap = n.strapDay?.let(reads.strapNights::get)?.score
+            ForkReports.Morning(span.dayOf(day), r.score, r.strainAlert, strap, n.hrv, n.restingHr, n.asleepMinutes)
+        }.sortedBy { it.date }
+        val usual = if (base.loads.size >= TREND_DAYS) Recovery.fitnessFatigue(base.loads).last().ctl else null
+        return ForkReports.Mornings(mornings, base.loadDays.associate { span.dayOf(it.first) to it.second }, base.todaySplit.total, usual)
+    }
+
     /** The spans [compute] reads and scores for [date]. */
     private class Span(val date: LocalDate, val zone: ZoneId, val now: Long) {
         val day = DayWindow.of(date, zone)

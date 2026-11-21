@@ -87,7 +87,7 @@
     <string name="workout_live_speed_title">Velocidade</string>
     <string name="workout_live_unit_per_km">/km</string>
     <string name="workout_live_avg">Méd. %1$s</string>
-    <string name="workout_live_splits_description">Parciais por quilómetro: %1$s</string>
+    <string name="workout_live_splits_description">Parciais por km: %1$s</string>
     <string name="workout_live_split_km">Km %1$d</string>
     <string name="workout_live_map_show_map">Mostrar o mapa</string>
     <string name="workout_live_map_route_only">Mostrar só o percurso, sem mapa</string>

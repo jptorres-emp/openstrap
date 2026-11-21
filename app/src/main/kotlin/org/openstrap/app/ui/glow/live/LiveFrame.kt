@@ -31,6 +31,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
@@ -285,9 +286,9 @@ private fun ColumnScope.FrameControls(
 ) {
     // One controls row on every screen, paused too: Resume takes Pause's place as the white tap (board HaloLivePaused).
     if (quiet && tapHint && !r.paused) ControlsHint(stringResource(R.string.workout_live_tap_to_light), alpha = 1f)
-    ControlsRow(r, controls, lap, true, Modifier.align(Alignment.CenterHorizontally), pauseWhite)
-    // A little room under the controls, so they sit up off the screen's edge.
-    Spacer(Modifier.height(Space.S8))
+    // 8 under the row on top of the page's 16, so the row stands 24 from the bottom, where [LiveBottomBar] puts it: a
+    // padding rather than a spacer, which the page's gap would push a further 12.
+    ControlsRow(r, controls, lap, true, Modifier.align(Alignment.CenterHorizontally).padding(bottom = Space.S8), pauseWhite)
 }
 
 /** A line under the controls saying how to use them, centred. Quieter on the dimmed mind screen ([alpha]). */
@@ -319,6 +320,7 @@ internal fun ControlsRow(
             variant = if (white) HaloIconVariant.Primary else HaloIconVariant.Control, size = HaloIconSize.Pause,
         )
         Spacer(Modifier.weight(1f))
+        // The label may be wider than the button at a large font: it centres on it and runs over the gutter, never cut.
         Box(Modifier.width(72.dp), contentAlignment = Alignment.TopCenter) {
             Labelled(stringResource(R.string.workout_live_hold_to_end), labelled) { HoldToEnd(controls.onEnd) }
         }
@@ -331,7 +333,10 @@ private fun Labelled(label: String, show: Boolean, button: @Composable () -> Uni
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(Space.S8)) {
         // The side buttons are 60 tall, centred on Pause's 88 so the row reads as one line.
         Box(Modifier.height(88.dp), contentAlignment = Alignment.Center) { button() }
-        if (show) Text(label, color = LiveLabelInk, style = GlowType.noteSmall, maxLines = 1, softWrap = false)
+        if (show) Text(
+            label, color = LiveLabelInk, style = GlowType.noteSmall, maxLines = 1, softWrap = false,
+            modifier = Modifier.wrapContentWidth(Alignment.CenterHorizontally, unbounded = true),
+        )
     }
 }
 
@@ -370,7 +375,7 @@ private fun TotalTime(time: () -> Long, paused: Boolean) {
  */
 @Suppress("UnstableCollections", "ComposeUnstableCollections")
 @Composable
-private fun LiveTopBar(
+internal fun LiveTopBar(
     r: WorkoutState.Recording, connected: Boolean, controls: LiveControls, title: String?, time: (() -> Long)?,
     status: List<Pair<String, Color>>, battery: Int?, labelled: Boolean, quiet: Boolean,
 ) {
@@ -396,7 +401,7 @@ private fun LiveTopBar(
             if (quiet) return@Column
             val strap = when {
                 !connected -> WorkoutWords.STRAP_GONE
-                battery != null && labelled -> stringResource(R.string.workout_live_status_strap_battery, battery)
+                battery != null -> stringResource(R.string.workout_live_status_strap_battery, battery)
                 else -> stringResource(R.string.workout_live_status_strap)
             }
             Text(strap, color = if (connected) GlowType.noteColor else TrendBad, style = GlowType.noteSmall, maxLines = 1)
@@ -445,7 +450,7 @@ internal fun LiveBottomBar(
         Column(
             Modifier.fillMaxWidth().padding(bottom = contentPadding.calculateBottomPadding())
                 .onSizeChanged { onHeight(with(density) { it.height.toDp() }) }
-                .padding(start = side, end = side, bottom = Space.S20),
+                .padding(start = side, end = side, bottom = Space.S24),
             verticalArrangement = Arrangement.spacedBy(Space.S12),
             content = items,
         )

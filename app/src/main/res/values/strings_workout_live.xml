@@ -63,7 +63,7 @@
     <!-- Top right, small, beside a dot: the strap is connected, with its battery. About 10 characters. -->
     <string name="workout_live_status_strap_battery">Strap <xliff:g id="percent" example="64">%1$d</xliff:g>%%</string>
     <!-- Top right, small, beside a dot: the strap is connected. About 10 characters. -->
-    <string name="workout_live_status_strap">Strap</string>
+    <string name="workout_live_status_strap">Connected</string>
     <!-- Top right, small, under the total time, where a set's or a round's clock is the screen's big number. About 10 characters. -->
     <!-- A pill on a paused workout, held to end it. About 14 characters. -->
     <!-- The button that carries on a paused workout, and its label under it. About 10 characters. -->

@@ -64,7 +64,6 @@ import org.openstrap.app.ui.glow.GlowLayout
 import org.openstrap.app.ui.glow.draw.DotSize
 import org.openstrap.app.ui.glow.GlowType
 import org.openstrap.app.ui.glow.MediumBody
-import org.openstrap.app.ui.workout.RestTeal
 import org.openstrap.app.ui.glow.TrendBad
 import org.openstrap.app.ui.glow.TrendGood
 import org.openstrap.app.ui.glow.activeSecondsState
@@ -218,7 +217,8 @@ internal fun LiveDistanceScreen(
                 // On its side the map stops short of the bar, so the controls stay on black, and of the nav bar.
                 LiveView.Map -> Box(Modifier.fillMaxSize().padding(start = mapStart, end = clear)) {
                     LiveMapScreen(
-                        r, route, readings, bpm, color, contentPadding, controls,
+                        r, route, readings, bpm, connected, contentPadding, controls,
+                        time = { active.value }, battery = battery, status = status,
                         figures = listOf(
                             km(distance) to stringResource(R.string.workout_live_figure_distance),
                             (if (speed) kmh(speedText(averagePace())) else Pace.clock(averagePace())) to
@@ -257,7 +257,7 @@ private fun RepPage(
     val (repLength, repUnit) = org.openstrap.app.ui.workout.StartCopy.repParts(structure)
     val repName = stringResource(R.string.workout_live_rep_length, repLength, repUnit)
     val rest = m.phase is org.openstrap.app.data.Phase.Rest
-    val sport = if (rest) RestTeal else color
+    val sport = if (rest) RestColor else color
     val tint = heroTint(sport)
     // Board HaloLiveRunReps: the rep as the lit hero with its bar, the plan and each rep's time in a solid card with the
     // heart rate under a rule, then the plain figures.

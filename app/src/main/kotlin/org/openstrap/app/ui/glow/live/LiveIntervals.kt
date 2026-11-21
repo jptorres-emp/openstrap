@@ -56,7 +56,6 @@ import org.openstrap.app.ui.glow.SegmentBar
 import org.openstrap.app.ui.glow.Raised
 import org.openstrap.app.ui.theme.Ink
 import org.openstrap.app.ui.workout.PausedGrey
-import org.openstrap.app.ui.workout.RestTeal
 import org.openstrap.app.ui.glow.activeSecondsState
 import org.openstrap.app.ui.glow.workoutClock
 import org.openstrap.app.ui.glow.dotClock
@@ -72,12 +71,9 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import org.openstrap.app.R
 
-/** Work is HIIT's red, rest the teal of every rest (workout-rules.md, Colour). */
-private val RestGreen = RestTeal
-
 /**
  * HIIT (workout-rules.md, HIIT; boards HaloLiveHiitWork and HaloLiveHiitRest): the phase's hero lit red for work and
- * teal for rest, with the round N of M and a bar of the rounds in it, the seconds left as the one dotted number and
+ * lilac for rest, with the round N of M and a bar of the rounds in it, the seconds left as the one dotted number and
  * what's next in its line. Work then has the heart rate in a solid card, rest each round's peak; the plain figures
  * row is Rounds, Peak bpm and Active kcal. Skip (Done, every minute) is the left action of work, +10 s of rest, with Skip
  * rest on the hero's title row. A warm up waits on Start rounds, which is then the white tap. With [split] the heart
@@ -108,7 +104,7 @@ internal fun LiveIntervalsScreen(
     if (r.structure == null || phase == null) return
     val color = when {
         r.paused -> PausedGrey
-        phase is Phase.Rest -> RestGreen
+        phase is Phase.Rest -> RestColor
         else -> liveColor(r)
     }
     // Parsed once with the recording, not on each recomposition.
@@ -118,6 +114,7 @@ internal fun LiveIntervalsScreen(
     val warmUp = phase == Phase.WarmUp
     LiveFrame(
         r, color, connected, contentPadding, controls, time = { active.value },
+        battery = (connection as? ConnectionState.Connected)?.batteryPercent,
         lap = phaseLap(r, phase, onSkip, onAddRest),
         pauseWhite = !warmUp,
         paused = { LivePaused(r, liveHeartRate.takeIf { connected }, readings, roundFigures(r, kcal)) },
@@ -257,7 +254,7 @@ private fun RoundPeaks(rounds: List<AppWorkoutRound>, total: Int) {
 
 /**
  * A run rep (workouts spec 2.5, board HaloLiveRunReps), in place of the Pace card: the hero lit in the run's lime, or
- * the rest's teal, with rep N of M and the pace now, the metres to go (or the seconds of a time rep) as the one dotted
+ * the rest's lilac, with rep N of M and the pace now, the metres to go (or the seconds of a time rep) as the one dotted
  * number, and the reps done with their times in its line.
  */
 // The route and readings arrive whole with each update and never change in place.
@@ -267,7 +264,7 @@ internal fun RepCard(r: WorkoutState.Recording, route: List<Route.Point>, readin
     val now = nowTicking()
     val m = intervalMoment(r, now, bpm, readings, route) ?: return
     val resting = m.phase is Phase.Rest
-    val color = if (resting) RestGreen else liveColor(r)
+    val color = if (resting) RestColor else liveColor(r)
     val tint = heroTint(color)
     LiveHero(color, liveAngle(r)) {
         val pace = if (m.phase is Phase.Work) org.openstrap.app.presentation.Pace.clock(Route.currentPace(route)) else null

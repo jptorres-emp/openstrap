@@ -6,7 +6,6 @@ import org.openstrap.app.ui.glow.BigNumber
 import org.openstrap.app.ui.glow.ButtonSpec
 import org.openstrap.app.ui.glow.HaloButtonSize
 import org.openstrap.app.ui.theme.Space
-import org.openstrap.app.presentation.WorkoutColors
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -63,7 +62,6 @@ import org.openstrap.app.ui.glow.HaloButtonVariant
 import org.openstrap.app.ui.glow.Segment
 import org.openstrap.app.ui.glow.SegmentBar
 import org.openstrap.app.ui.theme.Ink
-import org.openstrap.app.ui.workout.RestTeal
 import org.openstrap.app.ui.glow.GlowLayout
 import org.openstrap.app.ui.glow.GlowType
 import org.openstrap.app.ui.glow.NavRow
@@ -81,15 +79,13 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import org.openstrap.app.R
 
-/** Strength's rest colour, the green the floating bar and the hero rest in too. */
-private val RestGreen = Color(WorkoutColors.REST_GREEN)
 
 /**
  * Strength (workouts spec 2.4, boards StrengthSet, StrengthLog and StrengthRest), with the total small on top.
  *
  * In a set: set N of M and its exercise (tap to name or change it), the set's clock in dots on a glow in the zone's
  * colour, the sets as dots, the heart rate and zone, the sets done with their reps, weight, time and peak, and one big
- * Set done. Resting: the rest left in dots on a card lit in rest green, the heart rate and how far it dropped, its line
+ * Set done. Resting: the rest left in dots on a card lit in rest lilac, the heart rate and how far it dropped, its line
  * falling toward the level that ends rest sooner, what's next, +30 s and Start set N. The strap buzzes when rest ends.
  *
  * With logging on ([WorkoutState.Recording.logSets]), the log card follows each set while rest runs underneath: reps
@@ -119,7 +115,7 @@ internal fun LiveStrengthScreen(
     val connected = connection is ConnectionState.Connected
     val bpm = liveHeartRate.takeIf { connected && !r.paused }
     ZoneTick(bpm, r)
-    val color = if (r.resting && !r.paused) RestGreen else workoutColor(r, liveHeartRate, connected, heartZones)
+    val color = if (r.resting && !r.paused) RestColor else workoutColor(r, liveHeartRate, connected, heartZones)
     // Read where it shows (the cards' clocks, the paused figures, the log card), so the screen holds still between
     // seconds. The rest of the screen doesn't move with the clock: [steady] is the moment without its seconds, which
     // only the clocks read, so it needs no time at all.
@@ -131,9 +127,10 @@ internal fun LiveStrengthScreen(
     val skipped = rememberSaveable(r.workout.start) { mutableStateListOf<Int>() }
     val unlogged = r.sets.lastOrNull { it.end != null }?.takeIf { r.logSets && it.reps == null && it.index !in skipped && !r.inSet }
     val active = activeSecondsState(r)
-    val sport = if (r.resting && !r.paused) RestGreen else liveColor(r)
+    val sport = if (r.resting && !r.paused) RestColor else liveColor(r)
     LiveFrame(
-        r, color, connected, contentPadding, controls, time = { active.value }, fill = true, pauseWhite = false,
+        r, color, connected, contentPadding, controls, time = { active.value },
+        battery = (connection as? ConnectionState.Connected)?.batteryPercent, fill = true, pauseWhite = false,
         paused = { LivePaused(r, liveHeartRate.takeIf { connected }, history, listOf(
             momentNow().done.let { done -> done.toString() to pluralStringResource(R.plurals.workout_live_figure_sets_done, done) },
             Strength.kgLifted(r.sets)?.let { Strength.kgText(it) } to stringResource(R.string.workout_live_figure_kg_lifted),
@@ -156,7 +153,7 @@ internal fun LiveStrengthScreen(
                 Row(Modifier.fillMaxWidth()) {
                     Text(stringResource(R.string.workout_live_sets_falling_description), color = GlowType.noteColor,
                         style = GlowType.noteSmall, modifier = Modifier.weight(1f))
-                    Text(WorkoutCopy.restRule(rule.belowBpm), color = RestTeal, style = GlowType.noteSmall, maxLines = 1)
+                    Text(WorkoutCopy.restRule(rule.belowBpm), color = RestColor, style = GlowType.noteSmall, maxLines = 1)
                 }
             } else {
                 HeartLine(bpm, r.maxHeartRate, r.paused)
@@ -208,7 +205,7 @@ internal fun LiveStrengthScreen(
 }
 
 /**
- * The strength hero (boards HaloLiveStrengthSet and HaloLiveStrengthRest), in orange for a set and teal for a rest:
+ * The strength hero (boards HaloLiveStrengthSet and HaloLiveStrengthRest), in orange for a set and lilac for a rest:
  * set N of M and its exercise, a bar of the sets, the set's clock or the rest left as the one dotted number, and what
  * the strap will do or what is next in its line.
  */
@@ -258,7 +255,7 @@ private fun DotClock(text: () -> String, unit: String, tint: Color) = HaloBigNum
 
 /**
  * The heart rate since the set ended (board HaloLiveStrengthRest): a white line with a dot at now, the level that ends
- * rest as a dashed teal rule, and a faint dashed run from the dot toward that level.
+ * rest as a dashed lilac rule, and a faint dashed run from the dot toward that level.
  */
 @Composable
 private fun FallingHeart(readings: List<Pair<Long, Int>>, level: Int?) {
@@ -273,7 +270,7 @@ private fun FallingHeart(readings: List<Pair<Long, Int>>, level: Int?) {
         val reach = size.width * FALLING_REACH
         fun x(t: Long) = (t - from).toFloat() / (to - from) * reach
         fun y(v: Int) = size.height - (v - lo).toFloat() / (hi - lo) * size.height
-        if (level != null) dashedLine(RestTeal.copy(alpha = 0.8f), Offset(0f, y(level)), Offset(size.width, y(level)),
+        if (level != null) dashedLine(RestColor.copy(alpha = 0.8f), Offset(0f, y(level)), Offset(size.width, y(level)),
             1.5.dp.toPx(), 4.dp.toPx(), 4.dp.toPx())
         val path = Path().apply {
             readings.forEachIndexed { i, (t, v) -> if (i == 0) moveTo(x(t), y(v)) else lineTo(x(t), y(v)) }

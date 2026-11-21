@@ -23,7 +23,7 @@
     <string name="workout_live_minimize">最小化</string>
     <string name="workout_live_status_paused">已暂停</string>
     <string name="workout_live_status_strap_battery">手环 %1$d%%</string>
-    <string name="workout_live_status_strap">手环</string>
+    <string name="workout_live_status_strap">已连接</string>
     <string name="workout_live_resume">继续</string>
     <string name="workout_live_pause">暂停</string>
     <string name="workout_live_hold_to_end">长按停止</string>

@@ -115,7 +115,7 @@ internal fun LiveMindScreen(
         // Board HaloLiveMind: the time as the violet hero, the heart line in a solid card, a quiet hint under them.
         val color = liveColor(r)
         val tint = heroTint(color)
-        LiveFrame(r, color, connected, contentPadding, controls, time = null, quiet = true, fill = true, tapHint = !compact) {
+        LiveFrame(r, color, connected, contentPadding, controls, time = null, quiet = true, tapHint = !compact) {
             LiveHero(color, liveAngle(r)) {
                 HeroTitle(
                     stringResource(R.string.workout_live_mind_time_title),

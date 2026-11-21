@@ -69,7 +69,7 @@ import org.openstrap.app.ui.theme.ControlSurface
 internal fun glanceColor(g: LiveGlance): Color = when (g.tint) {
     GlanceTint.Zone -> g.sport?.let { sportFamilyColor(it) } ?: g.zone?.let { ZONE_COLORS[it] } ?: PausedColor
     GlanceTint.Work -> g.sport?.let { sportFamilyColor(it) } ?: MetricColors.heart
-    GlanceTint.Rest -> Color(WorkoutColors.REST_GREEN)
+    GlanceTint.Rest -> Color(WorkoutColors.REST)
     GlanceTint.Mind -> g.sport?.let { sportFamilyColor(it) } ?: MetricColors.evening
     GlanceTint.Paused -> PausedColor
     GlanceTint.Asking -> MetricColors.warn

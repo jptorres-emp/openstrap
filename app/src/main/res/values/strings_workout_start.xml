@@ -22,6 +22,8 @@
     <string name="workout_start_just_walk">Just walk</string>
     <!-- The goal chip for no goal on a bike ride. A short chip. -->
     <string name="workout_start_just_ride">Just ride</string>
+    <!-- The goal chip for no goal on rowing. A short chip. -->
+    <string name="workout_start_just_row">Just row</string>
     <!-- The goal chip for no goal on any other sport. A short chip. -->
     <string name="workout_start_just_go">Just go</string>
 

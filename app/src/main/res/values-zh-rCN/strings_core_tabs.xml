@@ -77,17 +77,17 @@
         <item quantity="other">了解中，%1$d/%2$d</item>
     </plurals>
     <string name="core_tab_breathing_short_usual">常态 %1$s</string>
-    <string name="core_tab_load_usual">你的常态，%1$d</string>
-    <string name="core_tab_load_learning">了解中</string>
+    <string name="core_tab_load_usual">你的常态，每天 %1$d</string>
+    <string name="core_tab_load_learning">正在了解你的常态</string>
     <string name="core_tab_balance_building">提升中</string>
     <string name="core_tab_balance_easing">减量中</string>
     <string name="core_tab_balance_steady">平稳</string>
-    <string name="core_tab_active_reached">目标已达成，%1$d 分钟</string>
-    <string name="core_tab_active_goal">目标 %1$d</string>
+    <string name="core_tab_active_reached">本周目标已达成</string>
+    <string name="core_tab_active_goal">每周目标 %1$d</string>
     <plurals name="core_tab_points_reached">
-        <item quantity="other">目标已达成，%1$d 分</item>
+        <item quantity="other">本周目标已达成</item>
     </plurals>
-    <string name="core_tab_points_aim">目标 %1$d</string>
+    <string name="core_tab_points_aim">每周目标 %1$d</string>
     <string name="core_tab_calories_today">今日至今预估 kcal</string>
     <string name="core_tab_calories_partial">预估 kcal（仅佩戴部分时段）</string>
     <string name="core_tab_calories">预估 kcal</string>

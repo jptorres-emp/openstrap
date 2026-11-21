@@ -347,7 +347,7 @@ fun WeeklyRecapPage(view: RewardsView?, first: LocalDate, contentPadding: Paddin
                         Units.km(meters, Units.Precision.Day) to stringResource(R.string.glow_goals_distance),
                         Units.count(Math.round(kcal)) to stringResource(R.string.glow_goals_active_kcal),
                     ),
-                    units = listOf(stringResource(R.string.you_unit_h), stringResource(R.string.glow_unit_km), null),
+                    units = listOf(null, stringResource(R.string.glow_unit_km), null),
                 )
             }
         }

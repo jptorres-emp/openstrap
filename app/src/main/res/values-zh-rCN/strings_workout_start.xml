@@ -8,6 +8,7 @@
     <string name="workout_start_just_run">自由跑</string>
     <string name="workout_start_just_walk">自由健走</string>
     <string name="workout_start_just_ride">自由骑行</string>
+    <string name="workout_start_just_row">自由划船</string>
     <string name="workout_start_just_go">自由运动</string>
     <string name="workout_start_strength_plan">计划</string>
     <string name="workout_start_open_sets_note">组数不限，休息结束时振动</string>

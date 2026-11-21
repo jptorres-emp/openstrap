@@ -21,7 +21,7 @@
     <string name="glow_goals_best_lift_how">你为这个动作记录过的最重一组，含次数。</string>
     <string name="glow_goals_best_steps_how">手环在单日记录到的最多步数。</string>
     <string name="glow_goals_all_badges">全部徽章</string>
-    <string name="glow_goals_last_week">上周回顾</string>
+    <string name="glow_goals_last_week">上周</string>
     <string name="glow_goals_celebrations">庆祝</string>
     <string name="glow_goals_earned_count">已获得 %1$d / %2$d</string>
     <string name="glow_goals_group_firsts">首次达成</string>
@@ -42,7 +42,7 @@
     <plurals name="glow_goals_workouts_count">
         <item quantity="other">%d 次运动</item>
     </plurals>
-    <string name="glow_goals_hours">小时</string>
+    <string name="glow_goals_hours">时长</string>
     <string name="glow_goals_distance">距离</string>
     <string name="glow_goals_active_kcal">活动千卡</string>
     <string name="glow_goals_share_week">分享本周</string>
@@ -63,9 +63,9 @@
     </plurals>
     <string name="glow_goals_next_week_goal">下周目标</string>
     <string name="glow_goals_what_it_measures">衡量内容</string>
-    <string name="glow_goals_celebrations_both">目标时刻，每周回顾</string>
+    <string name="glow_goals_celebrations_both">目标时刻和你的一周</string>
     <string name="glow_goals_celebrations_goal">目标时刻</string>
-    <string name="glow_goals_celebrations_recap">每周回顾</string>
+    <string name="glow_goals_celebrations_recap">你的一周</string>
     <string name="glow_goals_celebrations_off">已关闭</string>
     <string name="glow_goals_unit_kcal">千卡</string>
     <string name="glow_goals_per_week">每周</string>

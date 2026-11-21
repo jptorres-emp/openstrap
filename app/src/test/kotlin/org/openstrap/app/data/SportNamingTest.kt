@@ -19,7 +19,7 @@ class SportNamingTest {
         assertEquals("Cycling", Workouts.sportName(4))
         assertEquals("Cycling", Workouts.sportName(8))
         // A sport with one kind keeps its own name.
-        assertEquals("Strength training", Workouts.sportName(52))
+        assertEquals("Strength", Workouts.sportName(52))
         assertEquals("Walk", Workouts.sportName(40))
         assertEquals("Indoor walk", Workouts.exactName(40))
     }

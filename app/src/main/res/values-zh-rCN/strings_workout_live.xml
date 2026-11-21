@@ -91,8 +91,8 @@
     <string name="workout_live_seconds_left_minute">本分钟剩余秒数</string>
     <string name="workout_live_seconds_left">剩余秒数</string>
     <string name="workout_live_round_next">接下来第 %1$d 轮</string>
-    <string name="workout_live_heart_rate">心率 %1$d</string>
-    <string name="workout_live_heart_rate_down">心率 %1$d，已下降 %2$d</string>
+    <string name="workout_live_heart_rate">心率 %1$d bpm</string>
+    <string name="workout_live_heart_rate_down">心率 %1$d bpm，已下降 %2$d</string>
     <string name="workout_live_add_10_s">+10 秒</string>
     <plurals name="workout_live_rounds_after">
         <item quantity="other">随后 %1$d 轮</item>

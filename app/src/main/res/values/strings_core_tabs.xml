@@ -171,9 +171,9 @@
     <string name="core_tab_breathing_short_usual">Usual <xliff:g id="rate" example="2.1">%1$s</xliff:g></string>
 
     <!-- Under Load's number: your usual Load for a whole day. -->
-    <string name="core_tab_load_usual">Your usual, <xliff:g id="usual" example="40">%1$d</xliff:g></string>
+    <string name="core_tab_load_usual">Your usual, <xliff:g id="usual" example="40">%1$d</xliff:g> a day</string>
     <!-- Under Load's number while the usual is still being learned: the learning word. -->
-    <string name="core_tab_load_learning">Learning</string>
+    <string name="core_tab_load_learning">Learning your usual</string>
     <!-- The week's training balance: well above your usual. One word if it can. -->
     <string name="core_tab_balance_building">Building</string>
     <!-- The week's training balance: well below your usual. -->
@@ -182,16 +182,16 @@
     <string name="core_tab_balance_steady">Steady</string>
 
     <!-- Active minutes over the last 7 days, with the goal reached. -->
-    <string name="core_tab_active_reached">Goal met, <xliff:g id="minutes" example="150">%1$d</xliff:g> min</string>
+    <string name="core_tab_active_reached">Met this week</string>
     <!-- Active minutes over the last 7 days, with the goal. -->
-    <string name="core_tab_active_goal">Aim for <xliff:g id="goal" example="150">%1$d</xliff:g></string>
+    <string name="core_tab_active_goal">Aim <xliff:g id="goal" example="150">%1$d</xliff:g> a week</string>
     <!-- Heart points over the last 7 days, with the aim reached. -->
     <plurals name="core_tab_points_reached">
-        <item quantity="one">Goal met, <xliff:g id="points" example="1">%1$d</xliff:g> point</item>
-        <item quantity="other">Goal met, <xliff:g id="points" example="100">%1$d</xliff:g> points</item>
+        <item quantity="one">Met this week</item>
+        <item quantity="other">Met this week</item>
     </plurals>
     <!-- Heart points over the last 7 days, with the aim. -->
-    <string name="core_tab_points_aim">Aim for <xliff:g id="aim" example="100">%1$d</xliff:g></string>
+    <string name="core_tab_points_aim">Aim <xliff:g id="aim" example="100">%1$d</xliff:g> a week</string>
     <!-- Under the calories number, today. kcal is kilocalories. -->
     <string name="core_tab_calories_today">Estimated kcal so far today</string>
     <!-- Under the calories number, a past day the strap was worn for part of. -->

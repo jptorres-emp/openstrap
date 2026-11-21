@@ -121,7 +121,7 @@ internal fun HiitHero(rounds: Structure, onRounds: (Structure) -> Unit, look: He
 }
 
 /**
- * The hero with no goal: "No goal. Last walk, Wed" over last time's big figure and the rest in a line ([cardio]
+ * The hero with no goal: "No goal, last session Wed" over last time's big figure and the rest in a line ([cardio]
  * says goal, else plan); with no workout of the sport yet, "No goal" over [words], what is recorded.
  */
 @Composable
@@ -132,7 +132,7 @@ internal fun LastTimeHero(type: Int, cardio: Boolean, last: ReadyLast?, look: He
         LookHero(look, null, null, null, caption = caption, words = words)
         return
     }
-    val caption = if (cardio) stringResource(R.string.ready_last_no_goal, Workouts.shortName(type).lowercase(), last.day)
+    val caption = if (cardio) stringResource(R.string.ready_last_no_goal, last.day)
         else stringResource(R.string.ready_last_no_plan, last.day)
     LookHero(look, hero.number, hero.unit, hero.line, caption = caption)
 }

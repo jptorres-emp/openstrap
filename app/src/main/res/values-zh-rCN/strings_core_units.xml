@@ -5,6 +5,7 @@
     <string name="core_unit_minutes">%1$s 分钟</string>
     <string name="core_unit_hours">%1$s 小时</string>
     <string name="core_unit_hours_minutes">%1$s 小时 %2$s 分</string>
+    <string name="core_unit_minutes_seconds">%1$s 分钟 %2$s 秒</string>
     <string name="core_unit_seconds">%1$s 秒</string>
     <string name="core_unit_pace">%1$s/km</string>
     <string name="core_unit_kcal">%1$s kcal</string>

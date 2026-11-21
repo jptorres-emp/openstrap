@@ -5,9 +5,9 @@
 -->
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <!-- A habit Habit Age weighs, as a row title on its page. -->
-    <string name="core_healthspan_habit_strength">Strength training</string>
+    <string name="core_healthspan_habit_strength">Strength</string>
     <!-- A habit Habit Age weighs, as a row title. -->
-    <string name="core_healthspan_habit_vo2max">Fitness (VO2 max)</string>
+    <string name="core_healthspan_habit_vo2max">VO2 max</string>
     <!-- A habit Habit Age weighs, as a row title. -->
     <string name="core_healthspan_habit_steps">Steps</string>
     <!-- A habit Habit Age weighs, as a row title. How alike your sleep times are from day to day. -->

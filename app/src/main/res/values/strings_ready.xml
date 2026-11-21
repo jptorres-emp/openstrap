@@ -63,10 +63,10 @@
     <!-- Under a game's periods: about how long the periods and breaks take. -->
     <string name="ready_hero_periods_about">About <xliff:g id="minutes" example="70">%1$d</xliff:g> min with breaks</string>
 
-    <!-- The hero with no goal: what it says over last time's figures, "No goal. Last walk, Wed". -->
-    <string name="ready_last_no_goal">No goal. Last <xliff:g id="sport" example="walk">%1$s</xliff:g>, <xliff:g id="day" example="Wed">%2$s</xliff:g></string>
-    <!-- The hero with no plan: what it says over last time's figures, "No plan. Last session, Sat". -->
-    <string name="ready_last_no_plan">No plan. Last session, <xliff:g id="day" example="Sat">%1$s</xliff:g></string>
+    <!-- The hero with no goal: what it says over last time's figures, "No goal, last session Wed". -->
+    <string name="ready_last_no_goal">No goal, last session <xliff:g id="day" example="Wed">%1$s</xliff:g></string>
+    <!-- The hero with no plan: what it says over last time's figures, "No plan, last session Sat". -->
+    <string name="ready_last_no_plan">No plan, last session <xliff:g id="day" example="Sat">%1$s</xliff:g></string>
     <!-- Under last time's distance in the hero: its time and pace, "28:10 at 11:44 per km". -->
     <string name="ready_last_pace_line"><xliff:g id="time" example="28:10">%1$s</xliff:g> at <xliff:g id="pace" example="11:44">%2$s</xliff:g> per km</string>
     <!-- The hero with no goal and no workout of the sport yet. Very short. -->

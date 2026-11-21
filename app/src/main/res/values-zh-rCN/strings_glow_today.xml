@@ -28,7 +28,7 @@
     <string name="glow_today_stress">压力</string>
     <string name="glow_today_charge_fills_back">睡眠会恢复精力</string>
     <string name="glow_today_charge_steady">自醒来保持平稳</string>
-    <string name="glow_today_load">负荷</string>
+    <string name="glow_today_load">今日负荷</string>
     <string name="glow_today_to_recover">恢复所需</string>
     <string name="glow_today_hours_unit">小时</string>
     <string name="glow_today_recover_no_estimate">手环暂无预估</string>

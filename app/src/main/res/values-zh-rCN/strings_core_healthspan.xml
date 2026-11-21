@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="core_healthspan_habit_strength">力量训练</string>
-    <string name="core_healthspan_habit_vo2max">体能（最大摄氧量）</string>
+    <string name="core_healthspan_habit_vo2max">最大摄氧量</string>
     <string name="core_healthspan_habit_steps">步数</string>
     <string name="core_healthspan_habit_regularity">睡眠规律性</string>
     <string name="core_healthspan_habit_resting_hr">静息心率</string>

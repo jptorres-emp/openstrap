@@ -76,7 +76,7 @@ class WorkoutDetailCopyTest {
 
     @Test fun `without Load it's just the sport`() {
         assertEquals("A run, mostly in zone 2.", WorkoutDetailCopy.sentence(run, hour, null, 100f, listOf(0, 600, 0, 0, 0)))
-        assertEquals("Strength training.", WorkoutDetailCopy.sentence(strength, hour, null, null, emptyList()))
+        assertEquals("Strength.", WorkoutDetailCopy.sentence(strength, hour, null, null, emptyList()))
         assertEquals("HIIT.", WorkoutDetailCopy.sentence(hiit, hour, null, null, emptyList()))
     }
 

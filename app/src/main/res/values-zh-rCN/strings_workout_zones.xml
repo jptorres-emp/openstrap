@@ -9,7 +9,7 @@
     <string name="workout_zones_you_line">各运动共用相同区间</string>
     <string name="workout_zones_max_row">最大心率</string>
     <string name="workout_zones_profile_set">%1$d bpm，由你设定</string>
-    <string name="workout_zones_profile_worked_out">自动得出，不是你设置的</string>
+    <string name="workout_zones_profile_worked_out">由 unstrap 自动得出</string>
     <string name="workout_zones_source_set">由你设定</string>
     <string name="workout_zones_source_learned_on">根据全力运动学习，%1$s</string>
     <string name="workout_zones_source_learned">根据全力运动记录学习得出</string>

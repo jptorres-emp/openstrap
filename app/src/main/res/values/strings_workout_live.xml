@@ -53,8 +53,6 @@
 
     <!-- The round button top left that tucks the live screen away, for a screen reader. -->
     <string name="workout_live_minimize">Minimise</string>
-    <!-- Top right, small, beside a dot: the workout is paused. About 10 characters. -->
-    <string name="workout_live_status_paused">Paused</string>
     <!-- Top right, small, beside a dot: the strap is connected, with its battery. About 10 characters. -->
     <string name="workout_live_status_strap_battery">Strap <xliff:g id="percent" example="64">%1$d</xliff:g>%%</string>
     <!-- Top right, small, beside a dot: the strap is connected. About 10 characters. -->
@@ -398,4 +396,6 @@
     <string name="workout_live_not_saved_note">The workout couldn\'t be saved, so it keeps recording.</string>
     <!-- A button under that note: ends the workout again. -->
     <string name="workout_live_try_again">Try again</string>
+    <!-- The total time under the sport's name while paused: the time, then that it is paused. -->
+    <string name="workout_live_total_paused"><xliff:g id="time" example="12:40">%1$s</xliff:g>, paused</string>
 </resources>

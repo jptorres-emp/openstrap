@@ -359,9 +359,9 @@ private val HintInk = Ink.Disabled
 /** The total time under the sport's name, read in its own scope so only it is composed again each second. */
 @Composable
 private fun TotalTime(time: () -> Long, paused: Boolean) {
-    val suffix = if (paused) ", " + stringResource(R.string.workout_live_status_paused).lowercase() else ""
+    val clock = workoutClock(time())
     Text(
-        workoutClock(time()) + suffix, color = GlowType.noteColor,
+        if (paused) stringResource(R.string.workout_live_total_paused, clock) else clock, color = GlowType.noteColor,
         style = GlowType.secondary.copy(fontFeatureSettings = "tnum"), maxLines = 1,
     )
 }

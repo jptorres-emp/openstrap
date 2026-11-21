@@ -128,7 +128,7 @@
     <string name="you_section_about">关于</string>
     <string name="you_row_version">版本</string>
     <string name="you_version_value">unstrap %1$s</string>
-    <string name="you_data_footnote">所有内容都留在本手机上。unstrap 没有账号，也不跟踪你，只会在这几种情况下联网：向 GitHub 检查新版本，打开路线时从 OpenFreeMap 加载地图图块和道路数据，以及登录 Zepp 或检查固件时连接 Zepp。</string>
+    <string name="you_data_footnote">你的数据留在本手机上。unstrap 没有账号，也不跟踪你。它只会在这几种情况下联网：向 GitHub 检查新版本，打开路线时从 OpenFreeMap 加载地图和道路数据，以及登录 Zepp 或检查固件时连接 Zepp。</string>
     <string name="you_updates_ready">unstrap %1$s 已可安装</string>
     <string name="you_updates_install">安装</string>
     <string name="you_strap_group_on_strap">手环上</string>

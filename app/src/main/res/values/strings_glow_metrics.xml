@@ -169,6 +169,7 @@
     <string name="glow_detail_asleep_note">Asleep</string>
     <!-- Under stress's line: what the strip of colour is. -->
     <string name="glow_detail_stress_strip_note">Each hour, from calm to high</string>
-    <!-- After "Last night" under a resting heart rate unstrap worked out itself. -->
-    <string name="glow_detail_estimated">estimated</string>
+    <!-- The Resting heart rate headline's context when the night's figure is an estimate: the night it is from, then that it is estimated. -->
+    <string name="glow_detail_last_night_estimated">Last night, estimated</string>
+    <string name="glow_detail_that_night_estimated">That night, estimated</string>
 </resources>

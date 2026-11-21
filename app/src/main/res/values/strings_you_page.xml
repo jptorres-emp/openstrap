@@ -104,7 +104,7 @@
     <string name="you_profile_height">Height</string>
     <string name="you_profile_unit_cm">cm</string>
     <!-- Over five numbered segments, 1 to 5. -->
-    <string name="you_profile_activity_note">Used for the fitness estimate.</string>
+    <string name="you_profile_activity_note">unstrap uses this for the fitness estimate.</string>
     <!-- Under the activity segments while none is picked. -->
     <!-- Switch rows. -->
     <string name="you_profile_beta_blockers">Taking beta-blockers</string>
@@ -118,7 +118,7 @@
     <string name="you_sleep_goal_need">Sleep need %1$s</string>
     <string name="you_sleep_goal_need_profile">From your profile</string>
     <string name="you_sleep_goal_need_age">From your age</string>
-    <string name="you_sleep_goal_note">It sets the sleep goal ring and when the goal is met.</string>
+    <string name="you_sleep_goal_note">This sets your sleep goal ring and when the goal counts as met.</string>
 
     <!-- The goals sheet's title and its note. -->
     <string name="you_goals_title">Goals</string>
@@ -211,7 +211,7 @@
     <string name="you_section_about">About</string>
     <string name="you_row_version">Version</string>
     <string name="you_version_value">unstrap <xliff:g id="version" example="3.0.7">%1$s</xliff:g></string>
-    <string name="you_data_footnote">Everything stays on this phone. unstrap has no account and no tracking, and only goes online to check GitHub for a new release, to load map tiles and road data from OpenFreeMap when you open a route, and to reach Zepp when you sign in or check firmware.</string>
+    <string name="you_data_footnote">Your data stays on this phone. unstrap has no account and no tracking. It goes online only to check GitHub for a new release, to load maps and road data from OpenFreeMap when you open a route, and to reach Zepp when you sign in or check firmware.</string>
     <!-- Updates page banner (Halo). -->
     <string name="you_updates_ready">unstrap <xliff:g id="version" example="3.0.8">%1$s</xliff:g> is ready</string>
     <string name="you_updates_install">Install</string>

@@ -120,9 +120,9 @@ class StartCopyTest {
 
     @Test fun `the Outdoor switch says how close the GPS fix is, and what indoors gives`() {
         assertEquals("GPS for distance and a map, finding you", StartCopy.outdoorNote(null))
-        assertEquals("GPS for distance and a map, 48 m so far", StartCopy.outdoorNote(48f))
-        assertEquals("GPS for distance and a map, ready to 8 m", StartCopy.outdoorNote(8f))
-        assertEquals("GPS for distance and a map, ready to 6 m", StartCopy.outdoorNote(6.4f))
+        assertEquals("GPS for distance and a map, accurate to 48 m for now", StartCopy.outdoorNote(48f))
+        assertEquals("GPS for distance and a map, accurate to 8 m", StartCopy.outdoorNote(8f))
+        assertEquals("GPS for distance and a map, accurate to 6 m", StartCopy.outdoorNote(6.4f))
         assertEquals("Distance from your steps", StartCopy.indoorLine(2))
         assertEquals("No distance indoors", StartCopy.indoorLine(8))
     }

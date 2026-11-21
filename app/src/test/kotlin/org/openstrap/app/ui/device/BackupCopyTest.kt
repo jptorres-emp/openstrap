@@ -16,7 +16,7 @@ class BackupCopyTest {
     private fun status(s: BackupState) = BackupCopy.status(s, now, utc, Locale.UK)
 
     @Test fun `the row says off, waiting, when it last ran, or why it failed`() {
-        assertEquals("Off, a zip each day in your folder", status(BackupState(null, null, null, null, null)))
+        assertEquals("Off, daily zips in a folder you choose", status(BackupState(null, null, null, null, null)))
         assertEquals("No backup yet, runs while charging", status(on))
         assertEquals("Last backup 03:12", status(on.copy(lastDone = 1792195200L + 3 * 3600 + 12 * 60)))
         assertEquals("Last backup Yesterday 23:50", status(on.copy(lastDone = 1792195200L - 600)))

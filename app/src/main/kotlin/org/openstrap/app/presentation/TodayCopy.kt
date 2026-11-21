@@ -136,19 +136,14 @@ object TodayCopy {
      */
     fun charge(now: Int?, drained: Int?, anchored: Boolean, hour: Int, strings: Strings = Strings.app): String {
         if (now == null || !anchored) return strings.get(R.string.core_today_energy_first_night)
-        val level = when {
-            now >= 50 -> 0
-            now >= 25 -> 1
-            else -> 2
-        }
+        val level = energyLevel(now)
         // Each pair of sentences is one string, so a translator sees the whole line.
         val whole = when {
             drained == null -> null
             drained >= 1 -> if (hour < 12) MORNING_DRAINED[level] else DAY_DRAINED[level]
             else -> NOTHING_DRAINED[level]
         }
-        if (whole != null) return strings.format(whole, drained ?: 0)
-        return strings.get(ENERGY_LEFT[level])
+        return if (whole != null) strings.format(whole, drained ?: 0) else strings.get(ENERGY_LEFT[level])
     }
 
     private val MORNING_DRAINED = intArrayOf(
@@ -219,10 +214,13 @@ object TodayCopy {
     }
 
     private fun energyLevel(energy: Int): Int = when {
-        energy >= 50 -> 0
-        energy >= 25 -> 1
+        energy >= ENERGY_PLENTY_FROM -> 0
+        energy >= ENERGY_ENOUGH_FROM -> 1
         else -> 2
     }
+
+    private const val ENERGY_PLENTY_FROM = 50
+    private const val ENERGY_ENOUGH_FROM = 25
 
     private val WINDOW_SAY = intArrayOf(
         R.string.core_today_window_say_ready, R.string.core_today_window_say_steady, R.string.core_today_window_say_easy,

@@ -1366,7 +1366,8 @@ internal fun RecoveryScoreRow(
 ) {
     val shown = org.openstrap.app.presentation.TodayCopy.recoveryShown(ready, strapScore, NO_VALUE)
     ScoreRow(
-        Score.Recovery, org.openstrap.app.ui.theme.MetricColors.readiness, shown.value?.toString(), shown.word ?: shown.line, divider, onOpen,
+        Score.Recovery, org.openstrap.app.ui.theme.MetricColors.readiness, shown.value?.toString(), shown.word ?: shown.line,
+        divider, onOpen,
     )
 }
 

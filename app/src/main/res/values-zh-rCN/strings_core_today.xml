@@ -54,9 +54,6 @@
     <string name="core_today_own_score_not_ready">你自己的评分尚未就绪。</string>
     <string name="core_today_own_score_not_ready_phrase">你的评分尚未就绪</string>
     <string name="core_today_energy_first_night">度过首晚后即可开启精力。睡眠能为你补充精力。</string>
-    <string name="core_today_energy_morning_drained">上午已消耗 %1$d。</string>
-    <string name="core_today_energy_day_drained">今天目前已消耗 %1$d。</string>
-    <string name="core_today_energy_nothing_drained">醒来后尚未消耗精力。</string>
     <string name="core_today_energy_plenty">今晚精力依然充沛。</string>
     <string name="core_today_energy_enough">余量足够轻松度过今晚。</string>
     <string name="core_today_energy_low">精力偏低，早点休息会有帮助。</string>

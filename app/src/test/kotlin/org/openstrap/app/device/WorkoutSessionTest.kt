@@ -1109,7 +1109,7 @@ class WorkoutSessionTest {
     fun theSportReadsAsInASentence() {
         assertEquals("Keep recording your mountain hike", KeepRecordingNotice.title(224))
         assertEquals("Keep recording your HYROX training", KeepRecordingNotice.title(222))
-        assertEquals("Keep recording your strength training", KeepRecordingNotice.title(52))
+        assertEquals("Keep recording your strength", KeepRecordingNotice.title(52))
     }
 
     /** A preferences store of the test's own, for settings writes that fail. */

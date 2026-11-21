@@ -125,7 +125,7 @@ internal fun HiitHero(rounds: Structure, onRounds: (Structure) -> Unit, look: He
  * says goal, else plan); with no workout of the sport yet, "No goal" over [words], what is recorded.
  */
 @Composable
-internal fun LastTimeHero(type: Int, cardio: Boolean, last: ReadyLast?, look: HeroLook, words: String) {
+internal fun LastTimeHero(cardio: Boolean, last: ReadyLast?, look: HeroLook, words: String) {
     val hero = last?.hero
     if (last == null || hero == null) {
         val caption = stringResource(if (cardio) R.string.ready_no_goal else R.string.ready_no_plan)

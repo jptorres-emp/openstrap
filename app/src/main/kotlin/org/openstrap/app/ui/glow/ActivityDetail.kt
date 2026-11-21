@@ -395,7 +395,9 @@ private fun LoadDetail(ctx: ActivityDetailContext) {
                 } else {
                     val shownDays = (shown.days - 1 downTo 0).map { date.minusDays(it.toLong()) }
                     val shownValues = shownDays.map { byDay[it] }
-                    if (shownValues.none { it != null }) DetailEmpty(pluralStringResource(R.plurals.glow_activity_no_load, shown.days, shown.days))
+                    if (shownValues.none { it != null }) {
+                        DetailEmpty(pluralStringResource(R.plurals.glow_activity_no_load, shown.days, shown.days))
+                    }
                     else DetailColumns(
                         shownValues, color,
                         if (shown == Range.Week) shownDays.map { DayWords.weekdayShort(it) }
@@ -689,13 +691,15 @@ private fun CaloriesDetail(ctx: ActivityDetailContext) {
                         }
                         HourlyKcal(e, color) { h ->
                             scrub = h?.let {
-                                DetailHeadline(Units.count(Math.round(e.hourly.total[it]), Units.DOT_LOCALE), CaloriesCopy.hourLabel(it), null)
+                                val kcal = Units.count(Math.round(e.hourly.total[it]), Units.DOT_LOCALE)
+                                DetailHeadline(kcal, CaloriesCopy.hourLabel(it), null)
                             }
                         }
                     }
                 } else when {
                     rows == null -> DetailEmpty(stringResource(R.string.glow_loading))
-                    summary == null || rows.keys.none { it in start..date } -> DetailEmpty(stringResource(R.string.glow_activity_no_calories))
+                    summary == null || rows.keys.none { it in start..date } ->
+                        DetailEmpty(stringResource(R.string.glow_activity_no_calories))
                     else -> RangeKcal(rows, shown, start, date, goal, color) { scrub = it }
                 }
             }

@@ -96,7 +96,7 @@ class DeviceViewModelTest {
         val uri = Uri.parse("content://test/backup.zip")
         backups.next = BackupResult.Saved
         vm.exportCsv(uri).join()
-        assertEquals("Saved a copy.", vm.message.value)
+        assertEquals("unstrap saved a copy.", vm.message.value)
 
         backups.next = BackupResult.Failed(SecurityException("denied"))
         vm.exportCsv(uri).join()

@@ -46,7 +46,7 @@ class WorkoutDetailCopyTest {
         assertEquals("run", WorkoutDetailCopy.sport(run))
         assertEquals("walk", WorkoutDetailCopy.sport(walk))
         assertEquals("ride", WorkoutDetailCopy.sport(4))
-        assertEquals("strength training", WorkoutDetailCopy.sport(strength))
+        assertEquals("strength", WorkoutDetailCopy.sport(strength))
         assertEquals("HIIT", WorkoutDetailCopy.sport(hiit))
         assertEquals("HYROX training", WorkoutDetailCopy.sport(222))
         assertEquals("workout", WorkoutDetailCopy.sport(999))
@@ -65,7 +65,7 @@ class WorkoutDetailCopyTest {
         val z2 = listOf(300, 1200, 60, 0, 0)
         assertEquals("Hard run, mostly in zone 4.", WorkoutDetailCopy.sentence(run, hour, 150, 100f, z4))
         assertEquals("Easy walk, mostly in zone 2.", WorkoutDetailCopy.sentence(walk, hour, 30, 100f, z2))
-        assertEquals("Steady strength training, mostly in zone 2.", WorkoutDetailCopy.sentence(strength, hour, 100, 100f, z2))
+        assertEquals("Steady strength, mostly in zone 2.", WorkoutDetailCopy.sentence(strength, hour, 100, 100f, z2))
         assertEquals("Very hard HIIT, mostly in zone 4.", WorkoutDetailCopy.sentence(hiit, hour, 300, 100f, z4))
     }
 
@@ -83,7 +83,7 @@ class WorkoutDetailCopyTest {
     @Test fun `a very short workout is short whatever its Load`() {
         assertEquals("Short run.", WorkoutDetailCopy.sentence(run, 4 * 60L, 200, 100f, listOf(0, 0, 0, 30, 0)))
         assertEquals("Short walk, mostly in zone 1.", WorkoutDetailCopy.sentence(walk, 4 * 60L, null, null, listOf(120, 0, 0, 0, 0)))
-        assertEquals("Short strength training.", WorkoutDetailCopy.sentence(strength, 0L, null, null, emptyList()))
+        assertEquals("Short strength.", WorkoutDetailCopy.sentence(strength, 0L, null, null, emptyList()))
         assertTrue(WorkoutDetailCopy.sentence(run, WorkoutDetailCopy.SHORT_S, 150, 100f, emptyList()).startsWith("Hard"))
     }
 

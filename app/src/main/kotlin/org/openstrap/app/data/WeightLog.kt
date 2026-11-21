@@ -40,7 +40,8 @@ object WeightLog {
      * height is known, so calories and VO2 max use it.
      */
     suspend fun save(dao: ForkDao, settings: SettingsStore, profile: UserProfile, kg: Float, now: Instant = Instant.now()) {
-        dao.insertWeights(listOf(WeightEntry(LocalDate.ofInstant(now, ZoneId.systemDefault()), kg, now.epochSecond)))
+        // atZone, not LocalDate.ofInstant: that one needs Android 14, and the app runs from Android 11.
+        dao.insertWeights(listOf(WeightEntry(now.atZone(ZoneId.systemDefault()).toLocalDate(), kg, now.epochSecond)))
         val measured = if (profile.heightCm != null) now.epochSecond else profile.bodyMeasuredAt
         settings.saveProfile(profile.copy(weightKg = kg, bodyMeasuredAt = measured))
     }

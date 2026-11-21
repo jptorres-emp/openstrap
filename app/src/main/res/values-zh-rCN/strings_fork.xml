@@ -14,7 +14,7 @@
     <string name="fork_weight_down">比前 7 天少 <xliff:g id="change" example="0.5 公斤">%1$s</xliff:g></string>
     <string name="fork_weight_up">比前 7 天多 <xliff:g id="change" example="0.3 公斤">%1$s</xliff:g></string>
     <string name="fork_weight_same">与前 7 天相同</string>
-    <string name="fork_weight_chart">最近 <xliff:g id="weeks" example="12">%1$d</xliff:g> 周的 7 天平均体重，<xliff:g id="first" example="92.8 公斤">%2$s</xliff:g> 到 <xliff:g id="last" example="91.6 公斤">%3$s</xliff:g></string>
+    <string name="fork_weight_chart">每周的 7 天平均体重：<xliff:g id="first" example="92.8 公斤">%1$s</xliff:g> 到 <xliff:g id="last" example="91.6 公斤">%2$s</xliff:g></string>
     <string name="fork_sleep_performance_line">达到所需睡眠的 <xliff:g id="percent" example="92">%1$d</xliff:g>%%</string>
     <string name="fork_sleep_performance">达成率</string>
     <string name="fork_sleep_efficiency">效率</string>

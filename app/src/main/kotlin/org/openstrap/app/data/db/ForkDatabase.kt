@@ -2,6 +2,7 @@ package org.openstrap.app.data.db
 
 import android.database.sqlite.SQLiteDatabase
 import android.util.Log
+import androidx.core.database.sqlite.transaction
 import org.openstrap.app.data.DayKey
 import java.io.File
 import java.time.ZoneId
@@ -40,18 +41,14 @@ object ForkDatabase {
 
     /** The original's version 20 additions, and the weight's days as date keys, in one transaction. */
     private fun upgrade(db: SQLiteDatabase, zone: ZoneId) {
-        db.beginTransaction()
-        try {
-            db.execSQL(CREATE_DAILY_ENERGY)
+        val moved = db.transaction {
+            execSQL(CREATE_DAILY_ENERGY)
             for (column in listOf("activeKcal", "totalKcal")) {
-                if (!hasColumn(db, "app_workout", column)) db.execSQL("ALTER TABLE `app_workout` ADD COLUMN `$column` REAL")
+                if (!hasColumn(this, "app_workout", column)) execSQL("ALTER TABLE `app_workout` ADD COLUMN `$column` REAL")
             }
-            val moved = weightDays(db, zone)
-            db.setTransactionSuccessful()
-            Log.i(TAG, "fork database 20 repaired: daily_energy added, app_workout's calories added, $moved weight days moved")
-        } finally {
-            db.endTransaction()
+            weightDays(this, zone)
         }
+        Log.i(TAG, "fork database 20 repaired: daily_energy added, app_workout's calories added, $moved weight days moved")
     }
 
     /** Each weight row under its date's [DayKey]; two rows that become one date keep the newer. Returns the rows moved. */

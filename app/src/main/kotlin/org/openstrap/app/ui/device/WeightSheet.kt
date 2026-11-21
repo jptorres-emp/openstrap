@@ -118,7 +118,7 @@ internal fun WeightContent(
         if (logged.size >= 2) {
             val values = shown.map { w -> w.kg?.let { if (imperial) Units.kgToLb(it) else it } }
             val described = stringResource(
-                R.string.fork_weight_chart, shown.size, weightText(logged.first(), imperial), weightText(logged.last(), imperial),
+                R.string.fork_weight_chart, weightText(logged.first(), imperial), weightText(logged.last(), imperial),
             )
             GlowLineChart(
                 values, Modifier.semantics { contentDescription = described }, height = 110.dp,

@@ -27,7 +27,7 @@
     <string name="fork_weight_up"><xliff:g id="change" example="0.3 kg">%1$s</xliff:g> more than the 7 days before</string>
     <string name="fork_weight_same">The same as the 7 days before</string>
     <!-- What the weight chart says to a screen reader. -->
-    <string name="fork_weight_chart">Your 7-day average weight over the last <xliff:g id="weeks" example="12">%1$d</xliff:g> weeks, <xliff:g id="first" example="92.8 kg">%2$s</xliff:g> then <xliff:g id="last" example="91.6 kg">%3$s</xliff:g></string>
+    <string name="fork_weight_chart">Your 7-day average weight, week by week: <xliff:g id="first" example="92.8 kg">%1$s</xliff:g> then <xliff:g id="last" example="91.6 kg">%2$s</xliff:g></string>
     <!-- Under last night's sleep: the time asleep against the sleep you need, in percent. -->
     <string name="fork_sleep_performance_line"><xliff:g id="percent" example="92">%1$d</xliff:g>%% of the sleep you need</string>
     <!-- A figure's name in the sleep details: the time asleep against the need. -->

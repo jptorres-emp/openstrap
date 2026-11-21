@@ -77,11 +77,25 @@ fun WeightSheet(
         mutableStateOf(todays?.kg?.let { "%.1f".format(java.util.Locale.ROOT, if (imperial) Units.kgToLb(it) else it) }.orEmpty())
     }
     val kg = WeightLog.parse(text, imperial)
+    PageSheet(onDismiss, stringResource(R.string.fork_weight_title), note = stringResource(R.string.fork_weight_note)) {
+        WeightContent(entries, today, imperial, text, { text = it }, kg)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            PageButton(stringResource(R.string.glow_cancel), onDismiss, Modifier.weight(1f))
+            PageButton(stringResource(R.string.glow_save), { kg?.let(onSave) }, Modifier.weight(1f), enabled = kg != null, primary = true)
+        }
+    }
+}
+
+/** The weight sheet's body, without the sheet and its buttons: the field, the average and the weeks' line. */
+@Composable
+internal fun WeightContent(
+    entries: List<WeightEntry>, today: LocalDate, imperial: Boolean, text: String, onText: (String) -> Unit, kg: Float?,
+) {
     val summary = remember(entries, today) { WeightLog.summary(entries, today) }
     val weeks = remember(entries, today) { WeightLog.weeks(entries, today) }
-    PageSheet(onDismiss, stringResource(R.string.fork_weight_title), note = stringResource(R.string.fork_weight_note)) {
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         PageNumberField(
-            text, { text = it }, stringResource(R.string.fork_weight_field),
+            text, onText, stringResource(R.string.fork_weight_field),
             stringResource(if (imperial) R.string.fork_weight_unit_lb else R.string.fork_weight_unit_kg),
             error = text.isNotBlank() && kg == null, decimal = true,
         )
@@ -105,10 +119,6 @@ fun WeightSheet(
                 labels = listOf(DayWords.dayMonth(shown.first().end), DayWords.dayMonth(shown.last().end)),
                 showAverage = false, color = MetricColors.steps, format = { "%.1f".format(java.util.Locale.getDefault(), it) },
             )
-        }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            PageButton(stringResource(R.string.glow_cancel), onDismiss, Modifier.weight(1f))
-            PageButton(stringResource(R.string.glow_save), { kg?.let(onSave) }, Modifier.weight(1f), enabled = kg != null, primary = true)
         }
     }
 }

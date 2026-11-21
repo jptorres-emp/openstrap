@@ -40,7 +40,9 @@ enum class Metric(@StringRes private val titleId: Int, @StringRes private val un
     /** A change from your normal, signed with a true minus (spec 2.3): "+0.2", "−0.3"; no sign is lost to rounding. */
     fun formatChange(d: Float, locale: Locale = Locale.getDefault()): String {
         val shown = format(kotlin.math.abs(d), locale)
-        return (if (d < 0 && shown.any { it in '1'..'9' }) "\u2212" else "+") + shown
+        // A change that rounds to nothing has no sign either way (the fork's review: no "+0.0").
+        if (shown.none { it in '1'..'9' }) return shown
+        return (if (d < 0) "\u2212" else "+") + shown
     }
 }
 

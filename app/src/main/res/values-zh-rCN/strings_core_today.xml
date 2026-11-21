@@ -60,7 +60,7 @@
     <string name="core_today_energy_plenty">今晚精力依然充沛。</string>
     <string name="core_today_energy_enough">余量足够轻松度过今晚。</string>
     <string name="core_today_energy_low">精力偏低，早点休息会有帮助。</string>
-    <string name="core_today_window_title_usual">你平时的运动时段</string>
+    <string name="core_today_window_title_usual">运动时段</string>
     <string name="core_today_window_title_ready">状态良好，适合发力</string>
     <string name="core_today_window_title_steady">平稳训练</string>
     <string name="core_today_window_title_easy">轻松训练</string>
@@ -145,4 +145,7 @@
     <string name="core_today_heart_at">于 %1$s</string>
     <string name="core_today_heart_average_from">%2$s 起 %1$d 分钟平均</string>
     <string name="core_today_heart_waiting">等待手环连接</string>
+    <string name="core_today_evening_nothing">今天还没有记录。</string>
+    <string name="core_today_night_wind_down">该放松下来了。</string>
+    <string name="core_today_night_wind_down_day">该放松下来了。%1$s</string>
 </resources>

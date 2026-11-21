@@ -136,7 +136,7 @@
     <string name="core_today_energy_low">Running low. An early night helps.</string>
 
     <!-- The workout time hero's title before there is a Recovery score. -->
-    <string name="core_today_window_title_usual">Your usual workout time</string>
+    <string name="core_today_window_title_usual">Workout time</string>
     <!-- The workout time hero's title with a good Recovery score. -->
     <string name="core_today_window_title_ready">Ready for effort</string>
     <!-- The workout time hero's title with a middling Recovery score. -->
@@ -231,14 +231,16 @@
     <string name="core_today_list_and"><xliff:g id="first" example="a run, 13,860 steps">%1$s</xliff:g> and <xliff:g id="last" example="a Load above your usual">%2$s</xliff:g></string>
 
     <!-- The day's steps against the step goal, an item of the evening list: at or past it. Lower case. -->
-    <string name="core_today_goal_past">past your step goal</string>
+    <string name="core_today_goal_past">steps past your goal</string>
     <!-- The same, from 80% of the goal. -->
-    <string name="core_today_goal_close">close to your step goal</string>
+    <string name="core_today_goal_close">steps close to your goal</string>
     <!-- The same, from half the goal. -->
-    <string name="core_today_goal_short">short of your step goal</string>
+    <string name="core_today_goal_short">steps short of your goal</string>
     <!-- The same, under half the goal. -->
-    <string name="core_today_goal_well_short">well short of your step goal</string>
+    <string name="core_today_goal_well_short">steps well short of your goal</string>
 
+    <!-- The evening hero when nothing at all was recorded today: no verdict on the day. -->
+    <string name="core_today_evening_nothing">Nothing recorded yet today.</string>
     <!-- Until your usual bedtime. The time is "1 h 10", "1 h" or "30 min". -->
     <string name="core_today_bedtime_in">Bedtime in <xliff:g id="duration" example="1 h 10">%1$s</xliff:g></string>
 
@@ -303,4 +305,8 @@
     <string name="core_today_heart_average_from"><xliff:g id="minutes" example="10">%1$d</xliff:g> min average from <xliff:g id="time" example="20:52">%2$s</xliff:g></string>
     <!-- The heart rate card's line before any reading. Short. -->
     <string name="core_today_heart_waiting">Waiting for the strap</string>
+    <!-- The night hero's first sentence when nothing was recorded today. -->
+    <string name="core_today_night_wind_down">Time to wind down.</string>
+    <!-- The night hero: a wind-down line, then the day in a sentence ("A steady day. A run and steps past your goal."). -->
+    <string name="core_today_night_wind_down_day">Time to wind down. <xliff:g id="day" example="A steady day. A run and steps past your goal.">%1$s</xliff:g></string>
 </resources>

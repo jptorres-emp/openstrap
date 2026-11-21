@@ -80,8 +80,8 @@ object StatusButton {
 /**
  * A widget's top row (spec 5): the title at [titleSp], always; its [status] button at the right, quiet while all is
  * well, and while the strap needs something with the [words] that fit beside it (none on a Small, or when none fits),
- * which replace the [note]; else whether the note still fits before the button. [height] is what every layout's sums
- * use: the title's line, or the button's when it shows.
+ * which replace the [note]; else whether the note still fits before the button. [height] is always the grid's top row
+ * ([WidgetGrid.TOP_ROW_DP]), so the status never moves what is under it.
  */
 data class TopRow(
     val status: StatusLine?, val note: Boolean, val height: Float,
@@ -107,8 +107,7 @@ data class TopRow(
                 val button = if (line != null) StatusButton.WORDS_GAP_DP + StatusButton.SIZE_DP else 0f
                 val keep = note != null && WidgetText.fitWidth(title, sp, fontScale) + StatusButton.TITLE_GAP_DP +
                     WidgetText.fitWidth(note, WidgetText.SECONDARY_SP, fontScale) + button <= width
-                val h = maxOf(WidgetText.line(sp, fontScale), if (line != null) StatusButton.SIZE_DP else 0f)
-                return TopRow(line, keep, h, titleSp = sp)
+                return TopRow(line, keep, WidgetGrid.TOP_ROW_DP, titleSp = sp)
             }
             val beside = StatusButton.SIZE_DP + StatusButton.TITLE_GAP_DP
             fun room(sp: Float) = width - WidgetText.fitWidth(title, sp, fontScale) - StatusButton.TITLE_GAP_DP - StatusButton.WORDS_GAP_DP - StatusButton.SIZE_DP
@@ -117,8 +116,7 @@ data class TopRow(
             val sp = if (!withWords) fitting else titleSizes.take(2).filter { it <= fitting }
                 .firstOrNull { StatusButton.words(line, room(it), fontScale) != null } ?: fitting
             val words = if (withWords) StatusButton.words(line, room(sp), fontScale) else null
-            val h = maxOf(WidgetText.line(sp, fontScale), StatusButton.SIZE_DP, if (words != null) WidgetText.line(StatusButton.WORDS_SP, fontScale) else 0f)
-            return TopRow(line, false, h, words, sp)
+            return TopRow(line, false, WidgetGrid.TOP_ROW_DP, words, sp)
         }
     }
 }

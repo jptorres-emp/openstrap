@@ -93,29 +93,25 @@ private fun RecoveryContent(data: RecoveryWidget.Shown) {
 /** Small: the top row, the score, its word, the dots grown to fill a tall cell. */
 @Composable
 private fun ColumnScope.SmallContent(m: RecoveryWidgetModel, fit: RecoveryLayout.Fit, f: WidgetFrame) {
-    Edge(fit.spread, f)
-    TopRowView(m.title, null, fit.top, f, fit.spread.edge(f.drawContentHeight))
-    Gap()
+    TopRowView(m.title, null, fit.top, f, 0f)
+    Flex()
     m.score?.let { DotNumber(it, fit.dot, f.density, m.scoreDescription) }
     if (fit.word) m.word?.let {
-        Gap()
+        Gap(WidgetGrid.GAP_TIGHT_DP)
         Text(it, style = WidgetType.word.copy(fontSize = fit.wordSp.sp), maxLines = 1)
     }
-    Edge(fit.spread, f)
 }
 
 /** Wide: the top row with "This morning", the score and word with the week of dots beside them, the three figures. */
 @Composable
 private fun ColumnScope.WideContent(m: RecoveryWidgetModel, fit: RecoveryLayout.Fit, f: WidgetFrame) {
-    Edge(fit.spread, f)
-    TopRowView(m.title, m.note, fit.top, f, fit.spread.edge(f.drawContentHeight))
-    Gap()
+    TopRowView(m.title, m.note, fit.top, f, 0f)
+    Flex()
     ScoreAndWeek(m, fit, f)
     if (fit.figures) {
         Gap()
         Figures(m.figures)
     }
-    Edge(fit.spread, f)
 }
 
 /** The score with its word, and the week of dots on the right when it fits beside them. */
@@ -133,26 +129,21 @@ private fun ScoreAndWeek(m: RecoveryWidgetModel, fit: RecoveryLayout.Fit, f: Wid
 /** Large: the Wide plus the sentence and the last seven days as a week of dots on a row of their own. */
 @Composable
 private fun ColumnScope.LargeContent(m: RecoveryWidgetModel, fit: RecoveryLayout.Fit, f: WidgetFrame) {
-    // The edge and the top row in a column of their own: Glance takes at most ten children in a column.
-    Column(GlanceModifier.fillMaxWidth()) {
-        Edge(fit.spread, f)
-        TopRowView(m.title, m.note, fit.top, f, fit.spread.edge(f.drawContentHeight))
-    }
+    // The top row in a column of its own: Glance takes at most ten children in a column.
+    Column(GlanceModifier.fillMaxWidth()) { TopRowView(m.title, m.note, fit.top, f, 0f) }
     if (fit.sentenceLines > 0) m.sentence?.let {
         Gap()
         Text(it, style = WidgetType.hero.copy(fontSize = fit.sentenceSp.sp), maxLines = fit.sentenceLines)
     }
-    if (fit.week) {
-        Gap()
-        Week(m.week, m.usual, fit.weekColumn, f.density)
-    }
-    Gap()
+    // The score straight under the sentence, as on the board and at the Wide's size.
+    Gap(WidgetGrid.GAP_WIDE_DP)
     ScoreRow(m, fit.dot, f.density)
     if (fit.figures) {
         Gap()
         Figures(m.figures)
     }
-    Edge(fit.spread, f)
+    Flex()
+    if (fit.week) Week(m.week, m.usual, fit.weekColumn, f.density)
 }
 
 /** The score in dots [dot] dp across with its word beside it, read out as "78, Ready". */

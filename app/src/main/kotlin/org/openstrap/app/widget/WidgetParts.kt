@@ -63,8 +63,9 @@ import androidx.glance.unit.ColorProvider
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import org.openstrap.app.MainActivity
 import org.openstrap.app.data.WidgetKind
 import org.openstrap.app.ui.glow.draw.drawIcon
@@ -112,35 +113,84 @@ abstract class LoadingWidget<T>(internal val kind: WidgetKind) : GlanceAppWidget
     /** The mockups' sample ([WidgetSamples]) for the picker's preview, lit by day. */
     protected abstract fun sample(): T
 
-    /** The real layout with [sample]'s values and no status line, so the picker shows the widget as it looks. */
+    /**
+     * The real layout with [sample]'s values and no status line, so the picker shows the widget as it looks. A preview
+     * has no Glance id, so the card is told ([LocalPreview]) not to ask for one.
+     */
     override suspend fun providePreview(context: Context, widgetCategory: Int) {
         val data = sample()
-        provideContent { CompositionLocalProvider(LocalStatusLine provides null) { Content(data) } }
+        provideContent {
+            CompositionLocalProvider(LocalStatusLine provides null, LocalPreview provides true) { Content(data) }
+        }
     }
 
     /** The widget at the size Glance lays out. */
     @Composable
     protected abstract fun Content(data: T)
 
+    /** What this widget showed last, drawn while the next read runs ([READ_TIMEOUT_MS]) so a slow read never leaves a spinner. */
+    @Volatile
+    private var last: T? = null
+
+    /** An empty read, for the gallery's sample day, which needs nothing from the database. */
+    private fun sampleData() = WidgetData(
+        setOf(kind), java.time.Instant.now(), java.time.ZoneId.systemDefault(), null, false, null, null, null, null, null, null, null,
+    )
+
     override suspend fun provideGlance(context: Context, id: GlanceId) = coroutineScope {
         val widgets = context.widgets
-        val first = widgets.data(kind)
-        fun read(data: WidgetData) = if (WidgetRefresh.sampleOverride) sample() else shown(data, context)
-        val shown = MutableStateFlow(read(first))
-        val status = MutableStateFlow(statusLine(first))
+        val shown = MutableStateFlow<T?>(if (WidgetRefresh.sampleOverride) sample() else last)
+        val status = MutableStateFlow<StatusLine?>(null)
         val resized = WidgetRefresh.resized(kind)
+
+        /** One read, within [READ_TIMEOUT_MS]; false when it timed out, leaving what shows as it was. */
+        suspend fun load(): Boolean {
+            // The gallery's sample needs no read, so it shows at once whatever the database is doing.
+            val data = if (WidgetRefresh.sampleOverride) sampleData() else withTimeoutOrNull(READ_TIMEOUT_MS) { widgets.data(kind) }
+            if (data == null) {
+                Log.w(WIDGET_TAG, "widgets: $kind read took over $READ_TIMEOUT_MS ms, showing the last one")
+                return false
+            }
+            val value = if (WidgetRefresh.sampleOverride) sample() else shown(data, context)
+            last = value
+            shown.value = value
+            status.value = statusLine(data)
+            return true
+        }
         launch {
-            WidgetRefresh.version(kind).drop(1).collectLatest {
-                val data = widgets.data(kind)
-                shown.value = read(data)
-                status.value = statusLine(data)
+            WidgetRefresh.version(kind).collectLatest {
+                var tries = 0
+                while (!load() && ++tries < READ_ATTEMPTS) delay(READ_RETRY_MS)
             }
         }
         provideContent {
             val data by shown.collectAsState()
             val line by status.collectAsState()
             val sizes by resized.collectAsState()
-            CompositionLocalProvider(LocalStatusLine provides line, LocalResized provides sizes) { Content(data) }
+            val value = data
+            CompositionLocalProvider(LocalStatusLine provides line, LocalResized provides sizes) {
+                if (value != null) Content(value) else LoadingCard()
+            }
+        }
+    }
+
+    private companion object {
+        /** The longest one read may take before the widget shows what it last had (or its loading card) and tries again. */
+        const val READ_TIMEOUT_MS = 12_000L
+        const val READ_ATTEMPTS = 3
+        const val READ_RETRY_MS = 5_000L
+    }
+}
+
+/** True while the picker's generated preview composes: there is no Glance id to ask the launcher about. */
+internal val LocalPreview = staticCompositionLocalOf { false }
+
+/** The card with a spinner, while there's neither a read nor an earlier one to show. */
+@Composable
+private fun LoadingCard() {
+    PictureWidget(Intent(LocalContext.current, MainActivity::class.java), bitmapExtra = 0.0, showStatus = false) {
+        Box(GlanceModifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(GlanceModifier.size(StatusButton.SIZE_DP.dp), color = ColorProvider(Color.White))
         }
     }
 }
@@ -256,9 +306,13 @@ class WidgetFrame(
     /** Where the top row put the status button, for the card's tap target over it ([StatusTapTarget]). */
     val spot: StatusSpot = StatusSpot(),
 ) {
-    /** The content's width and height in the real cell, inside the padding, dp: what decides what fits. */
+    /**
+     * The content's width in the real cell, inside the padding, dp: what decides what fits across. Its height is the
+     * bucket's own ([WidgetGrid.contentHeight]), not the launcher's cell, so which rows show and the number's size
+     * stay the same in every cell of a size; a taller cell only gives the card's one flexible space more.
+     */
     val contentWidth: Float get() = fitWidth - 2 * WidgetSizes.PADDING_DP
-    val contentHeight: Float get() = fitHeight - 2 * WidgetSizes.PADDING_DP
+    val contentHeight: Float get() = WidgetGrid.contentHeight(bucket)
 
     /** The content's real width, dp, for bitmaps that span it. */
     val drawContentWidth: Float get() = drawWidth - 2 * WidgetSizes.PADDING_DP
@@ -326,7 +380,9 @@ private fun CardWidget(
     val bucket = WidgetSizes.bucket(size.width.value, size.height.value)
     val metrics = context.resources.displayMetrics
     LocalResized.current
-    val reported = cellSizes(LocalAppWidgetOptions.current, LocalGlanceId.current, context)
+    // A preview has no Glance id (LocalGlanceId throws), so it is not asked for.
+    val id = if (LocalPreview.current) null else LocalGlanceId.current
+    val reported = cellSizes(LocalAppWidgetOptions.current, id, context)
     val (w, h) = WidgetSizes.drawSize(bucket, reported)
     val (fitW, fitH) = WidgetSizes.fitSize(bucket, reported)
     val allPixels = WidgetSizes.all.sumOf { (it.width.value * it.height.value).toDouble() } * bitmapExtra * metrics.density * metrics.density
@@ -378,14 +434,72 @@ private fun statusAction(status: StrapStatus): Action? {
     }
 }
 
-/** A glow card's light ([style], its mood set) for a widget [w] by [h] dp in the cards' squircle, at [density] px per dp. */
+/**
+ * A glow card's light ([style], its mood set) for a widget [w] by [h] dp in the cards' squircle, at [density] px per
+ * dp, with the light held to [TEXT_LUMINANCE] where text sits ([limitLuminance]), so white words keep 4.5:1.
+ */
 private fun glowBackground(style: GlowStyle, w: Float, h: Float, density: Float): Bitmap {
     val pw = w * density
     val ph = h * density
-    return renderToBitmap(pw, ph) {
+    val lit = renderToBitmap(pw, ph) {
         it.clipPath(cardSquirclePath(w * density, h * density, density))
         drawGlow(it, style.copy(radius = 0.dp), pw, ph, density)
     }
+    return limitLuminance(lit, (WidgetSizes.PADDING_DP - TEXT_REACH_DP) * density, TEXT_FEATHER_DP * density)
+}
+
+/**
+ * The most relative luminance the light may have behind text: white on it is 4.5:1 ((1 + 0.05) / (0.18 + 0.05)), the
+ * least the contrast rule allows. The rim at the card's edge, outside the text, keeps its full light.
+ */
+internal const val TEXT_LUMINANCE = 0.18f
+
+/** How far the text area reaches past the padding into the card, and the ramp between full light and the cap, dp. */
+private const val TEXT_REACH_DP = 4f
+private const val TEXT_FEATHER_DP = 14f
+
+/**
+ * [src] with every pixel's relative luminance brought down to [TEXT_LUMINANCE] inside the rectangle [inset] px from
+ * the edges, the cap easing in over [feather] px outside it so no edge shows. Only light above the cap changes, and
+ * its colour stays (the RGB is scaled in linear light).
+ */
+internal fun limitLuminance(src: Bitmap, inset: Float, feather: Float): Bitmap {
+    val w = src.width
+    val h = src.height
+    val px = IntArray(w * h)
+    src.getPixels(px, 0, w, 0, 0, w, h)
+    for (y in 0 until h) {
+        val dy = minOf(y + 0.5f - inset, h - inset - (y + 0.5f))
+        for (x in 0 until w) {
+            val dx = minOf(x + 0.5f - inset, w - inset - (x + 0.5f))
+            val inside = minOf(dx, dy)
+            if (inside <= -feather) continue
+            // 0 at the feather's outer edge, 1 from the rectangle inward.
+            val weight = ((inside + feather) / feather).coerceIn(0f, 1f)
+            val c = px[y * w + x]
+            val a = c ushr 24
+            val r = linear((c shr 16) and 0xFF)
+            val g = linear((c shr 8) and 0xFF)
+            val b = linear(c and 0xFF)
+            val lum = 0.2126f * r + 0.7152f * g + 0.0722f * b
+            val cap = 1f - weight * (1f - TEXT_LUMINANCE)
+            if (lum <= cap) continue
+            val k = cap / lum
+            px[y * w + x] = (a shl 24) or (srgb(r * k) shl 16) or (srgb(g * k) shl 8) or srgb(b * k)
+        }
+    }
+    src.setPixels(px, 0, w, 0, 0, w, h)
+    return src
+}
+
+private fun linear(v: Int): Float {
+    val c = v / 255f
+    return if (c <= 0.04045f) c / 12.92f else Math.pow(((c + 0.055f) / 1.055f).toDouble(), 2.4).toFloat()
+}
+
+private fun srgb(l: Float): Int {
+    val c = if (l <= 0.0031308f) l * 12.92f else (1.055 * Math.pow(l.toDouble(), 1 / 2.4) - 0.055).toFloat()
+    return (c * 255f + 0.5f).toInt().coerceIn(0, 255)
 }
 
 /** The launcher's widget corner, dp, on Android 12 and later, and null before or when the system doesn't say. */
@@ -398,12 +512,12 @@ private fun systemCorner(context: Context): Float? = if (Build.VERSION.SDK_INT >
  * [options] when it can't be asked (the picker's preview has no widget). The session's alone can be stale: a session
  * started before the launcher set them keeps them empty.
  */
-private fun cellSizes(options: Bundle, id: GlanceId, context: Context): List<Pair<Float, Float>> {
+private fun cellSizes(options: Bundle, id: GlanceId?, context: Context): List<Pair<Float, Float>> {
     fun real(sizes: List<Pair<Float, Float>>) = sizes.filter { (w, h) -> w > 0f && h > 0f }
-    val now = runCatching {
+    val now = id?.let { runCatching {
         val appWidgetId = androidx.glance.appwidget.GlanceAppWidgetManager(context).getAppWidgetId(id)
         AppWidgetManager.getInstance(context).getAppWidgetOptions(appWidgetId)
-    }.getOrNull()
+    }.getOrNull() }
     return now?.let { real(reportedSizes(it, context)) }?.takeIf { it.isNotEmpty() } ?: real(reportedSizes(options, context))
 }
 
@@ -490,6 +604,21 @@ internal fun TopRowView(title: String, note: String?, top: TopRow, f: WidgetFram
     }
 }
 
+/**
+ * What a Small says when the strap needs something ([f]'s status that isn't the quiet synced line or a running sync):
+ * the first wording of the line that fits the content's width ("Pair your strap"), or null. The Small's top row has no
+ * room for words beside the button, so the Small says it in its own last line.
+ */
+internal fun attentionWords(f: WidgetFrame): String? {
+    val line = f.status ?: return null
+    if (line.status is StrapStatus.Synced || line.status == StrapStatus.Syncing) return null
+    return StatusButton.words(line, f.contentWidth, f.fontScale)
+}
+
+/** [words] ([attentionWords]) as the status words: Secondary in amber. */
+@Composable
+internal fun AttentionText(words: String) = Text(words, style = StatusWords, maxLines = 1)
+
 /** The status words: Secondary in amber, the strap and sync colour (v2 spec: amber is for those only). */
 private val StatusWords =
     TextStyle(color = ColorProvider(MetricColors.warn), fontSize = StatusButton.WORDS_SP.sp, fontFamily = WidgetType.Sans)
@@ -551,16 +680,21 @@ internal fun iconBitmap(icon: ImageVector, color: Color, sizeDp: Float, density:
     return renderToBitmap(s, s) { c -> drawIcon(c, icon, color, 0f, 0f, s) }
 }
 
-/** The weighted gap between blocks: every gap in a column shares what the blocks leave. */
+/** The gap between blocks: one grid token ([WidgetGrid.GAP_DP]), the same in every widget. */
 @Composable
-internal fun ColumnScope.Gap() = Spacer(GlanceModifier.defaultWeight())
+internal fun ColumnScope.Gap(dp: Float = WidgetGrid.GAP_DP) = Spacer(GlanceModifier.height(dp.dp))
 
-/** The half gap above the first block or below the last, at the cell's real height. */
+/** The card's one flexible space: what the cell has over what the blocks take, in a single place. */
 @Composable
-internal fun Edge(spread: Spread, f: WidgetFrame) = Spacer(GlanceModifier.height(spread.edge(f.drawContentHeight).dp))
+internal fun ColumnScope.Flex() = Spacer(GlanceModifier.defaultWeight())
+
+/** Nothing above the first block or below the last: the card's padding is the whole margin. */
+@Composable
+@Suppress("UNUSED_PARAMETER")
+internal fun Edge(spread: Spread, f: WidgetFrame) = Unit
 
 /** Between a figure's Caption and its Body. */
-internal const val FIGURE_LINE_GAP_DP = 2f
+internal const val FIGURE_LINE_GAP_DP = 4f
 
 /** A figure: its [label] in Caption over its [value] in Body. */
 @Composable

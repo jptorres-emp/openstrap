@@ -21,6 +21,19 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.res.stringResource
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Text
+import kotlinx.coroutines.delay
+import org.openstrap.app.R
+import org.openstrap.app.ui.components.Motion
+import org.openstrap.app.ui.theme.Corner
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
@@ -85,6 +98,8 @@ fun WorkoutMap(
         return
     }
     val panned by rememberUpdatedState(onPanned)
+    // The credit text shows when the map opens and goes after a few seconds or the first pan; the (i) stays.
+    var creditShown by remember { mutableStateOf(true) }
     val density = LocalDensity.current
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -97,7 +112,7 @@ fun WorkoutMap(
         MapView(context).apply {
             onCreate(null)
             getMapAsync { m ->
-                m.setUpForRoutes { panned() }
+                m.setUpForRoutes { creditShown = false; panned() }
                 map = m
             }
         }
@@ -221,8 +236,33 @@ fun WorkoutMap(
             map?.easeCamera(CameraUpdateFactory.newLatLngZoom(LatLng(last.lat, last.lon), MAX_ZOOM))
         }
     }
-    AndroidView({ view }, modifier.onSizeChanged { mapSize = it })
+    LaunchedEffect(Unit) {
+        delay(CREDIT_SHOWN_MS)
+        creditShown = false
+    }
+    Box(modifier) {
+        AndroidView({ view }, Modifier.fillMaxSize().onSizeChanged { mapSize = it })
+        if (!routeOnly) {
+            val alpha by animateFloatAsState(if (creditShown) 1f else 0f, tween(Motion.QUICK), label = "map credit")
+            if (alpha > 0f) {
+                // Left of the (i), on the same line.
+                Text(
+                    stringResource(R.string.glow_map_credit), color = Color.White, style = GlowType.noteSmall, maxLines = 1,
+                    modifier = Modifier.align(Alignment.BottomEnd)
+                        .padding(end = 18.dp + CREDIT_INFO_WIDTH, bottom = creditBottom + 6.dp)
+                        .graphicsLayer { this.alpha = alpha }
+                        .clip(Corner.Pill).background(Greys.OverMap).padding(horizontal = Space.S8, vertical = Space.S4),
+                )
+            }
+        }
+    }
 }
+
+/** How long the "© OpenStreetMap" text stays up when a map with tiles opens. */
+private const val CREDIT_SHOWN_MS = 5_000L
+
+/** The map's own (i) button and its margin, which the credit text sits left of. */
+private val CREDIT_INFO_WIDTH = 40.dp
 
 /** Close enough to read the streets, far enough to see where they go. */
 private const val MAX_ZOOM = 16.5

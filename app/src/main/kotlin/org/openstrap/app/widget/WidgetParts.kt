@@ -1,5 +1,6 @@
 package org.openstrap.app.widget
 
+import kotlin.math.hypot
 import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.Intent
@@ -458,12 +459,12 @@ internal const val TEXT_LUMINANCE = 0.18f
 
 /** How far the text area reaches past the padding into the card, and the ramp between full light and the cap, dp. */
 private const val TEXT_REACH_DP = 4f
-private const val TEXT_FEATHER_DP = 14f
+private const val TEXT_FEATHER_DP = 28f
 
 /**
  * [src] with every pixel's relative luminance brought down to [TEXT_LUMINANCE] inside the rectangle [inset] px from
- * the edges, the cap easing in over [feather] px outside it so no edge shows. Only light above the cap changes, and
- * its colour stays (the RGB is scaled in linear light).
+ * the edges, the cap easing in over [feather] px outside it along a smooth curve (round at the corners) so no edge
+ * shows as a shape. Only light above the cap changes, and its colour stays (the RGB is scaled in linear light).
  */
 internal fun limitLuminance(src: Bitmap, inset: Float, feather: Float): Bitmap {
     val w = src.width
@@ -474,10 +475,12 @@ internal fun limitLuminance(src: Bitmap, inset: Float, feather: Float): Bitmap {
         val dy = minOf(y + 0.5f - inset, h - inset - (y + 0.5f))
         for (x in 0 until w) {
             val dx = minOf(x + 0.5f - inset, w - inset - (x + 0.5f))
-            val inside = minOf(dx, dy)
+            // Distance in from the rectangle, negative outside it and measured round a corner.
+            val inside = if (dx >= 0f && dy >= 0f) minOf(dx, dy) else -hypot(minOf(dx, 0f), minOf(dy, 0f))
             if (inside <= -feather) continue
-            // 0 at the feather's outer edge, 1 from the rectangle inward.
-            val weight = ((inside + feather) / feather).coerceIn(0f, 1f)
+            // 0 at the feather's outer edge, 1 from the rectangle inward, eased at both ends.
+            val t = ((inside + feather) / feather).coerceIn(0f, 1f)
+            val weight = t * t * (3f - 2f * t)
             px[y * w + x] = capPixel(px[y * w + x], 1f - weight * (1f - TEXT_LUMINANCE))
         }
     }
@@ -493,15 +496,30 @@ private const val LUMA_RED = 0.2126f
 private const val LUMA_GREEN = 0.7152f
 private const val LUMA_BLUE = 0.0722f
 
-/** The ARGB pixel [c] with its relative luminance brought down to [cap], its colour kept, or as it is when under. */
+/** Where the compression starts, as a share of the cap: below it the light is untouched. */
+private const val KNEE = 0.6f
+
+/**
+ * The luminance [lum] pressed under [cap] along a curve that keeps rising: untouched up to [KNEE] of the cap, then easing
+ * toward it without ever flattening, so a gradient of light stays a gradient and no plateau shows as a shape.
+ */
+private fun compress(lum: Float, cap: Float): Float {
+    val knee = cap * KNEE
+    if (lum <= knee) return lum
+    val room = cap - knee
+    return knee + room * (1f - kotlin.math.exp(-(lum - knee) / room))
+}
+
+/** The ARGB pixel [c] with its relative luminance pressed under [cap], its colour kept, or as it is when under. */
 private fun capPixel(c: Int, cap: Float): Int {
     val a = c ushr ALPHA_SHIFT
     val r = linear((c shr RED_SHIFT) and BYTE_MASK)
     val g = linear((c shr GREEN_SHIFT) and BYTE_MASK)
     val b = linear(c and BYTE_MASK)
     val lum = LUMA_RED * r + LUMA_GREEN * g + LUMA_BLUE * b
-    if (lum <= cap) return c
-    val k = cap / lum
+    val squeezed = compress(lum, cap)
+    if (squeezed >= lum) return c
+    val k = squeezed / lum
     return (a shl ALPHA_SHIFT) or (srgb(r * k) shl RED_SHIFT) or (srgb(g * k) shl GREEN_SHIFT) or srgb(b * k)
 }
 

@@ -184,7 +184,9 @@ private fun NightHero(state: DayUiState, firstNights: Boolean, onRestore: (org.o
             }
             state.sleepBreakdown?.let { b ->
                 // Stage totals as text, never dots (spec 2.3): a stage under a minute leaves its segment and legend out.
-                val totals = stageTotals(b.byStage)
+                // One awake time for the night, the session's length less the time asleep, as the Sleep score's detail says.
+                val awake = (session.end - session.start - asleep).coerceAtLeast(0L)
+                val totals = stageTotals(b.withAwake(awake).byStage)
                 if (totals.isNotEmpty()) {
                     Spacer(Modifier.height(Space.S16))
                     // The stage bar: sized by [StageBarLook] as a widget's bar is ([stageBarSegments] lays that one out in
@@ -337,7 +339,7 @@ private fun NapsCard(state: DayUiState, size: PictureSize, modifier: Modifier, o
     val pictured = naps.map { Nap(it.start, it.end, state.napStages[it.start].orEmpty()) }
     SleepPictureCard(
         MetricColors.sleepDeep, TabCopy.napsTitle(naps.size), null, onOpen, modifier = modifier,
-        value = clockDuration(naps.sumOf { it.end - it.start }), unit = stringResource(R.string.glow_sleep_unit_hours), tag = null,
+        value = clockDuration(naps.sumOf { it.end - it.start }), unit = null, tag = null,
         status = TabCopy.naps(naps.size, clock(naps.first().start)),
         picture = { m -> NapDay(pictured, span.first, span.last, MetricColors.sleepDeep, size, m) },
     )

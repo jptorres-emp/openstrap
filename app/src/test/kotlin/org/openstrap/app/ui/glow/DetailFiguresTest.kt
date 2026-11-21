@@ -16,6 +16,15 @@ class DetailFiguresTest {
         assertEquals(0f, vsNormal(53f, 53f)!!, 1e-6f)
     }
 
+    @Test fun aZeroDifferenceHasNoSign() {
+        val show = { v: Float -> "${v.toInt()} bpm" }
+        assertEquals("0 bpm", signedFigure(0f, show))
+        assertEquals("0 bpm", signedFigure(-0f, show))
+        assertEquals("0 bpm", signedFigure(0.2f, show))
+        assertEquals("+7 bpm", signedFigure(7f, show))
+        assertEquals("−11 bpm", signedFigure(-11f, show))
+    }
+
     @Test fun vsNormalWaitsForBothSides() {
         assertNull(vsNormal(null, 53f))
         assertNull(vsNormal(60f, null))

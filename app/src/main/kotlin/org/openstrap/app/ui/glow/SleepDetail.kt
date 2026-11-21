@@ -187,21 +187,16 @@ internal fun SleepScoreDetail(
             } else null,
             scrubbed = { scrub },
         ) {
-            if (range == Range.Day) {
-                val deleted = state.deletedSleep
-                if (session == null && deleted != null) {
-                    item { DeletedNight(SleepCopy.deletedNight(clock(deleted.start), clock(deleted.end), isToday)) { editing.restore(deleted.strap) } }
-                } else if (session == null) {
-                    // Not before the day has loaded: an empty state isn't "No night".
-                    if (state.loaded) item { DetailEmpty(TabCopy.noNight(state.naps.isNotEmpty(), isToday)) }
-                } else {
-                    val asleep = state.asleepSeconds ?: (session.end - session.start)
-                    // One awake time for the night: the time between falling asleep and waking that wasn't asleep, which is what
-                    // the figures below add up to. The stage legend and the staying asleep line say the same.
-                    val awake = (session.end - session.start - asleep).coerceAtLeast(0L)
-                    val detected = state.sleepAsDetected
-                    val moved = detected != null && (detected.start != session.start || detected.end != session.end)
-                    item {
+            // The picture crossfades between ranges while the header and the figures stay put, as the metric detail's does.
+            val asleep = state.asleepSeconds ?: session?.let { it.end - it.start } ?: 0L
+            // One awake time for the night: the time between falling asleep and waking that wasn't asleep, which is what
+            // the figures below add up to. The stage legend and the staying asleep line say the same.
+            val awake = session?.let { (it.end - it.start - asleep).coerceAtLeast(0L) } ?: 0L
+            val detected = state.sleepAsDetected
+            val moved = session != null && detected != null && (detected.start != session.start || detected.end != session.end)
+            if (range == Range.Week || session != null) item {
+                RangeCrossfade(range) { shown ->
+                    if (shown == Range.Day && session != null) {
                         Column(Modifier.padding(top = Space.S8)) {
                             // Moved, the strap's whole night shows with what's outside the user's times dimmed.
                             if (moved && state.strapSleepStages.isNotEmpty()) DetailStages(state.strapSleepStages, kept = session.start..session.end)
@@ -221,7 +216,34 @@ internal fun SleepScoreDetail(
                                 Modifier.padding(top = Space.S20),
                             )
                         }
+                    } else if (shown == Range.Week) {
+                        if (known.isEmpty()) DetailEmpty(stringResource(R.string.glow_sleep_no_scores_week))
+                        else Column {
+                            val values = week.map { it.second }
+                            DetailColumns(
+                                values, color, week.map { DayWords.weekdayShort(it.first) }, valueLabels = true, fixed = 0f..100f,
+                                band = normal?.let { it.low..it.high }, bandLabel = stringResource(R.string.glow_detail_your_normal),
+                                onScrub = { i ->
+                                    scrub = i?.let { week[it] }?.let { (d, v) ->
+                                        v?.let { Math.round(it) }?.let { score ->
+                                            DetailHeadline(score.toString(), DayWords.short(d), TabCopy.sleepScoreWord(score))
+                                        }
+                                    }
+                                },
+                            )
+                            if (normal == null) HaloNote(DetailCopy.learningNormal(before.size, nightly = true))
+                        }
                     }
+                }
+            }
+            if (range == Range.Day) {
+                val deleted = state.deletedSleep
+                if (session == null && deleted != null) {
+                    item { DeletedNight(SleepCopy.deletedNight(clock(deleted.start), clock(deleted.end), isToday)) { editing.restore(deleted.strap) } }
+                } else if (session == null) {
+                    // Not before the day has loaded: an empty state isn't "No night".
+                    if (state.loaded) item { DetailEmpty(TabCopy.noNight(state.naps.isNotEmpty(), isToday)) }
+                } else {
                     item {
                         val others = state.nights.takeLast(SleepHistory.WEEK_NIGHTS).filter { it.date != state.date }.mapNotNull { it.asleepSeconds }
                         Column {
@@ -251,24 +273,6 @@ internal fun SleepScoreDetail(
                     }
                 }
             } else {
-                item {
-                    if (known.isEmpty()) DetailEmpty(stringResource(R.string.glow_sleep_no_scores_week))
-                    else Column {
-                        val values = week.map { it.second }
-                        DetailColumns(
-                            values, color, week.map { DayWords.weekdayShort(it.first) }, valueLabels = true, fixed = 0f..100f,
-                            band = normal?.let { it.low..it.high }, bandLabel = stringResource(R.string.glow_detail_your_normal),
-                            onScrub = { i ->
-                                scrub = i?.let { week[it] }?.let { (d, v) ->
-                                    v?.let { Math.round(it) }?.let { score ->
-                                        DetailHeadline(score.toString(), DayWords.short(d), TabCopy.sleepScoreWord(score))
-                                    }
-                                }
-                            },
-                        )
-                        if (normal == null) HaloNote(DetailCopy.learningNormal(before.size, nightly = true))
-                    }
-                }
                 val values = week.map { it.second }
                 DetailCopy.span(Range.Week, DetailCopy.levels(values, normal), nightly = true, normalKnown = normal != null, days = before.size)?.let {
                     item { DetailSentence(it) }

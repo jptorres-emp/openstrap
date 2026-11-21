@@ -36,5 +36,4 @@
     <string name="glow_sleep_use_strap_times">使用手环时间</string>
     <string name="glow_sleep_naps_none">当天无小睡</string>
     <string name="glow_sleep_after_a_night">一晚之后</string>
-    <string name="glow_sleep_unit_hours"></string>
 </resources>

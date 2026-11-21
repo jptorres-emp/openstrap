@@ -96,6 +96,8 @@ private fun ColumnScope.SmallContent(m: RecoveryWidgetModel, fit: RecoveryLayout
     TopRowView(m.title, null, fit.top, f, 0f)
     Flex()
     m.score?.let { DotNumber(it, fit.dot, f.density, m.scoreDescription) }
+        // With no score the Small says what the strap needs, as the status button's words, where the top row has no room.
+        ?: attentionWords(f)?.let { AttentionText(it) }
     if (fit.word) m.word?.let {
         Gap(WidgetGrid.GAP_TIGHT_DP)
         Text(it, style = WidgetType.word.copy(fontSize = fit.wordSp.sp), maxLines = 1)

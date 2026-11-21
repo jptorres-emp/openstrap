@@ -377,10 +377,13 @@ private fun ChargeSmall(c: Recovery.ChargeDay?, recharged: Boolean, modifier: Mo
     val title = stringResource(if (recharged) R.string.glow_recovery_recharged else R.string.glow_recovery_drained)
     HaloCard(modifier, verticalArrangement = Arrangement.Top) {
         HaloTitle(title)
-        // Tighter than a Small's 12 and 8: stacked beside the Tall it is 160 high, and its picture needs the room.
-        Spacer(Modifier.height(Space.S8))
+        // Tighter than a Small's 12 and 8: stacked beside the Tall it is 160 high, and its picture needs the room. At a
+        // large font size the words need it more (the status says two lines), so the picture gives way and keeps a gap.
+        val large = androidx.compose.ui.platform.LocalDensity.current.fontScale > PICTURE_MAX_FONT_SCALE
+        Spacer(Modifier.height(Space.S4))
         val picture = Modifier.fillMaxWidth().weight(1f)
         when {
+            large -> Spacer(picture)
             night != null -> RangeFill(night.first, night.second, ChargeLight, PictureSize.Small, picture, deep = ChargeDeep)
             parts != null && parts.any { it > 0f } -> SplitBar(parts, ChargeLight, PictureSize.Small, picture, deep = ChargeDeep)
             else -> Spacer(picture)
@@ -389,11 +392,13 @@ private fun ChargeSmall(c: Recovery.ChargeDay?, recharged: Boolean, modifier: Mo
         if (value != null) Text(value, Modifier.cardNumber(value), color = Color.White, style = GlowType.smallValue, maxLines = 1)
         else WaitingDash(Modifier.padding(vertical = Space.S8), onTile = true)
         Text(
-            status, color = Ink.Secondary, style = GlowType.secondary,
-            modifier = Modifier.padding(top = Space.S4), maxLines = 2, overflow = TextOverflow.Ellipsis,
+            status, color = Ink.Secondary, style = GlowType.secondary, maxLines = 2, overflow = TextOverflow.Ellipsis,
         )
     }
 }
+
+/** Above this font scale Recharged and Drained drop their picture so the status keeps two lines. */
+private const val PICTURE_MAX_FONT_SCALE = 1.15f
 
 /** Recharged's and Drained's bar colours: Energy's orange and a deeper step of it (board HaloRecovery). */
 private val ChargeLight = MetricColors.charge

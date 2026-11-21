@@ -103,7 +103,7 @@ private fun ColumnScope.SmallContent(m: SleepWidgetModel, f: WidgetFrame) {
     val fit = SleepLayout.small(m, f.contentWidth, f.contentHeight, f.fontScale, f.status)
     TopRowView(m.title, null, fit.top, f, 0f)
     Flex()
-    ScoreRow(m, fit.row, SleepLayout.SMALL_WORD_GAP_DP, f.density)
+    ScoreRow(m, fit.row, SleepLayout.SMALL_WORD_GAP_DP, f.density, attentionWords(f))
     if (fit.lines.isNotEmpty() || fit.bar) {
         Gap()
         // One child of the column, its rows inside: Glance drops a column's children past ten.
@@ -155,7 +155,7 @@ private fun ColumnScope.LargeContent(m: SleepWidgetModel, f: WidgetFrame) {
  * words saying so in its place.
  */
 @Composable
-private fun ScoreRow(m: SleepWidgetModel, row: SleepLayout.ScoreRow, wordGap: Float, density: Float) {
+private fun ScoreRow(m: SleepWidgetModel, row: SleepLayout.ScoreRow, wordGap: Float, density: Float, attention: String? = null) {
     Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
         val score = m.score
         if (row.dot > 0f && score != null) {
@@ -165,6 +165,9 @@ private fun ScoreRow(m: SleepWidgetModel, row: SleepLayout.ScoreRow, wordGap: Fl
                 Text(it, style = WidgetType.word, maxLines = 1)
             }
             Spacer(GlanceModifier.defaultWeight())
+        } else if (attention != null && score == null) {
+            // A Small with no night says what the strap needs, as the status button's words, where the top row has no room.
+            AttentionText(attention)
         } else row.word?.let {
             Text(it, style = WidgetType.word, maxLines = row.wordLines, modifier = GlanceModifier.defaultWeight())
         }

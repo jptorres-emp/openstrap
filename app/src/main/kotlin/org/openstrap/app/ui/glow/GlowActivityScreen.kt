@@ -652,7 +652,7 @@ internal fun WorkoutRow(a: WorkoutAnalysis, usual: Float?, divider: Boolean, onC
         },
         titleSuffix = workoutTags(a.workout.sportType, autoDetected = !a.startedByYou),
         line = { RowLine(TabCopy.workoutLine(fact, TimeOfDay.format(start.toLocalTime())), Ink.Secondary) },
-        value = workoutClock(a.activeSeconds), valueInk = Color.White,
+        value = Units.length(a.activeSeconds, Units.DOT_LOCALE), valueInk = Color.White,
         // Zone bar (chart kit): how the workout's time was spent, thin under its row, lined up with its name.
         below = { ZoneBar(a.zoneSeconds, ZONE_COLORS, Modifier.fillMaxWidth(), height = Space.S4) },
         trail = { RowTrail.Chevron() },

@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
     alias(libs.plugins.detekt)
+    alias(libs.plugins.roborazzi)
 }
 
 fun env(name: String): String? = providers.environmentVariable(name).orNull?.takeIf { it.isNotBlank() }
@@ -152,6 +153,12 @@ android {
     }
 }
 
+// Screenshot tests (src/test/.../screenshots). The pictures are committed, so a UI change shows as a changed picture:
+// ./gradlew :app:recordRoborazziDebug stores them, :app:verifyRoborazziDebug compares against them.
+roborazzi {
+    outputDir.set(layout.projectDirectory.dir("src/test/screenshots"))
+}
+
 // Stability reports, so recomposition problems are visible rather than guessed (build/compose_compiler).
 composeCompiler {
     reportsDestination = layout.buildDirectory.dir("compose_compiler")
@@ -257,6 +264,9 @@ dependencies {
     testImplementation(libs.androidx.test.core)
     // Compose UI tests under Robolectric, for saved state across a recreate (StateRestorationTester).
     testImplementation(libs.compose.ui.test.junit4)
+    testImplementation(libs.roborazzi)
+    testImplementation(libs.roborazzi.compose)
+    testImplementation(libs.roborazzi.junit.rule)
     // Migration tests (MigrationTestHelper).
     testImplementation(libs.room.testing)
 

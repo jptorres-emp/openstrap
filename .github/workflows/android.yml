@@ -24,11 +24,22 @@ jobs:
       - name: Test
         run: ./gradlew :protocol:test :app:testDebugUnitTest
 
+      # The screenshot tests against the pictures stored in app/src/test/screenshots (a UI change must record new ones:
+      # ./gradlew :app:recordRoborazziDebug). Only the screenshot classes run, not the whole suite again.
+      - name: Verify screenshots
+        run: ./gradlew :app:verifyRoborazziDebug --tests 'org.openstrap.app.screenshots.*'
+
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: test-reports
           path: app/build/reports/tests/
+
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: screenshot-diffs
+          path: app/build/outputs/roborazzi/
 
       # Here, where the debug build is compiled already.
       - name: Build debug APK

@@ -193,6 +193,11 @@ internal fun CheckInStrip(feeling: Int?, onCheckIn: (Int?) -> Unit, modifier: Mo
         // Tapping the chosen one again takes the answer back.
         val values = (CheckIn.MIN..CheckIn.MAX).toList()
         GlowSegments(values.map { "$it" }, feeling?.let(values::indexOf) ?: -1, { onCheckIn(values[it].takeIf { v -> v != feeling }) })
+        // Words at both ends, so before answering it's clear which end is good.
+        Row(Modifier.fillMaxWidth().padding(top = Space.S8, start = Space.S8, end = Space.S8), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(CheckIn.label(CheckIn.MIN), color = Ink.Secondary, style = GlowType.secondary, maxLines = 1)
+            Text(CheckIn.label(CheckIn.MAX), color = Ink.Secondary, style = GlowType.secondary, maxLines = 1)
+        }
     }
 
 /**
@@ -298,12 +303,12 @@ private val WidePictureHeight = 52.dp
  * ([NumberWithTag]), dropping under the number where a Small can't hold both. A dim dash while there's no [value].
  */
 @Composable
-internal fun PictureNumber(value: String?, unit: String?, tag: NewsTag?, modifier: Modifier = Modifier) {
+internal fun PictureNumber(value: String?, unit: String?, tag: NewsTag?, modifier: Modifier = Modifier, textColor: Color = Ink.Secondary) {
     if (value == null) WaitingDash(modifier.padding(vertical = Space.S8), onTile = true)
     else NumberWithTag(tag, modifier) {
         HaloBigNumber(value, cardNumberSize(DotSize.Edge), Modifier.cardNumber(value))
         // Its own item, so on a Small too narrow for both the unit drops under the number whole, never split.
-        if (unit != null) Text(unit, color = Ink.Secondary, style = GlowType.secondary, maxLines = 1, softWrap = false)
+        if (unit != null) Text(unit, color = textColor, style = GlowType.secondary, maxLines = 1, softWrap = false)
     }
 }
 
@@ -324,12 +329,15 @@ internal fun TodayPictureCard(
     modifier: Modifier = Modifier, note: String? = null, rim: Rim? = null, onClick: (() -> Unit)? = null,
     marker: String? = null, titleTag: TitleTag? = null, pictureLast: Boolean = false, dash: Boolean = true,
     picture: (@Composable (Modifier) -> Unit)? = null,
-    /** A Small with no [value] says its state in this word, in the figure style, where the number would be. */
+    /** A Small with no [value] says its state in this word, small under the dash ([FigureWord]). */
     word: String? = null,
+    /** The light a lit card is drawn in, or null for a plain grey one. Its words are white, to keep their contrast on the light. */
+    lit: GlowStyle? = null,
 ) {
     val small = size == PictureSize.Small
     val m = if (small) modifier else modifier.fillMaxWidth().gridSize(CardSize.Wide)
-    HaloCard(m, onClick = onClick, verticalArrangement = Arrangement.Top) {
+    val text = if (lit != null) Color.White else Ink.Secondary
+    HaloCard(m, tone = lit?.let { CardTone.lit(it) } ?: CardTone.Grey, onClick = onClick, verticalArrangement = Arrangement.Top) {
         HaloTitle(title, note = note.takeIf { !small }, marker = marker, tag = titleTag)
         if (small) {
             if (picture != null) {
@@ -340,10 +348,10 @@ internal fun TodayPictureCard(
                 Spacer(Modifier.height(Space.S12))
             } else Spacer(Modifier.weight(1f))
             if (value == null && word != null) FigureWord(word)
-            else if (value != null || dash) PictureNumber(value, unit, tag)
+            else if (value != null || dash) PictureNumber(value, unit, tag, textColor = text)
             val line = status.takeIf { tag == null || value == null }
             if (line != null) Text(
-                line, color = Ink.Secondary, style = GlowType.secondary,
+                line, color = text, style = GlowType.secondary,
                 modifier = Modifier.padding(top = Space.S4), maxLines = if (value == null) 2 else 1, overflow = TextOverflow.Ellipsis,
             )
             return@HaloCard
@@ -365,21 +373,17 @@ internal fun TodayPictureCard(
 }
 
 /**
- * A state word (Learning, No reading yet) where a Small's number would be, in [GlowType.smallValue], the figure style
- * the Smalls already use for words. A word too wide for one line steps down to [GlowType.figureInline], and at that size
- * may take a second line (text rules T3 and T7).
+ * The one "no data" look on Today (P8): the waiting dash at figure size, as every number's place says nothing yet, and
+ * the state (Learning, No reading yet, After a night) as a small word under it. A word never takes the figure's size,
+ * so it can't fill or wrap a Small at larger font sizes.
  */
 @Composable
 internal fun FigureWord(text: String, modifier: Modifier = Modifier) {
-    androidx.compose.foundation.layout.BoxWithConstraints(modifier.fillMaxWidth().padding(vertical = Space.S4)) {
-        val measurer = androidx.compose.ui.text.rememberTextMeasurer()
-        val widthPx = with(androidx.compose.ui.platform.LocalDensity.current) { maxWidth.roundToPx() }
-        val fits = remember(text, widthPx) {
-            measurer.measure(text, GlowType.smallValue, softWrap = false, maxLines = 1).size.width <= widthPx
-        }
+    Column(modifier.fillMaxWidth()) {
+        WaitingDash(Modifier.padding(vertical = Space.S8), onTile = true)
         Text(
-            text, color = Color.White, style = if (fits) GlowType.smallValue else GlowType.figureInline,
-            maxLines = if (fits) 1 else 2, overflow = TextOverflow.Clip,
+            text, color = Ink.Secondary, style = GlowType.secondary,
+            modifier = Modifier.padding(top = Space.S4), maxLines = 2, overflow = TextOverflow.Ellipsis,
         )
     }
 }
@@ -417,6 +421,8 @@ private fun noNightWord(firstNights: Boolean, stuck: Boolean): String = stringRe
 internal fun LastNightCard(
     state: DayUiState, firstNights: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier, stuck: Boolean = false,
     size: PictureSize = PictureSize.Wide,
+    /** A Small lit in Sleep blue to its score, as the plan gives it ([org.openstrap.app.ui.dashboard.Tier.Glow]); grey when it stands next to another lit card. */
+    lit: Boolean = false,
 ) {
     val s = state.sleep
     val asleep = state.asleepSeconds
@@ -446,6 +452,7 @@ internal fun LastNightCard(
             },
             modifier, rim = rim, onClick = onClick, picture = picture,
             word = if (asleep != null) null else noNightWord(firstNights, stuck),
+            lit = if (lit) GlowStyle.level(MetricColors.sleepDeep, (score ?: LAST_NIGHT_LEVEL_DEFAULT_PCT) / 100f).copy(second = true) else null,
         )
         return
     }
@@ -759,13 +766,12 @@ private fun NightDots(scores: List<Float?>, ink: Color, modifier: Modifier = Mod
 
 private const val NIGHTS = 7
 
-private const val LOAD_LEVEL_SPAN = 1.5f
-private const val LOAD_LEVEL_MIN = 0.15f
-private const val LOAD_LEVEL_DEFAULT = 0.5f
+/** The level a lit Last night Small draws at when the night has no score. */
+private const val LAST_NIGHT_LEVEL_DEFAULT_PCT = 50
 
 /**
- * Load: a Small lit from below to its level in Load's violet (boards HaloTodayWorkoutTime, HaloTodayAfter, the level
- * look), else the picture card with its fill over your usual.
+ * Load: a grey picture card with its level filling over your usual (boards HaloTodayWorkoutTime, HaloTodayAfter). Never
+ * lit: it sits beside To recover under a lit hero and Energy, and no two lit cards touch.
  */
 @Composable
 internal fun LoadCard(
@@ -775,26 +781,6 @@ internal fun LoadCard(
 ) {
     val off = org.openstrap.app.ui.dashboard.loadOffStatus(load, usual, endOfDay)
     val band = org.openstrap.app.presentation.LoadBands.usualRange(usual)
-    if (size == PictureSize.Small && load != null) {
-        // The level look: Load's violet rising from below to where today's Load stands against your usual.
-        val level = band?.let { (load / (it.endInclusive * LOAD_LEVEL_SPAN)).coerceIn(LOAD_LEVEL_MIN, 1f) } ?: LOAD_LEVEL_DEFAULT
-        HaloCard(modifier, tone = CardTone.lit(GlowStyle.level(MetricColors.load, level).copy(second = true)), onClick = onClick) {
-            Column(Modifier.fillMaxHeight()) {
-                HaloTitle(stringResource(R.string.glow_today_load))
-                val offPill = offTag(OffWords.Usual, off)
-                offPill?.let { NewsTagView(it, Modifier.padding(top = Space.S8)) }
-                Spacer(Modifier.weight(1f))
-                val shown = load.roundToInt().toString()
-                HaloBigNumber(shown, cardNumberSize(DotSize.Edge), Modifier.cardNumber(shown))
-                // The pill already says Above or Below usual, so the status line gives way to it, as on the other Smalls.
-                if (offPill == null) Text(
-                    status, color = Ink.Secondary, style = GlowType.secondary,
-                    modifier = Modifier.padding(top = Space.S4), maxLines = 1, overflow = TextOverflow.Ellipsis,
-                )
-            }
-        }
-        return
-    }
     TodayPictureCard(
         MetricColors.load, stringResource(R.string.glow_today_load), size, load?.roundToInt()?.toString(), null, offTag(OffWords.Usual, off),
         status.takeIf { load != null || word == null || size != PictureSize.Small },
@@ -933,16 +919,24 @@ internal fun WorkoutCard(w: org.openstrap.app.data.WorkoutAnalysis, onClick: () 
 internal fun AfterWorkoutBody(w: org.openstrap.app.data.WorkoutAnalysis) = Column {
     val metres = w.distanceMeters?.takeIf { it >= MIN_KM_METRES }
     val mostly = w.zoneSeconds.withIndex().filter { it.value > 0 }.maxByOrNull { it.value }?.index
+    val active = w.activeSeconds.coerceAtLeast(0)
+    // Each figure says what it is: the big one is the distance, else the active time; the length and the heart rate
+    // beside it are named too, so no duration stands alone.
     HeroReading(
-        metres?.let { Units.km(it, Units.Precision.Day, Units.DOT_LOCALE) } ?: dotClock(w.activeSeconds.coerceAtLeast(0)),
+        metres?.let { Units.km(it, Units.Precision.Day, Units.DOT_LOCALE) } ?: dotClock(active),
         listOfNotNull(
-            Units.duration(w.activeSeconds.coerceAtLeast(0)),
+            if (metres != null) stringResource(R.string.glow_unit_km) else stringResource(R.string.glow_today_after_active_time),
+            if (metres != null) stringResource(R.string.glow_today_after_active, Units.duration(active)) else null,
             // A side line is one fact of at most 20 characters: the zones are in the bar under it.
             workoutLine(w.workout.averageHeartRate, if (w.workout.averageHeartRate != null) null else mostly?.let { it + 1 }),
         ),
     )
     Spacer(Modifier.height(Space.S12))
     ZoneBar(w.zoneSeconds, org.openstrap.app.ui.workout.ZONE_COLORS, Modifier)
+    Text(
+        stringResource(R.string.glow_today_after_zones), color = Ink.Secondary, style = GlowType.secondary,
+        modifier = Modifier.padding(top = Space.S8), maxLines = 1,
+    )
 }
 
 private const val MIN_KM_METRES = 1000f

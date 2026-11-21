@@ -31,9 +31,9 @@ data class Release(
 
 /** unstrap's releases on GitHub: where they're read from, and which are newer than the one installed. */
 object Releases {
-    // Was sayed0am/openstrap until 3.0. GitHub forwards the old name, the API included, so 2.x builds still find
-    // releases here. Never create a repo at the old name, or that forwarding stops.
-    const val REPO = "sayed0am/unstrap"
+    // The fork's own releases: the original's (sayed0am/unstrap) are signed with its key, so this copy, signed with the
+    // fork's, could never install them, and listing them would only offer updates that fail.
+    const val REPO = "jptorres-emp/openstrap"
     const val API = "https://api.github.com/repos/$REPO/releases?per_page=30"
     const val PAGE = "https://github.com/$REPO/releases"
 

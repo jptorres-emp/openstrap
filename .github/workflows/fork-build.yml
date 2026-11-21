@@ -1,0 +1,59 @@
+# The fork's own build: the tests and a release APK (R8) on every push to main, signed with the fork's key
+# (app/debug.keystore) so each build installs over the one before and keeps the phone's data. The log, any failing
+# tests' reports and the APK go to the ci-results branch (readable with git alone), and the APK to the "latest"
+# pre-release, for a phone to download straight from the fork's Releases.
+name: Fork build
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: fork-build
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+env:
+  # The original's release this fork is built on, and the fork's own build of it (3.0.7-fork installs as 30007).
+  FORK_VERSION: 3.0.7-fork
+
+jobs:
+  build:
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup
+
+      - name: Test and build
+        id: build
+        run: |
+          set -o pipefail
+          { ./gradlew :protocol:test :app:testDebugUnitTest --continue && ./gradlew :app:assembleRelease -PappVersion=$FORK_VERSION; } 2>&1 | tee build.log
+
+      - name: Publish results
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OUTCOME: ${{ steps.build.outcome }}
+        run: |
+          mkdir -p out/tests
+          cp build.log out/ 2>/dev/null || true
+          grep -rl "<failure" --include="*.xml" . 2>/dev/null | grep test-results | xargs -r -I{} cp {} out/tests/ || true
+          if [ -f app/build/outputs/apk/release/app-release.apk ]; then cp app/build/outputs/apk/release/app-release.apk out/OpenStrap.apk; fi
+          echo "$OUTCOME ${{ github.sha }}" > out/STATUS
+          cd out
+          git init -q -b ci-results
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -qm "Build of ${{ github.sha }}: $OUTCOME"
+          git push -fq "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" ci-results
+          cd ..
+          if [ -f out/OpenStrap.apk ]; then
+            gh release delete latest --yes --cleanup-tag 2>/dev/null || true
+            gh release create latest out/OpenStrap.apk --prerelease --target "${{ github.sha }}" \
+              --title "OpenStrap $FORK_VERSION (fork build)" --notes "Release build (R8) of ${{ github.sha }}, the original's 3.0.7 with the fork's changes, signed with this fork's own key."
+          fi

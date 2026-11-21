@@ -200,6 +200,7 @@
     <string name="glow_route_map_unpick_hint">Tap it again to show the whole route</string>
     <string name="glow_route_map_split_in"><xliff:g id="split" example="Km 3">%1$s</xliff:g> in <xliff:g id="time" example="6:02">%2$s</xliff:g></string>
     <string name="glow_route_map_split_heart"><xliff:g id="bpm" example="151">%1$d</xliff:g> bpm, <xliff:g id="zone" example="Zone 3">%2$s</xliff:g></string>
+    <string name="glow_map_credit">© OpenStreetMap</string>
     <string name="glow_route_map_line">Line</string>
     <string name="glow_route_map_roads">Roads</string>
     <string name="glow_route_map_gps">GPS</string>

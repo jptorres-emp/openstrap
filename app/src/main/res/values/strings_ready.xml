@@ -88,10 +88,10 @@
 
     <!-- The switch for a sport with an indoor side. One word. -->
     <string name="ready_outdoor">Outdoor</string>
-    <!-- Under Outdoor when on and GPS has a fix: "GPS for distance and a map, ready to 6 m". -->
-    <string name="ready_outdoor_gps_ready">GPS for distance and a map, ready to <xliff:g id="meters" example="6">%1$d</xliff:g> m</string>
+    <!-- Under Outdoor when on and GPS has a fix: "GPS for distance and a map, accurate to 6 m". -->
+    <string name="ready_outdoor_gps_ready">GPS for distance and a map, accurate to <xliff:g id="meters" example="6">%1$d</xliff:g> m</string>
     <!-- Under Outdoor when on and GPS has a fix that isn't close enough yet. -->
-    <string name="ready_outdoor_gps_close">GPS for distance and a map, <xliff:g id="meters" example="40">%1$d</xliff:g> m so far</string>
+    <string name="ready_outdoor_gps_close">GPS for distance and a map, accurate to <xliff:g id="meters" example="40">%1$d</xliff:g> m for now</string>
     <!-- Under Outdoor when on and GPS has no fix yet. -->
     <string name="ready_outdoor_gps_finding">GPS for distance and a map, finding you</string>
     <!-- Under Outdoor when off, for a sport on foot. -->

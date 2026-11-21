@@ -5,6 +5,7 @@ import org.openstrap.app.data.WorkoutAnalysis
 import org.openstrap.app.data.Workouts
 import org.openstrap.app.i18n.Strings
 import org.openstrap.app.presentation.TimeOfDay
+import org.openstrap.app.presentation.sportNoun
 import org.openstrap.app.data.Weeks
 import org.openstrap.app.presentation.topSports
 import org.openstrap.app.presentation.WorkoutCopy
@@ -229,11 +230,12 @@ data class StartWidgetModel(
             if (count == 0) strings.get(R.string.system_widget_start_no_workouts)
             else strings.plural(R.plurals.system_widget_start_week, count, count, Units.duration(seconds))
 
-        /** "Last run" for a run outdoors or on a treadmill, "Last HIIT", and "Last workout" for Other. */
+        /** "Last run" for a run outdoors or on a treadmill, "Last row", "Last HIIT", and "Last workout" for Other. */
         fun lastLabel(sportType: Int, strings: Strings = Strings.app): String {
             val tile = Workouts.tileType(sportType)
             if (tile == OTHER) return strings.get(R.string.system_widget_start_last_workout)
-            val name = Workouts.shortName(tile)
+            // A noun where the sport has one ("Last row", "Last ride"), else its short name ("Last HIIT").
+            val name = sportNoun(sportType, strings) ?: Workouts.shortName(tile)
             return strings.format(R.string.system_widget_start_last, if (name.any { it.isLowerCase() }) name.lowercase() else name)
         }
 

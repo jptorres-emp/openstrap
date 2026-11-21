@@ -136,23 +136,33 @@ object TodayCopy {
      */
     fun charge(now: Int?, drained: Int?, anchored: Boolean, hour: Int, strings: Strings = Strings.app): String {
         if (now == null || !anchored) return strings.get(R.string.core_today_energy_first_night)
-        val first = when {
-            drained == null -> null
-            drained >= 1 -> strings.format(
-                if (hour < 12) R.string.core_today_energy_morning_drained else R.string.core_today_energy_day_drained,
-                drained,
-            )
-            else -> strings.get(R.string.core_today_energy_nothing_drained)
+        val level = when {
+            now >= 50 -> 0
+            now >= 25 -> 1
+            else -> 2
         }
-        val left = strings.get(
-            when {
-                now >= 50 -> R.string.core_today_energy_plenty
-                now >= 25 -> R.string.core_today_energy_enough
-                else -> R.string.core_today_energy_low
-            },
-        )
-        return listOfNotNull(first, left).joinToString(" ")
+        // Each pair of sentences is one string, so a translator sees the whole line.
+        val whole = when {
+            drained == null -> null
+            drained >= 1 -> if (hour < 12) MORNING_DRAINED[level] else DAY_DRAINED[level]
+            else -> NOTHING_DRAINED[level]
+        }
+        if (whole != null) return strings.format(whole, drained ?: 0)
+        return strings.get(ENERGY_LEFT[level])
     }
+
+    private val MORNING_DRAINED = intArrayOf(
+        R.string.core_today_energy_morning_plenty, R.string.core_today_energy_morning_enough, R.string.core_today_energy_morning_low,
+    )
+    private val DAY_DRAINED = intArrayOf(
+        R.string.core_today_energy_day_plenty, R.string.core_today_energy_day_enough, R.string.core_today_energy_day_low,
+    )
+    private val NOTHING_DRAINED = intArrayOf(
+        R.string.core_today_energy_nothing_plenty, R.string.core_today_energy_nothing_enough, R.string.core_today_energy_nothing_low,
+    )
+    private val ENERGY_LEFT = intArrayOf(
+        R.string.core_today_energy_plenty, R.string.core_today_energy_enough, R.string.core_today_energy_low,
+    )
 
     /** The workout window hero's title: what Recovery says about effort now. */
     fun windowTitle(score: Int?, strings: Strings = Strings.app): String = strings.get(
@@ -195,36 +205,54 @@ object TodayCopy {
     /** The workout window hero's sentence: what Recovery says about effort, then Energy left ([window]'s second half). */
     fun windowSentence(score: Int?, charge: Int?, strings: Strings = Strings.app): String {
         val say = when {
-            score == null -> null
-            score >= RecoveryBands.READY_FROM -> R.string.core_today_window_say_ready
-            score >= RecoveryBands.MODERATE_FROM -> R.string.core_today_window_say_steady
-            else -> R.string.core_today_window_say_easy
-        }?.let(strings::get)
-        val left = charge?.let {
-            strings.format(
-                when {
-                    it >= 50 -> R.string.core_today_window_energy_plenty
-                    it >= 25 -> R.string.core_today_window_energy_enough
-                    else -> R.string.core_today_window_energy_low
-                },
-                it,
-            )
+            score == null -> -1
+            score >= RecoveryBands.READY_FROM -> 0
+            score >= RecoveryBands.MODERATE_FROM -> 1
+            else -> 2
         }
-        return listOfNotNull(say, left).joinToString(" ")
+        // Each pair of sentences is one string, so a translator sees the whole line.
+        if (charge != null) {
+            val level = energyLevel(charge)
+            return strings.format(if (say >= 0) WINDOW_SAY_LEFT[say][level] else WINDOW_ENERGY[level], charge)
+        }
+        return if (say >= 0) strings.get(WINDOW_SAY[say]) else ""
     }
+
+    private fun energyLevel(energy: Int): Int = when {
+        energy >= 50 -> 0
+        energy >= 25 -> 1
+        else -> 2
+    }
+
+    private val WINDOW_SAY = intArrayOf(
+        R.string.core_today_window_say_ready, R.string.core_today_window_say_steady, R.string.core_today_window_say_easy,
+    )
+    private val WINDOW_ENERGY = intArrayOf(
+        R.string.core_today_window_energy_plenty, R.string.core_today_window_energy_enough, R.string.core_today_window_energy_low,
+    )
+    private val WINDOW_SAY_LEFT = arrayOf(
+        intArrayOf(
+            R.string.core_today_window_say_ready_plenty, R.string.core_today_window_say_ready_enough,
+            R.string.core_today_window_say_ready_low,
+        ),
+        intArrayOf(
+            R.string.core_today_window_say_steady_plenty, R.string.core_today_window_say_steady_enough,
+            R.string.core_today_window_say_steady_low,
+        ),
+        intArrayOf(
+            R.string.core_today_window_say_easy_plenty, R.string.core_today_window_say_easy_enough,
+            R.string.core_today_window_say_easy_low,
+        ),
+    )
+    private val WINDOW_USUALLY_ENERGY = intArrayOf(
+        R.string.core_today_window_usually_energy_plenty, R.string.core_today_window_usually_energy_enough,
+        R.string.core_today_window_usually_energy_low,
+    )
 
     /** "You usually run around now. Energy is 58, plenty left." [sportType] is the usual sport, null for none. */
     fun window(sportType: Int?, charge: Int?, strings: Strings = Strings.app): String {
-        val usual = sportUsually(sportType, strings)
-        val left = charge?.let {
-            val id = when {
-                it >= 50 -> R.string.core_today_window_energy_plenty
-                it >= 25 -> R.string.core_today_window_energy_enough
-                else -> R.string.core_today_window_energy_low
-            }
-            " " + strings.format(id, it)
-        }
-        return usual + left.orEmpty()
+        charge ?: return sportUsually(sportType, strings)
+        return strings.format(WINDOW_USUALLY_ENERGY[energyLevel(charge)], sportVerb(sportType, strings), charge)
     }
 
     /** After a workout: how the heart is coming down, from the latest reading against resting. */

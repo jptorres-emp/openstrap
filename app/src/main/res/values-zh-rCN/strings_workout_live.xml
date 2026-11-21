@@ -18,7 +18,6 @@
     <string name="workout_live_unit_bpm">bpm</string>
     <string name="workout_live_bpm">%1$d bpm</string>
     <string name="workout_live_minimize">最小化</string>
-    <string name="workout_live_status_paused">已暂停</string>
     <string name="workout_live_status_strap_battery">手环 %1$d%%</string>
     <string name="workout_live_status_strap">已连接</string>
     <string name="workout_live_resume">继续</string>
@@ -184,4 +183,5 @@
     <string name="workout_live_sets_set_line">之后休息 %1$s，结束时振动</string>
     <string name="workout_live_sets_next_line">接下来 %1$s</string>
     <string name="workout_live_bpm_down_unit">bpm，下降 %1$d</string>
+    <string name="workout_live_total_paused">%1$s，已暂停</string>
 </resources>

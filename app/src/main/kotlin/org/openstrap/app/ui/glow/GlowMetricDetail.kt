@@ -722,8 +722,14 @@ fun GlowMetricDetailScreen(
         )
         dayValue != null && metric == Metric.RestingHr -> DetailHeadline(
             metric.format(dayValue, Units.DOT_LOCALE), "", word, metric.unit,
-            context = stringResource(if (isToday) R.string.core_detail_none_last_night else R.string.core_detail_none_that_night) +
-                if (state.restingEstimated) ", " + stringResource(R.string.glow_detail_estimated) else "",
+            context = stringResource(
+                when {
+                    state.restingEstimated && isToday -> R.string.glow_detail_last_night_estimated
+                    state.restingEstimated -> R.string.glow_detail_that_night_estimated
+                    isToday -> R.string.core_detail_none_last_night
+                    else -> R.string.core_detail_none_that_night
+                },
+            ),
         )
         dayValue != null && metric == Metric.Steps -> DetailHeadline(
             metric.format(dayValue, Units.DOT_LOCALE), "",

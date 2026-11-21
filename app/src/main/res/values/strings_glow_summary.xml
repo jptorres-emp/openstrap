@@ -127,7 +127,7 @@
     <!-- Spoken name of the (i) button on the Load card, for screen readers. -->
     <string name="glow_summary_load_about">About Load and training effect</string>
     <!-- On the Load card when the workout had too little heart rate for a Load. -->
-    <string name="glow_summary_load_none">Not enough heart rate to calculate Load.</string>
+    <string name="glow_summary_load_none">There is not enough heart rate to calculate Load.</string>
 
     <!-- Title of the list of each kilometre's time. One word. -->
     <string name="glow_summary_splits">Splits</string>

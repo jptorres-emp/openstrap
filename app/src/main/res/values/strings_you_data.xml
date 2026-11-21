@@ -54,7 +54,7 @@
     <!-- The reason is one of the you_backup_failure sentences. -->
     <string name="you_backup_outcome_failed">Couldn\'t back up. <xliff:g id="reason" example="There isn't enough space for it.">%1$s</xliff:g></string>
     <!-- A message once a copy is saved. -->
-    <string name="you_backup_saved_copy">Saved a copy.</string>
+    <string name="you_backup_saved_copy">unstrap saved a copy.</string>
     <!-- A message when Android won't let unstrap keep the backup folder. -->
     <string name="you_backup_folder_refused">unstrap can\'t keep writing to that folder. Choose another one.</string>
 

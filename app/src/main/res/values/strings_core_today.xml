@@ -309,4 +309,37 @@
     <string name="core_today_night_wind_down">Time to wind down.</string>
     <!-- The night hero: a wind-down line, then the day in a sentence ("A steady day. A run and steps past your goal."). -->
     <string name="core_today_night_wind_down_day">Time to wind down. <xliff:g id="day" example="A steady day. A run and steps past your goal.">%1$s</xliff:g></string>
+
+    <!-- The Energy hero's two sentences as one string each: what the morning or the day drained, then what is left. -->
+    <string name="core_today_energy_morning_plenty">The morning drained <xliff:g id="amount" example="22">%1$d</xliff:g>. Plenty left for this evening.</string>
+    <string name="core_today_energy_morning_enough">The morning drained <xliff:g id="amount" example="22">%1$d</xliff:g>. Enough left for an easy evening.</string>
+    <string name="core_today_energy_morning_low">The morning drained <xliff:g id="amount" example="22">%1$d</xliff:g>. Running low. An early night helps.</string>
+    <string name="core_today_energy_day_plenty">The day has drained <xliff:g id="amount" example="40">%1$d</xliff:g> so far. Plenty left for this evening.</string>
+    <string name="core_today_energy_day_enough">The day has drained <xliff:g id="amount" example="40">%1$d</xliff:g> so far. Enough left for an easy evening.</string>
+    <string name="core_today_energy_day_low">The day has drained <xliff:g id="amount" example="40">%1$d</xliff:g> so far. Running low. An early night helps.</string>
+    <string name="core_today_energy_nothing_plenty">Nothing drained since waking. Plenty left for this evening.</string>
+    <string name="core_today_energy_nothing_enough">Nothing drained since waking. Enough left for an easy evening.</string>
+    <string name="core_today_energy_nothing_low">Nothing drained since waking. Running low. An early night helps.</string>
+    <!-- The workout time hero as one string each: what Recovery says about effort, then Energy left. The number is Energy. -->
+    <string name="core_today_window_say_ready_plenty">Recovered and ready for effort. Energy is <xliff:g id="energy" example="58">%1$d</xliff:g>, plenty left.</string>
+    <string name="core_today_window_say_ready_enough">Recovered and ready for effort. Energy is <xliff:g id="energy" example="30">%1$d</xliff:g>, enough for something easy.</string>
+    <string name="core_today_window_say_ready_low">Recovered and ready for effort. Energy is <xliff:g id="energy" example="20">%1$d</xliff:g>, running low.</string>
+    <string name="core_today_window_say_steady_plenty">Fine for a steady session. Energy is <xliff:g id="energy" example="58">%1$d</xliff:g>, plenty left.</string>
+    <string name="core_today_window_say_steady_enough">Fine for a steady session. Energy is <xliff:g id="energy" example="30">%1$d</xliff:g>, enough for something easy.</string>
+    <string name="core_today_window_say_steady_low">Fine for a steady session. Energy is <xliff:g id="energy" example="20">%1$d</xliff:g>, running low.</string>
+    <string name="core_today_window_say_easy_plenty">An easy session suits today. Energy is <xliff:g id="energy" example="58">%1$d</xliff:g>, plenty left.</string>
+    <string name="core_today_window_say_easy_enough">An easy session suits today. Energy is <xliff:g id="energy" example="30">%1$d</xliff:g>, enough for something easy.</string>
+    <string name="core_today_window_say_easy_low">An easy session suits today. Energy is <xliff:g id="energy" example="20">%1$d</xliff:g>, running low.</string>
+    <!-- What the wearer usually does around now, as a verb, for the sentences below. -->
+    <string name="core_today_window_verb_run">run</string>
+    <string name="core_today_window_verb_walk">walk</string>
+    <string name="core_today_window_verb_ride">ride</string>
+    <string name="core_today_window_verb_swim">swim</string>
+    <string name="core_today_window_verb_hike">hike</string>
+    <string name="core_today_window_verb_row">row</string>
+    <string name="core_today_window_verb_workout">work out</string>
+    <!-- The workout time hero when a usual sport and Energy are both known: one sentence of what you usually do, then Energy left. The first is a verb above, the number is Energy. -->
+    <string name="core_today_window_usually_energy_plenty">You usually %1$s around now. Energy is %2$d, plenty left.</string>
+    <string name="core_today_window_usually_energy_enough">You usually %1$s around now. Energy is %2$d, enough for something easy.</string>
+    <string name="core_today_window_usually_energy_low">You usually %1$s around now. Energy is %2$d, running low.</string>
 </resources>

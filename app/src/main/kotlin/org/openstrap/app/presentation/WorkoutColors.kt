@@ -8,7 +8,7 @@ object WorkoutColors {
     /** Zone 1, easy: a calm blue, the cool end of one scale that warms with effort. */
     const val ZONE_1 = 0xFF5B8CFF.toInt()
 
-    /** Zone 2, aerobic: teal. Also the rest colour between sets and intervals. */
+    /** Zone 2, aerobic: teal. */
     const val ZONE_2 = 0xFF2EC5D3.toInt()
 
     /** Zone 3, tempo: lime. */
@@ -23,8 +23,8 @@ object WorkoutColors {
     /** Zone 1 (easy) to 5 (max), cool to hot, by zone index 0 to 4. */
     val ZONES: List<Int> = listOf(ZONE_1, ZONE_2, ZONE_3, ZONE_4, ZONE_5)
 
-    /** Rest between sets or intervals. */
-    const val REST_GREEN = ZONE_2
+    /** Rest between sets or intervals: lilac, apart from every zone colour. */
+    const val REST = 0xFFB79CFF.toInt()
 
     /** A paused workout, a lost strap or no reading yet: a cool grey rather than a zone, in the app and the notification. */
     const val PAUSED_GREY = 0xFFA0A0A0.toInt()

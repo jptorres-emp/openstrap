@@ -85,7 +85,7 @@
     <!-- Title of the card and the list with each set of a strength workout. One word. -->
     <string name="glow_summary_sets_title">Sets</string>
     <!-- Beside the sets card's title: each bar is the set's peak heart rate. Short. -->
-    <string name="glow_summary_peak_heart_rate">Peak heart rate</string>
+    <string name="glow_summary_peak_heart_rate">Peak bpm</string>
     <!-- A set's peak heart rate on its row, in a narrow column. -->
 
     <!-- Title of the cards with the time in each heart rate zone. -->
@@ -169,6 +169,8 @@
     <!-- Beside the sets card's exercise name: the kilograms lifted in it, as "2,620 kg". -->
     <string name="glow_summary_exercise_total"><xliff:g id="kg" example="2,620">%1$s</xliff:g> kg</string>
     <!-- Beside the rest card's title: the average rest between sets, as "Average 1:38". -->
+    <!-- The Rest card's line when rest ended on the clock, with no heart rate level to report on. -->
+    <string name="glow_summary_rest_on_time">Rest ended when the time was up.</string>
     <string name="glow_summary_rest_average">Average <xliff:g id="time" example="1:38">%1$s</xliff:g></string>
     <!-- Beside the recovery title on a round card: where in the round it is read. Short. -->
     <string name="glow_summary_in_each_rest">In each rest</string>

@@ -210,7 +210,7 @@ internal fun StartContent(data: StartWidget.Shown) {
  */
 internal fun recordingInk(r: StartRecording): Color = when (r.state) {
     RecordingState.Paused -> Ink.Paused
-    RecordingState.Rest -> Color(WorkoutColors.REST_GREEN)
+    RecordingState.Rest -> Color(WorkoutColors.REST)
     RecordingState.Asking -> MetricColors.warn
     RecordingState.Recording -> sportInk(r.sport.sportType)
 }

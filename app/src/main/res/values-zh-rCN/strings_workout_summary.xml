@@ -43,6 +43,7 @@
     <string name="workout_summary_when_today">今天 %1$s</string>
     <string name="workout_summary_when_yesterday">昨天 %1$s</string>
     <string name="workout_summary_when_day">%1$s %2$s</string>
+    <string name="workout_summary_set_skipped">已跳过</string>
     <string name="workout_summary_set_reps_kg">%1$d × %2$s kg</string>
     <plurals name="workout_summary_set_reps">
         <item quantity="other">%1$d 次</item>

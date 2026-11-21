@@ -6,7 +6,6 @@ import org.openstrap.app.ui.glow.BigNumber
 import org.openstrap.app.ui.glow.ButtonSpec
 import org.openstrap.app.ui.glow.HaloButtonSize
 import org.openstrap.app.ui.theme.Space
-import org.openstrap.app.presentation.WorkoutColors
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -63,7 +62,6 @@ import org.openstrap.app.ui.glow.HaloButtonVariant
 import org.openstrap.app.ui.glow.Segment
 import org.openstrap.app.ui.glow.SegmentBar
 import org.openstrap.app.ui.theme.Ink
-import org.openstrap.app.ui.workout.RestTeal
 import org.openstrap.app.ui.glow.GlowLayout
 import org.openstrap.app.ui.glow.GlowType
 import org.openstrap.app.ui.glow.NavRow
@@ -79,17 +77,16 @@ import org.openstrap.app.ui.workout.strengthMoment
 import org.openstrap.app.ui.dashboard.LocalHeartZones
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.material3.minimumInteractiveComponentSize
 import org.openstrap.app.R
 
-/** Strength's rest colour, the green the floating bar and the hero rest in too. */
-private val RestGreen = Color(WorkoutColors.REST_GREEN)
 
 /**
  * Strength (workouts spec 2.4, boards StrengthSet, StrengthLog and StrengthRest), with the total small on top.
  *
  * In a set: set N of M and its exercise (tap to name or change it), the set's clock in dots on a glow in the zone's
  * colour, the sets as dots, the heart rate and zone, the sets done with their reps, weight, time and peak, and one big
- * Set done. Resting: the rest left in dots on a card lit in rest green, the heart rate and how far it dropped, its line
+ * Set done. Resting: the rest left in dots on a card lit in rest lilac, the heart rate and how far it dropped, its line
  * falling toward the level that ends rest sooner, what's next, +30 s and Start set N. The strap buzzes when rest ends.
  *
  * With logging on ([WorkoutState.Recording.logSets]), the log card follows each set while rest runs underneath: reps
@@ -119,7 +116,7 @@ internal fun LiveStrengthScreen(
     val connected = connection is ConnectionState.Connected
     val bpm = liveHeartRate.takeIf { connected && !r.paused }
     ZoneTick(bpm, r)
-    val color = if (r.resting && !r.paused) RestGreen else workoutColor(r, liveHeartRate, connected, heartZones)
+    val color = if (r.resting && !r.paused) RestColor else workoutColor(r, liveHeartRate, connected, heartZones)
     // Read where it shows (the cards' clocks, the paused figures, the log card), so the screen holds still between
     // seconds. The rest of the screen doesn't move with the clock: [steady] is the moment without its seconds, which
     // only the clocks read, so it needs no time at all.
@@ -131,11 +128,12 @@ internal fun LiveStrengthScreen(
     val skipped = rememberSaveable(r.workout.start) { mutableStateListOf<Int>() }
     val unlogged = r.sets.lastOrNull { it.end != null }?.takeIf { r.logSets && it.reps == null && it.index !in skipped && !r.inSet }
     val active = activeSecondsState(r)
-    val sport = if (r.resting && !r.paused) RestGreen else liveColor(r)
+    val sport = if (r.resting && !r.paused) RestColor else liveColor(r)
     LiveFrame(
-        r, color, connected, contentPadding, controls, time = { active.value }, fill = true, pauseWhite = false,
+        r, color, connected, contentPadding, controls, time = { active.value },
+        battery = (connection as? ConnectionState.Connected)?.batteryPercent, fill = true, pauseWhite = false,
         paused = { LivePaused(r, liveHeartRate.takeIf { connected }, history, listOf(
-            momentNow().done.let { done -> done.toString() to pluralStringResource(R.plurals.workout_live_figure_sets_done, done) },
+            r.setsCounted.toString() to stringResource(R.string.workout_live_figure_sets),
             Strength.kgLifted(r.sets)?.let { Strength.kgText(it) } to stringResource(R.string.workout_live_figure_kg_lifted),
             r.workout.maxHeartRate?.toString() to stringResource(R.string.workout_live_figure_peak_bpm),
         )) },
@@ -153,14 +151,15 @@ internal fun LiveStrengthScreen(
                 val since = r.sets.lastOrNull()?.end
                 val rule = Strength.Rest.parse(r.workout.rest) ?: Strength.Rest.DEFAULT
                 if (since != null) FallingHeart(remember(history, since) { history.filter { it.first >= since - 10 } }, rule.belowBpm)
-                Row(Modifier.fillMaxWidth()) {
+                // Two lines, what the line is and then when rest ends, so they never run into one sentence.
+                Column(verticalArrangement = Arrangement.spacedBy(Space.S4)) {
                     Text(stringResource(R.string.workout_live_sets_falling_description), color = GlowType.noteColor,
-                        style = GlowType.noteSmall, modifier = Modifier.weight(1f))
-                    Text(WorkoutCopy.restRule(rule.belowBpm), color = RestTeal, style = GlowType.noteSmall, maxLines = 1)
+                        style = GlowType.noteSmall)
+                    Text(WorkoutCopy.restRule(rule.belowBpm), color = RestColor, style = GlowType.noteSmall)
                 }
             } else {
                 HeartLine(bpm, r.maxHeartRate, r.paused)
-                DoneSets(r.sets, history)
+                DoneSets(r.sets, history, logSets = r.logSets, pending = unlogged?.index)
             }
         }
         if (!compact) {
@@ -168,7 +167,7 @@ internal fun LiveStrengthScreen(
             val avg = history.takeIf { it.isNotEmpty() }?.let { h -> h.sumOf { it.second } / h.size }
             LiveFigures(listOf(
                 kg to stringResource(R.string.workout_live_figure_kg_lifted),
-                moment.done.toString() to stringResource(R.string.workout_live_figure_sets),
+                r.setsCounted.toString() to stringResource(R.string.workout_live_figure_sets),
                 avg?.toString() to stringResource(R.string.workout_live_figure_avg_bpm),
             ))
         }
@@ -208,7 +207,7 @@ internal fun LiveStrengthScreen(
 }
 
 /**
- * The strength hero (boards HaloLiveStrengthSet and HaloLiveStrengthRest), in orange for a set and teal for a rest:
+ * The strength hero (boards HaloLiveStrengthSet and HaloLiveStrengthRest), in orange for a set and lilac for a rest:
  * set N of M and its exercise, a bar of the sets, the set's clock or the rest left as the one dotted number, and what
  * the strap will do or what is next in its line.
  */
@@ -244,7 +243,11 @@ private fun StrengthHero(
                 val next = r.exercise?.lowercase()?.let { e -> listOfNotNull(e, moment.nextLoad).joinToString(" ") }
                     ?.let { stringResource(R.string.workout_live_sets_next_set_exercise, moment.setNumber, it) }
                     ?: stringResource(R.string.workout_live_sets_next_set, moment.setNumber)
-                HeroLine(stringResource(R.string.workout_live_sets_next_line, next), tint)
+                // Name it stays through the rest, where the next sets are named.
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Space.S12), verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.weight(1f)) { HeroLine(stringResource(R.string.workout_live_sets_next_line, next), tint) }
+                    ExercisePill(r.exercise, onName)
+                }
             }
             else -> HeroLine(stringResource(R.string.workout_live_sets_next_tap_start, WorkoutCopy.setOf(moment.setNumber,
                 r.workout.setsTarget)), tint)
@@ -258,7 +261,7 @@ private fun DotClock(text: () -> String, unit: String, tint: Color) = HaloBigNum
 
 /**
  * The heart rate since the set ended (board HaloLiveStrengthRest): a white line with a dot at now, the level that ends
- * rest as a dashed teal rule, and a faint dashed run from the dot toward that level.
+ * rest as a dashed lilac rule, and a faint dashed run from the dot toward that level.
  */
 @Composable
 private fun FallingHeart(readings: List<Pair<Long, Int>>, level: Int?) {
@@ -273,7 +276,7 @@ private fun FallingHeart(readings: List<Pair<Long, Int>>, level: Int?) {
         val reach = size.width * FALLING_REACH
         fun x(t: Long) = (t - from).toFloat() / (to - from) * reach
         fun y(v: Int) = size.height - (v - lo).toFloat() / (hi - lo) * size.height
-        if (level != null) dashedLine(RestTeal.copy(alpha = 0.8f), Offset(0f, y(level)), Offset(size.width, y(level)),
+        if (level != null) dashedLine(RestColor.copy(alpha = 0.8f), Offset(0f, y(level)), Offset(size.width, y(level)),
             1.5.dp.toPx(), 4.dp.toPx(), 4.dp.toPx())
         val path = Path().apply {
             readings.forEachIndexed { i, (t, v) -> if (i == 0) moveTo(x(t), y(v)) else lineTo(x(t), y(v)) }
@@ -301,6 +304,9 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.dashedLine(color: C
     }
 }
 
+/** Segments shown past the sets done when the workout has no set count. */
+private const val OPEN_SETS_AHEAD = 3
+
 private const val FALLING_REACH = 0.63f
 private const val FALLING_TARGET = 0.85f
 
@@ -310,7 +316,8 @@ private const val FALLING_TARGET = 0.85f
  */
 @Composable
 private fun SetSegments(done: Int, target: Int?) {
-    val total = maxOf(target ?: 0, done + 1)
+    // With no set count, a couple more than done: a lone full-width bar would read as a finished set.
+    val total = maxOf(target ?: (done + OPEN_SETS_AHEAD), done + 1)
     val described = target?.let {
         pluralStringResource(R.plurals.workout_live_sets_dots_description_to_go, done, done, (it - done).coerceAtLeast(0))
     }
@@ -325,24 +332,33 @@ private fun ExercisePill(name: String?, onClick: () -> Unit) {
     Text(
         name ?: stringResource(R.string.workout_live_sets_name_it), color = Color.White, style = GlowType.secondary, maxLines = 1,
         overflow = TextOverflow.Ellipsis,
-        modifier = Modifier.clip(shape).background(Ink.Scrim).pressClickable(onClick, shape)
+        modifier = Modifier.minimumInteractiveComponentSize().clip(shape).background(Ink.Scrim).pressClickable(onClick, shape)
             .padding(horizontal = Space.S12, vertical = Space.S8),
     )
 }
 
 /** The sets done, newest first: "Set 2" in grey and "10 × 60 kg, 0:51, peak 148" (board HaloLiveStrengthSet). */
 @Composable
-private fun DoneSets(sets: List<AppWorkoutSet>, history: List<Pair<Long, Int>>) {
+private fun DoneSets(sets: List<AppWorkoutSet>, history: List<Pair<Long, Int>>, logSets: Boolean, pending: Int?) {
     val done = sets.filter { it.end != null }.asReversed()
     if (done.isEmpty()) return
     // The peaks scan the readings, so they're worked out when a set or the readings change, not on every pass.
     val lines = remember(done, history) { done.take(4).map { s -> WorkoutCopy.setLine(s, Strength.peak(history, s.start, s.end!!)) } }
+    // A set whose log card was skipped has no reps: say so rather than show only its time.
+    val skippedWord = stringResource(R.string.workout_live_sets_skipped)
+
     Column(Modifier.fillMaxWidth()) {
         done.take(4).forEachIndexed { i, s ->
             Row(Modifier.fillMaxWidth().padding(vertical = Space.S8), horizontalArrangement = Arrangement.spacedBy(Space.S12)) {
                 Text(stringResource(R.string.workout_live_sets_row, s.index + 1), color = GlowType.noteColor,
                     style = GlowType.secondary)
-                Text(lines[i], color = Color.White, style = GlowType.secondary, maxLines = 1,
+                val skipped = logSets && s.reps == null && s.index != pending
+                val text = when {
+                    !skipped -> lines[i]
+                    lines[i].isEmpty() -> skippedWord
+                    else -> stringResource(R.string.workout_live_sets_skipped_line, lines[i])
+                }
+                Text(text, color = Color.White, style = GlowType.secondary, maxLines = 1,
                     overflow = TextOverflow.Ellipsis)
             }
         }
@@ -360,6 +376,8 @@ private fun LogCard(
 ) {
     val row = exercises.firstOrNull { it.name.equals(set.exercise, ignoreCase = true) }
     val (fillReps, fillKg) = remember(set.index) { Strength.prefill(set.exercise, sets, row?.lastReps, row?.lastKg) }
+    // "Filled from your last set" only when there was one to fill from.
+    val hadLast = sets.any { it.reps != null && it.exercise.equals(set.exercise, ignoreCase = true) } || row?.lastReps != null
     var reps by rememberSaveable(set.index) { mutableStateOf(fillReps) }
     var kg by rememberSaveable(set.index) { mutableStateOf(fillKg) }
     val peak = Strength.peak(history, set.start, set.end ?: set.start)
@@ -386,7 +404,7 @@ private fun LogCard(
             )
         }
         Text(
-            stringResource(R.string.workout_live_log_filled), color = Ink.Secondary,
+            stringResource(if (hadLast) R.string.workout_live_log_filled else R.string.workout_live_log_unfilled), color = Ink.Secondary,
             style = GlowType.secondary,
         )
         ButtonPair(
@@ -461,8 +479,11 @@ private fun ExerciseSheet(current: String?, used: List<String>, onPick: (String?
         val nowLabel = stringResource(R.string.workout_live_exercise_now)
         Column {
             names.forEachIndexed { i, name ->
-                val value = if (name.equals(current, ignoreCase = true)) nowLabel else null
-                NavRow(name, value = value, divider = i > 0, onClick = { onPick(name) })
+                val picked = name.equals(current, ignoreCase = true)
+                // A pick, not a way on: no chevron, and a tick marks the one in use.
+                NavRow(name, divider = i > 0, onClick = { onPick(name) }, trailing = {
+                    if (picked) Icon(AppIcons.Tick02, nowLabel, tint = Color.White, modifier = Modifier.size(20.dp))
+                })
             }
         }
         if (current != null) HaloButton(

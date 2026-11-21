@@ -100,6 +100,7 @@ internal fun LiveGameScreen(
     val inBreak = periods != null && phase is Phase.Rest
     LiveFrame(
         r, color, connected, contentPadding, controls, time = { active.value },
+        battery = (connection as? ConnectionState.Connected)?.batteryPercent,
         // Half time stays on the left, the way every sport's own action does; a break's next step is the white tap.
         lap = if (periods != null && phase is Phase.Work && !r.paused) ({ SideAction(StartCopy.breakName(periods.rounds),
             AppIcons.PauseFill, onHalfTime) }) else null,

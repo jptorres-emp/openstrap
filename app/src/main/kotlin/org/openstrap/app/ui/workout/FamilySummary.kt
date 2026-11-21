@@ -73,10 +73,11 @@ object FamilySummary {
 
     /**
      * Finished [sets] by exercise, in the order each was first done, with the peak of [readings] (time, bpm) in each set.
-     * A logged set reads "10 × 60 kg"; one without a log reads by its time.
+     * A logged set reads "10 × 60 kg"; one without a log reads by its time, or "Skipped" when the others were logged.
      */
     fun exerciseSets(sets: List<AppWorkoutSet>, readings: List<Pair<Long, Int>>, strings: Strings = Strings.app): List<ExerciseSets> {
         val done = sets.filter { it.end != null }
+        val logged = done.any { it.reps != null }
         val order = done.map { it.exercise?.trim()?.takeIf(String::isNotEmpty) }.distinctBy { it?.lowercase() }
         return order.map { name ->
             val mine = done.filter { it.exercise?.trim()?.takeIf(String::isNotEmpty)?.lowercase() == name?.lowercase() }
@@ -85,6 +86,8 @@ object FamilySummary {
                     strings.format(R.string.workout_summary_set_reps_kg, s.reps, Strength.kgText(s.weightKg))
                 } else if (s.reps != null) {
                     strings.plural(R.plurals.workout_summary_set_reps, s.reps, s.reps)
+                } else if (logged) {
+                    strings.get(R.string.workout_summary_set_skipped)
                 } else {
                     Units.workoutClock(s.end!! - s.start)
                 }
@@ -142,7 +145,8 @@ object FamilySummary {
     fun roundsLine(lines: List<RoundLine>, restSeconds: Long?, strings: Strings = Strings.app): String? {
         val drops = lines.mapNotNull { it.drop }
         val hardest = hardestRound(lines)?.let { lines[it] }?.let { strings.format(R.string.workout_summary_rounds_hardest, it.number) }
-        val recovered = drops.takeIf { it.isNotEmpty() }?.let {
+        // Nothing came down on average: no sentence, rather than "0 bpm" read as a measurement.
+        val recovered = drops.takeIf { it.isNotEmpty() && Math.round(it.average()) > 0 }?.let {
             val avg = Math.round(it.average()).toInt()
             if (restSeconds != null) {
                 strings.format(R.string.workout_summary_rounds_recovered, avg, clockOrSeconds(restSeconds))
@@ -157,10 +161,11 @@ object FamilySummary {
         }
     }
 
-    /** The hardest of [lines], the highest peak (the first of equals), as its index; named only with 3 or more peaks. */
+    /** The hardest of [lines], the highest peak, as its index; named only with 3 or more peaks and one round highest. */
     fun hardestRound(lines: List<RoundLine>): Int? {
         if (lines.count { it.peak != null } < 3) return null
-        return lines.indices.filter { lines[it].peak != null }.maxByOrNull { lines[it].peak!! }
+        val top = lines.maxOf { it.peak ?: Int.MIN_VALUE }
+        return lines.indices.singleOrNull { lines[it].peak == top }
     }
 
     /** A peak bar starts from this share of the highest peak, so the gaps between sets and rounds show. */

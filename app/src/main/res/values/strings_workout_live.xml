@@ -40,11 +40,6 @@
     <!-- A label under a figure in a row of three, on a paused interval workout. About 12 characters. -->
     <string name="workout_live_figure_sets">Sets</string>
     <string name="workout_live_figure_rounds">Rounds</string>
-    <!-- A label under a figure in a row of three, on a paused strength workout: the sets finished. No number in it, the number is the figure above. About 12 characters. -->
-    <plurals name="workout_live_figure_sets_done">
-        <item quantity="one">Set done</item>
-        <item quantity="other">Sets done</item>
-    </plurals>
     <!-- A label under a figure in a row of three, on a paused strength workout: all the weight lifted. About 12 characters. -->
     <string name="workout_live_figure_kg_lifted">kg lifted</string>
     <!-- Under the big moving time (the time not paused). About 12 characters. -->
@@ -63,7 +58,7 @@
     <!-- Top right, small, beside a dot: the strap is connected, with its battery. About 10 characters. -->
     <string name="workout_live_status_strap_battery">Strap <xliff:g id="percent" example="64">%1$d</xliff:g>%%</string>
     <!-- Top right, small, beside a dot: the strap is connected. About 10 characters. -->
-    <string name="workout_live_status_strap">Strap</string>
+    <string name="workout_live_status_strap">Connected</string>
     <!-- Top right, small, under the total time, where a set's or a round's clock is the screen's big number. About 10 characters. -->
     <!-- A pill on a paused workout, held to end it. About 14 characters. -->
     <!-- The button that carries on a paused workout, and its label under it. About 10 characters. -->
@@ -282,9 +277,9 @@
     <!-- ======================================== Mind and body ======================================== -->
 
     <!-- Under the dimmed screen's heart rate line: the heart rate now. One line. -->
-    <string name="workout_live_mind_heart">Heart rate <xliff:g id="bpm" example="68">%1$d</xliff:g>, settling</string>
+    <string name="workout_live_mind_heart"><xliff:g id="bpm" example="68">%1$d</xliff:g> bpm now</string>
     <!-- Under the dimmed screen's heart rate line: the heart rate now and how far it has come down since the start. One line. -->
-    <string name="workout_live_mind_heart_down" tools:ignore="PluralsCandidate">Heart rate <xliff:g id="bpm" example="68">%1$d</xliff:g>, settling, down <xliff:g id="drop" example="9">%2$d</xliff:g> since you started</string>
+    <string name="workout_live_mind_heart_down" tools:ignore="PluralsCandidate"><xliff:g id="bpm" example="68">%1$d</xliff:g> bpm now, down <xliff:g id="drop" example="9">%2$d</xliff:g> since you started</string>
     <!-- Under the time in the ring: the session's length. -->
     <string name="workout_live_mind_length">of <xliff:g id="minutes" example="45">%1$d</xliff:g> min</string>
     <!-- Under the time in the ring once the session's length has passed. -->
@@ -341,6 +336,10 @@
         <item quantity="other"><xliff:g id="done" example="3">%1$d</xliff:g> sets done, <xliff:g id="left" example="2">%2$d</xliff:g> to go</item>
     </plurals>
     <!-- The exercise pill before the sets have a name: a tap names it. About 10 characters. -->
+    <!-- A set whose log card was skipped, in the list of sets done, alone. -->
+    <string name="workout_live_sets_skipped">Skipped</string>
+    <!-- A skipped set with its time and peak: "Skipped, 0:07, peak 135". -->
+    <string name="workout_live_sets_skipped_line">Skipped, <xliff:g id="rest" example="0:07, peak 135">%1$s</xliff:g></string>
     <string name="workout_live_sets_name_it">Name it</string>
     <!-- A row in the list of sets done, on its left. -->
     <string name="workout_live_sets_row">Set <xliff:g id="set" example="2">%1$d</xliff:g></string>
@@ -356,7 +355,7 @@
     <!-- The log sheet's note: the set's time alone. -->
     <string name="workout_live_log_note"><xliff:g id="time" example="0:51">%1$s</xliff:g>.</string>
     <!-- The log sheet, in place of the exercise's name for sets without one. -->
-    <string name="workout_live_log_numbered_set">Numbered set</string>
+    <string name="workout_live_log_numbered_set">No exercise named</string>
     <!-- The log sheet's reps stepper's label. About 8 characters. -->
     <string name="workout_live_log_reps">Reps</string>
     <!-- The reps stepper's minus for a screen reader. -->
@@ -370,6 +369,8 @@
     <!-- The weight stepper's plus for a screen reader. -->
     <string name="workout_live_log_more_weight">More weight</string>
     <!-- Under the log sheet's steppers. -->
+    <!-- Under the log sheet's steppers when there is no earlier set of this exercise to fill from. -->
+    <string name="workout_live_log_unfilled">Set the reps and weight you did.</string>
     <string name="workout_live_log_filled">Filled from your last set. Change only what\'s different.</string>
     <!-- A button on the log sheet: close it without logging the set. Half the sheet wide. -->
     <string name="workout_live_log_skip">Skip</string>

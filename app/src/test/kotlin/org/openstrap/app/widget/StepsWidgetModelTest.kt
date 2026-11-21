@@ -200,10 +200,13 @@ class StepsWidgetModelTest {
         val big = StepsLayout.small(m.stepsText, m.share, small.first, small.second, 1.3f)
         assertTrue(smallHeight(big, 1.3f) <= small.second)
         assertTrue(big.word || big.share)
-        // Five figures shrink the dots to the width rather than clip.
-        val many = StepsLayout.small("12,345", "Goal met", small.first, small.second, 1f)
+        // Five figures fit; the fork's narrower Barlow figures need no shrink for them, so eight show the shrink to the
+        // width rather than a clip.
+        val five = StepsLayout.small("12,345", "Goal met", small.first, small.second, 1f)
+        assertTrue(StepsLayout.dotsWidth("12,345", five.dot) <= small.first + 1e-3f)
+        val many = StepsLayout.small("12,345,678", "Goal met", small.first, small.second, 1f)
         assertTrue(many.dot < StepsLayout.SMALL_DOT)
-        assertTrue(StepsLayout.dotsWidth("12,345", many.dot) <= small.first + 1e-3f)
+        assertTrue(StepsLayout.dotsWidth("12,345,678", many.dot) <= small.first + 1e-3f)
     }
 
     @Test fun `the Wide's number row fits its width at both font sizes`() {

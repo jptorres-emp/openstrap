@@ -5,7 +5,7 @@ import java.time.LocalDate
 
 /**
  * The fork's weight log ([WeightEntry]): one weight a day, read as 7-day averages, so a day's water and meals don't
- * read as a change. Pure, for the You row and the weight sheet ([org.openstrap.app.ui.device.WeightSheet]).
+ * read as a change. Pure, for the You row and the weight sheet.
  */
 object WeightLog {
     /** The weeks the chart shows, newest last. */

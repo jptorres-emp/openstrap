@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
@@ -42,6 +43,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
@@ -49,6 +51,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.openstrap.app.R
 import org.openstrap.app.data.Route
+import org.openstrap.app.data.WorkoutRecorder
+import org.openstrap.app.i18n.Strings
+import org.openstrap.app.presentation.WorkoutCopy
+import org.openstrap.app.ui.workout.HeartZonesCopy
 import org.openstrap.app.export.GpxShare
 import org.openstrap.app.export.GpxWriter
 import org.openstrap.app.maps.RouteSnapper
@@ -83,7 +89,7 @@ internal fun RouteMapPage(summary: PhoneSummary, model: RouteMapModel, contentPa
         onDispose { hideTabBar(false) }
     }
     val line = rememberRouteLine(summary)
-    val rows = remember(summary) { splitRowsOf(summary, emptyList()) }
+    val rows = remember(summary, line.legs) { routeSplitRows(summary, line.legs) }
     val selected = model.selected?.takeIf { it in line.legs.indices && it in rows.indices }
     val density = LocalDensity.current
     var panel by remember { mutableStateOf(240.dp) }
@@ -192,11 +198,13 @@ private fun Splits(rows: List<SplitRow>, selected: Int?, maxHr: Int, onPick: (In
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 stringResource(R.string.glow_summary_splits), color = Color.White, style = GlowType.cardTitle,
-                maxLines = 1, modifier = Modifier.weight(1f),
+                maxLines = 1,
             )
+            Spacer(Modifier.width(Space.S12))
             Text(
                 stringResource(if (selected == null) R.string.glow_route_map_pick_hint else R.string.glow_route_map_unpick_hint),
-                color = GlowType.noteColor, style = GlowType.noteSmall, maxLines = 1,
+                color = GlowType.noteColor, style = GlowType.noteSmall, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.End, modifier = Modifier.weight(1f),
             )
         }
         val list = rememberLazyListState()
@@ -229,26 +237,48 @@ private fun Splits(rows: List<SplitRow>, selected: Int?, maxHr: Int, onPick: (In
     }
 }
 
-/** The picked kilometre in a line, "Km 3 in 6:02", with its average heart rate in its zone's colour. */
+/** The picked kilometre in a line, "Km 3 in 6:02", with its average heart rate and the zone's name, the dot in its colour. */
 @Composable
 private fun PickedSplit(row: SplitRow, maxHr: Int) {
     val heartZones = LocalHeartZones.current
-    HaloCard(Modifier.height(48.dp), size = HaloCardSize.Strip) {
+    HaloCard(Modifier.heightIn(min = 48.dp), size = HaloCardSize.Strip) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 stringResource(R.string.glow_route_map_split_in, row.name, row.time), color = Color.White,
-                style = GlowType.secondary.copy(fontFeatureSettings = "tnum"), maxLines = 1, modifier = Modifier.weight(1f),
+                style = GlowType.secondary.copy(fontFeatureSettings = "tnum"), maxLines = 1, overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false),
             )
+            Spacer(Modifier.weight(1f))
             row.averageBpm?.let {
+                val zone = WorkoutRecorder.liveZoneOf(it, maxHr, heartZones)
                 Box(Modifier.size(8.dp).clip(CircleShape).background(zoneColor(it, maxHr, heartZones)))
                 Spacer(Modifier.width(Space.S8))
                 Text(
-                    stringResource(R.string.glow_summary_split_average, it), color = GlowType.noteColor,
-                    style = GlowType.noteSmall, maxLines = 1,
+                    stringResource(R.string.glow_route_map_split_heart, it, HeartZonesCopy.zoneName(zone)), color = GlowType.noteColor,
+                    style = GlowType.noteSmall.copy(fontFeatureSettings = "tnum"), maxLines = 1,
                 )
             }
         }
     }
+}
+
+/**
+ * [splitRowsOf], with the last part of the route always a row: the summary leaves out a part under 100 m, but the map
+ * has a leg for it (a kilometre's chip picks the leg of the same index), so the chips end where the line does.
+ */
+private fun routeSplitRows(summary: PhoneSummary, legs: List<Route.Leg>): List<SplitRow> {
+    val rows = splitRowsOf(summary, emptyList())
+    val last = legs.lastOrNull()?.split ?: return rows
+    if (legs.size == rows.size || last.meters >= 1000.0 || last.meters <= 0.0) return rows
+    val i = legs.lastIndex
+    val firstT = summary.route.firstOrNull()?.t
+    val from = legs.getOrNull(i - 1)?.split?.endT ?: firstT ?: last.endT
+    val meters = summary.distanceMeters?.takeIf { !summary.distanceFromSteps }?.let { it - 1000f * i }?.takeIf { it > 0f } ?: last.meters.toFloat()
+    val distance = Units.distance(meters, Units.Precision.Workout) ?: Strings.app.format(R.string.workout_summary_meters, meters.toInt())
+    return rows + SplitRow(
+        Strings.app.format(R.string.workout_summary_split_last, distance), Units.workoutClock(last.seconds),
+        WorkoutCopy.averageOver(summary.history, from, last.endT), last.seconds, SplitRow.Kind.Last,
+    )
 }
 
 /** Line: Roads or GPS, and a note on what is drawn. Nothing to choose without the app (a preview). */
@@ -264,7 +294,7 @@ private fun LineChoice(line: RouteLine) {
             )
             GlowSegments(
                 listOf(stringResource(R.string.glow_route_map_roads), stringResource(R.string.glow_route_map_gps)),
-                if (roads) 0 else 1, { choose(it == 0) }, Modifier.weight(1f),
+                if (line.drawnAsRoads) 0 else 1, { choose(it == 0) }, Modifier.weight(1f),
             )
         }
         val note = when {

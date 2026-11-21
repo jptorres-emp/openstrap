@@ -6,6 +6,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.foundation.background
@@ -88,6 +90,8 @@ fun WorkoutMap(
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     var map by remember { mutableStateOf<MapLibreMap?>(null) }
     var style by remember { mutableStateOf<Style?>(null) }
+    // The map's size in pixels: a fit made at one size is wrong at the next (a panel over it changes height), so it is made again.
+    var mapSize by remember { mutableStateOf(IntSize.Zero) }
     val view = remember {
         MapLibre.getInstance(context)
         MapView(context).apply {
@@ -192,7 +196,7 @@ fun WorkoutMap(
     LaunchedEffect(style, highlight) {
         style?.getSourceAs<GeoJsonSource>(HIGHLIGHT_SRC)?.setGeoJson(highlightGeoJson(highlight))
     }
-    LaunchedEffect(style, stretches, here, follow, highlight, fitPadding) {
+    LaunchedEffect(style, stretches, here, follow, highlight, fitPadding, mapSize) {
         val s = style ?: return@LaunchedEffect
         s.getSourceAs<GeoJsonSource>(SOURCE)?.setGeoJson(geoJson(stretches))
         val last = here ?: stretches.lastOrNull()?.first?.lastOrNull()
@@ -201,15 +205,23 @@ fun WorkoutMap(
         s.getSourceAs<GeoJsonSource>(START)?.setGeoJson(point(all.firstOrNull()?.takeIf { all.size >= 2 }))
         if (!follow) return@LaunchedEffect
         val fit = if (highlight.size >= 2) highlight else all
+        // Nothing to fit into until the map has a size, and padding that leaves no room would throw the camera off.
+        if (mapSize.width <= 0 || mapSize.height <= 0) return@LaunchedEffect
         if (fit.size >= 2) {
             val bounds = LatLngBounds.Builder().includes(fit.map { LatLng(it.lat, it.lon) }).build()
             val px = with(density) { listOf(fitPadding.calculateLeftPadding(LayoutDirection.Ltr), fitPadding.calculateTopPadding(), fitPadding.calculateRightPadding(LayoutDirection.Ltr), fitPadding.calculateBottomPadding()).map { it.roundToPx() } }
-            runCatching { map?.easeCamera(CameraUpdateFactory.newLatLngBounds(bounds, px[0], px[1], px[2], px[3])) }
+            // The map adds its own padding to a fit's, and a fit leaves it set, so each fit would drift the next: start clean.
+            val room = mapSize.width - px[0] - px[2] > 0 && mapSize.height - px[1] - px[3] > 0
+            val pad = if (room) px else listOf(0, 0, 0, 0)
+            runCatching {
+                map?.setPadding(0, 0, 0, 0)
+                map?.easeCamera(CameraUpdateFactory.newLatLngBounds(bounds, pad[0], pad[1], pad[2], pad[3]))
+            }
         } else if (last != null) {
             map?.easeCamera(CameraUpdateFactory.newLatLngZoom(LatLng(last.lat, last.lon), MAX_ZOOM))
         }
     }
-    AndroidView({ view }, modifier)
+    AndroidView({ view }, modifier.onSizeChanged { mapSize = it })
 }
 
 /** Close enough to read the streets, far enough to see where they go. */

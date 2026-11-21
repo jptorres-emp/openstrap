@@ -116,7 +116,7 @@ fun GlowSleepScreen(
             val pair = (breathing != null || firstNights) && state.naps.isNotEmpty()
             tabCards(slots) { card, m ->
                 when (card) {
-                    SleepCard.Hero -> NightHero(state, firstNights, onRestore) { onOpen(Detail.OfScore(Score.Sleep)) }
+                    SleepCard.Hero -> NightHero(state, firstNights, onRestore, rec?.sleepNeed) { onOpen(Detail.OfScore(Score.Sleep)) }
                     SleepCard.Vitals -> VitalsList(state, firstNights) { onOpen(Detail.OfMetric(it, night = true)) }
                     SleepCard.Regularity -> RegularityCard(state, rec?.regularity, firstNights) { onOpen(Detail.OfScore(Score.Regularity)) }
                     SleepCard.Breathing -> BreathingCard(
@@ -152,7 +152,12 @@ internal val SleepGlow = GlowStyle.Midnight.copy(
  * ([onOpen]). A night the user deleted says so, with Restore ([onRestore]).
  */
 @Composable
-private fun NightHero(state: DayUiState, firstNights: Boolean, onRestore: (org.openstrap.app.data.db.SleepSession) -> Unit, onOpen: () -> Unit) {
+private fun NightHero(
+    state: DayUiState, firstNights: Boolean, onRestore: (org.openstrap.app.data.db.SleepSession) -> Unit,
+    /** The sleep need Recovery used, in minutes, for the fork's performance line; null before Recovery has one. */
+    needMinutes: Int?,
+    onOpen: () -> Unit,
+) {
     val session = state.sleep
     val isToday = state.date == LocalDate.now()
     GlowCard(SleepGlow, Modifier.fillMaxWidth().gridSize(CardSize.Wide), onClick = onOpen) {
@@ -185,6 +190,9 @@ private fun NightHero(state: DayUiState, firstNights: Boolean, onRestore: (org.o
                         if (state.sleepScoreAdjusted) stringResource(R.string.glow_sleep_score_adjusted, it) else it
                     },
                     TabCopy.woke(session.wakeCount),
+                    // The fork's performance: the time asleep against the sleep you need.
+                    org.openstrap.app.data.SleepFigures.performance(asleep, needMinutes ?: org.openstrap.app.data.Recovery.SLEEP_NEED_MINUTES)
+                        ?.let { stringResource(R.string.fork_sleep_performance_line, it) },
                 ),
             )
             if (state.sleepStages.isNotEmpty()) {

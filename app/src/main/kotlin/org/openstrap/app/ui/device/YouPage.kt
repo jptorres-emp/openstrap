@@ -140,6 +140,10 @@ fun YouPage(
     onBack: () -> Unit,
     /** The row whose page is open beside the list on a wide screen, by its key in [PageRowKeys], or null. */
     selected: String? = null,
+    /** The weight log's last weight and averages (the fork's), said on the Weight row; null before the first. */
+    weight: org.openstrap.app.data.WeightLog.Summary? = null,
+    /** Opens the weight sheet. */
+    onWeight: () -> Unit = {},
 ) {
     BackHandler(onBack = onBack)
     ScreenList(contentPadding, gutter = GlowLayout.Gutter) {
@@ -150,6 +154,10 @@ fun YouPage(
                     stringResource(R.string.you_row_profile), profile.summary(), onClick = onProfile, below = true, divider = false,
                     icon = AppIcons.User,
                     selected = selected == PageRowKeys.PROFILE,
+                )
+                PageRow(
+                    stringResource(R.string.fork_weight_row), weightLine(weight, profile.usesImperial), onClick = onWeight, below = true,
+                    icon = AppIcons.ChartLine,
                 )
                 PageRow(
                     org.openstrap.app.ui.workout.HeartZonesCopy.TITLE, org.openstrap.app.ui.workout.HeartZonesCopy.youLine(maxHeartRate), onClick = onHeartZones,

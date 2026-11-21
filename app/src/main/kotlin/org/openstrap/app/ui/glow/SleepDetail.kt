@@ -224,6 +224,14 @@ internal fun SleepScoreDetail(
                                 ),
                                 Modifier.padding(top = 20.dp),
                             )
+                            // The fork's figures: performance against your need, efficiency against the time in bed.
+                            val figures = listOfNotNull(
+                                org.openstrap.app.data.SleepFigures.performance(asleep, r?.sleepNeed ?: Recovery.SLEEP_NEED_MINUTES)
+                                    ?.let { stringResource(R.string.fork_percent, it) to stringResource(R.string.fork_sleep_performance) },
+                                org.openstrap.app.data.SleepFigures.efficiency(asleep, session.start, session.end)
+                                    ?.let { stringResource(R.string.fork_percent, it) to stringResource(R.string.fork_sleep_efficiency) },
+                            )
+                            if (figures.isNotEmpty()) DetailFigures(figures, Modifier.padding(top = 14.dp))
                             if (detected != null) SleepEditActions(
                                 if (moved) SleepCopy.yourTimes(clock(detected.start), clock(detected.end)) else null,
                                 onAdjust = { adjusting = true }, onDelete = { deleting = true }, Modifier.padding(top = 20.dp),

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The fork's own text (jptorres-emp/openstrap): the weight log and the sleep figures it adds to the original. -->
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <!-- The You page's row for the weight log. -->
+    <string name="fork_weight_row">Weight</string>
+    <!-- Under the Weight row before any weight is logged. -->
+    <string name="fork_weight_line_none">Log it to see its trend</string>
+    <!-- Under the Weight row: the last weight logged, then the last 7 days' average. -->
+    <string name="fork_weight_line"><xliff:g id="weight" example="92.4 kg">%1$s</xliff:g>, 7-day average <xliff:g id="average" example="92.8 kg">%2$s</xliff:g></string>
+    <!-- A body weight in kilograms, one decimal. -->
+    <string name="fork_weight_kg"><xliff:g id="kilograms" example="92.4">%1$.1f</xliff:g> kg</string>
+    <!-- A body weight in pounds, one decimal. -->
+    <string name="fork_weight_lb"><xliff:g id="pounds" example="203.7">%1$.1f</xliff:g> lb</string>
+    <!-- The unit after the weight field. -->
+    <string name="fork_weight_unit_kg">kg</string>
+    <string name="fork_weight_unit_lb">lb</string>
+    <!-- The weight sheet's title. -->
+    <string name="fork_weight_title">Weight</string>
+    <!-- Under the weight sheet's title. -->
+    <string name="fork_weight_note">Weigh yourself in the morning, before breakfast. The 7-day average shows the trend through the day-to-day ups and downs. Saving also sets your profile\'s weight.</string>
+    <!-- The weight sheet's field. -->
+    <string name="fork_weight_field">Today\'s weight</string>
+    <!-- On the weight sheet: the last 7 days' average. -->
+    <string name="fork_weight_average">7-day average <xliff:g id="average" example="92.8 kg">%1$s</xliff:g></string>
+    <!-- Under the average: how it compares with the 7 days before. -->
+    <string name="fork_weight_down"><xliff:g id="change" example="0.5 kg">%1$s</xliff:g> less than the 7 days before</string>
+    <string name="fork_weight_up"><xliff:g id="change" example="0.3 kg">%1$s</xliff:g> more than the 7 days before</string>
+    <string name="fork_weight_same">The same as the 7 days before</string>
+    <!-- What the weight chart says to a screen reader. -->
+    <string name="fork_weight_chart">Your 7-day average weight over the last <xliff:g id="weeks" example="12">%1$d</xliff:g> weeks, <xliff:g id="first" example="92.8 kg">%2$s</xliff:g> then <xliff:g id="last" example="91.6 kg">%3$s</xliff:g></string>
+    <!-- Under last night's sleep: the time asleep against the sleep you need, in percent. -->
+    <string name="fork_sleep_performance_line"><xliff:g id="percent" example="92">%1$d</xliff:g>%% of the sleep you need</string>
+    <!-- A figure's name in the sleep details: the time asleep against the need. -->
+    <string name="fork_sleep_performance">Performance</string>
+    <!-- A figure's name in the sleep details: the time asleep against the time in bed. -->
+    <string name="fork_sleep_efficiency">Efficiency</string>
+    <!-- A figure's value: a percentage. -->
+    <string name="fork_percent"><xliff:g id="percent" example="92">%1$d</xliff:g>%%</string>
+</resources>

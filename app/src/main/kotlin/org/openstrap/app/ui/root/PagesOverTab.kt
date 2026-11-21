@@ -36,6 +36,7 @@ import androidx.navigationevent.NavigationEventDispatcherOwner
 import androidx.navigationevent.compose.LocalNavigationEventDispatcherOwner
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
+import kotlinx.coroutines.launch
 import org.openstrap.app.AppContainer
 import org.openstrap.app.PendingAction
 import org.openstrap.app.R
@@ -281,6 +282,13 @@ private fun YouPageHost(
     val updateWaiting by hooks.rootVm.updateWaiting.collectAsStateWithLifecycle()
     val deletedSleep by hooks.dayVm.deletedSleep.collectAsStateWithLifecycle()
     val youMaxHr by hooks.workoutsVm.maxHeartRate.collectAsStateWithLifecycle()
+    // The fork's weight log: its rows for the sheet and the row's line, read here as the page opens.
+    val today = remember { java.time.LocalDate.now() }
+    val dao = container.database.healthDao()
+    val weights by remember(today) { dao.weights(today.minusDays(org.openstrap.app.data.WeightLog.DAYS), today) }
+        .collectAsStateWithLifecycle(emptyList())
+    var weighing by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
+    val weightScope = androidx.compose.runtime.rememberCoroutineScope()
     // Permissions can be taken back in Health Connect while away: the row says so on return.
     LifecycleResumeEffect(Unit) {
         deviceVm.checkAutoHealthConnect()
@@ -308,7 +316,25 @@ private fun YouPageHost(
         onSampleData = if (SampleData.AVAILABLE) ({ deviceVm.loadSampleData() }) else null,
         onBack = onBack,
         selected = selected?.row,
+        weight = org.openstrap.app.data.WeightLog.summary(weights, today),
+        onWeight = { weighing = true },
     )
+    if (weighing) {
+        org.openstrap.app.ui.device.WeightSheet(
+            weights, today, profile.usesImperial,
+            onSave = { kg ->
+                weighing = false
+                weightScope.launch {
+                    dao.insertWeights(listOf(org.openstrap.app.data.db.WeightEntry(today, kg, System.currentTimeMillis() / 1000)))
+                    // The profile's weight follows, confirmed now when the height is known, so calories and VO2 max use it.
+                    container.settings.saveProfile(
+                        profile.copy(weightKg = kg, bodyMeasuredAt = if (profile.heightCm != null) System.currentTimeMillis() / 1000 else profile.bodyMeasuredAt),
+                    )
+                }
+            },
+            onDismiss = { weighing = false },
+        )
+    }
 }
 
 /** The Strap page, with what the strap holds read once it's connected. */

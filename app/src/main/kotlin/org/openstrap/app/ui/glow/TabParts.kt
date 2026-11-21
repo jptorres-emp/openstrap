@@ -97,17 +97,34 @@ internal fun <T> GridRowBlock(row: GridRow<T>, draw: @Composable (T, Modifier) -
     }
 }
 
+/** What a page last had from a load: [value] once something arrived, else nothing to hold ([rememberHeld]). */
+internal class Held<T> {
+    var value: T? = null
+}
+
+/**
+ * [fresh] while it is there, else what the page last got under the same [keys]: a change of day starts a new load, and
+ * the page keeps the last day's value until the new one arrives rather than blinking to nothing (P2). A change of the
+ * [keys] (another metric or range) drops what was held, so it is never another thing's value.
+ */
+@Composable
+internal fun <T : Any> rememberHeld(vararg keys: Any?, fresh: T?): T? {
+    val held = androidx.compose.runtime.remember(*keys) { Held<T>() }
+    if (fresh != null) held.value = fresh
+    return fresh ?: held.value
+}
+
 /**
  * Your normal for [metric] as of [date] (mean ± one standard deviation of the last days, [History.normal]), loaded
  * from [history]; null without a history or before there are enough days. For your resting range behind a heart
- * rate line, from the nightly resting heart rate.
+ * rate line, from the nightly resting heart rate. While another day's loads it keeps the last day's normal.
  */
 @Composable
 internal fun rememberNormal(metric: org.openstrap.app.presentation.Metric, date: java.time.LocalDate, history: org.openstrap.app.ui.dashboard.DailyHistory?): org.openstrap.app.data.History.Normal? {
     val from = date.minusDays(org.openstrap.app.data.History.NORMAL_DAYS - 1L)
     val stats by androidx.compose.runtime.remember(metric, date, history) {
         history?.invoke(metric.daily, from, date) ?: kotlinx.coroutines.flow.flowOf(emptyList())
-    }.collectAsStateWithLifecycle(emptyList())
-    return androidx.compose.runtime.remember(stats, date) { org.openstrap.app.data.History.normal(stats, date) }
+    }.collectAsStateWithLifecycle(null)
+    val fresh = androidx.compose.runtime.remember(stats, date) { stats?.let { listOf(org.openstrap.app.data.History.normal(it, date)) } }
+    return rememberHeld(metric, history, fresh = fresh)?.firstOrNull()
 }
-

@@ -75,4 +75,21 @@
     <string name="glow_detail_at_waking_note">醒来时 %1$d</string>
     <string name="glow_detail_seven_day_average">7 天平均</string>
     <string name="glow_detail_vs_yesterday">较昨天</string>
+    <string name="glow_detail_goal">目标</string>
+    <string name="glow_detail_best_day">最佳一天</string>
+    <string name="glow_detail_daily_average">日均</string>
+    <string name="glow_detail_hr_calm">平静</string>
+    <string name="glow_detail_hr_raised">偏高</string>
+    <string name="glow_detail_spo2_normal">正常</string>
+    <string name="glow_detail_spo2_slightly_low">略低</string>
+    <string name="glow_detail_spo2_low">偏低</string>
+    <string name="glow_detail_steps_below_goal">未达目标</string>
+    <string name="glow_detail_steps_goal_reached">已达目标</string>
+    <string name="glow_detail_steps_to_go">还差 %1$s 步达到目标。</string>
+    <string name="glow_detail_steps_done">你已达到目标。</string>
+    <string name="glow_detail_steps_so_far_to">今天截至 %1$s</string>
+    <string name="glow_detail_live">实时</string>
+    <string name="glow_detail_asleep_note">睡眠中</string>
+    <string name="glow_detail_stress_strip_note">每小时，从平静到偏高</string>
+    <string name="glow_detail_estimated">估算</string>
 </resources>

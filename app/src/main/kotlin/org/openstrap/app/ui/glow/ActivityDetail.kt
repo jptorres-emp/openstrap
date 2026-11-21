@@ -143,7 +143,7 @@ private fun stepsStrip(ctx: ActivityDetailContext, metric: DailyMetric = DailyMe
 @Composable
 private fun HeartPointsDetail(ctx: ActivityDetailContext) {
     val date = ctx.state.date
-    val color = MetricColors.heart
+    val color = ActivityLime
     val ranges = listOf(Range.Week, Range.Month)
     var rangeIndex by rememberSaveable { mutableIntStateOf(0) }
     val range = ranges[rangeIndex.coerceIn(ranges.indices)]
@@ -254,7 +254,7 @@ private const val OLDEST_SHADE = 0.35f
 @Composable
 private fun ActiveMinutesDetail(ctx: ActivityDetailContext) {
     val date = ctx.state.date
-    val color = MetricColors.steps
+    val color = ActivityLime
     val a = ctx.r?.activity
     // TODO(step 6): Month and Year need each day's active minutes further back; the engine works them out from the
     // minutes for only the 14 days ending on the day shown.
@@ -925,12 +925,12 @@ private fun ActivityRelated(current: Score, ctx: ActivityDetailContext, heartPoi
             icon = Metric.Steps.rowIcon(),
         )
         if (current != Score.ActiveMinutes) MetricRow(
-            Score.ActiveMinutes.title, MetricColors.steps, a?.weekEquivalent?.toString(),
+            Score.ActiveMinutes.title, ActivityLime, a?.weekEquivalent?.toString(),
             a?.let { TabCopy.activeMinutes(it.weekEquivalent, Activity.MVPA_WEEKLY_TARGET) } ?: NO_VALUE,
             onClick = { ctx.onOpen(Detail.OfScore(Score.ActiveMinutes)) }, divider = divider(), icon = Score.ActiveMinutes.rowIcon(),
         )
         if (current != Score.HeartPoints) MetricRow(
-            Score.HeartPoints.title, MetricColors.heart, points?.toString(),
+            Score.HeartPoints.title, ActivityLime, points?.toString(),
             points?.let { TabCopy.heartPoints(it, ActivityCopy.HEART_POINTS_TARGET) } ?: AFTER_NEXT_SYNC,
             onClick = { ctx.onOpen(Detail.OfScore(Score.HeartPoints)) }, divider = divider(), icon = Score.HeartPoints.rowIcon(),
         )

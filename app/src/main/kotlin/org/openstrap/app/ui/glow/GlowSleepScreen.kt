@@ -339,7 +339,7 @@ private fun NapsCard(state: DayUiState, size: PictureSize, modifier: Modifier, o
     val pictured = naps.map { Nap(it.start, it.end, state.napStages[it.start].orEmpty()) }
     SleepPictureCard(
         MetricColors.sleepDeep, TabCopy.napsTitle(naps.size), null, onOpen, modifier = modifier,
-        value = clockDuration(naps.sumOf { it.end - it.start }), unit = stringResource(R.string.glow_sleep_unit_hours), tag = null,
+        value = clockDuration(naps.sumOf { it.end - it.start }), unit = null, tag = null,
         status = TabCopy.naps(naps.size, clock(naps.first().start)),
         picture = { m -> NapDay(pictured, span.first, span.last, MetricColors.sleepDeep, size, m) },
     )

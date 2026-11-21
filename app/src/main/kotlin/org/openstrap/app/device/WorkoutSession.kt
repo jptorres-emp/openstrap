@@ -91,6 +91,12 @@ sealed interface WorkoutState {
         /** A set under way. */
         val inSet: Boolean get() = sets.lastOrNull()?.let { it.end == null } == true
         val resting: Boolean get() = restUntil != null
+
+        /** The sets as the screens count them: the one under way counts, so set 1 reads 1 while it is being done. */
+        val setsCounted: Int get() = sets.size
+
+        /** The rounds (or reps) as the screens count them: the one under way counts, so round 1 reads 1 from its start. */
+        val roundsCounted: Int get() = rounds.size
     }
     /**
      * Saved; its summary shows until it is dismissed. [preview] is a debug build opening the summary for a stored

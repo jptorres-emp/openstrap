@@ -40,7 +40,7 @@
     <!-- A sport's full name. One line in lists. -->
     <string name="core_workouts_sport_jump_rope">Jump rope</string>
     <!-- A sport's full name. One line in lists. -->
-    <string name="core_workouts_sport_rowing_machine">Rowing machine</string>
+    <string name="core_workouts_sport_rowing_machine">Rowing</string>
     <!-- A sport's full name. One line in lists. -->
     <string name="core_workouts_sport_indoor_fitness">Indoor fitness</string>
     <!-- A sport's full name. One line in lists. -->
@@ -52,7 +52,7 @@
     <!-- A sport's full name. One line in lists. -->
     <string name="core_workouts_sport_mixed_aerobic">Mixed aerobic</string>
     <!-- A sport's full name. One line in lists. -->
-    <string name="core_workouts_sport_strength_training">Strength training</string>
+    <string name="core_workouts_sport_strength_training">Strength</string>
     <!-- A sport's full name. One line in lists. -->
     <string name="core_workouts_sport_stretching">Stretching</string>
     <!-- A sport's full name. One line in lists. -->

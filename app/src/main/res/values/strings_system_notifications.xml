@@ -23,7 +23,7 @@
     <!-- Channel name: the reminder when the strap is taken off. -->
     <string name="system_channel_wear">Wear reminders</string>
     <!-- Channel name: the summary of last week, on Monday. -->
-    <string name="system_channel_recap">Weekly recap</string>
+    <string name="system_channel_recap">Your week</string>
 
     <!-- A workout the strap noticed by itself. The sport is "Outdoor run" or "Yoga", the times "10:02 to 10:40". -->
     <string name="system_auto_detected_title"><xliff:g id="sport" example="Outdoor run">%1$s</xliff:g> detected, <xliff:g id="times" example="10:02 to 10:40">%2$s</xliff:g></string>

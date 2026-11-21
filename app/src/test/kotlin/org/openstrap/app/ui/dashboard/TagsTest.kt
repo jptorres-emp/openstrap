@@ -51,11 +51,11 @@ class TagsTest {
 
     @Test fun `off words`() {
         fun t(w: OffWords, s: OffStatus) = offTag(w, s, strings)?.text
-        assertEquals("Above normal", t(OffWords.Normal, OffStatus.Above))
-        assertEquals("Below normal", t(OffWords.Normal, OffStatus.Below))
-        assertEquals("Below normal", t(OffWords.LowOnly, OffStatus.Below))
+        assertEquals("Above your normal", t(OffWords.Normal, OffStatus.Above))
+        assertEquals("Below your normal", t(OffWords.Normal, OffStatus.Below))
+        assertEquals("Below your normal", t(OffWords.LowOnly, OffStatus.Below))
         assertNull(t(OffWords.LowOnly, OffStatus.Above))
-        assertEquals("Above usual", t(OffWords.Usual, OffStatus.Above))
+        assertEquals("Above your normal", t(OffWords.Usual, OffStatus.Above))
         assertEquals("Short", t(OffWords.Length, OffStatus.Below))
         assertEquals("Long", t(OffWords.Length, OffStatus.Above))
         assertEquals("Later", t(OffWords.Timing, OffStatus.Above))
@@ -74,7 +74,7 @@ class TagsTest {
 
     @Test fun `one tag per number, the goal first`() {
         val goal = NewsTag("Goal met", goal = true)
-        val off = NewsTag("Above usual", goal = false)
+        val off = NewsTag("Above your normal", goal = false)
         assertEquals(goal, newsTag(goal, off))
         assertEquals(off, newsTag(null, off))
         assertNull(newsTag(null, null))
@@ -82,8 +82,8 @@ class TagsTest {
 
     @Test fun `blood oxygen only says below`() {
         assertNull(bodyTag(Metric.Spo2, 1, strings))
-        assertEquals("Below normal", bodyTag(Metric.Spo2, -1, strings)?.text)
-        assertEquals("Above normal", bodyTag(Metric.Hrv, 1, strings)?.text)
+        assertEquals("Below your normal", bodyTag(Metric.Spo2, -1, strings)?.text)
+        assertEquals("Above your normal", bodyTag(Metric.Hrv, 1, strings)?.text)
         assertNull(bodyTag(Metric.Hrv, null, strings))
     }
 }

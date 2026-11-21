@@ -79,9 +79,9 @@
     <!-- Under a figure in the Energy detail: Energy when you woke. -->
     <string name="glow_recovery_at_waking">At waking</string>
     <!-- Under a figure in the Energy detail: the day's highest Energy. -->
-    <string name="glow_recovery_highest">Highest</string>
+    <string name="glow_recovery_highest">High</string>
     <!-- Under a figure in the Energy detail: the day's lowest Energy. -->
-    <string name="glow_recovery_lowest">Lowest</string>
+    <string name="glow_recovery_lowest">Low</string>
     <!-- A row under a score's detail that opens last night's sleep. -->
     <string name="glow_recovery_last_night">Last night</string>
     <!-- The Last night row when the strap recorded no sleep. -->

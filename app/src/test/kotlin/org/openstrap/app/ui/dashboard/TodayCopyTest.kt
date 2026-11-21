@@ -83,7 +83,7 @@ class TodayCopyTest {
         assertEquals("Ready for effort", TodayCopy.windowTitle(78))
         assertEquals("Steady session", TodayCopy.windowTitle(60))
         assertEquals("Easy session", TodayCopy.windowTitle(40))
-        assertEquals("Your usual workout time", TodayCopy.windowTitle(null))
+        assertEquals("Workout time", TodayCopy.windowTitle(null))
         assertEquals("You usually run around now. Energy is 58, plenty left.", TodayCopy.window(1, 58))
         assertEquals("You usually work out around now.", TodayCopy.window(null, null))
         assertEquals("You usually ride around now. Energy is 20, running low.", TodayCopy.window(4, 20))

@@ -1023,7 +1023,7 @@ private fun DayChart(metric: Metric, state: DayUiState, color: Color, hasValue: 
                 )
                 if (metric == Metric.Stress) {
                     if (stripe) DetailPicture(height = 24.dp) { m -> DayStrip(state.stressStrip, color, PictureSize.Wide, m) }
-                    else Spacer(Modifier.height(24.dp + Space.S12 + Space.S4))
+                    else Spacer(Modifier.height(Space.S24 + Space.S12 + Space.S4))
                     Text(
                         stringResource(R.string.glow_detail_stress_strip_note), color = GlowType.noteColor, style = GlowType.noteSmall,
                         maxLines = 1,

@@ -107,12 +107,15 @@ class TodayLooksTest {
         assertEquals(look(Tier.Glow, Hue.Charge, PictureKind.Curve), window[1].look)
         assertEquals(true, window[1].secondGlow)
         assertFalse(window[0].look!!.sameDesign(window[1].look))
-        // After a workout, in the evening and at night it is a plain picture card with its curve, and the hero is the only glow.
+        // After a workout, in the evening and at night it is a plain picture card with its curve. The hero is the only glow,
+        // except where Last night is a lit Small (after a workout), the one other lit card.
         for (m in listOf(Moment.After, Moment.Evening, Moment.Night)) {
             val out = today(m, TodayFacts(workout = true))
             assertEquals("$m", Tier.Picture, out.first { it.card == TodayCard.Charge }.look?.tier)
-            assertEquals("$m", 1, out.count { it.look?.tier == Tier.Glow })
+            val lastNightLit = out.any { it.card == LastNight && it.look?.tier == Tier.Glow }
+            assertEquals("$m", if (lastNightLit) 2 else 1, out.count { it.look?.tier == Tier.Glow })
         }
+        assertEquals(2, today(Moment.After, TodayFacts(workout = true)).count { it.look?.tier == Tier.Glow })
         // After a run the hero is Recovery teal: red is for effort.
         assertEquals(Hue.Recovery, today(Moment.After, TodayFacts(workout = true)).first().look?.hue)
     }

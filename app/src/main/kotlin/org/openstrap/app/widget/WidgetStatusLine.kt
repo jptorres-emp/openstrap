@@ -103,8 +103,9 @@ data class TopRow(
         ): TopRow {
             if (line == null || line.status is StrapStatus.Synced) {
                 // All well: the quiet button (when there's a line) keeps its room, and the note shows if it still fits.
-                val sp = titleSizes.first()
+                // The title takes the first size that fits beside the button, so a long one steps down rather than be cut.
                 val button = if (line != null) StatusButton.WORDS_GAP_DP + StatusButton.SIZE_DP else 0f
+                val sp = titleSizes.firstOrNull { WidgetText.fitWidth(title, it, fontScale) + button <= width } ?: titleSizes.last()
                 val keep = note != null && WidgetText.fitWidth(title, sp, fontScale) + StatusButton.TITLE_GAP_DP +
                     WidgetText.fitWidth(note, WidgetText.SECONDARY_SP, fontScale) + button <= width
                 return TopRow(line, keep, WidgetGrid.TOP_ROW_DP, titleSp = sp)

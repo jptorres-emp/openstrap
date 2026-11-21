@@ -735,19 +735,16 @@ private fun EveningHero(ctx: TodayContext, lightAngle: Float?, bedtime: LocalTim
             }
             // The count is in dots below, so the sentence says the steps against the goal instead.
             val day = TodayCopy.evening(sports, ctx.state.steps, goals.steps, ctx.loadStatus, stepCount = false)
-            if (night) {
-                // The night hero winds down (board HaloTodayNight): the day in a sentence, then your usual bedtime as
-                // its figure. The steps are the Steps card's, right under it.
-                HeroSentence(stringResource(R.string.core_today_night_wind_down_day, day))
-                bedtime?.let {
-                    Spacer(Modifier.height(Space.S24))
-                    HeroReading(TimeOfDay.format(it), listOf(stringResource(R.string.glow_today_usual_bedtime)))
-                }
-                return@Column
+            // The night winds down (board HaloTodayNight): the day in a sentence, then your usual bedtime as its figure
+            // (the steps are the Steps card's, right under it). The evening says the steps in dots.
+            HeroSentence(if (night) stringResource(R.string.core_today_night_wind_down_day, day) else day)
+            val figure = if (night) bedtime?.let { TimeOfDay.format(it) to R.string.glow_today_usual_bedtime }
+                else Units.count(ctx.state.steps, Units.DOT_LOCALE) to R.string.glow_today_steps
+            if (figure != null) {
+                Spacer(Modifier.height(Space.S24))
+                HeroReading(figure.first, listOf(stringResource(figure.second)))
             }
-            HeroSentence(day)
-            Spacer(Modifier.height(Space.S24))
-            HeroReading(Units.count(ctx.state.steps, Units.DOT_LOCALE), listOf(stringResource(R.string.glow_today_steps)))
+            if (night) return@Column
             // Load is said in the sentence, and Energy has its own card right under the hero. Only with that card
             // hidden in Edit Today does Energy come back here, last and full width, never a lone dash.
             val energy = ctx.charge?.takeIf { energyHidden }

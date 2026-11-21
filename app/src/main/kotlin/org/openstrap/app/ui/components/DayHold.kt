@@ -17,7 +17,7 @@ import java.time.LocalDate
  * that a day read from the phone's own database lands without a flash, short enough that another day's numbers never
  * stand for the new one.
  */
-const val DAY_HOLD_MS = 300L
+const val DAY_HOLD_MS = Motion.HOLD.toLong()
 
 /** How faint a held day is drawn, so it reads as on its way out. */
 const val DAY_HELD_ALPHA = 0.5f

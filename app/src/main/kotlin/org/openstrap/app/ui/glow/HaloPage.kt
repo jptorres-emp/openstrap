@@ -47,6 +47,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import org.openstrap.app.R
@@ -168,8 +169,10 @@ internal fun HaloPageColumn(
         // The live screen fits the screen instead (scroll = false): its controls never move. A scrolling page ends at
         // the keyboard, so what's typed can scroll above it.
         Column(
-            Modifier.fillMaxSize().then(if (scroll) Modifier.imePadding().verticalScroll(rememberScrollState()) else Modifier)
-                .statusBarsPadding()
+            // The status bar's inset sits outside the scroll, so the page's content is clipped at it and never draws
+            // under the system clock.
+            Modifier.fillMaxSize().statusBarsPadding()
+                .then(if (scroll) Modifier.imePadding().verticalScroll(rememberScrollState()) else Modifier)
                 .padding(contentPadding).padding(start = side, end = side, top = PageSpec.WorkoutTop, bottom = end)
                 // At least the screen's height, so the controls sit at the bottom without the page scrolling.
                 .then(if (scroll) Modifier.heightIn(min = (maxHeight - padTop - padBottom - end).coerceAtLeast(0.dp)) else Modifier),
@@ -222,9 +225,10 @@ internal fun HaloPageHeader(
 
 /**
  * The header of a page or a detail (HaloProfile, HaloAlarms and HaloDetailRecovery boards): back at the left, the
- * [title] centred in Page title type (over [subtitle] in Secondary), and [trailing] at the right (a detail's (i), or the
- * Save pill while the page has unsaved edits). [onTitle] makes the title a button with a caret (a detail's switcher).
- * [titleSuffix] follows the title on its line (a workout's Indoor tag).
+ * [title] centred on the screen in Page title type whatever the caret or the trailing action (one line, ending in an
+ * ellipsis when it is too long), over [subtitle] in Secondary. [onTitle] makes the title a button with a caret (a
+ * detail's switcher). [titleSuffix] follows the title on its line (a workout's Indoor tag). [trailing] is last, so a
+ * trailing lambda at a call site lands at the right edge: a detail's (i), Copy, or the Save pill while there are edits.
  */
 @Composable
 internal fun HaloPageHeader(
@@ -235,8 +239,8 @@ internal fun HaloPageHeader(
     backEnabled: Boolean = true,
     subtitle: String? = null,
     onTitle: (() -> Unit)? = null,
-    trailing: (@Composable () -> Unit)? = null,
     titleSuffix: (@Composable () -> Unit)? = null,
+    trailing: (@Composable () -> Unit)? = null,
 ) {
     val switchLabel = stringResource(R.string.glow_page_switch)
     HaloPageHeader(
@@ -255,8 +259,10 @@ internal fun HaloPageHeader(
                         },
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
+                    // The caret's room is kept at both sides, so the words sit in the middle with or without it.
+                    if (onTitle != null) Spacer(Modifier.width(PageSpec.Caret + PageSpec.CaretGap))
                     Text(
-                        title, color = Color.White, style = GlowType.pageTitle, maxLines = 1,
+                        title, color = Color.White, style = GlowType.pageTitle, maxLines = 1, overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false),
                     )
                     if (onTitle != null) {
@@ -268,7 +274,9 @@ internal fun HaloPageHeader(
                         titleSuffix()
                     }
                 }
-                if (subtitle != null) Text(subtitle, color = Ink.Secondary, style = GlowType.secondary, maxLines = 1)
+                if (subtitle != null) Text(
+                    subtitle, color = Ink.Secondary, style = GlowType.secondary, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                )
             }
         },
         end = { trailing?.invoke() },

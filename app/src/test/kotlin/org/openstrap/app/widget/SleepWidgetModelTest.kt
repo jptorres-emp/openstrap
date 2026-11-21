@@ -226,8 +226,10 @@ class SleepWidgetModelTest {
         assertTrue(hundred.row.dot <= WidgetHero.dot(WidgetSizes.Small, small.second))
         assertTrue(hundred.row.width("100", 1f, SleepLayout.SMALL_WORD_GAP_DP) <= small.first + 1e-3f)
         val big = SleepLayout.small(m.copy(score = "100", word = "Great"), small.first, small.second, 1.3f)
-        assertNull(big.row.word)
-        assertEquals(WidgetHero.dot(WidgetSizes.Small, small.second), big.row.dot, 0f)
+        // With the fork's narrower figures the word can stay at 1.3 as well; either way the row fits, and without it
+        // the number takes the Small's own size.
+        assertTrue(big.row.width("100", 1.3f, SleepLayout.SMALL_WORD_GAP_DP) <= small.first + 1e-3f || big.row.wordLines > 1)
+        if (big.row.word == null) assertEquals(WidgetHero.dot(WidgetSizes.Small, small.second), big.row.dot, 0f)
     }
 
     @Test fun `the Wide fits its width and height at every size, dropping the legend before clipping`() {

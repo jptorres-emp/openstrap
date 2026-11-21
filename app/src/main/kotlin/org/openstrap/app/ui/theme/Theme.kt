@@ -113,6 +113,9 @@ val FunnelSans = FontFamily(
     variable(R.font.funnel_sans, 700),
 )
 
+/** The cards' dotted numbers, in the fork: Barlow Condensed SemiBold (SIL OFL 1.1, licenses/OFL-Barlow.txt). */
+val BarlowCondensed = FontFamily(Font(R.font.barlow_condensed_semibold, FontWeight.SemiBold))
+
 private val Base = Typography()
 
 /** Big numerals use tabular figures so values don't jitter as they update (e.g. live HR). */

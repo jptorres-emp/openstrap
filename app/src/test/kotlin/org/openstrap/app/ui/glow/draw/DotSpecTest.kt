@@ -58,7 +58,8 @@ class DotSpecTest {
     }
 
     @Test fun `a number's width matches its widest digits`() {
-        val four = dotLayout("8888", DotSize.Detail, 1f)
-        assertEquals(four.width, org.openstrap.app.ui.glow.dotNumberWidth(4, DotSize.Detail).value, 1e-4f)
+        // The fork draws numbers in Barlow Condensed at the dots' height, so the width is the font's.
+        val four = NumberFont.width("8888", NumberFont.em(NumberFont.height(DotSize.Detail.dot.value)))
+        assertEquals(four, org.openstrap.app.ui.glow.dotNumberWidth(4, DotSize.Detail).value, 1e-4f)
     }
 }

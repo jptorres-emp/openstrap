@@ -28,10 +28,13 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import org.openstrap.app.ui.glow.draw.DotFont
-import org.openstrap.app.ui.glow.draw.dotLayout
-import org.openstrap.app.ui.glow.draw.drawDots
+import androidx.compose.runtime.remember
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.rememberTextMeasurer
 import org.openstrap.app.ui.glow.draw.DotSize
+import org.openstrap.app.ui.glow.draw.NumberFont
 
 /* ------------------------------------------------------------------------------------------------ */
 /* Dot-matrix numerals                                                                               */
@@ -50,15 +53,20 @@ fun DotMatrixText(
     /** Shrinks the dots below [dot] where the number must fit a space (the live workout's arc), 0..1. */
     scale: Float = 1f,
 ) {
-    // The shared dot geometry ([dotLayout]), as a widget's number draws it.
-    val dotDp = (dot.dot * scale).value
-    val box = dotLayout(text, dotDp, 1f)
+    // The fork's numbers: Barlow Condensed at the height the dots had ([NumberFont]), so every place laid out for the
+    // dot numerals still fits, the condensed figures taking about a quarter less width.
+    val density = LocalDensity.current
+    val height = NumberFont.height(dot.dot.value * scale)
+    val style = remember(height, density) { GlowType.number(with(density) { NumberFont.em(height).dp.toSp() }) }
+    val measurer = rememberTextMeasurer()
+    val layout = remember(text, style) { measurer.measure(text, style, softWrap = false, maxLines = 1) }
     Canvas(
         modifier
-            .size(box.width.dp, box.height.dp)
+            .size(with(density) { layout.size.width.toDp() }, height.dp)
             .semantics { contentDescription = text },
     ) {
-        drawDots(dotLayout(text, dotDp, density), color)
+        // The baseline on the box's foot, so the digits fill it.
+        drawText(layout, color = color, topLeft = Offset(0f, size.height - layout.firstBaseline))
     }
 }
 
@@ -102,7 +110,7 @@ fun GlowSwitch(checked: Boolean, onCheckedChange: (Boolean) -> Unit, modifier: M
 internal fun dotNumberWidth(digits: Int, dot: DotSize): Dp = dotTextWidth("0".repeat(digits), dot)
 
 /** How wide [text] is in [dot] dots at full size, as [DotMatrixText] lays it out. */
-internal fun dotTextWidth(text: String, dot: DotSize): Dp = (dot.dot + dot.gap) * DotFont.columns(text) - dot.gap
+internal fun dotTextWidth(text: String, dot: DotSize): Dp = NumberFont.width(text, NumberFont.em(NumberFont.height(dot.dot.value))).dp
 
 /** The [DotMatrixText] scale that fits [text] in [dot] dots into [room]: 1 when it fits already, never larger. */
 internal fun dotFitScale(text: String, dot: DotSize, room: Dp): Float = (room / dotTextWidth(text, dot)).coerceAtMost(1f)

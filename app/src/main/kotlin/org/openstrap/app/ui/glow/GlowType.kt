@@ -1,9 +1,12 @@
 package org.openstrap.app.ui.glow
 
+import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import org.openstrap.app.ui.theme.BarlowCondensed
 import org.openstrap.app.ui.theme.FunnelDisplay
 import org.openstrap.app.ui.theme.FunnelSans
 
@@ -87,4 +90,14 @@ object GlowType {
 
     /** The smaller numbers beside a [goalValue] (the rest in "with 90 s rest between", the ×): Display 300, 26 on 28. */
     val goalValueMinor = TextStyle(fontFamily = FunnelDisplay, fontWeight = FontWeight.Light, fontSize = 26.sp, lineHeight = 28.sp, fontFeatureSettings = "tnum")
+
+    /**
+     * A card's number ([DotMatrixText]), in the fork: Barlow Condensed SemiBold with tabular figures, at the type size
+     * [em] that gives its digits their [org.openstrap.app.ui.glow.draw.DotSize]'s height
+     * ([org.openstrap.app.ui.glow.draw.NumberFont]).
+     */
+    fun number(em: TextUnit) = TextStyle(
+        fontFamily = BarlowCondensed, fontWeight = FontWeight.SemiBold, fontSize = em, fontFeatureSettings = "tnum",
+        platformStyle = PlatformTextStyle(includeFontPadding = false),
+    )
 }

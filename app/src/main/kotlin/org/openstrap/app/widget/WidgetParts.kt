@@ -80,8 +80,6 @@ import org.openstrap.app.ui.glow.draw.drawPictureCard
 import org.openstrap.app.ui.glow.draw.Rim
 import org.openstrap.app.ui.glow.draw.renderToBitmap
 import org.openstrap.app.ui.glow.draw.WeekBarsLook
-import org.openstrap.app.ui.glow.draw.dotLayout
-import org.openstrap.app.ui.glow.draw.renderDots
 import java.time.LocalDate
 import java.time.LocalTime
 
@@ -540,11 +538,14 @@ internal fun WaitingContent(title: String, line: String?, f: WidgetFrame) {
 /** [text] in white dots [dot] dp across, read out as [description]: the widget's one dotted number (spec 3). */
 @Composable
 internal fun DotNumber(text: String, dot: Float, density: Float, description: String?) {
-    val layout = dotLayout(text, dot, 1f)
+    // The fork's Barlow Condensed, at the dot numerals' height ([WidgetDots]).
+    val bitmap = org.openstrap.app.ui.glow.draw.renderNumber(
+        text, WidgetDots.height(dot), density, org.openstrap.app.ui.glow.draw.NumberFont.typeface(LocalContext.current),
+    )
     Image(
-        ImageProvider(renderDots(text, dot, density)),
+        ImageProvider(bitmap),
         contentDescription = description,
-        modifier = GlanceModifier.size(layout.width.dp, layout.height.dp),
+        modifier = GlanceModifier.size((bitmap.width / density).dp, WidgetDots.height(dot).dp),
         contentScale = ContentScale.FillBounds,
     )
 }

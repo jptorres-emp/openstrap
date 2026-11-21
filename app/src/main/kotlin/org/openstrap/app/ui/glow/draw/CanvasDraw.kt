@@ -253,6 +253,22 @@ fun renderDots(text: String, dot: Float, density: Float, color: Color = Color.Wh
     return renderToBitmap(layout.width * density, layout.height * density) { drawDots(it, layout, color) }
 }
 
+/**
+ * [text] in the fork's number face ([typeface], Barlow Condensed) as a bitmap [height] dp high at [density]: its
+ * figures a little shorter than the box, so a comma's tail stays inside ([NumberFont.widgetEm]), and tabular.
+ */
+fun renderNumber(text: String, height: Float, density: Float, typeface: android.graphics.Typeface?, color: Color = Color.White): Bitmap {
+    val em = NumberFont.widgetEm(height)
+    val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        this.typeface = typeface
+        textSize = em * density
+        fontFeatureSettings = "tnum"
+        this.color = color.toArgb()
+    }
+    val h = height * density
+    return renderToBitmap(paint.measureText(text), h) { it.drawText(text, 0f, h - NumberFont.DESCENT * em * density, paint) }
+}
+
 /* ------------------------------------------------------------------------------------------------ */
 /* Charts                                                                                            */
 /* ------------------------------------------------------------------------------------------------ */

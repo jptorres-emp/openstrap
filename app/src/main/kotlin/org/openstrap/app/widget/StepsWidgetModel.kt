@@ -185,7 +185,7 @@ object StepsLayout {
 
     /** Small: between the number and "today", and either side of the goal bar. */
     const val SMALL_WORD_GAP_DP = 4f
-    const val SMALL_BAR_GAP_DP = 6f
+    const val SMALL_BAR_GAP_DP = 8f
 
     /** Wide: between the number and "today", and before what's to go on the right. */
     const val WORD_GAP_DP = 8f
@@ -205,13 +205,13 @@ object StepsLayout {
     const val MIN_LINE_DP = 20f
 
     /** The least room between the rows that share out the spare height. */
-    const val MIN_GAP_DP = 4f
+    const val MIN_GAP_DP = WidgetGrid.GAP_DP
 
     /** Between "This week" and how many days met the goal, on their one line. */
     const val WEEK_GAP_DP = 12f
 
     /** Between that line and the bars under it. */
-    const val WEEK_LINE_GAP_DP = 6f
+    const val WEEK_LINE_GAP_DP = 8f
 
     /** [text]'s dots at [dot] dp, wide and high. */
     fun dotsWidth(text: String, dot: Float): Float = WidgetDots.width(text, dot)
@@ -245,7 +245,7 @@ object StepsLayout {
             val foot = (if (pills) SMALL_PILLS_DP else BAR_DP) + (if (withShare) SMALL_BAR_GAP_DP + WidgetText.line(WidgetText.SECONDARY_SP, fontScale) else 0f)
             return Small(d, word, withShare, top, Spread.of(top.height, number, foot))
         }
-        val gap = SMALL_BAR_GAP_DP / 2
+        val gap = MIN_GAP_DP
         for ((withShare, word) in listOf(true to true, true to false, false to true, false to false)) {
             if (withShare && !shareFits) continue
             val base = at(SMALL_DOT, word, withShare)

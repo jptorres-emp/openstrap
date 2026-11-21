@@ -203,7 +203,7 @@ object RecoveryLayout {
     /* ------------------------------------------- Fitting ------------------------------------------- */
 
     /** The least gap between blocks. */
-    const val MIN_GAP_DP = 4f
+    const val MIN_GAP_DP = WidgetGrid.GAP_DP
 
     /** The Small's dots when even the smallest of [WidgetHero]'s leaves no room for the word: the mockup's 3 dp. */
     const val SMALL_DOT = 3f

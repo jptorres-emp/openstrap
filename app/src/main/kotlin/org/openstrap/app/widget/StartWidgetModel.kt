@@ -278,7 +278,7 @@ object StartLayout {
     const val SMALL_GAP_DP = 8f
 
     /** Between the tile and play on the Small with a status. */
-    const val STATUS_PLAY_GAP_DP = 16f
+    const val STATUS_PLAY_GAP_DP = 12f
 
     /** Between a tile and its caption ([FIGURE_LINE_GAP_DP] is a figure's Caption to its Body). */
     const val CAPTION_GAP_DP = 4f
@@ -291,7 +291,7 @@ object StartLayout {
     const val FIGURE_ROW_GAP_DP = 8f
 
     /** The least room between the blocks that share out the spare height. */
-    const val MIN_GAP_DP = 8f
+    const val MIN_GAP_DP = WidgetGrid.GAP_DP
 
     /** The tile row at its fullest: four sports and All sports. */
     const val COLUMNS = 5
@@ -304,19 +304,11 @@ object StartLayout {
     fun openWidth(fontScale: Float): Float = WidgetText.width(StartWidgetModel.OPEN, WidgetText.BUTTON_SP, fontScale) + 2 * OPEN_PAD_DP
 
     /**
-     * The Wide's or Large's title row for the strap status [line] (spec 5): "Start a workout" with the status button
-     * and its words at the right, a block above the usual row. Null without a line, or when the layout at [size] in
-     * [width] by [height] dp wouldn't fit with it (the line then drops rather than push the usual sport out).
+     * The Wide's or Large's top row (spec 5): "Start a workout" with the status button, and its words when the strap
+     * needs something, at the right. Always there, as in every widget, whatever the strap says.
      */
-    fun statusTop(m: StartWidgetModel, line: StatusLine?, size: androidx.compose.ui.unit.DpSize, width: Float, height: Float, fontScale: Float): TopRow? {
-        line ?: return null
-        val top = TopRow.of(StartWidgetModel.TITLE, null, line, width, fontScale, withWords = true)
-        val fits = when (size) {
-            WidgetSizes.Wide -> wide(m, width, height, fontScale, top.height).let { it.content + (it.gaps - 2) * MIN_GAP_DP <= height + 0.01f }
-            else -> large(m, width, height, fontScale, top.height).let { it.content + (it.gaps - 2) * MIN_GAP_DP <= height + 0.01f }
-        }
-        return top.takeIf { fits }
-    }
+    fun statusTop(m: StartWidgetModel, line: StatusLine?, size: androidx.compose.ui.unit.DpSize, width: Float, height: Float, fontScale: Float): TopRow =
+        TopRow.of(StartWidgetModel.TITLE, null, line, width, fontScale, withWords = size != WidgetSizes.Small)
 
     /** Whether [text] fits [room] dp on one line at [sp]. */
     fun fits(text: String, sp: Float, room: Float, fontScale: Float): Boolean = WidgetText.width(text, sp, fontScale) <= room
@@ -344,8 +336,14 @@ object StartLayout {
         fun action(recording: Boolean, fontScale: Float): Float = if (recording) openWidth(fontScale) else play
     }
 
-    /** The Wide's and Large's sizes, largest first; the last only for a short Wide at a large font. */
-    val ROW_SIZES = listOf(Sizes(48f, 52f, 44f), Sizes(48f, 48f, 40f), Sizes(TILE_DP, PLAY_DP, SMALL_TILE_DP), Sizes(TILE_DP, PLAY_DP, 32f))
+    /**
+     * The Wide's and Large's one size (the grid: one size a bucket, never grown to fill a cell): a 40 dp tile and play,
+     * 32 dp sport tiles. The Wide's 120 dp of content holds the top row, this row and bare tiles exactly.
+     */
+    val ROW_SIZES = listOf(Sizes(40f, 40f, 32f))
+
+    /** The idle Small's tile and play: 40 dp each, side by side under the top row. */
+    val GRID_SMALL = Sizes(40f, 40f, 0f)
 
     /** The Small's tile and play, largest first. */
     val SMALL_SIZES = listOf(Sizes(56f, 52f, 0f), Sizes(48f, 48f, 0f), Sizes(TILE_DP, PLAY_DP, 0f))
@@ -411,7 +409,7 @@ object StartLayout {
     val STATUS_SHRINK = listOf(Sizes(40f, 40f, 0f), Sizes(36f, 36f, 0f))
 
     /** The least gap in the status Small when it's short of room. */
-    const val STATUS_MIN_GAP_DP = 4f
+    const val STATUS_MIN_GAP_DP = WidgetGrid.GAP_DP
 
     /**
      * The Small in [width] by [height] dp with the status [line]: the top row, the tile and play, the name over "Your
@@ -690,7 +688,7 @@ object StartLayout {
 
     /** The timer's largest size per layout, sp, and the least it steps down to. */
     const val TIMER_SMALL_SP = 40f
-    const val TIMER_WIDE_SP = TypeScale.CLOCK_SP
+    const val TIMER_WIDE_SP = 44f
     const val TIMER_LARGE_SP = TypeScale.CLOCK_SP
     const val TIMER_MIN_SP = 20f
     const val TIMER_STEP_SP = 2f
@@ -700,14 +698,14 @@ object StartLayout {
 
     /** The red recording dot before "Recording", and the room after it. */
     const val DOT_DP = 8f
-    const val DOT_GAP_DP = 6f
+    const val DOT_GAP_DP = 4f
 
     /** The zone chip (workout-rules.md, Colour 3): a ringed dot and "Zone 3" on a dark pill, padded so. */
     const val CHIP_PAD_X_DP = 9f
     const val CHIP_PAD_Y_DP = 3f
     const val CHIP_DOT_DP = 9f
     /** Between bpm and the chip under it. */
-    const val CHIP_ABOVE_DP = 6f
+    const val CHIP_ABOVE_DP = 4f
 
     /** The zone chip's width for [label] at [fontScale]. */
     fun chipWidth(label: String, fontScale: Float): Float =
@@ -744,8 +742,15 @@ object StartLayout {
         val figures: Figures?, val content: Float, val gaps: Int,
         /** The heart rate and zone at the timer's right (the Wide's and Large's), in place of "Since" there. */
         val heart: Boolean = false,
+        /** The Small's timer box height, dp (its sp times [TIMER_LINE_EM]); null takes the font's line. */
+        val timerLine: Float? = null,
+        /** The Small's zone chip is the dot and the zone's number only, when the heart rate and "Zone 1" won't share the row. */
+        val compactChip: Boolean = false,
     ) {
         val sizes: Sizes get() = Sizes(tile, open, 0f)
+
+        /** [label] as the chip shows it: whole, or its digits alone ([compactChip]). */
+        fun chipLabel(label: String): String = if (compactChip) label.filter { it.isDigit() }.ifEmpty { label } else label
 
         /** As [Block.edgeGap]: the Large's gap above and below, half of those between. */
         fun edgeGap(height: Float): Float = ((height - content) / (gaps - 1) / 2).coerceAtLeast(0f)
@@ -754,32 +759,36 @@ object StartLayout {
     /** The heights the timer steps through from [top], largest first. */
     private fun timerSizes(top: Float): List<Float> = generateSequence(top) { it - TIMER_STEP_SP }.takeWhile { it >= TIMER_MIN_SP }.toList()
 
+    /** The Small recording's dot before "Recording" (board: 6 dp), and its timer's box height as a share of its size in px. */
+    const val SMALL_DOT_DP = 6f
+    const val TIMER_LINE_EM = 1.1f
+
     /**
-     * The Small recording in [width] by [height] dp: the sport's tile top left (smaller when Open needs the room) and
-     * Open top right, then the timer as large as fits up to [TIMER_SMALL_SP], then the sport's name (the short one when
-     * the full one won't fit), then "Since 11:58" under it when the height allows. Paused, that line reads "Paused"
-     * and the timer gives way to keep it.
+     * The Small recording (board HaloWidgetsWorkout): the sport's name, a dot and "Recording", one flexible space, the
+     * timer at [TIMER_SMALL_SP] (smaller only when mm:ss or h:mm:ss won't fit across, as at a large font), then the
+     * heart rate with its zone chip. Heights: 20 + 18 + the timer's box + 4 + the chip's row, which is 110 dp or under
+     * at the board's sizes, so no row is ever cut. Paused, "Paused" takes the dot's line.
      */
     fun smallRecording(r: StartRecording, width: Float, height: Float, fontScale: Float): Recording {
-        val open = PLAY_DP
-        val tile = minOf(56f, width - SMALL_GAP_DP - openWidth(fontScale)).coerceAtLeast(0f)
-        val top = maxOf(tile, open)
-        val name = if (fits(r.sport.name, WidgetText.BODY_SP, width, fontScale)) r.sport.name else r.sport.shortName
-        val words = body(fontScale)
-        val sinceH = secondary(fontScale)
-        for (sp in timerSizes(TIMER_SMALL_SP)) {
-            if (timerWidth(sp, fontScale) > width) continue
-            val base = top + timerLine(sp, fontScale) + words
-            if (base + MIN_GAP_DP > height) continue
-            val roomy = base + sinceH + MIN_GAP_DP <= height
-            // Paused, the line reads "Paused" and must show: a smaller timer before leaving it out.
-            if (r.paused && !roomy) continue
-            val since = roomy && (r.paused || fits(r.since, WidgetText.SECONDARY_SP, width, fontScale))
-            return Recording(tile, open, name, false, sp, if (since) SincePlace.Under else SincePlace.None, null, base + if (since) sinceH else 0f, 3)
-        }
-        // No room for both lines: paused, "Paused" takes the name's (the tile still shows the sport).
-        return Recording(tile, open, if (r.paused) r.status else name, false, TIMER_MIN_SP, SincePlace.None, null, top + timerLine(TIMER_MIN_SP, fontScale) + words, 3)
+        val name = if (fits(r.sport.name, WidgetText.CARD_TITLE_SP, width, fontScale)) r.sport.name else r.sport.shortName
+        val pattern = if (r.activeMillis >= HOUR_MS) TIMER_PATTERN else TIMER_SHORT_PATTERN
+        // What is always under or over the timer: the name, the status line and the heart rate row, with the gap above it.
+        val heartRow = if (r.heart != null) WidgetGrid.GAP_TIGHT_DP + maxOf(secondary(fontScale), if (r.zoneLabel != null) chipHeight(fontScale) else 0f) else 0f
+        val fixed = WidgetText.line(WidgetText.CARD_TITLE_SP, fontScale) + secondary(fontScale) + heartRow
+        val sp = timerSizes(TIMER_SMALL_SP).firstOrNull {
+            letterEms(pattern) * it * fontScale <= width && it * fontScale * TIMER_LINE_EM + fixed <= height
+        } ?: TIMER_MIN_SP
+        val heartW = r.heart?.let { WidgetText.fitWidth(it, WidgetText.SECONDARY_SP, fontScale) } ?: 0f
+        val chipW = r.zoneLabel?.let { chipWidth(it, fontScale) } ?: 0f
+        val compact = r.zoneLabel != null && heartW + SMALL_GAP_DP + chipW > width
+        return Recording(
+            0f, 0f, name, true, sp, SincePlace.None, null, 0f, 0, heart = r.heart != null,
+            timerLine = sp * fontScale * TIMER_LINE_EM, compactChip = compact,
+        )
     }
+
+    private const val HOUR_MS = 3_600_000L
+    private const val TIMER_SHORT_PATTERN = "00:00"
 
     /** The Wide recording: the top row, then the timer with "Since" beside or under it, as large as fits. */
     fun wideRecording(r: StartRecording, width: Float, height: Float, fontScale: Float): Recording =

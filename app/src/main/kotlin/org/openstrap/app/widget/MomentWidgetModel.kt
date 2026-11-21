@@ -640,7 +640,7 @@ object MomentLayout {
     val STRIP_GROWTH = listOf(10f, 12f, 14f, 16f, 18f, 20f)
 
     /** Between a chart and its times. */
-    const val CHART_LABEL_GAP_DP = 6f
+    const val CHART_LABEL_GAP_DP = 4f
 
     /** During a workout: the sport's tile, and the sport's name in the hero's light type on the Wide and Large. */
     const val TILE_DP = 44f
@@ -650,14 +650,14 @@ object MomentLayout {
 
     /** The red recording dot before "Recording since 17:42", and the room after it, as Start's. */
     const val REC_DOT_DP = 8f
-    const val REC_DOT_GAP_DP = 6f
+    const val REC_DOT_GAP_DP = 4f
 
     /** Open, as Start's while recording. */
     const val OPEN_PAD_DP = 12f
     val OPEN: String get() = Strings.app.get(R.string.system_widget_open)
 
     /** The least gap between blocks, and the most a tall cell should show. */
-    const val MIN_GAP_DP = 4f
+    const val MIN_GAP_DP = WidgetGrid.GAP_DP
     const val TARGET_GAP_DP = 32f
 
     /** A text and the size it fits at. */
@@ -731,7 +731,7 @@ object MomentLayout {
         fun edgeGap(height: Float): Float = gap(height) / 2
 
         /** Whether it fits [height] with at least [MIN_GAP_DP] between blocks. */
-        fun fits(height: Float): Boolean = content + (inner + 1) * (if (inner > 0) MIN_GAP_DP else 0f) <= height + 0.01f
+        fun fits(height: Float): Boolean = content + inner * MIN_GAP_DP <= height + 0.01f
     }
 
     /**
@@ -751,14 +751,14 @@ object MomentLayout {
         line(listOf(m.name), NAME_SIZES, width - beside, fontScale) ?: Line(m.name, NAME_SIZES.last())
 
     /** The top row's height: the name's line, or the status button's while it shows ([top]). */
-    private fun topHeight(name: Line, top: TopRow?, fontScale: Float): Float = top?.height ?: name.height(fontScale)
+    private fun topHeight(@Suppress("UNUSED_PARAMETER") name: Line, top: TopRow?, @Suppress("UNUSED_PARAMETER") fontScale: Float): Float = top?.height ?: WidgetGrid.TOP_ROW_DP
 
     /**
      * The top row with [status]'s button at its right (and on the Wide and Large, [withWords], its words before it),
      * null without a status; the name then at the size the row gives it.
      */
-    private fun statusRow(m: MomentWidgetModel, status: StatusLine?, width: Float, fontScale: Float, withWords: Boolean): TopRow? =
-        status?.let { TopRow.of(m.name, null, it, width, fontScale, withWords, titleSizes = NAME_SIZES) }
+    private fun statusRow(m: MomentWidgetModel, status: StatusLine?, width: Float, fontScale: Float, withWords: Boolean): TopRow =
+        TopRow.of(m.name, null, status, width, fontScale, withWords, titleSizes = NAME_SIZES)
 
     /** The name as the top row shows it: at [row]'s size beside the button, else the first of [NAME_SIZES] that fits. */
     private fun nameIn(m: MomentWidgetModel, row: TopRow?, width: Float, fontScale: Float): Line =
@@ -811,7 +811,7 @@ object MomentLayout {
         val ladders = sinceOptions.flatMap { opts ->
             val since = line(opts, FIGURE_SIZES, width - REC_DOT_DP - REC_DOT_GAP_DP, fontScale)
             fun at(tile: Float): Fit {
-                val parts = listOfNotNull(name.height(fontScale), tile.takeIf { it > 0f }, sport?.height(fontScale), since?.height(fontScale))
+                val parts = listOfNotNull(WidgetGrid.TOP_ROW_DP, tile.takeIf { it > 0f }, sport?.height(fontScale), since?.height(fontScale))
                 return Fit(name, tile = tile, sport = sport, since = since, content = parts.sum(), inner = parts.size - 1)
             }
             listOf((listOf(TILE_DP) + TILE_GROWTH.take(1)).map(::at), listOf(at(0f)))
@@ -915,7 +915,7 @@ object MomentLayout {
     fun recordingWide(m: MomentWidgetModel, r: MomentRecording, width: Float, height: Float, fontScale: Float, large: Boolean): Fit {
         val open = openWidth(fontScale)
         val name = nameLine(m, width, fontScale, beside = open + FIGURE_GAP_DP)
-        val top = maxOf(name.height(fontScale), PLAY_DP)
+        val top = WidgetGrid.TOP_ROW_DP
         val ladders = mutableListOf<List<Fit>>()
         for (opts in listOf(listOf(r.since), listOf(r.sinceShort), emptyList())) {
             val since = line(opts, FIGURE_SIZES, width - REC_DOT_DP - REC_DOT_GAP_DP, fontScale)

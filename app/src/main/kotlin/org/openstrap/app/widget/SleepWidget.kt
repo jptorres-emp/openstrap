@@ -101,9 +101,8 @@ private fun SleepContent(m: SleepWidgetModel) {
 @Composable
 private fun ColumnScope.SmallContent(m: SleepWidgetModel, f: WidgetFrame) {
     val fit = SleepLayout.small(m, f.contentWidth, f.contentHeight, f.fontScale, f.status)
-    Edge(fit.spread, f)
-    TopRowView(m.title, null, fit.top, f, fit.spread.edge(f.drawContentHeight))
-    Gap()
+    TopRowView(m.title, null, fit.top, f, 0f)
+    Flex()
     ScoreRow(m, fit.row, SleepLayout.SMALL_WORD_GAP_DP, f.density)
     if (fit.lines.isNotEmpty() || fit.bar) {
         Gap()
@@ -119,22 +118,19 @@ private fun ColumnScope.SmallContent(m: SleepWidgetModel, f: WidgetFrame) {
             }
         }
     }
-    Edge(fit.spread, f)
 }
 
 /** Wide: the top row with bedtime to waking, the score with time asleep, the stage bar with its legend. */
 @Composable
 private fun ColumnScope.WideContent(m: SleepWidgetModel, f: WidgetFrame) {
     val fit = SleepLayout.wide(m, f.contentWidth, f.contentHeight, f.fontScale, f.status)
-    Edge(fit.spread, f)
-    TopRowView(m.title, m.note, fit.top, f, fit.spread.edge(f.drawContentHeight))
-    Gap()
+    TopRowView(m.title, m.note, fit.top, f, 0f)
+    Flex()
     ScoreRow(m, fit.row, SleepLayout.WORD_GAP_DP, f.density)
     if (fit.bar) {
         Gap()
         Stages(m, fit.legendRows, f)
     }
-    Edge(fit.spread, f)
 }
 
 /** Large: the top row, the tab's sentence, the score with how often you woke, then the time in each stage. */
@@ -142,19 +138,17 @@ private fun ColumnScope.WideContent(m: SleepWidgetModel, f: WidgetFrame) {
 private fun ColumnScope.LargeContent(m: SleepWidgetModel, f: WidgetFrame) {
     val fit = SleepLayout.large(m, f.contentWidth, f.contentHeight, f.fontScale, f.status)
     val spread = SleepLayout.largeSpread(fit, m.stages.size, f.fontScale)
-    Edge(spread, f)
-    TopRowView(m.title, m.note, fit.top, f, spread.edge(f.drawContentHeight))
+    TopRowView(m.title, m.note, fit.top, f, 0f)
     if (fit.sentenceLines > 0 && m.sentence != null) {
         Gap()
         Text(m.sentence, style = WidgetType.hero, maxLines = fit.sentenceLines)
     }
-    Gap()
+    Flex()
     ScoreRow(m, fit.row, SleepLayout.WORD_GAP_DP, f.density)
     when {
         fit.stages -> { Gap(); StageRows(m.stages, f) }
         fit.bar -> { Gap(); StageBar(m, SleepLayout.BAR_DP, f) }
     }
-    Edge(spread, f)
 }
 
 /**

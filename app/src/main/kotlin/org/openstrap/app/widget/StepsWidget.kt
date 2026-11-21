@@ -102,9 +102,8 @@ private fun StepsContent(data: StepsWidget.Shown) {
 @Composable
 private fun ColumnScope.SmallContent(m: StepsWidgetModel, f: WidgetFrame) {
     val fit = StepsLayout.small(m.smallText, m.share, f.contentWidth, f.contentHeight, f.fontScale, f.status, pills = m.showLine)
-    Edge(fit.spread, f)
-    TopRowView(m.title, null, fit.top, f, fit.spread.edge(f.drawContentHeight))
-    Gap()
+    TopRowView(m.title, null, fit.top, f, 0f)
+    Flex()
     // Each block one child of the column: Glance drops a column's children past ten.
     Column(GlanceModifier.fillMaxWidth()) {
         DotNumber(m.smallText, fit.dot, f.density, m.description)
@@ -118,23 +117,22 @@ private fun ColumnScope.SmallContent(m: StepsWidgetModel, f: WidgetFrame) {
         StepsLine(m, StepsLayout.SMALL_PILLS_DP, f)
         if (fit.share) {
             Spacer(GlanceModifier.height(StepsLayout.SMALL_BAR_GAP_DP.dp))
-            Text(m.share, style = WidgetType.secondary, maxLines = 1)
+            // While the strap needs something the line says so ("Pair your strap"), as the Wide's top row does.
+            val note = attentionWords(f)
+            if (note != null) AttentionText(note) else Text(m.share, style = WidgetType.secondary, maxLines = 1)
         }
     }
-    Edge(fit.spread, f)
 }
 
 /** Wide: the top row with the goal, the steps with what's to go, the day so far as a line (or the goal bar). */
 @Composable
 private fun ColumnScope.WideContent(m: StepsWidgetModel, f: WidgetFrame) {
     val fit = StepsLayout.wide(m, f.contentWidth, f.contentHeight, f.fontScale, f.status)
-    Edge(fit.spread, f)
-    TopRowView(m.title, m.goalNote, fit.top, f, fit.spread.edge(f.drawContentHeight))
-    Gap()
+    TopRowView(m.title, m.goalNote, fit.top, f, 0f)
+    Flex()
     NumberRow(m, fit.row, f)
     Gap()
     StepsLine(m, fit.line, f)
-    Edge(fit.spread, f)
 }
 
 /**
@@ -144,15 +142,13 @@ private fun ColumnScope.WideContent(m: StepsWidgetModel, f: WidgetFrame) {
 @Composable
 private fun ColumnScope.LargeContent(m: StepsWidgetModel, f: WidgetFrame) {
     val fit = StepsLayout.large(m, f.contentWidth, f.contentHeight, f.fontScale, f.status)
-    Edge(fit.spread, f)
-    TopRowView(m.title, m.goalNote, fit.top, f, fit.spread.edge(f.drawContentHeight))
-    Gap()
+    TopRowView(m.title, m.goalNote, fit.top, f, 0f)
+    Flex()
     NumberRow(m, fit.row, f)
     Gap()
     if (fit.week != null) GoalBar(m.progress, f) else StepsLine(m, fit.line, f)
     Gap()
     fit.week?.let { WeekRow(m, it, f.density) }
-    Edge(fit.spread, f)
 }
 
 /** The steps in dots with "today" beside them when it fits, what's to go (or "Goal met") on the right. */

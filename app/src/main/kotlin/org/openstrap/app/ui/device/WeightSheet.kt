@@ -59,6 +59,10 @@ fun weightChange(summary: WeightLog.Summary?, imperial: Boolean, strings: String
 /** Under this, a change of the 7-day average reads as the same: it rounds to 0.0. */
 private const val SAME_KG = 0.05f
 
+/** The weight log's rows, as one stable value for Compose. */
+@androidx.compose.runtime.Immutable
+class WeightEntries(val list: List<WeightEntry>)
+
 /**
  * The weight log in a sheet, from the You page's Weight row: today's weight to type (filled in when there is one),
  * the 7-day average and how it moved, and each week's average as a line once two weeks have one. Save keeps today's
@@ -66,19 +70,20 @@ private const val SAME_KG = 0.05f
  */
 @Composable
 fun WeightSheet(
-    entries: List<WeightEntry>,
+    entries: WeightEntries,
     today: LocalDate,
     imperial: Boolean,
     onSave: (Float) -> Unit,
     onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    val todays = remember(entries, today) { WeightLog.today(entries, today) }
+    val todays = remember(entries, today) { WeightLog.today(entries.list, today) }
     var text by rememberSaveable(todays) {
         mutableStateOf(todays?.kg?.let { "%.1f".format(java.util.Locale.ROOT, if (imperial) Units.kgToLb(it) else it) }.orEmpty())
     }
     val kg = WeightLog.parse(text, imperial)
     PageSheet(onDismiss, stringResource(R.string.fork_weight_title), note = stringResource(R.string.fork_weight_note)) {
-        WeightContent(entries, today, imperial, text, { text = it }, kg)
+        WeightContent(entries, today, imperial, text, { text = it }, kg, modifier)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             PageButton(stringResource(R.string.glow_cancel), onDismiss, Modifier.weight(1f))
             PageButton(stringResource(R.string.glow_save), { kg?.let(onSave) }, Modifier.weight(1f), enabled = kg != null, primary = true)
@@ -89,11 +94,12 @@ fun WeightSheet(
 /** The weight sheet's body, without the sheet and its buttons: the field, the average and the weeks' line. */
 @Composable
 internal fun WeightContent(
-    entries: List<WeightEntry>, today: LocalDate, imperial: Boolean, text: String, onText: (String) -> Unit, kg: Float?,
+    entries: WeightEntries, today: LocalDate, imperial: Boolean, text: String, onText: (String) -> Unit, kg: Float?,
+    modifier: Modifier = Modifier,
 ) {
-    val summary = remember(entries, today) { WeightLog.summary(entries, today) }
-    val weeks = remember(entries, today) { WeightLog.weeks(entries, today) }
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    val summary = remember(entries, today) { WeightLog.summary(entries.list, today) }
+    val weeks = remember(entries, today) { WeightLog.weeks(entries.list, today) }
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(16.dp)) {
         PageNumberField(
             text, onText, stringResource(R.string.fork_weight_field),
             stringResource(if (imperial) R.string.fork_weight_unit_lb else R.string.fork_weight_unit_kg),
@@ -108,11 +114,11 @@ internal fun WeightContent(
             }
         }
         val shown = weeks.dropWhile { it.kg == null }
-        if (shown.count { it.kg != null } >= 2) {
+        val logged = shown.mapNotNull { it.kg }
+        if (logged.size >= 2) {
             val values = shown.map { w -> w.kg?.let { if (imperial) Units.kgToLb(it) else it } }
             val described = stringResource(
-                R.string.fork_weight_chart, shown.size,
-                weightText(shown.first { it.kg != null }.kg!!, imperial), weightText(shown.last { it.kg != null }.kg!!, imperial),
+                R.string.fork_weight_chart, shown.size, weightText(logged.first(), imperial), weightText(logged.last(), imperial),
             )
             GlowLineChart(
                 values, Modifier.semantics { contentDescription = described }, height = 110.dp,

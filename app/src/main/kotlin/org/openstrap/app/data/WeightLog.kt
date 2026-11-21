@@ -1,7 +1,16 @@
 package org.openstrap.app.data
 
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
+import org.openstrap.app.data.db.ForkDao
 import org.openstrap.app.data.db.WeightEntry
+import org.openstrap.app.data.settings.SettingsStore
+import org.openstrap.app.data.settings.UserProfile
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 
 /**
  * The fork's weight log ([WeightEntry]): one weight a day, read as 7-day averages, so a day's water and meals don't
@@ -16,6 +25,25 @@ object WeightLog {
 
     /** The 7 days that end on [end], and their average, null with nothing logged in them. */
     data class Week(val end: LocalDate, val kg: Float?)
+
+    /** The log as read for [today]: its weights from [DAYS] back. */
+    data class Recent(val today: LocalDate, val entries: List<WeightEntry>)
+
+    /** The log from [DAYS] back to today, today taken from [clock] as the reading starts. */
+    fun recent(dao: ForkDao, clock: () -> LocalDate = { LocalDate.now() }): Flow<Recent> = flow {
+        val today = clock()
+        emitAll(dao.weights(today.minusDays(DAYS), today).map { Recent(today, it) })
+    }
+
+    /**
+     * Logs [kg] for today (replacing today's if there is one) and makes it [profile]'s weight, confirmed [now] when the
+     * height is known, so calories and VO2 max use it.
+     */
+    suspend fun save(dao: ForkDao, settings: SettingsStore, profile: UserProfile, kg: Float, now: Instant = Instant.now()) {
+        dao.insertWeights(listOf(WeightEntry(LocalDate.ofInstant(now, ZoneId.systemDefault()), kg, now.epochSecond)))
+        val measured = if (profile.heightCm != null) now.epochSecond else profile.bodyMeasuredAt
+        settings.saveProfile(profile.copy(weightKg = kg, bodyMeasuredAt = measured))
+    }
 
     /** The last weight logged up to today, the last 7 days' average and the 7 days' before it. */
     data class Summary(val latest: WeightEntry, val week: Float?, val weekBefore: Float?) {

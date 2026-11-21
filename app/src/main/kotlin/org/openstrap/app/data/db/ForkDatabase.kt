@@ -30,24 +30,27 @@ object ForkDatabase {
      */
     fun repair(file: File, zone: ZoneId = ZoneId.systemDefault()): Boolean {
         if (!file.isFile) return false
-        val db = SQLiteDatabase.openDatabase(file.path, null, SQLiteDatabase.OPEN_READWRITE or SQLiteDatabase.ENABLE_WRITE_AHEAD_LOGGING)
+        val flags = SQLiteDatabase.OPEN_READWRITE or SQLiteDatabase.ENABLE_WRITE_AHEAD_LOGGING
+        return SQLiteDatabase.openDatabase(file.path, null, flags).use { db ->
+            val fork = db.version == FORK_VERSION && hasTable(db, "weight") && !hasTable(db, "daily_energy")
+            if (fork) upgrade(db, zone)
+            fork
+        }
+    }
+
+    /** The original's version 20 additions, and the weight's days as date keys, in one transaction. */
+    private fun upgrade(db: SQLiteDatabase, zone: ZoneId) {
+        db.beginTransaction()
         try {
-            if (db.version != FORK_VERSION || !hasTable(db, "weight") || hasTable(db, "daily_energy")) return false
-            db.beginTransaction()
-            try {
-                db.execSQL(CREATE_DAILY_ENERGY)
-                for (column in listOf("activeKcal", "totalKcal")) {
-                    if (!hasColumn(db, "app_workout", column)) db.execSQL("ALTER TABLE `app_workout` ADD COLUMN `$column` REAL")
-                }
-                val moved = weightDays(db, zone)
-                db.setTransactionSuccessful()
-                Log.i(TAG, "fork database 20 repaired: daily_energy added, app_workout's calories added, $moved weight days moved")
-            } finally {
-                db.endTransaction()
+            db.execSQL(CREATE_DAILY_ENERGY)
+            for (column in listOf("activeKcal", "totalKcal")) {
+                if (!hasColumn(db, "app_workout", column)) db.execSQL("ALTER TABLE `app_workout` ADD COLUMN `$column` REAL")
             }
-            return true
+            val moved = weightDays(db, zone)
+            db.setTransactionSuccessful()
+            Log.i(TAG, "fork database 20 repaired: daily_energy added, app_workout's calories added, $moved weight days moved")
         } finally {
-            db.close()
+            db.endTransaction()
         }
     }
 

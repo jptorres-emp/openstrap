@@ -46,22 +46,6 @@ internal object ZeppCursors {
     suspend fun read(cursors: SyncCursors, key: String, now: Long, zone: ZoneId): Long =
         cursors.get(key)?.let { onRead(it, now) } ?: default(now, zone)
 
-    /**
-     * The fork's first sync: a type never synced goes [FIRST_SYNC_DAYS] back instead of Zepp's 2 days, so the days
-     * between unboxing the strap and pairing it here come too: the strap sends what it still holds (sleep, HRV,
-     * stress, the extended minutes' steps, workouts...). Per-minute activity, which it keeps about 43 hours, and max
-     * HR, which follows activity's cursor, keep Zepp's start. Later syncs read their stored cursors as before.
-     */
-    suspend fun readFirst(type: HistoryDataType, cursors: SyncCursors, key: String, now: Long, zone: ZoneId): Long =
-        cursors.get(key)?.let { onRead(it, now) }
-            ?: if (type in ZEPP_START) default(now, zone) else twelveHourFloor(ZonedDateTime.ofInstant(java.time.Instant.ofEpochSecond(now), zone).minusDays(FIRST_SYNC_DAYS))
-
-    /** How far back a never synced type starts in the fork ([readFirst]). */
-    const val FIRST_SYNC_DAYS = 30L
-
-    /** The types whose first sync keeps Zepp's 2 days ([readFirst]). */
-    private val ZEPP_START = setOf(HistoryDataType.ACTIVITY, HistoryDataType.DAILY_MAX_EXERCISE_HR)
-
     /** A cursor as written (`c5a0`): below [FLOOR] is raised, over now + 1 h becomes now. */
     fun onWrite(value: Long, now: Long): Long = when {
         value < FLOOR -> FLOOR

@@ -11,7 +11,7 @@ import java.time.LocalDate
 // A DAO is its queries, one function each: splitting it by count would only scatter them.
 @Suppress("TooManyFunctions")
 @Dao
-interface HealthDao : RangedReads {
+interface HealthDao : RangedReads, ForkDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertHeartRate(samples: List<HeartRateSample>)
 
@@ -470,31 +470,8 @@ interface HealthDao : RangedReads {
     @Query("SELECT * FROM hrv_sdnn WHERE timestamp BETWEEN :from AND :to ORDER BY timestamp")
     fun hrvSdnn(from: Long, to: Long): Flow<List<HrvSdnnSample>>
 
-    // Minutes filled in from the extended record keep their marker ([ActivityMinute.KIND_FROM_EXTENDED]).
     @Query("UPDATE activity_minute SET kind = kind & 15 WHERE kind > 15 AND kind != 126 AND kind != ${ActivityMinute.KIND_FROM_EXTENDED}")
     suspend fun fixActivityModeNibble(): Int
-
-    /**
-     * Steps for minutes with no activity record (type 1) from the extended records (type 88) between [from] and [to]:
-     * the strap keeps type 1 about 43 hours and type 88 for months, so a phone away longer still gets the day's steps.
-     * Filled rows are marked [ActivityMinute.KIND_FROM_EXTENDED]; a minute that has a record of its own is left alone.
-     */
-    @Query(
-        "INSERT INTO activity_minute (timestamp, steps, intensity, kind, heartRate) " +
-            "SELECT e.timestamp / 60 * 60, e.steps, 0, ${ActivityMinute.KIND_FROM_EXTENDED}, NULL FROM activity_extended e " +
-            "WHERE e.timestamp BETWEEN :from AND :to AND e.steps BETWEEN 1 AND 250 AND NOT EXISTS (" +
-            "SELECT 1 FROM activity_minute a WHERE a.timestamp BETWEEN e.timestamp / 60 * 60 AND e.timestamp / 60 * 60 + 59)",
-    )
-    suspend fun fillStepsFromExtended(from: Long, to: Long)
-
-    /** Drops the filled-in minutes ([fillStepsFromExtended]) that an activity record for the same minute now covers. */
-    @Query(
-        "DELETE FROM activity_minute WHERE kind = ${ActivityMinute.KIND_FROM_EXTENDED} AND timestamp BETWEEN :from AND :to AND EXISTS (" +
-            "SELECT 1 FROM activity_minute a WHERE a.kind != ${ActivityMinute.KIND_FROM_EXTENDED} " +
-            "AND a.timestamp != activity_minute.timestamp " +
-            "AND a.timestamp BETWEEN activity_minute.timestamp / 60 * 60 AND activity_minute.timestamp / 60 * 60 + 59)",
-    )
-    suspend fun dropFilledStepsCovered(from: Long, to: Long): Int
 
     /** The strap re-sends a day's sleep as it updates it, so the old version goes first. [day] is the strap's day. */
     @Query("DELETE FROM sleep_stage WHERE sessionStart IN (SELECT start FROM sleep_session WHERE day = :day AND nap = :nap)")
@@ -797,18 +774,6 @@ interface HealthDao : RangedReads {
     @Query("SELECT * FROM check_in WHERE day BETWEEN :from AND :to ORDER BY day")
     suspend fun checkInsOnce(from: LocalDate, to: LocalDate): List<CheckInRow>
 
-    // Weights the user logged, one a day (the fork's weight log).
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertWeights(rows: List<WeightEntry>)
-
-    @Query("DELETE FROM weight WHERE day = :day")
-    suspend fun deleteWeight(day: LocalDate)
-
-    @Query("SELECT * FROM weight WHERE day BETWEEN :from AND :to ORDER BY day")
-    fun weights(from: LocalDate, to: LocalDate): Flow<List<WeightEntry>>
-
-    @Query("SELECT * FROM weight ORDER BY day")
-    suspend fun weightsAll(): List<WeightEntry>
 
     // Each Sunday's Habit Age estimate, for the next week's comparison.
     @Insert(onConflict = OnConflictStrategy.REPLACE)

@@ -360,7 +360,7 @@ class HistorySync internal constructor(
     }
 
     /** A type's stored cursor as Zepp reads it: corrected, or its default when there is none ([ZeppCursors]). */
-    private suspend fun read(type: HistoryDataType, now: Long): Long = ZeppCursors.readFirst(type, cursors, keyOf(type), now, zone)
+    private suspend fun read(type: HistoryDataType, now: Long): Long = ForkCursors.read(type, cursors, keyOf(type), now, zone)
 
     private suspend fun startOf(type: HistoryDataType, now: Long): Long = when {
         // Statistics ask from now. A sleep plan with none stored falls back to the bind time, as Zepp's job does

@@ -183,6 +183,9 @@ private fun NightHero(
             HeroSentence(TabCopy.night(asleep, others))
             Spacer(Modifier.height(16.dp))
             val score = session.score
+            // The fork's performance: the time asleep against the sleep you need.
+            val need = needMinutes ?: org.openstrap.app.data.Recovery.SLEEP_NEED_MINUTES
+            val performance = org.openstrap.app.data.SleepFigures.performance(asleep, need)
             HeroNumber(
                 score?.toString(),
                 listOfNotNull(
@@ -190,9 +193,7 @@ private fun NightHero(
                         if (state.sleepScoreAdjusted) stringResource(R.string.glow_sleep_score_adjusted, it) else it
                     },
                     TabCopy.woke(session.wakeCount),
-                    // The fork's performance: the time asleep against the sleep you need.
-                    org.openstrap.app.data.SleepFigures.performance(asleep, needMinutes ?: org.openstrap.app.data.Recovery.SLEEP_NEED_MINUTES)
-                        ?.let { stringResource(R.string.fork_sleep_performance_line, it) },
+                    performance?.let { stringResource(R.string.fork_sleep_performance_line, it) },
                 ),
             )
             if (state.sleepStages.isNotEmpty()) {

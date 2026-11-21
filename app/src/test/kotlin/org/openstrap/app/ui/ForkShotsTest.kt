@@ -77,7 +77,7 @@ class ForkShotsTest {
             listOf(0L, 3L).map { d -> WeightEntry(today.minusDays(7L * (kg.size - 1 - week) + d), w + d * 0.1f, 1) }
         }
         shot("fork_weight") {
-            Box(Modifier.width(360.dp)) { WeightContent(entries, today, false, "92.0", {}, 92.0f) }
+            Box(Modifier.width(360.dp)) { WeightContent(org.openstrap.app.ui.device.WeightEntries(entries), today, false, "92.0", {}, 92.0f) }
         }
     }
 }

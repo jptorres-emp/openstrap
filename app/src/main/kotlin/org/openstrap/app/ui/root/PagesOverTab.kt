@@ -282,12 +282,10 @@ private fun YouPageHost(
     val updateWaiting by hooks.rootVm.updateWaiting.collectAsStateWithLifecycle()
     val deletedSleep by hooks.dayVm.deletedSleep.collectAsStateWithLifecycle()
     val youMaxHr by hooks.workoutsVm.maxHeartRate.collectAsStateWithLifecycle()
-    // The fork's weight log: its rows for the sheet and the row's line, read here as the page opens.
-    val today = remember { java.time.LocalDate.now() }
+    // The fork's weight log: its rows for the sheet and the row's line, read as the page opens.
     val dao = container.database.healthDao()
-    val weights by remember(today) { dao.weights(today.minusDays(org.openstrap.app.data.WeightLog.DAYS), today) }
-        .collectAsStateWithLifecycle(emptyList())
-    var weighing by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
+    val weights by remember { org.openstrap.app.data.WeightLog.recent(dao) }.collectAsStateWithLifecycle(null)
+    var weighing by rememberSaveable { mutableStateOf(false) }
     val weightScope = androidx.compose.runtime.rememberCoroutineScope()
     // Permissions can be taken back in Health Connect while away: the row says so on return.
     LifecycleResumeEffect(Unit) {
@@ -316,21 +314,16 @@ private fun YouPageHost(
         onSampleData = if (SampleData.AVAILABLE) ({ deviceVm.loadSampleData() }) else null,
         onBack = onBack,
         selected = selected?.row,
-        weight = org.openstrap.app.data.WeightLog.summary(weights, today),
+        weight = weights?.let { org.openstrap.app.data.WeightLog.summary(it.entries, it.today) },
         onWeight = { weighing = true },
     )
-    if (weighing) {
+    val recent = weights
+    if (weighing && recent != null) {
         org.openstrap.app.ui.device.WeightSheet(
-            weights, today, profile.usesImperial,
+            org.openstrap.app.ui.device.WeightEntries(recent.entries), recent.today, profile.usesImperial,
             onSave = { kg ->
                 weighing = false
-                weightScope.launch {
-                    dao.insertWeights(listOf(org.openstrap.app.data.db.WeightEntry(today, kg, System.currentTimeMillis() / 1000)))
-                    // The profile's weight follows, confirmed now when the height is known, so calories and VO2 max use it.
-                    container.settings.saveProfile(
-                        profile.copy(weightKg = kg, bodyMeasuredAt = if (profile.heightCm != null) System.currentTimeMillis() / 1000 else profile.bodyMeasuredAt),
-                    )
-                }
+                weightScope.launch { org.openstrap.app.data.WeightLog.save(dao, container.settings, profile, kg) }
             },
             onDismiss = { weighing = false },
         )

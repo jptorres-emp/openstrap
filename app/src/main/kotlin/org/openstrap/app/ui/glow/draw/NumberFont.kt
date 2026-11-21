@@ -32,9 +32,14 @@ object NumberFont {
     fun widgetEm(height: Float): Float = height / (FIGURE_HEIGHT + DESCENT)
 
     /** [text]'s width at the type size [em], from the font's advances (tabular figures), in the same unit. */
-    fun width(text: String, em: Float): Float = text.sumOf { advance(it) } / 1000f * em
+    fun width(text: String, em: Float): Float = text.sumOf { advance(it) } / UNITS_PER_EM * em
+
+    /** The font's units to the em. */
+    private const val UNITS_PER_EM = 1000f
 
     /** A character's advance in thousandths of the em; one the font may not have counts as a figure. */
+    // Barlow Condensed SemiBold's own advance widths, read from the font: they are the table, not thresholds.
+    @Suppress("MagicNumber")
     private fun advance(c: Char): Int = when (c) {
         in '0'..'9' -> 475
         ',' -> 199

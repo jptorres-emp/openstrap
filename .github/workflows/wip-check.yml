@@ -27,20 +27,34 @@ jobs:
           ./gradlew :app:compileDebugKotlin :app:compileDebugUnitTestKotlin 2>&1 | tee build.log
           OPENSTRAP_SHOTS=1 ./gradlew :protocol:test :app:testDebugUnitTest --continue 2>&1 | tee -a build.log
 
+      # The original's lint job (android.yml): Android lint and detekt, which fail on any finding not in their baselines.
+      - name: Lint and static analysis
+        id: lint
+        if: always()
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          ./gradlew :app:lintDebug :app:detektDebug :protocol:detektMain --continue 2>&1 | tee lint.log
+
       - name: Publish results
         if: always()
         env:
           GH_TOKEN: ${{ github.token }}
           OUTCOME: ${{ steps.build.outcome }}
+          LINT: ${{ steps.lint.outcome }}
         run: |
-          mkdir -p out/tests
+          mkdir -p out/tests out/lint
           cp build.log out/ 2>/dev/null || true
+          cp lint.log out/lint/ 2>/dev/null || true
+          cp app/build/reports/lint-results-debug.xml out/lint/ 2>/dev/null || true
+          cp app/build/reports/detekt/debug.md out/lint/detekt-app.md 2>/dev/null || true
+          cp protocol/build/reports/detekt/main.md out/lint/detekt-protocol.md 2>/dev/null || true
           # Room's schemas as KSP wrote them, so a new database version's file can be committed from here.
           cp -r app/schemas out/ 2>/dev/null || true
           # Screens as ScreenshotsTest drew them.
           cp -r app/build/shots out/ 2>/dev/null || true
           grep -rl "<failure" --include="*.xml" . 2>/dev/null | grep test-results | xargs -r -I{} cp {} out/tests/ || true
-          echo "$OUTCOME ${{ github.sha }}" > out/STATUS
+          echo "$OUTCOME ${{ github.sha }} lint=$LINT" > out/STATUS
           cd out
           git init -q -b ci-results-wip
           git config user.name "github-actions[bot]"

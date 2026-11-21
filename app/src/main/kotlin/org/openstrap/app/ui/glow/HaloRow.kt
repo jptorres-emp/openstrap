@@ -303,7 +303,7 @@ private fun RowValue(value: String?, ink: Color, style: TextStyle, dash: Boolean
 
 /** A row's line: grey [GlowType.secondary], up to two lines. */
 @Composable
-internal fun RowLine(text: String, ink: Color = GlowType.noteColor) =
+internal fun RowLine(text: String, ink: Color = GlowType.noteInk) =
     Text(text, color = ink, style = GlowType.secondary, maxLines = 2, overflow = TextOverflow.Ellipsis)
 
 /** The tint of the [selected] row whose page is open beside the list, across the card. */

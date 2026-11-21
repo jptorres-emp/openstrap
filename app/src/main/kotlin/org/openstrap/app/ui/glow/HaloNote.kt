@@ -63,32 +63,37 @@ internal enum class NoteVariant(val style: TextStyle, val ink: Color) {
 }
 
 /**
- * A note in its [variant]'s type and grey, or in [color] (a warning in amber). A [NoteVariant.Caveat] leads with a dot in
- * [dot]; an [icon] leads an inline note in its ink. [textAlign] Center centres a note across its column, under a centred value.
+ * A note in its [variant]'s type and grey (a lit card's [LitInk]), or in [color] (a warning in amber). A
+ * [NoteVariant.Caveat] leads with a dot in [dot]; an [icon] leads an inline note in its ink. [textAlign] Center centres a note across its column, under a centred value.
  */
 @Composable
 internal fun HaloNote(
     text: String,
     modifier: Modifier = Modifier,
     variant: NoteVariant = NoteVariant.Inline,
-    color: Color = variant.ink,
+    color: Color? = null,
     dot: Color? = null,
     icon: ImageVector? = null,
     textAlign: TextAlign? = null,
 ) {
+    val ink = color ?: when (variant) {
+        NoteVariant.Inline -> GlowType.noteInk
+        NoteVariant.Footnote -> GlowType.footnoteInk
+        NoteVariant.Caveat -> LocalLitInk.current ?: variant.ink
+    }
     when {
         variant == NoteVariant.Caveat -> Row(
             modifier.padding(top = NoteSpec.CaveatTop), verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(NoteSpec.CaveatGap),
         ) {
-            Box(Modifier.size(NoteSpec.CaveatDot).background(dot ?: color, Corner.Pill))
-            Text(text, color = color, style = variant.style)
+            Box(Modifier.size(NoteSpec.CaveatDot).background(dot ?: ink, Corner.Pill))
+            Text(text, color = ink, style = variant.style)
         }
         icon != null -> Row(
             modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(NoteSpec.GlyphGap),
         ) {
-            Icon(icon, null, Modifier.size(NoteSpec.Glyph), tint = color)
-            Text(text, color = color, style = variant.style)
+            Icon(icon, null, Modifier.size(NoteSpec.Glyph), tint = ink)
+            Text(text, color = ink, style = variant.style)
         }
         else -> Text(
             text,
@@ -98,7 +103,7 @@ internal fun HaloNote(
                 textAlign == TextAlign.Center -> modifier.fillMaxWidth()
                 else -> modifier
             },
-            color = color, style = variant.style, textAlign = textAlign,
+            color = ink, style = variant.style, textAlign = textAlign,
         )
     }
 }

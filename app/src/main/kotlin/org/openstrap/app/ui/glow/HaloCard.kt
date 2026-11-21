@@ -5,7 +5,9 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
@@ -15,11 +17,14 @@ import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import org.openstrap.app.ui.components.LocalCardNumbers
 import org.openstrap.app.ui.components.cardOpening
 import org.openstrap.app.ui.components.pressClickable
+import org.openstrap.app.ui.glow.draw.GlowPalette
 import org.openstrap.app.ui.glow.draw.GlowStyle
 import org.openstrap.app.ui.theme.Greys
 import org.openstrap.app.ui.theme.Ink
@@ -121,6 +126,34 @@ internal enum class CardFill {
     None,
 }
 
+/**
+ * The ink of secondary text (notes, units, labels, footnotes) on a lit card. The grey of a dark card ([Ink.Secondary],
+ * 65% white) falls to 1.2 to 2.5:1 where the light is bright, so a lit card's secondary text is solid white: the most
+ * contrast an ink can have on a light, and at least 4.5:1 on the card's body, which the luminance cap
+ * ([GlowPalette.MID_MAX_LUMINANCE]) keeps dark enough for white. The very rim of a lime or mint light is brighter than
+ * any white ink can meet, so text keeps off it. LitInkTest holds the numbers.
+ */
+internal object LitInk {
+    val Secondary: Color = Ink.Primary
+
+    /** The least contrast text needs against its backdrop (WCAG 1.4.3). */
+    const val MIN_CONTRAST = 4.5f
+
+    /** The contrast ratio of [ink] over the opaque [backdrop]. */
+    fun contrast(ink: Color, backdrop: Color): Float {
+        val a = ink.luminance()
+        val b = backdrop.luminance()
+        return (maxOf(a, b) + LUMINANCE_OFFSET) / (minOf(a, b) + LUMINANCE_OFFSET)
+    }
+
+    private const val LUMINANCE_OFFSET = 0.05f
+}
+
+/** The ink secondary text takes inside the card, or null on a grey card (then [GlowType.noteColor]). Set by a lit [HaloCard]. */
+// Like LocalCardHero: every note, unit and label in the card reads it, and no caller could thread it through.
+@Suppress("CompositionLocalAllowlist", "ComposeCompositionLocalUsage")
+internal val LocalLitInk = compositionLocalOf<Color?> { null }
+
 /** True inside a [CardTone.Lit] card, so its title is a hero's. */
 // Like LocalCardOpens: every title in the card reads it, and no title's caller could thread it through.
 @Suppress("CompositionLocalAllowlist", "ComposeCompositionLocalUsage")
@@ -155,11 +188,15 @@ internal fun HaloCard(
             else title()
         }
         if (rows) CompositionLocalProvider(LocalRowInset provides Inset.list) { content() } else content()
+        // The title opens the card by the list inset; the last row already pads its own foot, so the rest makes the foot match.
+        if (rows && title != null) Spacer(Modifier.height(Inset.list - RowSpec.Pad))
     }
     val style = (tone as? CardTone.Lit)?.style ?: (tone as? CardTone.LitLevel)?.style
     if (style != null) {
         // Parts on a lit card were drawn for a grey card, so they step up from Card.
-        CompositionLocalProvider(LocalCardHero provides (tone is CardTone.Lit), LocalSurface provides Greys.Card) {
+        CompositionLocalProvider(
+            LocalCardHero provides (tone is CardTone.Lit), LocalSurface provides Greys.Card, LocalLitInk provides LitInk.Secondary,
+        ) {
             val padded = fill == CardFill.Inset && size != HaloCardSize.Strip
             LitSurface(style, sized, onClick = onClick, padded = padded, swell = swell) {
                 Column(

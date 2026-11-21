@@ -7,8 +7,14 @@ WAIT=${WAIT:-30}   # a cold start late in a session needs about 30 s before Toda
 
 scale() { adb shell settings get system font_scale | tr -d '\r'; }
 
-# Stops the run when anything other than unstrap is in front, so no tap lands in another app.
-front() { adb shell dumpsys activity activities | grep -m1 topResumedActivity | grep -q "$P" || { echo "NOT IN FRONT"; exit 1; }; }
+# Fails when anything other than unstrap is in front, so no tap lands in another app. One relaunch is tried first;
+# the screen being captured is then skipped, not the whole run.
+infront() { adb shell dumpsys activity activities 2>/dev/null | grep -m1 topResumedActivity | grep -q "$P"; }
+front() {
+  infront && return 0
+  adb shell am start -n $ACT >/dev/null 2>&1; sleep 8
+  infront || { echo "NOT IN FRONT"; return 1; }
+}
 
 # open [am extras...]: a cold start with the extras, so no scroll or page is left from the last screen.
 open() { adb shell am start -S -n $ACT "$@" >/dev/null 2>&1; sleep $WAIT; front; }
@@ -16,7 +22,7 @@ open() { adb shell am start -S -n $ACT "$@" >/dev/null 2>&1; sleep $WAIT; front;
 # warm [am extras...]: the extras to the running app (workout commands).
 warm() { adb shell am start -n $ACT "$@" >/dev/null 2>&1; sleep ${T:-6}; front; }
 
-tap() { front; adb shell input tap $1 $2; sleep ${T:-2.5}; }
+tap() { front || return 1; adb shell input tap $1 $2; sleep ${T:-2.5}; }
 
 # tapText "Backup": taps the centre of the first element whose text or description is exactly that.
 tapText() {
@@ -39,9 +45,10 @@ top() { for k in 1 2 3; do front; adb shell input swipe 540 900 540 2000 200; sl
 # shots name [pages]: the screen, then a scroll per page; stops early when a scroll changes nothing.
 shots() {
   local n=$1 pages=${2:-1} d="$OUT/$(scale)"; mkdir -p "$d"
+  front || { echo "skipped $n"; return 1; }
   adb exec-out screencap -p > "$d/$n-1.png"
   for i in $(seq 2 $pages); do
-    front; adb shell input swipe 540 1900 540 700 400; sleep 1.5
+    front || return 1; adb shell input swipe 540 1900 540 700 400; sleep 1.5
     adb exec-out screencap -p > "$d/$n-$i.png"
     if cmp -s "$d/$n-$i.png" "$d/$n-$((i-1)).png"; then rm "$d/$n-$i.png"; break; fi
   done

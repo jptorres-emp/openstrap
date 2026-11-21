@@ -90,6 +90,9 @@ internal fun DetailPicture(modifier: Modifier = Modifier, height: Dp = DetailPic
 /** How tall a card's picture stands on its page, a little over a Wide's 52 dp on Today. */
 internal val DetailPictureHeight = 64.dp
 
+/** Heart points and active minutes share this lime (rules, metric colours), apart from Steps' own. */
+internal val ActivityLime = Color(0xFFC6F55A)
+
 /** How tall a detail's chart stands, whatever its data: an empty one keeps it too ([DetailEmpty]), so nothing below moves. */
 internal val DetailChartHeight = 200.dp
 

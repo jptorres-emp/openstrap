@@ -1264,7 +1264,7 @@ private fun ActivityScoreRow(
         Score.HeartPoints -> {
             val points = state.pai?.total?.let(Math::round)
             ScoreRow(
-                score, org.openstrap.app.ui.theme.MetricColors.heart, points?.toString(),
+                score, ActivityLime, points?.toString(),
                 points?.let {
                     org.openstrap.app.presentation.TabCopy.heartPoints(it, org.openstrap.app.presentation.ActivityCopy.HEART_POINTS_TARGET)
                 } ?: AFTER_NEXT_SYNC,
@@ -1272,7 +1272,7 @@ private fun ActivityScoreRow(
             )
         }
         Score.ActiveMinutes -> ScoreRow(
-            score, org.openstrap.app.ui.theme.MetricColors.steps, a?.weekEquivalent?.toString(),
+            score, ActivityLime, a?.weekEquivalent?.toString(),
             a?.let {
                 org.openstrap.app.presentation.TabCopy.activeMinutes(it.weekEquivalent, org.openstrap.app.data.Activity.MVPA_WEEKLY_TARGET)
             } ?: NO_VALUE,
@@ -1340,7 +1340,8 @@ internal fun RelatedMetricRow(
     // A percent stays on its number, as on Recovery ("99%"): the line under it is the word, not the unit.
     val tag = relatedTag(m, v, status)
     MetricRow(
-        m.title, colorOf(m), v?.let { if (m == Metric.Spo2) "${m.format(it)}%" else m.format(it) },
+        // The unit stays on the number, as the boards write "60 bpm" and "57 ms", so the line under it is only the word.
+        m.title, colorOf(m), v?.let { if (m == Metric.Spo2) "${m.format(it)}%" else "${m.format(it)} ${m.unit}".trim() },
         when {
             v == null -> NO_VALUE
             // Blood oxygen on a night page is the night's average.
@@ -1351,7 +1352,7 @@ internal fun RelatedMetricRow(
             latest -> latestLine(m, state, java.time.Instant.now().epochSecond, tagged = tag != null, time = ::clock)
             // The tag already says which way it is off.
             tag != null -> null
-            else -> DetailCopy.statusWord(status) ?: m.unit.ifEmpty { null }
+            else -> DetailCopy.statusWord(status)
         },
         tag = tag, onClick = { onOpen(Detail.OfMetric(m, night)) }, divider = divider,
         icon = m.rowIcon(),

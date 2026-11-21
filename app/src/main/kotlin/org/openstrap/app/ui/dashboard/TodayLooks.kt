@@ -5,9 +5,9 @@ import org.openstrap.app.ui.glow.CardSize
 import org.openstrap.app.ui.glow.Pane
 
 /*
- * How each Today card looks, and the rules that no two cards next to each other look the same and no two lit cards touch (spec 2.5), with the
- * looks themselves in CardLooks.kt. Plain functions over the final list of cards, after Edit Today, so every moment
- * and every pin and hide is tested without a screen.
+ * How each Today card looks, and the rules that no two cards next to each other look the same and no two lit cards
+ * touch (spec 2.5), with the looks themselves in CardLooks.kt. Plain functions over the final list of cards, after
+ * Edit Today, so every moment and every pin and hide is tested without a screen.
  */
 
 private fun glow(h: Hue, p: PictureKind? = null) = CardLook(Tier.Glow, h, picture = p)
@@ -38,17 +38,19 @@ private fun heroHue(moment: Moment?): Hue = when (moment) {
 fun defaultLook(slot: TodaySlot, moment: Moment?, live: Boolean = false): CardLook =
     ownLook(slot, moment).copy(shape = Shape.of(slot.size))
 
+private fun lastNightLook(size: CardSize): CardLook = when (size) {
+    CardSize.Strip -> strip(Hue.Sleep)
+    // Lit in Sleep blue, so a run of grey cards has a break in it (boards HaloTodayMidday, HaloTodayAfter).
+    CardSize.Small -> glow(Hue.Sleep, PictureKind.StageBar)
+    else -> picture(Hue.Sleep, PictureKind.StageBar)
+}
+
 private fun ownLook(slot: TodaySlot, moment: Moment?): CardLook = when (slot.card) {
     TodayCard.Hero -> glow(heroHue(moment))
     TodayCard.Suggestion, TodayCard.Alerts -> strip(Hue.Heart)
     TodayCard.CheckIn, TodayCard.StartWorkout -> strip(Hue.Neutral)
     TodayCard.BodyMorning -> ListLook
-    TodayCard.LastNight -> when (slot.size) {
-        CardSize.Strip -> strip(Hue.Sleep)
-        // Lit in Sleep blue, so a run of grey cards has a break in it (boards HaloTodayMidday, HaloTodayAfter).
-        CardSize.Small -> glow(Hue.Sleep, PictureKind.StageBar)
-        else -> picture(Hue.Sleep, PictureKind.StageBar)
-    }
+    TodayCard.LastNight -> lastNightLook(slot.size)
     TodayCard.HeartRate -> picture(Hue.Heart, PictureKind.Line)
     TodayCard.Stress -> picture(Hue.Stress, PictureKind.DayStrip)
     TodayCard.Activity -> picture(Hue.Steps, PictureKind.HourlyBars)
@@ -140,7 +142,8 @@ private fun rowStarts(slots: List<TodaySlot>): Set<Int> {
 private fun options(s: TodaySlot): List<TodaySlot> = when {
     s.secondGlow -> listOf(s.copy(secondGlow = false)).map { it.copy(look = defaultLook(it, null)) }
     // Lit Last night as a Small steps down to grey beside another lit card.
-    s.card == TodayCard.LastNight && s.size == CardSize.Small -> listOf(s.copy(look = picture(Hue.Sleep, PictureKind.StageBar).copy(shape = Shape.Small)))
+    s.card == TodayCard.LastNight && s.size == CardSize.Small ->
+        listOf(s.copy(look = picture(Hue.Sleep, PictureKind.StageBar).copy(shape = Shape.Small)))
     s.card == TodayCard.LastNight && s.size == CardSize.Wide -> listOf(s.copy(size = CardSize.Strip)).map { it.copy(look = defaultLook(it, null)) }
     s.card == TodayCard.LastNight && s.size == CardSize.Strip -> listOf(s.copy(size = CardSize.Wide)).map { it.copy(look = defaultLook(it, null)) }
     else -> emptyList()

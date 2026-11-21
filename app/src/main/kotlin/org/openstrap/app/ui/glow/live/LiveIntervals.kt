@@ -170,7 +170,8 @@ private fun phaseLap(r: WorkoutState.Recording, phase: Phase, onSkip: () -> Unit
 @ReadOnlyComposable
 private fun roundFigures(r: WorkoutState.Recording, kcal: WorkoutRecorder.Kcal?): List<Pair<String?, String>> = listOf(
     "${r.roundsCounted}" to stringResource(R.string.workout_live_figure_rounds),
-    (r.rounds.mapNotNull { it.peakBpm }.maxOrNull() ?: r.workout.maxHeartRate)?.toString() to stringResource(R.string.workout_live_figure_peak_bpm),
+    (r.rounds.mapNotNull { it.peakBpm }.maxOrNull() ?: r.workout.maxHeartRate)?.toString() to
+        stringResource(R.string.workout_live_figure_peak_bpm),
     kcal?.active?.toInt()?.toString() to stringResource(R.string.workout_live_figure_active_kcal),
 )
 

@@ -244,7 +244,11 @@ private fun StrengthHero(
                     ?.let { stringResource(R.string.workout_live_sets_next_set_exercise, moment.setNumber, it) }
                     ?: stringResource(R.string.workout_live_sets_next_set, moment.setNumber)
                 // Name it stays through the rest, where the next sets are named.
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Space.S12), verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(Space.S12),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
                     Box(Modifier.weight(1f)) { HeroLine(stringResource(R.string.workout_live_sets_next_line, next), tint) }
                     ExercisePill(r.exercise, onName)
                 }

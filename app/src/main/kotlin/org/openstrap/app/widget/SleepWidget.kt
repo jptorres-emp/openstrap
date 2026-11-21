@@ -137,7 +137,6 @@ private fun ColumnScope.WideContent(m: SleepWidgetModel, f: WidgetFrame) {
 @Composable
 private fun ColumnScope.LargeContent(m: SleepWidgetModel, f: WidgetFrame) {
     val fit = SleepLayout.large(m, f.contentWidth, f.contentHeight, f.fontScale, f.status)
-    val spread = SleepLayout.largeSpread(fit, m.stages.size, f.fontScale)
     TopRowView(m.title, m.note, fit.top, f, 0f)
     if (fit.sentenceLines > 0 && m.sentence != null) {
         Gap()

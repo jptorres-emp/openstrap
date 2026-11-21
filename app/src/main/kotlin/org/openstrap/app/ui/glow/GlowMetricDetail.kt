@@ -136,12 +136,17 @@ internal data class DetailHeadline(
      * The unit that sits beside the value and the context that sits under the status word (board HaloDetailHeart: "bpm" by
      * the number, "Live, 15:40" under it). [unit] when given, else a short first word before a comma ("bpm, day average").
      */
-    fun parts(): Pair<String?, String?> {
-        if (context != null) return unit to context
-        if (unit != null) {
+    fun parts(): Pair<String?, String?> = when {
+        context != null -> unit to context
+        unit != null -> {
             val rest = label.removePrefix(unit).removePrefix(",").trim()
-            return unit to rest.replaceFirstChar { it.uppercase() }.ifBlank { null }
+            unit to rest.replaceFirstChar { it.uppercase() }.ifBlank { null }
         }
+        else -> labelParts()
+    }
+
+    /** A short first word before a comma is the unit ("bpm, day average"), a lone short word is only a unit. */
+    private fun labelParts(): Pair<String?, String?> {
         val head = label.substringBefore(", ", "")
         return when {
             head.isNotEmpty() && ' ' !in head && head.length <= UNIT_LENGTH ->
@@ -643,7 +648,9 @@ fun GlowMetricDetailScreen(
 
     // The range's number and the daily values its chart draws (weekly over a year).
     val dataStart = dataEnd.minusDays(range.days - 1L)
-    val summary = remember(stats, range, dataStart, dataEnd) { stats?.takeIf { range != Range.Day }?.let { History.summary(it, dataStart, dataEnd) } }
+    val summary = remember(stats, range, dataStart, dataEnd) {
+        stats?.takeIf { range != Range.Day }?.let { History.summary(it, dataStart, dataEnd) }
+    }
     val value = when {
         night && range == Range.Day -> SleepCopy.nightValue(state, metric)
         night && range == Range.Week -> nightWeek.mapNotNull { it.second }.takeIf { it.isNotEmpty() }?.average()?.toFloat()
@@ -688,32 +695,41 @@ fun GlowMetricDetailScreen(
         value != null && learning -> DetailCopy.learningNormal(if (fromNight) nightDays else normalDays, nightly)
         else -> null
     }
-    val dayReading = !night && range == Range.Day && value != null
+    // The value of a day's reading, null on a night, a range, or no reading.
+    val dayValue = if (!night && range == Range.Day) value else null
     val headline = when {
         // Every Signal, Vital and Count reading says its status word and when it was taken (rules 3).
-        dayReading && metric == Metric.HeartRate -> DetailHeadline(
-            metric.format(value!!, Units.DOT_LOCALE), "",
-            stringResource(if (value < CALM_BELOW_BPM) R.string.glow_detail_hr_calm else R.string.glow_detail_hr_raised), metric.unit,
-            context = if (live != null) stringResource(R.string.glow_detail_live) else dataAt?.let { stringResource(R.string.core_today_heart_at, clock(it)) }.orEmpty(),
+        dayValue != null && metric == Metric.HeartRate -> DetailHeadline(
+            metric.format(dayValue, Units.DOT_LOCALE), "",
+            stringResource(if (dayValue < CALM_BELOW_BPM) R.string.glow_detail_hr_calm else R.string.glow_detail_hr_raised),
+            metric.unit,
+            context = if (live != null) {
+                stringResource(R.string.glow_detail_live)
+            } else {
+                dataAt?.let { stringResource(R.string.core_today_heart_at, clock(it)) }.orEmpty()
+            },
         )
-        dayReading && metric == Metric.Spo2 -> DetailHeadline(
-            metric.format(value!!, Units.DOT_LOCALE), "", stringResource(spo2Word(value)), metric.unit,
+        dayValue != null && metric == Metric.Spo2 -> DetailHeadline(
+            metric.format(dayValue, Units.DOT_LOCALE), "", stringResource(spo2Word(dayValue)), metric.unit,
             context = LatestReading.of(metric, state)?.let {
                 LatestReading.spo2Line(it.x, LatestReading.sleepWindow(state), Long.MAX_VALUE / 2, Strings.app, ::clock)
             }.orEmpty(),
         )
-        dayReading && metric == Metric.Stress -> DetailHeadline(
-            metric.format(value!!, Units.DOT_LOCALE), "", StressLevel.of(value).word(Strings.app), null,
+        dayValue != null && metric == Metric.Stress -> DetailHeadline(
+            metric.format(dayValue, Units.DOT_LOCALE), "", StressLevel.of(dayValue).word(Strings.app), null,
             context = LatestReading.of(metric, state)?.let { stringResource(R.string.core_today_heart_at, clock(it.x)) }.orEmpty(),
         )
-        dayReading && metric == Metric.RestingHr -> DetailHeadline(
-            metric.format(value!!, Units.DOT_LOCALE), "", word, metric.unit,
+        dayValue != null && metric == Metric.RestingHr -> DetailHeadline(
+            metric.format(dayValue, Units.DOT_LOCALE), "", word, metric.unit,
             context = stringResource(if (isToday) R.string.core_detail_none_last_night else R.string.core_detail_none_that_night) +
                 if (state.restingEstimated) ", " + stringResource(R.string.glow_detail_estimated) else "",
         )
-        dayReading && metric == Metric.Steps -> DetailHeadline(
-            metric.format(value!!, Units.DOT_LOCALE), "",
-            stringResource(if (value >= goal) R.string.glow_detail_steps_goal_reached else R.string.glow_detail_steps_below_goal), metric.unit,
+        dayValue != null && metric == Metric.Steps -> DetailHeadline(
+            metric.format(dayValue, Units.DOT_LOCALE), "",
+            stringResource(
+                if (dayValue >= goal) R.string.glow_detail_steps_goal_reached else R.string.glow_detail_steps_below_goal,
+            ),
+            metric.unit,
             context = if (isToday) dataAt?.let { stringResource(R.string.glow_detail_steps_so_far_to, clock(it)) }
                 ?: stringResource(R.string.core_detail_none_so_far_today) else stringResource(R.string.core_detail_none_that_day),
         )
@@ -774,7 +790,10 @@ fun GlowMetricDetailScreen(
             when {
                 inRange == null -> DetailEmpty(stringResource(R.string.glow_loading))
                 inRange.none { it.date in rStart..dataEnd } -> DetailEmpty(stringResource(R.string.glow_metrics_none_in_range))
-                else -> HistoryChart(metric, r, inRange, normal, rStart, dataEnd, color, nightly, goal.takeIf { metric == Metric.Steps }) { scrub = it }
+                else -> {
+                    val stepsGoal = goal.takeIf { metric == Metric.Steps }
+                    HistoryChart(metric, r, inRange, normal, rStart, dataEnd, color, nightly, stepsGoal) { scrub = it }
+                }
             }
         }
     }
@@ -821,9 +840,10 @@ fun GlowMetricDetailScreen(
             val inRange = stats
             val sentence = when {
                 inRange == null || summary == null -> null
-                range == Range.Year -> History.weekly(inRange.filter { it.date in dataStart..dataEnd }).takeIf { it.isNotEmpty() }?.let { w ->
-                    DetailCopy.year(metric.format(w.minOf { it.value }), metric.format(w.maxOf { it.value }), metric.unit)
-                }
+                range == Range.Year ->
+                    History.weekly(inRange.filter { it.date in dataStart..dataEnd }).takeIf { it.isNotEmpty() }?.let { w ->
+                        DetailCopy.year(metric.format(w.minOf { it.value }), metric.format(w.maxOf { it.value }), metric.unit)
+                    }
                 else -> {
                     val days = generateSequence(dataStart) { it.plusDays(1) }.takeWhile { !it.isAfter(dataEnd) }.toList()
                     val byDate = inRange.associate { it.date to it.value }
@@ -1078,13 +1098,15 @@ private fun HistoryChart(
         } else {
             Strings.app.format(R.string.glow_metrics_unit_day, metric.unit, label)
         }
-        DetailHeadline(metric.format(v, Units.DOT_LOCALE), unitAndDay, if (signal) null else DetailCopy.statusWord(History.status(v, normal)))
+        val word = if (signal) null else DetailCopy.statusWord(History.status(v, normal))
+        DetailHeadline(metric.format(v, Units.DOT_LOCALE), unitAndDay, word)
     }
     Column(Modifier.padding(top = Space.S8), verticalArrangement = Arrangement.spacedBy(Space.S8)) {
         // A count stands on the axis; the rest run from your normal, its band behind them (rules, Vital and Count).
         val count = metric == Metric.Steps
         val few = values.size <= FEW_DAYS
-        if (normal != null && !few && !count && !signal) Text(
+        val showBandNote = normal != null && !few && !count && !signal
+        if (showBandNote) Text(
             stringResource(R.string.glow_detail_band_note), color = GlowType.noteColor, style = GlowType.noteSmall,
             modifier = Modifier.padding(horizontal = Space.S4),
         )

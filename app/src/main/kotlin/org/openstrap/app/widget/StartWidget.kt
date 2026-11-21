@@ -223,7 +223,8 @@ private const val RECORDING_LIGHT_ANGLE = 0f
 private fun ColumnScope.StartBody(m: StartWidgetModel, frame: WidgetFrame) {
     val rec = m.recording
     when {
-        rec != null && frame.bucket == WidgetSizes.Small -> Column(GlanceModifier.fillMaxWidth().defaultWeight().then(Inset)) { SmallRecording(rec, frame) }
+        rec != null && frame.bucket == WidgetSizes.Small ->
+            Column(GlanceModifier.fillMaxWidth().defaultWeight().then(Inset)) { SmallRecording(rec, frame) }
         rec != null && frame.bucket == WidgetSizes.Wide -> WideRecording(m, rec, frame)
         rec != null -> LargeRecording(m, rec, frame)
         frame.bucket == WidgetSizes.Small -> Column(GlanceModifier.fillMaxWidth().defaultWeight().then(Inset)) { SmallContent(m, frame) }

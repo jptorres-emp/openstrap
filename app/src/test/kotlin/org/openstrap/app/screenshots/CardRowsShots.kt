@@ -22,18 +22,18 @@ import org.openstrap.app.ui.theme.Space
 class CardRowsShots : ScreenshotTest() {
     @Test fun titled() = shoot("card_rows", "card_rows_titled") {
         Column(Modifier.padding(Space.S16)) {
-            HaloCard(fill = CardFill.Rows, title = { HaloTitle("Your body this morning", note = "Against your normal") }) { rows() }
+            HaloCard(fill = CardFill.Rows, title = { HaloTitle("Your body this morning", note = "Against your normal") }) { Rows() }
         }
     }
 
     @Test fun untitled() = shoot("card_rows", "card_rows_untitled") {
         Column(Modifier.padding(Space.S16)) {
-            HaloCard(fill = CardFill.Rows) { rows() }
+            HaloCard(fill = CardFill.Rows) { Rows() }
         }
     }
 
     @Composable
-    private fun rows() {
+    private fun Rows() {
         MetricRow("Resting heart rate", MetricColors.heart, "52", "Usual", icon = AppIcons.Heart, onClick = {})
         MetricRow("Blood oxygen", MetricColors.spo2, "97%", "Usual", icon = AppIcons.Heart, onClick = {})
         MetricRow("Breathing rate", MetricColors.sleepLight, null, "After your first night", icon = AppIcons.Heart)

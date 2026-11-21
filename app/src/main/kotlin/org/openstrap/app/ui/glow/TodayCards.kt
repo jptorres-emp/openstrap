@@ -194,7 +194,10 @@ internal fun CheckInStrip(feeling: Int?, onCheckIn: (Int?) -> Unit, modifier: Mo
         val values = (CheckIn.MIN..CheckIn.MAX).toList()
         GlowSegments(values.map { "$it" }, feeling?.let(values::indexOf) ?: -1, { onCheckIn(values[it].takeIf { v -> v != feeling }) })
         // Words at both ends, so before answering it's clear which end is good.
-        Row(Modifier.fillMaxWidth().padding(top = Space.S8, start = Space.S8, end = Space.S8), horizontalArrangement = Arrangement.SpaceBetween) {
+        Row(
+            Modifier.fillMaxWidth().padding(top = Space.S8, start = Space.S8, end = Space.S8),
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
             Text(CheckIn.label(CheckIn.MIN), color = Ink.Secondary, style = GlowType.secondary, maxLines = 1)
             Text(CheckIn.label(CheckIn.MAX), color = Ink.Secondary, style = GlowType.secondary, maxLines = 1)
         }
@@ -340,35 +343,61 @@ internal fun TodayPictureCard(
     HaloCard(m, tone = lit?.let { CardTone.lit(it) } ?: CardTone.Grey, onClick = onClick, verticalArrangement = Arrangement.Top) {
         HaloTitle(title, note = note.takeIf { !small }, marker = marker, tag = titleTag)
         if (small) {
-            if (picture != null) {
-                Spacer(Modifier.height(Space.S12))
-                picture(Modifier.fillMaxWidth().weight(1f))
-                // As much room under the picture as over it, so a picture standing on a baseline (Steps' bars) doesn't
-                // touch the number.
-                Spacer(Modifier.height(Space.S12))
-            } else Spacer(Modifier.weight(1f))
-            if (value == null && word != null) FigureWord(word)
-            else if (value != null || dash) PictureNumber(value, unit, tag, textColor = text)
-            val line = status.takeIf { tag == null || value == null }
-            if (line != null) Text(
-                line, color = text, style = GlowType.secondary,
-                modifier = Modifier.padding(top = Space.S4), maxLines = if (value == null) 2 else 1, overflow = TextOverflow.Ellipsis,
-            )
-            return@HaloCard
+            SmallPictureBody(value, unit, tag, status, picture, dash, word, text)
+        } else {
+            WidePictureBody(value, unit, tag, status, picture, pictureLast, dash)
         }
-        if (picture != null && !pictureLast) {
-            Spacer(Modifier.height(Space.S12))
-            picture(Modifier.fillMaxWidth().height(WidePictureHeight))
-        }
+    }
+}
+
+/** A Small picture card under its title: the picture in the middle, the number at the foot, then the status or tag. */
+@Composable
+private fun ColumnScope.SmallPictureBody(
+    value: String?, unit: String?, tag: NewsTag?, status: String?, picture: (@Composable (Modifier) -> Unit)?,
+    dash: Boolean, word: String?, text: Color,
+) {
+    if (picture != null) {
+        Spacer(Modifier.height(Space.S12))
+        picture(Modifier.fillMaxWidth().weight(1f))
+        // As much room under the picture as over it, so a picture standing on a baseline (Steps' bars) doesn't
+        // touch the number.
+        Spacer(Modifier.height(Space.S12))
+    } else Spacer(Modifier.weight(1f))
+    if (value == null && word != null) FigureWord(word)
+    else if (value != null || dash) PictureNumber(value, unit, tag, textColor = text)
+    val line = status.takeIf { tag == null || value == null }
+    if (line != null) Text(
+        line, color = text, style = GlowType.secondary,
+        modifier = Modifier.padding(top = Space.S4), maxLines = if (value == null) 2 else 1, overflow = TextOverflow.Ellipsis,
+    )
+}
+
+/** A Wide picture card under its title: the picture over or under the number, and the status in Secondary. */
+// The picture is invoked from one lambda, run in the one branch of the two that applies, so it composes once.
+@Suppress("SlotReused", "ComposeSlotReused")
+@Composable
+private fun ColumnScope.WidePictureBody(
+    value: String?, unit: String?, tag: NewsTag?, status: String?, picture: (@Composable (Modifier) -> Unit)?,
+    pictureLast: Boolean, dash: Boolean,
+) {
+    val numberAndStatus: @Composable () -> Unit = {
         if (value != null || dash) PictureNumber(value, unit, tag, Modifier.padding(top = Space.S12))
         if (status != null) Text(
             status, color = Ink.Secondary, style = GlowType.secondary,
             modifier = Modifier.padding(top = Space.S8), maxLines = 2, overflow = TextOverflow.Ellipsis,
         )
-        if (picture != null && pictureLast) {
-            Spacer(Modifier.height(Space.S12))
-            picture(Modifier.fillMaxWidth())
-        }
+    }
+    val drawn: @Composable () -> Unit = {
+        val size = if (pictureLast) Modifier.fillMaxWidth() else Modifier.fillMaxWidth().height(WidePictureHeight)
+        if (picture != null) picture(Modifier.padding(top = Space.S12).then(size))
+    }
+    // The picture goes first, or after the number.
+    if (pictureLast) {
+        numberAndStatus()
+        drawn()
+    } else {
+        drawn()
+        numberAndStatus()
     }
 }
 
@@ -421,7 +450,10 @@ private fun noNightWord(firstNights: Boolean, stuck: Boolean): String = stringRe
 internal fun LastNightCard(
     state: DayUiState, firstNights: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier, stuck: Boolean = false,
     size: PictureSize = PictureSize.Wide,
-    /** A Small lit in Sleep blue to its score, as the plan gives it ([org.openstrap.app.ui.dashboard.Tier.Glow]); grey when it stands next to another lit card. */
+    /**
+     * A Small lit in Sleep blue to its score, as the plan gives it ([org.openstrap.app.ui.dashboard.Tier.Glow]); grey
+     * when it stands next to another lit card.
+     */
     lit: Boolean = false,
 ) {
     val s = state.sleep
@@ -452,7 +484,11 @@ internal fun LastNightCard(
             },
             modifier, rim = rim, onClick = onClick, picture = picture,
             word = if (asleep != null) null else noNightWord(firstNights, stuck),
-            lit = if (lit) GlowStyle.level(MetricColors.sleepDeep, (score ?: LAST_NIGHT_LEVEL_DEFAULT_PCT) / 100f).copy(second = true) else null,
+            lit = if (lit) {
+                GlowStyle.level(MetricColors.sleepDeep, (score ?: LAST_NIGHT_LEVEL_DEFAULT_PCT) / 100f).copy(second = true)
+            } else {
+                null
+            },
         )
         return
     }

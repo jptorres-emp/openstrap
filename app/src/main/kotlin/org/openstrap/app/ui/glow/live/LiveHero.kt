@@ -64,6 +64,8 @@ internal fun LiveHero(color: Color, angle: Float, modifier: Modifier = Modifier,
 
 /** The hero's title row: 16 semibold at the left, one small note in the lit card's ink at the right. */
 @Composable
+// Kept so every live screen passes its sport's tint the same way (ten call sites).
+@Suppress("UnusedParameter")
 internal fun HeroTitle(title: String, note: String?, tint: Color, trailing: (@Composable () -> Unit)? = null) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Space.S12), verticalAlignment = Alignment.CenterVertically) {
         Text(title, color = Color.White, style = GlowType.heroTitle, maxLines = 1, overflow = TextOverflow.Ellipsis,
@@ -74,7 +76,10 @@ internal fun HeroTitle(title: String, note: String?, tint: Color, trailing: (@Co
     }
 }
 
-/** The hero's one 13 px line in the lit card's ink (solid white, 4.5:1 where the light is brightest): what the strap will do, or what is next. */
+/**
+ * The hero's one 13 px line in the lit card's ink (solid white, 4.5:1 where the light is brightest): what the strap will
+ * do, or what is next.
+ */
 @Composable
 @Suppress("UnusedParameter")
 internal fun HeroLine(text: String, tint: Color) =

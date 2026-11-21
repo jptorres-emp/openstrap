@@ -92,7 +92,8 @@ internal fun HaloFigures(
         // One layout for the whole row: when any value and its unit don't fit a column on one line, every unit goes under
         // its value, so the labels of the columns stay level.
         val stacked = !live && with(density) {
-            val column = (constraints.maxWidth - 2 * FigureSpec.Side.roundToPx()) / figures.size - (FigureSpec.RuleGap + FigureSpec.Rule).roundToPx()
+            val column = (constraints.maxWidth - 2 * FigureSpec.Side.roundToPx()) / figures.size -
+                (FigureSpec.RuleGap + FigureSpec.Rule).roundToPx()
             figures.withIndex().any { (i, f) ->
                 val v = f.first
                 v != null && measurer.measure(

@@ -138,7 +138,8 @@ private fun TitleNote(note: String, onNote: (() -> Unit)?) {
 
 /**
  * [start] on the left and [end] on the right when both fit on one line at font size 1.0; when they don't, [end] drops
- * under [start] rather than wrap it. The same choice at every font size, so a card keeps its height. [bottom] lines them up on their foot (a heading), else on their middle (a card's title).
+ * under [start] rather than wrap it. The same choice at every font size, so a card keeps its height. [bottom] lines them
+ * up on their foot (a heading), else on their middle (a card's title).
  */
 // One layout or the other, by whether there is an end; the same title keeps to one of them.
 @Suppress("ContentSlotReused", "ComposeContentSlotReused")

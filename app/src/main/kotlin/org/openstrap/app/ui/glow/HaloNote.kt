@@ -64,7 +64,8 @@ internal enum class NoteVariant(val style: TextStyle, val ink: Color) {
 
 /**
  * A note in its [variant]'s type and grey (a lit card's [LitInk]), or in [color] (a warning in amber). A
- * [NoteVariant.Caveat] leads with a dot in [dot]; an [icon] leads an inline note in its ink. [textAlign] Center centres a note across its column, under a centred value.
+ * [NoteVariant.Caveat] leads with a dot in [dot]; an [icon] leads an inline note in its ink. [textAlign] Center centres a
+ * note across its column, under a centred value.
  */
 @Composable
 internal fun HaloNote(

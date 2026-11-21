@@ -183,6 +183,8 @@ abstract class LoadingWidget<T>(internal val kind: WidgetKind) : GlanceAppWidget
 }
 
 /** True while the picker's generated preview composes: there is no Glance id to ask the launcher about. */
+// A flag only the picker's preview sets and the card reads; no parameter could reach it through Glance's layers.
+@Suppress("CompositionLocalAllowlist", "ComposeCompositionLocalUsage")
 internal val LocalPreview = staticCompositionLocalOf { false }
 
 /** The card with a spinner, while there's neither a read nor an earlier one to show. */
@@ -476,30 +478,56 @@ internal fun limitLuminance(src: Bitmap, inset: Float, feather: Float): Bitmap {
             if (inside <= -feather) continue
             // 0 at the feather's outer edge, 1 from the rectangle inward.
             val weight = ((inside + feather) / feather).coerceIn(0f, 1f)
-            val c = px[y * w + x]
-            val a = c ushr 24
-            val r = linear((c shr 16) and 0xFF)
-            val g = linear((c shr 8) and 0xFF)
-            val b = linear(c and 0xFF)
-            val lum = 0.2126f * r + 0.7152f * g + 0.0722f * b
-            val cap = 1f - weight * (1f - TEXT_LUMINANCE)
-            if (lum <= cap) continue
-            val k = cap / lum
-            px[y * w + x] = (a shl 24) or (srgb(r * k) shl 16) or (srgb(g * k) shl 8) or srgb(b * k)
+            px[y * w + x] = capPixel(px[y * w + x], 1f - weight * (1f - TEXT_LUMINANCE))
         }
     }
     src.setPixels(px, 0, w, 0, 0, w, h)
     return src
 }
 
+private const val BYTE_MASK = 0xFF
+private const val ALPHA_SHIFT = 24
+private const val RED_SHIFT = 16
+private const val GREEN_SHIFT = 8
+private const val LUMA_RED = 0.2126f
+private const val LUMA_GREEN = 0.7152f
+private const val LUMA_BLUE = 0.0722f
+
+/** The ARGB pixel [c] with its relative luminance brought down to [cap], its colour kept, or as it is when under. */
+private fun capPixel(c: Int, cap: Float): Int {
+    val a = c ushr ALPHA_SHIFT
+    val r = linear((c shr RED_SHIFT) and BYTE_MASK)
+    val g = linear((c shr GREEN_SHIFT) and BYTE_MASK)
+    val b = linear(c and BYTE_MASK)
+    val lum = LUMA_RED * r + LUMA_GREEN * g + LUMA_BLUE * b
+    if (lum <= cap) return c
+    val k = cap / lum
+    return (a shl ALPHA_SHIFT) or (srgb(r * k) shl RED_SHIFT) or (srgb(g * k) shl GREEN_SHIFT) or srgb(b * k)
+}
+
+private const val BYTE_MAX = 255f
+private const val SRGB_KNEE = 0.04045f
+private const val LINEAR_KNEE = 0.0031308f
+private const val SRGB_LINEAR_SLOPE = 12.92f
+private const val SRGB_OFFSET = 0.055f
+private const val SRGB_SCALE = 1.055f
+private const val SRGB_OFFSET_D = 0.055
+private const val SRGB_SCALE_D = 1.055
+private const val SRGB_GAMMA = 2.4
+private const val ROUND_HALF = 0.5f
+
 private fun linear(v: Int): Float {
-    val c = v / 255f
-    return if (c <= 0.04045f) c / 12.92f else Math.pow(((c + 0.055f) / 1.055f).toDouble(), 2.4).toFloat()
+    val c = v / BYTE_MAX
+    return if (c <= SRGB_KNEE) c / SRGB_LINEAR_SLOPE else Math.pow(((c + SRGB_OFFSET) / SRGB_SCALE).toDouble(), SRGB_GAMMA).toFloat()
 }
 
 private fun srgb(l: Float): Int {
-    val c = if (l <= 0.0031308f) l * 12.92f else (1.055 * Math.pow(l.toDouble(), 1 / 2.4) - 0.055).toFloat()
-    return (c * 255f + 0.5f).toInt().coerceIn(0, 255)
+    val c = if (l <= LINEAR_KNEE) {
+        l * SRGB_LINEAR_SLOPE
+    } else {
+        (SRGB_SCALE_D * Math.pow(l.toDouble(), 1 / SRGB_GAMMA) - SRGB_OFFSET_D).toFloat()
+    }
+    return (c * BYTE_MAX + ROUND_HALF).toInt().coerceIn(0, BYTE_MASK)
 }
 
 /** The launcher's widget corner, dp, on Android 12 and later, and null before or when the system doesn't say. */
@@ -611,8 +639,8 @@ internal fun TopRowView(title: String, note: String?, top: TopRow, f: WidgetFram
  */
 internal fun attentionWords(f: WidgetFrame): String? {
     val line = f.status ?: return null
-    if (line.status is StrapStatus.Synced || line.status == StrapStatus.Syncing) return null
-    return StatusButton.words(line, f.contentWidth, f.fontScale)
+    val quiet = line.status is StrapStatus.Synced || line.status == StrapStatus.Syncing
+    return if (quiet) null else StatusButton.words(line, f.contentWidth, f.fontScale)
 }
 
 /** [words] ([attentionWords]) as the status words: Secondary in amber. */
@@ -687,11 +715,6 @@ internal fun ColumnScope.Gap(dp: Float = WidgetGrid.GAP_DP) = Spacer(GlanceModif
 /** The card's one flexible space: what the cell has over what the blocks take, in a single place. */
 @Composable
 internal fun ColumnScope.Flex() = Spacer(GlanceModifier.defaultWeight())
-
-/** Nothing above the first block or below the last: the card's padding is the whole margin. */
-@Composable
-@Suppress("UNUSED_PARAMETER")
-internal fun Edge(spread: Spread, f: WidgetFrame) = Unit
 
 /** Between a figure's Caption and its Body. */
 internal const val FIGURE_LINE_GAP_DP = 4f

@@ -307,7 +307,7 @@ object StartLayout {
      * The Wide's or Large's top row (spec 5): "Start a workout" with the status button, and its words when the strap
      * needs something, at the right. Always there, as in every widget, whatever the strap says.
      */
-    fun statusTop(m: StartWidgetModel, line: StatusLine?, size: androidx.compose.ui.unit.DpSize, width: Float, height: Float, fontScale: Float): TopRow =
+    fun statusTop(line: StatusLine?, size: androidx.compose.ui.unit.DpSize, width: Float, fontScale: Float): TopRow =
         TopRow.of(StartWidgetModel.TITLE, null, line, width, fontScale, withWords = size != WidgetSizes.Small)
 
     /** Whether [text] fits [room] dp on one line at [sp]. */
@@ -773,7 +773,8 @@ object StartLayout {
         val name = if (fits(r.sport.name, WidgetText.CARD_TITLE_SP, width, fontScale)) r.sport.name else r.sport.shortName
         val pattern = if (r.activeMillis >= HOUR_MS) TIMER_PATTERN else TIMER_SHORT_PATTERN
         // What is always under or over the timer: the name, the status line and the heart rate row, with the gap above it.
-        val heartRow = if (r.heart != null) WidgetGrid.GAP_TIGHT_DP + maxOf(secondary(fontScale), if (r.zoneLabel != null) chipHeight(fontScale) else 0f) else 0f
+        val chip = if (r.zoneLabel != null) chipHeight(fontScale) else 0f
+        val heartRow = if (r.heart != null) WidgetGrid.GAP_TIGHT_DP + maxOf(secondary(fontScale), chip) else 0f
         val fixed = WidgetText.line(WidgetText.CARD_TITLE_SP, fontScale) + secondary(fontScale) + heartRow
         val sp = timerSizes(TIMER_SMALL_SP).firstOrNull {
             letterEms(pattern) * it * fontScale <= width && it * fontScale * TIMER_LINE_EM + fixed <= height

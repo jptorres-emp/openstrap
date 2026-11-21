@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="glow_goals_title">Objetivos e recordes</string>
+    <string name="glow_goals_loading">A carregar…</string>
+    <string name="glow_goals_this_week">Esta semana</string>
+    <string name="glow_goals_goal_button">Objetivo %1$d</string>
+    <plurals name="glow_goals_of_workouts">
+        <item quantity="one">de %d treino</item>
+        <item quantity="many">de %d treinos</item>
+        <item quantity="other">de %d treinos</item>
+    </plurals>
+    <plurals name="glow_goals_count_of_goal">
+        <item quantity="one">%1$d de %2$d treino</item>
+        <item quantity="many">%1$d de %2$d treinos</item>
+        <item quantity="other">%1$d de %2$d treinos</item>
+    </plurals>
+    <string name="glow_goals_personal_bests">Recordes pessoais</string>
+    <string name="glow_goals_no_bests">Os teus recordes aparecem aqui depois dos primeiros treinos.</string>
+    <string name="glow_goals_badges">Medalhas</string>
+    <string name="glow_goals_next_badge">Próxima medalha</string>
+    <string name="glow_goals_not_set">Ainda não definido</string>
+    <string name="glow_goals_not_earned">Ainda não ganha</string>
+    <string name="glow_goals_earned_on">Ganha a %1$s</string>
+    <string name="glow_goals_badge_described">%1$s, %2$s</string>
+    <string name="glow_goals_counts_rule">Os treinos contam a partir de 10 minutos, quando os começas ou os guardas.</string>
+    <string name="glow_goals_best_fastest_how">O teu tempo mais rápido em %1$s, dentro de qualquer corrida medida por GPS.</string>
+    <string name="glow_goals_best_longest_run_how">A tua corrida mais longa medida por GPS.</string>
+    <string name="glow_goals_best_longest_workout_how">O treino mais longo que começaste, em tempo em movimento.</string>
+    <string name="glow_goals_best_lift_how">A série mais pesada que registaste neste exercício, com as repetições.</string>
+    <string name="glow_goals_best_steps_how">O máximo de passos que a strap contou num só dia.</string>
+    <string name="glow_goals_all_badges">Todas as medalhas</string>
+    <string name="glow_goals_last_week">Semana passada</string>
+    <string name="glow_goals_celebrations">Celebrações</string>
+    <string name="glow_goals_earned_count">%1$d de %2$d ganhas</string>
+    <string name="glow_goals_group_firsts">Primeiras vezes</string>
+    <string name="glow_goals_group_milestones">Marcos</string>
+    <string name="glow_goals_group_kinds">Algo novo</string>
+    <string name="glow_goals_weekly_goal">Objetivo semanal</string>
+    <string name="glow_goals_sheet_note">Uma alteração aplica-se a esta semana. As semanas passadas mantêm o objetivo que tinham.</string>
+    <string name="glow_goals_your_week">A tua semana</string>
+    <string name="glow_goals_goal_met">Objetivo cumprido</string>
+    <plurals name="glow_goals_weekly_streak">
+        <item quantity="one">Objetivo cumprido %d semana seguida</item>
+        <item quantity="many">Objetivo cumprido %d semanas seguidas</item>
+        <item quantity="other">Objetivo cumprido %d semanas seguidas</item>
+    </plurals>
+    <plurals name="glow_goals_short_of_goal">
+        <item quantity="one">Faltou %d treino para o objetivo</item>
+        <item quantity="many">Faltaram %d treinos para o objetivo</item>
+        <item quantity="other">Faltaram %d treinos para o objetivo</item>
+    </plurals>
+    <string name="glow_goals_highlights">Destaques</string>
+    <string name="glow_goals_best">%1$s, %2$s</string>
+    <string name="glow_goals_in_all">No total</string>
+    <plurals name="glow_goals_workouts_count">
+        <item quantity="one">%d treino</item>
+        <item quantity="many">%d treinos</item>
+        <item quantity="other">%d treinos</item>
+    </plurals>
+    <string name="glow_goals_hours">Horas</string>
+    <string name="glow_goals_distance">Distância</string>
+    <string name="glow_goals_active_kcal">kcal ativas</string>
+    <string name="glow_goals_next_week">Próxima semana: %1$d</string>
+    <string name="glow_goals_share_week">Partilhar semana</string>
+    <plurals name="glow_goals_workouts_word" tools:ignore="ImpliedQuantity">
+        <item quantity="one">treino</item>
+        <item quantity="many">treinos</item>
+        <item quantity="other">treinos</item>
+    </plurals>
+    <string name="glow_goals_story_goal">%1$s, objetivo %2$d</string>
+    <plurals name="glow_goals_weeks_in_a_row">
+        <item quantity="one">%d semana seguida</item>
+        <item quantity="many">%d semanas seguidas</item>
+        <item quantity="other">%d semanas seguidas</item>
+    </plurals>
+</resources>

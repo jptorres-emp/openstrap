@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="core_day_today">Hoje</string>
+    <string name="core_day_yesterday">Ontem</string>
+    <string name="core_day_today_in_sentence">hoje</string>
+    <string name="core_day_yesterday_in_sentence">ontem</string>
+    <string name="core_day_at">%1$s às %2$s</string>
+    <string name="core_day_done_today">hoje às %1$s</string>
+    <string name="core_day_done_yesterday">ontem às %1$s</string>
+    <string name="core_day_done_on">a %1$s</string>
+</resources>

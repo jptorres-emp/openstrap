@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="glow_sleep_breathing_title">Perturbações respiratórias</string>
+    <string name="glow_sleep_last_night">A noite passada</string>
+    <string name="glow_sleep_score_adjusted">%1$s, ajustada</string>
+    <string name="glow_sleep_restore">Recuperar</string>
+    <string name="glow_sleep_stage_span">%1$s, %2$s, %3$d min</string>
+    <string name="glow_sleep_vitals_title">Sinais vitais da noite</string>
+    <string name="glow_sleep_vitals_note">Face ao teu normal</string>
+    <string name="glow_sleep_regularity_title">Regularidade do sono</string>
+    <string name="glow_sleep_last_7_nights">Últimas 7 noites</string>
+    <string name="glow_sleep_regularity_none">Sem sono registado nas últimas 7 noites</string>
+    <string name="glow_sleep_an_hour">por hora</string>
+    <string name="glow_sleep_scrubbed">%1$s %2$s</string>
+    <string name="glow_sleep_week_average">Média das últimas 7 noites</string>
+    <string name="glow_sleep_no_scores">Sem pontuações</string>
+    <string name="glow_sleep_in_last_7_nights">Nas últimas 7 noites</string>
+    <string name="glow_sleep_no_score">Sem pontuação</string>
+    <string name="glow_sleep_what_shaped">O que moldou a pontuação</string>
+    <string name="glow_sleep_no_scores_week">Ainda sem pontuações de sono nas últimas 7 noites.</string>
+    <string name="glow_sleep_adjust_times">Ajustar horas</string>
+    <string name="glow_sleep_delete_text">%1$s. %2$s</string>
+    <string name="glow_sleep_undo">Anular</string>
+    <string name="glow_sleep_heart_rate">Frequência cardíaca</string>
+    <string name="glow_sleep_heart_note">Mínimo %1$d, média %2$d bpm</string>
+    <string name="glow_sleep_breathing_note">Média de %1$s resp/min</string>
+    <string name="glow_sleep_breathing_rate">Frequência respiratória</string>
+    <string name="glow_sleep_unit_breaths">resp/min</string>
+    <string name="glow_sleep_scrub_at">%1$s às %2$s</string>
+    <string name="glow_sleep_no_sleep">Sem sono</string>
+    <string name="glow_sleep_none_week">Sem sono registado nas últimas 7 noites.</string>
+    <string name="glow_sleep_usually_asleep">Normalmente a dormir às</string>
+    <string name="glow_sleep_usually_up">Normalmente a pé às</string>
+    <string name="glow_sleep_no_naps_today">Sem sestas registadas hoje.</string>
+    <string name="glow_sleep_no_naps_that_day">Sem sestas registadas nesse dia.</string>
+    <string name="glow_sleep_use_strap_times">Usar as horas da strap</string>
+    <string name="glow_sleep_naps_none">Nenhuma nesse dia</string>
+</resources>

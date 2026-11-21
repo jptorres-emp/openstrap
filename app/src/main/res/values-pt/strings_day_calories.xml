@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="day_calories_row_line">Ativas, objetivo %1$s. Total %2$s</string>
+    <string name="day_calories_row_line_met">Ativas, objetivo cumprido. Total %1$s</string>
+    <string name="day_calories_day_label_today">kcal ativas até agora hoje</string>
+    <string name="day_calories_day_label">kcal ativas</string>
+    <string name="day_calories_to_goal">Faltam %1$s para o teu objetivo de %2$s</string>
+    <string name="day_calories_to_goal_met">Objetivo de %1$s cumprido</string>
+    <string name="day_calories_peak">Pico às %1$s, %2$s kcal</string>
+    <string name="day_calories_hour_label">kcal ativas, %1$s</string>
+    <string name="day_calories_source_workout_line">%1$s, %2$s</string>
+    <string name="day_calories_source_walking">A andar</string>
+    <string name="day_calories_source_everyday">Movimento do dia a dia</string>
+    <string name="day_calories_source_everyday_line">Estar de pé, tarefas e deslocações</string>
+    <string name="day_calories_walking_none">Sem caminhadas fora dos treinos</string>
+    <plurals name="day_calories_walking">
+        <item quantity="one">%1$d min a andar ou a correr, fora dos treinos</item>
+        <item quantity="many">%1$d min a andar ou a correr, fora dos treinos</item>
+        <item quantity="other">%1$d min a andar ou a correr, fora dos treinos</item>
+    </plurals>
+    <string name="day_calories_range_label_year">kcal ativas por dia, últimos 12 meses</string>
+    <plurals name="day_calories_range_label">
+        <item quantity="one">kcal ativas por dia, último %1$d dia</item>
+        <item quantity="many">kcal ativas por dia, últimos %1$d dias</item>
+        <item quantity="other">kcal ativas por dia, últimos %1$d dias</item>
+    </plurals>
+    <string name="day_calories_goal_days">Objetivo cumprido em %1$d de %2$s</string>
+    <plurals name="day_calories_days">
+        <item quantity="one">%1$d dia</item>
+        <item quantity="many">%1$d dias</item>
+        <item quantity="other">%1$d dias</item>
+    </plurals>
+    <string name="day_calories_vs_year">vs. o ano anterior</string>
+    <plurals name="day_calories_vs_days">
+        <item quantity="one">vs. o %1$d dia anterior</item>
+        <item quantity="many">vs. os %1$d dias anteriores</item>
+        <item quantity="other">vs. os %1$d dias anteriores</item>
+    </plurals>
+    <string name="day_calories_range_workouts">Os treinos deram %1$d%% das tuas kcal ativas. O resto veio de andar e de te mexeres.</string>
+    <string name="day_calories_range_busiest">O teu dia mais ativo foi %1$s, com %2$s kcal ativas.</string>
+    <string name="day_calories_in_your_day_phone_today">Esta sessão de %1$s vale %2$s das %3$s kcal ativas de hoje. O teu dia conta o mesmo valor.</string>
+    <string name="day_calories_in_your_day_phone_yesterday">Esta sessão de %1$s vale %2$s das %3$s kcal ativas de ontem. O teu dia conta o mesmo valor.</string>
+    <string name="day_calories_in_your_day_phone_that_day">Esta sessão de %1$s vale %2$s das %3$s kcal ativas desse dia. O teu dia conta o mesmo valor.</string>
+    <string name="day_calories_in_your_day_strap_today">Esta sessão de %1$s vale %2$s das %3$s kcal ativas de hoje. O dia conta-a pelo valor da própria strap.</string>
+    <string name="day_calories_in_your_day_strap_yesterday">Esta sessão de %1$s vale %2$s das %3$s kcal ativas de ontem. O dia conta-a pelo valor da própria strap.</string>
+    <string name="day_calories_in_your_day_strap_that_day">Esta sessão de %1$s vale %2$s das %3$s kcal ativas desse dia. O dia conta-a pelo valor da própria strap.</string>
+</resources>

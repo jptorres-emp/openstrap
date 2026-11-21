@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="core_body_title">Alguns sinais do corpo estão fora do teu normal</string>
+    <string name="core_body_short">Alguns sinais estão fora do normal</string>
+    <string name="core_body_causes">Pode acontecer com treino pesado, álcool, viagens, sono fraco ou quando o corpo está a combater alguma coisa.</string>
+    <string name="core_body_advice">Um dia mais leve pode ajudar. Se te sentires mal, falar com um profissional de saúde pode ajudar.</string>
+    <string name="core_body_disclaimer">Isto é uma estimativa de bem-estar, não uma avaliação médica.</string>
+    <string name="core_body_push_several_again">Vários dos teus sinais noturnos (%1$s) estão fora do teu intervalo normal há duas noites ou mais.</string>
+    <string name="core_body_push_several_once">Vários dos teus sinais noturnos (%1$s) estiveram fora do teu intervalo normal na noite passada.</string>
+    <string name="core_body_push_one_again">A tua %1$s durante a noite está fora do teu intervalo normal há duas noites ou mais.</string>
+    <string name="core_body_push_one_once">A tua %1$s durante a noite esteve fora do teu intervalo normal na noite passada.</string>
+    <string name="core_body_family_cardiac">frequência cardíaca em repouso</string>
+    <string name="core_body_family_thermal">temperatura da pele</string>
+    <string name="core_body_family_respiratory">frequência respiratória</string>
+    <string name="core_body_signal_rhr">frequência cardíaca em repouso %1$d bpm acima</string>
+    <string name="core_body_signal_temperature">temperatura da pele acima do teu normal</string>
+    <string name="core_body_signal_breathing">frequência respiratória %1$s/min acima</string>
+    <string name="core_body_signal_hrv">VFC bem abaixo do teu normal</string>
+    <string name="core_checkin_poor">Mal</string>
+    <string name="core_checkin_low">Em baixo</string>
+    <string name="core_checkin_ok">OK</string>
+    <string name="core_checkin_good">Bem</string>
+    <string name="core_checkin_great">Ótimo</string>
+</resources>

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="glow_celebrate_personal_best">Recorde pessoal</string>
+    <string name="glow_celebrate_settings">Celebrações</string>
+    <string name="glow_celebrate_goal_met">Objetivo semanal cumprido</string>
+    <string name="glow_celebrate_goal_note">Aparece uma vez por semana, quando atinges o teu objetivo.</string>
+    <string name="glow_celebrate_title">Celebrações</string>
+    <string name="glow_celebrate_sheet_note">Sem séries a manter e sem lembretes insistentes. Só estas duas.</string>
+    <string name="glow_celebrate_goal_moment">Momento do objetivo semanal</string>
+    <string name="glow_celebrate_goal_moment_line">Um ecrã inteiro uma vez por semana, quando atinges o teu objetivo</string>
+    <string name="glow_celebrate_recap">Resumo semanal</string>
+    <string name="glow_celebrate_recap_line">Uma notificação à segunda de manhã sobre a tua semana</string>
+    <string name="glow_celebrate_history_title">Dos teus treinos até agora</string>
+    <plurals name="glow_celebrate_history_badges">
+        <item quantity="one">%d medalha já ganha. As novas aparecem no resumo depois de um treino.</item>
+        <item quantity="many">%d medalhas já ganhas. As novas aparecem no resumo depois de um treino.</item>
+        <item quantity="other">%d medalhas já ganhas. As novas aparecem no resumo depois de um treino.</item>
+    </plurals>
+</resources>

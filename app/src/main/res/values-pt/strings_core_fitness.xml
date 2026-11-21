@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="core_strength_bench_press">Supino</string>
+    <string name="core_strength_squat">Agachamento</string>
+    <string name="core_strength_deadlift">Peso morto</string>
+    <string name="core_strength_overhead_press">Press militar</string>
+    <string name="core_strength_barbell_row">Remada com barra</string>
+    <string name="core_strength_pull_up">Elevação na barra</string>
+    <string name="core_strength_lat_pulldown">Puxada na polia</string>
+    <string name="core_strength_romanian_deadlift">Peso morto romeno</string>
+    <string name="core_strength_hip_thrust">Hip thrust</string>
+    <string name="core_strength_leg_press">Leg press</string>
+    <string name="core_strength_lunge">Afundo</string>
+    <string name="core_strength_dumbbell_curl">Curl com halteres</string>
+    <string name="core_strength_triceps_extension">Extensão de tríceps</string>
+    <string name="core_strength_push_up">Flexão</string>
+    <string name="core_strength_dips">Fundos</string>
+    <string name="core_strength_plank">Prancha</string>
+    <string name="core_vo2_activity_inactive">Inativo, ou pouco além das atividades do dia a dia</string>
+    <string name="core_vo2_activity_light">Atividade leve, pelo menos 10 minutos de cada vez, 5 ou mais dias por semana</string>
+    <string name="core_vo2_activity_aerobic_low">Exercício aeróbico de 20 a 60 minutos por semana</string>
+    <string name="core_vo2_activity_aerobic_mid">Exercício aeróbico de 1 a 3 horas por semana</string>
+    <string name="core_vo2_activity_aerobic_high">Exercício aeróbico mais de 3 horas por semana</string>
+</resources>

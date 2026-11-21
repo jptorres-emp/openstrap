@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="core_healthspan_habit_strength">Treino de força</string>
+    <string name="core_healthspan_habit_vo2max">Forma física (VO2 máx)</string>
+    <string name="core_healthspan_habit_steps">Passos</string>
+    <string name="core_healthspan_habit_regularity">Regularidade do sono</string>
+    <string name="core_healthspan_habit_resting_hr">Frequência cardíaca em repouso</string>
+    <string name="core_healthspan_habit_time_asleep">Tempo a dormir</string>
+    <string name="core_healthspan_withheld_no_age">Junta o teu ano de nascimento ao perfil para veres a tua Idade dos hábitos.</string>
+    <string name="core_healthspan_withheld_age">A Idade dos hábitos é para idades dos 20 aos 79 anos.</string>
+    <string name="core_healthspan_withheld_sex">Junta o teu sexo ao perfil: os valores típicos são diferentes para mulheres e homens.</string>
+    <string name="core_healthspan_withheld_medication">Não aparece se tomares betabloqueadores ou durante a gravidez: aí a frequência cardíaca em repouso não reflete a forma física.</string>
+    <string name="core_healthspan_withheld_learning">Precisa de 30 dias de uso antes da primeira estimativa.</string>
+    <string name="core_healthspan_withheld_resting_hr">Precisa da frequência cardíaca em repouso em cerca de metade das noites recentes.</string>
+    <string name="core_healthspan_withheld_steps">Precisa de cerca de metade dos dias recentes com 10 horas ou mais de uso.</string>
+    <string name="core_healthspan_withheld_regularity">Precisa de mais semanas de regularidade do sono.</string>
+    <string name="core_healthspan_withheld_sleep">Precisa de sono em cerca de metade das noites recentes.</string>
+</resources>

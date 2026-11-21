@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="day_tab_today">Hoje</string>
+    <string name="day_tab_recovery">Recuperação</string>
+    <string name="day_tab_sleep">Sono</string>
+    <string name="day_tab_activity">Atividade</string>
+    <string name="day_hc_unavailable">O Health Connect não está disponível neste telemóvel.</string>
+    <string name="day_hc_install_first">Instala primeiro o Health Connect.</string>
+    <string name="day_hc_not_granted">O unstrap não tem autorização do Health Connect.</string>
+    <string name="day_bluetooth_required">O unstrap precisa de Dispositivos próximos para chegar à tua strap.</string>
+    <string name="day_bluetooth_required_location">O unstrap precisa de acesso à localização para encontrar a tua strap. Não usa a tua localização.</string>
+    <string name="day_location_declined">Sem localização, a distância vem dos passos da strap.</string>
+    <string name="day_nearby_title">Permitir Dispositivos próximos</string>
+    <string name="day_nearby_text">O unstrap precisa de Dispositivos próximos para encontrar e ligar à tua strap. O Android não volta a perguntar, por isso ativa-o nas definições do unstrap, em Autorizações.</string>
+    <string name="day_nearby_title_location">Permitir localização</string>
+    <string name="day_nearby_text_location">No Android 11, o unstrap precisa de acesso à localização para encontrar e ligar à tua strap. Não usa a tua localização. O Android não volta a perguntar, por isso ativa-o nas definições do unstrap, em Autorizações.</string>
+    <string name="day_nearby_open_settings">Abrir definições</string>
+    <string name="day_nearby_not_now">Agora não</string>
+    <string name="day_location_blocked_text">Os treinos com GPS precisam de acesso à localização. O Android não volta a perguntar, por isso ativa-o nas definições do unstrap, em Autorizações.</string>
+    <string name="day_notifications_blocked_title">Permitir notificações</string>
+    <string name="day_notifications_blocked_text">O unstrap mostra o teu treino e o estado da strap numa notificação. O Android não volta a perguntar, por isso ativa-as nas definições do unstrap, em Notificações.</string>
+    <string name="day_pull_sync_failed">Não foi possível sincronizar. %1$s</string>
+    <string name="day_pull_not_connected">A strap não está ligada.</string>
+    <string name="day_pull_syncing">A sincronizar a strap…</string>
+    <string name="day_pull_release">Solta para sincronizar a strap</string>
+    <string name="day_pull_pull">Puxa para sincronizar a strap</string>
+</resources>

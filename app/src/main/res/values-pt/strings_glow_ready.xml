@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="glow_choose_title">Começar um treino</string>
+    <string name="glow_choose_search_all">Procurar todos os desportos</string>
+    <string name="glow_choose_recent">Recentes</string>
+    <string name="glow_choose_all_sports">Todos os desportos</string>
+    <string name="glow_choose_more_sports">Mais desportos</string>
+    <string name="glow_choose_more_sports_detail">Ténis, padel, dança e os restantes</string>
+    <string name="glow_choose_your_usual">O teu habitual</string>
+    <string name="glow_choose_start">Começar</string>
+    <string name="glow_choose_outdoors">Ao ar livre</string>
+    <string name="glow_choose_pick_title">Escolhe um desporto</string>
+    <string name="glow_choose_search">Procurar</string>
+    <string name="glow_choose_sports">Desportos</string>
+    <string name="glow_choose_no_match">Nenhum desporto corresponde a «%1$s».</string>
+    <string name="glow_choose_clear">Limpar</string>
+    <plurals name="glow_choose_sports_count">
+        <item quantity="one">%d desporto</item>
+        <item quantity="many">%d desportos</item>
+        <item quantity="other">%d desportos</item>
+    </plurals>
+    <string name="glow_ready_strap_disconnected">A tua strap está desligada. A gravação funciona sem ela, mas sem frequência cardíaca ao vivo.</string>
+    <string name="glow_ready_connect">Ligar a strap</string>
+    <string name="glow_ready_bpm_live">bpm, ao vivo da tua strap</string>
+    <string name="glow_ready_plan_description">%1$s. %2$s</string>
+    <string name="glow_ready_shorter">Mais curto</string>
+    <string name="glow_ready_longer">Mais longo</string>
+    <string name="glow_ready_save_title">%1$s %2$s</string>
+    <string name="glow_ready_with">com</string>
+    <string name="glow_ready_rest_between">de descanso entre</string>
+    <string name="glow_ready_rest_after_set">de descanso após cada série</string>
+    <string name="glow_ready_with_a">com</string>
+    <string name="glow_ready_break">de pausa</string>
+    <string name="glow_ready_unit_sets">séries</string>
+    <string name="glow_ready_unit_rounds">rondas</string>
+    <string name="glow_ready_unit_s_on">s ativo</string>
+    <string name="glow_ready_unit_s_off">s pausa</string>
+    <string name="glow_ready_unit_s_a_round">s por ronda</string>
+    <plurals name="glow_ready_rounds_description">
+        <item quantity="one">%1$d ronda, %2$d s de trabalho, %3$d s de descanso</item>
+        <item quantity="many">%1$d rondas, %2$d s de trabalho, %3$d s de descanso</item>
+        <item quantity="other">%1$d rondas, %2$d s de trabalho, %3$d s de descanso</item>
+    </plurals>
+</resources>

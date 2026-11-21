@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="update_summary_ready">unstrap %1$s pronto a instalar</string>
+    <string name="update_summary_checking">A verificar…</string>
+    <string name="update_summary_version">Versão %1$s</string>
+    <string name="update_summary_up_to_date">Atualizado. Verificado %1$s</string>
+    <string name="update_check_checking">A verificar o GitHub…</string>
+    <string name="update_check_failed_last">Não foi possível chegar ao GitHub. Última verificação %1$s</string>
+    <string name="update_check_failed">Não foi possível chegar ao GitHub</string>
+    <string name="update_check_last">Última verificação %1$s</string>
+    <string name="update_check_never">Nunca verificado</string>
+    <string name="update_install_downloading_percent">A transferir, %1$d%%</string>
+    <string name="update_install_downloading_size">A transferir, %1$s</string>
+    <string name="update_install_installing">A instalar. O unstrap fecha quando terminar</string>
+    <string name="update_install_not_allowed">O unstrap não tem autorização para instalar apps, por isso não foi atualizado</string>
+    <string name="update_install_no_apk">Não há ficheiro da app nesta versão. Abre-a no GitHub</string>
+    <string name="update_install_after_workout">Depois do teu treino. Instalar fecha a app</string>
+    <string name="update_install_download">Transferir e instalar, %1$s</string>
+    <string name="update_megabytes">%1$.1f MB</string>
+    <string name="update_failure_network">A transferência parou. Toca para tentar de novo</string>
+    <string name="update_failure_checksum">A transferência não corresponde ao ficheiro no GitHub. Toca para tentar de novo</string>
+    <string name="update_failure_no_checksum">O GitHub não tinha forma de verificar a transferência, por isso não foi instalada</string>
+    <string name="update_failure_not_openstrap">A transferência não é o unstrap, por isso não foi instalada</string>
+    <string name="update_failure_signature">Esta cópia do unstrap está assinada com outra chave. Instala-a a partir do GitHub</string>
+    <string name="update_failure_storage">Não há espaço suficiente para a instalar</string>
+    <string name="update_failure_android">O Android não a conseguiu instalar. Toca para tentar de novo</string>
+    <string name="update_available_title">unstrap %1$s já saiu</string>
+    <string name="update_available_text">Vê as novidades e instala na página Atualizações.</string>
+    <string name="update_installed_title">Atualizado para unstrap %1$s</string>
+    <string name="update_installed_text">Toca para ver as novidades.</string>
+    <string name="update_channel_name">Atualizações da app</string>
+</resources>

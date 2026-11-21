@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="glow_tag_personal_best">Recorde pessoal</string>
+    <string name="glow_tag_best_month">Melhor do mês</string>
+    <string name="glow_tag_double_goal">Objetivo a dobrar</string>
+    <string name="glow_tag_past_goal">+%1$s acima do objetivo</string>
+    <plurals name="glow_tag_in_a_row">
+        <item quantity="one">%d dia seguido</item>
+        <item quantity="many">%d dias seguidos</item>
+        <item quantity="other">%d dias seguidos</item>
+    </plurals>
+    <string name="glow_tag_goal_met">Objetivo cumprido</string>
+    <string name="glow_tag_above_normal">Acima do normal</string>
+    <string name="glow_tag_below_normal">Abaixo do normal</string>
+    <string name="glow_tag_above_usual">Acima do habitual</string>
+    <string name="glow_tag_below_usual">Abaixo do habitual</string>
+    <string name="glow_tag_short">Curto</string>
+    <string name="glow_tag_long">Longo</string>
+    <string name="glow_tag_later">Mais tarde</string>
+    <string name="glow_tag_earlier">Mais cedo</string>
+    <string name="glow_tag_older">Mais velho</string>
+    <string name="glow_tag_younger">Mais jovem</string>
+    <string name="glow_tag_more_than_usual">Mais do que o habitual</string>
+    <string name="glow_tag_up">A subir</string>
+    <string name="glow_tag_down">A descer</string>
+</resources>

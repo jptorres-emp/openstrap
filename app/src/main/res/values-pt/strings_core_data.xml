@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="core_data_recovery_hrv">%1$s ms, %2$s%% vs. habitual</string>
+    <string name="core_data_recovery_resting_hr">%1$s bpm, %2$s vs. habitual</string>
+    <string name="core_data_recovery_asleep">%1$s a dormir</string>
+    <string name="core_data_recovery_no_debt">Sem dívida de sono</string>
+    <string name="core_data_recovery_debt">%1$s de dívida de sono</string>
+    <string name="core_data_recovery_lowest_hr">Frequência cardíaca mais baixa %1$s antes de acordar</string>
+    <string name="core_data_recovery_temperature">%1$s °C vs. habitual</string>
+    <string name="core_data_recovery_breathing">%1$s/min vs. habitual</string>
+    <string name="core_data_recovery_blood_oxygen">%1$s%%, %2$s vs. habitual</string>
+    <string name="core_data_recovery_load">Carga %1$s, habitual %2$s</string>
+    <string name="core_data_edit_wake_before_sleep">Acordar tem de ser depois de adormecer.</string>
+    <string name="core_data_edit_nap_too_short">Uma sesta precisa de pelo menos 5 minutos.</string>
+    <string name="core_data_edit_sleep_too_short">O sono precisa de pelo menos uma hora.</string>
+    <string name="core_data_edit_nap_too_long">Uma sesta pode ter no máximo 4 horas.</string>
+    <string name="core_data_edit_sleep_too_long">O sono pode ter no máximo 16 horas.</string>
+    <string name="core_data_edit_future">Isso é mais tarde do que agora.</string>
+    <string name="core_data_edit_too_far">Fica a menos de 3 horas do que a strap registou.</string>
+    <string name="core_data_edit_runs_into_nap">Isso sobrepõe-se à tua sesta das %1$s.</string>
+    <string name="core_data_edit_runs_into_sleep">Isso sobrepõe-se ao teu sono das %1$s.</string>
+    <string name="core_data_vo2_needs_age">Precisa de uma idade entre 20 e 79 anos.</string>
+    <string name="core_data_vo2_needs_sex">Precisa do teu sexo: a equação é diferente para mulheres e homens.</string>
+    <string name="core_data_vo2_needs_body">Precisa de peso e altura registados nos últimos 90 dias.</string>
+    <string name="core_data_vo2_needs_activity">Responde à pergunta sobre atividade (feita a cada 6 meses).</string>
+    <string name="core_data_vo2_medication">Não aparece se tomares betabloqueadores ou durante a gravidez: aí a frequência cardíaca em repouso não reflete a forma física.</string>
+    <string name="core_data_vo2_needs_resting_hr">Precisa de pelo menos 5 noites de frequência cardíaca em repouso nas últimas 2 semanas.</string>
+    <string name="core_data_vo2_band_below_30">Abaixo do percentil 30</string>
+    <string name="core_data_vo2_band_30_50">Percentil 30 a 50</string>
+    <string name="core_data_vo2_band_50_70">Percentil 50 a 70</string>
+    <string name="core_data_vo2_band_70_90">Percentil 70 a 90</string>
+    <string name="core_data_vo2_band_top_10">Top %1$d%%</string>
+    <string name="core_data_vo2_estimate_rest">a %1$s ml/kg/min</string>
+    <string name="core_data_goal_summary">%1$s passos, %2$s kcal ativas, %3$s de sono, %4$s horas ativas</string>
+    <string name="core_data_goal_out_of_range">Escolhe um número de %1$s a %2$s</string>
+</resources>

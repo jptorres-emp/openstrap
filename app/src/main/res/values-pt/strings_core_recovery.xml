@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="core_recovery_quality_hrv">VFC %1$d ms aqui, %2$d ms da strap</string>
+    <string name="core_recovery_quality_rhr">Frequência cardíaca em repouso %1$d bpm aqui, %2$d bpm da strap</string>
+    <string name="core_recovery_cause_hard_day">um dia de treino duro</string>
+    <string name="core_regularity_irregular">Irregular</string>
+    <string name="core_regularity_fair">Razoável</string>
+    <string name="core_regularity_regular">Regular</string>
+    <string name="core_regularity_very_regular">Muito regular</string>
+</resources>

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <plurals name="day_week_active_minutes">
+        <item quantity="one">%1$d minuto ativo</item>
+        <item quantity="many">%1$d minutos ativos</item>
+        <item quantity="other">%1$d minutos ativos</item>
+    </plurals>
+    <string name="day_week_asleep">%1$s a dormir</string>
+    <plurals name="day_week_busiest">
+        <item quantity="one">Mais ativo: %2$s, %1$s passo.</item>
+        <item quantity="many">Mais ativo: %2$s, %1$s passos.</item>
+        <item quantity="other">Mais ativo: %2$s, %1$s passos.</item>
+    </plurals>
+    <string name="day_week_workouts_none">Sem treinos esta semana nem na anterior.</string>
+    <plurals name="day_week_workouts_same">
+        <item quantity="one">%1$d treino, tantos como na semana anterior.</item>
+        <item quantity="many">%1$d treinos, tantos como na semana anterior.</item>
+        <item quantity="other">%1$d treinos, tantos como na semana anterior.</item>
+    </plurals>
+    <plurals name="day_week_workouts_more">
+        <item quantity="one">%1$d treino, mais %2$d do que na semana anterior.</item>
+        <item quantity="many">%1$d treinos, mais %2$d do que na semana anterior.</item>
+        <item quantity="other">%1$d treinos, mais %2$d do que na semana anterior.</item>
+    </plurals>
+    <plurals name="day_week_workouts_fewer">
+        <item quantity="one">%1$d treino, menos %2$d do que na semana anterior.</item>
+        <item quantity="many">%1$d treinos, menos %2$d do que na semana anterior.</item>
+        <item quantity="other">%1$d treinos, menos %2$d do que na semana anterior.</item>
+    </plurals>
+    <string name="day_week_steps_up">Passos a subir %1$d%% face à semana anterior.</string>
+    <string name="day_week_steps_down">Passos a descer %1$d%% face à semana anterior.</string>
+    <string name="day_week_steps_steady">Passos estáveis face à semana anterior.</string>
+    <string name="day_week_label">passos por dia, %1$s</string>
+    <string name="day_week_nothing">Nada registado</string>
+</resources>

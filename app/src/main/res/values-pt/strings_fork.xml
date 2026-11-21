@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="fork_weight_row">Peso</string>
+    <string name="fork_weight_line_none">Regista-o para veres a tendência</string>
+    <string name="fork_weight_line">%1$s, média de 7 dias %2$s</string>
+    <string name="fork_weight_kg">%1$.1f kg</string>
+    <string name="fork_weight_lb">%1$.1f lb</string>
+    <string name="fork_weight_unit_kg">kg</string>
+    <string name="fork_weight_unit_lb">lb</string>
+    <string name="fork_weight_title">Peso</string>
+    <string name="fork_weight_note">Pesa-te de manhã, antes do pequeno-almoço. A média de 7 dias mostra a tendência por entre os altos e baixos do dia a dia. Guardar também define o peso do teu perfil.</string>
+    <string name="fork_weight_field">Peso de hoje</string>
+    <string name="fork_weight_average">Média de 7 dias %1$s</string>
+    <string name="fork_weight_down">%1$s a menos do que nos 7 dias anteriores</string>
+    <string name="fork_weight_up">%1$s a mais do que nos 7 dias anteriores</string>
+    <string name="fork_weight_same">Igual aos 7 dias anteriores</string>
+    <string name="fork_weight_chart">A tua média de peso de 7 dias, semana a semana: %1$s e depois %2$s</string>
+    <string name="fork_sleep_performance_line">%1$d%% do sono de que precisas</string>
+    <string name="fork_sleep_performance">Desempenho</string>
+    <string name="fork_sleep_efficiency">Eficiência</string>
+    <string name="fork_percent">%1$d%%</string>
+</resources>

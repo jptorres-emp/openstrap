@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="core_activity_pace_more_now">Mais do que o habitual a esta hora</string>
+    <string name="core_activity_pace_about_now">Perto do habitual a esta hora</string>
+    <string name="core_activity_pace_fewer_now">Menos do que o habitual a esta hora</string>
+    <string name="core_activity_pace_more_day">Mais do que num dia habitual</string>
+    <string name="core_activity_pace_about_day">Perto de um dia habitual</string>
+    <string name="core_activity_pace_fewer_day">Menos do que num dia habitual</string>
+    <string name="core_activity_goal_met">Objetivo cumprido</string>
+    <string name="core_activity_goal_share">%1$d%% do teu objetivo</string>
+    <string name="core_activity_line_more_now">%1$s, mais do que o habitual a esta hora</string>
+    <string name="core_activity_line_about_now">%1$s, perto do habitual a esta hora</string>
+    <string name="core_activity_line_fewer_now">%1$s, menos do que o habitual a esta hora</string>
+    <string name="core_activity_line_more_day">%1$s, mais do que num dia habitual</string>
+    <string name="core_activity_line_about_day">%1$s, perto de um dia habitual</string>
+    <string name="core_activity_line_fewer_day">%1$s, menos do que num dia habitual</string>
+    <string name="core_activity_hour_label">passos, das %1$s às %2$s</string>
+    <string name="core_activity_points_at_aim">No objetivo</string>
+    <string name="core_activity_points_week_met">O que conta é manter %1$d ou mais semana após semana.</string>
+    <string name="core_activity_points_week_to_go">Faltam %1$d para %2$d.</string>
+    <plurals name="core_activity_points_drop_off">
+        <item quantity="one">Amanhã, o %1$d ponto de %2$s deixa de contar.</item>
+        <item quantity="many">Amanhã, os %1$d pontos de %2$s deixam de contar.</item>
+        <item quantity="other">Amanhã, os %1$d pontos de %2$s deixam de contar.</item>
+    </plurals>
+    <string name="core_activity_points_earned">pontos ganhos, %1$s</string>
+    <string name="core_activity_points_month_under">Abaixo de %1$d todos os dias nos últimos 30, entre %2$d e %3$d.</string>
+    <string name="core_activity_points_month_all">Com %1$d ou mais em todos os dias com total nos últimos 30.</string>
+    <plurals name="core_activity_points_month_some">
+        <item quantity="one">Com %1$d ou mais em %2$d de %3$d dia nos últimos 30.</item>
+        <item quantity="many">Com %1$d ou mais em %2$d de %3$d dias nos últimos 30.</item>
+        <item quantity="other">Com %1$d ou mais em %2$d de %3$d dias nos últimos 30.</item>
+    </plurals>
+    <string name="core_activity_active_goal_met">Objetivo cumprido</string>
+    <string name="core_activity_active_week_at">Mesmo nos %1$d a atingir.</string>
+    <string name="core_activity_active_week_past">%1$d acima dos %2$d a atingir.</string>
+    <string name="core_activity_active_week_to_go">Faltam %1$d para %2$d.</string>
+    <plurals name="core_activity_minutes">
+        <item quantity="one">%1$d minuto</item>
+        <item quantity="many">%1$d minutos</item>
+        <item quantity="other">%1$d minutos</item>
+    </plurals>
+    <string name="core_activity_active_none_today">Ainda sem minutos ativos hoje.</string>
+    <string name="core_activity_active_none_day">Sem minutos ativos nesse dia.</string>
+    <string name="core_activity_active_brisk_today">Hoje, até agora, %1$s de movimento acelerado.</string>
+    <string name="core_activity_active_brisk_day">Nesse dia, %1$s de movimento acelerado.</string>
+    <string name="core_activity_active_hard_today">Hoje, até agora, %1$s de esforço intenso.</string>
+    <string name="core_activity_active_hard_day">Nesse dia, %1$s de esforço intenso.</string>
+    <string name="core_activity_active_both_today">Hoje, até agora, %1$s em ritmo acelerado e %2$s de esforço intenso.</string>
+    <string name="core_activity_active_both_day">Nesse dia, %1$s em ritmo acelerado e %2$s de esforço intenso.</string>
+    <string name="core_activity_usual_band">O teu habitual, de %1$d a %2$d</string>
+    <string name="core_activity_load_long_run_today">A tua corrida de hoje foi %1$d%% mais longa do que a mais longa do mês anterior. Quem alonga uma corrida mais de 10%% de cada vez tem mais probabilidade de se lesionar, por isso aumenta aos poucos.</string>
+    <string name="core_activity_load_long_run_day">A tua corrida desse dia foi %1$d%% mais longa do que a mais longa do mês anterior. Quem alonga uma corrida mais de 10%% de cada vez tem mais probabilidade de se lesionar, por isso aumenta aos poucos.</string>
+    <string name="core_activity_load_learning">O teu habitual aparece após uma semana de uso.</string>
+    <string name="core_activity_load_harder_today">Hoje, até agora, pelo menos tão duro como %1$d%% dos teus dias dos últimos 3 meses.</string>
+    <string name="core_activity_load_harder_day">Nesse dia, pelo menos tão duro como %1$d%% dos teus dias dos últimos 3 meses.</string>
+    <string name="core_activity_load_easier_today">Hoje, até agora, mais leve do que %1$d%% dos teus dias dos últimos 3 meses.</string>
+    <string name="core_activity_load_easier_day">Nesse dia, mais leve do que %1$d%% dos teus dias dos últimos 3 meses.</string>
+    <string name="core_activity_balance_building">Os teus últimos 7 dias estão bem acima do habitual, estás a subir a carga.</string>
+    <string name="core_activity_balance_easing">Os teus últimos 7 dias estão bem abaixo do habitual, estás a abrandar.</string>
+    <string name="core_activity_balance_steady">Os teus últimos 7 dias estão perto do habitual, uma fase estável.</string>
+    <string name="core_activity_span_none_week">Nenhum dia acima do habitual nos últimos 7 dias.</string>
+    <string name="core_activity_span_none_month">Nenhum dia acima do habitual nos últimos 30 dias.</string>
+    <string name="core_activity_span_one_week">Um dia acima do habitual nos últimos 7 dias.</string>
+    <string name="core_activity_span_one_month">Um dia acima do habitual nos últimos 30 dias.</string>
+    <plurals name="core_activity_span_days_week">
+        <item quantity="one">%1$d dia acima do habitual nos últimos 7 dias.</item>
+        <item quantity="many">%1$d dias acima do habitual nos últimos 7 dias.</item>
+        <item quantity="other">%1$d dias acima do habitual nos últimos 7 dias.</item>
+    </plurals>
+    <plurals name="core_activity_span_days_month">
+        <item quantity="one">%1$d dia acima do habitual nos últimos 30 dias.</item>
+        <item quantity="many">%1$d dias acima do habitual nos últimos 30 dias.</item>
+        <item quantity="other">%1$d dias acima do habitual nos últimos 30 dias.</item>
+    </plurals>
+    <string name="core_activity_strap_range">Intervalo produtivo da strap, de %1$d a %2$d</string>
+    <string name="core_activity_vo2_workout">Do teu treino mais recente com uma leitura utilizável.</string>
+    <string name="core_activity_vo2_profile">Estimado a partir do teu perfil e da frequência cardíaca em repouso, atualizado todas as semanas.</string>
+    <string name="core_activity_ended">%1$s às %2$s</string>
+    <string name="core_activity_recover">Contado a partir da tua sessão de %1$s, que terminou %2$s.</string>
+    <string name="core_activity_calories_at_rest">O teu corpo gasta cerca de %1$s kcal por dia em repouso, antes de qualquer movimento.</string>
+    <string name="core_activity_distance_from_steps">km, pelos teus passos</string>
+    <string name="core_activity_distance_from_strap">km, medidos pela strap</string>
+    <string name="core_activity_distance_steps_today">Em %1$s passos até agora hoje.</string>
+    <string name="core_activity_distance_steps_day">Em %1$s passos nesse dia.</string>
+</resources>

@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="glow_workout_deleted">Este treino foi apagado.</string>
+    <string name="glow_workout_untitled">Treino</string>
+    <string name="glow_workout_loading">A carregar…</string>
+    <string name="glow_workout_day_times">%1$s, %2$s</string>
+    <string name="glow_workout_zone_under">abaixo de %1$d bpm</string>
+    <string name="glow_workout_zone_range">%1$s bpm</string>
+    <string name="glow_workout_suggestion_title">Parece que treinaste</string>
+    <string name="glow_workout_suggestion_text">%1$s, %2$s, sobretudo na zona %3$d, %4$d bpm em média. Não foi gravado.</string>
+    <string name="glow_workout_suggestion_save">Guardar como treino</string>
+    <string name="glow_workout_suggestion_dismiss">Não é treino</string>
+    <string name="glow_workout_add_title">Juntar um treino</string>
+    <string name="glow_workout_add_choose_sport">Escolher o desporto</string>
+    <string name="glow_workout_add_no_heart">A strap ainda não enviou a frequência cardíaca deste dia. Sincroniza e tenta de novo.</string>
+    <string name="glow_workout_add_when">Quando foi?</string>
+    <string name="glow_workout_add_hint">Arrasta as pegas para onde o treino começou e acabou. A frequência cardíaca vem dos registos por minuto da strap.</string>
+    <string name="glow_workout_delete">Apagar este treino</string>
+    <string name="glow_workout_delete_confirm">Apagar este treino?</string>
+    <string name="glow_workout_delete_phone">A frequência cardíaca e as horas são removidas do unstrap. O histórico da própria strap mantém-se.</string>
+    <string name="glow_workout_delete_strap">A frequência cardíaca e as horas são removidas do unstrap, e a próxima sincronização não o traz de volta. O histórico da própria strap mantém-se.</string>
+    <string name="glow_workout_trim_title">Cortar início e fim</string>
+    <string name="glow_workout_undo">Anular</string>
+    <string name="glow_workout_trim_start">Cortado para começar às %1$s. Nada é apagado.</string>
+    <string name="glow_workout_trim_seconds">%1$d s</string>
+    <string name="glow_workout_trim_minutes">%1$d min</string>
+    <string name="glow_workout_trim_car">Terminado às %1$s. Ficaram de fora %2$s de condução.</string>
+    <string name="glow_workout_trim_auto">Terminado às %1$s, quando paraste. Ficaram de fora os %2$s seguintes.</string>
+    <string name="glow_workout_trim_range">Cortado, agora das %1$s. Nada é apagado.</string>
+    <string name="glow_workout_heart_by_zone">Cores por zona</string>
+    <string name="glow_workout_heart_at">Às %1$s</string>
+    <string name="glow_workout_heart_at_after">Às %1$s, depois do fim</string>
+    <string name="glow_workout_unit_bpm_average">bpm de média</string>
+    <string name="glow_workout_heart_max_lowest">Máximo %1$d, mínimo %2$d bpm</string>
+    <string name="glow_workout_heart_max">Máximo %1$d bpm</string>
+    <string name="glow_workout_heart_lowest">Mínimo %1$d bpm</string>
+    <string name="glow_workout_heart_none">A strap ainda não enviou a frequência cardíaca deste treino.</string>
+    <string name="glow_workout_heart_drop_after">Descida depois das %1$s</string>
+    <string name="glow_workout_heart_dimmed">Esbatido: %1$s veio do histórico da strap.</string>
+    <string name="glow_workout_in_your_day">No teu dia</string>
+    <string name="glow_workout_facts_title">O treino</string>
+    <string name="glow_workout_list_title">Treinos</string>
+    <plurals name="glow_workout_list_recorded">
+        <item quantity="one">%d gravado</item>
+        <item quantity="many">%d gravados</item>
+        <item quantity="other">%d gravados</item>
+    </plurals>
+    <string name="glow_workout_list_empty">Ainda sem treinos</string>
+    <string name="glow_workout_list_empty_text">Os treinos que começas no unstrap aparecem aqui, e os da própria strap depois de sincronizar.</string>
+    <string name="glow_workout_capsule_pause">Pausa</string>
+    <string name="glow_workout_capsule_next">A seguir</string>
+    <string name="glow_workout_capsule_lines">%1$s. %2$s</string>
+</resources>

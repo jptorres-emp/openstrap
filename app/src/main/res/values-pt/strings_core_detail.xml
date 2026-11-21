@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="core_detail_status_above">Acima do teu normal</string>
+    <string name="core_detail_status_below">Abaixo do teu normal</string>
+    <string name="core_detail_status_usual">Habitual</string>
+    <string name="core_detail_band_label">O teu normal, de %1$s a %2$s</string>
+    <plurals name="core_detail_learning_nights">
+        <item quantity="one">A aprender o teu normal, %1$d de %2$d noite</item>
+        <item quantity="many">A aprender o teu normal, %1$d de %2$d noites</item>
+        <item quantity="other">A aprender o teu normal, %1$d de %2$d noites</item>
+    </plurals>
+    <plurals name="core_detail_learning_days">
+        <item quantity="one">A aprender o teu normal, %1$d de %2$d dia</item>
+        <item quantity="many">A aprender o teu normal, %1$d de %2$d dias</item>
+        <item quantity="other">A aprender o teu normal, %1$d de %2$d dias</item>
+    </plurals>
+    <plurals name="core_detail_learning_nights_sentence">
+        <item quantity="one">A aprender o teu normal, %1$d de %2$d noite.</item>
+        <item quantity="many">A aprender o teu normal, %1$d de %2$d noites.</item>
+        <item quantity="other">A aprender o teu normal, %1$d de %2$d noites.</item>
+    </plurals>
+    <plurals name="core_detail_learning_days_sentence">
+        <item quantity="one">A aprender o teu normal, %1$d de %2$d dia.</item>
+        <item quantity="many">A aprender o teu normal, %1$d de %2$d dias.</item>
+        <item quantity="other">A aprender o teu normal, %1$d de %2$d dias.</item>
+    </plurals>
+    <string name="core_detail_number_0">0</string>
+    <string name="core_detail_number_1">1</string>
+    <string name="core_detail_number_2">2</string>
+    <string name="core_detail_number_3">3</string>
+    <string name="core_detail_number_4">4</string>
+    <string name="core_detail_number_5">5</string>
+    <string name="core_detail_number_6">6</string>
+    <string name="core_detail_number_7">7</string>
+    <string name="core_detail_number_8">8</string>
+    <string name="core_detail_number_9">9</string>
+    <plurals name="core_detail_nights">
+        <item quantity="one">%1$s noite</item>
+        <item quantity="many">%1$s noites</item>
+        <item quantity="other">%1$s noites</item>
+    </plurals>
+    <plurals name="core_detail_days">
+        <item quantity="one">%1$s dia</item>
+        <item quantity="many">%1$s dias</item>
+        <item quantity="other">%1$s dias</item>
+    </plurals>
+    <string name="core_detail_label_bpm_now">bpm agora</string>
+    <string name="core_detail_label_bpm_latest">bpm, última leitura</string>
+    <string name="core_detail_label_bpm_resting">bpm em repouso</string>
+    <string name="core_detail_label_bpm_resting_estimated">bpm em repouso, estimado</string>
+    <string name="core_detail_label_steps_today">passos até agora hoje</string>
+    <string name="core_detail_label_steps">passos</string>
+    <string name="core_detail_label_breathing">resp/min durante o sono</string>
+    <string name="core_detail_label_day_average">Média do dia</string>
+    <string name="core_detail_label_unit_day_average">%1$s, média do dia</string>
+    <string name="core_detail_label_stress_latest_at">%1$s, última às %2$s</string>
+    <string name="core_detail_skin_above">%1$s, acima do teu normal</string>
+    <string name="core_detail_skin_below">%1$s, abaixo do teu normal</string>
+    <string name="core_detail_skin_within">%1$s, dentro do teu normal</string>
+    <string name="core_detail_label_unit_daytime_latest_at">%1$s, de dia, última às %2$s</string>
+    <string name="core_detail_label_unit_asleep_latest_at">%1$s, a dormir, última às %2$s</string>
+    <string name="core_detail_label_steps_week">passos por dia, últimos 7 dias</string>
+    <string name="core_detail_label_steps_month">passos por dia, últimos 30 dias</string>
+    <string name="core_detail_label_steps_year">passos por dia, últimos 12 meses</string>
+    <string name="core_detail_label_average_week">Média dos últimos 7 dias</string>
+    <string name="core_detail_label_average_month">Média dos últimos 30 dias</string>
+    <string name="core_detail_label_average_year">Média dos últimos 12 meses</string>
+    <string name="core_detail_label_unit_average_week">%1$s, média dos últimos 7 dias</string>
+    <string name="core_detail_label_unit_average_month">%1$s, média dos últimos 30 dias</string>
+    <string name="core_detail_label_unit_average_year">%1$s, média dos últimos 12 meses</string>
+    <string name="core_detail_day_night_today_above">A noite passada, acima do teu normal.</string>
+    <string name="core_detail_day_night_today_below">A noite passada, abaixo do teu normal.</string>
+    <string name="core_detail_day_night_today_within">A noite passada, dentro do teu normal.</string>
+    <string name="core_detail_day_night_past_above">Nessa noite, acima do teu normal.</string>
+    <string name="core_detail_day_night_past_below">Nessa noite, abaixo do teu normal.</string>
+    <string name="core_detail_day_night_past_within">Nessa noite, dentro do teu normal.</string>
+    <string name="core_detail_day_average_today_above">A média de hoje até agora, acima do teu normal.</string>
+    <string name="core_detail_day_average_today_below">A média de hoje até agora, abaixo do teu normal.</string>
+    <string name="core_detail_day_average_today_within">A média de hoje até agora, dentro do teu normal.</string>
+    <string name="core_detail_day_average_past_above">A média desse dia, acima do teu normal.</string>
+    <string name="core_detail_day_average_past_below">A média desse dia, abaixo do teu normal.</string>
+    <string name="core_detail_day_average_past_within">A média desse dia, dentro do teu normal.</string>
+    <string name="core_detail_day_so_far_today_above">Hoje até agora, acima do teu normal.</string>
+    <string name="core_detail_day_so_far_today_below">Hoje até agora, abaixo do teu normal.</string>
+    <string name="core_detail_day_so_far_today_within">Hoje até agora, dentro do teu normal.</string>
+    <string name="core_detail_day_so_far_past_above">Nesse dia, acima do teu normal.</string>
+    <string name="core_detail_day_so_far_past_below">Nesse dia, abaixo do teu normal.</string>
+    <string name="core_detail_day_so_far_past_within">Nesse dia, dentro do teu normal.</string>
+    <string name="core_detail_none_during_sleep">Medido durante o sono</string>
+    <string name="core_detail_none_last_night">Para a noite passada</string>
+    <string name="core_detail_none_that_night">Para essa noite</string>
+    <string name="core_detail_none_so_far_today">Hoje até agora</string>
+    <string name="core_detail_none_that_day">Para esse dia</string>
+    <string name="core_detail_none_week">Nos últimos 7 dias</string>
+    <string name="core_detail_none_month">Nos últimos 30 dias</string>
+    <string name="core_detail_none_year">Nos últimos 12 meses</string>
+    <string name="core_detail_heart_day_today">Entre %1$d e %2$d bpm hoje até agora.</string>
+    <string name="core_detail_heart_day_past">Entre %1$d e %2$d bpm nesse dia.</string>
+    <string name="core_detail_run_above">Acima do teu normal durante %1$s.</string>
+    <string name="core_detail_run_below">Abaixo do teu normal durante %1$s.</string>
+    <string name="core_detail_every_night">Dentro do teu normal todas as noites.</string>
+    <string name="core_detail_every_night_with_data">Dentro do teu normal todas as noites com dados.</string>
+    <string name="core_detail_every_night_month">Dentro do teu normal todas as noites dos últimos 30 dias.</string>
+    <string name="core_detail_every_night_with_data_month">Dentro do teu normal todas as noites com dados dos últimos 30 dias.</string>
+    <string name="core_detail_every_day">Dentro do teu normal todos os dias.</string>
+    <string name="core_detail_every_day_with_data">Dentro do teu normal todos os dias com dados.</string>
+    <string name="core_detail_every_day_month">Dentro do teu normal todos os dias dos últimos 30 dias.</string>
+    <string name="core_detail_every_day_with_data_month">Dentro do teu normal todos os dias com dados dos últimos 30 dias.</string>
+    <plurals name="core_detail_inside_nights">
+        <item quantity="one">Dentro do teu normal em %1$d de %2$d noite.</item>
+        <item quantity="many">Dentro do teu normal em %1$d de %2$d noites.</item>
+        <item quantity="other">Dentro do teu normal em %1$d de %2$d noites.</item>
+    </plurals>
+    <plurals name="core_detail_inside_nights_month">
+        <item quantity="one">Dentro do teu normal em %1$d de %2$d noite dos últimos 30 dias.</item>
+        <item quantity="many">Dentro do teu normal em %1$d de %2$d noites dos últimos 30 dias.</item>
+        <item quantity="other">Dentro do teu normal em %1$d de %2$d noites dos últimos 30 dias.</item>
+    </plurals>
+    <plurals name="core_detail_inside_days">
+        <item quantity="one">Dentro do teu normal em %1$d de %2$d dia.</item>
+        <item quantity="many">Dentro do teu normal em %1$d de %2$d dias.</item>
+        <item quantity="other">Dentro do teu normal em %1$d de %2$d dias.</item>
+    </plurals>
+    <plurals name="core_detail_inside_days_month">
+        <item quantity="one">Dentro do teu normal em %1$d de %2$d dia dos últimos 30 dias.</item>
+        <item quantity="many">Dentro do teu normal em %1$d de %2$d dias dos últimos 30 dias.</item>
+        <item quantity="other">Dentro do teu normal em %1$d de %2$d dias dos últimos 30 dias.</item>
+    </plurals>
+    <string name="core_detail_year_unit">Nos últimos 12 meses, as médias semanais foram de %1$s a %2$s %3$s.</string>
+    <string name="core_detail_year">Nos últimos 12 meses, as médias semanais foram de %1$s a %2$s.</string>
+    <string name="core_detail_score_week_one">Uma pontuação nos últimos 7 dias, até agora.</string>
+    <string name="core_detail_score_week">Média de %1$d nos últimos 7 dias, de %2$d a %3$d.</string>
+    <string name="core_detail_charge_started">Começou o dia em %1$d e terminou-o em %2$d.</string>
+    <string name="core_detail_charge_ended">Terminou o dia em %1$d.</string>
+    <string name="core_detail_recovery_waiting">À espera</string>
+    <string name="core_detail_recovery_for_last_night">Para o sono da noite passada</string>
+    <string name="core_detail_recovery_no_sleep">Sem sono registado nessa noite</string>
+    <string name="core_detail_recovery_learning">A aprender</string>
+    <plurals name="core_detail_recovery_nights">
+        <item quantity="one">%1$d de %2$d noite</item>
+        <item quantity="many">%1$d de %2$d noites</item>
+        <item quantity="other">%1$d de %2$d noites</item>
+    </plurals>
+    <string name="core_detail_recovery_no_score">Sem pontuação</string>
+    <string name="core_detail_recovery_no_heart_data">Dados cardíacos insuficientes nessa noite</string>
+    <string name="core_detail_recovery_scored_mornings">Pontuada todas as manhãs a partir da noite anterior</string>
+</resources>

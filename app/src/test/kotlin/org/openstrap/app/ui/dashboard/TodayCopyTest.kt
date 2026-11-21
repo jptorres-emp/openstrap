@@ -124,8 +124,8 @@ class TodayCopyTest {
         assertEquals("A steady day. A workout and 6,000 steps.", TodayCopy.evening(listOf(OTHER_SPORT), 6_000, 8_000, LoadBand.SoFar, Locale.UK))
         assertEquals("A steady day. A ride and 6,000 steps.", TodayCopy.evening(listOf(4), 6_000, 8_000, null, Locale.UK))
         // The app's hero says the steps against the goal, since it shows the count in dots.
-        assertEquals("A quiet day. Well short of your step goal and a Load below your usual.", TodayCopy.evening(emptyList(), 2_100, 8_000, LoadBand.Below, Locale.UK, stepCount = false))
-        assertEquals("A full day. A run, past your step goal and a Load above your usual.", TodayCopy.evening(listOf(1), 13_860, 8_000, LoadBand.Above, Locale.UK, stepCount = false))
+        assertEquals("A quiet day. Steps well short of your goal and a Load below your usual.", TodayCopy.evening(emptyList(), 2_100, 8_000, LoadBand.Below, Locale.UK, stepCount = false))
+        assertEquals("A full day. A run, steps past your goal and a Load above your usual.", TodayCopy.evening(listOf(1), 13_860, 8_000, LoadBand.Above, Locale.UK, stepCount = false))
     }
 
     @Test fun `bedtime counts down and stops once passed`() {
@@ -238,9 +238,9 @@ class TodayCopyTest {
 
     @Test
     fun `steps against the goal read as words`() {
-        assertEquals("well short of your step goal", TodayCopy.stepsAgainstGoal(3_999, 8_000))
-        assertEquals("short of your step goal", TodayCopy.stepsAgainstGoal(4_000, 8_000))
-        assertEquals("close to your step goal", TodayCopy.stepsAgainstGoal(6_400, 8_000))
-        assertEquals("past your step goal", TodayCopy.stepsAgainstGoal(8_000, 8_000))
+        assertEquals("steps well short of your goal", TodayCopy.stepsAgainstGoal(3_999, 8_000))
+        assertEquals("steps short of your goal", TodayCopy.stepsAgainstGoal(4_000, 8_000))
+        assertEquals("steps close to your goal", TodayCopy.stepsAgainstGoal(6_400, 8_000))
+        assertEquals("steps past your goal", TodayCopy.stepsAgainstGoal(8_000, 8_000))
     }
 }

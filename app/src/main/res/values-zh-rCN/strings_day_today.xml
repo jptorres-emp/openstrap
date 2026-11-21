@@ -33,7 +33,7 @@
     <string name="day_pair_found">在附近找到了手环。点击进行配对。</string>
     <string name="day_pair_connecting">正在连接手环。请将其靠近手机。</string>
     <string name="day_pair_connected">已连接。正在开始首次同步。</string>
-    <string name="day_pair_failed">暂时无法连接。请将手环放在充电座上，并靠近手机。</string>
+    <string name="day_pair_failed">无法连接。如果 Zepp 应用正在运行，它可能占用了手环，请在手机的应用设置中关闭它，然后重新配对。</string>
     <string name="day_pair_key_rejected">手环拒绝配对。请打开「手环」页面重新配对。</string>
     <string name="day_first_score">首个分数</string>
     <string name="day_partial_day">未全天佩戴</string>

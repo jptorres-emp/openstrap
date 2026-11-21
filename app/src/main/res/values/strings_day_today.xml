@@ -48,7 +48,7 @@
     <string name="day_pair_found">Found a strap nearby. Pick it to pair.</string>
     <string name="day_pair_connecting">Connecting to your strap. Keep it close.</string>
     <string name="day_pair_connected">Connected. The first sync starts now.</string>
-    <string name="day_pair_failed">Couldn\'t connect yet. Keep the strap on its charger, near the phone.</string>
+    <string name="day_pair_failed">Couldn\'t connect. If the Zepp app is open it may be holding the strap, so close it in your phone\'s app settings, then pair again.</string>
     <!-- The strap refused the pairing. The Strap page is where pairing starts. -->
     <string name="day_pair_key_rejected">The strap refused to pair. Open the Strap page to pair again.</string>
 

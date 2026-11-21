@@ -465,7 +465,10 @@ private fun AppRoot(
             // enough for the detail to open beside the tab, the bar stays with the tab it belongs to.
             var barHidden by remember { mutableStateOf(false) }
             val detailOpen = nav.stack(nav.current).isNotEmpty()
-            val showBar = !rail && !barHidden && !(detailOpen && maxWidth < SideBySideWidth)
+            // The You and Strap pages (and what they open) are stepped into the same way, from the avatar and the strap
+            // chip: no bar under them either, wide or narrow, since they cover the whole tab.
+            val pageOpen = nav.pages.isNotEmpty()
+            val showBar = !rail && !barHidden && !pageOpen && !(detailOpen && maxWidth < SideBySideWidth)
             val selectTab: (Int) -> Unit = { t -> tapTab(t, nav, firmwareVm, scroll) }
             Scaffold(
                 bottomBar = {

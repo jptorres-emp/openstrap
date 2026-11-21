@@ -213,7 +213,8 @@ fun ProfileScreen(profile: UserProfile, contentPadding: PaddingValues, onSave: (
                 // Your max is set on the Heart rate zones page, with the zones that follow it.
                 NavRow(
                     org.openstrap.app.ui.workout.HeartZonesCopy.MAX_ROW,
-                    org.openstrap.app.ui.workout.HeartZonesCopy.profileLine(profile.maxHeartRate),
+                    if (profile.maxHeartRate == null && ageValue == null) stringResource(R.string.you_profile_max_no_age)
+                    else org.openstrap.app.ui.workout.HeartZonesCopy.profileLine(profile.maxHeartRate),
                     onClick = onHeartZones, below = true,
                 )
             }

@@ -16,6 +16,7 @@
     <!-- The strap refused unstrap's auth key. -->
     <string name="you_strap_state_key_rejected">Key rejected</string>
     <string name="you_strap_state_cant_connect">Can\'t connect</string>
+    <string name="you_strap_state_cant_connect_seen">Can\'t connect, last seen %1$s</string>
     <string name="you_strap_state_not_paired">No strap paired</string>
     <!-- The state, then how long ago in lower case, "Not connected, last seen 18 min ago". A phrase. -->
     <string name="you_strap_state_last_seen">Not connected, last seen %1$s</string>

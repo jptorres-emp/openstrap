@@ -48,6 +48,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -121,7 +122,8 @@ import org.openstrap.app.update.UpdateState
 
 /**
  * The line under the strap's name on the Strap page: what it's doing and when it was last heard from ("Connected.
- * Synced 2 min ago", "Last seen 18 min ago"). [lastSeen] and [now] are epoch seconds.
+ * Synced 2 min ago", "Not connected, last seen 18 min ago", "Can't connect, last seen 18 min ago"). [lastSeen] and [now]
+ * are epoch seconds.
  */
 internal fun strapStateLine(
     connection: ConnectionState,
@@ -144,8 +146,11 @@ internal fun strapStateLine(
     }
     ConnectionState.BluetoothOff -> strings.get(R.string.you_strap_state_bluetooth_off)
     ConnectionState.Connecting, ConnectionState.Authenticating -> strings.get(R.string.you_strap_state_connecting)
-    is ConnectionState.Failed ->
-        strings.get(if (connection.keyRejected) R.string.you_strap_state_key_rejected else R.string.you_strap_state_cant_connect)
+    is ConnectionState.Failed -> when {
+        connection.keyRejected -> strings.get(R.string.you_strap_state_key_rejected)
+        lastSeen != null -> strings.format(R.string.you_strap_state_cant_connect_seen, agoText(now - lastSeen).lowercase())
+        else -> strings.get(R.string.you_strap_state_cant_connect)
+    }
     ConnectionState.NotPaired -> strings.get(R.string.you_strap_state_not_paired)
     ConnectionState.Disconnected ->
         lastSeen?.let { strings.format(R.string.you_strap_state_last_seen, agoText(now - it).lowercase()) }
@@ -664,7 +669,7 @@ fun DiagnosticsScreen(lines: List<String>, contentPadding: PaddingValues, onBack
                 HaloButton(stringResource(R.string.you_diagnostics_copy), {
                     context.getSystemService(ClipboardManager::class.java)
                         .setPrimaryClip(ClipData.newPlainText(label, lines.joinToString("\n")))
-                }, Modifier.height(40.dp), icon = AppIcons.Copy)
+                }, Modifier.height(40.dp).minimumInteractiveComponentSize(), icon = AppIcons.Copy)
             }
         }
         item {

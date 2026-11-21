@@ -357,14 +357,19 @@ class HistorySyncTest {
     private val day = 24 * 3600L
     private val now get() = System.currentTimeMillis() / 1000
 
-    @Test fun `a type with no cursor starts two days back at the half day, as Zepp`() = runTest {
-        // Forget strap cleared the cursors, and the strap was away for longer than two days.
-        strap.records[HistoryDataType.HRV_RMSSD.code] = listOf(hrv(base - 10 * day, 40), hrv(base - 5 * day, 50), hrv(base, 60))
+    @Test fun `a type with no cursor starts a month back at the half day, activity two days back as Zepp`() = runTest {
+        // Forget strap cleared the cursors, and the strap was away for longer than two days: the fork's first sync
+        // takes what the strap still holds of the last month (ZeppCursors.readFirst).
+        strap.records[HistoryDataType.HRV_RMSSD.code] =
+            listOf(hrv(base - 40 * day, 30), hrv(base - 10 * day, 40), hrv(base - 5 * day, 50), hrv(base, 60))
         val before = ZeppCursors.default(now, zone)
         runSync()
         val first = strap.starts.first { it.first == HistoryDataType.HRV_RMSSD.code }.second
-        assertTrue("$first", first == before || first == ZeppCursors.default(now, zone))
-        assertEquals(listOf(base), table("SELECT timestamp FROM hrv ORDER BY timestamp").map { it[0] })
+        assertTrue("$first", first in now - ZeppCursors.FIRST_SYNC_DAYS * day - day / 2 - 60..now - ZeppCursors.FIRST_SYNC_DAYS * day)
+        assertEquals(listOf(base - 10 * day, base - 5 * day, base), table("SELECT timestamp FROM hrv ORDER BY timestamp").map { it[0] })
+        strap.starts.firstOrNull { it.first == HistoryDataType.ACTIVITY.code }?.second?.let { activity ->
+            assertTrue("$activity", activity == before || activity == ZeppCursors.default(now, zone))
+        }
     }
 
     @Test fun `a cursor over an hour ahead is read as two days back`() = runTest {

@@ -28,7 +28,16 @@ data class ActivityMinute(
     val intensity: Int,
     val kind: Int,
     val heartRate: Int?,
-)
+) {
+    companion object {
+        /**
+         * A minute's steps filled in from the extended record (type 88) where the strap no longer had the minute's own
+         * record (type 1) by the time it was synced: it keeps type 1 for about 43 hours, type 88 for 60 days and more.
+         * No mode, intensity or heart rate; a type 1 record for the minute replaces it. The fork's step repair.
+         */
+        const val KIND_FROM_EXTENDED = 0x80
+    }
+}
 
 /**
  * A main sleep or a nap. The strap's own totals and score are kept as it reported them. Indexed on [nap] and [end] as

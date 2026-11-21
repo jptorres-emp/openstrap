@@ -360,7 +360,7 @@ class HistorySync internal constructor(
     }
 
     /** A type's stored cursor as Zepp reads it: corrected, or its default when there is none ([ZeppCursors]). */
-    private suspend fun read(type: HistoryDataType, now: Long): Long = ZeppCursors.read(cursors, keyOf(type), now, zone)
+    private suspend fun read(type: HistoryDataType, now: Long): Long = ZeppCursors.readFirst(type, cursors, keyOf(type), now, zone)
 
     private suspend fun startOf(type: HistoryDataType, now: Long): Long = when {
         // Statistics ask from now. A sleep plan with none stored falls back to the bind time, as Zepp's job does
@@ -658,7 +658,11 @@ class HistorySync internal constructor(
             val sample = HeartRateSample(minute, values.average().toInt())
             if (minute == partMinute) partial += sample else hr += sample
         }
-        if (activity.isNotEmpty()) dao.insertActivity(activity)
+        if (activity.isNotEmpty()) {
+            dao.insertActivity(activity)
+            // A minute filled in from type 88 earlier gives way to its own activity record.
+            dao.dropFilledStepsCovered(activity.minOf { it.timestamp } - 60, activity.maxOf { it.timestamp } + 60)
+        }
         if (hr.isNotEmpty()) dao.insertHeartRate(hr)
         if (partial.isNotEmpty()) dao.insertHeartRateIfMissing(partial)
         if (spo2.isNotEmpty()) dao.insertSpo2(spo2)
@@ -677,7 +681,11 @@ class HistorySync internal constructor(
         if (osaResults.isNotEmpty()) dao.insertOsaResults(osaResults)
         if (maxHr.isNotEmpty()) dao.insertDailyMaxHr(maxHr.map { (day, bpm) -> DailyMaxHr(day, bpm) })
         if (recoveryHr.isNotEmpty()) dao.insertRecoveryHeartRate(recoveryHr)
-        if (extended.isNotEmpty()) dao.insertActivityExtended(extended)
+        if (extended.isNotEmpty()) {
+            dao.insertActivityExtended(extended)
+            // Steps for minutes whose activity record (type 1) the strap no longer had: it keeps those about 43 hours.
+            dao.fillStepsFromExtended(extended.minOf { it.timestamp }, extended.maxOf { it.timestamp })
+        }
         if (raw.isNotEmpty()) dao.insertRawRecords(raw)
     }
 

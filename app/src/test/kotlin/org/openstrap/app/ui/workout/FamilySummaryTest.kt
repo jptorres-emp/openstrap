@@ -75,7 +75,7 @@ class FamilySummaryTest {
         assertNull(FamilySummary.restRecovery(sets, readings, null))
         assertEquals("Your heart rate dropped under 110 in 41 s on average, 9 s faster than last time.", FamilySummary.restLine(41, 110, 50))
         assertEquals("Your heart rate dropped under 110 in 41 s on average, about the same as last time.", FamilySummary.restLine(41, 110, 43))
-        assertEquals("Your heart rate dropped under 110 in 1:05 on average.", FamilySummary.restLine(65, 110, null))
+        assertEquals("Your heart rate dropped under 110 in 1 min 05 on average.", FamilySummary.restLine(65, 110, null))
     }
 
     @Test

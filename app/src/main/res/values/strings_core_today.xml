@@ -122,12 +122,6 @@
 
     <!-- The Energy hero before the first night. -->
     <string name="core_today_energy_first_night">Energy starts after your first night. Sleep is what fills it.</string>
-    <!-- The Energy hero before noon: how much Energy the morning used. A sentence follows. -->
-    <string name="core_today_energy_morning_drained">The morning drained <xliff:g id="amount" example="22">%1$d</xliff:g>.</string>
-    <!-- The Energy hero after noon: how much Energy the day used so far. A sentence follows. -->
-    <string name="core_today_energy_day_drained">The day has drained <xliff:g id="amount" example="40">%1$d</xliff:g> so far.</string>
-    <!-- The Energy hero when nothing was used since waking. A sentence follows. -->
-    <string name="core_today_energy_nothing_drained">Nothing drained since waking.</string>
     <!-- The Energy hero with 50 or more left. -->
     <string name="core_today_energy_plenty">Plenty left for this evening.</string>
     <!-- The Energy hero with 25 to 49 left. -->

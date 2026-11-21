@@ -38,6 +38,8 @@ import kotlin.math.roundToLong
  * Every function takes the locale it writes in, the phone's by default. Text drawn in the dot font passes [DOT_LOCALE]
  * or uses [dotFormat], since the font has only ASCII digits and both marks but no other script's digits.
  */
+// One entry point for every number a person reads, so each format has one home and one rule.
+@Suppress("TooManyFunctions")
 object Units {
     /** The locale for text drawn in the dot font: ASCII digits and a dot decimal mark. */
     val DOT_LOCALE: Locale = Locale.ROOT

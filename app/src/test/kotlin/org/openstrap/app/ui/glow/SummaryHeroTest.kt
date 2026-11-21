@@ -25,7 +25,7 @@ class SummaryHeroTest {
         val h = summaryHero(Workouts.Family.IndoorCardio, summary(69, 2), null)
         assertEquals("1", h.value)
         assertEquals("min", h.unit)
-        assertEquals(listOf("1:09", null, null), h.figures.map { it.first })
+        assertEquals(listOf("1 min 09", null, null), h.figures.map { it.first })
         assertEquals(listOf("Time", "Active kcal", "Peak bpm"), h.figures.map { it.second })
     }
 

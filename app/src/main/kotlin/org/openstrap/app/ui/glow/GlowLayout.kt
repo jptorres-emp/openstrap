@@ -417,6 +417,6 @@ data class TitleTag(val text: String, val onClick: (() -> Unit)? = null)
 @Composable
 internal fun TitleMark(marker: String?, tag: TitleTag?, modifier: Modifier = Modifier) {
     if (marker != null) HaloTag(marker, modifier, TagVariant.Marker)
-    if (tag != null) HaloTag(tag.text, modifier, onClick = tag.onClick)
+    if (tag != null) HaloTag(tag.text, onClick = tag.onClick)
 }
 

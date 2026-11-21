@@ -268,14 +268,20 @@ private fun PickedSplit(row: SplitRow, maxHr: Int) {
  */
 private fun routeSplitRows(summary: PhoneSummary, legs: List<Route.Leg>): List<SplitRow> {
     val rows = splitRowsOf(summary, emptyList())
-    val last = legs.lastOrNull()?.split ?: return rows
-    if (legs.size == rows.size || last.meters >= 1000.0 || last.meters <= 0.0) return rows
+    val last = legs.lastOrNull()?.split
+    val partial = last != null && legs.size != rows.size && last.meters < Units.METERS_PER_KM && last.meters > 0.0
+    return if (last != null && partial) rows + lastSplitRow(summary, legs, last) else rows
+}
+
+/** The row for the route's last part, which is under a kilometre: its distance, time and average heart rate. */
+private fun lastSplitRow(summary: PhoneSummary, legs: List<Route.Leg>, last: Route.Split): SplitRow {
     val i = legs.lastIndex
     val firstT = summary.route.firstOrNull()?.t
     val from = legs.getOrNull(i - 1)?.split?.endT ?: firstT ?: last.endT
-    val meters = summary.distanceMeters?.takeIf { !summary.distanceFromSteps }?.let { it - 1000f * i }?.takeIf { it > 0f } ?: last.meters.toFloat()
+    val measured = summary.distanceMeters?.takeIf { !summary.distanceFromSteps }
+    val meters = measured?.let { it - Units.METERS_PER_KM * i }?.takeIf { it > 0f } ?: last.meters.toFloat()
     val distance = Units.distance(meters, Units.Precision.Workout) ?: Strings.app.format(R.string.workout_summary_meters, meters.toInt())
-    return rows + SplitRow(
+    return SplitRow(
         Strings.app.format(R.string.workout_summary_split_last, distance), Units.workoutClock(last.seconds),
         WorkoutCopy.averageOver(summary.history, from, last.endT), last.seconds, SplitRow.Kind.Last,
     )

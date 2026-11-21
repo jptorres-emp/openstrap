@@ -5,6 +5,7 @@ import org.openstrap.app.ui.theme.Greys
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.layout.onSizeChanged
@@ -143,69 +144,11 @@ fun WorkoutMap(
         style = null
         val builder = if (routeOnly) Style.Builder().fromJson(BLANK_STYLE) else Style.Builder().fromUri(TILES_STYLE)
         m.setStyle(builder) { s ->
-            s.addSource(GeoJsonSource(SOURCE, geoJson(emptyList())))
-            s.addSource(GeoJsonSource(HERE, geoJson(emptyList())))
-            s.addSource(GeoJsonSource(START, geoJson(emptyList())))
-            s.addSource(GeoJsonSource(KM_SRC, geoJson(emptyList())))
-            s.addSource(GeoJsonSource(HIGHLIGHT_SRC, geoJson(emptyList())))
-            underRoute(s, streets = !routeOnly)
-            s.addLayer(
-                LineLayer(HIGHLIGHT_LINE, HIGHLIGHT_SRC).withProperties(
-                    PropertyFactory.lineColor(Color.White.toArgb()),
-                    PropertyFactory.lineWidth(HIGHLIGHT_WIDTH),
-                    PropertyFactory.lineCap(Property.LINE_CAP_ROUND),
-                    PropertyFactory.lineJoin(Property.LINE_JOIN_ROUND),
-                ),
-            )
-            s.addLayer(
-                LineLayer(LINE, SOURCE).withProperties(
-                    PropertyFactory.lineColor(Expression.get("color")),
-                    PropertyFactory.lineWidth(5f),
-                    PropertyFactory.lineCap(Property.LINE_CAP_ROUND),
-                    PropertyFactory.lineJoin(Property.LINE_JOIN_ROUND),
-                ),
-            )
-            s.addLayer(
-                SymbolLayer(KM_LAYER, KM_SRC).withProperties(
-                    PropertyFactory.iconImage(Expression.get("icon")),
-                    PropertyFactory.iconAllowOverlap(true),
-                    PropertyFactory.iconIgnorePlacement(true),
-                ),
-            )
-            s.addLayer(
-                CircleLayer(START_DOT, START).withProperties(
-                    PropertyFactory.circleRadius(5f),
-                    PropertyFactory.circleColor(Greys.MapDot.toArgb()),
-                    PropertyFactory.circleStrokeWidth(2f),
-                    PropertyFactory.circleStrokeColor(Color.White.toArgb()),
-                ),
-            )
-            s.addLayer(
-                CircleLayer(HALO, HERE).withProperties(
-                    PropertyFactory.circleRadius(18f),
-                    PropertyFactory.circleOpacity(0.25f),
-                    PropertyFactory.visibility(Property.NONE),
-                ),
-            )
-            s.addLayer(
-                CircleLayer(DOT, HERE).withProperties(
-                    PropertyFactory.circleRadius(6f),
-                    PropertyFactory.circleColor(Color.White.toArgb()),
-                    PropertyFactory.circleStrokeWidth(3f),
-                    PropertyFactory.circleStrokeColor(Color.Black.toArgb()),
-                ),
-            )
+            addRouteLayers(s, routeOnly)
             style = s
         }
     }
-    LaunchedEffect(style, hereColor) {
-        style?.getLayerAs<CircleLayer>(HALO)?.setProperties(
-            *listOfNotNull(
-                PropertyFactory.visibility(if (hereColor != null) Property.VISIBLE else Property.NONE),
-                hereColor?.let { PropertyFactory.circleColor(it.toArgb()) },
-            ).toTypedArray(),
-        )
-    }
+    LaunchedEffect(style, hereColor) { style?.showHalo(hereColor) }
     // Again for each new style: switching Route only replaces the style, and its images with it.
     LaunchedEffect(style, kmMarkers) { style?.showKmMarkers(kmMarkers, density.density) }
     LaunchedEffect(style, highlight) {
@@ -222,19 +165,7 @@ fun WorkoutMap(
         val fit = if (highlight.size >= 2) highlight else all
         // Nothing to fit into until the map has a size, and padding that leaves no room would throw the camera off.
         if (mapSize.width <= 0 || mapSize.height <= 0) return@LaunchedEffect
-        if (fit.size >= 2) {
-            val bounds = LatLngBounds.Builder().includes(fit.map { LatLng(it.lat, it.lon) }).build()
-            val px = with(density) { listOf(fitPadding.calculateLeftPadding(LayoutDirection.Ltr), fitPadding.calculateTopPadding(), fitPadding.calculateRightPadding(LayoutDirection.Ltr), fitPadding.calculateBottomPadding()).map { it.roundToPx() } }
-            // The map adds its own padding to a fit's, and a fit leaves it set, so each fit would drift the next: start clean.
-            val room = mapSize.width - px[0] - px[2] > 0 && mapSize.height - px[1] - px[3] > 0
-            val pad = if (room) px else listOf(0, 0, 0, 0)
-            runCatching {
-                map?.setPadding(0, 0, 0, 0)
-                map?.easeCamera(CameraUpdateFactory.newLatLngBounds(bounds, pad[0], pad[1], pad[2], pad[3]))
-            }
-        } else if (last != null) {
-            map?.easeCamera(CameraUpdateFactory.newLatLngZoom(LatLng(last.lat, last.lon), MAX_ZOOM))
-        }
+        map?.let { fitCamera(it, fit, last, fitPadding, mapSize, density) }
     }
     LaunchedEffect(Unit) {
         delay(CREDIT_SHOWN_MS)
@@ -243,19 +174,113 @@ fun WorkoutMap(
     Box(modifier) {
         AndroidView({ view }, Modifier.fillMaxSize().onSizeChanged { mapSize = it })
         if (!routeOnly) {
-            val alpha by animateFloatAsState(if (creditShown) 1f else 0f, tween(Motion.QUICK), label = "map credit")
-            if (alpha > 0f) {
-                // Left of the (i), on the same line.
-                Text(
-                    stringResource(R.string.glow_map_credit), color = Color.White, style = GlowType.noteSmall, maxLines = 1,
-                    modifier = Modifier.align(Alignment.BottomEnd)
-                        .padding(end = 18.dp + CREDIT_INFO_WIDTH, bottom = creditBottom + 6.dp)
-                        .graphicsLayer { this.alpha = alpha }
-                        .clip(Corner.Pill).background(Greys.OverMap).padding(horizontal = Space.S8, vertical = Space.S4),
-                )
-            }
+            MapCredit(creditShown, creditBottom, Modifier.align(Alignment.BottomEnd))
         }
     }
+}
+
+/** The "© OpenStreetMap" text, left of the map's own (i) on the same line, fading out once [shown] is false. */
+@Composable
+private fun MapCredit(shown: Boolean, bottom: Dp, modifier: Modifier = Modifier) {
+    val alpha by animateFloatAsState(if (shown) 1f else 0f, tween(Motion.QUICK), label = "map credit")
+    if (alpha <= 0f) return
+    Text(
+        stringResource(R.string.glow_map_credit), color = Color.White, style = GlowType.noteSmall, maxLines = 1,
+        modifier = modifier
+            .padding(end = CREDIT_INFO_MARGIN + CREDIT_INFO_WIDTH, bottom = bottom + CREDIT_LIFT)
+            .graphicsLayer { this.alpha = alpha }
+            .clip(Corner.Pill).background(Greys.OverMap).padding(horizontal = Space.S8, vertical = Space.S4),
+    )
+}
+
+/**
+ * Moves the camera onto [fit] inside [fitPadding], or onto [last] when the route is one point or none. Padding that
+ * leaves no room would throw the camera off, so it falls back to none.
+ */
+private fun fitCamera(
+    map: MapLibreMap, fit: List<Route.Point>, last: Route.Point?, fitPadding: PaddingValues, mapSize: IntSize, density: Density,
+) {
+    if (fit.size >= 2) {
+        val bounds = LatLngBounds.Builder().includes(fit.map { LatLng(it.lat, it.lon) }).build()
+        val px = with(density) {
+            listOf(
+                fitPadding.calculateLeftPadding(LayoutDirection.Ltr), fitPadding.calculateTopPadding(),
+                fitPadding.calculateRightPadding(LayoutDirection.Ltr), fitPadding.calculateBottomPadding(),
+            ).map { it.roundToPx() }
+        }
+        // The map adds its own padding to a fit's, and a fit leaves it set, so each fit would drift the next: start clean.
+        val room = mapSize.width - px[0] - px[2] > 0 && mapSize.height - px[1] - px[3] > 0
+        val pad = if (room) px else listOf(0, 0, 0, 0)
+        runCatching {
+            map.setPadding(0, 0, 0, 0)
+            map.easeCamera(CameraUpdateFactory.newLatLngBounds(bounds, pad[0], pad[1], pad[2], pad[3]))
+        }
+    } else if (last != null) {
+        map.easeCamera(CameraUpdateFactory.newLatLngZoom(LatLng(last.lat, last.lon), MAX_ZOOM))
+    }
+}
+
+/** The ring round the dot: [color] when given, hidden when null. */
+private fun Style.showHalo(color: Color?) {
+    val halo = getLayerAs<CircleLayer>(HALO) ?: return
+    halo.setProperties(PropertyFactory.visibility(if (color != null) Property.VISIBLE else Property.NONE))
+    if (color != null) halo.setProperties(PropertyFactory.circleColor(color.toArgb()))
+}
+
+/** The sources and layers a route map draws, bottom to top: the street dimming, casing, highlight, line, markers, dots. */
+private fun addRouteLayers(s: Style, routeOnly: Boolean) {
+    s.addSource(GeoJsonSource(SOURCE, geoJson(emptyList())))
+    s.addSource(GeoJsonSource(HERE, geoJson(emptyList())))
+    s.addSource(GeoJsonSource(START, geoJson(emptyList())))
+    s.addSource(GeoJsonSource(KM_SRC, geoJson(emptyList())))
+    s.addSource(GeoJsonSource(HIGHLIGHT_SRC, geoJson(emptyList())))
+    underRoute(s, streets = !routeOnly)
+    s.addLayer(
+        LineLayer(HIGHLIGHT_LINE, HIGHLIGHT_SRC).withProperties(
+            PropertyFactory.lineColor(Color.White.toArgb()),
+            PropertyFactory.lineWidth(HIGHLIGHT_WIDTH),
+            PropertyFactory.lineCap(Property.LINE_CAP_ROUND),
+            PropertyFactory.lineJoin(Property.LINE_JOIN_ROUND),
+        ),
+    )
+    s.addLayer(
+        LineLayer(LINE, SOURCE).withProperties(
+            PropertyFactory.lineColor(Expression.get("color")),
+            PropertyFactory.lineWidth(5f),
+            PropertyFactory.lineCap(Property.LINE_CAP_ROUND),
+            PropertyFactory.lineJoin(Property.LINE_JOIN_ROUND),
+        ),
+    )
+    s.addLayer(
+        SymbolLayer(KM_LAYER, KM_SRC).withProperties(
+            PropertyFactory.iconImage(Expression.get("icon")),
+            PropertyFactory.iconAllowOverlap(true),
+            PropertyFactory.iconIgnorePlacement(true),
+        ),
+    )
+    s.addLayer(
+        CircleLayer(START_DOT, START).withProperties(
+            PropertyFactory.circleRadius(5f),
+            PropertyFactory.circleColor(Greys.MapDot.toArgb()),
+            PropertyFactory.circleStrokeWidth(2f),
+            PropertyFactory.circleStrokeColor(Color.White.toArgb()),
+        ),
+    )
+    s.addLayer(
+        CircleLayer(HALO, HERE).withProperties(
+            PropertyFactory.circleRadius(18f),
+            PropertyFactory.circleOpacity(0.25f),
+            PropertyFactory.visibility(Property.NONE),
+        ),
+    )
+    s.addLayer(
+        CircleLayer(DOT, HERE).withProperties(
+            PropertyFactory.circleRadius(6f),
+            PropertyFactory.circleColor(Color.White.toArgb()),
+            PropertyFactory.circleStrokeWidth(3f),
+            PropertyFactory.circleStrokeColor(Color.Black.toArgb()),
+        ),
+    )
 }
 
 /** How long the "© OpenStreetMap" text stays up when a map with tiles opens. */
@@ -263,6 +288,10 @@ private const val CREDIT_SHOWN_MS = 5_000L
 
 /** The map's own (i) button and its margin, which the credit text sits left of. */
 private val CREDIT_INFO_WIDTH = 40.dp
+
+/** Where the (i) sits in from the map's right edge, and how far the text rides above the map's bottom line. */
+private val CREDIT_INFO_MARGIN = 18.dp
+private val CREDIT_LIFT = 6.dp
 
 /** Close enough to read the streets, far enough to see where they go. */
 private const val MAX_ZOOM = 16.5

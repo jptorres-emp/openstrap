@@ -320,6 +320,10 @@ private val RailMinWidth = 600.dp
 private val CapsuleOverBar = 104.dp
 private val CapsuleNoBar = 16.dp
 
+/** Below the fold the status bar is far away, so what sits there doesn't make room for it. */
+@Composable
+private fun Modifier.belowTheFold(folded: Boolean): Modifier = if (folded) consumeWindowInsets(WindowInsets.statusBars) else this
+
 /**
  * The app: the tabs, the pages over them, the sheets and the workout screens, in that order. Back goes to what was
  * composed last, so the order is the back order (wave 4 Decisions 1): the tabs, the pages over them, All metrics, add
@@ -455,7 +459,7 @@ private fun AppRoot(
         }
         // Below the fold the status bar is far away, so the pages don't make room for it.
         BoxWithConstraints(
-            Modifier.weight(1f).fillMaxWidth().let { if (hinge != null) it.consumeWindowInsets(WindowInsets.statusBars) else it },
+            Modifier.weight(1f).fillMaxWidth().belowTheFold(hinge != null),
         ) {
             // Wider than tall (a phone on its side, an unfolded foldable turned sideways): the tabs stand down the left
             // edge, so the pages keep their height.

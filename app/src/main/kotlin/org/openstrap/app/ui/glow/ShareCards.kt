@@ -172,7 +172,8 @@ internal fun storyCard(
                 }
                 StoryCard.Run(date, sport, hero.value, hero.unit, listOfNotNull(time, pace, avg), chips)
             } else {
-                StoryCard.Run(date, sport, Units.length(active, Units.DOT_LOCALE), "", listOfNotNull(avg, kcal, peak).take(MAX_STATS), chips)
+                val stats = listOfNotNull(avg, kcal, peak).take(MAX_STATS)
+                StoryCard.Run(date, sport, Units.length(active, Units.DOT_LOCALE), "", stats, chips)
             }
         }
         Workouts.Family.Strength -> {

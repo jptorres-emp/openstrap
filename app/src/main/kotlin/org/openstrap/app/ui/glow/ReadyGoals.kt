@@ -45,7 +45,7 @@ internal fun CardioGoal(
 ) {
     GoalType(kinds.map { kindName(it, type) }, kinds.indexOf(kind)) { onDraft(draft.copy(kind = kinds[it])) }
     when (kind) {
-        GoalKind.None -> LastTimeHero(type, cardio = true, last, look, noGoalWords(Workouts.family(type), hasDistance))
+        GoalKind.None -> LastTimeHero(cardio = true, last, look, noGoalWords(Workouts.family(type), hasDistance))
         GoalKind.Distance -> LookHero(
             look, distanceFigure(draft.meters), stringResource(R.string.glow_unit_km), distanceLine(draft.meters, gps, lastPace),
             input = HeroInput(distanceFigure(draft.meters), stringResource(R.string.glow_unit_km), decimal = true) { t ->
@@ -92,7 +92,6 @@ internal fun CardioGoal(
 @Suppress("LongParameterList")
 @Composable
 internal fun StrengthGoal(
-    type: Int,
     sets: Int?,
     onSets: (Int?) -> Unit,
     planSets: Int,
@@ -106,7 +105,7 @@ internal fun StrengthGoal(
         onSets(if (it == 1) planSets else null)
     }
     if (sets == null) {
-        LastTimeHero(type, cardio = false, last, look, noGoalWords(Workouts.Family.Strength, hasDistance = false))
+        LastTimeHero(cardio = false, last, look, noGoalWords(Workouts.Family.Strength, hasDistance = false))
         return
     }
     val unit = pluralStringResource(R.plurals.ready_hero_sets, sets)
@@ -125,7 +124,7 @@ internal fun StrengthGoal(
  * often each starts; Free shows last time. A tab picked opens on last time's rounds of its kind ([saved]).
  */
 @Composable
-internal fun HiitGoal(type: Int, rounds: Structure?, onRounds: (Structure?) -> Unit, saved: String?, last: ReadyLast?, look: HeroLook) {
+internal fun HiitGoal(rounds: Structure?, onRounds: (Structure?) -> Unit, saved: String?, last: ReadyLast?, look: HeroLook) {
     val tab = when (rounds) {
         is Structure.Timed -> 1
         is Structure.EveryMinute -> 2
@@ -158,19 +157,19 @@ internal fun HiitGoal(type: Int, rounds: Structure?, onRounds: (Structure?) -> U
                 ),
             )
         }
-        else -> LastTimeHero(type, cardio = false, last, look, noGoalWords(Workouts.Family.Intervals, hasDistance = false))
+        else -> LastTimeHero(cardio = false, last, look, noGoalWords(Workouts.Family.Intervals, hasDistance = false))
     }
 }
 
 /** Mind and body: Open, or a Time on the ruler with when it would end. */
 @Composable
-internal fun MindGoal(type: Int, draft: GoalDraft, onDraft: (GoalDraft) -> Unit, nowMillis: Long, last: ReadyLast?, look: HeroLook) {
+internal fun MindGoal(draft: GoalDraft, onDraft: (GoalDraft) -> Unit, nowMillis: Long, last: ReadyLast?, look: HeroLook) {
     val timed = draft.kind == GoalKind.Time
     GoalType(listOf(stringResource(R.string.ready_tab_open), StartCopy.TIME), if (timed) 1 else 0) {
         onDraft(draft.copy(kind = if (it == 1) GoalKind.Time else GoalKind.None))
     }
     if (timed) TimeGoalHero(draft.seconds, { onDraft(draft.copy(seconds = it)) }, look, nowMillis)
-    else LastTimeHero(type, cardio = false, last, look, noGoalWords(Workouts.Family.MindBody, hasDistance = false))
+    else LastTimeHero(cardio = false, last, look, noGoalWords(Workouts.Family.MindBody, hasDistance = false))
 }
 
 /**
@@ -179,13 +178,13 @@ internal fun MindGoal(type: Int, draft: GoalDraft, onDraft: (GoalDraft) -> Unit,
  */
 @Composable
 internal fun GamesGoal(
-    type: Int, periods: Structure.Periods?, onPeriods: (Structure.Periods?) -> Unit, saved: String?, last: ReadyLast?, look: HeroLook,
+    periods: Structure.Periods?, onPeriods: (Structure.Periods?) -> Unit, saved: String?, last: ReadyLast?, look: HeroLook,
 ) {
     GoalType(listOf(stringResource(R.string.ready_tab_free), stringResource(R.string.ready_tab_periods)), if (periods != null) 1 else 0) {
         onPeriods(if (it == 1) Structure.parse(saved) as? Structure.Periods ?: Structure.HALVES else null)
     }
     if (periods == null) {
-        LastTimeHero(type, cardio = false, last, look, noGoalWords(Workouts.Family.Games, hasDistance = false))
+        LastTimeHero(cardio = false, last, look, noGoalWords(Workouts.Family.Games, hasDistance = false))
         return
     }
     val unit = pluralStringResource(R.plurals.ready_hero_periods, periods.rounds)

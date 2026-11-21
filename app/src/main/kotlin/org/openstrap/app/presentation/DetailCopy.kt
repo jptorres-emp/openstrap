@@ -134,37 +134,52 @@ internal object DetailCopy {
         metric: Metric, range: Range, live: Boolean = false, today: Boolean = true, estimated: Boolean = false,
         latest: Latest? = null, upTo: String? = null, strings: Strings = Strings.app,
     ): String {
-        val unit = metric.unit
+        if (range == Range.Day) return dayLabel(metric, live, today, estimated, latest, upTo, strings)
+        val steps = metric == Metric.Steps
         // One string with the unit and one without, so a translator writes the capital rather than the code adding it.
-        fun with(bare: Int, withUnit: Int) = if (unit.isEmpty()) strings.get(bare) else strings.format(withUnit, unit)
-        return when (range) {
-            Range.Day -> when (metric) {
-                Metric.HeartRate -> when {
-                    live -> strings.get(R.string.core_detail_label_bpm_now)
-                    upTo != null -> strings.format(R.string.core_detail_label_bpm_up_to, upTo)
-                    else -> strings.get(R.string.core_detail_label_bpm_latest)
-                }
-                Metric.RestingHr -> strings.get(
-                    when {
-                        estimated && today -> R.string.core_detail_label_bpm_resting_estimated
-                        estimated -> R.string.core_detail_label_bpm_resting_estimated_that_night
-                        today -> R.string.core_detail_label_bpm_resting
-                        else -> R.string.core_detail_label_bpm_resting_that_night
-                    },
-                )
-                Metric.Steps -> strings.get(if (today) R.string.core_detail_label_steps_today else R.string.core_detail_label_steps)
-                Metric.Breathing -> strings.get(R.string.core_detail_label_breathing)
-                // Blood oxygen's and stress's day is their latest reading, with the time it was taken ([latest]).
-                Metric.Spo2, Metric.Stress -> latestLabel(unit, latest, strings)
-                    ?: with(R.string.core_detail_label_day_average, R.string.core_detail_label_unit_day_average)
-                else -> with(R.string.core_detail_label_day_average, R.string.core_detail_label_unit_day_average)
+        val (bare, withUnit) = when (range) {
+            Range.Week -> R.string.core_detail_label_average_week to R.string.core_detail_label_unit_average_week
+            Range.Month -> R.string.core_detail_label_average_month to R.string.core_detail_label_unit_average_month
+            else -> R.string.core_detail_label_average_year to R.string.core_detail_label_unit_average_year
+        }
+        val stepsLabel = when (range) {
+            Range.Week -> R.string.core_detail_label_steps_week
+            Range.Month -> R.string.core_detail_label_steps_month
+            else -> R.string.core_detail_label_steps_year
+        }
+        return when {
+            steps -> strings.get(stepsLabel)
+            metric.unit.isEmpty() -> strings.get(bare)
+            else -> strings.format(withUnit, metric.unit)
+        }
+    }
+
+    /** [valueLabel] for a day: what the one number is, by metric. */
+    private fun dayLabel(
+        metric: Metric, live: Boolean, today: Boolean, estimated: Boolean, latest: Latest?, upTo: String?, strings: Strings,
+    ): String {
+        val unit = metric.unit
+        val average = if (unit.isEmpty()) strings.get(R.string.core_detail_label_day_average)
+        else strings.format(R.string.core_detail_label_unit_day_average, unit)
+        return when (metric) {
+            Metric.HeartRate -> when {
+                live -> strings.get(R.string.core_detail_label_bpm_now)
+                upTo != null -> strings.format(R.string.core_detail_label_bpm_up_to, upTo)
+                else -> strings.get(R.string.core_detail_label_bpm_latest)
             }
-            Range.Week -> if (metric == Metric.Steps) strings.get(R.string.core_detail_label_steps_week)
-            else with(R.string.core_detail_label_average_week, R.string.core_detail_label_unit_average_week)
-            Range.Month -> if (metric == Metric.Steps) strings.get(R.string.core_detail_label_steps_month)
-            else with(R.string.core_detail_label_average_month, R.string.core_detail_label_unit_average_month)
-            Range.Year -> if (metric == Metric.Steps) strings.get(R.string.core_detail_label_steps_year)
-            else with(R.string.core_detail_label_average_year, R.string.core_detail_label_unit_average_year)
+            Metric.RestingHr -> strings.get(
+                when {
+                    estimated && today -> R.string.core_detail_label_bpm_resting_estimated
+                    estimated -> R.string.core_detail_label_bpm_resting_estimated_that_night
+                    today -> R.string.core_detail_label_bpm_resting
+                    else -> R.string.core_detail_label_bpm_resting_that_night
+                },
+            )
+            Metric.Steps -> strings.get(if (today) R.string.core_detail_label_steps_today else R.string.core_detail_label_steps)
+            Metric.Breathing -> strings.get(R.string.core_detail_label_breathing)
+            // Blood oxygen's and stress's day is their latest reading, with the time it was taken ([latest]).
+            Metric.Spo2, Metric.Stress -> latestLabel(unit, latest, strings) ?: average
+            else -> average
         }
     }
 

@@ -175,6 +175,7 @@
     <ID>InjectDispatcher:RewardsKeeper.kt:RewardsKeeper$IO</ID>
     <ID>InjectDispatcher:ShareScreen.kt:IO</ID>
     <ID>InjectDispatcher:StrapService.kt:StrapService$Default</ID>
+    <ID>InjectDispatcher:SummarySections.kt:IO</ID>
     <ID>InjectDispatcher:ZeppCloud.kt:ZeppCloud$IO</ID>
     <ID>LambdaParameterEventTrailing:ActivityDetail.kt:onPick: (Int?) -&gt; Unit</ID>
     <ID>LambdaParameterEventTrailing:ChooseScreen.kt:onChange: (String) -&gt; Unit</ID>

@@ -62,7 +62,7 @@ internal fun LiveHero(color: Color, angle: Float, modifier: Modifier = Modifier,
     }
 }
 
-/** The hero's title row: 16 semibold at the left, one small note in the tint at the right. */
+/** The hero's title row: 16 semibold at the left, one small note in the lit card's ink at the right. */
 @Composable
 internal fun HeroTitle(title: String, note: String?, tint: Color, trailing: (@Composable () -> Unit)? = null) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Space.S12), verticalAlignment = Alignment.CenterVertically) {
@@ -70,14 +70,15 @@ internal fun HeroTitle(title: String, note: String?, tint: Color, trailing: (@Co
             modifier = Modifier.weight(1f))
         // The title takes the free width, so the note or [trailing] sits flush with the card's right edge.
         if (trailing != null) trailing()
-        else if (note != null) Text(note, color = tint, style = GlowType.secondary, maxLines = 1)
+        else if (note != null) Text(note, color = GlowType.noteInk, style = GlowType.secondary, maxLines = 1)
     }
 }
 
-/** The hero's one 13 px line in the tint: what the strap will do, or what is next. */
+/** The hero's one 13 px line in the lit card's ink (solid white, 4.5:1 where the light is brightest): what the strap will do, or what is next. */
 @Composable
+@Suppress("UnusedParameter")
 internal fun HeroLine(text: String, tint: Color) =
-    Text(text, color = tint, style = GlowType.secondary)
+    Text(text, color = GlowType.noteInk, style = GlowType.secondary)
 
 /** The sport's own card on a live screen: a grey [org.openstrap.app.ui.glow.HaloCard] (kept as a name: 20 call sites). */
 @androidx.compose.runtime.NonRestartableComposable

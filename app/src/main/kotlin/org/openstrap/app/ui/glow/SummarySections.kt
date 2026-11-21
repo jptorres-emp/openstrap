@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -48,7 +49,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.text.style.TextOverflow
 import org.openstrap.app.ui.glow.draw.LightAngle
 import org.openstrap.app.ui.glow.draw.heroStyle
@@ -235,13 +235,10 @@ private const val MIND_ANGLE = 160f
 /** Yoga's rim is calmer (workout rules: "Yoga 160 with k 0.8"). */
 private const val MIND_RIM = 0.8f
 
-/** How far a hero's text tint reaches from its colour to white (board SummaryRun: #C6F55A gives #EFFCD1). */
-private const val HERO_TINT = 0.72f
-
 /**
  * The summary's hero (board HaloSummaryRun): a card lit from one edge in the workout's [color], at the light angle of
  * its [family]. A title row (what the number counts, with [note] on the right), the one number in dots with its unit,
- * then the sentence in a tint of the colour. [effort] and [swell] stay so the callers compile: Halo's hero has no
+ * then the sentence in the lit card's ink. [effort] and [swell] stay so the callers compile: Halo's hero has no
  * effort light, and a personal best ticks but no longer swells it.
  */
 @Suppress("UnusedParameter", "UNUSED_PARAMETER")
@@ -250,7 +247,6 @@ internal fun SummaryHeroCard(
     hero: SummaryHero, color: Color, effort: Float = 0f, swell: () -> Float = { 0f },
     family: Workouts.Family? = null, note: String? = null,
 ) {
-    val tint = remember(color) { lerp(color, Color.White, HERO_TINT) }
     val style = remember(color, family) { heroStyle(color, heroAngle(family), if (family == Workouts.Family.MindBody) MIND_RIM else 1f) }
     HaloCard(Modifier.fillMaxWidth(), tone = CardTone.lit(style)) {
         Column(verticalArrangement = Arrangement.spacedBy(Space.S12)) {
@@ -258,11 +254,11 @@ internal fun SummaryHeroCard(
                 Text(
                     hero.title.orEmpty(), Modifier.weight(1f, fill = false), color = Color.White, style = GlowType.heroTitle, maxLines = 1,
                 )
-                if (note != null) Text(note, Modifier.padding(start = Space.S12), color = tint, style = GlowType.noteSmall, maxLines = 1)
+                if (note != null) Text(note, Modifier.padding(start = Space.S12), color = GlowType.noteInk, style = GlowType.noteSmall, maxLines = 1)
             }
-            HaloBigNumber(hero.value, BigNumber.Detail, unit = hero.unit, unitColor = tint, unitLines = 2, fit = true)
+            HaloBigNumber(hero.value, BigNumber.Detail, unit = hero.unit, unitColor = GlowType.noteInk, unitLines = 2, fit = true)
             val sentence = hero.sentence ?: hero.line
-            if (sentence != null) Text(sentence, color = tint, style = GlowType.secondary)
+            if (sentence != null) Text(sentence, color = GlowType.noteInk, style = GlowType.secondary)
         }
     }
 }
@@ -335,8 +331,10 @@ internal fun FamilySection(
     }
     if (family == Workouts.Family.MindBody) {
         val day = java.time.Instant.ofEpochSecond(a.shownStart).atZone(java.time.ZoneId.systemDefault()).toLocalDate()
-        val note = week?.let { FamilySummary.weekGoalLine(it.count, it.goal) }
-        WeekDaysPanel(weekStarts, note = note, day = day, color = familyColor(family))
+        // This session's own day is lit even when it is too short to count toward the goal. A count of none then says
+        // the days with a workout instead, so the line and the marks agree.
+        val note = week?.takeIf { it.count > 0 }?.let { FamilySummary.weekGoalLine(it.count, it.goal) }
+        WeekDaysPanel((weekStarts + a.shownStart).distinct(), note = note, day = day, color = familyColor(family))
     }
 }
 
@@ -354,15 +352,19 @@ private fun StrengthCard(summary: PhoneSummary, readings: List<Pair<Long, Int>>)
     val groups = remember(summary) { FamilySummary.exerciseSets(summary.sets, readings) }
     val below = summary.restBelow
     val rest = remember(summary) { FamilySummary.restRecovery(summary.sets, readings, below) }
-    val restLine = if (below != null && rest != null) FamilySummary.restLine(rest, below, summary.restBefore) else null
+    val average = FamilySummary.averageRest(summary.sets)
+    // Rest on the clock only (no heart rate level set) still says how long it was.
+    val restLine = if (below != null && rest != null) FamilySummary.restLine(rest, below, summary.restBefore)
+        else average?.let { stringResource(R.string.glow_summary_rest_on_time) }
     if (groups.isEmpty() && restLine == null) return
     HaloCard {
         if (groups.isNotEmpty()) SetsBlock(groups, summary, summary.analysis.maxHeartRate)
         if (restLine != null) {
             if (groups.isNotEmpty()) CardDivider()
-            val average = FamilySummary.averageRest(summary.sets)
-                ?.let { stringResource(R.string.glow_summary_rest_average, workoutClock(it)) }
-            HaloTitle(stringResource(R.string.glow_summary_rest_title), note = average)
+            HaloTitle(
+                stringResource(R.string.glow_summary_rest_title),
+                note = average?.let { stringResource(R.string.glow_summary_rest_average, workoutClock(it)) },
+            )
             CardSentence(restLine)
         }
     }
@@ -616,10 +618,11 @@ private fun SetsBlock(groups: List<ExerciseSets>, summary: PhoneSummary, maxHr: 
             }
             g.sets.forEach { s ->
                 val share = shares[i++]
-                Row(Modifier.fillMaxWidth().height(22.dp), verticalAlignment = Alignment.CenterVertically,
+                // Heights and columns are minimums: at a large font a set's words and numbers take what they need.
+                Row(Modifier.fillMaxWidth().heightIn(min = 22.dp), verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(Space.S8)) {
-                    Text("${s.number}", Modifier.width(14.dp), color = CaptionInk, style = GlowType.secondary, maxLines = 1)
-                    Text(s.text, Modifier.width(80.dp), color = Color.White, style = GlowType.secondary, maxLines = 1)
+                    Text("${s.number}", Modifier.widthIn(min = 14.dp), color = CaptionInk, style = GlowType.secondary, maxLines = 1)
+                    Text(s.text, Modifier.widthIn(min = 80.dp), color = Color.White, style = GlowType.secondary, maxLines = 1)
                     Box(Modifier.weight(1f).height(6.dp)) {
                         if (share != null) {
                             val bar = zoneColor(s.peak, maxHr, heartZones)
@@ -627,7 +630,7 @@ private fun SetsBlock(groups: List<ExerciseSets>, summary: PhoneSummary, maxHr: 
                         }
                     }
                     Text(
-                        s.peak?.toString().orEmpty(), Modifier.width(30.dp), color = SoftInk, style = GlowType.secondary, maxLines = 1,
+                        s.peak?.toString().orEmpty(), Modifier.widthIn(min = 30.dp), color = SoftInk, style = GlowType.secondary, maxLines = 1,
                         textAlign = TextAlign.End,
                     )
                 }

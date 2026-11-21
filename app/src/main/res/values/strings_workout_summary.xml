@@ -97,6 +97,8 @@
     <string name="workout_summary_when_day"><xliff:g id="day" example="Tuesday">%1$s</xliff:g>, <xliff:g id="time" example="10:00">%2$s</xliff:g></string>
 
     <!-- A strength set on the summary: reps and the weight in kilograms. Short, about 12 characters. -->
+    <!-- A set whose log card was skipped, in the list of sets, where the logged ones read "10 × 60 kg". -->
+    <string name="workout_summary_set_skipped">Skipped</string>
     <string name="workout_summary_set_reps_kg"><xliff:g id="reps" example="10">%1$d</xliff:g> × <xliff:g id="kg" example="60">%2$s</xliff:g> kg</string>
     <!-- A strength set with reps and no weight. Short. -->
     <plurals name="workout_summary_set_reps">

@@ -66,6 +66,7 @@
     <string name="glow_summary_recover_label">恢复所需时间</string>
     <string name="glow_summary_zone_minutes">区间 %1$d，%2$d 分钟</string>
     <string name="glow_summary_exercise_total">%1$s 千克</string>
+    <string name="glow_summary_rest_on_time">休息在倒计时结束时结束。</string>
     <string name="glow_summary_rest_average">平均 %1$s</string>
     <string name="glow_summary_in_each_rest">每次休息中</string>
     <string name="glow_summary_rounds_span">第 %1$d 至 %2$d 回合</string>

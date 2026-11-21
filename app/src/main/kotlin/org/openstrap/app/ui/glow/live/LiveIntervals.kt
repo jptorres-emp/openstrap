@@ -182,7 +182,7 @@ private fun PhaseHero(m: IntervalMoment, color: Color, angle: Float, bpm: Int?, 
         val (title, note) = phaseTitle(m)
         HeroTitle(title, note, tint)
         RoundBar(m)
-        val seconds = m.left?.let { dotFormat("%02d", it) }
+        val seconds = m.left?.let { dotFormat("%d", it) }
         if (seconds != null) HaloBigNumber(seconds, BigNumber.Live, unit = stringResource(secondsUnit(m)), unitColor = tint)
         HeroLine(phaseLine(m, bpm), tint)
         if (m.phase is Phase.Rest) HaloButton(

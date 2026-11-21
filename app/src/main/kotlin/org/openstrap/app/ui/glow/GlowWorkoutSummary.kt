@@ -61,7 +61,9 @@ import org.openstrap.app.ui.theme.AppIcons
 import org.openstrap.app.ui.theme.MetricColors
 import org.openstrap.app.ui.workout.CalmDownLine
 import org.openstrap.app.presentation.EarnedLine
+import org.openstrap.app.presentation.RewardsCopy
 import org.openstrap.app.presentation.SummaryRewards
+import org.openstrap.app.data.Rewards
 import org.openstrap.app.ui.workout.FamilySummary
 import org.openstrap.app.ui.workout.PhoneSummary
 import org.openstrap.app.ui.workout.SummaryCopy
@@ -77,6 +79,16 @@ import androidx.compose.ui.semantics.semantics
  * usual. A personal best ticks once, no modal. Past workouts open their own page ([GlowWorkoutDetailScreen]), which
  * shares the Load panel and the cards.
  */
+
+/** These rewards without the longest-workout best, when [short] says the workout is too short to count. */
+private fun SummaryRewards.withoutShortBest(short: Boolean): SummaryRewards {
+    if (!short) return this
+    val longest = RewardsCopy.bestTitle(Rewards.Kind.LONGEST_WORKOUT)
+    return copy(
+        earned = earned.filterNot { it.kind == EarnedLine.Kind.Best && it.text == longest },
+        best = best?.takeUnless { it.best.kind == Rewards.Kind.LONGEST_WORKOUT },
+    )
+}
 
 /** Where Done has got to: the summary, a personal best's card, the goal moment. */
 private enum class SummaryStep { Summary, Best, Moment }
@@ -107,6 +119,9 @@ fun GlowWorkoutSummaryScreen(
     celebrations: Celebrations? = null,
 ) {
     val a = summary?.analysis
+    // A workout too short to count toward the goal and the badges sets no longest-workout best either.
+    @Suppress("NAME_SHADOWING")
+    val rewards = remember(rewards, a?.activeSeconds) { rewards?.withoutShortBest(a != null && !Rewards.countsTowardGoal(true, a.activeSeconds)) }
     // Done goes through the celebrations it earned (workouts spec 3.4): a personal best's card, then the goal moment
     // once a week, then away.
     var step by rememberSaveable { mutableStateOf(SummaryStep.Summary) }
@@ -215,7 +230,8 @@ fun GlowWorkoutSummaryScreen(
         // The drop only with heart rate to show: recorded in the workout, or arriving live after it.
         val live = calmDown?.takeIf { it.start == w.start }
         val dropShown = summary.recorded.isNotEmpty() || !live?.readings.isNullOrEmpty()
-        if (dropShown) CalmDownHero(summary, live, usualDrop) { info = true }
+        // Mind and body has no drop card (workout-rules.md, Summary).
+        if (dropShown && family != Workouts.Family.MindBody) CalmDownHero(summary, live, usualDrop) { info = true }
         WorkoutLoadCard(a, usualLoad)
         DeleteWorkout(stringResource(R.string.glow_workout_delete_phone), onDelete)
     }
@@ -264,7 +280,7 @@ private fun CalmDownHero(summary: PhoneSummary, live: CalmDown?, usualDrop: Int?
                         horizontalArrangement = Arrangement.spacedBy(Space.S8)) {
                         Text("${line.drop}", color = Color.White, style = GlowType.figureLarge)
                         Text(
-                            stringResource(R.string.glow_summary_drop_unit), Modifier.padding(bottom = Space.S4), color = ink,
+                            stringResource(R.string.glow_summary_drop_unit), Modifier.padding(bottom = Space.S4), color = if (beats) ink else DropTealInk,
                             style = GlowType.secondary,
                         )
                     }
@@ -274,7 +290,7 @@ private fun CalmDownHero(summary: PhoneSummary, live: CalmDown?, usualDrop: Int?
                         Text(stringResource(R.string.glow_summary_unit_bpm_now), color = ink, style = GlowType.noteSmall)
                     }
                 }
-                if (shown.size >= 2) DropLine(shown, a.end)
+                if (shown.size >= 2) DropLine(shown, a.end, after = if (beats) Color.White else DropTealInk)
             }
         }
     }
@@ -287,10 +303,10 @@ private val DropTealInk = MetricColors.readinessPale
 
 /**
  * The heart rate from a minute before the [end] to two after, small (board HaloSummaryRun: 120 by 52): the workout's
- * last minute dim, the drop bright, a hairline mark at the end. Gaps of more than five seconds break the line.
+ * last minute dim, the drop bright ([after]: white on the lit card, teal on the grey one, so it stays apart from the Load card under it), a hairline mark at the end. Gaps of more than five seconds break the line.
  */
 @Composable
-private fun DropLine(readings: List<Pair<Long, Int>>, end: Long, modifier: Modifier = Modifier) {
+private fun DropLine(readings: List<Pair<Long, Int>>, end: Long, after: Color, modifier: Modifier = Modifier) {
     val first = end - BeforeS
     val span = (BeforeS + WorkoutSession.CALM_S).toFloat()
     val lo = readings.minOf { it.second } - 5f
@@ -310,7 +326,7 @@ private fun DropLine(readings: List<Pair<Long, Int>>, end: Long, modifier: Modif
             drawPath(path, color, style = Stroke(width, cap = StrokeCap.Round))
         }
         stroke(readings.filter { it.first <= end }, Ink.Tertiary, 2.dp.toPx())
-        stroke(readings.filter { it.first >= end }, Color.White, 2.4.dp.toPx())
+        stroke(readings.filter { it.first >= end }, after, 2.4.dp.toPx())
     }
 }
 

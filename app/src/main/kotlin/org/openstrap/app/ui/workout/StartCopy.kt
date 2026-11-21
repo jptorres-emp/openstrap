@@ -29,12 +29,16 @@ object StartCopy {
             strings.get(R.string.workout_start_strap_not_connected)
     }
 
-    /** The goal chip for no goal, named for the sport: "Just run", "Just walk", "Just ride", else "Just go". */
+    /** Zepp's rowing machine sport type. */
+    private const val ROWING = 23
+
+    /** The goal chip for no goal, named for the sport: "Just run", "Just walk", "Just ride", "Just row", else "Just go". */
     fun noGoal(type: Int, strings: Strings = Strings.app): String = strings.get(
         when {
             type in SportTypes.RUNS -> R.string.workout_start_just_run
             type in SportTypes.WALKS -> R.string.workout_start_just_walk
             Workouts.tileType(type) == 4 -> R.string.workout_start_just_ride
+            type == ROWING -> R.string.workout_start_just_row
             else -> R.string.workout_start_just_go
         },
     )

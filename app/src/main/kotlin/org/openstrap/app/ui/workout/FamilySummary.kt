@@ -89,7 +89,7 @@ object FamilySummary {
                 } else if (logged) {
                     strings.get(R.string.workout_summary_set_skipped)
                 } else {
-                    Units.workoutClock(s.end!! - s.start)
+                    Units.length(s.end!! - s.start)
                 }
                 SetLine(if (name == null) s.index + 1 else i + 1, text, Strength.peak(readings, s.start, s.end!!))
             })

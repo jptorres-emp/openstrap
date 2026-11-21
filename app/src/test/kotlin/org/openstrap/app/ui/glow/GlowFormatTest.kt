@@ -51,11 +51,11 @@ class GlowFormatTest {
     @Test fun `numbers drawn in dots keep ASCII digits and a dot in every language`() {
         for (locale in TEST_LOCALES) inLocale(locale) {
             listOf(
-                dotClock(3723), dotClock(754), clockDuration(27_600), Metric.SkinTemperature.format(36.55f, Units.DOT_LOCALE), Metric.Steps.format(13_860f, Units.DOT_LOCALE),
+                dotClock(3723), dotClock(754), Metric.SkinTemperature.format(36.55f, Units.DOT_LOCALE), Metric.Steps.format(13_860f, Units.DOT_LOCALE),
                 speedText(300.0, Units.DOT_LOCALE)!!, summaryHero(Workouts.Family.Distance, run(5210f), null).value,
             ).forEach(::assertDrawable)
             assertEquals("1:02:03", dotClock(3723))
-            assertEquals("7:40", clockDuration(27_600))
+            assertEquals("7 h 40", clockDuration(27_600))
             assertEquals("13\u2009860", Metric.Steps.format(13_860f, Units.DOT_LOCALE))
             assertEquals("36.5", Metric.SkinTemperature.format(36.54f, Units.DOT_LOCALE))
             // Read in a row's text, the same figures take the phone's own marks.

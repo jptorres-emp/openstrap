@@ -6,6 +6,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.foundation.background
@@ -19,6 +21,19 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.res.stringResource
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Text
+import kotlinx.coroutines.delay
+import org.openstrap.app.R
+import org.openstrap.app.ui.components.Motion
+import org.openstrap.app.ui.theme.Corner
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
@@ -83,17 +98,21 @@ fun WorkoutMap(
         return
     }
     val panned by rememberUpdatedState(onPanned)
+    // The credit text shows when the map opens and goes after a few seconds or the first pan; the (i) stays.
+    var creditShown by remember { mutableStateOf(true) }
     val density = LocalDensity.current
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     var map by remember { mutableStateOf<MapLibreMap?>(null) }
     var style by remember { mutableStateOf<Style?>(null) }
+    // The map's size in pixels: a fit made at one size is wrong at the next (a panel over it changes height), so it is made again.
+    var mapSize by remember { mutableStateOf(IntSize.Zero) }
     val view = remember {
         MapLibre.getInstance(context)
         MapView(context).apply {
             onCreate(null)
             getMapAsync { m ->
-                m.setUpForRoutes { panned() }
+                m.setUpForRoutes { creditShown = false; panned() }
                 map = m
             }
         }
@@ -192,7 +211,7 @@ fun WorkoutMap(
     LaunchedEffect(style, highlight) {
         style?.getSourceAs<GeoJsonSource>(HIGHLIGHT_SRC)?.setGeoJson(highlightGeoJson(highlight))
     }
-    LaunchedEffect(style, stretches, here, follow, highlight, fitPadding) {
+    LaunchedEffect(style, stretches, here, follow, highlight, fitPadding, mapSize) {
         val s = style ?: return@LaunchedEffect
         s.getSourceAs<GeoJsonSource>(SOURCE)?.setGeoJson(geoJson(stretches))
         val last = here ?: stretches.lastOrNull()?.first?.lastOrNull()
@@ -201,16 +220,49 @@ fun WorkoutMap(
         s.getSourceAs<GeoJsonSource>(START)?.setGeoJson(point(all.firstOrNull()?.takeIf { all.size >= 2 }))
         if (!follow) return@LaunchedEffect
         val fit = if (highlight.size >= 2) highlight else all
+        // Nothing to fit into until the map has a size, and padding that leaves no room would throw the camera off.
+        if (mapSize.width <= 0 || mapSize.height <= 0) return@LaunchedEffect
         if (fit.size >= 2) {
             val bounds = LatLngBounds.Builder().includes(fit.map { LatLng(it.lat, it.lon) }).build()
             val px = with(density) { listOf(fitPadding.calculateLeftPadding(LayoutDirection.Ltr), fitPadding.calculateTopPadding(), fitPadding.calculateRightPadding(LayoutDirection.Ltr), fitPadding.calculateBottomPadding()).map { it.roundToPx() } }
-            runCatching { map?.easeCamera(CameraUpdateFactory.newLatLngBounds(bounds, px[0], px[1], px[2], px[3])) }
+            // The map adds its own padding to a fit's, and a fit leaves it set, so each fit would drift the next: start clean.
+            val room = mapSize.width - px[0] - px[2] > 0 && mapSize.height - px[1] - px[3] > 0
+            val pad = if (room) px else listOf(0, 0, 0, 0)
+            runCatching {
+                map?.setPadding(0, 0, 0, 0)
+                map?.easeCamera(CameraUpdateFactory.newLatLngBounds(bounds, pad[0], pad[1], pad[2], pad[3]))
+            }
         } else if (last != null) {
             map?.easeCamera(CameraUpdateFactory.newLatLngZoom(LatLng(last.lat, last.lon), MAX_ZOOM))
         }
     }
-    AndroidView({ view }, modifier)
+    LaunchedEffect(Unit) {
+        delay(CREDIT_SHOWN_MS)
+        creditShown = false
+    }
+    Box(modifier) {
+        AndroidView({ view }, Modifier.fillMaxSize().onSizeChanged { mapSize = it })
+        if (!routeOnly) {
+            val alpha by animateFloatAsState(if (creditShown) 1f else 0f, tween(Motion.QUICK), label = "map credit")
+            if (alpha > 0f) {
+                // Left of the (i), on the same line.
+                Text(
+                    stringResource(R.string.glow_map_credit), color = Color.White, style = GlowType.noteSmall, maxLines = 1,
+                    modifier = Modifier.align(Alignment.BottomEnd)
+                        .padding(end = 18.dp + CREDIT_INFO_WIDTH, bottom = creditBottom + 6.dp)
+                        .graphicsLayer { this.alpha = alpha }
+                        .clip(Corner.Pill).background(Greys.OverMap).padding(horizontal = Space.S8, vertical = Space.S4),
+                )
+            }
+        }
+    }
 }
+
+/** How long the "© OpenStreetMap" text stays up when a map with tiles opens. */
+private const val CREDIT_SHOWN_MS = 5_000L
+
+/** The map's own (i) button and its margin, which the credit text sits left of. */
+private val CREDIT_INFO_WIDTH = 40.dp
 
 /** Close enough to read the streets, far enough to see where they go. */
 private const val MAX_ZOOM = 16.5

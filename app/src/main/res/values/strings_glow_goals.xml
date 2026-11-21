@@ -48,7 +48,7 @@
     <!-- A button that opens every badge, and that page's title. -->
     <string name="glow_goals_all_badges">All badges</string>
     <!-- A button that opens last week's recap. -->
-    <string name="glow_goals_last_week">Last week\'s recap</string>
+    <string name="glow_goals_last_week">Last week</string>
     <!-- A button that opens the settings for which moments get a celebration. -->
     <string name="glow_goals_celebrations">Celebrations</string>
     <!-- Under the All badges title: how many are earned out of all of them. -->
@@ -89,7 +89,7 @@
         <item quantity="other"><xliff:g id="count" example="4">%d</xliff:g> workouts</item>
     </plurals>
     <!-- Under a total time in the recap and on the share card. -->
-    <string name="glow_goals_hours">Hours</string>
+    <string name="glow_goals_hours">Time</string>
     <!-- Under a total distance on the share card. -->
     <string name="glow_goals_distance">Distance</string>
     <!-- Under the total calories burned in workouts. -->
@@ -129,9 +129,9 @@
     <!-- Over what a best measures, in its sheet. -->
     <string name="glow_goals_what_it_measures">What it measures</string>
     <!-- The Celebrations row's line on Goals and bests: what is switched on. -->
-    <string name="glow_goals_celebrations_both">Goal moment, weekly recap</string>
+    <string name="glow_goals_celebrations_both">Goal moment and your week</string>
     <string name="glow_goals_celebrations_goal">Goal moment</string>
-    <string name="glow_goals_celebrations_recap">Weekly recap</string>
+    <string name="glow_goals_celebrations_recap">Your week</string>
     <string name="glow_goals_celebrations_off">Off</string>
     <!-- The goals sheet's unit after the calorie goal, and after the workouts goal. -->
     <string name="glow_goals_unit_kcal">kcal</string>

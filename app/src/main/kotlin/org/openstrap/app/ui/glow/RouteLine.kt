@@ -36,6 +36,9 @@ internal class RouteLine(
     /** Roads is chosen and the route is still being matched to them. */
     val matching: Boolean get() = roads == true && outcome == null
 
+    /** The line on the map is along the roads (or on its way to be): Roads is chosen and matching didn't fall back to GPS. */
+    val drawnAsRoads: Boolean get() = roads == true && (outcome == null || outcome is RouteSnapper.Outcome.Snapped)
+
     /** Each whole kilometre's number at its end. */
     val kmMarkers: List<Pair<Int, Route.Point>>
         get() = legs.filter { it.split.meters >= 1000.0 }.map { it.split.index + 1 to it.points.last() }

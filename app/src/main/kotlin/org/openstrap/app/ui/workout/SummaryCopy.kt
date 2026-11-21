@@ -209,7 +209,7 @@ object SummaryCopy {
     val TRIM_HINT: String get() = Strings.app.get(R.string.workout_summary_trim_hint)
 
     /** The trim sheet's header: "18:02 to 18:40, 38:12". */
-    fun trimHeader(from: String, to: String, seconds: Long): String = "${Ranges.of(from, to)}, ${Units.workoutClock(seconds)}"
+    fun trimHeader(from: String, to: String, seconds: Long): String = "${Ranges.of(from, to)}, ${Units.length(seconds)}"
 
     /** The last part's distance, down to "0 m" where the smoothed total leaves next to nothing. */
     private fun lastPart(meters: Float, locale: Locale, strings: Strings): String =

@@ -17,6 +17,7 @@ import org.openstrap.app.ui.glow.BannerKind
 import org.openstrap.app.ui.glow.PageGroup
 import org.openstrap.app.ui.glow.SwitchRow
 import org.openstrap.app.ui.glow.NavRow
+import org.openstrap.app.export.BackupFiles
 import org.openstrap.app.ui.theme.AppIcons
 
 /**
@@ -56,7 +57,9 @@ fun BackupPage(
         // Groups as on the HaloBackup board: the switch, the folder and Back up now; Restore; Save a copy.
         item {
             PageGroup(
-                footnote = if (state.on) stringResource(R.string.you_backup_now_note) else null,
+                footnote = stringResource(
+                    if (state.on) R.string.you_backup_now_note else R.string.you_backup_off_note, BackupFiles.KEEP,
+                ),
             ) {
                 SwitchRow(
                     stringResource(R.string.you_backup_automatic), BackupCopy.status(state.copy(failed = null),

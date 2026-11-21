@@ -78,13 +78,13 @@ object WorkoutCopy {
             strings.format(R.string.core_workout_rest_rule_below, belowBpm)
         }
 
-    /** A set done, as the live screen lists it: "10 × 60 kg, 0:51, peak 148", or without the log "0:51, peak 148". */
+    /** A set done, as the live screen lists it: "10 × 60 kg, 51 s, peak 148", or without the log "51 s, peak 148". */
     fun setLine(s: org.openstrap.app.data.db.AppWorkoutSet, peak: Int?, strings: Strings = Strings.app): String = listOfNotNull(
         s.reps?.let { r ->
             s.weightKg?.let { strings.format(R.string.core_workout_set_weight, r, org.openstrap.app.data.Strength.kgText(it)) }
                 ?: strings.plural(R.plurals.core_workout_set_reps, r, r)
         },
-        s.end?.let { Units.workoutClock(it - s.start) },
+        s.end?.let { Units.length(it - s.start) },
         peak?.let { strings.format(R.string.core_workout_set_peak, it) },
     ).reduceOrNull { a, b -> strings.format(R.string.core_workout_list, a, b) }.orEmpty()
 

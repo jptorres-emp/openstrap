@@ -78,11 +78,11 @@
     <!-- Unit beside the workout's average heart rate. Short. -->
     <string name="glow_workout_unit_bpm_average">avg bpm</string>
     <!-- Under the average heart rate: the highest and the lowest. -->
-    <string name="glow_workout_heart_max_lowest">Highest <xliff:g id="max" example="172">%1$d</xliff:g>, lowest <xliff:g id="min" example="98">%2$d</xliff:g> bpm</string>
+    <string name="glow_workout_heart_max_lowest">High <xliff:g id="max" example="172">%1$d</xliff:g>, low <xliff:g id="min" example="98">%2$d</xliff:g> bpm</string>
     <!-- Under the average heart rate: the highest, when the lowest isn't known. -->
-    <string name="glow_workout_heart_max">Highest <xliff:g id="max" example="172">%1$d</xliff:g> bpm</string>
+    <string name="glow_workout_heart_max">High <xliff:g id="max" example="172">%1$d</xliff:g> bpm</string>
     <!-- Under the average heart rate: the lowest, when the highest isn't known. -->
-    <string name="glow_workout_heart_lowest">Lowest <xliff:g id="min" example="98">%1$d</xliff:g> bpm</string>
+    <string name="glow_workout_heart_lowest">Low <xliff:g id="min" example="98">%1$d</xliff:g> bpm</string>
     <!-- On the heart rate card before the strap has sent it. -->
     <string name="glow_workout_heart_none">The strap hasn\'t sent this workout\'s heart rate yet.</string>
     <!-- Under the line's right end, when it runs on past the workout's end. The time is "18:44". -->

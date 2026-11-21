@@ -20,9 +20,9 @@ import kotlin.math.roundToLong
  * 1. Distance. A workout shows 2 decimals ("5.21 km"), a day's total 1 ("5.2 km"). Under 1 km it's metres ("820 m"),
  *    under 10 m nothing. The decimal mark follows the phone's language, except in the dot font, which keeps the dot.
  *    Distance from steps always gets "≈ " in front.
- * 2. Duration. "7 h 40" everywhere, "7 h" on the hour and "40 min" under an hour. "7:40" only where a design asks
- *    for a clock look.
- * 3. Workout timer. "12:34", then "1:02:03" past the hour, written once. A finished workout under a minute reads "45 s".
+ * 2. Duration. "7 h 40" everywhere, "7 h" on the hour and "40 min" under an hour, never a clock look ("7:40").
+ * 3. Workout timer. "12:34", then "1:02:03" past the hour, written once, while it runs. A finished workout's length is
+ *    "45 s", "1 min 22" or "1 h 02" ([Units.length]).
  * 4. Time of day. Every clock follows the phone's 12 or 24 hour setting through [TimeOfDay], widgets and the
  *    notification too.
  * 5. Pace. "5:24 /km" everywhere, shown once a workout has covered 100 m, and never slower than 60 min a km ([Pace]).
@@ -126,22 +126,36 @@ object Units {
         }
     }
 
-    /** A length of time with a clock's look, hours and minutes, where a design asks for it: "7:40". */
-    fun clockDuration(seconds: Long, locale: Locale = Locale.getDefault()): String =
-        String.format(locale, "%d:%02d", seconds / HOUR, seconds % HOUR / MINUTE)
+    /**
+     * [duration] for a figure drawn in the dot font ([locale] is [DOT_LOCALE] there): "7 h 40", "40 min". The big number
+     * draws the digits as dots and the unit words small between them, so a length never takes a clock's look ("7:40").
+     */
+    fun clockDuration(seconds: Long, locale: Locale = Locale.getDefault(), strings: Strings = Strings.app): String =
+        duration(seconds, locale, strings)
+
+    /**
+     * A finished workout's length, or a gap between two, written as every length is: "45 s" under a minute, "1 min 22"
+     * under an hour, "1 h 02" from an hour. Seconds drop out from the hour, as in [duration].
+     */
+    fun length(seconds: Long, locale: Locale = Locale.getDefault(), strings: Strings = Strings.app): String {
+        val s = seconds.coerceAtLeast(0)
+        return when {
+            s < MINUTE -> strings.format(R.string.core_unit_seconds, String.format(locale, "%d", s))
+            s < HOUR -> strings.format(
+                R.string.core_unit_minutes_seconds, String.format(locale, "%d", s / MINUTE), String.format(locale, "%02d", s % MINUTE),
+            )
+            else -> duration(s, locale, strings)
+        }
+    }
 
     /** The workout timer: "12:34", or "1:02:03" past the hour. */
     fun workoutClock(seconds: Long, locale: Locale = Locale.getDefault()): String =
         if (seconds >= HOUR) String.format(locale, "%d:%02d:%02d", seconds / HOUR, seconds / MINUTE % MINUTES_PER_HOUR, seconds % MINUTE)
         else String.format(locale, "%d:%02d", seconds / MINUTE, seconds % MINUTE)
 
-    /** A finished workout's length, or a gap between two: "45 s" under a minute, else [workoutClock]. */
+    /** A finished workout's length, or a gap between two: [length]. The running timer is [workoutClock]. */
     fun secondsOrClock(seconds: Long, locale: Locale = Locale.getDefault(), strings: Strings = Strings.app): String =
-        if (seconds < MINUTE) {
-            strings.format(R.string.core_unit_seconds, String.format(locale, "%d", seconds))
-        } else {
-            workoutClock(seconds, locale)
-        }
+        length(seconds, locale, strings)
 }
 
 /** A change against your usual, with its sign: "+3", "−3", or "±0" when it rounds to nothing, never "-0". */

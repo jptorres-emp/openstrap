@@ -667,6 +667,7 @@ fun GlowMetricDetailScreen(
     }
     val label = if (night) SleepCopy.nightLabel(metric, range) else DetailCopy.valueLabel(
         metric, range, live = live != null, today = isToday, estimated = metric == Metric.RestingHr && state.restingEstimated,
+        upTo = if (metric == Metric.HeartRate && isToday) state.heartRate.maxOfOrNull { it.x }?.let { clock(it) } else null,
         latest = LatestReading.of(metric, state)?.let {
             DetailCopy.Latest(
                 clock(it.x), asleep = metric == Metric.Spo2 && LatestReading.spo2Asleep(state),

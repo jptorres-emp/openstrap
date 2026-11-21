@@ -57,9 +57,13 @@
     <!-- The label under a metric's value on the Day view. bpm is beats a minute. Short, one line. -->
     <string name="core_detail_label_bpm_now">bpm now</string>
     <string name="core_detail_label_bpm_latest">bpm, latest</string>
-    <string name="core_detail_label_bpm_resting">bpm resting</string>
+    <string name="core_detail_label_bpm_resting">bpm, last night</string>
+    <string name="core_detail_label_bpm_resting_that_night">bpm, that night</string>
     <!-- The label under a resting heart rate unstrap worked out itself, because the strap sent none for the day. -->
-    <string name="core_detail_label_bpm_resting_estimated">bpm resting, estimated</string>
+    <string name="core_detail_label_bpm_resting_estimated">bpm, last night, estimated</string>
+    <string name="core_detail_label_bpm_resting_estimated_that_night">bpm, that night, estimated</string>
+    <!-- The label under a heart rate when the day's data ends early: today, or a day the strap was worn part of. -->
+    <string name="core_detail_label_bpm_up_to">bpm, up to <xliff:g id="time" example="09:10">%1$s</xliff:g></string>
     <string name="core_detail_label_steps_today">steps so far today</string>
     <string name="core_detail_label_steps">steps</string>
     <!-- br/min is breaths a minute. -->

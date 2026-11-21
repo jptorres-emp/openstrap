@@ -227,9 +227,9 @@
     <!-- Small on the right while resting: the round after the rest. -->
     <string name="workout_live_round_next" tools:ignore="PluralsCandidate">Round <xliff:g id="round" example="4">%1$d</xliff:g> next</string>
     <!-- Under the big seconds during a rest: the heart rate now. -->
-    <string name="workout_live_heart_rate">Heart rate <xliff:g id="bpm" example="128">%1$d</xliff:g></string>
+    <string name="workout_live_heart_rate">Heart rate <xliff:g id="bpm" example="128">%1$d</xliff:g> bpm</string>
     <!-- Under the big seconds during a rest: the heart rate now and how far it has come down since the work. -->
-    <string name="workout_live_heart_rate_down">Heart rate <xliff:g id="bpm" example="128">%1$d</xliff:g>, down <xliff:g id="drop" example="31">%2$d</xliff:g></string>
+    <string name="workout_live_heart_rate_down">Heart rate <xliff:g id="bpm" example="128">%1$d</xliff:g> bpm, down <xliff:g id="drop" example="31">%2$d</xliff:g></string>
     <!-- A button during a rest: ten seconds more rest. About 6 characters. -->
     <string name="workout_live_add_10_s">+10 s</string>
     <!-- Small on the right while warming up before the rounds. -->

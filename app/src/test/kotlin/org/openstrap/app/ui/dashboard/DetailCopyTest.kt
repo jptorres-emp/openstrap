@@ -123,8 +123,8 @@ class DetailCopyTest {
         // Stress has no unit: its longer ranges stay averages.
         assertEquals("Normal, latest at 14:05", DetailCopy.valueLabel(Metric.Stress, Range.Day, latest = Latest("14:05", level = StressLevel.Normal)))
         assertEquals("Average of the last 30 days", DetailCopy.valueLabel(Metric.Stress, Range.Month, latest = Latest("14:05", level = StressLevel.High)))
-        assertEquals("bpm resting", DetailCopy.valueLabel(Metric.RestingHr, Range.Day))
-        assertEquals("bpm resting, estimated", DetailCopy.valueLabel(Metric.RestingHr, Range.Day, estimated = true))
+        assertEquals("bpm, last night", DetailCopy.valueLabel(Metric.RestingHr, Range.Day))
+        assertEquals("bpm, last night, estimated", DetailCopy.valueLabel(Metric.RestingHr, Range.Day, estimated = true))
         assertEquals("steps a day, last 7 days", DetailCopy.valueLabel(Metric.Steps, Range.Week))
         assertEquals("ms, average of the last 30 days", DetailCopy.valueLabel(Metric.Hrv, Range.Month))
     }

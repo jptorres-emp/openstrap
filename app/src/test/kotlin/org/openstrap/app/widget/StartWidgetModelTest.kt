@@ -85,7 +85,7 @@ class StartWidgetModelTest {
         assertFalse(off.gpsOn)
         // Strength has no GPS to speak of.
         val indoor = model(workouts = listOf(workout(20, 8, 52, 40), workout(21, 8, 52, 40)))
-        assertEquals("Strength training", indoor.usual.name)
+        assertEquals("Strength", indoor.usual.name)
         assertEquals("Your usual", indoor.usualLine)
         assertFalse(indoor.gpsOn)
     }

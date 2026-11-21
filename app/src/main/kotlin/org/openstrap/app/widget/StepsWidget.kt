@@ -28,11 +28,9 @@ import org.openstrap.app.data.DetailRoutes
 import org.openstrap.app.data.Summaries
 import org.openstrap.app.data.WidgetKind
 import org.openstrap.app.ui.glow.draw.GlowMood
+import org.openstrap.app.ui.glow.draw.drawStepsHourDots
+import org.openstrap.app.ui.glow.draw.drawWeekRingsDotted
 import org.openstrap.app.ui.glow.draw.WeekBarsLook
-import org.openstrap.app.ui.glow.draw.drawPillBar
-import org.openstrap.app.ui.glow.draw.drawWeekRings
-import org.openstrap.app.ui.glow.draw.ChartInk
-import org.openstrap.app.ui.glow.draw.hourPills
 import org.openstrap.app.ui.glow.draw.renderToBitmap
 import org.openstrap.app.ui.theme.Ink
 import org.openstrap.app.ui.theme.MetricColors
@@ -91,7 +89,7 @@ private val Hue = MetricColors.steps
 private fun StepsContent(data: StepsWidget.Shown) {
     val m = data.model
     val open = openMetric(LocalContext.current, DetailRoutes.STEPS, m.date)
-    PictureWidget(Hue, null, data.mood, open, BITMAP_EXTRA) { frame ->
+    PictureWidget(open, BITMAP_EXTRA) { frame ->
         when (frame.bucket) {
             WidgetSizes.Small -> SmallContent(m, frame)
             WidgetSizes.Wide -> WideContent(m, frame)
@@ -139,7 +137,10 @@ private fun ColumnScope.WideContent(m: StepsWidgetModel, f: WidgetFrame) {
     Edge(fit.spread, f)
 }
 
-/** Large: the Wide plus this week, day by day against the goal. */
+/**
+ * Large: the Wide's number, the goal bar, and this week as dotted rings. The rings are its one dotted chart, so the
+ * hours step back to the bar (HaloCharts: one dotted chart a card).
+ */
 @Composable
 private fun ColumnScope.LargeContent(m: StepsWidgetModel, f: WidgetFrame) {
     val fit = StepsLayout.large(m, f.contentWidth, f.contentHeight, f.fontScale, f.status)
@@ -148,7 +149,7 @@ private fun ColumnScope.LargeContent(m: StepsWidgetModel, f: WidgetFrame) {
     Gap()
     NumberRow(m, fit.row, f)
     Gap()
-    StepsLine(m, fit.line, f)
+    if (fit.week != null) GoalBar(m.progress, f) else StepsLine(m, fit.line, f)
     Gap()
     fit.week?.let { WeekRow(m, it, f.density) }
     Edge(fit.spread, f)
@@ -169,8 +170,9 @@ private fun NumberRow(m: StepsWidgetModel, row: StepsLayout.NumberRow, f: Widget
 }
 
 /**
- * The day so far as Today's Steps card draws it, [height] dp high: the hours as lime pill bars, the latest full, the
- * rest dimmer, on a hairline baseline. The goal bar instead when there's no room or no step yet.
+ * The day so far as Today's Steps card draws it, [height] dp high: the hours as lime dots, a dot per 250 steps, the
+ * latest hour full and the rest dimmer ([drawStepsHourDots], HaloCharts Steps by hour). The goal bar instead when there's
+ * no room or no step yet.
  */
 @Composable
 private fun StepsLine(m: StepsWidgetModel, height: Float?, f: WidgetFrame) {
@@ -181,15 +183,7 @@ private fun StepsLine(m: StepsWidgetModel, height: Float?, f: WidgetFrame) {
     }
     val w = f.drawContentWidth * f.density
     val h = height * f.density
-    val bitmap = renderToBitmap(w, h) { c ->
-        hourPills(m.hourly, null, w, h, f.density)?.let { g ->
-            c.drawLine(0f, g.baselineY, w, g.baselineY, Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                color = ChartInk.Grid.toArgb()
-                strokeWidth = ChartInk.HAIRLINE_DP * f.density
-            })
-            g.bars.forEach { (bar, latest) -> drawPillBar(c, bar, if (latest) Hue else Hue.copy(alpha = HOUR_BAR_ALPHA)) }
-        }
-    }
+    val bitmap = renderDrawScope(w, h, f.density) { drawStepsHourDots(m.hourly, Hue) }
     Image(
         ImageProvider(bitmap),
         contentDescription = LocalContext.current.getString(R.string.system_widget_steps_line_description, m.share),
@@ -233,9 +227,6 @@ private fun WeekRow(m: StepsWidgetModel, week: StepsLayout.Week, density: Float)
 /* Bitmaps                                                                                           */
 /* ------------------------------------------------------------------------------------------------ */
 
-/** The hours before the latest, a little dimmer than it, as on Today's Steps card. */
-private const val HOUR_BAR_ALPHA = 0.6f
-
 /** Room for the dots, the line, the bar and the week beside the backgrounds, in the bitmap budget. */
 private const val BITMAP_EXTRA = 1.35
 
@@ -252,10 +243,14 @@ private fun goalBar(progress: Float, width: Float, density: Float): Bitmap {
     }
 }
 
-/** This week as rings, as Today's Your week card draws them ([drawWeekRings]), a ring per column over its letter. */
+/** This week as dotted rings, as Today's Your week card draws them ([drawWeekRingsDotted]), a ring per column over its letter. */
 private fun weekBitmap(m: StepsWidgetModel, column: Float, density: Float): Bitmap {
     val height = StepsLayout.ringHeight(column) * density
-    return renderToBitmap(WeekBarsLook.width(m.week.size, column) * density, height) { c ->
-        drawWeekRings(c, StepsWidgetModel.ringShares(m.week, m.goal), Hue, column * density, WeekBarsLook.GAP_DP * density, height, density)
+    val today = m.week.indexOfFirst { it.state == StepsDay.Today }
+    return renderDrawScope(WeekBarsLook.width(m.week.size, column) * density, height, density) {
+        drawWeekRingsDotted(StepsWidgetModel.ringShares(m.week, m.goal), Hue, WEEK_RING_STROKE_DP * density, today)
     }
 }
+
+/** The rings' stroke, as Today's Your week on a Small. */
+private const val WEEK_RING_STROKE_DP = 3f

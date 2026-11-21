@@ -58,6 +58,8 @@
     </plurals>
     <string name="system_widget_recording">正在记录</string>
     <string name="system_widget_paused">已暂停</string>
+    <string name="system_widget_rest">休息中</string>
+    <string name="system_widget_still_going">还在运动吗？</string>
     <string name="system_widget_moment_energy_left">剩余精力</string>
     <string name="system_widget_moment_left">剩余</string>
     <string name="system_widget_moment_energy_at_waking">起床时精力 %1$d</string>

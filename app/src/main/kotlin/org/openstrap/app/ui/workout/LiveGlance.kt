@@ -28,7 +28,11 @@ import kotlinx.coroutines.flow.flowOf
 import org.openstrap.app.presentation.WorkoutCopy
 import org.openstrap.app.data.HeartZones
 
-/** What a [LiveGlance] is lit in: the zone's colour, work red, rest green, yoga purple, paused grey, asking amber. */
+/**
+ * What a [LiveGlance] is lit in (workout-rules.md, Colour): [Zone], [Work] and [Mind] in the sport's own colour, so a
+ * workout keeps one colour everywhere; only the states change it: rest teal, paused grey, asking amber. The live zone
+ * shows as a chip, never as the light.
+ */
 enum class GlanceTint { Zone, Work, Rest, Mind, Paused, Asking }
 
 /** The next thing to do from the Today hero or the floating bar, or the second one beside it. */
@@ -108,6 +112,8 @@ data class LiveGlance(
     val split: Pair<String, String?>? = null,
     /** The bar shows the live bpm in dots beside its action (only where the action is Pause). */
     val bpm: Int? = null,
+    /** The workout's sport type, for its colour; null lights it in the zone's as before. */
+    val sport: Int? = null,
 )
 
 /**
@@ -310,7 +316,7 @@ object Glance {
         )
         val base = LiveGlance(
             figure, unit, "", null, progress, GlanceTint.Zone, zone, GlanceAction.Pause, strings.get(R.string.workout_glance_pause),
-            goal = goal, toGo = toGo, figures = figures, split = splitLine(i, strings), clock = clock,
+            goal = goal, toGo = toGo, figures = figures, split = splitLine(i, strings), clock = clock, sport = i.sportType,
         )
         i.stoppedSince?.let { since ->
             val minutes = ((i.now - since) / 60).coerceAtLeast(1)
@@ -359,9 +365,9 @@ object Glance {
         )
     }
 
-    /** A bpm figure's label: "bpm, zone 3", or "bpm" with no zone. */
-    private fun bpmLabel(zone: Int?, strings: Strings): String =
-        zone?.let { strings.format(R.string.workout_glance_figure_bpm_zone, it + 1) } ?: strings.get(R.string.workout_glance_figure_bpm)
+    /** A bpm figure's label: "bpm". The zone is the hero's chip, not words in a label (workout-rules.md, Colour). */
+    @Suppress("UNUSED_PARAMETER")
+    private fun bpmLabel(zone: Int?, strings: Strings): String = strings.get(R.string.workout_glance_figure_bpm)
 
     /** "142 bpm", and "142 bpm, down 20" once the heart rate has come down since the work ended. */
     private fun heart(bpm: Int, drop: Int?, strings: Strings): String =

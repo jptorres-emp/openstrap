@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -68,8 +67,8 @@ internal fun LiveHero(color: Color, angle: Float, modifier: Modifier = Modifier,
 internal fun HeroTitle(title: String, note: String?, tint: Color, trailing: (@Composable () -> Unit)? = null) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Space.S12), verticalAlignment = Alignment.CenterVertically) {
         Text(title, color = Color.White, style = GlowType.heroTitle, maxLines = 1, overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f, fill = false))
-        Spacer(Modifier.weight(1f))
+            modifier = Modifier.weight(1f))
+        // The title takes the free width, so the note or [trailing] sits flush with the card's right edge.
         if (trailing != null) trailing()
         else if (note != null) Text(note, color = tint, style = GlowType.secondary, maxLines = 1)
     }
@@ -87,8 +86,8 @@ internal fun LiveCard(modifier: Modifier = Modifier, content: @Composable Column
     org.openstrap.app.ui.glow.HaloCard(modifier, content = content)
 
 /**
- * The heart rate as a row (board HaloLiveHiitWork): the heart in its zone's colour, the bpm in Display Light 20 and
- * [unit] after it, the zone's name at the right. Put it in a [LiveCard].
+ * The heart rate as a row (board HaloLiveHiitWork): a white heart, the bpm in Display Light 20 and [unit] after it,
+ * the zone's chip at the right (workout-rules.md, Colour). Put it in a [LiveCard].
  */
 @Composable
 internal fun HeartLine(bpm: Int?, maxHr: Int, paused: Boolean, modifier: Modifier = Modifier, unit: String? = null) {
@@ -102,7 +101,7 @@ internal fun HeartLine(bpm: Int?, maxHr: Int, paused: Boolean, modifier: Modifie
         Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.S8)) {
             androidx.compose.material3.Icon(
                 org.openstrap.app.ui.theme.AppIcons.Heartbeat, null,
-                    tint = zone?.let { org.openstrap.app.ui.workout.ZONE_COLORS[it] } ?: Color.White,
+                tint = Color.White,
                 modifier = Modifier.size(16.dp),
             )
             Text("$bpm", color = Color.White, style = GlowType.figureInline)
@@ -111,7 +110,6 @@ internal fun HeartLine(bpm: Int?, maxHr: Int, paused: Boolean, modifier: Modifie
                 color = GlowType.noteColor, style = GlowType.secondary, maxLines = 1,
             )
         }
-        zone?.let { Text(org.openstrap.app.presentation.WorkoutCopy.zoneTitle(it).first, color = GlowType.noteColor,
-            style = GlowType.secondary, maxLines = 1) }
+        zone?.let { org.openstrap.app.ui.glow.ZoneChip(it) }
     }
 }

@@ -268,6 +268,19 @@ internal val MindLine: List<Float?> = List(120) { i -> 88f - i / 8f + (i % 7) * 
 private fun LiveParts(modifier: Modifier = Modifier) {
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(GlowGrid.Gap)) {
         Heading("Live parts")
+        // A walk 24 min in at 112 bpm, zone 1: one sport colour everywhere, the zone as a chip (workout-rules.md, Colour).
+        val walk = org.openstrap.app.ui.workout.Glance.of(
+            org.openstrap.app.ui.workout.GlanceInput(
+                org.openstrap.app.data.SportTypes.WALK, LIVE_START + 1452, 1452, null, 112, true, 190,
+                org.openstrap.app.data.HeartZones.STANDARD, true, 2310f, pace = 624.0, averagePace = 624.0, activeKcal = 96f,
+            ),
+        )
+        Label("Today, during a walk")
+        org.openstrap.app.ui.glow.LiveHero(walk, org.openstrap.app.data.SportTypes.WALK, walk.clock, {}, {}, Modifier.fillMaxWidth())
+        Label("Heart line")
+        org.openstrap.app.ui.glow.live.LiveCard { org.openstrap.app.ui.glow.live.HeartLine(112, 190, false) }
+        Label("Floating bar")
+        org.openstrap.app.ui.glow.WorkoutCapsule(walk.copy(line1 = "Walk, 24:12", line2 = "2.31 km", bpm = 112), {}, {})
         Label("Live heart card, with the zone time bar")
         WorkoutHeartCard(
             LiveRun, 148, LiveZones, connected = true, active = { LIVE_ACTIVE }, Modifier.fillMaxWidth(), zoneBar = true,

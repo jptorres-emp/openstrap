@@ -33,8 +33,6 @@ import java.time.ZoneId
 import org.openstrap.app.R
 import org.openstrap.app.data.DetailRoutes
 import org.openstrap.app.data.WidgetKind
-import org.openstrap.app.ui.glow.draw.EdgeKind
-import org.openstrap.app.ui.glow.draw.GlowMood
 import org.openstrap.app.ui.glow.draw.drawStageBar
 import org.openstrap.app.ui.glow.draw.renderToBitmap
 import org.openstrap.app.ui.glow.draw.stageColor
@@ -77,21 +75,19 @@ class SleepWidgetReceiver : PlacedWidgetReceiver() {
 /* Layout                                                                                            */
 /* ------------------------------------------------------------------------------------------------ */
 
-/** Sleep's ink, as the Sleep tab and Today's Last night card. */
-private val Hue = MetricColors.sleepDeep
 
 /** The legend's labels: Caption size and weight, at Secondary's 72% (the mockup's). */
 private val LegendStyle = WidgetType.caption.copy(color = ColorProvider(Ink.Secondary))
 
 /**
- * The widget at the size Glance lays out, lit from the top in the night mood whatever the moment ([EdgeKind.Sleep],
- * spec 2.2). A night opens its Sleep score; while waiting, the Sleep screen.
+ * The widget at the size Glance lays out, an unlit Halo card. A night opens its Sleep score; while waiting, the
+ * Sleep screen.
  */
 @Composable
 private fun SleepContent(m: SleepWidgetModel) {
     val context = LocalContext.current
     val open = if (m.date != null) openMetric(context, DetailRoutes.SLEEP_SCORE, m.date) else openMetric(context, DetailRoutes.SLEEP, null)
-    PictureWidget(Hue, null, GlowMood.Night, open, BITMAP_EXTRA) { frame ->
+    PictureWidget(open, BITMAP_EXTRA) { frame ->
         when {
             m.waiting != null -> WaitingContent(m.title, m.waiting, frame)
             frame.bucket == WidgetSizes.Small -> SmallContent(m, frame)

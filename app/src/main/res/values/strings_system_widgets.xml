@@ -112,6 +112,10 @@
     <!-- Start and Moment, during a workout: beside a red dot. One short word. -->
     <string name="system_widget_recording">Recording</string>
     <string name="system_widget_paused">Paused</string>
+    <!-- Under the sport while recording, resting between sets or intervals. -->
+    <string name="system_widget_rest">Rest</string>
+    <!-- Under the sport while recording, when the strap thinks you stopped and the app asks whether to end. -->
+    <string name="system_widget_still_going">Still going?</string>
 
     <!-- Moment: under or beside the Energy number. Energy is the body's energy score, 0 to 100, not the strap battery. -->
     <string name="system_widget_moment_energy_left">Energy left</string>

@@ -95,8 +95,7 @@ internal fun LiveMapScreen(
                     AppIcons.CaretDown, stringResource(R.string.workout_live_minimize), controls.onMinimize,
                     variant = HaloIconVariant.Glass,
                 )
-                if (heartPill) LitHeartPill(bpm, r.maxHeartRate, WorkoutRecorder.liveZone(bpm, r.maxHeartRate,
-                    heartZones)?.let { org.openstrap.app.ui.workout.ZONE_COLORS[it] } ?: Color.White, r.paused, 36.dp)
+                if (heartPill) LitHeartPill(bpm, r.maxHeartRate, r.paused, 36.dp)
                 Spacer(Modifier.weight(1f))
                 val acc = route.lastOrNull()?.accuracy
                 Row(

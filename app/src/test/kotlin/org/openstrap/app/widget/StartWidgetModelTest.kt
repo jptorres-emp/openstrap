@@ -214,7 +214,8 @@ class StartWidgetModelTest {
             val large = StartLayout.largeRecording(r, m, 313f, 290f, s)
             val edge = large.edgeGap(290f)
             val inner = (290f - large.content - 2 * edge) / (large.gaps - 2)
-            assertTrue("Large at $s: $inner", inner <= 32f)
+            // The timer stops at its 48 token (board HaloTypeScale), so One UI's tallest Large keeps a little more air.
+            assertTrue("Large at $s: $inner", inner <= 34f)
         }
     }
 
@@ -419,7 +420,7 @@ class StartWidgetModelTest {
             val room = when (f.layout) {
                 StartLayout.FigureLayout.Side -> (w - StartLayout.FIGURE_GAP_DP) / 2
                 StartLayout.FigureLayout.Rows -> w - StartLayout.FIGURE_GAP_DP - WidgetText.width(m.lastLabel, WidgetText.CAPTION_SP, s)
-                StartLayout.FigureLayout.Stacked -> w
+                StartLayout.FigureLayout.Stacked, StartLayout.FigureLayout.Live -> w
             }
             assertTrue("$w at $s: ${f.layout}", one(m.lastLine, WidgetText.BODY_SP, room, s))
         }

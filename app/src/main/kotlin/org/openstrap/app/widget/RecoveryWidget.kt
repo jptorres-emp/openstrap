@@ -23,7 +23,6 @@ import androidx.glance.layout.size
 import androidx.glance.layout.width
 import androidx.glance.text.Text
 import org.openstrap.app.data.WidgetKind
-import org.openstrap.app.ui.glow.draw.Rim
 import org.openstrap.app.ui.glow.draw.GlowMood
 import org.openstrap.app.ui.glow.draw.WeekBarsLook
 import org.openstrap.app.ui.glow.draw.drawWeekDots
@@ -81,8 +80,7 @@ private val Hue = MetricColors.readiness
 private fun RecoveryContent(data: RecoveryWidget.Shown) {
     val model = data.model
     val open = openMetric(LocalContext.current, DetailRoutes.RECOVERY, model.date)
-    // Off your usual, the rim lights by the latest day, at the bottom right as on Today's Recovery card.
-    PictureWidget(Hue, Rim.Corner.takeIf { model.off }, data.mood, open, BITMAP_EXTRA) { frame ->
+    PictureWidget(open, BITMAP_EXTRA) { frame ->
         when {
             model.score == null -> WaitingContent(model.title, model.waiting, frame)
             frame.bucket == WidgetSizes.Small -> SmallContent(model, RecoveryLayout.small(model, frame.contentWidth, frame.contentHeight, frame.fontScale, frame.status), frame)
@@ -135,8 +133,11 @@ private fun ScoreAndWeek(m: RecoveryWidgetModel, fit: RecoveryLayout.Fit, f: Wid
 /** Large: the Wide plus the sentence and the last seven days as a week of dots on a row of their own. */
 @Composable
 private fun ColumnScope.LargeContent(m: RecoveryWidgetModel, fit: RecoveryLayout.Fit, f: WidgetFrame) {
-    Edge(fit.spread, f)
-    TopRowView(m.title, m.note, fit.top, f, fit.spread.edge(f.drawContentHeight))
+    // The edge and the top row in a column of their own: Glance takes at most ten children in a column.
+    Column(GlanceModifier.fillMaxWidth()) {
+        Edge(fit.spread, f)
+        TopRowView(m.title, m.note, fit.top, f, fit.spread.edge(f.drawContentHeight))
+    }
     if (fit.sentenceLines > 0) m.sentence?.let {
         Gap()
         Text(it, style = WidgetType.hero.copy(fontSize = fit.sentenceSp.sp), maxLines = fit.sentenceLines)

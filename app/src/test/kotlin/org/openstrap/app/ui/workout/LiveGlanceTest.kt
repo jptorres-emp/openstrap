@@ -37,7 +37,7 @@ class LiveGlanceTest {
         assertEquals("Goal 5 km", g.goal)
         // 680 m at 5:42 /km is 3.9 min: about 4.
         assertEquals("About 4 min to go", g.toGo)
-        assertEquals(listOf("5:42" to "Pace /km", "142" to "bpm, zone 3", "312" to "Active kcal"), g.figures)
+        assertEquals(listOf("5:42" to "Pace /km", "142" to "bpm", "312" to "Active kcal"), g.figures)
         assertEquals("24:51", g.clock)
     }
 

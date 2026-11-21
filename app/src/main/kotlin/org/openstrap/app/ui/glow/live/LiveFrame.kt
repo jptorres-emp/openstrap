@@ -595,11 +595,12 @@ internal fun nowTickingState(): androidx.compose.runtime.State<Long> = produceSt
 }
 
 /**
- * The live heart rate over the map (board HaloLiveMap): a dark see-through pill with the heart in its zone's [color],
- * the bpm in Display Light 18 and "bpm, Zone 3" in grey. Paused or without a reading, it says so.
+ * The live heart rate over the map (board HaloLiveMap): a dark see-through pill with a white heart, the bpm in Display
+ * Light 18, "bpm" in grey and the zone's chip (workout-rules.md, Colour). Paused or
+ * without a reading, it says so.
  */
 @Composable
-internal fun LitHeartPill(bpm: Int?, maxHr: Int?, color: Color, paused: Boolean, height: Dp, modifier: Modifier = Modifier) {
+internal fun LitHeartPill(bpm: Int?, maxHr: Int?, paused: Boolean, height: Dp, modifier: Modifier = Modifier) {
     val heartZones = LocalHeartZones.current
     Row(
         modifier.height(height).clip(CircleShape).background(OverMapSurface).padding(horizontal = Space.S16),
@@ -610,14 +611,11 @@ internal fun LitHeartPill(bpm: Int?, maxHr: Int?, color: Color, paused: Boolean,
             Text(WorkoutCopy.noHeartRate(paused), color = GlowType.noteColor, style = GlowType.secondary)
             return@Row
         }
-        Icon(AppIcons.Heartbeat, null, tint = color, modifier = Modifier.size(IconSize.GlyphS))
+        Icon(AppIcons.Heartbeat, null, tint = Color.White, modifier = Modifier.size(IconSize.GlyphS))
         Text("$bpm", color = Color.White, style = GlowType.figureInline)
         val zone = maxHr?.let { WorkoutRecorder.liveZone(bpm, it, heartZones) }
-        val unit = stringResource(R.string.workout_live_unit_bpm)
-        Text(
-            if (zone != null) "$unit, ${WorkoutCopy.zoneTitle(zone).first}" else unit,
-            color = GlowType.noteColor, style = GlowType.noteSmall, maxLines = 1,
-        )
+        Text(stringResource(R.string.workout_live_unit_bpm), color = GlowType.noteColor, style = GlowType.noteSmall, maxLines = 1)
+        zone?.let { org.openstrap.app.ui.glow.ZoneChip(it) }
     }
 }
 

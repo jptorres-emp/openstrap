@@ -12,6 +12,7 @@ import java.time.Instant
 import java.time.ZoneId
 import java.util.Locale
 import org.openstrap.app.presentation.Units
+import org.openstrap.app.ui.theme.TypeScale
 
 /**
  * A sport on the Start widget. [sportType] is what a tap hands Ready (`EXTRA_READY_SPORT`), which then opens on the
@@ -60,7 +61,21 @@ data class StartSport(
  * The workout recording, as the widget reads it from the session: its sport type, its start (epoch seconds), its
  * active seconds so far (pauses left out, as the live screen counts) and whether it's paused.
  */
-data class StartRecordingInput(val sportType: Int, val start: Long, val activeSeconds: Long, val paused: Boolean)
+data class StartRecordingInput(
+    val sportType: Int, val start: Long, val activeSeconds: Long, val paused: Boolean,
+    /** The live heart rate and its zone (0 to 4) while it's known and the workout isn't paused. */
+    val bpm: Int? = null, val zone: Int? = null,
+    /** Resting between sets or intervals, or asked whether it ended; [paused] wins over both. */
+    val resting: Boolean = false, val asking: Boolean = false,
+    /** The Large's figures so far, value over label, the sport's own (workout-rules.md, section 7, rule 6). */
+    val figures: List<Pair<String, String>> = emptyList(),
+)
+
+/**
+ * What a recording card is lit in and says under the sport (workout-rules.md, section 7, rules 2 and 3): the sport's
+ * colour while it records, and the three states that replace it.
+ */
+enum class RecordingState { Recording, Paused, Rest, Asking }
 
 /**
  * A workout under way, which every size shows in place of the usual: the sport, "Recording" (or "Paused"), "Since
@@ -73,6 +88,13 @@ data class StartRecording(
     val activeMillis: Long,
     val atMillis: Long,
     val paused: Boolean,
+    /** "152 bpm" and "Zone 4" with its [zone] (0 to 4) while the heart rate is known; null otherwise. */
+    val heart: String? = null,
+    val zoneLabel: String? = null,
+    val zone: Int? = null,
+    val state: RecordingState = if (paused) RecordingState.Paused else RecordingState.Recording,
+    /** The Large's figures so far, value over label; empty shows the week's instead. */
+    val figures: List<Pair<String, String>> = emptyList(),
 ) {
     companion object {
         val RECORDING: String get() = Strings.app.get(R.string.system_widget_recording)
@@ -170,14 +192,36 @@ data class StartWidgetModel(
                     strings.format(R.string.system_widget_start_last_line, day, fact(a, locale, strings))
                 } ?: strings.get(R.string.system_widget_start_none_yet),
                 recording = recording?.let { r ->
+                    val state = recordingState(r)
                     StartRecording(
                         StartSport.recorded(r.sportType),
                         strings.format(R.string.system_widget_since, TimeOfDay.format(r.start, zone, locale = locale)),
-                        strings.get(if (r.paused) R.string.system_widget_paused else R.string.system_widget_recording),
+                        strings.get(statusWord(state)),
                         r.activeSeconds * 1000L, now.toEpochMilli(), r.paused,
+                        heart = r.bpm?.let { strings.format(R.string.core_notif_bpm, it) },
+                        zoneLabel = r.zone?.let { strings.format(R.string.core_workout_zone_number, it + 1) },
+                        zone = r.zone,
+                        state = state,
+                        figures = r.figures,
                     )
                 },
             )
+        }
+
+        /** The state a recording card shows: paused wins, then the stop question, then rest. */
+        private fun recordingState(r: StartRecordingInput): RecordingState = when {
+            r.paused -> RecordingState.Paused
+            r.asking -> RecordingState.Asking
+            r.resting -> RecordingState.Rest
+            else -> RecordingState.Recording
+        }
+
+        /** The word under the sport for [state]. */
+        private fun statusWord(state: RecordingState): Int = when (state) {
+            RecordingState.Paused -> R.string.system_widget_paused
+            RecordingState.Rest -> R.string.system_widget_rest
+            RecordingState.Asking -> R.string.system_widget_still_going
+            RecordingState.Recording -> R.string.system_widget_recording
         }
 
         /** "2 workouts, 1 h 35", "1 workout, 40 min", "No workouts yet". */
@@ -224,7 +268,10 @@ object StartLayout {
     const val MARK_GAP_DP = 4f
 
     /** Open's sides, either side of its word. */
-    const val OPEN_PAD_DP = 14f
+    const val OPEN_PAD_DP = 12f
+
+    /** Open's pill height, a short pill however tall the row (board HaloWidgetsWorkout: 28 high, never a circle). */
+    const val OPEN_HEIGHT_DP = 30f
 
     /** Between the usual row's tile, words and play (the mockup's), and the Small's words and play. */
     const val ROW_GAP_DP = 12f
@@ -254,7 +301,7 @@ object StartLayout {
 
 
     /** Open's width at [fontScale]: its word in Body 500 with [OPEN_PAD_DP] each side. */
-    fun openWidth(fontScale: Float): Float = WidgetText.width(StartWidgetModel.OPEN, WidgetText.BODY_SP, fontScale) + 2 * OPEN_PAD_DP
+    fun openWidth(fontScale: Float): Float = WidgetText.width(StartWidgetModel.OPEN, WidgetText.BUTTON_SP, fontScale) + 2 * OPEN_PAD_DP
 
     /**
      * The Wide's or Large's title row for the strap status [line] (spec 5): "Start a workout" with the status button
@@ -553,6 +600,9 @@ object StartLayout {
         /** Side by side, Caption over Body, as the mockup. */
         Side,
 
+        /** A recording's own figures, up to three side by side, Body over Caption (board HaloWidgetsWorkout). */
+        Live,
+
         /** A row each: the Caption on the left, the value on the right. */
         Rows,
 
@@ -640,8 +690,8 @@ object StartLayout {
 
     /** The timer's largest size per layout, sp, and the least it steps down to. */
     const val TIMER_SMALL_SP = 40f
-    const val TIMER_WIDE_SP = 48f
-    const val TIMER_LARGE_SP = 56f
+    const val TIMER_WIDE_SP = TypeScale.CLOCK_SP
+    const val TIMER_LARGE_SP = TypeScale.CLOCK_SP
     const val TIMER_MIN_SP = 20f
     const val TIMER_STEP_SP = 2f
 
@@ -651,6 +701,20 @@ object StartLayout {
     /** The red recording dot before "Recording", and the room after it. */
     const val DOT_DP = 8f
     const val DOT_GAP_DP = 6f
+
+    /** The zone chip (workout-rules.md, Colour 3): a ringed dot and "Zone 3" on a dark pill, padded so. */
+    const val CHIP_PAD_X_DP = 9f
+    const val CHIP_PAD_Y_DP = 3f
+    const val CHIP_DOT_DP = 9f
+    /** Between bpm and the chip under it. */
+    const val CHIP_ABOVE_DP = 6f
+
+    /** The zone chip's width for [label] at [fontScale]. */
+    fun chipWidth(label: String, fontScale: Float): Float =
+        2 * CHIP_PAD_X_DP + CHIP_DOT_DP + DOT_GAP_DP + WidgetText.width(label, WidgetText.NOTE_SP, fontScale)
+
+    /** The zone chip's height at [fontScale]. */
+    fun chipHeight(fontScale: Float): Float = 2 * CHIP_PAD_Y_DP + WidgetText.line(WidgetText.NOTE_SP, fontScale)
 
     /** Between the timer and "Since 11:58" beside it. */
     const val SINCE_GAP_DP = 12f
@@ -678,6 +742,8 @@ object StartLayout {
     data class Recording(
         val tile: Float, val open: Float, val name: String, val status: Boolean, val timerSp: Float, val since: SincePlace,
         val figures: Figures?, val content: Float, val gaps: Int,
+        /** The heart rate and zone at the timer's right (the Wide's and Large's), in place of "Since" there. */
+        val heart: Boolean = false,
     ) {
         val sizes: Sizes get() = Sizes(tile, open, 0f)
 
@@ -720,35 +786,61 @@ object StartLayout {
         rowRecording(r, null, TIMER_WIDE_SP, width, height, fontScale)
 
     /** The Large recording: the Wide's, then the hairline and This week and the usual's last, as idle. */
-    fun largeRecording(r: StartRecording, m: StartWidgetModel, width: Float, height: Float, fontScale: Float): Recording =
-        rowRecording(r, figures(m, width, fontScale), TIMER_LARGE_SP, width, height, fontScale)
+    fun largeRecording(r: StartRecording, m: StartWidgetModel, width: Float, height: Float, fontScale: Float): Recording {
+        // The workout's own figures (workout-rules.md, section 7, rule 6); the week's only before any are in.
+        val figures = if (r.figures.isNotEmpty()) {
+            Figures(FigureLayout.Live, body(fontScale) + FIGURE_LINE_GAP_DP + secondary(fontScale))
+        } else figures(m, width, fontScale)
+        return rowRecording(r, figures, TIMER_LARGE_SP, width, height, fontScale)
+    }
 
     /**
      * The Wide's and Large's recording in [width] by [height] dp: the top row (the sport's tile, its name over the red
      * dot and "Recording", Open), then the timer as large as fits up to [top] sp, "Since 11:58" beside it when the
      * width allows, else under it when the height does, else left out. The biggest timer wins over the biggest tile.
      */
+    /** The heart rate over its zone, at the timer's right: the wider of the two lines; null with no heart rate. */
+    private fun heartWidth(r: StartRecording, fontScale: Float): Float? = r.heart?.let { heart ->
+        val zone = r.zoneLabel?.let { chipWidth(it, fontScale) } ?: 0f
+        maxOf(WidgetText.width(heart, WidgetText.CARD_TITLE_SP, fontScale), zone)
+    }
+
+    /** The heart rate over its zone chip: bpm, then the chip under it when there's a zone. */
+    private fun heartHeight(r: StartRecording, fontScale: Float): Float =
+        body(fontScale) + if (r.zoneLabel != null) CHIP_ABOVE_DP + chipHeight(fontScale) else 0f
+
+    /** The sport's name that fits in [room] (else its short name), and whether "Recording" fits under it. */
+    private fun topRowWords(r: StartRecording, room: Float, fontScale: Float): Pair<String, Boolean> {
+        val name = if (fits(r.sport.name, WidgetText.BODY_SP, room, fontScale)) r.sport.name else r.sport.shortName
+        return name to fits(r.status, WidgetText.SECONDARY_SP, room - DOT_DP - DOT_GAP_DP, fontScale)
+    }
+
+    /** "Since 11:58" [beside] the timer, else under it when it [fitsUnder], else left out. */
+    private fun sincePlace(beside: Boolean, fitsUnder: Boolean): SincePlace = when {
+        beside -> SincePlace.Beside
+        fitsUnder -> SincePlace.Under
+        else -> SincePlace.None
+    }
+
     private fun rowRecording(r: StartRecording, figures: Figures?, top: Float, width: Float, height: Float, fontScale: Float): Recording {
         val under = figures?.let { it.height + 1f + 2 * MIN_GAP_DP } ?: 0f
         val gaps = if (figures != null) 5 else 3
         val sinceW = WidgetText.width(r.since, WidgetText.SECONDARY_SP, fontScale)
+        val heartW = heartWidth(r, fontScale)
+        val heartH = heartHeight(r, fontScale)
         for (sp in timerSizes(top)) for (sz in ROW_SIZES) {
-            val room = width - sz.tile - 2 * ROW_GAP_DP - openWidth(fontScale)
-            val name = if (fits(r.sport.name, WidgetText.BODY_SP, room, fontScale)) r.sport.name else r.sport.shortName
-            val status = fits(r.status, WidgetText.SECONDARY_SP, room - DOT_DP - DOT_GAP_DP, fontScale)
+            val (name, status) = topRowWords(r, width - sz.tile - 2 * ROW_GAP_DP - openWidth(fontScale), fontScale)
             val row = maxOf(sz.tile, sz.play, body(fontScale) + if (status) secondary(fontScale) else 0f)
             val timerW = timerWidth(sp, fontScale)
-            if (timerW > width) continue
-            val timer = timerLine(sp, fontScale)
-            val beside = timerW + SINCE_GAP_DP + sinceW <= width
-            val since = when {
-                beside -> SincePlace.Beside
-                row + timer + secondary(fontScale) + MIN_GAP_DP + under <= height -> SincePlace.Under
-                else -> SincePlace.None
-            }
+            // With a heart rate, it takes the timer's right; a timer too wide to leave it room steps down.
+            if (timerW + (heartW?.let { SINCE_GAP_DP + it } ?: 0f) > width) continue
+            val timer = maxOf(timerLine(sp, fontScale), if (heartW != null) heartH else 0f)
+            val beside = heartW == null && timerW + SINCE_GAP_DP + sinceW <= width
+            val since = sincePlace(beside, row + timer + secondary(fontScale) + MIN_GAP_DP + under <= height)
             val block = row + timer + (if (since == SincePlace.Under) secondary(fontScale) else 0f)
             if (block + MIN_GAP_DP + under > height) continue
-            return Recording(sz.tile, sz.play, name, status, sp, since, figures, block + (figures?.let { it.height + 1f } ?: 0f), gaps)
+            val total = block + (figures?.let { it.height + 1f } ?: 0f)
+            return Recording(sz.tile, sz.play, name, status, sp, since, figures, total, gaps, heart = heartW != null)
         }
         val sz = ROW_SIZES.last()
         val row = maxOf(sz.tile, sz.play, body(fontScale))

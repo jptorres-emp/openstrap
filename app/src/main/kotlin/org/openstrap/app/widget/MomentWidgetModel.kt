@@ -653,7 +653,7 @@ object MomentLayout {
     const val REC_DOT_GAP_DP = 6f
 
     /** Open, as Start's while recording. */
-    const val OPEN_PAD_DP = 14f
+    const val OPEN_PAD_DP = 12f
     val OPEN: String get() = Strings.app.get(R.string.system_widget_open)
 
     /** The least gap between blocks, and the most a tall cell should show. */
@@ -765,7 +765,7 @@ object MomentLayout {
         row?.let { Line(m.name, it.titleSp) } ?: nameLine(m, width, fontScale)
 
     /** Open's width at [fontScale]: its word in Body 500 with [OPEN_PAD_DP] each side. */
-    fun openWidth(fontScale: Float): Float = WidgetText.fitWidth(OPEN, WidgetText.BODY_SP, fontScale) + 2 * OPEN_PAD_DP
+    fun openWidth(fontScale: Float): Float = WidgetText.fitWidth(OPEN, WidgetText.BUTTON_SP, fontScale) + 2 * OPEN_PAD_DP
 
     /* ---------------------------------------------- Small --------------------------------------------- */
 

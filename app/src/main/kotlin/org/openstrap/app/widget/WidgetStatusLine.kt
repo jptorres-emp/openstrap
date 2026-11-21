@@ -30,7 +30,7 @@ data class StatusLine(val status: StrapStatus, val options: List<String>) {
             val shorter = when (status) {
                 StrapStatus.NotPaired -> listOf(strings.get(R.string.system_widget_status_not_paired_short))
                 is StrapStatus.LowBattery -> listOf(strings.format(R.string.system_widget_status_percent, status.percent))
-                StrapStatus.Syncing, StrapStatus.SyncFailed -> emptyList()
+                StrapStatus.Syncing, StrapStatus.SyncFailed, is StrapStatus.Synced -> emptyList()
                 StrapStatus.BluetoothOff -> listOf(strings.get(R.string.system_widget_status_bluetooth_off_short))
                 is StrapStatus.StaleSync -> {
                     val then = Instant.ofEpochSecond(status.at).atZone(zone).toLocalDate()
@@ -78,9 +78,10 @@ object StatusButton {
 }
 
 /**
- * A widget's top row (spec 5): the title at [titleSp], always; while the strap needs something its [status] button at
- * the right with the [words] that fit beside it (none on a Small, or when none fits); else whether the [note] on the
- * right still fits. [height] is what every layout's sums use: the title's line, or the button's when it shows.
+ * A widget's top row (spec 5): the title at [titleSp], always; its [status] button at the right, quiet while all is
+ * well, and while the strap needs something with the [words] that fit beside it (none on a Small, or when none fits),
+ * which replace the [note]; else whether the note still fits before the button. [height] is what every layout's sums
+ * use: the title's line, or the button's when it shows.
  */
 data class TopRow(
     val status: StatusLine?, val note: Boolean, val height: Float,
@@ -100,11 +101,14 @@ data class TopRow(
             title: String, note: String?, line: StatusLine?, width: Float, fontScale: Float, withWords: Boolean,
             titleSizes: List<Float> = TITLE_SIZES,
         ): TopRow {
-            if (line == null) {
+            if (line == null || line.status is StrapStatus.Synced) {
+                // All well: the quiet button (when there's a line) keeps its room, and the note shows if it still fits.
                 val sp = titleSizes.first()
-                val keep = note != null &&
-                    WidgetText.fitWidth(title, sp, fontScale) + StatusButton.TITLE_GAP_DP + WidgetText.fitWidth(note, WidgetText.SECONDARY_SP, fontScale) <= width
-                return TopRow(null, keep, WidgetText.line(sp, fontScale), titleSp = sp)
+                val button = if (line != null) StatusButton.WORDS_GAP_DP + StatusButton.SIZE_DP else 0f
+                val keep = note != null && WidgetText.fitWidth(title, sp, fontScale) + StatusButton.TITLE_GAP_DP +
+                    WidgetText.fitWidth(note, WidgetText.SECONDARY_SP, fontScale) + button <= width
+                val h = maxOf(WidgetText.line(sp, fontScale), if (line != null) StatusButton.SIZE_DP else 0f)
+                return TopRow(line, keep, h, titleSp = sp)
             }
             val beside = StatusButton.SIZE_DP + StatusButton.TITLE_GAP_DP
             fun room(sp: Float) = width - WidgetText.fitWidth(title, sp, fontScale) - StatusButton.TITLE_GAP_DP - StatusButton.WORDS_GAP_DP - StatusButton.SIZE_DP

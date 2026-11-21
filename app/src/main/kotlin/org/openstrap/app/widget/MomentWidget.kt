@@ -25,7 +25,6 @@ import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.size
 import androidx.glance.layout.width
-import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.unit.ColorProvider
 import org.openstrap.app.MainActivity
@@ -44,13 +43,30 @@ import org.openstrap.app.ui.theme.SportIcons
  * its Start opens Ready with your usual sport. It refreshes at each moment's end and, while it counts minutes, every
  * five ([WidgetUpdater.scheduleMoment]).
  */
-class MomentWidget : LoadingWidget<MomentWidgetModel>(WidgetKind.Moment) {
-    override fun shown(data: WidgetData, context: Context): MomentWidgetModel = load(data, context.widgets)
+class MomentWidget : LoadingWidget<MomentWidget.Shown>(WidgetKind.Moment) {
+    override fun shown(data: WidgetData, context: Context): Shown {
+        val model = load(data, context.widgets)
+        // While a workout records, Moment shows Start's recording card, so the two never disagree (workout-rules.md,
+        // section 7, rule 1).
+        val recording = if (model.recording != null && data.start?.state is org.openstrap.app.device.WorkoutState.Recording) {
+            StartWidget.load(data)
+        } else null
+        return Shown(model, recording)
+    }
 
-    override fun sample(): MomentWidgetModel = java.time.ZoneId.systemDefault().let { WidgetSamples.moment(java.time.LocalDate.now(it), it) }
+    override fun sample(): Shown {
+        val model = java.time.ZoneId.systemDefault().let { WidgetSamples.moment(java.time.LocalDate.now(it), it) }
+        return Shown(model, StartWidget().sampleShown().takeIf { WidgetRefresh.recordingOverride })
+    }
 
     @Composable
-    override fun Content(data: MomentWidgetModel) = MomentContent(data)
+    override fun Content(data: Shown) {
+        val recording = data.recording
+        if (recording?.model?.recording != null) StartContent(recording) else MomentContent(data.model)
+    }
+
+    /** The moment, and the recording card in its place while a workout records. */
+    data class Shown(val model: MomentWidgetModel, val recording: StartWidget.Shown?)
 
     companion object {
         /**
@@ -89,11 +105,11 @@ internal fun openToday(context: Context): Intent =
 /** The moment's name: every widget's title (spec 3.1). */
 private val NameStyle = WidgetType.title
 
-/** The sport's name while recording: Body 500 on the Small, the hero's light type on the Wide and Large. */
-private val SportStyle = WidgetType.body.copy(fontWeight = FontWeight.Medium)
+/** The sport's name while recording: cardTitle on the Small, the hero's light type on the Wide and Large. */
+private val SportStyle = WidgetType.cardTitle
 
 /** Open's word, black on its white pill. */
-private val OpenStyle = WidgetType.body.copy(color = ColorProvider(Color.Black), fontWeight = FontWeight.Medium)
+private val OpenStyle = WidgetType.button
 
 /** Room for the dots, the chart, play and the tile beside the backgrounds, in the bitmap budget. */
 private const val BITMAP_EXTRA = 1.4

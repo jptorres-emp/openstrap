@@ -449,17 +449,21 @@ internal fun weekRingsGeometry(width: Float, height: Float, stroke: Float, count
 @Suppress("UnstableCollections", "ComposeUnstableCollections")
 @Composable
 fun WeekRings(shares: List<Float?>, ink: Color, size: PictureSize, modifier: Modifier = Modifier, today: Int = -1) {
-    Canvas(modifier) {
-        val stroke = (if (size == PictureSize.Small) 3.dp else 4.dp).toPx()
-        val g = weekRingsGeometry(this.size.width, this.size.height, stroke, shares.size)
-        val cy = this.size.height / 2
-        // Sixteen dots a ring, the share of them lit (HaloCharts, Your week).
-        val dotR = max(g.radius * 0.12f, 1.4.dp.toPx())
-        shares.forEachIndexed { i, s ->
-            val lit = if (s == null) 0 else (s.coerceIn(0f, 1f) * WEEK_RING_DOTS).roundToInt()
-            // Only today's ring is in colour; the days before it are light grey (board HaloTodayEvening, Your week).
-            dotRing(Offset(g.centres[i], cy), g.radius, WEEK_RING_DOTS, lit, if (today < 0 || i == today) ink else WeekPast, dotR, DotTrack)
-        }
+    Canvas(modifier) { drawWeekRingDots(shares, ink, (if (size == PictureSize.Small) 3.dp else 4.dp).toPx(), today) }
+}
+
+/**
+ * [WeekRings]' drawing, across the whole draw area with rings of [stroke] px: sixteen dots a ring, the share of them
+ * lit (HaloCharts, Your week), only [today]'s ring in [ink] (all of them for -1). The home screen widget draws it too.
+ */
+fun DrawScope.drawWeekRingDots(shares: List<Float?>, ink: Color, stroke: Float, today: Int = -1) {
+    val g = weekRingsGeometry(size.width, size.height, stroke, shares.size)
+    val cy = size.height / 2
+    val dotR = max(g.radius * 0.12f, 1.4.dp.toPx())
+    shares.forEachIndexed { i, s ->
+        val lit = if (s == null) 0 else (s.coerceIn(0f, 1f) * WEEK_RING_DOTS).roundToInt()
+        // Only today's ring is in colour; the days before it are light grey (board HaloTodayEvening, Your week).
+        dotRing(Offset(g.centres[i], cy), g.radius, WEEK_RING_DOTS, lit, if (today < 0 || i == today) ink else WeekPast, dotR, DotTrack)
     }
 }
 

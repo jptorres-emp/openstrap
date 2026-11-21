@@ -9,6 +9,7 @@ import org.openstrap.app.ui.theme.Greys
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -108,8 +109,13 @@ internal fun LiveGameScreen(
         val zone = WorkoutRecorder.liveZone(bpm, r.maxHeartRate, heartZones)
         // Board HaloLiveGame: the heart rate as the hero, the period in its one line, then the effort in a solid card.
         LiveHero(sport, liveAngle(r)) {
-            HeroTitle(stringResource(R.string.workout_live_heart_title), zone?.let { WorkoutCopy.zoneTitle(it).first }, tint)
-            if (bpm != null) HaloBigNumber("$bpm", BigNumber.Live, unit = stringResource(R.string.workout_live_unit_bpm), unitColor = tint)
+            HeroTitle(stringResource(R.string.workout_live_heart_title), null, tint)
+            if (bpm != null) androidx.compose.foundation.layout.Row(verticalAlignment = androidx.compose.ui.Alignment.Bottom) {
+                HaloBigNumber(
+                    "$bpm", BigNumber.Live, Modifier.weight(1f), unit = stringResource(R.string.workout_live_unit_bpm), unitColor = tint,
+                )
+                zone?.let { org.openstrap.app.ui.glow.ZoneChip(it, Modifier.padding(bottom = org.openstrap.app.ui.theme.Space.S8)) }
+            }
             else Text(WorkoutCopy.noHeartRate(r.paused, connected), color = Color.White, style = GlowType.sentence)
             if (periods != null && phase != null) PeriodLine(r, periods, phase, { now.value }, { active.value }, tint)
         }

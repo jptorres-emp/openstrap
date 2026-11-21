@@ -892,6 +892,16 @@ private fun spo2Word(percent: Float): Int = when {
 private const val SPO2_NORMAL_FROM = 95f
 private const val SPO2_SLIGHTLY_LOW_FROM = 90f
 
+/**
+ * [diff] as "+7 bpm" or "−11 bpm", written by [show] (which gives a size without a sign). A difference that shows as
+ * zero has no sign, "0 bpm", not "+0 bpm".
+ */
+internal fun signedFigure(diff: Float, show: (Float) -> String?): String? {
+    val size = show(kotlin.math.abs(diff)) ?: return null
+    val zero = size.takeWhile { it.isDigit() || it == '.' || it == ',' }.all { it == '0' || it == '.' || it == ',' }
+    return if (zero || diff == 0f) size else (if (diff < 0f) "−" else "+") + size
+}
+
 /** How far the shown day's [value] is from [normal]'s mean: last night's against your normal, which the status word agrees with. */
 internal fun vsNormal(value: Float?, normal: Float?): Float? = if (value != null && normal != null) value - normal else null
 
@@ -1235,7 +1245,7 @@ private fun detailFigures(
                 show(normal?.mean) to stringResource(R.string.glow_detail_your_normal),
                 show(last7) to
                     stringResource(if (nightly) R.string.glow_detail_seven_night_average else R.string.glow_detail_seven_day_average),
-                vs?.let { (if (it < 0f) "−" else "+") + show(kotlin.math.abs(it)) } to stringResource(R.string.glow_detail_vs_normal),
+                vs?.let { signedFigure(it, ::show) } to stringResource(R.string.glow_detail_vs_normal),
             )
         }
     }
@@ -1324,22 +1334,34 @@ private fun ActivityScoreRow(
     }
 }
 
-/** The night's Sleep score as a related row, with its word. */
+/**
+ * The night's Sleep score as a related row, with its word. A night with no score says so, as the Sleep tab does, rather
+ * than "Nothing for this night" beside a night that is drawn.
+ */
 @Composable
 internal fun SleepScoreRow(state: DayUiState, divider: Boolean, onOpen: (Detail) -> Unit) {
     val score = state.sleep?.score
     ScoreRow(
         Score.Sleep, org.openstrap.app.ui.theme.MetricColors.sleepDeep, score?.toString(),
-        score?.let(org.openstrap.app.presentation.TabCopy::sleepScoreWord) ?: NO_NIGHT_VALUE, divider, onOpen,
+        score?.let(org.openstrap.app.presentation.TabCopy::sleepScoreWord)
+            ?: if (state.sleep != null) stringResource(R.string.glow_sleep_no_score) else NO_NIGHT_VALUE,
+        divider, onOpen,
     )
 }
 
-/** The day's Recovery as a related row, with its word. */
+/**
+ * The day's Recovery as a related row, with its word: what the Recovery tab shows ([TodayCopy.recoveryShown]), so a day
+ * with no score says why, or shows the strap's estimate when [strapScore] is given, rather than "No reading".
+ */
 @Composable
-internal fun RecoveryScoreRow(ready: org.openstrap.app.data.Recovery.Readiness?, divider: Boolean, onOpen: (Detail) -> Unit) = ScoreRow(
-    Score.Recovery, org.openstrap.app.ui.theme.MetricColors.readiness, ready?.score?.toString(),
-    ready?.score?.let { org.openstrap.app.presentation.TodayCopy.recoveryWord(it, ready.strainAlert) } ?: NO_VALUE, divider, onOpen,
-)
+internal fun RecoveryScoreRow(
+    ready: org.openstrap.app.data.Recovery.Readiness?, divider: Boolean, onOpen: (Detail) -> Unit, strapScore: Int? = null,
+) {
+    val shown = org.openstrap.app.presentation.TodayCopy.recoveryShown(ready, strapScore, NO_VALUE)
+    ScoreRow(
+        Score.Recovery, org.openstrap.app.ui.theme.MetricColors.readiness, shown.value?.toString(), shown.word ?: shown.line, divider, onOpen,
+    )
+}
 
 /**
  * A body signal as a related row: the day's value and its word against your normal, marked when it's off normal. On a

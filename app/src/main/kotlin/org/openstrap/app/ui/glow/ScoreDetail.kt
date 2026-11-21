@@ -202,27 +202,44 @@ private fun RecoveryDetail(
             { DetailGauge(shown / 100f, color, key = Score.Recovery) { DetailScoreNumber(shown, state.date) } }
         },
     ) {
-        if (range == Range.Day) {
-            val all = ready?.contributors.orEmpty().sortedByDescending { it.factor.weight }
-            if (all.isNotEmpty()) item {
-                val mid = (RecoveryBands.READY_FROM + RecoveryBands.READY_FOR_MORE_FROM) / 2f
-                Column {
-                    HaloTitle(
-                        stringResource(R.string.glow_recovery_what_drove), variant = TitleVariant.OutOfCard,
-                        note = stringResource(R.string.glow_detail_against_normal),
-                    )
-                    DetailDrivers(
-                        all.map { c ->
-                            DetailDriver(
-                                TabCopy.factorName(c.factor), null,
-                                RecoveryCopy.detail(c.detail).takeIf { it.isNotBlank() } ?: TabCopy.contributorWord(c.score),
-                                (c.score - mid) / DRIVER_RANGE,
-                            )
+        // The picture crossfades between ranges while the header and the figures stay put, as the metric detail's does.
+        val all = ready?.contributors.orEmpty().sortedByDescending { it.factor.weight }
+        if (range == Range.Week || all.isNotEmpty()) item {
+            RangeCrossfade(range) { shown ->
+                if (shown == Range.Day) {
+                    val mid = (RecoveryBands.READY_FROM + RecoveryBands.READY_FOR_MORE_FROM) / 2f
+                    Column {
+                        HaloTitle(
+                            stringResource(R.string.glow_recovery_what_drove), variant = TitleVariant.OutOfCard,
+                            note = stringResource(R.string.glow_detail_against_normal),
+                        )
+                        DetailDrivers(
+                            all.map { c ->
+                                DetailDriver(
+                                    TabCopy.factorName(c.factor), null,
+                                    RecoveryCopy.detail(c.detail).takeIf { it.isNotBlank() } ?: TabCopy.contributorWord(c.score),
+                                    (c.score - mid) / DRIVER_RANGE,
+                                )
+                            },
+                            color, scaleWords(),
+                        )
+                    }
+                } else if (known.isEmpty()) DetailEmpty(stringResource(R.string.glow_recovery_none_week))
+                else {
+                    val values = week.map { it.second?.toFloat() }
+                    DetailColumns(
+                        values, color, week.map { DayWords.weekdayShort(it.first) }, valueLabels = true, fixed = 0f..100f,
+                        band = r?.readinessUsual?.let { it.low..it.high }, bandLabel = stringResource(R.string.glow_detail_your_normal),
+                        onScrub = { i ->
+                            scrub = i?.let { week[it] }?.let { (d, v) ->
+                                v?.let { DetailHeadline(it.toString(), DayWords.short(d), TodayCopy.recoveryWord(it, false)) }
+                            }
                         },
-                        color, scaleWords(),
                     )
                 }
             }
+        }
+        if (range == Range.Day) {
             item {
                 Column {
                     DetailSentence(
@@ -254,21 +271,6 @@ private fun RecoveryDetail(
                 )
             }
         } else {
-            item {
-                if (known.isEmpty()) DetailEmpty(stringResource(R.string.glow_recovery_none_week))
-                else {
-                    val values = week.map { it.second?.toFloat() }
-                    DetailColumns(
-                        values, color, week.map { DayWords.weekdayShort(it.first) }, valueLabels = true, fixed = 0f..100f,
-                        band = r?.readinessUsual?.let { it.low..it.high }, bandLabel = stringResource(R.string.glow_detail_your_normal),
-                        onScrub = { i ->
-                            scrub = i?.let { week[it] }?.let { (d, v) ->
-                                v?.let { DetailHeadline(it.toString(), DayWords.short(d), TodayCopy.recoveryWord(it, false)) }
-                            }
-                        },
-                    )
-                }
-            }
             DetailCopy.scoreWeek(week.map { it.second })?.let { item { DetailSentence(it) } }
         }
         item { ScoreRelated(Score.Recovery, state, r, history, onOpen) }

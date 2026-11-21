@@ -184,7 +184,9 @@ private fun NightHero(state: DayUiState, firstNights: Boolean, onRestore: (org.o
             }
             state.sleepBreakdown?.let { b ->
                 // Stage totals as text, never dots (spec 2.3): a stage under a minute leaves its segment and legend out.
-                val totals = stageTotals(b.byStage)
+                // One awake time for the night, the session's length less the time asleep, as the Sleep score's detail says.
+                val awake = (session.end - session.start - asleep).coerceAtLeast(0L)
+                val totals = stageTotals(b.withAwake(awake).byStage)
                 if (totals.isNotEmpty()) {
                     Spacer(Modifier.height(Space.S16))
                     // The stage bar: sized by [StageBarLook] as a widget's bar is ([stageBarSegments] lays that one out in

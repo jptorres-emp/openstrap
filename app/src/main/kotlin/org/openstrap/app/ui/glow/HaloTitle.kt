@@ -48,8 +48,8 @@ internal object TitleSpec {
     /** How far a title over a card sits in from the card's edge. */
     val OutSide = Space.S4
 
-    /** A card's title may take two lines; a heading or a label one. */
-    const val CARD_LINES = 2
+    /** Every title is one line, ellipsised, so a card's height never depends on the font size or the words. */
+    const val CARD_LINES = 1
 }
 
 /** Where a title sits. */
@@ -86,7 +86,7 @@ internal fun HaloTitle(
         inCard && LocalCardHero.current -> TitleSpec.Hero
         else -> TitleSpec.Text
     }
-    val color = if (variant == TitleVariant.Group) GlowType.noteColor else Color.White
+    val color = if (variant == TitleVariant.Group) GlowType.noteInk else Color.White
     val lines = if (inCard) TitleSpec.CARD_LINES else 1
     val chevron = inCard && LocalCardOpens.current && LocalTitleChevron.current
     val marked = marker != null || tag != null
@@ -123,7 +123,7 @@ internal fun HaloTitle(
 /** A title's note: a way on ("All 9") with its caret when [onNote] is given, else plain Secondary. */
 @Composable
 private fun TitleNote(note: String, onNote: (() -> Unit)?) {
-    if (onNote == null) return Text(note, color = Ink.Secondary, style = TitleSpec.Note, maxLines = 1)
+    if (onNote == null) return Text(note, color = GlowType.noteInk, style = TitleSpec.Note, maxLines = 1)
     Row(
         // Tapped, the note grows into what it opens (spec 3.5).
         cardOpening(onNote).let { o -> Modifier.then(o?.modifier ?: Modifier).clickable(onClick = o?.onClick ?: onNote) }
@@ -137,8 +137,8 @@ private fun TitleNote(note: String, onNote: (() -> Unit)?) {
 }
 
 /**
- * [start] on the left and [end] on the right when both fit on one line; when they don't, [end] drops under [start]
- * rather than wrap it. [bottom] lines them up on their foot (a heading), else on their middle (a card's title).
+ * [start] on the left and [end] on the right when both fit on one line at font size 1.0; when they don't, [end] drops
+ * under [start] rather than wrap it. The same choice at every font size, so a card keeps its height. [bottom] lines them up on their foot (a heading), else on their middle (a card's title).
  */
 // One layout or the other, by whether there is an end; the same title keeps to one of them.
 @Suppress("ContentSlotReused", "ComposeContentSlotReused")
@@ -159,7 +159,9 @@ private fun TitleLine(
         val wanted = s.maxIntrinsicWidth(cs.maxHeight) + gap + note.width
         // Asked how wide it would like to be (an intrinsic measure), it's the one line.
         val w = if (cs.hasBoundedWidth) cs.maxWidth else wanted
-        if (wanted <= w) {
+        // One rule at every font size: the note sits beside the title when both fit on a line at font size 1.0, else
+        // under it. Words grow with the font size, so the width they'd take at 1.0 is what they take now over fontScale.
+        if (wanted / fontScale <= w) {
             val title = s.measure(Constraints(maxWidth = w - gap - note.width))
             val h = maxOf(title.height, note.height)
             layout(w, h) {

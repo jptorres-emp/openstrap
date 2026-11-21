@@ -210,7 +210,7 @@ object Rewards {
 
     /**
      * Every personal best in [workouts] and [days] (workouts spec 3.2): the fastest stretches and the longest of GPS
-     * runs only, the longest workout you started, the most rounds of a HIIT or interval
+     * runs only, the longest workout you started (at least [MIN_SECONDS] moving), the most rounds of a HIIT or interval
      * workout you started, the heaviest logged set of each exercise, the day with the most
      * steps. A tie keeps the first.
      */
@@ -224,7 +224,7 @@ object Rewards {
                 ?.let { (r, s) -> out += PersonalBest(Kind.fastest(d), s.seconds.toDouble(), r.shownStart, r.start) }
         }
         runs.maxByOrNull { it.gpsMeters!! }?.let { out += PersonalBest(Kind.LONGEST_RUN, it.gpsMeters!!.toDouble(), it.shownStart, it.start) }
-        ordered.filter { it.startedByYou && it.activeSeconds > 0 }.maxByOrNull { it.activeSeconds }
+        ordered.filter { it.startedByYou && it.activeSeconds >= MIN_SECONDS }.maxByOrNull { it.activeSeconds }
             ?.let { out += PersonalBest(Kind.LONGEST_WORKOUT, it.activeSeconds.toDouble(), it.shownStart, it.start) }
         ordered.filter { it.startedByYou && it.rounds > 0 }.maxByOrNull { it.rounds }
             ?.let { out += PersonalBest(Kind.MOST_ROUNDS, it.rounds.toDouble(), it.shownStart, it.start) }

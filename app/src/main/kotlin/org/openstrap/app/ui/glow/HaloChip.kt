@@ -1,12 +1,14 @@
 package org.openstrap.app.ui.glow
 
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.getValue
@@ -320,31 +322,30 @@ internal fun GlowSegments(
     role: Role = Role.RadioButton,
     size: SegmentSize = SegmentSize.Regular,
 ) {
-    // The track is drawn at [size]; the control's touch area is at least 48 high.
-    Box(
+    // The track is drawn at [size]; the control's touch area is at least 48 high. The chosen pill is drawn behind the
+    // labels and slides to the new segment (P6) instead of snapping; no nested layout, so a list item measures it once.
+    val at by animateFloatAsState(selected.coerceAtLeast(0).toFloat(), tween(Motion.SWIFT, easing = Motion.easing), label = "segment")
+    Row(
         modifier.minimumInteractiveComponentSize().fillMaxWidth().height(size.height).clip(Corner.Pill)
-            .background(OnSurface.track).padding(SegmentSpec.Pad),
+            .background(OnSurface.track).padding(SegmentSpec.Pad)
+            .drawBehind {
+                if (selected < 0) return@drawBehind
+                val w = this.size.width / options.size.coerceAtLeast(1)
+                drawRoundRect(Color.White, Offset(w * at, 0f), Size(w, this.size.height), CornerRadius(this.size.height / 2))
+            },
     ) {
-        BoxWithConstraints(Modifier.fillMaxSize()) {
-            val segment = maxWidth / options.size.coerceAtLeast(1)
-            // The chosen pill slides to the new segment (P6) instead of snapping.
-            val x by animateDpAsState(segment * selected.coerceAtLeast(0), tween(Motion.SWIFT, easing = Motion.easing), label = "segment")
-            if (selected >= 0) Box(Modifier.offset(x).width(segment).fillMaxHeight().clip(Corner.Pill).background(Color.White))
-            Row(Modifier.fillMaxSize()) {
-                options.forEachIndexed { i, label ->
-                    val on = i == selected
-                    val ink by animateColorAsState(
-                        if (on) Color.Black else Ink.Secondary, tween(Motion.QUICK, easing = Motion.easing), label = "segmentInk",
-                    )
-                    Box(
-                        Modifier.weight(1f).fillMaxHeight().clip(Corner.Pill)
-                            .pressClickable({ onSelect(i) }, Corner.Pill, scale = SegmentSpec.PRESS)
-                            .semantics { this.role = role; this.selected = on },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(label, color = ink, style = size.label, maxLines = 1)
-                    }
-                }
+        options.forEachIndexed { i, label ->
+            val on = i == selected
+            val ink by animateColorAsState(
+                if (on) Color.Black else Ink.Secondary, tween(Motion.QUICK, easing = Motion.easing), label = "segmentInk",
+            )
+            Box(
+                Modifier.weight(1f).fillMaxHeight().clip(Corner.Pill)
+                    .pressClickable({ onSelect(i) }, Corner.Pill, scale = SegmentSpec.PRESS)
+                    .semantics { this.role = role; this.selected = on },
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(label, color = ink, style = size.label, maxLines = 1)
             }
         }
     }

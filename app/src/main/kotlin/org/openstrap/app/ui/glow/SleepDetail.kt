@@ -129,7 +129,8 @@ internal fun SleepScoreDetail(
     onOpen: (Detail) -> Unit, onSwitch: (Detail) -> Unit, onSelectDay: (LocalDate) -> Unit, contentPadding: PaddingValues, onBack: () -> Unit,
     editing: SleepEditing,
 ) {
-    val session = state.sleep
+    val night = remember(state.sleep, state.sleepStages) { state.shownNight() }
+    val session = night?.session
     val score = session?.score
     val color = MetricColors.sleepDeep
     // Saveable, so turning the phone doesn't close the sheet being used.
@@ -188,10 +189,10 @@ internal fun SleepScoreDetail(
             scrubbed = { scrub },
         ) {
             // The picture crossfades between ranges while the header and the figures stay put, as the metric detail's does.
-            val asleep = state.asleepSeconds ?: session?.let { it.end - it.start } ?: 0L
-            // One awake time for the night: the time between falling asleep and waking that wasn't asleep, which is what
-            // the figures below add up to. The stage legend and the staying asleep line say the same.
-            val awake = session?.let { (it.end - it.start - asleep).coerceAtLeast(0L) } ?: 0L
+            // One time asleep and one time awake for the night, from its stage rows ([ShownNight]): the stage legend, the
+            // factors, the sentence and the graph all read these.
+            val asleep = night?.asleep ?: 0L
+            val awake = night?.awake ?: 0L
             val detected = state.sleepAsDetected
             val moved = session != null && detected != null && (detected.start != session.start || detected.end != session.end)
             if (range == Range.Week || session != null) item {
@@ -200,8 +201,8 @@ internal fun SleepScoreDetail(
                         Column(Modifier.padding(top = Space.S8)) {
                             // Moved, the strap's whole night shows with what's outside the user's times dimmed.
                             if (moved && state.strapSleepStages.isNotEmpty()) DetailStages(state.strapSleepStages, kept = session.start..session.end)
-                            else if (state.sleepStages.isNotEmpty()) DetailStages(state.sleepStages)
-                            state.sleepBreakdown?.let { DetailStageShares(it.withAwake(awake), Modifier.padding(top = Space.S16)) }
+                            else if (night != null && night.spans.isNotEmpty()) DetailStages(night.spans)
+                            night?.breakdown?.let { DetailStageShares(it, Modifier.padding(top = Space.S16)) }
                             // Times extended past the strap's have no stages for the added time, so the page says so.
                             if (detected != null && state.sleepBreakdown != null) {
                                 SleepCopy.stagesCover(session.start, session.end, detected.start, detected.end)?.let {

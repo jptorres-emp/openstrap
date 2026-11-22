@@ -144,7 +144,9 @@ internal val SleepGlow = org.openstrap.app.ui.glow.draw.heroStyle(MetricColors.s
  */
 @Composable
 private fun NightHero(state: DayUiState, firstNights: Boolean, onRestore: (org.openstrap.app.data.db.SleepSession) -> Unit, onOpen: () -> Unit) {
-    val session = state.sleep
+    // One time asleep, time awake and wake count for the night, from its stage rows ([ShownNight]).
+    val night = remember(state.sleep, state.sleepStages) { state.shownNight() }
+    val session = night?.session
     val isToday = state.date == LocalDate.now()
     HaloCard(Modifier.fillMaxWidth().gridSize(CardSize.Wide), tone = CardTone.lit(SleepGlow), onClick = onOpen) {
         Column {
@@ -164,7 +166,7 @@ private fun NightHero(state: DayUiState, firstNights: Boolean, onRestore: (org.o
                 }
                 return@Column
             }
-            val asleep = state.asleepSeconds ?: (session.end - session.start)
+            val asleep = night?.asleep ?: (session.end - session.start)
             val others = SleepHistory.weekOthers(state.nights.mapNotNull { n -> n.session?.let { n.date to it } }.toMap(), state.date)
             HeroSentence(TabCopy.night(asleep, others))
             Spacer(Modifier.height(Space.S16))
@@ -178,15 +180,13 @@ private fun NightHero(state: DayUiState, firstNights: Boolean, onRestore: (org.o
                     TabCopy.woke(session.wakeCount),
                 ),
             )
-            if (state.sleepStages.isNotEmpty()) {
+            if (night != null && night.spans.isNotEmpty()) {
                 Spacer(Modifier.height(Space.S20))
-                GlowSleepStages(state.sleepStages, 96.dp)
+                GlowSleepStages(night.spans, 96.dp)
             }
-            state.sleepBreakdown?.let { b ->
+            night?.breakdown?.let { b ->
                 // Stage totals as text, never dots (spec 2.3): a stage under a minute leaves its segment and legend out.
-                // One awake time for the night, the session's length less the time asleep, as the Sleep score's detail says.
-                val awake = (session.end - session.start - asleep).coerceAtLeast(0L)
-                val totals = stageTotals(b.withAwake(awake).byStage)
+                val totals = stageTotals(b.byStage)
                 if (totals.isNotEmpty()) {
                     Spacer(Modifier.height(Space.S16))
                     // The stage bar: sized by [StageBarLook] as a widget's bar is ([stageBarSegments] lays that one out in

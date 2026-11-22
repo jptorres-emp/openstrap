@@ -22,6 +22,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -83,9 +84,10 @@ fun SleepGoalSheet(
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.S8)) {
                 Text(
                     stringResource(R.string.you_sleep_goal_need, Units.duration(MINUTES.toSeconds(needMinutes.toLong()))),
-                    Modifier.weight(1f), color = NeedInk, style = GlowType.secondary,
+                    color = NeedInk, style = GlowType.secondary, softWrap = false,
                 )
-                HaloNote(stringResource(
+                // The need stays on one line, and the source after it takes what's left, wrapping when it's long.
+                HaloNote(modifier = Modifier.weight(1f), textAlign = TextAlign.End, text = stringResource(
                         when {
                             fromProfile -> R.string.you_sleep_goal_need_profile
                             ageKnown -> R.string.you_sleep_goal_need_age

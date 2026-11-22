@@ -105,7 +105,7 @@ private fun weekStory(view: RewardsView, first: LocalDate, strings: Strings = St
     val totals = if (mine.isEmpty()) emptyList() else listOfNotNull(
         StoryStat(Units.clockDuration(seconds), null, strings.get(R.string.glow_goals_hours)),
         meters.takeIf { it >= MIN_WEEK_METERS }?.let {
-            StoryStat(Units.km(it, Units.Precision.Day), strings.get(R.string.glow_unit_km), strings.get(R.string.glow_goals_distance))
+            StoryStat(Units.major(it, Units.Precision.Day), Units.majorUnit(strings), strings.get(R.string.glow_goals_distance))
         },
         kcal.takeIf { it > 0 }?.let { StoryStat(Units.count(it), null, strings.get(R.string.glow_goals_active_kcal)) },
     )
@@ -363,10 +363,10 @@ fun WeeklyRecapPage(view: RewardsView?, first: LocalDate, contentPadding: Paddin
                 HaloFigures(
                     listOf(
                         Units.clockDuration(seconds) to stringResource(R.string.glow_goals_hours),
-                        Units.km(meters, Units.Precision.Day) to stringResource(R.string.glow_goals_distance),
+                        Units.major(meters, Units.Precision.Day) to stringResource(R.string.glow_goals_distance),
                         Units.count(Math.round(kcal)) to stringResource(R.string.glow_goals_active_kcal),
                     ),
-                    units = listOf(null, stringResource(R.string.glow_unit_km), null),
+                    units = listOf(null, Units.majorUnit(), null),
                 )
             }
         }

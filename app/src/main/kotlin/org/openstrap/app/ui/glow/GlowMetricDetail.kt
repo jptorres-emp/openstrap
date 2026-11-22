@@ -1389,7 +1389,7 @@ private fun ActivityScoreRow(
         else -> {
             val distance = a?.distanceMeters ?: state.distanceMeters?.toFloat()
             ScoreRow(
-                score, org.openstrap.app.ui.theme.MetricColors.steps, distance?.let { Units.km(it, Units.Precision.Day) },
+                score, org.openstrap.app.ui.theme.MetricColors.steps, distance?.let { Units.major(it, Units.Precision.Day) },
                 if (distance == null) NO_VALUE else org.openstrap.app.presentation.ActivityCopy.distanceSource(a?.distanceMeters != null),
                 divider, onOpen,
             )

@@ -194,7 +194,7 @@ private fun glanceTicks(
         val active = WorkoutRecorder.activeSeconds(w, now)
         val distance = w.distanceMeters
         if (w.useGps && splitsOf.first != route.size) splitsOf = route.size to Route.splits(route, w.pauseRanges)
-        val whole = splitsOf.second.filter { it.meters >= 1000 }
+        val whole = splitsOf.second.filter { it.meters >= Units.splitMeters }
         val last = whole.lastOrNull()
         val lastBpm = last?.let { s ->
             val from = whole.getOrNull(whole.size - 2)?.endT ?: route.firstOrNull()?.t ?: s.endT
@@ -294,7 +294,7 @@ object Glance {
         val clock = Units.workoutClock(i.activeSeconds)
         val figure = if (distance) i.distanceMeters?.let { kmFigure(it) } ?: "0.00" else bpm?.toString()
         val unit = when {
-            distance -> strings.get(R.string.workout_glance_unit_km)
+            distance -> Units.majorUnit(strings)
             figure != null -> strings.get(R.string.workout_glance_unit_bpm)
             else -> null
         }
@@ -302,13 +302,17 @@ object Glance {
         val (goal, toGo) = goalLine(i, strings)
         val activeKcal = i.activeKcal?.toInt()?.toString() to strings.get(R.string.workout_glance_figure_active_kcal)
         val figures = if (distance) listOf(
-            Pace.clock(i.pace) to strings.get(R.string.workout_glance_figure_pace),
+            Pace.clock(i.pace) to strings.get(Units.res(R.string.workout_glance_figure_pace, R.string.workout_glance_figure_pace_mi)),
             bpm?.toString() to bpmLabel(zone, strings),
             activeKcal,
         ) else listOfNotNull(
             i.distanceMeters?.takeIf { it >= Units.SHOWN_FROM_METERS }?.let {
-                Units.km(it, Units.Precision.Workout) to strings.get(
-                    if (i.distanceFromSteps) R.string.workout_glance_figure_km_from_steps else R.string.workout_glance_figure_km,
+                Units.major(it, Units.Precision.Workout) to strings.get(
+                    if (i.distanceFromSteps) {
+                        Units.res(R.string.workout_glance_figure_km_from_steps, R.string.workout_glance_figure_mi_from_steps)
+                    } else {
+                        Units.res(R.string.workout_glance_figure_km, R.string.workout_glance_figure_mi)
+                    },
                 )
             },
             i.averageBpm?.toString() to strings.get(R.string.workout_glance_figure_average_bpm),
@@ -554,10 +558,10 @@ object Glance {
         }
     }
 
-    /** The hero's split strip: "Km 4 in 5:55", then its average and which was fastest; null before a whole kilometre. */
+    /** The hero's split strip: "Km 4 in 5:55" ("Mile 4 in 8:40"), then its average and which was fastest; null before a whole kilometre. */
     fun splitLine(i: GlanceInput, strings: Strings = Strings.app): Pair<String, String?>? {
         val s = i.lastSplit ?: return null
-        val fastest = i.fastestSplit?.takeIf { it != s.index }?.let { strings.format(R.string.workout_glance_fastest_was, it + 1) }
+        val fastest = i.fastestSplit?.takeIf { it != s.index }?.let { strings.format(Units.res(R.string.workout_glance_fastest_was, R.string.workout_glance_fastest_was_mile), it + 1) }
             ?: strings.get(R.string.workout_glance_fastest_this).takeIf { s.index > 0 }
         val avg = i.lastSplitBpm?.let { strings.format(R.string.workout_glance_split_average, it) }
         val line = (if (avg != null && fastest != null) strings.format(R.string.workout_glance_join, avg, fastest) else avg ?: fastest)
@@ -628,13 +632,13 @@ object Glance {
             strings.format(R.string.workout_glance_minutes_to_go, ceil(seconds / 60).toInt())
         }
 
-    /** "4.32" kilometres, as the figure in the dot font, so always with a dot and ASCII digits. */
-    fun kmFigure(meters: Float): String = Units.km(meters, Units.Precision.Workout, Units.DOT_LOCALE)
+    /** "4.32" kilometres or miles, as the figure in the dot font, so always with a dot and ASCII digits. */
+    fun kmFigure(meters: Float): String = Units.major(meters, Units.Precision.Workout, Units.DOT_LOCALE)
 
-    /** "4.32 km", or "680 m" under one, down to "0 m" where a line needs a figure. */
+    /** "4.32 km", or "680 m" under one ("0.26 mi", "528 ft" in miles), down to "0 m" where a line needs a figure. */
     fun kmWithUnit(meters: Float, locale: Locale = Locale.getDefault(), strings: Strings = Strings.app): String =
         Units.distance(meters, Units.Precision.Workout, locale = locale)
-            ?: strings.format(R.string.workout_glance_meters, meters.coerceAtLeast(0f).toInt())
+            ?: Units.minorText(meters.coerceAtLeast(0f), locale, strings)
 
     /** A pace as a clock in the dot font, "5:42" ([Pace.clock]); null with none, or one too slow to be moving. */
     fun paceClock(secondsPerKm: Double?): String? = Pace.clock(secondsPerKm, Units.DOT_LOCALE)

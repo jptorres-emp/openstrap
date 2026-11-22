@@ -35,7 +35,6 @@ object WorkoutCopy {
      */
     const val READY_LOW_BATTERY = 20
 
-    private const val KM = 1000.0
 
     /**
      * Ready's hero, the strap (spec 6.3): its [title], the [line] under it, and whether it's [live], the glow with the
@@ -121,7 +120,7 @@ object WorkoutCopy {
     fun splitLine(
         splits: List<Route.Split>, history: List<Pair<Long, Int>>, firstT: Long?, now: Long, strings: Strings = Strings.app,
     ): SplitLine? {
-        val i = splits.indexOfLast { it.meters >= KM }
+        val i = splits.indexOfLast { it.meters >= Units.splitMeters }
         if (i < 0) return null
         val sp = splits[i]
         // A fix stamped a moment ahead of the phone's clock still shows; one long ago doesn't.
@@ -138,7 +137,7 @@ object WorkoutCopy {
     fun lastSplit(
         splits: List<Route.Split>, history: List<Pair<Long, Int>>, firstT: Long?, now: Long, strings: Strings = Strings.app,
     ): Pair<String, String>? {
-        val i = splits.indexOfLast { it.meters >= KM }
+        val i = splits.indexOfLast { it.meters >= Units.splitMeters }
         if (i < 0) return null
         val sp = splits[i]
         val from = splits.getOrNull(i - 1)?.endT ?: firstT ?: sp.endT
@@ -167,8 +166,8 @@ object WorkoutCopy {
         return history + recent.filter { it.first > last }
     }
 
-    /** The index of the latest whole kilometre, or -1: the splits already done when the live screen opens. */
-    fun wholeKms(splits: List<Route.Split>): Int = splits.indexOfLast { it.meters >= KM }
+    /** The index of the latest whole kilometre or mile, or -1: the splits already done when the live screen opens. */
+    fun wholeKms(splits: List<Route.Split>): Int = splits.indexOfLast { it.meters >= Units.splitMeters }
 
     /** Whether [line] is a kilometre not ticked for yet ([lastTicked] its index): one tick per split. */
     fun splitTick(line: SplitLine?, lastTicked: Int): Boolean = line != null && line.index > lastTicked
@@ -193,7 +192,7 @@ object WorkoutCopy {
         meters: Float?, target: WorkoutTarget.Distance, locale: Locale = Locale.getDefault(), strings: Strings = Strings.app,
     ): String {
         val m = meters ?: 0f
-        val done = if (target.meters < 1000) String.format(locale, "%d", m.toInt()) else Units.km(m, Units.Precision.Workout, locale)
+        val done = if (!Units.isMajor(target.meters.toFloat())) Units.minor(m, locale) else Units.major(m, Units.Precision.Workout, locale)
         return strings.format(R.string.core_workout_progress, done, target.label)
     }
 

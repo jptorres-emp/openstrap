@@ -1,5 +1,6 @@
 package org.openstrap.app.widget
 
+import org.openstrap.app.presentation.Units
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
@@ -129,8 +130,7 @@ internal fun recordingFigures(r: WorkoutState.Recording, active: Long, live: Liv
             kcal,
         )
         meters != null -> listOf(
-            org.openstrap.app.presentation.Units.km(meters, org.openstrap.app.presentation.Units.Precision.Workout) + " " +
-                s.get(R.string.workout_glance_unit_km) to s.get(R.string.workout_live_figure_distance),
+            Units.major(meters, Units.Precision.Workout) + " " + Units.majorUnit(s) to s.get(R.string.workout_live_figure_distance),
             org.openstrap.app.presentation.Pace.clock(active / (meters / METERS_PER_KM_D)) to s.get(R.string.workout_live_figure_avg_pace),
             kcal,
         )

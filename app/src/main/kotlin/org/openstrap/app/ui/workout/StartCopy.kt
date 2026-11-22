@@ -116,7 +116,7 @@ object StartCopy {
     /** A rep's length with its unit, as [repParts] splits it: "400 m", "1.5 km", "4 min", "90 s". */
     private fun repLength(r: org.openstrap.app.data.Structure.Reps, strings: Strings): String = when {
         r.meters != null -> if (r.meters >= 1000) {
-            strings.format(R.string.workout_start_km, distanceValue(r.meters))
+            strings.format(R.string.workout_start_km, repKm(r.meters))
         } else {
             strings.format(R.string.workout_start_meters, r.meters)
         }
@@ -253,15 +253,25 @@ object StartCopy {
     fun noGoalNote(hasDistance: Boolean, strings: Strings = Strings.app): String =
         strings.get(if (hasDistance) R.string.workout_start_no_goal_note_distance else R.string.workout_start_no_goal_note)
 
-    /** A distance goal's value in km, as typed: "5", "7.5", "12.45", and a half marathon "21.1". */
-    fun distanceValue(meters: Int): String =
+    /** A distance goal's value in km or miles, as typed: "5", "7.5", "12.45", and a half marathon "21.1" ("13.1" in miles). */
+    fun distanceValue(meters: Int): String = Units.goalNumber(meters, 2)
+
+    /**
+     * An interval rep's length in km, as typed. Reps are laid out in metres on a track, whatever the system, so their
+     * lengths and totals stay in metres and km.
+     */
+    private fun repKm(meters: Int): String =
         if (meters % 1000 == 0) "${meters / 1000}" else String.format(Locale.ROOT, "%.2f", meters / 1000.0).trimEnd('0').trimEnd('.')
 
     /** What a distance goal does: "The strap buzzes at halfway and at 7.5 km." */
     fun distanceNote(meters: Int, strings: Strings = Strings.app): String =
-        strings.format(R.string.workout_start_distance_note, distanceValue(meters))
+        strings.format(Units.res(R.string.workout_start_distance_note, R.string.workout_start_distance_note_mi), distanceValue(meters))
 
-    const val MAX_KM = 300
+    /** The most a distance goal can be, in km or miles: 300 km, 200 miles. */
+    val maxDistanceUnits: Int get() = if (Units.system == org.openstrap.app.data.settings.UnitSystem.Imperial) MAX_MILES else MAX_KM
+
+    private const val MAX_KM = 300
+    private const val MAX_MILES = 200
 
     /** A time goal in one line, as every duration reads ([Units.duration]): "1 h 15", "1 h", "45 min". */
     fun timeValue(seconds: Long): String = Units.duration(seconds)
@@ -277,7 +287,7 @@ object StartCopy {
     /** A rep's length as a number and its unit: "400" "m", "1.5" "km", "4" "min", "90" "s". */
     fun repParts(r: org.openstrap.app.data.Structure.Reps, strings: Strings = Strings.app): Pair<String, String> = when {
         r.meters != null -> if (r.meters >= 1000) {
-            distanceValue(r.meters) to strings.get(R.string.workout_start_unit_km)
+            repKm(r.meters) to strings.get(R.string.workout_start_unit_km)
         } else {
             "${r.meters}" to strings.get(R.string.workout_start_unit_m)
         }
@@ -296,7 +306,7 @@ object StartCopy {
         )
         val all = meters * r.rounds
         val total = if (all >= 1000) {
-            strings.format(R.string.workout_start_km, distanceValue(all))
+            strings.format(R.string.workout_start_km, repKm(all))
         } else {
             strings.format(R.string.workout_start_meters, all)
         }

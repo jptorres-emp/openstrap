@@ -1,5 +1,6 @@
 package org.openstrap.app.ui.glow
 
+import org.openstrap.app.presentation.Units
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -47,9 +48,9 @@ internal fun CardioGoal(
     when (kind) {
         GoalKind.None -> LastTimeHero(cardio = true, last, look, noGoalWords(Workouts.family(type), hasDistance))
         GoalKind.Distance -> LookHero(
-            look, distanceFigure(draft.meters), stringResource(R.string.glow_unit_km), distanceLine(draft.meters, gps, lastPace),
-            input = HeroInput(distanceFigure(draft.meters), stringResource(R.string.glow_unit_km), decimal = true) { t ->
-                typedMeters(t, StartCopy.MAX_KM)?.let { onDraft(draft.copy(meters = it)) }
+            look, distanceFigure(draft.meters), Units.majorUnit(), distanceLine(draft.meters, gps, lastPace),
+            input = HeroInput(distanceFigure(draft.meters), Units.majorUnit(), decimal = true) { t ->
+                typedMeters(t, StartCopy.maxDistanceUnits)?.let { onDraft(draft.copy(meters = it)) }
             },
         ) { DistanceRuler(draft.meters, { onDraft(draft.copy(meters = it)) }, look.tint) }
         GoalKind.Time -> TimeGoalHero(draft.seconds, { onDraft(draft.copy(seconds = it)) }, look, nowMillis)

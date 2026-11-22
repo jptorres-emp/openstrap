@@ -168,7 +168,7 @@ internal fun storyCard(
             val m = summary.distanceMeters?.takeIf { it > 0f }
             if (m != null) {
                 val pace = hero.pace?.let {
-                    StoryStat(it, strings.get(R.string.glow_share_unit_per_km), strings.get(R.string.glow_share_stat_pace))
+                    StoryStat(it, Units.paceUnit(strings), strings.get(R.string.glow_share_stat_pace))
                 }
                 StoryCard.Run(date, sport, hero.value, hero.unit, listOfNotNull(time, pace, avg), chips)
             } else {

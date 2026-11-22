@@ -152,9 +152,9 @@ private class HeroParts(val summary: PhoneSummary, val strings: Strings) {
         val m = summary.distanceMeters
         val pace = Pace.clock(Pace.of(FamilySummary.gpsDistance(m, summary.distanceFromSteps), active))
         if (m == null || m <= 0f) return byTime(listOf(avg to w.avgBpm, kcal to w.activeKcal(kcal != null)))
+        val figure = Units.figure(m, Units.Precision.Workout, Units.DOT_LOCALE, strings)
         return SummaryHero(
-            if (m < Units.METERS_PER_KM) m.toInt().toString() else Units.km(m, Units.Precision.Workout, Units.DOT_LOCALE),
-            strings.get(if (m < Units.METERS_PER_KM) R.string.glow_summary_unit_m else R.string.glow_unit_km),
+            figure?.number ?: m.toInt().toString(), figure?.unit ?: Units.minorUnit(strings),
             listOf(time to w.time, if (pace != null) pace to w.avgPace else kcal to w.activeKcal(kcal != null), avg to w.avgBpm),
             pace = pace, title = strings.get(R.string.glow_summary_hero_distance),
         )
@@ -456,7 +456,7 @@ private fun RunCard(summary: PhoneSummary, liveRoute: List<Route.Point>): Boolea
         }
         if (rows.isNotEmpty()) {
             if (mapped) CardDivider()
-            HaloTitle(stringResource(R.string.glow_summary_splits), note = stringResource(R.string.glow_summary_splits_note))
+            HaloTitle(stringResource(R.string.glow_summary_splits), note = stringResource(Units.res(R.string.glow_summary_splits_note, R.string.glow_summary_splits_note_mi)))
             SplitBars(rows, FamilySummary.fastestSplit(rows), maxHr)
         }
         if (laps.isNotEmpty()) {

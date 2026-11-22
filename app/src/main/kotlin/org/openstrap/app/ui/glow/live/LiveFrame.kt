@@ -491,16 +491,16 @@ private val DotOff = Greys.Line
 private val DotTap = 48.dp
 private val DotsRowHeight = 28.dp
 
-/** A distance for a live figure: "4.02 km", the unit after the number. */
+/** A distance for a live figure: "4.02 km" or "2.50 mi", the unit after the number. */
 @Composable
 @ReadOnlyComposable
-internal fun km(meters: Float): String =
-    Units.km(meters, Units.Precision.Workout) + " " + stringResource(R.string.workout_live_unit_km)
+internal fun liveDistance(meters: Float): String =
+    Units.major(meters, Units.Precision.Workout) + " " + Units.majorUnit()
 
 /** A speed for a live figure: "24.5 km/h", or null while there is none. */
 @Composable
 @ReadOnlyComposable
-internal fun kmh(speed: String?): String? = speed?.let { it + " " + stringResource(R.string.workout_live_unit_kmh) }
+internal fun liveSpeed(speed: String?): String? = speed?.let { it + " " + Units.speedUnit() }
 
 /** End was tried and couldn't save: the workout records on, and Try again runs End again. */
 @Composable

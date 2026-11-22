@@ -152,8 +152,8 @@ internal fun LiveDistanceScreen(
             r, color, connected, contentPadding, controls, lap, time = { active.value }, battery = battery, status = status,
             paused = {
                 LivePaused(r, liveHeartRate.takeIf { connected }, recent, listOf(
-                    km(distance) to stringResource(R.string.workout_live_figure_distance),
-                    (if (speed) kmh(speedText(averagePace())) else Pace.clock(averagePace())) to
+                    liveDistance(distance) to stringResource(R.string.workout_live_figure_distance),
+                    (if (speed) liveSpeed(Units.speed(averagePace())) else Pace.clock(averagePace())) to
                         stringResource(if (speed) R.string.workout_live_figure_avg_speed else R.string.workout_live_figure_avg_pace),
                     stats?.average?.toString() to stringResource(R.string.workout_live_figure_avg_bpm),
                 ))
@@ -195,8 +195,8 @@ internal fun LiveDistanceScreen(
                 ) {
                     if (compact) Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
                         LiveFigures(listOf(
-                            km(distance) to stringResource(R.string.workout_live_figure_distance),
-                            (if (speed) kmh(speedText(pace)) else Pace.clock(pace)) to
+                            liveDistance(distance) to stringResource(R.string.workout_live_figure_distance),
+                            (if (speed) liveSpeed(Units.speed(pace)) else Pace.clock(pace)) to
                                 stringResource(if (speed) R.string.workout_live_figure_speed else R.string.workout_live_figure_pace),
                             kcal?.active?.toInt()?.toString() to activeKcalLabel(kcal != null),
                         ))
@@ -205,7 +205,7 @@ internal fun LiveDistanceScreen(
                         PaceHero(r, pace, averagePace, speed, route, readings, Modifier.fillMaxWidth())
                         SplitsCard(splits, bpm, r, showHeart = !split)
                         LiveFigures(listOf(
-                            km(distance) to stringResource(R.string.workout_live_figure_distance),
+                            liveDistance(distance) to stringResource(R.string.workout_live_figure_distance),
                             climb?.toInt()?.toString() to stringResource(R.string.workout_live_figure_climb),
                             kcal?.active?.toInt()?.toString() to activeKcalLabel(kcal != null),
                         ))
@@ -220,8 +220,8 @@ internal fun LiveDistanceScreen(
                         r, route, readings, bpm, connected, contentPadding, controls,
                         time = { active.value }, battery = battery, status = status,
                         figures = listOf(
-                            km(distance) to stringResource(R.string.workout_live_figure_distance),
-                            (if (speed) kmh(speedText(averagePace())) else Pace.clock(averagePace())) to
+                            liveDistance(distance) to stringResource(R.string.workout_live_figure_distance),
+                            (if (speed) liveSpeed(Units.speed(averagePace())) else Pace.clock(averagePace())) to
                                 stringResource(
                                     if (speed) R.string.workout_live_figure_avg_speed else R.string.workout_live_figure_avg_pace,
                                 ),
@@ -294,7 +294,7 @@ private fun RepPage(
                 m.phase is org.openstrap.app.data.Phase.Work -> Route.currentPace(route)?.let { pace ->
                     structure.meters?.let { meters -> workoutClock((pace * meters / 1000).toLong()) }
                         ?.let { stringResource(R.string.workout_live_rep_pace, it, repName) }
-                        ?: Pace.clock(pace)?.let { stringResource(R.string.workout_live_rep_pace_km, it) }
+                        ?: Pace.clock(pace)?.let { stringResource(Units.res(R.string.workout_live_rep_pace_km, R.string.workout_live_rep_pace_mi), it) }
                 }
                 m.phase == org.openstrap.app.data.Phase.WarmUp -> stringResource(R.string.workout_live_reps_skip_hint)
                 m.phase == org.openstrap.app.data.Phase.Done -> stringResource(R.string.workout_live_end_or_keep)
@@ -351,10 +351,6 @@ internal fun ZoneTick(bpm: Int?, r: WorkoutState.Recording) {
     }
 }
 
-/** km/h from seconds per kilometre, one decimal; null with no pace. */
-internal fun speedText(secondsPerKm: Double?, locale: java.util.Locale = java.util.Locale.getDefault()): String? =
-    secondsPerKm?.takeIf { it > 0 && it < Pace.SLOWEST_S }?.let { String.format(locale, "%.1f", 3600 / it) }
-
 /**
  * The pace as the hero (workout-rules.md, Run; board HaloLiveRun): "Pace now" with the average beside it, the pace in
  * the one dotted number, and the latest kilometre's line under it. Lit in the sport's lime from its edge.
@@ -372,10 +368,10 @@ private fun PaceHero(
             stringResource(if (speed) R.string.workout_live_speed_title else R.string.workout_live_pace_title), null, tint,
             trailing = { AveragePace(averagePace, speed, tint) },
         )
-        val now = if (speed) speedText(pace, Units.DOT_LOCALE) else Pace.clock(pace, Units.DOT_LOCALE)
+        val now = if (speed) Units.speed(pace, Units.DOT_LOCALE) else Pace.clock(pace, Units.DOT_LOCALE)
         if (now != null) HaloBigNumber(
             now, BigNumber.Live, unitColor = tint,
-            unit = stringResource(if (speed) R.string.workout_live_unit_kmh else R.string.workout_live_unit_per_km),
+            unit = if (speed) Units.speedUnit() else Units.paceUnit(),
         ) else WaitingDash(Modifier.padding(vertical = Space.S16))
         KmSplitLine(route, readings, r.workout.pauseRanges, keepRoom = true, color = tint, center = false)
     }
@@ -385,7 +381,7 @@ private fun PaceHero(
 @Composable
 private fun AveragePace(averagePace: () -> Double?, speed: Boolean, tint: Color) {
     val average = averagePace()
-    val avg = (if (speed) speedText(average) else Pace.clock(average))?.let { stringResource(R.string.workout_live_avg, it) }
+    val avg = (if (speed) Units.speed(average) else Pace.clock(average))?.let { stringResource(R.string.workout_live_avg, it) }
     if (avg != null) Text(avg, color = tint, style = GlowType.secondary)
 }
 
@@ -396,7 +392,7 @@ private fun SplitsCard(splits: List<Route.Split>, bpm: Int?, r: WorkoutState.Rec
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text(stringResource(R.string.workout_live_splits_title), color = Color.White, style = GlowType.cardTitle, maxLines = 1,
                 modifier = Modifier.weight(1f))
-            Text(stringResource(R.string.workout_live_splits_note), color = GlowType.noteColor, style = GlowType.noteSmall)
+            Text(stringResource(Units.res(R.string.workout_live_splits_note, R.string.workout_live_splits_note_mi)), color = GlowType.noteColor, style = GlowType.noteSmall)
         }
         KmSplitBars(splits)
         if (showHeart) {
@@ -413,21 +409,21 @@ private fun SplitsCard(splits: List<Route.Split>, bpm: Int?, r: WorkoutState.Rec
 @Composable
 private fun KmSplitBars(splits: List<Route.Split>) {
     val shown = splits.takeLast(SPLIT_SLOTS)
-    val done = splits.filter { it.meters >= 1000 }
+    val done = splits.filter { it.meters >= Units.splitMeters }
     val slowest = done.maxOfOrNull { it.pace } ?: 0.0
     val quickest = done.minByOrNull { it.pace }?.pace ?: 0.0
     val described = stringResource(
-        R.string.workout_live_splits_description, done.takeLast(4).joinToString(", ") { workoutClock(it.seconds) },
+        Units.res(R.string.workout_live_splits_description, R.string.workout_live_splits_description_mi), done.takeLast(4).joinToString(", ") { workoutClock(it.seconds) },
     )
     Row(
         Modifier.fillMaxWidth().semantics { contentDescription = described },
         horizontalArrangement = Arrangement.spacedBy(Space.S8),
     ) {
         shown.forEach { s ->
-            val underWay = s.meters < 1000
+            val underWay = s.meters < Units.splitMeters
             // Faster is taller: from 40 percent for the slowest to full for the fastest.
             val height = when {
-                underWay -> (s.meters / 1000).toFloat().coerceIn(0.1f, 1f)
+                underWay -> (s.meters / Units.splitMeters).toFloat().coerceIn(0.1f, 1f)
                 slowest <= quickest -> 1f
                 else -> (0.4f + 0.6f * ((slowest - s.pace) / (slowest - quickest)).toFloat()).coerceIn(0.4f, 1f)
             }
@@ -441,7 +437,7 @@ private fun KmSplitBars(splits: List<Route.Split>) {
                 }
                 Text(
                     if (underWay) stringResource(R.string.workout_live_split_now) else
-                        stringResource(R.string.workout_live_split_km, s.index + 1),
+                        stringResource(Units.res(R.string.workout_live_split_km, R.string.workout_live_split_mile), s.index + 1),
                     color = if (underWay) Color.White else GlowType.noteColor, style = GlowType.caption, maxLines = 1,
                 )
             }

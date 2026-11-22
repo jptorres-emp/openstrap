@@ -49,18 +49,21 @@ internal fun TimeRuler(seconds: Long, onSeconds: (Long) -> Unit, tint: Color) {
     )
 }
 
-/** A distance goal: half km steps from 0.5 km to [StartCopy.MAX_KM], labelled at 1, 3 and 5 km, then every 5 km. */
+/**
+ * A distance goal: half km (or half mile) steps up to [StartCopy.maxDistanceUnits], labelled at 1, 3 and 5, then every
+ * 5, so in miles the goals come out at 1, 2, 3, 5, 10 and the half marathon's 13.1 sits between two steps.
+ */
 @Composable
 internal fun DistanceRuler(meters: Int, onMeters: (Int) -> Unit, tint: Color) {
-    val count = StartCopy.MAX_KM * 1000 / DISTANCE_STEP_M
+    val step = Units.majorMeters / 2
+    val count = StartCopy.maxDistanceUnits * 2
     val labels = (0 until count).mapNotNull { i ->
-        val m = (i + 1) * DISTANCE_STEP_M
-        val km = m / 1000
-        (i to "$km").takeIf { m % 1000 == 0 && (km in DISTANCE_LABELS || km % 5 == 0) }
+        val whole = (i + 1) / 2
+        (i to "$whole").takeIf { (i + 1) % 2 == 0 && (whole in DISTANCE_LABELS || whole % 5 == 0) }
     }.toMap()
     HaloRuler(
-        ((meters + DISTANCE_STEP_M / 2) / DISTANCE_STEP_M - 1).coerceIn(0, count - 1), count, { onMeters((it + 1) * DISTANCE_STEP_M) },
-        labels, ReadyRulerSpec.DistanceStep, "${distanceFigure(meters)} ${stringResource(R.string.glow_unit_km)}", tint,
+        (Math.round(meters / step) - 1).coerceIn(0, count - 1), count, { onMeters(Math.round((it + 1) * step)) },
+        labels, ReadyRulerSpec.DistanceStep, "${distanceFigure(meters)} ${Units.majorUnit()}", tint,
         description = stringResource(R.string.ready_goal),
     )
 }
@@ -91,8 +94,8 @@ internal fun timeFigure(seconds: Long): Pair<String, String> {
         stringResource(R.string.glow_unit_h)
 }
 
-/** A distance goal as the big number, to a tenth of a km in the dots: "5.0", "12.5". */
-internal fun distanceFigure(meters: Int): String = Units.km(meters.toFloat(), Units.Precision.Day, Units.DOT_LOCALE)
+/** A distance goal as the big number, to a tenth of a km or mile in the dots: "5.0", "12.5". */
+internal fun distanceFigure(meters: Int): String = Units.major(meters.toFloat(), Units.Precision.Day, Units.DOT_LOCALE)
 
 /** "6 reps of 400 m" after the count. */
 @Composable
@@ -104,5 +107,4 @@ private const val MINUTES_PER_HOUR = 60L
 private const val SECONDS_PER_HOUR = 3600L
 private const val TIME_STEP_S = 300L
 private const val STEPS_A_QUARTER = 3
-private const val DISTANCE_STEP_M = 500
 private val DISTANCE_LABELS = setOf(1, 3, 5)

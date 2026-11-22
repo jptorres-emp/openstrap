@@ -132,10 +132,10 @@ object WidgetSamples {
             org.openstrap.app.data.SportTypes.WALK, start, 24 * 60L, false, bpm = 112, zone = 1,
             figures = org.openstrap.app.i18n.Strings.app.let { t ->
                 listOf(
-                    org.openstrap.app.presentation.Units.km(2310f, org.openstrap.app.presentation.Units.Precision.Workout) + " " +
-                        t.get(org.openstrap.app.R.string.workout_glance_unit_km) to
-                        t.get(org.openstrap.app.R.string.workout_live_figure_distance),
-                    "10:24" to t.get(org.openstrap.app.R.string.workout_live_figure_avg_pace),
+                    org.openstrap.app.presentation.Units.distance(
+                        2310f, org.openstrap.app.presentation.Units.Precision.Workout,
+                    ).orEmpty() to t.get(org.openstrap.app.R.string.workout_live_figure_distance),
+                    org.openstrap.app.presentation.Pace.clock(org.openstrap.app.presentation.Pace.of(2310f, 24 * 60L)).orEmpty() to t.get(org.openstrap.app.R.string.workout_live_figure_avg_pace),
                     "96" to t.get(org.openstrap.app.R.string.workout_live_figure_active_kcal),
                 )
             },

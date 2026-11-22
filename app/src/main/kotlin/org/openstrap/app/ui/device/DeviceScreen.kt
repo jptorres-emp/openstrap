@@ -27,7 +27,6 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -286,15 +285,17 @@ fun DeviceScreen(
                 HaloNote(rejected.reason, variant = NoteVariant.Footnote)
                 HaloNote(stringResource(R.string.you_strap_key_rejected_note), variant = NoteVariant.Footnote)
             }
-        } else if (connection is ConnectionState.Disconnected) item {
+        } else if (connection is ConnectionState.Disconnected || failed != null) item {
             HaloNote(stringResource(R.string.you_strap_away_note), variant = NoteVariant.Footnote)
         }
         val connected = connection is ConnectionState.Connected
+        // "As last read" only says something where a row has a value read from the strap.
+        val anyRead = alarmsSummary(alarms) != null || healthAlertsSummary(alarms) != null
         val firmware = info?.firmware ?: (connection as? ConnectionState.Connected)?.firmware
         if (!keyRejected) item {
             PageGroup(
                 heading = stringResource(R.string.you_strap_group_on_strap),
-                footnote = if (connected) null else stringResource(R.string.you_strap_last_read),
+                footnote = if (connected || !anyRead) null else stringResource(R.string.you_strap_last_read),
             ) {
                 NavRow(
                     stringResource(R.string.you_strap_row_alarms), alarmsSummary(alarms) ?: waiting, onClick = onAlarms, divider = false,
@@ -310,7 +311,7 @@ fun DeviceScreen(
                 )
                 SwitchRow(
                     stringResource(R.string.you_strap_row_off_body), stringResource(R.string.you_strap_row_off_body_note),
-                    wearReminder, vm::setWearReminder, icon = AppIcons.HandPalm,
+                    wearReminder, vm::setWearReminder,
                 )
                 KeepConnectedRow(vm, keepConnected, device.address)
             }
@@ -682,11 +683,11 @@ fun DiagnosticsScreen(lines: List<String>, contentPadding: PaddingValues, onBack
                         color = GlowType.noteColor, style = GlowType.secondary,
                     )
                 }
-                // The log is a black block in a panel, in monospace at 11.5 (the board's).
+                // The log is a black block in a panel, in monospace at 11.5 (the board's). Long lines wrap, so none runs past the edge.
                 HaloCard {
                     Box(
                         Modifier.fillMaxWidth().heightIn(max = 520.dp).clip(GlowLayout.TileShape).background(Color.Black)
-                            .verticalScroll(rememberScrollState()).horizontalScroll(rememberScrollState()).padding(Space.S12),
+                            .verticalScroll(rememberScrollState()).padding(Space.S12),
                     ) {
                         Text(
                             if (lines.isEmpty()) stringResource(R.string.you_diagnostics_empty) else lines.joinToString("\n"),

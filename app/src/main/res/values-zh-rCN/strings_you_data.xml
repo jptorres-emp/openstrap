@@ -34,7 +34,7 @@
     <string name="you_backup_folder">备份文件夹</string>
     <string name="you_backup_now">立即备份</string>
     <string name="you_backup_now_running">正在备份</string>
-    <string name="you_backup_now_note">每天把压缩包保存到该文件夹，并保留最近 %1$d 个。</string>
+    <string name="you_backup_now_note">每天把压缩包保存到 %2$s，并保留最近 %1$d 个。</string>
     <string name="you_backup_off_note">开启时会请你选择文件夹。unstrap 每天在那里保存一个压缩包，并保留最近 %1$d 个。</string>
     <string name="you_backup_restore_note">任何 unstrap 压缩包都可以。它会补全这台手机缺少的数据。</string>
     <string name="you_backup_save_copy">保存副本</string>
@@ -55,7 +55,7 @@
     <string name="you_hc_open">打开 Health Connect</string>
     <string name="you_hc_open_note">权限与数据</string>
     <string name="you_hc_calories_note">允许后才会复制卡路里、呼吸频率和最大摄氧量。</string>
-    <string name="you_hc_calories_offer">请求权限</string>
+    <string name="you_hc_calories_offer">允许卡路里、呼吸频率和最大摄氧量</string>
     <string name="you_hc_install">安装 Health Connect</string>
     <string name="you_hc_install_note">在此手机上 Health Connect 是来自 Play 商店的应用。请安装它以便将数据复制到其中。</string>
     <string name="you_hc_store_failed">无法打开 Play 商店。</string>

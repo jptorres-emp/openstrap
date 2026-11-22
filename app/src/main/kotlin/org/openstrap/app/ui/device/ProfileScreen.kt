@@ -120,7 +120,7 @@ fun ProfileScreen(profile: UserProfile, contentPadding: PaddingValues, onSave: (
                 imperial = imperial,
                 sleepNeedMinutes = sleepNeedValue,
                 activityLevel = activity.takeIf { it in 0..4 },
-                // Saving confirms the answers, so the fitness estimate's freshness checks restart.
+                // Saving confirms the answers, so the VO2 max estimate's freshness checks restart.
                 activityAnsweredAt = if (activity in 0..4) System.currentTimeMillis() / 1000 else null,
                 bodyMeasuredAt = if (weightValue != null && heightValue != null) System.currentTimeMillis() / 1000 else null,
                 betaBlocker = betaBlocker,

@@ -65,7 +65,7 @@
     <string name="you_backup_now">Back up now</string>
     <!-- Under Back up now while it runs. -->
     <string name="you_backup_now_running">Backing up</string>
-    <string name="you_backup_now_note">Saves a zip in that folder each day and keeps the last %1$d.</string>
+    <string name="you_backup_now_note">Saves a zip in %2$s each day and keeps the last %1$d.</string>
     <string name="you_backup_off_note">Turning it on asks you to choose a folder. unstrap saves a zip there each day and keeps the last %1$d.</string>
     <string name="you_backup_restore_note">Any unstrap zip works. It fills in what this phone is missing.</string>
     <string name="you_backup_save_copy">Save a copy</string>
@@ -98,7 +98,7 @@
     <string name="you_hc_open_note">Permissions and data</string>
     <!-- The note and button when the optional permissions (calories, breathing rate, VO2 max) are off: asks for just those. -->
     <string name="you_hc_calories_note">Calories, breathing rate and VO2 max are left out until you allow them.</string>
-    <string name="you_hc_calories_offer">Ask for access</string>
+    <string name="you_hc_calories_offer">Allow calories, breathing rate and VO2 max</string>
     <!-- Where Health Connect is a Play Store app that's missing or out of date: the button, and why. -->
     <string name="you_hc_install">Install Health Connect</string>
     <string name="you_hc_install_note">On this phone Health Connect is an app from the Play Store. Install it to copy your data there.</string>

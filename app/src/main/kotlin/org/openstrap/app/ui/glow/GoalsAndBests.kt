@@ -129,6 +129,19 @@ private fun weekStory(view: RewardsView, first: LocalDate, strings: Strings = St
     )
 }
 
+/** How the weekly goal, the bests and the badges are counted: the page's (i). */
+@Composable
+private fun BestsInfoSheet(onDismiss: () -> Unit) {
+    HaloSheet(
+        onDismiss, stringResource(R.string.glow_goals_title), variant = HaloSheetVariant.Info,
+        footer = { HaloButton(stringResource(R.string.glow_close), onDismiss, Modifier.fillMaxWidth()) },
+    ) {
+        SheetSection(stringResource(R.string.glow_goals_weekly_goal), stringResource(R.string.glow_goals_about_goal))
+        SheetSection(stringResource(R.string.glow_goals_personal_bests), stringResource(R.string.glow_goals_about_bests))
+        SheetSection(stringResource(R.string.glow_goals_badges), stringResource(R.string.glow_goals_about_badges))
+    }
+}
+
 /**
  * The weekly goal on its own, in a sheet (board HaloWeeklyGoalSheet): the pencil on the Goals and bests page and the
  * recap. A stepper with the number in Funnel Display Light 44 and its word, a note, then Cancel and Save.
@@ -190,8 +203,13 @@ fun GoalsAndBestsPage(
     BackHandler(onBack = onBack)
     var openBadge by rememberSaveable { mutableStateOf<String?>(null) }
     var openBest by rememberSaveable { mutableStateOf<String?>(null) }
+    var info by rememberSaveable { mutableStateOf(false) }
     HaloPageList(contentPadding, variant = PageVariant.Detail) {
-        item { HaloPageHeader(stringResource(R.string.glow_goals_title), onBack) }
+        item {
+            HaloPageHeader(stringResource(R.string.glow_goals_title), onBack, trailing = {
+                InfoButton(stringResource(R.string.glow_goals_about), { info = true })
+            })
+        }
         if (view == null) {
             item { HaloNote(stringResource(R.string.glow_goals_loading)) }
             return@HaloPageList
@@ -211,6 +229,7 @@ fun GoalsAndBestsPage(
         item { BadgesPanel(view, onOpen = { openBadge = it.id }) }
         item { WaysOn(view, celebrations, onAllBadges, onGoal, onRecap, onCelebrations) }
     }
+    if (info) BestsInfoSheet { info = false }
     if (view != null) {
         openBadge?.let(Rewards::badge)?.let { b -> BadgeSheet(b, view, onDismiss = { openBadge = null }) }
         openBest?.let { kind -> BestSheet(kind, view, onDismiss = { openBest = null }) }
@@ -290,7 +309,7 @@ fun WeeklyRecapPage(view: RewardsView?, first: LocalDate, contentPadding: Paddin
     BackHandler(onBack = onBack)
     var openBest by rememberSaveable { mutableStateOf<String?>(null) }
     HaloPageList(contentPadding, variant = PageVariant.Detail) {
-        item { HaloPageHeader(stringResource(R.string.glow_goals_your_week), onBack, subtitle = RewardsCopy.weekRange(first)) }
+        item { HaloPageHeader(stringResource(R.string.glow_goals_recap_title), onBack, subtitle = RewardsCopy.weekRange(first)) }
         if (view == null) return@HaloPageList
         val week = view.week(first)
         val count = week?.count ?: 0
@@ -354,7 +373,7 @@ fun WeeklyRecapPage(view: RewardsView?, first: LocalDate, contentPadding: Paddin
         item {
             HaloCard(fill = CardFill.Rows) {
                 NavRow(
-                    stringResource(R.string.glow_goals_next_week_goal),
+                    stringResource(R.string.glow_goals_weekly_goal),
                     pluralStringResource(R.plurals.you_goals_workouts_value, view.goal, view.goal),
                     onClick = onGoal, divider = false,
                 )

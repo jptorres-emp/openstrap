@@ -33,7 +33,7 @@
     </plurals>
     <string name="you_goals_active_kcal">%1$s 千卡</string>
     <plurals name="you_goals_active_hours">
-        <item quantity="other">活跃 %1$d 小时</item>
+        <item quantity="other">%1$d 活跃小时</item>
     </plurals>
     <string name="you_sleep_goal_line">%1$s，睡眠需求 %2$s</string>
     <string name="you_profile_empty">添加年龄和性别</string>
@@ -59,7 +59,7 @@
     <string name="you_profile_unit_kg">kg</string>
     <string name="you_profile_height">身高</string>
     <string name="you_profile_unit_cm">cm</string>
-    <string name="you_profile_activity_note">用于体能估算。</string>
+    <string name="you_profile_activity_note">用于最大摄氧量估算。</string>
     <string name="you_profile_beta_blockers">服用 β 受体阻滞剂</string>
     <string name="you_profile_pregnant">怀孕</string>
     <string name="you_unit_h">小时</string>
@@ -76,7 +76,7 @@
     <string name="you_goals_active_label">活跃小时</string>
     <string name="you_goals_active_unit">/ 24 小时</string>
     <string name="you_goals_active_note">走满至少 250 步即计为 1 个活跃小时。</string>
-    <string name="you_goals_workouts_label">运动记录</string>
+    <string name="you_goals_workouts_label">周目标</string>
     <string name="you_goals_workouts_fewer">减少每周运动次数</string>
     <string name="you_goals_workouts_more">增加每周运动次数</string>
     <plurals name="you_goals_workouts_value">
@@ -117,10 +117,10 @@
     <string name="you_profile_group_about">关于你</string>
     <string name="you_profile_group_body">身体</string>
     <string name="you_profile_group_estimates">用于估算</string>
-    <string name="you_profile_foot_about">年龄决定你的最大心率。性别用于热量、负荷、体能和习惯年龄。</string>
+    <string name="you_profile_foot_about">年龄决定你的最大心率。性别用于热量、负荷、最大摄氧量和习惯年龄。</string>
     <string name="you_profile_foot_all">所有信息均为选填，且仅保存在本手机上。</string>
     <string name="you_profile_age_note">决定你的最大心率，强度和恢复数据都以它为基础。</string>
-    <string name="you_profile_sex_sheet_note">用于卡路里、负荷、体能和习惯年龄。</string>
+    <string name="you_profile_sex_sheet_note">用于卡路里、负荷、最大摄氧量和习惯年龄。</string>
     <string name="you_profile_beta_note">会降低心率，因此心率区间会相应调整</string>
     <string name="you_profile_sleep_note">7 到 9 小时之间，恢复评分据此判断你的睡眠。</string>
     <string name="you_sheet_less">减少</string>
@@ -133,11 +133,11 @@
     <string name="you_updates_ready">unstrap %1$s 已可安装</string>
     <string name="you_updates_install">安装</string>
     <string name="you_strap_group_on_strap">手环上</string>
-    <string name="you_strap_group_software">软件</string>
+    <string name="you_strap_group_software">更新和账号</string>
     <string name="you_strap_row_app_updates">应用更新</string>
     <string name="you_strap_no_strap">无手环</string>
     <string name="you_strap_last_read">为上次从手环读取的内容。</string>
-    <string name="you_strap_away_note">请让手环留在充电座上并靠近手机，同时关闭 Zepp 应用。</string>
+    <string name="you_strap_away_note">Zepp 可能占用手环的连接，请先关闭它。手环靠近手机并放在充电座上时最容易连上。</string>
     <string name="you_strap_key_rejected_note">重试没有用。请重新配对，从 Zepp 获取手环当前的密钥。</string>
     <string name="you_strap_forget_note">忘记手环会从本手机删除它的地址和认证密钥。已同步的健康数据会保留。</string>
     <string name="you_updates_view">查看</string>
@@ -145,7 +145,7 @@
     <string name="you_diagnostics_note">用于提交问题反馈。复制会把完整日志放到剪贴板，其中包含手环的蓝牙地址。</string>
     <string name="you_profile_clear">清除</string>
     <string name="you_profile_sleep_use_usual">使用按年龄的默认值</string>
-    <string name="you_profile_pregnant_note">暂停体能估算</string>
+    <string name="you_profile_pregnant_note">暂停最大摄氧量估算</string>
     <string name="you_profile_activity_short_inactive">久坐</string>
     <string name="you_profile_activity_short_light">轻度</string>
     <string name="you_profile_activity_short_low">低强度有氧</string>

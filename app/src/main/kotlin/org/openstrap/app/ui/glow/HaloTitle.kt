@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
 import org.openstrap.app.ui.components.cardOpening
@@ -92,7 +93,7 @@ internal fun HaloTitle(
     val marked = marker != null || tag != null
     val start: @Composable () -> Unit = {
         val title: @Composable () -> Unit = {
-            Text(text, color = color, style = style, maxLines = lines, overflow = TextOverflow.Ellipsis)
+            FittedLine(text, color, style, lines)
         }
         // The mark goes beside the text, or under it on a narrow card, so it never squeezes the text.
         if (marked) FlowRow(
@@ -117,6 +118,25 @@ internal fun HaloTitle(
             trailing?.invoke()
             if (chevron) ChevronCircle()
         }
+    }
+}
+
+/**
+ * [text] in [style] when it fits whole in the width it is given, else one size down (Secondary semibold, as a page
+ * header's title steps), and only then with an ellipsis, so "Load today" and "Heart points" show whole in a Small at
+ * font 1.3. A plain [Layout] that measures each size and places one: a card is often an item of a lazy list, where a
+ * BoxWithConstraints subcomposes. A style that has no step under it (a group label) is drawn as it is.
+ */
+@Composable
+private fun FittedLine(text: String, color: Color, style: TextStyle, maxLines: Int) {
+    val down = GlowType.secondary.copy(fontWeight = FontWeight.SemiBold)
+    val steps = if (style == TitleSpec.Group) listOf(style) else listOf(style, down)
+    Layout(content = {
+        steps.forEach { Text(text, color = color, style = it, maxLines = maxLines, overflow = TextOverflow.Ellipsis) }
+    }) { measurables, constraints ->
+        val fits = measurables.dropLast(1).firstOrNull { it.maxIntrinsicWidth(constraints.maxHeight) <= constraints.maxWidth }
+        val placeable = fits?.measure(constraints.copy(minWidth = 0)) ?: measurables.last().measure(constraints.copy(minWidth = 0))
+        layout(placeable.width, placeable.height) { placeable.place(0, 0) }
     }
 }
 

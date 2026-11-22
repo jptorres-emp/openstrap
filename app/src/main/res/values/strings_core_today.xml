@@ -302,7 +302,12 @@
     <!-- The night hero's first sentence when nothing was recorded today. -->
     <string name="core_today_night_wind_down">Time to wind down.</string>
     <!-- The night hero: a wind-down line, then the day in a sentence ("A steady day. A run and steps past your goal."). -->
-    <string name="core_today_night_wind_down_day">Time to wind down. <xliff:g id="day" example="A steady day. A run and steps past your goal.">%1$s</xliff:g></string>
+    <!-- The night hero after the day: one idea to a sentence, the day's list as in the evening's. -->
+    <string name="core_today_night_full">Time to wind down after a full day. <xliff:g id="list" example="A run and steps past your goal">%1$s</xliff:g>.</string>
+    <string name="core_today_night_quiet">Time to wind down after a quiet day. <xliff:g id="list" example="2,100 steps">%1$s</xliff:g>.</string>
+    <string name="core_today_night_steady">Time to wind down after a steady day. <xliff:g id="list" example="A workout and 6,000 steps">%1$s</xliff:g>.</string>
+    <!-- The workout window hero's sentence before a first night, when there is no Recovery or Energy to say. -->
+    <string name="core_today_window_first_night">Recovery and Energy start after your first night.</string>
 
     <!-- The Energy hero's two sentences as one string each: what the morning or the day drained, then what is left. -->
     <string name="core_today_energy_morning_plenty">The morning drained <xliff:g id="amount" example="22">%1$d</xliff:g>. Plenty left for this evening.</string>

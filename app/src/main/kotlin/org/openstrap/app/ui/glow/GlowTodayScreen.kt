@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -37,6 +36,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import java.time.Instant
@@ -374,6 +374,9 @@ private data class TodayContext(
     /** Pairing or the first day: the cards that need a history are left out ([TodayFacts.bare]). */
     val bare: Boolean = false,
 ) {
+    /** The day has loaded and has no night: what Energy was at waking is then no one's figure to show. */
+    val noNight: Boolean get() = state.loaded && state.asleepSeconds == null
+
     /** "Up to 09:40" for a card whose [newest] reading is stale while syncing has stopped ([upToMarker]). */
     fun upTo(newest: Long?): String? = upToMarker(newest, now, stopped, isToday, zone, staleAfter)
 
@@ -535,7 +538,7 @@ private fun WakingHero(ctx: TodayContext, lightAngle: Float?, onOpen: () -> Unit
     val score = ctx.score
     val shown = ctx.recoveryShown
     val before = ctx.rec?.readinessTrend?.dropLast(1)?.lastOrNull()?.second
-    val atWake = ctx.rec?.charge?.takeIf { it.anchored }?.atWake?.toInt()
+    val atWake = ctx.rec?.charge?.takeIf { it.anchored && !ctx.noNight }?.atWake?.toInt()
     HaloCard(modifier, tone = CardTone.lit(heroStyle(MetricColors.readiness, lightAngle)), onClick = onOpen) {
         Column {
             HaloTitle(
@@ -570,7 +573,7 @@ private fun ChargeHero(ctx: TodayContext, lightAngle: Float?, onOpen: () -> Unit
     // The midday hero is Energy's orange lit from above, like every hero at its moment's angle (HaloTodayMidday).
     HaloCard(modifier, tone = CardTone.lit(heroStyle(MetricColors.charge, lightAngle ?: LightAngle.Above)), onClick = onOpen) {
         Column {
-            val start = c?.takeIf { it.anchored }?.atWake?.toInt()
+            val start = c?.takeIf { it.anchored && !ctx.noNight }?.atWake?.toInt()
             HaloTitle(stringResource(R.string.glow_today_energy_title), note = start?.let {
                     stringResource(if (c.strapOffOvernight) R.string.glow_today_energy_at_start else R.string.glow_today_energy_waking, it)
                 }, marker = ctx.mark(ctx.newest).takeIf { now != null }, tag = ctx.partial)
@@ -739,10 +742,11 @@ private fun EveningHero(ctx: TodayContext, lightAngle: Float?, bedtime: LocalTim
                 return@Column
             }
             // The count is in dots below, so the sentence says the steps against the goal instead.
-            val day = TodayCopy.evening(sports, ctx.state.steps, goals.steps, ctx.loadStatus, stepCount = false)
+            val counted = ctx.dayWorkouts.count { it.durationSeconds >= TodayCopy.SHORT_SESSION_S }
+            val day = TodayCopy.evening(sports, ctx.state.steps, goals.steps, ctx.loadStatus, stepCount = false, counted = counted, night = night)
             // The night winds down (board HaloTodayNight): the day in a sentence, then your usual bedtime as its figure
             // (the steps are the Steps card's, right under it). The evening says the steps in dots.
-            HeroSentence(if (night) stringResource(R.string.core_today_night_wind_down_day, day) else day)
+            HeroSentence(day)
             val figure = if (night) bedtime?.let { TimeOfDay.format(it) to R.string.glow_today_usual_bedtime }
                 else Units.count(ctx.state.steps, Units.DOT_LOCALE) to R.string.glow_today_steps
             if (figure != null) {
@@ -820,8 +824,12 @@ private fun PairHero(step: PairStep, onPair: () -> Unit, modifier: Modifier) {
     HaloCard(modifier, tone = CardTone.lit(heroStyle(StrapSilver, LightAngle.Below)), onClick = onPair.takeIf { !busy }) {
         Column {
             HaloTitle(stringResource(R.string.glow_today_pair_title))
-            // The sentence and the button keep their room at every step, so the cards under the hero never jump.
-            HeroSentence(pairSentence(step), Modifier.heightIn(min = PairSentenceHeight))
+            // The sentence keeps the room of the longest one (a failed pairing's), laid out unseen under it at the same width
+            // and font size, so the hero is one height at every step and every font size and the cards under it never jump.
+            Box {
+                HeroSentence(pairSentence(PairStep.Failed), Modifier.alpha(0f).clearAndSetSemantics {})
+                HeroSentence(pairSentence(step))
+            }
             Spacer(Modifier.height(Space.S20))
             PairingStage(step)
             Spacer(Modifier.height(Space.S20))
@@ -837,8 +845,7 @@ private fun PairHero(step: PairStep, onPair: () -> Unit, modifier: Modifier) {
     }
 }
 
-/** The room the pairing hero keeps for its sentence (the longest, a failed pairing's) and its button, at every step. */
-private val PairSentenceHeight = 96.dp
+/** The room the pairing hero keeps for its button at every step. */
 private val PairButtonSlot = 48.dp
 
 /**
@@ -963,7 +970,7 @@ private fun TodayRow(
             ChargeWideCard(
                 ctx.charge, status, slot.secondGlow, { openScore(org.openstrap.app.ui.dashboard.Score.Energy) }, soFar = soFar,
                 upTo = ctx.mark(ctx.newest).takeIf { ctx.charge != null }, tag = ctx.partial, small = slot.size == CardSize.Small,
-                atWake = c?.takeIf { it.anchored }?.atWake?.toInt(),
+                atWake = c?.takeIf { it.anchored && !ctx.noNight }?.atWake?.toInt(),
                 word = if (ctx.recoveryFailure != null) stringResource(R.string.glow_today_word_unavailable) else ctx.waitingWord,
             )
         }

@@ -75,10 +75,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.text.TextStyle
@@ -190,15 +190,9 @@ internal val LocalDetailDay = androidx.compose.runtime.compositionLocalOf { Deta
 @Composable
 private fun DetailHeader(title: String, onBack: () -> Unit, onTitle: (() -> Unit)?, trailing: @Composable () -> Unit) {
     val switchLabel = stringResource(R.string.glow_page_switch)
-    val measurer = rememberTextMeasurer()
     Box(Modifier.fillMaxWidth().height(PageSpec.HeaderHeight), contentAlignment = Alignment.Center) {
-        BoxWithConstraints(Modifier.fillMaxWidth().padding(horizontal = DetailTitleSide), contentAlignment = Alignment.Center) {
+        Box(Modifier.fillMaxWidth().padding(horizontal = DetailTitleSide), contentAlignment = Alignment.Center) {
             val caret = if (onTitle != null) PageSpec.Caret + PageSpec.CaretGap else 0.dp
-            val room = with(LocalDensity.current) { (maxWidth - caret * 2).roundToPx() }
-            val steps = listOf(GlowType.pageTitle, GlowType.cardTitle, GlowType.secondary.copy(fontWeight = FontWeight.SemiBold))
-            val style = remember(title, room, LocalDensity.current.fontScale) {
-                steps.firstOrNull { measurer.measure(title, it, maxLines = 1, softWrap = false).size.width <= room } ?: steps.last()
-            }
             Row(
                 Modifier.clip(Corner.Chip).let {
                     if (onTitle != null) it.clickable(onClickLabel = switchLabel, role = Role.Button, onClick = onTitle) else it
@@ -206,10 +200,7 @@ private fun DetailHeader(title: String, onBack: () -> Unit, onTitle: (() -> Unit
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 if (onTitle != null) Spacer(Modifier.width(caret))
-                Text(
-                    title, color = Color.White, style = style, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f, fill = false),
-                )
+                FittedTitle(title, Modifier.weight(1f, fill = false))
                 if (onTitle != null) {
                     Spacer(Modifier.width(PageSpec.CaretGap))
                     Icon(AppIcons.CaretDown, null, modifier = Modifier.size(PageSpec.Caret), tint = Ink.Secondary)
@@ -220,6 +211,27 @@ private fun DetailHeader(title: String, onBack: () -> Unit, onTitle: (() -> Unit
             HaloIconButton(AppIcons.ArrowLeft, stringResource(R.string.glow_back), onBack, variant = HeaderVariant.Detail.button)
         }
         Box(Modifier.align(Alignment.CenterEnd)) { trailing() }
+    }
+}
+
+/**
+ * [title] in the first of the header's type sizes it fits at whole, in the width it is given, else the smallest with an
+ * ellipsis. A plain [Layout] that measures each size and places one, so the header, the first item of a lazy list,
+ * never subcomposes (a [androidx.compose.foundation.layout.BoxWithConstraints] there made detail pages open scrolled).
+ */
+@Composable
+private fun FittedTitle(title: String, modifier: Modifier = Modifier) {
+    val steps = listOf(GlowType.pageTitle, GlowType.cardTitle, GlowType.secondary.copy(fontWeight = FontWeight.SemiBold))
+    Layout(
+        content = {
+            steps.forEach { Text(title, color = Color.White, style = it, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+        },
+        modifier = modifier.clearAndSetSemantics { contentDescription = title },
+    ) { measurables, constraints ->
+        val loose = constraints.copy(minWidth = 0, maxWidth = Constraints.Infinity)
+        val fits = measurables.dropLast(1).firstOrNull { it.maxIntrinsicWidth(constraints.maxHeight) <= constraints.maxWidth }
+        val placeable = fits?.measure(loose) ?: measurables.last().measure(constraints.copy(minWidth = 0))
+        layout(placeable.width, placeable.height) { placeable.place(0, 0) }
     }
 }
 

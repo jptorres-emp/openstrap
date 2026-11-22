@@ -38,7 +38,8 @@ fun peekDay(date: LocalDate, locale: Locale = Locale.getDefault()): String =
     date.dayOfWeek.getDisplayName(TextStyle.SHORT, locale)
 
 /**
- * What the strap chip in the header shows: a [dot] and, only when they matter, a few words ([text] may be empty).
+ * What the strap chip in the header shows: a [dot] and a few words, never a bare dot: the battery when it is known, else
+ * what the strap is doing ("Connecting", "Connected", "No strap").
  * [description] is read out by a screen reader.
  */
 data class StrapChip(val text: String, val dot: Dot, val description: String, val battery: Int? = null) {
@@ -79,7 +80,7 @@ const val STARTUP_GRACE_S = 120L
  * how long the app's process has been running (seconds): during its first [STARTUP_GRACE_S] a strap that isn't
  * connected yet is still being reconnected, so it shows a quiet dot like a brief connect.
  *
- * When several apply, the first wins: "Not paired", then not connected ("18 min ago", after the grace), then
+ * When several apply, the first wins: "No strap", then not connected ("18 min ago", after the grace), then
  * "Charging 64%", then "Not synced", then the battery. A strap that isn't there can't sync, so how long it's been
  * gone is the news. A charging strap isn't worn and stops syncing in fast-charge mode, so charging explains a failed
  * sync rather than the other way round; the data waits on the strap.
@@ -93,7 +94,9 @@ fun strapChip(
             strings.get(R.string.day_chip_not_paired), StrapChip.Dot.Quiet, strings.get(R.string.day_chip_not_paired_description),
         )
     }
-    val connecting = { StrapChip("", StrapChip.Dot.Quiet, strings.get(R.string.day_chip_connecting_description)) }
+    val connecting = {
+        StrapChip(strings.get(R.string.day_chip_connecting), StrapChip.Dot.Quiet, strings.get(R.string.day_chip_connecting_description))
+    }
     if (connection !is ConnectionState.Connected && sinceStart < STARTUP_GRACE_S) return connecting()
     val ago = lastSeen?.let { now - it }
     val unseen = if (ago != null) {
@@ -116,7 +119,9 @@ fun strapChip(
                     strings.get(R.string.day_chip_not_synced), StrapChip.Dot.Unsynced,
                     strings.get(R.string.day_chip_not_synced_description),
                 )
-                battery == null -> StrapChip("", StrapChip.Dot.Fine, strings.get(R.string.day_chip_connected_description))
+                battery == null -> StrapChip(
+                    strings.get(R.string.day_chip_connected), StrapChip.Dot.Fine, strings.get(R.string.day_chip_connected_description),
+                )
                 StrapBands.lowBattery(battery, connection.charging) -> StrapChip(
                     strings.format(R.string.day_chip_battery, battery), StrapChip.Dot.Low,
                     strings.plural(R.plurals.day_chip_battery_low_description, battery, battery), battery,

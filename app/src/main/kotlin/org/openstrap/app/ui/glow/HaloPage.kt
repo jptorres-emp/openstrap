@@ -301,7 +301,7 @@ internal fun HaloPageHeader(
 private fun FittedTitle(title: String, modifier: Modifier = Modifier) {
     val steps = listOf(GlowType.pageTitle, GlowType.cardTitle, GlowType.secondary.copy(fontWeight = FontWeight.SemiBold))
     FittedText(
-        title, steps, Color.White,
+        title, TextSteps(steps), Color.White,
         modifier.clearAndSetSemantics {
             contentDescription = title
             heading()
@@ -311,14 +311,20 @@ private fun FittedTitle(title: String, modifier: Modifier = Modifier) {
 
 /** The subtitle under a title, a size down (Secondary, then the small note) before it ends in an ellipsis, as the title does. */
 @Composable
-private fun FittedSubtitle(subtitle: String) = FittedText(subtitle, listOf(GlowType.secondary, GlowType.noteSmall), Ink.Secondary)
+private fun FittedSubtitle(subtitle: String) = FittedText(
+    subtitle, TextSteps(listOf(GlowType.secondary, GlowType.noteSmall)), Ink.Secondary,
+)
+
+/** The sizes a text steps down through, stable for compose. */
+@androidx.compose.runtime.Immutable
+private class TextSteps(val styles: List<androidx.compose.ui.text.TextStyle>)
 
 /** [text] in the first of [steps] that fits whole in the width it is given, else in the last with an ellipsis. */
 @Composable
-private fun FittedText(text: String, steps: List<androidx.compose.ui.text.TextStyle>, color: Color, modifier: Modifier = Modifier) {
+private fun FittedText(text: String, steps: TextSteps, color: Color, modifier: Modifier = Modifier) {
     Layout(
         content = {
-            steps.forEach { Text(text, color = color, style = it, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+            steps.styles.forEach { Text(text, color = color, style = it, maxLines = 1, overflow = TextOverflow.Ellipsis) }
         },
         modifier = modifier,
     ) { measurables, constraints ->

@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="workout_live_figure_active_kcal">活动千卡</string>
-    <string name="workout_live_figure_kcal_needs_profile">需要个人资料</string>
+    <string name="workout_live_figure_kcal_needs_profile">添加资料</string>
     <string name="workout_live_figure_peak_bpm">峰值 bpm</string>
-    <string name="workout_live_figure_peak_moving">运动时峰值</string>
+    <string name="workout_live_figure_peak_moving">运动峰值</string>
     <string name="workout_live_figure_avg_bpm">平均 bpm</string>
     <string name="workout_live_figure_hard_efforts">高强度次数</string>
     <string name="workout_live_figure_distance">距离</string>

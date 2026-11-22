@@ -333,7 +333,7 @@ internal fun FamilySection(
     val zones = remember(a) { ZoneSeconds(a.zoneSeconds) }
     when (family) {
         // A run with no route, splits or laps (no GPS) has the indoor card: zones and the heart line, as indoors.
-        Workouts.Family.Distance -> if (!RunCard(summary, liveRoute)) {
+        Workouts.Family.Distance -> if (!runCard(summary, liveRoute)) {
             IndoorCard(zones, a.maxHeartRate, readings, indoorTarget(a), chart = heartLine)
         }
         Workouts.Family.IndoorCardio -> IndoorCard(zones, a.maxHeartRate, readings, indoorTarget(a), chart = heartLine)
@@ -441,7 +441,7 @@ private fun GamesCard(summary: PhoneSummary, readings: List<Pair<Long, Int>>, zo
  * without a route, splits or laps.
  */
 @Composable
-private fun RunCard(summary: PhoneSummary, liveRoute: List<Route.Point>): Boolean {
+private fun runCard(summary: PhoneSummary, liveRoute: List<Route.Point>): Boolean {
     val mapped = Route.mappable(summary.route)
     val rows = remember(summary, liveRoute) { splitRowsOf(summary, liveRoute) }
     val laps = manualLaps(summary, rows)

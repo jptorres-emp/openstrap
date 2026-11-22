@@ -90,7 +90,10 @@
     <string name="glow_detail_steps_so_far_to">今天截至 %1$s</string>
     <string name="glow_detail_live">实时</string>
     <string name="glow_detail_asleep_note">睡眠中</string>
-    <string name="glow_detail_stress_strip_note">每小时，从平静到偏高</string>
+    <string name="glow_detail_spo2_day_today">今天截至目前在 %1$d%% 至 %2$d%% 之间。</string>
+    <string name="glow_detail_spo2_day_past">当天在 %1$d%% 到 %2$d%% 之间。</string>
+    <string name="glow_detail_stress_calm">平静</string>
+    <string name="glow_detail_stress_high">偏高</string>
     <string name="glow_detail_last_night_estimated">昨晚，估算</string>
     <string name="glow_detail_that_night_estimated">当晚，估算</string>
 </resources>

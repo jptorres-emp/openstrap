@@ -251,6 +251,10 @@ internal object DetailCopy {
     fun heartDay(low: Int, high: Int, today: Boolean, strings: Strings = Strings.app): String =
         strings.format(if (today) R.string.core_detail_heart_day_today else R.string.core_detail_heart_day_past, low, high)
 
+    /** Blood oxygen's day sentence, as heart rate's is: its lowest and highest reading, in percent. */
+    fun spo2Day(low: Int, high: Int, today: Boolean, strings: Strings = Strings.app): String =
+        strings.format(if (today) R.string.glow_detail_spo2_day_today else R.string.glow_detail_spo2_day_past, low, high)
+
     /**
      * A week's or a month's sentence from the daily [levels] against your normal: a run off it first ("Below your
      * normal for three nights."), otherwise how many days sat inside it. Null with no values at all.
@@ -338,6 +342,42 @@ internal object DetailCopy {
         ready.withheld -> strings.get(R.string.core_detail_recovery_no_score) to strings.get(R.string.core_detail_recovery_no_heart_data)
         else -> strings.get(R.string.core_detail_recovery_no_score) to strings.get(R.string.core_detail_recovery_scored_mornings)
     }
+
+    /**
+     * A recovery driver's reading as its row says it: HRV and resting heart rate against your normal ("56 ms, your normal
+     * 53"), the rest as [RecoveryCopy] words them. Null when there is nothing to say.
+     */
+    fun driverReading(c: org.openstrap.app.data.Recovery.Contributor, strings: Strings = Strings.app): String? {
+        val d = c.detail
+        val line = when {
+            d is org.openstrap.app.data.Recovery.Detail.Hrv && d.percentVsUsual > -100 ->
+                strings.format(R.string.glow_recovery_driver_hrv, d.ms, Math.round(d.ms / (1f + d.percentVsUsual / 100f)))
+            d is org.openstrap.app.data.Recovery.Detail.RestingHr ->
+                strings.format(R.string.glow_recovery_driver_resting, d.bpm, Math.round(d.bpm - d.vsUsual))
+            else -> RecoveryCopy.detail(d, strings = strings)
+        }
+        return line.takeIf { it.isNotBlank() }
+    }
+
+    /**
+     * Where a driver's bar ends, 0 to 1, from its reading: halfway at your normal, further for an HRV above it (up to
+     * 50 % more) and a resting heart rate below it (up to 10 bpm lower, since lower is better), and for sleep from its
+     * length against 8 hours. A driver with no such reading falls back to its score.
+     */
+    fun driverPlace(c: org.openstrap.app.data.Recovery.Contributor): Float {
+        val d = c.detail
+        val place = when (d) {
+            is org.openstrap.app.data.Recovery.Detail.Hrv -> 0.5f + d.percentVsUsual / (2f * HRV_SPAN_PERCENT)
+            is org.openstrap.app.data.Recovery.Detail.RestingHr -> 0.5f - d.vsUsual / (2f * RESTING_SPAN_BPM)
+            is org.openstrap.app.data.Recovery.Detail.Asleep -> d.minutes / (2f * SLEEP_NEED_MINUTES)
+            else -> c.score / 100f
+        }
+        return place.coerceIn(0f, 1f)
+    }
+
+    private const val HRV_SPAN_PERCENT = 50f
+    private const val RESTING_SPAN_BPM = 10f
+    private const val SLEEP_NEED_MINUTES = 8 * 60f
 
     /** A day of the seven-day strip under the value: its short name, whether it has data, and whether it's shown. */
     data class StripDay(val date: LocalDate, val label: String, val hasData: Boolean, val selected: Boolean)

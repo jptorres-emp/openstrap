@@ -297,8 +297,9 @@ private fun DriversList(ready: Recovery.Readiness?, onAll: () -> Unit) {
         top.forEachIndexed { i, c ->
             // The bar and the word stay grey: colour never says how it's going (spec 2.2); off usual the tag takes the word's place.
             ContributorRow(
-                TabCopy.factorName(c.factor), Color.White, TabCopy.contributorWord(c.score), c.score / 100f,
-                divider = i > 0, onClick = onAll, tag = offTag(OffWords.Usual, contributorOffStatus(c.score)),
+                TabCopy.factorName(c.factor), Color.White, TabCopy.contributorWord(c.score), DetailCopy.driverPlace(c),
+                divider = i > 0, detail = DetailCopy.driverReading(c), onClick = onAll,
+                tag = offTag(OffWords.Usual, contributorOffStatus(c.score)),
             )
         }
     }

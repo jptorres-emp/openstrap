@@ -664,27 +664,9 @@ fun GlowMetricDetailScreen(
     onBack: () -> Unit,
     recovery: org.openstrap.app.data.RecoveryResult? = null,
 ) {
-    // The resting heart rate Recovery scored the night with, so this page and Recovery's drivers read the same number.
-    val read = remember(state, metric, recovery) { if (metric == Metric.RestingHr) state.withScoredResting(recovery) else state }
     MetricDetailBody(
-        metric, night, read, history, liveHeartRate, canUseLive, onOpen, onSwitch, onSelectDay, contentPadding, onBack, recovery,
+        metric, night, state, history, liveHeartRate, canUseLive, onOpen, onSwitch, onSelectDay, contentPadding, onBack, recovery,
     )
-}
-
-/**
- * [DayUiState] with the day's resting heart rate (and the last column of the week's) set to the night's own, the lowest
- * 30-minute average that Recovery's resting heart rate driver scores and shows. The state carries the strap's stored
- * daily figure, a different measure of the same night, which read 59 where the driver read 47. Unchanged without a score
- * for the night or while the day is not the last of the trend.
- */
-internal fun DayUiState.withScoredResting(recovery: org.openstrap.app.data.RecoveryResult?): DayUiState {
-    val bpm = recovery?.takeIf { it.date == date }?.readiness?.contributors?.firstNotNullOfOrNull {
-        (it.detail as? Recovery.Detail.RestingHr)?.bpm
-    } ?: return this
-    val trend = restingTrend.toMutableList()
-    val last = trend.indexOfLast { it.value != null }
-    if (last >= 0) trend[last] = trend[last].copy(value = bpm.toFloat())
-    return copy(restingHeartRate = bpm, restingEstimated = false, restingTrend = trend)
 }
 
 @Composable

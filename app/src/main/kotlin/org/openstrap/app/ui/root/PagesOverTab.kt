@@ -334,6 +334,7 @@ private fun YouPageHost(
                 sleepGoalOpen = false
             },
             onDismiss = { sleepGoalOpen = false },
+            ageKnown = profile.age() != null,
         )
     }
 }

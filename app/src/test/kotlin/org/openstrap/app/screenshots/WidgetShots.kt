@@ -93,7 +93,7 @@ class WidgetShots {
                 // Drawn to a bitmap by hand: a view's own capture wants an activity to host it.
                 val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
                 root.draw(Canvas(bitmap))
-                bitmap.captureRoboImage(File(ScreenshotTest.OUTPUT_DIR, "widgets/${name}_${sizeName}_$scale.png").path)
+                bitmap.captureRoboImage(File(ScreenshotTest.OUTPUT_DIR, "widgets/${name}_${sizeName}_$scale.png").path, ScreenshotTest.SMOOTHED)
             }
         }
     }

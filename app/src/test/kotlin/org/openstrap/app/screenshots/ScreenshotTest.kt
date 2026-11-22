@@ -92,6 +92,18 @@ abstract class ScreenshotTest {
             ),
         )
 
+        /**
+         * For a widget drawn through RemoteViews to a bitmap: its rounded corners are smoothed a shade differently on
+         * Linux (CI) than on a Mac, by at most a few levels of 255 along the curve. Each pixel may differ by up to
+         * [EDGE_DISTANCE] of the colour range, too little to hide a moved text or shape.
+         */
+        private const val EDGE_DISTANCE = 0.02f
+        val SMOOTHED = RoborazziOptions(
+            compareOptions = RoborazziOptions.CompareOptions(
+                imageComparator = SimpleImageComparator(maxDistance = EDGE_DISTANCE), resultValidator = ThresholdValidator(0f),
+            ),
+        )
+
         /** Normal, and the two larger sizes the app is checked at. */
         val FONT_SCALES = listOf(1.0f, 1.15f, 1.3f)
 

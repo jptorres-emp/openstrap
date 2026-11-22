@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.graphics.Paint
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
 import androidx.glance.GlanceModifier
@@ -106,7 +107,7 @@ private fun ColumnScope.SmallContent(m: StepsWidgetModel, f: WidgetFrame) {
     val note = attentionWords(f)
     // With words to say, the hour pills give way to the 4 dp goal bar, so the words have the room.
     val pills = m.showLine && note == null
-    val fit = StepsLayout.small(m.smallText, note ?: m.share, f.contentWidth, f.contentHeight, f.fontScale, f.status, pills = pills)
+    val fit = StepsLayout.small(m.smallText, note ?: m.share, f.contentWidth, f.contentHeight, f.fontScale, f.status, pills = pills, words = note != null)
     TopRowView(m.title, null, fit.top, f, 0f)
     Gap()
     // Each block one child of the column: Glance drops a column's children past ten.
@@ -119,9 +120,9 @@ private fun ColumnScope.SmallContent(m: StepsWidgetModel, f: WidgetFrame) {
     }
     Flex()
     Column(GlanceModifier.fillMaxWidth()) {
-        StepsLine(m, StepsLayout.SMALL_PILLS_DP.takeIf { pills }, f)
+        if (fit.bar) StepsLine(m, StepsLayout.SMALL_PILLS_DP.takeIf { pills }, f, labels = false)
         if (fit.share) {
-            Spacer(GlanceModifier.height(StepsLayout.SMALL_BAR_GAP_DP.dp))
+            if (fit.bar) Spacer(GlanceModifier.height(StepsLayout.SMALL_BAR_GAP_DP.dp))
             if (note != null) AttentionText(note) else Text(m.share, style = WidgetType.secondary, maxLines = 1)
         }
     }
@@ -170,25 +171,39 @@ private fun NumberRow(m: StepsWidgetModel, row: StepsLayout.NumberRow, f: Widget
 
 /**
  * The day so far as Today's Steps card draws it, [height] dp high: the hours as lime dots, a dot per 250 steps, the
- * latest hour full and the rest dimmer ([drawStepsHourDots], HaloCharts Steps by hour). The goal bar instead when there's
- * no room or no step yet.
+ * latest hour full and the rest dimmer ([drawStepsHourDots], HaloCharts Steps by hour), with the hours under them when
+ * [labels] and there's room. The goal bar instead when there's no room or no step yet.
  */
 @Composable
-private fun StepsLine(m: StepsWidgetModel, height: Float?, f: WidgetFrame) {
+private fun StepsLine(m: StepsWidgetModel, height: Float?, f: WidgetFrame, labels: Boolean = true) {
     if (!m.showLine || height == null) {
         // No line (a large font, or none to draw): the goal bar shows the progress instead.
         GoalBar(m.progress, f)
         return
     }
+    // The hours under the dots as the Steps card has them, when the line is tall enough to keep a readable picture over them.
+    val labels = labels && height - StepsLayout.hourLabelsHeight(f.fontScale) >= StepsLayout.MIN_PICTURE_DP
+    val picture = if (labels) height - StepsLayout.hourLabelsHeight(f.fontScale) else height
     val w = f.drawContentWidth * f.density
-    val h = height * f.density
+    val h = picture * f.density
     val bitmap = renderDrawScope(w, h, f.density) { drawStepsHourDots(m.hourly, Hue) }
-    Image(
-        ImageProvider(bitmap),
-        contentDescription = LocalContext.current.getString(R.string.system_widget_steps_line_description, m.share),
-        modifier = GlanceModifier.fillMaxWidth().height(height.dp),
-        contentScale = ContentScale.FillBounds,
-    )
+    Column(GlanceModifier.fillMaxWidth()) {
+        Image(
+            ImageProvider(bitmap),
+            contentDescription = LocalContext.current.getString(R.string.system_widget_steps_line_description, m.share),
+            modifier = GlanceModifier.fillMaxWidth().height(picture.dp),
+            contentScale = ContentScale.FillBounds,
+        )
+        if (labels) {
+            Spacer(GlanceModifier.height(StepsLayout.HOUR_LABELS_GAP_DP.dp))
+            Row(GlanceModifier.fillMaxWidth()) {
+                StepsLayout.HOUR_LABELS.forEachIndexed { i, hour ->
+                    if (i > 0) Spacer(GlanceModifier.defaultWeight())
+                    Text(hour, style = WidgetType.caption, maxLines = 1)
+                }
+            }
+        }
+    }
 }
 
 /** The goal bar: 4 dp, lime on white at 10%, as far as the goal, full past it. */
@@ -242,12 +257,22 @@ private fun goalBar(progress: Float, width: Float, density: Float): Bitmap {
     }
 }
 
-/** This week as dotted rings, as Today's Your week card draws them ([drawWeekRingsDotted]), a ring per column over its letter. */
+/**
+ * This week as dotted rings, as Today's Your week card draws them ([drawWeekRingsDotted]), a ring per column over its
+ * letter. Today's ring and every day that met the goal are in Steps' lime, the others the light grey the card gives its
+ * past days; each ring is drawn in its own column's clip so one picture holds both inks.
+ */
 private fun weekBitmap(m: StepsWidgetModel, column: Float, density: Float): Bitmap {
     val height = StepsLayout.ringHeight(column) * density
-    val today = m.week.indexOfFirst { it.state == StepsDay.Today }
+    val shares = StepsWidgetModel.ringShares(m.week, m.goal)
     return renderDrawScope(WeekBarsLook.width(m.week.size, column) * density, height, density) {
-        drawWeekRingsDotted(StepsWidgetModel.ringShares(m.week, m.goal), Hue, WEEK_RING_STROKE_DP * density, today)
+        val slot = size.width / m.week.size
+        m.week.forEachIndexed { i, day ->
+            val marked = day.state == StepsDay.Today || day.state == StepsDay.Met
+            clipRect(left = slot * i, right = slot * (i + 1)) {
+                drawWeekRingsDotted(shares, if (marked) Hue else Ink.Strong, WEEK_RING_STROKE_DP * density, i)
+            }
+        }
     }
 }
 

@@ -598,16 +598,13 @@ object StartLayout {
     fun bareTiles(next: List<StartSport>, width: Float, room: Float, tile: Float): Tiles? =
         if (tile <= room && COLUMNS * tile + (COLUMNS - 1) * CAPTION_SPACE_DP <= width) Tiles(next.take(COLUMNS - 1), tile, 0f, tile) else null
 
-    /** How the Large's two figures sit. Every value stays on one line in all three. */
+    /** How the Large's two figures sit, always a label over its value. Every value stays on one line in all three. */
     enum class FigureLayout {
         /** Side by side, Caption over Body, as the mockup. */
         Side,
 
-        /** A recording's own figures, up to three side by side, Body over Caption (board HaloWidgetsWorkout). */
+        /** A recording's own figures, up to three side by side, each its label over its value. */
         Live,
-
-        /** A row each: the Caption on the left, the value on the right. */
-        Rows,
 
         /** One under the other, Caption over Body across the whole width. */
         Stacked,
@@ -617,18 +614,13 @@ object StartLayout {
 
     /**
      * This week and the usual's last in [width] dp, a value never wrapped: side by side when both values fit half the
-     * width, else a row each with the Caption beside the value, else one under the other.
+     * width, else one under the other.
      */
     fun figures(m: StartWidgetModel, width: Float, fontScale: Float): Figures {
         val half = (width - FIGURE_GAP_DP) / 2
         val pair = caption(fontScale) + FIGURE_LINE_GAP_DP + body(fontScale)
         if (fits(m.weekLine, WidgetText.BODY_SP, half, fontScale) && fits(m.lastLine, WidgetText.BODY_SP, half, fontScale)) {
             return Figures(FigureLayout.Side, pair)
-        }
-        fun row(label: String, value: String) =
-            WidgetText.width(label, WidgetText.CAPTION_SP, fontScale) + FIGURE_GAP_DP + WidgetText.width(value, WidgetText.BODY_SP, fontScale) <= width
-        if (row(StartWidgetModel.THIS_WEEK, m.weekLine) && row(m.lastLabel, m.lastLine)) {
-            return Figures(FigureLayout.Rows, 2 * body(fontScale) + FIGURE_ROW_GAP_DP)
         }
         return Figures(FigureLayout.Stacked, 2 * pair + FIGURE_ROW_GAP_DP)
     }

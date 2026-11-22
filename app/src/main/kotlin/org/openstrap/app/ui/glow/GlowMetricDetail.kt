@@ -716,9 +716,7 @@ fun GlowMetricDetailScreen(
         )
         dayValue != null && metric == Metric.Spo2 -> DetailHeadline(
             metric.format(dayValue, Units.DOT_LOCALE), "", stringResource(spo2Word(dayValue)), metric.unit,
-            context = LatestReading.of(metric, state)?.let {
-                LatestReading.spo2Line(it.x, LatestReading.sleepWindow(state), Long.MAX_VALUE / 2, Strings.app, ::clock)
-            }.orEmpty(),
+            context = LatestReading.of(metric, state)?.let { spo2Context(state, it.x) }.orEmpty(),
         )
         dayValue != null && metric == Metric.Stress -> DetailHeadline(
             metric.format(dayValue, Units.DOT_LOCALE), "", StressLevel.of(dayValue).word(Strings.app), null,
@@ -856,7 +854,7 @@ fun GlowMetricDetailScreen(
                 inRange == null || summary == null -> null
                 range == Range.Year ->
                     History.weekly(inRange.filter { it.date in dataStart..dataEnd }).takeIf { it.isNotEmpty() }?.let { w ->
-                        DetailCopy.year(metric.format(w.minOf { it.value }), metric.format(w.maxOf { it.value }), metric.unit)
+                        DetailCopy.year(metric.format(w.minOf { it.value }), metric.format(w.maxOf { it.value }), metric.unit, w.size)
                     }
                 else -> {
                     val days = generateSequence(dataStart) { it.plusDays(1) }.takeWhile { !it.isAfter(dataEnd) }.toList()
@@ -950,8 +948,24 @@ private fun NightChart(metric: Metric, state: DayUiState, color: Color, onScrub:
                 onScrub(i?.let { values[it] }?.let { v -> scrubAt(metric, v, window.first + i * slot, slot) })
             },
         )
+        FirstReadingNote(series.minOf { it.x }, window.first)
     }
 }
+
+/**
+ * The strap reads some vitals only once you are settled, so a night's line can start well after its axis does: when the
+ * first reading at [first] comes over an hour after the night's [start], a note under the chart says when.
+ */
+@Composable
+private fun FirstReadingNote(first: Long, start: Long) {
+    if (first - start > LATE_START_S) Text(
+        stringResource(R.string.glow_metrics_first_reading, clock(first)),
+        color = GlowType.noteInk, style = GlowType.secondary, modifier = Modifier.padding(top = Space.S8, start = Space.S4),
+    )
+}
+
+/** How long after falling asleep a night's first reading may come before the chart says so: an hour. */
+private const val LATE_START_S = 60 * 60L
 
 /**
  * A scrubbed point of [metric]'s line in the headline: its value and the time it starts. The line is made of averages
@@ -978,6 +992,20 @@ private fun hourSteps(hour: Int, steps: Float, strings: Strings = Strings.app): 
 }
 
 private const val MINUTES_PER_HOUR = 60
+
+/**
+ * Under blood oxygen's number: when the latest reading [at] was taken, and which part of the day it and the line beside it
+ * are. The line is mostly the night when most of the day's readings fall in the sleep window, and "Daytime, 09:10" over it
+ * would say the opposite ([LatestReading.spo2Line] says it by the one reading).
+ */
+@Composable
+private fun spo2Context(state: DayUiState, at: Long): String {
+    val window = LatestReading.sleepWindow(state)
+    val asleep = state.spo2.count { LatestReading.isAsleep(it.x, window) }
+    val mostly = asleep * 2 > state.spo2.size && asleep < state.spo2.size
+    return if (mostly) stringResource(R.string.glow_metrics_spo2_mostly_asleep, clock(at))
+    else LatestReading.spo2Line(at, window, Long.MAX_VALUE / 2, Strings.app, ::clock)
+}
 
 /** Blood oxygen's chart scale, so the lowest reading doesn't sit on the bottom edge: a fixed 80 to 100 %. */
 private val SPO2_AXIS = 80f..100f
@@ -1065,6 +1093,8 @@ private fun DayChart(metric: Metric, state: DayUiState, color: Color, hasValue: 
                         onScrub(i?.let { values[it] }?.let { v -> scrubAt(metric, v, window.first + i * slot, slot) })
                     },
                 )
+                // A night's line (breathing in sleep) that starts late says so, as the night chart does.
+                if (window != day && series.isNotEmpty()) FirstReadingNote(series.minOf { it.x }, window.first)
                 if (metric == Metric.Stress) {
                     if (stripe) DetailPicture(height = 24.dp) { m -> DayStrip(state.stressStrip, color, PictureSize.Wide, m) }
                     else Spacer(Modifier.height(Space.S24 + Space.S12 + Space.S4))
@@ -1253,7 +1283,9 @@ private fun detailFigures(
     metric: Metric, night: Boolean, range: Range, state: DayUiState, summary: History.Summary?, nightValues: List<Float?>,
     normal: History.Normal?, value: Float?, weekAverage: Float?, nightly: Boolean, goal: Int, countDays: List<DayStat>,
 ): List<Pair<String?, String>>? {
-    fun show(v: Float?) = v?.let { "${metric.format(it, Units.DOT_LOCALE)} ${metric.unit}".trim() }
+    // Figures are text, not dots: a count keeps the language's grouping, as the rows and "of 8,000" beside it do.
+    val locale = if (metric == Metric.Steps) java.util.Locale.getDefault() else Units.DOT_LOCALE
+    fun show(v: Float?) = v?.let { "${metric.format(it, locale)} ${metric.unit}".trim() }
     return when {
         metric in SIGNALS -> {
             val (low, avg, high) = signalTrio(metric, night, range == Range.Day, state, summary, nightValues)

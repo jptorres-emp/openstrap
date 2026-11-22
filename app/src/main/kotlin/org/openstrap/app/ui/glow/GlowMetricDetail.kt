@@ -75,8 +75,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -180,64 +178,6 @@ internal class DetailDay(val picked: LocalDate?, val pending: Boolean)
 
 internal val LocalDetailDay = androidx.compose.runtime.compositionLocalOf { DetailDay(null, false) }
 
-/**
- * A detail's header: back at the left, the [title] centred, [trailing] at the right. The title gets the room between
- * the buttons, not the header grid's wider sides, and steps down a type size at a time until the whole name fits, so
- * "Resting heart rate" and "Skin temperature" show in full at every font size. Only a name too long for the smallest
- * size ends in an ellipsis. [onTitle] makes the title a button with a caret (the switcher), whose room is kept at both
- * sides so the words stay centred.
- */
-@Composable
-private fun DetailHeader(title: String, onBack: () -> Unit, onTitle: (() -> Unit)?, trailing: @Composable () -> Unit) {
-    val switchLabel = stringResource(R.string.glow_page_switch)
-    Box(Modifier.fillMaxWidth().height(PageSpec.HeaderHeight), contentAlignment = Alignment.Center) {
-        Box(Modifier.fillMaxWidth().padding(horizontal = DetailTitleSide), contentAlignment = Alignment.Center) {
-            val caret = if (onTitle != null) PageSpec.Caret + PageSpec.CaretGap else 0.dp
-            Row(
-                Modifier.clip(Corner.Chip).let {
-                    if (onTitle != null) it.clickable(onClickLabel = switchLabel, role = Role.Button, onClick = onTitle) else it
-                },
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                if (onTitle != null) Spacer(Modifier.width(caret))
-                FittedTitle(title, Modifier.weight(1f, fill = false))
-                if (onTitle != null) {
-                    Spacer(Modifier.width(PageSpec.CaretGap))
-                    Icon(AppIcons.CaretDown, null, modifier = Modifier.size(PageSpec.Caret), tint = Ink.Secondary)
-                }
-            }
-        }
-        Box(Modifier.align(Alignment.CenterStart)) {
-            HaloIconButton(AppIcons.ArrowLeft, stringResource(R.string.glow_back), onBack, variant = HeaderVariant.Detail.button)
-        }
-        Box(Modifier.align(Alignment.CenterEnd)) { trailing() }
-    }
-}
-
-/**
- * [title] in the first of the header's type sizes it fits at whole, in the width it is given, else the smallest with an
- * ellipsis. A plain [Layout] that measures each size and places one, so the header, the first item of a lazy list,
- * never subcomposes (a [androidx.compose.foundation.layout.BoxWithConstraints] there made detail pages open scrolled).
- */
-@Composable
-private fun FittedTitle(title: String, modifier: Modifier = Modifier) {
-    val steps = listOf(GlowType.pageTitle, GlowType.cardTitle, GlowType.secondary.copy(fontWeight = FontWeight.SemiBold))
-    Layout(
-        content = {
-            steps.forEach { Text(title, color = Color.White, style = it, maxLines = 1, overflow = TextOverflow.Ellipsis) }
-        },
-        modifier = modifier.clearAndSetSemantics { contentDescription = title },
-    ) { measurables, constraints ->
-        val loose = constraints.copy(minWidth = 0, maxWidth = Constraints.Infinity)
-        val fits = measurables.dropLast(1).firstOrNull { it.maxIntrinsicWidth(constraints.maxHeight) <= constraints.maxWidth }
-        val placeable = fits?.measure(loose) ?: measurables.last().measure(constraints.copy(minWidth = 0))
-        layout(placeable.width, placeable.height) { placeable.place(0, 0) }
-    }
-}
-
-/** What a detail's header keeps free at each side for its 44 dp buttons and a gap. */
-private val DetailTitleSide = 52.dp
-
 /** A detail the switcher can move to: its [title], and whether it's the one showing. */
 internal class DetailSibling(val title: String, val current: Boolean, val icon: androidx.compose.ui.graphics.vector.ImageVector?, val open: () -> Unit)
 
@@ -310,7 +250,7 @@ internal fun DetailTemplate(
                     val onSwitch = { switching = true }
                     // The detail's header (HaloDetailRecovery board): back, the title, which opens the switcher when there's
                     // something to switch to, and the (i), both flat circles over the wash.
-                    DetailHeader(title, onBack, onTitle = if (siblings.size > 1) onSwitch else null) {
+                    HaloPageHeader(title, onBack, variant = HeaderVariant.Detail, onTitle = if (siblings.size > 1) onSwitch else null) {
                         HaloIconButton(
                             AppIcons.Info, stringResource(R.string.glow_metrics_about, title), onInfo, variant = HaloIconVariant.OverWash,
                         )
@@ -675,26 +615,6 @@ fun GlowMetricDetailScreen(
     contentPadding: PaddingValues,
     onBack: () -> Unit,
     recovery: org.openstrap.app.data.RecoveryResult? = null,
-) {
-    MetricDetailBody(
-        metric, night, state, history, liveHeartRate, canUseLive, onOpen, onSwitch, onSelectDay, contentPadding, onBack, recovery,
-    )
-}
-
-@Composable
-private fun MetricDetailBody(
-    metric: Metric,
-    night: Boolean,
-    state: DayUiState,
-    history: DailyHistory,
-    liveHeartRate: Int?,
-    canUseLive: Boolean,
-    onOpen: (Detail) -> Unit,
-    onSwitch: (Detail) -> Unit,
-    onSelectDay: (LocalDate) -> Unit,
-    contentPadding: PaddingValues,
-    onBack: () -> Unit,
-    recovery: org.openstrap.app.data.RecoveryResult?,
 ) {
     var rangeIndex by rememberSaveable(metric, night) { mutableIntStateOf(0) }
     val range = Range.entries[rangeIndex]

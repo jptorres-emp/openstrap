@@ -542,7 +542,11 @@ private const val STAGE_RUN_DP = 8f
  * A coloured hypnogram's rows as 8 dp tracks (white 6%) from [trackX] across, each run of a stage one bar as long as the
  * run in the stage's colour ([NightStages.join]), so the lengths of the stages read straight off the bars.
  */
-private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawStageRuns(g: org.openstrap.app.ui.glow.draw.HypnogramGeometry, rowColors: List<Color>, trackX: Float) {
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawStageRuns(
+    g: org.openstrap.app.ui.glow.draw.HypnogramGeometry,
+    rowColors: List<Color>,
+    trackX: Float,
+) {
     val h = STAGE_RUN_DP.dp.toPx()
     val corner = CornerRadius(h / 2)
     g.rowY.indices.forEach { row ->

@@ -38,9 +38,9 @@ import org.openstrap.app.ui.theme.Ink
 /**
  * The sleep goal on its own, in a sheet over the You page (board HaloSleepGoalSheet): the hours and the minutes on two
  * wheels with their units beside them, then the sleep need the goal is measured against ([needMinutes], from the profile
- * when it holds one, [fromProfile], else from your age when the profile has one, [ageKnown], else a default), a note on what uses the goal, and Cancel and Save. It saves the
- * same goal the goals sheet does; Cancel, or pulling the sheet down, leaves it as it was. Minutes step by 5, or by 1 when
- * the goal isn't on a 5.
+ * when it holds one, [fromProfile], else from your age when the profile has one, [ageKnown], else a default), a note on
+ * what uses the goal, and Cancel and Save. It saves the same goal the goals sheet does. Cancel, or pulling the sheet
+ * down, leaves it as it was. Minutes step by 5, or by 1 when the goal isn't on a 5.
  */
 @Composable
 fun SleepGoalSheet(

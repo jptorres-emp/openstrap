@@ -80,23 +80,24 @@ internal class ShownNight(
 
 /** The night [session] with its stage [spans] as every sleep picture and sentence reads it; null without a session. */
 internal fun shownNight(session: SleepSession?, spans: List<StageSpan>): ShownNight? {
-    session ?: return null
-    val length = (session.end - session.start).coerceAtLeast(0L)
+    val length = ((session ?: return null).end - session.start).coerceAtLeast(0L)
     val clean = NightStages.clean(spans, session.start, session.end)
-    if (clean.isEmpty()) {
+    return if (clean.isEmpty()) {
         // No stage rows: the strap's own figures, held to the length of the night.
         val asleep = SleepHistory.asleepSeconds(session).coerceIn(0L, length)
-        val awake = ((session.awakeMinutes ?: 0) * 60L).coerceIn(0L, length - asleep)
-        return ShownNight(session, emptyList(), null, asleep, awake)
+        ShownNight(session, emptyList(), null, asleep, ((session.awakeMinutes ?: 0) * SECONDS_PER_MINUTE).coerceIn(0L, length - asleep))
+    } else {
+        val b = NightStages.breakdown(clean)
+        fun minutes(stage: Int) = ((b.byStage[stage] ?: 0L) / SECONDS_PER_MINUTE).toInt()
+        val shown = session.copy(
+            deepMinutes = minutes(SleepStage.DEEP), lightMinutes = minutes(SleepStage.LIGHT), remMinutes = minutes(SleepStage.REM),
+            awakeMinutes = minutes(SleepStage.AWAKE), wakeCount = NightStages.wakes(clean),
+        )
+        ShownNight(shown, clean, b, b.asleepSeconds, b.awakeSeconds)
     }
-    val b = NightStages.breakdown(clean)
-    fun minutes(stage: Int) = ((b.byStage[stage] ?: 0L) / 60).toInt()
-    val shown = session.copy(
-        deepMinutes = minutes(SleepStage.DEEP), lightMinutes = minutes(SleepStage.LIGHT), remMinutes = minutes(SleepStage.REM),
-        awakeMinutes = minutes(SleepStage.AWAKE), wakeCount = NightStages.wakes(clean),
-    )
-    return ShownNight(shown, clean, b, b.asleepSeconds, b.awakeSeconds)
 }
+
+private const val SECONDS_PER_MINUTE = 60L
 
 /** This day's main sleep as every sleep picture reads it ([shownNight]). */
 internal fun DayUiState.shownNight(): ShownNight? = shownNight(sleep, sleepStages)

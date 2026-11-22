@@ -166,7 +166,7 @@ private fun NightHero(state: DayUiState, firstNights: Boolean, onRestore: (org.o
                 }
                 return@Column
             }
-            val asleep = night?.asleep ?: (session.end - session.start)
+            val asleep = night.asleep
             val others = SleepHistory.weekOthers(state.nights.mapNotNull { n -> n.session?.let { n.date to it } }.toMap(), state.date)
             HeroSentence(TabCopy.night(asleep, others))
             Spacer(Modifier.height(Space.S16))
@@ -180,11 +180,11 @@ private fun NightHero(state: DayUiState, firstNights: Boolean, onRestore: (org.o
                     TabCopy.woke(session.wakeCount),
                 ),
             )
-            if (night != null && night.spans.isNotEmpty()) {
+            if (night.spans.isNotEmpty()) {
                 Spacer(Modifier.height(Space.S20))
                 GlowSleepStages(night.spans, 96.dp)
             }
-            night?.breakdown?.let { b ->
+            night.breakdown?.let { b ->
                 // Stage totals as text, never dots (spec 2.3): a stage under a minute leaves its segment and legend out.
                 val totals = stageTotals(b.byStage)
                 if (totals.isNotEmpty()) {

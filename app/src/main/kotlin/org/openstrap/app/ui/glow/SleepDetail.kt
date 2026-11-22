@@ -201,8 +201,8 @@ internal fun SleepScoreDetail(
                         Column(Modifier.padding(top = Space.S8)) {
                             // Moved, the strap's whole night shows with what's outside the user's times dimmed.
                             if (moved && state.strapSleepStages.isNotEmpty()) DetailStages(state.strapSleepStages, kept = session.start..session.end)
-                            else if (night != null && night.spans.isNotEmpty()) DetailStages(night.spans)
-                            night?.breakdown?.let { DetailStageShares(it, Modifier.padding(top = Space.S16)) }
+                            else if (night.spans.isNotEmpty()) DetailStages(night.spans)
+                            night.breakdown?.let { DetailStageShares(it, Modifier.padding(top = Space.S16)) }
                             // Times extended past the strap's have no stages for the added time, so the page says so.
                             if (detected != null && state.sleepBreakdown != null) {
                                 SleepCopy.stagesCover(session.start, session.end, detected.start, detected.end)?.let {

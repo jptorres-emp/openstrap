@@ -50,7 +50,9 @@ object SampleData {
                 cycle++
             }
             // The day's night replaces what is there, as a sync does, under the strap's day key.
-            dao.replaceSleepDay(date, nap = false, sessions = listOf(SleepSession(sleepStart, sleepEnd, day = DayKey.of(date))), stages = stages)
+            dao.replaceSleepDay(
+                date, nap = false, sessions = listOf(SleepSession(sleepStart, sleepEnd, day = DayKey.of(date))), stages = stages,
+            )
 
             val minutes = mutableListOf<ActivityMinute>()
             val hr = mutableListOf<HeartRateSample>()

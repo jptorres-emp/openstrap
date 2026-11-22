@@ -43,11 +43,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import org.openstrap.app.R
@@ -82,6 +88,9 @@ internal object PageSpec {
     val HeaderHeight = 48.dp
     val TabHeaderHeight = 60.dp
     val HeaderSide = 96.dp
+
+    /** A detail's side columns: its back and (i), 44 dp each, and a gap, so a long metric name keeps its room. */
+    val HeaderSideDetail = 52.dp
 
     /** The header's side buttons, 44 across. */
     val HeaderButton = IconSize.TileM
@@ -215,7 +224,11 @@ internal fun HaloPageHeader(
     end: @Composable BoxScope.() -> Unit = {},
 ) {
     val side =
-        if (variant == HeaderVariant.Workout) Modifier.widthIn(min = PageSpec.HeaderSide) else Modifier.width(PageSpec.HeaderSide)
+        when (variant) {
+            HeaderVariant.Workout -> Modifier.widthIn(min = PageSpec.HeaderSide)
+            HeaderVariant.Detail -> Modifier.width(PageSpec.HeaderSideDetail)
+            HeaderVariant.Page -> Modifier.width(PageSpec.HeaderSide)
+        }
     Row(modifier.fillMaxWidth().height(PageSpec.HeaderHeight), verticalAlignment = Alignment.CenterVertically) {
         Box(side, contentAlignment = Alignment.CenterStart, content = start)
         Box(Modifier.weight(1f), contentAlignment = Alignment.Center, content = centre)
@@ -261,10 +274,7 @@ internal fun HaloPageHeader(
                 ) {
                     // The caret's room is kept at both sides, so the words sit in the middle with or without it.
                     if (onTitle != null) Spacer(Modifier.width(PageSpec.Caret + PageSpec.CaretGap))
-                    Text(
-                        title, color = Color.White, style = GlowType.pageTitle, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false),
-                    )
+                    FittedTitle(title, Modifier.weight(1f, fill = false))
                     if (onTitle != null) {
                         Spacer(Modifier.width(PageSpec.CaretGap))
                         Icon(AppIcons.CaretDown, null, modifier = Modifier.size(PageSpec.Caret), tint = Ink.Secondary)
@@ -281,4 +291,29 @@ internal fun HaloPageHeader(
         },
         end = { trailing?.invoke() },
     )
+}
+
+/**
+ * [title] in Page title type when it fits whole in the width it is given, else a size down at a time (Card title, then
+ * Secondary semibold), and only at the smallest with an ellipsis, so "Resting heart rate" shows in full at font 1.3. A
+ * plain [Layout] that measures each size and places one: a header is often the first item of a lazy list, where a
+ * BoxWithConstraints subcomposes and made detail pages open scrolled.
+ */
+@Composable
+private fun FittedTitle(title: String, modifier: Modifier = Modifier) {
+    val steps = listOf(GlowType.pageTitle, GlowType.cardTitle, GlowType.secondary.copy(fontWeight = FontWeight.SemiBold))
+    Layout(
+        content = {
+            steps.forEach { Text(title, color = Color.White, style = it, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+        },
+        modifier = modifier.clearAndSetSemantics {
+            contentDescription = title
+            heading()
+        },
+    ) { measurables, constraints ->
+        val fits = measurables.dropLast(1).firstOrNull { it.maxIntrinsicWidth(constraints.maxHeight) <= constraints.maxWidth }
+        val placeable = fits?.measure(constraints.copy(minWidth = 0, maxWidth = Constraints.Infinity))
+            ?: measurables.last().measure(constraints.copy(minWidth = 0))
+        layout(placeable.width, placeable.height) { placeable.place(0, 0) }
+    }
 }

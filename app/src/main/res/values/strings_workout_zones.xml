@@ -9,7 +9,7 @@
     <!-- The heading over your max heart rate on the page. -->
     <string name="workout_zones_max_title">Your max heart rate</string>
     <!-- A button: type your max yourself. -->
-    <string name="workout_zones_set_it">Set it myself</string>
+    <string name="workout_zones_set_it">Set my max heart rate</string>
     <!-- A button: forget the max you set and learn it from workouts again. -->
     <string name="workout_zones_learn_it">Learn it again</string>
     <!-- Under the list of zones. Load is the app's name for how much a workout or a day asked of your body. -->
@@ -27,13 +27,13 @@
     <!-- Under your max: you typed it. -->
     <string name="workout_zones_source_set">Set by you</string>
     <!-- Under your max: learned from workouts, with the day it was. The day is "3 Oct". -->
-    <string name="workout_zones_source_learned_on">Learned from hard efforts, <xliff:g id="v1" example="x">%1$s</xliff:g></string>
+    <string name="workout_zones_source_learned_on">Hard efforts, <xliff:g id="v1" example="x">%1$s</xliff:g></string>
     <!-- Under your max: learned from workouts, with no day kept. -->
-    <string name="workout_zones_source_learned">Learned from your hardest efforts</string>
+    <string name="workout_zones_source_learned">Your hardest efforts</string>
     <!-- Under your max: worked out from your age for now. -->
-    <string name="workout_zones_source_age">From your age, for now</string>
+    <string name="workout_zones_source_age">Your age, for now</string>
     <!-- Under your max: taken from the profile in the Zepp app for now. -->
-    <string name="workout_zones_source_strap">From your strap, until you add your age</string>
+    <string name="workout_zones_source_strap">Your strap, until you add your age</string>
     <!-- Under your max: a guess with nothing to go on. -->
     <string name="workout_zones_source_guess">First guess, add your age or set it</string>
     <!-- A zone's name on the list. -->

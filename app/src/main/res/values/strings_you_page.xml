@@ -52,7 +52,7 @@
     </plurals>
     <!-- Centred at the foot of the You page: the version running. -->
 
-    <!-- The Goals row, one line of 36 characters: the three daily goals joined, "8,000 steps, 450 kcal, 8 h active". -->
+    <!-- The Goals row, one line of 36 characters: the three daily goals joined, "8,000 steps, 450 kcal, 8 active hours". -->
     <string name="you_goals_line"><xliff:g id="steps" example="8,000 steps">%1$s</xliff:g>, <xliff:g id="calories" example="450 active kcal">%2$s</xliff:g>, <xliff:g id="hours" example="8 active hours">%3$s</xliff:g></string>
     <!-- The steps goal in the Goals row. The number is already formatted, "8,000". -->
     <plurals name="you_goals_steps">
@@ -63,8 +63,8 @@
     <string name="you_goals_active_kcal">%1$s kcal</string>
     <!-- The active hours goal in the Goals row. -->
     <plurals name="you_goals_active_hours">
-        <item quantity="one">%1$d h active</item>
-        <item quantity="other">%1$d h active</item>
+        <item quantity="one">%1$d active hour</item>
+        <item quantity="other">%1$d active hours</item>
     </plurals>
     <!-- The Sleep goal row: the goal, then the sleep need Recovery uses. Both are lengths of time, "7 h 30" and "8 h". -->
     <string name="you_sleep_goal_line">%1$s, sleep need %2$s</string>
@@ -104,7 +104,7 @@
     <string name="you_profile_height">Height</string>
     <string name="you_profile_unit_cm">cm</string>
     <!-- Over five numbered segments, 1 to 5. -->
-    <string name="you_profile_activity_note">unstrap uses this for the fitness estimate.</string>
+    <string name="you_profile_activity_note">unstrap uses this for the VO2 max estimate.</string>
     <!-- Under the activity segments while none is picked. -->
     <!-- Switch rows. -->
     <string name="you_profile_beta_blockers">Taking beta-blockers</string>
@@ -131,7 +131,7 @@
     <!-- The active hours field's unit: hours out of the day's 24. -->
     <string name="you_goals_active_unit">of 24</string>
     <string name="you_goals_active_note">An active hour is one with at least 250 steps.</string>
-    <string name="you_goals_workouts_label">Workouts</string>
+    <string name="you_goals_workouts_label">Weekly goal</string>
     <!-- The minus and plus buttons beside the weekly workout goal, read by screen readers. -->
     <string name="you_goals_workouts_fewer">Fewer workouts a week</string>
     <string name="you_goals_workouts_more">More workouts a week</string>
@@ -198,10 +198,10 @@
     <string name="you_profile_group_body">Body</string>
     <string name="you_profile_group_estimates">For your estimates</string>
     <!-- Calories, Load and Habit Age are names of unstrap's pages and scores. -->
-    <string name="you_profile_foot_about">Age sets your max heart rate. Sex is used for Calories, Load, fitness and Habit Age.</string>
+    <string name="you_profile_foot_about">Age sets your max heart rate. Sex is used for Calories, Load, VO2 max and Habit Age.</string>
     <string name="you_profile_foot_all">All fields are optional and stay on this phone.</string>
     <string name="you_profile_age_note">Sets your max heart rate, which your effort and recovery numbers depend on.</string>
-    <string name="you_profile_sex_sheet_note">Used for Calories, Load, fitness and Habit Age.</string>
+    <string name="you_profile_sex_sheet_note">Used for Calories, Load, VO2 max and Habit Age.</string>
     <string name="you_profile_beta_note">Lowers your heart rate, so zones adjust</string>
     <string name="you_profile_sleep_note">Between 7 and 9 hours. Recovery uses it to judge your sleep.</string>
     <!-- The minus and plus buttons of a picker sheet, read by screen readers. -->
@@ -218,11 +218,11 @@
     <string name="you_updates_install">Install</string>
     <!-- Strap page (Halo): group headings and footnotes, the card for a strap not paired, the pairing sheet's key hint. -->
     <string name="you_strap_group_on_strap">On the strap</string>
-    <string name="you_strap_group_software">Software</string>
+    <string name="you_strap_group_software">Updates and account</string>
     <string name="you_strap_row_app_updates">App updates</string>
     <string name="you_strap_no_strap">No strap</string>
     <string name="you_strap_last_read">As last read from the strap.</string>
-    <string name="you_strap_away_note">Keep the strap on its charger near the phone, and close the Zepp app.</string>
+    <string name="you_strap_away_note">Zepp can hold the strap\'s connection, so close it. Near the phone and on its charger, the strap is easiest to reach.</string>
     <string name="you_strap_key_rejected_note">Retrying won\'t help. Pair again to fetch the strap\'s current key from Zepp.</string>
     <string name="you_strap_forget_note">Forget deletes the strap\'s address and auth key from this phone. Your synced health data stays.</string>
     <string name="you_updates_view">View</string>
@@ -230,7 +230,7 @@
     <string name="you_diagnostics_note">For bug reports. Copy log puts the whole log on the clipboard, including the strap\'s Bluetooth address.</string>
     <string name="you_profile_clear">Clear</string>
     <string name="you_profile_sleep_use_usual">Use the default for my age</string>
-    <string name="you_profile_pregnant_note">Pauses the fitness estimate</string>
+    <string name="you_profile_pregnant_note">Pauses the VO2 max estimate</string>
     <string name="you_profile_activity_short_inactive">Inactive</string>
     <string name="you_profile_activity_short_light">Light</string>
     <string name="you_profile_activity_short_low">Low aerobic</string>

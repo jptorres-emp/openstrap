@@ -37,8 +37,8 @@ class StrapPageTest {
 
     @Test fun `You page values`() {
         val goals = Goals(steps = 8000, sleepMinutes = 450, activeHours = 8, calories = 450)
-        assertEquals("8,000 steps, 450 kcal, 8 h active", goalsLine(goals, Locale.UK))
-        assertEquals("8.000 steps, 450 kcal, 8 h active", goalsLine(goals, Locale.GERMANY))
+        assertEquals("8,000 steps, 450 kcal, 8 active hours", goalsLine(goals, Locale.UK))
+        assertEquals("8.000 steps, 450 kcal, 8 active hours", goalsLine(goals, Locale.GERMANY))
         // The sleep goal and need read as every other length of time does.
         assertEquals("7 h 30, sleep need 8 h", sleepGoalLine(goals, 480))
         assertEquals("7 h 05, sleep need 8 h", sleepGoalLine(goals.copy(sleepMinutes = 425), 480))

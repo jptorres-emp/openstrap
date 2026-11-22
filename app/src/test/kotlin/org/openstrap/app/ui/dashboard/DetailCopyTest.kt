@@ -24,7 +24,7 @@ class DetailCopyTest {
 
     @Test fun `the status word says where a value sits against your normal`() {
         assertEquals("Above your normal", DetailCopy.statusWord(1))
-        assertEquals("Usual", DetailCopy.statusWord(0))
+        assertEquals("Your normal", DetailCopy.statusWord(0))
         assertEquals("Below your normal", DetailCopy.statusWord(-1))
         assertNull(DetailCopy.statusWord(null))
     }

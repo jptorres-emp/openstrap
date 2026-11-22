@@ -78,7 +78,7 @@
     <!-- A Recovery contributor's status word, when it lifts the score. Short. -->
     <string name="core_tab_contributor_helping">Helping</string>
     <!-- A Recovery contributor's status word, when it is as usual. Short. -->
-    <string name="core_tab_contributor_usual">Usual</string>
+    <string name="core_tab_contributor_usual">Your normal</string>
     <!-- A Recovery contributor's status word. Short. -->
     <string name="core_tab_contributor_little">Holding back a little</string>
     <!-- A Recovery contributor's status word. Short. -->
@@ -167,8 +167,8 @@
         <item quantity="one">Learning, <xliff:g id="have" example="4">%1$d</xliff:g> of <xliff:g id="need" example="7">%2$d</xliff:g></item>
         <item quantity="other">Learning, <xliff:g id="have" example="4">%1$d</xliff:g> of <xliff:g id="need" example="7">%2$d</xliff:g></item>
     </plurals>
-    <!-- Under the breathing disturbances number, a word slot of 18 characters: "Usual 2.1". -->
-    <string name="core_tab_breathing_short_usual">Usual <xliff:g id="rate" example="2.1">%1$s</xliff:g></string>
+    <!-- Under the breathing disturbances number, a word slot of 18 characters: "Your normal 2.1". -->
+    <string name="core_tab_breathing_short_usual">Your normal <xliff:g id="rate" example="2.1">%1$s</xliff:g></string>
 
     <!-- Under Load's number: your usual Load for a whole day. -->
     <string name="core_tab_load_usual">Your usual, <xliff:g id="usual" example="40">%1$d</xliff:g> a day</string>

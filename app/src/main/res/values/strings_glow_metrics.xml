@@ -88,6 +88,10 @@
     <string name="glow_metrics_none_in_range">No reading in this range yet.</string>
     <!-- In the chart's place on a night with no readings of this metric while asleep. -->
     <string name="glow_metrics_none_asleep">No reading while asleep.</string>
+    <!-- Under a night's line that starts well after falling asleep: when the first reading came. -->
+    <string name="glow_metrics_first_reading">First reading at <xliff:g id="time" example="02:40">%1$s</xliff:g>, once you were settled in sleep.</string>
+    <!-- Under blood oxygen's number when most of the day's readings were taken asleep: when the latest was taken. -->
+    <string name="glow_metrics_spo2_mostly_asleep">Mostly while asleep, latest at <xliff:g id="time" example="09:10">%1$s</xliff:g></string>
     <!-- In the chart's place on a day with no readings of this metric. -->
     <string name="glow_metrics_none_this_day">No reading for this day.</string>
     <!-- In the chart's place on a day for breathing rate, which the strap reads only in sleep. -->

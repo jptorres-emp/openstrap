@@ -380,7 +380,10 @@ private fun ChargeSmall(c: Recovery.ChargeDay?, recharged: Boolean, modifier: Mo
         else TabCopy.chargeAmount(it.drainedExercise + it.drainedStress + it.drainedLiving, -1)
     }
     // Recharged's night: from bedtime, or where the card's own figure says it started, to waking.
-    val night = c?.takeIf { ready && recharged }?.atWake?.let { wake -> (c.atBedtime ?: (wake - c.recharged)).coerceIn(0f, 100f) to wake }
+    // Ends at the waking figure the Energy card beside it shows, which cuts the decimals: 95.6 is "95" on both.
+    val night = c?.takeIf { ready && recharged }?.atWake?.let { wake ->
+        (c.atBedtime ?: (wake - c.recharged)).coerceIn(0f, 100f) to wake.toInt().toFloat()
+    }
     val parts = c?.takeIf { ready && !recharged }?.let { listOf(it.drainedExercise, it.drainedStress, it.drainedLiving) }
     val status = when {
         failed -> FAILED_SHORT
@@ -511,11 +514,11 @@ private fun rememberSignals(state: DayUiState): Signals {
     val nightAverage = stringResource(R.string.glow_today_spo2_night_average)
     return remember(state) {
         fun body(
-            metric: Metric, name: String, accent: Color, today: Float?, normal: History.Normal?, unit: String = "", line: String? = null,
+            metric: Metric, name: String, accent: Color, today: Float?, normal: History.Normal?, line: String? = null,
         ): BodySignal {
             val direction = History.status(today, normal)
             return BodySignal(
-                metric, name, accent, today?.let { metric.format(it) + unit }, direction, bodyTag(metric, direction),
+                metric, name, accent, today?.let { metric.formatWithUnit(it) }, direction, bodyTag(metric, direction),
                 SleepCopy.learning(state, metric), line,
             )
         }
@@ -532,7 +535,7 @@ private fun rememberSignals(state: DayUiState): Signals {
                 ),
                 body(
                     Metric.Spo2, spo2Name, MetricColors.spo2, SleepCopy.nightValue(state, Metric.Spo2),
-                    SleepCopy.nightNormal(state, Metric.Spo2), unit = "%", line = nightAverage,
+                    SleepCopy.nightNormal(state, Metric.Spo2), line = nightAverage,
                 ),
                 BodySignal(
                     Metric.Stress, stressName, MetricColors.stress, stressLatest?.let { Metric.Stress.format(it.y) },
@@ -549,10 +552,10 @@ private fun rememberSignals(state: DayUiState): Signals {
     }
 }
 
-/** Body signals against your normal, each opening its metric, its off tag after its line. [waiting] is what a row with no reading says. */
+/** Body signals, each opening its metric, its off tag after its line. [waiting] is what a row with no reading says. */
 @Composable
 private fun SignalsList(signals: List<BodySignal>, waiting: String, onOpen: (Metric) -> Unit) {
-    ListPanel(title = stringResource(R.string.glow_recovery_body_signals), note = stringResource(R.string.glow_recovery_against_normal)) {
+    ListPanel(title = stringResource(R.string.glow_recovery_body_signals)) {
         signals.forEachIndexed { i, s ->
             MetricRow(
                 s.label, s.accent, s.value,

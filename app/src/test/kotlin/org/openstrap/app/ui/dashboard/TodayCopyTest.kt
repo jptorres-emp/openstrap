@@ -204,7 +204,7 @@ class TodayCopyTest {
     @Test fun `values read against your normal`() {
         assertEquals("Above your normal", TodayCopy.normalWord(1))
         assertEquals("Below your normal", TodayCopy.normalWord(-1))
-        assertEquals("Usual", TodayCopy.normalWord(0))
+        assertEquals("Your normal", TodayCopy.normalWord(0))
         assertEquals("Learning", TodayCopy.normalWord(null))
     }
 

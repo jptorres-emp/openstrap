@@ -99,6 +99,8 @@ internal data class WeekDotsGeometry(val xs: List<Float>, val ys: List<Float?>, 
 
 /** The dots' radius as a share of the picture's height, and the latest's. */
 private const val DOT_R = 3.5f / 40f
+private const val KIT_DOT_DP = 4
+private const val KIT_TODAY_DP = 6
 private const val TODAY_R = 5f / 40f
 
 /**
@@ -169,7 +171,8 @@ fun WeekOfDots(values: List<Float?>, usual: ClosedFloatingPointRange<Float>?, in
             val y = g.ys[i] ?: return@forEachIndexed
             val inBand = usual == null || usual.holds(v!!)
             val alpha = if (i == last || !inBand) 1f else DIM_ALPHA
-            val r = (if (i == last) TODAY_R else DOT_R) * h
+            // Never under the chart kit's dot (4 dp, today's 6): a short picture would draw them a pixel wide.
+            val r = max((if (i == last) TODAY_R else DOT_R) * h, (if (i == last) KIT_TODAY_DP else KIT_DOT_DP).dp.toPx())
             drawCircle(ink.copy(alpha = alpha), r, Offset(g.xs[i] * w, y * h))
         }
     }

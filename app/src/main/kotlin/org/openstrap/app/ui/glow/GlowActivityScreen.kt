@@ -185,12 +185,12 @@ fun GlowActivityScreen(
                     ActivityCard.ActiveMinutes -> r?.activity.let { a ->
                         // Blocks toward the week's target, a block per 5 minutes. A target, never off: no rim.
                         PictureSmall(
-                            MetricColors.steps, stringResource(R.string.glow_activity_active_minutes), a?.weekEquivalent?.toString(),
+                            ActivityLime, stringResource(R.string.glow_activity_active_minutes), a?.weekEquivalent?.toString(),
                             stringResource(R.string.glow_unit_min).takeIf { a != null },
                             a?.let { TabCopy.activeMinutes(it.weekEquivalent, Activity.MVPA_WEEKLY_TARGET) } ?: NO_READING,
                             onClick = { open(Score.ActiveMinutes) }, modifier = m,
                             picture = a?.let { w ->
-                                { pm -> Blocks(w.weekEquivalent, MetricColors.steps, PictureSize.Small, pm, target = Activity.MVPA_WEEKLY_TARGET) }
+                                { pm -> Blocks(w.weekEquivalent, ActivityLime, PictureSize.Small, pm, target = Activity.MVPA_WEEKLY_TARGET) }
                             },
                         )
                     }
@@ -198,12 +198,12 @@ fun GlowActivityScreen(
                         val week = remember(stored, state.date, state.pai) { heartPointsWeek(state.date, stored, state.pai?.daily) }
                         // The last 7 days as bars, today's in full ink. The aim is the week's total, so no line per day.
                         PictureSmall(
-                            MetricColors.heart, stringResource(R.string.glow_activity_heart_points),
+                            ActivityLime, stringResource(R.string.glow_activity_heart_points),
                             heartPoints?.roundToInt()?.toString(), null,
                             heartPoints?.let { TabCopy.heartPoints(it.roundToInt(), HEART_POINTS_TARGET) } ?: AFTER_NEXT_SYNC,
                             onClick = { open(Score.HeartPoints) }, modifier = m,
                             picture = week.takeIf { days -> days.any { it != null } }?.let { days ->
-                                { pm -> DayBars(days, MetricColors.heart, PictureSize.Small, pm) }
+                                { pm -> DayBars(days, ActivityLime, PictureSize.Small, pm) }
                             },
                         )
                     }
@@ -572,7 +572,7 @@ private fun DayFactsList(
             e?.let { CaloriesCopy.rowLine(active ?: 0, goal, it.totalKcal.roundToInt()) }
                 ?: stringResource(R.string.glow_activity_add_profile_to_see),
             tag = caloriesTag,
-            onClick = if (e == null && r != null) onEditProfile else { { open(Score.Calories) } }, dash = e != null,
+            onClick = if (e == null && r != null) onEditProfile else { { open(Score.Calories) } },
             icon = Score.Calories.rowIcon(), ring = active?.let { CaloriesCopy.share(it, goal) },
         )
         // Ours from step length and height when we can; the strap's own figure otherwise. Always approximate.
@@ -633,7 +633,7 @@ private fun WorkoutsList(
 }
 
 /**
- * A workout as a list row: its sport's toned white icon on the effort light (a heart-red glow as strong as the
+ * A workout as a list row: its sport's icon in the sport's colour on the effort light (a heart-red glow as strong as the
  * workout's Load against your [usual], [Workouts.effort]), the sport with "Auto-detected" when the strap logged
  * it by itself, the sport's one fact and the start time ([TabCopy.workoutFact]), and the duration. A thin zone
  * bar under it, lined up with the name. [divider] draws the hairline above.
@@ -650,7 +650,7 @@ internal fun WorkoutRow(a: WorkoutAnalysis, usual: Float?, divider: Boolean, onC
         lead = RowLead.custom(RowSpec.Sport) {
             HaloTile(
                 SportIcons.of(a.workout.sportType), size = TileSize.Medium,
-                tone = TileTone.Effort(Workouts.effort(a.workout.trainingLoad, usual)),
+                tone = TileTone.Effort(Workouts.effort(a.workout.trainingLoad, usual)), glyph = sportColor(a.workout.sportType),
             )
         },
         titleSuffix = workoutTags(a.workout.sportType, autoDetected = !a.startedByYou),

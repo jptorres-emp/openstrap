@@ -49,8 +49,6 @@
     <string name="glow_recovery_stress">Stress</string>
     <!-- Title of the body signals list. -->
     <string name="glow_recovery_body_signals">Body signals</string>
-    <!-- The note on the body signals' title row: each is compared with your normal. -->
-    <string name="glow_recovery_against_normal">Against your normal</string>
 
     <!-- Under the Recovery score in the week view. -->
     <string name="glow_recovery_week_average">Average of the last 7 days</string>

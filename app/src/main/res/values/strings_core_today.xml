@@ -61,7 +61,7 @@
     <!-- A value against your usual range: below it. -->
     <string name="core_today_normal_below">Below your normal</string>
     <!-- A value against your usual range: within it. -->
-    <string name="core_today_normal_usual">Usual</string>
+    <string name="core_today_normal_usual">Your normal</string>
 
     <!-- What a Recovery score means for the day, when overnight signals are off your normal. -->
     <string name="core_today_meaning_alert">Some overnight signals are off your normal. An easy day may help.</string>

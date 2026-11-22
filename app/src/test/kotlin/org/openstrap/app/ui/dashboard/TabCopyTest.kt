@@ -61,7 +61,7 @@ class TabCopyTest {
 
     @Test fun `contributors read in words, three that weigh most`() {
         assertEquals("Helping", TabCopy.contributorWord(90))
-        assertEquals("Usual", TabCopy.contributorWord(80))
+        assertEquals("Your normal", TabCopy.contributorWord(80))
         assertEquals("Holding back a little", TabCopy.contributorWord(60))
         assertEquals("Holding back", TabCopy.contributorWord(30))
         assertFalse(TabCopy.contributorOff(80))
@@ -169,7 +169,7 @@ class TabCopyTest {
     }
 
     @Test fun `the sleep Smalls`() {
-        assertEquals("Usual 2.1", TabCopy.breathingShort(Recovery.BreathingDisturbances(2.4f, 2.1f, 20)))
+        assertEquals("Your normal 2.1", TabCopy.breathingShort(Recovery.BreathingDisturbances(2.4f, 2.1f, 20)))
         assertEquals("Learning, 3 of 7", TabCopy.breathingShort(Recovery.BreathingDisturbances(2.4f, null, 3)))
         assertEquals("Nap", TabCopy.napsTitle(1))
         assertEquals("Naps", TabCopy.napsTitle(2))
@@ -285,6 +285,6 @@ class TabCopyTest {
 
     @Test fun `the bands come from the shared definitions`() {
         assertEquals(listOf("Poor", "Fair", "Good", "Great"), listOf(59, 60, 80, 90).map(TabCopy::sleepScoreWord))
-        assertEquals(listOf("Holding back", "Holding back a little", "Usual", "Helping"), listOf(10, Recovery.FAIR_FROM, 70, 85).map(TabCopy::contributorWord))
+        assertEquals(listOf("Holding back", "Holding back a little", "Your normal", "Helping"), listOf(10, Recovery.FAIR_FROM, 70, 85).map(TabCopy::contributorWord))
     }
 }

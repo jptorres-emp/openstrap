@@ -294,7 +294,9 @@ private fun RepPage(
                 m.phase is org.openstrap.app.data.Phase.Work -> Route.currentPace(route)?.let { pace ->
                     structure.meters?.let { meters -> workoutClock((pace * meters / 1000).toLong()) }
                         ?.let { stringResource(R.string.workout_live_rep_pace, it, repName) }
-                        ?: Pace.clock(pace)?.let { stringResource(Units.res(R.string.workout_live_rep_pace_km, R.string.workout_live_rep_pace_mi), it) }
+                        ?: Pace.clock(pace)?.let {
+                            stringResource(Units.res(R.string.workout_live_rep_pace_km, R.string.workout_live_rep_pace_mi), it)
+                        }
                 }
                 m.phase == org.openstrap.app.data.Phase.WarmUp -> stringResource(R.string.workout_live_reps_skip_hint)
                 m.phase == org.openstrap.app.data.Phase.Done -> stringResource(R.string.workout_live_end_or_keep)
@@ -392,7 +394,10 @@ private fun SplitsCard(splits: List<Route.Split>, bpm: Int?, r: WorkoutState.Rec
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text(stringResource(R.string.workout_live_splits_title), color = Color.White, style = GlowType.cardTitle, maxLines = 1,
                 modifier = Modifier.weight(1f))
-            Text(stringResource(Units.res(R.string.workout_live_splits_note, R.string.workout_live_splits_note_mi)), color = GlowType.noteColor, style = GlowType.noteSmall)
+            Text(
+                stringResource(Units.res(R.string.workout_live_splits_note, R.string.workout_live_splits_note_mi)),
+                color = GlowType.noteColor, style = GlowType.noteSmall,
+            )
         }
         KmSplitBars(splits)
         if (showHeart) {
@@ -413,7 +418,8 @@ private fun KmSplitBars(splits: List<Route.Split>) {
     val slowest = done.maxOfOrNull { it.pace } ?: 0.0
     val quickest = done.minByOrNull { it.pace }?.pace ?: 0.0
     val described = stringResource(
-        Units.res(R.string.workout_live_splits_description, R.string.workout_live_splits_description_mi), done.takeLast(4).joinToString(", ") { workoutClock(it.seconds) },
+        Units.res(R.string.workout_live_splits_description, R.string.workout_live_splits_description_mi),
+        done.takeLast(4).joinToString(", ") { workoutClock(it.seconds) },
     )
     Row(
         Modifier.fillMaxWidth().semantics { contentDescription = described },

@@ -205,3 +205,11 @@ object WorkoutCopy {
      */
     fun zoneLightLevel(zone: Int?): Float? = zone?.let { 0.35f + 0.65f * it.coerceIn(0, Workouts.ZONES - 1) / (Workouts.ZONES - 1) }
 }
+
+/** A distance goal as the ready screen and the notification say it: "5 km", "21.1 km", "800 m", or "3.1 mi", "528 ft". */
+val WorkoutTarget.Distance.label: String
+    get() = if (!Units.isMajor(meters.toFloat())) {
+        Strings.app.format(Units.res(R.string.core_coach_meters, R.string.core_coach_feet), Units.minor(meters.toFloat()))
+    } else {
+        Strings.app.format(Units.res(R.string.core_coach_km, R.string.core_coach_mi), Units.goalNumber(meters, 1))
+    }

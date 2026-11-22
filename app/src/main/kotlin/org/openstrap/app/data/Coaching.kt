@@ -2,7 +2,6 @@ package org.openstrap.app.data
 
 import org.openstrap.app.R
 import org.openstrap.app.i18n.Strings
-import org.openstrap.app.presentation.Units
 
 /**
  * What a workout aims for, chosen on the ready screen: a zone or a range of zones (0..4, inclusive), a time, active
@@ -31,16 +30,12 @@ sealed interface WorkoutTarget {
         val label: String get() = Strings.app.format(R.string.core_coach_kcal, kcal)
     }
 
-    /** Metres: from GPS, or the strap's steps without it, as the workout counts its distance. */
+    /**
+     * Metres: from GPS, or the strap's steps without it, as the workout counts its distance. Its label is written in the
+     * distance system in force, so it lives with the formatter (`presentation`, `WorkoutTarget.Distance.label`).
+     */
     data class Distance(val meters: Int) : WorkoutTarget {
         override val code get() = "d:$meters"
-        /** "5 km", "21.1 km", "800 m", or "3.1 mi", "528 ft" in miles. */
-        val label: String get() = when {
-            !Units.isMajor(meters.toFloat()) -> Strings.app.format(
-                Units.res(R.string.core_coach_meters, R.string.core_coach_feet), Units.minor(meters.toFloat()),
-            )
-            else -> Strings.app.format(Units.res(R.string.core_coach_km, R.string.core_coach_mi), Units.goalNumber(meters, 1))
-        }
     }
 
     companion object {

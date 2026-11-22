@@ -14,13 +14,16 @@ enum class UnitSystem(
     /** Metres in the unit a long distance, a split and a pace are counted in: a kilometre, a mile. */
     val splitMeters: Double,
 ) {
-    Metric(1000.0),
-    Imperial(1609.344),
+    Metric(METERS_PER_KM),
+    Imperial(METERS_PER_MILE),
 }
+
+private const val METERS_PER_KM = 1000.0
+private const val METERS_PER_MILE = 1609.344
 
 /**
  * The [UnitSystem] in force, kept here so data code, widgets, notifications and tests can write a distance without a
- * Context, as [org.openstrap.app.presentation.ClockSetting] does for the clock. [SettingsStore] sets it from the
+ * Context, as the clock setting does for 12 or 24 hours. [SettingsStore] sets it from the
  * profile when the app starts and whenever the profile changes. Until then it's metric.
  */
 object UnitSetting {

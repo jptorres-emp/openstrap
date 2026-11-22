@@ -170,7 +170,9 @@ object Units {
      * Speed from [secondsPerKm], one decimal, in km/h or mph ([speedUnit]); null with none or slower than [Pace.SLOWEST_S].
      */
     fun speed(secondsPerKm: Double?, locale: Locale = Locale.getDefault()): String? =
-        secondsPerKm?.takeIf { it > 0 && it < Pace.SLOWEST_S }?.let { String.format(locale, "%.1f", KMH_SECONDS / it / (splitMeters / METERS_PER_KM)) }
+        secondsPerKm?.takeIf { it > 0 && it < Pace.SLOWEST_S }?.let {
+            String.format(locale, "%.1f", KMH_SECONDS / it / (splitMeters / METERS_PER_KM))
+        }
 
     private const val KMH_SECONDS = 3600.0
 

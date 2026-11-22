@@ -171,7 +171,9 @@ fun ProfileScreen(profile: UserProfile, contentPadding: PaddingValues, onSave: (
             }
         }
         item {
-            PageGroup(heading = stringResource(R.string.you_profile_group_body), footnote = stringResource(R.string.you_profile_units_covers)) {
+            PageGroup(
+                heading = stringResource(R.string.you_profile_group_body), footnote = stringResource(R.string.you_profile_units_covers),
+            ) {
                 NavRow(
                     stringResource(R.string.you_profile_units),
                     stringResource(if (imperial) R.string.you_profile_units_imperial else R.string.you_profile_units_metric),

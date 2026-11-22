@@ -135,7 +135,8 @@ object WidgetSamples {
                     org.openstrap.app.presentation.Units.distance(
                         2310f, org.openstrap.app.presentation.Units.Precision.Workout,
                     ).orEmpty() to t.get(org.openstrap.app.R.string.workout_live_figure_distance),
-                    org.openstrap.app.presentation.Pace.clock(org.openstrap.app.presentation.Pace.of(2310f, 24 * 60L)).orEmpty() to t.get(org.openstrap.app.R.string.workout_live_figure_avg_pace),
+                    org.openstrap.app.presentation.Pace.clock(org.openstrap.app.presentation.Pace.of(2310f, 24 * 60L)).orEmpty() to
+                        t.get(org.openstrap.app.R.string.workout_live_figure_avg_pace),
                     "96" to t.get(org.openstrap.app.R.string.workout_live_figure_active_kcal),
                 )
             },

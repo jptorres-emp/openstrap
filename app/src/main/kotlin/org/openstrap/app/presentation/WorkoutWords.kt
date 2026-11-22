@@ -59,7 +59,12 @@ object WorkoutWords {
     fun kcalText(activeKcal: Float?, strings: Strings = Strings.app): String? =
         activeKcal?.let { strings.format(R.string.core_unit_kcal, it.toInt().toString()) }
 
-    /** A finished kilometre or mile, [index] from 0: "Km 3 in 5:42", "Mile 3 in 8:40". The live screens and the summary all name one this way. */
+    /**
+     * A finished kilometre or mile, [index] from 0: "Km 3 in 5:42", "Mile 3 in 8:40". The live screens and the summary
+     * all name one this way.
+     */
     fun split(index: Int, seconds: Long, locale: Locale = Locale.getDefault(), strings: Strings = Strings.app): String =
-        strings.format(Units.res(R.string.core_workout_split, R.string.core_workout_split_mile), index + 1, Units.workoutClock(seconds, locale))
+        strings.format(
+            Units.res(R.string.core_workout_split, R.string.core_workout_split_mile), index + 1, Units.workoutClock(seconds, locale),
+        )
 }

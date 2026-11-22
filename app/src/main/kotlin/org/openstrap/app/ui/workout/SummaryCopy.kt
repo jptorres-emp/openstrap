@@ -219,7 +219,8 @@ object SummaryCopy {
     private const val PARTIAL_MIN_M = 100.0
 
     /**
-     * The Splits list: each whole kilometre ("Km 3", "5:42"), or mile ("Mile 3") with the average of [readings] (time, bpm) over it, then the
+     * The Splits list: each whole kilometre ("Km 3", "5:42"), or mile ("Mile 3") with the average of [readings]
+     * (time, bpm) over it, then the
      * last part ("Last 430 m") when there's enough of it. A kilometre starts where the one before ended, or at [firstT].
      * With the workout's [totalMeters], the last part is what's left of it after the whole kilometres, so the list adds
      * up to the distance shown above it (the raw route runs a little longer than the smoothed distance).

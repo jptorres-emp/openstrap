@@ -456,7 +456,10 @@ private fun runCard(summary: PhoneSummary, liveRoute: List<Route.Point>): Boolea
         }
         if (rows.isNotEmpty()) {
             if (mapped) CardDivider()
-            HaloTitle(stringResource(R.string.glow_summary_splits), note = stringResource(Units.res(R.string.glow_summary_splits_note, R.string.glow_summary_splits_note_mi)))
+            HaloTitle(
+                stringResource(R.string.glow_summary_splits),
+                note = stringResource(Units.res(R.string.glow_summary_splits_note, R.string.glow_summary_splits_note_mi)),
+            )
             SplitBars(rows, FamilySummary.fastestSplit(rows), maxHr)
         }
         if (laps.isNotEmpty()) {

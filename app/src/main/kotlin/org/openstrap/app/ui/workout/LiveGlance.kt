@@ -18,6 +18,7 @@ import org.openstrap.app.i18n.Strings
 import org.openstrap.app.data.WorkoutTarget
 import org.openstrap.app.data.Workouts
 import org.openstrap.app.presentation.Pace
+import org.openstrap.app.presentation.label
 import org.openstrap.app.presentation.Units
 import org.openstrap.app.presentation.WorkoutWords
 import java.util.Locale
@@ -307,13 +308,7 @@ object Glance {
             activeKcal,
         ) else listOfNotNull(
             i.distanceMeters?.takeIf { it >= Units.SHOWN_FROM_METERS }?.let {
-                Units.major(it, Units.Precision.Workout) to strings.get(
-                    if (i.distanceFromSteps) {
-                        Units.res(R.string.workout_glance_figure_km_from_steps, R.string.workout_glance_figure_mi_from_steps)
-                    } else {
-                        Units.res(R.string.workout_glance_figure_km, R.string.workout_glance_figure_mi)
-                    },
-                )
+                Units.major(it, Units.Precision.Workout) to distanceLabel(i, strings)
             },
             i.averageBpm?.toString() to strings.get(R.string.workout_glance_figure_average_bpm),
             activeKcal,
@@ -368,6 +363,15 @@ object Glance {
             bpm = bpm,
         )
     }
+
+    /** The distance figure's label: "km" or "mi", "from steps" when the strap's steps measured it. */
+    private fun distanceLabel(i: GlanceInput, strings: Strings): String = strings.get(
+        if (i.distanceFromSteps) {
+            Units.res(R.string.workout_glance_figure_km_from_steps, R.string.workout_glance_figure_mi_from_steps)
+        } else {
+            Units.res(R.string.workout_glance_figure_km, R.string.workout_glance_figure_mi)
+        },
+    )
 
     /** A bpm figure's label: "bpm". The zone is the hero's chip, not words in a label (workout-rules.md, Colour). */
     @Suppress("UNUSED_PARAMETER")
@@ -561,7 +565,9 @@ object Glance {
     /** The hero's split strip: "Km 4 in 5:55" ("Mile 4 in 8:40"), then its average and which was fastest; null before a whole kilometre. */
     fun splitLine(i: GlanceInput, strings: Strings = Strings.app): Pair<String, String?>? {
         val s = i.lastSplit ?: return null
-        val fastest = i.fastestSplit?.takeIf { it != s.index }?.let { strings.format(Units.res(R.string.workout_glance_fastest_was, R.string.workout_glance_fastest_was_mile), it + 1) }
+        val fastest = i.fastestSplit?.takeIf { it != s.index }?.let {
+            strings.format(Units.res(R.string.workout_glance_fastest_was, R.string.workout_glance_fastest_was_mile), it + 1)
+        }
             ?: strings.get(R.string.workout_glance_fastest_this).takeIf { s.index > 0 }
         val avg = i.lastSplitBpm?.let { strings.format(R.string.workout_glance_split_average, it) }
         val line = (if (avg != null && fastest != null) strings.format(R.string.workout_glance_join, avg, fastest) else avg ?: fastest)

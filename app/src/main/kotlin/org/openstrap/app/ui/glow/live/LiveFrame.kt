@@ -39,7 +39,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import org.openstrap.app.presentation.Units
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -492,14 +491,10 @@ private val DotTap = 48.dp
 private val DotsRowHeight = 28.dp
 
 /** A distance for a live figure: "4.02 km" or "2.50 mi", the unit after the number. */
-@Composable
-@ReadOnlyComposable
 internal fun liveDistance(meters: Float): String =
     Units.major(meters, Units.Precision.Workout) + " " + Units.majorUnit()
 
 /** A speed for a live figure: "24.5 km/h", or null while there is none. */
-@Composable
-@ReadOnlyComposable
 internal fun liveSpeed(speed: String?): String? = speed?.let { it + " " + Units.speedUnit() }
 
 /** End was tried and couldn't save: the workout records on, and Try again runs End again. */

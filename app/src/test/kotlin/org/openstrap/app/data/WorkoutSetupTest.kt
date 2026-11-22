@@ -1,6 +1,7 @@
 package org.openstrap.app.data
 
 import org.junit.Assert.assertEquals
+import org.openstrap.app.presentation.label
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue

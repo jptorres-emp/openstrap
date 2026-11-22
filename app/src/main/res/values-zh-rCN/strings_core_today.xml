@@ -144,7 +144,10 @@
     <string name="core_today_heart_waiting">等待手环连接</string>
     <string name="core_today_evening_nothing">今天还没有记录。</string>
     <string name="core_today_night_wind_down">该放松下来了。</string>
-    <string name="core_today_night_wind_down_day">该放松下来了。%1$s</string>
+    <string name="core_today_night_full">充实的一天过去了，该放松下来了。%1$s。</string>
+    <string name="core_today_night_quiet">平静的一天过去了，该放松下来了。%1$s。</string>
+    <string name="core_today_night_steady">平稳的一天过去了，该放松下来了。%1$s。</string>
+    <string name="core_today_window_first_night">恢复和精力在你的第一晚之后开始。</string>
 
     <string name="core_today_energy_morning_plenty">上午已消耗 %1$d。今晚精力依然充沛。</string>
     <string name="core_today_energy_morning_enough">上午已消耗 %1$d。余量足够轻松度过今晚。</string>

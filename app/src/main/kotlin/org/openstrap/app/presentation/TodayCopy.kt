@@ -210,7 +210,8 @@ object TodayCopy {
             val level = energyLevel(charge)
             return strings.format(if (say >= 0) WINDOW_SAY_LEFT[say][level] else WINDOW_ENERGY[level], charge)
         }
-        return if (say >= 0) strings.get(WINDOW_SAY[say]) else ""
+        // Before a first night there is neither: the hero still says why it has no figure.
+        return if (say >= 0) strings.get(WINDOW_SAY[say]) else strings.get(R.string.core_today_window_first_night)
     }
 
     private fun energyLevel(energy: Int): Int = when {
@@ -278,11 +279,16 @@ object TodayCopy {
     fun evening(
         workouts: List<Int>, steps: Int, stepGoal: Int, load: LoadBand?, locale: Locale = Locale.getDefault(), stepCount: Boolean = true,
         strings: Strings = Strings.app,
+        /** How many of [workouts] count toward the kind of day: a session under [SHORT_SESSION_S] is listed but doesn't make it "steady". */
+        counted: Int = workouts.size,
+        /** At night the verdict leads into winding down in one sentence ("Time to wind down after a full day."). */
+        night: Boolean = false,
     ): String {
         val head = when {
-            workouts.isNotEmpty() && (steps >= stepGoal || load == LoadBand.Above) -> R.string.core_today_evening_full
-            workouts.isEmpty() && steps < stepGoal / 2 -> R.string.core_today_evening_quiet
-            else -> R.string.core_today_evening_steady
+            counted > 0 && (steps >= stepGoal || load == LoadBand.Above) ->
+                if (night) R.string.core_today_night_full else R.string.core_today_evening_full
+            counted == 0 && steps < stepGoal / 2 -> if (night) R.string.core_today_night_quiet else R.string.core_today_evening_quiet
+            else -> if (night) R.string.core_today_night_steady else R.string.core_today_evening_steady
         }
         val parts = listOfNotNull(
             when (workouts.size) {
@@ -310,6 +316,9 @@ object TodayCopy {
         }
         return strings.format(head, list.replaceFirstChar { it.uppercase() })
     }
+
+    /** A workout shorter than this is in the day's list but doesn't count toward what kind of day it was. */
+    const val SHORT_SESSION_S = 15 * 60
 
     /** The day's [steps] against the [goal] in words: under half is well short, from 80% close, the goal itself past. */
     fun stepsAgainstGoal(steps: Int, goal: Int, strings: Strings = Strings.app): String = strings.get(

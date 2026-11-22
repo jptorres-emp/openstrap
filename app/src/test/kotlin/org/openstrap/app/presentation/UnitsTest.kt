@@ -73,14 +73,14 @@ class UnitsTest(private val locale: Locale) {
 
     @Test
     fun kmFigureAlone() {
-        assertEquals(n("5.21"), Units.km(5210f, Precision.Workout))
-        assertEquals(n("0.8"), Units.km(820f, Precision.Day))
+        assertEquals(n("5.21"), Units.major(5210f, Precision.Workout))
+        assertEquals(n("0.8"), Units.major(820f, Precision.Day))
     }
 
     @Test
     fun dotFontKeepsTheDotAndAsciiDigits() {
         val dotted = listOf(
-            Units.km(5210f, Precision.Workout, Units.DOT_LOCALE),
+            Units.major(5210f, Precision.Workout, Units.DOT_LOCALE),
             Units.count(23_410, Units.DOT_LOCALE),
             Units.workoutClock(3723, Units.DOT_LOCALE),
             Pace.clock(324.0, Units.DOT_LOCALE)!!,

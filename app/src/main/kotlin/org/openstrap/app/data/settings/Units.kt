@@ -6,6 +6,27 @@ import org.openstrap.app.data.settings.UserProfile.Companion.KG_PER_LB
 import org.openstrap.app.i18n.Strings
 import kotlin.math.roundToInt
 
+/**
+ * The system distances are written in: kilometres and metres, or miles and feet. It follows the profile's Metric and
+ * Imperial choice and only changes what is shown. Stored distances, GPX and the Health Connect export stay metric.
+ */
+enum class UnitSystem(
+    /** Metres in the unit a long distance, a split and a pace are counted in: a kilometre, a mile. */
+    val splitMeters: Double,
+) {
+    Metric(1000.0),
+    Imperial(1609.344),
+}
+
+/**
+ * The [UnitSystem] in force, kept here so data code, widgets, notifications and tests can write a distance without a
+ * Context, as [org.openstrap.app.presentation.ClockSetting] does for the clock. [SettingsStore] sets it from the
+ * profile when the app starts and whenever the profile changes. Until then it's metric.
+ */
+object UnitSetting {
+    @Volatile var system: UnitSystem = UnitSystem.Metric
+}
+
 /** Body measurement conversions. The profile is stored metric; imperial is only for entry and display. */
 object Units {
     fun kgToLb(kg: Float): Float = kg / KG_PER_LB

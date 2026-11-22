@@ -21,7 +21,6 @@ import org.openstrap.app.testing.workout
 import org.openstrap.app.presentation.ChartPoint
 import org.openstrap.app.presentation.Metric
 import org.openstrap.app.ui.glow.draw.DotFont
-import org.openstrap.app.ui.glow.live.speedText
 import org.openstrap.app.ui.workout.PhoneSummary
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -52,7 +51,7 @@ class GlowFormatTest {
         for (locale in TEST_LOCALES) inLocale(locale) {
             listOf(
                 dotClock(3723), dotClock(754), Metric.SkinTemperature.format(36.55f, Units.DOT_LOCALE), Metric.Steps.format(13_860f, Units.DOT_LOCALE),
-                speedText(300.0, Units.DOT_LOCALE)!!, summaryHero(Workouts.Family.Distance, run(5210f), null).value,
+                Units.speed(300.0, Units.DOT_LOCALE)!!, summaryHero(Workouts.Family.Distance, run(5210f), null).value,
             ).forEach(::assertDrawable)
             assertEquals("1:02:03", dotClock(3723))
             assertEquals("7 h 40", clockDuration(27_600))
@@ -67,10 +66,10 @@ class GlowFormatTest {
 
     @Test fun `text figures follow the phone's language`() {
         inLocale(Locale.GERMANY) {
-            assertEquals("12,0", speedText(300.0))
+            assertEquals("12,0", Units.speed(300.0))
             assertEquals("12:34", workoutClock(754))
         }
-        inLocale(Locale.US) { assertEquals("12.0", speedText(300.0)) }
+        inLocale(Locale.US) { assertEquals("12.0", Units.speed(300.0)) }
     }
 
     @Test fun `a run under a kilometre leads with its metres`() {

@@ -54,6 +54,7 @@
     <string name="you_profile_units">单位</string>
     <string name="you_profile_units_metric">公制</string>
     <string name="you_profile_units_imperial">英制</string>
+    <string name="you_profile_units_covers">距离、配速、体重和身高。</string>
     <string name="you_profile_weight">体重</string>
     <string name="you_profile_unit_lb">lb</string>
     <string name="you_profile_unit_kg">kg</string>

@@ -98,6 +98,8 @@
     <string name="you_profile_units">Units</string>
     <string name="you_profile_units_metric">Metric</string>
     <string name="you_profile_units_imperial">Imperial</string>
+    <!-- Under the Units row and in its sheet: what the choice changes. -->
+    <string name="you_profile_units_covers">Distances, pace, weight and height.</string>
     <string name="you_profile_weight">Weight</string>
     <string name="you_profile_unit_lb">lb</string>
     <string name="you_profile_unit_kg">kg</string>

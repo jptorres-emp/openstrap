@@ -580,7 +580,7 @@ private fun DayFactsList(
         // Ours from step length and height when we can; the strap's own figure otherwise. Always approximate.
         val distance = a?.distanceMeters ?: state.distanceMeters?.toFloat()
         MetricRow(
-            stringResource(R.string.glow_activity_distance), MetricColors.steps, distance?.let { Units.km(it, Units.Precision.Day) },
+            stringResource(R.string.glow_activity_distance), MetricColors.steps, distance?.let { Units.major(it, Units.Precision.Day) },
             if (distance == null) waiting else ActivityCopy.distanceSource(a?.distanceMeters != null),
             onClick = { open(Score.Distance) }, icon = Score.Distance.rowIcon(),
         )

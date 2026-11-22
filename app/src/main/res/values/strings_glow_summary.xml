@@ -12,8 +12,6 @@
 
     <!-- Unit beside a workout's length in the hero's dots when it was under a minute: seconds. Very short. -->
     <string name="glow_summary_unit_s">s</string>
-    <!-- Unit beside a distance under a kilometre in the hero's dots: metres. Very short. -->
-    <string name="glow_summary_unit_m">m</string>
     <!-- Unit beside an indoor workout's average heart rate in the hero's dots. Short. -->
     <string name="glow_summary_unit_avg_bpm">avg bpm</string>
     <!-- Unit beside the kilograms a strength workout lifted in all, in the hero's dots. Short. -->
@@ -187,6 +185,8 @@
     <string name="glow_summary_route_zones">Route coloured by heart zone</string>
     <!-- Beside the Splits title on a run's card. Short. -->
     <string name="glow_summary_splits_note">Pace per km</string>
+    <!-- Beside the Splits title, in miles. -->
+    <string name="glow_summary_splits_note_mi">Pace per mile</string>
     <!-- Under the round columns: what the rounds were set up as, as "20 s work, 10 s rest". -->
     <string name="glow_summary_work_rest"><xliff:g id="work" example="20">%1$d</xliff:g> s work, <xliff:g id="rest" example="10">%2$d</xliff:g> s rest</string>
     <!-- Beside a game's halves title: each bar is the period's average heart rate. Short. -->

@@ -6,6 +6,7 @@ import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.first
 import org.openstrap.app.ble.BleScanner
 import org.openstrap.app.data.HealthRepository
 import org.openstrap.app.data.db.OpenStrapDatabase
@@ -37,6 +38,13 @@ class AppContainer(val app: Application) {
     )
     val database = OpenStrapDatabase.create(app)
     val settings = SettingsStore(app)
+
+    init {
+        // The profile sets the distance system as it is read. Reading it once here puts that in place before the first
+        // widget or notification is written, which would otherwise be in kilometres for a moment on an imperial phone.
+        // A one-off read of a small file at start, like the app's text above.
+        kotlinx.coroutines.runBlocking { settings.profile.first() }
+    }
     val health = HealthRepository(database.healthDao())
     /** The max heart rate every zone goes by: `maxHeartRates.current` to follow it, `maxHeartRates.now()` to read it once. */
     val maxHeartRates = org.openstrap.app.data.MaxHeartRates(database.healthDao(), settings.profile)

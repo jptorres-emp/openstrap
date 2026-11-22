@@ -1,5 +1,6 @@
 package org.openstrap.app.ui.glow.live
 
+import org.openstrap.app.presentation.Units
 import androidx.compose.runtime.ReadOnlyComposable
 import org.openstrap.app.ui.glow.HaloBigNumber
 import org.openstrap.app.ui.glow.BigNumber
@@ -292,7 +293,7 @@ internal fun RepCard(r: WorkoutState.Recording, route: List<Route.Point>, readin
                 Phase.WarmUp -> stringResource(R.string.workout_live_warm_up)
                 Phase.Done -> pluralStringResource(R.plurals.workout_live_all_reps_done, m.rounds, m.rounds)
             },
-            pace?.let { stringResource(R.string.workout_live_pace_now, it) }, tint,
+            pace?.let { stringResource(Units.res(R.string.workout_live_pace_now, R.string.workout_live_pace_now_mi), it) }, tint,
         )
         val (value, unit) = when {
             m.metersLeft != null && m.phase is Phase.Work -> "${m.metersLeft.toInt()}" to stringResource(R.string.workout_live_unit_m_to_go)

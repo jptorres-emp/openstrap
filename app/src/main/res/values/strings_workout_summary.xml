@@ -80,10 +80,10 @@
     <string name="workout_summary_trim_hint">Drag the handles to where the workout really started and ended. Nothing recorded is deleted.</string>
     <!-- A whole kilometre on the splits list, by its number. Short, about 8 characters. -->
     <string name="workout_summary_split_km">Km <xliff:g id="number" example="3">%1$d</xliff:g></string>
+    <!-- A whole mile on the splits list, by its number. Short, about 8 characters. -->
+    <string name="workout_summary_split_mile">Mile <xliff:g id="number" example="3">%1$d</xliff:g></string>
     <!-- The part kilometre at the end of the splits list. The distance is "430 m". -->
     <string name="workout_summary_split_last">Last <xliff:g id="distance" example="430 m">%1$s</xliff:g></string>
-    <!-- A short distance in metres. -->
-    <string name="workout_summary_meters"><xliff:g id="meters" example="0">%1$d</xliff:g> m</string>
 
     <!-- When the workout was, at the top of its summary: this morning (4 to 12). The time follows the phone's 12 or 24 hour clock. -->
     <string name="workout_summary_when_morning">This morning, <xliff:g id="time" example="07:12">%1$s</xliff:g></string>

@@ -1,5 +1,6 @@
 package org.openstrap.app.data
 
+import org.openstrap.app.data.settings.UnitSetting
 import kotlin.math.asin
 import kotlin.math.cos
 import kotlin.math.pow
@@ -314,21 +315,24 @@ object Route {
     /** Whether the stretch from [a] to [b] overlaps a pause; one that only ends or begins at a pause's edge counts. */
     private fun paused(a: Point, b: Point, pauses: List<LongRange>) = pauses.any { it.first < b.t && it.last > a.t }
 
-    /** One kilometre (or the last part of one): when it ended, its time and metres. */
+    /** One kilometre or mile (or the last part of one): when it ended, its time and metres. */
     data class Split(val index: Int, val endT: Long, val seconds: Long, val meters: Double) {
-        /** Seconds per kilometre. */
+        /** Seconds per kilometre, whatever the split's length: paces are passed around in km and written by Pace. */
         val pace: Double get() = if (meters > 0) seconds / (meters / 1000) else 0.0
     }
 
-    /** Per-kilometre splits along [points]; the last one may be partial. Paused time doesn't count. */
-    fun splits(points: List<Point>, pauses: List<LongRange> = emptyList(), km: Double = 1000.0): List<Split> =
-        legs(points, pauses, km).map { it.split }
+    /**
+     * Splits along [points], one a [unit] of metres long, a kilometre or a mile as the profile chooses; the last one
+     * may be partial. Paused time doesn't count.
+     */
+    fun splits(points: List<Point>, pauses: List<LongRange> = emptyList(), unit: Double = UnitSetting.system.splitMeters): List<Split> =
+        legs(points, pauses, unit).map { it.split }
 
     /** One kilometre's [split] with the smoothed track [points] it covers, from the previous leg's last point. */
     data class Leg(val split: Split, val points: List<Point>)
 
-    /** The kilometres of [splits], each with its stretch of the smoothed track; paused stretches are left out. */
-    fun legs(points: List<Point>, pauses: List<LongRange> = emptyList(), km: Double = 1000.0): List<Leg> {
+    /** The [unit]s of [splits], each with its stretch of the smoothed track; paused stretches are left out. */
+    fun legs(points: List<Point>, pauses: List<LongRange> = emptyList(), unit: Double = UnitSetting.system.splitMeters): List<Leg> {
         val clean = track(points)
         val out = mutableListOf<Leg>()
         val current = mutableListOf(clean.firstOrNull() ?: return out)
@@ -339,7 +343,7 @@ object Route {
             meters += meters(a, b)
             seconds += b.t - a.t
             current += b
-            if (meters >= km) {
+            if (meters >= unit) {
                 out += Leg(Split(out.size, b.t, seconds, meters), current.toList())
                 current.clear()
                 current += b

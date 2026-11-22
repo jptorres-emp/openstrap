@@ -126,11 +126,10 @@ private fun lastHero(
     strings: Strings,
 ): LastHero = when {
     family == Workouts.Family.Distance && distance != null -> {
-        val km = distance >= METERS_PER_KM
+        val figure = Units.figure(distance, Units.Precision.Day, Units.DOT_LOCALE, strings)
         LastHero(
-            if (km) Units.km(distance, Units.Precision.Day, Units.DOT_LOCALE) else "${distance.toInt()}",
-            strings.get(if (km) R.string.workout_start_unit_km else R.string.workout_start_unit_m),
-            pace?.let { strings.format(R.string.ready_last_pace_line, clock, it) } ?: clock,
+            figure?.number.orEmpty(), figure?.unit,
+            pace?.let { strings.format(Units.res(R.string.ready_last_pace_line, R.string.ready_last_pace_line_mi), clock, it) } ?: clock,
         )
     }
     family == Workouts.Family.Strength && a.sets != null && a.sets > 0 -> LastHero(
@@ -181,4 +180,3 @@ internal fun rememberNowMillis(): androidx.compose.runtime.State<Long> = android
 private const val NOW_REFRESH_MS = 30_000L
 private const val MS_PER_S = 1000L
 internal const val READY_S_PER_MIN = 60L
-private const val METERS_PER_KM = 1000f

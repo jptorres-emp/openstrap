@@ -72,6 +72,10 @@ data class UserProfile(
     val usesImperial: Boolean
         get() = imperial ?: (java.util.Locale.getDefault().country in IMPERIAL_REGIONS)
 
+    /** What distances, paces and speeds are written in: the same choice as weight and height. */
+    val unitSystem: UnitSystem
+        get() = if (usesImperial) UnitSystem.Imperial else UnitSystem.Metric
+
     companion object {
         /** Regions that use pounds and feet day to day. */
         val IMPERIAL_REGIONS = setOf("US", "LR", "MM")
@@ -345,6 +349,7 @@ class SettingsStore private constructor(private val store: DataStore<Preferences
     private val betaBlocker = androidx.datastore.preferences.core.booleanPreferencesKey(SettingsKeys.PROFILE_BETA_BLOCKER)
     private val pregnant = androidx.datastore.preferences.core.booleanPreferencesKey(SettingsKeys.PROFILE_PREGNANT)
 
+    /** The profile; the distance system follows it as each value is read, before any collector sees it. */
     val profile: Flow<UserProfile> = read { prefs ->
         UserProfile(
             prefs[birthYear],
@@ -359,7 +364,7 @@ class SettingsStore private constructor(private val store: DataStore<Preferences
             prefs[bodyAt],
             prefs[betaBlocker] == true,
             prefs[pregnant] == true,
-        )
+        ).also { UnitSetting.system = it.unitSystem }
     }
 
     suspend fun saveProfile(p: UserProfile) {

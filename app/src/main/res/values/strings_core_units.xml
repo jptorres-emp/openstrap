@@ -7,8 +7,12 @@
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <!-- A distance under a kilometre. -->
     <string name="core_unit_meters"><xliff:g id="meters" example="820">%1$s</xliff:g> m</string>
+    <!-- A distance under a tenth of a mile, in feet. -->
+    <string name="core_unit_ft"><xliff:g id="feet" example="528">%1$s</xliff:g> ft</string>
     <!-- A distance in kilometres, with one or two decimals. -->
     <string name="core_unit_km"><xliff:g id="km" example="5.21">%1$s</xliff:g> km</string>
+    <!-- A distance in miles, with one or two decimals. -->
+    <string name="core_unit_mi"><xliff:g id="mi" example="3.11">%1$s</xliff:g> mi</string>
     <!-- A length of time under an hour. -->
     <string name="core_unit_minutes"><xliff:g id="minutes" example="40">%1$s</xliff:g> min</string>
     <!-- A length of time on the hour. -->
@@ -21,6 +25,8 @@
     <string name="core_unit_seconds"><xliff:g id="seconds" example="45">%1$s</xliff:g> s</string>
     <!-- A pace, minutes and seconds per kilometre. -->
     <string name="core_unit_pace"><xliff:g id="pace" example="5:24">%1$s</xliff:g>/km</string>
+    <!-- A pace, minutes and seconds per mile. -->
+    <string name="core_unit_pace_mi"><xliff:g id="pace" example="8:40">%1$s</xliff:g>/mi</string>
     <!-- Active energy burned, in kilocalories. -->
     <string name="core_unit_kcal"><xliff:g id="kcal" example="312">%1$s</xliff:g> kcal</string>
     <!-- Heart rate's unit, beats per minute, shown beside a figure. -->
@@ -41,6 +47,22 @@
     <string name="core_unit_feet_inches"><xliff:g id="feet" example="5">%1$d</xliff:g>′<xliff:g id="inches" example="10">%2$d</xliff:g>″</string>
     <!-- Height in centimetres, on the profile. -->
     <string name="core_unit_cm"><xliff:g id="centimeters" example="178">%1$d</xliff:g> cm</string>
+    <!-- A unit drawn apart from its number: km. Very short. -->
+    <string name="core_unit_label_km">km</string>
+    <!-- A unit drawn apart from its number: mi. Very short. -->
+    <string name="core_unit_label_mi">mi</string>
+    <!-- A unit drawn apart from its number: m. Very short. -->
+    <string name="core_unit_label_m">m</string>
+    <!-- A unit drawn apart from its number: ft. Very short. -->
+    <string name="core_unit_label_ft">ft</string>
+    <!-- A unit drawn apart from its number: /km. Very short. -->
+    <string name="core_unit_label_per_km">/km</string>
+    <!-- A unit drawn apart from its number: /mi. Very short. -->
+    <string name="core_unit_label_per_mi">/mi</string>
+    <!-- A unit drawn apart from its number: km/h. Very short. -->
+    <string name="core_unit_label_kmh">km/h</string>
+    <!-- A unit drawn apart from its number: mph. Very short. -->
+    <string name="core_unit_label_mph">mph</string>
     <!--
       A range between two values already written: times ("11:05 PM to 8:16 AM"), numbers ("8,000 to 10,000"), days
       ("Mon 3 Nov to Sun 9 Nov"). Never a dash, so a line that doesn't fit wraps.

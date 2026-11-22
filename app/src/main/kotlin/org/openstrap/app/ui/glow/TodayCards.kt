@@ -976,9 +976,9 @@ internal fun AfterWorkoutBody(w: org.openstrap.app.data.WorkoutAnalysis) = Colum
     // Each figure says what it is: the big one is the distance, else the active time; the length and the heart rate
     // beside it are named too, so no duration stands alone.
     HeroReading(
-        metres?.let { Units.km(it, Units.Precision.Day, Units.DOT_LOCALE) } ?: Units.length(active, Units.DOT_LOCALE),
+        metres?.let { Units.major(it, Units.Precision.Day, Units.DOT_LOCALE) } ?: Units.length(active, Units.DOT_LOCALE),
         listOfNotNull(
-            if (metres != null) stringResource(R.string.glow_unit_km) else stringResource(R.string.glow_today_after_active_time),
+            if (metres != null) Units.majorUnit() else stringResource(R.string.glow_today_after_active_time),
             if (metres != null) stringResource(R.string.glow_today_after_active, Units.duration(active)) else null,
             // A side line is one fact of at most 20 characters: the zones are in the bar under it.
             workoutLine(w.workout.averageHeartRate, if (w.workout.averageHeartRate != null) null else mostly?.let { it + 1 }),

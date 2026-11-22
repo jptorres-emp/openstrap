@@ -269,7 +269,7 @@ private fun PickedSplit(row: SplitRow, maxHr: Int) {
 private fun routeSplitRows(summary: PhoneSummary, legs: List<Route.Leg>): List<SplitRow> {
     val rows = splitRowsOf(summary, emptyList())
     val last = legs.lastOrNull()?.split
-    val partial = last != null && legs.size != rows.size && last.meters < Units.METERS_PER_KM && last.meters > 0.0
+    val partial = last != null && legs.size != rows.size && last.meters < Units.splitMeters && last.meters > 0.0
     return if (last != null && partial) rows + lastSplitRow(summary, legs, last) else rows
 }
 
@@ -279,8 +279,8 @@ private fun lastSplitRow(summary: PhoneSummary, legs: List<Route.Leg>, last: Rou
     val firstT = summary.route.firstOrNull()?.t
     val from = legs.getOrNull(i - 1)?.split?.endT ?: firstT ?: last.endT
     val measured = summary.distanceMeters?.takeIf { !summary.distanceFromSteps }
-    val meters = measured?.let { it - Units.METERS_PER_KM * i }?.takeIf { it > 0f } ?: last.meters.toFloat()
-    val distance = Units.distance(meters, Units.Precision.Workout) ?: Strings.app.format(R.string.workout_summary_meters, meters.toInt())
+    val meters = measured?.let { it - Units.splitMeters.toFloat() * i }?.takeIf { it > 0f } ?: last.meters.toFloat()
+    val distance = Units.distance(meters, Units.Precision.Workout) ?: Units.minorText(meters)
     return SplitRow(
         Strings.app.format(R.string.workout_summary_split_last, distance), Units.workoutClock(last.seconds),
         WorkoutCopy.averageOver(summary.history, from, last.endT), last.seconds, SplitRow.Kind.Last,

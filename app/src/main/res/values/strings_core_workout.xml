@@ -44,6 +44,8 @@
     <string name="core_workout_strap_gone_note">The strap isn\'t connected. Recording goes on, and missed minutes fill in from the strap after it syncs.</string>
     <!-- A kilometre just finished and its time, on the live screens and the summary. -->
     <string name="core_workout_split">Km <xliff:g id="km" example="3">%1$d</xliff:g> in <xliff:g id="time" example="5:42">%2$s</xliff:g></string>
+    <!-- A mile just finished and its time, on the live screens and the summary. -->
+    <string name="core_workout_split_mile">Mile <xliff:g id="mile" example="3">%1$d</xliff:g> in <xliff:g id="time" example="8:40">%2$s</xliff:g></string>
     <!-- A finished kilometre with its average heart rate in bpm. The split is the line above, "Km 3 in 5:42". -->
     <string name="core_workout_split_avg"><xliff:g id="split" example="Km 3 in 5:42">%1$s</xliff:g>, <xliff:g id="bpm" example="152">%2$d</xliff:g> bpm</string>
     <!-- How long ago the last kilometre ended, under a minute. On the map page. -->

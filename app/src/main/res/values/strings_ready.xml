@@ -69,6 +69,8 @@
     <string name="ready_last_time_line">Last time <xliff:g id="last" example="5.2 km, 28 min at 5:40 per km">%1$s</xliff:g></string>
     <!-- Under last time's distance in the hero: its time and pace, "28:10 at 11:44 per km". -->
     <string name="ready_last_pace_line"><xliff:g id="time" example="28:10">%1$s</xliff:g> at <xliff:g id="pace" example="11:44">%2$s</xliff:g> per km</string>
+    <!-- Under last time's distance in the hero, in miles: its time and pace, "28:10 at 8:40 per mile". -->
+    <string name="ready_last_pace_line_mi"><xliff:g id="time" example="28:10">%1$s</xliff:g> at <xliff:g id="pace" example="8:40">%2$s</xliff:g> per mile</string>
     <!-- The hero with no goal and no workout of the sport yet. Very short. -->
     <string name="ready_no_goal">No goal</string>
     <!-- The hero with no plan and no workout of the sport yet. Very short. -->

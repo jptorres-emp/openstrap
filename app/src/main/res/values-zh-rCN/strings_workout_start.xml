@@ -73,6 +73,7 @@
     <string name="workout_start_no_goal_note_distance">记录你的时间、距离和心率</string>
     <string name="workout_start_no_goal_note">记录你的时间和心率</string>
     <string name="workout_start_distance_note">过半和 %1$s km 时振动</string>
+    <string name="workout_start_distance_note_mi">过半和 %1$s 英里时振动</string>
     <string name="workout_start_ends_near">预计 %1$s 结束</string>
     <string name="workout_start_zone_note">轻点一个区间，或两个设定范围</string>
     <string name="workout_start_intervals_note_distance">每组 %1$s 振动一次，共 %2$s</string>

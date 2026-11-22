@@ -213,13 +213,13 @@ object SummaryCopy {
 
     /** The last part's distance, down to "0 m" where the smoothed total leaves next to nothing. */
     private fun lastPart(meters: Float, locale: Locale, strings: Strings): String =
-        Units.distance(meters, Units.Precision.Workout, locale = locale) ?: strings.format(R.string.workout_summary_meters, meters.toInt())
+        Units.distance(meters, Units.Precision.Workout, locale = locale) ?: Units.minorText(meters, locale, strings)
 
     /** A last stretch shorter than this isn't worth a row. */
     private const val PARTIAL_MIN_M = 100.0
 
     /**
-     * The Splits list: each whole kilometre ("Km 3", "5:42") with the average of [readings] (time, bpm) over it, then the
+     * The Splits list: each whole kilometre ("Km 3", "5:42"), or mile ("Mile 3") with the average of [readings] (time, bpm) over it, then the
      * last part ("Last 430 m") when there's enough of it. A kilometre starts where the one before ended, or at [firstT].
      * With the workout's [totalMeters], the last part is what's left of it after the whole kilometres, so the list adds
      * up to the distance shown above it (the raw route runs a little longer than the smoothed distance).
@@ -229,13 +229,13 @@ object SummaryCopy {
         locale: Locale = Locale.getDefault(), strings: Strings = Strings.app,
     ): List<SplitRow> =
         splits.mapIndexedNotNull { i, sp ->
-            val whole = sp.meters >= 1000.0
+            val whole = sp.meters >= Units.splitMeters
             if (!whole && (i != splits.lastIndex || sp.meters < PARTIAL_MIN_M)) return@mapIndexedNotNull null
             val from = splits.getOrNull(i - 1)?.endT ?: firstT ?: sp.endT
-            val last = totalMeters?.let { it - 1000f * i }?.takeIf { it > 0f } ?: sp.meters.toFloat()
+            val last = totalMeters?.let { it - Units.splitMeters.toFloat() * i }?.takeIf { it > 0f } ?: sp.meters.toFloat()
             SplitRow(
                 if (whole) {
-                    strings.format(R.string.workout_summary_split_km, i + 1)
+                    strings.format(Units.res(R.string.workout_summary_split_km, R.string.workout_summary_split_mile), i + 1)
                 } else {
                     strings.format(R.string.workout_summary_split_last, lastPart(last, locale, strings))
                 },

@@ -903,7 +903,7 @@ private fun DistanceDetail(ctx: ActivityDetailContext) {
     // TODO(step 6): Week and longer need each day's distance, which the engine works out only for the day shown.
     val ours = ctx.r?.activity?.distanceMeters
     val meters = ours ?: ctx.state.distanceMeters?.toFloat()
-    val km = meters?.let { Units.km(it, Units.Precision.Day, Units.DOT_LOCALE) }
+    val km = meters?.let { Units.major(it, Units.Precision.Day, Units.DOT_LOCALE) }
     val headline = if (km != null) DetailHeadline(km, ActivityCopy.distanceSource(ours != null), null)
     else DetailHeadline.none(stringResource(R.string.glow_no_reading_yet), DetailCopy.noValue(Metric.Steps, Range.Day, ctx.isToday))
     DetailTemplate(

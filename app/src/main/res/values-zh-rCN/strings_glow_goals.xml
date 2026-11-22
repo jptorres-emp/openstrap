@@ -7,10 +7,10 @@
         <item quantity="other">%1$d / %2$d 次运动</item>
     </plurals>
     <string name="glow_goals_personal_bests">个人最佳</string>
-    <string name="glow_goals_no_bests">完成首次运动后，你的最佳记录将显示在这里。</string>
+    <string name="glow_goals_set_count">已设置 %1$d / %2$d</string>
     <string name="glow_goals_badges">徽章</string>
     <string name="glow_goals_next_badge">下一枚徽章</string>
-    <string name="glow_goals_not_set">未设置</string>
+    <string name="glow_goals_not_set">尚未设置</string>
     <string name="glow_goals_not_earned">尚未获得</string>
     <string name="glow_goals_earned_on">获得于 %1$s</string>
     <string name="glow_goals_badge_described">%1$s，%2$s</string>

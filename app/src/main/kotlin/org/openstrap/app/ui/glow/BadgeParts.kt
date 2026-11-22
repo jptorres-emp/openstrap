@@ -35,23 +35,20 @@ import org.openstrap.app.ui.components.pressClickable
  */
 
 /**
- * The personal bests as rosettes, three to a row, each with its name and figure (rules A3). Before the first, the kinds
- * there are to set, quiet, with a line on when they come.
+ * Every personal best as a rosette, three to a row, each with its name and figure (rules A1, A3): the ones set in colour,
+ * the ones not set yet quiet with an empty bar, never hidden. The note counts how many are set. A lift is a best only
+ * once logged, so the kinds are the fixed ones and the lifts there are.
  */
 @Composable
 internal fun BestsPanel(view: RewardsView, onOpen: (String) -> Unit) {
-    val shown = view.bests
+    val set = view.bests.associateBy { it.kind }
+    val kinds = (ALL_BESTS + view.bests.map { it.kind }.filter { Rewards.Kind.liftName(it) != null }).sortedBy(::order)
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(GRID_GAP)) {
-        HaloTitle(stringResource(R.string.glow_goals_personal_bests), variant = TitleVariant.OutOfCard)
-        if (shown.isEmpty()) {
-            Text(
-                stringResource(R.string.glow_goals_no_bests), Modifier.padding(horizontal = Space.S4), color = GlowType.noteColor,
-                style = GlowType.secondary,
-            )
-            TokenGrid(FIRST_BESTS) { kind, m -> BestCell(kind, null, onOpen, m) }
-        } else {
-            BestsGrid(shown, onOpen)
-        }
+        HaloTitle(
+            stringResource(R.string.glow_goals_personal_bests), variant = TitleVariant.OutOfCard,
+            note = stringResource(R.string.glow_goals_set_count, kinds.count { it in set }, kinds.size),
+        )
+        TokenGrid(kinds) { kind, m -> BestCell(kind, set[kind], onOpen, m) }
     }
 }
 
@@ -196,15 +193,15 @@ private fun order(kind: String): Int = Rewards.Kind.fastestMeters(kind)
         else -> STEPS_ORDER
     }
 
-/** Before any best, the kinds there are to set: the ones any workout or day can set. */
-private val FIRST_BESTS = listOf(Rewards.Kind.LONGEST_WORKOUT, Rewards.Kind.MOST_STEPS, Rewards.Kind.fastest(FIVE_KM))
+/** The kinds of best every runner or lifter can set, whatever has been logged: the lifts come with their first set. */
+private val ALL_BESTS = Rewards.STRETCHES.map(Rewards.Kind::fastest) +
+    listOf(Rewards.Kind.LONGEST_RUN, Rewards.Kind.LONGEST_WORKOUT, Rewards.Kind.MOST_ROUNDS, Rewards.Kind.MOST_STEPS)
 
 /** After every fastest stretch (their metres), the longest run, the longest workout, the most rounds, the lifts, then the steps. */
 private const val RUN_ORDER = 100_000
 private const val ROUNDS_ORDER = 100_002
 private const val LIFT_ORDER = 100_003
 private const val STEPS_ORDER = 100_004
-private const val FIVE_KM = 5000
 private const val PANEL_BADGES = 9
 private val GRID_GAP = 16.dp
 private val CELL_BAR = 58.dp

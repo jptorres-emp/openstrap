@@ -19,14 +19,14 @@
     </plurals>
     <!-- The personal bests panel's title. -->
     <string name="glow_goals_personal_bests">Personal bests</string>
-    <!-- The personal bests panel before there are any. -->
-    <string name="glow_goals_no_bests">Your bests show here after your first workouts.</string>
+    <!-- The note beside the personal bests title: how many of the bests are set. -->
+    <string name="glow_goals_set_count" tools:ignore="PluralsCandidate"><xliff:g id="set" example="2">%1$d</xliff:g> of <xliff:g id="total" example="9">%2$d</xliff:g> set</string>
     <!-- The badges panel's title on the Goals and bests page. Its note says how many are earned (glow_goals_earned_count). -->
     <string name="glow_goals_badges">Badges</string>
     <!-- The title of the card with the badge closest to earned, its name and how far along under it. -->
     <string name="glow_goals_next_badge">Next badge</string>
     <!-- Under a personal best's medal, and on its sheet, while that best hasn't been set. -->
-    <string name="glow_goals_not_set">Not set</string>
+    <string name="glow_goals_not_set">Not set yet</string>
     <!-- On a badge's sheet, and read out for its medal, while it hasn't been earned. -->
     <string name="glow_goals_not_earned">Not earned yet</string>
     <!-- On a badge's sheet, and read out for its medal: the day it was earned, written out in full. -->

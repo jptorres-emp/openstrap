@@ -198,7 +198,7 @@ internal fun LiveDistanceScreen(
                             km(distance) to stringResource(R.string.workout_live_figure_distance),
                             (if (speed) kmh(speedText(pace)) else Pace.clock(pace)) to
                                 stringResource(if (speed) R.string.workout_live_figure_speed else R.string.workout_live_figure_pace),
-                            kcal?.active?.toInt()?.toString() to stringResource(R.string.workout_live_figure_active_kcal),
+                            kcal?.active?.toInt()?.toString() to activeKcalLabel(kcal != null),
                         ))
                     } else Column(Modifier.fillMaxWidth().weight(1f), verticalArrangement = Arrangement.spacedBy(Space.S12)) {
                         // Board HaloLiveRun: the pace as the lit hero, the splits and the heart rate in a solid card, the figures.
@@ -207,7 +207,7 @@ internal fun LiveDistanceScreen(
                         LiveFigures(listOf(
                             km(distance) to stringResource(R.string.workout_live_figure_distance),
                             climb?.toInt()?.toString() to stringResource(R.string.workout_live_figure_climb),
-                            kcal?.active?.toInt()?.toString() to stringResource(R.string.workout_live_figure_active_kcal),
+                            kcal?.active?.toInt()?.toString() to activeKcalLabel(kcal != null),
                         ))
                     }
                     // Each kilometre gets a line for a few seconds, with one tick, in the pace hero. On a short screen the
@@ -225,7 +225,7 @@ internal fun LiveDistanceScreen(
                                 stringResource(
                                     if (speed) R.string.workout_live_figure_avg_speed else R.string.workout_live_figure_avg_pace,
                                 ),
-                            kcal?.active?.toInt()?.toString() to stringResource(R.string.workout_live_figure_active_kcal),
+                            kcal?.active?.toInt()?.toString() to activeKcalLabel(kcal != null),
                         ),
                         bottomRoom = bar, heartPill = !split,
                     )

@@ -75,7 +75,7 @@ internal fun LiveIndoorScreen(
         )
     }
     val average = stats?.average?.toString() to stringResource(R.string.workout_live_figure_avg_bpm)
-    val activeKcal = kcal?.active?.toInt()?.toString() to stringResource(R.string.workout_live_figure_active_kcal)
+    val activeKcal = kcal?.active?.toInt()?.toString() to activeKcalLabel(kcal != null)
     val figures = if (distance != null) listOf(distance, average, activeKcal)
     else listOf(average, stats?.max?.toString() to stringResource(R.string.workout_live_figure_peak_bpm), activeKcal)
     LiveFrame(

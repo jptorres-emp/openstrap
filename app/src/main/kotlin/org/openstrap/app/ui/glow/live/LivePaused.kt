@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
 import org.openstrap.app.ui.theme.AppIcons
-import org.openstrap.app.ui.theme.MetricColors
 import org.openstrap.app.ui.workout.PausedGrey
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -37,11 +36,12 @@ import org.openstrap.app.R
 /**
  * A paused workout (workout-rules.md, Colour; board HaloLivePaused): a grey hero, "Paused for" and the pause counting up
  * in the one dotted number, then a solid card with the heart rate now and how far it has dropped since you stopped
- * ([recent], the live readings, hold the one at the pause), then the workout's [figures] so far (value, label).
+ * ([recent], the live readings, hold the one at the pause), then the workout's [figures] so far (value, label). A
+ * [detail] adds a line to the hero: where a round workout stopped.
  */
 @Composable
 internal fun ColumnScope.LivePaused(r: WorkoutState.Recording, liveHeartRate: Int?, recent: List<Pair<Long, Int>>,
-    figures: List<Pair<String?, String>>) {
+    figures: List<Pair<String?, String>>, detail: String? = null) {
     val at = r.workout.pausedAt ?: return
     val now = nowTicking()
     val tint = heroTint(PausedGrey)
@@ -49,6 +49,7 @@ internal fun ColumnScope.LivePaused(r: WorkoutState.Recording, liveHeartRate: In
         HeroTitle(stringResource(R.string.workout_live_paused_for), null, tint)
         HaloBigNumber(dotClock((now - at).coerceAtLeast(0)), BigNumber.Live, unitColor = tint)
         HeroLine(stringResource(R.string.workout_live_paused_note), tint)
+        detail?.let { HeroLine(it, tint) }
     }
     val before = Workouts.heartRateAt(recent, at) ?: recent.lastOrNull { it.first <= at }?.second
     val drop = if (before != null && liveHeartRate != null) before - liveHeartRate else null
@@ -61,7 +62,7 @@ internal fun ColumnScope.LivePaused(r: WorkoutState.Recording, liveHeartRate: In
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(Space.S8)) {
-                Icon(AppIcons.Heartbeat, null, tint = MetricColors.heart, modifier = Modifier.size(IconSize.GlyphS))
+                Icon(AppIcons.Heart, null, tint = GlowType.noteColor, modifier = Modifier.size(IconSize.GlyphS))
                 Text("$liveHeartRate", color = Color.White, style = GlowType.figureInline)
                 Text(stringResource(R.string.workout_live_unit_bpm), color = GlowType.noteColor, style = GlowType.secondary)
             }
@@ -70,7 +71,10 @@ internal fun ColumnScope.LivePaused(r: WorkoutState.Recording, liveHeartRate: In
             }
         }
     }
-    LiveFigures(figures)
+    // The readings stop with the pause, so a peak is the highest while moving.
+    val peak = stringResource(R.string.workout_live_figure_peak_bpm)
+    val peakMoving = stringResource(R.string.workout_live_figure_peak_moving)
+    LiveFigures(figures.map { (v, label) -> v to if (label == peak) peakMoving else label })
 }
 
 /**
@@ -82,3 +86,12 @@ internal fun ColumnScope.LivePaused(r: WorkoutState.Recording, liveHeartRate: In
 @Composable
 internal fun LiveFigures(figures: List<Pair<String?, String>>, modifier: Modifier = Modifier) =
     org.openstrap.app.ui.glow.HaloFigures(figures, modifier, org.openstrap.app.ui.glow.FiguresVariant.Live)
+
+/**
+ * The label of the live Active kcal figure: its name, or why there is none. Kcal needs weight, height and age, so
+ * without a figure the label says what it waits for.
+ */
+@Composable
+@androidx.compose.runtime.ReadOnlyComposable
+internal fun activeKcalLabel(hasValue: Boolean): String =
+    stringResource(if (hasValue) R.string.workout_live_figure_active_kcal else R.string.workout_live_figure_kcal_needs_profile)

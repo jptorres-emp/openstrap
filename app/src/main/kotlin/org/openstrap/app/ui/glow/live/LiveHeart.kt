@@ -244,8 +244,13 @@ internal fun WorkoutHeartCard(
         else Text(WorkoutCopy.noHeartRate(r.paused, connected), color = Color.White, style = GlowType.sentence)
         if (zone != null) {
             val (name, _) = WorkoutCopy.zoneTitle(zone)
-            HeroLine("$name, ${zoneRange(zone, r.maxHeartRate)}, ${WorkoutCopy.zoneTime(zoneSeconds[zone])}", tint)
-        } else HeroLine(WorkoutCopy.noZone(r.paused), tint)
+            HeroLine("$name, ${zoneRange(zone, r.maxHeartRate)}", tint)
+            HeroLine(WorkoutCopy.zoneTime(zoneSeconds[zone]), tint)
+        } else {
+            HeroLine(WorkoutCopy.noZone(r.paused), tint)
+            // The second line's room is kept, so the hero doesn't change height when a zone comes.
+            HeroLine("\u00A0", tint)
+        }
     }
     if (zoneBar && !fill) LiveCard {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {

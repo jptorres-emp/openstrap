@@ -463,6 +463,7 @@ internal fun LiveBottomBar(
 internal fun PageDots(current: Int, count: Int, position: Float? = null, onSelect: (Int) -> Unit) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
         repeat(count) { i ->
+            val described = stringResource(R.string.workout_live_view_dot, i + 1, count)
             Box(
                 // 48 dp square to tap, laid out as tall as before so the live screens keep their height: the 10 dp above
                 // and below reach into the bottom bar's 14 dp gaps, never over the controls.
@@ -470,7 +471,9 @@ internal fun PageDots(current: Int, count: Int, position: Float? = null, onSelec
                     val tap = measurable.measure(constraints)
                     val row = DotsRowHeight.roundToPx()
                     layout(tap.width, row) { tap.place(0, (row - tap.height) / 2) }
-                }.size(DotTap).clip(CircleShape).pressClickable({ onSelect(i) }, CircleShape),
+                }.size(DotTap).clip(CircleShape)
+                    .pressClickable({ onSelect(i) }, CircleShape, role = androidx.compose.ui.semantics.Role.Button)
+                    .semantics { contentDescription = described },
                 contentAlignment = Alignment.Center,
             ) {
                 val lit = if (position != null) (1f - kotlin.math.abs(position - i)).coerceIn(0f, 1f) else if (i == current) 1f else 0f

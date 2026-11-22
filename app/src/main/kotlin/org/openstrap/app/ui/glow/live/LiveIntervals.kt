@@ -109,7 +109,7 @@ internal fun LiveIntervalsScreen(
     }
     // Parsed once with the recording, not on each recomposition.
     val structure = r.structure
-    val plan = structure?.let { StartCopy.structureName(it) }
+    val plan = structure?.let { StartCopy.planName(it) }
     val active = activeSecondsState(r)
     val warmUp = phase == Phase.WarmUp
     LiveFrame(
@@ -117,7 +117,9 @@ internal fun LiveIntervalsScreen(
         battery = (connection as? ConnectionState.Connected)?.batteryPercent,
         lap = phaseLap(r, phase, onSkip, onAddRest),
         pauseWhite = !warmUp,
-        paused = { LivePaused(r, liveHeartRate.takeIf { connected }, readings, roundFigures(r, kcal)) },
+        paused = {
+            LivePaused(r, liveHeartRate.takeIf { connected }, readings, roundFigures(r, kcal), pausedDetail(r, now.value))
+        },
         fill = true,
         title = listOfNotNull(org.openstrap.app.data.Workouts.sportName(r.workout.sportType), plan).joinToString(", "),
     ) {
@@ -165,6 +167,20 @@ private fun phaseLap(r: WorkoutState.Recording, phase: Phase, onSkip: () -> Unit
     }
 }
 
+/** Where a paused round workout stopped: "Round 3 of 8, 12 s of work left", or without the time where none is counted. */
+@Composable
+@ReadOnlyComposable
+private fun pausedDetail(r: WorkoutState.Recording, now: Long): String? {
+    val m = intervalMoment(r, now, null, emptyList(), emptyList()) ?: return null
+    if (m.phase == Phase.WarmUp || m.phase == Phase.Done) return null
+    val left = m.left
+    return when {
+        left == null -> stringResource(R.string.workout_live_round_of, m.round, m.rounds)
+        m.phase is Phase.Rest -> stringResource(R.string.workout_live_paused_round_rest, m.round, m.rounds, left)
+        else -> stringResource(R.string.workout_live_paused_round_work, m.round, m.rounds, left)
+    }
+}
+
 /** Rounds, Peak bpm and Active kcal (workout-rules.md, section 5), the figures row of both phases and of the paused view. */
 @Composable
 @ReadOnlyComposable
@@ -172,7 +188,7 @@ private fun roundFigures(r: WorkoutState.Recording, kcal: WorkoutRecorder.Kcal?)
     "${r.roundsCounted}" to stringResource(R.string.workout_live_figure_rounds),
     (r.rounds.mapNotNull { it.peakBpm }.maxOrNull() ?: r.workout.maxHeartRate)?.toString() to
         stringResource(R.string.workout_live_figure_peak_bpm),
-    kcal?.active?.toInt()?.toString() to stringResource(R.string.workout_live_figure_active_kcal),
+    kcal?.active?.toInt()?.toString() to activeKcalLabel(kcal != null),
 )
 
 /** The phase's hero (boards HaloLiveHiitWork and HaloLiveHiitRest): its word, the rounds, the seconds and what is next. */

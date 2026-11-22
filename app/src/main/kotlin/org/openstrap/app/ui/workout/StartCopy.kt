@@ -100,6 +100,16 @@ object StartCopy {
         }
     }
 
+    /**
+     * The name Ready's tabs give a structure's kind ("Timed", "Every minute"), which Live titles its plan with, so one
+     * plan has one name on both. Reps and periods have no tab of this kind and read by [structureName].
+     */
+    fun planName(s: org.openstrap.app.data.Structure, strings: Strings = Strings.app): String = when (s) {
+        is org.openstrap.app.data.Structure.Timed -> strings.get(R.string.ready_tab_timed)
+        is org.openstrap.app.data.Structure.EveryMinute -> strings.get(R.string.workout_start_every_minute)
+        else -> structureName(s, strings)
+    }
+
     /** A rep's length with its unit: "400 m", "1.5 km", "4 min", "90 s". */
     fun repText(r: org.openstrap.app.data.Structure.Reps, strings: Strings = Strings.app): String = repLength(r, strings)
 

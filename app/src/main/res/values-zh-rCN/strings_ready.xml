@@ -8,7 +8,6 @@
     <string name="ready_tab_timed">计时</string>
     <string name="ready_tab_periods">分节</string>
     <string name="ready_hero_pace_about">按你的配速约 %1$d 分钟</string>
-    <string name="ready_hero_from_steps">距离按步数计算</string>
     <string name="ready_hero_zone_keep">保持在 %1$d 到 %2$d bpm</string>
     <string name="ready_hero_zone_keep_up">保持在 %1$d bpm 以上</string>
     <plurals name="ready_hero_heart_zones">
@@ -32,6 +31,7 @@
     <string name="ready_hero_periods_about">含休息约 %1$d 分钟</string>
     <string name="ready_last_no_goal">无目标，上次训练 %1$s</string>
     <string name="ready_last_no_plan">无计划，上次训练 %1$s</string>
+    <string name="ready_last_time_line">上次 %1$s</string>
     <string name="ready_last_pace_line">%1$s，配速 %2$s 每公里</string>
     <string name="ready_no_goal">无目标</string>
     <string name="ready_no_plan">无计划</string>

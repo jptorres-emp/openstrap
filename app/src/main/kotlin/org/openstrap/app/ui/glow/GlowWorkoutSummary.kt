@@ -228,7 +228,7 @@ fun GlowWorkoutSummaryScreen(
         SummaryHeroCard(shownHero, sportFamilyColor(w.sportType, family), family = family, note = Ranges.times(a.shownStart, a.end))
         // What was done to the times, under the hero that says them.
         TrimNote(summary, trim.undo, Modifier.padding(horizontal = Space.S4), onCard = false)
-        val weekStarts = remember(workouts) { goalWeekStarts(workouts) }
+        val weekStarts = remember(workouts) { workoutDayStarts(workouts) }
         FamilySection(family, summary, liveRoute, others, weekStarts, week = shownRewards?.week, figures = shownHero.figures)
         EarnedChips(earned)
         // The drop only with heart rate to show: recorded in the workout, or arriving live after it.
@@ -374,6 +374,17 @@ internal fun splitRowsOf(summary: PhoneSummary, liveRoute: List<Route.Point>): L
 }
 
 /**
+ * [summary]'s laps worth listing beside its [rows] (splits): none when there is only one lap, and none when the laps cut
+ * the route where the splits do, which would list the same distances twice. Only manual laps show beside splits.
+ */
+internal fun manualLaps(summary: PhoneSummary, rows: List<SplitRow>): List<org.openstrap.app.data.WorkoutRecorder.Lap> {
+    val laps = summary.laps.takeIf { it.size > 1 }.orEmpty()
+    val same = rows.isNotEmpty() && laps.size == rows.size &&
+        laps.indices.all { kotlin.math.abs((laps[it].end - laps[it].start) - rows[it].seconds) <= 1 }
+    return if (same) emptyList() else laps
+}
+
+/**
  * Laps without GPS, and sets for strength, as a list (a past workout whose kind's own section doesn't show them).
  * Nothing without any of them. Returns whether it showed anything.
  */
@@ -383,7 +394,7 @@ internal fun SplitsList(summary: PhoneSummary, liveRoute: List<Route.Point>): Bo
     val a = summary.analysis
     val maxHr = a.maxHeartRate
     val rows = remember(summary, liveRoute) { splitRowsOf(summary, liveRoute) }
-    val laps = summary.laps.takeIf { it.size > 1 }.orEmpty()
+    val laps = manualLaps(summary, rows)
     val sets = summary.sets.filter { it.end != null }
     // Each row's heart takes the zone its average heart rate sat in.
     fun dot(bpm: Int?) = bpm?.let { zoneColor(it, maxHr, heartZones) } ?: EdgeNeutral

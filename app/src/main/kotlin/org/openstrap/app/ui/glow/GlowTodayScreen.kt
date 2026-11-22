@@ -743,7 +743,8 @@ private fun EveningHero(ctx: TodayContext, lightAngle: Float?, bedtime: LocalTim
             }
             // The count is in dots below, so the sentence says the steps against the goal instead.
             val counted = ctx.dayWorkouts.count { it.durationSeconds >= TodayCopy.SHORT_SESSION_S }
-            val day = TodayCopy.evening(sports, ctx.state.steps, goals.steps, ctx.loadStatus, stepCount = false, counted = counted, night = night)
+            val read = TodayCopy.DayRead(counted, night)
+            val day = TodayCopy.evening(sports, ctx.state.steps, goals.steps, ctx.loadStatus, stepCount = false, read = read)
             // The night winds down (board HaloTodayNight): the day in a sentence, then your usual bedtime as its figure
             // (the steps are the Steps card's, right under it). The evening says the steps in dots.
             HeroSentence(day)

@@ -272,6 +272,13 @@ object TodayCopy {
     fun loadStatus(load: Float, usual: Float?, endOfDay: Boolean): LoadBand? = LoadBands.of(load, usual, endOfDay)
 
     /**
+     * How [evening] reads the day: [counted] of the workouts count toward the kind of day (a session under
+     * [SHORT_SESSION_S] is listed but doesn't make it "steady"), and at [night] the verdict leads into winding down in
+     * one sentence ("Time to wind down after a full day.").
+     */
+    data class DayRead(val counted: Int, val night: Boolean = false)
+
+    /**
      * The evening hero: what kind of day it was, then what made it. [workouts] are the sport types of the day's
      * workouts. Without [stepCount] the steps are said against the goal ([stepsAgainstGoal]), for
      * the app's hero, which shows the count in dots under the sentence; the widget keeps the count.
@@ -279,16 +286,15 @@ object TodayCopy {
     fun evening(
         workouts: List<Int>, steps: Int, stepGoal: Int, load: LoadBand?, locale: Locale = Locale.getDefault(), stepCount: Boolean = true,
         strings: Strings = Strings.app,
-        /** How many of [workouts] count toward the kind of day: a session under [SHORT_SESSION_S] is listed but doesn't make it "steady". */
-        counted: Int = workouts.size,
-        /** At night the verdict leads into winding down in one sentence ("Time to wind down after a full day."). */
-        night: Boolean = false,
+        /** How the day is read; the workouts all count and it is the evening unless said. */
+        read: DayRead = DayRead(workouts.size),
     ): String {
         val head = when {
-            counted > 0 && (steps >= stepGoal || load == LoadBand.Above) ->
-                if (night) R.string.core_today_night_full else R.string.core_today_evening_full
-            counted == 0 && steps < stepGoal / 2 -> if (night) R.string.core_today_night_quiet else R.string.core_today_evening_quiet
-            else -> if (night) R.string.core_today_night_steady else R.string.core_today_evening_steady
+            read.counted > 0 && (steps >= stepGoal || load == LoadBand.Above) ->
+                if (read.night) R.string.core_today_night_full else R.string.core_today_evening_full
+            read.counted == 0 && steps < stepGoal / 2 ->
+                if (read.night) R.string.core_today_night_quiet else R.string.core_today_evening_quiet
+            else -> if (read.night) R.string.core_today_night_steady else R.string.core_today_evening_steady
         }
         val parts = listOfNotNull(
             when (workouts.size) {

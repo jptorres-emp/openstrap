@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<resources>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     
     <string name="you_action_cancel">Cancelar</string>
     
@@ -45,7 +45,7 @@
         <item quantity="other"><xliff:g id="count" example="250">%1$d</xliff:g> lines, for bug reports</item>
     </plurals>
     
-    <string name="you_footer">quitar correa<xliff:g id="version" example="2.1.0">%1$s</xliff:g>. Everything stays on this phone.</string>
+    <string name="you_footer">unstrap <xliff:g id="version" example="2.1.0">%1$s</xliff:g>. Todo permanece en este telefono.</string>
 
     
     <string name="you_goals_line"><xliff:g id="steps" example="8,000 steps">%1$s</xliff:g>, <xliff:g id="calories" example="450 active kcal">%2$s</xliff:g>, <xliff:g id="hours" example="8 active hours">%3$s</xliff:g></string>
@@ -55,14 +55,14 @@
         <item quantity="other"><xliff:g id="steps" example="8,000">%1$s</xliff:g> steps</item>
     </plurals>
     
-    <string name="you_goals_active_kcal"><xliff:g id="calories" example="450">%1$s</xliff:g> active kcal</string>
+    <string name="you_goals_active_kcal"><xliff:g id="calories" example="450">%1$s</xliff:g> kcal de actividad</string>
     
     <plurals name="you_goals_active_hours">
         <item quantity="one"><xliff:g id="hours" example="8">%1$d</xliff:g> active hour</item>
         <item quantity="other"><xliff:g id="hours" example="8">%1$d</xliff:g> active hours</item>
     </plurals>
     
-    <string name="you_sleep_goal_line"><xliff:g id="goal" example="7 h 30">%1$s</xliff:g>. Your sleep need is <xliff:g id="need" example="8 h">%2$s</xliff:g></string>
+    <string name="you_sleep_goal_line"><xliff:g id="goal" example="7 h 30">%1$s</xliff:g>. Tu sueño necesario es de <xliff:g id="need" example="8 h">%2$s</xliff:g></string>
 
     
     <string name="you_profile_empty">Añade tu edad y sexo para calcular con precisión la carga y la recuperación</string>
@@ -146,9 +146,9 @@
     
     <string name="you_goals_calories_type">Escribe la meta de calorías</string>
     
-    <string name="you_goals_suggested">Sugerido<xliff:g id="calories" example="520">%1$s</xliff:g>, from your last 4 weeks</string>
+    <string name="you_goals_suggested">Sugerido <xliff:g id="calories" example="520">%1$s</xliff:g>, de tus últimas 4 semanas.</string>
     
-    <string name="you_goals_suggested_matched">Sugerido<xliff:g id="calories" example="520">%1$s</xliff:g>, from your last 4 weeks. Your strap\'s goal is set to match.</string>
+    <string name="you_goals_suggested_matched">Sugerido <xliff:g id="calories" example="520">%1$s</xliff:g>, de tus últimas 4 semanas. El objetivo de tu pulsera se ha ajustado en consecuencia.</string>
     
     <string name="you_goals_use">Usar</string>
 
@@ -170,7 +170,7 @@
     
     <string name="you_updates_latest">Última versión</string>
     
-    <string name="you_updates_installed">Tienes unstrap<xliff:g id="version" example="2.1.0">%1$s</xliff:g>.</string>
+    <string name="you_updates_installed">Tienes unstrap <xliff:g id="version" example="2.1.0">%1$s</xliff:g>. Traducido por DanielF.</string>
     <string name="you_updates_no_notes">No hay notas para esta versión.</string>
 
     

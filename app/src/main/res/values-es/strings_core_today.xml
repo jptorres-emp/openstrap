@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools" xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     
     <string name="core_first_night_after">Después de tu primera noche</string>
 
@@ -8,7 +8,7 @@
     
     <string name="core_header_after_workout">Después de tu entrenamiento</string>
     
-    <string name="core_header_after_sport">Después de tu<xliff:g id="sport" example="run">%1$s</xliff:g></string>
+    <string name="core_header_after_sport">Después de tu <xliff:g id="sport" example="run">%1$s</xliff:g></string>
     
     <string name="core_header_workout_window">Hora de entrenar</string>
     
@@ -29,7 +29,7 @@
     
     <string name="core_header_sport_swim">natación</string>
     
-    <string name="core_header_sport_hike">caminata</string>
+    <string name="core_header_sport_hike">senderismo</string>
     
     <string name="core_header_sport_row">remo</string>
     
@@ -63,15 +63,15 @@
     
     <string name="core_today_meaning_moderate">No te has recuperado del todo. Mantén un esfuerzo moderado.</string>
     
-    <string name="core_today_meaning_low">Aún poniéndote al día. Un día suave ayuda.</string>
+    <string name="core_today_meaning_low">En recuperación. Un día suave ayuda.</string>
 
     
-    <string name="core_today_no_score_learning">unstrap aún está aprendiendo sobre tus noches,<xliff:g id="nights" example="5">%1$d</xliff:g> of <xliff:g id="needed" example="7">%2$d</xliff:g>.</string>
+    <string name="core_today_no_score_learning">Unstrap aún está aprendiendo sobre tus noches, <xliff:g id="nights" example="5">%1$d</xliff:g> de <xliff:g id="needed" example="7">%2$d</xliff:g> obtenidas.</string>
     
     <string name="core_today_no_score_heart">No hubo suficientes datos cardíacos la noche pasada para obtener una puntuación de recuperación.</string>
 
     
-    <string name="core_today_slept">Dormido/a<xliff:g id="duration" example="7 h 40">%1$s</xliff:g>.</string>
+    <string name="core_today_slept">Dormido <xliff:g id="duration" example="7 h 40">%1$s</xliff:g>.</string>
     
     <string name="core_today_no_sleep_that_night">No se registró sueño esa noche.</string>
     
@@ -92,7 +92,7 @@
     
     <string name="core_today_energy_morning_drained">La mañana te ha agotado<xliff:g id="amount" example="22">%1$d</xliff:g>.</string>
     
-    <string name="core_today_energy_day_drained">El día te ha agotado<xliff:g id="amount" example="40">%1$d</xliff:g> so far.</string>
+    <string name="core_today_energy_day_drained">El día te ha agotado <xliff:g id="amount" example="40">%1$d</xliff:g> hasta ahora.</string>
     
     <string name="core_today_energy_nothing_drained">No has gastado energía desde que te despertaste.</string>
     
@@ -129,7 +129,7 @@
     
     <string name="core_today_after_waiting">La frecuencia cardíaca de tu entrenamiento aparecerá cuando la banda la envíe.</string>
     
-    <string name="core_today_after_now" ns1:ignore="PluralsCandidate">Frecuencia cardíaca<xliff:g id="bpm" example="74">%1$d</xliff:g>.</string>
+    <string name="core_today_after_now" tools:ignore="PluralsCandidate">Frecuencia cardíaca <xliff:g id="bpm" example="74">%1$d</xliff:g>.</string>
     
     <string name="core_today_after_settled">Frecuencia cardíaca de nuevo cerca del reposo.</string>
     
@@ -181,7 +181,7 @@
     <string name="core_today_goal_well_short">muy lejos de tu meta de pasos</string>
 
     
-    <string name="core_today_bedtime_in">Hora de dormir en<xliff:g id="duration" example="1 h 10">%1$s</xliff:g></string>
+    <string name="core_today_bedtime_in">Hora de dormir en <xliff:g id="duration" example="1 h 10">%1$s</xliff:g></string>
 
     
     <string name="core_today_recovered">Recuperado</string>
@@ -230,7 +230,7 @@
     <string name="core_today_steps_steady">Pasos sin cambios</string>
 
     
-    <string name="core_today_last_night_score">Puntuación<xliff:g id="score" example="83">%2$d</xliff:g>, <xliff:g id="duration" example="7 h 40">%1$s</xliff:g></string>
+    <string name="core_today_last_night_score">Puntuación <xliff:g id="score" example="83">%2$d</xliff:g>, <xliff:g id="duration" example="7 h 40">%1$s</xliff:g></string>
 
     
     <string name="core_today_heart_note_band">Mantén presionada la línea para leer cualquier momento. La banda es tu rango de descanso.</string>
@@ -239,7 +239,7 @@
     
     <string name="core_today_heart_live">En tiempo real</string>
     
-    <string name="core_today_heart_at">A las<xliff:g id="time" example="20:52">%1$s</xliff:g></string>
+    <string name="core_today_heart_at">A las <xliff:g id="time" example="20:52">%1$s</xliff:g></string>
     
     <string name="core_today_heart_waiting">Esperando la correa</string>
 </resources>

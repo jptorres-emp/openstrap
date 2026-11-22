@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools" xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     
     <string name="core_tab_stage_awake">Despierto</string>
     
@@ -60,7 +60,7 @@
     
     <string name="core_tab_phrase_recovery_index">cuándo se estabilizó tarde tu corazón</string>
     
-    <string name="core_tab_held_back_by">Principalmente limitado por<xliff:g id="contributor" example="HRV">%1$s</xliff:g>.</string>
+    <string name="core_tab_held_back_by">Principalmente limitado por <xliff:g id="contributor" example="HRV">%1$s</xliff:g> fuera de rango.</string>
 
     
     <string name="core_tab_recovery_waiting">La recuperación se mostrará cuando se sincronice el sueño de anoche.</string>
@@ -74,9 +74,9 @@
     
     <string name="core_tab_contributor_usual">Habitual</string>
     
-    <string name="core_tab_contributor_little">Frenando un poco</string>
+    <string name="core_tab_contributor_little">Conteniendose un poco</string>
     
-    <string name="core_tab_contributor_holding">Frenando</string>
+    <string name="core_tab_contributor_holding">Conteniendose</string>
 
     
     <string name="core_tab_charge_sleep_rest">Sueño y descanso tranquilo</string>
@@ -98,9 +98,9 @@
     
     <string name="core_tab_charge_now">Ahora</string>
     
-    <string name="core_tab_charge_used" ns1:ignore="PluralsCandidate">Usado<xliff:g id="amount" example="20">%1$d</xliff:g> desde que despertaste</string>
+    <string name="core_tab_charge_used" tools:ignore="PluralsCandidate">Usado<xliff:g id="amount" example="20">%1$d</xliff:g> desde que despertaste</string>
     
-    <string name="core_tab_charge_up" ns1:ignore="PluralsCandidate">Arriba<xliff:g id="amount" example="5">%1$d</xliff:g> desde que despertaste</string>
+    <string name="core_tab_charge_up" tools:ignore="PluralsCandidate">Arriba<xliff:g id="amount" example="5">%1$d</xliff:g> desde que despertaste</string>
     
     <string name="core_tab_charge_level">Igual que al despertar</string>
 
@@ -120,7 +120,7 @@
     
     <string name="core_tab_sleep_score_poor">Calidad de sueño, baja</string>
     
-    <string name="core_tab_sleep_score_fair">Calidad de sueño, regular</string>
+    <string name="core_tab_sleep_score_fair">Calidad de sueño, normal</string>
     
     <string name="core_tab_sleep_score_good">Calidad de sueño, buena</string>
     
@@ -147,7 +147,7 @@
     
     <string name="core_tab_regularity_moved">Los horarios de sueño cambiaron esta semana</string>
     
-    <string name="core_tab_usual_times">Normalmente te duermes a las<xliff:g id="bedtime" example="23:10">%1$s</xliff:g>, despertando a las <xliff:g id="wake" example="06:50">%2$s</xliff:g>.</string>
+    <string name="core_tab_usual_times">Normalmente te duermes a las <xliff:g id="bedtime" example="23:10">%1$s</xliff:g>, despertando a las <xliff:g id="wake" example="06:50">%2$s</xliff:g>.</string>
 
     
     <plurals name="core_tab_breathing_learning">
@@ -155,14 +155,14 @@
         <item quantity="other">Aprendiendo tu horario habitual,<xliff:g id="nights" example="3">%1$d</xliff:g> of <xliff:g id="needed" example="7">%2$d</xliff:g> noches</item>
     </plurals>
     
-    <string name="core_tab_breathing_usual">Tu horario habitual es<xliff:g id="per_hour" example="2.1">%1$s</xliff:g> hora</string>
+    <string name="core_tab_breathing_usual">Tu ritmo habitual es <xliff:g id="per_hour" example="2.1">%1$s</xliff:g> hora</string>
     
     <plurals name="core_tab_breathing_short_learning">
         <item quantity="one">Aprendiendo,<xliff:g id="nights" example="3">%1$d</xliff:g> of <xliff:g id="needed" example="7">%2$d</xliff:g> noche</item>
         <item quantity="other">Aprendiendo,<xliff:g id="nights" example="3">%1$d</xliff:g> of <xliff:g id="needed" example="7">%2$d</xliff:g> noches</item>
     </plurals>
     
-    <string name="core_tab_breathing_short_usual">Habitual<xliff:g id="per_hour" example="2.1">%1$s</xliff:g>, estimado</string>
+    <string name="core_tab_breathing_short_usual">Habitual <xliff:g id="per_hour" example="2.1">%1$s</xliff:g>, estimado</string>
 
     
     <string name="core_tab_load_usual">Tu horario habitual es<xliff:g id="load" example="40">%1$d</xliff:g></string>
@@ -176,11 +176,11 @@
     <string name="core_tab_balance_steady">Estable</string>
 
     
-    <string name="core_tab_active_reached" ns1:ignore="PluralsCandidate">Últimos 7 días, objetivo de<xliff:g id="goal" example="150">%1$d</xliff:g> alcanzado</string>
+    <string name="core_tab_active_reached" tools:ignore="PluralsCandidate">Últimos 7 días, objetivo de<xliff:g id="goal" example="150">%1$d</xliff:g> alcanzado</string>
     
     <string name="core_tab_active_goal">Últimos 7 días, objetivo<xliff:g id="goal" example="150">%1$d</xliff:g></string>
     
-    <string name="core_tab_points_reached">Últimos 7 días, en<xliff:g id="aim" example="100">%1$d</xliff:g> o mas</string>
+    <string name="core_tab_points_reached">Últimos 7 días, en <xliff:g id="aim" example="100">%1$d</xliff:g> o mas</string>
     
     <string name="core_tab_points_aim">Últimos 7 días, apunta a<xliff:g id="aim" example="100">%1$d</xliff:g></string>
     
@@ -195,7 +195,7 @@
     
     <string name="core_tab_mostly_stress">Mayormente estrés</string>
     
-    <string name="core_tab_mostly_awake">Mayormente despierto/a</string>
+    <string name="core_tab_mostly_awake">Mayormente despierto</string>
     
     <string name="core_tab_nothing_yet">Aún nada</string>
 
@@ -205,7 +205,7 @@
         <item quantity="other">Siestas</item>
     </plurals>
     
-    <string name="core_tab_nap_at">A las<xliff:g id="time" example="14:10">%1$s</xliff:g></string>
+    <string name="core_tab_nap_at">A las <xliff:g id="time" example="14:10">%1$s</xliff:g></string>
     
     <plurals name="core_tab_naps_first_at">
         <item quantity="one"><xliff:g id="count" example="1">%1$d</xliff:g> siesta, a las <xliff:g id="time" example="14:10">%2$s</xliff:g></item>
@@ -217,7 +217,7 @@
     
     <string name="core_tab_auto_detected">Detectado automáticamente</string>
     
-    <string name="core_tab_fact_average_bpm">Promedio<xliff:g id="bpm" example="128">%1$d</xliff:g> bpm</string>
+    <string name="core_tab_fact_average_bpm">Promedio <xliff:g id="bpm" example="128">%1$d</xliff:g> lpm</string>
     
     <plurals name="core_tab_fact_sets">
         <item quantity="one"><xliff:g id="count" example="1">%d</xliff:g> set</item>
@@ -229,9 +229,9 @@
     <string name="core_tab_workout_line"><xliff:g id="fact" example="3.4 km">%1$s</xliff:g>, <xliff:g id="time" example="17:35">%2$s</xliff:g></string>
 
     
-    <string name="core_tab_habit_age_updated">Actualizado<xliff:g id="date" example="Sun 18 Oct">%1$s</xliff:g></string>
+    <string name="core_tab_habit_age_updated">Actualizado <xliff:g id="date" example="Sun 18 Oct">%1$s</xliff:g></string>
     
-    <string name="core_tab_first_estimate">Primera estimación<xliff:g id="date" example="Sunday 22 Nov">%1$s</xliff:g></string>
+    <string name="core_tab_first_estimate">Primera estimación <xliff:g id="date" example="Sunday 22 Nov">%1$s</xliff:g></string>
     
     <string name="core_tab_age_for_now">Tu edad actual</string>
     

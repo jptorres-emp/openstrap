@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools" xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     
     <string name="day_score_recovery">Recuperación</string>
     <string name="day_score_energy">Energía</string>
@@ -164,23 +164,23 @@
     
     <string name="day_rating_very_good">Muy bien</string>
     <string name="day_rating_good">Bien</string>
-    <string name="day_rating_fair">Regular</string>
+    <string name="day_rating_fair">Normal</string>
     <string name="day_rating_low">Bajo</string>
 
     
-    <string name="day_stress_counts_from_calm" ns1:ignore="PluralsCandidate">El estrés se cuenta desde<xliff:g id="level" example="35">%1$d</xliff:g>: <xliff:g id="margin" example="10">%2$d</xliff:g> above your calm level of <xliff:g id="calm" example="25">%3$d</xliff:g> over the last <xliff:g id="days" example="5 days">%4$s</xliff:g>.</string>
+    <string name="day_stress_counts_from_calm" tools:ignore="PluralsCandidate">El estrés se cuenta desde <xliff:g id="level" example="35">%1$d</xliff:g>: <xliff:g id="margin" example="10">%2$d</xliff:g> above your calm level of <xliff:g id="calm" example="25">%3$d</xliff:g> over the last <xliff:g id="days" example="5 days">%4$s</xliff:g>.</string>
     
     <plurals name="day_stress_last_days">
-        <item quantity="one"><xliff:g id="days" example="1">%1$d</xliff:g> day</item>
-        <item quantity="other"><xliff:g id="days" example="5">%1$d</xliff:g> days</item>
+        <item quantity="one"><xliff:g id="days" example="1">%1$d</xliff:g> dia</item>
+        <item quantity="other"><xliff:g id="days" example="5">%1$d</xliff:g> dias</item>
     </plurals>
     
-    <string name="day_stress_counts_for_now" ns1:ignore="PluralsCandidate">El estrés se cuenta desde<xliff:g id="level" example="40">%1$d</xliff:g> for now. After <xliff:g id="more" example="2 more days">%2$s</xliff:g> of wear it adjusts to your own calm level.</string>
+    <string name="day_stress_counts_for_now" tools:ignore="PluralsCandidate">El estrés se cuenta desde <xliff:g id="level" example="40">%1$d</xliff:g> ahora. After <xliff:g id="more" example="2 more days">%2$s</xliff:g> of wear it adjusts to your own calm level.</string>
     
     <plurals name="day_stress_more_days">
         <item quantity="one"><xliff:g id="days" example="1">%1$d</xliff:g> more day</item>
         <item quantity="other"><xliff:g id="days" example="2">%1$d</xliff:g> more days</item>
     </plurals>
     
-    <string name="day_stress_counts_until" ns1:ignore="PluralsCandidate">El estrés se cuenta desde<xliff:g id="level" example="40">%1$d</xliff:g> for now, until there are enough calm readings to find your own level.</string>
+    <string name="day_stress_counts_until" tools:ignore="PluralsCandidate">El estrés se cuenta desde <xliff:g id="level" example="40">%1$d</xliff:g> por ahora, hasta que haya suficientes lecturas de calma para determinar tu propio nivel.</string>
 </resources>

@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<resources>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     
     <string name="glow_choose_title">Iniciar un entrenamiento</string>
     
@@ -35,7 +35,7 @@
     </plurals>
 
     
-    <string name="glow_ready_bpm_live">bpm, en directo desde tu banda</string>
+    <string name="glow_ready_bpm_live">lpm, ahora desde tu banda</string>
     
     <string name="glow_ready_plan_description"><xliff:g id="plan" example="Distance">%1$s</xliff:g>. <xliff:g id="hint" example="Tap to choose another goal">%2$s</xliff:g></string>
     

@@ -1,10 +1,10 @@
 <?xml version='1.0' encoding='utf-8'?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools" xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     
     <string name="system_widget_status_not_paired">Vincula tu banda</string>
     
     <string name="system_widget_status_not_paired_short">Vincular banda</string>
-    <string name="system_widget_status_low_battery">Banda en<xliff:g id="percent" example="12">%1$d</xliff:g>%%</string>
+    <string name="system_widget_status_low_battery">Banda en <xliff:g id="percent" example="12">%1$d</xliff:g>%%</string>
     
     <string name="system_widget_status_percent"><xliff:g id="percent" example="12">%1$d</xliff:g>%%</string>
     <string name="system_widget_status_syncing">Sincronizando...</string>
@@ -64,9 +64,9 @@
     
     <string name="system_widget_sleep_last_synced">Noche anterior</string>
     
-    <string name="system_widget_sleep_score_word">Puntuación de sueño<xliff:g id="score" example="82">%1$s</xliff:g>, <xliff:g id="word" example="good">%2$s</xliff:g></string>
+    <string name="system_widget_sleep_score_word">Puntuación de sueño <xliff:g id="score" example="82">%1$s</xliff:g>, <xliff:g id="word" example="good">%2$s</xliff:g></string>
     
-    <string name="system_widget_sleep_score">Puntuación de sueño<xliff:g id="score" example="82">%1$s</xliff:g></string>
+    <string name="system_widget_sleep_score">Puntuación de sueño <xliff:g id="score" example="82">%1$s</xliff:g></string>
     
     <string name="system_widget_sleep_stage_description"><xliff:g id="stage" example="Deep">%1$s</xliff:g> <xliff:g id="time" example="1 h 32">%2$s</xliff:g></string>
 
@@ -116,7 +116,7 @@
     <string name="system_widget_moment_recovery_word">Recuperación<xliff:g id="score" example="78">%1$d</xliff:g>, <xliff:g id="word" example="Ready">%2$s</xliff:g></string>
     <string name="system_widget_moment_recovery">Recuperación<xliff:g id="score" example="78">%1$d</xliff:g></string>
     
-    <string name="system_widget_moment_energy" ns1:ignore="PluralsCandidate">Energía<xliff:g id="energy" example="62">%1$d</xliff:g> restante</string>
+    <string name="system_widget_moment_energy" tools:ignore="PluralsCandidate">Energía<xliff:g id="energy" example="62">%1$d</xliff:g> restante</string>
     
     <string name="system_widget_moment_two_sentences"><xliff:g id="first" example="Ready for effort">%1$s</xliff:g>. <xliff:g id="second" example="You usually run around now.">%2$s</xliff:g></string>
     
@@ -155,7 +155,7 @@
     <string name="system_widget_moment_stages_description">Fases de anoche,<xliff:g id="times" example="22:58 to 06:56">%1$s</xliff:g></string>
     
     <string name="system_widget_moment_energy_since">Energía desde<xliff:g id="time" example="07:10">%1$s</xliff:g></string>
-    <string name="system_widget_moment_energy_since_now" ns1:ignore="PluralsCandidate">Energía desde<xliff:g id="time" example="07:10">%1$s</xliff:g>, <xliff:g id="energy" example="62">%2$d</xliff:g> now</string>
+    <string name="system_widget_moment_energy_since_now" tools:ignore="PluralsCandidate">Energía desde<xliff:g id="time" example="07:10">%1$s</xliff:g>, <xliff:g id="energy" example="62">%2$d</xliff:g> now</string>
     
     <string name="system_widget_moment_heart_today">Tu frecuencia cardíaca hoy</string>
 </resources>

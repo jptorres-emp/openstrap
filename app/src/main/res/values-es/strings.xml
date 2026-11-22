@@ -10,7 +10,7 @@
     
     <string name="widget_moment_name">Momento</string>
     <string name="widget_moment_description">Lo que importa ahora, cambiando a lo largo del día</string>
-    <string name="widget_recovery_name">Recuperación</string>
+    <string name="widget_recovery_name">Recupera</string>
     <string name="widget_recovery_description">La recuperación de esta mañana y lo que hay detrás</string>
     <string name="widget_steps_name">Pasos</string>
     <string name="widget_steps_description">Pasos de hoy y tu objetivo</string>

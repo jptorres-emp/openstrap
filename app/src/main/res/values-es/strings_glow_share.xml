@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<resources>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <string name="glow_share_join"><xliff:g id="first" example="141 avg bpm">%1$s</xliff:g>, <xliff:g id="second" example="320 kcal">%2$s</xliff:g></string>
 
     

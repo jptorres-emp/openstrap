@@ -1,13 +1,13 @@
 <?xml version='1.0' encoding='utf-8'?>
-<resources>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     
     <string name="core_workout_zone_easy">Suave</string>
     
     <string name="core_workout_zone_aerobic">Aeróbico</string>
     
-    <string name="core_workout_zone_tempo">Tempo</string>
+    <string name="core_workout_zone_tempo">Moderado</string>
     
-    <string name="core_workout_zone_threshold">Umbral</string>
+    <string name="core_workout_zone_threshold">Duro</string>
     
     <string name="core_workout_zone_max">Máximo</string>
     
@@ -15,15 +15,15 @@
     
     <string name="core_workout_zone_aerobic_in_sentence">aeróbico</string>
     
-    <string name="core_workout_zone_tempo_in_sentence">tempo</string>
+    <string name="core_workout_zone_tempo_in_sentence">moderado</string>
     
-    <string name="core_workout_zone_threshold_in_sentence">umbral</string>
+    <string name="core_workout_zone_threshold_in_sentence">duro</string>
     
     <string name="core_workout_zone_max_in_sentence">máximo</string>
     
-    <string name="core_workout_zone_number">Zona<xliff:g id="zone" example="3">%1$d</xliff:g>,</string>
+    <string name="core_workout_zone_number">Zona <xliff:g id="zone" example="3">%1$d</xliff:g>,</string>
     
-    <string name="core_workout_zone_line">Zona<xliff:g id="zone" example="3">%1$d</xliff:g>, <xliff:g id="name" example="aerobic">%2$s</xliff:g></string>
+    <string name="core_workout_zone_line">Zona <xliff:g id="zone" example="3">%1$d</xliff:g>, <xliff:g id="name" example="aerobic">%2$s</xliff:g></string>
     
     <string name="core_workout_zone_time_under">Menos de un minuto en esta zona</string>
     
@@ -40,11 +40,11 @@
     
     <string name="core_workout_split">km<xliff:g id="km" example="3">%1$d</xliff:g> in <xliff:g id="time" example="5:42">%2$s</xliff:g></string>
     
-    <string name="core_workout_split_avg"><xliff:g id="split" example="Km 3 in 5:42">%1$s</xliff:g>, <xliff:g id="bpm" example="152">%2$d</xliff:g> bpm</string>
+    <string name="core_workout_split_avg"><xliff:g id="split" example="Km 3 en 5:42">%1$s</xliff:g>, <xliff:g id="bpm" example="152">%2$d</xliff:g> lpm</string>
     
     <string name="core_workout_just_now">hace un momento</string>
     
-    <string name="core_workout_min_ago"><xliff:g id="minutes" example="3">%1$d</xliff:g> minutos atras</string>
+    <string name="core_workout_min_ago">Hace <xliff:g id="minutes" example="3">%1$d</xliff:g> minutos</string>
 
     
     <string name="core_workout_location_off">La ubicación está desactivada</string>
@@ -64,13 +64,13 @@
     <string name="core_workout_open_workout">Volver al entrenamiento</string>
 
     
-    <string name="core_workout_set_of">Serie<xliff:g id="set" example="3">%1$d</xliff:g> of <xliff:g id="sets" example="5">%2$d</xliff:g></string>
+    <string name="core_workout_set_of">Serie <xliff:g id="set" example="3">%1$d</xliff:g> de <xliff:g id="sets" example="5">%2$d</xliff:g></string>
     
-    <string name="core_workout_set">Serie<xliff:g id="set" example="3">%1$d</xliff:g></string>
+    <string name="core_workout_set">Serie <xliff:g id="set" example="3">%1$d</xliff:g></string>
     
     <string name="core_workout_rest_rule">El descanso termina cuando se acaba el tiempo.</string>
     
-    <string name="core_workout_rest_rule_below">El descanso termina cuando se acaba el tiempo o cuando tu frecuencia cardíaca se mantiene por debajo de<xliff:g id="bpm" example="110">%1$d</xliff:g> bpm.</string>
+    <string name="core_workout_rest_rule_below">El descanso termina cuando se acaba el tiempo o cuando tu frecuencia cardíaca se mantiene por debajo de<xliff:g id="bpm" example="110">%1$d</xliff:g> lpm.</string>
     
     <string name="core_workout_set_weight"><xliff:g id="reps" example="10">%1$d</xliff:g> × <xliff:g id="kilograms" example="60">%2$s</xliff:g> kg</string>
     

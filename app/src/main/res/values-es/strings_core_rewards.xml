@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<resources>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     
     <string name="core_rewards_best_fastest">Más rápido<xliff:g id="distance" example="5 km">%1$s</xliff:g></string>
     
@@ -19,15 +19,15 @@
     <string name="core_rewards_meters"><xliff:g id="meters" example="0">%1$s</xliff:g> m</string>
 
     
-    <string name="core_rewards_beat_faster"><xliff:g id="time" example="22 s">%1$s</xliff:g> faster</string>
+    <string name="core_rewards_beat_faster"><xliff:g id="time" example="22 s">%1$s</xliff:g> mas rápido</string>
     
-    <string name="core_rewards_beat_kg_more"><xliff:g id="kg" example="2.5">%1$s</xliff:g> kg more</string>
+    <string name="core_rewards_beat_kg_more"><xliff:g id="kg" example="2.5">%1$s</xliff:g> mas kg</string>
     
-    <string name="core_rewards_beat_farther"><xliff:g id="distance" example="1.23 km">%1$s</xliff:g> farther</string>
+    <string name="core_rewards_beat_farther"><xliff:g id="distance" example="1.23 km">%1$s</xliff:g> más lejos</string>
     
-    <string name="core_rewards_beat_longer"><xliff:g id="minutes" example="4">%1$d</xliff:g> min longer</string>
+    <string name="core_rewards_beat_longer"><xliff:g id="minutes" example="4">%1$d</xliff:g> mas minutos</string>
     
-    <string name="core_rewards_beat_more"><xliff:g id="steps" example="1,240">%1$s</xliff:g> more steps</string>
+    <string name="core_rewards_beat_more"><xliff:g id="steps" example="1,240">%1$s</xliff:g> mas pasos</string>
     
     <string name="core_rewards_beat_line_faster"><xliff:g id="time" example="22 s">%1$s</xliff:g> faster than your best from <xliff:g id="month" example="August">%2$s</xliff:g>.</string>
     <string name="core_rewards_beat_line_kg_more"><xliff:g id="kg" example="2.5">%1$s</xliff:g> kg more than your best from <xliff:g id="month" example="August">%2$s</xliff:g>.</string>

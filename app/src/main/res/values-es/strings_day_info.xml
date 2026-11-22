@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools" xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     
     <string name="day_info_scale_normal_below">Por debajo de tu normalidad</string>
     <string name="day_info_scale_normal_usual">Habitual</string>
@@ -141,7 +141,7 @@
     
     <string name="day_info_active_minutes_meaning">Minutos de movimiento rápido o intenso en los últimos 7 días, en comparación con<xliff:g id="target" example="150">%1$d</xliff:g> a week health guidelines aim for.</string>
     
-    <string name="day_info_active_minutes_how" ns1:ignore="PluralsCandidate">Un minuto a<xliff:g id="moderate" example="100">%1$d</xliff:g> steps or more counts as moderate, and <xliff:g id="vigorous" example="130">%2$d</xliff:g> or more as vigorous, inside a run of at least <xliff:g id="run" example="2">%3$d</xliff:g> such minutes. Effort without steps, like cycling or rowing, counts from heart rate after <xliff:g id="hr_run" example="5">%4$d</xliff:g> minutes in a row at <xliff:g id="moderate_share" example="40">%5$d</xliff:g>%% of your heart rate reserve or more, vigorous from <xliff:g id="vigorous_share" example="60">%6$d</xliff:g>%%. A vigorous minute counts double, as in the World Health Organization\'s 2020 guidelines.</string>
+    <string name="day_info_active_minutes_how" tools:ignore="PluralsCandidate">Un minuto a <xliff:g id="moderate" example="100">%1$d</xliff:g> steps or more counts as moderate, and <xliff:g id="vigorous" example="130">%2$d</xliff:g> or more as vigorous, inside a run of at least <xliff:g id="run" example="2">%3$d</xliff:g> such minutes. Effort without steps, like cycling or rowing, counts from heart rate after <xliff:g id="hr_run" example="5">%4$d</xliff:g> minutes in a row at <xliff:g id="moderate_share" example="40">%5$d</xliff:g>%% of your heart rate reserve or more, vigorous from <xliff:g id="vigorous_share" example="60">%6$d</xliff:g>%%. A vigorous minute counts double, as in the World Health Organization\'s 2020 guidelines.</string>
     <string name="day_info_active_minutes_moves">Caminatas rápidas de unos minutos o más, andar en bicicleta, correr y hacer deporte cuentan. Los paseos y los esfuerzos cortos no.</string>
     <string name="day_info_active_minutes_off">Ningún estudio ha verificado el recuento de pasos de un brazalete frente al ritmo de caminata, por lo que los minutos a paso ligero cerca del límite pueden pasarse por alto o contarse mal. Empujar un carrito o sostenerse de un pasamanos oculta los pasos.</string>
 
@@ -181,18 +181,18 @@
     <string name="day_info_active_note_that_day"><xliff:g id="minutes" example="12">%1$d</xliff:g> of that day\'s minutes came from heart rate.</string>
 
     
-    <string name="day_info_load_note_between_tested">Hoy se ha leído entre<xliff:g id="resting" example="52">%1$d</xliff:g> bpm resting and <xliff:g id="max" example="186">%2$d</xliff:g> bpm maximum, from your test.</string>
+    <string name="day_info_load_note_between_tested">Hoy se ha leído entre<xliff:g id="resting" example="52">%1$d</xliff:g> lpm descansando y <xliff:g id="max" example="186">%2$d</xliff:g> lpm maximo, desde tu prueba.</string>
     
-    <string name="day_info_load_note_between">Hoy se ha leído entre<xliff:g id="resting" example="52">%1$d</xliff:g> bpm resting and <xliff:g id="max" example="186">%2$d</xliff:g> bpm maximum.</string>
+    <string name="day_info_load_note_between">Hoy se ha leído entre<xliff:g id="resting" example="52">%1$d</xliff:g> lpm descansando y <xliff:g id="max" example="186">%2$d</xliff:g> lpm maximo.</string>
     
-    <string name="day_info_load_note_acwr">Tus últimos 7 días en comparación con las últimas 4 semanas suman<xliff:g id="ratio" example="1.21">%1$.2f</xliff:g>, the acute to chronic ratio. It\'s shown for interest only, since the evidence for a safe ratio is disputed, and never enters Recovery.</string>
+    <string name="day_info_load_note_acwr">Tus últimos 7 días en comparación con las últimas 4 semanas suman <xliff:g id="ratio" example="1.21">%1$.2f</xliff:g>, La relación entre casos agudos y crónicos. Se muestra únicamente a título informativo, ya que no hay consenso sobre cuál es la relación segura, y nunca se incluye en Recuperación.</string>
 
     
-    <string name="day_info_vo2_note_resting">La estimación de esta semana utiliza una frecuencia cardíaca en reposo de<xliff:g id="bpm" example="52">%1$d</xliff:g> bpm, while asleep.</string>
+    <string name="day_info_vo2_note_resting">La estimación de esta semana utiliza una frecuencia cardíaca en reposo de<xliff:g id="bpm" example="52">%1$d</xliff:g> lpm, mientras dormias.</string>
     
-    <string name="day_info_vo2_note_age_man">Eso es típico de un hombre de unos<xliff:g id="from" example="28">%1$d</xliff:g> to <xliff:g id="to" example="38">%2$d</xliff:g>.</string>
+    <string name="day_info_vo2_note_age_man">Eso es típico de un hombre de unos <xliff:g id="from" example="28">%1$d</xliff:g> a <xliff:g id="to" example="38">%2$d</xliff:g>.</string>
     
-    <string name="day_info_vo2_note_age_woman">Eso es típico de una mujer de unos<xliff:g id="from" example="28">%1$d</xliff:g> to <xliff:g id="to" example="38">%2$d</xliff:g>.</string>
+    <string name="day_info_vo2_note_age_woman">Eso es típico de una mujer de unos <xliff:g id="from" example="28">%1$d</xliff:g> a <xliff:g id="to" example="38">%2$d</xliff:g>.</string>
     
     <string name="day_info_vo2_note_withheld">Aún no hay una estimación de tu perfil.<xliff:g id="reason" example="Add your age in your profile.">%1$s</xliff:g></string>
 
@@ -239,9 +239,9 @@
     <string name="day_info_week_off">Los pasos y los entrenamientos se comparan con la semana anterior. Los minutos activos y el sueño solo se remontan a dos semanas, por lo que se muestran sin comparación. Un día con la correa quitada registra un valor bajo.</string>
 
     
-    <string name="day_info_disturbances_last_night">Anoche<xliff:g id="per_hour" example="2.4">%1$.1f</xliff:g> an hour.</string>
+    <string name="day_info_disturbances_last_night">Anoche <xliff:g id="per_hour" example="2.4">%1$.1f</xliff:g> por hora.</string>
     
-    <string name="day_info_disturbances_that_night">Esa noche<xliff:g id="per_hour" example="2.4">%1$.1f</xliff:g> an hour.</string>
+    <string name="day_info_disturbances_that_night">Esa noche <xliff:g id="per_hour" example="2.4">%1$.1f</xliff:g> por hora.</string>
     
     <plurals name="day_info_disturbances_learning">
         <item quantity="one">Aprendiendo tu valor habitual,<xliff:g id="nights" example="3">%1$d</xliff:g> of <xliff:g id="needed" example="7">%2$d</xliff:g> night.</item>
@@ -258,7 +258,7 @@
     <string name="day_info_regularity_note_midpoint">Mientras tanto, la mediana de tu sueño varió aproximadamente<xliff:g id="time" example="40 min">%1$s</xliff:g> this week.</string>
 
     
-    <string name="day_info_sleep_note_need">Tu necesidad de sueño aquí es<xliff:g id="need" example="8 h">%1$s</xliff:g>, from your age or your own setting.</string>
+    <string name="day_info_sleep_note_need">Tu necesidad de sueño aquí es <xliff:g id="need" example="8 h">%1$s</xliff:g>, en función de tu edad o ajustes.</string>
 
     
     <string name="day_info_recovery_note_strap">La puntuación propia de la correa de hoy es<xliff:g id="score" example="91">%1$d</xliff:g>. It doesn\'t count sleep length, so after a short night it reads higher than unstrap\'s. It\'s kept for comparison and never enters unstrap\'s score.</string>
@@ -266,7 +266,7 @@
     
     <string name="day_info_recovery_note_hrv">La VFC propia de anoche no fue lo suficientemente limpia, por lo que la de la correa<xliff:g id="ms" example="41">%1$d</xliff:g> ms stands in.</string>
     
-    <string name="day_info_recovery_note_resting_hr">La frecuencia cardíaca en reposo propia de anoche no fue lo suficientemente limpia, por lo que la de la correa<xliff:g id="bpm" example="55">%1$d</xliff:g> bpm stands in.</string>
+    <string name="day_info_recovery_note_resting_hr">La frecuencia cardíaca en reposo de anoche no era lo suficientemente precisa, así que se ha utilizado el valor de <xliff:g id="bpm" example="55">%1$d</xliff:g> lpm que indica la pulsera.</string>
     
     <string name="day_info_recovery_note_week_thin">La VFC de la semana se basa en<xliff:g id="nights" example="4">%1$d</xliff:g> of 7 nights, so it\'s less sure than usual.</string>
 

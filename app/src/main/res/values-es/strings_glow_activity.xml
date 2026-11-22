@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<resources>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     
    
     <string name="glow_activity_active_minutes">Minutos activos</string>
@@ -61,7 +61,7 @@
     
     <string name="glow_activity_suggestion">Parece un entrenamiento</string>
     
-    <string name="glow_activity_suggestion_line"><xliff:g id="times" example="07:10 to 07:45">%1$s</xliff:g>, mostly zone <xliff:g id="zone" example="3">%2$d</xliff:g>, <xliff:g id="bpm" example="132">%3$d</xliff:g> bpm on average</string>
+    <string name="glow_activity_suggestion_line"><xliff:g id="times" example="07:10 to 07:45">%1$s</xliff:g>, principalmente por zona <xliff:g id="zone" example="3">%2$d</xliff:g>, <xliff:g id="bpm" example="132">%3$d</xliff:g> lpm de media</string>
     
     <string name="glow_activity_not_a_workout">No es un entrenamiento</string>
 
@@ -161,7 +161,7 @@
     
     <string name="glow_activity_recovered">Recuperado</string>
     
-    <string name="glow_activity_recovered_after">Después de tu<xliff:g id="sport" example="run">%1$s</xliff:g>, <xliff:g id="ended" example="yesterday at 18:40">%2$s</xliff:g></string>
+    <string name="glow_activity_recovered_after">Después de tu <xliff:g id="sport" example="run">%1$s</xliff:g>, <xliff:g id="ended" example="yesterday at 18:40">%2$s</xliff:g></string>
     
     <string name="glow_activity_recover_ready">Listo</string>
     

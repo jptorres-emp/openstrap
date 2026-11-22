@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<resources>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     
     <string name="core_day_today">Hoy</string>
     
@@ -9,11 +9,11 @@
     
     <string name="core_day_yesterday_in_sentence">ayer</string>
     
-    <string name="core_day_at"><xliff:g id="day" example="yesterday">%1$s</xliff:g> at <xliff:g id="time" example="10:42">%2$s</xliff:g></string>
+    <string name="core_day_at"><xliff:g id="day" example="yesterday">%1$s</xliff:g> a las <xliff:g id="time" example="10:42">%2$s</xliff:g></string>
     
-    <string name="core_day_done_today">hoy a las<xliff:g id="time" example="10:42">%1$s</xliff:g></string>
+    <string name="core_day_done_today">hoy a las <xliff:g id="time" example="10:42">%1$s</xliff:g></string>
     
-    <string name="core_day_done_yesterday">ayer a las<xliff:g id="time" example="10:42">%1$s</xliff:g></string>
+    <string name="core_day_done_yesterday">ayer a las <xliff:g id="time" example="10:42">%1$s</xliff:g></string>
     
-    <string name="core_day_done_on">el<xliff:g id="date" example="Tue 21 Oct">%1$s</xliff:g></string>
+    <string name="core_day_done_on">el <xliff:g id="date" example="Tue 21 Oct">%1$s</xliff:g></string>
 </resources>

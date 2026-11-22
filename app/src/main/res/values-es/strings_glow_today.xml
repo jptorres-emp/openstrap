@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools" xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     
     <string name="glow_today_recovery_title">Recuperación</string>
     
@@ -43,7 +43,7 @@
     
     <string name="glow_today_steps">pasos</string>
     
-    <string name="glow_today_energy_left" ns1:ignore="PluralsCandidate">Energía<xliff:g id="energy" example="34">%1$d</xliff:g> left</string>
+    <string name="glow_today_energy_left" tools:ignore="PluralsCandidate">Energía<xliff:g id="energy" example="34">%1$d</xliff:g> left</string>
     
     <string name="glow_today_pair_title">Vincula tu Helio Strap</string>
     
@@ -69,7 +69,7 @@
     
     <string name="glow_today_load">Carga</string>
     
-    <string name="glow_today_to_recover">Tiempo para recuperar</string>
+    <string name="glow_today_to_recover">Recuperacion</string>
     
     <string name="glow_today_hours_unit">h</string>
     
@@ -111,7 +111,7 @@
     
     <string name="glow_today_score_unit">puntuación</string>
     
-    <string name="glow_today_last_night_scored"><xliff:g id="word" example="Good">%1$s</xliff:g>, <xliff:g id="duration" example="7 h 20">%2$s</xliff:g> asleep</string>
+    <string name="glow_today_last_night_scored"><xliff:g id="word" example="Good">%1$s</xliff:g>, <xliff:g id="duration" example="7 h 20">%2$s</xliff:g> dormido</string>
     
     <string name="glow_today_heart_rate">Frecuencia cardíaca</string>
     
@@ -127,9 +127,9 @@
     
     <string name="glow_today_workout_long">largo</string>
     
-    <string name="glow_today_workout_average_zone">Promedio<xliff:g id="bpm" example="141">%1$d</xliff:g> bpm, mostly zone <xliff:g id="zone" example="3">%2$d</xliff:g></string>
+    <string name="glow_today_workout_average_zone">Promedio <xliff:g id="bpm" example="141">%1$d</xliff:g> lpm, principalmente en zona <xliff:g id="zone" example="3">%2$d</xliff:g></string>
     
-    <string name="glow_today_workout_average">Promedio<xliff:g id="bpm" example="141">%1$d</xliff:g> bpm</string>
+    <string name="glow_today_workout_average">Promedio <xliff:g id="bpm" example="141">%1$d</xliff:g> lpm</string>
     
     <string name="glow_today_workout_zone">Principalmente zona<xliff:g id="zone" example="3">%1$d</xliff:g></string>
     

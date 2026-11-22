@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<resources>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     
     <string name="glow_workout_untitled">Entrenamiento</string>
     
@@ -8,7 +8,7 @@
     <string name="glow_workout_day_times"><xliff:g id="day" example="Yesterday">%1$s</xliff:g>, <xliff:g id="times" example="18:02 to 18:44">%2$s</xliff:g></string>
 
     
-    <string name="glow_workout_zone_under">bajo<xliff:g id="bpm" example="115">%1$d</xliff:g> bpm</string>
+    <string name="glow_workout_zone_under">bajo <xliff:g id="bpm" example="115">%1$d</xliff:g> lpm</string>
     
     <string name="glow_workout_zone_range"><xliff:g id="range" example="134 to 152">%1$s</xliff:g> bpm</string>
 
@@ -73,19 +73,19 @@
     
     <string name="glow_workout_heart_at_after">A las<xliff:g id="time" example="18:46">%1$s</xliff:g>, after the end</string>
     
-    <string name="glow_workout_unit_bpm_average">ppm promedio</string>
+    <string name="glow_workout_unit_bpm_average">lpm medio</string>
     
     <string name="glow_workout_heart_max_lowest">Más alta<xliff:g id="max" example="172">%1$d</xliff:g>, lowest <xliff:g id="min" example="98">%2$d</xliff:g> bpm</string>
     
     <string name="glow_workout_heart_max">Más alta<xliff:g id="max" example="172">%1$d</xliff:g> bpm</string>
     
-    <string name="glow_workout_heart_lowest">Más baja<xliff:g id="min" example="98">%1$d</xliff:g> bpm</string>
+    <string name="glow_workout_heart_lowest">Más baja <xliff:g id="min" example="98">%1$d</xliff:g> lpm</string>
     
     <string name="glow_workout_heart_none">El sensor todavía no ha enviado la frecuencia cardiaca de este entrenamiento.</string>
     
     <string name="glow_workout_heart_drop_after">Descartar después de<xliff:g id="time" example="18:44">%1$s</xliff:g></string>
     
-    <string name="glow_workout_heart_dimmed">Atenuado:<xliff:g id="times" example="18:02 to 18:10">%1$s</xliff:g> came from the strap\'s history.</string>
+    <string name="glow_workout_heart_dimmed">Atenuado: <xliff:g id="times" example="18:02 to 18:10">%1$s</xliff:g> came from the strap\'s history.</string>
 
     
     <string name="glow_workout_in_your_day">En tu día</string>

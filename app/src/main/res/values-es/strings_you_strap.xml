@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<resources>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     
     <string name="you_strap_state_charging">Cargando. Los datos del sensor se pausarán hasta que te lo vuelvas a poner.</string>
     <string name="you_strap_state_syncing">Conectado. Sincronizando…</string>
@@ -13,7 +13,7 @@
     <string name="you_strap_state_cant_connect">No se puede conectar</string>
     <string name="you_strap_state_not_paired">No vinculado</string>
     
-    <string name="you_strap_state_last_seen">Última vez visto<xliff:g id="ago" example="18 min ago">%1$s</xliff:g></string>
+    <string name="you_strap_state_last_seen">Última vez visto: <xliff:g id="ago" example="18 min ago">%1$s</xliff:g></string>
     <string name="you_strap_state_not_connected">No conectado</string>
 
     
@@ -65,13 +65,13 @@
     <string name="you_strap_row_background">Mantente conectado en segundo plano</string>
     <string name="you_strap_battery_settings_failed">No se pudo abrir la configuración de batería en este teléfono.</string>
     
-    <string name="you_strap_battery_unit"><xliff:g id="percent_sign" example="%">%1$s</xliff:g> battery</string>
+    <string name="you_strap_battery_unit"><xliff:g id="percent_sign" example="%">%1$s</xliff:g> batería</string>
     
     <string name="you_strap_retrying">unstrap sigue intentándolo. Mantén la correa en su cargador cerca del teléfono y asegúrate de que la aplicación Zepp no esté abierta. La correa solo se comunica con una aplicación a la vez.</string>
     
     <string name="you_strap_sync_stopped">Sincronización detenida.<xliff:g id="reason" example="The strap stopped answering.">%1$s</xliff:g></string>
     
-    <string name="you_strap_sync_retry"><xliff:g id="data_on_strap" example="Your data is still on the strap.">%1$s</xliff:g> unstrap tries again by itself.</string>
+    <string name="you_strap_sync_retry"><xliff:g id="data_on_strap" example="Your data is still on the strap.">%1$s</xliff:g> unstrap lo intentará de nuevo.</string>
 
     
     <string name="you_pair_title">Vincula tu Helio Strap</string>
@@ -98,7 +98,7 @@
     <string name="you_pair_scan_stop">Detener escaneo</string>
     <string name="you_pair_scan">Buscar correas</string>
     
-    <string name="you_pair_scan_failed">Escaneo detenido:<xliff:g id="reason" example="Bluetooth is off">%1$s</xliff:g>. Check that Bluetooth is on and try again.</string>
+    <string name="you_pair_scan_failed">Escaneo detenido: <xliff:g id="reason" example="Bluetooth is off">%1$s</xliff:g>. Comprueba que tienes el Bluetooth encendido y prueba de nuevo.</string>
     
     <string name="you_pair_scan_location_off">Android 11 solo encuentra correas si la ubicación está activada.</string>
     <string name="you_pair_scan_location_on">Activar ubicación</string>

@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<resources>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     
     <string name="system_connect_permission">unstrap no tiene permiso para usar Bluetooth. Permite el acceso a dispositivos cercanos en la configuración de la app y toca Conectar.</string>
     <string name="system_connect_bad_address">La dirección guardada de la banda no es válida. Olvida la banda y vuelve a vincularla.</string>
@@ -58,7 +58,7 @@
     
     <string name="system_sync_preparing">Preparando…</string>
     
-    <string name="system_sync_step">Sincronizando<xliff:g id="kind" example="heart rate">%1$s</xliff:g> (<xliff:g id="index" example="3">%2$d</xliff:g>/<xliff:g id="count" example="12">%3$d</xliff:g>)</string>
+    <string name="system_sync_step">Sincronizando <xliff:g id="kind" example="heart rate">%1$s</xliff:g> (<xliff:g id="index" example="3">%2$d</xliff:g>/<xliff:g id="count" example="12">%3$d</xliff:g>)</string>
     
     <string name="system_sync_kind_activity">actividad</string>
     <string name="system_sync_kind_sleep">sueño</string>

@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<resources>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     
     <string name="glow_sleep_breathing_title">Alteraciones respiratorias</string>
     
@@ -46,15 +46,15 @@
     
     <string name="glow_sleep_heart_rate">Frecuencia cardíaca</string>
     
-    <string name="glow_sleep_heart_note">Más baja<xliff:g id="lowest" example="48">%1$d</xliff:g>, average <xliff:g id="average" example="55">%2$d</xliff:g> bpm</string>
+    <string name="glow_sleep_heart_note">Más baja <xliff:g id="lowest" example="48">%1$d</xliff:g>, de media <xliff:g id="average" example="55">%2$d</xliff:g> lpm</string>
     
-    <string name="glow_sleep_breathing_note">Promedio<xliff:g id="rate" example="14.2">%1$s</xliff:g> br/min</string>
+    <string name="glow_sleep_breathing_note">Promedio <xliff:g id="rate" example="14.2">%1$s</xliff:g> res/min</string>
     
     <string name="glow_sleep_breathing_rate">Frecuencia respiratoria</string>
     
     <string name="glow_sleep_unit_breaths">respr/min</string>
     
-    <string name="glow_sleep_scrub_at"><xliff:g id="unit" example="bpm">%1$s</xliff:g> at <xliff:g id="time" example="03:10">%2$s</xliff:g></string>
+    <string name="glow_sleep_scrub_at"><xliff:g id="unit" example="bpm">%1$s</xliff:g> a las<xliff:g id="time" example="03:10">%2$s</xliff:g></string>
     
     <string name="glow_sleep_no_sleep">Sin sueño</string>
     
@@ -70,5 +70,5 @@
     
     <string name="glow_sleep_use_strap_times">Usar los horarios de la banda</string>
     
-    <string name="glow_sleep_naps_none">Ninguno ese día</string>
+    <string name="glow_sleep_naps_none">Ninguno este día</string>
 </resources>

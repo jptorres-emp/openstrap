@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<resources>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     
     <string name="core_unit_meters"><xliff:g id="meters" example="820">%1$s</xliff:g> m</string>
     
@@ -17,13 +17,13 @@
     
     <string name="core_unit_kcal"><xliff:g id="kcal" example="312">%1$s</xliff:g> kcal</string>
     
-    <string name="core_unit_bpm">bpm</string>
+    <string name="core_unit_bpm">lpm</string>
     
     <string name="core_unit_ms">ms</string>
     
     <string name="core_unit_celsius">°C</string>
     
-    <string name="core_unit_breaths">rpm</string>
+    <string name="core_unit_breaths">res/min</string>
     
     <string name="core_unit_steps">pasos</string>
     

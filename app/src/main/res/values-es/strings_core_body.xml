@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<resources>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <string name="core_body_title">Algunas señales corporales están fuera de tu rango normal</string>
     
     <string name="core_body_short">Algunas señales están fuera de tu rango normal</string>
@@ -17,7 +17,7 @@
     
     <string name="core_body_push_one_again">Tus valores nocturnos de<xliff:g id="signal" example="skin temperature">%1$s</xliff:g> has been outside your normal range for two nights or more.</string>
     
-    <string name="core_body_push_one_once">Tus valores nocturnos de<xliff:g id="signal" example="skin temperature">%1$s</xliff:g> was outside your normal range last night.</string>
+    <string name="core_body_push_one_once">Tus valores nocturnos de <xliff:g id="signal" example="skin temperature">%1$s</xliff:g> was outside your normal range last night.</string>
 
     
     <string name="core_body_family_cardiac">frecuencia cardíaca en reposo</string>
@@ -27,7 +27,7 @@
     <string name="core_body_family_respiratory">frecuencia respiratoria</string>
 
     
-    <string name="core_body_signal_rhr">frecuencia cardíaca en reposo alta<xliff:g id="bpm" example="6">%1$d</xliff:g> bpm</string>
+    <string name="core_body_signal_rhr">frecuencia cardíaca en reposo alta<xliff:g id="bpm" example="6">%1$d</xliff:g> lpm</string>
     
     <string name="core_body_signal_temperature">temperatura de la piel superior a tu normal</string>
     

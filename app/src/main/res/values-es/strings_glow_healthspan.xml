@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<resources>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     
     <string name="glow_healthspan_pace_learning">Aprendiendo</string>
     
@@ -19,7 +19,7 @@
     
     <string name="glow_healthspan_effect_off_half">quita aproximadamente ½ año</string>
     
-    <string name="glow_healthspan_effect_adds_half">añade aproximadamente ½ año</string>
+    <string name="glow_healthspan_effect_adds_half">añade aproximadamente medio año</string>
     
     <plurals name="glow_healthspan_effect_off_years">
         <item quantity="one">quita aproximadamente<xliff:g id="years" example="1">%d</xliff:g> year</item>
@@ -51,9 +51,9 @@
     
     <string name="glow_healthspan_regularity"><xliff:g id="score" example="78">%1$d</xliff:g>, typical: <xliff:g id="typical" example="72">%2$s</xliff:g></string>
     
-    <string name="glow_healthspan_resting_hr"><xliff:g id="bpm" example="54">%1$d</xliff:g> bpm asleep, typical: about <xliff:g id="typical" example="60">%2$s</xliff:g></string>
+    <string name="glow_healthspan_resting_hr"><xliff:g id="bpm" example="54">%1$d</xliff:g> lpm dormido, normalmente: sobre <xliff:g id="typical" example="60">%2$s</xliff:g></string>
     
-    <string name="glow_healthspan_time_asleep"><xliff:g id="duration" example="5 h 40">%1$s</xliff:g> a night, only counts below <xliff:g id="limit" example="7 h">%2$s</xliff:g></string>
+    <string name="glow_healthspan_time_asleep"><xliff:g id="duration" example="5 h 40">%1$s</xliff:g> por noche, solo se cuenta a partir de aquí abajo <xliff:g id="limit" example="7 h">%2$s</xliff:g></string>
     
     <string name="glow_healthspan_profile_birth_year">Añade tu año de nacimiento a tu perfil para ver tu Edad de hábitos.</string>
     

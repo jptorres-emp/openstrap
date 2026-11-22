@@ -12,7 +12,7 @@
     
     <string name="core_band_sleep_poor">Bajo</string>
     
-    <string name="core_band_sleep_fair">Regular</string>
+    <string name="core_band_sleep_fair">Normal</string>
     
     <string name="core_band_sleep_good">Bueno</string>
     
@@ -25,5 +25,5 @@
     
     <string name="core_band_load_below">Por debajo de lo habitual</string>
     
-    <string name="core_band_load_so_far">Hasta ahora hoy</string>
+    <string name="core_band_load_so_far">Hoy </string>
 </resources>

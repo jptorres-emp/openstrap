@@ -1,25 +1,25 @@
 <?xml version='1.0' encoding='utf-8'?>
-<resources>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     
-    <string name="core_data_recovery_hrv"><xliff:g id="ms" example="52">%1$s</xliff:g> ms, <xliff:g id="change" example="+4">%2$s</xliff:g>%% vs usual</string>
+    <string name="core_data_recovery_hrv"><xliff:g id="ms" example="52">%1$s</xliff:g> ms, <xliff:g id="change" example="+4">%2$s</xliff:g>%% vs habitual</string>
     
-    <string name="core_data_recovery_resting_hr"><xliff:g id="bpm" example="54">%1$s</xliff:g> bpm, <xliff:g id="change" example="−3">%2$s</xliff:g> vs usual</string>
+    <string name="core_data_recovery_resting_hr"><xliff:g id="bpm" example="54">%1$s</xliff:g> lpm, <xliff:g id="change" example="−3">%2$s</xliff:g> vs habitual</string>
     
-    <string name="core_data_recovery_asleep"><xliff:g id="duration" example="7 h 40">%1$s</xliff:g> asleep</string>
+    <string name="core_data_recovery_asleep"><xliff:g id="duration" example="7 h 40">%1$s</xliff:g> dormido</string>
     
     <string name="core_data_recovery_no_debt">Sin deuda de sueño</string>
     
-    <string name="core_data_recovery_debt"><xliff:g id="duration" example="1 h 10">%1$s</xliff:g> of sleep debt</string>
+    <string name="core_data_recovery_debt"><xliff:g id="duration" example="1 h 10">%1$s</xliff:g> de deuda de sueño</string>
     
-    <string name="core_data_recovery_lowest_hr">Frecuencia cardíaca más baja<xliff:g id="duration" example="40 min">%1$s</xliff:g> before waking</string>
+    <string name="core_data_recovery_lowest_hr">Frecuencia cardíaca más baja <xliff:g id="duration" example="40 min">%1$s</xliff:g> antes de despertarse</string>
     
-    <string name="core_data_recovery_temperature"><xliff:g id="change" example="+0.3">%1$s</xliff:g> °C vs usual</string>
+    <string name="core_data_recovery_temperature"><xliff:g id="change" example="+0.3">%1$s</xliff:g> °C vs habitual</string>
     
-    <string name="core_data_recovery_breathing"><xliff:g id="change" example="−0.4">%1$s</xliff:g>/min vs usual</string>
+    <string name="core_data_recovery_breathing"><xliff:g id="change" example="−0.4">%1$s</xliff:g>/min vs habitual</string>
     
-    <string name="core_data_recovery_blood_oxygen"><xliff:g id="percent" example="96.3">%1$s</xliff:g>%%, <xliff:g id="change" example="−1.2">%2$s</xliff:g> vs usual</string>
+    <string name="core_data_recovery_blood_oxygen"><xliff:g id="percent" example="96.3">%1$s</xliff:g>%%, <xliff:g id="change" example="−1.2">%2$s</xliff:g> vs habitual</string>
     
-    <string name="core_data_recovery_load">Carga<xliff:g id="yesterday" example="62">%1$s</xliff:g>, usual <xliff:g id="usual" example="45">%2$s</xliff:g></string>
+    <string name="core_data_recovery_load">Carga <xliff:g id="yesterday" example="62">%1$s</xliff:g>, normalmente: <xliff:g id="usual" example="45">%2$s</xliff:g></string>
 
     
     <string name="core_data_edit_wake_before_sleep">Despertarse debe ocurrir después de dormirse.</string>
@@ -36,9 +36,9 @@
     
     <string name="core_data_edit_too_far">Mantenlo dentro de las 3 horas de lo que registró la correa.</string>
     
-    <string name="core_data_edit_runs_into_nap">Eso se cruza con tu siesta a las<xliff:g id="time" example="13:00">%1$s</xliff:g>.</string>
+    <string name="core_data_edit_runs_into_nap">Eso se cruza con tu siesta a las <xliff:g id="time" example="13:00">%1$s</xliff:g>.</string>
     
-    <string name="core_data_edit_runs_into_sleep">Eso se cruza con tu sueño a las<xliff:g id="time" example="23:10">%1$s</xliff:g>.</string>
+    <string name="core_data_edit_runs_into_sleep">Eso te quita horas de sueño a las <xliff:g id="time" example="23:10">%1$s</xliff:g>.</string>
 
     
     <string name="core_data_vo2_needs_age">Necesita una edad entre 20 y 79 años.</string>
@@ -58,12 +58,12 @@
     <string name="core_data_vo2_band_50_70">Percentil 50 a 70</string>
     <string name="core_data_vo2_band_70_90">Percentil 70 a 90</string>
     
-    <string name="core_data_vo2_band_top_10">Superior<xliff:g id="percent" example="10">%1$d</xliff:g>%%</string>
+    <string name="core_data_vo2_band_top_10">Superior <xliff:g id="percent" example="10">%1$d</xliff:g>%%</string>
     
-    <string name="core_data_vo2_estimate_rest">a<xliff:g id="high" example="45">%1$s</xliff:g> ml/kg/min</string>
+    <string name="core_data_vo2_estimate_rest">a <xliff:g id="high" example="45">%1$s</xliff:g> ml/kg/min</string>
 
     
-    <string name="core_data_goal_summary"><xliff:g id="steps" example="8,000">%1$s</xliff:g> steps, <xliff:g id="kcal" example="300">%2$s</xliff:g> active kcal, <xliff:g id="sleep" example="8 h">%3$s</xliff:g> sleep, <xliff:g id="hours" example="10">%4$s</xliff:g> active hours</string>
+    <string name="core_data_goal_summary"><xliff:g id="steps" example="8,000">%1$s</xliff:g> pasos, <xliff:g id="kcal" example="300">%2$s</xliff:g> kcal de actividad, <xliff:g id="sleep" example="8 h">%3$s</xliff:g> sueño, <xliff:g id="hours" example="10">%4$s</xliff:g> horas activas</string>
     
-    <string name="core_data_goal_out_of_range">Elige un número del<xliff:g id="low" example="200">%1$s</xliff:g> to <xliff:g id="high" example="3,000">%2$s</xliff:g></string>
+    <string name="core_data_goal_out_of_range">Elige un número del <xliff:g id="low" example="200">%1$s</xliff:g> a <xliff:g id="high" example="3,000">%2$s</xliff:g></string>
 </resources>

@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<resources>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     
     <string name="glow_tag_personal_best">Mejor personal</string>
     
@@ -7,7 +7,7 @@
     
     <string name="glow_tag_double_goal">Doble objetivo</string>
     
-    <string name="glow_tag_past_goal">+<xliff:g id="amount" example="2,140">%1$s</xliff:g> past goal</string>
+    <string name="glow_tag_past_goal">+<xliff:g id="amount" example="2,140">%1$s</xliff:g> objetivo pasado</string>
     
     <plurals name="glow_tag_in_a_row">
         <item quantity="one"><xliff:g id="days" example="1">%d</xliff:g> day in a row</item>

@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools" xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     
     <string name="glow_goals_title">Metas y mejores marcas</string>
     
@@ -31,7 +31,7 @@
     
     <string name="glow_goals_celebrations">Celebraciones</string>
     
-    <string name="glow_goals_earned_count" ns1:ignore="PluralsCandidate"><xliff:g id="earned" example="5">%1$d</xliff:g> of <xliff:g id="total" example="24">%2$d</xliff:g> earned</string>
+    <string name="glow_goals_earned_count" tools:ignore="PluralsCandidate"><xliff:g id="earned" example="5">%1$d</xliff:g> of <xliff:g id="total" example="24">%2$d</xliff:g> earned</string>
     
     <string name="glow_goals_group_firsts">Primeras veces</string>
     

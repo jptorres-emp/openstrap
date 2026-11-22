@@ -1,15 +1,15 @@
 <?xml version='1.0' encoding='utf-8'?>
-<resources>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     
-    <string name="day_sleep_night_label_day"><xliff:g id="unit" example="ms">%1$s</xliff:g>, average asleep</string>
+    <string name="day_sleep_night_label_day"><xliff:g id="unit" example="ms">%1$s</xliff:g>, de media dormido</string>
     
-    <string name="day_sleep_night_label_week"><xliff:g id="unit" example="ms">%1$s</xliff:g>, average of the last 7 nights</string>
+    <string name="day_sleep_night_label_week"><xliff:g id="unit" example="ms">%1$s</xliff:g>, media de las últimas 7 noches</string>
     
-    <string name="day_sleep_night_label_month_nights"><xliff:g id="unit" example="%">%1$s</xliff:g>, last 30 nights</string>
+    <string name="day_sleep_night_label_month_nights"><xliff:g id="unit" example="%">%1$s</xliff:g>, ultimos 30 dias</string>
     
-    <string name="day_sleep_night_label_month_days"><xliff:g id="unit" example="ms">%1$s</xliff:g>, last 30 days, day and night</string>
+    <string name="day_sleep_night_label_month_days"><xliff:g id="unit" example="ms">%1$s</xliff:g>, ultimos 30 dias, dia y noche</string>
     
-    <string name="day_sleep_night_label_year_nights"><xliff:g id="unit" example="%">%1$s</xliff:g>, nights of the last 12 months</string>
+    <string name="day_sleep_night_label_year_nights"><xliff:g id="unit" example="%">%1$s</xliff:g>, noches de los ultimos 12 meses</string>
     
     <string name="day_sleep_night_label_year_days"><xliff:g id="unit" example="ms">%1$s</xliff:g>, last 12 months, day and night</string>
 
@@ -27,17 +27,17 @@
     <string name="day_sleep_not_measured_that_night">No medido esa noche</string>
 
     
-    <string name="day_sleep_heart_lowest_last_night">Más bajo<xliff:g id="lowest" example="48">%1$d</xliff:g> bpm at <xliff:g id="time" example="03:10">%2$s</xliff:g> last night, <xliff:g id="average" example="55">%3$d</xliff:g> on average while asleep.</string>
+    <string name="day_sleep_heart_lowest_last_night">LPM más bajo <xliff:g id="lowest" example="48">%1$d</xliff:g> a las <xliff:g id="time" example="03:10">%2$s</xliff:g> anoche, <xliff:g id="average" example="55">%3$d</xliff:g> de media mientras dormias.</string>
     
-    <string name="day_sleep_heart_lowest_that_night">Más bajo<xliff:g id="lowest" example="48">%1$d</xliff:g> bpm at <xliff:g id="time" example="03:10">%2$s</xliff:g> that night, <xliff:g id="average" example="55">%3$d</xliff:g> on average while asleep.</string>
+    <string name="day_sleep_heart_lowest_that_night">LPM más bajo <xliff:g id="lowest" example="48">%1$d</xliff:g> a las <xliff:g id="time" example="03:10">%2$s</xliff:g> esa noche, <xliff:g id="average" example="55">%3$d</xliff:g> de media mientras dormias.</string>
     
-    <string name="day_sleep_heart_average_last_night"><xliff:g id="average" example="55">%1$d</xliff:g> bpm on average while asleep last night.</string>
+    <string name="day_sleep_heart_average_last_night"><xliff:g id="average" example="55">%1$d</xliff:g> lpm de media mientras dormías anoche.</string>
     
-    <string name="day_sleep_heart_average_that_night"><xliff:g id="average" example="55">%1$d</xliff:g> bpm on average while asleep that night.</string>
+    <string name="day_sleep_heart_average_that_night"><xliff:g id="average" example="55">%1$d</xliff:g> lpm de media mientras dormias esa noche.</string>
     
     <string name="day_sleep_heart_week_one">Solo una de las últimas 7 noches tiene una frecuencia cardíaca hasta ahora.</string>
     
-    <string name="day_sleep_heart_week">Promedio<xliff:g id="average" example="55">%1$d</xliff:g> bpm asleep over the last 7 nights, from <xliff:g id="low" example="51">%2$d</xliff:g> to <xliff:g id="high" example="60">%3$d</xliff:g>.</string>
+    <string name="day_sleep_heart_week">Promedio <xliff:g id="average" example="55">%1$d</xliff:g> lpm dormido las últimas 7 noches, desde <xliff:g id="low" example="51">%2$d</xliff:g> a <xliff:g id="high" example="60">%3$d</xliff:g>.</string>
 
     
     <string name="day_sleep_score_label_last_night">anoche</string>
@@ -57,9 +57,9 @@
     
     <string name="day_sleep_factor_staying_asleep">Permanecer dormido</string>
     
-    <string name="day_sleep_factor_asleep_detail"><xliff:g id="asleep" example="7 h 40">%1$s</xliff:g> of <xliff:g id="need" example="8 h">%2$s</xliff:g></string>
+    <string name="day_sleep_factor_asleep_detail"><xliff:g id="asleep" example="7 h 40">%1$s</xliff:g> de <xliff:g id="need" example="8 h">%2$s</xliff:g></string>
     
-    <string name="day_sleep_factor_awake_detail"><xliff:g id="awake" example="45 min">%1$s</xliff:g> awake after falling asleep</string>
+    <string name="day_sleep_factor_awake_detail"><xliff:g id="awake" example="45 min">%1$s</xliff:g> despierto después de haberse quedado dormido</string>
     
     <string name="day_sleep_factor_helping">Ayudando</string>
     
@@ -86,23 +86,23 @@
     <string name="day_sleep_regularity_fair">Regular esta semana. Tus horarios de sueño cambiaron algunos días.</string>
     <string name="day_sleep_regularity_irregular">Irregular esta semana. Tus horarios de sueño variaron mucho de un día para otro.</string>
     
-    <string name="day_sleep_regularity_midpoint">El centro de tu sueño se movió aproximadamente<xliff:g id="time" example="40 min">%1$s</xliff:g> this week. The full measure needs more wear.</string>
+    <string name="day_sleep_regularity_midpoint">El centro de tu sueño se movió aproximadamente <xliff:g id="time" example="40 min">%1$s</xliff:g> this week. The full measure needs more wear.</string>
     
     <string name="day_sleep_regularity_needs">La regularidad requiere usar el dispositivo unas 5 días las 24 horas.</string>
 
     
-    <string name="day_sleep_bedtime_last_night">Anoche te dormiste a las<xliff:g id="bed" example="23:40">%1$s</xliff:g> and woke at <xliff:g id="wake" example="07:05">%2$s</xliff:g>.</string>
+    <string name="day_sleep_bedtime_last_night">Anoche te dormiste a las <xliff:g id="bed" example="23:40">%1$s</xliff:g> y despertaste a las <xliff:g id="wake" example="07:05">%2$s</xliff:g>.</string>
     
-    <string name="day_sleep_bedtime_last_night_usual">Anoche te dormiste a las<xliff:g id="bed" example="23:40">%1$s</xliff:g>, close to your usual, and woke at <xliff:g id="wake" example="07:05">%2$s</xliff:g>.</string>
+    <string name="day_sleep_bedtime_last_night_usual">Anoche te dormiste a las <xliff:g id="bed" example="23:40">%1$s</xliff:g>, cerca de lo normal, y te despertaste a las <xliff:g id="wake" example="07:05">%2$s</xliff:g>.</string>
     
-    <string name="day_sleep_bedtime_last_night_later">Anoche te dormiste a las<xliff:g id="bed" example="23:40">%1$s</xliff:g>, <xliff:g id="by" example="30 min">%3$s</xliff:g> later than usual, and woke at <xliff:g id="wake" example="07:05">%2$s</xliff:g>.</string>
+    <string name="day_sleep_bedtime_last_night_later">Anoche te dormiste a las <xliff:g id="bed" example="23:40">%1$s</xliff:g>, <xliff:g id="by" example="30 min">%3$s</xliff:g> later than usual, and woke at <xliff:g id="wake" example="07:05">%2$s</xliff:g>.</string>
     
-    <string name="day_sleep_bedtime_last_night_earlier">Anoche te dormiste a las<xliff:g id="bed" example="23:40">%1$s</xliff:g>, <xliff:g id="by" example="30 min">%3$s</xliff:g> earlier than usual, and woke at <xliff:g id="wake" example="07:05">%2$s</xliff:g>.</string>
+    <string name="day_sleep_bedtime_last_night_earlier">Anoche te dormiste a las <xliff:g id="bed" example="23:40">%1$s</xliff:g>, <xliff:g id="by" example="30 min">%3$s</xliff:g> earlier than usual, and woke at <xliff:g id="wake" example="07:05">%2$s</xliff:g>.</string>
     
-    <string name="day_sleep_bedtime_that_night">Esa noche te dormiste a las<xliff:g id="bed" example="23:40">%1$s</xliff:g> and woke at <xliff:g id="wake" example="07:05">%2$s</xliff:g>.</string>
-    <string name="day_sleep_bedtime_that_night_usual">Esa noche te dormiste a las<xliff:g id="bed" example="23:40">%1$s</xliff:g>, close to your usual, and woke at <xliff:g id="wake" example="07:05">%2$s</xliff:g>.</string>
-    <string name="day_sleep_bedtime_that_night_later">Esa noche te dormiste a las<xliff:g id="bed" example="23:40">%1$s</xliff:g>, <xliff:g id="by" example="30 min">%3$s</xliff:g> later than usual, and woke at <xliff:g id="wake" example="07:05">%2$s</xliff:g>.</string>
-    <string name="day_sleep_bedtime_that_night_earlier">Esa noche te dormiste a las<xliff:g id="bed" example="23:40">%1$s</xliff:g>, <xliff:g id="by" example="30 min">%3$s</xliff:g> earlier than usual, and woke at <xliff:g id="wake" example="07:05">%2$s</xliff:g>.</string>
+    <string name="day_sleep_bedtime_that_night">Esa noche te dormiste a las <xliff:g id="bed" example="23:40">%1$s</xliff:g> and woke at <xliff:g id="wake" example="07:05">%2$s</xliff:g>.</string>
+    <string name="day_sleep_bedtime_that_night_usual">Esa noche te dormiste a las <xliff:g id="bed" example="23:40">%1$s</xliff:g>, close to your usual, and woke at <xliff:g id="wake" example="07:05">%2$s</xliff:g>.</string>
+    <string name="day_sleep_bedtime_that_night_later">Esa noche te dormiste a las <xliff:g id="bed" example="23:40">%1$s</xliff:g>, <xliff:g id="by" example="30 min">%3$s</xliff:g> later than usual, and woke at <xliff:g id="wake" example="07:05">%2$s</xliff:g>.</string>
+    <string name="day_sleep_bedtime_that_night_earlier">Esa noche te dormiste a las <xliff:g id="bed" example="23:40">%1$s</xliff:g>, <xliff:g id="by" example="30 min">%3$s</xliff:g> earlier than usual, and woke at <xliff:g id="wake" example="07:05">%2$s</xliff:g>.</string>
     
     <string name="day_sleep_no_night_last_night">No se registró sueño la noche pasada.</string>
     
@@ -119,11 +119,11 @@
     
     <string name="day_sleep_no_naps_that_day">No se registró ninguna ese día</string>
     
-    <string name="day_sleep_naps_one">Una siesta,<xliff:g id="length" example="45 min">%1$s</xliff:g>.</string>
+    <string name="day_sleep_naps_one">Una siesta, <xliff:g id="length" example="45 min">%1$s</xliff:g>.</string>
     
-    <string name="day_sleep_naps_many"><xliff:g id="naps" example="Two naps">%1$s</xliff:g>, <xliff:g id="length" example="1 h 10">%2$s</xliff:g> in all.</string>
+    <string name="day_sleep_naps_many"><xliff:g id="naps" example="Two naps">%1$s</xliff:g>, <xliff:g id="length" example="1 h 10">%2$s</xliff:g> en total.</string>
     
-    <string name="day_sleep_nap_heart">Más baja<xliff:g id="lowest" example="58">%1$d</xliff:g> bpm, <xliff:g id="average" example="64">%2$d</xliff:g> on average.</string>
+    <string name="day_sleep_nap_heart">Más baja <xliff:g id="lowest" example="58">%1$d</xliff:g> lpm, <xliff:g id="average" example="64">%2$d</xliff:g> de media.</string>
     
     <string name="day_sleep_nap_no_stages">La correa no registró las fases de esta siesta.</string>
 
@@ -132,17 +132,17 @@
     
     <string name="day_sleep_times_title_night">Horarios de sueño</string>
     
-    <string name="day_sleep_strap_saw">La correa detectó<xliff:g id="times" example="23:20 to 07:21">%1$s</xliff:g>.</string>
+    <string name="day_sleep_strap_saw">La correa detectó <xliff:g id="times" example="23:20 to 07:21">%1$s</xliff:g>.</string>
     
     <string name="day_sleep_times_hint">Tu frecuencia cardíaca baja al dormir y sube al despertar.</string>
     
-    <string name="day_sleep_trim_line_night"><xliff:g id="times" example="23:05 to 08:16">%1$s</xliff:g>, <xliff:g id="length" example="9 h 11">%2$s</xliff:g> in bed</string>
+    <string name="day_sleep_trim_line_night"><xliff:g id="times" example="23:05 to 08:16">%1$s</xliff:g>, <xliff:g id="length" example="9 h 11">%2$s</xliff:g> en la cama</string>
     
     <string name="day_sleep_trim_line_nap"><xliff:g id="times" example="07:17 to 10:57">%1$s</xliff:g>, <xliff:g id="length" example="3 h 40">%2$s</xliff:g></string>
     
-    <string name="day_sleep_stages_cover">Las fases cubren<xliff:g id="length" example="15 min">%1$s</xliff:g> the strap saw.</string>
+    <string name="day_sleep_stages_cover">Las fases cubren <xliff:g id="length" example="15 min">%1$s</xliff:g> que la pulsera detecta.</string>
     
-    <string name="day_sleep_your_times">Tus horarios.<xliff:g id="strap_saw" example="The strap saw 23:20 to 07:21.">%1$s</xliff:g></string>
+    <string name="day_sleep_your_times">Tus horarios. <xliff:g id="strap_saw" example="The strap saw 23:20 to 07:21.">%1$s</xliff:g></string>
     
     <string name="day_sleep_score_from_your_times">La puntuación de la correa, ajustada según tus horarios.</string>
 
@@ -155,9 +155,9 @@
     
     <string name="day_sleep_delete_what">No se sumará a tus totales, puntuaciones ni a Health Connect. La frecuencia cardíaca y las demás lecturas se mantendrán.</string>
     
-    <string name="day_sleep_delete_restore">Durante 7 días podrás recuperarlo desde Sueño eliminado, en Tú, Tus datos.</string>
+    <string name="day_sleep_delete_restore">Durante 7 días puedes recuperarlo del modo «Eliminado», en «Tú >> Tus datos».</string>
     
-    <string name="day_sleep_deleted_nap">Siesta a las<xliff:g id="start" example="10:40">%1$s</xliff:g> deleted</string>
+    <string name="day_sleep_deleted_nap">Siesta a las <xliff:g id="start" example="10:40">%1$s</xliff:g> eliminada</string>
     
     <string name="day_sleep_deleted_last_night">Sueño de la noche pasada eliminado</string>
     
@@ -165,9 +165,9 @@
     
     <string name="day_sleep_no_sleep_title">No se registró sueño</string>
     
-    <string name="day_sleep_deleted_night_last_night">Eliminaste<xliff:g id="times" example="23:20 to 07:21">%1$s</xliff:g>. This morning\'s Recovery leaves it out, as if the strap was off.</string>
+    <string name="day_sleep_deleted_night_last_night">Eliminaste <xliff:g id="times" example="23:20 to 07:21">%1$s</xliff:g>. This morning\'s Recovery leaves it out, as if the strap was off.</string>
     
-    <string name="day_sleep_deleted_night_that_night">Eliminaste<xliff:g id="times" example="23:20 to 07:21">%1$s</xliff:g>. That morning\'s Recovery leaves it out, as if the strap was off.</string>
+    <string name="day_sleep_deleted_night_that_night">Eliminaste <xliff:g id="times" example="23:20 to 07:21">%1$s</xliff:g>. That morning\'s Recovery leaves it out, as if the strap was off.</string>
     
     <string name="day_sleep_deleted_label_last_night">Noche pasada</string>
     
@@ -180,16 +180,16 @@
     
     <string name="day_sleep_deleted_none">No hay elementos eliminados en los últimos 7 días.</string>
     
-    <string name="day_sleep_deleted_name_nap">Siesta,<xliff:g id="day" example="Thu 30 Oct">%1$s</xliff:g></string>
+    <string name="day_sleep_deleted_name_nap">Siesta, <xliff:g id="day" example="Thu 30 Oct">%1$s</xliff:g></string>
     
-    <string name="day_sleep_deleted_name_night">Noche del<xliff:g id="day" example="Wed 29 Oct">%1$s</xliff:g></string>
+    <string name="day_sleep_deleted_name_night">Noche del <xliff:g id="day" example="Wed 29 Oct">%1$s</xliff:g></string>
     
     <plurals name="day_sleep_deleted_line">
         <item quantity="one"><xliff:g id="times" example="10:40 to 11:05">%2$s</xliff:g>\n<xliff:g id="days" example="1">%1$d</xliff:g> day left</item>
         <item quantity="other"><xliff:g id="times" example="23:20 to 07:21">%2$s</xliff:g>\n<xliff:g id="days" example="6">%1$d</xliff:g> days left</item>
     </plurals>
     
-    <string name="day_sleep_still_nap">La frecuencia cardíaca se mantuvo en<xliff:g id="bpm" example="72">%1$d</xliff:g> bpm, as when you sit still. It might not be a nap.</string>
+    <string name="day_sleep_still_nap">La frecuencia cardíaca se mantuvo en <xliff:g id="bpm" example="72">%1$d</xliff:g> lpm, como cuando estás quieto. Puede que no sea una siesta.</string>
     
     <plurals name="day_sleep_deleted_count">
         <item quantity="one"><xliff:g id="count" example="1">%1$d</xliff:g> to restore</item>
@@ -208,7 +208,7 @@
     
     <string name="day_sleep_vital_lowest_heart">Frecuencia cardíaca más baja</string>
     
-    <string name="day_sleep_vital_lowest_at">A las<xliff:g id="time" example="03:10">%1$s</xliff:g></string>
+    <string name="day_sleep_vital_lowest_at">A las <xliff:g id="time" example="03:10">%1$s</xliff:g></string>
     
     <string name="day_sleep_vital_average_heart">Frecuencia cardíaca promedio</string>
     

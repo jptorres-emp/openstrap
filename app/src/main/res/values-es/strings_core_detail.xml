@@ -1,12 +1,12 @@
 <?xml version='1.0' encoding='utf-8'?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools" xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     
     <string name="core_detail_status_above">Por encima de tu valor normal</string>
     <string name="core_detail_status_below">Por debajo de tu valor normal</string>
     <string name="core_detail_status_usual">Habitual</string>
 
     
-    <string name="core_detail_band_label">Tu valor normal,<xliff:g id="low" example="44">%1$s</xliff:g> to <xliff:g id="high" example="58">%2$s</xliff:g></string>
+    <string name="core_detail_band_label">Tu valor normal, <xliff:g id="low" example="44">%1$s</xliff:g> a <xliff:g id="high" example="58">%2$s</xliff:g></string>
     
     <plurals name="core_detail_learning_nights">
         <item quantity="one">Aprendiendo tu valor normal,<xliff:g id="have" example="4">%1$d</xliff:g> of <xliff:g id="need" example="7">%2$d</xliff:g> night</item>
@@ -60,7 +60,7 @@
     
     <string name="core_detail_label_day_average">Promedio del día</string>
     
-    <string name="core_detail_label_unit_day_average"><xliff:g id="unit" example="ms">%1$s</xliff:g>, day average</string>
+    <string name="core_detail_label_unit_day_average"><xliff:g id="unit" example="ms">%1$s</xliff:g>, media diaria</string>
     
     <string name="core_detail_label_steps_week">pasos al día, últimos 7 días</string>
     <string name="core_detail_label_steps_month">pasos al día, últimos 30 días</string>
@@ -70,9 +70,9 @@
     <string name="core_detail_label_average_month">Promedio de los últimos 30 días</string>
     <string name="core_detail_label_average_year">Promedio de los últimos 12 meses</string>
     
-    <string name="core_detail_label_unit_average_week"><xliff:g id="unit" example="ms">%1$s</xliff:g>, average of the last 7 days</string>
-    <string name="core_detail_label_unit_average_month"><xliff:g id="unit" example="ms">%1$s</xliff:g>, average of the last 30 days</string>
-    <string name="core_detail_label_unit_average_year"><xliff:g id="unit" example="ms">%1$s</xliff:g>, average of the last 12 months</string>
+    <string name="core_detail_label_unit_average_week"><xliff:g id="unit" example="ms">%1$s</xliff:g>, de media los ultimos 7 dias</string>
+    <string name="core_detail_label_unit_average_month"><xliff:g id="unit" example="ms">%1$s</xliff:g>, de media los ultimos 30 dias</string>
+    <string name="core_detail_label_unit_average_year"><xliff:g id="unit" example="ms">%1$s</xliff:g>, de media los ultimos 12 meses</string>
 
     
     <string name="core_detail_day_night_today_above">Anoche, por encima de tu valor normal.</string>
@@ -105,8 +105,8 @@
     <string name="core_detail_none_year">En los últimos 12 meses</string>
 
     
-    <string name="core_detail_heart_day_today" ns1:ignore="PluralsCandidate">Entre<xliff:g id="low" example="52">%1$d</xliff:g> and <xliff:g id="high" example="148">%2$d</xliff:g> bpm so far today.</string>
-    <string name="core_detail_heart_day_past" ns1:ignore="PluralsCandidate">Entre<xliff:g id="low" example="52">%1$d</xliff:g> and <xliff:g id="high" example="148">%2$d</xliff:g> bpm that day.</string>
+    <string name="core_detail_heart_day_today" tools:ignore="PluralsCandidate">Entre<xliff:g id="low" example="52">%1$d</xliff:g> y <xliff:g id="high" example="148">%2$d</xliff:g> lpm hoy.</string>
+    <string name="core_detail_heart_day_past" tools:ignore="PluralsCandidate">Entre <xliff:g id="low" example="52">%1$d</xliff:g> y <xliff:g id="high" example="148">%2$d</xliff:g> lpm ese dia..</string>
 
     
     <string name="core_detail_run_above">Por encima de tu rango normal para<xliff:g id="count" example="three nights">%1$s</xliff:g>.</string>
@@ -140,19 +140,19 @@
     </plurals>
 
     
-    <string name="core_detail_year_unit">En los últimos 12 meses, los promedios semanales oscilaron entre<xliff:g id="lowest" example="48">%1$s</xliff:g> to <xliff:g id="highest" example="61">%2$s</xliff:g> <xliff:g id="unit" example="ms">%3$s</xliff:g>.</string>
+    <string name="core_detail_year_unit">En los últimos 12 meses, los promedios semanales oscilaron entre <xliff:g id="lowest" example="48">%1$s</xliff:g> a <xliff:g id="highest" example="61">%2$s</xliff:g> <xliff:g id="unit" example="ms">%3$s</xliff:g>.</string>
     
-    <string name="core_detail_year">En los últimos 12 meses, los promedios semanales oscilaron entre<xliff:g id="lowest" example="20">%1$s</xliff:g> to <xliff:g id="highest" example="41">%2$s</xliff:g>.</string>
+    <string name="core_detail_year">En los últimos 12 meses, los promedios semanales oscilaron entre <xliff:g id="lowest" example="20">%1$s</xliff:g> a <xliff:g id="highest" example="41">%2$s</xliff:g>.</string>
 
     
     <string name="core_detail_score_week_one">Un puntaje en los últimos 7 días hasta ahora.</string>
     
-    <string name="core_detail_score_week" ns1:ignore="PluralsCandidate">Promedio<xliff:g id="average" example="74">%1$d</xliff:g> over the last 7 days, from <xliff:g id="lowest" example="61">%2$d</xliff:g> to <xliff:g id="highest" example="84">%3$d</xliff:g>.</string>
+    <string name="core_detail_score_week" tools:ignore="PluralsCandidate">Promedio <xliff:g id="average" example="74">%1$d</xliff:g> de los últimos 7 dias, desde <xliff:g id="lowest" example="61">%2$d</xliff:g> a <xliff:g id="highest" example="84">%3$d</xliff:g>.</string>
 
     
-    <string name="core_detail_charge_started" ns1:ignore="PluralsCandidate">Comenzó el día en<xliff:g id="start" example="84">%1$d</xliff:g> and ended it at <xliff:g id="end" example="30">%2$d</xliff:g>.</string>
+    <string name="core_detail_charge_started" tools:ignore="PluralsCandidate">Comenzó el día en <xliff:g id="start" example="84">%1$d</xliff:g> y terminó en <xliff:g id="end" example="30">%2$d</xliff:g>.</string>
     
-    <string name="core_detail_charge_ended">Terminó el día en<xliff:g id="end" example="30">%1$d</xliff:g>.</string>
+    <string name="core_detail_charge_ended">Terminó el día en <xliff:g id="end" example="30">%1$d</xliff:g>.</string>
 
     
     <string name="core_detail_recovery_waiting">Esperando</string>

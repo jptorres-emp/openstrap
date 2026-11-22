@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools" xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <string name="workout_live_figure_active_kcal">kcal activas</string>
     
     <string name="workout_live_figure_peak_bpm">BPM máx.</string>
@@ -37,7 +37,7 @@
     
     <string name="workout_live_moving_time">Tiempo en movimiento</string>
     
-    <string name="workout_live_unit_bpm">BPM</string>
+    <string name="workout_live_unit_bpm">LPM</string>
     
     <string name="workout_live_bpm"><xliff:g id="bpm" example="142">%1$d</xliff:g> bpm</string>
     
@@ -50,7 +50,7 @@
     
     <string name="workout_live_status_paused">Pausado</string>
     
-    <string name="workout_live_status_strap_battery">Banda<xliff:g id="percent" example="64">%1$d</xliff:g>%%</string>
+    <string name="workout_live_status_strap_battery">Banda <xliff:g id="percent" example="64">%1$d</xliff:g>%%</string>
     
     <string name="workout_live_status_strap">Banda</string>
     
@@ -117,7 +117,7 @@
     
     <string name="workout_live_rep_of">Repetición<xliff:g id="rep" example="3">%1$d</xliff:g> of <xliff:g id="reps" example="6">%2$d</xliff:g></string>
     
-    <string name="workout_live_done_of" ns1:ignore="PluralsCandidate"><xliff:g id="done" example="2">%1$d</xliff:g> of <xliff:g id="total" example="6">%2$d</xliff:g> done</string>
+    <string name="workout_live_done_of" tools:ignore="PluralsCandidate"><xliff:g id="done" example="2">%1$d</xliff:g> of <xliff:g id="total" example="6">%2$d</xliff:g> done</string>
     
     <string name="workout_live_warm_up">Calentamiento</string>
     
@@ -130,7 +130,7 @@
     
     <string name="workout_live_last_rep">Última repetición</string>
     
-    <string name="workout_live_rep_next" ns1:ignore="PluralsCandidate">Repetición<xliff:g id="rep" example="3">%1$d</xliff:g> next</string>
+    <string name="workout_live_rep_next" tools:ignore="PluralsCandidate">Repetición<xliff:g id="rep" example="3">%1$d</xliff:g> next</string>
     
     <plurals name="workout_live_reps_after">
         <item quantity="one">Luego<xliff:g id="reps" example="6">%1$d</xliff:g> rep</item>
@@ -167,7 +167,7 @@
     
     <string name="workout_live_unit_per_km">/km</string>
     
-    <string name="workout_live_avg">Prom.<xliff:g id="average" example="5:42">%1$s</xliff:g></string>
+    <string name="workout_live_avg">Prom. <xliff:g id="average" example="5:42">%1$s</xliff:g></string>
     
     <string name="workout_live_splits_description">Parciales por kilómetro:<xliff:g id="times" example="5:42, 5:38">%1$s</xliff:g></string>
     
@@ -187,11 +187,11 @@
     
     <string name="workout_live_heart_of_max"><xliff:g id="percent" example="78">%1$d</xliff:g>%% of max</string>
     
-    <string name="workout_live_heart_behind">bpm, la línea muestra los últimos 10 min</string>
+    <string name="workout_live_heart_behind">lpm, la línea muestra los últimos 10 min</string>
     
-    <string name="workout_live_target_zone">Zona objetivo<xliff:g id="zone" example="2">%1$d</xliff:g>. The strap buzzes if you drift</string>
+    <string name="workout_live_target_zone">Zona objetivo<xliff:g id="zone" example="2">%1$d</xliff:g>. La correa vibra si te desvías</string>
     
-    <string name="workout_live_target_zones">Zonas objetivo<xliff:g id="from" example="2">%1$d</xliff:g> to <xliff:g id="to" example="3">%2$d</xliff:g>. The strap buzzes if you drift</string>
+    <string name="workout_live_target_zones">Zonas objetivo <xliff:g id="from" example="2">%1$d</xliff:g> a <xliff:g id="to" example="3">%2$d</xliff:g>. La correa vibra si te desvías</string>
     
     <string name="workout_live_time_target"><xliff:g id="time" example="12:30">%1$s</xliff:g> of <xliff:g id="minutes" example="30">%2$d</xliff:g> min</string>
     
@@ -218,7 +218,7 @@
     
     <string name="workout_live_seconds_left">segundos restantes</string>
     
-    <string name="workout_live_round_next" ns1:ignore="PluralsCandidate">Ronda<xliff:g id="round" example="4">%1$d</xliff:g> next</string>
+    <string name="workout_live_round_next" tools:ignore="PluralsCandidate">Ronda<xliff:g id="round" example="4">%1$d</xliff:g> next</string>
     
     <string name="workout_live_heart_rate">Frecuencia cardíaca<xliff:g id="bpm" example="128">%1$d</xliff:g></string>
     
@@ -251,7 +251,7 @@
     
     <string name="workout_live_peaks_bpm"><xliff:g id="peaks" example="168, 172, 175">%1$s</xliff:g> bpm</string>
     
-    <string name="workout_live_rest_rep_next" ns1:ignore="PluralsCandidate">Descanso, repetición<xliff:g id="rep" example="3">%1$d</xliff:g> next</string>
+    <string name="workout_live_rest_rep_next" tools:ignore="PluralsCandidate">Descanso, repetición<xliff:g id="rep" example="3">%1$d</xliff:g> next</string>
     
     <string name="workout_live_pace_now"><xliff:g id="pace" example="4:40">%1$s</xliff:g>/km now</string>
     
@@ -264,7 +264,7 @@
     
     <string name="workout_live_paused_heart">Frecuencia cardíaca<xliff:g id="bpm" example="104">%1$d</xliff:g></string>
     
-    <string name="workout_live_paused_heart_down" ns1:ignore="PluralsCandidate">Frecuencia cardíaca<xliff:g id="bpm" example="104">%1$d</xliff:g>, down <xliff:g id="drop" example="38">%2$d</xliff:g> since you stopped</string>
+    <string name="workout_live_paused_heart_down" tools:ignore="PluralsCandidate">Frecuencia cardíaca<xliff:g id="bpm" example="104">%1$d</xliff:g>, down <xliff:g id="drop" example="38">%2$d</xliff:g> since you stopped</string>
     
     <string name="workout_live_paused_note">La pausa excluye este tiempo de tu ritmo y tus promedios</string>
 
@@ -273,7 +273,7 @@
     
     <string name="workout_live_mind_heart">Frecuencia cardíaca<xliff:g id="bpm" example="68">%1$d</xliff:g>, settling</string>
     
-    <string name="workout_live_mind_heart_down" ns1:ignore="PluralsCandidate">Frecuencia cardíaca<xliff:g id="bpm" example="68">%1$d</xliff:g>, settling, down <xliff:g id="drop" example="9">%2$d</xliff:g> since you started</string>
+    <string name="workout_live_mind_heart_down" tools:ignore="PluralsCandidate">Frecuencia cardíaca<xliff:g id="bpm" example="68">%1$d</xliff:g>, settling, down <xliff:g id="drop" example="9">%2$d</xliff:g> since you started</string>
     
     <string name="workout_live_mind_length">de<xliff:g id="minutes" example="45">%1$d</xliff:g> min</string>
     
@@ -288,7 +288,7 @@
     
     <string name="workout_live_sets_add_30_s">+30 s</string>
     
-    <string name="workout_live_sets_start_set">Iniciar serie<xliff:g id="set" example="4">%1$d</xliff:g></string>
+    <string name="workout_live_sets_start_set">Iniciar serie <xliff:g id="set" example="4">%1$d</xliff:g></string>
     
     <plurals name="workout_live_sets_all_done">
         <item quantity="one"><xliff:g id="sets" example="5">%1$d</xliff:g> set done. Hold the square to end, or keep going.</item>
@@ -307,13 +307,13 @@
     
     <string name="workout_live_sets_rest_title">Descanso</string>
     
-    <string name="workout_live_sets_after">después<xliff:g id="set" example="set 3 of 5">%1$s</xliff:g></string>
+    <string name="workout_live_sets_after">después <xliff:g id="set" example="set 3 of 5">%1$s</xliff:g></string>
     
     <string name="workout_live_sets_next">Siguiente</string>
     
-    <string name="workout_live_sets_next_set">Serie<xliff:g id="set" example="4">%1$d</xliff:g></string>
+    <string name="workout_live_sets_next_set">Serie <xliff:g id="set" example="4">%1$d</xliff:g></string>
     
-    <string name="workout_live_sets_next_set_exercise">Serie<xliff:g id="set" example="4">%1$d</xliff:g>, <xliff:g id="exercise" example="bench press 10 × 60 kg">%2$s</xliff:g></string>
+    <string name="workout_live_sets_next_set_exercise">Serie <xliff:g id="set" example="4">%1$d</xliff:g>, <xliff:g id="exercise" example="bench press 10 × 60 kg">%2$s</xliff:g></string>
     
     <string name="workout_live_sets_falling_description">Frecuencia cardíaca desde que terminó la serie</string>
     
@@ -326,13 +326,13 @@
         <item quantity="one"><xliff:g id="done" example="3">%1$d</xliff:g> set done, <xliff:g id="left" example="2">%2$d</xliff:g> to go</item>
         <item quantity="other"><xliff:g id="done" example="3">%1$d</xliff:g> sets done, <xliff:g id="left" example="2">%2$d</xliff:g> to go</item>
     </plurals>
-    
-    <string name="workout_live_sets_name_it">Ponle un nombre</string>
-    
-    <string name="workout_live_sets_row">Serie<xliff:g id="set" example="2">%1$d</xliff:g></string>
+
+
+    <string name="workout_live_sets_name_it">Dale un nombre</string>
+    <string name="workout_live_sets_row">Serie <xliff:g id="set" example="2">%1$d</xliff:g></string>
 
     
-    <string name="workout_live_log_title" ns1:ignore="PluralsCandidate">Serie<xliff:g id="set" example="3">%1$d</xliff:g> done</string>
+    <string name="workout_live_log_title" tools:ignore="PluralsCandidate">Serie<xliff:g id="set" example="3">%1$d</xliff:g> done</string>
     
     <string name="workout_live_log_note_peak_rest"><xliff:g id="time" example="0:51">%1$s</xliff:g>, peak <xliff:g id="bpm" example="148">%2$d</xliff:g> bpm. Rest is running, <xliff:g id="left" example="1:20">%3$s</xliff:g> left.</string>
     

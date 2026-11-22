@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
-<resources>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     
-    <string name="workout_start_strap_ready_bpm">Banda lista,<xliff:g id="bpm" example="72">%1$d</xliff:g> bpm</string>
+    <string name="workout_start_strap_ready_bpm">Banda lista, <xliff:g id="bpm" example="72">%1$d</xliff:g> lpm</string>
     
     <string name="workout_start_strap_ready">Banda lista</string>
     

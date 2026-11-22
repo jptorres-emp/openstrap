@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<resources>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     
     <string name="day_calories_row_line">Activo de<xliff:g id="goal" example="450">%1$s</xliff:g>. <xliff:g id="total" example="1,468">%2$s</xliff:g> total</string>
     
@@ -14,7 +14,7 @@
     
     <string name="day_calories_to_goal_met">Meta de<xliff:g id="goal" example="450">%1$s</xliff:g> met</string>
     
-    <string name="day_calories_peak">Pico a las<xliff:g id="hour" example="07:00">%1$s</xliff:g>, <xliff:g id="kcal" example="228">%2$s</xliff:g> kcal</string>
+    <string name="day_calories_peak">Pico a las <xliff:g id="hour" example="07:00">%1$s</xliff:g>, <xliff:g id="kcal" example="228">%2$s</xliff:g> kcal</string>
     
     <string name="day_calories_hour_label">kcal activas,<xliff:g id="hours" example="07:00 to 08:00">%1$s</xliff:g></string>
 
@@ -65,11 +65,11 @@
     
     <string name="day_calories_in_your_day_phone_yesterday">Este<xliff:g id="sport" example="run">%1$s</xliff:g> is <xliff:g id="kcal" example="486">%2$s</xliff:g> of yesterday\'s <xliff:g id="day_kcal" example="702">%3$s</xliff:g> active kcal. Your day counts the same figure.</string>
     
-    <string name="day_calories_in_your_day_phone_that_day">Este<xliff:g id="sport" example="run">%1$s</xliff:g> is <xliff:g id="kcal" example="486">%2$s</xliff:g> of that day\'s <xliff:g id="day_kcal" example="702">%3$s</xliff:g> active kcal. Your day counts the same figure.</string>
+    <string name="day_calories_in_your_day_phone_that_day">Este <xliff:g id="sport" example="run">%1$s</xliff:g> is <xliff:g id="kcal" example="486">%2$s</xliff:g> of that day\'s <xliff:g id="day_kcal" example="702">%3$s</xliff:g> active kcal. Your day counts the same figure.</string>
     
     <string name="day_calories_in_your_day_strap_today">Este<xliff:g id="sport" example="walk">%1$s</xliff:g> is <xliff:g id="kcal" example="86">%2$s</xliff:g> of today\'s <xliff:g id="day_kcal" example="702">%3$s</xliff:g> active kcal. The day counts it from the strap\'s own figure.</string>
     
     <string name="day_calories_in_your_day_strap_yesterday">Este<xliff:g id="sport" example="walk">%1$s</xliff:g> is <xliff:g id="kcal" example="86">%2$s</xliff:g> of yesterday\'s <xliff:g id="day_kcal" example="702">%3$s</xliff:g> active kcal. The day counts it from the strap\'s own figure.</string>
     
-    <string name="day_calories_in_your_day_strap_that_day">Este<xliff:g id="sport" example="walk">%1$s</xliff:g> is <xliff:g id="kcal" example="86">%2$s</xliff:g> of that day\'s <xliff:g id="day_kcal" example="702">%3$s</xliff:g> active kcal. The day counts it from the strap\'s own figure.</string>
+    <string name="day_calories_in_your_day_strap_that_day">Este <xliff:g id="sport" example="walk">%1$s</xliff:g> is <xliff:g id="kcal" example="86">%2$s</xliff:g> of that day\'s <xliff:g id="day_kcal" example="702">%3$s</xliff:g> active kcal. The day counts it from the strap\'s own figure.</string>
 </resources>

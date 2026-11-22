@@ -1,8 +1,8 @@
 <?xml version='1.0' encoding='utf-8'?>
-<resources>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     
     <string name="day_tab_today">Hoy</string>
-    <string name="day_tab_recovery">Recuperación</string>
+    <string name="day_tab_recovery">Recupera.</string>
     <string name="day_tab_sleep">Sueño</string>
     <string name="day_tab_activity">Actividad</string>
 
@@ -32,7 +32,7 @@
     <string name="day_nearby_not_now">Ahora no</string>
 
     
-    <string name="day_pull_sync_failed">No se pudo sincronizar.<xliff:g id="data_on_strap" example="Your data is still on the strap.">%1$s</xliff:g></string>
+    <string name="day_pull_sync_failed">No se pudo sincronizar. <xliff:g id="data_on_strap" example="Your data is still on the strap.">%1$s</xliff:g></string>
     
     <string name="day_pull_not_connected">La pulsera no está conectada.</string>
     

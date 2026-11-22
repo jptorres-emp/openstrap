@@ -1,17 +1,17 @@
 <?xml version='1.0' encoding='utf-8'?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools" xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     
     <string name="workout_zones_title">Zonas de frecuencia cardíaca</string>
     
     <string name="workout_zones_max_title">Tu frecuencia cardíaca máxima</string>
     
-    <string name="workout_zones_set_it">Configurarlo yo mismo</string>
+    <string name="workout_zones_set_it">Configurar</string>
     
     <string name="workout_zones_learn_it">Aprender de nuevo</string>
     
     <string name="workout_zones_note">Las mismas para todos los deportes. Las metas de zona y el tiempo en zonas las usan, y la Carga usa tu máx. Toca una zona para mover sus límites.</string>
     
-    <string name="workout_zones_you_line_max">Máx.<xliff:g id="bpm" example="192">%1$d</xliff:g> bpm, the same zones for every sport</string>
+    <string name="workout_zones_you_line_max">Máx.<xliff:g id="bpm" example="192">%1$d</xliff:g> bpm, las mismas para todos los deportes</string>
     
     <string name="workout_zones_you_line">Las mismas zonas para todos los deportes</string>
     
@@ -33,11 +33,11 @@
     
     <string name="workout_zones_source_guess">Una estimación inicial. Añade tu edad o configúrala tú mismo.</string>
     
-    <string name="workout_zones_zone_name">Zona<xliff:g id="zone" example="2">%1$d</xliff:g></string>
+    <string name="workout_zones_zone_name">Zona <xliff:g id="zone" example="2">%1$d</xliff:g></string>
     
     <string name="workout_zones_bpm_range"><xliff:g id="from" example="115">%1$d</xliff:g> to <xliff:g id="to" example="133">%2$d</xliff:g></string>
     
-    <string name="workout_zones_bpm_up" ns1:ignore="PluralsCandidate"><xliff:g id="from" example="172">%1$d</xliff:g> and up</string>
+    <string name="workout_zones_bpm_up" tools:ignore="PluralsCandidate"><xliff:g id="from" example="172">%1$d</xliff:g> and up</string>
     
     <string name="workout_zones_starts_at">Comienza en</string>
     

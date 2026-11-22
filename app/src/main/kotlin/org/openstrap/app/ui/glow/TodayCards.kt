@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import org.openstrap.app.ui.theme.Corner
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -456,18 +457,28 @@ internal fun LastNightCard(
      */
     lit: Boolean = false,
 ) {
-    val s = state.sleep
-    val asleep = state.asleepSeconds
+    // One time asleep for the night, from its stage rows, as the Sleep tab and its detail read it ([ShownNight]).
+    val night = remember(state.sleep, state.sleepStages) { state.shownNight() }
+    val s = night?.session
+    val asleep = night?.asleep
     val score = s?.score
-    val off = org.openstrap.app.ui.dashboard.sleepLengthOffStatus(state)
+    val off = org.openstrap.app.ui.dashboard.offStatus(asleep?.toFloat(), state.sleepLengthNormal)
     val tag = offTag(OffWords.Length, off)
-    val totals = state.sleepBreakdown?.let { org.openstrap.app.ui.glow.draw.stageTotals(it.byStage) }.orEmpty()
+    val totals = night?.breakdown?.let { org.openstrap.app.ui.glow.draw.stageTotals(it.byStage) }.orEmpty()
     val picture: (@Composable (Modifier) -> Unit)? = if (totals.isEmpty()) null else { m ->
-        Box(m, contentAlignment = Alignment.Center) {
+        // A Wide names each stage with its length under the bar, so the colours never carry the meaning alone. A Small has
+        // no room for the names, and its bar is its picture.
+        Column(m, verticalArrangement = if (size == PictureSize.Small) Arrangement.Center else Arrangement.spacedBy(Space.S12)) {
             SegmentBar(
                 totals.map { (stage, seconds) -> Segment(seconds.toFloat(), org.openstrap.app.ui.glow.draw.stageColor(stage)) },
                 height = org.openstrap.app.ui.glow.draw.StageBarLook.HEIGHT_DP.dp, gap = org.openstrap.app.ui.glow.draw.StageBarLook.GAP_DP.dp,
                 corner = org.openstrap.app.ui.glow.draw.StageBarLook.CORNER_DP.dp,
+            )
+            if (size != PictureSize.Small) Legend(
+                totals.map { (stage, seconds) ->
+                    org.openstrap.app.presentation.TabCopy.stageTotal(stage, seconds) to org.openstrap.app.ui.glow.draw.stageColor(stage)
+                },
+                swatch = Corner.Pip, layout = LegendLayout.Flow,
             )
         }
     }

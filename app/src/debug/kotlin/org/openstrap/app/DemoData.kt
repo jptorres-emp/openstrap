@@ -57,12 +57,12 @@ object DemoData {
             }
             fun mins(s: Int) = (stages.filter { it.stage == s }.sumOf { it.end - it.start } / 60).toInt()
             val day = org.openstrap.app.data.DayKey.of(date)
-            dao.insertSleepSessions(listOf(SleepSession(
+            // The day's night replaces what is there, as a sync does (replaceSleepDay), so a second fill never adds a second one.
+            dao.replaceSleepDay(day = date, nap = false, sessions = listOf(SleepSession(
                 sleepStart, sleepEnd, day, nap = false, score = 72 + rnd.nextInt(0, 18), averageHeartRate = 56 + rnd.nextInt(0, 5),
                 deepMinutes = mins(SleepStage.DEEP), lightMinutes = mins(SleepStage.LIGHT), remMinutes = mins(SleepStage.REM),
                 awakeMinutes = mins(SleepStage.AWAKE), wakeCount = stages.count { it.stage == SleepStage.AWAKE },
-            )))
-            dao.insertSleepStages(stages)
+            )), stages = stages)
             dao.insertRestingHr(listOf(RestingHeartRate(date, 56 + rnd.nextInt(0, 6))))
             dao.insertBreathRate((0 until 14).map { BreathRate(sleepStart + it * 1800L, 13 + rnd.nextInt(0, 3)) })
             dao.insertHrv((0 until 8).map { HrvSample(sleepStart + it * 3600L, (if (back % 2 == 0) 40 else 48) + rnd.nextInt(0, 12)) })

@@ -535,6 +535,29 @@ private const val GAUGE_FILL_MS = 450
 
 /* ------------------------------------------------------------------------------------------------ */
 
+/** How tall a stage run and its track stand on a coloured [GlowHypnogram]. */
+private const val STAGE_RUN_DP = 8f
+
+/**
+ * A coloured hypnogram's rows as 8 dp tracks (white 6%) from [trackX] across, each run of a stage one bar as long as the
+ * run in the stage's colour ([NightStages.join]), so the lengths of the stages read straight off the bars.
+ */
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawStageRuns(g: org.openstrap.app.ui.glow.draw.HypnogramGeometry, rowColors: List<Color>, trackX: Float) {
+    val h = STAGE_RUN_DP.dp.toPx()
+    val corner = CornerRadius(h / 2)
+    g.rowY.indices.forEach { row ->
+        drawRoundRect(Ink.Faint, Offset(trackX, g.rowY[row] - h / 2), Size(size.width - trackX, h), corner)
+    }
+    NightStages.joinStages(g.sorted).forEach { st ->
+        val x0 = g.xOf(st.from)
+        val x1 = g.xOf(st.to)
+        drawRoundRect(
+            rowColors.getOrNull(st.row) ?: Color.White, Offset(x0, g.rowY[st.row] - h / 2),
+            Size((x1 - x0).coerceAtLeast(3.dp.toPx()), h), corner,
+        )
+    }
+}
+
 /** A stretch of sleep on a [GlowHypnogram]: start and end as fractions of the night, and its row. */
 data class GlowStage(val from: Float, val to: Float, val row: Int)
 
@@ -589,10 +612,11 @@ fun GlowHypnogram(
             val axisLabels = m.measureAll(labels)
             onDrawBehind {
                 rowNames.indices.forEach { row ->
-                    gridLine(g.rowY[row], x0 = nameW)
+                    // In stage colours each row is a track the runs fill (board HaloSleep); the white pills sit on hairlines.
+                    if (rowColors == null) gridLine(g.rowY[row], x0 = nameW)
                     if (showNames) text(names[row], 0f, g.rowY[row] - 7.dp.toPx())
                 }
-                drawHypnogramBands(g, rowColors)
+                if (rowColors == null) drawHypnogramBands(g, rowColors) else drawStageRuns(g, rowColors, nameW)
                 if (kept != null) {
                     val dim = Ink.ScrimDeep
                     val a = g.xOf(kept.start.coerceIn(0f, 1f))

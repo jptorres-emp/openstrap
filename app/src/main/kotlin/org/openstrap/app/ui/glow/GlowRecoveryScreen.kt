@@ -119,6 +119,8 @@ fun GlowRecoveryScreen(
     wear: Wear? = null,
     /** The day's score is the first real one, marked once (E4). */
     firstScore: Boolean = false,
+    /** Daily history, for resting heart rate's normal in What drove it; null leaves the reading without one. */
+    history: org.openstrap.app.ui.dashboard.DailyHistory? = null,
 ) {
     val list = rememberLazyListState()
     val signals = rememberSignals(state)
@@ -149,7 +151,9 @@ fun GlowRecoveryScreen(
                             noSleep = isToday && state.loaded && state.asleepSeconds == null, deleted = state.deletedSleep != null, firstScore = firstScore,
                             shown = TodayCopy.recoveryShown(r?.readiness, strapScore, waiting),
                         )
-                    RecoveryCard.Drivers -> DriversList(r?.readiness, onAll = { onOpenScore(Score.Recovery) })
+                    RecoveryCard.Drivers -> DriversList(
+                        r?.readiness, rememberDriverFigures(state, history), onAll = { onOpenScore(Score.Recovery) },
+                    )
                     // Charge is worked out with Recovery, so a failure there says so here too, not "after your first night".
                     RecoveryCard.Charge -> ChargeTall(
                         r?.charge, m, failed = failure != null, tag = partial, onOpen = { onOpenScore(Score.Energy) },
@@ -281,7 +285,7 @@ internal fun RecoveryFailedHero(
  * place when it's off usual (spec 5.1). Bars and words stay white: colour never says how it's going (spec 2.2).
  */
 @Composable
-private fun DriversList(ready: Recovery.Readiness?, onAll: () -> Unit) {
+private fun DriversList(ready: Recovery.Readiness?, resting: DetailCopy.DriverFigures?, onAll: () -> Unit) {
     val all = ready?.contributors.orEmpty()
     val top = TabCopy.topDrivers(all)
     // "All" and each row open the Recovery detail, which has every contributor.
@@ -297,12 +301,22 @@ private fun DriversList(ready: Recovery.Readiness?, onAll: () -> Unit) {
         top.forEachIndexed { i, c ->
             // The bar and the word stay grey: colour never says how it's going (spec 2.2); off usual the tag takes the word's place.
             ContributorRow(
-                TabCopy.factorName(c.factor), Color.White, TabCopy.contributorWord(c.score), DetailCopy.driverPlace(c),
-                divider = i > 0, detail = DetailCopy.driverReading(c), onClick = onAll,
+                TabCopy.factorName(c.factor), Color.White, TabCopy.contributorWord(c.score), DetailCopy.driverPlace(c, resting),
+                divider = i > 0, detail = DetailCopy.driverReading(c, resting), onClick = onAll,
                 tag = offTag(OffWords.Usual, contributorOffStatus(c.score)),
             )
         }
     }
+}
+
+/**
+ * The day's resting heart rate and time asleep as Today shows them ([DetailCopy.DriverFigures]), for Recovery's
+ * drivers.
+ */
+@Composable
+internal fun rememberDriverFigures(state: DayUiState, history: org.openstrap.app.ui.dashboard.DailyHistory?): DetailCopy.DriverFigures {
+    val normal = rememberNormal(Metric.RestingHr, state.date, history)
+    return DetailCopy.DriverFigures(state.restingHeartRate, normal?.mean, state.asleepSeconds)
 }
 
 /** A contributor against usual: Above from Ready for more, Below under Ready, by the score's own bands. */

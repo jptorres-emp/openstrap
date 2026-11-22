@@ -35,13 +35,17 @@ data class SleepWidgetNight(
 
     companion object {
         /** The night [main] ended on [date], with its [stages] and the week's [nights] ([SleepHistory.mainSleeps]). */
-        fun of(date: LocalDate, main: SleepSession, stages: List<SleepStage>, nights: Map<LocalDate, SleepSession>): SleepWidgetNight = SleepWidgetNight(
-            date = date,
-            session = main,
-            stages = stages.map { StageSpan(it.start, it.end, it.stage) },
-            breakdown = if (stages.isEmpty()) null else Summaries.sleepBreakdown(stages),
-            others = SleepHistory.weekOthers(nights, date),
-        )
+        fun of(date: LocalDate, main: SleepSession, stages: List<SleepStage>, nights: Map<LocalDate, SleepSession>): SleepWidgetNight {
+            // As the app reads a night: kept to its times, no two rows over the same time ([SleepEdits.clean]).
+            val clean = org.openstrap.app.data.SleepEdits.clean(stages, main.start, main.end)
+            return SleepWidgetNight(
+                date = date,
+                session = main,
+                stages = clean.map { StageSpan(it.start, it.end, it.stage) },
+                breakdown = if (clean.isEmpty()) null else Summaries.sleepBreakdown(clean),
+                others = SleepHistory.weekOthers(nights, date),
+            )
+        }
     }
 }
 

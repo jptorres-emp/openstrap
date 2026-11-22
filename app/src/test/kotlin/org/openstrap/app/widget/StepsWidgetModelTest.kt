@@ -270,4 +270,12 @@ class StepsWidgetModelTest {
         assertNull(small.top.words)
         assertEquals(StatusButton.SIZE_DP, small.top.height, 0f)
     }
+
+    @Test fun `the not-paired Small gives the pills' room to its words`() {
+        val m = model()
+        val l = StatusLine(StrapStatus.NotPaired, listOf("Pair your strap", "Pair strap", "Pair"))
+        val words = StatusButton.words(l, small.first, 1f)!!
+        val withBar = StepsLayout.small(m.stepsText, words, small.first, small.second, 1f, l, pills = false)
+        assertTrue(withBar.share)
+    }
 }

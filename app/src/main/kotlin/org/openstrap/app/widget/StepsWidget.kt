@@ -104,7 +104,9 @@ private fun ColumnScope.SmallContent(m: StepsWidgetModel, f: WidgetFrame) {
     // While the strap needs something the line says so ("Pair your strap"), as the Wide's top row does. The words take the
     // share's place in the fit, so the Small never drops them while the share would have fitted.
     val note = attentionWords(f)
-    val fit = StepsLayout.small(m.smallText, note ?: m.share, f.contentWidth, f.contentHeight, f.fontScale, f.status, pills = m.showLine)
+    // With words to say, the hour pills give way to the 4 dp goal bar, so the words have the room.
+    val pills = m.showLine && note == null
+    val fit = StepsLayout.small(m.smallText, note ?: m.share, f.contentWidth, f.contentHeight, f.fontScale, f.status, pills = pills)
     TopRowView(m.title, null, fit.top, f, 0f)
     Gap()
     // Each block one child of the column: Glance drops a column's children past ten.
@@ -117,7 +119,7 @@ private fun ColumnScope.SmallContent(m: StepsWidgetModel, f: WidgetFrame) {
     }
     Flex()
     Column(GlanceModifier.fillMaxWidth()) {
-        StepsLine(m, StepsLayout.SMALL_PILLS_DP, f)
+        StepsLine(m, StepsLayout.SMALL_PILLS_DP.takeIf { pills }, f)
         if (fit.share) {
             Spacer(GlanceModifier.height(StepsLayout.SMALL_BAR_GAP_DP.dp))
             if (note != null) AttentionText(note) else Text(m.share, style = WidgetType.secondary, maxLines = 1)

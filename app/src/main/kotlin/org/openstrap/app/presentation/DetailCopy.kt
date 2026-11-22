@@ -344,14 +344,38 @@ internal object DetailCopy {
     }
 
     /**
-     * A recovery driver's reading as its row says it: HRV and resting heart rate against your normal ("56 ms, your normal
-     * 53"), the rest as [RecoveryCopy] words them. Null when there is nothing to say.
+     * The day's figures as Today and their own details show them, for the recovery drivers that name them: the strap's
+     * daily resting heart rate, [restingBpm], against your normal over 30 days, [restingNormal] (null until there is
+     * one), and the night's time asleep from its stage rows, [asleepSeconds]. So one number is called resting heart rate
+     * and one is called asleep everywhere (decision 2026-11-22), while the score still weighs the night as it does.
      */
-    fun driverReading(c: org.openstrap.app.data.Recovery.Contributor, strings: Strings = Strings.app): String? {
+    data class DriverFigures(val restingBpm: Int?, val restingNormal: Float?, val asleepSeconds: Long?)
+
+    /** [c]'s detail with the time asleep of [figures] in place of the model's, when there is one. */
+    private fun detailOf(c: org.openstrap.app.data.Recovery.Contributor, figures: DriverFigures?): org.openstrap.app.data.Recovery.Detail {
         val d = c.detail
+        val asleep = figures?.asleepSeconds
+        return if (d is org.openstrap.app.data.Recovery.Detail.Asleep && asleep != null) {
+            org.openstrap.app.data.Recovery.Detail.Asleep((asleep / SECONDS_PER_MINUTE).toInt())
+        } else d
+    }
+
+    /**
+     * A recovery driver's reading as its row says it: HRV and resting heart rate against your normal ("56 ms, your normal
+     * 53"), the rest as [RecoveryCopy] words them. Resting heart rate and the time asleep read the day's [figures] when
+     * there are some. Null when there is nothing to say.
+     */
+    fun driverReading(
+        c: org.openstrap.app.data.Recovery.Contributor, figures: DriverFigures? = null, strings: Strings = Strings.app,
+    ): String? {
+        val d = detailOf(c, figures)
+        val bpm = figures?.restingBpm
         val line = when {
             d is org.openstrap.app.data.Recovery.Detail.Hrv && d.percentVsUsual > -100 ->
                 strings.format(R.string.glow_recovery_driver_hrv, d.ms, Math.round(d.ms / (1f + d.percentVsUsual / 100f)))
+            d is org.openstrap.app.data.Recovery.Detail.RestingHr && bpm != null -> figures.restingNormal?.let {
+                strings.format(R.string.glow_recovery_driver_resting, bpm, Math.round(it))
+            } ?: strings.format(R.string.glow_recovery_driver_resting_alone, bpm)
             d is org.openstrap.app.data.Recovery.Detail.RestingHr ->
                 strings.format(R.string.glow_recovery_driver_resting, d.bpm, Math.round(d.bpm - d.vsUsual))
             else -> RecoveryCopy.detail(d, strings = strings)
@@ -362,12 +386,17 @@ internal object DetailCopy {
     /**
      * Where a driver's bar ends, 0 to 1, from its reading: halfway at your normal, further for an HRV above it (up to
      * 50 % more) and a resting heart rate below it (up to 10 bpm lower, since lower is better), and for sleep from its
-     * length against 8 hours. A driver with no such reading falls back to its score.
+     * length against 8 hours. Resting heart rate and sleep read the day's [figures] when there are some. A driver with no
+     * such reading falls back to its score.
      */
-    fun driverPlace(c: org.openstrap.app.data.Recovery.Contributor): Float {
-        val d = c.detail
+    fun driverPlace(c: org.openstrap.app.data.Recovery.Contributor, figures: DriverFigures? = null): Float {
+        val d = detailOf(c, figures)
+        val bpm = figures?.restingBpm
+        val normal = figures?.restingNormal
         val place = when (d) {
             is org.openstrap.app.data.Recovery.Detail.Hrv -> 0.5f + d.percentVsUsual / (2f * HRV_SPAN_PERCENT)
+            is org.openstrap.app.data.Recovery.Detail.RestingHr if bpm != null && normal != null ->
+                0.5f - (bpm - normal) / (2f * RESTING_SPAN_BPM)
             is org.openstrap.app.data.Recovery.Detail.RestingHr -> 0.5f - d.vsUsual / (2f * RESTING_SPAN_BPM)
             is org.openstrap.app.data.Recovery.Detail.Asleep -> d.minutes / (2f * SLEEP_NEED_MINUTES)
             else -> c.score / 100f
@@ -375,6 +404,7 @@ internal object DetailCopy {
         return place.coerceIn(0f, 1f)
     }
 
+    private const val SECONDS_PER_MINUTE = 60L
     private const val HRV_SPAN_PERCENT = 50f
     private const val RESTING_SPAN_BPM = 10f
     private const val SLEEP_NEED_MINUTES = 8 * 60f

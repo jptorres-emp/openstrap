@@ -171,4 +171,20 @@ class DetailCopyTest {
         ) + Metric.entries.flatMap { m -> Range.entries.map { DetailCopy.valueLabel(m, it) } }
         lines.forEach { assertTrue(it, it.none { c -> c == '·' || c == ';' || c == '—' }) }
     }
+
+    @Test fun `recovery's resting heart rate and sleep rows read the day's figures, the score keeps the night's`() {
+        val rhr = org.openstrap.app.data.Recovery.Contributor(
+            org.openstrap.app.data.Recovery.Factor.RestingHr, 60, org.openstrap.app.data.Recovery.Detail.RestingHr(47, 0f),
+        )
+        val sleep = org.openstrap.app.data.Recovery.Contributor(
+            org.openstrap.app.data.Recovery.Factor.Sleep, 83, org.openstrap.app.data.Recovery.Detail.Asleep(481),
+        )
+        val figures = DetailCopy.DriverFigures(restingBpm = 59, restingNormal = 59.4f, asleepSeconds = 477 * 60L)
+        assertEquals("59 bpm, your normal 59", DetailCopy.driverReading(rhr, figures))
+        assertEquals(0.5f, DetailCopy.driverPlace(rhr, figures), 0.03f)
+        assertTrue(DetailCopy.driverReading(sleep, figures)!!.contains("7 h 57"))
+        // Without a normal the reading stands alone; without figures it's the model's.
+        assertEquals("59 bpm", DetailCopy.driverReading(rhr, figures.copy(restingNormal = null)))
+        assertEquals("47 bpm, your normal 47", DetailCopy.driverReading(rhr))
+    }
 }

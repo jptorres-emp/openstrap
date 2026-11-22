@@ -7,7 +7,6 @@ import org.openstrap.app.R
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalResources
 import org.openstrap.app.presentation.DayWords
-import org.openstrap.app.presentation.RecoveryCopy
 import org.openstrap.app.presentation.Units
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -171,6 +170,8 @@ private fun RecoveryDetail(
     val today = LocalDate.now()
     val isToday = state.date == today
     val week = r?.readinessTrend.orEmpty()
+    // Resting heart rate and sleep read the day's figures, as Today and their own details do.
+    val resting = rememberDriverFigures(state, history)
     // A night's resting heart rate marks every day of the strip, so a day keeps its dot whichever day is shown and while
     // the score is worked out; the trend adds the days it has a score for.
     val nights = stripDaysWithData(DailyMetric.RestingHr, stripDate, today, history)
@@ -217,7 +218,7 @@ private fun RecoveryDetail(
                             all.map { c ->
                                 DetailDriver(
                                     TabCopy.factorName(c.factor), null,
-                                    RecoveryCopy.detail(c.detail).takeIf { it.isNotBlank() } ?: TabCopy.contributorWord(c.score),
+                                    DetailCopy.driverReading(c, resting) ?: TabCopy.contributorWord(c.score),
                                     (c.score - mid) / DRIVER_RANGE,
                                 )
                             },

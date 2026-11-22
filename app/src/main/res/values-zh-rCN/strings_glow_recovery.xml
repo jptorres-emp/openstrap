@@ -6,7 +6,8 @@
     <string name="glow_recovery_yesterday">昨天</string>
     <string name="glow_recovery_what_drove">影响因素</string>
     <string name="glow_recovery_driver_hrv">%1$d 毫秒，你的常态 %2$d</string>
-    <string name="glow_recovery_driver_resting">最低 %1$d 次/分，你的常态 %2$d</string>
+    <string name="glow_recovery_driver_resting">%1$d 次/分，你的常态 %2$d</string>
+    <string name="glow_recovery_driver_resting_alone">%1$d 次/分</string>
     <string name="glow_recovery_drivers_all">全部 %1$d 项</string>
     <string name="glow_recovery_waiting_night">等待整夜数据</string>
     <string name="glow_recovery_drivers_waiting">每天早晨显示在这里</string>

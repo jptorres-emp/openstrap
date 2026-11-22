@@ -137,8 +137,8 @@ private fun TitleNote(note: String, onNote: (() -> Unit)?) {
 }
 
 /**
- * [start] on the left and [end] on the right when both fit on one line at font size 1.0; when they don't, [end] drops
- * under [start] rather than wrap it. The same choice at every font size, so a card keeps its height. [bottom] lines them
+ * [start] on the left and [end] on the right when both fit on one line; when they don't, [end] drops under [start]
+ * rather than cut it. [bottom] lines them
  * up on their foot (a heading), else on their middle (a card's title).
  */
 // One layout or the other, by whether there is an end; the same title keeps to one of them.
@@ -160,9 +160,9 @@ private fun TitleLine(
         val wanted = s.maxIntrinsicWidth(cs.maxHeight) + gap + note.width
         // Asked how wide it would like to be (an intrinsic measure), it's the one line.
         val w = if (cs.hasBoundedWidth) cs.maxWidth else wanted
-        // One rule at every font size: the note sits beside the title when both fit on a line at font size 1.0, else
-        // under it. Words grow with the font size, so the width they'd take at 1.0 is what they take now over fontScale.
-        if (wanted / fontScale <= w) {
+        // The note sits beside the title when both fit on the line at the font size in use, else under it, so a title
+        // is never cut to make room for its note: "Your body this morning" stays whole at 1.3 (release check 2026-11-22).
+        if (wanted <= w) {
             val title = s.measure(Constraints(maxWidth = w - gap - note.width))
             val h = maxOf(title.height, note.height)
             layout(w, h) {

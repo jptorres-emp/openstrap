@@ -171,10 +171,10 @@ private fun phaseLap(r: WorkoutState.Recording, phase: Phase, onSkip: () -> Unit
 @Composable
 @ReadOnlyComposable
 private fun pausedDetail(r: WorkoutState.Recording, now: Long): String? {
-    val m = intervalMoment(r, now, null, emptyList(), emptyList()) ?: return null
-    if (m.phase == Phase.WarmUp || m.phase == Phase.Done) return null
-    val left = m.left
+    val m = intervalMoment(r, now, null, emptyList(), emptyList())?.takeUnless { it.phase == Phase.WarmUp || it.phase == Phase.Done }
+    val left = m?.left
     return when {
+        m == null -> null
         left == null -> stringResource(R.string.workout_live_round_of, m.round, m.rounds)
         m.phase is Phase.Rest -> stringResource(R.string.workout_live_paused_round_rest, m.round, m.rounds, left)
         else -> stringResource(R.string.workout_live_paused_round_work, m.round, m.rounds, left)

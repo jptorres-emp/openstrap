@@ -255,7 +255,8 @@ internal val SleepRowColors: List<Color> = DayViewModel.SLEEP_STAGE_ROWS.let { r
 /** The vitals while asleep against your previous nights, each opening its metric scoped to the night. */
 @Composable
 private fun VitalsList(state: DayUiState, firstNights: Boolean, onOpen: (Metric) -> Unit) {
-    ListPanel(title = stringResource(R.string.glow_sleep_vitals_title), note = stringResource(R.string.glow_sleep_vitals_note)) {
+    // No "against your normal" note: blood oxygen reads as a night average, so not every row compares (as Body signals).
+    ListPanel(title = stringResource(R.string.glow_sleep_vitals_title)) {
         nightVitals(state, firstNights).forEachIndexed { i, v ->
             val tag = org.openstrap.app.ui.dashboard.bodyTag(v.metric, v.direction)
             MetricRow(

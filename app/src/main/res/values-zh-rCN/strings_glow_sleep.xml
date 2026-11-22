@@ -6,7 +6,6 @@
     <string name="glow_sleep_restore">恢复</string>
     <string name="glow_sleep_stage_span">%1$s，%2$s，%3$d 分钟</string>
     <string name="glow_sleep_vitals_title">夜间体征</string>
-    <string name="glow_sleep_vitals_note">对比你的常态</string>
     <string name="glow_sleep_regularity_title">睡眠规律性</string>
     <string name="glow_sleep_last_7_nights">最近 7 晚</string>
     <string name="glow_sleep_regularity_none">未记录到睡眠</string>

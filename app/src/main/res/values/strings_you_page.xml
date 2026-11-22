@@ -118,7 +118,8 @@
     <string name="you_sleep_goal_need">Sleep need %1$s</string>
     <string name="you_sleep_goal_need_profile">From your profile</string>
     <string name="you_sleep_goal_need_age">From your age</string>
-    <string name="you_sleep_goal_note">This sets your sleep goal ring and when the goal counts as met.</string>
+    <string name="you_sleep_goal_need_default">A default, until you add your age</string>
+    <string name="you_sleep_goal_note">Your sleep goal ring and goal met use it.</string>
 
     <!-- The goals sheet's title and its note. -->
     <string name="you_goals_title">Goals</string>
@@ -175,7 +176,7 @@
     <!-- The Diagnostics page: the strap's log, for bug reports. -->
     <string name="you_diagnostics_title">Diagnostics</string>
     <!-- A short button that copies the whole log. -->
-    <string name="you_diagnostics_copy">Copy</string>
+    <string name="you_diagnostics_copy">Copy log</string>
     <!-- The clipboard's label for the copied log, which some phones show. -->
     <string name="you_diagnostics_clip_label">unstrap log</string>
     <string name="you_diagnostics_log">Strap log</string>
@@ -226,7 +227,7 @@
     <string name="you_strap_forget_note">Forget deletes the strap\'s address and auth key from this phone. Your synced health data stays.</string>
     <string name="you_updates_view">View</string>
     <string name="you_pair_key_placeholder">32 characters, 0 to 9 and a to f</string>
-    <string name="you_diagnostics_note">For bug reports. Copy puts the whole log on the clipboard, including the strap\'s Bluetooth address.</string>
+    <string name="you_diagnostics_note">For bug reports. Copy log puts the whole log on the clipboard, including the strap\'s Bluetooth address.</string>
     <string name="you_profile_clear">Clear</string>
     <string name="you_profile_sleep_use_usual">Use the default for my age</string>
     <string name="you_profile_pregnant_note">Pauses the fitness estimate</string>

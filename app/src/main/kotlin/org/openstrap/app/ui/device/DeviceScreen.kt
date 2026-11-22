@@ -662,14 +662,15 @@ internal val StrapGlow = org.openstrap.app.ui.glow.draw.heroStyle(org.openstrap.
 fun DiagnosticsScreen(lines: List<String>, contentPadding: PaddingValues, onBack: () -> Unit) {
     BackHandler(onBack = onBack)
     val context = LocalContext.current
+    val label = stringResource(R.string.you_diagnostics_clip_label)
+    val copy = {
+        context.getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText(label, lines.joinToString("\n")))
+    }
     HaloPageList(contentPadding, variant = PageVariant.Settings) {
+        // Copy is an icon in the header so the title keeps its room at every font size; the labelled button is under the log.
         item {
-            val label = stringResource(R.string.you_diagnostics_clip_label)
             HaloPageHeader(stringResource(R.string.you_diagnostics_title), onBack) {
-                HaloButton(stringResource(R.string.you_diagnostics_copy), {
-                    context.getSystemService(ClipboardManager::class.java)
-                        .setPrimaryClip(ClipData.newPlainText(label, lines.joinToString("\n")))
-                }, Modifier.height(40.dp).minimumInteractiveComponentSize(), icon = AppIcons.Copy)
+                HaloIconButton(AppIcons.Copy, stringResource(R.string.you_diagnostics_copy), copy)
             }
         }
         item {
@@ -694,6 +695,10 @@ fun DiagnosticsScreen(lines: List<String>, contentPadding: PaddingValues, onBack
                         )
                     }
                 }
+                HaloButton(
+                    stringResource(R.string.you_diagnostics_copy), copy, Modifier.fillMaxWidth().minimumInteractiveComponentSize(),
+                    icon = AppIcons.Copy,
+                )
                 HaloNote(stringResource(R.string.you_diagnostics_note), variant = NoteVariant.Footnote)
             }
         }

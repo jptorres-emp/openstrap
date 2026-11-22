@@ -68,7 +68,8 @@
     <string name="you_sleep_goal_need">睡眠需求 %1$s</string>
     <string name="you_sleep_goal_need_profile">来自你的个人资料</string>
     <string name="you_sleep_goal_need_age">来自你的年龄</string>
-    <string name="you_sleep_goal_note">它决定睡眠目标环，以及目标何时达成。</string>
+    <string name="you_sleep_goal_need_default">默认值，直到你添加年龄</string>
+    <string name="you_sleep_goal_note">睡眠目标环和目标达成都会用到它。</string>
     <string name="you_goals_title">目标</string>
     <string name="you_goals_steps_label">步数</string>
     <string name="you_goals_sleep_label">睡眠</string>
@@ -100,7 +101,7 @@
     <string name="you_updates_latest">最新版本</string>
     <string name="you_updates_no_notes">此版本暂无更新说明。</string>
     <string name="you_diagnostics_title">诊断</string>
-    <string name="you_diagnostics_copy">复制</string>
+    <string name="you_diagnostics_copy">复制日志</string>
     <string name="you_diagnostics_clip_label">unstrap 日志</string>
     <string name="you_diagnostics_log">手环日志</string>
     <plurals name="you_diagnostics_lines">

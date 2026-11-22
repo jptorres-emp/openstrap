@@ -48,7 +48,6 @@ import org.openstrap.app.ui.glow.workoutColor
 import org.openstrap.app.ui.theme.AppIcons
 import org.openstrap.app.ui.workout.StartCopy
 import org.openstrap.app.presentation.WorkoutCopy
-import org.openstrap.app.ui.workout.ZONE_COLORS
 import org.openstrap.app.ui.workout.ZoneSeconds
 import org.openstrap.app.ui.dashboard.LocalHeartZones
 import androidx.compose.ui.res.stringResource
@@ -91,7 +90,7 @@ internal fun LiveGameScreen(
     val effort = Games.effort(zoneSeconds.toIntArray())
     val hard = remember(readings.size / 10, heartZones) { Games.hardEfforts(readings, r.maxHeartRate, heartZones) }
     val figures = listOf(
-        kcal?.active?.toInt()?.toString() to stringResource(R.string.workout_live_figure_active_kcal),
+        kcal?.active?.toInt()?.toString() to activeKcalLabel(kcal != null),
         stats?.max?.toString() to stringResource(R.string.workout_live_figure_peak_bpm),
         hard.toString() to stringResource(R.string.workout_live_figure_hard_efforts),
     )
@@ -130,7 +129,7 @@ internal fun LiveGameScreen(
                     color = GlowType.noteColor, style = GlowType.noteSmall,
                 )
             }
-            EffortBar(effort)
+            EffortBar(effort, tint)
             Box(Modifier.fillMaxWidth().height(1.dp).background(Greys.Control))
             Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                 Text(stringResource(R.string.workout_live_zones_title), color = GlowType.noteColor, style = GlowType.noteSmall,
@@ -168,12 +167,12 @@ private fun PeriodLine(r: WorkoutState.Recording, periods: Structure.Periods, ph
     HeroLine("$title, $clock", tint)
 }
 
-/** Effort 1 to 5 as five steps, lit up to it in the zones' colours (board HaloLiveGame); the words are the card's note. */
+/** Effort 1 to 5 as five steps, lit up to it in the sport's colour (zone is only ever a chip); the words are the card's note. */
 @Composable
-internal fun EffortBar(effort: Int?) {
+internal fun EffortBar(effort: Int?, tint: Color = Color.White) {
     val described = effort?.let { stringResource(R.string.workout_live_effort_of, it) } ?: stringResource(R.string.workout_live_effort_none)
     SegmentBar(
-        List(5) { i -> Segment(1f, if (effort != null && i < effort) ZONE_COLORS[i] else Ink.Edge) },
+        List(5) { i -> Segment(1f, if (effort != null && i < effort) tint else Ink.Edge) },
         Modifier.fillMaxWidth().semantics { contentDescription = described },
         height = 14.dp, gap = 4.dp, corner = 4.dp,
     )

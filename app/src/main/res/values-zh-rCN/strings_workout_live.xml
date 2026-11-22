@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="workout_live_figure_active_kcal">活动千卡</string>
+    <string name="workout_live_figure_kcal_needs_profile">需要个人资料</string>
     <string name="workout_live_figure_peak_bpm">峰值 bpm</string>
+    <string name="workout_live_figure_peak_moving">运动时峰值</string>
     <string name="workout_live_figure_avg_bpm">平均 bpm</string>
     <string name="workout_live_figure_hard_efforts">高强度次数</string>
     <string name="workout_live_figure_distance">距离</string>
@@ -28,6 +30,7 @@
     <string name="workout_live_lap">计圈</string>
     <string name="workout_live_skip">跳过</string>
     <string name="workout_live_view_of">第 %1$d/%2$d 个视图</string>
+    <string name="workout_live_view_dot">显示第 %1$d 个视图，共 %2$d 个</string>
     <string name="workout_live_stopped_car_title">看起来你正在乘车</string>
     <string name="workout_live_stopped_title">看起来你已停下</string>
     <string name="workout_live_stopped_car_note">你最后一次移动是在 %1$s。是否在此时结束%2$s，避免将乘车计入运动？</string>
@@ -111,6 +114,8 @@
     <string name="workout_live_reps_start_hint">点击“跳过”即可开始训练</string>
     <string name="workout_live_paused_for">已暂停</string>
     <string name="workout_live_paused_note">暂停时间不计入平均数据</string>
+    <string name="workout_live_paused_round_work">第 %1$d 轮，共 %2$d 轮，运动还剩 %3$d 秒</string>
+    <string name="workout_live_paused_round_rest">接下来第 %1$d 轮，共 %2$d 轮，休息还剩 %3$d 秒</string>
     <string name="workout_live_mind_heart">当前 %1$d bpm</string>
     <string name="workout_live_mind_heart_down">当前 %1$d bpm，较开始时已下降 %2$d</string>
     <string name="workout_live_mind_length">共 %1$d 分钟</string>

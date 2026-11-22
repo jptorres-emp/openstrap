@@ -284,9 +284,7 @@ internal fun HaloPageHeader(
                         titleSuffix()
                     }
                 }
-                if (subtitle != null) Text(
-                    subtitle, color = Ink.Secondary, style = GlowType.secondary, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                )
+                if (subtitle != null) FittedSubtitle(subtitle)
             }
         },
         end = { trailing?.invoke() },
@@ -302,14 +300,27 @@ internal fun HaloPageHeader(
 @Composable
 private fun FittedTitle(title: String, modifier: Modifier = Modifier) {
     val steps = listOf(GlowType.pageTitle, GlowType.cardTitle, GlowType.secondary.copy(fontWeight = FontWeight.SemiBold))
-    Layout(
-        content = {
-            steps.forEach { Text(title, color = Color.White, style = it, maxLines = 1, overflow = TextOverflow.Ellipsis) }
-        },
-        modifier = modifier.clearAndSetSemantics {
+    FittedText(
+        title, steps, Color.White,
+        modifier.clearAndSetSemantics {
             contentDescription = title
             heading()
         },
+    )
+}
+
+/** The subtitle under a title, a size down (Secondary, then the small note) before it ends in an ellipsis, as the title does. */
+@Composable
+private fun FittedSubtitle(subtitle: String) = FittedText(subtitle, listOf(GlowType.secondary, GlowType.noteSmall), Ink.Secondary)
+
+/** [text] in the first of [steps] that fits whole in the width it is given, else in the last with an ellipsis. */
+@Composable
+private fun FittedText(text: String, steps: List<androidx.compose.ui.text.TextStyle>, color: Color, modifier: Modifier = Modifier) {
+    Layout(
+        content = {
+            steps.forEach { Text(text, color = color, style = it, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+        },
+        modifier = modifier,
     ) { measurables, constraints ->
         val fits = measurables.dropLast(1).firstOrNull { it.maxIntrinsicWidth(constraints.maxHeight) <= constraints.maxWidth }
         val placeable = fits?.measure(constraints.copy(minWidth = 0, maxWidth = Constraints.Infinity))

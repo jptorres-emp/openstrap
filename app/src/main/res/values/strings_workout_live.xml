@@ -11,8 +11,12 @@
 
     <!-- A label under a figure in a row of three (value over label). About 12 characters: the active calories burned. -->
     <string name="workout_live_figure_active_kcal">Active kcal</string>
+    <!-- Where the Active kcal label goes when there is no figure: kcal needs the profile's weight, height and age. -->
+    <string name="workout_live_figure_kcal_needs_profile">Needs your profile</string>
     <!-- A label under a figure in a row of three: the highest heart rate so far. About 12 characters. -->
     <string name="workout_live_figure_peak_bpm">Peak bpm</string>
+    <!-- The paused view's peak: the readings stop with the pause, so it is the peak while moving. -->
+    <string name="workout_live_figure_peak_moving">Peak while moving</string>
     <!-- A label under a figure in a row of three: the average heart rate so far. About 12 characters. -->
     <string name="workout_live_figure_avg_bpm">Avg bpm</string>
     <!-- A label under a figure in a row of three, in a game: how many spells of 10 s or more in zone 5. About 12 characters. -->
@@ -77,6 +81,8 @@
     <string name="workout_live_skip">Skip</string>
     <!-- The page dots under the run's two views (pace and map), for a screen reader. -->
     <string name="workout_live_view_of">View <xliff:g id="view" example="1">%1$d</xliff:g> of <xliff:g id="views" example="2">%2$d</xliff:g></string>
+    <!-- A page dot's description for a screen reader: the dots are the way back from the map, which keeps its own drags. -->
+    <string name="workout_live_view_dot">Show view <xliff:g id="view" example="1">%1$d</xliff:g> of <xliff:g id="views" example="2">%2$d</xliff:g></string>
 
     <!-- The panel's title when the phone moves like a car mid workout. One line. -->
     <string name="workout_live_stopped_car_title">Looks like you\'re in a car</string>
@@ -271,6 +277,10 @@
     <!-- Under the time paused: the heart rate now and how far it has come down since the pause. -->
     <!-- Under the time paused: why pausing is worth it. Two short lines at most. -->
     <string name="workout_live_paused_note">Paused time stays out of your averages</string>
+    <!-- Under the paused hero: where a round workout stopped, in a work phase. -->
+    <string name="workout_live_paused_round_work">Round <xliff:g id="round" example="3">%1$d</xliff:g> of <xliff:g id="rounds" example="8">%2$d</xliff:g>, <xliff:g id="s" example="12">%3$d</xliff:g> s of work left</string>
+    <!-- Under the paused hero: where a round workout stopped, in a rest. -->
+    <string name="workout_live_paused_round_rest">Round <xliff:g id="round" example="4">%1$d</xliff:g> of <xliff:g id="rounds" example="8">%2$d</xliff:g> next, <xliff:g id="s" example="12">%3$d</xliff:g> s of rest left</string>
 
     <!-- ======================================== Mind and body ======================================== -->
 

@@ -23,8 +23,6 @@
 
     <!-- Under a distance goal: how long it takes at last time's pace. -->
     <string name="ready_hero_pace_about">About <xliff:g id="minutes" example="31">%1$d</xliff:g> min at your pace</string>
-    <!-- Under a distance goal indoors, where the distance is counted from steps. -->
-    <string name="ready_hero_from_steps">Distance from your steps</string>
     <!-- Under a zone goal: the heart rates to keep between. -->
     <string name="ready_hero_zone_keep">Keep <xliff:g id="low" example="120">%1$d</xliff:g> to <xliff:g id="high" example="155">%2$d</xliff:g> bpm</string>
     <!-- Under a zone goal of the top zone: the heart rate to stay above. -->
@@ -67,6 +65,8 @@
     <string name="ready_last_no_goal">No goal, last session <xliff:g id="day" example="Wed">%1$s</xliff:g></string>
     <!-- The hero with no plan: what it says over last time's figures, "No plan, last session Sat". -->
     <string name="ready_last_no_plan">No plan, last session <xliff:g id="day" example="Sat">%1$s</xliff:g></string>
+    <!-- The no-goal hero's line: last time's figure and the rest, "5.2 km, 28 min at 5:40 per km". -->
+    <string name="ready_last_time_line">Last time <xliff:g id="last" example="5.2 km, 28 min at 5:40 per km">%1$s</xliff:g></string>
     <!-- Under last time's distance in the hero: its time and pace, "28:10 at 11:44 per km". -->
     <string name="ready_last_pace_line"><xliff:g id="time" example="28:10">%1$s</xliff:g> at <xliff:g id="pace" example="11:44">%2$s</xliff:g> per km</string>
     <!-- The hero with no goal and no workout of the sport yet. Very short. -->

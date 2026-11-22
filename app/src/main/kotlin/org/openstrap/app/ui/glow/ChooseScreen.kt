@@ -405,7 +405,10 @@ private fun groupColor(group: SportGroup): Color = when (group) {
 }
 
 /** A sport's own colour: its family's, or Other's grey. */
-internal fun sportColor(type: Int): Color = groupColor(SportGroups.of(Workouts.tileType(type)))
+internal fun sportColor(type: Int): Color {
+    val group = SportGroups.of(Workouts.tileType(type))
+    return if (group == SportGroup.Other) groupColor(group) else sportFamilyColor(type)
+}
 
 /** The sections of sport tiles, four to a row, each under its family's title (board HaloChooseSport). */
 @Suppress("UnstableCollections", "ComposeUnstableCollections")

@@ -121,8 +121,8 @@ internal fun HiitHero(rounds: Structure, onRounds: (Structure) -> Unit, look: He
 }
 
 /**
- * The hero with no goal: "No goal, last session Wed" over last time's big figure and the rest in a line ([cardio]
- * says goal, else plan); with no workout of the sport yet, "No goal" over [words], what is recorded.
+ * The hero with no goal: "No goal, last session Wed" over the time counting up from zero, and last time in the line
+ * under it ([cardio] says goal, else plan); with no workout of the sport yet, "No goal" over [words], what is recorded.
  */
 @Composable
 internal fun LastTimeHero(cardio: Boolean, last: ReadyLast?, look: HeroLook, words: String) {
@@ -134,7 +134,9 @@ internal fun LastTimeHero(cardio: Boolean, last: ReadyLast?, look: HeroLook, wor
     }
     val caption = if (cardio) stringResource(R.string.ready_last_no_goal, last.day)
         else stringResource(R.string.ready_last_no_plan, last.day)
-    LookHero(look, hero.number, hero.unit, hero.line, caption = caption)
+    // The big number is what this session will count, time from zero; last time is the line under it.
+    val lastTime = listOfNotNull(listOfNotNull(hero.number, hero.unit).joinToString(" "), hero.line).joinToString(", ")
+    LookHero(look, dotClock(0), null, stringResource(R.string.ready_last_time_line, lastTime), caption = caption)
 }
 
 /** What is recorded with no goal, by family, where there is no last time to show. */
@@ -156,11 +158,14 @@ internal fun repsLine(reps: Structure.Reps, lastPace: Double?): String {
     return stringResource(R.string.ready_hero_reps_about, (total / READY_S_PER_MIN).toInt().coerceAtLeast(1))
 }
 
-/** Under a distance goal: from your steps indoors, else about how long at last time's pace, else what the strap does. */
+/**
+ * Under a distance goal: about how long at last time's pace, else what the strap does. Without GPS (a treadmill) it
+ * promises nothing about where the distance comes from: Live keeps no distance there.
+ */
 @Composable
 @androidx.compose.runtime.ReadOnlyComposable
+@Suppress("UnusedParameter")
 internal fun distanceLine(meters: Int, gps: Boolean, lastPace: Double?): String = when {
-    !gps -> stringResource(R.string.ready_hero_from_steps)
     lastPace != null -> stringResource(
         R.string.ready_hero_pace_about, (meters / HERO_METERS_PER_KM * lastPace / READY_S_PER_MIN).toInt().coerceAtLeast(1),
     )

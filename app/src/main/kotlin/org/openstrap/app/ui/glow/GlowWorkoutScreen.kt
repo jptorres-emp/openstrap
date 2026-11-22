@@ -197,7 +197,7 @@ private fun PastSummary(
     val others = remember(workouts, w.start) { workouts.filter { it.workout.start != w.start }.sortedByDescending { it.workout.start } }
     val usual = remember(others) { Workouts.usualLoad(others.map { it.workout.trainingLoad }) }
     val family = org.openstrap.app.ui.workout.FamilySummary.familyOf(w.sportType, summary.structure)
-    val weekStarts = remember(workouts) { goalWeekStarts(workouts) }
+    val weekStarts = remember(workouts) { workoutDayStarts(workouts) }
     val trim = rememberWorkoutTrim(summary, onTrim, onUndoTrim)
     // Share opens the share screen in the page's place, as after the workout (board HaloPastWorkout); close comes back.
     var sharing by rememberSaveable { mutableStateOf(false) }

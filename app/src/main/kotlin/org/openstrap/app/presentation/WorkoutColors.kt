@@ -11,8 +11,8 @@ object WorkoutColors {
     /** Zone 2, aerobic: teal. */
     const val ZONE_2 = 0xFF2EC5D3.toInt()
 
-    /** Zone 3, tempo: lime. */
-    const val ZONE_3 = 0xFFA6E05A.toInt()
+    /** Zone 3, tempo: a green between Zone 2's teal and the Distance lime, apart from both. */
+    const val ZONE_3 = 0xFF3DDC84.toInt()
 
     /** Zone 4, threshold: amber. */
     const val ZONE_4 = 0xFFFFB020.toInt()

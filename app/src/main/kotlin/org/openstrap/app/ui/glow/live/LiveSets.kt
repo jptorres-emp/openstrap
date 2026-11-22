@@ -276,8 +276,9 @@ private fun FallingHeart(readings: List<Pair<Long, Int>>, level: Int?) {
     val to = maxOf(readings.last().first, from + 60)
     val described = stringResource(R.string.workout_live_sets_falling_description)
     Canvas(Modifier.fillMaxWidth().height(72.dp).semantics { contentDescription = described }) {
-        // The line takes the first 63 percent of the width, the rest is the run toward the level.
-        val reach = size.width * FALLING_REACH
+        // With a level to reach the line takes the first 63 percent of the width and the rest is the run toward it;
+        // without one (rest on the clock) there is no run, so the line spans the band.
+        val reach = size.width * if (level != null) FALLING_REACH else 1f
         fun x(t: Long) = (t - from).toFloat() / (to - from) * reach
         fun y(v: Int) = size.height - (v - lo).toFloat() / (hi - lo) * size.height
         if (level != null) dashedLine(RestColor.copy(alpha = 0.8f), Offset(0f, y(level)), Offset(size.width, y(level)),

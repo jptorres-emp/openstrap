@@ -105,6 +105,18 @@ internal fun minutesFigure(active: Long, strings: Strings = Strings.app): Pair<S
     if (active >= 60) "${active / 60}" to strings.get(R.string.glow_unit_min) else "$active" to strings.get(R.string.glow_summary_unit_s)
 
 /**
+ * A workout's length as a hero's number and its unit, the same duration the Time figure writes: "1" to "min 19" under an
+ * hour, "1" to "h 02" from one, and seconds under a minute. Where the length doesn't start with its leading number (another
+ * language's digits), it falls back to whole minutes.
+ */
+internal fun heroDuration(active: Long, strings: Strings = Strings.app): Pair<String, String> {
+    if (active < 60) return minutesFigure(active, strings)
+    val lead = if (active < 3600) active / 60 else active / 3600
+    val unit = Units.length(active, strings = strings).removePrefix("$lead").trim()
+    return if (unit.isEmpty()) minutesFigure(active, strings) else "$lead" to unit
+}
+
+/**
  * What the hero shows for [summary]'s [family]; [usualLoad] names a game's Load. When the kind's own number is missing
  * (no heart rate for an indoor workout, no sets or rounds), the hero falls back to the minutes, for every kind.
  */
@@ -130,7 +142,7 @@ private class HeroParts(val summary: PhoneSummary, val strings: Strings) {
     private val avg = a.workout.averageHeartRate?.toString()
     private val kcal = kcalFigure(a)
     private val time = Units.length(active)
-    private val minutes = minutesFigure(active, strings)
+    private val minutes = heroDuration(active, strings)
     private val w = HeroWords(strings)
 
     private fun byTime(figures: List<Pair<String?, String>>) =
@@ -139,19 +151,19 @@ private class HeroParts(val summary: PhoneSummary, val strings: Strings) {
     fun distance(): SummaryHero {
         val m = summary.distanceMeters
         val pace = Pace.clock(Pace.of(FamilySummary.gpsDistance(m, summary.distanceFromSteps), active))
-        if (m == null || m <= 0f) return byTime(listOf(avg to w.avgBpm, kcal to w.activeKcal))
+        if (m == null || m <= 0f) return byTime(listOf(avg to w.avgBpm, kcal to w.activeKcal(kcal != null)))
         return SummaryHero(
             if (m < Units.METERS_PER_KM) m.toInt().toString() else Units.km(m, Units.Precision.Workout, Units.DOT_LOCALE),
             strings.get(if (m < Units.METERS_PER_KM) R.string.glow_summary_unit_m else R.string.glow_unit_km),
-            listOf(time to w.time, if (pace != null) pace to w.avgPace else kcal to w.activeKcal, avg to w.avgBpm),
+            listOf(time to w.time, if (pace != null) pace to w.avgPace else kcal to w.activeKcal(kcal != null), avg to w.avgBpm),
             pace = pace, title = strings.get(R.string.glow_summary_hero_distance),
         )
     }
 
     fun indoor(): SummaryHero {
-        val bpm = avg ?: return byTime(listOf(kcal to w.activeKcal, peak to w.peak))
+        val bpm = avg ?: return byTime(listOf(kcal to w.activeKcal(kcal != null), peak to w.peak))
         return SummaryHero(
-            bpm, w.avgBpmUnit, listOf(time to w.time, kcal to w.activeKcal, peak to w.peak),
+            bpm, w.avgBpmUnit, listOf(time to w.time, kcal to w.activeKcal(kcal != null), peak to w.peak),
             title = strings.get(R.string.glow_summary_hero_avg_bpm),
         )
     }
@@ -180,7 +192,7 @@ private class HeroParts(val summary: PhoneSummary, val strings: Strings) {
         if (done == 0) return byTime(listOf(avg to w.avgBpm, peak to w.peak))
         return SummaryHero(
             "$done", strings.get(if (reps) R.string.glow_summary_unit_reps_done else R.string.glow_summary_unit_rounds_done),
-            listOf(time to w.time, peak to w.peak, kcal to w.activeKcal),
+            listOf(time to w.time, peak to w.peak, kcal to w.activeKcal(kcal != null)),
             title = strings.get(if (reps) R.string.glow_summary_hero_reps else R.string.glow_summary_hero_rounds),
         )
     }
@@ -190,7 +202,7 @@ private class HeroParts(val summary: PhoneSummary, val strings: Strings) {
         val average = a.workout.averageHeartRate?.let { strings.format(R.string.glow_summary_line_average_bpm, it) }
         val burned = a.activeKcal?.let { strings.format(R.string.glow_summary_line_active_kcal, Math.round(it)) }
         return SummaryHero(
-            minutes.first, minutes.second, listOf(avg to w.avgBpm, kcal to w.activeKcal),
+            minutes.first, minutes.second, listOf(avg to w.avgBpm, kcal to w.activeKcal(kcal != null)),
             sentence = settled?.let { (f, t) -> FamilySummary.settledLine(f, t) },
             line = joined(listOfNotNull(average, burned), strings), title = w.time,
         )
@@ -201,7 +213,7 @@ private class HeroParts(val summary: PhoneSummary, val strings: Strings) {
         val unit = if (active >= 60) R.string.glow_summary_unit_min_played else R.string.glow_summary_unit_s_played
         return SummaryHero(
             minutes.first, strings.get(unit),
-            listOf(load?.toString() to strings.get(R.string.glow_summary_figure_load), kcal to w.activeKcal, peak to w.peak),
+            listOf(load?.toString() to strings.get(R.string.glow_summary_figure_load), kcal to w.activeKcal(kcal != null), peak to w.peak),
             title = strings.get(R.string.glow_summary_hero_played),
         )
     }
@@ -212,7 +224,11 @@ private class HeroWords(strings: Strings) {
     val time = strings.get(R.string.glow_summary_figure_time)
     val avgBpm = strings.get(R.string.glow_summary_figure_avg_bpm)
     val avgBpmUnit = strings.get(R.string.glow_summary_unit_avg_bpm)
-    val activeKcal = strings.get(R.string.glow_summary_figure_active_kcal)
+    private val activeKcalName = strings.get(R.string.glow_summary_figure_active_kcal)
+    private val kcalNeedsProfile = strings.get(R.string.workout_live_figure_kcal_needs_profile)
+
+    /** The label of the Active kcal figure: its name, or why it is a dash (kcal needs weight, height and age). */
+    fun activeKcal(hasValue: Boolean) = if (hasValue) activeKcalName else kcalNeedsProfile
     val avgPace = strings.get(R.string.glow_summary_figure_avg_pace)
     val peak = strings.get(R.string.glow_summary_figure_peak_bpm)
 }
@@ -316,7 +332,10 @@ internal fun FamilySection(
     // The stored time in zones, as the hero and the share card read it, so the page shows one total.
     val zones = remember(a) { ZoneSeconds(a.zoneSeconds) }
     when (family) {
-        Workouts.Family.Distance -> RunCard(summary, liveRoute)
+        // A run with no route, splits or laps (no GPS) has the indoor card: zones and the heart line, as indoors.
+        Workouts.Family.Distance -> if (!RunCard(summary, liveRoute)) {
+            IndoorCard(zones, a.maxHeartRate, readings, indoorTarget(a), chart = heartLine)
+        }
         Workouts.Family.IndoorCardio -> IndoorCard(zones, a.maxHeartRate, readings, indoorTarget(a), chart = heartLine)
         Workouts.Family.Strength -> StrengthCard(summary, readings)
         Workouts.Family.Intervals -> IntervalsCard(summary, readings)
@@ -418,14 +437,15 @@ private fun GamesCard(summary: PhoneSummary, readings: List<Pair<Long, Int>>, zo
 
 /**
  * A run's card (board HaloSummaryRun): the route in its zones' colours with the climb under it, then each kilometre as
- * a bar, then the laps when any were marked. Nothing without a route, splits or laps.
+ * a bar, then the laps when any were marked apart from the splits ([manualLaps]). Draws nothing and returns false
+ * without a route, splits or laps.
  */
 @Composable
-private fun RunCard(summary: PhoneSummary, liveRoute: List<Route.Point>) {
+private fun RunCard(summary: PhoneSummary, liveRoute: List<Route.Point>): Boolean {
     val mapped = Route.mappable(summary.route)
     val rows = remember(summary, liveRoute) { splitRowsOf(summary, liveRoute) }
-    val laps = summary.laps.takeIf { it.size > 1 }.orEmpty()
-    if (!mapped && rows.isEmpty() && laps.isEmpty()) return
+    val laps = manualLaps(summary, rows)
+    if (!mapped && rows.isEmpty() && laps.isEmpty()) return false
     val heartZones = LocalHeartZones.current
     val maxHr = summary.analysis.maxHeartRate
     HaloCard {
@@ -453,6 +473,7 @@ private fun RunCard(summary: PhoneSummary, liveRoute: List<Route.Point>) {
             }
         }
     }
+    return true
 }
 
 /** One row of the splits (board HaloSummaryRun): its name, a bar, its time and a dot in its zone's colour. A compact row. */
@@ -809,12 +830,14 @@ private fun HeartLineCard(
 }
 
 /**
- * The starts of the [workouts] that fill a day on [WeekDaysPanel]: the ones that count toward the weekly goal by the
- * rule the week count uses ([Rewards.countsTowardGoal]), so the marks and "N days with a workout" agree with "N workouts
- * this week" under them.
+ * The starts of the [workouts] that count toward the weekly goal by the rule the week count uses
+ * ([Rewards.countsTowardGoal]), for the goal moment's week.
  */
 internal fun goalWeekStarts(workouts: List<WorkoutAnalysis>): List<Long> =
     workouts.filter { Rewards.countsTowardGoal(it.startedByYou, it.activeSeconds) }.map { it.shownStart }
+
+/** The starts of every one of [workouts]: a day with any workout is lit on [WeekDaysPanel], however short. */
+internal fun workoutDayStarts(workouts: List<WorkoutAnalysis>): List<Long> = workouts.map { it.shownStart }
 
 /**
  * The days of [day]'s week as seven rounded marks from the locale's first day (board HaloSummaryMind), no card: a day

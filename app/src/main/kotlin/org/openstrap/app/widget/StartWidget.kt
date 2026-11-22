@@ -250,7 +250,7 @@ private fun StartTop(f: WidgetFrame) {
 private fun ColumnScope.SmallContent(m: StartWidgetModel, f: WidgetFrame) {
     val sz = StartLayout.GRID_SMALL
     StartTop(f)
-    Flex()
+    Gap()
     Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         UsualTile(m.usual, false, sz, f.density)
         Spacer(GlanceModifier.defaultWeight())
@@ -268,10 +268,10 @@ private fun ColumnScope.WideContent(m: StartWidgetModel, f: WidgetFrame) {
     val top = TopRow.of(StartWidgetModel.TITLE, null, f.status, f.contentWidth, f.fontScale, withWords = true)
     val b = StartLayout.wide(m, f.contentWidth, f.contentHeight, f.fontScale, top.height)
     StartTop(f)
-    Flex()
+    Gap()
     UsualRow(m, b, f)
     b.tiles?.let {
-        Gap()
+        Flex()
         TileRow(it, f)
     }
 }
@@ -282,13 +282,13 @@ private fun ColumnScope.LargeContent(m: StartWidgetModel, f: WidgetFrame) {
     val top = TopRow.of(StartWidgetModel.TITLE, null, f.status, f.contentWidth, f.fontScale, withWords = true)
     val b = StartLayout.large(m, f.contentWidth, f.contentHeight, f.fontScale, top.height)
     StartTop(f)
-    Flex()
+    Gap()
     UsualRow(m, b, f)
     b.tiles?.let {
         Gap()
         TileRow(it, f)
     }
-    Gap()
+    Flex()
     Hairline()
     Gap()
     b.figures?.let { Figures(m, it) }
@@ -379,7 +379,7 @@ private fun ColumnScope.LargeRecording(m: StartWidgetModel, r: StartRecording, f
     Gap()
     Hairline()
     Gap()
-    fit.figures?.let { if (it.layout == StartLayout.FigureLayout.Live) LiveFigures(r) else Figures(m, it) }
+    fit.figures?.let { if (it.layout == StartLayout.FigureLayout.Live) LiveFigures(r) else Figures(m, it, lit = true) }
 }
 
 /**
@@ -618,33 +618,33 @@ private fun TileRow(tiles: StartLayout.Tiles, f: WidgetFrame) {
 
 /** This week and the usual's last: side by side, Caption over Body, or a row each when a value won't fit half. */
 @Composable
-private fun Figures(m: StartWidgetModel, fit: StartLayout.Figures) {
+private fun Figures(m: StartWidgetModel, fit: StartLayout.Figures, lit: Boolean = false) {
     when (fit.layout) {
         StartLayout.FigureLayout.Side -> Row(GlanceModifier.fillMaxWidth().then(Inset)) {
-            FigureCell(StartWidgetModel.THIS_WEEK, m.weekLine, GlanceModifier.defaultWeight())
+            FigureCell(StartWidgetModel.THIS_WEEK, m.weekLine, GlanceModifier.defaultWeight(), lit)
             Spacer(GlanceModifier.width(StartLayout.FIGURE_GAP_DP.dp))
-            FigureCell(m.lastLabel, m.lastLine, GlanceModifier.defaultWeight())
+            FigureCell(m.lastLabel, m.lastLine, GlanceModifier.defaultWeight(), lit)
         }
         StartLayout.FigureLayout.Rows -> Column(GlanceModifier.fillMaxWidth().then(Inset)) {
-            FigureRow(StartWidgetModel.THIS_WEEK, m.weekLine)
+            FigureRow(StartWidgetModel.THIS_WEEK, m.weekLine, lit)
             Spacer(GlanceModifier.height(StartLayout.FIGURE_ROW_GAP_DP.dp))
-            FigureRow(m.lastLabel, m.lastLine)
+            FigureRow(m.lastLabel, m.lastLine, lit)
         }
         // A recording's own figures are drawn by [LiveFigures]; the week's never take this layout.
         StartLayout.FigureLayout.Live,
         StartLayout.FigureLayout.Stacked -> Column(GlanceModifier.fillMaxWidth().then(Inset)) {
-            FigureCell(StartWidgetModel.THIS_WEEK, m.weekLine, GlanceModifier.fillMaxWidth())
+            FigureCell(StartWidgetModel.THIS_WEEK, m.weekLine, GlanceModifier.fillMaxWidth(), lit)
             Spacer(GlanceModifier.height(StartLayout.FIGURE_ROW_GAP_DP.dp))
-            FigureCell(m.lastLabel, m.lastLine, GlanceModifier.fillMaxWidth())
+            FigureCell(m.lastLabel, m.lastLine, GlanceModifier.fillMaxWidth(), lit)
         }
     }
 }
 
 /** A figure as a row: its Caption on the left, the value on the right. */
 @Composable
-private fun FigureRow(label: String, value: String) {
+private fun FigureRow(label: String, value: String, lit: Boolean = false) {
     Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text(label, style = WidgetType.caption, maxLines = 1)
+        Text(label, style = if (lit) WidgetType.captionShown else WidgetType.caption, maxLines = 1)
         Spacer(GlanceModifier.defaultWeight())
         Text(value, style = WidgetType.body, maxLines = 1)
     }

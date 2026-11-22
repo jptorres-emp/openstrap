@@ -105,9 +105,9 @@ class WidgetStatusLineTest {
         val tight = TopRow.of("Last night", null, l, 140f, 1.3f, withWords = false)
         assertTrue(tight.titleSp < WidgetText.TITLE_SP)
         assertTrue(WidgetText.fitWidth("Last night", tight.titleSp, 1.3f) + StatusButton.TITLE_GAP_DP + StatusButton.SIZE_DP <= 140f)
-        // And one size down, no further, to make room for the words.
+        // The shortest wording ("Pair") fits beside the full-size title, so the title keeps its size at 1.3.
         val start = TopRow.of(StartWidgetModel.TITLE, null, line(StrapStatus.NotPaired), 313f, 1.3f, withWords = true)
-        assertEquals(WidgetText.BODY_SP, start.titleSp, 0f)
+        assertEquals(WidgetText.TITLE_SP, start.titleSp, 0f)
         assertNotNull(start.words)
         // No status: the title's line, the note while it fits.
         val none = TopRow.of("Steps", "Goal 10,000", null, 313f, 1f, withWords = true)

@@ -621,9 +621,9 @@ private fun TileRow(tiles: StartLayout.Tiles, f: WidgetFrame) {
 private fun Figures(m: StartWidgetModel, fit: StartLayout.Figures, lit: Boolean = false) {
     when (fit.layout) {
         StartLayout.FigureLayout.Side -> Row(GlanceModifier.fillMaxWidth().then(Inset)) {
-            FigureCell(StartWidgetModel.THIS_WEEK, m.weekLine, GlanceModifier.defaultWeight(), lit)
+            FigureCell(StartWidgetModel.THIS_WEEK, m.weekLine, GlanceModifier.defaultWeight(), lit, fit.valueSp)
             Spacer(GlanceModifier.width(StartLayout.FIGURE_GAP_DP.dp))
-            FigureCell(m.lastLabel, m.lastLine, GlanceModifier.defaultWeight(), lit)
+            FigureCell(m.lastLabel, m.lastLine, GlanceModifier.defaultWeight(), lit, fit.valueSp)
         }
         // A recording's own figures are drawn by [LiveFigures]; the week's never take this layout.
         StartLayout.FigureLayout.Live,

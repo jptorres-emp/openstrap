@@ -610,18 +610,22 @@ object StartLayout {
         Stacked,
     }
 
-    data class Figures(val layout: FigureLayout, val height: Float)
+    /** [valueSp] is the values' size: Body, or a step down while both must still sit side by side. */
+    data class Figures(val layout: FigureLayout, val height: Float, val valueSp: Float = WidgetText.BODY_SP)
 
     /**
      * This week and the usual's last in [width] dp, a value never wrapped: side by side when both values fit half the
-     * width, else one under the other.
+     * width at Body, else a step down at Secondary and then Caption (the tiles above keep their room), and only then
+     * one under the other.
      */
     fun figures(m: StartWidgetModel, width: Float, fontScale: Float): Figures {
         val half = (width - FIGURE_GAP_DP) / 2
-        val pair = caption(fontScale) + FIGURE_LINE_GAP_DP + body(fontScale)
-        if (fits(m.weekLine, WidgetText.BODY_SP, half, fontScale) && fits(m.lastLine, WidgetText.BODY_SP, half, fontScale)) {
-            return Figures(FigureLayout.Side, pair)
+        for (sp in listOf(WidgetText.BODY_SP, WidgetText.SECONDARY_SP, WidgetText.CAPTION_SP)) {
+            if (fits(m.weekLine, sp, half, fontScale) && fits(m.lastLine, sp, half, fontScale)) {
+                return Figures(FigureLayout.Side, caption(fontScale) + FIGURE_LINE_GAP_DP + WidgetText.line(sp, fontScale), sp)
+            }
         }
+        val pair = caption(fontScale) + FIGURE_LINE_GAP_DP + body(fontScale)
         return Figures(FigureLayout.Stacked, 2 * pair + FIGURE_ROW_GAP_DP)
     }
 

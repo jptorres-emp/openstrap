@@ -419,10 +419,10 @@ class StartWidgetModelTest {
                 StartLayout.FigureLayout.Side -> (w - StartLayout.FIGURE_GAP_DP) / 2
                 StartLayout.FigureLayout.Stacked, StartLayout.FigureLayout.Live -> w
             }
-            assertTrue("$w at $s: ${f.layout}", one(m.lastLine, WidgetText.BODY_SP, room, s))
+            assertTrue("$w at $s: ${f.layout}", one(m.lastLine, f.valueSp, room, s))
         }
-        // The phone's case: at 300 wide and 1.08 the two don't fit half each, so one goes under the other.
-        assertEquals(StartLayout.FigureLayout.Stacked, StartLayout.figures(m, 260f, 1.08f).layout)
+        // The phone's case: at 300 wide and 1.08 the two don't fit half each, so the values step down to Caption before one goes under the other.
+        assertEquals(WidgetText.CAPTION_SP, StartLayout.figures(m, 260f, 1.08f).valueSp, 0f)
         assertEquals(StartLayout.FigureLayout.Side, StartLayout.figures(model(), 313f, 1f).layout)
     }
 

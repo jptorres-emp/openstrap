@@ -107,7 +107,9 @@ private fun ColumnScope.SmallContent(m: StepsWidgetModel, f: WidgetFrame) {
     val note = attentionWords(f)
     // With words to say, the hour pills give way to the 4 dp goal bar, so the words have the room.
     val pills = m.showLine && note == null
-    val fit = StepsLayout.small(m.smallText, note ?: m.share, f.contentWidth, f.contentHeight, f.fontScale, f.status, pills = pills, words = note != null)
+    val fit = StepsLayout.small(
+        m.smallText, note ?: m.share, f.contentWidth, f.contentHeight, f.fontScale, f.status, pills = pills, words = note != null,
+    )
     TopRowView(m.title, null, fit.top, f, 0f)
     Gap()
     // Each block one child of the column: Glance drops a column's children past ten.
@@ -181,9 +183,9 @@ private fun StepsLine(m: StepsWidgetModel, height: Float?, f: WidgetFrame, label
         GoalBar(m.progress, f)
         return
     }
-    // The hours under the dots as the Steps card has them, when the line is tall enough to keep a readable picture over them.
-    val labels = labels && height - StepsLayout.hourLabelsHeight(f.fontScale) >= StepsLayout.MIN_PICTURE_DP
-    val picture = if (labels) height - StepsLayout.hourLabelsHeight(f.fontScale) else height
+    // The hours under the dots as the Steps card has them, when the line is tall enough to keep a picture over them.
+    val hours = labels && height - StepsLayout.hourLabelsHeight(f.fontScale) >= StepsLayout.MIN_PICTURE_DP
+    val picture = if (hours) height - StepsLayout.hourLabelsHeight(f.fontScale) else height
     val w = f.drawContentWidth * f.density
     val h = picture * f.density
     val bitmap = renderDrawScope(w, h, f.density) { drawStepsHourDots(m.hourly, Hue) }
@@ -194,7 +196,7 @@ private fun StepsLine(m: StepsWidgetModel, height: Float?, f: WidgetFrame, label
             modifier = GlanceModifier.fillMaxWidth().height(picture.dp),
             contentScale = ContentScale.FillBounds,
         )
-        if (labels) {
+        if (hours) {
             Spacer(GlanceModifier.height(StepsLayout.HOUR_LABELS_GAP_DP.dp))
             Row(GlanceModifier.fillMaxWidth()) {
                 StepsLayout.HOUR_LABELS.forEachIndexed { i, hour ->

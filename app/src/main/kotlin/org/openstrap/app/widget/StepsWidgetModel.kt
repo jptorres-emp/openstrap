@@ -270,7 +270,8 @@ object StepsLayout {
             if (withShare && !shareFits) continue
             val base = at(SMALL_DOT, word, withShare, bar)
             if (!base.spread.fits(height, gap)) continue
-            return WidgetHero.ladder(WidgetSizes.Small, height).map { at(it, word, withShare, bar) }.firstOrNull { it.spread.fits(height, gap) } ?: base
+            val ladder = WidgetHero.ladder(WidgetSizes.Small, height)
+            return ladder.map { at(it, word, withShare, bar) }.firstOrNull { it.spread.fits(height, gap) } ?: base
         }
         return at(SMALL_DOT, word = false, withShare = false)
     }

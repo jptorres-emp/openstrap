@@ -739,11 +739,13 @@ internal const val FIGURE_LINE_GAP_DP = 4f
 
 /** A figure: its [label] in Caption over its [value] in Body, the Caption white on a [lit] card (the grey fails 4.5:1 on its light). */
 @Composable
-internal fun FigureCell(label: String, value: String, modifier: GlanceModifier = GlanceModifier, lit: Boolean = false) {
+internal fun FigureCell(
+    label: String, value: String, modifier: GlanceModifier = GlanceModifier, lit: Boolean = false, valueSp: Float = WidgetText.BODY_SP,
+) {
     Column(modifier) {
         Text(label, style = if (lit) WidgetType.captionShown else WidgetType.caption, maxLines = 1)
         Spacer(GlanceModifier.height(FIGURE_LINE_GAP_DP.dp))
-        Text(value, style = WidgetType.body, maxLines = 1)
+        Text(value, style = WidgetType.body.copy(fontSize = valueSp.sp), maxLines = 1)
     }
 }
 

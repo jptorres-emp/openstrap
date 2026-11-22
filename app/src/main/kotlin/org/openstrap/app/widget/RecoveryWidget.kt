@@ -123,7 +123,7 @@ private fun ScoreAndWeek(m: RecoveryWidgetModel, fit: RecoveryLayout.Fit, f: Wid
         ScoreRow(m, fit.dot, f.density)
         if (fit.week) {
             Spacer(GlanceModifier.defaultWeight())
-            Week(m.week, m.usual, fit.weekColumn, f.density)
+            Week(m.week, m.usual, fit.weekColumn, f.density, fit.weekLetters)
         }
     }
 }
@@ -145,7 +145,7 @@ private fun ColumnScope.LargeContent(m: RecoveryWidgetModel, fit: RecoveryLayout
         Figures(m.figures, f)
     }
     Flex()
-    if (fit.week) Week(m.week, m.usual, fit.weekColumn, f.density)
+    if (fit.week) Week(m.week, m.usual, fit.weekColumn, f.density, fit.weekLetters)
 }
 
 /** The score in dots [dot] dp across with its word beside it, read out as "78, Ready". */
@@ -174,19 +174,26 @@ private fun Figures(figures: List<RecoveryFigure>, frame: WidgetFrame) {
     }
 }
 
-/** The last seven days as the Recovery card's week of dots through your usual band, the latest larger, each with its day's initial under it. */
+/**
+ * The last seven days as the Recovery card's week of dots through your usual band, the latest larger, each with its
+ * day's initial under it when [letters].
+ */
 @Composable
-private fun Week(week: List<RecoveryWeekDay>, usual: ClosedFloatingPointRange<Float>?, column: Float, density: Float) {
+private fun Week(
+    week: List<RecoveryWeekDay>, usual: ClosedFloatingPointRange<Float>?, column: Float, density: Float, letters: Boolean,
+) {
     val width = WeekBarsLook.width(week.size, column)
     val h = RecoveryLayout.DOTS_HEIGHT_DP
     val bitmap = renderToBitmap(width * density, h * density) {
         drawWeekDots(it, week.map { d -> d.score?.toFloat() }, usual, Hue, column * density, WeekBarsLook.GAP_DP * density, h * density)
     }
+    val description = LocalContext.current.getString(R.string.system_widget_recovery_week_description)
+    if (!letters) {
+        Image(ImageProvider(bitmap), description, GlanceModifier.size(width.dp, h.dp), contentScale = ContentScale.FillBounds)
+        return
+    }
     // Each day's initial under its dot, the shown day's white.
-    WeekChart(
-        ImageProvider(bitmap), LocalContext.current.getString(R.string.system_widget_recovery_week_description),
-        week.map { it.letter to it.shown }, column, h,
-    )
+    WeekChart(ImageProvider(bitmap), description, week.map { it.letter to it.shown }, column, h)
 }
 
 /* ------------------------------------------------------------------------------------------------ */

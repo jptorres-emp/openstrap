@@ -204,6 +204,16 @@ object StepsLayout {
     const val LINE_DP = 52f
     const val MIN_LINE_DP = 20f
 
+    /** The hours under the day's dots, as the Steps card's, a Caption each; the gap above them. */
+    val HOUR_LABELS = listOf("00", "06", "12", "18", "24")
+    const val HOUR_LABELS_GAP_DP = 4f
+
+    /** The least the dots' picture is, dp, for the hours to go under it. */
+    const val MIN_PICTURE_DP = 16f
+
+    /** The hours' row with its gap, dp. */
+    fun hourLabelsHeight(fontScale: Float): Float = HOUR_LABELS_GAP_DP + WidgetText.line(WidgetText.CAPTION_SP, fontScale)
+
     /** The least room between the rows that share out the spare height. */
     const val MIN_GAP_DP = WidgetGrid.GAP_DP
 
@@ -222,10 +232,11 @@ object StepsLayout {
 
     /**
      * What the Small keeps: the dot it draws at, whether "today" and the share line fit, its [top] row and how its
-     * three blocks (the top row, the number with "today", the bar with the share) share the height.
+     * three blocks (the top row, the number with "today", the bar with the share) share the height. [bar] is false
+     * only when the strap's words stand in for it.
      */
     data class Small(
-        val dot: Float, val word: Boolean, val share: Boolean,
+        val dot: Float, val word: Boolean, val share: Boolean, val bar: Boolean = true,
         val top: TopRow = TopRow(null, false, 0f), val spread: Spread = Spread(0f, 0),
     )
 
@@ -234,23 +245,32 @@ object StepsLayout {
      * The Small in [width] by [height] dp: the top row (the title, with the strap [status] button when it shows), the
      * number, the bar always, then the share line and "today" while they fit, the share first as it says how far. The
      * share only on one line. The blocks share the spare height, the dots growing from 3 dp until no gap is over
-     * [Spread.TARGET_GAP_DP]; at least [SMALL_BAR_GAP_DP] between them all.
+     * [Spread.TARGET_GAP_DP]; at least [SMALL_BAR_GAP_DP] between them all. When [share] is the strap's [words] (what the
+     * strap needs) and a large font leaves no room for them under the bar, they take the bar's place rather than go.
      */
-    fun small(stepsText: String, share: String, width: Float, height: Float, fontScale: Float, status: StatusLine? = null, pills: Boolean = false): Small {
+    fun small(
+        stepsText: String, share: String, width: Float, height: Float, fontScale: Float, status: StatusLine? = null,
+        pills: Boolean = false, words: Boolean = false,
+    ): Small {
         val top = TopRow.of(StepsWidgetModel.TITLE, null, status, width, fontScale, withWords = false)
         val shareFits = WidgetText.width(share, WidgetText.SECONDARY_SP, fontScale) <= width
-        fun at(dot: Float, word: Boolean, withShare: Boolean): Small {
+        fun at(dot: Float, word: Boolean, withShare: Boolean, bar: Boolean = true): Small {
             val d = fitDot(stepsText, width, dot)
             val number = dotsHeight(d) + (if (word) SMALL_WORD_GAP_DP + WidgetText.line(WidgetText.BODY_SP, fontScale) else 0f)
-            val foot = (if (pills) SMALL_PILLS_DP else BAR_DP) + (if (withShare) SMALL_BAR_GAP_DP + WidgetText.line(WidgetText.SECONDARY_SP, fontScale) else 0f)
-            return Small(d, word, withShare, top, Spread.of(top.height, number, foot))
+            val line = if (withShare) WidgetText.line(WidgetText.SECONDARY_SP, fontScale) else 0f
+            val foot = if (bar) (if (pills) SMALL_PILLS_DP else BAR_DP) + (if (withShare) SMALL_BAR_GAP_DP + line else 0f) else line
+            return Small(d, word, withShare, bar, top, Spread.of(top.height, number, foot))
         }
         val gap = MIN_GAP_DP
-        for ((withShare, word) in listOf(true to true, true to false, false to true, false to false)) {
+        // The strap's words in the bar's place come after every layout that keeps the bar, before the share is given up.
+        val tries = listOf(Triple(true, true, true), Triple(true, false, true)) +
+            (if (words) listOf(Triple(true, false, false)) else emptyList()) +
+            listOf(Triple(false, true, true), Triple(false, false, true))
+        for ((withShare, word, bar) in tries) {
             if (withShare && !shareFits) continue
-            val base = at(SMALL_DOT, word, withShare)
+            val base = at(SMALL_DOT, word, withShare, bar)
             if (!base.spread.fits(height, gap)) continue
-            return WidgetHero.ladder(WidgetSizes.Small, height).map { at(it, word, withShare) }.firstOrNull { it.spread.fits(height, gap) } ?: base
+            return WidgetHero.ladder(WidgetSizes.Small, height).map { at(it, word, withShare, bar) }.firstOrNull { it.spread.fits(height, gap) } ?: base
         }
         return at(SMALL_DOT, word = false, withShare = false)
     }

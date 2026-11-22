@@ -28,7 +28,9 @@ data class StatusLine(val status: StrapStatus, val options: List<String>) {
         ): StatusLine {
             val full = strapStatusLine(status, now, zone, locale, strings)
             val shorter = when (status) {
-                StrapStatus.NotPaired -> listOf(strings.get(R.string.system_widget_status_not_paired_short))
+                StrapStatus.NotPaired -> listOf(
+                    strings.get(R.string.system_widget_status_not_paired_short), strings.get(R.string.system_widget_status_not_paired_shortest),
+                )
                 is StrapStatus.LowBattery -> listOf(strings.format(R.string.system_widget_status_percent, status.percent))
                 StrapStatus.Syncing, StrapStatus.SyncFailed, is StrapStatus.Synced -> emptyList()
                 StrapStatus.BluetoothOff -> listOf(strings.get(R.string.system_widget_status_bluetooth_off_short))

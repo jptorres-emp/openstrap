@@ -388,16 +388,16 @@ private fun ColumnScope.LargeRecording(m: StartWidgetModel, r: StartRecording, f
  */
 private val LitSecondary = WidgetType.secondaryShown
 
-/** The recording's own figures, side by side, each value over its label (board HaloWidgetsWorkout, Large). */
+/** The recording's own figures, side by side, each label over its value, as every figure in the widgets. */
 @Composable
 private fun LiveFigures(r: StartRecording) {
     Row(GlanceModifier.fillMaxWidth().then(Inset)) {
         r.figures.forEachIndexed { i, (value, label) ->
             if (i > 0) Spacer(GlanceModifier.width(StartLayout.FIGURE_GAP_DP.dp))
             Column(GlanceModifier.defaultWeight()) {
-                Text(value, style = NameStyle, maxLines = 1)
-                Spacer(GlanceModifier.height(FIGURE_LINE_GAP_DP.dp))
                 Text(label, style = LitSecondary, maxLines = 1)
+                Spacer(GlanceModifier.height(FIGURE_LINE_GAP_DP.dp))
+                Text(value, style = NameStyle, maxLines = 1)
             }
         }
     }
@@ -616,7 +616,7 @@ private fun TileRow(tiles: StartLayout.Tiles, f: WidgetFrame) {
     }
 }
 
-/** This week and the usual's last: side by side, Caption over Body, or a row each when a value won't fit half. */
+/** This week and the usual's last: side by side, Caption over Body, or one under the other when a value won't fit half. */
 @Composable
 private fun Figures(m: StartWidgetModel, fit: StartLayout.Figures, lit: Boolean = false) {
     when (fit.layout) {
@@ -625,11 +625,6 @@ private fun Figures(m: StartWidgetModel, fit: StartLayout.Figures, lit: Boolean 
             Spacer(GlanceModifier.width(StartLayout.FIGURE_GAP_DP.dp))
             FigureCell(m.lastLabel, m.lastLine, GlanceModifier.defaultWeight(), lit)
         }
-        StartLayout.FigureLayout.Rows -> Column(GlanceModifier.fillMaxWidth().then(Inset)) {
-            FigureRow(StartWidgetModel.THIS_WEEK, m.weekLine, lit)
-            Spacer(GlanceModifier.height(StartLayout.FIGURE_ROW_GAP_DP.dp))
-            FigureRow(m.lastLabel, m.lastLine, lit)
-        }
         // A recording's own figures are drawn by [LiveFigures]; the week's never take this layout.
         StartLayout.FigureLayout.Live,
         StartLayout.FigureLayout.Stacked -> Column(GlanceModifier.fillMaxWidth().then(Inset)) {
@@ -637,16 +632,6 @@ private fun Figures(m: StartWidgetModel, fit: StartLayout.Figures, lit: Boolean 
             Spacer(GlanceModifier.height(StartLayout.FIGURE_ROW_GAP_DP.dp))
             FigureCell(m.lastLabel, m.lastLine, GlanceModifier.fillMaxWidth(), lit)
         }
-    }
-}
-
-/** A figure as a row: its Caption on the left, the value on the right. */
-@Composable
-private fun FigureRow(label: String, value: String, lit: Boolean = false) {
-    Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text(label, style = if (lit) WidgetType.captionShown else WidgetType.caption, maxLines = 1)
-        Spacer(GlanceModifier.defaultWeight())
-        Text(value, style = WidgetType.body, maxLines = 1)
     }
 }
 

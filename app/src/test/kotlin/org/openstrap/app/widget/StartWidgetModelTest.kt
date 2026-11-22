@@ -417,13 +417,12 @@ class StartWidgetModelTest {
             val f = StartLayout.figures(m, w, s)
             val room = when (f.layout) {
                 StartLayout.FigureLayout.Side -> (w - StartLayout.FIGURE_GAP_DP) / 2
-                StartLayout.FigureLayout.Rows -> w - StartLayout.FIGURE_GAP_DP - WidgetText.width(m.lastLabel, WidgetText.CAPTION_SP, s)
                 StartLayout.FigureLayout.Stacked, StartLayout.FigureLayout.Live -> w
             }
             assertTrue("$w at $s: ${f.layout}", one(m.lastLine, WidgetText.BODY_SP, room, s))
         }
-        // The phone's case: at 300 wide and 1.08 the two don't fit half each, so they take a row each.
-        assertEquals(StartLayout.FigureLayout.Rows, StartLayout.figures(m, 260f, 1.08f).layout)
+        // The phone's case: at 300 wide and 1.08 the two don't fit half each, so one goes under the other.
+        assertEquals(StartLayout.FigureLayout.Stacked, StartLayout.figures(m, 260f, 1.08f).layout)
         assertEquals(StartLayout.FigureLayout.Side, StartLayout.figures(model(), 313f, 1f).layout)
     }
 

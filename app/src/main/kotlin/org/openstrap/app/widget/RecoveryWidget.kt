@@ -112,7 +112,7 @@ private fun ColumnScope.WideContent(m: RecoveryWidgetModel, fit: RecoveryLayout.
     ScoreAndWeek(m, fit, f)
     if (fit.figures) {
         Flex()
-        Figures(m.figures)
+        Figures(m.figures, f)
     }
 }
 
@@ -142,7 +142,7 @@ private fun ColumnScope.LargeContent(m: RecoveryWidgetModel, fit: RecoveryLayout
     ScoreRow(m, fit.dot, f.density)
     if (fit.figures) {
         Gap()
-        Figures(m.figures)
+        Figures(m.figures, f)
     }
     Flex()
     if (fit.week) Week(m.week, m.usual, fit.weekColumn, f.density)
@@ -160,18 +160,21 @@ private fun ScoreRow(m: RecoveryWidgetModel, dot: Float, density: Float) {
     }
 }
 
-/** Resting HR, HRV and Sleep in a row, each a Caption over a Body value. */
+/** Resting heart rate, HRV and Sleep score in a row, each a Caption over a Body value. */
 @Composable
-private fun Figures(figures: List<RecoveryFigure>) {
+private fun Figures(figures: List<RecoveryFigure>, frame: WidgetFrame) {
+    val cell = (frame.contentWidth - FIGURE_GAP_DP * (figures.size - 1)) / figures.size
     Row(GlanceModifier.fillMaxWidth()) {
         figures.forEachIndexed { i, f ->
-            if (i > 0) Spacer(GlanceModifier.width(12.dp))
-            FigureCell(f.label, f.value, GlanceModifier.defaultWeight())
+            if (i > 0) Spacer(GlanceModifier.width(FIGURE_GAP_DP.dp))
+            // The full name where it fits its third of the row, else the short one.
+            val label = if (WidgetText.fits(f.label, WidgetText.CAPTION_SP, cell, frame.fontScale)) f.label else f.short
+            FigureCell(label, f.value, GlanceModifier.defaultWeight())
         }
     }
 }
 
-/** The last seven days as the Recovery card's week of dots through your usual band, the latest larger. */
+/** The last seven days as the Recovery card's week of dots through your usual band, the latest larger, each with its day's initial under it. */
 @Composable
 private fun Week(week: List<RecoveryWeekDay>, usual: ClosedFloatingPointRange<Float>?, column: Float, density: Float) {
     val width = WeekBarsLook.width(week.size, column)
@@ -179,9 +182,10 @@ private fun Week(week: List<RecoveryWeekDay>, usual: ClosedFloatingPointRange<Fl
     val bitmap = renderToBitmap(width * density, h * density) {
         drawWeekDots(it, week.map { d -> d.score?.toFloat() }, usual, Hue, column * density, WeekBarsLook.GAP_DP * density, h * density)
     }
-    Image(
-        ImageProvider(bitmap), contentDescription = LocalContext.current.getString(R.string.system_widget_recovery_week_description),
-        modifier = GlanceModifier.size(width.dp, h.dp), contentScale = ContentScale.FillBounds,
+    // Each day's initial under its dot, the shown day's white.
+    WeekChart(
+        ImageProvider(bitmap), LocalContext.current.getString(R.string.system_widget_recovery_week_description),
+        week.map { it.letter to it.shown }, column, h,
     )
 }
 
@@ -191,3 +195,6 @@ private fun Week(week: List<RecoveryWeekDay>, usual: ClosedFloatingPointRange<Fl
 
 /** Room for the dots and the week beside the backgrounds, in the bitmap budget. */
 private const val BITMAP_EXTRA = 1.25
+
+/** Between the figures, dp. */
+private const val FIGURE_GAP_DP = 12f

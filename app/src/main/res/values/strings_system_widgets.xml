@@ -11,6 +11,8 @@
     <string name="system_widget_status_not_paired">Pair your strap</string>
     <!-- Shorter, where the line above doesn't fit. -->
     <string name="system_widget_status_not_paired_short">Pair strap</string>
+    <!-- Shortest, for a Small at a large font. -->
+    <string name="system_widget_status_not_paired_shortest">Pair</string>
     <string name="system_widget_status_low_battery">Strap at <xliff:g id="percent" example="12">%1$d</xliff:g>%%</string>
     <!-- Shortest, the battery alone. -->
     <string name="system_widget_status_percent"><xliff:g id="percent" example="12">%1$d</xliff:g>%%</string>
@@ -58,10 +60,11 @@
     <string name="system_widget_recovery_yesterday">Yesterday</string>
     <!-- Recovery: a figure the night didn't give, in place of its value. -->
     <string name="system_widget_recovery_no_reading">No reading</string>
-    <!-- Recovery: the three figures' labels, one short line each. Resting is the resting heart rate. HRV is heart rate variability. -->
-    <string name="system_widget_recovery_resting_hr">Resting</string>
+    <!-- Recovery: the three figures' labels, one short line each. The resting heart rate, with a short form for a narrow third of the row. HRV is heart rate variability. -->
+    <string name="system_widget_recovery_resting_hr">Resting heart rate</string>
+    <string name="system_widget_recovery_resting_hr_short">Resting HR</string>
     <string name="system_widget_recovery_hrv">HRV</string>
-    <string name="system_widget_recovery_sleep">Sleep</string>
+    <string name="system_widget_recovery_sleep">Sleep score</string>
     <!-- Recovery: a figure's value and its unit, "52 bpm", "64 ms". -->
     <string name="system_widget_recovery_figure"><xliff:g id="value" example="52">%1$s</xliff:g> <xliff:g id="unit" example="bpm">%2$s</xliff:g></string>
     <!-- TalkBack, for the score and its word: "78, Ready". -->

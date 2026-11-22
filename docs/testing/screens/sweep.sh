@@ -1,7 +1,7 @@
 #!/bin/bash
 # Captures every screen in screens.md at the font sizes given, into a dated folder.
 #   docs/testing/screens/sweep.sh [out-folder] [groups...]
-# Groups: today details tabs data strap sheets you ready live summary widgets route. Default: all of them.
+# Groups: today edit details tabs data strap sheets you ready live summary widgets route. Default: all of them.
 # FONTS="1.0 1.15 1.3" sets the font sizes (default all three). Before the first run: setup.sh.
 set -u
 HERE=$(cd "$(dirname "$0")" && pwd)
@@ -11,10 +11,14 @@ WHICH=${*:-today details tabs data strap sheets you ready live summary widgets r
 SPORTS=${SPORTS:-"1 2 4 23 49 52 60"}   # run, treadmill, cycling, rowing, HIIT, strength, yoga (data/SportTypes.kt)
 
 today()   { for m in Waking Midday WorkoutWindow After Evening Night; do open --es moment $m; shots today-$m 4; done
-            open; tapText "Edit Today" && shots edit-today 2; }
+            edit; }
+# Edit Today is the button at the foot of Today, so scroll until it shows.
+edit()    { open; for k in 1 2 3 4 5 6; do tapText "Edit Today" >/dev/null && { shots edit-today 2; return; }
+              front; adb shell input swipe 540 1900 540 500 300; sleep 1; done; echo "no Edit Today"; }
 details() { for m in HeartRate RestingHr Hrv Spo2 Stress SkinTemperature Breathing Steps SleepScore Recovery Sleep Energy Load; do
               open --es open_metric $m; shots detail-$m-day 3
-              for r in Week Month Year; do top; tapText $r && shots detail-$m-$r 1; done; done; }
+              # Score pages (Sleep score, Recovery, Sleep, Energy, Load) offer fewer ranges; a missing one is skipped.
+              for r in Week Month Year; do top; tapText $r >/dev/null && shots detail-$m-$r 1; done; done; true; }
 tabs()    { for t in Recovery Sleep Activity; do open; tapText $t && shots tab-$t 4; done; }
 data()    { for s in pair pair_search pair_connecting pair_connected pair_failed firstnights nosleep partial firstscore; do
               open --es data_state $s; shots data-$s 2; done; open --es data_state auto; }

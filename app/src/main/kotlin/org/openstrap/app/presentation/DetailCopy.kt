@@ -22,6 +22,12 @@ internal object DetailCopy {
         else -> strings.get(R.string.core_detail_status_usual)
     }
 
+    /** A value already written for [metric] with its unit after it, for a row that shows no label: "45 bpm", "13.3 br/min". A percent or no unit stays as written. */
+    fun shownWithUnit(metric: Metric, shown: String): String {
+        val unit = metric.unit
+        return if (unit.isEmpty() || shown.endsWith(unit)) shown else "$shown $unit"
+    }
+
     /**
      * How far a skin temperature is from your normal, signed and with its unit, on the cards and rows that have room for
      * no more: "+0.3 °C", "\u22120.2 °C". [change] is the level minus your normal's mean; none reads "+0.0 °C".
@@ -298,10 +304,27 @@ internal object DetailCopy {
         R.string.core_detail_every_day_with_data_month, R.plurals.core_detail_inside_days, R.plurals.core_detail_inside_days_month,
     )
 
-    /** The year's sentence, from its weekly averages: "Over the last 12 months, weeks averaged from 48 to 61 ms." */
-    fun year(lowest: String, highest: String, unit: String, strings: Strings = Strings.app): String =
-        if (unit.isEmpty()) strings.format(R.string.core_detail_year, lowest, highest)
-        else strings.format(R.string.core_detail_year_unit, lowest, highest, unit)
+    /**
+     * The year's sentence, from its weekly averages: "Over the last 3 weeks, weekly averages ran from 48 to 61 ms." It names the
+     * span the data covers, [weeks] of it, not the year the range could reach back to.
+     */
+    fun year(lowest: String, highest: String, unit: String, weeks: Int = WEEKS_IN_YEAR, strings: Strings = Strings.app): String {
+        val span = yearSpan(weeks, strings)
+        return if (unit.isEmpty()) strings.format(R.string.core_detail_year, lowest, highest, span)
+        else strings.format(R.string.core_detail_year_unit, lowest, highest, unit, span)
+    }
+
+    /** The data's span in words: weeks while it is under two months, then months, up to the year. */
+    private fun yearSpan(weeks: Int, strings: Strings): String {
+        if (weeks <= WEEKS_AS_WEEKS) return strings.plural(R.plurals.core_detail_year_span_weeks, weeks.coerceAtLeast(1), weeks.coerceAtLeast(1))
+        val months = Math.round(weeks / WEEKS_PER_MONTH).coerceIn(2, MONTHS_IN_YEAR)
+        return strings.plural(R.plurals.core_detail_year_span_months, months, months)
+    }
+
+    private const val WEEKS_IN_YEAR = 52
+    private const val WEEKS_AS_WEEKS = 8
+    private const val WEEKS_PER_MONTH = 4.345f
+    private const val MONTHS_IN_YEAR = 12
 
     /** A score's last 7 days: "Averaged 74 over the last 7 days, from 61 to 84." Null without any. */
     fun scoreWeek(values: List<Int?>, strings: Strings = Strings.app): String? {

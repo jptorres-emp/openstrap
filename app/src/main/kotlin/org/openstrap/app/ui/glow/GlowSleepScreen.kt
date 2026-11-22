@@ -41,6 +41,8 @@ import org.openstrap.app.ui.dashboard.InfoCopy
 import org.openstrap.app.ui.dashboard.Score
 import org.openstrap.app.ui.dashboard.DayViewModel
 import org.openstrap.app.ui.dashboard.LocalGoals
+import org.openstrap.app.presentation.DayWords
+import org.openstrap.app.presentation.DetailCopy
 import org.openstrap.app.presentation.Metric
 import org.openstrap.app.presentation.SLEEP_NAMES
 import org.openstrap.app.ui.dashboard.SleepCard
@@ -257,7 +259,7 @@ private fun VitalsList(state: DayUiState, firstNights: Boolean, onOpen: (Metric)
         nightVitals(state, firstNights).forEachIndexed { i, v ->
             val tag = org.openstrap.app.ui.dashboard.bodyTag(v.metric, v.direction)
             MetricRow(
-                v.label, v.color, v.value,
+                v.label, v.color, v.value?.let { DetailCopy.shownWithUnit(v.metric, it) },
                 // The tag already says which way it is off, so the plain word against your normal gives way to it.
                 v.status.takeUnless { tag != null && it == org.openstrap.app.presentation.TodayCopy.normalWord(v.direction) },
                 tag = tag, onClick = { onOpen(v.metric) }, divider = i > 0,
@@ -297,12 +299,24 @@ private fun RegularityCard(state: DayUiState, reg: org.openstrap.app.data.SleepR
         if (week != null) {
             Spacer(Modifier.height(Space.S12))
             BedWakeBars(week.first, week.second, MetricColors.sleepDeep, PictureSize.Wide, Modifier.fillMaxWidth().height(RegularityBarsHeight))
+            // A name under each night's bar, oldest first like the bars, so a late or early night can be told which.
+            Row(Modifier.fillMaxWidth().padding(top = Space.S8)) {
+                w.nights.forEach { n ->
+                    Text(
+                        DayWords.weekdayShort(n.date), Modifier.weight(1f), color = Ink.Tertiary, style = GlowType.caption,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center, maxLines = 1, overflow = TextOverflow.Clip,
+                    )
+                }
+            }
         }
     }
 }
 
 /** How tall regularity's bed and wake bars stand. */
 private val RegularityBarsHeight = 64.dp
+
+/** How tall Breathing disturbances' week of dots stands on a Wide, which has no room left over to give it. */
+private val BreathingDotsHeight = 48.dp
 
 /**
  * Breathing disturbances (spec 5.2): the strap's dips in blood oxygen an hour asleep, a week of dots through the band
@@ -323,6 +337,7 @@ private fun BreathingCard(rec: org.openstrap.app.data.RecoveryResult?, size: Pic
         value = b?.let { dotFormat("%.1f", it.perHour) }, unit = stringResource(R.string.glow_sleep_an_hour), tag = tag,
         status = if (b == null) stringResource(R.string.glow_sleep_after_a_night) else TabCopy.breathingShort(b),
         picture = if (values.none { it != null }) null else ({ m -> WeekOfDots(values, usual, MetricColors.sleepLight, size, m) }),
+        pictureHeight = BreathingDotsHeight.takeIf { size == PictureSize.Wide },
     )
 }
 
@@ -358,12 +373,14 @@ private fun SleepPictureCard(
     value: String?, unit: String?, tag: NewsTag?, status: String?,
     picture: (@Composable (Modifier) -> Unit)?,
     modifier: Modifier = Modifier,
+    /** The picture's own height on a card that has no spare room to give it (a Wide); null takes what the card leaves. */
+    pictureHeight: Dp? = null,
 ) {
     HaloCard(modifier, onClick = onClick, verticalArrangement = Arrangement.Top) {
         HaloTitle(title)
         if (picture != null) {
             Spacer(Modifier.height(Space.S12))
-            picture(Modifier.fillMaxWidth().weight(1f))
+            picture(Modifier.fillMaxWidth().let { if (pictureHeight != null) it.height(pictureHeight) else it.weight(1f) })
             Spacer(Modifier.height(Space.S8))
         } else Spacer(Modifier.weight(1f))
         SleepNumber(value, unit, tag)

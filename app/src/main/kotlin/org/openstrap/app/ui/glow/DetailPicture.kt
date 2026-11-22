@@ -121,6 +121,10 @@ private val DetailBandInk = Ink.Faint
 /** A chart's value labels sit in this gutter on the right, which data never enters (rules, picture). */
 private val DetailGutter = 30.dp
 
+/** A value label's gap to the chart's right edge, and the room the latest reading's ring takes beside the plot, in dp. */
+private const val GUTTER_LABEL_EDGE = 2
+private const val GUTTER_RING = 8
+
 /** A chart's axis text (boards: 11 px #6E7480). */
 private val DetailAxisText = GlowType.caption.copy(color = DetailAxisInk)
 
@@ -252,7 +256,11 @@ internal fun DetailChart(
     // The finger's line belongs to the data it was laid on: other data (another day) starts with none.
     var touchX by remember(values) { mutableStateOf<Float?>(null) }
     var width by remember { mutableFloatStateOf(0f) }
-    val gutter = with(LocalDensity.current) { DetailGutter.toPx() }
+    // The gutter holds the widest value label and the latest reading's ring beside it, whatever the font size: no label under a ring.
+    val gutter = with(LocalDensity.current) {
+        val widest = ticks.maxOfOrNull { m.measure(tickText(it), DetailAxisText).size.width } ?: 0
+        maxOf(DetailGutter.toPx(), widest + GUTTER_LABEL_EDGE.dp.toPx() + GUTTER_RING.dp.toPx())
+    }
     val tick = rememberScrubHaptics()
     val currentPick by rememberUpdatedState(pick)
     val currentScrub by rememberUpdatedState(onScrub)
@@ -284,7 +292,7 @@ internal fun DetailChart(
             val y = plot.y(t)
             drawLine(Greys.Raised, Offset(0f, y), Offset(size.width, y), 1.dp.toPx())
             val r = m.measure(tickText(t), DetailAxisText)
-            drawText(r, topLeft = Offset(size.width - 2.dp.toPx() - r.size.width, y - 4.dp.toPx() - r.size.height))
+            drawText(r, topLeft = Offset(size.width - GUTTER_LABEL_EDGE.dp.toPx() - r.size.width, y - 4.dp.toPx() - r.size.height))
         }
         val picked = touchX?.let { tx -> pick((tx / plot.plotRight.coerceAtLeast(1f)).coerceIn(0f, 1f)) }
         draw(plot, picked)
@@ -452,11 +460,26 @@ internal fun DetailColumns(
     ) { plot, picked ->
         val n = values.size
         val pitch = plot.plotRight / n
+        val barW = (pitch * if (few) 0.55f else 0.78f).coerceIn(2.dp.toPx(), if (few) 30.dp.toPx() else 14.dp.toPx())
         band?.let { b ->
             drawRect(DetailBandInk, Offset(0f, plot.y(b.endInclusive)), Size(plot.plotRight, plot.y(b.start) - plot.y(b.endInclusive)))
             if (few && bandLabel != null) {
                 val r = m.measure(bandLabel, DetailAxisText)
-                drawText(r, topLeft = Offset(2.dp.toPx(), plot.y(b.start) + 3.dp.toPx()))
+                // Where the label touches no column and no axis label: under the band, over it, else in the strip above the plot.
+                fun clear(y: Float): Boolean {
+                    val x0 = 2.dp.toPx()
+                    if (y < 0f || y + r.size.height > plot.bottom) return false
+                    return values.indices.none { i ->
+                        val v = values[i] ?: return@none false
+                        val bx = pitch * i + (pitch - barW) / 2f
+                        val (by0, by1) = plot.y(v).let { yv -> minOf(yv, plot.y(floor)) to maxOf(yv, plot.y(floor)) }
+                        bx < x0 + r.size.width && bx + barW > x0 && by0 < y + r.size.height && by1 > y
+                    }
+                }
+                val under = plot.y(b.start) + 3.dp.toPx()
+                val over = plot.y(b.endInclusive) - 3.dp.toPx() - r.size.height
+                val y = listOf(under, over).firstOrNull(::clear) ?: 0f
+                drawText(r, topLeft = Offset(2.dp.toPx(), y))
             }
         }
         if (baseline != null) {
@@ -468,7 +491,6 @@ internal fun DetailColumns(
             }
         }
         goal?.let { g -> dashedGoalLine(plot.y(g), plot.plotRight) }
-        val barW = (pitch * if (few) 0.55f else 0.78f).coerceIn(2.dp.toPx(), if (few) 30.dp.toPx() else 14.dp.toPx())
         val radius = if (few) 9.dp.toPx().coerceAtMost(barW / 2f) else minOf(3.dp.toPx(), barW / 2f)
         val on = picked ?: highlight
         values.forEachIndexed { i, v ->

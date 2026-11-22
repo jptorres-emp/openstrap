@@ -46,6 +46,9 @@ internal object FigureSpec {
     val Rule = 1.dp
     val RuleGap = Space.S16
 
+    /** A label's right edge, kept clear of the next column's rule at any font size. */
+    val LabelEnd = Space.S8
+
     /** The row's sides, so a value lines up with a card's words above it. */
     val Side = Space.S4
 
@@ -122,8 +125,8 @@ internal fun HaloFigures(
                         else -> Box(Modifier.height(valueLine), contentAlignment = Alignment.CenterStart) { WaitingDash() }
                     }
                     Text(
-                        label, color = unitInk, style = FigureSpec.Label, maxLines = if (live) 1 else 2,
-                        softWrap = !live,
+                        label, Modifier.padding(end = FigureSpec.LabelEnd), color = unitInk, style = FigureSpec.Label,
+                        maxLines = if (live) 1 else 2, softWrap = !live,
                     )
                 }
             }

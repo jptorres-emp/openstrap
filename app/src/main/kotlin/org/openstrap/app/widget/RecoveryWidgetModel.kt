@@ -62,8 +62,8 @@ data class RecoveryDay(
     }
 }
 
-/** A figure under the score: a Caption over a Body value. */
-data class RecoveryFigure(val label: String, val value: String)
+/** A figure under the score: a Caption over a Body value. [short] is the label when [label] won't fit its third of the row. */
+data class RecoveryFigure(val label: String, val value: String, val short: String = label)
 
 /** A day's bar in the Large's week: its letter, its score (null for none) and whether it's the day shown. */
 data class RecoveryWeekDay(val letter: String, val score: Int?, val shown: Boolean)
@@ -147,7 +147,7 @@ data class RecoveryWidgetModel(
             )
         }
 
-        /** Resting HR "52 bpm", HRV "64 ms", Sleep "82". */
+        /** Resting heart rate "52 bpm", HRV "64 ms", Sleep score "82". */
         fun figures(d: RecoveryDay, strings: Strings = Strings.app): List<RecoveryFigure> {
             val none = strings.get(R.string.system_widget_recovery_no_reading)
             fun value(v: String, unit: String) = strings.format(R.string.system_widget_recovery_figure, v, unit)
@@ -155,6 +155,7 @@ data class RecoveryWidgetModel(
                 RecoveryFigure(
                     strings.get(R.string.system_widget_recovery_resting_hr),
                     d.restingHr?.let { value(Metric.RestingHr.format(it), Metric.RestingHr.unit) } ?: none,
+                    short = strings.get(R.string.system_widget_recovery_resting_hr_short),
                 ),
                 RecoveryFigure(
                     strings.get(R.string.system_widget_recovery_hrv),
@@ -193,6 +194,10 @@ object RecoveryLayout {
     const val DOTS_MIN_COLUMN_DP = 12f
     /** The week of dots' height, beside the score or on its own row: the dots alone, no letters, as in the mockup. */
     const val DOTS_HEIGHT_DP = 28f
+
+    /** The week of dots with the day initials under it: the dots, the gap, one Caption line. */
+    fun weekHeight(fontScale: Float): Float = DOTS_HEIGHT_DP + WEEK_LETTERS_GAP_DP + WidgetText.line(WidgetText.CAPTION_SP, fontScale)
+    const val WEEK_LETTERS_GAP_DP = 4f
 
     /** The Large's week of dots, on its own row: each day's column at its widest, dp. */
     const val LARGE_DOTS_COLUMN_DP = 40f
@@ -267,7 +272,7 @@ object RecoveryLayout {
             val column = weekColumn(width, WidgetDots.width(score, d), m.word, fontScale, m.week.size.coerceAtLeast(1))
             val week = withWeek && m.week.isNotEmpty() &&
                 rowWidth(m, d, fontScale) + WEEK_GAP_DP + org.openstrap.app.ui.glow.draw.WeekBarsLook.width(m.week.size, column) <= width + 0.01f
-            val row = maxOf(WidgetDots.height(d), WidgetText.line(WORD_SP, fontScale), if (week) DOTS_HEIGHT_DP else 0f)
+            val row = maxOf(WidgetDots.height(d), WidgetText.line(WORD_SP, fontScale), if (week) weekHeight(fontScale) else 0f)
             return Fit(top, d, m.word != null, Spread.of(top.height, row, if (figures) figuresHeight(fontScale) else null), figures = figures, week = week, weekColumn = column)
         }
         // The week of dots beside the score as on the Large, given up before the figures.
@@ -294,7 +299,7 @@ object RecoveryLayout {
             val week = withWeek && m.week.isNotEmpty()
             val row = maxOf(WidgetDots.height(d), WidgetText.line(WORD_SP, fontScale))
             val spread = Spread.of(
-                top.height, lines.takeIf { it > 0 }?.let { it * WidgetText.line(sp, fontScale) }, if (week) DOTS_HEIGHT_DP else null,
+                top.height, lines.takeIf { it > 0 }?.let { it * WidgetText.line(sp, fontScale) }, if (week) weekHeight(fontScale) else null,
                 row, if (figures) figuresHeight(fontScale) else null,
             )
             return Fit(top, d, m.word != null, spread, lines, sp, figures, week, column)

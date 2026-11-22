@@ -1284,7 +1284,7 @@ private fun detailFigures(
     normal: History.Normal?, value: Float?, weekAverage: Float?, nightly: Boolean, goal: Int, countDays: List<DayStat>,
 ): List<Pair<String?, String>>? {
     // Figures are text, not dots: a count keeps the language's grouping, as the rows and "of 8,000" beside it do.
-    val locale = if (metric == Metric.Steps) java.util.Locale.getDefault() else Units.DOT_LOCALE
+    val locale = if (metric == Metric.Steps) androidx.compose.ui.platform.LocalConfiguration.current.locales[0] else Units.DOT_LOCALE
     fun show(v: Float?) = v?.let { "${metric.format(it, locale)} ${metric.unit}".trim() }
     return when {
         metric in SIGNALS -> {

@@ -190,7 +190,9 @@ fun GlowActivityScreen(
                             a?.let { TabCopy.activeMinutes(it.weekEquivalent, Activity.MVPA_WEEKLY_TARGET) } ?: NO_READING,
                             onClick = { open(Score.ActiveMinutes) }, modifier = m,
                             picture = a?.let { w ->
-                                { pm -> Blocks(w.weekEquivalent, ActivityLime, PictureSize.Small, pm, target = Activity.MVPA_WEEKLY_TARGET) }
+                                { pm ->
+                                    Blocks(w.weekEquivalent, ActivityLime, PictureSize.Small, pm, target = Activity.MVPA_WEEKLY_TARGET)
+                                }
                             },
                         )
                     }

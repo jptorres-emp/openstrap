@@ -22,7 +22,10 @@ internal object DetailCopy {
         else -> strings.get(R.string.core_detail_status_usual)
     }
 
-    /** A value already written for [metric] with its unit after it, for a row that shows no label: "45 bpm", "13.3 br/min". A percent or no unit stays as written. */
+    /**
+     * A value already written for [metric] with its unit after it, for a row that shows no label: "45 bpm", "13.3 br/min".
+     * A percent or no unit stays as written.
+     */
     fun shownWithUnit(metric: Metric, shown: String): String {
         val unit = metric.unit
         return if (unit.isEmpty() || shown.endsWith(unit)) shown else "$shown $unit"
@@ -316,7 +319,8 @@ internal object DetailCopy {
 
     /** The data's span in words: weeks while it is under two months, then months, up to the year. */
     private fun yearSpan(weeks: Int, strings: Strings): String {
-        if (weeks <= WEEKS_AS_WEEKS) return strings.plural(R.plurals.core_detail_year_span_weeks, weeks.coerceAtLeast(1), weeks.coerceAtLeast(1))
+        val n = weeks.coerceAtLeast(1)
+        if (weeks <= WEEKS_AS_WEEKS) return strings.plural(R.plurals.core_detail_year_span_weeks, n, n)
         val months = Math.round(weeks / WEEKS_PER_MONTH).coerceIn(2, MONTHS_IN_YEAR)
         return strings.plural(R.plurals.core_detail_year_span_months, months, months)
     }

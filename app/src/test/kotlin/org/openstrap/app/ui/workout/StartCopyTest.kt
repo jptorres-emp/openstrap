@@ -181,7 +181,7 @@ class StartCopyTest {
 
     @Test fun `the zones page says where your max comes from and each zone's heart rates`() {
         val d = LocalDate.of(2026, 10, 3)
-        assertEquals("Learned from hard efforts, 3 Oct", HeartZonesCopy.source(org.openstrap.app.data.MaxHeartRate(192, org.openstrap.app.data.MaxHeartRate.Source.Learned, d), Locale.UK))
+        assertEquals("Hard efforts, 3 Oct", HeartZonesCopy.source(org.openstrap.app.data.MaxHeartRate(192, org.openstrap.app.data.MaxHeartRate.Source.Learned, d), Locale.UK))
         assertEquals("Set by you", HeartZonesCopy.source(org.openstrap.app.data.MaxHeartRate(185, org.openstrap.app.data.MaxHeartRate.Source.Set)))
         val zones = org.openstrap.app.data.HeartZones.STANDARD
         assertEquals("96 to 115 bpm", HeartZonesCopy.zoneBpm(zones, 0, 192))

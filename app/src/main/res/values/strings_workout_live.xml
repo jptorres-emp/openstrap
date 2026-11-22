@@ -23,10 +23,6 @@
     <string name="workout_live_figure_hard_efforts">Hard efforts</string>
     <!-- A label under a figure in a row of three: the distance. Its unit (km or m) sits beside the number, not here. -->
     <string name="workout_live_figure_distance">Distance</string>
-    <!-- Beside a distance figure, small: kilometres. -->
-    <string name="workout_live_unit_km">km</string>
-    <!-- Beside a distance figure, small: metres, under a kilometre. -->
-    <string name="workout_live_unit_m">m</string>
     <!-- A label under a figure in a row of three: the average pace, or the average speed in km/h on a ride. About 12 characters. -->
     <string name="workout_live_figure_avg_pace">Avg pace</string>
     <!-- A label under a distance figure indoors, when the distance was worked out from the steps (no GPS). About 12 characters. -->
@@ -37,8 +33,6 @@
     <string name="workout_live_figure_pace">Pace</string>
     <!-- A label under a figure in a row of three, on a ride: the speed now in km/h. About 12 characters. -->
     <string name="workout_live_figure_speed">Speed</string>
-    <!-- Speed's unit, under a figure in a row of three and beside the speed in dots on the Speed card. -->
-    <string name="workout_live_unit_kmh">km/h</string>
     <!-- A label under a figure in a row of three: the metres climbed. About 12 characters. -->
     <string name="workout_live_figure_climb">m climbed</string>
     <!-- A label under a figure in a row of three, on a paused interval workout. About 12 characters. -->
@@ -158,6 +152,8 @@
     <string name="workout_live_rep_pace">Pace <xliff:g id="time" example="1:52">%1$s</xliff:g> per <xliff:g id="length" example="400 m">%2$s</xliff:g></string>
     <!-- Under the big number during a time rep: the pace now, minutes per kilometre. -->
     <string name="workout_live_rep_pace_km">Pace <xliff:g id="pace" example="4:40">%1$s</xliff:g>/km</string>
+    <!-- Under the big number during a time rep: the pace now, minutes per mile. -->
+    <string name="workout_live_rep_pace_mi">Pace <xliff:g id="pace" example="7:30">%1$s</xliff:g>/mi</string>
     <!-- Under the reps while warming up: the left button, Skip, starts them. -->
     <string name="workout_live_reps_skip_hint">Skip to start the reps</string>
     <!-- Once every rep or round is done. -->
@@ -168,17 +164,21 @@
     <string name="workout_live_pace_title">Pace now</string>
     <!-- The ride's card title over the speed now in dots. One line. -->
     <string name="workout_live_speed_title">Speed now</string>
-    <!-- Pace's unit, beside the pace in dots: minutes per kilometre. -->
-    <string name="workout_live_unit_per_km">/km</string>
     <!-- Beside the Pace or Speed card's title: the average so far, "Avg 5:42" or "Avg 24.3". -->
     <string name="workout_live_avg">Avg <xliff:g id="average" example="5:42">%1$s</xliff:g></string>
     <!-- The bars of the last kilometres for a screen reader: each one's time, "5:42, 5:38, 5:51". -->
     <string name="workout_live_splits_description">Kilometre splits: <xliff:g id="times" example="5:42, 5:38">%1$s</xliff:g></string>
+    <!-- The bars of the last miles for a screen reader: each one's time. -->
+    <string name="workout_live_splits_description_mi">Mile splits: <xliff:g id="times" example="8:42, 8:38">%1$s</xliff:g></string>
     <!-- Under the bar of the kilometre under way, small. About 6 characters. -->
     <string name="workout_live_splits_title">Splits</string>
     <string name="workout_live_splits_note">Pace per km</string>
+    <!-- Beside the Splits title on the live screen, in miles. -->
+    <string name="workout_live_splits_note_mi">Pace per mile</string>
     <string name="workout_live_split_now">Now</string>
     <string name="workout_live_split_km">Km <xliff:g id="km" example="4">%1$d</xliff:g></string>
+    <!-- A mile on the live splits bars, by its number. About 8 characters. -->
+    <string name="workout_live_split_mile">Mile <xliff:g id="mile" example="4">%1$d</xliff:g></string>
 
     <!-- The map's round button, for a screen reader, while it shows the route alone: show the map under it again. -->
     <string name="workout_live_map_show_map">Show the map</string>
@@ -264,6 +264,8 @@
     <string name="workout_live_rest_rep_next" tools:ignore="PluralsCandidate">Rest, rep <xliff:g id="rep" example="3">%1$d</xliff:g> next</string>
     <!-- Beside the rep card's title: the pace now, minutes per kilometre. -->
     <string name="workout_live_pace_now"><xliff:g id="pace" example="4:40">%1$s</xliff:g>/km now</string>
+    <!-- Beside the rep card's title: the pace now, minutes per mile. -->
+    <string name="workout_live_pace_now_mi"><xliff:g id="pace" example="7:30">%1$s</xliff:g>/mi now</string>
     <!-- In the rep card while warming up: Skip starts the reps. -->
     <string name="workout_live_reps_start_hint">Tap Skip to start the reps</string>
 

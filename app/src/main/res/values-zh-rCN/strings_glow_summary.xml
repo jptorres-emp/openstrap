@@ -2,7 +2,6 @@
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <string name="glow_summary_join">%1$s，%2$s</string>
     <string name="glow_summary_unit_s">秒</string>
-    <string name="glow_summary_unit_m">米</string>
     <string name="glow_summary_unit_avg_bpm">平均 bpm</string>
     <string name="glow_summary_unit_kg_lifted">kg 负重</string>
     <plurals name="glow_summary_unit_sets">
@@ -76,6 +75,7 @@
     <string name="glow_summary_hero_reps">次数</string>
     <string name="glow_summary_route_zones">路线按心率区间着色</string>
     <string name="glow_summary_splits_note">每公里配速</string>
+    <string name="glow_summary_splits_note_mi">每英里配速</string>
     <string name="glow_summary_work_rest">运动 %1$d 秒，休息 %2$d 秒</string>
     <string name="glow_summary_period_note">平均心率</string>
     <!-- The route map page (boards HaloRouteMap to HaloRouteMapNotOnRoads). -->

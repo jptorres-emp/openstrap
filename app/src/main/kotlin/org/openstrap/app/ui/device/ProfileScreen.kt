@@ -171,7 +171,7 @@ fun ProfileScreen(profile: UserProfile, contentPadding: PaddingValues, onSave: (
             }
         }
         item {
-            PageGroup(heading = stringResource(R.string.you_profile_group_body)) {
+            PageGroup(heading = stringResource(R.string.you_profile_group_body), footnote = stringResource(R.string.you_profile_units_covers)) {
                 NavRow(
                     stringResource(R.string.you_profile_units),
                     stringResource(if (imperial) R.string.you_profile_units_imperial else R.string.you_profile_units_metric),
@@ -241,6 +241,7 @@ fun ProfileScreen(profile: UserProfile, contentPadding: PaddingValues, onSave: (
             listOf(stringResource(R.string.you_profile_units_metric), stringResource(R.string.you_profile_units_imperial)),
             if (imperial) 1 else 0,
             onSave = { switchUnits(it == 1); sheet = null }, onDismiss = { sheet = null },
+            note = stringResource(R.string.you_profile_units_covers),
         )
         "weight" -> StepperSheet(
             stringResource(R.string.you_profile_weight),

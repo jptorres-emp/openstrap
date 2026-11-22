@@ -48,12 +48,20 @@
     <string name="workout_detail_fact_distance">Distance</string>
     <!-- Under Distance: the number is in kilometres. -->
     <string name="workout_detail_fact_km">Kilometres</string>
+    <!-- Under Distance: the number is in miles. -->
+    <string name="workout_detail_fact_mi">Miles</string>
     <!-- Under Distance: the number is in metres. -->
     <string name="workout_detail_fact_m">Metres</string>
+    <!-- Under Distance: the number is in feet, under a tenth of a mile. -->
+    <string name="workout_detail_fact_ft">Feet</string>
     <!-- Under Distance: in kilometres, worked out from steps with no GPS. -->
     <string name="workout_detail_fact_km_from_steps">Kilometres, estimated from your steps</string>
+    <!-- Under Distance: in miles, worked out from steps with no GPS. -->
+    <string name="workout_detail_fact_mi_from_steps">Miles, estimated from your steps</string>
     <!-- Under Distance: in metres, worked out from steps with no GPS. -->
     <string name="workout_detail_fact_m_from_steps">Metres, estimated from your steps</string>
+    <!-- Under Distance: in feet, worked out from steps with no GPS. -->
+    <string name="workout_detail_fact_ft_from_steps">Feet, estimated from your steps</string>
     <!-- A fact's name: how long the workout was paused. One word. -->
     <string name="workout_detail_fact_paused">Paused</string>
     <!-- Under Paused. -->

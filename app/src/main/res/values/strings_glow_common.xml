@@ -28,8 +28,6 @@
     <string name="glow_unit_bpm">bpm</string>
     <!-- Unit beside a number of minutes. Very short. -->
     <string name="glow_unit_min">min</string>
-    <!-- Unit beside a distance in kilometres. Very short. -->
-    <string name="glow_unit_km">km</string>
 
     <!-- Under a row's name in All metrics and the detail pages when the day has no value for it. -->
     <string name="glow_no_value">No reading</string>

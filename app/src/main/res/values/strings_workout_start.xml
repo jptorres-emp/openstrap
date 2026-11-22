@@ -160,6 +160,8 @@
     <string name="workout_start_no_goal_note">Records your time and heart rate</string>
     <!-- A distance goal's note. The number is in kilometres, as typed. -->
     <string name="workout_start_distance_note">A buzz at halfway and at <xliff:g id="v1" example="x">%1$s</xliff:g> km</string>
+    <!-- A distance goal's note in miles. The number is in miles, as typed. -->
+    <string name="workout_start_distance_note_mi">A buzz at halfway and at <xliff:g id="v1" example="x">%1$s</xliff:g> mi</string>
     <!-- A time goal's note: when it would end if started now. -->
     <string name="workout_start_ends_near">Ends about <xliff:g id="time" example="19:15">%1$s</xliff:g></string>
     <!-- How the zone buttons work. -->

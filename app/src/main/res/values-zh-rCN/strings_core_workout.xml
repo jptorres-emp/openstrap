@@ -19,6 +19,7 @@
     <string name="core_workout_waiting_hr">等待心率数据</string>
     <string name="core_workout_strap_gone_note">手环未连接。记录仍在继续，手环同步后将补全遗漏的数据。</string>
     <string name="core_workout_split">第 %1$d 公里用时 %2$s</string>
+    <string name="core_workout_split_mile">第 %1$d 英里用时 %2$s</string>
     <string name="core_workout_split_avg">%1$s，%2$d bpm</string>
     <string name="core_workout_just_now">刚刚</string>
     <string name="core_workout_min_ago">%1$d 分钟前</string>

@@ -33,6 +33,7 @@
     <string name="ready_last_no_plan">无计划，上次训练 %1$s</string>
     <string name="ready_last_time_line">上次 %1$s</string>
     <string name="ready_last_pace_line">%1$s，配速 %2$s 每公里</string>
+    <string name="ready_last_pace_line_mi">%1$s，配速 %2$s 每英里</string>
     <string name="ready_no_goal">无目标</string>
     <string name="ready_no_plan">无计划</string>
     <string name="ready_rest_between_sets">组间休息</string>

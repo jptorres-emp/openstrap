@@ -134,7 +134,7 @@ private fun MomentContent(m: MomentWidgetModel) {
 private fun ColumnScope.SmallContent(m: MomentWidgetModel, f: WidgetFrame) {
     val fit = MomentLayout.small(m, f.contentWidth, f.contentHeight, f.fontScale, f.status)
     Top(fit, f, 0f)
-    Flex()
+    if (m.recording == null) Gap() else Flex()
     val r = m.recording
     if (r != null) {
         if (fit.tile > 0f) { Tile(r, fit.tile, f); Gap() }
@@ -178,14 +178,14 @@ private fun ColumnScope.WideContent(m: MomentWidgetModel, fit: MomentLayout.Fit,
         fit.since?.let { Gap(); Since(it, f) }
     } else {
         Top(fit, f, 0f)
-        Flex()
+        Gap()
         fit.sentence?.let {
             Text(it.text, style = WidgetType.hero.copy(fontSize = it.sp.sp), maxLines = MomentLayout.SENTENCE_LINES)
             Gap(WidgetGrid.GAP_WIDE_DP)
         }
         fit.row?.let { NumberRow(m, it, f) }
         fit.waiting?.let { Text(it.text, style = WidgetType.secondaryShown.copy(fontSize = it.sp.sp), maxLines = 1) }
-        if (fit.chart > 0f) m.chart?.let { Gap(WidgetGrid.GAP_WIDE_DP); Chart(it, fit.chart, f) }
+        if (fit.chart > 0f) m.chart?.let { Gap(WidgetGrid.GAP_WIDE_DP); Flex(); Chart(it, fit.chart, f) }
     }
 }
 

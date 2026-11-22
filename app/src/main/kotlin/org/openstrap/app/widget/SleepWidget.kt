@@ -102,10 +102,10 @@ private fun SleepContent(m: SleepWidgetModel) {
 private fun ColumnScope.SmallContent(m: SleepWidgetModel, f: WidgetFrame) {
     val fit = SleepLayout.small(m, f.contentWidth, f.contentHeight, f.fontScale, f.status)
     TopRowView(m.title, null, fit.top, f, 0f)
-    Flex()
+    Gap()
     ScoreRow(m, fit.row, SleepLayout.SMALL_WORD_GAP_DP, f.density, attentionWords(f))
     if (fit.lines.isNotEmpty() || fit.bar) {
-        Gap()
+        Flex()
         // One child of the column, its rows inside: Glance drops a column's children past ten.
         Column(GlanceModifier.fillMaxWidth()) {
             fit.lines.forEachIndexed { i, line ->
@@ -125,10 +125,10 @@ private fun ColumnScope.SmallContent(m: SleepWidgetModel, f: WidgetFrame) {
 private fun ColumnScope.WideContent(m: SleepWidgetModel, f: WidgetFrame) {
     val fit = SleepLayout.wide(m, f.contentWidth, f.contentHeight, f.fontScale, f.status)
     TopRowView(m.title, m.note, fit.top, f, 0f)
-    Flex()
+    Gap()
     ScoreRow(m, fit.row, SleepLayout.WORD_GAP_DP, f.density)
     if (fit.bar) {
-        Gap()
+        Flex()
         Stages(m, fit.legendRows, f)
     }
 }
@@ -138,15 +138,15 @@ private fun ColumnScope.WideContent(m: SleepWidgetModel, f: WidgetFrame) {
 private fun ColumnScope.LargeContent(m: SleepWidgetModel, f: WidgetFrame) {
     val fit = SleepLayout.large(m, f.contentWidth, f.contentHeight, f.fontScale, f.status)
     TopRowView(m.title, m.note, fit.top, f, 0f)
+    Gap()
     if (fit.sentenceLines > 0 && m.sentence != null) {
-        Gap()
         Text(m.sentence, style = WidgetType.hero, maxLines = fit.sentenceLines)
+        Gap()
     }
-    Flex()
     ScoreRow(m, fit.row, SleepLayout.WORD_GAP_DP, f.density)
     when {
-        fit.stages -> { Gap(); StageRows(m.stages, f) }
-        fit.bar -> { Gap(); StageBar(m, SleepLayout.BAR_DP, f) }
+        fit.stages -> { Flex(); StageRows(m.stages, f) }
+        fit.bar -> { Flex(); StageBar(m, SleepLayout.BAR_DP, f) }
     }
 }
 

@@ -101,9 +101,12 @@ private fun StepsContent(data: StepsWidget.Shown) {
 /** Small: the top row, then the steps with "today", then the hours as pills (the goal bar before a step) and the share of the goal. */
 @Composable
 private fun ColumnScope.SmallContent(m: StepsWidgetModel, f: WidgetFrame) {
-    val fit = StepsLayout.small(m.smallText, m.share, f.contentWidth, f.contentHeight, f.fontScale, f.status, pills = m.showLine)
+    // While the strap needs something the line says so ("Pair your strap"), as the Wide's top row does. The words take the
+    // share's place in the fit, so the Small never drops them while the share would have fitted.
+    val note = attentionWords(f)
+    val fit = StepsLayout.small(m.smallText, note ?: m.share, f.contentWidth, f.contentHeight, f.fontScale, f.status, pills = m.showLine)
     TopRowView(m.title, null, fit.top, f, 0f)
-    Flex()
+    Gap()
     // Each block one child of the column: Glance drops a column's children past ten.
     Column(GlanceModifier.fillMaxWidth()) {
         DotNumber(m.smallText, fit.dot, f.density, m.description)
@@ -112,13 +115,11 @@ private fun ColumnScope.SmallContent(m: StepsWidgetModel, f: WidgetFrame) {
             Text(m.word, style = WidgetType.word, maxLines = 1)
         }
     }
-    Gap()
+    Flex()
     Column(GlanceModifier.fillMaxWidth()) {
         StepsLine(m, StepsLayout.SMALL_PILLS_DP, f)
         if (fit.share) {
             Spacer(GlanceModifier.height(StepsLayout.SMALL_BAR_GAP_DP.dp))
-            // While the strap needs something the line says so ("Pair your strap"), as the Wide's top row does.
-            val note = attentionWords(f)
             if (note != null) AttentionText(note) else Text(m.share, style = WidgetType.secondary, maxLines = 1)
         }
     }
@@ -129,9 +130,9 @@ private fun ColumnScope.SmallContent(m: StepsWidgetModel, f: WidgetFrame) {
 private fun ColumnScope.WideContent(m: StepsWidgetModel, f: WidgetFrame) {
     val fit = StepsLayout.wide(m, f.contentWidth, f.contentHeight, f.fontScale, f.status)
     TopRowView(m.title, m.goalNote, fit.top, f, 0f)
-    Flex()
-    NumberRow(m, fit.row, f)
     Gap()
+    NumberRow(m, fit.row, f)
+    Flex()
     StepsLine(m, fit.line, f)
 }
 
@@ -143,9 +144,9 @@ private fun ColumnScope.WideContent(m: StepsWidgetModel, f: WidgetFrame) {
 private fun ColumnScope.LargeContent(m: StepsWidgetModel, f: WidgetFrame) {
     val fit = StepsLayout.large(m, f.contentWidth, f.contentHeight, f.fontScale, f.status)
     TopRowView(m.title, m.goalNote, fit.top, f, 0f)
-    Flex()
-    NumberRow(m, fit.row, f)
     Gap()
+    NumberRow(m, fit.row, f)
+    Flex()
     if (fit.week != null) GoalBar(m.progress, f) else StepsLine(m, fit.line, f)
     Gap()
     fit.week?.let { WeekRow(m, it, f.density) }

@@ -94,7 +94,7 @@ private fun RecoveryContent(data: RecoveryWidget.Shown) {
 @Composable
 private fun ColumnScope.SmallContent(m: RecoveryWidgetModel, fit: RecoveryLayout.Fit, f: WidgetFrame) {
     TopRowView(m.title, null, fit.top, f, 0f)
-    Flex()
+    Gap()
     m.score?.let { DotNumber(it, fit.dot, f.density, m.scoreDescription) }
         // With no score the Small says what the strap needs, as the status button's words, where the top row has no room.
         ?: attentionWords(f)?.let { AttentionText(it) }
@@ -108,10 +108,10 @@ private fun ColumnScope.SmallContent(m: RecoveryWidgetModel, fit: RecoveryLayout
 @Composable
 private fun ColumnScope.WideContent(m: RecoveryWidgetModel, fit: RecoveryLayout.Fit, f: WidgetFrame) {
     TopRowView(m.title, m.note, fit.top, f, 0f)
-    Flex()
+    Gap()
     ScoreAndWeek(m, fit, f)
     if (fit.figures) {
-        Gap()
+        Flex()
         Figures(m.figures)
     }
 }
@@ -133,12 +133,12 @@ private fun ScoreAndWeek(m: RecoveryWidgetModel, fit: RecoveryLayout.Fit, f: Wid
 private fun ColumnScope.LargeContent(m: RecoveryWidgetModel, fit: RecoveryLayout.Fit, f: WidgetFrame) {
     // The top row in a column of its own: Glance takes at most ten children in a column.
     Column(GlanceModifier.fillMaxWidth()) { TopRowView(m.title, m.note, fit.top, f, 0f) }
+    Gap()
     if (fit.sentenceLines > 0) m.sentence?.let {
-        Gap()
         Text(it, style = WidgetType.hero.copy(fontSize = fit.sentenceSp.sp), maxLines = fit.sentenceLines)
+        // The score straight under the sentence, as on the board and at the Wide's size.
+        Gap(WidgetGrid.GAP_WIDE_DP)
     }
-    // The score straight under the sentence, as on the board and at the Wide's size.
-    Gap(WidgetGrid.GAP_WIDE_DP)
     ScoreRow(m, fit.dot, f.density)
     if (fit.figures) {
         Gap()

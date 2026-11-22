@@ -167,8 +167,12 @@
     <string name="glow_detail_live">Live</string>
     <!-- On a blood oxygen chart, labelling the shaded hours spent asleep. -->
     <string name="glow_detail_asleep_note">Asleep</string>
-    <!-- Under stress's line: what the strip of colour is. -->
-    <string name="glow_detail_stress_strip_note">Each hour, from calm to high</string>
+    <!-- Blood oxygen's day sentence: the lowest and highest readings, as heart rate's does. -->
+    <string name="glow_detail_spo2_day_today" tools:ignore="PluralsCandidate">Between <xliff:g id="low" example="94">%1$d</xliff:g>%% and <xliff:g id="high" example="99">%2$d</xliff:g>%% so far today.</string>
+    <string name="glow_detail_spo2_day_past" tools:ignore="PluralsCandidate">Between <xliff:g id="low" example="94">%1$d</xliff:g>%% and <xliff:g id="high" example="99">%2$d</xliff:g>%% that day.</string>
+    <!-- Under stress's strip, its key: the light end and the strong end of the shade. -->
+    <string name="glow_detail_stress_calm">Calm</string>
+    <string name="glow_detail_stress_high">High</string>
     <!-- The Resting heart rate headline's context when the night's figure is an estimate: the night it is from, then that it is estimated. -->
     <string name="glow_detail_last_night_estimated">Last night, estimated</string>
     <string name="glow_detail_that_night_estimated">That night, estimated</string>

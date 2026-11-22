@@ -298,10 +298,9 @@ private fun StepsGlow(state: DayUiState, usual: List<Float>?, history: ActivityH
         onClick = onClick,
     ) {
         Column {
-            HaloTitle(
-                stringResource(R.string.glow_activity_steps),
-                note = stringResource(R.string.glow_activity_goal, Units.count(goal)), tag = tag,
-            )
+            // The goal sits low with the number, not at the title's right: the lime light is brightest in the upper right
+            // corner, where no white ink reaches 4.5:1.
+            HaloTitle(stringResource(R.string.glow_activity_steps), tag = tag)
             Spacer(Modifier.height(GlowLayout.TitleGap))
             HourPills(state.hourlySteps, hour) { hour = it }
             Spacer(Modifier.height(Space.S16))
@@ -317,6 +316,10 @@ private fun StepsGlow(state: DayUiState, usual: List<Float>?, history: ActivityH
                 Text(
                     label,
                     color = Ink.Secondary, style = GlowType.secondary, maxLines = 2,
+                )
+                Text(
+                    stringResource(R.string.glow_activity_goal, Units.count(goal)),
+                    color = GlowType.noteInk, style = GlowType.secondary, maxLines = 1,
                 )
             }
         }

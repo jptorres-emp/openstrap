@@ -75,6 +75,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
@@ -85,6 +90,7 @@ import org.openstrap.app.R
 import org.openstrap.app.data.DayStat
 import org.openstrap.app.i18n.Strings
 import org.openstrap.app.data.History
+import org.openstrap.app.data.Recovery
 import org.openstrap.app.data.Weeks
 import org.openstrap.app.presentation.ChartPoint
 import org.openstrap.app.ui.components.LocalCardsGrow
@@ -174,6 +180,52 @@ internal class DetailDay(val picked: LocalDate?, val pending: Boolean)
 
 internal val LocalDetailDay = androidx.compose.runtime.compositionLocalOf { DetailDay(null, false) }
 
+/**
+ * A detail's header: back at the left, the [title] centred, [trailing] at the right. The title gets the room between
+ * the buttons, not the header grid's wider sides, and steps down a type size at a time until the whole name fits, so
+ * "Resting heart rate" and "Skin temperature" show in full at every font size. Only a name too long for the smallest
+ * size ends in an ellipsis. [onTitle] makes the title a button with a caret (the switcher), whose room is kept at both
+ * sides so the words stay centred.
+ */
+@Composable
+private fun DetailHeader(title: String, onBack: () -> Unit, onTitle: (() -> Unit)?, trailing: @Composable () -> Unit) {
+    val switchLabel = stringResource(R.string.glow_page_switch)
+    val measurer = rememberTextMeasurer()
+    Box(Modifier.fillMaxWidth().height(PageSpec.HeaderHeight), contentAlignment = Alignment.Center) {
+        BoxWithConstraints(Modifier.fillMaxWidth().padding(horizontal = DetailTitleSide), contentAlignment = Alignment.Center) {
+            val caret = if (onTitle != null) PageSpec.Caret + PageSpec.CaretGap else 0.dp
+            val room = with(LocalDensity.current) { (maxWidth - caret * 2).roundToPx() }
+            val steps = listOf(GlowType.pageTitle, GlowType.cardTitle, GlowType.secondary.copy(fontWeight = FontWeight.SemiBold))
+            val style = remember(title, room, LocalDensity.current.fontScale) {
+                steps.firstOrNull { measurer.measure(title, it, maxLines = 1, softWrap = false).size.width <= room } ?: steps.last()
+            }
+            Row(
+                Modifier.clip(Corner.Chip).let {
+                    if (onTitle != null) it.clickable(onClickLabel = switchLabel, role = Role.Button, onClick = onTitle) else it
+                },
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (onTitle != null) Spacer(Modifier.width(caret))
+                Text(
+                    title, color = Color.White, style = style, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+                if (onTitle != null) {
+                    Spacer(Modifier.width(PageSpec.CaretGap))
+                    Icon(AppIcons.CaretDown, null, modifier = Modifier.size(PageSpec.Caret), tint = Ink.Secondary)
+                }
+            }
+        }
+        Box(Modifier.align(Alignment.CenterStart)) {
+            HaloIconButton(AppIcons.ArrowLeft, stringResource(R.string.glow_back), onBack, variant = HeaderVariant.Detail.button)
+        }
+        Box(Modifier.align(Alignment.CenterEnd)) { trailing() }
+    }
+}
+
+/** What a detail's header keeps free at each side for its 44 dp buttons and a gap. */
+private val DetailTitleSide = 52.dp
+
 /** A detail the switcher can move to: its [title], and whether it's the one showing. */
 internal class DetailSibling(val title: String, val current: Boolean, val icon: androidx.compose.ui.graphics.vector.ImageVector?, val open: () -> Unit)
 
@@ -246,7 +298,7 @@ internal fun DetailTemplate(
                     val onSwitch = { switching = true }
                     // The detail's header (HaloDetailRecovery board): back, the title, which opens the switcher when there's
                     // something to switch to, and the (i), both flat circles over the wash.
-                    HaloPageHeader(title, onBack, variant = HeaderVariant.Detail, onTitle = if (siblings.size > 1) onSwitch else null) {
+                    DetailHeader(title, onBack, onTitle = if (siblings.size > 1) onSwitch else null) {
                         HaloIconButton(
                             AppIcons.Info, stringResource(R.string.glow_metrics_about, title), onInfo, variant = HaloIconVariant.OverWash,
                         )
@@ -612,6 +664,44 @@ fun GlowMetricDetailScreen(
     onBack: () -> Unit,
     recovery: org.openstrap.app.data.RecoveryResult? = null,
 ) {
+    // The resting heart rate Recovery scored the night with, so this page and Recovery's drivers read the same number.
+    val read = remember(state, metric, recovery) { if (metric == Metric.RestingHr) state.withScoredResting(recovery) else state }
+    MetricDetailBody(
+        metric, night, read, history, liveHeartRate, canUseLive, onOpen, onSwitch, onSelectDay, contentPadding, onBack, recovery,
+    )
+}
+
+/**
+ * [DayUiState] with the day's resting heart rate (and the last column of the week's) set to the night's own, the lowest
+ * 30-minute average that Recovery's resting heart rate driver scores and shows. The state carries the strap's stored
+ * daily figure, a different measure of the same night, which read 59 where the driver read 47. Unchanged without a score
+ * for the night or while the day is not the last of the trend.
+ */
+internal fun DayUiState.withScoredResting(recovery: org.openstrap.app.data.RecoveryResult?): DayUiState {
+    val bpm = recovery?.takeIf { it.date == date }?.readiness?.contributors?.firstNotNullOfOrNull {
+        (it.detail as? Recovery.Detail.RestingHr)?.bpm
+    } ?: return this
+    val trend = restingTrend.toMutableList()
+    val last = trend.indexOfLast { it.value != null }
+    if (last >= 0) trend[last] = trend[last].copy(value = bpm.toFloat())
+    return copy(restingHeartRate = bpm, restingEstimated = false, restingTrend = trend)
+}
+
+@Composable
+private fun MetricDetailBody(
+    metric: Metric,
+    night: Boolean,
+    state: DayUiState,
+    history: DailyHistory,
+    liveHeartRate: Int?,
+    canUseLive: Boolean,
+    onOpen: (Detail) -> Unit,
+    onSwitch: (Detail) -> Unit,
+    onSelectDay: (LocalDate) -> Unit,
+    contentPadding: PaddingValues,
+    onBack: () -> Unit,
+    recovery: org.openstrap.app.data.RecoveryResult?,
+) {
     var rangeIndex by rememberSaveable(metric, night) { mutableIntStateOf(0) }
     val range = Range.entries[rangeIndex]
     val end = state.date
@@ -832,7 +922,10 @@ fun GlowMetricDetailScreen(
             if (sentence != null) item { DetailSentence(sentence) }
         } else if (range == Range.Day) {
             val sentence = when {
-                value == null || (latestReading && metric == Metric.Spo2) -> null
+                value == null -> null
+                metric == Metric.Spo2 -> state.spo2.map { it.y }.let { v ->
+                    if (v.isEmpty()) null else DetailCopy.spo2Day(Math.round(v.min()), Math.round(v.max()), isToday)
+                }
                 // The day's stored lowest and highest readings, the strap's own maximum when higher, not the chart's averages.
                 metric == Metric.HeartRate -> state.heartRateRange?.let { (low, high) -> DetailCopy.heartDay(low, high, isToday) }
                 // A count's sentence is about its goal, which the bar shows, not a repeat of the status word.
@@ -1061,13 +1154,30 @@ private fun DayChart(metric: Metric, state: DayUiState, color: Color, hasValue: 
                 if (metric == Metric.Stress) {
                     if (stripe) DetailPicture(height = 24.dp) { m -> DayStrip(state.stressStrip, color, PictureSize.Wide, m) }
                     else Spacer(Modifier.height(Space.S24 + Space.S12 + Space.S4))
-                    Text(
-                        stringResource(R.string.glow_detail_stress_strip_note), color = GlowType.noteColor, style = GlowType.noteSmall,
-                        maxLines = 1,
-                    )
+                    StressKey(color)
                 }
             }
         }
+    }
+}
+
+/**
+ * The strip's key: the note that says what a stripe is, then Calm at the light end of a ramp in the strip's own ink and
+ * High at the strong end, so a shade reads without telling colours apart.
+ */
+@Composable
+private fun StressKey(color: Color) {
+    Row(Modifier.fillMaxWidth().padding(top = Space.S8), verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            stringResource(R.string.glow_detail_stress_calm), color = GlowType.noteColor, style = GlowType.noteSmall, maxLines = 1,
+        )
+        Box(
+            Modifier.weight(1f).padding(horizontal = Space.S8).height(Space.S8).clip(Corner.Pill)
+                .background(androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(color.copy(alpha = 0.25f), color))),
+        )
+        Text(
+            stringResource(R.string.glow_detail_stress_high), color = GlowType.noteColor, style = GlowType.noteSmall, maxLines = 1,
+        )
     }
 }
 
